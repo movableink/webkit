@@ -5,7 +5,7 @@
 	<key>CFBundleFollowParentLocalization</key>
 	<true/>
 	<key>CFBundleGetInfoString</key>
-	<string>${BUNDLE_VERSION}, Copyright 2003-2019 Apple Inc.</string>
+	<string>${BUNDLE_VERSION}, Copyright 2003-2022 Apple Inc.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
@@ -28,8 +28,6 @@
 	<true/>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
-	<key>WebKitEntryPoint</key>
-	<string>WebContentServiceInitializer</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
@@ -38,6 +36,8 @@
 	<true/>
 	<key>NSMainNibFile</key>
 	<string>WebContentProcess</string>
+	<key>_STAttributionDisplayName</key>
+	<string>Website</string>
 	<key>XPCService</key>
 	<dict>
 		<key>JoinExistingSession</key>
@@ -46,10 +46,16 @@
 		<string>Application</string>
 		<key>RunLoopType</key>
 		<string>${RUNLOOP_TYPE}</string>
+		<key>_ProcessType</key>
+		<string>App</string>
 		<key>_MultipleInstances</key>
 		<true/>
 		<key>_HighBitsASLR</key>
 		<true/>
 	</dict>
+	<key>NSColorPreferLocalNotifications</key>
+	<integer>1</integer>
+	<key>NSDisableKeyboardLayoutAdjustedShortcuts</key>
+	<true/>
 </dict>
 </plist>

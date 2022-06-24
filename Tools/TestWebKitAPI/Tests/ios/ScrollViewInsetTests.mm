@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(IOS_FAMILY)
 
@@ -32,18 +32,35 @@
 #import "TestWKWebView.h"
 #import "UIKitSPI.h"
 #import <WebKit/WKWebViewPrivate.h>
+#import <wtf/Vector.h>
+
+@interface ScrollViewDelegate : NSObject<UIScrollViewDelegate> {
+    @public Vector<CGPoint> _contentOffsetHistory;
+}
+@end
+
+@implementation ScrollViewDelegate
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView
+{
+    auto contentOffset = scrollView.contentOffset;
+    if (_contentOffsetHistory.isEmpty() || !CGPointEqualToPoint(_contentOffsetHistory.last(), contentOffset))
+        _contentOffsetHistory.append(contentOffset);
+}
+
+@end
 
 @interface AsyncPolicyDelegateForInsetTest : NSObject<WKNavigationDelegate> {
-    @public BOOL _navigationComplete;
+    @public bool _navigationComplete;
 }
 @property (nonatomic, copy) void (^webContentProcessDidTerminate)(WKWebView *);
 @end
 
 @implementation AsyncPolicyDelegateForInsetTest
 
-- (void)webView:(WKWebView *)webView didFinishNavigation:(null_unspecified WKNavigation *)navigation
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
 {
-    _navigationComplete = YES;
+    _navigationComplete = true;
 }
 
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
@@ -178,7 +195,7 @@ TEST(ScrollViewInsetTests, RestoreInitialContentOffsetAfterCrashWithAsyncPolicyD
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, viewHeight)]);
     [webView scrollView].contentInset = UIEdgeInsetsMake(400, 0, 0, 0);
     [webView setNavigationDelegate:delegate.get()];
-    delegate->_navigationComplete = NO;
+    delegate->_navigationComplete = false;
     NSURL *testResourceURL = [[[NSBundle mainBundle] bundleURL] URLByAppendingPathComponent:@"TestWebKitAPI.resources"];
     [webView loadHTMLString:veryTallDocumentMarkup baseURL:testResourceURL];
     Util::run(&delegate->_navigationComplete);
@@ -204,6 +221,58 @@ TEST(ScrollViewInsetTests, RestoreInitialContentOffsetAfterCrashWithAsyncPolicyD
     EXPECT_EQ(initialContentOffset.y, contentOffsetAfterCrash.y);
     EXPECT_EQ(0, initialContentOffset.x);
     EXPECT_EQ(-400, initialContentOffset.y);
+}
+
+TEST(ScrollViewInsetTests, ChangeInsetWithoutAutomaticAdjustmentWhileWebProcessIsUnresponsive)
+{
+    constexpr CGFloat initialTopInset = 100;
+    constexpr CGFloat updatedTopInset = 70;
+
+    auto scrollViewDelegate = adoptNS([[ScrollViewDelegate alloc] init]);
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)]);
+    [webView scrollView].scrollEnabled = NO;
+    [webView scrollView].delegate = scrollViewDelegate.get();
+    [webView _setObscuredInsets:UIEdgeInsetsMake(initialTopInset, 0, 0, 0)];
+    [webView scrollView].contentInset = UIEdgeInsetsMake(initialTopInset, 0, 0, 0);
+    [webView synchronouslyLoadTestPageNamed:@"overflow-hidden"];
+
+    UIWindow *window = [webView window];
+    [webView evaluateJavaScript:@"setBodyHeight(2000); hangFor(500)" completionHandler:nil];
+    [webView removeFromSuperview];
+
+    __block bool done = false;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [window addSubview:webView.get()];
+        [webView _setObscuredInsets:UIEdgeInsetsMake(updatedTopInset, 0, 0, 0)];
+        [[webView scrollView] _setAutomaticContentOffsetAdjustmentEnabled:NO];
+        [webView scrollView].contentInset = UIEdgeInsetsMake(updatedTopInset, 0, 0, 0);
+        [[webView scrollView] _setAutomaticContentOffsetAdjustmentEnabled:YES];
+        done = true;
+    });
+
+    TestWebKitAPI::Util::run(&done);
+    [webView waitForNextPresentationUpdate];
+
+    EXPECT_EQ(2U, scrollViewDelegate->_contentOffsetHistory.size());
+    EXPECT_EQ(-100, scrollViewDelegate->_contentOffsetHistory.first().y);
+    EXPECT_EQ(-70, scrollViewDelegate->_contentOffsetHistory.last().y);
+    EXPECT_EQ(0, [[webView stringByEvaluatingJavaScript:@"document.scrollingElement.scrollTop"] intValue]);
+}
+
+TEST(ScrollViewInsetTests, PreserveContentOffsetForRefreshControl)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, viewHeight)]);
+    [webView scrollView].refreshControl = adoptNS([[UIRefreshControl alloc] init]).get();
+    [webView synchronouslyLoadHTMLString:@""];
+
+    [webView scrollView].contentOffset = CGPointMake(0, -100);
+
+    [webView synchronouslyLoadHTMLString:@"<body bgcolor='red'>"];
+    [webView waitForNextPresentationUpdate];
+
+    CGPoint contentOffsetAfterNavigation = [webView scrollView].contentOffset;
+    EXPECT_EQ(0, contentOffsetAfterNavigation.x);
+    EXPECT_EQ(-100, contentOffsetAfterNavigation.y);
 }
 
 } // namespace TestWebKitAPI

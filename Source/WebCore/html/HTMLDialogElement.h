@@ -33,22 +33,30 @@ class HTMLDialogElement final : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLDialogElement);
 public:
     template<typename... Args> static Ref<HTMLDialogElement> create(Args&&... args) { return adoptRef(*new HTMLDialogElement(std::forward<Args>(args)...)); }
-    
-    bool open();
-    void setOpen(bool);
 
-    const String& returnValue();
-    void setReturnValue(String&&);
+    bool isOpen() const { return hasAttribute(HTMLNames::openAttr); }
+
+    const String& returnValue() const { return m_returnValue; }
+    void setReturnValue(String&& value) { m_returnValue = WTFMove(value); }
 
     void show();
-    void showModal();
+    ExceptionOr<void> showModal();
     void close(const String&);
+
+    bool isModal() const { return m_isModal; };
+
+    void queueCancelTask();
+
+    void runFocusingSteps();
 
 private:
     HTMLDialogElement(const QualifiedName&, Document&);
-    
-    bool m_open { false };
+
+    void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) final;
+
     String m_returnValue;
+    bool m_isModal { false };
+    WeakPtr<Element> m_previouslyFocusedElement;
 };
 
 } // namespace WebCore

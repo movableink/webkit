@@ -32,7 +32,7 @@
 namespace WebKit {
 
 WebPopupItem::WebPopupItem()
-    : m_type(Item)
+    : m_type(Type::Item)
     , m_textDirection(WebCore::TextDirection::LTR)
     , m_hasTextDirectionOverride(false)
     , m_isEnabled(true)
@@ -65,9 +65,9 @@ WebPopupItem::WebPopupItem(Type type, const String& text, WebCore::TextDirection
 
 void WebPopupItem::encode(IPC::Encoder& encoder) const
 {
-    encoder.encodeEnum(m_type);
+    encoder << m_type;
     encoder << m_text;
-    encoder.encodeEnum(m_textDirection);
+    encoder << m_textDirection;
     encoder << m_hasTextDirectionOverride;
     encoder << m_toolTip;
     encoder << m_accessibilityText;
@@ -76,43 +76,43 @@ void WebPopupItem::encode(IPC::Encoder& encoder) const
     encoder << m_isSelected;
 }
 
-Optional<WebPopupItem> WebPopupItem::decode(IPC::Decoder& decoder)
+std::optional<WebPopupItem> WebPopupItem::decode(IPC::Decoder& decoder)
 {
     Type type;
-    if (!decoder.decodeEnum(type))
-        return WTF::nullopt;
+    if (!decoder.decode(type))
+        return std::nullopt;
 
     String text;
     if (!decoder.decode(text))
-        return WTF::nullopt;
+        return std::nullopt;
     
     WebCore::TextDirection textDirection;
-    if (!decoder.decodeEnum(textDirection))
-        return WTF::nullopt;
+    if (!decoder.decode(textDirection))
+        return std::nullopt;
 
     bool hasTextDirectionOverride;
     if (!decoder.decode(hasTextDirectionOverride))
-        return WTF::nullopt;
+        return std::nullopt;
 
     String toolTip;
     if (!decoder.decode(toolTip))
-        return WTF::nullopt;
+        return std::nullopt;
 
     String accessibilityText;
     if (!decoder.decode(accessibilityText))
-        return WTF::nullopt;
+        return std::nullopt;
 
     bool isEnabled;
     if (!decoder.decode(isEnabled))
-        return WTF::nullopt;
+        return std::nullopt;
 
     bool isLabel;
     if (!decoder.decode(isLabel))
-        return WTF::nullopt;
+        return std::nullopt;
 
     bool isSelected;
     if (!decoder.decode(isSelected))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return {{ type, text, textDirection, hasTextDirectionOverride, toolTip, accessibilityText, isEnabled, isLabel, isSelected }};
 }

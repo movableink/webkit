@@ -9,6 +9,7 @@
 // 
 
 #include "General.xcconfig"
+#include? "../../../../../LocalOverrides.xcconfig"
 
 // subconfig/Release.xcconfig
 
@@ -17,12 +18,6 @@ GCC_OPTIMIZATION_LEVEL = s
 
 // Deploment postprocessing is what triggers Xcode to strip
 DEPLOYMENT_POSTPROCESSING = YES
-
-MACOSX_DEPLOYMENT_TARGET = $(MACOSX_DEPLOYMENT_TARGET_$(TARGET_MAC_OS_X_VERSION_MAJOR));
-MACOSX_DEPLOYMENT_TARGET_101300 = 10.13;
-MACOSX_DEPLOYMENT_TARGET_101400 = 10.14;
-MACOSX_DEPLOYMENT_TARGET_101500 = 10.15;
-MACOSX_DEPLOYMENT_TARGET_101600 = 10.16;
 
 // No symbols
 GCC_GENERATE_DEBUGGING_SYMBOLS = NO

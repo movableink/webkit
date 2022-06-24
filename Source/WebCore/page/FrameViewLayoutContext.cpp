@@ -26,7 +26,6 @@
 #include "config.h"
 #include "FrameViewLayoutContext.h"
 
-#include "CSSAnimationController.h"
 #include "DebugPageOverlays.h"
 #include "Document.h"
 #include "FrameView.h"
@@ -39,8 +38,13 @@
 #include "RuntimeEnabledFeatures.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
+#include "StyleScope.h"
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+#include "LayoutBoxGeometry.h"
 #include "LayoutContext.h"
+#include "LayoutState.h"
+#include "LayoutTreeBuilder.h"
+#include "RenderDescendantIterator.h"
 #endif
 
 #include <wtf/SetForScope.h>
@@ -50,12 +54,37 @@
 namespace WebCore {
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-static void layoutUsingFormattingContext(const RenderView& renderView)
+void FrameViewLayoutContext::layoutUsingFormattingContext()
 {
     if (!RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled())
         return;
-    Layout::LayoutContext::runLayoutAndVerify(renderView);
-} 
+    // FrameView::setContentsSize temporary disables layout.
+    if (m_disableSetNeedsLayoutCount)
+        return;
+
+    m_layoutState = nullptr;
+    m_layoutTree = nullptr;
+
+    auto& renderView = *this->renderView();
+    m_layoutTree = Layout::TreeBuilder::buildLayoutTree(renderView);
+    m_layoutState = makeUnique<Layout::LayoutState>(*document(), m_layoutTree->root());
+    auto layoutContext = Layout::LayoutContext { *m_layoutState };
+    layoutContext.layout(view().layoutSize());
+
+    // Clean up the render tree state when we don't run RenderView::layout.
+    if (renderView.needsLayout()) {
+        auto contentSize = Layout::BoxGeometry::marginBoxRect(m_layoutState->geometryForBox(*m_layoutState->root().firstChild())).size();
+        renderView.setSize(contentSize);
+        renderView.repaintViewRectangle({ 0, 0, contentSize.width(), contentSize.height() });
+
+        for (auto& descendant : descendantsOfType<RenderObject>(renderView))
+            descendant.clearNeedsLayout();
+        renderView.clearNeedsLayout();
+    }
+#ifndef NDEBUG
+    Layout::LayoutContext::verifyAndOutputMismatchingLayoutTree(*m_layoutState, renderView);
+#endif
+}
 #endif
 
 static bool isObjectAncestorContainerOf(RenderElement& ancestor, RenderElement& descendant)
@@ -156,11 +185,9 @@ void FrameViewLayoutContext::layout()
     LayoutScope layoutScope(*this);
     TraceScope tracingScope(LayoutStart, LayoutEnd);
     InspectorInstrumentation::willLayout(view().frame());
-    AnimationUpdateBlock animationUpdateBlock(&view().frame().animation());
     WeakPtr<RenderElement> layoutRoot;
     
     m_layoutTimer.stop();
-    m_delayedLayout = false;
     m_setNeedsLayoutWasDeferred = false;
 
 #if !LOG_DISABLED
@@ -175,13 +202,16 @@ void FrameViewLayoutContext::layout()
         return;
 
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InPreLayout);
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InPreLayout);
 
-        // If this is a new top-level layout and there are any remaining tasks from the previous layout, finish them now.
-        if (!isLayoutNested() && m_asynchronousTasksTimer.isActive() && !view().isInChildFrameWithFrameFlattening())
-            runAsynchronousTasks();
+        if (!frame().document()->isResolvingContainerQueries()) {
+            // If this is a new top-level layout and there are any remaining tasks from the previous layout, finish them now.
+            if (!isLayoutNested() && m_asynchronousTasksTimer.isActive() && !view().isInChildFrameWithFrameFlattening())
+                runAsynchronousTasks();
 
-        updateStyleForLayout();
+            updateStyleForLayout();
+        }
+
         if (view().hasOneRef())
             return;
 
@@ -189,13 +219,13 @@ void FrameViewLayoutContext::layout()
         if (!renderView())
             return;
 
-        layoutRoot = makeWeakPtr(subtreeLayoutRoot() ? subtreeLayoutRoot() : renderView());
-        m_needsFullRepaint = is<RenderView>(layoutRoot.get()) && (m_firstLayout || renderView()->printing());
+        layoutRoot = subtreeLayoutRoot() ? subtreeLayoutRoot() : renderView();
+        m_needsFullRepaint = is<RenderView>(layoutRoot) && (m_firstLayout || renderView()->printing());
         view().willDoLayout(layoutRoot);
         m_firstLayout = false;
     }
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InRenderTreeLayout);
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InRenderTreeLayout);
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         SubtreeLayoutStateMaintainer subtreeLayoutStateMaintainer(subtreeLayoutRoot());
         RenderView::RepaintRegionAccumulator repaintRegionAccumulator(renderView());
@@ -204,7 +234,7 @@ void FrameViewLayoutContext::layout()
 #endif
         layoutRoot->layout();
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-        layoutUsingFormattingContext(*renderView());
+        layoutUsingFormattingContext();
 #endif
         ++m_layoutCount;
 #if ENABLE(TEXT_AUTOSIZING)
@@ -213,10 +243,10 @@ void FrameViewLayoutContext::layout()
         clearSubtreeLayoutRoot();
     }
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InViewSizeAdjust);
-        if (is<RenderView>(layoutRoot.get()) && !renderView()->printing()) {
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InViewSizeAdjust);
+        if (is<RenderView>(layoutRoot) && !renderView()->printing()) {
             // This is to protect m_needsFullRepaint's value when layout() is getting re-entered through adjustViewSize().
-            SetForScope<bool> needsFullRepaint(m_needsFullRepaint);
+            SetForScope needsFullRepaint(m_needsFullRepaint);
             view().adjustViewSize();
             // FIXME: Firing media query callbacks synchronously on nested frames could produced a detached FrameView here by
             // navigating away from the current document (see webkit.org/b/173329).
@@ -225,7 +255,7 @@ void FrameViewLayoutContext::layout()
         }
     }
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InPostLayout);
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InPostLayout);
         if (m_needsFullRepaint)
             renderView()->repaintRootContents();
         ASSERT(!layoutRoot->needsLayout());
@@ -240,6 +270,12 @@ void FrameViewLayoutContext::runOrScheduleAsynchronousTasks()
 {
     if (m_asynchronousTasksTimer.isActive())
         return;
+
+    if (frame().document()->isResolvingContainerQueries()) {
+        // We are doing layout from style resolution to resolve container queries.
+        m_asynchronousTasksTimer.startOneShot(0_s);
+        return;
+    }
 
     if (view().isInChildFrameWithFrameFlattening()) {
         // While flattening frames, we defer post layout tasks to avoid getting stuck in a cycle,
@@ -270,7 +306,7 @@ void FrameViewLayoutContext::runAsynchronousTasks()
     m_asynchronousTasksTimer.stop();
     if (m_inAsynchronousTasks)
         return;
-    SetForScope<bool> inAsynchronousTasks(m_inAsynchronousTasks, true);
+    SetForScope inAsynchronousTasks(m_inAsynchronousTasks, true);
     view().performPostLayoutTasks();
 }
 
@@ -287,7 +323,6 @@ void FrameViewLayoutContext::reset()
     clearSubtreeLayoutRoot();
     m_layoutCount = 0;
     m_layoutSchedulingIsEnabled = true;
-    m_delayedLayout = false;
     m_layoutTimer.stop();
     m_firstLayout = true;
     m_asynchronousTasksTimer.stop();
@@ -352,21 +387,15 @@ void FrameViewLayoutContext::scheduleLayout()
     if (frame().ownerRenderer() && view().isInChildFrameWithFrameFlattening())
         frame().ownerRenderer()->setNeedsLayout(MarkContainingBlockChain);
 
-    Seconds delay = frame().document()->minimumLayoutDelay();
-    if (m_layoutTimer.isActive() && m_delayedLayout && !delay)
-        unscheduleLayout();
-
     if (m_layoutTimer.isActive())
         return;
 
-    m_delayedLayout = delay.value();
-
 #if !LOG_DISABLED
     if (!frame().document()->ownerElement())
-        LOG(Layout, "FrameView %p scheduling layout for %.3fs", this, delay.value());
+        LOG(Layout, "FrameView %p layout timer scheduled at %.3fs", this, frame().document()->timeSinceDocumentCreation().value());
 #endif
 
-    m_layoutTimer.startOneShot(delay);
+    m_layoutTimer.startOneShot(0_s);
 }
 
 void FrameViewLayoutContext::unscheduleLayout()
@@ -383,7 +412,6 @@ void FrameViewLayoutContext::unscheduleLayout()
 #endif
 
     m_layoutTimer.stop();
-    m_delayedLayout = false;
 }
 
 void FrameViewLayoutContext::scheduleSubtreeLayout(RenderElement& layoutRoot)
@@ -401,12 +429,10 @@ void FrameViewLayoutContext::scheduleSubtreeLayout(RenderElement& layoutRoot)
     }
 
     if (!isLayoutPending() && isLayoutSchedulingEnabled()) {
-        Seconds delay = renderView.document().minimumLayoutDelay();
         ASSERT(!layoutRoot.container() || is<RenderView>(layoutRoot.container()) || !layoutRoot.container()->needsLayout());
         setSubtreeLayoutRoot(layoutRoot);
         InspectorInstrumentation::didInvalidateLayout(frame());
-        m_delayedLayout = delay.value();
-        m_layoutTimer.startOneShot(delay);
+        m_layoutTimer.startOneShot(0_s);
         return;
     }
 
@@ -465,7 +491,7 @@ void FrameViewLayoutContext::convertSubtreeLayoutToFullLayout()
 
 void FrameViewLayoutContext::setSubtreeLayoutRoot(RenderElement& layoutRoot)
 {
-    m_subtreeLayoutRoot = makeWeakPtr(layoutRoot);
+    m_subtreeLayoutRoot = layoutRoot;
 }
 
 bool FrameViewLayoutContext::canPerformLayout() const
@@ -496,7 +522,7 @@ void FrameViewLayoutContext::applyTextSizingIfNeeded(RenderElement& layoutRoot)
     if (!idempotentMode && !minimumZoomFontSize)
         return;
     auto textAutosizingWidth = layoutRoot.page().textAutosizingWidth();
-    if (auto overrideWidth = settings.textAutosizingWindowSizeOverride().width())
+    if (auto overrideWidth = settings.textAutosizingWindowSizeOverrideWidth())
         textAutosizingWidth = overrideWidth;
     if (!idempotentMode && !textAutosizingWidth)
         return;
@@ -519,7 +545,7 @@ void FrameViewLayoutContext::updateStyleForLayout()
     // Viewport-dependent media queries may cause us to need completely different style information.
     document.styleScope().evaluateMediaQueriesForViewportChange();
 
-    document.evaluateMediaQueryList();
+    document.updateElementsAffectedByMediaQueries();
     // If there is any pagination to apply, it will affect the RenderView's style, so we should
     // take care of that now.
     view().applyPaginationToViewport();
@@ -575,7 +601,7 @@ void FrameViewLayoutContext::addLayoutDelta(const LayoutSize& delta)
         layoutState->addLayoutDelta(delta);
 }
     
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 bool FrameViewLayoutContext::layoutDeltaMatches(const LayoutSize& delta)
 {
     if (auto* layoutState = this->layoutState())

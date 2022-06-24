@@ -2,10 +2,10 @@
 <style>
     div.columns {
         display:inline-block;
-        -webkit-logical-height: 50px;
-        -webkit-logical-width: 100px;
-        -webkit-margin-before: 10px;
-        -webkit-margin-after: 10px;
+        block-size: 50px;
+        inline-size: 100px;
+        margin-block-start: 10px;
+        margin-block-end: 10px;
          padding: 5px;
         border: solid black;
         font-family: ahem;
@@ -100,7 +100,7 @@
     <br><div><br><img id="t13" style="width: 25px; height: 25px; background-color: lightblue;"></div>
 </div>
 <div class="columns vertical">
-    <div id="t14" style=" -webkit-margin-before: 40px; width: 25px; height: 25px; background-color: lightblue;"></div>
+    <div id="t14" style=" margin-block-start: 40px; width: 25px; height: 25px; background-color: lightblue;"></div>
 </div>
 
 
@@ -128,7 +128,7 @@
     <br><div><br><img id="t20" style="width: 25px; height: 25px; background-color: lightblue;"></div>
 </div>
 <div class="columns vertical flipped">
-    <div id="t21" style="-webkit-margin-before: 40px; width: 25px; height: 25px; background-color: lightblue;"></div>
+    <div id="t21" style="margin-block-start: 40px; width: 25px; height: 25px; background-color: lightblue;"></div>
 </div>
 
 
@@ -172,7 +172,7 @@
 
     var block = document.getElementById("t4");
     range.selectNode(block);
-    placeMarkersForRange(range, 1);
+    placeMarkersForRange(range, 2);
 
     var slider = document.getElementById("t5");
     range.selectNode(slider);
@@ -203,7 +203,7 @@
 
     var block = document.getElementById("t11");
     range.selectNode(block);
-    placeMarkersForRange(range, 1);
+    placeMarkersForRange(range, 2);
 
     var slider = document.getElementById("t12");
     range.selectNode(slider);
@@ -234,7 +234,7 @@
 
     var block = document.getElementById("t18");
     range.selectNode(block);
-    placeMarkersForRange(range, 1);
+    placeMarkersForRange(range, 2);
 
     var slider = document.getElementById("t19");
     range.selectNode(slider);

@@ -50,7 +50,7 @@ static Vector<String> filePathsFromFileURLs(const API::Array& fileURLs)
     for (size_t i = 0; i < size; ++i) {
         API::URL* apiURL = fileURLs.at<API::URL>(i);
         if (apiURL)
-            filePaths.uncheckedAppend(URL(URL(), apiURL->string()).fileSystemPath());
+            filePaths.uncheckedAppend(URL { apiURL->string() }.fileSystemPath());
     }
 
     return filePaths;
@@ -63,9 +63,9 @@ void WKOpenPanelResultListenerChooseMediaFiles(WKOpenPanelResultListenerRef list
 }
 #endif
 
-void WKOpenPanelResultListenerChooseFiles(WKOpenPanelResultListenerRef listenerRef, WKArrayRef fileURLsRef)
+void WKOpenPanelResultListenerChooseFiles(WKOpenPanelResultListenerRef listenerRef, WKArrayRef fileURLsRef, WKArrayRef allowedMimeTypesRef)
 {
-    toImpl(listenerRef)->chooseFiles(filePathsFromFileURLs(*toImpl(fileURLsRef)));
+    toImpl(listenerRef)->chooseFiles(filePathsFromFileURLs(*toImpl(fileURLsRef)), toImpl(allowedMimeTypesRef)->toStringVector());
 }
 
 void WKOpenPanelResultListenerCancel(WKOpenPanelResultListenerRef listenerRef)

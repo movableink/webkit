@@ -33,6 +33,7 @@
 #include "TestMain.h"
 #include "WebKitTestServer.h"
 #include "WebViewTest.h"
+#include <WebCore/SoupVersioning.h>
 #include <wtf/glib/GRefPtr.h>
 
 static WebKitTestServer* gServer;
@@ -80,11 +81,6 @@ static void testWebKitSettings(Test*, gconstpointer)
     g_assert_false(webkit_settings_get_enable_frame_flattening(settings));
     webkit_settings_set_enable_frame_flattening(settings, TRUE);
     g_assert_true(webkit_settings_get_enable_frame_flattening(settings));
-
-    // Plugins are enabled by default.
-    g_assert_true(webkit_settings_get_enable_plugins(settings));
-    webkit_settings_set_enable_plugins(settings, FALSE);
-    g_assert_false(webkit_settings_get_enable_plugins(settings));
 
     // Java is enabled by default.
     g_assert_true(webkit_settings_get_enable_java(settings));
@@ -169,8 +165,7 @@ static void testWebKitSettings(Test*, gconstpointer)
     g_assert_cmpuint(webkit_settings_font_size_to_points(8), ==, 6);
     g_assert_cmpuint(webkit_settings_font_size_to_points(24), ==, 18);
 
-    // Test font size on DPI change. The font size value in pixels should scale
-    // accordingly, while the font size value in points should remain the same.
+    // Test font size on DPI change.
     if (gtkSettings) {
         // At 96 DPI, 20 pixels is 15 points.
         webkit_settings_set_default_font_size(settings, 20);
@@ -181,12 +176,12 @@ static void testWebKitSettings(Test*, gconstpointer)
 
         // Set DPI to 120. The scaling factor is 120 / 96 == 1.25.
         g_object_set(gtkSettings, "gtk-xft-dpi", 120 * 1024, nullptr);
-        g_assert_cmpuint(webkit_settings_get_default_font_size(settings), ==, 25);
-        g_assert_cmpuint(webkit_settings_font_size_to_points(webkit_settings_get_default_font_size(settings)), ==, 15);
-        g_assert_cmpuint(webkit_settings_get_default_monospace_font_size(settings), ==, 20);
-        g_assert_cmpuint(webkit_settings_font_size_to_points(webkit_settings_get_default_monospace_font_size(settings)), ==, 12);
+        g_assert_cmpuint(webkit_settings_get_default_font_size(settings), ==, 20);
+        g_assert_cmpuint(webkit_settings_font_size_to_points(webkit_settings_get_default_font_size(settings) * 1.25), ==, 15);
+        g_assert_cmpuint(webkit_settings_get_default_monospace_font_size(settings), ==, 16);
+        g_assert_cmpuint(webkit_settings_font_size_to_points(webkit_settings_get_default_monospace_font_size(settings) * 1.25), ==, 12);
 
-        // Set DPI back to 96. The scaling factor is 96 / 120 == 0.8.
+        // Set DPI back to 96.
         g_object_set(gtkSettings, "gtk-xft-dpi", 96 * 1024, nullptr);
         g_assert_cmpuint(webkit_settings_get_default_font_size(settings), ==, 20);
         g_assert_cmpuint(webkit_settings_font_size_to_points(webkit_settings_get_default_font_size(settings)), ==, 15);
@@ -231,15 +226,15 @@ static void testWebKitSettings(Test*, gconstpointer)
     webkit_settings_set_print_backgrounds(settings, FALSE);
     g_assert_false(webkit_settings_get_print_backgrounds(settings));
 
-    // WebAudio is disabled by default.
-    g_assert_false(webkit_settings_get_enable_webaudio(settings));
-    webkit_settings_set_enable_webaudio(settings, TRUE);
+    // WebAudio is enabled by default.
     g_assert_true(webkit_settings_get_enable_webaudio(settings));
+    webkit_settings_set_enable_webaudio(settings, FALSE);
+    g_assert_false(webkit_settings_get_enable_webaudio(settings));
 
-    // WebGL is disabled by default.
-    g_assert_false(webkit_settings_get_enable_webgl(settings));
-    webkit_settings_set_enable_webgl(settings, TRUE);
+    // WebGL is enabled by default.
     g_assert_true(webkit_settings_get_enable_webgl(settings));
+    webkit_settings_set_enable_webgl(settings, FALSE);
+    g_assert_false(webkit_settings_get_enable_webgl(settings));
 
     // Allow Modal Dialogs is disabled by default.
     g_assert_false(webkit_settings_get_allow_modal_dialogs(settings));
@@ -281,25 +276,20 @@ static void testWebKitSettings(Test*, gconstpointer)
     webkit_settings_set_enable_page_cache(settings, FALSE);
     g_assert_false(webkit_settings_get_enable_page_cache(settings));
 
-    // By default, smooth scrolling is disabled.
-    g_assert_false(webkit_settings_get_enable_smooth_scrolling(settings));
-    webkit_settings_set_enable_smooth_scrolling(settings, TRUE);
+    // By default, smooth scrolling is enabled.
     g_assert_true(webkit_settings_get_enable_smooth_scrolling(settings));
-
-    // By default, accelerated 2D canvas is disabled.
-    g_assert_false(webkit_settings_get_enable_accelerated_2d_canvas(settings));
-    webkit_settings_set_enable_accelerated_2d_canvas(settings, TRUE);
-    g_assert_true(webkit_settings_get_enable_accelerated_2d_canvas(settings));
+    webkit_settings_set_enable_smooth_scrolling(settings, FALSE);
+    g_assert_false(webkit_settings_get_enable_smooth_scrolling(settings));
 
     // By default, writing of console messages to stdout is disabled.
     g_assert_false(webkit_settings_get_enable_write_console_messages_to_stdout(settings));
     webkit_settings_set_enable_write_console_messages_to_stdout(settings, TRUE);
     g_assert_true(webkit_settings_get_enable_write_console_messages_to_stdout(settings));
 
-    // MediaStream is disabled by default.
-    g_assert_false(webkit_settings_get_enable_media_stream(settings));
-    webkit_settings_set_enable_media_stream(settings, TRUE);
+    // MediaStream is enabled by default as experimental feature.
     g_assert_true(webkit_settings_get_enable_media_stream(settings));
+    webkit_settings_set_enable_media_stream(settings, FALSE);
+    g_assert_false(webkit_settings_get_enable_media_stream(settings));
 
     // By default, SpatialNavigation is disabled
     g_assert_false(webkit_settings_get_enable_spatial_navigation(settings));
@@ -331,20 +321,34 @@ static void testWebKitSettings(Test*, gconstpointer)
     webkit_settings_set_allow_universal_access_from_file_urls(settings, TRUE);
     g_assert_true(webkit_settings_get_allow_universal_access_from_file_urls(settings));
 
+    // Top frame navigation to data url is not allowed by default.
+    g_assert_false(webkit_settings_get_allow_top_navigation_to_data_urls(settings));
+    webkit_settings_set_allow_top_navigation_to_data_urls(settings, TRUE);
+    g_assert_true(webkit_settings_get_allow_top_navigation_to_data_urls(settings));
+
     // Media is enabled by default.
     g_assert_true(webkit_settings_get_enable_media(settings));
     webkit_settings_set_enable_media(settings, FALSE);
     g_assert_false(webkit_settings_get_enable_media(settings));
 
+    // Default media content types requiring hardware support is nullptr.
+    g_assert_cmpstr(nullptr, ==, webkit_settings_get_media_content_types_requiring_hardware_support(settings));
+    webkit_settings_set_media_content_types_requiring_hardware_support(settings, "video/*; codecs=\"*\"");
+    g_assert_cmpstr("video/*; codecs=\"*\"", ==, webkit_settings_get_media_content_types_requiring_hardware_support(settings));
+    webkit_settings_set_media_content_types_requiring_hardware_support(settings, nullptr);
+    g_assert_cmpstr(nullptr, ==, webkit_settings_get_media_content_types_requiring_hardware_support(settings));
+
 #if PLATFORM(GTK)
-    // Ondemand is the default hardware acceleration policy.
-    g_assert_cmpuint(webkit_settings_get_hardware_acceleration_policy(settings), ==, WEBKIT_HARDWARE_ACCELERATION_POLICY_ON_DEMAND);
+#if !USE(GTK4)
+    // Always is the default hardware acceleration policy.
+    g_assert_cmpuint(webkit_settings_get_hardware_acceleration_policy(settings), ==, WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS);
     webkit_settings_set_hardware_acceleration_policy(settings, WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER);
     g_assert_cmpuint(webkit_settings_get_hardware_acceleration_policy(settings), ==, WEBKIT_HARDWARE_ACCELERATION_POLICY_NEVER);
-    webkit_settings_set_hardware_acceleration_policy(settings, WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS);
-    g_assert_cmpuint(webkit_settings_get_hardware_acceleration_policy(settings), ==, WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS);
     webkit_settings_set_hardware_acceleration_policy(settings, WEBKIT_HARDWARE_ACCELERATION_POLICY_ON_DEMAND);
     g_assert_cmpuint(webkit_settings_get_hardware_acceleration_policy(settings), ==, WEBKIT_HARDWARE_ACCELERATION_POLICY_ON_DEMAND);
+    webkit_settings_set_hardware_acceleration_policy(settings, WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS);
+    g_assert_cmpuint(webkit_settings_get_hardware_acceleration_policy(settings), ==, WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS);
+#endif
 
     // Back-forward navigation gesture is disabled by default
     g_assert_false(webkit_settings_get_enable_back_forward_navigation_gestures(settings));
@@ -356,6 +360,13 @@ static void testWebKitSettings(Test*, gconstpointer)
     g_assert_true(webkit_settings_get_enable_javascript_markup(settings));
     webkit_settings_set_enable_javascript_markup(settings, FALSE);
     g_assert_false(webkit_settings_get_enable_javascript_markup(settings));
+
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    // Accelerated 2D canvas setting is deprecated and no-op.
+    g_assert_false(webkit_settings_get_enable_accelerated_2d_canvas(settings));
+    webkit_settings_set_enable_accelerated_2d_canvas(settings, TRUE);
+    g_assert_false(webkit_settings_get_enable_accelerated_2d_canvas(settings));
+ALLOW_DEPRECATED_DECLARATIONS_END
 
     g_object_unref(G_OBJECT(settings));
 }
@@ -442,7 +453,7 @@ static void testWebKitSettingsJavaScriptMarkup(WebViewTest* test, gconstpointer)
         " </body>"
         "</html>";
     test->loadHtml(html, nullptr);
-    test->waitUntilLoadFinished();
+    test->waitUntilTitleChanged();
 
     g_assert_cmpstr(webkit_web_view_get_title(test->m_webView), ==, "No JavaScript allowed");
     auto* jsResult = test->runJavaScriptAndWaitUntilFinished("document.getElementsByTagName('script').length", nullptr);
@@ -452,20 +463,25 @@ static void testWebKitSettingsJavaScriptMarkup(WebViewTest* test, gconstpointer)
     webkit_settings_set_enable_javascript_markup(webkit_web_view_get_settings(test->m_webView), TRUE);
 }
 
+#if USE(SOUP2)
 static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
+#else
+static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
+#endif
 {
-    if (message->method != SOUP_METHOD_GET) {
-        soup_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED);
+    if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+        soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
         return;
     }
 
     if (g_str_equal(path, "/")) {
-        const char* userAgent = soup_message_headers_get_one(message->request_headers, "User-Agent");
-        soup_message_set_status(message, SOUP_STATUS_OK);
-        soup_message_body_append(message->response_body, SOUP_MEMORY_COPY, userAgent, strlen(userAgent));
-        soup_message_body_complete(message->response_body);
+        const char* userAgent = soup_message_headers_get_one(soup_server_message_get_request_headers(message), "User-Agent");
+        auto* responseBody = soup_server_message_get_response_body(message);
+        soup_message_body_append(responseBody, SOUP_MEMORY_COPY, userAgent, strlen(userAgent));
+        soup_message_body_complete(responseBody);
+        soup_server_message_set_status(message, SOUP_STATUS_OK, nullptr);
     } else
-        soup_message_set_status(message, SOUP_STATUS_NOT_FOUND);
+        soup_server_message_set_status(message, SOUP_STATUS_NOT_FOUND, nullptr);
 }
 
 void beforeAll()

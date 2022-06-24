@@ -28,9 +28,26 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "APIObject.h"
+#include <WebCore/AuthenticatorTransport.h>
+#include <variant>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
+
+namespace WebCore {
+enum class ClientDataType : bool;
+
+class AuthenticatorResponse;
+
+struct ExceptionData;
+struct MockWebAuthenticationConfiguration;
+}
+
+namespace WebKit {
+class AuthenticatorManager;
+
+struct WebAuthenticationRequestData;
+}
 
 namespace API {
 
@@ -38,19 +55,40 @@ class WebAuthenticationPanelClient;
 
 class WebAuthenticationPanel final : public ObjectImpl<Object::Type::WebAuthenticationPanel>, public CanMakeWeakPtr<WebAuthenticationPanel> {
 public:
-    static Ref<WebAuthenticationPanel> create(const String& rpId);
+    using Response = std::variant<Ref<WebCore::AuthenticatorResponse>, WebCore::ExceptionData>;
+    using Callback = CompletionHandler<void(Response&&)>;
+
+    WebAuthenticationPanel();
     ~WebAuthenticationPanel();
 
-    WTF::String rpId() const { return m_rpId; }
+    void handleRequest(WebKit::WebAuthenticationRequestData&&, Callback&&);
+    void cancel() const;
+    void setMockConfiguration(WebCore::MockWebAuthenticationConfiguration&&);
 
     const WebAuthenticationPanelClient& client() const { return m_client.get(); }
     void setClient(UniqueRef<WebAuthenticationPanelClient>&&);
 
-private:
-    WebAuthenticationPanel(const String& rpId);
+    // FIXME: <rdar://problem/71509848> Remove the following deprecated methods.
+    using TransportSet = HashSet<WebCore::AuthenticatorTransport, WTF::IntHash<WebCore::AuthenticatorTransport>, WTF::StrongEnumHashTraits<WebCore::AuthenticatorTransport>>;
+    static Ref<WebAuthenticationPanel> create(const WebKit::AuthenticatorManager&, const WTF::String& rpId, const TransportSet&, WebCore::ClientDataType, const WTF::String& userName);
+    WTF::String rpId() const { return m_rpId; }
+    const Vector<WebCore::AuthenticatorTransport>& transports() const { return m_transports; }
+    WebCore::ClientDataType clientDataType() const { return m_clientDataType; }
+    WTF::String userName() const { return m_userName; }
 
-    WTF::String m_rpId;
+private:
+    // FIXME: <rdar://problem/71509848> Remove the following deprecated method.
+    WebAuthenticationPanel(const WebKit::AuthenticatorManager&, const WTF::String& rpId, const TransportSet&, WebCore::ClientDataType, const WTF::String& userName);
+
+    std::unique_ptr<WebKit::AuthenticatorManager> m_manager; // FIXME: <rdar://problem/71509848> Change to UniqueRef.
     UniqueRef<WebAuthenticationPanelClient> m_client;
+
+    // FIXME: <rdar://problem/71509848> Remove the following deprecated fields.
+    WeakPtr<WebKit::AuthenticatorManager> m_weakManager;
+    WTF::String m_rpId;
+    Vector<WebCore::AuthenticatorTransport> m_transports;
+    WebCore::ClientDataType m_clientDataType;
+    WTF::String m_userName;
 };
 
 } // namespace API

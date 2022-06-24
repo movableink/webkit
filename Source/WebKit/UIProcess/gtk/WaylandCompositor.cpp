@@ -28,6 +28,7 @@
 
 #if PLATFORM(WAYLAND) && USE(EGL) && !USE(WPE_RENDERER)
 
+#include "ProvisionalPageProxy.h"
 #include "WebKitWaylandServerProtocol.h"
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -41,9 +42,9 @@
 #if USE(OPENGL_ES)
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
-#include <WebCore/Extensions3DOpenGLES.h>
+#include <WebCore/ExtensionsGLOpenGLES.h>
 #else
-#include <WebCore/Extensions3DOpenGL.h>
+#include <WebCore/ExtensionsGLOpenGL.h>
 #include <WebCore/OpenGLShims.h>
 #endif
 
@@ -56,6 +57,10 @@ typedef EGLBoolean (*PFNEGLBINDWAYLANDDISPLAYWL) (EGLDisplay, struct wl_display*
 
 #if !defined(PFNEGLUNBINDWAYLANDDISPLAYWL)
 typedef EGLBoolean (*PFNEGLUNBINDWAYLANDDISPLAYWL) (EGLDisplay, struct wl_display*);
+#endif
+
+#if !defined(EGL_WAYLAND_BUFFER_WL)
+#define EGL_WAYLAND_BUFFER_WL 0x31D5
 #endif
 
 #if !defined(PFNEGLQUERYWAYLANDBUFFERWL)
@@ -228,7 +233,7 @@ void WaylandCompositor::Surface::attachBuffer(struct wl_resource* buffer)
 
     if (buffer) {
         auto* compositorBuffer = WaylandCompositor::Buffer::getOrCreate(buffer);
-        m_pendingBuffer = makeWeakPtr(*compositorBuffer);
+        m_pendingBuffer = *compositorBuffer;
     }
 }
 
@@ -423,9 +428,9 @@ bool WaylandCompositor::initializeEGL()
         return false;
 
 #if USE(OPENGL_ES)
-    std::unique_ptr<Extensions3DOpenGLES> glExtensions = makeUnique<Extensions3DOpenGLES>(nullptr,  false);
+    std::unique_ptr<ExtensionsGLOpenGLES> glExtensions = makeUnique<ExtensionsGLOpenGLES>(nullptr,  false);
 #else
-    std::unique_ptr<Extensions3DOpenGL> glExtensions = makeUnique<Extensions3DOpenGL>(nullptr, GLContext::current()->version() >= 320);
+    std::unique_ptr<ExtensionsGLOpenGL> glExtensions = makeUnique<ExtensionsGLOpenGL>(nullptr, GLContext::current()->version() >= 320);
 #endif
     if (glExtensions->supports("GL_OES_EGL_image") || glExtensions->supports("GL_OES_EGL_image_external"))
         glImageTargetTexture2D = reinterpret_cast<PFNGLEGLIMAGETARGETTEXTURE2DOESPROC>(eglGetProcAddress("glEGLImageTargetTexture2DOES"));
@@ -496,7 +501,7 @@ WaylandCompositor::WaylandCompositor()
         return;
     }
 
-    String displayName = "webkitgtk-wayland-compositor-" + createCanonicalUUIDString();
+    String displayName = "webkitgtk-wayland-compositor-" + createVersion4UUIDString();
     if (wl_display_add_socket(display.get(), displayName.utf8().data()) == -1) {
         WTFLogAlways("Nested Wayland compositor could not create display socket");
         return;
@@ -554,7 +559,9 @@ void WaylandCompositor::bindSurfaceToWebPage(WaylandCompositor::Surface* surface
 {
     WebPageProxy* webPage = nullptr;
     for (auto* page : m_pageMap.keys()) {
-        if (page->webPageID() == pageID) {
+        auto* provisionalPage = page->provisionalPageProxy();
+        auto webPageID = provisionalPage ? provisionalPage->webPageID() : page->webPageID();
+        if (webPageID == pageID) {
             webPage = page;
             break;
         }
@@ -562,8 +569,9 @@ void WaylandCompositor::bindSurfaceToWebPage(WaylandCompositor::Surface* surface
     if (!webPage)
         return;
 
+    unbindWebPage(*webPage);
     surface->setWebPage(webPage);
-    m_pageMap.set(webPage, makeWeakPtr(*surface));
+    m_pageMap.set(webPage, *surface);
 }
 
 void WaylandCompositor::bindWebPage(WebPageProxy& webPage)

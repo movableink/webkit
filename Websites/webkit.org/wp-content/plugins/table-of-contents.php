@@ -11,6 +11,7 @@ WebKitTableOfContents::init();
 
 class WebKitTableOfContents {
 
+    private static $supported_post_types = array('page', 'web_inspector_page');
     private static $editing = false;
     private static $toc = array();
     private static $attr_regex = '\{((?:[ ]*[#.][-_:a-zA-Z0-9]+){1,})[ ]*\}';
@@ -18,6 +19,17 @@ class WebKitTableOfContents {
     public function init() {
         add_filter( 'wp_insert_post_data', array( 'WebKitTableOfContents', 'wp_insert_post_data' ), 20, 2 );
         add_action( 'wp_insert_post', array( 'WebKitTableOfContents', 'wp_insert_post' ) );
+    }
+    
+    public static function tocEnabled ($post_type) {
+        $build_toc = get_post_meta(get_the_ID(), 'build-table-of-contents', true);
+        if ($build_toc === 'enabled')
+            return true;
+
+        if (in_array($post_type, self::$supported_post_types))
+            return true;
+
+        return false;
     }
 
     public static function hasIndex() {
@@ -32,9 +44,10 @@ class WebKitTableOfContents {
     }
 
     public static function renderMarkup() {
-        if ( ! is_page() ) return;
+        if (!self::tocEnabled(get_post_type()))
+            return;
 
-        if ( empty(self::$toc) || ! self::hasIndex() )
+        if ( ! self::hasIndex() || empty(self::$toc) )
             return;
 
         $depth = 0;
@@ -72,8 +85,7 @@ class WebKitTableOfContents {
     }
 
     public function wp_insert_post_data( $post_data, $record ) {
-
-        if ( ! in_array($post_data['post_type'], array('page')) )
+        if (!self::tocEnabled($post_data['post_type']))
             return $post_data;
 
         $post_data['post_content'] = self::parse($post_data['post_content']);
@@ -102,6 +114,7 @@ class WebKitTableOfContents {
 
     public static function index( $matches ) {
         list($marked, $level, $heading) = $matches;
+        $heading = strip_tags($heading);
         $anchor = sanitize_title_with_dashes($heading);
         self::$toc[ "$level::$anchor" ] = $heading;
         return sprintf('<h%2$d><a name="%1$s"></a>%3$s</h%2$d>', $anchor, $level, $heading);

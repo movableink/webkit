@@ -46,10 +46,6 @@
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #endif
 
-#if USE(DIRECT2D)
-#include <dwrite_3.h>
-#endif
-
 using std::min;
 
 namespace WebCore
@@ -146,7 +142,7 @@ static const Vector<String>* getLinkedFonts(String& family)
     return result;
 }
 
-static const Vector<DWORD, 4>& getCJKCodePageMasks()
+static const Vector<DWORD, 4>& getCJKCodePageMasks(FontCache& fontCache)
 {
     // The default order in which we look for a font for a CJK character. If the user's default code page is
     // one of these, we will use it first.
@@ -161,7 +157,7 @@ static const Vector<DWORD, 4>& getCJKCodePageMasks()
     static bool initialized;
     if (!initialized) {
         initialized = true;
-        IMLangFontLinkType* langFontLink = FontCache::singleton().getFontLinkInterface();
+        IMLangFontLinkType* langFontLink = fontCache.getFontLinkInterface();
         if (!langFontLink)
             return codePageMasks;
 
@@ -183,8 +179,36 @@ static const Vector<DWORD, 4>& getCJKCodePageMasks()
     return codePageMasks;
 }
 
-static bool currentFontContainsCharacter(HDC hdc, UChar character)
+static bool currentFontContainsCharacterNonBMP(HDC hdc, const UChar* str)
 {
+    ASSERT(U_IS_LEAD(str[0]) && U_IS_TRAIL(str[1]));
+
+    SCRIPT_CACHE sc = { };
+    SCRIPT_FONTPROPERTIES fp = { };
+    fp.cBytes = sizeof fp;
+    ScriptGetFontProperties(hdc, &sc, &fp);
+    ScriptFreeCache(&sc);
+
+    wchar_t glyphs[2] = { };
+    GCP_RESULTS gcpResults = { };
+    gcpResults.lStructSize = sizeof gcpResults;
+    gcpResults.nGlyphs = 2;
+    gcpResults.lpGlyphs = glyphs;
+    GetCharacterPlacement(hdc, wcharFrom(str), 2, 0, &gcpResults, GCP_GLYPHSHAPE);
+
+    if (gcpResults.nGlyphs != 1)
+        return false;
+    auto glyph = glyphs[0];
+    return !(glyph == fp.wgBlank || glyph == fp.wgInvalid || glyph == fp.wgDefault);
+}
+
+static bool currentFontContainsCharacter(HDC hdc, const UChar* str, size_t length)
+{
+    ASSERT(length <= 2);
+    if (length == 2)
+        return currentFontContainsCharacterNonBMP(hdc, str);
+    UChar character = str[0];
+
     static Vector<char, 512> glyphsetBuffer;
     glyphsetBuffer.resize(GetFontUnicodeRanges(hdc, 0));
     GLYPHSET* glyphset = reinterpret_cast<GLYPHSET*>(glyphsetBuffer.data());
@@ -213,14 +237,15 @@ static HFONT createMLangFont(IMLangFontLinkType* langFontLink, HDC hdc, DWORD co
 
 RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& description, const Font* originalFontData, IsForPlatformFont, PreferColoredFont, const UChar* characters, unsigned length)
 {
-    UChar character = characters[0];
     RefPtr<Font> fontData;
     HWndDC hdc(0);
     HFONT primaryFont = originalFontData->platformData().hfont();
     HGDIOBJ oldFont = SelectObject(hdc, primaryFont);
     HFONT hfont = 0;
+    IMLangFontLinkType* langFontLink = getFontLinkInterface();
 
-    if (IMLangFontLinkType* langFontLink = getFontLinkInterface()) {
+    if (length == 1 && langFontLink) {
+        UChar character = characters[0];
         // Try MLang font linking first.
         DWORD codePages = 0;
         if (SUCCEEDED(langFontLink->GetCharCodePages(character, &codePages))) {
@@ -228,7 +253,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& descr
                 // The CJK character may belong to multiple code pages. We want to
                 // do font linking against a single one of them, preferring the default
                 // code page for the user's locale.
-                const Vector<DWORD, 4>& CJKCodePageMasks = getCJKCodePageMasks();
+                const Vector<DWORD, 4>& CJKCodePageMasks = getCJKCodePageMasks(*this);
                 unsigned numCodePages = CJKCodePageMasks.size();
                 for (unsigned i = 0; i < numCodePages && !hfont; ++i) {
                     hfont = createMLangFont(langFontLink, hdc, CJKCodePageMasks[i]);
@@ -236,7 +261,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& descr
                         // We asked about a code page that is not one of the code pages
                         // returned by MLang, so the font might not contain the character.
                         SelectObject(hdc, hfont);
-                        if (!currentFontContainsCharacter(hdc, character)) {
+                        if (!currentFontContainsCharacter(hdc, characters, length)) {
                             DeleteObject(hfont);
                             hfont = 0;
                         }
@@ -287,7 +312,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& descr
         GetTextFace(hdc, LF_FACESIZE, name);
         familyName = String(name);
 
-        if (containsCharacter || currentFontContainsCharacter(hdc, character))
+        if (containsCharacter || currentFontContainsCharacter(hdc, characters, length))
             break;
 
         if (!linkedFonts)
@@ -309,8 +334,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& descr
 
     if (hfont) {
         if (!familyName.isEmpty()) {
-            FontPlatformData* result = getCachedFontPlatformData(description, familyName);
-            if (result)
+            if (auto result = cachedFontPlatformData(description, familyName))
                 fontData = fontForPlatformData(*result);
         }
 
@@ -333,9 +357,9 @@ bool FontCache::isSystemFontForbiddenForEditing(const String&)
     return false;
 }
 
-RefPtr<Font> FontCache::fontFromDescriptionAndLogFont(const FontDescription& fontDescription, const LOGFONT& font, AtomString& outFontFamilyName)
+RefPtr<Font> FontCache::fontFromDescriptionAndLogFont(const FontDescription& fontDescription, const LOGFONT& font, String& outFontFamilyName)
 {
-    AtomString familyName(font.lfFaceName, wcsnlen(font.lfFaceName, LF_FACESIZE));
+    String familyName(font.lfFaceName, wcsnlen(font.lfFaceName, LF_FACESIZE));
     RefPtr<Font> fontData = fontForFamily(fontDescription, familyName);
     if (fontData)
         outFontFamilyName = familyName;
@@ -344,56 +368,60 @@ RefPtr<Font> FontCache::fontFromDescriptionAndLogFont(const FontDescription& fon
 
 Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescription)
 {
-    static NeverDestroyed<AtomString> fallbackFontName;
+    static NeverDestroyed<String> fallbackFontName;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [&]() {
+        // FIXME: Would be even better to somehow get the user's default font here. For now we'll pick
+        // the default that the user would get without changing any prefs.
 
-    if (!fallbackFontName.get().isEmpty())
-        return *fontForFamily(fontDescription, fallbackFontName);
-
-    // FIXME: Would be even better to somehow get the user's default font here.  For now we'll pick
-    // the default that the user would get without changing any prefs.
-
-    // Search all typical Windows-installed full Unicode fonts.
-    // Sorted by most to least glyphs according to http://en.wikipedia.org/wiki/Unicode_typefaces
-    // Start with Times New Roman also since it is the default if the user doesn't change prefs.
-    static NeverDestroyed<AtomString> fallbackFonts[] = {
-        AtomString("Times New Roman", AtomString::ConstructFromLiteral),
-        AtomString("Microsoft Sans Serif", AtomString::ConstructFromLiteral),
-        AtomString("Tahoma", AtomString::ConstructFromLiteral),
-        AtomString("Lucida Sans Unicode", AtomString::ConstructFromLiteral),
-        AtomString("Arial", AtomString::ConstructFromLiteral)
-    };
-    RefPtr<Font> simpleFont;
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(fallbackFonts); ++i) {
-        if (simpleFont = fontForFamily(fontDescription, fallbackFonts[i])) {
-            fallbackFontName.get() = fallbackFonts[i];
-            return *simpleFont;
+        // Search all typical Windows-installed full Unicode fonts.
+        // Sorted by most to least glyphs according to http://en.wikipedia.org/wiki/Unicode_typefaces
+        // Start with Times New Roman also since it is the default if the user doesn't change prefs.
+        static NeverDestroyed<const String> fallbackFonts[] = {
+            String("Times New Roman", String::ConstructFromLiteral),
+            String("Microsoft Sans Serif", String::ConstructFromLiteral),
+            String("Tahoma", String::ConstructFromLiteral),
+            String("Lucida Sans Unicode", String::ConstructFromLiteral),
+            String("Arial", String::ConstructFromLiteral)
+        };
+        for (size_t i = 0; i < WTF_ARRAY_LENGTH(fallbackFonts); ++i) {
+            if (fontForFamily(fontDescription, fallbackFonts[i])) {
+                fallbackFontName.get() = fallbackFonts[i];
+                return;
+            }
         }
+
+        // Fall back to the DEFAULT_GUI_FONT if no known Unicode fonts are available.
+        if (HFONT defaultGUIFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT))) {
+            LOGFONT defaultGUILogFont;
+            GetObject(defaultGUIFont, sizeof(defaultGUILogFont), &defaultGUILogFont);
+            if (fontFromDescriptionAndLogFont(fontDescription, defaultGUILogFont, fallbackFontName))
+                return;
+        }
+
+        // Fall back to Non-client metrics fonts.
+        NONCLIENTMETRICS nonClientMetrics { };
+        nonClientMetrics.cbSize = sizeof(nonClientMetrics);
+        if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(nonClientMetrics), &nonClientMetrics, 0)) {
+            if (fontFromDescriptionAndLogFont(fontDescription, nonClientMetrics.lfMessageFont, fallbackFontName))
+                return;
+            if (fontFromDescriptionAndLogFont(fontDescription, nonClientMetrics.lfMenuFont, fallbackFontName))
+                return;
+            if (fontFromDescriptionAndLogFont(fontDescription, nonClientMetrics.lfStatusFont, fallbackFontName))
+                return;
+            if (fontFromDescriptionAndLogFont(fontDescription, nonClientMetrics.lfCaptionFont, fallbackFontName))
+                return;
+            if (fontFromDescriptionAndLogFont(fontDescription, nonClientMetrics.lfSmCaptionFont, fallbackFontName))
+                return;
+        }
+    });
+
+    if (!fallbackFontName.get().isEmpty()) {
+        auto fallbackFont = fontForFamily(fontDescription, fallbackFontName);
+        if (fallbackFont)
+            return *fallbackFont;
     }
 
-    // Fall back to the DEFAULT_GUI_FONT if no known Unicode fonts are available.
-    if (HFONT defaultGUIFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT))) {
-        LOGFONT defaultGUILogFont;
-        GetObject(defaultGUIFont, sizeof(defaultGUILogFont), &defaultGUILogFont);
-        if (simpleFont = fontFromDescriptionAndLogFont(fontDescription, defaultGUILogFont, fallbackFontName))
-            return *simpleFont;
-    }
-
-    // Fall back to Non-client metrics fonts.
-    NONCLIENTMETRICS nonClientMetrics { };
-    nonClientMetrics.cbSize = sizeof(nonClientMetrics);
-    if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(nonClientMetrics), &nonClientMetrics, 0)) {
-        if (simpleFont = fontFromDescriptionAndLogFont(fontDescription, nonClientMetrics.lfMessageFont, fallbackFontName))
-            return *simpleFont;
-        if (simpleFont = fontFromDescriptionAndLogFont(fontDescription, nonClientMetrics.lfMenuFont, fallbackFontName))
-            return *simpleFont;
-        if (simpleFont = fontFromDescriptionAndLogFont(fontDescription, nonClientMetrics.lfStatusFont, fallbackFontName))
-            return *simpleFont;
-        if (simpleFont = fontFromDescriptionAndLogFont(fontDescription, nonClientMetrics.lfCaptionFont, fallbackFontName))
-            return *simpleFont;
-        if (simpleFont = fontFromDescriptionAndLogFont(fontDescription, nonClientMetrics.lfSmCaptionFont, fallbackFontName))
-            return *simpleFont;
-    }
-    
     auto hFont = adoptGDIObject(static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
     FontPlatformData platformData(WTFMove(hFont), fontDescription.computedPixelSize(), false, false, false);
     return fontForPlatformData(platformData);
@@ -507,7 +535,7 @@ static GDIObject<HFONT> createGDIFont(const AtomString& family, LONG desiredWeig
     matchData.m_chosen.lfUnderline = false;
     matchData.m_chosen.lfStrikeOut = false;
     matchData.m_chosen.lfCharSet = DEFAULT_CHARSET;
-#if USE(CG) || USE(CAIRO) || USE(DIRECT2D)
+#if USE(CG) || USE(CAIRO)
     matchData.m_chosen.lfOutPrecision = OUT_TT_ONLY_PRECIS;
 #else
     matchData.m_chosen.lfOutPrecision = OUT_TT_PRECIS;
@@ -617,7 +645,7 @@ Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamil
     return result;
 }
 
-std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontFeatureSettings*, const FontVariantSettings*, FontSelectionSpecifiedCapabilities)
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext&)
 {
     bool isLucidaGrande = equalLettersIgnoringASCIICase(family, "lucida grande");
 
@@ -647,8 +675,6 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
 
 #if USE(CG)
     bool fontCreationFailed = !result->cgFont();
-#elif USE(DIRECT2D)
-    bool fontCreationFailed = !result->dwFont();
 #elif USE(CAIRO)
     bool fontCreationFailed = !result->scaledFont();
 #endif
@@ -663,11 +689,8 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     return result;
 }
 
-const AtomString& FontCache::platformAlternateFamilyName(const AtomString& familyName)
+std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String& familyName)
 {
-    static NeverDestroyed<AtomString> timesNewRoman("Times New Roman", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> microsoftSansSerif("Microsoft Sans Serif", AtomString::ConstructFromLiteral);
-
     switch (familyName.length()) {
     // On Windows, we don't support bitmap fonts, but legacy content expects support.
     // Thus we allow Times New Roman as an alternative for the bitmap font MS Serif,
@@ -676,7 +699,7 @@ const AtomString& FontCache::platformAlternateFamilyName(const AtomString& famil
     // would need it on other platforms too.
     case 8:
         if (equalLettersIgnoringASCIICase(familyName, "ms serif"))
-            return timesNewRoman;
+            return "Times New Roman"_s;
         break;
     // On Windows, we don't support bitmap fonts, but legacy content expects support.
     // Thus we allow Microsoft Sans Serif as an alternative for the bitmap font MS Sans Serif,
@@ -685,10 +708,10 @@ const AtomString& FontCache::platformAlternateFamilyName(const AtomString& famil
     // would need it on other platforms too.
     case 13:
         if (equalLettersIgnoringASCIICase(familyName, "ms sans serif"))
-            return microsoftSansSerif;
+            return "Microsoft Sans Serif"_s;
         break;
     }
-    return nullAtom();
+    return std::nullopt;
 }
 
 }

@@ -29,6 +29,7 @@
 #include "JSCInlines.h"
 #include "JSCValuePrivate.h"
 #include "JSCallbackObject.h"
+#include "JSContextRef.h"
 
 namespace JSC {
 
@@ -74,25 +75,25 @@ JSCClass* WrapperMap::registeredClass(JSClassRef jsClass) const
     return m_classMap.get(jsClass);
 }
 
-JSObject* WrapperMap::createJSWrappper(JSGlobalContextRef jsContext, JSClassRef jsClass, JSValueRef prototype, gpointer wrappedObject, GDestroyNotify destroyFunction)
+JSObject* WrapperMap::createJSWrapper(JSGlobalContextRef jsContext, JSClassRef jsClass, JSValueRef prototype, gpointer wrappedObject, GDestroyNotify destroyFunction)
 {
     ASSERT(toJSGlobalObject(jsContext)->wrapperMap() == this);
-    ExecState* exec = toJS(jsContext);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(jsContext);
+    VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
-    auto* object = JSC::JSCallbackObject<JSC::JSAPIWrapperObject>::create(exec, exec->lexicalGlobalObject(), exec->lexicalGlobalObject()->glibWrapperObjectStructure(), jsClass, nullptr);
+    auto* object = JSC::JSCallbackObject<JSC::JSAPIWrapperObject>::create(globalObject, globalObject->glibWrapperObjectStructure(), jsClass, nullptr);
     if (wrappedObject) {
         object->setWrappedObject(new JSC::JSCGLibWrapperObject(wrappedObject, destroyFunction));
         m_cachedJSWrappers->set(wrappedObject, object);
     }
     if (prototype)
         JSObjectSetPrototype(jsContext, toRef(object), prototype);
-    else if (auto* jsPrototype = jsClass->prototype(exec))
+    else if (auto* jsPrototype = jsClass->prototype(globalObject))
         object->setPrototypeDirect(vm, jsPrototype);
     return object;
 }
 
-JSGlobalContextRef WrapperMap::createContextWithJSWrappper(JSContextGroupRef jsGroup, JSClassRef jsClass, JSValueRef prototype, gpointer wrappedObject, GDestroyNotify destroyFunction)
+JSGlobalContextRef WrapperMap::createContextWithJSWrapper(JSContextGroupRef jsGroup, JSClassRef jsClass, JSValueRef prototype, gpointer wrappedObject, GDestroyNotify destroyFunction)
 {
     Ref<VM> vm(*toJS(jsGroup));
     JSLockHolder locker(vm.ptr());
@@ -101,15 +102,14 @@ JSGlobalContextRef WrapperMap::createContextWithJSWrappper(JSContextGroupRef jsG
         globalObject->setWrappedObject(new JSC::JSCGLibWrapperObject(wrappedObject, destroyFunction));
         m_cachedJSWrappers->set(wrappedObject, globalObject);
     }
-    ExecState* exec = globalObject->globalExec();
     if (prototype)
-        globalObject->resetPrototype(vm.get(), toJS(exec, prototype));
-    else if (auto jsPrototype = jsClass->prototype(exec))
+        globalObject->resetPrototype(vm.get(), toJS(globalObject, prototype));
+    else if (auto jsPrototype = jsClass->prototype(globalObject))
         globalObject->resetPrototype(vm.get(), jsPrototype);
     else
         globalObject->resetPrototype(vm.get(), jsNull());
 
-    return JSGlobalContextRetain(toGlobalRef(exec));
+    return JSGlobalContextRetain(toGlobalRef(globalObject));
 }
 
 JSObject* WrapperMap::jsWrapper(gpointer wrappedObject) const

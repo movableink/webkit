@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,11 +24,14 @@
  */
 
 #import "config.h"
-#import "WebPreferencesDefaultValues.h"
+#import "WebPreferencesDefaultValuesIOS.h"
 
 #if PLATFORM(IOS_FAMILY)
 
-#import "UIKitSPI.h"
+#import "UserInterfaceIdiom.h"
+#import <WebCore/Device.h>
+#import <pal/ios/ManagedConfigurationSoftLink.h>
+#import <pal/spi/ios/ManagedConfigurationSPI.h>
 
 namespace WebKit {
 
@@ -36,7 +39,36 @@ namespace WebKit {
 
 bool defaultTextAutosizingUsesIdempotentMode()
 {
-    return currentUserInterfaceIdiomIsPad();
+    return !currentUserInterfaceIdiomIsSmallScreen();
+}
+
+#endif
+
+#if !PLATFORM(MACCATALYST) && !PLATFORM(WATCHOS)
+static std::optional<bool>& cachedAllowsRequest()
+{
+    static NeverDestroyed<std::optional<bool>> allowsRequest;
+    return allowsRequest;
+}
+
+bool allowsDeprecatedSynchronousXMLHttpRequestDuringUnload()
+{
+    if (!cachedAllowsRequest())
+        cachedAllowsRequest() = [[PAL::getMCProfileConnectionClass() sharedConnection] effectiveBoolValueForSetting:@"allowDeprecatedWebKitSynchronousXHRLoads"] == MCRestrictedBoolExplicitYes;
+    return *cachedAllowsRequest();
+}
+
+void setAllowsDeprecatedSynchronousXMLHttpRequestDuringUnload(bool allowsRequest)
+{
+    cachedAllowsRequest() = allowsRequest;
+}
+#endif
+
+#if ENABLE(MEDIA_SOURCE)
+
+bool defaultMediaSourceEnabled()
+{
+    return !WebCore::deviceClassIsSmallScreen();
 }
 
 #endif

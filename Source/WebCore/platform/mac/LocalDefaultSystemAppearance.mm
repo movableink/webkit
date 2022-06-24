@@ -22,31 +22,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "LocalDefaultSystemAppearance.h"
+#import "config.h"
+#import "LocalDefaultSystemAppearance.h"
 
 #if USE(APPKIT)
 
-#include <AppKit/NSAppearance.h>
+#import "ColorMac.h"
+
+#import <AppKit/NSAppearance.h>
+#import <pal/spi/mac/NSAppearanceSPI.h>
 
 namespace WebCore {
 
-LocalDefaultSystemAppearance::LocalDefaultSystemAppearance(bool useDarkAppearance)
+LocalDefaultSystemAppearance::LocalDefaultSystemAppearance(bool useDarkAppearance, const Color& tintColor)
 {
 #if HAVE(OS_DARK_MODE_SUPPORT)
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     m_savedSystemAppearance = [NSAppearance currentAppearance];
+    ALLOW_DEPRECATED_DECLARATIONS_END
     m_usingDarkAppearance = useDarkAppearance;
 
-    [NSAppearance setCurrentAppearance:[NSAppearance appearanceNamed:m_usingDarkAppearance ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua]];
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    NSAppearance *appearance = [NSAppearance appearanceNamed:m_usingDarkAppearance ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua];
+
+    if (tintColor.isValid())
+        appearance = [appearance appearanceByApplyingTintColor:cocoaColor(tintColor).get()];
+
+    [NSAppearance setCurrentAppearance:appearance];
+    ALLOW_DEPRECATED_DECLARATIONS_END
 #else
     UNUSED_PARAM(useDarkAppearance);
+    UNUSED_PARAM(tintColor);
 #endif
 }
 
 LocalDefaultSystemAppearance::~LocalDefaultSystemAppearance()
 {
 #if HAVE(OS_DARK_MODE_SUPPORT)
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     [NSAppearance setCurrentAppearance:m_savedSystemAppearance.get()];
+    ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
 }
 

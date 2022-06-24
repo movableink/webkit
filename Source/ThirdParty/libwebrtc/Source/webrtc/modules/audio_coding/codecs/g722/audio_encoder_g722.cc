@@ -12,7 +12,6 @@
 
 #include <cstdint>
 
-#include "common_types.h"
 #include "modules/audio_coding/codecs/g722/g722_interface.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/numerics/safe_conversions.h"
@@ -22,13 +21,6 @@ namespace webrtc {
 namespace {
 
 const size_t kSampleRateHz = 16000;
-
-AudioEncoderG722Config CreateConfig(const CodecInst& codec_inst) {
-  AudioEncoderG722Config config;
-  config.num_channels = rtc::dchecked_cast<int>(codec_inst.channels);
-  config.frame_size_ms = codec_inst.pacsize / 16;
-  return config;
-}
 
 }  // namespace
 
@@ -51,9 +43,6 @@ AudioEncoderG722Impl::AudioEncoderG722Impl(const AudioEncoderG722Config& config,
   }
   Reset();
 }
-
-AudioEncoderG722Impl::AudioEncoderG722Impl(const CodecInst& codec_inst)
-    : AudioEncoderG722Impl(CreateConfig(codec_inst), codec_inst.pltype) {}
 
 AudioEncoderG722Impl::~AudioEncoderG722Impl() = default;
 
@@ -88,6 +77,12 @@ void AudioEncoderG722Impl::Reset() {
   num_10ms_frames_buffered_ = 0;
   for (size_t i = 0; i < num_channels_; ++i)
     RTC_CHECK_EQ(0, WebRtcG722_EncoderInit(encoders_[i].encoder));
+}
+
+absl::optional<std::pair<TimeDelta, TimeDelta>>
+AudioEncoderG722Impl::GetFrameLengthRange() const {
+  return {{TimeDelta::Millis(num_10ms_frames_per_packet_ * 10),
+           TimeDelta::Millis(num_10ms_frames_per_packet_ * 10)}};
 }
 
 AudioEncoder::EncodedInfo AudioEncoderG722Impl::EncodeImpl(

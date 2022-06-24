@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2015-2016 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,12 @@ public:
 
     static constexpr bool needsDestruction = true;
 
+    template<typename CellType, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.symbolSpace<mode>();
+    }
+
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(SymbolType, StructureFlags), info());
@@ -49,14 +55,14 @@ public:
     static Symbol* createWithDescription(VM&, const String&);
     JS_EXPORT_PRIVATE static Symbol* create(VM&, SymbolImpl& uid);
 
+    SymbolImpl& uid() const { return m_privateName.uid(); }
     PrivateName privateName() const { return m_privateName; }
     String descriptiveString() const;
     String description() const;
 
-    JSValue toPrimitive(ExecState*, PreferredPrimitiveType) const;
-    bool getPrimitiveNumber(ExecState*, double& number, JSValue&) const;
-    JSObject* toObject(ExecState*, JSGlobalObject*) const;
-    double toNumber(ExecState*) const;
+    JSValue toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const;
+    JSObject* toObject(JSGlobalObject*) const;
+    double toNumber(JSGlobalObject*) const;
 
     static ptrdiff_t offsetOfSymbolImpl()
     {
@@ -64,7 +70,7 @@ public:
         return OBJECT_OFFSETOF(Symbol, m_privateName);
     }
 
-protected:
+private:
     static void destroy(JSCell*);
 
     Symbol(VM&);

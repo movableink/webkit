@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2011, 2014-2015 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "NetworkStorageSessionMap.h"
 #include "WebNotificationCenter.h"
 #include "WebPreferenceKeysPrivate.h"
+#include "WebPreferencesDefinitions.h"
 
 #if USE(CG)
 #include <CoreGraphics/CoreGraphics.h>
@@ -104,9 +105,23 @@ static bool booleanValueForPreferencesValue(CFPropertyListRef value)
     return numberValueForPreferencesValue<int>(value);
 }
 
+static RetainPtr<CFStringRef> stringValueForPreferencesValue(CFPropertyListRef value)
+{
+    if (!value)
+        return nullptr;
+    if (CFGetTypeID(value) != CFStringGetTypeID())
+        return nullptr;
+
+    return static_cast<CFStringRef>(value);
+}
+
 // WebPreferences ----------------------------------------------------------------
 
-static CFDictionaryRef defaultSettings;
+static RetainPtr<CFDictionaryRef>& defaultSettings()
+{
+    static NeverDestroyed<RetainPtr<CFDictionaryRef>> defaultSettings;
+    return defaultSettings;
+}
 
 RetainPtr<CFStringRef> WebPreferences::m_applicationId = kCFPreferencesCurrentApplication;
 #endif
@@ -150,6 +165,10 @@ WebPreferences* WebPreferences::createInstance()
 
 HRESULT WebPreferences::postPreferencesChangesNotification()
 {
+    if (m_updateBatchCount) {
+        m_needsUpdateAfterBatch = true;
+        return S_OK;
+    }
     IWebNotificationCenter* nc = WebNotificationCenter::defaultCenterInternal();
     HRESULT hr = nc->postNotificationName(webPreferencesChangedNotification(), static_cast<IWebPreferences*>(this), 0);
     if (FAILED(hr))
@@ -203,147 +222,155 @@ CFStringRef WebPreferences::applicationId()
 void WebPreferences::initializeDefaultSettings()
 {
 #if USE(CF)
-    if (defaultSettings)
+    if (defaultSettings())
         return;
 
-    CFMutableDictionaryRef defaults = CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    auto defaults = adoptCF(CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitStandardFontPreferenceKey), CFSTR("Times New Roman"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitFixedFontPreferenceKey), CFSTR("Courier New"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitSerifFontPreferenceKey), CFSTR("Times New Roman"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitSansSerifFontPreferenceKey), CFSTR("Arial"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitCursiveFontPreferenceKey), CFSTR("Comic Sans MS"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitFantasyFontPreferenceKey), CFSTR("Comic Sans MS"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitPictographFontPreferenceKey), CFSTR("Segoe UI Symbol"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitMinimumFontSizePreferenceKey), CFSTR("0"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitMinimumLogicalFontSizePreferenceKey), CFSTR("9"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitDefaultFontSizePreferenceKey), CFSTR("16"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitDefaultFixedFontSizePreferenceKey), CFSTR("13"));
+    INITIALIZE_DEFAULT_PREFERENCES_DICTIONARY_FROM_GENERATED_PREFERENCES;
+
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitStandardFontPreferenceKey), CFSTR("Times New Roman"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitFixedFontPreferenceKey), CFSTR("Courier New"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitSerifFontPreferenceKey), CFSTR("Times New Roman"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitSansSerifFontPreferenceKey), CFSTR("Arial"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitCursiveFontPreferenceKey), CFSTR("Comic Sans MS"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitFantasyFontPreferenceKey), CFSTR("Comic Sans MS"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitPictographFontPreferenceKey), CFSTR("Segoe UI Symbol"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitMinimumFontSizePreferenceKey), CFSTR("0"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitMinimumLogicalFontSizePreferenceKey), CFSTR("9"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitDefaultFontSizePreferenceKey), CFSTR("16"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitDefaultFixedFontSizePreferenceKey), CFSTR("13"));
 
     String defaultDefaultEncoding(WEB_UI_STRING("ISO-8859-1", "The default, default character encoding on Windows"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitDefaultTextEncodingNamePreferenceKey), defaultDefaultEncoding.createCFString().get());
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitDefaultTextEncodingNamePreferenceKey), defaultDefaultEncoding.createCFString().get());
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitUserStyleSheetEnabledPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitUserStyleSheetLocationPreferenceKey), CFSTR(""));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitShouldPrintBackgroundsPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitTextAreasAreResizablePreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitJavaEnabledPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitJavaScriptEnabledPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitJavaScriptRuntimeFlagsPreferenceKey), CFSTR("0"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitWebSecurityEnabledPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitAllowUniversalAccessFromFileURLsPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitAllowFileAccessFromFileURLsPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitJavaScriptCanAccessClipboardPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitXSSAuditorEnabledPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitFrameFlatteningEnabledPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitJavaScriptCanOpenWindowsAutomaticallyPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitPluginsEnabledPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitCSSRegionsEnabledPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitDatabasesEnabledPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitLocalStorageEnabledPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitExperimentalNotificationsEnabledPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitZoomsTextOnlyPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitAllowAnimatedImagesPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitAllowAnimatedImageLoopingPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitDisplayImagesKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitLoadSiteIconsKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitBackForwardCacheExpirationIntervalKey), CFSTR("1800"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitTabToLinksPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitPrivateBrowsingEnabledPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitRespectStandardStyleKeyEquivalentsPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitShowsURLsInToolTipsPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitShowsToolTipOverTruncatedTextPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitPDFDisplayModePreferenceKey), CFSTR("1"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitPDFScaleFactorPreferenceKey), CFSTR("0"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitShouldDisplaySubtitlesPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitShouldDisplayCaptionsPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitShouldDisplayTextDescriptionsPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitUserStyleSheetEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitUserStyleSheetLocationPreferenceKey), CFSTR(""));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitShouldPrintBackgroundsPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitTextAreasAreResizablePreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitJavaEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitJavaScriptEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitJavaScriptRuntimeFlagsPreferenceKey), CFSTR("0"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitWebSecurityEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitAllowTopNavigationToDataURLsPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitWebAudioEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitAllowUniversalAccessFromFileURLsPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitAllowFileAccessFromFileURLsPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitJavaScriptCanAccessClipboardPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitXSSAuditorEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitFrameFlatteningEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitJavaScriptCanOpenWindowsAutomaticallyPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitPluginsEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitCSSRegionsEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitDatabasesEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitLocalStorageEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitExperimentalNotificationsEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitZoomsTextOnlyPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitAllowAnimatedImagesPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitAllowAnimatedImageLoopingPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitDisplayImagesKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitLoadSiteIconsKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitBackForwardCacheExpirationIntervalKey), CFSTR("1800"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitTabToLinksPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitPrivateBrowsingEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitRespectStandardStyleKeyEquivalentsPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitShowsURLsInToolTipsPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitShowsToolTipOverTruncatedTextPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitPDFDisplayModePreferenceKey), CFSTR("1"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitPDFScaleFactorPreferenceKey), CFSTR("0"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitShouldDisplaySubtitlesPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitShouldDisplayCaptionsPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitShouldDisplayTextDescriptionsPreferenceKey), kCFBooleanFalse);
 
     RetainPtr<CFStringRef> linkBehaviorStringRef = adoptCF(CFStringCreateWithFormat(0, 0, CFSTR("%d"), WebKitEditableLinkDefaultBehavior));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitEditableLinkBehaviorPreferenceKey), linkBehaviorStringRef.get());
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitEditableLinkBehaviorPreferenceKey), linkBehaviorStringRef.get());
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitHistoryItemLimitKey), CFSTR("1000"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitHistoryAgeInDaysLimitKey), CFSTR("7"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitIconDatabaseLocationKey), CFSTR(""));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitIconDatabaseEnabledPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitFontSmoothingTypePreferenceKey), CFSTR("2"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitFontSmoothingContrastPreferenceKey), CFSTR("2"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitCookieStorageAcceptPolicyPreferenceKey), CFSTR("2"));
-    CFDictionaryAddValue(defaults, CFSTR(WebContinuousSpellCheckingEnabledPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebGrammarCheckingEnabledPreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(AllowContinuousSpellCheckingPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitUsesPageCachePreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitLocalStorageDatabasePathPreferenceKey), CFSTR(""));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitHistoryItemLimitKey), CFSTR("1000"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitHistoryAgeInDaysLimitKey), CFSTR("7"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitIconDatabaseLocationKey), CFSTR(""));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitIconDatabaseEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitFontSmoothingTypePreferenceKey), CFSTR("2"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitFontSmoothingContrastPreferenceKey), CFSTR("2"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitCookieStorageAcceptPolicyPreferenceKey), CFSTR("2"));
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebContinuousSpellCheckingEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebGrammarCheckingEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(AllowContinuousSpellCheckingPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitUsesPageCachePreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitLocalStorageDatabasePathPreferenceKey), CFSTR(""));
 
     RetainPtr<CFStringRef> cacheModelRef = adoptCF(CFStringCreateWithFormat(0, 0, CFSTR("%d"), WebCacheModelDocumentViewer));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitCacheModelPreferenceKey), cacheModelRef.get());
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitCacheModelPreferenceKey), cacheModelRef.get());
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitAuthorAndUserStylesEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitAuthorAndUserStylesEnabledPreferenceKey), kCFBooleanTrue);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitOfflineWebApplicationCacheEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitOfflineWebApplicationCacheEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitPaintNativeControlsPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitPaintNativeControlsPreferenceKey), kCFBooleanTrue);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitUseHighResolutionTimersPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitUseHighResolutionTimersPreferenceKey), kCFBooleanTrue);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitAcceleratedCompositingEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitAcceleratedCompositingEnabledPreferenceKey), kCFBooleanTrue);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitShowDebugBordersPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitShowDebugBordersPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitSpatialNavigationEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitSpatialNavigationEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitDNSPrefetchingEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitDNSPrefetchingEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitHyperlinkAuditingEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitHyperlinkAuditingEnabledPreferenceKey), kCFBooleanTrue);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitMediaPlaybackRequiresUserGesturePreferenceKey), kCFBooleanFalse);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitMediaPlaybackAllowsInlinePreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitMediaPlaybackRequiresUserGesturePreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitMediaPlaybackAllowsInlinePreferenceKey), kCFBooleanTrue);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitRequestAnimationFrameEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitFullScreenEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitFullScreenEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitRequestAnimationFrameEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitRequestAnimationFrameEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitAllowDisplayAndRunningOfInsecureContentPreferenceKey), kCFBooleanTrue);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitAllowDisplayAndRunningOfInsecureContentPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitCustomElementsEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitFetchAPIEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitWebAnimationsCompositeOperationsEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitShadowDOMEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitWebAnimationsMutableTimelinesEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitCustomElementsEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitCSSCustomPropertiesAndValuesEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitWebAnimationsEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitLinkPreloadEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitWebAnimationsCSSIntegrationEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitMediaPreloadingEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitUserTimingEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitDataTransferItemsEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitResourceTimingEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitInspectorAdditionsEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitLinkPreloadEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitVisualViewportAPIEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitMediaPreloadingEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitCSSOMViewScrollingAPIEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitIsSecureContextAttributeEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitResizeObserverEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitDataTransferItemsEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitCSSOMViewSmoothScrollingEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitInspectorAdditionsEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitCoreMathMLEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitVisualViewportAPIEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitRequestIdleCallbackEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitCSSOMViewScrollingAPIEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitAsyncClipboardAPIEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitResizeObserverEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitContactPickerAPIEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitCoreMathMLEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitAspectRatioOfImgFromWidthAndHeightEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitRequestIdleCallbackEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitWebSQLEnabledPreferenceKey), kCFBooleanFalse);
 
-    CFDictionaryAddValue(defaults, CFSTR(WebKitAsyncClipboardAPIEnabledPreferenceKey), kCFBooleanFalse);
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitCSSIndividualTransformPropertiesEnabledPreferenceKey), kCFBooleanTrue);
 
-    defaultSettings = defaults;
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitSpeechRecognitionEnabledPreferenceKey), kCFBooleanFalse);
+
+    CFDictionaryAddValue(defaults.get(), CFSTR(WebKitOverscrollBehaviorEnabledPreferenceKey), kCFBooleanFalse);
+
+    defaultSettings() = WTFMove(defaults);
 #endif
 }
 
@@ -358,7 +385,7 @@ RetainPtr<CFPropertyListRef> WebPreferences::valueForKey(CFStringRef key)
     if (value)
         return value;
 
-    return CFDictionaryGetValue(defaultSettings, key);
+    return CFDictionaryGetValue(defaultSettings().get(), key);
 }
 
 void WebPreferences::setValueForKey(CFStringRef key, CFPropertyListRef value)
@@ -599,7 +626,7 @@ void WebPreferences::copyWebKitPreferencesToCFPreferences(CFDictionaryRef dict)
             continue;
 
         if (omitDefaults) {
-            CFTypeRef defaultValue = CFDictionaryGetValue(defaultSettings, keys[i]);
+            CFTypeRef defaultValue = CFDictionaryGetValue(defaultSettings().get(), keys[i]);
             if (defaultValue && CFEqual(defaultValue, values[i]))
                 continue;
         }
@@ -634,6 +661,8 @@ HRESULT WebPreferences::QueryInterface(_In_ REFIID riid, _COM_Outptr_ void** ppv
         *ppvObject = static_cast<IWebPreferencesPrivate6*>(this);
     else if (IsEqualGUID(riid, IID_IWebPreferencesPrivate7))
         *ppvObject = static_cast<IWebPreferencesPrivate7*>(this);
+    else if (IsEqualGUID(riid, IID_IWebPreferencesPrivate8))
+        *ppvObject = static_cast<IWebPreferencesPrivate8*>(this);
     else if (IsEqualGUID(riid, CLSID_WebPreferences))
         *ppvObject = this;
     else
@@ -1675,9 +1704,8 @@ HRESULT WebPreferences::setLocalStorageDatabasePath(_In_ BSTR location)
     return S_OK;
 }
 
-HRESULT WebPreferences::setExperimentalNotificationsEnabled(BOOL enabled)
+HRESULT WebPreferences::setExperimentalNotificationsEnabled(BOOL)
 {
-    setBoolValue(WebKitExperimentalNotificationsEnabledPreferenceKey, enabled);
     return S_OK;
 }
 
@@ -1685,7 +1713,7 @@ HRESULT WebPreferences::experimentalNotificationsEnabled(_Out_ BOOL* enabled)
 {
     if (!enabled)
         return E_POINTER;
-    *enabled = boolValueForKey(WebKitExperimentalNotificationsEnabledPreferenceKey);
+    *enabled = true;
     return S_OK;
 }
 
@@ -1909,7 +1937,7 @@ void WebPreferences::didRemoveFromWebView()
 
 HRESULT WebPreferences::shouldDisplaySubtitles(_Out_ BOOL* enabled)
 {
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     if (!enabled)
         return E_POINTER;
 
@@ -1922,7 +1950,7 @@ HRESULT WebPreferences::shouldDisplaySubtitles(_Out_ BOOL* enabled)
 
 HRESULT WebPreferences::setShouldDisplaySubtitles(BOOL enabled)
 {
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     setBoolValue(WebKitShouldDisplaySubtitlesPreferenceKey, enabled);
     return S_OK;
 #else
@@ -1932,7 +1960,7 @@ HRESULT WebPreferences::setShouldDisplaySubtitles(BOOL enabled)
 
 HRESULT WebPreferences::shouldDisplayCaptions(_Out_ BOOL* enabled)
 {
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     if (!enabled)
         return E_POINTER;
 
@@ -1945,7 +1973,7 @@ HRESULT WebPreferences::shouldDisplayCaptions(_Out_ BOOL* enabled)
 
 HRESULT WebPreferences::setShouldDisplayCaptions(BOOL enabled)
 {
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     setBoolValue(WebKitShouldDisplayCaptionsPreferenceKey, enabled);
     return S_OK;
 #else
@@ -1955,7 +1983,7 @@ HRESULT WebPreferences::setShouldDisplayCaptions(BOOL enabled)
 
 HRESULT WebPreferences::shouldDisplayTextDescriptions(_Out_ BOOL* enabled)
 {
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     if (!enabled)
         return E_POINTER;
 
@@ -1968,7 +1996,7 @@ HRESULT WebPreferences::shouldDisplayTextDescriptions(_Out_ BOOL* enabled)
 
 HRESULT WebPreferences::setShouldDisplayTextDescriptions(BOOL enabled)
 {
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     setBoolValue(WebKitShouldDisplayTextDescriptionsPreferenceKey, enabled);
     return S_OK;
 #else
@@ -1976,9 +2004,8 @@ HRESULT WebPreferences::setShouldDisplayTextDescriptions(BOOL enabled)
 #endif
 }
 
-HRESULT WebPreferences::setRequestAnimationFrameEnabled(BOOL enabled)
+HRESULT WebPreferences::setRequestAnimationFrameEnabled(BOOL)
 {
-    setBoolValue(WebKitRequestAnimationFrameEnabledPreferenceKey, enabled);
     return S_OK;
 }
 
@@ -1986,7 +2013,7 @@ HRESULT WebPreferences::requestAnimationFrameEnabled(_Out_ BOOL* enabled)
 {
     if (!enabled)
         return E_POINTER;
-    *enabled = boolValueForKey(WebKitRequestAnimationFrameEnabledPreferenceKey);
+    *enabled = true;
     return S_OK;
 }
 
@@ -2036,13 +2063,12 @@ HRESULT WebPreferences::fetchAPIEnabled(_Out_ BOOL* enabled)
 {
     if (!enabled)
         return E_POINTER;
-    *enabled = boolValueForKey(WebKitFetchAPIEnabledPreferenceKey);
+    *enabled = true;
     return S_OK;
 }
 
-HRESULT WebPreferences::setFetchAPIEnabled(BOOL enabled)
+HRESULT WebPreferences::setFetchAPIEnabled(BOOL)
 {
-    setBoolValue(WebKitFetchAPIEnabledPreferenceKey, enabled);
     return S_OK;
 }
 
@@ -2050,13 +2076,12 @@ HRESULT WebPreferences::shadowDOMEnabled(_Out_ BOOL* enabled)
 {
     if (!enabled)
         return E_POINTER;
-    *enabled = boolValueForKey(WebKitShadowDOMEnabledPreferenceKey);
+    *enabled = true;
     return S_OK;
 }
 
-HRESULT WebPreferences::setShadowDOMEnabled(BOOL enabled)
+HRESULT WebPreferences::setShadowDOMEnabled(BOOL)
 {
-    setBoolValue(WebKitShadowDOMEnabledPreferenceKey, enabled);
     return S_OK;
 }
 
@@ -2064,13 +2089,12 @@ HRESULT WebPreferences::customElementsEnabled(_Out_ BOOL* enabled)
 {
     if (!enabled)
         return E_POINTER;
-    *enabled = boolValueForKey(WebKitCustomElementsEnabledPreferenceKey);
+    *enabled = true;
     return S_OK;
 }
 
-HRESULT WebPreferences::setCustomElementsEnabled(BOOL enabled)
+HRESULT WebPreferences::setCustomElementsEnabled(BOOL)
 {
-    setBoolValue(WebKitCustomElementsEnabledPreferenceKey, enabled);
     return S_OK;
 }
 
@@ -2092,13 +2116,12 @@ HRESULT WebPreferences::keygenElementEnabled(_Out_ BOOL* enabled)
 {
     if (!enabled)
         return E_POINTER;
-    *enabled = boolValueForKey(WebKitKeygenElementEnabledPreferenceKey);
+    *enabled = false;
     return S_OK;
 }
 
-HRESULT WebPreferences::setKeygenElementEnabled(BOOL enabled)
+HRESULT WebPreferences::setKeygenElementEnabled(BOOL)
 {
-    setBoolValue(WebKitKeygenElementEnabledPreferenceKey, enabled);
     return S_OK;
 }
 
@@ -2112,34 +2135,6 @@ HRESULT WebPreferences::crossOriginWindowPolicySupportEnabled(_Out_ BOOL* enable
 
 HRESULT WebPreferences::setCrossOriginWindowPolicySupportEnabled(BOOL)
 {
-    return S_OK;
-}
-
-HRESULT WebPreferences::setModernMediaControlsEnabled(BOOL enabled)
-{
-    setBoolValue(WebKitModernMediaControlsEnabledPreferenceKey, enabled);
-    return S_OK;
-}
-
-HRESULT WebPreferences::modernMediaControlsEnabled(_Out_ BOOL* enabled)
-{
-    if (!enabled)
-        return E_POINTER;
-    *enabled = boolValueForKey(WebKitModernMediaControlsEnabledPreferenceKey);
-    return S_OK;
-}
-
-HRESULT WebPreferences::webAnimationsCSSIntegrationEnabled(_Out_ BOOL* enabled)
-{
-    if (!enabled)
-        return E_POINTER;
-    *enabled = boolValueForKey(WebKitWebAnimationsCSSIntegrationEnabledPreferenceKey);
-    return S_OK;
-}
-
-HRESULT WebPreferences::setWebAnimationsCSSIntegrationEnabled(BOOL enabled)
-{
-    setBoolValue(WebKitWebAnimationsCSSIntegrationEnabledPreferenceKey, enabled);
     return S_OK;
 }
 
@@ -2197,9 +2192,8 @@ HRESULT WebPreferences::switchNetworkLoaderToNewTestingSession()
     return S_OK;
 }
 
-HRESULT WebPreferences::setIsSecureContextAttributeEnabled(BOOL enabled)
+HRESULT WebPreferences::setIsSecureContextAttributeEnabled(BOOL)
 {
-    setBoolValue(WebKitIsSecureContextAttributeEnabledPreferenceKey, enabled);
     return S_OK;
 }
 
@@ -2207,7 +2201,7 @@ HRESULT WebPreferences::isSecureContextAttributeEnabled(_Out_ BOOL* enabled)
 {
     if (!enabled)
         return E_POINTER;
-    *enabled = boolValueForKey(WebKitIsSecureContextAttributeEnabledPreferenceKey);
+    *enabled = true;
     return S_OK;
 }
 
@@ -2281,6 +2275,20 @@ HRESULT WebPreferences::setCoreMathMLEnabled(BOOL enabled)
     return S_OK;
 }
 
+HRESULT WebPreferences::CSSOMViewSmoothScrollingEnabled(_Out_ BOOL* enabled)
+{
+    if (!enabled)
+        return E_POINTER;
+    *enabled = boolValueForKey(WebKitCSSOMViewSmoothScrollingEnabledPreferenceKey);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setCSSOMViewSmoothScrollingEnabled(BOOL enabled)
+{
+    setBoolValue(WebKitCSSOMViewSmoothScrollingEnabledPreferenceKey, enabled);
+    return S_OK;
+}
+
 HRESULT WebPreferences::requestIdleCallbackEnabled(_Out_ BOOL* enabled)
 {
     if (!enabled)
@@ -2309,6 +2317,89 @@ HRESULT WebPreferences::setAsyncClipboardAPIEnabled(BOOL enabled)
     return S_OK;
 }
 
+HRESULT WebPreferences::contactPickerAPIEnabled(_Out_ BOOL* enabled)
+{
+    if (!enabled)
+        return E_POINTER;
+    *enabled = boolValueForKey(WebKitContactPickerAPIEnabledPreferenceKey);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setContactPickerAPIEnabled(BOOL enabled)
+{
+    setBoolValue(WebKitContactPickerAPIEnabledPreferenceKey, enabled);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setBoolPreferenceForTesting(_In_ BSTR key, _In_ BOOL value)
+{
+    if (!SysStringLen(key))
+        return E_FAIL;
+
+#if USE(CF)
+    auto keyString = String(key).createCFString();
+    if (booleanValueForPreferencesValue(valueForKey(keyString.get()).get()) == !!value)
+        return S_OK;
+    setValueForKey(keyString.get(), value ? kCFBooleanTrue : kCFBooleanFalse);
+#endif
+
+    postPreferencesChangesNotification();
+
+    return S_OK;
+}
+
+HRESULT WebPreferences::setUInt32PreferenceForTesting(_In_ BSTR key, _In_ unsigned value)
+{
+    if (!SysStringLen(key))
+        return E_FAIL;
+
+#if USE(CF)
+    auto keyString = String(key).createCFString();
+    if (numberValueForPreferencesValue<int>(valueForKey(keyString.get()).get()) == value)
+        return S_OK;
+    setValueForKey(keyString.get(), cfNumber(static_cast<int>(value)).get());
+#endif
+
+    postPreferencesChangesNotification();
+
+    return S_OK;
+}
+
+HRESULT WebPreferences::setDoublePreferenceForTesting(_In_ BSTR key, _In_ double value)
+{
+    if (!SysStringLen(key))
+        return E_FAIL;
+
+#if USE(CF)
+    auto keyString = String(key).createCFString();
+    if (numberValueForPreferencesValue<float>(valueForKey(keyString.get()).get()) == value)
+        return S_OK;
+    setValueForKey(keyString.get(), cfNumber(static_cast<float>(value)).get());
+#endif
+
+    postPreferencesChangesNotification();
+
+    return S_OK;
+}
+
+HRESULT WebPreferences::setStringPreferenceForTesting(_In_ BSTR key, _In_ BSTR value)
+{
+    if (!SysStringLen(key) || !SysStringLen(value))
+        return E_FAIL;
+
+#if USE(CF)
+    auto keyString = String(key).createCFString();
+    auto valueString = String(value).createCFString();
+    if (!CFStringCompare(stringValueForPreferencesValue(valueForKey(keyString.get()).get()).get(), valueString.get(), 0))
+        return S_OK;
+    setValueForKey(keyString.get(), valueString.get());
+#endif
+
+    postPreferencesChangesNotification();
+
+    return S_OK;
+}
+
 HRESULT WebPreferences::setApplicationId(BSTR applicationId)
 {
 #if USE(CF)
@@ -2317,23 +2408,50 @@ HRESULT WebPreferences::setApplicationId(BSTR applicationId)
     return S_OK;
 }
 
-HRESULT WebPreferences::setWebAnimationsEnabled(BOOL enabled)
+HRESULT WebPreferences::setWebAnimationsCompositeOperationsEnabled(BOOL enabled)
 {
-    setBoolValue(WebKitWebAnimationsEnabledPreferenceKey, enabled);
+    setBoolValue(WebKitWebAnimationsCompositeOperationsEnabledPreferenceKey, enabled);
     return S_OK;
 }
 
-HRESULT WebPreferences::webAnimationsEnabled(_Out_ BOOL* enabled)
+HRESULT WebPreferences::webAnimationsCompositeOperationsEnabled(_Out_ BOOL* enabled)
 {
     if (!enabled)
         return E_POINTER;
-    *enabled = boolValueForKey(WebKitWebAnimationsEnabledPreferenceKey);
+    *enabled = boolValueForKey(WebKitWebAnimationsCompositeOperationsEnabledPreferenceKey);
     return S_OK;
 }
 
-HRESULT WebPreferences::setUserTimingEnabled(BOOL enabled)
+HRESULT WebPreferences::setWebAnimationsMutableTimelinesEnabled(BOOL enabled)
 {
-    setBoolValue(WebKitUserTimingEnabledPreferenceKey, enabled);
+    setBoolValue(WebKitWebAnimationsMutableTimelinesEnabledPreferenceKey, enabled);
+    return S_OK;
+}
+
+HRESULT WebPreferences::webAnimationsMutableTimelinesEnabled(_Out_ BOOL* enabled)
+{
+    if (!enabled)
+        return E_POINTER;
+    *enabled = boolValueForKey(WebKitWebAnimationsMutableTimelinesEnabledPreferenceKey);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setCSSCustomPropertiesAndValuesEnabled(BOOL enabled)
+{
+    setBoolValue(WebKitCSSCustomPropertiesAndValuesEnabledPreferenceKey, enabled);
+    return S_OK;
+}
+
+HRESULT WebPreferences::CSSCustomPropertiesAndValuesEnabled(_Out_ BOOL* enabled)
+{
+    if (!enabled)
+        return E_POINTER;
+    *enabled = boolValueForKey(WebKitCSSCustomPropertiesAndValuesEnabledPreferenceKey);
+    return S_OK;
+}
+    
+HRESULT WebPreferences::setUserTimingEnabled(BOOL)
+{
     return S_OK;
 }
 
@@ -2341,13 +2459,12 @@ HRESULT WebPreferences::userTimingEnabled(_Out_ BOOL* enabled)
 {
     if (!enabled)
         return E_POINTER;
-    *enabled = boolValueForKey(WebKitUserTimingEnabledPreferenceKey);
+    *enabled = true;
     return S_OK;
 }
 
-HRESULT WebPreferences::setResourceTimingEnabled(BOOL enabled)
+HRESULT WebPreferences::setResourceTimingEnabled(BOOL)
 {
-    setBoolValue(WebKitResourceTimingEnabledPreferenceKey, enabled);
     return S_OK;
 }
 
@@ -2355,7 +2472,7 @@ HRESULT WebPreferences::resourceTimingEnabled(_Out_ BOOL* enabled)
 {
     if (!enabled)
         return E_POINTER;
-    *enabled = boolValueForKey(WebKitResourceTimingEnabledPreferenceKey);
+    *enabled = true;
     return S_OK;
 }
 
@@ -2385,4 +2502,153 @@ HRESULT WebPreferences::setResizeObserverEnabled(BOOL enabled)
 {
     setBoolValue(WebKitResizeObserverEnabledPreferenceKey, enabled);
     return S_OK;
+}
+
+HRESULT WebPreferences::aspectRatioOfImgFromWidthAndHeightEnabled(_Out_ BOOL* enabled)
+{
+    if (!enabled)
+        return E_POINTER;
+    *enabled = boolValueForKey(WebKitAspectRatioOfImgFromWidthAndHeightEnabledPreferenceKey);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setAspectRatioOfImgFromWidthAndHeightEnabled(BOOL enabled)
+{
+    setBoolValue(WebKitAspectRatioOfImgFromWidthAndHeightEnabledPreferenceKey, enabled);
+    return S_OK;
+}
+
+HRESULT WebPreferences::webSQLEnabled(_Out_ BOOL* enabled)
+{
+    if (!enabled)
+        return E_POINTER;
+    *enabled = boolValueForKey(WebKitWebSQLEnabledPreferenceKey);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setWebSQLEnabled(BOOL enabled)
+{
+    setBoolValue(WebKitWebSQLEnabledPreferenceKey, enabled);
+    return S_OK;
+}
+
+HRESULT WebPreferences::allowTopNavigationToDataURLs(_Out_ BOOL* allowAccess)
+{
+    if (!allowAccess)
+        return E_POINTER;
+    *allowAccess = boolValueForKey(WebKitAllowTopNavigationToDataURLsPreferenceKey);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setAllowTopNavigationToDataURLs(BOOL allowAccess)
+{
+    setBoolValue(WebKitAllowTopNavigationToDataURLsPreferenceKey, allowAccess);
+    return S_OK;
+}
+
+HRESULT WebPreferences::modernUnprefixedWebAudioEnabled(_Out_ BOOL* enabled)
+{
+    if (!enabled)
+        return E_POINTER;
+    *enabled = boolValueForKey(WebKitWebAudioEnabledPreferenceKey);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setModernUnprefixedWebAudioEnabled(BOOL enabled)
+{
+    setBoolValue(WebKitWebAudioEnabledPreferenceKey, enabled);
+    return S_OK;
+}
+
+HRESULT WebPreferences::CSSIndividualTransformPropertiesEnabled(_Out_ BOOL* enabled)
+{
+    if (!enabled)
+        return E_POINTER;
+    *enabled = boolValueForKey(WebKitCSSIndividualTransformPropertiesEnabledPreferenceKey);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setCSSIndividualTransformPropertiesEnabled(BOOL enabled)
+{
+    setBoolValue(WebKitCSSIndividualTransformPropertiesEnabledPreferenceKey, enabled);
+    return S_OK;
+}
+
+HRESULT WebPreferences::speechRecognitionEnabled(_Out_ BOOL* enabled)
+{
+    if (!enabled)
+        return E_POINTER;
+    *enabled = boolValueForKey(WebKitSpeechRecognitionEnabledPreferenceKey);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setSpeechRecognitionEnabled(BOOL enabled)
+{
+    setBoolValue(WebKitSpeechRecognitionEnabledPreferenceKey, enabled);
+    return S_OK;
+}
+
+HRESULT WebPreferences::overscrollBehaviorEnabled(_Out_ BOOL* enabled)
+{
+    if (!enabled)
+        return E_POINTER;
+    *enabled = boolValueForKey(WebKitOverscrollBehaviorEnabledPreferenceKey);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setOverscrollBehaviorEnabled(BOOL enabled)
+{
+    setBoolValue(WebKitOverscrollBehaviorEnabledPreferenceKey, enabled);
+    return S_OK;
+}
+
+HRESULT WebPreferences::resetForTesting()
+{
+    load();
+    return S_OK;
+}
+
+HRESULT WebPreferences::startBatchingUpdates()
+{
+    m_updateBatchCount++;
+    return S_OK;
+}
+
+HRESULT WebPreferences::stopBatchingUpdates()
+{
+    if (!m_updateBatchCount)
+        return E_FAIL;
+    m_updateBatchCount--;
+    if (!m_updateBatchCount) {
+        if (m_needsUpdateAfterBatch) {
+            postPreferencesChangesNotification();
+            m_needsUpdateAfterBatch = false;
+        }
+    }
+    return S_OK;
+}
+
+bool WebPreferences::canvasColorSpaceEnabled()
+{
+    return boolValueForKey("WebKitCanvasColorSpaceEnabled");
+}
+
+bool WebPreferences::cssGradientInterpolationColorSpacesEnabled()
+{
+    return boolValueForKey("WebKitCSSGradientInterpolationColorSpacesEnabled");
+}
+
+bool WebPreferences::cssGradientPremultipliedAlphaInterpolationEnabled()
+{
+    return boolValueForKey("WebKitCSSGradientPremultipliedAlphaInterpolationEnabled");
+}
+
+bool WebPreferences::mockScrollbarsControllerEnabled()
+{
+    return boolValueForKey("WebKitMockScrollbarsControllerEnabled");
+}
+
+bool WebPreferences::cssInputSecurityEnabled()
+{
+    return boolValueForKey("WebKitCSSInputSecurityEnabled");
 }

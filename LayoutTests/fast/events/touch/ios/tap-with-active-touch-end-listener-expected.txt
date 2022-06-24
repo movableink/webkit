@@ -3,8 +3,7 @@ Tap on Target1 (green)
 (Frame scrolling node
   (scrollable area size 800 600)
   (contents size 800 600)
-  (parent relative scrollable rect at (0,0) size 800x600)
-  (scrollable area parameters 
+  (scrollable area parameters
     (horizontal scroll elasticity 1)
     (vertical scroll elasticity 1)
     (horizontal scrollbar mode 0)
@@ -23,8 +22,7 @@ Tap on Target2 (red)
 (Frame scrolling node
   (scrollable area size 800 600)
   (contents size 800 600)
-  (parent relative scrollable rect at (0,0) size 800x600)
-  (scrollable area parameters 
+  (scrollable area parameters
     (horizontal scroll elasticity 1)
     (vertical scroll elasticity 1)
     (horizontal scrollbar mode 0)
@@ -43,8 +41,7 @@ Tap on Target3 (blue)
 (Frame scrolling node
   (scrollable area size 800 600)
   (contents size 800 600)
-  (parent relative scrollable rect at (0,0) size 800x600)
-  (scrollable area parameters 
+  (scrollable area parameters
     (horizontal scroll elasticity 1)
     (vertical scroll elasticity 1)
     (horizontal scrollbar mode 0)

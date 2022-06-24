@@ -27,17 +27,9 @@ RtcEventAudioReceiveStreamConfig::RtcEventAudioReceiveStreamConfig(
 RtcEventAudioReceiveStreamConfig::RtcEventAudioReceiveStreamConfig(
     const RtcEventAudioReceiveStreamConfig& other)
     : RtcEvent(other.timestamp_us_),
-      config_(absl::make_unique<rtclog::StreamConfig>(*other.config_)) {}
+      config_(std::make_unique<rtclog::StreamConfig>(*other.config_)) {}
 
 RtcEventAudioReceiveStreamConfig::~RtcEventAudioReceiveStreamConfig() = default;
-
-RtcEvent::Type RtcEventAudioReceiveStreamConfig::GetType() const {
-  return RtcEvent::Type::AudioReceiveStreamConfig;
-}
-
-bool RtcEventAudioReceiveStreamConfig::IsConfigEvent() const {
-  return true;
-}
 
 std::unique_ptr<RtcEventAudioReceiveStreamConfig>
 RtcEventAudioReceiveStreamConfig::Copy() const {

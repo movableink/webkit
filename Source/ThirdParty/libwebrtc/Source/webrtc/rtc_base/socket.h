@@ -25,9 +25,9 @@
 #include "rtc_base/win32.h"
 #endif
 
-#include "rtc_base/constructormagic.h"
-#include "rtc_base/network/sent_packet.h"
-#include "rtc_base/socketaddress.h"
+#include "rtc_base/constructor_magic.h"
+#include "rtc_base/socket_address.h"
+#include "rtc_base/third_party/sigslot/sigslot.h"
 
 // Rather than converting errors into a private namespace,
 // Reuse the POSIX socket api errors. Note this depends on
@@ -40,74 +40,28 @@
 #define EINPROGRESS WSAEINPROGRESS
 #undef EALREADY
 #define EALREADY WSAEALREADY
-#undef ENOTSOCK
-#define ENOTSOCK WSAENOTSOCK
-#undef EDESTADDRREQ
-#define EDESTADDRREQ WSAEDESTADDRREQ
 #undef EMSGSIZE
 #define EMSGSIZE WSAEMSGSIZE
-#undef EPROTOTYPE
-#define EPROTOTYPE WSAEPROTOTYPE
-#undef ENOPROTOOPT
-#define ENOPROTOOPT WSAENOPROTOOPT
-#undef EPROTONOSUPPORT
-#define EPROTONOSUPPORT WSAEPROTONOSUPPORT
-#undef ESOCKTNOSUPPORT
-#define ESOCKTNOSUPPORT WSAESOCKTNOSUPPORT
-#undef EOPNOTSUPP
-#define EOPNOTSUPP WSAEOPNOTSUPP
-#undef EPFNOSUPPORT
-#define EPFNOSUPPORT WSAEPFNOSUPPORT
-#undef EAFNOSUPPORT
-#define EAFNOSUPPORT WSAEAFNOSUPPORT
 #undef EADDRINUSE
 #define EADDRINUSE WSAEADDRINUSE
 #undef EADDRNOTAVAIL
 #define EADDRNOTAVAIL WSAEADDRNOTAVAIL
 #undef ENETDOWN
 #define ENETDOWN WSAENETDOWN
-#undef ENETUNREACH
-#define ENETUNREACH WSAENETUNREACH
-#undef ENETRESET
-#define ENETRESET WSAENETRESET
 #undef ECONNABORTED
 #define ECONNABORTED WSAECONNABORTED
-#undef ECONNRESET
-#define ECONNRESET WSAECONNRESET
 #undef ENOBUFS
 #define ENOBUFS WSAENOBUFS
 #undef EISCONN
 #define EISCONN WSAEISCONN
 #undef ENOTCONN
 #define ENOTCONN WSAENOTCONN
-#undef ESHUTDOWN
-#define ESHUTDOWN WSAESHUTDOWN
-#undef ETOOMANYREFS
-#define ETOOMANYREFS WSAETOOMANYREFS
-#undef ETIMEDOUT
-#define ETIMEDOUT WSAETIMEDOUT
 #undef ECONNREFUSED
 #define ECONNREFUSED WSAECONNREFUSED
-#undef ELOOP
-#define ELOOP WSAELOOP
-#undef ENAMETOOLONG
-#define ENAMETOOLONG WSAENAMETOOLONG
-#undef EHOSTDOWN
-#define EHOSTDOWN WSAEHOSTDOWN
 #undef EHOSTUNREACH
 #define EHOSTUNREACH WSAEHOSTUNREACH
-#undef ENOTEMPTY
-#define ENOTEMPTY WSAENOTEMPTY
-#undef EPROCLIM
-#define EPROCLIM WSAEPROCLIM
-#undef EUSERS
-#define EUSERS WSAEUSERS
-#undef EDQUOT
-#define EDQUOT WSAEDQUOT
-#undef ESTALE
-#define ESTALE WSAESTALE
-#undef EREMOTE
-#define EREMOTE WSAEREMOTE
+#undef ENETUNREACH
+#define ENETUNREACH WSAENETUNREACH
 #define SOCKET_EACCES WSAEACCES
 #endif  // WEBRTC_WIN
 
@@ -141,7 +95,7 @@ class Socket {
   virtual int Connect(const SocketAddress& addr) = 0;
   virtual int Send(const void* pv, size_t cb) = 0;
   virtual int SendTo(const void* pv, size_t cb, const SocketAddress& addr) = 0;
-  // |timestamp| is in units of microseconds.
+  // `timestamp` is in units of microseconds.
   virtual int Recv(void* pv, size_t cb, int64_t* timestamp) = 0;
   virtual int RecvFrom(void* pv,
                        size_t cb,
@@ -170,6 +124,17 @@ class Socket {
   };
   virtual int GetOption(Option opt, int* value) = 0;
   virtual int SetOption(Option opt, int value) = 0;
+
+  // SignalReadEvent and SignalWriteEvent use multi_threaded_local to allow
+  // access concurrently from different thread.
+  // For example SignalReadEvent::connect will be called in AsyncUDPSocket ctor
+  // but at the same time the SocketDispatcher may be signaling the read event.
+  // ready to read
+  sigslot::signal1<Socket*, sigslot::multi_threaded_local> SignalReadEvent;
+  // ready to write
+  sigslot::signal1<Socket*, sigslot::multi_threaded_local> SignalWriteEvent;
+  sigslot::signal1<Socket*> SignalConnectEvent;     // connected
+  sigslot::signal2<Socket*, int> SignalCloseEvent;  // closed
 
  protected:
   Socket() {}

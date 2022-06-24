@@ -80,13 +80,13 @@ namespace RegisterNames {
 
     inline FPSingleRegisterID asSingle(FPDoubleRegisterID reg)
     {
-        ASSERT(reg < d16);
+        ASSERT(reg <= d15);
         return (FPSingleRegisterID)(reg << 1);
     }
 
     inline FPSingleRegisterID asSingleUpper(FPDoubleRegisterID reg)
     {
-        ASSERT(reg < d16);
+        ASSERT(reg <= d15);
         return (FPSingleRegisterID)((reg << 1) + 1);
     }
 
@@ -446,11 +446,17 @@ public:
             data.realTypes.m_linkType = LinkInvalid;
             data.realTypes.m_condition = condition;
         }
-        void operator=(const LinkRecord& other)
+        // We are defining a copy constructor and assignment operator
+        // because the ones provided by the compiler are not
+        // optimal. See https://bugs.webkit.org/show_bug.cgi?id=90930
+        LinkRecord(const LinkRecord& other)
         {
-            data.copyTypes.content[0] = other.data.copyTypes.content[0];
-            data.copyTypes.content[1] = other.data.copyTypes.content[1];
-            data.copyTypes.content[2] = other.data.copyTypes.content[2];
+            data.copyTypes = other.data.copyTypes;
+        }
+        LinkRecord& operator=(const LinkRecord& other)
+        {
+            data.copyTypes = other.data.copyTypes;
+            return *this;
         }
         intptr_t from() const { return data.realTypes.m_from; }
         void setFrom(intptr_t from) { data.realTypes.m_from = from; }
@@ -556,6 +562,8 @@ private:
     typedef enum {
         OP_B_T1         = 0xD000,
         OP_B_T2         = 0xE000,
+        OP_STRD_imm_T1  = 0xE840,
+        OP_LDRD_imm_T1  = 0xE850,
         OP_POP_T2       = 0xE8BD,
         OP_PUSH_T2      = 0xE92D,
         OP_AND_reg_T2   = 0xEA00,
@@ -575,6 +583,8 @@ private:
         OP_CMP_reg_T2   = 0xEBB0,
         OP_VMOV_CtoD    = 0xEC00,
         OP_VMOV_DtoC    = 0xEC10,
+        OP_VSTMIA       = 0xEC80,
+        OP_VLDMIA       = 0xEC90,
         OP_FSTS         = 0xED00,
         OP_VSTR         = 0xED00,
         OP_FLDS         = 0xED10,
@@ -595,10 +605,13 @@ private:
         OP_VSQRT_T1     = 0xEEB0,
         OP_VCVTSD_T1    = 0xEEB0,
         OP_VCVTDS_T1    = 0xEEB0,
+        OP_VAND_T1      = 0xEF00,
+        OP_VORR_T1      = 0xEF20,
         OP_B_T3a        = 0xF000,
         OP_B_T4a        = 0xF000,
         OP_AND_imm_T1   = 0xF000,
         OP_TST_imm      = 0xF010,
+        OP_BIC_imm_T1   = 0xF020,
         OP_ORR_imm_T1   = 0xF040,
         OP_MOV_imm_T2   = 0xF040,
         OP_MVN_imm      = 0xF060,
@@ -653,6 +666,8 @@ private:
     } OpcodeID1;
 
     typedef enum {
+        OP_VAND_T1b      = 0x0010,
+        OP_VORR_T1b      = 0x0010,
         OP_VADD_T2b      = 0x0A00,
         OP_VDIVb         = 0x0A00,
         OP_FLDSb         = 0x0A00,
@@ -675,6 +690,8 @@ private:
         OP_VSQRT_T1b     = 0x0A40,
         OP_VCVTSD_T1b    = 0x0A40,
         OP_VCVTDS_T1b    = 0x0A40,
+        OP_VSTMIAb       = 0x0B00,
+        OP_VLDMIAb       = 0x0B00,
         OP_NOP_T2b       = 0x8000,
         OP_DMB_SY_T1b    = 0x8F5F,
         OP_DMB_ISHST_T1b = 0x8F5A,
@@ -800,7 +817,7 @@ public:
     // NOTE: In an IT block, add doesn't modify the flags register.
     ALWAYS_INLINE void add(RegisterID rd, RegisterID rn, RegisterID rm)
     {
-        if (rd == ARMRegisters::sp) {
+        if (rd == ARMRegisters::sp && rd != rn) {
             mov(rd, rn);
             rn = rd;
         }
@@ -920,6 +937,14 @@ public:
         return m_formatter.label();
     }
 
+    ALWAYS_INLINE void bic(RegisterID rd, RegisterID rn, ARMThumbImmediate imm)
+    {
+        ASSERT(!BadReg(rd));
+        ASSERT(!BadReg(rn));
+        ASSERT(imm.isEncodedImm());
+        m_formatter.twoWordOp5i6Imm4Reg4EncodedImm(OP_BIC_imm_T1, rn, rd, imm);
+    }
+
     void bkpt(uint8_t imm = 0)
     {
         m_formatter.oneWordOp8Imm8(OP_BKPT, imm);
@@ -1029,9 +1054,13 @@ public:
         ASSERT(rn != ARMRegisters::pc); // LDR (literal)
         ASSERT(imm.isUInt12());
 
-        if (!((rt | rn) & 8) && imm.isUInt7())
+        if (!((rt | rn) & 8) && imm.isUInt7() && !(imm.getUInt7() % 4)) {
+            // We can only use Encoding T1 when imm is a multiple of 4.
+            // For details see A8.8.63 on ARM Architecture Reference
+            // Manual ARMv7-A and ARMv7-R edition available on
+            // https://static.docs.arm.com/ddi0406/cd/DDI0406C_d_armv7ar_arm.pdf
             m_formatter.oneWordOp5Imm5Reg3Reg3(OP_LDR_imm_T1, imm.getUInt7() >> 2, rn, rt);
-        else if ((rn == ARMRegisters::sp) && !(rt & 8) && imm.isUInt10())
+        } else if ((rn == ARMRegisters::sp) && !(rt & 8) && imm.isUInt10())
             m_formatter.oneWordOp5Reg3Imm8(OP_LDR_imm_T2, rt, static_cast<uint8_t>(imm.getUInt10() >> 2));
         else
             m_formatter.twoWordOp12Reg4Reg4Imm12(OP_LDR_imm_T3, rn, rt, imm.getUInt12());
@@ -1226,6 +1255,47 @@ public:
             m_formatter.twoWordOp12Reg4FourFours(OP_LDRSH_reg_T2, rn, FourFours(rt, 0, shift, rm));
     }
 
+    // If index is set, this is a regular offset or a pre-indexed load;
+    // if index is not set then it is a post-index load.
+    //
+    // If wback is set rn is updated - this is a pre or post index load,
+    // if wback is not set this is a regular offset memory access.
+    //
+    // (-1020 <= offset <= 1020)
+    // offset % 4 == 0
+    // _reg = REG[rn]
+    // _tmp = _reg + offset
+    // _addr = index ? _tmp : _reg
+    // REG[rt] = MEM[_addr]
+    // REG[rt2] = MEM[_addr + 4]
+    // if (wback) REG[rn] = _tmp
+    ALWAYS_INLINE void ldrd(RegisterID rt, RegisterID rt2, RegisterID rn, int offset, bool index, bool wback)
+    {
+        ASSERT(!BadReg(rt));
+        ASSERT(!BadReg(rt2));
+        ASSERT(rn != ARMRegisters::pc);
+        ASSERT(rt != rt2);
+        ASSERT(index || wback);
+        ASSERT(!wback | (rt != rn));
+        ASSERT(!wback | (rt2 != rn));
+        ASSERT(!(offset & 0x3));
+
+        bool add = true;
+        if (offset < 0) {
+            add = false;
+            offset = -offset;
+        }
+        offset >>= 2;
+        ASSERT(!(offset & ~0xff));
+
+        uint16_t opcode = OP_LDRD_imm_T1;
+        opcode |= (wback << 5);
+        opcode |= (add << 7);
+        opcode |= (index << 8);
+
+        m_formatter.twoWordOp12Reg4Reg4Reg4Imm8(static_cast<OpcodeID1>(opcode), rn, rt, rt2, offset);
+    }
+
     void lsl(RegisterID rd, RegisterID rm, int32_t shiftAmount)
     {
         ASSERT(!BadReg(rd));
@@ -1315,6 +1385,7 @@ public:
 
     ALWAYS_INLINE void mov(RegisterID rd, RegisterID rm)
     {
+        ASSERT(rd != rm); // Use a NOP instead
         m_formatter.oneWordOp8RegReg143(OP_MOV_reg_T1, rm, rd);
     }
 
@@ -1551,8 +1622,8 @@ public:
         ASSERT(rn != ARMRegisters::pc);
         ASSERT(imm.isUInt12());
 
-        if (!((rt | rn) & 8) && imm.isUInt7())
-            m_formatter.oneWordOp5Imm5Reg3Reg3(OP_STRB_imm_T1, imm.getUInt7() >> 2, rn, rt);
+        if (!((rt | rn) & 8) && imm.isUInt5())
+            m_formatter.oneWordOp5Imm5Reg3Reg3(OP_STRB_imm_T1, imm.getUInt5(), rn, rt);
         else
             m_formatter.twoWordOp12Reg4Reg4Imm12(OP_STRB_imm_T2, rn, rt, imm.getUInt12());
     }
@@ -1660,6 +1731,46 @@ public:
             m_formatter.oneWordOp7Reg3Reg3Reg3(OP_STRH_reg_T1, rm, rn, rt);
         else
             m_formatter.twoWordOp12Reg4FourFours(OP_STRH_reg_T2, rn, FourFours(rt, 0, shift, rm));
+    }
+
+    // If index is set, this is a regular offset or a pre-indexed load;
+    // if index is not set then it is a post-index load.
+    //
+    // If wback is set rn is updated - this is a pre or post index load,
+    // if wback is not set this is a regular offset memory access.
+    //
+    // (-1020 <= offset <= 1020)
+    // offset % 4 == 0
+    // _reg = REG[rn]
+    // _tmp = _reg + offset
+    // _addr = index ? _tmp : _reg
+    // MEM[_addr] = REG[rt]
+    // MEM[_addr + 4] = REG[rt2]
+    // if (wback) REG[rn] = _tmp
+    ALWAYS_INLINE void strd(RegisterID rt, RegisterID rt2, RegisterID rn, int offset, bool index, bool wback)
+    {
+        ASSERT(!BadReg(rt));
+        ASSERT(!BadReg(rt2));
+        ASSERT(rn != ARMRegisters::pc);
+        ASSERT(index || wback);
+        ASSERT(!wback | (rt != rn));
+        ASSERT(!wback | (rt2 != rn));
+        ASSERT(!(offset & 0x3));
+
+        bool add = true;
+        if (offset < 0) {
+            add = false;
+            offset = -offset;
+        }
+        offset >>= 2;
+        ASSERT(!(offset & ~0xff));
+
+        uint16_t opcode = OP_STRD_imm_T1;
+        opcode |= (wback << 5);
+        opcode |= (add << 7);
+        opcode |= (index << 8);
+
+        m_formatter.twoWordOp12Reg4Reg4Reg4Imm8(static_cast<OpcodeID1>(opcode), rn, rt, rt2, offset);
     }
 
     ALWAYS_INLINE void sub(RegisterID rd, RegisterID rn, ARMThumbImmediate imm)
@@ -1819,6 +1930,28 @@ public:
     }
 #endif
 
+    void vldmia(RegisterID rn, FPDoubleRegisterID rs, uint32_t count)
+    {
+        ASSERT(count < 16);
+        m_formatter.vfpMemOp(OP_VLDMIA, OP_VLDMIAb, true, rn, rs, count << 3);
+    }
+
+    void vstmia(RegisterID rn, FPDoubleRegisterID rs, uint32_t count)
+    {
+        ASSERT(count < 16);
+        m_formatter.vfpMemOp(OP_VSTMIA, OP_VSTMIAb, true, rn, rs, count << 3);
+    }
+
+    void vand(FPDoubleRegisterID rd, FPDoubleRegisterID rn, FPDoubleRegisterID rm)
+    {
+        m_formatter.vfpOp(OP_VAND_T1, OP_VAND_T1b, true, rn, rd, rm);
+    }
+
+    void vorr(FPDoubleRegisterID rd, FPDoubleRegisterID rn, FPDoubleRegisterID rm)
+    {
+        m_formatter.vfpOp(OP_VORR_T1, OP_VORR_T1b, true, rn, rd, rm);
+    }
+
     void vadd(FPDoubleRegisterID rd, FPDoubleRegisterID rn, FPDoubleRegisterID rm)
     {
         m_formatter.vfpOp(OP_VADD_T2, OP_VADD_T2b, true, rn, rd, rm);
@@ -1972,7 +2105,7 @@ public:
     using CopyFunction = void*(&)(void*, const void*, size_t);
 
     template <CopyFunction copy>
-    static void fillNops(void* base, size_t size)
+    ALWAYS_INLINE static void fillNops(void* base, size_t size)
     {
         RELEASE_ASSERT(!(size % sizeof(int16_t)));
 
@@ -2011,18 +2144,18 @@ public:
     AssemblerLabel labelForWatchpoint()
     {
         AssemblerLabel result = m_formatter.label();
-        if (static_cast<int>(result.m_offset) != m_indexOfLastWatchpoint)
+        if (static_cast<int>(result.offset()) != m_indexOfLastWatchpoint)
             result = label();
-        m_indexOfLastWatchpoint = result.m_offset;
-        m_indexOfTailOfLastWatchpoint = result.m_offset + maxJumpReplacementSize();
+        m_indexOfLastWatchpoint = result.offset();
+        m_indexOfTailOfLastWatchpoint = result.offset() + maxJumpReplacementSize();
         return result;
     }
 
     AssemblerLabel label()
     {
         AssemblerLabel result = m_formatter.label();
-        while (UNLIKELY(static_cast<int>(result.m_offset) < m_indexOfTailOfLastWatchpoint)) {
-            if (UNLIKELY(static_cast<int>(result.m_offset) + 4 <= m_indexOfTailOfLastWatchpoint))
+        while (UNLIKELY(static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint)) {
+            if (UNLIKELY(static_cast<int>(result.offset()) + 4 <= m_indexOfTailOfLastWatchpoint))
                 nopw();
             else
                 nop();
@@ -2042,12 +2175,12 @@ public:
     static void* getRelocatedAddress(void* code, AssemblerLabel label)
     {
         ASSERT(label.isSet());
-        return reinterpret_cast<void*>(reinterpret_cast<ptrdiff_t>(code) + label.m_offset);
+        return reinterpret_cast<void*>(reinterpret_cast<ptrdiff_t>(code) + label.offset());
     }
     
     static int getDifferenceBetweenLabels(AssemblerLabel a, AssemblerLabel b)
     {
-        return b.m_offset - a.m_offset;
+        return b.offset() - a.offset();
     }
 
     static int jumpSizeDelta(JumpType jumpType, JumpLinkType jumpLinkType) { return JUMP_ENUM_SIZE(jumpType) - JUMP_ENUM_SIZE(jumpLinkType); }
@@ -2162,7 +2295,7 @@ public:
     static unsigned getCallReturnOffset(AssemblerLabel call)
     {
         ASSERT(call.isSet());
-        return call.m_offset;
+        return call.offset();
     }
 
     // Linking & patching:
@@ -2177,14 +2310,14 @@ public:
     {
         ASSERT(to.isSet());
         ASSERT(from.isSet());
-        m_jumpsToLink.append(LinkRecord(from.m_offset, to.m_offset, type, condition));
+        m_jumpsToLink.append(LinkRecord(from.offset(), to.offset(), type, condition));
     }
 
     static void linkJump(void* code, AssemblerLabel from, void* to)
     {
         ASSERT(from.isSet());
         
-        uint16_t* location = reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(code) + from.m_offset);
+        uint16_t* location = reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(code) + from.offset());
         linkJumpAbsolute(location, location, to);
     }
 
@@ -2193,12 +2326,12 @@ public:
         ASSERT(!(reinterpret_cast<intptr_t>(code) & 1));
         ASSERT(from.isSet());
 
-        setPointer(reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(code) + from.m_offset) - 1, to, false);
+        setPointer(reinterpret_cast<uint16_t*>(reinterpret_cast<intptr_t>(code) + from.offset()) - 1, to, false);
     }
 
     static void linkPointer(void* code, AssemblerLabel where, void* value)
     {
-        setPointer(reinterpret_cast<char*>(code) + where.m_offset, value, false);
+        setPointer(reinterpret_cast<char*>(code) + where.offset(), value, false);
     }
 
     // The static relink and replace methods can use can use |from| for both
@@ -2215,11 +2348,6 @@ public:
         cacheFlush(reinterpret_cast<uint16_t*>(from) - 5, 5 * sizeof(uint16_t));
     }
 
-    static void relinkJumpToNop(void* from)
-    {
-        relinkJump(from, from);
-    }
-    
     static void relinkCall(void* from, void* to)
     {
         ASSERT(!(reinterpret_cast<intptr_t>(from) & 1));
@@ -2376,7 +2504,7 @@ public:
 
     static void cacheFlush(void* code, size_t size)
     {
-#if OS(IOS_FAMILY)
+#if OS(DARWIN)
         sys_cache_control(kCacheFunctionPrepareForExecution, code, size);
 #elif OS(LINUX)
         size_t page = pageSize();
@@ -2861,6 +2989,12 @@ private:
         {
             m_buffer.putShort(op | reg1);
             m_buffer.putShort((reg2 << 12) | imm);
+        }
+
+        ALWAYS_INLINE void twoWordOp12Reg4Reg4Reg4Imm8(OpcodeID1 op, RegisterID reg1, RegisterID reg2, RegisterID reg3, uint8_t imm)
+        {
+            m_buffer.putShort(op | reg1);
+            m_buffer.putShort((reg2 << 12) | (reg3 << 8) | imm);
         }
 
         ALWAYS_INLINE void twoWordOp12Reg40Imm3Reg4Imm20Imm5(OpcodeID1 op, RegisterID reg1, RegisterID reg2, uint16_t imm1, uint16_t imm2, uint16_t imm3)

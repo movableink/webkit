@@ -1,3 +1,0 @@
-
-FAIL Changing size resets canvas to transparent black Can't find variable: OffscreenCanvas
-

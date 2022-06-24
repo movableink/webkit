@@ -26,14 +26,9 @@
 #import "config.h"
 #import "WKSelectMenuListViewController.h"
 
-#if PLATFORM(WATCHOS)
+#if HAVE(PEPPER_UI_CORE)
 
 #import "UIKitSPI.h"
-#import <PepperUICore/PUICQuickboardListViewController.h>
-#import <PepperUICore/PUICQuickboardListViewControllerSubclass.h>
-#import <PepperUICore/PUICResources.h>
-#import <PepperUICore/PUICTableView.h>
-#import <PepperUICore/PUICTableViewCell.h>
 #import <wtf/RetainPtr.h>
 
 static const CGFloat checkmarkImageViewWidth = 32;
@@ -48,7 +43,11 @@ typedef NS_ENUM(NSInteger, PUICQuickboardListSection) {
     PUICQuickboardListSectionContentUnavailable,
 };
 
-@interface WKSelectMenuItemCell : WKQuickboardListItemCell
+static constexpr CGFloat itemCellTopToLabelBaseline = 26;
+static constexpr CGFloat itemCellBaselineToBottom = 8;
+
+// FIXME: This can be removed when <rdar://problem/57807445> lands in a build.
+@interface WKSelectMenuItemCell : PUICQuickboardListItemCell
 @property (nonatomic, readonly) UIImageView *imageView;
 @end
 
@@ -56,7 +55,7 @@ typedef NS_ENUM(NSInteger, PUICQuickboardListSection) {
     RetainPtr<UIImageView> _imageView;
 }
 
-- (instancetype) initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
 {
     if (!(self = [super initWithStyle:style reuseIdentifier:reuseIdentifier]))
         return nil;
@@ -75,7 +74,60 @@ typedef NS_ENUM(NSInteger, PUICQuickboardListSection) {
     return _imageView.get();
 }
 
+- (CGFloat)topToLabelBaselineSpecValue
+{
+    return itemCellTopToLabelBaseline;
+}
+
+- (CGFloat)baselineToBottomSpecValue
+{
+    return itemCellBaselineToBottom;
+}
+
 @end
+
+#if HAVE(QUICKBOARD_COLLECTION_VIEWS)
+
+@interface WKSelectMenuCollectionViewItemCell : PUICQuickboardListCollectionViewItemCell
+@property (nonatomic, readonly) UIImageView *imageView;
+@end
+
+@implementation WKSelectMenuCollectionViewItemCell {
+    RetainPtr<UIImageView> _imageView;
+}
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    if (!(self = [super initWithFrame:frame]))
+        return nil;
+
+    _imageView = adoptNS([[UIImageView alloc] init]);
+    UIImage *checkmarkImage = [PUICResources imageNamed:@"UIPreferencesBlueCheck" inBundle:[NSBundle bundleWithIdentifier:@"com.apple.PepperUICore"] shouldCache:YES];
+    [_imageView setImage:[checkmarkImage _flatImageWithColor:[UIColor systemBlueColor]]];
+    [_imageView setContentMode:UIViewContentModeCenter];
+    [_imageView setHidden:YES];
+    [self.contentView addSubview:_imageView.get()];
+    return self;
+}
+
+- (UIImageView *)imageView
+{
+    return _imageView.get();
+}
+
+- (CGFloat)topToLabelBaselineSpecValue
+{
+    return itemCellTopToLabelBaseline;
+}
+
+- (CGFloat)baselineToBottomSpecValue
+{
+    return itemCellBaselineToBottom;
+}
+
+@end
+
+#endif // HAVE(QUICKBOARD_COLLECTION_VIEWS)
 
 @implementation WKSelectMenuListViewController {
     BOOL _isMultipleSelect;
@@ -86,7 +138,7 @@ typedef NS_ENUM(NSInteger, PUICQuickboardListSection) {
 
 - (instancetype)initWithDelegate:(id <WKSelectMenuListViewControllerDelegate>)delegate
 {
-    return [super initWithDelegate:delegate];
+    return [super initWithDelegate:delegate dictationMode:PUICDictationModeText];
 }
 
 - (void)viewDidLoad
@@ -116,9 +168,16 @@ typedef NS_ENUM(NSInteger, PUICQuickboardListSection) {
     return NO;
 }
 
+// FIXME: This method can be removed when <rdar://problem/57807445> lands in a build.
 - (void)didSelectListItem:(NSInteger)itemNumber
 {
+    [self didSelectListItemAtIndexPath:[NSIndexPath indexPathForRow:itemNumber inSection:PUICQuickboardListSectionTextOptions]];
+}
+
+- (void)didSelectListItemAtIndexPath:(NSIndexPath *)indexPath
+{
     NSMutableArray *indexPathsToReload = [NSMutableArray array];
+    NSInteger itemNumber = indexPath.row;
     if (_isMultipleSelect) {
         BOOL addIndex = ![_indicesOfCheckedOptions containsIndex:itemNumber];
         if (addIndex)
@@ -126,7 +185,7 @@ typedef NS_ENUM(NSInteger, PUICQuickboardListSection) {
         else
             [_indicesOfCheckedOptions removeIndex:itemNumber];
         [self.delegate selectMenu:self didCheckItemAtIndex:itemNumber checked:addIndex];
-        [indexPathsToReload addObject:[NSIndexPath indexPathForRow:itemNumber inSection:PUICQuickboardListSectionTextOptions]];
+        [indexPathsToReload addObject:[NSIndexPath indexPathForRow:itemNumber inSection:indexPath.section]];
     } else {
         NSInteger previousSelectedIndex = [_indicesOfCheckedOptions firstIndex];
         if (previousSelectedIndex != itemNumber) {
@@ -134,13 +193,22 @@ typedef NS_ENUM(NSInteger, PUICQuickboardListSection) {
             [_indicesOfCheckedOptions addIndex:itemNumber];
             [self.delegate selectMenu:self didSelectItemAtIndex:itemNumber];
             if (previousSelectedIndex != NSNotFound)
-                [indexPathsToReload addObject:[NSIndexPath indexPathForRow:previousSelectedIndex inSection:PUICQuickboardListSectionTextOptions]];
-            [indexPathsToReload addObject:[NSIndexPath indexPathForRow:itemNumber inSection:PUICQuickboardListSectionTextOptions]];
+                [indexPathsToReload addObject:[NSIndexPath indexPathForRow:previousSelectedIndex inSection:indexPath.section]];
+            [indexPathsToReload addObject:[NSIndexPath indexPathForRow:itemNumber inSection:indexPath.section]];
         }
     }
 
-    if (indexPathsToReload.count)
+    if (!indexPathsToReload.count)
+        return;
+
+    if (self.listView) {
         [self.listView reloadRowsAtIndexPaths:indexPathsToReload withRowAnimation:UITableViewRowAnimationNone];
+        return;
+    }
+
+#if HAVE(QUICKBOARD_COLLECTION_VIEWS)
+    [self.collectionView reloadItemsAtIndexPaths:indexPathsToReload];
+#endif
 }
 
 - (NSInteger)numberOfListItems
@@ -153,6 +221,7 @@ typedef NS_ENUM(NSInteger, PUICQuickboardListSection) {
     return selectMenuItemCellHeight;
 }
 
+// FIXME: This method can be removed when <rdar://problem/57807445> lands in a build.
 - (PUICQuickboardListItemCell *)cellForListItem:(NSInteger)itemNumber
 {
     auto reusableCell = retainPtr([self.listView dequeueReusableCellWithIdentifier:selectMenuCellReuseIdentifier]);
@@ -179,11 +248,61 @@ typedef NS_ENUM(NSInteger, PUICQuickboardListSection) {
     return reusableCell.autorelease();
 }
 
+- (NSString *)listItemCellReuseIdentifier
+{
+    return selectMenuCellReuseIdentifier;
+}
+
+- (BOOL)shouldShowLanguageButton
+{
+    return NO;
+}
+
+#if HAVE(QUICKBOARD_COLLECTION_VIEWS)
+
+- (Class)listItemCellClass
+{
+    return [WKSelectMenuCollectionViewItemCell class];
+}
+
+- (PUICQuickboardListCollectionViewItemCell *)itemCellForListItem:(NSInteger)itemNumber forIndexPath:(NSIndexPath *)indexPath
+{
+    auto reusableCell = retainPtr([self.collectionView dequeueReusableCellWithReuseIdentifier:selectMenuCellReuseIdentifier forIndexPath:indexPath]);
+
+    [reusableCell bodyLabel].numberOfLines = 1;
+    [reusableCell bodyLabel].lineBreakMode = NSLineBreakByTruncatingTail;
+    [reusableCell bodyLabel].allowsDefaultTighteningForTruncation = YES;
+    [reusableCell imageView].frame = UIRectInset([reusableCell contentView].bounds, 0, 0, 0, CGRectGetWidth([reusableCell contentView].bounds) - checkmarkImageViewWidth);
+    [reusableCell setText:[self.delegate selectMenu:self displayTextForItemAtIndex:itemNumber]];
+
+    if ([_indicesOfCheckedOptions containsIndex:itemNumber]) {
+        [reusableCell bodyLabel].frame = UIRectInset([reusableCell contentView].bounds, 0, selectMenuItemHorizontalMargin + checkmarkImageViewWidth, 0, selectMenuItemHorizontalMargin);
+        [reusableCell imageView].hidden = NO;
+    } else {
+        [reusableCell bodyLabel].frame = UIRectInset([reusableCell contentView].bounds, 0, selectMenuItemHorizontalMargin, 0, selectMenuItemHorizontalMargin);
+        [reusableCell imageView].hidden = YES;
+    }
+
+    return reusableCell.autorelease();
+}
+
+- (BOOL)collectionViewSectionIsRadioSection:(NSInteger)sectionNumber
+{
+    return !_isMultipleSelect;
+}
+
+#endif // HAVE(QUICKBOARD_COLLECTION_VIEWS)
+
 - (void)selectItemAtIndex:(NSInteger)index
 {
-    [self didSelectListItem:index];
+#if HAVE(QUICKBOARD_COLLECTION_VIEWS)
+    NSInteger itemSection = 0;
+#else
+    NSInteger itemSection = PUICQuickboardListSectionTextOptions;
+#endif
+    [self didSelectListItemAtIndexPath:[NSIndexPath indexPathForRow:index inSection:itemSection]];
 }
 
 @end
 
-#endif // PLATFORM(WATCHOS)
+#endif // HAVE(PEPPER_UI_CORE)

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -33,10 +33,12 @@
 #import "AccessibilityController.h"
 #import "EventSendingController.h"
 #import "GCController.h"
+#import "JSWrapper.h"
 #import "NavigationController.h"
 #import "ObjCController.h"
 #import "ObjCPlugin.h"
 #import "ObjCPluginFunction.h"
+#import "ReftestFunctions.h"
 #import "TestRunner.h"
 #import "TextInputController.h"
 #import "WebCoreTestSupport.h"
@@ -46,7 +48,6 @@
 #import <JavaScriptCore/JavaScriptCore.h>
 #import <WebKit/WebFramePrivate.h>
 #import <WebKit/WebHTMLViewPrivate.h>
-#import <WebKit/WebKit.h>
 #import <WebKit/WebNSURLExtras.h>
 #import <WebKit/WebScriptWorld.h>
 #import <WebKit/WebSecurityOriginPrivate.h>
@@ -136,7 +137,27 @@ IGNORE_WARNINGS_END
     [super dealloc];
 }
 
-// Exec messages in the work queue until they're all done, or one of them starts a new load
+- (void)dumpAfterWaitAttributeIsRemoved:(id)dummy
+{
+#if PLATFORM(IOS_FAMILY)
+    WebThreadLock();
+#endif
+    if (WTR::hasReftestWaitAttribute(mainFrame.globalContext))
+        [self performSelector:@selector(dumpAfterWaitAttributeIsRemoved:) withObject:nil afterDelay:0];
+    else
+        dump();
+}
+
+- (void)readyToDumpState
+{
+#if PLATFORM(IOS_FAMILY)
+    WebThreadLock();
+#endif
+    WTR::sendTestRenderedEvent(mainFrame.globalContext);
+    [self dumpAfterWaitAttributeIsRemoved:nil];
+}
+
+// Execute messages in the work queue until they're all done, or one of them starts a new load.
 - (void)processWork:(id)dummy
 {
     // if another load started, then wait for it to complete.
@@ -146,10 +167,9 @@ IGNORE_WARNINGS_END
 #if PLATFORM(IOS_FAMILY)
     WebThreadLock();
 #endif
-
-    // if we finish all the commands, we're ready to dump state
+    // If we finish all the commands, we're ready to dump state.
     if (DRT::WorkQueue::singleton().processWork() && !gTestRunner->waitToDump())
-        dump();
+        [self readyToDumpState];
 }
 
 - (void)resetToConsistentState
@@ -167,7 +187,7 @@ IGNORE_WARNINGS_END
             if (workQueue.count())
                 [self performSelector:@selector(processWork:) withObject:nil afterDelay:0];
             else
-                dump();
+                [self readyToDumpState];
         }
     }
 }
@@ -274,7 +294,7 @@ IGNORE_WARNINGS_END
     ASSERT(![frame provisionalDataSource]);
     ASSERT([frame dataSource]);
     
-    [self webView:sender locationChangeDone:error forDataSource:[frame dataSource]];    
+    [self webView:sender locationChangeDone:error forDataSource:[frame dataSource]];
 }
 
 IGNORE_WARNINGS_BEGIN("deprecated-implementations")
@@ -291,54 +311,26 @@ IGNORE_WARNINGS_END
 
 - (void)didClearWindowObjectInStandardWorldForFrame:(WebFrame *)frame
 {
-    // Make New-Style TestRunner
-    JSContextRef context = [frame globalContext];
-    JSObjectRef globalObject = JSContextGetGlobalObject(context);
-    JSValueRef exception = 0;
+    auto context = [frame globalContext];
+    auto webView = [frame webView];
+    auto windowObject = [frame windowObject];
 
-    ASSERT(gTestRunner);
-    gTestRunner->makeWindowObject(context, globalObject, &exception);
-    ASSERT(!exception);
-
-    gcController->makeWindowObject(context, globalObject, &exception);
-    ASSERT(!exception);
-
-    accessibilityController->makeWindowObject(context, globalObject, &exception);
-    ASSERT(!exception);
+    gTestRunner->makeWindowObject(context);
+    gcController->makeWindowObject(context);
+    accessibilityController->makeWindowObject(context);
 
     WebCoreTestSupport::injectInternalsObject(context);
 
-    // Make Old-Style controllers
-
-    WebView *webView = [frame webView];
-    WebScriptObject *obj = [frame windowObject];
-#if !PLATFORM(IOS_FAMILY)
-    AppleScriptController *asc = [[AppleScriptController alloc] initWithWebView:webView];
-    [obj setValue:asc forKey:@"appleScriptController"];
-    [asc release];
+#if PLATFORM(MAC)
+    [windowObject setValue:adoptNS([[AppleScriptController alloc] initWithWebView:webView]).get() forKey:@"appleScriptController"];
 #endif
 
-    EventSendingController *esc = [[EventSendingController alloc] init];
-    [obj setValue:esc forKey:@"eventSender"];
-    [esc release];
-    
-    [obj setValue:gNavigationController forKey:@"navigationController"];
-    
-    ObjCController *occ = [[ObjCController alloc] init];
-    [obj setValue:occ forKey:@"objCController"];
-    [occ release];
-
-    ObjCPlugin *plugin = [[ObjCPlugin alloc] init];
-    [obj setValue:plugin forKey:@"objCPlugin"];
-    [plugin release];
-    
-    ObjCPluginFunction *pluginFunction = [[ObjCPluginFunction alloc] init];
-    [obj setValue:pluginFunction forKey:@"objCPluginFunction"];
-    [pluginFunction release];
-
-    TextInputController *tic = [[TextInputController alloc] initWithWebView:webView];
-    [obj setValue:tic forKey:@"textInputController"];
-    [tic release];
+    [windowObject setValue:adoptNS([[EventSendingController alloc] init]).get() forKey:@"eventSender"];
+    [windowObject setValue:gNavigationController.get() forKey:@"navigationController"];
+    [windowObject setValue:adoptNS([[ObjCController alloc] init]).get() forKey:@"objCController"];
+    [windowObject setValue:adoptNS([[ObjCPlugin alloc] init]).get() forKey:@"objCPlugin"];
+    [windowObject setValue:adoptNS([[ObjCPluginFunction alloc] init]).get() forKey:@"objCPluginFunction"];
+    [windowObject setValue:adoptNS([[TextInputController alloc] initWithWebView:webView]).get() forKey:@"textInputController"];
 }
 
 - (void)didClearWindowObjectForFrame:(WebFrame *)frame inIsolatedWorld:(WebScriptWorld *)world
@@ -351,7 +343,7 @@ IGNORE_WARNINGS_END
     if (!globalObject)
         return;
 
-    JSObjectSetProperty(ctx, globalObject, adopt(JSStringCreateWithUTF8CString("__worldID")).get(), JSValueMakeNumber(ctx, worldIDForWorld(world)), kJSPropertyAttributeReadOnly, 0);
+    JSObjectSetProperty(ctx, globalObject, WTR::createJSString("__worldID").get(), JSValueMakeNumber(ctx, worldIDForWorld(world)), kJSPropertyAttributeReadOnly, 0);
 }
 
 - (void)webView:(WebView *)sender didClearWindowObjectForFrame:(WebFrame *)frame inScriptWorld:(WebScriptWorld *)world
@@ -392,7 +384,7 @@ IGNORE_WARNINGS_END
 - (void)webView:(WebView *)sender willPerformClientRedirectToURL:(NSURL *)URL delay:(NSTimeInterval)seconds fireDate:(NSDate *)date forFrame:(WebFrame *)frame
 {
     if (!done && gTestRunner->dumpFrameLoadCallbacks()) {
-        NSString *string = [NSString stringWithFormat:@"%@ - willPerformClientRedirectToURL: %@ ", [frame _drt_descriptionSuitableForTestResult], [URL _drt_descriptionSuitableForTestResult]];
+        NSString *string = [NSString stringWithFormat:@"%@ - willPerformClientRedirectToURL: %@", [frame _drt_descriptionSuitableForTestResult], [URL _drt_descriptionSuitableForTestResult]];
         printf ("%s\n", [string UTF8String]);
     }
 

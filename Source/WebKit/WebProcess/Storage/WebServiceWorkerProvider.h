@@ -34,6 +34,11 @@ namespace WebCore {
 class CachedResource;
 }
 
+namespace IPC {
+class Connection;
+class Decoder;
+};
+
 namespace WebKit {
 
 class WebServiceWorkerProvider final : public WebCore::ServiceWorkerProvider {
@@ -41,13 +46,14 @@ public:
     static WebServiceWorkerProvider& singleton();
 
     void didReceiveServiceWorkerClientRegistrationMatch(IPC::Connection&, IPC::Decoder&);
+    void updateThrottleState(bool isThrottleable);
 
 private:
     friend NeverDestroyed<WebServiceWorkerProvider>;
     WebServiceWorkerProvider();
 
-    WebCore::SWClientConnection* existingServiceWorkerConnection() final;
     WebCore::SWClientConnection& serviceWorkerConnection() final;
+    void terminateWorkerForTesting(WebCore::ServiceWorkerIdentifier, CompletionHandler<void()>&&) final;
 }; // class WebServiceWorkerProvider
 
 } // namespace WebKit

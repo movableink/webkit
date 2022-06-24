@@ -11,6 +11,8 @@
 #ifndef RTC_BASE_MEMORY_STREAM_H_
 #define RTC_BASE_MEMORY_STREAM_H_
 
+#include <stddef.h>
+
 #include "rtc_base/stream.h"
 
 namespace rtc {
@@ -20,8 +22,6 @@ namespace rtc {
 class MemoryStream final : public StreamInterface {
  public:
   MemoryStream();
-  explicit MemoryStream(const char* data);  // Calls SetData(data, strlen(data))
-  MemoryStream(const void* data, size_t length);  // Calls SetData(data, length)
   ~MemoryStream() override;
 
   StreamState GetState() const override;
@@ -34,10 +34,12 @@ class MemoryStream final : public StreamInterface {
                      size_t* bytes_written,
                      int* error) override;
   void Close() override;
-  bool SetPosition(size_t position) override;
-  bool GetPosition(size_t* position) const override;
-  bool GetSize(size_t* size) const override;
-  bool ReserveSize(size_t size) override;
+  bool GetSize(size_t* size) const;
+  bool ReserveSize(size_t size);
+
+  bool SetPosition(size_t position);
+  bool GetPosition(size_t* position) const;
+  void Rewind();
 
   char* GetBuffer() { return buffer_; }
   const char* GetBuffer() const { return buffer_; }

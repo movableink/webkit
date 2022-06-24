@@ -25,13 +25,7 @@ static const int16_t vector16[kVector16Size] = {1,
                                                 -3333,
                                                 345};
 
-class SplTest : public testing::Test {
- protected:
-  SplTest() { WebRtcSpl_Init(); }
-  ~SplTest() override {}
-};
-
-TEST_F(SplTest, MacroTest) {
+TEST(SplTest, MacroTest) {
   // Macros with inputs.
   int A = 10;
   int B = 21;
@@ -93,7 +87,7 @@ TEST_F(SplTest, MacroTest) {
 #endif
 }
 
-TEST_F(SplTest, InlineTest) {
+TEST(SplTest, InlineTest) {
   int16_t a16 = 121;
   int16_t b16 = -17;
   int32_t a32 = 111121;
@@ -124,7 +118,7 @@ TEST_F(SplTest, InlineTest) {
   EXPECT_EQ(138, WebRtcSpl_SubSatW16(a16, b16));
 }
 
-TEST_F(SplTest, AddSubSatW32) {
+TEST(SplTest, AddSubSatW32) {
   static constexpr int32_t kAddSubArgs[] = {
       INT32_MIN, INT32_MIN + 1, -3,       -2, -1, 0, 1, -1, 2,
       3,         INT32_MAX - 1, INT32_MAX};
@@ -143,7 +137,7 @@ TEST_F(SplTest, AddSubSatW32) {
   }
 }
 
-TEST_F(SplTest, CountLeadingZeros32) {
+TEST(SplTest, CountLeadingZeros32) {
   EXPECT_EQ(32, WebRtcSpl_CountLeadingZeros32(0));
   EXPECT_EQ(32, WebRtcSpl_CountLeadingZeros32_NotBuiltin(0));
   for (int i = 0; i < 32; ++i) {
@@ -156,7 +150,7 @@ TEST_F(SplTest, CountLeadingZeros32) {
   }
 }
 
-TEST_F(SplTest, CountLeadingZeros64) {
+TEST(SplTest, CountLeadingZeros64) {
   EXPECT_EQ(64, WebRtcSpl_CountLeadingZeros64(0));
   EXPECT_EQ(64, WebRtcSpl_CountLeadingZeros64_NotBuiltin(0));
   for (int i = 0; i < 64; ++i) {
@@ -169,7 +163,7 @@ TEST_F(SplTest, CountLeadingZeros64) {
   }
 }
 
-TEST_F(SplTest, MathOperationsTest) {
+TEST(SplTest, MathOperationsTest) {
   int A = 1134567892;
   int32_t num = 117;
   int32_t den = -5;
@@ -184,7 +178,7 @@ TEST_F(SplTest, MathOperationsTest) {
   EXPECT_EQ(0, WebRtcSpl_DivW32HiLow(128, 0, 256));
 }
 
-TEST_F(SplTest, BasicArrayOperationsTest) {
+TEST(SplTest, BasicArrayOperationsTest) {
   const size_t kVectorSize = 4;
   int B[] = {4, 12, 133, 1100};
   int16_t b16[kVectorSize];
@@ -249,7 +243,7 @@ TEST_F(SplTest, BasicArrayOperationsTest) {
   }
 }
 
-TEST_F(SplTest, MinMaxOperationsTest) {
+TEST(SplTest, MinMaxOperationsTest) {
   const size_t kVectorSize = 17;
 
   // Vectors to test the cases where minimum values have to be caught
@@ -295,6 +289,12 @@ TEST_F(SplTest, MinMaxOperationsTest) {
             WebRtcSpl_MinValueW32(vector32, kVectorSize));
   EXPECT_EQ(kVectorSize - 1, WebRtcSpl_MinIndexW16(vector16, kVectorSize));
   EXPECT_EQ(kVectorSize - 1, WebRtcSpl_MinIndexW32(vector32, kVectorSize));
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MIN,
+            WebRtcSpl_MaxAbsElementW16(vector16, kVectorSize));
+  int16_t min_value, max_value;
+  WebRtcSpl_MinMaxW16(vector16, kVectorSize, &min_value, &max_value);
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MIN, min_value);
+  EXPECT_EQ(12334, max_value);
 
   // Test the cases where maximum values have to be caught
   // outside of the unrolled loops in ARM-Neon.
@@ -312,6 +312,11 @@ TEST_F(SplTest, MinMaxOperationsTest) {
   EXPECT_EQ(kVectorSize - 1, WebRtcSpl_MaxAbsIndexW16(vector16, kVectorSize));
   EXPECT_EQ(kVectorSize - 1, WebRtcSpl_MaxIndexW16(vector16, kVectorSize));
   EXPECT_EQ(kVectorSize - 1, WebRtcSpl_MaxIndexW32(vector32, kVectorSize));
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MAX,
+            WebRtcSpl_MaxAbsElementW16(vector16, kVectorSize));
+  WebRtcSpl_MinMaxW16(vector16, kVectorSize, &min_value, &max_value);
+  EXPECT_EQ(-29871, min_value);
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MAX, max_value);
 
   // Test the cases where multiple maximum and minimum values are present.
   vector16[1] = WEBRTC_SPL_WORD16_MAX;
@@ -338,9 +343,46 @@ TEST_F(SplTest, MinMaxOperationsTest) {
   EXPECT_EQ(1u, WebRtcSpl_MaxIndexW32(vector32, kVectorSize));
   EXPECT_EQ(6u, WebRtcSpl_MinIndexW16(vector16, kVectorSize));
   EXPECT_EQ(6u, WebRtcSpl_MinIndexW32(vector32, kVectorSize));
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MIN,
+            WebRtcSpl_MaxAbsElementW16(vector16, kVectorSize));
+  WebRtcSpl_MinMaxW16(vector16, kVectorSize, &min_value, &max_value);
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MIN, min_value);
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MAX, max_value);
+
+  // Test a one-element vector.
+  int16_t single_element_vector = 0;
+  EXPECT_EQ(0, WebRtcSpl_MaxAbsValueW16(&single_element_vector, 1));
+  EXPECT_EQ(0, WebRtcSpl_MaxValueW16(&single_element_vector, 1));
+  EXPECT_EQ(0, WebRtcSpl_MinValueW16(&single_element_vector, 1));
+  EXPECT_EQ(0u, WebRtcSpl_MaxAbsIndexW16(&single_element_vector, 1));
+  EXPECT_EQ(0u, WebRtcSpl_MaxIndexW16(&single_element_vector, 1));
+  EXPECT_EQ(0u, WebRtcSpl_MinIndexW16(&single_element_vector, 1));
+  EXPECT_EQ(0, WebRtcSpl_MaxAbsElementW16(&single_element_vector, 1));
+  WebRtcSpl_MinMaxW16(&single_element_vector, 1, &min_value, &max_value);
+  EXPECT_EQ(0, min_value);
+  EXPECT_EQ(0, max_value);
+
+  // Test a two-element vector with the values WEBRTC_SPL_WORD16_MIN and
+  // WEBRTC_SPL_WORD16_MAX.
+  int16_t two_element_vector[2] = {WEBRTC_SPL_WORD16_MIN,
+                                   WEBRTC_SPL_WORD16_MAX};
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MAX,
+            WebRtcSpl_MaxAbsValueW16(two_element_vector, 2));
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MAX,
+            WebRtcSpl_MaxValueW16(two_element_vector, 2));
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MIN,
+            WebRtcSpl_MinValueW16(two_element_vector, 2));
+  EXPECT_EQ(0u, WebRtcSpl_MaxAbsIndexW16(two_element_vector, 2));
+  EXPECT_EQ(1u, WebRtcSpl_MaxIndexW16(two_element_vector, 2));
+  EXPECT_EQ(0u, WebRtcSpl_MinIndexW16(two_element_vector, 2));
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MIN,
+            WebRtcSpl_MaxAbsElementW16(two_element_vector, 2));
+  WebRtcSpl_MinMaxW16(two_element_vector, 2, &min_value, &max_value);
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MIN, min_value);
+  EXPECT_EQ(WEBRTC_SPL_WORD16_MAX, max_value);
 }
 
-TEST_F(SplTest, VectorOperationsTest) {
+TEST(SplTest, VectorOperationsTest) {
   const size_t kVectorSize = 4;
   int B[] = {4, 12, 133, 1100};
   int16_t a16[kVectorSize];
@@ -402,7 +444,7 @@ TEST_F(SplTest, VectorOperationsTest) {
   EXPECT_EQ(0, WebRtcSpl_GetScalingSquare(b16, kVectorSize, 1));
 }
 
-TEST_F(SplTest, EstimatorsTest) {
+TEST(SplTest, EstimatorsTest) {
   const size_t kOrder = 2;
   const int32_t unstable_filter[] = {4, 12, 133, 1100};
   const int32_t stable_filter[] = {1100, 133, 12, 4};
@@ -419,7 +461,7 @@ TEST_F(SplTest, EstimatorsTest) {
   }
 }
 
-TEST_F(SplTest, FilterTest) {
+TEST(SplTest, FilterTest) {
   const size_t kVectorSize = 4;
   const size_t kFilterOrder = 3;
   int16_t A[] = {1, 2, 33, 100};
@@ -440,13 +482,13 @@ TEST_F(SplTest, FilterTest) {
   }
 
   // MA filters.
-  // Note that the input data has |kFilterOrder| states before the actual
+  // Note that the input data has `kFilterOrder` states before the actual
   // data (one sample).
   WebRtcSpl_FilterMAFastQ12(&data_in[kFilterOrder], data_out, B,
                             kFilterOrder + 1, 1);
   EXPECT_EQ(0, data_out[0]);
   // AR filters.
-  // Note that the output data has |kFilterOrder| states before the actual
+  // Note that the output data has `kFilterOrder` states before the actual
   // data (one sample).
   WebRtcSpl_FilterARFastQ12(data_in, &data_out[kFilterOrder], A,
                             kFilterOrder + 1, 1);
@@ -457,7 +499,7 @@ TEST_F(SplTest, FilterTest) {
                                             data_out, bTmp16Low, kVectorSize));
 }
 
-TEST_F(SplTest, RandTest) {
+TEST(SplTest, RandTest) {
   const int kVectorSize = 4;
   int16_t BU[] = {3653, 12446, 8525, 30691};
   int16_t b16[kVectorSize];
@@ -472,12 +514,12 @@ TEST_F(SplTest, RandTest) {
   }
 }
 
-TEST_F(SplTest, DotProductWithScaleTest) {
+TEST(SplTest, DotProductWithScaleTest) {
   EXPECT_EQ(605362796, WebRtcSpl_DotProductWithScale(vector16, vector16,
                                                      kVector16Size, 2));
 }
 
-TEST_F(SplTest, CrossCorrelationTest) {
+TEST(SplTest, CrossCorrelationTest) {
   // Note the function arguments relation specificed by API.
   const size_t kCrossCorrelationDimension = 3;
   const int kShift = 2;
@@ -509,7 +551,7 @@ TEST_F(SplTest, CrossCorrelationTest) {
   }
 }
 
-TEST_F(SplTest, AutoCorrelationTest) {
+TEST(SplTest, AutoCorrelationTest) {
   int scale = 0;
   int32_t vector32[kVector16Size];
   const int32_t expected[kVector16Size] = {302681398, 14223410,  -121705063,
@@ -525,7 +567,7 @@ TEST_F(SplTest, AutoCorrelationTest) {
   }
 }
 
-TEST_F(SplTest, SignalProcessingTest) {
+TEST(SplTest, SignalProcessingTest) {
   const size_t kVectorSize = 4;
   int A[] = {1, 2, 33, 100};
   const int16_t kHanning[4] = {2399, 8192, 13985, 16384};
@@ -565,7 +607,7 @@ TEST_F(SplTest, SignalProcessingTest) {
   EXPECT_EQ(0, bScale);
 }
 
-TEST_F(SplTest, FFTTest) {
+TEST(SplTest, FFTTest) {
   int16_t B[] = {1, 2, 33, 100, 2, 3, 34, 101, 3, 4, 35, 102, 4, 5, 36, 103};
 
   EXPECT_EQ(0, WebRtcSpl_ComplexFFT(B, 3, 1));
@@ -582,7 +624,7 @@ TEST_F(SplTest, FFTTest) {
   }
 }
 
-TEST_F(SplTest, Resample48WithSaturationTest) {
+TEST(SplTest, Resample48WithSaturationTest) {
   // The test resamples 3*kBlockSize number of samples to 2*kBlockSize number
   // of samples.
   const size_t kBlockSize = 16;
@@ -597,11 +639,11 @@ TEST_F(SplTest, Resample48WithSaturationTest) {
       32767,  32767,  32767,  32767,  32767,  32767,  32767,  32767,
       32767,  32767,  32767,  32767,  32767,  32767,  32767};
 
-  // All values in |out_vector| should be |kRefValue32kHz|.
+  // All values in `out_vector` should be `kRefValue32kHz`.
   const int32_t kRefValue32kHz1 = -1077493760;
   const int32_t kRefValue32kHz2 = 1077493645;
 
-  // After bit shift with saturation, |out_vector_w16| is saturated.
+  // After bit shift with saturation, `out_vector_w16` is saturated.
 
   const int16_t kRefValue16kHz1 = -32768;
   const int16_t kRefValue16kHz2 = 32767;

@@ -29,21 +29,21 @@ namespace WebCore {
 
 class JSTestCallbackFunctionRethrow final : public TestCallbackFunctionRethrow {
 public:
-    static Ref<JSTestCallbackFunctionRethrow> create(JSC::JSObject* callback, JSDOMGlobalObject* globalObject)
+    static Ref<JSTestCallbackFunctionRethrow> create(JSC::VM& vm, JSC::JSObject* callback)
     {
-        return adoptRef(*new JSTestCallbackFunctionRethrow(callback, globalObject));
+        return adoptRef(*new JSTestCallbackFunctionRethrow(vm, callback));
     }
 
-    virtual ScriptExecutionContext* scriptExecutionContext() const { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const { return ContextDestructionObserver::scriptExecutionContext(); }
 
-    virtual ~JSTestCallbackFunctionRethrow();
+    ~JSTestCallbackFunctionRethrow() final;
     JSCallbackDataStrong* callbackData() { return m_data; }
 
     // Functions
     CallbackResult<typename IDLDOMString::ImplementationType> handleEvent(typename IDLSequence<IDLLong>::ParameterType argument) override;
 
 private:
-    JSTestCallbackFunctionRethrow(JSC::JSObject*, JSDOMGlobalObject*);
+    JSTestCallbackFunctionRethrow(JSC::VM&, JSC::JSObject* callback);
 
     JSCallbackDataStrong* m_data;
 };

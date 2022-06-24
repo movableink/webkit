@@ -33,12 +33,14 @@ class ManifestGenerator {
         $platforms = (object)$this->platforms($platform_table, false);
         $dashboard = (object)$this->platforms($platform_table, true);
         $repositories = (object)$this->repositories($repositories_table, $repositories_with_commit);
+        $platform_groups = (object)$this->platform_groups();
 
         $this->manifest = array(
             'siteTitle' => config('siteTitle', 'Performance Dashboard'),
             'tests' => &$tests,
             'metrics' => &$metrics,
             'all' => &$platforms,
+            'platformGroups' => &$platform_groups,
             'dashboard' => &$dashboard,
             'repositories' => &$repositories,
             'builders' => (object)$this->builders(),
@@ -48,6 +50,7 @@ class ManifestGenerator {
             'summaryPages' => config('summaryPages'),
             'fileUploadSizeLimit' => config('uploadFileLimitInMB', 0) * 1024 * 1024,
             'testAgeToleranceInHours' => config('testAgeToleranceInHours'),
+            'maxRootReuseAgeInDays' => config('maxRootReuseAgeInDays'),
         );
 
         $this->elapsed_time = (microtime(true) - $start_time) * 1000;
@@ -115,7 +118,6 @@ class ManifestGenerator {
                 array_push($current_platform_entry['last_modified'], intval($metric_row['last_modified']));
             }
         }
-        $configurations = array();
 
         $platforms = array();
         if ($platform_table) {
@@ -127,11 +129,22 @@ class ManifestGenerator {
                     $platforms[$id] = array(
                         'name' => $platform_row['platform_name'],
                         'metrics' => $platform_metrics[$id]['metrics'],
+                        'group' => $platform_row['platform_group'],
                         'lastModified' => $platform_metrics[$id]['last_modified']);
                 }
             }
         }
         return $platforms;
+    }
+
+    private function platform_groups() {
+        $platform_groups_table = $this->db->fetch_table('platform_groups');
+        if (!$platform_groups_table)
+            return array();
+        $platform_groups = array();
+        foreach ($platform_groups_table as &$row)
+            $platform_groups[$row['platformgroup_id']] = array('name' => $row['platformgroup_name']);
+        return $platform_groups;
     }
 
     private function repositories($repositories_table, $repositories_with_commit) {
@@ -248,6 +261,11 @@ class ManifestGenerator {
             }
         }
 
+        $repetition_types_by_configuration = $db->fetch_table('triggerable_configuration_repetition_types');
+        $repetition_types_by_config = array();
+        foreach ($repetition_types_by_configuration as &$row)
+            array_push(array_ensure_item_has_array($repetition_types_by_config, $row['configrepetition_config']), $row['configrepetition_type']);
+
         $configuration_map = $db->fetch_table('triggerable_configurations');
         if ($configuration_map) {
             foreach ($configuration_map as &$row) {
@@ -255,7 +273,8 @@ class ManifestGenerator {
                 if (!array_key_exists($triggerable_id, $id_to_triggerable))
                     continue;
                 $triggerable = &$id_to_triggerable[$triggerable_id];
-                array_push($triggerable['configurations'], array($row['trigconfig_test'], $row['trigconfig_platform']));
+                $repetition_types = $repetition_types_by_config[$row['trigconfig_id']];
+                array_push($triggerable['configurations'], array($row['trigconfig_test'], $row['trigconfig_platform'], $repetition_types));
             }
         }
 

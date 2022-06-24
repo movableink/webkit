@@ -29,6 +29,7 @@
 #include <string.h>
 #include <wtf/Forward.h>
 #include <wtf/HashTraits.h>
+#include <wtf/Hasher.h>
 
 namespace IPC {
 
@@ -63,37 +64,52 @@ public:
 
     CString toString() const;
 
-    friend bool operator==(const StringReference& a, const StringReference& b)
-    {
-        return a.m_size == b.m_size && !memcmp(a.m_data, b.m_data, a.m_size);
-    }
-
     void encode(Encoder&) const;
-    static bool decode(Decoder&, StringReference&);
+    static WARN_UNUSED_RETURN bool decode(Decoder&, StringReference&);
 
     struct Hash {
         static unsigned hash(const StringReference& a);
-        static bool equal(const StringReference& a, const StringReference& b) { return a == b; }
+        static bool equal(const StringReference&, const StringReference&);
         static const bool safeToCompareToEmptyOrDeleted = true;
     };
 
 private:
+    friend struct HashTraits<IPC::StringReference>;
+
     const char* m_data;
     size_t m_size;
 };
+
+inline void add(Hasher& hasher, const StringReference& string)
+{
+    add(hasher, Span { string.data(), string.size() });
+}
+
+inline bool operator==(const StringReference& a, const StringReference& b)
+{
+    return a.size() == b.size() && !memcmp(a.data(), b.data(), a.size());
+}
+
+inline bool operator!=(const StringReference& a, const StringReference& b)
+{
+    return !(a == b);
+}
+
+inline bool StringReference::Hash::equal(const StringReference& a, const StringReference& b)
+{
+    return a == b;
+}
 
 } // namespace IPC
 
 namespace WTF {
 template<typename T> struct DefaultHash;
 
-template<> struct DefaultHash<IPC::StringReference> {
-    typedef IPC::StringReference::Hash Hash;
-};
+template<> struct DefaultHash<IPC::StringReference> : IPC::StringReference::Hash { };
 
 template<> struct HashTraits<IPC::StringReference> : GenericHashTraits<IPC::StringReference> {
     static const bool emptyValueIsZero = 0;
-    static void constructDeletedValue(IPC::StringReference& stringReference) { stringReference = IPC::StringReference(0, std::numeric_limits<size_t>::max()); }
+    static void constructDeletedValue(IPC::StringReference& stringReference) { stringReference.m_size = std::numeric_limits<size_t>::max(); }
     static bool isDeletedValue(const IPC::StringReference& stringReference) { return stringReference.size() == std::numeric_limits<size_t>::max(); }
 };
 

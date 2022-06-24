@@ -1,5 +1,0 @@
-2d.path.lineTo.nextpoint
-
-
-FAIL OffscreenCanvas test: 2d.path.lineTo.nextpoint null is not an object (evaluating 'ctx.fillStyle = '#f00'')
-

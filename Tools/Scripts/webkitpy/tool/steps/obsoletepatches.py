@@ -28,7 +28,8 @@
 
 import logging
 
-from webkitpy.tool.grammar import pluralize
+from webkitcorepy.string_utils import pluralize
+
 from webkitpy.tool.steps.abstractstep import AbstractStep
 from webkitpy.tool.steps.options import Options
 
@@ -46,12 +47,9 @@ class ObsoletePatches(AbstractStep):
         if not self._options.obsolete_patches:
             return
         bug_id = state["bug_id"]
-        bug = self._tool.bugs.fetch_bug(bug_id)
-        if not bug:
-            return
-        patches = bug.patches()
+        patches = self._tool.bugs.fetch_bug(bug_id).patches()
         if not patches:
             return
-        _log.info("Obsoleting %s on bug %s" % (pluralize(len(patches), "old patch"), bug_id))
+        _log.info("Obsoleting %s on bug %s" % (pluralize(len(patches), 'old patch', plural='old patches'), bug_id))
         for patch in patches:
             self._tool.bugs.obsolete_attachment(patch.id())

@@ -22,7 +22,7 @@ function firstFrameLoaded() {
     // no credentials should be sent out automatically this time.
     
     var frame = document.createElement("iframe");
-    frame.setAttribute("src", "resources/auth-echo.php");
+    frame.setAttribute("src", "resources/auth-echo.py");
     frame.setAttribute("onload", "secondFrameLoaded()");
     document.body.appendChild(frame);
 }
@@ -35,5 +35,5 @@ function secondFrameLoaded() {
 </script>
 <body>
 This test makes sure that auth credentials cached during a private browsing session do not leak out after private browsing is disabled.
-<iframe src="resources/basic-auth.php?username=webkit&password=rocks" onload="firstFrameLoaded();"></iframe>
+<iframe src="resources/basic-auth.py?username=webkit&password=rocks" onload="firstFrameLoaded();"></iframe>
 </body>

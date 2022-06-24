@@ -10,18 +10,18 @@
 #ifndef MODULES_DESKTOP_CAPTURE_DESKTOP_CAPTURE_OPTIONS_H_
 #define MODULES_DESKTOP_CAPTURE_DESKTOP_CAPTURE_OPTIONS_H_
 
-#include "rtc_base/constructormagic.h"
-#include "rtc_base/scoped_ref_ptr.h"
+#include "api/scoped_refptr.h"
 #include "rtc_base/system/rtc_export.h"
 
-#if defined(USE_X11)
+#if defined(WEBRTC_USE_X11)
 #include "modules/desktop_capture/linux/shared_x_display.h"
 #endif
 
 #if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
 #include "modules/desktop_capture/mac/desktop_configuration_monitor.h"
-#include "modules/desktop_capture/mac/full_screen_chrome_window_detector.h"
 #endif
+
+#include "modules/desktop_capture/full_screen_window_detector.h"
 
 namespace webrtc {
 
@@ -42,7 +42,7 @@ class RTC_EXPORT DesktopCaptureOptions {
   DesktopCaptureOptions& operator=(const DesktopCaptureOptions& options);
   DesktopCaptureOptions& operator=(DesktopCaptureOptions&& options);
 
-#if defined(USE_X11)
+#if defined(WEBRTC_USE_X11)
   SharedXDisplay* x_display() const { return x_display_; }
   void set_x_display(rtc::scoped_refptr<SharedXDisplay> x_display) {
     x_display_ = x_display;
@@ -63,20 +63,17 @@ class RTC_EXPORT DesktopCaptureOptions {
     configuration_monitor_ = m;
   }
 
-  // TODO(zijiehe): Instead of FullScreenChromeWindowDetector, provide a
-  // FullScreenWindowDetector for external consumers to detect the target
-  // fullscreen window.
-  FullScreenChromeWindowDetector* full_screen_chrome_window_detector() const {
-    return full_screen_window_detector_;
-  }
-  void set_full_screen_chrome_window_detector(
-      rtc::scoped_refptr<FullScreenChromeWindowDetector> detector) {
-    full_screen_window_detector_ = detector;
-  }
-
   bool allow_iosurface() const { return allow_iosurface_; }
   void set_allow_iosurface(bool allow) { allow_iosurface_ = allow; }
 #endif
+
+  FullScreenWindowDetector* full_screen_window_detector() const {
+    return full_screen_window_detector_;
+  }
+  void set_full_screen_window_detector(
+      rtc::scoped_refptr<FullScreenWindowDetector> detector) {
+    full_screen_window_detector_ = detector;
+  }
 
   // Flag indicating that the capturer should use screen change notifications.
   // Enables/disables use of XDAMAGE in the X11 capturer.
@@ -101,6 +98,24 @@ class RTC_EXPORT DesktopCaptureOptions {
   }
 
 #if defined(WEBRTC_WIN)
+  // Enumerating windows owned by the current process on Windows has some
+  // complications due to |GetWindowText*()| APIs potentially causing a
+  // deadlock (see the comments in the `GetWindowListHandler()` function in
+  // window_capture_utils.cc for more details on the deadlock).
+  // To avoid this issue, consumers can either ensure that the thread that runs
+  // their message loop never waits on `GetSourceList()`, or they can set this
+  // flag to false which will prevent windows running in the current process
+  // from being enumerated and included in the results. Consumers can still
+  // provide the WindowId for their own windows to `SelectSource()` and capture
+  // them.
+  bool enumerate_current_process_windows() const {
+    return enumerate_current_process_windows_;
+  }
+  void set_enumerate_current_process_windows(
+      bool enumerate_current_process_windows) {
+    enumerate_current_process_windows_ = enumerate_current_process_windows;
+  }
+
   bool allow_use_magnification_api() const {
     return allow_use_magnification_api_;
   }
@@ -113,7 +128,35 @@ class RTC_EXPORT DesktopCaptureOptions {
   void set_allow_directx_capturer(bool enabled) {
     allow_directx_capturer_ = enabled;
   }
-#endif
+
+  // Flag that may be set to allow use of the cropping window capturer (which
+  // captures the screen & crops that to the window region in some cases). An
+  // advantage of using this is significantly higher capture frame rates than
+  // capturing the window directly. A disadvantage of using this is the
+  // possibility of capturing unrelated content (e.g. overlapping windows that
+  // aren't detected properly, or neighboring regions when moving/resizing the
+  // captured window). Note: this flag influences the behavior of calls to
+  // DesktopCapturer::CreateWindowCapturer; calls to
+  // CroppingWindowCapturer::CreateCapturer ignore the flag (treat it as true).
+  bool allow_cropping_window_capturer() const {
+    return allow_cropping_window_capturer_;
+  }
+  void set_allow_cropping_window_capturer(bool allow) {
+    allow_cropping_window_capturer_ = allow;
+  }
+
+#if defined(RTC_ENABLE_WIN_WGC)
+  // This flag enables the WGC capturer for both window and screen capture.
+  // This capturer should offer similar or better performance than the cropping
+  // capturer without the disadvantages listed above. However, the WGC capturer
+  // is only available on Windows 10 version 1809 (Redstone 5) and up. This flag
+  // will have no affect on older versions.
+  // If set, and running a supported version of Win10, this flag will take
+  // precedence over the cropping, directx, and magnification flags.
+  bool allow_wgc_capturer() const { return allow_wgc_capturer_; }
+  void set_allow_wgc_capturer(bool allow) { allow_wgc_capturer_ = allow; }
+#endif  // defined(RTC_ENABLE_WIN_WGC)
+#endif  // defined(WEBRTC_WIN)
 
 #if defined(WEBRTC_USE_PIPEWIRE)
   bool allow_pipewire() const { return allow_pipewire_; }
@@ -121,22 +164,27 @@ class RTC_EXPORT DesktopCaptureOptions {
 #endif
 
  private:
-#if defined(USE_X11)
+#if defined(WEBRTC_USE_X11)
   rtc::scoped_refptr<SharedXDisplay> x_display_;
 #endif
 
 #if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
   rtc::scoped_refptr<DesktopConfigurationMonitor> configuration_monitor_;
-  rtc::scoped_refptr<FullScreenChromeWindowDetector>
-      full_screen_window_detector_;
   bool allow_iosurface_ = false;
 #endif
 
+  rtc::scoped_refptr<FullScreenWindowDetector> full_screen_window_detector_;
+
 #if defined(WEBRTC_WIN)
+  bool enumerate_current_process_windows_ = true;
   bool allow_use_magnification_api_ = false;
   bool allow_directx_capturer_ = false;
+  bool allow_cropping_window_capturer_ = false;
+#if defined(RTC_ENABLE_WIN_WGC)
+  bool allow_wgc_capturer_ = false;
 #endif
-#if defined(USE_X11)
+#endif
+#if defined(WEBRTC_USE_X11)
   bool use_update_notifications_ = false;
 #else
   bool use_update_notifications_ = true;

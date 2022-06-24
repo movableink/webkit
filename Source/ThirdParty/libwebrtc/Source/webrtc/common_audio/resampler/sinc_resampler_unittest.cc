@@ -14,22 +14,22 @@
 // MSVC++ requires this to be set before any other includes to get M_PI.
 #define _USE_MATH_DEFINES
 
+#include "common_audio/resampler/sinc_resampler.h"
+
 #include <math.h>
 
 #include <algorithm>
 #include <memory>
 #include <tuple>
 
-#include "common_audio/resampler/sinc_resampler.h"
 #include "common_audio/resampler/sinusoidal_linear_chirp_source.h"
-#include "rtc_base/stringize_macros.h"
 #include "rtc_base/system/arch.h"
-#include "rtc_base/timeutils.h"
+#include "rtc_base/time_utils.h"
 #include "system_wrappers/include/cpu_features_wrapper.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
 
-using testing::_;
+using ::testing::_;
 
 namespace webrtc {
 
@@ -39,7 +39,7 @@ static const double kKernelInterpolationFactor = 0.5;
 // Helper class to ensure ChunkedResample() functions properly.
 class MockSource : public SincResamplerCallback {
  public:
-  MOCK_METHOD2(Run, void(size_t frames, float* destination));
+  MOCK_METHOD(void, Run, (size_t frames, float* destination), (override));
 };
 
 ACTION(ClearBuffer) {
@@ -72,7 +72,7 @@ TEST(SincResamplerTest, ChunkedResample) {
   resampler.Resample(resampler.ChunkSize(), resampled_destination.get());
 
   // Verify requesting kChunks * ChunkSize() frames causes kChunks callbacks.
-  testing::Mock::VerifyAndClear(&mock_source);
+  ::testing::Mock::VerifyAndClear(&mock_source);
   EXPECT_CALL(mock_source, Run(_, _))
       .Times(kChunks)
       .WillRepeatedly(ClearBuffer());
@@ -94,7 +94,7 @@ TEST(SincResamplerTest, Flush) {
 
   // Flush and request more data, which should all be zeros now.
   resampler.Flush();
-  testing::Mock::VerifyAndClear(&mock_source);
+  ::testing::Mock::VerifyAndClear(&mock_source);
   EXPECT_CALL(mock_source, Run(_, _)).Times(1).WillOnce(ClearBuffer());
   resampler.Resample(resampler.ChunkSize() / 2, resampled_destination.get());
   for (size_t i = 0; i < resampler.ChunkSize() / 2; ++i)
@@ -115,22 +115,14 @@ TEST(SincResamplerTest, DISABLED_SetRatioBench) {
   printf("SetRatio() took %.2fms.\n", total_time_c_us / 1000);
 }
 
-// Define platform independent function name for Convolve* tests.
-#if defined(WEBRTC_ARCH_X86_FAMILY)
-#define CONVOLVE_FUNC Convolve_SSE
-#elif defined(WEBRTC_ARCH_ARM_V7)
-#define CONVOLVE_FUNC Convolve_NEON
-#endif
-
 // Ensure various optimized Convolve() methods return the same value.  Only run
 // this test if other optimized methods exist, otherwise the default Convolve()
 // will be tested by the parameterized SincResampler tests below.
-#if defined(CONVOLVE_FUNC)
 TEST(SincResamplerTest, Convolve) {
 #if defined(WEBRTC_ARCH_X86_FAMILY)
-  ASSERT_TRUE(WebRtc_GetCPUInfo(kSSE2));
+  ASSERT_TRUE(GetCPUInfo(kSSE2));
 #elif defined(WEBRTC_ARCH_ARM_V7)
-  ASSERT_TRUE(WebRtc_GetCPUFeaturesARM() & kCPUFeatureNEON);
+  ASSERT_TRUE(GetCPUFeaturesARM() & kCPUFeatureNEON);
 #endif
 
   // Initialize a dummy resampler.
@@ -147,7 +139,7 @@ TEST(SincResamplerTest, Convolve) {
   double result = resampler.Convolve_C(
       resampler.kernel_storage_.get(), resampler.kernel_storage_.get(),
       resampler.kernel_storage_.get(), kKernelInterpolationFactor);
-  double result2 = resampler.CONVOLVE_FUNC(
+  double result2 = resampler.convolve_proc_(
       resampler.kernel_storage_.get(), resampler.kernel_storage_.get(),
       resampler.kernel_storage_.get(), kKernelInterpolationFactor);
   EXPECT_NEAR(result2, result, kEpsilon);
@@ -156,12 +148,11 @@ TEST(SincResamplerTest, Convolve) {
   result = resampler.Convolve_C(
       resampler.kernel_storage_.get() + 1, resampler.kernel_storage_.get(),
       resampler.kernel_storage_.get(), kKernelInterpolationFactor);
-  result2 = resampler.CONVOLVE_FUNC(
+  result2 = resampler.convolve_proc_(
       resampler.kernel_storage_.get() + 1, resampler.kernel_storage_.get(),
       resampler.kernel_storage_.get(), kKernelInterpolationFactor);
   EXPECT_NEAR(result2, result, kEpsilon);
 }
-#endif
 
 // Benchmark for the various Convolve() methods.  Make sure to build with
 // branding=Chrome so that RTC_DCHECKs are compiled out when benchmarking.
@@ -189,48 +180,48 @@ TEST(SincResamplerTest, ConvolveBenchmark) {
       (rtc::TimeNanos() - start) / rtc::kNumNanosecsPerMicrosec;
   printf("Convolve_C took %.2fms.\n", total_time_c_us / 1000);
 
-#if defined(CONVOLVE_FUNC)
 #if defined(WEBRTC_ARCH_X86_FAMILY)
-  ASSERT_TRUE(WebRtc_GetCPUInfo(kSSE2));
+  ASSERT_TRUE(GetCPUInfo(kSSE2));
 #elif defined(WEBRTC_ARCH_ARM_V7)
-  ASSERT_TRUE(WebRtc_GetCPUFeaturesARM() & kCPUFeatureNEON);
+  ASSERT_TRUE(GetCPUFeaturesARM() & kCPUFeatureNEON);
 #endif
 
   // Benchmark with unaligned input pointer.
   start = rtc::TimeNanos();
   for (int j = 0; j < kConvolveIterations; ++j) {
-    resampler.CONVOLVE_FUNC(
+    resampler.convolve_proc_(
         resampler.kernel_storage_.get() + 1, resampler.kernel_storage_.get(),
         resampler.kernel_storage_.get(), kKernelInterpolationFactor);
   }
   double total_time_optimized_unaligned_us =
       (rtc::TimeNanos() - start) / rtc::kNumNanosecsPerMicrosec;
-  printf(STRINGIZE(CONVOLVE_FUNC) "(unaligned) took %.2fms; which is %.2fx "
-         "faster than Convolve_C.\n", total_time_optimized_unaligned_us / 1000,
-         total_time_c_us / total_time_optimized_unaligned_us);
+  printf(
+      "convolve_proc_(unaligned) took %.2fms; which is %.2fx "
+      "faster than Convolve_C.\n",
+      total_time_optimized_unaligned_us / 1000,
+      total_time_c_us / total_time_optimized_unaligned_us);
 
   // Benchmark with aligned input pointer.
   start = rtc::TimeNanos();
   for (int j = 0; j < kConvolveIterations; ++j) {
-    resampler.CONVOLVE_FUNC(
+    resampler.convolve_proc_(
         resampler.kernel_storage_.get(), resampler.kernel_storage_.get(),
         resampler.kernel_storage_.get(), kKernelInterpolationFactor);
   }
   double total_time_optimized_aligned_us =
       (rtc::TimeNanos() - start) / rtc::kNumNanosecsPerMicrosec;
-  printf(STRINGIZE(CONVOLVE_FUNC) " (aligned) took %.2fms; which is %.2fx "
-         "faster than Convolve_C and %.2fx faster than "
-         STRINGIZE(CONVOLVE_FUNC) " (unaligned).\n",
-         total_time_optimized_aligned_us / 1000,
-         total_time_c_us / total_time_optimized_aligned_us,
-         total_time_optimized_unaligned_us / total_time_optimized_aligned_us);
-#endif
+  printf(
+      "convolve_proc_ (aligned) took %.2fms; which is %.2fx "
+      "faster than Convolve_C and %.2fx faster than "
+      "convolve_proc_ (unaligned).\n",
+      total_time_optimized_aligned_us / 1000,
+      total_time_c_us / total_time_optimized_aligned_us,
+      total_time_optimized_unaligned_us / total_time_optimized_aligned_us);
 }
 
-#undef CONVOLVE_FUNC
-
 typedef std::tuple<int, int, double, double> SincResamplerTestData;
-class SincResamplerTest : public testing::TestWithParam<SincResamplerTestData> {
+class SincResamplerTest
+    : public ::testing::TestWithParam<SincResamplerTestData> {
  public:
   SincResamplerTest()
       : input_rate_(std::get<0>(GetParam())),
@@ -340,17 +331,17 @@ static const double kResamplingRMSError = -14.58;
 
 // Thresholds chosen arbitrarily based on what each resampling reported during
 // testing.  All thresholds are in dbFS, http://en.wikipedia.org/wiki/DBFS.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SincResamplerTest,
     SincResamplerTest,
-    testing::Values(
+    ::testing::Values(
         // To 44.1kHz
         std::make_tuple(8000, 44100, kResamplingRMSError, -62.73),
         std::make_tuple(11025, 44100, kResamplingRMSError, -72.19),
         std::make_tuple(16000, 44100, kResamplingRMSError, -62.54),
         std::make_tuple(22050, 44100, kResamplingRMSError, -73.53),
         std::make_tuple(32000, 44100, kResamplingRMSError, -63.32),
-        std::make_tuple(44100, 44100, kResamplingRMSError, -73.53),
+        std::make_tuple(44100, 44100, kResamplingRMSError, -73.52),
         std::make_tuple(48000, 44100, -15.01, -64.04),
         std::make_tuple(96000, 44100, -18.49, -25.51),
         std::make_tuple(192000, 44100, -20.50, -13.31),
@@ -358,7 +349,7 @@ INSTANTIATE_TEST_CASE_P(
         // To 48kHz
         std::make_tuple(8000, 48000, kResamplingRMSError, -63.43),
         std::make_tuple(11025, 48000, kResamplingRMSError, -62.61),
-        std::make_tuple(16000, 48000, kResamplingRMSError, -63.96),
+        std::make_tuple(16000, 48000, kResamplingRMSError, -63.95),
         std::make_tuple(22050, 48000, kResamplingRMSError, -62.42),
         std::make_tuple(32000, 48000, kResamplingRMSError, -64.04),
         std::make_tuple(44100, 48000, kResamplingRMSError, -62.63),

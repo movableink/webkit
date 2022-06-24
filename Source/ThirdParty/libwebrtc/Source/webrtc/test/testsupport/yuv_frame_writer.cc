@@ -8,6 +8,11 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include <stdint.h>
+#include <stdio.h>
+
+#include <string>
+
 #include "rtc_base/checks.h"
 #include "test/testsupport/frame_writer.h"
 
@@ -45,7 +50,7 @@ bool YuvFrameWriterImpl::Init() {
   return true;
 }
 
-bool YuvFrameWriterImpl::WriteFrame(uint8_t* frame_buffer) {
+bool YuvFrameWriterImpl::WriteFrame(const uint8_t* frame_buffer) {
   RTC_DCHECK(frame_buffer);
   if (output_file_ == nullptr) {
     fprintf(stderr,

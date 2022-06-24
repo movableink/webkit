@@ -24,6 +24,7 @@
 #include <WebCore/SQLiteStatement.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashMap.h>
+#include <wtf/Lock.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WorkQueue.h>
 
@@ -43,9 +44,9 @@ public:
     void invalidate();
 
     void checkIconURLAndSetPageURLIfNeeded(const String& iconURL, const String& pageURL, AllowDatabaseWrite, CompletionHandler<void(bool, bool)>&&);
-    void loadIconForPageURL(const String&, AllowDatabaseWrite, CompletionHandler<void(WebCore::NativeImagePtr&&)>&&);
+    void loadIconForPageURL(const String&, AllowDatabaseWrite, CompletionHandler<void(WebCore::PlatformImagePtr&&)>&&);
     String iconURLForPageURL(const String&);
-    void setIconForPageURL(const String& iconURL, const unsigned char*, size_t, const String& pageURL, AllowDatabaseWrite, CompletionHandler<void(bool)>&&);
+    void setIconForPageURL(const String& iconURL, const uint8_t*, size_t, const String& pageURL, AllowDatabaseWrite, CompletionHandler<void(bool)>&&);
     void clear(CompletionHandler<void()>&&);
 
 private:
@@ -58,10 +59,10 @@ private:
     void clearStatements();
     void clearLoadedIconsTimerFired();
     void startClearLoadedIconsTimer();
-    Optional<int64_t> iconIDForIconURL(const String&, bool& expired);
+    std::optional<int64_t> iconIDForIconURL(const String&, bool& expired);
     bool setIconIDForPageURL(int64_t, const String&);
-    Vector<char> iconData(int64_t);
-    Optional<int64_t> addIcon(const String&, const Vector<char>&);
+    Vector<uint8_t> iconData(int64_t);
+    std::optional<int64_t> addIcon(const String&, const Vector<uint8_t>&);
     void updateIconTimestamp(int64_t iconID, int64_t timestamp);
     void deleteIcon(int64_t);
 
@@ -69,7 +70,9 @@ private:
     AllowDatabaseWrite m_allowDatabaseWrite { AllowDatabaseWrite::Yes };
     WebCore::SQLiteDatabase m_db;
     HashMap<String, String> m_pageURLToIconURLMap;
-    HashMap<String, std::pair<WebCore::NativeImagePtr, MonotonicTime>> m_loadedIcons;
+    Lock m_pageURLToIconURLMapLock;
+    HashMap<String, std::pair<WebCore::PlatformImagePtr, MonotonicTime>> m_loadedIcons WTF_GUARDED_BY_LOCK(m_loadedIconsLock);
+    Lock m_loadedIconsLock;
 
     std::unique_ptr<WebCore::SQLiteStatement> m_iconIDForIconURLStatement;
     std::unique_ptr<WebCore::SQLiteStatement> m_setIconIDForPageURLStatement;

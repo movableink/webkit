@@ -42,18 +42,24 @@ DrawingAreaProxy::DrawingAreaProxy(DrawingAreaType type, WebPageProxy& webPagePr
     : m_type(type)
     , m_identifier(DrawingAreaIdentifier::generate())
     , m_webPageProxy(webPageProxy)
-    , m_process(makeRef(process))
+    , m_process(process)
     , m_size(webPageProxy.viewSize())
 #if PLATFORM(MAC)
     , m_viewExposedRectChangedTimer(RunLoop::main(), this, &DrawingAreaProxy::viewExposedRectChangedTimerFired)
 #endif
 {
-    process.addMessageReceiver(Messages::DrawingAreaProxy::messageReceiverName(), m_identifier, *this);
 }
 
 DrawingAreaProxy::~DrawingAreaProxy()
 {
-    process().removeMessageReceiver(Messages::DrawingAreaProxy::messageReceiverName(), m_identifier);
+    if (m_startedReceivingMessages)
+        process().removeMessageReceiver(Messages::DrawingAreaProxy::messageReceiverName(), m_identifier);
+}
+
+void DrawingAreaProxy::startReceivingMessages()
+{
+    m_startedReceivingMessages = true;
+    process().addMessageReceiver(Messages::DrawingAreaProxy::messageReceiverName(), m_identifier, *this);
 }
 
 bool DrawingAreaProxy::setSize(const IntSize& size, const IntSize& scrollDelta)
@@ -79,18 +85,16 @@ IPC::Connection* DrawingAreaProxy::messageSenderConnection() const
     return process().connection();
 }
 
-bool DrawingAreaProxy::sendMessage(std::unique_ptr<IPC::Encoder> encoder, OptionSet<IPC::SendOption> sendOptions)
+bool DrawingAreaProxy::sendMessage(UniqueRef<IPC::Encoder>&& encoder, OptionSet<IPC::SendOption> sendOptions, std::optional<std::pair<CompletionHandler<void(IPC::Decoder*)>, uint64_t>>&& asyncReplyInfo)
 {
-    return process().sendMessage(WTFMove(encoder), sendOptions);
+    return process().sendMessage(WTFMove(encoder), sendOptions, WTFMove(asyncReplyInfo));
 }
 
 #if PLATFORM(MAC)
-void DrawingAreaProxy::setViewExposedRect(Optional<WebCore::FloatRect> viewExposedRect)
+void DrawingAreaProxy::didChangeViewExposedRect()
 {
     if (!m_webPageProxy.hasRunningProcess())
         return;
-
-    m_viewExposedRect = viewExposedRect;
 
     if (!m_viewExposedRectChangedTimer.isActive())
         m_viewExposedRectChangedTimer.startOneShot(0_s);
@@ -101,11 +105,12 @@ void DrawingAreaProxy::viewExposedRectChangedTimerFired()
     if (!m_webPageProxy.hasRunningProcess())
         return;
 
-    if (m_viewExposedRect == m_lastSentViewExposedRect)
+    auto viewExposedRect = m_webPageProxy.viewExposedRect();
+    if (viewExposedRect == m_lastSentViewExposedRect)
         return;
 
-    send(Messages::DrawingArea::SetViewExposedRect(m_viewExposedRect));
-    m_lastSentViewExposedRect = m_viewExposedRect;
+    send(Messages::DrawingArea::SetViewExposedRect(viewExposedRect));
+    m_lastSentViewExposedRect = viewExposedRect;
 }
 #endif // PLATFORM(MAC)
 

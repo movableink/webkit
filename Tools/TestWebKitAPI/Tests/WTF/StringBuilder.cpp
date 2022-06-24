@@ -30,8 +30,9 @@
  */
 
 #include "config.h"
-#include "WTFStringUtilities.h"
 
+#include "WTFStringUtilities.h"
+#include <sstream>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace TestWebKitAPI {
@@ -118,6 +119,20 @@ TEST(StringBuilderTest, Append)
     }
 }
 
+TEST(StringBuilderTest, AppendIntMin)
+{
+    constexpr int intMin = std::numeric_limits<int>::min();
+    StringBuilder builder;
+    builder.append(intMin);
+
+    std::stringstream stringStream;
+    stringStream << intMin;
+    std::string expectedString;
+    stringStream >> expectedString;
+
+    expectBuilderContent(String(expectedString.c_str()), builder);
+}
+
 TEST(StringBuilderTest, VariadicAppend)
 {
     {
@@ -200,7 +215,7 @@ TEST(StringBuilderTest, ToString)
 
     // Resizing the StringBuilder should not affect the original result of toString().
     string1 = builder.toString();
-    builder.resize(10);
+    builder.shrink(10);
     builder.append("###");
     EXPECT_EQ(String("0123456789abcdefghijklmnopqrstuvwxyzABC"), string1);
 }
@@ -245,7 +260,7 @@ TEST(StringBuilderTest, ToStringPreserveCapacity)
     string1 = builder.toStringPreserveCapacity();
     EXPECT_EQ(capacity, builder.capacity());
     EXPECT_EQ(string.characters8(), builder.characters8());
-    builder.resize(10);
+    builder.shrink(10);
     builder.append("###");
     EXPECT_EQ(String("0123456789abcdefghijklmnopqrstuvwxyzABC"), string1);
 }
@@ -273,18 +288,18 @@ TEST(StringBuilderTest, Resize)
 {
     StringBuilder builder;
     builder.append("0123456789");
-    builder.resize(10);
+    builder.shrink(10);
     EXPECT_EQ(10U, builder.length());
     expectBuilderContent("0123456789", builder);
-    builder.resize(8);
+    builder.shrink(8);
     EXPECT_EQ(8U, builder.length());
     expectBuilderContent("01234567", builder);
 
     builder.toString();
-    builder.resize(7);
+    builder.shrink(7);
     EXPECT_EQ(7U, builder.length());
     expectBuilderContent("0123456", builder);
-    builder.resize(0);
+    builder.shrink(0);
     expectEmpty(builder);
 }
 
@@ -314,22 +329,22 @@ TEST(StringBuilderTest, Equal)
     builder2.toString(); // Test after reifyString().
     EXPECT_TRUE(builder1 != builder2);
 
-    builder2.resize(3);
+    builder2.shrink(3);
     EXPECT_TRUE(builder1 == builder2);
 
     builder1.toString(); // Test after reifyString().
     EXPECT_TRUE(builder1 == builder2);
 }
 
-TEST(StringBuilderTest, CanShrink)
+TEST(StringBuilderTest, ShouldShrinkToFit)
 {
     StringBuilder builder;
     builder.reserveCapacity(256);
-    EXPECT_TRUE(builder.canShrink());
+    EXPECT_TRUE(builder.shouldShrinkToFit());
     for (int i = 0; i < 256; i++)
         builder.append('x');
     EXPECT_EQ(builder.length(), builder.capacity());
-    EXPECT_FALSE(builder.canShrink());
+    EXPECT_FALSE(builder.shouldShrinkToFit());
 }
 
 TEST(StringBuilderTest, ToAtomString)
@@ -340,7 +355,7 @@ TEST(StringBuilderTest, ToAtomString)
     EXPECT_EQ(String("123"), atomString);
 
     builder.reserveCapacity(256);
-    EXPECT_TRUE(builder.canShrink());
+    EXPECT_TRUE(builder.shouldShrinkToFit());
     for (int i = builder.length(); i < 128; i++)
         builder.append('x');
     AtomString atomString1 = builder.toAtomString();
@@ -352,7 +367,7 @@ TEST(StringBuilderTest, ToAtomString)
         builder.append('x');
     EXPECT_EQ(128u, atomString1.length());
 
-    EXPECT_FALSE(builder.canShrink());
+    EXPECT_FALSE(builder.shouldShrinkToFit());
     String string = builder.toString();
     AtomString atomString2 = builder.toAtomString();
     // They should share the same StringImpl.
@@ -399,7 +414,7 @@ TEST(StringBuilderTest, ToAtomStringOnEmpty)
     }
     { // Cleared StringBuilder.
         StringBuilder builder;
-        builder.appendLiteral("WebKit");
+        builder.append("WebKit");
         builder.clear();
         AtomString atomString = builder.toAtomString();
         EXPECT_EQ(emptyAtom(), atomString);

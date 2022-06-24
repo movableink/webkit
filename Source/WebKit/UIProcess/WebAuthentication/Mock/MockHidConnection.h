@@ -48,9 +48,11 @@ public:
     MockHidConnection(IOHIDDeviceRef, const WebCore::MockWebAuthenticationConfiguration&);
 
 private:
-    void send(Vector<uint8_t>&& data, DataSentCallback&&) final;
+    // HidConnection
     void initialize() final;
     void terminate() final;
+    DataSent sendSync(const Vector<uint8_t>& data) final;
+    void send(Vector<uint8_t>&& data, DataSentCallback&&) final;
     void registerDataReceivedCallbackInternal() final;
 
     void assembleRequest(Vector<uint8_t>&&);
@@ -61,7 +63,7 @@ private:
     void continueFeedReports();
 
     WebCore::MockWebAuthenticationConfiguration m_configuration;
-    Optional<fido::FidoHidMessage> m_requestMessage;
+    std::optional<fido::FidoHidMessage> m_requestMessage;
     WebCore::MockWebAuthenticationConfiguration::HidStage m_stage { WebCore::MockWebAuthenticationConfiguration::HidStage::Info };
     WebCore::MockWebAuthenticationConfiguration::HidSubStage m_subStage { WebCore::MockWebAuthenticationConfiguration::HidSubStage::Init };
     uint32_t m_currentChannel { fido::kHidBroadcastChannel };

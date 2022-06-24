@@ -26,14 +26,12 @@
 #include "config.h"
 #include "UniqueIDBDatabaseTransaction.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
-#include "IDBError.h"
 #include "IDBIterateCursorData.h"
 #include "IDBResultData.h"
-#include "IDBServer.h"
 #include "Logging.h"
 #include "UniqueIDBDatabase.h"
+#include "UniqueIDBDatabaseConnection.h"
+#include "UniqueIDBDatabaseManager.h"
 
 namespace WebCore {
 namespace IDBServer {
@@ -47,23 +45,26 @@ UniqueIDBDatabaseTransaction::UniqueIDBDatabaseTransaction(UniqueIDBDatabaseConn
     : m_databaseConnection(connection)
     , m_transactionInfo(info)
 {
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
 
     if (m_transactionInfo.mode() == IDBTransactionMode::Versionchange)
         m_originalDatabaseInfo = makeUnique<IDBDatabaseInfo>(database->info());
 
-    if (auto* server = m_databaseConnection->server())
-        server->registerTransaction(*this);
+    if (auto* manager = databaseConnection().manager())
+        manager->registerTransaction(*this);
 }
 
 UniqueIDBDatabaseTransaction::~UniqueIDBDatabaseTransaction()
 {
-    if (auto database = m_databaseConnection->database())
-        database->transactionDestroyed(*this);
+    if (auto* manager = databaseConnection().manager())
+        manager->unregisterTransaction(*this);
+}
 
-    if (auto* server = m_databaseConnection->server())
-        server->unregisterTransaction(*this);
+UniqueIDBDatabaseConnection& UniqueIDBDatabaseTransaction::databaseConnection()
+{
+    RELEASE_ASSERT(m_databaseConnection);
+    return *m_databaseConnection;
 }
 
 IDBDatabaseInfo* UniqueIDBDatabaseTransaction::originalDatabaseInfo() const
@@ -76,15 +77,13 @@ void UniqueIDBDatabaseTransaction::abort()
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::abort");
     
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
 
-    database->abortTransaction(*this, UniqueIDBDatabase::WaitForPendingTasks::Yes, [this, weakThis = makeWeakPtr(*this)](auto& error) {
+    database->abortTransaction(*this, [this](auto& error) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::abort (callback)");
-        if (!weakThis)
-            return;
 
-        m_databaseConnection->didAbortTransaction(*this, error);
+        databaseConnection().didAbortTransaction(*this, error);
     });
 }
 
@@ -92,7 +91,7 @@ void UniqueIDBDatabaseTransaction::abortWithoutCallback()
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::abortWithoutCallback");
 
-    m_databaseConnection->abortTransactionWithoutCallback(*this);
+    databaseConnection().abortTransactionWithoutCallback(*this);
 }
 
 bool UniqueIDBDatabaseTransaction::isVersionChange() const
@@ -105,20 +104,34 @@ bool UniqueIDBDatabaseTransaction::isReadOnly() const
     return m_transactionInfo.mode() == IDBTransactionMode::Readonly;
 }   
 
-void UniqueIDBDatabaseTransaction::commit()
+void UniqueIDBDatabaseTransaction::commit(uint64_t pendingRequestCount)
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::commit");
 
-    auto database = m_databaseConnection->database();
-    if (!database || database->hardClosedForUserDelete())
+    auto database = databaseConnection().database();
+
+    std::optional<IDBError> errorInPendingRequests;
+    while (pendingRequestCount--) {
+        auto error = m_requestResults.takeLast();
+        if (!error.isNull()) {
+            errorInPendingRequests = error;
+            break;
+        }
+    }
+
+    if (errorInPendingRequests) {
+        database->abortTransaction(*this, [this, &errorInPendingRequests](auto&) {
+            LOG(IndexedDB, "UniqueIDBDatabaseTransaction::commit with error (callback)");
+
+            m_databaseConnection->didCommitTransaction(*this, *errorInPendingRequests);
+        });
         return;
+    }
 
-    database->commitTransaction(*this, [this, weakThis = makeWeakPtr(*this)](auto& error) {
+    database->commitTransaction(*this, [this](auto& error) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::commit (callback)");
-        if (!weakThis)
-            return;
 
-        m_databaseConnection->didCommitTransaction(*this, error);
+        databaseConnection().didCommitTransaction(*this, error);
     });
 }
 
@@ -129,18 +142,18 @@ void UniqueIDBDatabaseTransaction::createObjectStore(const IDBRequestData& reque
     ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
 
-    database->createObjectStore(*this, info, [this, weakThis = makeWeakPtr(*this), requestData](auto& error) {
+    database->createObjectStore(*this, info, [this, requestData](auto& error) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::createObjectStore (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->didCreateObjectStore(IDBResultData::createObjectStoreSuccess(requestData.requestIdentifier()));
+            databaseConnection().didCreateObjectStore(IDBResultData::createObjectStoreSuccess(requestData.requestIdentifier()));
         else
-            m_databaseConnection->didCreateObjectStore(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().didCreateObjectStore(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -150,19 +163,19 @@ void UniqueIDBDatabaseTransaction::deleteObjectStore(const IDBRequestData& reque
 
     ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
-    
-    auto database = m_databaseConnection->database();
+
+    auto database = databaseConnection().database();
     ASSERT(database);
 
-    database->deleteObjectStore(*this, objectStoreName, [this, weakThis = makeWeakPtr(*this), requestData](const IDBError& error) {
+    database->deleteObjectStore(*this, objectStoreName, [this, requestData](const IDBError& error) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::deleteObjectStore (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->didDeleteObjectStore(IDBResultData::deleteObjectStoreSuccess(requestData.requestIdentifier()));
+            databaseConnection().didDeleteObjectStore(IDBResultData::deleteObjectStoreSuccess(requestData.requestIdentifier()));
         else
-            m_databaseConnection->didDeleteObjectStore(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().didDeleteObjectStore(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -173,18 +186,18 @@ void UniqueIDBDatabaseTransaction::renameObjectStore(const IDBRequestData& reque
     ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
 
-    database->renameObjectStore(*this, objectStoreIdentifier, newName, [this, weakThis = makeWeakPtr(*this), requestData](auto& error) {
+    database->renameObjectStore(*this, objectStoreIdentifier, newName, [this, requestData](auto& error) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::renameObjectStore (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->didRenameObjectStore(IDBResultData::renameObjectStoreSuccess(requestData.requestIdentifier()));
+            databaseConnection().didRenameObjectStore(IDBResultData::renameObjectStoreSuccess(requestData.requestIdentifier()));
         else
-            m_databaseConnection->didRenameObjectStore(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().didRenameObjectStore(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -194,18 +207,18 @@ void UniqueIDBDatabaseTransaction::clearObjectStore(const IDBRequestData& reques
 
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
 
-    database->clearObjectStore(*this, objectStoreIdentifier, [this, weakThis = makeWeakPtr(*this), requestData](auto& error) {
+    database->clearObjectStore(*this, objectStoreIdentifier, [this, requestData](auto& error) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::clearObjectStore (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->didClearObjectStore(IDBResultData::clearObjectStoreSuccess(requestData.requestIdentifier()));
+            databaseConnection().didClearObjectStore(IDBResultData::clearObjectStoreSuccess(requestData.requestIdentifier()));
         else
-            m_databaseConnection->didClearObjectStore(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().didClearObjectStore(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -216,18 +229,18 @@ void UniqueIDBDatabaseTransaction::createIndex(const IDBRequestData& requestData
     ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
     
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
 
-    database->createIndex(*this, info, [this, weakThis = makeWeakPtr(*this), requestData](auto& error) {
+    database->createIndex(*this, info, [this, requestData](auto& error) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::createIndex (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->didCreateIndex(IDBResultData::createIndexSuccess(requestData.requestIdentifier()));
+            databaseConnection().didCreateIndex(IDBResultData::createIndexSuccess(requestData.requestIdentifier()));
         else
-            m_databaseConnection->didCreateIndex(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().didCreateIndex(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -238,18 +251,18 @@ void UniqueIDBDatabaseTransaction::deleteIndex(const IDBRequestData& requestData
     ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
     
-    database->deleteIndex(*this, objectStoreIdentifier, indexName, [this, weakThis = makeWeakPtr(*this), requestData](auto& error) {
+    database->deleteIndex(*this, objectStoreIdentifier, indexName, [this, requestData](auto& error) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::createIndex (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->didDeleteIndex(IDBResultData::deleteIndexSuccess(requestData.requestIdentifier()));
+            databaseConnection().didDeleteIndex(IDBResultData::deleteIndexSuccess(requestData.requestIdentifier()));
         else
-            m_databaseConnection->didDeleteIndex(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().didDeleteIndex(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -259,19 +272,19 @@ void UniqueIDBDatabaseTransaction::renameIndex(const IDBRequestData& requestData
 
     ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
-    
-    auto database = m_databaseConnection->database();
+
+    auto database = databaseConnection().database();
     ASSERT(database);
     
-    database->renameIndex(*this, objectStoreIdentifier, indexIdentifier, newName, [this, weakThis = makeWeakPtr(*this), requestData](auto& error) {
+    database->renameIndex(*this, objectStoreIdentifier, indexIdentifier, newName, [this, requestData](auto& error) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::renameIndex (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->didRenameIndex(IDBResultData::renameIndexSuccess(requestData.requestIdentifier()));
+            databaseConnection().didRenameIndex(IDBResultData::renameIndexSuccess(requestData.requestIdentifier()));
         else
-            m_databaseConnection->didRenameIndex(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().didRenameIndex(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -283,18 +296,18 @@ void UniqueIDBDatabaseTransaction::putOrAdd(const IDBRequestData& requestData, c
     ASSERT(!isReadOnly());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
     
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
     
-    database->putOrAdd(*this, requestData, keyData, value, overwriteMode, [this, weakThis = makeWeakPtr(*this), requestData](auto& error, const IDBKeyData& key) {
+    database->putOrAdd(requestData, keyData, value, overwriteMode, [this, requestData](auto& error, const IDBKeyData& key) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::putOrAdd (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->connectionToClient().didPutOrAdd(IDBResultData::putOrAddSuccess(requestData.requestIdentifier(), key));
+            databaseConnection().connectionToClient().didPutOrAdd(IDBResultData::putOrAddSuccess(requestData.requestIdentifier(), key));
         else
-            m_databaseConnection->connectionToClient().didPutOrAdd(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().connectionToClient().didPutOrAdd(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -304,18 +317,18 @@ void UniqueIDBDatabaseTransaction::getRecord(const IDBRequestData& requestData, 
 
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
     
-    database->getRecord(*this, requestData, getRecordData, [this, weakThis = makeWeakPtr(*this), requestData](auto& error, const IDBGetResult& result) {
+    database->getRecord(requestData, getRecordData, [this, requestData](auto& error, const IDBGetResult& result) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::getRecord (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->connectionToClient().didGetRecord(IDBResultData::getRecordSuccess(requestData.requestIdentifier(), result));
+            databaseConnection().connectionToClient().didGetRecord(IDBResultData::getRecordSuccess(requestData.requestIdentifier(), result));
         else
-            m_databaseConnection->connectionToClient().didGetRecord(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().connectionToClient().didGetRecord(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -325,18 +338,18 @@ void UniqueIDBDatabaseTransaction::getAllRecords(const IDBRequestData& requestDa
 
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
     
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
     
-    database->getAllRecords(*this, requestData, getAllRecordsData, [this, weakThis = makeWeakPtr(*this), requestData](auto& error, const IDBGetAllResult& result) {
+    database->getAllRecords(requestData, getAllRecordsData, [this, requestData](auto& error, const IDBGetAllResult& result) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::getAllRecords (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->connectionToClient().didGetAllRecords(IDBResultData::getAllRecordsSuccess(requestData.requestIdentifier(), result));
+            databaseConnection().connectionToClient().didGetAllRecords(IDBResultData::getAllRecordsSuccess(requestData.requestIdentifier(), result));
         else
-            m_databaseConnection->connectionToClient().didGetAllRecords(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().connectionToClient().didGetAllRecords(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -346,18 +359,18 @@ void UniqueIDBDatabaseTransaction::getCount(const IDBRequestData& requestData, c
 
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
     
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
     
-    database->getCount(*this, requestData, keyRangeData, [this, weakThis = makeWeakPtr(*this), requestData](auto& error, uint64_t count) {
+    database->getCount(requestData, keyRangeData, [this, requestData](auto& error, uint64_t count) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::getCount (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->connectionToClient().didGetCount(IDBResultData::getCountSuccess(requestData.requestIdentifier(), count));
+            databaseConnection().connectionToClient().didGetCount(IDBResultData::getCountSuccess(requestData.requestIdentifier(), count));
         else
-            m_databaseConnection->connectionToClient().didGetCount(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().connectionToClient().didGetCount(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -367,18 +380,18 @@ void UniqueIDBDatabaseTransaction::deleteRecord(const IDBRequestData& requestDat
 
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
     
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
     
-    database->deleteRecord(*this, requestData, keyRangeData, [this, weakThis = makeWeakPtr(*this), requestData](auto& error) {
+    database->deleteRecord(requestData, keyRangeData, [this, requestData](auto& error) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::deleteRecord (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->connectionToClient().didDeleteRecord(IDBResultData::deleteRecordSuccess(requestData.requestIdentifier()));
+            databaseConnection().connectionToClient().didDeleteRecord(IDBResultData::deleteRecordSuccess(requestData.requestIdentifier()));
         else
-            m_databaseConnection->connectionToClient().didDeleteRecord(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().connectionToClient().didDeleteRecord(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -388,18 +401,18 @@ void UniqueIDBDatabaseTransaction::openCursor(const IDBRequestData& requestData,
 
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
     
-    auto database = m_databaseConnection->database();
+    auto database = databaseConnection().database();
     ASSERT(database);
     
-    database->openCursor(*this, requestData, info, [this, weakThis = makeWeakPtr(*this), requestData](auto& error, const IDBGetResult& result) {
+    database->openCursor(requestData, info, [this, requestData](auto& error, const IDBGetResult& result) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::openCursor (callback)");
-        if (!weakThis)
-            return;
+
+        m_requestResults.append(error);
 
         if (error.isNull())
-            m_databaseConnection->connectionToClient().didOpenCursor(IDBResultData::openCursorSuccess(requestData.requestIdentifier(), result));
+            databaseConnection().connectionToClient().didOpenCursor(IDBResultData::openCursorSuccess(requestData.requestIdentifier(), result));
         else
-            m_databaseConnection->connectionToClient().didOpenCursor(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().connectionToClient().didOpenCursor(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -408,19 +421,22 @@ void UniqueIDBDatabaseTransaction::iterateCursor(const IDBRequestData& requestDa
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::iterateCursor");
 
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
-    
-    auto database = m_databaseConnection->database();
+
+    auto database = databaseConnection().database();
     ASSERT(database);
     
-    database->iterateCursor(*this, requestData, data, [this, weakThis = makeWeakPtr(*this), requestData](auto& error, const IDBGetResult& result) {
+    database->iterateCursor(requestData, data, [this, requestData, option = data.option](auto& error, const IDBGetResult& result) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::iterateCursor (callback)");
-        if (!weakThis)
+
+        if (option == IndexedDB::CursorIterateOption::DoNotReply)
             return;
 
+        m_requestResults.append(error);
+
         if (error.isNull())
-            m_databaseConnection->connectionToClient().didIterateCursor(IDBResultData::iterateCursorSuccess(requestData.requestIdentifier(), result));
+            databaseConnection().connectionToClient().didIterateCursor(IDBResultData::iterateCursorSuccess(requestData.requestIdentifier(), result));
         else
-            m_databaseConnection->connectionToClient().didIterateCursor(IDBResultData::error(requestData.requestIdentifier(), error));
+            databaseConnection().connectionToClient().didIterateCursor(IDBResultData::error(requestData.requestIdentifier(), error));
     });
 }
 
@@ -429,7 +445,7 @@ const Vector<uint64_t>& UniqueIDBDatabaseTransaction::objectStoreIdentifiers()
     if (!m_objectStoreIdentifiers.isEmpty())
         return m_objectStoreIdentifiers;
 
-    auto& info = m_databaseConnection->database()->info();
+    auto& info = databaseConnection().database()->info();
     for (const auto& objectStoreName : info.objectStoreNames()) {
         auto objectStoreInfo = info.infoForExistingObjectStore(objectStoreName);
         ASSERT(objectStoreInfo);
@@ -447,10 +463,8 @@ void UniqueIDBDatabaseTransaction::didActivateInBackingStore(const IDBError& err
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::didActivateInBackingStore");
 
-    m_databaseConnection->connectionToClient().didStartTransaction(m_transactionInfo.identifier(), error);
+    databaseConnection().connectionToClient().didStartTransaction(m_transactionInfo.identifier(), error);
 }
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

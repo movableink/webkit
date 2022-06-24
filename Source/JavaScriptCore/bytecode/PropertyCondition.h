@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@ public:
         Absence,
         AbsenceOfSetEffect,
         Equivalence, // An adaptive watchpoint on this will be a pair of watchpoints, and when the structure transitions, we will set the replacement watchpoint on the new structure.
-        CustomFunctionEquivalence, // Custom value or accessor.
+        HasStaticProperty, // Custom value or accessor.
         HasPrototype
     };
 
@@ -86,7 +86,7 @@ public:
         VM& vm, JSCell* owner, UniquedStringImpl* uid, JSObject* prototype)
     {
         if (owner)
-            vm.heap.writeBarrier(owner);
+            vm.writeBarrier(owner);
         return absenceWithoutBarrier(uid, prototype);
     }
     
@@ -103,7 +103,7 @@ public:
         VM& vm, JSCell* owner, UniquedStringImpl* uid, JSObject* prototype)
     {
         if (owner)
-            vm.heap.writeBarrier(owner);
+            vm.writeBarrier(owner);
         return absenceOfSetEffectWithoutBarrier(uid, prototype);
     }
     
@@ -120,14 +120,14 @@ public:
         VM& vm, JSCell* owner, UniquedStringImpl* uid, JSValue value)
     {
         if (value.isCell() && owner)
-            vm.heap.writeBarrier(owner);
+            vm.writeBarrier(owner);
         return equivalenceWithoutBarrier(uid, value);
     }
 
-    static PropertyCondition customFunctionEquivalence(UniquedStringImpl* uid)
+    static PropertyCondition hasStaticProperty(UniquedStringImpl* uid)
     {
         PropertyCondition result;
-        result.m_header = Header(uid, CustomFunctionEquivalence);
+        result.m_header = Header(uid, HasStaticProperty);
         return result;
     }
     
@@ -142,7 +142,7 @@ public:
     static PropertyCondition hasPrototype(VM& vm, JSCell* owner, JSObject* prototype)
     {
         if (owner)
-            vm.heap.writeBarrier(owner);
+            vm.writeBarrier(owner);
         return hasPrototypeWithoutBarrier(prototype);
     }
     
@@ -201,7 +201,7 @@ public:
         case Equivalence:
             result ^= EncodedJSValueHash::hash(u.equivalence.value);
             break;
-        case CustomFunctionEquivalence:
+        case HasStaticProperty:
             break;
         }
         return result;
@@ -223,7 +223,7 @@ public:
             return u.prototype.prototype == other.u.prototype.prototype;
         case Equivalence:
             return u.equivalence.value == other.u.equivalence.value;
-        case CustomFunctionEquivalence:
+        case HasStaticProperty:
             return true;
         }
         RELEASE_ASSERT_NOT_REACHED();
@@ -361,9 +361,7 @@ namespace WTF {
 void printInternal(PrintStream&, JSC::PropertyCondition::Kind);
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::PropertyCondition> {
-    typedef JSC::PropertyConditionHash Hash;
-};
+template<> struct DefaultHash<JSC::PropertyCondition> : JSC::PropertyConditionHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::PropertyCondition> : SimpleClassHashTraits<JSC::PropertyCondition> { };

@@ -44,21 +44,21 @@ WTF_EXPORT_PRIVATE void initializeMainThread();
 
 WTF_EXPORT_PRIVATE void callOnMainThread(Function<void()>&&);
 WTF_EXPORT_PRIVATE void callOnMainThreadAndWait(Function<void()>&&);
+WTF_EXPORT_PRIVATE void ensureOnMainThread(Function<void()>&&); // Sync if called on main thread, async otherwise.
 
 #if PLATFORM(COCOA)
 WTF_EXPORT_PRIVATE void dispatchAsyncOnMainThreadWithWebThreadLockIfNeeded(void (^block)());
 WTF_EXPORT_PRIVATE void callOnWebThreadOrDispatchAsyncOnMainThread(void (^block)());
 #endif
 
-WTF_EXPORT_PRIVATE void setMainThreadCallbacksPaused(bool paused);
-
 WTF_EXPORT_PRIVATE bool isMainThread();
 
-WTF_EXPORT_PRIVATE bool canAccessThreadLocalDataForThread(Thread&);
+WTF_EXPORT_PRIVATE bool canCurrentThreadAccessThreadLocalData(Thread&);
 
 WTF_EXPORT_PRIVATE bool isMainRunLoop();
 WTF_EXPORT_PRIVATE void callOnMainRunLoop(Function<void()>&&);
 WTF_EXPORT_PRIVATE void callOnMainRunLoopAndWait(Function<void()>&&);
+WTF_EXPORT_PRIVATE void ensureOnMainRunLoop(Function<void()>&&); // Sync if called on main run loop, async otherwise.
 
 #if USE(WEB_THREAD)
 WTF_EXPORT_PRIVATE bool isWebThread();
@@ -74,8 +74,6 @@ WTF_EXPORT_PRIVATE bool isMainThreadOrGCThread();
 
 // NOTE: these functions are internal to the callOnMainThread implementation.
 void initializeMainThreadPlatform();
-void scheduleDispatchFunctionsOnMainThread();
-void dispatchFunctionsFromMainThread();
 
 } // namespace WTF
 
@@ -83,16 +81,20 @@ using WTF::callOnMainThread;
 using WTF::callOnMainThreadAndWait;
 using WTF::callOnMainRunLoop;
 using WTF::callOnMainRunLoopAndWait;
-using WTF::canAccessThreadLocalDataForThread;
+using WTF::ensureOnMainRunLoop;
+using WTF::ensureOnMainThread;
+using WTF::canCurrentThreadAccessThreadLocalData;
+using WTF::isMainRunLoop;
 using WTF::isMainThread;
 using WTF::isMainThreadOrGCThread;
 using WTF::isUIThread;
 using WTF::isWebThread;
-using WTF::setMainThreadCallbacksPaused;
+
 #if PLATFORM(COCOA)
 using WTF::dispatchAsyncOnMainThreadWithWebThreadLockIfNeeded;
 using WTF::callOnWebThreadOrDispatchAsyncOnMainThread;
 #endif
+
 #if USE(WEB_THREAD)
 using WTF::initializeWebThread;
 using WTF::initializeApplicationUIThread;

@@ -36,7 +36,10 @@
 #import <WebKit/WKWebViewPrivate.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/BlockObjCExceptions.h>
+#import <wtf/BlockPtr.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/Vector.h>
+#import <wtf/WeakObjCPtr.h>
 
 @interface WKWebView (Details)
 - (WKPageRef)_pageForTesting;
@@ -65,16 +68,27 @@ static Vector<WebKitTestRunnerWindow *> allWindows;
     return self;
 }
 
+- (void)becomeKeyWindow
+{
+    [super becomeKeyWindow];
+
+    if (_platformWebView)
+        _platformWebView->setWindowIsKey(true);
+}
+
+- (void)resignKeyWindow
+{
+    [super resignKeyWindow];
+
+    if (_platformWebView)
+        _platformWebView->setWindowIsKey(false);
+}
+
 - (void)dealloc
 {
     allWindows.removeFirst(self);
     ASSERT(!allWindows.contains(self));
     [super dealloc];
-}
-
-- (BOOL)isKeyWindow
-{
-    return [super isKeyWindow] && (_platformWebView ? _platformWebView->windowIsKey() : YES);
 }
 
 - (void)setFrameOrigin:(CGPoint)point
@@ -121,15 +135,27 @@ static CGRect viewRectForWindowRect(CGRect, PlatformWebView::WebViewSizingMode);
 } // namespace WTR
 
 @interface PlatformWebViewController : UIViewController
+@property (nonatomic) CGFloat horizontalSystemMinimumLayoutMargin;
 @end
 
 @implementation PlatformWebViewController
+
+- (NSDirectionalEdgeInsets)systemMinimumLayoutMargins
+{
+    auto layoutMargins = [super systemMinimumLayoutMargins];
+    layoutMargins.leading = self.horizontalSystemMinimumLayoutMargin;
+    layoutMargins.trailing = self.horizontalSystemMinimumLayoutMargin;
+    return layoutMargins;
+}
 
 - (void)viewWillTransitionToSize:(CGSize)toSize withTransitionCoordinator:(id <UIViewControllerTransitionCoordinator>)coordinator
 {
     [super viewWillTransitionToSize:toSize withTransitionCoordinator:coordinator];
 
     TestRunnerWKWebView *webView = WTR::TestController::singleton().mainWebView()->platformView();
+
+    if (CGSizeEqualToSize([webView frame].size, toSize))
+        return;
 
     if (webView.usesSafariLikeRotation)
         [webView _setInterfaceOrientationOverride:[[UIApplication sharedApplication] statusBarOrientation]];
@@ -154,6 +180,19 @@ static CGRect viewRectForWindowRect(CGRect, PlatformWebView::WebViewSizingMode);
     }];
 }
 
+- (void)presentViewController:(UIViewController *)viewController animated:(BOOL)animated completion:(void(^)(void))completion
+{
+    auto weakWebView = WeakObjCPtr<TestRunnerWKWebView>(WTR::TestController::singleton().mainWebView()->platformView());
+    [super presentViewController:viewController animated:animated completion:[weakWebView, completion = makeBlockPtr(completion), viewController = retainPtr(viewController)] {
+        if (completion)
+            completion();
+
+        auto strongWebView = weakWebView.get();
+        if (WTR::TestController::singleton().mainWebView()->platformView() == strongWebView)
+            [strongWebView _didPresentViewController:viewController.get()];
+    }];
+}
+
 @end
 
 namespace WTR {
@@ -168,15 +207,15 @@ PlatformWebView::PlatformWebView(WKWebViewConfiguration* configuration, const Te
     : m_windowIsKey(true)
     , m_options(options)
 {
-    CGRect rect = CGRectMake(0, 0, TestController::viewWidth, TestController::viewHeight);
+    CGRect rect = CGRectMake(0, 0, options.viewWidth(), options.viewHeight());
 
     m_window = [[WebKitTestRunnerWindow alloc] initWithFrame:rect];
     m_window.backgroundColor = [UIColor lightGrayColor];
     m_window.platformWebView = this;
 
-    UIViewController *viewController = [[PlatformWebViewController alloc] init];
-    [m_window setRootViewController:viewController];
-    [viewController release];
+    auto webViewController = adoptNS([[PlatformWebViewController alloc] init]);
+    [webViewController setHorizontalSystemMinimumLayoutMargin:options.horizontalSystemMinimumLayoutMargin()];
+    [m_window setRootViewController:webViewController.get()];
 
     m_view = [[TestRunnerWKWebView alloc] initWithFrame:viewRectForWindowRect(rect, WebViewSizingMode::Default) configuration:configuration];
 
@@ -207,8 +246,24 @@ PlatformWindow PlatformWebView::keyWindow()
 void PlatformWebView::setWindowIsKey(bool isKey)
 {
     m_windowIsKey = isKey;
-    if (isKey)
+
+    if (isKey && !m_window.keyWindow) {
+        [m_otherWindow setHidden:YES];
         [m_window makeKeyWindow];
+        return;
+    }
+
+    if (!isKey && m_window.keyWindow) {
+        if (!m_otherWindow) {
+            m_otherWindow = adoptNS([[UIWindow alloc] initWithWindowScene:m_window.windowScene]);
+            [m_otherWindow setFrame:CGRectMake(-1, -1, 1, 1)];
+        }
+        // On iOS, there's no API to force a UIWindow to resign key window. However, we can instead
+        // cause the test runner window to resign key window by making a different window (in this
+        // case, m_otherWindow) the key window.
+        [m_otherWindow setHidden:NO];
+        [m_otherWindow makeKeyWindow];
+    }
 }
 
 void PlatformWebView::addToWindow()
@@ -266,21 +321,41 @@ void PlatformWebView::didInitializeClients()
     setWindowFrame(wkFrame);
 }
 
+static UITextField *chromeInputField(UIWindow *window)
+{
+    return (UITextField *)[window viewWithTag:1];
+}
+
 void PlatformWebView::addChromeInputField()
 {
-    UITextField* textField = [[UITextField alloc] initWithFrame:CGRectMake(0, 0, 100, 20)];
-    textField.tag = 1;
-    [m_window addSubview:textField];
-    [textField release];
+    auto textField = adoptNS([[UITextField alloc] initWithFrame:CGRectMake(0, 0, 320, 64)]);
+    [textField setTag:1];
+    [m_window addSubview:textField.get()];
+}
+
+void PlatformWebView::setTextInChromeInputField(const String& text)
+{
+    chromeInputField(m_window).text = text;
+}
+
+void PlatformWebView::selectChromeInputField()
+{
+    auto textField = chromeInputField(m_window);
+    [textField becomeFirstResponder];
+    [textField selectAll:nil];
+}
+
+String PlatformWebView::getSelectedTextInChromeInputField()
+{
+    auto textField = chromeInputField(m_window);
+    return [textField textInRange:textField.selectedTextRange];
 }
 
 void PlatformWebView::removeChromeInputField()
 {
-    UITextField* textField = (UITextField*)[m_window viewWithTag:1];
-    if (textField) {
+    if (auto textField = chromeInputField(m_window)) {
         [textField removeFromSuperview];
         makeWebViewFirstResponder();
-        [textField release];
     }
 }
 
@@ -308,26 +383,35 @@ void PlatformWebView::setDrawsBackground(bool)
 {
 }
 
-#if !HAVE(IOSURFACE)
-static void releaseDataProviderData(void* info, const void*, size_t)
-{
-    CARenderServerDestroyBuffer(static_cast<CARenderServerBufferRef>(info));
-}
-#endif
-
 RetainPtr<CGImageRef> PlatformWebView::windowSnapshotImage()
 {
-    BEGIN_BLOCK_OBJC_EXCEPTIONS;
-
     CGSize viewSize = m_view.bounds.size;
     RELEASE_ASSERT(viewSize.width);
     RELEASE_ASSERT(viewSize.height);
 
-#if HAVE(IOSURFACE)
+    UIView *selectionView = [platformView().contentView valueForKeyPath:@"interactionAssistant.selectionView"];
+    UIView *startGrabberView = [selectionView valueForKeyPath:@"rangeView.startGrabber"];
+    UIView *endGrabberView = [selectionView valueForKeyPath:@"rangeView.endGrabber"];
+    Vector<WeakObjCPtr<UIView>, 3> viewsToUnhide;
+    if (![selectionView isHidden]) {
+        [selectionView setHidden:YES];
+        viewsToUnhide.uncheckedAppend(selectionView);
+    }
+
+    if (![startGrabberView isHidden]) {
+        [startGrabberView setHidden:YES];
+        viewsToUnhide.uncheckedAppend(startGrabberView);
+    }
+
+    if (![endGrabberView isHidden]) {
+        [endGrabberView setHidden:YES];
+        viewsToUnhide.uncheckedAppend(endGrabberView);
+    }
+
     __block bool isDone = false;
     __block RetainPtr<CGImageRef> result;
     
-    RetainPtr<WKSnapshotConfiguration> snapshotConfiguration = adoptNS([[WKSnapshotConfiguration alloc] init]);
+    auto snapshotConfiguration = adoptNS([[WKSnapshotConfiguration alloc] init]);
     [snapshotConfiguration setRect:CGRectMake(0, 0, viewSize.width, viewSize.height)];
     [snapshotConfiguration setSnapshotWidth:@(viewSize.width)];
     
@@ -342,32 +426,11 @@ RetainPtr<CGImageRef> PlatformWebView::windowSnapshotImage()
     }];
     while (!isDone)
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantPast]];
+
+    for (auto view : viewsToUnhide)
+        [view setHidden:NO];
+
     return result;
-
-#else
-    CGFloat deviceScaleFactor = 2; // FIXME: hardcode 2x for now. In future we could respect 1x and 3x as we do on Mac.
-    CATransform3D transform = CATransform3DMakeScale(deviceScaleFactor, deviceScaleFactor, 1);
-    
-    int bufferWidth = ceil(viewSize.width * deviceScaleFactor);
-    int bufferHeight = ceil(viewSize.height * deviceScaleFactor);
-
-    CARenderServerBufferRef buffer = CARenderServerCreateBuffer(bufferWidth, bufferHeight);
-    RELEASE_ASSERT(buffer);
-
-    CARenderServerRenderLayerWithTransform(MACH_PORT_NULL, m_view.layer.context.contextId, reinterpret_cast<uint64_t>(m_view.layer), buffer, 0, 0, &transform);
-
-    uint8_t* data = CARenderServerGetBufferData(buffer);
-    size_t rowBytes = CARenderServerGetBufferRowBytes(buffer);
-
-    static CGColorSpaceRef sRGBSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-    RetainPtr<CGDataProviderRef> provider = adoptCF(CGDataProviderCreateWithData(buffer, data, CARenderServerGetBufferDataSize(buffer), releaseDataProviderData));
-    
-    RetainPtr<CGImageRef> cgImage = adoptCF(CGImageCreate(bufferWidth, bufferHeight, 8, 32, rowBytes, sRGBSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host, provider.get(), 0, false, kCGRenderingIntentDefault));
-    RELEASE_ASSERT(cgImage);
-
-    return cgImage;
-#endif
-    END_BLOCK_OBJC_EXCEPTIONS;
 }
 
 void PlatformWebView::setNavigationGesturesEnabled(bool enabled)

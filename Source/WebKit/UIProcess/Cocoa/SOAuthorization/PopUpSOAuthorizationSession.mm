@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,11 @@
 #if HAVE(APP_SSO)
 
 #import "APINavigationAction.h"
-#import "WKNavigationDelegatePrivate.h"
-#import "WKUIDelegate.h"
-#import "WKWebViewConfigurationPrivate.h"
+#import <WebKit/WKNavigationDelegatePrivate.h>
+#import <WebKit/WKUIDelegate.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
 #import "WKWebViewInternal.h"
+#import "WebPageProxy.h"
 #import <WebCore/ResourceResponse.h>
 #import <wtf/BlockPtr.h>
 
@@ -51,7 +52,7 @@
 - (instancetype)initWithSession:(WebKit::PopUpSOAuthorizationSession *)session
 {
     if ((self = [super init])) {
-        _session = makeWeakPtr(session);
+        _session = session;
         _isFirstNavigation = YES;
     }
     return self;
@@ -88,6 +89,8 @@
 
 @end
 
+#define AUTHORIZATIONSESSION_RELEASE_LOG(fmt, ...) RELEASE_LOG(AppSSO, "%p - [InitiatingAction=%s][State=%s] PopUpSOAuthorizationSession::" fmt, this, initiatingActionString(), stateString(), ##__VA_ARGS__)
+
 namespace WebKit {
 
 Ref<SOAuthorizationSession> PopUpSOAuthorizationSession::create(SOAuthorization *soAuthorization, WebPageProxy& page, Ref<API::NavigationAction>&& navigationAction, NewPageCallback&& newPageCallback, UIClientCallback&& uiClientCallback)
@@ -111,41 +114,56 @@ PopUpSOAuthorizationSession::~PopUpSOAuthorizationSession()
 
 void PopUpSOAuthorizationSession::shouldStartInternal()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("shouldStartInternal: m_page=%p", page());
     ASSERT(page() && page()->isInWindow());
     start();
 }
 
 void PopUpSOAuthorizationSession::fallBackToWebPathInternal()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("fallBackToWebPathInternal");
     m_uiClientCallback(releaseNavigationAction(), WTFMove(m_newPageCallback));
 }
 
 void PopUpSOAuthorizationSession::abortInternal()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("abortInternal: m_page=%p", page());
     if (!page()) {
         m_newPageCallback(nullptr);
         return;
     }
 
     initSecretWebView();
+    if (!m_secretWebView) {
+        m_newPageCallback(nullptr);
+        return;
+    }
+
     m_newPageCallback(m_secretWebView->_page.get());
     [m_secretWebView evaluateJavaScript: @"window.close()" completionHandler:nil];
 }
 
 void PopUpSOAuthorizationSession::completeInternal(const WebCore::ResourceResponse& response, NSData *data)
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("completeInternal: httpState=%d", response.httpStatusCode());
     if (response.httpStatusCode() != 200 || !page()) {
         fallBackToWebPathInternal();
         return;
     }
 
     initSecretWebView();
+    if (!m_secretWebView) {
+        fallBackToWebPathInternal();
+        return;
+    }
+
     m_newPageCallback(m_secretWebView->_page.get());
     [m_secretWebView loadData:data MIMEType:@"text/html" characterEncodingName:@"UTF-8" baseURL:response.url()];
 }
 
 void PopUpSOAuthorizationSession::close(WKWebView *webView)
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("close");
     if (!m_secretWebView)
         return;
     if (state() != State::Completed || webView != m_secretWebView.get()) {
@@ -158,20 +176,25 @@ void PopUpSOAuthorizationSession::close(WKWebView *webView)
 
 void PopUpSOAuthorizationSession::initSecretWebView()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("initSecretWebView");
     ASSERT(page());
-    auto initiatorWebView = fromWebPageProxy(*page());
-    auto configuration = adoptNS([initiatorWebView.configuration copy]);
-    [configuration _setRelatedWebView:initiatorWebView];
+    auto initiatorWebView = page()->cocoaView();
+    if (!initiatorWebView)
+        return;
+    auto configuration = adoptNS([[initiatorWebView configuration] copy]);
+    [configuration _setRelatedWebView:initiatorWebView.get()];
     m_secretWebView = adoptNS([[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
 
     m_secretDelegate = adoptNS([[WKSOSecretDelegate alloc] initWithSession:this]);
     [m_secretWebView setUIDelegate:m_secretDelegate.get()];
     [m_secretWebView setNavigationDelegate:m_secretDelegate.get()];
 
-    m_secretWebView->_page->setShouldSuppressSOAuthorizationInAllNavigationPolicyDecision();
+    m_secretWebView->_page->preferences().setExtensibleSSOEnabled(false);
     WTFLogAlways("SecretWebView is created.");
 }
 
 } // namespace WebKit
+
+#undef AUTHORIZATIONSESSION_RELEASE_LOG
 
 #endif

@@ -6,7 +6,9 @@
 
 // WindowSurfaceCGL.cpp: CGL implementation of egl::Surface for windows
 
-#if __has_include(<Cocoa/Cocoa.h>)
+#include "common/platform.h"
+
+#if defined(ANGLE_PLATFORM_MACOS) || defined(ANGLE_PLATFORM_MACCATALYST)
 
 #    include "libANGLE/renderer/gl/cgl/WindowSurfaceCGL.h"
 
@@ -15,13 +17,14 @@
 #    import <QuartzCore/QuartzCore.h>
 
 #    include "common/debug.h"
+#    include "common/gl/cgl/FunctionsCGL.h"
 #    include "libANGLE/Context.h"
 #    include "libANGLE/renderer/gl/FramebufferGL.h"
 #    include "libANGLE/renderer/gl/RendererGL.h"
 #    include "libANGLE/renderer/gl/StateManagerGL.h"
 #    include "libANGLE/renderer/gl/cgl/DisplayCGL.h"
 
-@interface WebSwapLayer : CAOpenGLLayer {
+@interface WebSwapCGLLayer : CAOpenGLLayer {
     CGLContextObj mDisplayContext;
 
     bool initialized;
@@ -35,7 +38,7 @@
             withFunctions:(const rx::FunctionsGL *)functions;
 @end
 
-@implementation WebSwapLayer
+@implementation WebSwapCGLLayer
 - (id)initWithSharedState:(rx::SharedSwapState *)swapState
               withContext:(CGLContextObj)displayContext
             withFunctions:(const rx::FunctionsGL *)functions
@@ -151,7 +154,7 @@ WindowSurfaceCGL::WindowSurfaceCGL(const egl::SurfaceState &state,
     : SurfaceGL(state),
       mSwapLayer(nil),
       mCurrentSwapId(0),
-      mLayer(reinterpret_cast<CALayer *>(layer)),
+      mLayer((__bridge CALayer *)layer),
       mContext(context),
       mFunctions(renderer->getFunctions()),
       mStateManager(renderer->getStateManager()),
@@ -162,11 +165,13 @@ WindowSurfaceCGL::WindowSurfaceCGL(const egl::SurfaceState &state,
 
 WindowSurfaceCGL::~WindowSurfaceCGL()
 {
+    EnsureCGLContextIsCurrent ensureContextCurrent(mContext);
+
     pthread_mutex_destroy(&mSwapState.mutex);
 
     if (mDSRenderbuffer != 0)
     {
-        mFunctions->deleteRenderbuffers(1, &mDSRenderbuffer);
+        mStateManager->deleteRenderbuffer(mDSRenderbuffer);
         mDSRenderbuffer = 0;
     }
 
@@ -181,7 +186,7 @@ WindowSurfaceCGL::~WindowSurfaceCGL()
     {
         if (mSwapState.textures[i].texture != 0)
         {
-            mFunctions->deleteTextures(1, &mSwapState.textures[i].texture);
+            mStateManager->deleteTexture(mSwapState.textures[i].texture);
             mSwapState.textures[i].texture = 0;
         }
     }
@@ -189,6 +194,8 @@ WindowSurfaceCGL::~WindowSurfaceCGL()
 
 egl::Error WindowSurfaceCGL::initialize(const egl::Display *display)
 {
+    EnsureCGLContextIsCurrent ensureContextCurrent(mContext);
+
     unsigned width  = getWidth();
     unsigned height = getHeight();
 
@@ -206,10 +213,11 @@ egl::Error WindowSurfaceCGL::initialize(const egl::Display *display)
     mSwapState.lastRendered   = &mSwapState.textures[1];
     mSwapState.beingPresented = &mSwapState.textures[2];
 
-    mSwapLayer = [[WebSwapLayer alloc] initWithSharedState:&mSwapState
-                                               withContext:mContext
-                                             withFunctions:mFunctions];
+    mSwapLayer = [[WebSwapCGLLayer alloc] initWithSharedState:&mSwapState
+                                                  withContext:mContext
+                                                withFunctions:mFunctions];
     [mLayer addSublayer:mSwapLayer];
+    [mSwapLayer setContentsScale:[mLayer contentsScale]];
 
     mFunctions->genRenderbuffers(1, &mDSRenderbuffer);
     mStateManager->bindRenderbuffer(GL_RENDERBUFFER, mDSRenderbuffer);
@@ -299,12 +307,12 @@ void WindowSurfaceCGL::setSwapInterval(EGLint interval)
 
 EGLint WindowSurfaceCGL::getWidth() const
 {
-    return (EGLint)CGRectGetWidth([mLayer frame]);
+    return static_cast<EGLint>(CGRectGetWidth([mLayer frame]) * [mLayer contentsScale]);
 }
 
 EGLint WindowSurfaceCGL::getHeight() const
 {
-    return (EGLint)CGRectGetHeight([mLayer frame]);
+    return static_cast<EGLint>(CGRectGetHeight([mLayer frame]) * [mLayer contentsScale]);
 }
 
 EGLint WindowSurfaceCGL::isPostSubBufferSupported() const
@@ -337,4 +345,4 @@ FramebufferImpl *WindowSurfaceCGL::createDefaultFramebuffer(const gl::Context *c
 
 }  // namespace rx
 
-#endif  // __has_include(<Cocoa/Cocoa.h>)
+#endif  // defined(ANGLE_PLATFORM_MACOS) || defined(ANGLE_PLATFORM_MACCATALYST)

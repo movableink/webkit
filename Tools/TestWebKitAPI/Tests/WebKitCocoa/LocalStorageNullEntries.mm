@@ -25,6 +25,7 @@
 
 #import "config.h"
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import <WebKit/WKProcessPoolPrivate.h>
@@ -34,8 +35,6 @@
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <WebKit/_WKUserStyleSheet.h>
 #import <wtf/RetainPtr.h>
-
-static bool readyToContinue;
 
 @interface LocalStorageNullEntriesMessageHandler : NSObject <WKScriptMessageHandler>
 @end
@@ -62,7 +61,7 @@ TEST(WKWebView, LocalStorageNullEntries)
     NSURL *url1 = [[NSBundle mainBundle] URLForResource:@"LocalStorageNullEntries" withExtension:@"localstorage" subdirectory:@"TestWebKitAPI.resources"];
     NSURL *url2 = [[NSBundle mainBundle] URLForResource:@"LocalStorageNullEntries" withExtension:@"localstorage-shm" subdirectory:@"TestWebKitAPI.resources"];
 
-    NSURL *targetURL = [NSURL fileURLWithPath:[@"~/Library/WebKit/TestWebKitAPI/WebsiteData/LocalStorage/" stringByExpandingTildeInPath]];
+    NSURL *targetURL = [NSURL fileURLWithPath:[@"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/WebsiteData/LocalStorage/" stringByExpandingTildeInPath]];
     [[NSFileManager defaultManager] createDirectoryAtURL:targetURL withIntermediateDirectories:YES attributes:nil error:nil];
 
     [[NSFileManager defaultManager] copyItemAtURL:url1 toURL:[targetURL URLByAppendingPathComponent:@"file__0.localstorage"] error:nil];

@@ -1,4 +1,4 @@
-<body onload="runTest();">
+<body onload="runTest();"><!-- webkit-test-runner [ JavaScriptCanOpenWindowsAutomatically=false ] -->
 <div>This tests the restrictions to entering full screen mode laid out in section 4.1 of the W3C 
 <a href="http://dvcs.w3.org/hg/fullscreen/raw-file/tip/Overview.html">Full Screen API</a></div>
 <script src="full-screen-test.js"></script>
@@ -18,6 +18,7 @@
         var step2 = function() {
             consoleWrite('"The context object\'s node document, or an ancestor browsing context\'s document does not have the fullscreen enabled flag set."')
             var iframe = document.documentElement.appendChild(document.createElement('iframe'));
+            iframe.setAttribute('allow', "fullscreen 'none'");
             var div = iframe.contentDocument.documentElement.appendChild(iframe.contentDocument.createElement('div'));
 
             waitForEventOnce(iframe.contentDocument, 'webkitfullscreenerror', step3);
@@ -60,8 +61,5 @@
             waitForEventOnce(document, 'webkitfullscreenerror', endTest);
             div.webkitRequestFullscreen();
         };
-
-        if (typeof(testRunner) != 'undefined')
-            testRunner.setPopupBlockingEnabled(true);
     }
 </script>

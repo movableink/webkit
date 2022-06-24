@@ -25,22 +25,24 @@
 
 #import "config.h"
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
+#import "TestNavigationDelegate.h"
+#import "TestUIDelegate.h"
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKUserContentControllerPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebpagePreferencesPrivate.h>
+#import <WebKit/WKWebsiteDataStorePrivate.h>
+#import <WebKit/WKWebsiteDataStoreRef.h>
 #import <WebKit/WebKit.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <WebKit/_WKUserStyleSheet.h>
+#import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/text/WTFString.h>
 
-static bool readyToContinue;
-static bool receivedScriptMessage;
-static bool didFinishNavigation;
-static RetainPtr<WKScriptMessage> lastScriptMessage;
 static RetainPtr<WKWebView> createdWebView;
 
 @interface LocalStorageMessageHandler : NSObject <WKScriptMessageHandler>
@@ -80,7 +82,7 @@ static RetainPtr<WKWebView> createdWebView;
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
 {
-    didFinishNavigation = true;
+    didFinishNavigationBoolean = true;
 }
 
 @end
@@ -109,7 +111,13 @@ TEST(WKWebView, LocalStorageProcessCrashes)
     TestWebKitAPI::Util::run(&receivedScriptMessage);
     EXPECT_WK_STREQ(@"session:storage", [lastScriptMessage body]);
 
-    [configuration.get().processPool _terminateNetworkProcess];
+    readyToContinue = false;
+    WKWebsiteDataStoreSyncLocalStorage((WKWebsiteDataStoreRef)configuration.get().websiteDataStore, nullptr, [](void*) {
+        readyToContinue = true;
+    });
+    TestWebKitAPI::Util::run(&readyToContinue);
+
+    [configuration.get().websiteDataStore _terminateNetworkProcess];
 
     receivedScriptMessage = false;
     TestWebKitAPI::Util::run(&receivedScriptMessage);
@@ -162,7 +170,7 @@ TEST(WKWebView, LocalStorageProcessSuspends)
     TestWebKitAPI::Util::run(&receivedScriptMessage);
     EXPECT_WK_STREQ(@"value", [lastScriptMessage body]);
 
-    [processPool.get() _sendNetworkProcessWillSuspendImminently];
+    [configuration.get().websiteDataStore _sendNetworkProcessWillSuspendImminently];
 
     readyToContinue = false;
     [webView1 evaluateJavaScript:@"window.localStorage.setItem('key', 'newValue')" completionHandler:^(id, NSError *) {
@@ -177,7 +185,7 @@ TEST(WKWebView, LocalStorageProcessSuspends)
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
     
-    [processPool.get() _sendNetworkProcessDidResume];
+    [configuration.get().websiteDataStore _sendNetworkProcessDidResume];
 
     receivedScriptMessage = false;
     TestWebKitAPI::Util::run(&receivedScriptMessage);
@@ -266,8 +274,8 @@ TEST(WKWebView, PrivateBrowsingAffectsLocalStorage)
     NSURLRequest *request = [NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"simple" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]];
     [webView loadRequest:request];
     
-    TestWebKitAPI::Util::run(&didFinishNavigation);
-    didFinishNavigation = false;
+    TestWebKitAPI::Util::run(&didFinishNavigationBoolean);
+    didFinishNavigationBoolean = false;
     
     bool finishedRunningScript = false;
     [webView evaluateJavaScript:@"localStorage.setItem('testItem', 'Persistent item!');" completionHandler: [&] (id result, NSError *error) {
@@ -291,8 +299,8 @@ TEST(WKWebView, PrivateBrowsingAffectsLocalStorage)
     };
     
     [webView reload];
-    TestWebKitAPI::Util::run(&didFinishNavigation);
-    didFinishNavigation = false;
+    TestWebKitAPI::Util::run(&didFinishNavigationBoolean);
+    didFinishNavigationBoolean = false;
     
     [webView evaluateJavaScript:@"localStorage.getItem('testItem');" completionHandler: [&] (id result, NSError *error) {
         EXPECT_TRUE([result isEqual:NSNull.null]);
@@ -336,8 +344,8 @@ TEST(WKWebView, PrivateBrowsingAffectsLocalStorage)
     };
     
     [webView reload];
-    TestWebKitAPI::Util::run(&didFinishNavigation);
-    didFinishNavigation = false;
+    TestWebKitAPI::Util::run(&didFinishNavigationBoolean);
+    didFinishNavigationBoolean = false;
     
     [webView evaluateJavaScript:@"localStorage.getItem('testItem');" completionHandler: [&] (id result, NSError *error) {
         NSString *value = (NSString *)result;
@@ -362,8 +370,8 @@ TEST(WKWebView, AuxiliaryWindowsShareLocalStorage)
     NSURLRequest *request = [NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"simple" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]];
     [webView loadRequest:request];
     
-    TestWebKitAPI::Util::run(&didFinishNavigation);
-    didFinishNavigation = false;
+    TestWebKitAPI::Util::run(&didFinishNavigationBoolean);
+    didFinishNavigationBoolean = false;
     
     bool finishedRunningScript = false;
     [webView evaluateJavaScript:@"localStorage.setItem('testItem', 'Persistent item!');" completionHandler: [&] (id result, NSError *error) {
@@ -379,8 +387,8 @@ TEST(WKWebView, AuxiliaryWindowsShareLocalStorage)
     TestWebKitAPI::Util::run(&finishedRunningScript);
     finishedRunningScript = false;
         
-    TestWebKitAPI::Util::run(&didFinishNavigation);
-    didFinishNavigation = false;
+    TestWebKitAPI::Util::run(&didFinishNavigationBoolean);
+    didFinishNavigationBoolean = false;
     
     EXPECT_TRUE(!!createdWebView);
     
@@ -414,3 +422,69 @@ TEST(WKWebView, AuxiliaryWindowsShareLocalStorage)
     TestWebKitAPI::Util::run(&finishedRunningScript);
     finishedRunningScript = false;
 }
+
+TEST(WKWebView, LocalStorageGroup)
+{
+    auto runTest = [] (bool setGroupIdentifier) {
+        auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+        [configuration setWebsiteDataStore:[WKWebsiteDataStore nonPersistentDataStore]];
+        if (setGroupIdentifier)
+            [configuration _setGroupIdentifier:@"testgroupidentifier"];
+        auto webView1 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+        NSString *html1 = @""
+        "<script>"
+        "localStorage.setItem('testkey', 'testvalue1');"
+        "window.onstorage = function(e) { alert('storage changed key ' + e.key + ' value from ' + e.oldValue + ' to ' + e.newValue) };"
+        "</script>";
+        [webView1 loadHTMLString:html1 baseURL:[NSURL URLWithString:@"https://webkit.org/"]];
+        [webView1 _test_waitForDidFinishNavigation];
+
+        auto webView2 = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+        NSString *html2 = @""
+        "<script>"
+        "alert('second web view got value ' + localStorage.getItem('testkey'));"
+        "localStorage.setItem('testkey', 'testvalue2');"
+        "</script>";
+        [webView2 loadHTMLString:html2 baseURL:[NSURL URLWithString:@"https://webkit.org/"]];
+        EXPECT_WK_STREQ([webView2 _test_waitForAlert], "second web view got value testvalue1");
+
+        EXPECT_WK_STREQ([webView1 _test_waitForAlert], "storage changed key testkey value from testvalue1 to testvalue2");
+    };
+    runTest(true);
+    runTest(false);
+}
+
+#if PLATFORM(IOS_FAMILY)
+
+TEST(WKWebView, LocalStorageDirectoryExcludedFromBackup)
+{
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    RetainPtr<NSURL> url = [[[configuration websiteDataStore] _configuration] _webStorageDirectory];
+    // Create a directory and make it not excluded.
+    [[NSFileManager defaultManager] createDirectoryAtURL:url.get() withIntermediateDirectories:YES attributes:nil error:nullptr];
+    [url.get() setResourceValue:@NO forKey:NSURLIsExcludedFromBackupKey error:nil];
+    NSNumber *isDirectoryExcluded = nil;
+    EXPECT_TRUE([url.get() getResourceValue:&isDirectoryExcluded forKey:NSURLIsExcludedFromBackupKey error:nil]);
+    EXPECT_FALSE(isDirectoryExcluded.boolValue);
+
+    auto delegate = adoptNS([[LocalStorageNavigationDelegate alloc] init]);
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView setNavigationDelegate:delegate.get()];
+    didFinishNavigationBoolean = false;
+    NSURLRequest *request = [NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"simple" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]];
+    [webView loadRequest:request];
+    TestWebKitAPI::Util::run(&didFinishNavigationBoolean);
+
+    bool finishedRunningScript = false;
+    [webView evaluateJavaScript:@"localStorage.getItem('key');" completionHandler: [&] (id result, NSError *) {
+        finishedRunningScript = true;
+    }];
+    TestWebKitAPI::Util::run(&finishedRunningScript);
+
+    // Create new url that has updated value.
+    url = [[[configuration websiteDataStore] _configuration] _webStorageDirectory];
+    EXPECT_TRUE([url.get() getResourceValue:&isDirectoryExcluded forKey:NSURLIsExcludedFromBackupKey error:nil]);
+    EXPECT_TRUE(isDirectoryExcluded.boolValue);
+}
+
+#endif

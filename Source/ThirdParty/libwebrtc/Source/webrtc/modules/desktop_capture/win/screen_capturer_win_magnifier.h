@@ -11,18 +11,18 @@
 #ifndef MODULES_DESKTOP_CAPTURE_WIN_SCREEN_CAPTURER_WIN_MAGNIFIER_H_
 #define MODULES_DESKTOP_CAPTURE_WIN_SCREEN_CAPTURER_WIN_MAGNIFIER_H_
 
-#include <memory>
-
 #include <magnification.h>
 #include <wincodec.h>
 #include <windows.h>
+
+#include <memory>
 
 #include "modules/desktop_capture/desktop_capturer.h"
 #include "modules/desktop_capture/screen_capture_frame_queue.h"
 #include "modules/desktop_capture/screen_capturer_helper.h"
 #include "modules/desktop_capture/shared_desktop_frame.h"
 #include "modules/desktop_capture/win/scoped_thread_desktop.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 
@@ -80,7 +80,7 @@ class ScreenCapturerWinMagnifier : public DesktopCapturer {
                                                RECT clipped,
                                                HRGN dirty);
 
-  // Captures the screen within |rect| in the desktop coordinates. Returns true
+  // Captures the screen within `rect` in the desktop coordinates. Returns true
   // if succeeded.
   // It can only capture the primary screen for now. The magnification library
   // crashes under some screen configurations (e.g. secondary screen on top of
@@ -95,7 +95,7 @@ class ScreenCapturerWinMagnifier : public DesktopCapturer {
   // Called by OnMagImageScalingCallback to output captured data.
   void OnCaptured(void* data, const MAGIMAGEHEADER& header);
 
-  // Makes sure the current frame exists and matches |size|.
+  // Makes sure the current frame exists and matches `size`.
   void CreateCurrentFrameIfNecessary(const DesktopSize& size);
 
   Callback* callback_ = nullptr;

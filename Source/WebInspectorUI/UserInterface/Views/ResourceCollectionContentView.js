@@ -35,8 +35,10 @@ WI.ResourceCollectionContentView = class ResourceCollectionContentView extends W
 
         super(collection, contentViewConstructor);
 
+        this.element.classList.add("resource-collection");
+
         if (collection.resourceType === WI.Resource.Type.Image) {
-            this._showGridButtonNavigationItem = new WI.ActivateButtonNavigationItem("show-grid", WI.UIString("Show transparency grid"), WI.UIString("Hide transparency grid"), "Images/NavigationItemCheckers.svg", 13, 13);
+            this._showGridButtonNavigationItem = new WI.ActivateButtonNavigationItem("show-grid", WI.repeatedUIString.showTransparencyGridTooltip(), WI.UIString("Hide transparency grid"), "Images/NavigationItemCheckers.svg", 13, 13);
             this._showGridButtonNavigationItem.addEventListener(WI.ButtonNavigationItem.Event.Clicked, this._handleShowGridButtonClicked, this);
             this._showGridButtonNavigationItem.visibilityPriority = WI.NavigationItem.VisibilityPriority.Low;
             this._showGridButtonNavigationItem.activated = !!WI.settings.showImageGrid.value;
@@ -93,9 +95,17 @@ WI.ResourceCollectionContentView = class ResourceCollectionContentView extends W
 
     detached()
     {
-        WI.settings.showImageGrid.removeEventListener(null, null, this);
+        WI.settings.showImageGrid.removeEventListener(WI.Setting.Event.Changed, this._handleShowImageGridSettingChanged, this);
 
         super.detached();
+    }
+
+    get contentViewConstructorOptions()
+    {
+        let contentViewConstructorOptions = super.contentViewConstructorOptions;
+        if (this.representedObject.resourceType === WI.Resource.Type.Image)
+            contentViewConstructorOptions.disableInteractions = true;
+        return contentViewConstructorOptions;
     }
 
     contentViewAdded(contentView)
@@ -114,6 +124,8 @@ WI.ResourceCollectionContentView = class ResourceCollectionContentView extends W
     contentViewRemoved(contentView)
     {
         this._updateImageTypeScopeBar();
+
+        contentView.removeEventListener(WI.ResourceContentView.Event.ContentError, this._handleContentError, this);
     }
 
     // Private

@@ -24,9 +24,7 @@
 
 #if USE(TEXTURE_MAPPER_GL)
 
-#include "Extensions3D.h"
 #include "FilterOperations.h"
-#include "Image.h"
 #include "LengthFunctions.h"
 #include "NativeImage.h"
 #include "NotImplemented.h"
@@ -47,11 +45,6 @@
 #include <wtf/text/CString.h>
 #endif
 
-#if USE(DIRECT2D)
-#include <d2d1.h>
-#include <wincodec.h>
-#endif
-
 #if OS(DARWIN)
 #define GL_UNSIGNED_INT_8_8_8_8_REV 0x8367
 #endif
@@ -68,13 +61,14 @@ BitmapTextureGL* toBitmapTextureGL(BitmapTexture* texture)
 
 BitmapTextureGL::BitmapTextureGL(const TextureMapperContextAttributes& contextAttributes, const Flags, GLint internalFormat)
     : m_contextAttributes(contextAttributes)
+    , m_format(GL_RGBA)
 {
     if (internalFormat != GL_DONT_CARE) {
-        m_internalFormat = m_format = internalFormat;
+        m_internalFormat = internalFormat;
         return;
     }
 
-    m_internalFormat = m_format = GL_RGBA;
+    m_internalFormat = GL_RGBA;
 }
 
 void BitmapTextureGL::didReset()
@@ -84,6 +78,7 @@ void BitmapTextureGL::didReset()
 
     m_shouldClear = true;
     m_colorConvertFlags = TextureMapperGL::NoFlag;
+    m_filterInfo = FilterInfo();
     if (m_textureSize == contentSize())
         return;
 
@@ -107,8 +102,8 @@ void BitmapTextureGL::updateContents(const void* srcData, const IntRect& targetR
     glBindTexture(GL_TEXTURE_2D, m_id);
 
     const unsigned bytesPerPixel = 4;
-    const char* data = static_cast<const char*>(srcData);
-    Vector<char> temporaryData;
+    auto data = static_cast<const uint8_t*>(srcData);
+    Vector<uint8_t> temporaryData;
     IntPoint adjustedSourceOffset = sourceOffset;
 
     // Texture upload requires subimage buffer if driver doesn't support subimage and we don't have full image upload.
@@ -118,10 +113,10 @@ void BitmapTextureGL::updateContents(const void* srcData, const IntRect& targetR
     // prepare temporaryData if necessary
     if (requireSubImageBuffer) {
         temporaryData.resize(targetRect.width() * targetRect.height() * bytesPerPixel);
-        char* dst = temporaryData.data();
+        auto dst = temporaryData.data();
         data = dst;
-        const char* bits = static_cast<const char*>(srcData);
-        const char* src = bits + sourceOffset.y() * bytesPerLine + sourceOffset.x() * bytesPerPixel;
+        auto bits = static_cast<const uint8_t*>(srcData);
+        auto src = bits + sourceOffset.y() * bytesPerLine + sourceOffset.x() * bytesPerPixel;
         const int targetBytesPerLine = targetRect.width() * bytesPerPixel;
         for (int y = 0; y < targetRect.height(); ++y) {
             memcpy(dst, src, targetBytesPerLine);
@@ -155,16 +150,16 @@ void BitmapTextureGL::updateContents(Image* image, const IntRect& targetRect, co
 {
     if (!image)
         return;
-    NativeImagePtr frameImage = image->nativeImageForCurrentFrame();
+    auto frameImage = image->nativeImageForCurrentFrame();
     if (!frameImage)
         return;
 
     int bytesPerLine;
-    const char* imageData;
+    const uint8_t* imageData;
 
 #if USE(CAIRO)
-    cairo_surface_t* surface = frameImage.get();
-    imageData = reinterpret_cast<const char*>(cairo_image_surface_get_data(surface));
+    cairo_surface_t* surface = frameImage->platformImage().get();
+    imageData = cairo_image_surface_get_data(surface);
     bytesPerLine = cairo_image_surface_get_stride(surface);
 #elif PLATFORM(QT)
     QImage qImage;
@@ -180,12 +175,29 @@ void BitmapTextureGL::updateContents(Image* image, const IntRect& targetRect, co
         qImage = frameImage->toImage();
     imageData = reinterpret_cast<const char*>(qImage.constBits());
     bytesPerLine = qImage.bytesPerLine();
-#elif USE(DIRECT2D)
-    notImplemented();
 #endif
 
     updateContents(imageData, targetRect, offset, bytesPerLine);
 }
+
+#if USE(ANGLE)
+void BitmapTextureGL::setPendingContents(RefPtr<Image>&& image)
+{
+    m_pendingContents = image;
+}
+
+void BitmapTextureGL::updatePendingContents(const IntRect& targetRect, const IntPoint& offset)
+{
+    if (!m_pendingContents)
+        return;
+
+    if (!isValid()) {
+        IntSize textureSize(m_pendingContents->size());
+        reset(textureSize);
+    }
+    updateContents(m_pendingContents.get(), targetRect, offset);
+}
+#endif
 
 static unsigned getPassesRequiredForFilter(FilterOperation::OperationType type)
 {

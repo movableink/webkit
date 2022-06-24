@@ -27,14 +27,22 @@
 
 #if PLATFORM(IOS_FAMILY)
 
-#import "WebEvent.h"
+#import "WebKeyboardEvent.h"
+#import "WebMouseEvent.h"
+#import "WebWheelEvent.h"
 #import <UIKit/UIKit.h>
 #import <WebCore/WebEvent.h>
+
+OBJC_CLASS UIScrollEvent;
 
 class WebIOSEventFactory {
 public:
     static WebKit::WebKeyboardEvent createWebKeyboardEvent(::WebEvent *, bool handledByInputMethod);
     static WebKit::WebMouseEvent createWebMouseEvent(::WebEvent *);
+
+#if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
+    static WebKit::WebWheelEvent createWebWheelEvent(UIScrollEvent *, UIView *contentView, std::optional<WebKit::WebWheelEvent::Phase> overridePhase = std::nullopt);
+#endif
 
     static UIKeyModifierFlags toUIKeyModifierFlags(OptionSet<WebKit::WebEvent::Modifier>);
 };

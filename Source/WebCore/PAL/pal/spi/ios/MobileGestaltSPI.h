@@ -45,16 +45,24 @@ static const CFStringRef kMGQiPadCapability = CFSTR("ipad");
 static const CFStringRef kMGQDeviceName = CFSTR("DeviceName");
 static const CFStringRef kMGQDeviceClassNumber = CFSTR("DeviceClassNumber");
 static const CFStringRef kMGQHasExtendedColorDisplay = CFSTR("HasExtendedColorDisplay");
+static const CFStringRef kMGQDeviceCornerRadius = CFSTR("DeviceCornerRadius");
+static const CFStringRef kMGQMainScreenStaticInfo CFSTR("MainScreenStaticInfo");
+static const CFStringRef kMGQSupportsForceTouch CFSTR("eQd5mlz0BN0amTp/2ccMoA");
+static const CFStringRef kMGQBluetoothCapability CFSTR("bluetooth");
+static const CFStringRef kMGQDeviceProximityCapability CFSTR("DeviceProximityCapability");
+static const CFStringRef kMGQDeviceSupportsARKit CFSTR("arkit");
+static const CFStringRef kMGQTimeSyncCapability CFSTR("LJ8aZhTg8lXUeVxHzT+hMw");
+static const CFStringRef kMGQWAPICapability CFSTR("wapi");
+static const CFStringRef kMGQMainDisplayRotation CFSTR("MainDisplayRotation");
 
 typedef enum {
     MGDeviceClassInvalid = -1,
-    /* 0 is intentionally not in this enum */
     MGDeviceClassiPhone  = 1,
     MGDeviceClassiPod    = 2,
     MGDeviceClassiPad    = 3,
     MGDeviceClassAppleTV = 4,
-    /* 5 is intentionally not in this enum */
     MGDeviceClassWatch   = 6,
+    MGDeviceClassMac     = 9,
 } MGDeviceClass;
 
 typedef enum {
@@ -63,6 +71,12 @@ typedef enum {
     MGScreenClassPad4          = 7,
 } MGScreenClass;
 
+#endif
+
+#ifdef __OBJC__
+@interface MobileGestaltHelperProxy : NSObject
+- (BOOL) proxyRebuildCache;
+@end
 #endif
 
 WTF_EXTERN_C_BEGIN
@@ -80,6 +94,8 @@ SInt32 MGGetSInt32Answer(CFStringRef question, SInt32 defaultValue);
 #ifndef MGGetFloat32Answer
 Float32 MGGetFloat32Answer(CFStringRef question, Float32 defaultValue);
 #endif
+
+bool _MGCacheValid();
 
 WTF_EXTERN_C_END
 

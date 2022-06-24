@@ -17,8 +17,8 @@
  *  Boston, MA 02110-1301, USA.
  */
 
-#ifndef GUniquePtrGStreamer_h
-#define GUniquePtrGStreamer_h
+#pragma once
+
 #if USE(GSTREAMER)
 
 #include <gst/audio/audio.h>
@@ -29,6 +29,20 @@
 #include <gst/pbutils/install-plugins.h>
 #include <gst/video/video.h>
 #include <wtf/glib/GUniquePtr.h>
+
+#if defined(BUILDING_WebCore) && USE(GSTREAMER_WEBRTC)
+#define GST_USE_UNSTABLE_API
+#include <gst/webrtc/webrtc.h>
+#undef GST_USE_UNSTABLE_API
+#endif
+
+#if USE(WPE_VIDEO_PLANE_DISPLAY_DMABUF)
+#include <wpe/extensions/video-plane-display-dmabuf.h>
+#endif
+
+#if defined(BUILDING_WebCore) && PLATFORM(WPE) && USE(WPEBACKEND_FDO_AUDIO_EXTENSION)
+#include <wpe/extensions/audio.h>
+#endif
 
 namespace WTF {
 
@@ -41,7 +55,18 @@ WTF_DEFINE_GPTR_DELETER(GstByteReader, gst_byte_reader_free)
 WTF_DEFINE_GPTR_DELETER(GstVideoConverter, gst_video_converter_free)
 WTF_DEFINE_GPTR_DELETER(GstAudioConverter, gst_audio_converter_free)
 
+#if defined(BUILDING_WebCore) && USE(GSTREAMER_WEBRTC)
+WTF_DEFINE_GPTR_DELETER(GstWebRTCSessionDescription, gst_webrtc_session_description_free)
+#endif
+
+#if USE(WPE_VIDEO_PLANE_DISPLAY_DMABUF)
+WTF_DEFINE_GPTR_DELETER(struct wpe_video_plane_display_dmabuf_source, wpe_video_plane_display_dmabuf_source_destroy)
+#endif
+
+#if defined(BUILDING_WebCore) && PLATFORM(WPE) && USE(WPEBACKEND_FDO_AUDIO_EXTENSION)
+WTF_DEFINE_GPTR_DELETER(struct wpe_audio_source, wpe_audio_source_destroy)
+#endif
 }
 
 #endif // USE(GSTREAMER)
-#endif
+

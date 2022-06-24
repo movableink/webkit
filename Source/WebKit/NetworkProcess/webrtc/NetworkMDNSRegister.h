@@ -27,8 +27,10 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "MDNSRegisterIdentifier.h"
 #include "RTCNetwork.h"
-#include <WebCore/DocumentIdentifier.h>
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
 #include <wtf/Expected.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -64,15 +66,14 @@ public:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&);
 
 private:
-    void unregisterMDNSNames(WebCore::DocumentIdentifier);
-    void registerMDNSName(uint64_t requestIdentifier, WebCore::DocumentIdentifier, const String& ipAddress);
-    void resolveMDNSName(uint64_t requestIdentifier, const String& name);
+    void unregisterMDNSNames(WebCore::ScriptExecutionContextIdentifier);
+    void registerMDNSName(MDNSRegisterIdentifier, WebCore::ScriptExecutionContextIdentifier, const String& ipAddress);
     
     PAL::SessionID sessionID() const;
 
     NetworkConnectionToWebProcess& m_connection;
 #if ENABLE_MDNS
-    HashMap<WebCore::DocumentIdentifier, DNSServiceRef> m_services;
+    HashMap<WebCore::ScriptExecutionContextIdentifier, DNSServiceRef> m_services;
 #endif
 };
 

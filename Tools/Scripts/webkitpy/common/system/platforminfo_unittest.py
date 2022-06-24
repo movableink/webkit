@@ -64,7 +64,7 @@ def fake_platform(mac_version_string='10.6.3', release_string='bar', win_version
 def fake_executive(output=None):
     if output:
         return MockExecutive2(output=output)
-    return MockExecutive2(exception=SystemError)
+    return MockExecutive2(output='10.15.0\n')
 
 
 class TestPlatformInfo(unittest.TestCase):
@@ -75,7 +75,7 @@ class TestPlatformInfo(unittest.TestCase):
     # yet run by default and there's no reason not to run this everywhere by default.
     def test_real_code(self):
         # This test makes sure the real (unmocked) code actually works.
-        info = PlatformInfo(sys, platform, Executive())
+        info = PlatformInfo(executive=Executive())
         self.assertNotEqual(info.os_name, '')
         if info.is_mac() or info.is_win():
             self.assertIsNotNone(info.os_version)
@@ -160,6 +160,10 @@ class TestPlatformInfo(unittest.TestCase):
         self.assertIsNone(info.total_bytes_memory())
 
     def test_available_sdks(self):
+        sdk_version_output = '10.16\n'
+        info = self.make_info(fake_sys('darwin'), fake_platform('10.14.0'), fake_executive(sdk_version_output))
+        info.xcode_sdk_version('macosx')
+
         show_sdks_output = """iOS SDKs:
     iOS 12.0                          -sdk iphoneos12.0
 
@@ -177,7 +181,7 @@ watchOS Simulator SDKs:
     Simulator - watchOS 5.0           -sdk watchsimulator5.0
     Simulator - watchOS 5.0 Internal    -sdk watchsimulator5.0.type
 """
-        info = self.make_info(fake_sys('darwin'), fake_platform('10.14.0'), fake_executive(show_sdks_output))
+        info._executive = fake_executive(show_sdks_output)
         self.assertEqual(info.available_sdks(), [
             'iphoneos',
             'iphonesimulator', 'iphonesimulator.type',

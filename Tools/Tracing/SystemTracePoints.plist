@@ -66,6 +66,21 @@
                  <string>5001</string>
                  <key>CodeEnd</key>
                  <string>5002</string>
+                 <key>ArgNamesBegin</key>
+                 <dict>
+                     <key>Arg1</key>
+                     <string>Page ID</string>
+                 </dict>
+                 <key>ArgValueTypesBegin</key>
+                 <dict>
+                     <key>Arg1</key>
+                     <string>UInt64</string>
+                 </dict>
+                 <key>EventsMatchedBy</key>
+                 <array>
+                     <string>Thread</string>
+                     <string>Arg1</string>
+                 </array>
              </dict>
              <dict>
                  <key>Name</key>
@@ -78,6 +93,29 @@
                  <string>5003</string>
                  <key>CodeEnd</key>
                  <string>5004</string>
+                 <key>ArgNamesBegin</key>
+                 <dict>
+                     <key>Arg1</key>
+                     <string>Resource ID</string>
+                     <key>Arg2</key>
+                     <string>Page ID</string>
+                     <key>Arg3</key>
+                     <string>Frame ID</string>
+                 </dict>
+                 <key>ArgValueTypesBegin</key>
+                 <dict>
+                     <key>Arg1</key>
+                     <string>UInt64</string>
+                     <key>Arg2</key>
+                     <string>UInt64</string>
+                     <key>Arg3</key>
+                     <string>UInt64</string>
+                 </dict>
+                 <key>EventsMatchedBy</key>
+                 <array>
+                     <string>Thread</string>
+                     <string>Arg1</string>
+                 </array>
              </dict>
              <dict>
                  <key>Name</key>
@@ -215,6 +253,13 @@
                  <string>47</string>
                  <key>Code</key>
                  <string>5025</string>
+                 <key>ArgNames</key>
+                 <dict>
+                     <key>Arg1</key>
+                     <string>Display ID</string>
+                     <key>Arg2</key>
+                     <string>Send to main thread</string>
+                 </dict>
              </dict>
              <dict>
                  <key>Name</key>
@@ -284,6 +329,104 @@
                  <string>5034</string>
                  <key>CodeEnd</key>
                  <string>5035</string>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Parse HTML</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>5036</string>
+                 <key>CodeEnd</key>
+                 <string>5037</string>
+                 <key>ArgNamesBegin</key>
+                 <dict>
+                    <key>Arg1</key>
+                    <string>Start Line</string>
+                    <key>Arg2</key>
+                    <string>Start Col</string>
+                 </dict>
+                 <key>ArgValueTypesBegin</key>
+                 <dict>
+                    <key>Arg1</key>
+                    <string>Decimal</string>
+                    <key>Arg2</key>
+                    <string>Decimal</string>
+                 </dict>
+                 <key>ArgNamesEnd</key>
+                 <dict>
+                    <key>Arg1</key>
+                    <string>End Line</string>
+                    <key>Arg2</key>
+                    <string>End Col</string>
+                 </dict>
+                 <key>ArgValueTypesEnd</key>
+                 <dict>
+                    <key>Arg1</key>
+                    <string>Decimal</string>
+                    <key>Arg2</key>
+                    <string>Decimal</string>
+                 </dict>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Display list replay</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>5038</string>
+                 <key>CodeEnd</key>
+                 <string>5039</string>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Scrolling Sync</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>5040</string>
+                 <key>CodeEnd</key>
+                 <string>5041</string>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Scrolling Thread DisplayDidRefresh</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>5042</string>
+                 <key>CodeEnd</key>
+                 <string>5043</string>
+                 <key>ArgNamesBegin</key>
+                 <dict>
+                     <key>Arg1</key>
+                     <string>Display ID</string>
+                 </dict>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Display Refresh Dispatch to scrolling thread</string>
+                 <key>Type</key>
+                 <string>Impulse</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>Code</key>
+                 <string>5044</string>
+                 <key>ArgNames</key>
+                 <dict>
+                     <key>Arg1</key>
+                     <string>Display ID</string>
+                     <key>Arg2</key>
+                     <string>Recent Events?</string>
+                 </dict>
              </dict>
              <dict>
                  <key>Name</key>
@@ -359,6 +502,142 @@
              </dict>
              <dict>
                  <key>Name</key>
+                 <string>Rendering update runloop observer</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>12011</string>
+                 <key>CodeEnd</key>
+                 <string>12012</string>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Layer tree frozen</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>12013</string>
+                 <key>CodeEnd</key>
+                 <string>12014</string>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Flush remote image buffer</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>12015</string>
+                 <key>CodeEnd</key>
+                 <string>12016</string>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Create injected bundle</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>12017</string>
+                 <key>CodeEnd</key>
+                 <string>12018</string>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Paint snapshot</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>12019</string>
+                 <key>CodeEnd</key>
+                 <string>12020</string>
+                 <key>ArgNamesBegin</key>
+                 <dict>
+                     <key>Arg1</key>
+                     <string>Options</string>
+                 </dict>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Render server snapshot</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>12021</string>
+                 <key>CodeEnd</key>
+                 <string>12022</string>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Take snapshot</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>12023</string>
+                 <key>CodeEnd</key>
+                 <string>12024</string>
+                 <key>ArgNamesEnd</key>
+                 <dict>
+                     <key>Arg1</key>
+                     <string>Succeeded</string>
+                 </dict>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Synthetic momentum</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>12025</string>
+                 <key>CodeEnd</key>
+                 <string>12026</string>
+                 <key>ArgNamesEnd</key>
+                 <dict>
+                     <key>Arg1</key>
+                     <string>Initial Velocity X</string>
+                     <key>Arg2</key>
+                     <string>Initial Velocity Y</string>
+                 </dict>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Synthetic momentum event</string>
+                 <key>Type</key>
+                 <string>Level</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>Code</key>
+                 <string>12027</string>
+                 <key>ArgNames</key>
+                 <dict>
+                     <key>Arg1</key>
+                     <string>Phase</string>
+                     <key>Arg2</key>
+                     <string>Delta X</string>
+                     <key>Arg3</key>
+                     <string>Delta Y</string>
+                 </dict>
+                 <key>LevelArg</key>
+                 <string>Arg3</string>
+                 <key>LevelDataType</key>
+                 <string>UInt64</string>
+             </dict>
+             <dict>
+                 <key>Name</key>
                  <string>Commit RemoteLayerTree transaction</string>
                  <key>Type</key>
                  <string>Interval</string>
@@ -392,6 +671,18 @@
                  <string>14005</string>
                  <key>CodeEnd</key>
                  <string>14006</string>
+             </dict>
+             <dict>
+                 <key>Name</key>
+                 <string>Wake up and apply display list</string>
+                 <key>Type</key>
+                 <string>Interval</string>
+                 <key>Component</key>
+                 <string>47</string>
+                 <key>CodeBegin</key>
+                 <string>16001</string>
+                 <key>CodeEnd</key>
+                 <string>16002</string>
              </dict>
          </array>
      </dict>

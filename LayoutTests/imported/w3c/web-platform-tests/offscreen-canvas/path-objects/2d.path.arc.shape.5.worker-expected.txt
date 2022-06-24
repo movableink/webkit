@@ -1,3 +1,0 @@
-
-FAIL arc() from 0 to 5pi does not draw crazy things Can't find variable: OffscreenCanvas
-

@@ -1,3 +1,219 @@
+2022-02-19  Jon Lee  <jonlee@apple.com>
+
+        Test gardening for [CSS Blending] Non-separable blend modes don't work
+        https://bugs.webkit.org/show_bug.cgi?id=131354
+
+        Unreviewed. Relanding with updated fuzzy data.
+        * svg/blend-color.svg:
+        * svg/blend-hue.svg:
+        * svg/blend-luminosity.svg:
+
+2022-02-22  Jonathan Bedard  <jbedard@apple.com>
+
+        Unreviewed, reverting r290220.
+
+        Tests still fail with with fuzzy data
+
+        Reverted changeset:
+
+        "Test gardening for [CSS Blending] Non-separable blend modes
+        don't work"
+        https://bugs.webkit.org/show_bug.cgi?id=131354
+        https://commits.webkit.org/r290220
+
+2022-02-19  Jon Lee  <jonlee@apple.com>
+
+        Test gardening for [CSS Blending] Non-separable blend modes don't work
+        https://bugs.webkit.org/show_bug.cgi?id=131354
+
+        Unreviewed. Add fuzzy data.
+        * svg/blend-color.svg:
+        * svg/blend-hue.svg:
+        * svg/blend-luminosity.svg:
+
+2022-02-19  Jon Lee  <jonlee@apple.com>
+
+        Unreviewed gardening for GPU Process bots.
+
+        * svg/blend-hard-light.svg:
+
+2022-02-16  Jon Lee  <jonlee@apple.com>
+
+        Add fuzzy data for test failures seen on the iOS GPU Process bot
+        Unreviewed.
+
+        * svg/blend-exclusion.svg:
+        * svg/blend-overlay.svg:
+        * svg/text-gradient-01.svg:
+
+2022-02-08  Jon Lee  <jonlee@apple.com>
+
+        Unreviewed gardening.
+
+        * svg/opacity-and-gradient-02.svg: Expand pixel range based on EWS run.
+
+2022-01-26  Jon Lee  <jonlee@apple.com>
+
+        Add fuzzy match meta headers to tests
+        https://bugs.webkit.org/show_bug.cgi?id=235671
+
+        Reviewed by Simon Fraser.
+
+        * svg/blend-saturation.svg:
+        * svg/filters/feComposite-2.svg:
+        * svg/filters/feFlood-1.svg:
+        * svg/filters/feFlood-2.svg:
+        * svg/filters/feImage-1.svg:
+        * svg/mask-type-01.svg:
+        * svg/opacity-and-gradient-02.svg:
+        * svg/text-scale-02.svg:
+        * svg/text/simple-fill-gradient.svg:
+
+2020-05-08  David Kilzer  <ddkilzer@apple.com>
+
+        Remove empty directories from from svn.webkit.org repository
+        <https://webkit.org/b/211644>
+
+        Reviewed by Darin Adler.
+
+        * css-animations: Removed.
+        * css-transitions: Removed.
+
+2019-10-30  Dirk Schulze  <krit@webkit.org>
+
+        [css-masking] Unprefix -webkit-clip-path
+        https://bugs.webkit.org/show_bug.cgi?id=187888
+
+        Reviewed by Simon Fraser.
+
+        Integrated test expectations do not match the actual expected
+        behavior. The reason is that the expectation files reference
+        resources from different documents - which is not supported by
+        WebKit. Since unprefixed clip-path wasn't supported either
+        the test passed.
+
+        * svg/svg-integration/clipPath-html-01-expected.xhtml:
+        * svg/svg-integration/clipPath-html-02-expected.xhtml:
+        * svg/svg-integration/clipPath-html-02.xhtml:
+        * svg/svg-integration/clipPath-html-03-expected.xhtml:
+        * svg/svg-integration/clipPath-html-04-expected.xhtml:
+        * svg/svg-integration/clipPath-html-05-expected.xhtml:
+        * svg/svg-integration/clipPath-html-06-expected.xhtml:
+
+2019-10-25  Antoine Quint  <graouts@apple.com>
+
+        [Web Animations] Update WPT tests related to Web Animations and remove imported Mozilla tests
+        https://bugs.webkit.org/show_bug.cgi?id=203291
+        <rdar://problem/56577481>
+
+        Reviewed by Youenn Fablet.
+
+        * css-animations/test_animation-cancel-expected.txt: Removed.
+        * css-animations/test_animation-cancel.html: Removed.
+        * css-animations/test_animation-currenttime-expected.txt: Removed.
+        * css-animations/test_animation-currenttime.html: Removed.
+        * css-animations/test_animation-finish-expected.txt: Removed.
+        * css-animations/test_animation-finish.html: Removed.
+        * css-animations/test_animation-finished-expected.txt: Removed.
+        * css-animations/test_animation-finished.html: Removed.
+        * css-animations/test_animation-id.html: Removed.
+        * css-animations/test_animation-pausing.html: Removed.
+        * css-animations/test_animation-playstate.html: Removed.
+        * css-animations/test_animation-ready.html: Removed.
+        * css-animations/test_animation-reverse-expected.txt: Removed.
+        * css-animations/test_animation-reverse.html: Removed.
+        * css-animations/test_animation-starttime-expected.txt: Removed.
+        * css-animations/test_animation-starttime.html: Removed.
+        * css-animations/test_animations-dynamic-changes.html: Removed.
+        * css-animations/test_event-dispatch.html: Removed.
+        * css-animations/test_event-order-expected.txt: Removed.
+        * css-animations/test_event-order.html: Removed.
+        * css-animations/test_setting-effect.html: Removed.
+        * css-transitions/test_animation-cancel.html: Removed.
+        * css-transitions/test_animation-currenttime-expected.txt: Removed.
+        * css-transitions/test_animation-currenttime.html: Removed.
+        * css-transitions/test_animation-finished-expected.txt: Removed.
+        * css-transitions/test_animation-finished.html: Removed.
+        * css-transitions/test_animation-pausing-expected.txt: Removed.
+        * css-transitions/test_animation-pausing.html: Removed.
+        * css-transitions/test_animation-ready-expected.txt: Removed.
+        * css-transitions/test_animation-ready.html: Removed.
+        * css-transitions/test_animation-starttime-expected.txt: Removed.
+        * css-transitions/test_animation-starttime.html: Removed.
+        * css-transitions/test_csstransition-transitionproperty.html: Removed.
+        * css-transitions/test_document-get-animations-expected.txt: Removed.
+        * css-transitions/test_document-get-animations.html: Removed.
+        * css-transitions/test_element-get-animations-expected.txt: Removed.
+        * css-transitions/test_element-get-animations.html: Removed.
+        * css-transitions/test_event-dispatch.html: Removed.
+        * css-transitions/test_keyframeeffect-getkeyframes-expected.txt: Removed.
+        * css-transitions/test_keyframeeffect-getkeyframes.html: Removed.
+        * css-transitions/test_setting-effect-expected.txt: Removed.
+        * css-transitions/test_setting-effect.html: Removed.
+
+2019-10-24  Russell Epstein  <repstein@apple.com>
+
+        Unreviewed, rolling out r251536.
+
+        Landed 3 Broken Tests.
+
+        Reverted changeset:
+
+        "[Web Animations] Update WPT tests related to Web Animations
+        and remove imported Mozilla tests"
+        https://bugs.webkit.org/show_bug.cgi?id=203291
+        https://trac.webkit.org/changeset/251536
+
+2019-10-24  Antoine Quint  <graouts@apple.com>
+
+        [Web Animations] Update WPT tests related to Web Animations and remove imported Mozilla tests
+        https://bugs.webkit.org/show_bug.cgi?id=203291
+
+        Reviewed by Youenn Fablet.
+
+        * css-animations/test_animation-cancel-expected.txt: Removed.
+        * css-animations/test_animation-cancel.html: Removed.
+        * css-animations/test_animation-currenttime-expected.txt: Removed.
+        * css-animations/test_animation-currenttime.html: Removed.
+        * css-animations/test_animation-finish-expected.txt: Removed.
+        * css-animations/test_animation-finish.html: Removed.
+        * css-animations/test_animation-finished-expected.txt: Removed.
+        * css-animations/test_animation-finished.html: Removed.
+        * css-animations/test_animation-id.html: Removed.
+        * css-animations/test_animation-pausing.html: Removed.
+        * css-animations/test_animation-playstate.html: Removed.
+        * css-animations/test_animation-ready.html: Removed.
+        * css-animations/test_animation-reverse-expected.txt: Removed.
+        * css-animations/test_animation-reverse.html: Removed.
+        * css-animations/test_animation-starttime-expected.txt: Removed.
+        * css-animations/test_animation-starttime.html: Removed.
+        * css-animations/test_animations-dynamic-changes.html: Removed.
+        * css-animations/test_event-dispatch.html: Removed.
+        * css-animations/test_event-order-expected.txt: Removed.
+        * css-animations/test_event-order.html: Removed.
+        * css-animations/test_setting-effect.html: Removed.
+        * css-transitions/test_animation-cancel.html: Removed.
+        * css-transitions/test_animation-currenttime-expected.txt: Removed.
+        * css-transitions/test_animation-currenttime.html: Removed.
+        * css-transitions/test_animation-finished-expected.txt: Removed.
+        * css-transitions/test_animation-finished.html: Removed.
+        * css-transitions/test_animation-pausing-expected.txt: Removed.
+        * css-transitions/test_animation-pausing.html: Removed.
+        * css-transitions/test_animation-ready-expected.txt: Removed.
+        * css-transitions/test_animation-ready.html: Removed.
+        * css-transitions/test_animation-starttime-expected.txt: Removed.
+        * css-transitions/test_animation-starttime.html: Removed.
+        * css-transitions/test_csstransition-transitionproperty.html: Removed.
+        * css-transitions/test_document-get-animations-expected.txt: Removed.
+        * css-transitions/test_document-get-animations.html: Removed.
+        * css-transitions/test_element-get-animations-expected.txt: Removed.
+        * css-transitions/test_element-get-animations.html: Removed.
+        * css-transitions/test_event-dispatch.html: Removed.
+        * css-transitions/test_keyframeeffect-getkeyframes-expected.txt: Removed.
+        * css-transitions/test_keyframeeffect-getkeyframes.html: Removed.
+        * css-transitions/test_setting-effect-expected.txt: Removed.
+        * css-transitions/test_setting-effect.html: Removed.
+
 2018-11-06  Antoine Quint  <graouts@apple.com>
 
         [Web Animations] Update all tests to match the latest API changes

@@ -26,7 +26,7 @@ class Hello {
     get *gen() {
     }
 }
-`, `SyntaxError: Unexpected token '*'. Expected an opening '(' before a method's parameter list.`);
+`, `SyntaxError: Unexpected token '*'. Expected a ';' following a class field.`);
 
 
 testSyntaxError(`
@@ -34,7 +34,7 @@ class Hello {
     set *gen(value) {
     }
 }
-`, `SyntaxError: Unexpected token '*'. Expected an opening '(' before a method's parameter list.`);
+`, `SyntaxError: Unexpected token '*'. Expected a ';' following a class field.`);
 
 testSyntaxError(`
 function ** gen() { }
@@ -164,3 +164,7 @@ function* gen(b) {
     const b = 1;
 }
 `, `SyntaxError: Cannot declare a const variable twice: 'b'.`);
+
+testSyntaxError(`
+if (false) function* gen() {}
+`, `SyntaxError: Unexpected token '*'. Cannot use generator function declaration in single-statement context.`);

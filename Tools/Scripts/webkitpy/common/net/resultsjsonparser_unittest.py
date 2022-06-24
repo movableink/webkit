@@ -1,4 +1,5 @@
 # Copyright (c) 2010, Google Inc. All rights reserved.
+# Copyright (C) 2019 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -36,7 +37,7 @@ from webkitpy.layout_tests.models import test_failures
 class ParsedJSONResultsTest(unittest.TestCase):
     # The real files have no whitespace, but newlines make this much more readable.
 
-    _example_full_results_json = """ADD_RESULTS({
+    _example_full_results_json = r"""ADD_RESULTS({
     "tests": {
         "fast": {
             "dom": {
@@ -61,7 +62,7 @@ class ParsedJSONResultsTest(unittest.TestCase):
                     "actual": "LEAK",
                     "leaks": [
                         {
-                            "document": "file:///Volumes/Data/slave/webkit/build/LayoutTests/fast/dom/prototype-strawberry.html"
+                            "document": "file:///Volumes/Data/worker/webkit/build/LayoutTests/fast/dom/prototype-strawberry.html"
                         }
                     ]
                 }
@@ -80,7 +81,7 @@ class ParsedJSONResultsTest(unittest.TestCase):
     "interrupted": true,
     "skipped": 450,
     "num_regressions": 15,
-    "layout_tests_dir": "\/b\/build\/slave\/Webkit_Mac10_5\/build\/src\/third_party\/WebKit\/LayoutTests",
+    "layout_tests_dir": "\/b\/build\/worker\/Webkit_Mac10_5\/build\/src\/third_party\/WebKit\/LayoutTests",
     "version": 3,
     "num_passes": 77,
     "has_pretty_patch": false,
@@ -89,7 +90,7 @@ class ParsedJSONResultsTest(unittest.TestCase):
     "uses_expectations_file": true
 });"""
 
-    _not_interrupted_example_full_results_json = """ADD_RESULTS({
+    _not_interrupted_example_full_results_json = r"""ADD_RESULTS({
     "tests": {
         "fast": {
             "dom": {
@@ -114,7 +115,7 @@ class ParsedJSONResultsTest(unittest.TestCase):
                     "actual": "LEAK",
                     "leaks": [
                         {
-                            "document": "file:///Volumes/Data/slave/webkit/build/LayoutTests/fast/dom/prototype-strawberry.html"
+                            "document": "file:///Volumes/Data/worker/webkit/build/LayoutTests/fast/dom/prototype-strawberry.html"
                         }
                     ]
                 }
@@ -133,7 +134,7 @@ class ParsedJSONResultsTest(unittest.TestCase):
     "interrupted": false,
     "skipped": 450,
     "num_regressions": 15,
-    "layout_tests_dir": "\/b\/build\/slave\/Webkit_Mac10_5\/build\/src\/third_party\/WebKit\/LayoutTests",
+    "layout_tests_dir": "\/b\/build\/worker\/Webkit_Mac10_5\/build\/src\/third_party\/WebKit\/LayoutTests",
     "version": 3,
     "num_passes": 77,
     "has_pretty_patch": false,
@@ -143,11 +144,13 @@ class ParsedJSONResultsTest(unittest.TestCase):
 });"""
 
     def test_basic(self):
+        self.maxDiff = None
         expected_results = [
             test_results.TestResult("svg/dynamic-updates/SVGFEDropShadowElement-dom-stdDeviation-attr.html", [test_failures.FailureImageHashMismatch()], 0),
             test_results.TestResult("fast/dom/prototype-inheritance.html", [test_failures.FailureTextMismatch(), test_failures.FailureImageHashMismatch(), test_failures.FailureAudioMismatch()], 0),
-            test_results.TestResult("fast/dom/prototype-strawberry.html", [test_failures.FailureDocumentLeak(['file:///Volumes/Data/slave/webkit/build/LayoutTests/fast/dom/prototype-strawberry.html'])], 0),
+            test_results.TestResult("fast/dom/prototype-strawberry.html", [test_failures.FailureDocumentLeak(['file:///Volumes/Data/worker/webkit/build/LayoutTests/fast/dom/prototype-strawberry.html'])], 0),
         ]
+        expected_results.sort(key=lambda result: result.test_name)
         parsed_results = ParsedJSONResults(self._example_full_results_json)
         self.assertEqual(expected_results, parsed_results.test_results())
         self.assertTrue(parsed_results.did_exceed_test_failure_limit())

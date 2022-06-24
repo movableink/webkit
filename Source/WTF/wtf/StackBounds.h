@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2010-2022 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,16 +34,22 @@ namespace WTF {
 
 class StackBounds {
     WTF_MAKE_FAST_ALLOCATED;
+public:
 
     // This 64k number was picked because a sampling of stack usage differences
     // between consecutive entries into one of the Interpreter::execute...()
     // functions was seen to be as high as 27k. Hence, 64k is chosen as a
     // conservative availability value that is not too large but comfortably
     // exceeds 27k with some buffer for error.
-    static constexpr size_t s_defaultAvailabilityDelta = 64 * 1024;
-
-public:
-    enum class StackDirection { Upward, Downward };
+#if !ASAN_ENABLED
+    static constexpr size_t DefaultReservedZone = 64 * 1024;
+#else
+    // ASAN inflates stack frames a lot. A factor of 3 was empirically found to
+    // be the ratio of inflation of stack usage between 2 consecutive stack
+    // recursion checkpoints. So, we'll also multiply the reserved zone size
+    // accordingly to accommodate this.
+    static constexpr size_t DefaultReservedZone = 64 * 1024 * 3;
+#endif
 
     static constexpr StackBounds emptyBounds() { return StackBounds(); }
 
@@ -72,9 +78,7 @@ public:
     
     size_t size() const
     {
-        if (isGrowingDownward())
-            return static_cast<char*>(m_origin) - static_cast<char*>(m_bound);
-        return static_cast<char*>(m_bound) - static_cast<char*>(m_origin);
+        return static_cast<char*>(m_origin) - static_cast<char*>(m_bound);
     }
 
     bool isEmpty() const { return !m_origin; }
@@ -83,17 +87,13 @@ public:
     {
         if (isEmpty())
             return false;
-        if (isGrowingDownward())
-            return (m_origin >= p) && (p > m_bound);
-        return (m_bound > p) && (p >= m_origin);
+        return (m_origin >= p) && (p > m_bound);
     }
 
-    void* recursionLimit(size_t minAvailableDelta = s_defaultAvailabilityDelta) const
+    void* recursionLimit(size_t minReservedZone = DefaultReservedZone) const
     {
         checkConsistency();
-        if (isGrowingDownward())
-            return static_cast<char*>(m_bound) + minAvailableDelta;
-        return static_cast<char*>(m_bound) - minAvailableDelta;
+        return static_cast<char*>(m_bound) + minReservedZone;
     }
 
     void* recursionLimit(char* startOfUserStack, size_t maxUserStack, size_t reservedZoneSize) const
@@ -103,29 +103,19 @@ public:
             reservedZoneSize = maxUserStack;
         size_t maxUserStackWithReservedZone = maxUserStack - reservedZoneSize;
 
-        if (isGrowingDownward()) {
-            char* endOfStackWithReservedZone = reinterpret_cast<char*>(m_bound) + reservedZoneSize;
-            if (startOfUserStack < endOfStackWithReservedZone)
-                return endOfStackWithReservedZone;
-            size_t availableUserStack = startOfUserStack - endOfStackWithReservedZone;
-            if (maxUserStackWithReservedZone > availableUserStack)
-                maxUserStackWithReservedZone = availableUserStack;
-            return startOfUserStack - maxUserStackWithReservedZone;
-        }
-
-        char* endOfStackWithReservedZone = reinterpret_cast<char*>(m_bound) - reservedZoneSize;
-        if (startOfUserStack > endOfStackWithReservedZone)
+        char* endOfStackWithReservedZone = reinterpret_cast<char*>(m_bound) + reservedZoneSize;
+        if (startOfUserStack < endOfStackWithReservedZone)
             return endOfStackWithReservedZone;
-        size_t availableUserStack = endOfStackWithReservedZone - startOfUserStack;
+        size_t availableUserStack = startOfUserStack - endOfStackWithReservedZone;
         if (maxUserStackWithReservedZone > availableUserStack)
             maxUserStackWithReservedZone = availableUserStack;
-        return startOfUserStack + maxUserStackWithReservedZone;
+        return startOfUserStack - maxUserStackWithReservedZone;
     }
 
-    bool isGrowingDownward() const
+    StackBounds withSoftOrigin(void* origin) const
     {
-        ASSERT(m_origin && m_bound);
-        return m_bound <= m_origin;
+        ASSERT(contains(origin));
+        return StackBounds(origin, m_bound);
     }
 
 private:
@@ -133,6 +123,7 @@ private:
         : m_origin(origin)
         , m_bound(end)
     {
+        ASSERT(isGrowingDownwards());
     }
 
     constexpr StackBounds()
@@ -141,18 +132,20 @@ private:
     {
     }
 
-    static StackDirection stackDirection();
+    inline bool isGrowingDownwards() const
+    {
+        ASSERT(m_origin && m_bound);
+        return m_bound <= m_origin;
+    }
 
     WTF_EXPORT_PRIVATE static StackBounds currentThreadStackBoundsInternal();
 
     void checkConsistency() const
     {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         void* currentPosition = currentStackPointer();
         ASSERT(m_origin != m_bound);
-        ASSERT(isGrowingDownward()
-            ? (currentPosition < m_origin && currentPosition > m_bound)
-            : (currentPosition > m_origin && currentPosition < m_bound));
+        ASSERT(currentPosition < m_origin && currentPosition > m_bound);
 #endif
     }
 

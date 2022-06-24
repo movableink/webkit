@@ -23,8 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
 #if ENABLE(ACCESSIBILITY) && PLATFORM(IOS_FAMILY)
 
 #import "AXObjectCache.h"
@@ -57,18 +55,7 @@
 
 - (BOOL)isAttachment;
 
-- (void)postFocusChangeNotification;
-- (void)postSelectedTextChangeNotification;
-- (void)postLayoutChangeNotification;
-- (void)postLiveRegionChangeNotification;
-- (void)postLoadCompleteNotification;
-- (void)postChildrenChangedNotification;
-- (void)postInvalidStatusChangedNotification;
-- (void)postLiveRegionCreatedNotification;
-- (void)postScrollStatusChangeNotification;
-- (void)postValueChangedNotification;
-- (void)postExpandedChangedNotification;
-
+- (void)postNotification:(NSString *)notificationName;
 @end
 
 #endif // ENABLE(ACCESSIBILITY) && PLATFORM(IOS_FAMILY)

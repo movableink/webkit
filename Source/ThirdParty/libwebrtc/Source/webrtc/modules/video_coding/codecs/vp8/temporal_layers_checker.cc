@@ -9,7 +9,9 @@
  */
 
 #include "modules/video_coding/codecs/vp8/include/temporal_layers_checker.h"
-#include "absl/memory/memory.h"
+
+#include <memory>
+
 #include "modules/video_coding/codecs/interface/common_constants.h"
 #include "modules/video_coding/codecs/vp8/default_temporal_layers.h"
 #include "rtc_base/logging.h"
@@ -21,12 +23,13 @@ TemporalLayersChecker::CreateTemporalLayersChecker(Vp8TemporalLayersType type,
                                                    int num_temporal_layers) {
   switch (type) {
     case Vp8TemporalLayersType::kFixedPattern:
-      return absl::make_unique<DefaultTemporalLayersChecker>(
+      return std::make_unique<DefaultTemporalLayersChecker>(
           num_temporal_layers);
     case Vp8TemporalLayersType::kBitrateDynamic:
       // Conference mode temporal layering for screen content in base stream.
-      return absl::make_unique<TemporalLayersChecker>(num_temporal_layers);
+      return std::make_unique<TemporalLayersChecker>(num_temporal_layers);
   }
+  RTC_CHECK_NOTREACHED();
 }
 
 TemporalLayersChecker::TemporalLayersChecker(int num_temporal_layers)
@@ -40,10 +43,10 @@ bool TemporalLayersChecker::CheckAndUpdateBufferState(
     bool* need_sync,
     bool frame_is_keyframe,
     uint8_t temporal_layer,
-    webrtc::Vp8TemporalLayers::BufferFlags flags,
+    Vp8FrameConfig::BufferFlags flags,
     uint32_t sequence_number,
     uint32_t* lowest_sequence_referenced) {
-  if (flags & Vp8TemporalLayers::BufferFlags::kReference) {
+  if (flags & Vp8FrameConfig::BufferFlags::kReference) {
     if (state->temporal_layer > 0 && !state->is_keyframe) {
       *need_sync = false;
     }
@@ -57,7 +60,7 @@ bool TemporalLayersChecker::CheckAndUpdateBufferState(
       return false;
     }
   }
-  if ((flags & Vp8TemporalLayers::BufferFlags::kUpdate)) {
+  if ((flags & Vp8FrameConfig::BufferFlags::kUpdate)) {
     state->temporal_layer = temporal_layer;
     state->sequence_number = sequence_number;
     state->is_keyframe = frame_is_keyframe;
@@ -69,7 +72,7 @@ bool TemporalLayersChecker::CheckAndUpdateBufferState(
 
 bool TemporalLayersChecker::CheckTemporalConfig(
     bool frame_is_keyframe,
-    const Vp8TemporalLayers::FrameConfig& frame_config) {
+    const Vp8FrameConfig& frame_config) {
   if (frame_config.drop_frame ||
       frame_config.packetizer_temporal_idx == kNoTemporalIdx) {
     return true;

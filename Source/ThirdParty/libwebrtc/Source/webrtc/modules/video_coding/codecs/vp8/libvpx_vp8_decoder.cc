@@ -8,18 +8,32 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "modules/video_coding/codecs/vp8/libvpx_vp8_decoder.h"
+
+#include <stdio.h>
+#include <string.h>
+
 #include <algorithm>
+#include <memory>
 #include <string>
 
-#include "absl/memory/memory.h"
-#include "modules/video_coding/codecs/vp8/libvpx_vp8_decoder.h"
+#include "absl/types/optional.h"
+#include "api/scoped_refptr.h"
+#include "api/video/i420_buffer.h"
+#include "api/video/video_frame.h"
+#include "api/video/video_frame_buffer.h"
+#include "api/video/video_rotation.h"
+#include "modules/video_coding/codecs/vp8/include/vp8.h"
+#include "modules/video_coding/include/video_error_codes.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/numerics/exp_filter.h"
-#include "rtc_base/timeutils.h"
+#include "rtc_base/time_utils.h"
 #include "system_wrappers/include/field_trial.h"
 #include "system_wrappers/include/metrics.h"
 #include "third_party/libyuv/include/libyuv/convert.h"
-#include "third_party/libyuv/include/libyuv/scale.h"
+#include "vpx/vp8.h"
+#include "vpx/vp8dx.h"
+#include "vpx/vpx_decoder.h"
 
 namespace webrtc {
 namespace {
@@ -30,32 +44,50 @@ constexpr int kVp8ErrorPropagationTh = 30;
 constexpr long kDecodeDeadlineRealtime = 1;  // NOLINT
 
 const char kVp8PostProcArmFieldTrial[] = "WebRTC-VP8-Postproc-Config-Arm";
+const char kVp8PostProcFieldTrial[] = "WebRTC-VP8-Postproc-Config";
 
-void GetPostProcParamsFromFieldTrialGroup(
-    LibvpxVp8Decoder::DeblockParams* deblock_params) {
-  std::string group =
-      webrtc::field_trial::FindFullName(kVp8PostProcArmFieldTrial);
-  if (group.empty())
-    return;
+#if defined(WEBRTC_ARCH_ARM) || defined(WEBRTC_ARCH_ARM64) || \
+    defined(WEBRTC_ANDROID)
+constexpr bool kIsArm = true;
+#else
+constexpr bool kIsArm = false;
+#endif
+
+absl::optional<LibvpxVp8Decoder::DeblockParams> DefaultDeblockParams() {
+  return LibvpxVp8Decoder::DeblockParams(/*max_level=*/8,
+                                         /*degrade_qp=*/60,
+                                         /*min_qp=*/30);
+}
+
+absl::optional<LibvpxVp8Decoder::DeblockParams>
+GetPostProcParamsFromFieldTrialGroup() {
+  std::string group = webrtc::field_trial::FindFullName(
+      kIsArm ? kVp8PostProcArmFieldTrial : kVp8PostProcFieldTrial);
+  if (group.empty()) {
+    return DefaultDeblockParams();
+  }
 
   LibvpxVp8Decoder::DeblockParams params;
   if (sscanf(group.c_str(), "Enabled-%d,%d,%d", &params.max_level,
-             &params.min_qp, &params.degrade_qp) != 3)
-    return;
+             &params.min_qp, &params.degrade_qp) != 3) {
+    return DefaultDeblockParams();
+  }
 
-  if (params.max_level < 0 || params.max_level > 16)
-    return;
+  if (params.max_level < 0 || params.max_level > 16) {
+    return DefaultDeblockParams();
+  }
 
-  if (params.min_qp < 0 || params.degrade_qp <= params.min_qp)
-    return;
+  if (params.min_qp < 0 || params.degrade_qp <= params.min_qp) {
+    return DefaultDeblockParams();
+  }
 
-  *deblock_params = params;
+  return params;
 }
 
 }  // namespace
 
 std::unique_ptr<VideoDecoder> VP8Decoder::Create() {
-  return absl::make_unique<LibvpxVp8Decoder>();
+  return std::make_unique<LibvpxVp8Decoder>();
 }
 
 class LibvpxVp8Decoder::QpSmoother {
@@ -83,8 +115,9 @@ class LibvpxVp8Decoder::QpSmoother {
 };
 
 LibvpxVp8Decoder::LibvpxVp8Decoder()
-    : use_postproc_arm_(
-          webrtc::field_trial::IsEnabled(kVp8PostProcArmFieldTrial)),
+    : use_postproc_(
+          kIsArm ? webrtc::field_trial::IsEnabled(kVp8PostProcArmFieldTrial)
+                 : true),
       buffer_pool_(false, 300 /* max_number_of_buffers*/),
       decode_complete_callback_(NULL),
       inited_(false),
@@ -93,20 +126,21 @@ LibvpxVp8Decoder::LibvpxVp8Decoder()
       last_frame_width_(0),
       last_frame_height_(0),
       key_frame_required_(true),
-      qp_smoother_(use_postproc_arm_ ? new QpSmoother() : nullptr) {
-  if (use_postproc_arm_)
-    GetPostProcParamsFromFieldTrialGroup(&deblock_);
-}
+      deblock_params_(use_postproc_ ? GetPostProcParamsFromFieldTrialGroup()
+                                    : absl::nullopt),
+      qp_smoother_(use_postproc_ ? new QpSmoother() : nullptr),
+      preferred_output_format_(field_trial::IsEnabled("WebRTC-NV12Decode")
+                                   ? VideoFrameBuffer::Type::kNV12
+                                   : VideoFrameBuffer::Type::kI420) {}
 
 LibvpxVp8Decoder::~LibvpxVp8Decoder() {
   inited_ = true;  // in order to do the actual release
   Release();
 }
 
-int LibvpxVp8Decoder::InitDecode(const VideoCodec* inst, int number_of_cores) {
-  int ret_val = Release();
-  if (ret_val < 0) {
-    return ret_val;
+bool LibvpxVp8Decoder::Configure(const Settings& settings) {
+  if (Release() < 0) {
+    return false;
   }
   if (decoder_ == NULL) {
     decoder_ = new vpx_codec_ctx_t;
@@ -117,17 +151,12 @@ int LibvpxVp8Decoder::InitDecode(const VideoCodec* inst, int number_of_cores) {
   cfg.threads = 1;
   cfg.h = cfg.w = 0;  // set after decode
 
-#if defined(WEBRTC_ARCH_ARM) || defined(WEBRTC_ARCH_ARM64) || \
-    defined(WEBRTC_ANDROID)
-  vpx_codec_flags_t flags = use_postproc_arm_ ? VPX_CODEC_USE_POSTPROC : 0;
-#else
-  vpx_codec_flags_t flags = VPX_CODEC_USE_POSTPROC;
-#endif
+  vpx_codec_flags_t flags = use_postproc_ ? VPX_CODEC_USE_POSTPROC : 0;
 
   if (vpx_codec_dec_init(decoder_, vpx_codec_vp8_dx(), &cfg, flags)) {
     delete decoder_;
     decoder_ = nullptr;
-    return WEBRTC_VIDEO_CODEC_MEMORY;
+    return false;
   }
 
   propagation_cnt_ = -1;
@@ -135,12 +164,16 @@ int LibvpxVp8Decoder::InitDecode(const VideoCodec* inst, int number_of_cores) {
 
   // Always start with a complete key frame.
   key_frame_required_ = true;
-  return WEBRTC_VIDEO_CODEC_OK;
+  if (absl::optional<int> buffer_pool_size = settings.buffer_pool_size()) {
+    if (!buffer_pool_.Resize(*buffer_pool_size)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 int LibvpxVp8Decoder::Decode(const EncodedImage& input_image,
                              bool missing_frames,
-                             const CodecSpecificInfo* codec_specific_info,
                              int64_t /*render_time_ms*/) {
   if (!inited_) {
     return WEBRTC_VIDEO_CODEC_UNINITIALIZED;
@@ -148,7 +181,7 @@ int LibvpxVp8Decoder::Decode(const EncodedImage& input_image,
   if (decode_complete_callback_ == NULL) {
     return WEBRTC_VIDEO_CODEC_UNINITIALIZED;
   }
-  if (input_image._buffer == NULL && input_image._length > 0) {
+  if (input_image.data() == NULL && input_image.size() > 0) {
     // Reset to avoid requesting key frames too often.
     if (propagation_cnt_ > 0)
       propagation_cnt_ = 0;
@@ -156,62 +189,60 @@ int LibvpxVp8Decoder::Decode(const EncodedImage& input_image,
   }
 
 // Post process configurations.
-#if defined(WEBRTC_ARCH_ARM) || defined(WEBRTC_ARCH_ARM64) || \
-    defined(WEBRTC_ANDROID)
-  if (use_postproc_arm_) {
+  if (use_postproc_) {
     vp8_postproc_cfg_t ppcfg;
+    // MFQE enabled to reduce key frame popping.
     ppcfg.post_proc_flag = VP8_MFQE;
-    // For low resolutions, use stronger deblocking filter.
-    int last_width_x_height = last_frame_width_ * last_frame_height_;
-    if (last_width_x_height > 0 && last_width_x_height <= 320 * 240) {
-      // Enable the deblock and demacroblocker based on qp thresholds.
-      RTC_DCHECK(qp_smoother_);
-      int qp = qp_smoother_->GetAvg();
-      if (qp > deblock_.min_qp) {
-        int level = deblock_.max_level;
-        if (qp < deblock_.degrade_qp) {
-          // Use lower level.
-          level = deblock_.max_level * (qp - deblock_.min_qp) /
-                  (deblock_.degrade_qp - deblock_.min_qp);
-        }
-        // Deblocking level only affects VP8_DEMACROBLOCK.
-        ppcfg.deblocking_level = std::max(level, 1);
-        ppcfg.post_proc_flag |= VP8_DEBLOCK | VP8_DEMACROBLOCK;
-      }
+
+    if (kIsArm) {
+      RTC_DCHECK(deblock_params_.has_value());
     }
+    if (deblock_params_.has_value()) {
+      // For low resolutions, use stronger deblocking filter.
+      int last_width_x_height = last_frame_width_ * last_frame_height_;
+      if (last_width_x_height > 0 && last_width_x_height <= 320 * 240) {
+        // Enable the deblock and demacroblocker based on qp thresholds.
+        RTC_DCHECK(qp_smoother_);
+        int qp = qp_smoother_->GetAvg();
+        if (qp > deblock_params_->min_qp) {
+          int level = deblock_params_->max_level;
+          if (qp < deblock_params_->degrade_qp) {
+            // Use lower level.
+            level = deblock_params_->max_level *
+                    (qp - deblock_params_->min_qp) /
+                    (deblock_params_->degrade_qp - deblock_params_->min_qp);
+          }
+          // Deblocking level only affects VP8_DEMACROBLOCK.
+          ppcfg.deblocking_level = std::max(level, 1);
+          ppcfg.post_proc_flag |= VP8_DEBLOCK | VP8_DEMACROBLOCK;
+        }
+      }
+    } else {
+      // Non-arm with no explicit deblock params set.
+      ppcfg.post_proc_flag |= VP8_DEBLOCK;
+      // For VGA resolutions and lower, enable the demacroblocker postproc.
+      if (last_frame_width_ * last_frame_height_ <= 640 * 360) {
+        ppcfg.post_proc_flag |= VP8_DEMACROBLOCK;
+      }
+      // Strength of deblocking filter. Valid range:[0,16]
+      ppcfg.deblocking_level = 3;
+    }
+
     vpx_codec_control(decoder_, VP8_SET_POSTPROC, &ppcfg);
   }
-#else
-  vp8_postproc_cfg_t ppcfg;
-  // MFQE enabled to reduce key frame popping.
-  ppcfg.post_proc_flag = VP8_MFQE | VP8_DEBLOCK;
-  // For VGA resolutions and lower, enable the demacroblocker postproc.
-  if (last_frame_width_ * last_frame_height_ <= 640 * 360) {
-    ppcfg.post_proc_flag |= VP8_DEMACROBLOCK;
-  }
-  // Strength of deblocking filter. Valid range:[0,16]
-  ppcfg.deblocking_level = 3;
-  vpx_codec_control(decoder_, VP8_SET_POSTPROC, &ppcfg);
-#endif
 
   // Always start with a complete key frame.
   if (key_frame_required_) {
-    if (input_image._frameType != kVideoFrameKey)
+    if (input_image._frameType != VideoFrameType::kVideoFrameKey)
       return WEBRTC_VIDEO_CODEC_ERROR;
-    // We have a key frame - is it complete?
-    if (input_image._completeFrame) {
-      key_frame_required_ = false;
-    } else {
-      return WEBRTC_VIDEO_CODEC_ERROR;
-    }
+    key_frame_required_ = false;
   }
   // Restrict error propagation using key frame requests.
   // Reset on a key frame refresh.
-  if (input_image._frameType == kVideoFrameKey && input_image._completeFrame) {
+  if (input_image._frameType == VideoFrameType::kVideoFrameKey) {
     propagation_cnt_ = -1;
     // Start count on first loss.
-  } else if ((!input_image._completeFrame || missing_frames) &&
-             propagation_cnt_ == -1) {
+  } else if (missing_frames && propagation_cnt_ == -1) {
     propagation_cnt_ = 0;
   }
   if (propagation_cnt_ >= 0) {
@@ -235,11 +266,11 @@ int LibvpxVp8Decoder::Decode(const EncodedImage& input_image,
     iter = NULL;
   }
 
-  uint8_t* buffer = input_image._buffer;
-  if (input_image._length == 0) {
+  const uint8_t* buffer = input_image.data();
+  if (input_image.size() == 0) {
     buffer = NULL;  // Triggers full frame concealment.
   }
-  if (vpx_codec_decode(decoder_, buffer, input_image._length, 0,
+  if (vpx_codec_decode(decoder_, buffer, input_image.size(), 0,
                        kDecodeDeadlineRealtime)) {
     // Reset to avoid requesting key frames too often.
     if (propagation_cnt_ > 0) {
@@ -253,7 +284,7 @@ int LibvpxVp8Decoder::Decode(const EncodedImage& input_image,
   vpx_codec_err_t vpx_ret =
       vpx_codec_control(decoder_, VPXD_GET_LAST_QUANTIZER, &qp);
   RTC_DCHECK_EQ(vpx_ret, VPX_CODEC_OK);
-  ret = ReturnFrame(img, input_image.Timestamp(), input_image.ntp_time_ms_, qp);
+  ret = ReturnFrame(img, input_image.Timestamp(), qp, input_image.ColorSpace());
   if (ret != 0) {
     // Reset to avoid requesting key frames too often.
     if (ret < 0 && propagation_cnt_ > 0)
@@ -269,10 +300,11 @@ int LibvpxVp8Decoder::Decode(const EncodedImage& input_image,
   return WEBRTC_VIDEO_CODEC_OK;
 }
 
-int LibvpxVp8Decoder::ReturnFrame(const vpx_image_t* img,
-                                  uint32_t timestamp,
-                                  int64_t ntp_time_ms,
-                                  int qp) {
+int LibvpxVp8Decoder::ReturnFrame(
+    const vpx_image_t* img,
+    uint32_t timestamp,
+    int qp,
+    const webrtc::ColorSpace* explicit_color_space) {
   if (img == NULL) {
     // Decoder OK and NULL image => No show frame
     return WEBRTC_VIDEO_CODEC_NO_OUTPUT;
@@ -287,8 +319,39 @@ int LibvpxVp8Decoder::ReturnFrame(const vpx_image_t* img,
   last_frame_width_ = img->d_w;
   last_frame_height_ = img->d_h;
   // Allocate memory for decoded image.
-  rtc::scoped_refptr<I420Buffer> buffer =
-      buffer_pool_.CreateBuffer(img->d_w, img->d_h);
+  rtc::scoped_refptr<VideoFrameBuffer> buffer;
+
+  if (preferred_output_format_ == VideoFrameBuffer::Type::kNV12) {
+    // Convert instead of making a copy.
+    // Note: libvpx doesn't support creating NV12 image directly.
+    // Due to the bitstream structure such a change would just hide the
+    // conversion operation inside the decode call.
+    rtc::scoped_refptr<NV12Buffer> nv12_buffer =
+        buffer_pool_.CreateNV12Buffer(img->d_w, img->d_h);
+    buffer = nv12_buffer;
+    if (nv12_buffer.get()) {
+      libyuv::I420ToNV12(img->planes[VPX_PLANE_Y], img->stride[VPX_PLANE_Y],
+                         img->planes[VPX_PLANE_U], img->stride[VPX_PLANE_U],
+                         img->planes[VPX_PLANE_V], img->stride[VPX_PLANE_V],
+                         nv12_buffer->MutableDataY(), nv12_buffer->StrideY(),
+                         nv12_buffer->MutableDataUV(), nv12_buffer->StrideUV(),
+                         img->d_w, img->d_h);
+    }
+  } else {
+    rtc::scoped_refptr<I420Buffer> i420_buffer =
+        buffer_pool_.CreateI420Buffer(img->d_w, img->d_h);
+    buffer = i420_buffer;
+    if (i420_buffer.get()) {
+      libyuv::I420Copy(img->planes[VPX_PLANE_Y], img->stride[VPX_PLANE_Y],
+                       img->planes[VPX_PLANE_U], img->stride[VPX_PLANE_U],
+                       img->planes[VPX_PLANE_V], img->stride[VPX_PLANE_V],
+                       i420_buffer->MutableDataY(), i420_buffer->StrideY(),
+                       i420_buffer->MutableDataU(), i420_buffer->StrideU(),
+                       i420_buffer->MutableDataV(), i420_buffer->StrideV(),
+                       img->d_w, img->d_h);
+    }
+  }
+
   if (!buffer.get()) {
     // Pool has too many pending frames.
     RTC_HISTOGRAM_BOOLEAN("WebRTC.Video.LibvpxVp8Decoder.TooManyPendingFrames",
@@ -296,16 +359,11 @@ int LibvpxVp8Decoder::ReturnFrame(const vpx_image_t* img,
     return WEBRTC_VIDEO_CODEC_NO_OUTPUT;
   }
 
-  libyuv::I420Copy(img->planes[VPX_PLANE_Y], img->stride[VPX_PLANE_Y],
-                   img->planes[VPX_PLANE_U], img->stride[VPX_PLANE_U],
-                   img->planes[VPX_PLANE_V], img->stride[VPX_PLANE_V],
-                   buffer->MutableDataY(), buffer->StrideY(),
-                   buffer->MutableDataU(), buffer->StrideU(),
-                   buffer->MutableDataV(), buffer->StrideV(), img->d_w,
-                   img->d_h);
-
-  VideoFrame decoded_image(buffer, timestamp, 0, kVideoRotation_0);
-  decoded_image.set_ntp_time_ms(ntp_time_ms);
+  VideoFrame decoded_image = VideoFrame::Builder()
+                                 .set_video_frame_buffer(buffer)
+                                 .set_timestamp_rtp(timestamp)
+                                 .set_color_space(explicit_color_space)
+                                 .build();
   decode_complete_callback_->Decoded(decoded_image, absl::nullopt, qp);
 
   return WEBRTC_VIDEO_CODEC_OK;
@@ -332,6 +390,13 @@ int LibvpxVp8Decoder::Release() {
   buffer_pool_.Release();
   inited_ = false;
   return ret_val;
+}
+
+VideoDecoder::DecoderInfo LibvpxVp8Decoder::GetDecoderInfo() const {
+  DecoderInfo info;
+  info.implementation_name = "libvpx";
+  info.is_hardware_accelerated = false;
+  return info;
 }
 
 const char* LibvpxVp8Decoder::ImplementationName() const {

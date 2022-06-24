@@ -32,6 +32,7 @@
 #import "ScrollingStateOverflowScrollingNode.h"
 #import "ScrollingTree.h"
 #import "WebCoreCALayerExtras.h"
+#import <wtf/BlockObjCExceptions.h>
 #import <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -49,41 +50,60 @@ ScrollingTreeOverflowScrollingNodeMac::ScrollingTreeOverflowScrollingNodeMac(Scr
 
 ScrollingTreeOverflowScrollingNodeMac::~ScrollingTreeOverflowScrollingNodeMac() = default;
 
+void ScrollingTreeOverflowScrollingNodeMac::willBeDestroyed()
+{
+    m_delegate.nodeWillBeDestroyed();
+}
+
 void ScrollingTreeOverflowScrollingNodeMac::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
 {
     ScrollingTreeOverflowScrollingNode::commitStateBeforeChildren(stateNode);
     m_delegate.updateFromStateNode(downcast<ScrollingStateOverflowScrollingNode>(stateNode));
 }
 
-void ScrollingTreeOverflowScrollingNodeMac::commitStateAfterChildren(const ScrollingStateNode& stateNode)
+WheelEventHandlingResult ScrollingTreeOverflowScrollingNodeMac::handleWheelEvent(const PlatformWheelEvent& wheelEvent, EventTargeting eventTargeting)
 {
-    ScrollingTreeOverflowScrollingNode::commitStateAfterChildren(stateNode);
+#if ENABLE(SCROLLING_THREAD)
+    if (hasSynchronousScrollingReasons() && eventTargeting != EventTargeting::NodeOnly)
+        return { { WheelEventProcessingSteps::MainThreadForScrolling, WheelEventProcessingSteps::MainThreadForNonBlockingDOMEventDispatch }, false };
+#endif
 
-    const auto& overflowStateNode = downcast<ScrollingStateOverflowScrollingNode>(stateNode);
+    if (!canHandleWheelEvent(wheelEvent, eventTargeting))
+        return WheelEventHandlingResult::unhandled();
 
-    if (overflowStateNode.hasChangedProperty(ScrollingStateScrollingNode::RequestedScrollPosition)) {
-        auto scrollType = overflowStateNode.requestedScrollPositionRepresentsProgrammaticScroll() ? ScrollType::Programmatic : ScrollType::User;
-        scrollTo(overflowStateNode.requestedScrollPosition(), scrollType);
-    }
+    return WheelEventHandlingResult::result(m_delegate.handleWheelEvent(wheelEvent));
 }
 
-ScrollingEventResult ScrollingTreeOverflowScrollingNodeMac::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
+bool ScrollingTreeOverflowScrollingNodeMac::startAnimatedScrollToPosition(FloatPoint destinationPosition)
 {
-    if (!canHaveScrollbars())
-        return ScrollingEventResult::DidNotHandleEvent;
-
-    m_delegate.handleWheelEvent(wheelEvent);
-
-    // FIXME: Scroll snap
-
-    scrollingTree().setOrClearLatchedNode(wheelEvent, scrollingNodeID());
-    scrollingTree().handleWheelEventPhase(wheelEvent.phase());
-    
-    // FIXME: This needs to return whether the event was handled.
-    return ScrollingEventResult::DidHandleEvent;
+    bool started = m_delegate.startAnimatedScrollToPosition(destinationPosition);
+    if (started)
+        willStartAnimatedScroll();
+    return started;
 }
 
-FloatPoint ScrollingTreeOverflowScrollingNodeMac::adjustedScrollPosition(const FloatPoint& position, ScrollPositionClamp clamp) const
+void ScrollingTreeOverflowScrollingNodeMac::stopAnimatedScroll()
+{
+    m_delegate.stopAnimatedScroll();
+}
+
+void ScrollingTreeOverflowScrollingNodeMac::serviceScrollAnimation(MonotonicTime currentTime)
+{
+    m_delegate.serviceScrollAnimation(currentTime);
+}
+
+void ScrollingTreeOverflowScrollingNodeMac::willDoProgrammaticScroll(const FloatPoint& targetScrollPosition)
+{
+    m_delegate.willDoProgrammaticScroll(targetScrollPosition);
+}
+
+void ScrollingTreeOverflowScrollingNodeMac::currentScrollPositionChanged(ScrollType scrollType, ScrollingLayerPositionAction action)
+{
+    ScrollingTreeOverflowScrollingNode::currentScrollPositionChanged(scrollType, action);
+    m_delegate.currentScrollPositionChanged();
+}
+
+FloatPoint ScrollingTreeOverflowScrollingNodeMac::adjustedScrollPosition(const FloatPoint& position, ScrollClamping clamp) const
 {
     FloatPoint scrollPosition(roundf(position.x()), roundf(position.y()));
     return ScrollingTreeOverflowScrollingNode::adjustedScrollPosition(scrollPosition, clamp);
@@ -91,7 +111,9 @@ FloatPoint ScrollingTreeOverflowScrollingNodeMac::adjustedScrollPosition(const F
 
 void ScrollingTreeOverflowScrollingNodeMac::repositionScrollingLayers()
 {
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
     [static_cast<CALayer*>(scrollContainerLayer()) _web_setLayerBoundsOrigin:currentScrollOffset()];
+    END_BLOCK_OBJC_EXCEPTIONS
 }
 
 void ScrollingTreeOverflowScrollingNodeMac::repositionRelatedLayers()

@@ -32,6 +32,7 @@ import logging
 import os
 import time
 
+from webkitpy.common.iteration_compatibility import iteritems
 from webkitpy.layout_tests.servers import http_server_base
 
 
@@ -40,7 +41,7 @@ _log = logging.getLogger(__name__)
 
 class Lighttpd(http_server_base.HttpServerBase):
 
-    def __init__(self, port_obj, output_dir, background=False, port=None,
+    def __init__(self, port_obj, output_dir, port=None,
                  root=None, run_background=None, additional_dirs=None,
                  layout_tests_dir=None):
         """Args:
@@ -107,11 +108,10 @@ class Lighttpd(http_server_base.HttpServerBase):
         # Write out our cgi handlers.  Run perl through env so that it
         # processes the #! line and runs perl with the proper command
         # line arguments. Emulate apache's mod_asis with a cat cgi handler.
-        f.write(('cgi.assign = ( ".cgi"  => "/usr/bin/env",\n'
+        f.write('cgi.assign = ( ".cgi"  => "/usr/bin/env",\n'
                  '               ".pl"   => "/usr/bin/env",\n'
                  '               ".asis" => "/bin/cat",\n'
-                 '               ".php"  => "%s" )\n\n') %
-                                     self._port_obj._path_to_lighttpd_php())
+                 '               ".py"  => "/bin/python3" )\n\n')
 
         # Setup log files
         f.write(('server.errorlog = "%s"\n'
@@ -129,7 +129,7 @@ class Lighttpd(http_server_base.HttpServerBase):
             operator = "+="
 
         if self._additional_dirs:
-            for alias, path in self._additional_dirs.iteritems():
+            for alias, path in iteritems(self._additional_dirs):
                 f.write(('alias.url += ( "%s" => "%s" )\n\n') % (alias, path))
 
         # dump out of virtual host config at the bottom.
@@ -193,13 +193,13 @@ class Lighttpd(http_server_base.HttpServerBase):
         for log_prefix in ('access.log-', 'error.log-'):
             try:
                 self._remove_log_files(self._output_dir, log_prefix)
-            except OSError as e:
+            except OSError:
                 _log.warning('Failed to remove old %s %s files' % (self._name, log_prefix))
 
     def _spawn_process(self):
         _log.debug('Starting %s server, cmd="%s"' % (self._name, self._start_cmd))
-        process = self._executive.popen(self._start_cmd, env=self._env, shell=False, stderr=self._executive.PIPE)
-        pid = process.pid
+        self._process = self._executive.popen(self._start_cmd, env=self._env, shell=False, stderr=self._executive.PIPE)
+        pid = self._process.pid
         self._filesystem.write_text_file(self._pid_file, str(pid))
         return pid
 
@@ -214,6 +214,11 @@ class Lighttpd(http_server_base.HttpServerBase):
             self._filesystem.remove(self._pid_file)
 
     def _check_and_kill(self):
+        if self._process is not None:
+            self._process.poll()
+            if self._process.returncode is not None:
+                return True
+
         if self._executive.check_running_pid(self._pid):
             host = self._port_obj.host
             if host.platform.is_win() and not host.platform.is_cygwin():
@@ -227,3 +232,12 @@ class Lighttpd(http_server_base.HttpServerBase):
                 self._executive.kill_process(self._pid)
             return False
         return True
+
+    def _is_server_running_on_all_ports(self):
+        if self._process is not None:
+            self._process.poll()
+            if self._process.returncode is not None:
+                _log.debug("Server isn't running at all")
+                raise http_server_base.ServerError("Server exited")
+
+        return super(Lighttpd, self)._is_server_running_on_all_ports()

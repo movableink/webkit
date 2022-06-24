@@ -31,14 +31,16 @@ import logging
 
 from webkitpy.tool import steps
 
+from webkitcorepy.string_utils import pluralize
+
 from webkitpy.common.checkout.changelog import ChangeLog
 from webkitpy.common.config import urls
 from webkitpy.common.net.bugzilla import Bugzilla
 from webkitpy.common.system.executive import ScriptError
 from webkitpy.tool.commands.abstractsequencedcommand import AbstractSequencedCommand
+from webkitpy.tool.commands.deprecatedcommand import DeprecatedCommand
 from webkitpy.tool.commands.stepsequence import StepSequence
 from webkitpy.tool.comments import bug_comment_from_commit_text
-from webkitpy.tool.grammar import pluralize
 from webkitpy.tool.multicommandtool import Command
 
 _log = logging.getLogger(__name__)
@@ -55,47 +57,6 @@ class Clean(AbstractSequencedCommand):
         options.force_clean = True
 
 
-class Update(AbstractSequencedCommand):
-    name = "update"
-    help_text = "Update working copy (used internally)"
-    steps = [
-        steps.DiscardLocalChanges,
-        steps.Update,
-    ]
-
-
-class Build(AbstractSequencedCommand):
-    name = "build"
-    help_text = "Update working copy and build"
-    steps = [
-        steps.DiscardLocalChanges,
-        steps.Update,
-        steps.Build,
-    ]
-
-    def _prepare_state(self, options, args, tool):
-        options.build = True
-
-
-class BuildAndTest(AbstractSequencedCommand):
-    name = "build-and-test"
-    help_text = "Update working copy, build, and run the tests"
-    steps = [
-        steps.DiscardLocalChanges,
-        steps.Update,
-        steps.Build,
-        steps.RunTests,
-    ]
-
-
-class CheckPatchRelevance(AbstractSequencedCommand):
-    name = "check-patch-relevance"
-    help_text = "Check if this patch needs to be tested"
-    steps = [
-        steps.CheckPatchRelevance,
-    ]
-
-
 class Land(AbstractSequencedCommand):
     name = "land"
     help_text = "Land the current working directory diff and updates the associated bug if any"
@@ -107,7 +68,6 @@ class Land(AbstractSequencedCommand):
         steps.ValidateReviewer,
         steps.ValidateChangeLogs,  # We do this after UpdateChangeLogsWithReviewer to avoid not having to cache the diff twice.
         steps.Build,
-        steps.RunTests,
         steps.Commit,
         steps.CloseBugForLandDiff,
     ]
@@ -123,6 +83,7 @@ If a bug id is provided, or one can be found in the ChangeLog land will update t
         }
 
 
+@DeprecatedCommand
 class LandCowhand(AbstractSequencedCommand):
     # Gender-blind term for cowboy, see: http://en.wiktionary.org/wiki/cowhand
     name = "land-cowhand"
@@ -134,21 +95,12 @@ class LandCowhand(AbstractSequencedCommand):
         steps.CheckStyle,
         steps.ConfirmDiff,
         steps.Build,
-        steps.RunTests,
         steps.Commit,
         steps.CloseBugForLandDiff,
     ]
 
     def _prepare_state(self, options, args, tool):
         options.check_style_filter = "-changelog"
-
-
-class LandCowboy(LandCowhand):
-    name = "land-cowboy"
-
-    def _prepare_state(self, options, args, tool):
-        _log.warning("land-cowboy is deprecated, use land-cowhand instead.")
-        LandCowhand._prepare_state(self, options, args, tool)
 
 
 class CheckStyleLocal(AbstractSequencedCommand):
@@ -181,7 +133,7 @@ class AbstractPatchProcessingCommand(Command):
 
         # It's nice to print out total statistics.
         bugs_to_patches = self._collect_patches_by_bug(patches)
-        _log.info("Processing %s from %s." % (pluralize(len(patches), "patch"), pluralize(len(bugs_to_patches), "bug")))
+        _log.info("Processing %s from %s." % (pluralize(len(patches), 'patch', plural='patches'), pluralize(len(bugs_to_patches), "bug")))
 
         for patch in patches:
             self._process_patch(patch, options, args, tool)
@@ -192,10 +144,9 @@ class AbstractPatchSequencingCommand(AbstractPatchProcessingCommand):
     main_steps = None
 
     def __init__(self):
-        options = []
         self._prepare_sequence = StepSequence(self.prepare_steps)
         self._main_sequence = StepSequence(self.main_steps)
-        options = sorted(set(self._prepare_sequence.options() + self._main_sequence.options()))
+        options = sorted(set(self._prepare_sequence.options() + self._main_sequence.options()), key=lambda option: option.dest)
         AbstractPatchProcessingCommand.__init__(self, options)
 
     def _prepare_to_process(self, options, args, tool):
@@ -218,36 +169,21 @@ class AbstractPatchSequencingCommand(AbstractPatchProcessingCommand):
 
 class ProcessAttachmentsMixin(object):
     def _fetch_list_of_patches_to_process(self, options, args, tool):
-        patches = []
-        for patch_id in args:
-            try:
-                patch = tool.bugs.fetch_attachment(patch_id, throw_on_access_error=True)
-            except Bugzilla.AccessError as e:
-                if e.error_code == Bugzilla.AccessError.NOT_PERMITTED:
-                    patch = tool.status_server.fetch_attachment(patch_id)
-            if patch:
-                patches.append(patch)
-        return patches
+        return list(map(lambda patch_id: tool.bugs.fetch_attachment(patch_id), args))
 
 
 class ProcessBugsMixin(object):
     def _fetch_list_of_patches_to_process(self, options, args, tool):
         all_patches = []
         for bug_id in args:
-            bug = tool.bugs.fetch_bug(bug_id)
-            if not bug:
-                continue
-            patches = bug.reviewed_patches()
-            _log.info("%s found on bug %s." % (pluralize(len(patches), "reviewed patch"), bug_id))
+            patches = tool.bugs.fetch_bug(bug_id).reviewed_patches()
+            _log.info("%s found on bug %s." % (pluralize(len(patches), 'reviewed patch', plural='reviewed patches'), bug_id))
             all_patches += patches
         if not all_patches:
             _log.info("No reviewed patches found, looking for unreviewed patches.")
             for bug_id in args:
-                bug = tool.bugs.fetch_bug(bug_id)
-                if not bug:
-                    continue
-                patches = bug.patches()
-                _log.info("%s found on bug %s." % (pluralize(len(patches), "patch"), bug_id))
+                patches = tool.bugs.fetch_bug(bug_id).patches()
+                _log.info("%s found on bug %s." % (pluralize(len(patches), 'patch', plural='patches'), bug_id))
                 all_patches += patches
         return all_patches
 
@@ -259,7 +195,7 @@ class ProcessURLsMixin(object):
             bug_id = urls.parse_bug_id(url)
             if bug_id:
                 patches = tool.bugs.fetch_bug(bug_id).patches()
-                _log.info("%s found on bug %s." % (pluralize(len(patches), "patch"), bug_id))
+                _log.info("%s found on bug %s." % (pluralize(len(patches), 'patch', plural='patches'), bug_id))
                 all_patches += patches
 
             attachment_id = urls.parse_attachment_id(url)
@@ -278,31 +214,6 @@ class CheckStyle(AbstractPatchSequencingCommand, ProcessAttachmentsMixin):
         steps.Update,
         steps.ApplyPatch,
         steps.CheckStyle,
-    ]
-
-
-class BuildAttachment(AbstractPatchSequencingCommand, ProcessAttachmentsMixin):
-    name = "build-attachment"
-    help_text = "Apply and build patches from bugzilla"
-    argument_names = "ATTACHMENT_ID [ATTACHMENT_IDS]"
-    main_steps = [
-        steps.DiscardLocalChanges,
-        steps.Update,
-        steps.ApplyPatch,
-        steps.Build,
-    ]
-
-
-class BuildAndTestAttachment(AbstractPatchSequencingCommand, ProcessAttachmentsMixin):
-    name = "build-and-test-attachment"
-    help_text = "Apply, build, and test patches from bugzilla"
-    argument_names = "ATTACHMENT_ID [ATTACHMENT_IDS]"
-    main_steps = [
-        steps.DiscardLocalChanges,
-        steps.Update,
-        steps.ApplyPatch,
-        steps.Build,
-        steps.RunTests,
     ]
 
 
@@ -333,20 +244,6 @@ class ApplyFromBug(AbstractPatchApplyingCommand, ProcessBugsMixin):
     show_in_main_help = True
 
 
-class ApplyWatchList(AbstractPatchSequencingCommand, ProcessAttachmentsMixin):
-    name = "apply-watchlist"
-    help_text = "Applies the watchlist to the specified attachments"
-    argument_names = "ATTACHMENT_ID [ATTACHMENT_IDS]"
-    main_steps = [
-        steps.DiscardLocalChanges,
-        steps.Update,
-        steps.ApplyPatch,
-        steps.ApplyWatchList,
-    ]
-    long_help = """"Applies the watchlist to the specified attachments.
-Downloads the attachment, applies it locally, runs the watchlist against it, and updates the bug with the result."""
-
-
 class AbstractPatchLandingCommand(AbstractPatchSequencingCommand):
     main_steps = [
         steps.DiscardLocalChanges,
@@ -355,7 +252,6 @@ class AbstractPatchLandingCommand(AbstractPatchSequencingCommand):
         steps.ValidateChangeLogs,
         steps.ValidateReviewer,
         steps.Build,
-        steps.RunTests,
         steps.Commit,
         steps.ClosePatch,
         steps.CloseBug,
@@ -384,12 +280,6 @@ class LandFromBug(AbstractPatchLandingCommand, ProcessBugsMixin):
     show_in_main_help = True
 
 
-class LandFromURL(AbstractPatchLandingCommand, ProcessURLsMixin):
-    name = "land-from-url"
-    help_text = "Land all patches on the given URLs, optionally building and testing them first"
-    argument_names = "URL [URLS]"
-
-
 class ValidateChangelog(AbstractSequencedCommand):
     name = "validate-changelog"
     help_text = "Validate that the ChangeLogs and reviewers look reasonable"
@@ -402,7 +292,7 @@ and the reviewers listed in the ChangeLogs look reasonable.
     ]
 
 
-class AbstractRolloutPrepCommand(AbstractSequencedCommand):
+class AbstractRevertPrepCommand(AbstractSequencedCommand):
     argument_names = "REVISION [REVISIONS] REASON"
 
     def _commit_info(self, revision):
@@ -410,9 +300,9 @@ class AbstractRolloutPrepCommand(AbstractSequencedCommand):
         if commit_info and commit_info.bug_id():
             # Note: Don't print a bug URL here because it will confuse the
             #       SheriffBot because the SheriffBot just greps the output
-            #       of create-rollout for bug URLs.  It should do better
+            #       of create-revert for bug URLs.  It should do better
             #       parsing instead.
-            _log.info("Preparing rollout for bug %s." % commit_info.bug_id())
+            _log.info("Preparing revert for bug %s." % commit_info.bug_id())
         else:
             _log.info("Unable to parse bug number from diff.")
         return commit_info
@@ -432,7 +322,7 @@ class AbstractRolloutPrepCommand(AbstractSequencedCommand):
         state = {
             "revision": earliest_revision,
             "revision_list": revision_list,
-            "reason": args[1],
+            "reason": ' '.join(args[1:]),
             "bug_id": None,
             "bug_id_list": bug_id_list,
             "description_list": description_list,
@@ -456,12 +346,12 @@ class AbstractRolloutPrepCommand(AbstractSequencedCommand):
         return state
 
 
-class PrepareRollout(AbstractRolloutPrepCommand):
-    name = "prepare-rollout"
+class PrepareRevert(AbstractRevertPrepCommand):
+    name = "prepare-revert"
     help_text = "Revert the given revision(s) in the working copy and prepare ChangeLogs with revert reason"
     long_help = """Updates the working copy.
 Applies the inverse diff for the provided revision(s).
-Creates an appropriate rollout ChangeLog, including a trac link and bug link.
+Creates an appropriate revert ChangeLog, including a trac link and bug link.
 """
     steps = [
         steps.DiscardLocalChanges,
@@ -471,9 +361,9 @@ Creates an appropriate rollout ChangeLog, including a trac link and bug link.
     ]
 
 
-class CreateRollout(AbstractRolloutPrepCommand):
-    name = "create-rollout"
-    help_text = "Creates a bug to track the broken SVN revision(s) and uploads a rollout patch."
+class CreateRevert(AbstractRevertPrepCommand):
+    name = "create-revert"
+    help_text = "Creates a bug to track the broken SVN revision(s) and uploads a revert patch."
     steps = [
         steps.DiscardLocalChanges,
         steps.Update,
@@ -484,9 +374,9 @@ class CreateRollout(AbstractRolloutPrepCommand):
     ]
 
     def _prepare_state(self, options, args, tool):
-        state = AbstractRolloutPrepCommand._prepare_state(self, options, args, tool)
+        state = AbstractRevertPrepCommand._prepare_state(self, options, args, tool)
         state["bug_title"] = "REGRESSION(r%s): %s" % (state["revision"], state["reason"])
-        state["bug_description"] = "%s broke the build:\n%s" % (urls.view_revision_url(state["revision"]), state["reason"])
+        state["bug_description"] = "%s introduced a regression:\n%s" % (urls.view_revision_url(state["revision"]), state["reason"])
         # FIXME: If we had more context here, we could link to other open bugs
         #        that mention the test that regressed.
         if options.parent_command == "sheriff-bot":
@@ -500,13 +390,13 @@ so that we can track how often these flaky tests fail.
         return state
 
 
-class Rollout(AbstractRolloutPrepCommand):
-    name = "rollout"
+class Revert(AbstractRevertPrepCommand):
+    name = "revert"
     show_in_main_help = True
     help_text = "Revert the given revision(s) in the working copy and optionally commit the revert and re-open the original bug"
     long_help = """Updates the working copy.
 Applies the inverse diff for the provided revision.
-Creates an appropriate rollout ChangeLog, including a trac link and bug link.
+Creates an appropriate revert ChangeLog, including a trac link and bug link.
 Opens the generated ChangeLogs in $EDITOR.
 Shows the prepared diff for confirmation.
 Commits the revert and updates the bug (including re-opening the bug if necessary)."""
@@ -519,5 +409,5 @@ Commits the revert and updates the bug (including re-opening the bug if necessar
         steps.ConfirmDiff,
         steps.Build,
         steps.Commit,
-        steps.ReopenBugAfterRollout,
+        steps.ReopenBugAfterRevert,
     ]

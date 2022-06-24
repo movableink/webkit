@@ -2,20 +2,22 @@ include(WebKitCommon)
 
 set_property(DIRECTORY . PROPERTY FOLDER "WebKit")
 
-if (PAL_LIBRARY_TYPE MATCHES STATIC)
-    add_definitions(-DSTATICALLY_LINKED_WITH_PAL=1)
-endif ()
-
 set(WebKit_PRIVATE_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}"
 )
 
 set(WebKit_INCLUDE_DIRECTORIES
+    "${PAL_FRAMEWORK_HEADERS_DIR}"
     "${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}"
     "${WebKit_FRAMEWORK_HEADERS_DIR}"
     "${WebKit_DERIVED_SOURCES_DIR}"
     "${WebKit_DERIVED_SOURCES_DIR}/include"
     "${WEBKIT_DIR}"
+    "${WEBKIT_DIR}/GPUProcess"
+    "${WEBKIT_DIR}/GPUProcess/graphics"
+    "${WEBKIT_DIR}/GPUProcess/graphics/WebGPU"
+    "${WEBKIT_DIR}/GPUProcess/media"
+    "${WEBKIT_DIR}/GPUProcess/webrtc"
     "${WEBKIT_DIR}/NetworkProcess"
     "${WEBKIT_DIR}/NetworkProcess/Classifier"
     "${WEBKIT_DIR}/NetworkProcess/Cookies"
@@ -23,9 +25,13 @@ set(WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/NetworkProcess/Downloads"
     "${WEBKIT_DIR}/NetworkProcess/FileAPI"
     "${WEBKIT_DIR}/NetworkProcess/IndexedDB"
+    "${WEBKIT_DIR}/NetworkProcess/Notifications"
+    "${WEBKIT_DIR}/NetworkProcess/PrivateClickMeasurement"
     "${WEBKIT_DIR}/NetworkProcess/ServiceWorker"
+    "${WEBKIT_DIR}/NetworkProcess/SharedWorker"
     "${WEBKIT_DIR}/NetworkProcess/WebStorage"
     "${WEBKIT_DIR}/NetworkProcess/cache"
+    "${WEBKIT_DIR}/NetworkProcess/storage"
     "${WEBKIT_DIR}/NetworkProcess/watchos"
     "${WEBKIT_DIR}/NetworkProcess/webrtc"
     "${WEBKIT_DIR}/Platform"
@@ -41,11 +47,14 @@ set(WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/Shared/Databases/IndexedDB"
     "${WEBKIT_DIR}/Shared/FileAPI"
     "${WEBKIT_DIR}/Shared/Gamepad"
+    "${WEBKIT_DIR}/Shared/Notifications"
     "${WEBKIT_DIR}/Shared/Plugins"
     "${WEBKIT_DIR}/Shared/Plugins/Netscape"
     "${WEBKIT_DIR}/Shared/Plugins/Netscape/x11"
     "${WEBKIT_DIR}/Shared/RemoteLayerTree"
+    "${WEBKIT_DIR}/Shared/WebGPU"
     "${WEBKIT_DIR}/Shared/WebsiteData"
+    "${WEBKIT_DIR}/Shared/XR"
     "${WEBKIT_DIR}/UIProcess"
     "${WEBKIT_DIR}/UIProcess/API"
     "${WEBKIT_DIR}/UIProcess/API/C"
@@ -54,7 +63,11 @@ set(WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/UIProcess/Automation"
     "${WEBKIT_DIR}/UIProcess/Downloads"
     "${WEBKIT_DIR}/UIProcess/Gamepad"
+    "${WEBKIT_DIR}/UIProcess/GPU"
+    "${WEBKIT_DIR}/UIProcess/Inspector"
+    "${WEBKIT_DIR}/UIProcess/Inspector/Agents"
     "${WEBKIT_DIR}/UIProcess/Launcher"
+    "${WEBKIT_DIR}/UIProcess/Media"
     "${WEBKIT_DIR}/UIProcess/Network"
     "${WEBKIT_DIR}/UIProcess/Network/CustomProtocols"
     "${WEBKIT_DIR}/UIProcess/Notifications"
@@ -64,6 +77,8 @@ set(WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/UIProcess/WebAuthentication"
     "${WEBKIT_DIR}/UIProcess/WebAuthentication/Mock"
     "${WEBKIT_DIR}/UIProcess/WebsiteData"
+    "${WEBKIT_DIR}/UIProcess/XR"
+    "${WEBKIT_DIR}/WebAuthnProcess"
     "${WEBKIT_DIR}/WebProcess"
     "${WEBKIT_DIR}/WebProcess/ApplePay"
     "${WEBKIT_DIR}/WebProcess/ApplicationCache"
@@ -71,18 +86,26 @@ set(WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/WebProcess/Cache"
     "${WEBKIT_DIR}/WebProcess/Databases"
     "${WEBKIT_DIR}/WebProcess/Databases/IndexedDB"
+    "${WEBKIT_DIR}/WebProcess/EncryptedMedia"
     "${WEBKIT_DIR}/WebProcess/FileAPI"
     "${WEBKIT_DIR}/WebProcess/FullScreen"
     "${WEBKIT_DIR}/WebProcess/Gamepad"
     "${WEBKIT_DIR}/WebProcess/Geolocation"
+    "${WEBKIT_DIR}/WebProcess/GPU"
+    "${WEBKIT_DIR}/WebProcess/GPU/graphics"
+    "${WEBKIT_DIR}/WebProcess/GPU/graphics/WebGPU"
+    "${WEBKIT_DIR}/WebProcess/GPU/media"
+    "${WEBKIT_DIR}/WebProcess/GPU/webrtc"
     "${WEBKIT_DIR}/WebProcess/IconDatabase"
     "${WEBKIT_DIR}/WebProcess/InjectedBundle"
     "${WEBKIT_DIR}/WebProcess/InjectedBundle/API"
     "${WEBKIT_DIR}/WebProcess/InjectedBundle/API/c"
     "${WEBKIT_DIR}/WebProcess/InjectedBundle/DOM"
+    "${WEBKIT_DIR}/WebProcess/Inspector"
     "${WEBKIT_DIR}/WebProcess/Launching"
     "${WEBKIT_DIR}/WebProcess/MediaCache"
     "${WEBKIT_DIR}/WebProcess/MediaStream"
+    "${WEBKIT_DIR}/WebProcess/Model"
     "${WEBKIT_DIR}/WebProcess/Network"
     "${WEBKIT_DIR}/WebProcess/Network/webrtc"
     "${WEBKIT_DIR}/WebProcess/Notifications"
@@ -90,12 +113,14 @@ set(WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/WebProcess/Plugins"
     "${WEBKIT_DIR}/WebProcess/Plugins/Netscape"
     "${WEBKIT_DIR}/WebProcess/ResourceCache"
+    "${WEBKIT_DIR}/WebProcess/Speech"
     "${WEBKIT_DIR}/WebProcess/Storage"
     "${WEBKIT_DIR}/WebProcess/UserContent"
     "${WEBKIT_DIR}/WebProcess/WebCoreSupport"
     "${WEBKIT_DIR}/WebProcess/WebPage"
     "${WEBKIT_DIR}/WebProcess/WebPage/RemoteLayerTree"
     "${WEBKIT_DIR}/WebProcess/WebStorage"
+    "${WEBKIT_DIR}/WebProcess/XR"
     "${CMAKE_SOURCE_DIR}/Source"
     "${CMAKE_SOURCE_DIR}/WebKitLibraries"
 )
@@ -107,178 +132,267 @@ list(APPEND WebKit_UNIFIED_SOURCE_LIST_FILES
 )
 
 set(WebKit_MESSAGES_IN_FILES
-    NetworkProcess/Cookies/WebCookieManager.messages.in
+    GPUProcess/GPUConnectionToWebProcess
+    GPUProcess/GPUProcess
 
-    NetworkProcess/IndexedDB/WebIDBConnectionToClient.messages.in
+    GPUProcess/graphics/RemoteDisplayListRecorder
+    GPUProcess/graphics/RemoteGraphicsContextGL
+    GPUProcess/graphics/RemoteRenderingBackend
 
-    NetworkProcess/NetworkConnectionToWebProcess.messages.in
-    NetworkProcess/NetworkContentRuleListManager.messages.in
-    NetworkProcess/NetworkProcess.messages.in
-    NetworkProcess/NetworkResourceLoader.messages.in
-    NetworkProcess/NetworkSocketChannel.messages.in
-    NetworkProcess/NetworkSocketStream.messages.in
+    GPUProcess/graphics/WebGPU/RemoteAdapter
+    GPUProcess/graphics/WebGPU/RemoteBindGroup
+    GPUProcess/graphics/WebGPU/RemoteBindGroupLayout
+    GPUProcess/graphics/WebGPU/RemoteBuffer
+    GPUProcess/graphics/WebGPU/RemoteCommandBuffer
+    GPUProcess/graphics/WebGPU/RemoteCommandEncoder
+    GPUProcess/graphics/WebGPU/RemoteComputePassEncoder
+    GPUProcess/graphics/WebGPU/RemoteComputePipeline
+    GPUProcess/graphics/WebGPU/RemoteDevice
+    GPUProcess/graphics/WebGPU/RemoteExternalTexture
+    GPUProcess/graphics/WebGPU/RemoteGPU
+    GPUProcess/graphics/WebGPU/RemotePipelineLayout
+    GPUProcess/graphics/WebGPU/RemoteQuerySet
+    GPUProcess/graphics/WebGPU/RemoteQueue
+    GPUProcess/graphics/WebGPU/RemoteRenderBundle
+    GPUProcess/graphics/WebGPU/RemoteRenderBundleEncoder
+    GPUProcess/graphics/WebGPU/RemoteRenderPassEncoder
+    GPUProcess/graphics/WebGPU/RemoteRenderPipeline
+    GPUProcess/graphics/WebGPU/RemoteSampler
+    GPUProcess/graphics/WebGPU/RemoteShaderModule
+    GPUProcess/graphics/WebGPU/RemoteTexture
+    GPUProcess/graphics/WebGPU/RemoteTextureView
 
-    NetworkProcess/ServiceWorker/ServiceWorkerFetchTask.messages.in
-    NetworkProcess/ServiceWorker/WebSWServerConnection.messages.in
-    NetworkProcess/ServiceWorker/WebSWServerToContextConnection.messages.in
+    GPUProcess/media/RemoteAudioDestinationManager
+    GPUProcess/media/RemoteAudioSessionProxy
+    GPUProcess/media/RemoteCDMFactoryProxy
+    GPUProcess/media/RemoteCDMInstanceProxy
+    GPUProcess/media/RemoteCDMInstanceSessionProxy
+    GPUProcess/media/RemoteCDMProxy
+    GPUProcess/media/RemoteLegacyCDMFactoryProxy
+    GPUProcess/media/RemoteLegacyCDMProxy
+    GPUProcess/media/RemoteLegacyCDMSessionProxy
+    GPUProcess/media/RemoteMediaEngineConfigurationFactoryProxy
+    GPUProcess/media/RemoteMediaPlayerManagerProxy
+    GPUProcess/media/RemoteMediaPlayerProxy
+    GPUProcess/media/RemoteMediaResourceManager
+    GPUProcess/media/RemoteMediaSourceProxy
+    GPUProcess/media/RemoteRemoteCommandListenerProxy
+    GPUProcess/media/RemoteSourceBufferProxy
+    GPUProcess/media/RemoteVideoFrameObjectHeap
 
-    NetworkProcess/WebStorage/StorageManagerSet.messages.in
+    GPUProcess/webrtc/LibWebRTCCodecsProxy
+    GPUProcess/webrtc/RemoteAudioMediaStreamTrackRendererInternalUnitManager
+    GPUProcess/webrtc/RemoteMediaRecorder
+    GPUProcess/webrtc/RemoteMediaRecorderManager
+    GPUProcess/webrtc/RemoteSampleBufferDisplayLayer
+    GPUProcess/webrtc/RemoteSampleBufferDisplayLayerManager
 
-    NetworkProcess/cache/CacheStorageEngineConnection.messages.in
+    NetworkProcess/Cookies/WebCookieManager
 
-    NetworkProcess/webrtc/NetworkMDNSRegister.messages.in
-    NetworkProcess/webrtc/NetworkRTCMonitor.messages.in
-    NetworkProcess/webrtc/NetworkRTCProvider.messages.in
-    NetworkProcess/webrtc/NetworkRTCSocket.messages.in
+    NetworkProcess/NetworkBroadcastChannelRegistry
+    NetworkProcess/NetworkConnectionToWebProcess
+    NetworkProcess/NetworkContentRuleListManager
+    NetworkProcess/NetworkProcess
+    NetworkProcess/NetworkResourceLoader
+    NetworkProcess/NetworkSocketChannel
+    NetworkProcess/NetworkSocketStream
 
-    PluginProcess/PluginControllerProxy.messages.in
-    PluginProcess/PluginProcess.messages.in
-    PluginProcess/WebProcessConnection.messages.in
+    NetworkProcess/ServiceWorker/ServiceWorkerDownloadTask
+    NetworkProcess/ServiceWorker/ServiceWorkerFetchTask
+    NetworkProcess/ServiceWorker/WebSWServerConnection
+    NetworkProcess/ServiceWorker/WebSWServerToContextConnection
 
-    Shared/AuxiliaryProcess.messages.in
-    Shared/WebConnection.messages.in
+    NetworkProcess/SharedWorker/WebSharedWorkerServerConnection
+    NetworkProcess/SharedWorker/WebSharedWorkerServerToContextConnection
 
-    Shared/Authentication/AuthenticationManager.messages.in
+    NetworkProcess/WebStorage/StorageManagerSet
 
-    Shared/Plugins/NPObjectMessageReceiver.messages.in
+    NetworkProcess/cache/CacheStorageEngineConnection
 
-    UIProcess/DrawingAreaProxy.messages.in
-    UIProcess/RemoteWebInspectorProxy.messages.in
-    UIProcess/VisitedLinkStore.messages.in
-    UIProcess/WebCookieManagerProxy.messages.in
-    UIProcess/WebFullScreenManagerProxy.messages.in
-    UIProcess/WebGeolocationManagerProxy.messages.in
-    UIProcess/WebInspectorProxy.messages.in
-    UIProcess/WebPageProxy.messages.in
-    UIProcess/WebPasteboardProxy.messages.in
-    UIProcess/WebProcessPool.messages.in
-    UIProcess/WebProcessProxy.messages.in
+    NetworkProcess/storage/NetworkStorageManager
 
-    UIProcess/Automation/WebAutomationSession.messages.in
+    NetworkProcess/webrtc/NetworkMDNSRegister
+    NetworkProcess/webrtc/NetworkRTCMonitor
+    NetworkProcess/webrtc/NetworkRTCProvider
+    NetworkProcess/webrtc/RTCDataChannelRemoteManagerProxy
 
-    UIProcess/Downloads/DownloadProxy.messages.in
+    Shared/AuxiliaryProcess
+    Shared/IPCStreamTester
+    Shared/IPCStreamTesterProxy
+    Shared/IPCTester
+    Shared/WebConnection
 
-    UIProcess/Network/NetworkProcessProxy.messages.in
+    Shared/Authentication/AuthenticationManager
 
-    UIProcess/Plugins/PluginProcessProxy.messages.in
+    Shared/Notifications/NotificationManagerMessageHandler
 
-    UIProcess/UserContent/WebUserContentControllerProxy.messages.in
+    UIProcess/DrawingAreaProxy
 
-    WebProcess/WebProcess.messages.in
+    UIProcess/Media/RemoteMediaSessionCoordinatorProxy
 
-    WebProcess/Automation/WebAutomationSessionProxy.messages.in
+    UIProcess/SpeechRecognitionRemoteRealtimeMediaSourceManager
+    UIProcess/SpeechRecognitionServer
+    UIProcess/VisitedLinkStore
+    UIProcess/WebCookieManagerProxy
+    UIProcess/WebFullScreenManagerProxy
+    UIProcess/WebGeolocationManagerProxy
+    UIProcess/WebLockRegistryProxy
+    UIProcess/WebPageProxy
+    UIProcess/WebPasteboardProxy
+    UIProcess/WebProcessPool
+    UIProcess/WebProcessProxy
 
-    WebProcess/Databases/IndexedDB/WebIDBConnectionToServer.messages.in
+    UIProcess/Automation/WebAutomationSession
 
-    WebProcess/FullScreen/WebFullScreenManager.messages.in
+    UIProcess/Downloads/DownloadProxy
 
-    WebProcess/Geolocation/WebGeolocationManager.messages.in
+    UIProcess/GPU/GPUProcessProxy
 
-    WebProcess/Network/webrtc/WebMDNSRegister.messages.in
-    WebProcess/Network/webrtc/WebRTCMonitor.messages.in
-    WebProcess/Network/webrtc/WebRTCResolver.messages.in
-    WebProcess/Network/webrtc/WebRTCSocket.messages.in
+    UIProcess/Inspector/RemoteWebInspectorUIProxy
+    UIProcess/Inspector/WebInspectorUIProxy
 
-    WebProcess/Network/NetworkProcessConnection.messages.in
-    WebProcess/Network/WebResourceLoader.messages.in
-    WebProcess/Network/WebSocketChannel.messages.in
-    WebProcess/Network/WebSocketStream.messages.in
+    UIProcess/Network/NetworkProcessProxy
 
-    WebProcess/Notifications/WebNotificationManager.messages.in
+    UIProcess/UserContent/WebUserContentControllerProxy
 
-    WebProcess/Plugins/PluginProcessConnection.messages.in
-    WebProcess/Plugins/PluginProcessConnectionManager.messages.in
-    WebProcess/Plugins/PluginProxy.messages.in
+    UIProcess/XR/PlatformXRSystem
 
-    WebProcess/Storage/WebSWClientConnection.messages.in
-    WebProcess/Storage/WebSWContextManagerConnection.messages.in
+    WebProcess/WebProcess
 
-    WebProcess/UserContent/WebUserContentController.messages.in
+    WebProcess/Automation/WebAutomationSessionProxy
 
-    WebProcess/WebPage/DrawingArea.messages.in
-    WebProcess/WebPage/EventDispatcher.messages.in
-    WebProcess/WebPage/RemoteWebInspectorUI.messages.in
-    WebProcess/WebPage/VisitedLinkTableController.messages.in
-    WebProcess/WebPage/WebInspector.messages.in
-    WebProcess/WebPage/WebInspectorInterruptDispatcher.messages.in
-    WebProcess/WebPage/WebInspectorUI.messages.in
-    WebProcess/WebPage/WebPage.messages.in
+    WebProcess/Databases/IndexedDB/WebIDBConnectionToServer
 
-    WebProcess/WebStorage/StorageAreaMap.messages.in
+    WebProcess/FullScreen/WebFullScreenManager
+
+    WebProcess/GPU/GPUProcessConnection
+
+    WebProcess/GPU/graphics/RemoteGraphicsContextGLProxy
+    WebProcess/GPU/graphics/RemoteRenderingBackendProxy
+
+    WebProcess/GPU/graphics/WebGPU/RemoteGPUProxy
+
+    WebProcess/GPU/media/RemoteAudioHardwareListener
+    WebProcess/GPU/media/MediaPlayerPrivateRemote
+    WebProcess/GPU/media/MediaSourcePrivateRemote
+    WebProcess/GPU/media/RemoteAudioSession
+    WebProcess/GPU/media/RemoteAudioSourceProviderManager
+    WebProcess/GPU/media/RemoteCDMInstance
+    WebProcess/GPU/media/RemoteCDMInstanceSession
+    WebProcess/GPU/media/RemoteLegacyCDMSession
+    WebProcess/GPU/media/RemoteRemoteCommandListener
+    WebProcess/GPU/media/SourceBufferPrivateRemote
+
+    WebProcess/GPU/webrtc/LibWebRTCCodecs
+    WebProcess/GPU/webrtc/RemoteVideoFrameObjectHeapProxyProcessor
+    WebProcess/GPU/webrtc/SampleBufferDisplayLayer
+
+    WebProcess/Geolocation/WebGeolocationManager
+
+    WebProcess/Inspector/RemoteWebInspectorUI
+    WebProcess/Inspector/WebInspector
+    WebProcess/Inspector/WebInspectorInterruptDispatcher
+    WebProcess/Inspector/WebInspectorUI
+
+    WebProcess/MediaSession/RemoteMediaSessionCoordinator
+
+    WebProcess/Network/webrtc/LibWebRTCNetwork
+    WebProcess/Network/webrtc/RTCDataChannelRemoteManager
+    WebProcess/Network/webrtc/WebMDNSRegister
+    WebProcess/Network/webrtc/WebRTCMonitor
+    WebProcess/Network/webrtc/WebRTCResolver
+
+    WebProcess/Network/NetworkProcessConnection
+    WebProcess/Network/WebResourceLoader
+    WebProcess/Network/WebSocketChannel
+    WebProcess/Network/WebSocketStream
+
+    WebProcess/Notifications/WebNotificationManager
+
+    WebProcess/Speech/SpeechRecognitionRealtimeMediaSourceManager
+
+    WebProcess/Storage/WebSharedWorkerContextManagerConnection
+    WebProcess/Storage/WebSharedWorkerObjectConnection
+    WebProcess/Storage/WebSWClientConnection
+    WebProcess/Storage/WebSWContextManagerConnection
+
+    WebProcess/UserContent/WebUserContentController
+
+    WebProcess/WebCoreSupport/RemoteWebLockRegistry
+    WebProcess/WebCoreSupport/WebBroadcastChannelRegistry
+    WebProcess/WebCoreSupport/WebFileSystemStorageConnection
+    WebProcess/WebCoreSupport/WebSpeechRecognitionConnection
+
+    WebProcess/WebPage/DrawingArea
+    WebProcess/WebPage/EventDispatcher
+    WebProcess/WebPage/VisitedLinkTableController
+    WebProcess/WebPage/WebPage
+
+    WebProcess/WebStorage/StorageAreaMap
+
+    WebProcess/XR/PlatformXRSystemProxy
 )
 
-if (${WebCore_LIBRARY_TYPE} STREQUAL STATIC)
-    # Link with WebCore as PRIVATE not to propagate WebCore to all users of WebKit.
-    set(WebKit_LIBRARIES
-        PRIVATE WebCore
-        PUBLIC WebCoreHeaderInterface
+set(WebKit_FRAMEWORKS
+    JavaScriptCore
+    PAL
+    WTF
+    WebCore
+)
+if (NOT USE_SYSTEM_MALLOC)
+    list(APPEND WebKit_FRAMEWORKS bmalloc)
+endif ()
+
+set(WebProcess_LIBRARIES WebKit)
+set(NetworkProcess_LIBRARIES WebKit)
+set(GPUProcess_LIBRARIES WebKit)
+set(PluginProcess_LIBRARIES WebKit)
+set(WebAuthnProcess_LIBRARIES WebKit)
+
+if (ENABLE_ENCRYPTED_MEDIA AND ENABLE_OPENCDM)
+  list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
+      ${OPENCDM_INCLUDE_DIRS}
+  )
+endif ()
+
+# For platforms that want to use system-provided OpenGL (ES) / EGL headers,
+# these include directories, libraries or definitions need to be
+# added before the ANGLE directories.
+if (USE_LIBEPOXY)
+    list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
+        ${LIBEPOXY_INCLUDE_DIRS}
+    )
+    list(APPEND WebKit_PRIVATE_LIBRARIES
+        ${LIBEPOXY_LIBRARIES}
+    )
+    add_definitions(${LIBEPOXY_DEFINITIONS})
+elseif (USE_ANGLE_EGL)
+    # Prepend to make sure the ANGLE headers are found before system headers
+    list(PREPEND WebKit_PRIVATE_LIBRARIES
+        ANGLE::GLES
+        ANGLE::EGL
     )
 else ()
-    # All users of WebKit need to link WebCore if WebCore is a shared library.
-    if (APPLE)
-        set(WebKit_LIBRARIES PRIVATE WebCore)
-    else ()
-        set(WebKit_LIBRARIES PUBLIC WebCore)
-    endif ()
-endif ()
-
-set(WebProcess_LIBRARIES
-    WebKit
-)
-
-set(NetworkProcess_LIBRARIES
-    WebKit
-)
-
-set(PluginProcess_LIBRARIES
-    WebKit
-)
-
-if (ENABLE_GRAPHICS_CONTEXT_3D)
-    # For platforms that want to use system-provided OpenGL (ES) / EGL headers,
-    # these include directories, libraries or definitions need to be
-    # added before the ANGLE directories.
-    if (USE_LIBEPOXY)
+    if (USE_EGL)
         list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
-            ${LIBEPOXY_INCLUDE_DIRS}
+            ${EGL_INCLUDE_DIRS}
         )
-        list(APPEND WebKit_LIBRARIES
-            PRIVATE ${LIBEPOXY_LIBRARIES}
+        list(APPEND WebKit_PRIVATE_LIBRARIES
+            ${EGL_LIBRARIES}
         )
-        add_definitions(${LIBEPOXY_DEFINITIONS})
-    else ()
-        if (USE_OPENGL)
-            list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
-                ${OPENGL_INCLUDE_DIRS}
-            )
-            list(APPEND WebKit_LIBRARIES
-                PRIVATE ${OPENGL_LIBRARIES}
-            )
-            add_definitions(${OPENGL_DEFINITIONS})
-        elseif (USE_OPENGL_ES)
-            list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
-                ${OPENGLES2_INCLUDE_DIRS}
-            )
-            list(APPEND WebKit_LIBRARIES
-                PRIVATE ${OPENGLES2_LIBRARIES}
-            )
-            add_definitions(${OPENGLES2_DEFINITIONS})
-        endif ()
-
-        if (USE_EGL)
-            list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES
-                ${EGL_INCLUDE_DIRS}
-            )
-            list(APPEND WebKit_LIBRARIES
-                PRIVATE ${EGL_LIBRARIES}
-            )
-            add_definitions(${EGL_DEFINITIONS})
-        endif ()
+        add_definitions(${EGL_DEFINITIONS})
     endif ()
 endif ()
 
-if (ATOMIC_INT64_REQUIRES_LIBATOMIC)
-    list(APPEND WebKit_LIBRARIES PRIVATE atomic)
+if (USE_LIBWEBRTC)
+    list(APPEND WebKit_SYSTEM_INCLUDE_DIRECTORIES "${THIRDPARTY_DIR}/libwebrtc/Source/"
+        "${THIRDPARTY_DIR}/libwebrtc/Source/webrtc"
+        "${THIRDPARTY_DIR}/libwebrtc/Source/third_party/abseil-cpp")
+    list(APPEND WebKit_LIBRARIES webrtc)
+endif ()
+
+if (ATOMICS_REQUIRE_LIBATOMIC)
+    list(APPEND WebKit_PRIVATE_LIBRARIES atomic)
 endif ()
 
 if (UNIX)
@@ -287,7 +401,7 @@ if (UNIX)
         set(CMAKE_REQUIRED_LIBRARIES rt)
         check_function_exists(shm_open SHM_OPEN_REQUIRES_LIBRT)
         if (SHM_OPEN_REQUIRES_LIBRT)
-            list(APPEND WebKit_LIBRARIES PRIVATE rt)
+            list(APPEND WebKit_PRIVATE_LIBRARIES rt)
         endif ()
         unset(CMAKE_REQUIRED_LIBRARIES)
     endif ()
@@ -303,36 +417,101 @@ macro(ADD_WEBKIT_PREFIX_HEADER _target)
     endif ()
 endmacro()
 
-set(WebKit_AUTOMATION_PROTOCOL_GENERATOR_EXTRA_FLAGS
+set(WebKit_AUTOMATION_PROTOCOL_GENERATOR_EXTRA_FLAGS)
+
+set(WebKit_INTERFACE_LIBRARIES WebKit)
+set(WebKit_INTERFACE_INCLUDE_DIRECTORIES
+    ${WebKit_FRAMEWORK_HEADERS_DIR}
+    ${WebKit_PRIVATE_FRAMEWORK_HEADERS_DIR}
 )
+set(WebKit_INTERFACE_DEPENDENCIES
+    NetworkProcess
+    WebProcess
+)
+
+WEBKIT_EXECUTABLE_DECLARE(WebProcess)
+WEBKIT_EXECUTABLE_DECLARE(NetworkProcess)
+
+if (ENABLE_GPU_PROCESS)
+    WEBKIT_EXECUTABLE_DECLARE(GPUProcess)
+    list(APPEND WebKit_INTERFACE_DEPENDENCIES GPUProcess)
+endif ()
+
+if (ENABLE_PLUGIN_PROCESS)
+    WEBKIT_EXECUTABLE_DECLARE(PluginProcess)
+    list(APPEND WebKit_INTERFACE_DEPENDENCIES PluginProcess)
+endif ()
+
+if (ENABLE_WEB_AUTHN)
+    WEBKIT_EXECUTABLE_DECLARE(WebAuthnProcess)
+    list(APPEND WebKit_INTERFACE_DEPENDENCIES WebAuthnProcess)
+endif ()
 
 WEBKIT_FRAMEWORK_DECLARE(WebKit)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
-# Helper macro which wraps generate-message-receiver.py and generate-message-header.py scripts
-#   _output_source is a list name which will contain generated sources.(eg. WebKit_SOURCES)
-#   _input_files are messages.in files to generate.
-macro(GENERATE_MESSAGE_SOURCES _output_source _input_files)
-    foreach (_file ${_input_files})
-        get_filename_component(_name ${_file} NAME_WE)
-        add_custom_command(
-            OUTPUT ${WebKit_DERIVED_SOURCES_DIR}/${_name}MessageReceiver.cpp ${WebKit_DERIVED_SOURCES_DIR}/${_name}Messages.h
-            MAIN_DEPENDENCY ${_file}
-            DEPENDS ${WEBKIT_DIR}/Scripts/webkit/__init__.py
-                    ${WEBKIT_DIR}/Scripts/webkit/messages.py
-                    ${WEBKIT_DIR}/Scripts/webkit/model.py
-                    ${WEBKIT_DIR}/Scripts/webkit/parser.py
-            COMMAND ${PYTHON_EXECUTABLE} ${WEBKIT_DIR}/Scripts/generate-message-receiver.py ${_file} > ${WebKit_DERIVED_SOURCES_DIR}/${_name}MessageReceiver.cpp
-            COMMAND ${PYTHON_EXECUTABLE} ${WEBKIT_DIR}/Scripts/generate-messages-header.py ${_file} > ${WebKit_DERIVED_SOURCES_DIR}/${_name}Messages.h
-            WORKING_DIRECTORY ${WEBKIT_DIR}
-            VERBATIM)
+if (WebKit_PUBLIC_FRAMEWORK_HEADERS)
+    WEBKIT_COPY_FILES(WebKit_CopyHeaders
+        DESTINATION ${WebKit_FRAMEWORK_HEADERS_DIR}/WebKit
+        FILES ${WebKit_PUBLIC_FRAMEWORK_HEADERS}
+        FLATTENED
+    )
+    list(APPEND WebKit_DEPENDENCIES WebKit_CopyHeaders)
+endif ()
 
-        if (${PORT} STREQUAL "Qt")
-            set_property(SOURCE ${WebKit_DERIVED_SOURCES_DIR}/${_name}MessageReceiver.cpp PROPERTY SKIP_AUTOMOC ON)
-        endif ()
+if (WebKit_PRIVATE_FRAMEWORK_HEADERS)
+    WEBKIT_COPY_FILES(WebKit_CopyPrivateHeaders
+        DESTINATION ${WebKit_PRIVATE_FRAMEWORK_HEADERS_DIR}/WebKit
+        FILES ${WebKit_PRIVATE_FRAMEWORK_HEADERS}
+        FLATTENED
+    )
+    list(APPEND WebKit_INTERFACE_DEPENDENCIES WebKit_CopyPrivateHeaders)
+endif ()
+
+# Helper macro which wraps the generate-message-receiver.py script
+#   _output_source is a list name which will contain generated sources.(eg. WebKit_SOURCES)
+#   _inputs are messages.in files to generate.
+macro(GENERATE_MESSAGE_SOURCES _output_source _inputs)
+    unset(_input_files)
+    unset(_outputs)
+    foreach (_file IN ITEMS ${_inputs})
+        get_filename_component(_name ${_file} NAME_WE)
+        list(APPEND _input_files ${WEBKIT_DIR}/${_file}.messages.in)
+        list(APPEND _outputs
+            ${WebKit_DERIVED_SOURCES_DIR}/${_name}MessageReceiver.cpp
+            ${WebKit_DERIVED_SOURCES_DIR}/${_name}Messages.h
+            ${WebKit_DERIVED_SOURCES_DIR}/${_name}MessagesReplies.h
+        )
+
+if (${PORT} STREQUAL "Qt")
+        set_property(SOURCE ${WebKit_DERIVED_SOURCES_DIR}/${_name}MessageReceiver.cpp PROPERTY SKIP_AUTOMOC ON)
+endif ()
 
         list(APPEND ${_output_source} ${WebKit_DERIVED_SOURCES_DIR}/${_name}MessageReceiver.cpp)
     endforeach ()
+
+    list(APPEND ${_output_source}
+        ${WebKit_DERIVED_SOURCES_DIR}/MessageArgumentDescriptions.cpp
+        ${WebKit_DERIVED_SOURCES_DIR}/MessageNames.cpp
+    )
+
+    add_custom_command(
+        OUTPUT
+            ${WebKit_DERIVED_SOURCES_DIR}/MessageArgumentDescriptions.cpp
+            ${WebKit_DERIVED_SOURCES_DIR}/MessageNames.cpp
+            ${WebKit_DERIVED_SOURCES_DIR}/MessageNames.h
+            ${_outputs}
+        MAIN_DEPENDENCY ${WEBKIT_DIR}/Scripts/generate-message-receiver.py
+        DEPENDS
+            ${WEBKIT_DIR}/Scripts/webkit/__init__.py
+            ${WEBKIT_DIR}/Scripts/webkit/messages.py
+            ${WEBKIT_DIR}/Scripts/webkit/model.py
+            ${WEBKIT_DIR}/Scripts/webkit/parser.py
+            ${_input_files}
+        COMMAND ${PYTHON_EXECUTABLE} ${WEBKIT_DIR}/Scripts/generate-message-receiver.py ${WEBKIT_DIR} ${_inputs}
+        WORKING_DIRECTORY ${WebKit_DERIVED_SOURCES_DIR}
+        VERBATIM
+    )
 endmacro()
 GENERATE_MESSAGE_SOURCES(WebKit_DERIVED_SOURCES "${WebKit_MESSAGES_IN_FILES}")
 
@@ -391,17 +570,26 @@ set(WebKit_WEB_PREFERENCES_TEMPLATES
     ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPageUpdatePreferences.cpp.erb
     ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesDefinitions.h.erb
     ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesExperimentalFeatures.cpp.erb
+    ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesGetterSetters.cpp.erb
     ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesInternalDebugFeatures.cpp.erb
     ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesKeys.cpp.erb
     ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesKeys.h.erb
     ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesStoreDefaultsMap.cpp.erb
 )
 
+set(WebKit_WEB_PREFERENCES
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml
+)
+
+set_source_files_properties(${WebKit_WEB_PREFERENCES} PROPERTIES GENERATED TRUE)
+
 add_custom_command(
-    OUTPUT ${WebKit_DERIVED_SOURCES_DIR}/WebPageUpdatePreferences.cpp ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesDefinitions.h ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesExperimentalFeatures.cpp ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesInternalDebugFeatures.cpp ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesKeys.cpp ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesKeys.h ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesStoreDefaultsMap.cpp
-    MAIN_DEPENDENCY ${WEBKIT_DIR}/Shared/WebPreferences.yaml
-    DEPENDS ${WebKit_WEB_PREFERENCES_TEMPLATES}
-    COMMAND ${RUBY_EXECUTABLE} ${WEBKIT_DIR}/Scripts/GeneratePreferences.rb --input ${WEBKIT_DIR}/Shared/WebPreferences.yaml --outputDir "${WebKit_DERIVED_SOURCES_DIR}"
+    OUTPUT ${WebKit_DERIVED_SOURCES_DIR}/WebPageUpdatePreferences.cpp ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesDefinitions.h ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesExperimentalFeatures.cpp ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesGetterSetters.cpp ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesInternalDebugFeatures.cpp ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesKeys.cpp ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesKeys.h ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesStoreDefaultsMap.cpp
+    DEPENDS ${WebKit_WEB_PREFERENCES_TEMPLATES} ${WebKit_WEB_PREFERENCES} WTF_CopyPreferences
+    COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/GeneratePreferences.rb --frontend WebKit --base ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml --debug ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml --experimental ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml --internal ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml --outputDir "${WebKit_DERIVED_SOURCES_DIR}" --template ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPageUpdatePreferences.cpp.erb --template ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesDefinitions.h.erb --template ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesExperimentalFeatures.cpp.erb --template ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesGetterSetters.cpp.erb --template ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesInternalDebugFeatures.cpp.erb --template ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesKeys.cpp.erb --template ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesKeys.h.erb --template ${WEBKIT_DIR}/Scripts/PreferencesTemplates/WebPreferencesStoreDefaultsMap.cpp.erb
     VERBATIM)
 
 list(APPEND WebKit_HEADERS
@@ -412,62 +600,64 @@ list(APPEND WebKit_HEADERS
 list(APPEND WebKit_SOURCES
     ${WebKit_DERIVED_SOURCES_DIR}/WebPageUpdatePreferences.cpp
     ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesExperimentalFeatures.cpp
+    ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesGetterSetters.cpp
     ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesInternalDebugFeatures.cpp
     ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesKeys.cpp
     ${WebKit_DERIVED_SOURCES_DIR}/WebPreferencesStoreDefaultsMap.cpp
 )
 
-
 list(APPEND WebKit_SOURCES ${WebKit_DERIVED_SOURCES})
 
 WEBKIT_COMPUTE_SOURCES(WebKit)
-
 WEBKIT_FRAMEWORK(WebKit)
-add_dependencies(WebKit WebCore ${WEBKIT_EXTRA_DEPENDENCIES})
+WEBKIT_FRAMEWORK_TARGET(WebKit)
 ADD_WEBKIT_PREFIX_HEADER(WebKit)
 
 QT_ADD_EXTRA_WEBKIT_TARGET_EXPORT(WebKit2)
 
-add_executable(WebProcess ${WebProcess_SOURCES})
+list(APPEND WebProcess_PRIVATE_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:WebKit,INCLUDE_DIRECTORIES>)
+WEBKIT_EXECUTABLE(WebProcess)
 ADD_WEBKIT_PREFIX_HEADER(WebProcess)
-target_link_libraries(WebProcess ${WebProcess_LIBRARIES})
-target_include_directories(WebProcess PRIVATE ${WebProcess_INCLUDE_DIRECTORIES})
 
-if (WebKit_WebProcess_OUTPUT_NAME)
-    set_target_properties(WebProcess PROPERTIES OUTPUT_NAME ${WebKit_WebProcess_OUTPUT_NAME})
+list(APPEND NetworkProcess_PRIVATE_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:WebKit,INCLUDE_DIRECTORIES>)
+WEBKIT_EXECUTABLE(NetworkProcess)
+ADD_WEBKIT_PREFIX_HEADER(NetworkProcess)
+
+if (ENABLE_GPU_PROCESS)
+    list(APPEND GPUProcess_PRIVATE_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:WebKit,INCLUDE_DIRECTORIES>)
+    WEBKIT_EXECUTABLE(GPUProcess)
+    ADD_WEBKIT_PREFIX_HEADER(GPUProcess)
 endif ()
 
-add_executable(NetworkProcess ${NetworkProcess_SOURCES})
-ADD_WEBKIT_PREFIX_HEADER(NetworkProcess)
-target_link_libraries(NetworkProcess ${NetworkProcess_LIBRARIES})
-target_include_directories(NetworkProcess PRIVATE ${NetworkProcess_INCLUDE_DIRECTORIES})
+if (ENABLE_PLUGIN_PROCESS)
+    list(APPEND PluginProcess_PRIVATE_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:WebKit,INCLUDE_DIRECTORIES>)
+    WEBKIT_EXECUTABLE(PluginProcess)
+    ADD_WEBKIT_PREFIX_HEADER(PluginProcess)
+endif ()
 
-if (WebKit_NetworkProcess_OUTPUT_NAME)
-    set_target_properties(NetworkProcess PROPERTIES OUTPUT_NAME ${WebKit_NetworkProcess_OUTPUT_NAME})
+if (ENABLE_WEB_AUTHN)
+    list(APPEND WebAuthnProcess_PRIVATE_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:WebKit,INCLUDE_DIRECTORIES>)
+    WEBKIT_EXECUTABLE(WebAuthnProcess)
+    ADD_WEBKIT_PREFIX_HEADER(WebAuthnProcess)
 endif ()
 
 if (COMPILER_IS_GCC_OR_CLANG)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebKit -Wno-unused-parameter)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebProcess -Wno-unused-parameter)
     WEBKIT_ADD_TARGET_CXX_FLAGS(NetworkProcess -Wno-unused-parameter)
-endif ()
-
-# FIXME: Mac should build a plugin process.
-if (ENABLE_PLUGIN_PROCESS AND NOT "${PORT}" STREQUAL "Mac")
-    add_definitions(-DENABLE_PLUGIN_PROCESS=1)
-    add_executable(PluginProcess ${PluginProcess_SOURCES})
-    ADD_WEBKIT_PREFIX_HEADER(PluginProcess)
-    target_link_libraries(PluginProcess ${PluginProcess_LIBRARIES})
-    target_include_directories(PluginProcess PRIVATE ${PluginProcess_INCLUDE_DIRECTORIES})
-    install(TARGETS PluginProcess DESTINATION "${LIBEXEC_INSTALL_DIR}")
-
-    if (COMPILER_IS_GCC_OR_CLANG)
+    if (ENABLE_GPU_PROCESS)
+        WEBKIT_ADD_TARGET_CXX_FLAGS(GPUProcess -Wno-unused-parameter)
+    endif ()
+    if (ENABLE_PLUGIN_PROCESS)
         WEBKIT_ADD_TARGET_CXX_FLAGS(PluginProcess -Wno-unused-parameter)
     endif ()
-
-    if (WebKit_PluginProcess_OUTPUT_NAME)
-      set_target_properties(PluginProcess PROPERTIES OUTPUT_NAME ${WebKit_PluginProcess_OUTPUT_NAME})
+    if (ENABLE_WEB_AUTHN)
+        WEBKIT_ADD_TARGET_CXX_FLAGS(WebAuthnProcess -Wno-unused-parameter)
     endif ()
+endif ()
+
+if (APPLE)
+    WEBKIT_ADD_TARGET_CXX_FLAGS(WebKit -fobjc-weak)
 endif ()
 
 if ("${PORT}" STREQUAL "Mac")

@@ -1,3 +1,0 @@
-
-FAIL lineCap 'butt' is rendered correctly Can't find variable: OffscreenCanvas
-

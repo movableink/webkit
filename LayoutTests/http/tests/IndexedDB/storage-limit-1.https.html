@@ -8,7 +8,7 @@
 if (window.testRunner)
     testRunner.setAllowStorageQuotaIncrease(false);
 
-description("This test makes sure that storage of indexedDB  and Cache API do not grow unboundedly.");
+description("This test makes sure that storage of indexedDB and Cache API do not grow unboundedly.");
 
 window.caches.open("test").then(cache => {
     return cache.put(new Request("/test"), new Response(new Uint8Array(200 * 1024)));
@@ -52,6 +52,7 @@ async function onOpenSuccess(event)
         testFailed("Add operation should fail because storage limit is reached, but succeeded.");
         finishJSTest();
     }
-}</script>
+}
+</script>
 </body>
 </html>

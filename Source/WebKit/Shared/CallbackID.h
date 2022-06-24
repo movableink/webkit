@@ -81,12 +81,12 @@ public:
         encoder << m_id;
     }
 
-    template<class Decoder> static Optional<CallbackID> decode(Decoder& decoder)
+    template<class Decoder> static std::optional<CallbackID> decode(Decoder& decoder)
     {
-        Optional<uint64_t> identifier;
+        std::optional<uint64_t> identifier;
         decoder >> identifier;
         if (!identifier)
-            return WTF::nullopt;
+            return std::nullopt;
         RELEASE_ASSERT(isValidCallbackID(*identifier));
         return fromInteger(*identifier);
     }
@@ -100,7 +100,6 @@ private:
 
     friend class CallbackMap;
     template <typename CallbackType> friend class SpecificCallbackMap;
-    friend class OptionalCallbackID;
     friend struct WTF::CallbackIDHash;
     friend HashTraits<WebKit::CallbackID>;
 
@@ -118,11 +117,9 @@ struct CallbackIDHash {
 };
 template<> struct HashTraits<WebKit::CallbackID> : GenericHashTraits<WebKit::CallbackID> {
     static WebKit::CallbackID emptyValue() { return WebKit::CallbackID(); }
-    static void constructDeletedValue(WebKit::CallbackID& slot) { slot = WebKit::CallbackID(std::numeric_limits<uint64_t>::max()); }
-    static bool isDeletedValue(const WebKit::CallbackID& slot) { return slot.m_id == std::numeric_limits<uint64_t>::max(); }
+    static void constructDeletedValue(WebKit::CallbackID& slot) { HashTraits<uint64_t>::constructDeletedValue(slot.m_id); }
+    static bool isDeletedValue(const WebKit::CallbackID& slot) { return HashTraits<uint64_t>::isDeletedValue(slot.m_id); }
 };
-template<> struct DefaultHash<WebKit::CallbackID> {
-    typedef CallbackIDHash Hash;
-};
+template<> struct DefaultHash<WebKit::CallbackID> : CallbackIDHash { };
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,28 +35,22 @@
 
 namespace WebCore {
 
-NSString *localizedNSString(NSString *key)
-{
-#if !PLATFORM(IOS_FAMILY)
-    // Can be called on a dispatch queue when initializing strings on iOS.
-    // See LoadWebLocalizedStrings and <rdar://problem/7902473>.
-    ASSERT(isMainThread());
-#endif
-
-    static NSBundle *bundle = [NSBundle bundleWithIdentifier:@"com.apple.WebCore"];
-    return [bundle localizedStringForKey:key value:@"localized string not found" table:nullptr];
-}
-
-String localizedString(const char* key)
-{
-    RetainPtr<CFStringRef> keyString = adoptCF(CFStringCreateWithCStringNoCopy(0, key, kCFStringEncodingUTF8, kCFAllocatorNull));
-    return localizedNSString((__bridge NSString *)keyString.get());
-}
-
 String copyImageUnknownFileLabel()
 {
     return WEB_UI_STRING("unknown", "Unknown filename");
 }
+
+#if ENABLE(APP_HIGHLIGHTS)
+String contextMenuItemTagAddHighlightToCurrentQuickNote()
+{
+    return WEB_UI_NSSTRING(@"Add to Quick Note", "Add to Quick Note context menu item.");
+}
+
+String contextMenuItemTagAddHighlightToNewQuickNote()
+{
+    return WEB_UI_NSSTRING(@"New Quick Note", "New Quick Note context menu item.");
+}
+#endif
 
 #if ENABLE(CONTEXT_MENUS)
 String contextMenuItemTagSearchInSpotlight()
@@ -67,7 +61,7 @@ String contextMenuItemTagSearchInSpotlight()
 String contextMenuItemTagSearchWeb()
 {
     auto searchProviderName = PAL::defaultSearchProviderDisplayName();
-    return formatLocalizedString(WEB_UI_STRING("Search with %@", "Search with search provider context menu item with provider name inserted"), searchProviderName.get());
+    return WEB_UI_FORMAT_CFSTRING("Search with %@", "Search with search provider context menu item with provider name inserted", searchProviderName.get());
 }
 
 String contextMenuItemTagShowFonts()
@@ -181,64 +175,6 @@ String contextMenuItemTagExitVideoEnhancedFullscreen()
 #endif
 #endif // ENABLE(CONTEXT_MENUS)
 
-String AXARIAContentGroupText(const String& ariaType)
-{
-    if (ariaType == "ARIAApplicationAlert")
-        return WEB_UI_STRING("alert", "An ARIA accessibility group that acts as an alert.");
-    if (ariaType == "ARIAApplicationAlertDialog")
-        return WEB_UI_STRING("web alert dialog", "An ARIA accessibility group that acts as an alert dialog.");
-    if (ariaType == "ARIAApplicationDialog")
-        return WEB_UI_STRING("web dialog", "An ARIA accessibility group that acts as an dialog.");
-    if (ariaType == "ARIAApplicationLog")
-        return WEB_UI_STRING("log", "An ARIA accessibility group that acts as a console log.");
-    if (ariaType == "ARIAApplicationMarquee")
-        return WEB_UI_STRING("marquee", "An ARIA accessibility group that acts as a marquee.");
-    if (ariaType == "ARIAApplicationStatus")
-        return WEB_UI_STRING("application status", "An ARIA accessibility group that acts as a status update.");
-    if (ariaType == "ARIAApplicationTimer")
-        return WEB_UI_STRING("timer", "An ARIA accessibility group that acts as an updating timer.");
-    if (ariaType == "ARIADocument")
-        return WEB_UI_STRING("document", "An ARIA accessibility group that acts as a document.");
-    if (ariaType == "ARIADocumentArticle")
-        return WEB_UI_STRING("article", "An ARIA accessibility group that acts as an article.");
-    if (ariaType == "ARIADocumentNote")
-        return WEB_UI_STRING("note", "An ARIA accessibility group that acts as a note in a document.");
-    if (ariaType == "ARIAWebApplication")
-        return WEB_UI_STRING("web application", "An ARIA accessibility group that acts as an application.");
-    if (ariaType == "ARIALandmarkBanner")
-        return WEB_UI_STRING("banner", "An ARIA accessibility group that acts as a banner.");
-    if (ariaType == "ARIALandmarkComplementary")
-        return WEB_UI_STRING("complementary", "An ARIA accessibility group that acts as a region of complementary information.");
-    if (ariaType == "ARIALandmarkContentInfo")
-        return WEB_UI_STRING("content information", "An ARIA accessibility group that contains content.");
-    if (ariaType == "ARIALandmarkMain")
-        return WEB_UI_STRING("main", "An ARIA accessibility group that is the main portion of the website.");
-    if (ariaType == "ARIALandmarkNavigation")
-        return WEB_UI_STRING("navigation", "An ARIA accessibility group that contains the main navigation elements of a website.");
-    if (ariaType == "ARIALandmarkRegion")
-        return WEB_UI_STRING("region", "An ARIA accessibility group that acts as a distinct region in a document.");
-    if (ariaType == "ARIALandmarkSearch")
-        return WEB_UI_STRING("search", "An ARIA accessibility group that contains a search feature of a website.");
-    if (ariaType == "ARIAUserInterfaceTooltip")
-        return WEB_UI_STRING("tooltip", "An ARIA accessibility group that acts as a tooltip.");
-    if (ariaType == "ARIATabPanel")
-        return WEB_UI_STRING("tab panel", "An ARIA accessibility group that contains the content of a tab.");
-    if (ariaType == "ARIADocumentMath")
-        return WEB_UI_STRING("math", "An ARIA accessibility group that contains mathematical symbols.");
-    return String();
-}
-
-String AXHorizontalRuleDescriptionText()
-{
-    return WEB_UI_STRING("separator", "accessibility role description for a horizontal rule [<hr>]");
-}
-
-String AXMarkText()
-{
-    return WEB_UI_STRING("highlighted", "accessibility role description for a mark element");
-}
-
-#if ENABLE(METER_ELEMENT)
 String AXMeterGaugeRegionOptimumText()
 {
     return WEB_UI_STRING("optimal value", "The optimum value description for a meter element.");
@@ -253,7 +189,6 @@ String AXMeterGaugeRegionLessGoodText()
 {
     return WEB_UI_STRING("critical value", "The less good value description for a meter element.");
 }
-#endif // ENABLE(METER_ELEMENT)
 
 String builtInPDFPluginName()
 {
@@ -280,7 +215,7 @@ String keygenMenuItem2048()
 
 String keygenKeychainItemName(const String& host)
 {
-    return formatLocalizedString(WEB_UI_STRING("Key from %@", "Name of keychain key generated by the KEYGEN tag"), host.createCFString().get());
+    return WEB_UI_FORMAT_CFSTRING("Key from %@", "Name of keychain key generated by the KEYGEN tag", host.createCFString().get());
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -292,7 +227,7 @@ String htmlSelectMultipleItems(size_t count)
     case 1:
         return WEB_UI_STRING("1 Item", "Present the element <select multiple> when a single <option> is selected (iOS only)");
     default:
-        return formatLocalizedString(WEB_UI_STRING("%zu Items", "Present the number of selected <option> items in a <select multiple> element (iOS only)"), count);
+        return WEB_UI_FORMAT_CFSTRING("%zu Items", "Present the number of selected <option> items in a <select multiple> element (iOS only)", count);
     }
 }
 
@@ -315,11 +250,17 @@ String fileButtonNoMediaFilesSelectedLabel()
 {
     return WEB_UI_STRING("no media selected (multiple)", "Text to display in file button used in HTML forms for media files when no media files are selected and the button allows multiple files to be selected");
 }
+
+
+String formControlDoneButtonTitle()
+{
+    return WEB_UI_STRING("Done", "Title of the Done button for form controls.");
+}
 #endif
 
 String validationMessageTooLongText(int, int maxLength)
 {
-    return [NSString localizedStringWithFormat:WEB_UI_NSSTRING(@"Use no more than %d character(s)", @"Validation message for form control elements with a value shorter than maximum allowed length"), maxLength];
+    return WEB_UI_FORMAT_CFSTRING("Use no more than %d character(s)", "Validation message for form control elements with a value shorter than maximum allowed length", maxLength);
 }
 
 #if PLATFORM(MAC)
@@ -353,5 +294,43 @@ String exitFullScreenButtonAccessibilityTitle()
     return WEB_UI_STRING("Exit Full Screen", "Button for exiting full screen when in full screen media playback");
 }
 #endif // PLATFORM(MAC)
+
+#if ENABLE(IMAGE_ANALYSIS)
+
+String contextMenuItemTagLookUpImage()
+{
+    return WEB_UI_STRING("Look Up", "Title for Look Up action button");
+}
+
+String contextMenuItemTagQuickLookImage()
+{
+    return WEB_UI_STRING("Quick Look", "Title for Quick Look action button");
+}
+
+String contextMenuItemTagQuickLookImageForTextSelection()
+{
+    return WEB_UI_STRING("Select Text in Quick Look", "Title for Quick Look action button for images with text");
+}
+
+String contextMenuItemTagQuickLookImageForVisualSearch()
+{
+    return WEB_UI_STRING("Look Up in Quick Look", "Title for Quick Look action button for images with visual search results");
+}
+
+#endif // ENABLE(IMAGE_ANALYSIS)
+
+#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
+
+String contextMenuItemTagCopyCroppedImage()
+{
+    return WEB_UI_STRING("Copy Cropped Image", "Title for Copy Cropped Image");
+}
+
+String contextMenuItemTitleMarkupImage()
+{
+    return WEB_UI_STRING("Markup Image", "Image analysis markup menu item");
+}
+
+#endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
 
 } // namespace WebCore

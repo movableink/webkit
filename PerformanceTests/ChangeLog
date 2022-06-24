@@ -1,3 +1,1931 @@
+2022-03-12  Tim Horton  <timothy_horton@apple.com>
+
+        Adopt FALLBACK_PLATFORM_NAME in place of FALLBACK_PLATFORM
+        https://bugs.webkit.org/show_bug.cgi?id=237809
+
+        Reviewed by Per Arne Vollan.
+
+        * MediaTime/Configurations/SDKVariant.xcconfig:
+
+2022-03-08  Robin Morisset  <rmorisset@apple.com>
+
+        Enable tier-up in loops created by recursive tail call optimizations.
+        https://bugs.webkit.org/show_bug.cgi?id=178389
+
+        Reviewed by Saam Barati.
+
+        Just changed a constant for consistency with TailBench9000/merge-sort.js
+
+        * TailBench9000/merge-sort-cps.js:
+
+2022-03-01  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        Fix Speedometer's setTimeout throttling issue
+        https://bugs.webkit.org/show_bug.cgi?id=237303
+        rdar://89444976
+
+        Reviewed by Geoffrey Garen.
+
+        Speedometer is driving each test via setTimeout. Because we are using setTimeout to
+        measure async time in each subtest of Speedometer, our measurement included 4ms
+        throttle introduced due to nested setTimeout. This is happening in the test
+        harness (not test itself), and the intention of this test harness is not measuring
+        the throttle time. In this patch, we fix this nesting level propagation by inserting
+        window.requestAnimationFrame for each test run and BenchmarkRunner.prototype.waitForElement
+        so that we can reset nesting level count of setTimeout, which prevents the rendering
+        engine to insert 4ms throttle.
+
+        Since this affects on the score of async measurement, we bump the version number from 2.0 to 2.1
+
+        * Speedometer/InteractiveRunner.html:
+        * Speedometer/index.html:
+        * Speedometer/resources/benchmark-runner.js:
+        (resolveIfReady):
+        (BenchmarkRunner.prototype.waitForElement):
+        (BenchmarkRunner.prototype._runTest):
+        * Speedometer/resources/todomvc/architecture-examples/angular/README.md:
+        * Speedometer/resources/todomvc/architecture-examples/angularjs/readme.md:
+        * Speedometer/resources/todomvc/architecture-examples/backbone/readme.md:
+        * Speedometer/resources/todomvc/architecture-examples/emberjs/README.md:
+        * Speedometer/resources/todomvc/architecture-examples/preact/README.md:
+        * Speedometer/resources/todomvc/architecture-examples/react-redux/README.md:
+        * Speedometer/resources/todomvc/architecture-examples/react/README.md:
+        * Speedometer/resources/todomvc/architecture-examples/vuejs-cli/README.md:
+        * Speedometer/resources/todomvc/vanilla-examples/es2015-babel-webpack/README.md:
+        * Speedometer/resources/todomvc/vanilla-examples/es2015/README.md:
+        * Speedometer/resources/todomvc/vanilla-examples/vanillajs/readme.md:
+
+2022-02-18  Robert Jenner  <Jenner@apple.com>
+
+        Unreviewed, reverting r290149.
+
+        Broke Debug Builds.
+
+        Reverted changeset:
+
+        "Generate compile_commands.json on macOS Builds"
+        https://bugs.webkit.org/show_bug.cgi?id=235686
+        https://commits.webkit.org/r290149
+
+2022-02-18  Brandon Stewart  <brandonstewart@apple.com>
+
+        Generate compile_commands.json on macOS Builds
+        https://bugs.webkit.org/show_bug.cgi?id=235686
+
+        Reviewed by Saam Barati.
+
+        Add support for generating compile_commands.json file to WebKit.
+        
+        compile_commands.json can be used by tools like clangd to provide code complete,
+        refactoring, formatting, and cross references.
+
+        Steps to generate the compile commands file:
+        make r EXPORT_COMPILE_COMMANDS=YES
+        generate-compile-commands WebKitBuild/Release
+
+        * DecoderTest/Configurations/DebugRelease.xcconfig:
+        * MediaTime/Configurations/DebugRelease.xcconfig:
+
+2022-01-20  Ross Kirsling  <ross.kirsling@sony.com>
+
+        [WinCairo] Unreviewed performance test gardening.
+
+        * Skipped:
+        Skip various IndexedDB timeouts.
+
+2022-01-18  Ross Kirsling  <ross.kirsling@sony.com>
+
+        Speedometer should be locally runnable on Windows
+        https://bugs.webkit.org/show_bug.cgi?id=235334
+
+        Reviewed by Don Olmstead.
+
+        It's currently not possible to run Speedometer locally on Windows (even using Chrome or Firefox):
+        the EmberJS-TodoMVC test fails its subresource integrity checks due to line endings.
+
+        * .gitattributes:
+        Ensure two JS files never include CRLFs.
+
+2021-12-17  Rob Buis  <rbuis@igalia.com>
+
+        [css-contain][Performance test] Add test contain-paint-text-nowrap.html
+        https://bugs.webkit.org/show_bug.cgi?id=234001
+
+        Reviewed by Simon Fraser.
+
+        Add test contain-paint-text-nowrap.html to verify that paint containment
+        improves the case where many contained children have inline text that is
+        wider than the container width. The improvement is because paint
+        containment clips the child content.
+
+        This patch also introduces the Containment directory to separate the
+        containment tests.
+
+        * Containment/contain-paint-nowrap.html:
+        * Containment/css-contain-change-size.html: Renamed from PerformanceTests/Layout/css-contain-change-size.html.
+        * Containment/css-contain-layout-size-inside-complex-document.html: Renamed from PerformanceTests/Layout/css-contain-layout-size-inside-complex-document.html.
+        * Containment/large-grid.html: Renamed from PerformanceTests/Layout/large-grid.html.
+        * Paint/lots-of-self-painting-layers.html: use let instead of var
+
+2021-12-14  Jean-Yves Avenard  <jya@apple.com>
+
+        Distinguish contiguous SharedBuffer from non-contiguous one and guarantee immutability: part 3
+        https://bugs.webkit.org/show_bug.cgi?id=233677
+
+        Reviewed by Youenn Fablet.
+
+        * DecoderTest/DecoderTest/main.mm:
+        (main):
+
+2021-12-13  Cathie Chen  <cathiechen@igalia.com>
+
+        [Performance test] Add test lots-of-self-painting-layers.html
+        https://bugs.webkit.org/show_bug.cgi?id=233684
+
+        Reviewed by Rob Buis.
+
+        This test is a transform of the test [1] in blink. It uses position: relative to create
+        lots of self-painting layers. By changing the first layer's height, it tracks the repaint
+        performance of these self-painting layers.
+
+        [1] third_party/blink/perf_tests/layout/contain-content-style-change.html
+
+        * Paint/lots-of-self-painting-layers.html: Added.
+
+2021-12-08  Alan Bujtas  <zalan@apple.com>
+
+        Add layout performance test for simple bidi content with inline boxes
+        https://bugs.webkit.org/show_bug.cgi?id=234062
+
+        Unreviewed.
+
+        This is in preparation for enabling IFC bidi handling.
+
+        * Layout/line-layout-simple-bidi-with-inline-boxes.html: Added.
+
+2021-12-08  Alan Bujtas  <zalan@apple.com>
+
+        Add layout performance test for bidi content with direction override inside inline boxes
+        https://bugs.webkit.org/show_bug.cgi?id=234064
+
+        Unreviewed.
+
+        This is in preparation for enabling IFC bidi handling.
+
+        * Layout/line-layout-simple-bidi-with-direction-overrides-in-inline-boxes.html: Added.
+
+2021-12-07  Cathie Chen  <cathiechen@igalia.com>
+
+        [Performance test][css-contain] Add test large-grid.html
+        https://bugs.webkit.org/show_bug.cgi?id=233628
+
+        Reviewed by Rob Buis.
+
+        This test large-grid.html is imported from Chromium, and we change it a little bit.
+        This case tests the performance of getting gridContainer.offsetHeight which is the parent of
+        a large grid with `contain: strict`. The performance is improved when enable CSS contain,
+        because offsetHeight returns the value directly if the element doesn't need relayout, see
+        `Document::updateLayoutIfDimensionsOutOfDate`. `contain: strict` sets a relayout boundary to
+        the large grid, so when its subtree changes, the container of the large grid doesn't need
+        relayout.
+
+        * Layout/large-grid.html: Added.
+
+2021-12-06  Zan Dobersek  <zdobersek@igalia.com>
+
+        [RAMification] Add support for dumping smaps rollups on Linux
+        https://bugs.webkit.org/show_bug.cgi?id=233867
+
+        Reviewed by Yusuke Suzuki.
+
+        Add the option to dump smaps rollup after the end of each RAMification
+        test case. This mirrors the vmmap functionality and is implemented
+        alongside that option.
+
+        Once the jsc binary is left idle after the test case run, the
+        smaps_rollup output for the given jsc process is collected from the
+        proc filesystem. This material is then printed out after the test
+        is done, following the memory footprint dump.
+
+        For now this prefers the smaps_rollup instead of the complete smaps.
+        In this form, it already gives a good insight into the balance between
+        the proportional and residential set size amounts. Complete smaps could
+        be beneficial later, especially if we can implement differentiation
+        between allocations of different types and/or purposes.
+
+        * JetStream2/RAMification.py:
+        (parseArgs):
+        (BaseRunner.__init__):
+        (BaseRunner.getResults):
+        (LocalRunner.runOneTest):
+        (main):
+        (main.runTestList):
+
+2021-11-21  Cathie Chen  <cathiechen@igalia.com>
+
+        [Performance test][css-contain] Add case to test contain: layout inside a complex document
+        https://bugs.webkit.org/show_bug.cgi?id=232883
+
+        Reviewed by Rob Buis.
+
+        This case test the performance of changing the content of a layout containment which is
+        inside a complex document.
+
+        * Layout/css-contain-layout-size-inside-complex-document.html: Added.
+
+2021-11-19  Alan Bujtas  <zalan@apple.com>
+
+        Add layout performance test for simple bidi content
+        (this is not about inline axis direction, just mixed, bidirectional content)
+
+        Unreviewed.
+
+        * Layout/line-layout-simple-bidi.html: Added.
+
+2021-11-19  Angelos Oikonomopoulos  <angelos@igalia.com>
+
+        [JSC] Workaround for failing mips tests
+        https://bugs.webkit.org/show_bug.cgi?id=233359
+
+        Reviewed by Adrian Perez de Castro.
+
+        Re-enable tests skipped on mips after adding workaround.
+
+        * ARES-6/Basic/basic-tests.yaml:
+
+2021-11-15  Angelos Oikonomopoulos  <angelos@igalia.com>
+
+        Skip tests newly-failing on mips
+        https://bugs.webkit.org/show_bug.cgi?id=233124
+
+        Unreviewed gardening.
+
+        After 3f59d2aa489ec843e055fc3104c275851d7fbd35, these tests started
+        failing with a SIGBUS on MIPS (on fuloong hardware, they pass on the
+        ci20 boards). Temporarily skip them on this arch until we can track
+        down the issue.
+
+        * ARES-6/Basic/basic-tests.yaml:
+
+2021-11-10  Sergio Villar Senin  <svillar@igalia.com>
+
+        [css-flexbox] Improve & simplify the flex-basis computation
+        https://bugs.webkit.org/show_bug.cgi?id=230755
+
+        Reviewed by Alan Bujtas.
+
+        New test case to catch performance regressions with lots of nested (specially column) flexboxes.
+
+        * Layout/nested-flexbox.html: Added.
+
+2021-11-10  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        Unreviewed, fix broken test
+        https://bugs.webkit.org/show_bug.cgi?id=232949
+
+        useGrouping: 'false' is no longer allowed according to the spec.
+
+        * Intl/numberformat-format-all-options.html:
+
+2021-10-14  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        All the SDKVariant.xcconfig files should match
+        https://bugs.webkit.org/show_bug.cgi?id=231663
+
+        Reviewed by Youenn Fablet.
+
+        * MediaTime/Configurations/SDKVariant.xcconfig:
+
+2021-09-07  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        Add a PerformanceTest for some common FontFaceSet style update operations
+        https://bugs.webkit.org/show_bug.cgi?id=229913
+
+        Reviewed by Stephanie Lewis.
+
+        This is similar to some of the operations we've seen in the wild.
+        We want to make sure we can do these fast.
+
+        * CSS/FontFaceSetUpdateStyle.html: Added.
+
+2021-08-06  Michael Catanzaro  <mcatanzaro@gnome.org>
+
+        MallocBench: fix ODR violation
+        https://bugs.webkit.org/show_bug.cgi?id=228874
+
+        Reviewed by Geoffrey Garen.
+
+        When built with LTO enabled, GCC will warn about violations of C++'s one-definition rule.
+        MallocBench has two different Objects in two different files, which is illegal. We could
+        rename one of them, but I decided it's simplest to just put them each in anonymous
+        namespaces in order to restrict them to file scope.
+
+        * MallocBench/MallocBench/big.cpp:
+        * MallocBench/MallocBench/stress.cpp:
+
+2021-07-25  Cathie Chen  <cathiechen@igalia.com>
+
+        [Performance test][css-contain] Add test to contain: size layout
+        https://bugs.webkit.org/show_bug.cgi?id=227948
+
+        Reviewed by Ryosuke Niwa.
+
+        This test emulates the scenario that a small part of the page is changed. If it's applied contain: size layout,
+        the performance should be improved. This test is a transform of the test [1] in blink.
+
+        [1] third_party/blink/perf_tests/layout/css-contain-change-text.html
+
+        * Layout/css-contain-change-size.html: Added.
+
+2021-07-16  Manuel Rego Casasnovas  <rego@igalia.com>
+
+        Remove CSS Regions perf tests
+        https://bugs.webkit.org/show_bug.cgi?id=228016
+
+        Reviewed by Ryosuke Niwa.
+
+        The feature has been removed long time ago, so let's do the same with the associated perf tests.
+
+        * Layout/RegionsAuto.html: Removed.
+        * Layout/RegionsAutoMaxHeight.html: Removed.
+        * Layout/RegionsExtendingSelectionMixedContent.html: Removed.
+        * Layout/RegionsFixed.html: Removed.
+        * Layout/RegionsFixedShort.html: Removed.
+        * Layout/RegionsSelectAllMixedContent.html: Removed.
+        * Layout/RegionsSelection.html: Removed.
+        * Layout/RegionsShapes.html: Removed.
+        * Layout/Shapes/RegionsShapesNoShapes.html: Removed.
+        * Layout/Shapes/resources/RegionsShapesContent.html: Removed.
+        * Layout/Shapes/resources/RegionsShapesContentNoShapes.html: Removed.
+        * Layout/resources/regions.css: Removed.
+        * Layout/resources/regions.js: Removed.
+
+2021-06-03  Said Abou-Hallawa  <said@apple.com>
+
+        [MotionMark] Controller.filterOutOutliers() sorts the frameLengths array incorrectly
+        https://bugs.webkit.org/show_bug.cgi?id=226605
+
+        Reviewed by Myles C. Maxfield.
+
+        Controller.filterOutOutliers must pass a compare function to Array.sort()
+        because it filters an array of numbers.
+
+        * MotionMark/tests/resources/main.js:
+        (filterOutOutliers):
+
+2021-06-03  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [MotionMark] Update version number of local development version of the benchmark to match the currently-being-released version
+        https://bugs.webkit.org/show_bug.cgi?id=226592
+
+        Reviewed by Darin Adler.
+
+        We are currently in the process of releasing MotionMark 1.2. http://browserbench.org/MotionMark1.2/
+
+        * MotionMark/about.html:
+        * MotionMark/resources/strings.js:
+
+2021-05-21  Sam Sneddon  <gsnedders@apple.com>
+
+        Fix Python 3.6+ DeprecationWarnings about unknown escapes
+        https://bugs.webkit.org/show_bug.cgi?id=226018
+
+        Reviewed by Jonathan Bedard.
+
+        Fix Python 3.6+ DeprecationWarnings about unknown escapes
+
+        * JetStream2/RAMification.py:
+        * JetStream2/RexBench/FlightPlanner/convert-nfdc.py:
+        * RexBench/FlightPlanner/convert-nfdc.py:
+
+2021-05-12  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [MotionMark] Temporarily remove the focus test
+        https://bugs.webkit.org/show_bug.cgi?id=225714
+
+        Reviewed by Geoffrey Garen.
+
+        The focus test is causing unacceptably high variance on test results. Initial investigation
+        indicates that this is related to secondary and tertiary interactions between the browser's
+        runloop and the compositor's runloop. Not only that, but the variable cost of the focus test
+        seems to affect the variance on the subtests which run after it.
+
+        This patch temporarily removes the focus test, just so we can get a stronger signal of
+        browsers' true performance, while we do a deeper analysis of the focus test.
+
+        Because the focus test's score is lower than the average score of the subtests, removing it
+        causes scores in all browsers to increase:
+
+                             | WebKit | Chrome | Firefox
+        ================================================
+        Score with Focus     |   1020 |    550 |    962
+        Score without Focus  |   1623 |    874 |   1101
+        Stddev with Focus    |   9.3% |   2.3% |   2.9%
+        Stddev without Focus |   0.7% |   0.5% |   7.9%
+
+        * MotionMark/resources/runner/tests.js:
+
+2021-04-19  Kimmo Kinnunen  <kkinnunen@apple.com>
+
+        Enable -Wthread-safety, add attributes to custom lock classes, and provide macros to declare guards
+        https://bugs.webkit.org/show_bug.cgi?id=221614
+        <rdar://problem/74396781>
+
+        Reviewed by David Kilzer.
+
+        Add -Wthread-safety to compile flags.
+
+        * DecoderTest/Configurations/Base.xcconfig:
+
+2021-04-12  Sergio Villar Senin  <svillar@igalia.com>
+
+        [css-flexbox] CDC COVID Vaccine Tracker: Safari garbles data table
+        https://bugs.webkit.org/show_bug.cgi?id=222581
+
+        Reviewed by Zalan Bujtas.
+
+        * Layout/nested-flexboxes-percentage-flex-basis.html: Added.
+
+2021-03-17  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        Laying out complex text in columns is O(n^2)
+        https://bugs.webkit.org/show_bug.cgi?id=223363
+        <rdar://problem/68279075>
+
+        Reviewed by Zalan Bujtas.
+
+        * Layout/complex-columns.html: Added.
+
+2021-03-09  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        MotionMark scores are super sensitive to a single long frame
+        https://bugs.webkit.org/show_bug.cgi?id=220847
+        <rdar://problem/74152743>
+
+        Reviewed by Jon Lee.
+
+        Currently, "ramp" tests have three phases. The middle phase is where they try to determine a maximum reasonable
+        complexity, and the third one is where they try various complexities between 0 and the maximum. The calculation
+        of this maximum reasonable complexity is currently very sensitive to outlier frame times. If there is a single
+        outlier frame time, the failure mode is to assume that the maximum complexity is ~10. So, the solution is to
+        ignore outlier frame times during this first phase, and to ensure that there are at least 9 frames measured that
+        have non-outlier times.
+
+        This test also changes the speed of the middle phase. Previously, each interval during this phase had
+        a complexity that was 3.16x of the previous complexity. This patch changes that to 1.78x of the previous
+        complexity for complexities above 50, and 1.33x for complexities above 10,000.
+
+        * MotionMark/tests/resources/main.js:
+        (filterOutOutliers):
+        (_measureAndResetInterval):
+        (update):
+        (registerFrameTime):
+        (intervalHasConcluded):
+        (start):
+        (didFinishInterval):
+
+2021-02-26  Zalan Bujtas  <zalan@apple.com>
+
+        [Performance test][Line layout] Add test with inline boxes
+        https://bugs.webkit.org/show_bug.cgi?id=222498
+
+        Reviewed by Ryosuke Niwa.
+
+        We don't have a performance test on inline boxes yet.
+
+        * Layout/line-layout-inline-level-boxes.html: Added.
+
+2021-02-25  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, reverting r273122 and r273123.
+        https://bugs.webkit.org/show_bug.cgi?id=222449
+
+        Didn't fix the extreme test variance, and caused some internal
+        performance bots to hang during testing
+
+        Reverted changesets:
+
+        "MotionMark scores are super sensitive to a single long frame"
+        https://bugs.webkit.org/show_bug.cgi?id=220847
+        https://trac.webkit.org/changeset/273122
+
+        "MotionMark scores are super sensitive to a single long frame"
+        https://bugs.webkit.org/show_bug.cgi?id=220847
+        https://trac.webkit.org/changeset/273123
+
+2021-02-22  Sergio Villar Senin  <svillar@igalia.com>
+
+        REGRESSION (r266695): twitch.tv: when in fullscreen, WebKit continually does 350ms layouts. Firefox and Chrome do not
+        https://bugs.webkit.org/show_bug.cgi?id=222202
+        <rdar://problem/74537782>
+
+        Reviewed by Simon Fraser.
+
+        New performance test for nested column flexboxes with percentage heights.
+
+        * Layout/nested-column-flexboxes-relative-height.html: Added.
+
+2021-02-18  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        MotionMark scores are super sensitive to a single long frame
+        https://bugs.webkit.org/show_bug.cgi?id=220847
+        <rdar://problem/74152743>
+
+        Reviewed by Maciej Stachowiak and Jon Lee.
+
+        Currently, "ramp" tests have three phases. The middle phase is where they try to determine a maximum reasonable
+        complexity, and the third one is where they try various complexities between 0 and the maximum. The calculation
+        of this maximum reasonable complexity is currently very sensitive to outlier frame times. If there is a single
+        outlier frame time, the failure mode is to assume that the maximum complexity is ~10. So, the solution is to
+        ignore outlier frame times during this first phase, and to ensure that there are at least 9 frames measured that
+        have non-outlier times.
+
+        * MotionMark/tests/resources/main.js:
+        (filterOutOutliers):
+        (_measureAndResetInterval):
+        (update):
+        (registerFrameTime):
+        (intervalHasConcluded):
+        (start):
+        (didFinishInterval):
+
+2021-01-28  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        MotionMark focus test can cause extreme variance in whichever test runs directly after it
+        https://bugs.webkit.org/show_bug.cgi?id=221075
+        <rdar://problem/72143661>
+
+        Reviewed by Said Abou-Hallawa.
+
+        The focus test loads up the window server with work, which runs asynchronously from WebKit's run loop.
+        This means that the window server can still be busy when the next test starts.
+
+        In r270959 we already tried to combat this, and it was mostly successful, but not as successful as we'd
+        like. This patch goes further by:
+        1. Bumping up the warmup timeout to 2000ms from 1000ms
+        2. Making the warmup render at least 30 frames. This means that a single extremely long frame can't
+           fill up the entire warmup period.
+
+        * MotionMark/developer.html:
+        * MotionMark/resources/runner/motionmark.js:
+        (this.clear):
+        * MotionMark/tests/resources/main.js:
+        (Benchmark.Utilities.createClass):
+        (_animateLoop):
+
+2021-01-03  Beth Dakin  <bdakin@apple.com>
+
+        Remove non-inclusive language from JetStream 2.0
+        https://bugs.webkit.org/show_bug.cgi?id=220109
+
+        Reviewed by Anders Carlsson.
+
+        * JetStream2/code-load/inspector-payload.js:
+        (WebInspector.DOMNode.WebInspector.Resource.WebInspector.ConsoleMessageView.prototype._formatWithSubstitutionString.styleFormatter):
+        (WebInspector.DOMNode.WebInspector.Resource.WebInspector.ConsoleMessageView.prototype._formatWithSubstitutionString.isAllowlistedProperty):
+        (WebInspector.DOMNode.WebInspector.Resource.WebInspector.ConsoleMessageView.prototype._formatWithSubstitutionString.isWhitelistedProperty): Deleted.
+        * JetStream2/web-tooling-benchmark/cli.js:
+
+2020-12-17  Said Abou-Hallawa  <said@apple.com>
+
+        [MotionMark] Increase the warm-up time for each sub-test from 100ms to 1000ms
+        https://bugs.webkit.org/show_bug.cgi?id=219984
+
+        Reviewed by Jon Lee.
+
+        Ensure the warm-up time is enough for the system to finish any initialization
+        work which may be triggered by the sub-test before starting the sampling.
+        This should prevent bi-modality in the score of the sub-tests since the
+        initial frame rate is crucial in deciding how much the complexity can grow.
+
+        * MotionMark/developer.html:
+        * MotionMark/resources/runner/motionmark.js:
+        (this.clear):
+
+2020-12-14  Antti Koivisto  <antti@apple.com>
+
+        Add inline-block line layout microbench
+        https://bugs.webkit.org/show_bug.cgi?id=219854
+
+        Reviewed by Zalan Bujtas.
+
+        * Layout/line-layout-inline-block.html: Added.
+
+2020-12-11  Geoffrey Garen  <ggaren@apple.com>
+
+        Eliminate 'async time' in StyleBench
+        https://bugs.webkit.org/show_bug.cgi?id=219785
+
+        Reviewed by Antti Koivisto.
+
+        r270132 (a RunLoop change) measured as a 13% regression on the
+        StyleBench bot. But I don't think the measured regression was user-real.
+        Instead, I think the baseline score was artificially high because 'async
+        time' sometimes did not measure painting.
+
+        I decided just to eliminate 'async time' (and force style resolution +
+        layout during 'sync time') because this benchmark intends to measure
+        style resolution + layout, and not painting or frame rate.
+
+        With this change, there is no measured regression anymore.
+
+        Explanation of 'did not measure painting':
+
+                StyleBench synchronously modifies DOM + style, and then sets a
+                zero-delay timer to measure 'async time'. If layout has not
+                happened by the time the timer fires, StyleBench forces layout
+                and then computes 'async time'. The flaw here is painting.
+                StyleBench accepts both of these orders of operations as valid:
+                
+                (A) { modify DOM + style }, { measure 'sync time' }, { style resolution + layout }, { paint }, { measure 'async time' }
+
+                (B) { modify DOM + style }, { measure 'sync time' }, { style resolution + layout }, { measure 'async time' }, { paint }
+
+                ^ (B) includes more stuff than (A). Not cool!
+
+        Evidence for the theory that the baseline was sometimes doing (B):
+
+                * Forcing style resolution + layout during sync time reduces the
+                baseline score and eliminates the difference in async time
+                between baseline and patch.
+
+                * Starting the benchmark from a requestAnimationFrame() instead
+                of a timer reduces the baseline score and eliminates the
+                difference in async time between baseline and patch.
+
+                * The regression only reproduced on machines with fewer cores.
+
+                * The new benchmark method reduces sttdev by ~3X - ~5X.
+
+        * StyleBench/resources/benchmark-runner.js:
+        (BenchmarkRunner.prototype._runTest): Call getBoundingClientRect()
+        during sync time to force style resolution + layout consistently.
+
+        Always report async time as 1, since this benchmark doesn't have an
+        async time component anymore. (The harness doesn't like zeroes.)
+
+        Just store height in a global because that is sufficient to prevent
+        dead code elimination (which was probably impossible anyway, since
+        getBoundingClientRect() has side effects).
+
+2020-12-10  Tadeu Zagallo  <tzagallo@apple.com>
+
+        Removing unnecessary locking from JSValue API functions
+        https://bugs.webkit.org/show_bug.cgi?id=219723
+
+        Reviewed by Filip Pizlo.
+
+        Print an error message when benchmarks fail to run and add option to change
+        the configuration used to build the benchmarks.
+
+        * APIBench/api-bench:
+
+2020-12-10  Tadeu Zagallo  <tzagallo@apple.com>
+
+        Add a JSC API to allow acquiring the JSLock
+        https://bugs.webkit.org/show_bug.cgi?id=219663
+
+        Reviewed by Filip Pizlo.
+
+        This patch does 3 things:
+        - Change how the geomean is calculated in api-bench to avoid overflowing
+        - Allow linking against the local build we're benchmarking
+        - Adopt the new JSLock API in the UpcomingAPI subtests
+
+        Using the new API the score improves by ~13.5%. Here are the results for each
+        of the "UpcomingAPI" subtests plus the total score:
+
+                                Before       After
+        RichardsMostlyC:          77ms        23ms
+        RichardsMostlyObjC:      309ms       282ms
+        RichardsMostlySwift      305ms       280ms
+        RichardsSomeC:           101ms        95ms
+        RichardsSomeObjC:        160ms       157ms
+        RichardsSomeSwift:       201ms       202ms
+        ------------------------------------------
+        Score:                 29.5974     33.6404
+
+        * APIBench/UpcomingAPI/RichardsMostlyC/RichardsMostlyC/richards.c:
+        (workfn):
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC.xcodeproj/xcshareddata/xcschemes/RichardsMostlyObjC.xcscheme: Renamed from PerformanceTests/APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC.xcodeproj/xcshareddata/xcschemes/RichardsMostlySwift.xcscheme.
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/WorkerTask.m:
+        (+[WorkerTask context]):
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/project.pbxproj:
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/BridgingHeader.h: Copied from PerformanceTests/APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/WorkerTask.swift.
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/WorkerTask.swift:
+        * APIBench/UpcomingAPI/RichardsSomeC/RichardsSomeC/main.m:
+        (main):
+        * APIBench/UpcomingAPI/RichardsSomeObjC/RichardsSomeObjC/main.m:
+        (main):
+        * APIBench/UpcomingAPI/RichardsSomeSwift/RichardsSomeSwift.xcodeproj/project.pbxproj:
+        * APIBench/UpcomingAPI/RichardsSomeSwift/RichardsSomeSwift/BridgingHeader.h: Copied from PerformanceTests/APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/WorkerTask.swift.
+        * APIBench/UpcomingAPI/RichardsSomeSwift/RichardsSomeSwift/main.swift:
+        * APIBench/api-bench:
+
+2020-12-07  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Remove WEBKIT_WRAP_SOURCELIST
+        https://bugs.webkit.org/show_bug.cgi?id=196916
+
+        Reviewed by Michael Catanzaro.
+
+        * MallocBench/MallocBench/CMakeLists.txt:
+
+2020-12-04  Adam Roben  <aroben@apple.com>
+
+        More FALLBACK_PLATFORM adoption
+        https://bugs.webkit.org/show_bug.cgi?id=219545
+
+        Reviewed by Tim Horton.
+
+        * MediaTime/Configurations/SDKVariant.xcconfig:
+        WK_EMPTY_$(THIS_IS_NOT_EMPTY) evaluates to the empty string, not to
+        NO.
+
+2020-12-03  Adam Roben  <aroben@apple.com>
+
+        Adopt FALLBACK_PLATFORM
+        https://bugs.webkit.org/show_bug.cgi?id=219504
+
+        Reviewed by Tim Horton.
+
+        * MediaTime/Configurations/SDKVariant.xcconfig: Use FALLBACK_PLATFORM
+        it if it's defined, otherwise use PLATFORM_NAME as before.
+
+2020-11-30  Tadeu Zagallo  <tzagallo@apple.com>
+
+        Add C and ObjC tests to APIBench
+        https://bugs.webkit.org/show_bug.cgi?id=219246
+
+        Reviewed by Yusuke Suzuki.
+
+        The benchmark now consists of two groups: initially they are identical, but the first group will not
+        be changed going forward while the second group will be free to adopt new APIs.
+        The two original tests (one mostly JS and the other mostly native) were also split into three tests each (C, ObjC and Swift).
+
+        * APIBench/CurrentAPI/RichardsMostlyC/RichardsMostlyC.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/project.pbxproj.
+        * APIBench/CurrentAPI/RichardsMostlyC/RichardsMostlyC.xcodeproj/xcshareddata/xcschemes/RichardsMostlyC.xcscheme: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift.xcodeproj/xcshareddata/xcschemes/RichardsSwift.xcscheme.
+        * APIBench/CurrentAPI/RichardsMostlyC/RichardsMostlyC/richards.c: Added.
+        (pkt):
+        (trace):
+        (schedule):
+        (wait_):
+        (holdself):
+        (findtcb):
+        (release):
+        (qpkt):
+        (idlefn):
+        (valueToTask):
+        (waitWrapper):
+        (qpktWrapper):
+        (readFile):
+        (workfn):
+        (handlerfn):
+        (devfn):
+        (append):
+        (setup):
+        (getQpktcount):
+        (getHoldcount):
+        (main):
+        * APIBench/CurrentAPI/RichardsMostlyC/RichardsMostlyC/richards.js: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        (createWorkfn):
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/project.pbxproj.
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC.xcodeproj/xcshareddata/xcschemes/RichardsMostlySwift.xcscheme: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift.xcodeproj/xcshareddata/xcschemes/RichardsSwift.xcscheme.
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/Device.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/DeviceTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/DeviceTask.m: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        (+[DeviceTask createWithScheduler:device:priority:]):
+        (-[DeviceTask run:]):
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/HandlerTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/HandlerTask.m: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/DeviceTask.swift.
+        (+[HandlerTask createWithScheduler:device:priority:queue:]):
+        (-[HandlerTask run:]):
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/IdleTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/IdleTask.m: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        (+[IdleTask createWithScheduler:priority:]):
+        (-[IdleTask run:]):
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/Packet.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/Packet.swift.
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/Packet.m: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/IdleTask.swift.
+        (+[Packet create:withLink:]):
+        (-[Packet addToQueue:]):
+        (+[DevicePacket create:withLink:]):
+        (+[WorkPacket createWithLink:]):
+        (+[WorkPacket size]):
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/Scheduler.h: Added.
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/Scheduler.m: Added.
+        (-[Scheduler schedule]):
+        (-[Scheduler addTask:]):
+        (-[Scheduler releaseDevice:]):
+        (-[Scheduler holdCurrent]):
+        (-[Scheduler waitCurrent]):
+        (-[Scheduler queue:]):
+        (-[Scheduler handle:]):
+        (-[Scheduler _queueImpl:packet:]):
+        (-[Scheduler _find:]):
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/Task.h: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/DeviceTask.swift.
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/Task.m: Added.
+        (+[Task createWithScheduler:priority:queue:]):
+        (-[Task run:]):
+        (-[Task release_]):
+        (-[Task hold]):
+        (-[Task wait]):
+        (-[Task resume]):
+        (-[Task takePacket]):
+        (-[Task checkPriorityAdd:packet:]):
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/WorkerTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/WorkerTask.m: Added.
+        (+[WorkerTask createWithScheduler:priority:queue:]):
+        (+[WorkerTask context]):
+        (+[WorkerTask constructor]):
+        (-[WorkerTask run:]):
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/main.m: Added.
+        (runRichards):
+        (main):
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/richards.js: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/richards.js.
+        (return.prototype.run):
+        * APIBench/CurrentAPI/RichardsMostlyObjC/RichardsMostlyObjC/richards.m: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/project.pbxproj.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/xcshareddata/xcschemes/RichardsMostlySwift.xcscheme: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/xcshareddata/xcschemes/RichardsMostlySwift.xcscheme.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift/DeviceTask.swift: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/DeviceTask.swift.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift/HandlerTask.swift: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/HandlerTask.swift.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift/IdleTask.swift: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/IdleTask.swift.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift/Packet.swift: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/Packet.swift.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift/Scheduler.swift: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/Scheduler.swift.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift/Task.swift: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/Task.swift.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift/WorkerTask.swift: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/WorkerTask.swift.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift/main.swift: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/main.swift.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift/richards.js: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/richards.js.
+        * APIBench/CurrentAPI/RichardsMostlySwift/RichardsMostlySwift/richards.swift: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/richards.swift.
+        * APIBench/CurrentAPI/RichardsSomeC/RichardsSomeC.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/project.pbxproj.
+        * APIBench/CurrentAPI/RichardsSomeC/RichardsSomeC/main.m: Added.
+        (WorkerTask_run):
+        (WorkerTask_constructor):
+        (WorkerTask_getProperty):
+        (main):
+        * APIBench/CurrentAPI/RichardsSomeC/RichardsSomeC/richards.js: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS/richards.js.
+        * APIBench/CurrentAPI/RichardsSomeObjC/RichardsSomeObjC.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/project.pbxproj.
+        * APIBench/CurrentAPI/RichardsSomeObjC/RichardsSomeObjC.xcodeproj/xcshareddata/xcschemes/RichardsSomeObjC.xcscheme: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/xcshareddata/xcschemes/RichardsMostlyJS.xcscheme.
+        * APIBench/CurrentAPI/RichardsSomeObjC/RichardsSomeObjC/main.m: Added.
+        (-[WorkerTask initWithScheduler:v1:v2:]):
+        (-[WorkerTask toString]):
+        (-[WorkerTask run:]):
+        (main):
+        * APIBench/CurrentAPI/RichardsSomeObjC/RichardsSomeObjC/richards.js: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS/richards.js.
+        (runRichards):
+        (Scheduler):
+        (Scheduler.prototype.addIdleTask):
+        (Scheduler.prototype.addWorkerTask):
+        (Scheduler.prototype.addHandlerTask):
+        (Scheduler.prototype.addDeviceTask):
+        (Scheduler.prototype.addRunningTask):
+        (Scheduler.prototype.addTask):
+        (Scheduler.prototype.schedule):
+        (Scheduler.prototype.release):
+        (Scheduler.prototype.holdCurrent):
+        (Scheduler.prototype.suspendCurrent):
+        (Scheduler.prototype.queue):
+        (TaskControlBlock):
+        (TaskControlBlock.prototype.setRunning):
+        (TaskControlBlock.prototype.markAsNotHeld):
+        (TaskControlBlock.prototype.markAsHeld):
+        (TaskControlBlock.prototype.isHeldOrSuspended):
+        (TaskControlBlock.prototype.markAsSuspended):
+        (TaskControlBlock.prototype.markAsRunnable):
+        (TaskControlBlock.prototype.run):
+        (TaskControlBlock.prototype.checkPriorityAdd):
+        (TaskControlBlock.prototype.toString):
+        (IdleTask):
+        (IdleTask.prototype.run):
+        (IdleTask.prototype.toString):
+        (DeviceTask):
+        (DeviceTask.prototype.run):
+        (DeviceTask.prototype.toString):
+        (HandlerTask):
+        (HandlerTask.prototype.run):
+        (HandlerTask.prototype.toString):
+        (Packet):
+        (Packet.prototype.addTo):
+        (Packet.prototype.toString):
+        * APIBench/CurrentAPI/RichardsSomeSwift/RichardsSomeSwift.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/project.pbxproj.
+        * APIBench/CurrentAPI/RichardsSomeSwift/RichardsSomeSwift.xcodeproj/xcshareddata/xcschemes/RichardsSomeSwift.xcscheme: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/xcshareddata/xcschemes/RichardsMostlyJS.xcscheme.
+        * APIBench/CurrentAPI/RichardsSomeSwift/RichardsSomeSwift/main.swift: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS/main.swift.
+        * APIBench/CurrentAPI/RichardsSomeSwift/RichardsSomeSwift/richards.js: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS/richards.js.
+        (runRichards):
+        (Scheduler):
+        (Scheduler.prototype.addIdleTask):
+        (Scheduler.prototype.addWorkerTask):
+        (Scheduler.prototype.addHandlerTask):
+        (Scheduler.prototype.addDeviceTask):
+        (Scheduler.prototype.addRunningTask):
+        (Scheduler.prototype.addTask):
+        (Scheduler.prototype.schedule):
+        (Scheduler.prototype.release):
+        (Scheduler.prototype.holdCurrent):
+        (Scheduler.prototype.suspendCurrent):
+        (Scheduler.prototype.queue):
+        (TaskControlBlock):
+        (TaskControlBlock.prototype.setRunning):
+        (TaskControlBlock.prototype.markAsNotHeld):
+        (TaskControlBlock.prototype.markAsHeld):
+        (TaskControlBlock.prototype.isHeldOrSuspended):
+        (TaskControlBlock.prototype.markAsSuspended):
+        (TaskControlBlock.prototype.markAsRunnable):
+        (TaskControlBlock.prototype.run):
+        (TaskControlBlock.prototype.checkPriorityAdd):
+        (TaskControlBlock.prototype.toString):
+        (IdleTask):
+        (IdleTask.prototype.run):
+        (IdleTask.prototype.toString):
+        (DeviceTask):
+        (DeviceTask.prototype.run):
+        (DeviceTask.prototype.toString):
+        (HandlerTask):
+        (HandlerTask.prototype.run):
+        (HandlerTask.prototype.toString):
+        (Packet):
+        (Packet.prototype.addTo):
+        (Packet.prototype.toString):
+        * APIBench/References/RichardsC/RichardsC.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/project.pbxproj.
+        * APIBench/References/RichardsC/RichardsC.xcodeproj/xcshareddata/xcschemes/RichardsC.xcscheme: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift.xcodeproj/xcshareddata/xcschemes/RichardsSwift.xcscheme.
+        * APIBench/References/RichardsC/RichardsC/richards.c: Added.
+        (pkt):
+        (trace):
+        (schedule):
+        (wait_):
+        (holdself):
+        (findtcb):
+        (release):
+        (qpkt):
+        (idlefn):
+        (workfn):
+        (handlerfn):
+        (devfn):
+        (append):
+        (setup):
+        (getQpktcount):
+        (getHoldcount):
+        (main):
+        * APIBench/References/RichardsC/RichardsC/richards.js: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        (createWorkfn):
+        * APIBench/References/RichardsJS/RichardsJS.js: Renamed from PerformanceTests/APIBench/RichardsJS/RichardsJS.js.
+        * APIBench/References/RichardsObjC/RichardsObjC.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/project.pbxproj.
+        * APIBench/References/RichardsObjC/RichardsObjC.xcodeproj/xcshareddata/xcschemes/RichardsObjC.xcscheme: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift.xcodeproj/xcshareddata/xcschemes/RichardsSwift.xcscheme.
+        * APIBench/References/RichardsObjC/RichardsObjC/Device.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/References/RichardsObjC/RichardsObjC/DeviceTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/References/RichardsObjC/RichardsObjC/DeviceTask.m: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        (+[DeviceTask createWithScheduler:device:priority:]):
+        (-[DeviceTask run:]):
+        * APIBench/References/RichardsObjC/RichardsObjC/HandlerTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/References/RichardsObjC/RichardsObjC/HandlerTask.m: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/DeviceTask.swift.
+        (+[HandlerTask createWithScheduler:device:priority:queue:]):
+        (-[HandlerTask run:]):
+        * APIBench/References/RichardsObjC/RichardsObjC/IdleTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/References/RichardsObjC/RichardsObjC/IdleTask.m: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        (+[IdleTask createWithScheduler:priority:]):
+        (-[IdleTask run:]):
+        * APIBench/References/RichardsObjC/RichardsObjC/Packet.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/Packet.swift.
+        * APIBench/References/RichardsObjC/RichardsObjC/Packet.m: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/IdleTask.swift.
+        (+[Packet create:withLink:]):
+        (-[Packet addToQueue:]):
+        (+[DevicePacket create:withLink:]):
+        (+[WorkPacket createWithLink:]):
+        (+[WorkPacket size]):
+        * APIBench/References/RichardsObjC/RichardsObjC/Scheduler.h: Added.
+        * APIBench/References/RichardsObjC/RichardsObjC/Scheduler.m: Added.
+        (-[Scheduler schedule]):
+        (-[Scheduler addTask:]):
+        (-[Scheduler releaseDevice:]):
+        (-[Scheduler holdCurrent]):
+        (-[Scheduler waitCurrent]):
+        (-[Scheduler queue:]):
+        (-[Scheduler handle:]):
+        (-[Scheduler _queueImpl:packet:]):
+        (-[Scheduler _find:]):
+        * APIBench/References/RichardsObjC/RichardsObjC/Task.h: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/DeviceTask.swift.
+        * APIBench/References/RichardsObjC/RichardsObjC/Task.m: Added.
+        (+[Task createWithScheduler:priority:queue:]):
+        (-[Task run:]):
+        (-[Task release_]):
+        (-[Task hold]):
+        (-[Task wait]):
+        (-[Task resume]):
+        (-[Task takePacket]):
+        (-[Task checkPriorityAdd:packet:]):
+        * APIBench/References/RichardsObjC/RichardsObjC/WorkerTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/References/RichardsObjC/RichardsObjC/WorkerTask.m: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        (+[WorkerTask createWithScheduler:priority:queue:]):
+        (-[WorkerTask run:]):
+        * APIBench/References/RichardsObjC/RichardsObjC/main.m: Added.
+        (runRichards):
+        (main):
+        * APIBench/References/RichardsObjC/RichardsObjC/richards.m: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/References/RichardsSwift/RichardsSwift.xcodeproj/project.pbxproj: Renamed from PerformanceTests/APIBench/RichardsSwift/RichardsSwift.xcodeproj/project.pbxproj.
+        * APIBench/References/RichardsSwift/RichardsSwift.xcodeproj/xcshareddata/xcschemes/RichardsSwift.xcscheme: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift.xcodeproj/xcshareddata/xcschemes/RichardsSwift.xcscheme.
+        * APIBench/References/RichardsSwift/RichardsSwift/DeviceTask.swift: Renamed from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/DeviceTask.swift.
+        * APIBench/References/RichardsSwift/RichardsSwift/HandlerTask.swift: Renamed from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/HandlerTask.swift.
+        * APIBench/References/RichardsSwift/RichardsSwift/IdleTask.swift: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/IdleTask.swift.
+        * APIBench/References/RichardsSwift/RichardsSwift/Packet.swift: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/Packet.swift.
+        * APIBench/References/RichardsSwift/RichardsSwift/Scheduler.swift: Renamed from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/Scheduler.swift.
+        * APIBench/References/RichardsSwift/RichardsSwift/Task.swift: Renamed from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/Task.swift.
+        * APIBench/References/RichardsSwift/RichardsSwift/WorkerTask.swift: Renamed from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/WorkerTask.swift.
+        * APIBench/References/RichardsSwift/RichardsSwift/main.swift: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/References/RichardsSwift/RichardsSwift/richards.swift: Renamed from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/richards.swift.
+        * APIBench/UpcomingAPI/RichardsMostlyC/RichardsMostlyC.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/project.pbxproj.
+        * APIBench/UpcomingAPI/RichardsMostlyC/RichardsMostlyC.xcodeproj/xcshareddata/xcschemes/RichardsMostlyC.xcscheme: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift.xcodeproj/xcshareddata/xcschemes/RichardsSwift.xcscheme.
+        * APIBench/UpcomingAPI/RichardsMostlyC/RichardsMostlyC/richards.c: Added.
+        (pkt):
+        (trace):
+        (schedule):
+        (wait_):
+        (holdself):
+        (findtcb):
+        (release):
+        (qpkt):
+        (idlefn):
+        (valueToTask):
+        (waitWrapper):
+        (qpktWrapper):
+        (readFile):
+        (workfn):
+        (handlerfn):
+        (devfn):
+        (append):
+        (setup):
+        (getQpktcount):
+        (getHoldcount):
+        (main):
+        * APIBench/UpcomingAPI/RichardsMostlyC/RichardsMostlyC/richards.js: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        (createWorkfn):
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/project.pbxproj.
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC.xcodeproj/xcshareddata/xcschemes/RichardsMostlySwift.xcscheme: Renamed from PerformanceTests/APIBench/RichardsSwift/RichardsSwift.xcodeproj/xcshareddata/xcschemes/RichardsSwift.xcscheme.
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/Device.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/DeviceTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/DeviceTask.m: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        (+[DeviceTask createWithScheduler:device:priority:]):
+        (-[DeviceTask run:]):
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/HandlerTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/HandlerTask.m: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/DeviceTask.swift.
+        (+[HandlerTask createWithScheduler:device:priority:queue:]):
+        (-[HandlerTask run:]):
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/IdleTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/IdleTask.m: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        (+[IdleTask createWithScheduler:priority:]):
+        (-[IdleTask run:]):
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/Packet.h: Renamed from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/Packet.swift.
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/Packet.m: Renamed from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/IdleTask.swift.
+        (+[Packet create:withLink:]):
+        (-[Packet addToQueue:]):
+        (+[DevicePacket create:withLink:]):
+        (+[WorkPacket createWithLink:]):
+        (+[WorkPacket size]):
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/Scheduler.h: Added.
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/Scheduler.m: Added.
+        (-[Scheduler schedule]):
+        (-[Scheduler addTask:]):
+        (-[Scheduler releaseDevice:]):
+        (-[Scheduler holdCurrent]):
+        (-[Scheduler waitCurrent]):
+        (-[Scheduler queue:]):
+        (-[Scheduler handle:]):
+        (-[Scheduler _queueImpl:packet:]):
+        (-[Scheduler _find:]):
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/Task.h: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/DeviceTask.swift.
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/Task.m: Added.
+        (+[Task createWithScheduler:priority:queue:]):
+        (-[Task run:]):
+        (-[Task release_]):
+        (-[Task hold]):
+        (-[Task wait]):
+        (-[Task resume]):
+        (-[Task takePacket]):
+        (-[Task checkPriorityAdd:packet:]):
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/WorkerTask.h: Copied from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/WorkerTask.m: Added.
+        (+[WorkerTask createWithScheduler:priority:queue:]):
+        (+[WorkerTask context]):
+        (+[WorkerTask constructor]):
+        (-[WorkerTask run:]):
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/main.m: Added.
+        (runRichards):
+        (main):
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/richards.js: Copied from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/richards.js.
+        (return.prototype.run):
+        * APIBench/UpcomingAPI/RichardsMostlyObjC/RichardsMostlyObjC/richards.m: Renamed from PerformanceTests/APIBench/RichardsSwift/RichardsSwift/main.swift.
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/project.pbxproj: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/project.pbxproj.
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/xcshareddata/xcschemes/RichardsMostlySwift.xcscheme: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/xcshareddata/xcschemes/RichardsMostlySwift.xcscheme.
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/DeviceTask.swift: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/DeviceTask.swift.
+        (DeviceTask.create(_:device:priority:)):
+        (DeviceTask.run(_:)):
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/HandlerTask.swift: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/HandlerTask.swift.
+        (HandlerTask.device):
+        (HandlerTask.create(_:device:priority:queue:)):
+        (HandlerTask.run(_:)):
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/IdleTask.swift: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/IdleTask.swift.
+        (IdleTask.create(_:priority:)):
+        (IdleTask.run(_:)):
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/Packet.swift: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/Packet.swift.
+        (Packet.addTo(_:)):
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/Scheduler.swift: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/Scheduler.swift.
+        (waitCurrent):
+        (handle(_:)):
+        (Scheduler.schedule):
+        (Scheduler.add(_:)):
+        (Scheduler.release_(_:)):
+        (holdCurrent):
+        (queue(_:)):
+        (queueImpl(_:packet:)):
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/Task.swift: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/Task.swift.
+        (Task.run(_:)):
+        (Task.release_):
+        (Task.hold):
+        (Task.wait):
+        (Task.resume):
+        (Task.takePacket):
+        (Task.checkPriorityAdd(_:packet:)):
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/WorkerTask.swift: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/WorkerTask.swift.
+        (WorkerTask.create(_:priority:queue:)):
+        (WorkerTask.run(_:)):
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/main.swift: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/main.swift.
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/richards.js: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/richards.js.
+        (return.prototype.run):
+        * APIBench/UpcomingAPI/RichardsMostlySwift/RichardsMostlySwift/richards.swift: Renamed from PerformanceTests/APIBench/RichardsMostlySwift/RichardsMostlySwift/richards.swift.
+        (runRichards):
+        * APIBench/UpcomingAPI/RichardsSomeC/RichardsSomeC.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/project.pbxproj.
+        * APIBench/UpcomingAPI/RichardsSomeC/RichardsSomeC/main.m: Added.
+        (WorkerTask_run):
+        (WorkerTask_constructor):
+        (WorkerTask_getProperty):
+        (main):
+        * APIBench/UpcomingAPI/RichardsSomeC/RichardsSomeC/richards.js: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS/richards.js.
+        (runRichards):
+        (Scheduler):
+        (Scheduler.prototype.addIdleTask):
+        (Scheduler.prototype.addWorkerTask):
+        (Scheduler.prototype.addHandlerTask):
+        (Scheduler.prototype.addDeviceTask):
+        (Scheduler.prototype.addRunningTask):
+        (Scheduler.prototype.addTask):
+        (Scheduler.prototype.schedule):
+        (Scheduler.prototype.release):
+        (Scheduler.prototype.holdCurrent):
+        (Scheduler.prototype.suspendCurrent):
+        (Scheduler.prototype.queue):
+        (TaskControlBlock):
+        (TaskControlBlock.prototype.setRunning):
+        (TaskControlBlock.prototype.markAsNotHeld):
+        (TaskControlBlock.prototype.markAsHeld):
+        (TaskControlBlock.prototype.isHeldOrSuspended):
+        (TaskControlBlock.prototype.markAsSuspended):
+        (TaskControlBlock.prototype.markAsRunnable):
+        (TaskControlBlock.prototype.run):
+        (TaskControlBlock.prototype.checkPriorityAdd):
+        (TaskControlBlock.prototype.toString):
+        (IdleTask):
+        (IdleTask.prototype.run):
+        (IdleTask.prototype.toString):
+        (DeviceTask):
+        (DeviceTask.prototype.run):
+        (DeviceTask.prototype.toString):
+        (HandlerTask):
+        (HandlerTask.prototype.run):
+        (HandlerTask.prototype.toString):
+        (Packet):
+        (Packet.prototype.addTo):
+        (Packet.prototype.toString):
+        * APIBench/UpcomingAPI/RichardsSomeObjC/RichardsSomeObjC.xcodeproj/project.pbxproj: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/project.pbxproj.
+        * APIBench/UpcomingAPI/RichardsSomeObjC/RichardsSomeObjC.xcodeproj/xcshareddata/xcschemes/RichardsSomeObjC.xcscheme: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/xcshareddata/xcschemes/RichardsMostlyJS.xcscheme.
+        * APIBench/UpcomingAPI/RichardsSomeObjC/RichardsSomeObjC/main.m: Added.
+        (-[WorkerTask initWithScheduler:v1:v2:]):
+        (-[WorkerTask toString]):
+        (-[WorkerTask run:]):
+        (main):
+        * APIBench/UpcomingAPI/RichardsSomeObjC/RichardsSomeObjC/richards.js: Copied from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS/richards.js.
+        (runRichards):
+        (Scheduler):
+        (Scheduler.prototype.addIdleTask):
+        (Scheduler.prototype.addWorkerTask):
+        (Scheduler.prototype.addHandlerTask):
+        (Scheduler.prototype.addDeviceTask):
+        (Scheduler.prototype.addRunningTask):
+        (Scheduler.prototype.addTask):
+        (Scheduler.prototype.schedule):
+        (Scheduler.prototype.release):
+        (Scheduler.prototype.holdCurrent):
+        (Scheduler.prototype.suspendCurrent):
+        (Scheduler.prototype.queue):
+        (TaskControlBlock):
+        (TaskControlBlock.prototype.setRunning):
+        (TaskControlBlock.prototype.markAsNotHeld):
+        (TaskControlBlock.prototype.markAsHeld):
+        (TaskControlBlock.prototype.isHeldOrSuspended):
+        (TaskControlBlock.prototype.markAsSuspended):
+        (TaskControlBlock.prototype.markAsRunnable):
+        (TaskControlBlock.prototype.run):
+        (TaskControlBlock.prototype.checkPriorityAdd):
+        (TaskControlBlock.prototype.toString):
+        (IdleTask):
+        (IdleTask.prototype.run):
+        (IdleTask.prototype.toString):
+        (DeviceTask):
+        (DeviceTask.prototype.run):
+        (DeviceTask.prototype.toString):
+        (HandlerTask):
+        (HandlerTask.prototype.run):
+        (HandlerTask.prototype.toString):
+        (Packet):
+        (Packet.prototype.addTo):
+        (Packet.prototype.toString):
+        * APIBench/UpcomingAPI/RichardsSomeSwift/RichardsSomeSwift.xcodeproj/project.pbxproj: Renamed from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/project.pbxproj.
+        * APIBench/UpcomingAPI/RichardsSomeSwift/RichardsSomeSwift.xcodeproj/xcshareddata/xcschemes/RichardsSomeSwift.xcscheme: Renamed from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/xcshareddata/xcschemes/RichardsMostlyJS.xcscheme.
+        * APIBench/UpcomingAPI/RichardsSomeSwift/RichardsSomeSwift/main.swift: Renamed from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS/main.swift.
+        (run(_:)):
+        (toString):
+        (WorkerTask.toString):
+        (WorkerTask.run(_:)):
+        * APIBench/UpcomingAPI/RichardsSomeSwift/RichardsSomeSwift/richards.js: Renamed from PerformanceTests/APIBench/RichardsMostlyJS/RichardsMostlyJS/richards.js.
+        (runRichards):
+        (Scheduler):
+        (Scheduler.prototype.addIdleTask):
+        (Scheduler.prototype.addWorkerTask):
+        (Scheduler.prototype.addHandlerTask):
+        (Scheduler.prototype.addDeviceTask):
+        (Scheduler.prototype.addRunningTask):
+        (Scheduler.prototype.addTask):
+        (Scheduler.prototype.schedule):
+        (Scheduler.prototype.release):
+        (Scheduler.prototype.holdCurrent):
+        (Scheduler.prototype.suspendCurrent):
+        (Scheduler.prototype.queue):
+        (TaskControlBlock):
+        (TaskControlBlock.prototype.setRunning):
+        (TaskControlBlock.prototype.markAsNotHeld):
+        (TaskControlBlock.prototype.markAsHeld):
+        (TaskControlBlock.prototype.isHeldOrSuspended):
+        (TaskControlBlock.prototype.markAsSuspended):
+        (TaskControlBlock.prototype.markAsRunnable):
+        (TaskControlBlock.prototype.run):
+        (TaskControlBlock.prototype.checkPriorityAdd):
+        (TaskControlBlock.prototype.toString):
+        (IdleTask):
+        (IdleTask.prototype.run):
+        (IdleTask.prototype.toString):
+        (DeviceTask):
+        (DeviceTask.prototype.run):
+        (DeviceTask.prototype.toString):
+        (HandlerTask):
+        (HandlerTask.prototype.run):
+        (HandlerTask.prototype.toString):
+        (Packet):
+        (Packet.prototype.addTo):
+        (Packet.prototype.toString):
+        * APIBench/api-bench:
+
+2020-10-27  Jer Noble  <jer.noble@apple.com>
+
+        [Mac] Audio and Video element creation up to 300x slower than other browsers
+        https://bugs.webkit.org/show_bug.cgi?id=218206
+        <rdar://problem/62451019>
+
+        Reviewed by Eric Carlson.
+
+        * Media/AudioElementCreation.html: Added.
+        * Media/VideoElementCreation.html: Added.
+
+2020-10-27  Caio Lima  <ticaiolima@gmail.com>
+
+        Make WebAssembly tests on JetStream 2 be feature detactable
+        https://bugs.webkit.org/show_bug.cgi?id=218198
+
+        Reviewed by Saam Barati.
+
+        This patch is disabling JetStream 2's WASM tests when it's not
+        possible to find WebAssembly constructor on global object. This allows
+        us to run JetStream 2 on devices without WASM support, like 32-bits
+        ports of WebKit.
+
+        * JetStream2/JetStreamDriver.js:
+
+2020-10-13  Keith Rollin  <krollin@apple.com>
+
+        Remove leftover MACOSX_DEPLOYMENT_TARGET_macosx support
+        https://bugs.webkit.org/show_bug.cgi?id=217649
+        <rdar://problem/70236877>
+
+        Reviewed by Darin Adler.
+
+        Bug 42796 introduced MACOSX_DEPLOYMENT_TARGET_<PLATFORM> as "support
+        for compiling WebKit against iOS SDKs". Support for the iOS part of
+        this feature was later removed in several changes, including Bug
+        139212, Bug 139463 and Bug 144762. However, vestiges have remained for
+        five or six years in the form of MACOSX_DEPLOYMENT_TARGET_macosx. The
+        inclusion of the platform in MACOSX_DEPLOYMENT_TARGET is no longer
+        needed and can be removed.
+
+        This changes brings most projects in conformance with other projects
+        that don't support including the platform in MACOSX_DEPLOYMENT_TARGET,
+        including WebEditingTester, gtest, WebKitTestRunner, MiniBrowser, and
+        TestWebKitAPI.
+
+        Along the way, remove a couple of left-over references to macOS 10.16,
+        and a couple of places where [sdk=macosx*] was still being used.
+
+        With this change, initialization of MACOSX_DEPLOYMENT_TARGET should be
+        consistent across all projects, with two exceptions: WebKitLauncher
+        (which hardcodes it to 10.12) and libwebrtc's copy of googletest
+        (which hardcodes it to 10.4). The reasons for these hard-coded values
+        is not apparent, so leave them be.
+
+        * DecoderTest/Configurations/DebugRelease.xcconfig:
+        * MediaTime/Configurations/DebugRelease.xcconfig:
+
+2020-10-12  Luming Yin  <luming_yin@apple.com>
+
+        [macOS] Workaround for MAC_OS_X_VERSION_MAJOR incorrectly including minor version when building 
+        with Xcode 12 on macOS Big Sur SUs
+        https://bugs.webkit.org/show_bug.cgi?id=217602
+        rdar://70194453
+
+        Reviewed by Darin Adler.
+
+        The previous workaround turns out to be ineffective because we can't set the value of 
+        TARGET_MAC_OS_X_VERSION_MAJOR based on a previous value of itself. Introduce a new 
+        variable TARGET_MAC_OS_X_VERSION_MAJOR to determine whether we need to explicitly 
+        adjust MAC_OS_X_VERSION_MAJOR to 110000.
+
+        * DecoderTest/Configurations/DebugRelease.xcconfig:
+        * MediaTime/Configurations/DebugRelease.xcconfig:
+
+2020-10-12  Luming Yin  <luming_yin@apple.com>
+
+        [macOS] Workaround for MAC_OS_X_VERSION_MAJOR incorrectly including minor version when building 
+        with Xcode 12 on macOS Big Sur SUs
+        https://bugs.webkit.org/show_bug.cgi?id=217602
+        rdar://70194453
+
+        Reviewed by Darin Adler.
+
+        Due to a bug in Xcode (rdar://70185899), Xcode 12.0 and Xcode 12.1 Beta incorrectly includes the 
+        minor release number in MAC_OS_X_VERSION_MAJOR, which causes Debug and Release builds of WebKit 
+        to be misconfigured when building on macOS Big Sur SUs, leading to webpages failing to load.
+
+        To work around the Xcode bug, when the MAC_OS_X_VERSION_MAJOR includes the minor version number, 
+        drop the minor version number by explicitly setting TARGET_MAC_OS_X_VERSION_MAJOR to 110000.
+
+        Note: This change should be reverted after <rdar://70185899> is resolved.
+
+        * DecoderTest/Configurations/DebugRelease.xcconfig:
+        * MediaTime/Configurations/DebugRelease.xcconfig:
+
+2020-10-11  Darin Adler  <darin@apple.com>
+
+        [macOS] Harden more build configurations against macOS versions 11 and higher as well as inclusion of patch versions
+        https://bugs.webkit.org/show_bug.cgi?id=217595
+
+        Reviewed by Alexey Proskuryakov.
+
+        * MediaTime/Configurations/Base.xcconfig: Updated to same idiom used elsewhere.
+
+2020-07-30  Jer Noble  <jer.noble@apple.com>
+
+        [Cocoa] Make DecoderTest run against .mp4 files; add rate-limiting.
+        https://bugs.webkit.org/show_bug.cgi?id=214807
+
+        Reviewed by Darin Adler.
+
+        Look up the UTI type of the specified file, and create the appropriate SourceBufferParser
+        by passing in the ContentType (converted from UTI). Also, add a --rate-limit flag which
+        causes the decompression session to run at the same FPS as the underlying media.
+
+        * DecoderTest/DecoderTest.xcodeproj/project.pbxproj:
+        * DecoderTest/DecoderTest/main.mm:
+        (main):
+
+2020-07-24  Jer Noble  <jer.noble@apple.com>
+
+        [Cocoa] Add PerformanceTest tool for measuring raw speed of a video decoder
+        https://bugs.webkit.org/show_bug.cgi?id=214723
+
+        Reviewed by Darin Adler.
+
+        * DecoderTest/Configurations/Base.xcconfig: Added.
+        * DecoderTest/Configurations/DebugRelease.xcconfig: Added.
+        * DecoderTest/Configurations/DecoderTest.xcconfig: Added.
+        * DecoderTest/DecoderTest.xcodeproj/project.pbxproj: Added.
+        * DecoderTest/DecoderTest/main.mm: Added.
+        (Function<void):
+        (main):
+        * DecoderTest/Makefile: Added.
+        * Makefile.shared: Added.
+
+2020-07-22  Conrad Shultz  <conrad_shultz@apple.com>
+
+        Update macOS Version macros
+        https://bugs.webkit.org/show_bug.cgi?id=214653
+
+        Reviewed by Tim Horton.
+
+        * MediaTime/Configurations/Base.xcconfig:
+        * MediaTime/Configurations/DebugRelease.xcconfig:
+
+2020-07-06  Philippe Normand  <pnormand@igalia.com>
+
+        MallocBench: Remove unused private field
+        https://bugs.webkit.org/show_bug.cgi?id=213989
+
+        Reviewed by Alex Christensen.
+
+        The m_argc private field is never used. Remove it.
+        
+        * MallocBench/MallocBench/CommandLine.cpp:
+        * MallocBench/MallocBench/CommandLine.h:
+
+2020-07-01  Saam Barati  <sbarati@apple.com>
+
+        Make it so JetStream2 can run with the d8 shell
+        https://bugs.webkit.org/show_bug.cgi?id=213856
+
+        Reviewed by Keith Miller.
+
+        We use d8's Realm API to create separate global objects for
+        each test to run in.
+
+        * JetStream2/JetStreamDriver.js:
+        (Driver.prototype.runCode.globalObject.loadString):
+        (Driver.prototype.runCode):
+        (prototype.async run):
+        * JetStream2/cli.js:
+        * JetStream2/index.html:
+
+2020-06-29  Tadeu Zagallo  <tzagallo@apple.com>
+
+        New API benchmark
+        https://bugs.webkit.org/show_bug.cgi?id=213750
+
+        Reviewed by Saam Barati.
+
+        APIBench is a new benchmark suite to measure the performance of the JavaScriptCore API. It has 4 benchmarks:
+        - RichardsJS: This is imported from Octane and used as a reference so we know how fast the pure JS implementation runs.
+        - RichardsSwift: a Swift port of the benchmark, also used as reference for how fast the pure Swift implementation is.
+        - RichardsMostlyJS: As the name suggests, mostly the same the as the JS benchmark, but here the WorkerTask
+          is implemented in Swift. The API is used to write to the packet being processed and talking to the scheduler.
+        - RichardsMostlySwift: inverse of the above. Mostly the same code from the Swift benchark, but here the WorkerTask is
+          implemented in JavaScript. The API is used to run the JS version of the task and marshaling the Packet by using JSExport.
+
+        The benchmark can be built and run using the api-bench script, as following:
+
+        PerformanceTests/APIBench/api-bench WebKitBuild/Release
+
+        By default, it will build each of the benchmarks and run 5 iterations.
+        The score is calculated as 5000 / geomean([avg of RichardsMostlySwift, avg of RichardsMostlyJS]).
+        The script prints the average for the references and tests and the final score:
+
+        Results for /Volumes/Data/wk2/OpenSource/WebKitBuild/Release (5 iterations)
+        ================================================================================
+
+        References:
+        ----------------------------------------
+        RichardsJS: 14ms
+        RichardsSwift: 29ms
+
+        Tests:
+        ----------------------------------------
+        RichardsMostlyJS: 218ms
+        RichardsMostlySwift: 315ms
+
+        Score: 19.0804
+
+        * APIBench/RichardsJS/RichardsJS.js: Added.
+        (runRichards):
+        (Scheduler):
+        (Scheduler.prototype.addIdleTask):
+        (Scheduler.prototype.addWorkerTask):
+        (Scheduler.prototype.addHandlerTask):
+        (Scheduler.prototype.addDeviceTask):
+        (Scheduler.prototype.addRunningTask):
+        (Scheduler.prototype.addTask):
+        (Scheduler.prototype.schedule):
+        (Scheduler.prototype.release):
+        (Scheduler.prototype.holdCurrent):
+        (Scheduler.prototype.suspendCurrent):
+        (Scheduler.prototype.queue):
+        (TaskControlBlock):
+        (TaskControlBlock.prototype.setRunning):
+        (TaskControlBlock.prototype.markAsNotHeld):
+        (TaskControlBlock.prototype.markAsHeld):
+        (TaskControlBlock.prototype.isHeldOrSuspended):
+        (TaskControlBlock.prototype.markAsSuspended):
+        (TaskControlBlock.prototype.markAsRunnable):
+        (TaskControlBlock.prototype.run):
+        (TaskControlBlock.prototype.checkPriorityAdd):
+        (TaskControlBlock.prototype.toString):
+        (IdleTask):
+        (IdleTask.prototype.run):
+        (IdleTask.prototype.toString):
+        (DeviceTask):
+        (DeviceTask.prototype.run):
+        (DeviceTask.prototype.toString):
+        (WorkerTask):
+        (WorkerTask.prototype.run):
+        (WorkerTask.prototype.toString):
+        (HandlerTask):
+        (HandlerTask.prototype.run):
+        (HandlerTask.prototype.toString):
+        (Packet):
+        (Packet.prototype.addTo):
+        (Packet.prototype.toString):
+        * APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/project.pbxproj: Added.
+        * APIBench/RichardsMostlyJS/RichardsMostlyJS.xcodeproj/xcshareddata/xcschemes/RichardsMostlyJS.xcscheme: Added.
+        * APIBench/RichardsMostlyJS/RichardsMostlyJS/main.swift: Added.
+        (run(_:)):
+        (toString):
+        (WorkerTask.toString):
+        (WorkerTask.run(_:)):
+        * APIBench/RichardsMostlyJS/RichardsMostlyJS/richards.js: Added.
+        (runRichards):
+        (Scheduler):
+        (Scheduler.prototype.addIdleTask):
+        (Scheduler.prototype.addWorkerTask):
+        (Scheduler.prototype.addHandlerTask):
+        (Scheduler.prototype.addDeviceTask):
+        (Scheduler.prototype.addRunningTask):
+        (Scheduler.prototype.addTask):
+        (Scheduler.prototype.schedule):
+        (Scheduler.prototype.release):
+        (Scheduler.prototype.holdCurrent):
+        (Scheduler.prototype.suspendCurrent):
+        (Scheduler.prototype.queue):
+        (TaskControlBlock):
+        (TaskControlBlock.prototype.setRunning):
+        (TaskControlBlock.prototype.markAsNotHeld):
+        (TaskControlBlock.prototype.markAsHeld):
+        (TaskControlBlock.prototype.isHeldOrSuspended):
+        (TaskControlBlock.prototype.markAsSuspended):
+        (TaskControlBlock.prototype.markAsRunnable):
+        (TaskControlBlock.prototype.run):
+        (TaskControlBlock.prototype.checkPriorityAdd):
+        (TaskControlBlock.prototype.toString):
+        (IdleTask):
+        (IdleTask.prototype.run):
+        (IdleTask.prototype.toString):
+        (DeviceTask):
+        (DeviceTask.prototype.run):
+        (DeviceTask.prototype.toString):
+        (HandlerTask):
+        (HandlerTask.prototype.run):
+        (HandlerTask.prototype.toString):
+        (Packet):
+        (Packet.prototype.addTo):
+        (Packet.prototype.toString):
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/project.pbxproj: Added.
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift.xcodeproj/xcshareddata/xcschemes/RichardsMostlySwift.xcscheme: Added.
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift/DeviceTask.swift: Added.
+        (DeviceTask.create(_:device:priority:)):
+        (DeviceTask.run(_:)):
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift/HandlerTask.swift: Added.
+        (HandlerTask.device):
+        (HandlerTask.create(_:device:priority:queue:)):
+        (HandlerTask.run(_:)):
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift/IdleTask.swift: Added.
+        (IdleTask.create(_:priority:)):
+        (IdleTask.run(_:)):
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift/Packet.swift: Added.
+        (Packet.addTo(_:)):
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift/Scheduler.swift: Added.
+        (waitCurrent):
+        (handle(_:)):
+        (Scheduler.schedule):
+        (Scheduler.add(_:)):
+        (Scheduler.release_(_:)):
+        (holdCurrent):
+        (queue(_:)):
+        (queueImpl(_:packet:)):
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift/Task.swift: Added.
+        (Task.run(_:)):
+        (Task.release_):
+        (Task.hold):
+        (Task.wait):
+        (Task.resume):
+        (Task.takePacket):
+        (Task.checkPriorityAdd(_:packet:)):
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift/WorkerTask.swift: Added.
+        (WorkerTask.create(_:priority:queue:)):
+        (WorkerTask.run(_:)):
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift/main.swift: Added.
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift/richards.js: Added.
+        (return.prototype.run):
+        * APIBench/RichardsMostlySwift/RichardsMostlySwift/richards.swift: Added.
+        (runRichards):
+        * APIBench/RichardsSwift/RichardsSwift.xcodeproj/project.pbxproj: Added.
+        * APIBench/RichardsSwift/RichardsSwift.xcodeproj/xcshareddata/xcschemes/RichardsSwift.xcscheme: Added.
+        * APIBench/RichardsSwift/RichardsSwift/DeviceTask.swift: Added.
+        (DeviceTask.create(_:device:priority:)):
+        (DeviceTask.run(_:)):
+        * APIBench/RichardsSwift/RichardsSwift/HandlerTask.swift: Added.
+        (HandlerTask.device):
+        (HandlerTask.create(_:device:priority:queue:)):
+        (HandlerTask.run(_:)):
+        * APIBench/RichardsSwift/RichardsSwift/IdleTask.swift: Added.
+        (IdleTask.create(_:priority:)):
+        (IdleTask.run(_:)):
+        * APIBench/RichardsSwift/RichardsSwift/Packet.swift: Added.
+        (Packet.addTo(_:)):
+        * APIBench/RichardsSwift/RichardsSwift/Scheduler.swift: Added.
+        (Scheduler.schedule):
+        (Scheduler.add(_:)):
+        (Scheduler.release(_:)):
+        (holdCurrent):
+        (waitCurrent):
+        (queue(_:)):
+        (handle(_:)):
+        (queueImpl(_:packet:)):
+        * APIBench/RichardsSwift/RichardsSwift/Task.swift: Added.
+        (Task.run(_:)):
+        (Task.release):
+        (Task.hold):
+        (Task.wait):
+        (Task.resume):
+        (Task.takePacket):
+        (Task.checkPriorityAdd(_:packet:)):
+        * APIBench/RichardsSwift/RichardsSwift/WorkerTask.swift: Added.
+        (WorkerTask.create(_:priority:queue:)):
+        (WorkerTask.run(_:)):
+        * APIBench/RichardsSwift/RichardsSwift/main.swift: Added.
+        * APIBench/RichardsSwift/RichardsSwift/richards.swift: Added.
+        (runRichards):
+        * APIBench/api-bench: Added.
+
+2020-05-09  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Use WEBKIT_EXECUTABLE in MallocBench
+        https://bugs.webkit.org/show_bug.cgi?id=211665
+
+        Reviewed by Yusuke Suzuki.
+
+        Cleanup MallocBench definitions using WEBKIT_EXECUTABLE. Notify developers
+        that MallocBench is unavailable only if bmalloc is being used but the platform
+        does not have the functionality required.
+
+        * CMakeLists.txt:
+        * MallocBench/MallocBench/CMakeLists.txt:
+
+2020-05-08  Darin Adler  <darin@apple.com>
+
+        Remove no-longer-used PerformanceTests/StitchMarker
+        https://bugs.webkit.org/show_bug.cgi?id=211639
+
+        Reviewed by Ryosuke Niwa.
+
+        Having this test around can be confusing since it contains old versions
+        of many WebKit source files, which will show up when searching the source
+        tree. And since we're not using it, we don't need to keep a copy of it
+        in the tip of tree in the repository.
+
+        * StitchMarker: Removed.
+
+2020-04-24  Jon Lee  <jonlee@apple.com>
+
+        MotionMark: add link to bug in about page
+
+        Unreviewed.
+
+        * MotionMark/about.html:
+
+2020-04-24  Jon Lee  <jonlee@apple.com>
+
+        MotionMark: ensure that timestamps are valid during warm up phase of tests
+        https://bugs.webkit.org/show_bug.cgi?id=210640
+
+        Reviewed by Said Abou-Hallawa.
+
+        Ensure that Benchmark._benchmarkStartTimestamp is set during warm up phase.
+        Otherwise it is NaN, which makes the Benchmark.timestamp invalid, which is
+        used by tests like Multiply to drive the animation. When the warm up phase
+        completes, the start timestamp is reset.
+
+        Update minor version of benchmark with this bug fix, and include
+        version changelog in the about page.
+
+        For testing, add a parameter that allows for adjusting the length of the
+        warm up phase. It remains at its current default, 100 ms.
+
+        * MotionMark/about.html: Add section of version changelog. Includes links
+        to webkit.org blog posts.
+        * MotionMark/developer.html: Add parameter for setting warmup length.
+        Remove the Kalman filter parameters, since they should always be fixed.
+        * MotionMark/resources/runner/motionmark.css: Include styles to show
+        version log.
+        * MotionMark/resources/runner/motionmark.js: Factor out default options to
+        a property on window.benchmarkController. Include the default warmup length
+        of 100 ms.
+        (window.benchmarkController.startBenchmark): Refactor to use benchmarkDefaultParameters.
+        * MotionMark/resources/debug-runner/motionmark.js: Ditto.
+        * MotionMark/resources/strings.js: Update version number.
+        * MotionMark/tests/resources/main.js:
+        (_animateLoop): Set _benchmarkTimestamp during the warmup phase. Check the
+        warmup length. The _benchmarkTimestamp variable remains reset when the test
+        begins.
+
+2020-04-07  Saam Barati  <sbarati@apple.com>
+
+        RAMification should have a way of gathering vmmaps for each test at the end of each run
+        https://bugs.webkit.org/show_bug.cgi?id=210060
+
+        Reviewed by Yusuke Suzuki.
+
+        When I was debugging a memory issue, I needed to gather vmmaps for each
+        RAMification subtest. This patch is checking in the code I wrote to be able
+        to do this. It works by:
+        - Passing in an argument to RAMification saying we want vmmaps at the end of
+        each subtest run.
+        - RAMification invokes jsc with an environment variable that tells the shell
+        to wait for one character of input from stdin before exiting.
+        - The jsc shell also disables the bmalloc scavenger while waiting for input so the
+        vmmap we take from the python runner script represents the "footprint" score
+        of the benchmark. If the scavenger ran, it would end up releasing too much
+        memory for the vmmap to be useful.
+        - The python script runs a vmmap, and then communicates to the jsc process
+        when the vmmap finishes running.
+
+        * JetStream2/RAMification.py:
+        (parseArgs):
+        (BaseRunner.__init__):
+        (BaseRunner.getResults):
+        (LocalRunner.runOneTest):
+        (main):
+        (main.runTestList):
+
+2020-04-06  Saam Barati  <sbarati@apple.com>
+
+        Implement 1GB of executable memory on arm64
+        https://bugs.webkit.org/show_bug.cgi?id=208490
+        <rdar://problem/60797127>
+
+        Reviewed by Keith Miller.
+
+        * JetStream2/JetStreamDriver.js:
+        (Driver.prototype.dumpJSONResultsIfNeeded):
+        (DefaultBenchmark.prototype.updateUIAfterRun):
+        (DefaultBenchmark):
+        (WSLBenchmark.prototype.updateUIAfterRun):
+        (WSLBenchmark):
+        (WasmBenchmark.prototype.updateUIAfterRun):
+        (WasmBenchmark):
+        (Driver.async fetchResources.statusElement.innerHTML.a.href.string_appeared_here):
+        (Driver.prototype.async fetchResources):
+
+2020-03-26  Saam Barati  <sbarati@apple.com>
+
+        Make it so RAMification can be run with python 3 and 2 and that it recognizes the new JavaScriptCore.framework directory structure
+        https://bugs.webkit.org/show_bug.cgi?id=209636
+
+        Reviewed by Yusuke Suzuki.
+
+        - JavaScriptCore builds now put the jsc shell under JavaScriptCore.framework/Helpers/jsc,
+          not JavaScriptCore.framework/Resources/jsc
+        - It's also helpful to be able to run RAMification with python3.7 and 2.7,
+          since there are some contexts where 3.7 is all we have.
+
+        * JetStream2/RAMification.py:
+        (frameworkPathFromExecutablePath):
+        (BaseRunner.processLine):
+        (LocalRunner.runOneTest):
+        (main.runTestList):
+        (main):
+
+2020-03-15  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        Should not use variable-length-array (VLA)
+        https://bugs.webkit.org/show_bug.cgi?id=209043
+
+        Reviewed by Mark Lam.
+
+        * MediaTime/Configurations/Base.xcconfig:
+
+2020-02-17  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Use builtin targets
+        https://bugs.webkit.org/show_bug.cgi?id=205166
+
+        Reviewed by Darin Adler.
+
+        * MallocBench/MallocBench/CMakeLists.txt:
+
+2020-01-28  Sihui Liu  <sihui_liu@apple.com>
+
+        IndexedDB: speed up index records deletion
+        https://bugs.webkit.org/show_bug.cgi?id=206196
+
+        Reviewed by Brady Eidson.
+
+        * IndexedDB/basic/index-cursor-delete-2.html: Added.
+
+2020-01-08  Sihui Liu  <sihui_liu@apple.com>
+
+        REGRESSION (r242911?): High Sierra Release WK2 Perf bot timing out while running IndexedDB/large-number-of-inserts.html
+        https://bugs.webkit.org/show_bug.cgi?id=195952
+        <rdar://problem/49137688>
+
+        Re-enable the test after recent IDB performance improvement.
+
+        Reviewed by Alexey Proskuryakov.
+
+        * Skipped:
+
+2020-01-07  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK][WPE] Add API to set purpose and hints of active editable element to input methods
+        https://bugs.webkit.org/show_bug.cgi?id=205605
+
+        Reviewed by Žan Doberšek.
+
+        Split ENABLE_IOS_AUTOCORRECT_AND_AUTOCAPITALIZE and remove the IOS prefix.
+
+        * StitchMarker/wtf/FeatureDefines.h:
+
+2020-01-06  Mark Lam  <mark.lam@apple.com>
+
+        Convert ASSERT_DISABLED to ASSERT_ENABLED, and fix some tests of NDEBUG that should actually test for ASSERT_ENABLED.
+        https://bugs.webkit.org/show_bug.cgi?id=205776
+
+        Reviewed by Saam Barati.
+
+        * JetStream2/wasm/HashSet.cpp:
+        * StitchMarker/wtf/Assertions.h:
+        * StitchMarker/wtf/DateMath.cpp:
+        (WTF::initializeDates):
+        * StitchMarker/wtf/HashTable.h:
+        * StitchMarker/wtf/Hasher.h:
+        (WTF::StringHasher::addCharacters):
+        * StitchMarker/wtf/NeverDestroyed.h:
+        (WTF::LazyNeverDestroyed::construct):
+        * StitchMarker/wtf/StackBounds.h:
+        (WTF::StackBounds::checkConsistency const):
+        * StitchMarker/wtf/ValueCheck.h:
+        * StitchMarker/wtf/Vector.h:
+        (WTF::minCapacity>::checkConsistency):
+        * StitchMarker/wtf/text/AtomicStringImpl.cpp:
+        * StitchMarker/wtf/text/AtomicStringImpl.h:
+        * StitchMarker/wtf/text/StringCommon.h:
+        (WTF::hasPrefixWithLettersIgnoringASCIICaseCommon):
+        * StitchMarker/wtf/text/StringImpl.h:
+        * StitchMarker/wtf/text/SymbolImpl.h:
+        * StitchMarker/wtf/text/UniquedStringImpl.h:
+
+2020-01-05  Dean Jackson  <dino@apple.com>
+
+        Rename GraphicsContext3D to GraphicsContextGL
+        https://bugs.webkit.org/show_bug.cgi?id=205778
+        <rdar://problem/58327597>
+
+        Reviewed by Sam Weinig.
+
+        Rename all the GraphicsContext3D things to GraphicsContextGL
+        (includes Extensions3D and GRAPHICS_CONTEXT_3D).
+
+        GraphicsContext3DBase now becomes GraphicsContextGL.
+        GraphicsContext3D is now GraphicsContextGLOpenGL (since it represents
+        the OpenGL implementation of the API).
+
+        * StitchMarker/wtf/FeatureDefines.h:
+        * StitchMarker/wtf/Platform.h:
+
+2019-12-16  Antti Koivisto  <antti@apple.com>
+
+        Add StyleBench subtest for dynamic media query performance
+        https://bugs.webkit.org/show_bug.cgi?id=205263
+
+        Reviewed by Zalan Bujtas.
+
+        Add a subtest that contains a small number of rules inside min/max-width media queries.
+        The test is executed by resizing the test frame to various widths.
+
+        * StyleBench/index.html:
+        * StyleBench/resources/style-bench.js:
+        (Random.prototype.chance):
+        (defaultConfiguration):
+        (mediaQueryConfiguration):
+        (predefinedConfigurations):
+        * StyleBench/resources/tests.js:
+        (makeSteps):
+
+2019-10-26  Chris Lord  <clord@igalia.com>
+
+        Put OffscreenCanvas behind a build flag
+        https://bugs.webkit.org/show_bug.cgi?id=203146
+
+        Reviewed by Ryosuke Niwa.
+
+        * StitchMarker/wtf/FeatureDefines.h:
+
+2019-10-21  Carlos Alberto Lopez Perez  <clopez@igalia.com>
+
+        [GTK] Perf test SVG/UnderTheSeeBenchmark.html timeouts.
+        https://bugs.webkit.org/show_bug.cgi?id=203229
+
+        Unreviewed gardening.
+
+        * Skipped: Mark 2 new tests timing out in the GTK perf bot.
+
 2019-10-17  Saam Barati  <sbarati@apple.com>
 
         Have a CLI version of JetStream 2 to run on watchOS
@@ -567,7 +2495,7 @@
 
         Reviewed by Ryosuke Niwa.
 
-        r240358 sets default IDB quota as 50 MB for single test, we need to increase that for big tests. 
+        r240358 sets default IDB quota as 50 MB for single test, we need to increase that for big tests.
 
         * IndexedDB/large-binary-keys.html:
         * IndexedDB/large-string-keys.html:
@@ -902,7 +2830,7 @@
         - Web Tooling Benchmark
         - WasmBench
         - RexBench
-        
+
         JetStream 2 also adds some new benchmarks:
         - Two tests emphasizing web worker performance.
         - One test emphasizing Promise, async iteration, and DataView performance.

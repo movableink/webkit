@@ -31,6 +31,7 @@
 #import "PlatformUtilities.h"
 #import "TestDraggingInfo.h"
 #import "TestWKWebView.h"
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <cmath>
 #import <wtf/WeakObjCPtr.h>
 
@@ -69,24 +70,15 @@ IGNORE_WARNINGS_END
     return [_dragAndDropSimulator draggingSession];
 }
 
-- (void)waitForPendingMouseEvents
-{
-    __block bool doneProcessMouseEvents = false;
-    [self _doAfterProcessingAllPendingMouseEvents:^{
-        doneProcessMouseEvents = true;
-    }];
-    TestWebKitAPI::Util::run(&doneProcessMouseEvents);
-}
-
 @end
 
 // This exceeds the default drag hysteresis of all potential drag types.
 const double initialMouseDragDistance = 45;
 const double dragUpdateProgressIncrement = 0.05;
 
-static NSImage *defaultExternalDragImage()
+static RetainPtr<NSImage> defaultExternalDragImage()
 {
-    return [[[NSImage alloc] initWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"icon" withExtension:@"png" subdirectory:@"TestWebKitAPI.resources"]] autorelease];
+    return adoptNS([[NSImage alloc] initWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"icon" withExtension:@"png" subdirectory:@"TestWebKitAPI.resources"]]);
 }
 
 @implementation DragAndDropSimulator {
@@ -108,8 +100,8 @@ static NSImage *defaultExternalDragImage()
     bool _doneWaitingForDrop;
 }
 
-@synthesize currentDragOperation=_currentDragOperation;
-@synthesize initialDragImageLocationInView=_initialDragImageLocationInView;
+@synthesize currentDragOperation = _currentDragOperation;
+@synthesize initialDragImageLocationInView = _initialDragImageLocationInView;
 
 - (instancetype)initWithWebViewFrame:(CGRect)frame
 {
@@ -119,10 +111,12 @@ static NSImage *defaultExternalDragImage()
 - (instancetype)initWithWebViewFrame:(CGRect)frame configuration:(WKWebViewConfiguration *)configuration
 {
     if (self = [super init]) {
-        _webView = adoptNS([[DragAndDropTestWKWebView alloc] initWithFrame:frame configuration:configuration ?: [[[WKWebViewConfiguration alloc] init] autorelease] simulator:self]);
+        _webView = adoptNS([[DragAndDropTestWKWebView alloc] initWithFrame:frame configuration:configuration ?: adoptNS([[WKWebViewConfiguration alloc] init]).get() simulator:self]);
         _filePromiseDestinationURLs = adoptNS([NSMutableArray new]);
         [_webView setUIDelegate:self];
         self.dragDestinationAction = WKDragDestinationActionAny & ~WKDragDestinationActionLoad;
+
+        [[NSPasteboard pasteboardWithName:NSPasteboardNameDrag] clearContents];
     }
     return self;
 }
@@ -150,7 +144,7 @@ static NSImage *defaultExternalDragImage()
 
 - (double)initialProgressForMouseDrag
 {
-    double totalDistance = std::sqrt(std::pow(_startLocationInWindow.x - _endLocationInWindow.x, 2) + std::pow(_startLocationInWindow.y - _endLocationInWindow.y, 2));
+    double totalDistance = std::hypot(_startLocationInWindow.x - _endLocationInWindow.x, _startLocationInWindow.y - _endLocationInWindow.y);
     return !totalDistance ? 1 : std::min<double>(1, initialMouseDragDistance / totalDistance);
 }
 
@@ -170,8 +164,8 @@ static NSImage *defaultExternalDragImage()
 
     if (NSPasteboard *pasteboard = self.externalDragPasteboard) {
         NSPoint startLocationInView = [_webView convertPoint:_startLocationInWindow fromView:nil];
-        NSImage *dragImage = self.externalDragImage ?: defaultExternalDragImage();
-        [self performDragInWebView:_webView.get() atLocation:startLocationInView withImage:dragImage pasteboard:pasteboard source:nil];
+        auto dragImage = !self.externalDragImage ? defaultExternalDragImage(): nil;
+        [self performDragInWebView:_webView.get() atLocation:startLocationInView withImage:dragImage.get() pasteboard:pasteboard source:nil];
         TestWebKitAPI::Util::run(&_doneWaitingForDrop);
         return;
     }
@@ -185,6 +179,8 @@ static NSImage *defaultExternalDragImage()
     [_webView mouseEnterAtPoint:_startLocationInWindow];
     [_webView mouseMoveToPoint:_startLocationInWindow withFlags:0];
     [_webView mouseDownAtPoint:_startLocationInWindow simulatePressure:NO];
+    // Make sure that we exceed the minimum 150ms delay between handling mousedown and drag when dragging a text selection.
+    [_webView setEventTimestampOffset:0.25];
     [_webView mouseDragToPoint:[self locationInViewForCurrentProgress]];
     [_webView waitForPendingMouseEvents];
 
@@ -194,6 +190,7 @@ static NSImage *defaultExternalDragImage()
     [_webView waitForPendingMouseEvents];
 
     TestWebKitAPI::Util::run(&_doneWaitingForDrop);
+    [_webView setEventTimestampOffset:0];
 }
 
 - (void)beginDraggingSessionInWebView:(DragAndDropTestWKWebView *)webView withItems:(NSArray<NSDraggingItem *> *)items source:(id<NSDraggingSource>)source
@@ -452,6 +449,15 @@ static BOOL getFilePathsAndTypeIdentifiers(NSArray<NSURL *> *fileURLs, NSArray<N
 
 - (void)endDataTransfer
 {
+}
+
+- (BOOL)containsDraggedType:(NSString *)expectedType
+{
+    for (NSPasteboardType type in [NSPasteboard pasteboardWithName:NSPasteboardNameDrag].types) {
+        if ([type isEqualToString:expectedType])
+            return YES;
+    }
+    return NO;
 }
 
 #pragma mark - WKUIDelegatePrivate

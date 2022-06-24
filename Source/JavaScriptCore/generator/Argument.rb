@@ -66,7 +66,7 @@ class Argument
         "#{field_name}(#{Fits::convert(size, "stream[#{index}]", @type)})"
     end
 
-    def setter
+    def setter(traits)
         <<-EOF
     template<typename Functor>
     void set#{capitalized_name}(#{@type.to_s} value, Functor func)
@@ -84,7 +84,7 @@ class Argument
     {
         if (!#{Fits::check "size", "value", @type})
             value = func();
-        auto* stream = bitwise_cast<typename TypeBySize<size>::unsignedType*>(reinterpret_cast<uint8_t*>(this) + #{@index} * size + PaddingBySize<size>::value);
+        auto* stream = bitwise_cast<typename TypeBySize<size>::unsignedType*>(reinterpret_cast<uint8_t*>(this) + #{@index} * size + PaddingBySize<size>::value + OpcodeIDWidthBySize<#{traits}, size>::opcodeIDSize);
         *stream = #{Fits::convert "size", "value", @type};
     }
 EOF

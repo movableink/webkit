@@ -159,8 +159,29 @@ describe('config.json', () => {
                 assert.equal(Config.value('maintenanceDirectory'), 'string');
         });
 
-        it('`universalSlavePassword` should be `null` or a string', () => {
-            assertNullOrType(Config.value('universalSlavePassword'), 'string');
+        it('`universalWorkerPassword` should be `null` or a string', () => {
+            assertNullOrType(Config.value('universalWorkerPassword'), 'string');
+        });
+
+        it('`database.ssl` should be `null` or a dictionary', () => {
+            assertNullOrType(Config.value('database.ssl'), 'object');
+        });
+
+        it('`database.ssl.rootcert` should be `null` or a string', () => {
+            assertNullOrType(Config.value('database.ssl.rootcert'), 'string');
+        });
+
+        it('`database.ssl.cert` should be `null` or a string', () => {
+            assertNullOrType(Config.value('database.ssl.cert'), 'string');
+        });
+
+        it('`database.ssl.key` should be `null` or a string', () => {
+            assertNullOrType(Config.value('database.ssl.key'), 'string');
+        });
+
+        it('`database.ssl.mode` should be `null` or a string in 1 of 6 options', () => {
+            assertNullOrType(Config.value('database.ssl.mode'), 'string');
+            assert.ok([null, 'disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full'].includes(Config.value('database.ssl.mode')))
         });
     });
 });

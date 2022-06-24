@@ -1,4 +1,4 @@
-# Copyright (c) 2011, Apple Inc. All rights reserved.
+# Copyright (c) 2011, 2021 Apple Inc. All rights reserved.
 # Copyright (c) 2009, 2011, 2012 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,15 +31,18 @@
 
 import fnmatch
 import json
+import os
 import sys
 
+from webkitcorepy import string_utils, unicode
+
+from functools import reduce
 from webkitpy.common.editdistance import edit_distance
-from webkitpy.common.memoized import memoized
 from webkitpy.common.system.filesystem import FileSystem
 
 
 class Contributor(object):
-    def __init__(self, name, email_or_emails, irc_nickname_or_nicknames=None, alias_or_aliases=None, expertise=None):
+    def __init__(self, name, email_or_emails, irc_nickname_or_nicknames=None, alias_or_aliases=None, expertise=None, github=None):
         assert(name)
         assert(email_or_emails)
         self.full_name = name
@@ -48,7 +51,8 @@ class Contributor(object):
         else:
             self.emails = email_or_emails
         self._case_preserved_emails = self.emails
-        self.emails = map(lambda email: email.lower(), self.emails)  # Emails are case-insensitive.
+        self.emails = list(map(lambda email: email.lower(), self.emails))  # Emails are case-insensitive.
+        self.github = github
 
         if isinstance(irc_nickname_or_nicknames, str):
             self.irc_nicknames = [irc_nickname_or_nicknames]
@@ -71,20 +75,57 @@ class Contributor(object):
         return self.emails[0]
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return string_utils.encode(u'"{}" <{}>'.format(unicode(self.full_name), unicode(self.emails[0])), target_type=str)
 
     def __unicode__(self):
-        return '"%s" <%s>' % (self.full_name, self.emails[0])
+        return u'"{}" <{}>'.format(unicode(self.full_name), unicode(self.emails[0]))
+
+    def __hash__(self):
+        return hash(self.full_name) \
+            ^ reduce(lambda a, b: hash(a) ^ hash(b), (self.emails or []) + [0]) \
+            ^ reduce(lambda a, b: hash(a) ^ hash(b), (self._case_preserved_emails or []) + [0]) \
+            ^ reduce(lambda a, b: hash(a) ^ hash(b), (self.irc_nicknames or []) + [0]) \
+            ^ hash(self.expertise) \
+            ^ hash(self.can_commit) \
+            ^ hash(self.can_review)
+
+    def __cmp__(self, other):
+        if other is None:
+            return 1
+
+        for member in ('full_name', 'emails', '_case_preserved_emails', 'irc_nicknames', 'can_commit', 'can_review', 'expertise'):
+            if member in ('emails', '_case_preserved_emails', 'irc_nicknames'):
+                self_list = sorted(getattr(self, member) or [])
+                other_list = sorted(getattr(other, member) or [])
+                for i in range(min(len(self_list), len(other_list))):
+                    if self_list[i] != other_list[i]:
+                        return 1 if self_list[i] > other_list[i] else -1
+                if len(self_list) != len(other_list):
+                    return len(self_list) - len(other_list)
+
+            else:
+                if getattr(self, member) != getattr(other, member):
+                    return 1 if getattr(self, member) > getattr(other, member) else -1
+
+        return 0
 
     def __eq__(self, other):
-        return (other is not None
-            and self.full_name == other.full_name
-            and self.emails == other.emails
-            and self._case_preserved_emails == other._case_preserved_emails
-            and self.irc_nicknames == other.irc_nicknames
-            and self.expertise == other.expertise
-            and self.can_commit == other.can_commit
-            and self.can_review == other.can_review)
+        return self.__cmp__(other) == 0
+
+    def __ne__(self, other):
+        return self.__cmp__(other) != 0
+
+    def __lt__(self, other):
+        return self.__cmp__(other) < 0
+
+    def __le__(self, other):
+        return self.__cmp__(other) <= 0
+
+    def __gt__(self, other):
+        return self.__cmp__(other) > 0
+
+    def __ge__(self, other):
+        return self.__cmp__(other) >= 0
 
     def contains_string(self, search_string):
         string = search_string.lower()
@@ -133,8 +174,12 @@ class Contributor(object):
         return False
 
     def as_dict(self):
-        info = {"emails" : self._case_preserved_emails}
-
+        info = dict(
+            name=self.full_name,
+            emails=self._case_preserved_emails,
+        )
+        if self.github:
+            info["github"] = self.github
         if self.aliases:
             info["aliases"] = self.aliases
 
@@ -150,26 +195,26 @@ class Contributor(object):
             info["expertise"] = self.expertise
 
         if self.is_bot:
-            info["class"] = "bot"
+            info["status"] = "bot"
 
         return info
 
 
 class Committer(Contributor):
-    def __init__(self, name, email_or_emails, irc_nickname=None, alias_or_aliases=None, expertise=None):
-        Contributor.__init__(self, name, email_or_emails, irc_nickname, alias_or_aliases, expertise)
+    def __init__(self, name, email_or_emails, irc_nickname=None, alias_or_aliases=None, expertise=None, github=None):
+        Contributor.__init__(self, name, email_or_emails, irc_nickname, alias_or_aliases, expertise, github)
         self.can_commit = True
 
 
 class Reviewer(Committer):
-    def __init__(self, name, email_or_emails, irc_nickname=None, alias_or_aliases=None, expertise=None):
-        Committer.__init__(self, name, email_or_emails, irc_nickname, alias_or_aliases, expertise)
+    def __init__(self, name, email_or_emails, irc_nickname=None, alias_or_aliases=None, expertise=None, github=None):
+        Committer.__init__(self, name, email_or_emails, irc_nickname, alias_or_aliases, expertise, github)
         self.can_review = True
 
 
 class Bot(Contributor):
-    def __init__(self, name, email_or_emails, irc_nickname=None, alias_or_aliases=None, expertise=None):
-        Contributor.__init__(self, name, email_or_emails, irc_nickname, alias_or_aliases, expertise)
+    def __init__(self, name, email_or_emails, irc_nickname=None, alias_or_aliases=None, expertise=None, github=None):
+        Contributor.__init__(self, name, email_or_emails, irc_nickname, alias_or_aliases, expertise, github)
         self.is_bot = True
 
 
@@ -190,10 +235,12 @@ class CommitterList(object):
         self._accounts_by_login = {}
 
     def load_json(self):
-        filesystem = FileSystem()
-        json_path = filesystem.join(filesystem.dirname(filesystem.path_to_module('webkitpy.common.config')), 'contributors.json')
+        json_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))),
+            'metadata', 'contributors.json',
+        )
         try:
-            contributors = json.loads(filesystem.read_text_file(json_path))
+            contributors = json.loads(FileSystem().read_text_file(json_path))
         except ValueError as e:
             sys.exit('contributors.json is malformed: ' + str(e))
 
@@ -201,20 +248,22 @@ class CommitterList(object):
         self._committers = []
         self._reviewers = []
 
-        for name, data in contributors.items():
-            contributor = None
+        for data in contributors:
+            name = data.get('name')
             status = data.get('status')
+            if not name:
+                continue
             if status == "reviewer":
-                contributor = Reviewer(name, data.get('emails'), data.get('nicks'), data.get('aliases'), data.get('expertise'))
+                contributor = Reviewer(name, data.get('emails'), data.get('nicks'), data.get('aliases'), data.get('expertise'), data.get('github'))
                 self._reviewers.append(contributor)
                 self._committers.append(contributor)
             elif status == "committer":
-                contributor = Committer(name, data.get('emails'), data.get('nicks'), data.get('aliases'), data.get('expertise'))
+                contributor = Committer(name, data.get('emails'), data.get('nicks'), data.get('aliases'), data.get('expertise'), data.get('github'))
                 self._committers.append(contributor)
-            elif data.get('class') == 'bot':
-                contributor = Bot(name, data.get('emails'), data.get('nicks'), data.get('aliases'), data.get('expertise'))
+            elif status == 'bot':
+                contributor = Bot(name, data.get('emails'), data.get('nicks'), data.get('aliases'), data.get('expertise'), data.get('github'))
             else:
-                contributor = Contributor(name, data.get('emails'), data.get('nicks'), data.get('aliases'), data.get('expertise'))
+                contributor = Contributor(name, data.get('emails'), data.get('nicks'), data.get('aliases'), data.get('expertise'), data.get('github'))
 
             self._contributors.append(contributor)
 
@@ -223,29 +272,26 @@ class CommitterList(object):
         self._committers = committers + reviewers
         self._reviewers = reviewers
 
-    @staticmethod
-    def _contributor_list_to_dict(list):
-        committers_dict = {}
-        for contributor in sorted(list):
-            committers_dict[contributor.full_name] = contributor.as_dict()
-        return committers_dict
-
     def as_json(self):
-        result = CommitterList._contributor_list_to_dict(self._contributors)
-        return json.dumps(result, sort_keys=True, indent=3, separators=(',', ' : '))
+        return json.dumps(
+            [contributor.as_dict() for contributor in sorted(self._contributors)],
+            sort_keys=True, indent=3, separators=(',', ' : '),
+        )
 
     def reformat_in_place(self):
-        filesystem = FileSystem()
-        json_path = filesystem.join(filesystem.dirname(filesystem.path_to_module('webkitpy.common.config')), 'contributors.json')
-        filesystem.write_text_file(json_path, self.as_json())
+        json_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))),
+            'metadata', 'contributors.json',
+        )
+        FileSystem().write_text_file(json_path, self.as_json())
 
     # Contributors who are not in any other category.
     def _exclusive_contributors(self):
-        return filter(lambda contributor: not (contributor.can_commit or contributor.can_review), self._contributors)
+        return list(filter(lambda contributor: not (contributor.can_commit or contributor.can_review), self._contributors))
 
     # Committers who are not reviewers.
     def _exclusive_committers(self):
-        return filter(lambda contributor: contributor.can_commit and not contributor.can_review, self._committers)
+        return list(filter(lambda contributor: contributor.can_commit and not contributor.can_review, self._committers))
 
     # This is the superset of contributors + committers + reviewers
     def contributors(self):
@@ -306,8 +352,8 @@ class CommitterList(object):
         return None
 
     def contributors_by_search_string(self, string):
-        glob_matches = filter(lambda contributor: contributor.matches_glob(string), self.contributors())
-        return glob_matches or filter(lambda contributor: contributor.contains_string(string), self.contributors())
+        glob_matches = list(filter(lambda contributor: contributor.matches_glob(string), self.contributors()))
+        return glob_matches or list(filter(lambda contributor: contributor.contains_string(string), self.contributors()))
 
     def contributors_by_email_username(self, string):
         string = string + '@'

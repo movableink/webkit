@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,46 @@
 
 #pragma once
 
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/WKTextInputListViewControllerAdditions.h>
-#endif
+#if HAVE(PEPPER_UI_CORE)
+
+#import "WKQuickboardViewControllerDelegate.h"
+
+typedef NS_ENUM(NSInteger, WKNumberPadInputMode) {
+    WKNumberPadInputModeNone,
+    WKNumberPadInputModeNumbersAndSymbols,
+    WKNumberPadInputModeTelephone,
+    WKNumberPadInputModeNumbersOnly
+};
+
+@class WKTextInputListViewController;
+
+@protocol WKTextInputListViewControllerDelegate <WKQuickboardViewControllerDelegate>
+
+- (WKNumberPadInputMode)numericInputModeForListViewController:(WKTextInputListViewController *)controller;
+- (PUICTextInputContext *)textInputContextForListViewController:(WKTextInputListViewController *)controller;
+- (UIView *)inputContextViewForViewController:(PUICQuickboardViewController *)controller;
+- (BOOL)allowsDictationInputForListViewController:(WKTextInputListViewController *)controller;
+- (BOOL)allowsLanguageSelectionForListViewController:(WKTextInputListViewController *)controller;
+- (BOOL)shouldDisplayInputContextViewForListViewController:(PUICQuickboardViewController *)controller;
+
+@end
+
+@interface WKTextInputListViewController : PUICQuickboardMessageViewController
+
+- (instancetype)initWithDelegate:(id <WKTextInputListViewControllerDelegate>)delegate NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithDelegate:(id <PUICQuickboardViewControllerDelegate>)delegate dictationMode:(PUICDictationMode)dictationMode NS_UNAVAILABLE;
+- (instancetype)initWithCoder:(NSCoder *)coder NS_UNAVAILABLE;
+- (void)updateTextSuggestions:(NSArray<UITextSuggestion *> *)suggestions;
+- (void)reloadContextView;
+
+@property (nonatomic, weak) id <WKTextInputListViewControllerDelegate> delegate;
+
+@end
+
+@interface WKTextInputListViewController (Testing)
+
+- (void)enterText:(NSString *)text;
+
+@end
+
+#endif // HAVE(PEPPER_UI_CORE)

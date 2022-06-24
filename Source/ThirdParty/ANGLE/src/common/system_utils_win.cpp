@@ -15,69 +15,35 @@
 
 namespace angle
 {
+
 namespace
 {
-struct ScopedPipe
+
+std::string GetPath(HMODULE module)
 {
-    ~ScopedPipe()
-    {
-        closeReadHandle();
-        closeWriteHandle();
-    }
-    void closeReadHandle()
-    {
-        if (readHandle)
-        {
-            CloseHandle(readHandle);
-            readHandle = nullptr;
-        }
-    }
-    void closeWriteHandle()
-    {
-        if (writeHandle)
-        {
-            CloseHandle(writeHandle);
-            writeHandle = nullptr;
-        }
-    }
-    HANDLE readHandle  = nullptr;
-    HANDLE writeHandle = nullptr;
-};
-
-void ReadEntireFile(HANDLE handle, std::string *out)
-{
-    out->clear();
-
-    while (true)
-    {
-        char buffer[256];
-        DWORD bytesRead;
-
-        BOOL success = ReadFile(handle, buffer, sizeof(buffer), &bytesRead, nullptr);
-
-        if (!success || bytesRead == 0)
-        {
-            break;
-        }
-
-        out->append(buffer, bytesRead);
-    }
+    std::array<wchar_t, MAX_PATH> executableFileBuf;
+    DWORD executablePathLen = GetModuleFileNameW(module, executableFileBuf.data(),
+                                                 static_cast<DWORD>(executableFileBuf.size()));
+    return Narrow(executablePathLen > 0 ? executableFileBuf.data() : L"");
 }
+
+std::string GetDirectory(HMODULE module)
+{
+    std::string executablePath = GetPath(module);
+    size_t lastPathSepLoc      = executablePath.find_last_of("\\/");
+    return (lastPathSepLoc != std::string::npos) ? executablePath.substr(0, lastPathSepLoc) : "";
+}
+
 }  // anonymous namespace
 
 std::string GetExecutablePath()
 {
-    std::array<char, MAX_PATH> executableFileBuf;
-    DWORD executablePathLen = GetModuleFileNameA(nullptr, executableFileBuf.data(),
-                                                 static_cast<DWORD>(executableFileBuf.size()));
-    return (executablePathLen > 0 ? std::string(executableFileBuf.data()) : "");
+    return GetPath(nullptr);
 }
 
 std::string GetExecutableDirectory()
 {
-    std::string executablePath = GetExecutablePath();
-    size_t lastPathSepLoc      = executablePath.find_last_of("\\/");
-    return (lastPathSepLoc != std::string::npos) ? executablePath.substr(0, lastPathSepLoc) : "";
+    return GetDirectory(nullptr);
 }
 
 const char *GetSharedLibraryExtension()
@@ -87,51 +53,26 @@ const char *GetSharedLibraryExtension()
 
 Optional<std::string> GetCWD()
 {
-    std::array<char, MAX_PATH> pathBuf;
-    DWORD result = GetCurrentDirectoryA(static_cast<DWORD>(pathBuf.size()), pathBuf.data());
+    std::array<wchar_t, MAX_PATH> pathBuf;
+    DWORD result = GetCurrentDirectoryW(static_cast<DWORD>(pathBuf.size()), pathBuf.data());
     if (result == 0)
     {
         return Optional<std::string>::Invalid();
     }
-    return std::string(pathBuf.data());
+    return Narrow(pathBuf.data());
 }
 
 bool SetCWD(const char *dirName)
 {
-    return (SetCurrentDirectoryA(dirName) == TRUE);
+    return (SetCurrentDirectoryW(Widen(dirName).c_str()) == TRUE);
 }
 
-bool UnsetEnvironmentVar(const char *variableName)
-{
-    return (SetEnvironmentVariableA(variableName, nullptr) == TRUE);
-}
-
-bool SetEnvironmentVar(const char *variableName, const char *value)
-{
-    return (SetEnvironmentVariableA(variableName, value) == TRUE);
-}
-
-std::string GetEnvironmentVar(const char *variableName)
-{
-    std::array<char, MAX_PATH> oldValue;
-    DWORD result =
-        GetEnvironmentVariableA(variableName, oldValue.data(), static_cast<DWORD>(oldValue.size()));
-    if (result == 0)
-    {
-        return std::string();
-    }
-    else
-    {
-        return std::string(oldValue.data());
-    }
-}
-
-const char *GetPathSeparator()
+const char *GetPathSeparatorForEnvironmentVar()
 {
     return ";";
 }
 
-double GetCurrentTime()
+double GetCurrentSystemTime()
 {
     LARGE_INTEGER frequency = {};
     QueryPerformanceFrequency(&frequency);
@@ -142,172 +83,43 @@ double GetCurrentTime()
     return static_cast<double>(curTime.QuadPart) / frequency.QuadPart;
 }
 
-bool RunApp(const std::vector<const char *> &args,
-            std::string *stdoutOut,
-            std::string *stderrOut,
-            int *exitCodeOut)
+double GetCurrentProcessCpuTime()
 {
-    ScopedPipe stdoutPipe;
-    ScopedPipe stderrPipe;
+    FILETIME creationTime = {};
+    FILETIME exitTime     = {};
+    FILETIME kernelTime   = {};
+    FILETIME userTime     = {};
 
-    SECURITY_ATTRIBUTES sa_attr;
-    // Set the bInheritHandle flag so pipe handles are inherited.
-    sa_attr.nLength              = sizeof(SECURITY_ATTRIBUTES);
-    sa_attr.bInheritHandle       = TRUE;
-    sa_attr.lpSecurityDescriptor = nullptr;
+    // Note this will not give accurate results if the current thread is
+    // scheduled for less than the tick rate, which is often 15 ms. In that
+    // case, GetProcessTimes will not return different values, making it
+    // possible to end up with 0 ms for a process that takes 93% of a core
+    // (14/15 ms)!  An alternative is QueryProcessCycleTime but there is no
+    // simple way to convert cycles back to seconds, and on top of that, it's
+    // not supported pre-Windows Vista.
 
-    // Create pipes for stdout and stderr.  Ensure the read handles to the pipes are not inherited.
-    if (stdoutOut && !CreatePipe(&stdoutPipe.readHandle, &stdoutPipe.writeHandle, &sa_attr, 0) &&
-        !SetHandleInformation(stdoutPipe.readHandle, HANDLE_FLAG_INHERIT, 0))
-    {
-        return false;
-    }
-    if (stderrOut && !CreatePipe(&stderrPipe.readHandle, &stderrPipe.writeHandle, &sa_attr, 0) &&
-        !SetHandleInformation(stderrPipe.readHandle, HANDLE_FLAG_INHERIT, 0))
-    {
-        return false;
-    }
+    // Returns 100-ns intervals, so we want to divide by 1e7 to get seconds
+    GetProcessTimes(GetCurrentProcess(), &creationTime, &exitTime, &kernelTime, &userTime);
 
-    // Concat the nicely separated arguments into one string so the application has to reparse it.
-    // We don't support quotation and spaces in arguments currently.
-    std::vector<char> commandLineString;
-    for (const char *arg : args)
-    {
-        if (arg)
-        {
-            if (!commandLineString.empty())
-            {
-                commandLineString.push_back(' ');
-            }
-            commandLineString.insert(commandLineString.end(), arg, arg + strlen(arg));
-        }
-    }
-    commandLineString.push_back('\0');
+    ULARGE_INTEGER kernelInt64;
+    kernelInt64.LowPart      = kernelTime.dwLowDateTime;
+    kernelInt64.HighPart     = kernelTime.dwHighDateTime;
+    double systemTimeSeconds = static_cast<double>(kernelInt64.QuadPart) * 1e-7;
 
-    STARTUPINFOA startInfo = {};
+    ULARGE_INTEGER userInt64;
+    userInt64.LowPart      = userTime.dwLowDateTime;
+    userInt64.HighPart     = userTime.dwHighDateTime;
+    double userTimeSeconds = static_cast<double>(userInt64.QuadPart) * 1e-7;
 
-    startInfo.cb        = sizeof(STARTUPINFOA);
-    startInfo.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
-    if (stdoutOut)
-    {
-        startInfo.hStdOutput = stdoutPipe.writeHandle;
-    }
-    else
-    {
-        startInfo.hStdError = GetStdHandle(STD_OUTPUT_HANDLE);
-    }
-    if (stderrOut)
-    {
-        startInfo.hStdError = stderrPipe.writeHandle;
-    }
-    else
-    {
-        startInfo.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-    }
-
-    if (stderrOut || stdoutOut)
-    {
-        startInfo.dwFlags |= STARTF_USESTDHANDLES;
-    }
-
-    // Create the child process.
-    PROCESS_INFORMATION processInfo = {};
-    if (!CreateProcessA(nullptr, commandLineString.data(), nullptr, nullptr,
-                        TRUE,  // Handles are inherited.
-                        0, nullptr, nullptr, &startInfo, &processInfo))
-    {
-        return false;
-    }
-
-    // Close the write end of the pipes, so EOF can be generated when child exits.
-    stdoutPipe.closeWriteHandle();
-    stderrPipe.closeWriteHandle();
-
-    // Read back the output of the child.
-    if (stdoutOut)
-    {
-        ReadEntireFile(stdoutPipe.readHandle, stdoutOut);
-    }
-    if (stderrOut)
-    {
-        ReadEntireFile(stderrPipe.readHandle, stderrOut);
-    }
-
-    // Cleanup the child.
-    bool success = WaitForSingleObject(processInfo.hProcess, INFINITE) == WAIT_OBJECT_0;
-
-    if (success)
-    {
-        DWORD exitCode = 0;
-        success        = GetExitCodeProcess(processInfo.hProcess, &exitCode);
-
-        if (success)
-        {
-            *exitCodeOut = static_cast<int>(exitCode);
-        }
-    }
-
-    CloseHandle(processInfo.hProcess);
-    CloseHandle(processInfo.hThread);
-
-    return success;
-}
-
-class Win32Library : public Library
-{
-  public:
-    Win32Library(const char *libraryName, SearchType searchType)
-    {
-        char buffer[MAX_PATH];
-        int ret = snprintf(buffer, MAX_PATH, "%s.%s", libraryName, GetSharedLibraryExtension());
-        if (ret > 0 && ret < MAX_PATH)
-        {
-            switch (searchType)
-            {
-                case SearchType::ApplicationDir:
-                    mModule = LoadLibraryA(buffer);
-                    break;
-                case SearchType::SystemDir:
-                    mModule = LoadLibraryExA(buffer, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-                    break;
-            }
-        }
-    }
-
-    ~Win32Library() override
-    {
-        if (mModule)
-        {
-            FreeLibrary(mModule);
-        }
-    }
-
-    void *getSymbol(const char *symbolName) override
-    {
-        if (!mModule)
-        {
-            return nullptr;
-        }
-
-        return reinterpret_cast<void *>(GetProcAddress(mModule, symbolName));
-    }
-
-    void *getNative() const override { return reinterpret_cast<void *>(mModule); }
-
-  private:
-    HMODULE mModule = nullptr;
-};
-
-Library *OpenSharedLibrary(const char *libraryName, SearchType searchType)
-{
-    return new Win32Library(libraryName, searchType);
+    return systemTimeSeconds + userTimeSeconds;
 }
 
 bool IsDirectory(const char *filename)
 {
     WIN32_FILE_ATTRIBUTE_DATA fileInformation;
 
-    BOOL result = GetFileAttributesExA(filename, GetFileExInfoStandard, &fileInformation);
+    BOOL result =
+        GetFileAttributesExW(Widen(filename).c_str(), GetFileExInfoStandard, &fileInformation);
     if (result)
     {
         DWORD attribs = fileInformation.dwFileAttributes;
@@ -326,4 +138,100 @@ void BreakDebugger()
 {
     __debugbreak();
 }
+
+const char *GetExecutableExtension()
+{
+    return ".exe";
+}
+
+char GetPathSeparator()
+{
+    return '\\';
+}
+
+std::string GetModuleDirectory()
+{
+// GetModuleHandleEx is unavailable on UWP
+#if !defined(ANGLE_IS_WINUWP)
+    static int placeholderSymbol = 0;
+    HMODULE module               = nullptr;
+    if (GetModuleHandleExW(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(&placeholderSymbol), &module))
+    {
+        return GetDirectory(module);
+    }
+#endif
+    return GetDirectory(nullptr);
+}
+
+std::string GetRootDirectory()
+{
+    return "C:\\";
+}
+
+std::string GetLibraryPath(void *libraryHandle)
+{
+    if (!libraryHandle)
+    {
+        return "";
+    }
+
+    std::array<wchar_t, MAX_PATH> buffer;
+    if (GetModuleFileNameW(reinterpret_cast<HMODULE>(libraryHandle), buffer.data(),
+                           buffer.size()) == 0)
+    {
+        return "";
+    }
+
+    return Narrow(buffer.data());
+}
+
+void *GetLibrarySymbol(void *libraryHandle, const char *symbolName)
+{
+    if (!libraryHandle)
+    {
+        fprintf(stderr, "Module was not loaded\n");
+        return nullptr;
+    }
+
+    return reinterpret_cast<void *>(
+        GetProcAddress(reinterpret_cast<HMODULE>(libraryHandle), symbolName));
+}
+
+void CloseSystemLibrary(void *libraryHandle)
+{
+    if (libraryHandle)
+    {
+        FreeLibrary(reinterpret_cast<HMODULE>(libraryHandle));
+    }
+}
+std::string Narrow(const std::wstring_view &utf16)
+{
+    if (utf16.empty())
+    {
+        return {};
+    }
+    int requiredSize = WideCharToMultiByte(CP_UTF8, 0, utf16.data(), static_cast<int>(utf16.size()),
+                                           nullptr, 0, nullptr, nullptr);
+    std::string utf8(requiredSize, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, utf16.data(), static_cast<int>(utf16.size()), &utf8[0],
+                        requiredSize, nullptr, nullptr);
+    return utf8;
+}
+
+std::wstring Widen(const std::string_view &utf8)
+{
+    if (utf8.empty())
+    {
+        return {};
+    }
+    int requiredSize =
+        MultiByteToWideChar(CP_UTF8, 0, utf8.data(), static_cast<int>(utf8.size()), nullptr, 0);
+    std::wstring utf16(requiredSize, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, utf8.data(), static_cast<int>(utf8.size()), &utf16[0],
+                        requiredSize);
+    return utf16;
+}
+
 }  // namespace angle

@@ -37,16 +37,27 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xdamage.h>
 #include <cairo-xlib.h>
+#if USE(GTK4)
+#include <gdk/x11/gdkx.h>
+#else
 #include <gdk/gdkx.h>
+#endif
 #include <gtk/gtk.h>
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 
-namespace WebKit {
-using namespace WebCore;
+#if USE(GLX)
+#include <X11/Xproto.h>
+#include <GL/glxproto.h>
+#endif
 
-static Optional<int> s_damageEventBase;
-static Optional<int> s_damageErrorBase;
+namespace WebKit {
+
+static std::optional<int> s_damageEventBase;
+static std::optional<int> s_damageErrorBase;
+#if USE(GLX)
+static std::optional<int> s_glxErrorBase;
+#endif
 
 class XDamageNotifier {
     WTF_MAKE_NONCOPYABLE(XDamageNotifier);
@@ -60,21 +71,46 @@ public:
 
     void add(Damage damage, WTF::Function<void()>&& notifyFunction)
     {
-        if (m_notifyFunctions.isEmpty())
+        if (m_notifyFunctions.isEmpty()) {
+#if USE(GTK4)
+            g_signal_connect(gdk_display_get_default(), "xevent", G_CALLBACK(filterXDamageEvent), this);
+#else
             gdk_window_add_filter(nullptr, reinterpret_cast<GdkFilterFunc>(&filterXDamageEvent), this);
+#endif
+        }
         m_notifyFunctions.add(damage, WTFMove(notifyFunction));
     }
 
     void remove(Damage damage)
     {
         m_notifyFunctions.remove(damage);
-        if (m_notifyFunctions.isEmpty())
+        if (m_notifyFunctions.isEmpty()) {
+#if USE(GTK4)
+            g_signal_handlers_disconnect_by_data(gdk_display_get_default(), this);
+#else
             gdk_window_remove_filter(nullptr, reinterpret_cast<GdkFilterFunc>(&filterXDamageEvent), this);
+#endif
+        }
     }
 
 private:
     XDamageNotifier() = default;
 
+#if USE(GTK4)
+    static gboolean filterXDamageEvent(GdkDisplay*, XEvent* xEvent, XDamageNotifier* notifier)
+    {
+        if (xEvent->type != s_damageEventBase.value() + XDamageNotify)
+            return GDK_EVENT_PROPAGATE;
+
+        auto* damageEvent = reinterpret_cast<XDamageNotifyEvent*>(xEvent);
+        if (notifier->notify(damageEvent->damage)) {
+            XDamageSubtract(xEvent->xany.display, damageEvent->damage, None, None);
+            return GDK_EVENT_STOP;
+        }
+
+        return GDK_EVENT_PROPAGATE;
+    }
+#else
     static GdkFilterReturn filterXDamageEvent(GdkXEvent* event, GdkEvent*, XDamageNotifier* notifier)
     {
         auto* xEvent = static_cast<XEvent*>(event);
@@ -89,6 +125,7 @@ private:
 
         return GDK_FILTER_CONTINUE;
     }
+#endif
 
     bool notify(Damage damage) const
     {
@@ -105,7 +142,11 @@ private:
 
 bool AcceleratedBackingStoreX11::checkRequirements()
 {
-    auto& display = downcast<PlatformDisplayX11>(PlatformDisplay::sharedDisplay());
+    auto& display = downcast<WebCore::PlatformDisplayX11>(WebCore::PlatformDisplay::sharedDisplay());
+#if USE(GLX)
+    // GLX is optional, he we just want the error base.
+    display.supportsGLX(s_glxErrorBase);
+#endif
     return display.supportsXComposite() && display.supportsXDamage(s_damageEventBase, s_damageErrorBase);
 }
 
@@ -126,13 +167,26 @@ static inline unsigned char xDamageErrorCode(unsigned char errorCode)
     return static_cast<unsigned>(s_damageErrorBase.value()) + errorCode;
 }
 
+#if USE(GLX)
+static inline unsigned char glxErrorCode(unsigned char errorCode)
+{
+    ASSERT(s_glxErrorBase);
+    return static_cast<unsigned>(s_glxErrorBase.value()) + errorCode;
+}
+#endif
+
 AcceleratedBackingStoreX11::~AcceleratedBackingStoreX11()
 {
     if (!m_surface && !m_damage)
         return;
 
-    Display* display = downcast<PlatformDisplayX11>(PlatformDisplay::sharedDisplay()).native();
-    XErrorTrapper trapper(display, XErrorTrapper::Policy::Crash, { BadDrawable, xDamageErrorCode(BadDamage) });
+    Display* display = downcast<WebCore::PlatformDisplayX11>(WebCore::PlatformDisplay::sharedDisplay()).native();
+    Vector<unsigned char> errorList = { BadDrawable, xDamageErrorCode(BadDamage) };
+#if USE(GLX)
+    if (s_glxErrorBase)
+        errorList.append(glxErrorCode(GLXBadWindow));
+#endif
+    WebCore::XErrorTrapper trapper(display, WebCore::XErrorTrapper::Policy::Crash, WTFMove(errorList));
     if (m_damage) {
         XDamageNotifier::singleton().remove(m_damage.get());
         m_damage.reset();
@@ -146,10 +200,15 @@ void AcceleratedBackingStoreX11::update(const LayerTreeContext& layerTreeContext
     if (m_surface && cairo_xlib_surface_get_drawable(m_surface.get()) == pixmap)
         return;
 
-    Display* display = downcast<PlatformDisplayX11>(PlatformDisplay::sharedDisplay()).native();
+    Display* display = downcast<WebCore::PlatformDisplayX11>(WebCore::PlatformDisplay::sharedDisplay()).native();
 
     if (m_surface) {
-        XErrorTrapper trapper(display, XErrorTrapper::Policy::Crash, { BadDrawable, xDamageErrorCode(BadDamage) });
+        Vector<unsigned char> errorList = { BadDrawable, xDamageErrorCode(BadDamage) };
+#if USE(GLX)
+        if (s_glxErrorBase)
+            errorList.append(glxErrorCode(GLXBadWindow));
+#endif
+        WebCore::XErrorTrapper trapper(display, WebCore::XErrorTrapper::Policy::Crash, WTFMove(errorList));
         if (m_damage) {
             XDamageNotifier::singleton().remove(m_damage.get());
             m_damage.reset();
@@ -165,17 +224,27 @@ void AcceleratedBackingStoreX11::update(const LayerTreeContext& layerTreeContext
     if (!drawingArea)
         return;
 
-    IntSize size = drawingArea->size();
+    WebCore::IntSize size = drawingArea->size();
     float deviceScaleFactor = m_webPage.deviceScaleFactor();
     size.scale(deviceScaleFactor);
 
-    XErrorTrapper trapper(display, XErrorTrapper::Policy::Crash, { BadDrawable, xDamageErrorCode(BadDamage) });
-    ASSERT(downcast<PlatformDisplayX11>(PlatformDisplay::sharedDisplay()).native() == GDK_DISPLAY_XDISPLAY(gdk_display_get_default()));
-    GdkVisual* visual = gdk_screen_get_rgba_visual(gdk_screen_get_default());
-    if (!visual)
-        visual = gdk_screen_get_system_visual(gdk_screen_get_default());
-    m_surface = adoptRef(cairo_xlib_surface_create(display, pixmap, GDK_VISUAL_XVISUAL(visual), size.width(), size.height()));
-    cairoSurfaceSetDeviceScale(m_surface.get(), deviceScaleFactor, deviceScaleFactor);
+    Vector<unsigned char> errorList = { BadDrawable, xDamageErrorCode(BadDamage) };
+#if USE(GLX)
+    if (s_glxErrorBase)
+        errorList.append(glxErrorCode(GLXBadWindow));
+#endif
+    WebCore::XErrorTrapper trapper(display, WebCore::XErrorTrapper::Policy::Crash, WTFMove(errorList));
+    ASSERT(downcast<WebCore::PlatformDisplayX11>(WebCore::PlatformDisplay::sharedDisplay()).native() == gdk_x11_display_get_xdisplay(gdk_display_get_default()));
+#if USE(GTK4)
+    auto* visual = WK_XVISUAL(downcast<WebCore::PlatformDisplayX11>(WebCore::PlatformDisplay::sharedDisplay()));
+#else
+    GdkVisual* gdkVisual = gdk_screen_get_rgba_visual(gdk_screen_get_default());
+    if (!gdkVisual)
+        gdkVisual = gdk_screen_get_system_visual(gdk_screen_get_default());
+    auto* visual = GDK_VISUAL_XVISUAL(gdkVisual);
+#endif
+    m_surface = adoptRef(cairo_xlib_surface_create(display, pixmap, visual, size.width(), size.height()));
+    cairo_surface_set_device_scale(m_surface.get(), deviceScaleFactor, deviceScaleFactor);
     m_damage = XDamageCreate(display, pixmap, XDamageReportNonEmpty);
     XDamageNotifier::singleton().add(m_damage.get(), [this] {
         if (m_webPage.isViewVisible())
@@ -184,7 +253,27 @@ void AcceleratedBackingStoreX11::update(const LayerTreeContext& layerTreeContext
     XSync(display, False);
 }
 
-bool AcceleratedBackingStoreX11::paint(cairo_t* cr, const IntRect& clipRect)
+#if USE(GTK4)
+void AcceleratedBackingStoreX11::snapshot(GtkSnapshot* gtkSnapshot)
+{
+    if (!m_surface)
+        return;
+
+    // The surface can be modified by the web process at any time, so we mark it
+    // as dirty to ensure we always render the updated contents as soon as possible.
+    cairo_surface_mark_dirty(m_surface.get());
+
+    WebCore::FloatSize viewSize(gtk_widget_get_width(m_webPage.viewWidget()), gtk_widget_get_height(m_webPage.viewWidget()));
+    graphene_rect_t rect = GRAPHENE_RECT_INIT(0, 0, viewSize.width(), viewSize.height());
+    RefPtr<cairo_t> cr = adoptRef(gtk_snapshot_append_cairo(gtkSnapshot, &rect));
+    cairo_set_source_surface(cr.get(), m_surface.get(), 0, 0);
+    cairo_set_operator(cr.get(), CAIRO_OPERATOR_OVER);
+    cairo_paint(cr.get());
+
+    cairo_surface_flush(m_surface.get());
+}
+#else
+bool AcceleratedBackingStoreX11::paint(cairo_t* cr, const WebCore::IntRect& clipRect)
 {
     if (!m_surface)
         return false;
@@ -201,8 +290,11 @@ bool AcceleratedBackingStoreX11::paint(cairo_t* cr, const IntRect& clipRect)
 
     cairo_restore(cr);
 
+    cairo_surface_flush(m_surface.get());
+
     return true;
 }
+#endif
 
 } // namespace WebKit
 

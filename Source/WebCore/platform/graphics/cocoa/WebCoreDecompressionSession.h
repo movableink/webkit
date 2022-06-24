@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if USE(VIDEOTOOLBOX)
-
 #include <CoreMedia/CMTime.h>
 #include <functional>
 #include <wtf/Lock.h>
@@ -35,6 +33,7 @@
 #include <wtf/Ref.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/WorkQueue.h>
 
 typedef CFTypeRef CMBufferRef;
 typedef const struct __CFArray * CFArrayRef;
@@ -45,12 +44,11 @@ typedef signed long CMItemCount;
 typedef struct __CVBuffer *CVPixelBufferRef;
 typedef struct __CVBuffer *CVImageBufferRef;
 typedef UInt32 VTDecodeInfoFlags;
-typedef UInt32 VTDecodeInfoFlags;
 typedef struct OpaqueVTDecompressionSession*  VTDecompressionSessionRef;
 
 namespace WebCore {
 
-class WebCoreDecompressionSession : public ThreadSafeRefCounted<WebCoreDecompressionSession> {
+class WEBCORE_EXPORT WebCoreDecompressionSession : public ThreadSafeRefCounted<WebCoreDecompressionSession> {
 public:
     static Ref<WebCoreDecompressionSession> createOpenGL() { return adoptRef(*new WebCoreDecompressionSession(OpenGL)); }
     static Ref<WebCoreDecompressionSession> createRGB() { return adoptRef(*new WebCoreDecompressionSession(RGB)); }
@@ -77,6 +75,9 @@ public:
     unsigned droppedVideoFrames() const { return m_droppedVideoFrames; }
     unsigned corruptedVideoFrames() const { return m_corruptedVideoFrames; }
     MediaTime totalFrameDelay() const { return m_totalFrameDelay; }
+
+    bool hardwareDecoderEnabled() const { return m_hardwareDecoderEnabled; }
+    void setHardwareDecoderEnabled(bool enabled) { m_hardwareDecoderEnabled = enabled; }
 
 private:
     enum Mode {
@@ -115,8 +116,8 @@ private:
     RetainPtr<CMBufferQueueRef> m_producerQueue;
     RetainPtr<CMBufferQueueRef> m_consumerQueue;
     RetainPtr<CMTimebaseRef> m_timebase;
-    OSObjectPtr<dispatch_queue_t> m_decompressionQueue;
-    OSObjectPtr<dispatch_queue_t> m_enqueingQueue;
+    Ref<WorkQueue> m_decompressionQueue;
+    Ref<WorkQueue> m_enqueingQueue;
     OSObjectPtr<dispatch_source_t> m_timerSource;
     std::function<void()> m_notificationCallback;
     std::function<void()> m_hasAvailableFrameCallback;
@@ -126,6 +127,7 @@ private:
     double m_decodeRatioMovingAverage { 0 };
 
     bool m_invalidated { false };
+    bool m_hardwareDecoderEnabled { true };
     int m_framesBeingDecoded { 0 };
     unsigned m_totalVideoFrames { 0 };
     unsigned m_droppedVideoFrames { 0 };
@@ -134,5 +136,3 @@ private:
 };
 
 }
-
-#endif

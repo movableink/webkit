@@ -1,3 +1,7 @@
+click me!
 
-PASS EventTarget#dispatchEvent(): redispatching a native event 
+PASS Redispatching DOMContentLoaded event after being dispatched
+PASS Redispatching mouseup event whose default action dispatches a click event
+PASS Redispatching event which is being dispatched
+PASS Synthesizing click on button...
 

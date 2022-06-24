@@ -39,68 +39,11 @@
 #import <sysexits.h>
 #import <wtf/FileSystem.h>
 
-#if PLATFORM(MACCATALYST)
-#import <wtf/spi/darwin/SandboxSPI.h>
-#endif
-
 namespace WebKit {
 
-void AuxiliaryProcess::platformInitialize()
+void AuxiliaryProcess::initializeSandbox(const AuxiliaryProcessInitializationParameters&, SandboxInitializationParameters&)
 {
-    FloatingPointEnvironment& floatingPointEnvironment = FloatingPointEnvironment::singleton(); 
-    floatingPointEnvironment.enableDenormalSupport(); 
-    floatingPointEnvironment.saveMainThreadEnvironment(); 
-    [[NSFileManager defaultManager] changeCurrentDirectoryPath:[[NSBundle mainBundle] bundlePath]];
-}
-
-void AuxiliaryProcess::initializeSandbox(const AuxiliaryProcessInitializationParameters& parameters, SandboxInitializationParameters& sandboxParameters)
-{
-#if PLATFORM(MACCATALYST)
-    NSBundle *webkit2Bundle = [NSBundle bundleForClass:NSClassFromString(@"WKWebView")];
-    String defaultProfilePath = [webkit2Bundle pathForResource:[[NSBundle mainBundle] bundleIdentifier] ofType:@"sb"];
-    if (sandboxParameters.userDirectorySuffix().isNull()) {
-        String defaultUserDirectorySuffix = makeString(String([[NSBundle mainBundle] bundleIdentifier]), '+', parameters.clientIdentifier);
-        sandboxParameters.setUserDirectorySuffix(defaultUserDirectorySuffix);
-    }
-
-    switch (sandboxParameters.mode()) {
-    case SandboxInitializationParameters::UseDefaultSandboxProfilePath:
-    case SandboxInitializationParameters::UseOverrideSandboxProfilePath: {
-        String sandboxProfilePath = sandboxParameters.mode() == SandboxInitializationParameters::UseDefaultSandboxProfilePath ? defaultProfilePath : sandboxParameters.overrideSandboxProfilePath();
-        if (!sandboxProfilePath.isEmpty()) {
-            CString profilePath = FileSystem::fileSystemRepresentation(sandboxProfilePath);
-            char* errorBuf;
-            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-            if (sandbox_init_with_parameters(profilePath.data(), SANDBOX_NAMED_EXTERNAL, sandboxParameters.namedParameterArray(), &errorBuf)) {
-                ALLOW_DEPRECATED_DECLARATIONS_END
-                WTFLogAlways("%s: Couldn't initialize sandbox profile [%s], error '%s'\n", getprogname(), profilePath.data(), errorBuf);
-                for (size_t i = 0, count = sandboxParameters.count(); i != count; ++i)
-                    WTFLogAlways("%s=%s\n", sandboxParameters.name(i), sandboxParameters.value(i));
-                exit(EX_NOPERM);
-            }
-        }
-
-        break;
-    }
-    case SandboxInitializationParameters::UseSandboxProfile: {
-        char* errorBuf;
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        if (sandbox_init_with_parameters(sandboxParameters.sandboxProfile().utf8().data(), 0, sandboxParameters.namedParameterArray(), &errorBuf)) {
-            ALLOW_DEPRECATED_DECLARATIONS_END
-            WTFLogAlways("%s: Couldn't initialize sandbox profile, error '%s'\n", getprogname(), errorBuf);
-            for (size_t i = 0, count = sandboxParameters.count(); i != count; ++i)
-                WTFLogAlways("%s=%s\n", sandboxParameters.name(i), sandboxParameters.value(i));
-            exit(EX_NOPERM);
-        }
-
-        break;
-    }
-    }
-#else
-    UNUSED_PARAM(parameters);
-    UNUSED_PARAM(sandboxParameters);
     RELEASE_ASSERT_NOT_REACHED();
-#endif
 }
 
 void AuxiliaryProcess::setQOS(int, int)

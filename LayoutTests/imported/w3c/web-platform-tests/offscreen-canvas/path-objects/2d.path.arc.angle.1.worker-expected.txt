@@ -1,3 +1,0 @@
-
-FAIL arc() draws pi/2 .. -pi anticlockwise correctly Can't find variable: OffscreenCanvas
-

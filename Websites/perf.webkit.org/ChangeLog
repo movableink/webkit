@@ -1,3 +1,1233 @@
+2021-11-06  David Kilzer  <ddkilzer@apple.com>
+
+        Remove empty directories from from svn.webkit.org repository as of r285357
+        <https://webkit.org/b/232773>
+
+        Unreviewed clean up.
+
+        * public/js: Removed.
+        * public/v2/js: Removed.
+
+2021-11-02  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Add 'paired-parallel' repetition type for A/B testing.
+        https://bugs.webkit.org/show_bug.cgi?id=229545
+
+        Reviewed by Ryosuke Niwa and Alexey Proskuryakov.
+
+        Add 'paired-parallel' repetition type for A/B testing.
+        Add 'TriggerableConfiguration' model to store repetition type information for each (platform, test) pair.
+        Add new component 'repetition-type-selection' to unify A/B testing UI for repetition type selection.
+        Extend A/B testing syncing script to update repetition types for each triggerable configuration and only
+        schedule A/B testing on a builder which supports a given repetition type.
+
+        * browser-tests/custom-analysis-task-configurator-tests.js: Updated unit tests accordingly.
+        (async createCustomAnalysisTaskConfiguratorWithContext):
+        * browser-tests/customizable-test-group-form-tests.js: Updated unit tests accordingly.
+        (async createCustomizableTestGroupFormWithContext):
+        * browser-tests/test-group-form-tests.js: Updated unit tests accordingly.
+        (async createTestGroupFormWithContext):
+        * init-database.sql: Added 'triggerable_configuration_repetition_types' table to store supported
+        repetition types for each triggerable configuration.
+        Added 'paired-parallel' repetition type.
+        * migrate-database.sql: Updated migration scripts.
+        * public/api/update-triggerable.php: Added logic to update repetition types for each tirggerable configurations.
+        * public/include/commit-sets-helpers.php: Added support for 'paired-parallel' repetition type.
+        * public/include/json-header.php: Extended 'find_triggerable_for_task' to include supported repetition types in
+        return value.
+        * public/include/manifest-generator.php: Added logic to include supported repetition types in manifest.
+        * public/privileged-api/add-build-requests.php: Extended API to support 'paired-parallel' repetition type.
+        * public/privileged-api/create-analysis-task.php: Extended API to support 'paired-parallel' repetition type.
+        * public/privileged-api/create-test-group.php: Extended API to support 'paired-parallel' repetition type.
+        * public/v3/commit-set-range-bisector.js:
+        (CommitSetRangeBisector._closestCommitSetsToBisectingCommitByTime): Fix a bug that error is raise when there is
+        no middle commit set in a range.
+        * public/v3/components/custom-configuration-test-group-form.js: Added code to update supported repetition types
+        on test config change.
+        (CustomConfigurationTestGroupForm.prototype.startTesting):
+        (CustomConfigurationTestGroupForm.prototype.didConstructShadowTree):
+        * public/v3/components/customizable-test-group-form.js:
+        (CustomizableTestGroupForm.prototype.startTesting):
+        * public/v3/components/repetition-type-selection.js: Added a new model that stores repetition types information
+        for each (platform, test) pair.
+        (RepetitionTypeSelection):
+        (RepetitionTypeSelection.prototype.didConstructShadowTree):
+        (RepetitionTypeSelection.prototype.get selectedRepetitionType):
+        (RepetitionTypeSelection.prototype.set selectedRepetitionType):
+        (RepetitionTypeSelection.prototype.set disabled):
+        (RepetitionTypeSelection.prototype.setTestAndPlatform):
+        (RepetitionTypeSelection.prototype.labelForRepetitionType):
+        (RepetitionTypeSelection.prototype.render):
+        (RepetitionTypeSelection.prototype._renderRepetitionTypeList):
+        (RepetitionTypeSelection.htmlTemplate):
+        * public/v3/components/test-group-form.js: Adopt 'repetition-type-selection'.
+        (TestGroupForm.prototype.setTestAndPlatform):
+        (TestGroupForm.prototype.updateWithTestGroup):
+        (TestGroupForm.prototype.startTesting):
+        * public/v3/index.html:
+        * public/v3/models/manifest.js: Pass 'supportedRepetitionTypes' and 'id' for TriggerableConfiguration.
+        (Manifest.reset):
+        (Manifest._didFetchManifest):
+        (Manifest):
+        * public/v3/models/test-group.js: Updated logic to share retry logic of 'alternating' test group with 'paired-parallel'
+        test group.
+        (TestGroup.prototype.async scheduleMoreRequestsOrClearFlag):
+        * public/v3/models/triggerable.js: Added TriggerableConfiguration model.
+        Added code to creat TriggerableConfiguration in 'Triggerable' constructor.
+        (Triggerable):
+        (Triggerable.findByTestConfiguration):
+        (prototype.get triggerable):
+        (prototype.get supportedRepetitionTypes):
+        (findByTestAndPlatform):
+        * public/v3/pages/analysis-task-page.js: Added code to update repetition type in the UI based on (test, platform) pair.
+        (AnalysisTaskResultsPane.prototype.setTestGroups):
+        (AnalysisTaskTestGroupPane.prototype._renderCurrentTestGroup):
+        (AnalysisTaskTestGroupPane.prototype._renderTestGroupForm):
+        * public/v3/pages/chart-pane.js: Adopt 'repetition-type-selection'.
+        (ChartPane.prototype.didConstructShadowTree):
+        (ChartPane.prototype.async _analyzeRange):
+        (ChartPane.prototype._renderActionToolbar):
+        * server-tests/api-manifest-tests.js:
+        * server-tests/api-update-triggerable-tests.js: Added and updated unit tests.
+        (updateWithMacWebKitRepositoryGroups):
+        * server-tests/api-upload-root-tests.js: Updated unit tests.
+        * server-tests/privileged-api-add-build-requests-tests.js: Added and updated unit tests.
+        (async addTriggerableAndCreateTask):
+        * server-tests/privileged-api-create-analysis-task-tests.js: Added and updated unit tests.
+        * server-tests/privileged-api-create-test-group-tests.js: Added and updated unit tests.
+        * server-tests/privileged-api-update-test-group-tests.js: Updated unit tests.
+        (async addTriggerableAndCreateTask):
+        * server-tests/resources/mock-data.js:
+        (MockData.someTestConfigurationId):
+        (MockData.otherTestConfigurationId):
+        (MockData.addMockConfiguration):
+        (MockData.set mockTestSyncConfigWithSingleBuilder):
+        (MockData.mockTestSyncConfigWithPatchAcceptingBuilder):
+        (MockData.mockTestSyncConfigWithTwoBuilders):
+        * server-tests/tools-sync-buildbot-integration-tests.js: Added and updated unit tests.
+        * tools/js/buildbot-syncer.js: Added code to update supported repetition types on triggerable updates.
+        Update configuration match code to only scheduler build requests the repetition types of which are both
+        supported by builder and triggerable configuration.
+        (BuildbotSyncer):
+        (BuildbotSyncer.prototype.addTestConfiguration):
+        (BuildbotSyncer.prototype.matchesConfiguration):
+        (BuildbotSyncer._loadConfig):
+        * tools/js/buildbot-triggerable.js:
+        (BuildbotTriggerable.prototype.updateTriggerable):
+        (BuildbotTriggerable.prototype.async syncOnce): Move the code that fetches all related test groups before
+        invoking 'BuildbotTriggerable._validateRequests' which needs repetition types stored in test group in
+        'BuildbotSyncer.matchesConfiguration'.
+        * tools/js/v3-models.js:
+        * unit-tests/buildbot-syncer-tests.js: Added and updated unit tests.
+        (sampleiOSConfig):
+        (sampleiOSConfigWithExpansions):
+        (smallConfiguration):
+        (smallConfigurationWithCustomRepetitionTypes):
+        (createSampleBuildRequest):
+        * unit-tests/measurement-set-analyzer-tests.js: Updated unit tests.
+        * unit-tests/resources/mock-v3-models.js:
+        (MockModels.inject):
+
+2021-09-26  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Summary page should support calculating summary using weighted mean.
+        https://bugs.webkit.org/show_bug.cgi?id=230810
+
+        Reviewed by Ryosuke Niwa.
+
+        Add a way to specify weight for a platform or (plafform, metric) which will be used while calculating a summary.
+
+        * public/shared/statistics.js: Added 'weightedMean' function.
+        (Statistics.new.this.weightedMean):
+        * public/v3/pages/summary-page.js: Added support for specifying a weight for platform or (platform, metric).
+        (SummaryPage):
+        (SummaryPage.prototype._createConfigurationGroup):
+        (SummaryPageConfigurationGroup):
+        * unit-tests/statistics-tests.js: Added unit tests.
+
+2021-07-20  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Use bigint for 'commit_order' field in 'commits' table to support larger range.
+        https://bugs.webkit.org/show_bug.cgi?id=228133
+
+        Reviewed by Ryosuke Niwa.
+
+        'integer' in postgres has range from -2147483648 to +2147483647 which is not big enough.
+        Use 'bigint' to support wider range (-9223372036854775808 to 9223372036854775807).
+        SQL query for migration:
+            `ALTER TABLE commits ALTER commit_order TYPE bigint;`
+
+        * init-database.sql: Update 'integer' to 'bigint' for 'commit_order'.
+        * migrate-database.sql: Added migration SQL for this change.
+        * server-tests/api-report-commits-tests.js: Add a unit test.
+
+2021-05-03  Dewei Zhu  <dewei_zhu@apple.com>
+
+        [perf dashboard] Add sequential mode for perf dashboard A/B testing.
+        https://bugs.webkit.org/show_bug.cgi?id=223886
+
+        Reviewed by Ryosuke Niwa.
+
+        Add 'testgroup_repetition_type' to 'analysis_test_groups' table to store repetition type which defaults to 'alternating'.
+        Add support to schedule 'sequential' A/B testing which schedules all iterations for the first configuration (A)
+        before the iterations for the second configuration (B).
+        Before this patch, all A/B testing alternated between two different configurations for each iteration.
+        Add retry logic for 'sequential' A/B testing.
+
+        Update syncing script to not proceed with next configuration the current configuration successfully completed
+        more iterations than the initially requested or retries exceeded the list.
+
+        Fix a potential race in syncing script that 'Promise.all' may cause test group not scheduled in order.
+
+        * browser-tests/test-group-form-tests.js: Updated and added unit tests.
+        * init-database.sql: Added 'testgroup_repetition_type' field to 'analysis_test_groups' table.
+        * migrate-database.sql: Updated migration script to conditionally add 'testgroup_repetition_type' field.
+        * public/api/test-groups.php: Added 'repetitionType' field in api return value.
+        * public/include/build-requests-fetcher.php: Fetching build requests under a triggerable should include test
+        group with all test groups finished but still need retry. This will allow syncing script to resolve the build
+        request by ID and block other request to be scheduled on the builder.
+        * public/include/commit-sets-helpers.php: Added code to create build requests based on test mode.
+        * public/privileged-api/add-build-requests.php: Added support to only add build requests to one commit set.
+        * public/privileged-api/create-analysis-task.php: Added 'repetitionType' support.
+        * public/privileged-api/create-test-group.php: Added 'repetitionType' support.
+        * public/privileged-api/update-test-group.php:
+        * public/shared/common-component-base.js:
+        * public/v3/components/custom-configuration-test-group-form.js: Added 'repetitionType' support.
+        (CustomConfigurationTestGroupForm.prototype.startTesting):
+        * public/v3/components/customizable-test-group-form.js:
+        (CustomizableTestGroupForm.prototype.startTesting):
+        * public/v3/components/test-group-form.js:
+        (TestGroupForm.prototype.startTesting):
+        * public/v3/models/analysis-task.js:
+        (AnalysisTask.async create):
+        (AnalysisTask):
+        * public/v3/models/build-request.js:
+        (BuildRequest):
+        (BuildRequest.prototype.updateSingleton): Allow build request order to be updated.
+        * public/v3/models/test-group.js:
+        (TestGroup):
+        (TestGroup.prototype.updateSingleton):
+        (TestGroup.prototype.repetitionType):
+        (TestGroup.prototype.repetitionCountForCommitSet): Refactored `repetitionCount` since repetition may be different
+        between configurations.
+        (TestGroup.prototype.hasRetries): A helper function to tell if a test group has retry runs.
+        (TestGroup.prototype.additionalRepetitionNeededToReachInitialRepetitionCount):
+        (TestGroup.prototype.successfulTestCount):
+        (TestGroup.prototype.isFirstTestRequest):
+        (TestGroup.prototype.precedingBuildRequest):
+        (TestGroup.prototype.retryCountForCommitSet):
+        (TestGroup.prototype.retryCountsAreSameForAllCommitSets):
+        (TestGroup.prototype.async _createAlternatingRetriesForTestGroup): Moved from 'retry-failed-build-requests' module.
+        (TestGroup.async _createSequentialRetriesForTestGroup): Moved from 'retry-failed-build-requests' module.
+        (TestGroup.prototype.async cancelPendingRequests):
+        (TestGroup.prototype.async didSendNotification):
+        (TestGroup.prototype.async addMoreBuildRequests):
+        (TestGroup.async createWithTask):
+        (TestGroup.async createWithCustomConfiguration):
+        (TestGroup.async createAndRefetchTestGroups):
+        (TestGroup.prototype.async scheduleMoreRequestsOrClearFlag): Moved from 'retry-failed-build-requests' module.
+        (TestGroup.async fetchById): Added support to fetch test group by ID.
+        * public/v3/pages/analysis-task-page.js:
+        (AnalysisTaskChartPane.prototype.didConstructShadowTree):
+        (AnalysisTaskResultsPane.prototype.didConstructShadowTree):
+        (AnalysisTaskConfiguratorPane.prototype.setTestGroups):
+        (AnalysisTaskConfiguratorPane):
+        (AnalysisTaskTestGroupPane.prototype.didConstructShadowTree):
+        (AnalysisTaskTestGroupPane.prototype._renderCurrentTestGroup):
+        (AnalysisTaskTestGroupPane.prototype._retrySummary):
+        (AnalysisTaskPage.prototype.didConstructShadowTree):
+        (AnalysisTaskPage.prototype.async _retryCurrentTestGroup):
+        (AnalysisTaskPage.prototype.async _bisectCurrentTestGroup):
+        (AnalysisTaskPage.set const):
+        (AnalysisTaskPage.prototype.async _createTestGroupAfterVerifyingCommitSetList):
+        (AnalysisTaskPage.prototype.async _createCustomTestGroup):
+        * public/v3/pages/chart-pane.js:
+        (ChartPane.prototype.didConstructShadowTree):
+        (ChartPane.prototype.async _analyzeRange):
+        * public/v3/pages/create-analysis-task-page.js:
+        (CreateAnalysisTaskPage.prototype.async _createAnalysisTaskWithGroup):
+        * server-tests/api-build-requests-tests.js: Added a unit test.
+        * server-tests/api-upload-root-tests.js: Updated unit tests.
+        * server-tests/privileged-api-add-build-requests-tests.js: Updated and added unit tests.
+        * server-tests/privileged-api-create-analysis-task-tests.js: Added unit tests.
+        * server-tests/privileged-api-create-test-group-tests.js: Updated and added unit tests.
+        * server-tests/privileged-api-update-test-group-tests.js: Updated and added unit tests.
+        * server-tests/resources/common-operations.js:
+        (async assertThrows):
+        * server-tests/resources/mock-data.js:
+        (MockData.addMockData):
+        (MockData.set addMockBuildRequestsWithRoots):
+        (MockData.set addAnotherMockTestGroup):
+        (MockData.set mockTestSyncConfigWithSingleBuilder):
+        (MockData.sampleBuildData):
+        * server-tests/tools-buildbot-triggerable-tests.js: Updated and added unit tests.
+        * server-tests/tools-sync-buildbot-integration-tests.js: Updated unit tests.
+        (async createTestGroupWithPatch):
+        (createTestGroupWihOwnedCommit):
+        * tools/js/buildbot-syncer.js:
+        (BuildbotSyncer.prototype.scheduleRequestInGroupIfAvailable):
+        (BuildbotSyncer.prototype.pullBuildbot):
+        * tools/js/buildbot-triggerable.js:
+        (BuildbotTriggerable):
+        (BuildbotTriggerable.prototype.async syncOnce):
+        (BuildbotTriggerable.prototype.async _scheduleRequest):
+        (BuildbotTriggerable.prototype._shouldDeferSequentialTestingRequestWithNewCommitSet):
+        * tools/js/measurement-set-analyzer.js:
+        (MeasurementSetAnalyzer.prototype.async _analyzeMeasurementSet):
+        (MeasurementSetAnalyzer):
+        * tools/js/retry-failed-build-requests.js: Removed.
+        * tools/run-analysis.js: Use updated API to retry.
+        (async analysisLoop):
+        (async processTestGroupMayNeedMoreRequests):
+        * tools/sync-buildbot.js: Added command line option '--max-retry-factor'.
+        * unit-tests/analysis-task-tests.js: Updated unit tests.
+        * unit-tests/buildbot-syncer-tests.js: Updated unit tests.
+        (createSampleBuildRequest):
+        * unit-tests/measurement-set-analyzer-tests.js:
+        * unit-tests/retry-failed-build-requests-tests.js: Moved unit tests to test-group-tests.js.
+        * unit-tests/test-groups-tests.js: Added unit tests from 'retry-failed-build-requests-tests.js'.
+
+2021-05-19  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Fix a bug that incorrect timestamp is reported for Git repositories.
+        https://bugs.webkit.org/show_bug.cgi?id=225987
+
+        Reviewed by Ryosuke Niwa.
+
+        'datetime.fromtimestamp' will use the current timezone.
+        However, '/api/report-commits' will interprete it as a timestamp string from UTC.
+        In order to keep the consistency, we should always use 'datetime.utcfromtimestamp'.
+
+        * tools/sync-commits.py: Use 'datetime.utcfromtimestamp' instead of 'datetime.fromtimestamp'.
+        (GitRepository._revision_from_tokens):
+
+2021-05-20  Zhifei Fang  <zhifei_fang@apple.com>
+
+        Need to use default git pull to remove the fake svn commit when syncing with SVN
+        https://bugs.webkit.org/show_bug.cgi?id=226039
+
+        Reviewed by Jonathan Bedard.
+
+        * tools/sync-commits.py:
+        (GitRepository._fetch_remote):
+
+2021-05-18  Zhifei Fang  <zhifei_fang@apple.com>
+
+        Clean up git svn mapping when git pull
+        https://bugs.webkit.org/show_bug.cgi?id=225934
+
+        Reviewed by Ryosuke Niwa.
+
+        * tools/sync-commits.py:
+        (GitRepository._fetch_remote):
+
+2021-05-18  Zhifei Fang  <zhifei_fang@apple.com>
+
+        Commits updater should ignore null revision identifier
+        https://bugs.webkit.org/show_bug.cgi?id=225911
+
+        Reviewed by Ryosuke Niwa.
+
+        * public/include/commit-updater.php:
+        * server-tests/api-report-commits-tests.js:
+
+2021-05-07  Zhifei Fang  <zhifei_fang@apple.com>
+        
+        Add support for syncing repo with commit revision label.
+        https://bugs.webkit.org/show_bug.cgi?id=221982
+
+        Reviewed by Ryosuke Niwa.
+
+        Add new syncing option reportRevisionIdentifier, which will let the script try to sync the commit revision identifier from the commit message.
+        Add new syncing option reportSVNRevision, which will let the script try to report SVN revision from a git-svn repo.
+
+        * tools/sync-commits.py:
+        (main):
+        (load_repository):
+        (GitRepository.__init__):
+        (GitRepository.fetch_next_commit):
+        (GitRepository._git_hash_to_svn_revision):
+        (GitRepository._svn_revision_to_git_hash):
+        (GitRepository._revision_from_tokens):
+        (GitRepository._fetch_all_hashes):
+
+2021-04-14  Zhifei Fang  <zhifei_fang@apple.com>
+
+        Support Commit revision identifier in the Chart
+        https://bugs.webkit.org/show_bug.cgi?id=224496
+
+        Reviewed by Dewei Zhu.
+
+        In the measurement-set, we include the commit info but not the commit revision identifier column.
+        Make the API return the commit revision identifier as part of the commit data.
+
+        * browser-tests/customizable-test-group-form-tests.js: Fix flaky tests.
+        * browser-tests/index.html: Add commit revision identifier info.
+        * browser-tests/time-series-chart-tests.js: Fix flaky tests.
+        * public/api/measurement-set.php: Make this API provide commit revision identifier info.
+        * public/include/build-requests-fetcher.php: Ditto.
+        * public/v3/models/commit-set.js: Make the commit model can be constructed with the API respose format.
+        * server-tests/api-measurement-set-tests.js: Adding test for commit revision identifier.
+        * server-tests/api-build-requests-tests.js: Ditto.
+        * unit-tests/analysis-task-tests.js: Ditto.
+        (measurementCluster):
+        * unit-tests/commit-set-tests.js: Ditto.
+        * unit-tests/measurement-adaptor-tests.js: Ditto.
+        * unit-tests/measurement-set-tests.js: Ditto.
+
+2021-03-31  Zhifei Fang  <zhifei_fang@apple.com>
+
+        Add commit revision label support
+        https://bugs.webkit.org/show_bug.cgi?id=222897
+
+        Reviewed by Ryosuke Niwa.
+
+        Add new column revision label.
+        Make all commit api also can work with revision label.
+        Change the commit label display with commit revision label.
+
+        * browser-tests/commit-log-viewer-tests.js: Fix a failed test case, while requesting the remote api, 
+        we should wait for those promises resolved and then wait for commponent to render.
+        * init-database.sql: Add new column revision_identifier.
+        * migrate-database.sql: Add new column revision_identifier.
+        * public/include/commit-log-fetcher.php: Make api that works with revision should work with revision label.
+        * public/include/commit-updater.php: Ditto.
+        * public/include/report-processor.php: Make the processor can also insert revision label.
+        * public/v3/models/commit-log.js:
+        (CommitLog.prototype.updateSingleton):
+        (CommitLog.prototype.revisionIdentifier):
+        (CommitLog.prototype.label): Make the label include revision label and revision.
+        (CommitLog.prototype.diff): Make the diff label include revision label and revision.
+        * server-tests/api-commits-tests.js:
+        * server-tests/api-report-commits-tests.js:
+        * server-tests/api-report-tests.js:
+        (reportWithRevisionIdentifierCommit):
+        * unit-tests/commit-log-tests.js:
+
+2021-03-22  Dewei Zhu  <dewei_zhu@apple.com>
+
+        [perf dashboard] Remove v1 and v2 code.
+        https://bugs.webkit.org/show_bug.cgi?id=223617
+
+        Reviewed by Ryosuke Niwa.
+
+        Remove v1 and v2 code from perf dashboard.
+        Remove detect-changes.js script since run-analysis.js is the v3 version equivalent.
+
+        * public/index.html: Keep the redirection to v3.
+        * public/js/helper-classes.js: Removed.
+        * public/js/jquery.colorhelpers.js: Removed.
+        * public/js/jquery.flot.categories.js: Removed.
+        * public/js/jquery.flot.crosshair.js: Removed.
+        * public/js/jquery.flot.errorbars.js: Removed.
+        * public/js/jquery.flot.fillbetween.js: Removed.
+        * public/js/jquery.flot.js: Removed.
+        * public/js/jquery.flot.navigate.js: Removed.
+        * public/js/jquery.flot.plugins.js: Removed.
+        * public/js/jquery.flot.resize.js: Removed.
+        * public/js/jquery.flot.selection.js: Removed.
+        * public/js/jquery.flot.stack.js: Removed.
+        * public/js/jquery.flot.symbol.js: Removed.
+        * public/js/jquery.flot.threshold.js: Removed.
+        * public/js/jquery.flot.time.js: Removed.
+        * public/js/jquery.js: Removed.
+        * public/v2/analysis.js: Removed.
+        * public/v2/app.css: Removed.
+        * public/v2/app.js: Removed.
+        * public/v2/chart-pane.css: Removed.
+        * public/v2/commits-viewer.js: Removed.
+        * public/v2/data.js: Removed.
+        * public/v2/index.html: Keep the redirection to v3.
+        * public/v2/interactive-chart.js: Removed.
+        * public/v2/js/d3/LICENSE: Removed.
+        * public/v2/js/d3/d3.js: Removed.
+        * public/v2/js/d3/d3.min.js: Removed.
+        * public/v2/js/ember-data.js: Removed.
+        * public/v2/js/ember.js: Removed.
+        * public/v2/js/handlebars.js: Removed.
+        * public/v2/js/jquery.min.js: Removed.
+        * public/v2/manifest.js: Removed.
+        * public/v2/popup.js: Removed.
+        * public/v2/statistics-strategies.js: Removed.
+        * tools/detect-changes.js: Removed.
+
+2021-03-21  Dewei Zhu  <dewei_zhu@apple.com>
+
+        [perf dashboard] Remove non-inclusive words from perf dashboard.
+        https://bugs.webkit.org/show_bug.cgi?id=223505
+
+        Reviewed by Ryosuke Niwa.
+
+        Removed most of non-inclusive terminology and replaced it with 'worker'.
+        Make impacted APIs backward compatible during transition.
+        The non-inclusive terminology will be removed after transition.
+
+        * ReadMe.md: Removed non-inclusive words.
+        * init-database.sql: Rename tables with non-inclusive words.
+        * migrate-database.sql: Added migration SQL for existing database.
+        * public/admin/build-workers.php: Renamed from Websites/perf.webkit.org/public/admin/build-slaves.php.
+        * public/api/build-requests.php:
+        * public/api/measurement-set.php:
+        * public/api/report-commits.php:
+        * public/api/runs.php:
+        * public/api/update-triggerable.php:
+        * public/api/upload-root.php:
+        * public/include/admin-header.php:
+        * public/include/json-header.php:
+        * public/include/report-processor.php:
+        * public/privileged-api/add-build-requests.php:
+        * public/privileged-api/create-analysis-task.php:
+        * public/privileged-api/create-test-group.php:
+        * public/privileged-api/update-test-group.php:
+        * public/v2/js/ember.js:
+        * server-tests/api-build-requests-tests.js:
+        * server-tests/api-commits-tests.js:
+        * server-tests/api-report-commits-tests.js:
+        * server-tests/api-report-tests.js:
+        (emptyReport):
+        (reportWitMismatchingCommitTime):
+        (reportWithOneSecondCommitTimeDifference):
+        (emptyWorkerReport):
+        (emptySlaveReport): Deleted.
+        * server-tests/api-test-groups.js:
+        * server-tests/api-update-triggerable-tests.js:
+        (updateWithOSXRepositoryGroup):
+        (updateWithMacWebKitRepositoryGroups):
+        * server-tests/api-upload-root-tests.js:
+        (makeReport):
+        (addWorkerAndCreateRootFile):
+        * server-tests/privileged-api-add-build-requests-tests.js:
+        (async createAnalysisTask):
+        (async addTriggerableAndCreateTask):
+        * server-tests/privileged-api-create-analysis-task-tests.js:
+        * server-tests/privileged-api-create-test-group-tests.js:
+        (createAnalysisTask):
+        * server-tests/privileged-api-update-test-group-tests.js:
+        (async createAnalysisTask):
+        (async addTriggerableAndCreateTask):
+        * server-tests/resources/common-operations.js:
+        * server-tests/resources/mock-data.js:
+        (MockData.addMockConfiguration):
+        (MockData.set mockTestSyncConfigWithSingleBuilder):
+        (MockData.sampleBuildData):
+        * server-tests/resources/test-server.js:
+        (TestServer.prototype.testConfig):
+        * server-tests/tools-buildbot-triggerable-tests.js:
+        * server-tests/tools-os-build-fetcher-tests.js:
+        * server-tests/tools-sync-buildbot-integration-tests.js:
+        (createTriggerable):
+        * tools/detect-changes.js:
+        (loadServerConfig):
+        * tools/js/buildbot-syncer.js:
+        (BuildbotBuildEntry.prototype.buildTag):
+        (BuildbotSyncer):
+        (BuildbotSyncer.prototype.scheduleRequest):
+        (BuildbotSyncer.prototype.scheduleRequestInGroupIfAvailable):
+        (BuildbotSyncer.prototype.pullBuildbot):
+        (BuildbotSyncer._loadConfig):
+        (BuildbotSyncer._validateAndMergeConfig):
+        (BuildbotBuildEntry.prototype.slaveName): Deleted.
+        * tools/js/buildbot-triggerable.js:
+        (BuildbotTriggerable):
+        (BuildbotTriggerable.prototype.updateTriggerable):
+        (BuildbotTriggerable.prototype.async syncOnce):
+        (BuildbotTriggerable.prototype.async _scheduleRequest):
+        (BuildbotTriggerable.prototype._scheduleRequestIfWorkerIsAvailable):
+        (BuildbotTriggerable.prototype._scheduleRequestWithLog):
+        (BuildbotTriggerable._testGroupMapForBuildRequests):
+        (BuildbotTriggerable.prototype._scheduleRequestIfSlaveIsAvailable): Deleted.
+        * tools/js/database.js:
+        * tools/js/os-build-fetcher.js:
+        (prototype.async _reportCommits):
+        * tools/js/privileged-api.js:
+        (NodePrivilegedAPI.prototype.sendRequest):
+        (NodePrivilegedAPI.configure):
+        (NodePrivilegedAPI):
+        * tools/pull-os-versions.py:
+        (OSBuildFetcher.fetch_and_report_new_builds):
+        * tools/run-analysis.js:
+        (async analysisLoop):
+        * tools/sync-buildbot.js:
+        (syncLoop.const.makeTriggerable):
+        (syncLoop):
+        * tools/sync-commits.py:
+        (Repository.fetch_commits_and_submit):
+        * tools/sync-os-versions.js:
+        (syncLoop):
+        * tools/util.py:
+        (submit_commits):
+        * unit-tests/analysis-task-tests.js:
+        * unit-tests/buildbot-syncer-tests.js:
+        (sampleiOSConfig):
+        (sampleBuildData):
+        (async const):
+        * unit-tests/checkconfig.js:
+        * unit-tests/measurement-set-analyzer-tests.js:
+        * unit-tests/privileged-api-tests.js:
+        * unit-tests/retry-failed-build-requests-tests.js:
+        * unit-tests/test-groups-tests.js:
+
+2021-03-21  Dewei Zhu  <dewei_zhu@apple.com>
+
+        [perf dashboard] Perf dashboard should be compatible with newer version of postgres.
+        https://bugs.webkit.org/show_bug.cgi?id=223567
+
+        Reviewed by Ryosuke Niwa.
+
+        Newer version of postgres requires explicit ROW expression while updating a single column
+        using multi-column update syntax. However, 'ROW' is not supported in postgres < 10. In order
+        to keep compatibility, using a separate query when only updating one row.
+
+        * public/include/db.php: Use 'column = value' when there is only one column to update.
+
+2021-03-06  Ryosuke Niwa  <rniwa@webkit.org>
+
+        [perf dashboard] Use async/await in tests for TimeSeriesChart and InteractiveTimeSeriesChart
+        https://bugs.webkit.org/show_bug.cgi?id=222876
+
+        Reviewed by Sam Weinig.
+
+        Use async/await instead of chaining promises manually in the browser tests for
+        TimeSeriesChart and InteractiveTimeSeriesChart for better readability.
+
+        * browser-tests/interactive-time-series-chart-tests.js:
+        * browser-tests/time-series-chart-tests.js:
+
+2021-03-06  Ryosuke Niwa  <rniwa@webkit.org>
+
+        [perf dashboard] Modernize TimeSeries and TimeSeriesView
+        https://bugs.webkit.org/show_bug.cgi?id=222872
+
+        Reviewed by Dewei Zhu.
+
+        Declare instance fields in class declarations, use const/let instead of var, and use generators
+        for forward and backward iterations instead of manually implementing the iterator protocol.
+
+        This patch also splits FilteredTimeSeriesView out of TimeSeriesView.
+
+        * public/v3/models/time-series.js:
+        (TimeSeries): Moved the declaration of _data instance field to the class declaration.
+        (TimeSeries.prototype.constructor): Deleted.
+        (TimeSeries.prototype.extendToFuture):
+        (TimeSeries.prototype.valuesBetweenRange):
+        (TimeSeries.prototype.findById):
+        (TimeSeries.prototype.findPointAfterTime):
+        (TimeSeriesView): Declared the instance fields in the class declaration.
+        (TimeSeriesView.prototype.constructor): Removed filteredData from the argument since it's split
+        out to FilteredTimeSeriesView now.
+        (TimeSeriesView.prototype.get _data): Added. An abstraction needed for FilteredTimeSeriesView.
+        (TimeSeriesView.prototype._findIndexForPoint): Ditto. Moved out of the constructor.
+        (TimeSeriesView.prototype.filter): Return a FilteredTimeSeriesView.
+        (TimeSeriesView.prototype.viewTimeRange): Use _subRange to return either TimeSeriesView or
+        FilteredTimeSeriesView which ever is needed.
+        (TimeSeriesView.prototype._subRange): An abstraction needed for FilteredTimeSeriesView.
+        (TimeSeriesView.prototype.Symbol.iterator): Made this a generator instead of implementing
+        the iterator protocol directly.
+        (TimeSeriesView.prototype._reverse): Ditto.
+        (FilteredTimeSeriesView): Added.
+        (FilteredTimeSeriesView.prototype.constructor): Added. Assert that afterEndingIndex is less than
+        the length of the filtered data. This assertion was missing in TimeSeries prior to this patch
+        when filteredData is specified.
+        (FilteredTimeSeriesView.prototype.get _data): Added.
+        (FilteredTimeSeriesView.prototype._subRange): Added. Instantiate FilteredTimeSeriesView with
+        the same filtered data.
+        (FilteredTimeSeriesView.prototype._findIndexForPoint): Moved from TimeSeriesView's constructor.
+        (FilteredTimeSeriesView.prototype._buildPointIndexMap): Moved from TimeSeriesView.
+
+2021-03-06  Ryosuke Niwa  <rniwa@webkit.org>
+
+        [perf dashboard] Some browser tests are flaky or failing
+        https://bugs.webkit.org/show_bug.cgi?id=222874
+
+        Reviewed by Dewei Zhu.
+
+        There were two tests in TimeSeriesChart tests that were intermittently failing due to the test
+        not reliably waiting for the iframe's resize to take effect and not waiting for the time series'
+        fetching logic to run 'til completion before waiting for canvas charts to be re-drawn. Fixing
+        these by adding code to wait for these conditons.
+
+        All browser tests for markup-component.js was broken in r274036 as `require` function is not
+        available in browsers. Added a workaround in BrowsingContext to add a make assert.ok function
+        using expect(~).to.be.true().
+
+        * browser-tests/index.html:
+        (BrowsingContext.prototype.constructor): 
+        (waitForElementResize): Added.
+        * browser-tests/time-series-chart-tests.js: Fixed bugs in the tests.
+
+2021-03-06  Ryosuke Niwa  <rniwa@webkit.org>
+
+        [perf dashboard] Modernize DataModelObject and LabeledObject
+        https://bugs.webkit.org/show_bug.cgi?id=222871
+
+        Reviewed by Dewei Zhu.
+
+        Use const/let instead of var, async/await instead of Promise.then, and Map instead
+        of a regular object for a dictionary.
+
+        Also define instance fields in the class declaration instead of simply adding them
+        in the class constructors, and set the default parameter values instead of relying
+        on the unspecified argument being undefined.
+
+        * public/v3/models/data-model.js:
+        (DataModelObject.ensureSingleton):
+        (DataModelObject.namedStaticMap):
+        (DataModelObject.ensureNamedStaticMap):
+        (DataModelObject.findById):
+        (DataModelObject.listForStaticMap):
+        (DataModelObject.async cachedFetch):
+        (DataModelObject):
+        (LabeledObject.sortByName):
+        (DataModelObject.cachedFetch): Deleted.
+
+2021-03-06  Ryosuke Niwa  <rniwa@webkit.org>
+
+        [perf dashboard] Modernize MeasurementSet
+        https://bugs.webkit.org/show_bug.cgi?id=222857
+
+        Reviewed by Dewei Zhu.
+
+        Modernized MeasurementSet by using new instance field syntax, let/const instead of var,
+        async/await instead of then/catch, and Map instead of an object as a dictionary.
+
+        * public/v3/models/measurement-set.js:
+        (Array.prototype.includes): Deleted this polyfill which was needed for an old node.js.
+        (MeasurementSet): Moved the initialization of instance variables here. Also use Map
+        for this._allFetches instead of using a regular object as a dictionary.
+        (MeasurementSet.findSet): Use Map for MeasurementSet mapping.
+        (MeasurementSet.prototype.findClusters): Use const and let instead of var.
+        (MeasurementSet.prototype.async fetchBetween): Use async & await instead of Promise.then.
+        (MeasurementSet.prototype._ensureClusterPromise): Use let/const instead of var.
+        (MeasurementSet.prototype._urlForCache): Renamed from _constructUrl and removed the argument
+        for useCache since this function is now only used for feteching JSON caches.
+        (MeasurementSet.async _fetchPrimaryCluster): Use async/await and let/const. Consolidated
+        the API call to re-generate new JSON files and inlined API path here.
+        (MeasurementSet.async _fetchSecondaryCluster): Use async/await.
+        (MeasurementSet._addFetchedCluster): Use let/const instead of var.
+        (MeasurementSet.async fetchSegmentation): Use async/await and let/const.
+        (MeasurementSet.async _cachedClusterSegmentation): Ditto.
+        (MeasurementSet.prototype.async _invokeSegmentationAlgorithm): Ditto.
+        * unit-tests/measurement-set-tests.js:
+        (beforeEach): Updated the logic to reset measurement sets since the static variable was
+        renamed in MeasurementSet.findSet above.
+        * unit-tests/resources/mock-v3-models.js:
+        (MockModels.inject): Ditto.
+
+2021-03-06  Zhifei Fang  <zhifei_fang@apple.com>
+        
+        Make server test run with new node version
+        https://bugs.webkit.org/show_bug.cgi?id=222463
+
+        Change assert.equal to assert.strictEqual since node deprecated this API
+        Add a new function console.assert to make sure it will throw an error
+
+        Reviewed by Ryosuke Niwa.
+
+        * public/v3/models/repository.js:
+        (Repository.sortByNamePreferringOnesWithURL):
+        (Repository):
+        * server-tests/admin-platforms-tests.js:
+        * server-tests/admin-reprocess-report-tests.js:
+        * server-tests/api-build-requests-tests.js:
+        (return.TestServer.remoteAPI.getJSON.string_appeared_here.then):
+        * server-tests/api-commits-tests.js:
+        (assertCommitIsSameAsOneSubmitted):
+        (return.TestServer.remoteAPI.getJSON.string_appeared_here.then):
+        * server-tests/api-manifest-tests.js:
+        (return.TestServer.remoteAPI.getJSON.string_appeared_here.then):
+        * server-tests/api-measurement-set-tests.js:
+        * server-tests/api-report-commits-tests.js:
+        (emptyReport.then):
+        (async initialReportCommits):
+        (async setUpTestsWithExpectedStatus):
+        (async testWithExpectedFailure):
+        * server-tests/api-report-tests.js:
+        (emptyReport.then):
+        * server-tests/api-test-groups.js:
+        * server-tests/api-update-triggerable-tests.js:
+        (update.then):
+        (then.response.db.selectAll.string_appeared_here.then):
+        (then.db.selectAll.string_appeared_here.then):
+        (then.Manifest.fetch.then):
+        * server-tests/api-upload-root-tests.js:
+        * server-tests/api-uploaded-file-tests.js:
+        (return.TestServer.remoteAPI.getJSON.string_appeared_here.then):
+        * server-tests/privileged-api-add-build-requests-tests.js:
+        (async createAnalysisTask):
+        (const.commitSet.of.updatedGroups.0.requestedCommitSets):
+        * server-tests/privileged-api-create-analysis-task-tests.js:
+        * server-tests/privileged-api-create-test-group-tests.js:
+        (createAnalysisTask):
+        (return.createAnalysisTask.string_appeared_here.then):
+        (return.addTriggerableAndCreateTask.string_appeared_here.then):
+        (string_appeared_here.then):
+        * server-tests/privileged-api-upate-run-status.js:
+        * server-tests/privileged-api-update-test-group-tests.js:
+        (async createAnalysisTask):
+        * server-tests/privileged-api-upload-file-tests.js:
+        (TestServer.testConfig.uploadFileLimitInMB.1.then):
+        * server-tests/resources/common-operations.js:
+        (async assertThrows):
+        * server-tests/resources/temporary-file.js:
+        (TemporaryFile.makeTemporaryFileOfSizeInMB):
+        * server-tests/tools-buildbot-triggerable-tests.js:
+        (assertRequestAndResolve):
+        (then.refetchManifest.then):
+        (getBuilderNameToIDMapPromise.then):
+        * server-tests/tools-os-build-fetcher-tests.js:
+        * server-tests/tools-sync-buildbot-integration-tests.js:
+        (assertAndResolveRequest):
+        * tools/js/assert-override.js: Added.
+        (makeConsoleAssertThrow):
+        * tools/js/buildbot-syncer.js:
+        (BuildbotBuildEntry.prototype.initialize):
+        (BuildbotBuildEntry.prototype.buildRequestStatusIfUpdateIsNeeded):
+        (BuildbotBuildEntry):
+        (BuildbotSyncer.prototype.scheduleRequest):
+        (BuildbotSyncer._loadConfig):
+        (BuildbotSyncer._parseRepositoryGroup):
+        (BuildbotSyncer._validateAndMergeConfig):
+        (BuildbotSyncer):
+        * tools/js/buildbot-triggerable.js:
+        (BuildbotTriggerable.prototype._validateRequests):
+        * tools/js/markup-component.js:
+        (const.MarkupDocument.new.MarkupDocument.prototype._idForClone):
+        (const.MarkupDocument.new.MarkupDocument.prototype.markup):
+        * tools/js/os-build-fetcher.js:
+        (prototype._addOwnedCommitsForBuild):
+        * tools/js/remote.js:
+        (NodeRemoteAPI.prototype.configure):
+        * tools/js/v3-models.js:
+        * unit-tests/commit-set-tests.js:
+
+2021-02-18  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Fix a bug that a syncing script may try to reuse a delete root.
+        https://bugs.webkit.org/show_bug.cgi?id=222144
+
+        Reviewed by Ryosuke Niwa.
+
+        UploadedFile.deletedAt is not returned by API which makes UploadedFile instance always claims
+        the file it not deleted.
+        Fix a logical bug in CommitSet.areAllRootsAvailable.
+
+        * public/include/uploaded-file-helpers.php: Include 'deletedAt' filed in the API response.
+        * public/v3/models/commit-set.js:
+        (CommitSet.prototype.areAllRootsAvailable): Fixed an syntax error and a logical bug.
+        * server-tests/api-build-requests-tests.js: Added check on 'deletedAt' to be set on deleted files.
+        * unit-tests/commit-set-tests.js: Added unit tests for CommitSet.areAllRootsAvailable.
+        * unit-tests/resources/mock-v3-models.js: Cleared static map for UploadedFile.
+
+2021-02-16  Dean Johnson  <dean_johnson@apple.com>
+
+        [perf.webkit.org] Do not schedule jobs to Buildbot if the last job failed
+        https://bugs.webkit.org/show_bug.cgi?id=221943
+
+        Reviewed by Dewei Zhu.
+
+        * server-tests/resources/mock-data.js:
+        (MockData.sampleBuildData): Allow options.results to be specified.
+        * server-tests/tools-buildbot-triggerable-tests.js:
+        (async const): Add tests for new functionality. Existing tests still pass.
+        * tools/js/buildbot-syncer.js:
+        (BuildbotBuildEntry.prototype.initialize): Track the 'results' key from a build.
+        (BuildbotBuildEntry.prototype.result): Make the build result available.
+        (BuildbotSyncer): Track the last completed build.
+        (BuildbotSyncer.prototype.lastCompletedBuildSuccessful): Check if the last completed
+        build was successful.
+        (BuildbotSyncer.prototype.pullBuildbot):
+        * tools/js/buildbot-triggerable.js: Do not schedule a job to a builder who failed
+        its last completedd build.
+        (BuildbotTriggerable.prototype._scheduleRequestIfSlaveIsAvailable):
+
+2021-02-11  Dewei Zhu  <dewei_zhu@apple.com>
+
+        'sync-commits.py' should be able to limit reporting scope to a specific branch on a Git repository.
+        https://bugs.webkit.org/show_bug.cgi?id=221799
+
+        Reviewed by Ryosuke Niwa.
+
+        Fetching git commits with 'git log --all ...' may end up fetching commits from branches created for
+        pull requests. Add 'branch' variable to allow us to limit to a certain branch.
+
+        * tools/sync-commits.py: Added 'branch' variable to GitRepository so that we can fetch from a specific branch.
+        If branch is not specified, it will still use '--all' to list commits.
+        (load_repository):
+        (GitRepository.__init__):
+        (GitRepository._fetch_all_hashes):
+
+2021-02-12  Roy Reapor  <rreapor@apple.com>
+
+        perf.webkit.org/tools/js/analysis-results-notifier.js should allow sending of completion emails regardless of test name
+        https://bugs.webkit.org/show_bug.cgi?id=221712
+
+        Reviewed by Dewei Zhu.
+
+        Rule `platforms` and `tests` can be undefined, an empty array, or an array of strings. Undefined will match everything.
+        Empty array will match nothing. Array of strings will match items in the array.
+
+        Rule will not match if either `tests` or `platforms` is an empty array.
+
+        * tools/js/analysis-results-notifier.js:
+        (AnalysisResultsNotifier._validateRules.isUnderfinedOrEmptyArrayOrArrayOfStrings): 
+        - `platforms` and `tests` can now be undefined or an empty array officially
+        (AnalysisResultsNotifier._validateRules): 
+        - switched to `assert.ok()`. `console.assert()` no longer throws since node v10 (https://github.com/facebook/jest/issues/5634)
+        - both rule `platforms` and `tests` must pass `isUnderfinedOrEmptyArrayOrArrayOfStrings()`. previously, rules like `{tests: [1, 3], platforms: ['speedometer']}` passes validation.
+        (AnalysisResultsNotifier._applyUpdate): 
+        - switched to `assert.ok()`. `console.assert()` no longer throws since node v10 (https://github.com/facebook/jest/issues/5634)
+        (AnalysisResultsNotifier._validateRules.isNonemptyArrayOfStrings): Deleted.
+        * unit-tests/analysis-results-notifier-tests.js:
+        - added a bunch of unittests
+        - specify the exact regex match for `assert.throws()` and `assert.doesNotThrow()` argument.
+
+2021-01-20  Dewei Zhu  <dewei_zhu@apple.com>
+
+        BuildbotTriggerable should not update build requests from another triggerable.
+        https://bugs.webkit.org/show_bug.cgi?id=220762
+
+        Reviewed by Ryosuke Niwa.
+
+        BuildbotTriggerable._pullBuildbotOnAllSyncers assumes 'BuildRequest.all()' returns all build requests under current triggerable.
+        However, this assumption got broken when root reuse change was introduced because build requests under same analysis task are
+        fetched. Thus, 'BuildRequest.all()' may contain build requests those are not under current triggerable. And those build requests
+        will be updated to 'failedIfNotCompleted'.
+        Update 'api/build-requests' so that 'url' and 'status_description' fields are not cleared if update does not specify them.
+
+        * public/api/build-requests.php: Added logic to avoid updating 'url' and 'status_description' if they are not specified.
+        * server-tests/api-build-requests-tests.js: Added an unit test.
+        * server-tests/resources/mock-data.js:
+        (MockData.async set addMockBuildRequestsForTwoTriggerablesUnderOneAnalysisTask):
+        * server-tests/tools-buildbot-triggerable-tests.js: Added an unit test.
+        * tools/js/buildbot-triggerable.js:
+        (BuildbotTriggerable.prototype.async syncOnce): Fixed a typo.
+        (BuildbotTriggerable._pullBuildbotOnAllSyncers): Instead of iterating over 'BuildRequest.all()', only set 'failedIfNotCompleted'
+        for build requests those are under current triggerable and satisfy the condition.
+
+2020-12-09  Dewei Zhu  <dewei_zhu@apple.com>
+
+        'AnalysisTask._commitSetsInSamePlatformGroup' should not fetch an invalid platform and metric config for a MeasurementSet.
+        https://bugs.webkit.org/show_bug.cgi?id=219721
+
+        Reviewed by Ryosuke Niwa.
+
+        Selected test group on analysis task page may not highlight when 'AnalysisTask._commitSetsInSamePlatformGroup' fetches
+        an invalid platform and metric config for a MeasurementSet.
+
+        * public/v3/models/analysis-task.js: Added a logic to avoid fetching MeasurementSet with an invalid config.
+        (AnalysisTask.prototype._commitSetsInSamePlatformGroup):
+
+2020-12-09  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Add max age for a root to be reused.
+        https://bugs.webkit.org/show_bug.cgi?id=219628
+
+        Reviewed by Ryosuke Niwa.
+
+        In order to prevent reusing a stale root, we should set a limit on the age of a root to be reused.
+        * public/include/manifest-generator.php: Added 'maxRootReuseAgeInDays' to manifest.
+        * public/v3/models/build-request.js: Added root age check.
+        (BuildRequest.prototype.async findBuildRequestWithSameRoots):
+        * public/v3/models/commit-set.js: Extended 'areAllRootsAvailable' with root age check.
+        (CommitSet.prototype.areAllRootsAvailable):
+        * public/v3/models/manifest.js:
+        (Manifest.fetch): Made it async.
+        (Manifest.async fetchRawResponse): Extract fetching raw manifest out so that 'maxRootReuseAgeInDays'
+        can be read without resetting other data models. Also added code to only fetch from API if requesting
+        /data/manifest.json returns 404.
+        (Manifest._didFetchManifest):
+        * server-tests/api-manifest-tests.js: Updated unit tests.
+        * unit-tests/build-request-tests.js: Updated unit tests and add new tests.
+        * unit-tests/manifest-test.js: Added unit tests.
+
+2020-11-20  Dewei Zhu  <dewei_zhu@apple.com>
+
+        'run-analysis' script should schedule retries for A/B tests even after chart analysis failure.
+        https://bugs.webkit.org/show_bug.cgi?id=219116
+
+        Reviewed by Ryosuke Niwa.
+
+        Anlyzing charts and schedule retries for A/B tests on run-analysis script are independent task.
+        It should not skip scheduling retries even when chart analysis part fails.
+
+        * tools/run-analysis.js:
+        (async analysisLoop): Change the logic so that chart analysis failure will not stop scheduling retries.
+        Fix a typo for 'notificationRemoteAPI'.
+
+2020-11-18  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Fix a bug that platform groups cannot be updated on 'admin/platform'.
+        https://bugs.webkit.org/show_bug.cgi?id=219118
+
+        Reviewed by Ryosuke Niwa.
+
+        Admins should be able to update platform group on 'admin/platform'.
+        Update the assertion on BuildbotTriggerable._pullBuildbotOnAllSyncers so that when there is no
+        corresponding entry in buildRequestByGroup, the test group for the request should be finished.
+
+        * public/admin/platforms.php:
+        * tools/js/buildbot-triggerable.js: Updated the assert statement.
+        (BuildbotTriggerable.prototype._pullBuildbotOnAllSyncers):
+
+2020-11-16  Dewei Zhu  <dewei_zhu@apple.com>
+
+        BuildbotTriggerable should not process a completed build request from a completed test group.
+        https://bugs.webkit.org/show_bug.cgi?id=219016
+
+        Reviewed by Ryosuke Niwa.
+
+        BuildBotTriggerable._pullBuildbotOnAllSyncers relies on buildReqeustsByGroup to contain all build requests found by
+        BuildRequest.findById. However, since re-use root change is landed, above assumption is no longer valid. BuildRequest.all()
+        may includes build requests under same analysis task. Thus, `_pullBuildbotOnAllSyncers` will fail due to 'info' is undefined.
+
+        * server-tests/tools-buildbot-triggerable-tests.js: Added a unit test.
+        * tools/js/buildbot-triggerable.js:
+        (BuildbotTriggerable.prototype._pullBuildbotOnAllSyncers): Added logic to stop processing the build request if it's not
+        from incomplete build requests under a triggerable.
+
+2020-10-30  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Performance dashboard should avoid building same configuration under one analysis task.
+        https://bugs.webkit.org/show_bug.cgi?id=218413
+
+        Reviewed by Ryosuke Niwa.
+
+        Add logic in syncing script to reuse already built roots from same build request under current analysis task.
+        If there is another same build request scheduled/running, will defer scheduling current build request.
+
+        * public/admin/platforms.php: Fixed newer version of PHP warns on accessing invalid key in an array.
+        * public/admin/tests.php: Added a null check against $selected_parent.
+        * public/api/build-requests.php: Extended this API to allow reusing roots from existing build request.
+        * public/v3/models/build-request.js:
+        (BuildRequest.prototype.async findBuildRequestWithSameRoots): Find build type build request with same commit set
+        which can/will be reused under current analysis task.
+        * public/v3/models/commit-set.js:
+        (CommitSet.prototype.equalsIgnoringRoot): Added a helper function which checks commit set equality ignoring the root.
+        (CommitSet.prototype.equals): Use '_equalsOptionallyIgnoringRoot' as underlying implementation.
+        (CommitSet.prototype._equalsOptionallyIgnoringRoot): Implementation for both equals and equalsIngnoringRoot.
+        * server-tests/api-build-requests-tests.js: Added unit tests.
+        * server-tests/resources/mock-data.js: Added new mock data for new unit tests.
+        (MockData.addMockConfiguration):
+        (MockData.addMockData):
+        (MockData.set addMockBuildRequestsWithRoots):
+        (MockData.set addTwoMockTestGroupWithOwnedCommits):
+        (MockData.mockTestSyncConfigWithPatchAcceptingBuilder):
+        * server-tests/tools-buildbot-triggerable-tests.js: Added unit tests.
+        * tools/js/buildbot-triggerable.js:
+        (BuildbotTriggerable.prototype.async syncOnce):
+        (BuildbotTriggerable.prototype.async _scheduleRequest): A helper function to reuse the roots if there are built
+        roots available for same build type build request. If there is another build scheduled for same build request,
+        will defer scheduling the build request.
+        * unit-tests/build-request-tests.js: Add unit tests.
+
+2020-10-27  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Refactor 'platforms' table to contain group information.
+        https://bugs.webkit.org/show_bug.cgi?id=193132
+
+        Reviewed by Ryosuke Niwa.
+
+        Group 'platforms' so that bisecting can use commit sets from other platforms which are in the same platform group.
+        This will help to enhance the bisecting capability to higher granularity.
+        Added admin page to manage platform groups.
+        Updated platform admin page to allow update platform group.
+        SQL query to update existing database:
+        '''
+        BEGIN;
+        CREATE TABLE platform_groups (
+            platformgroup_id serial PRIMARY KEY,
+            platformgroup_name varchar(64) NOT NULL,
+            CONSTRAINT platform_group_name_must_be_unique UNIQUE (platformgroup_name));
+
+        ALTER TABLE platforms ADD COLUMN platform_group integer REFERENCES platform_groups DEFAULT NULL;
+        END;
+        '''
+
+        * init-database.sql: Added 'platform_group' column to 'platforms' table.
+        Added 'platform_groups' table.
+        * migrate-database.sql: Updated migration script accordingly.
+        * public/admin/platform-groups.php: Added a page to manage platform groups.
+        * public/admin/platforms.php: Added support to update platform group in admin page.
+        * public/include/admin-header.php: Added link to page that maneges platform groups.
+        * public/include/manifest-generator.php: Added 'platformGroup' in manifest.
+        * public/v3/index.html: Included 'platform-groups.js'.
+        * public/v3/models/analysis-task.js:
+        (AnalysisTask.prototype.async.commitSetsFromTestGroupsAndMeasurementSet):
+        Included measurement commit sets from other platforms in the same platform group.
+        (AnalysisTask.prototype._commitSetsInSamePlatformGroup):
+        Helper function to find measurement commit set for other platforms in same platform group.
+        * public/v3/models/manifest.js: Added step to build 'PlatformGroup' instances.
+        * public/v3/models/platform-group.js: Added 'PlatformGroup' to represent entries in 'platform_groups' table.
+        (PlatformGroup):
+        (PlatformGroup.prototype.addPlatform):
+        (PlatformGroup.prototype.platforms):
+        * public/v3/models/platform.js: Added itself to 'PlatformGroup' in constructor if it belongs
+        to a group.
+        (Platform.prototype.group): Return the platform group of current platform.
+        * public/v3/models/time-series.js: Added helper function to show view between a given time range.
+        (TimeSeries.prototype.viewBetweenTime):
+        * server-tests/api-manifest-tests.js: Updated unit test to also test platform group initialization.
+        * tools/js/database.js: Added prefix for 'platform_groups'.
+        * tools/js/v3-models.js: Added import for platform group.
+
+2020-10-26  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Fix and update performance dashboard tests
+        https://bugs.webkit.org/show_bug.cgi?id=218222
+
+        Reviewed by Ryosuke Niwa.
+
+        * public/api/upload-root.php: Add a null check against empty array
+        when accessing invalid key which will show warning since php 7.4.
+        Per https://wiki.php.net/rfc/notice-for-non-valid-array-container.
+        * server-tests/tools-sync-buildbot-integration-tests.js:
+        Fixed a unit test that assumes build request IDs under one test group is
+        one after another. This assumption is wrong when 'StartServers' under
+        'mpm_prefork_module' is set more than one in apache config.
+        Fixed antoher incorrect unit test.
+        * unit-tests/analysis-results-notifier-tests.js:
+        Fixed unit tests which incorrectly used 'assert.throws' per
+        https://nodejs.org/docs/latest-v7.x/api/assert.html#assert_assert_throws_block_error_message.
+
+2020-03-04  Zhifei Fang  <zhifei_fang@apple.com>
+
+        Test-freshness page table heaer misplaced
+        Some platform name is too long
+        https://bugs.webkit.org/show_bug.cgi?id=208617
+
+        Reviewed by Ryosuke Niwa.
+
+        * public/v3/pages/test-freshness-page.js:
+        (TestFreshnessPage.cssTemplate):
+
+2019-12-15  Zhifei Fang  <zhifei_fang@apple.com>
+
+        Add power metric to perf dashboard
+        https://bugs.webkit.org/show_bug.cgi?id=205227
+
+        Reviewed by Ryosuke Niwa.
+
+        * public/v3/models/metric.js:
+        (Metric):
+
+2019-12-05  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Custom analysis task page should allow schedule any triggerable accepted tests.
+        https://bugs.webkit.org/show_bug.cgi?id=204925
+
+        Reviewed by Ryosuke Niwa.
+
+        Fix a bug that subtest will not show on custom analysis task page if both itself and parent test are
+        accepted by triggerable.
+        Order test list in alphabetical order.
+
+        * public/v3/components/custom-analysis-task-configurator.js:
+        (CustomAnalysisTaskConfigurator.prototype._renderTriggerableTests):
+
+2019-10-28  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Fix a bug that cannot unhide a platform.
+        https://bugs.webkit.org/show_bug.cgi?id=203521
+
+        Reviewed by Ryosuke Niwa.
+
+        Before this change, the there is no value in POST when 'hidden' checkbox is unchecked.
+        Then the update will fail because platform_hidden cannot be NULL.
+
+        * public/admin/platforms.php: Adapted 'update_boolean_field'.
+        * public/admin/triggerables.php: Adapted 'update_boolean_field'.
+        * public/include/admin-header.php: Added 'update_boolean_field' helper function to set explict
+        boolean value for update.
+
+2019-10-25  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Add SSL support for peformance dashboard database connection.
+        https://bugs.webkit.org/show_bug.cgi?id=203426
+
+        Reviewed by Ryosuke Niwa.
+
+        Performance dashboard should allow connecting Postgres database with SSL.
+
+        * public/include/db.php: Add SSL configuration to connection string if specified.
+        * tools/js/database.js: Add SSL configuration to connection string if specified.
+        (Database.prototype._prepareSSLConfig):
+        (Database.prototype.connect):
+        * unit-tests/checkconfig.js: Added unit tests for optional ssl fields.
+
+2019-10-22  Dewei Zhu  <dewei_zhu@apple.com>
+
+        Refactor "builds" table "build_number" row to "build_tag" to fit more generic use cases.
+        https://bugs.webkit.org/show_bug.cgi?id=203270
+
+        Reviewed by Ryosuke Niwa.
+
+        Rename "build_number" to "build_tag" to fit more generic use cases.
+        Add support to be backward compatible to accept reports contain either
+        "buildNumber" or "buildTag".
+
+        * browser-tests/index.html:
+        * init-database.sql:
+        * migrate-database.sql: Updated migration sql for this change.
+        * public/admin/test-configurations.php:
+        * public/api/measurement-set.php:
+        * public/api/runs.php:
+        * public/api/upload-root.php: Added support for both "buildNumber" and "buildTag".
+        * public/include/report-processor.php: Added support for both "buildNumber" and "buildTag".
+        * public/v3/models/builder.js:
+        (Builder.prototype.urlForBuild):
+        (Builder):
+        (Build):
+        (Build.prototype.buildTag):
+        (Build.prototype.label):
+        (Build.prototype.url):
+        (Build.prototype.buildNumber): Deleted.
+        * public/v3/models/measurement-adaptor.js:
+        (MeasurementAdaptor):
+        (MeasurementAdaptor.prototype.applyTo.return.build):
+        * public/v3/pages/chart-pane-status-view.js:
+        * public/v3/pages/test-freshness-page.js:
+        (TestFreshnessPage.prototype._renderTooltip):
+        * server-tests/admin-platforms-tests.js:
+        (reportsForDifferentPlatforms):
+        * server-tests/admin-reprocess-report-tests.js:
+        * server-tests/api-commits-tests.js:
+        * server-tests/api-manifest-tests.js:
+        * server-tests/api-measurement-set-tests.js:
+        * server-tests/api-report-tests.js: Added unit tests for testing "buildNumber" and "buildTag".
+        (emptyReport):
+        (reportWitMismatchingCommitTime):
+        (reportWithOneSecondCommitTimeDifference):
+        (emptySlaveReport):
+        (makeReport):
+        (reportWithSameSubtestName):
+        * server-tests/api-upload-root-tests.js: Added unit tests for testing "buildNumber" and "buildTag".
+        * server-tests/privileged-api-add-build-requests-tests.js:
+        * server-tests/privileged-api-create-analysis-task-tests.js:
+        * server-tests/privileged-api-create-test-group-tests.js:
+        (createAnalysisTask):
+        * server-tests/privileged-api-upate-run-status.js:
+        * server-tests/privileged-api-update-test-group-tests.js:
+        (async.createAnalysisTask):
+        * server-tests/resources/mock-data.js:
+        (MockData.addMockConfiguration):
+        (MockData.sampleBuildData):
+        (MockData.finishedBuildData):
+        * server-tests/tools-sync-buildbot-integration-tests.js:
+        * tools/js/buildbot-syncer.js:
+        (BuildbotBuildEntry.prototype.initialize):
+        (BuildbotBuildEntry.prototype.buildTag):
+        (BuildbotBuildEntry.prototype.url):
+        (BuildbotSyncer.prototype.urlForBuildTag):
+        (BuildbotBuildEntry.prototype.buildNumber): Deleted.
+        (BuildbotSyncer.prototype.urlForBuildNumber): Deleted.
+        * unit-tests/analysis-task-tests.js:
+        (measurementCluster):
+        * unit-tests/buildbot-syncer-tests.js:
+        * unit-tests/measurement-adaptor-tests.js:
+        * unit-tests/measurement-set-analyzer-tests.js:
+        * unit-tests/measurement-set-tests.js:
+        * unit-tests/resources/mock-v3-models.js:
+
 2019-10-11  Dewei Zhu  <dewei_zhu@apple.com>
 
         Improve test freshness page interaction experience.

@@ -33,15 +33,23 @@ function clickEnterFullscreenButton()
 function fullscreenchange()
 {
     if (document.webkitIsFullScreen)
-        beginfullscreen();
+        beginfullscreen(true);
     else
         endfullscreen();
 }
 
-function beginfullscreen()
+async function beginfullscreen(wasTriggeredFromFullscreenChangeEvent)
 {
-    testExpected("mediaElement.webkitDisplayingFullscreen", true);
-    run("mediaElement.webkitExitFullScreen()");
+    if (window.internals)
+        await testExpectedEventually("internals.isChangingPresentationMode(mediaElement)", false);
+    if (!wasTriggeredFromFullscreenChangeEvent)
+        run("mediaElement.webkitExitFullScreen()");
+    else {
+        // Call asynchronously to give time to the WebCore FullscreenManager to notify the video
+        // element that it entered full-screen, and thus allowing the exitFullScreen() call to go
+        // through.
+        setTimeout('run("mediaElement.webkitExitFullScreen()")', 0);
+    }
 }
 
 function endfullscreen()
@@ -49,13 +57,13 @@ function endfullscreen()
     setTimeout(openNextMovie, 10);
 }
 
-function fullscreenerror()
+async function fullscreenerror()
 {
     var movie = movieInfo.movies[movieInfo.current];
     if (movie.inline) {
         failTest("Unexpected fullscreenerror event");
     } else {
-        testExpected("mediaElement.webkitDisplayingFullscreen", false);
+        await testExpectedEventually("mediaElement.webkitDisplayingFullscreen", false);
         openNextMovie();
     }
 }
@@ -138,4 +146,3 @@ function addEventListeners(elem)
     waitForEvent('webkitfullscreenchange', fullscreenchange);
     waitForEvent('webkitfullscreenerror', fullscreenerror);
 }
-

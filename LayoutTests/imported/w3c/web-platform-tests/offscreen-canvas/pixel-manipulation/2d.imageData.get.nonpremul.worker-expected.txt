@@ -1,3 +1,0 @@
-
-FAIL getImageData() returns non-premultiplied colours Can't find variable: OffscreenCanvas
-

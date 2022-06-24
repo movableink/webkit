@@ -36,14 +36,11 @@
 #include <wtf/HashSet.h>
 #include <wtf/text/StringHash.h>
 
-namespace IPC {
-class DataReference;
-}
-
 namespace WebCore {
 class PaymentCoordinator;
 class PaymentContact;
 class PaymentSessionError;
+struct ApplePayShippingMethod;
 }
 
 namespace WebKit {
@@ -62,16 +59,19 @@ public:
 
 private:
     // WebCore::PaymentCoordinatorClient.
-    Optional<String> validatedPaymentNetwork(const String&) override;
+    std::optional<String> validatedPaymentNetwork(const String&) override;
     bool canMakePayments() override;
     void canMakePaymentsWithActiveCard(const String& merchantIdentifier, const String& domainName, CompletionHandler<void(bool)>&&) override;
     void openPaymentSetup(const String& merchantIdentifier, const String& domainName, CompletionHandler<void(bool)>&&) override;
     bool showPaymentUI(const URL& originatingURL, const Vector<URL>& linkIconURLs, const WebCore::ApplePaySessionPaymentRequest&) override;
     void completeMerchantValidation(const WebCore::PaymentMerchantSession&) override;
-    void completeShippingMethodSelection(Optional<WebCore::ShippingMethodUpdate>&&) override;
-    void completeShippingContactSelection(Optional<WebCore::ShippingContactUpdate>&&) override;
-    void completePaymentMethodSelection(Optional<WebCore::PaymentMethodUpdate>&&) override;
-    void completePaymentSession(Optional<WebCore::PaymentAuthorizationResult>&&) override;
+    void completeShippingMethodSelection(std::optional<WebCore::ApplePayShippingMethodUpdate>&&) override;
+    void completeShippingContactSelection(std::optional<WebCore::ApplePayShippingContactUpdate>&&) override;
+    void completePaymentMethodSelection(std::optional<WebCore::ApplePayPaymentMethodUpdate>&&) override;
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    void completeCouponCodeChange(std::optional<WebCore::ApplePayCouponCodeUpdate>&&) override;
+#endif
+    void completePaymentSession(WebCore::ApplePayPaymentAuthorizationResult&&) override;
 
     void abortPaymentSession() override;
     void cancelPaymentSession() override;
@@ -80,8 +80,9 @@ private:
 
     bool isWebPaymentCoordinator() const override { return true; }
 
-    bool isAlwaysOnLoggingAllowed() const override;
-    bool supportsUnrestrictedApplePay() const override;
+    void getSetupFeatures(const WebCore::ApplePaySetupConfiguration&, const URL&, CompletionHandler<void(Vector<Ref<WebCore::ApplePaySetupFeature>>&&)>&&) final;
+    void beginApplePaySetup(const WebCore::ApplePaySetupConfiguration&, const URL&, Vector<RefPtr<WebCore::ApplePaySetupFeature>>&&, CompletionHandler<void(bool)>&&) final;
+    void endApplePaySetup() final;
 
     // IPC::MessageReceiver.
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
@@ -93,9 +94,12 @@ private:
     // Message handlers.
     void validateMerchant(const String& validationURLString);
     void didAuthorizePayment(const WebCore::Payment&);
-    void didSelectShippingMethod(const WebCore::ApplePaySessionPaymentRequest::ShippingMethod&);
+    void didSelectShippingMethod(const WebCore::ApplePayShippingMethod&);
     void didSelectShippingContact(const WebCore::PaymentContact&);
     void didSelectPaymentMethod(const WebCore::PaymentMethod&);
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    void didChangeCouponCode(String&& couponCode);
+#endif
     void didCancelPaymentSession(WebCore::PaymentSessionError&&);
 
     WebCore::PaymentCoordinator& paymentCoordinator();
@@ -109,11 +113,7 @@ private:
 
     WebPage& m_webPage;
 
-    Optional<AvailablePaymentNetworksSet> m_availablePaymentNetworks;
-
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/WebPaymentCoordinatorAdditions.h>
-#endif
+    std::optional<AvailablePaymentNetworksSet> m_availablePaymentNetworks;
 };
 
 } // namespace WebKit

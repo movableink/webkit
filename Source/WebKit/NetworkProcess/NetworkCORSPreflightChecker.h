@@ -37,11 +37,13 @@
 namespace WebCore {
 class ResourceError;
 class SecurityOrigin;
+class SharedBuffer;
 }
 
 namespace WebKit {
 
 class NetworkProcess;
+class NetworkResourceLoader;
 
 class NetworkCORSPreflightChecker final : private NetworkDataTaskClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -58,7 +60,7 @@ public:
     };
     using CompletionCallback = CompletionHandler<void(WebCore::ResourceError&&)>;
 
-    NetworkCORSPreflightChecker(NetworkProcess&, Parameters&&, bool shouldCaptureExtraNetworkLoadMetrics, CompletionCallback&&);
+    NetworkCORSPreflightChecker(NetworkProcess&, NetworkResourceLoader*, Parameters&&, bool shouldCaptureExtraNetworkLoadMetrics, CompletionCallback&&);
     ~NetworkCORSPreflightChecker();
     const WebCore::ResourceRequest& originalRequest() const { return m_parameters.originalRequest; }
 
@@ -68,14 +70,15 @@ public:
 
 private:
     void willPerformHTTPRedirection(WebCore::ResourceResponse&&, WebCore::ResourceRequest&&, RedirectCompletionHandler&&) final;
-    void didReceiveChallenge(WebCore::AuthenticationChallenge&&, ChallengeCompletionHandler&&) final;
-    void didReceiveResponse(WebCore::ResourceResponse&&, ResponseCompletionHandler&&) final;
-    void didReceiveData(Ref<WebCore::SharedBuffer>&&) final;
+    void didReceiveChallenge(WebCore::AuthenticationChallenge&&, NegotiatedLegacyTLS, ChallengeCompletionHandler&&) final;
+    void didReceiveResponse(WebCore::ResourceResponse&&, NegotiatedLegacyTLS, PrivateRelayed, ResponseCompletionHandler&&) final;
+    void didReceiveData(const WebCore::SharedBuffer&) final;
     void didCompleteWithError(const WebCore::ResourceError&, const WebCore::NetworkLoadMetrics&) final;
     void didSendData(uint64_t totalBytesSent, uint64_t totalBytesExpectedToSend) final;
     void wasBlocked() final;
     void cannotShowURL() final;
     void wasBlockedByRestrictions() final;
+    void wasBlockedByDisabledFTP() final;
 
     Parameters m_parameters;
     Ref<NetworkProcess> m_networkProcess;
@@ -84,6 +87,7 @@ private:
     RefPtr<NetworkDataTask> m_task;
     bool m_shouldCaptureExtraNetworkLoadMetrics { false };
     WebCore::NetworkTransactionInformation m_loadInformation;
+    WeakPtr<NetworkResourceLoader> m_networkResourceLoader;
 };
 
 } // namespace WebKit

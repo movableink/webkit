@@ -8,83 +8,53 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "rtc_base/task_queue.h"
+#include "rtc_base/task_queue_stdlib.h"
 
 #include <string.h>
+
 #include <algorithm>
-#include <atomic>
-#include <condition_variable>
 #include <map>
+#include <memory>
 #include <queue>
 #include <utility>
 
+#include "absl/strings/string_view.h"
+#include "api/task_queue/queued_task.h"
+#include "api/task_queue/task_queue_base.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/criticalsection.h"
 #include "rtc_base/event.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/platform_thread.h"
-#include "rtc_base/refcount.h"
-#include "rtc_base/refcountedobject.h"
+#include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/thread_annotations.h"
-#include "rtc_base/timeutils.h"
+#include "rtc_base/time_utils.h"
 
-namespace rtc {
+namespace webrtc {
 namespace {
 
-using Priority = TaskQueue::Priority;
-
-ThreadPriority TaskQueuePriorityToThreadPriority(Priority priority) {
+rtc::ThreadPriority TaskQueuePriorityToThreadPriority(
+    TaskQueueFactory::Priority priority) {
   switch (priority) {
-    case Priority::HIGH:
-      return kRealtimePriority;
-    case Priority::LOW:
-      return kLowPriority;
-    case Priority::NORMAL:
-      return kNormalPriority;
-    default:
-      RTC_NOTREACHED();
-      return kNormalPriority;
+    case TaskQueueFactory::Priority::HIGH:
+      return rtc::ThreadPriority::kRealtime;
+    case TaskQueueFactory::Priority::LOW:
+      return rtc::ThreadPriority::kLow;
+    case TaskQueueFactory::Priority::NORMAL:
+      return rtc::ThreadPriority::kNormal;
   }
-  return kNormalPriority;
 }
 
-}  // namespace
-
-class TaskQueue::Impl : public RefCountInterface {
+class TaskQueueStdlib final : public TaskQueueBase {
  public:
-  Impl(const char* queue_name, TaskQueue* queue, Priority priority);
-  ~Impl() override;
+  TaskQueueStdlib(absl::string_view queue_name, rtc::ThreadPriority priority);
+  ~TaskQueueStdlib() override = default;
 
-  static TaskQueue::Impl* Current();
-  static TaskQueue* CurrentQueue();
+  void Delete() override;
+  void PostTask(std::unique_ptr<QueuedTask> task) override;
+  void PostDelayedTask(std::unique_ptr<QueuedTask> task,
+                       uint32_t milliseconds) override;
 
-  // Used for DCHECKing the current queue.
-  bool IsCurrent() const;
-
-  template <class Closure,
-            typename std::enable_if<!std::is_convertible<
-                Closure,
-                std::unique_ptr<QueuedTask>>::value>::type* = nullptr>
-  void PostTask(Closure&& closure) {
-    PostTask(NewClosure(std::forward<Closure>(closure)));
-  }
-
-  void PostTask(std::unique_ptr<QueuedTask> task);
-  void PostTaskAndReply(std::unique_ptr<QueuedTask> task,
-                        std::unique_ptr<QueuedTask> reply,
-                        TaskQueue::Impl* reply_queue);
-
-  void PostDelayedTask(std::unique_ptr<QueuedTask> task, uint32_t milliseconds);
-
-  class WorkerThread : public PlatformThread {
-   public:
-    WorkerThread(ThreadRunFunction func,
-                 void* obj,
-                 const char* thread_name,
-                 ThreadPriority priority)
-        : PlatformThread(func, obj, thread_name, priority) {}
-  };
-
+ private:
   using OrderId = uint64_t;
 
   struct DelayedEntryTimeout {
@@ -103,40 +73,19 @@ class TaskQueue::Impl : public RefCountInterface {
     int64_t sleep_time_ms_{};
   };
 
- protected:
   NextTask GetNextTask();
-
- private:
-  // The ThreadQueue::Current() method requires that the current thread
-  // returns the task queue if the current thread is the active task
-  // queue and this variable holds the value needed in thread_local to
-  // on the initialized worker thread holding the queue.
-  static thread_local TaskQueue::Impl* thread_context_;
-
-  static void ThreadMain(void* context);
 
   void ProcessTasks();
 
   void NotifyWake();
 
-  // The back pointer from the owner task queue object
-  // from this implementation detail.
-  TaskQueue* const queue_;
-
   // Indicates if the thread has started.
-  Event started_;
-
-  // Indicates if the thread has stopped.
-  Event stopped_;
+  rtc::Event started_;
 
   // Signaled whenever a new task is pending.
-  Event flag_notify_;
+  rtc::Event flag_notify_;
 
-  // Contains the active worker thread assigned to processing
-  // tasks (including delayed tasks).
-  WorkerThread thread_;
-
-  rtc::CriticalSection pending_lock_;
+  Mutex pending_lock_;
 
   // Indicates if the worker thread needs to shutdown now.
   bool thread_should_quit_ RTC_GUARDED_BY(pending_lock_){false};
@@ -158,59 +107,44 @@ class TaskQueue::Impl : public RefCountInterface {
   // std::unique_ptr out of the queue without the presence of a hack.
   std::map<DelayedEntryTimeout, std::unique_ptr<QueuedTask>> delayed_queue_
       RTC_GUARDED_BY(pending_lock_);
+
+  // Contains the active worker thread assigned to processing
+  // tasks (including delayed tasks).
+  // Placing this last ensures the thread doesn't touch uninitialized attributes
+  // throughout it's lifetime.
+  rtc::PlatformThread thread_;
 };
 
-// static
-thread_local TaskQueue::Impl* TaskQueue::Impl::thread_context_ = nullptr;
-
-TaskQueue::Impl::Impl(const char* queue_name,
-                      TaskQueue* queue,
-                      Priority priority)
-    : queue_(queue),
-      started_(/*manual_reset=*/false, /*initially_signaled=*/false),
-      stopped_(/*manual_reset=*/false, /*initially_signaled=*/false),
+TaskQueueStdlib::TaskQueueStdlib(absl::string_view queue_name,
+                                 rtc::ThreadPriority priority)
+    : started_(/*manual_reset=*/false, /*initially_signaled=*/false),
       flag_notify_(/*manual_reset=*/false, /*initially_signaled=*/false),
-      thread_(&TaskQueue::Impl::ThreadMain,
-              this,
-              queue_name,
-              TaskQueuePriorityToThreadPriority(priority)) {
-  RTC_DCHECK(queue_name);
-  thread_.Start();
-  started_.Wait(Event::kForever);
+      thread_(rtc::PlatformThread::SpawnJoinable(
+          [this] {
+            CurrentTaskQueueSetter set_current(this);
+            ProcessTasks();
+          },
+          queue_name,
+          rtc::ThreadAttributes().SetPriority(priority))) {
+  started_.Wait(rtc::Event::kForever);
 }
 
-TaskQueue::Impl::~Impl() {
+void TaskQueueStdlib::Delete() {
   RTC_DCHECK(!IsCurrent());
 
   {
-    CritScope lock(&pending_lock_);
+    MutexLock lock(&pending_lock_);
     thread_should_quit_ = true;
   }
 
   NotifyWake();
 
-  stopped_.Wait(Event::kForever);
-  thread_.Stop();
+  delete this;
 }
 
-// static
-TaskQueue::Impl* TaskQueue::Impl::Current() {
-  return thread_context_;
-}
-
-// static
-TaskQueue* TaskQueue::Impl::CurrentQueue() {
-  TaskQueue::Impl* current = Current();
-  return current ? current->queue_ : nullptr;
-}
-
-bool TaskQueue::Impl::IsCurrent() const {
-  return IsThreadRefEqual(thread_.GetThreadRef(), CurrentThreadRef());
-}
-
-void TaskQueue::Impl::PostTask(std::unique_ptr<QueuedTask> task) {
+void TaskQueueStdlib::PostTask(std::unique_ptr<QueuedTask> task) {
   {
-    CritScope lock(&pending_lock_);
+    MutexLock lock(&pending_lock_);
     OrderId order = thread_posting_order_++;
 
     pending_queue_.push(std::pair<OrderId, std::unique_ptr<QueuedTask>>(
@@ -220,7 +154,7 @@ void TaskQueue::Impl::PostTask(std::unique_ptr<QueuedTask> task) {
   NotifyWake();
 }
 
-void TaskQueue::Impl::PostDelayedTask(std::unique_ptr<QueuedTask> task,
+void TaskQueueStdlib::PostDelayedTask(std::unique_ptr<QueuedTask> task,
                                       uint32_t milliseconds) {
   auto fire_at = rtc::TimeMillis() + milliseconds;
 
@@ -228,7 +162,7 @@ void TaskQueue::Impl::PostDelayedTask(std::unique_ptr<QueuedTask> task,
   delay.next_fire_at_ms_ = fire_at;
 
   {
-    CritScope lock(&pending_lock_);
+    MutexLock lock(&pending_lock_);
     delay.order_ = ++thread_posting_order_;
     delayed_queue_[delay] = std::move(task);
   }
@@ -236,25 +170,12 @@ void TaskQueue::Impl::PostDelayedTask(std::unique_ptr<QueuedTask> task,
   NotifyWake();
 }
 
-void TaskQueue::Impl::PostTaskAndReply(std::unique_ptr<QueuedTask> task,
-                                       std::unique_ptr<QueuedTask> reply,
-                                       TaskQueue::Impl* reply_queue) {
-  QueuedTask* task_ptr = task.release();
-  QueuedTask* reply_task_ptr = reply.release();
-  PostTask([task_ptr, reply_task_ptr, reply_queue]() {
-    if (task_ptr->Run())
-      delete task_ptr;
-
-    reply_queue->PostTask(std::unique_ptr<QueuedTask>(reply_task_ptr));
-  });
-}
-
-TaskQueue::Impl::NextTask TaskQueue::Impl::GetNextTask() {
+TaskQueueStdlib::NextTask TaskQueueStdlib::GetNextTask() {
   NextTask result{};
 
   auto tick = rtc::TimeMillis();
 
-  CritScope lock(&pending_lock_);
+  MutexLock lock(&pending_lock_);
 
   if (thread_should_quit_) {
     result.final_task_ = true;
@@ -294,14 +215,7 @@ TaskQueue::Impl::NextTask TaskQueue::Impl::GetNextTask() {
   return result;
 }
 
-// static
-void TaskQueue::Impl::ThreadMain(void* context) {
-  TaskQueue::Impl* me = static_cast<TaskQueue::Impl*>(context);
-  me->ProcessTasks();
-}
-
-void TaskQueue::Impl::ProcessTasks() {
-  thread_context_ = this;
+void TaskQueueStdlib::ProcessTasks() {
   started_.Set();
 
   while (true) {
@@ -321,15 +235,13 @@ void TaskQueue::Impl::ProcessTasks() {
     }
 
     if (0 == task.sleep_time_ms_)
-      flag_notify_.Wait(Event::kForever);
+      flag_notify_.Wait(rtc::Event::kForever);
     else
       flag_notify_.Wait(task.sleep_time_ms_);
   }
-
-  stopped_.Set();
 }
 
-void TaskQueue::Impl::NotifyWake() {
+void TaskQueueStdlib::NotifyWake() {
   // The queue holds pending tasks to complete. Either tasks are to be
   // executed immediately or tasks are to be run at some future delayed time.
   // For immediate tasks the task queue's thread is busy running the task and
@@ -357,43 +269,20 @@ void TaskQueue::Impl::NotifyWake() {
   flag_notify_.Set();
 }
 
-// Boilerplate for the PIMPL pattern.
-TaskQueue::TaskQueue(const char* queue_name, Priority priority)
-    : impl_(new RefCountedObject<TaskQueue::Impl>(queue_name, this, priority)) {
+class TaskQueueStdlibFactory final : public TaskQueueFactory {
+ public:
+  std::unique_ptr<TaskQueueBase, TaskQueueDeleter> CreateTaskQueue(
+      absl::string_view name,
+      Priority priority) const override {
+    return std::unique_ptr<TaskQueueBase, TaskQueueDeleter>(
+        new TaskQueueStdlib(name, TaskQueuePriorityToThreadPriority(priority)));
+  }
+};
+
+}  // namespace
+
+std::unique_ptr<TaskQueueFactory> CreateTaskQueueStdlibFactory() {
+  return std::make_unique<TaskQueueStdlibFactory>();
 }
 
-TaskQueue::~TaskQueue() {}
-
-// static
-TaskQueue* TaskQueue::Current() {
-  return TaskQueue::Impl::CurrentQueue();
-}
-
-// Used for DCHECKing the current queue.
-bool TaskQueue::IsCurrent() const {
-  return impl_->IsCurrent();
-}
-
-void TaskQueue::PostTask(std::unique_ptr<QueuedTask> task) {
-  return TaskQueue::impl_->PostTask(std::move(task));
-}
-
-void TaskQueue::PostTaskAndReply(std::unique_ptr<QueuedTask> task,
-                                 std::unique_ptr<QueuedTask> reply,
-                                 TaskQueue* reply_queue) {
-  return TaskQueue::impl_->PostTaskAndReply(std::move(task), std::move(reply),
-                                            reply_queue->impl_.get());
-}
-
-void TaskQueue::PostTaskAndReply(std::unique_ptr<QueuedTask> task,
-                                 std::unique_ptr<QueuedTask> reply) {
-  return TaskQueue::impl_->PostTaskAndReply(std::move(task), std::move(reply),
-                                            impl_.get());
-}
-
-void TaskQueue::PostDelayedTask(std::unique_ptr<QueuedTask> task,
-                                uint32_t milliseconds) {
-  return TaskQueue::impl_->PostDelayedTask(std::move(task), milliseconds);
-}
-
-}  // namespace rtc
+}  // namespace webrtc

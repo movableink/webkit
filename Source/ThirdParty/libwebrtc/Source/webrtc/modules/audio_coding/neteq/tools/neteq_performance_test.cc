@@ -12,14 +12,14 @@
 
 #include "api/audio/audio_frame.h"
 #include "api/audio_codecs/builtin_audio_decoder_factory.h"
-#include "common_types.h"  // NOLINT(build/include)
+#include "api/neteq/neteq.h"
 #include "modules/audio_coding/codecs/pcm16b/pcm16b.h"
-#include "modules/audio_coding/neteq/include/neteq.h"
+#include "modules/audio_coding/neteq/default_neteq_factory.h"
 #include "modules/audio_coding/neteq/tools/audio_loop.h"
 #include "modules/audio_coding/neteq/tools/rtp_generator.h"
 #include "rtc_base/checks.h"
 #include "system_wrappers/include/clock.h"
-#include "test/testsupport/fileutils.h"
+#include "test/testsupport/file_utils.h"
 
 using webrtc::NetEq;
 using webrtc::test::AudioLoop;
@@ -34,17 +34,19 @@ int64_t NetEqPerformanceTest::Run(int runtime_ms,
   const std::string kInputFileName =
       webrtc::test::ResourcePath("audio_coding/testfile32kHz", "pcm");
   const int kSampRateHz = 32000;
-  const webrtc::NetEqDecoder kDecoderType =
-      webrtc::NetEqDecoder::kDecoderPCM16Bswb32kHz;
   const std::string kDecoderName = "pcm16-swb32";
   const int kPayloadType = 95;
 
   // Initialize NetEq instance.
   NetEq::Config config;
   config.sample_rate_hz = kSampRateHz;
-  NetEq* neteq = NetEq::Create(config, CreateBuiltinAudioDecoderFactory());
-  // Register decoder in |neteq|.
-  if (neteq->RegisterPayloadType(kDecoderType, kDecoderName, kPayloadType) != 0)
+  webrtc::Clock* clock = webrtc::Clock::GetRealTimeClock();
+  auto audio_decoder_factory = CreateBuiltinAudioDecoderFactory();
+  auto neteq =
+      DefaultNetEqFactory().CreateNetEq(config, audio_decoder_factory, clock);
+  // Register decoder in `neteq`.
+  if (!neteq->RegisterPayloadType(kPayloadType,
+                                  SdpAudioFormat("l16", kSampRateHz, 1)))
     return -1;
 
   // Set up AudioLoop object.
@@ -74,7 +76,6 @@ int64_t NetEqPerformanceTest::Run(int runtime_ms,
   RTC_CHECK_EQ(sizeof(input_payload), payload_len);
 
   // Main loop.
-  webrtc::Clock* clock = webrtc::Clock::GetRealTimeClock();
   int64_t start_time_ms = clock->TimeInMilliseconds();
   AudioFrame out_frame;
   while (time_now_ms < runtime_ms) {
@@ -86,9 +87,7 @@ int64_t NetEqPerformanceTest::Run(int runtime_ms,
       }
       if (!lost) {
         // Insert packet.
-        int error =
-            neteq->InsertPacket(rtp_header, input_payload,
-                                packet_input_time_ms * kSampRateHz / 1000);
+        int error = neteq->InsertPacket(rtp_header, input_payload);
         if (error != NetEq::kOK)
           return -1;
       }
@@ -122,7 +121,6 @@ int64_t NetEqPerformanceTest::Run(int runtime_ms,
     }
   }
   int64_t end_time_ms = clock->TimeInMilliseconds();
-  delete neteq;
   return end_time_ms - start_time_ms;
 }
 

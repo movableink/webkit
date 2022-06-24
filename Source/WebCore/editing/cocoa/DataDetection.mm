@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 Apple, Inc.  All rights reserved.
+ * Copyright (C) 2014-2020 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,34 +30,38 @@
 
 #import "Attr.h"
 #import "CSSStyleDeclaration.h"
+#import "ColorConversion.h"
+#import "ColorSerialization.h"
+#import "DataDetectionResultsStorage.h"
 #import "Editing.h"
 #import "ElementAncestorIterator.h"
 #import "ElementTraversal.h"
 #import "FrameView.h"
 #import "HTMLAnchorElement.h"
+#import "HTMLDivElement.h"
 #import "HTMLNames.h"
 #import "HTMLTextFormControlElement.h"
 #import "HitTestResult.h"
-#import "Node.h"
 #import "NodeList.h"
 #import "NodeTraversal.h"
+#import "QualifiedName.h"
 #import "Range.h"
 #import "RenderObject.h"
 #import "StyleProperties.h"
 #import "Text.h"
 #import "TextIterator.h"
+#import "TextRecognitionResult.h"
 #import "VisiblePosition.h"
 #import "VisibleUnits.h"
 #import <pal/spi/ios/DataDetectorsUISPI.h>
-#import <pal/spi/mac/DataDetectorsSPI.h>
 #import <wtf/cf/TypeCastsCF.h>
 #import <wtf/text/StringBuilder.h>
+#import <wtf/text/StringToIntegerConversion.h>
+#import <pal/cocoa/DataDetectorsCoreSoftLink.h>
+#import <pal/mac/DataDetectorsSoftLink.h>
 
-#import "DataDetectorsCoreSoftLink.h"
-
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
-template <>
-struct WTF::CFTypeTrait<DDResultRef> {
+#if PLATFORM(MAC)
+template<> struct WTF::CFTypeTrait<DDResultRef> {
     static inline CFTypeID typeID(void) { return DDResultGetCFTypeID(); }
 };
 #endif
@@ -68,70 +72,67 @@ using namespace HTMLNames;
 
 #if PLATFORM(MAC)
 
-static RetainPtr<DDActionContext> detectItemAtPositionWithRange(VisiblePosition position, RefPtr<Range> contextRange, FloatRect& detectedDataBoundingBox, RefPtr<Range>& detectedDataRange)
+static std::optional<DetectedItem> detectItem(const VisiblePosition& position, const SimpleRange& contextRange)
 {
-    String fullPlainTextString = plainText(contextRange.get());
-    int hitLocation = TextIterator::rangeLength(makeRange(contextRange->startPosition(), position).get());
+    if (position.isNull())
+        return { };
+    String fullPlainTextString = plainText(contextRange);
+    CFIndex hitLocation = characterCount(*makeSimpleRange(contextRange.start, position));
 
-    RetainPtr<DDScannerRef> scanner = adoptCF(DDScannerCreate(DDScannerTypeStandard, 0, nullptr));
-    RetainPtr<DDScanQueryRef> scanQuery = adoptCF(DDScanQueryCreateFromString(kCFAllocatorDefault, fullPlainTextString.createCFString().get(), CFRangeMake(0, fullPlainTextString.length())));
+    auto scanner = adoptCF(DDScannerCreate(DDScannerTypeStandard, 0, nullptr));
+    auto scanQuery = adoptCF(DDScanQueryCreateFromString(kCFAllocatorDefault, fullPlainTextString.createCFString().get(), CFRangeMake(0, fullPlainTextString.length())));
 
     if (!DDScannerScanQuery(scanner.get(), scanQuery.get()))
-        return nullptr;
+        return { };
 
-    RetainPtr<CFArrayRef> results = adoptCF(DDScannerCopyResultsWithOptions(scanner.get(), DDScannerCopyResultsOptionsNoOverlap));
+    auto results = adoptCF(DDScannerCopyResultsWithOptions(scanner.get(), DDScannerCopyResultsOptionsNoOverlap));
 
     // Find the DDResultRef that intersects the hitTestResult's VisiblePosition.
     DDResultRef mainResult = nullptr;
-    RefPtr<Range> mainResultRange;
+    std::optional<SimpleRange> mainResultRange;
     CFIndex resultCount = CFArrayGetCount(results.get());
     for (CFIndex i = 0; i < resultCount; i++) {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
-        DDResultRef result = checked_cf_cast<DDResultRef>(CFArrayGetValueAtIndex(results.get(), i));
-#else
-        DDResultRef result = static_cast<DDResultRef>(const_cast<CF_BRIDGED_TYPE(id) void*>(CFArrayGetValueAtIndex(results.get(), i)));
-#endif
+        auto result = checked_cf_cast<DDResultRef>(CFArrayGetValueAtIndex(results.get(), i));
         CFRange resultRangeInContext = DDResultGetRange(result);
         if (hitLocation >= resultRangeInContext.location && (hitLocation - resultRangeInContext.location) < resultRangeInContext.length) {
             mainResult = result;
-            mainResultRange = TextIterator::subrange(*contextRange, resultRangeInContext.location, resultRangeInContext.length);
+            mainResultRange = resolveCharacterRange(contextRange, resultRangeInContext);
             break;
         }
     }
 
     if (!mainResult)
-        return nullptr;
+        return { };
 
-    RetainPtr<DDActionContext> actionContext = adoptNS([allocDDActionContextInstance() init]);
+    auto view = mainResultRange->start.document().view();
+    if (!view)
+        return { };
+
+    auto actionContext = adoptNS([PAL::allocDDActionContextInstance() init]);
     [actionContext setAllResults:@[ (__bridge id)mainResult ]];
     [actionContext setMainResult:mainResult];
 
-    Vector<FloatQuad> quads;
-    mainResultRange->absoluteTextQuads(quads);
-    detectedDataBoundingBox = FloatRect();
-    FrameView* frameView = mainResultRange->ownerDocument().view();
-    for (const auto& quad : quads)
-        detectedDataBoundingBox.unite(frameView->contentsToWindow(quad.enclosingBoundingBox()));
-    
-    detectedDataRange = mainResultRange;
-    
-    return actionContext;
+    return { {
+        WTFMove(actionContext),
+        view->contentsToWindow(enclosingIntRect(unitedBoundingBoxes(RenderObject::absoluteTextQuads(*mainResultRange)))),
+        *mainResultRange,
+    } };
 }
 
-RetainPtr<DDActionContext> DataDetection::detectItemAroundHitTestResult(const HitTestResult& hitTestResult, FloatRect& detectedDataBoundingBox, RefPtr<Range>& detectedDataRange)
+std::optional<DetectedItem> DataDetection::detectItemAroundHitTestResult(const HitTestResult& hitTestResult)
 {
-    if (!DataDetectorsLibrary())
-        return nullptr;
+    if (!PAL::isDataDetectorsFrameworkAvailable())
+        return { };
 
     Node* node = hitTestResult.innerNonSharedNode();
     if (!node)
-        return nullptr;
+        return { };
     auto renderer = node->renderer();
     if (!renderer)
-        return nullptr;
+        return { };
 
     VisiblePosition position;
-    RefPtr<Range> contextRange;
+    std::optional<SimpleRange> contextRange;
 
     if (!is<HTMLTextFormControlElement>(*node)) {
         position = renderer->positionForPoint(hitTestResult.localPoint(), nullptr);
@@ -139,35 +140,35 @@ RetainPtr<DDActionContext> DataDetection::detectItemAroundHitTestResult(const Hi
             position = firstPositionInOrBeforeNode(node);
 
         contextRange = rangeExpandedAroundPositionByCharacters(position, 250);
-        if (!contextRange)
-            return nullptr;
     } else {
         Frame* frame = node->document().frame();
         if (!frame)
-            return nullptr;
+            return { };
 
         IntPoint framePoint = hitTestResult.roundedPointInInnerNodeFrame();
         if (!frame->rangeForPoint(framePoint))
-            return nullptr;
+            return { };
 
-        VisiblePosition position = frame->visiblePositionForPoint(framePoint);
+        position = frame->visiblePositionForPoint(framePoint);
         if (position.isNull())
-            return nullptr;
+            return { };
 
-        contextRange = enclosingTextUnitOfGranularity(position, LineGranularity, DirectionForward);
-        if (!contextRange)
-            return nullptr;
+        contextRange = enclosingTextUnitOfGranularity(position, TextGranularity::LineGranularity, SelectionDirection::Forward);
     }
 
-    return detectItemAtPositionWithRange(position, contextRange, detectedDataBoundingBox, detectedDataRange);
+    if (!contextRange)
+        return { };
+
+    return detectItem(position, *contextRange);
 }
+
 #endif // PLATFORM(MAC)
 
 #if PLATFORM(IOS_FAMILY)
 
 bool DataDetection::canBePresentedByDataDetectors(const URL& url)
 {
-    return [softLink_DataDetectorsCore_DDURLTapAndHoldSchemes() containsObject:(NSString *)url.protocol().toStringWithoutCopying().convertToASCIILowercase()];
+    return [PAL::softLink_DataDetectorsCore_DDURLTapAndHoldSchemes() containsObject:(NSString *)url.protocol().convertToASCIILowercase()];
 }
 
 bool DataDetection::isDataDetectorLink(Element& element)
@@ -188,28 +189,37 @@ String DataDetection::dataDetectorIdentifier(Element& element)
     return element.attributeWithoutSynchronization(x_apple_data_detectors_resultAttr);
 }
 
-bool DataDetection::shouldCancelDefaultAction(Element& element)
+bool DataDetection::canPresentDataDetectorsUIForElement(Element& element)
 {
     if (!isDataDetectorLink(element))
         return false;
     
-    if (softLink_DataDetectorsCore_DDShouldImmediatelyShowActionSheetForURL(downcast<HTMLAnchorElement>(element).href()))
+    if (PAL::softLink_DataDetectorsCore_DDShouldImmediatelyShowActionSheetForURL(downcast<HTMLAnchorElement>(element).href()))
         return true;
     
-    const AtomString& resultAttribute = element.attributeWithoutSynchronization(x_apple_data_detectors_resultAttr);
+    auto& resultAttribute = element.attributeWithoutSynchronization(x_apple_data_detectors_resultAttr);
     if (resultAttribute.isEmpty())
         return false;
-    NSArray *results = element.document().frame()->dataDetectionResults();
+
+    auto* dataDetectionResults = element.document().frame()->dataDetectionResultsIfExists();
+    if (!dataDetectionResults)
+        return false;
+
+    NSArray *results = dataDetectionResults->documentLevelResults();
     if (!results)
         return false;
-    Vector<String> resultIndices = resultAttribute.string().split('/');
-    DDResultRef result = [[results objectAtIndex:resultIndices[0].toInt()] coreResult];
-    // Handle the case of a signature block, where we need to check the correct subresult.
-    for (size_t i = 1; i < resultIndices.size(); i++) {
-        results = (NSArray *)softLink_DataDetectorsCore_DDResultGetSubResults(result);
-        result = (DDResultRef)[results objectAtIndex:resultIndices[i].toInt()];
+
+    auto resultIndices = StringView { resultAttribute }.split('/');
+    auto indexIterator = resultIndices.begin();
+    auto result = [results[parseIntegerAllowingTrailingJunk<int>(*indexIterator).value_or(0)] coreResult];
+
+    // Handle the case of a signature block, where we need to follow the path down one or more subresult levels.
+    while (++indexIterator != resultIndices.end()) {
+        results = (__bridge NSArray *)PAL::softLink_DataDetectorsCore_DDResultGetSubResults(result);
+        result = (__bridge DDResultRef)results[parseIntegerAllowingTrailingJunk<int>(*indexIterator).value_or(0)];
     }
-    return softLink_DataDetectorsCore_DDShouldImmediatelyShowActionSheetForResult(result);
+
+    return PAL::softLink_DataDetectorsCore_DDShouldImmediatelyShowActionSheetForResult(result);
 }
 
 static BOOL resultIsURL(DDResultRef result)
@@ -217,31 +227,35 @@ static BOOL resultIsURL(DDResultRef result)
     if (!result)
         return NO;
     
-    static NSSet *urlTypes = [[NSSet setWithObjects: (NSString *)get_DataDetectorsCore_DDBinderHttpURLKey(), (NSString *)get_DataDetectorsCore_DDBinderWebURLKey(), (NSString *)get_DataDetectorsCore_DDBinderMailURLKey(), (NSString *)get_DataDetectorsCore_DDBinderGenericURLKey(), (NSString *)get_DataDetectorsCore_DDBinderEmailKey(), nil] retain];
-    return [urlTypes containsObject:(NSString *)softLink_DataDetectorsCore_DDResultGetType(result)];
+    static NeverDestroyed<RetainPtr<NSSet>> urlTypes = [NSSet setWithObjects:
+        (NSString *)PAL::get_DataDetectorsCore_DDBinderHttpURLKey(),
+        (NSString *)PAL::get_DataDetectorsCore_DDBinderWebURLKey(),
+        (NSString *)PAL::get_DataDetectorsCore_DDBinderMailURLKey(),
+        (NSString *)PAL::get_DataDetectorsCore_DDBinderGenericURLKey(),
+        (NSString *)PAL::get_DataDetectorsCore_DDBinderEmailKey(), nil];
+    return [urlTypes.get() containsObject:(NSString *)PAL::softLink_DataDetectorsCore_DDResultGetType(result)];
 }
 
-static NSString *constructURLStringForResult(DDResultRef currentResult, NSString *resultIdentifier, NSDate *referenceDate, NSTimeZone *referenceTimeZone, DataDetectorTypes detectionTypes)
+static NSString *constructURLStringForResult(DDResultRef currentResult, NSString *resultIdentifier, NSDate *referenceDate, NSTimeZone *referenceTimeZone, OptionSet<DataDetectorType> detectionTypes)
 {
-    if (!softLink_DataDetectorsCore_DDResultHasProperties(currentResult, DDResultPropertyPassiveDisplay))
+    if (!PAL::softLink_DataDetectorsCore_DDResultHasProperties(currentResult, DDResultPropertyPassiveDisplay))
         return nil;
-    
-    DDURLifierPhoneNumberDetectionTypes phoneTypes = (detectionTypes & DataDetectorTypePhoneNumber) ? DDURLifierPhoneNumberDetectionRegular : DDURLifierPhoneNumberDetectionNone;
-    DDResultCategory category = softLink_DataDetectorsCore_DDResultGetCategory(currentResult);
-    CFStringRef type = softLink_DataDetectorsCore_DDResultGetType(currentResult);
-    
-    if (((detectionTypes & DataDetectorTypeAddress) && (DDResultCategoryAddress == category))
-        || ((detectionTypes & DataDetectorTypeTrackingNumber) && (CFStringCompare(get_DataDetectorsCore_DDBinderTrackingNumberKey(), type, 0) == kCFCompareEqualTo))
-        || ((detectionTypes & DataDetectorTypeFlightNumber) && (CFStringCompare(get_DataDetectorsCore_DDBinderFlightInformationKey(), type, 0) == kCFCompareEqualTo))
-        || ((detectionTypes & DataDetectorTypeLookupSuggestion) && (CFStringCompare(get_DataDetectorsCore_DDBinderParsecSourceKey(), type, 0) == kCFCompareEqualTo))
-        || ((detectionTypes & DataDetectorTypePhoneNumber) && (DDResultCategoryPhoneNumber == category))
-        || ((detectionTypes & DataDetectorTypeLink) && resultIsURL(currentResult))) {
-        
-        return softLink_DataDetectorsCore_DDURLStringForResult(currentResult, resultIdentifier, phoneTypes, referenceDate, referenceTimeZone);
+
+    auto phoneTypes = detectionTypes.contains(DataDetectorType::PhoneNumber) ? DDURLifierPhoneNumberDetectionRegular : DDURLifierPhoneNumberDetectionNone;
+    auto category = PAL::softLink_DataDetectorsCore_DDResultGetCategory(currentResult);
+    auto type = PAL::softLink_DataDetectorsCore_DDResultGetType(currentResult);
+
+    if ((detectionTypes.contains(DataDetectorType::Address) && DDResultCategoryAddress == category)
+        || (detectionTypes.contains(DataDetectorType::TrackingNumber) && CFEqual(PAL::get_DataDetectorsCore_DDBinderTrackingNumberKey(), type))
+        || (detectionTypes.contains(DataDetectorType::FlightNumber) && CFEqual(PAL::get_DataDetectorsCore_DDBinderFlightInformationKey(), type))
+        || (detectionTypes.contains(DataDetectorType::LookupSuggestion) && CFEqual(PAL::get_DataDetectorsCore_DDBinderParsecSourceKey(), type))
+        || (detectionTypes.contains(DataDetectorType::PhoneNumber) && DDResultCategoryPhoneNumber == category)
+        || (detectionTypes.contains(DataDetectorType::Link) && resultIsURL(currentResult))) {
+        return PAL::softLink_DataDetectorsCore_DDURLStringForResult(currentResult, resultIdentifier, phoneTypes, referenceDate, referenceTimeZone);
     }
-    if ((detectionTypes & DataDetectorTypeCalendarEvent) && (DDResultCategoryCalendarEvent == category)) {
-        if (!softLink_DataDetectorsCore_DDResultIsPastDate(currentResult, (CFDateRef)referenceDate, (CFTimeZoneRef)referenceTimeZone))
-            return softLink_DataDetectorsCore_DDURLStringForResult(currentResult, resultIdentifier, phoneTypes, referenceDate, referenceTimeZone);
+    if (detectionTypes.contains(DataDetectorType::CalendarEvent) && DDResultCategoryCalendarEvent == category) {
+        if (!PAL::softLink_DataDetectorsCore_DDResultIsPastDate(currentResult, (CFDateRef)referenceDate, (CFTimeZoneRef)referenceTimeZone))
+            return PAL::softLink_DataDetectorsCore_DDURLStringForResult(currentResult, resultIdentifier, phoneTypes, referenceDate, referenceTimeZone);
     }
     return nil;
 }
@@ -270,16 +284,14 @@ static void removeResultLinksFromAnchor(Element& element)
     elementParent->removeChild(element);
 }
 
-static bool searchForLinkRemovingExistingDDLinks(Node& startNode, Node& endNode, bool& didModifyDOM)
+static bool searchForLinkRemovingExistingDDLinks(Node& startNode, Node& endNode)
 {
-    didModifyDOM = false;
     for (Node* node = &startNode; node; node = NodeTraversal::next(*node)) {
         if (is<HTMLAnchorElement>(*node)) {
             auto& anchor = downcast<HTMLAnchorElement>(*node);
             if (!equalIgnoringASCIICase(anchor.attributeWithoutSynchronization(x_apple_data_detectorsAttr), "true"))
                 return true;
             removeResultLinksFromAnchor(anchor);
-            didModifyDOM = true;
         }
         
         if (node == &endNode) {
@@ -289,7 +301,6 @@ static bool searchForLinkRemovingExistingDDLinks(Node& startNode, Node& endNode,
                 if (!equalIgnoringASCIICase(anchor.attributeWithoutSynchronization(x_apple_data_detectorsAttr), "true"))
                     return true;
                 removeResultLinksFromAnchor(anchor);
-                didModifyDOM = true;
             }
             return false;
         }
@@ -317,34 +328,24 @@ static NSString *dataDetectorTypeForCategory(DDResultCategory category)
 
 static String dataDetectorStringForPath(NSIndexPath *path)
 {
-    NSUInteger length = path.length;
-    
+    auto length = path.length;
     switch (length) {
     case 0:
         return { };
     case 1:
-        return String::number([path indexAtPosition:0]);
-    case 2: {
-        StringBuilder stringBuilder;
-        stringBuilder.appendNumber([path indexAtPosition:0]);
-        stringBuilder.append('/');
-        stringBuilder.appendNumber([path indexAtPosition:1]);
-        return stringBuilder.toString();
-    }
-    default: {
-        StringBuilder stringBuilder;
-        stringBuilder.appendNumber([path indexAtPosition:0]);
-        for (NSUInteger i = 1 ; i < length ; i++) {
-            stringBuilder.append('/');
-            stringBuilder.appendNumber([path indexAtPosition:i]);
-        }
-
-        return stringBuilder.toString();
-    }
+        return makeString([path indexAtPosition:0]);
+    case 2:
+        return makeString([path indexAtPosition:0], '/', [path indexAtPosition:1]);
+    default:
+        StringBuilder builder;
+        builder.append([path indexAtPosition:0]);
+        for (NSUInteger i = 1; i < length; i++)
+            builder.append('/', [path indexAtPosition:i]);
+        return builder.toString();
     }
 }
 
-static void buildQuery(DDScanQueryRef scanQuery, Range* contextRange)
+static void buildQuery(DDScanQueryRef scanQuery, const SimpleRange& contextRange)
 {
     // Once we're over this number of fragments, stop at the first hard break.
     const CFIndex maxFragmentWithHardBreak = 1000;
@@ -356,7 +357,6 @@ static void buildQuery(DDScanQueryRef scanQuery, Range* contextRange)
     CFCharacterSetRef whiteSpacesSet = CFCharacterSetGetPredefined(kCFCharacterSetWhitespaceAndNewline);
     CFCharacterSetRef newLinesSet = CFCharacterSetGetPredefined(kCFCharacterSetNewline);
     
-    RefPtr<Range> endRange;
     CFIndex iteratorCount = 0;
     CFIndex fragmentCount = 0;
     
@@ -366,14 +366,14 @@ static void buildQuery(DDScanQueryRef scanQuery, Range* contextRange)
         StringView currentText = iterator.text();
         size_t currentTextLength = currentText.length();
         if (!currentTextLength) {
-            softLink_DataDetectorsCore_DDScanQueryAddSeparator(scanQuery, DDTextCoalescingTypeHardBreak);
+            PAL::softLink_DataDetectorsCore_DDScanQueryAddSeparator(scanQuery, DDTextCoalescingTypeHardBreak);
             if (iteratorCount > maxFragmentWithHardBreak)
                 break;
             continue;
         }
         // Test for white space nodes, we're coalescing them.
         auto currentTextUpconvertedCharacters = currentText.upconvertedCharacters();
-        const UniChar* currentCharPtr = currentTextUpconvertedCharacters.get();
+        auto currentCharPtr = currentTextUpconvertedCharacters.get();
         
         bool containsOnlyWhiteSpace = true;
         bool hasTab = false;
@@ -401,19 +401,19 @@ static void buildQuery(DDScanQueryRef scanQuery, Range* contextRange)
         }
         if (containsOnlyWhiteSpace) {
             if (hasNewline) {
-                softLink_DataDetectorsCore_DDScanQueryAddLineBreak(scanQuery);
+                PAL::softLink_DataDetectorsCore_DDScanQueryAddLineBreak(scanQuery);
                 if (iteratorCount > maxFragmentWithLinebreak)
                     break;
             } else {
-                softLink_DataDetectorsCore_DDScanQueryAddSeparator(scanQuery, hasTab ? DDTextCoalescingTypeTab : DDTextCoalescingTypeSpace);
+                PAL::softLink_DataDetectorsCore_DDScanQueryAddSeparator(scanQuery, hasTab ? DDTextCoalescingTypeTab : DDTextCoalescingTypeSpace);
                 if (iteratorCount > maxFragmentSpace)
                     break;
             }
             continue;
         }
         
-        auto currentTextCFString = adoptCF(CFStringCreateWithCharacters(kCFAllocatorDefault, currentTextUpconvertedCharacters.get(), currentTextLength));
-        softLink_DataDetectorsCore_DDScanQueryAddTextFragment(scanQuery, currentTextCFString.get(), CFRangeMake(0, currentTextLength), (void *)iteratorCount, (DDTextFragmentMode)0, DDTextCoalescingTypeNone);
+        auto currentTextCFString = adoptCF(CFStringCreateWithCharacters(kCFAllocatorDefault, reinterpret_cast<const UniChar*>(currentTextUpconvertedCharacters.get()), currentTextLength));
+        PAL::softLink_DataDetectorsCore_DDScanQueryAddTextFragment(scanQuery, currentTextCFString.get(), CFRangeMake(0, currentTextLength), (void *)iteratorCount, (DDTextFragmentMode)0, DDTextCoalescingTypeNone);
         fragmentCount++;
     }
 }
@@ -441,25 +441,24 @@ void DataDetection::removeDataDetectedLinksInDocument(Document& document)
         removeResultLinksFromAnchor(anchor.get());
 }
 
-NSArray *DataDetection::detectContentInRange(RefPtr<Range>& contextRange, DataDetectorTypes types, NSDictionary *context)
+NSArray *DataDetection::detectContentInRange(const SimpleRange& contextRange, OptionSet<DataDetectorType> types, NSDictionary *context)
 {
-    RetainPtr<DDScannerRef> scanner = adoptCF(softLink_DataDetectorsCore_DDScannerCreate(DDScannerTypeStandard, 0, nullptr));
-    RetainPtr<DDScanQueryRef> scanQuery = adoptCF(softLink_DataDetectorsCore_DDScanQueryCreate(NULL));
-    buildQuery(scanQuery.get(), contextRange.get());
+    auto scanner = adoptCF(PAL::softLink_DataDetectorsCore_DDScannerCreate(DDScannerTypeStandard, 0, nullptr));
+    auto scanQuery = adoptCF(PAL::softLink_DataDetectorsCore_DDScanQueryCreate(NULL));
+    buildQuery(scanQuery.get(), contextRange);
     
-    if (types & DataDetectorTypeLookupSuggestion)
-        softLink_DataDetectorsCore_DDScannerEnableOptionalSource(scanner.get(), DDScannerSourceSpotlight, true);
+    if (types.contains(DataDetectorType::LookupSuggestion))
+        PAL::softLink_DataDetectorsCore_DDScannerEnableOptionalSource(scanner.get(), DDScannerSourceSpotlight, true);
 
     // FIXME: we should add a timeout to this call to make sure it doesn't take too much time.
-    if (!softLink_DataDetectorsCore_DDScannerScanQuery(scanner.get(), scanQuery.get()))
+    if (!PAL::softLink_DataDetectorsCore_DDScannerScanQuery(scanner.get(), scanQuery.get()))
         return nil;
 
-    RetainPtr<CFArrayRef> scannerResults = adoptCF(softLink_DataDetectorsCore_DDScannerCopyResultsWithOptions(scanner.get(), get_DataDetectorsCore_DDScannerCopyResultsOptionsForPassiveUse() | DDScannerCopyResultsOptionsCoalesceSignatures));
+    auto scannerResults = adoptCF(PAL::softLink_DataDetectorsCore_DDScannerCopyResultsWithOptions(scanner.get(), PAL::get_DataDetectorsCore_DDScannerCopyResultsOptionsForPassiveUse() | DDScannerCopyResultsOptionsCoalesceSignatures));
     if (!scannerResults)
         return nil;
 
-    CFIndex resultCount = CFArrayGetCount(scannerResults.get());
-    if (!resultCount)
+    if (!CFArrayGetCount(scannerResults.get()))
         return nil;
 
     Vector<RetainPtr<DDResultRef>> allResults;
@@ -471,8 +470,8 @@ NSArray *DataDetection::detectContentInRange(RefPtr<Range>& contextRange, DataDe
     for (id resultObject in (NSArray *)scannerResults.get()) {
         DDResultRef result = (DDResultRef)resultObject;
         NSIndexPath *indexPath = [NSIndexPath indexPathWithIndex:currentTopLevelIndex];
-        if (CFStringCompare(softLink_DataDetectorsCore_DDResultGetType(result), get_DataDetectorsCore_DDBinderSignatureBlockKey(), 0) == kCFCompareEqualTo) {
-            NSArray *subresults = (NSArray *)softLink_DataDetectorsCore_DDResultGetSubResults(result);
+        if (CFEqual(PAL::softLink_DataDetectorsCore_DDResultGetType(result), PAL::get_DataDetectorsCore_DDBinderSignatureBlockKey())) {
+            NSArray *subresults = (NSArray *)PAL::softLink_DataDetectorsCore_DDResultGetSubResults(result);
             
             for (NSUInteger subResultIndex = 0 ; subResultIndex < [subresults count] ; subResultIndex++) {
                 indexPaths.append([indexPath indexPathByAddingIndex:subResultIndex]);
@@ -485,64 +484,66 @@ NSArray *DataDetection::detectContentInRange(RefPtr<Range>& contextRange, DataDe
         currentTopLevelIndex++;
     }
 
-    Vector<Vector<RefPtr<Range>>> allResultRanges;
-    TextIterator iterator(contextRange.get());
-    CFIndex iteratorCount = 0;
+    Vector<Vector<SimpleRange>> allResultRanges;
+    {
+        TextIterator iterator(contextRange);
+        CFIndex iteratorCount = 0;
 
-    // Iterate through the array of the expanded results to create a vector of Range objects that indicate
-    // where the DOM needs to be modified.
-    // Each result can be contained all in one text node or can span multiple text nodes.
-    for (auto& result : allResults) {
-        DDQueryRange queryRange = softLink_DataDetectorsCore_DDResultGetQueryRangeForURLification(result.get());
-        CFIndex iteratorTargetAdvanceCount = (CFIndex)softLink_DataDetectorsCore_DDScanQueryGetFragmentMetaData(scanQuery.get(), queryRange.start.queryIndex);
-        for (; iteratorCount < iteratorTargetAdvanceCount; ++iteratorCount)
-            iterator.advance();
-
-        Vector<RefPtr<Range>> fragmentRanges;
-        RefPtr<Range> currentRange = iterator.range();
-        CFIndex fragmentIndex = queryRange.start.queryIndex;
-        if (fragmentIndex == queryRange.end.queryIndex)
-            fragmentRanges.append(TextIterator::subrange(*currentRange, queryRange.start.offset, queryRange.end.offset - queryRange.start.offset));
-        else {
-            if (!queryRange.start.offset)
-                fragmentRanges.append(currentRange);
-            else
-                fragmentRanges.append(Range::create(currentRange->ownerDocument(), &currentRange->startContainer(), currentRange->startOffset() + queryRange.start.offset, &currentRange->endContainer(), currentRange->endOffset()));
-        }
-        
-        while (fragmentIndex < queryRange.end.queryIndex) {
-            ++fragmentIndex;
-            iteratorTargetAdvanceCount = (CFIndex)softLink_DataDetectorsCore_DDScanQueryGetFragmentMetaData(scanQuery.get(), fragmentIndex);
+        // Iterate through the array of the expanded results to create a vector of Range objects that indicate
+        // where the DOM needs to be modified.
+        // Each result can be contained all in one text node or can span multiple text nodes.
+        for (auto& result : allResults) {
+            DDQueryRange queryRange = PAL::softLink_DataDetectorsCore_DDResultGetQueryRangeForURLification(result.get());
+            CFIndex iteratorTargetAdvanceCount = (CFIndex)PAL::softLink_DataDetectorsCore_DDScanQueryGetFragmentMetaData(scanQuery.get(), queryRange.start.queryIndex);
             for (; iteratorCount < iteratorTargetAdvanceCount; ++iteratorCount)
                 iterator.advance();
 
-            currentRange = iterator.range();
-            RefPtr<Range> fragmentRange = (fragmentIndex == queryRange.end.queryIndex) ?  Range::create(currentRange->ownerDocument(), &currentRange->startContainer(), currentRange->startOffset(), &currentRange->endContainer(), currentRange->startOffset() + queryRange.end.offset) : currentRange;
-            RefPtr<Range> previousRange = fragmentRanges.last();
-            if (&previousRange->startContainer() == &fragmentRange->startContainer()) {
-                fragmentRange = Range::create(currentRange->ownerDocument(), &previousRange->startContainer(), previousRange->startOffset(), &fragmentRange->endContainer(), fragmentRange->endOffset());
-                fragmentRanges.last() = fragmentRange;
-            } else
-                fragmentRanges.append(fragmentRange);
+            Vector<SimpleRange> fragmentRanges;
+            CFIndex fragmentIndex = queryRange.start.queryIndex;
+            if (fragmentIndex == queryRange.end.queryIndex) {
+                CharacterRange fragmentRange;
+                fragmentRange.location = queryRange.start.offset;
+                fragmentRange.length = queryRange.end.offset - queryRange.start.offset;
+                fragmentRanges.append(resolveCharacterRange(iterator.range(), fragmentRange));
+            } else {
+                auto range = iterator.range();
+                range.start.offset += queryRange.start.offset;
+                fragmentRanges.append(range);
+            }
+
+            while (fragmentIndex < queryRange.end.queryIndex) {
+                ++fragmentIndex;
+                iteratorTargetAdvanceCount = (CFIndex)PAL::softLink_DataDetectorsCore_DDScanQueryGetFragmentMetaData(scanQuery.get(), fragmentIndex);
+                for (; iteratorCount < iteratorTargetAdvanceCount; ++iteratorCount)
+                    iterator.advance();
+
+                auto fragmentRange = iterator.range();
+                if (fragmentIndex == queryRange.end.queryIndex)
+                    fragmentRange.end.offset = fragmentRange.start.offset + queryRange.end.offset;
+                auto& previousRange = fragmentRanges.last();
+                if (previousRange.start.container.ptr() == fragmentRange.start.container.ptr())
+                    previousRange.end = fragmentRange.end;
+                else
+                    fragmentRanges.append(fragmentRange);
+            }
+            allResultRanges.append(WTFMove(fragmentRanges));
         }
-        allResultRanges.append(WTFMove(fragmentRanges));
     }
-    
+
     auto tz = adoptCF(CFTimeZoneCopyDefault());
     NSDate *referenceDate = [context objectForKey:getkDataDetectorsReferenceDateKey()] ?: [NSDate date];
-    Text* lastTextNodeToUpdate = nullptr;
+    RefPtr<Text> lastTextNodeToUpdate;
     String lastNodeContent;
-    size_t contentOffset = 0;
+    unsigned contentOffset = 0;
     DDQueryOffset lastModifiedQueryOffset = { -1, 0 };
-    
+
     // For each result add the link.
     // Since there could be multiple results in the same text node, the node is only modified when
     // we are about to process a different text node.
-    resultCount = allResults.size();
-    
+    CFIndex resultCount = allResults.size();
     for (CFIndex resultIndex = 0; resultIndex < resultCount; ++resultIndex) {
         DDResultRef coreResult = allResults[resultIndex].get();
-        DDQueryRange queryRange = softLink_DataDetectorsCore_DDResultGetQueryRangeForURLification(coreResult);
+        DDQueryRange queryRange = PAL::softLink_DataDetectorsCore_DDResultGetQueryRangeForURLification(coreResult);
         auto& resultRanges = allResultRanges[resultIndex];
 
         // Compare the query offsets to make sure we don't go backwards
@@ -552,41 +553,24 @@ NSArray *DataDetection::detectContentInRange(RefPtr<Range>& contextRange, DataDe
         if (resultRanges.isEmpty())
             continue;
         
-        // Store the range boundaries as Position, because the DOM could change if we find
-        // old data detector link.
-        Vector<std::pair<Position, Position>> rangeBoundaries;
-        rangeBoundaries.reserveInitialCapacity(resultRanges.size());
-        for (auto& range : resultRanges)
-            rangeBoundaries.uncheckedAppend({ range->startPosition(), range->endPosition() });
-
         NSString *identifier = dataDetectorStringForPath(indexPaths[resultIndex].get());
         NSString *correspondingURL = constructURLStringForResult(coreResult, identifier, referenceDate, (NSTimeZone *)tz.get(), types);
-        bool didModifyDOM = false;
 
-        if (!correspondingURL || searchForLinkRemovingExistingDDLinks(resultRanges.first()->startContainer(), resultRanges.last()->endContainer(), didModifyDOM))
+        if (!correspondingURL || searchForLinkRemovingExistingDDLinks(resultRanges.first().start.container, resultRanges.last().end.container))
             continue;
-        
-        if (didModifyDOM) {
-            // If the DOM was modified because some old links were removed,
-            // we need to recreate the ranges because they could no longer be valid.
-            ASSERT(resultRanges.size() == rangeBoundaries.size());
-            resultRanges.shrink(0); // Keep capacity as we are going to repopulate the Vector right away with the same number of items.
-            for (auto& rangeBoundary : rangeBoundaries)
-                resultRanges.uncheckedAppend(Range::create(*rangeBoundary.first.document(), rangeBoundary.first, rangeBoundary.second));
-        }
-        
+
         lastModifiedQueryOffset = queryRange.end;
-        BOOL shouldUseLightLinks = softLink_DataDetectorsCore_DDShouldUseLightLinksForResult(coreResult, [indexPaths[resultIndex] length] > 1);
+        BOOL shouldUseLightLinks = PAL::softLink_DataDetectorsCore_DDShouldUseLightLinksForResult(coreResult, [indexPaths[resultIndex] length] > 1);
 
         for (auto& range : resultRanges) {
-            auto* parentNode = range->startContainer().parentNode();
+            auto* parentNode = range.start.container->parentNode();
             if (!parentNode)
                 continue;
 
-            if (!is<Text>(range->startContainer()))
+            if (!is<Text>(range.start.container))
                 continue;
 
-            auto& currentTextNode = downcast<Text>(range->startContainer());
+            auto& currentTextNode = downcast<Text>(range.start.container.get());
             Document& document = currentTextNode.document();
             String textNodeData;
 
@@ -594,25 +578,24 @@ NSArray *DataDetection::detectContentInRange(RefPtr<Range>& contextRange, DataDe
                 if (lastTextNodeToUpdate)
                     lastTextNodeToUpdate->setData(lastNodeContent);
                 contentOffset = 0;
-                if (range->startOffset() > 0)
-                    textNodeData = currentTextNode.data().substring(0, range->startOffset());
+                if (range.start.offset > 0)
+                    textNodeData = currentTextNode.data().substring(0, range.start.offset);
             } else
-                textNodeData = currentTextNode.data().substring(contentOffset, range->startOffset() - contentOffset);
+                textNodeData = currentTextNode.data().substring(contentOffset, range.start.offset - contentOffset);
 
             if (!textNodeData.isEmpty()) {
                 parentNode->insertBefore(Text::create(document, textNodeData), &currentTextNode);
-                contentOffset = range->startOffset();
+                contentOffset = range.start.offset;
             }
 
             // Create the actual anchor node and insert it before the current node.
-            textNodeData = currentTextNode.data().substring(range->startOffset(), range->endOffset() - range->startOffset());
-            Ref<Text> newTextNode = Text::create(document, textNodeData);
+            textNodeData = currentTextNode.data().substring(range.start.offset, range.end.offset - range.start.offset);
+            auto newTextNode = Text::create(document, textNodeData);
             parentNode->insertBefore(newTextNode.copyRef(), &currentTextNode);
             
             Ref<HTMLAnchorElement> anchorElement = HTMLAnchorElement::create(document);
             anchorElement->setHref(correspondingURL);
             anchorElement->setDir("ltr");
-            anchorElement->setInlineStyleProperty(CSSPropertyColor, CSSValueCurrentcolor);
 
             if (shouldUseLightLinks) {
                 document.updateStyleIfNeeded();
@@ -621,16 +604,19 @@ NSArray *DataDetection::detectContentInRange(RefPtr<Range>& contextRange, DataDe
                 if (renderStyle) {
                     auto textColor = renderStyle->visitedDependentColor(CSSPropertyColor);
                     if (textColor.isValid()) {
-                        double hue, saturation, lightness;
-                        textColor.getHSL(hue, saturation, lightness);
+                        // FIXME: Consider using LCHA<float> rather than HSLA<float> for better perceptual results and to avoid clamping to sRGB gamut, which is what HSLA does.
+                        auto hsla = textColor.toColorTypeLossy<HSLA<float>>().resolved();
 
                         // Force the lightness of the underline color to the middle, and multiply the alpha by 38%,
                         // so the color will appear on light and dark backgrounds, since only one color can be specified.
-                        double overrideLightness = 0.5;
-                        double overrideAlphaMultiplier = 0.38;
-                        auto underlineColor = Color(makeRGBAFromHSLA(hue, saturation, overrideLightness, overrideAlphaMultiplier * textColor.alphaAsFloat()));
+                        hsla.lightness = 50.0f;
+                        hsla.alpha *= 0.38f;
+                        
+                        // FIXME: Consider keeping color in LCHA (if that change is made) or converting back to the initial underlying color type to avoid unnecessarily clamping colors outside of sRGB.
+                        auto underlineColor = convertColor<SRGBA<uint8_t>>(hsla);
 
-                        anchorElement->setInlineStyleProperty(CSSPropertyTextDecorationColor, underlineColor.cssText());
+                        anchorElement->setInlineStyleProperty(CSSPropertyColor, CSSValueCurrentcolor);
+                        anchorElement->setInlineStyleProperty(CSSPropertyTextDecorationColor, serializationForCSS(underlineColor));
                     }
                 }
             }
@@ -639,27 +625,27 @@ NSArray *DataDetection::detectContentInRange(RefPtr<Range>& contextRange, DataDe
 
             // Add a special attribute to mark this URLification as the result of data detectors.
             anchorElement->setAttributeWithoutSynchronization(x_apple_data_detectorsAttr, AtomString("true", AtomString::ConstructFromLiteral));
-            anchorElement->setAttributeWithoutSynchronization(x_apple_data_detectors_typeAttr, dataDetectorTypeForCategory(softLink_DataDetectorsCore_DDResultGetCategory(coreResult)));
+            anchorElement->setAttributeWithoutSynchronization(x_apple_data_detectors_typeAttr, dataDetectorTypeForCategory(PAL::softLink_DataDetectorsCore_DDResultGetCategory(coreResult)));
             anchorElement->setAttributeWithoutSynchronization(x_apple_data_detectors_resultAttr, identifier);
 
             parentNode->insertBefore(WTFMove(anchorElement), &currentTextNode);
 
-            contentOffset = range->endOffset();
+            contentOffset = range.end.offset;
 
-            lastNodeContent = currentTextNode.data().substring(range->endOffset(), currentTextNode.length() - range->endOffset());
+            lastNodeContent = currentTextNode.data().substring(range.end.offset, currentTextNode.length() - range.end.offset);
             lastTextNodeToUpdate = &currentTextNode;
         }        
     }
 
     if (lastTextNodeToUpdate)
         lastTextNodeToUpdate->setData(lastNodeContent);
-    
-    return [getDDScannerResultClass() resultsFromCoreResults:scannerResults.get()];
+
+    return [PAL::getDDScannerResultClass() resultsFromCoreResults:scannerResults.get()];
 }
 
 #else
 
-NSArray *DataDetection::detectContentInRange(RefPtr<Range>&, DataDetectorTypes, NSDictionary *)
+NSArray *DataDetection::detectContentInRange(const SimpleRange&, OptionSet<DataDetectorType>, NSDictionary *)
 {
     return nil;
 }
@@ -681,7 +667,42 @@ bool DataDetection::isDataDetectorURL(const URL& url)
     return url.protocolIs(dataDetectorURLProtocol());
 }
 
+bool DataDetection::isDataDetectorAttribute(const QualifiedName& name)
+{
+    if (name == x_apple_data_detectorsAttr)
+        return true;
+
+    if (name == x_apple_data_detectors_resultAttr)
+        return true;
+
+    if (name == x_apple_data_detectors_typeAttr)
+        return true;
+
+    if (name == hrefAttr)
+        return true;
+
+    return false;
+}
+
+bool DataDetection::isDataDetectorElement(const Element& element)
+{
+    return is<HTMLAnchorElement>(element) && equalIgnoringASCIICase(element.attributeWithoutSynchronization(x_apple_data_detectorsAttr), "true");
+}
+
+#if ENABLE(IMAGE_ANALYSIS)
+
+Ref<HTMLDivElement> DataDetection::createElementForImageOverlay(Document& document, const TextRecognitionDataDetector& info)
+{
+    auto container = HTMLDivElement::create(document);
+    if (RefPtr frame = document.frame()) {
+        auto resultIdentifier = frame->dataDetectionResults().addImageOverlayDataDetectionResult(info.result.get());
+        container->setAttributeWithoutSynchronization(x_apple_data_detectors_resultAttr, String::number(resultIdentifier.toUInt64()));
+    }
+    return container;
+}
+
+#endif // ENABLE(IMAGE_ANALYSIS)
+
 } // namespace WebCore
 
 #endif
-

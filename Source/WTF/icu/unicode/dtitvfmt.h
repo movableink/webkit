@@ -1,5 +1,7 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /********************************************************************************
-* Copyright (C) 2008-2013, International Business Machines Corporation and
+* Copyright (C) 2008-2016, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -26,9 +28,86 @@
 #include "unicode/dtintrv.h"
 #include "unicode/dtitvinf.h"
 #include "unicode/dtptngen.h"
+#include "unicode/formattedvalue.h"
 
 U_NAMESPACE_BEGIN
 
+
+class FormattedDateIntervalData;
+class DateIntervalFormat;
+
+#ifndef U_HIDE_DRAFT_API
+/**
+ * An immutable class containing the result of a date interval formatting operation.
+ *
+ * Instances of this class are immutable and thread-safe.
+ *
+ * When calling nextPosition():
+ * The fields are returned from left to right. The special field category
+ * UFIELD_CATEGORY_DATE_INTERVAL_SPAN is used to indicate which datetime
+ * primitives came from which arguments: 0 means fromCalendar, and 1 means
+ * toCalendar. The span category will always occur before the
+ * corresponding fields in UFIELD_CATEGORY_DATE
+ * in the nextPosition() iterator.
+ *
+ * Not intended for public subclassing.
+ *
+ * @draft ICU 64
+ */
+class U_I18N_API FormattedDateInterval : public UMemory, public FormattedValue {
+  public:
+    /**
+     * Default constructor; makes an empty FormattedDateInterval.
+     * @draft ICU 64
+     */
+    FormattedDateInterval() : fData(nullptr), fErrorCode(U_INVALID_STATE_ERROR) {}
+
+    /**
+     * Move constructor: Leaves the source FormattedDateInterval in an undefined state.
+     * @draft ICU 64
+     */
+    FormattedDateInterval(FormattedDateInterval&& src) U_NOEXCEPT;
+
+    /**
+     * Destruct an instance of FormattedDateInterval.
+     * @draft ICU 64
+     */
+    virtual ~FormattedDateInterval() U_OVERRIDE;
+
+    /** Copying not supported; use move constructor instead. */
+    FormattedDateInterval(const FormattedDateInterval&) = delete;
+
+    /** Copying not supported; use move assignment instead. */
+    FormattedDateInterval& operator=(const FormattedDateInterval&) = delete;
+
+    /**
+     * Move assignment: Leaves the source FormattedDateInterval in an undefined state.
+     * @draft ICU 64
+     */
+    FormattedDateInterval& operator=(FormattedDateInterval&& src) U_NOEXCEPT;
+
+    /** @copydoc FormattedValue::toString() */
+    UnicodeString toString(UErrorCode& status) const U_OVERRIDE;
+
+    /** @copydoc FormattedValue::toTempString() */
+    UnicodeString toTempString(UErrorCode& status) const U_OVERRIDE;
+
+    /** @copydoc FormattedValue::appendTo() */
+    Appendable &appendTo(Appendable& appendable, UErrorCode& status) const U_OVERRIDE;
+
+    /** @copydoc FormattedValue::nextPosition() */
+    UBool nextPosition(ConstrainedFieldPosition& cfpos, UErrorCode& status) const U_OVERRIDE;
+
+  private:
+    FormattedDateIntervalData *fData;
+    UErrorCode fErrorCode;
+    explicit FormattedDateInterval(FormattedDateIntervalData *results)
+        : fData(results), fErrorCode(U_ZERO_ERROR) {}
+    explicit FormattedDateInterval(UErrorCode errorCode)
+        : fData(nullptr), fErrorCode(errorCode) {}
+    friend class DateIntervalFormat;
+};
+#endif /* U_HIDE_DRAFT_API */
 
 
 /**
@@ -93,9 +172,11 @@ U_NAMESPACE_BEGIN
  *
  * <P>
  * The calendar fields we support for interval formatting are:
- * year, month, date, day-of-week, am-pm, hour, hour-of-day, and minute.
+ * year, month, date, day-of-week, am-pm, hour, hour-of-day, minute, and second
+ * (though we do not currently have specific intervalFormat date for skeletons
+ * with seconds).
  * Those calendar fields can be defined in the following order:
- * year >  month > date > hour (in day) >  minute
+ * year >  month > date > hour (in day) >  minute > second
  *
  * The largest different calendar fields between 2 calendars is the
  * first different calendar field in above order.
@@ -214,7 +295,6 @@ U_NAMESPACE_BEGIN
  * \endcode
  * </pre>
  */
-
 class U_I18N_API DateIntervalFormat : public Format {
 public:
 
@@ -387,6 +467,9 @@ public:
      *                          Result is appended to existing contents.
      * @param fieldPosition     On input: an alignment field, if desired.
      *                          On output: the offsets of the alignment field.
+     *                          There may be multiple instances of a given field type
+     *                          in an interval format; in this case the fieldPosition
+     *                          offsets refer to the first instance.
      * @param status            Output param filled with success/failure status.
      * @return                  Reference to 'appendTo' parameter.
      * @stable ICU 4.0
@@ -406,6 +489,9 @@ public:
      *                          Result is appended to existing contents.
      * @param fieldPosition     On input: an alignment field, if desired.
      *                          On output: the offsets of the alignment field.
+     *                          There may be multiple instances of a given field type
+     *                          in an interval format; in this case the fieldPosition
+     *                          offsets refer to the first instance.
      * @param status            Output param filled with success/failure status.
      * @return                  Reference to 'appendTo' parameter.
      * @stable ICU 4.0
@@ -415,6 +501,21 @@ public:
                           FieldPosition& fieldPosition,
                           UErrorCode& status) const ;
 
+#ifndef U_HIDE_DRAFT_API
+    /**
+     * Format a DateInterval to produce a FormattedDateInterval.
+     *
+     * The FormattedDateInterval exposes field information about the formatted string.
+     *
+     * @param dtInterval        DateInterval to be formatted.
+     * @param status            Set if an error occurs.
+     * @return                  A FormattedDateInterval containing the format result.
+     * @draft ICU 64
+     */
+    FormattedDateInterval formatToValue(
+        const DateInterval& dtInterval,
+        UErrorCode& status) const;
+#endif /* U_HIDE_DRAFT_API */
 
     /**
      * Format 2 Calendars to produce a string.
@@ -430,6 +531,9 @@ public:
      *                          Result is appended to existing contents.
      * @param fieldPosition     On input: an alignment field, if desired.
      *                          On output: the offsets of the alignment field.
+     *                          There may be multiple instances of a given field type
+     *                          in an interval format; in this case the fieldPosition
+     *                          offsets refer to the first instance.
      * @param status            Output param filled with success/failure status.
      *                          Caller needs to make sure it is SUCCESS
      *                          at the function entrance
@@ -441,6 +545,29 @@ public:
                           UnicodeString& appendTo,
                           FieldPosition& fieldPosition,
                           UErrorCode& status) const ;
+
+#ifndef U_HIDE_DRAFT_API
+    /**
+     * Format 2 Calendars to produce a FormattedDateInterval.
+     *
+     * The FormattedDateInterval exposes field information about the formatted string.
+     *
+     * Note: "fromCalendar" and "toCalendar" are not const,
+     * since calendar is not const in  SimpleDateFormat::format(Calendar&),
+     *
+     * @param fromCalendar      calendar set to the from date in date interval
+     *                          to be formatted into date interval string
+     * @param toCalendar        calendar set to the to date in date interval
+     *                          to be formatted into date interval string
+     * @param status            Set if an error occurs.
+     * @return                  A FormattedDateInterval containing the format result.
+     * @draft ICU 64
+     */
+    FormattedDateInterval formatToValue(
+        Calendar& fromCalendar,
+        Calendar& toCalendar,
+        UErrorCode& status) const;
+#endif /* U_HIDE_DRAFT_API */
 
     /**
      * Date interval parsing is not supported. Please do not use.
@@ -493,7 +620,13 @@ public:
 
 
     /**
-     * Gets the date formatter
+     * Gets the date formatter. The DateIntervalFormat instance continues to own
+     * the returned DateFormatter object, and will use and possibly modify it
+     * during format operations. In a multi-threaded environment, the returned
+     * DateFormat can only be used if it is certain that no other threads are
+     * concurrently using this DateIntervalFormatter, even for nominally const
+     * functions.
+     *
      * @return the date formatter associated with this date interval formatter.
      * @stable ICU 4.0
      */
@@ -598,7 +731,7 @@ private:
 
     /**
      * default constructor
-     * @internal ICU 4.0
+     * @internal (private)
      */
     DateIntervalFormat();
 
@@ -642,28 +775,17 @@ private:
                                                 UErrorCode& status);
 
     /**
-     * Create a simple date/time formatter from skeleton, given locale,
-     * and date time pattern generator.
-     *
-     * @param skeleton  the skeleton on which date format based.
-     * @param locale    the given locale.
-     * @param dtpng     the date time pattern generator.
-     * @param status    Output param to be set to success/failure code.
-     *                  If it is failure, the returned date formatter will
-     *                  be NULL.
-     * @return          a simple date formatter which the caller owns.
-     */
-    static SimpleDateFormat* U_EXPORT2 createSDFPatternInstance(
-                                        const UnicodeString& skeleton,
-                                        const Locale& locale,
-                                        DateTimePatternGenerator* dtpng,
-                                        UErrorCode& status);
-
-
-    /**
      *  Below are for generating interval patterns local to the formatter
      */
 
+    /** Like fallbackFormat, but only formats the range part of the fallback. */
+    void fallbackFormatRange(
+        Calendar& fromCalendar,
+        Calendar& toCalendar,
+        UnicodeString& appendTo,
+        int8_t& firstIndex,
+        FieldPositionHandler& fphandler,
+        UErrorCode& status) const;
 
     /**
      * Format 2 Calendars using fall-back interval pattern
@@ -671,21 +793,28 @@ private:
      * The full pattern used in this fall-back format is the
      * full pattern of the date formatter.
      *
+     * gFormatterMutex must already be locked when calling this function.
+     *
      * @param fromCalendar      calendar set to the from date in date interval
      *                          to be formatted into date interval string
      * @param toCalendar        calendar set to the to date in date interval
      *                          to be formatted into date interval string
+     * @param fromToOnSameDay   TRUE iff from and to dates are on the same day
+     *                          (any difference is in ampm/hours or below)
      * @param appendTo          Output parameter to receive result.
      *                          Result is appended to existing contents.
-     * @param pos               On input: an alignment field, if desired.
-     *                          On output: the offsets of the alignment field.
+     * @param firstIndex        See formatImpl for more information.
+     * @param fphandler         See formatImpl for more information.
      * @param status            output param set to success/failure code on exit
      * @return                  Reference to 'appendTo' parameter.
+     * @internal (private)
      */
     UnicodeString& fallbackFormat(Calendar& fromCalendar,
                                   Calendar& toCalendar,
+                                  UBool fromToOnSameDay,
                                   UnicodeString& appendTo,
-                                  FieldPosition& pos,
+                                  int8_t& firstIndex,
+                                  FieldPositionHandler& fphandler,
                                   UErrorCode& status) const;
 
 
@@ -874,13 +1003,11 @@ private:
      * both time and date. Present the date followed by
      * the range expression for the time.
      * @param format         date and time format
-     * @param formatLen      format string length
      * @param datePattern    date pattern
      * @param field          time calendar field: AM_PM, HOUR, MINUTE
      * @param status         output param set to success/failure code on exit
      */
-    void concatSingleDate2TimeInterval(const UChar* format,
-                                       int32_t formatLen,
+    void concatSingleDate2TimeInterval(UnicodeString& format,
                                        const UnicodeString& datePattern,
                                        UCalendarDateFields field,
                                        UErrorCode& status);
@@ -937,9 +1064,48 @@ private:
                         const UnicodeString* secondPart,
                         UBool laterDateFirst);
 
+    /**
+     * Format 2 Calendars to produce a string.
+     * Implementation of the similar public format function.
+     * Must be called with gFormatterMutex already locked.
+     *
+     * Note: "fromCalendar" and "toCalendar" are not const,
+     * since calendar is not const in  SimpleDateFormat::format(Calendar&),
+     *
+     * @param fromCalendar      calendar set to the from date in date interval
+     *                          to be formatted into date interval string
+     * @param toCalendar        calendar set to the to date in date interval
+     *                          to be formatted into date interval string
+     * @param appendTo          Output parameter to receive result.
+     *                          Result is appended to existing contents.
+     * @param firstIndex        0 if the first output date is fromCalendar;
+     *                          1 if it corresponds to toCalendar;
+     *                          -1 if there is only one date printed.
+     * @param fphandler         Handler for field position information.
+     *                          The fields will be from the UDateFormatField enum.
+     * @param status            Output param filled with success/failure status.
+     *                          Caller needs to make sure it is SUCCESS
+     *                          at the function entrance
+     * @return                  Reference to 'appendTo' parameter.
+     * @internal (private)
+     */
+    UnicodeString& formatImpl(Calendar& fromCalendar,
+                              Calendar& toCalendar,
+                              UnicodeString& appendTo,
+                              int8_t& firstIndex,
+                              FieldPositionHandler& fphandler,
+                              UErrorCode& status) const ;
+
+    /** Version of formatImpl for DateInterval. */
+    UnicodeString& formatIntervalImpl(const DateInterval& dtInterval,
+                              UnicodeString& appendTo,
+                              int8_t& firstIndex,
+                              FieldPositionHandler& fphandler,
+                              UErrorCode& status) const;
+
 
     // from calendar field to pattern letter
-    static const UChar fgCalendarFieldToPatternLetter[];
+    static const char16_t fgCalendarFieldToPatternLetter[];
 
 
     /**
@@ -960,16 +1126,20 @@ private:
     Calendar* fFromCalendar;
     Calendar* fToCalendar;
 
-    /**
-     * Date time pattern generator
-     */
-    DateTimePatternGenerator* fDtpng;
+    Locale fLocale;
 
     /**
-     * Following are interval information relavent (locale) to this formatter.
+     * Following are interval information relevant (locale) to this formatter.
      */
     UnicodeString fSkeleton;
     PatternInfo fIntervalPatterns[DateIntervalInfo::kIPI_MAX_INDEX];
+
+    /**
+     * Patterns for fallback formatting.
+     */
+    UnicodeString* fDatePattern;
+    UnicodeString* fTimePattern;
+    UnicodeString* fDateTimeFormat;
 };
 
 inline UBool

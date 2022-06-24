@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,9 +43,22 @@
 
 .settings-view.blackbox > p > .toggle-script-blackbox {
     display: inline-block;
-    width: 15px;
-    height: 15px;
-    vertical-align: bottom;
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+}
+
+.settings-view.blackbox > p > label {
+    display: flex;
+}
+
+.settings-view.blackbox > p > label > input {
+    flex-shrink: 0;
+    margin-inline: 0.5px 4px;
+}
+
+.settings-view.blackbox > p > label > span {
+    margin-top: 1.5px;
 }
 
 .settings-view.blackbox > table {
@@ -68,9 +81,14 @@
     text-align: start;
 }
 
+.settings-view.blackbox > table > tbody td.url {
+    background-color: var(--background-color-content);
+}
+
 .settings-view.blackbox > table > tbody td.url > .CodeMirror {
     min-width: 110px;
     height: auto;
+    background-color: transparent;
 }
 
 .settings-view.blackbox > table :matches(th, td):matches(.case-sensitive, .remove-blackbox) {
@@ -86,5 +104,5 @@
 .settings-view.blackbox > table > tbody td.remove-blackbox > .remove-blackbox-button {
     width: 15px;
     height: 15px;
-    -webkit-margin-start: 4px;
+    margin-inline-start: 4px;
 }

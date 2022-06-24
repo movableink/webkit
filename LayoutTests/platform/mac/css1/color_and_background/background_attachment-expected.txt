@@ -9,6 +9,7 @@ layer at (0,0) size 785x1194
       RenderBlock {PRE} at (0,34) size 769x30
         RenderText {#text} at (0,0) size 851x30
           text run at (0,0) width 851: "BODY {background-image: url(../resources/bg.gif); background-repeat: repeat-x; background-attachment: fixed;}"
+          text run at (850,0) width 1: " "
           text run at (0,15) width 0: " "
       RenderBlock {HR} at (0,77) size 769x2 [border: (1px inset #000000)]
       RenderBlock {P} at (0,95) size 769x90
@@ -39,31 +40,31 @@ layer at (0,0) size 785x1194
             text run at (0,0) width 41: "Value:"
         RenderText {#text} at (40,0) size 84x18
           text run at (40,0) width 84: " scroll | fixed"
-        RenderBR {BR} at (123,14) size 1x0
+        RenderBR {BR} at (123,0) size 1x18
         RenderInline {EM} at (0,0) size 45x18
           RenderText {#text} at (0,18) size 45x18
             text run at (0,18) width 45: "Initial:"
         RenderText {#text} at (44,18) size 40x18
           text run at (44,18) width 40: " scroll"
-        RenderBR {BR} at (83,32) size 1x0
+        RenderBR {BR} at (83,18) size 1x18
         RenderInline {EM} at (0,0) size 70x18
           RenderText {#text} at (0,36) size 70x18
             text run at (0,36) width 70: "Applies to:"
         RenderText {#text} at (69,36) size 82x18
           text run at (69,36) width 82: " all elements"
-        RenderBR {BR} at (150,50) size 1x0
+        RenderBR {BR} at (150,36) size 1x18
         RenderInline {EM} at (0,0) size 64x18
           RenderText {#text} at (0,54) size 64x18
             text run at (0,54) width 64: "Inherited:"
         RenderText {#text} at (63,54) size 21x18
           text run at (63,54) width 21: " no"
-        RenderBR {BR} at (83,68) size 1x0
+        RenderBR {BR} at (83,54) size 1x18
         RenderInline {EM} at (0,0) size 123x18
           RenderText {#text} at (0,72) size 123x18
             text run at (0,72) width 123: "Percentage values:"
         RenderText {#text} at (122,72) size 33x18
           text run at (122,72) width 33: " N/A"
-        RenderBR {BR} at (154,86) size 1x0
+        RenderBR {BR} at (154,72) size 1x18
       RenderBlock {P} at (0,413) size 769x37
         RenderText {#text} at (0,0) size 734x36
           text run at (0,0) width 734: "If a background image is specified, the value of 'background-attachment' determines if it is fixed with regard to the"
@@ -71,10 +72,15 @@ layer at (0,0) size 785x1194
       RenderBlock {PRE} at (0,465) size 769x76
         RenderText {#text} at (0,0) size 289x75
           text run at (0,0) width 71: "  BODY { "
+          text run at (70,0) width 1: " "
           text run at (0,15) width 289: "    background: red url(pendant.gif);"
+          text run at (288,15) width 1: " "
           text run at (0,30) width 250: "    background-repeat: repeat-y;"
+          text run at (249,30) width 1: " "
           text run at (0,45) width 258: "    background-attachment: fixed;"
+          text run at (257,45) width 1: " "
           text run at (0,60) width 24: "  }"
+          text run at (23,60) width 1: " "
       RenderBlock {P} at (0,556) size 769x55
         RenderInline {EM} at (0,0) size 72x18
           RenderText {#text} at (0,0) size 72x18
@@ -92,8 +98,8 @@ layer at (0,0) size 785x1194
                   text run at (4,4) width 161: "TABLE Testing Section"
           RenderTableRow {TR} at (0,26) size 767x524
             RenderTableCell {TD} at (0,274) size 13x27 [bgcolor=#C0C0C0] [border: (1px inset #808080)] [r=1 c=0 rs=1 cs=1]
-              RenderText {#text} at (4,4) size 4x19
-                text run at (4,5) width 4: " "
+              RenderText {#text} at (4,3) size 4x20
+                text run at (4,4) width 4: " "
             RenderTableCell {TD} at (12,26) size 756x524 [border: (1px inset #808080)] [r=1 c=1 rs=1 cs=1]
               RenderBlock {P} at (4,4) size 747x90
                 RenderText {#text} at (0,0) size 745x90
@@ -123,31 +129,31 @@ layer at (0,0) size 785x1194
                     text run at (0,0) width 41: "Value:"
                 RenderText {#text} at (40,0) size 84x18
                   text run at (40,0) width 84: " scroll | fixed"
-                RenderBR {BR} at (123,14) size 1x0
+                RenderBR {BR} at (123,0) size 1x18
                 RenderInline {EM} at (0,0) size 45x18
                   RenderText {#text} at (0,18) size 45x18
                     text run at (0,18) width 45: "Initial:"
                 RenderText {#text} at (44,18) size 40x18
                   text run at (44,18) width 40: " scroll"
-                RenderBR {BR} at (83,32) size 1x0
+                RenderBR {BR} at (83,18) size 1x18
                 RenderInline {EM} at (0,0) size 70x18
                   RenderText {#text} at (0,36) size 70x18
                     text run at (0,36) width 70: "Applies to:"
                 RenderText {#text} at (69,36) size 82x18
                   text run at (69,36) width 82: " all elements"
-                RenderBR {BR} at (150,50) size 1x0
+                RenderBR {BR} at (150,36) size 1x18
                 RenderInline {EM} at (0,0) size 64x18
                   RenderText {#text} at (0,54) size 64x18
                     text run at (0,54) width 64: "Inherited:"
                 RenderText {#text} at (63,54) size 21x18
                   text run at (63,54) width 21: " no"
-                RenderBR {BR} at (83,68) size 1x0
+                RenderBR {BR} at (83,54) size 1x18
                 RenderInline {EM} at (0,0) size 123x18
                   RenderText {#text} at (0,72) size 123x18
                     text run at (0,72) width 123: "Percentage values:"
                 RenderText {#text} at (122,72) size 33x18
                   text run at (122,72) width 33: " N/A"
-                RenderBR {BR} at (154,86) size 1x0
+                RenderBR {BR} at (154,72) size 1x18
               RenderBlock {P} at (4,322) size 747x37
                 RenderText {#text} at (0,0) size 734x36
                   text run at (0,0) width 734: "If a background image is specified, the value of 'background-attachment' determines if it is fixed with regard to the"
@@ -155,10 +161,15 @@ layer at (0,0) size 785x1194
               RenderBlock {PRE} at (4,374) size 747x76
                 RenderText {#text} at (0,0) size 289x75
                   text run at (0,0) width 71: "  BODY { "
+                  text run at (70,0) width 1: " "
                   text run at (0,15) width 289: "    background: red url(pendant.gif);"
+                  text run at (288,15) width 1: " "
                   text run at (0,30) width 250: "    background-repeat: repeat-y;"
+                  text run at (249,30) width 1: " "
                   text run at (0,45) width 258: "    background-attachment: fixed;"
+                  text run at (257,45) width 1: " "
                   text run at (0,60) width 24: "  }"
+                  text run at (23,60) width 1: " "
               RenderBlock {P} at (4,465) size 747x55
                 RenderInline {EM} at (0,0) size 72x18
                   RenderText {#text} at (0,0) size 72x18

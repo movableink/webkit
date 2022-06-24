@@ -38,14 +38,14 @@ GIFImageDecoder::GIFImageDecoder(AlphaOption alphaOption, GammaAndColorProfileOp
 
 GIFImageDecoder::~GIFImageDecoder() = default;
 
-void GIFImageDecoder::setData(SharedBuffer& data, bool allDataReceived)
+void GIFImageDecoder::setData(const FragmentedSharedBuffer& data, bool allDataReceived)
 {
     if (failed())
         return;
 
     ScalableImageDecoder::setData(data, allDataReceived);
     if (m_reader)
-        m_reader->setData(&data);
+        m_reader->setData(*m_data);
 }
 
 bool GIFImageDecoder::setSize(const IntSize& size)
@@ -328,7 +328,7 @@ void GIFImageDecoder::decode(unsigned haltAtFrame, GIFQuery query, bool allDataR
 
     if (!m_reader) {
         m_reader = makeUnique<GIFImageReader>(this);
-        m_reader->setData(m_data.get());
+        m_reader->setData(*m_data);
     }
 
     if (query == GIFSizeQuery) {

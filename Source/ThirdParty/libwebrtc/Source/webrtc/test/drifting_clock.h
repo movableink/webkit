@@ -10,34 +10,36 @@
 #ifndef TEST_DRIFTING_CLOCK_H_
 #define TEST_DRIFTING_CLOCK_H_
 
+#include <stdint.h>
+
 #include "system_wrappers/include/clock.h"
+#include "system_wrappers/include/ntp_time.h"
 
 namespace webrtc {
 namespace test {
 class DriftingClock : public Clock {
  public:
-  // TODO(danilchap): Make this constants constexpr when it would be supported.
-  static const float kDoubleSpeed;  // 2.0f;
-  static const float kNoDrift;      // 1.0f;
-  static const float kHalfSpeed;    // 0.5f;
+  static constexpr float kNoDrift = 1.0f;
 
   DriftingClock(Clock* clock, float speed);
 
-  // TODO(danilchap): Make this functions constexpr when it would be supported.
-  static float PercentsFaster(float percent) { return 1.0f + percent / 100.0f; }
-  static float PercentsSlower(float percent) { return 1.0f - percent / 100.0f; }
+  static constexpr float PercentsFaster(float percent) {
+    return 1.0f + percent / 100.0f;
+  }
+  static constexpr float PercentsSlower(float percent) {
+    return 1.0f - percent / 100.0f;
+  }
 
-  int64_t TimeInMilliseconds() const override;
-  int64_t TimeInMicroseconds() const override;
-  NtpTime CurrentNtpTime() const override;
-  int64_t CurrentNtpInMilliseconds() const override;
+  Timestamp CurrentTime() override;
+  NtpTime CurrentNtpTime() override;
+  int64_t CurrentNtpInMilliseconds() override;
 
  private:
-  float Drift() const;
+  TimeDelta Drift() const;
 
   Clock* const clock_;
   const float drift_;
-  const int64_t start_time_;
+  const Timestamp start_time_;
 };
 }  // namespace test
 }  // namespace webrtc

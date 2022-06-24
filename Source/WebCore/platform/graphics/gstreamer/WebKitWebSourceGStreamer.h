@@ -22,6 +22,7 @@
 
 #include <gst/base/gstpushsrc.h>
 #include <gst/gst.h>
+#include <wtf/Forward.h>
 
 namespace WebCore {
 class MediaPlayer;
@@ -35,25 +36,24 @@ G_BEGIN_DECLS
 #define WEBKIT_WEB_SRC_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), WEBKIT_TYPE_WEB_SRC, WebKitWebSrcClass))
 #define WEBKIT_IS_WEB_SRC(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), WEBKIT_TYPE_WEB_SRC))
 #define WEBKIT_IS_WEB_SRC_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), WEBKIT_TYPE_WEB_SRC))
+#define WEBKIT_WEB_SRC_CAST(obj)       ((WebKitWebSrc*)(obj))
 
 #define WEBKIT_WEB_SRC_PLAYER_CONTEXT_TYPE_NAME  "webkit.media-player"
 
-typedef struct _WebKitWebSrc        WebKitWebSrc;
-typedef struct _WebKitWebSrcClass   WebKitWebSrcClass;
-typedef struct _WebKitWebSrcPrivate WebKitWebSrcPrivate;
+struct WebKitWebSrcPrivate;
 
-struct _WebKitWebSrc {
+struct WebKitWebSrc {
     GstPushSrc parent;
 
     WebKitWebSrcPrivate *priv;
 };
 
-struct _WebKitWebSrcClass {
+struct WebKitWebSrcClass {
     GstPushSrcClass parentClass;
 };
 
 GType webkit_web_src_get_type(void);
-void webKitWebSrcSetMediaPlayer(WebKitWebSrc*, WebCore::MediaPlayer*);
+void webKitWebSrcSetMediaPlayer(WebKitWebSrc*, WebCore::MediaPlayer*, const String&);
 bool webKitSrcPassedCORSAccessCheck(WebKitWebSrc*);
 bool webKitSrcWouldTaintOrigin(WebKitWebSrc*, const WebCore::SecurityOrigin&);
 

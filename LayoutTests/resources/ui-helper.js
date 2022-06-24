@@ -19,6 +19,19 @@ window.UIHelper = class UIHelper {
         eventSender.mouseUp();
     }
 
+    static doubleClickAtMouseDown(x1, y1)
+    {
+        eventSender.mouseMoveTo(x1, y1);
+        eventSender.mouseDown();
+        eventSender.mouseUp();
+        eventSender.mouseDown();
+    }
+
+    static mouseUp()
+    {
+        eventSender.mouseUp();
+    }
+
     static doubleClickAtThenDragTo(x1, y1, x2, y2)
     {
         eventSender.mouseMoveTo(x1, y1);
@@ -27,6 +40,144 @@ window.UIHelper = class UIHelper {
         eventSender.mouseDown();
         eventSender.mouseMoveTo(x2, y2);
         eventSender.mouseUp();
+    }
+
+    static dragMouseAcrossElement(element)
+    {
+        const x1 = element.offsetLeft + element.offsetWidth;
+        const x2 = element.offsetLeft + element.offsetWidth * .75;
+        const x3 = element.offsetLeft + element.offsetWidth / 2;
+        const x4 = element.offsetLeft + element.offsetWidth / 4;
+        const x5 = element.offsetLeft;
+        const y = element.offsetTop + element.offsetHeight / 2;
+        eventSender.mouseMoveTo(x1, y);
+        eventSender.mouseMoveTo(x2, y);
+        eventSender.mouseMoveTo(x3, y);
+        eventSender.mouseMoveTo(x4, y);
+        eventSender.mouseMoveTo(x5, y);
+    }
+
+    static doubleClickElementMouseDown(element1)
+    {
+        const x1 = element1.offsetLeft + element1.offsetWidth / 2;
+        const y1 = element1.offsetTop + element1.offsetHeight / 2;
+        return UIHelper.doubleClickAtMouseDown(x1, y1);
+    }
+
+    static async moveMouseAndWaitForFrame(x, y)
+    {
+        eventSender.mouseMoveTo(x, y);
+        await UIHelper.animationFrame();
+    }
+
+    static async mouseWheelScrollAt(x, y, beginX, beginY, deltaX, deltaY)
+    {
+        if (beginX === undefined)
+            beginX = 0;
+        if (beginY === undefined)
+            beginY = -1;
+
+        if (deltaX === undefined)
+            deltaX = 0;
+        if (deltaY === undefined)
+            deltaY = -10;
+
+        eventSender.monitorWheelEvents();
+        eventSender.mouseMoveTo(x, y);
+        eventSender.mouseScrollByWithWheelAndMomentumPhases(beginX, beginY, "began", "none");
+        eventSender.mouseScrollByWithWheelAndMomentumPhases(deltaX, deltaY, "changed", "none");
+        eventSender.mouseScrollByWithWheelAndMomentumPhases(0, 0, "ended", "none");
+        return new Promise(resolve => {
+            eventSender.callAfterScrollingCompletes(() => {
+                requestAnimationFrame(resolve);
+            });
+        });
+    }
+
+    static async statelessMouseWheelScrollAt(x, y, deltaX, deltaY)
+    {
+        eventSender.monitorWheelEvents();
+        eventSender.mouseMoveTo(x, y);
+        eventSender.mouseScrollBy(deltaX, deltaY);
+        return new Promise(resolve => {
+            eventSender.callAfterScrollingCompletes(() => {
+                requestAnimationFrame(resolve);
+            });
+        });
+    }
+
+    static async mouseWheelMayBeginAt(x, y)
+    {
+        eventSender.mouseMoveTo(x, y);
+        eventSender.mouseScrollByWithWheelAndMomentumPhases(x, y, "maybegin", "none");
+        await UIHelper.animationFrame();
+    }
+
+    static async mouseWheelCancelAt(x, y)
+    {
+        eventSender.mouseMoveTo(x, y);
+        eventSender.mouseScrollByWithWheelAndMomentumPhases(x, y, "cancelled", "none");
+        await UIHelper.animationFrame();
+    }
+
+    static async mouseWheelSequence(eventStream, { waitForCompletion = true } = {})
+    {
+        if (waitForCompletion)
+            eventSender.monitorWheelEvents();
+        const eventStreamAsString = JSON.stringify(eventStream);
+        await new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    uiController.sendEventStream(\`${eventStreamAsString}\`, () => {
+                        uiController.uiScriptComplete();
+                    });
+                })();
+            `, resolve);
+        });
+
+        if (waitForCompletion)
+            await UIHelper.waitForScrollCompletion();
+    }
+
+    static async waitForScrollCompletion()
+    {
+        return new Promise(resolve => {
+            eventSender.callAfterScrollingCompletes(() => {
+                requestAnimationFrame(resolve);
+            });
+        });
+    }
+
+    static async animationFrame()
+    {
+        return new Promise(requestAnimationFrame);
+    }
+
+    static async renderingUpdate()
+    {
+        await UIHelper.animationFrame();
+        await UIHelper.delayFor(0);
+    }
+
+    static async waitForCondition(conditionFunc)
+    {
+        while (!conditionFunc()) {
+            await UIHelper.animationFrame();
+        }
+    }
+
+    static sendEventStream(eventStream)
+    {
+        const eventStreamAsString = JSON.stringify(eventStream);
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    uiController.sendEventStream(\`${eventStreamAsString}\`, () => {
+                        uiController.uiScriptComplete();
+                    });
+                })();
+            `, resolve);
+        });
     }
 
     static tapAt(x, y, modifiers=[])
@@ -48,6 +199,20 @@ window.UIHelper = class UIHelper {
                     uiController.uiScriptComplete();
                 });`, resolve);
         });
+    }
+
+    static tapElement(element, delay = 0)
+    {
+        const x = element.offsetLeft + (element.offsetWidth / 2);
+        const y = element.offsetTop + (element.offsetHeight / 2);
+        this.tapAt(x, y);
+    }
+
+    static doubleTapElement(element, delay = 0)
+    {
+        const x = element.offsetLeft + (element.offsetWidth / 2);
+        const y = element.offsetTop + (element.offsetHeight / 2);
+        this.doubleTapAt(x, y, delay);
     }
 
     static doubleTapAt(x, y, delay = 0)
@@ -147,28 +312,28 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static activateAt(x, y)
+    static activateAt(x, y, modifiers=[])
     {
         if (!this.isWebKit2() || !this.isIOSFamily()) {
             eventSender.mouseMoveTo(x, y);
-            eventSender.mouseDown();
-            eventSender.mouseUp();
+            eventSender.mouseDown(0, modifiers);
+            eventSender.mouseUp(0, modifiers);
             return Promise.resolve();
         }
 
         return new Promise((resolve) => {
             testRunner.runUIScript(`
-                uiController.singleTapAtPoint(${x}, ${y}, function() {
+                uiController.singleTapAtPointWithModifiers(${x}, ${y}, ${JSON.stringify(modifiers)}, function() {
                     uiController.uiScriptComplete();
                 });`, resolve);
         });
     }
 
-    static activateElement(element)
+    static activateElement(element, modifiers=[])
     {
         const x = element.offsetLeft + element.offsetWidth / 2;
         const y = element.offsetTop + element.offsetHeight / 2;
-        return UIHelper.activateAt(x, y);
+        return UIHelper.activateAt(x, y, modifiers);
     }
 
     static async doubleActivateAt(x, y)
@@ -210,6 +375,30 @@ window.UIHelper = class UIHelper {
         }
     }
 
+    static rawKeyDown(key, modifiers=[])
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily()) {
+            eventSender.rawKeyDown(key, modifiers);
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+            testRunner.runUIScript(`uiController.rawKeyDown("${key}", ${JSON.stringify(modifiers)});`, resolve);
+        });
+    }
+
+    static rawKeyUp(key, modifiers=[])
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily()) {
+            eventSender.rawKeyUp(key, modifiers);
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+            testRunner.runUIScript(`uiController.rawKeyUp("${key}", ${JSON.stringify(modifiers)});`, resolve);
+        });
+    }
+
     static keyDown(key, modifiers=[])
     {
         if (!this.isWebKit2() || !this.isIOSFamily()) {
@@ -226,6 +415,20 @@ window.UIHelper = class UIHelper {
     {
         return new Promise((resolve) => {
             testRunner.runUIScript(`uiController.toggleCapsLock(() => uiController.uiScriptComplete());`, resolve);
+        });
+    }
+
+    static keyboardIsAutomaticallyShifted()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`uiController.keyboardIsAutomaticallyShifted`, result => resolve(result === "true"));
+        });
+    }
+
+    static isAnimatingDragCancel()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`uiController.isAnimatingDragCancel`, result => resolve(result === "true"));
         });
     }
 
@@ -282,8 +485,8 @@ window.UIHelper = class UIHelper {
     {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-    
-    static immediateScrollTo(x, y)
+
+    static scrollTo(x, y, unconstrained)
     {
         if (!this.isWebKit2()) {
             window.scrollTo(x, y);
@@ -292,11 +495,29 @@ window.UIHelper = class UIHelper {
 
         return new Promise(resolve => {
             testRunner.runUIScript(`
-                uiController.immediateScrollToOffset(${x}, ${y});`, resolve);
+                (function() {
+                    uiController.didEndScrollingCallback = function() {
+                        uiController.uiScriptComplete();
+                    }
+                    uiController.scrollToOffset(${x}, ${y}, { unconstrained: ${unconstrained} });
+                })()`, resolve);
+        });
+    }
+    
+    static immediateScrollTo(x, y, unconstrained)
+    {
+        if (!this.isWebKit2()) {
+            window.scrollTo(x, y);
+            return Promise.resolve();
+        }
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                uiController.immediateScrollToOffset(${x}, ${y}, { unconstrained: ${unconstrained} });`, resolve);
         });
     }
 
-    static immediateUnstableScrollTo(x, y)
+    static immediateUnstableScrollTo(x, y, unconstrained)
     {
         if (!this.isWebKit2()) {
             window.scrollTo(x, y);
@@ -306,7 +527,7 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => {
             testRunner.runUIScript(`
                 uiController.stableStateOverride = false;
-                uiController.immediateScrollToOffset(${x}, ${y});`, resolve);
+                uiController.immediateScrollToOffset(${x}, ${y}, { unconstrained: ${unconstrained} });`, resolve);
         });
     }
 
@@ -333,6 +554,19 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static longPressAndGetContextMenuContentAt(x, y)
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+            (function() {
+                uiController.didShowContextMenuCallback = function() {
+                    uiController.uiScriptComplete(JSON.stringify(uiController.contentsOfUserInterfaceItem('contextMenu')));
+                };
+                uiController.longPressAtPoint(${x}, ${y}, function() { });
+            })();`, result => resolve(JSON.parse(result)));
+        });
+    }
+
     static activateAndWaitForInputSessionAt(x, y)
     {
         if (!this.isWebKit2() || !this.isIOSFamily())
@@ -341,10 +575,43 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => {
             testRunner.runUIScript(`
                 (function() {
-                    uiController.didShowKeyboardCallback = function() {
+                    function clearCallbacksAndScriptComplete() {
+                        uiController.didShowContextMenuCallback = null;
+                        uiController.didShowKeyboardCallback = null;
+                        uiController.willPresentPopoverCallback = null;
                         uiController.uiScriptComplete();
-                    };
+                    }
+                    uiController.didShowContextMenuCallback = clearCallbacksAndScriptComplete;
+                    uiController.didShowKeyboardCallback = clearCallbacksAndScriptComplete;
+                    uiController.willPresentPopoverCallback = clearCallbacksAndScriptComplete;
                     uiController.singleTapAtPoint(${x}, ${y}, function() { });
+                })()`, resolve);
+        });
+    }
+
+    static waitForInputSessionToDismiss()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    if (!uiController.isShowingKeyboard && !uiController.isShowingContextMenu && !uiController.isShowingPopover) {
+                        uiController.uiScriptComplete();
+                        return;
+                    }
+
+                    function clearCallbacksAndScriptComplete() {
+                        uiController.didHideKeyboardCallback = null;
+                        uiController.didDismissPopoverCallback = null;
+                        uiController.didDismissContextMenuCallback = null;
+                        uiController.uiScriptComplete();
+                    }
+
+                    uiController.didHideKeyboardCallback = clearCallbacksAndScriptComplete;
+                    uiController.didDismissPopoverCallback = clearCallbacksAndScriptComplete;
+                    uiController.didDismissContextMenuCallback = clearCallbacksAndScriptComplete;
                 })()`, resolve);
         });
     }
@@ -393,6 +660,13 @@ window.UIHelper = class UIHelper {
     {
         return new Promise(resolve => {
             testRunner.runUIScript("uiController.isShowingKeyboard", result => resolve(result === "true"));
+        });
+    }
+
+    static isShowingPopover()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript("uiController.isShowingPopover", result => resolve(result === "true"));
         });
     }
 
@@ -453,6 +727,38 @@ window.UIHelper = class UIHelper {
                 (function() {
                     if (uiController.isShowingPopover)
                         uiController.didDismissPopoverCallback = () => uiController.uiScriptComplete();
+                    else
+                        uiController.uiScriptComplete();
+                })()`, resolve);
+        });
+    }
+
+    static waitForContextMenuToShow()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    if (!uiController.isShowingContextMenu)
+                        uiController.didShowContextMenuCallback = () => uiController.uiScriptComplete();
+                    else
+                        uiController.uiScriptComplete();
+                })()`, resolve);
+        });
+    }
+
+    static waitForContextMenuToHide()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    if (uiController.isShowingContextMenu)
+                        uiController.didDismissContextMenuCallback = () => uiController.uiScriptComplete();
                     else
                         uiController.uiScriptComplete();
                 })()`, resolve);
@@ -571,6 +877,26 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static midPointOfRect(rect) {
+        return { x: rect.left + (rect.width / 2), y: rect.top + (rect.height / 2) };
+    }
+
+    static selectionCaretBackgroundColor()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript("uiController.uiScriptComplete(uiController.selectionCaretBackgroundColor)", resolve);
+        });
+    }
+
+    static tapHighlightViewRect()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript("JSON.stringify(uiController.tapHighlightViewRect)", jsonString => {
+                resolve(JSON.parse(jsonString));
+            });
+        });
+    }
+
     static replaceTextAtRange(text, location, length) {
         return new Promise(resolve => {
             testRunner.runUIScript(`(() => {
@@ -603,8 +929,15 @@ window.UIHelper = class UIHelper {
 
     static selectFormAccessoryPickerRow(rowIndex)
     {
-        const selectRowScript = `(() => uiController.selectFormAccessoryPickerRow(${rowIndex}))()`;
+        const selectRowScript = `uiController.selectFormAccessoryPickerRow(${rowIndex})`;
         return new Promise(resolve => testRunner.runUIScript(selectRowScript, resolve));
+    }
+
+    static selectFormAccessoryHasCheckedItemAtRow(rowIndex)
+    {
+        return new Promise(resolve => testRunner.runUIScript(`uiController.selectFormAccessoryHasCheckedItemAtRow(${rowIndex})`, result => {
+            resolve(result === "true");
+        }));
     }
 
     static selectFormPopoverTitle()
@@ -614,6 +947,12 @@ window.UIHelper = class UIHelper {
                 uiController.uiScriptComplete(uiController.selectFormPopoverTitle);
             })()`, resolve);
         });
+    }
+
+    static setSelectedColorForColorPicker(red, green, blue)
+    {
+        const selectColorScript = `uiController.setSelectedColorForColorPicker(${red}, ${green}, ${blue})`;
+        return new Promise(resolve => testRunner.runUIScript(selectColorScript, resolve));
     }
 
     static enterText(text)
@@ -629,10 +968,16 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => testRunner.runUIScript(setValueScript, resolve));
     }
 
-    static setShareSheetCompletesImmediatelyWithResolution(resolved)
+    static timerPickerValues()
     {
-        const resolveShareSheet = `(() => uiController.setShareSheetCompletesImmediatelyWithResolution(${resolved}))()`;
-        return new Promise(resolve => testRunner.runUIScript(resolveShareSheet, resolve));
+        if (!this.isIOSFamily())
+            return Promise.resolve();
+
+        const uiScript = "JSON.stringify([uiController.timePickerValueHour, uiController.timePickerValueMinute])";
+        return new Promise(resolve => testRunner.runUIScript(uiScript, result => {
+            const [hour, minute] = JSON.parse(result)
+            resolve({ hour: hour, minute: minute });
+        }));
     }
 
     static textContentType()
@@ -653,12 +998,72 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static dismissFilePicker()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        const script = `uiController.dismissFilePicker(() => {
+            uiController.uiScriptComplete();
+        })`;
+        return new Promise(resolve => testRunner.runUIScript(script, resolve));
+    }
+
+    static filePickerAcceptedTypeIdentifiers()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(() => {
+                uiController.uiScriptComplete(JSON.stringify(uiController.filePickerAcceptedTypeIdentifiers));
+            })()`, jsonString => {
+                resolve(JSON.parse(jsonString));
+            });
+        });
+    }
+
+    static activateDataListSuggestion(index) {
+        const script = `uiController.activateDataListSuggestion(${index}, () => {
+            uiController.uiScriptComplete("");
+        });`;
+        return new Promise(resolve => testRunner.runUIScript(script, resolve));
+    }
+
     static isShowingDataListSuggestions()
     {
         return new Promise(resolve => {
             testRunner.runUIScript(`(() => {
                 uiController.uiScriptComplete(uiController.isShowingDataListSuggestions);
             })()`, result => resolve(result === "true"));
+        });
+    }
+
+    static isShowingDateTimePicker()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(() => {
+                uiController.uiScriptComplete(uiController.isShowingDateTimePicker);
+            })()`, result => resolve(result === "true"));
+        });
+    }
+
+    static dateTimePickerValue()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(() => {
+                uiController.uiScriptComplete(uiController.dateTimePickerValue);
+            })()`, valueAsString => resolve(parseFloat(valueAsString)));
+        });
+    }
+
+    static chooseDateTimePickerValue()
+    {
+        return new Promise((resolve) => {
+            testRunner.runUIScript(`
+                uiController.chooseDateTimePickerValue();
+                uiController.uiScriptComplete();
+            `, resolve);
         });
     }
 
@@ -735,12 +1140,12 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static setDefaultCalendarType(calendarIdentifier)
+    static setDefaultCalendarType(calendarIdentifier, localeIdentifier)
     {
         if (!this.isWebKit2())
             return Promise.resolve();
 
-        return new Promise(resolve => testRunner.runUIScript(`uiController.setDefaultCalendarType('${calendarIdentifier}')`, resolve));
+        return new Promise(resolve => testRunner.runUIScript(`uiController.setDefaultCalendarType('${calendarIdentifier}', '${localeIdentifier}')`, resolve));
 
     }
 
@@ -752,12 +1157,44 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => testRunner.runUIScript(`uiController.setViewScale(${scale})`, resolve));
     }
 
+    static setScrollViewKeyboardAvoidanceEnabled(enabled)
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => testRunner.runUIScript(`uiController.setScrollViewKeyboardAvoidanceEnabled(${enabled})`, resolve));
+    }
+
     static resignFirstResponder()
     {
         if (!this.isWebKit2())
             return Promise.resolve();
 
         return new Promise(resolve => testRunner.runUIScript(`uiController.resignFirstResponder()`, resolve));
+    }
+
+    static becomeFirstResponder()
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => testRunner.runUIScript(`uiController.becomeFirstResponder()`, resolve));
+    }
+
+    static removeViewFromWindow()
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => testRunner.runUIScript(`uiController.removeViewFromWindow()`, resolve));
+    }
+
+    static addViewToWindow()
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => testRunner.runUIScript(`uiController.addViewToWindow()`, resolve));
     }
 
     static minimumZoomScale()
@@ -770,14 +1207,6 @@ window.UIHelper = class UIHelper {
                 uiController.uiScriptComplete(uiController.minimumZoomScale);
             })()`, scaleAsString => resolve(parseFloat(scaleAsString)))
         });
-    }
-
-    static drawSquareInEditableImage()
-    {
-        if (!this.isWebKit2())
-            return Promise.resolve();
-
-        return new Promise(resolve => testRunner.runUIScript(`uiController.drawSquareInEditableImage()`, resolve));
     }
 
     static stylusTapAt(x, y, modifiers=[])
@@ -793,18 +1222,6 @@ window.UIHelper = class UIHelper {
         });
     }
 
-    static numberOfStrokesInEditableImage()
-    {
-        if (!this.isWebKit2())
-            return Promise.resolve();
-
-        return new Promise(resolve => {
-            testRunner.runUIScript(`(() => {
-                uiController.uiScriptComplete(uiController.numberOfStrokesInEditableImage);
-            })()`, numberAsString => resolve(parseInt(numberAsString, 10)))
-        });
-    }
-
     static attachmentInfo(attachmentIdentifier)
     {
         if (!this.isWebKit2())
@@ -816,6 +1233,19 @@ window.UIHelper = class UIHelper {
             })()`, jsonString => {
                 resolve(JSON.parse(jsonString));
             })
+        });
+    }
+
+    static insertAttachmentForFilePath(path, contentType)
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                uiController.insertAttachmentForFilePath('${path}', '${contentType}', function() {
+                    uiController.uiScriptComplete();
+                });`, resolve);
         });
     }
 
@@ -917,30 +1347,60 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => testRunner.runUIScript(`uiController.setHardwareKeyboardAttached(${attached ? "true" : "false"})`, resolve));
     }
 
+    static setWebViewEditable(editable)
+    {
+        return new Promise(resolve => testRunner.runUIScript(`uiController.setWebViewEditable(${editable ? "true" : "false"})`, resolve));
+    }
+
     static rectForMenuAction(action)
     {
         return new Promise(resolve => {
             testRunner.runUIScript(`
-                const rect = uiController.rectForMenuAction("${action}");
-                uiController.uiScriptComplete(rect ? JSON.stringify(rect) : "");
+                (() => {
+                    const rect = uiController.rectForMenuAction("${action}");
+                    uiController.uiScriptComplete(rect ? JSON.stringify(rect) : "");
+                })();
             `, stringResult => {
                 resolve(stringResult.length ? JSON.parse(stringResult) : null);
             });
         });
     }
 
-    static async chooseMenuAction(action)
+    static chooseMenuAction(action)
     {
-        const menuRect = await this.rectForMenuAction(action);
-        if (menuRect)
-            await this.activateAt(menuRect.left + menuRect.width / 2, menuRect.top + menuRect.height / 2);
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (() => {
+                    uiController.chooseMenuAction("${action}", () => {
+                        uiController.uiScriptComplete();
+                    });
+                })();
+            `, resolve);
+        });
+    }
+
+    static waitForEvent(target, eventName)
+    {
+        return new Promise(resolve => target.addEventListener(eventName, resolve, { once: true }));
     }
 
     static callFunctionAndWaitForEvent(functionToCall, target, eventName)
     {
-        return new Promise((resolve) => {
-            target.addEventListener(eventName, resolve, { once: true });
-            functionToCall();
+        return new Promise(async resolve => {
+            let event;
+            await Promise.all([
+                new Promise((eventListenerResolve) => {
+                    target.addEventListener(eventName, (e) => {
+                        event = e;
+                        eventListenerResolve();
+                    }, {once: true});
+                }),
+                new Promise(async functionResolve => {
+                    await functionToCall();
+                    functionResolve();
+                })
+            ]);
+            resolve(event);
         });
     }
 
@@ -971,6 +1431,33 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static waitForTargetScrollAnimationToSettle(scrollTarget)
+    {
+        return new Promise((resolved) => {
+            let lastObservedScrollPosition = [scrollTarget.scrollLeft, scrollTarget.scrollTop];
+            let frameOfLastChange = 0;
+            let totalFrames = 0;
+
+            function animationFrame() {
+                if (lastObservedScrollPosition[0] != scrollTarget.scrollLeft ||
+                    lastObservedScrollPosition[1] != scrollTarget.scrollTop) {
+                    lastObservedScrollPosition = [scrollTarget.scrollLeft, scrollTarget.scrollTop];
+                    frameOfLastChange = totalFrames;
+                }
+
+                // If we have gone 20 frames without changing, resolve. If we have gone 500, then time out.
+                // This matches the amount of frames used in the WPT scroll animation helper.
+                if (totalFrames - frameOfLastChange >= 20 || totalFrames > 500)
+                    resolved();
+
+                totalFrames++;
+                requestAnimationFrame(animationFrame);
+            }
+
+            requestAnimationFrame(animationFrame);
+        });
+    }
+
     static rotateDevice(orientationName, animatedResize = false)
     {
         if (!this.isWebKit2() || !this.isIOSFamily())
@@ -997,6 +1484,18 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static getUIViewTree()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(() => {
+                return uiController.uiViewTreeAsText;
+            })()`, resolve);
+        });
+    }
+
     static dragFromPointToPoint(fromX, fromY, toX, toY, duration)
     {
         if (!this.isWebKit2() || !this.isIOSFamily()) {
@@ -1017,6 +1516,20 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static setWindowIsKey(isKey)
+    {
+        const script = `uiController.windowIsKey = ${isKey}`;
+        return new Promise(resolve => testRunner.runUIScript(script, resolve));
+    }
+
+    static windowIsKey()
+    {
+        const script = "uiController.uiScriptComplete(uiController.windowIsKey)";
+        return new Promise(resolve => testRunner.runUIScript(script, (result) => {
+            resolve(result === "true");
+        }));
+    }
+
     static waitForDoubleTapDelay()
     {
         const uiScript = `uiController.doAfterDoubleTapDelay(() => uiController.uiScriptComplete(""))`;
@@ -1025,8 +1538,9 @@ window.UIHelper = class UIHelper {
 
     static async waitForSelectionToAppear() {
         while (true) {
-            if ((await this.getUISelectionViewRects()).length > 0)
-                break;
+            let selectionRects = await this.getUISelectionViewRects();
+            if (selectionRects.length > 0)
+                return selectionRects;
         }
     }
 
@@ -1035,5 +1549,257 @@ window.UIHelper = class UIHelper {
             if (!(await this.getUISelectionViewRects()).length)
                 break;
         }
+    }
+
+    static async copyText(text) {
+        const copyTextScript = `uiController.copyText(\`${text.replace(/`/g, "\\`")}\`)`;
+        return new Promise(resolve => testRunner.runUIScript(copyTextScript, resolve));
+    }
+
+    static async paste() {
+        return new Promise(resolve => testRunner.runUIScript(`uiController.paste()`, resolve));
+    }
+
+    static async setContinuousSpellCheckingEnabled(enabled) {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`uiController.setContinuousSpellCheckingEnabled(${enabled})`, resolve);
+        });
+    }
+
+    static async longPressElement(element)
+    {
+        return this.longPressAtPoint(element.offsetLeft + element.offsetWidth / 2, element.offsetTop + element.offsetHeight / 2);
+    }
+
+    static async longPressAtPoint(x, y)
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    uiController.longPressAtPoint(${x}, ${y}, function() {
+                        uiController.uiScriptComplete();
+                    });
+                })();`, resolve);
+        });
+    }
+
+    static async setSpellCheckerResults(results)
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript(`(() => {
+                uiController.setSpellCheckerResults(${JSON.stringify(results)});
+                uiController.uiScriptComplete();
+            })()`, resolve);
+        });
+    }
+
+    static async activateElementAfterInstallingTapGestureOnWindow(element)
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return activateElement(element);
+
+        const x = element.offsetLeft + element.offsetWidth / 2;
+        const y = element.offsetTop + element.offsetHeight / 2;
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    let progress = 0;
+                    function incrementProgress() {
+                        if (++progress == 2)
+                            uiController.uiScriptComplete();
+                    }
+                    uiController.installTapGestureOnWindow(incrementProgress);
+                    uiController.singleTapAtPoint(${x}, ${y}, incrementProgress);
+                })();`, resolve);
+        });
+    }
+
+    static mayContainEditableElementsInRect(x, y, width, height)
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve(false);
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    uiController.doAfterPresentationUpdate(function() {
+                        uiController.uiScriptComplete(uiController.mayContainEditableElementsInRect(${x}, ${y}, ${width}, ${height}));
+                    })
+                })();`, result => resolve(result === "true"));
+        });
+    }
+
+    static moveToNextByKeyboardAccessoryBar()
+    {
+        return new Promise((resolve) => {
+            testRunner.runUIScript(`
+                uiController.keyboardAccessoryBarNext();
+                uiController.uiScriptComplete();
+            `, resolve);
+        });
+    }
+
+    static moveToPrevByKeyboardAccessoryBar()
+    {
+        return new Promise((resolve) => {
+            testRunner.runUIScript(`
+                uiController.keyboardAccessoryBarPrevious();
+                uiController.uiScriptComplete();
+            `, resolve);
+        });
+    }
+
+    static waitForContactPickerToShow()
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    if (!uiController.isShowingContactPicker)
+                        uiController.didShowContactPickerCallback = () => uiController.uiScriptComplete();
+                    else
+                        uiController.uiScriptComplete();
+                })()`, resolve);
+        });
+    }
+
+    static waitForContactPickerToHide()
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    if (uiController.isShowingContactPicker)
+                        uiController.didHideContactPickerCallback = () => uiController.uiScriptComplete();
+                    else
+                        uiController.uiScriptComplete();
+                })()`, resolve);
+        });
+    }
+
+    static dismissContactPickerWithContacts(contacts)
+    {
+       const script = `(() => uiController.dismissContactPickerWithContacts(${JSON.stringify(contacts)}))()`;
+       return new Promise(resolve => testRunner.runUIScript(script, resolve));
+    }
+
+    static addChromeInputField()
+    {
+        return new Promise(resolve => testRunner.addChromeInputField(resolve));
+    }
+
+    static removeChromeInputField()
+    {
+        return new Promise(resolve => testRunner.removeChromeInputField(resolve));
+    }
+
+    static setTextInChromeInputField(text)
+    {
+        return new Promise(resolve => testRunner.setTextInChromeInputField(text, resolve));
+    }
+
+    static selectChromeInputField()
+    {
+        return new Promise(resolve => testRunner.selectChromeInputField(resolve));
+    }
+
+    static getSelectedTextInChromeInputField()
+    {
+        return new Promise(resolve => testRunner.getSelectedTextInChromeInputField(resolve));
+    }
+}
+
+UIHelper.EventStreamBuilder = class {
+    constructor()
+    {
+        // FIXME: This could support additional customization options, such as interpolation, timestep, and different
+        // digitizer indices in the future. For now, just make it simpler to string together sequences of pan gestures.
+        this._reset();
+    }
+
+    _reset() {
+        this.events = [];
+        this.currentTimeOffset = 0;
+        this.currentX = 0;
+        this.currentY = 0;
+    }
+
+    begin(x, y) {
+        console.assert(this.currentTimeOffset === 0);
+        this.events.push({
+            interpolate : "linear",
+            timestep : 0.016,
+            coordinateSpace : "content",
+            startEvent : {
+                inputType : "hand",
+                timeOffset : this.currentTimeOffset,
+                touches : [{ inputType : "finger", phase : "began", id : 1, x : x, y : y, pressure : 0 }]
+            },
+            endEvent : {
+                inputType : "hand",
+                timeOffset : this.currentTimeOffset,
+                touches : [{ inputType : "finger", phase : "began", id : 1, x : x, y : y, pressure : 0 }]
+            }
+        });
+        this.currentX = x;
+        this.currentY = y;
+        return this;
+    }
+
+    wait(duration) {
+        this.currentTimeOffset += duration;
+        return this;
+    }
+
+    move(x, y, duration = 0) {
+        const previousTimeOffset = this.currentTimeOffset;
+        this.currentTimeOffset += duration;
+        this.events.push({
+            interpolate : "linear",
+            timestep : 0.016,
+            coordinateSpace : "content",
+            startEvent : {
+                inputType : "hand",
+                timeOffset : previousTimeOffset,
+                touches : [{ inputType : "finger", phase : "moved", id : 1, x : this.currentX, y : this.currentY, pressure : 0 }]
+            },
+            endEvent : {
+                inputType : "hand",
+                timeOffset : this.currentTimeOffset,
+                touches : [{ inputType : "finger", phase : "moved", id : 1, x : x, y : y, pressure : 0 }]
+            }
+        });
+        this.currentX = x;
+        this.currentY = y;
+        return this;
+    }
+
+    end() {
+        this.events.push({
+            interpolate : "linear",
+            timestep : 0.016,
+            coordinateSpace : "content",
+            startEvent : {
+                inputType : "hand",
+                timeOffset : this.currentTimeOffset,
+                touches : [{ inputType : "finger", phase : "ended", id : 1, x : this.currentX, y : this.currentY, pressure : 0 }]
+            },
+            endEvent : {
+                inputType : "hand",
+                timeOffset : this.currentTimeOffset,
+                touches : [{ inputType : "finger", phase : "ended", id : 1, x : this.currentX, y : this.currentY, pressure : 0 }]
+            }
+        });
+        return this;
+    }
+
+    takeResult() {
+        const events = this.events;
+        this._reset();
+        return { "events": events };
     }
 }

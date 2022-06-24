@@ -13,7 +13,6 @@
 #include "modules/desktop_capture/mac/desktop_configuration.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/trace_event.h"
-#include "system_wrappers/include/event_wrapper.h"
 
 namespace webrtc {
 
@@ -22,7 +21,7 @@ DesktopConfigurationMonitor::DesktopConfigurationMonitor() {
       DesktopConfigurationMonitor::DisplaysReconfiguredCallback, this);
   if (err != kCGErrorSuccess)
     RTC_LOG(LS_ERROR) << "CGDisplayRegisterReconfigurationCallback " << err;
-  rtc::CritScope cs(&desktop_configuration_lock_);
+  MutexLock lock(&desktop_configuration_lock_);
   desktop_configuration_ = MacDesktopConfiguration::GetCurrent(
       MacDesktopConfiguration::TopLeftOrigin);
 }
@@ -35,7 +34,7 @@ DesktopConfigurationMonitor::~DesktopConfigurationMonitor() {
 }
 
 MacDesktopConfiguration DesktopConfigurationMonitor::desktop_configuration() {
-  rtc::CritScope crit(&desktop_configuration_lock_);
+  MutexLock lock(&desktop_configuration_lock_);
   return desktop_configuration_;
 }
 
@@ -55,8 +54,8 @@ void DesktopConfigurationMonitor::DisplaysReconfigured(
     CGDisplayChangeSummaryFlags flags) {
   TRACE_EVENT0("webrtc", "DesktopConfigurationMonitor::DisplaysReconfigured");
   RTC_LOG(LS_INFO) << "DisplaysReconfigured: "
-                   << "DisplayID " << display << "; ChangeSummaryFlags "
-                   << flags;
+                      "DisplayID "
+                   << display << "; ChangeSummaryFlags " << flags;
 
   if (flags & kCGDisplayBeginConfigurationFlag) {
     reconfiguring_displays_.insert(display);
@@ -65,7 +64,7 @@ void DesktopConfigurationMonitor::DisplaysReconfigured(
 
   reconfiguring_displays_.erase(display);
   if (reconfiguring_displays_.empty()) {
-    rtc::CritScope cs(&desktop_configuration_lock_);
+    MutexLock lock(&desktop_configuration_lock_);
     desktop_configuration_ = MacDesktopConfiguration::GetCurrent(
         MacDesktopConfiguration::TopLeftOrigin);
   }

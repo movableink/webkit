@@ -29,18 +29,13 @@
 
 #include <WebCore/LibWebRTCProvider.h>
 #include <WebCore/LibWebRTCSocketIdentifier.h>
-#include <webrtc/rtc_base/asyncpacketsocket.h>
+#include <webrtc/rtc_base/async_packet_socket.h>
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
 
 namespace IPC {
 class Connection;
-class DataReference;
 class Decoder;
-}
-
-namespace WebCore {
-class SharedBuffer;
 }
 
 namespace WebKit {
@@ -69,8 +64,8 @@ public:
 private:
     bool willSend(size_t);
 
-    friend class WebRTCSocket;
-    void signalReadPacket(const WebCore::SharedBuffer&, rtc::SocketAddress&&, int64_t);
+    friend class LibWebRTCNetwork;
+    void signalReadPacket(const uint8_t*, size_t, rtc::SocketAddress&&, int64_t);
     void signalSentPacket(int, int64_t);
     void signalAddressReady(const rtc::SocketAddress&);
     void signalConnect();
@@ -89,8 +84,6 @@ private:
     int GetOption(rtc::Socket::Option, int*) final;
     int SetOption(rtc::Socket::Option, int) final;
 
-    static void sendOnMainThread(Function<void(IPC::Connection&)>&&);
-
     LibWebRTCSocketFactory& m_factory;
     WebCore::LibWebRTCSocketIdentifier m_identifier;
     Type m_type;
@@ -101,7 +94,7 @@ private:
     State m_state { STATE_BINDING };
 
     static const unsigned MAX_SOCKET_OPTION { rtc::Socket::OPT_RTP_SENDTIME_EXTN_ID + 1 };
-    Optional<int> m_options[MAX_SOCKET_OPTION];
+    std::optional<int> m_options[MAX_SOCKET_OPTION];
 
     Deque<size_t> m_beingSentPacketSizes;
     size_t m_availableSendingBytes { 65536 };

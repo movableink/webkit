@@ -40,30 +40,31 @@ void OptionItem::encode(IPC::Encoder& encoder) const
     encoder << parentGroupID;
 }
 
-Optional<OptionItem> OptionItem::decode(IPC::Decoder& decoder)
+std::optional<OptionItem> OptionItem::decode(IPC::Decoder& decoder)
 {
     OptionItem result;
     if (!decoder.decode(result.text))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(result.isGroup))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(result.isSelected))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(result.disabled))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(result.parentGroupID))
-        return WTF::nullopt;
+        return std::nullopt;
     
     return WTFMove(result);
 }
 
 void FocusedElementInformation::encode(IPC::Encoder& encoder) const
 {
-    encoder << elementRect;
+    encoder << interactionRect;
+    encoder << elementContext;
     encoder << lastInteractionLocation;
     encoder << minimumScaleFactor;
     encoder << maximumScaleFactor;
@@ -75,9 +76,10 @@ void FocusedElementInformation::encode(IPC::Encoder& encoder) const
     encoder << previousNodeRect;
     encoder << isAutocorrect;
     encoder << isRTL;
-    encoder.encodeEnum(autocapitalizeType);
-    encoder.encodeEnum(elementType);
-    encoder.encodeEnum(inputMode);
+    encoder << autocapitalizeType;
+    encoder << elementType;
+    encoder << inputMode;
+    encoder << enterKeyHint;
     encoder << formAction;
     encoder << selectOptions;
     encoder << selectedIndex;
@@ -92,15 +94,17 @@ void FocusedElementInformation::encode(IPC::Encoder& encoder) const
     encoder << acceptsAutofilledLoginCredentials;
     encoder << isAutofillableUsernameField;
     encoder << representingPageURL;
-    encoder.encodeEnum(autofillFieldName);
+    encoder << autofillFieldName;
     encoder << placeholder;
     encoder << label;
     encoder << ariaLabel;
-    encoder << embeddedViewID;
-    encoder << focusedElementIdentifier;
+    encoder << identifier;
+    encoder << containerScrollingNodeID;
 #if ENABLE(DATALIST_ELEMENT)
     encoder << hasSuggestions;
+    encoder << isFocusingWithDataListDropdown;
 #if ENABLE(INPUT_TYPE_COLOR)
+    encoder << colorValue;
     encoder << suggestedColors;
 #endif
 #endif
@@ -109,11 +113,16 @@ void FocusedElementInformation::encode(IPC::Encoder& encoder) const
     encoder << shouldAvoidResizingWhenInputViewBoundsChange;
     encoder << shouldAvoidScrollingWhenFocusedContentIsVisible;
     encoder << shouldUseLegacySelectPopoverDismissalBehaviorInDataActivation;
+    encoder << isFocusingWithValidationMessage;
+    encoder << preventScroll;
 }
 
 bool FocusedElementInformation::decode(IPC::Decoder& decoder, FocusedElementInformation& result)
 {
-    if (!decoder.decode(result.elementRect))
+    if (!decoder.decode(result.interactionRect))
+        return false;
+
+    if (!decoder.decode(result.elementContext))
         return false;
 
     if (!decoder.decode(result.lastInteractionLocation))
@@ -149,13 +158,16 @@ bool FocusedElementInformation::decode(IPC::Decoder& decoder, FocusedElementInfo
     if (!decoder.decode(result.isRTL))
         return false;
 
-    if (!decoder.decodeEnum(result.autocapitalizeType))
+    if (!decoder.decode(result.autocapitalizeType))
         return false;
 
-    if (!decoder.decodeEnum(result.elementType))
+    if (!decoder.decode(result.elementType))
         return false;
 
-    if (!decoder.decodeEnum(result.inputMode))
+    if (!decoder.decode(result.inputMode))
+        return false;
+
+    if (!decoder.decode(result.enterKeyHint))
         return false;
 
     if (!decoder.decode(result.formAction))
@@ -200,7 +212,7 @@ bool FocusedElementInformation::decode(IPC::Decoder& decoder, FocusedElementInfo
     if (!decoder.decode(result.representingPageURL))
         return false;
 
-    if (!decoder.decodeEnum(result.autofillFieldName))
+    if (!decoder.decode(result.autofillFieldName))
         return false;
 
     if (!decoder.decode(result.placeholder))
@@ -212,17 +224,23 @@ bool FocusedElementInformation::decode(IPC::Decoder& decoder, FocusedElementInfo
     if (!decoder.decode(result.ariaLabel))
         return false;
 
-    if (!decoder.decode(result.embeddedViewID))
+    if (!decoder.decode(result.identifier))
         return false;
 
-    if (!decoder.decode(result.focusedElementIdentifier))
+    if (!decoder.decode(result.containerScrollingNodeID))
         return false;
 
 #if ENABLE(DATALIST_ELEMENT)
     if (!decoder.decode(result.hasSuggestions))
         return false;
 
+    if (!decoder.decode(result.isFocusingWithDataListDropdown))
+        return false;
+
 #if ENABLE(INPUT_TYPE_COLOR)
+    if (!decoder.decode(result.colorValue))
+        return false;
+
     if (!decoder.decode(result.suggestedColors))
         return false;
 #endif
@@ -240,6 +258,12 @@ bool FocusedElementInformation::decode(IPC::Decoder& decoder, FocusedElementInfo
         return false;
 
     if (!decoder.decode(result.shouldUseLegacySelectPopoverDismissalBehaviorInDataActivation))
+        return false;
+
+    if (!decoder.decode(result.isFocusingWithValidationMessage))
+        return false;
+
+    if (!decoder.decode(result.preventScroll))
         return false;
 
     return true;

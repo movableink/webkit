@@ -19,30 +19,30 @@
 #include "absl/types/optional.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/call/transport.h"
-#include "api/crypto/cryptooptions.h"
-#include "api/media_transport_interface.h"
-#include "api/rtpparameters.h"
-#include "api/rtpreceiverinterface.h"
+#include "api/crypto/crypto_options.h"
+#include "api/rtp_parameters.h"
+#include "call/receive_stream.h"
 #include "call/rtp_config.h"
-#include "rtc_base/scoped_ref_ptr.h"
 
 namespace webrtc {
 class AudioSinkInterface;
-class FrameDecryptorInterface;
 
-class AudioReceiveStream {
+class AudioReceiveStream : public MediaReceiveStream {
  public:
   struct Stats {
     Stats();
     ~Stats();
     uint32_t remote_ssrc = 0;
-    int64_t bytes_rcvd = 0;
+    int64_t payload_bytes_rcvd = 0;
+    int64_t header_and_padding_bytes_rcvd = 0;
     uint32_t packets_rcvd = 0;
+    uint64_t fec_packets_received = 0;
+    uint64_t fec_packets_discarded = 0;
     uint32_t packets_lost = 0;
-    float fraction_lost = 0.0f;
+    uint64_t packets_discarded = 0;
+    uint32_t nacks_sent = 0;
     std::string codec_name;
     absl::optional<int> codec_payload_type;
-    uint32_t ext_seqnum = 0;
     uint32_t jitter_ms = 0;
     uint32_t jitter_buffer_ms = 0;
     uint32_t jitter_buffer_preferred_ms = 0;
@@ -54,8 +54,13 @@ class AudioReceiveStream {
     uint64_t total_samples_received = 0;
     double total_output_duration = 0.0;
     uint64_t concealed_samples = 0;
+    uint64_t silent_concealed_samples = 0;
     uint64_t concealment_events = 0;
     double jitter_buffer_delay_seconds = 0.0;
+    uint64_t jitter_buffer_emitted_count = 0;
+    double jitter_buffer_target_delay_seconds = 0.0;
+    uint64_t inserted_samples_for_deceleration = 0;
+    uint64_t removed_samples_for_acceleration = 0;
     // Stats below DO NOT correspond directly to anything in the WebRTC stats
     float expand_rate = 0.0f;
     float speech_expand_rate = 0.0f;
@@ -67,12 +72,33 @@ class AudioReceiveStream {
     int32_t decoding_calls_to_silence_generator = 0;
     int32_t decoding_calls_to_neteq = 0;
     int32_t decoding_normal = 0;
+    // TODO(alexnarest): Consider decoding_neteq_plc for consistency
     int32_t decoding_plc = 0;
+    int32_t decoding_codec_plc = 0;
     int32_t decoding_cng = 0;
     int32_t decoding_plc_cng = 0;
     int32_t decoding_muted_output = 0;
     int64_t capture_start_ntp_time_ms = 0;
+    // The timestamp at which the last packet was received, i.e. the time of the
+    // local clock when it was received - not the RTP timestamp of that packet.
+    // https://w3c.github.io/webrtc-stats/#dom-rtcinboundrtpstreamstats-lastpacketreceivedtimestamp
+    absl::optional<int64_t> last_packet_received_timestamp_ms;
     uint64_t jitter_buffer_flushes = 0;
+    double relative_packet_arrival_delay_seconds = 0.0;
+    int32_t interruption_count = 0;
+    int32_t total_interruption_duration_ms = 0;
+    // https://w3c.github.io/webrtc-stats/#dom-rtcinboundrtpstreamstats-estimatedplayouttimestamp
+    absl::optional<int64_t> estimated_playout_ntp_timestamp_ms;
+    // Remote outbound stats derived by the received RTCP sender reports.
+    // https://w3c.github.io/webrtc-stats/#remoteoutboundrtpstats-dict*
+    absl::optional<int64_t> last_sender_report_timestamp_ms;
+    absl::optional<int64_t> last_sender_report_remote_timestamp_ms;
+    uint32_t sender_reports_packets_sent = 0;
+    uint64_t sender_reports_bytes_sent = 0;
+    uint64_t sender_reports_reports_count = 0;
+    absl::optional<TimeDelta> round_trip_time;
+    TimeDelta total_round_trip_time = TimeDelta::Zero();
+    int round_trip_time_measurements;
   };
 
   struct Config {
@@ -82,39 +108,26 @@ class AudioReceiveStream {
     std::string ToString() const;
 
     // Receive-stream specific RTP settings.
-    struct Rtp {
+    struct Rtp : public RtpConfig {
       Rtp();
       ~Rtp();
 
       std::string ToString() const;
 
-      // Synchronization source (stream identifier) to be received.
-      uint32_t remote_ssrc = 0;
-
-      // Sender SSRC used for sending RTCP (such as receiver reports).
-      uint32_t local_ssrc = 0;
-
-      // Enable feedback for send side bandwidth estimation.
-      // See
-      // https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions
-      // for details.
-      bool transport_cc = false;
-
       // See NackConfig for description.
       NackConfig nack;
-
-      // RTP header extensions used for the received stream.
-      std::vector<RtpExtension> extensions;
     } rtp;
+
+    // Receive-side RTT.
+    bool enable_non_sender_rtt = false;
 
     Transport* rtcp_send_transport = nullptr;
 
-    MediaTransportInterface* media_transport = nullptr;
-
     // NetEq settings.
-    size_t jitter_buffer_max_packets = 50;
+    size_t jitter_buffer_max_packets = 200;
     bool jitter_buffer_fast_accelerate = false;
     int jitter_buffer_min_delay_ms = 0;
+    bool jitter_buffer_enable_rtx_handling = false;
 
     // Identifier for an A/V synchronization group. Empty string to disable.
     // TODO(pbos): Synchronize streams in a sync group, not just one video
@@ -134,20 +147,30 @@ class AudioReceiveStream {
     // An optional custom frame decryptor that allows the entire frame to be
     // decrypted in whatever way the caller choses. This is not required by
     // default.
+    // TODO(tommi): Remove this member variable from the struct. It's not
+    // a part of the AudioReceiveStream state but rather a pass through
+    // variable.
     rtc::scoped_refptr<webrtc::FrameDecryptorInterface> frame_decryptor;
+
+    // An optional frame transformer used by insertable streams to transform
+    // encoded frames.
+    // TODO(tommi): Remove this member variable from the struct. It's not
+    // a part of the AudioReceiveStream state but rather a pass through
+    // variable.
+    rtc::scoped_refptr<webrtc::FrameTransformerInterface> frame_transformer;
   };
 
-  // Reconfigure the stream according to the Configuration.
-  virtual void Reconfigure(const Config& config) = 0;
+  // Methods that support reconfiguring the stream post initialization.
+  virtual void SetDecoderMap(std::map<int, SdpAudioFormat> decoder_map) = 0;
+  virtual void SetUseTransportCcAndNackHistory(bool use_transport_cc,
+                                               int history_ms) = 0;
+  virtual void SetNonSenderRttMeasurement(bool enabled) = 0;
 
-  // Starts stream activity.
-  // When a stream is active, it can receive, process and deliver packets.
-  virtual void Start() = 0;
-  // Stops stream activity.
-  // When a stream is stopped, it can't receive, process or deliver packets.
-  virtual void Stop() = 0;
+  // Returns true if the stream has been started.
+  virtual bool IsRunning() const = 0;
 
-  virtual Stats GetStats() const = 0;
+  virtual Stats GetStats(bool get_and_clear_legacy_stats) const = 0;
+  Stats GetStats() { return GetStats(/*get_and_clear_legacy_stats=*/true); }
 
   // Sets an audio sink that receives unmixed audio from the receive stream.
   // Ownership of the sink is managed by the caller.
@@ -162,7 +185,14 @@ class AudioReceiveStream {
   // is potentially forwarded to any attached AudioSinkInterface implementation.
   virtual void SetGain(float gain) = 0;
 
-  virtual std::vector<RtpSource> GetSources() const = 0;
+  // Sets a base minimum for the playout delay. Base minimum delay sets lower
+  // bound on minimum delay value determining lower bound on playout delay.
+  //
+  // Returns true if value was successfully set, false overwise.
+  virtual bool SetBaseMinimumPlayoutDelayMs(int delay_ms) = 0;
+
+  // Returns current value of base minimum delay in milliseconds.
+  virtual int GetBaseMinimumPlayoutDelayMs() const = 0;
 
  protected:
   virtual ~AudioReceiveStream() {}

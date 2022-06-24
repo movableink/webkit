@@ -23,8 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import * as assert from 'assert.js';
-import * as WASM from 'WASM.js';
+import * as assert from './assert.js';
+import * as WASM from './WASM.js';
 
 const _initialAllocationSize = 1024;
 const _growAllocationSize = allocated => allocated * 2;
@@ -200,6 +200,11 @@ export default class LowLevelBinary {
     block_type(v) {
         if (!WASM.isValidBlockType(v))
             throw new Error(`Invalid block type ${v}`);
+        this.varint7(WASM.typeValue[v]);
+    }
+    ref_type(v) {
+        if (!WASM.isValidRefType(v))
+            throw new Error(`Invalid elem type ${v}`);
         this.varint7(WASM.typeValue[v]);
     }
     string(str) {

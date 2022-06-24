@@ -12,14 +12,15 @@ class BuildbotBuildEntry {
 
     initialize(syncer, rawData)
     {
-        assert.equal(syncer.builderID(), rawData['builderid']);
+        assert.strictEqual(parseInt(syncer.builderID()), parseInt(rawData['builderid']));
 
         this._syncer = syncer;
         this._buildbotBuildRequestId = rawData['buildrequestid'];
         this._hasFinished = rawData['complete'];
         this._isPending = 'claimed' in rawData && !rawData['claimed'];
         this._isInProgress = !this._isPending && !this._hasFinished;
-        this._buildNumber = rawData['number'];
+        this._buildTag = rawData['number'];
+        this._result = rawData['results'];
         this._workerName = rawData['properties'] && rawData['properties']['workername'] ? rawData['properties']['workername'][0] : null;
         this._buildRequestId = rawData['properties'] && rawData['properties'][syncer._buildRequestPropertyName]
             ? rawData['properties'][syncer._buildRequestPropertyName][0] : null;
@@ -27,19 +28,19 @@ class BuildbotBuildEntry {
     }
 
     syncer() { return this._syncer; }
-    buildNumber() { return this._buildNumber; }
-    slaveName() { return this._workerName; }
+    buildTag() { return this._buildTag; }
     workerName() { return this._workerName; }
     buildRequestId() { return this._buildRequestId; }
     isPending() { return this._isPending; }
     isInProgress() { return this._isInProgress; }
     hasFinished() { return this._hasFinished; }
+    result() { return this._result; }
     statusDescription() { return this._statusDescription; }
-    url() { return this.isPending() ? this._syncer.urlForPendingBuild(this._buildbotBuildRequestId) : this._syncer.urlForBuildNumber(this._buildNumber); }
+    url() { return this.isPending() ? this._syncer.urlForPendingBuild(this._buildbotBuildRequestId) : this._syncer.urlForBuildSerial(this._buildTag); }
 
     buildRequestStatusIfUpdateIsNeeded(request)
     {
-        assert.equal(request.id(), this._buildRequestId);
+        assert.strictEqual(request.id(), this._buildRequestId);
         if (!request)
             return null;
         if (this.isPending()) {
@@ -65,35 +66,43 @@ class BuildbotSyncer {
         this._type = null;
         this._configurations = [];
         this._repositoryGroups = commonConfigurations.repositoryGroups;
-        this._slavePropertyName = commonConfigurations.slaveArgument;
+        this._workerPropertyName = commonConfigurations.workerArgument;
         this._platformPropertyName = commonConfigurations.platformArgument;
         this._buildRequestPropertyName = commonConfigurations.buildRequestArgument;
+        this._builderSupportedRepetitionTypes = object.supportedRepetitionTypes;
         this._builderName = object.builder;
         this._builderID = object.builderID;
-        this._slaveList = object.slaveList;
+        this._workerList = object.workerList;
         this._entryList = null;
-        this._slavesWithNewRequests = new Set;
+        this._lastCompletedBuild = null;
+        this._workersWithNewRequests = new Set;
     }
 
     builderName() { return this._builderName; }
     builderID() { return this._builderID; }
+    // Buildbot result codes: https://docs.buildbot.net/latest/developer/results.html
+    lastCompletedBuildSuccessful() { return !this._lastCompletedBuild || !this._lastCompletedBuild.result() }
 
-    addTestConfiguration(test, platform, propertiesTemplate)
+    addTestConfiguration(test, platform, supportedRepetitionTypes, propertiesTemplate)
     {
         assert(test instanceof Test);
         assert(platform instanceof Platform);
+        assert(Array.isArray(supportedRepetitionTypes));
+        assert(supportedRepetitionTypes.every(repetitionType => TriggerableConfiguration.isValidRepetitionType(repetitionType)));
         assert(this._type == null || this._type == 'tester');
         this._type = 'tester';
-        this._configurations.push({test, platform, propertiesTemplate});
+        this._configurations.push({test, platform, supportedRepetitionTypes, propertiesTemplate});
     }
     testConfigurations() { return this._type == 'tester' ? this._configurations : []; }
 
-    addBuildConfiguration(platform, propertiesTemplate)
+    addBuildConfiguration(platform, supportedRepetitionTypes, propertiesTemplate)
     {
         assert(platform instanceof Platform);
         assert(this._type == null || this._type == 'builder');
+        assert(Array.isArray(supportedRepetitionTypes));
+        assert(supportedRepetitionTypes.every(repetitionType => TriggerableConfiguration.isValidRepetitionType(repetitionType)));
         this._type = 'builder';
-        this._configurations.push({test: null, platform, propertiesTemplate});
+        this._configurations.push({test: null, platform, supportedRepetitionTypes, propertiesTemplate});
     }
     buildConfigurations() { return this._type == 'builder' ? this._configurations : []; }
 
@@ -103,23 +112,28 @@ class BuildbotSyncer {
 
     matchesConfiguration(request)
     {
-        return this._configurations.some((config) => config.platform == request.platform() && config.test == request.test());
+        const requestRepetitionType = request.testGroup().repetitionType();
+        if (!this._builderSupportedRepetitionTypes.includes(requestRepetitionType))
+            return false;
+
+        return this._configurations.some((config) => config.platform == request.platform() && config.test == request.test()
+            && config.supportedRepetitionTypes.includes(requestRepetitionType));
     }
 
-    scheduleRequest(newRequest, requestsInGroup, slaveName)
+    scheduleRequest(newRequest, requestsInGroup, workerName)
     {
-        assert(!this._slavesWithNewRequests.has(slaveName));
+        assert(!this._workersWithNewRequests.has(workerName));
         let properties = this._propertiesForBuildRequest(newRequest, requestsInGroup);
 
         assert(properties['forcescheduler'], `forcescheduler was not specified in buildbot properties for build request ${newRequest.id()} on platform "${newRequest.platform().name()}" for builder "${this.builderName()}"`);
-        assert.equal(!this._slavePropertyName, !slaveName);
-        if (this._slavePropertyName)
-            properties[this._slavePropertyName] = slaveName;
+        assert.strictEqual(!this._workerPropertyName, !workerName);
+        if (this._workerPropertyName)
+            properties[this._workerPropertyName] = workerName;
 
         if (this._platformPropertyName)
             properties[this._platformPropertyName] = newRequest.platform().name();
 
-        this._slavesWithNewRequests.add(slaveName);
+        this._workersWithNewRequests.add(workerName);
         return this.scheduleBuildOnBuildbot(properties);
     }
 
@@ -130,15 +144,16 @@ class BuildbotSyncer {
         return this._remote.postJSON(path, data);
     }
 
-    scheduleRequestInGroupIfAvailable(newRequest, requestsInGroup, slaveName)
+    scheduleRequestInGroupIfAvailable(newRequest, requestsInGroup, workerName)
     {
         assert(newRequest instanceof BuildRequest);
 
         if (!this.matchesConfiguration(newRequest))
             return null;
 
-        let hasPendingBuildsWithoutSlaveNameSpecified = false;
-        let usedSlaves = new Set;
+        let hasPendingBuildsWithoutWorkerNameSpecified = false;
+        let usedWorkers = new Set;
+        const latestEntryByWorkerName = new Map;
         for (let entry of this._entryList) {
             let entryPreventsNewRequest = entry.isPending();
             if (entry.isInProgress()) {
@@ -147,27 +162,49 @@ class BuildbotSyncer {
                     entryPreventsNewRequest = true;
             }
             if (entryPreventsNewRequest) {
-                if (!entry.slaveName())
-                    hasPendingBuildsWithoutSlaveNameSpecified = true;
-                usedSlaves.add(entry.slaveName());
+                if (!entry.workerName())
+                    hasPendingBuildsWithoutWorkerNameSpecified = true;
+                usedWorkers.add(entry.workerName());
+            }
+            if (!entry.isPending()) {
+                console.assert(entry.workerName(), 'Non-pending entry must have a worker name');
+                const lastFinishedEntry = latestEntryByWorkerName.get(entry.workerName());
+                if (!lastFinishedEntry || +lastFinishedEntry.buildTag() < +entry.buildTag())
+                    latestEntryByWorkerName.set(entry.workerName(), entry)
             }
         }
 
-        if (!this._slaveList || hasPendingBuildsWithoutSlaveNameSpecified) {
-            if (usedSlaves.size || this._slavesWithNewRequests.size)
+        for (let [name, entry] of latestEntryByWorkerName.entries()) {
+            const latestActiveBuildRequest = BuildRequest.findById(entry.buildRequestId());
+            if (!latestActiveBuildRequest)
+                continue;
+            if (latestActiveBuildRequest.testGroupId() == newRequest.testGroupId())
+                continue;
+            const testGroup = latestActiveBuildRequest.testGroup();
+            if (!testGroup) {
+                // The request might be for a very old test group we didn't fetch.
+                continue;
+            }
+            if (testGroup.hasFinished() && !testGroup.mayNeedMoreRequests())
+                continue;
+            usedWorkers.add(name);
+        }
+
+        if (!this._workerList || hasPendingBuildsWithoutWorkerNameSpecified) {
+            if (usedWorkers.size || this._workersWithNewRequests.size)
                 return null;
             return this.scheduleRequest(newRequest, requestsInGroup, null);
         }
 
-        if (slaveName) {
-            if (!usedSlaves.has(slaveName) && !this._slavesWithNewRequests.has(slaveName))
-                return this.scheduleRequest(newRequest, requestsInGroup, slaveName);
+        if (workerName) {
+            if (!usedWorkers.has(workerName) && !this._workersWithNewRequests.has(workerName))
+                return this.scheduleRequest(newRequest, requestsInGroup, workerName);
             return null;
         }
 
-        for (let slaveName of this._slaveList) {
-            if (!usedSlaves.has(slaveName) && !this._slavesWithNewRequests.has(slaveName))
-                return this.scheduleRequest(newRequest, requestsInGroup, slaveName);
+        for (let workerName of this._workerList) {
+            if (!usedWorkers.has(workerName) && !this._workersWithNewRequests.has(workerName))
+                return this.scheduleRequest(newRequest, requestsInGroup, workerName);
         }
 
         return null;
@@ -183,15 +220,18 @@ class BuildbotSyncer {
                 for (let entry of pendingEntries)
                     entryByRequest[entry.buildRequestId()] = entry;
 
-                for (let entry of entries)
+                for (let entry of entries) {
                     entryByRequest[entry.buildRequestId()] = entry;
+                    if ((!this._lastCompletedBuild || this._lastCompletedBuild.buildTag() < entry.buildTag()) && entry.hasFinished())
+                        this._lastCompletedBuild = entry;
+                }
 
                 let entryList = [];
                 for (let id in entryByRequest)
                     entryList.push(entryByRequest[id]);
 
                 this._entryList = entryList;
-                this._slavesWithNewRequests.clear();
+                this._workersWithNewRequests.clear();
 
                 return entryList;
             });
@@ -214,7 +254,7 @@ class BuildbotSyncer {
     pathForRecentBuilds(count) { return `/api/v2/builders/${this._builderID}/builds?limit=${count}&order=-number&property=*`; }
     pathForForceBuild(schedulerName) { return `/api/v2/forceschedulers/${schedulerName}`; }
 
-    urlForBuildNumber(number) { return this._remote.url(`/#/builders/${this._builderID}/builds/${number}`); }
+    urlForBuildSerial(serail) { return this._remote.url(`/#/builders/${this._builderID}/builds/${serail}`); }
     urlForPendingBuild(buildRequestId) { return this._remote.url(`/#/buildrequests/${buildRequestId}`); }
 
     _propertiesForBuildRequest(buildRequest, requestsInGroup)
@@ -329,7 +369,7 @@ class BuildbotSyncer {
 
         assert(config.buildRequestArgument, 'buildRequestArgument must specify the name of the property used to store the build request ID');
 
-        assert.equal(typeof(config.repositoryGroups), 'object', 'repositoryGroups must specify a dictionary from the name to its definition');
+        assert.strictEqual(typeof(config.repositoryGroups), 'object', 'repositoryGroups must specify a dictionary from the name to its definition');
 
         const repositoryGroups = {};
         for (const name in config.repositoryGroups)
@@ -337,7 +377,7 @@ class BuildbotSyncer {
 
         const commonConfigurations = {
             repositoryGroups,
-            slaveArgument: config.slaveArgument,
+            workerArgument: config.workerArgument,
             buildRequestArgument: config.buildRequestArgument,
             platformArgument: config.platformArgument,
         };
@@ -364,7 +404,7 @@ class BuildbotSyncer {
                 const test = Test.findByPath(testPath);
                 assert(test, `"${testPath.join('", "')}" is not a valid test path in the test configuration ${configurationIndex}`);
 
-                ensureBuildbotSyncer(entry.builderConfig).addTestConfiguration(test, entry.platform, typeConfig.properties);
+                ensureBuildbotSyncer(entry.builderConfig).addTestConfiguration(test, entry.platform, entry.supportedRepetitionTypes, typeConfig.properties);
             }
         });
 
@@ -374,7 +414,7 @@ class BuildbotSyncer {
             this._resolveBuildersWithPlatforms('test', buildConfigurations, builders, builderNameToIDMap).forEach((entry, configurationIndex) => {
                 const syncer = ensureBuildbotSyncer(entry.builderConfig);
                 assert(!syncer.isTester(), `The build configuration ${configurationIndex} uses a tester: ${syncer.builderName()}`);
-                syncer.addBuildConfiguration(entry.platform, entry.builderConfig.properties);
+                syncer.addBuildConfiguration(entry.platform, entry.supportedRepetitionTypes, entry.builderConfig.properties);
             });
         }
 
@@ -389,17 +429,23 @@ class BuildbotSyncer {
             configurationIndex++;
             assert(Array.isArray(entry['builders']), `The ${configurationType} configuration ${configurationIndex} does not specify "builders" as an array`);
             assert(Array.isArray(entry['platforms']), `The ${configurationType} configuration ${configurationIndex} does not specify "platforms" as an array`);
+            assert(Array.isArray(entry['supportedRepetitionTypes']), `The ${configurationType} configuration ${configurationIndex} does not specify "supportedRepetitionTypes" as an array`);
+            assert(entry['supportedRepetitionTypes'].every(TriggerableConfiguration.isValidRepetitionType.bind(TriggerableConfiguration)),
+                `The ${configurationType} configuration ${configurationIndex} specifies invalid repetitionType in "supportedRepetitionTypes": ${entry['supportedRepetitionTypes']}`);
             for (const builderKey of entry['builders']) {
                 const matchingBuilder = builders[builderKey];
                 assert(matchingBuilder, `"${builderKey}" is not a valid builder in the configuration`);
                 assert('builder' in matchingBuilder, `Builder ${builderKey} does not specify a buildbot builder name`);
                 assert(matchingBuilder.builder in builderNameToIDMap, `Builder ${matchingBuilder.builder} not found in Buildbot configuration.`);
+                assert(Array.isArray(matchingBuilder.supportedRepetitionTypes), `Builder ${matchingBuilder.builder} does not specify "supportedRepetitionTypes" as an array`);
+                assert(matchingBuilder.supportedRepetitionTypes.every(TriggerableConfiguration.isValidRepetitionType.bind(TriggerableConfiguration)),
+                    `Builder ${matchingBuilder.builder} specifies repetitionType in "supportedRepetitionTypes": ${matchingBuilder.supportedRepetitionTypes}`);
                 matchingBuilder['builderID'] = builderNameToIDMap[matchingBuilder.builder];
                 const builderConfig = this._validateAndMergeConfig({}, matchingBuilder);
                 for (const platformName of entry['platforms']) {
                     const platform = Platform.findByName(platformName);
                     assert(platform, `${platformName} is not a valid platform name`);
-                    resolvedConfigurations.push({types: entry.types, builderConfig, platform});
+                    resolvedConfigurations.push({types: entry.types, builderConfig, platform, supportedRepetitionTypes: entry['supportedRepetitionTypes']});
                 }
             }
         }
@@ -408,7 +454,7 @@ class BuildbotSyncer {
 
     static _parseRepositoryGroup(name, group)
     {
-        assert.equal(typeof(group.repositories), 'object',
+        assert.strictEqual(typeof(group.repositories), 'object',
             `Repository group "${name}" does not specify a dictionary of repositories`);
         assert(!('description' in group) || typeof(group['description']) == 'string',
             `Repository group "${name}" have an invalid description`);
@@ -423,7 +469,7 @@ class BuildbotSyncer {
             const repository = Repository.findTopLevelByName(repositoryName);
             assert(repository, `"${repositoryName}" is not a valid repository name`);
             repositoryByName[repositoryName] = repository;
-            assert.equal(typeof(options), 'object', `"${repositoryName}" specifies a non-dictionary value`);
+            assert.strictEqual(typeof(options), 'object', `"${repositoryName}" specifies a non-dictionary value`);
             assert([undefined, true, false].includes(options.acceptsPatch),
                 `"${repositoryName}" contains invalid acceptsPatch value: ${JSON.stringify(options.acceptsPatch)}`);
             if (options.acceptsPatch)
@@ -433,7 +479,7 @@ class BuildbotSyncer {
         }
         assert(parsedRepositoryList.length, `Repository group "${name}" does not specify any repository`);
 
-        assert.equal(typeof(group.testProperties), 'object', `Repository group "${name}" specifies the test configurations with an invalid type`);
+        assert.strictEqual(typeof(group.testProperties), 'object', `Repository group "${name}" specifies the test configurations with an invalid type`);
 
         const resolveRepository = (repositoryName) => {
             const repository = repositoryByName[repositoryName];
@@ -462,7 +508,7 @@ class BuildbotSyncer {
         });
         assert(!group.acceptsRoots == !specifiesRoots,
             `Repository group "${name}" accepts roots but does not specify roots in testProperties`);
-        assert.equal(parsedRepositoryList.length, testRepositories.size,
+        assert.strictEqual(parsedRepositoryList.length, testRepositories.size,
             `Repository group "${name}" does not use some of the repositories listed in testing`);
 
         let buildPropertiesTemplate = null;
@@ -496,7 +542,7 @@ class BuildbotSyncer {
             assert(patchAcceptingRepositoryList.size || hasOwnedRevisions, `Repository group "${name}" specifies the properties for building but does not accept any patches or need to build owned components`);
             for (const repository of patchRepositories)
                 assert(revisionRepositories.has(repository), `Repository group "${name}" specifies a patch for "${repository.name()}" but does not specify a revision`);
-            assert.equal(patchAcceptingRepositoryList.size, patchRepositories.size,
+            assert.strictEqual(patchAcceptingRepositoryList.size, patchRepositories.size,
                 `Repository group "${name}" does not use some of the repositories listed in building a patch`);
         }
 
@@ -556,23 +602,24 @@ class BuildbotSyncer {
 
             switch (name) {
             case 'properties': // Fallthrough
-                assert.equal(typeof(value), 'object', 'Build properties should be a dictionary');
+                assert.strictEqual(typeof(value), 'object', 'Build properties should be a dictionary');
                 if (!config['properties'])
                     config['properties'] = {};
                 const properties = config['properties'];
                 for (const name in value) {
-                    assert.equal(typeof(value[name]), 'string', `Build properties "${name}" specifies a non-string value of type "${typeof(value)}"`);
+                    assert.strictEqual(typeof(value[name]), 'string', `Build properties "${name}" specifies a non-string value of type "${typeof(value)}"`);
                     properties[name] = value[name];
                 }
                 break;
+            case 'supportedRepetitionTypes':
             case 'test': // Fallthrough
-            case 'slaveList': // Fallthrough
+            case 'workerList': // Fallthrough
                 assert(value instanceof Array, `${name} should be an array`);
                 assert(value.every(function (part) { return typeof part == 'string'; }), `${name} should be an array of strings`);
                 config[name] = value.slice();
                 break;
             case 'builder': // Fallthrough
-                assert.equal(typeof(value), 'string', `${name} should be of string type`);
+                assert.strictEqual(typeof(value), 'string', `${name} should be of string type`);
                 config[name] = value;
                 break;
             case 'builderID':

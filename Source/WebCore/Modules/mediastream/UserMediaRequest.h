@@ -40,6 +40,7 @@
 #include "MediaConstraints.h"
 #include "MediaStreamPrivate.h"
 #include "MediaStreamRequest.h"
+#include "UserMediaRequestIdentifier.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/UniqueRef.h>
@@ -50,9 +51,6 @@ class MediaStream;
 class SecurityOrigin;
 
 template<typename IDLType> class DOMPromiseDeferred;
-
-enum UserMediaRequestIdentifierType { };
-using UserMediaRequestIdentifier = ObjectIdentifier<UserMediaRequestIdentifierType>;
 
 class UserMediaRequest : public RefCounted<UserMediaRequest>, public ActiveDOMObject {
 public:
@@ -65,7 +63,7 @@ public:
     WEBCORE_EXPORT void setAllowedMediaDeviceUIDs(const String& audioDeviceUID, const String& videoDeviceUID);
     WEBCORE_EXPORT void allow(CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, String&& deviceIdentifierHashSalt, CompletionHandler<void()>&&);
 
-    enum MediaAccessDenialReason { NoConstraints, UserMediaDisabled, NoCaptureDevices, InvalidConstraint, HardwareError, PermissionDenied, InvalidAccess, IllegalConstraint, OtherFailure };
+    enum MediaAccessDenialReason { NoConstraints, UserMediaDisabled, NoCaptureDevices, InvalidConstraint, HardwareError, PermissionDenied, InvalidAccess, OtherFailure };
     WEBCORE_EXPORT void deny(MediaAccessDenialReason, const String& errorMessage = emptyString());
 
     const Vector<String>& audioDeviceUIDs() const { return m_audioDeviceUIDs; }
@@ -85,7 +83,6 @@ private:
 
     void stop() final;
     const char* activeDOMObjectName() const final;
-    bool shouldPreventEnteringBackForwardCache_DEPRECATED() const final;
 
     void mediaStreamDidFail(RealtimeMediaSource::Type);
 
@@ -95,6 +92,7 @@ private:
     Vector<String> m_audioDeviceUIDs;
 
     UniqueRef<DOMPromiseDeferred<IDLInterface<MediaStream>>> m_promise;
+    CompletionHandler<void()> m_allowCompletionHandler;
     MediaStreamRequest m_request;
 };
 

@@ -28,7 +28,9 @@
 
 #include "ArgumentCoders.h"
 #include "WebsiteDataType.h"
+#include <WebCore/RegistrableDomain.h>
 #include <WebCore/SecurityOriginData.h>
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebKit {
@@ -36,25 +38,25 @@ namespace WebKit {
 void WebsiteData::Entry::encode(IPC::Encoder& encoder) const
 {
     encoder << origin;
-    encoder.encodeEnum(type);
+    encoder << type;
     encoder << size;
 }
 
-auto WebsiteData::Entry::decode(IPC::Decoder& decoder) -> Optional<Entry>
+auto WebsiteData::Entry::decode(IPC::Decoder& decoder) -> std::optional<Entry>
 {
     Entry result;
 
-    Optional<WebCore::SecurityOriginData> securityOriginData;
+    std::optional<WebCore::SecurityOriginData> securityOriginData;
     decoder >> securityOriginData;
     if (!securityOriginData)
-        return WTF::nullopt;
+        return std::nullopt;
     result.origin = WTFMove(*securityOriginData);
 
-    if (!decoder.decodeEnum(result.type))
-        return WTF::nullopt;
+    if (!decoder.decode(result.type))
+        return std::nullopt;
 
     if (!decoder.decode(result.size))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return result;
 }
@@ -63,10 +65,10 @@ void WebsiteData::encode(IPC::Encoder& encoder) const
 {
     encoder << entries;
     encoder << hostNamesWithCookies;
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    encoder << hostNamesWithPluginData;
-#endif
     encoder << hostNamesWithHSTSCache;
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+    encoder << registrableDomainsWithResourceLoadStatistics;
+#endif
 }
 
 bool WebsiteData::decode(IPC::Decoder& decoder, WebsiteData& result)
@@ -75,12 +77,12 @@ bool WebsiteData::decode(IPC::Decoder& decoder, WebsiteData& result)
         return false;
     if (!decoder.decode(result.hostNamesWithCookies))
         return false;
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    if (!decoder.decode(result.hostNamesWithPluginData))
-        return false;
-#endif
     if (!decoder.decode(result.hostNamesWithHSTSCache))
         return false;
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+    if (!decoder.decode(result.registrableDomainsWithResourceLoadStatistics))
+        return false;
+#endif
     return true;
 }
 
@@ -109,10 +111,6 @@ WebsiteDataProcessType WebsiteData::ownerProcess(WebsiteDataType dataType)
         return WebsiteDataProcessType::Network;
     case WebsiteDataType::SearchFieldRecentSearches:
         return WebsiteDataProcessType::UI;
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    case WebsiteDataType::PlugInData:
-        return WebsiteDataProcessType::UI;
-#endif
     case WebsiteDataType::ResourceLoadStatistics:
         return WebsiteDataProcessType::Network;
     case WebsiteDataType::Credentials:
@@ -125,7 +123,13 @@ WebsiteDataProcessType WebsiteData::ownerProcess(WebsiteDataType dataType)
         return WebsiteDataProcessType::Network;
     case WebsiteDataType::DeviceIdHashSalt:
         return WebsiteDataProcessType::UI;
-    case WebsiteDataType::AdClickAttributions:
+    case WebsiteDataType::PrivateClickMeasurements:
+        return WebsiteDataProcessType::Network;
+#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
+    case WebsiteDataType::AlternativeServices:
+        return WebsiteDataProcessType::Network;
+#endif
+    case WebsiteDataType::FileSystem:
         return WebsiteDataProcessType::Network;
     }
 
@@ -141,6 +145,40 @@ OptionSet<WebsiteDataType> WebsiteData::filter(OptionSet<WebsiteDataType> unfilt
     }
     
     return filtered;
+}
+
+WebsiteData WebsiteData::isolatedCopy() const &
+{
+    return WebsiteData {
+        crossThreadCopy(entries),
+        crossThreadCopy(hostNamesWithCookies),
+        crossThreadCopy(hostNamesWithHSTSCache),
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+        crossThreadCopy(registrableDomainsWithResourceLoadStatistics),
+#endif
+    };
+}
+
+WebsiteData WebsiteData::isolatedCopy() &&
+{
+    return WebsiteData {
+        crossThreadCopy(WTFMove(entries)),
+        crossThreadCopy(WTFMove(hostNamesWithCookies)),
+        crossThreadCopy(WTFMove(hostNamesWithHSTSCache)),
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+        crossThreadCopy(WTFMove(registrableDomainsWithResourceLoadStatistics)),
+#endif
+    };
+}
+
+auto WebsiteData::Entry::isolatedCopy() const & -> Entry
+{
+    return { crossThreadCopy(origin), type, size };
+}
+
+auto WebsiteData::Entry::isolatedCopy() && -> Entry
+{
+    return { crossThreadCopy(WTFMove(origin)), type, size };
 }
 
 }

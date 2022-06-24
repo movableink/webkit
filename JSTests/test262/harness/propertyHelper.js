@@ -106,7 +106,7 @@ function isConfigurable(obj, name) {
     delete obj[name];
   } catch (e) {
     if (!(e instanceof TypeError)) {
-      $ERROR("Expected TypeError, got " + e);
+      throw new Test262Error("Expected TypeError, got " + e);
     }
   }
   return !hasOwnProperty.call(obj, name);
@@ -139,8 +139,12 @@ function isSameValue(a, b) {
   return a === b;
 }
 
+var __isArray = Array.isArray;
 function isWritable(obj, name, verifyProp, value) {
-  var newValue = value || "unlikelyValue";
+  var unlikelyValue = __isArray(obj) && name === "length" ?
+    Math.pow(2, 32) - 1 :
+    "unlikelyValue";
+  var newValue = value || unlikelyValue;
   var hadValue = Object.prototype.hasOwnProperty.call(obj, name);
   var oldValue = obj[name];
   var writeSucceeded;
@@ -149,7 +153,7 @@ function isWritable(obj, name, verifyProp, value) {
     obj[name] = newValue;
   } catch (e) {
     if (!(e instanceof TypeError)) {
-      $ERROR("Expected TypeError, got " + e);
+      throw new Test262Error("Expected TypeError, got " + e);
     }
   }
 
@@ -171,7 +175,7 @@ function isWritable(obj, name, verifyProp, value) {
 
 function verifyEqualTo(obj, name, value) {
   if (!isSameValue(obj[name], value)) {
-    $ERROR("Expected obj[" + String(name) + "] to equal " + value +
+    throw new Test262Error("Expected obj[" + String(name) + "] to equal " + value +
            ", actually " + obj[name]);
   }
 }
@@ -182,7 +186,7 @@ function verifyWritable(obj, name, verifyProp, value) {
          "Expected obj[" + String(name) + "] to have writable:true.");
   }
   if (!isWritable(obj, name, verifyProp, value)) {
-    $ERROR("Expected obj[" + String(name) + "] to be writable, but was not.");
+    throw new Test262Error("Expected obj[" + String(name) + "] to be writable, but was not.");
   }
 }
 
@@ -192,7 +196,7 @@ function verifyNotWritable(obj, name, verifyProp, value) {
          "Expected obj[" + String(name) + "] to have writable:false.");
   }
   if (isWritable(obj, name, verifyProp)) {
-    $ERROR("Expected obj[" + String(name) + "] NOT to be writable, but was.");
+    throw new Test262Error("Expected obj[" + String(name) + "] NOT to be writable, but was.");
   }
 }
 
@@ -200,7 +204,7 @@ function verifyEnumerable(obj, name) {
   assert(Object.getOwnPropertyDescriptor(obj, name).enumerable,
        "Expected obj[" + String(name) + "] to have enumerable:true.");
   if (!isEnumerable(obj, name)) {
-    $ERROR("Expected obj[" + String(name) + "] to be enumerable, but was not.");
+    throw new Test262Error("Expected obj[" + String(name) + "] to be enumerable, but was not.");
   }
 }
 
@@ -208,7 +212,7 @@ function verifyNotEnumerable(obj, name) {
   assert(!Object.getOwnPropertyDescriptor(obj, name).enumerable,
        "Expected obj[" + String(name) + "] to have enumerable:false.");
   if (isEnumerable(obj, name)) {
-    $ERROR("Expected obj[" + String(name) + "] NOT to be enumerable, but was.");
+    throw new Test262Error("Expected obj[" + String(name) + "] NOT to be enumerable, but was.");
   }
 }
 
@@ -216,7 +220,7 @@ function verifyConfigurable(obj, name) {
   assert(Object.getOwnPropertyDescriptor(obj, name).configurable,
        "Expected obj[" + String(name) + "] to have configurable:true.");
   if (!isConfigurable(obj, name)) {
-    $ERROR("Expected obj[" + String(name) + "] to be configurable, but was not.");
+    throw new Test262Error("Expected obj[" + String(name) + "] to be configurable, but was not.");
   }
 }
 
@@ -224,6 +228,6 @@ function verifyNotConfigurable(obj, name) {
   assert(!Object.getOwnPropertyDescriptor(obj, name).configurable,
        "Expected obj[" + String(name) + "] to have configurable:false.");
   if (isConfigurable(obj, name)) {
-    $ERROR("Expected obj[" + String(name) + "] NOT to be configurable, but was.");
+    throw new Test262Error("Expected obj[" + String(name) + "] NOT to be configurable, but was.");
   }
 }

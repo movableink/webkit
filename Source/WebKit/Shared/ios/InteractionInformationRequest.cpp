@@ -38,7 +38,11 @@ void InteractionInformationRequest::encode(IPC::Encoder& encoder) const
     encoder << point;
     encoder << includeSnapshot;
     encoder << includeLinkIndicator;
+    encoder << includeCaretContext;
+    encoder << includeHasDoubleClickHandler;
+    encoder << includeImageData;
     encoder << linkIndicatorShouldHaveLegacyMargins;
+    encoder << disallowUserAgentShadowContent;
 }
 
 bool InteractionInformationRequest::decode(IPC::Decoder& decoder, InteractionInformationRequest& result)
@@ -52,13 +56,25 @@ bool InteractionInformationRequest::decode(IPC::Decoder& decoder, InteractionInf
     if (!decoder.decode(result.includeLinkIndicator))
         return false;
 
+    if (!decoder.decode(result.includeCaretContext))
+        return false;
+
+    if (!decoder.decode(result.includeHasDoubleClickHandler))
+        return false;
+
+    if (!decoder.decode(result.includeImageData))
+        return false;
+
     if (!decoder.decode(result.linkIndicatorShouldHaveLegacyMargins))
+        return false;
+
+    if (!decoder.decode(result.disallowUserAgentShadowContent))
         return false;
 
     return true;
 }
 
-bool InteractionInformationRequest::isValidForRequest(const InteractionInformationRequest& other, int radius)
+bool InteractionInformationRequest::isValidForRequest(const InteractionInformationRequest& other, int radius) const
 {
     if (other.includeSnapshot && !includeSnapshot)
         return false;
@@ -66,13 +82,25 @@ bool InteractionInformationRequest::isValidForRequest(const InteractionInformati
     if (other.includeLinkIndicator && !includeLinkIndicator)
         return false;
 
+    if (other.includeCaretContext && !includeCaretContext)
+        return false;
+
+    if (other.includeHasDoubleClickHandler && !includeHasDoubleClickHandler)
+        return false;
+
+    if (other.includeImageData && !includeImageData)
+        return false;
+
     if (other.linkIndicatorShouldHaveLegacyMargins != linkIndicatorShouldHaveLegacyMargins)
+        return false;
+
+    if (other.disallowUserAgentShadowContent != disallowUserAgentShadowContent)
         return false;
 
     return (other.point - point).diagonalLengthSquared() <= radius * radius;
 }
     
-bool InteractionInformationRequest::isApproximatelyValidForRequest(const InteractionInformationRequest& other, int radius)
+bool InteractionInformationRequest::isApproximatelyValidForRequest(const InteractionInformationRequest& other, int radius) const
 {
     return isValidForRequest(other, radius);
 }

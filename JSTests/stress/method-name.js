@@ -25,7 +25,7 @@ testSyntaxError(`
 class Hello {
     hello hello() { }
 }
-`, `SyntaxError: Unexpected identifier 'hello'. Expected an opening '(' before a method's parameter list.`);
+`, `SyntaxError: Unexpected identifier 'hello'. Expected a ';' following a class field.`);
 
 testSyntaxError(`
 let obj = {

@@ -10,7 +10,8 @@
 
 package org.webrtc;
 
-import javax.annotation.Nullable;
+import androidx.annotation.Nullable;
+import java.util.List;
 
 /** Java wrapper for a C++ RtpSenderInterface. */
 public class RtpSender {
@@ -38,7 +39,7 @@ public class RtpSender {
    *
    * @param takeOwnership If true, the RtpSender takes ownership of the track
    *                      from the caller, and will auto-dispose of it when no
-   *                      longer needed. |takeOwnership| should only be used if
+   *                      longer needed. `takeOwnership` should only be used if
    *                      the caller owns the track; it is not appropriate when
    *                      the track is owned by, for example, another RtpSender
    *                      or a MediaStream.
@@ -60,6 +61,16 @@ public class RtpSender {
   @Nullable
   public MediaStreamTrack track() {
     return cachedTrack;
+  }
+
+  public void setStreams(List<String> streamIds) {
+    checkRtpSenderExists();
+    nativeSetStreams(nativeRtpSender, streamIds);
+  }
+
+  public List<String> getStreams() {
+    checkRtpSenderExists();
+    return nativeGetStreams(nativeRtpSender);
   }
 
   public boolean setParameters(RtpParameters parameters) {
@@ -116,6 +127,10 @@ public class RtpSender {
   // This should increment the reference count of the track.
   // Will be released in dispose() or setTrack().
   private static native long nativeGetTrack(long rtpSender);
+
+  private static native void nativeSetStreams(long rtpSender, List<String> streamIds);
+
+  private static native List<String> nativeGetStreams(long rtpSender);
 
   // This should increment the reference count of the DTMF sender.
   // Will be released in dispose().

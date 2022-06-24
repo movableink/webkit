@@ -14,8 +14,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "absl/base/attributes.h"
+#include "api/scoped_refptr.h"
+#include "api/task_queue/task_queue_factory.h"
 #include "modules/audio_device/include/audio_device.h"
-#include "rtc_base/scoped_ref_ptr.h"
 
 namespace webrtc {
 
@@ -39,15 +41,30 @@ class AudioDeviceDataObserver {
   virtual ~AudioDeviceDataObserver() = default;
 };
 
+// Creates an ADMWrapper around an ADM instance that registers
+// the provided AudioDeviceDataObserver.
+rtc::scoped_refptr<AudioDeviceModule> CreateAudioDeviceWithDataObserver(
+    rtc::scoped_refptr<AudioDeviceModule> impl,
+    std::unique_ptr<AudioDeviceDataObserver> observer);
+
+// Creates an ADMWrapper around an ADM instance that registers
+// the provided AudioDeviceDataObserver.
+ABSL_DEPRECATED("")
+rtc::scoped_refptr<AudioDeviceModule> CreateAudioDeviceWithDataObserver(
+    rtc::scoped_refptr<AudioDeviceModule> impl,
+    AudioDeviceDataObserver* observer);
+
 // Creates an ADM instance with AudioDeviceDataObserver registered.
 rtc::scoped_refptr<AudioDeviceModule> CreateAudioDeviceWithDataObserver(
     const AudioDeviceModule::AudioLayer audio_layer,
-    AudioDeviceDataObserver* observer);
+    TaskQueueFactory* task_queue_factory,
+    std::unique_ptr<AudioDeviceDataObserver> observer);
 
-// TODO(bugs.webrtc.org/7306): deprecated.
+// Creates an ADM instance with AudioDeviceDataObserver registered.
+ABSL_DEPRECATED("")
 rtc::scoped_refptr<AudioDeviceModule> CreateAudioDeviceWithDataObserver(
-    const int32_t id,
     const AudioDeviceModule::AudioLayer audio_layer,
+    TaskQueueFactory* task_queue_factory,
     AudioDeviceDataObserver* observer);
 
 }  // namespace webrtc

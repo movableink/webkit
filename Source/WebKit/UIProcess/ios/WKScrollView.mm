@@ -29,13 +29,14 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "UIKitSPI.h"
-#import "VersionChecks.h"
-#import "WKWebViewInternal.h"
+#import "WKDeferringGestureRecognizer.h"
+#import "WKWebViewIOS.h"
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 #import <wtf/WeakObjCPtr.h>
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
-#if PLATFORM(WATCHOS)
-#import <PepperUICore/UIScrollView+PUICAdditionsPrivate.h>
+#if HAVE(PEPPER_UI_CORE)
+#import "PepperUICoreSPI.h"
 #endif
 
 @interface WKScrollViewDelegateForwarder : NSObject <UIScrollViewDelegate>
@@ -124,16 +125,22 @@ static BOOL shouldForwardScrollViewDelegateMethodToExternalDelegate(SEL selector
 
 @implementation WKScrollView {
     WeakObjCPtr<id <UIScrollViewDelegate>> _externalDelegate;
-    WKScrollViewDelegateForwarder *_delegateForwarder;
+    RetainPtr<WKScrollViewDelegateForwarder> _delegateForwarder;
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
+    BOOL _backgroundColorSetByClient;
+    BOOL _indicatorStyleSetByClient;
+// FIXME: Likely we can remove this special case for watchOS and tvOS.
+#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
     BOOL _contentInsetAdjustmentBehaviorWasExternallyOverridden;
 #endif
+    BOOL _contentInsetWasExternallyOverridden;
     CGFloat _keyboardBottomInsetAdjustment;
     BOOL _scrollEnabledByClient;
     BOOL _scrollEnabledInternal;
     BOOL _zoomEnabledByClient;
     BOOL _zoomEnabledInternal;
+    std::optional<UIEdgeInsets> _contentScrollInsetFromClient;
+    std::optional<UIEdgeInsets> _contentScrollInsetInternal;
 }
 
 - (id)initWithFrame:(CGRect)frame
@@ -152,11 +159,12 @@ static BOOL shouldForwardScrollViewDelegateMethodToExternalDelegate(SEL selector
     self.directionalLockEnabled = YES;
     [self _setIndicatorInsetAdjustmentBehavior:UIScrollViewIndicatorInsetAdjustmentAlways];
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
+// FIXME: Likely we can remove this special case for watchOS and tvOS.
+#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
     _contentInsetAdjustmentBehaviorWasExternallyOverridden = (self.contentInsetAdjustmentBehavior != UIScrollViewContentInsetAdjustmentAutomatic);
 #endif
     
-#if PLATFORM(WATCHOS)
+#if HAVE(PEPPER_UI_CORE)
     [self _configureDigitalCrownScrolling];
 #endif
 
@@ -184,26 +192,72 @@ static BOOL shouldForwardScrollViewDelegateMethodToExternalDelegate(SEL selector
     return _externalDelegate.getAutoreleased();
 }
 
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRequireFailureOfGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
+{
+    if ([otherGestureRecognizer isKindOfClass:WKDeferringGestureRecognizer.class])
+        return [(WKDeferringGestureRecognizer *)otherGestureRecognizer shouldDeferGestureRecognizer:gestureRecognizer];
+
+    return NO;
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldBeRequiredToFailByGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
+{
+    if ([gestureRecognizer isKindOfClass:WKDeferringGestureRecognizer.class])
+        return [(WKDeferringGestureRecognizer *)gestureRecognizer shouldDeferGestureRecognizer:otherGestureRecognizer];
+
+    return NO;
+}
+
 - (void)_updateDelegate
 {
-    WKScrollViewDelegateForwarder *oldForwarder = _delegateForwarder;
-    _delegateForwarder = nil;
+    auto oldForwarder = std::exchange(_delegateForwarder, nil);
     auto externalDelegate = _externalDelegate.get();
     if (!externalDelegate)
         [super setDelegate:_internalDelegate];
     else if (!_internalDelegate)
         [super setDelegate:externalDelegate.get()];
     else {
-        _delegateForwarder = [[WKScrollViewDelegateForwarder alloc] initWithInternalDelegate:_internalDelegate externalDelegate:externalDelegate.get()];
-        [super setDelegate:_delegateForwarder];
+        _delegateForwarder = adoptNS([[WKScrollViewDelegateForwarder alloc] initWithInternalDelegate:_internalDelegate externalDelegate:externalDelegate.get()]);
+        [super setDelegate:_delegateForwarder.get()];
     }
-    [oldForwarder release];
 }
 
-- (void)dealloc
+- (void)setBackgroundColor:(UIColor *)backgroundColor
 {
-    [_delegateForwarder release];
-    [super dealloc];
+    _backgroundColorSetByClient = !!backgroundColor;
+
+    super.backgroundColor = backgroundColor;
+
+    if (!_backgroundColorSetByClient) {
+        [_internalDelegate _resetCachedScrollViewBackgroundColor];
+        [_internalDelegate _updateScrollViewBackground];
+    }
+}
+
+- (void)_setBackgroundColorInternal:(UIColor *)backgroundColor
+{
+    if (_backgroundColorSetByClient)
+        return;
+
+    super.backgroundColor = backgroundColor;
+}
+
+- (void)setIndicatorStyle:(UIScrollViewIndicatorStyle)indicatorStyle
+{
+    _indicatorStyleSetByClient = indicatorStyle != UIScrollViewIndicatorStyleDefault;
+
+    super.indicatorStyle = indicatorStyle;
+
+    if (!_indicatorStyleSetByClient)
+        [_internalDelegate _updateScrollViewIndicatorStyle];
+}
+
+- (void)_setIndicatorStyleInternal:(UIScrollViewIndicatorStyle)indicatorStyle
+{
+    if (_indicatorStyleSetByClient)
+        return;
+
+    super.indicatorStyle = indicatorStyle;
 }
 
 static inline bool valuesAreWithinOnePixel(CGFloat a, CGFloat b)
@@ -258,10 +312,19 @@ static inline bool valuesAreWithinOnePixel(CGFloat a, CGFloat b)
 {
     [super setContentInset:contentInset];
 
+    _contentInsetWasExternallyOverridden = YES;
+#if PLATFORM(WATCHOS)
+    if (_contentScrollInsetInternal) {
+        _contentScrollInsetInternal = std::nullopt;
+        [self _updateContentScrollInset];
+    }
+#endif // PLATFORM(WATCHOS)
+
     [_internalDelegate _scheduleVisibleContentRectUpdate];
 }
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
+// FIXME: Likely we can remove this special case for watchOS and tvOS.
+#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
 
 - (BOOL)_contentInsetAdjustmentBehaviorWasExternallyOverridden
 {
@@ -324,7 +387,9 @@ static inline bool valuesAreWithinOnePixel(CGFloat a, CGFloat b)
 {
     CGSize currentContentSize = [self contentSize];
 
-    if (CGSizeEqualToSize(currentContentSize, CGSizeZero) || CGSizeEqualToSize(currentContentSize, contentSize) || self.zoomScale < self.minimumZoomScale) {
+    BOOL mightBeRubberbanding = self.isDragging || self.isVerticalBouncing || self.isHorizontalBouncing || self.refreshControl;
+    if (!mightBeRubberbanding || CGSizeEqualToSize(currentContentSize, CGSizeZero) || CGSizeEqualToSize(currentContentSize, contentSize) || self.zoomScale < self.minimumZoomScale) {
+        // FIXME: rdar://problem/65277759 Find out why iOS Mail needs this call even when the contentSize has not changed.
         [self setContentSize:contentSize];
         return;
     }
@@ -357,7 +422,7 @@ static inline bool valuesAreWithinOnePixel(CGFloat a, CGFloat b)
     // to include keyboard insets in the systemContentInset. We always want
     // keyboard insets applied, even when web content has chosen to disable automatic
     // safe area inset adjustment.
-    if (linkedOnOrAfter(WebKit::SDKVersion::FirstWhereUIScrollViewDoesNotApplyKeyboardInsetsUnconditionally) && self.contentInsetAdjustmentBehavior == UIScrollViewContentInsetAdjustmentNever)
+    if (linkedOnOrAfter(SDKVersion::FirstWhereUIScrollViewDoesNotApplyKeyboardInsetsUnconditionally) && self.contentInsetAdjustmentBehavior == UIScrollViewContentInsetAdjustmentNever)
         systemContentInset.bottom += _keyboardBottomInsetAdjustment;
 
     return systemContentInset;
@@ -407,6 +472,48 @@ static inline bool valuesAreWithinOnePixel(CGFloat a, CGFloat b)
         gestureRecognizer.allowedTouchTypes = @[];
 }
 
+#endif // PLATFORM(WATCHOS)
+
+- (void)_setContentScrollInset:(UIEdgeInsets)insets
+{
+    _contentScrollInsetFromClient = insets;
+    [self _updateContentScrollInset];
+}
+
+- (BOOL)_setContentScrollInsetInternal:(UIEdgeInsets)insets
+{
+#if PLATFORM(WATCHOS)
+    if (_contentInsetWasExternallyOverridden)
+        return NO;
+#endif // PLATFORM(WATCHOS)
+
+    if (_contentScrollInsetFromClient)
+        return NO;
+
+    if (_contentScrollInsetInternal && UIEdgeInsetsEqualToEdgeInsets(*_contentScrollInsetInternal, insets))
+        return NO;
+
+    _contentScrollInsetInternal = insets;
+    [self _updateContentScrollInset];
+    return YES;
+}
+
+- (void)_updateContentScrollInset
+{
+    if (auto insets = _contentScrollInsetFromClient)
+        super.contentScrollInset = *insets;
+    else if (auto insets = _contentScrollInsetInternal)
+        super.contentScrollInset = *insets;
+#if PLATFORM(WATCHOS)
+    else if (_contentInsetWasExternallyOverridden)
+        super.contentScrollInset = UIEdgeInsetsZero;
+#endif // PLATFORM(WATCHOS)
+    else
+        ASSERT_NOT_REACHED();
+}
+
+#if HAVE(PEPPER_UI_CORE)
+
 - (void)_configureDigitalCrownScrolling
 {
     self.showsVerticalScrollIndicator = NO;
@@ -424,7 +531,7 @@ static inline bool valuesAreWithinOnePixel(CGFloat a, CGFloat b)
     return targetOffset;
 }
 
-#endif
+#endif // HAVE(PEPPER_UI_CORE)
 
 @end
 

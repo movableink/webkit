@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2011 Igalia S.L.
 # Copyright (C) 2012 Intel Corporation
 #
@@ -43,14 +42,26 @@ def init(jhbuildrc_globals, jhbuild_platform):
 
     jhbuildrc_globals["build_policy"] = 'updated'
 
-    __moduleset_file_uri = 'file://' + os.path.join(__tools_directory, 'jhbuild.modules')
+    __moduleset_file_name = 'jhbuild.modules'
+    if 'WEBKIT_JHBUILD_MODULESET' in os.environ:
+        __moduleset_file_name = 'jhbuild-%s.modules' % os.environ['WEBKIT_JHBUILD_MODULESET']
+    __moduleset_file_path = os.path.join(__tools_directory, __moduleset_file_name)
+    if not os.path.isfile(__moduleset_file_path):
+        raise RuntimeError("Can't find the moduleset in path %s" % __moduleset_file_path)
+    __moduleset_file_uri = 'file://' + __moduleset_file_path
+
     __extra_modulesets = os.environ.get("WEBKIT_EXTRA_MODULESETS", "").split(",")
     jhbuildrc_globals["moduleset"] = [__moduleset_file_uri, ]
     if __extra_modulesets != ['']:
         jhbuildrc_globals["moduleset"].extend(__extra_modulesets)
 
     __extra_modules = os.environ.get("WEBKIT_EXTRA_MODULES", "").split(",")
-    jhbuildrc_globals["modules"] = ['webkit' + jhbuild_platform + '-testing-dependencies', ]
+
+    base_dependency_suffix = 'testing'
+    if 'WEBKIT_JHBUILD_MODULESET' in os.environ:
+        base_dependency_suffix = os.environ['WEBKIT_JHBUILD_MODULESET']
+
+    jhbuildrc_globals["modules"] = ['webkit' + jhbuild_platform + '-' + base_dependency_suffix + '-dependencies', ]
     if __extra_modules != ['']:
         jhbuildrc_globals["modules"].extend(__extra_modules)
 
@@ -67,16 +78,12 @@ def init(jhbuildrc_globals, jhbuild_platform):
     if 'NUMBER_OF_PROCESSORS' in os.environ:
         jhbuildrc_globals['jobs'] = os.environ['NUMBER_OF_PROCESSORS']
 
-    # Avoid runtime conflicts with GStreamer system-wide plugins. We want
-    # to use only the plugins we build in JHBuild.
-    os.environ['GST_PLUGIN_SYSTEM_PATH'] = ''
+    if os.environ.get("WEBKIT_JHBUILD_MODULESET") != "minimal":
+        # Avoid runtime conflicts with GStreamer system-wide plugins. We want
+        # to use only the plugins we build in JHBuild.
+        os.environ['GST_PLUGIN_SYSTEM_PATH'] = ''
 
-    # Use system libraries while building.
     addpath = jhbuildrc_globals['addpath']
-    system_libdirs = jhbuildrc_globals['system_libdirs']
-    for libdir in system_libdirs:
-        addpath('PKG_CONFIG_PATH', os.path.join(libdir, 'pkgconfig'))
-    addpath('PKG_CONFIG_PATH', os.path.join(os.sep, 'usr', 'share', 'pkgconfig'))
 
     prefix = jhbuildrc_globals['prefix']
     addpath('CMAKE_PREFIX_PATH', prefix)
@@ -88,3 +95,8 @@ def init(jhbuildrc_globals, jhbuild_platform):
 
     if 'x86_64' in platform.machine():
         jhbuildrc_globals['conditions'].add('x86_64')
+
+    if 'JHBUILD_ENABLE_THUNDER' in os.environ:
+        jhbuild_enable_thunder = os.environ['JHBUILD_ENABLE_THUNDER'].lower()
+        if jhbuild_enable_thunder == 'yes' or jhbuild_enable_thunder == '1' or jhbuild_enable_thunder == 'true':
+            jhbuildrc_globals['conditions'].add('Thunder')

@@ -37,21 +37,21 @@
 namespace WebKit {
 using namespace WebCore;
 
-static WebMouseEvent::Button mouseButtonForMouseEventData(const Optional<NavigationAction::MouseEventData>& mouseEventData)
+static WebMouseEvent::Button mouseButtonForMouseEventData(const std::optional<NavigationAction::MouseEventData>& mouseEventData)
 {
     if (mouseEventData && mouseEventData->buttonDown && mouseEventData->isTrusted)
         return static_cast<WebMouseEvent::Button>(mouseEventData->button);
     return WebMouseEvent::NoButton;
 }
 
-static WebMouseEvent::SyntheticClickType syntheticClickTypeForMouseEventData(const Optional<NavigationAction::MouseEventData>& mouseEventData)
+static WebMouseEvent::SyntheticClickType syntheticClickTypeForMouseEventData(const std::optional<NavigationAction::MouseEventData>& mouseEventData)
 {
     if (mouseEventData && mouseEventData->buttonDown && mouseEventData->isTrusted)
         return static_cast<WebMouseEvent::SyntheticClickType>(mouseEventData->syntheticClickType);
     return WebMouseEvent::NoTap;
 }
     
-static FloatPoint clickLocationInRootViewCoordinatesForMouseEventData(const Optional<NavigationAction::MouseEventData>& mouseEventData)
+static FloatPoint clickLocationInRootViewCoordinatesForMouseEventData(const std::optional<NavigationAction::MouseEventData>& mouseEventData)
 {
     if (mouseEventData && mouseEventData->buttonDown && mouseEventData->isTrusted)
         return mouseEventData->locationInRootViewCoordinates;
@@ -100,11 +100,12 @@ InjectedBundleNavigationAction::InjectedBundleNavigationAction(WebFrame* frame, 
     , m_modifiers(modifiersForNavigationAction(navigationAction))
     , m_mouseButton(WebMouseEvent::NoButton)
     , m_downloadAttribute(navigationAction.downloadAttribute())
-    , m_shouldOpenExternalURLs(navigationAction.shouldOpenExternalURLsPolicy() == ShouldOpenExternalURLsPolicy::ShouldAllow || navigationAction.shouldOpenExternalURLsPolicy() == ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemes)
+    , m_shouldOpenExternalURLs(navigationAction.shouldOpenExternalURLsPolicy() == ShouldOpenExternalURLsPolicy::ShouldAllow || navigationAction.shouldOpenExternalURLsPolicy() == ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks)
     , m_shouldTryAppLinks(navigationAction.shouldOpenExternalURLsPolicy() == ShouldOpenExternalURLsPolicy::ShouldAllow)
 {
     if (auto mouseEventData = navigationAction.mouseEventData()) {
-        m_hitTestResult = InjectedBundleHitTestResult::create(frame->coreFrame()->eventHandler().hitTestResultAtPoint(mouseEventData->absoluteLocation, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowUserAgentShadowContent | HitTestRequest::AllowChildFrameContent));
+        constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::AllowChildFrameContent };
+        m_hitTestResult = InjectedBundleHitTestResult::create(frame->coreFrame()->eventHandler().hitTestResultAtPoint(mouseEventData->absoluteLocation, hitType));
         m_mouseButton = mouseButtonForMouseEventData(mouseEventData);
         m_syntheticClickType = syntheticClickTypeForNavigationAction(navigationAction);
         m_clickLocationInRootViewCoordinates = clickLocationInRootViewCoordinatesForNavigationAction(navigationAction);

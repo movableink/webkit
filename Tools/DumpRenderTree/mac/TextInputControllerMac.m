@@ -34,23 +34,15 @@
 #import "DumpRenderTreeMac.h"
 #import <AppKit/NSInputManager.h>
 #import <AppKit/NSTextAlternatives.h>
-
-#define SUPPORT_INSERTION_UNDO_GROUPING
-#if __has_include(<AppKit/NSTextInputContext_Private.h>)
-#import <AppKit/NSTextInputContext_Private.h>
-#else
-NSString *NSTextInsertionUndoableAttributeName;
-#endif
-
 #import <WebKit/WebDocument.h>
 #import <WebKit/WebFrame.h>
 #import <WebKit/WebFramePrivate.h>
 #import <WebKit/WebFrameView.h>
 #import <WebKit/WebHTMLViewPrivate.h>
 #import <WebKit/WebScriptObject.h>
-#import <WebKit/WebTypesInternal.h>
 #import <WebKit/WebView.h>
 #import <WebKit/WebViewPrivate.h>
+#import <pal/spi/mac/NSTextInputContextSPI.h>
 
 @interface TextInputController (DumpRenderTreeInputMethodHandler)
 - (BOOL)interpretKeyEvents:(NSArray *)eventArray withSender:(WebHTMLView *)sender;
@@ -224,7 +216,7 @@ NSString *NSTextInsertionUndoableAttributeName;
 {
     if (aSelector == @selector(insertText:)
         || aSelector == @selector(doCommand:)
-        || aSelector == @selector(setMarkedText:selectedFrom:length:suppressUnderline:)
+        || aSelector == @selector(setMarkedText:selectedFrom:length:suppressUnderline:highlights:)
         || aSelector == @selector(unmarkText)
         || aSelector == @selector(hasMarkedText)
         || aSelector == @selector(conversationIdentifier)
@@ -251,7 +243,7 @@ NSString *NSTextInsertionUndoableAttributeName;
         return @"insertText";
     if (aSelector == @selector(doCommand:))
         return @"doCommand";
-    if (aSelector == @selector(setMarkedText:selectedFrom:length:suppressUnderline:))
+    if (aSelector == @selector(setMarkedText:selectedFrom:length:suppressUnderline:highlights:))
         return @"setMarkedText";
     if (aSelector == @selector(substringFrom:length:))
         return @"substringFromRange";
@@ -292,9 +284,14 @@ NSString *NSTextInsertionUndoableAttributeName;
     [super dealloc];
 }
 
+- (WebFrame *)selectedOrMainFrame
+{
+    return webView.selectedFrame ?: webView.mainFrame;
+}
+
 - (NSObject <NSTextInput> *)textInput
 {
-    NSView <NSTextInput> *view = inputMethodView ? inputMethodView : (id)[[[webView mainFrame] frameView] documentView];
+    NSView <NSTextInput> *view = inputMethodView ?: (id)self.selectedOrMainFrame.frameView.documentView;
     return [view conformsToProtocol:@protocol(NSTextInput)] ? view : nil;
 }
 
@@ -314,7 +311,7 @@ NSString *NSTextInsertionUndoableAttributeName;
         [textInput doCommandBySelector:NSSelectorFromString(aCommand)];
 }
 
-- (void)setMarkedText:(NSString *)aString selectedFrom:(int)from length:(int)length suppressUnderline:(BOOL)suppressUnderline
+- (void)setMarkedText:(NSString *)aString selectedFrom:(int)from length:(int)length suppressUnderline:(BOOL)suppressUnderline highlights:(NSArray<NSDictionary *> *)highlights
 {
     NSObject <NSTextInput> *textInput = [self textInput];
 
@@ -387,7 +384,7 @@ NSString *NSTextInsertionUndoableAttributeName;
 
     if (textInput) {
         NSRange range = [textInput markedRange];
-        return [NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:range.location], [NSNumber numberWithUnsignedInt:range.length], nil];
+        return @[@(range.location), @(range.length)];
     }
 
     return nil;
@@ -399,7 +396,7 @@ NSString *NSTextInsertionUndoableAttributeName;
 
     if (textInput) {
         NSRange range = [textInput selectedRange];
-        return [NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:range.location], [NSNumber numberWithUnsignedInt:range.length], nil];
+        return @[@(range.location), @(range.length)];
     }
 
     return nil;
@@ -415,12 +412,7 @@ NSString *NSTextInsertionUndoableAttributeName;
             rect.origin = [[webView window] convertScreenToBase:rect.origin];
             rect = [webView convertRect:rect fromView:nil];
         }
-        return [NSArray arrayWithObjects:
-            [NSNumber numberWithFloat:rect.origin.x],
-            [NSNumber numberWithFloat:rect.origin.y],
-            [NSNumber numberWithFloat:rect.size.width],
-            [NSNumber numberWithFloat:rect.size.height],
-            nil];
+        return @[ @(rect.origin.x), @(rect.origin.y), @(rect.size.width), @(rect.size.height) ];
     }
 
     return nil;
@@ -460,20 +452,16 @@ NSString *NSTextInsertionUndoableAttributeName;
     return [[[NSMutableAttributedString alloc] initWithString:@" " attributes:[webView typingAttributes]] autorelease];
 }
 
-- (NSMutableAttributedString *)attributedStringWithString:(NSString *)aString
+- (NSMutableAttributedString *)attributedStringWithString:(NSString *)string
 {
-    return [[[NSMutableAttributedString alloc] initWithString:aString] autorelease];
+    return [[[NSMutableAttributedString alloc] initWithString:string] autorelease];
 }
 
-- (NSMutableAttributedString*)stringWithUndoGroupingInsertion:(NSString*)aString
+- (NSMutableAttributedString *)stringWithUndoGroupingInsertion:(NSString *)string
 {
-#if defined(SUPPORT_INSERTION_UNDO_GROUPING)
-    NSMutableAttributedString* attributedString = [self dictatedStringWithPrimaryString:aString alternative:@"test" alternativeOffset:0 alternativeLength:1];
+    NSMutableAttributedString* attributedString = [self dictatedStringWithPrimaryString:string alternative:@"test" alternativeOffset:0 alternativeLength:1];
     [attributedString addAttribute:NSTextInsertionUndoableAttributeName value:@YES range:NSMakeRange(0, [attributedString length])];
     return attributedString;
-#else
-    return nil;
-#endif
 }
 
 - (NSMutableAttributedString*)dictatedStringWithPrimaryString:(NSString*)aString alternative:(NSString*)alternative alternativeOffset:(int)offset alternativeLength:(int)length
@@ -484,7 +472,7 @@ NSString *NSTextInsertionUndoableAttributeName;
     if (!subStringWithAlternative)
         return nil;
 
-    NSTextAlternatives* alternativeObject = [[[NSTextAlternatives alloc] initWithPrimaryString:subStringWithAlternative alternativeStrings:[NSArray arrayWithObject:alternative]] autorelease];
+    NSTextAlternatives* alternativeObject = [[[NSTextAlternatives alloc] initWithPrimaryString:subStringWithAlternative alternativeStrings:@[alternative]] autorelease];
     if (!alternativeObject)
         return nil;
 
@@ -538,7 +526,7 @@ NSString *NSTextInsertionUndoableAttributeName;
 
     [modifiers release];
     
-    id result = [inputMethodHandler callWebScriptMethod:@"call" withArguments:[NSArray arrayWithObjects:inputMethodHandler, eventParam, nil]];
+    id result = [inputMethodHandler callWebScriptMethod:@"call" withArguments:@[inputMethodHandler, eventParam]];
     if (![result respondsToSelector:@selector(boolValue)] || ![result boolValue]) {
         IGNORE_WARNINGS_BEGIN("undeclared-selector")
         [sender doCommandBySelector:@selector(noop:)]; // AppKit sends noop: if the ime does not handle an event

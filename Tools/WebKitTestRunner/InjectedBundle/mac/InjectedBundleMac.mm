@@ -52,8 +52,8 @@ void InjectedBundle::platformInitialize(WKTypeRef initializationUserData)
         @"AppleAquaColorVariant": @(BlueTintedAppearance),
         @"AppleHighlightColor": @"0.709800 0.835300 1.000000",
         @"AppleOtherHighlightColor": @"0.500000 0.500000 0.500000",
-        @"NSScrollAnimationEnabled": @NO,
         @"NSOverlayScrollersEnabled": @NO,
+        @"NSScrollAnimationEnabled" : @NO,
         @"AppleShowScrollBars": @"Always",
         @"NSButtonAnimationsEnabled": @NO, // Ideally, we should find a way to test animations, but for now, make sure that the dumped snapshot matches actual state.
         // FIXME (<rdar://problem/13396515>): It is too late to set AppleLanguages here, as loaded frameworks localizations cannot be changed.
@@ -74,6 +74,9 @@ void InjectedBundle::platformInitialize(WKTypeRef initializationUserData)
     };
 
     [[NSUserDefaults standardUserDefaults] setVolatileDomain:dict forName:NSArgumentDomain];
+    
+    // For testing in engineering builds, allow CoreMedia to load the MediaFormatReader bundle no matter its code signature.
+    CFPreferencesSetAppValue(CFSTR("pluginformatreader_unsigned"), kCFBooleanTrue, CFSTR("com.apple.coremedia"));
 
     // Underlying frameworks have already read AppleAntiAliasingThreshold default before we changed it.
     // A distributed notification is delivered to all applications, but it should be harmless, and it's the only way to update all underlying frameworks anyway.

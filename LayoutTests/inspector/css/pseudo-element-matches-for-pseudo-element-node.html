@@ -17,8 +17,7 @@ function test() {
         InspectorTest.expectThat(nodeStyles.computedStyle, "Has Computed Styles");
 
         function logProperty(propertyName) {
-            const dontCreateIfMissing = true;
-            let property = nodeStyles.computedStyle.propertyForName(propertyName, dontCreateIfMissing);
+            let property = nodeStyles.computedStyle.propertyForName(propertyName);
             InspectorTest.log(`PROPERTY: ${property.name}: ${property.value};`);
         }
 
@@ -38,7 +37,7 @@ function test() {
     }
 
     WI.domManager.requestDocument(function(documentNode) {
-        WI.domManager.querySelector(documentNode.id, "#x", function(contentNodeId) {
+        documentNode.querySelector("#x", function(contentNodeId) {
             var domNode = WI.domManager.nodeForId(contentNodeId);
             InspectorTest.assert(domNode);
             var beforePseudoElementDOMNode = domNode.beforePseudoElement();

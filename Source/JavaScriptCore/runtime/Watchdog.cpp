@@ -26,9 +26,8 @@
 #include "config.h"
 #include "Watchdog.h"
 
-#include "CallFrame.h"
+#include "VM.h"
 #include <wtf/CPUTime.h>
-#include <wtf/MathExtras.h>
 
 namespace JSC {
 
@@ -37,10 +36,10 @@ Watchdog::Watchdog(VM* vm)
     , m_timeLimit(noTimeLimit)
     , m_cpuDeadline(noTimeLimit)
     , m_deadline(MonotonicTime::infinity())
-    , m_callback(0)
-    , m_callbackData1(0)
-    , m_callbackData2(0)
-    , m_timerQueue(WorkQueue::create("jsc.watchdog.queue", WorkQueue::Type::Serial, WorkQueue::QOS::Utility))
+    , m_callback(nullptr)
+    , m_callbackData1(nullptr)
+    , m_callbackData2(nullptr)
+    , m_timerQueue(WorkQueue::create("jsc.watchdog.queue", WorkQueue::QOS::Utility))
 {
 }
 
@@ -58,7 +57,7 @@ void Watchdog::setTimeLimit(Seconds limit,
         startTimer(m_timeLimit);
 }
 
-bool Watchdog::shouldTerminate(ExecState* exec)
+bool Watchdog::shouldTerminate(JSGlobalObject* globalObject)
 {
     ASSERT(m_vm->currentThreadIsHoldingAPILock());
     if (MonotonicTime::now() < m_deadline)
@@ -81,7 +80,7 @@ bool Watchdog::shouldTerminate(ExecState* exec)
     // If m_callback is not set, then we terminate by default.
     // Else, we let m_callback decide if we should terminate or not.
     bool needsTermination = !m_callback
-        || m_callback(exec, m_callbackData1, m_callbackData2);
+        || m_callback(globalObject, m_callbackData1, m_callbackData2);
     if (needsTermination)
         return true;
 
@@ -145,7 +144,7 @@ void Watchdog::startTimer(Seconds timeLimit)
     // via willDestroyVM() before it goes away.
     RefPtr<Watchdog> protectedThis = this;
     m_timerQueue->dispatchAfter(timeLimit, [this, protectedThis] {
-        LockHolder locker(m_lock);
+        Locker locker { m_lock };
         if (m_vm)
             m_vm->notifyNeedWatchdogCheck();
     });
@@ -160,7 +159,7 @@ void Watchdog::stopTimer()
 
 void Watchdog::willDestroyVM(VM* vm)
 {
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
     ASSERT_UNUSED(vm, m_vm == vm);
     m_vm = nullptr;
 }

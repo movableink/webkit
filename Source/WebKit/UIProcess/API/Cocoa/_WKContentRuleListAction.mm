@@ -26,10 +26,16 @@
 #import "config.h"
 #import "_WKContentRuleListActionInternal.h"
 
+#import <WebCore/WebCoreObjCExtras.h>
+#import <wtf/cocoa/VectorCocoa.h>
+
 @implementation _WKContentRuleListAction
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(_WKContentRuleListAction.class, self))
+        return;
+
     _action->~ContentRuleListAction();
     
     [super dealloc];
@@ -37,29 +43,59 @@
 
 - (BOOL)blockedLoad
 {
+#if ENABLE(CONTENT_EXTENSIONS)
     return _action->blockedLoad();
+#else
+    return NO;
+#endif
 }
 
 - (BOOL)blockedCookies
 {
+#if ENABLE(CONTENT_EXTENSIONS)
     return _action->blockedCookies();
+#else
+    return NO;
+#endif
 }
 
 - (BOOL)madeHTTPS
 {
+#if ENABLE(CONTENT_EXTENSIONS)
     return _action->madeHTTPS();
+#else
+    return NO;
+#endif
+}
+
+- (BOOL)redirected
+{
+#if ENABLE(CONTENT_EXTENSIONS)
+    return _action->redirected();
+#else
+    return NO;
+#endif
+}
+
+- (BOOL)modifiedHeaders
+{
+#if ENABLE(CONTENT_EXTENSIONS)
+    return _action->modifiedHeaders();
+#else
+    return NO;
+#endif
 }
 
 - (NSArray<NSString *> *)notifications
 {
-    const auto& vector = _action->notifications();
+#if ENABLE(CONTENT_EXTENSIONS)
+    auto& vector = _action->notifications();
     if (vector.isEmpty())
         return nil;
-
-    NSMutableArray<NSString *> *array = [[[NSMutableArray alloc] initWithCapacity:vector.size()] autorelease];
-    for (const auto& notification : vector)
-        [array addObject:notification];
-    return array;
+    return createNSArray(vector).autorelease();
+#else
+    return nil;
+#endif
 }
 
 - (API::Object&)_apiObject

@@ -14,8 +14,9 @@ Property values requiring vendor prefixes:
 None
 ------------------------------------------------------------------------
 List of files:
+/LayoutTests/imported/w3c/web-platform-tests/tools/lint/tests/dummy/about_blank.html
 /LayoutTests/imported/w3c/web-platform-tests/tools/lint/tests/dummy/broken.html
 /LayoutTests/imported/w3c/web-platform-tests/tools/lint/tests/dummy/broken_ignored.html
 /LayoutTests/imported/w3c/web-platform-tests/tools/lint/tests/dummy/dependency.html
-/LayoutTests/imported/w3c/web-platform-tests/tools/lint/tests/dummy/lint.whitelist
+/LayoutTests/imported/w3c/web-platform-tests/tools/lint/tests/dummy/lint.ignore
 /LayoutTests/imported/w3c/web-platform-tests/tools/lint/tests/dummy/okay.html

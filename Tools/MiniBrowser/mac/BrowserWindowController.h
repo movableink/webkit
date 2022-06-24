@@ -28,6 +28,7 @@
 @interface BrowserWindowController : NSWindowController {
     IBOutlet NSProgressIndicator *progressIndicator;
     IBOutlet NSButton *reloadButton;
+    IBOutlet NSButton *lockButton;
     IBOutlet NSButton *backButton;
     IBOutlet NSButton *forwardButton;
     IBOutlet NSButton *share;
@@ -47,16 +48,19 @@
 - (IBAction)openLocation:(id)sender;
 
 - (IBAction)saveAsPDF:(id)sender;
+- (IBAction)saveAsWebArchive:(id)sender;
 
 - (IBAction)fetch:(id)sender;
 - (IBAction)share:(id)sender;
 - (IBAction)reload:(id)sender;
+- (IBAction)showCertificate:(id)sender;
 - (IBAction)forceRepaint:(id)sender;
 - (IBAction)goBack:(id)sender;
 - (IBAction)goForward:(id)sender;
 
 - (IBAction)showHideWebView:(id)sender;
 - (IBAction)removeReinsertWebView:(id)sender;
+- (IBAction)toggleFullWindowWebView:(id)sender;
 
 - (IBAction)zoomIn:(id)sender;
 - (IBAction)zoomOut:(id)sender;
@@ -77,6 +81,8 @@
 - (IBAction)showHideWebInspector:(id)sender;
 
 - (void)didChangeSettings;
+- (BOOL)webViewFillsWindow;
+- (void)setWebViewFillsWindow:(BOOL)fillWindow;
 
 - (NSURL *)currentURL;
 - (NSView *)mainContentView;

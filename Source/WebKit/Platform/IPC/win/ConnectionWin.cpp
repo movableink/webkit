@@ -26,6 +26,7 @@
 #include "config.h"
 #include "Connection.h"
 
+#include "ArgumentCoder.h"
 #include "DataReference.h"
 #include <wtf/HexNumber.h>
 #include <wtf/RandomNumber.h>
@@ -139,8 +140,10 @@ void Connection::readEventHandler()
 
         if (!m_readBuffer.isEmpty()) {
             // We have a message, let's dispatch it.
-            Vector<Attachment> attachments(0);
-            auto decoder = makeUnique<Decoder>(m_readBuffer.data(), m_readBuffer.size(), nullptr, WTFMove(attachments));
+            auto decoder = Decoder::create(m_readBuffer.data(), m_readBuffer.size(), { });
+            ASSERT(decoder);
+            if (!decoder)
+                return;
             processIncomingMessage(WTFMove(decoder));
         }
 
@@ -230,14 +233,14 @@ void Connection::writeEventHandler()
 
 void Connection::invokeReadEventHandler()
 {
-    m_connectionQueue->dispatch([this, protectedThis = makeRef(*this)] {
+    m_connectionQueue->dispatch([this, protectedThis = Ref { *this }] {
         readEventHandler();
     });
 }
 
 void Connection::invokeWriteEventHandler()
 {
-    m_connectionQueue->dispatch([this, protectedThis = makeRef(*this)] {
+    m_connectionQueue->dispatch([this, protectedThis = Ref { *this }] {
         writeEventHandler();
     });
 }
@@ -269,7 +272,7 @@ bool Connection::platformCanSendOutgoingMessages() const
     return !m_pendingWriteEncoder;
 }
 
-bool Connection::sendOutgoingMessage(std::unique_ptr<Encoder> encoder)
+bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
 {
     ASSERT(!m_pendingWriteEncoder);
 
@@ -278,7 +281,7 @@ bool Connection::sendOutgoingMessage(std::unique_ptr<Encoder> encoder)
         return false;
 
     // We put the message ID last.
-    *encoder << 0;
+    encoder.get() << 0;
 
     // Write the outgoing message.
 
@@ -302,7 +305,7 @@ bool Connection::sendOutgoingMessage(std::unique_ptr<Encoder> encoder)
 
     // The message will be sent soon. Hold onto the encoder so that it won't be destroyed
     // before the write completes.
-    m_pendingWriteEncoder = WTFMove(encoder);
+    m_pendingWriteEncoder = encoder.moveToUniquePtr();
 
     // We can only send one asynchronous message at a time (see comment in platformCanSendOutgoingMessages).
     return false;

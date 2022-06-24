@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,9 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WKFoundation.h>
-
 #import <Foundation/Foundation.h>
+#import <WebKit/WKFoundation.h>
 
 /*! @enum WKContentMode
  @abstract A content mode represents the type of content to load, as well as
@@ -41,13 +40,13 @@ typedef NS_ENUM(NSInteger, WKContentMode) {
     WKContentModeRecommended,
     WKContentModeMobile,
     WKContentModeDesktop
-} WK_API_AVAILABLE(ios(WK_IOS_TBA));
+} WK_API_AVAILABLE(ios(13.0));
 
 /*! A WKWebpagePreferences object is a collection of properties that
  determine the preferences to use when loading and rendering a page.
  @discussion Contains properties used to determine webpage preferences.
  */
-WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
+WK_CLASS_AVAILABLE(macos(10.15), ios(13.0))
 @interface WKWebpagePreferences : NSObject
 
 /*! @abstract A WKContentMode indicating the content mode to prefer
@@ -55,6 +54,25 @@ WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
  @discussion The default value is WKContentModeRecommended. The stated
  preference is ignored on subframe navigation
  */
-@property (nonatomic) WKContentMode preferredContentMode WK_API_AVAILABLE(ios(WK_IOS_TBA));
+@property (nonatomic) WKContentMode preferredContentMode WK_API_AVAILABLE(ios(13.0));
+
+/* @abstract A Boolean value indicating whether JavaScript from web content is enabled
+ @discussion If this value is set to NO then JavaScript referenced by the web content will not execute.
+ This includes JavaScript found in inline <script> elements, referenced by external JavaScript resources,
+ "javascript:" URLs, and all other forms.
+
+ Even if this value is set to NO your application can still execute JavaScript using:
+ - [WKWebView evaluteJavaScript:completionHandler:]
+ - [WKWebView evaluteJavaScript:inContentWorld:completionHandler:]
+ - [WKWebView callAsyncJavaScript:arguments:inContentWorld:completionHandler:]
+ - WKUserScripts
+
+ The default value is YES.
+*/
+@property (nonatomic) BOOL allowsContentJavaScript WK_API_AVAILABLE(macos(11.0), ios(14.0));
+
+#if 0 // API_WEBKIT_ADDITIONS_REPLACEMENT
+#import <WebKitAdditions/WKWebpagePreferencesAdditions.h>
+#endif
 
 @end

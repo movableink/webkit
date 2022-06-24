@@ -11,10 +11,13 @@
 #ifndef MODULES_AUDIO_CODING_CODECS_G711_AUDIO_ENCODER_PCM_H_
 #define MODULES_AUDIO_CODING_CODECS_G711_AUDIO_ENCODER_PCM_H_
 
+#include <utility>
 #include <vector>
 
+#include "absl/types/optional.h"
 #include "api/audio_codecs/audio_encoder.h"
-#include "rtc_base/constructormagic.h"
+#include "api/units/time_delta.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 
@@ -41,6 +44,8 @@ class AudioEncoderPcm : public AudioEncoder {
   size_t Max10MsFramesInAPacket() const override;
   int GetTargetBitrate() const override;
   void Reset() override;
+  absl::optional<std::pair<TimeDelta, TimeDelta>> GetFrameLengthRange()
+      const override;
 
  protected:
   AudioEncoderPcm(const Config& config, int sample_rate_hz);
@@ -69,8 +74,6 @@ class AudioEncoderPcm : public AudioEncoder {
   uint32_t first_timestamp_in_buffer_;
 };
 
-struct CodecInst;
-
 class AudioEncoderPcmA final : public AudioEncoderPcm {
  public:
   struct Config : public AudioEncoderPcm::Config {
@@ -79,7 +82,6 @@ class AudioEncoderPcmA final : public AudioEncoderPcm {
 
   explicit AudioEncoderPcmA(const Config& config)
       : AudioEncoderPcm(config, kSampleRateHz) {}
-  explicit AudioEncoderPcmA(const CodecInst& codec_inst);
 
  protected:
   size_t EncodeCall(const int16_t* audio,
@@ -103,7 +105,6 @@ class AudioEncoderPcmU final : public AudioEncoderPcm {
 
   explicit AudioEncoderPcmU(const Config& config)
       : AudioEncoderPcm(config, kSampleRateHz) {}
-  explicit AudioEncoderPcmU(const CodecInst& codec_inst);
 
  protected:
   size_t EncodeCall(const int16_t* audio,

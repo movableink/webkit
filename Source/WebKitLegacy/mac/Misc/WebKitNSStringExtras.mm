@@ -30,7 +30,7 @@
 
 #import <WebCore/ColorMac.h>
 #import <WebCore/FontCascade.h>
-#import <WebCore/GraphicsContext.h>
+#import <WebCore/GraphicsContextCG.h>
 #import <WebCore/LoaderNSURLExtras.h>
 #import <WebCore/TextRun.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
@@ -69,7 +69,7 @@ static bool canUseFastRenderer(const UniChar* buffer, unsigned length)
 
     if (canUseFastRenderer(buffer.data(), length)) {
         FontCascade webCoreFont(FontPlatformData((__bridge CTFontRef)font, [font pointSize]));
-        TextRun run(StringView(buffer.data(), length));
+        TextRun run(StringView(reinterpret_cast<const UChar*>(buffer.data()), length));
 
         // The following is a half-assed attempt to match AppKit's rounding rules for drawAtPoint.
         // If you change it, be sure to test all the text drawn this way in Safari, including
@@ -77,17 +77,15 @@ static bool canUseFastRenderer(const UniChar* buffer, unsigned length)
         point.y = CGCeiling(point.y);
 
         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        CGContextRef cgContext = static_cast<CGContextRef>([nsContext graphicsPort]);
-        ALLOW_DEPRECATED_DECLARATIONS_END
-        GraphicsContext graphicsContext { cgContext };
+        CGContextRef cgContext = [nsContext CGContext];
+        GraphicsContextCG graphicsContext { cgContext };
 
         // WebCore requires a flipped graphics context.
         bool flipped = [nsContext isFlipped];
         if (!flipped)
             CGContextScaleCTM(cgContext, 1, -1);
 
-        graphicsContext.setFillColor(colorFromNSColor(textColor));
+        graphicsContext.setFillColor(colorFromCocoaColor(textColor));
         webCoreFont.drawText(graphicsContext, run, FloatPoint(point.x, flipped ? point.y : -point.y));
 
         if (!flipped)
@@ -99,7 +97,7 @@ static bool canUseFastRenderer(const UniChar* buffer, unsigned length)
         else
             point.y += [font descender];
 
-        [self drawAtPoint:point withAttributes:[NSDictionary dictionaryWithObjectsAndKeys:font, NSFontAttributeName, textColor, NSForegroundColorAttributeName, nil]];
+        [self drawAtPoint:point withAttributes:@{ NSFontAttributeName: font, NSForegroundColorAttributeName: textColor }];
     }
 }
 
@@ -111,11 +109,11 @@ static bool canUseFastRenderer(const UniChar* buffer, unsigned length)
 
     if (canUseFastRenderer(buffer.data(), length)) {
         FontCascade webCoreFont(FontPlatformData((__bridge CTFontRef)font, [font pointSize]));
-        TextRun run(StringView(buffer.data(), length));
+        TextRun run(StringView(reinterpret_cast<const UChar*>(buffer.data()), length));
         return webCoreFont.width(run);
     }
 
-    return [self sizeWithAttributes:[NSDictionary dictionaryWithObjectsAndKeys:font, NSFontAttributeName, nil]].width;
+    return [self sizeWithAttributes:@{ NSFontAttributeName: font }].width;
 }
 
 #endif // PLATFORM(MAC)
@@ -160,9 +158,9 @@ static bool canUseFastRenderer(const UniChar* buffer, unsigned length)
 
 -(NSString *)_webkit_stringByTrimmingWhitespace
 {
-    NSMutableString *trimmed = [[self mutableCopy] autorelease];
-    CFStringTrimWhitespace((__bridge CFMutableStringRef)trimmed);
-    return trimmed;
+    auto trimmed = adoptNS([self mutableCopy]);
+    CFStringTrimWhitespace((__bridge CFMutableStringRef)trimmed.get());
+    return trimmed.autorelease();
 }
 
 #if PLATFORM(MAC)

@@ -39,6 +39,7 @@
 - (NSURLRequest *)safeRequestForRequest:(NSURLRequest *)request;
 - (id)initWithConnection:(NSURLConnection *)connection delegate:(id)delegate response:(NSURLResponse *)response options:(NSDictionary *)options;
 - (id)initWithData:(NSData *)data name:(NSString *)name uti:(NSString *)uti options:(NSDictionary *)options;
+- (void)appendData:(NSData *)data;
 - (void)appendDataArray:(NSArray *)dataArray;
 - (void)finishConverting;
 - (void)finishedAppendingData;
@@ -59,9 +60,24 @@
 - (instancetype)initWithPreviewItemProvider:(NSItemProvider *)itemProvider contentType:(NSString *)contentType previewTitle:(NSString *)previewTitle fileSize:(NSNumber *)fileSize;
 - (void)setPreviewItemProviderProgress:(NSNumber*)progress;
 - (void)setUseLoadingTimeout:(BOOL) timeout;
+@property (nonatomic, copy) NSDictionary *previewOptions;
 @end
 
 #define kQLReturnPasswordProtected 1 << 2
+
+typedef NS_OPTIONS(NSUInteger, QLPreviewControllerFirstTimeAppearanceActions) {
+    QLPreviewControllerFirstTimeAppearanceActionNone = 0,
+    QLPreviewControllerFirstTimeAppearanceActionPlayAudio = 1 << 0,
+    QLPreviewControllerFirstTimeAppearanceActionPlayVideo = 1 << 1,
+    QLPreviewControllerFirstTimeAppearanceActionEnableEditMode = 1 << 2,
+    QLPreviewControllerFirstTimeAppearanceActionEnableVisualSearchDataDetection = 1 << 3,
+    QLPreviewControllerFirstTimeAppearanceActionEnableVisualSearchMode = 1 << 4,
+    QLPreviewControllerFirstTimeAppearanceActionAll = NSUIntegerMax,
+};
+
+@interface QLPreviewController ()
+@property (nonatomic, assign) QLPreviewControllerFirstTimeAppearanceActions appearanceActions;
+@end
 
 #endif
 

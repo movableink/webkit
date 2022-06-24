@@ -28,10 +28,12 @@
 #import "DragAndDropSimulator.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
+#import "TestUIDelegate.h"
 #import "TestWKWebView.h"
 #import <WebKit/WKDragDestinationAction.h>
 #import <WebKit/WKNavigationPrivate.h>
 #import <WebKit/WKWebView.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/text/WTFString.h>
@@ -201,6 +203,52 @@ TEST(LoadWebArchive, DragNavigationReload)
     [webView reload];
     Util::run(&navigationComplete);
     EXPECT_WK_STREQ(finalURL, "");
+}
+
+static NSData* constructArchive()
+{
+    NSString *js = @"alert('loaded http subresource successfully')";
+    auto response = adoptNS([[NSURLResponse alloc] initWithURL:[NSURL URLWithString:@"http://download/script.js"] MIMEType:@"application/javascript" expectedContentLength:js.length textEncodingName:@"utf-8"]);
+    auto responseArchiver = adoptNS([[NSKeyedArchiver alloc] initRequiringSecureCoding:YES]);
+    [responseArchiver encodeObject:response.get() forKey:@"WebResourceResponse"];
+    NSDictionary *archive = @{
+        @"WebMainResource": @{
+            @"WebResourceData": [@"<script src='script.js'></script>" dataUsingEncoding:NSUTF8StringEncoding],
+            @"WebResourceFrameName": @"",
+            @"WebResourceMIMEType": @"text/html",
+            @"WebResourceTextEncodingName": @"UTF-8",
+            @"WebResourceURL": @"http://download/",
+        },
+        @"WebSubresources": @[@{
+            @"WebResourceData": [js dataUsingEncoding:NSUTF8StringEncoding],
+            @"WebResourceMIMEType": @"application/javascript",
+            @"WebResourceResponse": responseArchiver.get().encodedData,
+            @"WebResourceTextEncodingName": @"utf-8",
+            @"WebResourceURL": @"http://download/script.js",
+        }]
+    };
+    return [NSPropertyListSerialization dataFromPropertyList:archive format:NSPropertyListBinaryFormat_v1_0 errorDescription:nil];
+}
+
+TEST(LoadWebArchive, HTTPSUpgrade)
+{
+    NSData *data = constructArchive();
+
+    auto webView = adoptNS([WKWebView new]);
+    [webView loadData:data MIMEType:@"application/x-webarchive" characterEncodingName:@"utf-8" baseURL:[NSURL URLWithString:@"http://download/"]];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "loaded http subresource successfully");
+}
+
+TEST(LoadWebArchive, DisallowedNetworkHosts)
+{
+    NSData *data = constructArchive();
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    configuration.get()._allowedNetworkHosts = [NSSet set];
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView loadData:data MIMEType:@"application/x-webarchive" characterEncodingName:@"utf-8" baseURL:[NSURL URLWithString:@"http://download/"]];
+    EXPECT_WK_STREQ([webView _test_waitForAlert], "loaded http subresource successfully");
 }
 
 } // namespace TestWebKitAPI

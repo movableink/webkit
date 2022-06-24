@@ -83,6 +83,7 @@ typedef void (GLAPIENTRY *glDisableVertexAttribArrayType) (GLuint);
 typedef void (GLAPIENTRY *glDrawArraysInstancedType) (GLenum, GLint, GLsizei, GLsizei);
 typedef void (GLAPIENTRY *glDrawBuffersType) (GLsizei, const GLenum*);
 typedef void (GLAPIENTRY *glDrawElementsInstancedType) (GLenum, GLsizei, GLenum, const GLvoid*, GLsizei);
+typedef void (GLAPIENTRY *glEGLImageTargetTexture2DOESType) (GLenum target, GLeglImageOES);
 typedef void (GLAPIENTRY *glEnableVertexAttribArrayType) (GLuint);
 typedef void (GLAPIENTRY *glFramebufferRenderbufferType) (GLenum, GLenum, GLenum, GLuint);
 typedef void (GLAPIENTRY *glFramebufferTexture2DType) (GLenum, GLenum, GLenum, GLuint, GLint);
@@ -103,6 +104,7 @@ typedef void (GLAPIENTRY *glGetRenderbufferParameterivType) (GLenum, GLenum, GLi
 typedef void (GLAPIENTRY *glGetShaderInfoLogType) (GLuint, GLsizei, GLsizei*, char*);
 typedef void (GLAPIENTRY *glGetShaderivType) (GLuint, GLenum, GLint*);
 typedef void (GLAPIENTRY *glGetShaderSourceType) (GLuint, GLsizei, GLsizei*, char*);
+typedef const GLubyte* (GLAPIENTRY *glGetStringType) (GLenum);
 typedef const GLubyte* (GLAPIENTRY *glGetStringiType) (GLenum, GLuint);
 typedef GLint (GLAPIENTRY *glGetUniformLocationType) (GLuint, const char*);
 typedef void (GLAPIENTRY *glGetUniformfvType) (GLuint, GLint, GLfloat*);
@@ -190,6 +192,7 @@ typedef struct _OpenGLFunctionTable {
     FUNCTION_TABLE_ENTRY(glDrawArraysInstanced);
     FUNCTION_TABLE_ENTRY(glDrawBuffers);
     FUNCTION_TABLE_ENTRY(glDrawElementsInstanced);
+    FUNCTION_TABLE_ENTRY(glEGLImageTargetTexture2DOES);
     FUNCTION_TABLE_ENTRY(glEnableVertexAttribArray);
     FUNCTION_TABLE_ENTRY(glFramebufferRenderbuffer);
     FUNCTION_TABLE_ENTRY(glFramebufferTexture2D);
@@ -210,6 +213,7 @@ typedef struct _OpenGLFunctionTable {
     FUNCTION_TABLE_ENTRY(glGetShaderInfoLog);
     FUNCTION_TABLE_ENTRY(glGetShaderiv);
     FUNCTION_TABLE_ENTRY(glGetShaderSource);
+    FUNCTION_TABLE_ENTRY(glGetString);
     FUNCTION_TABLE_ENTRY(glGetStringi);
     FUNCTION_TABLE_ENTRY(glGetUniformfv);
     FUNCTION_TABLE_ENTRY(glGetUniformiv);
@@ -309,6 +313,7 @@ typedef struct _OpenGLFunctionTable {
 #define glDrawBuffers                          LOOKUP_GL_FUNCTION(glDrawBuffers)
 #define glDrawElementsInstancedEXT             glDrawElementsInstanced
 #define glDrawElementsInstanced                LOOKUP_GL_FUNCTION(glDrawElementsInstanced)
+#define glEGLImageTargetTexture2DOES           LOOKUP_GL_FUNCTION(glEGLImageTargetTexture2DOES)
 #define glEnableVertexAttribArray              LOOKUP_GL_FUNCTION(glEnableVertexAttribArray)
 #define glFramebufferRenderbufferEXT           glFramebufferRenderbuffer
 #define glFramebufferRenderbuffer              LOOKUP_GL_FUNCTION(glFramebufferRenderbuffer)
@@ -338,6 +343,7 @@ typedef struct _OpenGLFunctionTable {
 #define glGetShaderInfoLog                     LOOKUP_GL_FUNCTION(glGetShaderInfoLog)
 #define glGetShaderiv                          LOOKUP_GL_FUNCTION(glGetShaderiv)
 #define glGetShaderSource                      LOOKUP_GL_FUNCTION(glGetShaderSource)
+#define glGetString                            LOOKUP_GL_FUNCTION(glGetString)
 #define glGetStringi                           LOOKUP_GL_FUNCTION(glGetStringi)
 #define glGetUniformfv                         LOOKUP_GL_FUNCTION(glGetUniformfv)
 #define glGetUniformiv                         LOOKUP_GL_FUNCTION(glGetUniformiv)

@@ -25,12 +25,12 @@
 
 #import "config.h"
 #import "MenuUtilities.h"
+#import <pal/cocoa/RevealSoftLink.h>
 
 #if PLATFORM(MAC)
 
 #import "StringUtilities.h"
 #import <WebCore/LocalizedStrings.h>
-#import <pal/spi/mac/DataDetectorsSPI.h>
 
 #if ENABLE(TELEPHONE_NUMBER_DETECTION)
 #import <pal/spi/mac/TelephonyUtilitiesSPI.h>
@@ -39,6 +39,43 @@
 SOFT_LINK_PRIVATE_FRAMEWORK_OPTIONAL(TelephonyUtilities)
 SOFT_LINK_CLASS(TelephonyUtilities, TUCall)
 #endif
+
+#import <pal/cocoa/DataDetectorsCoreSoftLink.h>
+#import <pal/mac/DataDetectorsSoftLink.h>
+
+@interface WKEmptyPresenterHighlightDelegate : NSObject <RVPresenterHighlightDelegate>
+
+- (instancetype)initWithRect:(NSRect)rect;
+
+@property NSRect rect;
+
+@end
+
+@implementation WKEmptyPresenterHighlightDelegate
+
+- (instancetype)initWithRect:(NSRect)rect
+{
+    if (!(self = [super init]))
+        return nil;
+
+    _rect = rect;
+    return self;
+}
+
+
+- (NSArray <NSValue *> *)revealContext:(RVPresentingContext *)context rectsForItem:(RVItem *)item
+{
+    return @[ [NSValue valueWithRect:self.rect] ];
+}
+
+- (BOOL)revealContext:(RVPresentingContext *)context shouldUseDefaultHighlightForItem:(RVItem *)item
+{
+    UNUSED_PARAM(context);
+    UNUSED_PARAM(item);
+    return NO;
+}
+
+@end
 
 namespace WebKit {
 
@@ -49,25 +86,41 @@ NSString *menuItemTitleForTelephoneNumberGroup()
     return [getTUCallClass() supplementalDialTelephonyCallString];
 }
 
-NSMenuItem *menuItemForTelephoneNumber(const String& telephoneNumber)
+#if HAVE(DATA_DETECTORS_MAC_ACTION)
+static DDMacAction *actionForMenuItem(NSMenuItem *item)
+#else
+static DDAction *actionForMenuItem(NSMenuItem *item)
+#endif
 {
-    if (!DataDetectorsLibrary())
+    NSDictionary *representedObject = item.representedObject;
+    if (![representedObject isKindOfClass:[NSDictionary class]])
         return nil;
 
-    RetainPtr<DDActionContext> actionContext = adoptNS([allocDDActionContextInstance() init]);
+    id action = [representedObject objectForKey:@"DDAction"];
+
+#if HAVE(DATA_DETECTORS_MAC_ACTION)
+    if (![action isKindOfClass:PAL::getDDMacActionClass()])
+        return nil;
+#else
+    if (![action isKindOfClass:PAL::getDDActionClass()])
+        return nil;
+#endif
+
+    return action;
+}
+
+NSMenuItem *menuItemForTelephoneNumber(const String& telephoneNumber)
+{
+    if (!PAL::isDataDetectorsFrameworkAvailable())
+        return nil;
+
+    auto actionContext = adoptNS([PAL::allocDDActionContextInstance() init]);
     [actionContext setAllowedActionUTIs:@[ @"com.apple.dial" ]];
 
-    NSArray *proposedMenuItems = [[getDDActionsManagerClass() sharedManager] menuItemsForValue:(NSString *)telephoneNumber type:getDDBinderPhoneNumberKey() service:nil context:actionContext.get()];
+    NSArray *proposedMenuItems = [[PAL::getDDActionsManagerClass() sharedManager] menuItemsForValue:(NSString *)telephoneNumber type:PAL::get_DataDetectorsCore_DDBinderPhoneNumberKey() service:nil context:actionContext.get()];
     for (NSMenuItem *item in proposedMenuItems) {
-        NSDictionary *representedObject = item.representedObject;
-        if (![representedObject isKindOfClass:[NSDictionary class]])
-            continue;
-
-        DDAction *actionObject = [representedObject objectForKey:@"DDAction"];
-        if (![actionObject isKindOfClass:getDDActionClass()])
-            continue;
-
-        if ([actionObject.actionUTI hasPrefix:@"com.apple.dial"]) {
+        auto action = actionForMenuItem(item);
+        if ([action.actionUTI hasPrefix:@"com.apple.dial"]) {
             item.title = formattedPhoneNumberString(telephoneNumber);
             return item;
         }
@@ -76,43 +129,24 @@ NSMenuItem *menuItemForTelephoneNumber(const String& telephoneNumber)
     return nil;
 }
 
-RetainPtr<NSMenu> menuForTelephoneNumber(const String& telephoneNumber)
+RetainPtr<NSMenu> menuForTelephoneNumber(const String& telephoneNumber, NSView *webView, const WebCore::IntRect& rect)
 {
-    if (!DataDetectorsLibrary())
+    if (!PAL::isRevealFrameworkAvailable() || !PAL::isRevealCoreFrameworkAvailable())
         return nil;
 
     RetainPtr<NSMenu> menu = adoptNS([[NSMenu alloc] init]);
-    NSMutableArray *faceTimeItems = [NSMutableArray array];
-    NSMenuItem *dialItem = nil;
-
-    RetainPtr<DDActionContext> actionContext = adoptNS([allocDDActionContextInstance() init]);
-    [actionContext setAllowedActionUTIs:@[ @"com.apple.dial", @"com.apple.facetime", @"com.apple.facetimeaudio" ]];
-
-    NSArray *proposedMenuItems = [[getDDActionsManagerClass() sharedManager] menuItemsForValue:(NSString *)telephoneNumber type:getDDBinderPhoneNumberKey() service:nil context:actionContext.get()];
-    for (NSMenuItem *item in proposedMenuItems) {
-        NSDictionary *representedObject = item.representedObject;
-        if (![representedObject isKindOfClass:[NSDictionary class]])
-            continue;
-
-        DDAction *actionObject = [representedObject objectForKey:@"DDAction"];
-        if (![actionObject isKindOfClass:getDDActionClass()])
-            continue;
-
-        if ([actionObject.actionUTI hasPrefix:@"com.apple.dial"])
-            dialItem = item;
-        else if ([actionObject.actionUTI hasPrefix:@"com.apple.facetime"])
-            [faceTimeItems addObject:item];
-    }
-
-    if (dialItem)
-        [menu addItem:dialItem];
-
-    if (faceTimeItems.count) {
-        if ([menu numberOfItems])
-            [menu addItem:[NSMenuItem separatorItem]];
-        for (NSMenuItem *item in faceTimeItems)
-            [menu addItem:item];
-    }
+    auto urlComponents = adoptNS([[NSURLComponents alloc] init]);
+    [urlComponents setScheme:@"tel"];
+    [urlComponents setPath:telephoneNumber];
+    auto item = adoptNS([PAL::allocRVItemInstance() initWithURL:[urlComponents URL] rangeInContext:NSMakeRange(0, telephoneNumber.length())]);
+    auto presenter = adoptNS([PAL::allocRVPresenterInstance() init]);
+    auto delegate = adoptNS([[WKEmptyPresenterHighlightDelegate alloc] initWithRect:rect]);
+    auto context = adoptNS([PAL::allocRVPresentingContextInstance() initWithPointerLocationInView:NSZeroPoint inView:webView highlightDelegate:delegate.get()]);
+    static char wkRevealDelegateKey;
+    objc_setAssociatedObject(context.get(), &wkRevealDelegateKey, delegate.get(), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    NSArray *proposedMenuItems = [presenter menuItemsForItem:item.get() documentContext:nil presentingContext:context.get() options:nil];
+    
+    [menu setItemArray:proposedMenuItems];
 
     return menu;
 }

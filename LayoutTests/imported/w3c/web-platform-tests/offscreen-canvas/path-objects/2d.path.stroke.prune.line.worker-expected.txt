@@ -1,3 +1,0 @@
-
-FAIL Zero-length line segments from lineTo are removed before stroking Can't find variable: OffscreenCanvas
-

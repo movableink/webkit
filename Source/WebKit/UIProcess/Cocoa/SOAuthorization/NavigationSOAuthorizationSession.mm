@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,13 +23,15 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "NavigationSOAuthorizationSession.h"
+#import "config.h"
+#import "NavigationSOAuthorizationSession.h"
 
 #if HAVE(APP_SSO)
 
 #import "WebPageProxy.h"
 #import <WebCore/ResourceResponse.h>
+
+#define AUTHORIZATIONSESSION_RELEASE_LOG(fmt, ...) RELEASE_LOG(AppSSO, "%p - [InitiatingAction=%s][State=%s] NavigationSOAuthorizationSession::" fmt, this, initiatingActionString(), stateString(), ##__VA_ARGS__)
 
 namespace WebKit {
 
@@ -49,10 +51,13 @@ NavigationSOAuthorizationSession::~NavigationSOAuthorizationSession()
 
 void NavigationSOAuthorizationSession::shouldStartInternal()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("shouldStartInternal: m_page=%p", page());
+
     auto* page = this->page();
     ASSERT(page);
     beforeStart();
     if (!page->isInWindow()) {
+        AUTHORIZATIONSESSION_RELEASE_LOG("shouldStartInternal: Starting Extensible SSO authentication for a web view that is not attached to a window. Loading will pause until a window is attached.");
         setState(State::Waiting);
         page->addObserver(*this);
         ASSERT(page->mainFrame());
@@ -64,6 +69,7 @@ void NavigationSOAuthorizationSession::shouldStartInternal()
 
 void NavigationSOAuthorizationSession::webViewDidMoveToWindow()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("webViewDidMoveToWindow");
     auto* page = this->page();
     if (state() != State::Waiting || !page || !page->isInWindow())
         return;
@@ -78,10 +84,13 @@ void NavigationSOAuthorizationSession::webViewDidMoveToWindow()
 
 bool NavigationSOAuthorizationSession::pageActiveURLDidChangeDuringWaiting() const
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("pageActiveURLDidChangeDuringWaiting");
     auto* page = this->page();
     return !page || page->pageLoadState().activeURL() != m_waitingPageActiveURL;
 }
 
 } // namespace WebKit
+
+#undef AUTHORIZATIONSESSION_RELEASE_LOG
 
 #endif

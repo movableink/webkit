@@ -26,6 +26,8 @@
 #pragma once
 
 #include "WindRule.h"
+#include <optional>
+#include <wtf/EnumTraits.h>
 #include <wtf/Forward.h>
 
 namespace WTF {
@@ -34,24 +36,24 @@ class TextStream;
 
 namespace WebCore {
 
-enum CompositeOperator {
-    CompositeClear,
-    CompositeCopy,
-    CompositeSourceOver,
-    CompositeSourceIn,
-    CompositeSourceOut,
-    CompositeSourceAtop,
-    CompositeDestinationOver,
-    CompositeDestinationIn,
-    CompositeDestinationOut,
-    CompositeDestinationAtop,
-    CompositeXOR,
-    CompositePlusDarker,
-    CompositePlusLighter,
-    CompositeDifference
+enum class CompositeOperator : uint8_t {
+    Clear,
+    Copy,
+    SourceOver,
+    SourceIn,
+    SourceOut,
+    SourceAtop,
+    DestinationOver,
+    DestinationIn,
+    DestinationOut,
+    DestinationAtop,
+    XOR,
+    PlusDarker,
+    PlusLighter,
+    Difference
 };
 
-enum class BlendMode {
+enum class BlendMode : uint8_t {
     Normal = 1, // Start with 1 to match SVG's blendmode enumeration.
     Multiply,
     Screen,
@@ -72,36 +74,95 @@ enum class BlendMode {
     PlusLighter
 };
 
-enum GradientSpreadMethod {
-    SpreadMethodPad,
-    SpreadMethodReflect,
-    SpreadMethodRepeat
+struct DocumentMarkerLineStyle {
+    enum class Mode : uint8_t {
+        TextCheckingDictationPhraseWithAlternatives,
+        Spelling,
+        Grammar,
+        AutocorrectionReplacement,
+        DictationAlternatives
+    } mode;
+    bool shouldUseDarkAppearance { false };
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<DocumentMarkerLineStyle> decode(Decoder&);
 };
 
-enum InterpolationQuality {
-    InterpolationDefault,
-    InterpolationNone,
-    InterpolationLow,
-    InterpolationMedium,
-    InterpolationHigh
+template<class Encoder>
+void DocumentMarkerLineStyle::encode(Encoder& encoder) const
+{
+    encoder << mode;
+    encoder << shouldUseDarkAppearance;
+}
+
+template<class Decoder>
+std::optional<DocumentMarkerLineStyle> DocumentMarkerLineStyle::decode(Decoder& decoder)
+{
+    std::optional<Mode> mode;
+    decoder >> mode;
+    if (!mode)
+        return std::nullopt;
+
+    std::optional<bool> shouldUseDarkAppearance;
+    decoder >> shouldUseDarkAppearance;
+    if (!shouldUseDarkAppearance)
+        return std::nullopt;
+
+    return { { *mode, *shouldUseDarkAppearance } };
+}
+
+enum class GradientSpreadMethod : uint8_t {
+    Pad,
+    Reflect,
+    Repeat
 };
 
-enum LineCap {
-    ButtCap,
-    RoundCap,
-    SquareCap
+enum class InterpolationQuality : uint8_t {
+    Default,
+    DoNotInterpolate,
+    Low,
+    Medium,
+    High
 };
 
-enum LineJoin {
-    MiterJoin,
-    RoundJoin,
-    BevelJoin
+enum class LineCap : uint8_t {
+    Butt,
+    Round,
+    Square
+};
+
+enum class LineJoin : uint8_t {
+    Miter,
+    Round,
+    Bevel
 };
 
 enum HorizontalAlignment {
     AlignLeft,
     AlignRight,
     AlignHCenter
+};
+
+enum StrokeStyle {
+    NoStroke,
+    SolidStroke,
+    DottedStroke,
+    DashedStroke,
+    DoubleStroke,
+    WavyStroke,
+};
+
+enum class TextDrawingMode : uint8_t {
+    Fill = 1 << 0,
+    Stroke = 1 << 1,
+};
+using TextDrawingModeFlags = OptionSet<TextDrawingMode>;
+
+// Legacy shadow blur radius is used for canvas, and -webkit-box-shadow.
+// It has different treatment of radii > 8px.
+enum class ShadowRadiusMode : bool {
+    Default,
+    Legacy
 };
 
 enum TextBaseline {
@@ -121,28 +182,132 @@ enum TextAlign {
     RightTextAlign
 };
 
-enum RenderingMode {
-    Unaccelerated,
-    UnacceleratedNonPlatformBuffer, // Use plain memory allocation rather than platform API to allocate backing store.
-    Accelerated
-};
+String compositeOperatorName(WebCore::CompositeOperator, WebCore::BlendMode);
+String blendModeName(WebCore::BlendMode);
+bool parseBlendMode(const String&, WebCore::BlendMode&);
+bool parseCompositeAndBlendOperator(const String&, WebCore::CompositeOperator&, WebCore::BlendMode&);
 
-enum class AlphaPremultiplication {
-    Premultiplied,
-    Unpremultiplied
-};
-
-String compositeOperatorName(CompositeOperator, BlendMode);
-String blendModeName(BlendMode);
-bool parseBlendMode(const String&, BlendMode&);
-bool parseCompositeAndBlendOperator(const String&, CompositeOperator&, BlendMode&);
-
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, BlendMode);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, CompositeOperator);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WebCore::BlendMode);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WebCore::CompositeOperator);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WindRule);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, LineCap);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, LineJoin);
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, AlphaPremultiplication);
 
 } // namespace WebCore
 
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::CompositeOperator> {
+    using values = EnumValues<
+    WebCore::CompositeOperator,
+    WebCore::CompositeOperator::Clear,
+    WebCore::CompositeOperator::Copy,
+    WebCore::CompositeOperator::SourceOver,
+    WebCore::CompositeOperator::SourceIn,
+    WebCore::CompositeOperator::SourceOut,
+    WebCore::CompositeOperator::SourceAtop,
+    WebCore::CompositeOperator::DestinationOver,
+    WebCore::CompositeOperator::DestinationIn,
+    WebCore::CompositeOperator::DestinationOut,
+    WebCore::CompositeOperator::DestinationAtop,
+    WebCore::CompositeOperator::XOR,
+    WebCore::CompositeOperator::PlusDarker,
+    WebCore::CompositeOperator::PlusLighter,
+    WebCore::CompositeOperator::Difference
+    >;
+};
+
+template<> struct EnumTraits<WebCore::BlendMode> {
+    using values = EnumValues<
+    WebCore::BlendMode,
+    WebCore::BlendMode::Normal,
+    WebCore::BlendMode::Multiply,
+    WebCore::BlendMode::Screen,
+    WebCore::BlendMode::Darken,
+    WebCore::BlendMode::Lighten,
+    WebCore::BlendMode::Overlay,
+    WebCore::BlendMode::ColorDodge,
+    WebCore::BlendMode::ColorBurn,
+    WebCore::BlendMode::HardLight,
+    WebCore::BlendMode::SoftLight,
+    WebCore::BlendMode::Difference,
+    WebCore::BlendMode::Exclusion,
+    WebCore::BlendMode::Hue,
+    WebCore::BlendMode::Saturation,
+    WebCore::BlendMode::Color,
+    WebCore::BlendMode::Luminosity,
+    WebCore::BlendMode::PlusDarker,
+    WebCore::BlendMode::PlusLighter
+    >;
+};
+
+template<> struct EnumTraits<WebCore::GradientSpreadMethod> {
+    using values = EnumValues<
+    WebCore::GradientSpreadMethod,
+    WebCore::GradientSpreadMethod::Pad,
+    WebCore::GradientSpreadMethod::Reflect,
+    WebCore::GradientSpreadMethod::Repeat
+    >;
+};
+
+template<> struct EnumTraits<WebCore::InterpolationQuality> {
+    using values = EnumValues<
+    WebCore::InterpolationQuality,
+    WebCore::InterpolationQuality::Default,
+    WebCore::InterpolationQuality::DoNotInterpolate,
+    WebCore::InterpolationQuality::Low,
+    WebCore::InterpolationQuality::Medium,
+    WebCore::InterpolationQuality::High
+    >;
+};
+
+template<> struct EnumTraits<WebCore::LineCap> {
+    using values = EnumValues<
+    WebCore::LineCap,
+    WebCore::LineCap::Butt,
+    WebCore::LineCap::Round,
+    WebCore::LineCap::Square
+    >;
+};
+
+template<> struct EnumTraits<WebCore::LineJoin> {
+    using values = EnumValues<
+    WebCore::LineJoin,
+    WebCore::LineJoin::Miter,
+    WebCore::LineJoin::Round,
+    WebCore::LineJoin::Bevel
+    >;
+};
+
+template<> struct EnumTraits<WebCore::DocumentMarkerLineStyle::Mode> {
+    using values = EnumValues<
+    WebCore::DocumentMarkerLineStyle::Mode,
+    WebCore::DocumentMarkerLineStyle::Mode::TextCheckingDictationPhraseWithAlternatives,
+    WebCore::DocumentMarkerLineStyle::Mode::Spelling,
+    WebCore::DocumentMarkerLineStyle::Mode::Grammar,
+    WebCore::DocumentMarkerLineStyle::Mode::AutocorrectionReplacement,
+    WebCore::DocumentMarkerLineStyle::Mode::DictationAlternatives
+    >;
+};
+
+template<> struct EnumTraits<WebCore::StrokeStyle> {
+    using values = EnumValues<
+    WebCore::StrokeStyle,
+    WebCore::StrokeStyle::NoStroke,
+    WebCore::StrokeStyle::SolidStroke,
+    WebCore::StrokeStyle::DottedStroke,
+    WebCore::StrokeStyle::DashedStroke,
+    WebCore::StrokeStyle::DoubleStroke,
+    WebCore::StrokeStyle::WavyStroke
+    >;
+};
+
+template<> struct EnumTraits<WebCore::TextDrawingMode> {
+    using values = EnumValues<
+        WebCore::TextDrawingMode,
+        WebCore::TextDrawingMode::Fill,
+        WebCore::TextDrawingMode::Stroke
+    >;
+};
+
+} // namespace WTF

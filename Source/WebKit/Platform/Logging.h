@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <pal/LogMacros.h>
 #include <wtf/Assertions.h>
 #include <wtf/text/WTFString.h>
 
@@ -40,28 +39,40 @@ extern "C" {
 #endif
 
 #define WEBKIT2_LOG_CHANNELS(M) \
-    M(AdClickAttribution) \
+    M(ActivityState) \
+    M(PrivateClickMeasurement) \
+    M(AppSSO) \
     M(Automation) \
     M(AutomationInteractions) \
-    M(ActivityState) \
     M(BackForward) \
     M(BackForwardCache) \
     M(CacheStorage) \
     M(ContentObservation) \
     M(ContextMenu) \
+    M(DisplayLink) \
     M(DiskPersistency) \
     M(DragAndDrop) \
+    M(EME) \
     M(Fullscreen) \
     M(Gamepad) \
-    M(IconDatabase) \
-    M(IndexedDB) \
     M(IPC) \
+    M(IPCMessages) \
     M(ITPDebug) \
+    M(IconDatabase) \
+    M(Images) \
+    M(IncrementalPDF) \
+    M(IncrementalPDFVerbose) \
+    M(IndexedDB) \
+    M(Inspector) \
     M(KeyHandling) \
+    M(Language) \
     M(Layers) \
     M(Layout) \
     M(Loading) \
     M(LocalStorageDatabaseTracker) \
+    M(Media) \
+    M(MemoryPressure) \
+    M(ModelElement) \
     M(MouseHandling) \
     M(Network) \
     M(NetworkCache) \
@@ -69,6 +80,7 @@ extern "C" {
     M(NetworkCacheStorage) \
     M(NetworkScheduling) \
     M(NetworkSession) \
+    M(Notifications) \
     M(PerformanceLogging) \
     M(Plugins) \
     M(Printing) \
@@ -76,36 +88,41 @@ extern "C" {
     M(ProcessSuspension) \
     M(ProcessSwapping) \
     M(ProximityNetworking) \
+    M(Push) \
+    M(RemoteRenderingBufferVolatility) \
     M(RemoteLayerTree) \
     M(Resize) \
     M(ResourceLoadStatistics) \
+    M(ScrollAnimations) \
     M(Scrolling) \
     M(Selection) \
     M(ServiceWorker) \
     M(SessionState) \
+    M(SharedDisplayLists) \
+    M(SharedWorker) \
     M(Storage) \
     M(StorageAPI) \
     M(TextInput) \
+    M(Translation) \
     M(UIHitTesting) \
     M(ViewGestures) \
     M(ViewState) \
     M(ViewportSizing) \
     M(VirtualMemory) \
     M(VisibleRects) \
+    M(WebAuthn) \
     M(WebGL) \
     M(WebRTC) \
+    M(WheelEvents) \
+    M(Worker) \
+    M(XR) \
 
 WEBKIT2_LOG_CHANNELS(DECLARE_LOG_CHANNEL)
 
 #undef DECLARE_LOG_CHANNEL
-
-namespace WebKit {
-WTFLogChannel* getLogChannel(const String&);
-} // namespace WebKit
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
-

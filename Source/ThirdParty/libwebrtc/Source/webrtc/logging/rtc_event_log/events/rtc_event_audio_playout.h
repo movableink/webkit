@@ -12,20 +12,23 @@
 #define LOGGING_RTC_EVENT_LOG_EVENTS_RTC_EVENT_AUDIO_PLAYOUT_H_
 
 #include <stdint.h>
+
 #include <memory>
 
-#include "logging/rtc_event_log/events/rtc_event.h"
+#include "api/rtc_event_log/rtc_event.h"
+#include "api/units/timestamp.h"
 
 namespace webrtc {
 
 class RtcEventAudioPlayout final : public RtcEvent {
  public:
+  static constexpr Type kType = Type::AudioPlayout;
+
   explicit RtcEventAudioPlayout(uint32_t ssrc);
   ~RtcEventAudioPlayout() override = default;
 
-  Type GetType() const override;
-
-  bool IsConfigEvent() const override;
+  Type GetType() const override { return kType; }
+  bool IsConfigEvent() const override { return false; }
 
   std::unique_ptr<RtcEventAudioPlayout> Copy() const;
 
@@ -35,6 +38,18 @@ class RtcEventAudioPlayout final : public RtcEvent {
   RtcEventAudioPlayout(const RtcEventAudioPlayout& other);
 
   const uint32_t ssrc_;
+};
+
+struct LoggedAudioPlayoutEvent {
+  LoggedAudioPlayoutEvent() = default;
+  LoggedAudioPlayoutEvent(Timestamp timestamp, uint32_t ssrc)
+      : timestamp(timestamp), ssrc(ssrc) {}
+
+  int64_t log_time_us() const { return timestamp.us(); }
+  int64_t log_time_ms() const { return timestamp.ms(); }
+
+  Timestamp timestamp = Timestamp::MinusInfinity();
+  uint32_t ssrc;
 };
 
 }  // namespace webrtc

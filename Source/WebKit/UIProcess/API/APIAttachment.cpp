@@ -28,6 +28,7 @@
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
+#include "WebPageProxy.h"
 #include <WebCore/SharedBuffer.h>
 #include <wtf/text/WTFString.h>
 
@@ -40,7 +41,7 @@ Ref<Attachment> Attachment::create(const WTF::String& identifier, WebKit::WebPag
 
 Attachment::Attachment(const WTF::String& identifier, WebKit::WebPageProxy& webPage)
     : m_identifier(identifier)
-    , m_webPage(makeWeakPtr(webPage))
+    , m_webPage(webPage)
 {
 }
 
@@ -48,15 +49,15 @@ Attachment::~Attachment()
 {
 }
 
-void Attachment::updateAttributes(Function<void(WebKit::CallbackBase::Error)>&& callback)
+void Attachment::updateAttributes(CompletionHandler<void()>&& callback)
 {
     if (!m_webPage) {
-        callback(WebKit::CallbackBase::Error::OwnerWasInvalidated);
+        callback();
         return;
     }
 
     if (m_webPage->willUpdateAttachmentAttributes(*this) == WebKit::WebPageProxy::ShouldUpdateAttachmentAttributes::No) {
-        callback(WebKit::CallbackBase::Error::None);
+        callback();
         return;
     }
 
@@ -92,12 +93,12 @@ WTF::String Attachment::fileName() const
     return { };
 }
 
-Optional<uint64_t> Attachment::fileSizeForDisplay() const
+std::optional<uint64_t> Attachment::fileSizeForDisplay() const
 {
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-RefPtr<WebCore::SharedBuffer> Attachment::enclosingImageData() const
+RefPtr<WebCore::FragmentedSharedBuffer> Attachment::enclosingImageData() const
 {
     return nullptr;
 }

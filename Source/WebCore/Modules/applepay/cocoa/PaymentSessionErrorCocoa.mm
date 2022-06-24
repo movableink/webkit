@@ -31,15 +31,27 @@
 #import "ApplePaySessionError.h"
 #import <pal/cocoa/PassKitSoftLink.h>
 
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/PaymentSessionErrorCocoaAdditions.mm>
-#else
 namespace WebCore {
-static Optional<ApplePaySessionError> additionalError(NSError *) { return WTF::nullopt; }
-}
-#endif
 
-namespace WebCore {
+static std::optional<ApplePaySessionError> additionalError(NSError *error)
+{
+#if HAVE(PASSKIT_INSTALLMENTS)
+    // FIXME: Replace with PKPaymentErrorBindTokenUserInfoKey and
+    // PKPaymentAuthorizationFeatureApplicationError when they're available in an SDK.
+    static NSString * const bindTokenKey = @"PKPaymentErrorBindToken";
+    static constexpr NSInteger pkPaymentAuthorizationFeatureApplicationError = -2016;
+
+    if (error.code != pkPaymentAuthorizationFeatureApplicationError)
+        return std::nullopt;
+
+    id bindTokenValue = error.userInfo[bindTokenKey];
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!bindTokenValue || [bindTokenValue isKindOfClass:NSString.class]);
+    return ApplePaySessionError { "featureApplicationError"_s, { { "bindToken"_s, (NSString *)bindTokenValue } } };
+#else
+    UNUSED_PARAM(error);
+    return std::nullopt;
+#endif
+}
 
 PaymentSessionError::PaymentSessionError(RetainPtr<NSError>&& error)
     : m_platformError { WTFMove(error) }
@@ -48,7 +60,7 @@ PaymentSessionError::PaymentSessionError(RetainPtr<NSError>&& error)
 
 ApplePaySessionError PaymentSessionError::sessionError() const
 {
-    ASSERT(!m_platformError || [[m_platformError domain] isEqualToString:PAL::get_PassKit_PKPassKitErrorDomain()]);
+    ASSERT(!m_platformError || [[m_platformError domain] isEqualToString:PKPassKitErrorDomain]);
 
     if (auto error = additionalError(m_platformError.get()))
         return *error;

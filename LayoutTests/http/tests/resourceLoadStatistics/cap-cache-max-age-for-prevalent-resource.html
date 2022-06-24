@@ -13,7 +13,7 @@
     var loadedUrl;
     function firstFetch() {
         // This should create a capped cache entry.
-        fetch("http://localhost:8000/resourceLoadStatistics/resources/cached-permanent-redirect.php",
+        fetch("http://localhost:8000/resourceLoadStatistics/resources/cached-permanent-redirect.py",
             {
                 cache: "reload",
                 headers: {
@@ -22,7 +22,7 @@
             }
         ).then(function(response) {
             loadedUrl = response.url;
-            shouldBeEqualToString("loadedUrl", "http://localhost:8000/resourceLoadStatistics/resources/echo-query.php?value=1234");
+            shouldBeEqualToString("loadedUrl", "http://localhost:8000/resourceLoadStatistics/resources/echo-query.py?value=1234");
             secondFetch();
         }).catch(function(error) {
             testFailed(error.message);
@@ -32,7 +32,7 @@
 
     function secondFetch() {
         // This should not trigger a successful cache hit and instead create another capped cache entry.
-        fetch("http://localhost:8000/resourceLoadStatistics/resources/cached-permanent-redirect.php",
+        fetch("http://localhost:8000/resourceLoadStatistics/resources/cached-permanent-redirect.py",
             {
                 cache: "force-cache",
                 headers: {
@@ -41,7 +41,7 @@
             }
         ).then(function(response) {
             loadedUrl = response.url;
-            shouldBeEqualToString("loadedUrl", "http://localhost:8000/resourceLoadStatistics/resources/echo-query.php?value=4321");
+            shouldBeEqualToString("loadedUrl", "http://localhost:8000/resourceLoadStatistics/resources/echo-query.py?value=4321");
             thirdFetch();
         }).catch(function(error) {
             testFailed(error.message);
@@ -51,13 +51,13 @@
 
     function thirdFetch() {
         // This should not trigger a successful cache hit and instead create another capped cache entry.
-        fetch("http://localhost:8000/resourceLoadStatistics/resources/cached-permanent-redirect.php",
+        fetch("http://localhost:8000/resourceLoadStatistics/resources/cached-permanent-redirect.py",
             {
                 cache: "force-cache",
             }
         ).then(function(response) {
             loadedUrl = response.url;
-            shouldBeEqualToString("loadedUrl", "http://localhost:8000/resourceLoadStatistics/resources/echo-query.php?value=");
+            shouldBeEqualToString("loadedUrl", "http://localhost:8000/resourceLoadStatistics/resources/echo-query.py?value=");
             fourthFetch();
         }).catch(function(error) {
             testFailed(error.message);
@@ -67,13 +67,13 @@
 
     function fourthFetch() {
         // This should not trigger a successful cache hit but clear capping.
-        fetch("http://localhost:8000/resourceLoadStatistics/resources/cached-permanent-redirect.php",
+        fetch("http://localhost:8000/resourceLoadStatistics/resources/cached-permanent-redirect.py",
             {
                 cache: "force-cache",
             }
         ).then(function(response) {
             loadedUrl = response.url;
-            shouldBeEqualToString("loadedUrl", "http://localhost:8000/resourceLoadStatistics/resources/echo-query.php?value=");
+            shouldBeEqualToString("loadedUrl", "http://localhost:8000/resourceLoadStatistics/resources/echo-query.py?value=");
             fifthFetch();
         }).catch(function(error) {
             testFailed(error.message);
@@ -83,7 +83,7 @@
 
     function fifthFetch() {
         // This should trigger a regular, successful cache hit.
-        fetch("http://localhost:8000/resourceLoadStatistics/resources/cached-permanent-redirect.php",
+        fetch("http://localhost:8000/resourceLoadStatistics/resources/cached-permanent-redirect.py",
             {
                 headers: {
                     "X-WebKit": "1234",
@@ -91,7 +91,7 @@
             }
         ).then(function(response) {
             loadedUrl = response.url;
-            shouldBeEqualToString("loadedUrl", "http://localhost:8000/resourceLoadStatistics/resources/echo-query.php?value=");
+            shouldBeEqualToString("loadedUrl", "http://localhost:8000/resourceLoadStatistics/resources/echo-query.py?value=");
             setEnableFeature(false, finishJSTest);
         }).catch(function(error) {
             testFailed(error.message);

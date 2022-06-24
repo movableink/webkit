@@ -1,10 +1,4 @@
-cmake_minimum_required(VERSION 2.8.11)
-
-# Report AppleClang separately from Clang. Their version numbers are different.
-# https://cmake.org/cmake/help/v3.0/policy/CMP0025.html
-if(POLICY CMP0025)
-  cmake_policy(SET CMP0025 NEW)
-endif()
+cmake_minimum_required(VERSION 3.5)
 
 # Defer enabling C and CXX languages.
 project(BoringSSL NONE)
@@ -39,6 +33,20 @@ else()
   find_program(GO_EXECUTABLE go)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_CROSSCOMPILING)
+  find_package(PkgConfig QUIET)
+  if (PkgConfig_FOUND)
+    pkg_check_modules(LIBUNWIND libunwind-generic)
+    if(LIBUNWIND_FOUND)
+      add_definitions(-DBORINGSSL_HAVE_LIBUNWIND)
+    else()
+      message("libunwind not found. Disabling unwind tests.")
+    endif()
+  else()
+    message("pkgconfig not found. Disabling unwind tests.")
+  endif()
+endif()
+
 if(NOT GO_EXECUTABLE)
   message(FATAL_ERROR "Could not find Go")
 endif()
@@ -50,6 +58,24 @@ endif()
 if(BORINGSSL_ALLOW_CXX_RUNTIME)
   add_definitions(-DBORINGSSL_ALLOW_CXX_RUNTIME)
 endif()
+
+string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LOWER)
+if(NOT FIPS)
+  if(CMAKE_BUILD_TYPE_LOWER STREQUAL "relwithassert" OR
+     NOT CMAKE_BUILD_TYPE_LOWER MATCHES "rel")
+    add_definitions(-DBORINGSSL_DISPATCH_TEST)
+    # CMake automatically connects include_directories to the NASM
+    # command-line, but not add_definitions.
+    set(CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} -DBORINGSSL_DISPATCH_TEST")
+  endif()
+endif()
+
+# Add a RelWithAsserts build configuration. It is the same as Release, except it
+# does not define NDEBUG, so asserts run.
+foreach(VAR CMAKE_C_FLAGS CMAKE_CXX_FLAGS CMAKE_ASM_FLAGS)
+  string(REGEX REPLACE "(^| )[/-]DNDEBUG( |$)" " " "${VAR}_RELWITHASSERTS"
+         "${${VAR}_RELEASE}")
+endforeach()
 
 if(BORINGSSL_PREFIX AND BORINGSSL_PREFIX_SYMBOLS)
   add_definitions(-DBORINGSSL_PREFIX=${BORINGSSL_PREFIX})
@@ -84,10 +110,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(CLANG 1)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  set(EMSCRIPTEN 1)
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CLANG)
   # Note clang-cl is odd and sets both CLANG and MSVC. We base our configuration
   # primarily on our normal Clang one.
-  set(C_CXX_FLAGS "-Werror -Wformat=2 -Wsign-compare -Wmissing-field-initializers -Wwrite-strings")
+  set(C_CXX_FLAGS "-Werror -Wformat=2 -Wsign-compare -Wmissing-field-initializers -Wwrite-strings -Wvla")
   if(MSVC)
     # clang-cl sets different default warnings than clang. It also treats -Wall
     # as -Weverything, to match MSVC. Instead -W3 is the alias for -Wall.
@@ -97,7 +127,14 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CLANG)
     # honor it. Suppress it here to compensate. See https://crbug.com/772117.
     set(C_CXX_FLAGS "${C_CXX_FLAGS} -Wno-deprecated-declarations")
   else()
-    set(C_CXX_FLAGS "${C_CXX_FLAGS} -Wall -ggdb -fvisibility=hidden -fno-common")
+    if(EMSCRIPTEN)
+      # emscripten's emcc/clang does not accept the "-ggdb" flag.
+      set(C_CXX_FLAGS "${C_CXX_FLAGS} -g")
+    else()
+      set(C_CXX_FLAGS "${C_CXX_FLAGS} -ggdb")
+    endif()
+
+    set(C_CXX_FLAGS "${C_CXX_FLAGS} -Wall -fvisibility=hidden -fno-common")
   endif()
 
   if(CLANG)
@@ -178,6 +215,7 @@ elseif(MSVC)
               # copy constructor is inaccessible or deleted
       "C4626" # assignment operator could not be generated because a base class
               # assignment operator is inaccessible or deleted
+      "C4628" # digraphs not supported with -Ze
       "C4668" # 'symbol' is not defined as a preprocessor macro, replacing with
               # '0' for 'directives'
               # Disable this because GTest uses it everywhere.
@@ -210,11 +248,10 @@ if(WIN32)
   add_definitions(-DNOMINMAX)
   # Allow use of fopen.
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-  # VS 2017 and higher supports STL-only warning suppressions. Manually add to
-  # C++ only to work around a CMake quoting bug when using NASM with the Visual
-  # Studio generator. This will be fixed in CMake 3.13.0. See
-  # https://gitlab.kitware.com/cmake/cmake/merge_requests/2179
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-D_STL_EXTRA_DISABLED_WARNINGS=4774\ 4987>)
+  # VS 2017 and higher supports STL-only warning suppressions.
+  # A bug in CMake < 3.13.0 may cause the space in this value to
+  # cause issues when building with NASM. In that case, update CMake.
+  add_definitions("-D_STL_EXTRA_DISABLED_WARNINGS=4774 4987")
 endif()
 
 if((CMAKE_COMPILER_IS_GNUCXX AND CMAKE_C_COMPILER_VERSION VERSION_GREATER "4.7.99") OR
@@ -224,11 +261,7 @@ if((CMAKE_COMPILER_IS_GNUCXX AND CMAKE_C_COMPILER_VERSION VERSION_GREATER "4.7.9
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-  if((CMAKE_C_COMPILER_VERSION VERSION_GREATER "4.8.99") OR CLANG)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")
-  else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
-  endif()
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")
 endif()
 
 # pthread_rwlock_t requires a feature flag.
@@ -316,6 +349,22 @@ if(TSAN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
 endif()
 
+if(UBSAN)
+  if(NOT CLANG)
+    message(FATAL_ERROR "Cannot enable UBSAN unless using Clang")
+  endif()
+
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=undefined")
+
+  if(NOT UBSAN_RECOVER)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-sanitize-recover=undefined")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-sanitize-recover=undefined")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fno-sanitize-recover=undefined")
+  endif()
+endif()
+
 if(GCOV)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
@@ -326,14 +375,32 @@ if(FIPS)
   if(FIPS_BREAK_TEST)
     add_definitions("-DBORINGSSL_FIPS_BREAK_${FIPS_BREAK_TEST}=1")
   endif()
-  # Delocate does not work for ASan and MSan builds.
+  # The FIPS integrity check does not work for ASan and MSan builds.
   if(NOT ASAN AND NOT MSAN)
-    set(FIPS_DELOCATE "1")
+    if(BUILD_SHARED_LIBS)
+      set(FIPS_SHARED "1")
+    else()
+      set(FIPS_DELOCATE "1")
+    endif()
+  endif()
+  if(FIPS_SHARED)
+    # The Android CMake files set -ffunction-sections and -fdata-sections,
+    # which is incompatible with FIPS_SHARED.
+    set(CMAKE_C_FLAGS
+        "${CMAKE_C_FLAGS} -fno-function-sections -fno-data-sections")
+    set(CMAKE_CXX_FLAGS
+        "${CMAKE_CXX_FLAGS} -fno-function-sections -fno-data-sections")
   endif()
 endif()
 
 if(OPENSSL_SMALL)
   add_definitions(-DOPENSSL_SMALL)
+endif()
+
+if(CONSTANT_TIME_VALIDATION)
+  add_definitions(-DBORINGSSL_CONSTANT_TIME_VALIDATION)
+  # Asserts will often test secret data.
+  add_definitions(-DNDEBUG)
 endif()
 
 function(go_executable dest package)
@@ -387,6 +454,10 @@ if(NOT OPENSSL_NO_ASM AND CMAKE_OSX_ARCHITECTURES)
   list(GET CMAKE_OSX_ARCHITECTURES 0 CMAKE_SYSTEM_PROCESSOR)
 endif()
 
+if(OPENSSL_NO_SSE2_FOR_TESTING)
+  add_definitions(-DOPENSSL_NO_SSE2_FOR_TESTING)
+endif()
+
 if(OPENSSL_NO_ASM)
   add_definitions(-DOPENSSL_NO_ASM)
   set(ARCH "generic")
@@ -396,7 +467,7 @@ elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "amd64")
   set(ARCH "x86_64")
 elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64")
   # cmake reports AMD64 on Windows, but we might be building for 32-bit.
-  if(CMAKE_CL_64)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(ARCH "x86_64")
   else()
     set(ARCH "x86")
@@ -408,6 +479,8 @@ elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "i386")
 elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "i686")
   set(ARCH "x86")
 elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
+  set(ARCH "aarch64")
+elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ARM64")
   set(ARCH "aarch64")
 elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64")
   set(ARCH "aarch64")
@@ -430,13 +503,6 @@ if(ANDROID AND NOT ANDROID_NDK_REVISION AND ${ARCH} STREQUAL "arm")
   # for assembly files. Without this flag, the compiler believes that it's
   # building for ARMv5.
   set(CMAKE_ASM_FLAGS "-march=${CMAKE_SYSTEM_PROCESSOR} ${CMAKE_ASM_FLAGS}")
-endif()
-
-if(${ARCH} STREQUAL "x86" AND APPLE AND ${CMAKE_VERSION} VERSION_LESS "3.0")
-  # With CMake 2.8.x, ${CMAKE_SYSTEM_PROCESSOR} evalutes to i386 on OS X,
-  # but clang defaults to 64-bit builds on OS X unless otherwise told.
-  # Set ARCH to x86_64 so clang and CMake agree. This is fixed in CMake 3.
-  set(ARCH "x86_64")
 endif()
 
 if(USE_CUSTOM_LIBCXX)
@@ -505,10 +571,21 @@ include_directories(third_party/googletest/include)
 # themselves as dependencies next to the target definition.
 add_custom_target(all_tests)
 
+# On Windows, CRYPTO_TEST_DATA is too long to fit in command-line limits.
+# TODO(davidben): CMake 3.12 has a list(JOIN) command. Use that when we've
+# updated the minimum version.
+set(EMBED_TEST_DATA_ARGS "")
+foreach(arg ${CRYPTO_TEST_DATA})
+  set(EMBED_TEST_DATA_ARGS "${EMBED_TEST_DATA_ARGS}${arg}\n")
+endforeach()
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/embed_test_data_args.txt"
+     "${EMBED_TEST_DATA_ARGS}")
+
 add_custom_command(
   OUTPUT crypto_test_data.cc
-  COMMAND ${GO_EXECUTABLE} run util/embed_test_data.go ${CRYPTO_TEST_DATA} >
-  ${CMAKE_CURRENT_BINARY_DIR}/crypto_test_data.cc
+  COMMAND ${GO_EXECUTABLE} run util/embed_test_data.go -file-list
+          "${CMAKE_CURRENT_BINARY_DIR}/embed_test_data_args.txt" >
+          "${CMAKE_CURRENT_BINARY_DIR}/crypto_test_data.cc"
   DEPENDS util/embed_test_data.go ${CRYPTO_TEST_DATA}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -517,21 +594,49 @@ add_library(crypto_test_data OBJECT crypto_test_data.cc)
 add_subdirectory(crypto)
 add_subdirectory(ssl)
 add_subdirectory(ssl/test)
-add_subdirectory(fipstools)
 add_subdirectory(tool)
+add_subdirectory(util/fipstools/cavp)
+add_subdirectory(util/fipstools/acvp/modulewrapper)
 add_subdirectory(decrepit)
 
 if(FUZZ)
-  add_subdirectory(fuzz)
-endif()
+  if(LIBFUZZER_FROM_DEPS)
+    file(GLOB LIBFUZZER_SOURCES "util/bot/libFuzzer/*.cpp")
+    add_library(Fuzzer STATIC ${LIBFUZZER_SOURCES})
+    # libFuzzer does not pass our aggressive warnings. It also must be built
+    # without -fsanitize-coverage options or clang crashes.
+    set_target_properties(Fuzzer PROPERTIES COMPILE_FLAGS "-Wno-shadow -Wno-format-nonliteral -Wno-missing-prototypes -fsanitize-coverage=0")
+  endif()
 
-if(NOT ${CMAKE_VERSION} VERSION_LESS "3.2")
-  # USES_TERMINAL is only available in CMake 3.2 or later.
-  set(MAYBE_USES_TERMINAL USES_TERMINAL)
+  add_subdirectory(fuzz)
 endif()
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)
   set(HANDSHAKER_ARGS "-handshaker-path" $<TARGET_FILE:handshaker>)
+endif()
+
+if(FIPS)
+  add_custom_target(
+    acvp_tests
+    COMMAND ${GO_EXECUTABLE} build -o ${CMAKE_BINARY_DIR}/acvptool
+            boringssl.googlesource.com/boringssl/util/fipstools/acvp/acvptool
+    COMMAND ${GO_EXECUTABLE} build -o ${CMAKE_BINARY_DIR}/testmodulewrapper
+            boringssl.googlesource.com/boringssl/util/fipstools/acvp/acvptool/testmodulewrapper
+    COMMAND cd util/fipstools/acvp/acvptool/test &&
+            ${GO_EXECUTABLE} run check_expected.go
+            -tool ${CMAKE_BINARY_DIR}/acvptool
+            -module-wrappers modulewrapper:$<TARGET_FILE:modulewrapper>,testmodulewrapper:${CMAKE_BINARY_DIR}/testmodulewrapper
+            -tests tests.json
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    DEPENDS modulewrapper
+    USES_TERMINAL)
+
+  add_custom_target(
+    fips_specific_tests_if_any
+    DEPENDS acvp_tests
+  )
+else()
+  add_custom_target(fips_specific_tests_if_any)
 endif()
 
 add_custom_target(
@@ -542,5 +647,5 @@ add_custom_target(
             ${GO_EXECUTABLE} test -shim-path $<TARGET_FILE:bssl_shim>
               ${HANDSHAKER_ARGS} ${RUNNER_ARGS}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    DEPENDS all_tests bssl_shim handshaker
-    ${MAYBE_USES_TERMINAL})
+    DEPENDS all_tests bssl_shim handshaker fips_specific_tests_if_any
+    USES_TERMINAL)

@@ -29,13 +29,6 @@
 #include <WebKit/WKBase.h>
 #include <WebKit/WKContext.h>
 
-#if defined(WIN32) || defined(_WIN32)
-typedef int WKProcessID;
-#else
-#include <unistd.h>
-typedef pid_t WKProcessID;
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -75,7 +68,7 @@ WK_EXPORT void WKContextSetDiskCacheSpeculativeValidationEnabled(WKContextRef co
 
 WK_EXPORT void WKContextSetIconDatabasePath(WKContextRef context, WKStringRef iconDatabasePath);
 
-WK_EXPORT void WKContextAllowSpecificHTTPSCertificateForHost(WKContextRef context, WKCertificateInfoRef certificate, WKStringRef host);
+WK_EXPORT void WKContextAllowSpecificHTTPSCertificateForHost(WKContextRef context, WKCertificateInfoRef certificate, WKStringRef host) WK_C_API_DEPRECATED;
 
 // FIXME: This is a workaround for testing purposes only and should be removed once a better
 // solution has been found for testing.
@@ -90,41 +83,26 @@ WK_EXPORT void WKContextWarmInitialProcess(WKContextRef context);
 // At some point it should be removed.
 WK_EXPORT void WKContextSetUsesNetworkProcess(WKContextRef, bool);
 
-WK_EXPORT void WKContextTerminateNetworkProcess(WKContextRef);
-WK_EXPORT void WKContextTerminateServiceWorkerProcess(WKContextRef);
-
-WK_EXPORT void WKContextSetAllowsAnySSLCertificateForWebSocketTesting(WKContextRef, bool);
-WK_EXPORT void WKContextSetAllowsAnySSLCertificateForServiceWorkerTesting(WKContextRef, bool);
-
-// Test only. Should be called before any secondary processes are started.
-WK_EXPORT void WKContextUseTestingNetworkSession(WKContextRef context);
-
-// Test only. Should be called before running a test.
-WK_EXPORT void WKContextClearCachedCredentials(WKContextRef context);
+WK_EXPORT void WKContextTerminateGPUProcess(WKContextRef);
+WK_EXPORT void WKContextTerminateServiceWorkers(WKContextRef);
 
 typedef void (*WKContextInvalidMessageFunction)(WKStringRef messageName);
 WK_EXPORT void WKContextSetInvalidMessageFunction(WKContextInvalidMessageFunction invalidMessageFunction);
     
 WK_EXPORT void WKContextSetMemoryCacheDisabled(WKContextRef, bool disabled);
 
-WK_EXPORT void WKContextSetFontWhitelist(WKContextRef, WKArrayRef);
+WK_EXPORT void WKContextSetFontAllowList(WKContextRef, WKArrayRef);
 
 WK_EXPORT void WKContextPreconnectToServer(WKContextRef context, WKURLRef serverURL) WK_C_API_DEPRECATED;
-
-WK_EXPORT WKProcessID WKContextGetNetworkProcessIdentifier(WKContextRef context);
 
 WK_EXPORT void WKContextAddSupportedPlugin(WKContextRef context, WKStringRef domain, WKStringRef name, WKArrayRef mimeTypes, WKArrayRef extensions);
 WK_EXPORT void WKContextClearSupportedPlugins(WKContextRef context);
 
 WK_EXPORT void WKContextClearCurrentModifierStateForTesting(WKContextRef context);
 
-typedef void (*WKContextSyncLocalStorageCallback)(void* functionContext);
-WK_EXPORT void WKContextSyncLocalStorage(WKContextRef contextRef, void* context, WKContextSyncLocalStorageCallback callback);
-
-typedef void (*WKContextClearLegacyPrivateBrowsingLocalStorageCallback)(void* functionContext);
-WK_EXPORT void WKContextClearLegacyPrivateBrowsingLocalStorage(WKContextRef contextRef, void* context, WKContextClearLegacyPrivateBrowsingLocalStorageCallback callback);
-
 WK_EXPORT void WKContextSetUseSeparateServiceWorkerProcess(WKContextRef context, bool forceServiceWorkerProcess);
+
+WK_EXPORT void WKContextSetPrimaryWebsiteDataStore(WKContextRef context, WKWebsiteDataStoreRef websiteDataStore);
 
 #ifdef __cplusplus
 }

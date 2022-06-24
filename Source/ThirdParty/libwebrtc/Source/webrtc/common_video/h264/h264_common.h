@@ -13,6 +13,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 #include <vector>
 
 #include "rtc_base/buffer.h"
@@ -41,6 +42,7 @@ enum NaluType : uint8_t {
   kEndOfSequence = 10,
   kEndOfStream = 11,
   kFiller = 12,
+  kPrefix = 14,
   kStapA = 24,
   kFuA = 28
 };

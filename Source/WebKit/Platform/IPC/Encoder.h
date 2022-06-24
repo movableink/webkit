@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,64 +25,52 @@
 
 #pragma once
 
-#include "ArgumentCoder.h"
 #include "Attachment.h"
+#include "MessageNames.h"
 #include "StringReference.h"
-#include <wtf/EnumTraits.h>
+#include <WebCore/SharedBuffer.h>
+#include <wtf/Forward.h>
+#include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
 
 namespace IPC {
 
-class DataReference;
-enum class ShouldDispatchWhenWaitingForSyncReply;
+enum class MessageFlags : uint8_t;
+enum class ShouldDispatchWhenWaitingForSyncReply : uint8_t;
+
+template<typename, typename> struct ArgumentCoder;
 
 class Encoder final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    Encoder(StringReference messageReceiverName, StringReference messageName, uint64_t destinationID);
+    Encoder(MessageName, uint64_t destinationID);
     ~Encoder();
 
-    StringReference messageReceiverName() const { return m_messageReceiverName; }
-    StringReference messageName() const { return m_messageName; }
+    Encoder(const Encoder&) = delete;
+    Encoder(Encoder&&) = delete;
+    Encoder& operator=(const Encoder&) = delete;
+    Encoder& operator=(Encoder&&) = delete;
+
+    ReceiverName messageReceiverName() const { return receiverName(m_messageName); }
+    MessageName messageName() const { return m_messageName; }
     uint64_t destinationID() const { return m_destinationID; }
 
-    void setIsSyncMessage(bool);
-    bool isSyncMessage() const;
+    bool isSyncMessage() const { return messageIsSync(messageName()); }
 
     void setShouldDispatchMessageWhenWaitingForSyncReply(ShouldDispatchWhenWaitingForSyncReply);
     ShouldDispatchWhenWaitingForSyncReply shouldDispatchMessageWhenWaitingForSyncReply() const;
 
     void setFullySynchronousModeForTesting();
+    void setShouldMaintainOrderingWithAsyncMessages();
 
-    void wrapForTesting(std::unique_ptr<Encoder>);
+    void wrapForTesting(UniqueRef<Encoder>&&);
 
-    void encodeFixedLengthData(const uint8_t*, size_t, unsigned alignment);
-    void encodeVariableLengthByteArray(const DataReference&);
+    void encodeFixedLengthData(const uint8_t* data, size_t, size_t alignment);
 
-    template<typename T> void encodeEnum(T t)
-    {
-        COMPILE_ASSERT(sizeof(T) <= sizeof(uint64_t), enum_type_must_not_be_larger_than_64_bits);
-
-        encode(static_cast<uint64_t>(t));
-    }
-
-    template<typename T, std::enable_if_t<!std::is_enum<typename std::remove_const_t<std::remove_reference_t<T>>>::value>* = nullptr>
-    void encode(T&& t)
-    {
-        ArgumentCoder<typename std::remove_const<typename std::remove_reference<T>::type>::type>::encode(*this, std::forward<T>(t));
-    }
-
-    template<typename T, std::enable_if_t<std::is_enum<T>::value>* = nullptr>
+    template<typename T>
     Encoder& operator<<(T&& t)
     {
-        encode(static_cast<uint64_t>(t));
-        return *this;
-    }
-
-    template<typename T, std::enable_if_t<!std::is_enum<T>::value>* = nullptr>
-    Encoder& operator<<(T&& t)
-    {
-        encode(std::forward<T>(t));
+        ArgumentCoder<std::remove_const_t<std::remove_reference_t<T>>, void>::encode(*this, std::forward<T>(t));
         return *this;
     }
 
@@ -93,45 +81,27 @@ public:
     Vector<Attachment> releaseAttachments();
     void reserve(size_t);
 
-    static const bool isIPCEncoder = true;
-
-    void encode(uint64_t);
+    static constexpr bool isIPCEncoder = true;
 
 private:
-    uint8_t* grow(unsigned alignment, size_t);
+    uint8_t* grow(size_t alignment, size_t);
 
-    void encode(bool);
-    void encode(uint8_t);
-    void encode(uint16_t);
-    void encode(uint32_t);
-    void encode(int16_t);
-    void encode(int32_t);
-    void encode(int64_t);
-    void encode(float);
-    void encode(double);
-
-    template<typename E>
-    auto encode(E value) -> std::enable_if_t<std::is_enum<E>::value>
-    {
-        static_assert(sizeof(E) <= sizeof(uint64_t), "Enum type must not be larger than 64 bits.");
-
-        ASSERT(isValidEnum<E>(static_cast<uint64_t>(value)));
-        encode(static_cast<uint64_t>(value));
-    }
+    bool hasAttachments() const;
 
     void encodeHeader();
+    const OptionSet<MessageFlags>& messageFlags() const;
+    OptionSet<MessageFlags>& messageFlags();
 
-    StringReference m_messageReceiverName;
-    StringReference m_messageName;
+    MessageName m_messageName;
     uint64_t m_destinationID;
 
     uint8_t m_inlineBuffer[512];
 
-    uint8_t* m_buffer;
-    uint8_t* m_bufferPointer;
+    uint8_t* m_buffer { m_inlineBuffer };
+    uint8_t* m_bufferPointer { m_inlineBuffer };
     
-    size_t m_bufferSize;
-    size_t m_bufferCapacity;
+    size_t m_bufferSize { 0 };
+    size_t m_bufferCapacity { sizeof(m_inlineBuffer) };
 
     Vector<Attachment> m_attachments;
 };

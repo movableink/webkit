@@ -53,10 +53,10 @@ WI.BlackboxSettingsView = class BlackboxSettingsView extends WI.SettingsView
     {
         super.initialLayout();
 
-        let patternBlackboxExplanationElement = this.element.appendChild(document.createElement("p"));
+        let patternBlackboxExplanationElement = this.element.insertBefore(document.createElement("p"), this.element.lastChild);
         patternBlackboxExplanationElement.textContent = WI.UIString("If the URL of any script matches one of the regular expression patterns below, any pauses that would have happened in that script will be deferred until execution has continued to outside of that script.");
 
-        let table = this.element.appendChild(document.createElement("table"));
+        let table = this.element.insertBefore(document.createElement("table"), this.element.lastChild);
 
         let tableHead = table.appendChild(document.createElement("thead"));
 
@@ -100,12 +100,26 @@ WI.BlackboxSettingsView = class BlackboxSettingsView extends WI.SettingsView
             this._addRow(null);
         });
 
-        let individualBlackboxExplanationElement = this.element.appendChild(document.createElement("p"));
+        let individualBlackboxExplanationElement = this.element.insertBefore(document.createElement("p"), this.element.lastChild);
         let blackboxIconElement = WI.ImageUtilities.useSVGSymbol("Images/Hide.svg#currentColor", "toggle-script-blackbox", WI.UIString("Ignore script when debugging"));
         String.format(WI.UIString("Scripts can also be individually blackboxed by clicking on the %s icon that is shown on hover."), [blackboxIconElement], String.standardFormatters, individualBlackboxExplanationElement, (a, b) => {
             a.append(b);
             return a;
         });
+
+        if (WI.DebuggerManager.supportsBlackboxingBreakpointEvaluations()) {
+            let blackboxBreakpointEvaluationsExplanationElement = this.element.insertBefore(document.createElement("p"), this.element.lastChild);
+            let blackboxBreakpointEvaluationsExplanationLabel = blackboxBreakpointEvaluationsExplanationElement.appendChild(document.createElement("label"));
+
+            let blackboxBreakpointEvaluationsExplanationCheckbox = blackboxBreakpointEvaluationsExplanationLabel.appendChild(document.createElement("input"));
+            blackboxBreakpointEvaluationsExplanationCheckbox.type = "checkbox";
+            blackboxBreakpointEvaluationsExplanationCheckbox.checked = WI.settings.blackboxBreakpointEvaluations.value;
+            blackboxBreakpointEvaluationsExplanationCheckbox.addEventListener("change", (event) => {
+                WI.settings.blackboxBreakpointEvaluations.value = blackboxBreakpointEvaluationsExplanationCheckbox.checked;
+            });
+
+            blackboxBreakpointEvaluationsExplanationLabel.append(WI.UIString("Also defer evaluating breakpoint conditions, ignore counts, and actions until execution has continued outside of the related script instead of at the breakpoint's location."));
+        }
     }
 
     // Private
@@ -140,7 +154,7 @@ WI.BlackboxSettingsView = class BlackboxSettingsView extends WI.SettingsView
         let removeBlackboxBodyCell = tableBodyRow.appendChild(document.createElement("td"));
         removeBlackboxBodyCell.classList.add("remove-blackbox");
 
-        let removeBlackboxButton = removeBlackboxBodyCell.appendChild(WI.ImageUtilities.useSVGSymbol("Images/NavigationItemTrash.svg", "remove-blackbox-button", WI.UIString("Remove Blackbox")));
+        let removeBlackboxButton = removeBlackboxBodyCell.appendChild(WI.ImageUtilities.useSVGSymbol("Images/NavigationItemTrash.svg", "remove-blackbox-button", WI.UIString("Delete Blackbox")));
         removeBlackboxButton.addEventListener("click", (event) => {
             if (regex)
                 WI.debuggerManager.setShouldBlackboxPattern(regex, false);

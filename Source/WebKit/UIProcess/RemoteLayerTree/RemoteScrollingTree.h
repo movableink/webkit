@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(ASYNC_SCROLLING)
+#if ENABLE(UI_SIDE_COMPOSITING)
 
 #include "RemoteScrollingCoordinator.h"
 #include <WebCore/ScrollingConstraints.h>
@@ -44,32 +44,32 @@ public:
     static Ref<RemoteScrollingTree> create(RemoteScrollingCoordinatorProxy&);
     virtual ~RemoteScrollingTree();
 
-    bool isRemoteScrollingTree() const override { return true; }
-    WebCore::ScrollingEventResult tryToHandleWheelEvent(const WebCore::PlatformWheelEvent&) override;
+    bool isRemoteScrollingTree() const final { return true; }
 
     void handleMouseEvent(const WebCore::PlatformMouseEvent&);
 
     const RemoteScrollingCoordinatorProxy& scrollingCoordinatorProxy() const { return m_scrollingCoordinatorProxy; }
 
-    void scrollingTreeNodeDidScroll(WebCore::ScrollingTreeScrollingNode&, WebCore::ScrollingLayerPositionAction = WebCore::ScrollingLayerPositionAction::Sync) override;
-    void scrollingTreeNodeRequestsScroll(WebCore::ScrollingNodeID, const WebCore::FloatPoint& scrollPosition, bool representsProgrammaticScroll) override;
+    void scrollingTreeNodeDidScroll(WebCore::ScrollingTreeScrollingNode&, WebCore::ScrollingLayerPositionAction = WebCore::ScrollingLayerPositionAction::Sync) final;
+    void scrollingTreeNodeDidStopAnimatedScroll(WebCore::ScrollingTreeScrollingNode&) final;
+    bool scrollingTreeNodeRequestsScroll(WebCore::ScrollingNodeID, const WebCore::RequestedScrollData&) final;
 
-    void currentSnapPointIndicesDidChange(WebCore::ScrollingNodeID, unsigned horizontal, unsigned vertical) override;
+    void currentSnapPointIndicesDidChange(WebCore::ScrollingNodeID, std::optional<unsigned> horizontal, std::optional<unsigned> vertical) final;
 
 private:
     explicit RemoteScrollingTree(RemoteScrollingCoordinatorProxy&);
 
 #if PLATFORM(MAC)
-    void handleWheelEventPhase(WebCore::PlatformWheelEventPhase) override;
+    void handleWheelEventPhase(WebCore::ScrollingNodeID, WebCore::PlatformWheelEventPhase) final;
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    void scrollingTreeNodeWillStartPanGesture() override;
-    void scrollingTreeNodeWillStartScroll() override;
-    void scrollingTreeNodeDidEndScroll() override;
+    void scrollingTreeNodeWillStartPanGesture(WebCore::ScrollingNodeID) final;
+    void scrollingTreeNodeWillStartScroll(WebCore::ScrollingNodeID) final;
+    void scrollingTreeNodeDidEndScroll(WebCore::ScrollingNodeID) final;
 #endif
 
-    Ref<WebCore::ScrollingTreeNode> createScrollingTreeNode(WebCore::ScrollingNodeType, WebCore::ScrollingNodeID) override;
+    Ref<WebCore::ScrollingTreeNode> createScrollingTreeNode(WebCore::ScrollingNodeType, WebCore::ScrollingNodeID) final;
     
     RemoteScrollingCoordinatorProxy& m_scrollingCoordinatorProxy;
 };
@@ -78,4 +78,4 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_SCROLLING_TREE(WebKit::RemoteScrollingTree, isRemoteScrollingTree());
 
-#endif // ENABLE(ASYNC_SCROLLING)
+#endif // ENABLE(UI_SIDE_COMPOSITING)

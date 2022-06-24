@@ -12,9 +12,10 @@
 #define MODULES_RTP_RTCP_SOURCE_DTMF_QUEUE_H_
 
 #include <stdint.h>
+
 #include <list>
 
-#include "rtc_base/criticalsection.h"
+#include "rtc_base/synchronization/mutex.h"
 
 namespace webrtc {
 class DtmfQueue {
@@ -34,7 +35,7 @@ class DtmfQueue {
   bool PendingDtmf() const;
 
  private:
-  rtc::CriticalSection dtmf_critsect_;
+  mutable Mutex dtmf_mutex_;
   std::list<Event> queue_;
 };
 }  // namespace webrtc

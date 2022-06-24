@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,8 @@
 namespace JSC {
 
 class CallFrame;
+class JSGlobalObject;
 class VM;
-using ExecState = CallFrame;
 
 class Watchdog : public WTF::ThreadSafeRefCounted<Watchdog> {
     WTF_MAKE_FAST_ALLOCATED;
@@ -45,10 +45,12 @@ public:
     Watchdog(VM*);
     void willDestroyVM(VM*);
 
-    typedef bool (*ShouldTerminateCallback)(ExecState*, void* data1, void* data2);
-    void setTimeLimit(Seconds limit, ShouldTerminateCallback = 0, void* data1 = 0, void* data2 = 0);
+    typedef bool (*ShouldTerminateCallback)(JSGlobalObject*, void* data1, void* data2);
+    void setTimeLimit(Seconds limit, ShouldTerminateCallback = nullptr, void* data1 = nullptr, void* data2 = nullptr);
 
-    bool shouldTerminate(ExecState*);
+    bool shouldTerminate(JSGlobalObject*);
+
+    bool isActive() const { return m_hasEnteredVM; }
 
     bool hasTimeLimit();
     void enteredVM();

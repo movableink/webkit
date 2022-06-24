@@ -1,3 +1,0 @@
-
-FAIL lineWidth determines the width of line strokes Can't find variable: OffscreenCanvas
-

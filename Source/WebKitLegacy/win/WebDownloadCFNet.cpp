@@ -160,14 +160,14 @@ HRESULT WebDownload::initToResumeWithBundle(_In_ BSTR bundlePath, _In_opt_ IWebD
 {
     LOG(Download, "Attempting resume of download bundle %s", String(bundlePath, SysStringLen(bundlePath)).ascii().data());
 
-    Vector<char> buffer;
+    Vector<uint8_t> buffer;
     if (!DownloadBundle::extractResumeData(String(bundlePath, SysStringLen(bundlePath)), buffer))
         return E_FAIL;
 
     // It is possible by some twist of fate the bundle magic number was naturally at the end of the file and its not actually a valid bundle.
     // That, or someone engineered it that way to try to attack us. In that cause, this CFData will successfully create but when we actually
     // try to start the CFURLDownload using this bogus data, it will fail and we will handle that gracefully.
-    RetainPtr<CFDataRef> resumeData = adoptCF(CFDataCreate(0, reinterpret_cast<const UInt8*>(buffer.data()), buffer.size()));
+    auto resumeData = adoptCF(CFDataCreate(0, buffer.data(), buffer.size()));
 
     if (!delegate)
         return E_FAIL;
@@ -178,7 +178,7 @@ HRESULT WebDownload::initToResumeWithBundle(_In_ BSTR bundlePath, _In_opt_ IWebD
                                   didReceiveResponseCallback, willResumeWithResponseCallback, didReceiveDataCallback, shouldDecodeDataOfMIMETypeCallback, 
                                   decideDestinationWithSuggestedObjectNameCallback, didCreateDestinationCallback, didFinishCallback, didFailCallback};
     
-    RetainPtr<CFURLRef> pathURL = adoptCF(MarshallingHelpers::PathStringToFileCFURLRef(String(bundlePath, SysStringLen(bundlePath))));
+    auto pathURL = MarshallingHelpers::PathStringToFileCFURLRef(String(bundlePath, SysStringLen(bundlePath)));
     ASSERT(pathURL);
 
     m_download = adoptCF(CFURLDownloadCreateWithResumeData(0, resumeData.get(), pathURL.get(), &client));
@@ -236,11 +236,11 @@ HRESULT WebDownload::cancelForResume()
     if (!m_download)
         return E_FAIL;
 
-    HRESULT hr = S_OK;
     RetainPtr<CFDataRef> resumeData;
     if (m_destination.isEmpty()) {
         CFURLDownloadCancel(m_download.get());
-        goto exit;
+        m_download = nullptr;
+        return S_OK;
     }
 
     CFURLDownloadSetDeletesUponFailure(m_download.get(), false);
@@ -249,16 +249,16 @@ HRESULT WebDownload::cancelForResume()
     resumeData = adoptCF(CFURLDownloadCopyResumeData(m_download.get()));
     if (!resumeData) {
         LOG(Download, "WebDownload - Unable to create resume data for download (%p)", this);
-        goto exit;
+        m_download = nullptr;
+        return S_OK;
     }
 
-    const char* resumeBytes = reinterpret_cast<const char*>(CFDataGetBytePtr(resumeData.get()));
+    auto* resumeBytes = reinterpret_cast<const uint8_t*>(CFDataGetBytePtr(resumeData.get()));
     uint32_t resumeLength = CFDataGetLength(resumeData.get());
     DownloadBundle::appendResumeData(resumeBytes, resumeLength, m_bundlePath);
 
-exit:
     m_download = nullptr;
-    return hr;
+    return S_OK;
 }
 
 HRESULT WebDownload::deletesFileUponFailure(_Out_ BOOL* result)
@@ -288,9 +288,8 @@ HRESULT WebDownload::setDestination(_In_ BSTR path, BOOL allowOverwrite)
     m_destination = String(path, SysStringLen(path));
     m_bundlePath = m_destination + DownloadBundle::fileExtension();
 
-    CFURLRef pathURL = MarshallingHelpers::PathStringToFileCFURLRef(m_bundlePath);
-    CFURLDownloadSetDestination(m_download.get(), pathURL, !!allowOverwrite);
-    CFRelease(pathURL);
+    auto pathURL = MarshallingHelpers::PathStringToFileCFURLRef(m_bundlePath);
+    CFURLDownloadSetDestination(m_download.get(), pathURL.get(), !!allowOverwrite);
 
     LOG(Download, "WebDownload - Set destination to %s", m_bundlePath.ascii().data());
 
@@ -335,7 +334,7 @@ HRESULT WebDownload::useCredential(_In_opt_ IWebURLCredential* credential, _In_o
     if (!webCredential)
         return E_NOINTERFACE;
 
-    RetainPtr<CFURLCredentialRef> cfCredential = adoptCF(createCF(webCredential->credential()));
+    auto cfCredential = createCF(webCredential->credential());
 
     if (m_download)
         CFURLDownloadUseCredential(m_download.get(), cfCredential.get(), webChallenge->authenticationChallenge().cfURLAuthChallengeRef());
@@ -368,9 +367,7 @@ CFURLRequestRef WebDownload::willSendRequest(CFURLRequestRef request, CFURLRespo
 
     COMPtr<WebMutableURLRequest> finalWebRequest(AdoptCOM, WebMutableURLRequest::createInstance(finalRequest.get()));
     m_request = finalWebRequest.get();
-    CFURLRequestRef result = finalWebRequest->resourceRequest().cfURLRequest(UpdateHTTPBody);
-    CFRetain(result);
-    return result;
+    return retainPtr(finalWebRequest->resourceRequest().cfURLRequest(UpdateHTTPBody)).leakRef();
 }
 
 void WebDownload::didReceiveAuthenticationChallenge(CFURLAuthChallengeRef challenge)
@@ -379,7 +376,7 @@ void WebDownload::didReceiveAuthenticationChallenge(CFURLAuthChallengeRef challe
     if (!CFURLAuthChallengeGetPreviousFailureCount(challenge)) {
         Credential credential = NetworkStorageSessionMap::defaultStorageSession().credentialStorage().get(emptyString(), core(CFURLAuthChallengeGetProtectionSpace(challenge)));
         if (!credential.isEmpty()) {
-            RetainPtr<CFURLCredentialRef> cfCredential = adoptCF(createCF(credential));
+            auto cfCredential = createCF(credential);
             CFURLDownloadUseCredential(m_download.get(), cfCredential.get(), challenge);
             return;
         }

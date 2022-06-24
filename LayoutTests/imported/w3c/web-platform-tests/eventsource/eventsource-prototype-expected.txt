@@ -1,3 +1,0 @@
-
-FAIL EventSource: prototype et al Can't find variable: assert_exists
-

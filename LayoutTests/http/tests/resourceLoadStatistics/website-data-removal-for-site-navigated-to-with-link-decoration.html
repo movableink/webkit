@@ -10,7 +10,6 @@
 <div id="output"></div>
 <br>
 <script>
-    testRunner.setUseITPDatabase(false);
     testRunner.waitUntilDone();
     testRunner.dumpAsText();
 
@@ -127,7 +126,7 @@
 
                 if (++intervalCounterIDB >= maxIntervals) {
                     clearInterval(checkIDBIntervalID);
-                    addOutput("Before deletion: IDB entry does not exist.");
+                    addOutput("After deletion: IDB entry checks exhausted.");
                     semaphoreIDBCheck = false;
                     checkIDBCallback();
                 } else {
@@ -166,6 +165,8 @@
             checkLocalStorageIntervalID = setInterval(function() {
                 if (++intervalCounterLocalStorage >= maxIntervals) {
                     clearInterval(checkLocalStorageIntervalID);
+                    let value = localStorage.getItem(localStorageName);
+                    addOutput("Before deletion: LocalStorage entry " + (value === localStorageValue ? "does" : "does not") + " exist.");
                     checkLocalStorageCallback();
                 } else if (testRunner.isStatisticsHasLocalStorage(destinationOrigin)) {
                     clearInterval(checkLocalStorageIntervalID);
@@ -179,6 +180,8 @@
             checkLocalStorageIntervalID = setInterval(function() {
                 if (++intervalCounterLocalStorage >= maxIntervals) {
                     clearInterval(checkLocalStorageIntervalID);
+                    let value = localStorage.getItem(localStorageName);
+                    addOutput("After deletion: LocalStorage entry " + (value === localStorageValue ? "does" : "does not") + " exist.");
                     checkLocalStorageCallback();
                 } else if (!testRunner.isStatisticsHasLocalStorage(destinationOrigin)) {
                     clearInterval(checkLocalStorageIntervalID);
@@ -192,7 +195,7 @@
 
     async function writeWebsiteDataAndContinue() {
         // Write cookies.
-        await fetch("/cookies/resources/set-http-only-cookie.php?cookieName=" + httpOnlyCookieName, { credentials: "same-origin" });
+        await fetch("/cookies/resources/set-http-only-cookie.py?cookieName=" + httpOnlyCookieName, { credentials: "same-origin" });
         await fetch("/cookies/resources/setCookies.cgi", { headers: { "Set-Cookie": serverSideCookieName + "=1; path=/;" }, credentials: "same-origin" });
         document.cookie = clientSideCookieName + "=1";
 
@@ -213,8 +216,8 @@
     }
 
     function processWebsiteDataAndContinue() {
+        testRunner.installStatisticsDidScanDataRecordsCallback(checkWebsiteDataAndContinue);
         testRunner.statisticsProcessStatisticsAndDataRecords();
-        checkWebsiteDataAndContinue();
     }
 
     function checkWebsiteDataAndContinue() {
@@ -224,8 +227,8 @@
         });
     }
 
-    function finishTest() {
-        resetCookies();
+    async function finishTest() {
+        await resetCookiesITP();
         testRunner.dumpResourceLoadStatistics();
         setEnableFeature(false, function() {
             testRunner.notifyDone();

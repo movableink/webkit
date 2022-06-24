@@ -29,6 +29,8 @@
 #include "ShadowRoot.h"
 
 #include "CSSStyleSheet.h"
+#include "ChildListMutationScope.h"
+#include "ElementInlines.h"
 #include "ElementTraversal.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSlotElement.h"
@@ -41,6 +43,7 @@
 #include "StyleResolver.h"
 #include "StyleScope.h"
 #include "StyleSheetList.h"
+#include "WebAnimation.h"
 #include "markup.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -53,12 +56,15 @@ struct SameSizeAsShadowRoot : public DocumentFragment, public TreeScope {
     uint8_t mode;
     void* styleScope;
     void* styleSheetList;
-    void* host;
+    WeakPtr<Element> host;
     void* slotAssignment;
-    Optional<HashMap<AtomString, AtomString>> partMappings;
+    std::optional<HashMap<AtomString, AtomString>> partMappings;
 };
 
 COMPILE_ASSERT(sizeof(ShadowRoot) == sizeof(SameSizeAsShadowRoot), shadowroot_should_stay_small);
+#if !ASSERT_ENABLED
+COMPILE_ASSERT(sizeof(WeakPtr<Element>) == sizeof(void*), WeakPtr_should_be_same_size_as_raw_pointer);
+#endif
 
 ShadowRoot::ShadowRoot(Document& document, ShadowRootMode type, DelegatesFocus delegatesFocus)
     : DocumentFragment(document, CreateShadowRoot)
@@ -127,17 +133,17 @@ void ShadowRoot::childrenChanged(const ChildChange& childChange)
 
     // FIXME: Avoid always invalidating style just for first-child, etc... as done in Element::childrenChanged.
     switch (childChange.type) {
-    case ElementInserted:
-    case ElementRemoved:
+    case ChildChange::Type::ElementInserted:
+    case ChildChange::Type::ElementRemoved:
         m_host->invalidateStyleForSubtreeInternal();
         break;
-    case TextInserted:
-    case TextRemoved:
-    case TextChanged:
-    case AllChildrenRemoved:
-    case NonContentsChildRemoved:
-    case NonContentsChildInserted:
-    case AllChildrenReplaced:
+    case ChildChange::Type::TextInserted:
+    case ChildChange::Type::TextRemoved:
+    case ChildChange::Type::TextChanged:
+    case ChildChange::Type::AllChildrenRemoved:
+    case ChildChange::Type::NonContentsChildRemoved:
+    case ChildChange::Type::NonContentsChildInserted:
+    case ChildChange::Type::AllChildrenReplaced:
         break;
     }
 }
@@ -177,6 +183,12 @@ String ShadowRoot::innerHTML() const
 
 ExceptionOr<void> ShadowRoot::setInnerHTML(const String& markup)
 {
+    if (markup.isEmpty()) {
+        ChildListMutationScope mutation(*this);
+        removeChildren();
+        return { };
+    }
+
     auto fragment = createFragmentForInnerOuterHTML(*host(), markup, AllowScriptingContent);
     if (fragment.hasException())
         return fragment.releaseException();
@@ -222,7 +234,7 @@ HTMLSlotElement* ShadowRoot::findAssignedSlot(const Node& node)
     ASSERT(node.parentNode() == host());
     if (!m_slotAssignment)
         return nullptr;
-    return m_slotAssignment->findAssignedSlot(node, *this);
+    return m_slotAssignment->findAssignedSlot(node);
 }
 
 void ShadowRoot::renameSlotElement(HTMLSlotElement& slot, const AtomString& oldName, const AtomString& newName)
@@ -252,14 +264,14 @@ void ShadowRoot::slotFallbackDidChange(HTMLSlotElement& slot)
     return m_slotAssignment->slotFallbackDidChange(slot, *this);
 }
 
-const Vector<Node*>* ShadowRoot::assignedNodesForSlot(const HTMLSlotElement& slot)
+const Vector<WeakPtr<Node>>* ShadowRoot::assignedNodesForSlot(const HTMLSlotElement& slot)
 {
     if (!m_slotAssignment)
         return nullptr;
     return m_slotAssignment->assignedNodesForSlot(slot, *this);
 }
 
-static Optional<std::pair<AtomString, AtomString>> parsePartMapping(StringView mappingString)
+static std::optional<std::pair<AtomString, AtomString>> parsePartMapping(StringView mappingString)
 {
     const auto end = mappingString.length();
 
@@ -308,9 +320,6 @@ static Optional<std::pair<AtomString, AtomString>> parsePartMapping(StringView m
 
 static ShadowRoot::PartMappings parsePartMappingsList(StringView mappingsListString)
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().cssShadowPartsEnabled())
-        return { };
-
     ShadowRoot::PartMappings mappings;
 
     const auto end = mappingsListString.length();
@@ -366,5 +375,12 @@ HTMLVideoElement* ShadowRoot::pictureInPictureElement() const
     return nullptr;
 }
 #endif
+
+Vector<RefPtr<WebAnimation>> ShadowRoot::getAnimations()
+{
+    return document().matchingAnimations([&] (Element& target) -> bool {
+        return target.containingShadowRoot() == this;
+    });
+}
 
 }

@@ -13,7 +13,6 @@
 
 #include <queue>
 
-#include "modules/include/module_common_types.h"
 #include "rtc_base/numerics/percentile_filter.h"
 
 namespace webrtc {
@@ -41,7 +40,7 @@ class VCMCodecTimer {
   int ignored_sample_count_;
   // Queue with history of latest decode time values.
   std::queue<Sample> history_;
-  // |filter_| contains the same values as |history_|, but in a data structure
+  // `filter_` contains the same values as `history_`, but in a data structure
   // that allows efficient retrieval of the percentile value.
   PercentileFilter<int64_t> filter_;
 };

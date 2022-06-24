@@ -39,32 +39,11 @@ std::unique_ptr<KeyedDecoder> createForFile(const String& path)
 {
     ASSERT(!RunLoop::isMain());
 
-    auto handle = FileSystem::openAndLockFile(path, FileSystem::FileOpenMode::Read);
-    if (handle == FileSystem::invalidPlatformFileHandle)
+    auto buffer = FileSystem::readEntireFile(path);
+    if (!buffer)
         return nullptr;
 
-    long long fileSize = 0;
-    if (!FileSystem::getFileSize(handle, fileSize) || !fileSize) {
-        FileSystem::unlockAndCloseFile(handle);
-        return nullptr;
-    }
-
-    size_t bytesToRead;
-    if (!WTF::convertSafely(fileSize, bytesToRead)) {
-        FileSystem::unlockAndCloseFile(handle);
-        return nullptr;
-    }
-
-    Vector<char> buffer(bytesToRead);
-    size_t totalBytesRead = FileSystem::readFromFile(handle, buffer.data(), buffer.size());
-
-    FileSystem::unlockAndCloseFile(handle);
-
-    if (totalBytesRead != bytesToRead)
-        return nullptr;
-
-    // FIXME: We should try to modify the constructor to pass &&.
-    return KeyedDecoder::decoder(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size());
+    return KeyedDecoder::decoder(buffer->data(), buffer->size());
 }
 
 void writeToDisk(std::unique_ptr<KeyedEncoder>&& encoder, String&& path)

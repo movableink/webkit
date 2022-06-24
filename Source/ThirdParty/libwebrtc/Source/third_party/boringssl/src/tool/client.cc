@@ -48,6 +48,11 @@ static const struct argument kArguments[] = {
         "An OpenSSL-style ECDH curves list that configures the offered curves",
     },
     {
+        "-sigalgs", kOptionalArgument,
+        "An OpenSSL-style signature algorithms list that configures the "
+        "signature algorithm preferences",
+    },
+    {
         "-max-version", kOptionalArgument,
         "The maximum acceptable protocol version",
     },
@@ -117,20 +122,19 @@ static const struct argument kArguments[] = {
     },
     {
         "-root-certs", kOptionalArgument,
-        "A filename containing one of more PEM root certificates. Implies that "
+        "A filename containing one or more PEM root certificates. Implies that "
         "verification is required.",
+    },
+    {
+        "-root-cert-dir", kOptionalArgument,
+        "A directory containing one or more root certificate PEM files in "
+        "OpenSSL's hashed-directory format. Implies that verification is "
+        "required.",
     },
     {
         "-early-data", kOptionalArgument, "Enable early data. The argument to "
         "this flag is the early data to send or if it starts with '@', the "
         "file to read from for early data.",
-    },
-    {
-        "-tls13-variant", kOptionalArgument,
-        "Enable the specified experimental TLS 1.3 variant",
-    },
-    {
-        "-ed25519", kBooleanArgument, "Advertise Ed25519 support",
     },
     {
         "-http-tunnel", kOptionalArgument,
@@ -328,26 +332,6 @@ static bool DoConnection(SSL_CTX *ctx,
   return cb(ssl.get(), sock);
 }
 
-static bool GetTLS13Variant(tls13_variant_t *out, const std::string &in) {
-  if (in == "draft23") {
-    *out = tls13_draft23;
-    return true;
-  }
-  if (in == "draft28") {
-    *out = tls13_draft28;
-    return true;
-  }
-  if (in == "rfc") {
-    *out = tls13_rfc;
-    return true;
-  }
-  if (in == "all") {
-    *out = tls13_all;
-    return true;
-  }
-  return false;
-}
-
 static void InfoCallback(const SSL *ssl, int type, int value) {
   switch (type) {
     case SSL_CB_HANDSHAKE_START:
@@ -395,6 +379,12 @@ bool Client(const std::vector<std::string> &args) {
   if (args_map.count("-curves") != 0 &&
       !SSL_CTX_set1_curves_list(ctx.get(), args_map["-curves"].c_str())) {
     fprintf(stderr, "Failed setting curves list\n");
+    return false;
+  }
+
+  if (args_map.count("-sigalgs") != 0 &&
+      !SSL_CTX_set1_sigalgs_list(ctx.get(), args_map["-sigalgs"].c_str())) {
+    fprintf(stderr, "Failed setting signature algorithms list\n");
     return false;
   }
 
@@ -524,22 +514,18 @@ bool Client(const std::vector<std::string> &args) {
     SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
   }
 
-  if (args_map.count("-early-data") != 0) {
-    SSL_CTX_set_early_data_enabled(ctx.get(), 1);
-  }
-
-  if (args_map.count("-tls13-variant") != 0) {
-    tls13_variant_t variant;
-    if (!GetTLS13Variant(&variant, args_map["-tls13-variant"])) {
-      fprintf(stderr, "Unknown TLS 1.3 variant: %s\n",
-              args_map["-tls13-variant"].c_str());
+  if (args_map.count("-root-cert-dir") != 0) {
+    if (!SSL_CTX_load_verify_locations(
+            ctx.get(), nullptr, args_map["-root-cert-dir"].c_str())) {
+      fprintf(stderr, "Failed to load root certificates.\n");
+      ERR_print_errors_fp(stderr);
       return false;
     }
-    SSL_CTX_set_tls13_variant(ctx.get(), variant);
+    SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
   }
 
-  if (args_map.count("-ed25519") != 0) {
-    SSL_CTX_set_ed25519_enabled(ctx.get(), 1);
+  if (args_map.count("-early-data") != 0) {
+    SSL_CTX_set_early_data_enabled(ctx.get(), 1);
   }
 
   if (args_map.count("-debug") != 0) {

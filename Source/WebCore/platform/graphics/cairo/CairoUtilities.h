@@ -32,9 +32,6 @@
 #include "IntSize.h"
 #include <cairo.h>
 
-// This function was added pretty much simultaneous to when 1.13 was branched.
-#define HAVE_CAIRO_SURFACE_SET_DEVICE_SCALE CAIRO_VERSION_MAJOR > 1 || (CAIRO_VERSION_MAJOR == 1 && CAIRO_VERSION_MINOR >= 13)
-
 #if USE(FREETYPE)
 #include <cairo-ft.h>
 #endif
@@ -70,7 +67,9 @@ private:
     cairo_scaled_font_t* m_scaledFont { nullptr };
     FT_Face m_ftFace { nullptr };
 };
+#endif
 
+#if USE(CAIRO)
 const cairo_font_options_t* getDefaultCairoFontOptions();
 #endif
 
@@ -82,16 +81,14 @@ void appendWebCorePathToCairoContext(cairo_t* context, const Path& path);
 void appendRegionToCairoContext(cairo_t*, const cairo_region_t*);
 cairo_operator_t toCairoOperator(CompositeOperator, BlendMode = BlendMode::Normal);
 void drawPatternToCairoContext(cairo_t* cr, cairo_surface_t* image, const IntSize& imageSize, const FloatRect& tileRect,
-                               const AffineTransform& patternTransform, const FloatPoint& phase, cairo_operator_t op, const FloatRect& destRect);
+    const AffineTransform& patternTransform, const FloatPoint& phase, cairo_operator_t, InterpolationQuality, const FloatRect& destRect);
 RefPtr<cairo_surface_t> copyCairoImageSurface(cairo_surface_t*);
 
 void copyRectFromCairoSurfaceToContext(cairo_surface_t* from, cairo_t* to, const IntSize& offset, const IntRect&);
-void copyRectFromOneSurfaceToAnother(cairo_surface_t* from, cairo_surface_t* to, const IntSize& offset, const IntRect&, const IntSize& = IntSize(), cairo_operator_t = CAIRO_OPERATOR_OVER);
+void copyRectFromOneSurfaceToAnother(cairo_surface_t* from, cairo_surface_t* to, const IntSize& offset, const IntRect&, const IntSize& = IntSize());
 
 IntSize cairoSurfaceSize(cairo_surface_t*);
 void flipImageSurfaceVertically(cairo_surface_t*);
-void cairoSurfaceSetDeviceScale(cairo_surface_t*, double xScale, double yScale);
-void cairoSurfaceGetDeviceScale(cairo_surface_t*, double& xScale, double& yScale);
 
 RefPtr<cairo_region_t> toCairoRegion(const Region&);
 

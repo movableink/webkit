@@ -27,11 +27,13 @@
 
 #include "NetworkSession.h"
 #include "SoupCookiePersistentStorageType.h"
+#include "WebPageProxyIdentifier.h"
 
 typedef struct _SoupSession SoupSession;
 
 namespace WebCore {
 class SoupNetworkSession;
+struct SoupNetworkProxySettings;
 }
 
 namespace WebKit {
@@ -42,11 +44,11 @@ struct NetworkSessionCreationParameters;
 
 class NetworkSessionSoup final : public NetworkSession {
 public:
-    static std::unique_ptr<NetworkSession> create(NetworkProcess& networkProcess, NetworkSessionCreationParameters&& parameters)
+    static std::unique_ptr<NetworkSession> create(NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
     {
-        return makeUnique<NetworkSessionSoup>(networkProcess, WTFMove(parameters));
+        return makeUnique<NetworkSessionSoup>(networkProcess, parameters);
     }
-    NetworkSessionSoup(NetworkProcess&, NetworkSessionCreationParameters&&);
+    NetworkSessionSoup(NetworkProcess&, const NetworkSessionCreationParameters&);
     ~NetworkSessionSoup();
 
     WebCore::SoupNetworkSession& soupNetworkSession() const { return *m_networkSession; }
@@ -54,11 +56,18 @@ public:
 
     void setCookiePersistentStorage(const String& storagePath, SoupCookiePersistentStorageType);
 
+    void setPersistentCredentialStorageEnabled(bool enabled) { m_persistentCredentialStorageEnabled = enabled; }
+    bool persistentCredentialStorageEnabled() const { return m_persistentCredentialStorageEnabled; }
+
+    void setIgnoreTLSErrors(bool);
+    void setProxySettings(const WebCore::SoupNetworkProxySettings&);
+
 private:
-    std::unique_ptr<WebSocketTask> createWebSocketTask(NetworkSocketChannel&, const WebCore::ResourceRequest&, const String& protocol) final;
+    std::unique_ptr<WebSocketTask> createWebSocketTask(WebPageProxyIdentifier, NetworkSocketChannel&, const WebCore::ResourceRequest&, const String& protocol, const WebCore::ClientOrigin&, bool) final;
     void clearCredentials() final;
 
     std::unique_ptr<WebCore::SoupNetworkSession> m_networkSession;
+    bool m_persistentCredentialStorageEnabled { true };
 };
 
 } // namespace WebKit

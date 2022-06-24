@@ -26,9 +26,12 @@
 #include "config.h"
 #include "TestController.h"
 
+#include "PlatformWebView.h"
+#include <cairo.h>
 #include <glib.h>
 #include <wtf/RunLoop.h>
 #include <wtf/glib/GUniquePtr.h>
+#include <wtf/text/Base64.h>
 
 namespace WTR {
 
@@ -41,7 +44,7 @@ void TestController::setHidden(bool)
 {
 }
 
-void TestController::platformInitialize()
+void TestController::platformInitialize(const Options&)
 {
 }
 
@@ -130,14 +133,30 @@ const char* TestController::platformLibraryPathForTesting()
 
 void TestController::platformConfigureViewForTest(const TestInvocation&)
 {
+    WKPageSetApplicationNameForUserAgent(mainWebView()->page(), WKStringCreateWithUTF8CString("WebKitTestRunnerWPE"));
 }
 
-void TestController::platformResetPreferencesToConsistentValues()
+bool TestController::platformResetStateToConsistentValues(const TestOptions&)
 {
+    return true;
 }
 
-void TestController::updatePlatformSpecificTestOptionsForTest(TestOptions&, const std::string&) const
+TestFeatures TestController::platformSpecificFeatureDefaultsForTest(const TestCommand&) const
 {
+    TestFeatures features;
+    features.boolWebPreferenceFeatures.insert({ "AsyncOverflowScrollingEnabled", true });
+    return features;
+}
+
+WKRetainPtr<WKStringRef> TestController::takeViewPortSnapshot()
+{
+    Vector<unsigned char> output;
+    cairo_surface_write_to_png_stream(mainWebView()->windowSnapshotImage(), [](void* output, const unsigned char* data, unsigned length) -> cairo_status_t {
+        reinterpret_cast<Vector<unsigned char>*>(output)->append(data, length);
+        return CAIRO_STATUS_SUCCESS;
+    }, &output);
+    auto uri = makeString("data:image/png;base64,", base64Encoded(output.data(), output.size()));
+    return adoptWK(WKStringCreateWithUTF8CString(uri.utf8().data()));
 }
 
 } // namespace WTR

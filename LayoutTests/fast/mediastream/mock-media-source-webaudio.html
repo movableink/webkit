@@ -17,7 +17,7 @@
 
     var test = async_test(() => {
         navigator.mediaDevices.getUserMedia({audio: true}).then((stream) => {
-            var context = new webkitAudioContext();
+            var context = new AudioContext();
             var sourceNode = context.createMediaStreamSource(stream);
             var analyser = context.createAnalyser();
             var gain = context.createGain();
@@ -31,6 +31,11 @@
             sourceNode.connect(analyser);
             analyser.connect(gain);
             gain.connect(context.destination);
+
+            const secondSource = context.createMediaStreamSource(stream);
+            const sourceGain = new GainNode(context, { gain : 0 });
+            secondSource.connect(gain);
+            sourceGain.connect(context.destination);
 
             function analyse() {
                 var freqDomain = new Uint8Array(analyser.frequencyBinCount);

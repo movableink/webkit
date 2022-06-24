@@ -52,8 +52,9 @@ public:
     }
 
     VisibleSelection visibleSelectionForInsertedText() const { return m_visibleSelectionForInsertedText; }
+    String documentFragmentPlainText() const { return m_documentFragmentPlainText; }
 
-    RefPtr<Range> insertedContentRange() const;
+    std::optional<SimpleRange> insertedContentRange() const;
 
 private:
     ReplaceSelectionCommand(Document&, RefPtr<DocumentFragment>&&, OptionSet<CommandOption>, EditAction);
@@ -67,6 +68,7 @@ private:
     public:
         void respondToNodeInsertion(Node*);
         void willRemoveNodePreservingChildren(Node*);
+        void willRemovePossibleAncestorNode(Node*);
         void willRemoveNode(Node*);
         void didReplaceNode(Node*, Node* newNode);
 

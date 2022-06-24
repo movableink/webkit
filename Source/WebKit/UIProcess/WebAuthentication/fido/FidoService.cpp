@@ -49,7 +49,7 @@ FidoService::FidoService(Observer& observer)
 void FidoService::getInfo(std::unique_ptr<CtapDriver>&& driver)
 {
     // Get authenticator info from the device.
-    driver->transact(encodeEmptyAuthenticatorRequest(CtapRequestCommand::kAuthenticatorGetInfo), [weakThis = makeWeakPtr(*this), weakDriver = makeWeakPtr(*driver)] (Vector<uint8_t>&& response) mutable {
+    driver->transact(encodeEmptyAuthenticatorRequest(CtapRequestCommand::kAuthenticatorGetInfo), [weakThis = WeakPtr { *this }, weakDriver = WeakPtr { *driver }] (Vector<uint8_t>&& response) mutable {
         ASSERT(RunLoop::isMain());
         if (!weakThis)
             return;
@@ -64,7 +64,7 @@ void FidoService::continueAfterGetInfo(WeakPtr<CtapDriver>&& weakDriver, Vector<
     if (!weakDriver)
         return;
 
-    std::unique_ptr<CtapDriver> driver = m_drivers.take(weakDriver.get());
+    auto driver = m_drivers.take(weakDriver.get());
     if (!driver || !observer() || response.isEmpty())
         return;
 

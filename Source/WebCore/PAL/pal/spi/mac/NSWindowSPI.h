@@ -29,6 +29,10 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 
+#if HAVE(CPP20_INCOMPATIBLE_INTERNAL_HEADERS)
+#define CGCOLORTAGGEDPOINTER_H_
+#endif
+
 #import <AppKit/NSWindow_Private.h>
 
 #else
@@ -40,7 +44,13 @@
 - (id)_oldFirstResponderBeforeBecoming;
 - (id)_newFirstResponderAfterResigning;
 - (void)_setCursorForMouseLocation:(NSPoint)point;
+- (void)exitFullScreenMode:(id)sender;
+- (void)enterFullScreenMode:(id)sender;
 
+enum {
+    NSWindowChildOrderingPriorityPopover = 20,
+};
+- (NSInteger)_childWindowOrderingPriority;
 @end
 
 enum {

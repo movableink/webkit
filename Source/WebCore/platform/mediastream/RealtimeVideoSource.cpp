@@ -28,37 +28,68 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#if PLATFORM(COCOA)
+#include "ImageTransferSessionVT.h"
+#include "VideoFrameCV.h"
+#endif
+
 namespace WebCore {
 
-RealtimeVideoSource::RealtimeVideoSource(Ref<RealtimeVideoCaptureSource>&& source)
-    : RealtimeVideoCaptureSource(String { source->name() }, String { source->persistentID() }, String { source->deviceIDHashSalt() })
+RealtimeVideoSource::RealtimeVideoSource(Ref<RealtimeVideoCaptureSource>&& source, bool shouldUseIOSurface)
+    : RealtimeMediaSource(Type::Video, String { source->name() }, String { source->persistentID() }, String { source->deviceIDHashSalt() }, source->pageIdentifier())
     , m_source(WTFMove(source))
+#if PLATFORM(COCOA)
+    , m_shouldUseIOSurface(shouldUseIOSurface)
+#endif
 {
+    UNUSED_PARAM(shouldUseIOSurface);
     m_source->addObserver(*this);
     m_currentSettings = m_source->settings();
+    setSize(m_source->size());
+    setFrameRate(m_source->frameRate());
 }
 
 RealtimeVideoSource::~RealtimeVideoSource()
 {
+    m_source->removeVideoSampleObserver(*this);
     m_source->removeObserver(*this);
+}
+
+void RealtimeVideoSource::whenReady(CompletionHandler<void(String)>&& callback)
+{
+    m_source->whenReady([this, protectedThis = Ref { *this }, callback = WTFMove(callback)](auto message) mutable {
+        setName(String { m_source->name() });
+        m_currentSettings = m_source->settings();
+        setSize(m_source->size());
+        setFrameRate(m_source->frameRate());
+        callback(WTFMove(message));
+    });
 }
 
 void RealtimeVideoSource::startProducingData()
 {
     m_source->start();
+    m_source->addVideoSampleObserver(*this);
 }
 
 void RealtimeVideoSource::stopProducingData()
 {
+    m_source->removeVideoSampleObserver(*this);
     m_source->stop();
 }
 
-bool RealtimeVideoSource::supportsSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate)
+void RealtimeVideoSource::endProducingData()
+{
+    m_source->removeVideoSampleObserver(*this);
+    m_source->requestToEnd(*this);
+}
+
+bool RealtimeVideoSource::supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate)
 {
     return m_source->supportsSizeAndFrameRate(width, height, frameRate);
 }
 
-void RealtimeVideoSource::setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate)
+void RealtimeVideoSource::setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate)
 {
     if (!width && !height) {
         width = size().width();
@@ -70,12 +101,15 @@ void RealtimeVideoSource::setSizeAndFrameRate(Optional<int> width, Optional<int>
     ASSERT(sourceSize.height());
     ASSERT(sourceSize.width());
 
+    auto* currentPreset = m_source->currentPreset();
+    auto intrinsicSize = currentPreset ? currentPreset->size : sourceSize;
+
     if (!width)
-        width = sourceSize.width() * height.value() / sourceSize.height();
+        width = intrinsicSize.width() * height.value() / intrinsicSize.height();
     m_currentSettings.setWidth(*width);
 
     if (!height)
-        height = sourceSize.height() * width.value() / sourceSize.width();
+        height = intrinsicSize.height() * width.value() / intrinsicSize.width();
     m_currentSettings.setHeight(*height);
 
     if (frameRate)
@@ -95,8 +129,10 @@ void RealtimeVideoSource::sourceSettingsChanged()
     auto size = this->size();
     if (size.isEmpty())
         size = m_source->size();
+
     if (rotation == MediaSample::VideoRotation::Left || rotation == MediaSample::VideoRotation::Right)
         size = size.transposedSize();
+
     m_currentSettings.setWidth(size.width());
     m_currentSettings.setHeight(size.height());
 
@@ -118,11 +154,6 @@ bool RealtimeVideoSource::preventSourceFromStopping()
     return hasObserverPreventingStopping;
 }
 
-void RealtimeVideoSource::requestToEnd(RealtimeMediaSource::Observer&)
-{
-    m_source->requestToEnd(*this);
-}
-
 void RealtimeVideoSource::stopBeingObserved()
 {
     m_source->requestToEnd(*this);
@@ -140,22 +171,64 @@ void RealtimeVideoSource::sourceStopped()
     });
 }
 
-void RealtimeVideoSource::videoSampleAvailable(MediaSample& sample)
+#if PLATFORM(COCOA)
+RefPtr<MediaSample> RealtimeVideoSource::adaptVideoFrame(MediaSample& videoFrame)
 {
-    if (!isProducingData())
+    if (!m_imageTransferSession || m_imageTransferSession->pixelFormat() != videoFrame.videoPixelFormat())
+        m_imageTransferSession = ImageTransferSessionVT::create(videoFrame.videoPixelFormat(), m_shouldUseIOSurface);
+
+    ASSERT(m_imageTransferSession);
+    if (!m_imageTransferSession)
+        return nullptr;
+
+    auto newVideoFrame = m_imageTransferSession->convertVideoFrame(videoFrame, size());
+    ASSERT(newVideoFrame);
+
+    return newVideoFrame;
+}
+#endif
+
+void RealtimeVideoSource::videoSampleAvailable(MediaSample& videoFrame, VideoFrameTimeMetadata metadata)
+{
+    if (m_frameDecimation > 1 && ++m_frameDecimationCounter % m_frameDecimation)
         return;
 
-    if (auto mediaSample = adaptVideoSample(sample))
-        RealtimeMediaSource::videoSampleAvailable(*mediaSample);
+    auto frameRate = this->frameRate();
+    m_frameDecimation = frameRate ? static_cast<size_t>(m_source->observedFrameRate() / frameRate) : 1;
+    if (!m_frameDecimation)
+        m_frameDecimation = 1;
+
+#if PLATFORM(COCOA)
+    auto size = this->size();
+    if (!size.isEmpty() && size != expandedIntSize(videoFrame.presentationSize())) {
+        if (auto newVideoFrame = adaptVideoFrame(videoFrame)) {
+            RealtimeMediaSource::videoSampleAvailable(*newVideoFrame, metadata);
+            return;
+        }
+    }
+#endif
+
+    RealtimeMediaSource::videoSampleAvailable(videoFrame, metadata);
 }
 
 Ref<RealtimeMediaSource> RealtimeVideoSource::clone()
 {
     auto source = create(m_source.copyRef());
     source->m_currentSettings = m_currentSettings;
-
+    source->setSize(size());
+#if !RELEASE_LOG_DISABLED
+    source->setLogger(logger(), childLogIdentifier(logIdentifier(), ++m_cloneCounter));
+#endif
     return source;
 }
+
+#if !RELEASE_LOG_DISABLED
+void RealtimeVideoSource::setLogger(const Logger& logger, const void* identifier)
+{
+    RealtimeMediaSource::setLogger(logger, identifier);
+    m_source->setLogger(logger, identifier);
+}
+#endif
 
 } // namespace WebCore
 

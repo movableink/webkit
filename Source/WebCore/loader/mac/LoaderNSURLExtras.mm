@@ -71,11 +71,11 @@ NSString *suggestedFilenameWithMIMEType(NSURL *url, const String& mimeType)
     // I don't think we need to worry about this for the image case
     // If the type is known, check the extension and correct it if necessary.
     if (mimeType != "application/octet-stream" && mimeType != "text/plain") {
-        Vector<String> extensions = MIMETypeRegistry::getExtensionsForMIMEType(mimeType);
+        Vector<String> extensions = MIMETypeRegistry::extensionsForMIMEType(mimeType);
 
         if (extensions.isEmpty() || !extensions.contains(String(extension))) {
             // The extension doesn't match the MIME type. Correct this.
-            NSString *correctExtension = MIMETypeRegistry::getPreferredExtensionForMIMEType(mimeType);
+            NSString *correctExtension = MIMETypeRegistry::preferredExtensionForMIMEType(mimeType);
             if ([correctExtension length] != 0) {
                 // Append the correct extension.
                 filename = [filename stringByAppendingPathExtension:correctExtension];
@@ -88,7 +88,7 @@ NSString *suggestedFilenameWithMIMEType(NSURL *url, const String& mimeType)
 
 NSString *filenameByFixingIllegalCharacters(NSString *string)
 {
-    NSMutableString *filename = [[string mutableCopy] autorelease];
+    auto filename = adoptNS([string mutableCopy]);
 
     // Strip null characters.
     unichar nullChar = 0;
@@ -104,5 +104,5 @@ NSString *filenameByFixingIllegalCharacters(NSString *string)
     while ([filename hasPrefix:@"."])
         [filename deleteCharactersInRange:NSMakeRange(0, 1)];
 
-    return filename;
+    return filename.autorelease();
 }

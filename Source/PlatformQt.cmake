@@ -57,8 +57,10 @@ endif ()
 if (FORCE_DEBUG_INFO)
     if (COMPILER_IS_GCC_OR_CLANG)
         if (NOT APPLE)
-            target_compile_options(WebKit        PRIVATE -fdebug-types-section)
-            target_compile_options(WebKit2       PRIVATE -fdebug-types-section)
+            target_compile_options(WebKitLegacy PRIVATE -fdebug-types-section)
+            if (TARGET WebKit)
+                target_compile_options(WebKit PRIVATE -fdebug-types-section)
+            endif ()
         endif ()
     endif ()
 endif ()
@@ -88,21 +90,21 @@ target_include_directories(WebKitWidgets INTERFACE
 )
 
 if (QT_ORIGIN_RPATH)
-    set(WEBKIT_SHARED_LIBRARY_TARGETS WebKit)
+    set(WEBKIT_SHARED_LIBRARY_TARGETS WebKitLegacy)
 
     if (TARGET WebKitWidgets)
         list(APPEND WEBKIT_SHARED_LIBRARY_TARGETS WebKitWidgets)
     endif ()
 
-    if (TARGET WebKit2)
-        set(WEBKIT2_EXECUTABLES WebProcess NetworkProcess)
+    if (TARGET WebKit)
+        set(WEBKIT_EXECUTABLES WebProcess NetworkProcess)
         if (ENABLE_PLUGIN_PROCESS)
-            list(APPEND WEBKIT2_EXECUTABLES PluginProcess)
+            list(APPEND WEBKIT_EXECUTABLES PluginProcess)
         endif ()
         if (ENABLE_DATABASE_PROCESS)
-            list(APPEND WEBKIT2_EXECUTABLES DatabaseProcess)
+            list(APPEND WEBKIT_EXECUTABLES DatabaseProcess)
         endif ()
-        set_target_properties(${WEBKIT2_EXECUTABLES} PROPERTIES INSTALL_RPATH "\$ORIGIN/../lib")
+        set_target_properties(${WEBKIT_EXECUTABLES} PROPERTIES INSTALL_RPATH "\$ORIGIN/../lib")
         set_target_properties(qmlwebkitplugin PROPERTIES INSTALL_RPATH "\$ORIGIN/../../lib")
         set_target_properties(qmlwebkitexperimentalplugin PROPERTIES INSTALL_RPATH "\$ORIGIN/../../../lib")
     endif ()
@@ -131,8 +133,8 @@ set(Qt5@MODULE_NAME@_VERSION_STRING \${Qt5@MODULE_NAME@_VERSION})
 set(Qt5@MODULE_NAME@_EXECUTABLE_COMPILE_FLAGS \"\")
 set(Qt5@MODULE_NAME@_PRIVATE_INCLUDE_DIRS \"\") # FIXME: Support private headers
 
-get_target_property(Qt5@MODULE_NAME@_INCLUDE_DIRS        Qt5::@MODULE_NAME@ INTERFACE_INCLUDE_DIRECTORIES)
-get_target_property(Qt5@MODULE_NAME@_COMPILE_DEFINITIONS Qt5::@MODULE_NAME@ INTERFACE_COMPILE_DEFINITIONS)
+get_target_property(Qt5@MODULE_NAME@_INCLUDE_DIRS        Qt5::@FULL_MODULE_NAME@ INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(Qt5@MODULE_NAME@_COMPILE_DEFINITIONS Qt5::@FULL_MODULE_NAME@ INTERFACE_COMPILE_DEFINITIONS)
 
 foreach (_module_dep \${_Qt5@MODULE_NAME@_MODULE_DEPENDENCIES})
     list(APPEND Qt5@MODULE_NAME@_INCLUDE_DIRS \${Qt5\${_module_dep}_INCLUDE_DIRS})
@@ -149,7 +151,7 @@ list(REMOVE_DUPLICATES Qt5@MODULE_NAME@_EXECUTABLE_COMPILE_FLAGS)
 
 # Fixup order of configurations to match behavior of other Qt modules
 # See also https://bugreports.qt.io/browse/QTBUG-29186
-get_target_property(_configurations Qt5::@MODULE_NAME@ IMPORTED_CONFIGURATIONS)
+get_target_property(_configurations Qt5::@FULL_MODULE_NAME@ IMPORTED_CONFIGURATIONS)
 list(FIND _configurations RELEASE _index)
 if (\${_index} GREATER -1)
     list(REMOVE_AT _configurations \${_index})
@@ -161,6 +163,7 @@ unset(_index)
 ")
 
 set(MODULE_NAME WebKit)
+set(FULL_MODULE_NAME WebKitLegacy)
 string(CONFIGURE ${_package_footer_template} QTWEBKIT_PACKAGE_FOOTER @ONLY)
 ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt5WebKitConfig.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitConfig.cmake"
@@ -168,6 +171,7 @@ ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt5WebKitConfig.c
 )
 
 set(MODULE_NAME WebKitWidgets)
+set(FULL_MODULE_NAME WebKitWidgets)
 string(CONFIGURE ${_package_footer_template} QTWEBKIT_PACKAGE_FOOTER @ONLY)
 ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt5WebKitWidgetsConfig.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitWidgetsConfig.cmake"
@@ -175,6 +179,7 @@ ecm_configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/Qt5WebKitWidgetsC
 )
 
 unset(MODULE_NAME)
+unset(FULL_MODULE_NAME)
 unset(QTWEBKIT_PACKAGE_FOOTER)
 
 write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/Qt5WebKitConfigVersion.cmake"

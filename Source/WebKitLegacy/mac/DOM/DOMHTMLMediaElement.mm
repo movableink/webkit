@@ -28,6 +28,7 @@
 
 #import "DOMHTMLMediaElement.h"
 
+#import "DOMInternal.h"
 #import "DOMMediaErrorInternal.h"
 #import "DOMNodeInternal.h"
 #import "DOMTimeRangesInternal.h"
@@ -55,7 +56,7 @@
 - (NSString *)src
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr);
+    return IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string();
 }
 
 - (void)setSrc:(NSString *)newSrc
@@ -67,7 +68,7 @@
 - (NSString *)currentSrc
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->currentSrc();
+    return IMPL->currentSrc().string();
 }
 
 - (NSString *)crossOrigin
@@ -313,7 +314,7 @@
 - (NSTimeInterval)getStartDate
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->getStartDate();
+    return kit(IMPL->getStartDate());
 }
 
 - (void)play

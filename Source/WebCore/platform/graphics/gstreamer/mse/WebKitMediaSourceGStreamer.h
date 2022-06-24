@@ -3,8 +3,8 @@
  *  Copyright (C) 2013 Collabora Ltd.
  *  Copyright (C) 2013 Orange
  *  Copyright (C) 2014, 2015 Sebastian Dröge <sebastian@centricular.com>
- *  Copyright (C) 2015, 2016, 2018, 2019 Metrological Group B.V.
- *  Copyright (C) 2015, 2016, 2018, 2019 Igalia, S.L
+ *  Copyright (C) 2015, 2016, 2018, 2019, 2020, 2021 Metrological Group B.V.
+ *  Copyright (C) 2015, 2016, 2018, 2019, 2020, 2021 Igalia, S.L
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -31,13 +31,11 @@
 #include "MediaSourcePrivate.h"
 #include "SourceBufferPrivate.h"
 #include "SourceBufferPrivateClient.h"
-#include <gst/gst.h>
+#include "SourceBufferPrivateGStreamer.h"
 
 namespace WebCore {
 
 class MediaPlayerPrivateGStreamerMSE;
-
-enum MediaSourceStreamTypeGStreamer { Invalid, Unknown, Audio, Video, Text };
 
 } // namespace WebCore
 
@@ -63,17 +61,9 @@ struct WebKitMediaSrcClass {
 
 GType webkit_media_src_get_type(void);
 
-void webKitMediaSrcAddStream(WebKitMediaSrc*, const AtomString& name, WebCore::MediaSourceStreamTypeGStreamer, GRefPtr<GstCaps>&& initialCaps);
-void webKitMediaSrcRemoveStream(WebKitMediaSrc*, const AtomString& name);
-
-void webKitMediaSrcEnqueueSample(WebKitMediaSrc*, const AtomString& streamName, GRefPtr<GstSample>&&);
-void webKitMediaSrcEndOfStream(WebKitMediaSrc*, const AtomString& streamName);
-
-bool webKitMediaSrcIsReadyForMoreSamples(WebKitMediaSrc*, const AtomString& streamName);
-void webKitMediaSrcNotifyWhenReadyForMoreSamples(WebKitMediaSrc*, const AtomString& streamName, WebCore::SourceBufferPrivateClient*);
+void webKitMediaSrcEmitStreams(WebKitMediaSrc* source, const Vector<RefPtr<WebCore::MediaSourceTrackGStreamer>>& tracks);
 
 void webKitMediaSrcFlush(WebKitMediaSrc*, const AtomString& streamName);
-void webKitMediaSrcSeek(WebKitMediaSrc*, guint64 startTime, double rate);
 
 G_END_DECLS
 

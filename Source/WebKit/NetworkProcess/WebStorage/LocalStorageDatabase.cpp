@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2010, 2013, 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,35 +26,33 @@
 #include "config.h"
 #include "LocalStorageDatabase.h"
 
-#include "LocalStorageDatabaseTracker.h"
+#include <WebCore/SQLiteFileSystem.h>
 #include <WebCore/SQLiteStatement.h>
+#include <WebCore/SQLiteStatementAutoResetScope.h>
 #include <WebCore/SQLiteTransaction.h>
-#include <WebCore/SecurityOrigin.h>
 #include <WebCore/StorageMap.h>
-#include <WebCore/SuddenTermination.h>
 #include <wtf/FileSystem.h>
+#include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
-#include <wtf/WorkQueue.h>
-#include <wtf/text/StringHash.h>
-#include <wtf/text/WTFString.h>
-
-static const auto databaseUpdateInterval = 1_s;
-
-static const int maximumItemsToUpdate = 100;
+#include <wtf/RunLoop.h>
+#include <wtf/SuspendableWorkQueue.h>
 
 namespace WebKit {
 using namespace WebCore;
 
-Ref<LocalStorageDatabase> LocalStorageDatabase::create(Ref<WorkQueue>&& queue, Ref<LocalStorageDatabaseTracker>&& tracker, const SecurityOriginData& securityOrigin)
+constexpr auto getItemsQueryString { "SELECT key, value FROM ItemTable"_s };
+constexpr unsigned maximumSizeForValuesKeptInMemory { 1024 }; // 1 KB
+constexpr Seconds transactionDuration { 500_ms };
+
+Ref<LocalStorageDatabase> LocalStorageDatabase::create(Ref<SuspendableWorkQueue>&& workQueue, String&& databasePath, unsigned quotaInBytes)
 {
-    return adoptRef(*new LocalStorageDatabase(WTFMove(queue), WTFMove(tracker), securityOrigin));
+    return adoptRef(*new LocalStorageDatabase(WTFMove(workQueue), WTFMove(databasePath), quotaInBytes));
 }
 
-LocalStorageDatabase::LocalStorageDatabase(Ref<WorkQueue>&& queue, Ref<LocalStorageDatabaseTracker>&& tracker, const SecurityOriginData& securityOrigin)
-    : m_queue(WTFMove(queue))
-    , m_tracker(WTFMove(tracker))
-    , m_securityOrigin(securityOrigin)
-    , m_databasePath(m_tracker->databasePath(m_securityOrigin))
+LocalStorageDatabase::LocalStorageDatabase(Ref<SuspendableWorkQueue>&& workQueue, String&& databasePath, unsigned quotaInBytes)
+    : m_workQueue(WTFMove(workQueue))
+    , m_databasePath(WTFMove(databasePath))
+    , m_quotaInBytes(quotaInBytes)
 {
     ASSERT(!RunLoop::isMain());
 }
@@ -65,25 +63,14 @@ LocalStorageDatabase::~LocalStorageDatabase()
     ASSERT(m_isClosed);
 }
 
-void LocalStorageDatabase::openDatabase(DatabaseOpeningStrategy openingStrategy)
-{
-    ASSERT(!m_database.isOpen());
-    ASSERT(!m_failedToOpenDatabase);
-
-    if (!tryToOpenDatabase(openingStrategy)) {
-        m_failedToOpenDatabase = true;
-        return;
-    }
-
-    if (m_database.isOpen())
-        m_tracker->didOpenDatabaseWithOrigin(m_securityOrigin);
-}
-
-bool LocalStorageDatabase::tryToOpenDatabase(DatabaseOpeningStrategy openingStrategy)
+bool LocalStorageDatabase::openDatabase(ShouldCreateDatabase shouldCreateDatabase)
 {
     ASSERT(!RunLoop::isMain());
-    if (!FileSystem::fileExists(m_databasePath) && openingStrategy == SkipIfNonExistent)
-        return true;
+    if (!FileSystem::fileExists(m_databasePath)) {
+        if (shouldCreateDatabase == ShouldCreateDatabase::No)
+            return true;
+        m_items = HashMap<String, String> { };
+    }
 
     if (m_databasePath.isEmpty()) {
         LOG_ERROR("Filename for local storage database is empty - cannot open for persistent storage");
@@ -102,48 +89,66 @@ bool LocalStorageDatabase::tryToOpenDatabase(DatabaseOpeningStrategy openingStra
     if (!migrateItemTableIfNeeded()) {
         // We failed to migrate the item table. In order to avoid trying to migrate the table over and over,
         // just delete it and start from scratch.
-        if (!m_database.executeCommand("DROP TABLE ItemTable"))
+        if (!m_database.executeCommand("DROP TABLE ItemTable"_s))
             LOG_ERROR("Failed to delete table ItemTable for local storage");
     }
 
-    if (!m_database.executeCommand("CREATE TABLE IF NOT EXISTS ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)")) {
+    if (!m_database.executeCommand("CREATE TABLE IF NOT EXISTS ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)"_s)) {
         LOG_ERROR("Failed to create table ItemTable for local storage");
         return false;
     }
 
+    if (m_quotaInBytes != WebCore::StorageMap::noQuota)
+        m_database.setMaximumSize(m_quotaInBytes);
+
     return true;
+}
+
+void LocalStorageDatabase::startTransactionIfNecessary()
+{
+    if (!m_transaction)
+        m_transaction = makeUnique<SQLiteTransaction>(m_database);
+
+    if (m_transaction->inProgress())
+        return;
+
+    m_transaction->begin();
+    m_workQueue->dispatchAfter(transactionDuration, [weakThis = WeakPtr { *this }] {
+        if (weakThis)
+            weakThis->m_transaction->commit();
+    });
 }
 
 bool LocalStorageDatabase::migrateItemTableIfNeeded()
 {
+    ASSERT(!RunLoop::isMain());
     if (!m_database.tableExists("ItemTable"))
         return true;
 
-    SQLiteStatement query(m_database, "SELECT value FROM ItemTable LIMIT 1");
+    auto query = m_database.prepareStatement("SELECT value FROM ItemTable LIMIT 1"_s);
 
     // This query isn't ever executed, it's just used to check the column type.
-    if (query.isColumnDeclaredAsBlob(0))
+    if (query && query->isColumnDeclaredAsBlob(0))
         return true;
 
     // Create a new table with the right type, copy all the data over to it and then replace the new table with the old table.
-    static const char* commands[] = {
-        "DROP TABLE IF EXISTS ItemTable2",
-        "CREATE TABLE ItemTable2 (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)",
-        "INSERT INTO ItemTable2 SELECT * from ItemTable",
-        "DROP TABLE ItemTable",
-        "ALTER TABLE ItemTable2 RENAME TO ItemTable",
-        0,
+    static const ASCIILiteral commands[] = {
+        "DROP TABLE IF EXISTS ItemTable2"_s,
+        "CREATE TABLE ItemTable2 (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB NOT NULL ON CONFLICT FAIL)"_s,
+        "INSERT INTO ItemTable2 SELECT * from ItemTable"_s,
+        "DROP TABLE ItemTable"_s,
+        "ALTER TABLE ItemTable2 RENAME TO ItemTable"_s,
+        ASCIILiteral::null(),
     };
 
-    SQLiteTransaction transaction(m_database, false);
+    SQLiteTransaction transaction(m_database);
     transaction.begin();
 
     for (size_t i = 0; commands[i]; ++i) {
         if (m_database.executeCommand(commands[i]))
             continue;
 
-        LOG_ERROR("Failed to migrate table ItemTable for local storage when executing: %s", commands[i]);
-        transaction.rollback();
+        LOG_ERROR("Failed to migrate table ItemTable for local storage when executing: %s", commands[i].characters());
 
         return false;
     }
@@ -152,212 +157,255 @@ bool LocalStorageDatabase::migrateItemTableIfNeeded()
     return true;
 }
 
-void LocalStorageDatabase::importItems(StorageMap& storageMap)
+HashMap<String, String> LocalStorageDatabase::items() const
 {
-    if (m_didImportItems)
-        return;
+    ASSERT(!RunLoop::isMain());
+    if (!m_database.isOpen())
+        return { };
 
-    // FIXME: If it can't import, then the default WebKit behavior should be that of private browsing,
-    // not silently ignoring it. https://bugs.webkit.org/show_bug.cgi?id=25894
+    HashMap<String, String> items;
+    if (m_items) {
+        items.reserveInitialCapacity(m_items->size());
+        for (auto& entry : *m_items) {
+            auto value = entry.value.isNull() ? itemBypassingCache(entry.key) : entry.value;
+            items.add(entry.key, WTFMove(value));
+        }
+        return items;
+    }
 
-    // We set this to true even if we don't end up importing any items due to failure because
-    // there's really no good way to recover other than not importing anything.
-    m_didImportItems = true;
+    auto query = scopedStatement(m_getItemsStatement, getItemsQueryString);
+    if (!query) {
+        LOG_ERROR("Unable to select items from ItemTable for local storage");
+        return { };
+    }
 
-    openDatabase(SkipIfNonExistent);
+    m_items = HashMap<String, String> { };
+    int result = query->step();
+    while (result == SQLITE_ROW) {
+        String key = query->columnText(0);
+        String value = query->columnBlobAsString(1);
+        if (!key.isNull() && !value.isNull()) {
+            m_items->add(key, value.sizeInBytes() > maximumSizeForValuesKeptInMemory ? String() : value);
+            items.add(WTFMove(key), WTFMove(value));
+        }
+        result = query->step();
+    }
+
+    if (result != SQLITE_DONE)
+        LOG_ERROR("Error reading items from ItemTable for local storage");
+
+    return items;
+}
+
+void LocalStorageDatabase::removeItem(const String& key, String& oldValue)
+{
+    ASSERT(!RunLoop::isMain());
     if (!m_database.isOpen())
         return;
 
-    SQLiteStatement query(m_database, "SELECT key, value FROM ItemTable"_str);
-    if (query.prepare() != SQLITE_OK) {
-        LOG_ERROR("Unable to select items from ItemTable for local storage");
+    startTransactionIfNecessary();
+    oldValue = item(key);
+    if (oldValue.isNull())
+        return;
+
+    auto deleteStatement = scopedStatement(m_deleteItemStatement, "DELETE FROM ItemTable WHERE key=?"_s);
+    if (!deleteStatement) {
+        LOG_ERROR("Failed to prepare delete statement - cannot write to local storage database");
         return;
     }
+    deleteStatement->bindText(1, key);
 
-    HashMap<String, String> items;
-
-    int result = query.step();
-    while (result == SQLITE_ROW) {
-        String key = query.getColumnText(0);
-        String value = query.getColumnBlobAsString(1);
-        if (!key.isNull() && !value.isNull())
-            items.add(WTFMove(key), WTFMove(value));
-        result = query.step();
-    }
-
+    int result = deleteStatement->step();
     if (result != SQLITE_DONE) {
-        LOG_ERROR("Error reading items from ItemTable for local storage");
+        LOG_ERROR("Failed to delete item in the local storage database - %i", result);
         return;
     }
 
-    storageMap.importItems(WTFMove(items));
+    if (m_items)
+        m_items->remove(key);
 }
 
-void LocalStorageDatabase::setItem(const String& key, const String& value)
+String LocalStorageDatabase::item(const String& key) const
 {
-    itemDidChange(key, value);
+    ASSERT(!RunLoop::isMain());
+    if (!m_database.isOpen())
+        return { };
+
+    if (m_items) {
+        // Use find() instead of get() since a null String is a valid value here.
+        auto it = m_items->find(key);
+        if (it == m_items->end())
+            return { };
+        if (!it->value.isNull())
+            return it->value;
+        // The value is too large and needs to be fetched from the database.
+    }
+    return itemBypassingCache(key);
 }
 
-void LocalStorageDatabase::removeItem(const String& key)
+String LocalStorageDatabase::itemBypassingCache(const String& key) const
 {
-    itemDidChange(key, String());
+    auto query = scopedStatement(m_getItemStatement, "SELECT value FROM ItemTable WHERE key=?"_s);
+    if (!query) {
+        LOG_ERROR("Unable to get item from ItemTable for local storage");
+        return { };
+    }
+    query->bindText(1, key);
+
+    int result = query->step();
+    if (result == SQLITE_ROW)
+        return query->columnBlobAsString(0);
+    if (result != SQLITE_DONE)
+        LOG_ERROR("Error get item from ItemTable for local storage");
+    return { };
 }
 
-void LocalStorageDatabase::clear()
+void LocalStorageDatabase::setItem(const String& key, const String& value, String& oldValue, bool& quotaException)
 {
-    m_changedItems.clear();
-    m_shouldClearItems = true;
+    ASSERT(!RunLoop::isMain());
+    if (!m_database.isOpen())
+        openDatabase(ShouldCreateDatabase::Yes);
+    if (!m_database.isOpen())
+        return;
 
-    scheduleDatabaseUpdate();
+    startTransactionIfNecessary();
+    oldValue = item(key);
+
+    auto insertStatement = scopedStatement(m_insertStatement, "INSERT INTO ItemTable VALUES (?, ?)"_s);
+    if (!insertStatement) {
+        LOG_ERROR("Failed to prepare insert statement - cannot write to local storage database");
+        return;
+    }
+
+    insertStatement->bindText(1, key);
+    insertStatement->bindBlob(2, value);
+
+    int result = insertStatement->step();
+    if (result != SQLITE_DONE) {
+        LOG_ERROR("Failed to update item in the local storage database - %i", result);
+        if (result == SQLITE_FULL)
+            quotaException = true;
+        return;
+    }
+
+    if (m_items)
+        m_items->set(key, value.sizeInBytes() > maximumSizeForValuesKeptInMemory ? String() : value);
+}
+
+bool LocalStorageDatabase::clear()
+{
+    ASSERT(!RunLoop::isMain());
+    if (!m_database.isOpen())
+        return false;
+
+    if (m_items && m_items->isEmpty())
+        return false;
+
+    startTransactionIfNecessary();
+    auto clearStatement = scopedStatement(m_clearStatement, "DELETE FROM ItemTable"_s);
+    if (!clearStatement) {
+        LOG_ERROR("Failed to prepare clear statement - cannot write to local storage database");
+        return false;
+    }
+
+    int result = clearStatement->step();
+    if (result != SQLITE_DONE) {
+        LOG_ERROR("Failed to clear all items in the local storage database - %i", result);
+        return false;
+    }
+
+    if (m_items) {
+        m_items->clear();
+        return true;
+    }
+
+    return m_database.lastChanges() > 0;
+}
+
+void LocalStorageDatabase::flushToDisk()
+{
+    if (m_transaction)
+        m_transaction->commit();
 }
 
 void LocalStorageDatabase::close()
 {
-    ASSERT(!m_isClosed);
+    ASSERT(!RunLoop::isMain());
+    if (m_isClosed)
+        return;
     m_isClosed = true;
 
-    if (m_didScheduleDatabaseUpdate) {
-        updateDatabaseWithChangedItems(m_changedItems);
-        m_changedItems.clear();
-    }
-
     bool isEmpty = databaseIsEmpty();
+
+    m_clearStatement = nullptr;
+    m_insertStatement = nullptr;
+    m_getItemStatement = nullptr;
+    m_getItemsStatement = nullptr;
+    m_deleteItemStatement = nullptr;
+    m_items = std::nullopt;
+    if (auto transaction = std::exchange(m_transaction, nullptr))
+        transaction->commit();
 
     if (m_database.isOpen())
         m_database.close();
 
     if (isEmpty)
-        m_tracker->deleteDatabaseWithOrigin(m_securityOrigin);
+        SQLiteFileSystem::deleteDatabaseFile(m_databasePath);
 }
 
-void LocalStorageDatabase::itemDidChange(const String& key, const String& value)
+bool LocalStorageDatabase::databaseIsEmpty() const
 {
-    m_changedItems.set(key, value);
-    scheduleDatabaseUpdate();
-}
-
-void LocalStorageDatabase::scheduleDatabaseUpdate()
-{
-    if (m_didScheduleDatabaseUpdate)
-        return;
-
-    if (!m_disableSuddenTerminationWhileWritingToLocalStorage)
-        m_disableSuddenTerminationWhileWritingToLocalStorage = makeUnique<SuddenTerminationDisabler>();
-
-    m_didScheduleDatabaseUpdate = true;
-
-    m_queue->dispatch([protectedThis = makeRef(*this)] {
-        protectedThis->updateDatabase();
-    });
-}
-
-void LocalStorageDatabase::updateDatabase()
-{
-    if (m_isClosed)
-        return;
-
-    m_didScheduleDatabaseUpdate = false;
-
-    HashMap<String, String> changedItems;
-    if (m_changedItems.size() <= maximumItemsToUpdate) {
-        // There are few enough changed items that we can just always write all of them.
-        m_changedItems.swap(changedItems);
-        updateDatabaseWithChangedItems(changedItems);
-        m_disableSuddenTerminationWhileWritingToLocalStorage = nullptr;
-    } else {
-        for (int i = 0; i < maximumItemsToUpdate; ++i) {
-            auto it = m_changedItems.begin();
-            changedItems.add(it->key, it->value);
-
-            m_changedItems.remove(it);
-        }
-
-        ASSERT(changedItems.size() <= maximumItemsToUpdate);
-
-        // Reschedule the update for the remaining items.
-        scheduleDatabaseUpdate();
-        updateDatabaseWithChangedItems(changedItems);
-    }
-}
-
-void LocalStorageDatabase::updateDatabaseWithChangedItems(const HashMap<String, String>& changedItems)
-{
-    if (!m_database.isOpen())
-        openDatabase(CreateIfNonExistent);
-    if (!m_database.isOpen())
-        return;
-
-    if (m_shouldClearItems) {
-        m_shouldClearItems = false;
-
-        SQLiteStatement clearStatement(m_database, "DELETE FROM ItemTable");
-        if (clearStatement.prepare() != SQLITE_OK) {
-            LOG_ERROR("Failed to prepare clear statement - cannot write to local storage database");
-            return;
-        }
-
-        int result = clearStatement.step();
-        if (result != SQLITE_DONE) {
-            LOG_ERROR("Failed to clear all items in the local storage database - %i", result);
-            return;
-        }
-    }
-
-    SQLiteStatement insertStatement(m_database, "INSERT INTO ItemTable VALUES (?, ?)");
-    if (insertStatement.prepare() != SQLITE_OK) {
-        LOG_ERROR("Failed to prepare insert statement - cannot write to local storage database");
-        return;
-    }
-
-    SQLiteStatement deleteStatement(m_database, "DELETE FROM ItemTable WHERE key=?");
-    if (deleteStatement.prepare() != SQLITE_OK) {
-        LOG_ERROR("Failed to prepare delete statement - cannot write to local storage database");
-        return;
-    }
-
-    SQLiteTransaction transaction(m_database);
-    transaction.begin();
-
-    for (auto it = changedItems.begin(), end = changedItems.end(); it != end; ++it) {
-        // A null value means that the key/value pair should be deleted.
-        SQLiteStatement& statement = it->value.isNull() ? deleteStatement : insertStatement;
-
-        statement.bindText(1, it->key);
-
-        // If we're inserting a key/value pair, bind the value as well.
-        if (!it->value.isNull())
-            statement.bindBlob(2, it->value);
-
-        int result = statement.step();
-        if (result != SQLITE_DONE) {
-            LOG_ERROR("Failed to update item in the local storage database - %i", result);
-            break;
-        }
-
-        statement.reset();
-    }
-
-    transaction.commit();
-}
-
-bool LocalStorageDatabase::databaseIsEmpty()
-{
+    ASSERT(!RunLoop::isMain());
     if (!m_database.isOpen())
         return false;
 
-    SQLiteStatement query(m_database, "SELECT COUNT(*) FROM ItemTable");
-    if (query.prepare() != SQLITE_OK) {
+    if (m_items)
+        return m_items->isEmpty();
+
+    auto query = m_database.prepareStatement("SELECT COUNT(*) FROM ItemTable"_s);
+    if (!query) {
         LOG_ERROR("Unable to count number of rows in ItemTable for local storage");
         return false;
     }
 
-    int result = query.step();
-    if (result != SQLITE_ROW) {
+    if (query->step() != SQLITE_ROW) {
         LOG_ERROR("No results when counting number of rows in ItemTable for local storage");
         return false;
     }
 
-    return !query.getColumnInt(0);
+    return !query->columnInt(0);
+}
+
+void LocalStorageDatabase::openIfExisting()
+{
+    ASSERT(!RunLoop::isMain());
+    if (m_database.isOpen())
+        return;
+
+    openDatabase(ShouldCreateDatabase::No);
+
+    // Prewarm the getItems statement for performance since the pages block synchronously on retrieving the items.
+    if (m_database.isOpen())
+        scopedStatement(m_getItemsStatement, getItemsQueryString);
+}
+
+SQLiteStatementAutoResetScope LocalStorageDatabase::scopedStatement(std::unique_ptr<SQLiteStatement>& statement, ASCIILiteral query) const
+{
+    ASSERT(!RunLoop::isMain());
+    if (!statement) {
+        auto statementOrError = m_database.prepareHeapStatement(query);
+        if (!statementOrError)
+            return SQLiteStatementAutoResetScope { };
+        statement = statementOrError.value().moveToUniquePtr();
+        ASSERT(m_database.isOpen());
+    }
+    return SQLiteStatementAutoResetScope { statement.get() };
+}
+
+void LocalStorageDatabase::handleLowMemoryWarning()
+{
+    if (m_database.isOpen())
+        m_database.releaseMemory();
 }
 
 } // namespace WebKit

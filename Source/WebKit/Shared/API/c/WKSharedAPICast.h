@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WKSharedAPICast_h
-#define WKSharedAPICast_h
+#pragma once
 
 #include "APIError.h"
 #include "APINumber.h"
@@ -47,8 +46,8 @@
 #include "WKPageVisibilityTypes.h"
 #include "WKUserContentInjectedFrames.h"
 #include "WKUserScriptInjectionTime.h"
-#include "WebEvent.h"
 #include "WebFindOptions.h"
+#include "WebMouseEvent.h"
 #include <WebCore/ContextMenuItem.h>
 #include <WebCore/DiagnosticLoggingResultType.h>
 #include <WebCore/FloatRect.h>
@@ -128,6 +127,12 @@ auto toAPI(T* t) -> APIType
     return reinterpret_cast<APIType>(API::Object::wrap(t));
 }
 
+template<typename T, typename APIType = typename ImplTypeInfo<T>::APIType>
+auto toAPI(T& t) -> APIType
+{
+    return reinterpret_cast<APIType>(API::Object::wrap(&t));
+}
+
 template<typename T, typename ImplType = typename APITypeInfo<T>::ImplType>
 auto toImpl(T t) -> ImplType*
 {
@@ -177,6 +182,11 @@ inline WKURLRef toCopiedURLAPI(const String& string)
     if (!string)
         return nullptr;
     return toAPI(&API::URL::create(string).leakRef());
+}
+
+inline WKURLRef toCopiedURLAPI(const URL& url)
+{
+    return toCopiedURLAPI(url.string());
 }
 
 inline String toWTFString(WKStringRef stringRef)
@@ -499,6 +509,10 @@ inline WKContextMenuItemTag toAPI(WebCore::ContextMenuAction action)
         return kWKContextMenuItemTagMediaPlayPause;
     case WebCore::ContextMenuItemTagMediaMute:
         return kWKContextMenuItemTagMediaMute;
+    case WebCore::ContextMenuItemTagAddHighlightToCurrentQuickNote:
+        return kWKContextMenuItemTagAddHighlightToCurrentQuickNote;
+    case WebCore::ContextMenuItemTagAddHighlightToNewQuickNote:
+        return kWKContextMenuItemTagAddHighlightToNewQuickNote;
 #if PLATFORM(COCOA)
     case WebCore::ContextMenuItemTagCorrectSpellingAutomatically:
         return kWKContextMenuItemTagCorrectSpellingAutomatically;
@@ -533,6 +547,12 @@ inline WKContextMenuItemTag toAPI(WebCore::ContextMenuAction action)
 #endif
     case WebCore::ContextMenuItemTagShareMenu:
         return kWKContextMenuItemTagShareMenu;
+    case WebCore::ContextMenuItemTagQuickLookImage:
+        return kWKContextMenuItemTagRevealImage;
+    case WebCore::ContextMenuItemTagTranslate:
+        return kWKContextMenuItemTagTranslate;
+    case WebCore::ContextMenuItemTagCopyCroppedImage:
+        return kWKContextMenuItemTagCopyCroppedImage;
     default:
         if (action < WebCore::ContextMenuItemBaseApplicationTag && !(action >= WebCore::ContextMenuItemBaseCustomTag && action <= WebCore::ContextMenuItemLastCustomTag))
             LOG_ERROR("ContextMenuAction %i is an unknown tag but is below the allowable custom tag value of %i", action, WebCore::ContextMenuItemBaseApplicationTag);
@@ -697,6 +717,10 @@ inline WebCore::ContextMenuAction toImpl(WKContextMenuItemTag tag)
         return WebCore::ContextMenuItemTagMediaPlayPause;
     case kWKContextMenuItemTagMediaMute:
         return WebCore::ContextMenuItemTagMediaMute;
+    case kWKContextMenuItemTagAddHighlightToCurrentQuickNote:
+        return WebCore::ContextMenuItemTagAddHighlightToCurrentQuickNote;
+    case kWKContextMenuItemTagAddHighlightToNewQuickNote:
+        return WebCore::ContextMenuItemTagAddHighlightToNewQuickNote;
 #if PLATFORM(COCOA)
     case kWKContextMenuItemTagCorrectSpellingAutomatically:
         return WebCore::ContextMenuItemTagCorrectSpellingAutomatically;
@@ -728,9 +752,16 @@ inline WebCore::ContextMenuAction toImpl(WKContextMenuItemTag tag)
         return WebCore::ContextMenuItemTagShareMenu;
 #endif
 #if PLATFORM(QT)
-    case kWKContextMenuItemTagOpenLinkInThisWindow:
-        return WebCore::ContextMenuItemTagOpenLinkInThisWindow;
+        case kWKContextMenuItemTagOpenLinkInThisWindow:
+            return WebCore::ContextMenuItemTagOpenLinkInThisWindow;
 #endif
+    case kWKContextMenuItemTagRevealImage:
+        return WebCore::ContextMenuItemTagQuickLookImage;
+    case kWKContextMenuItemTagTranslate:
+        return WebCore::ContextMenuItemTagTranslate;
+    case kWKContextMenuItemTagCopyCroppedImage:
+        return WebCore::ContextMenuItemTagCopyCroppedImage;
+    case kWKContextMenuItemTagOpenLinkInThisWindow:
     default:
         if (tag < kWKContextMenuItemBaseApplicationTag && !(tag >= WebCore::ContextMenuItemBaseCustomTag && tag <= WebCore::ContextMenuItemLastCustomTag))
             LOG_ERROR("WKContextMenuItemTag %i is an unknown tag but is below the allowable custom tag value of %i", tag, kWKContextMenuItemBaseApplicationTag);
@@ -755,28 +786,28 @@ inline WKContextMenuItemType toAPI(WebCore::ContextMenuItemType type)
     }
 }
 
-inline FindOptions toFindOptions(WKFindOptions wkFindOptions)
+inline OptionSet<FindOptions> toFindOptions(WKFindOptions wkFindOptions)
 {
-    unsigned findOptions = 0;
+    OptionSet<FindOptions> findOptions;
 
     if (wkFindOptions & kWKFindOptionsCaseInsensitive)
-        findOptions |= FindOptionsCaseInsensitive;
+        findOptions.add(FindOptions::CaseInsensitive);
     if (wkFindOptions & kWKFindOptionsAtWordStarts)
-        findOptions |= FindOptionsAtWordStarts;
+        findOptions.add(FindOptions::AtWordStarts);
     if (wkFindOptions & kWKFindOptionsTreatMedialCapitalAsWordStart)
-        findOptions |= FindOptionsTreatMedialCapitalAsWordStart;
+        findOptions.add(FindOptions::TreatMedialCapitalAsWordStart);
     if (wkFindOptions & kWKFindOptionsBackwards)
-        findOptions |= FindOptionsBackwards;
+        findOptions.add(FindOptions::Backwards);
     if (wkFindOptions & kWKFindOptionsWrapAround)
-        findOptions |= FindOptionsWrapAround;
+        findOptions.add(FindOptions::WrapAround);
     if (wkFindOptions & kWKFindOptionsShowOverlay)
-        findOptions |= FindOptionsShowOverlay;
+        findOptions.add(FindOptions::ShowOverlay);
     if (wkFindOptions & kWKFindOptionsShowFindIndicator)
-        findOptions |= FindOptionsShowFindIndicator;
+        findOptions.add(FindOptions::ShowFindIndicator);
     if (wkFindOptions & kWKFindOptionsShowHighlight)
-        findOptions |= FindOptionsShowHighlight;
+        findOptions.add(FindOptions::ShowHighlight);
 
-    return static_cast<FindOptions>(findOptions);
+    return findOptions;
 }
 
 inline WKFrameNavigationType toAPI(WebCore::NavigationType type)
@@ -853,7 +884,7 @@ inline SameDocumentNavigationType toSameDocumentNavigationType(WKSameDocumentNav
 
 inline WKDiagnosticLoggingResultType toAPI(WebCore::DiagnosticLoggingResultType type)
 {
-    WKDiagnosticLoggingResultType wkType;
+    WKDiagnosticLoggingResultType wkType { };
 
     switch (type) {
     case WebCore::DiagnosticLoggingResultPass:
@@ -872,7 +903,7 @@ inline WKDiagnosticLoggingResultType toAPI(WebCore::DiagnosticLoggingResultType 
 
 inline WebCore::DiagnosticLoggingResultType toDiagnosticLoggingResultType(WKDiagnosticLoggingResultType wkType)
 {
-    WebCore::DiagnosticLoggingResultType type;
+    WebCore::DiagnosticLoggingResultType type { };
 
     switch (wkType) {
     case kWKDiagnosticLoggingResultPass:
@@ -945,7 +976,7 @@ inline WebCore::VisibilityState toVisibilityState(WKPageVisibilityState wkPageVi
     case kWKPageVisibilityStateHidden:
         return WebCore::VisibilityState::Hidden;
     case kWKPageVisibilityStatePrerender:
-        return WebCore::VisibilityState::Prerender;
+        return WebCore::VisibilityState::Hidden;
     }
 
     ASSERT_NOT_REACHED();
@@ -1000,21 +1031,21 @@ inline WebCore::UserScriptInjectionTime toUserScriptInjectionTime(_WKUserScriptI
 {
     switch (wkInjectedTime) {
     case kWKInjectAtDocumentStart:
-        return WebCore::InjectAtDocumentStart;
+        return WebCore::UserScriptInjectionTime::DocumentStart;
     case kWKInjectAtDocumentEnd:
-        return WebCore::InjectAtDocumentEnd;
+        return WebCore::UserScriptInjectionTime::DocumentEnd;
     }
 
     ASSERT_NOT_REACHED();
-    return WebCore::InjectAtDocumentStart;
+    return WebCore::UserScriptInjectionTime::DocumentStart;
 }
 
 inline _WKUserScriptInjectionTime toWKUserScriptInjectionTime(WebCore::UserScriptInjectionTime injectedTime)
 {
     switch (injectedTime) {
-    case WebCore::InjectAtDocumentStart:
+    case WebCore::UserScriptInjectionTime::DocumentStart:
         return kWKInjectAtDocumentStart;
-    case WebCore::InjectAtDocumentEnd:
+    case WebCore::UserScriptInjectionTime::DocumentEnd:
         return kWKInjectAtDocumentEnd;
     }
 
@@ -1026,15 +1057,13 @@ inline WebCore::UserContentInjectedFrames toUserContentInjectedFrames(WKUserCont
 {
     switch (wkInjectedFrames) {
     case kWKInjectInAllFrames:
-        return WebCore::InjectInAllFrames;
+        return WebCore::UserContentInjectedFrames::InjectInAllFrames;
     case kWKInjectInTopFrameOnly:
-        return WebCore::InjectInTopFrameOnly;
+        return WebCore::UserContentInjectedFrames::InjectInTopFrameOnly;
     }
 
     ASSERT_NOT_REACHED();
-    return WebCore::InjectInAllFrames;
+    return WebCore::UserContentInjectedFrames::InjectInAllFrames;
 }
 
 } // namespace WebKit
-
-#endif // WKSharedAPICast_h

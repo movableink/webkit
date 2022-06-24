@@ -10,6 +10,14 @@
 
 #include "modules/video_coding/encoded_frame.h"
 
+#include <string.h>
+
+#include "absl/types/variant.h"
+#include "api/video/video_timing.h"
+#include "modules/video_coding/codecs/interface/common_constants.h"
+#include "modules/video_coding/codecs/vp8/include/vp8_globals.h"
+#include "modules/video_coding/codecs/vp9/include/vp9_globals.h"
+
 namespace webrtc {
 
 VCMEncodedFrame::VCMEncodedFrame()
@@ -17,39 +25,31 @@ VCMEncodedFrame::VCMEncodedFrame()
       _renderTimeMs(-1),
       _payloadType(0),
       _missingFrame(false),
-      _codec(kVideoCodecGeneric),
-      _rotation_set(false) {
+      _codec(kVideoCodecGeneric) {
   _codecSpecificInfo.codecType = kVideoCodecGeneric;
 }
 
-VCMEncodedFrame::~VCMEncodedFrame() {
-  Free();
-}
+VCMEncodedFrame::VCMEncodedFrame(const VCMEncodedFrame&) = default;
 
-void VCMEncodedFrame::Free() {
+VCMEncodedFrame::~VCMEncodedFrame() {
   Reset();
-  if (_buffer != NULL) {
-    delete[] _buffer;
-    _buffer = NULL;
-  }
 }
 
 void VCMEncodedFrame::Reset() {
   SetTimestamp(0);
+  SetSpatialIndex(absl::nullopt);
   _renderTimeMs = -1;
   _payloadType = 0;
-  _frameType = kVideoFrameDelta;
+  _frameType = VideoFrameType::kVideoFrameDelta;
   _encodedWidth = 0;
   _encodedHeight = 0;
-  _completeFrame = false;
   _missingFrame = false;
-  _length = 0;
+  set_size(0);
   _codecSpecificInfo.codecType = kVideoCodecGeneric;
   _codec = kVideoCodecGeneric;
   rotation_ = kVideoRotation_0;
   content_type_ = VideoContentType::UNSPECIFIED;
   timing_.flags = VideoSendTiming::kInvalid;
-  _rotation_set = false;
 }
 
 void VCMEncodedFrame::CopyCodecSpecific(const RTPVideoHeader* header) {
@@ -108,6 +108,7 @@ void VCMEncodedFrame::CopyCodecSpecific(const RTPVideoHeader* header) {
         if (vp9_header.spatial_idx != kNoSpatialIdx) {
           _codecSpecificInfo.codecSpecific.VP9.inter_layer_predicted =
               vp9_header.inter_layer_predicted;
+          SetSpatialIndex(vp9_header.spatial_idx);
         }
         if (vp9_header.gof_idx != kNoGofIdx) {
           _codecSpecificInfo.codecSpecific.VP9.gof_idx = vp9_header.gof_idx;
@@ -135,25 +136,15 @@ void VCMEncodedFrame::CopyCodecSpecific(const RTPVideoHeader* header) {
         _codecSpecificInfo.codecType = kVideoCodecH264;
         break;
       }
+      case kVideoCodecAV1: {
+        _codecSpecificInfo.codecType = kVideoCodecAV1;
+        break;
+      }
       default: {
         _codecSpecificInfo.codecType = kVideoCodecGeneric;
         break;
       }
     }
-  }
-}
-
-void VCMEncodedFrame::VerifyAndAllocate(size_t minimumSize) {
-  if (minimumSize > _size) {
-    // create buffer of sufficient size
-    uint8_t* newBuffer = new uint8_t[minimumSize];
-    if (_buffer) {
-      // copy old data
-      memcpy(newBuffer, _buffer, _size);
-      delete[] _buffer;
-    }
-    _buffer = newBuffer;
-    _size = minimumSize;
   }
 }
 

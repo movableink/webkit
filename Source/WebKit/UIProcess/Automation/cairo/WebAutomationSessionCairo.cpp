@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebAutomationSession.h"
 
+#include "ViewSnapshotStore.h"
 #include <WebCore/RefPtrCairo.h>
 #include <cairo/cairo.h>
 #include <wtf/text/Base64.h>
@@ -33,27 +34,41 @@
 namespace WebKit {
 using namespace WebCore;
 
-Optional<String> WebAutomationSession::platformGetBase64EncodedPNGData(const ShareableBitmap::Handle& handle)
+static std::optional<String> base64EncodedPNGData(cairo_surface_t* surface)
 {
-    auto bitmap = ShareableBitmap::create(handle, SharedMemory::Protection::ReadOnly);
-    if (!bitmap)
-        return WTF::nullopt;
-
-    auto surface = bitmap->createCairoSurface();
     if (!surface)
-        return WTF::nullopt;
+        return std::nullopt;
 
     Vector<unsigned char> pngData;
-    cairo_surface_write_to_png_stream(surface.get(), [](void* userData, const unsigned char* data, unsigned length) -> cairo_status_t {
+    cairo_surface_write_to_png_stream(surface, [](void* userData, const unsigned char* data, unsigned length) -> cairo_status_t {
         auto* pngData = static_cast<Vector<unsigned char>*>(userData);
         pngData->append(data, length);
         return CAIRO_STATUS_SUCCESS;
     }, &pngData);
 
     if (pngData.isEmpty())
-        return WTF::nullopt;
+        return std::nullopt;
 
-    return base64Encode(pngData);
+    return base64EncodeToString(pngData);
+}
+
+std::optional<String> WebAutomationSession::platformGetBase64EncodedPNGData(const ShareableBitmap::Handle& handle)
+{
+    auto bitmap = ShareableBitmap::create(handle, SharedMemory::Protection::ReadOnly);
+    if (!bitmap)
+        return std::nullopt;
+
+    auto surface = bitmap->createCairoSurface();
+    return base64EncodedPNGData(surface.get());
+}
+
+std::optional<String> WebAutomationSession::platformGetBase64EncodedPNGData(const ViewSnapshot& snapshot)
+{
+#if PLATFORM(GTK) && !USE(GTK4)
+    return base64EncodedPNGData(snapshot.surface());
+#else
+    return std::nullopt;
+#endif
 }
 
 } // namespace WebKit

@@ -64,9 +64,9 @@ unsigned int b_modes[14] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
  * Eventually this should be replaced by custom no-reference routines,
  *  which will be faster.
  */
-static const unsigned char VP8_VAR_OFFS[16] = {
-  128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128
-};
+static const unsigned char VP8_VAR_OFFS[16] = { 128, 128, 128, 128, 128, 128,
+                                                128, 128, 128, 128, 128, 128,
+                                                128, 128, 128, 128 };
 
 /* Original activity measure from Tim T's code. */
 static unsigned int tt_activity_measure(VP8_COMP *cpi, MACROBLOCK *x) {
@@ -343,8 +343,11 @@ static void encode_mb_row(VP8_COMP *cpi, VP8_COMMON *cm, int mb_row,
   const int nsync = cpi->mt_sync_range;
   vpx_atomic_int rightmost_col = VPX_ATOMIC_INIT(cm->mb_cols + nsync);
   const vpx_atomic_int *last_row_current_mb_col;
-  vpx_atomic_int *current_mb_col = &cpi->mt_current_mb_col[mb_row];
+  vpx_atomic_int *current_mb_col = NULL;
 
+  if (vpx_atomic_load_acquire(&cpi->b_multi_threaded) != 0) {
+    current_mb_col = &cpi->mt_current_mb_col[mb_row];
+  }
   if (vpx_atomic_load_acquire(&cpi->b_multi_threaded) != 0 && mb_row != 0) {
     last_row_current_mb_col = &cpi->mt_current_mb_col[mb_row - 1];
   } else {

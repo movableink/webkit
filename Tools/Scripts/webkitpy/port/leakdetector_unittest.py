@@ -1,4 +1,5 @@
 # Copyright (C) 2011 Google Inc. All rights reserved.
+# Copyright (C) 2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -30,8 +31,9 @@ import unittest
 
 from webkitpy.port.leakdetector import LeakDetector
 from webkitpy.common.system.filesystem_mock import MockFileSystem
-from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.common.system.executive_mock import MockExecutive
+
+from webkitcorepy import OutputCapture
 
 
 class LeakDetectorTest(unittest.TestCase):
@@ -107,8 +109,8 @@ Leak: 0x7fc506025980  size=432  zone: DefaultMallocZone_0x107c29000   URLConnect
 
 
 Binary Images:
-       0x107ac2000 -        0x107b4aff7 +DumpRenderTree (??? - ???) <5694BE03-A60A-30B2-9D40-27CFFCFB88EE> /Volumes/Data/WebKit-BuildSlave/lion-intel-leaks/build/WebKitBuild/Debug/DumpRenderTree
-       0x107c2f000 -        0x107c58fff +libWebCoreTestSupport.dylib (535.8.0 - compatibility 1.0.0) <E4F7A13E-5807-30F7-A399-62F8395F9106> /Volumes/Data/WebKit-BuildSlave/lion-intel-leaks/build/WebKitBuild/Debug/libWebCoreTestSupport.dylib
+       0x107ac2000 -        0x107b4aff7 +DumpRenderTree (??? - ???) <5694BE03-A60A-30B2-9D40-27CFFCFB88EE> /Volumes/Data/worker/lion-intel-leaks/build/WebKitBuild/Debug/DumpRenderTree
+       0x107c2f000 -        0x107c58fff +libWebCoreTestSupport.dylib (535.8.0 - compatibility 1.0.0) <E4F7A13E-5807-30F7-A399-62F8395F9106> /Volumes/Data/worker/lion-intel-leaks/build/WebKitBuild/Debug/libWebCoreTestSupport.dylib
 17 leaks excluded (not printed)
 """
 
@@ -139,8 +141,12 @@ total: 5,888 bytes (0 bytes excluded)."""
         detector._port._run_script = mock_run_script
 
         leak_files = ['/mock-results/DumpRenderTree-1234-leaks.txt', '/mock-results/DumpRenderTree-1235-leaks.txt']
-        expected_stdout = "MOCK _run_script: parse-malloc-history ['--merge-depth', 5, '/mock-results/DumpRenderTree-1234-leaks.txt', '/mock-results/DumpRenderTree-1235-leaks.txt']\n"
-        results_tuple = OutputCapture().assert_outputs(self, detector.count_total_bytes_and_unique_leaks, [leak_files], expected_stdout=expected_stdout)
+        with OutputCapture() as captured:
+            results_tuple = detector.count_total_bytes_and_unique_leaks(leak_files)
+        self.assertEqual(
+            captured.stdout.getvalue(),
+            "MOCK _run_script: parse-malloc-history ['--merge-depth', 5, '/mock-results/DumpRenderTree-1234-leaks.txt', '/mock-results/DumpRenderTree-1235-leaks.txt']\n",
+        )
         self.assertEqual(results_tuple, ("5,888 bytes", 2))
 
     def test_count_total_leaks(self):

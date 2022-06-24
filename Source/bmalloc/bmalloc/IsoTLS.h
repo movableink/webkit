@@ -28,6 +28,8 @@
 #include "PerThread.h"
 #include <cstddef>
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 class IsoTLSEntry;
@@ -49,7 +51,7 @@ public:
     template<typename Type>
     static void ensureHeap(api::IsoHeap<Type>&);
     
-    static void scavenge();
+    BEXPORT static void scavenge();
     
     template<typename Type>
     static void scavenge(api::IsoHeap<Type>&);
@@ -60,8 +62,8 @@ private:
     template<typename Config, typename Type>
     static void* allocateImpl(api::IsoHeap<Type>&, bool abortOnFailure);
     
-    template<typename Config>
-    void* allocateFast(unsigned offset, bool abortOnFailure);
+    template<typename Config, typename Type>
+    void* allocateFast(api::IsoHeap<Type>&, unsigned offset, bool abortOnFailure);
     
     template<typename Config, typename Type>
     static void* allocateSlow(api::IsoHeap<Type>&, bool abortOnFailure);
@@ -93,16 +95,6 @@ private:
     template<typename Func>
     void forEachEntry(const Func&);
     
-    enum class MallocFallbackState : uint8_t {
-        Undecided,
-        FallBackToMalloc,
-        DoNotFallBack
-    };
-    
-    BEXPORT static MallocFallbackState s_mallocFallbackState;
-    
-    BEXPORT static void determineMallocFallbackState();
-    
     IsoTLSEntry* m_lastEntry { nullptr };
     unsigned m_extent { 0 };
     unsigned m_capacity { 0 };
@@ -118,3 +110,4 @@ private:
 
 } // namespace bmalloc
 
+#endif

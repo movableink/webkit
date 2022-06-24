@@ -26,8 +26,8 @@
 #include "config.h"
 #include "FilterOperations.h"
 
-#include "ColorUtilities.h"
 #include "FEGaussianBlur.h"
+#include "ImageBuffer.h"
 #include "IntSize.h"
 #include "LengthFunctions.h"
 #include <wtf/text/TextStream.h>
@@ -84,12 +84,13 @@ IntOutsets FilterOperations::outsets() const
             auto& dropShadowOperation = downcast<DropShadowFilterOperation>(*operation);
             float stdDeviation = dropShadowOperation.stdDeviation();
             IntSize outsetSize = FEGaussianBlur::calculateOutsetSize({ stdDeviation, stdDeviation });
-            IntOutsets outsets {
-                std::max(0, outsetSize.height() - dropShadowOperation.y()),
-                std::max(0, outsetSize.width() + dropShadowOperation.x()),
-                std::max(0, outsetSize.height() + dropShadowOperation.y()),
-                std::max(0, outsetSize.width() - dropShadowOperation.x())
-            };
+            
+            int top = std::max(0, outsetSize.height() - dropShadowOperation.y());
+            int right = std::max(0, outsetSize.width() + dropShadowOperation.x());
+            int bottom = std::max(0, outsetSize.height() + dropShadowOperation.y());
+            int left = std::max(0, outsetSize.width() - dropShadowOperation.x());
+            
+            auto outsets = IntOutsets { top, right, bottom, left };
             totalOutsets += outsets;
             break;
         }
@@ -111,15 +112,14 @@ bool FilterOperations::transformColor(Color& color) const
     if (color.isSemantic())
         return false;
 
-    FloatComponents components;
-    color.getRGBA(components.components[0], components.components[1], components.components[2], components.components[3]);
+    auto sRGBAColor = color.toColorTypeLossy<SRGBA<float>>();
 
     for (auto& operation : m_operations) {
-        if (!operation->transformColor(components))
+        if (!operation->transformColor(sRGBAColor))
             return false;
     }
 
-    color = Color(components.components[0], components.components[1], components.components[2], components.components[3]);
+    color = convertColor<SRGBA<uint8_t>>(sRGBAColor);
     return true;
 }
 
@@ -131,15 +131,14 @@ bool FilterOperations::inverseTransformColor(Color& color) const
     if (color.isSemantic())
         return false;
 
-    FloatComponents components;
-    color.getRGBA(components.components[0], components.components[1], components.components[2], components.components[3]);
+    auto sRGBAColor = color.toColorTypeLossy<SRGBA<float>>();
 
     for (auto& operation : m_operations) {
-        if (!operation->inverseTransformColor(components))
+        if (!operation->inverseTransformColor(sRGBAColor))
             return false;
     }
 
-    color = Color(components.components[0], components.components[1], components.components[2], components.components[3]);
+    color = convertColor<SRGBA<uint8_t>>(sRGBAColor);
     return true;
 }
 

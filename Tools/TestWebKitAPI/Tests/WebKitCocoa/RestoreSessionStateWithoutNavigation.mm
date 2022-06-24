@@ -23,29 +23,29 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(MAC)
 
-#include "JavaScriptTest.h"
-#include "PlatformUtilities.h"
-#include "PlatformWebView.h"
-#include "Test.h"
-#include <WebKit/WKBackForwardListItemRef.h>
-#include <WebKit/WKBackForwardListRef.h>
-#include <WebKit/WKData.h>
-#include <WebKit/WKPagePrivate.h>
-#include <WebKit/WKSessionStateRef.h>
-#include <WebKit/WKURL.h>
-#include <WebKit/WKURLCF.h>
-#include <WebKit/WKWebViewPrivate.h>
-#include <wtf/RetainPtr.h>
+#import "JavaScriptTest.h"
+#import "PlatformUtilities.h"
+#import "PlatformWebView.h"
+#import "Test.h"
+#import <WebKit/WKBackForwardListItemRef.h>
+#import <WebKit/WKBackForwardListRef.h>
+#import <WebKit/WKData.h>
+#import <WebKit/WKPagePrivate.h>
+#import <WebKit/WKSessionStateRef.h>
+#import <WebKit/WKURL.h>
+#import <WebKit/WKURLCF.h>
+#import <WebKit/WKWebViewPrivate.h>
+#import <wtf/RetainPtr.h>
 
 @interface WKWebView ()
 - (WKPageRef)_pageForTesting;
 @end
 
-static bool didFinishLoad;
+static bool didFinishNavigationForSessionState;
 static bool didChangeBackForwardList;
     
 @interface SessionStateDelegate : NSObject <WKNavigationDelegate>
@@ -55,7 +55,7 @@ static bool didChangeBackForwardList;
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
 {
-    didFinishLoad = true;
+    didFinishNavigationForSessionState = true;
 }
 
 - (void)_webView:(WKWebView *)webView backForwardListItemAdded:(WKBackForwardListItem *)itemAdded removed:(NSArray<WKBackForwardListItem *> *)itemsRemoved
@@ -73,8 +73,8 @@ static WKRetainPtr<WKDataRef> createSessionStateData()
     auto view = adoptNS([WKWebView new]);
     [view setNavigationDelegate:delegate.get()];
     [view loadRequest:[NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"simple" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]]];
-    Util::run(&didFinishLoad);
-    didFinishLoad = false;
+    Util::run(&didFinishNavigationForSessionState);
+    didFinishNavigationForSessionState = false;
 
     NSData *data = [view _sessionStateData];
     return adoptWK(WKDataCreate(static_cast<const unsigned char*>(data.bytes), data.length));

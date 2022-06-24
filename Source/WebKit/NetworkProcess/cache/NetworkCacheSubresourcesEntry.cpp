@@ -30,6 +30,7 @@
 
 #include "Logging.h"
 #include "NetworkCacheCoders.h"
+#include <WebCore/RegistrableDomain.h>
 
 namespace WebKit {
 namespace NetworkCache {
@@ -46,39 +47,80 @@ void SubresourceInfo::encode(WTF::Persistence::Encoder& encoder) const
         return;
 
     encoder << m_isSameSite;
+    encoder << m_isAppInitiated;
     encoder << m_firstPartyForCookies;
     encoder << m_requestHeaders;
-    encoder.encodeEnum(m_priority);
+    encoder << m_priority;
 }
 
-bool SubresourceInfo::decode(WTF::Persistence::Decoder& decoder, SubresourceInfo& info)
+std::optional<SubresourceInfo> SubresourceInfo::decode(WTF::Persistence::Decoder& decoder)
 {
-    if (!decoder.decode(info.m_key))
-        return false;
-    if (!decoder.decode(info.m_lastSeen))
-        return false;
-    if (!decoder.decode(info.m_firstSeen))
-        return false;
-    
-    if (!decoder.decode(info.m_isTransient))
-        return false;
-    
+    SubresourceInfo info;
+
+    std::optional<Key> key;
+    decoder >> key;
+    if (!key)
+        return std::nullopt;
+    info.m_key = WTFMove(*key);
+
+    std::optional<WallTime> lastSeen;
+    decoder >> lastSeen;
+    if (!lastSeen)
+        return std::nullopt;
+    info.m_lastSeen = WTFMove(*lastSeen);
+
+    std::optional<WallTime> firstSeen;
+    decoder >> firstSeen;
+    if (!firstSeen)
+        return std::nullopt;
+    info.m_firstSeen = WTFMove(*firstSeen);
+
+    std::optional<bool> isTransient;
+    decoder >> isTransient;
+    if (!isTransient)
+        return std::nullopt;
+    info.m_isTransient = WTFMove(*isTransient);
+
     if (info.m_isTransient)
-        return true;
+        return { WTFMove(info) };
 
-    if (!decoder.decode(info.m_isSameSite))
-        return false;
+    std::optional<bool> isSameSite;
+    decoder >> isSameSite;
+    if (!isSameSite)
+        return std::nullopt;
+    info.m_isSameSite = WTFMove(*isSameSite);
 
-    if (!decoder.decode(info.m_firstPartyForCookies))
-        return false;
+    std::optional<bool> isAppInitiated;
+    decoder >> isAppInitiated;
+    if (!isAppInitiated)
+        return std::nullopt;
+    info.m_isAppInitiated = WTFMove(*isAppInitiated);
 
-    if (!decoder.decode(info.m_requestHeaders))
-        return false;
+    std::optional<URL> firstPartyForCookies;
+    decoder >> firstPartyForCookies;
+    if (!firstPartyForCookies)
+        return std::nullopt;
+    info.m_firstPartyForCookies = WTFMove(*firstPartyForCookies);
 
-    if (!decoder.decodeEnum(info.m_priority))
-        return false;
+    std::optional<WebCore::HTTPHeaderMap> requestHeaders;
+    decoder >> requestHeaders;
+    if (!requestHeaders)
+        return std::nullopt;
+    info.m_requestHeaders = WTFMove(*requestHeaders);
+
+    std::optional<WebCore::ResourceLoadPriority> priority;
+    decoder >> priority;
+    if (!priority)
+        return std::nullopt;
+    info.m_priority = WTFMove(*priority);
     
-    return true;
+    return { WTFMove(info) };
+}
+
+bool SubresourceInfo::isFirstParty() const
+{
+    WebCore::RegistrableDomain firstPartyDomain { m_firstPartyForCookies };
+    return firstPartyDomain.matches(URL(URL(), key().identifier()));
 }
 
 Storage::Record SubresourcesEntry::encodeAsStorageRecord() const
@@ -95,9 +137,12 @@ std::unique_ptr<SubresourcesEntry> SubresourcesEntry::decodeStorageRecord(const 
 {
     auto entry = makeUnique<SubresourcesEntry>(storageEntry);
 
-    WTF::Persistence::Decoder decoder(storageEntry.header.data(), storageEntry.header.size());
-    if (!decoder.decode(entry->m_subresources))
+    WTF::Persistence::Decoder decoder(storageEntry.header.span());
+    std::optional<Vector<SubresourceInfo>> subresources;
+    decoder >> subresources;
+    if (!subresources)
         return nullptr;
+    entry->m_subresources = WTFMove(*subresources);
 
     if (!decoder.verifyChecksum()) {
         LOG(NetworkCache, "(NetworkProcess) checksum verification failure\n");
@@ -120,6 +165,7 @@ SubresourceInfo::SubresourceInfo(const Key& key, const WebCore::ResourceRequest&
     , m_firstSeen(previousInfo ? previousInfo->firstSeen() : m_lastSeen)
     , m_isTransient(!previousInfo)
     , m_isSameSite(request.isSameSite())
+    , m_isAppInitiated(request.isAppInitiated())
     , m_firstPartyForCookies(request.firstPartyForCookies())
     , m_requestHeaders(request.httpHeaderFields())
     , m_priority(request.priority())

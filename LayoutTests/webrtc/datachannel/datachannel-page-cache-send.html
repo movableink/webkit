@@ -1,4 +1,4 @@
-<!-- webkit-test-runner [ enableBackForwardCache=true ] -->
+<!-- webkit-test-runner [ UsesBackForwardCache=true ] -->
 <!DOCTYPE html>
 <html>
 <body>
@@ -17,6 +17,10 @@ pc2.ondatachannel = (e) =>  { e.channel.onmessage = t.done(); };
 window.addEventListener("pageshow", async function(event) {
     if (!event.persisted)
         return;
+
+    const offer = await pc1.createOffer({ iceRestart: true });
+    await pc1.setLocalDescription(offer);
+    await pc2.setRemoteDescription(offer);
 
     const answer = await pc2.createAnswer();
     await pc2.setLocalDescription(answer);

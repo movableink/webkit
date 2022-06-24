@@ -33,13 +33,6 @@
 #include <WebCore/ScrollableArea.h>
 #include <WebCore/Scrollbar.h>
 
-#if USE(DIRECT2D)
-interface ID3D11Device1;
-interface ID3D11DeviceContext1;
-interface ID3D11RenderTargetView;
-interface IDXGISwapChain;
-#endif
-
 namespace WebKit {
 
 class WebView;
@@ -58,6 +51,8 @@ public:
     bool setFocusedIndex(int index, bool hotTracking = false);
 
     void hide() { hidePopupMenu(); }
+
+    String debugDescription() const final;
 
 private:
     WebPopupMenuProxyWin(WebView*, WebPopupMenuProxy::Client&);
@@ -78,7 +73,7 @@ private:
     WebCore::IntSize visibleSize() const override;
     WebCore::IntSize contentsSize() const override;
     WebCore::IntRect scrollableAreaBoundingBox(bool* = nullptr) const override;
-    bool shouldPlaceBlockDirectionScrollbarOnLeft() const override { return false; }
+    bool shouldPlaceVerticalScrollbarOnLeft() const override { return false; }
     bool forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const override { return false; }
     bool isScrollableOrRubberbandable() override { return true; }
     bool hasScrollableOrRubberbandableAncestor() override { return true; }
@@ -129,23 +124,12 @@ private:
     void incrementWheelDelta(int delta);
     void reduceWheelDelta(int delta);
 
-#if USE(DIRECT2D)
-    void setupSwapChain(const WebCore::IntSize&);
-    void configureBackingStore(const WebCore::IntSize&);
-#endif
-
     WebView* m_webView;
     Vector<WebPopupItem> m_items;
     PlatformPopupMenuData m_data;
     int m_newSelectedIndex { 0 };
 
     RefPtr<WebCore::Scrollbar> m_scrollbar;
-#if USE(DIRECT2D)
-    COMPtr<ID3D11Device1> m_d3dDevice;
-    COMPtr<ID3D11DeviceContext1> m_immediateContext;
-    COMPtr<ID3D11RenderTargetView> m_renderTargetView; 
-    COMPtr<IDXGISwapChain> m_swapChain;
-#endif
     GDIObject<HDC> m_DC;
     GDIObject<HBITMAP> m_bmp;
     HWND m_popup { nullptr };

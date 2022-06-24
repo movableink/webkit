@@ -11,21 +11,19 @@
 package org.webrtc;
 
 import android.annotation.TargetApi;
-import android.graphics.Matrix;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.opengl.GLES20;
 import android.os.Bundle;
 import android.view.Surface;
+import androidx.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 import org.webrtc.ThreadUtils.ThreadChecker;
 
 /**
@@ -56,10 +54,56 @@ class HardwareVideoEncoder implements VideoEncoder {
   private static final int MEDIA_CODEC_RELEASE_TIMEOUT_MS = 5000;
   private static final int DEQUEUE_OUTPUT_BUFFER_TIMEOUT_US = 100000;
 
+  /**
+   * Keeps track of the number of output buffers that have been passed down the pipeline and not yet
+   * released. We need to wait for this to go down to zero before operations invalidating the output
+   * buffers, i.e., stop() and getOutputBuffers().
+   */
+  private static class BusyCount {
+    private final Object countLock = new Object();
+    private int count;
+
+    public void increment() {
+      synchronized (countLock) {
+        count++;
+      }
+    }
+
+    // This method may be called on an arbitrary thread.
+    public void decrement() {
+      synchronized (countLock) {
+        count--;
+        if (count == 0) {
+          countLock.notifyAll();
+        }
+      }
+    }
+
+    // The increment and waitForZero methods are called on the same thread (deliverEncodedImage,
+    // running on the output thread). Hence, after waitForZero returns, the count will stay zero
+    // until the same thread calls increment.
+    public void waitForZero() {
+      boolean wasInterrupted = false;
+      synchronized (countLock) {
+        while (count > 0) {
+          try {
+            countLock.wait();
+          } catch (InterruptedException e) {
+            Logging.e(TAG, "Interrupted while waiting on busy count", e);
+            wasInterrupted = true;
+          }
+        }
+      }
+
+      if (wasInterrupted) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
   // --- Initialized on construction.
   private final MediaCodecWrapperFactory mediaCodecWrapperFactory;
   private final String codecName;
-  private final VideoCodecType codecType;
+  private final VideoCodecMimeType codecType;
   private final Integer surfaceColorFormat;
   private final Integer yuvColorFormat;
   private final YuvFormat yuvFormat;
@@ -81,6 +125,7 @@ class HardwareVideoEncoder implements VideoEncoder {
 
   private final ThreadChecker encodeThreadChecker = new ThreadChecker();
   private final ThreadChecker outputThreadChecker = new ThreadChecker();
+  private final BusyCount outputBuffersBusyCount = new BusyCount();
 
   // --- Set on initialize and immutable until release.
   private Callback callback;
@@ -88,6 +133,7 @@ class HardwareVideoEncoder implements VideoEncoder {
 
   // --- Valid and immutable while an encoding session is running.
   @Nullable private MediaCodecWrapper codec;
+  @Nullable private ByteBuffer[] outputBuffers;
   // Thread that delivers encoded frames to the user callback.
   @Nullable private Thread outputThread;
 
@@ -103,6 +149,8 @@ class HardwareVideoEncoder implements VideoEncoder {
   private boolean useSurfaceMode;
 
   // --- Only accessed from the encoding thread.
+  // Presentation timestamp of next frame to encode.
+  private long nextPresentationTimestampUs;
   // Presentation timestamp of the last requested (or forced) key frame.
   private long lastKeyFrameNs;
 
@@ -123,7 +171,7 @@ class HardwareVideoEncoder implements VideoEncoder {
    * intervals, and bitrateAdjuster.
    *
    * @param codecName the hardware codec implementation to use
-   * @param codecType the type of the given video codec (eg. VP8, VP9, or H264)
+   * @param codecType the type of the given video codec (eg. VP8, VP9, H264 or AV1)
    * @param surfaceColorFormat color format for surface mode or null if not available
    * @param yuvColorFormat color format for bytebuffer mode
    * @param keyFrameIntervalSec interval in seconds between key frames; used to initialize the codec
@@ -134,7 +182,7 @@ class HardwareVideoEncoder implements VideoEncoder {
    * @throws IllegalArgumentException if colorFormat is unsupported
    */
   public HardwareVideoEncoder(MediaCodecWrapperFactory mediaCodecWrapperFactory, String codecName,
-      VideoCodecType codecType, Integer surfaceColorFormat, Integer yuvColorFormat,
+      VideoCodecMimeType codecType, Integer surfaceColorFormat, Integer yuvColorFormat,
       Map<String, String> params, int keyFrameIntervalSec, int forceKeyFrameIntervalMs,
       BitrateAdjuster bitrateAdjuster, EglBase14.Context sharedContext) {
     this.mediaCodecWrapperFactory = mediaCodecWrapperFactory;
@@ -177,6 +225,7 @@ class HardwareVideoEncoder implements VideoEncoder {
   private VideoCodecStatus initEncodeInternal() {
     encodeThreadChecker.checkIsOnValidThread();
 
+    nextPresentationTimestampUs = 0;
     lastKeyFrameNs = -1;
 
     try {
@@ -192,9 +241,10 @@ class HardwareVideoEncoder implements VideoEncoder {
       format.setInteger(MediaFormat.KEY_BIT_RATE, adjustedBitrate);
       format.setInteger(KEY_BITRATE_MODE, VIDEO_ControlRateConstant);
       format.setInteger(MediaFormat.KEY_COLOR_FORMAT, colorFormat);
-      format.setInteger(MediaFormat.KEY_FRAME_RATE, bitrateAdjuster.getCodecConfigFramerate());
+      format.setFloat(
+          MediaFormat.KEY_FRAME_RATE, (float) bitrateAdjuster.getAdjustedFramerateFps());
       format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, keyFrameIntervalSec);
-      if (codecType == VideoCodecType.H264) {
+      if (codecType == VideoCodecMimeType.H264) {
         String profileLevelId = params.get(VideoCodecInfo.H264_FMTP_PROFILE_LEVEL_ID);
         if (profileLevelId == null) {
           profileLevelId = VideoCodecInfo.H264_CONSTRAINED_BASELINE_3_1;
@@ -215,13 +265,14 @@ class HardwareVideoEncoder implements VideoEncoder {
           format, null /* surface */, null /* crypto */, MediaCodec.CONFIGURE_FLAG_ENCODE);
 
       if (useSurfaceMode) {
-        textureEglBase = new EglBase14(sharedContext, EglBase.CONFIG_RECORDABLE);
+        textureEglBase = EglBase.createEgl14(sharedContext, EglBase.CONFIG_RECORDABLE);
         textureInputSurface = codec.createInputSurface();
         textureEglBase.createSurface(textureInputSurface);
         textureEglBase.makeCurrent();
       }
 
       codec.start();
+      outputBuffers = codec.getOutputBuffers();
     } catch (IllegalStateException e) {
       Logging.e(TAG, "initEncodeInternal failed", e);
       release();
@@ -271,6 +322,7 @@ class HardwareVideoEncoder implements VideoEncoder {
     outputBuilders.clear();
 
     codec = null;
+    outputBuffers = null;
     outputThread = null;
 
     // Allow changing thread after release.
@@ -322,17 +374,23 @@ class HardwareVideoEncoder implements VideoEncoder {
     int bufferSize = videoFrameBuffer.getHeight() * videoFrameBuffer.getWidth() * 3 / 2;
     EncodedImage.Builder builder = EncodedImage.builder()
                                        .setCaptureTimeNs(videoFrame.getTimestampNs())
-                                       .setCompleteFrame(true)
                                        .setEncodedWidth(videoFrame.getBuffer().getWidth())
                                        .setEncodedHeight(videoFrame.getBuffer().getHeight())
                                        .setRotation(videoFrame.getRotation());
     outputBuilders.offer(builder);
 
+    long presentationTimestampUs = nextPresentationTimestampUs;
+    // Round frame duration down to avoid bitrate overshoot.
+    long frameDurationUs =
+        (long) (TimeUnit.SECONDS.toMicros(1) / bitrateAdjuster.getAdjustedFramerateFps());
+    nextPresentationTimestampUs += frameDurationUs;
+
     final VideoCodecStatus returnValue;
     if (useSurfaceMode) {
-      returnValue = encodeTextureBuffer(videoFrame);
+      returnValue = encodeTextureBuffer(videoFrame, presentationTimestampUs);
     } else {
-      returnValue = encodeByteBuffer(videoFrame, videoFrameBuffer, bufferSize);
+      returnValue =
+          encodeByteBuffer(videoFrame, presentationTimestampUs, videoFrameBuffer, bufferSize);
     }
 
     // Check if the queue was successful.
@@ -344,7 +402,8 @@ class HardwareVideoEncoder implements VideoEncoder {
     return returnValue;
   }
 
-  private VideoCodecStatus encodeTextureBuffer(VideoFrame videoFrame) {
+  private VideoCodecStatus encodeTextureBuffer(
+      VideoFrame videoFrame, long presentationTimestampUs) {
     encodeThreadChecker.checkIsOnValidThread();
     try {
       // TODO(perkj): glClear() shouldn't be necessary since every pixel is covered anyway,
@@ -354,7 +413,7 @@ class HardwareVideoEncoder implements VideoEncoder {
       VideoFrame derotatedFrame =
           new VideoFrame(videoFrame.getBuffer(), 0 /* rotation */, videoFrame.getTimestampNs());
       videoFrameDrawer.drawFrame(derotatedFrame, textureDrawer, null /* additionalRenderMatrix */);
-      textureEglBase.swapBuffers(videoFrame.getTimestampNs());
+      textureEglBase.swapBuffers(TimeUnit.MICROSECONDS.toNanos(presentationTimestampUs));
     } catch (RuntimeException e) {
       Logging.e(TAG, "encodeTexture failed", e);
       return VideoCodecStatus.ERROR;
@@ -362,12 +421,9 @@ class HardwareVideoEncoder implements VideoEncoder {
     return VideoCodecStatus.OK;
   }
 
-  private VideoCodecStatus encodeByteBuffer(
-      VideoFrame videoFrame, VideoFrame.Buffer videoFrameBuffer, int bufferSize) {
+  private VideoCodecStatus encodeByteBuffer(VideoFrame videoFrame, long presentationTimestampUs,
+      VideoFrame.Buffer videoFrameBuffer, int bufferSize) {
     encodeThreadChecker.checkIsOnValidThread();
-    // Frame timestamp rounded to the nearest microsecond.
-    long presentationTimestampUs = (videoFrame.getTimestampNs() + 500) / 1000;
-
     // No timeout.  Don't block for an input buffer, drop frames if the encoder falls behind.
     int index;
     try {
@@ -414,14 +470,21 @@ class HardwareVideoEncoder implements VideoEncoder {
   }
 
   @Override
+  public VideoCodecStatus setRates(RateControlParameters rcParameters) {
+    encodeThreadChecker.checkIsOnValidThread();
+    bitrateAdjuster.setTargets(rcParameters.bitrate.getSum(), rcParameters.framerateFps);
+    return VideoCodecStatus.OK;
+  }
+
+  @Override
   public ScalingSettings getScalingSettings() {
     encodeThreadChecker.checkIsOnValidThread();
     if (automaticResizeOn) {
-      if (codecType == VideoCodecType.VP8) {
+      if (codecType == VideoCodecMimeType.VP8) {
         final int kLowVp8QpThreshold = 29;
         final int kHighVp8QpThreshold = 95;
         return new ScalingSettings(kLowVp8QpThreshold, kHighVp8QpThreshold);
-      } else if (codecType == VideoCodecType.H264) {
+      } else if (codecType == VideoCodecMimeType.H264) {
         final int kLowH264QpThreshold = 24;
         final int kHighH264QpThreshold = 37;
         return new ScalingSettings(kLowH264QpThreshold, kHighH264QpThreshold);
@@ -488,10 +551,14 @@ class HardwareVideoEncoder implements VideoEncoder {
       MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
       int index = codec.dequeueOutputBuffer(info, DEQUEUE_OUTPUT_BUFFER_TIMEOUT_US);
       if (index < 0) {
+        if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
+          outputBuffersBusyCount.waitForZero();
+          outputBuffers = codec.getOutputBuffers();
+        }
         return;
       }
 
-      ByteBuffer codecOutputBuffer = codec.getOutputBuffers()[index];
+      ByteBuffer codecOutputBuffer = outputBuffers[index];
       codecOutputBuffer.position(info.offset);
       codecOutputBuffer.limit(info.offset + info.size);
 
@@ -511,7 +578,7 @@ class HardwareVideoEncoder implements VideoEncoder {
         }
 
         final ByteBuffer frameBuffer;
-        if (isKeyFrame && codecType == VideoCodecType.H264) {
+        if (isKeyFrame && codecType == VideoCodecMimeType.H264) {
           Logging.d(TAG,
               "Prepending config frame of size " + configBuffer.capacity()
                   + " to output buffer with offset " + info.offset + ", size " + info.size);
@@ -529,12 +596,28 @@ class HardwareVideoEncoder implements VideoEncoder {
             ? EncodedImage.FrameType.VideoFrameKey
             : EncodedImage.FrameType.VideoFrameDelta;
 
+        outputBuffersBusyCount.increment();
         EncodedImage.Builder builder = outputBuilders.poll();
-        builder.setBuffer(frameBuffer).setFrameType(frameType);
+        EncodedImage encodedImage = builder
+                                        .setBuffer(frameBuffer,
+                                            () -> {
+                                              // This callback should not throw any exceptions since
+                                              // it may be called on an arbitrary thread.
+                                              // Check bug webrtc:11230 for more details.
+                                              try {
+                                                codec.releaseOutputBuffer(index, false);
+                                              } catch (Exception e) {
+                                                Logging.e(TAG, "releaseOutputBuffer failed", e);
+                                              }
+                                              outputBuffersBusyCount.decrement();
+                                            })
+                                        .setFrameType(frameType)
+                                        .createEncodedImage();
         // TODO(mellem):  Set codec-specific info.
-        callback.onEncodedFrame(builder.createEncodedImage(), new CodecSpecificInfo());
+        callback.onEncodedFrame(encodedImage, new CodecSpecificInfo());
+        // Note that the callback may have retained the image.
+        encodedImage.release();
       }
-      codec.releaseOutputBuffer(index, false);
     } catch (IllegalStateException e) {
       Logging.e(TAG, "deliverOutput failed", e);
     }
@@ -543,6 +626,7 @@ class HardwareVideoEncoder implements VideoEncoder {
   private void releaseCodecOnOutputThread() {
     outputThreadChecker.checkIsOnValidThread();
     Logging.d(TAG, "Releasing MediaCodec on output thread");
+    outputBuffersBusyCount.waitForZero();
     try {
       codec.stop();
     } catch (Exception e) {

@@ -1,6 +1,6 @@
 # Copyright (C) 2012 Google, Inc.
 # Copyright (C) 2010 Chris Jerdonek (cjerdonek@webkit.org)
-# Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+# Copyright (C) 2018-2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -24,7 +24,6 @@
 
 """unit testing code for webkitpy."""
 
-import StringIO
 import itertools
 import json
 import logging
@@ -38,15 +37,15 @@ import traceback
 import unittest
 
 from webkitpy.common.system.logutils import configure_logging
-from webkitpy.common.system.executive import ScriptError
 from webkitpy.common.system.filesystem import FileSystem
 from webkitpy.common.host import Host
-from webkitpy.port.config import Config
 from webkitpy.test.finder import Finder
 from webkitpy.test.printer import Printer
 from webkitpy.test.runner import Runner, unit_test_name
 from webkitpy.results.upload import Upload
 from webkitpy.results.options import upload_options
+
+from webkitcorepy import StringIO
 
 _log = logging.getLogger(__name__)
 
@@ -63,51 +62,56 @@ def main():
 
     tester = Tester()
     tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts'), 'webkitpy')
+    tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts', 'libraries', 'webkitcorepy'), 'webkitcorepy')
+    tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts', 'libraries', 'webkitbugspy'), 'webkitbugspy')
+    tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts', 'libraries', 'webkitscmpy'), 'webkitscmpy')
+    tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts', 'libraries', 'webkitflaskpy'), 'webkitflaskpy')
+    if sys.version_info > (3, 0):
+        tester.add_tree(os.path.join(_webkit_root, 'Tools', 'Scripts', 'libraries', 'reporelaypy'), 'reporelaypy')
 
-    # There is no WebKit2 on Windows, so we don't need to run WebKit2 unittests on it.
-    if not (sys.platform.startswith('win') or sys.platform == 'cygwin'):
+    # AppleWin is the only platform that does not support Modern WebKit
+    # FIXME: Find a better way to detect this currently assuming cygwin means AppleWin
+    if sys.platform != 'cygwin':
         tester.add_tree(os.path.join(_webkit_root, 'Source', 'WebKit', 'Scripts'), 'webkit')
-
-    lldb_python_directory = _host.path_to_lldb_python_directory()
-    if not _supports_building_and_running_lldb_tests():
-        _log.info("Skipping lldb_webkit tests; not yet supported on macOS Catalina.")
-        will_run_lldb_webkit_tests = False
-    elif not os.path.isdir(lldb_python_directory):
-        _log.info("Skipping lldb_webkit tests; could not find path to lldb.py '{}'.".format(lldb_python_directory))
-        will_run_lldb_webkit_tests = False
-    else:
-        if lldb_python_directory not in sys.path:
-            sys.path.append(lldb_python_directory)
-        tester.add_tree(os.path.join(_webkit_root, 'Tools', 'lldb'))
-        will_run_lldb_webkit_tests = True
 
     tester.skip(('webkitpy.common.checkout.scm.scm_unittest',), 'are really, really, slow', 31818)
     if sys.platform.startswith('win'):
-        tester.skip(('webkitpy.common.checkout', 'webkitpy.common.config', 'webkitpy.tool'), 'fail horribly on win32', 54526)
+        tester.skip(('webkitpy.common.checkout', 'webkitpy.tool'), 'fail horribly on win32', 54526)
 
-    # This only needs to run on Unix, so don't worry about win32 for now.
-    appengine_sdk_path = '/usr/local/google_appengine'
-    if os.path.exists(appengine_sdk_path):
-        if not appengine_sdk_path in sys.path:
-            sys.path.append(appengine_sdk_path)
-        import dev_appserver
-        from google.appengine.dist import use_library
-        use_library('django', '1.2')
-        dev_appserver.fix_sys_path()
-        tester.add_tree(os.path.join(_webkit_root, 'Tools', 'QueueStatusServer'))
+    # Tests that are platform specific
+    mac_only_tests = (
+        'webkitpy.xcode',
+        'webkitpy.port.ios_device_unittest',
+        'webkitpy.port.ios_simulator_unittest',
+        'webkitpy.port.mac_unittest',
+        'webkitpy.port.watch_simulator_unittest',
+    )
+    linux_only_tests = (
+        'webkitpy.port.gtk_unittest',
+        'webkitpy.port.headlessdriver_unittest',
+        'webkitpy.port.linux_get_crash_log_unittest',
+        'webkitpy.port.waylanddriver_unittest',
+        'webkitpy.port.westondriver_unittest',
+        'webkitpy.port.wpe_unittest',
+        'webkitpy.port.xorgdriver_unittest',
+        'webkitpy.port.xvfbdriver_unittest',
+    )
+    windows_only_tests = ('webkitpy.port.win_unittest',)
+
+    # Skip platform specific tests on Windows and Linux
+    # The webkitpy EWS is run on Mac so only skip tests that won't run on it
+    if sys.platform.startswith('darwin'):
+        skip_tests = None
+    elif sys.platform.startswith('win'):
+        skip_tests = mac_only_tests + linux_only_tests + \
+            ('webkitpy.port.leakdetector_unittest', 'webkitpy.port.leakdetector_valgrind_unittest')
     else:
-        _log.info('Skipping QueueStatusServer tests; the Google AppEngine Python SDK is not installed.')
+        skip_tests = mac_only_tests + windows_only_tests
 
-    return not tester.run(will_run_lldb_webkit_tests=will_run_lldb_webkit_tests)
+    if skip_tests is not None:
+        tester.skip(skip_tests, 'are not relevant for the platform running tests', 222066)
 
-
-def _supports_building_and_running_lldb_tests():
-    # FIXME: Remove when test-lldb is in its own script
-    # https://bugs.webkit.org/show_bug.cgi?id=187916
-    build_version = _host.platform.build_version()
-    if build_version is None:
-        return False
-    return True
+    return not tester.run()
 
 
 def _print_results_as_json(stream, all_test_names, failures, errors):
@@ -115,8 +119,8 @@ def _print_results_as_json(stream, all_test_names, failures, errors):
         return {'name': result_tuple[0], 'result': result_tuple[1]}
 
     results = {}
-    results['failures'] = map(result_dict_from_tuple, sorted(failures, key=operator.itemgetter(0)))
-    results['errors'] = map(result_dict_from_tuple, sorted(errors, key=operator.itemgetter(0)))
+    results['failures'] = list(map(result_dict_from_tuple, sorted(failures, key=operator.itemgetter(0))))
+    results['errors'] = list(map(result_dict_from_tuple, sorted(errors, key=operator.itemgetter(0))))
     results['passes'] = sorted(set(all_test_names) - set(map(operator.itemgetter(0), failures)) - set(map(operator.itemgetter(0), errors)))
 
     json.dump(results, stream, separators=(',', ':'))
@@ -127,6 +131,7 @@ class Tester(object):
         self.finder = Finder(filesystem or FileSystem())
         self.printer = Printer(sys.stderr)
         self._options = None
+        self.upload_style = 'release'
 
     def add_tree(self, top_directory, starting_subdirectory=None):
         self.finder.add_tree(top_directory, starting_subdirectory)
@@ -136,14 +141,6 @@ class Tester(object):
 
     def _parse_args(self, argv=None):
         parser = optparse.OptionParser(usage='usage: %prog [options] [args...]')
-
-        #  Configuration options only effect the building of lldbWebKitTester.
-        configuration_group = optparse.OptionGroup(parser, 'Configuration options')
-        configuration_group.add_option('--debug', action='store_const', const='Debug', dest="configuration",
-            help='Set the configuration to Debug')
-        configuration_group.add_option('--release', action='store_const', const='Release', dest="configuration",
-            help='Set the configuration to Release')
-        parser.add_option_group(configuration_group)
 
         upload_group = optparse.OptionGroup(parser, 'Upload Options')
         upload_group.add_options(upload_options())
@@ -176,8 +173,8 @@ class Tester(object):
 
         return parser.parse_args(argv)
 
-    def run(self, will_run_lldb_webkit_tests=False):
-        self._options, args = self._parse_args()
+    def run(self, argv=None):
+        self._options, args = self._parse_args(argv)
         self.printer.configure(self._options)
 
         self.finder.clean_trees()
@@ -187,45 +184,31 @@ class Tester(object):
             _log.error('No tests to run')
             return False
 
-        return self._run_tests(names, will_run_lldb_webkit_tests)
+        return self._run_tests(names)
 
-    def _run_tests(self, names, will_run_lldb_webkit_tests):
+    def _run_tests(self, names):
         # Make sure PYTHONPATH is set up properly.
         sys.path = self.finder.additional_paths(sys.path) + sys.path
 
-        # We autoinstall everything up so that we can run tests concurrently
-        # and not have to worry about autoinstalling packages concurrently.
-        self.printer.write_update("Checking autoinstalled packages ...")
-        from webkitpy.thirdparty import autoinstall_everything
-        autoinstall_everything()
+        from webkitcorepy import AutoInstall
+
+        # Force registration of all autoinstalled packages.
+        if sys.version_info > (3, 0):
+            import reporelaypy
+        import webkitflaskpy
+
+        AutoInstall.install_everything()
 
         start_time = time.time()
-        config = Config(_host.executive, self.finder.filesystem)
-        configuration_to_use = self._options.configuration or config.default_configuration()
 
-        if will_run_lldb_webkit_tests:
-            self.printer.write_update('Building lldbWebKitTester ...')
-            build_lldbwebkittester = self.finder.filesystem.join(_webkit_root, 'Tools', 'Scripts', 'build-lldbwebkittester')
-            try:
-                _host.executive.run_and_throw_if_fail([build_lldbwebkittester, config.flag_for_configuration(configuration_to_use)], quiet=(not bool(self._options.verbose)))
-            except ScriptError as e:
-                _log.error(e.message_with_output(output_limit=None))
-                return False
-            os.environ['LLDB_WEBKIT_TESTER_EXECUTABLE'] = str(self.finder.filesystem.join(config.build_directory(configuration_to_use), 'lldbWebKitTester'))
-            if not self.finder.filesystem.exists(os.environ['LLDB_WEBKIT_TESTER_EXECUTABLE']):
-                _log.error('Failed to find lldbWebKitTester.')
-                return False
-
-        if self._options.coverage:
+        if getattr(self._options, 'coverage', False):
             _log.warning("Checking code coverage, so running things serially")
             self._options.child_processes = 1
 
-            import webkitpy.thirdparty.autoinstalled.coverage as coverage
+            import coverage
             cov = coverage.coverage(omit=[
                 "/usr/*",
-                "*/webkitpy/thirdparty/autoinstalled/*",
-                "*/webkitpy/thirdparty/BeautifulSoup.py",
-                "*/webkitpy/thirdparty/BeautifulSoup_legacy.py",
+                "*/webkitpy/thirdparty/*",
             ])
             cov.start()
 
@@ -241,26 +224,26 @@ class Tester(object):
         self.printer.num_tests = len(parallel_tests) + len(serial_tests)
         start = time.time()
         test_runner = Runner(self.printer, loader)
-        test_runner.run(parallel_tests, self._options.child_processes)
+        test_runner.run(parallel_tests, getattr(self._options, 'child_processes', 1))
         test_runner.run(serial_tests, 1)
         end_time = time.time()
 
         self.printer.print_result(time.time() - start)
 
-        if self._options.json:
+        if getattr(self._options, 'json', False):
             _print_results_as_json(sys.stdout, itertools.chain(parallel_tests, serial_tests), test_runner.failures, test_runner.errors)
 
-        if self._options.json_file_name:
+        if getattr(self._options, 'json_file_name', None):
             self._options.json_file_name = os.path.abspath(self._options.json_file_name)
             with open(self._options.json_file_name, 'w') as json_file:
                 _print_results_as_json(json_file, itertools.chain(parallel_tests, serial_tests), test_runner.failures, test_runner.errors)
 
-        if self._options.coverage:
+        if getattr(self._options, 'coverage', False):
             cov.stop()
             cov.save()
 
         failed_uploads = 0
-        if self._options.report_urls:
+        if getattr(self._options, 'report_urls', None):
             self.printer.meter.writeln('\n')
             self.printer.write_update('Preparing upload data ...')
 
@@ -273,14 +256,15 @@ class Tester(object):
 
             _host.initialize_scm()
             upload = Upload(
-                suite='webkitpy-tests',
+                suite=self._options.suite or 'webkitpy-tests',
                 configuration=Upload.create_configuration(
                     platform=_host.platform.os_name,
                     version=str(_host.platform.os_version),
                     version_name=_host.platform.os_version_name(),
-                    style='asan' if config.asan else configuration_to_use.lower(),
+                    style=self.upload_style,
                     sdk=_host.platform.build_version(),
                     flavor=self._options.result_report_flavor,
+                    architecture=_host.platform.architecture(),
                 ),
                 details=Upload.create_details(options=self._options),
                 commits=[Upload.create_commit(
@@ -300,7 +284,7 @@ class Tester(object):
                 failed_uploads = failed_uploads if upload.upload(url, log_line_func=self.printer.meter.writeln) else (failed_uploads + 1)
             self.printer.meter.writeln('Uploads completed!')
 
-        if self._options.coverage:
+        if getattr(self._options, 'coverage', False):
             cov.report(show_missing=False)
 
         return not self.printer.num_errors and not self.printer.num_failures and not failed_uploads
@@ -322,7 +306,7 @@ class Tester(object):
     def _test_names(self, loader, names):
         parallel_test_method_prefixes = ['test_']
         serial_test_method_prefixes = ['serial_test_']
-        if self._options.integration_tests:
+        if getattr(self._options, 'integration_tests', None):
             parallel_test_method_prefixes.append('integration_test_')
             serial_test_method_prefixes.append('serial_integration_test_')
 
@@ -353,9 +337,9 @@ class Tester(object):
         return names
 
     def _log_exception(self):
-        s = StringIO.StringIO()
+        s = StringIO()
         traceback.print_exc(file=s)
-        for l in s.buflist:
+        for l in s.getvalue().splitlines():
             _log.error('  ' + l.rstrip())
 
 
@@ -373,9 +357,8 @@ class _Loader(unittest.TestLoader):
             if not hasattr(getattr(testCaseClass, attrname), '__call__'):
                 return False
             return (any(attrname.startswith(prefix) for prefix in self.test_method_prefixes))
-        testFnNames = filter(isTestMethod, dir(testCaseClass))
-        testFnNames.sort()
-        return testFnNames
+
+        return sorted(filter(isTestMethod, dir(testCaseClass)))
 
 
 if __name__ == '__main__':

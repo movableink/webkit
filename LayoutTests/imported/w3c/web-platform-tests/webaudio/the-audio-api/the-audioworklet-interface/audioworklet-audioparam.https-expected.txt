@@ -1,7 +1,14 @@
-CONSOLE MESSAGE: line 24: TypeError: undefined is not an object (evaluating 'context.audioWorklet.addModule')
 
-Harness Error (FAIL), message = TypeError: undefined is not an object (evaluating 'context.audioWorklet.addModule')
-
-PASS # AUDIT TASK RUNNER STARTED. 
-PASS > [Initializing AudioWorklet and Context]  
+PASS # AUDIT TASK RUNNER STARTED.
+PASS Executing "Initializing AudioWorklet and Context"
+PASS Executing "Verifying AudioParam in AudioWorkletNode"
+PASS Audit report
+PASS > [Initializing AudioWorklet and Context]
+PASS < [Initializing AudioWorklet and Context] All assertions passed. (total 0 assertions)
+PASS > [Verifying AudioParam in AudioWorkletNode]
+PASS   Default gain value of gainWorkletNode is equal to 0.707000.
+PASS   Value of gainWorkletParam after setter = 0.1 is equal to 0.100000.
+PASS   The rendered buffer contains only the constant 0.
+PASS < [Verifying AudioParam in AudioWorkletNode] All assertions passed. (total 3 assertions)
+PASS # AUDIT TASK RUNNER FINISHED: 2 tasks ran successfully.
 

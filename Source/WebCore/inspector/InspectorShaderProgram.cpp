@@ -26,27 +26,19 @@
 #include "config.h"
 #include "InspectorShaderProgram.h"
 
+#if ENABLE(WEBGL)
+
 #include "InspectorCanvas.h"
 #include <JavaScriptCore/IdentifiersFactory.h>
-#include <wtf/Optional.h>
+#include <variant>
 #include <wtf/Ref.h>
-#include <wtf/Variant.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(WEBGL)
-#include "GraphicsContext3D.h"
 #include "WebGLProgram.h"
 #include "WebGLRenderingContextBase.h"
+#include "WebGLSampler.h"
 #include "WebGLShader.h"
-#endif
-
-#if ENABLE(WEBGPU)
-#include "GPUShaderModule.h"
-#include "WHLSLPrepare.h"
-#include "WebGPUComputePipeline.h"
-#include "WebGPUPipeline.h"
-#include "WebGPURenderPipeline.h"
-#include "WebGPUShaderModule.h"
 #endif
 
 namespace WebCore {
@@ -60,13 +52,6 @@ Ref<InspectorShaderProgram> InspectorShaderProgram::create(WebGLProgram& program
 }
 #endif
 
-#if ENABLE(WEBGPU)
-Ref<InspectorShaderProgram> InspectorShaderProgram::create(WebGPUPipeline& pipeline, InspectorCanvas& inspectorCanvas)
-{
-    return adoptRef(*new InspectorShaderProgram(pipeline, inspectorCanvas));
-}
-#endif
-
 #if ENABLE(WEBGL)
 InspectorShaderProgram::InspectorShaderProgram(WebGLProgram& program, InspectorCanvas& inspectorCanvas)
     : m_identifier("program:" + IdentifiersFactory::createIdentifier())
@@ -77,30 +62,11 @@ InspectorShaderProgram::InspectorShaderProgram(WebGLProgram& program, InspectorC
 }
 #endif
 
-#if ENABLE(WEBGPU)
-InspectorShaderProgram::InspectorShaderProgram(WebGPUPipeline& pipeline, InspectorCanvas& inspectorCanvas)
-    : m_identifier("pipeline:" + IdentifiersFactory::createIdentifier())
-    , m_canvas(inspectorCanvas)
-    , m_program(pipeline)
-{
-    ASSERT(m_canvas.deviceContext());
-}
-#endif
-
 #if ENABLE(WEBGL)
 WebGLProgram* InspectorShaderProgram::program() const
 {
-    if (auto* programWrapper = WTF::get_if<std::reference_wrapper<WebGLProgram>>(m_program))
+    if (auto* programWrapper = std::get_if<std::reference_wrapper<WebGLProgram>>(&m_program))
         return &programWrapper->get();
-    return nullptr;
-}
-#endif
-
-#if ENABLE(WEBGPU)
-WebGPUPipeline* InspectorShaderProgram::pipeline() const
-{
-    if (auto* pipelineWrapper = WTF::get_if<std::reference_wrapper<WebGPUPipeline>>(m_program))
-        return &pipelineWrapper->get();
     return nullptr;
 }
 #endif
@@ -110,10 +76,10 @@ static WebGLShader* shaderForType(WebGLProgram& program, Inspector::Protocol::Ca
 {
     switch (shaderType) {
     case Inspector::Protocol::Canvas::ShaderType::Fragment:
-        return program.getAttachedShader(GraphicsContext3D::FRAGMENT_SHADER);
+        return program.getAttachedShader(GraphicsContextGL::FRAGMENT_SHADER);
 
     case Inspector::Protocol::Canvas::ShaderType::Vertex:
-        return program.getAttachedShader(GraphicsContext3D::VERTEX_SHADER);
+        return program.getAttachedShader(GraphicsContextGL::VERTEX_SHADER);
 
     // Compute shaders are a WebGPU concept.
     case Inspector::Protocol::Canvas::ShaderType::Compute:
@@ -125,37 +91,8 @@ static WebGLShader* shaderForType(WebGLProgram& program, Inspector::Protocol::Ca
 }
 #endif
 
-#if ENABLE(WEBGPU)
-static Optional<WebGPUPipeline::ShaderData> shaderForType(WebGPUPipeline& pipeline, Inspector::Protocol::Canvas::ShaderType shaderType)
-{
-    switch (shaderType) {
-    case Inspector::Protocol::Canvas::ShaderType::Compute:
-        if (is<WebGPUComputePipeline>(pipeline))
-            return downcast<WebGPUComputePipeline>(pipeline).computeShader();
-        return WTF::nullopt;
-
-    case Inspector::Protocol::Canvas::ShaderType::Fragment:
-        if (is<WebGPURenderPipeline>(pipeline))
-            return downcast<WebGPURenderPipeline>(pipeline).fragmentShader();
-        return WTF::nullopt;
-
-    case Inspector::Protocol::Canvas::ShaderType::Vertex:
-        if (is<WebGPURenderPipeline>(pipeline))
-            return downcast<WebGPURenderPipeline>(pipeline).vertexShader();
-        return WTF::nullopt;
-    }
-
-    ASSERT_NOT_REACHED();
-    return WTF::nullopt;
-}
-#endif
-
 String InspectorShaderProgram::requestShaderSource(Inspector::Protocol::Canvas::ShaderType shaderType)
 {
-#if !ENABLE(WEBGL) && !ENABLE(WEBGPU)
-    UNUSED_PARAM(shaderType);
-#endif
-
     return WTF::switchOn(m_program,
 #if ENABLE(WEBGL)
         [&] (std::reference_wrapper<WebGLProgram> programWrapper) {
@@ -165,18 +102,8 @@ String InspectorShaderProgram::requestShaderSource(Inspector::Protocol::Canvas::
             return String();
         },
 #endif
-#if ENABLE(WEBGPU)
-        [&] (std::reference_wrapper<WebGPUPipeline> pipelineWrapper) {
-            auto& pipeline = pipelineWrapper.get();
-            if (auto shaderData = shaderForType(pipeline, shaderType)) {
-                if (auto module = shaderData.value().module)
-                    return module->source();
-            }
-            return String();
-        },
-#endif
-        [&] (Monostate) {
-#if ENABLE(WEBGL) || ENABLE(WEBGPU)
+        [&] (std::monostate) {
+#if ENABLE(WEBGL)
             ASSERT_NOT_REACHED();
 #endif
             return String();
@@ -186,11 +113,6 @@ String InspectorShaderProgram::requestShaderSource(Inspector::Protocol::Canvas::
 
 bool InspectorShaderProgram::updateShader(Inspector::Protocol::Canvas::ShaderType shaderType, const String& source)
 {
-#if !ENABLE(WEBGL) && !ENABLE(WEBGPU)
-    UNUSED_PARAM(shaderType);
-    UNUSED_PARAM(source);
-#endif
-
     return WTF::switchOn(m_program,
 #if ENABLE(WEBGL)
         [&] (std::reference_wrapper<WebGLProgram> programWrapper) {
@@ -199,8 +121,8 @@ bool InspectorShaderProgram::updateShader(Inspector::Protocol::Canvas::ShaderTyp
                 if (auto* context = m_canvas.canvasContext()) {
                     if (is<WebGLRenderingContextBase>(context)) {
                         auto& contextWebGLBase = downcast<WebGLRenderingContextBase>(*context);
-                        contextWebGLBase.shaderSource(shader, source);
-                        contextWebGLBase.compileShader(shader);
+                        contextWebGLBase.shaderSource(*shader, source);
+                        contextWebGLBase.compileShader(*shader);
                         if (shader->isValid()) {
                             contextWebGLBase.linkProgramWithoutInvalidatingAttribLocations(&program);
                             return true;
@@ -211,25 +133,8 @@ bool InspectorShaderProgram::updateShader(Inspector::Protocol::Canvas::ShaderTyp
             return false;
         },
 #endif
-#if ENABLE(WEBGPU)
-        [&] (std::reference_wrapper<WebGPUPipeline> pipelineWrapper) {
-            auto& pipeline = pipelineWrapper.get();
-            if (auto* device = m_canvas.deviceContext()) {
-                if (pipeline.cloneShaderModules(*device)) {
-                    if (auto shaderData = shaderForType(pipeline, shaderType)) {
-                        if (auto module = shaderData.value().module) {
-                            module->update(*device, source);
-                            if (pipeline.recompile(*device))
-                                return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        },
-#endif
-        [&] (Monostate) {
-#if ENABLE(WEBGL) || ENABLE(WEBGPU)
+        [&] (std::monostate) {
+#if ENABLE(WEBGL)
             ASSERT_NOT_REACHED();
 #endif
             return false;
@@ -239,36 +144,18 @@ bool InspectorShaderProgram::updateShader(Inspector::Protocol::Canvas::ShaderTyp
 
 Ref<Inspector::Protocol::Canvas::ShaderProgram> InspectorShaderProgram::buildObjectForShaderProgram()
 {
-    bool sharesVertexFragmentShader = false;
-
-    using ProgramTypeType = Optional<Inspector::Protocol::Canvas::ProgramType>;
+    using ProgramTypeType = std::optional<Inspector::Protocol::Canvas::ProgramType>;
     auto programType = WTF::switchOn(m_program,
 #if ENABLE(WEBGL)
         [&] (std::reference_wrapper<WebGLProgram>) -> ProgramTypeType {
             return Inspector::Protocol::Canvas::ProgramType::Render;
         },
 #endif
-#if ENABLE(WEBGPU)
-        [&] (std::reference_wrapper<WebGPUPipeline> pipelineWrapper) -> ProgramTypeType {
-            auto& pipeline = pipelineWrapper.get();
-            if (is<WebGPUComputePipeline>(pipeline))
-                return Inspector::Protocol::Canvas::ProgramType::Compute;
-            if (is<WebGPURenderPipeline>(pipeline)) {
-                auto& renderPipeline = downcast<WebGPURenderPipeline>(pipeline);
-                auto vertexShader = renderPipeline.vertexShader();
-                auto fragmentShader = renderPipeline.fragmentShader();
-                if (vertexShader && fragmentShader && vertexShader.value().module == fragmentShader.value().module)
-                    sharesVertexFragmentShader = true;
-                return Inspector::Protocol::Canvas::ProgramType::Render;
-            }
-            return WTF::nullopt;
-        },
-#endif
-        [&] (Monostate) -> ProgramTypeType {
-#if ENABLE(WEBGL) || ENABLE(WEBGPU)
+        [&] (std::monostate) -> ProgramTypeType {
+#if ENABLE(WEBGL)
             ASSERT_NOT_REACHED();
 #endif
-            return WTF::nullopt;
+            return std::nullopt;
         }
     );
     if (!programType) {
@@ -281,9 +168,9 @@ Ref<Inspector::Protocol::Canvas::ShaderProgram> InspectorShaderProgram::buildObj
         .setProgramType(programType.value())
         .setCanvasId(m_canvas.identifier())
         .release();
-    if (sharesVertexFragmentShader)
-        payload->setSharesVertexFragmentShader(true);
     return payload;
 }
 
 } // namespace WebCore
+
+#endif // ENABLE(WEBGL)

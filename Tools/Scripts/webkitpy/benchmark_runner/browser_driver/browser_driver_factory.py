@@ -1,10 +1,3 @@
-#!/usr/bin/env python
-
-import logging
-import json
-import os
-
-
 class BrowserDriverFactory(object):
 
     browser_drivers = {}

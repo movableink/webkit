@@ -34,9 +34,10 @@ import shlex
 import sys
 import time
 import os
-from collections import defaultdict
 
-from os.path import normpath
+from collections import defaultdict
+from webkitcorepy import string_utils
+
 from webkitpy.common.system import path
 from webkitpy.common.system.profiler import ProfilerFactory
 
@@ -45,16 +46,18 @@ _log = logging.getLogger(__name__)
 
 
 class DriverInput(object):
-    def __init__(self, test_name, timeout, image_hash, should_run_pixel_test, should_dump_jsconsolelog_in_stderr=None, args=None):
+    def __init__(self, test_name, timeout, image_hash, should_run_pixel_test, should_dump_jsconsolelog_in_stderr=None, args=None, self_comparison_header=None, force_dump_pixels=False):
         self.test_name = test_name
         self.timeout = timeout  # in ms
         self.image_hash = image_hash
         self.should_run_pixel_test = should_run_pixel_test
         self.should_dump_jsconsolelog_in_stderr = should_dump_jsconsolelog_in_stderr
         self.args = args or []
+        self.self_comparison_header = self_comparison_header
+        self.force_dump_pixels = force_dump_pixels
 
     def __repr__(self):
-        return "DriverInput(test_name='{}', timeout={}, image_hash={}, should_run_pixel_test={}, should_dump_jsconsolelog_in_stderr={}'".format(self.test_name, self.timeout, self.image_hash, self.should_run_pixel_test, self.should_dump_jsconsolelog_in_stderr)
+        return "DriverInput(test_name='{}', timeout={}, image_hash={}, should_run_pixel_test={}, should_dump_jsconsolelog_in_stderr={}, self_comparison_header={}, force_dump_pixels={}'".format(self.test_name, self.timeout, self.image_hash, self.should_run_pixel_test, self.should_dump_jsconsolelog_in_stderr, self.self_comparison_header, self.force_dump_pixels)
 
 
 class DriverOutput(object):
@@ -62,7 +65,7 @@ class DriverOutput(object):
     and post-processing of data."""
 
     metrics_patterns = []
-    metrics_patterns.append((re.compile('at \(-?[0-9]+,-?[0-9]+\) *'), ''))
+    metrics_patterns.append((re.compile(r'at \(-?[0-9]+,-?[0-9]+\) *'), ''))
     metrics_patterns.append((re.compile('size -?[0-9]+x-?[0-9]+ *'), ''))
     metrics_patterns.append((re.compile('text run width -?[0-9]+: '), ''))
     metrics_patterns.append((re.compile('text run width -?[0-9]+ [a-zA-Z ]+: '), ''))
@@ -70,12 +73,12 @@ class DriverOutput(object):
     metrics_patterns.append((re.compile('RenderImage {INPUT} .*'), 'RenderImage {INPUT}'))
     metrics_patterns.append((re.compile('RenderBlock {INPUT} .*'), 'RenderBlock {INPUT}'))
     metrics_patterns.append((re.compile('RenderTextControl {INPUT} .*'), 'RenderTextControl {INPUT}'))
-    metrics_patterns.append((re.compile('\([0-9]+px'), 'px'))
+    metrics_patterns.append((re.compile(r'\([0-9]+px'), 'px'))
     metrics_patterns.append((re.compile(' *" *\n +" *'), ' '))
     metrics_patterns.append((re.compile('" +$'), '"'))
     metrics_patterns.append((re.compile('- '), '-'))
-    metrics_patterns.append((re.compile('\n( *)"\s+'), '\n\g<1>"'))
-    metrics_patterns.append((re.compile('\s+"\n'), '"\n'))
+    metrics_patterns.append((re.compile('\n( *)"\\s+'), '\n\\g<1>"'))
+    metrics_patterns.append((re.compile('\\s+"\n'), '"\n'))
     metrics_patterns.append((re.compile('scrollWidth [0-9]+'), 'scrollWidth'))
     metrics_patterns.append((re.compile('scrollHeight [0-9]+'), 'scrollHeight'))
     metrics_patterns.append((re.compile('scrollX [0-9]+'), 'scrollX'))
@@ -86,11 +89,11 @@ class DriverOutput(object):
             test_time=0, measurements=None, timeout=False, error='', crashed_process_name='??',
             crashed_pid=None, crash_log=None, pid=None):
         # FIXME: Args could be renamed to better clarify what they do.
-        self.text = text
+        self.text = string_utils.decode(text, target_type=str) if text else None
         self.image = image  # May be empty-string if the test crashes.
         self.image_hash = image_hash
         self.image_diff = None  # image_diff gets filled in after construction.
-        self.audio = audio  # Binary format is port-dependent.
+        self.audio = string_utils.encode(audio) if audio else None  # Binary format is port-dependent.
         self.crash = crash
         self.crashed_process_name = crashed_process_name
         self.crashed_pid = crashed_pid
@@ -112,6 +115,20 @@ class DriverOutput(object):
             return
         for pattern in patterns:
             self.text = re.sub(pattern[0], pattern[1], self.text)
+
+    def strip_text_start_if_needed(self, detectors):
+        if not self.text or not len(detectors):
+            return
+
+        result = self.text.split('Content-Type: text/plain\n')
+        if len(result) != 2:
+            return
+
+        for detector in detectors:
+            if detector in result[0]:
+                self.text = result[1]
+                self.error += '\nRemoved logging from stdout:\n' + result[0]
+                return
 
     def strip_stderror_patterns(self, patterns):
         if not self.error:
@@ -161,7 +178,7 @@ class Driver(object):
         # stderr output, as well as if we've seen #EOF on this driver instance.
         # FIXME: We should probably remove _read_first_block and _read_optional_image_block and
         # instead scope these locally in run_test.
-        self.error_from_test = str()
+        self.error_from_test = ''
         self.err_seen_eof = False
 
         self._server_name = self._port.driver_name()
@@ -196,7 +213,7 @@ class Driver(object):
         test_begin_time = time.time()
         self._driver_timed_out = False
         self._crash_report_from_driver = None
-        self.error_from_test = str()
+        self.error_from_test = ''
         self.err_seen_eof = False
 
         command = self._command_from_driver_input(driver_input)
@@ -214,6 +231,7 @@ class Driver(object):
         self._server_process.write(command)
         text, audio = self._read_first_block(deadline, driver_input.test_name)  # First block is either text or audio
         image, actual_image_hash = self._read_optional_image_block(deadline, driver_input.test_name)  # The second (optional) block is image data.
+        text = string_utils.decode(text, target_type=str)
 
         crashed = self.has_crashed()
         timed_out = self._server_process.timed_out
@@ -227,9 +245,9 @@ class Driver(object):
             # In the timeout case, we kill the hung process as well.
             out, err = self._server_process.stop(self._port.driver_stop_timeout() if stop_when_done else 0.0)
             if out:
-                text += out
+                text += string_utils.decode(out, target_type=str, errors='backslashreplace')
             if err:
-                self.error_from_test += err
+                self.error_from_test += string_utils.decode(err, target_type=str)
             self._server_process = None
 
         crash_log = None
@@ -280,10 +298,10 @@ class Driver(object):
         child_processes = defaultdict(list)
 
         for line in output.splitlines():
-            m = re.match('^([^:]+): ([0-9]+)$', line)
+            m = re.match(b'^([^:]+): ([0-9]+)$', line)
             if m:
-                process_name = m.group(1)
-                process_id = m.group(2)
+                process_name = string_utils.decode(m.group(1), target_type=str)
+                process_id = string_utils.decode(m.group(2), target_type=str)
                 child_processes[process_name].append(process_id)
 
         return child_processes
@@ -433,8 +451,11 @@ class Driver(object):
         environment['__XPC_ASAN_OPTIONS'] = environment['ASAN_OPTIONS']
 
         # Disable vnode-guard related simulated crashes for WKTR / DRT (rdar://problem/40674034).
-        environment['SQLITE_EXEMPT_PATH_FROM_VNODE_GUARDS'] = os.path.realpath(environment['DUMPRENDERTREE_TEMP'])
+        environment['SQLITE_EXEMPT_PATH_FROM_VNODE_GUARDS'] = '/'
         environment['__XPC_SQLITE_EXEMPT_PATH_FROM_VNODE_GUARDS'] = environment['SQLITE_EXEMPT_PATH_FROM_VNODE_GUARDS']
+
+        environment['JSC_useKernTCSM'] = 'false'
+        environment['__XPC_JSC_useKernTCSM'] = environment['JSC_useKernTCSM']
 
         if sys.platform.startswith('linux'):
             # Currently on WebKit2, there is no API for setting the application cache directory.
@@ -518,10 +539,25 @@ class Driver(object):
             cmd.append('--no-timeout')
         if self._port.get_option('show_touches'):
             cmd.append('--show-touches')
+        if self._port.get_option('show_window'):
+            cmd.append('--show-window')
+        if self._port.get_option('accessibility_isolated_tree'):
+            cmd.append('--accessibility-isolated-tree')
 
         for allowed_host in self._port.allowed_hosts():
             cmd.append('--allowed-host')
             cmd.append(allowed_host)
+
+        for feature in self._port.internal_feature():
+            cmd.append('--internal-feature')
+            cmd.append(feature)
+
+        if not self._port.get_option('enable_all_experimental_features'):
+            cmd.append('--no-enable-all-experimental-features')
+
+        for feature in self._port.experimental_feature():
+            cmd.append('--experimental-feature')
+            cmd.append(feature)
 
         cmd.extend(self._port.get_option('additional_drt_flag', []))
         cmd.extend(self._port.additional_drt_flag())
@@ -532,46 +568,46 @@ class Driver(object):
         return cmd
 
     def _check_for_driver_timeout(self, out_line):
-        if out_line.startswith("#PID UNRESPONSIVE - "):
-            match = re.match('#PID UNRESPONSIVE - (\S+)', out_line)
-            child_process_name = match.group(1) if match else 'WebProcess'
-            match = re.search('pid (\d+)', out_line)
+        if out_line.startswith(b"#PID UNRESPONSIVE - "):
+            match = re.match(br'#PID UNRESPONSIVE - (\S+)', out_line)
+            child_process_name = string_utils.decode(match.group(1), target_type=str) if match else 'WebProcess'
+            match = re.search(br'pid (\d+)', out_line)
             child_process_pid = int(match.group(1)) if match else None
             err_line = 'Wait on notifyDone timed out, process ' + child_process_name + ' pid = ' + str(child_process_pid)
             self.error_from_test += err_line
             _log.debug(err_line)
             if self._port.get_option("sample_on_timeout"):
                 self._port.sample_process(child_process_name, child_process_pid, self._target_host)
-        if out_line == "FAIL: Timed out waiting for notifyDone to be called\n":
+        if out_line == b"FAIL: Timed out waiting for notifyDone to be called\n":
             self._driver_timed_out = True
 
     def _check_for_address_sanitizer_violation(self, error_line):
-        if "ERROR: AddressSanitizer" in error_line:
+        if b"ERROR: AddressSanitizer" in error_line:
             return True
 
     def _check_for_driver_crash_or_unresponsiveness(self, error_line):
-        crashed_check = error_line.rstrip('\r\n')
-        if crashed_check == "#CRASHED":
+        crashed_check = error_line.rstrip(b'\r\n')
+        if crashed_check == b"#CRASHED":
             self._crashed_process_name = self._server_process.process_name()
             self._crashed_pid = self._server_process.system_pid()
             return True
-        elif error_line.startswith("#CRASHED - "):
-            match = re.match('#CRASHED - (\S+)', error_line)
-            self._crashed_process_name = match.group(1) if match else 'WebProcess'
-            match = re.search('pid (\d+)', error_line)
+        elif error_line.startswith(b"#CRASHED - "):
+            match = re.match(br'#CRASHED - (\S+)', error_line)
+            self._crashed_process_name = string_utils.decode(match.group(1), target_type=str) if match else 'WebProcess'
+            match = re.search(br'pid (\d+)', error_line)
             self._crashed_pid = int(match.group(1)) if match else None
             _log.debug('%s crash, pid = %s' % (self._crashed_process_name, str(self._crashed_pid)))
             return True
-        elif error_line.startswith("#PROCESS UNRESPONSIVE - "):
-            match = re.match('#PROCESS UNRESPONSIVE - (\S+)', error_line)
-            child_process_name = match.group(1) if match else 'WebProcess'
-            match = re.search('pid (\d+)', error_line)
+        elif error_line.startswith(b"#PROCESS UNRESPONSIVE - "):
+            match = re.match(br'#PROCESS UNRESPONSIVE - (\S+)', error_line)
+            child_process_name = string_utils.decode(match.group(1), target_type=str) if match else 'WebProcess'
+            match = re.search(br'pid (\d+)', error_line)
             child_process_pid = int(match.group(1)) if match else None
             _log.debug('%s is unresponsive, pid = %s' % (child_process_name, str(child_process_pid)))
             self._driver_timed_out = True
             if child_process_pid:
                 self._port.sample_process(child_process_name, child_process_pid, self._target_host)
-            self.error_from_test += error_line
+            self.error_from_test += string_utils.decode(error_line, target_type=str)
             self._server_process.write('#SAMPLE FINISHED\n', True)  # Must be able to ignore a broken pipe here, target process may already be closed.
             return True
         return self.has_crashed()
@@ -597,12 +633,19 @@ class Driver(object):
         # ' is the separator between arguments.
         if self._port.supports_per_test_timeout():
             command += "'--timeout'%s" % driver_input.timeout
-        if driver_input.should_run_pixel_test:
-            command += "'--pixel-test"
         if driver_input.should_dump_jsconsolelog_in_stderr:
             command += "'--dump-jsconsolelog-in-stderr"
-        if driver_input.image_hash:
-            command += "'" + driver_input.image_hash
+        if driver_input.self_comparison_header:
+            command += "'--self-compare-with-header'%s" % driver_input.self_comparison_header
+        if driver_input.force_dump_pixels:
+            command += "'--force-dump-pixels"
+
+        # --pixel-test must be the last argument, because the hash is optional,
+        # and any argument put in its place will be incorrectly consumed as the hash.
+        if driver_input.should_run_pixel_test:
+            command += "'--pixel-test"
+            if driver_input.image_hash:
+                command += "'" + driver_input.image_hash
         return command + "\n"
 
     def _read_first_block(self, deadline, test_name):
@@ -620,12 +663,12 @@ class Driver(object):
         # returns (image, actual_image_hash)
         block = self._read_block(deadline, test_name, wait_for_stderr_eof=True)
         if block.content and block.content_type == 'image/png':
-            return (block.decoded_content, block.content_hash)
+            return (block.decoded_content if block.encoding == 'base64' else block.content, block.content_hash)
         return (None, block.content_hash)
 
     def _read_header(self, block, line, header_text, header_attr, header_filter=None):
         if line.startswith(header_text) and getattr(block, header_attr) is None:
-            value = line.split()[1]
+            value = string_utils.decode(line.split()[1], target_type=str)
             if header_filter:
                 value = header_filter(value)
             setattr(block, header_attr, value)
@@ -633,19 +676,23 @@ class Driver(object):
         return False
 
     def _process_stdout_line(self, block, line):
-        if (self._read_header(block, line, 'Content-Type: ', 'content_type')
-            or self._read_header(block, line, 'Content-Transfer-Encoding: ', 'encoding')
-            or self._read_header(block, line, 'Content-Length: ', '_content_length', int)
-            or self._read_header(block, line, 'ActualHash: ', 'content_hash')
-            or self._read_header(block, line, 'DumpMalloc: ', 'malloc')
-            or self._read_header(block, line, 'DumpJSHeap: ', 'js_heap')):
-            return
+        for header in [
+            (b'Content-Type: ', 'content_type', None),
+            (b'Content-Transfer-Encoding: ', 'encoding', None),
+            (b'Content-Length: ', '_content_length', int),
+            (b'ActualHash: ', 'content_hash', None),
+            (b'DumpMalloc: ', 'malloc', None),
+            (b'DumpJSHeap: ', 'js_heap', None),
+        ]:
+            if self._read_header(block, line, header[0], header[1], header[2]):
+                return
+
         # Note, we're not reading ExpectedHash: here, but we could.
         # If the line wasn't a header, we just append it to the content.
-        block.content += line
+        block.content = string_utils.encode(block.content) + line
 
     def _strip_eof(self, line):
-        if line and line.endswith("#EOF\n"):
+        if line and line.endswith(b"#EOF\n"):
             return line[:-5], True
         return line, False
 
@@ -680,34 +727,34 @@ class Driver(object):
 
             if out_line:
                 self._check_for_driver_timeout(out_line)
-                if out_line[-1] != "\n":
+                if out_line[-1] != '\n' and out_line[-1] != 10:
                     _log.error("  %s -> Last character read from DRT stdout line was not a newline!  This indicates either a NRWT or DRT bug." % test_name)
                 content_length_before_header_check = block._content_length
                 self._process_stdout_line(block, out_line)
                 # FIXME: Unlike HTTP, DRT dumps the content right after printing a Content-Length header.
                 # Don't wait until we're done with headers, just read the binary blob right now.
                 if content_length_before_header_check != block._content_length:
-                    block.content = self._server_process.read_stdout(deadline, block._content_length)
+                    block.content = string_utils.encode(self._server_process.read_stdout(deadline, block._content_length))
 
             if err_line:
                 if self._check_for_driver_crash_or_unresponsiveness(err_line):
                     break
                 elif self._check_for_address_sanitizer_violation(err_line):
                     asan_violation_detected = True
-                    self._crash_report_from_driver = ""
+                    self._crash_report_from_driver = ''
                     # ASan report starts with a nondescript line, we only detect the second line.
                     end_of_previous_error_line = self.error_from_test.rfind('\n', 0, -1)
                     if end_of_previous_error_line > 0:
                         self.error_from_test = self.error_from_test[:end_of_previous_error_line]
                     else:
-                        self.error_from_test = ""
+                        self.error_from_test = ''
                     # Symbolication can take a very long time, give it 10 extra minutes to finish.
                     # FIXME: This can likely be removed once <rdar://problem/18701447> is fixed.
                     deadline += 10 * 60 * 1000
                 if asan_violation_detected:
-                    self._crash_report_from_driver += err_line
+                    self._crash_report_from_driver += string_utils.decode(err_line, target_type=str)
                 else:
-                    self.error_from_test += err_line
+                    self.error_from_test += string_utils.decode(err_line, target_type=str)
 
         if asan_violation_detected and not self._crashed_process_name:
             self._crashed_process_name = self._server_process.process_name()
@@ -730,7 +777,7 @@ class ContentBlock(object):
         self.content_hash = None
         self._content_length = None
         # Content is treated as binary data even though the text output is usually UTF-8.
-        self.content = str()  # FIXME: Should be bytearray() once we require Python 2.6.
+        self.content = b''
         self.decoded_content = None
         self.malloc = None
         self.js_heap = None
@@ -739,7 +786,10 @@ class ContentBlock(object):
         if self.encoding == 'base64' and self.content is not None:
             self.decoded_content = base64.b64decode(self.content)
         else:
-            self.decoded_content = self.content
+            try:
+                self.decoded_content = string_utils.decode(self.content, target_type=str)
+            except UnicodeDecodeError:
+                self.decoded_content = None
 
 
 class DriverProxy(object):

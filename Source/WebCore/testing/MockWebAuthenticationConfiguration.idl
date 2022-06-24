@@ -61,6 +61,15 @@
 
 [
     Conditional=WEB_AUTHN,
+] enum UserVerification {
+    "no",
+    "yes",
+    "cancel",
+    "presence"
+};
+
+[
+    Conditional=WEB_AUTHN,
 ] dictionary MockWebAuthenticationConfiguration {
     boolean silentFailure = false;
     MockLocalConfiguration local;
@@ -71,12 +80,12 @@
 [
     Conditional=WEB_AUTHN,
 ] dictionary MockLocalConfiguration {
-    boolean acceptAuthentication = false;
+    UserVerification userVerification = "no";
     boolean acceptAttestation = false;
     DOMString privateKeyBase64;
     DOMString userCertificateBase64;
     DOMString intermediateCACertificateBase64;
-    DOMString preferredUserhandleBase64;
+    DOMString preferredCredentialIdBase64;
 };
 
 [
@@ -91,6 +100,9 @@
     boolean fastDataArrival = false;
     boolean continueAfterErrorData = false;
     boolean canDowngrade = false;
+    boolean expectCancel = false;
+    boolean supportClientPin = false;
+    boolean supportInternalUV = false;
 };
 
 [
@@ -99,4 +111,5 @@
     MockNfcError error = "success";
     sequence<DOMString> payloadBase64;
     boolean multipleTags = false;
+    boolean multiplePhysicalTags = false;
 };

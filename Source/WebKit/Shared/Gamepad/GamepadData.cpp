@@ -31,21 +31,16 @@
 #include "ArgumentCoders.h"
 #include <wtf/text/StringBuilder.h>
 
+using WebCore::SharedGamepadValue;
+
 namespace WebKit {
 
-GamepadData::GamepadData(unsigned index, const Vector<double>& axisValues, const Vector<double>& buttonValues, MonotonicTime lastUpdateTime)
-    : m_index(index)
-    , m_axisValues(axisValues)
-    , m_buttonValues(buttonValues)
-    , m_lastUpdateTime(lastUpdateTime)
-{
-}
-
-GamepadData::GamepadData(unsigned index, const String& id, const Vector<double>& axisValues, const Vector<double>& buttonValues, MonotonicTime lastUpdateTime)
+GamepadData::GamepadData(unsigned index, const String& id, const String& mapping, const Vector<SharedGamepadValue>& axisValues, const Vector<SharedGamepadValue>& buttonValues, MonotonicTime lastUpdateTime)
     : m_index(index)
     , m_id(id)
-    , m_axisValues(axisValues)
-    , m_buttonValues(buttonValues)
+    , m_mapping(mapping)
+    , m_axisValues(WTF::map(axisValues, [](const auto& value) { return value.value(); }))
+    , m_buttonValues(WTF::map(buttonValues, [](const auto& value) { return value.value(); }))
     , m_lastUpdateTime(lastUpdateTime)
 {
 }
@@ -56,63 +51,58 @@ void GamepadData::encode(IPC::Encoder& encoder) const
     if (m_isNull)
         return;
 
-    encoder << m_index << m_id << m_axisValues << m_buttonValues << m_lastUpdateTime;
+    encoder << m_index << m_id << m_mapping << m_axisValues << m_buttonValues << m_lastUpdateTime;
 }
 
-Optional<GamepadData> GamepadData::decode(IPC::Decoder& decoder)
+std::optional<GamepadData> GamepadData::decode(IPC::Decoder& decoder)
 {
     GamepadData data;
     if (!decoder.decode(data.m_isNull))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (data.m_isNull)
         return data;
 
     if (!decoder.decode(data.m_index))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.m_id))
-        return WTF::nullopt;
+        return std::nullopt;
+
+    if (!decoder.decode(data.m_mapping))
+        return std::nullopt;
 
     if (!decoder.decode(data.m_axisValues))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.m_buttonValues))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(data.m_lastUpdateTime))
-        return WTF::nullopt;
+        return std::nullopt;
 
-    return WTFMove(data);
+    return data;
 }
 
 #if !LOG_DISABLED
+
 String GamepadData::loggingString() const
 {
     StringBuilder builder;
 
-    builder.appendNumber(m_axisValues.size());
-    builder.appendLiteral(" axes, ");
-    builder.appendNumber(m_buttonValues.size());
-    builder.appendLiteral(" buttons\n");
+    builder.append(m_axisValues.size(), " axes, ", m_buttonValues.size(), " buttons\n");
 
-    for (size_t i = 0; i < m_axisValues.size(); ++i) {
-        builder.appendLiteral(" Axis ");
-        builder.appendNumber(i);
-        builder.appendLiteral(": ");
-        builder.appendFixedPrecisionNumber(m_axisValues[i]);
-    }
+    for (size_t i = 0; i < m_axisValues.size(); ++i)
+        builder.append(" Axis ", i, ": ", m_axisValues[i]);
 
     builder.append('\n');
-    for (size_t i = 0; i < m_buttonValues.size(); ++i) {
-        builder.appendLiteral(" Button ");
-        builder.appendNumber(i);
-        builder.appendLiteral(": ");
-        builder.appendFixedPrecisionNumber(m_buttonValues[i]);
-    }
+
+    for (size_t i = 0; i < m_buttonValues.size(); ++i)
+        builder.append(" Button ", i, ": ", FormattedNumber::fixedPrecision(m_buttonValues[i]));
 
     return builder.toString();
 }
+
 #endif
 
 } // namespace WebKit

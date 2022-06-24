@@ -28,25 +28,27 @@
 #include "JSWrappable.h"
 #include <wtf/Ref.h>
 
+typedef const struct OpaqueJSContext* JSContextRef;
+typedef struct OpaqueJSString* JSStringRef;
+typedef const struct OpaqueJSValue* JSValueRef;
+
 namespace WTR {
 
-class TextInputController : public JSWrappable {
+class TextInputController final : public JSWrappable {
 public:
     static Ref<TextInputController> create();
-    virtual ~TextInputController();
 
-    // JSWrappable
-    virtual JSClassRef wrapperClass();
+    void makeWindowObject(JSContextRef);
 
-    void makeWindowObject(JSContextRef, JSObjectRef windowObject, JSValueRef* exception);
-
-    void setMarkedText(JSStringRef text, int from, int length, bool suppressUnderline);
+    void setMarkedText(JSStringRef text, int from, int length, bool suppressUnderline, JSValueRef highlights);
     bool hasMarkedText();
     void unmarkText();
     void insertText(JSStringRef text);
 
 private:
-    TextInputController();
+    TextInputController() = default;
+
+    JSClassRef wrapperClass() final;
 };
 
 } // namespace WTR

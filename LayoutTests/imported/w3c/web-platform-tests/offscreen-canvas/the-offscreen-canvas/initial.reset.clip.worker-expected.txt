@@ -1,3 +1,0 @@
-
-FAIL Resetting the canvas state resets the current clip region Can't find variable: OffscreenCanvas
-

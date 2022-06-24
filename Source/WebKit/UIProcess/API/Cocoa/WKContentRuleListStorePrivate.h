@@ -30,14 +30,9 @@
 // For testing only.
 - (void)_removeAllContentRuleLists;
 - (void)_invalidateContentRuleListVersionForIdentifier:(NSString *)identifier;
-- (void)_getContentRuleListSourceForIdentifier:(NSString *)identifier completionHandler:(void (^)(NSString*))completionHandler;
+- (void)_getContentRuleListSourceForIdentifier:(NSString *)identifier completionHandler:(void (^)(NSString *))completionHandler;
 
-// NS_RELEASES_ARGUMENT to keep peak memory usage low.
-- (void)_compileContentRuleListForIdentifier:(NSString *)identifier encodedContentRuleList:(NSString *) NS_RELEASES_ARGUMENT encodedContentRuleList completionHandler:(void (^)(WKContentRuleList *, NSError *))completionHandler;
-
-// To maintain compatibility with _WKUserContentExtensionStore
-// FIXME: Add something to existing clients of _WKUserContentExtensionStore to migrate files from legacy filenames,
-// adopt WKContentRuleListStore, and remove _WKUserContentExtensionStore.
+// FIXME: Remove _WKUserContentExtensionStore.
 + (instancetype)defaultStoreWithLegacyFilename;
 + (instancetype)storeWithURLAndLegacyFilename:(NSURL *)url;
 

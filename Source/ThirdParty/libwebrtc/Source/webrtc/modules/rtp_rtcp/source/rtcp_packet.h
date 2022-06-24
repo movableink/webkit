@@ -15,8 +15,8 @@
 #include <stdint.h>
 
 #include "api/array_view.h"
+#include "api/function_view.h"
 #include "rtc_base/buffer.h"
-#include "rtc_base/function_view.h"
 
 namespace webrtc {
 namespace rtcp {
@@ -56,7 +56,10 @@ class RtcpPacket {
   using PacketReadyCallback =
       rtc::FunctionView<void(rtc::ArrayView<const uint8_t> packet)>;
 
-  virtual ~RtcpPacket() {}
+  virtual ~RtcpPacket() = default;
+
+  void SetSenderSsrc(uint32_t ssrc) { sender_ssrc_ = ssrc; }
+  uint32_t sender_ssrc() const { return sender_ssrc_; }
 
   // Convenience method mostly used for test. Creates packet without
   // fragmentation using BlockLength() to allocate big enough buffer.
@@ -87,11 +90,21 @@ class RtcpPacket {
                            uint8_t* buffer,
                            size_t* pos);
 
+  static void CreateHeader(size_t count_or_format,
+                           uint8_t packet_type,
+                           size_t block_length,  // Payload size in 32bit words.
+                           bool padding,  // True if there are padding bytes.
+                           uint8_t* buffer,
+                           size_t* pos);
+
   bool OnBufferFull(uint8_t* packet,
                     size_t* index,
                     PacketReadyCallback callback) const;
   // Size of the rtcp packet as written in header.
   size_t HeaderLength() const;
+
+ private:
+  uint32_t sender_ssrc_ = 0;
 };
 }  // namespace rtcp
 }  // namespace webrtc

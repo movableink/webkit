@@ -31,13 +31,13 @@
 
 namespace WebCore {
 
-String MIMETypeRegistry::getMIMETypeForExtension(const String& extension)
+String MIMETypeRegistry::mimeTypeForExtension(StringView string)
 {
-    if (extension.isEmpty())
+    if (string.isEmpty())
         return String();
 
     // Build any filename with the given extension.
-    String filename = "a." + extension;
+    String filename = "a." + string;
     if (const char* mimeType = xdg_mime_get_mime_type_from_file_name(filename.utf8().data())) {
         if (mimeType != XDG_MIME_TYPE_UNKNOWN)
             return String::fromUTF8(mimeType);
@@ -51,9 +51,12 @@ bool MIMETypeRegistry::isApplicationPluginMIMEType(const String&)
     return false;
 }
 
-String MIMETypeRegistry::getPreferredExtensionForMIMEType(const String& mimeType)
+String MIMETypeRegistry::preferredExtensionForMIMEType(const String& mimeType)
 {
     if (mimeType.isEmpty())
+        return String();
+
+    if (mimeType.startsWith("text/plain"))
         return String();
 
     String returnValue;
@@ -64,6 +67,12 @@ String MIMETypeRegistry::getPreferredExtensionForMIMEType(const String& mimeType
         free(extension);
     }
     return returnValue;
+}
+
+Vector<String> MIMETypeRegistry::extensionsForMIMEType(const String&)
+{
+    ASSERT_NOT_IMPLEMENTED_YET();
+    return { };
 }
 
 }

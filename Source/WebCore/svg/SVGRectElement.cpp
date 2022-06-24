@@ -23,8 +23,10 @@
 #include "config.h"
 #include "SVGRectElement.h"
 
+#include "LegacyRenderSVGRect.h"
 #include "RenderSVGRect.h"
 #include "RenderSVGResource.h"
+#include "SVGElementInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -33,7 +35,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGRectElement);
 
 inline SVGRectElement::SVGRectElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
 {
     ASSERT(hasTagName(SVGNames::rectTag));
 
@@ -73,24 +74,27 @@ void SVGRectElement::parseAttribute(const QualifiedName& name, const AtomString&
     reportAttributeParsingError(parseError, name, value);
 
     SVGGeometryElement::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
 }
 
 void SVGRectElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        invalidateSVGPresentationAttributeStyle();
+        setPresentationalHintStyleIsDirty();
         return;
     }
 
     SVGGeometryElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
 }
 
 RenderPtr<RenderElement> SVGRectElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGRect>(*this, WTFMove(style));
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
+        return createRenderer<RenderSVGRect>(*this, WTFMove(style));
+#endif
+
+    return createRenderer<LegacyRenderSVGRect>(*this, WTFMove(style));
 }
 
 }

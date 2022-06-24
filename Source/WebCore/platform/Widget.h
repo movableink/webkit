@@ -75,6 +75,7 @@ namespace WebCore {
 
 class Cursor;
 class Event;
+class EventRegionContext;
 class FontCascade;
 class FrameView;
 class GraphicsContext;
@@ -124,7 +125,7 @@ public:
 
     enum class SecurityOriginPaintPolicy { AnyOrigin, AccessibleOriginOnly };
 
-    WEBCORE_EXPORT virtual void paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin);
+    WEBCORE_EXPORT virtual void paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr);
     void invalidate() { invalidateRect(boundsRect()); }
     virtual void invalidateRect(const IntRect&) = 0;
 
@@ -189,7 +190,11 @@ public:
     // the frame rects be the same no matter what transforms are applied.
     virtual bool transformsAffectFrameRect() { return true; }
 
+    virtual void willBeDestroyed() { }
+
 #if PLATFORM(COCOA)
+    virtual id accessibilityHitTest(const IntPoint&) const { return nil; }
+    virtual id accessibilityObject() const { return nil; }
     NSView* getOuterView() const;
 
     void removeFromSuperview();

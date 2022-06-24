@@ -1,3 +1,4 @@
+//@ skip if not $jitTests
 let glob = 0
 
 function doTest(number, bit) {

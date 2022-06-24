@@ -20,8 +20,8 @@
 #include "config.h"
 #include "WebKitWebInspector.h"
 
-#include "WebInspectorProxy.h"
-#include "WebInspectorProxyClient.h"
+#include "WebInspectorUIProxy.h"
+#include "WebInspectorUIProxyClient.h"
 #include "WebKitWebInspectorPrivate.h"
 #include <glib/gi18n-lib.h>
 #include <wtf/glib/GRefPtr.h>
@@ -46,7 +46,7 @@ using namespace WebKit;
  *
  * <informalexample><programlisting>
  * /<!-- -->* Enable the developer extras *<!-- -->/
- * WebKitSettings *setting = webkit_web_view_get_settings (WEBKIT_WEB_VIEW(my_webview));
+ * WebKitSettings *settings = webkit_web_view_get_settings (WEBKIT_WEB_VIEW(my_webview));
  * g_object_set (G_OBJECT(settings), "enable-developer-extras", TRUE, NULL);
  *
  * /<!-- -->* Load some data or reload to be able to inspect the page*<!-- -->/
@@ -71,11 +71,13 @@ enum {
 
 enum {
     PROP_0,
-
     PROP_INSPECTED_URI,
     PROP_ATTACHED_HEIGHT,
-    PROP_CAN_ATTACH
+    PROP_CAN_ATTACH,
+    N_PROPERTIES,
 };
+
+static GParamSpec* sObjProperties[N_PROPERTIES] = { nullptr, };
 
 struct _WebKitWebInspectorPrivate {
     ~_WebKitWebInspectorPrivate()
@@ -83,7 +85,7 @@ struct _WebKitWebInspectorPrivate {
         webInspector->setClient(nullptr);
     }
 
-    RefPtr<WebInspectorProxy> webInspector;
+    RefPtr<WebInspectorUIProxy> webInspector;
     CString inspectedURI;
     unsigned attachedHeight;
     bool canAttach;
@@ -122,25 +124,25 @@ static void webkit_web_inspector_class_init(WebKitWebInspectorClass* findClass)
      *
      * The URI that is currently being inspected.
      */
-    g_object_class_install_property(gObjectClass,
-                                    PROP_INSPECTED_URI,
-                                    g_param_spec_string("inspected-uri",
-                                                        _("Inspected URI"),
-                                                        _("The URI that is currently being inspected"),
-                                                        0,
-                                                        WEBKIT_PARAM_READABLE));
+    sObjProperties[PROP_INSPECTED_URI] =
+        g_param_spec_string(
+            "inspected-uri",
+            _("Inspected URI"),
+            _("The URI that is currently being inspected"),
+            nullptr,
+            WEBKIT_PARAM_READABLE);
     /**
      * WebKitWebInspector:attached-height:
      *
      * The height that the inspector view should have when it is attached.
      */
-    g_object_class_install_property(gObjectClass,
-                                    PROP_ATTACHED_HEIGHT,
-                                    g_param_spec_uint("attached-height",
-                                                      _("Attached Height"),
-                                                      _("The height that the inspector view should have when it is attached"),
-                                                      0, G_MAXUINT, 0,
-                                                      WEBKIT_PARAM_READABLE));
+    sObjProperties[PROP_ATTACHED_HEIGHT] =
+        g_param_spec_uint(
+            "attached-height",
+            _("Attached Height"),
+            _("The height that the inspector view should have when it is attached"),
+            0, G_MAXUINT, 0,
+            WEBKIT_PARAM_READABLE);
 
     /**
      * WebKitWebInspector:can-attach:
@@ -150,15 +152,15 @@ static void webkit_web_inspector_class_init(WebKitWebInspectorClass* findClass)
      *
      * Since: 2.8
      */
-    g_object_class_install_property(
-        gObjectClass,
-        PROP_CAN_ATTACH,
+    sObjProperties[PROP_CAN_ATTACH] =
         g_param_spec_boolean(
             "can-attach",
             _("Can Attach"),
             _("Whether the inspector can be attached to the same window that contains the inspected view"),
             FALSE,
-            WEBKIT_PARAM_READABLE));
+            WEBKIT_PARAM_READABLE);
+
+    g_object_class_install_properties(gObjectClass, N_PROPERTIES, sObjProperties);
 
     /**
      * WebKitWebInspector::open-window:
@@ -283,7 +285,7 @@ static void webkit_web_inspector_class_init(WebKitWebInspectorClass* findClass)
         G_TYPE_BOOLEAN, 0);
 }
 
-class WebKitInspectorClient final : public WebInspectorProxyClient {
+class WebKitInspectorClient final : public WebInspectorUIProxyClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit WebKitInspectorClient(WebKitWebInspector* inspector)
@@ -292,72 +294,72 @@ public:
     }
 
 private:
-    bool openWindow(WebInspectorProxy&) override
+    bool openWindow(WebInspectorUIProxy&) override
     {
         gboolean returnValue;
         g_signal_emit(m_inspector, signals[OPEN_WINDOW], 0, &returnValue);
         return returnValue;
     }
 
-    void didClose(WebInspectorProxy&) override
+    void didClose(WebInspectorUIProxy&) override
     {
         g_signal_emit(m_inspector, signals[CLOSED], 0);
     }
 
-    bool bringToFront(WebInspectorProxy&) override
+    bool bringToFront(WebInspectorUIProxy&) override
     {
         gboolean returnValue;
         g_signal_emit(m_inspector, signals[BRING_TO_FRONT], 0, &returnValue);
         return returnValue;
     }
 
-    void inspectedURLChanged(WebInspectorProxy&, const String& url) override
+    void inspectedURLChanged(WebInspectorUIProxy&, const String& url) override
     {
         CString uri = url.utf8();
         if (uri == m_inspector->priv->inspectedURI)
             return;
         m_inspector->priv->inspectedURI = uri;
-        g_object_notify(G_OBJECT(m_inspector), "inspected-uri");
+        g_object_notify_by_pspec(G_OBJECT(m_inspector), sObjProperties[PROP_INSPECTED_URI]);
     }
 
-    bool attach(WebInspectorProxy&) override
+    bool attach(WebInspectorUIProxy&) override
     {
         gboolean returnValue;
         g_signal_emit(m_inspector, signals[ATTACH], 0, &returnValue);
         return returnValue;
     }
 
-    bool detach(WebInspectorProxy&) override
+    bool detach(WebInspectorUIProxy&) override
     {
         gboolean returnValue;
         g_signal_emit(m_inspector, signals[DETACH], 0, &returnValue);
         return returnValue;
     }
 
-    void didChangeAttachedHeight(WebInspectorProxy&, unsigned height) override
+    void didChangeAttachedHeight(WebInspectorUIProxy&, unsigned height) override
     {
         if (m_inspector->priv->attachedHeight == height)
             return;
         m_inspector->priv->attachedHeight = height;
-        g_object_notify(G_OBJECT(m_inspector), "attached-height");
+        g_object_notify_by_pspec(G_OBJECT(m_inspector), sObjProperties[PROP_ATTACHED_HEIGHT]);
     }
 
-    void didChangeAttachedWidth(WebInspectorProxy&, unsigned width) override
+    void didChangeAttachedWidth(WebInspectorUIProxy&, unsigned width) override
     {
     }
 
-    void didChangeAttachAvailability(WebInspectorProxy&, bool available) override
+    void didChangeAttachAvailability(WebInspectorUIProxy&, bool available) override
     {
         if (m_inspector->priv->canAttach == available)
             return;
         m_inspector->priv->canAttach = available;
-        g_object_notify(G_OBJECT(m_inspector), "can-attach");
+        g_object_notify_by_pspec(G_OBJECT(m_inspector), sObjProperties[PROP_CAN_ATTACH]);
     }
 
     WebKitWebInspector* m_inspector;
 };
 
-WebKitWebInspector* webkitWebInspectorCreate(WebInspectorProxy* webInspector)
+WebKitWebInspector* webkitWebInspectorCreate(WebInspectorUIProxy* webInspector)
 {
     WebKitWebInspector* inspector = WEBKIT_WEB_INSPECTOR(g_object_new(WEBKIT_TYPE_WEB_INSPECTOR, NULL));
     inspector->priv->webInspector = webInspector;

@@ -427,10 +427,6 @@ endif ()
 find_package(HarfBuzz 0.9.2 REQUIRED)
 find_package(Threads REQUIRED)
 
-if (HARFBUZZ_FOUND)
-    SET_AND_EXPOSE_TO_BUILD(USE_HARFBUZZ ON)
-endif ()
-
 if (USE_LIBJPEG)
     find_package(JPEG)
     if (NOT JPEG_FOUND)

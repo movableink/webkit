@@ -1,3 +1,0 @@
-
-FAIL Shadows are drawn if shadowOffsetX is set Can't find variable: OffscreenCanvas
-

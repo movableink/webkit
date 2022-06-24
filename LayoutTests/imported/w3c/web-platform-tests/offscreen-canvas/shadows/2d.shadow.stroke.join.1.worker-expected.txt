@@ -1,3 +1,0 @@
-
-FAIL Shadows are not drawn for areas outside stroke joins Can't find variable: OffscreenCanvas
-

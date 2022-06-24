@@ -3,6 +3,7 @@
 <head>
 <script src="../../../resources/ui-helper.js"></script>
 <script src="../../../resources/js-test.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 html, body {
     margin: 0;
@@ -11,16 +12,21 @@ html, body {
 }
 
 input {
-    font-size: 320px;
+    width: 100%;
+    font-size: 100px;
     display: block;
 }
 </style>
 </head>
 <body>
 <input id="input" value="covfefe">
+<div id="description"></div>
+<div id="console"></div>
 <script>
 const input = document.getElementById("input");
 jsTestIsAsync = true;
+clicked = false;
+selectionChanged = false;
 
 description("This test verifies that tapping in a misspelled word selects the misspelled word, and does not cause " +
     "the selection to collapse after a click event is dispatched. To manually test, tap the input field to bring up " +
@@ -28,17 +34,18 @@ description("This test verifies that tapping in a misspelled word selects the mi
     "a result, the contents of the input should be selected and marked as a misspelled word.");
 
 (async function() {
-    await UIHelper.activateAndWaitForInputSessionAt(100, 200);
+    await UIHelper.activateAndWaitForInputSessionAt(40, 100);
 
-    input.addEventListener("click", () => {
-        setTimeout(() => {
-            shouldBe("input.selectionStart", "0");
-            shouldBe("input.selectionEnd", "7");
-            finishJSTest();
-        });
+    input.addEventListener("click", () => clicked = true);
+    document.addEventListener("selectionchange", () => selectionChanged = true);
+
+    await UIHelper.tapAt(300, 100);
+    shouldBecomeEqual("clicked && selectionChanged", "true", () => {
+        shouldBe("input.selectionStart", "0");
+        shouldBe("input.selectionEnd", "7");
+        input.remove();
+        finishJSTest();
     });
-
-    UIHelper.tapAt(800, 200);
 })();
 </script>
 </body>

@@ -1,3 +1,0 @@
-
-FAIL getImageData() exists and returns something Can't find variable: OffscreenCanvas
-

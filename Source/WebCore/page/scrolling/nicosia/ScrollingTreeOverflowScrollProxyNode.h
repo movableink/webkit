@@ -45,13 +45,13 @@ public:
 
     ScrollingNodeID overflowScrollingNodeID() const { return m_overflowScrollingNodeID; }
 
-protected:
+private:
     ScrollingTreeOverflowScrollProxyNode(ScrollingTree&, ScrollingNodeID);
 
     void commitStateBeforeChildren(const ScrollingStateNode&) override;
     void applyLayerPositions() override;
 
-    WEBCORE_EXPORT void dumpProperties(TextStream&, ScrollingStateTreeAsTextBehavior) const override;
+    WEBCORE_EXPORT void dumpProperties(TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 
     ScrollingNodeID m_overflowScrollingNodeID { 0 };
     RefPtr<Nicosia::CompositionLayer> m_layer;

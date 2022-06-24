@@ -6,13 +6,10 @@ if (window.testRunner)
     testRunner.dumpAsText(); 
  
 window.onload = function() { 
-    shouldBeTrue("(self.appletFrame1.document['app'].init) != undefined");
-    shouldBeTrue("(self.appletFrame2.document['app'].init) == undefined");
-
-    shouldBeTrue("(self.embedFrame1.document.getElementById('plugin').destroyStream) != undefined");
+    shouldBeTrue("(self.embedFrame1.document.getElementById('plugin').destroyStream) == undefined");
     shouldBeTrue("(self.embedFrame2.document.getElementById('plugin').destroyStream) == undefined");
 
-    shouldBeTrue("(self.objectFrame1.document.getElementById('plugin').destroyStream) != undefined");
+    shouldBeTrue("(self.objectFrame1.document.getElementById('plugin').destroyStream) == undefined");
     shouldBeTrue("(self.objectFrame2.document.getElementById('plugin').destroyStream) == undefined");
 
     isSuccessfullyParsed();

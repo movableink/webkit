@@ -12,12 +12,12 @@
 #define MODULES_AUDIO_PROCESSING_INCLUDE_AEC_DUMP_H_
 
 #include <stdint.h>
+
 #include <string>
 
-#include "api/audio/audio_frame.h"
+#include "absl/base/attributes.h"
 #include "modules/audio_processing/include/audio_frame_view.h"
 #include "modules/audio_processing/include/audio_processing.h"
-#include "rtc_base/deprecation.h"
 
 namespace webrtc {
 
@@ -31,7 +31,7 @@ struct InternalAPMConfig {
   InternalAPMConfig& operator=(const InternalAPMConfig&);
   InternalAPMConfig& operator=(InternalAPMConfig&&) = delete;
 
-  bool operator==(const InternalAPMConfig& other);
+  bool operator==(const InternalAPMConfig& other) const;
 
   bool aec_enabled = false;
   bool aec_delay_agnostic_enabled = false;
@@ -76,7 +76,8 @@ class AecDump {
   // Logs Event::Type INIT message.
   virtual void WriteInitMessage(const ProcessingConfig& api_format,
                                 int64_t time_now_ms) = 0;
-  RTC_DEPRECATED void WriteInitMessage(const ProcessingConfig& api_format) {
+  ABSL_DEPRECATED("")
+  void WriteInitMessage(const ProcessingConfig& api_format) {
     WriteInitMessage(api_format, 0);
   }
 
@@ -87,13 +88,19 @@ class AecDump {
       const AudioFrameView<const float>& src) = 0;
   virtual void AddCaptureStreamOutput(
       const AudioFrameView<const float>& src) = 0;
-  virtual void AddCaptureStreamInput(const AudioFrame& frame) = 0;
-  virtual void AddCaptureStreamOutput(const AudioFrame& frame) = 0;
+  virtual void AddCaptureStreamInput(const int16_t* const data,
+                                     int num_channels,
+                                     int samples_per_channel) = 0;
+  virtual void AddCaptureStreamOutput(const int16_t* const data,
+                                      int num_channels,
+                                      int samples_per_channel) = 0;
   virtual void AddAudioProcessingState(const AudioProcessingState& state) = 0;
   virtual void WriteCaptureStreamMessage() = 0;
 
   // Logs Event::Type REVERSE_STREAM message.
-  virtual void WriteRenderStreamMessage(const AudioFrame& frame) = 0;
+  virtual void WriteRenderStreamMessage(const int16_t* const data,
+                                        int num_channels,
+                                        int samples_per_channel) = 0;
   virtual void WriteRenderStreamMessage(
       const AudioFrameView<const float>& src) = 0;
 

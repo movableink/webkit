@@ -8,9 +8,19 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "modules/congestion_controller/pcc/utility_function.h"
+
+#include <stddef.h>
+
+#include <cmath>
+#include <type_traits>
 #include <vector>
 
-#include "modules/congestion_controller/pcc/utility_function.h"
+#include "api/transport/network_types.h"
+#include "api/units/data_rate.h"
+#include "api/units/data_size.h"
+#include "api/units/time_delta.h"
+#include "api/units/timestamp.h"
 #include "test/gtest.h"
 
 namespace webrtc {
@@ -22,13 +32,13 @@ constexpr double kThroughputPower = 0.9;
 constexpr double kThroughputCoefficient = 1;
 constexpr double kDelayGradientNegativeBound = 10;
 
-const Timestamp kStartTime = Timestamp::us(0);
-const TimeDelta kPacketsDelta = TimeDelta::ms(1);
-const TimeDelta kIntervalDuration = TimeDelta::ms(100);
-const DataRate kSendingBitrate = DataRate::bps(1000);
+const Timestamp kStartTime = Timestamp::Micros(0);
+const TimeDelta kPacketsDelta = TimeDelta::Millis(1);
+const TimeDelta kIntervalDuration = TimeDelta::Millis(100);
+const DataRate kSendingBitrate = DataRate::BitsPerSec(1000);
 
-const DataSize kDefaultDataSize = DataSize::bytes(100);
-const TimeDelta kDefaultDelay = TimeDelta::ms(100);
+const DataSize kDefaultDataSize = DataSize::Bytes(100);
+const TimeDelta kDefaultDelay = TimeDelta::Millis(100);
 
 std::vector<PacketResult> CreatePacketResults(
     const std::vector<Timestamp>& packets_send_times,

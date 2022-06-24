@@ -31,11 +31,15 @@
 #import "APIDictionary.h"
 #import "APINumber.h"
 #import "APIString.h"
+#import "Logging.h"
 #import "NSInvocationSPI.h"
+#import "_WKErrorRecoveryAttempting.h"
 #import "_WKRemoteObjectInterfaceInternal.h"
 #import <objc/runtime.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/Scope.h>
 #import <wtf/SetForScope.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/CString.h>
 
 static const char* const classNameKey = "$class";
@@ -53,7 +57,7 @@ static RefPtr<API::Dictionary> createEncodedObject(WKRemoteObjectEncoder *, id);
 @end
 
 @interface NSCoder ()
-- (void)validateClassSupportsSecureCoding:(Class)objectClass;
+- (BOOL)validateClassSupportsSecureCoding:(Class)objectClass;
 @end
 
 @implementation WKRemoteObjectEncoder {
@@ -61,6 +65,7 @@ static RefPtr<API::Dictionary> createEncodedObject(WKRemoteObjectEncoder *, id);
     API::Array* _objectStream;
 
     API::Dictionary* _currentDictionary;
+    HashSet<NSObject *> _objectsBeingEncoded; // Used to detect cycles.
 }
 
 - (id)init
@@ -74,7 +79,7 @@ static RefPtr<API::Dictionary> createEncodedObject(WKRemoteObjectEncoder *, id);
     return self;
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 - (void)dealloc
 {
     ASSERT(_currentDictionary == _rootDictionary);
@@ -140,6 +145,24 @@ static void encodeInvocationArguments(WKRemoteObjectEncoder *encoder, NSInvocati
             break;
         }
 
+        // short
+        case 's': {
+            short value;
+            [invocation getArgument:&value atIndex:i];
+
+            encodeToObjectStream(encoder, @(value));
+            break;
+        }
+
+        // unsigned short
+        case 'S': {
+            unsigned short value;
+            [invocation getArgument:&value atIndex:i];
+
+            encodeToObjectStream(encoder, @(value));
+            break;
+        }
+
         // int
         case 'i': {
             int value;
@@ -161,6 +184,15 @@ static void encodeInvocationArguments(WKRemoteObjectEncoder *encoder, NSInvocati
         // char
         case 'c': {
             char value;
+            [invocation getArgument:&value atIndex:i];
+
+            encodeToObjectStream(encoder, @(value));
+            break;
+        }
+
+        // unsigned char
+        case 'C': {
+            unsigned char value;
             [invocation getArgument:&value atIndex:i];
 
             encodeToObjectStream(encoder, @(value));
@@ -217,7 +249,12 @@ static void encodeInvocationArguments(WKRemoteObjectEncoder *encoder, NSInvocati
             id value;
             [invocation getArgument:&value atIndex:i];
 
-            encodeToObjectStream(encoder, value);
+            @try {
+                encodeToObjectStream(encoder, value);
+            } @catch (NSException *e) {
+                RELEASE_LOG_ERROR(IPC, "WKRemoteObjectCode::encodeInvocationArguments: Exception caught when trying to encode an argument of type ObjC Object");
+            }
+
             break;
         }
 
@@ -264,6 +301,120 @@ static void encodeString(WKRemoteObjectEncoder *encoder, NSString *string)
     encoder->_currentDictionary->set(stringKey, API::String::create(string));
 }
 
+static RetainPtr<id> decodeObjCObject(WKRemoteObjectDecoder *decoder, Class objectClass)
+{
+    id allocation = [objectClass allocWithZone:decoder.zone];
+    if (!allocation)
+        [NSException raise:NSInvalidUnarchiveOperationException format:@"Class \"%@\" returned nil from +alloc while being decoded", NSStringFromClass(objectClass)];
+
+    RetainPtr<id> result = adoptNS([allocation initWithCoder:decoder]);
+    if (!result)
+        [NSException raise:NSInvalidUnarchiveOperationException format:@"Object of class \"%@\" returned nil from -initWithCoder: while being decoded", NSStringFromClass(objectClass)];
+
+    result = adoptNS([result.leakRef() awakeAfterUsingCoder:decoder]);
+    if (!result)
+        [NSException raise:NSInvalidUnarchiveOperationException format:@"Object of class \"%@\" returned nil from -awakeAfterUsingCoder: while being decoded", NSStringFromClass(objectClass)];
+
+    return result;
+}
+
+static constexpr NSString *peerCertificateKey = @"NSErrorPeerCertificateChainKey";
+static constexpr NSString *peerTrustKey = @"NSURLErrorFailingURLPeerTrustErrorKey";
+static constexpr NSString *clientCertificateKey = @"NSErrorClientCertificateChainKey";
+
+static RetainPtr<NSArray<NSData *>> transformCertificatesToData(NSArray *input)
+{
+    auto dataArray = adoptNS([[NSMutableArray alloc] initWithCapacity:input.count]);
+    for (id certificate in input) {
+        if (CFGetTypeID(certificate) != SecCertificateGetTypeID())
+            [NSException raise:NSInvalidArgumentException format:@"Error encoding invalid certificate in chain"];
+        [dataArray addObject:(NSData *)adoptCF(SecCertificateCopyData((SecCertificateRef)certificate)).get()];
+    }
+    return dataArray;
+}
+
+static RetainPtr<CFDataRef> transformTrustToData(SecTrustRef trust)
+{
+    if (CFGetTypeID(trust) != SecTrustGetTypeID())
+        [NSException raise:NSInvalidArgumentException format:@"Error encoding invalid SecTrustRef"];
+    CFErrorRef error = nullptr;
+    auto data = adoptCF(SecTrustSerialize(trust, &error));
+    if (error)
+        [NSException raise:NSInvalidArgumentException format:@"Error serializing SecTrustRef: %@", error];
+    return data;
+}
+
+static void encodeError(WKRemoteObjectEncoder *encoder, NSError *error)
+{
+    RetainPtr<NSMutableDictionary> copy;
+    if (error.userInfo[_WKRecoveryAttempterErrorKey]) {
+        copy = adoptNS([error.userInfo mutableCopy]);
+        [copy removeObjectForKey:_WKRecoveryAttempterErrorKey];
+    }
+    if (error.userInfo[clientCertificateKey]) {
+        if (!copy)
+            copy = adoptNS([error.userInfo mutableCopy]);
+        [copy removeObjectForKey:clientCertificateKey];
+    }
+    if (NSArray *certificateChain = error.userInfo[peerCertificateKey]) {
+        if (!copy)
+            copy = adoptNS([error.userInfo mutableCopy]);
+        copy.get()[peerCertificateKey] = transformCertificatesToData(certificateChain).get();
+    }
+    if (id trust = error.userInfo[peerTrustKey]) {
+        if (!copy)
+            copy = adoptNS([error.userInfo mutableCopy]);
+        copy.get()[peerTrustKey] = bridge_cast(transformTrustToData((SecTrustRef)trust).get());
+    }
+    if (!copy)
+        [error encodeWithCoder:encoder];
+    else
+        [[NSError errorWithDomain:error.domain code:error.code userInfo:copy.get()] encodeWithCoder:encoder];
+}
+
+static RetainPtr<NSArray> transformDataToCertificates(NSArray *input)
+{
+    auto array = adoptNS([[NSMutableArray alloc] initWithCapacity:input.count]);
+    for (NSData *data in input) {
+        if (CFGetTypeID(data) != CFDataGetTypeID())
+            [NSException raise:NSInvalidUnarchiveOperationException format:@"Error decoding certificate from object that is not data %@", NSStringFromClass([data class])];
+        auto certificate = adoptCF(SecCertificateCreateWithData(nullptr, (CFDataRef)data));
+        if (!certificate)
+            [NSException raise:NSInvalidUnarchiveOperationException format:@"Error decoding nvalid certificate in chain"];
+        [array addObject:(id)certificate.get()];
+    }
+    return array;
+}
+
+static RetainPtr<SecTrustRef> transformDataToTrust(NSData *data)
+{
+    if (CFGetTypeID(data) != CFDataGetTypeID())
+        [NSException raise:NSInvalidUnarchiveOperationException format:@"Invalid SecTrustRef data %@", NSStringFromClass([data class])];
+    CFErrorRef error = nullptr;
+    auto trust = adoptCF(SecTrustDeserialize((CFDataRef)data, &error));
+    if (error || !trust)
+        [NSException raise:NSInvalidUnarchiveOperationException format:@"Invalid SecTrustRef %@", error];
+    return trust;
+}
+
+static RetainPtr<NSError> decodeError(WKRemoteObjectDecoder *decoder)
+{
+    RetainPtr<NSError> error = decodeObjCObject(decoder, [NSError class]);
+    RetainPtr<NSMutableDictionary> copy;
+    if (NSArray *certificateChain = error.get().userInfo[peerCertificateKey]) {
+        copy = adoptNS([error.get().userInfo mutableCopy]);
+        copy.get()[peerCertificateKey] = transformDataToCertificates(certificateChain).get();
+    }
+    if (NSData *trust = error.get().userInfo[peerTrustKey]) {
+        if (!copy)
+            copy = adoptNS([error.get().userInfo mutableCopy]);
+        copy.get()[peerTrustKey] = bridge_id_cast(transformDataToTrust(trust).get());
+    }
+    if (!copy)
+        return error;
+    return [NSError errorWithDomain:error.get().domain code:error.get().code userInfo:copy.get()];
+}
+
 static void encodeObject(WKRemoteObjectEncoder *encoder, id object)
 {
     ASSERT(object);
@@ -278,6 +429,17 @@ static void encodeObject(WKRemoteObjectEncoder *encoder, id object)
     if (!objectClass)
         [NSException raise:NSInvalidArgumentException format:@"-classForCoder returned nil for %@", object];
 
+    if (encoder->_objectsBeingEncoded.contains(object)) {
+        RELEASE_LOG_FAULT(IPC, "WKRemoteObjectCode::encodeObject: Object of type '%{private}s' contains a cycle", class_getName(object_getClass(object)));
+        [NSException raise:NSInvalidArgumentException format:@"Object of type '%s' contains a cycle", class_getName(object_getClass(object))];
+        return;
+    }
+
+    encoder->_objectsBeingEncoded.add(object);
+    auto exitScope = makeScopeExit([encoder, object] {
+        encoder->_objectsBeingEncoded.remove(object);
+    });
+
     encoder->_currentDictionary->set(classNameKey, API::String::create(class_getName(objectClass)));
 
     if ([object isKindOfClass:[NSInvocation class]]) {
@@ -291,6 +453,9 @@ static void encodeObject(WKRemoteObjectEncoder *encoder, id object)
         return;
     }
 
+    if (objectClass == [NSError class])
+        return encodeError(encoder, object);
+    
     [object encodeWithCoder:encoder];
 }
 
@@ -300,7 +465,7 @@ static RefPtr<API::Dictionary> createEncodedObject(WKRemoteObjectEncoder *encode
         return nil;
 
     Ref<API::Dictionary> dictionary = API::Dictionary::create();
-    SetForScope<API::Dictionary*> dictionaryChange(encoder->_currentDictionary, dictionary.ptr());
+    SetForScope dictionaryChange(encoder->_currentDictionary, dictionary.ptr());
 
     encodeObject(encoder, object);
 
@@ -310,9 +475,69 @@ static RefPtr<API::Dictionary> createEncodedObject(WKRemoteObjectEncoder *encode
 - (void)encodeValueOfObjCType:(const char *)type at:(const void *)address
 {
     switch (*type) {
+    // double
+    case 'd':
+        encodeToObjectStream(self, @(*static_cast<const double*>(address)));
+        break;
+
+    // float
+    case 'f':
+        encodeToObjectStream(self, @(*static_cast<const float*>(address)));
+        break;
+
+    // short
+    case 's':
+        encodeToObjectStream(self, @(*static_cast<const short*>(address)));
+        break;
+
+    // unsigned short
+    case 'S':
+        encodeToObjectStream(self, @(*static_cast<const unsigned short*>(address)));
+        break;
+
     // int
     case 'i':
         encodeToObjectStream(self, @(*static_cast<const int*>(address)));
+        break;
+
+    // unsigned
+    case 'I':
+        encodeToObjectStream(self, @(*static_cast<const unsigned*>(address)));
+        break;
+
+    // char
+    case 'c':
+        encodeToObjectStream(self, @(*static_cast<const char*>(address)));
+        break;
+
+    // unsigned char
+    case 'C':
+        encodeToObjectStream(self, @(*static_cast<const unsigned char*>(address)));
+        break;
+
+    // bool
+    case 'B':
+        encodeToObjectStream(self, @(*static_cast<const bool*>(address)));
+        break;
+
+    // long
+    case 'l':
+        encodeToObjectStream(self, @(*static_cast<const long*>(address)));
+        break;
+
+    // unsigned long
+    case 'L':
+        encodeToObjectStream(self, @(*static_cast<const unsigned long*>(address)));
+        break;
+
+    // long long
+    case 'q':
+        encodeToObjectStream(self, @(*static_cast<const long long*>(address)));
+        break;
+
+    // unsigned long long
+    case 'Q':
+        encodeToObjectStream(self, @(*static_cast<const unsigned long long*>(address)));
         break;
 
     // Objective-C object.
@@ -424,9 +649,69 @@ static NSString *escapeKey(NSString *key)
 - (void)decodeValueOfObjCType:(const char *)type at:(void *)data
 {
     switch (*type) {
+    // double
+    case 'd':
+        *static_cast<double*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) doubleValue];
+        break;
+
+    // float
+    case 'f':
+        *static_cast<float*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) floatValue];
+        break;
+
+    // short
+    case 's':
+        *static_cast<short*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) shortValue];
+        break;
+
+    // unsigned short
+    case 'S':
+        *static_cast<unsigned short*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) unsignedShortValue];
+        break;
+
     // int
     case 'i':
         *static_cast<int*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) intValue];
+        break;
+
+    // unsigned
+    case 'I':
+        *static_cast<unsigned*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) unsignedIntValue];
+        break;
+
+    // char
+    case 'c':
+        *static_cast<char*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) charValue];
+        break;
+
+    // unsigned char
+    case 'C':
+        *static_cast<unsigned char*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) unsignedCharValue];
+        break;
+
+    // bool
+    case 'B':
+        *static_cast<bool*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) boolValue];
+        break;
+
+    // long
+    case 'l':
+        *static_cast<long*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) longValue];
+        break;
+
+    // unsigned long
+    case 'L':
+        *static_cast<unsigned long*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) unsignedLongValue];
+        break;
+
+    // long long
+    case 'q':
+        *static_cast<long long*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) longLongValue];
+        break;
+
+    // unsigned long long
+    case 'Q':
+        *static_cast<unsigned long long*>(data) = [decodeObjectFromObjectStream(self, { (__bridge CFTypeRef)[NSNumber class] }) unsignedLongLongValue];
         break;
 
     default:
@@ -491,7 +776,8 @@ static void validateClass(WKRemoteObjectDecoder *decoder, Class objectClass)
     if (objectClass == [NSInvocation class] || objectClass == [NSBlockInvocation class])
         return;
 
-    [decoder validateClassSupportsSecureCoding:objectClass];
+    if (![decoder validateClassSupportsSecureCoding:objectClass])
+        [NSException raise:NSInvalidUnarchiveOperationException format:@"Object of class \"%@\" does not support NSSecureCoding.", objectClass];
 }
 
 static void decodeInvocationArguments(WKRemoteObjectDecoder *decoder, NSInvocation *invocation, const Vector<HashSet<CFTypeRef>>& allowedArgumentClasses, NSUInteger firstArgument)
@@ -519,6 +805,20 @@ static void decodeInvocationArguments(WKRemoteObjectDecoder *decoder, NSInvocati
             break;
         }
 
+        // short
+        case 's': {
+            short value = [decodeObjectFromObjectStream(decoder, { (__bridge CFTypeRef)[NSNumber class] }) shortValue];
+            [invocation setArgument:&value atIndex:i];
+            break;
+        }
+
+        // unsigned short
+        case 'S': {
+            unsigned short value = [decodeObjectFromObjectStream(decoder, { (__bridge CFTypeRef)[NSNumber class] }) unsignedShortValue];
+            [invocation setArgument:&value atIndex:i];
+            break;
+        }
+
         // int
         case 'i': {
             int value = [decodeObjectFromObjectStream(decoder, { (__bridge CFTypeRef)[NSNumber class] }) intValue];
@@ -536,6 +836,13 @@ static void decodeInvocationArguments(WKRemoteObjectDecoder *decoder, NSInvocati
         // char
         case 'c': {
             char value = [decodeObjectFromObjectStream(decoder, { (__bridge CFTypeRef)[NSNumber class] }) charValue];
+            [invocation setArgument:&value atIndex:i];
+            break;
+        }
+
+        // unsigned char
+        case 'C': {
+            unsigned char value = [decodeObjectFromObjectStream(decoder, { (__bridge CFTypeRef)[NSNumber class] }) unsignedCharValue];
             [invocation setArgument:&value atIndex:i];
             break;
         }
@@ -610,16 +917,14 @@ static void decodeInvocationArguments(WKRemoteObjectDecoder *decoder, NSInvocati
 static NSInvocation *decodeInvocation(WKRemoteObjectDecoder *decoder)
 {
     SEL selector = nullptr;
-    NSMethodSignature *localMethodSignature = nil;
-
+    NSInvocation* invocation = nil;
     BOOL isReplyBlock = [decoder decodeBoolForKey:isReplyBlockKey];
-
     if (isReplyBlock) {
         if (!decoder->_replyToSelector)
             [NSException raise:NSInvalidUnarchiveOperationException format:@"%@: Received unknown reply block", decoder];
 
-        localMethodSignature = [decoder->_interface _methodSignatureForReplyBlockOfSelector:decoder->_replyToSelector];
-        if (!localMethodSignature)
+        invocation = [decoder->_interface _invocationForReplyBlockOfSelector:decoder->_replyToSelector];
+        if (!invocation)
             [NSException raise:NSInvalidUnarchiveOperationException format:@"Reply block for selector \"%s\" is not defined in the local interface", sel_getName(decoder->_replyToSelector)];
     } else {
         NSString *selectorString = [decoder decodeObjectOfClass:[NSString class] forKey:selectorKey];
@@ -629,8 +934,8 @@ static NSInvocation *decodeInvocation(WKRemoteObjectDecoder *decoder)
         selector = NSSelectorFromString(selectorString);
         ASSERT(selector);
 
-        localMethodSignature = [decoder->_interface _methodSignatureForSelector:selector];
-        if (!localMethodSignature)
+        invocation = [decoder->_interface _invocationForSelector:selector];
+        if (!invocation)
             [NSException raise:NSInvalidUnarchiveOperationException format:@"Selector \"%@\" is not defined in the local interface", selectorString];
     }
 
@@ -639,10 +944,8 @@ static NSInvocation *decodeInvocation(WKRemoteObjectDecoder *decoder)
         [NSException raise:NSInvalidUnarchiveOperationException format:@"Invocation had no type signature"];
 
     NSMethodSignature *remoteMethodSignature = [NSMethodSignature signatureWithObjCTypes:typeSignature.UTF8String];
-    if (![localMethodSignature isEqual:remoteMethodSignature])
+    if (![[invocation methodSignature] isEqual:remoteMethodSignature])
         [NSException raise:NSInvalidUnarchiveOperationException format:@"Local and remote method signatures are not equal for method \"%s\"", selector ? sel_getName(selector) : "(no selector)"];
-
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:localMethodSignature];
 
     if (isReplyBlock) {
         const auto& allowedClasses = [decoder->_interface _allowedArgumentClassesForReplyBlockOfSelector:decoder->_replyToSelector];
@@ -685,23 +988,14 @@ static id decodeObject(WKRemoteObjectDecoder *decoder)
 
     if (objectClass == [NSString class])
         return decodeString(decoder);
+    
+    if (objectClass == [NSError class])
+        return decodeError(decoder).autorelease();
 
     if (objectClass == [NSMutableString class])
         return [NSMutableString stringWithString:decodeString(decoder)];
 
-    id result = [objectClass allocWithZone:decoder.zone];
-    if (!result)
-        [NSException raise:NSInvalidUnarchiveOperationException format:@"Class \"%s\" returned nil from +alloc while being decoded", className.data()];
-
-    result = [result initWithCoder:decoder];
-    if (!result)
-        [NSException raise:NSInvalidUnarchiveOperationException format:@"Object of class \"%s\" returned nil from -initWithCoder: while being decoded", className.data()];
-
-    result = [result awakeAfterUsingCoder:decoder];
-    if (!result)
-        [NSException raise:NSInvalidUnarchiveOperationException format:@"Object of class \"%s\" returned nil from -awakeAfterUsingCoder: while being decoded", className.data()];
-
-    return [result autorelease];
+    return decodeObjCObject(decoder, objectClass).autorelease();
 }
 
 static id decodeObject(WKRemoteObjectDecoder *decoder, const API::Dictionary* dictionary, const HashSet<CFTypeRef>& allowedClasses)
@@ -709,13 +1003,13 @@ static id decodeObject(WKRemoteObjectDecoder *decoder, const API::Dictionary* di
     if (!dictionary)
         return nil;
 
-    SetForScope<const API::Dictionary*> dictionaryChange(decoder->_currentDictionary, dictionary);
+    SetForScope dictionaryChange(decoder->_currentDictionary, dictionary);
 
     // If no allowed classes were listed, just use the currently allowed classes.
     if (allowedClasses.isEmpty())
         return decodeObject(decoder);
 
-    SetForScope<const HashSet<CFTypeRef>*> allowedClassesChange(decoder->_allowedClasses, &allowedClasses);
+    SetForScope allowedClassesChange(decoder->_allowedClasses, &allowedClasses);
     return decodeObject(decoder);
 }
 

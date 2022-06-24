@@ -34,11 +34,13 @@
 #include "EventSenderProxy.h"
 
 #include "PlatformWebView.h"
+#include "StringFunctions.h"
 #include "TestController.h"
 #include <WebCore/GtkUtilities.h>
-#include <WebCore/NotImplemented.h>
+#include <WebCore/GtkVersioning.h>
+#include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
-#include <gtk/gtk.h>
+#include <webkit2/WebKitWebViewBaseInternal.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/UniqueArray.h>
 #include <wtf/glib/GUniquePtr.h>
@@ -58,22 +60,6 @@ enum KeyLocationCode {
 };
 
 
-struct WTREventQueueItem {
-    GdkEvent* event;
-    gulong delay;
-
-    WTREventQueueItem()
-        : event(0)
-        , delay(0)
-    {
-    }
-    WTREventQueueItem(GdkEvent* event, gulong delay)
-        : event(event)
-        , delay(delay)
-    {
-    }
-};
-
 EventSenderProxy::EventSenderProxy(TestController* testController)
     : m_testController(testController)
     , m_time(0)
@@ -82,6 +68,11 @@ EventSenderProxy::EventSenderProxy(TestController* testController)
     , m_clickTime(0)
     , m_clickButton(kWKEventMouseButtonNoButton)
 {
+}
+
+static inline WebKitWebViewBase* toWebKitGLibAPI(PlatformWKView view)
+{
+    return const_cast<WebKitWebViewBase*>(reinterpret_cast<const WebKitWebViewBase*>(view));
 }
 
 EventSenderProxy::~EventSenderProxy()
@@ -118,28 +109,6 @@ static guint webkitModifiersToGDKModifiers(WKEventModifiers wkModifiers)
     return modifiers;
 }
 
-GdkEvent* EventSenderProxy::createMouseButtonEvent(GdkEventType eventType, unsigned button, WKEventModifiers modifiers)
-{
-    GdkEvent* mouseEvent = gdk_event_new(eventType);
-
-    mouseEvent->button.button = button;
-    mouseEvent->button.x = m_position.x;
-    mouseEvent->button.y = m_position.y;
-    mouseEvent->button.window = gtk_widget_get_window(GTK_WIDGET(m_testController->mainWebView()->platformView()));
-    g_object_ref(mouseEvent->button.window);
-    gdk_event_set_device(mouseEvent, gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(mouseEvent->button.window))));
-    mouseEvent->button.state = webkitModifiersToGDKModifiers(modifiers) | m_mouseButtonsCurrentlyDown;
-    mouseEvent->button.time = GDK_CURRENT_TIME;
-    mouseEvent->button.axes = 0;
-
-    int xRoot, yRoot;
-    gdk_window_get_root_coords(mouseEvent->button.window, m_position.x, m_position.y, &xRoot, &yRoot);
-    mouseEvent->button.x_root = xRoot;
-    mouseEvent->button.y_root = yRoot;
-
-    return mouseEvent;
-}
-
 void EventSenderProxy::updateClickCountForButton(int button)
 {
     if (m_time - m_clickTime < 1 && m_position == m_clickPosition && button == m_clickButton) {
@@ -154,41 +123,12 @@ void EventSenderProxy::updateClickCountForButton(int button)
     m_clickButton = button;
 }
 
-void EventSenderProxy::dispatchEvent(GdkEvent* event)
-{
-    ASSERT(m_testController->mainWebView());
-    gtk_main_do_event(event);
-    gdk_event_free(event);
-}
-
-void EventSenderProxy::replaySavedEvents()
-{
-    while (!m_eventQueue.isEmpty()) {
-        WTREventQueueItem item = m_eventQueue.takeFirst();
-        if (item.delay)
-            g_usleep(item.delay * 1000);
-
-        dispatchEvent(item.event);
-    }
-}
-
-void EventSenderProxy::sendOrQueueEvent(GdkEvent* event)
-{
-    if (m_eventQueue.isEmpty() || !m_eventQueue.last().delay) {
-        dispatchEvent(event);
-        return;
-    }
-
-    m_eventQueue.last().event = event;
-    replaySavedEvents();
-}
-
-int getGDKKeySymForKeyRef(WKStringRef keyRef, unsigned location, guint* modifiers)
+static int getGDKKeySymForKeyRef(WKStringRef keyRef, unsigned location, guint* modifiers)
 {
     if (location == DOMKeyLocationNumpad) {
         if (WKStringIsEqualToUTF8CString(keyRef, "leftArrow"))
             return GDK_KEY_KP_Left;
-        if (WKStringIsEqualToUTF8CString(keyRef, "rightArror"))
+        if (WKStringIsEqualToUTF8CString(keyRef, "rightArrow"))
             return GDK_KEY_KP_Right;
         if (WKStringIsEqualToUTF8CString(keyRef, "upArrow"))
             return GDK_KEY_KP_Up;
@@ -222,6 +162,10 @@ int getGDKKeySymForKeyRef(WKStringRef keyRef, unsigned location, guint* modifier
         return GDK_KEY_Alt_L;
     if (WKStringIsEqualToUTF8CString(keyRef, "rightAlt"))
         return GDK_KEY_Alt_R;
+    if (WKStringIsEqualToUTF8CString(keyRef, "leftMeta"))
+        return GDK_KEY_Meta_L;
+    if (WKStringIsEqualToUTF8CString(keyRef, "rightMeta"))
+        return GDK_KEY_Meta_R;
     if (WKStringIsEqualToUTF8CString(keyRef, "leftArrow"))
         return GDK_KEY_Left;
     if (WKStringIsEqualToUTF8CString(keyRef, "rightArrow"))
@@ -270,6 +214,8 @@ int getGDKKeySymForKeyRef(WKStringRef keyRef, unsigned location, guint* modifier
         return GDK_KEY_F11;
     if (WKStringIsEqualToUTF8CString(keyRef, "F12"))
         return GDK_KEY_F12;
+    if (WKStringIsEqualToUTF8CString(keyRef, "escape"))
+        return GDK_KEY_Escape;
 
     size_t bufferSize = WKStringGetMaximumUTF8CStringSize(keyRef);
     auto buffer = makeUniqueArray<char>(bufferSize);
@@ -295,26 +241,18 @@ void EventSenderProxy::keyDown(WKStringRef keyRef, WKEventModifiers wkModifiers,
 {
     guint modifiers = webkitModifiersToGDKModifiers(wkModifiers);
     int gdkKeySym = getGDKKeySymForKeyRef(keyRef, location, &modifiers);
-
-    GdkEvent* pressEvent = gdk_event_new(GDK_KEY_PRESS);
-    pressEvent->key.keyval = gdkKeySym;
-    pressEvent->key.state = modifiers;
-    pressEvent->key.window = gtk_widget_get_window(GTK_WIDGET(m_testController->mainWebView()->platformWindow()));
-    g_object_ref(pressEvent->key.window);
-    gdk_event_set_device(pressEvent, gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(pressEvent->key.window))));
-
-    GUniqueOutPtr<GdkKeymapKey> keys;
-    gint nKeys;
-    if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), gdkKeySym, &keys.outPtr(), &nKeys) && nKeys)
-        pressEvent->key.hardware_keycode = keys.get()[0].keycode;
-
-    GdkEvent* releaseEvent = gdk_event_copy(pressEvent);
-    dispatchEvent(pressEvent);
-    releaseEvent->key.type = GDK_KEY_RELEASE;
-    dispatchEvent(releaseEvent);
+    webkitWebViewBaseSynthesizeKeyEvent(toWebKitGLibAPI(m_testController->mainWebView()->platformView()), KeyEventType::Insert, gdkKeySym, modifiers, ShouldTranslateKeyboardState::No);
 }
 
-void EventSenderProxy::mouseDown(unsigned button, WKEventModifiers wkModifiers)
+void EventSenderProxy::rawKeyDown(WKStringRef key, WKEventModifiers modifiers, unsigned keyLocation)
+{
+}
+
+void EventSenderProxy::rawKeyUp(WKStringRef key, WKEventModifiers modifiers, unsigned keyLocation)
+{
+}
+
+void EventSenderProxy::mouseDown(unsigned button, WKEventModifiers wkModifiers, WKStringRef pointerType)
 {
     unsigned gdkButton = eventSenderButtonToGDKButton(button);
     auto modifier = WebCore::stateModifierForGdkButton(gdkButton);
@@ -324,64 +262,32 @@ void EventSenderProxy::mouseDown(unsigned button, WKEventModifiers wkModifiers)
     if (m_mouseButtonsCurrentlyDown & modifier)
         return;
 
-    // Normally GDK will send both GDK_BUTTON_PRESS and GDK_2BUTTON_PRESS for
-    // the second button press during double-clicks. WebKit GTK+ selectively
-    // ignores the first GDK_BUTTON_PRESS of that pair using gdk_event_peek.
-    // Since our events aren't ever going onto the GDK event queue, WebKit won't
-    // be able to filter out the first GDK_BUTTON_PRESS, so we just don't send
-    // it here. Eventually this code should probably figure out a way to get all
-    // appropriate events onto the event queue and this work-around should be
-    // removed.
     updateClickCountForButton(button);
-
-    GdkEventType eventType;
-    if (m_clickCount == 2)
-        eventType = GDK_2BUTTON_PRESS;
-    else if (m_clickCount == 3)
-        eventType = GDK_3BUTTON_PRESS;
-    else
-        eventType = GDK_BUTTON_PRESS;
-
-    GdkEvent* event = createMouseButtonEvent(eventType, gdkButton, wkModifiers);
     m_mouseButtonsCurrentlyDown |= modifier;
-    sendOrQueueEvent(event);
+
+    webkitWebViewBaseSynthesizeMouseEvent(toWebKitGLibAPI(m_testController->mainWebView()->platformView()),
+        MouseEventType::Press, gdkButton, m_mouseButtonsCurrentlyDown, m_position.x, m_position.y, webkitModifiersToGDKModifiers(wkModifiers), m_clickCount, toWTFString(pointerType));
 }
 
-void EventSenderProxy::mouseUp(unsigned button, WKEventModifiers wkModifiers)
+void EventSenderProxy::mouseUp(unsigned button, WKEventModifiers wkModifiers, WKStringRef pointerType)
 {
-    m_clickButton = kWKEventMouseButtonNoButton;
     unsigned gdkButton = eventSenderButtonToGDKButton(button);
-    GdkEvent* event = createMouseButtonEvent(GDK_BUTTON_RELEASE, gdkButton, wkModifiers);
     auto modifier = WebCore::stateModifierForGdkButton(gdkButton);
     m_mouseButtonsCurrentlyDown &= ~modifier;
-    sendOrQueueEvent(event);
+    webkitWebViewBaseSynthesizeMouseEvent(toWebKitGLibAPI(m_testController->mainWebView()->platformView()),
+        MouseEventType::Release, gdkButton, m_mouseButtonsCurrentlyDown, m_position.x, m_position.y, webkitModifiersToGDKModifiers(wkModifiers), 0, toWTFString(pointerType));
 
     m_clickPosition = m_position;
-    m_clickTime = GDK_CURRENT_TIME;
+    m_clickTime = m_time;
 }
 
-void EventSenderProxy::mouseMoveTo(double x, double y)
+void EventSenderProxy::mouseMoveTo(double x, double y, WKStringRef pointerType)
 {
     m_position.x = x;
     m_position.y = y;
 
-    GdkEvent* event = gdk_event_new(GDK_MOTION_NOTIFY);
-    event->motion.x = m_position.x;
-    event->motion.y = m_position.y;
-
-    event->motion.time = GDK_CURRENT_TIME;
-    event->motion.window = gtk_widget_get_window(GTK_WIDGET(m_testController->mainWebView()->platformView()));
-    g_object_ref(event->motion.window);
-    gdk_event_set_device(event, gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(event->motion.window))));
-    event->motion.state = m_mouseButtonsCurrentlyDown;
-    event->motion.axes = 0;
-
-    int xRoot, yRoot;
-    gdk_window_get_root_coords(gtk_widget_get_window(GTK_WIDGET(m_testController->mainWebView()->platformView())), m_position.x, m_position.y , &xRoot, &yRoot);
-    event->motion.x_root = xRoot;
-    event->motion.y_root = yRoot;
-
-    sendOrQueueEvent(event);
+    webkitWebViewBaseSynthesizeMouseEvent(toWebKitGLibAPI(m_testController->mainWebView()->platformView()),
+        MouseEventType::Motion, 0, m_mouseButtonsCurrentlyDown, m_position.x, m_position.y, 0, 0, toWTFString(pointerType));
 }
 
 void EventSenderProxy::mouseScrollBy(int horizontal, int vertical)
@@ -390,36 +296,8 @@ void EventSenderProxy::mouseScrollBy(int horizontal, int vertical)
     if (!horizontal && !vertical)
         return;
 
-    GdkEvent* event = gdk_event_new(GDK_SCROLL);
-    event->scroll.x = m_position.x;
-    event->scroll.y = m_position.y;
-    event->scroll.time = GDK_CURRENT_TIME;
-    event->scroll.window = gtk_widget_get_window(GTK_WIDGET(m_testController->mainWebView()->platformView()));
-    g_object_ref(event->scroll.window);
-    gdk_event_set_device(event, gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(event->scroll.window))));
-
-    // For more than one tick in a scroll, we need smooth scroll event
-    if ((horizontal && vertical) || horizontal > 1 || horizontal < -1 || vertical > 1 || vertical < -1) {
-        event->scroll.direction = GDK_SCROLL_SMOOTH;
-        event->scroll.delta_x = -horizontal;
-        event->scroll.delta_y = -vertical;
-
-        sendOrQueueEvent(event);
-        return;
-    }
-
-    if (horizontal < 0)
-        event->scroll.direction = GDK_SCROLL_RIGHT;
-    else if (horizontal > 0)
-        event->scroll.direction = GDK_SCROLL_LEFT;
-    else if (vertical < 0)
-        event->scroll.direction = GDK_SCROLL_DOWN;
-    else if (vertical > 0)
-        event->scroll.direction = GDK_SCROLL_UP;
-    else
-        g_assert_not_reached();
-
-    sendOrQueueEvent(event);
+    webkitWebViewBaseSynthesizeWheelEvent(toWebKitGLibAPI(m_testController->mainWebView()->platformView()),
+        horizontal, vertical, m_position.x, m_position.y, WheelEventPhase::NoPhase, WheelEventPhase::NoPhase, m_hasPreciseDeltas);
 }
 
 void EventSenderProxy::continuousMouseScrollBy(int horizontal, int vertical, bool paged)
@@ -430,151 +308,107 @@ void EventSenderProxy::continuousMouseScrollBy(int horizontal, int vertical, boo
         return;
     }
 
-    GdkEvent* event = gdk_event_new(GDK_SCROLL);
-    event->scroll.x = m_position.x;
-    event->scroll.y = m_position.y;
-    event->scroll.time = GDK_CURRENT_TIME;
-    event->scroll.window = gtk_widget_get_window(GTK_WIDGET(m_testController->mainWebView()->platformView()));
-    g_object_ref(event->scroll.window);
-    gdk_event_set_device(event, gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(event->scroll.window))));
-
-    event->scroll.direction = GDK_SCROLL_SMOOTH;
-    event->scroll.delta_x = -horizontal / pixelsPerScrollTick;
-    event->scroll.delta_y = -vertical / pixelsPerScrollTick;
-
-    sendOrQueueEvent(event);
+    webkitWebViewBaseSynthesizeWheelEvent(toWebKitGLibAPI(m_testController->mainWebView()->platformView()),
+        horizontal / pixelsPerScrollTick, vertical / pixelsPerScrollTick, m_position.x, m_position.y, WheelEventPhase::NoPhase, WheelEventPhase::NoPhase, m_hasPreciseDeltas);
 }
 
-void EventSenderProxy::mouseScrollByWithWheelAndMomentumPhases(int x, int y, int /*phase*/, int /*momentum*/)
+void EventSenderProxy::mouseScrollByWithWheelAndMomentumPhases(int horizontal, int vertical, int phase, int momentum)
 {
-    // Gtk+ does not have the concept of wheel gesture phases or momentum. Just relay to
-    // the mouse wheel handler.
-    mouseScrollBy(x, y);
+    WheelEventPhase eventPhase = WheelEventPhase::NoPhase;
+    switch (phase) {
+    case 0:
+        eventPhase = WheelEventPhase::NoPhase;
+        break;
+    case 1:
+        eventPhase = WheelEventPhase::Began;
+        break;
+    case 2:
+        eventPhase = WheelEventPhase::Changed;
+        break;
+    case 4:
+        eventPhase = WheelEventPhase::Ended;
+        break;
+    case 8:
+        eventPhase = WheelEventPhase::Cancelled;
+        break;
+    case 128:
+        eventPhase = WheelEventPhase::MayBegin;
+        break;
+    }
+
+    WheelEventPhase eventMomentumPhase = WheelEventPhase::NoPhase;
+    switch (momentum) {
+    case 0:
+        eventMomentumPhase = WheelEventPhase::NoPhase;
+        break;
+    case 1:
+        eventMomentumPhase = WheelEventPhase::Began;
+        break;
+    case 2:
+        eventMomentumPhase = WheelEventPhase::Changed;
+        break;
+    case 3:
+        eventMomentumPhase = WheelEventPhase::Ended;
+        break;
+    }
+
+    webkitWebViewBaseSynthesizeWheelEvent(toWebKitGLibAPI(m_testController->mainWebView()->platformView()),
+        horizontal, vertical, m_position.x, m_position.y, eventPhase, eventMomentumPhase, m_hasPreciseDeltas);
+}
+
+void EventSenderProxy::setWheelHasPreciseDeltas(bool hasPreciseDeltas)
+{
+    m_hasPreciseDeltas = hasPreciseDeltas;
 }
 
 void EventSenderProxy::leapForward(int milliseconds)
 {
-    if (m_eventQueue.isEmpty())
-        m_eventQueue.append(WTREventQueueItem());
-
-    m_eventQueue.last().delay = milliseconds;
     m_time += milliseconds / 1000.0;
 }
 
-void updateEventCoordinates(GdkEvent* touchEvent, int x, int y)
-{
-    touchEvent->touch.x = x;
-    touchEvent->touch.y = y;
-
-    int xRoot, yRoot;
-    gdk_window_get_root_coords(touchEvent->touch.window, x, y, &xRoot, &yRoot);
-    touchEvent->touch.x_root = xRoot;
-    touchEvent->touch.y_root = yRoot;
-}
-
-GUniquePtr<GdkEvent> EventSenderProxy::createTouchEvent(GdkEventType eventType, int id)
-{
-    GUniquePtr<GdkEvent> touchEvent(gdk_event_new(eventType));
-
-    touchEvent->touch.sequence = static_cast<GdkEventSequence*>(GINT_TO_POINTER(id));
-    touchEvent->touch.window = gtk_widget_get_window(GTK_WIDGET(m_testController->mainWebView()->platformView()));
-    g_object_ref(touchEvent->touch.window);
-    gdk_event_set_device(touchEvent.get(), gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(touchEvent->button.window))));
-    touchEvent->touch.time = GDK_CURRENT_TIME;
-
-    return touchEvent;
-}
-
 #if ENABLE(TOUCH_EVENTS)
-void EventSenderProxy::addTouchPoint(int x, int y)
+void EventSenderProxy::addTouchPoint(int, int)
 {
-    // Touch ID is array index plus one, so 0 is skipped.
-    GUniquePtr<GdkEvent> event = createTouchEvent(static_cast<GdkEventType>(GDK_TOUCH_BEGIN), m_touchEvents.size() + 1);
-    updateEventCoordinates(event.get(), x, y);
-    m_updatedTouchEvents.add(GPOINTER_TO_INT(event->touch.sequence));
-    m_touchEvents.append(std::move(event));
 }
 
-void EventSenderProxy::updateTouchPoint(int index, int x, int y)
+void EventSenderProxy::updateTouchPoint(int, int, int)
 {
-    ASSERT(index >= 0 && static_cast<size_t>(index) < m_touchEvents.size());
-
-    const auto& event = m_touchEvents[index];
-    ASSERT(event);
-
-    event->type = GDK_TOUCH_UPDATE;
-    updateEventCoordinates(event.get(), x, y);
-    m_updatedTouchEvents.add(GPOINTER_TO_INT(event->touch.sequence));
-}
-
-void EventSenderProxy::sendUpdatedTouchEvents()
-{
-    for (auto id : m_updatedTouchEvents)
-        sendOrQueueEvent(gdk_event_copy(m_touchEvents[id - 1].get()));
-
-    m_updatedTouchEvents.clear();
 }
 
 void EventSenderProxy::touchStart()
 {
-    sendUpdatedTouchEvents();
 }
 
 void EventSenderProxy::touchMove()
 {
-    sendUpdatedTouchEvents();
 }
 
 void EventSenderProxy::touchEnd()
 {
-    sendUpdatedTouchEvents();
 }
 
 void EventSenderProxy::touchCancel()
 {
-    notImplemented();
 }
 
 void EventSenderProxy::clearTouchPoints()
 {
-    m_updatedTouchEvents.clear();
-    m_touchEvents.clear();
 }
 
-void EventSenderProxy::releaseTouchPoint(int index)
+void EventSenderProxy::releaseTouchPoint(int)
 {
-    ASSERT(index >= 0 && static_cast<size_t>(index) < m_touchEvents.size());
-
-    const auto& event = m_touchEvents[index];
-    event->type = GDK_TOUCH_END;
-    m_updatedTouchEvents.add(GPOINTER_TO_INT(event->touch.sequence));
 }
 
-void EventSenderProxy::cancelTouchPoint(int index)
+void EventSenderProxy::cancelTouchPoint(int)
 {
-    notImplemented();
 }
 
-void EventSenderProxy::setTouchPointRadius(int radiusX, int radiusY)
+void EventSenderProxy::setTouchPointRadius(int, int)
 {
-    notImplemented();
 }
 
-void EventSenderProxy::setTouchModifier(WKEventModifiers modifier, bool enable)
+void EventSenderProxy::setTouchModifier(WKEventModifiers, bool)
 {
-    guint state = webkitModifiersToGDKModifiers(modifier);
-
-    for (const auto& event : m_touchEvents) {
-        if (event->type == GDK_TOUCH_END)
-            continue;
-
-        if (enable)
-            event->touch.state |= state;
-        else
-            event->touch.state &= ~(state);
-
-        m_updatedTouchEvents.add(GPOINTER_TO_INT(event->touch.sequence));
-    }
 }
 #endif // ENABLE(TOUCH_EVENTS)
 

@@ -15,7 +15,7 @@ function test() {
 
     function getNodeStyles(selector, callback) {
         WI.domManager.requestDocument((documentNode) => {
-            WI.domManager.querySelector(documentNode.id, selector, (contentNodeId) => {
+            documentNode.querySelector(selector, (contentNodeId) => {
                 if (!contentNodeId) {
                     InspectorTest.fail("DOM node not found.");
                     InspectorTest.completeTest();
@@ -92,11 +92,10 @@ function test() {
         name: "OverriddenProperty.OverriddenByShorthand",
         test(resolve, reject) {
             getStyleDeclaration(".longhand-overridden-by-shorthand", (style) => {
-                const dontCreateIfMissing = true;
-                let borderTopColorProperty = style.propertyForName("border-top-color", dontCreateIfMissing);
+                let borderTopColorProperty = style.propertyForName("border-top-color");
                 InspectorTest.expectTrue(borderTopColorProperty.overridden, "border-top-color is overridden.");
 
-                let borderColorProperty = style.propertyForName("border-color", dontCreateIfMissing);
+                let borderColorProperty = style.propertyForName("border-color");
                 InspectorTest.expectFalse(borderColorProperty.overridden, "border-color is NOT overridden.");
 
                 resolve();
@@ -108,11 +107,10 @@ function test() {
         name: "OverriddenProperty.OverriddenByImportantShorthand",
         test(resolve, reject) {
             getStyleDeclaration(".longhand-overridden-by-important-shorthand", (style) => {
-                const dontCreateIfMissing = true;
-                let borderColorProperty = style.propertyForName("border-color", dontCreateIfMissing);
+                let borderColorProperty = style.propertyForName("border-color");
                 InspectorTest.expectFalse(borderColorProperty.overridden, "border-color is NOT overridden.");
 
-                let borderTopColorProperty = style.propertyForName("border-top-color", dontCreateIfMissing);
+                let borderTopColorProperty = style.propertyForName("border-top-color");
                 InspectorTest.expectTrue(borderTopColorProperty.overridden, "border-top-color is overridden.");
 
                 resolve();
@@ -124,11 +122,10 @@ function test() {
         name: "OverriddenProperty.NotOverriddenByImportantLonghand",
         test(resolve, reject) {
             getStyleDeclaration(".shorthand-overridden-by-important-longhand", (style) => {
-                const dontCreateIfMissing = true;
-                let borderTopColorProperty = style.propertyForName("border-top-color", dontCreateIfMissing);
+                let borderTopColorProperty = style.propertyForName("border-top-color");
                 InspectorTest.expectFalse(borderTopColorProperty.overridden, "border-top-color is NOT overridden.");
 
-                let borderColorProperty = style.propertyForName("border-color", dontCreateIfMissing);
+                let borderColorProperty = style.propertyForName("border-color");
                 InspectorTest.expectFalse(borderColorProperty.overridden, "border-color is NOT overridden.");
 
                 resolve();
@@ -140,12 +137,26 @@ function test() {
         name: "OverriddenProperty.NotOverriddenByLonghand",
         test(resolve, reject) {
             getStyleDeclaration(".shorthand-not-overridden-by-longhand", (style) => {
-                const dontCreateIfMissing = true;
-                let borderColorProperty = style.propertyForName("border-color", dontCreateIfMissing);
+                let borderColorProperty = style.propertyForName("border-color");
                 InspectorTest.expectFalse(borderColorProperty.overridden, "border-color is NOT overridden.");
 
-                let borderTopColorProperty = style.propertyForName("border-top-color", dontCreateIfMissing);
+                let borderTopColorProperty = style.propertyForName("border-top-color");
                 InspectorTest.expectFalse(borderTopColorProperty.overridden, "border-top-color is NOT overridden.");
+
+                resolve();
+            }, reject);
+        }
+    });
+
+    suite.addTestCase({
+        name: "OverriddenProperty.MixedCaseVariablesNotOverridden",
+        test(resolve, reject) {
+            getStyleDeclaration(".mixed-case-variables-not-overridden", (style) => {
+                let lowercaseVariableProperty = style.propertyForName("--foo");
+                InspectorTest.expectFalse(lowercaseVariableProperty.overridden, "`--foo` is NOT overridden.");
+
+                let uppercaseVariableProperty = style.propertyForName("--FOO");
+                InspectorTest.expectFalse(uppercaseVariableProperty.overridden, "`--FOO` is NOT overridden.");
 
                 resolve();
             }, reject);
@@ -182,11 +193,17 @@ function test() {
         border-color: green;
         border-top-color: red;
     }
+
+    .mixed-case-variables-not-overridden {
+        --foo: green;
+        --FOO: red;
+    }
     </style>
     <div id="x" style="color: green"></div>
     <div class="longhand-overridden-by-shorthand"></div>
     <div class="longhand-overridden-by-important-shorthand"></div>
     <div class="shorthand-overridden-by-important-longhand"></div>
     <div class="shorthand-not-overridden-by-longhand"></div>
+    <div class="mixed-case-variables-not-overridden"></div>
 </body>
 </html>

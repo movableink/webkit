@@ -47,7 +47,8 @@ bool AccessibilityController::addNotificationListener(JSValueRef functionCallbac
     // Other platforms may be different.
     if (m_globalNotificationHandler)
         return false;
-    m_globalNotificationHandler = [[AccessibilityNotificationHandler alloc] init];
+
+    m_globalNotificationHandler = adoptNS([[AccessibilityNotificationHandler alloc] init]);
     [m_globalNotificationHandler setCallback:functionCallback];
     [m_globalNotificationHandler startObserving];
     
@@ -62,7 +63,7 @@ bool AccessibilityController::removeNotificationListener()
 
 JSRetainPtr<JSStringRef> AccessibilityController::platformName()
 {
-    return adopt(JSStringCreateWithUTF8CString("ios"));
+    return WTR::createJSString("ios");
 }
 
 void AccessibilityController::resetToConsistentState()
@@ -87,9 +88,13 @@ static id findAccessibleObjectById(id obj, NSString *idAttribute)
     return nil;
 }
 
+void AccessibilityController::injectAccessibilityPreference(JSStringRef, JSStringRef, JSStringRef)
+{
+}
+
 RefPtr<AccessibilityUIElement> AccessibilityController::accessibleElementById(JSStringRef idAttribute)
 {
-    WKBundlePageRef page = InjectedBundle::singleton().page()->page();
+    auto page = InjectedBundle::singleton().page()->page();
     id root = static_cast<PlatformUIElement>(WKAccessibilityRootObject(page));
 
     id result = findAccessibleObjectById(root, [NSString stringWithJSStringRef:idAttribute]);

@@ -1,4 +1,4 @@
-//@ if $buildType == "debug" or $memoryLimited then skip else runBigIntEnabled end
+//@ skip if $buildType == "debug" or $memoryLimited
 
 function assert(a) {
     if (!a)
@@ -16,6 +16,6 @@ try {
     BigInt(sNumber);
     assert(false);
 } catch(e) {
-    assert(e.message == "Out of memory")
+    assert(e.message == "Out of memory: BigInt generated from this operation is too big")
 }
 

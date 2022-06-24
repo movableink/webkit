@@ -21,6 +21,7 @@
 
 #include "WebViewTest.h"
 #include <gio/gunixfdlist.h>
+#include <wtf/URL.h>
 #include <wtf/glib/GRefPtr.h>
 
 static GUniquePtr<char> scriptDialogResult;
@@ -73,7 +74,7 @@ static gboolean inputElementIsUserEdited(GDBusProxy* proxy, uint64_t pageID, con
 
 static void testWebExtensionInputElementIsUserEdited(WebViewTest* test, gconstpointer)
 {
-    test->showInWindowAndWaitUntilMapped();
+    test->showInWindow();
     test->loadHtml("<html><body id='body'><input id='input'></input><textarea id='textarea'></textarea></body></html>", nullptr);
     test->waitUntilLoadFinished();
 
@@ -83,8 +84,8 @@ static void testWebExtensionInputElementIsUserEdited(WebViewTest* test, gconstpo
     g_assert_false(inputElementIsUserEdited(proxy.get(), pageID, "input"));
     test->runJavaScriptAndWaitUntilFinished("document.getElementById('input').focus()", nullptr);
     test->keyStroke(GDK_KEY_a);
-    while (gtk_events_pending())
-        gtk_main_iteration();
+    while (g_main_context_pending(nullptr))
+        g_main_context_iteration(nullptr, TRUE);
     GUniquePtr<char> resultString;
     do {
         auto* result = test->runJavaScriptAndWaitUntilFinished("document.getElementById('input').value", nullptr);
@@ -95,8 +96,8 @@ static void testWebExtensionInputElementIsUserEdited(WebViewTest* test, gconstpo
     g_assert_false(inputElementIsUserEdited(proxy.get(), pageID, "textarea"));
     test->runJavaScriptAndWaitUntilFinished("document.getElementById('textarea').focus()", nullptr);
     test->keyStroke(GDK_KEY_b);
-    while (gtk_events_pending())
-        gtk_main_iteration();
+    while (g_main_context_pending(nullptr))
+        g_main_context_iteration(nullptr, TRUE);
     do {
         auto* result = test->runJavaScriptAndWaitUntilFinished("document.getElementById('textarea').value", nullptr);
         resultString.reset(WebViewTest::javascriptResultToCString(result));
@@ -160,28 +161,10 @@ static void testWebKitWebViewProcessCrashed(WebViewTest* test, gconstpointer)
         G_DBUS_CALL_FLAGS_NONE,
         -1, 0, 0));
     g_assert_null(result);
+    Test::removeLogFatalFlag(G_LOG_LEVEL_WARNING);
     g_main_loop_run(test->m_mainLoop);
+    Test::addLogFatalFlag(G_LOG_LEVEL_WARNING);
     test->m_expectedWebProcessCrash = false;
-}
-
-static void testWebExtensionWindowObjectCleared(WebViewTest* test, gconstpointer)
-{
-    test->loadHtml("<html><header></header><body></body></html>", 0);
-    test->waitUntilLoadFinished();
-
-    GUniqueOutPtr<GError> error;
-    WebKitJavascriptResult* javascriptResult = test->runJavaScriptAndWaitUntilFinished("window.echo('Foo');", &error.outPtr());
-    g_assert_nonnull(javascriptResult);
-    g_assert_no_error(error.get());
-    GUniquePtr<char> valueString(WebViewTest::javascriptResultToCString(javascriptResult));
-    g_assert_cmpstr(valueString.get(), ==, "Foo");
-
-    javascriptResult = test->runJavaScriptAndWaitUntilFinished("var f = new GFile('.'); f.path();", &error.outPtr());
-    g_assert_nonnull(javascriptResult);
-    g_assert_no_error(error.get());
-    valueString.reset(WebViewTest::javascriptResultToCString(javascriptResult));
-    GUniquePtr<char> currentDirectory(g_get_current_dir());
-    g_assert_cmpstr(valueString.get(), ==, currentDirectory.get());
 }
 
 static gboolean scriptDialogCallback(WebKitWebView*, WebKitScriptDialog* dialog, gpointer)
@@ -262,7 +245,7 @@ static void testInstallMissingPluginsPermissionRequest(WebViewTest* test, gconst
     GRefPtr<GVariant> result = adoptGRef(g_dbus_proxy_call_sync(proxy.get(), "RemoveAVPluginsFromGSTRegistry",
         nullptr, G_DBUS_CALL_FLAGS_NONE, -1, nullptr, nullptr));
 
-    test->showInWindowAndWaitUntilMapped();
+    test->showInWindow();
 
     gulong permissionRequestSignalID = g_signal_connect(test->m_webView, "permission-request", G_CALLBACK(permissionRequestCallback), test);
     // FIXME: the base URI needs to finish with / to work, that shouldn't happen.
@@ -493,10 +476,9 @@ static void testWebExtensionPageID(WebViewTest* test, gconstpointer)
     // Register a custom URI scheme to test history navigation.
     webkit_web_context_register_uri_scheme(test->m_webContext.get(), "foo",
         [](WebKitURISchemeRequest* request, gpointer) {
-            SoupURI* uri = soup_uri_new(webkit_uri_scheme_request_get_uri(request));
+            URL url = URL({ }, webkit_uri_scheme_request_get_uri(request));
             GRefPtr<GInputStream> inputStream = adoptGRef(g_memory_input_stream_new());
-            char* html = g_strdup_printf("<html><head><title>%s</title></head><body></body></html>", !strcmp(uri->host, "host5") ? "Title5" : "Title6");
-            soup_uri_free(uri);
+            char* html = g_strdup_printf("<html><head><title>%s</title></head><body></body></html>", url.host() == "host5" ? "Title5" : "Title6");
             g_memory_input_stream_add_data(G_MEMORY_INPUT_STREAM(inputStream.get()), html, strlen(html), g_free);
             webkit_uri_scheme_request_finish(request, inputStream.get(), strlen(html), "text/html");
         }, nullptr, nullptr);
@@ -512,27 +494,27 @@ static void testWebExtensionPageID(WebViewTest* test, gconstpointer)
 
     test->loadURI("foo://host6/");
     test->waitUntilLoadFinished();
-    g_assert_true(pageIDChangedEmitted);
+    g_assert_false(pageIDChangedEmitted);
     pageIDChangedEmitted = false;
-    g_assert_cmpuint(pageID, <, webkit_web_view_get_page_id(test->m_webView));
+    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->m_webView));
     pageID = webkit_web_view_get_page_id(test->m_webView);
     proxy = test->extensionProxy();
     checkTitle(test, proxy.get(), "Title6");
 
     test->goBack();
     test->waitUntilLoadFinished();
-    g_assert_true(pageIDChangedEmitted);
+    g_assert_false(pageIDChangedEmitted);
     pageIDChangedEmitted = false;
-    g_assert_cmpuint(pageID, >, webkit_web_view_get_page_id(test->m_webView));
+    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->m_webView));
     pageID = webkit_web_view_get_page_id(test->m_webView);
     proxy = test->extensionProxy();
     checkTitle(test, proxy.get(), "Title5");
 
     test->goForward();
     test->waitUntilLoadFinished();
-    g_assert_true(pageIDChangedEmitted);
+    g_assert_false(pageIDChangedEmitted);
     pageIDChangedEmitted = false;
-    g_assert_cmpuint(pageID, <, webkit_web_view_get_page_id(test->m_webView));
+    g_assert_cmpuint(pageID, ==, webkit_web_view_get_page_id(test->m_webView));
     pageID = webkit_web_view_get_page_id(test->m_webView);
     proxy = test->extensionProxy();
     checkTitle(test, proxy.get(), "Title6");
@@ -567,12 +549,12 @@ public:
     WebKitUserMessage* sendMessage(WebKitUserMessage* message, GError** error = nullptr)
     {
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(message));
-        m_receivedViewMessage = nullptr;
+        m_receivedViewMessages = { };
         webkit_web_view_send_message_to_page(m_webView, message, nullptr, [](GObject*, GAsyncResult* result, gpointer userData) {
             auto* test = static_cast<UserMessageTest*>(userData);
-            test->m_receivedViewMessage = adoptGRef(webkit_web_view_send_message_to_page_finish(test->m_webView, result, &test->m_receivedError.outPtr()));
-            if (test->m_receivedViewMessage)
-                test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(test->m_receivedViewMessage.get()));
+            test->m_receivedViewMessages.append(adoptGRef(webkit_web_view_send_message_to_page_finish(test->m_webView, result, &test->m_receivedError.outPtr())));
+            if (auto receivedMessage = test->m_receivedViewMessages.first())
+                test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(receivedMessage.get()));
             else
                 g_assert_nonnull(test->m_receivedError.get());
             test->quitMainLoop();
@@ -580,7 +562,7 @@ public:
         g_main_loop_run(m_mainLoop);
         if (error)
             *error = m_receivedError.get();
-        return m_receivedViewMessage.get();
+        return m_receivedViewMessages.first().get();
     }
 
     void sendMessageToAllExtensions(WebKitUserMessage* message)
@@ -592,13 +574,15 @@ public:
     bool viewUserMessageReceived(WebKitUserMessage* message)
     {
         assertObjectIsDeletedWhenTestFinishes(G_OBJECT(message));
-        if (!g_strcmp0(m_expectedViewMessageName.data(), webkit_user_message_get_name(message))) {
-            m_receivedViewMessage = message;
-            quitMainLoop();
+        if (m_expectedViewMessageNames.isEmpty())
+            return false;
 
+        if (m_expectedViewMessageNames.contains(webkit_user_message_get_name(message))) {
+            m_receivedViewMessages.append(message);
+            if (m_receivedViewMessages.size() == m_expectedViewMessageNames.size())
+                quitMainLoop();
             return true;
         }
-
         return false;
     }
 
@@ -615,12 +599,18 @@ public:
         return false;
     }
 
+    const Vector<GRefPtr<WebKitUserMessage>>& waitUntilViewMessagesReceived(Vector<CString>&& messageNames)
+    {
+        m_expectedViewMessageNames = WTFMove(messageNames);
+        m_receivedViewMessages = { };
+        g_main_loop_run(m_mainLoop);
+        m_expectedViewMessageNames = { };
+        return m_receivedViewMessages;
+    }
+
     WebKitUserMessage* waitUntilViewMessageReceived(const char* messageName)
     {
-        m_expectedViewMessageName = messageName;
-        g_main_loop_run(m_mainLoop);
-        m_expectedViewMessageName = { };
-        return m_receivedViewMessage.get();
+        return waitUntilViewMessagesReceived({ messageName }).first().get();
     }
 
     WebKitUserMessage* waitUntilContextMessageReceived(const char* messageName)
@@ -631,9 +621,10 @@ public:
         return m_receivedContextMessage.get();
     }
 
-    GRefPtr<WebKitUserMessage> m_receivedViewMessage;
+    Vector<GRefPtr<WebKitUserMessage>> m_receivedViewMessages;
     GRefPtr<WebKitUserMessage> m_receivedContextMessage;
     GUniqueOutPtr<GError> m_receivedError;
+    Vector<CString> m_expectedViewMessageNames;
     CString m_expectedViewMessageName;
     CString m_expectedContextMessageName;
 };
@@ -795,6 +786,28 @@ static void testWebExtensionUserMessages(UserMessageTest* test, gconstpointer)
     test->waitUntilContextMessageReceived("Test.FinishedPingRequest");
 }
 
+static void testWebExtensionWindowObjectCleared(UserMessageTest* test, gconstpointer)
+{
+    test->loadHtml("<html><header></header><body></body></html>", 0);
+
+    auto messages = test->waitUntilViewMessagesReceived({ "WindowObjectCleared", "WindowObjectClearedIsolatedWorld" });
+    g_assert_cmpuint(messages.size(), ==, 2);
+
+    GUniqueOutPtr<GError> error;
+    WebKitJavascriptResult* javascriptResult = test->runJavaScriptAndWaitUntilFinished("window.echo('Foo');", &error.outPtr());
+    g_assert_nonnull(javascriptResult);
+    g_assert_no_error(error.get());
+    GUniquePtr<char> valueString(WebViewTest::javascriptResultToCString(javascriptResult));
+    g_assert_cmpstr(valueString.get(), ==, "Foo");
+
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("var f = new GFile('.'); f.path();", &error.outPtr());
+    g_assert_nonnull(javascriptResult);
+    g_assert_no_error(error.get());
+    valueString.reset(WebViewTest::javascriptResultToCString(javascriptResult));
+    GUniquePtr<char> currentDirectory(g_get_current_dir());
+    g_assert_cmpstr(valueString.get(), ==, currentDirectory.get());
+}
+
 void beforeAll()
 {
     WebViewTest::add("WebKitWebExtension", "dom-document-title", testWebExtensionGetTitle);
@@ -803,7 +816,7 @@ void beforeAll()
 #endif
     WebViewTest::add("WebKitWebExtension", "document-loaded-signal", testDocumentLoadedSignal);
     WebViewTest::add("WebKitWebView", "web-process-crashed", testWebKitWebViewProcessCrashed);
-    WebViewTest::add("WebKitWebExtension", "window-object-cleared", testWebExtensionWindowObjectCleared);
+    UserMessageTest::add("WebKitWebExtension", "window-object-cleared", testWebExtensionWindowObjectCleared);
     WebViewTest::add("WebKitWebExtension", "isolated-world", testWebExtensionIsolatedWorld);
 #if PLATFORM(GTK)
     WebViewTest::add("WebKitWebView", "install-missing-plugins-permission-request", testInstallMissingPluginsPermissionRequest);

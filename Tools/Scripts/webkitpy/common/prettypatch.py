@@ -30,6 +30,9 @@ import errno
 import logging
 import os
 import tempfile
+
+from webkitcorepy import string_utils
+
 from webkitpy.common.system.executive import ScriptError
 
 _log = logging.getLogger(__name__)
@@ -49,8 +52,8 @@ class PrettyPatch(object):
     def pretty_diff_file(self, diff):
         # Diffs can contain multiple text files of different encodings
         # so we always deal with them as byte arrays, not unicode strings.
-        assert(isinstance(diff, str))
-        pretty_diff = self.pretty_diff(diff)
+        diff = string_utils.encode(diff)
+        pretty_diff = string_utils.encode(self.pretty_diff(diff))
         diff_file = tempfile.NamedTemporaryFile(suffix=".html")
         diff_file.write(pretty_diff)
         diff_file.flush()

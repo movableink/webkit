@@ -13,16 +13,17 @@
 #include <memory>
 
 #include "api/call/transport.h"
+#include "api/sequence_checker.h"
+#include "api/task_queue/task_queue_base.h"
 #include "api/test/simulated_network.h"
 #include "call/call.h"
 #include "call/simulated_packet_receiver.h"
-#include "rtc_base/sequenced_task_checker.h"
+#include "rtc_base/synchronization/mutex.h"
+#include "rtc_base/task_utils/repeating_task.h"
 #include "rtc_base/thread_annotations.h"
-#include "test/single_threaded_task_queue.h"
 
 namespace webrtc {
 
-class Clock;
 class PacketReceiver;
 
 namespace test {
@@ -40,14 +41,12 @@ class Demuxer {
 // same task-queue - the one that's passed in via the constructor.
 class DirectTransport : public Transport {
  public:
-  DirectTransport(SingleThreadedTaskQueueForTesting* task_queue,
+  DirectTransport(TaskQueueBase* task_queue,
                   std::unique_ptr<SimulatedPacketReceiverInterface> pipe,
                   Call* send_call,
                   const std::map<uint8_t, MediaType>& payload_type_map);
 
   ~DirectTransport() override;
-
-  RTC_DEPRECATED void StopSending();
 
   // TODO(holmer): Look into moving this to the constructor.
   virtual void SetReceiver(PacketReceiver* receiver);
@@ -60,21 +59,19 @@ class DirectTransport : public Transport {
   int GetAverageDelayMs();
 
  private:
-  void SendPackets();
+  void ProcessPackets() RTC_EXCLUSIVE_LOCKS_REQUIRED(&process_lock_);
   void SendPacket(const uint8_t* data, size_t length);
   void Start();
 
   Call* const send_call_;
-  Clock* const clock_;
 
-  SingleThreadedTaskQueueForTesting* const task_queue_;
-  SingleThreadedTaskQueueForTesting::TaskId next_scheduled_task_
-      RTC_GUARDED_BY(&sequence_checker_);
+  TaskQueueBase* const task_queue_;
+
+  Mutex process_lock_;
+  RepeatingTaskHandle next_process_task_ RTC_GUARDED_BY(&process_lock_);
 
   const Demuxer demuxer_;
   const std::unique_ptr<SimulatedPacketReceiverInterface> fake_network_;
-
-  rtc::SequencedTaskChecker sequence_checker_;
 };
 }  // namespace test
 }  // namespace webrtc

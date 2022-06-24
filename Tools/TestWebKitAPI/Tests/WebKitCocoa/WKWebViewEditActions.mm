@@ -28,6 +28,7 @@
 #import "PlatformUtilities.h"
 #import "TestWKWebView.h"
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import "UIKitSPI.h"
@@ -68,6 +69,14 @@
 }
 
 @end
+
+#if PLATFORM(IOS_FAMILY)
+
+@interface WKWebView (InternalIOS)
+- (void)_translate:(id)sender;
+@end
+
+#endif // PLATFORM(IOS_FAMILY)
 
 namespace TestWebKitAPI {
 
@@ -325,21 +334,36 @@ TEST(WKWebViewEditActions, SetFontFamily)
     [webView _setFont:[UIFont fontWithDescriptor:fontDescriptor size:24] sender:nil];
     EXPECT_WK_STREQ("Helvetica", [webView stylePropertyAtSelectionStart:@"font-family"]);
     EXPECT_WK_STREQ("24px", [webView stylePropertyAtSelectionStart:@"font-size"]);
-    EXPECT_WK_STREQ("normal", [webView stylePropertyAtSelectionStart:@"font-weight"]);
+    EXPECT_WK_STREQ("400", [webView stylePropertyAtSelectionStart:@"font-weight"]);
     EXPECT_WK_STREQ("normal", [webView stylePropertyAtSelectionStart:@"font-style"]);
 
     [webView _setFont:[UIFont fontWithName:@"TimesNewRomanPS-BoldMT" size:12] sender:nil];
     EXPECT_WK_STREQ("\"Times New Roman\"", [webView stylePropertyAtSelectionStart:@"font-family"]);
     EXPECT_WK_STREQ("12px", [webView stylePropertyAtSelectionStart:@"font-size"]);
-    EXPECT_WK_STREQ("bold", [webView stylePropertyAtSelectionStart:@"font-weight"]);
+    EXPECT_WK_STREQ("700", [webView stylePropertyAtSelectionStart:@"font-weight"]);
     EXPECT_WK_STREQ("normal", [webView stylePropertyAtSelectionStart:@"font-style"]);
 
     fontDescriptor = [fontDescriptor fontDescriptorWithSymbolicTraits:UIFontDescriptorTraitItalic | UIFontDescriptorTraitBold];
     [webView _setFont:[UIFont fontWithDescriptor:fontDescriptor size:20] sender:nil];
     EXPECT_WK_STREQ("Helvetica", [webView stylePropertyAtSelectionStart:@"font-family"]);
     EXPECT_WK_STREQ("20px", [webView stylePropertyAtSelectionStart:@"font-size"]);
-    EXPECT_WK_STREQ("bold", [webView stylePropertyAtSelectionStart:@"font-weight"]);
+    EXPECT_WK_STREQ("700", [webView stylePropertyAtSelectionStart:@"font-weight"]);
     EXPECT_WK_STREQ("italic", [webView stylePropertyAtSelectionStart:@"font-style"]);
+}
+
+TEST(WebKit, CanInvokeTranslateWithTextSelection)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 568)]);
+    [webView synchronouslyLoadTestPageNamed:@"simple"];
+    EXPECT_FALSE([webView canPerformAction:@selector(_translate:) withSender:nil]);
+
+    [webView selectAll:nil];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_TRUE([webView canPerformAction:@selector(_translate:) withSender:nil]);
+
+    [webView collapseToEnd];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_FALSE([webView canPerformAction:@selector(_translate:) withSender:nil]);
 }
 
 #else

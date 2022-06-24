@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "VideoTrackPrivate.h"
 
@@ -47,6 +47,7 @@ protected:
     void setLanguage(const AtomString& language) { m_language = language; }
     void setTrackIndex(int index) { m_index = index; }
 
+
     Kind m_kind { None };
     AtomString m_id;
     AtomString m_label;
@@ -58,4 +59,4 @@ protected:
 
 }
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

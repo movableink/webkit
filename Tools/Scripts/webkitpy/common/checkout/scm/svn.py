@@ -36,13 +36,14 @@ import string
 import sys
 import tempfile
 
+from webkitcorepy import Version, string_utils
+
+from webkitpy.common.checkout.scm.scm import AuthenticationError, SCM, commit_error_handler
 from webkitpy.common.config.urls import svn_server_host, svn_server_realm
 from webkitpy.common.memoized import memoized
 from webkitpy.common.system.executive import Executive, ScriptError
 from webkitpy.common.webkit_finder import WebKitFinder
-from webkitpy.common.version import Version
 
-from .scm import AuthenticationError, SCM, commit_error_handler
 
 _log = logging.getLogger(__name__)
 
@@ -52,10 +53,17 @@ class SVNRepository(object):
     svn_server_host = svn_server_host
     svn_server_realm = svn_server_realm
 
-    def has_authorization_for_realm(self, realm, home_directory=os.getenv("HOME")):
+    def has_authorization_for_realm(self, realm, home_directory=None):
         # If we are working on a file:// repository realm will be None
         if realm is None:
             return True
+
+        # Find the user's home directory
+        if home_directory is None:
+            home_directory = os.path.expanduser("~")
+            if home_directory == "~":
+                return False
+
         # ignore false positives for methods implemented in the mixee class. pylint: disable=E1101
         # Assumes find and grep are installed.
         if not os.path.isdir(os.path.join(home_directory, ".subversion")):
@@ -101,7 +109,7 @@ class SVN(SCM, SVNRepository):
             svn_info_args = [cls.executable_name, 'info']
             exit_code = executive.run_command(svn_info_args, cwd=path, return_exit_code=True)
             return (exit_code == 0)
-        except OSError as e:
+        except OSError:
             return False
 
     def find_uuid(self, path):
@@ -136,7 +144,7 @@ class SVN(SCM, SVNRepository):
 
     @staticmethod
     def commit_success_regexp():
-        return "^Committed revision (?P<svn_revision>\d+)\.$"
+        return r"^Committed revision (?P<svn_revision>\d+)\.$"
 
     def _run_svn(self, args, **kwargs):
         return self.run([self.executable_name] + args, **kwargs)
@@ -247,10 +255,10 @@ class SVN(SCM, SVNRepository):
         log_command = ['log', '--quiet', '--limit=%s' % limit, path]
         try:
             log_output = self._run_svn(log_command, cwd=self.checkout_root)
-        except ScriptError as e:
+        except ScriptError:
             return []
         for line in log_output.splitlines():
-            match = re.search('^r(?P<revision>\d+) ', line)
+            match = re.search(r'^r(?P<revision>\d+) ', line)
             if not match:
                 continue
             revisions.append(int(match.group('revision')))
@@ -273,18 +281,21 @@ class SVN(SCM, SVNRepository):
         return "svn"
 
     def svn_revision(self, path):
-        return self.value_from_svn_info(path, 'Revision')
+        return self.value_from_svn_info(path, 'Last Changed Rev')
 
-    def native_revision(self, path):
-        return self.svn_revision(path)
-
-    def native_branch(self, path):
+    def svn_branch(self, path):
         relative_url = self.value_from_svn_info(path, 'Relative URL')[2:]
         if relative_url.startswith('trunk'):
             return 'trunk'
         elif relative_url.startswith('branch'):
             return relative_url.split('/')[1]
         raise Exception('{} is not a branch'.format(relative_url.split('/')[0]))
+
+    def native_revision(self, path):
+        return self.svn_revision(path)
+
+    def native_branch(self, path):
+        return self.svn_branch(path)
 
     def timestamp_of_revision(self, path, revision):
         # We use --xml to get timestamps like 2013-02-08T08:18:04.964409Z
@@ -321,31 +332,23 @@ class SVN(SCM, SVNRepository):
 
     def diff_for_revision(self, revision):
         # FIXME: This should probably use cwd=self.checkout_root
-        return self._run_svn(['diff', '-c', revision])
-
-    def _bogus_dir_name(self):
-        rnd = ''.join(random.sample(string.ascii_letters, 5))
-        if sys.platform.startswith("win"):
-            parent_dir = tempfile.gettempdir()
-        else:
-            parent_dir = sys.path[0]  # tempdir is not secure.
-        return os.path.join(parent_dir, "temp_svn_config_" + rnd)
+        return self._run_svn(['diff', '-c', revision], decode_output=False)
 
     def _setup_bogus_dir(self, log):
-        self._bogus_dir = self._bogus_dir_name()
-        if not os.path.exists(self._bogus_dir):
-            os.mkdir(self._bogus_dir)
-            self._delete_bogus_dir = True
-        else:
-            self._delete_bogus_dir = False
+        if self._bogus_dir:
+            self._teardown_bogus_dir(log)
+
+        self._bogus_dir = tempfile.mkdtemp()
         if log:
             log.debug('  Html: temp config dir: "%s".', self._bogus_dir)
 
     def _teardown_bogus_dir(self, log):
-        if self._delete_bogus_dir:
-            shutil.rmtree(self._bogus_dir, True)
-            if log:
-                log.debug('  Html: removed temp config dir: "%s".', self._bogus_dir)
+        if not self._bogus_dir:
+            return
+
+        shutil.rmtree(self._bogus_dir, True)
+        if log:
+            log.debug('  Html: removed temp config dir: "%s".', self._bogus_dir)
         self._bogus_dir = None
 
     def diff_for_file(self, path, log=None):
@@ -368,7 +371,7 @@ class SVN(SCM, SVNRepository):
     def apply_reverse_diff(self, revision):
         # '-c -revision' applies the inverse diff of 'revision'
         svn_merge_args = ['merge', '--non-interactive', '-c', '-%s' % revision, self._repository_url()]
-        _log.warning("svn merge has been known to take more than 10 minutes to complete.  It is recommended you use git for rollouts.")
+        _log.warning("svn merge has been known to take more than 10 minutes to complete. It is recommended you use git for reverts.")
         _log.debug("Running 'svn %s'" % " ".join(svn_merge_args))
         # FIXME: Should this use cwd=self.checkout_root?
         self._run_svn(svn_merge_args)
@@ -411,4 +414,4 @@ class SVN(SCM, SVNRepository):
 
     def propget(self, pname, path):
         dir, base = os.path.split(path)
-        return self._run_svn(['pget', pname, base], cwd=dir).encode('utf-8').rstrip("\n")
+        return string_utils.encode(self._run_svn(['pget', pname, base], cwd=dir).rstrip("\n"))

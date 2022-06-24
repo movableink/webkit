@@ -29,7 +29,7 @@
 #include "Logging.h"
 #include <WebCore/SQLiteFileSystem.h>
 #include <WebCore/SQLiteStatement.h>
-#include <WebCore/TextEncoding.h>
+#include <pal/text/TextEncoding.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
@@ -82,19 +82,6 @@ void LocalStorageDatabaseTracker::deleteDatabaseWithOrigin(const SecurityOriginD
     // FIXME: Tell clients that the origin was removed.
 }
 
-void LocalStorageDatabaseTracker::deleteAllDatabases()
-{
-    auto localStorageDirectory = this->localStorageDirectory();
-    auto paths = FileSystem::listDirectory(localStorageDirectory, "*.localstorage");
-    for (const auto& path : paths) {
-        SQLiteFileSystem::deleteDatabaseFile(path);
-
-        // FIXME: Call out to the client.
-    }
-
-    SQLiteFileSystem::deleteEmptyDatabaseDirectory(localStorageDirectory);
-}
-
 Vector<SecurityOriginData> LocalStorageDatabaseTracker::databasesModifiedSince(WallTime time)
 {
     Vector<SecurityOriginData> databaseOriginsModified;
@@ -117,10 +104,8 @@ Vector<SecurityOriginData> LocalStorageDatabaseTracker::databasesModifiedSince(W
 Vector<SecurityOriginData> LocalStorageDatabaseTracker::origins() const
 {
     Vector<SecurityOriginData> databaseOrigins;
-    auto paths = FileSystem::listDirectory(localStorageDirectory(), "*.localstorage");
-    
-    for (const auto& path : paths) {
-        auto filename = FileSystem::pathGetFileName(path);
+    for (auto& path : FileSystem::listDirectory(localStorageDirectory())) {
+        auto filename = FileSystem::pathFileName(path);
         auto originIdentifier = filename.substring(0, filename.length() - strlen(".localstorage"));
         auto origin = SecurityOriginData::fromDatabaseIdentifier(originIdentifier);
         if (origin)
@@ -134,21 +119,14 @@ Vector<SecurityOriginData> LocalStorageDatabaseTracker::origins() const
 
 Vector<LocalStorageDatabaseTracker::OriginDetails> LocalStorageDatabaseTracker::originDetailsCrossThreadCopy()
 {
-    Vector<OriginDetails> result;
-    auto databaseOrigins = origins();
-    result.reserveInitialCapacity(databaseOrigins.size());
-
-    for (const auto& origin : databaseOrigins) {
-        String path = databasePath(origin);
-
-        OriginDetails details;
-        details.originIdentifier = crossThreadCopy(origin.databaseIdentifier());
-        details.creationTime = SQLiteFileSystem::databaseCreationTime(path);
-        details.modificationTime = SQLiteFileSystem::databaseModificationTime(path);
-        result.uncheckedAppend(WTFMove(details));
-    }
-
-    return result;
+    return origins().map([this](auto& origin) {
+        auto path = databasePath(origin);
+        return OriginDetails {
+            crossThreadCopy(origin.databaseIdentifier()),
+            SQLiteFileSystem::databaseCreationTime(path),
+            SQLiteFileSystem::databaseModificationTime(path)
+        };
+    });
 }
 
 String LocalStorageDatabaseTracker::databasePath(const String& filename) const

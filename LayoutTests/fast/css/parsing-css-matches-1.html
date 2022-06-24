@@ -32,12 +32,6 @@ var validSelectors = [
     ":last-child",
     ":visited",
 
-    // Pseudo elements.
-    "::first-letter",
-    "::first-line",
-    "::before",
-    "::after",
-
     // Compound selectors.
     "foobar#id.class",
     ".class:not(.notclass)",
@@ -53,7 +47,7 @@ var validSelectors = [
     // Functional pseudo classes.
     ":-webkit-any(.selector, #tama, #hanayo, #midoriko)",
     ":not(:link)",
-    ":nth-child(even of a, b, c)",
+    ":nth-child(2n of a, b, c)",
 ];
 
 debug("1 valid selectors");

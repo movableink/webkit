@@ -26,7 +26,7 @@ function clearLastPingResultAndRunTest(callback)
     }
 
     var xhr = new XMLHttpRequest;
-    xhr.open("GET", "../../resources/delete-ping.php", true /* async */);
+    xhr.open("GET", "../resources/delete-ping.py", true /* async */);
     xhr.send(null);
     xhr.onload = callback;
     xhr.onerror = done;
@@ -36,7 +36,7 @@ function clickElement(element)
 {
     var x = element.offsetLeft + 2;
     var y = element.offsetTop + 2;
-    var supportsTouchEvents = "TouchEvent" in window;
+    var supportsTouchEvents = "ontouchstart" in window;
     if (supportsTouchEvents && window.testRunner && testRunner.runUIScript)
         testRunner.runUIScript("(function() { uiController.singleTapAtPoint(" + x + ", " + y + ", function() { /* Do nothing */ }); })();", function () { /* Do nothing */ });
     else if (window.eventSender) {

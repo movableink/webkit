@@ -383,19 +383,18 @@ TEST_P(ParallelShaderCompileTestES31, LinkAndDispatchManyPrograms)
     // Suspectable to the flakyness of http://anglebug.com/3349.
     ANGLE_SKIP_TEST_IF(IsWindows() && IsD3D11());
 
+    // TODO(http://anglebug.com/5656): Fails on Linux+Intel+OpenGL
+    ANGLE_SKIP_TEST_IF(IsLinux() && IsIntel() && IsOpenGL());
+
     ANGLE_SKIP_TEST_IF(!ensureParallelShaderCompileExtensionAvailable());
 
     TaskRunner<ImageLoadStore> runner;
     runner.run(this);
 }
 
-ANGLE_INSTANTIATE_TEST(ParallelShaderCompileTest,
-                       ES2_D3D9(),
-                       ES2_D3D11(),
-                       ES2_OPENGL(),
-                       ES2_OPENGLES(),
-                       ES2_VULKAN());
+ANGLE_INSTANTIATE_TEST_ES2(ParallelShaderCompileTest);
 
-ANGLE_INSTANTIATE_TEST(ParallelShaderCompileTestES31, ES31_OPENGL(), ES31_OPENGLES(), ES31_D3D11());
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(ParallelShaderCompileTestES31);
+ANGLE_INSTANTIATE_TEST_ES31(ParallelShaderCompileTestES31);
 
 }  // namespace

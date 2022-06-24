@@ -38,16 +38,12 @@
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/GeometryUtilities.h>
 #import <WebCore/TextIndicatorWindow.h>
-#import <pal/spi/mac/DataDetectorsSPI.h>
 #import <pal/spi/mac/LookupSPI.h>
 #import <pal/spi/mac/NSMenuSPI.h>
 #import <pal/spi/mac/NSPopoverSPI.h>
-#import <pal/spi/mac/QuickLookMacSPI.h>
-#import <wtf/SoftLinking.h>
 #import <wtf/URL.h>
-
-SOFT_LINK_FRAMEWORK_IN_UMBRELLA(Quartz, QuickLookUI)
-SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
+#import <pal/mac/DataDetectorsSoftLink.h>
+#import <pal/mac/QuickLookUISoftLink.h>
 
 @interface WKImmediateActionController () <QLPreviewMenuItemDelegate>
 @end
@@ -60,16 +56,16 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
 
 @implementation WKImmediateActionController
 
-- (instancetype)initWithPage:(WebKit::WebPageProxy&)page view:(NSView *)view viewImpl:(WebKit::WebViewImpl&)viewImpl recognizer:(NSImmediateActionGestureRecognizer *)immediateActionRecognizer
+- (instancetype)initWithPage:(NakedRef<WebKit::WebPageProxy>)page view:(NSView *)view viewImpl:(NakedRef<WebKit::WebViewImpl>)viewImpl recognizer:(NSImmediateActionGestureRecognizer *)immediateActionRecognizer
 {
     self = [super init];
 
     if (!self)
         return nil;
 
-    _page = &page;
+    _page = page.ptr();
     _view = view;
-    _viewImpl = &viewImpl;
+    _viewImpl = viewImpl.ptr();
     _type = kWKImmediateActionNone;
     _immediateActionRecognizer = immediateActionRecognizer;
     _hasActiveImmediateAction = NO;
@@ -86,7 +82,7 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
     _contentPreventsDefault = NO;
     
     id animationController = [_immediateActionRecognizer animationController];
-    if ([animationController isKindOfClass:NSClassFromString(@"QLPreviewMenuItem")]) {
+    if (PAL::isQuickLookUIFrameworkAvailable() && [animationController isKindOfClass:PAL::getQLPreviewMenuItemClass()]) {
         QLPreviewMenuItem *menuItem = (QLPreviewMenuItem *)animationController;
         menuItem.delegate = nil;
     }
@@ -118,8 +114,8 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
 
     if (_currentActionContext && _hasActivatedActionContext) {
         _hasActivatedActionContext = NO;
-        if (DataDetectorsLibrary())
-            [getDDActionsManagerClass() didUseActions];
+        if (PAL::isDataDetectorsFrameworkAvailable())
+            [PAL::getDDActionsManagerClass() didUseActions];
     }
 
     _state = WebKit::ImmediateActionState::None;
@@ -206,8 +202,8 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
 
     if (_currentActionContext) {
         _hasActivatedActionContext = YES;
-        if (DataDetectorsLibrary()) {
-            if (![getDDActionsManagerClass() shouldUseActionsWithContext:_currentActionContext.get()])
+        if (PAL::isDataDetectorsFrameworkAvailable()) {
+            if (![PAL::getDDActionsManagerClass() shouldUseActionsWithContext:_currentActionContext.get()])
                 [self _cancelImmediateAction];
         }
     }
@@ -267,7 +263,7 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
 - (id <NSImmediateActionAnimationController>)_defaultAnimationController
 {
     if (_contentPreventsDefault)
-        return [[[WKAnimationController alloc] init] autorelease];
+        return adoptNS([[WKAnimationController alloc] init]).autorelease();
 
     RefPtr<API::HitTestResult> hitTestResult = [self _webHitTestResult];
 
@@ -276,6 +272,11 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
 
     String absoluteLinkURL = hitTestResult->absoluteLinkURL();
     if (!absoluteLinkURL.isEmpty()) {
+        if (WTF::protocolIs(absoluteLinkURL, "file")) {
+            _type = kWKImmediateActionNone;
+            return nil;
+        }
+
         if (WTF::protocolIs(absoluteLinkURL, "mailto")) {
             _type = kWKImmediateActionMailtoLink;
             return [self _animationControllerForDataDetectedLink];
@@ -400,7 +401,7 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
 
 - (id<NSImmediateActionAnimationController>)_animationControllerForDataDetectedText
 {
-    if (!DataDetectorsLibrary())
+    if (!PAL::isDataDetectorsFrameworkAvailable())
         return nil;
 
     DDActionContext *actionContext = _hitTestResultData.detectedDataActionContext.get();
@@ -409,10 +410,10 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
 
     actionContext.altMode = YES;
     actionContext.immediate = YES;
-    if (![[getDDActionsManagerClass() sharedManager] hasActionsForResult:actionContext.mainResult actionContext:actionContext])
+    if (![[PAL::getDDActionsManagerClass() sharedManager] hasActionsForResult:actionContext.mainResult actionContext:actionContext])
         return nil;
 
-    RefPtr<WebKit::WebPageProxy> page = _page;
+    RefPtr<WebKit::WebPageProxy> page = _page.get();
     WebCore::PageOverlay::PageOverlayID overlayID = _hitTestResultData.detectedDataOriginatingPageOverlay;
     _currentActionContext = [actionContext contextForView:_view altMode:YES interactionStartedHandler:^() {
         page->send(Messages::WebPage::DataDetectorsDidPresentUI(overlayID));
@@ -427,7 +428,7 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
 
     [_currentActionContext setHighlightFrame:[_view.window convertRectToScreen:[_view convertRect:_hitTestResultData.detectedDataBoundingBox toView:nil]]];
 
-    NSArray *menuItems = [[getDDActionsManagerClass() sharedManager] menuItemsForResult:[_currentActionContext mainResult] actionContext:_currentActionContext.get()];
+    NSArray *menuItems = [[PAL::getDDActionsManagerClass() sharedManager] menuItemsForResult:[_currentActionContext mainResult] actionContext:_currentActionContext.get()];
 
     if (menuItems.count != 1)
         return nil;
@@ -437,10 +438,10 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
 
 - (id<NSImmediateActionAnimationController>)_animationControllerForDataDetectedLink
 {
-    if (!DataDetectorsLibrary())
+    if (!PAL::isDataDetectorsFrameworkAvailable())
         return nil;
 
-    RetainPtr<DDActionContext> actionContext = adoptNS([allocDDActionContextInstance() init]);
+    auto actionContext = adoptNS([PAL::allocDDActionContextInstance() init]);
 
     if (!actionContext)
         return nil;
@@ -448,7 +449,7 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
     [actionContext setAltMode:YES];
     [actionContext setImmediate:YES];
 
-    RefPtr<WebKit::WebPageProxy> page = _page;
+    RefPtr<WebKit::WebPageProxy> page = _page.get();
     _currentActionContext = [actionContext contextForView:_view altMode:YES interactionStartedHandler:^() {
     } interactionChangedHandler:^() {
         if (_hitTestResultData.linkTextIndicator)
@@ -463,7 +464,7 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
     if (!hitTestResult)
         return nil;
 
-    NSArray *menuItems = [[getDDActionsManagerClass() sharedManager] menuItemsForTargetURL:hitTestResult->absoluteLinkURL() actionContext:_currentActionContext.get()];
+    NSArray *menuItems = [[PAL::getDDActionsManagerClass() sharedManager] menuItemsForTargetURL:hitTestResult->absoluteLinkURL() actionContext:_currentActionContext.get()];
 
     if (menuItems.count != 1)
         return nil;
@@ -485,9 +486,9 @@ SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
     _viewImpl->prepareForDictionaryLookup();
 
     return WebCore::DictionaryLookup::animationControllerForPopup(dictionaryPopupInfo, _view, [self](WebCore::TextIndicator& textIndicator) {
-        _viewImpl->setTextIndicator(textIndicator, WebCore::TextIndicatorWindowLifetime::Permanent);
+        _viewImpl->setTextIndicator(textIndicator, WebCore::TextIndicatorLifetime::Permanent);
     }, nullptr, [self]() {
-        _viewImpl->clearTextIndicatorWithAnimation(WebCore::TextIndicatorWindowDismissalAnimation::None);
+        _viewImpl->clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation::None);
     });
 }
 

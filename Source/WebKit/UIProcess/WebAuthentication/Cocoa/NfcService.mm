@@ -41,6 +41,7 @@ namespace WebKit {
 
 NfcService::NfcService(Observer& observer)
     : FidoService(observer)
+    , m_restartTimer(RunLoop::main(), this, &NfcService::platformStartDiscovery)
 {
 }
 
@@ -48,17 +49,34 @@ NfcService::~NfcService()
 {
 }
 
-void NfcService::didConnectTag()
+bool NfcService::isAvailable()
 {
 #if HAVE(NEAR_FIELD)
-    getInfo(WTFMove(m_driver));
+    return [[getNFHardwareManagerClass() sharedHardwareManager] areFeaturesSupported:NFFeatureReaderMode outError:nil];
+#else
+    return false;
 #endif
 }
 
-#if HAVE(NEAR_FIELD)
-void NfcService::setDriver(std::unique_ptr<CtapNfcDriver>&& driver)
+void NfcService::didConnectTag()
 {
-    m_driver = WTFMove(driver);
+#if HAVE(NEAR_FIELD)
+    auto connection = m_connection;
+    ASSERT(connection);
+    getInfo(WTF::makeUnique<CtapNfcDriver>(connection.releaseNonNull()));
+#endif
+}
+
+void NfcService::didDetectMultipleTags() const
+{
+    if (auto* observer = this->observer())
+        observer->serviceStatusUpdated(WebAuthenticationStatus::MultipleNFCTagsPresent);
+}
+
+#if HAVE(NEAR_FIELD)
+void NfcService::setConnection(Ref<NfcConnection>&& connection)
+{
+    m_connection = WTFMove(connection);
 }
 #endif
 
@@ -67,14 +85,23 @@ void NfcService::startDiscoveryInternal()
     platformStartDiscovery();
 }
 
+void NfcService::restartDiscoveryInternal()
+{
+#if HAVE(NEAR_FIELD)
+    if (m_connection)
+        m_connection->stop();
+#endif
+    m_restartTimer.startOneShot(1_s); // Magic number to give users enough time for reactions.
+}
+
 void NfcService::platformStartDiscovery()
 {
 #if HAVE(NEAR_FIELD)
-    if (![[getNFHardwareManagerClass() sharedHardwareManager] areFeaturesSupported:NFFeatureReaderMode outError:nil])
+    if (!isAvailable())
         return;
 
     // Will be executed in a different thread.
-    auto callback = makeBlockPtr([weakThis = makeWeakPtr(*this), this] (NFReaderSession *session, NSError *error) mutable {
+    auto callback = makeBlockPtr([weakThis = WeakPtr { *this }, this] (NFReaderSession *session, NSError *error) mutable {
         ASSERT(!RunLoop::isMain());
         if (error) {
             LOG_ERROR("Couldn't start a NFC reader session: %@", error);
@@ -87,8 +114,8 @@ void NfcService::platformStartDiscovery()
                 return;
             }
 
-            // CtapNfcDriver and NfcConnection will take care of polling tags and connecting to them.
-            m_driver = WTF::makeUnique<CtapNfcDriver>(makeUniqueRef<NfcConnection>(WTFMove(session), *this));
+            // NfcConnection will take care of polling tags and connecting to them.
+            m_connection = NfcConnection::create(WTFMove(session), *this);
         });
     });
     [[getNFHardwareManagerClass() sharedHardwareManager] startReaderSession:callback.get()];

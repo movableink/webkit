@@ -36,9 +36,10 @@ import subprocess
 import sys
 import time
 
+from webkitcorepy import StringIO, string_utils, unicode
+
 from webkitpy.common.system.abstractexecutive import AbstractExecutive
 from webkitpy.common.system.outputtee import Tee
-from webkitpy.common import unicode_compatibility
 
 
 _log = logging.getLogger(__name__)
@@ -71,7 +72,7 @@ class ScriptError(Exception):
                 return u"%s\n\nLast %s characters of output:\n%s" % \
                     (self, output_limit, self.output[-output_limit:])
             return u"%s\n\n%s" % (self, self.output)
-        return unicode_compatibility.unicode(self)
+        return unicode(self)
 
     def command_name(self):
         command_path = self.script_args
@@ -80,22 +81,28 @@ class ScriptError(Exception):
         return os.path.basename(command_path)
 
 
+class WrappedPopen(object):
+    def __init__(self, popen):
+        self._popen = popen
+        for attribute in dir(self._popen):
+            if attribute.startswith('__') or attribute == 'returncode':
+                continue
+            setattr(self, attribute, getattr(self._popen, attribute))
+
+    @property
+    def returncode(self):
+        return self._popen.returncode
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.wait()
+
+
 class Executive(AbstractExecutive):
     PIPE = subprocess.PIPE
     STDOUT = subprocess.STDOUT
-
-    class WrappedPopen(object):
-        def __init__(self, popen):
-            for attribute in dir(popen):
-                if attribute.startswith('__'):
-                    continue
-                setattr(self, attribute, getattr(popen, attribute))
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            self.wait()
 
     def __init__(self):
         self.pid_to_system_pid = {}
@@ -127,7 +134,7 @@ class Executive(AbstractExecutive):
             # FIXME: This could be improved not to flatten output to stdout.
             while child_process.poll() is None:
                 output_line = child_process.stdout.readline()
-                teed_output.write(unicode_compatibility.decode_for(output_line, str))
+                teed_output.write(string_utils.decode(output_line, target_type=str))
             return child_process.poll()
 
     # FIXME: Remove this deprecated method and move callers to run_command.
@@ -137,7 +144,7 @@ class Executive(AbstractExecutive):
     # but still have the output to stuff into a log file.
     def run_and_throw_if_fail(self, args, quiet=False, decode_output=True, **kwargs):
         # Cache the child's output locally so it can be used for error reports.
-        child_out_file = unicode_compatibility.StringIO()
+        child_out_file = StringIO()
         tee_stdout = sys.stdout
         try:
             if quiet:
@@ -153,9 +160,9 @@ class Executive(AbstractExecutive):
         child_out_file.close()
 
         if decode_output:
-            child_output = unicode_compatibility.decode_if_necessary(child_output, self._child_process_encoding())
+            child_output = string_utils.decode(child_output, encoding=self._child_process_encoding())
         else:
-            child_output = unicode_compatibility.encode_if_necessary(child_output, self._child_process_encoding())
+            child_output = string_utils.encode(child_output, encoding=self._child_process_encoding())
 
         if exit_code:
             raise ScriptError(script_args=args,
@@ -296,7 +303,7 @@ class Executive(AbstractExecutive):
                     if process_name_filter(process_name):
                         running_pids.append(int(pid))
                         self.pid_to_system_pid[int(pid)] = int(winpid)
-                except ValueError as e:
+                except ValueError:
                     pass
         else:
             with self.popen(['ps', '-eo', 'pid,comm'], stdout=self.PIPE, stderr=self.PIPE) as ps_process:
@@ -305,10 +312,10 @@ class Executive(AbstractExecutive):
                     try:
                         # In some cases the line can contain one or more
                         # leading white-spaces, so strip it before split.
-                        pid, process_name = line.strip().split(' ', 1)
-                        if process_name_filter(process_name):
+                        pid, process_name = line.strip().split(b' ', 1)
+                        if process_name_filter(string_utils.decode(process_name, target_type=str)):
                             running_pids.append(int(pid))
-                    except ValueError as e:
+                    except ValueError:
                         pass
 
         return sorted(running_pids)
@@ -321,24 +328,30 @@ class Executive(AbstractExecutive):
             process_name = "%s.exe" % name
         return process_name
 
+    def _windows_kill_command(self):
+        if self._is_native_win:
+            return os.path.join("C:", os.sep, "WINDOWS", "system32", "taskkill.exe")
+        else:
+            return 'taskkill.exe'
+
     def interrupt(self, pid):
-        interrupt_signal = signal.CTRL_C_EVENT if self._is_native_win else signal.SIGINT
-        try:
-            os.kill(pid, interrupt_signal)
-        except OSError:
-            # Silently ignore when the pid doesn't exist.
-            # It's impossible for callers to avoid race conditions with process shutdown.
-            pass
+        if self._is_native_win:
+            command = [self._windows_kill_command(), "/f", "/t", "/pid", str(pid)]
+            self.run_command(command, ignore_errors=True)
+        else:
+            try:
+                os.kill(pid, signal.SIGINT)
+            except OSError:
+                # Silently ignore when the pid doesn't exist.
+                # It's impossible for callers to avoid race conditions with process shutdown.
+                pass
 
     def kill_all(self, process_name):
         """Attempts to kill processes matching process_name.
         Will fail silently if no process are found."""
         if self._is_cygwin or self._is_native_win:
             image_name = self._windows_image_name(process_name)
-            killCommmand = 'taskkill.exe'
-            if self._is_native_win:
-                killCommand = os.path.join('C:', os.sep, 'WINDOWS', 'system32', 'taskkill.exe')
-            command = [killCommmand, "/f", "/im", image_name]
+            command = [self._windows_kill_command(), "/f", "/im", image_name]
             # taskkill will exit 128 if the process is not found.  We should log.
             self.run_command(command, ignore_errors=True)
             return
@@ -347,7 +360,10 @@ class Executive(AbstractExecutive):
         # uses KILL.  Windows is always using /f (which seems like -KILL).
         # We should pick one mode, or add support for switching between them.
         # Note: Mac OS X 10.6 requires -SIGNALNAME before -u USER
-        command = ["killall", "-TERM", "-u", os.getenv("USER"), process_name]
+        try:
+            command = ["killall", "-TERM", "-u", os.environ["USER"], process_name]
+        except KeyError:
+            command = ["killall", "-TERM", process_name]
         # killall returns 1 if no process can be found and 2 on command error.
         # FIXME: We should pass a custom error_handler to allow only exit_code 1.
         # We should log in exit_code == 1
@@ -368,7 +384,7 @@ class Executive(AbstractExecutive):
         # See https://bugs.webkit.org/show_bug.cgi?id=37528
         # for an example of a regresion caused by passing a unicode string directly.
         # FIXME: We may need to encode differently on different platforms.
-        input = unicode_compatibility.encode_if_necessary(input, self._child_process_encoding())
+        input = string_utils.encode(input, encoding=self._child_process_encoding())
         return (self.PIPE, input)
 
     # FIXME: run_and_throw_if_fail should be merged into this method.
@@ -377,6 +393,7 @@ class Executive(AbstractExecutive):
                     cwd=None,
                     env=None,
                     input=None,
+                    stdout=subprocess.PIPE,
                     error_handler=None,
                     ignore_errors=False,
                     return_exit_code=False,
@@ -391,7 +408,7 @@ class Executive(AbstractExecutive):
 
         process = self.popen(args,
                              stdin=stdin,
-                             stdout=self.PIPE,
+                             stdout=stdout,
                              stderr=stderr,
                              cwd=cwd,
                              env=env,
@@ -400,11 +417,11 @@ class Executive(AbstractExecutive):
             if not string_to_communicate:
                 output = process.communicate()[0]
             else:
-                output = process.communicate(unicode_compatibility.encode_if_necessary(string_to_communicate, 'utf-8'))[0]
+                output = process.communicate(string_utils.encode(string_to_communicate, encoding='utf-8'))[0]
 
             # run_command automatically decodes to unicode() and converts CRLF to LF unless explicitly told not to.
             if decode_output:
-                output = unicode_compatibility.decode_if_necessary(output, self._child_process_encoding()).replace('\r\n', '\n')
+                output = string_utils.decode(output, encoding=self._child_process_encoding()).replace('\r\n', '\n')
 
             # wait() is not threadsafe and can throw OSError due to:
             # http://bugs.python.org/issue1731717
@@ -457,11 +474,11 @@ class Executive(AbstractExecutive):
     def _encode_argument_if_needed(self, argument):
         if not self._should_encode_child_process_arguments():
             return argument
-        return unicode_compatibility.encode_if_necessary(argument, self._child_process_encoding())
+        return string_utils.encode(argument, encoding=self._child_process_encoding())
 
     def _stringify_args(self, args):
         # Popen will throw an exception if args are non-strings (like int())
-        string_args = map(unicode_compatibility.unicode, args)
+        string_args = map(unicode, args)
         # The Windows implementation of Popen cannot handle unicode strings. :(
         return map(self._encode_argument_if_needed, string_args)
 
@@ -475,7 +492,12 @@ class Executive(AbstractExecutive):
             # Must include proper interpreter
             if self._needs_interpreter_check(args[0]):
                 try:
-                    with open(args[0], 'r') as f:
+                    # On Python 2 'encoding' is an invalid keyword argument for this function
+                    open_kwargs = {}
+                    if sys.version_info.major >= 3:
+                        open_kwargs['encoding'] = 'cp437'
+
+                    with open(args[0], 'r', **open_kwargs) as f:
                         line = f.readline()
                         if "perl" in line:
                             args.insert(0, "perl")
@@ -495,10 +517,30 @@ class Executive(AbstractExecutive):
         else:
             string_args = self._stringify_args(args)
 
+        # Windows Python 3 throws a TypeError if the environment contains `bytes` instead of `str`
+        env = kwargs.pop('env', None)
+        if self._is_native_win and env is not None:
+            mod_env = {}
+            if sys.version_info.major >= 3:
+                for key, value in env.items():
+                    if not isinstance(key, str):
+                        key = key.decode('utf-8')
+                    if not isinstance(value, str):
+                        value = value.decode('utf-8')
+                    mod_env[key] = value
+            else:
+                for key, value in env.items():
+                    if not isinstance(key, bytes):
+                        key = key.encode('utf-8')
+                    if not isinstance(value, bytes):
+                        value = value.encode('utf-8')
+                    mod_env[key] = value
+            env = mod_env
+
         # Python 3 treats Popen as a context manager, we should allow this in Python 2
-        result = subprocess.Popen(string_args, **kwargs)
+        result = subprocess.Popen(string_args, env=env, **kwargs)
         if not callable(getattr(result, "__enter__", None)) and not callable(getattr(result, "__exit__", None)):
-            return self.WrappedPopen(result)
+            return WrappedPopen(result)
         return result
 
     def run_in_parallel(self, command_lines_and_cwds, processes=None):

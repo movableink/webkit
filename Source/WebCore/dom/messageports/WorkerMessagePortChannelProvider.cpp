@@ -27,14 +27,14 @@
 #include "WorkerMessagePortChannelProvider.h"
 
 #include "MessagePort.h"
-#include "WorkerGlobalScope.h"
+#include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerThread.h"
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
 
 namespace WebCore {
 
-WorkerMessagePortChannelProvider::WorkerMessagePortChannelProvider(WorkerGlobalScope& scope)
+WorkerMessagePortChannelProvider::WorkerMessagePortChannelProvider(WorkerOrWorkletGlobalScope& scope)
     : m_scope(scope)
 {
 }
@@ -74,31 +74,52 @@ void WorkerMessagePortChannelProvider::messagePortDisentangled(const MessagePort
     });
 }
 
-void WorkerMessagePortChannelProvider::messagePortClosed(const MessagePortIdentifier& local)
+void WorkerMessagePortChannelProvider::messagePortClosed(const MessagePortIdentifier&)
 {
-    callOnMainThread([local] {
-        MessagePortChannelProvider::singleton().messagePortClosed(local);
+    ASSERT_NOT_REACHED();
+}
+
+void WorkerMessagePortChannelProvider::postMessageToRemote(MessageWithMessagePorts&& message, const MessagePortIdentifier& remoteTarget)
+{
+    callOnMainThread([message = WTFMove(message), remoteTarget]() mutable {
+        MessagePortChannelProvider::singleton().postMessageToRemote(WTFMove(message), remoteTarget);
     });
 }
 
-void WorkerMessagePortChannelProvider::postMessageToRemote(const MessageWithMessagePorts& message, const MessagePortIdentifier& remoteTarget)
-{
-    callOnMainThreadAndWait([&]() mutable {
-        MessagePortChannelProvider::singleton().postMessageToRemote(message, remoteTarget);
-    });
-}
+class MainThreadCompletionHandler {
+public:
+    explicit MainThreadCompletionHandler(CompletionHandler<void()>&& completionHandler)
+        : m_completionHandler(WTFMove(completionHandler))
+    {
+    }
+    MainThreadCompletionHandler(MainThreadCompletionHandler&&) = default;
+    MainThreadCompletionHandler& operator=(MainThreadCompletionHandler&&) = default;
 
-void WorkerMessagePortChannelProvider::takeAllMessagesForPort(const MessagePortIdentifier& identifier, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>&& callback)
+    ~MainThreadCompletionHandler()
+    {
+        if (m_completionHandler)
+            complete();
+    }
+
+    void complete()
+    {
+        callOnMainThread(WTFMove(m_completionHandler));
+    }
+
+private:
+    CompletionHandler<void()> m_completionHandler;
+};
+
+void WorkerMessagePortChannelProvider::takeAllMessagesForPort(const MessagePortIdentifier& identifier, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, CompletionHandler<void()>&&)>&& callback)
 {
     uint64_t callbackIdentifier = ++m_lastCallbackIdentifier;
     m_takeAllMessagesCallbacks.add(callbackIdentifier, WTFMove(callback));
 
-    callOnMainThread([this, workerThread = makeRef(m_scope.thread()), callbackIdentifier, identifier]() mutable {
+    callOnMainThread([this, workerThread = RefPtr { m_scope.workerOrWorkletThread() }, callbackIdentifier, identifier]() mutable {
         MessagePortChannelProvider::singleton().takeAllMessagesForPort(identifier, [this, workerThread = WTFMove(workerThread), callbackIdentifier](Vector<MessageWithMessagePorts>&& messages, Function<void()>&& completionHandler) {
-            workerThread->runLoop().postTaskForMode([this, callbackIdentifier, messages = WTFMove(messages), completionHandler = WTFMove(completionHandler)](auto& scope) mutable {
-                ASSERT_UNUSED(scope, this == &downcast<WorkerGlobalScope>(scope).messagePortChannelProvider());
+            workerThread->runLoop().postTaskForMode([this, callbackIdentifier, messages = WTFMove(messages), completionHandler = MainThreadCompletionHandler(WTFMove(completionHandler))](auto&) mutable {
                 m_takeAllMessagesCallbacks.take(callbackIdentifier)(WTFMove(messages), [completionHandler = WTFMove(completionHandler)]() mutable {
-                    callOnMainThread(WTFMove(completionHandler));
+                    completionHandler.complete();
                 });
             }, WorkerRunLoop::defaultMode());
         });
@@ -110,10 +131,9 @@ void WorkerMessagePortChannelProvider::checkRemotePortForActivity(const MessageP
     uint64_t callbackIdentifier = ++m_lastCallbackIdentifier;
     m_activityCallbacks.add(callbackIdentifier, WTFMove(callback));
 
-    callOnMainThread([this, workerThread = makeRef(m_scope.thread()), callbackIdentifier, remoteTarget]() mutable {
+    callOnMainThread([this, workerThread = RefPtr { m_scope.workerOrWorkletThread() }, callbackIdentifier, remoteTarget]() mutable {
         MessagePortChannelProvider::singleton().checkRemotePortForActivity(remoteTarget, [this, workerThread = WTFMove(workerThread), callbackIdentifier](auto hasActivity) {
-            workerThread->runLoop().postTaskForMode([this, callbackIdentifier, hasActivity](auto& scope) mutable {
-                ASSERT_UNUSED(scope, this == &downcast<WorkerGlobalScope>(scope).messagePortChannelProvider());
+            workerThread->runLoop().postTaskForMode([this, callbackIdentifier, hasActivity](auto&) mutable {
                 m_activityCallbacks.take(callbackIdentifier)(hasActivity);
             }, WorkerRunLoop::defaultMode());
         });

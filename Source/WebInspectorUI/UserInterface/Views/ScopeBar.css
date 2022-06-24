@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,9 @@
 
 .scope-bar {
     padding: 0 3px;
-    overflow: hidden;
 
     --scope-bar-margin-default: 2px;
-    --scope-bar-padding-default: 4px;
+    --scope-bar-padding-default: 6px;
     --scope-bar-text-color-default: var(--text-color);
     --scope-bar-background-color-default: unset;
     --scope-bar-background-opacity-default: var(--glyph-opacity);
@@ -68,6 +67,10 @@
     opacity: var(--scope-bar-background-opacity);
 }
 
+.scope-bar > li:focus {
+    outline: none;
+}
+
 .scope-bar > li:matches(.selected, :hover) {
     --scope-bar-text-color-default: var(--selected-foreground-color);
     --scope-bar-background-color-default: var(--glyph-color-active);
@@ -89,6 +92,7 @@
 .scope-bar > li.multiple > select {
     position: absolute;
     top: 1px;
+    inset-inline-start: calc(var(--scope-bar-padding) - var(--scope-bar-padding-default) - 2px);
     width: 0;
     height: 0;
     margin: 0;
@@ -96,12 +100,10 @@
     pointer-events: none;
 }
 
-body[dir=ltr] .scope-bar > li.multiple > select {
-    left: calc(var(--scope-bar-padding) - var(--scope-bar-padding-default) - 4px);
-}
-
-body[dir=rtl] .scope-bar > li.multiple > select {
-    right: calc(var(--scope-bar-padding) - var(--scope-bar-padding-default) - 4px);
+.scope-bar > li:focus::after,
+.scope-bar > li.multiple > select:focus {
+    outline: auto -webkit-focus-ring-color;
+    outline-offset: -1px;
 }
 
 .scope-bar > li.multiple:not(.selected) > select {
@@ -115,6 +117,5 @@ body[dir=rtl] .scope-bar > li.multiple > select {
     vertical-align: -2px;
     margin-top: -1px;
     margin-bottom: -1px;
-    -webkit-margin-start: 6px;
-    -webkit-margin-end: 2px;
+    margin-inline: 6px 2px;
 }

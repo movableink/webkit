@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-
 import logging
-import os
 
 
 _log = logging.getLogger(__name__)

@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-class MessagePortChannelProviderImpl : public MessagePortChannelProvider {
+class MessagePortChannelProviderImpl final : public MessagePortChannelProvider {
 public:
     MessagePortChannelProviderImpl();
     ~MessagePortChannelProviderImpl() final;
@@ -40,11 +40,9 @@ private:
     void entangleLocalPortInThisProcessToRemote(const MessagePortIdentifier& local, const MessagePortIdentifier& remote) final;
     void messagePortDisentangled(const MessagePortIdentifier& local) final;
     void messagePortClosed(const MessagePortIdentifier& local) final;
-    void postMessageToRemote(const MessageWithMessagePorts&, const MessagePortIdentifier& remoteTarget) final;
-    void takeAllMessagesForPort(const MessagePortIdentifier&, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>&&) final;
+    void postMessageToRemote(MessageWithMessagePorts&&, const MessagePortIdentifier& remoteTarget) final;
+    void takeAllMessagesForPort(const MessagePortIdentifier&, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, CompletionHandler<void()>&&)>&&) final;
     void checkRemotePortForActivity(const MessagePortIdentifier& remoteTarget, CompletionHandler<void(HasActivity)>&& callback) final;
-
-    void performActionOnMainThread(Function<void()>&&);
 
     MessagePortChannelRegistry m_registry;
 };

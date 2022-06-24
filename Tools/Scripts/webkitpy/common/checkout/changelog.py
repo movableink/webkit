@@ -32,9 +32,10 @@ import logging
 import re
 import textwrap
 
+from webkitcorepy import StringIO, unicode
+
 from webkitpy.common.config.committers import CommitterList
 from webkitpy.common.system.filesystem import FileSystem
-from webkitpy.common.unicode_compatibility import StringIO
 import webkitpy.common.config.urls as config_urls
 
 _log = logging.getLogger(__name__)
@@ -46,10 +47,10 @@ _log = logging.getLogger(__name__)
 def parse_bug_id_from_changelog(message):
     if not message:
         return None
-    match = re.search("^\s*" + config_urls.bug_url_short + "$", message, re.MULTILINE)
+    match = re.search(r"^\s*" + config_urls.bug_url_short + "$", message, re.MULTILINE)
     if match:
         return int(match.group('bug_id'))
-    match = re.search("^\s*" + config_urls.bug_url_long + "$", message, re.MULTILINE)
+    match = re.search(r"^\s*" + config_urls.bug_url_long + "$", message, re.MULTILINE)
     if match:
         return int(match.group('bug_id'))
     # We weren't able to find a bug URL in the format used by prepare-ChangeLog. Fall back to the
@@ -66,7 +67,7 @@ class ChangeLogEntry(object):
     # e.g. (ChangeLogEntry.touched_functions): Added.
     touched_functions_regexp = r'^\s*\((?P<function>[^)]*)\):'
 
-    radar_id_regexp = r'^\s*(<?rdar://problems?/)?(?P<radar_id>-?\d{7,})>?'
+    radar_id_regexp = r'^\s*(<?rdar://(problems?/)?)?(?P<radar_id>-?\d{7,})>?'
 
     # e.g. Reviewed by Darin Adler.
     # (Discard everything after the first period to match more invalid lines.)
@@ -102,14 +103,11 @@ class ChangeLogEntry(object):
     # e.g. == Rolled over to ChangeLog-2011-02-16 ==
     rolled_over_regexp = r'^== Rolled over to ChangeLog-\d{4}-\d{2}-\d{2} ==$'
 
-    # e.g. git-svn-id: http://svn.webkit.org/repository/webkit/trunk@96161 268f45cc-cd09-0410-ab3c-d52691b4dbfc
-    svn_id_regexp = r'git-svn-id: http://svn.webkit.org/repository/webkit/trunk@(?P<svnid>\d+) '
-
     split_names_regexp = r'\s*(?:,(?:\s+and\s+|&)?|(?:^|\s+)and\s+|&&|[/+&])\s*'
 
-    def __init__(self, contents, committer_list=CommitterList(), revision=None):
+    def __init__(self, contents, committer_list=None, revision=None):
         self._contents = contents
-        self._committer_list = committer_list
+        self._committer_list = committer_list or CommitterList()
         self._revision = revision
         self._parse_entry()
 
@@ -151,7 +149,7 @@ class ChangeLogEntry(object):
 
         # Get rid of "reviewers" like "even though this is just a..." in "Reviewed by Sam Weinig, even though this is just a..."
         # and "who wrote the original code" in "Noam Rosenthal, who wrote the original code"
-        reviewer_list = [reviewer for reviewer in reviewer_list if not re.match('^who\s|^([a-z]+(\s+|\.|$)){6,}$', reviewer)]
+        reviewer_list = [reviewer for reviewer in reviewer_list if not re.match(r'^who\s|^([a-z]+(\s+|\.|$)){6,}$', reviewer)]
 
         return reviewer_text, reviewer_list
 
@@ -323,7 +321,7 @@ class ChangeLog(object):
     def parse_latest_entry_from_file(cls, changelog_file):
         try:
             return next(cls.parse_entries_from_file(changelog_file))
-        except StopIteration as e:
+        except StopIteration:
             return None
 
     svn_blame_regexp = re.compile(r'^(\s*(?P<revision>\d+) [^ ]+)\s*(?P<line>.*?\n)')
@@ -400,7 +398,7 @@ class ChangeLog(object):
 
     def update_with_unreviewed_message(self, message):
         first_boilerplate_line_regexp = re.compile(
-                "%sNeed a short description \(OOPS!\)\." % self._changelog_indent)
+                r"%sNeed a short description \(OOPS!\)\." % self._changelog_indent)
         removing_boilerplate = False
         result = StringIO()
         with self._filesystem.open_text_file_for_reading(self.path) as file:
@@ -422,7 +420,7 @@ class ChangeLog(object):
         latest_entry = self.latest_entry()
         latest_entry_contents = latest_entry.contents()
         reviewer_text = latest_entry.reviewer()
-        found_nobody = re.search("NOBODY\s*\(OOPS!\)", latest_entry_contents, re.MULTILINE)
+        found_nobody = re.search(r"NOBODY\s*\(OOPS!\)", latest_entry_contents, re.MULTILINE)
         found_reviewer_or_unreviewed = latest_entry.has_valid_reviewer()
         if not found_nobody and not found_reviewer_or_unreviewed and not reviewer_text:
             bug_url_number_of_items = len(re.findall(config_urls.bug_url_long, latest_entry_contents, re.MULTILINE))

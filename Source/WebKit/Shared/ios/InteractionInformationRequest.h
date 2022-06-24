@@ -30,7 +30,7 @@
 #include "ArgumentCoders.h"
 #include "ShareableBitmap.h"
 #include <WebCore/IntPoint.h>
-#include <WebCore/SelectionRect.h>
+#include <WebCore/SelectionGeometry.h>
 #include <WebCore/TextIndicator.h>
 #include <wtf/text/WTFString.h>
 
@@ -41,8 +41,12 @@ struct InteractionInformationRequest {
 
     bool includeSnapshot { false };
     bool includeLinkIndicator { false };
+    bool includeCaretContext { false };
+    bool includeHasDoubleClickHandler { true };
+    bool includeImageData { false };
 
     bool linkIndicatorShouldHaveLegacyMargins { false };
+    bool disallowUserAgentShadowContent { false };
 
     InteractionInformationRequest() { }
     explicit InteractionInformationRequest(WebCore::IntPoint point)
@@ -50,11 +54,11 @@ struct InteractionInformationRequest {
         this->point = point;
     }
 
-    bool isValidForRequest(const InteractionInformationRequest&, int radius = 0);
-    bool isApproximatelyValidForRequest(const InteractionInformationRequest&, int radius);
+    bool isValidForRequest(const InteractionInformationRequest&, int radius = 0) const;
+    bool isApproximatelyValidForRequest(const InteractionInformationRequest&, int radius) const;
 
     void encode(IPC::Encoder&) const;
-    static bool decode(IPC::Decoder&, InteractionInformationRequest&);
+    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, InteractionInformationRequest&);
 };
 
 }

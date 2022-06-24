@@ -19,13 +19,13 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.view.Surface;
+import androidx.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 
 /**
  * Implements VideoSink by displaying the video stream on an EGL Surface. This class is intended to
@@ -36,6 +36,12 @@ public class EglRenderer implements VideoSink {
   private static final long LOG_INTERVAL_SEC = 4;
 
   public interface FrameListener { void onFrame(Bitmap frame); }
+
+  /** Callback for clients to be notified about errors encountered during rendering. */
+  public static interface ErrorCallback {
+    /** Called if GLES20.GL_OUT_OF_MEMORY is encountered during rendering. */
+    void onGlOutOfMemory();
+  }
 
   private static class FrameListenerAndParams {
     public final FrameListener listener;
@@ -105,12 +111,14 @@ public class EglRenderer implements VideoSink {
 
   protected final String name;
 
-  // |renderThreadHandler| is a handler for communicating with |renderThread|, and is synchronized
-  // on |handlerLock|.
+  // `renderThreadHandler` is a handler for communicating with `renderThread`, and is synchronized
+  // on `handlerLock`.
   private final Object handlerLock = new Object();
   @Nullable private Handler renderThreadHandler;
 
   private final ArrayList<FrameListenerAndParams> frameListeners = new ArrayList<>();
+
+  private volatile ErrorCallback errorCallback;
 
   // Variables for fps reduction.
   private final Object fpsReductionLock = new Object();
@@ -120,25 +128,27 @@ public class EglRenderer implements VideoSink {
   // paused.
   private long minRenderPeriodNs;
 
-  // EGL and GL resources for drawing YUV/OES textures. After initilization, these are only accessed
-  // from the render thread.
+  // EGL and GL resources for drawing YUV/OES textures. After initialization, these are only
+  // accessed from the render thread.
   @Nullable private EglBase eglBase;
-  private final VideoFrameDrawer frameDrawer = new VideoFrameDrawer();
+  private final VideoFrameDrawer frameDrawer;
   @Nullable private RendererCommon.GlDrawer drawer;
   private boolean usePresentationTimeStamp;
   private final Matrix drawMatrix = new Matrix();
 
-  // Pending frame to render. Serves as a queue with size 1. Synchronized on |frameLock|.
+  // Pending frame to render. Serves as a queue with size 1. Synchronized on `frameLock`.
   private final Object frameLock = new Object();
   @Nullable private VideoFrame pendingFrame;
 
-  // These variables are synchronized on |layoutLock|.
+  // These variables are synchronized on `layoutLock`.
   private final Object layoutLock = new Object();
   private float layoutAspectRatio;
   // If true, mirrors the video stream horizontally.
-  private boolean mirror;
+  private boolean mirrorHorizontally;
+  // If true, mirrors the video stream vertically.
+  private boolean mirrorVertically;
 
-  // These variables are synchronized on |statisticsLock|.
+  // These variables are synchronized on `statisticsLock`.
   private final Object statisticsLock = new Object();
   // Total number of video frames received in renderFrame() call.
   private int framesReceived;
@@ -179,13 +189,18 @@ public class EglRenderer implements VideoSink {
    * logging. In order to render something, you must first call init() and createEglSurface.
    */
   public EglRenderer(String name) {
+    this(name, new VideoFrameDrawer());
+  }
+
+  public EglRenderer(String name, VideoFrameDrawer videoFrameDrawer) {
     this.name = name;
+    this.frameDrawer = videoFrameDrawer;
   }
 
   /**
-   * Initialize this class, sharing resources with |sharedContext|. The custom |drawer| will be used
+   * Initialize this class, sharing resources with `sharedContext`. The custom `drawer` will be used
    * for drawing frames on the EGLSurface. This class is responsible for calling release() on
-   * |drawer|. It is allowed to call init() to reinitialize the renderer after a previous
+   * `drawer`. It is allowed to call init() to reinitialize the renderer after a previous
    * init()/release() cycle. If usePresentationTimeStamp is true, eglPresentationTimeANDROID will be
    * set with the frame timestamps, which specifies desired presentation time and might be useful
    * for e.g. syncing audio and video.
@@ -274,6 +289,10 @@ public class EglRenderer implements VideoSink {
       renderThreadHandler.removeCallbacks(logStatisticsRunnable);
       // Release EGL and GL resources on render thread.
       renderThreadHandler.postAtFrontOfQueue(() -> {
+        // Detach current shader program.
+        synchronized (EglBase.lock) {
+          GLES20.glUseProgram(/* program= */ 0);
+        }
         if (drawer != null) {
           drawer.release();
           drawer = null;
@@ -330,9 +349,9 @@ public class EglRenderer implements VideoSink {
       if (renderThread != null) {
         final StackTraceElement[] renderStackTrace = renderThread.getStackTrace();
         if (renderStackTrace.length > 0) {
-          logD("EglRenderer stack trace:");
+          logW("EglRenderer stack trace:");
           for (StackTraceElement traceElem : renderStackTrace) {
-            logD(traceElem.toString());
+            logW(traceElem.toString());
           }
         }
       }
@@ -340,12 +359,22 @@ public class EglRenderer implements VideoSink {
   }
 
   /**
-   * Set if the video stream should be mirrored or not.
+   * Set if the video stream should be mirrored horizontally or not.
    */
   public void setMirror(final boolean mirror) {
-    logD("setMirror: " + mirror);
+    logD("setMirrorHorizontally: " + mirror);
     synchronized (layoutLock) {
-      this.mirror = mirror;
+      this.mirrorHorizontally = mirror;
+    }
+  }
+
+  /**
+   * Set if the video stream should be mirrored vertically or not.
+   */
+  public void setMirrorVertically(final boolean mirrorVertically) {
+    logD("setMirrorVertically: " + mirrorVertically);
+    synchronized (layoutLock) {
+      this.mirrorVertically = mirrorVertically;
     }
   }
 
@@ -466,6 +495,11 @@ public class EglRenderer implements VideoSink {
     ThreadUtils.awaitUninterruptibly(latch);
   }
 
+  /** Can be set in order to be notified about errors encountered during rendering. */
+  public void setErrorCallback(ErrorCallback errorCallback) {
+    this.errorCallback = errorCallback;
+  }
+
   // VideoSink interface.
   @Override
   public void onFrame(VideoFrame frame) {
@@ -558,10 +592,10 @@ public class EglRenderer implements VideoSink {
   }
 
   /**
-   * Renders and releases |pendingFrame|.
+   * Renders and releases `pendingFrame`.
    */
   private void renderFrameOnRenderThread() {
-    // Fetch and render |pendingFrame|.
+    // Fetch and render `pendingFrame`.
     final VideoFrame frame;
     synchronized (frameLock) {
       if (pendingFrame == null) {
@@ -619,34 +653,48 @@ public class EglRenderer implements VideoSink {
 
     drawMatrix.reset();
     drawMatrix.preTranslate(0.5f, 0.5f);
-    if (mirror)
-      drawMatrix.preScale(-1f, 1f);
+    drawMatrix.preScale(mirrorHorizontally ? -1f : 1f, mirrorVertically ? -1f : 1f);
     drawMatrix.preScale(scaleX, scaleY);
     drawMatrix.preTranslate(-0.5f, -0.5f);
 
-    if (shouldRenderFrame) {
-      GLES20.glClearColor(0 /* red */, 0 /* green */, 0 /* blue */, 0 /* alpha */);
-      GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
-      frameDrawer.drawFrame(frame, drawer, drawMatrix, 0 /* viewportX */, 0 /* viewportY */,
-          eglBase.surfaceWidth(), eglBase.surfaceHeight());
+    try {
+      if (shouldRenderFrame) {
+        GLES20.glClearColor(0 /* red */, 0 /* green */, 0 /* blue */, 0 /* alpha */);
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+        frameDrawer.drawFrame(frame, drawer, drawMatrix, 0 /* viewportX */, 0 /* viewportY */,
+            eglBase.surfaceWidth(), eglBase.surfaceHeight());
 
-      final long swapBuffersStartTimeNs = System.nanoTime();
-      if (usePresentationTimeStamp) {
-        eglBase.swapBuffers(frame.getTimestampNs());
-      } else {
-        eglBase.swapBuffers();
+        final long swapBuffersStartTimeNs = System.nanoTime();
+        if (usePresentationTimeStamp) {
+          eglBase.swapBuffers(frame.getTimestampNs());
+        } else {
+          eglBase.swapBuffers();
+        }
+
+        final long currentTimeNs = System.nanoTime();
+        synchronized (statisticsLock) {
+          ++framesRendered;
+          renderTimeNs += (currentTimeNs - startTimeNs);
+          renderSwapBufferTimeNs += (currentTimeNs - swapBuffersStartTimeNs);
+        }
       }
 
-      final long currentTimeNs = System.nanoTime();
-      synchronized (statisticsLock) {
-        ++framesRendered;
-        renderTimeNs += (currentTimeNs - startTimeNs);
-        renderSwapBufferTimeNs += (currentTimeNs - swapBuffersStartTimeNs);
+      notifyCallbacks(frame, shouldRenderFrame);
+    } catch (GlUtil.GlOutOfMemoryException e) {
+      logE("Error while drawing frame", e);
+      final ErrorCallback errorCallback = this.errorCallback;
+      if (errorCallback != null) {
+        errorCallback.onGlOutOfMemory();
       }
+      // Attempt to free up some resources.
+      drawer.release();
+      frameDrawer.release();
+      bitmapTextureFramebuffer.release();
+      // Continue here on purpose and retry again for next frame. In worst case, this is a continous
+      // problem and no more frames will be drawn.
+    } finally {
+      frame.release();
     }
-
-    notifyCallbacks(frame, shouldRenderFrame);
-    frame.release();
   }
 
   private void notifyCallbacks(VideoFrame frame, boolean wasRendered) {
@@ -655,8 +703,7 @@ public class EglRenderer implements VideoSink {
 
     drawMatrix.reset();
     drawMatrix.preTranslate(0.5f, 0.5f);
-    if (mirror)
-      drawMatrix.preScale(-1f, 1f);
+    drawMatrix.preScale(mirrorHorizontally ? -1f : 1f, mirrorVertically ? -1f : 1f);
     drawMatrix.preScale(1f, -1f); // We want the output to be upside down for Bitmap.
     drawMatrix.preTranslate(-0.5f, -0.5f);
 
@@ -710,7 +757,7 @@ public class EglRenderer implements VideoSink {
     final long currentTimeNs = System.nanoTime();
     synchronized (statisticsLock) {
       final long elapsedTimeNs = currentTimeNs - statisticsStartTimeNs;
-      if (elapsedTimeNs <= 0) {
+      if (elapsedTimeNs <= 0 || (minRenderPeriodNs == Long.MAX_VALUE && framesReceived == 0)) {
         return;
       }
       final float renderFps = framesRendered * TimeUnit.SECONDS.toNanos(1) / (float) elapsedTimeNs;
@@ -726,7 +773,15 @@ public class EglRenderer implements VideoSink {
     }
   }
 
+  private void logE(String string, Throwable e) {
+    Logging.e(TAG, name + string, e);
+  }
+
   private void logD(String string) {
     Logging.d(TAG, name + string);
+  }
+
+  private void logW(String string) {
+    Logging.w(TAG, name + string);
   }
 }

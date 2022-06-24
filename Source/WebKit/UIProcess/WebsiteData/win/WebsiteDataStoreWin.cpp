@@ -56,6 +56,11 @@ String WebsiteDataStore::defaultCacheStorageDirectory()
     return FileSystem::pathByAppendingComponent(FileSystem::localUserSpecificStorageDirectory(), "CacheStorage");
 }
 
+String WebsiteDataStore::defaultGeneralStorageDirectory()
+{
+    return FileSystem::pathByAppendingComponent(FileSystem::localUserSpecificStorageDirectory(), "Storage");
+}
+
 String WebsiteDataStore::defaultNetworkCacheDirectory()
 {
     return FileSystem::pathByAppendingComponent(FileSystem::localUserSpecificStorageDirectory(), "NetworkCache");
@@ -91,7 +96,7 @@ String WebsiteDataStore::defaultResourceLoadStatisticsDirectory()
     return FileSystem::pathByAppendingComponent(FileSystem::localUserSpecificStorageDirectory(), "ResourceLoadStatistics");
 }
 
-String WebsiteDataStore::cacheDirectoryFileSystemRepresentation(const String& directoryName)
+String WebsiteDataStore::cacheDirectoryFileSystemRepresentation(const String& directoryName, ShouldCreateDirectory)
 {
     return FileSystem::pathByAppendingComponent(FileSystem::localUserSpecificStorageDirectory(), directoryName);
 }

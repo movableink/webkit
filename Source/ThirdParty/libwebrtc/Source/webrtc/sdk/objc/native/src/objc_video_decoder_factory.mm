@@ -22,11 +22,10 @@
 
 #include "api/video_codecs/sdp_video_format.h"
 #include "api/video_codecs/video_decoder.h"
-#include "modules/include/module_common_types.h"
 #include "modules/video_coding/include/video_codec_interface.h"
 #include "modules/video_coding/include/video_error_codes.h"
 #include "rtc_base/logging.h"
-#include "rtc_base/timeutils.h"
+#include "rtc_base/time_utils.h"
 #include "sdk/objc/native/src/objc_frame_buffer.h"
 
 namespace webrtc {
@@ -37,50 +36,33 @@ class ObjCVideoDecoder : public VideoDecoder {
   ObjCVideoDecoder(id<RTCVideoDecoder> decoder)
       : decoder_(decoder), implementation_name_([decoder implementationName].stdString) {}
 
-  int32_t InitDecode(const VideoCodec *codec_settings, int32_t number_of_cores) {
-    if ([decoder_ respondsToSelector:@selector(startDecodeWithNumberOfCores:)]) {
-      return [decoder_ startDecodeWithNumberOfCores:number_of_cores];
-    } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-      RTCVideoEncoderSettings *settings = [[RTCVideoEncoderSettings alloc] init];
-      return [decoder_ startDecodeWithSettings:settings numberOfCores:number_of_cores];
-#pragma clang diagnostic pop
-    }
+  bool Configure(const Settings& settings) override {
+    return [decoder_ startDecodeWithNumberOfCores:settings.number_of_cores()] == WEBRTC_VIDEO_CODEC_OK;
   }
 
   int32_t Decode(const EncodedImage &input_image,
                  bool missing_frames,
-                 const CodecSpecificInfo *codec_specific_info = NULL,
-                 int64_t render_time_ms = -1) {
+                 int64_t render_time_ms = -1) override {
     RTCEncodedImage *encodedImage =
         [[RTCEncodedImage alloc] initWithNativeEncodedImage:input_image];
 
-    // webrtc::CodecSpecificInfo only handles a hard coded list of codecs
-    id<RTCCodecSpecificInfo> rtcCodecSpecificInfo = nil;
-    if (codec_specific_info) {
-      if (codec_specific_info->codecType == kVideoCodecH264) {
-        RTCCodecSpecificInfoH264 *h264Info = [[RTCCodecSpecificInfoH264 alloc] init];
-        h264Info.packetizationMode =
-            (RTCH264PacketizationMode)codec_specific_info->codecSpecific.H264.packetization_mode;
-        rtcCodecSpecificInfo = h264Info;
-      }
-    }
-
     return [decoder_ decode:encodedImage
               missingFrames:missing_frames
-          codecSpecificInfo:rtcCodecSpecificInfo
+          codecSpecificInfo:nil
                renderTimeMs:render_time_ms];
   }
 
-  int32_t RegisterDecodeCompleteCallback(DecodedImageCallback *callback) {
+  int32_t RegisterDecodeCompleteCallback(DecodedImageCallback *callback) override {
     [decoder_ setCallback:^(RTCVideoFrame *frame) {
       const rtc::scoped_refptr<VideoFrameBuffer> buffer =
           new rtc::RefCountedObject<ObjCFrameBuffer>(frame.buffer);
-      VideoFrame videoFrame(buffer,
-                            (uint32_t)(frame.timeStampNs / rtc::kNumNanosecsPerMicrosec),
-                            0,
-                            (VideoRotation)frame.rotation);
+      VideoFrame videoFrame =
+          VideoFrame::Builder()
+              .set_video_frame_buffer(buffer)
+              .set_timestamp_rtp((uint32_t)(frame.timeStampNs / rtc::kNumNanosecsPerMicrosec))
+              .set_timestamp_ms(0)
+              .set_rotation((VideoRotation)frame.rotation)
+              .build();
       videoFrame.set_timestamp(frame.timeStamp);
 
       callback->Decoded(videoFrame);
@@ -89,9 +71,9 @@ class ObjCVideoDecoder : public VideoDecoder {
     return WEBRTC_VIDEO_CODEC_OK;
   }
 
-  int32_t Release() { return [decoder_ releaseDecoder]; }
+  int32_t Release() override { return [decoder_ releaseDecoder]; }
 
-  const char *ImplementationName() const { return implementation_name_.c_str(); }
+  const char *ImplementationName() const override { return implementation_name_.c_str(); }
 
  private:
   id<RTCVideoDecoder> decoder_;
@@ -115,7 +97,14 @@ std::unique_ptr<VideoDecoder> ObjCVideoDecoderFactory::CreateVideoDecoder(
     if ([codecName isEqualToString:codecInfo.name]) {
       id<RTCVideoDecoder> decoder = [decoder_factory_ createDecoder:codecInfo];
 
-      if ([decoder isKindOfClass:[RTCWrappedNativeVideoDecoder class]]) {
+      // Because of symbol conflict, isKindOfClass doesn't work as expected.
+      // See https://bugs.webkit.org/show_bug.cgi?id=198782.
+      // if ([decoder isKindOfClass:[RTCWrappedNativeVideoDecoder class]]) {
+#if !defined(WEBRTC_WEBKIT_BUILD)
+        if ([codecName isEqual:@"VP8"] || [codecName isEqual:@"VP9"]) {
+#else
+        if (![decoder.implementationName isEqual:@"VideoToolbox"]) {
+#endif
         return [(RTCWrappedNativeVideoDecoder *)decoder releaseWrappedDecoder];
       } else {
         return std::unique_ptr<ObjCVideoDecoder>(new ObjCVideoDecoder(decoder));

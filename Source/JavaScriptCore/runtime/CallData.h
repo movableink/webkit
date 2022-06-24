@@ -33,21 +33,15 @@
 
 namespace JSC {
 
-class CallFrame;
 class ArgList;
 class Exception;
 class FunctionExecutable;
-class JSObject;
 class JSScope;
-using ExecState = CallFrame;
-
-enum class CallType : unsigned {
-    None,
-    Host,
-    JS
-};
 
 struct CallData {
+    enum class Type : uint8_t { None, Native, JS };
+    Type type { Type::None };
+
     union {
         struct {
             TaggedNativeFunction function;
@@ -59,20 +53,20 @@ struct CallData {
     };
 };
 
-enum class ProfilingReason {
+enum class ProfilingReason : uint8_t {
     API,
     Microtask,
     Other
 };
 
-// Convenience wrapper so you don't need to deal with CallData and CallType unless you are going to use them.
-JS_EXPORT_PRIVATE JSValue call(ExecState*, JSValue functionObject, const ArgList&, const char* errorMessage);
-JS_EXPORT_PRIVATE JSValue call(ExecState*, JSValue functionObject, JSValue thisValue, const ArgList&, const char* errorMessage);
+// Convenience wrapper so you don't need to deal with CallData unless you are going to use it.
+JS_EXPORT_PRIVATE JSValue call(JSGlobalObject*, JSValue functionObject, const ArgList&, const char* errorMessage);
+JS_EXPORT_PRIVATE JSValue call(JSGlobalObject*, JSValue functionObject, JSValue thisValue, const ArgList&, const char* errorMessage);
 
-JS_EXPORT_PRIVATE JSValue call(ExecState*, JSValue functionObject, CallType, const CallData&, JSValue thisValue, const ArgList&);
-JS_EXPORT_PRIVATE JSValue call(ExecState*, JSValue functionObject, CallType, const CallData&, JSValue thisValue, const ArgList&, NakedPtr<Exception>& returnedException);
+JS_EXPORT_PRIVATE JSValue call(JSGlobalObject*, JSValue functionObject, const CallData&, JSValue thisValue, const ArgList&);
+JS_EXPORT_PRIVATE JSValue call(JSGlobalObject*, JSValue functionObject, const CallData&, JSValue thisValue, const ArgList&, NakedPtr<Exception>& returnedException);
 
-JS_EXPORT_PRIVATE JSValue profiledCall(ExecState*, ProfilingReason, JSValue functionObject, CallType, const CallData&, JSValue thisValue, const ArgList&);
-JS_EXPORT_PRIVATE JSValue profiledCall(ExecState*, ProfilingReason, JSValue functionObject, CallType, const CallData&, JSValue thisValue, const ArgList&, NakedPtr<Exception>& returnedException);
+JS_EXPORT_PRIVATE JSValue profiledCall(JSGlobalObject*, ProfilingReason, JSValue functionObject, const CallData&, JSValue thisValue, const ArgList&);
+JS_EXPORT_PRIVATE JSValue profiledCall(JSGlobalObject*, ProfilingReason, JSValue functionObject, const CallData&, JSValue thisValue, const ArgList&, NakedPtr<Exception>& returnedException);
 
 } // namespace JSC

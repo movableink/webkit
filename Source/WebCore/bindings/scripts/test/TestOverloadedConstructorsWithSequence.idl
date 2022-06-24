@@ -24,7 +24,8 @@
 */
 
 [
-    Constructor(optional sequence<DOMString> sequenceOfStrings = []),
-    Constructor(DOMString string),
+    Exposed=TestGlobalObject
 ] interface TestOverloadedConstructorsWithSequence {
+    constructor(optional sequence<DOMString> sequenceOfStrings = []);
+    constructor(DOMString string);
 };

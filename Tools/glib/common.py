@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2011 Igalia S.L.
 #
 # This library is free software; you can redistribute it and/or
@@ -128,10 +127,12 @@ def parse_output_lines(fd, parse_line_callback):
                     chunk = ''
                 else:
                     raise e
-            if not chunk:
+
+            if chunk:
+                output += chunk.decode('utf-8')
+            else:
                 read_set.remove(fd)
 
-            output += chunk
             while '\n' in output:
                 pos = output.find('\n')
                 parse_line_callback(output[:pos + 1])

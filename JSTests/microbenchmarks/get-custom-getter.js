@@ -1,12 +1,12 @@
-// RegExp.input is a handy getter
+//@ skip if $model == "Apple Watch Series 3" # added by mark-jsc-stress-test.py
 
-var o = RegExp;
-o.input = "foo";
+var o = $vm.createCustomTestGetterSetter();
+o.customValue2 = "foo";
 
 function test(o) {
     var result = null;
     for (var i = 0; i < 30000; i++)
-        result = o.input;
+        result = o.customValue2;
 
     return result;
 }

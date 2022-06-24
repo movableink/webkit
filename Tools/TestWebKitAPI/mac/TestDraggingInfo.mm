@@ -50,10 +50,10 @@
     return self;
 }
 
-@synthesize draggingSourceOperationMask=_draggingSourceOperationMask;
-@synthesize draggingLocation=_draggingLocation;
-@synthesize draggingFormation=_draggingFormation;
-@synthesize numberOfValidItemsForDrop=_numberOfValidItemsForDrop;
+@synthesize draggingSourceOperationMask = _draggingSourceOperationMask;
+@synthesize draggingLocation = _draggingLocation;
+@synthesize draggingFormation = _draggingFormation;
+@synthesize numberOfValidItemsForDrop = _numberOfValidItemsForDrop;
 
 - (NSArray<NSFilePromiseReceiver *> *)filePromiseReceivers
 {
@@ -113,13 +113,7 @@
         [receiver setDraggingSource:_source.get().get()];
         [_filePromiseReceivers addObject:receiver.get()];
 
-#if HAVE(NSDRAGGINGITEM_INITWITHITEM)
         auto item = adoptNS([[NSDraggingItem alloc] _initWithItem:receiver.get()]);
-#else
-        auto item = adoptNS([[NSDraggingItem alloc] initWithPasteboardWriter:(id <NSPasteboardWriting>)receiver.get()]); // FIXME: <https://webkit.org/b/194060> Pass an object of the right type.
-        [item setItem:receiver.get()];
-#endif
-
         block(item.get(), 0, &stop);
         if (stop)
             break;
@@ -128,10 +122,10 @@
 
 // The following methods are not currently used by WebKit.
 
-@synthesize draggedImageLocation=_draggedImageLocation;
-@synthesize draggingSequenceNumber=_draggingSequenceNumber;
-@synthesize animatesToDestination=_animatesToDestination;
-@synthesize springLoadingHighlight=_springLoadingHighlight;
+@synthesize draggedImageLocation = _draggedImageLocation;
+@synthesize draggingSequenceNumber = _draggingSequenceNumber;
+@synthesize animatesToDestination = _animatesToDestination;
+@synthesize springLoadingHighlight = _springLoadingHighlight;
 
 - (NSWindow *)draggingDestinationWindow
 {

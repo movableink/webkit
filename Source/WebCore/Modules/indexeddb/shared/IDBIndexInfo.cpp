@@ -26,8 +26,7 @@
 #include "config.h"
 #include "IDBIndexInfo.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
@@ -46,9 +45,14 @@ IDBIndexInfo::IDBIndexInfo(uint64_t identifier, uint64_t objectStoreIdentifier, 
 {
 }
 
-IDBIndexInfo IDBIndexInfo::isolatedCopy() const
+IDBIndexInfo IDBIndexInfo::isolatedCopy() const &
 {
-    return { m_identifier, m_objectStoreIdentifier, m_name.isolatedCopy(), WebCore::isolatedCopy(m_keyPath), m_unique, m_multiEntry };
+    return { m_identifier, m_objectStoreIdentifier, m_name.isolatedCopy(), crossThreadCopy(m_keyPath), m_unique, m_multiEntry };
+}
+
+IDBIndexInfo IDBIndexInfo::isolatedCopy() &&
+{
+    return { m_identifier, m_objectStoreIdentifier, WTFMove(m_name).isolatedCopy(), crossThreadCopy(WTFMove(m_keyPath)), m_unique, m_multiEntry };
 }
 
 #if !LOG_DISABLED
@@ -69,5 +73,3 @@ String IDBIndexInfo::condensedLoggingString() const
 #endif
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

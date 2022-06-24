@@ -1,3 +1,0 @@
-
-FAIL transform() with Infinity/NaN is ignored Can't find variable: OffscreenCanvas
-

@@ -1,4 +1,4 @@
-load("./resources/typedarray-test-helper-functions.js");
+load("./resources/typedarray-test-helper-functions.js", "caller relative");
 description(
 "This test checks the behavior of the TypedArray.prototype.fill function"
 );
@@ -41,7 +41,7 @@ for (constructor of typedArrays) {
         return target[name];
     }});
     new constructor(10).fill(p);
-    shouldBeTrue("count === 40");
+    shouldBeTrue("count === 4");
 }
 
 

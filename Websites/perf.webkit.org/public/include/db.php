@@ -116,8 +116,33 @@ class Database
 
     function connect() {
         $databaseConfig = config('database');
-        $this->connection = @pg_connect('host=' . $databaseConfig['host'] . ' port=' . $databaseConfig['port']
-            . ' dbname=' . $databaseConfig['name'] . ' user=' . $databaseConfig['username'] . ' password=' . $databaseConfig['password']);
+
+        $host = $databaseConfig['host'];
+        $port = $databaseConfig['port'];
+        $dbname = $databaseConfig['name'];
+        $user = $databaseConfig['username'];
+        $password = $databaseConfig['password'];
+        $connectionString = "host=$host port=$port dbname=$dbname user=$user password=$password";
+
+        $sslConfigString = '';
+
+        if (array_get($databaseConfig, 'ssl')) {
+            $sslConfig = $databaseConfig['ssl'];
+            $sslConfigString .= ' sslmode=' . array_get($sslConfig, 'mode', 'require');
+            foreach (array('rootcert', 'cert', 'key') as $key) {
+                if (!array_get($sslConfig, $key))
+                    continue;
+
+                $path = $sslConfig[$key];
+                if (strlen($path) && $path[0] !== '/')
+                    $path = CONFIG_DIR . '/' . $path;
+
+                $sslConfigString .= " ssl$key=$path";
+            }
+        }
+
+        $connectionString .= $sslConfigString;
+        $this->connection = @pg_connect($connectionString);
         return $this->connection ? true : false;
     }
 
@@ -206,8 +231,8 @@ class Database
 
         if ($insert_params === NULL)
             $insert_params = $select_params;
-        $insert_placeholders = array();
-        $insert_column_names = $this->prepare_params($insert_params, $insert_placeholders, $values);
+        $insert_placeholder_list = array();
+        $insert_column_name_list = $this->prepare_params($insert_params, $insert_placeholder_list, $values);
 
         assert(!!$returning);
         assert(!$prefix || ctype_alnum_underscore($prefix));
@@ -216,14 +241,19 @@ class Database
         $condition = $this->select_conditions_with_null_columns($prefix, $select_column_names, $select_placeholders, $select_null_columns);
         $query = "SELECT $returning_column_name FROM $table WHERE $condition";
 
-        $insert_column_names = $this->prefixed_column_names($insert_column_names, $prefix);
-        $insert_placeholders = join(', ', $insert_placeholders);
+        $insert_column_names = $this->prefixed_column_names($insert_column_name_list, $prefix);
+        $insert_placeholders = join(', ', $insert_placeholder_list);
 
         // http://stackoverflow.com/questions/1109061/insert-on-duplicate-update-in-postgresql
         $rows = NULL;
         if ($should_update) {
-            $rows = $this->query_and_fetch_all("UPDATE $table SET ($insert_column_names) = ($insert_placeholders)
-                WHERE $condition RETURNING $returning_column_name", $values);
+            // FIXME: Remove this special case and use ROW expression when no instance uses Postgres < 10.
+            if (count($insert_placeholder_list) == 1 && count($insert_column_name_list) == 1)
+                $rows = $this->query_and_fetch_all("UPDATE $table SET $insert_column_names = $insert_placeholders
+                    WHERE $condition RETURNING $returning_column_name", $values);
+            else
+                $rows = $this->query_and_fetch_all("UPDATE $table SET ($insert_column_names) = ($insert_placeholders)
+                    WHERE $condition RETURNING $returning_column_name", $values);
         }
         if (!$rows && $should_insert) {
             $rows = $this->query_and_fetch_all("INSERT INTO $table ($insert_column_names) SELECT $insert_placeholders

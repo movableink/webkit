@@ -50,6 +50,14 @@ private:
     void runOpenPanel(WebCore::Frame&, WebCore::FileChooser&) final;
     void showShareSheet(WebCore::ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&) final;
 
+    bool hoverSupportedByPrimaryPointingDevice() const final { return false; }
+    bool hoverSupportedByAnyAvailablePointingDevice() const final { return false; }
+    std::optional<WebCore::PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const final { return WebCore::PointerCharacteristics::Coarse; }
+    OptionSet<WebCore::PointerCharacteristics> pointerCharacteristicsOfAllAvailablePointingDevices() const final { return WebCore::PointerCharacteristics::Coarse; }
+
+    void setCursor(const WebCore::Cursor&) final { }
+    void setCursorHiddenUntilMouseMoves(bool) final { }
+
 #if ENABLE(TOUCH_EVENTS)
     void didPreventDefaultForEvent() final;
 #endif
@@ -71,7 +79,7 @@ private:
     void suppressFormNotifications() final;
     void restoreFormNotifications() final;
 
-    void elementDidFocus(WebCore::Element&) final;
+    void elementDidFocus(WebCore::Element&, const WebCore::FocusOptions&) final;
     void elementDidBlur(WebCore::Element&) final;
 
     void attachRootGraphicsLayer(WebCore::Frame&, WebCore::GraphicsLayer*) final;
@@ -93,6 +101,8 @@ private:
     void focusedElementChanged(WebCore::Element*) final;
     void showPlaybackTargetPicker(bool hasVideo, WebCore::RouteSharingPolicy, const String&) final;
     RefPtr<WebCore::Icon> createIconForFiles(const Vector<String>& filenames) final;
+
+    bool showDataDetectorsUIForElement(const WebCore::Element&, const WebCore::Event&) final { return false; }
 
 #if ENABLE(ORIENTATION_EVENTS)
     int deviceOrientation() const final;

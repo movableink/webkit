@@ -28,8 +28,9 @@
 #if PLATFORM(MAC)
 
 #include <OpenGL/CGLTypes.h>
-#include <wtf/HashSet.h>
+#include <WebCore/Timer.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebKit {
 
@@ -40,17 +41,17 @@ class HighPerformanceGPUManager {
 public:
     static HighPerformanceGPUManager& singleton();
 
-    void addProcessRequiringHighPerformance(WebProcessProxy*);
-    void removeProcessRequiringHighPerformance(WebProcessProxy*);
+    void addProcessRequiringHighPerformance(WebProcessProxy&);
+    void removeProcessRequiringHighPerformance(WebProcessProxy&);
 
 private:
-    HighPerformanceGPUManager() = default;
+    HighPerformanceGPUManager();
     ~HighPerformanceGPUManager();
-
     void updateState();
 
-    HashSet<WebProcessProxy*> m_processesRequiringHighPerformance;
+    WeakHashSet<WebProcessProxy> m_processesRequiringHighPerformance;
     CGLPixelFormatObj m_pixelFormatObj { nullptr };
+    WebCore::Timer m_updateStateTimer;
 };
 
 }

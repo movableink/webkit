@@ -35,6 +35,7 @@ var validSelectors = [
     // Compound selectors.
     "foobar#id.class",
     ".class:not(.notclass)",
+    ".class:is(.notclass)",
     ".class:matches(.notclass)",
     "#id:empty",
 
@@ -48,7 +49,7 @@ var validSelectors = [
     // Functional pseudo classes.
     ":-webkit-any(.selector, #tama, #hanayo, #midoriko)",
     ":not(:link)",
-    ":nth-child(even of a, b, c)",
+    ":nth-child(2n of a, b, c)",
 ];
 
 debug("2 valid selectors");

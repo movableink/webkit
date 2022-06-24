@@ -69,17 +69,17 @@ protected:
     struct TypeTag { };
     typedef const TypeTag* Type;
 
-    explicit CallbackBase(Type type, const ProcessThrottler::BackgroundActivityToken& activityToken)
+    explicit CallbackBase(Type type, ProcessThrottler::ActivityVariant&& activity)
         : m_type(type)
         , m_callbackID(CallbackID::generateID())
-        , m_activityToken(activityToken)
+        , m_activity(WTFMove(activity))
     {
     }
 
 private:
     Type m_type;
     CallbackID m_callbackID;
-    ProcessThrottler::BackgroundActivityToken m_activityToken;
+    ProcessThrottler::ActivityVariant m_activity;
 };
 
 template<typename... T>
@@ -87,9 +87,9 @@ class GenericCallback : public CallbackBase {
 public:
     typedef Function<void (T..., Error)> CallbackFunction;
 
-    static Ref<GenericCallback> create(CallbackFunction&& callback, const ProcessThrottler::BackgroundActivityToken& activityToken = nullptr)
+    static Ref<GenericCallback> create(CallbackFunction&& callback, ProcessThrottler::ActivityVariant&& activity = nullptr)
     {
-        return adoptRef(*new GenericCallback(WTFMove(callback), activityToken));
+        return adoptRef(*new GenericCallback(WTFMove(callback), WTFMove(activity)));
     }
 
     virtual ~GenericCallback()
@@ -105,7 +105,7 @@ public:
         if (!m_callback)
             return;
 
-        auto callback = std::exchange(m_callback, WTF::nullopt);
+        auto callback = std::exchange(m_callback, std::nullopt);
         callback.value()(returnValue..., Error::None);
     }
 
@@ -121,13 +121,13 @@ public:
         if (!m_callback)
             return;
 
-        auto callback = std::exchange(m_callback, WTF::nullopt);
+        auto callback = std::exchange(m_callback, std::nullopt);
         callback.value()(typename std::remove_reference<T>::type()..., error);
     }
 
 private:
-    GenericCallback(CallbackFunction&& callback, const ProcessThrottler::BackgroundActivityToken& activityToken)
-        : CallbackBase(type(), activityToken)
+    GenericCallback(CallbackFunction&& callback, ProcessThrottler::ActivityVariant&& activity)
+        : CallbackBase(type(), WTFMove(activity))
         , m_callback(WTFMove(callback))
     {
     }
@@ -139,24 +139,14 @@ private:
         return &tag;
     }
 
-    Optional<CallbackFunction> m_callback;
+    std::optional<CallbackFunction> m_callback;
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     Ref<Thread> m_originThread { Thread::current() };
 #endif
 };
 
-template<typename APIReturnValueType, typename InternalReturnValueType = typename APITypeInfo<APIReturnValueType>::ImplType*>
-static typename GenericCallback<InternalReturnValueType>::CallbackFunction toGenericCallbackFunction(void* context, void (*callback)(APIReturnValueType, WKErrorRef, void*))
-{
-    return [context, callback](InternalReturnValueType returnValue, CallbackBase::Error error) {
-        callback(toAPI(returnValue), error != CallbackBase::Error::None ? toAPI(API::Error::create().ptr()) : 0, context);
-    };
-}
-
 typedef GenericCallback<> VoidCallback;
-typedef GenericCallback<const Vector<WebCore::IntRect>&, double, WebCore::FloatBoxExtent> ComputedPagesCallback;
-typedef GenericCallback<const ShareableBitmap::Handle&> ImageCallback;
 
 template<typename T>
 void invalidateCallbackMap(HashMap<uint64_t, T>& callbackMap, CallbackBase::Error error)
@@ -189,9 +179,9 @@ public:
     };
 
     template<typename... T>
-    CallbackID put(Function<void(T...)>&& function, const ProcessThrottler::BackgroundActivityToken& activityToken)
+    CallbackID put(Function<void(T...)>&& function, ProcessThrottler::ActivityVariant&& activity)
     {
-        auto callback = GenericCallbackType<sizeof...(T), T...>::type::create(WTFMove(function), activityToken);
+        auto callback = GenericCallbackType<sizeof...(T), T...>::type::create(WTFMove(function), WTFMove(activity));
         return put(WTFMove(callback));
     }
 

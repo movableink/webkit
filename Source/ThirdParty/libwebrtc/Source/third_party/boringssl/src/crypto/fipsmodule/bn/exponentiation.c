@@ -117,26 +117,8 @@
 #include <openssl/mem.h>
 
 #include "internal.h"
-
-
-#if !defined(OPENSSL_NO_ASM) && defined(OPENSSL_X86_64)
-#define OPENSSL_BN_ASM_MONT5
-#define RSAZ_ENABLED
-
 #include "rsaz_exp.h"
 
-void bn_mul_mont_gather5(BN_ULONG *rp, const BN_ULONG *ap,
-                         const BN_ULONG *table, const BN_ULONG *np,
-                         const BN_ULONG *n0, int num, int power);
-void bn_scatter5(const BN_ULONG *inp, size_t num, BN_ULONG *table,
-                 size_t power);
-void bn_gather5(BN_ULONG *out, size_t num, BN_ULONG *table, size_t power);
-void bn_power5(BN_ULONG *rp, const BN_ULONG *ap, const BN_ULONG *table,
-               const BN_ULONG *np, const BN_ULONG *n0, int num, int power);
-int bn_from_montgomery(BN_ULONG *rp, const BN_ULONG *ap,
-                       const BN_ULONG *not_used, const BN_ULONG *np,
-                       const BN_ULONG *n0, int num);
-#endif
 
 int BN_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx) {
   int i, bits, ret = 0;
@@ -632,10 +614,9 @@ int BN_mod_exp_mont(BIGNUM *rr, const BIGNUM *a, const BIGNUM *p,
   BN_MONT_CTX *new_mont = NULL;
 
   BN_CTX_start(ctx);
-  BIGNUM *d = BN_CTX_get(ctx);
   BIGNUM *r = BN_CTX_get(ctx);
   val[0] = BN_CTX_get(ctx);
-  if (!d || !r || !val[0]) {
+  if (r == NULL || val[0] == NULL) {
     goto err;
   }
 
@@ -657,7 +638,9 @@ int BN_mod_exp_mont(BIGNUM *rr, const BIGNUM *a, const BIGNUM *p,
     goto err;
   }
   if (window > 1) {
-    if (!BN_mod_mul_montgomery(d, val[0], val[0], mont, ctx)) {
+    BIGNUM *d = BN_CTX_get(ctx);
+    if (d == NULL ||
+        !BN_mod_mul_montgomery(d, val[0], val[0], mont, ctx)) {
       goto err;
     }
     for (int i = 1; i < 1 << (window - 1); i++) {
@@ -749,7 +732,7 @@ void bn_mod_exp_mont_small(BN_ULONG *r, const BN_ULONG *a, size_t num,
     num_p--;
   }
   if (num_p == 0) {
-    bn_from_montgomery_small(r, mont->RR.d, num, mont);
+    bn_from_montgomery_small(r, num, mont->RR.d, num, mont);
     return;
   }
   unsigned bits = BN_num_bits_word(p[num_p - 1]) + (num_p - 1) * BN_BITS2;
@@ -826,8 +809,8 @@ void bn_mod_exp_mont_small(BN_ULONG *r, const BN_ULONG *a, size_t num,
   OPENSSL_cleanse(val, sizeof(val));
 }
 
-void bn_mod_inverse_prime_mont_small(BN_ULONG *r, const BN_ULONG *a, size_t num,
-                                     const BN_MONT_CTX *mont) {
+void bn_mod_inverse0_prime_mont_small(BN_ULONG *r, const BN_ULONG *a,
+                                      size_t num, const BN_MONT_CTX *mont) {
   if (num != (size_t)mont->N.width || num > BN_SMALL_MAX_WORDS) {
     abort();
   }
@@ -974,12 +957,12 @@ int BN_mod_exp_mont_consttime(BIGNUM *rr, const BIGNUM *a, const BIGNUM *p,
   alignas(MOD_EXP_CTIME_MIN_CACHE_LINE_WIDTH) BN_ULONG
     storage[MOD_EXP_CTIME_STORAGE_LEN];
 #endif
-#ifdef RSAZ_ENABLED
-  // If the size of the operands allow it, perform the optimized
-  // RSAZ exponentiation. For further information see
-  // crypto/bn/rsaz_exp.c and accompanying assembly modules.
-  if ((16 == a->width) && (16 == p->width) && (BN_num_bits(m) == 1024) &&
-      rsaz_avx2_eligible()) {
+#if defined(RSAZ_ENABLED)
+  // If the size of the operands allow it, perform the optimized RSAZ
+  // exponentiation. For further information see crypto/fipsmodule/bn/rsaz_exp.c
+  // and accompanying assembly modules.
+  if (a->width == 16 && p->width == 16 && BN_num_bits(m) == 1024 &&
+      rsaz_avx2_preferred()) {
     if (!bn_wexpand(rr, 16)) {
       goto err;
     }

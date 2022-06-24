@@ -8,6 +8,8 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "modules/audio_processing/agc2/interpolated_gain_curve.h"
+
 #include <array>
 #include <type_traits>
 #include <vector>
@@ -16,7 +18,6 @@
 #include "common_audio/include/audio_util.h"
 #include "modules/audio_processing/agc2/agc2_common.h"
 #include "modules/audio_processing/agc2/compute_interpolated_gain_curve.h"
-#include "modules/audio_processing/agc2/interpolated_gain_curve.h"
 #include "modules/audio_processing/agc2/limiter_db_gain_curve.h"
 #include "modules/audio_processing/logging/apm_data_dumper.h"
 #include "rtc_base/checks.h"
@@ -33,7 +34,7 @@ const LimiterDbGainCurve limiter;
 
 }  // namespace
 
-TEST(AutomaticGainController2InterpolatedGainCurve, CreateUse) {
+TEST(GainController2InterpolatedGainCurve, CreateUse) {
   InterpolatedGainCurve igc(&apm_data_dumper, "");
 
   const auto levels = test::LinSpace(
@@ -43,7 +44,7 @@ TEST(AutomaticGainController2InterpolatedGainCurve, CreateUse) {
   }
 }
 
-TEST(AutomaticGainController2InterpolatedGainCurve, CheckValidOutput) {
+TEST(GainController2InterpolatedGainCurve, CheckValidOutput) {
   InterpolatedGainCurve igc(&apm_data_dumper, "");
 
   const auto levels = test::LinSpace(
@@ -56,7 +57,7 @@ TEST(AutomaticGainController2InterpolatedGainCurve, CheckValidOutput) {
   }
 }
 
-TEST(AutomaticGainController2InterpolatedGainCurve, CheckMonotonicity) {
+TEST(GainController2InterpolatedGainCurve, CheckMonotonicity) {
   InterpolatedGainCurve igc(&apm_data_dumper, "");
 
   const auto levels = test::LinSpace(
@@ -70,7 +71,7 @@ TEST(AutomaticGainController2InterpolatedGainCurve, CheckMonotonicity) {
   }
 }
 
-TEST(AutomaticGainController2InterpolatedGainCurve, CheckApproximation) {
+TEST(GainController2InterpolatedGainCurve, CheckApproximation) {
   InterpolatedGainCurve igc(&apm_data_dumper, "");
 
   const auto levels = test::LinSpace(
@@ -83,7 +84,7 @@ TEST(AutomaticGainController2InterpolatedGainCurve, CheckApproximation) {
   }
 }
 
-TEST(AutomaticGainController2InterpolatedGainCurve, CheckRegionBoundaries) {
+TEST(GainController2InterpolatedGainCurve, CheckRegionBoundaries) {
   InterpolatedGainCurve igc(&apm_data_dumper, "");
 
   const std::vector<double> levels{
@@ -101,7 +102,7 @@ TEST(AutomaticGainController2InterpolatedGainCurve, CheckRegionBoundaries) {
   EXPECT_EQ(1ul, stats.look_ups_saturation_region);
 }
 
-TEST(AutomaticGainController2InterpolatedGainCurve, CheckIdentityRegion) {
+TEST(GainController2InterpolatedGainCurve, CheckIdentityRegion) {
   constexpr size_t kNumSteps = 10;
   InterpolatedGainCurve igc(&apm_data_dumper, "");
 
@@ -119,8 +120,7 @@ TEST(AutomaticGainController2InterpolatedGainCurve, CheckIdentityRegion) {
   EXPECT_EQ(0ul, stats.look_ups_saturation_region);
 }
 
-TEST(AutomaticGainController2InterpolatedGainCurve,
-     CheckNoOverApproximationKnee) {
+TEST(GainController2InterpolatedGainCurve, CheckNoOverApproximationKnee) {
   constexpr size_t kNumSteps = 10;
   InterpolatedGainCurve igc(&apm_data_dumper, "");
 
@@ -141,8 +141,7 @@ TEST(AutomaticGainController2InterpolatedGainCurve,
   EXPECT_EQ(0ul, stats.look_ups_saturation_region);
 }
 
-TEST(AutomaticGainController2InterpolatedGainCurve,
-     CheckNoOverApproximationBeyondKnee) {
+TEST(GainController2InterpolatedGainCurve, CheckNoOverApproximationBeyondKnee) {
   constexpr size_t kNumSteps = 10;
   InterpolatedGainCurve igc(&apm_data_dumper, "");
 
@@ -163,7 +162,7 @@ TEST(AutomaticGainController2InterpolatedGainCurve,
   EXPECT_EQ(0ul, stats.look_ups_saturation_region);
 }
 
-TEST(AutomaticGainController2InterpolatedGainCurve,
+TEST(GainController2InterpolatedGainCurve,
      CheckNoOverApproximationWithSaturation) {
   constexpr size_t kNumSteps = 3;
   InterpolatedGainCurve igc(&apm_data_dumper, "");
@@ -183,7 +182,7 @@ TEST(AutomaticGainController2InterpolatedGainCurve,
   EXPECT_EQ(kNumSteps, stats.look_ups_saturation_region);
 }
 
-TEST(AutomaticGainController2InterpolatedGainCurve, CheckApproximationParams) {
+TEST(GainController2InterpolatedGainCurve, CheckApproximationParams) {
   test::InterpolatedParameters parameters =
       test::ComputeInterpolatedGainCurveApproximationParams();
 

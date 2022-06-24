@@ -21,21 +21,31 @@
 #pragma once
 
 #include <wtf/HashTraits.h>
+#include <wtf/Hasher.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 struct QualifiedNameComponents {
-    StringImpl* m_prefix;
-    StringImpl* m_localName;
-    StringImpl* m_namespace;
+    AtomStringImpl* m_prefix;
+    AtomStringImpl* m_localName;
+    AtomStringImpl* m_namespace;
 };
 
+inline void add(Hasher& hasher, const QualifiedNameComponents& components)
+{
+    add(hasher, components.m_prefix, components.m_localName, components.m_namespace);
+}
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(QualifiedName);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(QualifiedNameQualifiedNameImpl);
+
 class QualifiedName {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(QualifiedName);
 public:
     class QualifiedNameImpl : public RefCounted<QualifiedNameImpl> {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(QualifiedNameQualifiedNameImpl);
     public:
         static Ref<QualifiedNameImpl> create(const AtomString& prefix, const AtomString& localName, const AtomString& namespaceURI)
         {
@@ -68,6 +78,7 @@ public:
     };
 
     WEBCORE_EXPORT QualifiedName(const AtomString& prefix, const AtomString& localName, const AtomString& namespaceURI);
+    QualifiedName(QualifiedNameImpl& impl) : m_impl(&impl) { }
     explicit QualifiedName(WTF::HashTableDeletedValueType) : m_impl(WTF::HashTableDeletedValue) { }
     bool isHashTableDeletedValue() const { return m_impl.isHashTableDeletedValue(); }
 #ifdef QNAME_DEFAULT_CONSTRUCTOR
@@ -100,10 +111,20 @@ public:
     WEBCORE_EXPORT static void init();
 
 private:
-    static QualifiedNameImpl* hashTableDeletedValue() { return RefPtr<QualifiedNameImpl>::hashTableDeletedValue(); }
+    static QualifiedNameImpl* hashTableDeletedValue() { return RefPtr<QualifiedNameImpl>::PtrTraits::hashTableDeletedValue(); }
     
     RefPtr<QualifiedNameImpl> m_impl;
 };
+
+inline void add(Hasher& hasher, const QualifiedName::QualifiedNameImpl& impl)
+{
+    add(hasher, impl.m_prefix, impl.m_localName, impl.m_namespace);
+}
+
+inline void add(Hasher& hasher, const QualifiedName& name)
+{
+    add(hasher, *name.impl());
+}
 
 extern LazyNeverDestroyed<const QualifiedName> anyName;
 inline const QualifiedName& anyQName() { return anyName; }
@@ -114,11 +135,6 @@ inline bool operator==(const AtomString& a, const QualifiedName& q) { return a =
 inline bool operator!=(const AtomString& a, const QualifiedName& q) { return a != q.localName(); }
 inline bool operator==(const QualifiedName& q, const AtomString& a) { return a == q.localName(); }
 inline bool operator!=(const QualifiedName& q, const AtomString& a) { return a != q.localName(); }
-
-inline unsigned hashComponents(const QualifiedNameComponents& buf)
-{
-    return StringHasher::hashMemory<sizeof(QualifiedNameComponents)>(&buf);
-}
 
 struct QualifiedNameHash {
     static unsigned hash(const QualifiedName& name) { return hash(name.impl()); }
@@ -133,7 +149,8 @@ struct QualifiedNameHash {
     static bool equal(const QualifiedName& a, const QualifiedName& b) { return a == b; }
     static bool equal(const QualifiedName::QualifiedNameImpl* a, const QualifiedName::QualifiedNameImpl* b) { return a == b; }
 
-    static const bool safeToCompareToEmptyOrDeleted = false;
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
+    static constexpr bool hasHashInValue = true;
 };
 
 inline String QualifiedName::toString() const
@@ -150,9 +167,7 @@ namespace WTF {
     
     template<typename T> struct DefaultHash;
 
-    template<> struct DefaultHash<WebCore::QualifiedName> {
-        typedef WebCore::QualifiedNameHash Hash;
-    };
+    template<> struct DefaultHash<WebCore::QualifiedName> : WebCore::QualifiedNameHash { };
     
     template<> struct HashTraits<WebCore::QualifiedName> : SimpleClassHashTraits<WebCore::QualifiedName> {
         static const bool emptyValueIsZero = false;

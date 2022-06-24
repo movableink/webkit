@@ -85,14 +85,23 @@ static bool globalAutomaticInspectionState()
 
 RemoteInspector& RemoteInspector::singleton()
 {
-    static NeverDestroyed<RemoteInspector> shared;
+    static LazyNeverDestroyed<RemoteInspector> shared;
+    static dispatch_once_t onceConstructKey;
+    dispatch_once(&onceConstructKey, ^{
+        shared.construct();
+    });
 
+#if PLATFORM(COCOA)
+    if (needMachSandboxExtension)
+        return shared;
+#endif
+    
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         if (canAccessWebInspectorMachPort()) {
             dispatch_block_t initialize = ^{
                 WTF::initializeMainThread();
-                JSC::initializeThreading();
+                JSC::initialize();
                 if (RemoteInspector::startEnabled)
                     shared.get().start();
             };
@@ -120,7 +129,7 @@ void RemoteInspector::updateAutomaticInspectionCandidate(RemoteInspectionTarget*
 {
     ASSERT_ARG(target, target);
     {
-        LockHolder lock(m_mutex);
+        Locker locker { m_mutex };
 
         if (!updateTargetMap(target))
             return;
@@ -137,7 +146,7 @@ void RemoteInspector::updateAutomaticInspectionCandidate(RemoteInspectionTarget*
         // To make this work we will need to change m_automaticInspectionCandidateTargetIdentifier to be a per-thread value.
         // Multiple attempts on the same thread should not be possible because our nested run loop is in a special RWI mode.
         if (m_automaticInspectionPaused) {
-            LOG_ERROR("Skipping Automatic Inspection Candidate with pageId(%u) because we are already paused waiting for pageId(%u)", targetIdentifier, m_automaticInspectionCandidateTargetIdentifier);
+            WTFLogAlways("Skipping Automatic Inspection Candidate with pageId(%u) because we are already paused waiting for pageId(%u)", targetIdentifier, m_automaticInspectionCandidateTargetIdentifier);
             pushListingsSoon();
             return;
         }
@@ -152,15 +161,11 @@ void RemoteInspector::updateAutomaticInspectionCandidate(RemoteInspectionTarget*
         }
 
         // In case debuggers fail to respond, or we cannot connect to webinspectord, automatically continue after a short period of time.
-#if PLATFORM(WATCHOS)
-        int64_t debuggerTimeoutDelay = 5;
-#else
-        int64_t debuggerTimeoutDelay = 1;
-#endif
+        int64_t debuggerTimeoutDelay = 10;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, debuggerTimeoutDelay * NSEC_PER_SEC), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            LockHolder lock(m_mutex);
+            Locker locker { m_mutex };
             if (m_automaticInspectionCandidateTargetIdentifier == targetIdentifier) {
-                LOG_ERROR("Skipping Automatic Inspection Candidate with pageId(%u) because we failed to receive a response in time.", m_automaticInspectionCandidateTargetIdentifier);
+                WTFLogAlways("Skipping Automatic Inspection Candidate with pageId(%u) because we failed to receive a response in time.", m_automaticInspectionCandidateTargetIdentifier);
                 m_automaticInspectionPaused = false;
             }
         });
@@ -169,7 +174,7 @@ void RemoteInspector::updateAutomaticInspectionCandidate(RemoteInspectionTarget*
     target->pauseWaitingForAutomaticInspection();
 
     {
-        LockHolder lock(m_mutex);
+        Locker locker { m_mutex };
 
         ASSERT(m_automaticInspectionCandidateTargetIdentifier);
         m_automaticInspectionCandidateTargetIdentifier = 0;
@@ -190,7 +195,7 @@ void RemoteInspector::sendAutomaticInspectionCandidateMessage()
 
 void RemoteInspector::sendMessageToRemote(TargetID targetIdentifier, const String& message)
 {
-    LockHolder lock(m_mutex);
+    Locker locker { m_mutex };
 
     if (!m_relayConnection)
         return;
@@ -199,18 +204,38 @@ void RemoteInspector::sendMessageToRemote(TargetID targetIdentifier, const Strin
     if (!targetConnection)
         return;
 
-    NSDictionary *userInfo = @{
-        WIRRawDataKey: [static_cast<NSString *>(message) dataUsingEncoding:NSUTF8StringEncoding],
-        WIRConnectionIdentifierKey: targetConnection->connectionIdentifier(),
-        WIRDestinationKey: targetConnection->destination()
-    };
+    NSData *messageData = [static_cast<NSString *>(message) dataUsingEncoding:NSUTF8StringEncoding];
+    NSUInteger messageLength = messageData.length;
+    const NSUInteger maxChunkSize = 2 * 1024 * 1024; // 2 Mebibytes
 
-    m_relayConnection->sendMessage(WIRRawDataMessage, userInfo);
+    if (!m_messageDataTypeChunkSupported || messageLength < maxChunkSize) {
+        m_relayConnection->sendMessage(WIRRawDataMessage, @{
+            WIRRawDataKey: messageData,
+            WIRMessageDataTypeKey: WIRMessageDataTypeFull,
+            WIRConnectionIdentifierKey: targetConnection->connectionIdentifier(),
+            WIRDestinationKey: targetConnection->destination()
+        });
+        return;
+    }
+
+    for (NSUInteger offset = 0; offset < messageLength; offset += maxChunkSize) {
+        @autoreleasepool {
+            NSUInteger currentChunkSize = std::min(messageLength - offset, maxChunkSize);
+            NSString *type = offset + currentChunkSize == messageLength ? WIRMessageDataTypeFinalChunk : WIRMessageDataTypeChunk;
+
+            m_relayConnection->sendMessage(WIRRawDataMessage, @{
+                WIRRawDataKey: [messageData subdataWithRange:NSMakeRange(offset, currentChunkSize)],
+                WIRMessageDataTypeKey: type,
+                WIRConnectionIdentifierKey: targetConnection->connectionIdentifier(),
+                WIRDestinationKey: targetConnection->destination()
+            });
+        }
+    }
 }
 
 void RemoteInspector::start()
 {
-    LockHolder lock(m_mutex);
+    Locker locker { m_mutex };
 
     if (m_enabled)
         return;
@@ -260,23 +285,31 @@ void RemoteInspector::stopInternal(StopSource source)
         m_relayConnection = nullptr;
     }
 
+    m_shouldReconnectToRelayOnFailure = false;
+
     notify_cancel(m_notifyToken);
 }
 
 void RemoteInspector::setupXPCConnectionIfNeeded()
 {
-    LockHolder lock(m_mutex);
+    Locker locker { m_mutex };
 
-    if (m_relayConnection)
+    if (m_relayConnection) {
+        m_shouldReconnectToRelayOnFailure = true;
+
+        // Send a simple message to make sure the connection is still open.
+        m_relayConnection->sendMessage(@"check", nil);
         return;
+    }
 
-    xpc_connection_t connection = xpc_connection_create_mach_service(WIRXPCMachPortName, m_xpcQueue, 0);
-    if (!connection)
+    auto connection = adoptOSObject(xpc_connection_create_mach_service(WIRXPCMachPortName, m_xpcQueue, 0));
+    if (!connection) {
+        WTFLogAlways("RemoteInspector failed to create XPC connection.");
         return;
+    }
 
-    m_relayConnection = adoptRef(new RemoteInspectorXPCConnection(connection, m_xpcQueue, this));
+    m_relayConnection = adoptRef(new RemoteInspectorXPCConnection(connection.get(), m_xpcQueue, this));
     m_relayConnection->sendMessage(@"syn", nil); // Send a simple message to initialize the XPC connection.
-    xpc_release(connection);
 
     if (m_automaticInspectionCandidateTargetIdentifier) {
         // We already have a debuggable waiting to be automatically inspected.
@@ -290,7 +323,7 @@ void RemoteInspector::setupXPCConnectionIfNeeded()
 
 void RemoteInspector::setParentProcessInformation(pid_t pid, RetainPtr<CFDataRef> auditData)
 {
-    LockHolder lock(m_mutex);
+    Locker locker { m_mutex };
 
     if (m_parentProcessIdentifier || m_parentProcessAuditData)
         return;
@@ -306,7 +339,7 @@ void RemoteInspector::setParentProcessInformation(pid_t pid, RetainPtr<CFDataRef
 
 void RemoteInspector::xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*, NSString *messageName, NSDictionary *userInfo)
 {
-    LockHolder lock(m_mutex);
+    Locker locker { m_mutex };
 
     if ([messageName isEqualToString:WIRPermissionDenied]) {
         stopInternal(StopSource::XPCMessage);
@@ -321,6 +354,8 @@ void RemoteInspector::xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*
         receivedDidCloseMessage(userInfo);
     else if ([messageName isEqualToString:WIRApplicationGetListingMessage])
         receivedGetListingMessage(userInfo);
+    else if ([messageName isEqualToString:WIRApplicationWakeUpDebuggablesMessage])
+        receivedWakeUpDebuggables(userInfo);
     else if ([messageName isEqualToString:WIRIndicateMessage])
         receivedIndicateMessage(userInfo);
     else if ([messageName isEqualToString:WIRProxyApplicationSetupMessage])
@@ -339,7 +374,7 @@ void RemoteInspector::xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*
 
 void RemoteInspector::xpcConnectionFailed(RemoteInspectorXPCConnection* relayConnection)
 {
-    LockHolder lock(m_mutex);
+    Locker locker { m_mutex };
 
     ASSERT(relayConnection == m_relayConnection);
     if (relayConnection != m_relayConnection)
@@ -357,6 +392,16 @@ void RemoteInspector::xpcConnectionFailed(RemoteInspectorXPCConnection* relayCon
 
     // The XPC connection will close itself.
     m_relayConnection = nullptr;
+
+    if (!m_shouldReconnectToRelayOnFailure)
+        return;
+
+    m_shouldReconnectToRelayOnFailure = false;
+
+    // Schedule setting up a new connection, since we currently are holding a lock needed to create a new connection.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        RemoteInspector::singleton().setupXPCConnectionIfNeeded();
+    });
 }
 
 void RemoteInspector::xpcConnectionUnhandledMessage(RemoteInspectorXPCConnection*, xpc_object_t)
@@ -378,6 +423,10 @@ RetainPtr<NSDictionary> RemoteInspector::listingForInspectionTarget(const Remote
     [listing setObject:@(target.targetIdentifier()) forKey:WIRTargetIdentifierKey];
 
     switch (target.type()) {
+    case RemoteInspectionTarget::Type::ITML:
+        [listing setObject:target.name() forKey:WIRTitleKey];
+        [listing setObject:WIRTypeITML forKey:WIRTypeKey];
+        break;
     case RemoteInspectionTarget::Type::JavaScript:
         [listing setObject:target.name() forKey:WIRTitleKey];
         [listing setObject:WIRTypeJavaScript forKey:WIRTypeKey];
@@ -474,7 +523,7 @@ void RemoteInspector::pushListingsSoon()
 
     m_pushScheduled = true;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        LockHolder lock(m_mutex);
+        Locker locker { m_mutex };
         if (m_pushScheduled)
             pushListingsNow();
     });
@@ -497,6 +546,11 @@ void RemoteInspector::receivedSetupMessage(NSDictionary *userInfo)
     convertNSNullToNil(automaticallyPauseNumber);
     BAIL_IF_UNEXPECTED_TYPE_ALLOWING_NIL(automaticallyPauseNumber, [NSNumber class]);
     BOOL automaticallyPause = automaticallyPauseNumber.boolValue;
+
+    NSNumber *messageDataTypeChunkSupportedNumber = userInfo[WIRMessageDataTypeChunkSupportedKey];
+    convertNSNullToNil(messageDataTypeChunkSupportedNumber);
+    BAIL_IF_UNEXPECTED_TYPE_ALLOWING_NIL(messageDataTypeChunkSupportedNumber, [NSNumber class]);
+    m_messageDataTypeChunkSupported = messageDataTypeChunkSupportedNumber.boolValue;
 
     TargetID targetIdentifier = targetIdentifierNumber.unsignedIntValue;
     if (!targetIdentifier)
@@ -583,6 +637,12 @@ void RemoteInspector::receivedGetListingMessage(NSDictionary *)
     pushListingsNow();
 }
 
+void RemoteInspector::receivedWakeUpDebuggables(NSDictionary *)
+{
+    if (m_client)
+        m_client->requestedDebuggablesToWakeUp();
+}
+
 void RemoteInspector::receivedIndicateMessage(NSDictionary *userInfo)
 {
     NSNumber *targetIdentifierNumber = userInfo[WIRTargetIdentifierKey];
@@ -599,7 +659,7 @@ void RemoteInspector::receivedIndicateMessage(NSDictionary *userInfo)
     dispatchAsyncOnMainThreadWithWebThreadLockIfNeeded(^{
         RemoteControllableTarget* target = nullptr;
         {
-            LockHolder lock(m_mutex);
+            Locker locker { m_mutex };
 
             auto findResult = m_targetMap.find(targetIdentifier);
             if (findResult == m_targetMap.end())
@@ -623,7 +683,7 @@ void RemoteInspector::receivedProxyApplicationSetupMessage(NSDictionary *)
         // Wait a bit for the information, but give up after a second.
         m_shouldSendParentProcessInformation = true;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            LockHolder lock(m_mutex);
+            Locker locker { m_mutex };
             if (m_shouldSendParentProcessInformation)
                 stopInternal(StopSource::XPCMessage);
         });
@@ -694,6 +754,11 @@ void RemoteInspector::receivedAutomationSessionRequestMessage(NSDictionary *user
     BAIL_IF_UNEXPECTED_TYPE_ALLOWING_NIL(forwardedCapabilities, [NSDictionary class]);
 
     Client::SessionCapabilities sessionCapabilities;
+    if (NSNumber *value = forwardedCapabilities[WIRAcceptInsecureCertificatesKey]) {
+        if ([value isKindOfClass:[NSNumber class]])
+            sessionCapabilities.acceptInsecureCertificates = value.boolValue;
+    }
+
     if (NSNumber *value = forwardedCapabilities[WIRAllowInsecureMediaCaptureCapabilityKey]) {
         if ([value isKindOfClass:[NSNumber class]])
             sessionCapabilities.allowInsecureMediaCapture = value.boolValue;

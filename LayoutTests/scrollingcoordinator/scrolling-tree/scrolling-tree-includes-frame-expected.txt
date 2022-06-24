@@ -3,8 +3,7 @@
 (Frame scrolling node
   (scrollable area size 800 600)
   (contents size 800 600)
-  (parent relative scrollable rect at (0,0) size 800x600)
-  (scrollable area parameters 
+  (scrollable area parameters
     (horizontal scroll elasticity 2)
     (vertical scroll elasticity 2)
     (horizontal scrollbar mode 0)
@@ -15,19 +14,17 @@
   (behavior for fixed 0)
   (children 1
     (Frame hosting node
-      (parent relative scrollable rect at (0,0) size 100x200)
       (children 1
         (Frame scrolling node
           (scrollable area size 85 185)
           (contents size 308 416)
-          (parent relative scrollable rect at (0,0) size 100x200)
-          (scrollable area parameters 
+          (scrollable area parameters
             (horizontal scroll elasticity 0)
             (vertical scroll elasticity 0)
             (horizontal scrollbar mode 0)
             (vertical scrollbar mode 0)
-            (has enabled horizontal scrollbar 1)
-            (has enabled vertical scrollbar 1))
+            (allows horizontal scrolling 1)
+            (allows vertical scrolling 1))
           (layout viewport at (0,0) size 85x185)
           (min layout viewport origin (0,0))
           (max layout viewport origin (223,231))

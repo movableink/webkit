@@ -23,14 +23,16 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "PaymentRequestValidator.h"
+#import "config.h"
+#import "PaymentRequestValidator.h"
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePaySessionPaymentRequest.h"
-#include <unicode/ucurr.h>
-#include <unicode/uloc.h>
+#import "ApplePaySessionPaymentRequest.h"
+#import "ApplePayShippingMethod.h"
+#import <unicode/ucurr.h>
+#import <unicode/uloc.h>
+#import <wtf/unicode/icu/ICUHelpers.h>
 
 namespace WebCore {
 
@@ -38,45 +40,59 @@ static ExceptionOr<void> validateCountryCode(const String&);
 static ExceptionOr<void> validateCurrencyCode(const String&);
 static ExceptionOr<void> validateMerchantCapabilities(const ApplePaySessionPaymentRequest::MerchantCapabilities&);
 static ExceptionOr<void> validateSupportedNetworks(const Vector<String>&);
-static ExceptionOr<void> validateShippingMethods(const Vector<ApplePaySessionPaymentRequest::ShippingMethod>&);
-static ExceptionOr<void> validateShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod&);
+static ExceptionOr<void> validateShippingMethods(const Vector<ApplePayShippingMethod>&);
+static ExceptionOr<void> validateShippingMethod(const ApplePayShippingMethod&);
 
-ExceptionOr<void> PaymentRequestValidator::validate(const ApplePaySessionPaymentRequest& paymentRequest)
+ExceptionOr<void> PaymentRequestValidator::validate(const ApplePaySessionPaymentRequest& paymentRequest, OptionSet<Field> fieldsToValidate)
 {
-    auto validatedCountryCode = validateCountryCode(paymentRequest.countryCode());
-    if (validatedCountryCode.hasException())
-        return validatedCountryCode.releaseException();
-
-    auto validatedCurrencyCode = validateCurrencyCode(paymentRequest.currencyCode());
-    if (validatedCurrencyCode.hasException())
-        return validatedCurrencyCode.releaseException();
-
-    auto validatedSupportedNetworks = validateSupportedNetworks(paymentRequest.supportedNetworks());
-    if (validatedSupportedNetworks.hasException())
-        return validatedSupportedNetworks.releaseException();
-
-    auto validatedMerchantCapabilities = validateMerchantCapabilities(paymentRequest.merchantCapabilities());
-    if (validatedMerchantCapabilities.hasException())
-        return validatedMerchantCapabilities.releaseException();
-
-    auto validatedTotal = validateTotal(paymentRequest.total());
-    if (validatedTotal.hasException())
-        return validatedTotal.releaseException();
-
-    auto validatedShippingMethods = validateShippingMethods(paymentRequest.shippingMethods());
-    if (validatedShippingMethods.hasException())
-        return validatedShippingMethods.releaseException();
-
-    for (auto& countryCode : paymentRequest.supportedCountries()) {
-        auto validatedCountryCode = validateCountryCode(countryCode);
+    if (fieldsToValidate.contains(Field::CountryCode)) {
+        auto validatedCountryCode = validateCountryCode(paymentRequest.countryCode());
         if (validatedCountryCode.hasException())
             return validatedCountryCode.releaseException();
+    }
+
+    if (fieldsToValidate.contains(Field::CurrencyCode)) {
+        auto validatedCurrencyCode = validateCurrencyCode(paymentRequest.currencyCode());
+        if (validatedCurrencyCode.hasException())
+            return validatedCurrencyCode.releaseException();
+    }
+
+    if (fieldsToValidate.contains(Field::SupportedNetworks)) {
+        auto validatedSupportedNetworks = validateSupportedNetworks(paymentRequest.supportedNetworks());
+        if (validatedSupportedNetworks.hasException())
+            return validatedSupportedNetworks.releaseException();
+    }
+
+    if (fieldsToValidate.contains(Field::MerchantCapabilities)) {
+        auto validatedMerchantCapabilities = validateMerchantCapabilities(paymentRequest.merchantCapabilities());
+        if (validatedMerchantCapabilities.hasException())
+            return validatedMerchantCapabilities.releaseException();
+    }
+
+    if (fieldsToValidate.contains(Field::Total)) {
+        auto validatedTotal = validateTotal(paymentRequest.total());
+        if (validatedTotal.hasException())
+            return validatedTotal.releaseException();
+    }
+
+    if (fieldsToValidate.contains(Field::ShippingMethods)) {
+        auto validatedShippingMethods = validateShippingMethods(paymentRequest.shippingMethods());
+        if (validatedShippingMethods.hasException())
+            return validatedShippingMethods.releaseException();
+    }
+
+    if (fieldsToValidate.contains(Field::CountryCode)) {
+        for (auto& countryCode : paymentRequest.supportedCountries()) {
+            auto validatedCountryCode = validateCountryCode(countryCode);
+            if (validatedCountryCode.hasException())
+                return validatedCountryCode.releaseException();
+        }
     }
 
     return { };
 }
 
-ExceptionOr<void> PaymentRequestValidator::validateTotal(const ApplePaySessionPaymentRequest::LineItem& total)
+ExceptionOr<void> PaymentRequestValidator::validateTotal(const ApplePayLineItem& total)
 {
     if (!total.label)
         return Exception { TypeError, "Missing total label." };
@@ -114,7 +130,7 @@ static ExceptionOr<void> validateCurrencyCode(const String& currencyCode)
         return Exception { TypeError, "Missing currency code." };
 
     UErrorCode errorCode = U_ZERO_ERROR;
-    auto currencyCodes = std::unique_ptr<UEnumeration, void (*)(UEnumeration*)>(ucurr_openISOCurrencies(UCURR_ALL, &errorCode), uenum_close);
+    auto currencyCodes = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucurr_openISOCurrencies(UCURR_ALL, &errorCode));
 
     int32_t length;
     while (auto *currencyCodePtr = uenum_next(currencyCodes.get(), &length, &errorCode)) {
@@ -141,7 +157,7 @@ static ExceptionOr<void> validateSupportedNetworks(const Vector<String>& support
     return { };
 }
 
-static ExceptionOr<void> validateShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod& shippingMethod)
+static ExceptionOr<void> validateShippingMethod(const ApplePayShippingMethod& shippingMethod)
 {
     NSDecimalNumber *amount = [NSDecimalNumber decimalNumberWithString:shippingMethod.amount locale:@{ NSLocaleDecimalSeparator : @"." }];
     if (amount.integerValue < 0)
@@ -150,7 +166,7 @@ static ExceptionOr<void> validateShippingMethod(const ApplePaySessionPaymentRequ
     return { };
 }
 
-static ExceptionOr<void> validateShippingMethods(const Vector<ApplePaySessionPaymentRequest::ShippingMethod>& shippingMethods)
+static ExceptionOr<void> validateShippingMethods(const Vector<ApplePayShippingMethod>& shippingMethods)
 {
     for (const auto& shippingMethod : shippingMethods) {
         auto validatedShippingMethod = validateShippingMethod(shippingMethod);

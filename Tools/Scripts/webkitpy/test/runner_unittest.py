@@ -20,14 +20,24 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import StringIO
 import logging
 import re
 import unittest
 
+from webkitcorepy import StringIO
+
 from webkitpy.tool.mocktool import MockOptions
 from webkitpy.test.printer import Printer
 from webkitpy.test.runner import Runner
+
+
+class FakeTestCase(object):
+    def __init__(self, name):
+        self.name = name
+        self.failureException = AssertionError
+
+    def id(self):
+        return self.name
 
 
 class FakeModuleSuite(object):
@@ -40,11 +50,19 @@ class FakeModuleSuite(object):
         return self.name
 
     def run(self, result):
-        result.testsRun += 1
-        if self.result == 'F':
-            result.failures.append((self.name, self.msg))
-        elif self.result == 'E':
-            result.errors.append((self.name, self.msg))
+        tc = FakeTestCase(self.name)
+        result.startTest(tc)
+        try:
+            if self.result == 'F':
+                result.addFailure(tc, (None, None, None))
+            elif self.result == 'E':
+                result.addError(tc, (None, None, None))
+            elif self.result == '.':
+                result.addSuccess(tc)
+            else:
+                assert False, "unreachable"
+        finally:
+            result.stopTest(tc)
 
 
 class FakeTopSuite(object):
@@ -59,7 +77,7 @@ class FakeLoader(object):
         self._results = {}
         for test_name, result, msg in self.triples:
             self._tests.append(test_name)
-            m = re.match("(\w+) \(([\w.]+)\)", test_name)
+            m = re.match(r"(\w+) \(([\w.]+)\)", test_name)
             self._results['%s.%s' % (m.group(2), m.group(1))] = tuple([test_name, result, msg])
 
     def top_suite(self):
@@ -86,7 +104,7 @@ class RunnerTest(unittest.TestCase):
 
     def test_run(self, verbose=0, timing=False, child_processes=1, quiet=False):
         options = MockOptions(verbose=verbose, timing=timing, child_processes=child_processes, quiet=quiet, pass_through=False)
-        stream = StringIO.StringIO()
+        stream = StringIO()
         loader = FakeLoader(('test1 (Foo)', '.', ''),
                             ('test2 (Foo)', 'F', 'test2\nfailed'),
                             ('test3 (Foo)', 'E', 'test3\nerred'))

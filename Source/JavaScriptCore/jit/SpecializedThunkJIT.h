@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@ namespace JSC {
             emitFunctionPrologue();
             emitSaveThenMaterializeTagRegisters();
             // Check that we have the expected number of arguments
-            m_failures.append(branch32(NotEqual, payloadFor(CallFrameSlot::argumentCount), TrustedImm32(expectedArgCount + 1)));
+            m_failures.append(branch32(NotEqual, payloadFor(CallFrameSlot::argumentCountIncludingThis), TrustedImm32(expectedArgCount + 1)));
         }
         
         explicit SpecializedThunkJIT(VM& vm)
@@ -55,13 +55,13 @@ namespace JSC {
         
         void loadDoubleArgument(int argument, FPRegisterID dst, RegisterID scratch)
         {
-            unsigned src = CallFrame::argumentOffset(argument);
+            VirtualRegister src = virtualRegisterForArgumentIncludingThis(argument + 1);
             m_failures.append(emitLoadDouble(src, dst, scratch));
         }
         
         void loadCellArgument(int argument, RegisterID dst)
         {
-            unsigned src = CallFrame::argumentOffset(argument);
+            VirtualRegister src = virtualRegisterForArgumentIncludingThis(argument + 1);
             m_failures.append(emitLoadJSCell(src, dst));
         }
         
@@ -73,7 +73,7 @@ namespace JSC {
         
         void loadInt32Argument(int argument, RegisterID dst, Jump& failTarget)
         {
-            unsigned src = CallFrame::argumentOffset(argument);
+            VirtualRegister src = virtualRegisterForArgumentIncludingThis(argument + 1);
             failTarget = emitLoadInt32(src, dst);
         }
         
@@ -155,7 +155,7 @@ namespace JSC {
         
         MacroAssemblerCodeRef<JITThunkPtrTag> finalize(MacroAssemblerCodePtr<JITThunkPtrTag> fallback, const char* thunkKind)
         {
-            LinkBuffer patchBuffer(*this, GLOBAL_THUNK_ID);
+            LinkBuffer patchBuffer(*this, GLOBAL_THUNK_ID, LinkBuffer::Profile::SpecializedThunk);
             patchBuffer.link(m_failures, CodeLocationLabel<JITThunkPtrTag>(fallback));
             for (unsigned i = 0; i < m_calls.size(); i++)
                 patchBuffer.link(m_calls[i].first, m_calls[i].second);
@@ -166,7 +166,7 @@ namespace JSC {
         // and return value. Like any sensible architecture would.
         void callDoubleToDouble(FunctionPtr<CFunctionPtrTag> function)
         {
-            m_calls.append(std::make_pair(call(JITThunkPtrTag), function.retagged<JITThunkPtrTag>()));
+            m_calls.append(std::make_pair(call(OperationPtrTag), function.retagged<OperationPtrTag>()));
         }
         
         void callDoubleToDoublePreservingReturn(FunctionPtr<CFunctionPtrTag> function)
@@ -196,7 +196,7 @@ namespace JSC {
         }
         
         MacroAssembler::JumpList m_failures;
-        Vector<std::pair<Call, FunctionPtr<JITThunkPtrTag>>> m_calls;
+        Vector<std::pair<Call, FunctionPtr<OperationPtrTag>>> m_calls;
     };
 
 }

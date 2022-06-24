@@ -58,6 +58,7 @@ class MipmapTest : public BaseMipmapTest
           mCubeProgram(0),
           mTexture2D(0),
           mTextureCube(0),
+          m3DProgram(0),
           mLevelZeroBlueInitData(),
           mLevelZeroWhiteInitData(),
           mLevelOneGreenInitData(),
@@ -123,11 +124,64 @@ void main()
         ASSERT_NE(0u, mCubeProgram);
     }
 
+    void setUp3DProgram()
+    {
+        ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_OES_texture_3D"));
+
+        // http://anglebug.com/4927
+        ANGLE_SKIP_TEST_IF((IsPixel2() || IsNexus5X()) && IsOpenGLES());
+
+        // Vertex Shader source
+        constexpr char kVS[] = R"(attribute vec4 position;
+varying vec2 vTexCoord;
+
+void main()
+{
+    gl_Position = position;
+    vTexCoord   = (position.xy * 0.5) + 0.5;
+})";
+
+        constexpr char kFS[] = R"(#version 100
+#extension GL_OES_texture_3D : enable
+precision highp float;
+uniform highp sampler3D tex;
+uniform float slice;
+uniform float lod;
+varying vec2 vTexCoord;
+
+void main()
+{
+    gl_FragColor = texture3DLod(tex, vec3(vTexCoord, slice), lod);
+})";
+
+        m3DProgram = CompileProgram(kVS, kFS);
+        if (m3DProgram == 0)
+        {
+            FAIL() << "shader compilation failed.";
+        }
+
+        mTexture3DSliceUniformLocation = glGetUniformLocation(m3DProgram, "slice");
+        ASSERT_NE(-1, mTexture3DSliceUniformLocation);
+
+        mTexture3DLODUniformLocation = glGetUniformLocation(m3DProgram, "lod");
+        ASSERT_NE(-1, mTexture3DLODUniformLocation);
+
+        glUseProgram(m3DProgram);
+        glUniform1f(mTexture3DLODUniformLocation, 0);
+        glUseProgram(0);
+        ASSERT_GL_NO_ERROR();
+    }
+
     void testSetUp() override
     {
+        // http://anglebug.com/5725
+        ANGLE_SKIP_TEST_IF(IsOzone());
+
         setUp2DProgram();
 
         setUpCubeProgram();
+
+        setUp3DProgram();
 
         mLevelZeroBlueInitData =
             createRGBInitData(getWindowWidth(), getWindowHeight(), 0, 0, 255);  // Blue
@@ -168,6 +222,7 @@ void main()
     {
         glDeleteProgram(m2DProgram);
         glDeleteProgram(mCubeProgram);
+        glDeleteProgram(m3DProgram);
         glDeleteFramebuffers(1, &mOffscreenFramebuffer);
         glDeleteTextures(1, &mTexture2D);
         glDeleteTextures(1, &mTextureCube);
@@ -206,6 +261,10 @@ void main()
     GLuint mCubeProgram;
     GLuint mTexture2D;
     GLuint mTextureCube;
+
+    GLuint m3DProgram = 0;
+    GLint mTexture3DSliceUniformLocation;
+    GLint mTexture3DLODUniformLocation;
 
     std::vector<GLubyte> mLevelZeroBlueInitData;
     std::vector<GLubyte> mLevelZeroWhiteInitData;
@@ -376,6 +435,36 @@ void main()
         glDeleteProgram(mCubeProgram);
     }
 
+    void verifyAllMips(const uint32_t textureWidth,
+                       const uint32_t textureHeight,
+                       const GLColor &color)
+    {
+        ANGLE_GL_PROGRAM(program, essl3_shaders::vs::Texture2DLod(),
+                         essl3_shaders::fs::Texture2DLod());
+        glUseProgram(program);
+        const GLint textureLoc = glGetUniformLocation(program, essl3_shaders::Texture2DUniform());
+        const GLint lodLoc     = glGetUniformLocation(program, essl3_shaders::LodUniform());
+        ASSERT_NE(-1, textureLoc);
+        ASSERT_NE(-1, lodLoc);
+        glUniform1i(textureLoc, 0);
+
+        // Verify that every mip is correct.
+        const int w = getWindowWidth() - 1;
+        const int h = getWindowHeight() - 1;
+        for (uint32_t mip = 0; textureWidth >> mip >= 1 || textureHeight >> mip >= 1; ++mip)
+        {
+            glUniform1f(lodLoc, mip);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            drawQuad(program, essl3_shaders::PositionAttrib(), 0.5f);
+            EXPECT_GL_NO_ERROR();
+            EXPECT_PIXEL_COLOR_EQ(0, 0, color) << "Failed on mip " << mip;
+            EXPECT_PIXEL_COLOR_EQ(w, 0, color) << "Failed on mip " << mip;
+            EXPECT_PIXEL_COLOR_EQ(0, h, color) << "Failed on mip " << mip;
+            EXPECT_PIXEL_COLOR_EQ(w, h, color) << "Failed on mip " << mip;
+        }
+    }
+
     GLuint mTexture;
 
     GLuint mArrayProgram;
@@ -390,118 +479,156 @@ void main()
     GLuint mCubeProgram;
 };
 
-// This test uses init data for the first three levels of the texture. It passes the level 0 data
-// in, then renders, then level 1, then renders, etc. This ensures that renderers using the zero LOD
-// workaround (e.g. D3D11 FL9_3) correctly pass init data to the mipmapped texture, even if the the
-// zero-LOD texture is currently in use.
-TEST_P(MipmapTest, DISABLED_ThreeLevelsInitData)
+class MipmapTestES31 : public BaseMipmapTest
 {
-    // Pass in level zero init data.
-    glBindTexture(GL_TEXTURE_2D, mTexture2D);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, getWindowWidth(), getWindowHeight(), 0, GL_RGB,
-                 GL_UNSIGNED_BYTE, mLevelZeroBlueInitData.data());
-    ASSERT_GL_NO_ERROR();
+  protected:
+    MipmapTestES31()
 
-    // Disable mips.
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-    // Draw a full-sized quad, and check it's blue.
-    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, GLColor::blue);
-
-    // Draw a half-sized quad, and check it's blue.
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 2, getWindowHeight() / 2);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 4, getWindowHeight() / 4, GLColor::blue);
-
-    // Draw a quarter-sized quad, and check it's blue.
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 4, getWindowHeight() / 4);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 8, getWindowHeight() / 8, GLColor::blue);
-
-    // Complete the texture by initializing the remaining levels.
-    int n = 1;
-    while (getWindowWidth() / (1U << n) >= 1)
     {
-        glTexImage2D(GL_TEXTURE_2D, n, GL_RGB, getWindowWidth() / (1U << n),
-                     getWindowWidth() / (1U << n), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-        ASSERT_GL_NO_ERROR();
-        n += 1;
+        setWindowWidth(128);
+        setWindowHeight(128);
+        setConfigRedBits(8);
+        setConfigGreenBits(8);
+        setConfigBlueBits(8);
+        setConfigAlphaBits(8);
     }
+};
 
-    // Pass in level one init data.
-    glTexImage2D(GL_TEXTURE_2D, 1, GL_RGB, getWindowWidth() / 2, getWindowHeight() / 2, 0, GL_RGB,
-                 GL_UNSIGNED_BYTE, mLevelOneGreenInitData.data());
+// Test generating mipmaps with base level and max level set. Ported from part of the
+// conformance2/textures/misc/tex-mipmap-levels WebGL2 test.
+TEST_P(MipmapTestES3, GenerateMipmapPartialLevels)
+{
+    // TODO(anglebug.com/5360): Failing on ARM-based Apple DTKs.
+    ANGLE_SKIP_TEST_IF(IsOSX() && IsARM64() && IsDesktopOpenGL());
+
+    const std::vector<GLColor> kRedData(64, GLColor::red);
+    const std::vector<GLColor> kGreenData(16, GLColor::green);
+    const std::vector<GLColor> kBlueData(4, GLColor::blue);
+
+    // Initialize mips 2 to 4
+    GLTexture texture;
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 2, GL_RGBA, 8, 8, 0, GL_RGBA, GL_UNSIGNED_BYTE, kRedData.data());
+    glTexImage2D(GL_TEXTURE_2D, 3, GL_RGBA, 4, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE, kGreenData.data());
+    glTexImage2D(GL_TEXTURE_2D, 4, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, kBlueData.data());
+
+    // Set base and max levels
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 4);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+    // Verify the data
+    clearAndDrawQuad(m2DProgram, 2, 2);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::blue);
+
+    // Test that generateMipmap works with partial levels.
+    glGenerateMipmap(GL_TEXTURE_2D);
+    clearAndDrawQuad(m2DProgram, 2, 2);
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::red);
+}
+
+// This test generates mipmaps for a 1x1 texture, which should be a no-op.
+TEST_P(MipmapTestES3, GenerateMipmap1x1Texture)
+{
+    constexpr uint32_t kTextureSize = 1;
+
+    const std::vector<GLColor> kInitialColor(kTextureSize * kTextureSize,
+                                             GLColor(35, 81, 184, 211));
+
+    // Create the texture.
+    glBindTexture(GL_TEXTURE_2D, mTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kTextureSize, kTextureSize, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, kInitialColor.data());
+
+    // Then generate the mips.
+    glGenerateMipmap(GL_TEXTURE_2D);
     ASSERT_GL_NO_ERROR();
 
-    // Draw a full-sized quad, and check it's blue.
-    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, GLColor::blue);
+    // Verify that every mip is correct.
+    verifyAllMips(kTextureSize, kTextureSize, kInitialColor[0]);
+}
 
-    // Draw a half-sized quad, and check it's blue. We've not enabled mipmaps yet, so our init data
-    // for level one shouldn't be used.
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 2, getWindowHeight() / 2);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 4, getWindowHeight() / 4, GLColor::blue);
+// This test generates mipmaps for a large texture and ensures all mips are generated.
+TEST_P(MipmapTestES3, GenerateMipmapLargeTexture)
+{
+    constexpr uint32_t kTextureSize = 4096;
+
+    const std::vector<GLColor> kInitialColor(kTextureSize * kTextureSize,
+                                             GLColor(35, 81, 184, 211));
+
+    // Create the texture.
+    glBindTexture(GL_TEXTURE_2D, mTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kTextureSize, kTextureSize, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, kInitialColor.data());
+
+    // Then generate the mips.
+    glGenerateMipmap(GL_TEXTURE_2D);
+    ASSERT_GL_NO_ERROR();
 
     // Enable mipmaps.
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 
-    // Draw a half-sized quad, and check it's green.
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 2, getWindowHeight() / 2);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 4, getWindowHeight() / 4, GLColor::green);
+    // Verify that every mip is correct.
+    verifyAllMips(kTextureSize, kTextureSize, kInitialColor[0]);
+}
 
-    // Draw a quarter-sized quad, and check it's black, since we've not passed any init data for
-    // level two.
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 4, getWindowHeight() / 4);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 8, getWindowHeight() / 8, GLColor::black);
+// This test generates mipmaps for a large npot texture and ensures all mips are generated.
+TEST_P(MipmapTestES3, GenerateMipmapLargeNPOTTexture)
+{
+    constexpr uint32_t kTextureWidth  = 3840;
+    constexpr uint32_t kTextureHeight = 2160;
 
-    // Pass in level two init data.
-    glTexImage2D(GL_TEXTURE_2D, 2, GL_RGB, getWindowWidth() / 4, getWindowHeight() / 4, 0, GL_RGB,
-                 GL_UNSIGNED_BYTE, mLevelTwoRedInitData.data());
+    const std::vector<GLColor> kInitialColor(kTextureWidth * kTextureHeight,
+                                             GLColor(35, 81, 184, 211));
+
+    // Create the texture.
+    glBindTexture(GL_TEXTURE_2D, mTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kTextureWidth, kTextureHeight, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, kInitialColor.data());
+
+    // Then generate the mips.
+    glGenerateMipmap(GL_TEXTURE_2D);
     ASSERT_GL_NO_ERROR();
 
-    // Draw a full-sized quad, and check it's blue.
-    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, GLColor::blue);
+    // Enable mipmaps.
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 
-    // Draw a half-sized quad, and check it's green.
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 2, getWindowHeight() / 2);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 4, getWindowHeight() / 4, GLColor::green);
+    // Verify that every mip is correct.
+    verifyAllMips(kTextureWidth, kTextureHeight, kInitialColor[0]);
+}
 
-    // Draw a quarter-sized quad, and check it's red.
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 4, getWindowHeight() / 4);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 8, getWindowHeight() / 8, GLColor::red);
+// This test generates mipmaps for an elongated npot texture with the maximum number of mips and
+// ensures all mips are generated.
+TEST_P(MipmapTestES3, GenerateMipmapLongNPOTTexture)
+{
+    // Imprecisions in the result.  http://anglebug.com/4821
+    ANGLE_SKIP_TEST_IF(IsNVIDIA() && IsOpenGL());
 
-    // Now disable mipmaps again, and render multiple sized quads. They should all be blue, since
-    // level 0 is blue.
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, GLColor::blue);
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 2, getWindowHeight() / 2);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 4, getWindowHeight() / 4, GLColor::blue);
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 4, getWindowHeight() / 4);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 8, getWindowHeight() / 8, GLColor::blue);
+    GLint maxTextureWidth = 32767;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureWidth);
 
-    // Now reset level 0 to white, keeping mipmaps disabled. Then, render various sized quads. They
-    // should be white.
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, getWindowWidth(), getWindowHeight(), 0, GL_RGB,
-                 GL_UNSIGNED_BYTE, mLevelZeroWhiteInitData.data());
+    constexpr uint32_t kTextureHeight = 43;
+    const uint32_t kTextureWidth      = maxTextureWidth - 1;  // -1 to make the width NPOT
+
+    const std::vector<GLColor> kInitialColor(kTextureWidth * kTextureHeight,
+                                             GLColor(35, 81, 184, 211));
+
+    // Create the texture.
+    glBindTexture(GL_TEXTURE_2D, mTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kTextureWidth, kTextureHeight, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, kInitialColor.data());
+
+    // Then generate the mips.
+    glGenerateMipmap(GL_TEXTURE_2D);
     ASSERT_GL_NO_ERROR();
 
-    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, GLColor::white);
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 2, getWindowHeight() / 2);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 4, getWindowHeight() / 4, GLColor::white);
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 4, getWindowHeight() / 4);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 8, getWindowHeight() / 8, GLColor::white);
+    // Enable mipmaps.
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 
-    // Then enable mipmaps again. The quads should be white, green, red respectively.
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-
-    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, GLColor::white);
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 2, getWindowHeight() / 2);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 4, getWindowHeight() / 4, GLColor::green);
-    clearAndDrawQuad(m2DProgram, getWindowWidth() / 4, getWindowHeight() / 4);
-    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 8, getWindowHeight() / 8, GLColor::red);
+    // Verify that every mip is correct.
+    verifyAllMips(kTextureWidth, kTextureHeight, kInitialColor[0]);
 }
 
 // This test generates (and uses) mipmaps on a texture using init data. D3D11 will use a
@@ -512,6 +639,9 @@ TEST_P(MipmapTest, DISABLED_ThreeLevelsInitData)
 // the 'normal' texture are copied during conversion.
 TEST_P(MipmapTest, GenerateMipmapFromInitDataThenRender)
 {
+    // http://anglebug.com/5725
+    ANGLE_SKIP_TEST_IF(IsOzone());
+
     // Pass in initial data so the texture is blue.
     glBindTexture(GL_TEXTURE_2D, mTexture2D);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, getWindowWidth(), getWindowHeight(), 0, GL_RGB,
@@ -562,12 +692,88 @@ TEST_P(MipmapTest, GenerateMipmapFromInitDataThenRender)
     EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 8, getWindowHeight() / 8, GLColor::blue);
 }
 
+// Test that generating mipmap after the image is already created for a single level works.
+TEST_P(MipmapTest, GenerateMipmapAfterSingleLevelDraw)
+{
+    // http://anglebug.com/5725
+    ANGLE_SKIP_TEST_IF(IsOzone());
+
+    uint32_t width  = getWindowWidth();
+    uint32_t height = getWindowHeight();
+
+    const std::vector<GLColor> kInitData(width * height, GLColor::blue);
+
+    // Pass in initial data so the texture is blue.
+    glBindTexture(GL_TEXTURE_2D, mTexture2D);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 kInitData.data());
+
+    // Make sure the texture image is created.
+    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, kInitData[0]);
+
+    // Then generate the mips.
+    glGenerateMipmap(GL_TEXTURE_2D);
+    ASSERT_GL_NO_ERROR();
+
+    // Enable mipmaps.
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+
+    // Draw and make sure the second mip is blue.
+    clearAndDrawQuad(m2DProgram, getWindowWidth() / 2, getWindowHeight() / 2);
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 4, getWindowHeight() / 4, kInitData[0]);
+}
+
+// Test that generating mipmaps, then modifying the base level and generating mipmaps again works.
+TEST_P(MipmapTest, GenerateMipmapAfterModifyingBaseLevel)
+{
+    // http://anglebug.com/5725
+    ANGLE_SKIP_TEST_IF(IsOzone());
+
+    uint32_t width  = getWindowWidth();
+    uint32_t height = getWindowHeight();
+
+    const std::vector<GLColor> kInitData(width * height, GLColor::blue);
+
+    // Pass in initial data so the texture is blue.
+    glBindTexture(GL_TEXTURE_2D, mTexture2D);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 kInitData.data());
+
+    // Then generate the mips.
+    glGenerateMipmap(GL_TEXTURE_2D);
+    ASSERT_GL_NO_ERROR();
+
+    // Enable mipmaps.
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+
+    // Draw and make sure the second mip is blue.  This is to make sure the texture image is
+    // allocated.
+    clearAndDrawQuad(m2DProgram, getWindowWidth() / 2, getWindowHeight() / 2);
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 4, getWindowHeight() / 4, kInitData[0]);
+
+    // Modify mip 0 without redefining it.
+    const std::vector<GLColor> kModifyData(width * height, GLColor::green);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
+                    kModifyData.data());
+
+    // Generate the mips again, which should update all levels to the new (green) color.
+    glGenerateMipmap(GL_TEXTURE_2D);
+    ASSERT_GL_NO_ERROR();
+
+    clearAndDrawQuad(m2DProgram, getWindowWidth() / 2, getWindowHeight() / 2);
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 4, getWindowHeight() / 4, kModifyData[0]);
+}
+
 // This test ensures that mips are correctly generated from a rendered image.
 // In particular, on D3D11 Feature Level 9_3, the clear call will be performed on the zero-level
 // texture, rather than the mipped one. The test ensures that the zero-level texture is correctly
 // copied into the mipped texture before the mipmaps are generated.
 TEST_P(MipmapTest, GenerateMipmapFromRenderedImage)
 {
+    // http://anglebug.com/5725
+    ANGLE_SKIP_TEST_IF(IsOzone());
+
     glBindTexture(GL_TEXTURE_2D, mTexture2D);
     // Clear the texture to blue.
     clearTextureLevel0(GL_TEXTURE_2D, mTexture2D, 0.0f, 0.0f, 1.0f, 1.0f);
@@ -599,6 +805,8 @@ TEST_P(MipmapTest, RenderOntoLevelZeroAfterGenerateMipmap)
 {
     // TODO(geofflang): Figure out why this is broken on AMD OpenGL
     ANGLE_SKIP_TEST_IF(IsAMD() && IsOpenGL());
+    // http://anglebug.com/5725
+    ANGLE_SKIP_TEST_IF(IsOzone());
 
     glBindTexture(GL_TEXTURE_2D, mTexture2D);
 
@@ -666,6 +874,9 @@ TEST_P(MipmapTest, RenderOntoLevelZeroAfterGenerateMipmap)
 // already uploaded before. The test expects that mip to be usable.
 TEST_P(MipmapTest, DefineValidExtraLevelAndUseItLater)
 {
+    // http://anglebug.com/5725
+    ANGLE_SKIP_TEST_IF(IsOzone());
+
     glBindTexture(GL_TEXTURE_2D, mTexture2D);
 
     GLubyte *levels[] = {mLevelZeroBlueInitData.data(), mLevelOneGreenInitData.data(),
@@ -743,6 +954,9 @@ TEST_P(MipmapTest, MipMapGenerationD3D9Bug)
                        !IsGLExtensionEnabled("GL_OES_rgb8_rgba8") ||
                        !IsGLExtensionEnabled("GL_ANGLE_texture_usage"));
 
+    // http://anglebug.com/5725
+    ANGLE_SKIP_TEST_IF(IsOzone());
+
     const GLColor mip0Color[4] = {
         GLColor::red,
         GLColor::green,
@@ -771,9 +985,12 @@ TEST_P(MipmapTest, TextureCubeGeneralLevelZero)
 {
     // http://anglebug.com/3145
     ANGLE_SKIP_TEST_IF(IsFuchsia() && IsIntel() && IsVulkan());
-
     // http://anglebug.com/2822
     ANGLE_SKIP_TEST_IF(IsWindows() && IsIntel() && IsVulkan());
+    // http://issuetracker.google.com/159666631
+    ANGLE_SKIP_TEST_IF(isSwiftshader());
+    // http://anglebug.com/5725
+    ANGLE_SKIP_TEST_IF(IsOzone());
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, mTextureCube);
 
@@ -816,9 +1033,10 @@ TEST_P(MipmapTest, TextureCubeRenderToLevelZero)
 {
     // http://anglebug.com/3145
     ANGLE_SKIP_TEST_IF(IsFuchsia() && IsIntel() && IsVulkan());
-
     // http://anglebug.com/2822
     ANGLE_SKIP_TEST_IF(IsWindows() && IsIntel() && IsVulkan());
+    // http://anglebug.com/5725
+    ANGLE_SKIP_TEST_IF(IsOzone());
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, mTextureCube);
 
@@ -836,6 +1054,343 @@ TEST_P(MipmapTest, TextureCubeRenderToLevelZero)
     // Draw a to a quarter-size viewport. This should also be red.
     clearAndDrawQuad(mCubeProgram, getWindowWidth() / 4, getWindowHeight() / 4);
     EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::red);
+}
+
+// Creates a mipmapped 3D texture with two layers, and calls ANGLE's GenerateMipmap.
+// Then tests if the mipmaps are rendered correctly for all two layers.
+// This is the same as MipmapTestES3.MipmapsForTexture3D but for GL_OES_texture_3D extension on
+// GLES 2.0 instead.
+TEST_P(MipmapTest, MipmapsForTexture3DOES)
+{
+    ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_OES_texture_3D"));
+
+    // http://anglebug.com/4927
+    ANGLE_SKIP_TEST_IF((IsPixel2() || IsNexus5X()) && IsOpenGLES());
+    // http://anglebug.com/5725
+    ANGLE_SKIP_TEST_IF(IsOzone());
+
+    int px = getWindowWidth() / 2;
+    int py = getWindowHeight() / 2;
+
+    GLTexture texture;
+    glBindTexture(GL_TEXTURE_3D, texture);
+
+    glTexImage3DOES(GL_TEXTURE_3D, 0, GL_RGBA, 16, 16, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 1, GL_RGBA, 8, 8, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 2, GL_RGBA, 4, 4, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 3, GL_RGBA, 2, 2, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 4, GL_RGBA, 1, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    // Fill the first layer with red
+    std::vector<GLColor> pixelsRed(16 * 16, GLColor::red);
+    glTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 0, 16, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixelsRed.data());
+
+    // Fill the second layer with green
+    std::vector<GLColor> pixelsGreen(16 * 16, GLColor::green);
+    glTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 1, 16, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixelsGreen.data());
+
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    EXPECT_GL_NO_ERROR();
+
+    glGenerateMipmap(GL_TEXTURE_3D);
+
+    EXPECT_GL_NO_ERROR();
+
+    glUseProgram(m3DProgram);
+
+    EXPECT_GL_NO_ERROR();
+
+    // Mipmap level 0
+    // Draw the first slice
+    glUniform1f(mTexture3DLODUniformLocation, 0.);
+    glUniform1f(mTexture3DSliceUniformLocation, 0.25f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+
+    // Draw the second slice
+    glUniform1f(mTexture3DSliceUniformLocation, 0.75f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::green);
+
+    // Regenerate mipmap of same color texture
+    glTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 1, 16, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixelsRed.data());
+
+    glGenerateMipmap(GL_TEXTURE_3D);
+
+    EXPECT_GL_NO_ERROR();
+
+    // Mipmap level 1 8*8*1
+    glUniform1f(mTexture3DLODUniformLocation, 1.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+
+    // Mipmap level 2 4*4*1
+    glUniform1f(mTexture3DLODUniformLocation, 2.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+
+    // Mipmap level 3 2*2*1
+    glUniform1f(mTexture3DLODUniformLocation, 3.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+
+    // Mipmap level 4 1*1*1
+    glUniform1f(mTexture3DLODUniformLocation, 4.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+}
+
+// This test verifies 3D texture mipmap generation uses box filter on Metal back-end.
+class Mipmap3DBoxFilterTest : public MipmapTest
+{};
+
+TEST_P(Mipmap3DBoxFilterTest, GenMipmapsForTexture3DOES)
+{
+    int px = getWindowWidth() / 2;
+    int py = getWindowHeight() / 2;
+
+    GLTexture texture;
+    glBindTexture(GL_TEXTURE_3D, texture);
+
+    glTexImage3DOES(GL_TEXTURE_3D, 0, GL_RGBA, 32, 32, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 1, GL_RGBA, 16, 16, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 2, GL_RGBA, 8, 8, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 3, GL_RGBA, 4, 4, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 4, GL_RGBA, 2, 2, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 5, GL_RGBA, 1, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    // Fill the first layer with red
+    std::vector<GLColor> pixelsRed(32 * 32, GLColor::red);
+    glTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 0, 32, 32, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixelsRed.data());
+
+    // Fill the second layer with green
+    std::vector<GLColor> pixelsGreen(32 * 32, GLColor::green);
+    glTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 1, 32, 32, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixelsGreen.data());
+
+    // Fill the 3rd layer with blue
+    std::vector<GLColor> pixelsBlue(32 * 32, GLColor::blue);
+    glTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 2, 32, 32, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixelsBlue.data());
+
+    // Fill the 4th layer with yellow
+    std::vector<GLColor> pixelsYellow(32 * 32, GLColor::yellow);
+    glTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 3, 32, 32, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixelsYellow.data());
+
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    EXPECT_GL_NO_ERROR();
+
+    glGenerateMipmap(GL_TEXTURE_3D);
+
+    EXPECT_GL_NO_ERROR();
+
+    glUseProgram(m3DProgram);
+
+    EXPECT_GL_NO_ERROR();
+
+    // Mipmap level 0
+    // Draw the first slice
+    glUniform1f(mTexture3DLODUniformLocation, 0.);
+    glUniform1f(mTexture3DSliceUniformLocation, 0.125f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+
+    // Draw the second slice
+    glUniform1f(mTexture3DSliceUniformLocation, 0.375f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::green);
+
+    // Draw the 3rd slice
+    glUniform1f(mTexture3DSliceUniformLocation, 0.625f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::blue);
+
+    // Draw the 4th slice
+    glUniform1f(mTexture3DSliceUniformLocation, 0.875f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::yellow);
+
+    // Mipmap level 1
+    // The second mipmap should have two slice.
+    glUniform1f(mTexture3DLODUniformLocation, 1.);
+    glUniform1f(mTexture3DSliceUniformLocation, 0.25f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 0, 255, 1.0);
+
+    glUniform1f(mTexture3DSliceUniformLocation, 0.75f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 127, 255, 1.0);
+
+    // Mipmap level 2
+    // The 3rd mipmap should only have one slice.
+    glUniform1f(mTexture3DLODUniformLocation, 2.);
+    glUniform1f(mTexture3DSliceUniformLocation, 0.25f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 64, 255, 1.0);
+
+    glUniform1f(mTexture3DSliceUniformLocation, 0.75f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 64, 255, 1.0);
+
+    // Mipmap level 3
+    glUniform1f(mTexture3DLODUniformLocation, 3.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 64, 255, 1.0);
+
+    // Mipmap level 4
+    glUniform1f(mTexture3DLODUniformLocation, 4.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 64, 255, 1.0);
+
+    // Mipmap level 5
+    glUniform1f(mTexture3DLODUniformLocation, 5.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 64, 255, 1.0);
+}
+
+// Test that non-power of two texture also has mipmap generated using box filter
+TEST_P(Mipmap3DBoxFilterTest, GenMipmapsForTexture3DOESNpot)
+{
+    int px = getWindowWidth() / 2;
+    int py = getWindowHeight() / 2;
+
+    GLTexture texture;
+    glBindTexture(GL_TEXTURE_3D, texture);
+
+    glTexImage3DOES(GL_TEXTURE_3D, 0, GL_RGBA, 30, 30, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 1, GL_RGBA, 15, 15, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 2, GL_RGBA, 7, 7, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 3, GL_RGBA, 3, 3, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage3DOES(GL_TEXTURE_3D, 4, GL_RGBA, 1, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    // Fill the first layer with red
+    std::vector<GLColor> pixelsRed(30 * 30, GLColor::red);
+    glTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 0, 30, 30, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixelsRed.data());
+
+    // Fill the second layer with green
+    std::vector<GLColor> pixelsGreen(30 * 30, GLColor::green);
+    glTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 1, 30, 30, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixelsGreen.data());
+
+    // Fill the 3rd layer with blue
+    std::vector<GLColor> pixelsBlue(30 * 30, GLColor::blue);
+    glTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 2, 30, 30, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixelsBlue.data());
+
+    // Fill the 4th layer with yellow
+    std::vector<GLColor> pixelsYellow(30 * 30, GLColor::yellow);
+    glTexSubImage3DOES(GL_TEXTURE_3D, 0, 0, 0, 3, 30, 30, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                       pixelsYellow.data());
+
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    EXPECT_GL_NO_ERROR();
+
+    glGenerateMipmap(GL_TEXTURE_3D);
+
+    EXPECT_GL_NO_ERROR();
+
+    glUseProgram(m3DProgram);
+
+    EXPECT_GL_NO_ERROR();
+
+    // Mipmap level 0
+    // Draw the first slice
+    glUniform1f(mTexture3DLODUniformLocation, 0.);
+    glUniform1f(mTexture3DSliceUniformLocation, 0.125f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+
+    // Draw the second slice
+    glUniform1f(mTexture3DSliceUniformLocation, 0.375f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::green);
+
+    // Draw the 3rd slice
+    glUniform1f(mTexture3DSliceUniformLocation, 0.625f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::blue);
+
+    // Draw the 4th slice
+    glUniform1f(mTexture3DSliceUniformLocation, 0.875f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::yellow);
+
+    // Mipmap level 1
+    // The second mipmap should have two slice.
+    glUniform1f(mTexture3DLODUniformLocation, 1.);
+    glUniform1f(mTexture3DSliceUniformLocation, 0.25f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 0, 255, 1.0);
+
+    glUniform1f(mTexture3DSliceUniformLocation, 0.75f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 127, 255, 1.0);
+
+    // Mipmap level 2
+    // The 3rd mipmap should only have one slice.
+    glUniform1f(mTexture3DLODUniformLocation, 2.);
+    glUniform1f(mTexture3DSliceUniformLocation, 0.25f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 64, 255, 1.0);
+
+    glUniform1f(mTexture3DSliceUniformLocation, 0.75f);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 64, 255, 1.0);
+
+    // Mipmap level 3
+    glUniform1f(mTexture3DLODUniformLocation, 3.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 64, 255, 1.0);
+
+    // Mipmap level 4
+    glUniform1f(mTexture3DLODUniformLocation, 4.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 64, 255, 1.0);
+
+    // Mipmap level 5
+    glUniform1f(mTexture3DLODUniformLocation, 5.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_NEAR(px, py, 127, 127, 64, 255, 1.0);
 }
 
 // Creates a mipmapped 2D array texture with three layers, and calls ANGLE's GenerateMipmap.
@@ -940,10 +1495,6 @@ TEST_P(MipmapTestES3, MipmapForDeepTextureArray)
 // Then tests if the mipmaps are rendered correctly for all two layers.
 TEST_P(MipmapTestES3, MipmapsForTexture3D)
 {
-    // TODO(cnorthrop): Enabled the group to cover texture base level, but this test
-    // needs some triage: http://anglebug.com/3950
-    ANGLE_SKIP_TEST_IF(IsVulkan());
-
     int px = getWindowWidth() / 2;
     int py = getWindowHeight() / 2;
 
@@ -988,17 +1539,137 @@ TEST_P(MipmapTestES3, MipmapsForTexture3D)
     EXPECT_GL_NO_ERROR();
     EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::green);
 
-    // Mipmap level 1
-    // The second mipmap should only have one slice.
+    // Regenerate mipmap of same color texture
+    glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 1, 16, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                    pixelsRed.data());
+
+    glGenerateMipmap(GL_TEXTURE_3D);
+
+    EXPECT_GL_NO_ERROR();
+
+    // Mipmap level 1 8*8*1
     glUniform1f(mTexture3DLODUniformLocation, 1.);
     drawQuad(m3DProgram, "position", 0.5f);
     EXPECT_GL_NO_ERROR();
-    EXPECT_PIXEL_NEAR(px, py, 127, 127, 0, 255, 1.0);
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
 
-    glUniform1f(mTexture3DSliceUniformLocation, 0.75f);
+    // Mipmap level 2 4*4*1
+    glUniform1f(mTexture3DLODUniformLocation, 2.);
     drawQuad(m3DProgram, "position", 0.5f);
     EXPECT_GL_NO_ERROR();
-    EXPECT_PIXEL_NEAR(px, py, 127, 127, 0, 255, 1.0);
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+
+    // Mipmap level 3 2*2*1
+    glUniform1f(mTexture3DLODUniformLocation, 3.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+
+    // Mipmap level 4 1*1*1
+    glUniform1f(mTexture3DLODUniformLocation, 4.);
+    drawQuad(m3DProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+}
+
+// Create a 2D array, then immediately redefine it to have fewer layers.  Regression test for a bug
+// in the Vulkan backend where the old higher-layer-count data upload was not removed.
+TEST_P(MipmapTestES3, TextureArrayRedefineThenGenerateMipmap)
+{
+    int px = getWindowWidth() / 2;
+    int py = getWindowHeight() / 2;
+
+    glBindTexture(GL_TEXTURE_2D_ARRAY, mTexture);
+
+    // Fill the whole texture with red, then redefine it and fill with green
+    std::vector<GLColor> pixelsRed(2 * 2 * 4, GLColor::red);
+    std::vector<GLColor> pixelsGreen(2 * 2 * 2, GLColor::green);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, 2, 2, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 pixelsRed.data());
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, 2, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 pixelsGreen.data());
+
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    EXPECT_GL_NO_ERROR();
+
+    // Generate mipmaps
+    glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+    EXPECT_GL_NO_ERROR();
+
+    glUseProgram(mArrayProgram);
+    EXPECT_GL_NO_ERROR();
+
+    // Draw the first slice
+    glUniform1i(mTextureArraySliceUniformLocation, 0);
+    drawQuad(mArrayProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::green);
+
+    // Draw the second slice
+    glUniform1i(mTextureArraySliceUniformLocation, 1);
+    drawQuad(mArrayProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::green);
+}
+
+// Create a 2D array, use it, then redefine it to have fewer layers.  Regression test for a bug in
+// the Vulkan backend where the old higher-layer-count data upload was not removed.
+TEST_P(MipmapTestES3, TextureArrayUseThenRedefineThenGenerateMipmap)
+{
+    int px = getWindowWidth() / 2;
+    int py = getWindowHeight() / 2;
+
+    glBindTexture(GL_TEXTURE_2D_ARRAY, mTexture);
+
+    // Fill the whole texture with red.
+    std::vector<GLColor> pixelsRed(2 * 2 * 4, GLColor::red);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, 2, 2, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 pixelsRed.data());
+
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    EXPECT_GL_NO_ERROR();
+
+    // Generate mipmap
+    glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+    EXPECT_GL_NO_ERROR();
+
+    glUseProgram(mArrayProgram);
+    EXPECT_GL_NO_ERROR();
+
+    // Draw the first slice
+    glUniform1i(mTextureArraySliceUniformLocation, 0);
+    drawQuad(mArrayProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+
+    // Draw the fourth slice
+    glUniform1i(mTextureArraySliceUniformLocation, 3);
+    drawQuad(mArrayProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::red);
+
+    // Redefine the image and fill with green
+    std::vector<GLColor> pixelsGreen(2 * 2 * 2, GLColor::green);
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, 2, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 pixelsGreen.data());
+
+    // Generate mipmap
+    glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+    EXPECT_GL_NO_ERROR();
+
+    // Draw the first slice
+    glUniform1i(mTextureArraySliceUniformLocation, 0);
+    drawQuad(mArrayProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::green);
+
+    // Draw the second slice
+    glUniform1i(mTextureArraySliceUniformLocation, 1);
+    drawQuad(mArrayProgram, "position", 0.5f);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(px, py, GLColor::green);
 }
 
 // Create a 2D texture with levels 0-2, call GenerateMipmap with base level 1 so that level 0 stays
@@ -1011,6 +1682,9 @@ TEST_P(MipmapTestES3, GenerateMipmapBaseLevel)
 {
     // Observed incorrect rendering on AMD, sampling level 2 returns black.
     ANGLE_SKIP_TEST_IF(IsAMD() && IsDesktopOpenGL());
+
+    // TODO(anglebug.com/5360): Failing on ARM-based Apple DTKs.
+    ANGLE_SKIP_TEST_IF(IsOSX() && IsARM64() && IsDesktopOpenGL());
 
     glBindTexture(GL_TEXTURE_2D, mTexture);
 
@@ -1052,6 +1726,75 @@ TEST_P(MipmapTestES3, GenerateMipmapBaseLevel)
     EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, GLColor::blue);
 }
 
+// Test that generating mipmaps doesn't discard updates staged to out-of-range mips.
+TEST_P(MipmapTestES3, GenerateMipmapPreservesOutOfRangeMips)
+{
+    // http://anglebug.com/4782
+    ANGLE_SKIP_TEST_IF(IsOpenGL() && IsWindows() && (IsAMD() || IsIntel()));
+
+    // http://anglebug.com/4784
+    ANGLE_SKIP_TEST_IF(IsOpenGL() && IsLinux() && IsIntel());
+
+    // http://anglebug.com/4786
+    ANGLE_SKIP_TEST_IF(IsOpenGLES() && IsNVIDIAShield());
+
+    // TODO(anglebug.com/5360): Failing on ARM-based Apple DTKs.
+    ANGLE_SKIP_TEST_IF(IsOSX() && IsARM64() && IsDesktopOpenGL());
+
+    constexpr GLint kTextureSize = 16;
+    const std::vector<GLColor> kLevel0Data(kTextureSize * kTextureSize, GLColor::red);
+    const std::vector<GLColor> kLevel1Data(kTextureSize * kTextureSize, GLColor::green);
+    const std::vector<GLColor> kLevel6Data(kTextureSize * kTextureSize, GLColor::blue);
+
+    // Initialize a 16x16 RGBA8 texture with red, green and blue for levels 0, 1 and 6 respectively.
+    GLTexture tex;
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kTextureSize, kTextureSize, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, kLevel0Data.data());
+    glTexImage2D(GL_TEXTURE_2D, 1, GL_RGBA, kTextureSize, kTextureSize, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, kLevel1Data.data());
+    glTexImage2D(GL_TEXTURE_2D, 6, GL_RGBA, kTextureSize, kTextureSize, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, kLevel6Data.data());
+    ASSERT_GL_NO_ERROR();
+
+    // Set base level to 1, and generate mipmaps.  Levels 1 through 5 will be green.
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 1);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, kLevel1Data[0]);
+
+    glGenerateMipmap(GL_TEXTURE_2D);
+    ASSERT_GL_NO_ERROR();
+
+    // Verify that the mips are all green.
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    for (int mip = 0; mip < 5; ++mip)
+    {
+        int scale = 1 << mip;
+        clearAndDrawQuad(m2DProgram, getWindowWidth() / scale, getWindowHeight() / scale);
+        EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / scale / 2, getWindowHeight() / scale / 2,
+                              kLevel1Data[0]);
+    }
+
+    // Verify that level 0 is red.  TODO: setting MAX_LEVEL should be unnecessary, but is needed to
+    // work around a bug in the Vulkan backend.  http://anglebug.com/4780
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, kLevel0Data[0]);
+
+    // Verify that level 6 is blue.
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 6);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 6);
+
+    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, kLevel6Data[0]);
+}
+
 // Create a cube map with levels 0-2, call GenerateMipmap with base level 1 so that level 0 stays
 // the same, and then sample levels 0 and 2.
 // GLES 3.0.4 section 3.8.10:
@@ -1062,6 +1805,9 @@ TEST_P(MipmapTestES3, GenerateMipmapCubeBaseLevel)
 {
     // Observed incorrect rendering on AMD, sampling level 2 returns black.
     ANGLE_SKIP_TEST_IF(IsAMD() && IsDesktopOpenGL());
+
+    // TODO(anglebug.com/5360): Failing on ARM-based Apple DTKs.
+    ANGLE_SKIP_TEST_IF(IsOSX() && IsARM64() && IsDesktopOpenGL());
 
     ASSERT_EQ(getWindowWidth(), getWindowHeight());
 
@@ -1114,6 +1860,9 @@ TEST_P(MipmapTestES3, GenerateMipmapCubeBaseLevel)
 // the levelbase array, are left unchanged by this computation."
 TEST_P(MipmapTestES3, GenerateMipmapMaxLevel)
 {
+    // TODO(anglebug.com/5360): Failing on ARM-based Apple DTKs.
+    ANGLE_SKIP_TEST_IF(IsOSX() && IsARM64() && IsDesktopOpenGL());
+
     glBindTexture(GL_TEXTURE_2D, mTexture);
 
     // Fill level 0 with blue
@@ -1188,9 +1937,6 @@ TEST_P(MipmapTestES3, GenerateMipmapBaseLevelOutOfRange)
 // be clamped, so the call doesn't generate an error.
 TEST_P(MipmapTestES3, GenerateMipmapBaseLevelOutOfRangeImmutableTexture)
 {
-    // TODO(cnorthrop): Interacts with immutable texture supprt: http://anglebug.com/3950
-    ANGLE_SKIP_TEST_IF(IsVulkan());
-
     glBindTexture(GL_TEXTURE_2D, mTexture);
 
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 1, 1);
@@ -1222,8 +1968,11 @@ TEST_P(MipmapTestES3, BaseLevelTextureBug)
     // Probably not Intel.
     ANGLE_SKIP_TEST_IF(IsOSX() && (IsNVIDIA() || IsIntel()));
 
-    // TODO(cnorthrop): Figure out what's going on here: http://anglebug.com/3950
-    ANGLE_SKIP_TEST_IF(IsVulkan());
+    // TODO(anglebug.com/5360): Failing on ARM-based Apple DTKs.
+    ANGLE_SKIP_TEST_IF(IsOSX() && IsARM64() && IsDesktopOpenGL());
+
+    // TODO(anglebug.com/5491)
+    ANGLE_SKIP_TEST_IF(IsIOS() && IsOpenGLES());
 
     std::vector<GLColor> texDataRed(2u * 2u, GLColor::red);
 
@@ -1244,16 +1993,296 @@ TEST_P(MipmapTestES3, BaseLevelTextureBug)
     EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::red);
 }
 
+TEST_P(MipmapTestES31, MipmapWithMemoryBarrier)
+{
+    std::vector<GLColor> pixelsRed(getWindowWidth() * getWindowHeight(), GLColor::red);
+    std::vector<GLColor> pixelsGreen(getWindowWidth() * getWindowHeight() / 4, GLColor::green);
+
+    constexpr char kVS[] = R"(#version 300 es
+precision highp float;
+in vec4 position;
+out vec2 texcoord;
+
+void main()
+{
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+    texcoord = (position.xy * 0.5) + 0.5;
+})";
+
+    constexpr char kFS[] = R"(#version 300 es
+precision highp float;
+uniform highp sampler2D tex;
+in vec2 texcoord;
+out vec4 out_FragColor;
+
+void main()
+{
+    out_FragColor = texture(tex, texcoord);
+})";
+
+    ANGLE_GL_PROGRAM(m2DProgram, kVS, kFS);
+    glUseProgram(m2DProgram);
+
+    // Create a texture with red and enable the mipmap
+    GLTexture texture;
+    glBindTexture(GL_TEXTURE_2D, texture);
+    // Fill level 0 with red
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, getWindowWidth(), getWindowHeight(), 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, pixelsRed.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    EXPECT_GL_NO_ERROR();
+    glGenerateMipmap(GL_TEXTURE_2D);
+    ASSERT_GL_NO_ERROR();
+    // level 2 is red
+    clearAndDrawQuad(m2DProgram.get(), getWindowWidth() / 4, getWindowHeight() / 4);
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 8, getWindowHeight() / 8, GLColor::red);
+
+    // Clear the level 1 to green
+    glTexSubImage2D(GL_TEXTURE_2D, 1, 0, 0, getWindowWidth() / 2, getWindowHeight() / 2, GL_RGBA,
+                    GL_UNSIGNED_BYTE, pixelsGreen.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 1);
+    EXPECT_GL_NO_ERROR();
+    glGenerateMipmap(GL_TEXTURE_2D);
+    ASSERT_GL_NO_ERROR();
+    // Insert a memory barrier, then it will break the graph node submission order.
+    glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    // level 0 is red
+    clearAndDrawQuad(m2DProgram.get(), getWindowWidth(), getWindowHeight());
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, GLColor::red);
+    // Draw using level 2. It should be set to green by GenerateMipmap.
+    clearAndDrawQuad(m2DProgram.get(), getWindowWidth() / 4, getWindowHeight() / 4);
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 8, getWindowHeight() / 8, GLColor::green);
+}
+
+// Tests respecifying 3D mipmaps.
+TEST_P(MipmapTestES3, Generate3DMipmapRespecification)
+{
+    std::vector<GLColor> pixels(256 * 256 * 100, GLColor::black);
+
+    GLTexture texture;
+    glBindTexture(GL_TEXTURE_3D, texture);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, 256, 256, 100, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 pixels.data());
+    glTexImage3D(GL_TEXTURE_3D, 1, GL_RGBA, 128, 128, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 pixels.data());
+    glGenerateMipmap(GL_TEXTURE_3D);
+
+    ASSERT_GL_NO_ERROR();
+}
+
+// Test the calling glGenerateMipmap on a texture with a zero dimension doesn't crash.
+TEST_P(MipmapTestES3, GenerateMipmapZeroSize)
+{
+    GLTexture texture;
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    // Create a texture with at least one dimension that's zero.
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 2, 0, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    // Attempt to generate mipmap.  This shouldn't crash.
+    glGenerateMipmap(GL_TEXTURE_2D);
+    EXPECT_GL_NO_ERROR();
+
+    // Try the same with a 3D texture where depth is 0.
+    GLTexture texture2;
+    glBindTexture(GL_TEXTURE_3D, texture2);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, 2, 2, 0, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glGenerateMipmap(GL_TEXTURE_3D);
+}
+
+// Test that reducing the size of the mipchain by resizing the base image then deleting it doesn't
+// cause a crash. Issue found by fuzzer.
+TEST_P(MipmapTestES3, ResizeBaseMipTo1x1ThenDelete)
+{
+    GLTexture tex;
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    std::vector<GLColor> data(2, GLColor::blue);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+    glTexImage2D(GL_TEXTURE_2D, 1, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+
+    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::blue);
+
+    data[0] = GLColor::green;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+
+    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
+
+    tex.reset();
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::green);
+}
+
+// Test the calling generateMipmap with redefining texture and modifying baselevel.
+TEST_P(MipmapTestES3, GenerateMipmapWithRedefineLevelAndTexture)
+{
+    std::vector<GLColor> pixels(1000000, GLColor::black);
+
+    GLTexture texture;
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexImage2D(GL_TEXTURE_2D, 1, GL_RGBA, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 2);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    clearAndDrawQuad(m2DProgram, getWindowWidth(), getWindowHeight());
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, GLColor::black);
+}
+
+// Test that manually generating mipmaps using draw calls is functional
+TEST_P(MipmapTestES31, UpdateBaseLevel)
+{
+    constexpr char kVS[] = R"(#version 310 es
+precision highp float;
+
+in vec4 position;
+out vec2 texcoord;
+
+void main()
+{
+    gl_Position = position;
+    texcoord = (position.xy * 0.5) + 0.5;
+})";
+
+    constexpr char kFS[] = R"(#version 310 es
+precision highp float;
+
+uniform highp sampler2D tex;
+
+in vec2 texcoord;
+out vec4 frag_color;
+
+void main()
+{
+    highp vec4 samples = textureGatherOffset(tex, texcoord, ivec2(0, 0), 0);
+    highp float max_r = max(max(samples.x, samples.y), max(samples.z, samples.w));
+
+    frag_color = vec4(max_r, 0.0, 0.0, 1.0);
+}
+)";
+    ANGLE_GL_PROGRAM(program, kVS, kFS);
+    ASSERT_NE(0u, program);
+
+    GLTexture tex;
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexStorage2D(GL_TEXTURE_2D, 3, GL_RGBA8, 4, 4);
+    EXPECT_GL_NO_ERROR();
+
+    // clang-format off
+    constexpr GLubyte kRedColor[16] = {
+        0x0c, 0x08, 0x4c, 0x48,
+        0x00, 0x04, 0x40, 0x44,
+        0xcc, 0xc8, 0x8c, 0x88,
+        0xc0, 0xc4, 0x80, 0x84,
+    };
+
+    constexpr GLubyte kExpectedMip1Color[4] = {
+        0x0c, 0x4c,
+        0xcc, 0x8c,
+    };
+
+    constexpr GLubyte kExpectedMip2Color[1] = {
+        0xcc
+    };
+    // clang-format on
+
+    GLubyte mip0Color[16 * 4];
+    for (size_t i = 0; i < 16; i++)
+    {
+        mip0Color[i * 4 + 0] = kRedColor[i];
+        mip0Color[i * 4 + 1] = 0;
+        mip0Color[i * 4 + 2] = 0;
+        mip0Color[i * 4 + 3] = 0xff;
+    }
+
+    GLFramebuffer fb0, fb1, fb2;
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fb0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+    EXPECT_GL_NO_ERROR();
+    glBindFramebuffer(GL_FRAMEBUFFER, fb1);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 1);
+    EXPECT_GL_NO_ERROR();
+    glBindFramebuffer(GL_FRAMEBUFFER, fb2);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 2);
+    EXPECT_GL_NO_ERROR();
+
+    // initialize base mip
+    glBindFramebuffer(GL_FRAMEBUFFER, fb0);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 4, 4, GL_RGBA, GL_UNSIGNED_BYTE, &mip0Color[0]);
+    EXPECT_GL_NO_ERROR();
+
+    // draw mip 1 with mip 0
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+
+    glViewport(0, 0, 2, 2);
+    glBindFramebuffer(GL_FRAMEBUFFER, fb1);
+    EXPECT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
+
+    glUseProgram(program);
+    glUniform1i(glGetUniformLocation(program, "tex"), 0);
+    drawQuad(program, "position", 0.5);
+    EXPECT_GL_NO_ERROR();
+
+    // draw mip 2 with mip 1
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 1);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 1);
+
+    glViewport(0, 0, 1, 1);
+    glBindFramebuffer(GL_FRAMEBUFFER, fb2);
+    EXPECT_GL_FRAMEBUFFER_COMPLETE(GL_FRAMEBUFFER);
+
+    glUseProgram(program);
+    glUniform1i(glGetUniformLocation(program, "tex"), 0);
+    drawQuad(program, "position", 0.5);
+    EXPECT_GL_NO_ERROR();
+
+    // Read back rendered pixel values and compare
+    GLubyte resultColors[16];
+    glBindFramebuffer(GL_FRAMEBUFFER, fb1);
+    glReadPixels(0, 0, 2, 2, GL_RGBA, GL_UNSIGNED_BYTE, &resultColors[0]);
+    for (size_t i = 0; i < 4; i++)
+    {
+        EXPECT_EQ(resultColors[i * 4], kExpectedMip1Color[i]);
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fb2);
+    glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &resultColors[0]);
+    for (size_t i = 0; i < 1; i++)
+    {
+        EXPECT_EQ(resultColors[i * 4], kExpectedMip2Color[i]);
+    }
+}
+
 // Use this to select which configurations (e.g. which renderer, which GLES major version) these
 // tests should be run against.
-ANGLE_INSTANTIATE_TEST(MipmapTest,
-                       ES2_D3D9(),
-                       ES2_D3D11(),
-                       ES2_D3D11_PRESENT_PATH_FAST(),
-                       ES2_OPENGL(),
-                       ES3_OPENGL(),
-                       ES2_OPENGLES(),
-                       ES3_OPENGLES(),
-                       ES2_VULKAN(),
-                       ES3_VULKAN());
-ANGLE_INSTANTIATE_TEST(MipmapTestES3, ES3_D3D11(), ES3_OPENGL(), ES3_OPENGLES(), ES3_VULKAN());
+ANGLE_INSTANTIATE_TEST_ES2_AND_ES3(MipmapTest);
+
+namespace extraPlatforms
+{
+ANGLE_INSTANTIATE_TEST(MipmapTest, WithNoGenMultipleMipsPerPass(ES2_METAL()));
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(Mipmap3DBoxFilterTest);
+ANGLE_INSTANTIATE_TEST(Mipmap3DBoxFilterTest,
+                       ES2_METAL(),
+                       WithNoGenMultipleMipsPerPass(ES2_METAL()));
+}  // namespace extraPlatforms
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MipmapTestES3);
+ANGLE_INSTANTIATE_TEST_ES3(MipmapTestES3);
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MipmapTestES31);
+ANGLE_INSTANTIATE_TEST_ES31(MipmapTestES31);

@@ -31,8 +31,9 @@
 #import <WebCore/DocumentFragment.h>
 #import "ExceptionHandlers.h"
 #import <WebCore/JSExecState.h>
-#import <WebCore/Node.h>
 #import <WebCore/Range.h>
+#import <WebCore/SimpleRange.h>
+#import <WebCore/TextIterator.h>
 #import <WebCore/ThreadCheck.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <WebCore/WebScriptObjectPrivate.h>
@@ -92,7 +93,9 @@
 - (NSString *)text
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->text();
+    auto range = makeSimpleRange(*IMPL);
+    range.start.document().updateLayout();
+    return plainText(range);
 }
 
 - (void)setStart:(DOMNode *)refNode offset:(int)offset
@@ -170,7 +173,7 @@
     WebCore::JSMainThreadNullState state;
     if (!sourceRange)
         raiseTypeErrorException();
-    return raiseOnDOMError(IMPL->compareBoundaryPointsForBindings(how, *core(sourceRange)));
+    return raiseOnDOMError(IMPL->compareBoundaryPoints(how, *core(sourceRange)));
 }
 
 - (void)deleteContents
@@ -244,7 +247,7 @@
     WebCore::JSMainThreadNullState state;
     if (!refNode)
         raiseTypeErrorException();
-    return raiseOnDOMError(IMPL->intersectsNode(*core(refNode)));
+    return IMPL->intersectsNode(*core(refNode));
 }
 
 - (short)comparePoint:(DOMNode *)refNode offset:(int)offset
@@ -301,12 +304,17 @@ DOMRange *kit(WebCore::Range* value)
     if (!value)
         return nil;
     if (DOMRange *wrapper = getDOMWrapper(value))
-        return [[wrapper retain] autorelease];
-    DOMRange *wrapper = [[DOMRange alloc] _init];
+        return retainPtr(wrapper).autorelease();
+    auto wrapper = adoptNS([[DOMRange alloc] _init]);
     wrapper->_internal = reinterpret_cast<DOMObjectInternal*>(value);
     value->ref();
-    addDOMWrapper(wrapper, value);
-    return [wrapper autorelease];
+    addDOMWrapper(wrapper.get(), value);
+    return wrapper.autorelease();
+}
+
+DOMRange *kit(const std::optional<WebCore::SimpleRange>& value)
+{
+    return kit(createLiveRange(value).get());
 }
 
 #undef IMPL

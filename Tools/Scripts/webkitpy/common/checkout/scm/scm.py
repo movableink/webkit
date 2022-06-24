@@ -33,6 +33,8 @@ import logging
 import re
 import sys
 
+from webkitcorepy import unicode
+
 from webkitpy.common.system.executive import Executive, ScriptError
 from webkitpy.common.system.filesystem import FileSystem
 
@@ -95,7 +97,7 @@ class SCM:
         return filenames
 
     def strip_r_from_svn_revision(self, svn_revision):
-        match = re.match("^r(?P<svn_revision>\d+)", unicode(svn_revision))
+        match = re.match(r"^r(?P<svn_revision>\d+)", unicode(svn_revision))
         if (match):
             return match.group('svn_revision')
         return svn_revision
@@ -212,9 +214,13 @@ class SCM:
     def untracked_files(self, include_ignored_files=False):
         self._subclass_must_implement()
 
-    def discard_untracked_files(self, discard_ignored_files=False):
+    def discard_untracked_files(self, discard_ignored_files=False, keep_webkitbuild_directory=False):
         for filename in self.untracked_files(discard_ignored_files):
             if self._filesystem.isdir(filename):
+                if keep_webkitbuild_directory and filename == "WebKitBuild":
+                    continue
+                if filename == 'Tools/Scripts/libraries/autoinstalled':
+                    continue
                 self._filesystem.rmtree(filename)
             else:
                 self._filesystem.remove(filename)

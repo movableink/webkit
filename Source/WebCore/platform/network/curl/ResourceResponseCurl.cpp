@@ -95,8 +95,6 @@ ResourceResponse::ResourceResponse(const CurlResponse& response)
         setHTTPVersion("HTTP/1.1");
         break;
     case CURL_HTTP_VERSION_2_0:
-    case CURL_HTTP_VERSION_2TLS:
-    case CURL_HTTP_VERSION_2_PRIOR_KNOWLEDGE:
         setHTTPVersion("HTTP/2");
         break;
     case CURL_HTTP_VERSION_NONE:
@@ -149,11 +147,6 @@ void ResourceResponse::setStatusLine(const String& header)
 void ResourceResponse::setCertificateInfo(CertificateInfo&& certificateInfo)
 {
     m_certificateInfo = WTFMove(certificateInfo);
-}
-
-void ResourceResponse::setDeprecatedNetworkLoadMetrics(NetworkLoadMetrics&& networkLoadMetrics)
-{
-    m_networkLoadMetrics = WTFMove(networkLoadMetrics);
 }
 
 String ResourceResponse::platformSuggestedFilename() const

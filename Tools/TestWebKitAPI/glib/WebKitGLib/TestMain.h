@@ -31,7 +31,7 @@
 #if PLATFORM(GTK)
 #include <webkit2/webkit2.h>
 #elif PLATFORM(WPE)
-#include "HeadlessViewBackend.h"
+#include <WPEToolingBackends/HeadlessViewBackend.h>
 #include <wpe/webkit.h>
 #endif
 
@@ -124,17 +124,27 @@ public:
         GUniquePtr<char> applicationCacheDirectory(g_build_filename(dataDirectory(), "appcache", nullptr));
         GUniquePtr<char> webSQLDirectory(g_build_filename(dataDirectory(), "websql", nullptr));
         GUniquePtr<char> hstsDirectory(g_build_filename(dataDirectory(), "hsts", nullptr));
+        GUniquePtr<char> itpDirectory(g_build_filename(dataDirectory(), "itp", nullptr));
+        GUniquePtr<char> swRegistrationsDirectory(g_build_filename(dataDirectory(), "serviceworkers", nullptr));
+        GUniquePtr<char> domCacheDirectory(g_build_filename(dataDirectory(), "dom-cache", nullptr));
         GRefPtr<WebKitWebsiteDataManager> websiteDataManager = adoptGRef(webkit_website_data_manager_new(
             "local-storage-directory", localStorageDirectory.get(), "indexeddb-directory", indexedDBDirectory.get(),
             "disk-cache-directory", diskCacheDirectory.get(), "offline-application-cache-directory", applicationCacheDirectory.get(),
-            "websql-directory", webSQLDirectory.get(), "hsts-cache-directory", hstsDirectory.get(), nullptr));
+            "websql-directory", webSQLDirectory.get(), "hsts-cache-directory", hstsDirectory.get(),
+            "itp-directory", itpDirectory.get(), "service-worker-registrations-directory", swRegistrationsDirectory.get(),
+            "dom-cache-directory", domCacheDirectory.get(), nullptr));
 
         m_webContext = adoptGRef(WEBKIT_WEB_CONTEXT(g_object_new(WEBKIT_TYPE_WEB_CONTEXT,
             "website-data-manager", websiteDataManager.get(),
 #if PLATFORM(GTK)
             "process-swap-on-cross-site-navigation-enabled", TRUE,
+#if !USE(GTK4)
+            "use-system-appearance-for-scrollbars", FALSE,
 #endif
+#endif
+            "memory-pressure-settings", s_memoryPressureSettings,
             nullptr)));
+        assertObjectIsDeletedWhenTestFinishes(G_OBJECT(m_webContext.get()));
         g_signal_connect(m_webContext.get(), "initialize-web-extensions", G_CALLBACK(initializeWebExtensionsCallback), this);
     }
 
@@ -148,7 +158,7 @@ public:
         g_print("Leaked objects:");
         HashSet<GObject*>::const_iterator end = m_watchedObjects.end();
         for (HashSet<GObject*>::const_iterator it = m_watchedObjects.begin(); it != end; ++it)
-            g_print(" %s(%p)", g_type_name_from_instance(reinterpret_cast<GTypeInstance*>(*it)), *it);
+            g_print(" %s(%p - %u left)", g_type_name_from_instance(reinterpret_cast<GTypeInstance*>(*it)), *it, (*it)->ref_count);
         g_print("\n");
 
         g_assert_true(m_watchedObjects.isEmpty());
@@ -283,4 +293,5 @@ public:
     static GRefPtr<GDBusServer> s_dbusServer;
     static Vector<GRefPtr<GDBusConnection>> s_dbusConnections;
     static HashMap<uint64_t, GDBusConnection*> s_dbusConnectionPageMap;
+    static WebKitMemoryPressureSettings* s_memoryPressureSettings;
 };

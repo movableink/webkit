@@ -32,7 +32,6 @@
 #import <pal/spi/cocoa/IOKitSPI.h>
 #import <wtf/Assertions.h>
 #import <wtf/BlockPtr.h>
-#import <wtf/Optional.h>
 #import <wtf/SoftLinking.h>
 
 SOFT_LINK_PRIVATE_FRAMEWORK(BackBoardServices)
@@ -151,24 +150,17 @@ static void delayBetweenMove(int eventIndex, double elapsed)
     }   
 }
 
-@interface HIDEventGenerator ()
-@property (nonatomic, strong) NSMutableDictionary *eventCallbacks;
-@property (nonatomic, strong) NSArray<UIView *> *debugTouchViews;
-@end
-
 @implementation HIDEventGenerator {
     IOHIDEventSystemClientRef _ioSystemClient;
     SyntheticEventDigitizerInfo _activePoints[HIDMaxTouchCount];
     NSUInteger _activePointCount;
+    RetainPtr<NSMutableDictionary> _eventCallbacks;
 }
 
 + (HIDEventGenerator *)sharedHIDEventGenerator
 {
-    static HIDEventGenerator *eventGenerator = nil;
-    if (!eventGenerator)
-        eventGenerator = [[HIDEventGenerator alloc] init];
-
-    return eventGenerator;
+    static NeverDestroyed<RetainPtr<HIDEventGenerator>> eventGenerator = adoptNS([[HIDEventGenerator alloc] init]);
+    return eventGenerator.get().get();
 }
 
 + (CFIndex)nextEventCallbackID
@@ -186,21 +178,14 @@ static void delayBetweenMove(int eventIndex, double elapsed)
     for (NSUInteger i = 0; i < HIDMaxTouchCount; ++i)
         _activePoints[i].identifier = fingerIdentifiers[i];
 
-    _eventCallbacks = [[NSMutableDictionary alloc] init];
+    _eventCallbacks = adoptNS([[NSMutableDictionary alloc] init]);
 
     return self;
 }
 
-- (void)dealloc
-{
-    [_eventCallbacks release];
-    [_debugTouchViews release];
-    [super dealloc];
-}
-
 - (void)_sendIOHIDKeyboardEvent:(uint64_t)timestamp usage:(uint32_t)usage isKeyDown:(bool)isKeyDown
 {
-    RetainPtr<IOHIDEventRef> eventRef = adoptCF(IOHIDEventCreateKeyboardEvent(kCFAllocatorDefault,
+    auto eventRef = adoptCF(IOHIDEventCreateKeyboardEvent(kCFAllocatorDefault,
         timestamp,
         kHIDPage_KeyboardOrKeypad,
         usage,
@@ -333,7 +318,7 @@ static InterpolationType interpolationFromString(NSString *string)
         if ([touchInfo[HIDEventPressureKey] floatValue])
             childEventMask |= kIOHIDDigitizerEventAttribute;
 
-        IOHIDEventRef subEvent = IOHIDEventCreateDigitizerFingerEvent(kCFAllocatorDefault, machTime,
+        auto subEvent = adoptCF(IOHIDEventCreateDigitizerFingerEvent(kCFAllocatorDefault, machTime,
             [touchInfo[HIDEventTouchIDKey] intValue],               // index
             2,                                                      // identifier (which finger we think it is). FIXME: this should come from the data.
             childEventMask,
@@ -344,13 +329,12 @@ static InterpolationType interpolationFromString(NSString *string)
             [touchInfo[HIDEventTwistKey] floatValue],
             touch,                                                  // range
             touch,                                                  // touch
-            kIOHIDEventOptionNone);
+            kIOHIDEventOptionNone));
 
-        IOHIDEventSetFloatValue(subEvent, kIOHIDEventFieldDigitizerMajorRadius, [touchInfo[HIDEventMajorRadiusKey] floatValue]);
-        IOHIDEventSetFloatValue(subEvent, kIOHIDEventFieldDigitizerMinorRadius, [touchInfo[HIDEventMinorRadiusKey] floatValue]);
+        IOHIDEventSetFloatValue(subEvent.get(), kIOHIDEventFieldDigitizerMajorRadius, [touchInfo[HIDEventMajorRadiusKey] floatValue]);
+        IOHIDEventSetFloatValue(subEvent.get(), kIOHIDEventFieldDigitizerMinorRadius, [touchInfo[HIDEventMinorRadiusKey] floatValue]);
 
-        IOHIDEventAppendEvent(eventRef, subEvent, 0);
-        CFRelease(subEvent);
+        IOHIDEventAppendEvent(eventRef, subEvent.get(), 0);
     }
 
     return eventRef;
@@ -372,7 +356,7 @@ static InterpolationType interpolationFromString(NSString *string)
         eventMask |= kIOHIDDigitizerEventIdentity;
 
     uint64_t machTime = mach_absolute_time();
-    RetainPtr<IOHIDEventRef> eventRef = adoptCF(IOHIDEventCreateDigitizerEvent(kCFAllocatorDefault, machTime,
+    auto eventRef = adoptCF(IOHIDEventCreateDigitizerEvent(kCFAllocatorDefault, machTime,
         kIOHIDDigitizerTransducerTypeHand,
         0,
         0,
@@ -464,7 +448,7 @@ static InterpolationType interpolationFromString(NSString *string)
         _ioSystemClient = IOHIDEventSystemClientCreate(kCFAllocatorDefault);
 
     if (eventRef) {
-        RetainPtr<IOHIDEventRef> strongEvent = eventRef;
+        auto strongEvent = retainPtr(eventRef);
         dispatch_async(dispatch_get_main_queue(), ^{
             uint32_t contextID = [UIApplication sharedApplication].keyWindow._contextId;
             ASSERT(contextID);
@@ -523,7 +507,7 @@ static InterpolationType interpolationFromString(NSString *string)
         [[GeneratedTouchesDebugWindow sharedGeneratedTouchesDebugWindow] updateDebugIndicatorForTouch:i withPointInWindowCoordinates:points[i] isTouching:YES];
     }
     
-    RetainPtr<IOHIDEventRef> eventRef = adoptCF([self _createIOHIDEventType:handEventType]);
+    auto eventRef = adoptCF([self _createIOHIDEventType:handEventType]);
     [self _sendHIDEvent:eventRef.get()];
 }
 
@@ -540,7 +524,7 @@ static InterpolationType interpolationFromString(NSString *string)
         [[GeneratedTouchesDebugWindow sharedGeneratedTouchesDebugWindow] updateDebugIndicatorForTouch:index withPointInWindowCoordinates:locations[index] isTouching:YES];
     }
 
-    RetainPtr<IOHIDEventRef> eventRef = adoptCF([self _createIOHIDEventType:HandEventTouched]);
+    auto eventRef = adoptCF([self _createIOHIDEventType:HandEventTouched]);
     [self _sendHIDEvent:eventRef.get()];
 }
 
@@ -574,7 +558,7 @@ static InterpolationType interpolationFromString(NSString *string)
         [[GeneratedTouchesDebugWindow sharedGeneratedTouchesDebugWindow] updateDebugIndicatorForTouch:index withPointInWindowCoordinates:CGPointZero isTouching:NO];
     }
     
-    RetainPtr<IOHIDEventRef> eventRef = adoptCF([self _createIOHIDEventType:HandEventLifted]);
+    auto eventRef = adoptCF([self _createIOHIDEventType:HandEventLifted]);
     [self _sendHIDEvent:eventRef.get()];
     
     _activePointCount = newPointCount;
@@ -652,7 +636,7 @@ static InterpolationType interpolationFromString(NSString *string)
     _activePoints[0].azimuthAngle = M_PI * 2 - azimuthAngle;
     _activePoints[0].altitudeAngle = M_PI_2 - altitudeAngle;
 
-    RetainPtr<IOHIDEventRef> eventRef = adoptCF([self _createIOHIDEventType:StylusEventTouched]);
+    auto eventRef = adoptCF([self _createIOHIDEventType:StylusEventTouched]);
     [self _sendHIDEvent:eventRef.get()];
 }
 
@@ -666,7 +650,7 @@ static InterpolationType interpolationFromString(NSString *string)
     _activePoints[0].azimuthAngle = M_PI * 2 - azimuthAngle;
     _activePoints[0].altitudeAngle = M_PI_2 - altitudeAngle;
 
-    RetainPtr<IOHIDEventRef> eventRef = adoptCF([self _createIOHIDEventType:StylusEventMoved]);
+    auto eventRef = adoptCF([self _createIOHIDEventType:StylusEventMoved]);
     [self _sendHIDEvent:eventRef.get()];
 }
 
@@ -679,7 +663,7 @@ static InterpolationType interpolationFromString(NSString *string)
     _activePoints[0].azimuthAngle = 0;
     _activePoints[0].altitudeAngle = 0;
 
-    RetainPtr<IOHIDEventRef> eventRef = adoptCF([self _createIOHIDEventType:StylusEventLifted]);
+    auto eventRef = adoptCF([self _createIOHIDEventType:StylusEventLifted]);
     [self _sendHIDEvent:eventRef.get()];
 }
 
@@ -800,9 +784,9 @@ static InterpolationType interpolationFromString(NSString *string)
     }
 }
 
-- (BOOL)checkForOutstandingCallbacks
+- (BOOL)hasOutstandingCallbacks
 {
-    return !([_eventCallbacks count] > 0);
+    return [_eventCallbacks count];
 }
 
 static inline bool shouldWrapWithShiftKeyEventForCharacter(NSString *key)
@@ -839,7 +823,7 @@ static inline bool shouldWrapWithShiftKeyEventForCharacter(NSString *key)
     return false;
 }
 
-static Optional<uint32_t> keyCodeForDOMFunctionKey(NSString *key)
+static std::optional<uint32_t> keyCodeForDOMFunctionKey(NSString *key)
 {
     // Compare the input string with the function-key names defined by the DOM spec (i.e. "F1",...,"F24").
     // If the input string is a function-key name, set its key code. On iOS the key codes for the first 12
@@ -852,7 +836,7 @@ static Optional<uint32_t> keyCodeForDOMFunctionKey(NSString *key)
         if ([key isEqualToString:[NSString stringWithFormat:@"F%d", i]])
             return kHIDUsage_KeyboardF13 + i - 13;
     }
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 static inline uint32_t hidUsageCodeForCharacter(NSString *key)
@@ -1032,7 +1016,7 @@ RetainPtr<IOHIDEventRef> createHIDKeyEvent(NSString *character, uint64_t timesta
 {
     ASSERT([NSThread isMainThread]);
 
-    RetainPtr<IOHIDEventRef> eventRef = adoptCF([self _createIOHIDEventWithInfo:eventInfo]);
+    auto eventRef = adoptCF([self _createIOHIDEventWithInfo:eventInfo]);
     [self _sendHIDEvent:eventRef.get()];
 }
 
@@ -1053,9 +1037,9 @@ RetainPtr<IOHIDEventRef> createHIDKeyEvent(NSString *character, uint64_t timesta
     NSArray *endTouches = endEvent[HIDEventTouchesKey];
     
     while (time < endTime) {
-        NSMutableDictionary *newEvent = [endEvent mutableCopy];
+        auto newEvent = adoptNS([endEvent mutableCopy]);
         double timeRatio = (time - startTime) / (endTime - startTime);
-        newEvent[HIDEventTimeOffsetKey] = [NSNumber numberWithDouble:(time)];
+        newEvent.get()[HIDEventTimeOffsetKey] = @(time);
         
         NSEnumerator *startEnumerator = [startTouches objectEnumerator];
         NSDictionary *startTouch;
@@ -1069,27 +1053,25 @@ RetainPtr<IOHIDEventRef> createHIDKeyEvent(NSString *character, uint64_t timesta
                 endTouch = [endEnumerator nextObject];
             
             if (endTouch) {
-                NSMutableDictionary *newTouch = [endTouch mutableCopy];
+                auto newTouch = adoptNS([endTouch mutableCopy]);
                 
-                if (newTouch[HIDEventXKey] != startTouch[HIDEventXKey])
-                    newTouch[HIDEventXKey] = @(interpolations[interpolationType]([startTouch[HIDEventXKey] doubleValue], [endTouch[HIDEventXKey] doubleValue], timeRatio));
+                if (newTouch.get()[HIDEventXKey] != startTouch[HIDEventXKey])
+                    newTouch.get()[HIDEventXKey] = @(interpolations[interpolationType]([startTouch[HIDEventXKey] doubleValue], [endTouch[HIDEventXKey] doubleValue], timeRatio));
                 
-                if (newTouch[HIDEventYKey] != startTouch[HIDEventYKey])
-                    newTouch[HIDEventYKey] = @(interpolations[interpolationType]([startTouch[HIDEventYKey] doubleValue], [endTouch[HIDEventYKey] doubleValue], timeRatio));
+                if (newTouch.get()[HIDEventYKey] != startTouch[HIDEventYKey])
+                    newTouch.get()[HIDEventYKey] = @(interpolations[interpolationType]([startTouch[HIDEventYKey] doubleValue], [endTouch[HIDEventYKey] doubleValue], timeRatio));
                 
-                if (newTouch[HIDEventPressureKey] != startTouch[HIDEventPressureKey])
-                    newTouch[HIDEventPressureKey] = @(interpolations[interpolationType]([startTouch[HIDEventPressureKey] doubleValue], [endTouch[HIDEventPressureKey] doubleValue], timeRatio));
+                if (newTouch.get()[HIDEventPressureKey] != startTouch[HIDEventPressureKey])
+                    newTouch.get()[HIDEventPressureKey] = @(interpolations[interpolationType]([startTouch[HIDEventPressureKey] doubleValue], [endTouch[HIDEventPressureKey] doubleValue], timeRatio));
                 
-                [newTouches addObject:newTouch];
-                [newTouch release];
+                [newTouches addObject:newTouch.get()];
             } else
                 NSLog(@"Missing End Touch with ID: %ld", (long)startTouchID);
         }
         
-        newEvent[HIDEventTouchesKey] = newTouches;
+        newEvent.get()[HIDEventTouchesKey] = newTouches;
         
-        [interpolatedEvents addObject:newEvent];
-        [newEvent release];
+        [interpolatedEvents addObject:newEvent.get()];
         time += timeStep;
     }
     
@@ -1156,12 +1138,12 @@ RetainPtr<IOHIDEventRef> createHIDKeyEvent(NSString *character, uint64_t timesta
     }
     
     NSDictionary* threadData = @{
-        @"eventInfo": [[eventInfo copy] autorelease],
-        @"completionBlock": [[completionBlock copy] autorelease]
+        @"eventInfo": adoptNS([eventInfo copy]).get(),
+        @"completionBlock": adoptNS([completionBlock copy]).get()
     };
     
-    NSThread *eventDispatchThread = [[[NSThread alloc] initWithTarget:self selector:@selector(eventDispatchThreadEntry:) object:threadData] autorelease];
-    eventDispatchThread.qualityOfService = NSQualityOfServiceUserInteractive;
+    auto eventDispatchThread = adoptNS([[NSThread alloc] initWithTarget:self selector:@selector(eventDispatchThreadEntry:) object:threadData]);
+    [eventDispatchThread setQualityOfService:NSQualityOfServiceUserInteractive];
     [eventDispatchThread start];
 }
 

@@ -48,7 +48,7 @@ static bool didCloseCalled;
 
 @implementation SafeBrowsingNavigationDelegate
 
-- (void)webView:(WKWebView *)webView didCommitNavigation:(null_unspecified WKNavigation *)navigation
+- (void)webView:(WKWebView *)webView didCommitNavigation:(WKNavigation *)navigation
 {
     committedNavigation = true;
 }
@@ -77,7 +77,7 @@ static bool didCloseCalled;
 
 + (instancetype)resultWithProvider:(RetainPtr<NSString>&&)provider phishing:(BOOL)phishing malware:(BOOL)malware unwantedSoftware:(BOOL)unwantedSoftware
 {
-    TestServiceLookupResult *result = [[TestServiceLookupResult alloc] init];
+    auto result = adoptNS([[TestServiceLookupResult alloc] init]);
     if (!result)
         return nil;
 
@@ -86,7 +86,7 @@ static bool didCloseCalled;
     result->_isMalware = malware;
     result->_isUnwantedSoftware = unwantedSoftware;
 
-    return [result autorelease];
+    return result.autorelease();
 }
 
 - (NSString *)provider
@@ -120,13 +120,13 @@ static bool didCloseCalled;
 
 + (instancetype)resultWithResults:(RetainPtr<NSArray<TestServiceLookupResult *>>&&)results
 {
-    TestLookupResult *result = [[TestLookupResult alloc] init];
+    auto result = adoptNS([[TestLookupResult alloc] init]);
     if (!result)
         return nil;
     
     result->_results = WTFMove(results);
     
-    return [result autorelease];
+    return result.autorelease();
 }
 
 - (NSArray<TestServiceLookupResult *> *)serviceLookupResults
@@ -239,6 +239,37 @@ TEST(SafeBrowsing, GoBack)
     EXPECT_TRUE(didCloseCalled);
 }
 
+TEST(SafeBrowsing, GoBackAfterRestoreFromSessionState)
+{
+    auto webView1 = adoptNS([WKWebView new]);
+    [webView1 loadRequest:[NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"simple" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]]];
+    [webView1 _test_waitForDidFinishNavigation];
+    _WKSessionState *state = [webView1 _sessionState];
+
+    ClassMethodSwizzler swizzler(objc_getClass("SSBLookupContext"), @selector(sharedLookupContext), [TestLookupContext methodForSelector:@selector(sharedLookupContext)]);
+
+    auto delegate = adoptNS([SafeBrowsingNavigationDelegate new]);
+    auto webView2 = adoptNS([WKWebView new]);
+    [webView2 configuration].preferences.fraudulentWebsiteWarningEnabled = YES;
+    [webView2 setNavigationDelegate:delegate.get()];
+    [webView2 setUIDelegate:delegate.get()];
+    [webView2 _restoreSessionState:state andNavigate:YES];
+    EXPECT_FALSE(warningShown);
+    while (![webView2 _safeBrowsingWarning])
+        TestWebKitAPI::Util::spinRunLoop();
+    EXPECT_TRUE(warningShown);
+#if !PLATFORM(MAC)
+    [[webView2 _safeBrowsingWarning] didMoveToWindow];
+#endif
+    EXPECT_FALSE(didCloseCalled);
+    goBack([webView2 _safeBrowsingWarning]);
+    EXPECT_TRUE(didCloseCalled);
+    WKBackForwardList *list = [webView2 backForwardList];
+    EXPECT_FALSE(!!list.backItem);
+    EXPECT_FALSE(!!list.forwardItem);
+    EXPECT_TRUE([list.currentItem.URL.path hasSuffix:@"/simple.html"]);
+}
+
 template<typename ViewType> void visitUnsafeSite(ViewType *view)
 {
     [view performSelector:NSSelectorFromString(@"clickedOnLink:") withObject:[NSURL URLWithString:@"WKVisitUnsafeWebsiteSentinel"]];
@@ -252,10 +283,12 @@ TEST(SafeBrowsing, VisitUnsafeWebsite)
 #if PLATFORM(MAC)
     EXPECT_GT(warning.subviews.firstObject.subviews[2].frame.size.height, 0);
 #endif
+    EXPECT_WK_STREQ([webView title], "Deceptive Website Warning");
     checkTitleAndClick(warning.subviews.firstObject.subviews[4], "Show Details");
     EXPECT_EQ(warning.subviews.count, 2ull);
     EXPECT_FALSE(committedNavigation);
     visitUnsafeSite(warning);
+    EXPECT_WK_STREQ([webView title], "");
     TestWebKitAPI::Util::run(&committedNavigation);
 }
 
@@ -275,7 +308,7 @@ TEST(SafeBrowsing, ShowWarningSPI)
     auto webView = adoptNS([WKWebView new]);
     auto showWarning = ^{
         completionHandlerCalled = false;
-        [webView _showSafeBrowsingWarningWithURL:nil title:@"test title" warning:@"test warning" details:[[[NSAttributedString alloc] initWithString:@"test details"] autorelease] completionHandler:^(BOOL shouldContinue) {
+        [webView _showSafeBrowsingWarningWithURL:nil title:@"test title" warning:@"test warning" details:adoptNS([[NSAttributedString alloc] initWithString:@"test details"]).get() completionHandler:^(BOOL shouldContinue) {
             shouldContinueValue = shouldContinue;
             completionHandlerCalled = true;
         }];
@@ -401,7 +434,7 @@ static bool navigationFinished;
 
 @implementation WKWebViewGoBackNavigationDelegate
 
-- (void)webView:(WKWebView *)webView didFinishNavigation:(null_unspecified WKNavigation *)navigation
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
 {
     navigationFinished = true;
 }

@@ -8,17 +8,18 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "modules/audio_coding/audio_network_adaptor/fec_controller_plr_based.h"
+
 #include <utility>
 
 #include "common_audio/mocks/mock_smoothing_filter.h"
-#include "modules/audio_coding/audio_network_adaptor/fec_controller_plr_based.h"
 #include "test/gtest.h"
 
 namespace webrtc {
 
+using ::testing::_;
 using ::testing::NiceMock;
 using ::testing::Return;
-using ::testing::_;
 
 namespace {
 
@@ -99,9 +100,9 @@ void UpdateNetworkMetrics(FecControllerPlrBasedTestStates* states,
   }
 }
 
-// Checks that the FEC decision and |uplink_packet_loss_fraction| given by
-// |states->controller->MakeDecision| matches |expected_enable_fec| and
-// |expected_uplink_packet_loss_fraction|, respectively.
+// Checks that the FEC decision and `uplink_packet_loss_fraction` given by
+// `states->controller->MakeDecision` matches `expected_enable_fec` and
+// `expected_uplink_packet_loss_fraction`, respectively.
 void CheckDecision(FecControllerPlrBasedTestStates* states,
                    bool expected_enable_fec,
                    float expected_uplink_packet_loss_fraction) {
@@ -220,7 +221,7 @@ TEST(FecControllerPlrBasedTest, MaintainFecOffForLowBandwidth) {
 
 TEST(FecControllerPlrBasedTest, MaintainFecOffForVeryLowBandwidth) {
   auto states = CreateFecControllerPlrBased(false);
-  // Below |kEnablingBandwidthLow|, no packet loss fraction can cause FEC to
+  // Below `kEnablingBandwidthLow`, no packet loss fraction can cause FEC to
   // turn on.
   UpdateNetworkMetrics(&states, kEnablingBandwidthLow - 1, 1.0);
   CheckDecision(&states, false, 1.0);
@@ -271,7 +272,7 @@ TEST(FecControllerPlrBasedTest, DisableFecForLowBandwidth) {
 
 TEST(FecControllerPlrBasedTest, DisableFecForVeryLowBandwidth) {
   auto states = CreateFecControllerPlrBased(true);
-  // Below |kEnablingBandwidthLow|, any packet loss fraction can cause FEC to
+  // Below `kEnablingBandwidthLow`, any packet loss fraction can cause FEC to
   // turn off.
   UpdateNetworkMetrics(&states, kDisablingBandwidthLow - 1, 1.0);
   CheckDecision(&states, false, 1.0);
@@ -422,7 +423,7 @@ TEST(FecControllerPlrBasedTest, SingleThresholdCurveForEnablingAndDisabling) {
 
   // Test that FEC is turned on whenever we're on the curve or above it,
   // independent of the starting FEC state.
-  for (std::vector<NetworkState> states_list : {on, above}) {
+  for (const std::vector<NetworkState>& states_list : {on, above}) {
     for (NetworkState net_state : states_list) {
       for (bool initial_fec_enabled : {false, true}) {
         auto states =

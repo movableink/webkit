@@ -34,27 +34,21 @@ void WebPageGroupData::encode(IPC::Encoder& encoder) const
 {
     encoder << identifier;
     encoder << pageGroupID;
-    encoder << userContentControllerIdentifier;
 }
 
-Optional<WebPageGroupData> WebPageGroupData::decode(IPC::Decoder& decoder)
+std::optional<WebPageGroupData> WebPageGroupData::decode(IPC::Decoder& decoder)
 {
-    Optional<String> identifier;
+    std::optional<String> identifier;
     decoder >> identifier;
     if (!identifier)
-        return WTF::nullopt;
+        return std::nullopt;
     
-    Optional<uint64_t> pageGroupID;
+    std::optional<PageGroupIdentifier> pageGroupID;
     decoder >> pageGroupID;
     if (!pageGroupID)
-        return WTF::nullopt;
-    
-    Optional<UserContentControllerIdentifier> userContentControllerIdentifier;
-    decoder >> userContentControllerIdentifier;
-    if (!userContentControllerIdentifier)
-        return WTF::nullopt;
-    
-    return {{ WTFMove(*identifier), *pageGroupID, *userContentControllerIdentifier }};
+        return std::nullopt;
+        
+    return {{ WTFMove(*identifier), *pageGroupID }};
 }
 
 } // namespace WebKit

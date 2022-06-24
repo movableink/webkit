@@ -12,7 +12,7 @@ var sampleRate = 44100.0
 var lengthInSeconds = 2;
 var numberOfChannels = 4;
 
-var context = new webkitAudioContext();
+var context = new AudioContext();
 var buffer = context.createBuffer(numberOfChannels, sampleRate * lengthInSeconds, sampleRate);
 
 if (buffer.sampleRate === sampleRate)
@@ -49,7 +49,8 @@ try {
     testPassed("Exception has been thrown correctly when index is not less than numberOfChannels.");
 }
 
-shouldThrowErrorName("context.createBuffer(null, false)", "TypeError");
+shouldBeUndefined("buffer.gain");
+shouldBeUndefined("AudioBuffer.prototype.gain");
 
 </script>
 

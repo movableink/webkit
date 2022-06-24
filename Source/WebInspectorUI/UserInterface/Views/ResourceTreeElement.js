@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,16 +46,35 @@ WI.ResourceTreeElement = class ResourceTreeElement extends WI.SourceCodeTreeElem
 
     static compareResourceTreeElements(a, b)
     {
+        console.assert(a instanceof WI.SourceCodeTreeElement);
+        console.assert(b instanceof WI.SourceCodeTreeElement);
+
+        let resourceA = a.resource || a.representedObject;
+        let resourceB = b.resource || b.representedObject;
+
+        function resolvedType(resource) {
+            if (resource instanceof WI.Resource)
+                return resource.type;
+            if (resource instanceof WI.CSSStyleSheet)
+                return WI.Resource.Type.StyleSheet;
+            if (resource instanceof WI.Script)
+                return WI.Resource.Type.Script;
+            return WI.Resource.Type.Other;
+        }
+
+        let typeA = resolvedType(resourceA);
+        let typeB = resolvedType(resourceB);
+
         // Compare by type first to keep resources grouped by type when not sorted into folders.
-        var comparisonResult = a.resource.type.extendedLocaleCompare(b.resource.type);
+        var comparisonResult = typeA.extendedLocaleCompare(typeB);
         if (comparisonResult !== 0)
             return comparisonResult;
 
         // Compare async resource types by their first timestamp so they are in chronological order.
-        if (a.resource.type === WI.Resource.Type.XHR
-            || a.resource.type === WI.Resource.Type.Fetch
-            || a.resource.type === WI.Resource.Type.WebSocket)
-            return a.resource.firstTimestamp - b.resource.firstTimestamp || 0;
+        if (typeA === WI.Resource.Type.XHR
+            || typeA === WI.Resource.Type.Fetch
+            || typeA === WI.Resource.Type.WebSocket)
+            return resourceA.firstTimestamp - resourceB.firstTimestamp || 0;
 
         // Compare by subtitle when the types are the same. The subtitle is used to show the
         // domain of the resource. This causes resources to group by domain. If the resource
@@ -102,7 +121,7 @@ WI.ResourceTreeElement = class ResourceTreeElement extends WI.SourceCodeTreeElem
         if (this._resource.type === WI.Resource.Type.WebSocket)
             return;
 
-        InspectorFrontendHost.openInNewTab(this._resource.url);
+        WI.openURL(this._resource.url);
     }
 
     // Protected (Used by FrameTreeElement)
@@ -144,6 +163,7 @@ WI.ResourceTreeElement = class ResourceTreeElement extends WI.SourceCodeTreeElem
 
     get mainTitleText()
     {
+        // Overridden by subclasses if needed.
         return WI.displayNameForURL(this._resource.url, this._resource.urlComponents, {
             allowDirectoryAsName: this._allowDirectoryAsName,
         });
@@ -170,12 +190,16 @@ WI.ResourceTreeElement = class ResourceTreeElement extends WI.SourceCodeTreeElem
         this.mainTitle = this.mainTitleText;
 
         if (!this._hideOrigin) {
-            if (this._resource.isLocalResourceOverride) {
-                // Show the host for a local resource override if it is different from the main frame.
-                let localResourceOverrideHost = urlComponents.host;
-                let mainFrameHost = (WI.networkManager.mainFrame && WI.networkManager.mainFrame.mainResource) ? WI.networkManager.mainFrame.mainResource.urlComponents.host : null;
-                let subtitle = localResourceOverrideHost !== mainFrameHost ? localResourceOverrideHost : null;
-                this.subtitle = this.mainTitle !== subtitle ? subtitle : null;
+            if (this._resource.localResourceOverride) {
+                if (WI.NetworkManager.supportsOverridingRequests())
+                    this.subtitle = WI.LocalResourceOverride.displayNameForType(this._resource.localResourceOverride.type);
+                else {
+                    // Show the host for a local resource override if it is different from the main frame.
+                    let localResourceOverrideHost = urlComponents.host;
+                    let mainFrameHost = (WI.networkManager.mainFrame && WI.networkManager.mainFrame.mainResource) ? WI.networkManager.mainFrame.mainResource.urlComponents.host : null;
+                    let subtitle = localResourceOverrideHost !== mainFrameHost ? localResourceOverrideHost : null;
+                    this.subtitle = this.mainTitle !== subtitle ? subtitle : null;
+                }
             } else {
                 // Show the host as the subtitle if it is different from the main resource or if this is the main frame's main resource.
                 let subtitle = (parentResourceHost !== urlComponents.host || (frame && frame.isMainFrame() && isMainResource)) ? WI.displayNameForHost(urlComponents.host) : null;
@@ -236,13 +260,14 @@ WI.ResourceTreeElement = class ResourceTreeElement extends WI.SourceCodeTreeElem
 
     _updateIcon()
     {
-        let isOverride = this._resource.isLocalResourceOverride;
+        let isOverride = !!this._resource.localResourceOverride;
         let wasOverridden = this._resource.responseSource === WI.Resource.ResponseSource.InspectorOverride;
-
         if (isOverride || wasOverridden)
             this.addClassName("override");
         else
             this.removeClassName("override");
+
+        this.iconElement.title = wasOverridden ? WI.UIString("This resource was loaded from a local override") : "";
     }
 
     _urlDidChange(event)

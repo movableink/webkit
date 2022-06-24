@@ -2,13 +2,13 @@ TestPage.registerInitializer(() => {
     InspectorTest.EventBreakpoint = {};
 
     InspectorTest.EventBreakpoint.teardown = function(resolve, reject) {
-        WI.domDebuggerManager.removeEventBreakpoint(WI.domDebuggerManager.allAnimationFramesBreakpoint);
-        WI.domDebuggerManager.removeEventBreakpoint(WI.domDebuggerManager.allIntervalsBreakpoint);
-        WI.domDebuggerManager.removeEventBreakpoint(WI.domDebuggerManager.allListenersBreakpoint);
-        WI.domDebuggerManager.removeEventBreakpoint(WI.domDebuggerManager.allTimeoutsBreakpoint);
+        WI.domDebuggerManager.allAnimationFramesBreakpoint?.remove();
+        WI.domDebuggerManager.allIntervalsBreakpoint?.remove();
+        WI.domDebuggerManager.allListenersBreakpoint?.remove();
+        WI.domDebuggerManager.allTimeoutsBreakpoint?.remove();
 
         for (let breakpoint of WI.domDebuggerManager.listenerBreakpoints)
-            WI.domDebuggerManager.removeEventBreakpoint(breakpoint);
+            breakpoint.remove();
 
         resolve();
     };
@@ -42,8 +42,11 @@ TestPage.registerInitializer(() => {
         });
     };
 
-    InspectorTest.EventBreakpoint.createBreakpoint = function(type, eventName) {
-        InspectorTest.log(`Creating "${eventName}" Event Breakpoint...`);
+    InspectorTest.EventBreakpoint.createBreakpoint = function(type, {eventName} = {}) {
+        if (type !== WI.EventBreakpoint.Type.Listener)
+            eventName = null;
+
+        InspectorTest.log(`Creating "${eventName || type}" Event Breakpoint...`);
         return InspectorTest.EventBreakpoint.addBreakpoint(new WI.EventBreakpoint(type, {eventName}));
     };
 
@@ -74,7 +77,7 @@ TestPage.registerInitializer(() => {
                 resolve(breakpoint);
             });
 
-            WI.domDebuggerManager.removeEventBreakpoint(breakpoint);
+            breakpoint.remove();
         });
     };
 

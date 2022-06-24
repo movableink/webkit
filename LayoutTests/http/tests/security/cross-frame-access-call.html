@@ -14,9 +14,6 @@ window.targetWindow = frames[0];
 
 window.onload = function()
 {
-    if (window.testRunner)
-        testRunner.setCanOpenWindows(true);
-
     // Allowed
     // void focus();
     // void blur();
@@ -33,7 +30,6 @@ window.onload = function()
     shouldThrowErrorName("window.prompt.call(targetWindow, 'message', 'defaultValue')", "SecurityError");
     shouldThrowErrorName("window.getComputedStyle.call(targetWindow, document.body, '')", "SecurityError");
     shouldThrowErrorName("window.getMatchedCSSRules.call(targetWindow, document.body, '')", "SecurityError");
-    shouldThrowErrorName("window.openDatabase.call(targetWindow, 'name', '1.0', 'description', 0)", "SecurityError");
     shouldThrowErrorName("window.atob.call(targetWindow, 'string')", "SecurityError");
     shouldThrowErrorName("window.btoa.call(targetWindow, 'string')", "SecurityError");
     shouldThrowErrorName("window.open.call(targetWindow, '')", "SecurityError");

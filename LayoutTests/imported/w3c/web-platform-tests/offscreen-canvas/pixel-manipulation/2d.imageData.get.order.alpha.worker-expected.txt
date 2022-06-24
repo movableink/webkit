@@ -1,3 +1,0 @@
-
-FAIL getImageData() returns A in the fourth component Can't find variable: OffscreenCanvas
-

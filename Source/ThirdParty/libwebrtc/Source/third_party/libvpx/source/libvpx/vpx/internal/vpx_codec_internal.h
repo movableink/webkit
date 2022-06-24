@@ -27,21 +27,23 @@
  *     </pre>
  *
  * An application instantiates a specific decoder instance by using
- * vpx_codec_init() and a pointer to the algorithm's interface structure:
+ * vpx_codec_dec_init() and a pointer to the algorithm's interface structure:
  *     <pre>
  *     my_app.c:
  *       extern vpx_codec_iface_t my_codec;
  *       {
  *           vpx_codec_ctx_t algo;
- *           res = vpx_codec_init(&algo, &my_codec);
+ *           int threads = 4;
+ *           vpx_codec_dec_cfg_t cfg = { threads, 0, 0 };
+ *           res = vpx_codec_dec_init(&algo, &my_codec, &cfg, 0);
  *       }
  *     </pre>
  *
  * Once initialized, the instance is manged using other functions from
  * the vpx_codec_* family.
  */
-#ifndef VPX_INTERNAL_VPX_CODEC_INTERNAL_H_
-#define VPX_INTERNAL_VPX_CODEC_INTERNAL_H_
+#ifndef VPX_VPX_INTERNAL_VPX_CODEC_INTERNAL_H_
+#define VPX_VPX_INTERNAL_VPX_CODEC_INTERNAL_H_
 #include "../vpx_decoder.h"
 #include "../vpx_encoder.h"
 #include <stdarg.h>
@@ -66,7 +68,7 @@ typedef struct vpx_codec_priv_enc_mr_cfg vpx_codec_priv_enc_mr_cfg_t;
 /*!\brief init function pointer prototype
  *
  * Performs algorithm-specific initialization of the decoder context. This
- * function is called by the generic vpx_codec_init() wrapper function, so
+ * function is called by vpx_codec_dec_init() and vpx_codec_enc_init(), so
  * plugins implementing this interface may trust the input parameters to be
  * properly initialized.
  *
@@ -175,16 +177,15 @@ typedef const struct vpx_codec_ctrl_fn_map {
 /*!\brief decode data function pointer prototype
  *
  * Processes a buffer of coded data. If the processing results in a new
- * decoded frame becoming available, #VPX_CODEC_CB_PUT_SLICE and
- * #VPX_CODEC_CB_PUT_FRAME events are generated as appropriate. This
- * function is called by the generic vpx_codec_decode() wrapper function,
- * so plugins implementing this interface may trust the input parameters
- * to be properly initialized.
+ * decoded frame becoming available, put_slice and put_frame callbacks
+ * are invoked as appropriate. This function is called by the generic
+ * vpx_codec_decode() wrapper function, so plugins implementing this
+ * interface may trust the input parameters to be properly initialized.
  *
  * \param[in] ctx          Pointer to this instance's context
  * \param[in] data         Pointer to this block of new coded data. If
- *                         NULL, a #VPX_CODEC_CB_PUT_FRAME event is posted
- *                         for the previously decoded frame.
+ *                         NULL, the put_frame callback is invoked for
+ *                         the previously decoded frame.
  * \param[in] data_sz      Size of the coded data, in bytes.
  *
  * \return Returns #VPX_CODEC_OK if the coded data was processed completely
@@ -434,12 +435,22 @@ struct vpx_internal_error_info {
 #endif
 #endif
 
+#if defined(__clang__) || (defined(__GNUC__) && defined(__has_attribute))
+#if __has_attribute(format)
+#define LIBVPX_FORMAT_PRINTF(fmt, args) __attribute__((format(__printf__, fmt, args)))
+#else
+#define LIBVPX_FORMAT_PRINTF(fmt, args)
+#endif
+#else
+#define LIBVPX_FORMAT_PRINTF(fmt, args)
+#endif
+
 void vpx_internal_error(struct vpx_internal_error_info *info,
                         vpx_codec_err_t error, const char *fmt,
-                        ...) CLANG_ANALYZER_NORETURN;
+                        ...) LIBVPX_FORMAT_PRINTF(3, 4) CLANG_ANALYZER_NORETURN;
 
 #ifdef __cplusplus
 }  // extern "C"
 #endif
 
-#endif  // VPX_INTERNAL_VPX_CODEC_INTERNAL_H_
+#endif  // VPX_VPX_INTERNAL_VPX_CODEC_INTERNAL_H_

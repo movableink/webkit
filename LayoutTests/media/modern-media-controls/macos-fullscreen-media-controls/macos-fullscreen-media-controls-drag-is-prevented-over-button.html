@@ -17,10 +17,10 @@ media.addEventListener("webkitbeginfullscreen", () => {
 });
 
 media.addEventListener("webkitfullscreenchange", () => {
-    if (media.webkitDisplayingFullscreen) {
+    shouldBecomeEqual("media.webkitDisplayingFullscreen", "true", () => {
         mediaControls = shadowRoot.lastChild;
         shouldBecomeEqual("!!mediaControls.querySelector('.buttons-container.left')", "true", () => {
-            shouldBecomeEqualToString("mediaControls.querySelector('.buttons-container.left').style.width", "118px", () => {
+            shouldBecomeEqualToString("mediaControls.querySelector('.buttons-container.left').style.width", "100px", () => {
                 const bounds = mediaControls.querySelector(".controls-bar").getBoundingClientRect();
                 eventSender.mouseMoveTo(bounds.left + 68, bounds.top + 20);
                 eventSender.mouseDown();
@@ -33,7 +33,7 @@ media.addEventListener("webkitfullscreenchange", () => {
                 });
             });
         });
-    }
+    });
 });
 
 media.addEventListener("play", () => {

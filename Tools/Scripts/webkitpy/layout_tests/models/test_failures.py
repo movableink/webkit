@@ -27,13 +27,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import logging
-import sys
-
-if sys.version_info > (3, 0):
-    import pickle
-else:
-    import cPickle as pickle
-
 
 from webkitpy.layout_tests.models import test_expectations
 
@@ -71,7 +64,7 @@ def determine_result_type(failure_list):
           FailureMissingImage in failure_types or
           FailureMissingImageHash in failure_types or
           FailureMissingAudio in failure_types or
-          FailureNotTested in failure_types):
+          FailureNoOutput in failure_types):
         return test_expectations.MISSING
     else:
         is_text_failure = FailureTextMismatch in failure_types
@@ -94,11 +87,6 @@ def determine_result_type(failure_list):
 class TestFailure(object):
     """Abstract base class that defines the failure interface."""
 
-    @staticmethod
-    def loads(s):
-        """Creates a TestFailure object from the specified string."""
-        return pickle.loads(s)
-
     def message(self):
         """Returns a string describing the failure in more detail."""
         raise NotImplementedError
@@ -111,10 +99,6 @@ class TestFailure(object):
 
     def __hash__(self):
         return hash(self.__class__.__name__)
-
-    def dumps(self):
-        """Returns the string/JSON representation of a TestFailure."""
-        return pickle.dumps(self)
 
     def driver_needs_restart(self):
         """Returns True if we should kill DumpRenderTree/WebKitTestRunner before the next test."""
@@ -190,9 +174,9 @@ class FailureMissingResult(FailureText):
         return "-expected.txt was missing"
 
 
-class FailureNotTested(FailureText):
+class FailureNoOutput(FailureText):
     def message(self):
-        return 'test was not run'
+        return 'no output from test'
 
 
 class FailureTextMismatch(FailureText):
@@ -217,16 +201,25 @@ class FailureMissingImage(TestFailure):
 
 
 class FailureImageHashMismatch(TestFailure):
-    def __init__(self, diff_percent=0):
+    def __init__(self, image_diff_result=None):
         super(FailureImageHashMismatch, self).__init__()
-        self.diff_percent = diff_percent
+        self.image_diff_result = image_diff_result
 
     def message(self):
         return "image diff"
 
+    def formatted_diff_percent(self):
+        return '{:.2f}%'.format(max(self.image_diff_result.diff_percent, 0.01))
+
+    def formatted_fuzzy_data(self):
+        fuzzy_data = self.image_diff_result.fuzzy_data if self.image_diff_result else None
+        if fuzzy_data:
+            return 'maxDifference={}; totalPixels={}'.format(fuzzy_data['max_difference'], fuzzy_data['total_pixels'])
+        return None
+
     def write_failure(self, writer, driver_output, expected_driver_output, port):
         writer.write_image_files(driver_output.image, expected_driver_output.image)
-        writer.write_image_diff_files(driver_output.image_diff)
+        writer.write_image_diff_files(driver_output.image_diff, self.formatted_diff_percent(), self.formatted_fuzzy_data())
 
 
 class FailureImageHashIncorrect(TestFailure):
@@ -235,25 +228,38 @@ class FailureImageHashIncorrect(TestFailure):
 
 
 class FailureReftestMismatch(TestFailure):
-    def __init__(self, reference_filename=None):
+    def __init__(self, reference_filename=None, image_diff_result=None):
         super(FailureReftestMismatch, self).__init__()
         self.reference_filename = reference_filename
-        self.diff_percent = None
+        self.image_diff_result = image_diff_result
 
     def message(self):
+        fuzzy_data = self.image_diff_result.fuzzy_data if self.image_diff_result else None
+        if fuzzy_data:
+            return "reference mismatch maxDifference={}; totalPixels={}".format(fuzzy_data['max_difference'], fuzzy_data['total_pixels'])
         return "reference mismatch"
+
+    def formatted_diff_percent(self):
+        return '{:.2f}%'.format(max(self.image_diff_result.diff_percent, 0.01))
+
+    def formatted_fuzzy_data(self):
+        fuzzy_data = self.image_diff_result.fuzzy_data if self.image_diff_result else None
+        if fuzzy_data:
+            return 'maxDifference={}; totalPixels={}'.format(fuzzy_data['max_difference'], fuzzy_data['total_pixels'])
+        return None
 
     def write_failure(self, writer, driver_output, expected_driver_output, port):
         writer.write_image_files(driver_output.image, expected_driver_output.image)
-        # FIXME: This work should be done earlier in the pipeline (e.g., when we compare images for non-ref tests).
-        # FIXME: We should always have 2 images here.
-        if driver_output.image and expected_driver_output.image:
-            diff_image, diff_percent, err_str = port.diff_image(expected_driver_output.image, driver_output.image, tolerance=0)
-            if diff_image:
-                writer.write_image_diff_files(diff_image)
-                self.diff_percent = diff_percent
+        if self.image_diff_result:
+            # If the ref test was run with non-zero tolerance, generate the image diff again with zero tolerance.
+            if self.image_diff_result.tolerance != 0:
+                diff_image = port.diff_image(expected_driver_output.image, driver_output.image, tolerance=0).diff_image
             else:
-                _log.warn('ref test mismatch did not produce an image diff.')
+                diff_image = self.image_diff_result.diff_image
+
+            writer.write_image_diff_files(diff_image, self.formatted_diff_percent(), self.formatted_fuzzy_data())
+        else:
+            _log.warn('ref test mismatch did not produce an image diff.')
         writer.write_reftest(self.reference_filename)
 
 
@@ -296,7 +302,7 @@ class FailureEarlyExit(TestFailure):
 
 # Convenient collection of all failure classes for anything that might
 # need to enumerate over them all.
-ALL_FAILURE_CLASSES = (FailureTimeout, FailureCrash, FailureMissingResult, FailureNotTested,
+ALL_FAILURE_CLASSES = (FailureTimeout, FailureCrash, FailureMissingResult, FailureNoOutput,
                        FailureTextMismatch, FailureMissingImageHash,
                        FailureMissingImage, FailureImageHashMismatch,
                        FailureImageHashIncorrect, FailureReftestMismatch,

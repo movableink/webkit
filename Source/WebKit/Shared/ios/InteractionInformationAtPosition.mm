@@ -28,12 +28,7 @@
 
 #import "ArgumentCodersCocoa.h"
 #import "WebCoreArgumentCoders.h"
-#import <pal/spi/cocoa/DataDetectorsCoreSPI.h>
-#import <pal/spi/cocoa/NSKeyedArchiverSPI.h>
-#import <wtf/SoftLinking.h>
-
-SOFT_LINK_PRIVATE_FRAMEWORK(DataDetectorsCore)
-SOFT_LINK_CLASS(DataDetectorsCore, DDScannerResult)
+#import <pal/cocoa/DataDetectorsCoreSoftLink.h>
 
 namespace WebKit {
 
@@ -44,23 +39,24 @@ void InteractionInformationAtPosition::encode(IPC::Encoder& encoder) const
     encoder << request;
 
     encoder << canBeValid;
-    encoder << nodeAtPositionIsFocusedElement;
     encoder << nodeAtPositionHasDoubleClickHandler;
-#if ENABLE(DATA_INTERACTION)
-    encoder << hasSelectionAtPosition;
-#endif
-    encoder << isSelectable;
+    encoder << selectability;
+    encoder << isSelected;
+    encoder << prefersDraggingOverTextSelection;
     encoder << isNearMarkedText;
     encoder << touchCalloutEnabled;
     encoder << isLink;
     encoder << isImage;
     encoder << isAttachment;
     encoder << isAnimatedImage;
+    encoder << isPausedVideo;
     encoder << isElement;
+    encoder << isContentEditable;
     encoder << containerScrollingNodeID;
     encoder << adjustedPointForNodeRespondingToClickEvents;
     encoder << url;
     encoder << imageURL;
+    encoder << imageMIMEType;
     encoder << title;
     encoder << idAttribute;
     encoder << bounds;
@@ -69,6 +65,9 @@ void InteractionInformationAtPosition::encode(IPC::Encoder& encoder) const
 #endif
     encoder << textBefore;
     encoder << textAfter;
+    encoder << caretLength;
+    encoder << lineCaretExtent;
+    encoder << cursor;
     encoder << linkIndicator;
 
     ShareableBitmap::Handle handle;
@@ -77,15 +76,19 @@ void InteractionInformationAtPosition::encode(IPC::Encoder& encoder) const
     encoder << handle;
 #if ENABLE(DATA_DETECTION)
     encoder << isDataDetectorLink;
-    if (isDataDetectorLink) {
-        encoder << dataDetectorIdentifier;
-        encoder << dataDetectorResults;
-    }
+    encoder << dataDetectorIdentifier;
+    encoder << dataDetectorResults;
+    encoder << dataDetectorBounds;
 #endif
 #if ENABLE(DATALIST_ELEMENT)
     encoder << preventTextInteraction;
 #endif
+    encoder << elementContainsImageOverlay;
+    encoder << shouldNotUseIBeamInEditableContent;
+    encoder << isImageOverlayText;
+    encoder << isVerticalWritingMode;
     encoder << elementContext;
+    encoder << hostImageOrVideoElementContext;
 }
 
 bool InteractionInformationAtPosition::decode(IPC::Decoder& decoder, InteractionInformationAtPosition& result)
@@ -96,18 +99,16 @@ bool InteractionInformationAtPosition::decode(IPC::Decoder& decoder, Interaction
     if (!decoder.decode(result.canBeValid))
         return false;
 
-    if (!decoder.decode(result.nodeAtPositionIsFocusedElement))
-        return false;
-
     if (!decoder.decode(result.nodeAtPositionHasDoubleClickHandler))
         return false;
 
-#if ENABLE(DATA_INTERACTION)
-    if (!decoder.decode(result.hasSelectionAtPosition))
+    if (!decoder.decode(result.selectability))
         return false;
-#endif
 
-    if (!decoder.decode(result.isSelectable))
+    if (!decoder.decode(result.isSelected))
+        return false;
+
+    if (!decoder.decode(result.prefersDraggingOverTextSelection))
         return false;
 
     if (!decoder.decode(result.isNearMarkedText))
@@ -127,8 +128,14 @@ bool InteractionInformationAtPosition::decode(IPC::Decoder& decoder, Interaction
     
     if (!decoder.decode(result.isAnimatedImage))
         return false;
+
+    if (!decoder.decode(result.isPausedVideo))
+        return false;
     
     if (!decoder.decode(result.isElement))
+        return false;
+
+    if (!decoder.decode(result.isContentEditable))
         return false;
 
     if (!decoder.decode(result.containerScrollingNodeID))
@@ -141,6 +148,9 @@ bool InteractionInformationAtPosition::decode(IPC::Decoder& decoder, Interaction
         return false;
 
     if (!decoder.decode(result.imageURL))
+        return false;
+
+    if (!decoder.decode(result.imageMIMEType))
         return false;
 
     if (!decoder.decode(result.title))
@@ -162,8 +172,17 @@ bool InteractionInformationAtPosition::decode(IPC::Decoder& decoder, Interaction
     
     if (!decoder.decode(result.textAfter))
         return false;
+
+    if (!decoder.decode(result.caretLength))
+        return false;
+
+    if (!decoder.decode(result.lineCaretExtent))
+        return false;
+
+    if (!decoder.decode(result.cursor))
+        return false;
     
-    Optional<WebCore::TextIndicatorData> linkIndicator;
+    std::optional<WebCore::TextIndicatorData> linkIndicator;
     decoder >> linkIndicator;
     if (!linkIndicator)
         return false;
@@ -179,17 +198,18 @@ bool InteractionInformationAtPosition::decode(IPC::Decoder& decoder, Interaction
 #if ENABLE(DATA_DETECTION)
     if (!decoder.decode(result.isDataDetectorLink))
         return false;
-    
-    if (result.isDataDetectorLink) {
-        if (!decoder.decode(result.dataDetectorIdentifier))
-            return false;
 
-        auto dataDetectorResults = IPC::decode<NSArray>(decoder, @[ [NSArray class], getDDScannerResultClass() ]);
-        if (!dataDetectorResults)
-            return false;
+    if (!decoder.decode(result.dataDetectorIdentifier))
+        return false;
 
-        result.dataDetectorResults = WTFMove(*dataDetectorResults);
-    }
+    auto dataDetectorResults = IPC::decode<NSArray>(decoder, @[ NSArray.class, PAL::getDDScannerResultClass() ]);
+    if (!dataDetectorResults)
+        return false;
+
+    result.dataDetectorResults = WTFMove(*dataDetectorResults);
+
+    if (!decoder.decode(result.dataDetectorBounds))
+        return false;
 #endif
 
 #if ENABLE(DATALIST_ELEMENT)
@@ -197,7 +217,22 @@ bool InteractionInformationAtPosition::decode(IPC::Decoder& decoder, Interaction
         return false;
 #endif
 
+    if (!decoder.decode(result.elementContainsImageOverlay))
+        return false;
+
+    if (!decoder.decode(result.shouldNotUseIBeamInEditableContent))
+        return false;
+
+    if (!decoder.decode(result.isImageOverlayText))
+        return false;
+
+    if (!decoder.decode(result.isVerticalWritingMode))
+        return false;
+
     if (!decoder.decode(result.elementContext))
+        return false;
+
+    if (!decoder.decode(result.hostImageOrVideoElementContext))
         return false;
 
     return true;

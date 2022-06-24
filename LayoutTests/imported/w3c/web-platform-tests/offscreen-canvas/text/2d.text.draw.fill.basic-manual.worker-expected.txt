@@ -1,3 +1,0 @@
-
-FAIL fillText draws filled text Can't find variable: OffscreenCanvas
-

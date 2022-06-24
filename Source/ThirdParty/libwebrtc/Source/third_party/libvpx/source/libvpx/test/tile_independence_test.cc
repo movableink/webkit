@@ -48,7 +48,7 @@ class TileIndependenceTest : public ::libvpx_test::EncoderTest,
 
   virtual void PreEncodeFrameHook(libvpx_test::VideoSource *video,
                                   libvpx_test::Encoder *encoder) {
-    if (video->frame() == 1) {
+    if (video->frame() == 0) {
       encoder->Control(VP9E_SET_TILE_COLUMNS, n_tiles_);
     }
   }
@@ -100,5 +100,5 @@ TEST_P(TileIndependenceTest, MD5Match) {
   ASSERT_STREQ(md5_fw_str, md5_inv_str);
 }
 
-VP9_INSTANTIATE_TEST_CASE(TileIndependenceTest, ::testing::Range(0, 2, 1));
+VP9_INSTANTIATE_TEST_SUITE(TileIndependenceTest, ::testing::Range(0, 2, 1));
 }  // namespace

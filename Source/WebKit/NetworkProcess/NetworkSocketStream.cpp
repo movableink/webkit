@@ -26,37 +26,38 @@
 #include "config.h"
 #include "NetworkSocketStream.h"
 
-#include "DataReference.h"
 #include "NetworkStorageSessionProvider.h"
 #include "WebSocketStreamMessages.h"
 #include <WebCore/CookieRequestHeaderFieldProxy.h>
 #include <WebCore/SocketStreamError.h>
+#include <wtf/CryptographicallyRandomNumber.h>
 
 namespace WebKit {
 using namespace WebCore;
 
-Ref<NetworkSocketStream> NetworkSocketStream::create(NetworkProcess& networkProcess, URL&& url, PAL::SessionID sessionID, const String& credentialPartition, uint64_t identifier, IPC::Connection& connection, SourceApplicationAuditToken&& auditData)
+Ref<NetworkSocketStream> NetworkSocketStream::create(NetworkProcess& networkProcess, URL&& url, PAL::SessionID sessionID, const String& credentialPartition, WebSocketIdentifier identifier, IPC::Connection& connection, SourceApplicationAuditToken&& auditData, bool shouldAcceptInsecureCertificates)
 {
-    return adoptRef(*new NetworkSocketStream(networkProcess, WTFMove(url), sessionID, credentialPartition, identifier, connection, WTFMove(auditData)));
+    return adoptRef(*new NetworkSocketStream(networkProcess, WTFMove(url), sessionID, credentialPartition, identifier, connection, WTFMove(auditData), shouldAcceptInsecureCertificates));
 }
 
-NetworkSocketStream::NetworkSocketStream(NetworkProcess& networkProcess, URL&& url, PAL::SessionID sessionID, const String& credentialPartition, uint64_t identifier, IPC::Connection& connection, SourceApplicationAuditToken&& auditData)
+NetworkSocketStream::NetworkSocketStream(NetworkProcess& networkProcess, URL&& url, PAL::SessionID sessionID, const String& credentialPartition, WebSocketIdentifier identifier, IPC::Connection& connection, SourceApplicationAuditToken&& auditData, bool shouldAcceptInsecureCertificates)
     : m_identifier(identifier)
     , m_connection(connection)
-    , m_impl(SocketStreamHandleImpl::create(url, *this, sessionID, credentialPartition, WTFMove(auditData), NetworkStorageSessionProvider::create(networkProcess, sessionID).ptr()))
+    , m_impl(SocketStreamHandleImpl::create(url, *this, sessionID, credentialPartition, WTFMove(auditData), NetworkStorageSessionProvider::create(networkProcess, sessionID).ptr(), shouldAcceptInsecureCertificates))
+    , m_delayFailTimer(*this, &NetworkSocketStream::sendDelayedFailMessage)
 {
 }
 
 void NetworkSocketStream::sendData(const IPC::DataReference& data, uint64_t identifier)
 {
-    m_impl->platformSend(data.data(), data.size(), [this, protectedThis = makeRef(*this), identifier] (bool success) {
+    m_impl->platformSend(data.data(), data.size(), [this, protectedThis = Ref { *this }, identifier] (bool success) {
         send(Messages::WebSocketStream::DidSendData(identifier, success));
     });
 }
 
-void NetworkSocketStream::sendHandshake(const IPC::DataReference& data, const Optional<CookieRequestHeaderFieldProxy>& headerFieldProxy, uint64_t identifier)
+void NetworkSocketStream::sendHandshake(const IPC::DataReference& data, const std::optional<CookieRequestHeaderFieldProxy>& headerFieldProxy, uint64_t identifier)
 {
-    m_impl->platformSendHandshake(data.data(), data.size(), headerFieldProxy, [this, protectedThis = makeRef(*this), identifier] (bool success, bool didAccessSecureCookies) {
+    m_impl->platformSendHandshake(data.data(), data.size(), headerFieldProxy, [this, protectedThis = Ref { *this }, identifier] (bool success, bool didAccessSecureCookies) {
         send(Messages::WebSocketStream::DidSendHandshake(identifier, success, didAccessSecureCookies));
     });
 }
@@ -83,10 +84,10 @@ void NetworkSocketStream::didCloseSocketStream(SocketStreamHandle& handle)
     send(Messages::WebSocketStream::DidCloseSocketStream());
 }
 
-void NetworkSocketStream::didReceiveSocketStreamData(SocketStreamHandle& handle, const char* data, size_t length)
+void NetworkSocketStream::didReceiveSocketStreamData(SocketStreamHandle& handle, const uint8_t* data, size_t length)
 {
     ASSERT_UNUSED(handle, &handle == m_impl.ptr());
-    send(Messages::WebSocketStream::DidReceiveSocketStreamData(IPC::DataReference(reinterpret_cast<const uint8_t*>(data), length)));
+    send(Messages::WebSocketStream::DidReceiveSocketStreamData(IPC::DataReference(data, length)));
 }
 
 void NetworkSocketStream::didFailToReceiveSocketStreamData(WebCore::SocketStreamHandle& handle)
@@ -101,10 +102,22 @@ void NetworkSocketStream::didUpdateBufferedAmount(SocketStreamHandle& handle, si
     send(Messages::WebSocketStream::DidUpdateBufferedAmount(amount));
 }
 
+static constexpr auto closedPortErrorCode = 61;
+
+void NetworkSocketStream::sendDelayedFailMessage()
+{
+    send(Messages::WebSocketStream::DidFailSocketStream(m_closedPortError));
+}
+
 void NetworkSocketStream::didFailSocketStream(SocketStreamHandle& handle, const SocketStreamError& error)
 {
     ASSERT_UNUSED(handle, &handle == m_impl.ptr());
-    send(Messages::WebSocketStream::DidFailSocketStream(error));
+    
+    if (error.errorCode() == closedPortErrorCode) {
+        m_closedPortError = error;
+        m_delayFailTimer.startOneShot(NetworkProcess::randomClosedPortDelay());
+    } else
+        send(Messages::WebSocketStream::DidFailSocketStream(error));
 }
 
 IPC::Connection* NetworkSocketStream::messageSenderConnection() const
@@ -114,7 +127,7 @@ IPC::Connection* NetworkSocketStream::messageSenderConnection() const
 
 uint64_t NetworkSocketStream::messageSenderDestinationID() const
 {
-    return m_identifier;
+    return m_identifier.toUInt64();
 }
 
 } // namespace WebKit

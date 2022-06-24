@@ -29,6 +29,7 @@
 #include "PlatformCAAnimationRemote.h"
 #include "PlatformCALayerRemote.h"
 #include "RemoteLayerTreeContext.h"
+#include <WebCore/Model.h>
 #include <WebCore/PlatformScreen.h>
 
 namespace WebKit {
@@ -67,10 +68,12 @@ Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayer(PlatformLayer*
     return PlatformCALayerRemote::create(platformLayer, owner, *m_context);
 }
 
-Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayerForEmbeddedView(PlatformCALayer::LayerType layerType, GraphicsLayer::EmbeddedViewID embeddedViewID, PlatformCALayerClient* owner)
+#if ENABLE(MODEL_ELEMENT)
+Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayer(Ref<WebCore::Model> model, PlatformCALayerClient* owner)
 {
-    return PlatformCALayerRemote::createForEmbeddedView(layerType, embeddedViewID, owner, *m_context);
+    return PlatformCALayerRemote::create(model, owner, *m_context);
 }
+#endif
 
 Ref<PlatformCAAnimation> GraphicsLayerCARemote::createPlatformCAAnimation(PlatformCAAnimation::AnimationType type, const String& keyPath)
 {

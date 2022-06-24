@@ -1,3 +1,0 @@
-
-FAIL Shadows are not drawn outside the clipping region Can't find variable: OffscreenCanvas
-

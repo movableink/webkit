@@ -24,10 +24,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TemporaryOpenGLSetting_h
-#define TemporaryOpenGLSetting_h
+#pragma once
 
-#include "GraphicsTypes3D.h"
+#include "GraphicsTypesGL.h"
+
+#if USE(OPENGL) || USE(OPENGL_ES)
 
 #include <wtf/Noncopyable.h>
 
@@ -44,7 +45,7 @@ namespace WebCore {
 // value upon destruction, making it an alternative to checking, clearing, and resetting each flag
 // at all of a block's exit points.
 //
-// Based on WTF::SetForScope<>
+// Based on SetForScope<>
 
 class TemporaryOpenGLSetting {
     WTF_MAKE_NONCOPYABLE(TemporaryOpenGLSetting);
@@ -52,15 +53,15 @@ public:
 #if PLATFORM(QT)
     TemporaryOpenGLSetting(QOpenGLExtensions*, GC3Denum capability, GC3Denum scopedState);
 #else
-    TemporaryOpenGLSetting(GC3Denum capability, GC3Denum scopedState);
+    TemporaryOpenGLSetting(GCGLenum capability, GCGLenum scopedState);
 #endif
     ~TemporaryOpenGLSetting();
 
 private:
-    const GC3Denum m_capability;
-    const GC3Denum m_scopedState;
-    GC3Denum m_originalState;
-
+    const GCGLenum m_capability;
+    const GCGLenum m_scopedState;
+    GCGLenum m_originalState;
+    
 #if PLATFORM(QT)
     QOpenGLExtensions* m_functions { nullptr };
 #endif
@@ -70,4 +71,4 @@ private:
 
 using WebCore::TemporaryOpenGLSetting;
 
-#endif
+#endif // USE(OPENGL) || USE(OPENGL_ES)

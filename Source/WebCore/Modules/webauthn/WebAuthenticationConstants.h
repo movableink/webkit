@@ -38,6 +38,8 @@ const int64_t y = -3;
 // Values
 const int64_t EC2 = 2;
 const int64_t ES256 = -7;
+const int64_t RS256 = -257;
+const int64_t ECDH256 = -25;
 const int64_t P_256 = 1;
 
 } // namespace COSE
@@ -70,4 +72,37 @@ const size_t ES256FieldElementLength = 32;
 // https://www.w3.org/TR/webauthn/#none-attestation
 const char noneAttestationValue[] = "none";
 
+// https://www.w3.org/TR/webauthn-1/#dom-collectedclientdata-type
+enum class ClientDataType : bool {
+    Create,
+    Get
+};
+
+// rdar://88104045 - Remove once staged change completed
+const char LocalAuthenticatiorAccessGroup[] = "com.apple.webkit.webauthn";
+
+constexpr const char LocalAuthenticatorAccessGroup[] = "com.apple.webkit.webauthn";
+
+// Credential serialization
+constexpr const char privateKeyKey[] = "priv";
+constexpr const char keyTypeKey[] = "key_type";
+constexpr const char keySizeKey[] = "key_size";
+constexpr const char relyingPartyKey[] = "rp";
+constexpr const char applicationTagKey[] = "tag";
+
 } // namespace WebCore
+
+namespace WebAuthn {
+
+enum class Scope {
+    CrossOrigin,
+    SameOrigin,
+    SameSite
+};
+
+// https://www.w3.org/TR/webauthn-2/#authenticator-data
+constexpr uint8_t userPresenceFlag = 0b00000001;
+constexpr uint8_t userVerifiedFlag = 0b00000100;
+constexpr uint8_t attestedCredentialDataIncludedFlag = 0b01000000;
+
+} // namespace WebAuthn

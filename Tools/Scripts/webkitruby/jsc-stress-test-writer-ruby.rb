@@ -70,7 +70,7 @@ end
 def simpleErrorHandler
     Proc.new {
         | outp, plan |
-        outp.puts "if !status.success?\n"
+        outp.puts "if !success(status)\n"
         outp.puts "    print " + prefixString("\"ERROR: Unexpected exit code \#{status.exitstatus}\\n\"", plan.name) + "\n"
         outp.puts "        " + plan.failCommand
         outp.puts "else\n"
@@ -83,7 +83,7 @@ end
 def expectedFailErrorHandler
     Proc.new {
         | outp, plan |
-        outp.puts "if status.success?\n"
+        outp.puts "if success(status)\n"
         outp.puts "    print " + prefixString("\"ERROR: Unexpected exit code 0\\n\"", plan.name) + "\n"
         outp.puts "        " + plan.failCommand
         outp.puts "else\n"
@@ -97,7 +97,7 @@ end
 def noisyErrorHandler
     Proc.new {
         | outp, plan |
-        outp.puts "if !status.success?\n"
+        outp.puts "if !success(status)\n"
         outp.puts "    print " + prefixString("out", plan.name) + "\n"
         outp.puts "    print " + prefixString("\"ERROR: Unexpected exit code \#{status.exitstatus}\\n\"", plan.name) + "\n"
         outp.puts "        " + plan.failCommand
@@ -162,7 +162,7 @@ def diffErrorHandler(expectedFilename)
         | outp, plan |
         outputFilename = Shellwords.shellescape((Pathname("..") + (plan.name + ".out")).to_s)
         
-        outp.puts "if !status.success?\n"
+        outp.puts "if !success(status)\n"
         outp.puts "    print " + prefixString("out", plan.name) + "\n"
         outp.puts "    print " + prefixString("\"ERROR: Unexpected exit code \#{status.exitstatus}\\n\"", plan.name) + "\n"
         outp.puts "    " + plan.failCommand
@@ -188,7 +188,7 @@ end
 def mozillaErrorHandler
     Proc.new {
         | outp, plan |
-        outp.puts "if !status.success?\n"
+        outp.puts "if !success(status)\n"
         outp.puts "    print " + prefixString("out", plan.name) + "\n"
         outp.puts "    print " + prefixString("\"ERROR: Unexpected exit code \#{status.exitstatus}\\n\"", plan.name) + "\n"
         outp.puts "        " + plan.failCommand
@@ -207,7 +207,7 @@ end
 def mozillaFailErrorHandler
     Proc.new {
         | outp, plan |
-        outp.puts "if !status.success?\n"
+        outp.puts "if !success(status)\n"
         outp.puts "    " + plan.successCommand
         outp.puts "elsif /failed!/i =~ out\n"
         outp.puts "    " + plan.successCommand
@@ -223,7 +223,7 @@ end
 def mozillaExit3ErrorHandler
     Proc.new {
         | outp, plan |
-        outp.puts "if status.success?\n"
+        outp.puts "if success(status)\n"
         outp.puts "    print " + prefixString("out", plan.name) + "\n"
         outp.puts "    print " + prefixString("\"ERROR: Test expected to fail, but returned successfully\\n\"", plan.name) + "\n"
         outp.puts "        " + plan.failCommand
@@ -246,7 +246,7 @@ end
 def chakraPassFailErrorHandler
     Proc.new {
         | outp, plan |
-        outp.puts "if !status.success?\n"
+        outp.puts "if !success(status)\n"
         outp.puts "    print " + prefixString("out", plan.name) + "\n"
         outp.puts "    print " + prefixString("\"ERROR: Unexpected exit code \#{status.exitstatus}\\n\"", plan.name) + "\n"
         outp.puts "    " + plan.failCommand
@@ -260,21 +260,7 @@ def chakraPassFailErrorHandler
    }
 end
 
-class Plan
-    attr_reader :directory, :arguments, :family, :name, :outputHandler, :errorHandler, :additionalEnv
-    attr_accessor :index
-    
-    def initialize(directory, arguments, family, name, outputHandler, errorHandler)
-        @directory = directory
-        @arguments = arguments
-        @family = family
-        @name = name
-        @outputHandler = outputHandler
-        @errorHandler = errorHandler
-        @isSlow = !!$runCommandOptions[:isSlow]
-        @additionalEnv = []
-    end
-    
+class Plan < BasePlan
     def shellCommand 
         script = "out = nil\n"
         script += "err = nil\n"
@@ -297,6 +283,9 @@ class Plan
         script = "def error_script_contents\n"
         script += "    <<-END_OF_SCRIPT\n"
         script += "        require 'open3'\n"
+        script += "        def success(status)\n"
+        script += "            status.success?\n"
+        script += "        end\n"
         script += "        script_location = File.expand_path(File.dirname(__FILE__))\n"
         script += "        Dir.chdir(\"\\\#{script_location}"
         Pathname.new(@name).dirname.each_filename {
@@ -306,10 +295,12 @@ class Plan
         script += "/.runner\") do\n"
         script += "            ENV[\"DYLD_FRAMEWORK_PATH\"] = \"#{$testingFrameworkPath.dirname}\"\n"
         script += "            ENV[\"JSCTEST_timeout\"] = \"#{ENV['JSCTEST_timeout']}\"\n"
+        script += "            ENV[\"JSCTEST_hardTimeout\"] = \"#{ENV['JSCTEST_hardTimeout']}\"\n"
+        script += "            ENV[\"JSCTEST_memoryLimit\"] = \"#{ENV['JSCTEST_memoryLimit']}\"\n"
 
         script += "            #{shellCommand}"
         script += "            print out\n"
-        script += "            if (!status.success?)\n"
+        script += "            if (!success(status))\n"
         script += "                exit(1)\n"
         script += "            end\n"
         script += "        end\n"
@@ -326,10 +317,21 @@ class Plan
         END_REPRO_SCRIPT_COMMAND
     end
 
+    def statusCommand(status_code)
+        # May be called in th rescue block, so status is not
+        # guaranteed to be set; if it isn't, set the exit code to
+        # something that's clearly invalid.
+        <<-END_STATUS_COMMAND
+          File.open("#{statusFile}", "w") { |f|
+              f.puts("#{$runUniqueId} \#{status.nil? ? 999999999 : status.exitstatus} #{status_code}")
+          }
+        END_STATUS_COMMAND
+    end
+
     def failCommand
         <<-END_FAIL_COMMAND
             print "FAIL: #{Shellwords.shellescape(@name)}\n"
-            FileUtils.touch("#{failFile}")
+            #{statusCommand(STATUS_FILE_FAIL)}
             #{reproScriptCommand}
         END_FAIL_COMMAND
     end
@@ -337,28 +339,18 @@ class Plan
     def successCommand
         if $progressMeter or $verbosity >= 2
             <<-END_VERBOSE_SUCCESS_COMMAND
-                File.unlink("#{failFile}") if File.exists?("#{failFile}")
                 print "PASS: #{Shellwords.shellescape(@name)}\n"
+                #{statusCommand(STATUS_FILE_PASS)}
             END_VERBOSE_SUCCESS_COMMAND
         else
-            "File.unlink(\"#{failFile}\") if File.exists?(\"#{failFile}\")\n"
+            "#{statusCommand(STATUS_FILE_PASS)}\n"
         end
     end
     
-    def failFile
-        "test_fail_#{@index}"
+    def statusFile
+        "#{STATUS_FILE_PREFIX}#{@index}"
     end
 
-    def statusWrite
-        <<-END_STATUS_WRITE
-            if !status.success?
-                File.open("#{failFile}", "w") do |code_file|
-                    code_file.puts status.exitstatus
-                end
-            end
-        END_STATUS_WRITE
-    end
-    
     def writeRunScript(filename)
         File.open(filename, "w") {
             | outp |
@@ -367,10 +359,11 @@ class Plan
             outp.puts "begin"
             outp.puts "require 'open3'"
             outp.puts "require 'fileutils'"
+            outp.puts "def success(status)"
+            outp.puts "   status.success?"
+            outp.puts "end"
 
             cmd = shellCommand
-
-            cmd += statusWrite
 
             cmd += @outputHandler.call(@name)
 
@@ -381,64 +374,103 @@ class Plan
             @errorHandler.call(outp, self)
             outp.puts "rescue"
             outp.puts "    print \"FAIL: #{Shellwords.shellescape(@name)}\\n\""
-            outp.puts "    FileUtils.touch(\"#{failFile}\")"
+            outp.puts "    #{statusCommand(STATUS_FILE_FAIL)}"
             outp.puts "end"
         }
     end
 end
 
-def prepareShellTestRunner
-    File.open($runnerDir + "runscript", "w") {
-        | outp |
-        $runlist.each {
-            | plan |
-            outp.puts "ruby test_script_#{plan.index}"
+class TestRunnerShell < TestRunner
+    def prepareRunner(runlist, serialPlans, completedPlans, remoteHosts)
+        File.open("#{@runnerDir + "runscript"}", "w") { |f|
+            runlist.each { |plan|
+                if completedPlans.include?(plan)
+                    next
+                end
+                f.puts("ruby test_script_#{plan.index}")
+            }
         }
-    }
-    `dos2unix #{$runnerDir + "runscript"}`    
-end
-
-def prepareMakeTestRunner(remoteIndex)
-    runIndices = []
-    $runlist.each {
-        | plan |
-        if !$remote or plan.index % $remoteHosts.length == remoteIndex
-            runIndices << plan.index
-        end
-    }
-    
-    File.open($runnerDir + "Makefile.#{remoteIndex}", "w") {
-        | outp |
-        outp.puts("all: " + runIndices.map{|v| "test_done_#{v}"}.join(' '))
-        runIndices.each {
-            | index |
-            plan = $runlist[index]
-            outp.puts "test_done_#{index}:"
-            outp.puts "\truby test_script_#{plan.index}"
-        }
-    }
-end
-
-def prepareRubyTestRunner
-    File.open($runnerDir + "runscript", "w") {
-        | outp |
-        $runlist.each {
-            | plan |
-            outp.puts "system \"ruby test_script_#{plan.index}\""
-        }
-    }
-end
-
-def testRunnerCommand(remoteIndex=0)
-    case $testRunnerType
-    when :shell
-        command = "sh runscript"
-    when :make
-        command = "make -j #{$numChildProcesses} -s -f Makefile.#{remoteIndex}"
-    when :ruby
-        command = "ruby runscript"
-    else
-        raise "Unknown test runner type: #{$testRunnerType.to_s}"
+        `dos2unix #{@runnerDir + "runscript"}`
     end
-    return command
+    def command(remoteIndex=0)
+        "sh runscript"
+    end
+end
+
+class TestRunnerMake < TestRunner
+    def output_target(outp, plan, prereqs)
+        index = plan.index
+        target = "test_done_#{index}"
+        outp.puts "#{target}: #{prereqs.join(" ")}"
+        outp.puts "\truby test_script_#{index}"
+        target
+    end
+    def prepareRunnerForRemote(runlist, serialPlans, completedPlans, remoteIndex)
+        runPlans = []
+        serialRunPlans = []
+        runlist.each {
+            | plan |
+            if completedPlans.include?(plan)
+                next
+            end
+            if @remoteHosts.nil? or plan.index % @remoteHosts.length == remoteIndex
+                if serialPlans.include?(plan)
+                    serialRunPlans << plan
+                else
+                    runPlans << plan
+                end
+            end
+        }
+
+        File.open(@runnerDir + "Makefile.#{remoteIndex}", "w") {
+            | outp |
+            if serialRunPlans.empty?
+                outp.puts("all: parallel")
+            else
+                serialPrereq = "test_done_#{serialRunPlans[-1].index}"
+                outp.puts("all: #{serialPrereq}")
+                prev_target = "parallel"
+                serialRunPlans.each {
+                    | plan |
+                    prev_target = output_target(outp, plan, [prev_target])
+                }
+            end
+            parallelTargets = runPlans.collect {
+                | plan |
+                output_target(outp, plan, [])
+            }
+            outp.puts("parallel: " + parallelTargets.join(" "))
+        }
+    end
+    def prepareRunner(runlist, serialPlans, completedPlans, remoteHosts)
+        if remoteHosts.nil?
+            prepareRunnerForRemote(runlist, serialPlans, completedPlans, 0)
+        else
+            remoteHosts.each_index {
+                |remoteIndex|
+                prepareRunnerForRemote(runlist, serialPlans, completedPlans, remoteIndex)
+            }
+        end
+    end
+    def command(remoteIndex=0)
+        "make -j #{$numChildProcesses} -s -f Makefile.#{remoteIndex}"
+    end
+end
+
+class TestRunnerRuby < TestRunner
+    def prepareRunner(runlist, serialPlans, completedPlans, remoteHosts)
+        File.open(@runnerDir + "runscript", "w") {
+            | outp |
+            runlist.each {
+                | plan |
+                if completedPlans.include?(plan)
+                    next
+                end
+                outp.puts "system \"ruby test_script_#{plan.index}\""
+            }
+        }
+    end
+    def command(remoteIndex=0)
+        "ruby runscript"
+    end
 end

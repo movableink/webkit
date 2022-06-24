@@ -51,8 +51,7 @@ import Builder from '../Builder.js';
 
     const bin = builder.WebAssembly();
     bin.trim();
-
-    assert.throws(() => new WebAssembly.Module(bin.get()), WebAssembly.CompileError, "WebAssembly.Module doesn't parse at byte 32: Mutable Globals aren't supported (evaluating 'new WebAssembly.Module(bin.get())')");
+    assert.throws(() => new WebAssembly.Module(bin.get()), WebAssembly.CompileError, `WebAssembly.Module doesn't parse at byte 43: get_global import kind index 0 is mutable  (evaluating 'new WebAssembly.Module(bin.get())')`);
 }
 
 {
@@ -69,15 +68,14 @@ import Builder from '../Builder.js';
         .Code()
 
         .Function("setGlobal", { params: [], ret: "i32" })
-        .GetGlobal(1)
+        .GetGlobal(0)
         .End()
 
         .End()
 
     const bin = builder.WebAssembly();
     bin.trim();
-
-    assert.throws(() => new WebAssembly.Module(bin.get()), WebAssembly.CompileError, "WebAssembly.Module doesn't parse at byte 51: 1th Export isn't immutable, named 'global' (evaluating 'new WebAssembly.Module(bin.get())')");
+    new WebAssembly.Module(bin.get());
 }
 
 {
@@ -130,7 +128,7 @@ import Builder from '../Builder.js';
     const bin = builder.WebAssembly();
     bin.trim();
 
-    assert.throws(() => new WebAssembly.Module(bin.get()), WebAssembly.CompileError, "WebAssembly.Module doesn't validate: set_global 1 of unknown global, limit is 1, in function at index 0 (evaluating 'new WebAssembly.Module(bin.get())')");
+    assert.throws(() => new WebAssembly.Module(bin.get()), WebAssembly.CompileError, "WebAssembly.Module doesn't validate: 1 of unknown global, limit is 1, in function at index 0 (evaluating 'new WebAssembly.Module(bin.get())')");
 }
 
 
@@ -196,7 +194,8 @@ for ( let imp of [undefined, null, {}, () => {}, "number", new Number(4)]) {
             .Global("bigInt", 0)
         .End();
     const module = new WebAssembly.Module(builder.WebAssembly().get());
-    assert.throws(() => new WebAssembly.Instance(module), WebAssembly.LinkError, "exported global cannot be an i64 (evaluating 'new WebAssembly.Instance(module)')");
+    let instance = new WebAssembly.Instance(module);
+    assert.eq(instance.exports.bigInt.value, 0n);
 }
 
 {
@@ -208,5 +207,5 @@ for ( let imp of [undefined, null, {}, () => {}, "number", new Number(4)]) {
         .Function().End()
         .Global().GetGlobal("i64", 0, "immutable").End();
     const module = new WebAssembly.Module(builder.WebAssembly().get());
-    assert.throws(() => new WebAssembly.Instance(module, { imp: { global: undefined } }), WebAssembly.LinkError, "imported global imp:global cannot be an i64 (evaluating 'new WebAssembly.Instance(module, { imp: { global: undefined } })')");
+    assert.throws(() => new WebAssembly.Instance(module, { imp: { global: undefined } }), WebAssembly.LinkError, "imported global imp:global must be a BigInt (evaluating 'new WebAssembly.Instance(module, { imp: { global: undefined } })')");
 }

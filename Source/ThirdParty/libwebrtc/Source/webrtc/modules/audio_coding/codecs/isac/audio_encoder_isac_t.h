@@ -11,16 +11,17 @@
 #ifndef MODULES_AUDIO_CODING_CODECS_ISAC_AUDIO_ENCODER_ISAC_T_H_
 #define MODULES_AUDIO_CODING_CODECS_ISAC_AUDIO_ENCODER_ISAC_T_H_
 
+#include <utility>
 #include <vector>
 
+#include "absl/types/optional.h"
 #include "api/audio_codecs/audio_encoder.h"
-#include "modules/audio_coding/codecs/isac/locked_bandwidth_info.h"
-#include "rtc_base/constructormagic.h"
-#include "rtc_base/scoped_ref_ptr.h"
+#include "api/scoped_refptr.h"
+#include "api/units/time_delta.h"
+#include "rtc_base/constructor_magic.h"
+#include "system_wrappers/include/field_trial.h"
 
 namespace webrtc {
-
-struct CodecInst;
 
 template <typename T>
 class AudioEncoderIsacT final : public AudioEncoder {
@@ -31,9 +32,6 @@ class AudioEncoderIsacT final : public AudioEncoder {
   //  - 32000 Hz, 30 ms, 10000-56000 bps (if T has super-wideband support)
   struct Config {
     bool IsOk() const;
-
-    rtc::scoped_refptr<LockedIsacBandwidthInfo> bwinfo;
-
     int payload_type = 103;
     int sample_rate_hz = 16000;
     int frame_size_ms = 30;
@@ -41,20 +39,9 @@ class AudioEncoderIsacT final : public AudioEncoder {
                                      // rate, in bits/s.
     int max_payload_size_bytes = -1;
     int max_bit_rate = -1;
-
-    // If true, the encoder will dynamically adjust frame size and bit rate;
-    // the configured values are then merely the starting point.
-    bool adaptive_mode = false;
-
-    // In adaptive mode, prevent adaptive changes to the frame size. (Not used
-    // in nonadaptive mode.)
-    bool enforce_frame_size = false;
   };
 
   explicit AudioEncoderIsacT(const Config& config);
-  explicit AudioEncoderIsacT(
-      const CodecInst& codec_inst,
-      const rtc::scoped_refptr<LockedIsacBandwidthInfo>& bwinfo);
   ~AudioEncoderIsacT() override;
 
   int SampleRateHz() const override;
@@ -62,24 +49,38 @@ class AudioEncoderIsacT final : public AudioEncoder {
   size_t Num10MsFramesInNextPacket() const override;
   size_t Max10MsFramesInAPacket() const override;
   int GetTargetBitrate() const override;
+  void SetTargetBitrate(int target_bps) override;
+  void OnReceivedTargetAudioBitrate(int target_bps) override;
+  void OnReceivedUplinkBandwidth(
+      int target_audio_bitrate_bps,
+      absl::optional<int64_t> bwe_period_ms) override;
+  void OnReceivedUplinkAllocation(BitrateAllocationUpdate update) override;
+  void OnReceivedOverhead(size_t overhead_bytes_per_packet) override;
   EncodedInfo EncodeImpl(uint32_t rtp_timestamp,
                          rtc::ArrayView<const int16_t> audio,
                          rtc::Buffer* encoded) override;
   void Reset() override;
+  absl::optional<std::pair<TimeDelta, TimeDelta>> GetFrameLengthRange()
+      const override;
 
  private:
   // This value is taken from STREAM_SIZE_MAX_60 for iSAC float (60 ms) and
   // STREAM_MAXW16_60MS for iSAC fix (60 ms).
   static const size_t kSufficientEncodeBufferSizeBytes = 400;
 
-  static const int kDefaultBitRate = 32000;
+  static constexpr int kDefaultBitRate = 32000;
+  static constexpr int kMinBitrateBps = 10000;
+  static constexpr int MaxBitrateBps(int sample_rate_hz) {
+    return sample_rate_hz == 32000 ? 56000 : 32000;
+  }
+
+  void SetTargetBitrate(int target_bps, bool subtract_per_packet_overhead);
 
   // Recreate the iSAC encoder instance with the given settings, and save them.
   void RecreateEncoderInstance(const Config& config);
 
   Config config_;
   typename T::instance_type* isac_state_ = nullptr;
-  rtc::scoped_refptr<LockedIsacBandwidthInfo> bwinfo_;
 
   // Have we accepted input but not yet emitted it in a packet?
   bool packet_in_progress_ = false;
@@ -89,6 +90,15 @@ class AudioEncoderIsacT final : public AudioEncoder {
 
   // Timestamp of the previously encoded packet.
   uint32_t last_encoded_timestamp_;
+
+  // Cache the value of the "WebRTC-SendSideBwe-WithOverhead" field trial.
+  const bool send_side_bwe_with_overhead_ =
+      !field_trial::IsDisabled("WebRTC-SendSideBwe-WithOverhead");
+
+  // When we send a packet, expect this many bytes of headers to be added to it.
+  // Start out with a reasonable default that we can use until we receive a real
+  // value.
+  DataSize overhead_per_packet_ = DataSize::Bytes(28);
 
   RTC_DISALLOW_COPY_AND_ASSIGN(AudioEncoderIsacT);
 };

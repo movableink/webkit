@@ -4,6 +4,7 @@ LocalizedStringsGtk.cpp
 ../network/soup/NetworkStorageSessionSoup.cpp
 ../../editing/EditAction.cpp
 ../../../JavaScriptCore/API/glib/JSCOptions.cpp
+../../../WebKit/NetworkProcess/soup/WebKitDirectoryInputStream.cpp
 ../../../WebKit/Shared/API/glib/WebKitHitTestResult.cpp
 ../../../WebKit/Shared/API/glib/WebKitURIRequest.cpp
 ../../../WebKit/Shared/API/glib/WebKitURIResponse.cpp
@@ -32,16 +33,15 @@ LocalizedStringsGtk.cpp
 ../../../WebKit/UIProcess/API/glib/WebKitWindowProperties.cpp
 ../../../WebKit/UIProcess/API/gtk/WebKitAuthenticationDialog.cpp
 ../../../WebKit/UIProcess/API/gtk/WebKitColorChooserRequest.cpp
-../../../WebKit/UIProcess/API/gtk/WebKitEmojiChooser.cpp
 ../../../WebKit/UIProcess/API/gtk/WebKitPrintCustomWidget.cpp
 ../../../WebKit/UIProcess/API/gtk/WebKitPrintOperation.cpp
 ../../../WebKit/UIProcess/API/gtk/WebKitScriptDialogImpl.cpp
 ../../../WebKit/UIProcess/API/gtk/WebKitWebInspector.cpp
 ../../../WebKit/UIProcess/API/gtk/WebKitWebViewBase.cpp
 ../../../WebKit/UIProcess/API/gtk/WebKitWebViewGtk.cpp
+../../../WebKit/UIProcess/Inspector/gtk/WebKitInspectorWindow.cpp
 ../../../WebKit/UIProcess/geoclue/GeoclueGeolocationProvider.cpp
 ../../../WebKit/UIProcess/gtk/WebColorPickerGtk.cpp
-../../../WebKit/UIProcess/gtk/WebKitInspectorWindow.cpp
 ../../../WebKit/UIProcess/WebsiteData/WebsiteDataRecord.cpp
 ../../../WebKit/WebProcess/InjectedBundle/API/glib/WebKitWebHitTestResult.cpp
 ../../../WebKit/WebProcess/InjectedBundle/API/glib/WebKitWebExtension.cpp

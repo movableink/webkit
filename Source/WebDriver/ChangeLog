@@ -1,3 +1,1185 @@
+2022-02-09  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: add a javascript atom to get the visible text
+        https://bugs.webkit.org/show_bug.cgi?id=174617
+        <rdar://problem/32307461>
+
+        Reviewed by Adrian Perez de Castro.
+
+        Generate the JavaScript atoms using the new command and use the new atom to get element text.
+
+        * CMakeLists.txt:
+        * Session.cpp:
+        (WebDriver::Session::getElementText):
+
+2022-02-07  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [WebDriver] Add support for shadow roots
+        https://bugs.webkit.org/show_bug.cgi?id=230614
+        <rdar://problem/83667535>
+
+        Reviewed by Adrian Perez de Castro.
+
+        Add implementation of new shadow root commands.
+
+        * CommandResult.cpp:
+        (WebDriver::CommandResult::httpStatusCode const): Handle NoSuchShadowRoot and DetachedShadowRoot errors
+        (WebDriver::CommandResult::errorString const): Ditto.
+        * CommandResult.h:
+        * Session.cpp:
+        (WebDriver::Session::shadowRootIdentifier): Return shadow root identifier.
+        (WebDriver::Session::createShadowRoot): Create shadow root elment using the shadow root identifier.
+        (WebDriver::Session::findElements): Add ElementIsShadowRoot parameters to handle DetachedShadowRoot error.
+        (WebDriver::Session::getElementShadowRoot): Return the element shadow root.
+        * Session.h:
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::findElement): Pass ElementIsShadowRoot::No to Session::findElements().
+        (WebDriver::WebDriverService::findElements): Ditto.
+        (WebDriver::WebDriverService::findElementFromElement): Ditto.
+        (WebDriver::WebDriverService::findElementsFromElement): Ditto.
+        (WebDriver::WebDriverService::findElementFromShadowRoot):
+        (WebDriver::WebDriverService::findElementsFromShadowRoot):
+        (WebDriver::WebDriverService::getElementShadowRoot):
+        * WebDriverService.h:
+
+2022-02-02  Youenn Fablet  <youenn@apple.com>
+
+        Clarify that some UUID routines are dedicated to UUID v4
+        https://bugs.webkit.org/show_bug.cgi?id=235430
+
+        Reviewed by Darin Adler.
+
+        * glib/SessionHostGlib.cpp:
+        (WebDriver::SessionHost::startAutomationSession):
+        * socket/SessionHostSocket.cpp:
+        (WebDriver::SessionHost::startAutomationSession):
+
+2021-09-20  Chris Dumez  <cdumez@apple.com>
+
+        Stop using makeRef(*this) / makeRefPtr(this)
+        https://bugs.webkit.org/show_bug.cgi?id=230464
+
+        Reviewed by Alex Christensen.
+
+        * Session.cpp:
+        (WebDriver::Session::closeAllToplevelBrowsingContexts):
+        (WebDriver::Session::createTopLevelBrowsingContext):
+        (WebDriver::Session::handleUserPrompts):
+        (WebDriver::Session::go):
+        (WebDriver::Session::getCurrentURL):
+        (WebDriver::Session::back):
+        (WebDriver::Session::forward):
+        (WebDriver::Session::refresh):
+        (WebDriver::Session::getTitle):
+        (WebDriver::Session::getWindowHandle):
+        (WebDriver::Session::closeTopLevelBrowsingContext):
+        (WebDriver::Session::switchToWindow):
+        (WebDriver::Session::getWindowHandles):
+        (WebDriver::Session::newWindow):
+        (WebDriver::Session::switchToFrame):
+        (WebDriver::Session::switchToParentFrame):
+        (WebDriver::Session::getToplevelBrowsingContextRect):
+        (WebDriver::Session::setWindowRect):
+        (WebDriver::Session::maximizeWindow):
+        (WebDriver::Session::minimizeWindow):
+        (WebDriver::Session::fullscreenWindow):
+        (WebDriver::Session::computeElementLayout):
+        (WebDriver::Session::findElements):
+        (WebDriver::Session::getActiveElement):
+        (WebDriver::Session::isElementSelected):
+        (WebDriver::Session::getElementText):
+        (WebDriver::Session::getElementTagName):
+        (WebDriver::Session::getElementRect):
+        (WebDriver::Session::isElementEnabled):
+        (WebDriver::Session::isElementDisplayed):
+        (WebDriver::Session::getElementAttribute):
+        (WebDriver::Session::getElementProperty):
+        (WebDriver::Session::getElementCSSValue):
+        (WebDriver::Session::waitForNavigationToComplete):
+        (WebDriver::Session::elementIsFileUpload):
+        (WebDriver::Session::selectOptionElement):
+        (WebDriver::Session::elementClick):
+        (WebDriver::Session::elementIsEditable):
+        (WebDriver::Session::elementClear):
+        (WebDriver::Session::setInputFileUploadFiles):
+        (WebDriver::Session::elementSendKeys):
+        (WebDriver::Session::getPageSource):
+        (WebDriver::Session::executeScript):
+        (WebDriver::Session::performMouseInteraction):
+        (WebDriver::Session::performKeyboardInteractions):
+        (WebDriver::Session::getAllCookies):
+        (WebDriver::Session::addCookie):
+        (WebDriver::Session::deleteCookie):
+        (WebDriver::Session::deleteAllCookies):
+        (WebDriver::Session::performActions):
+        (WebDriver::Session::releaseActions):
+        (WebDriver::Session::dismissAlert):
+        (WebDriver::Session::acceptAlert):
+        (WebDriver::Session::getAlertText):
+        (WebDriver::Session::sendAlertText):
+        (WebDriver::Session::takeScreenshot):
+
+2021-06-08  Chris Dumez  <cdumez@apple.com>
+
+        Reduce use of reinterpret_cast<> in the codebase
+        https://bugs.webkit.org/show_bug.cgi?id=226743
+
+        Reviewed by Darin Adler.
+
+        * socket/HTTPParser.cpp:
+        (WebDriver::HTTPParser::readLine):
+        * socket/SessionHostSocket.cpp:
+        (WebDriver::SessionHost::sendWebInspectorEvent):
+
+2021-06-01  Darin Adler  <darin@apple.com>
+
+        Remove <wtf/Optional.h>
+        https://bugs.webkit.org/show_bug.cgi?id=226437
+
+        Reviewed by Chris Dumez.
+
+        * SessionHost.h: Removed include of <wtf/Optional.h>.
+
+2021-05-30  Darin Adler  <darin@apple.com>
+
+        Remove WTF::Optional synonym for std::optional, using that class template directly instead
+        https://bugs.webkit.org/show_bug.cgi?id=226433
+
+        Reviewed by Chris Dumez.
+
+        * <many files>: Let the do-webcore-rename script rename Optional<> to std::optional<>.
+
+2021-05-28  Darin Adler  <darin@apple.com>
+
+        Clients of optional should use has_value instead of relying on hasValue macro
+        https://bugs.webkit.org/show_bug.cgi?id=226395
+
+        Reviewed by Chris Dumez.
+
+        * socket/SessionHostSocket.cpp:
+        (WebDriver::SessionHost::isConnected const): Use has_value.
+
+2021-05-27  Darin Adler  <darin@apple.com>
+
+        Next step toward using std::optional directly instead of through WTF::Optional typedef
+        https://bugs.webkit.org/show_bug.cgi?id=226280
+
+        Reviewed by Chris Dumez.
+
+        * <many files>: Accept the renaming done by do-webcore-rename.
+
+2021-05-13  Michael Catanzaro  <mcatanzaro@gnome.org>
+
+        Misc GCC warning cleanup
+        https://bugs.webkit.org/show_bug.cgi?id=225777
+
+        Reviewed by Carlos Garcia Campos.
+
+        Remove unused variable.
+
+        * glib/WebDriverServiceGLib.cpp:
+        (WebDriver::parseVersion):
+
+2021-05-13  Darin Adler  <darin@apple.com>
+
+        Remove StringBuilder::appendNumber
+        https://bugs.webkit.org/show_bug.cgi?id=225732
+
+        Reviewed by Sam Weinig.
+
+        * SessionHost.cpp:
+        (WebDriver::SessionHost::sendCommandToBackend): Use append instead
+        of appendNumber.
+        * socket/HTTPServerSocket.cpp:
+        (WebDriver::HTTPRequestHandler::packHTTPMessage const): Ditto.
+
+2021-05-09  Darin Adler  <darin@apple.com>
+
+        Remove all remaining uses of the String::toInt family of functions
+        https://bugs.webkit.org/show_bug.cgi?id=225580
+
+        Reviewed by Sam Weinig.
+
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::run): Use
+        parseIntegerAllowingTrailingJunk<uint16_t> instead of String::toUInt.
+
+        * glib/WebDriverServiceGLib.cpp:
+        (WebDriver::parseVersion): Use
+        parseIntegerAllowingTrailingJunk<uint64_t> instead of String::toInt64,
+        and then assigning into a uint64_t.
+
+        * socket/HTTPParser.cpp:
+        (WebDriver::HTTPParser::expectedBodyLength const): Use
+        parseIntegerAllowingTrailingJunk<size_t> instead of String::toInt.
+        Also use StringView instead of String::substringSharingImpl and
+        dropped an unneeded call to String::stripWhiteSpace.
+
+2021-03-25  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Use WebDriver_DERIVED_SOURCES value
+        https://bugs.webkit.org/show_bug.cgi?id=223760
+
+        Reviewed by Ross Kirsling.
+
+        Replace DERIVED_SOURCES_WEBDRIVER_DIR with WebDriver_DERIVED_SOURCES.
+
+        * CMakeLists.txt:
+
+2021-03-24  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        All string resources from UserAgentStyleSheets / UserAgentScripts should be used as non-copying StringImpl
+        https://bugs.webkit.org/show_bug.cgi?id=223685
+
+        Reviewed by Saam Barati.
+
+        * Session.cpp:
+        (WebDriver::Session::fullscreenWindow):
+        (WebDriver::Session::findElements):
+        (WebDriver::Session::isElementSelected):
+        (WebDriver::Session::isElementEnabled):
+        (WebDriver::Session::isElementDisplayed):
+        (WebDriver::Session::getElementAttribute):
+        (WebDriver::Session::elementClear):
+
+2021-02-22  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [SOUP] Add support for libsoup3
+        https://bugs.webkit.org/show_bug.cgi?id=222093
+
+        Reviewed by Adrian Perez de Castro.
+
+        * soup/HTTPServerSoup.cpp:
+        (WebDriver::HTTPServer::listen):
+
+2020-12-11  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Determine correct visibility for linked frameworks
+        https://bugs.webkit.org/show_bug.cgi?id=210366
+
+        Reviewed by Michael Catanzaro.
+
+        Conditionally add bmalloc to the list of WebDriver_FRAMEWORKS.
+
+        * CMakeLists.txt:
+
+2020-12-10  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Determine when to use $<TARGET_OBJECTS> for executables
+        https://bugs.webkit.org/show_bug.cgi?id=219648
+
+        Reviewed by Michael Catanzaro.
+
+        Use ${taget_name}_FRAMEWORKS to specify WebKit frameworks when linking executables.
+        Remove use of $<TARGET_OBJECTS>.
+
+        * CMakeLists.txt:
+        * PlatformPlayStation.cmake:
+        * PlatformWin.cmake:
+
+2020-12-09  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: add support for pen pointer events
+        https://bugs.webkit.org/show_bug.cgi?id=219024
+
+        Reviewed by Brian Burg.
+
+        Pass the actual pointer type to the automation as a different input source.
+
+        * Session.cpp:
+        (WebDriver::automationSourceType):
+        (WebDriver::Session::performActions):
+
+2020-12-03  Lauro Moura  <lmoura@igalia.com>
+
+        [WTF] Avoid JSONValue::create with raw string falling to bool overload
+        https://bugs.webkit.org/show_bug.cgi?id=219483
+
+        Reviewed by Adrian Perez de Castro.
+
+        Avoid accidental conversion of "selected" to bool that would make the
+        getElementAttribute javascriptcode to fail with "attributeName.toLowerCase
+        is undefined"
+
+        * Session.cpp:
+        (WebDriver::Session::isElementSelected): Convert to WTF::String when creating the value.
+
+2020-11-05  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: session can have more than one active input source of the same type
+        https://bugs.webkit.org/show_bug.cgi?id=218382
+
+        Reviewed by Brian Burg.
+
+        Only send to the browser the list of input sources actually used by the action sequence.
+
+        * Session.cpp:
+        (WebDriver::Session::performActions):
+
+2020-10-28  Basuke Suzuki  <basuke.suzuki@sony.com>
+
+        [WinCairo][PlayStation] Add handling for accept failure case
+        https://bugs.webkit.org/show_bug.cgi?id=217353
+
+        Reviewed by Alex Christensen.
+
+        Following the interface change.
+
+        * HTTPServer.h:
+        * socket/HTTPServerSocket.cpp:
+        (WebDriver::HTTPServer::didStatusChanged):
+
+2020-10-22  Nitzan Uziely  <linkgoron@gmail.com>
+
+        Elements in Shadow DOM are wrongly marked as stale by the WebDriver
+        https://bugs.webkit.org/show_bug.cgi?id=217635
+
+        Reviewed by Brian Burg.
+
+        Changed stale checking, to check if the root node is the document element, 
+        instead of document.contains which doesn't work for elements in Shadow DOM.
+
+        * Session.cpp:
+        (WebDriver::Session::elementSendKeys):
+
+2020-10-21  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: add support for wheel actions
+        https://bugs.webkit.org/show_bug.cgi?id=217174
+
+        Reviewed by Brian Burg.
+
+        Handle wheel actions.
+
+        * Actions.h:
+        * Session.cpp:
+        (WebDriver::automationSourceType): Handle InputSource::Type::Wheel.
+        (WebDriver::Session::performActions): Handle Action::Type::Wheel.
+        * WebDriverService.cpp:
+        (WebDriver::processKeyAction): Assert if Action::Subtype::Scroll.
+        (WebDriver::processPointerMoveAction): Move this code to a helper to be used by both pointer move and scroll actions.
+        (WebDriver::processPointerAction): Use processPointerMoveAction().
+        (WebDriver::processWheelAction): Call processPointerMoveAction() and process the scroll delta too.
+        (WebDriver::processInputActionSequence): Handle InputSource::Type::Wheel.
+
+2020-10-20  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: add support for right variations of virtual keys
+        https://bugs.webkit.org/show_bug.cgi?id=217819
+
+        Reviewed by Brian Burg.
+
+        The browser is currently receiving the virtual keys already normalized, but WebDriver expects the key code to be
+        the actual one, not the normalized one. We need to send the raw virtual keys to the browser and do the
+        normalization there, but use the raw one when synthesizing the events.
+
+        Fixes: imported/w3c/webdriver/tests/perform_actions/key_events.py::test_modifier_key_sends_correct_events[\ue009-CONTROL]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_modifier_key_sends_correct_events[\ue008-SHIFT]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_modifier_key_sends_correct_events[\ue052-R_ALT]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[CONTROL-expected5]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[R_ALT-expected48]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[R_ARROWDOWN-expected49]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[R_ARROWLEFT-expected50]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[R_ARROWRIGHT-expected51]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[R_ARROWUP-expected52]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[R_DELETE-expected54]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[R_END-expected55]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[R_HOME-expected56]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[R_INSERT-expected57]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[R_PAGEDOWN-expected59]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[R_PAGEUP-expected60]
+               imported/w3c/webdriver/tests/perform_actions/key_events.py::test_special_key_sends_keydown[SHIFT-expected64]
+
+        * Session.cpp:
+        (WebDriver::Session::virtualKeyForKey): Do not normalize the virtual keys.
+
+2020-10-02  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: add support for same site cookies
+        https://bugs.webkit.org/show_bug.cgi?id=217222
+
+        Reviewed by Brian Burg.
+
+        * Session.cpp:
+        (WebDriver::parseAutomationCookie): Parse sameSite.
+        (WebDriver::builtAutomationCookie): Add sameSite to cookie.
+        (WebDriver::serializeCookie): Serialize sameSite.
+        * Session.h:
+        * WebDriverService.cpp:
+        (WebDriver::deserializeCookie): Deserialize sameSite.
+
+2020-10-02  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: several issues when switching to new browser context
+        https://bugs.webkit.org/show_bug.cgi?id=217217
+
+        Reviewed by Brian Burg.
+
+        There are several issues to fix when switching to a browser context:
+
+          1- The spec has changed and now we should always keep the current parent browsing context.
+          2- The spec says we should focus the new frame after switching to a frame or parent frame, but we are just
+             resolving the frame and updating the handle internally.
+          3- We are keeping stale frame handles and ids in the automation session, they should be removed when frames
+             are destroyed.
+          4- We are clearing all frame references in the automation session when a navigation happens in any main
+             frame. We should only clear the frames of the page that completed the navigation.
+
+        All theses cases are covered by new tests added to imported/w3c/webdriver/tests/switch_to_parent_frame/
+
+        * Session.cpp:
+        (WebDriver::Session::close): Close the current parent browsing context too.
+        (WebDriver::Session::switchToTopLevelBrowsingContext): Initialize the current parent browsing context too.
+        (WebDriver::Session::switchToBrowsingContext): Resolve the parent frame handle and set the current parent browsing context.
+        (WebDriver::Session::go): Pass completion handler to switchToBrowsingContext().
+        (WebDriver::Session::back): Ditto.
+        (WebDriver::Session::forward): Ditto.
+        (WebDriver::Session::refresh): Ditto.
+        (WebDriver::Session::closeWindow): Close the current parent browsing context too.
+        (WebDriver::Session::switchToBrowsingContext): Send switchToBrowsingContext message to the browser.
+        (WebDriver::Session::switchToWindow): Use switchToBrowsingContext() to send the message to the browser.
+        (WebDriver::Session::switchToFrame): Call switchToBrowsingContext() after the child frame handle is resolved.
+        (WebDriver::Session::switchToParentFrame): Check current parent browsing context is still open and call
+        switchToBrowsingContext() to switch to the current parent browsing context.
+        (WebDriver::Session::waitForNavigationToComplete): Close the current parent browsing context too when the window
+        is closed due to the navigation.
+        * Session.h: Add m_currentParentBrowsingContext.
+
+2020-10-02  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: check the right browser context is open in all commands
+        https://bugs.webkit.org/show_bug.cgi?id=217177
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        We currently check the top level browsing context for all commands, but the current browsing context should be
+        checked instead in some of them. New tests added to check this are now failing. This patch changes the way we
+        were handling the current browsing context, considering nullopt to be the main frame of the current top level
+        browsing context. Now the null string is used for that, matching what automation expects in the browser and
+        nullopt means the browser context is closed. That way we can check if the current browser context has been
+        closed.
+
+        * Session.cpp:
+        (WebDriver::Session::close): Also close the current browsing context.
+        (WebDriver::Session::switchToTopLevelBrowsingContext): Initialize the current browsing context to null string.
+        (WebDriver::Session::switchToBrowsingContext): Just set the given context now.
+        (WebDriver::Session::go): Pass null string to switchToBrowsingContext().
+        (WebDriver::Session::back): Ditto.
+        (WebDriver::Session::forward): Ditto.
+        (WebDriver::Session::refresh): Ditto.
+        (WebDriver::Session::closeWindow): Close the current browsing context too.
+        (WebDriver::Session::switchToFrame): If frame is null check top level browsing context is open, otherwise check
+        current browsing context.
+        (WebDriver::Session::findElements): Check current browsing context is open instead of toplevel one.
+        (WebDriver::Session::getActiveElement): Ditto.
+        (WebDriver::Session::isElementSelected): Ditto.
+        (WebDriver::Session::getElementText): Ditto.
+        (WebDriver::Session::getElementTagName): Ditto.
+        (WebDriver::Session::getElementRect): Ditto.
+        (WebDriver::Session::isElementEnabled): Ditto.
+        (WebDriver::Session::getElementAttribute): Ditto.
+        (WebDriver::Session::getElementProperty): Ditto.
+        (WebDriver::Session::getElementCSSValue): Ditto.
+        (WebDriver::Session::waitForNavigationToComplete): Ditto. Also close the current browsing context when the
+        window or the frame are closed to do the navigation.
+        (WebDriver::Session::elementClick): Check current browsing context is open instead of toplevel one.
+        (WebDriver::Session::elementClear): Ditto.
+        (WebDriver::Session::elementSendKeys): Ditto.
+        (WebDriver::Session::getPageSource): Ditto.
+        (WebDriver::Session::executeScript): Ditto.
+        (WebDriver::Session::getAllCookies): Ditto.
+        (WebDriver::Session::addCookie): Ditto.
+        (WebDriver::Session::deleteCookie): Ditto.
+        (WebDriver::Session::deleteAllCookies): Ditto.
+        (WebDriver::Session::performActions): Ditto.
+        (WebDriver::Session::takeScreenshot): Check current browsing context is open instead of toplevel one when an
+        element is given.
+        * Session.h:
+
+2020-09-30  Basuke Suzuki  <basuke.suzuki@sony.com>
+
+        [PlayStation][WinCairo] Enable WebDriver target on PlayStation and client for WinCairo
+        https://bugs.webkit.org/show_bug.cgi?id=216908
+
+        Reviewed by Don Olmstead.
+
+        Extend WebDriver client binary to support connection to remote device for both PlayStation
+        and WinCairo. We've implemented a simple web server to accept WebDriver request natively and bypass them
+        to RemoteInspector.
+
+        * Capabilities.h:
+        * HTTPServer.h:
+        * PlatformPlayStation.cmake: Added.
+        * PlatformWin.cmake:
+        * SessionHost.h:
+        (WebDriver::SessionHost::setHostAddress):
+        * WebDriverMain.cpp:
+        (main):
+        (dllLauncherEntryPoint):
+        * WebDriverService.cpp:
+        (WebDriver::printUsageStatement):
+        (WebDriver::WebDriverService::run):
+        (WebDriver::WebDriverService::connectToBrowser):
+        * WebDriverService.h:
+        * gtk/WebDriverServiceGtk.cpp:
+        (WebDriver::WebDriverService::platformInit):
+        * playstation/WebDriverServicePlayStation.cpp: Copied from Source\WebDriver\win\WebDriverServiceWin.cpp.
+        (WebDriver::WebDriverService::platformInit):
+        (WebDriver::WebDriverService::platformCapabilities):
+        (WebDriver::WebDriverService::platformCompareBrowserVersions):
+        (WebDriver::WebDriverService::platformValidateCapability const):
+        (WebDriver::WebDriverService::platformMatchCapability const):
+        (WebDriver::WebDriverService::platformParseCapabilities const):
+        (WebDriver::WebDriverService::platformSupportProxyType const):
+        * socket/CapabilitiesSocket.cpp: Copied from Source\WebDriver\socket\SessionHostSocket.cpp.
+        (WebDriver::CapabilitiesSocket::parseCapabilities):
+        * socket/CapabilitiesSocket.h: Copied from Source\WebDriver\socket\HTTPServerSocket.cpp.
+        * socket/HTTPParser.cpp: Added.
+        (WebDriver::HTTPParser::parse):
+        (WebDriver::HTTPParser::handlePhase):
+        (WebDriver::HTTPParser::abortProcess):
+        (WebDriver::HTTPParser::parseFirstLine):
+        (WebDriver::HTTPParser::readLine):
+        (WebDriver::HTTPParser::expectedBodyLength const):
+        * socket/HTTPParser.h: Copied from Source\WebDriver\HTTPServer.h.
+        (WebDriver::HTTPParser::pullMessage):
+        * socket/HTTPServerSocket.cpp:
+        (WebDriver::HTTPServer::listen):
+        (WebDriver::HTTPServer::disconnect):
+        (WebDriver::HTTPServer::doAccept):
+        (WebDriver::HTTPServer::didClose):
+        (WebDriver::HTTPRequestHandler::connect):
+        (WebDriver::HTTPRequestHandler::reset):
+        (WebDriver::HTTPRequestHandler::didReceive):
+        (WebDriver::HTTPRequestHandler::sendResponse):
+        (WebDriver::HTTPRequestHandler::packHTTPMessage const):
+        (WebDriver::HTTPRequestHandler::didClose):
+        * socket/SessionHostSocket.cpp:
+        (WebDriver::SessionHost::dispatchMap):
+        (WebDriver::SessionHost::sendWebInspectorEvent):
+        (WebDriver::SessionHost::connectToBrowser):
+        (WebDriver::SessionHost::isConnected const):
+        (WebDriver::SessionHost::didClose):
+        (WebDriver::SessionHost::parseTargetList):
+        (WebDriver::SessionHost::receivedSetTargetList):
+        (WebDriver::SessionHost::receivedSendMessageToFrontend):
+        (WebDriver::SessionHost::startAutomationSession):
+        (WebDriver::SessionHost::setTargetList):
+        (WebDriver::SessionHost::sendMessageToBackend):
+        * win/WebDriverServiceWin.cpp:
+        (WebDriver::WebDriverService::platformInit):
+        (WebDriver::WebDriverService::platformParseCapabilities const):
+        * wpe/WebDriverServiceWPE.cpp:
+        (WebDriver::WebDriverService::platformInit):
+
+2020-09-14  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        REGRESSION(r266885): WebDriver is broken since r266885
+        https://bugs.webkit.org/show_bug.cgi?id=216477
+
+        Reviewed by Devin Rousso.
+
+        There are several issues introduced in r266885, most of them related to JSValue::get methods now returning an
+        optional. In some cases of boolean values, the optional is checked instead of the contained bool or the logic is
+        inverted. JSONValue::getString() is problematic too because it doesn't use optional, when you call getString()
+        and null is returned it could be because the property is not present in the object or because the property is
+        not a string. In several cases we need to know that so we need to first get the value and then call asString(9
+        instead of calling getString() directly.
+
+        * Session.cpp:
+        (WebDriver::Session::handleUserPrompts): Check the value of isShowingJavaScriptDialog, not the optional.
+        (WebDriver::parseAutomationCookie): Check also the value of the session optional bool, not only the optional.
+        * SessionHost.cpp:
+        (WebDriver::SessionHost::dispatchMessage): Only set the responseObject if the object is not empty.
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::newWindow): Unknown values of type hint are not an error.
+        (WebDriver::WebDriverService::deleteCookie): Fix indentation.
+        (WebDriver::processKeyAction): Empty key value is an error, not the opposite.
+        * gtk/WebDriverServiceGtk.cpp:
+        (WebDriver::WebDriverService::platformValidateCapability const): Only fail if optional values are wrong type,
+        not if they are not present.
+        * wpe/WebDriverServiceWPE.cpp:
+        (WebDriver::WebDriverService::platformValidateCapability const): Ditto.
+
+2020-09-10  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        Unreviewed Debug build fix for WPE and WinCairo
+        https://bugs.webkit.org/show_bug.cgi?id=216302
+        <rdar://problem/68547649>
+
+        * Session.cpp:
+        (WebDriver::Session::switchToFrame): Replaced 'frameIndex' with '*frameIndex' in ASSERT expression.
+
+2020-09-10  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: modernize generated backend protocol code
+        https://bugs.webkit.org/show_bug.cgi?id=216302
+        <rdar://problem/68547649>
+
+        Reviewed by Brian Burg.
+
+        * CommandResult.cpp:
+        (WebDriver::CommandResult::CommandResult):
+        * Session.cpp:
+        (WebDriver::firstWindowHandleInResult):
+        (WebDriver::Session::getTimeouts):
+        (WebDriver::Session::createTopLevelBrowsingContext):
+        (WebDriver::Session::handleUserPrompts):
+        (WebDriver::Session::reportUnexpectedAlertOpen):
+        (WebDriver::Session::go):
+        (WebDriver::Session::getCurrentURL):
+        (WebDriver::Session::back):
+        (WebDriver::Session::forward):
+        (WebDriver::Session::refresh):
+        (WebDriver::Session::getTitle):
+        (WebDriver::Session::getWindowHandle):
+        (WebDriver::Session::closeTopLevelBrowsingContext):
+        (WebDriver::Session::switchToWindow):
+        (WebDriver::Session::getWindowHandles):
+        (WebDriver::Session::newWindow):
+        (WebDriver::Session::switchToFrame):
+        (WebDriver::Session::switchToParentFrame):
+        (WebDriver::Session::getToplevelBrowsingContextRect):
+        (WebDriver::Session::setWindowRect):
+        (WebDriver::Session::maximizeWindow):
+        (WebDriver::Session::minimizeWindow):
+        (WebDriver::Session::fullscreenWindow):
+        (WebDriver::Session::createElement):
+        (WebDriver::Session::extractElementID):
+        (WebDriver::Session::computeElementLayout):
+        (WebDriver::Session::findElements):
+        (WebDriver::Session::getActiveElement):
+        (WebDriver::Session::isElementSelected):
+        (WebDriver::Session::getElementText):
+        (WebDriver::Session::getElementTagName):
+        (WebDriver::Session::getElementRect):
+        (WebDriver::Session::isElementEnabled):
+        (WebDriver::Session::isElementDisplayed):
+        (WebDriver::Session::getElementAttribute):
+        (WebDriver::Session::getElementProperty):
+        (WebDriver::Session::getElementCSSValue):
+        (WebDriver::Session::waitForNavigationToComplete):
+        (WebDriver::Session::elementIsFileUpload):
+        (WebDriver::Session::parseElementIsFileUploadResult):
+        (WebDriver::Session::selectOptionElement):
+        (WebDriver::Session::elementClick):
+        (WebDriver::Session::elementIsEditable):
+        (WebDriver::Session::elementClear):
+        (WebDriver::Session::setInputFileUploadFiles):
+        (WebDriver::Session::elementSendKeys):
+        (WebDriver::Session::getPageSource):
+        (WebDriver::Session::handleScriptResult):
+        (WebDriver::Session::executeScript):
+        (WebDriver::Session::performMouseInteraction):
+        (WebDriver::Session::performKeyboardInteractions):
+        (WebDriver::builtAutomationCookie):
+        (WebDriver::serializeCookie):
+        (WebDriver::Session::getAllCookies):
+        (WebDriver::Session::getNamedCookie):
+        (WebDriver::Session::addCookie):
+        (WebDriver::Session::deleteCookie):
+        (WebDriver::Session::deleteAllCookies):
+        (WebDriver::Session::performActions):
+        (WebDriver::Session::releaseActions):
+        (WebDriver::Session::dismissAlert):
+        (WebDriver::Session::acceptAlert):
+        (WebDriver::Session::getAlertText):
+        (WebDriver::Session::sendAlertText):
+        (WebDriver::Session::takeScreenshot):
+        * SessionHost.cpp:
+        (WebDriver::SessionHost::dispatchMessage):
+        * WebDriverService.h:
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::handleRequest):
+        (WebDriver::WebDriverService::sendResponse const):
+        (WebDriver::valueAsNumberInRange):
+        (WebDriver::deserializeTimeouts):
+        (WebDriver::deserializeProxy):
+        (WebDriver::WebDriverService::parseCapabilities const):
+        (WebDriver::WebDriverService::findSessionOrCompleteWithError):
+        (WebDriver::WebDriverService::validatedCapabilities const):
+        (WebDriver::WebDriverService::mergeCapabilities const):
+        (WebDriver::WebDriverService::matchCapabilities const):
+        (WebDriver::WebDriverService::processCapabilities const):
+        (WebDriver::WebDriverService::createSession):
+        (WebDriver::WebDriverService::deleteSession):
+        (WebDriver::WebDriverService::go):
+        (WebDriver::WebDriverService::setWindowRect):
+        (WebDriver::WebDriverService::closeWindow):
+        (WebDriver::WebDriverService::switchToWindow):
+        (WebDriver::WebDriverService::newWindow):
+        (WebDriver::WebDriverService::switchToFrame):
+        (WebDriver::findElementOrCompleteWithError):
+        (WebDriver::findStrategyAndSelectorOrCompleteWithError):
+        (WebDriver::WebDriverService::getElementAttribute):
+        (WebDriver::WebDriverService::getElementProperty):
+        (WebDriver::WebDriverService::getElementCSSValue):
+        (WebDriver::WebDriverService::elementSendKeys):
+        (WebDriver::findScriptAndArgumentsOrCompleteWithError):
+        (WebDriver::WebDriverService::getNamedCookie):
+        (WebDriver::deserializeCookie):
+        (WebDriver::WebDriverService::addCookie):
+        (WebDriver::WebDriverService::deleteCookie):
+        (WebDriver::processPauseAction):
+        (WebDriver::processNullAction):
+        (WebDriver::processKeyAction):
+        (WebDriver::processPointerAction):
+        (WebDriver::processPointerParameters):
+        (WebDriver::processInputActionSequence):
+        (WebDriver::WebDriverService::performActions):
+        (WebDriver::WebDriverService::sendAlertText):
+        * WebDriver/gtk/WebDriverServiceGtk.cpp:
+        (WebDriver::WebDriverService::platformMatchCapability):
+        (WebDriver::WebDriverService::platformValidateCapability):
+        (WebDriver::WebDriverService::platformParseCapabilities):
+        * WebDriver/win/WebDriverServiceWin.cpp:
+        (WebDriver::WebDriverService::platformMatchCapability):
+        (WebDriver::WebDriverService::platformValidateCapability):
+        (WebDriver::WebDriverService::platformParseCapabilities):
+        * WebDriver/wpe/WebDriverServiceWPE.cpp:
+        (WebDriver::WebDriverService::platformMatchCapability):
+        (WebDriver::WebDriverService::platformValidateCapability):
+        (WebDriver::WebDriverService::platformParseCapabilities):
+        `JSON` classes now use `Ref&&` wherever possible and `Optional` instead of an out parameter
+        for `get*`/`as*` so that values can be more easily manipulated and can be confidently known
+        to exist.
+
+2020-07-15  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        [CMake][WebDriver] Generating WebDriverAtoms.cpp is rarely failing as "ImportError: No module named jsmin"
+        https://bugs.webkit.org/show_bug.cgi?id=214339
+
+        Reviewed by Don Olmstead.
+
+        There are a race condition between copying jsmin.py in
+        JavaScriptCore and using it in WebDriver. WebDriver target should
+        have a dependency to it.
+
+        * CMakeLists.txt: Added add_dependencies for WebDriver.
+
+2020-06-26  Geoffrey Garen  <ggaren@apple.com>
+
+        Initializing the main thread should initialize the main run loop
+        https://bugs.webkit.org/show_bug.cgi?id=213637
+
+        Reviewed by Anders Carlsson.
+
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::run):
+
+2020-06-23  Chris Dumez  <cdumez@apple.com>
+
+        Remove a lot of unnecessary calls to Ref::copyRef()
+        https://bugs.webkit.org/show_bug.cgi?id=213533
+
+        Reviewed by Darin Adler.
+
+        Remove a lot of unnecessary calls to Ref::copyRef() now that Ref is copyable.
+
+        * Session.cpp:
+        (WebDriver::Session::go):
+        (WebDriver::Session::getCurrentURL):
+        (WebDriver::Session::back):
+        (WebDriver::Session::forward):
+        (WebDriver::Session::refresh):
+        (WebDriver::Session::getTitle):
+        (WebDriver::Session::newWindow):
+        (WebDriver::Session::switchToFrame):
+        (WebDriver::Session::switchToParentFrame):
+        (WebDriver::Session::setWindowRect):
+        (WebDriver::Session::maximizeWindow):
+        (WebDriver::Session::minimizeWindow):
+        (WebDriver::Session::fullscreenWindow):
+        (WebDriver::Session::findElements):
+        (WebDriver::Session::getActiveElement):
+        (WebDriver::Session::isElementSelected):
+        (WebDriver::Session::getElementText):
+        (WebDriver::Session::getElementTagName):
+        (WebDriver::Session::getElementRect):
+        (WebDriver::Session::isElementEnabled):
+        (WebDriver::Session::isElementDisplayed):
+        (WebDriver::Session::getElementAttribute):
+        (WebDriver::Session::getElementProperty):
+        (WebDriver::Session::getElementCSSValue):
+        (WebDriver::Session::elementClick):
+        (WebDriver::Session::elementClear):
+        (WebDriver::Session::elementSendKeys):
+        (WebDriver::Session::getPageSource):
+        (WebDriver::Session::executeScript):
+        (WebDriver::Session::getAllCookies):
+        (WebDriver::Session::addCookie):
+        (WebDriver::Session::deleteCookie):
+        (WebDriver::Session::deleteAllCookies):
+        (WebDriver::Session::performActions):
+        (WebDriver::Session::takeScreenshot):
+
+2020-06-10  Geoffrey Garen  <ggaren@apple.com>
+
+        Some style improvements to main thread code
+        https://bugs.webkit.org/show_bug.cgi?id=213051
+
+        Reviewed by Darin Adler.
+
+        Updated for rename.
+
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::run):
+
+2020-03-19  Charlie Turner  <cturner@igalia.com>
+
+        Fix many warnings with Clang 7.0 on GTK x86-64 in Debug.
+        https://bugs.webkit.org/show_bug.cgi?id=209146
+
+        Reviewed by Darin Adler.
+
+        * Session.cpp:
+        (WebDriver::Session::newWindow):
+        (WebDriver::Session::elementIsFileUpload):
+        (WebDriver::Session::elementIsEditable):
+        (WebDriver::Session::setInputFileUploadFiles):
+
+2020-02-12  Carlos Alberto Lopez Perez  <clopez@igalia.com>
+
+        WebDriver: return invalidSessionID exception if the WebProcess doesn't respond (crashes)
+        https://bugs.webkit.org/show_bug.cgi?id=207565
+
+        Reviewed by Adrian Perez de Castro.
+
+        Report InvalidSessionID if the session connection its not connected.
+
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::findSessionOrCompleteWithError):
+
+2020-01-29  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] WebDriver: screenshot ignores CSS transformations or WebGL content.
+        https://bugs.webkit.org/show_bug.cgi?id=206514
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        * Session.cpp:
+        (WebDriver::Session::takeScreenshot): Always set clipToViewport to true.
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::takeElementScreenshot): Stop pretending a GET command can have body.
+
+2020-01-13  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: pressed virtual keys not correctly handled in action sequences
+        https://bugs.webkit.org/show_bug.cgi?id=205997
+
+        Reviewed by Brian Burg.
+
+        We are assuming that only one virtual key can be pressed and that a key up always releases the pressed virtual
+        key if any. We should keep a list of pressed keys and remove them from the list when key up happens for them.
+
+        Fixes: imported/w3c/webdriver/tests/perform_actions/key_modifiers.py::test_shift_modifier_generates_capital_letters[\ue008]
+               imported/w3c/webdriver/tests/perform_actions/key_modifiers.py::test_shift_modifier_generates_capital_letters[\ue050]
+
+        * Session.cpp:
+        (WebDriver::Session::performActions):
+        * Session.h:
+
+2020-01-10  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Automation: evaluateJavaScriptFunction should use Promises
+        https://bugs.webkit.org/show_bug.cgi?id=204151
+
+        Reviewed by Brian Burg.
+
+        * CommandResult.cpp:
+        (WebDriver::CommandResult::httpStatusCode const): Timeout errors should return 500 not 408.
+        * Session.cpp:
+        (WebDriver::Session::executeScript): Ensure the script body goes between new lines to avoid problems with
+        trailing comments like in function() { return foo; // Comment }.
+
+2020-01-07  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: handle no such element errors
+        https://bugs.webkit.org/show_bug.cgi?id=204684
+
+        Reviewed by Brian Burg.
+
+        Handle InvalidNodeIdentifier errors.
+
+        Fixes: imported/w3c/webdriver/tests/get_element_tag_name/get.py::test_element_not_found
+               imported/w3c/webdriver/tests/get_element_property/get.py::test_element_not_found
+               imported/w3c/webdriver/tests/get_element_attribute/get.py::test_element_not_found
+
+        * CommandResult.cpp:
+        (WebDriver::CommandResult::CommandResult):
+
+2019-12-23  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: fix handling of session timeouts for values higher than MAX_INT
+        https://bugs.webkit.org/show_bug.cgi?id=204114
+
+        Reviewed by Brian Burg.
+
+        Use double instead of Seconds for handling timeouts.
+
+        * Capabilities.h:
+        * Session.cpp:
+        (WebDriver::Session::getTimeouts): Handle the case of script timeout being null.
+        (WebDriver::Session::go):
+        (WebDriver::Session::back):
+        (WebDriver::Session::forward):
+        (WebDriver::Session::refresh):
+        (WebDriver::Session::findElements):
+        (WebDriver::Session::waitForNavigationToComplete):
+        (WebDriver::Session::executeScript): Do not pass a timeout when it's null.
+        * Session.h:
+        (WebDriver::Session::scriptTimeout const):
+        (WebDriver::Session::pageLoadTimeout const):
+        (WebDriver::Session::implicitWaitTimeout const):
+        * WebDriverService.cpp:
+        (WebDriver::deserializeTimeouts): Add IgnoreUnknownTimeout, since we should only fail when processing
+        capabilities, but not when setting new timeouts. Also handle the case of script timeout being null.
+        (WebDriver::WebDriverService::parseCapabilities const): Pass IgnoreUnknownTimeout::No to deserializeTimeouts.
+        (WebDriver::WebDriverService::validatedCapabilities const): Ditto.
+        (WebDriver::WebDriverService::createSession): Handle the case of script timeout being null.
+        (WebDriver::WebDriverService::setTimeouts): Pass IgnoreUnknownTimeout::Yes to deserializeTimeouts.
+
+2019-12-13  Jim Mason  <jmason@ibinx.com>
+
+        [GTK] WebKitGTK build hangs on g-ir-scanner
+        https://bugs.webkit.org/show_bug.cgi?id=204715
+
+        This patch fixes the static initialization order problem
+        introduced by Bug 204503.
+
+        The patch replaces the static data members with statics that
+        are constructed only upon first access (i.e., the 'construct
+        on first use' idiom).
+
+        Reviewed by Carlos Garcia Campos.
+
+        * SessionHost.h:
+        * glib/SessionHostGlib.cpp:
+        (WebDriver::SessionHost::messageHandlers):
+        (WebDriver::SessionHost::connectToBrowser):
+
+2019-12-12  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: tests is_element_enabled/enabled.py::test_fieldset_disabled_descendant are failing
+        https://bugs.webkit.org/show_bug.cgi?id=204700
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        Fixes: imported/w3c/webdriver/tests/is_element_enabled/enabled.py::test_fieldset_disabled_descendant[button]
+               imported/w3c/webdriver/tests/is_element_enabled/enabled.py::test_fieldset_disabled_descendant[input]
+               imported/w3c/webdriver/tests/is_element_enabled/enabled.py::test_fieldset_disabled_descendant[select]
+               imported/w3c/webdriver/tests/is_element_enabled/enabled.py::test_fieldset_disabled_descendant[textarea]
+
+        * CMakeLists.txt: Add ElementEnabled.js to compilation.
+        * Session.cpp:
+        (WebDriver::Session::isElementEnabled): Use ElementEnabled atom instead.
+
+2019-12-10  Fujii Hironori  <Hironori.Fujii@sony.com>
+
+        [Win] Fix MSVC warning C4701: potentially uninitialized local variable 'x' used
+        https://bugs.webkit.org/show_bug.cgi?id=205052
+
+        Reviewed by Don Olmstead.
+
+        * Session.cpp:
+        (WebDriver::Session::getToplevelBrowsingContextRect):
+        (WebDriver::Session::computeElementLayout):
+        Zero-initialized local variables.
+
+2019-12-03  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: handle elements of type file in send keys command
+        https://bugs.webkit.org/show_bug.cgi?id=188514
+
+        Reviewed by Brian Burg.
+
+        Handle the case of inpout element being a file upload in send keys command.
+
+        * Capabilities.h: Add strictFileInteractability.
+        * Session.cpp:
+        (WebDriver::Session::elementIsFileUpload): Helper to check if the given element is a file upload and whether
+        it's multiple or not.
+        (WebDriver::Session::parseElementIsFileUploadResult): Parse the result of elementIsFileUpload().
+        (WebDriver::Session::elementClick): If the element is a file upload, fail with invalid argument error.
+        (WebDriver::Session::setInputFileUploadFiles): Send setFilesForInputFileUpload message to the browser with the
+        selected files.
+        (WebDriver::Session::elementSendKeys): If the element is a file upload, call setInputFileUploadFiles()
+        instead. Also handle the strictFileInteractability capability to decide whether to focus and check
+        interactability on the input element or not.
+        * Session.h:
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::parseCapabilities const): Handle strictFileInteractability.
+        (WebDriver::WebDriverService::validatedCapabilities const): Ditto.
+        (WebDriver::WebDriverService::matchCapabilities const): Ditto.
+        (WebDriver::WebDriverService::createSession): Ditto.
+
+2019-12-03  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: most of the clear tests are failing
+        https://bugs.webkit.org/show_bug.cgi?id=180404
+
+        Reviewed by Brian Burg.
+
+        Implement the element clear command following the spec.
+        https://w3c.github.io/webdriver/#element-clear
+
+        * Session.cpp:
+        (WebDriver::Session::elementIsEditable): Helper function to check if the element is editable.
+        (WebDriver::Session::elementClear): Check if the element is editable and interactable before executing the clear atom.
+        * Session.h:
+
+2019-11-22  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Fix GTK/WPE debug build after r252770
+
+        Just remove the ASSERT instead, since it now always receive a newly created Ref.
+
+        * glib/SessionHostGlib.cpp:
+        (WebDriver::SessionHost::setupConnection):
+
+2019-11-22  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Fix GTK/WPE debug build after r252770
+
+        * glib/SessionHostGlib.cpp:
+        (WebDriver::SessionHost::setupConnection):
+
+2019-11-22  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK][WPE] RemoteInspector: use sockets instead of DBus
+        https://bugs.webkit.org/show_bug.cgi?id=204503
+
+        Reviewed by Žan Doberšek.
+
+        Use GSockets API instead of DBus.
+
+        * SessionHost.cpp:
+        (WebDriver::SessionHost::sendCommandToBackend):
+        * SessionHost.h:
+        * glib/SessionHostGlib.cpp:
+        (WebDriver::SessionHost::~SessionHost):
+        (WebDriver::SessionHost::isConnected const):
+        (WebDriver::ConnectToBrowserAsyncData::ConnectToBrowserAsyncData):
+        (WebDriver::SessionHost::launchBrowser):
+        (WebDriver::SessionHost::connectToBrowser):
+        (WebDriver::SessionHost::connectionDidClose):
+        (WebDriver::SessionHost::setupConnection):
+        (WebDriver::SessionHost::startAutomationSession):
+        (WebDriver::SessionHost::didStartAutomationSession):
+        (WebDriver::SessionHost::setTargetList):
+        (WebDriver::SessionHost::sendMessageToBackend):
+        * socket/SessionHostSocket.cpp:
+        (WebDriver::SessionHost::sendMessageToBackend):
+
+2019-11-13  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: duration can be undefined in pause actions
+        https://bugs.webkit.org/show_bug.cgi?id=204152
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        Make duration optional in pause actions.
+
+        Fixes: imported/w3c/webdriver/tests/perform_actions/validity.py::test_pause_without_duration[none]
+               imported/w3c/webdriver/tests/perform_actions/validity.py::test_pause_without_duration[key]
+               imported/w3c/webdriver/tests/perform_actions/validity.py::test_pause_without_duration[pointer]
+
+        * Session.cpp:
+        (WebDriver::Session::performActions):
+        * WebDriverService.cpp:
+        (WebDriver::processPauseAction):
+
+2019-11-13  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: check the frameID parameter before running switch to frame command
+        https://bugs.webkit.org/show_bug.cgi?id=204150
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        We should check it's either null, a number (unsigned sort) or an object referencing a web element.
+
+        Fixes: imported/w3c/webdriver/tests/switch_to_frame/switch.py::test_frame_id_invalid_types[foo]
+               imported/w3c/webdriver/tests/switch_to_frame/switch.py::test_frame_id_invalid_types[True]
+               imported/w3c/webdriver/tests/switch_to_frame/switch.py::test_frame_id_invalid_types[value2]
+               imported/w3c/webdriver/tests/switch_to_frame/switch.py::test_frame_id_invalid_types[value3]
+               imported/w3c/webdriver/tests/switch_to_frame/switch.py::test_frame_id_out_of_bounds[-1]
+               imported/w3c/webdriver/tests/switch_to_frame/switch.py::test_frame_id_out_of_bounds[65536]
+
+        * Session.cpp:
+        (WebDriver::Session::switchToFrame): Remove the validation here. Also remove the case of being a frame name,
+        since that's not in the spec.
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::switchToFrame): Check frameID type before calling Session::switchToFrame().
+
+2019-11-12  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] WebDriver: implement new window command
+        https://bugs.webkit.org/show_bug.cgi?id=203994
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        * Session.cpp:
+        (WebDriver::Session::newWindow):
+        * Session.h:
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::newWindow):
+        * WebDriverService.h:
+
+2019-11-11  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: implement proxy support
+        https://bugs.webkit.org/show_bug.cgi?id=180408
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        Handle proxy object in capabilities.
+
+        * Capabilities.h: Add Proxy struct.
+        * WebDriverService.cpp:
+        (WebDriver::deserializeProxy): Deserialize the proxy from capabilities.
+        (WebDriver::WebDriverService::parseCapabilities const): Get the deserialized proxy.
+        (WebDriver::WebDriverService::validatedCapabilities const): Ensure proxy object is valid.
+        (WebDriver::WebDriverService::matchCapabilities const): Check proxy type is supported by the platform.
+        (WebDriver::WebDriverService::createSession): Only set an empty proxy object in capabilities if we don't have a
+        deserialized proxy.
+        * WebDriverService.h:
+        * glib/SessionHostGlib.cpp:
+        (WebDriver::SessionHost::buildSessionCapabilities const): Send the proxy settings to the browser.
+        * glib/WebDriverServiceGLib.cpp:
+        (WebDriver::WebDriverService::platformSupportProxyType const): Return false if proxy type is "pac".
+
+2019-11-08  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: implement get page source command
+        https://bugs.webkit.org/show_bug.cgi?id=180399
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        * Session.cpp:
+        (WebDriver::Session::getPageSource):
+        * Session.h:
+        * WebDriverService.cpp:
+        (WebDriver::WebDriverService::getPageSource):
+        * WebDriverService.h:
+
+2019-11-07  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        WebDriver: correctly handle errors when focusing element before sending key events
+        https://bugs.webkit.org/show_bug.cgi?id=203945
+
+        Reviewed by Carlos Alberto Lopez Perez.
+
+        We are throwing an exception that is not correctly handled.
+
+        Fixes: imported/w3c/webdriver/tests/element_send_keys/interactability.py::test_not_a_focusable_element
+               imported/w3c/webdriver/tests/element_send_keys/interactability.py::test_display_none
+               imported/w3c/webdriver/tests/element_send_keys/interactability.py::test_visibility_hidden
+               imported/w3c/webdriver/tests/element_send_keys/interactability.py::test_hidden
+               imported/w3c/webdriver/tests/element_send_keys/interactability.py::test_disabled
+
+        * Session.cpp:
+        (WebDriver::Session::elementSendKeys): Raise ElementNotInteractable error when element is not focusable.
+
 2019-08-18  Yusuke Suzuki  <ysuzuki@apple.com>
 
         [WTF] Add makeUnique<T>, which ensures T is fast-allocated, makeUnique / makeUniqueWithoutFastMallocCheck part

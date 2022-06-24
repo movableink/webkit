@@ -14,15 +14,6 @@
 # limitations under the License.
 #
 
-# This is deprecated and will be removed in the future.  It also doesn't do
-# anything anyways.  Prefer to use the library associated with the API you are
-# using.
-absl_cc_library(
-  NAME
-    container
-  PUBLIC
-)
-
 absl_cc_library(
   NAME
     btree
@@ -40,6 +31,7 @@ absl_cc_library(
     absl::compare
     absl::compressed_tuple
     absl::container_memory
+    absl::cord
     absl::core_headers
     absl::layout
     absl::memory
@@ -60,6 +52,7 @@ absl_cc_library(
     ${ABSL_DEFAULT_LINKOPTS}
   DEPS
     absl::btree
+    absl::cord
     absl::flat_hash_set
     absl::strings
     absl::time
@@ -71,14 +64,19 @@ absl_cc_test(
     btree_test
   SRCS
     "btree_test.cc"
+  COPTS
+    ${ABSL_TEST_COPTS}
+  LINKOPTS
+    ${ABSL_DEFAULT_LINKOPTS}
   DEPS
-    absl::base
     absl::btree
     absl::btree_test_common
     absl::compare
+    absl::core_headers
     absl::counting_allocator
     absl::flags
     absl::hash_testing
+    absl::raw_logging_internal
     absl::strings
     absl::test_instance_tracker
     absl::type_traits
@@ -124,6 +122,7 @@ absl_cc_library(
   DEPS
     absl::compressed_tuple
     absl::algorithm
+    absl::config
     absl::core_headers
     absl::dynamic_annotations
     absl::throw_delegate
@@ -138,26 +137,10 @@ absl_cc_test(
     "fixed_array_test.cc"
   COPTS
     ${ABSL_TEST_COPTS}
-    ${ABSL_EXCEPTIONS_FLAG}
-  LINKOPTS
-    ${ABSL_EXCEPTIONS_FLAG_LINKOPTS}
   DEPS
     absl::fixed_array
-    absl::exception_testing
-    absl::hash_testing
-    absl::memory
-    gmock_main
-)
-
-absl_cc_test(
-  NAME
-    fixed_array_test_noexceptions
-  SRCS
-    "fixed_array_test.cc"
-  COPTS
-    ${ABSL_TEST_COPTS}
-  DEPS
-    absl::fixed_array
+    absl::counting_allocator
+    absl::config
     absl::exception_testing
     absl::hash_testing
     absl::memory
@@ -171,11 +154,9 @@ absl_cc_test(
     "fixed_array_exception_safety_test.cc"
   COPTS
     ${ABSL_TEST_COPTS}
-    ${ABSL_EXCEPTIONS_FLAG}
-  LINKOPTS
-    ${ABSL_EXCEPTIONS_FLAG_LINKOPTS}
   DEPS
     absl::fixed_array
+    absl::config
     absl::exception_safety_testing
     gmock_main
 )
@@ -219,6 +200,8 @@ absl_cc_library(
     "internal/counting_allocator.h"
   COPTS
     ${ABSL_DEFAULT_COPTS}
+  DEPS
+    absl::config
 )
 
 absl_cc_test(
@@ -228,37 +211,16 @@ absl_cc_test(
     "inlined_vector_test.cc"
   COPTS
     ${ABSL_TEST_COPTS}
-    ${ABSL_EXCEPTIONS_FLAG}
-  LINKOPTS
-    ${ABSL_EXCEPTIONS_FLAG_LINKOPTS}
   DEPS
     absl::counting_allocator
     absl::inlined_vector
     absl::test_instance_tracker
-    absl::base
+    absl::config
     absl::core_headers
     absl::exception_testing
     absl::hash_testing
     absl::memory
-    absl::strings
-    gmock_main
-)
-
-absl_cc_test(
-  NAME
-    inlined_vector_test_noexceptions
-  SRCS
-    "inlined_vector_test.cc"
-  COPTS
-    ${ABSL_TEST_COPTS}
-  DEPS
-    absl::inlined_vector
-    absl::test_instance_tracker
-    absl::base
-    absl::core_headers
-    absl::exception_testing
-    absl::hash_testing
-    absl::memory
+    absl::raw_logging_internal
     absl::strings
     gmock_main
 )
@@ -270,11 +232,9 @@ absl_cc_test(
     "inlined_vector_exception_safety_test.cc"
   COPTS
     ${ABSL_TEST_COPTS}
-    ${ABSL_EXCEPTIONS_FLAG}
-  LINKOPTS
-    ${ABSL_EXCEPTIONS_FLAG_LINKOPTS}
   DEPS
     absl::inlined_vector
+    absl::config
     absl::exception_safety_testing
     gmock_main
 )
@@ -336,6 +296,7 @@ absl_cc_test(
     absl::unordered_map_members_test
     absl::unordered_map_modifiers_test
     absl::any
+    absl::raw_logging_internal
     gmock_main
 )
 
@@ -372,6 +333,7 @@ absl_cc_test(
     absl::unordered_set_members_test
     absl::unordered_set_modifiers_test
     absl::memory
+    absl::raw_logging_internal
     absl::strings
     gmock_main
 )
@@ -453,7 +415,9 @@ absl_cc_library(
   COPTS
     ${ABSL_DEFAULT_COPTS}
   DEPS
+    absl::config
     absl::memory
+    absl::type_traits
     absl::utility
   PUBLIC
 )
@@ -468,6 +432,7 @@ absl_cc_test(
   DEPS
     absl::container_memory
     absl::strings
+    absl::test_instance_tracker
     gmock_main
 )
 
@@ -480,6 +445,7 @@ absl_cc_library(
     ${ABSL_DEFAULT_COPTS}
   DEPS
     absl::config
+    absl::cord
     absl::hash
     absl::strings
   PUBLIC
@@ -493,8 +459,11 @@ absl_cc_test(
   COPTS
     ${ABSL_TEST_COPTS}
   DEPS
+    absl::cord
+    absl::cord_test_helpers
     absl::hash_function_defaults
     absl::hash
+    absl::random_random
     absl::strings
     gmock_main
 )
@@ -510,6 +479,7 @@ absl_cc_library(
     ${ABSL_TEST_COPTS}
   DEPS
     absl::hash_policy_testing
+    absl::memory
     absl::meta
     absl::strings
   TESTONLY
@@ -576,6 +546,7 @@ absl_cc_library(
     ${ABSL_DEFAULT_COPTS}
   DEPS
     absl::base
+    absl::exponential_biased
     absl::have_sse
     absl::synchronization
 )
@@ -611,6 +582,8 @@ absl_cc_library(
     "internal/hashtable_debug_hooks.h"
   COPTS
     ${ABSL_DEFAULT_COPTS}
+  DEPS
+    absl::config
   PUBLIC
 )
 
@@ -630,6 +603,8 @@ absl_cc_library(
     "internal/node_hash_policy.h"
   COPTS
     ${ABSL_DEFAULT_COPTS}
+  DEPS
+    absl::config
   PUBLIC
 )
 
@@ -664,7 +639,7 @@ absl_cc_library(
   NAME
     container_common
   HDRS
-    "internal/commom.h"
+    "internal/common.h"
   COPTS
     ${ABSL_DEFAULT_COPTS}
   DEPS
@@ -714,7 +689,9 @@ absl_cc_test(
     absl::hashtable_debug
     absl::raw_hash_set
     absl::base
+    absl::config
     absl::core_headers
+    absl::raw_logging_internal
     absl::strings
     gmock_main
 )
@@ -741,6 +718,7 @@ absl_cc_library(
   COPTS
     ${ABSL_DEFAULT_COPTS}
   DEPS
+    absl::config
     absl::core_headers
     absl::meta
     absl::strings
@@ -758,8 +736,9 @@ absl_cc_test(
     ${ABSL_TEST_COPTS}
   DEPS
     absl::layout
-    absl::base
+    absl::config
     absl::core_headers
+    absl::raw_logging_internal
     absl::span
     gmock_main
 )
@@ -771,6 +750,8 @@ absl_cc_library(
     "internal/tracked.h"
   COPTS
     ${ABSL_TEST_COPTS}
+  DEPS
+    absl::config
   TESTONLY
 )
 

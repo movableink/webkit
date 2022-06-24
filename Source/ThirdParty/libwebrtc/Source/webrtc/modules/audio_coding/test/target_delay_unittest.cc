@@ -12,38 +12,34 @@
 
 #include "api/audio/audio_frame.h"
 #include "api/audio_codecs/builtin_audio_decoder_factory.h"
-#include "common_types.h"  // NOLINT(build/include)
+#include "api/rtp_headers.h"
+#include "modules/audio_coding/acm2/acm_receiver.h"
 #include "modules/audio_coding/codecs/pcm16b/pcm16b.h"
 #include "modules/audio_coding/include/audio_coding_module.h"
-#include "modules/audio_coding/test/utility.h"
-#include "modules/include/module_common_types.h"
 #include "test/gtest.h"
-#include "test/testsupport/fileutils.h"
+#include "test/testsupport/file_utils.h"
 
 namespace webrtc {
 
 class TargetDelayTest : public ::testing::Test {
  protected:
   TargetDelayTest()
-      : acm_(AudioCodingModule::Create(
-            AudioCodingModule::Config(CreateBuiltinAudioDecoderFactory()))) {}
+      : receiver_(
+            AudioCodingModule::Config(CreateBuiltinAudioDecoderFactory())) {}
 
   ~TargetDelayTest() {}
 
   void SetUp() {
-    EXPECT_TRUE(acm_.get() != NULL);
-
-    ASSERT_EQ(0, acm_->InitializeReceiver());
     constexpr int pltype = 108;
-    ASSERT_EQ(true,
-              acm_->RegisterReceiveCodec(pltype, {"L16", kSampleRateHz, 1}));
+    std::map<int, SdpAudioFormat> receive_codecs = {
+        {pltype, {"L16", kSampleRateHz, 1}}};
+    receiver_.SetCodecs(receive_codecs);
 
-    rtp_info_.header.payloadType = pltype;
-    rtp_info_.header.timestamp = 0;
-    rtp_info_.header.ssrc = 0x12345678;
-    rtp_info_.header.markerBit = false;
-    rtp_info_.header.sequenceNumber = 0;
-    rtp_info_.frameType = kAudioFrameSpeech;
+    rtp_header_.payloadType = pltype;
+    rtp_header_.timestamp = 0;
+    rtp_header_.ssrc = 0x12345678;
+    rtp_header_.markerBit = false;
+    rtp_header_.sequenceNumber = 0;
 
     int16_t audio[kFrameSizeSamples];
     const int kRange = 0x7FF;  // 2047, easy for masking.
@@ -55,20 +51,6 @@ class TargetDelayTest : public ::testing::Test {
   void OutOfRangeInput() {
     EXPECT_EQ(-1, SetMinimumDelay(-1));
     EXPECT_EQ(-1, SetMinimumDelay(10001));
-  }
-
-  void WithTargetDelayBufferNotChanging() {
-    // A target delay that is one packet larger than jitter.
-    const int kTargetDelayMs =
-        (kInterarrivalJitterPacket + 1) * kNum10msPerFrame * 10;
-    ASSERT_EQ(0, SetMinimumDelay(kTargetDelayMs));
-    for (int n = 0; n < 30; ++n)  // Run enough iterations to fill the buffer.
-      Run(true);
-    int clean_optimal_delay = GetCurrentOptimalDelayMs();
-    EXPECT_EQ(kTargetDelayMs, clean_optimal_delay);
-    Run(false);  // Run with jitter.
-    int jittery_optimal_delay = GetCurrentOptimalDelayMs();
-    EXPECT_EQ(jittery_optimal_delay, clean_optimal_delay);
   }
 
   void TargetDelayBufferMinMax() {
@@ -99,10 +81,11 @@ class TargetDelayTest : public ::testing::Test {
   static const int kInterarrivalJitterPacket = 2;
 
   void Push() {
-    rtp_info_.header.timestamp += kFrameSizeSamples;
-    rtp_info_.header.sequenceNumber++;
-    ASSERT_EQ(0,
-              acm_->IncomingPacket(payload_, kFrameSizeSamples * 2, rtp_info_));
+    rtp_header_.timestamp += kFrameSizeSamples;
+    rtp_header_.sequenceNumber++;
+    ASSERT_EQ(0, receiver_.InsertPacket(rtp_header_,
+                                        rtc::ArrayView<const uint8_t>(
+                                            payload_, kFrameSizeSamples * 2)));
   }
 
   // Pull audio equivalent to the amount of audio in one RTP packet.
@@ -110,7 +93,7 @@ class TargetDelayTest : public ::testing::Test {
     AudioFrame frame;
     bool muted;
     for (int k = 0; k < kNum10msPerFrame; ++k) {  // Pull one frame.
-      ASSERT_EQ(0, acm_->PlayoutData10Ms(-1, &frame, &muted));
+      ASSERT_EQ(0, receiver_.GetAudio(-1, &frame, &muted));
       ASSERT_FALSE(muted);
       // Had to use ASSERT_TRUE, ASSERT_EQ generated error.
       ASSERT_TRUE(kSampleRateHz == frame.sample_rate_hz_);
@@ -137,21 +120,21 @@ class TargetDelayTest : public ::testing::Test {
   }
 
   int SetMinimumDelay(int delay_ms) {
-    return acm_->SetMinimumPlayoutDelay(delay_ms);
+    return receiver_.SetMinimumDelay(delay_ms);
   }
 
   int SetMaximumDelay(int delay_ms) {
-    return acm_->SetMaximumPlayoutDelay(delay_ms);
+    return receiver_.SetMaximumDelay(delay_ms);
   }
 
   int GetCurrentOptimalDelayMs() {
     NetworkStatistics stats;
-    acm_->GetNetworkStatistics(&stats);
+    receiver_.GetNetworkStatistics(&stats);
     return stats.preferredBufferSize;
   }
 
-  std::unique_ptr<AudioCodingModule> acm_;
-  WebRtcRTPHeader rtp_info_;
+  acm2::AcmReceiver receiver_;
+  RTPHeader rtp_header_;
   uint8_t payload_[kPayloadLenBytes];
 };
 
@@ -163,17 +146,6 @@ class TargetDelayTest : public ::testing::Test {
 #endif
 TEST_F(TargetDelayTest, MAYBE_OutOfRangeInput) {
   OutOfRangeInput();
-}
-
-// Flaky on iOS: webrtc:7057.
-#if defined(WEBRTC_ANDROID) || defined(WEBRTC_IOS)
-#define MAYBE_WithTargetDelayBufferNotChanging \
-  DISABLED_WithTargetDelayBufferNotChanging
-#else
-#define MAYBE_WithTargetDelayBufferNotChanging WithTargetDelayBufferNotChanging
-#endif
-TEST_F(TargetDelayTest, MAYBE_WithTargetDelayBufferNotChanging) {
-  WithTargetDelayBufferNotChanging();
 }
 
 // Flaky on iOS: webrtc:7057.

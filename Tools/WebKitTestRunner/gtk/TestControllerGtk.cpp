@@ -28,11 +28,14 @@
 #include "TestController.h"
 
 #include "PlatformWebView.h"
+#include <WebKit/WKTextCheckerGLib.h>
+#include <WebKit/WKViewPrivate.h>
 #include <gtk/gtk.h>
 #include <wtf/Platform.h>
 #include <wtf/RunLoop.h>
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/GUniquePtr.h>
+#include <wtf/text/Base64.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTR {
@@ -42,7 +45,7 @@ void TestController::notifyDone()
     RunLoop::main().stop();
 }
 
-void TestController::platformInitialize()
+void TestController::platformInitialize(const Options&)
 {
 }
 
@@ -143,16 +146,31 @@ void TestController::platformConfigureViewForTest(const TestInvocation&)
     WKPageSetApplicationNameForUserAgent(mainWebView()->page(), WKStringCreateWithUTF8CString("WebKitTestRunnerGTK"));
 }
 
-void TestController::platformResetPreferencesToConsistentValues()
+bool TestController::platformResetStateToConsistentValues(const TestOptions&)
 {
-    if (!m_mainWebView)
-        return;
-    m_mainWebView->dismissAllPopupMenus();
+    if (m_mainWebView) {
+        m_mainWebView->dismissAllPopupMenus();
+        WKViewSetEditable(m_mainWebView->platformView(), false);
+    }
+
+    WKTextCheckerContinuousSpellCheckingEnabledStateChanged(true);
+    return true;
 }
 
-void TestController::updatePlatformSpecificTestOptionsForTest(TestOptions& options, const std::string&) const
+TestFeatures TestController::platformSpecificFeatureDefaultsForTest(const TestCommand&) const
 {
-    options.enableModernMediaControls = false;
+    return { };
+}
+
+WKRetainPtr<WKStringRef> TestController::takeViewPortSnapshot()
+{
+    Vector<unsigned char> output;
+    cairo_surface_write_to_png_stream(mainWebView()->windowSnapshotImage(), [](void* output, const unsigned char* data, unsigned length) -> cairo_status_t {
+        reinterpret_cast<Vector<unsigned char>*>(output)->append(data, length);
+        return CAIRO_STATUS_SUCCESS;
+    }, &output);
+    auto uri = makeString("data:image/png;base64,", base64Encoded(output.data(), output.size()));
+    return adoptWK(WKStringCreateWithUTF8CString(uri.utf8().data()));
 }
 
 } // namespace WTR

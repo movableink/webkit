@@ -27,8 +27,10 @@
 #import "_WKProcessPoolConfigurationInternal.h"
 
 #import "LegacyGlobalSettings.h"
+#import <WebCore/WebCoreObjCExtras.h>
 #import <objc/runtime.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 @implementation _WKProcessPoolConfiguration
 
@@ -44,6 +46,9 @@
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(_WKProcessPoolConfiguration.class, self))
+        return;
+
     _processPoolConfiguration->~ProcessPoolConfiguration();
 
     [super dealloc];
@@ -68,11 +73,11 @@
     if (classes.isEmpty())
         return [NSSet set];
 
-    NSMutableSet *result = [[NSMutableSet alloc] initWithCapacity:classes.size()];
+    auto result = adoptNS([[NSMutableSet alloc] initWithCapacity:classes.size()]);
     for (const auto& value : classes)
         [result addObject: objc_lookUpClass(value.utf8().data())];
 
-    return [result autorelease];
+    return result.autorelease();
 }
 
 - (void)setCustomClassesForParameterCoder:(NSSet<Class> *)classesForCoder
@@ -136,17 +141,25 @@
     return _processPoolConfiguration->setAttrStyleEnabled(enabled);
 }
 
+- (BOOL)shouldThrowExceptionForGlobalConstantRedeclaration
+{
+    return _processPoolConfiguration->shouldThrowExceptionForGlobalConstantRedeclaration();
+}
+
+- (void)setShouldThrowExceptionForGlobalConstantRedeclaration:(BOOL)shouldThrow
+{
+    return _processPoolConfiguration->setShouldThrowExceptionForGlobalConstantRedeclaration(shouldThrow);
+}
+
 - (NSArray<NSURL *> *)additionalReadAccessAllowedURLs
 {
     auto paths = _processPoolConfiguration->additionalReadAccessAllowedPaths();
     if (paths.isEmpty())
         return @[ ];
 
-    NSMutableArray *urls = [NSMutableArray arrayWithCapacity:paths.size()];
-    for (const auto& path : paths)
-        [urls addObject:[NSURL fileURLWithFileSystemRepresentation:path.data() isDirectory:NO relativeToURL:nil]];
-
-    return urls;
+    return createNSArray(paths, [] (auto& path) {
+        return [NSURL fileURLWithFileSystemRepresentation:path.data() isDirectory:NO relativeToURL:nil];
+    }).autorelease();
 }
 
 - (void)setAdditionalReadAccessAllowedURLs:(NSArray<NSURL *> *)additionalReadAccessAllowedURLs
@@ -176,51 +189,22 @@
 
 - (NSArray *)cachePartitionedURLSchemes
 {
-    auto schemes = _processPoolConfiguration->cachePartitionedURLSchemes();
-    if (schemes.isEmpty())
-        return @[];
-
-    NSMutableArray *array = [NSMutableArray arrayWithCapacity:schemes.size()];
-    for (const auto& scheme : schemes)
-        [array addObject:(NSString *)scheme];
-
-    return array;
+    return createNSArray(_processPoolConfiguration->cachePartitionedURLSchemes()).autorelease();
 }
 
 - (void)setCachePartitionedURLSchemes:(NSArray *)cachePartitionedURLSchemes
 {
-    Vector<String> schemes;
-    for (id urlScheme in cachePartitionedURLSchemes) {
-        if ([urlScheme isKindOfClass:[NSString class]])
-            schemes.append(String((NSString *)urlScheme));
-    }
-    
-    _processPoolConfiguration->setCachePartitionedURLSchemes(WTFMove(schemes));
+    _processPoolConfiguration->setCachePartitionedURLSchemes(makeVector<String>(cachePartitionedURLSchemes));
 }
 
 - (NSArray *)alwaysRevalidatedURLSchemes
 {
-    auto& schemes = _processPoolConfiguration->alwaysRevalidatedURLSchemes();
-    if (schemes.isEmpty())
-        return @[];
-
-    NSMutableArray *array = [NSMutableArray arrayWithCapacity:schemes.size()];
-    for (auto& scheme : schemes)
-        [array addObject:(NSString *)scheme];
-
-    return array;
+    return createNSArray(_processPoolConfiguration->alwaysRevalidatedURLSchemes()).autorelease();
 }
 
 - (void)setAlwaysRevalidatedURLSchemes:(NSArray *)alwaysRevalidatedURLSchemes
 {
-    Vector<String> schemes;
-    schemes.reserveInitialCapacity(alwaysRevalidatedURLSchemes.count);
-    for (id scheme in alwaysRevalidatedURLSchemes) {
-        if ([scheme isKindOfClass:[NSString class]])
-            schemes.append((NSString *)scheme);
-    }
-
-    _processPoolConfiguration->setAlwaysRevalidatedURLSchemes(WTFMove(schemes));
+    _processPoolConfiguration->setAlwaysRevalidatedURLSchemes(makeVector<String>(alwaysRevalidatedURLSchemes));
 }
 
 - (NSString *)sourceApplicationBundleIdentifier
@@ -241,16 +225,6 @@
 {
 }
 
-- (BOOL)shouldCaptureAudioInUIProcess
-{
-    return _processPoolConfiguration->shouldCaptureAudioInUIProcess();
-}
-
-- (void)setShouldCaptureAudioInUIProcess:(BOOL)shouldCaptureAudioInUIProcess
-{
-    _processPoolConfiguration->setShouldCaptureAudioInUIProcess(shouldCaptureAudioInUIProcess);
-}
-
 - (void)setPresentingApplicationPID:(pid_t)presentingApplicationPID
 {
     _processPoolConfiguration->setPresentingApplicationPID(presentingApplicationPID);
@@ -259,6 +233,18 @@
 - (pid_t)presentingApplicationPID
 {
     return _processPoolConfiguration->presentingApplicationPID();
+}
+
+- (void)setPresentingApplicationProcessToken:(audit_token_t)token
+{
+    _processPoolConfiguration->setPresentingApplicationProcessToken(token);
+}
+
+- (audit_token_t)presentingApplicationProcessToken
+{
+    if (_processPoolConfiguration->presentingApplicationProcessToken())
+        return *_processPoolConfiguration->presentingApplicationProcessToken();
+    return { };
 }
 
 - (void)setProcessSwapsOnNavigation:(BOOL)swaps
@@ -311,6 +297,16 @@
     return _processPoolConfiguration->processSwapsOnWindowOpenWithOpener();
 }
 
+- (void)setProcessSwapsOnNavigationWithinSameNonHTTPFamilyProtocol:(BOOL)swaps
+{
+    _processPoolConfiguration->setProcessSwapsOnNavigationWithinSameNonHTTPFamilyProtocol(swaps);
+}
+
+- (BOOL)processSwapsOnNavigationWithinSameNonHTTPFamilyProtocol
+{
+    return _processPoolConfiguration->processSwapsOnNavigationWithinSameNonHTTPFamilyProtocol();
+}
+
 - (BOOL)pageCacheEnabled
 {
     return _processPoolConfiguration->usesBackForwardCache();
@@ -331,11 +327,6 @@
     _processPoolConfiguration->setUsesSingleWebProcess(enabled);
 }
 
-- (BOOL)suppressesConnectionTerminationOnSystemChange
-{
-    return _processPoolConfiguration->suppressesConnectionTerminationOnSystemChange();
-}
-
 - (BOOL)isJITEnabled
 {
     return _processPoolConfiguration->isJITEnabled();
@@ -348,34 +339,14 @@
 
 - (void)setHSTSStorageDirectory:(NSURL *)directory
 {
-    if (directory && ![directory isFileURL])
-        [NSException raise:NSInvalidArgumentException format:@"%@ is not a file URL", directory];
-
-    // FIXME: Move this to _WKWebsiteDataStoreConfiguration once rdar://problem/50109631 is fixed.
-    WebKit::LegacyGlobalSettings::singleton().setHSTSStorageDirectory(directory.path);
 }
 
 - (NSURL *)hstsStorageDirectory
 {
-    return [NSURL fileURLWithPath:WebKit::LegacyGlobalSettings::singleton().hstsStorageDirectory() isDirectory:YES];
-}
-
-- (void)setSuppressesConnectionTerminationOnSystemChange:(BOOL)suppressesConnectionTerminationOnSystemChange
-{
-    _processPoolConfiguration->setSuppressesConnectionTerminationOnSystemChange(suppressesConnectionTerminationOnSystemChange);
+    return nil;
 }
 
 #if PLATFORM(IOS_FAMILY)
-- (NSString *)CTDataConnectionServiceType
-{
-    return _processPoolConfiguration->ctDataConnectionServiceType();
-}
-
-- (void)setCTDataConnectionServiceType:(NSString *)ctDataConnectionServiceType
-{
-    _processPoolConfiguration->setCTDataConnectionServiceType(ctDataConnectionServiceType);
-}
-
 - (BOOL)alwaysRunsAtBackgroundPriority
 {
     return _processPoolConfiguration->alwaysRunsAtBackgroundPriority();

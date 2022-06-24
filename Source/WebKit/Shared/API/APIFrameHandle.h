@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef APIFrameHandle_h
-#define APIFrameHandle_h
+#pragma once
 
 #include "APIObject.h"
 #include <WebCore/FrameIdentifier.h>
@@ -37,19 +36,18 @@ class Encoder;
 
 namespace API {
 
-class FrameHandle : public ObjectImpl<Object::Type::FrameHandle> {
+class FrameHandle final : public ObjectImpl<Object::Type::FrameHandle> {
 public:
     static Ref<FrameHandle> create(WebCore::FrameIdentifier);
     static Ref<FrameHandle> createAutoconverting(WebCore::FrameIdentifier);
 
     explicit FrameHandle(WebCore::FrameIdentifier, bool isAutoconverting);
-    virtual ~FrameHandle();
 
     WebCore::FrameIdentifier frameID() const { return m_frameID; }
     bool isAutoconverting() const { return m_isAutoconverting; }
 
     void encode(IPC::Encoder&) const;
-    static bool decode(IPC::Decoder&, RefPtr<Object>&);
+    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, RefPtr<Object>&);
 
 private:
     const WebCore::FrameIdentifier m_frameID;
@@ -57,5 +55,3 @@ private:
 };
 
 } // namespace API
-
-#endif // APIFrameHandle_h

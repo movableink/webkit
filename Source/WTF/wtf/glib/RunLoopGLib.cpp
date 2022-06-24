@@ -33,7 +33,12 @@
 
 namespace WTF {
 
-static GSourceFuncs runLoopSourceFunctions = {
+typedef struct {
+    GSource source;
+    RunLoop* runLoop;
+} RunLoopSource;
+
+GSourceFuncs RunLoop::s_runLoopSourceFunctions = {
     nullptr, // prepare
     nullptr, // check
     // dispatch
@@ -42,7 +47,12 @@ static GSourceFuncs runLoopSourceFunctions = {
         if (g_source_get_ready_time(source) == -1)
             return G_SOURCE_CONTINUE;
         g_source_set_ready_time(source, -1);
-        return callback(userData);
+        const char* name = g_source_get_name(source);
+        auto& runLoopSource = *reinterpret_cast<RunLoopSource*>(source);
+        runLoopSource.runLoop->notify(RunLoop::Event::WillDispatch, name);
+        auto returnValue = callback(userData);
+        runLoopSource.runLoop->notify(RunLoop::Event::DidDispatch, name);
+        return returnValue;
     },
     nullptr, // finalize
     nullptr, // closure_callback
@@ -60,7 +70,9 @@ RunLoop::RunLoop()
     ASSERT(innermostLoop);
     m_mainLoops.append(innermostLoop);
 
-    m_source = adoptGRef(g_source_new(&runLoopSourceFunctions, sizeof(GSource)));
+    m_source = adoptGRef(g_source_new(&RunLoop::s_runLoopSourceFunctions, sizeof(RunLoopSource)));
+    auto& runLoopSource = *reinterpret_cast<RunLoopSource*>(m_source.get());
+    runLoopSource.runLoop = this;
     g_source_set_priority(m_source.get(), RunLoopSourcePriority::RunLoopDispatcher);
     g_source_set_name(m_source.get(), "[WebKit] RunLoop work");
     g_source_set_can_recurse(m_source.get(), TRUE);
@@ -123,49 +135,35 @@ void RunLoop::wakeUp()
     g_source_set_ready_time(m_source.get(), 0);
 }
 
-RunLoop::CycleResult RunLoop::cycle(const String&)
+RunLoop::CycleResult RunLoop::cycle(RunLoopMode)
 {
     g_main_context_iteration(NULL, FALSE);
     return CycleResult::Continue;
 }
 
-class DispatchAfterContext {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    DispatchAfterContext(Function<void()>&& function)
-        : m_function(WTFMove(function))
-    {
-    }
-
-    void dispatch()
-    {
-        m_function();
-    }
-
-private:
-    Function<void()> m_function;
-};
-
-void RunLoop::dispatchAfter(Seconds duration, Function<void()>&& function)
+void RunLoop::observe(const RunLoop::Observer& observer)
 {
-    GRefPtr<GSource> source = adoptGRef(g_source_new(&runLoopSourceFunctions, sizeof(GSource)));
-    g_source_set_priority(source.get(), RunLoopSourcePriority::RunLoopTimer);
-    g_source_set_name(source.get(), "[WebKit] RunLoop dispatchAfter");
-    g_source_set_ready_time(source.get(), g_get_monotonic_time() + duration.microsecondsAs<gint64>());
+    ASSERT(!m_observers.contains(observer));
+    m_observers.add(observer);
+}
 
-    std::unique_ptr<DispatchAfterContext> context = makeUnique<DispatchAfterContext>(WTFMove(function));
-    g_source_set_callback(source.get(), [](gpointer userData) -> gboolean {
-        std::unique_ptr<DispatchAfterContext> context(static_cast<DispatchAfterContext*>(userData));
-        context->dispatch();
-        return G_SOURCE_REMOVE;
-    }, context.release(), nullptr);
-    g_source_attach(source.get(), m_mainContext.get());
+void RunLoop::notify(RunLoop::Event event, const char* name)
+{
+    if (m_observers.computesEmpty())
+        return;
+
+    m_observers.forEach([event, name = String::fromUTF8(name)](auto& observer) {
+        observer(event, name);
+    });
 }
 
 RunLoop::TimerBase::TimerBase(RunLoop& runLoop)
     : m_runLoop(runLoop)
-    , m_source(adoptGRef(g_source_new(&runLoopSourceFunctions, sizeof(GSource))))
+    , m_source(adoptGRef(g_source_new(&RunLoop::s_runLoopSourceFunctions, sizeof(RunLoopSource))))
 {
+    auto& runLoopSource = *reinterpret_cast<RunLoopSource*>(m_source.get());
+    runLoopSource.runLoop = m_runLoop.ptr();
+
     g_source_set_priority(m_source.get(), RunLoopSourcePriority::RunLoopTimer);
     g_source_set_name(m_source.get(), "[WebKit] RunLoop::Timer work");
     g_source_set_callback(m_source.get(), [](gpointer userData) -> gboolean {
@@ -174,11 +172,11 @@ RunLoop::TimerBase::TimerBase(RunLoop& runLoop)
         // before it is safe to dereference timer again.
         RunLoop::TimerBase* timer = static_cast<RunLoop::TimerBase*>(userData);
         GSource* source = timer->m_source.get();
+        if (timer->m_isRepeating)
+            timer->updateReadyTime();
         timer->fired();
         if (g_source_is_destroyed(source))
             return G_SOURCE_REMOVE;
-        if (timer->m_isRepeating)
-            timer->updateReadyTime();
         return G_SOURCE_CONTINUE;
     }, this, nullptr);
     g_source_attach(m_source.get(), m_runLoop->m_mainContext.get());
@@ -201,20 +199,20 @@ void RunLoop::TimerBase::setPriority(int priority)
 
 void RunLoop::TimerBase::updateReadyTime()
 {
-    if (!m_fireInterval) {
+    if (!m_interval) {
         g_source_set_ready_time(m_source.get(), 0);
         return;
     }
 
     gint64 currentTime = g_get_monotonic_time();
-    gint64 targetTime = currentTime + std::min<gint64>(G_MAXINT64 - currentTime, m_fireInterval.microsecondsAs<gint64>());
+    gint64 targetTime = currentTime + std::min<gint64>(G_MAXINT64 - currentTime, m_interval.microsecondsAs<gint64>());
     ASSERT(targetTime >= currentTime);
     g_source_set_ready_time(m_source.get(), targetTime);
 }
 
-void RunLoop::TimerBase::start(Seconds fireInterval, bool repeat)
+void RunLoop::TimerBase::start(Seconds interval, bool repeat)
 {
-    m_fireInterval = fireInterval;
+    m_interval = interval;
     m_isRepeating = repeat;
     updateReadyTime();
 }
@@ -222,7 +220,7 @@ void RunLoop::TimerBase::start(Seconds fireInterval, bool repeat)
 void RunLoop::TimerBase::stop()
 {
     g_source_set_ready_time(m_source.get(), -1);
-    m_fireInterval = { };
+    m_interval = { };
     m_isRepeating = false;
 }
 

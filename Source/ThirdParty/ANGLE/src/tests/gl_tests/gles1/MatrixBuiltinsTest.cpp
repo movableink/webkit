@@ -165,12 +165,19 @@ TEST_P(MatrixBuiltinsTest, OrthoNegative)
     EXPECT_GL_ERROR(GL_INVALID_VALUE);
     glOrthof(0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);
     EXPECT_GL_ERROR(GL_INVALID_VALUE);
-    glOrthof(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
-    EXPECT_GL_ERROR(GL_INVALID_VALUE);
-    glOrthof(0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f);
-    EXPECT_GL_ERROR(GL_INVALID_VALUE);
-    glOrthof(0.0f, 1.0f, 0.0f, 1.0f, -1.0f, 1.0f);
-    EXPECT_GL_ERROR(GL_INVALID_VALUE);
 }
 
-ANGLE_INSTANTIATE_TEST(MatrixBuiltinsTest, ES1_D3D11(), ES1_OPENGL(), ES1_OPENGLES(), ES1_VULKAN());
+// Test that glOrtho{fx} don't issue error result if near or far is negative.
+TEST_P(MatrixBuiltinsTest, OrthoNegativeNearFar)
+{
+    glOrthof(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 0.0f);
+    EXPECT_GL_NO_ERROR();
+    glOrthof(-1.0f, 1.0f, -1.0f, 1.0f, 0.0f, -1.0f);
+    EXPECT_GL_NO_ERROR();
+    glOrthox(-1, 1, -1, 1, -1, 0);
+    EXPECT_GL_NO_ERROR();
+    glOrthox(-1, 1, -1, 1, 0, -1);
+    EXPECT_GL_NO_ERROR();
+}
+
+ANGLE_INSTANTIATE_TEST_ES1(MatrixBuiltinsTest);

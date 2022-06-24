@@ -28,13 +28,8 @@
 
 #include "SystemFontDatabaseCoreText.h"
 #include <mutex>
-#include <wtf/Language.h>
 
 namespace WebCore {
-
-#if USE(PLATFORM_SYSTEM_FALLBACK_LIST)
-
-#if PLATFORM(IOS_FAMILY)
 
 template<typename T, typename U, std::size_t size, std::size_t... indices> std::array<T, size> convertArray(U (&array)[size], std::index_sequence<indices...>)
 {
@@ -45,30 +40,25 @@ template<typename T, typename U, std::size_t size> inline std::array<T, size> co
 {
     return convertArray<T>(array, std::make_index_sequence<size> { });
 }
-#endif
 
-static inline Optional<SystemFontDatabaseCoreText::ClientUse> matchSystemFontUse(const AtomString& string, bool shouldAllowDesignSystemUIFonts)
+static inline std::optional<SystemFontKind> matchSystemFontUse(const AtomString& string)
 {
     if (equalLettersIgnoringASCIICase(string, "-webkit-system-font")
         || equalLettersIgnoringASCIICase(string, "-apple-system")
         || equalLettersIgnoringASCIICase(string, "-apple-system-font")
-        || equalLettersIgnoringASCIICase(string, "system-ui"))
-        return SystemFontDatabaseCoreText::ClientUse::ForSystemUI;
+        || equalLettersIgnoringASCIICase(string, "system-ui")
+        || equalLettersIgnoringASCIICase(string, "ui-sans-serif"))
+        return SystemFontKind::SystemUI;
 
 #if HAVE(DESIGN_SYSTEM_UI_FONTS)
-    if (shouldAllowDesignSystemUIFonts) {
-        if (equalLettersIgnoringASCIICase(string, "-apple-system-ui-serif"))
-            return SystemFontDatabaseCoreText::ClientUse::ForSystemUISerif;
-        if (equalLettersIgnoringASCIICase(string, "-apple-system-ui-monospaced"))
-            return SystemFontDatabaseCoreText::ClientUse::ForSystemUIMonospaced;
-        if (equalLettersIgnoringASCIICase(string, "-apple-system-ui-rounded"))
-            return SystemFontDatabaseCoreText::ClientUse::ForSystemUIRounded;
-    }
-#else
-    UNUSED_PARAM(shouldAllowDesignSystemUIFonts);
+    if (equalLettersIgnoringASCIICase(string, "ui-serif"))
+        return SystemFontKind::UISerif;
+    if (equalLettersIgnoringASCIICase(string, "ui-monospace"))
+        return SystemFontKind::UIMonospace;
+    if (equalLettersIgnoringASCIICase(string, "ui-rounded"))
+        return SystemFontKind::UIRounded;
 #endif
 
-#if PLATFORM(IOS_FAMILY)
     static const CFStringRef styles[] = {
         kCTUIFontTextStyleHeadline,
         kCTUIFontTextStyleBody,
@@ -85,32 +75,36 @@ static inline Optional<SystemFontDatabaseCoreText::ClientUse> matchSystemFontUse
         kCTUIFontTextStyleShortFootnote,
         kCTUIFontTextStyleShortCaption1,
         kCTUIFontTextStyleTallBody,
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
         kCTUIFontTextStyleTitle0,
         kCTUIFontTextStyleTitle4,
-#endif
     };
-    
-    static auto strings { makeNeverDestroyed(convertArray<AtomString>(styles)) };
-    if (std::find(strings.get().begin(), strings.get().end(), string) != strings.get().end())
-        return SystemFontDatabaseCoreText::ClientUse::ForTextStyle;
-#endif
 
-    return WTF::nullopt;
+    auto compareAsPointer = [](const AtomString& lhs, const AtomString& rhs) {
+        return lhs.impl() < rhs.impl();
+    };
+    static NeverDestroyed strings = [&compareAsPointer] {
+        auto result = convertArray<AtomString>(styles);
+        std::sort(result.begin(), result.end(), compareAsPointer);
+        return result;
+    }();
+    if (std::binary_search(strings.get().begin(), strings.get().end(), string, compareAsPointer))
+        return SystemFontKind::TextStyle;
+
+    return std::nullopt;
 }
 
-static inline Vector<RetainPtr<CTFontDescriptorRef>> systemFontCascadeList(const FontDescription& description, const AtomString& cssFamily, SystemFontDatabaseCoreText::ClientUse clientUse, AllowUserInstalledFonts allowUserInstalledFonts)
+static inline Vector<RetainPtr<CTFontDescriptorRef>> systemFontCascadeList(const FontDescription& description, const AtomString& cssFamily, SystemFontKind systemFontKind, AllowUserInstalledFonts allowUserInstalledFonts)
 {
-    return SystemFontDatabaseCoreText::singleton().cascadeList(description, cssFamily, clientUse, allowUserInstalledFonts);
+    return SystemFontDatabaseCoreText::singleton().cascadeList(description, cssFamily, systemFontKind, allowUserInstalledFonts);
 }
 
 unsigned FontCascadeDescription::effectiveFamilyCount() const
 {
-    // FIXME: Move all the other system font keywords from platformFontWithFamilySpecialCase() to here.
+    // FIXME: Move all the other system font keywords from fontWithFamilySpecialCase() to here.
     unsigned result = 0;
     for (unsigned i = 0; i < familyCount(); ++i) {
         const auto& cssFamily = familyAt(i);
-        if (auto use = matchSystemFontUse(cssFamily, shouldAllowDesignSystemUIFonts()))
+        if (auto use = matchSystemFontUse(cssFamily))
             result += systemFontCascadeList(*this, cssFamily, *use, shouldAllowUserInstalledFonts()).size();
         else
             ++result;
@@ -120,16 +114,15 @@ unsigned FontCascadeDescription::effectiveFamilyCount() const
 
 FontFamilySpecification FontCascadeDescription::effectiveFamilyAt(unsigned index) const
 {
-    // The special cases in this function need to match the behavior in FontCacheIOS.mm and FontCacheMac.mm. On systems
-    // where USE(PLATFORM_SYSTEM_FALLBACK_LIST) is set to true, this code is used for regular (element style) lookups,
-    // and the code in FontDescriptionCocoa.cpp is used when src:local(special-cased-name) is specified inside an
-    // @font-face block.
+    // The special cases in this function need to match the behavior in FontCacheCoreText.cpp. This code
+    // is used for regular (element style) lookups, and the code in FontDescriptionCocoa.cpp is used when
+    // src:local(special-cased-name) is specified inside an @font-face block.
     // FIXME: Currently, an @font-face block corresponds to a single item in the font-family: fallback list, which
     // means that "src:local(system-ui)" can't follow the Core Text cascade list (the way it does for regular lookups).
     // These two behaviors should be unified, which would hopefully allow us to delete this duplicate code.
     for (unsigned i = 0; i < familyCount(); ++i) {
         const auto& cssFamily = familyAt(i);
-        if (auto use = matchSystemFontUse(cssFamily, shouldAllowDesignSystemUIFonts())) {
+        if (auto use = matchSystemFontUse(cssFamily)) {
             auto cascadeList = systemFontCascadeList(*this, cssFamily, *use, shouldAllowUserInstalledFonts());
             if (index < cascadeList.size())
                 return FontFamilySpecification(cascadeList[index].get());
@@ -144,56 +137,23 @@ FontFamilySpecification FontCascadeDescription::effectiveFamilyAt(unsigned index
     return nullAtom();
 }
 
-#endif // USE(PLATFORM_SYSTEM_FALLBACK_LIST)
-
-static String computeSpecializedChineseLocale()
-{
-    const Vector<String>& preferredLanguages = userPreferredLanguages();
-    for (auto& language : preferredLanguages) {
-        if (equalIgnoringASCIICase(language, "zh") || startsWithLettersIgnoringASCIICase(language, "zh-"))
-            return language;
-    }
-    return "zh-hans"_str; // We have no signal. Pick one option arbitrarily.
-}
-
-static String& cachedSpecializedChineseLocale()
-{
-    static NeverDestroyed<String> specializedChineseLocale;
-    return specializedChineseLocale.get();
-}
-
-static void languageChanged(void*)
-{
-    cachedSpecializedChineseLocale() = computeSpecializedChineseLocale();
-}
-
 AtomString FontDescription::platformResolveGenericFamily(UScriptCode script, const AtomString& locale, const AtomString& familyName)
 {
     ASSERT((locale.isNull() && script == USCRIPT_COMMON) || !locale.isNull());
     if (script == USCRIPT_COMMON)
         return nullAtom();
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&] {
-        static char dummy;
-        addLanguageChangeObserver(&dummy, &languageChanged); // We will never remove the observer, so all we need is a non-null pointer.
-        languageChanged(nullptr);
-    });
-
-    // FIXME: Delete this once <rdar://problem/47682577> is fixed.
-    auto& usedLocale = script == USCRIPT_HAN ? cachedSpecializedChineseLocale() : locale.string();
-
     // FIXME: Use the system font database to handle standardFamily
     if (familyName == serifFamily)
-        return SystemFontDatabaseCoreText::singleton().serifFamily(usedLocale);
+        return SystemFontDatabaseCoreText::singleton().serifFamily(locale.string());
     if (familyName == sansSerifFamily)
-        return SystemFontDatabaseCoreText::singleton().sansSerifFamily(usedLocale);
+        return SystemFontDatabaseCoreText::singleton().sansSerifFamily(locale.string());
     if (familyName == cursiveFamily)
-        return SystemFontDatabaseCoreText::singleton().cursiveFamily(usedLocale);
+        return SystemFontDatabaseCoreText::singleton().cursiveFamily(locale.string());
     if (familyName == fantasyFamily)
-        return SystemFontDatabaseCoreText::singleton().fantasyFamily(usedLocale);
+        return SystemFontDatabaseCoreText::singleton().fantasyFamily(locale.string());
     if (familyName == monospaceFamily)
-        return SystemFontDatabaseCoreText::singleton().monospaceFamily(usedLocale);
+        return SystemFontDatabaseCoreText::singleton().monospaceFamily(locale.string());
 
     return nullAtom();
 }

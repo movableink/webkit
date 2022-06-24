@@ -22,12 +22,19 @@
 #include "WebViewTest.h"
 
 #include <WebCore/GUniquePtrGtk.h>
+#include <WebCore/GtkVersioning.h>
 #include <gtk/gtk.h>
+#include <webkit2/WebKitWebViewBaseInternal.h>
 
 void WebViewTest::platformDestroy()
 {
+#if USE(GTK4)
+    if (m_parentWindow)
+        gtk_window_destroy(GTK_WINDOW(m_parentWindow));
+#else
     if (m_parentWindow)
         gtk_widget_destroy(m_parentWindow);
+#endif
 }
 
 void WebViewTest::platformInitializeWebView()
@@ -39,8 +46,8 @@ void WebViewTest::platformInitializeWebView()
 
 void WebViewTest::quitMainLoopAfterProcessingPendingEvents()
 {
-    while (gtk_events_pending())
-        gtk_main_iteration();
+    while (g_main_context_pending(nullptr))
+        g_main_context_iteration(nullptr, TRUE);
     quitMainLoop();
 }
 
@@ -60,65 +67,37 @@ void WebViewTest::hideView()
     gtk_widget_hide(GTK_WIDGET(m_webView));
 }
 
-static gboolean parentWindowMapped(GtkWidget* widget, GdkEvent*, WebViewTest* test)
-{
-    g_signal_handlers_disconnect_by_func(widget, reinterpret_cast<void*>(parentWindowMapped), test);
-    g_main_loop_quit(test->m_mainLoop);
-
-    return FALSE;
-}
-
-void WebViewTest::showInWindow(GtkWindowType windowType)
+void WebViewTest::showInWindow(int width, int height)
 {
     g_assert_null(m_parentWindow);
-    m_parentWindow = gtk_window_new(windowType);
+#if USE(GTK4)
+    m_parentWindow = gtk_window_new();
+    gtk_window_set_child(GTK_WINDOW(m_parentWindow), GTK_WIDGET(m_webView));
+#else
+    m_parentWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_container_add(GTK_CONTAINER(m_parentWindow), GTK_WIDGET(m_webView));
     gtk_widget_show(GTK_WIDGET(m_webView));
-    gtk_widget_show(m_parentWindow);
-}
+#endif
 
-void WebViewTest::showInWindowAndWaitUntilMapped(GtkWindowType windowType, int width, int height)
-{
-    g_assert_null(m_parentWindow);
-    m_parentWindow = gtk_window_new(windowType);
     if (width && height)
-        gtk_window_resize(GTK_WINDOW(m_parentWindow), width, height);
-    gtk_container_add(GTK_CONTAINER(m_parentWindow), GTK_WIDGET(m_webView));
-    gtk_widget_show(GTK_WIDGET(m_webView));
+        gtk_window_set_default_size(GTK_WINDOW(m_parentWindow), width, height);
 
-    g_signal_connect(m_parentWindow, "map-event", G_CALLBACK(parentWindowMapped), this);
     gtk_widget_show(m_parentWindow);
-    g_main_loop_run(m_mainLoop);
+
+    while (g_main_context_pending(nullptr))
+        g_main_context_iteration(nullptr, TRUE);
 }
 
 void WebViewTest::mouseMoveTo(int x, int y, unsigned mouseModifiers)
 {
     g_assert_nonnull(m_parentWindow);
-    GtkWidget* viewWidget = GTK_WIDGET(m_webView);
-    g_assert_true(gtk_widget_get_realized(viewWidget));
-
-    GUniquePtr<GdkEvent> event(gdk_event_new(GDK_MOTION_NOTIFY));
-    event->motion.x = x;
-    event->motion.y = y;
-
-    event->motion.time = GDK_CURRENT_TIME;
-    event->motion.window = gtk_widget_get_window(viewWidget);
-    g_object_ref(event->motion.window);
-    event->motion.device = gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gtk_widget_get_display(viewWidget)));
-    event->motion.state = mouseModifiers;
-    event->motion.axes = 0;
-
-    int xRoot, yRoot;
-    gdk_window_get_root_coords(gtk_widget_get_window(viewWidget), x, y, &xRoot, &yRoot);
-    event->motion.x_root = xRoot;
-    event->motion.y_root = yRoot;
-    gtk_main_do_event(event.get());
+    webkitWebViewBaseSynthesizeMouseEvent(WEBKIT_WEB_VIEW_BASE(m_webView), MouseEventType::Motion, 0, 0, x, y, mouseModifiers, 0);
 }
 
 void WebViewTest::clickMouseButton(int x, int y, unsigned button, unsigned mouseModifiers)
 {
-    doMouseButtonEvent(GDK_BUTTON_PRESS, x, y, button, mouseModifiers);
-    doMouseButtonEvent(GDK_BUTTON_RELEASE, x, y, button, mouseModifiers);
+    webkitWebViewBaseSynthesizeMouseEvent(WEBKIT_WEB_VIEW_BASE(m_webView), MouseEventType::Press, button, 1 << (8 + button - 1), x, y, mouseModifiers, 1);
+    webkitWebViewBaseSynthesizeMouseEvent(WEBKIT_WEB_VIEW_BASE(m_webView), MouseEventType::Release, button, 0, x, y, mouseModifiers, 0);
 }
 
 void WebViewTest::emitPopupMenuSignal()
@@ -133,51 +112,5 @@ void WebViewTest::emitPopupMenuSignal()
 void WebViewTest::keyStroke(unsigned keyVal, unsigned keyModifiers)
 {
     g_assert_nonnull(m_parentWindow);
-    GtkWidget* viewWidget = GTK_WIDGET(m_webView);
-    g_assert_true(gtk_widget_get_realized(viewWidget));
-
-    GUniquePtr<GdkEvent> event(gdk_event_new(GDK_KEY_PRESS));
-    event->key.keyval = keyVal;
-
-    event->key.time = GDK_CURRENT_TIME;
-    event->key.window = gtk_widget_get_window(viewWidget);
-    g_object_ref(event->key.window);
-    gdk_event_set_device(event.get(), gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gtk_widget_get_display(viewWidget))));
-    event->key.state = keyModifiers;
-
-    // When synthesizing an event, an invalid hardware_keycode value can cause it to be badly processed by GTK+.
-    GUniqueOutPtr<GdkKeymapKey> keys;
-    int keysCount;
-    if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), keyVal, &keys.outPtr(), &keysCount) && keysCount)
-        event->key.hardware_keycode = keys.get()[0].keycode;
-
-    gtk_main_do_event(event.get());
-    event->key.type = GDK_KEY_RELEASE;
-    gtk_main_do_event(event.get());
-}
-
-void WebViewTest::doMouseButtonEvent(GdkEventType eventType, int x, int y, unsigned button, unsigned mouseModifiers)
-{
-    g_assert_nonnull(m_parentWindow);
-    GtkWidget* viewWidget = GTK_WIDGET(m_webView);
-    g_assert_true(gtk_widget_get_realized(viewWidget));
-
-    GUniquePtr<GdkEvent> event(gdk_event_new(eventType));
-    event->button.window = gtk_widget_get_window(viewWidget);
-    g_object_ref(event->button.window);
-
-    event->button.time = GDK_CURRENT_TIME;
-    event->button.x = x;
-    event->button.y = y;
-    event->button.axes = 0;
-    event->button.state = mouseModifiers;
-    event->button.button = button;
-
-    event->button.device = gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gtk_widget_get_display(viewWidget)));
-
-    int xRoot, yRoot;
-    gdk_window_get_root_coords(gtk_widget_get_window(viewWidget), x, y, &xRoot, &yRoot);
-    event->button.x_root = xRoot;
-    event->button.y_root = yRoot;
-    gtk_main_do_event(event.get());
+    webkitWebViewBaseSynthesizeKeyEvent(WEBKIT_WEB_VIEW_BASE(m_webView), KeyEventType::Insert, keyVal, keyModifiers, ShouldTranslateKeyboardState::No);
 }

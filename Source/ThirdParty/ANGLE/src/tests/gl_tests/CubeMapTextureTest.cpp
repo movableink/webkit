@@ -46,7 +46,7 @@ class CubeMapTextureTest : public ANGLETest
 
     void testTearDown() override { glDeleteProgram(mProgram); }
 
-    void runSampleCoordinateTransformTest(const char *shader);
+    void runSampleCoordinateTransformTest(const char *shader, const bool useES3);
 
     GLuint mProgram;
     GLint mColorLocation;
@@ -115,7 +115,7 @@ TEST_P(CubeMapTextureTest, RenderToFacesConsecutively)
     EXPECT_GL_NO_ERROR();
 }
 
-void CubeMapTextureTest::runSampleCoordinateTransformTest(const char *shader)
+void CubeMapTextureTest::runSampleCoordinateTransformTest(const char *shader, const bool useES3)
 {
     // Fails to compile the shader.  anglebug.com/3776
     ANGLE_SKIP_TEST_IF(IsOpenGL() && IsIntel() && IsWindows());
@@ -182,14 +182,16 @@ void CubeMapTextureTest::runSampleCoordinateTransformTest(const char *shader)
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fboTex, 0);
     EXPECT_GL_NO_ERROR();
 
-    ANGLE_GL_PROGRAM(program, essl1_shaders::vs::Simple(), shader);
+    ANGLE_GL_PROGRAM(program, useES3 ? essl3_shaders::vs::Simple() : essl1_shaders::vs::Simple(),
+                     shader);
     glUseProgram(program);
 
     GLint texCubeLocation = glGetUniformLocation(program, "texCube");
     ASSERT_NE(-1, texCubeLocation);
     glUniform1i(texCubeLocation, 0);
 
-    drawQuad(program, essl1_shaders::PositionAttrib(), 0.5f);
+    drawQuad(program, useES3 ? essl3_shaders::PositionAttrib() : essl1_shaders::PositionAttrib(),
+             0.5f);
     EXPECT_GL_NO_ERROR();
 
     for (GLenum face = 0; face < kCubeFaceCount; face++)
@@ -230,6 +232,8 @@ void CubeMapTextureTest::runSampleCoordinateTransformTest(const char *shader)
 // within each face.  See section 3.7.5 of GLES2.0 (Cube Map Texture Selection).
 TEST_P(CubeMapTextureTest, SampleCoordinateTransform)
 {
+    // http://anglebug.com/4092
+    ANGLE_SKIP_TEST_IF(IsWindows() && IsD3D9());
     // Create a program that samples from 6x4 directions of the cubemap, draw and verify that the
     // colors match the right color from |faceColors|.
     constexpr char kFS[] = R"(precision mediump float;
@@ -265,14 +269,12 @@ void main()
     gl_FragColor = textureCube(texCube, coord);
 })";
 
-    runSampleCoordinateTransformTest(kFS);
+    runSampleCoordinateTransformTest(kFS, false);
 }
 
 // On Android Vulkan, unequal x and y derivatives cause this test to fail.
 TEST_P(CubeMapTextureTest, SampleCoordinateTransformGrad)
 {
-    ANGLE_SKIP_TEST_IF(IsAndroid() && IsVulkan());  // anglebug.com/3814
-    ANGLE_SKIP_TEST_IF(IsD3D11());                  // anglebug.com/3856
     ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_EXT_shader_texture_lod"));
 
     constexpr char kFS[] = R"(#extension GL_EXT_shader_texture_lod : require
@@ -310,16 +312,53 @@ void main()
                                       vec3(10.0, 10.0, 0.0), vec3(0.0, 10.0, 10.0));
 })";
 
-    runSampleCoordinateTransformTest(kFS);
+    runSampleCoordinateTransformTest(kFS, false);
+}
+
+// Same as the previous but uses the ES 3.0 explicit gradient function.
+TEST_P(CubeMapTextureTest, SampleCoordinateTransformGrad_ES3)
+{
+    ANGLE_SKIP_TEST_IF(getClientMajorVersion() < 3);
+
+    constexpr char kFS[] = R"(#version 300 es
+precision mediump float;
+
+uniform samplerCube texCube;
+out vec4 my_FragColor;
+
+const mat4 coordInSection = mat4(
+    vec4(-0.5, -0.5, 0, 0),
+    vec4( 0.5, -0.5, 0, 0),
+    vec4(-0.5,  0.5, 0, 0),
+    vec4( 0.5,  0.5, 0, 0)
+);
+
+void main()
+{
+    vec3 coord;
+    if (gl_FragCoord.x < 2.0)
+    {
+        coord.x = gl_FragCoord.x < 1.0 ? 1.0 : -1.0;
+        coord.zy = coordInSection[int(gl_FragCoord.y)].xy;
+    }
+    else if (gl_FragCoord.x < 4.0)
+    {
+        coord.y = gl_FragCoord.x < 3.0 ? 1.0 : -1.0;
+        coord.xz = coordInSection[int(gl_FragCoord.y)].xy;
+    }
+    else
+    {
+        coord.z = gl_FragCoord.x < 5.0 ? 1.0 : -1.0;
+        coord.xy = coordInSection[int(gl_FragCoord.y)].xy;
+    }
+
+    my_FragColor = textureGrad(texCube, coord,
+                               vec3(10.0, 10.0, 0.0), vec3(0.0, 10.0, 10.0));
+})";
+
+    runSampleCoordinateTransformTest(kFS, true);
 }
 
 // Use this to select which configurations (e.g. which renderer, which GLES major version) these
 // tests should be run against.
-ANGLE_INSTANTIATE_TEST(CubeMapTextureTest,
-                       ES2_D3D11(),
-                       ES2_OPENGL(),
-                       ES3_OPENGL(),
-                       ES2_OPENGLES(),
-                       ES3_OPENGLES(),
-                       ES2_VULKAN(),
-                       ES3_VULKAN());
+ANGLE_INSTANTIATE_TEST_ES2_AND_ES3(CubeMapTextureTest);

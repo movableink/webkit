@@ -38,6 +38,10 @@ namespace WebCore {
 PasteboardImage::PasteboardImage() = default;
 PasteboardImage::~PasteboardImage() = default;
 
+// Making this non-inline so that WebKit 2's decoding doesn't have to include SharedBuffer.h.
+PasteboardBuffer::PasteboardBuffer() = default;
+PasteboardBuffer::~PasteboardBuffer() = default;
+
 bool Pasteboard::isSafeTypeForDOMToReadAndWrite(const String& type)
 {
     return type == "text/plain" || type == "text/html" || type == "text/uri-list";
@@ -62,39 +66,54 @@ Vector<String> Pasteboard::readAllStrings(const String& type)
 
 #endif
 
-Vector<PasteboardItemInfo> Pasteboard::allPasteboardItemInfo() const
+std::optional<Vector<PasteboardItemInfo>> Pasteboard::allPasteboardItemInfo() const
 {
+#if PLATFORM(COCOA)
     if (auto* strategy = platformStrategies()->pasteboardStrategy())
-        return strategy->allPasteboardItemInfo(name());
-    return { };
+        return strategy->allPasteboardItemInfo(name(), m_changeCount, context());
+#endif
+    return std::nullopt;
 }
 
-PasteboardItemInfo Pasteboard::pasteboardItemInfo(size_t index) const
+std::optional<PasteboardItemInfo> Pasteboard::pasteboardItemInfo(size_t index) const
 {
+#if PLATFORM(COCOA)
     if (auto* strategy = platformStrategies()->pasteboardStrategy())
-        return strategy->informationForItemAtIndex(index, name());
-    return { };
+        return strategy->informationForItemAtIndex(index, name(), m_changeCount, context());
+#else
+    UNUSED_PARAM(index);
+#endif
+    return std::nullopt;
 }
 
 String Pasteboard::readString(size_t index, const String& type)
 {
     if (auto* strategy = platformStrategies()->pasteboardStrategy())
-        return strategy->readStringFromPasteboard(index, type, name());
+        return strategy->readStringFromPasteboard(index, type, name(), context());
     return { };
 }
 
-RefPtr<WebCore::SharedBuffer> Pasteboard::readBuffer(size_t index, const String& type)
+RefPtr<WebCore::SharedBuffer> Pasteboard::readBuffer(std::optional<size_t> index, const String& type)
 {
     if (auto* strategy = platformStrategies()->pasteboardStrategy())
-        return strategy->readBufferFromPasteboard(index, type, name());
+        return strategy->readBufferFromPasteboard(index, type, name(), context());
     return nullptr;
 }
 
 URL Pasteboard::readURL(size_t index, String& title)
 {
     if (auto* strategy = platformStrategies()->pasteboardStrategy())
-        return strategy->readURLFromPasteboard(index, name(), title);
+        return strategy->readURLFromPasteboard(index, name(), title, context());
     return { };
 }
+
+#if !PLATFORM(MAC)
+
+bool Pasteboard::canWriteTrustworthyWebURLsPboardType()
+{
+    return false;
+}
+
+#endif
 
 };

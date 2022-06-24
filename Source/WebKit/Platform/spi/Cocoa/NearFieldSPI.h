@@ -23,8 +23,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
 #if ENABLE(WEB_AUTHN) && HAVE(NEAR_FIELD)
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -38,8 +36,10 @@ typedef NS_OPTIONS(NSUInteger, NFFeature) {
 };
 
 typedef NS_ENUM(uint32_t, NFTagType) {
-    NFTagTypeUnknown    = 0,
-    NFTagTypeGeneric4A  = 3,
+    NFTagTypeUnknown        = 0,
+    NFTagTypeGeneric4A      = 3,
+    NFTagTypeGeneric4B      = 6,
+    NFTagTypeMiFareDESFire  = 16,
 };
 
 typedef NS_OPTIONS(uint32_t, NFTechnology) {
@@ -93,12 +93,11 @@ typedef NS_ENUM(uint32_t, NFNdefAvailability) {
 @interface NFReaderSession : NFSession
 @property (assign) id<NFReaderSessionDelegate> delegate;
 
-- (BOOL)startPolling;
+- (BOOL)startPollingWithError:(NSError **)outError;
 - (BOOL)stopPolling;
 - (BOOL)connectTag:(NFTag*)tag;
 - (BOOL)disconnectTag;
 - (NSData*)transceive:(NSData*)capdu;
-- (NSError *)updateUIAlertMessage:(NSString *)message;
 @end
 
 @protocol NFReaderSessionDelegate <NSObject>

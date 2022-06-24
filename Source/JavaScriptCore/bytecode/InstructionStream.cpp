@@ -26,25 +26,8 @@
 #include "config.h"
 #include "InstructionStream.h"
 
-#include "Instruction.h"
-#include "Opcode.h"
-
 namespace JSC {
 
-InstructionStream::InstructionStream(InstructionBuffer&& instructions)
-    : m_instructions(WTFMove(instructions))
-{ }
-
-size_t InstructionStream::sizeInBytes() const
-{
-    return m_instructions.size();
-}
-
-bool InstructionStream::contains(Instruction* instruction) const
-{
-
-    const uint8_t* pointer = bitwise_cast<const uint8_t*>(instruction);
-    return pointer >= m_instructions.data() && pointer < (m_instructions.data() + m_instructions.size());
-}
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(InstructionStream);
 
 }

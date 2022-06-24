@@ -26,7 +26,6 @@
 #import "config.h"
 #import "WKAccessibilityWebPageObjectBase.h"
 
-#import "ApplicationServicesSPI.h"
 #import "WebFrame.h"
 #import "WebPage.h"
 #import "WKArray.h"
@@ -35,7 +34,6 @@
 #import "WKSharedAPICast.h"
 #import "WKString.h"
 #import "WKStringCF.h"
-#import <WebCore/AXIsolatedTree.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/Document.h>
 #import <WebCore/Frame.h>
@@ -43,12 +41,15 @@
 #import <WebCore/Page.h>
 #import <WebCore/ScrollView.h>
 #import <WebCore/Scrollbar.h>
-#import <wtf/ObjCRuntimeExtras.h>
+
+namespace ax = WebCore::Accessibility;
 
 @implementation WKAccessibilityWebPageObjectBase
 
-- (WebCore::AXObjectCache*)axObjectCache
+- (NakedPtr<WebCore::AXObjectCache>)axObjectCache
 {
+    ASSERT(isMainRunLoop());
+
     if (!m_page)
         return nullptr;
 
@@ -65,82 +66,41 @@
 
 - (id)accessibilityPluginObject
 {
+    ASSERT(isMainRunLoop());
     auto retrieveBlock = [&self]() -> id {
         id axPlugin = nil;
-        auto dispatchBlock = [&axPlugin, &self] {
+        callOnMainRunLoopAndWait([&axPlugin, &self] {
             if (self->m_page)
                 axPlugin = self->m_page->accessibilityObjectForMainFramePlugin();
-        };
-
-        if (isMainThread())
-            dispatchBlock();
-        else {
-            callOnMainThreadAndWait([&dispatchBlock] {
-                dispatchBlock();
-            });
-        }
+        });
         return axPlugin;
     };
     
     return retrieveBlock();
 }
 
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-- (BOOL)clientSupportsIsolatedTree
-{
-    AXClientType type = _AXGetClientForCurrentRequestUntrusted();
-    // FIXME: Remove unknown client before enabling ACCESSIBILITY_ISOLATED_TREE.
-    return type == kAXClientTypeVoiceOver || type == kAXClientTypeUnknown;
-}
-
-- (id)isolatedTreeRootObject
-{
-    if (isMainThread()) {
-        if (auto cache = [self axObjectCache]) {
-            auto tree = cache->generateIsolatedAccessibilityTree();
-
-            // Now that we have created our tree, initialize the secondary thread,
-            // so future requests come in on the other thread.
-            _AXUIElementUseSecondaryAXThread(true);
-            if (auto rootNode = tree->rootNode())
-                return rootNode->wrapper();
-        }
-    } else {
-        auto tree = WebCore::AXIsolatedTree::treeForPageID(m_pageID);
-        tree->applyPendingChanges();
-        if (auto rootNode = tree->rootNode())
-            return rootNode->wrapper();
-    }
-
-    return nil;
-}
-#endif
-
 - (id)accessibilityRootObjectWrapper
 {
-    if (!WebCore::AXObjectCache::accessibilityEnabled())
-        WebCore::AXObjectCache::enableAccessibility();
+    return ax::retrieveAutoreleasedValueFromMainThread<id>([protectedSelf = retainPtr(self)] () -> RetainPtr<id> {
+        if (!WebCore::AXObjectCache::accessibilityEnabled())
+            WebCore::AXObjectCache::enableAccessibility();
 
-    if (m_hasMainFramePlugin)
-        return self.accessibilityPluginObject;
+        if (protectedSelf.get()->m_hasMainFramePlugin)
+            return protectedSelf.get().accessibilityPluginObject;
 
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    // If VoiceOver is on, ensure subsequent requests are now handled on the secondary AX thread.
-    bool clientSupportsIsolatedTree = [self clientSupportsIsolatedTree];
-    if (clientSupportsIsolatedTree)
-        return [self isolatedTreeRootObject];
-#endif
+        if (auto cache = protectedSelf.get().axObjectCache) {
+            if (auto* root = cache->rootObject())
+                return root->wrapper();
+        }
 
-    if (auto cache = [self axObjectCache]) {
-        if (WebCore::AccessibilityObject* root = cache->rootObject())
-            return root->wrapper();
-    }
-
-    return nil;
+        return nil;
+    });
 }
 
-- (void)setWebPage:(WebKit::WebPage*)page
+- (void)setWebPage:(NakedPtr<WebKit::WebPage>)page
 {
+    ASSERT(isMainRunLoop());
+
     m_page = page;
 
     if (page) {
@@ -156,21 +116,19 @@
 
 - (void)setHasMainFramePlugin:(bool)hasPlugin
 {
+    ASSERT(isMainRunLoop());
     m_hasMainFramePlugin = hasPlugin;
 }
 
 - (void)setRemoteParent:(id)parent
 {
-    if (parent != m_parent) {
-        [m_parent release];
-        m_parent = [parent retain];
-    }
+    ASSERT(isMainRunLoop());
+    m_parent = parent;
 }
 
 - (id)accessibilityFocusedUIElement
 {
     return [[self accessibilityRootObjectWrapper] accessibilityFocusedUIElement];
 }
-
 
 @end

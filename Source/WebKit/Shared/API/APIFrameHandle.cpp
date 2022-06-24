@@ -26,6 +26,7 @@
 #include "config.h"
 #include "APIFrameHandle.h"
 
+#include "ArgumentCoders.h"
 #include "Decoder.h"
 #include "Encoder.h"
 
@@ -44,10 +45,6 @@ Ref<FrameHandle> FrameHandle::createAutoconverting(WebCore::FrameIdentifier fram
 FrameHandle::FrameHandle(WebCore::FrameIdentifier frameID, bool isAutoconverting)
     : m_frameID(frameID)
     , m_isAutoconverting(isAutoconverting)
-{
-}
-
-FrameHandle::~FrameHandle()
 {
 }
 

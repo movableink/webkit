@@ -22,7 +22,6 @@ class CommonHeader;
 // Receiver Estimated Max Bitrate (REMB) (draft-alvestrand-rmcat-remb).
 class Remb : public Psfb {
  public:
-  static constexpr uint8_t kFeedbackMessageType = 15;
   static constexpr size_t kMaxNumberOfSsrcs = 0xff;
 
   Remb();
@@ -33,9 +32,9 @@ class Remb : public Psfb {
   bool Parse(const CommonHeader& packet);
 
   bool SetSsrcs(std::vector<uint32_t> ssrcs);
-  void SetBitrateBps(uint64_t bitrate_bps) { bitrate_bps_ = bitrate_bps; }
+  void SetBitrateBps(int64_t bitrate_bps) { bitrate_bps_ = bitrate_bps; }
 
-  uint64_t bitrate_bps() const { return bitrate_bps_; }
+  int64_t bitrate_bps() const { return bitrate_bps_; }
   const std::vector<uint32_t>& ssrcs() const { return ssrcs_; }
 
   size_t BlockLength() const override;
@@ -52,7 +51,7 @@ class Remb : public Psfb {
   void SetMediaSsrc(uint32_t);
   uint32_t media_ssrc() const;
 
-  uint64_t bitrate_bps_;
+  int64_t bitrate_bps_;
   std::vector<uint32_t> ssrcs_;
 };
 }  // namespace rtcp

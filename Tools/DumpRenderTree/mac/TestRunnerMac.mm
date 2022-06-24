@@ -32,6 +32,7 @@
 
 #import "DefaultPolicyDelegate.h"
 #import "EditingDelegate.h"
+#import "JSBasics.h"
 #import "LayoutTestSpellChecker.h"
 #import "MockGeolocationProvider.h"
 #import "MockWebNotificationProvider.h"
@@ -136,13 +137,13 @@ void TestRunner::addDisallowedURL(JSStringRef url)
     RetainPtr<CFStringRef> urlCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, url));
 
     if (!disallowedURLs)
-        disallowedURLs = CFSetCreateMutable(kCFAllocatorDefault, 0, NULL);
+        disallowedURLs = adoptCF(CFSetCreateMutable(kCFAllocatorDefault, 0, NULL));
 
     // Canonicalize the URL
     NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:(__bridge NSString *)urlCF.get()]];
     request = [NSURLProtocol canonicalRequestForRequest:request];
 
-    CFSetAddValue(disallowedURLs, (__bridge CFURLRef)[request URL]);
+    CFSetAddValue(disallowedURLs.get(), (__bridge CFURLRef)[request URL]);
 }
 
 bool TestRunner::callShouldCloseOnWebView()
@@ -157,35 +158,29 @@ void TestRunner::clearAllApplicationCaches()
 
 long long TestRunner::applicationCacheDiskUsageForOrigin(JSStringRef url)
 {
-    RetainPtr<CFStringRef> urlCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, url));
-    WebSecurityOrigin *origin = [[WebSecurityOrigin alloc] initWithURL:[NSURL URLWithString:(__bridge NSString *)urlCF.get()]];
-    long long usage = [WebApplicationCache diskUsageForOrigin:origin];
-    [origin release];
+    auto urlCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, url));
+    auto origin = adoptNS([[WebSecurityOrigin alloc] initWithURL:[NSURL URLWithString:(__bridge NSString *)urlCF.get()]]);
+    long long usage = [WebApplicationCache diskUsageForOrigin:origin.get()];
     return usage;
 }
 
 void TestRunner::clearApplicationCacheForOrigin(JSStringRef url)
 {
-    RetainPtr<CFStringRef> urlCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, url));
-
-    WebSecurityOrigin *origin = [[WebSecurityOrigin alloc] initWithURL:[NSURL URLWithString:(__bridge NSString *)urlCF.get()]];
-    [WebApplicationCache deleteCacheForOrigin:origin];
-    [origin release];
+    auto urlCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, url));
+    auto origin = adoptNS([[WebSecurityOrigin alloc] initWithURL:[NSURL URLWithString:(__bridge NSString *)urlCF.get()]]);
+    [WebApplicationCache deleteCacheForOrigin:origin.get()];
 }
 
-JSValueRef originsArrayToJS(JSContextRef context, NSArray *origins)
+static JSObjectRef originsArrayToJS(JSContextRef context, NSArray *origins)
 {
-    NSUInteger count = [origins count];
-
-    JSValueRef arrayResult = JSObjectMakeArray(context, 0, 0, 0);
-    JSObjectRef arrayObj = JSValueToObject(context, arrayResult, 0);
+    auto count = [origins count];
+    auto array = JSObjectMakeArray(context, 0, nullptr, nullptr);
     for (NSUInteger i = 0; i < count; i++) {
         NSString *origin = [[origins objectAtIndex:i] databaseIdentifier];
         auto originJS = adopt(JSStringCreateWithCFString((__bridge CFStringRef)origin));
-        JSObjectSetPropertyAtIndex(context, arrayObj, i, JSValueMakeString(context, originJS.get()), 0);
+        JSObjectSetPropertyAtIndex(context, array, i, JSValueMakeString(context, originJS.get()), 0);
     }
-
-    return arrayResult;
+    return array;
 }
 
 JSValueRef TestRunner::originsWithApplicationCache(JSContextRef context)
@@ -213,16 +208,6 @@ void TestRunner::setSpellCheckerLoggingEnabled(bool enabled)
 #endif
 }
 
-void TestRunner::setSpellCheckerResults(JSContextRef context, JSObjectRef results)
-{
-#if PLATFORM(MAC)
-    [[LayoutTestSpellChecker checker] setResultsFromJSObject:results inContext:context];
-#else
-    UNUSED_PARAM(results);
-    UNUSED_PARAM(context);
-#endif
-}
-
 void TestRunner::closeIdleLocalStorageDatabases()
 {
     [WebStorageManager closeIdleLocalStorageDatabases];
@@ -231,16 +216,15 @@ void TestRunner::closeIdleLocalStorageDatabases()
 void TestRunner::clearBackForwardList()
 {
     WebBackForwardList *backForwardList = [[mainFrame webView] backForwardList];
-    WebHistoryItem *item = [[backForwardList currentItem] retain];
+    auto item = retainPtr([backForwardList currentItem]);
 
     // We clear the history by setting the back/forward list's capacity to 0
     // then restoring it back and adding back the current item.
     int capacity = [backForwardList capacity];
     [backForwardList setCapacity:0];
     [backForwardList setCapacity:capacity];
-    [backForwardList addItem:item];
-    [backForwardList goToItem:item];
-    [item release];
+    [backForwardList addItem:item.get()];
+    [backForwardList goToItem:item.get()];
 }
 
 JSRetainPtr<JSStringRef> TestRunner::copyDecodedHostName(JSStringRef name)
@@ -269,11 +253,8 @@ void TestRunner::displayAndTrackRepaints()
 
 void TestRunner::keepWebHistory()
 {
-    if (![WebHistory optionalSharedHistory]) {
-        WebHistory *history = [[WebHistory alloc] init];
-        [WebHistory setOptionalSharedHistory:history];
-        [history release];
-    }
+    if (![WebHistory optionalSharedHistory])
+        [WebHistory setOptionalSharedHistory:adoptNS([[WebHistory alloc] init]).get()];
 }
 
 int TestRunner::numberOfPendingGeolocationPermissionRequests()
@@ -299,6 +280,11 @@ void TestRunner::notifyDone()
             dump();
     } else
         fprintf(stderr, "TestRunner::notifyDone() called unexpectedly.");
+}
+
+void TestRunner::stopLoading()
+{
+    [mainFrame.webView stopLoading:nil];
 }
 
 void TestRunner::forceImmediateCompletion()
@@ -416,27 +402,21 @@ void TestRunner::setAppCacheMaximumSize(unsigned long long size)
     [WebApplicationCache setMaximumSize:size];
 }
 
-void TestRunner::setAuthorAndUserStylesEnabled(bool flag)
-{
-    [[[mainFrame webView] preferences] setAuthorAndUserStylesEnabled:flag];
-}
-
 void TestRunner::setCustomPolicyDelegate(bool setDelegate, bool permissive)
 {
     if (!setDelegate) {
-        [[mainFrame webView] setPolicyDelegate:defaultPolicyDelegate];
+        [[mainFrame webView] setPolicyDelegate:defaultPolicyDelegate.get()];
         return;
     }
 
     [policyDelegate setPermissive:permissive];
-    [[mainFrame webView] setPolicyDelegate:policyDelegate];
+    [[mainFrame webView] setPolicyDelegate:policyDelegate.get()];
 }
 
 void TestRunner::setDatabaseQuota(unsigned long long quota)
 {    
-    WebSecurityOrigin *origin = [[WebSecurityOrigin alloc] initWithURL:[NSURL URLWithString:@"file:///"]];
+    auto origin = adoptNS([[WebSecurityOrigin alloc] initWithURL:[NSURL URLWithString:@"file:///"]]);
     [[origin databaseQuotaManager] setQuota:quota];
-    [origin release];
 }
 
 void TestRunner::goBack()
@@ -460,17 +440,16 @@ void TestRunner::setMockDeviceOrientation(bool canProvideAlpha, double alpha, bo
     // DumpRenderTree configured the WebView to use WebDeviceOrientationProviderMock.
     id<WebDeviceOrientationProvider> provider = [[mainFrame webView] _deviceOrientationProvider];
     WebDeviceOrientationProviderMock *mockProvider = static_cast<WebDeviceOrientationProviderMock*>(provider);
-    WebDeviceOrientation *orientation = [[WebDeviceOrientation alloc] initWithCanProvideAlpha:canProvideAlpha alpha:alpha canProvideBeta:canProvideBeta beta:beta canProvideGamma:canProvideGamma gamma:gamma];
-    [mockProvider setOrientation:orientation];
-    [orientation release];
+    auto orientation = adoptNS([[WebDeviceOrientation alloc] initWithCanProvideAlpha:canProvideAlpha alpha:alpha canProvideBeta:canProvideBeta beta:beta canProvideGamma:canProvideGamma gamma:gamma]);
+    [mockProvider setOrientation:orientation.get()];
 }
 
 void TestRunner::setMockGeolocationPosition(double latitude, double longitude, double accuracy, bool providesAltitude, double altitude, bool providesAltitudeAccuracy, double altitudeAccuracy, bool providesHeading, double heading, bool providesSpeed, double speed, bool providesFloorLevel, double floorLevel)
 {
-    WebGeolocationPosition *position = nil;
+    RetainPtr<WebGeolocationPosition> position;
     if (!providesAltitude && !providesAltitudeAccuracy && !providesHeading && !providesSpeed) {
         // Test the exposed API.
-        position = [[WebGeolocationPosition alloc] initWithTimestamp:WallTime::now().secondsSinceEpoch().seconds() latitude:latitude longitude:longitude accuracy:accuracy];
+        position = adoptNS([[WebGeolocationPosition alloc] initWithTimestamp:WallTime::now().secondsSinceEpoch().seconds() latitude:latitude longitude:longitude accuracy:accuracy]);
     } else {
         WebCore::GeolocationPositionData geolocationPosition { WallTime::now().secondsSinceEpoch().seconds(), latitude, longitude, accuracy };
         if (providesAltitude)
@@ -483,10 +462,9 @@ void TestRunner::setMockGeolocationPosition(double latitude, double longitude, d
             geolocationPosition.speed = speed;
         if (providesFloorLevel)
             geolocationPosition.floorLevel = floorLevel;
-        position = [[WebGeolocationPosition alloc] initWithGeolocationPosition:(WTFMove(geolocationPosition))];
+        position = adoptNS([[WebGeolocationPosition alloc] initWithGeolocationPosition:(WTFMove(geolocationPosition))]);
     }
-    [[MockGeolocationProvider shared] setPosition:position];
-    [position release];
+    [[MockGeolocationProvider shared] setPosition:position.get()];
 }
 
 void TestRunner::setMockGeolocationPositionUnavailableError(JSStringRef message)
@@ -522,46 +500,6 @@ void TestRunner::setPrivateBrowsingEnabled(bool privateBrowsingEnabled)
     [[[mainFrame webView] preferences] setPrivateBrowsingEnabled:privateBrowsingEnabled];
 }
 
-void TestRunner::setXSSAuditorEnabled(bool enabled)
-{
-    [[[mainFrame webView] preferences] setXSSAuditorEnabled:enabled];
-}
-
-void TestRunner::setSpatialNavigationEnabled(bool enabled)
-{
-    [[[mainFrame webView] preferences] setSpatialNavigationEnabled:enabled];
-}
-
-void TestRunner::setAllowUniversalAccessFromFileURLs(bool enabled)
-{
-    [[[mainFrame webView] preferences] setAllowUniversalAccessFromFileURLs:enabled];
-}
-
-void TestRunner::setAllowFileAccessFromFileURLs(bool enabled)
-{
-    [[[mainFrame webView] preferences] setAllowFileAccessFromFileURLs:enabled];
-}
-
-void TestRunner::setNeedsStorageAccessFromFileURLsQuirk(bool needsQuirk)
-{
-    [[[mainFrame webView] preferences] setNeedsStorageAccessFromFileURLsQuirk:needsQuirk];
-}
-
-void TestRunner::setPopupBlockingEnabled(bool popupBlockingEnabled)
-{
-    [[[mainFrame webView] preferences] setJavaScriptCanOpenWindowsAutomatically:!popupBlockingEnabled];
-}
-
-void TestRunner::setPluginsEnabled(bool pluginsEnabled)
-{
-    [[[mainFrame webView] preferences] setPlugInsEnabled:pluginsEnabled];
-}
-
-void TestRunner::setJavaScriptCanAccessClipboard(bool enabled)
-{
-    [[[mainFrame webView] preferences] setJavaScriptCanAccessClipboard:enabled];
-}
-
 void TestRunner::setAutomaticLinkDetectionEnabled(bool enabled)
 {
 #if !PLATFORM(IOS_FAMILY)
@@ -575,11 +513,6 @@ void TestRunner::setTabKeyCyclesThroughElements(bool cycles)
 }
 
 #if PLATFORM(IOS_FAMILY)
-void TestRunner::setTelephoneNumberParsingEnabled(bool enabled)
-{
-    [[[mainFrame webView] preferences] _setTelephoneNumberParsingEnabled:enabled];
-}
-
 void TestRunner::setPagePaused(bool paused)
 {
     [gWebBrowserView setPaused:paused];
@@ -588,14 +521,14 @@ void TestRunner::setPagePaused(bool paused)
 
 void TestRunner::setUserStyleSheetEnabled(bool flag)
 {
-    [[WebPreferences standardPreferences] setUserStyleSheetEnabled:flag];
+    [[[mainFrame webView] preferences] setUserStyleSheetEnabled:flag];
 }
 
 void TestRunner::setUserStyleSheetLocation(JSStringRef path)
 {
     RetainPtr<CFStringRef> pathCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, path));
     NSURL *url = [NSURL URLWithString:(__bridge NSString *)pathCF.get()];
-    [[WebPreferences standardPreferences] setUserStyleSheetLocation:url];
+    [[[mainFrame webView] preferences] setUserStyleSheetLocation:url];
 }
 
 void TestRunner::setValueForUser(JSContextRef context, JSValueRef nodeObject, JSStringRef value)
@@ -611,17 +544,6 @@ void TestRunner::setValueForUser(JSContextRef context, JSValueRef nodeObject, JS
 void TestRunner::dispatchPendingLoadRequests()
 {
     [[mainFrame webView] _dispatchPendingLoadRequests];
-}
-
-void TestRunner::overridePreference(JSStringRef key, JSStringRef value)
-{
-    RetainPtr<CFStringRef> keyCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, key));
-    NSString *keyNS = (__bridge NSString *)keyCF.get();
-
-    RetainPtr<CFStringRef> valueCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, value));
-    NSString *valueNS = (__bridge NSString *)valueCF.get();
-
-    [[WebPreferences standardPreferences] _setPreferenceForTestWithValue:valueNS forKey:keyNS];
 }
 
 void TestRunner::removeAllVisitedLinks()
@@ -660,7 +582,7 @@ void TestRunner::setWaitToDump(bool waitUntilDone)
 {
     m_waitToDump = waitUntilDone;
     if (m_waitToDump && m_timeout && shouldSetWaitToDumpWatchdog())
-        setWaitToDumpWatchdog(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + m_timeout / 1000.0, 0, 0, 0, waitUntilDoneWatchdogFired, NULL));
+        setWaitToDumpWatchdog(adoptCF(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + m_timeout / 1000.0, 0, 0, 0, waitUntilDoneWatchdogFired, NULL)));
 }
 
 int TestRunner::windowCount()
@@ -683,15 +605,10 @@ bool TestRunner::findString(JSContextRef context, JSStringRef target, JSObjectRe
 {
     WebFindOptions options = 0;
 
-    auto lengthPropertyName = adopt(JSStringCreateWithUTF8CString("length"));
-    JSValueRef lengthValue = JSObjectGetProperty(context, optionsArray, lengthPropertyName.get(), 0);
-    if (!JSValueIsNumber(context, lengthValue))
-        return false;
+    auto length = WTR::arrayLength(context, optionsArray);
+    auto targetCFString = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, target));
 
-    RetainPtr<CFStringRef> targetCFString = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, target));
-
-    size_t length = static_cast<size_t>(JSValueToNumber(context, lengthValue, 0));
-    for (size_t i = 0; i < length; ++i) {
+    for (unsigned i = 0; i < length; ++i) {
         JSValueRef value = JSObjectGetPropertyAtIndex(context, optionsArray, i, 0);
         if (!JSValueIsString(context, value))
             continue;
@@ -717,7 +634,7 @@ bool TestRunner::findString(JSContextRef context, JSStringRef target, JSObjectRe
 
 void TestRunner::setCacheModel(int cacheModel)
 {
-    [[WebPreferences standardPreferences] setCacheModel:(WebCacheModel)cacheModel];
+    [[[mainFrame webView] preferences] setCacheModel:(WebCacheModel)cacheModel];
 }
 
 bool TestRunner::isCommandEnabled(JSStringRef name)
@@ -752,10 +669,10 @@ void TestRunner::waitForPolicyDelegate()
 {
     setWaitToDump(true);
     [policyDelegate setControllerToNotifyDone:this];
-    [[mainFrame webView] setPolicyDelegate:policyDelegate];
+    [[mainFrame webView] setPolicyDelegate:policyDelegate.get()];
 }
 
-void TestRunner::addOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
+void TestRunner::addOriginAccessAllowListEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
 {
     RetainPtr<CFStringRef> sourceOriginCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, sourceOrigin));
     NSString *sourceOriginNS = (__bridge NSString *)sourceOriginCF.get();
@@ -763,10 +680,10 @@ void TestRunner::addOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStrin
     NSString *destinationProtocolNS = (__bridge NSString *)protocolCF.get();
     RetainPtr<CFStringRef> hostCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, destinationHost));
     NSString *destinationHostNS = (__bridge NSString *)hostCF.get();
-    [WebView _addOriginAccessWhitelistEntryWithSourceOrigin:sourceOriginNS destinationProtocol:destinationProtocolNS destinationHost:destinationHostNS allowDestinationSubdomains:allowDestinationSubdomains];
+    [WebView _addOriginAccessAllowListEntryWithSourceOrigin:sourceOriginNS destinationProtocol:destinationProtocolNS destinationHost:destinationHostNS allowDestinationSubdomains:allowDestinationSubdomains];
 }
 
-void TestRunner::removeOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
+void TestRunner::removeOriginAccessAllowListEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
 {
     RetainPtr<CFStringRef> sourceOriginCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, sourceOrigin));
     NSString *sourceOriginNS = (__bridge NSString *)sourceOriginCF.get();
@@ -774,7 +691,7 @@ void TestRunner::removeOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSSt
     NSString *destinationProtocolNS = (__bridge NSString *)protocolCF.get();
     RetainPtr<CFStringRef> hostCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, destinationHost));
     NSString *destinationHostNS = (__bridge NSString *)hostCF.get();
-    [WebView _removeOriginAccessWhitelistEntryWithSourceOrigin:sourceOriginNS destinationProtocol:destinationProtocolNS destinationHost:destinationHostNS allowDestinationSubdomains:allowDestinationSubdomains];
+    [WebView _removeOriginAccessAllowListEntryWithSourceOrigin:sourceOriginNS destinationProtocol:destinationProtocolNS destinationHost:destinationHostNS allowDestinationSubdomains:allowDestinationSubdomains];
 }
 
 void TestRunner::setScrollbarPolicy(JSStringRef orientation, JSStringRef policy)
@@ -786,19 +703,14 @@ void TestRunner::addUserScript(JSStringRef source, bool runAtStart, bool allFram
 {
     RetainPtr<CFStringRef> sourceCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, source));
     NSString *sourceNS = (__bridge NSString *)sourceCF.get();
-    [WebView _addUserScriptToGroup:@"org.webkit.DumpRenderTree" world:[WebScriptWorld world] source:sourceNS url:nil whitelist:nil blacklist:nil injectionTime:(runAtStart ? WebInjectAtDocumentStart : WebInjectAtDocumentEnd) injectedFrames:(allFrames ? WebInjectInAllFrames : WebInjectInTopFrameOnly)];
+    [WebView _addUserScriptToGroup:@"org.webkit.DumpRenderTree" world:[WebScriptWorld world] source:sourceNS url:nil includeMatchPatternStrings:nil excludeMatchPatternStrings:nil injectionTime:(runAtStart ? WebInjectAtDocumentStart : WebInjectAtDocumentEnd) injectedFrames:(allFrames ? WebInjectInAllFrames : WebInjectInTopFrameOnly)];
 }
 
 void TestRunner::addUserStyleSheet(JSStringRef source, bool allFrames)
 {
     RetainPtr<CFStringRef> sourceCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, source));
     NSString *sourceNS = (__bridge NSString *)sourceCF.get();
-    [WebView _addUserStyleSheetToGroup:@"org.webkit.DumpRenderTree" world:[WebScriptWorld world] source:sourceNS url:nil whitelist:nil blacklist:nil injectedFrames:(allFrames ? WebInjectInAllFrames : WebInjectInTopFrameOnly)];
-}
-
-void TestRunner::setDeveloperExtrasEnabled(bool enabled)
-{
-    [[[mainFrame webView] preferences] setDeveloperExtrasEnabled:enabled];
+    [WebView _addUserStyleSheetToGroup:@"org.webkit.DumpRenderTree" world:[WebScriptWorld world] source:sourceNS url:nil includeMatchPatternStrings:nil excludeMatchPatternStrings:nil injectedFrames:(allFrames ? WebInjectInAllFrames : WebInjectInTopFrameOnly)];
 }
 
 void TestRunner::showWebInspector()
@@ -923,9 +835,9 @@ void TestRunner::evaluateScriptInIsolatedWorld(unsigned worldID, JSObjectRef glo
 @interface APITestDelegateIPhone : NSObject <WebFrameLoadDelegate>
 {
     TestRunner* testRunner;
-    NSData *data;
-    NSURL *baseURL;
-    WebView *webView;
+    RetainPtr<NSData> data;
+    RetainPtr<NSURL> baseURL;
+    RetainPtr<WebView> webView;
 }
 - (id)initWithTestRunner:(TestRunner*)testRunner utf8Data:(JSStringRef)data baseURL:(JSStringRef)baseURL;
 - (void)run;
@@ -940,15 +852,13 @@ void TestRunner::evaluateScriptInIsolatedWorld(unsigned worldID, JSObjectRef glo
         return nil;
 
     testRunner = runner;
-    data = [[(__bridge NSString *)adoptCF(JSStringCopyCFString(kCFAllocatorDefault, dataString)).get() dataUsingEncoding:NSUTF8StringEncoding] retain];
-    baseURL = [[NSURL URLWithString:(__bridge NSString *)adoptCF(JSStringCopyCFString(kCFAllocatorDefault, baseURLString)).get()] retain];
+    data = [(__bridge NSString *)adoptCF(JSStringCopyCFString(kCFAllocatorDefault, dataString)).get() dataUsingEncoding:NSUTF8StringEncoding];
+    baseURL = [NSURL URLWithString:(__bridge NSString *)adoptCF(JSStringCopyCFString(kCFAllocatorDefault, baseURLString)).get()];
     return self;
 }
 
 - (void)dealloc
 {
-    [data release];
-    [baseURL release];
     [super dealloc];
 }
 
@@ -961,9 +871,9 @@ void TestRunner::evaluateScriptInIsolatedWorld(unsigned worldID, JSObjectRef glo
 
     WebThreadLock();
 
-    webView = [[WebView alloc] initWithFrame:NSZeroRect frameName:@"" groupName:@""];
+    webView = adoptNS([[WebView alloc] initWithFrame:NSZeroRect frameName:@"" groupName:@""]);
     [webView setFrameLoadDelegate:self];
-    [[webView mainFrame] loadData:data MIMEType:@"text/html" textEncodingName:@"utf-8" baseURL:baseURL];
+    [[webView mainFrame] loadData:data.get() MIMEType:@"text/html" textEncodingName:@"utf-8" baseURL:baseURL.get()];
 }
 
 - (void)_cleanUp
@@ -975,7 +885,6 @@ void TestRunner::evaluateScriptInIsolatedWorld(unsigned worldID, JSObjectRef glo
 
     [webView _clearDelegates];
     [webView close];
-    [webView release];
     webView = nil;
 
     testRunner->notifyDone();
@@ -1010,8 +919,8 @@ void TestRunner::apiTestNewWindowDataLoadBaseURL(JSStringRef utf8Data, JSStringR
     // and closes a WebView, it should be run on the main thread. Make the switch
     // from the web thread to the main thread and make the test asynchronous.
     if (WebThreadIsCurrent()) {
-        APITestDelegateIPhone *dispatcher = [[APITestDelegateIPhone alloc] initWithTestRunner:this utf8Data:utf8Data baseURL:baseURL];
-        NSInvocation *invocation = WebThreadMakeNSInvocation(dispatcher, @selector(run));
+        auto dispatcher = adoptNS([[APITestDelegateIPhone alloc] initWithTestRunner:this utf8Data:utf8Data baseURL:baseURL]);
+        NSInvocation *invocation = WebThreadMakeNSInvocation(dispatcher.get(), @selector(run));
         WebThreadCallDelegate(invocation);
         return;
     }
@@ -1021,11 +930,11 @@ void TestRunner::apiTestNewWindowDataLoadBaseURL(JSStringRef utf8Data, JSStringR
         RetainPtr<CFStringRef> utf8DataCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, utf8Data));
         RetainPtr<CFStringRef> baseURLCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, baseURL));
 
-        WebView *webView = [[WebView alloc] initWithFrame:NSZeroRect frameName:@"" groupName:@""];
+        auto webView = adoptNS([[WebView alloc] initWithFrame:NSZeroRect frameName:@"" groupName:@""]);
 
         bool done = false;
-        APITestDelegate *delegate = [[APITestDelegate alloc] initWithCompletionCondition:&done];
-        [webView setFrameLoadDelegate:delegate];
+        auto delegate = adoptNS([[APITestDelegate alloc] initWithCompletionCondition:&done]);
+        [webView setFrameLoadDelegate:delegate.get()];
 
         [[webView mainFrame] loadData:[(__bridge NSString *)utf8DataCF.get() dataUsingEncoding:NSUTF8StringEncoding] MIMEType:@"text/html" textEncodingName:@"utf-8" baseURL:[NSURL URLWithString:(__bridge NSString *)baseURLCF.get()]];
 
@@ -1040,8 +949,6 @@ void TestRunner::apiTestNewWindowDataLoadBaseURL(JSStringRef utf8Data, JSStringR
 #endif
 
         [webView close];
-        [webView release];
-        [delegate release];
     }
 }
 
@@ -1051,18 +958,12 @@ void TestRunner::apiTestGoToCurrentBackForwardItem()
     [view goToBackForwardItem:[[view backForwardList] currentItem]];
 }
 
-void TestRunner::setWebViewEditable(bool editable)
-{
-    WebView *view = [mainFrame webView];
-    [view setEditable:editable];
-}
-
 static NSString *SynchronousLoaderRunLoopMode = @"DumpRenderTreeSynchronousLoaderRunLoopMode";
 
 @interface SynchronousLoader : NSObject <NSURLConnectionDelegate>
 {
-    NSString *m_username;
-    NSString *m_password;
+    RetainPtr<NSString> m_username;
+    RetainPtr<NSString> m_password;
     BOOL m_isDone;
 }
 + (void)makeRequest:(NSURLRequest *)request withUsername:(NSString *)username password:(NSString *)password;
@@ -1071,9 +972,6 @@ static NSString *SynchronousLoaderRunLoopMode = @"DumpRenderTreeSynchronousLoade
 @implementation SynchronousLoader : NSObject
 - (void)dealloc
 {
-    [m_username release];
-    [m_password release];
-
     [super dealloc];
 }
 
@@ -1087,7 +985,7 @@ IGNORE_WARNINGS_BEGIN("deprecated-implementations")
 IGNORE_WARNINGS_END
 {
     if ([challenge previousFailureCount] == 0) {
-        RetainPtr<NSURLCredential> credential = adoptNS([[NSURLCredential alloc]  initWithUser:m_username password:m_password persistence:NSURLCredentialPersistenceForSession]);
+        RetainPtr<NSURLCredential> credential = adoptNS([[NSURLCredential alloc]  initWithUser:m_username.get() password:m_password.get() persistence:NSURLCredentialPersistenceForSession]);
         [[challenge sender] useCredential:credential.get() forAuthenticationChallenge:challenge];
         return;
     }
@@ -1110,21 +1008,18 @@ IGNORE_WARNINGS_END
     ASSERT(![[request URL] user]);
     ASSERT(![[request URL] password]);
 
-    SynchronousLoader *delegate = [[SynchronousLoader alloc] init];
-    delegate->m_username = [username copy];
-    delegate->m_password = [password copy];
+    auto delegate = adoptNS([[SynchronousLoader alloc] init]);
+    delegate.get()->m_username = adoptNS([username copy]);
+    delegate.get()->m_password = adoptNS([password copy]);
 
-    NSURLConnection *connection = [[NSURLConnection alloc] initWithRequest:request delegate:delegate startImmediately:NO];
+    auto connection = adoptNS([[NSURLConnection alloc] initWithRequest:request delegate:delegate.get() startImmediately:NO]);
     [connection scheduleInRunLoop:[NSRunLoop currentRunLoop] forMode:SynchronousLoaderRunLoopMode];
     [connection start];
     
-    while (!delegate->m_isDone)
+    while (!delegate.get()->m_isDone)
         [[NSRunLoop currentRunLoop] runMode:SynchronousLoaderRunLoopMode beforeDate:[NSDate distantFuture]];
 
     [connection cancel];
-    
-    [connection release];
-    [delegate release];
 }
 
 @end
@@ -1168,13 +1063,12 @@ void TestRunner::setTextDirection(JSStringRef directionName)
 void TestRunner::addChromeInputField()
 {
 #if !PLATFORM(IOS_FAMILY)
-    NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 100, 20)];
-    textField.tag = 1;
-    [[[[mainFrame webView] window] contentView] addSubview:textField];
-    [textField release];
+    auto textField = adoptNS([[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 100, 20)]);
+    [textField setTag:1];
+    [[[[mainFrame webView] window] contentView] addSubview:textField.get()];
     
     [textField setNextKeyView:[mainFrame webView]];
-    [[mainFrame webView] setNextKeyView:textField];
+    [[mainFrame webView] setNextKeyView:textField.get()];
 #endif
 }
 
@@ -1187,6 +1081,19 @@ void TestRunner::removeChromeInputField()
         focusWebView();
     }
 #endif
+}
+
+void TestRunner::setTextInChromeInputField(const String&)
+{
+}
+
+void TestRunner::selectChromeInputField()
+{
+}
+
+String TestRunner::getSelectedTextInChromeInputField()
+{
+    return { };
 }
 
 void TestRunner::focusWebView()
@@ -1260,16 +1167,16 @@ void TestRunner::simulateLegacyWebNotificationClick(JSStringRef jsTitle)
 {
 }
 
-static NSString * const WebArchivePboardType = @"Apple Web Archive pasteboard type";
 static NSString * const WebSubresourcesKey = @"WebSubresources";
 static NSString * const WebSubframeArchivesKey = @"WebResourceMIMEType like 'image*'";
 
 unsigned TestRunner::imageCountInGeneralPasteboard() const
 {
+    NSString *webArchivePboardType = @"Apple Web Archive pasteboard type";
 #if PLATFORM(MAC)
-    NSData *data = [[NSPasteboard generalPasteboard] dataForType:WebArchivePboardType];
+    NSData *data = [[NSPasteboard generalPasteboard] dataForType:webArchivePboardType];
 #elif PLATFORM(IOS_FAMILY)
-    NSData *data = [[UIPasteboard generalPasteboard] valueForPasteboardType:WebArchivePboardType];
+    NSData *data = [[UIPasteboard generalPasteboard] valueForPasteboardType:webArchivePboardType];
 #endif
     if (!data)
         return 0;

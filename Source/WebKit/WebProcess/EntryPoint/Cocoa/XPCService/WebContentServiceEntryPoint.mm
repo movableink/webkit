@@ -35,9 +35,9 @@
 #import <pal/spi/ios/GraphicsServicesSPI.h>
 #endif
 
-extern "C" WK_EXPORT void WebContentServiceInitializer(xpc_connection_t connection, xpc_object_t initializerMessage, xpc_object_t priorityBoostMessage);
+extern "C" WK_EXPORT void WEBCONTENT_SERVICE_INITIALIZER(xpc_connection_t connection, xpc_object_t initializerMessage, xpc_object_t priorityBoostMessage);
 
-void WebContentServiceInitializer(xpc_connection_t connection, xpc_object_t initializerMessage, xpc_object_t priorityBoostMessage)
+void WEBCONTENT_SERVICE_INITIALIZER(xpc_connection_t connection, xpc_object_t initializerMessage, xpc_object_t priorityBoostMessage)
 {
     WTF::initializeMainThread();
 
@@ -50,5 +50,5 @@ void WebContentServiceInitializer(xpc_connection_t connection, xpc_object_t init
     InitWebCoreThreadSystemInterface();
 #endif // PLATFORM(IOS_FAMILY)
 
-    WebKit::XPCServiceInitializer<WebKit::WebProcess, WebKit::XPCServiceInitializerDelegate>(adoptOSObject(connection), initializerMessage, priorityBoostMessage);
+    WebKit::XPCServiceInitializer<WebKit::WebProcess, WebKit::XPCServiceInitializerDelegate>(connection, initializerMessage, priorityBoostMessage);
 }

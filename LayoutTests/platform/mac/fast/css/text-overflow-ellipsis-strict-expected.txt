@@ -8,9 +8,9 @@ layer at (0,0) size 785x740
           text run at (0,0) width 572: "This tests checks that the text-overflow:ellipsis property is handled correctly for bidi text."
         RenderBR {BR} at (571,0) size 1x18
         RenderBR {BR} at (0,18) size 0x18
-        RenderText {#text} at (0,36) size 760x18
-          text run at (0,36) width 760: "Pass if the ellipsis do not overlap the text and the underlines for the links are placed under the text and not the ellipsis. "
-        RenderBR {BR} at (759,36) size 1x18
+        RenderText {#text} at (0,36) size 756x18
+          text run at (0,36) width 756: "Pass if the ellipsis do not overlap the text and the underlines for the links are placed under the text and not the ellipsis."
+        RenderBR {BR} at (755,36) size 1x18
         RenderBR {BR} at (0,54) size 0x18
         RenderText {#text} at (0,72) size 34x18
           text run at (0,72) width 34: "RTL:"
@@ -51,12 +51,12 @@ layer at (8,98) size 182x22 clip at (9,99) size 180x20 scrollX 191 scrollWidth 3
 layer at (8,158) size 182x22 clip at (9,159) size 180x20 scrollX 148 scrollWidth 328
   RenderBlock {DIV} at (0,150) size 182x22 [border: (1px solid #000000)]
     RenderText {#text} at (-147,1) size 329x18
-      text run at (-147,1) width 328 RTL override: "Lorem ipsum dolor sit amet, consectetur adipiscing"
+      text run at (-147,1) width 328 RTL: "Lorem ipsum dolor sit amet, consectetur adipiscing"
 layer at (8,218) size 182x22 clip at (9,219) size 180x20 scrollX 148 scrollWidth 328
   RenderBlock {DIV} at (0,210) size 182x22 [border: (1px solid #000000)]
     RenderInline {A} at (0,0) size 329x18 [color=#0000EE]
       RenderText {#text} at (-147,1) size 329x18
-        text run at (-147,1) width 328 RTL override: "Lorem ipsum dolor sit amet, consectetur adipiscing"
+        text run at (-147,1) width 328 RTL: "Lorem ipsum dolor sit amet, consectetur adipiscing"
     RenderText {#text} at (0,0) size 0x0
 layer at (8,278) size 182x22 clip at (9,279) size 180x20 scrollX 148 scrollWidth 328
   RenderBlock {DIV} at (0,270) size 182x22 [border: (1px solid #000000)]
@@ -86,7 +86,7 @@ layer at (8,578) size 182x22 clip at (9,579) size 180x20 scrollWidth 328
   RenderBlock {DIV} at (0,570) size 182x22 [border: (1px solid #000000)]
     RenderInline {SPAN} at (0,0) size 329x18
       RenderText {#text} at (1,1) size 329x18
-        text run at (1,1) width 329 RTL override: "Lorem ipsum dolor sit amet, consectetur adipiscing"
+        text run at (1,1) width 329 RTL: "Lorem ipsum dolor sit amet, consectetur adipiscing"
     RenderText {#text} at (0,0) size 0x0
 layer at (8,638) size 182x22 clip at (9,639) size 180x20 scrollWidth 371
   RenderBlock {DIV} at (0,630) size 182x22 [border: (1px solid #000000)]
@@ -100,6 +100,6 @@ layer at (8,698) size 182x22 clip at (9,699) size 180x20 scrollWidth 328
       RenderText {#text} at (0,0) size 0x0
       RenderInline {SPAN} at (0,0) size 329x18
         RenderText {#text} at (1,1) size 329x18
-          text run at (1,1) width 329 RTL override: "Lorem ipsum dolor sit amet, consectetur adipiscing"
+          text run at (1,1) width 329 RTL: "Lorem ipsum dolor sit amet, consectetur adipiscing"
       RenderText {#text} at (0,0) size 0x0
     RenderText {#text} at (0,0) size 0x0

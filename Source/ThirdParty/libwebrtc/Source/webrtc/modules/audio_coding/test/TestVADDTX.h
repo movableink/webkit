@@ -16,17 +16,26 @@
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
 #include "common_audio/vad/include/vad.h"
-#include "common_types.h"  // NOLINT(build/include)
 #include "modules/audio_coding/include/audio_coding_module.h"
 #include "modules/audio_coding/include/audio_coding_module_typedefs.h"
 #include "modules/audio_coding/test/Channel.h"
 
 namespace webrtc {
 
-class ActivityMonitor : public ACMVADCallback {
+// This class records the frame type, and delegates actual sending to the
+// `next_` AudioPacketizationCallback.
+class MonitoringAudioPacketizationCallback : public AudioPacketizationCallback {
  public:
-  ActivityMonitor();
-  int32_t InFrameType(FrameType frame_type);
+  explicit MonitoringAudioPacketizationCallback(
+      AudioPacketizationCallback* next);
+
+  int32_t SendData(AudioFrameType frame_type,
+                   uint8_t payload_type,
+                   uint32_t timestamp,
+                   const uint8_t* payload_data,
+                   size_t payload_len_bytes,
+                   int64_t absolute_capture_timestamp_ms) override;
+
   void PrintStatistics();
   void ResetStatistics();
   void GetStatistics(uint32_t* stats);
@@ -35,9 +44,8 @@ class ActivityMonitor : public ACMVADCallback {
   // 0 - kEmptyFrame
   // 1 - kAudioFrameSpeech
   // 2 - kAudioFrameCN
-  // 3 - kVideoFrameKey (not used by audio)
-  // 4 - kVideoFrameDelta (not used by audio)
-  uint32_t counter_[5];
+  uint32_t counter_[3];
+  AudioPacketizationCallback* const next_;
 };
 
 // TestVadDtx is to verify that VAD/DTX perform as they should. It runs through
@@ -59,14 +67,12 @@ class TestVadDtx {
   // the expectation. Saves result to a file.
   // expects[x] means
   // -1 : do not care,
-  // 0  : there have been no packets of type |x|,
-  // 1  : there have been packets of type |x|,
-  // with |x| indicates the following packet types
+  // 0  : there have been no packets of type `x`,
+  // 1  : there have been packets of type `x`,
+  // with `x` indicates the following packet types
   // 0 - kEmptyFrame
   // 1 - kAudioFrameSpeech
   // 2 - kAudioFrameCN
-  // 3 - kVideoFrameKey (not used by audio)
-  // 4 - kVideoFrameDelta (not used by audio)
   void Run(std::string in_filename,
            int frequency,
            int channels,
@@ -79,7 +85,7 @@ class TestVadDtx {
   std::unique_ptr<AudioCodingModule> acm_send_;
   std::unique_ptr<AudioCodingModule> acm_receive_;
   std::unique_ptr<Channel> channel_;
-  std::unique_ptr<ActivityMonitor> monitor_;
+  std::unique_ptr<MonitoringAudioPacketizationCallback> packetization_callback_;
   uint32_t time_stamp_ = 0x12345678;
 };
 

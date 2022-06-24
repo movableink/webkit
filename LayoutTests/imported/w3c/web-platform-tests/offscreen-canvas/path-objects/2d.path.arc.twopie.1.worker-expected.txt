@@ -1,3 +1,0 @@
-
-FAIL arc() draws nothing when end = start + 2pi-e and anticlockwise Can't find variable: OffscreenCanvas
-

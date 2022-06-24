@@ -26,7 +26,7 @@
 
 #pragma once
 
-#if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+#if ENABLE(VIDEO_PRESENTATION_MODE)
 
 namespace WebCore {
 
@@ -37,7 +37,7 @@ public:
     virtual void requestVideoContentLayer() = 0;
     virtual void returnVideoContentLayer() = 0;
     virtual void didSetupFullscreen() = 0;
-    virtual void didEnterFullscreen() = 0;
+    virtual void didEnterFullscreen(const FloatSize&) = 0;
     virtual void willExitFullscreen() = 0;
     virtual void didExitFullscreen() = 0;
     virtual void didCleanupFullscreen() = 0;

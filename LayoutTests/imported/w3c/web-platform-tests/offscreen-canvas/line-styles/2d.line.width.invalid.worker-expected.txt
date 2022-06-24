@@ -1,3 +1,0 @@
-
-FAIL Setting lineWidth to invalid values is ignored Can't find variable: OffscreenCanvas
-

@@ -25,19 +25,20 @@
 
 #if HAVE(CELESTIAL)
 
-#pragma once
-
 #import <Foundation/Foundation.h>
 
 #if USE(APPLE_INTERNAL_SDK)
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-W#warnings"
 #import <Celestial/AVSystemController.h>
+#pragma clang diagnostic pop
 
 #else
 
 @interface AVSystemController : NSObject
 
-+(AVSystemController*)sharedAVSystemController;
++ (AVSystemController*)sharedAVSystemController;
 
 - (id)attributeForKey:(NSString *)attributeKey;
 - (BOOL)setAttribute:(id)value forKey:(NSString *)attributeKey error:(NSError **)errorPtr;

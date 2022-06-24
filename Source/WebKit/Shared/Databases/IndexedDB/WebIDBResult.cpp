@@ -26,27 +26,25 @@
 #include "config.h"
 #include "WebIDBResult.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "WebCoreArgumentCoders.h"
 
 namespace WebKit {
 
 void WebIDBResult::encode(IPC::Encoder& encoder) const
 {
-    m_resultData.encode(encoder);
-    m_handles.encode(encoder);
+    encoder << m_resultData;
+    encoder << m_handles;
 }
 
 bool WebIDBResult::decode(IPC::Decoder& decoder, WebIDBResult& result)
 {
-    Optional<WebCore::IDBResultData> resultData;
+    std::optional<WebCore::IDBResultData> resultData;
     decoder >> resultData;
     if (!resultData)
         return false;
     result.m_resultData = WTFMove(*resultData);
 
-    Optional<SandboxExtension::HandleArray> handles;
+    std::optional<Vector<SandboxExtension::Handle>> handles;
     decoder >> handles;
     if (!handles)
         return false;
@@ -56,5 +54,3 @@ bool WebIDBResult::decode(IPC::Decoder& decoder, WebIDBResult& result)
 }
 
 } // namespace WebKit
-
-#endif // ENABLE(INDEXED_DATABASE)

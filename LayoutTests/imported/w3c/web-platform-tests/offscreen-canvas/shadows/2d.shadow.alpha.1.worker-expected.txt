@@ -1,3 +1,0 @@
-
-FAIL Shadow colour alpha components are used Can't find variable: OffscreenCanvas
-

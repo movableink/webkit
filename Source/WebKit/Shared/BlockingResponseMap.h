@@ -41,7 +41,7 @@ public:
     std::unique_ptr<T> waitForResponse(uint64_t requestID)
     {
         while (true) {
-            std::unique_lock<Lock> lock(m_mutex);
+            Locker locker { m_responsesLock };
 
             if (m_canceled)
                 return nullptr;
@@ -49,7 +49,7 @@ public:
             if (std::unique_ptr<T> response = m_responses.take(requestID))
                 return response;
 
-            m_condition.wait(lock);
+            m_condition.wait(m_responsesLock);
         }
 
         return nullptr;
@@ -57,7 +57,7 @@ public:
 
     void didReceiveResponse(uint64_t requestID, std::unique_ptr<T> response)
     {
-        std::lock_guard<Lock> lock(m_mutex);
+        Locker locker { m_responsesLock };
         ASSERT(!m_responses.contains(requestID));
 
         m_responses.set(requestID, WTFMove(response));
@@ -75,10 +75,10 @@ public:
     }
 
 private:
-    Lock m_mutex;
+    Lock m_responsesLock;
     Condition m_condition;
 
-    HashMap<uint64_t, std::unique_ptr<T>> m_responses;
+    HashMap<uint64_t, std::unique_ptr<T>> m_responses WTF_GUARDED_BY_LOCK(m_responsesLock);
     bool m_canceled;
 };
 

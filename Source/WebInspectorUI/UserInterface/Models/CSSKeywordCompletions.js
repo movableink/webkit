@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,9 +31,113 @@
 
 WI.CSSKeywordCompletions = {};
 
+WI.CSSKeywordCompletions.forPartialPropertyName = function(text, {caretPosition, allowEmptyPrefix, useFuzzyMatching} = {})
+{
+    allowEmptyPrefix ??= false;
+
+    // FIXME: <webkit.org/b/227157> Styles: Support completions mid-token.
+    if (caretPosition !== text.length)
+        return {prefix: "", completions: []};
+
+    if (!text.length && allowEmptyPrefix)
+        return {prefix: text, completions: WI.cssManager.propertyNameCompletions.values};
+
+    let completions;
+    if (useFuzzyMatching)
+        completions = WI.cssManager.propertyNameCompletions.executeQuery(text);
+    else
+        completions = WI.cssManager.propertyNameCompletions.startsWith(text);
+
+    return {prefix: text, completions};
+};
+
+WI.CSSKeywordCompletions.forPartialPropertyValue = function(text, propertyName, {caretPosition, additionalFunctionValueCompletionsProvider, useFuzzyMatching} = {})
+{
+    caretPosition ??= text.length;
+
+    console.assert(caretPosition >= 0 && caretPosition <= text.length, text, caretPosition);
+    if (caretPosition < 0 || caretPosition > text.length)
+        return {prefix: "", completions: []};
+
+    if (!text.length)
+        return {prefix: "", completions: WI.CSSKeywordCompletions.forProperty(propertyName).values};
+
+    let tokens = WI.tokenizeCSSValue(text);
+
+    // Find the token that the cursor is either in or at the end of.
+    let indexOfTokenAtCaret = -1;
+    let passedCharacters = 0;
+    for (let i = 0; i < tokens.length; ++i) {
+        passedCharacters += tokens[i].value.length;
+        if (passedCharacters >= caretPosition) {
+            indexOfTokenAtCaret = i;
+            break;
+        }
+    }
+
+    let tokenAtCaret = tokens[indexOfTokenAtCaret];
+    console.assert(tokenAtCaret, text, caretPosition);
+    if (!tokenAtCaret)
+        return {prefix: "", completions: []};
+
+    if (tokenAtCaret.type && /\b(comment|string)\b/.test(tokenAtCaret.type))
+        return {prefix: "", completions: []};
+
+    let currentTokenValue = tokenAtCaret.value.trim();
+    let caretIsInMiddleOfToken = caretPosition !== passedCharacters;
+
+    // FIXME: <webkit.org/b/227157 Styles: Support completions mid-token.
+    // If the cursor was in middle of a token or the next token starts with a valid character for a value, we are effectively mid-token.
+    let tokenAfterCaret = tokens[indexOfTokenAtCaret + 1];
+    if ((caretIsInMiddleOfToken && currentTokenValue.length) || (!caretIsInMiddleOfToken && tokenAfterCaret && /[a-zA-Z0-9-]/.test(tokenAfterCaret.value[0])))
+        return {prefix: "", completions: []};
+
+    // If the current token value is a comma or open parenthesis, treat it as if we are at the start of a new token.
+    if (currentTokenValue === "(" || currentTokenValue === ",")
+        currentTokenValue = "";
+
+    // It's not valid CSS to append completions immediately after a closing parenthesis.
+    let tokenBeforeCaret = tokens[indexOfTokenAtCaret - 1];
+    if (currentTokenValue === ")" || tokenBeforeCaret?.value === ")")
+        return {prefix: "", completions: []};
+
+    let functionName = null;
+    let preceedingFunctionDepth = 0;
+    for (let i = indexOfTokenAtCaret; i >= 0; --i) {
+        let value = tokens[i].value;
+
+        // There may be one or more complete functions between the cursor and the current scope's functions name.
+        if (value === ")")
+            ++preceedingFunctionDepth;
+        else if (value === "(") {
+            if (preceedingFunctionDepth)
+                --preceedingFunctionDepth;
+            else {
+                functionName = tokens[i - 1]?.value;
+                break;
+            }
+        }
+    }
+
+    let valueCompletions;
+    if (functionName) {
+        valueCompletions = WI.CSSKeywordCompletions.forFunction(functionName);
+        valueCompletions.addValues(additionalFunctionValueCompletionsProvider?.(functionName) ?? []);
+    } else
+        valueCompletions = WI.CSSKeywordCompletions.forProperty(propertyName);
+
+    let completions;
+    if (useFuzzyMatching)
+        completions = valueCompletions.executeQuery(currentTokenValue);
+    else
+        completions = valueCompletions.startsWith(currentTokenValue);
+
+    return {prefix: currentTokenValue, completions};
+};
+
 WI.CSSKeywordCompletions.forProperty = function(propertyName)
 {
-    let acceptedKeywords = ["initial", "unset", "revert", "var()", "env()"];
+    let acceptedKeywords = ["initial", "unset", "revert", "revert-layer", "var()", "env()"];
 
     function addKeywordsForName(name) {
         let isNotPrefixed = name.charAt(0) !== "-";
@@ -65,12 +169,12 @@ WI.CSSKeywordCompletions.forProperty = function(propertyName)
             addKeywordsForName(longhandName);
     }
 
-    if (acceptedKeywords.includes(WI.CSSKeywordCompletions.AllPropertyNamesPlaceholder) && WI.CSSCompletions.cssNameCompletions) {
+    if (acceptedKeywords.includes(WI.CSSKeywordCompletions.AllPropertyNamesPlaceholder) && WI.cssManager.propertyNameCompletions) {
         acceptedKeywords.remove(WI.CSSKeywordCompletions.AllPropertyNamesPlaceholder);
-        acceptedKeywords.pushAll(WI.CSSCompletions.cssNameCompletions.values);
+        acceptedKeywords.pushAll(WI.cssManager.propertyNameCompletions.values);
     }
 
-    return new WI.CSSCompletions(Array.from(new Set(acceptedKeywords)), true);
+    return new WI.CSSCompletions(Array.from(new Set(acceptedKeywords)), {acceptEmptyPrefix: true});
 };
 
 WI.CSSKeywordCompletions.isColorAwareProperty = function(name)
@@ -114,12 +218,14 @@ WI.CSSKeywordCompletions.forFunction = function(functionName)
         suggestions.push("url()");
     else if (functionName === "repeat")
         suggestions.push("auto", "auto-fill", "auto-fit", "min-content", "max-content");
+    else if (functionName === "steps")
+        suggestions.push("jump-none", "jump-start", "jump-end", "jump-both", "start", "end");
     else if (functionName.endsWith("gradient")) {
         suggestions.push("to", "left", "right", "top", "bottom");
         suggestions.pushAll(WI.CSSKeywordCompletions._colors);
     }
 
-    return new WI.CSSCompletions(suggestions, true);
+    return new WI.CSSCompletions(suggestions, {acceptEmptyPrefix: true});
 };
 
 WI.CSSKeywordCompletions.addCustomCompletions = function(properties)
@@ -136,8 +242,15 @@ WI.CSSKeywordCompletions.addCustomCompletions = function(properties)
         if (property.inherited)
             WI.CSSKeywordCompletions.InheritedProperties.add(property.name);
 
-        if (property.longhands)
+        if (property.longhands) {
             WI.CSSKeywordCompletions.LonghandNamesForShorthandProperty.set(property.name, property.longhands);
+
+            for (let longhand of property.longhands) {
+                let shorthands = WI.CSSKeywordCompletions.ShorthandNamesForLongHandProperty.getOrInitialize(longhand, []);
+                shorthands.push(property.name);
+            }
+        }
+
     }
 };
 
@@ -163,6 +276,7 @@ WI.CSSKeywordCompletions.AllPropertyNamesPlaceholder = "__all-properties__";
 // Populated by CSS.getSupportedCSSProperties.
 WI.CSSKeywordCompletions.PropertyNameForAlias = new Map;
 WI.CSSKeywordCompletions.LonghandNamesForShorthandProperty = new Map;
+WI.CSSKeywordCompletions.ShorthandNamesForLongHandProperty = new Map;
 
 WI.CSSKeywordCompletions.InheritedProperties = new Set([
     // Compatibility (iOS 12): `inherited` didn't exist on `CSSPropertyInfo`
@@ -188,7 +302,6 @@ WI.CSSKeywordCompletions.InheritedProperties = new Set([
     "-webkit-locale",
     "-webkit-nbsp-mode",
     "-webkit-overflow-scrolling",
-    "-webkit-print-color-adjust",
     "-webkit-rtl-ordering",
     "-webkit-ruby-position",
     "-webkit-text-align-last",
@@ -264,6 +377,7 @@ WI.CSSKeywordCompletions.InheritedProperties = new Set([
     "marker-start",
     "orphans",
     "pointer-events",
+    "print-color-adjust",
     "quotes",
     "resize",
     "shape-rendering",
@@ -311,7 +425,8 @@ WI.CSSKeywordCompletions._colors = [
     "paleturquoise", "palevioletred", "papayawhip", "peachpuff", "peru", "pink", "plum", "powderblue", "rebeccapurple", "rosybrown",
     "royalblue", "saddlebrown", "salmon", "sandybrown", "seagreen", "seashell", "sienna", "skyblue", "slateblue",
     "slategray", "slategrey", "snow", "springgreen", "steelblue", "tan", "thistle", "tomato", "turquoise", "violet",
-    "wheat", "whitesmoke", "yellowgreen", "rgb()", "rgba()", "hsl()", "hsla()"
+    "wheat", "whitesmoke", "yellowgreen", "rgb()", "rgba()", "hsl()", "hsla()", "color()", "hwb()", "lch()", "lab()",
+    "color-mix()", "color-contrast()",
 ];
 
 WI.CSSKeywordCompletions._colorAwareProperties = new Set([
@@ -371,8 +486,23 @@ WI.CSSKeywordCompletions._propertyKeywordMap = {
     "baseline-shift": [
         "baseline", "sub", "super"
     ],
+    "block-size": [
+        "auto", "intrinsic", "min-intrinsic", "min-content", "-webkit-min-content", "max-content", "-webkit-max-content", "-webkit-fill-available", "fit-content", "-webkit-fit-content", "calc()",
+    ],
+    "border-block-end-width": [
+        "medium", "thick", "thin", "calc()",
+    ],
+    "border-block-start-width": [
+        "medium", "thick", "thin", "calc()",
+    ],
     "border-bottom-width": [
         "medium", "thick", "thin", "calc()"
+    ],
+    "border-inline-end-width": [
+        "medium", "thick", "thin", "calc()",
+    ],
+    "border-inline-start-width": [
+        "medium", "thick", "thin", "calc()",
     ],
     "font-stretch": [
         "normal", "wider", "narrower", "ultra-condensed", "extra-condensed", "condensed", "semi-condensed",
@@ -436,8 +566,14 @@ WI.CSSKeywordCompletions._propertyKeywordMap = {
     "enable-background": [
         "accumulate", "new"
     ],
+    "font-palette": [
+        "none", "normal", "light", "dark"
+    ],
     "hanging-punctuation": [
         "none", "first", "last", "allow-end", "force-end"
+    ],
+    "inline-size": [
+        "auto", "intrinsic", "min-intrinsic", "min-content", "-webkit-min-content", "max-content", "-webkit-max-content", "-webkit-fill-available", "fit-content", "-webkit-fit-content", "calc()",
     ],
     "overflow": [
         "hidden", "auto", "visible", "scroll", "marquee", "-webkit-paged-x", "-webkit-paged-y"
@@ -445,8 +581,26 @@ WI.CSSKeywordCompletions._propertyKeywordMap = {
     "-webkit-box-reflect": [
         "none", "left", "right", "above", "below"
     ],
+    "margin-block": [
+        "auto",
+    ],
+    "margin-block-end": [
+        "auto",
+    ],
+    "margin-block-start": [
+        "auto",
+    ],
     "margin-bottom": [
         "auto"
+    ],
+    "margin-inline": [
+        "auto",
+    ],
+    "margin-inline-end": [
+        "auto",
+    ],
+    "margin-inline-start": [
+        "auto",
     ],
     "font-weight": [
         "normal", "bold", "bolder", "lighter", "100", "200", "300", "400", "500", "600", "700", "800", "900"
@@ -554,11 +708,23 @@ WI.CSSKeywordCompletions._propertyKeywordMap = {
     "min-width": [
         "auto", "intrinsic", "min-intrinsic", "min-content", "-webkit-min-content", "max-content", "-webkit-max-content", "-webkit-fill-available", "fit-content", "-webkit-fit-content", "calc()"
     ],
+    "max-block-size": [
+        "auto", "intrinsic", "min-intrinsic", "min-content", "-webkit-min-content", "max-content", "-webkit-max-content", "-webkit-fill-available", "fit-content", "-webkit-fit-content", "none", "calc()",
+    ],
     "max-height": [
         "auto", "intrinsic", "min-intrinsic", "min-content", "-webkit-min-content", "max-content", "-webkit-max-content", "-webkit-fill-available", "fit-content", "-webkit-fit-content", "none", "calc()"
     ],
+    "max-inline-size": [
+        "auto", "intrinsic", "min-intrinsic", "min-content", "-webkit-min-content", "max-content", "-webkit-max-content", "-webkit-fill-available", "fit-content", "-webkit-fit-content", "none", "calc()",
+    ],
+    "min-block-size": [
+        "auto", "intrinsic", "min-intrinsic", "min-content", "-webkit-min-content", "max-content", "-webkit-max-content", "-webkit-fill-available", "fit-content", "-webkit-fit-content", "calc()",
+    ],
     "min-height": [
         "auto", "intrinsic", "min-intrinsic", "min-content", "-webkit-min-content", "max-content", "-webkit-max-content", "-webkit-fill-available", "fit-content", "-webkit-fit-content", "calc()"
+    ],
+    "min-inline-size": [
+        "auto", "intrinsic", "min-intrinsic", "min-content", "-webkit-min-content", "max-content", "-webkit-max-content", "-webkit-fill-available", "fit-content", "-webkit-fit-content", "calc()",
     ],
     "letter-spacing": [
         "normal", "calc()"
@@ -611,15 +777,6 @@ WI.CSSKeywordCompletions._propertyKeywordMap = {
     ],
     "perspective-origin": [
         "none", "left", "right", "bottom", "top", "center"
-    ],
-    "-webkit-marquee-increment": [
-        "small", "large", "medium"
-    ],
-    "-webkit-marquee-repetition": [
-        "infinite"
-    ],
-    "-webkit-marquee-speed": [
-        "normal", "slow", "fast"
     ],
     "margin-right": [
         "auto"
@@ -775,9 +932,6 @@ WI.CSSKeywordCompletions._propertyKeywordMap = {
     "scroll-snap-type": [
         "none", "mandatory", "proximity", "x", "y", "inline", "block", "both"
     ],
-    "-webkit-background-composite": [
-        "clear", "copy", "source-over", "source-in", "source-out", "source-atop", "destination-over", "destination-in", "destination-out", "destination-atop", "xor", "plus-darker", "plus-lighter"
-    ],
     "-webkit-mask-composite": [
         "clear", "copy", "source-over", "source-in", "source-out", "source-atop", "destination-over", "destination-in", "destination-out", "destination-atop", "xor", "plus-darker", "plus-lighter"
     ],
@@ -852,7 +1006,7 @@ WI.CSSKeywordCompletions._propertyKeywordMap = {
         "ease", "linear", "ease-in", "ease-out", "ease-in-out", "step-start", "step-end", "steps()", "cubic-bezier()", "spring()",
     ],
     "-webkit-appearance": [
-        "none", "checkbox", "radio", "push-button", "square-button", "button", "button-bevel", "default-button", "inner-spin-button", "listbox", "listitem", "media-controls-background", "media-controls-dark-bar-background", "media-controls-fullscreen-background", "media-controls-light-bar-background", "media-current-time-display", "media-enter-fullscreen-button", "media-exit-fullscreen-button", "media-fullscreen-volume-slider", "media-fullscreen-volume-slider-thumb", "media-mute-button", "media-overlay-play-button", "media-play-button", "media-return-to-realtime-button", "media-rewind-button", "media-seek-back-button", "media-seek-forward-button", "media-slider", "media-sliderthumb", "media-time-remaining-display", "media-toggle-closed-captions-button", "media-volume-slider", "media-volume-slider-container", "media-volume-slider-mute-button", "media-volume-sliderthumb", "menulist", "menulist-button", "menulist-text", "menulist-textfield", "meter", "progress-bar", "progress-bar-value", "slider-horizontal", "slider-vertical", "sliderthumb-horizontal", "sliderthumb-vertical", "caret", "searchfield", "searchfield-decoration", "searchfield-results-decoration", "searchfield-results-button", "searchfield-cancel-button", "snapshotted-plugin-overlay", "textfield", "relevancy-level-indicator", "continuous-capacity-level-indicator", "discrete-capacity-level-indicator", "rating-level-indicator", "image-controls-button", "-apple-pay-button", "textarea", "attachment", "borderless-attachment", "caps-lock-indicator",
+        "none", "checkbox", "radio", "push-button", "square-button", "button", "button-bevel", "default-button", "inner-spin-button", "listbox", "listitem", "media-controls-background", "media-controls-dark-bar-background", "media-controls-fullscreen-background", "media-controls-light-bar-background", "media-current-time-display", "media-enter-fullscreen-button", "media-exit-fullscreen-button", "media-fullscreen-volume-slider", "media-fullscreen-volume-slider-thumb", "media-mute-button", "media-overlay-play-button", "media-play-button", "media-return-to-realtime-button", "media-rewind-button", "media-seek-back-button", "media-seek-forward-button", "media-slider", "media-sliderthumb", "media-time-remaining-display", "media-toggle-closed-captions-button", "media-volume-slider", "media-volume-slider-container", "media-volume-slider-mute-button", "media-volume-sliderthumb", "menulist", "menulist-button", "menulist-text", "menulist-textfield", "meter", "progress-bar", "progress-bar-value", "slider-horizontal", "slider-vertical", "sliderthumb-horizontal", "sliderthumb-vertical", "caret", "searchfield", "searchfield-decoration", "searchfield-results-decoration", "searchfield-results-button", "searchfield-cancel-button", "snapshotted-plugin-overlay", "textfield", "relevancy-level-indicator", "continuous-capacity-level-indicator", "discrete-capacity-level-indicator", "rating-level-indicator", "-apple-pay-button", "textarea", "attachment", "borderless-attachment", "caps-lock-indicator",
     ],
     "-webkit-backface-visibility": [
         "hidden", "visible",
@@ -865,9 +1019,6 @@ WI.CSSKeywordCompletions._propertyKeywordMap = {
     ],
     "-webkit-border-end-width": [
         "medium", "thick", "thin", "calc()",
-    ],
-    "-webkit-border-fit": [
-        "border", "lines",
     ],
     "-webkit-border-start-width": [
         "medium", "thick", "thin", "calc()",
@@ -941,24 +1092,6 @@ WI.CSSKeywordCompletions._propertyKeywordMap = {
     "-webkit-logical-width": [
         "auto", "intrinsic", "min-intrinsic", "min-content", "-webkit-min-content", "max-content", "-webkit-max-content", "-webkit-fill-available", "fit-content", "-webkit-fit-content", "calc()"
     ],
-    "-webkit-margin-after-collapse": [
-        "collapse", "separate", "discard",
-    ],
-    "-webkit-margin-before-collapse": [
-        "collapse", "separate", "discard",
-    ],
-    "-webkit-margin-bottom-collapse": [
-        "collapse", "separate", "discard",
-    ],
-    "-webkit-margin-top-collapse": [
-        "collapse", "separate", "discard",
-    ],
-    "-webkit-marquee-direction": [
-        "left", "right", "auto", "reverse", "forwards", "backwards", "ahead", "up", "down",
-    ],
-    "-webkit-marquee-style": [
-        "none", "scroll", "slide", "alternate",
-    ],
     "-webkit-max-logical-height": [
         "auto", "intrinsic", "min-intrinsic", "min-content", "-webkit-min-content", "max-content", "-webkit-max-content", "-webkit-fill-available", "fit-content", "-webkit-fit-content", "none", "calc()"
     ],
@@ -977,7 +1110,7 @@ WI.CSSKeywordCompletions._propertyKeywordMap = {
     "-webkit-overflow-scrolling": [
         "auto", "touch",
     ],
-    "-webkit-print-color-adjust": [
+    "print-color-adjust": [
         "economy", "exact",
     ],
     "-webkit-rtl-ordering": [
@@ -1197,7 +1330,7 @@ WI.CSSKeywordCompletions._propertyKeywordMap = {
         "auto", "fixed",
     ],
     "text-align": [
-        "-webkit-auto", "left", "right", "center", "justify", "-webkit-left", "-webkit-right", "-webkit-center", "-webkit-match-parent", "start", "end",
+        "-webkit-auto", "left", "right", "center", "justify", "match-parent", "-webkit-left", "-webkit-right", "-webkit-center", "-webkit-match-parent", "start", "end",
     ],
     "text-anchor": [
         "middle", "start", "end",

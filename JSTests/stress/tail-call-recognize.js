@@ -1,18 +1,10 @@
-//@ runNullishAwareOperatorsEnabled
-
 function callerMustBeRun() {
     if (!Object.is(callerMustBeRun.caller, runTests))
         throw new Error("Wrong caller, expected run but got ", callerMustBeRun.caller);
 }
 
 function callerMustBeStrict() {
-    var errorThrown = false;
-    try {
-        callerMustBeStrict.caller;
-    } catch (e) {
-        errorThrown = true;
-    }
-    if (!errorThrown)
+    if (!Object.is(callerMustBeStrict.caller, null))
         throw Error("Wrong caller, expected strict caller but got ", callerMustBeStrict.caller);
 }
 

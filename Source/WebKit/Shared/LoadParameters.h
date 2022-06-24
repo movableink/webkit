@@ -26,11 +26,15 @@
 #pragma once
 
 #include "DataReference.h"
+#include "NetworkResourceLoadIdentifier.h"
+#include "PolicyDecision.h"
 #include "SandboxExtension.h"
 #include "UserData.h"
 #include "WebsitePoliciesData.h"
 #include <WebCore/FrameLoaderTypes.h>
 #include <WebCore/ResourceRequest.h>
+#include <WebCore/ShouldTreatAsContinuingLoad.h>
+#include <WebCore/SubstituteData.h>
 
 OBJC_CLASS NSDictionary;
 
@@ -39,14 +43,18 @@ class Decoder;
 class Encoder;
 }
 
+namespace WebCore {
+typedef int SandboxFlags;
+}
+
 namespace WebKit {
 
 struct LoadParameters {
     void encode(IPC::Encoder&) const;
-    static bool decode(IPC::Decoder&, LoadParameters&);
+    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, LoadParameters&);
 
     void platformEncode(IPC::Encoder&) const;
-    static bool platformDecode(IPC::Decoder&, LoadParameters&);
+    static WARN_UNUSED_RETURN bool platformDecode(IPC::Decoder&, LoadParameters&);
 
     uint64_t navigationID;
 
@@ -61,17 +69,27 @@ struct LoadParameters {
     String unreachableURLString;
     String provisionalLoadErrorURLString;
 
-    Optional<WebsitePoliciesData> websitePolicies;
+    std::optional<WebsitePoliciesData> websitePolicies;
 
     WebCore::ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy { WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow };
-    bool shouldTreatAsContinuingLoad { false };
+    WebCore::ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad { WebCore::ShouldTreatAsContinuingLoad::No };
     UserData userData;
     WebCore::LockHistory lockHistory { WebCore::LockHistory::No };
     WebCore::LockBackForwardList lockBackForwardList { WebCore::LockBackForwardList::No };
+    WebCore::SubstituteData::SessionHistoryVisibility sessionHistoryVisibility { WebCore::SubstituteData::SessionHistoryVisibility::Visible };
     String clientRedirectSourceForHistory;
+    WebCore::SandboxFlags effectiveSandboxFlags { 0 };
+    std::optional<NavigatingToAppBoundDomain> isNavigatingToAppBoundDomain;
+    std::optional<NetworkResourceLoadIdentifier> existingNetworkResourceLoadIdentifierToResume;
+    bool isServiceWorkerLoad { false };
 
 #if PLATFORM(COCOA)
     RetainPtr<NSDictionary> dataDetectionContext;
+    Vector<SandboxExtension::Handle> networkExtensionSandboxExtensionHandles;
+#endif
+#if PLATFORM(IOS)
+    std::optional<SandboxExtension::Handle> contentFilterExtensionHandle;
+    std::optional<SandboxExtension::Handle> frontboardServiceExtensionHandle;
 #endif
 };
 

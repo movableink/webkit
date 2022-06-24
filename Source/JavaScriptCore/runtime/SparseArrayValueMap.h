@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "JSTypeInfo.h"
 #include "PropertyDescriptor.h"
 #include "PutDirectIndexMode.h"
+#include "VM.h"
 #include "WriteBarrier.h"
 #include <wtf/HashMap.h>
 
@@ -48,7 +49,7 @@ public:
 
     void get(JSObject*, PropertySlot&) const;
     void get(PropertyDescriptor&) const;
-    bool put(ExecState*, JSValue thisValue, SparseArrayValueMap*, JSValue, bool shouldThrow);
+    bool put(JSGlobalObject*, JSValue thisValue, SparseArrayValueMap*, JSValue, bool shouldThrow);
     JSValue getNonSparseMode() const;
     JSValue getConcurrently() const;
 
@@ -105,10 +106,16 @@ public:
     
     static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
+
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.sparseArrayValueMapSpace();
+    }
     
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     bool sparseMode()
     {
@@ -131,8 +138,8 @@ public:
     }
 
     // These methods may mutate the contents of the map
-    bool putEntry(ExecState*, JSObject*, unsigned, JSValue, bool shouldThrow);
-    bool putDirect(ExecState*, JSObject*, unsigned, JSValue, unsigned attributes, PutDirectIndexMode);
+    bool putEntry(JSGlobalObject*, JSObject*, unsigned, JSValue, bool shouldThrow);
+    bool putDirect(JSGlobalObject*, JSObject*, unsigned, JSValue, unsigned attributes, PutDirectIndexMode);
     AddResult add(JSObject*, unsigned);
     iterator find(unsigned i) { return m_map.find(i); }
     // This should ASSERT the remove is valid (check the result of the find).

@@ -84,10 +84,9 @@ for (const c in constructorProperties) {
         assert.isUndef(instance.exports.__proto__);
         assert.eq(Reflect.isExtensible(instance.exports), false);
         assert.eq(Symbol.iterator in instance.exports, false);
-        assert.eq(Symbol.toStringTag in instance.exports, true);
-        assert.eq(Object.getOwnPropertySymbols(instance.exports).length, 1);
-        assert.eq(Object.getOwnPropertySymbols(instance.exports)[0], Symbol.toStringTag);
-        assert.throws(() => instance.exports[Symbol.toStringTag] = 42, TypeError, `Attempted to assign to readonly property.`);
+        assert.eq(Symbol.toStringTag in instance.exports, false);
+        assert.eq(Object.getOwnPropertySymbols(instance.exports).length, 0);
+        assert.throws(() => instance.exports[Symbol.toStringTag] = 42, TypeError, `Attempting to define property on object that is not extensible.`);
         break;
     case "Memory":
         new WebAssembly.Memory({initial: 20});
@@ -109,7 +108,7 @@ for (const c in constructorProperties) {
             assert.eq(typeof e.stack, "string");
             const sillyString = "uh-oh!";
             const e2 = new WebAssembly[c](sillyString);
-            assert.eq(e2.message, sillyString + " (evaluating 'new WebAssembly[c](sillyString)')");
+            assert.eq(e2.message, sillyString);
         }
         {
             const e = WebAssembly[c]();

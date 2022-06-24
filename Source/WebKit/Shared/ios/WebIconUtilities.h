@@ -27,14 +27,16 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+#import <wtf/RetainPtr.h>
+
 @class UIImage;
 
 namespace WebKit {
 
-UIImage *fallbackIconForFile(NSURL *file);
-UIImage *iconForImageFile(NSURL *file);
-UIImage *iconForVideoFile(NSURL *file);
-UIImage *iconForFile(NSURL *file);
+RetainPtr<UIImage> fallbackIconForFile(NSURL *file);
+RetainPtr<UIImage> iconForImageFile(NSURL *file);
+RetainPtr<UIImage> iconForVideoFile(NSURL *file);
+RetainPtr<UIImage> iconForFile(NSURL *file);
 
 }
 

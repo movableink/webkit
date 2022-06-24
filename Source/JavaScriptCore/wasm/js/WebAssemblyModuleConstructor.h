@@ -47,14 +47,13 @@ public:
 
     DECLARE_INFO;
 
-    static JSWebAssemblyModule* createModule(ExecState*, Vector<uint8_t>&& buffer);
-
-protected:
-    void finishCreation(VM&, WebAssemblyModulePrototype*);
+    static JSWebAssemblyModule* createModule(JSGlobalObject*, CallFrame*, Vector<uint8_t>&& buffer);
 
 private:
     WebAssemblyModuleConstructor(VM&, Structure*);
+    void finishCreation(VM&, WebAssemblyModulePrototype*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(WebAssemblyModuleConstructor, InternalFunction);
 
 } // namespace JSC
 

@@ -12,6 +12,7 @@
 
 #include <string.h>
 
+#include <algorithm>
 #include <limits>
 #include <map>
 #include <memory>
@@ -20,27 +21,30 @@
 
 #include "api/video/video_bitrate_allocation.h"
 #include "api/video/video_bitrate_allocator.h"
-#include "common_types.h"  // NOLINT(build/include)
 #include "modules/rtp_rtcp/source/rtcp_packet/bye.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/common_header.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/compound_packet.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/extended_reports.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/fir.h"
+#include "modules/rtp_rtcp/source/rtcp_packet/loss_notification.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/nack.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/pli.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/rapid_resync_request.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/receiver_report.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/remb.h"
+#include "modules/rtp_rtcp/source/rtcp_packet/remote_estimate.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/sdes.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/sender_report.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/tmmbn.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/tmmbr.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/transport_feedback.h"
 #include "modules/rtp_rtcp/source/rtp_rtcp_config.h"
+#include "modules/rtp_rtcp/source/rtp_rtcp_impl2.h"
 #include "modules/rtp_rtcp/source/time_util.h"
 #include "modules/rtp_rtcp/source/tmmbr_help.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
+#include "rtc_base/time_utils.h"
 #include "rtc_base/trace_event.h"
 #include "system_wrappers/include/ntp_time.h"
 
@@ -59,139 +63,213 @@ const int64_t kMaxWarningLogIntervalMs = 10000;
 const int64_t kRtcpMinFrameLengthMs = 17;
 
 // Maximum number of received RRTRs that will be stored.
-const size_t kMaxNumberOfStoredRrtrs = 200;
+const size_t kMaxNumberOfStoredRrtrs = 300;
+
+constexpr TimeDelta kDefaultVideoReportInterval = TimeDelta::Seconds(1);
+constexpr TimeDelta kDefaultAudioReportInterval = TimeDelta::Seconds(5);
+
+// Returns true if the `timestamp` has exceeded the |interval *
+// kRrTimeoutIntervals| period and was reset (set to PlusInfinity()). Returns
+// false if the timer was either already reset or if it has not expired.
+bool ResetTimestampIfExpired(const Timestamp now,
+                             Timestamp& timestamp,
+                             TimeDelta interval) {
+  if (timestamp.IsInfinite() ||
+      now <= timestamp + interval * kRrTimeoutIntervals) {
+    return false;
+  }
+
+  timestamp = Timestamp::PlusInfinity();
+  return true;
+}
 
 }  // namespace
+
+constexpr size_t RTCPReceiver::RegisteredSsrcs::kMediaSsrcIndex;
+constexpr size_t RTCPReceiver::RegisteredSsrcs::kMaxSsrcs;
+
+RTCPReceiver::RegisteredSsrcs::RegisteredSsrcs(
+    bool disable_sequence_checker,
+    const RtpRtcpInterface::Configuration& config)
+    : packet_sequence_checker_(disable_sequence_checker) {
+  packet_sequence_checker_.Detach();
+  ssrcs_.push_back(config.local_media_ssrc);
+  if (config.rtx_send_ssrc) {
+    ssrcs_.push_back(*config.rtx_send_ssrc);
+  }
+  if (config.fec_generator) {
+    absl::optional<uint32_t> flexfec_ssrc = config.fec_generator->FecSsrc();
+    if (flexfec_ssrc) {
+      ssrcs_.push_back(*flexfec_ssrc);
+    }
+  }
+  // Ensure that the RegisteredSsrcs can inline the SSRCs.
+  RTC_DCHECK_LE(ssrcs_.size(), RTCPReceiver::RegisteredSsrcs::kMaxSsrcs);
+}
+
+bool RTCPReceiver::RegisteredSsrcs::contains(uint32_t ssrc) const {
+  RTC_DCHECK_RUN_ON(&packet_sequence_checker_);
+  return absl::c_linear_search(ssrcs_, ssrc);
+}
+
+uint32_t RTCPReceiver::RegisteredSsrcs::media_ssrc() const {
+  RTC_DCHECK_RUN_ON(&packet_sequence_checker_);
+  return ssrcs_[kMediaSsrcIndex];
+}
+
+void RTCPReceiver::RegisteredSsrcs::set_media_ssrc(uint32_t ssrc) {
+  RTC_DCHECK_RUN_ON(&packet_sequence_checker_);
+  ssrcs_[kMediaSsrcIndex] = ssrc;
+}
 
 struct RTCPReceiver::PacketInformation {
   uint32_t packet_type_flags = 0;  // RTCPPacketTypeFlags bit field.
 
   uint32_t remote_ssrc = 0;
   std::vector<uint16_t> nack_sequence_numbers;
+  // TODO(hbos): Remove `report_blocks` in favor of `report_block_datas`.
   ReportBlockList report_blocks;
+  std::vector<ReportBlockData> report_block_datas;
   int64_t rtt_ms = 0;
   uint32_t receiver_estimated_max_bitrate_bps = 0;
   std::unique_ptr<rtcp::TransportFeedback> transport_feedback;
   absl::optional<VideoBitrateAllocation> target_bitrate_allocation;
+  absl::optional<NetworkStateEstimate> network_state_estimate;
+  std::unique_ptr<rtcp::LossNotification> loss_notification;
 };
 
-// Structure for handing TMMBR and TMMBN rtcp messages (RFC5104, section 3.5.4).
-struct RTCPReceiver::TmmbrInformation {
-  struct TimedTmmbrItem {
-    rtcp::TmmbItem tmmbr_item;
-    int64_t last_updated_ms;
-  };
-
-  int64_t last_time_received_ms = 0;
-
-  bool ready_for_delete = false;
-
-  std::vector<rtcp::TmmbItem> tmmbn;
-  std::map<uint32_t, TimedTmmbrItem> tmmbr;
-};
-
-// Structure for storing received RRTR RTCP messages (RFC3611, section 4.4).
-struct RTCPReceiver::RrtrInformation {
-  RrtrInformation(uint32_t ssrc,
-                  uint32_t received_remote_mid_ntp_time,
-                  uint32_t local_receive_mid_ntp_time)
-      : ssrc(ssrc),
-        received_remote_mid_ntp_time(received_remote_mid_ntp_time),
-        local_receive_mid_ntp_time(local_receive_mid_ntp_time) {}
-
-  uint32_t ssrc;
-  // Received NTP timestamp in compact representation.
-  uint32_t received_remote_mid_ntp_time;
-  // NTP time when the report was received in compact representation.
-  uint32_t local_receive_mid_ntp_time;
-};
-
-struct RTCPReceiver::ReportBlockWithRtt {
-  RTCPReportBlock report_block;
-
-  int64_t last_rtt_ms = 0;
-  int64_t min_rtt_ms = 0;
-  int64_t max_rtt_ms = 0;
-  int64_t sum_rtt_ms = 0;
-  size_t num_rtts = 0;
-};
-
-struct RTCPReceiver::LastFirStatus {
-  LastFirStatus(int64_t now_ms, uint8_t sequence_number)
-      : request_ms(now_ms), sequence_number(sequence_number) {}
-  int64_t request_ms;
-  uint8_t sequence_number;
-};
-
-RTCPReceiver::RTCPReceiver(
-    Clock* clock,
-    bool receiver_only,
-    RtcpPacketTypeCounterObserver* packet_type_counter_observer,
-    RtcpBandwidthObserver* rtcp_bandwidth_observer,
-    RtcpIntraFrameObserver* rtcp_intra_frame_observer,
-    TransportFeedbackObserver* transport_feedback_observer,
-    VideoBitrateAllocationObserver* bitrate_allocation_observer,
-    int report_interval_ms,
-    ModuleRtpRtcp* owner)
-    : clock_(clock),
-      receiver_only_(receiver_only),
+RTCPReceiver::RTCPReceiver(const RtpRtcpInterface::Configuration& config,
+                           ModuleRtpRtcpImpl2* owner)
+    : clock_(config.clock),
+      receiver_only_(config.receiver_only),
       rtp_rtcp_(owner),
-      rtcp_bandwidth_observer_(rtcp_bandwidth_observer),
-      rtcp_intra_frame_observer_(rtcp_intra_frame_observer),
-      transport_feedback_observer_(transport_feedback_observer),
-      bitrate_allocation_observer_(bitrate_allocation_observer),
-      report_interval_ms_(report_interval_ms),
-      main_ssrc_(0),
+      main_ssrc_(config.local_media_ssrc),
+      registered_ssrcs_(false, config),
+      rtcp_bandwidth_observer_(config.bandwidth_callback),
+      rtcp_intra_frame_observer_(config.intra_frame_callback),
+      rtcp_loss_notification_observer_(config.rtcp_loss_notification_observer),
+      network_state_estimate_observer_(config.network_state_estimate_observer),
+      transport_feedback_observer_(config.transport_feedback_callback),
+      bitrate_allocation_observer_(config.bitrate_allocation_observer),
+      report_interval_(config.rtcp_report_interval_ms > 0
+                           ? TimeDelta::Millis(config.rtcp_report_interval_ms)
+                           : (config.audio ? kDefaultAudioReportInterval
+                                           : kDefaultVideoReportInterval)),
+      // TODO(bugs.webrtc.org/10774): Remove fallback.
       remote_ssrc_(0),
       remote_sender_rtp_time_(0),
-      xr_rrtr_status_(false),
+      remote_sender_packet_count_(0),
+      remote_sender_octet_count_(0),
+      remote_sender_reports_count_(0),
+      xr_rrtr_status_(config.non_sender_rtt_measurement),
       xr_rr_rtt_ms_(0),
       oldest_tmmbr_info_ms_(0),
-      last_received_rb_ms_(0),
-      last_increased_sequence_number_ms_(0),
-      stats_callback_(nullptr),
-      packet_type_counter_observer_(packet_type_counter_observer),
+      cname_callback_(config.rtcp_cname_callback),
+      report_block_data_observer_(config.report_block_data_observer),
+      packet_type_counter_observer_(config.rtcp_packet_type_counter_observer),
       num_skipped_packets_(0),
-      last_skipped_packets_warning_ms_(clock->TimeInMilliseconds()) {
+      last_skipped_packets_warning_ms_(clock_->TimeInMilliseconds()) {
   RTC_DCHECK(owner);
+}
+
+RTCPReceiver::RTCPReceiver(const RtpRtcpInterface::Configuration& config,
+                           ModuleRtpRtcp* owner)
+    : clock_(config.clock),
+      receiver_only_(config.receiver_only),
+      rtp_rtcp_(owner),
+      main_ssrc_(config.local_media_ssrc),
+      registered_ssrcs_(true, config),
+      rtcp_bandwidth_observer_(config.bandwidth_callback),
+      rtcp_intra_frame_observer_(config.intra_frame_callback),
+      rtcp_loss_notification_observer_(config.rtcp_loss_notification_observer),
+      network_state_estimate_observer_(config.network_state_estimate_observer),
+      transport_feedback_observer_(config.transport_feedback_callback),
+      bitrate_allocation_observer_(config.bitrate_allocation_observer),
+      report_interval_(config.rtcp_report_interval_ms > 0
+                           ? TimeDelta::Millis(config.rtcp_report_interval_ms)
+                           : (config.audio ? kDefaultAudioReportInterval
+                                           : kDefaultVideoReportInterval)),
+      // TODO(bugs.webrtc.org/10774): Remove fallback.
+      remote_ssrc_(0),
+      remote_sender_rtp_time_(0),
+      remote_sender_packet_count_(0),
+      remote_sender_octet_count_(0),
+      remote_sender_reports_count_(0),
+      xr_rrtr_status_(config.non_sender_rtt_measurement),
+      xr_rr_rtt_ms_(0),
+      oldest_tmmbr_info_ms_(0),
+      cname_callback_(config.rtcp_cname_callback),
+      report_block_data_observer_(config.report_block_data_observer),
+      packet_type_counter_observer_(config.rtcp_packet_type_counter_observer),
+      num_skipped_packets_(0),
+      last_skipped_packets_warning_ms_(clock_->TimeInMilliseconds()) {
+  RTC_DCHECK(owner);
+  // Dear reader - if you're here because of this log statement and are
+  // wondering what this is about, chances are that you are using an instance
+  // of RTCPReceiver without using the webrtc APIs. This creates a bit of a
+  // problem for WebRTC because this class is a part of an internal
+  // implementation that is constantly changing and being improved.
+  // The intention of this log statement is to give a heads up that changes
+  // are coming and encourage you to use the public APIs or be prepared that
+  // things might break down the line as more changes land. A thing you could
+  // try out for now is to replace the `CustomSequenceChecker` in the header
+  // with a regular `SequenceChecker` and see if that triggers an
+  // error in your code. If it does, chances are you have your own threading
+  // model that is not the same as WebRTC internally has.
+  RTC_LOG(LS_INFO) << "************** !!!DEPRECATION WARNING!! **************";
 }
 
 RTCPReceiver::~RTCPReceiver() {}
 
-void RTCPReceiver::IncomingPacket(const uint8_t* packet, size_t packet_size) {
-  if (packet_size == 0) {
+void RTCPReceiver::IncomingPacket(rtc::ArrayView<const uint8_t> packet) {
+  if (packet.empty()) {
     RTC_LOG(LS_WARNING) << "Incoming empty RTCP packet";
     return;
   }
 
   PacketInformation packet_information;
-  if (!ParseCompoundPacket(packet, packet + packet_size, &packet_information))
+  if (!ParseCompoundPacket(packet, &packet_information))
     return;
   TriggerCallbacksFromRtcpPacket(packet_information);
 }
 
+// This method is only used by test and legacy code, so we should be able to
+// remove it soon.
 int64_t RTCPReceiver::LastReceivedReportBlockMs() const {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
-  return last_received_rb_ms_;
+  MutexLock lock(&rtcp_receiver_lock_);
+  return last_received_rb_.IsFinite() ? last_received_rb_.ms() : 0;
 }
 
 void RTCPReceiver::SetRemoteSSRC(uint32_t ssrc) {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
+  MutexLock lock(&rtcp_receiver_lock_);
   // New SSRC reset old reports.
   last_received_sr_ntp_.Reset();
   remote_ssrc_ = ssrc;
 }
 
+void RTCPReceiver::set_local_media_ssrc(uint32_t ssrc) {
+  registered_ssrcs_.set_media_ssrc(ssrc);
+}
+
+uint32_t RTCPReceiver::local_media_ssrc() const {
+  return registered_ssrcs_.media_ssrc();
+}
+
 uint32_t RTCPReceiver::RemoteSSRC() const {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
+  MutexLock lock(&rtcp_receiver_lock_);
   return remote_ssrc_;
 }
 
-void RTCPReceiver::SetSsrcs(uint32_t main_ssrc,
-                            const std::set<uint32_t>& registered_ssrcs) {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
-  main_ssrc_ = main_ssrc;
-  registered_ssrcs_ = registered_ssrcs;
+void RTCPReceiver::RttStats::AddRtt(TimeDelta rtt) {
+  last_rtt_ = rtt;
+  if (rtt < min_rtt_) {
+    min_rtt_ = rtt;
+  }
+  if (rtt > max_rtt_) {
+    max_rtt_ = rtt;
+  }
+  sum_rtt_ += rtt;
+  ++num_rtts_;
 }
 
 int32_t RTCPReceiver::RTT(uint32_t remote_ssrc,
@@ -199,44 +277,49 @@ int32_t RTCPReceiver::RTT(uint32_t remote_ssrc,
                           int64_t* avg_rtt_ms,
                           int64_t* min_rtt_ms,
                           int64_t* max_rtt_ms) const {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
+  MutexLock lock(&rtcp_receiver_lock_);
 
-  auto it = received_report_blocks_.find(main_ssrc_);
-  if (it == received_report_blocks_.end())
+  auto it = rtts_.find(remote_ssrc);
+  if (it == rtts_.end()) {
     return -1;
+  }
 
-  auto it_info = it->second.find(remote_ssrc);
-  if (it_info == it->second.end())
-    return -1;
+  if (last_rtt_ms) {
+    *last_rtt_ms = it->second.last_rtt().ms();
+  }
 
-  const ReportBlockWithRtt* report_block = &it_info->second;
+  if (avg_rtt_ms) {
+    *avg_rtt_ms = it->second.average_rtt().ms();
+  }
 
-  if (report_block->num_rtts == 0)
-    return -1;
+  if (min_rtt_ms) {
+    *min_rtt_ms = it->second.min_rtt().ms();
+  }
 
-  if (last_rtt_ms)
-    *last_rtt_ms = report_block->last_rtt_ms;
-
-  if (avg_rtt_ms)
-    *avg_rtt_ms = report_block->sum_rtt_ms / report_block->num_rtts;
-
-  if (min_rtt_ms)
-    *min_rtt_ms = report_block->min_rtt_ms;
-
-  if (max_rtt_ms)
-    *max_rtt_ms = report_block->max_rtt_ms;
+  if (max_rtt_ms) {
+    *max_rtt_ms = it->second.max_rtt().ms();
+  }
 
   return 0;
 }
 
-void RTCPReceiver::SetRtcpXrRrtrStatus(bool enable) {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
-  xr_rrtr_status_ = enable;
+RTCPReceiver::NonSenderRttStats RTCPReceiver::GetNonSenderRTT() const {
+  MutexLock lock(&rtcp_receiver_lock_);
+  auto it = non_sender_rtts_.find(remote_ssrc_);
+  if (it == non_sender_rtts_.end()) {
+    return {};
+  }
+  return it->second;
+}
+
+void RTCPReceiver::SetNonSenderRttMeasurement(bool enabled) {
+  MutexLock lock(&rtcp_receiver_lock_);
+  xr_rrtr_status_ = enabled;
 }
 
 bool RTCPReceiver::GetAndResetXrRrRtt(int64_t* rtt_ms) {
   RTC_DCHECK(rtt_ms);
-  rtc::CritScope lock(&rtcp_receiver_lock_);
+  MutexLock lock(&rtcp_receiver_lock_);
   if (xr_rr_rtt_ms_ == 0) {
     return false;
   }
@@ -245,12 +328,57 @@ bool RTCPReceiver::GetAndResetXrRrRtt(int64_t* rtt_ms) {
   return true;
 }
 
+// Called regularly (1/sec) on the worker thread to do rtt  calculations.
+absl::optional<TimeDelta> RTCPReceiver::OnPeriodicRttUpdate(
+    Timestamp newer_than,
+    bool sending) {
+  // Running on the worker thread (same as construction thread).
+  absl::optional<TimeDelta> rtt;
+
+  if (sending) {
+    // Check if we've received a report block within the last kRttUpdateInterval
+    // amount of time.
+    MutexLock lock(&rtcp_receiver_lock_);
+    if (last_received_rb_.IsInfinite() || last_received_rb_ > newer_than) {
+      TimeDelta max_rtt = TimeDelta::MinusInfinity();
+      for (const auto& rtt_stats : rtts_) {
+        if (rtt_stats.second.last_rtt() > max_rtt) {
+          max_rtt = rtt_stats.second.last_rtt();
+        }
+      }
+      if (max_rtt.IsFinite()) {
+        rtt = max_rtt;
+      }
+    }
+
+    // Check for expired timers and if so, log and reset.
+    auto now = clock_->CurrentTime();
+    if (RtcpRrTimeoutLocked(now)) {
+      RTC_LOG_F(LS_WARNING) << "Timeout: No RTCP RR received.";
+    } else if (RtcpRrSequenceNumberTimeoutLocked(now)) {
+      RTC_LOG_F(LS_WARNING) << "Timeout: No increase in RTCP RR extended "
+                               "highest sequence number.";
+    }
+  } else {
+    // Report rtt from receiver.
+    int64_t rtt_ms;
+    if (GetAndResetXrRrRtt(&rtt_ms)) {
+      rtt.emplace(TimeDelta::Millis(rtt_ms));
+    }
+  }
+
+  return rtt;
+}
+
 bool RTCPReceiver::NTP(uint32_t* received_ntp_secs,
                        uint32_t* received_ntp_frac,
                        uint32_t* rtcp_arrival_time_secs,
                        uint32_t* rtcp_arrival_time_frac,
-                       uint32_t* rtcp_timestamp) const {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
+                       uint32_t* rtcp_timestamp,
+                       uint32_t* remote_sender_packet_count,
+                       uint64_t* remote_sender_octet_count,
+                       uint64_t* remote_sender_reports_count) const {
+  MutexLock lock(&rtcp_receiver_lock_);
   if (!last_received_sr_ntp_.Valid())
     return false;
 
@@ -259,7 +387,6 @@ bool RTCPReceiver::NTP(uint32_t* received_ntp_secs,
     *received_ntp_secs = remote_sender_ntp_time_.seconds();
   if (received_ntp_frac)
     *received_ntp_frac = remote_sender_ntp_time_.fractions();
-
   // Rtp time from incoming SenderReport.
   if (rtcp_timestamp)
     *rtcp_timestamp = remote_sender_rtp_time_;
@@ -270,20 +397,27 @@ bool RTCPReceiver::NTP(uint32_t* received_ntp_secs,
   if (rtcp_arrival_time_frac)
     *rtcp_arrival_time_frac = last_received_sr_ntp_.fractions();
 
+  // Counters.
+  if (remote_sender_packet_count)
+    *remote_sender_packet_count = remote_sender_packet_count_;
+  if (remote_sender_octet_count)
+    *remote_sender_octet_count = remote_sender_octet_count_;
+  if (remote_sender_reports_count)
+    *remote_sender_reports_count = remote_sender_reports_count_;
+
   return true;
 }
 
 std::vector<rtcp::ReceiveTimeInfo>
 RTCPReceiver::ConsumeReceivedXrReferenceTimeInfo() {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
+  MutexLock lock(&rtcp_receiver_lock_);
 
   const size_t last_xr_rtis_size = std::min(
       received_rrtrs_.size(), rtcp::ExtendedReports::kMaxNumberOfDlrrItems);
   std::vector<rtcp::ReceiveTimeInfo> last_xr_rtis;
   last_xr_rtis.reserve(last_xr_rtis_size);
 
-  const uint32_t now_ntp =
-      CompactNtp(TimeMicrosToNtp(clock_->TimeInMicroseconds()));
+  const uint32_t now_ntp = CompactNtp(clock_->CurrentNtpTime());
 
   for (size_t i = 0; i < last_xr_rtis_size; ++i) {
     RrtrInformation& rrtr = received_rrtrs_.front();
@@ -296,29 +430,36 @@ RTCPReceiver::ConsumeReceivedXrReferenceTimeInfo() {
   return last_xr_rtis;
 }
 
-// We can get multiple receive reports when we receive the report from a CE.
-int32_t RTCPReceiver::StatisticsReceived(
-    std::vector<RTCPReportBlock>* receive_blocks) const {
-  RTC_DCHECK(receive_blocks);
-  rtc::CritScope lock(&rtcp_receiver_lock_);
-  for (const auto& reports_per_receiver : received_report_blocks_)
-    for (const auto& report : reports_per_receiver.second)
-      receive_blocks->push_back(report.second.report_block);
-  return 0;
+std::vector<ReportBlockData> RTCPReceiver::GetLatestReportBlockData() const {
+  std::vector<ReportBlockData> result;
+  MutexLock lock(&rtcp_receiver_lock_);
+  for (const auto& report : received_report_blocks_) {
+    result.push_back(report.second);
+  }
+  return result;
 }
 
-bool RTCPReceiver::ParseCompoundPacket(const uint8_t* packet_begin,
-                                       const uint8_t* packet_end,
+bool RTCPReceiver::ParseCompoundPacket(rtc::ArrayView<const uint8_t> packet,
                                        PacketInformation* packet_information) {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
+  MutexLock lock(&rtcp_receiver_lock_);
 
   CommonHeader rtcp_block;
-  for (const uint8_t* next_block = packet_begin; next_block != packet_end;
+  // If a sender report is received but no DLRR, we need to reset the
+  // roundTripTime stat according to the standard, see
+  // https://www.w3.org/TR/webrtc-stats/#dom-rtcremoteoutboundrtpstreamstats-roundtriptime
+  struct RtcpReceivedBlock {
+    bool sender_report = false;
+    bool dlrr = false;
+  };
+  // For each remote SSRC we store if we've received a sender report or a DLRR
+  // block.
+  flat_map<uint32_t, RtcpReceivedBlock> received_blocks;
+  for (const uint8_t* next_block = packet.begin(); next_block != packet.end();
        next_block = rtcp_block.NextPacket()) {
-    ptrdiff_t remaining_blocks_size = packet_end - next_block;
+    ptrdiff_t remaining_blocks_size = packet.end() - next_block;
     RTC_DCHECK_GT(remaining_blocks_size, 0);
     if (!rtcp_block.Parse(next_block, remaining_blocks_size)) {
-      if (next_block == packet_begin) {
+      if (next_block == packet.begin()) {
         // Failed to parse 1st header, nothing was extracted from this packet.
         RTC_LOG(LS_WARNING) << "Incoming invalid RTCP packet";
         return false;
@@ -333,6 +474,7 @@ bool RTCPReceiver::ParseCompoundPacket(const uint8_t* packet_begin,
     switch (rtcp_block.type()) {
       case rtcp::SenderReport::kPacketType:
         HandleSenderReport(rtcp_block, packet_information);
+        received_blocks[packet_information->remote_ssrc].sender_report = true;
         break;
       case rtcp::ReceiverReport::kPacketType:
         HandleReceiverReport(rtcp_block, packet_information);
@@ -340,11 +482,20 @@ bool RTCPReceiver::ParseCompoundPacket(const uint8_t* packet_begin,
       case rtcp::Sdes::kPacketType:
         HandleSdes(rtcp_block, packet_information);
         break;
-      case rtcp::ExtendedReports::kPacketType:
-        HandleXr(rtcp_block, packet_information);
+      case rtcp::ExtendedReports::kPacketType: {
+        bool contains_dlrr = false;
+        uint32_t ssrc = 0;
+        HandleXr(rtcp_block, packet_information, contains_dlrr, ssrc);
+        if (contains_dlrr) {
+          received_blocks[ssrc].dlrr = true;
+        }
         break;
+      }
       case rtcp::Bye::kPacketType:
         HandleBye(rtcp_block);
+        break;
+      case rtcp::App::kPacketType:
+        HandleApp(rtcp_block, packet_information);
         break;
       case rtcp::Rtpfb::kPacketType:
         switch (rtcp_block.fmt()) {
@@ -376,7 +527,7 @@ bool RTCPReceiver::ParseCompoundPacket(const uint8_t* packet_begin,
           case rtcp::Fir::kFeedbackMessageType:
             HandleFir(rtcp_block, packet_information);
             break;
-          case rtcp::Remb::kFeedbackMessageType:
+          case rtcp::Psfb::kAfbMessageType:
             HandlePsfbApp(rtcp_block, packet_information);
             break;
           default:
@@ -390,20 +541,30 @@ bool RTCPReceiver::ParseCompoundPacket(const uint8_t* packet_begin,
     }
   }
 
+  for (const auto& rb : received_blocks) {
+    if (rb.second.sender_report && !rb.second.dlrr) {
+      auto rtt_stats = non_sender_rtts_.find(rb.first);
+      if (rtt_stats != non_sender_rtts_.end()) {
+        rtt_stats->second.Invalidate();
+      }
+    }
+  }
+
   if (packet_type_counter_observer_) {
     packet_type_counter_observer_->RtcpPacketTypesCounterUpdated(
         main_ssrc_, packet_type_counter_);
   }
 
-  int64_t now_ms = clock_->TimeInMilliseconds();
-  if (now_ms - last_skipped_packets_warning_ms_ >= kMaxWarningLogIntervalMs &&
-      num_skipped_packets_ > 0) {
-    last_skipped_packets_warning_ms_ = now_ms;
-    RTC_LOG(LS_WARNING)
-        << num_skipped_packets_
-        << " RTCP blocks were skipped due to being malformed or of "
-           "unrecognized/unsupported type, during the past "
-        << (kMaxWarningLogIntervalMs / 1000) << " second period.";
+  if (num_skipped_packets_ > 0) {
+    const int64_t now_ms = clock_->TimeInMilliseconds();
+    if (now_ms - last_skipped_packets_warning_ms_ >= kMaxWarningLogIntervalMs) {
+      last_skipped_packets_warning_ms_ = now_ms;
+      RTC_LOG(LS_WARNING)
+          << num_skipped_packets_
+          << " RTCP blocks were skipped due to being malformed or of "
+             "unrecognized/unsupported type, during the past "
+          << (kMaxWarningLogIntervalMs / 1000) << " second period.";
+    }
   }
 
   return true;
@@ -430,7 +591,10 @@ void RTCPReceiver::HandleSenderReport(const CommonHeader& rtcp_block,
 
     remote_sender_ntp_time_ = sender_report.ntp();
     remote_sender_rtp_time_ = sender_report.rtp_timestamp();
-    last_received_sr_ntp_ = TimeMicrosToNtp(clock_->TimeInMicroseconds());
+    last_received_sr_ntp_ = clock_->CurrentNtpTime();
+    remote_sender_packet_count_ = sender_report.sender_packet_count();
+    remote_sender_octet_count_ = sender_report.sender_octet_count();
+    remote_sender_reports_count_++;
   } else {
     // We will only store the send report from one source, but
     // we will store all the receive blocks.
@@ -470,35 +634,35 @@ void RTCPReceiver::HandleReportBlock(const ReportBlock& report_block,
   //
   // We can calc RTT if we send a send report and get a report block back.
 
-  // |report_block.source_ssrc()| is the SSRC identifier of the source to
+  // `report_block.source_ssrc()` is the SSRC identifier of the source to
   // which the information in this reception report block pertains.
 
   // Filter out all report blocks that are not for us.
-  if (registered_ssrcs_.count(report_block.source_ssrc()) == 0)
+  if (!registered_ssrcs_.contains(report_block.source_ssrc()))
     return;
 
-  last_received_rb_ms_ = clock_->TimeInMilliseconds();
+  last_received_rb_ = clock_->CurrentTime();
 
-  ReportBlockWithRtt* report_block_info =
-      &received_report_blocks_[report_block.source_ssrc()][remote_ssrc];
-  report_block_info->report_block.sender_ssrc = remote_ssrc;
-  report_block_info->report_block.source_ssrc = report_block.source_ssrc();
-  report_block_info->report_block.fraction_lost = report_block.fraction_lost();
-  report_block_info->report_block.packets_lost =
-      report_block.cumulative_lost_signed();
+  ReportBlockData* report_block_data =
+      &received_report_blocks_[report_block.source_ssrc()];
+  RTCPReportBlock rtcp_report_block;
+  rtcp_report_block.sender_ssrc = remote_ssrc;
+  rtcp_report_block.source_ssrc = report_block.source_ssrc();
+  rtcp_report_block.fraction_lost = report_block.fraction_lost();
+  rtcp_report_block.packets_lost = report_block.cumulative_lost_signed();
   if (report_block.extended_high_seq_num() >
-      report_block_info->report_block.extended_highest_sequence_number) {
+      report_block_data->report_block().extended_highest_sequence_number) {
     // We have successfully delivered new RTP packets to the remote side after
     // the last RR was sent from the remote side.
-    last_increased_sequence_number_ms_ = clock_->TimeInMilliseconds();
+    last_increased_sequence_number_ = last_received_rb_;
   }
-  report_block_info->report_block.extended_highest_sequence_number =
+  rtcp_report_block.extended_highest_sequence_number =
       report_block.extended_high_seq_num();
-  report_block_info->report_block.jitter = report_block.jitter();
-  report_block_info->report_block.delay_since_last_sender_report =
+  rtcp_report_block.jitter = report_block.jitter();
+  rtcp_report_block.delay_since_last_sender_report =
       report_block.delay_since_last_sr();
-  report_block_info->report_block.last_sender_report_timestamp =
-      report_block.last_sr();
+  rtcp_report_block.last_sender_report_timestamp = report_block.last_sr();
+  report_block_data->SetReportBlock(rtcp_report_block, rtc::TimeUTCMicros());
 
   int64_t rtt_ms = 0;
   uint32_t send_time_ntp = report_block.last_sr();
@@ -507,7 +671,7 @@ void RTCPReceiver::HandleReportBlock(const ReportBlock& report_block,
   // Receiver rtp_rtcp module is not expected to calculate rtt using
   // Sender Reports even if it accidentally can.
 
-  // TODO(nisse): Use this way to determine the RTT only when |receiver_only_|
+  // TODO(nisse): Use this way to determine the RTT only when `receiver_only_`
   // is false. However, that currently breaks the tests of the
   // googCaptureStartNtpTimeMs stat for audio receive streams. To fix, either
   // delete all dependencies on RTT measurements for audio receive streams, or
@@ -517,27 +681,23 @@ void RTCPReceiver::HandleReportBlock(const ReportBlock& report_block,
     uint32_t delay_ntp = report_block.delay_since_last_sr();
     // Local NTP time.
     uint32_t receive_time_ntp =
-        CompactNtp(TimeMicrosToNtp(clock_->TimeInMicroseconds()));
+        CompactNtp(clock_->ConvertTimestampToNtpTime(last_received_rb_));
 
     // RTT in 1/(2^16) seconds.
     uint32_t rtt_ntp = receive_time_ntp - delay_ntp - send_time_ntp;
     // Convert to 1/1000 seconds (milliseconds).
     rtt_ms = CompactNtpRttToMs(rtt_ntp);
-    if (rtt_ms > report_block_info->max_rtt_ms)
-      report_block_info->max_rtt_ms = rtt_ms;
-
-    if (report_block_info->num_rtts == 0 ||
-        rtt_ms < report_block_info->min_rtt_ms)
-      report_block_info->min_rtt_ms = rtt_ms;
-
-    report_block_info->last_rtt_ms = rtt_ms;
-    report_block_info->sum_rtt_ms += rtt_ms;
-    ++report_block_info->num_rtts;
+    report_block_data->AddRoundTripTimeSample(rtt_ms);
+    if (report_block.source_ssrc() == main_ssrc_) {
+      rtts_[remote_ssrc].AddRtt(TimeDelta::Millis(rtt_ms));
+    }
 
     packet_information->rtt_ms = rtt_ms;
   }
 
-  packet_information->report_blocks.push_back(report_block_info->report_block);
+  packet_information->report_blocks.push_back(
+      report_block_data->report_block());
+  packet_information->report_block_datas.push_back(*report_block_data);
 }
 
 RTCPReceiver::TmmbrInformation* RTCPReceiver::FindOrCreateTmmbrInfo(
@@ -563,37 +723,22 @@ RTCPReceiver::TmmbrInformation* RTCPReceiver::GetTmmbrInformation(
   return &it->second;
 }
 
+// These two methods (RtcpRrTimeout and RtcpRrSequenceNumberTimeout) only exist
+// for tests and legacy code (rtp_rtcp_impl.cc). We should be able to to delete
+// the methods and require that access to the locked variables only happens on
+// the worker thread and thus no locking is needed.
 bool RTCPReceiver::RtcpRrTimeout() {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
-  if (last_received_rb_ms_ == 0)
-    return false;
-
-  int64_t time_out_ms = kRrTimeoutIntervals * report_interval_ms_;
-  if (clock_->TimeInMilliseconds() > last_received_rb_ms_ + time_out_ms) {
-    // Reset the timer to only trigger one log.
-    last_received_rb_ms_ = 0;
-    return true;
-  }
-  return false;
+  MutexLock lock(&rtcp_receiver_lock_);
+  return RtcpRrTimeoutLocked(clock_->CurrentTime());
 }
 
 bool RTCPReceiver::RtcpRrSequenceNumberTimeout() {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
-  if (last_increased_sequence_number_ms_ == 0)
-    return false;
-
-  int64_t time_out_ms = kRrTimeoutIntervals * report_interval_ms_;
-  if (clock_->TimeInMilliseconds() >
-      last_increased_sequence_number_ms_ + time_out_ms) {
-    // Reset the timer to only trigger one log.
-    last_increased_sequence_number_ms_ = 0;
-    return true;
-  }
-  return false;
+  MutexLock lock(&rtcp_receiver_lock_);
+  return RtcpRrSequenceNumberTimeoutLocked(clock_->CurrentTime());
 }
 
 bool RTCPReceiver::UpdateTmmbrTimers() {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
+  MutexLock lock(&rtcp_receiver_lock_);
 
   int64_t now_ms = clock_->TimeInMilliseconds();
   int64_t timeout_ms = now_ms - kTmmbrTimeoutIntervalMs;
@@ -630,7 +775,7 @@ bool RTCPReceiver::UpdateTmmbrTimers() {
 }
 
 std::vector<rtcp::TmmbItem> RTCPReceiver::BoundingSet(bool* tmmbr_owner) {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
+  MutexLock lock(&rtcp_receiver_lock_);
   TmmbrInformation* tmmbr_info = GetTmmbrInformation(remote_ssrc_);
   if (!tmmbr_info)
     return std::vector<rtcp::TmmbItem>();
@@ -648,12 +793,8 @@ void RTCPReceiver::HandleSdes(const CommonHeader& rtcp_block,
   }
 
   for (const rtcp::Sdes::Chunk& chunk : sdes.chunks()) {
-    received_cnames_[chunk.ssrc] = chunk.cname;
-    {
-      rtc::CritScope lock(&feedbacks_lock_);
-      if (stats_callback_)
-        stats_callback_->CNameChanged(chunk.cname.c_str(), chunk.ssrc);
-    }
+    if (cname_callback_)
+      cname_callback_->OnCname(chunk.ssrc, chunk.cname);
   }
   packet_information->packet_type_flags |= kRtcpSdes;
 }
@@ -683,6 +824,22 @@ void RTCPReceiver::HandleNack(const CommonHeader& rtcp_block,
   }
 }
 
+void RTCPReceiver::HandleApp(const rtcp::CommonHeader& rtcp_block,
+                             PacketInformation* packet_information) {
+  rtcp::App app;
+  if (app.Parse(rtcp_block)) {
+    if (app.name() == rtcp::RemoteEstimate::kName &&
+        app.sub_type() == rtcp::RemoteEstimate::kSubType) {
+      rtcp::RemoteEstimate estimate(std::move(app));
+      if (estimate.ParseData()) {
+        packet_information->network_state_estimate = estimate.estimate();
+        return;
+      }
+    }
+  }
+  ++num_skipped_packets_;
+}
+
 void RTCPReceiver::HandleBye(const CommonHeader& rtcp_block) {
   rtcp::Bye bye;
   if (!bye.Parse(rtcp_block)) {
@@ -691,15 +848,16 @@ void RTCPReceiver::HandleBye(const CommonHeader& rtcp_block) {
   }
 
   // Clear our lists.
-  for (auto& reports_per_receiver : received_report_blocks_)
-    reports_per_receiver.second.erase(bye.sender_ssrc());
+  rtts_.erase(bye.sender_ssrc());
+  EraseIf(received_report_blocks_, [&](const auto& elem) {
+    return elem.second.report_block().sender_ssrc == bye.sender_ssrc();
+  });
 
   TmmbrInformation* tmmbr_info = GetTmmbrInformation(bye.sender_ssrc());
   if (tmmbr_info)
     tmmbr_info->ready_for_delete = true;
 
   last_fir_.erase(bye.sender_ssrc());
-  received_cnames_.erase(bye.sender_ssrc());
   auto it = received_rrtrs_ssrc_it_.find(bye.sender_ssrc());
   if (it != received_rrtrs_ssrc_it_.end()) {
     received_rrtrs_.erase(it->second);
@@ -709,18 +867,22 @@ void RTCPReceiver::HandleBye(const CommonHeader& rtcp_block) {
 }
 
 void RTCPReceiver::HandleXr(const CommonHeader& rtcp_block,
-                            PacketInformation* packet_information) {
+                            PacketInformation* packet_information,
+                            bool& contains_dlrr,
+                            uint32_t& ssrc) {
   rtcp::ExtendedReports xr;
   if (!xr.Parse(rtcp_block)) {
     ++num_skipped_packets_;
     return;
   }
+  ssrc = xr.sender_ssrc();
+  contains_dlrr = !xr.dlrr().sub_blocks().empty();
 
   if (xr.rrtr())
     HandleXrReceiveReferenceTime(xr.sender_ssrc(), *xr.rrtr());
 
   for (const rtcp::ReceiveTimeInfo& time_info : xr.dlrr().sub_blocks())
-    HandleXrDlrrReportBlock(time_info);
+    HandleXrDlrrReportBlock(xr.sender_ssrc(), time_info);
 
   if (xr.target_bitrate()) {
     HandleXrTargetBitrate(xr.sender_ssrc(), *xr.target_bitrate(),
@@ -731,8 +893,7 @@ void RTCPReceiver::HandleXr(const CommonHeader& rtcp_block,
 void RTCPReceiver::HandleXrReceiveReferenceTime(uint32_t sender_ssrc,
                                                 const rtcp::Rrtr& rrtr) {
   uint32_t received_remote_mid_ntp_time = CompactNtp(rrtr.ntp());
-  uint32_t local_receive_mid_ntp_time =
-      CompactNtp(TimeMicrosToNtp(clock_->TimeInMicroseconds()));
+  uint32_t local_receive_mid_ntp_time = CompactNtp(clock_->CurrentNtpTime());
 
   auto it = received_rrtrs_ssrc_it_.find(sender_ssrc);
   if (it != received_rrtrs_ssrc_it_.end()) {
@@ -750,8 +911,9 @@ void RTCPReceiver::HandleXrReceiveReferenceTime(uint32_t sender_ssrc,
   }
 }
 
-void RTCPReceiver::HandleXrDlrrReportBlock(const rtcp::ReceiveTimeInfo& rti) {
-  if (registered_ssrcs_.count(rti.ssrc) == 0)  // Not to us.
+void RTCPReceiver::HandleXrDlrrReportBlock(uint32_t sender_ssrc,
+                                           const rtcp::ReceiveTimeInfo& rti) {
+  if (!registered_ssrcs_.contains(rti.ssrc))  // Not to us.
     return;
 
   // Caller should explicitly enable rtt calculation using extended reports.
@@ -762,14 +924,21 @@ void RTCPReceiver::HandleXrDlrrReportBlock(const rtcp::ReceiveTimeInfo& rti) {
   uint32_t send_time_ntp = rti.last_rr;
   // RFC3611, section 4.5, LRR field discription states:
   // If no such block has been received, the field is set to zero.
-  if (send_time_ntp == 0)
+  if (send_time_ntp == 0) {
+    auto rtt_stats = non_sender_rtts_.find(sender_ssrc);
+    if (rtt_stats != non_sender_rtts_.end()) {
+      rtt_stats->second.Invalidate();
+    }
     return;
+  }
 
   uint32_t delay_ntp = rti.delay_since_last_rr;
-  uint32_t now_ntp = CompactNtp(TimeMicrosToNtp(clock_->TimeInMicroseconds()));
+  uint32_t now_ntp = CompactNtp(clock_->CurrentNtpTime());
 
   uint32_t rtt_ntp = now_ntp - delay_ntp - send_time_ntp;
   xr_rr_rtt_ms_ = CompactNtpRttToMs(rtt_ntp);
+
+  non_sender_rtts_[sender_ssrc].Update(TimeDelta::Millis(xr_rr_rtt_ms_));
 }
 
 void RTCPReceiver::HandleXrTargetBitrate(
@@ -834,7 +1003,9 @@ void RTCPReceiver::HandleTmmbr(const CommonHeader& rtcp_block,
     auto* entry = &tmmbr_info->tmmbr[sender_ssrc];
     entry->tmmbr_item = rtcp::TmmbItem(sender_ssrc, request.bitrate_bps(),
                                        request.packet_overhead());
-    entry->last_updated_ms = clock_->TimeInMilliseconds();
+    // FindOrCreateTmmbrInfo always sets `last_time_received_ms` to
+    // `clock_->TimeInMilliseconds()`.
+    entry->last_updated_ms = tmmbr_info->last_time_received_ms;
 
     packet_information->packet_type_flags |= kRtcpTmmbr;
     break;
@@ -869,12 +1040,26 @@ void RTCPReceiver::HandleSrReq(const CommonHeader& rtcp_block,
 
 void RTCPReceiver::HandlePsfbApp(const CommonHeader& rtcp_block,
                                  PacketInformation* packet_information) {
-  rtcp::Remb remb;
-  if (remb.Parse(rtcp_block)) {
-    packet_information->packet_type_flags |= kRtcpRemb;
-    packet_information->receiver_estimated_max_bitrate_bps = remb.bitrate_bps();
-    return;
+  {
+    rtcp::Remb remb;
+    if (remb.Parse(rtcp_block)) {
+      packet_information->packet_type_flags |= kRtcpRemb;
+      packet_information->receiver_estimated_max_bitrate_bps =
+          remb.bitrate_bps();
+      return;
+    }
   }
+
+  {
+    auto loss_notification = std::make_unique<rtcp::LossNotification>();
+    if (loss_notification->Parse(rtcp_block)) {
+      packet_information->packet_type_flags |= kRtcpLossNotification;
+      packet_information->loss_notification = std::move(loss_notification);
+      return;
+    }
+  }
+
+  RTC_LOG(LS_WARNING) << "Unknown PSFB-APP packet.";
 
   ++num_skipped_packets_;
 }
@@ -887,6 +1072,10 @@ void RTCPReceiver::HandleFir(const CommonHeader& rtcp_block,
     return;
   }
 
+  if (fir.requests().empty())
+    return;
+
+  const int64_t now_ms = clock_->TimeInMilliseconds();
   for (const rtcp::Fir::Request& fir_request : fir.requests()) {
     // Is it our sender that is requested to generate a new keyframe.
     if (main_ssrc_ != fir_request.ssrc)
@@ -894,7 +1083,6 @@ void RTCPReceiver::HandleFir(const CommonHeader& rtcp_block,
 
     ++packet_type_counter_.fir_packets;
 
-    int64_t now_ms = clock_->TimeInMilliseconds();
     auto inserted = last_fir_.insert(std::make_pair(
         fir.sender_ssrc(), LastFirStatus(now_ms, fir_request.seq_nr)));
     if (!inserted.second) {  // There was already an entry.
@@ -946,17 +1134,6 @@ void RTCPReceiver::NotifyTmmbrUpdated() {
   rtp_rtcp_->SetTmmbn(std::move(bounding));
 }
 
-void RTCPReceiver::RegisterRtcpStatisticsCallback(
-    RtcpStatisticsCallback* callback) {
-  rtc::CritScope cs(&feedbacks_lock_);
-  stats_callback_ = callback;
-}
-
-RtcpStatisticsCallback* RTCPReceiver::GetRtcpStatisticsCallback() {
-  rtc::CritScope cs(&feedbacks_lock_);
-  return stats_callback_;
-}
-
 // Holding no Critical section.
 void RTCPReceiver::TriggerCallbacksFromRtcpPacket(
     const PacketInformation& packet_information) {
@@ -966,14 +1143,7 @@ void RTCPReceiver::TriggerCallbacksFromRtcpPacket(
     // Might trigger a OnReceivedBandwidthEstimateUpdate.
     NotifyTmmbrUpdated();
   }
-  uint32_t local_ssrc;
-  std::set<uint32_t> registered_ssrcs;
-  {
-    // We don't want to hold this critsect when triggering the callbacks below.
-    rtc::CritScope lock(&rtcp_receiver_lock_);
-    local_ssrc = main_ssrc_;
-    registered_ssrcs = registered_ssrcs_;
-  }
+
   if (!receiver_only_ && (packet_information.packet_type_flags & kRtcpSrReq)) {
     rtp_rtcp_->OnRequestSendReport();
   }
@@ -1000,7 +1170,19 @@ void RTCPReceiver::TriggerCallbacksFromRtcpPacket(
         RTC_LOG(LS_VERBOSE)
             << "Incoming FIR from SSRC " << packet_information.remote_ssrc;
       }
-      rtcp_intra_frame_observer_->OnReceivedIntraFrameRequest(local_ssrc);
+      rtcp_intra_frame_observer_->OnReceivedIntraFrameRequest(main_ssrc_);
+    }
+  }
+  if (rtcp_loss_notification_observer_ &&
+      (packet_information.packet_type_flags & kRtcpLossNotification)) {
+    rtcp::LossNotification* loss_notification =
+        packet_information.loss_notification.get();
+    RTC_DCHECK(loss_notification);
+    if (loss_notification->media_ssrc() == main_ssrc_) {
+      rtcp_loss_notification_observer_->OnReceivedLossNotification(
+          loss_notification->media_ssrc(), loss_notification->last_decoded(),
+          loss_notification->last_received(),
+          loss_notification->decodability_flag());
     }
   }
   if (rtcp_bandwidth_observer_) {
@@ -1028,11 +1210,17 @@ void RTCPReceiver::TriggerCallbacksFromRtcpPacket(
       (packet_information.packet_type_flags & kRtcpTransportFeedback)) {
     uint32_t media_source_ssrc =
         packet_information.transport_feedback->media_ssrc();
-    if (media_source_ssrc == local_ssrc ||
-        registered_ssrcs.find(media_source_ssrc) != registered_ssrcs.end()) {
+    if (media_source_ssrc == main_ssrc_ ||
+        registered_ssrcs_.contains(media_source_ssrc)) {
       transport_feedback_observer_->OnTransportFeedback(
           *packet_information.transport_feedback);
     }
+  }
+
+  if (network_state_estimate_observer_ &&
+      packet_information.network_state_estimate) {
+    network_state_estimate_observer_->OnRemoteNetworkEstimate(
+        *packet_information.network_state_estimate);
   }
 
   if (bitrate_allocation_observer_ &&
@@ -1042,38 +1230,18 @@ void RTCPReceiver::TriggerCallbacksFromRtcpPacket(
   }
 
   if (!receiver_only_) {
-    rtc::CritScope cs(&feedbacks_lock_);
-    if (stats_callback_) {
-      for (const auto& report_block : packet_information.report_blocks) {
-        RtcpStatistics stats;
-        stats.packets_lost = report_block.packets_lost;
-        stats.extended_highest_sequence_number =
-            report_block.extended_highest_sequence_number;
-        stats.fraction_lost = report_block.fraction_lost;
-        stats.jitter = report_block.jitter;
-
-        stats_callback_->StatisticsUpdated(stats, report_block.source_ssrc);
+    if (report_block_data_observer_) {
+      for (const auto& report_block_data :
+           packet_information.report_block_datas) {
+        report_block_data_observer_->OnReportBlockDataUpdated(
+            report_block_data);
       }
     }
   }
 }
 
-int32_t RTCPReceiver::CNAME(uint32_t remoteSSRC,
-                            char cName[RTCP_CNAME_SIZE]) const {
-  RTC_DCHECK(cName);
-
-  rtc::CritScope lock(&rtcp_receiver_lock_);
-  auto received_cname_it = received_cnames_.find(remoteSSRC);
-  if (received_cname_it == received_cnames_.end())
-    return -1;
-
-  size_t length = received_cname_it->second.copy(cName, RTCP_CNAME_SIZE - 1);
-  cName[length] = 0;
-  return 0;
-}
-
 std::vector<rtcp::TmmbItem> RTCPReceiver::TmmbrReceived() {
-  rtc::CritScope lock(&rtcp_receiver_lock_);
+  MutexLock lock(&rtcp_receiver_lock_);
   std::vector<rtcp::TmmbItem> candidates;
 
   int64_t now_ms = clock_->TimeInMilliseconds();
@@ -1091,6 +1259,15 @@ std::vector<rtcp::TmmbItem> RTCPReceiver::TmmbrReceived() {
     }
   }
   return candidates;
+}
+
+bool RTCPReceiver::RtcpRrTimeoutLocked(Timestamp now) {
+  return ResetTimestampIfExpired(now, last_received_rb_, report_interval_);
+}
+
+bool RTCPReceiver::RtcpRrSequenceNumberTimeoutLocked(Timestamp now) {
+  return ResetTimestampIfExpired(now, last_increased_sequence_number_,
+                                 report_interval_);
 }
 
 }  // namespace webrtc

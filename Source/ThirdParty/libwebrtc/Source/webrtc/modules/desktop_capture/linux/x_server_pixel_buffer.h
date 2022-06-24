@@ -16,12 +16,16 @@
 #include <X11/Xutil.h>
 #include <X11/extensions/XShm.h>
 
+#include <memory>
+#include <vector>
+
 #include "modules/desktop_capture/desktop_geometry.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 
 class DesktopFrame;
+class XAtomCache;
 
 // A class to allow the X server's pixel buffer to be accessed as efficiently
 // as possible.
@@ -32,9 +36,9 @@ class XServerPixelBuffer {
 
   void Release();
 
-  // Allocate (or reallocate) the pixel buffer for |window|. Returns false in
+  // Allocate (or reallocate) the pixel buffer for `window`. Returns false in
   // case of an error (e.g. window doesn't exist).
-  bool Init(Display* display, Window window);
+  bool Init(XAtomCache* cache, Window window);
 
   bool is_initialized() { return window_ != 0; }
 
@@ -54,10 +58,10 @@ class XServerPixelBuffer {
   // beginning.
   void Synchronize();
 
-  // Capture the specified rectangle and stores it in the |frame|. In the case
+  // Capture the specified rectangle and stores it in the `frame`. In the case
   // where the full-screen data is captured by Synchronize(), this simply
   // returns the pointer without doing any more work. The caller must ensure
-  // that |rect| is not larger than window_size().
+  // that `rect` is not larger than window_size().
   bool CaptureRect(const DesktopRect& rect, DesktopFrame* frame);
 
  private:
@@ -75,6 +79,7 @@ class XServerPixelBuffer {
   Pixmap shm_pixmap_ = 0;
   GC shm_gc_ = nullptr;
   bool xshm_get_image_succeeded_ = false;
+  std::vector<uint8_t> icc_profile_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(XServerPixelBuffer);
 };

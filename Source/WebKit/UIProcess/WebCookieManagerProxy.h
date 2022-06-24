@@ -29,11 +29,11 @@
 #include "GenericCallback.h"
 #include "MessageReceiver.h"
 #include "WebContextSupplement.h"
-#include "WebCookieManagerProxyClient.h"
 #include <pal/SessionID.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
+#include <wtf/WeakHashSet.h>
 
 #if USE(SOUP)
 #include "SoupCookiePersistentStorageType.h"
@@ -52,19 +52,12 @@ namespace WebKit {
 class WebProcessPool;
 class WebProcessProxy;
 
-typedef GenericCallback<API::Array*> ArrayCallback;
-typedef GenericCallback<HTTPCookieAcceptPolicy> HTTPCookieAcceptPolicyCallback;
-typedef GenericCallback<const Vector<WebCore::Cookie>&> GetCookiesCallback;
-
-class WebCookieManagerProxy : public API::ObjectImpl<API::Object::Type::CookieManager>, public WebContextSupplement, private IPC::MessageReceiver {
+class WebCookieManagerProxy : public IPC::MessageReceiver {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static const char* supplementName();
-
-    static Ref<WebCookieManagerProxy> create(WebProcessPool*);
+    WebCookieManagerProxy(NetworkProcessProxy&);
     virtual ~WebCookieManagerProxy();
 
-    void initializeClient(const WKCookieManagerClientBase*);
-    
     void getHostnamesWithCookies(PAL::SessionID, CompletionHandler<void(Vector<String>&&)>&&);
     void deleteCookie(PAL::SessionID, const WebCore::Cookie&, CompletionHandler<void()>&&);
     void deleteCookiesForHostnames(PAL::SessionID, const Vector<String>&);
@@ -77,19 +70,16 @@ public:
     void getAllCookies(PAL::SessionID, CompletionHandler<void(Vector<WebCore::Cookie>&&)>&&);
     void getCookies(PAL::SessionID, const URL&, CompletionHandler<void(Vector<WebCore::Cookie>&&)>&&);
 
-    void setHTTPCookieAcceptPolicy(PAL::SessionID, HTTPCookieAcceptPolicy, CompletionHandler<void()>&&);
-    void getHTTPCookieAcceptPolicy(PAL::SessionID, CompletionHandler<void(HTTPCookieAcceptPolicy)>&&);
+    void setHTTPCookieAcceptPolicy(PAL::SessionID, WebCore::HTTPCookieAcceptPolicy, CompletionHandler<void()>&&);
+    void getHTTPCookieAcceptPolicy(PAL::SessionID, CompletionHandler<void(WebCore::HTTPCookieAcceptPolicy)>&&);
 
     void startObservingCookieChanges(PAL::SessionID);
     void stopObservingCookieChanges(PAL::SessionID);
 
-    void setCookieObserverCallback(PAL::SessionID, WTF::Function<void ()>&&);
-
-    class Observer {
+    class Observer : public CanMakeWeakPtr<Observer> {
     public:
         virtual ~Observer() { }
         virtual void cookiesDidChange() = 0;
-        virtual void managerDestroyed() = 0;
     };
 
     void registerObserver(PAL::SessionID, Observer&);
@@ -97,40 +87,17 @@ public:
 
 #if USE(SOUP)
     void setCookiePersistentStorage(PAL::SessionID, const String& storagePath, SoupCookiePersistentStorageType);
-    void getCookiePersistentStorage(PAL::SessionID, String& storagePath, SoupCookiePersistentStorageType&) const;
 #endif
 
-    using API::Object::ref;
-    using API::Object::deref;
-
 private:
-    WebCookieManagerProxy(WebProcessPool*);
-
     void cookiesDidChange(PAL::SessionID);
-
-    // WebContextSupplement
-    void processPoolDestroyed() override;
-    void processDidClose(WebProcessProxy*) override;
-    void processDidClose(NetworkProcessProxy*) override;
-    void refWebContextSupplement() override;
-    void derefWebContextSupplement() override;
 
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
-#if PLATFORM(COCOA)
-    void persistHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicy);
-#endif
+    HashMap<PAL::SessionID, WeakHashSet<Observer>> m_cookieObservers;
 
-    HashMap<PAL::SessionID, WTF::Function<void ()>> m_legacyCookieObservers;
-    HashMap<PAL::SessionID, HashSet<Observer*>> m_cookieObservers;
-
-    WebCookieManagerProxyClient m_client;
-
-#if USE(SOUP)
-    using CookiePersistentStorageMap = HashMap<PAL::SessionID, std::pair<String, SoupCookiePersistentStorageType>>;
-    CookiePersistentStorageMap m_cookiePersistentStorageMap;
-#endif
+    WeakPtr<NetworkProcessProxy> m_networkProcess;
 };
 
 } // namespace WebKit

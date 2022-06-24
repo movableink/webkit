@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2007, 2010-2016 Apple Inc. All rights reserved.
+# Copyright (C) 2005-2021 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
 # Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
@@ -47,6 +47,11 @@ use POSIX;
 use Time::HiRes qw(usleep);
 use VCSUtils;
 
+unless (defined(&decode_json)) {
+    eval "use JSON::XS;";
+    eval "use JSON::PP;" if $@;
+}
+
 BEGIN {
    use Exporter   ();
    our ($VERSION, @ISA, @EXPORT, @EXPORT_OK, %EXPORT_TAGS);
@@ -70,17 +75,12 @@ BEGIN {
        &debugSafari
        &executableProductDir
        &extractNonHostConfiguration
-       &findOrCreateSimulatorForIOSDevice
-       &iosSimulatorDeviceByName
        &iosVersion
        &nmPath
        &passedConfiguration
        &prependToEnvironmentVariableList
        &printHelpAndExitForRunAndDebugWebKitAppIfNeeded
        &productDir
-       &quitIOSSimulator
-       &relaunchIOSSimulator
-       &restartIOSSimulatorDevice
        &runIOSWebKitApp
        &runMacWebKitApp
        &safariPath
@@ -91,11 +91,12 @@ BEGIN {
        &setupUnixWebKitEnvironment
        &sharedCommandLineOptions
        &sharedCommandLineOptionsUsage
-       &shutDownIOSSimulatorDevice
+       &shouldUseFlatpak
+       &runInFlatpak
+       &sourceDir
        &willUseIOSDeviceSDK
        &willUseIOSSimulatorSDK
        DO_NOT_USE_OPEN_COMMAND
-       SIMULATOR_DEVICE_SUFFIX_FOR_WEBKIT_DEVELOPMENT
        USE_OPEN_COMMAND
    );
    %EXPORT_TAGS = ( );
@@ -122,8 +123,8 @@ use constant {
 
 use constant USE_OPEN_COMMAND => 1; # Used in runMacWebKitApp().
 use constant DO_NOT_USE_OPEN_COMMAND => 2;
-use constant SIMULATOR_DEVICE_STATE_SHUTDOWN => "1";
-use constant SIMULATOR_DEVICE_STATE_BOOTED => "3";
+use constant SIMULATOR_DEVICE_STATE_SHUTDOWN => "Shutdown";
+use constant SIMULATOR_DEVICE_STATE_BOOTED => "Booted";
 use constant SIMULATOR_DEVICE_SUFFIX_FOR_WEBKIT_DEVELOPMENT  => "For WebKit Development";
 
 # See table "Certificate types and names" on <https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/MaintainingCertificates/MaintainingCertificates.html#//apple_ref/doc/uid/TP40012582-CH31-SW41>.
@@ -132,7 +133,12 @@ use constant IOS_DEVELOPMENT_CERTIFICATE_NAME_PREFIX => "iPhone Developer: ";
 our @EXPORT_OK;
 
 my $architecture;
+my %nativeArchitectureMap = ();
 my $asanIsEnabled;
+my $tsanIsEnabled;
+my $ubsanIsEnabled;
+my $coverageIsEnabled;
+my $forceOptimizationLevel;
 my $ltoMode;
 my $numberOfCPUs;
 my $maxCPULoad;
@@ -140,6 +146,8 @@ my $baseProductDir;
 my @baseProductDirOption;
 my $configuration;
 my $xcodeSDK;
+my $xcodeSDKPlatformName;
+my $simulatorIdiom;
 my $configurationForVisualStudio;
 my $configurationProductDir;
 my $sourceDir;
@@ -160,6 +168,7 @@ my $shouldNotUseNinja;
 my $xcodeVersion;
 
 my $unknownPortProhibited = 0;
+my @originalArgv = @ARGV;
 
 # Variables for Win32 support
 my $programFilesPath;
@@ -333,6 +342,15 @@ sub setBaseProductDir($)
     ($baseProductDir) = @_;
 }
 
+sub setCreatedByXcodeBuildSystem
+{
+    determineBaseProductDir();
+    make_path($baseProductDir);
+    # This attribute is needed to support VALIDATE_DEPENDENCIES and other diagnostics.
+    my @xattr = ("xattr", "-w", "com.apple.xcode.CreatedByBuildSystem", "true", $baseProductDir);
+    system(@xattr) == 0 or die "xattr failed: $?";
+}
+
 sub determineConfiguration
 {
     return if defined $configuration;
@@ -351,16 +369,55 @@ sub determineConfiguration
     }
 }
 
+sub determineNativeArchitecture($)
+{
+    my ($remotes) = @_;
+    return if defined $nativeArchitectureMap{@{$remotes}};
+
+    my $output;
+    if (@{$remotes} == 0) {
+        $output = `uname -m` unless isWindows();
+    } else {
+        foreach my $remote (@{$remotes}) {
+            my @split = split(':', $remote->{"address"});
+            my $target = $split[0];
+            my $port = 22;
+            $port = $split[1] if scalar(@split) > 1;
+            my $cmd = 'ssh -o NoHostAuthenticationForLocalhost=yes '. (exists $remote->{'idFilePath'} ? ('-i '.$remote->{'idFilePath'}) : '') ." -p $port $target 'uname  -m'";
+            $output = readpipe($cmd);
+            last if ($? == 0);
+        }
+        if (length($output) == 0) {
+            die "Could not determineNativeArchitecture";
+        }
+    }
+    chomp $output if defined $output;
+    $output = "x86_64" if (not defined $output);
+
+    # FIXME: Remove this when <rdar://problem/64208532> is resolved
+    if (isAppleCocoaWebKit() && $output ne "x86_64") {
+        $output = "arm64";
+    }
+
+    $output = "arm" if $output =~ m/^armv[78]l$/;
+    $nativeArchitectureMap{@{$remotes}} = $output;
+}
+
 sub determineArchitecture
 {
     return if defined $architecture;
-    # make sure $architecture is defined in all cases
-    $architecture = "";
 
     determineBaseProductDir();
-    determineXcodeSDK();
+    $architecture = nativeArchitecture([]);
+    if (isAppleCocoaWebKit() && $architecture eq "arm64") {
+        determineXcodeSDK();
+        if ($xcodeSDK eq "macosx.internal") {
+            $architecture = "arm64e";
+        }
+    }
 
     if (isAppleCocoaWebKit()) {
+        determineXcodeSDK();
         if (open ARCHITECTURE, "$baseProductDir/Architecture") {
             $architecture = <ARCHITECTURE>;
             close ARCHITECTURE;
@@ -368,13 +425,13 @@ sub determineArchitecture
         if ($architecture) {
             chomp $architecture;
         } else {
-            if (not defined $xcodeSDK or $xcodeSDK =~ /^(\/$|macosx)/) {
-                my $supports64Bit = `sysctl -n hw.optional.x86_64`;
-                chomp $supports64Bit;
-                $architecture = 'x86_64' if $supports64Bit;
-            } elsif ($xcodeSDK =~ /^iphonesimulator/) {
-                $architecture = 'x86_64';
-            } elsif ($xcodeSDK =~ /^iphoneos/) {
+            if ($xcodeSDKPlatformName eq 'iphoneos') {
+                $architecture = 'arm64';
+            } elsif ($xcodeSDKPlatformName eq 'watchsimulator') {
+                $architecture = 'i386';
+            } elsif ($xcodeSDKPlatformName eq 'watchos') {
+                $architecture = 'arm64_32 arm64e armv7k';
+            } elsif ($xcodeSDKPlatformName eq 'appletvos') {
                 $architecture = 'arm64';
             }
         }
@@ -396,31 +453,66 @@ sub determineArchitecture
         }
     }
 
-    if (!isAnyWindows()) {
-        if (!$architecture) {
-            # Fall back to output of `uname -m', if it is present.
-            $architecture = `uname -m`;
-            chomp $architecture;
-        }
-    }
-
     $architecture = 'x86_64' if $architecture =~ /amd64/i;
     $architecture = 'arm64' if $architecture =~ /aarch64/i;
+}
+
+sub readSanitizerConfiguration($)
+{
+    my ($fileName) = @_;
+
+    if (open FILE, File::Spec->catfile($baseProductDir, $fileName)) {
+        my $value = <FILE>;
+        close FILE;
+        chomp $value;
+        return ($value eq "YES");
+    }
+
+    return 0;
 }
 
 sub determineASanIsEnabled
 {
     return if defined $asanIsEnabled;
     determineBaseProductDir();
+    $asanIsEnabled = readSanitizerConfiguration("ASan");
+}
 
-    $asanIsEnabled = 0;
-    my $asanConfigurationValue;
+sub determineTSanIsEnabled
+{
+    return if defined $tsanIsEnabled;
+    determineBaseProductDir();
+    $tsanIsEnabled = readSanitizerConfiguration("TSan");
+}
 
-    if (open ASAN, "$baseProductDir/ASan") {
-        $asanConfigurationValue = <ASAN>;
-        close ASAN;
-        chomp $asanConfigurationValue;
-        $asanIsEnabled = 1 if $asanConfigurationValue eq "YES";
+sub determineUBSanIsEnabled
+{
+    return if defined $ubsanIsEnabled;
+    determineBaseProductDir();
+    $ubsanIsEnabled = readSanitizerConfiguration("UBSan");
+}
+
+sub determineForceOptimizationLevel
+{
+    return if defined $forceOptimizationLevel;
+    determineBaseProductDir();
+
+    if (open ForceOptimizationLevel, "$baseProductDir/ForceOptimizationLevel") {
+        $forceOptimizationLevel = <ForceOptimizationLevel>;
+        close ForceOptimizationLevel;
+        chomp $forceOptimizationLevel;
+    }
+}
+
+sub determineCoverageIsEnabled
+{
+    return if defined $coverageIsEnabled;
+    determineBaseProductDir();
+
+    if (open Coverage, "$baseProductDir/Coverage") {
+        $coverageIsEnabled = <Coverage>;
+        close Coverage;
+        chomp $coverageIsEnabled;
     }
 }
 
@@ -472,31 +564,37 @@ sub jscPath($)
     my $jscName = "jsc";
     $jscName .= "_debug"  if configuration() eq "Debug_All";
     if (isPlayStation()) {
-        $jscName .= ".elf";
+        $jscName .= ".self";
     } elsif (isAnyWindows()) {
         $jscName .= ".exe";
     }
     return "$productDir/$jscName" if -e "$productDir/$jscName";
-    return "$productDir/JavaScriptCore.framework/Resources/$jscName";
+    return "$productDir/JavaScriptCore.framework/Helpers/$jscName";
 }
 
 sub argumentsForConfiguration()
 {
     determineConfiguration();
     determineArchitecture();
-    determineXcodeSDK();
+    if (isAppleCocoaWebKit()) {
+        determineXcodeSDKPlatformName();
+    }
 
     my @args = ();
     # FIXME: Is it necessary to pass --debug, --release, --32-bit or --64-bit?
     # These are determined automatically from stored configuration.
     push(@args, '--debug') if ($configuration =~ "^Debug");
     push(@args, '--release') if ($configuration =~ "^Release");
-    push(@args, '--ios-device') if (defined $xcodeSDK && $xcodeSDK =~ /^iphoneos/);
-    push(@args, '--ios-simulator') if (defined $xcodeSDK && $xcodeSDK =~ /^iphonesimulator/);
-    push(@args, '--maccatalyst') if (defined $xcodeSDK && $xcodeSDK =~ /^maccatalyst/);
+    push(@args, '--ios-device') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'iphoneos');
+    push(@args, '--ios-simulator') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'iphonesimulator' && $simulatorIdiom eq "iPhone");
+    push(@args, '--ipad-simulator') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'iphonesimulator' && $simulatorIdiom eq "iPad");
+    push(@args, '--tvos-device') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'appletvos');
+    push(@args, '--tvos-simulator') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'appletvsimulator');
+    push(@args, '--watchos-device') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'watchos');
+    push(@args, '--watchos-simulator') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'watchsimulator');
+    push(@args, '--maccatalyst') if (defined $xcodeSDKPlatformName && $xcodeSDKPlatformName eq 'maccatalyst');
     push(@args, '--32-bit') if ($architecture eq "x86" and !isWin64());
     push(@args, '--64-bit') if (isWin64());
-    push(@args, '--64-bit') if (isFTW());
     push(@args, '--ftw') if isFTW();
     push(@args, '--gtk') if isGtk();
     push(@args, '--qt') if isQt();
@@ -510,13 +608,12 @@ sub argumentsForConfiguration()
 sub extractNonMacOSHostConfiguration
 {
     my @args = ();
-    my @extract = ('--device', '--gtk', '--ios', '--platform', '--sdk', '--simulator', '--wincairo', '--ftw', 'SDKROOT', 'ARCHS');
+    my @extract = ('--device', '--gtk', '--ios', '--platform', '--sdk', '--simulator', '--wincairo', '--ftw', '--tvos', '--watchos', 'SDKROOT', 'ARCHS');
     foreach (@{$_[0]}) {
         my $line = $_;
         my $flag = 0;
         foreach (@extract) {
-            if (length($line) >= length($_) && substr($line, 0, length($_)) eq $_
-                && index($line, 'i386') == -1 && index($line, 'x86_64') == -1) {
+            if (length($line) >= length($_) && substr($line, 0, length($_)) eq $_ && index($line, 'x86_64') == -1) {
                 $flag = 1;
             }
         }
@@ -554,44 +651,76 @@ sub availableXcodeSDKs
     return parseAvailableXcodeSDKs(\@output);
 }
 
-sub determineXcodeSDK
-{
-    return if defined $xcodeSDK;
+sub isValidXcodeSDKPlatformName($) {
+    my $name = shift;
+    my @platforms = qw(
+        appletvos
+        appletvsimulator
+        iphoneos
+        iphonesimulator
+        macosx
+        watchos
+        watchsimulator
+        maccatalyst
+    );
+    return grep { $_ eq $name } @platforms;
+}
+
+sub determineXcodeSDKPlatformName {
+    return if defined $xcodeSDKPlatformName;
     my $sdk;
     
     # The user explicitly specified the sdk, don't assume anything
     if (checkForArgumentAndRemoveFromARGVGettingValue("--sdk", \$sdk)) {
-        $xcodeSDK = $sdk;
+        $xcodeSDK = lc $sdk;
+        $xcodeSDKPlatformName = $sdk;
+        $xcodeSDKPlatformName =~ s/\.internal$//;
+        die "Couldn't determine platform name from Xcode SDK" unless isValidXcodeSDKPlatformName($xcodeSDKPlatformName);
         return;
     }
     if (checkForArgumentAndRemoveFromARGV("--device") || checkForArgumentAndRemoveFromARGV("--ios-device")) {
-        $xcodeSDK ||= "iphoneos";
+        $xcodeSDKPlatformName ||= "iphoneos";
     }
     if (checkForArgumentAndRemoveFromARGV("--simulator") || checkForArgumentAndRemoveFromARGV("--ios-simulator")) {
-        $xcodeSDK ||= 'iphonesimulator';
+        $xcodeSDKPlatformName ||= 'iphonesimulator';
+        $simulatorIdiom = 'iPhone';
+    }
+    if (checkForArgumentAndRemoveFromARGV("--ipad-simulator")) {
+        $xcodeSDKPlatformName ||= 'iphonesimulator';
+        $simulatorIdiom = 'iPad';
     }
     if (checkForArgumentAndRemoveFromARGV("--tvos-device")) {
-        $xcodeSDK ||=  "appletvos";
+        $xcodeSDKPlatformName ||= "appletvos";
     }
     if (checkForArgumentAndRemoveFromARGV("--tvos-simulator")) {
-        $xcodeSDK ||= "appletvsimulator";
+        $xcodeSDKPlatformName ||= "appletvsimulator";
     }
     if (checkForArgumentAndRemoveFromARGV("--watchos-device")) {
-        $xcodeSDK ||=  "watchos";
+        $xcodeSDKPlatformName ||= "watchos";
     }
     if (checkForArgumentAndRemoveFromARGV("--watchos-simulator")) {
-        $xcodeSDK ||= "watchsimulator";
+        $xcodeSDKPlatformName ||= "watchsimulator";
     }
     if (checkForArgumentAndRemoveFromARGV("--maccatalyst")) {
-        $xcodeSDK ||= "maccatalyst";
+        $xcodeSDKPlatformName ||= "maccatalyst";
     }
-    return if !defined $xcodeSDK;
-    
+
+    # Finally, fall back to macOS if no platform is specified.
+    $xcodeSDKPlatformName ||= "macosx";
+}
+
+sub determineXcodeSDK
+{
+    determineXcodeSDKPlatformName();  # This can set $xcodeSDK if --sdk was used.
+    return if defined $xcodeSDK;
+
+    $xcodeSDK = $xcodeSDKPlatformName;
+
     # Prefer the internal version of an sdk, if it exists.
     my @availableSDKs = availableXcodeSDKs();
 
     foreach my $sdk (@availableSDKs) {
-        next if $sdk ne "$xcodeSDK.internal";
+        next if $sdk ne "$xcodeSDKPlatformName.internal";
         $xcodeSDK = $sdk;
         last;
     }
@@ -606,22 +735,14 @@ sub xcodeSDK
 sub setXcodeSDK($)
 {
     ($xcodeSDK) = @_;
+    $xcodeSDKPlatformName = $xcodeSDK;
+    $xcodeSDKPlatformName =~ s/\.internal$//;
 }
 
-
-sub xcodeSDKPlatformName()
+sub xcodeSDKPlatformName
 {
-    determineXcodeSDK();
-    return "" if !defined $xcodeSDK;
-    return "appletvos" if $xcodeSDK =~ /appletvos/i;
-    return "appletvsimulator" if $xcodeSDK =~ /appletvsimulator/i;
-    return "iphoneos" if $xcodeSDK =~ /iphoneos/i;
-    return "iphonesimulator" if $xcodeSDK =~ /iphonesimulator/i;
-    return "macosx" if $xcodeSDK =~ /macosx/i;
-    return "watchos" if $xcodeSDK =~ /watchos/i;
-    return "watchsimulator" if $xcodeSDK =~ /watchsimulator/i;
-    return "maccatalyst" if $xcodeSDK =~ /maccatalyst/i;
-    die "Couldn't determine platform name from Xcode SDK";
+    determineXcodeSDKPlatformName();
+    return $xcodeSDKPlatformName;
 }
 
 sub XcodeSDKPath
@@ -664,7 +785,7 @@ sub visualStudioInstallDirVSWhere
 {
     my $vswhere = File::Spec->catdir(programFilesPathX86(), "Microsoft Visual Studio", "Installer", "vswhere.exe");
     return unless -e $vswhere;
-    open(my $handle, "-|", $vswhere, qw(-nologo -latest -requires Microsoft.Component.MSBuild -property installationPath)) || return;
+    open(my $handle, "-|", $vswhere, qw(-nologo -latest -requires Microsoft.Component.MSBuild -property installationPath -products *)) || return;
     my $vsWhereOut = <$handle>;
     $vsWhereOut =~ s/\r?\n//;
     return $vsWhereOut;
@@ -731,7 +852,11 @@ sub determineConfigurationProductDir
         if (usesPerConfigurationBuildDirectory()) {
             $configurationProductDir = "$baseProductDir";
         } else {
-            $configurationProductDir = "$baseProductDir/$configuration";
+            if (shouldUseFlatpak()) {
+                $configurationProductDir = "$baseProductDir/$portName/$configuration";
+            } else {
+                $configurationProductDir = "$baseProductDir/$configuration";
+            }
             $configurationProductDir .= "-" . xcodeSDKPlatformName() if isEmbeddedWebKit() || isMacCatalystWebKit();
         }
     }
@@ -798,6 +923,18 @@ sub jscProductDir
     return executableProductDir();
 }
 
+sub architecturesForProducts
+{
+    # Most ports don't have emulation, assume that the user gave us an accurate architecture
+    if (!isAppleCocoaWebKit()) {
+        return architecture();
+    }
+    my $webkitBinary = File::Spec->catdir(executableProductDir(), "JavaScriptCore.framework", "JavaScriptCore");
+    my $architectures = `/usr/bin/lipo -archs $webkitBinary`;
+    chomp($architectures);
+    return $architectures;
+}
+
 sub configuration()
 {
     determineConfiguration();
@@ -808,6 +945,30 @@ sub asanIsEnabled()
 {
     determineASanIsEnabled();
     return $asanIsEnabled;
+}
+
+sub tsanIsEnabled()
+{
+    determineTSanIsEnabled();
+    return $tsanIsEnabled;
+}
+
+sub ubsanIsEnabled()
+{
+    determineUBSanIsEnabled();
+    return $ubsanIsEnabled;
+}
+
+sub coverageIsEnabled()
+{
+    determineCoverageIsEnabled();
+    return $coverageIsEnabled;
+}
+
+sub forceOptimizationLevel()
+{
+    determineForceOptimizationLevel();
+    return $forceOptimizationLevel;
 }
 
 sub ltoMode()
@@ -858,19 +1019,51 @@ sub XcodeOptions
     determineConfiguration();
     determineArchitecture();
     determineASanIsEnabled();
+    determineTSanIsEnabled();
+    determineUBSanIsEnabled();
+    determineForceOptimizationLevel();
+    determineCoverageIsEnabled();
     determineLTOMode();
-    determineXcodeSDK();
+    if (isAppleCocoaWebKit()) {
+      determineXcodeSDK();
+    }
 
     my @options;
     push @options, "-UseSanitizedBuildSystemEnvironment=YES";
     push @options, "-ShowBuildOperationDuration=YES";
     push @options, ("-configuration", $configuration);
-    push @options, ("-xcconfig", sourceDir() . "/Tools/asan/asan.xcconfig", "ASAN_IGNORE=" . sourceDir() . "/Tools/asan/webkit-asan-ignore.txt") if $asanIsEnabled;
+    if ($asanIsEnabled) {
+        my $xcconfig = $ubsanIsEnabled ? "asan+ubsan.xcconfig" : "asan.xcconfig";
+        push @options, ("-xcconfig", File::Spec->catfile(sourceDir(), "Tools", "sanitizer", $xcconfig));
+        my $asanIgnorePath = File::Spec->catfile(sourceDir(), "Tools", "sanitizer", "webkit-asan-ignore.txt");
+        push @options, "ASAN_IGNORE=$asanIgnorePath" if -e $asanIgnorePath;
+    } elsif ($tsanIsEnabled) {
+        push @options, ("-xcconfig", File::Spec->catfile(sourceDir(), "Tools", "sanitizer", "tsan.xcconfig"));
+    } elsif (ubsanIsEnabled) {
+        push @options, ("-xcconfig", File::Spec->catfile(sourceDir(), "Tools", "sanitizer", "ubsan.xcconfig"));
+    }
+    push @options, XcodeCoverageSupportOptions() if $coverageIsEnabled;
+    if ($forceOptimizationLevel) {
+        if ($asanIsEnabled || $tsanIsEnabled || $ubsanIsEnabled) {
+            # Command-line Xcode variable won't override that same varible set in a command-line xcconfig file.
+            push @options, "WK_FORCE_OPTIMIZATION_LEVEL=$forceOptimizationLevel";
+        } else {
+            push @options, "GCC_OPTIMIZATION_LEVEL=$forceOptimizationLevel";
+        }
+    }
     push @options, "WK_LTO_MODE=$ltoMode" if $ltoMode;
     push @options, @baseProductDirOption;
     push @options, "ARCHS=$architecture" if $architecture;
     push @options, "SDKROOT=$xcodeSDK" if $xcodeSDK;
-    if (willUseIOSDeviceSDK()) {
+
+    # When this environment variable is set Tools/Scripts/check-for-weak-vtables-and-externals
+    # treats errors as non-fatal when it encounters missing symbols related to coverage.
+    appendToEnvironmentVariableList("WEBKIT_COVERAGE_BUILD", "1") if $coverageIsEnabled;
+
+    die "Cannot enable both ASAN and TSAN at the same time\n" if $asanIsEnabled && $tsanIsEnabled;
+    die "Cannot enable both (ASAN or TSAN) and Coverage at this time\n" if $coverageIsEnabled && ($asanIsEnabled || $tsanIsEnabled);
+
+    if (willUseIOSDeviceSDK() || willUseWatchDeviceSDK() || willUseAppleTVDeviceSDK()) {
         push @options, "ENABLE_BITCODE=NO";
         if (hasIOSDevelopmentCertificate()) {
             # FIXME: May match more than one installed development certificate.
@@ -896,24 +1089,12 @@ sub XcodeOptionStringNoConfig
 
 sub XcodeCoverageSupportOptions()
 {
-    my @coverageSupportOptions = ();
-    push @coverageSupportOptions, "GCC_GENERATE_TEST_COVERAGE_FILES=YES";
-    push @coverageSupportOptions, "GCC_INSTRUMENT_PROGRAM_FLOW_ARCS=YES";
-    return @coverageSupportOptions;
+    return ("-xcconfig", sourceDir() . "/Tools/coverage/coverage.xcconfig");
 }
 
 sub XcodeStaticAnalyzerOption()
 {
     return "RUN_CLANG_STATIC_ANALYZER=YES";
-}
-
-sub canUseXCBuild()
-{
-    # if (`xcodebuild -version | grep "Build version"` =~ /Build version (\d+)([a-zA-Z])(\d+)([a-zA-Z]?)/) {
-    #     return $1 >= 11;
-    # }
-
-    return 0;
 }
 
 my $passedConfiguration;
@@ -930,6 +1111,10 @@ sub determinePassedConfiguration
         $passedConfiguration = "Release";
     } elsif (checkForArgumentAndRemoveFromARGV("--profile") || checkForArgumentAndRemoveFromARGV("--profiling")) {
         $passedConfiguration = "Profiling";
+    } elsif(checkForArgumentAndRemoveFromARGV("--testing")) {
+        $passedConfiguration = "Testing";
+    } elsif(checkForArgumentAndRemoveFromARGV("--release-and-assert") || checkForArgumentAndRemoveFromARGV("--ra")) {
+        $passedConfiguration = "Release+Assert";
     }
 }
 
@@ -978,6 +1163,13 @@ sub passedArchitecture
 {
     determinePassedArchitecture();
     return $passedArchitecture;
+}
+
+sub nativeArchitecture($)
+{
+    my ($remotes) = @_;
+    determineNativeArchitecture($remotes);
+    return $nativeArchitectureMap{@{$remotes}};
 }
 
 sub architecture()
@@ -1086,7 +1278,20 @@ sub builtDylibPathForName
     }
     if (isGtk()) {
         my $extension = isDarwin() ? ".dylib" : ".so";
-        return "$configurationProductDir/lib/libwebkit2gtk-4.0" . $extension;
+        my @apiVersions = ("4.0", "5.0");
+        for my $apiVersion (@apiVersions) {
+            my $libraryPath;
+            if ($libraryName eq "JavaScriptCore") {
+                $libraryPath = "$configurationProductDir/lib/libjavascriptcoregtk-$apiVersion$extension";
+            } else {
+                $libraryPath = "$configurationProductDir/lib/libwebkit2gtk-$apiVersion$extension";
+            }
+            if (-e $libraryPath) {
+                return $libraryPath;
+            }
+        }
+
+        return "";
     }
     if (isIOSWebKit()) {
         return "$configurationProductDir/$libraryName.framework/$libraryName";
@@ -1241,7 +1446,7 @@ sub determinePortName()
     if (isAnyWindows()) {
         $portName = AppleWin;
     } elsif (isDarwin()) {
-        determineXcodeSDK();
+        determineXcodeSDKPlatformName();
         if (willUseIOSDeviceSDK() || willUseIOSSimulatorSDK()) {
             $portName = iOS;
         } elsif (willUseAppleTVDeviceSDK() || willUseAppleTVSimulatorSDK()) {
@@ -1344,14 +1549,7 @@ sub isWin64()
 sub determineIsWin64()
 {
     return if defined($isWin64);
-    $isWin64 = checkForArgumentAndRemoveFromARGV("--64-bit") || ((isFTW() || isWinCairo() || isJSCOnly()) && !shouldBuild32Bit());
-}
-
-sub determineIsWin64FromArchitecture($)
-{
-    my $arch = shift;
-    $isWin64 = ($arch eq "x86_64");
-    return $isWin64;
+    $isWin64 = checkForArgumentAndRemoveFromARGV("--64-bit") || (isAnyWindows() && !shouldBuild32Bit());
 }
 
 sub isCygwin()
@@ -1374,12 +1572,12 @@ sub determineWinVersion()
     }
 
     my $versionString = `cmd /c ver`;
-    $versionString =~ /(\d)\.(\d)\.(\d+)/;
+    $versionString =~ /(\d+)\.(\d+)\.(\d+)/;
 
     $winVersion = {
         major => $1,
         minor => $2,
-        build => $3,
+        subminor => $3,
     };
 }
 
@@ -1510,27 +1708,35 @@ sub isAppleWinWebKit()
     return portName() eq AppleWin;
 }
 
-sub iOSSimulatorDevicesPath
+sub simulatorDeviceFromJSON
 {
-    return "$ENV{HOME}/Library/Developer/CoreSimulator/Devices";
+    my $runtime = shift;
+    my $jsonDevice = shift;
+
+    return {
+        "UDID" => $jsonDevice->{udid},
+        "name" => $jsonDevice->{name},
+        "runtime" => $runtime,
+        "state" => $jsonDevice->{state},
+        "deviceType" => $jsonDevice->{deviceTypeIdentifier}
+    };
 }
 
 sub iOSSimulatorDevices
 {
-    eval "require Foundation";
-    my $devicesPath = iOSSimulatorDevicesPath();
-    opendir(DEVICES, $devicesPath);
-    my @udids = grep {
-        $_ =~ m/^[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}$/;
-    } readdir(DEVICES);
-    close(DEVICES);
+    my $output = `xcrun simctl list devices --json`;
+    my $runtimes = decode_json($output)->{devices};
+    if (!$runtimes) {
+        die "No simulator devices found";
+    }
 
-    # FIXME: We should parse the device.plist file ourself and map the dictionary keys in it to known
-    #        dictionary keys so as to decouple our representation of the plist from the actual structure
-    #        of the plist, which may change.
-    my @devices = map {
-        Foundation::perlRefFromObjectRef(NSDictionary->dictionaryWithContentsOfFile_("$devicesPath/$_/device.plist"));
-    } @udids;
+    my @devices = ();
+    while ((my $runtime, my $devicesForRuntime) = each %$runtimes) {
+        foreach my $jsonDevice (@$devicesForRuntime) {
+            next if $jsonDevice->{availabilityError};
+            push @devices, simulatorDeviceFromJSON($runtime, $jsonDevice);
+        }
+    }
 
     return @devices;
 }
@@ -1544,18 +1750,12 @@ sub createiOSSimulatorDevice
     my $created = system("xcrun", "--sdk", "iphonesimulator", "simctl", "create", $name, $deviceTypeId, $runtimeId) == 0;
     die "Couldn't create simulator device: $name $deviceTypeId $runtimeId" if not $created;
 
-    system("xcrun", "--sdk", "iphonesimulator", "simctl", "list");
-
-    print "Waiting for device to be created ...\n";
-    sleep 5;
-    for (my $tries = 0; $tries < 5; $tries++){
-        my @devices = iOSSimulatorDevices();
-        foreach my $device (@devices) {
-            return $device if $device->{name} eq $name and $device->{deviceType} eq $deviceTypeId and $device->{runtime} eq $runtimeId;
-        }
-        sleep 5;
+    my @devices = iOSSimulatorDevices();
+    foreach my $device (@devices) {
+        return $device if $device->{name} eq $name and $device->{deviceType} eq $deviceTypeId and $device->{runtime} eq $runtimeId;
     }
-    die "Device $name $deviceTypeId $runtimeId wasn't found in " . iOSSimulatorDevicesPath();
+
+    die "Device $name $deviceTypeId $runtimeId wasn't found";
 }
 
 sub willUseIOSDeviceSDK()
@@ -1615,10 +1815,11 @@ sub splitVersionString
     my $versionString = shift;
     my @splitVersion = split(/\./, $versionString);
     @splitVersion >= 2 or die "Invalid version $versionString";
-    $osXVersion = {
-            "major" => $splitVersion[0],
-            "minor" => $splitVersion[1],
-            "subminor" => (defined($splitVersion[2]) ? $splitVersion[2] : 0),
+    my @subMinorVersion = defined($splitVersion[2]) ? split(/-/, $splitVersion[2]) : (0);
+    return {
+        "major" => $splitVersion[0],
+        "minor" => $splitVersion[1],
+        "subminor" => $subMinorVersion[0],
     };
 }
 
@@ -1631,7 +1832,7 @@ sub determineOSXVersion()
         return;
     }
 
-    my $versionString = `sw_vers -productVersion`;
+    chomp(my $versionString = `sw_vers -productVersion`);
     $osXVersion = splitVersionString($versionString);
 }
 
@@ -1959,7 +2160,28 @@ sub buildXCodeProject($$@)
     }
 
     chomp($ENV{DSYMUTIL_NUM_THREADS} = `sysctl -n hw.activecpu`);
+
+    # lldbWebKitTester won't work with the wrong CLANG_DEBUG_INFORMATION_LEVEL, so always use the default for that project
+    if ($project eq "lldbWebKitTester") {
+        my $index = 0;
+        while ($index < scalar(@extraOptions)) {
+            if ($extraOptions[$index] =~ /CLANG_DEBUG_INFORMATION_LEVEL=/) {
+                splice @extraOptions, $index, 1;
+            } else {
+                $index += 1;
+            }
+        }
+    }
     return system "xcodebuild", "-project", "$project.xcodeproj", @extraOptions;
+}
+
+sub buildXCodeWorkspace($$$@)
+{
+    my ($workspace, $scheme, $clean, @extraOptions) = @_;
+    if ($clean) {
+        push @extraOptions, "clean";
+    }
+    return system "xcodebuild", "-workspace", $workspace, "-scheme", $scheme, @extraOptions;
 }
 
 sub getVisualStudioToolset()
@@ -2042,20 +2264,30 @@ sub getJhbuildPath()
     return File::Spec->catdir(@jhbuildPath);
 }
 
-sub getFlatpakPath()
-{
-    my @flatpakBuildPath = File::Spec->splitdir(baseProductDir());
-    if (isGtk()) {
-        push(@flatpakBuildPath, "GTK");
-    } elsif (isWPE()) {
-        push(@flatpakBuildPath, "WPE");
-    } else {
-        die "Cannot get Flatpak path for platform that isn't GTK+ or WPE.\n";
-    }
-    my @configuration = configuration();
-    push(@flatpakBuildPath, "FlatpakTree$configuration");
 
-    return File::Spec->catdir(@flatpakBuildPath);
+sub getJhbuildModulesetName()
+{
+    if (defined($ENV{'WEBKIT_JHBUILD_MODULESET'})) {
+        return 'jhbuild-' . $ENV{'WEBKIT_JHBUILD_MODULESET'} . '.modules';
+    }
+    return 'jhbuild.modules';
+}
+
+
+sub getUserFlatpakPath()
+{
+    if (defined($ENV{'WEBKIT_FLATPAK_USER_DIR'})) {
+       return $ENV{'WEBKIT_FLATPAK_USER_DIR'};
+    }
+
+    my $productDir = baseProductDir();
+    if (isGit() && isGitBranchBuild() && gitBranch()) {
+        my $branch = gitBranch();
+        $productDir =~ s/$branch//;
+    }
+    my @flatpakPath = File::Spec->splitdir($productDir);
+    push(@flatpakPath, "UserFlatpak");
+    return File::Spec->catdir(@flatpakPath);
 }
 
 sub isCachedArgumentfileOutOfDate($@)
@@ -2082,22 +2314,46 @@ sub isCachedArgumentfileOutOfDate($@)
 
 sub inFlatpakSandbox()
 {
-    if (-f "/.flatpak-info") {
-        return 1;
-    }
-
-    return 0;
+    return (-f "/.flatpak-info");
 }
 
 sub runInFlatpak(@)
 {
+    if (isGtk() && checkForArgumentAndRemoveFromARGV("--update-gtk")) {
+        system("perl", File::Spec->catfile(sourceDir(), "Tools", "Scripts", "update-webkitgtk-libs"), argumentsForConfiguration()) == 0 or die $!;
+    }
+
+    if (isWPE() && checkForArgumentAndRemoveFromARGV("--update-wpe")) {
+        system("perl", File::Spec->catfile(sourceDir(), "Tools", "Scripts", "update-webkitwpe-libs"), argumentsForConfiguration()) == 0 or die $!;
+    }
+
     my @arg = @_;
     my @command = (File::Spec->catfile(sourceDir(), "Tools", "Scripts", "webkit-flatpak"));
-    exec @command, argumentsForConfiguration(), "--command", @_, argumentsForConfiguration(), @ARGV or die;
+
+    my @flatpakArgs;
+    my @filteredArgv;
+
+    # Filter-out Flatpak SDK-specific arguments to a separate array, passed to webkit-flatpak.
+    my $prefix = "--flatpak-";
+    foreach my $opt (@ARGV) {
+        if (substr($opt, 0, length($prefix)) eq $prefix) {
+            my ($name, $value) = split("--flatpak-", $opt);
+            push(@flatpakArgs, "--$value");
+        } else {
+            push(@filteredArgv, $opt);
+        }
+    }
+
+    exec @command, argumentsForConfiguration(), @flatpakArgs, "--command", @_, argumentsForConfiguration(), @filteredArgv or die;
 }
 
 sub runInFlatpakIfAvailable(@)
 {
+    my $prefix = wrapperPrefixIfNeeded();
+    if (defined($prefix)) {
+        return 0;
+    }
+
     if (inFlatpakSandbox()) {
         return 0;
     }
@@ -2107,47 +2363,69 @@ sub runInFlatpakIfAvailable(@)
         return 0;
     }
 
-    if (! -e getFlatpakPath()) {
-        return 0;
+    if (! -e getUserFlatpakPath()) {
+      return 0;
     }
 
     runInFlatpak(@_)
 }
 
+sub jhbuildWrapperPrefix()
+{
+    my @prefix = (File::Spec->catfile(sourceDir(), "Tools", "jhbuild", "jhbuild-wrapper"));
+    if (isGtk()) {
+        push(@prefix, "--gtk");
+    } elsif (isWPE()) {
+        push(@prefix, "--wpe");
+    }
+    push(@prefix, "run");
+
+    return @prefix;
+}
+
 sub wrapperPrefixIfNeeded()
 {
-
     if (isAnyWindows() || isJSCOnly() || isPlayStation()) {
         return ();
     }
     if (isAppleCocoaWebKit()) {
         return ("xcrun");
     }
-    if (shouldUseJhbuild() and ! shouldUseFlatpak()) {
-        my @prefix = (File::Spec->catfile(sourceDir(), "Tools", "jhbuild", "jhbuild-wrapper"));
-        if (isGtk()) {
-            push(@prefix, "--gtk");
-        } elsif (isQt()) {
-            push(@prefix, "--qt");
-        } elsif (isWPE()) {
-            push(@prefix, "--wpe");
+
+    # Returning () here means either Flatpak or no wrapper will be used.
+    if (isGtk() or isWPE() or isQt()) {
+        # Respect user's choice.
+        if (defined $ENV{'WEBKIT_JHBUILD'}) {
+            if ($ENV{'WEBKIT_JHBUILD'} and -e getJhbuildPath()) {
+                return jhbuildWrapperPrefix();
+            } else {
+                return ();
+            }
+            # or let Flatpak take precedence over JHBuild.
+        } elsif (-e getUserFlatpakPath()) {
+            return ();
+        } elsif (-e getJhbuildPath()) {
+            return jhbuildWrapperPrefix();
         }
-        push(@prefix, "run");
-
-        return @prefix;
     }
-
     return ();
-}
-
-sub shouldUseJhbuild()
-{
-    return ((isGtk() or isWPE() or isQt()) and -e getJhbuildPath());
 }
 
 sub shouldUseFlatpak()
 {
-    return ((isGtk() or isWPE()) and ! inFlatpakSandbox() and -e getFlatpakPath());
+    # TODO: Use flatpak for JSCOnly on Linux? Could be useful when the SDK
+    # supports cross-compilation for ARMv7 and Aarch64 for instance.
+
+    if (!isGtk() and !isWPE()) {
+        return 0;
+    }
+
+    if (defined $ENV{'WEBKIT_JHBUILD'} && $ENV{'WEBKIT_JHBUILD'}) {
+        return 0;
+    }
+
+    my @prefix = wrapperPrefixIfNeeded();
+    return ((! inFlatpakSandbox()) and (@prefix == 0) and -e getUserFlatpakPath());
 }
 
 sub cmakeCachePath()
@@ -2162,7 +2440,10 @@ sub cmakeFilesPath()
 
 sub shouldRemoveCMakeCache(@)
 {
-    my ($cacheFilePath, @buildArgs) = @_;
+    # For this check, ignore all arguments that do not begin with a dash. These
+    # are probably arguments specifying build targets. Changing those should
+    # not trigger a reconfiguration of the build.
+    my (@buildArgs) = grep(/^-/, sort(@_, @originalArgv));
 
     # We check this first, because we always want to create this file for a fresh build.
     my $productDir = File::Spec->catdir(baseProductDir(), configuration());
@@ -2214,7 +2495,7 @@ sub shouldRemoveCMakeCache(@)
     }
 
     # If a change on the JHBuild moduleset has been done, we need to clean the cache as well.
-    if (isGtk() || isWPE()) {
+    if (! shouldUseFlatpak() and (isGtk() || isWPE())) {
         my $jhbuildRootDirectory = File::Spec->catdir(getJhbuildPath(), "Root");
         # The script update-webkit-libs-jhbuild shall re-generate $jhbuildRootDirectory if the moduleset changed.
         if (-d $jhbuildRootDirectory && $cacheFileModifiedTime < stat($jhbuildRootDirectory)->mtime) {
@@ -2310,10 +2591,15 @@ sub generateBuildSystemFromCMakeProject
     }
 
     push @args, "-DENABLE_SANITIZERS=address" if asanIsEnabled();
+    push @args, "-DENABLE_SANITIZERS=thread" if tsanIsEnabled();
+    push @args, "-DENABLE_SANITIZERS=undefined" if ubsanIsEnabled();
 
     push @args, "-DLTO_MODE=$ltoMode" if ltoMode();
 
-    push @args, '-DCMAKE_TOOLCHAIN_FILE=Platform/PlayStation' if isPlayStation();
+    if (isPlayStation()) {
+        my $toolChainFile = $ENV{'CMAKE_TOOLCHAIN_FILE'} || "Platform/PlayStation";
+        push @args, '-DCMAKE_TOOLCHAIN_FILE=' . $toolChainFile;
+    }
 
     if ($willUseNinja) {
         push @args, "-G";
@@ -2339,7 +2625,7 @@ sub generateBuildSystemFromCMakeProject
     push @args, '-DSHOW_BINDINGS_GENERATION_PROGRESS=1' unless ($willUseNinja && -t STDOUT);
 
     # Some ports have production mode, but build-webkit should always use developer mode.
-    push @args, "-DDEVELOPER_MODE=ON" if isFTW() || isGtk() || isJSCOnly() || isQt() || isWPE() || isWinCairo();
+    push @args, "-DDEVELOPER_MODE=ON" if isGtk() || isJSCOnly() || isQt() || isWPE() || isWin64();
 
     if (architecture() eq "x86_64" && shouldBuild32Bit()) {
         # CMAKE_LIBRARY_ARCHITECTURE is needed to get the right .pc
@@ -2413,16 +2699,20 @@ sub buildCMakeProjectOrExit($$$@)
 
     exit(exitStatus(cleanCMakeGeneratedProject())) if $clean;
 
-    if (isGtk() && checkForArgumentAndRemoveFromARGV("--update-gtk")) {
-        system("perl", "$sourceDir/Tools/Scripts/update-webkitgtk-libs") == 0 or die $!;
-    }
+    my $wrapper = wrapperPrefixIfNeeded();
+    my $jhbuildPrefix = jhbuildWrapperPrefix();
+    if (defined($wrapper) && defined($jhbuildPrefix) && $wrapper == $jhbuildPrefix) {
+        if (isGtk() && checkForArgumentAndRemoveFromARGV("--update-gtk")) {
+            system("perl", File::Spec->catfile(sourceDir(), "Tools", "Scripts", "update-webkitgtk-libs")) == 0 or die $!;
+        }
+        
+        if (isQt() && isAnyWindows() && checkForArgumentAndRemoveFromARGV("--update-qt")) {
+            system("perl", File::Spec->catfile(sourceDir(), "Tools", "Scripts", "update-qtwebkit-win-libs")) == 0 or die $!;
+        }
 
-    if (isQt() && isAnyWindows() && checkForArgumentAndRemoveFromARGV("--update-qt")) {
-        system("perl", "$sourceDir/Tools/Scripts/update-qtwebkit-win-libs") == 0 or die $!;
-    }
-    
-    if (isWPE() && checkForArgumentAndRemoveFromARGV("--update-wpe")) {
-        system("perl", "$sourceDir/Tools/Scripts/update-webkitwpe-libs") == 0 or die $!;
+        if (isWPE() && checkForArgumentAndRemoveFromARGV("--update-wpe")) {
+            system("perl", File::Spec->catfile(sourceDir(), "Tools", "Scripts", "update-webkitwpe-libs")) == 0 or die $!;
+        }
     }
 
     $returnCode = exitStatus(generateBuildSystemFromCMakeProject($prefixPath, @cmakeArgs));
@@ -2541,6 +2831,10 @@ Options specific to macOS:
   --lang=LANGUAGE                   Use a specific language instead of system language.
                                     This accepts a language name (German) or a language code (de, ar, pt_BR, etc).
   --locale=LOCALE                   Use a specific locale instead of the system region.
+
+Options specific to iOS:
+  --iphone-simulator                Run the app in an iPhone Simulator
+  --ipad-simulator                  Run the app in an iPad Simulator
 EOF
 
     exit(1);
@@ -2551,8 +2845,6 @@ sub argumentsForRunAndDebugMacWebKitApp()
     my @args = ();
     if (checkForArgumentAndRemoveFromARGV("--no-saved-state")) {
         push @args, ("-ApplePersistenceIgnoreStateQuietly", "YES");
-        # FIXME: Don't set ApplePersistenceIgnoreState once all supported OS versions respect ApplePersistenceIgnoreStateQuietly (rdar://15032886).
-        push @args, ("-ApplePersistenceIgnoreState", "YES");
     }
 
     my $lang;
@@ -2600,19 +2892,20 @@ sub setupIOSWebKitEnvironment($)
 
     prependToEnvironmentVariableList("DYLD_FRAMEWORK_PATH", $dyldFrameworkPath);
     prependToEnvironmentVariableList("DYLD_LIBRARY_PATH", $dyldFrameworkPath);
+    prependToEnvironmentVariableList("METAL_DEVICE_WRAPPER_TYPE", "1");
 
     setUpGuardMallocIfNeeded();
 }
 
 sub iosSimulatorApplicationsPath()
 {
-    # FIXME: We should ask simctl for this information, instead of guessing from available runtimes.
-    my $runtimePath = File::Spec->catdir(sdkPlatformDirectory("iphoneos"), "Library", "Developer", "CoreSimulator", "Profiles", "Runtimes");
-    opendir(RUNTIMES, $runtimePath);
-    my @runtimes = grep {/.*\.simruntime/} readdir(RUNTIMES);
-    close(RUNTIMES);
-    my $sult = File::Spec->catdir($runtimePath, @runtimes ? $runtimes[0] : "iOS.simruntime", "Contents", "Resources", "RuntimeRoot", "Applications");
-    return $sult;
+    my $output = `xcrun simctl list runtimes iOS --json`;
+    my $runtimes = decode_json($output)->{runtimes};
+    if (!$runtimes) {
+        die "No iOS simulator runtimes found";
+    }
+    my $runtimePath = @$runtimes[0]->{runtimeRoot};
+    return File::Spec->catdir($runtimePath, "Applications");
 }
 
 sub installedMobileSafariBundle()
@@ -2677,6 +2970,8 @@ sub waitUntilProcessNotRunning($)
 sub shutDownIOSSimulatorDevice($)
 {
     my ($simulatorDevice) = @_;
+
+    return if $simulatorDevice->{state} eq SIMULATOR_DEVICE_STATE_SHUTDOWN;
     system("xcrun --sdk iphonesimulator simctl shutdown $simulatorDevice->{UDID} > /dev/null 2>&1");
 }
 
@@ -2691,34 +2986,16 @@ sub restartIOSSimulatorDevice($)
 sub relaunchIOSSimulator($)
 {
     my ($simulatedDevice) = @_;
-    quitIOSSimulator($simulatedDevice->{UDID});
+    shutDownIOSSimulatorDevice($simulatedDevice);
 
-    # FIXME: <rdar://problem/20916140> Switch to using CoreSimulator.framework for launching and quitting iOS Simulator
     chomp(my $developerDirectory = $ENV{DEVELOPER_DIR} || `xcode-select --print-path`); 
-    my $iosSimulatorPath = File::Spec->catfile($developerDirectory, "Applications", "Simulator.app"); 
+    my $iosSimulatorPath = File::Spec->catfile($developerDirectory, "Applications", "Simulator.app");
+    # Simulator.app needs to be running before the simulator is booted to have it visible.
     system("open", "-a", $iosSimulatorPath, "--args", "-CurrentDeviceUDID", $simulatedDevice->{UDID}) == 0 or die "Failed to open $iosSimulatorPath: $!"; 
+    system("xcrun", "simctl", "boot", $simulatedDevice->{UDID}) == 0 or die "Failed to boot simulator $simulatedDevice->{UDID}: $!"; 
 
     waitUntilIOSSimulatorDeviceIsInState($simulatedDevice->{UDID}, SIMULATOR_DEVICE_STATE_BOOTED);
     waitUntilProcessNotRunning("com.apple.datamigrator");
-}
-
-sub quitIOSSimulator(;$)
-{
-    my ($waitForShutdownOfSimulatedDeviceUDID) = @_;
-    # FIXME: <rdar://problem/20916140> Switch to using CoreSimulator.framework for launching and quitting iOS Simulator
-    if (exitStatus(system {"osascript"} "osascript", "-e", 'tell application id "com.apple.iphonesimulator" to quit')) {
-        # osascript returns a non-zero exit status if Simulator.app is not registered in LaunchServices.
-        return;
-    }
-
-    if (!defined($waitForShutdownOfSimulatedDeviceUDID)) {
-        return;
-    }
-    # FIXME: We assume that $waitForShutdownOfSimulatedDeviceUDID was not booted using the simctl command line tool.
-    #        Otherwise we will spin indefinitely since quiting the iOS Simulator will not shutdown this device. We
-    #        should add a maximum time limit to wait for a device to shutdown and either return an error or die()
-    #        on expiration of the time limit.
-    waitUntilIOSSimulatorDeviceIsInState($waitForShutdownOfSimulatedDeviceUDID, SIMULATOR_DEVICE_STATE_SHUTDOWN);
 }
 
 sub iosSimulatorDeviceByName($)
@@ -2737,22 +3014,30 @@ sub iosSimulatorDeviceByName($)
 sub iosSimulatorDeviceByUDID($)
 {
     my ($simulatedDeviceUDID) = @_;
-    my $devicePlistPath = File::Spec->catfile(iOSSimulatorDevicesPath(), $simulatedDeviceUDID, "device.plist");
-    if (!-f $devicePlistPath) {
-        return;
+
+    my $output = `xcrun simctl list devices $simulatedDeviceUDID --json`;
+    my $runtimes = decode_json($output)->{devices};
+
+    while ((my $runtime, my $devicesForRuntime) = each %$runtimes) {
+        next if not @$devicesForRuntime;
+        die "Multiple devices found for UDID $simulatedDeviceUDID: $output" if scalar(@$devicesForRuntime) > 1;
+        return simulatorDeviceFromJSON($runtime, @$devicesForRuntime[0]);        
     }
-    # FIXME: We should parse the device.plist file ourself and map the dictionary keys in it to known
-    #        dictionary keys so as to decouple our representation of the plist from the actual structure
-    #        of the plist, which may change.
-    eval "require Foundation";
-    return Foundation::perlRefFromObjectRef(NSDictionary->dictionaryWithContentsOfFile_($devicePlistPath));
+    return undef;
 }
 
 sub iosSimulatorRuntime()
 {
     my $xcodeSDKVersion = xcodeSDKVersion();
     $xcodeSDKVersion =~ s/\./-/;
-    return "com.apple.CoreSimulator.SimRuntime.iOS-$xcodeSDKVersion";
+    my $runtime = "com.apple.CoreSimulator.SimRuntime.iOS-$xcodeSDKVersion";
+
+    open(TEST, "-|", "xcrun --sdk iphonesimulator simctl list 2>&1") or die "Failed to run find simulator runtime";
+    while ( my $line = <TEST> ) {
+        $runtime = $1 if ($line =~ m/.+ - (com.apple.CoreSimulator.SimRuntime.iOS-\S+)/);
+    }
+    close(TEST);
+    return $runtime;
 }
 
 sub findOrCreateSimulatorForIOSDevice($)
@@ -2760,13 +3045,15 @@ sub findOrCreateSimulatorForIOSDevice($)
     my ($simulatorNameSuffix) = @_;
     my $simulatorName;
     my $simulatorDeviceType;
-    if (architecture() eq "x86_64") {
+
+    if ($simulatorIdiom eq "iPad") {
+        $simulatorName = "iPad Pro " . $simulatorNameSuffix;
+        $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPad-Pro--9-7-inch-";
+    } else {
         $simulatorName = "iPhone SE " . $simulatorNameSuffix;
         $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPhone-SE";
-    } else {
-        $simulatorName = "iPhone 5 " . $simulatorNameSuffix;
-        $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPhone-5";
     }
+
     my $simulatedDevice = iosSimulatorDeviceByName($simulatorName);
     return $simulatedDevice if $simulatedDevice;
     return createiOSSimulatorDevice($simulatorName, $simulatorDeviceType, iosSimulatorRuntime());
@@ -2832,7 +3119,7 @@ sub runIOSWebKitAppInSimulator($;$)
             # was previously overwritten with a custom built version of the app.
             # FIXME: Only restore the system-installed version of the app instead of erasing all contents and settings.
             print "Quitting iOS Simulator...\n";
-            quitIOSSimulator($simulatedDeviceUDID);
+            shutDownIOSSimulatorDevice($simulatedDevice);
             print "Erasing contents and settings for simulator device \"$simulatedDevice->{name}\".\n";
             exitStatus(system("xcrun", "--sdk", "iphonesimulator", "simctl", "erase", $simulatedDeviceUDID)) == 0 or die;
         }

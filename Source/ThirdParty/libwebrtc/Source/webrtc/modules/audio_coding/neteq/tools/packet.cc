@@ -10,85 +10,32 @@
 
 #include "modules/audio_coding/neteq/tools/packet.h"
 
-#include <string.h>
-
-#include <memory>
-
-#include "modules/rtp_rtcp/include/rtp_header_parser.h"
+#include "api/array_view.h"
+#include "modules/rtp_rtcp/source/rtp_packet_received.h"
 #include "rtc_base/checks.h"
+#include "rtc_base/copy_on_write_buffer.h"
 
 namespace webrtc {
 namespace test {
 
-Packet::Packet(uint8_t* packet_memory,
-               size_t allocated_bytes,
-               double time_ms,
-               const RtpHeaderParser& parser)
-    : payload_memory_(packet_memory),
-      payload_(NULL),
-      packet_length_bytes_(allocated_bytes),
-      payload_length_bytes_(0),
-      virtual_packet_length_bytes_(allocated_bytes),
-      virtual_payload_length_bytes_(0),
-      time_ms_(time_ms) {
-  valid_header_ = ParseHeader(parser);
-}
-
-Packet::Packet(uint8_t* packet_memory,
-               size_t allocated_bytes,
+Packet::Packet(rtc::CopyOnWriteBuffer packet,
                size_t virtual_packet_length_bytes,
                double time_ms,
-               const RtpHeaderParser& parser)
-    : payload_memory_(packet_memory),
-      payload_(NULL),
-      packet_length_bytes_(allocated_bytes),
-      payload_length_bytes_(0),
+               const RtpHeaderExtensionMap* extension_map)
+    : packet_(std::move(packet)),
       virtual_packet_length_bytes_(virtual_packet_length_bytes),
-      virtual_payload_length_bytes_(0),
-      time_ms_(time_ms) {
-  valid_header_ = ParseHeader(parser);
-}
+      time_ms_(time_ms),
+      valid_header_(ParseHeader(extension_map)) {}
 
 Packet::Packet(const RTPHeader& header,
                size_t virtual_packet_length_bytes,
                size_t virtual_payload_length_bytes,
                double time_ms)
     : header_(header),
-      payload_memory_(),
-      payload_(NULL),
-      packet_length_bytes_(0),
-      payload_length_bytes_(0),
       virtual_packet_length_bytes_(virtual_packet_length_bytes),
       virtual_payload_length_bytes_(virtual_payload_length_bytes),
       time_ms_(time_ms),
       valid_header_(true) {}
-
-Packet::Packet(uint8_t* packet_memory, size_t allocated_bytes, double time_ms)
-    : payload_memory_(packet_memory),
-      payload_(NULL),
-      packet_length_bytes_(allocated_bytes),
-      payload_length_bytes_(0),
-      virtual_packet_length_bytes_(allocated_bytes),
-      virtual_payload_length_bytes_(0),
-      time_ms_(time_ms) {
-  std::unique_ptr<RtpHeaderParser> parser(RtpHeaderParser::Create());
-  valid_header_ = ParseHeader(*parser);
-}
-
-Packet::Packet(uint8_t* packet_memory,
-               size_t allocated_bytes,
-               size_t virtual_packet_length_bytes,
-               double time_ms)
-    : payload_memory_(packet_memory),
-      payload_(NULL),
-      packet_length_bytes_(allocated_bytes),
-      payload_length_bytes_(0),
-      virtual_packet_length_bytes_(virtual_packet_length_bytes),
-      virtual_payload_length_bytes_(0),
-      time_ms_(time_ms) {
-  std::unique_ptr<RtpHeaderParser> parser(RtpHeaderParser::Create());
-  valid_header_ = ParseHeader(*parser);
-}
 
 Packet::~Packet() = default;
 
@@ -105,9 +52,8 @@ bool Packet::ExtractRedHeaders(std::list<RTPHeader*>* headers) const {
   // +-+-+-+-+-+-+-+-+
   //
 
-  assert(payload_);
-  const uint8_t* payload_ptr = payload_;
-  const uint8_t* payload_end_ptr = payload_ptr + payload_length_bytes_;
+  const uint8_t* payload_ptr = payload();
+  const uint8_t* payload_end_ptr = payload_ptr + payload_length_bytes();
 
   // Find all RED headers with the extension bit set to 1. That is, all headers
   // but the last one.
@@ -121,7 +67,7 @@ bool Packet::ExtractRedHeaders(std::list<RTPHeader*>* headers) const {
     payload_ptr += 4;
   }
   // Last header.
-  assert(payload_ptr < payload_end_ptr);
+  RTC_DCHECK_LT(payload_ptr, payload_end_ptr);
   if (payload_ptr >= payload_end_ptr) {
     return false;  // Payload too short.
   }
@@ -139,43 +85,48 @@ void Packet::DeleteRedHeaders(std::list<RTPHeader*>* headers) {
   }
 }
 
-bool Packet::ParseHeader(const RtpHeaderParser& parser) {
-  bool valid_header = parser.Parse(
-      payload_memory_.get(), static_cast<int>(packet_length_bytes_), &header_);
-  // Special case for dummy packets that have padding marked in the RTP header.
-  // This causes the RTP header parser to report failure, but is fine in this
-  // context.
-  const bool header_only_with_padding =
-      (header_.headerLength == packet_length_bytes_ &&
-       header_.paddingLength > 0);
-  if (!valid_header && !header_only_with_padding) {
-    return false;
+bool Packet::ParseHeader(const RtpHeaderExtensionMap* extension_map) {
+  // Use RtpPacketReceived instead of RtpPacket because former already has a
+  // converter into legacy RTPHeader.
+  webrtc::RtpPacketReceived rtp_packet(extension_map);
+
+  // Because of the special case of dummy packets that have padding marked in
+  // the RTP header, but do not have rtp payload with the padding size, handle
+  // padding manually. Regular RTP packet parser reports failure, but it is fine
+  // in this context.
+  bool padding = (packet_[0] & 0b0010'0000);
+  size_t padding_size = 0;
+  if (padding) {
+    // Clear the padding bit to prevent failure when rtp payload is omited.
+    rtc::CopyOnWriteBuffer packet(packet_);
+    packet.MutableData()[0] &= ~0b0010'0000;
+    if (!rtp_packet.Parse(std::move(packet))) {
+      return false;
+    }
+    if (rtp_packet.payload_size() > 0) {
+      padding_size = rtp_packet.data()[rtp_packet.size() - 1];
+    }
+    if (padding_size > rtp_packet.payload_size()) {
+      return false;
+    }
+  } else {
+    if (!rtp_packet.Parse(packet_)) {
+      return false;
+    }
   }
-  assert(header_.headerLength <= packet_length_bytes_);
-  payload_ = &payload_memory_[header_.headerLength];
-  assert(packet_length_bytes_ >= header_.headerLength);
-  payload_length_bytes_ = packet_length_bytes_ - header_.headerLength;
-  RTC_CHECK_GE(virtual_packet_length_bytes_, packet_length_bytes_);
-  assert(virtual_packet_length_bytes_ >= header_.headerLength);
+  rtp_payload_ = rtc::MakeArrayView(packet_.data() + rtp_packet.headers_size(),
+                                    rtp_packet.payload_size() - padding_size);
+  rtp_packet.GetHeader(&header_);
+
+  RTC_CHECK_GE(virtual_packet_length_bytes_, rtp_packet.size());
+  RTC_DCHECK_GE(virtual_packet_length_bytes_, rtp_packet.headers_size());
   virtual_payload_length_bytes_ =
-      virtual_packet_length_bytes_ - header_.headerLength;
+      virtual_packet_length_bytes_ - rtp_packet.headers_size();
   return true;
 }
 
 void Packet::CopyToHeader(RTPHeader* destination) const {
-  destination->markerBit = header_.markerBit;
-  destination->payloadType = header_.payloadType;
-  destination->sequenceNumber = header_.sequenceNumber;
-  destination->timestamp = header_.timestamp;
-  destination->ssrc = header_.ssrc;
-  destination->numCSRCs = header_.numCSRCs;
-  destination->paddingLength = header_.paddingLength;
-  destination->headerLength = header_.headerLength;
-  destination->payload_type_frequency = header_.payload_type_frequency;
-  memcpy(&destination->arrOfCSRCs, &header_.arrOfCSRCs,
-         sizeof(header_.arrOfCSRCs));
-  memcpy(&destination->extension, &header_.extension,
-         sizeof(header_.extension));
+  *destination = header_;
 }
 
 }  // namespace test

@@ -1,3 +1,4 @@
+//@ skip if not $jitTests
 function doTest(max) {
     let sum = 0
     for (let i=0; i<max; ++i) {

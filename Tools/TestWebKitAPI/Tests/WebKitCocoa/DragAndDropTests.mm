@@ -24,17 +24,47 @@
  */
 
 #import "config.h"
+#import "Test.h"
 
-#if ENABLE(DRAG_SUPPORT)
+#if ENABLE(DRAG_SUPPORT) && !PLATFORM(MACCATALYST)
 
 #import "DragAndDropSimulator.h"
 #import "PlatformUtilities.h"
+#import "WKWebViewConfigurationExtras.h"
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WebArchive.h>
+#import <wtf/RetainPtr.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import <MobileCoreServices/MobileCoreServices.h>
 #endif
+
+@implementation TestWKWebView (DragAndDropTests)
+
+- (void)selectElementWithID:(NSString *)elementID
+{
+    [self evaluateJavaScript:[NSString stringWithFormat:@"getSelection().selectAllChildren(document.getElementById('%@'))", elementID] completionHandler:nil];
+    [self waitForNextPresentationUpdate];
+}
+
+@end
+
+@implementation DragAndDropSimulator (DragAndDropTests)
+
+- (void)dragFromElementWithID:(NSString *)elementID to:(CGPoint)destination
+{
+    NSArray<NSNumber *> *rectValues = [self.webView objectByEvaluatingJavaScript:[NSString stringWithFormat:@"(() => {"
+        "    const element = document.getElementById('%@');"
+        "    const bounds = element.getBoundingClientRect();"
+        "    return [bounds.left, bounds.top, bounds.width, bounds.height];"
+        "})();", elementID]];
+
+    auto bounds = CGRectMake(rectValues[0].floatValue, rectValues[1].floatValue, rectValues[2].floatValue, rectValues[3].floatValue);
+    auto midPoint = CGPointMake(CGRectGetMidX(bounds), CGRectGetMidY(bounds));
+    [self runFrom:midPoint to:destination];
+}
+
+@end
 
 TEST(DragAndDropTests, ModernWebArchiveType)
 {
@@ -116,6 +146,31 @@ TEST(DragAndDropTests, ExposeMultipleURLsInDataTransfer)
     EXPECT_WK_STREQ("https://webkit.org/\nhttps://apple.com/", [webView stringByEvaluatingJavaScript:@"urlData.textContent"]);
 }
 
+#if PLATFORM(MAC)
+TEST(DragAndDropTests, DragAndDropOnEmptyView)
+{
+    auto simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebViewFrame:CGRectMake(0, 0, 320, 500)]);
+    simulator.get().dragDestinationAction = WKDragDestinationActionAny;
+    auto webView = [simulator webView];
+
+    NSURL *url = [[NSBundle mainBundle] URLForResource:@"simple" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"];
+
+    NSPasteboard *pasteboard = [NSPasteboard pasteboardWithUniqueName];
+    [pasteboard writeObjects:@[ url ]];
+    [simulator setExternalDragPasteboard:pasteboard];
+
+    [simulator runFrom:CGPointMake(0, 0) to:CGPointMake(100, 100)];
+
+    __block bool finished = false;
+    [webView performAfterLoading:^{
+        finished = true;
+    }];
+    TestWebKitAPI::Util::run(&finished);
+
+    EXPECT_WK_STREQ("Simple HTML file.", [webView stringByEvaluatingJavaScript:@"document.body.innerText"]);
+}
+#endif // PLATFORM(MAC)
+
 TEST(DragAndDropTests, PreventingMouseDownShouldPreventDragStart)
 {
     auto simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebViewFrame:CGRectMake(0, 0, 320, 500)]);
@@ -133,6 +188,136 @@ TEST(DragAndDropTests, PreventingMouseDownShouldPreventDragStart)
     EXPECT_WK_STREQ("", [webView stringByEvaluatingJavaScript:@"target.textContent"]);
     EXPECT_WK_STREQ("", [webView stringByEvaluatingJavaScript:@"output.textContent"]);
     EXPECT_TRUE([webView stringByEvaluatingJavaScript:@"observedMousedown"].boolValue);
+}
+
+struct DragStartData {
+    BOOL containsFile { NO };
+    NSString *text { nil };
+    NSString *url { nil };
+    NSString *html { nil };
+    RetainPtr<NSDictionary<NSString *, NSString *>> customData;
+};
+
+static DragStartData runDragStartDataTestCase(DragAndDropSimulator *simulator, NSString *elementID)
+{
+    auto webView = [simulator webView];
+    NSString *tagName = [webView stringByEvaluatingJavaScript:[NSString stringWithFormat:@"document.getElementById('%@').tagName", elementID]];
+    if (![tagName isEqualToString:@"IMG"] && ![tagName isEqualToString:@"A"])
+        [webView selectElementWithID:elementID];
+
+    [simulator dragFromElementWithID:elementID to:CGPointMake(400, 400)];
+    RetainPtr<NSMutableDictionary<NSString *, NSString *>> allData = adoptNS([[webView objectByEvaluatingJavaScript:@"allData"] mutableCopy]);
+    DragStartData result;
+    result.text = [allData objectForKey:@"text/plain"];
+    result.url = [allData objectForKey:@"text/uri-list"];
+    result.html = [allData objectForKey:@"text/html"];
+    result.containsFile = !![allData objectForKey:@"Files"];
+    [allData removeObjectForKey:@"text/plain"];
+    [allData removeObjectForKey:@"text/uri-list"];
+    [allData removeObjectForKey:@"text/html"];
+    [allData removeObjectForKey:@"Files"];
+    if ([allData count])
+        result.customData = WTFMove(allData);
+    return result;
+}
+
+TEST(DragAndDropTests, DataTransferTypesOnDragStartForTextSelection)
+{
+    auto simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebViewFrame:CGRectMake(0, 0, 500, 500)]);
+    [[simulator webView] synchronouslyLoadTestPageNamed:@"dragstart-data"];
+
+    auto result = runDragStartDataTestCase(simulator.get(), @"regular");
+    EXPECT_WK_STREQ("Regular text", result.text);
+    EXPECT_NULL(result.url);
+    EXPECT_TRUE([result.html containsString:@"Regular text"]);
+    EXPECT_NULL(result.customData);
+    EXPECT_FALSE(result.containsFile);
+
+    result = runDragStartDataTestCase(simulator.get(), @"regular-url");
+    EXPECT_WK_STREQ("Regular text + URL data", result.text);
+    EXPECT_WK_STREQ("https://www.google.com", result.url);
+    EXPECT_TRUE([result.html containsString:@"Regular text + URL data"]);
+    EXPECT_NULL(result.customData);
+    EXPECT_FALSE(result.containsFile);
+
+    result = runDragStartDataTestCase(simulator.get(), @"regular-custom");
+    EXPECT_WK_STREQ("Regular text + custom data", result.text);
+    EXPECT_NULL(result.url);
+    EXPECT_TRUE([result.html containsString:@"Regular text + custom data"]);
+    EXPECT_WK_STREQ("Hello world", result.customData.get()[@"text/foo"]);
+    EXPECT_FALSE(result.containsFile);
+
+    result = runDragStartDataTestCase(simulator.get(), @"url");
+    EXPECT_NULL(result.text);
+    EXPECT_WK_STREQ("https://www.google.com", result.url);
+    EXPECT_NULL([result.html containsString:@"Regular text + custom data"]);
+    EXPECT_NULL(result.customData);
+    EXPECT_FALSE(result.containsFile);
+
+    result = runDragStartDataTestCase(simulator.get(), @"custom");
+    EXPECT_NULL(result.text);
+    EXPECT_NULL(result.url);
+    EXPECT_NULL(result.html);
+    EXPECT_WK_STREQ("Hello world", result.customData.get()[@"text/foo"]);
+    EXPECT_FALSE(result.containsFile);
+}
+
+TEST(DragAndDropTests, DataTransferTypesOnDragStartForImage)
+{
+    auto simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebViewFrame:CGRectMake(0, 0, 500, 500)]);
+    [[simulator webView] synchronouslyLoadTestPageNamed:@"dragstart-data"];
+
+    auto result = runDragStartDataTestCase(simulator.get(), @"image");
+    EXPECT_NULL(result.text);
+    // The URL should be nil here because the image source is a file URL, so we shoud avoid exposing it to the page.
+    EXPECT_NULL(result.url);
+#if PLATFORM(MAC)
+    EXPECT_TRUE([result.html containsString:@"<img"]);
+#else
+    EXPECT_NULL(result.html);
+#endif
+    EXPECT_NULL(result.customData);
+    EXPECT_TRUE(result.containsFile);
+
+    result = runDragStartDataTestCase(simulator.get(), @"image-text");
+    EXPECT_WK_STREQ("This is an image of Cupertino.", result.text);
+    EXPECT_NULL(result.url);
+#if PLATFORM(MAC)
+    EXPECT_TRUE([result.html containsString:@"<img"]);
+#else
+    EXPECT_NULL(result.html);
+#endif
+    EXPECT_NULL(result.customData);
+    EXPECT_TRUE(result.containsFile);
+}
+
+TEST(DragAndDropTests, DataTransferTypesOnDragStartForLink)
+{
+    auto simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebViewFrame:CGRectMake(0, 0, 500, 800)]);
+    [[simulator webView] synchronouslyLoadTestPageNamed:@"dragstart-data"];
+
+    auto result = runDragStartDataTestCase(simulator.get(), @"link");
+    EXPECT_NULL(result.text);
+    EXPECT_WK_STREQ("https://www.apple.com/", result.url);
+    EXPECT_NULL(result.html);
+    EXPECT_NULL(result.customData);
+    EXPECT_FALSE(result.containsFile);
+
+    result = runDragStartDataTestCase(simulator.get(), @"link-custom");
+    EXPECT_NULL(result.text);
+    EXPECT_WK_STREQ("https://www.apple.com/", result.url);
+    EXPECT_NULL(result.html);
+    EXPECT_WK_STREQ("bar", result.customData.get()[@"text/foo"]);
+    EXPECT_FALSE(result.containsFile);
+}
+
+TEST(DragAndDropTests, DoNotCrashWhenRemovingNodeOnDrop)
+{
+    auto simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebViewFrame:CGRectMake(0, 0, 320, 500)]);
+    auto webView = [simulator webView];
+    [webView synchronouslyLoadTestPageNamed:@"remove-node-on-drop"];
+    [simulator runFrom:CGPointMake(150, 50) to:CGPointMake(150, 150)];
+    EXPECT_TRUE([[webView contentsAsString] containsString:@"Drag me"]);
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
@@ -209,4 +394,53 @@ TEST(DragAndDropTests, ColorInputEvents)
 
 #endif // ENABLE(INPUT_TYPE_COLOR)
 
-#endif // ENABLE(DRAG_SUPPORT)
+#if ENABLE(IMAGE_ANALYSIS)
+
+TEST(DragAndDropTests, DragElementWithImageOverlay)
+{
+    auto configuration = retainPtr([WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES]);
+    [[configuration preferences] _setLargeImageAsyncDecodingEnabled:NO];
+
+    auto simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebViewFrame:NSMakeRect(0, 0, 400, 400) configuration:configuration.get()]);
+    [[simulator webView] synchronouslyLoadTestPageNamed:@"simple-image-overlay"];
+
+    [simulator runFrom:NSMakePoint(150, 40) to:NSMakePoint(300, 40)];
+    EXPECT_FALSE([simulator containsDraggedType:(__bridge NSString *)kUTTypeJPEG]);
+
+    [simulator runFrom:NSMakePoint(150, 200) to:NSMakePoint(300, 200)];
+    EXPECT_TRUE([simulator containsDraggedType:(__bridge NSString *)kUTTypeJPEG]);
+}
+
+TEST(DragAndDropTests, DragSelectedTextInImageOverlay)
+{
+    auto configuration = retainPtr([WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES]);
+    [[configuration preferences] _setLargeImageAsyncDecodingEnabled:NO];
+
+    auto simulator = adoptNS([[DragAndDropSimulator alloc] initWithWebViewFrame:NSMakeRect(0, 0, 400, 400) configuration:configuration.get()]);
+    [[simulator webView] synchronouslyLoadTestPageNamed:@"simple-image-overlay"];
+    [[simulator webView] stringByEvaluatingJavaScript:@"selectImageOverlay()"];
+    [[simulator webView] waitForNextPresentationUpdate];
+
+    [simulator runFrom:NSMakePoint(150, 40) to:NSMakePoint(300, 300)];
+
+    EXPECT_TRUE([simulator containsDraggedType:(__bridge NSString *)kUTTypeUTF8PlainText]);
+    EXPECT_FALSE([simulator containsDraggedType:(__bridge NSString *)kUTTypeHTML]);
+    EXPECT_FALSE([simulator containsDraggedType:(__bridge NSString *)kUTTypeRTF]);
+
+    RetainPtr<NSString> draggedText;
+#if USE(APPKIT)
+    draggedText = [[simulator draggingInfo].draggingPasteboard stringForType:(__bridge NSString *)kUTTypeUTF8PlainText];
+#else
+    bool doneLoadingString = false;
+    [[simulator sourceItemProviders].firstObject loadObjectOfClass:NSString.class completionHandler:[&](NSString *string, NSError *error) {
+        draggedText = adoptNS([string copy]);
+        doneLoadingString = true;
+    }];
+    TestWebKitAPI::Util::run(&doneLoadingString);
+#endif
+    EXPECT_WK_STREQ(draggedText.get(), "foobar");
+}
+
+#endif // ENABLE(IMAGE_ANALYSIS)
+
+#endif // ENABLE(DRAG_SUPPORT) && !PLATFORM(MACCATALYST)

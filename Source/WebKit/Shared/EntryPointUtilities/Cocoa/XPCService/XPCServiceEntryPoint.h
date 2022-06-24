@@ -29,15 +29,20 @@
 #import "WebKit2Initialize.h"
 #import <JavaScriptCore/ExecutableAllocator.h>
 #import <wtf/OSObjectPtr.h>
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/spi/darwin/XPCSPI.h>
 
-#if HAVE(VOUCHERS)
+// FIXME: This should be moved to an SPI header.
 #if USE(APPLE_INTERNAL_SDK)
 #include <os/voucher_private.h>
 #else
 extern "C" OS_NOTHROW void voucher_replace_default_voucher(void);
 #endif
-#endif
+
+#define WEBCONTENT_SERVICE_INITIALIZER WebContentServiceInitializer
+#define NETWORK_SERVICE_INITIALIZER NetworkServiceInitializer
+#define GPU_SERVICE_INITIALIZER GPUServiceInitializer
+#define WEBAUTHN_SERVICE_INITIALIZER WebAuthnServiceInitializer
 
 namespace WebKit {
 
@@ -56,7 +61,10 @@ public:
     virtual bool getConnectionIdentifier(IPC::Connection::Identifier& identifier);
     virtual bool getProcessIdentifier(WebCore::ProcessIdentifier&);
     virtual bool getClientIdentifier(String& clientIdentifier);
+    virtual bool getClientBundleIdentifier(String& clientBundleIdentifier);
+    virtual bool getClientSDKVersion(uint32_t& clientSDKVersion);
     virtual bool getClientProcessName(String& clientProcessName);
+    virtual bool getLinkedOnOrAfterOverride(std::optional<LinkedOnOrAfterOverride>&);
     virtual bool getExtraInitializationData(HashMap<String, String>& extraInitializationData);
 
 protected:
@@ -73,23 +81,40 @@ void initializeAuxiliaryProcess(AuxiliaryProcessInitializationParameters&& param
     XPCServiceType::singleton().initialize(WTFMove(parameters));
 }
 
+#if PLATFORM(MAC)
+void setOSTransaction(OSObjectPtr<os_transaction_t>&&);
+#endif
+
 template<typename XPCServiceType, typename XPCServiceInitializerDelegateType>
 void XPCServiceInitializer(OSObjectPtr<xpc_connection_t> connection, xpc_object_t initializerMessage, xpc_object_t priorityBoostMessage)
 {
     if (initializerMessage) {
         if (xpc_dictionary_get_bool(initializerMessage, "configure-jsc-for-testing"))
             JSC::Config::configureForTesting();
+        if (xpc_dictionary_get_bool(initializerMessage, "enable-captive-portal-mode")) {
+            JSC::ExecutableAllocator::setJITEnabled(false);
+            JSC::Options::initialize();
+            JSC::Options::AllowUnfinalizedAccessScope scope;
+            JSC::Options::useGenerationalGC() = false;
+            JSC::Options::useConcurrentGC() = false;
+        }
         if (xpc_dictionary_get_bool(initializerMessage, "disable-jit"))
             JSC::ExecutableAllocator::setJITEnabled(false);
+        if (xpc_dictionary_get_bool(initializerMessage, "enable-shared-array-buffer")) {
+            JSC::Options::initialize();
+            JSC::Options::AllowUnfinalizedAccessScope scope;
+            JSC::Options::useSharedArrayBuffer() = true;
+        }
     }
 
     XPCServiceInitializerDelegateType delegate(WTFMove(connection), initializerMessage);
 
     // We don't want XPC to be in charge of whether the process should be terminated or not,
-    // so ensure that we have an outstanding transaction here.
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    xpc_transaction_begin();
-ALLOW_DEPRECATED_DECLARATIONS_END
+    // so ensure that we have an outstanding transaction here. This is not needed on iOS because
+    // the UIProcess takes process assertions on behalf of its child processes.
+#if PLATFORM(MAC)
+    setOSTransaction(adoptOSObject(os_transaction_create("WebKit XPC Service")));
+#endif
 
     InitializeWebKit2();
 
@@ -106,6 +131,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!delegate.getClientIdentifier(parameters.clientIdentifier))
         exit(EXIT_FAILURE);
 
+    // The host process may not have a bundle identifier (e.g. a command line app), so don't require one.
+    delegate.getClientBundleIdentifier(parameters.clientBundleIdentifier);
+    
+    delegate.getLinkedOnOrAfterOverride(parameters.clientLinkedOnOrAfterOverride);
+
+    if (!delegate.getClientSDKVersion(parameters.clientSDKVersion))
+        exit(EXIT_FAILURE);
+
     WebCore::ProcessIdentifier processIdentifier;
     if (!delegate.getProcessIdentifier(processIdentifier))
         exit(EXIT_FAILURE);
@@ -117,10 +150,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!delegate.getExtraInitializationData(parameters.extraInitializationData))
         exit(EXIT_FAILURE);
 
-#if HAVE(VOUCHERS)
     // Set the task default voucher to the current value (as propagated by XPC).
     voucher_replace_default_voucher();
-#endif
 
 #if HAVE(QOS_CLASSES)
     if (parameters.extraInitializationData.contains("always-runs-at-background-priority"_s))

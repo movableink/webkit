@@ -35,6 +35,8 @@
 
 namespace WebKit {
 
+class WebPage;
+
 #if USE(LIBWEBRTC)
 
 #if PLATFORM(COCOA)
@@ -47,19 +49,42 @@ using LibWebRTCProviderBase = WebCore::LibWebRTCProvider;
 
 class LibWebRTCProvider final : public LibWebRTCProviderBase {
 public:
-    LibWebRTCProvider() { m_useNetworkThreadWithSocketServer = false; }
+    explicit LibWebRTCProvider(WebPage&);
 
 private:
-    std::unique_ptr<SuspendableSocketFactory> createSocketFactory(String&& /* userAgent */) final;
+    std::unique_ptr<SuspendableSocketFactory> createSocketFactory(String&& /* userAgent */, bool /* isFirstParty */, WebCore::RegistrableDomain&&) final;
 
-    rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, rtc::PacketSocketFactory*, webrtc::PeerConnectionInterface::RTCConfiguration&&) final;
+    rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(WebCore::ScriptExecutionContextIdentifier, webrtc::PeerConnectionObserver&, rtc::PacketSocketFactory*, webrtc::PeerConnectionInterface::RTCConfiguration&&) final;
 
-    void unregisterMDNSNames(uint64_t documentIdentifier) final;
-    void registerMDNSName(uint64_t documentIdentifier, const String& ipAddress, CompletionHandler<void(MDNSNameOrError&&)>&&) final;
     void disableNonLocalhostConnections() final;
+    void startedNetworkThread() final;
+    RefPtr<WebCore::RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
+    void setLoggingLevel(WTFLogLevel) final;
+
+    WebPage& m_webPage;
+#if ENABLE(GPU_PROCESS) && PLATFORM(COCOA) && !PLATFORM(MACCATALYST)
+    bool m_didInitializeCallback { false };
+#endif
 };
+
+inline LibWebRTCProvider::LibWebRTCProvider(WebPage& webPage)
+    : m_webPage(webPage)
+{
+    m_useNetworkThreadWithSocketServer = false;
+    m_supportsMDNS = true;
+}
+
+inline UniqueRef<LibWebRTCProvider> createLibWebRTCProvider(WebPage& page)
+{
+    return makeUniqueRef<LibWebRTCProvider>(page);
+}
 #else
 using LibWebRTCProvider = WebCore::LibWebRTCProvider;
+
+inline UniqueRef<LibWebRTCProvider> createLibWebRTCProvider(WebPage&)
+{
+    return makeUniqueRef<LibWebRTCProvider>();
+}
 #endif // USE(LIBWEBRTC)
 
 } // namespace WebKit

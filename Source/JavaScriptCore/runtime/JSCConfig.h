@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,93 +25,117 @@
 
 #pragma once
 
+#include "Gate.h"
+#include "Opcode.h"
 #include "OptionsList.h"
-#include <wtf/StdLibExtras.h>
+#include "SecureARM64EHashPins.h"
+#include <wtf/WTFConfig.h>
 
 namespace JSC {
 
 class ExecutableAllocator;
 class FixedVMPoolExecutableAllocator;
-
-#if CPU(ARM64) || PLATFORM(WATCHOS)
-constexpr size_t PageSize = 16 * KB;
-constexpr size_t ConfigSizeToProtect = 1 * PageSize;
-#else
-constexpr size_t PageSize = 4 * KB;
-constexpr size_t ConfigSizeToProtect = 1 * PageSize;
-#endif
+class VM;
 
 #if ENABLE(SEPARATED_WX_HEAP)
 using JITWriteSeparateHeapsFunction = void (*)(off_t, const void*, size_t);
 #endif
 
+#if defined(STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB) && STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB > 0
+constexpr uintptr_t structureHeapAddressSize = STRUCTURE_HEAP_ADDRESS_SIZE_IN_MB * MB;
+#elif PLATFORM(IOS_FAMILY) && CPU(ARM64) && !CPU(ARM64E)
+constexpr uintptr_t structureHeapAddressSize = 512 * MB;
+#else
+constexpr uintptr_t structureHeapAddressSize = 1 * GB;
+#endif
+
 struct Config {
+    static Config& singleton();
+
     JS_EXPORT_PRIVATE static void disableFreezingForTesting();
     JS_EXPORT_PRIVATE static void enableRestrictedOptions();
-    JS_EXPORT_PRIVATE static void permanentlyFreeze();
+    static void permanentlyFreeze() { WTF::Config::permanentlyFreeze(); }
 
     static void configureForTesting()
     {
+        WTF::setPermissionsOfConfigPage();
         disableFreezingForTesting();
         enableRestrictedOptions();
     }
 
-    union {
-        struct {
-            // All the fields in this struct should be chosen such that their
-            // initial value is 0 / null / falsy because Config is instantiated
-            // as a global singleton.
+    bool isPermanentlyFrozen() { return g_wtfConfig.isPermanentlyFrozen; }
 
-            bool isPermanentlyFrozen;
-            bool disabledFreezingForTesting;
-            bool restrictedOptionsEnabled;
-            bool jitDisabled;
+    // All the fields in this struct should be chosen such that their
+    // initial value is 0 / null / falsy because Config is instantiated
+    // as a global singleton.
 
-            // The following HasBeenCalled flags are for auditing call_once initialization functions.
-            bool initializeThreadingHasBeenCalled;
+    bool disabledFreezingForTesting;
+    bool restrictedOptionsEnabled;
+    bool jitDisabled;
 
-            ExecutableAllocator* executableAllocator;
-            FixedVMPoolExecutableAllocator* fixedVMPoolExecutableAllocator;
-            void* startExecutableMemory;
-            void* endExecutableMemory;
-            uintptr_t startOfFixedWritableMemoryPool;
+    bool useFastJITPermissions;
+
+    // The following HasBeenCalled flags are for auditing call_once initialization functions.
+    bool initializeHasBeenCalled;
+
+    struct {
+#if ASSERT_ENABLED
+        bool canUseJITIsSet;
+#endif
+        bool canUseJIT;
+    } vm;
+
+    ExecutableAllocator* executableAllocator;
+    FixedVMPoolExecutableAllocator* fixedVMPoolExecutableAllocator;
+    void* startExecutableMemory;
+    void* endExecutableMemory;
+    uintptr_t startOfFixedWritableMemoryPool;
+    uintptr_t startOfStructureHeap;
 
 #if ENABLE(SEPARATED_WX_HEAP)
-            JITWriteSeparateHeapsFunction jitWriteSeparateHeaps;
-            bool useFastPermisionsJITCopy;
+    JITWriteSeparateHeapsFunction jitWriteSeparateHeaps;
 #endif
 
-            bool typeBoolOptions[NumberOfBoolOptions];
-            bool typeBoolDefaultOptions[NumberOfBoolOptions];
+    OptionsStorage options;
 
-            GCLogging::Level typeGCLogLevelOptions[NumberOfGCLogLevelOptions];
-            GCLogging::Level typeGCLogLevelDefaultOptions[NumberOfGCLogLevelOptions];
+    void (*shellTimeoutCheckCallback)(VM&);
 
-            int32_t typeInt32Options[NumberOfInt32Options];
-            int32_t typeInt32DefaultOptions[NumberOfInt32Options];
+    struct {
+        uint8_t exceptionInstructions[maxBytecodeStructLength + 1];
+        uint8_t wasmExceptionInstructions[maxBytecodeStructLength + 1];
+        const void* gateMap[numberOfGates];
+    } llint;
 
-            unsigned typeUnsignedOptions[NumberOfUnsignedOptions];
-            unsigned typeUnsignedDefaultOptions[NumberOfUnsignedOptions];
+#if CPU(ARM64E) && ENABLE(PTRTAG_DEBUGGING)
+    WTF::PtrTagLookup ptrTagLookupRecord;
+#endif
 
-            double typeDoubleOptions[NumberOfDoubleOptions];
-            double typeDoubleDefaultOptions[NumberOfDoubleOptions];
-
-            size_t typeSizeOptions[NumberOfSizeOptions];
-            size_t typeSizeDefaultOptions[NumberOfSizeOptions];
-
-            const char* typeOptionStringOptions[NumberOfOptionStringOptions];
-            const char* typeOptionStringDefaultOptions[NumberOfOptionStringOptions];
-
-            OptionRange typeOptionRangeOptions[NumberOfOptionRangeOptions];
-            OptionRange typeOptionRangeDefaultOptions[NumberOfOptionRangeOptions];
-        };
-        char ensureSize[ConfigSizeToProtect];
-    };
+#if CPU(ARM64E) && ENABLE(JIT)
+    SecureARM64EHashPins arm64eHashPins;
+#endif
 };
 
-extern "C" alignas(PageSize) JS_EXPORT_PRIVATE Config g_jscConfig;
+#if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 
-static_assert(sizeof(Config) == ConfigSizeToProtect, "");
-static_assert(roundUpToMultipleOf<PageSize>(ConfigSizeToProtect) == ConfigSizeToProtect, "");
+constexpr size_t alignmentOfJSCConfig = std::alignment_of<JSC::Config>::value;
+
+static_assert(WTF::offsetOfWTFConfigExtension + sizeof(JSC::Config) <= WTF::ConfigSizeToProtect);
+static_assert(roundUpToMultipleOf<alignmentOfJSCConfig>(WTF::offsetOfWTFConfigExtension) == WTF::offsetOfWTFConfigExtension);
+
+#define g_jscConfig (*bitwise_cast<JSC::Config*>(&g_wtfConfig.spaceForExtensions))
+
+#else // not ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
+extern "C" JS_EXPORT_PRIVATE Config g_jscConfig;
+
+#endif // ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
+constexpr size_t offsetOfJSCConfigInitializeHasBeenCalled = offsetof(JSC::Config, initializeHasBeenCalled);
+constexpr size_t offsetOfJSCConfigGateMap = offsetof(JSC::Config, llint.gateMap);
+constexpr size_t offsetOfJSCConfigStartOfStructureHeap = offsetof(JSC::Config, startOfStructureHeap);
 
 } // namespace JSC
+
+#if !ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+using JSC::g_jscConfig;
+#endif

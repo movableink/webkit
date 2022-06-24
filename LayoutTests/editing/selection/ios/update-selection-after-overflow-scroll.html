@@ -1,4 +1,4 @@
-<!DOCTYPE html> <!-- webkit-test-runner [ useFlexibleViewport=true internal:AsyncOverflowScrollingEnabled=true ] -->
+<!DOCTYPE html> <!-- webkit-test-runner [ useFlexibleViewport=true AsyncOverflowScrollingEnabled=true ] -->
 <html>
 <head>
 <script src="../../../resources/js-test.js"></script>
@@ -63,22 +63,23 @@ addEventListener("load", async function() {
     await UIHelper.activateElementAndWaitForInputSession(button);
     selectionRectsBefore = await waitForSelectionRectsToChange([]);
 
-    await UIHelper.immediateScrollElementAtContentPointToOffset(150, 100, 0, 50);
+    const rect = editor.getBoundingClientRect();
+    await UIHelper.immediateScrollElementAtContentPointToOffset(rect.left + 40, rect.top + 40, 0, 50);
     selectionRectsAfter = await waitForSelectionRectsToChange(selectionRectsBefore);
 
-    shouldBe("selectionRectsBefore[0].top", "108");
+    shouldBe("selectionRectsBefore[0].top", "109");
     shouldBe("selectionRectsBefore[0].width", "320");
     shouldBe("selectionRectsBefore[0].left", "0");
-    shouldBe("selectionRectsBefore[0].height", "29");
+    shouldBe("selectionRectsBefore[0].height", "28");
     shouldBe("selectionRectsBefore[1].top", "137");
     shouldBe("selectionRectsBefore[1].width", "172");
     shouldBe("selectionRectsBefore[1].left", "0");
     shouldBe("selectionRectsBefore[1].height", "30");
 
-    shouldBe("selectionRectsAfter[0].top", "58");
+    shouldBe("selectionRectsAfter[0].top", "59");
     shouldBe("selectionRectsAfter[0].width", "320");
     shouldBe("selectionRectsAfter[0].left", "0");
-    shouldBe("selectionRectsAfter[0].height", "29");
+    shouldBe("selectionRectsAfter[0].height", "28");
     shouldBe("selectionRectsAfter[1].top", "87");
     shouldBe("selectionRectsAfter[1].width", "172");
     shouldBe("selectionRectsAfter[1].left", "0");

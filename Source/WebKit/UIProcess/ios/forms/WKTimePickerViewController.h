@@ -23,11 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#if HAVE(PEPPER_UI_CORE)
 
-#if PLATFORM(WATCHOS)
-
-#import "WKQuickboardListViewController.h"
+#import "WKQuickboardViewControllerDelegate.h"
 
 @interface WKTimePickerViewController : PUICQuickboardViewController
 
@@ -44,4 +42,4 @@
 
 @end
 
-#endif
+#endif // HAVE(PEPPER_UI_CORE)

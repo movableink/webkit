@@ -38,11 +38,6 @@ class CheckPatchRelevance(AbstractStep):
             Options.quiet,
         ]
 
-    bindings_paths = [
-        "Source/WebCore",
-        "Tools",
-    ]
-
     jsc_paths = [
         "JSTests/",
         "Source/JavaScriptCore/",
@@ -64,15 +59,8 @@ class CheckPatchRelevance(AbstractStep):
         "Tools/Scripts/webkitdirs.pm",
     ]
 
-    webkitpy_paths = [
-        "Tools/Scripts/webkitpy/",
-        "Tools/QueueStatusServer/",
-    ]
-
     group_to_paths_mapping = {
-        'bindings': bindings_paths,
         'jsc': jsc_paths,
-        'webkitpy': webkitpy_paths,
     }
 
     def _changes_are_relevant(self, changed_files):

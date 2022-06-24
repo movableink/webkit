@@ -133,7 +133,7 @@ function parseURL(url)
     if (parsed.port)
         result.port = Number(parsed.port);
 
-    if (parsed.origin)
+    if (parsed.origin && parsed.origin !== "null")
         result.origin = parsed.origin;
     else if (result.scheme && result.host) {
         result.origin = result.scheme + "://" + result.host;
@@ -311,7 +311,12 @@ WI.urlWithoutFragment = function(urlString)
 
 WI.displayNameForHost = function(host)
 {
+    let extensionName = WI.browserManager.extensionNameForId(host);
+    if (extensionName)
+        return extensionName;
+
     // FIXME <rdar://problem/11237413>: This should decode punycode hostnames.
+
     return host;
 };
 

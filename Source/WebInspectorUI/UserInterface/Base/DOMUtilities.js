@@ -57,6 +57,15 @@ WI.linkifyAccessibilityNodeReference = function(node)
     return link;
 };
 
+WI.linkifyStyleable = function(styleable)
+{
+    console.assert(styleable instanceof WI.DOMStyleable, styleable);
+    let displayName = styleable.displayName;
+    let link = document.createElement("span");
+    link.append(displayName);
+    return WI.linkifyNodeReferenceElement(styleable.node, link, {displayName});
+};
+
 WI.linkifyNodeReference = function(node, options = {})
 {
     let displayName = node.displayName;
@@ -85,12 +94,14 @@ WI.linkifyNodeReferenceElement = function(node, element, options = {})
 WI.bindInteractionsForNodeToElement = function(node, element, options = {}) {
     if (!options.ignoreClick) {
         element.addEventListener("click", (event) => {
-            WI.domManager.inspectElement(node.id);
+            WI.domManager.inspectElement(node.id, {
+                initiatorHint: WI.TabBrowser.TabNavigationInitiator.LinkClick,
+            });
         });
     }
 
     element.addEventListener("mouseover", (event) => {
-        WI.domManager.highlightDOMNode(node.id, "all");
+        node.highlight();
     });
 
     element.addEventListener("mouseout", (event) => {

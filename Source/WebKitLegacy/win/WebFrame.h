@@ -50,7 +50,7 @@ class HTMLFrameOwnerElement;
 class IntRect;
 class Page;
 class ResourceError;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 }
 
 typedef const struct OpaqueJSContext* JSContextRef;
@@ -60,9 +60,9 @@ typedef struct OpaqueJSValue* JSObjectRef;
 typedef struct CGContext PlatformGraphicsContext;
 #elif USE(CAIRO)
 namespace WebCore {
-class PlatformContextCairo;
+class GraphicsContextCairo;
 }
-typedef class WebCore::PlatformContextCairo PlatformGraphicsContext;
+typedef class WebCore::GraphicsContextCairo PlatformGraphicsContext;
 #endif
 
 class WebFrame;
@@ -79,11 +79,7 @@ class DECLSPEC_UUID("{A3676398-4485-4a9d-87DC-CB5A40E6351D}") WebFrame final : p
 {
 public:
     static WebFrame* createInstance();
-protected:
-    WebFrame();
-    ~WebFrame();
 
-public:
     // IUnknown
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(_In_ REFIID riid, _COM_Outptr_ void** ppvObject);
     virtual ULONG STDMETHODCALLTYPE AddRef();
@@ -140,9 +136,6 @@ public:
     virtual HRESULT STDMETHODCALLTYPE paintDocumentRectToContext(RECT, _In_ HDC);
     virtual HRESULT STDMETHODCALLTYPE paintScrollViewRectToContextAtPoint(RECT, POINT, _In_ HDC);
     virtual HRESULT STDMETHODCALLTYPE elementDoesAutoComplete(_In_opt_ IDOMElement*, _Out_ BOOL*);
-    virtual HRESULT STDMETHODCALLTYPE pauseAnimation(_In_ BSTR animationName, _In_opt_ IDOMNode*, double secondsFromNow, _Out_ BOOL* animationWasRunning);
-    virtual HRESULT STDMETHODCALLTYPE pauseTransition(_In_ BSTR propertyName, _In_opt_ IDOMNode*, double secondsFromNow, _Out_ BOOL* transitionWasRunning);
-    virtual HRESULT STDMETHODCALLTYPE numberOfActiveAnimations(_Out_ UINT*);
     virtual HRESULT STDMETHODCALLTYPE loadPlainTextString(_In_ BSTR, _In_ BSTR url);
     virtual HRESULT STDMETHODCALLTYPE isDisplayingStandaloneImage(_Out_ BOOL*);
     virtual HRESULT STDMETHODCALLTYPE allowsFollowingLink(_In_ BSTR, _Out_ BOOL*);
@@ -154,8 +147,6 @@ public:
     virtual HRESULT STDMETHODCALLTYPE clearOpener();
     virtual HRESULT STDMETHODCALLTYPE setTextDirection(_In_ BSTR);
     virtual HRESULT STDMETHODCALLTYPE unused4() { return E_NOTIMPL; }
-    virtual HRESULT STDMETHODCALLTYPE resumeAnimations();
-    virtual HRESULT STDMETHODCALLTYPE suspendAnimations();
     virtual HRESULT STDMETHODCALLTYPE renderTreeAsExternalRepresentation(unsigned options, _Deref_opt_out_ BSTR* result);
     virtual HRESULT STDMETHODCALLTYPE renderTreeAsExternalRepresentationForPrinting(_Deref_opt_out_ BSTR* result);
 
@@ -199,9 +190,12 @@ public:
 
     COMPtr<IAccessible> accessible() const;
 
-protected:
+private:
+    WebFrame();
+    ~WebFrame();
+
     void loadHTMLString(_In_ BSTR string, _In_ BSTR baseURL, _In_ BSTR unreachableURL);
-    void loadData(Ref<WebCore::SharedBuffer>&&, BSTR mimeType, BSTR textEncodingName, BSTR baseURL, BSTR failingURL);
+    void loadData(Ref<WebCore::FragmentedSharedBuffer>&&, BSTR mimeType, BSTR textEncodingName, BSTR baseURL, BSTR failingURL);
     const Vector<WebCore::IntRect>& computePageRects(HDC printDC);
     void setPrinting(bool printing, const WebCore::FloatSize& pageSize, const WebCore::FloatSize& originalPageSize, float maximumShrinkRatio, WebCore::AdjustViewSizeOrNot);
     void headerAndFooterHeights(float*, float*);
@@ -210,7 +204,6 @@ protected:
     void drawHeader(PlatformGraphicsContext* pctx, IWebUIDelegate*, const WebCore::IntRect& pageRect, float headerHeight);
     void drawFooter(PlatformGraphicsContext* pctx, IWebUIDelegate*, const WebCore::IntRect& pageRect, UINT page, UINT pageCount, float headerHeight, float footerHeight);
 
-protected:
     ULONG m_refCount { 0 };
     class WebFramePrivate;
     WebFramePrivate* d;

@@ -24,16 +24,15 @@
  */
 
 #include "config.h"
-#include "RemoteScrollingCoordinatorProxy.h"
 
-#if ENABLE(ASYNC_SCROLLING)
+#if ENABLE(UI_SIDE_COMPOSITING)
+#include "RemoteScrollingCoordinatorProxy.h"
 
 #include "ArgumentCoders.h"
 #include "RemoteLayerTreeDrawingAreaProxy.h"
 #include "RemoteScrollingCoordinator.h"
 #include "RemoteScrollingCoordinatorMessages.h"
 #include "RemoteScrollingCoordinatorTransaction.h"
-#include "VersionChecks.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
 #include <WebCore/RuntimeApplicationChecks.h>
@@ -42,6 +41,7 @@
 #include <WebCore/ScrollingStatePositionedNode.h>
 #include <WebCore/ScrollingStateTree.h>
 #include <WebCore/ScrollingTreeFrameScrollingNode.h>
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -49,8 +49,6 @@ using namespace WebCore;
 RemoteScrollingCoordinatorProxy::RemoteScrollingCoordinatorProxy(WebPageProxy& webPageProxy)
     : m_webPageProxy(webPageProxy)
     , m_scrollingTree(RemoteScrollingTree::create(*this))
-    , m_requestedScrollInfo(nullptr)
-    , m_propagatesMainFrameScrolls(true)
 {
 }
 
@@ -78,16 +76,16 @@ const RemoteLayerTreeHost* RemoteScrollingCoordinatorProxy::layerTreeHost() cons
     return &remoteDrawingArea.remoteLayerTreeHost();
 }
 
-void RemoteScrollingCoordinatorProxy::commitScrollingTreeState(const RemoteScrollingCoordinatorTransaction& transaction, RequestedScrollInfo& requestedScrollInfo)
+std::optional<RequestedScrollData> RemoteScrollingCoordinatorProxy::commitScrollingTreeState(const RemoteScrollingCoordinatorTransaction& transaction)
 {
-    m_requestedScrollInfo = &requestedScrollInfo;
+    m_requestedScroll = { };
 
     auto stateTree = WTFMove(const_cast<RemoteScrollingCoordinatorTransaction&>(transaction).scrollingStateTree());
 
     auto* layerTreeHost = this->layerTreeHost();
     if (!layerTreeHost) {
         ASSERT_NOT_REACHED();
-        return;
+        return { };
     }
 
     connectStateNodeLayers(*stateTree, *layerTreeHost);
@@ -95,7 +93,7 @@ void RemoteScrollingCoordinatorProxy::commitScrollingTreeState(const RemoteScrol
 
     establishLayerTreeScrollingRelations(*layerTreeHost);
 
-    m_requestedScrollInfo = nullptr;
+    return std::exchange(m_requestedScroll, { });
 }
 
 #if !PLATFORM(IOS_FAMILY)
@@ -105,7 +103,7 @@ void RemoteScrollingCoordinatorProxy::connectStateNodeLayers(ScrollingStateTree&
     using PlatformLayerID = GraphicsLayer::PlatformLayerID;
 
     for (auto& currNode : stateTree.nodeMap().values()) {
-        if (currNode->hasChangedProperty(ScrollingStateNode::Layer))
+        if (currNode->hasChangedProperty(ScrollingStateNode::Property::Layer))
             currNode->setLayer(layerTreeHost.layerForID(PlatformLayerID { currNode->layer() }));
 
         switch (currNode->nodeType()) {
@@ -113,50 +111,50 @@ void RemoteScrollingCoordinatorProxy::connectStateNodeLayers(ScrollingStateTree&
         case ScrollingNodeType::Subframe: {
             ScrollingStateFrameScrollingNode& scrollingStateNode = downcast<ScrollingStateFrameScrollingNode>(*currNode);
             
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateScrollingNode::ScrollContainerLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrollContainerLayer))
                 scrollingStateNode.setScrollContainerLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.scrollContainerLayer() }));
 
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateScrollingNode::ScrolledContentsLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrolledContentsLayer))
                 scrollingStateNode.setScrolledContentsLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.scrolledContentsLayer() }));
 
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateFrameScrollingNode::CounterScrollingLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::CounterScrollingLayer))
                 scrollingStateNode.setCounterScrollingLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.counterScrollingLayer() }));
 
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateFrameScrollingNode::InsetClipLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::InsetClipLayer))
                 scrollingStateNode.setInsetClipLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.insetClipLayer() }));
 
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateFrameScrollingNode::ContentShadowLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ContentShadowLayer))
                 scrollingStateNode.setContentShadowLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.contentShadowLayer() }));
 
             // FIXME: we should never have header and footer layers coming from the WebProcess.
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateFrameScrollingNode::HeaderLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::HeaderLayer))
                 scrollingStateNode.setHeaderLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.headerLayer() }));
 
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateFrameScrollingNode::FooterLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::FooterLayer))
                 scrollingStateNode.setFooterLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.footerLayer() }));
 
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateFrameScrollingNode::VerticalScrollbarLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::VerticalScrollbarLayer))
                 scrollingStateNode.setVerticalScrollbarLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.verticalScrollbarLayer() }));
 
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateFrameScrollingNode::HorizontalScrollbarLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::HorizontalScrollbarLayer))
                 scrollingStateNode.setHorizontalScrollbarLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.horizontalScrollbarLayer() }));
 
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateFrameScrollingNode::RootContentsLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::RootContentsLayer))
                 scrollingStateNode.setRootContentsLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.rootContentsLayer() }));
             break;
         }
         case ScrollingNodeType::Overflow: {
             ScrollingStateOverflowScrollingNode& scrollingStateNode = downcast<ScrollingStateOverflowScrollingNode>(*currNode);
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateScrollingNode::ScrollContainerLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrollContainerLayer))
                 scrollingStateNode.setScrollContainerLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.scrollContainerLayer() }));
 
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateScrollingNode::ScrolledContentsLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::ScrolledContentsLayer))
                 scrollingStateNode.setScrolledContentsLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.scrolledContentsLayer() }));
 
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateFrameScrollingNode::VerticalScrollbarLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::VerticalScrollbarLayer))
                 scrollingStateNode.setVerticalScrollbarLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.verticalScrollbarLayer() }));
 
-            if (scrollingStateNode.hasChangedProperty(ScrollingStateFrameScrollingNode::HorizontalScrollbarLayer))
+            if (scrollingStateNode.hasChangedProperty(ScrollingStateNode::Property::HorizontalScrollbarLayer))
                 scrollingStateNode.setHorizontalScrollbarLayer(layerTreeHost.layerForID(PlatformLayerID { scrollingStateNode.horizontalScrollbarLayer() }));
             break;
         }
@@ -176,10 +174,20 @@ void RemoteScrollingCoordinatorProxy::establishLayerTreeScrollingRelations(const
 
 #endif
 
-bool RemoteScrollingCoordinatorProxy::handleWheelEvent(const PlatformWheelEvent& event)
+bool RemoteScrollingCoordinatorProxy::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
 {
-    ScrollingEventResult result = m_scrollingTree->tryToHandleWheelEvent(event);
-    return result == ScrollingEventResult::DidHandleEvent; // FIXME: handle other values.
+    if (!m_scrollingTree)
+        return false;
+
+    auto processingSteps = m_scrollingTree->determineWheelEventProcessing(wheelEvent);
+    if (processingSteps.containsAny({ WheelEventProcessingSteps::MainThreadForScrolling, WheelEventProcessingSteps::MainThreadForNonBlockingDOMEventDispatch, WheelEventProcessingSteps::MainThreadForBlockingDOMEventDispatch }))
+        return false;
+
+    if (m_scrollingTree->willWheelEventStartSwipeGesture(wheelEvent))
+        return false;
+
+    auto result = m_scrollingTree->handleWheelEvent(wheelEvent);
+    return result.wasHandled;
 }
 
 void RemoteScrollingCoordinatorProxy::handleMouseEvent(const WebCore::PlatformMouseEvent& event)
@@ -202,13 +210,13 @@ void RemoteScrollingCoordinatorProxy::applyScrollingTreeLayerPositionsAfterCommi
     m_scrollingTree->applyLayerPositionsAfterCommit();
 }
 
-void RemoteScrollingCoordinatorProxy::currentSnapPointIndicesDidChange(WebCore::ScrollingNodeID nodeID, unsigned horizontal, unsigned vertical)
+void RemoteScrollingCoordinatorProxy::currentSnapPointIndicesDidChange(WebCore::ScrollingNodeID nodeID, std::optional<unsigned> horizontal, std::optional<unsigned> vertical)
 {
     m_webPageProxy.send(Messages::RemoteScrollingCoordinator::CurrentSnapPointIndicesChangedForNode(nodeID, horizontal, vertical));
 }
 
 // This comes from the scrolling tree.
-void RemoteScrollingCoordinatorProxy::scrollingTreeNodeDidScroll(ScrollingNodeID scrolledNodeID, const FloatPoint& newScrollPosition, const Optional<FloatPoint>& layoutViewportOrigin, ScrollingLayerPositionAction scrollingLayerPositionAction)
+void RemoteScrollingCoordinatorProxy::scrollingTreeNodeDidScroll(ScrollingNodeID scrolledNodeID, const FloatPoint& newScrollPosition, const std::optional<FloatPoint>& layoutViewportOrigin, ScrollingLayerPositionAction scrollingLayerPositionAction)
 {
     // Scroll updates for the main frame are sent via WebPageProxy::updateVisibleContentRects()
     // so don't send them here.
@@ -228,13 +236,19 @@ void RemoteScrollingCoordinatorProxy::scrollingTreeNodeDidScroll(ScrollingNodeID
     m_webPageProxy.send(Messages::RemoteScrollingCoordinator::ScrollPositionChangedForNode(scrolledNodeID, newScrollPosition, scrollingLayerPositionAction == ScrollingLayerPositionAction::Sync));
 }
 
-void RemoteScrollingCoordinatorProxy::scrollingTreeNodeRequestsScroll(ScrollingNodeID scrolledNodeID, const FloatPoint& scrollPosition, bool representsProgrammaticScroll)
+void RemoteScrollingCoordinatorProxy::scrollingTreeNodeDidStopAnimatedScroll(ScrollingNodeID scrolledNodeID)
 {
-    if (scrolledNodeID == rootScrollingNodeID() && m_requestedScrollInfo) {
-        m_requestedScrollInfo->requestsScrollPositionUpdate = true;
-        m_requestedScrollInfo->requestIsProgrammaticScroll = representsProgrammaticScroll;
-        m_requestedScrollInfo->requestedScrollPosition = scrollPosition;
+    m_webPageProxy.send(Messages::RemoteScrollingCoordinator::AnimatedScrollDidEndForNode(scrolledNodeID));
+}
+
+bool RemoteScrollingCoordinatorProxy::scrollingTreeNodeRequestsScroll(ScrollingNodeID scrolledNodeID, const RequestedScrollData& request)
+{
+    if (scrolledNodeID == rootScrollingNodeID()) {
+        m_requestedScroll = request;
+        return true;
     }
+
+    return false;
 }
 
 String RemoteScrollingCoordinatorProxy::scrollingTreeAsText() const
@@ -248,18 +262,28 @@ String RemoteScrollingCoordinatorProxy::scrollingTreeAsText() const
 bool RemoteScrollingCoordinatorProxy::hasScrollableMainFrame() const
 {
     auto* rootNode = m_scrollingTree->rootNode();
+    return rootNode && rootNode->canHaveScrollbars();
+}
+
+ScrollingTreeScrollingNode* RemoteScrollingCoordinatorProxy::rootNode() const
+{
+    return m_scrollingTree->rootNode();
+}
+
+bool RemoteScrollingCoordinatorProxy::hasScrollableOrZoomedMainFrame() const
+{
+    auto* rootNode = m_scrollingTree->rootNode();
     if (!rootNode)
         return false;
 
 #if PLATFORM(IOS_FAMILY)
-    if (WebCore::IOSApplication::isEventbrite() && !linkedOnOrAfter(WebKit::SDKVersion::FirstThatSupportsOverflowHiddenOnMainFrame))
+    if (WebCore::IOSApplication::isEventbrite() && !linkedOnOrAfter(SDKVersion::FirstThatSupportsOverflowHiddenOnMainFrame))
         return true;
 #endif
 
     return rootNode->canHaveScrollbars() || rootNode->visualViewportIsSmallerThanLayoutViewport();
 }
 
-#if ENABLE(POINTER_EVENTS)
 OptionSet<TouchAction> RemoteScrollingCoordinatorProxy::activeTouchActionsForTouchIdentifier(unsigned touchIdentifier) const
 {
     auto iterator = m_touchActionsByTouchIdentifier.find(touchIdentifier);
@@ -278,8 +302,22 @@ void RemoteScrollingCoordinatorProxy::clearTouchActionsForTouchIdentifier(unsign
     m_touchActionsByTouchIdentifier.remove(touchIdentifier);
 }
 
-#endif
+void RemoteScrollingCoordinatorProxy::sendUIStateChangedIfNecessary()
+{
+    if (!m_uiState.changes())
+        return;
+
+    m_webPageProxy.send(Messages::RemoteScrollingCoordinator::ScrollingStateInUIProcessChanged(m_uiState));
+    m_uiState.clearChanges();
+}
+
+void RemoteScrollingCoordinatorProxy::resetStateAfterProcessExited()
+{
+    m_currentHorizontalSnapPointIndex = 0;
+    m_currentVerticalSnapPointIndex = 0;
+    m_uiState.reset();
+}
 
 } // namespace WebKit
 
-#endif // ENABLE(ASYNC_SCROLLING)
+#endif // ENABLE(UI_SIDE_COMPOSITING)

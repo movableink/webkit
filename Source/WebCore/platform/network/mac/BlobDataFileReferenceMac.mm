@@ -23,14 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "BlobDataFileReference.h"
+#import "config.h"
+#import "BlobDataFileReference.h"
 
 #if ENABLE(FILE_REPLACEMENT)
 
-#include <wtf/FileMetadata.h>
-#include <wtf/FileSystem.h>
-#include <wtf/text/CString.h>
+#import <wtf/FileSystem.h>
+#import <wtf/text/CString.h>
 
 namespace WebCore {
 
@@ -47,8 +46,8 @@ void BlobDataFileReference::generateReplacementFile()
 
     m_replacementShouldBeGenerated = false;
     if (!m_replacementPath.isNull()) {
-        if (auto metadata = FileSystem::fileMetadataFollowingSymlinks(m_replacementPath))
-            m_size = metadata.value().length;
+        if (auto fileSize = FileSystem::fileSize(m_replacementPath))
+            m_size = *fileSize;
     }
 
     revokeFileAccess();

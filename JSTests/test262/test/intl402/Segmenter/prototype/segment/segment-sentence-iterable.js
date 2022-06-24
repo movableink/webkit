@@ -1,4 +1,5 @@
 // Copyright 2018 the V8 project authors. All rights reserved.
+// Copyright 2020 Apple Inc. All rights reserved.
 // This code is governed by the BSD license found in the LICENSE file.
 
 /*---
@@ -6,6 +7,7 @@ esid: sec-Intl.Segmenter.prototype.segment
 description: Verifies the behavior for the "segment" function of the Segmenter prototype object.
 info: |
     Intl.Segmenter.prototype.segment( string )
+includes: [compareArray.js]
 features: [Intl.Segmenter]
 ---*/
 
@@ -29,22 +31,24 @@ for (const text of [
     "법원 “다스 지분 처분권·수익권 모두 MB가 보유”", // Korean
     ]) {
   let segments = [];
-  // Create another %SegmentIterator% to compare with result from the one that
-  // created in the for of loop.
-  let iter = seg.segment(text);
-  let prev = 0;
   for (const v of seg.segment(text)) {
-    assert(["sep", "term"].includes(v.breakType), v.breakType);
     assert.sameValue("string", typeof v.segment);
-    assert(v.segment.length > 0);
-    segments.push(v.segment);
+    assert.sameValue(true, v.segment.length > 0, "length > 0");
 
-    // manually advance the iter.
-    assert.sameValue(iter.following(), false);
-    assert.sameValue(iter.breakType, v.breakType);
-    assert.sameValue(text.substring(prev, iter.index), v.segment);
-    prev = iter.index;
+    assert.sameValue("number", typeof v.index);
+    assert.sameValue(true, v.index >= 0, "index >= 0");
+    assert.sameValue(true, v.index < text.length, "index < input.length");
+
+    assert.sameValue("string", typeof v.input);
+    assert.sameValue(text, v.input);
+
+    assert.sameValue(undefined, v.isWordLike);
+    assert.sameValue(false, v.hasOwnProperty("isWordLike"));
+
+    assert.sameValue(text.slice(v.index, v.index + v.segment.length), v.segment);
+    assert.compareArray(Object.getOwnPropertyNames(v), ["segment", "index", "input"]);
+
+    segments.push(v.segment);
   }
-  assert(iter.following());
   assert.sameValue(text, segments.join(''));
 }

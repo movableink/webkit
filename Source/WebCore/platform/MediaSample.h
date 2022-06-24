@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,55 +23,73 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#ifndef MediaSample_h
-#define MediaSample_h
+#pragma once
 
 #include "FloatSize.h"
+#include "FourCC.h"
+#include "PlatformVideoColorSpace.h"
+#include "SharedBuffer.h"
 #include <JavaScriptCore/TypedArrays.h>
+#include <functional>
 #include <wtf/EnumTraits.h>
 #include <wtf/MediaTime.h>
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/AtomString.h>
 
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
+typedef struct __CVBuffer *CVPixelBufferRef;
 typedef struct _GstSample GstSample;
+typedef struct OpaqueMTPluginByteSource *MTPluginByteSourceRef;
+typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
 
 namespace WebCore {
 
+class FragmentedSharedBuffer;
 class MockSampleBox;
+class ProcessIdentity;
+class SharedBuffer;
+struct TrackInfo;
 
 struct PlatformSample {
-    enum {
+    enum Type {
         None,
         MockSampleBoxType,
         CMSampleBufferType,
         GStreamerSampleType,
+        ByteRangeSampleType,
+        VideoFrameType, // FIXME: To be removed when VideoFrame is not MediaSample.
     } type;
     union {
-        MockSampleBox* mockSampleBox;
+        const MockSampleBox* mockSampleBox;
         CMSampleBufferRef cmSampleBuffer;
         GstSample* gstSample;
+        std::pair<MTPluginByteSourceRef, std::reference_wrapper<const TrackInfo>> byteRangeSample;
     } sample;
 };
 
-class MediaSample : public RefCounted<MediaSample> {
+class MediaSample : public ThreadSafeRefCounted<MediaSample> {
 public:
     virtual ~MediaSample() = default;
 
     virtual MediaTime presentationTime() const = 0;
-    virtual MediaTime outputPresentationTime() const { return presentationTime(); }
     virtual MediaTime decodeTime() const = 0;
     virtual MediaTime duration() const = 0;
-    virtual MediaTime outputDuration() const { return duration(); }
     virtual AtomString trackID() const = 0;
-    virtual void setTrackID(const String&) = 0;
     virtual size_t sizeInBytes() const = 0;
     virtual FloatSize presentationSize() const = 0;
     virtual void offsetTimestampsBy(const MediaTime&) = 0;
     virtual void setTimestamps(const MediaTime&, const MediaTime&) = 0;
-    virtual bool isDivisable() const = 0;
+    virtual bool isDivisable() const { return false; };
     enum DivideFlags { BeforePresentationTime, AfterPresentationTime };
-    virtual std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime& presentationTime) = 0;
+    enum class UseEndTime : bool {
+        DoNotUse,
+        Use,
+    };
+    virtual std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime&, UseEndTime = UseEndTime::DoNotUse)
+    {
+        ASSERT_NOT_REACHED();
+        return { nullptr, nullptr };
+    }
     virtual Ref<MediaSample> createNonDisplayingCopy() const = 0;
 
     virtual RefPtr<JSC::Uint8ClampedArray> getRGBAImageData() const { return nullptr; }
@@ -81,9 +99,17 @@ public:
         IsSync = 1 << 0,
         IsNonDisplaying = 1 << 1,
         HasAlpha = 1 << 2,
+        HasSyncInfo = 1 << 3,
     };
     virtual SampleFlags flags() const = 0;
-    virtual PlatformSample platformSample() = 0;
+    virtual PlatformSample platformSample() const = 0;
+    virtual PlatformSample::Type platformSampleType() const = 0;
+
+    struct ByteRange {
+        size_t byteOffset { 0 };
+        size_t byteLength { 0 };
+    };
+    virtual std::optional<ByteRange> byteRange() const { return std::nullopt; }
 
     enum class VideoRotation {
         None = 0,
@@ -94,16 +120,159 @@ public:
     virtual VideoRotation videoRotation() const { return VideoRotation::None; }
     virtual bool videoMirrored() const { return false; }
     virtual uint32_t videoPixelFormat() const { return 0; }
+#if PLATFORM(COCOA)
+    virtual CVPixelBufferRef pixelBuffer() const { return nullptr; };
+#endif
+    virtual void setOwnershipIdentity(const ProcessIdentity&) { }
 
     bool isSync() const { return flags() & IsSync; }
     bool isNonDisplaying() const { return flags() & IsNonDisplaying; }
     bool hasAlpha() const { return flags() & HasAlpha; }
+    bool hasSyncInfo() const { return flags() & HasSyncInfo; }
 
-    virtual void dump(PrintStream&) const = 0;
-    virtual String toJSONString() const { return { }; }
+    virtual void dump(PrintStream& out) const
+    {
+        out.print("{PTS(", presentationTime(), "), DTS(", decodeTime(), "), duration(", duration(), "), flags(", (int)flags(), "), presentationSize(", presentationSize().width(), "x", presentationSize().height(), ")}");
+    }
+
+    String toJSONString() const
+    {
+        auto object = JSON::Object::create();
+
+        object->setObject("pts"_s, presentationTime().toJSONObject());
+        object->setObject("dts"_s, decodeTime().toJSONObject());
+        object->setObject("duration"_s, duration().toJSONObject());
+        object->setInteger("flags"_s, static_cast<unsigned>(flags()));
+        object->setObject("presentationSize"_s, presentationSize().toJSONObject());
+
+        return object->toJSONString();
+    }
+};
+
+struct AudioInfo;
+struct VideoInfo;
+
+struct TrackInfo : public ThreadSafeRefCounted<TrackInfo> {
+    enum class TrackType { Unknown, Audio, Video };
+
+    bool isAudio() const { return type() == TrackType::Audio; }
+    bool isVideo() const { return type() == TrackType::Video; }
+
+    TrackType type() const { return m_type; }
+
+    bool operator==(const TrackInfo& other) const
+    {
+        if (type() != other.type() || codecName != other.codecName || trackID != other.trackID)
+            return false;
+        return equalTo(other);
+    }
+    bool operator!=(const TrackInfo& other) const { return !(*this == other); }
+
+    FourCC codecName;
+    uint64_t trackID { 0 };
+
+    virtual ~TrackInfo() = default;
+
+protected:
+    virtual bool equalTo(const TrackInfo& other) const = 0;
+    TrackInfo(TrackType type)
+        : m_type(type) { }
+
+private:
+    const TrackType m_type { TrackType::Unknown };
+};
+
+struct VideoInfo : public TrackInfo {
+    static Ref<VideoInfo> create() { return adoptRef(*new VideoInfo()); }
+
+    FloatSize size;
+    // Size in pixels at which the video is rendered. This is after it has
+    // been scaled by its aspect ratio.
+    FloatSize displaySize;
+    uint8_t bitDepth { 8 };
+    PlatformVideoColorSpace colorSpace;
+    MediaSample::VideoRotation rotation { MediaSample::VideoRotation::None };
+
+    RefPtr<SharedBuffer> atomData;
+
+private:
+    VideoInfo()
+        : TrackInfo(TrackType::Video) { }
+    bool equalTo(const TrackInfo& otherVideoInfo) const final
+    {
+        auto& other = downcast<const VideoInfo>(otherVideoInfo);
+        return size == other.size && displaySize == other.displaySize && bitDepth == other.bitDepth && colorSpace == other.colorSpace && rotation == other.rotation && ((!atomData && !other.atomData) || (atomData && other.atomData && *atomData == *other.atomData));
+    }
+};
+
+struct AudioInfo : public TrackInfo {
+    static Ref<AudioInfo> create() { return adoptRef(*new AudioInfo()); }
+
+    uint32_t rate { 0 };
+    uint32_t channels { 0 };
+    uint32_t framesPerPacket { 0 };
+    uint32_t bitDepth { 16 };
+    int8_t profile { 0 };
+    int8_t extendedProfile { 0 };
+
+    RefPtr<SharedBuffer> cookieData;
+
+private:
+    AudioInfo()
+        : TrackInfo(TrackType::Audio) { }
+    bool equalTo(const TrackInfo& otherAudioInfo) const final
+    {
+        auto& other = downcast<const AudioInfo>(otherAudioInfo);
+        return rate == other.rate && channels == other.channels && bitDepth == other.bitDepth && framesPerPacket == other.framesPerPacket && profile == other.profile && extendedProfile == other.extendedProfile && ((!cookieData && !other.cookieData) || (cookieData && other.cookieData && *cookieData == *other.cookieData));
+    }
+};
+
+class MediaSamplesBlock {
+public:
+    using MediaSampleDataType = std::variant<MediaSample::ByteRange, Ref<const FragmentedSharedBuffer>>;
+    struct MediaSampleItem {
+        using MediaSampleDataType = MediaSamplesBlock::MediaSampleDataType;
+        MediaTime presentationTime;
+        MediaTime decodeTime;
+        MediaTime duration;
+        MediaSampleDataType data;
+        MediaSample::SampleFlags flags;
+    };
+    using SamplesVector = Vector<MediaSampleItem>;
+
+    void setInfo(RefPtr<const TrackInfo>&& info) { m_info = WTFMove(info); }
+    const TrackInfo* info() const { return m_info.get(); }
+    bool isVideo() const { return m_info && m_info->isVideo(); }
+    bool isAudio() const { return m_info && m_info->isAudio(); }
+    TrackInfo::TrackType type() const { return m_info ? m_info->type() : TrackInfo::TrackType::Unknown; }
+    void append(MediaSampleItem&& item) { m_samples.append(WTFMove(item)); }
+    void append(MediaSamplesBlock&& block) { append(std::exchange(block.m_samples, { })); }
+    void append(SamplesVector&& samples) { m_samples.appendVector(WTFMove(samples)); }
+    size_t size() const { return m_samples.size(); };
+    bool isEmpty() const { return m_samples.isEmpty(); }
+    void clear() { m_samples.clear(); }
+    SamplesVector takeSamples() { return std::exchange(m_samples, { }); }
+
+    const MediaSampleItem& operator[](size_t index) const { return m_samples[index]; }
+    const MediaSampleItem& first() const { return m_samples.first(); }
+    const MediaSampleItem& last() const { return m_samples.last(); }
+    SamplesVector::const_iterator begin() const { return m_samples.begin(); }
+    SamplesVector::const_iterator end() const { return m_samples.end(); }
+
+private:
+    RefPtr<const TrackInfo> m_info;
+    SamplesVector m_samples;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::VideoInfo)
+    static bool isType(const WebCore::TrackInfo& info) { return info.isVideo(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AudioInfo)
+    static bool isType(const WebCore::TrackInfo& info) { return info.isAudio(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 namespace WTF {
 
@@ -127,5 +296,3 @@ struct LogArgument<WebCore::MediaSample> {
 };
 
 } // namespace WTF
-
-#endif

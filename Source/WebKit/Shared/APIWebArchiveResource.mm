@@ -23,15 +23,15 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "APIWebArchiveResource.h"
+#import "config.h"
+#import "APIWebArchiveResource.h"
 
 #if PLATFORM(COCOA)
 
-#include "APIData.h"
-#include <WebCore/ArchiveResource.h>
-#include <wtf/RetainPtr.h>
-#include <wtf/URL.h>
+#import "APIData.h"
+#import <WebCore/ArchiveResource.h>
+#import <wtf/RetainPtr.h>
+#import <wtf/URL.h>
 
 namespace API {
 using namespace WebCore;
@@ -47,7 +47,7 @@ Ref<WebArchiveResource> WebArchiveResource::create(RefPtr<ArchiveResource>&& arc
 }
 
 WebArchiveResource::WebArchiveResource(API::Data* data, const String& url, const String& MIMEType, const String& textEncoding)
-    : m_archiveResource(ArchiveResource::create(SharedBuffer::create(data->bytes(), data->size()), WTF::URL(WTF::URL(), url), MIMEType, textEncoding, String()))
+    : m_archiveResource(ArchiveResource::create(SharedBuffer::create(data->bytes(), data->size()), WTF::URL { url }, MIMEType, textEncoding, String()))
 {
 }
 
@@ -68,7 +68,7 @@ static void releaseWebArchiveResourceData(unsigned char*, const void* data)
 
 Ref<API::Data> WebArchiveResource::data()
 {
-    RetainPtr<CFDataRef> cfData = m_archiveResource->data().createCFData();
+    RetainPtr<CFDataRef> cfData = m_archiveResource->data().makeContiguous()->createCFData();
 
     // Balanced by CFRelease in releaseWebArchiveResourceData.
     CFRetain(cfData.get());

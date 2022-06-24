@@ -38,20 +38,21 @@ namespace JSC {
 
 #define FOR_EACH_ICEVENT_KIND(macro) \
     macro(InvalidKind) \
-    macro(GetByIdAddAccessCase) \
-    macro(GetByIdReplaceWithJump) \
-    macro(GetByIdSelfPatch) \
+    macro(GetByAddAccessCase) \
+    macro(GetByReplaceWithJump) \
+    macro(GetBySelfPatch) \
     macro(InAddAccessCase) \
     macro(InReplaceWithJump) \
+    macro(InReplaceWithGeneric) \
     macro(InstanceOfAddAccessCase) \
     macro(InstanceOfReplaceWithJump) \
     macro(OperationGetById) \
     macro(OperationGetByIdGeneric) \
     macro(OperationGetByIdBuildList) \
     macro(OperationGetByIdOptimize) \
+    macro(OperationGetByValOptimize) \
     macro(OperationGetByIdWithThisOptimize) \
     macro(OperationGenericIn) \
-    macro(OperationInById) \
     macro(OperationInByIdGeneric) \
     macro(OperationInByIdOptimize) \
     macro(OperationPutByIdStrict) \
@@ -64,12 +65,22 @@ namespace JSC {
     macro(OperationPutByIdDirectNonStrictOptimize) \
     macro(OperationPutByIdStrictBuildList) \
     macro(OperationPutByIdNonStrictBuildList) \
-    macro(OperationPutByIdDirectStrictBuildList) \
-    macro(OperationPutByIdDirectNonStrictBuildList) \
-    macro(PutByIdAddAccessCase) \
-    macro(PutByIdReplaceWithJump) \
-    macro(PutByIdSelfPatch) \
-    macro(InByIdSelfPatch)
+    macro(OperationPutByIdDefinePrivateFieldFieldStrictOptimize) \
+    macro(OperationPutByIdPutPrivateFieldFieldStrictOptimize) \
+    macro(PutByAddAccessCase) \
+    macro(PutByReplaceWithJump) \
+    macro(PutBySelfPatch) \
+    macro(InBySelfPatch) \
+    macro(DelByReplaceWithJump) \
+    macro(DelByReplaceWithGeneric) \
+    macro(OperationGetPrivateNameOptimize) \
+    macro(OperationGetPrivateNameById) \
+    macro(OperationGetPrivateNameByIdOptimize) \
+    macro(OperationGetPrivateNameByIdGeneric) \
+    macro(CheckPrivateBrandAddAccessCase) \
+    macro(SetPrivateBrandAddAccessCase) \
+    macro(CheckPrivateBrandReplaceWithJump) \
+    macro(SetPrivateBrandReplaceWithJump)
 
 class ICEvent {
 public:
@@ -139,8 +150,8 @@ public:
     unsigned hash() const
     {
         if (m_propertyName.isNull())
-            return m_kind + m_propertyLocation + WTF::PtrHash<const ClassInfo*>::hash(m_classInfo);
-        return m_kind + m_propertyLocation + WTF::PtrHash<const ClassInfo*>::hash(m_classInfo) + StringHash::hash(m_propertyName.string());
+            return static_cast<unsigned>(m_kind) + static_cast<unsigned>(m_propertyLocation) + WTF::PtrHash<const ClassInfo*>::hash(m_classInfo);
+        return static_cast<unsigned>(m_kind) + static_cast<unsigned>(m_propertyLocation) + WTF::PtrHash<const ClassInfo*>::hash(m_classInfo) + StringHash::hash(m_propertyName.string());
     }
     
     bool isHashTableDeletedValue() const
@@ -173,9 +184,7 @@ namespace WTF {
 void printInternal(PrintStream&, JSC::ICEvent::Kind);
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::ICEvent> {
-    typedef JSC::ICEventHash Hash;
-};
+template<> struct DefaultHash<JSC::ICEvent> : JSC::ICEventHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::ICEvent> : SimpleClassHashTraits<JSC::ICEvent> {

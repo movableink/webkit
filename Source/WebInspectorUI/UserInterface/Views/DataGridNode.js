@@ -25,15 +25,16 @@
 
 WI.DataGridNode = class DataGridNode extends WI.Object
 {
-    constructor(data, hasChildren, classNames)
+    constructor(data, {selectable, copyable, editable, hasChildren, classNames} = {})
     {
         super();
 
         this._expanded = false;
         this._hidden = false;
         this._selected = false;
-        this._copyable = true;
-        this._editable = true;
+        this._selectable = selectable !== undefined ? selectable : true;
+        this._copyable = copyable !== undefined ? copyable : true;
+        this._editable = editable !== undefined ? editable : true;
         this._shouldRefreshChildren = true;
         this._data = data || {};
         this.hasChildren = hasChildren || false;
@@ -68,7 +69,7 @@ WI.DataGridNode = class DataGridNode extends WI.Object
 
     get selectable()
     {
-        return this._element && !this._hidden;
+        return this._element && !this._hidden && this._selectable;
     }
 
     get copyable()
@@ -377,6 +378,7 @@ WI.DataGridNode = class DataGridNode extends WI.Object
             if (column["icon"]) {
                 let iconElement = document.createElement("div");
                 iconElement.classList.add("icon");
+                iconElement.title = this.generateIconTitle(columnIdentifier);
                 div.insertBefore(iconElement, div.firstChild);
             }
         }
@@ -401,6 +403,12 @@ WI.DataGridNode = class DataGridNode extends WI.Object
 
         let data = this.data[columnIdentifier];
         return typeof data === "number" ? data.maxDecimals(2).toLocaleString() : data;
+    }
+
+    generateIconTitle(columnIdentifier)
+    {
+        // Overridden by subclasses if needed.
+        return "";
     }
 
     elementWithColumnIdentifier(columnIdentifier)
@@ -453,8 +461,6 @@ WI.DataGridNode = class DataGridNode extends WI.Object
         for (var i = 0; i < this.children.length; ++i)
             this.children[i].revealed = false;
 
-        this.dispatchEventToListeners("collapsed");
-
         if (this.dataGrid) {
             this.dataGrid.dispatchEventToListeners(WI.DataGrid.Event.CollapsedNode, {dataGridNode: this});
             this.dataGrid._noteRowsChanged();
@@ -484,7 +490,7 @@ WI.DataGridNode = class DataGridNode extends WI.Object
             for (var i = 0; i < this.children.length; ++i)
                 this.children[i]._detach();
 
-            this.dispatchEventToListeners("populate");
+            this.dispatchEventToListeners(DataGridNode.Event.Populate);
 
             if (this._attached) {
                 for (var i = 0; i < this.children.length; ++i) {
@@ -502,8 +508,6 @@ WI.DataGridNode = class DataGridNode extends WI.Object
             this._element.classList.add("expanded");
 
         this._expanded = true;
-
-        this.dispatchEventToListeners("expanded");
 
         if (this.dataGrid) {
             this.dataGrid.dispatchEventToListeners(WI.DataGrid.Event.ExpandedNode, {dataGridNode: this});
@@ -556,8 +560,6 @@ WI.DataGridNode = class DataGridNode extends WI.Object
         }
 
         this.dataGrid.updateVisibleRows(this);
-
-        this.dispatchEventToListeners("revealed");
     }
 
     select(suppressSelectedEvent)
@@ -565,18 +567,10 @@ WI.DataGridNode = class DataGridNode extends WI.Object
         if (!this.dataGrid || !this.selectable || this.selected)
             return;
 
-        let oldSelectedNode = this.dataGrid.selectedNode;
-        if (oldSelectedNode)
-            oldSelectedNode.deselect(true);
-
         this._selected = true;
-        this.dataGrid.selectedNode = this;
+        this._element?.classList.add("selected");
 
-        if (this._element)
-            this._element.classList.add("selected");
-
-        if (!suppressSelectedEvent)
-            this.dataGrid.dispatchEventToListeners(WI.DataGrid.Event.SelectedNodeChanged, {oldSelectedNode});
+        this.dataGrid.selectDataGridNodeInternal(this, suppressSelectedEvent);
     }
 
     revealAndSelect(suppressSelectedEvent)
@@ -587,23 +581,19 @@ WI.DataGridNode = class DataGridNode extends WI.Object
 
     deselect(suppressDeselectedEvent)
     {
-        if (!this.dataGrid || this.dataGrid.selectedNode !== this || !this.selected)
+        if (!this.dataGrid || !this.selectable || !this.selected)
             return;
 
         this._selected = false;
-        this.dataGrid.selectedNode = null;
+        this._element?.classList.remove("selected");
 
-        if (this._element)
-            this._element.classList.remove("selected");
-
-        if (!suppressDeselectedEvent)
-            this.dataGrid.dispatchEventToListeners(WI.DataGrid.Event.SelectedNodeChanged, {oldSelectedNode: this});
+        this.dataGrid.deselectDataGridNodeInternal(this, suppressDeselectedEvent);
     }
 
     traverseNextNode(skipHidden, stayWithin, dontPopulate, info)
     {
         if (!dontPopulate && this.hasChildren)
-            this.dispatchEventToListeners("populate");
+            this.dispatchEventToListeners(DataGridNode.Event.Populate);
 
         if (info)
             info.depthChange = 0;
@@ -639,11 +629,11 @@ WI.DataGridNode = class DataGridNode extends WI.Object
     {
         var node = (!skipHidden || this.revealed) ? this.previousSibling : null;
         if (!dontPopulate && node && node.hasChildren)
-            node.dispatchEventToListeners("populate");
+            node.dispatchEventToListeners(DataGridNode.Event.Populate);
 
         while (node && ((!skipHidden || (node.revealed && node.expanded)) ? node.children.lastValue : null)) {
             if (!dontPopulate && node.hasChildren)
-                node.dispatchEventToListeners("populate");
+                node.dispatchEventToListeners(DataGridNode.Event.Populate);
             node = (!skipHidden || (node.revealed && node.expanded)) ? node.children.lastValue : null;
         }
 
@@ -765,12 +755,16 @@ WI.DataGridNode = class DataGridNode extends WI.Object
     }
 };
 
+WI.DataGridNode.Event = {
+    Populate: "data-grid-node-populate",
+};
+
 // Used to create a new table row when entering new data by editing cells.
 WI.PlaceholderDataGridNode = class PlaceholderDataGridNode extends WI.DataGridNode
 {
     constructor(data)
     {
-        super(data, false);
+        super(data);
         this.isPlaceholderNode = true;
     }
 

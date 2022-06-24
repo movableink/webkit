@@ -26,10 +26,10 @@
 #include "config.h"
 #include "ImageDecoder.h"
 
+#include <wtf/NeverDestroyed.h>
+
 #if USE(CG)
 #include "ImageDecoderCG.h"
-#elif USE(DIRECT2D)
-#include "ImageDecoderDirect2D.h"
 #else
 #include "ScalableImageDecoder.h"
 #endif
@@ -38,21 +38,73 @@
 #include "ImageDecoderAVFObjC.h"
 #endif
 
+#if USE(GSTREAMER) && ENABLE(VIDEO)
+#include "ImageDecoderGStreamer.h"
+#endif
+
 namespace WebCore {
 
-RefPtr<ImageDecoder> ImageDecoder::create(SharedBuffer& data, const String& mimeType, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
+#if ENABLE(GPU_PROCESS) && HAVE(AVASSETREADER)
+using FactoryVector = Vector<ImageDecoder::ImageDecoderFactory>;
+
+static void platformRegisterFactories(FactoryVector& factories)
+{
+    factories.append({ ImageDecoderAVFObjC::supportsMediaType, ImageDecoderAVFObjC::canDecodeType, ImageDecoderAVFObjC::create });
+}
+
+static FactoryVector& installedFactories()
+{
+    static NeverDestroyed<FactoryVector> factories;
+    static std::once_flag registerDefaults;
+    std::call_once(registerDefaults, [&] {
+        platformRegisterFactories(factories);
+    });
+
+    return factories;
+}
+
+void ImageDecoder::installFactory(ImageDecoder::ImageDecoderFactory&& factory)
+{
+    installedFactories().append(WTFMove(factory));
+}
+
+void ImageDecoder::resetFactories()
+{
+    installedFactories().clear();
+    platformRegisterFactories(installedFactories());
+}
+
+void ImageDecoder::clearFactories()
+{
+    installedFactories().clear();
+}
+#endif
+
+RefPtr<ImageDecoder> ImageDecoder::create(FragmentedSharedBuffer& data, const String& mimeType, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
 {
     UNUSED_PARAM(mimeType);
 
 #if HAVE(AVASSETREADER)
-    if (!ImageDecoderCG::canDecodeType(mimeType) && ImageDecoderAVFObjC::canDecodeType(mimeType))
-        return ImageDecoderAVFObjC::create(data, mimeType, alphaOption, gammaAndColorProfileOption);
+    if (!ImageDecoderCG::canDecodeType(mimeType)) {
+#if ENABLE(GPU_PROCESS)
+        for (auto& factory : installedFactories()) {
+            if (factory.canDecodeType(mimeType))
+                return factory.createImageDecoder(data, mimeType, alphaOption, gammaAndColorProfileOption);
+        }
+#else
+        if (ImageDecoderAVFObjC::canDecodeType(mimeType))
+            return ImageDecoderAVFObjC::create(data, mimeType, alphaOption, gammaAndColorProfileOption);
+#endif
+    }
+#endif
+
+#if USE(GSTREAMER) && ENABLE(VIDEO)
+    if (ImageDecoderGStreamer::canDecodeType(mimeType))
+        return ImageDecoderGStreamer::create(data, mimeType, alphaOption, gammaAndColorProfileOption);
 #endif
 
 #if USE(CG)
     return ImageDecoderCG::create(data, alphaOption, gammaAndColorProfileOption);
-#elif USE(DIRECT2D)
-    return ImageDecoderDirect2D::create(data, alphaOption, gammaAndColorProfileOption);
 #else
     return ScalableImageDecoder::create(data, alphaOption, gammaAndColorProfileOption);
 #endif
@@ -63,16 +115,25 @@ bool ImageDecoder::supportsMediaType(MediaType type)
 #if USE(CG)
     if (ImageDecoderCG::supportsMediaType(type))
         return true;
-#elif USE(DIRECT2D)
-    if (ImageDecoderDirect2D::supportsMediaType(type))
-        return true;
 #else
     if (ScalableImageDecoder::supportsMediaType(type))
         return true;
 #endif
 
 #if HAVE(AVASSETREADER)
+#if ENABLE(GPU_PROCESS)
+    for (auto& factory : installedFactories()) {
+        if (factory.supportsMediaType(type))
+            return true;
+    }
+#else
     if (ImageDecoderAVFObjC::supportsMediaType(type))
+        return true;
+#endif
+#endif
+
+#if USE(GSTREAMER) && ENABLE(VIDEO)
+    if (ImageDecoderGStreamer::supportsMediaType(type))
         return true;
 #endif
 

@@ -93,7 +93,7 @@ TEST(MatchedFilter, TestNeonOptimizations) {
 // Verifies that the optimized methods for SSE2 are bitexact to their reference
 // counterparts.
 TEST(MatchedFilter, TestSse2Optimizations) {
-  bool use_sse2 = (WebRtc_GetCPUInfo(kSSE2) != 0);
+  bool use_sse2 = (GetCPUInfo(kSSE2) != 0);
   if (use_sse2) {
     Random random_generator(42U);
     constexpr float kSmoothing = 0.7f;
@@ -133,6 +133,47 @@ TEST(MatchedFilter, TestSse2Optimizations) {
   }
 }
 
+TEST(MatchedFilter, TestAvx2Optimizations) {
+  bool use_avx2 = (GetCPUInfo(kAVX2) != 0);
+  if (use_avx2) {
+    Random random_generator(42U);
+    constexpr float kSmoothing = 0.7f;
+    for (auto down_sampling_factor : kDownSamplingFactors) {
+      const size_t sub_block_size = kBlockSize / down_sampling_factor;
+      std::vector<float> x(2000);
+      RandomizeSampleVector(&random_generator, x);
+      std::vector<float> y(sub_block_size);
+      std::vector<float> h_AVX2(512);
+      std::vector<float> h(512);
+      int x_index = 0;
+      for (int k = 0; k < 1000; ++k) {
+        RandomizeSampleVector(&random_generator, y);
+
+        bool filters_updated = false;
+        float error_sum = 0.f;
+        bool filters_updated_AVX2 = false;
+        float error_sum_AVX2 = 0.f;
+
+        MatchedFilterCore_AVX2(x_index, h.size() * 150.f * 150.f, kSmoothing, x,
+                               y, h_AVX2, &filters_updated_AVX2,
+                               &error_sum_AVX2);
+
+        MatchedFilterCore(x_index, h.size() * 150.f * 150.f, kSmoothing, x, y,
+                          h, &filters_updated, &error_sum);
+
+        EXPECT_EQ(filters_updated, filters_updated_AVX2);
+        EXPECT_NEAR(error_sum, error_sum_AVX2, error_sum / 100000.f);
+
+        for (size_t j = 0; j < h.size(); ++j) {
+          EXPECT_NEAR(h[j], h_AVX2[j], 0.00001f);
+        }
+
+        x_index = (x_index + sub_block_size) % x.size();
+      }
+    }
+  }
+}
+
 #endif
 
 // Verifies that the matched filter produces proper lag estimates for
@@ -140,21 +181,24 @@ TEST(MatchedFilter, TestSse2Optimizations) {
 // delayed signals.
 TEST(MatchedFilter, LagEstimation) {
   Random random_generator(42U);
+  constexpr size_t kNumChannels = 1;
+  constexpr int kSampleRateHz = 48000;
+  constexpr size_t kNumBands = NumBandsForRate(kSampleRateHz);
+
   for (auto down_sampling_factor : kDownSamplingFactors) {
     const size_t sub_block_size = kBlockSize / down_sampling_factor;
 
-    std::vector<std::vector<float>> render(3,
-                                           std::vector<float>(kBlockSize, 0.f));
-    std::array<float, kBlockSize> capture;
-    capture.fill(0.f);
+    std::vector<std::vector<std::vector<float>>> render(
+        kNumBands, std::vector<std::vector<float>>(
+                       kNumChannels, std::vector<float>(kBlockSize, 0.f)));
+    std::vector<std::vector<float>> capture(
+        1, std::vector<float>(kBlockSize, 0.f));
     ApmDataDumper data_dumper(0);
     for (size_t delay_samples : {5, 64, 150, 200, 800, 1000}) {
       SCOPED_TRACE(ProduceDebugText(delay_samples, down_sampling_factor));
       EchoCanceller3Config config;
       config.delay.down_sampling_factor = down_sampling_factor;
       config.delay.num_filters = kNumMatchedFilters;
-      config.delay.min_echo_path_delay_blocks = 0;
-      config.delay.api_call_jitter_blocks = 0;
       Decimator capture_decimator(down_sampling_factor);
       DelayBuffer<float> signal_delay_buffer(down_sampling_factor *
                                              delay_samples);
@@ -162,15 +206,20 @@ TEST(MatchedFilter, LagEstimation) {
                            kWindowSizeSubBlocks, kNumMatchedFilters,
                            kAlignmentShiftSubBlocks, 150,
                            config.delay.delay_estimate_smoothing,
+                           config.delay.delay_estimate_smoothing_delay_found,
                            config.delay.delay_candidate_detection_threshold);
 
       std::unique_ptr<RenderDelayBuffer> render_delay_buffer(
-          RenderDelayBuffer::Create2(config, 3));
+          RenderDelayBuffer::Create(config, kSampleRateHz, kNumChannels));
 
       // Analyze the correlation between render and capture.
       for (size_t k = 0; k < (600 + delay_samples / sub_block_size); ++k) {
-        RandomizeSampleVector(&random_generator, render[0]);
-        signal_delay_buffer.Delay(render[0], capture);
+        for (size_t band = 0; band < kNumBands; ++band) {
+          for (size_t channel = 0; channel < kNumChannels; ++channel) {
+            RandomizeSampleVector(&random_generator, render[band][channel]);
+          }
+        }
+        signal_delay_buffer.Delay(render[0][0], capture[0]);
         render_delay_buffer->Insert(render);
 
         if (k == 0) {
@@ -181,9 +230,9 @@ TEST(MatchedFilter, LagEstimation) {
         std::array<float, kBlockSize> downsampled_capture_data;
         rtc::ArrayView<float> downsampled_capture(
             downsampled_capture_data.data(), sub_block_size);
-        capture_decimator.Decimate(capture, downsampled_capture);
+        capture_decimator.Decimate(capture[0], downsampled_capture);
         filter.Update(render_delay_buffer->GetDownsampledRenderBuffer(),
-                      downsampled_capture);
+                      downsampled_capture, false);
       }
 
       // Obtain the lag estimates.
@@ -247,6 +296,9 @@ TEST(MatchedFilter, LagEstimation) {
 // Verifies that the matched filter does not produce reliable and accurate
 // estimates for uncorrelated render and capture signals.
 TEST(MatchedFilter, LagNotReliableForUncorrelatedRenderAndCapture) {
+  constexpr size_t kNumChannels = 1;
+  constexpr int kSampleRateHz = 48000;
+  constexpr size_t kNumBands = NumBandsForRate(kSampleRateHz);
   Random random_generator(42U);
   for (auto down_sampling_factor : kDownSamplingFactors) {
     EchoCanceller3Config config;
@@ -254,26 +306,29 @@ TEST(MatchedFilter, LagNotReliableForUncorrelatedRenderAndCapture) {
     config.delay.num_filters = kNumMatchedFilters;
     const size_t sub_block_size = kBlockSize / down_sampling_factor;
 
-    std::vector<std::vector<float>> render(3,
-                                           std::vector<float>(kBlockSize, 0.f));
+    std::vector<std::vector<std::vector<float>>> render(
+        kNumBands, std::vector<std::vector<float>>(
+                       kNumChannels, std::vector<float>(kBlockSize, 0.f)));
     std::array<float, kBlockSize> capture_data;
     rtc::ArrayView<float> capture(capture_data.data(), sub_block_size);
     std::fill(capture.begin(), capture.end(), 0.f);
     ApmDataDumper data_dumper(0);
     std::unique_ptr<RenderDelayBuffer> render_delay_buffer(
-        RenderDelayBuffer::Create2(config, 3));
+        RenderDelayBuffer::Create(config, kSampleRateHz, kNumChannels));
     MatchedFilter filter(&data_dumper, DetectOptimization(), sub_block_size,
                          kWindowSizeSubBlocks, kNumMatchedFilters,
                          kAlignmentShiftSubBlocks, 150,
                          config.delay.delay_estimate_smoothing,
+                         config.delay.delay_estimate_smoothing_delay_found,
                          config.delay.delay_candidate_detection_threshold);
 
     // Analyze the correlation between render and capture.
     for (size_t k = 0; k < 100; ++k) {
-      RandomizeSampleVector(&random_generator, render[0]);
+      RandomizeSampleVector(&random_generator, render[0][0]);
       RandomizeSampleVector(&random_generator, capture);
       render_delay_buffer->Insert(render);
-      filter.Update(render_delay_buffer->GetDownsampledRenderBuffer(), capture);
+      filter.Update(render_delay_buffer->GetDownsampledRenderBuffer(), capture,
+                    false);
     }
 
     // Obtain the lag estimates.
@@ -291,37 +346,44 @@ TEST(MatchedFilter, LagNotReliableForUncorrelatedRenderAndCapture) {
 // render signals of low level.
 TEST(MatchedFilter, LagNotUpdatedForLowLevelRender) {
   Random random_generator(42U);
+  constexpr size_t kNumChannels = 1;
+  constexpr int kSampleRateHz = 48000;
+  constexpr size_t kNumBands = NumBandsForRate(kSampleRateHz);
+
   for (auto down_sampling_factor : kDownSamplingFactors) {
     const size_t sub_block_size = kBlockSize / down_sampling_factor;
 
-    std::vector<std::vector<float>> render(3,
-                                           std::vector<float>(kBlockSize, 0.f));
-    std::array<float, kBlockSize> capture;
-    capture.fill(0.f);
+    std::vector<std::vector<std::vector<float>>> render(
+        kNumBands, std::vector<std::vector<float>>(
+                       kNumChannels, std::vector<float>(kBlockSize, 0.f)));
+    std::vector<std::vector<float>> capture(
+        1, std::vector<float>(kBlockSize, 0.f));
     ApmDataDumper data_dumper(0);
     EchoCanceller3Config config;
     MatchedFilter filter(&data_dumper, DetectOptimization(), sub_block_size,
                          kWindowSizeSubBlocks, kNumMatchedFilters,
                          kAlignmentShiftSubBlocks, 150,
                          config.delay.delay_estimate_smoothing,
+                         config.delay.delay_estimate_smoothing_delay_found,
                          config.delay.delay_candidate_detection_threshold);
     std::unique_ptr<RenderDelayBuffer> render_delay_buffer(
-        RenderDelayBuffer::Create2(EchoCanceller3Config(), 3));
+        RenderDelayBuffer::Create(EchoCanceller3Config(), kSampleRateHz,
+                                  kNumChannels));
     Decimator capture_decimator(down_sampling_factor);
 
     // Analyze the correlation between render and capture.
     for (size_t k = 0; k < 100; ++k) {
-      RandomizeSampleVector(&random_generator, render[0]);
-      for (auto& render_k : render[0]) {
+      RandomizeSampleVector(&random_generator, render[0][0]);
+      for (auto& render_k : render[0][0]) {
         render_k *= 149.f / 32767.f;
       }
-      std::copy(render[0].begin(), render[0].end(), capture.begin());
+      std::copy(render[0][0].begin(), render[0][0].end(), capture[0].begin());
       std::array<float, kBlockSize> downsampled_capture_data;
       rtc::ArrayView<float> downsampled_capture(downsampled_capture_data.data(),
                                                 sub_block_size);
-      capture_decimator.Decimate(capture, downsampled_capture);
+      capture_decimator.Decimate(capture[0], downsampled_capture);
       filter.Update(render_delay_buffer->GetDownsampledRenderBuffer(),
-                    downsampled_capture);
+                    downsampled_capture, false);
     }
 
     // Obtain the lag estimates.
@@ -349,6 +411,7 @@ TEST(MatchedFilter, NumberOfLagEstimates) {
       MatchedFilter filter(&data_dumper, DetectOptimization(), sub_block_size,
                            32, num_matched_filters, 1, 150,
                            config.delay.delay_estimate_smoothing,
+                           config.delay.delay_estimate_smoothing_delay_found,
                            config.delay.delay_candidate_detection_threshold);
       EXPECT_EQ(num_matched_filters, filter.GetLagEstimates().size());
     }
@@ -358,31 +421,34 @@ TEST(MatchedFilter, NumberOfLagEstimates) {
 #if RTC_DCHECK_IS_ON && GTEST_HAS_DEATH_TEST && !defined(WEBRTC_ANDROID)
 
 // Verifies the check for non-zero windows size.
-TEST(MatchedFilter, ZeroWindowSize) {
+TEST(MatchedFilterDeathTest, ZeroWindowSize) {
   ApmDataDumper data_dumper(0);
   EchoCanceller3Config config;
   EXPECT_DEATH(MatchedFilter(&data_dumper, DetectOptimization(), 16, 0, 1, 1,
                              150, config.delay.delay_estimate_smoothing,
+                             config.delay.delay_estimate_smoothing_delay_found,
                              config.delay.delay_candidate_detection_threshold),
                "");
 }
 
 // Verifies the check for non-null data dumper.
-TEST(MatchedFilter, NullDataDumper) {
+TEST(MatchedFilterDeathTest, NullDataDumper) {
   EchoCanceller3Config config;
   EXPECT_DEATH(MatchedFilter(nullptr, DetectOptimization(), 16, 1, 1, 1, 150,
                              config.delay.delay_estimate_smoothing,
+                             config.delay.delay_estimate_smoothing_delay_found,
                              config.delay.delay_candidate_detection_threshold),
                "");
 }
 
 // Verifies the check for that the sub block size is a multiple of 4.
 // TODO(peah): Activate the unittest once the required code has been landed.
-TEST(MatchedFilter, DISABLED_BlockSizeMultipleOf4) {
+TEST(MatchedFilterDeathTest, DISABLED_BlockSizeMultipleOf4) {
   ApmDataDumper data_dumper(0);
   EchoCanceller3Config config;
   EXPECT_DEATH(MatchedFilter(&data_dumper, DetectOptimization(), 15, 1, 1, 1,
                              150, config.delay.delay_estimate_smoothing,
+                             config.delay.delay_estimate_smoothing_delay_found,
                              config.delay.delay_candidate_detection_threshold),
                "");
 }
@@ -390,11 +456,12 @@ TEST(MatchedFilter, DISABLED_BlockSizeMultipleOf4) {
 // Verifies the check for that there is an integer number of sub blocks that add
 // up to a block size.
 // TODO(peah): Activate the unittest once the required code has been landed.
-TEST(MatchedFilter, DISABLED_SubBlockSizeAddsUpToBlockSize) {
+TEST(MatchedFilterDeathTest, DISABLED_SubBlockSizeAddsUpToBlockSize) {
   ApmDataDumper data_dumper(0);
   EchoCanceller3Config config;
   EXPECT_DEATH(MatchedFilter(&data_dumper, DetectOptimization(), 12, 1, 1, 1,
                              150, config.delay.delay_estimate_smoothing,
+                             config.delay.delay_estimate_smoothing_delay_found,
                              config.delay.delay_candidate_detection_threshold),
                "");
 }

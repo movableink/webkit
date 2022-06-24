@@ -11,11 +11,11 @@
 #ifndef MODULES_AUDIO_CODING_NETEQ_EXPAND_H_
 #define MODULES_AUDIO_CODING_NETEQ_EXPAND_H_
 
-#include <assert.h>
+
 #include <memory>
 
 #include "modules/audio_coding/neteq/audio_vector.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 
@@ -45,7 +45,7 @@ class Expand {
   virtual void Reset();
 
   // The main method to produce concealment data. The data is appended to the
-  // end of |output|.
+  // end of `output`.
   virtual int Process(AudioMultiVector* output);
 
   // Prepare the object to do extra expansion during normal operation following
@@ -56,9 +56,9 @@ class Expand {
   // a period of expands.
   virtual void SetParametersForMergeAfterExpand();
 
-  // Returns the mute factor for |channel|.
+  // Returns the mute factor for `channel`.
   int16_t MuteFactor(size_t channel) const {
-    assert(channel < num_channels_);
+    RTC_DCHECK_LT(channel, num_channels_);
     return channel_parameters_[channel].mute_factor;
   }
 
@@ -76,19 +76,12 @@ class Expand {
                             size_t length,
                             int16_t* random_vector);
 
-  void GenerateBackgroundNoise(int16_t* random_vector,
-                               size_t channel,
-                               int mute_slope,
-                               bool too_many_expands,
-                               size_t num_noise_samples,
-                               int16_t* buffer);
-
   // Initializes member variables at the beginning of an expand period.
   void InitializeForAnExpandPeriod();
 
   bool TooManyExpands();
 
-  // Analyzes the signal history in |sync_buffer_|, and set up all parameters
+  // Analyzes the signal history in `sync_buffer_`, and set up all parameters
   // necessary to produce concealment data.
   void AnalyzeSignal(int16_t* random_vector);
 
@@ -122,9 +115,9 @@ class Expand {
     int mute_slope; /* Q20 */
   };
 
-  // Calculate the auto-correlation of |input|, with length |input_length|
+  // Calculate the auto-correlation of `input`, with length `input_length`
   // samples. The correlation is calculated from a downsampled version of
-  // |input|, and is written to |output|.
+  // `input`, and is written to `output`.
   void Correlation(const int16_t* input,
                    size_t input_length,
                    int16_t* output) const;

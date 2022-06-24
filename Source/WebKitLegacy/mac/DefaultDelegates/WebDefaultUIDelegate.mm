@@ -28,13 +28,14 @@
 
 #import "WebDefaultUIDelegate.h"
 
-#import "WebTypesInternal.h"
 #import "WebUIDelegatePrivate.h"
 #import "WebView.h"
+#import <wtf/NeverDestroyed.h>
+#import <wtf/RetainPtr.h>
 
-#if !PLATFORM(IOS_FAMILY)
+#if PLATFORM(MAC)
 #import "WebJavaScriptTextInputPanel.h"
-#import "WebKitVersionChecks.h"
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -42,15 +43,13 @@
 #import <WebCore/WKViewPrivate.h>
 #endif
 
-#if !PLATFORM(IOS_FAMILY)
+#if PLATFORM(MAC)
 @interface NSApplication (DeclarationStolenFromAppKit)
 - (void)_cycleWindowsReversed:(BOOL)reversed;
 @end
 #endif
 
 @implementation WebDefaultUIDelegate
-
-static WebDefaultUIDelegate *sharedDelegate = nil;
 
 // Return a object with vanilla implementations of the protocol's methods
 // Note this feature relies on our default delegate being stateless. This
@@ -59,9 +58,8 @@ static WebDefaultUIDelegate *sharedDelegate = nil;
 // won't be able to use a singleton.
 + (WebDefaultUIDelegate *)sharedUIDelegate
 {
-    if (!sharedDelegate)
-        sharedDelegate = [[WebDefaultUIDelegate alloc] init];
-    return sharedDelegate;
+    static NeverDestroyed<RetainPtr<WebDefaultUIDelegate>> sharedDelegate = adoptNS([[WebDefaultUIDelegate alloc] init]);
+    return sharedDelegate.get().get();
 }
 
 - (WebView *)webView: (WebView *)wv createWebViewWithRequest:(NSURLRequest *)request windowFeatures:(NSDictionary *)features
@@ -86,21 +84,21 @@ static WebDefaultUIDelegate *sharedDelegate = nil;
 
 - (void)webViewClose: (WebView *)wv
 {
-#if !PLATFORM(IOS_FAMILY)
+#if PLATFORM(MAC)
     [[wv window] close];
 #endif
 }
 
 - (void)webViewFocus: (WebView *)wv
 {
-#if !PLATFORM(IOS_FAMILY)
+#if PLATFORM(MAC)
     [[wv window] makeKeyAndOrderFront:wv];
 #endif
 }
 
 - (void)webViewUnfocus: (WebView *)wv
 {
-#if !PLATFORM(IOS_FAMILY)
+#if PLATFORM(MAC)
     if ([[wv window] isKeyWindow] || [[[wv window] attachedSheet] isKeyWindow])
         [NSApp _cycleWindowsReversed:FALSE];
 #endif
@@ -158,7 +156,7 @@ static WebDefaultUIDelegate *sharedDelegate = nil;
 
 - (void)webView: (WebView *)wv setResizable:(BOOL)resizable
 {
-#if !PLATFORM(IOS_FAMILY)
+#if PLATFORM(MAC)
     // FIXME: This doesn't actually change the resizability of the window,
     // only visibility of the indicator.
     [[wv window] setShowsResizeIndicator:resizable];
@@ -167,7 +165,7 @@ static WebDefaultUIDelegate *sharedDelegate = nil;
 
 - (void)webView: (WebView *)wv setFrame:(NSRect)frame
 {
-#if !PLATFORM(IOS_FAMILY)
+#if PLATFORM(MAC)
     [[wv window] setFrame:frame display:YES];
 #endif
 }
@@ -191,8 +189,8 @@ static WebDefaultUIDelegate *sharedDelegate = nil;
 
 - (NSString *)webView: (WebView *)wv runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt defaultText:(NSString *)defaultText initiatedByFrame:(WebFrame *)frame
 {
-#if !PLATFORM(IOS_FAMILY)
-    WebJavaScriptTextInputPanel *panel = [[WebJavaScriptTextInputPanel alloc] initWithPrompt:prompt text:defaultText];
+#if PLATFORM(MAC)
+    auto panel = adoptNS([[WebJavaScriptTextInputPanel alloc] initWithPrompt:prompt text:defaultText]);
     [panel showWindow:nil];
     NSString *result;
     if ([NSApp runModalForWindow:[panel window]])
@@ -200,7 +198,6 @@ static WebDefaultUIDelegate *sharedDelegate = nil;
     else
         result = nil;
     [[panel window] close];
-    [panel release];
     return result;
 #else
     return nil;
@@ -216,8 +213,7 @@ static WebDefaultUIDelegate *sharedDelegate = nil;
 {
 }
 
-
-#if !PLATFORM(IOS_FAMILY)
+#if PLATFORM(MAC)
 - (NSUInteger)webView:(WebView *)webView dragDestinationActionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo
 {
     if (!linkedOnOrAfter(SDKVersion::FirstWithDropToNavigateDisallowedByDefault))

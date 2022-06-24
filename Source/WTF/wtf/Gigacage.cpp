@@ -28,9 +28,9 @@
 
 #include <wtf/Atomics.h>
 #include <wtf/PageBlock.h>
-#include <wtf/OSAllocator.h>
 
-#if defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
+#if USE(SYSTEM_MALLOC)
+#include <wtf/OSAllocator.h>
 
 namespace Gigacage {
 
@@ -49,7 +49,7 @@ void* tryAllocateZeroedVirtualPages(Kind, size_t requestedSize)
     size_t size = roundUpToMultipleOf(WTF::pageSize(), requestedSize);
     RELEASE_ASSERT(size >= requestedSize);
     void* result = OSAllocator::reserveAndCommit(size);
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     if (result) {
         for (size_t i = 0; i < size / sizeof(uintptr_t); ++i)
             ASSERT(static_cast<uintptr_t*>(result)[i] == 0);
@@ -64,7 +64,7 @@ void freeVirtualPages(Kind, void* basePtr, size_t size)
 }
 
 } // namespace Gigacage
-#else // defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
+#else // USE(SYSTEM_MALLOC)
 #include <bmalloc/bmalloc.h>
 
 namespace Gigacage {
@@ -135,11 +135,11 @@ namespace Gigacage {
 
 void* tryMallocArray(Kind kind, size_t numElements, size_t elementSize)
 {
-    Checked<size_t, RecordOverflow> checkedSize = elementSize;
+    CheckedSize checkedSize = elementSize;
     checkedSize *= numElements;
     if (checkedSize.hasOverflowed())
         return nullptr;
-    return tryMalloc(kind, checkedSize.unsafeGet());
+    return tryMalloc(kind, checkedSize);
 }
 
 void* malloc(Kind kind, size_t size)

@@ -14,6 +14,7 @@
 #include <map>
 #include <string>
 
+#include "api/array_view.h"
 #include "rtc_base/system/rtc_export.h"
 
 namespace webrtc {
@@ -32,8 +33,19 @@ struct RTC_EXPORT SdpVideoFormat {
 
   ~SdpVideoFormat();
 
-  friend bool operator==(const SdpVideoFormat& a, const SdpVideoFormat& b);
-  friend bool operator!=(const SdpVideoFormat& a, const SdpVideoFormat& b) {
+  // Returns true if the SdpVideoFormats have the same names as well as codec
+  // specific parameters. Please note that two SdpVideoFormats can represent the
+  // same codec even though not all parameters are the same.
+  bool IsSameCodec(const SdpVideoFormat& other) const;
+  bool IsCodecInList(
+      rtc::ArrayView<const webrtc::SdpVideoFormat> formats) const;
+
+  std::string ToString() const;
+
+  friend RTC_EXPORT bool operator==(const SdpVideoFormat& a,
+                                    const SdpVideoFormat& b);
+  friend RTC_EXPORT bool operator!=(const SdpVideoFormat& a,
+                                    const SdpVideoFormat& b) {
     return !(a == b);
   }
 

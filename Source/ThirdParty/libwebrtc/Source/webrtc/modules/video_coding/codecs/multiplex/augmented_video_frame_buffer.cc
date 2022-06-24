@@ -9,6 +9,11 @@
  */
 
 #include "modules/video_coding/codecs/multiplex/include/augmented_video_frame_buffer.h"
+
+#include <stdint.h>
+
+#include <utility>
+
 #include "api/video/video_frame_buffer.h"
 
 namespace webrtc {
@@ -48,5 +53,13 @@ int AugmentedVideoFrameBuffer::height() const {
 
 rtc::scoped_refptr<I420BufferInterface> AugmentedVideoFrameBuffer::ToI420() {
   return video_frame_buffer_->ToI420();
+}
+
+const I420BufferInterface* AugmentedVideoFrameBuffer::GetI420() const {
+  // TODO(https://crbug.com/webrtc/12021): When AugmentedVideoFrameBuffer is
+  // updated to implement the buffer interfaces of relevant
+  // VideoFrameBuffer::Types, stop overriding GetI420() as a workaround to
+  // AugmentedVideoFrameBuffer not being the type that is returned by type().
+  return video_frame_buffer_->GetI420();
 }
 }  // namespace webrtc

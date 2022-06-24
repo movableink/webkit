@@ -8,10 +8,11 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "modules/congestion_controller/pcc/bitrate_controller.h"
+
+#include <memory>
 #include <utility>
 
-#include "absl/memory/memory.h"
-#include "modules/congestion_controller/pcc/bitrate_controller.h"
 #include "modules/congestion_controller/pcc/monitor_interval.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
@@ -31,13 +32,13 @@ constexpr double kThroughputPower = 0.99;
 constexpr double kDelayGradientThreshold = 0.01;
 constexpr double kDelayGradientNegativeBound = 10;
 
-const DataRate kTargetSendingRate = DataRate::kbps(300);
+const DataRate kTargetSendingRate = DataRate::KilobitsPerSec(300);
 const double kEpsilon = 0.05;
-const Timestamp kStartTime = Timestamp::us(0);
-const TimeDelta kPacketsDelta = TimeDelta::ms(1);
-const TimeDelta kIntervalDuration = TimeDelta::ms(1000);
-const TimeDelta kDefaultRtt = TimeDelta::ms(1000);
-const DataSize kDefaultDataSize = DataSize::bytes(100);
+const Timestamp kStartTime = Timestamp::Micros(0);
+const TimeDelta kPacketsDelta = TimeDelta::Millis(1);
+const TimeDelta kIntervalDuration = TimeDelta::Millis(1000);
+const TimeDelta kDefaultRtt = TimeDelta::Millis(1000);
+const DataSize kDefaultDataSize = DataSize::Bytes(100);
 
 std::vector<PacketResult> CreatePacketResults(
     const std::vector<Timestamp>& packets_send_times,
@@ -66,8 +67,10 @@ std::vector<PacketResult> CreatePacketResults(
 
 class MockUtilityFunction : public PccUtilityFunctionInterface {
  public:
-  MOCK_CONST_METHOD1(Compute,
-                     double(const PccMonitorInterval& monitor_interval));
+  MOCK_METHOD(double,
+              Compute,
+              (const PccMonitorInterval& monitor_interval),
+              (const, override));
 };
 
 }  // namespace
@@ -108,11 +111,11 @@ TEST(PccBitrateControllerTest, IncreaseRateWhenNoChangesForTestBitrates) {
 
 TEST(PccBitrateControllerTest, NoChangesWhenUtilityFunctionDoesntChange) {
   std::unique_ptr<MockUtilityFunction> mock_utility_function =
-      absl::make_unique<MockUtilityFunction>();
-  EXPECT_CALL(*mock_utility_function, Compute(testing::_))
+      std::make_unique<MockUtilityFunction>();
+  EXPECT_CALL(*mock_utility_function, Compute(::testing::_))
       .Times(2)
-      .WillOnce(testing::Return(100))
-      .WillOnce(testing::Return(100));
+      .WillOnce(::testing::Return(100))
+      .WillOnce(::testing::Return(100));
 
   PccBitrateController bitrate_controller(
       kInitialConversionFactor, kInitialDynamicBoundary,
@@ -139,15 +142,15 @@ TEST(PccBitrateControllerTest, NoChangesWhenUtilityFunctionDoesntChange) {
 
 TEST(PccBitrateControllerTest, NoBoundaryWhenSmallGradient) {
   std::unique_ptr<MockUtilityFunction> mock_utility_function =
-      absl::make_unique<MockUtilityFunction>();
+      std::make_unique<MockUtilityFunction>();
   constexpr double kFirstMonitorIntervalUtility = 0;
   const double kSecondMonitorIntervalUtility =
       2 * kTargetSendingRate.bps() * kEpsilon;
 
-  EXPECT_CALL(*mock_utility_function, Compute(testing::_))
+  EXPECT_CALL(*mock_utility_function, Compute(::testing::_))
       .Times(2)
-      .WillOnce(testing::Return(kFirstMonitorIntervalUtility))
-      .WillOnce(testing::Return(kSecondMonitorIntervalUtility));
+      .WillOnce(::testing::Return(kFirstMonitorIntervalUtility))
+      .WillOnce(::testing::Return(kSecondMonitorIntervalUtility));
 
   PccBitrateController bitrate_controller(
       kInitialConversionFactor, kInitialDynamicBoundary,
@@ -176,18 +179,18 @@ TEST(PccBitrateControllerTest, NoBoundaryWhenSmallGradient) {
 
 TEST(PccBitrateControllerTest, FaceBoundaryWhenLargeGradient) {
   std::unique_ptr<MockUtilityFunction> mock_utility_function =
-      absl::make_unique<MockUtilityFunction>();
+      std::make_unique<MockUtilityFunction>();
   constexpr double kFirstMonitorIntervalUtility = 0;
   const double kSecondMonitorIntervalUtility =
       10 * kInitialDynamicBoundary * kTargetSendingRate.bps() * 2 *
       kTargetSendingRate.bps() * kEpsilon;
 
-  EXPECT_CALL(*mock_utility_function, Compute(testing::_))
+  EXPECT_CALL(*mock_utility_function, Compute(::testing::_))
       .Times(4)
-      .WillOnce(testing::Return(kFirstMonitorIntervalUtility))
-      .WillOnce(testing::Return(kSecondMonitorIntervalUtility))
-      .WillOnce(testing::Return(kFirstMonitorIntervalUtility))
-      .WillOnce(testing::Return(kSecondMonitorIntervalUtility));
+      .WillOnce(::testing::Return(kFirstMonitorIntervalUtility))
+      .WillOnce(::testing::Return(kSecondMonitorIntervalUtility))
+      .WillOnce(::testing::Return(kFirstMonitorIntervalUtility))
+      .WillOnce(::testing::Return(kSecondMonitorIntervalUtility));
 
   PccBitrateController bitrate_controller(
       kInitialConversionFactor, kInitialDynamicBoundary,
@@ -218,18 +221,18 @@ TEST(PccBitrateControllerTest, FaceBoundaryWhenLargeGradient) {
 
 TEST(PccBitrateControllerTest, SlowStartMode) {
   std::unique_ptr<MockUtilityFunction> mock_utility_function =
-      absl::make_unique<MockUtilityFunction>();
+      std::make_unique<MockUtilityFunction>();
   constexpr double kFirstUtilityFunction = 1000;
-  EXPECT_CALL(*mock_utility_function, Compute(testing::_))
+  EXPECT_CALL(*mock_utility_function, Compute(::testing::_))
       .Times(4)
       // For first 3 calls we expect to stay in the SLOW_START mode and double
       // the sending rate since the utility function increases its value. For
       // the last call utility function decreases its value, this means that
       // we should not double the sending rate and exit SLOW_START mode.
-      .WillOnce(testing::Return(kFirstUtilityFunction))
-      .WillOnce(testing::Return(kFirstUtilityFunction + 1))
-      .WillOnce(testing::Return(kFirstUtilityFunction + 2))
-      .WillOnce(testing::Return(kFirstUtilityFunction + 1));
+      .WillOnce(::testing::Return(kFirstUtilityFunction))
+      .WillOnce(::testing::Return(kFirstUtilityFunction + 1))
+      .WillOnce(::testing::Return(kFirstUtilityFunction + 2))
+      .WillOnce(::testing::Return(kFirstUtilityFunction + 1));
 
   PccBitrateController bitrate_controller(
       kInitialConversionFactor, kInitialDynamicBoundary,
@@ -255,17 +258,17 @@ TEST(PccBitrateControllerTest, SlowStartMode) {
 
 TEST(PccBitrateControllerTest, StepSizeIncrease) {
   std::unique_ptr<MockUtilityFunction> mock_utility_function =
-      absl::make_unique<MockUtilityFunction>();
+      std::make_unique<MockUtilityFunction>();
   constexpr double kFirstMiUtilityFunction = 0;
   const double kSecondMiUtilityFunction =
       2 * kTargetSendingRate.bps() * kEpsilon;
 
-  EXPECT_CALL(*mock_utility_function, Compute(testing::_))
+  EXPECT_CALL(*mock_utility_function, Compute(::testing::_))
       .Times(4)
-      .WillOnce(testing::Return(kFirstMiUtilityFunction))
-      .WillOnce(testing::Return(kSecondMiUtilityFunction))
-      .WillOnce(testing::Return(kFirstMiUtilityFunction))
-      .WillOnce(testing::Return(kSecondMiUtilityFunction));
+      .WillOnce(::testing::Return(kFirstMiUtilityFunction))
+      .WillOnce(::testing::Return(kSecondMiUtilityFunction))
+      .WillOnce(::testing::Return(kFirstMiUtilityFunction))
+      .WillOnce(::testing::Return(kSecondMiUtilityFunction));
   std::vector<PccMonitorInterval> monitor_block{
       PccMonitorInterval(kTargetSendingRate * (1 + kEpsilon), kStartTime,
                          kIntervalDuration),

@@ -33,6 +33,7 @@ def testShouldBeAbleToDetermineTheLocationOfAnElement(driver, pages):
     'coordinates_tests/page_with_transparent_element.html',
     'coordinates_tests/page_with_hidden_element.html'),
     ids=('basic', 'empty', 'transparent', 'hidden'))
+@pytest.mark.xfail_safari
 def testShouldGetCoordinatesOfAnElement(page, driver, pages):
     pages.load(page)
     element = driver.find_element(By.ID, "box")
@@ -40,6 +41,7 @@ def testShouldGetCoordinatesOfAnElement(page, driver, pages):
     _check_location(element.location, x=10, y=10)
 
 
+@pytest.mark.xfail_safari
 def testShouldGetCoordinatesOfAnInvisibleElement(driver, pages):
     pages.load("coordinates_tests/page_with_invisible_element.html")
     element = driver.find_element(By.ID, "box")
@@ -56,20 +58,28 @@ def testShouldScrollPageAndGetCoordinatesOfAnElementThatIsOutOfViewPort(driver, 
     _check_location(element.location, x=10, y=5010)
 
 
-@pytest.mark.xfail_marionette
+@pytest.mark.xfail_chrome
+@pytest.mark.xfail_chromiumedge
+@pytest.mark.xfail_firefox
+@pytest.mark.xfail_remote
+@pytest.mark.xfail_safari
 def testShouldGetCoordinatesOfAnElementInAFrame(driver, pages):
     pages.load("coordinates_tests/element_in_frame.html")
-    driver.switch_to_frame(driver.find_element(By.NAME, "ifr"))
+    driver.switch_to.frame(driver.find_element(By.NAME, "ifr"))
     element = driver.find_element(By.ID, "box")
     _check_location(element.location_once_scrolled_into_view, x=25, y=25)
     _check_location(element.location, x=10, y=10)
 
 
-@pytest.mark.xfail_marionette
+@pytest.mark.xfail_chrome
+@pytest.mark.xfail_chromiumedge
+@pytest.mark.xfail_firefox
+@pytest.mark.xfail_remote
+@pytest.mark.xfail_safari
 def testShouldGetCoordinatesOfAnElementInANestedFrame(driver, pages):
     pages.load("coordinates_tests/element_in_nested_frame.html")
-    driver.switch_to_frame(driver.find_element(By.NAME, "ifr"))
-    driver.switch_to_frame(driver.find_element(By.NAME, "ifr"))
+    driver.switch_to.frame(driver.find_element(By.NAME, "ifr"))
+    driver.switch_to.frame(driver.find_element(By.NAME, "ifr"))
     element = driver.find_element(By.ID, "box")
     _check_location(element.location_once_scrolled_into_view, x=40, y=40)
     _check_location(element.location, x=10, y=10)

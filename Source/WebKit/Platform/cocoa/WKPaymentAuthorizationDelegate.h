@@ -28,6 +28,7 @@
 #import <pal/spi/cocoa/PassKitSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/WeakPtr.h>
 
 OBJC_CLASS NSArray;
 OBJC_CLASS NSError;
@@ -43,21 +44,32 @@ using DidAuthorizePaymentCompletion = BlockPtr<void(PKPaymentAuthorizationResult
 using DidSelectPaymentMethodCompletion = BlockPtr<void(PKPaymentRequestPaymentMethodUpdate *)>;
 using DidSelectShippingContactCompletion = BlockPtr<void(PKPaymentRequestShippingContactUpdate *)>;
 using DidSelectShippingMethodCompletion = BlockPtr<void(PKPaymentRequestShippingMethodUpdate *)>;
+#if HAVE(PASSKIT_COUPON_CODE)
+using DidChangeCouponCodeCompletion = BlockPtr<void(PKPaymentRequestCouponCodeUpdate *)>;
+#endif
 
 }
 
 @interface WKPaymentAuthorizationDelegate : NSObject {
     RetainPtr<PKPaymentRequest> _request;
+    WeakPtr<WebKit::PaymentAuthorizationPresenter> _presenter;
 }
 
 - (instancetype)init NS_UNAVAILABLE;
 
 - (void)completeMerchantValidation:(PKPaymentMerchantSession *)session error:(NSError *)error;
 - (void)completePaymentMethodSelection:(PKPaymentRequestPaymentMethodUpdate *)paymentMethodUpdate;
-- (void)completePaymentSession:(PKPaymentAuthorizationStatus)status errors:(NSArray<NSError *> *)errors didReachFinalState:(BOOL)didReachFinalState;
+- (void)completePaymentSession:(PKPaymentAuthorizationStatus)status errors:(NSArray<NSError *> *)errors;
 - (void)completeShippingContactSelection:(PKPaymentRequestShippingContactUpdate *)shippingContactUpdate;
 - (void)completeShippingMethodSelection:(PKPaymentRequestShippingMethodUpdate *)shippingMethodUpdate;
+#if HAVE(PASSKIT_COUPON_CODE)
+- (void)completeCouponCodeChange:(PKPaymentRequestCouponCodeUpdate *)couponCodeUpdate;
+#endif
 - (void)invalidate;
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/WKPaymentAuthorizationDelegateAdditionsAfter.h>
+#endif
 
 @end
 
@@ -72,6 +84,9 @@ using DidSelectShippingMethodCompletion = BlockPtr<void(PKPaymentRequestShipping
 - (void)_didSelectPaymentMethod:(PKPaymentMethod *)paymentMethod completion:(WebKit::DidSelectPaymentMethodCompletion::BlockType)completion;
 - (void)_didSelectShippingContact:(PKContact *)contact completion:(WebKit::DidSelectShippingContactCompletion::BlockType)completion;
 - (void)_didSelectShippingMethod:(PKShippingMethod *)shippingMethod completion:(WebKit::DidSelectShippingMethodCompletion::BlockType)completion;
+#if HAVE(PASSKIT_COUPON_CODE)
+- (void)_didChangeCouponCode:(NSString *)couponCode completion:(WebKit::DidChangeCouponCodeCompletion::BlockType)completion;
+#endif
 - (void)_getPaymentServicesMerchantURL:(void(^)(NSURL *, NSError *))completion;
 - (void)_willFinishWithError:(NSError *)error;
 

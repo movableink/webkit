@@ -28,11 +28,10 @@
 
 #include <wtf/FileSystem.h>
 #include <wtf/glib/GUniquePtr.h>
-#include <wtf/threads/BinarySemaphore.h>
 
 namespace WebCore {
 
-FileMonitor::FileMonitor(const String& path, Ref<WorkQueue>&& handlerQueue, WTF::Function<void(FileChangeType)>&& modificationHandler)
+FileMonitor::FileMonitor(const String& path, Ref<WorkQueue>&& handlerQueue, Function<void(FileChangeType)>&& modificationHandler)
     : m_handlerQueue(WTFMove(handlerQueue))
     , m_modificationHandler(WTFMove(modificationHandler))
 {
@@ -55,26 +54,22 @@ FileMonitor::FileMonitor(const String& path, Ref<WorkQueue>&& handlerQueue, WTF:
         return;
     }
 
-    BinarySemaphore semaphore;
-    m_handlerQueue->dispatch([createPlatformMonitor = WTFMove(createPlatformMonitor), &semaphore] {
+    m_handlerQueue->dispatchSync([createPlatformMonitor = WTFMove(createPlatformMonitor)] {
         createPlatformMonitor();
-        semaphore.signal();
     });
-    semaphore.wait();
 }
 
 FileMonitor::~FileMonitor()
 {
     // The monitor can be destroyed in the work queue thread.
-    if (&m_handlerQueue->runLoop() == &RunLoop::current())
+    if (&m_handlerQueue->runLoop() == &RunLoop::current()) {
+        cancel();
         return;
+    }
 
-    BinarySemaphore semaphore;
-    m_handlerQueue->dispatch([&] {
-        m_platformMonitor = nullptr;
-        semaphore.signal();
+    m_handlerQueue->dispatchSync([this] {
+        cancel();
     });
-    semaphore.wait();
 }
 
 void FileMonitor::fileChangedCallback(GFileMonitor*, GFile*, GFile*, GFileMonitorEvent event, FileMonitor* monitor)
@@ -96,8 +91,17 @@ void FileMonitor::didChange(FileChangeType type)
 {
     ASSERT(!isMainThread());
     if (type == FileChangeType::Removal)
-        m_platformMonitor = nullptr;
+        cancel();
     m_modificationHandler(type);
+}
+
+void FileMonitor::cancel()
+{
+    if (!m_platformMonitor)
+        return;
+
+    g_file_monitor_cancel(m_platformMonitor.get());
+    m_platformMonitor = nullptr;
 }
 
 } // namespace WebCore

@@ -23,11 +23,14 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #import "PlatformUtilities.h"
+#import "TestNavigationDelegate.h"
+#import "TestURLSchemeHandler.h"
 #import <WebKit/WKNavigationPrivate.h>
 #import <WebKit/WKWebView.h>
+#import <pal/spi/cf/CFNetworkSPI.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/NSURLExtras.h>
 
@@ -62,6 +65,23 @@ static NSURL *literalURL(const char* literal)
 
 @end
 
+@interface TestURLRequest : NSURLRequest
+- (instancetype)initWithURL:(NSURL *)URL;
+@end
+
+@implementation TestURLRequest
+- (instancetype)initWithURL:(NSURL *)URL
+{
+    if (!(self = [super initWithURL:URL]))
+        return nil;
+    return self;
+}
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    EXPECT_TRUE(false);
+}
+@end
+
 namespace TestWebKitAPI {
 
 TEST(WebKit, LoadInvalidURLRequest)
@@ -79,6 +99,42 @@ TEST(WebKit, LoadInvalidURLRequest)
 
         EXPECT_TRUE(didFailProvisionalLoad);
     }
+}
+
+TEST(WebKit, LoadInvalidURLRequestNonASCII)
+{
+    __block bool done = false;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    delegate.get().webContentProcessDidTerminate = ^(WKWebView *) {
+        ASSERT_NOT_REACHED();
+    };
+    delegate.get().didFailProvisionalNavigation = ^(WKWebView *, WKNavigation *, NSError *error) {
+        EXPECT_WK_STREQ(error.domain, @"WebKitErrorDomain");
+        EXPECT_EQ(error.code, WebKitErrorCannotShowURL);
+        EXPECT_WK_STREQ([error.userInfo[@"NSErrorFailingURLKey"] absoluteString], "http://%C3%A2%C2%80%C2%80");
+        done = true;
+    };
+    auto webView = adoptNS([WKWebView new]);
+    [webView setNavigationDelegate:delegate.get()];
+    const UInt8 bytes[10] = { 'h', 't', 't', 'p', ':', '/', '/', 0xE2, 0x80, 0x80 };
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:(NSURL *)adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, bytes, 10, kCFStringEncodingUTF8, nullptr, true)).get()];
+    [request _setProperty:request.URL forKey:@"_kCFHTTPCookiePolicyPropertySiteForCookies"];
+    [webView loadRequest:request];
+    Util::run(&done);
+}
+
+TEST(WebKit, LoadNSURLRequestSubclass)
+{
+    auto request = adoptNS([[TestURLRequest alloc] initWithURL:[NSURL URLWithString:@"test:///"]]);
+    auto handler = adoptNS([TestURLSchemeHandler new]);
+    handler.get().startURLSchemeTaskHandler = ^(WKWebView *, id<WKURLSchemeTask> task) {
+        respond(task, "hi");
+    };
+    auto configuration = adoptNS([WKWebViewConfiguration new]);
+    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"test"];
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSZeroRect configuration:configuration.get()]);
+    [webView loadRequest:request.get()];
+    [webView _test_waitForDidFinishNavigation];
 }
 
 } // namespace TestWebKitAPI

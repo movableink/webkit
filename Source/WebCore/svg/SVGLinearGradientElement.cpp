@@ -29,6 +29,7 @@
 #include "FloatPoint.h"
 #include "LinearGradientAttributes.h"
 #include "RenderSVGResourceLinearGradient.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGLengthValue.h"
 #include "SVGNames.h"
 #include "SVGUnitTypes.h"
@@ -106,11 +107,8 @@ static void setGradientAttributes(SVGGradientElement& element, LinearGradientAtt
     if (!attributes.hasGradientTransform() && element.hasAttribute(SVGNames::gradientTransformAttr))
         attributes.setGradientTransform(element.gradientTransform().concatenate());
 
-    if (!attributes.hasStops()) {
-        const Vector<Gradient::ColorStop>& stops(element.buildStops());
-        if (!stops.isEmpty())
-            attributes.setStops(stops);
-    }
+    if (!attributes.hasStops())
+        attributes.setStops(element.buildStops());
 
     if (isLinear) {
         SVGLinearGradientElement& linear = downcast<SVGLinearGradientElement>(element);

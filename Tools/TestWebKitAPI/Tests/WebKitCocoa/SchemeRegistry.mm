@@ -25,6 +25,7 @@
 
 #import "config.h"
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestNavigationDelegate.h"
@@ -83,8 +84,6 @@ static RetainPtr<NSURL> lastEchoedURL;
 @end
 
 #if WK_HAVE_C_SPI
-
-static bool didFinishLoad = false;
 
 @interface WKContextRegisterURLSchemeAsCanDisplayOnlyIfCanRequestLoadDelegate : NSObject <WKBrowsingContextLoadDelegate>
 @end
@@ -169,7 +168,8 @@ TEST(WebKit, WKContextRegisterURLSchemeAsCanDisplayOnlyIfCanRequest_SameOriginLo
         WKContextRegisterURLSchemeAsCanDisplayOnlyIfCanRequest(context.get(), Util::toWK(echoScheme.UTF8String).get());
 
         PlatformWebView webView { context.get() };
-        webView.platformView().browsingContextController.loadDelegate = [[WKContextRegisterURLSchemeAsCanDisplayOnlyIfCanRequestLoadDelegate alloc] init];
+        auto loadDelegate = adoptNS([[WKContextRegisterURLSchemeAsCanDisplayOnlyIfCanRequestLoadDelegate alloc] init]);
+        webView.platformView().browsingContextController.loadDelegate = loadDelegate.get();
         [webView.platformView().browsingContextController loadHTMLString:@"<!DOCTYPE html><body><script src='echo://A/A_1'></script>" baseURL:[NSURL URLWithString:@"echo://A"]];
         Util::run(&didFinishLoad);
         didFinishLoad = false;
@@ -192,7 +192,8 @@ TEST(WebKit, WKContextRegisterURLSchemeAsCanDisplayOnlyIfCanRequest_CrossOriginL
         WKContextRegisterURLSchemeAsCanDisplayOnlyIfCanRequest(context.get(), Util::toWK(echoScheme.UTF8String).get());
 
         PlatformWebView webView { context.get() };
-        webView.platformView().browsingContextController.loadDelegate = [[WKContextRegisterURLSchemeAsCanDisplayOnlyIfCanRequestLoadDelegate alloc] init];
+        auto loadDelegate = adoptNS([[WKContextRegisterURLSchemeAsCanDisplayOnlyIfCanRequestLoadDelegate alloc] init]);
+        webView.platformView().browsingContextController.loadDelegate = loadDelegate.get();
         [webView.platformView().browsingContextController loadHTMLString:@"<!DOCTYPE html><body><script src='echo://A/A_1'></script>" baseURL:[NSURL URLWithString:@"echo://B"]];
         Util::run(&didFinishLoad);
         didFinishLoad = false;

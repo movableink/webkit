@@ -1,3 +1,4 @@
+CONSOLE MESSAGE: WebKit currently uses the first shipping option even if other shipping options are marked as selected.
 Internal properties of a PaymentRequest.
 
 
@@ -70,9 +71,7 @@ INTERNAL PROPERTY: details: {
           "value": "99.00"
         },
         "pending": false
-      },
-      "additionalDisplayItems": [],
-      "data": null
+      }
     }
   ]
 }
@@ -80,7 +79,7 @@ INTERNAL PROPERTY: options: {
   "requestPayerName": false,
   "requestPayerEmail": false,
   "requestPayerPhone": false,
-  "requestShipping": false,
+  "requestShipping": true,
   "shippingType": "shipping"
 }
 
@@ -96,7 +95,6 @@ INTERNAL PROPERTY: details: {
     },
     "pending": false
   },
-  "displayItems": [],
   "shippingOptions": [],
   "modifiers": []
 }
@@ -104,7 +102,7 @@ INTERNAL PROPERTY: options: {
   "requestPayerName": false,
   "requestPayerEmail": false,
   "requestPayerPhone": false,
-  "requestShipping": false,
+  "requestShipping": true,
   "shippingType": "shipping"
 }
 
@@ -120,7 +118,6 @@ INTERNAL PROPERTY: details: {
     },
     "pending": false
   },
-  "displayItems": [],
   "shippingOptions": [],
   "modifiers": []
 }
@@ -128,7 +125,7 @@ INTERNAL PROPERTY: options: {
   "requestPayerName": false,
   "requestPayerEmail": false,
   "requestPayerPhone": false,
-  "requestShipping": false,
+  "requestShipping": true,
   "shippingType": "shipping"
 }
 
@@ -144,7 +141,6 @@ INTERNAL PROPERTY: details: {
     },
     "pending": false
   },
-  "displayItems": [],
   "shippingOptions": [],
   "modifiers": []
 }
@@ -152,7 +148,7 @@ INTERNAL PROPERTY: options: {
   "requestPayerName": false,
   "requestPayerEmail": false,
   "requestPayerPhone": false,
-  "requestShipping": false,
+  "requestShipping": true,
   "shippingType": "shipping"
 }
 

@@ -30,6 +30,7 @@
 #import "WebDatabaseManagerInternal.h"
 #import "WebLocalizableStringsInternal.h"
 #import "WebPlatformStrategies.h"
+#import "WebPreferencesDefinitions.h"
 #import "WebViewPrivate.h"
 #import <JavaScriptCore/InitializeThreading.h>
 #import <WebCore/BreakLines.h>
@@ -54,9 +55,8 @@ static void LoadWebLocalizedStringsTimerCallback(CFRunLoopTimerRef timer, void *
 
 static void LoadWebLocalizedStrings()
 {
-    CFRunLoopTimerRef timer = CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent(), 0, 0, 0, &LoadWebLocalizedStringsTimerCallback, NULL);
-    CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopCommonModes);
-    CFRelease(timer);
+    auto timer = adoptCF(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent(), 0, 0, 0, &LoadWebLocalizedStringsTimerCallback, NULL));
+    CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer.get(), kCFRunLoopCommonModes);
 }
 
 void WebKitInitialize(void)
@@ -88,7 +88,7 @@ void WebKitSetIsClassic(BOOL flag)
 
 float WebKitGetMinimumZoomFontSize(void)
 {
-    return WebCore::Settings::defaultMinimumZoomFontSize();
+    return DEFAULT_VALUE_FOR_MinimumZoomFontSize;
 }
 
 int WebKitGetLastLineBreakInBuffer(UChar *characters, int position, int length)

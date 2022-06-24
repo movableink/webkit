@@ -15,22 +15,22 @@ layer at (0,0) size 800x600
               RenderTableCell {TD} at (2,54) size 595x43 [bgcolor=#99CCCC] [r=1 c=0 rs=1 cs=3]
                 RenderInline {FONT} at (0,0) size 128x15
                   RenderInline {B} at (0,0) size 128x15
-                    RenderText {#text} at (56,5) size 128x15
-                      text run at (56,5) width 128: "Search the Web with"
-                RenderText {#text} at (183,2) size 5x19
-                  text run at (183,2) width 5: " "
-                RenderMenuList {SELECT} at (189,3) size 80x20 [bgcolor=#FFFFFF02] [border: (1px solid #4C4C4C)]
-                  RenderBlock (anonymous) at (6,3) size 67x14
-                    RenderText at (0,0) size 47x14
-                      text run at (0,0) width 47: "Netscape"
-                RenderTextControl {INPUT} at (272,3) size 197x22 [bgcolor=#FFFFFF] [border: (1px solid #4C4C4C)]
-                RenderText {#text} at (470,2) size 5x19
-                  text run at (470,2) width 5: " "
-                RenderButton {INPUT} at (476,3) size 60x20 [bgcolor=#FFFFFF02] [border: (1px solid #4C4C4C)]
-                  RenderBlock (anonymous) at (12,3) size 35x14
-                    RenderText at (0,0) size 35x14
-                      text run at (0,0) width 35: "Search"
-                RenderBR {BR} at (537,17) size 1x0
+                    RenderText {#text} at (42,5) size 128x15
+                      text run at (42,5) width 128: "Search the Web with"
+                RenderText {#text} at (169,2) size 5x19
+                  text run at (169,2) width 5: " "
+                RenderMenuList {SELECT} at (175,3) size 75x20 [color=#007AFF] [bgcolor=#E9E9EA] [border: (1px solid #FFFFFF)]
+                  RenderBlock (anonymous) at (6,3) size 62x14
+                    RenderText at (0,0) size 50x14
+                      text run at (0,0) width 50: "Netscape"
+                RenderTextControl {INPUT} at (253,3) size 226x22 [bgcolor=#FFFFFF] [border: (1px solid #3C3C4399)]
+                RenderText {#text} at (480,2) size 5x19
+                  text run at (480,2) width 5: " "
+                RenderButton {INPUT} at (486,3) size 64x20 [color=#FFFFFF] [bgcolor=#007AFF] [border: (1px solid #FFFFFF)]
+                  RenderBlock (anonymous) at (12,3) size 39x14
+                    RenderText at (0,0) size 39x14
+                      text run at (0,0) width 39: "Search"
+                RenderBR {BR} at (551,2) size 1x19
                 RenderInline {SMALL} at (0,0) size 554x15
                   RenderInline {A} at (0,0) size 98x15 [color=#0000EE]
                     RenderText {#text} at (20,26) size 98x15
@@ -79,11 +79,11 @@ layer at (0,0) size 800x600
               RenderTableCell {TD} at (163,105) size 272x50 [r=2 c=1 rs=1 cs=1]
                 RenderInline {A} at (0,0) size 233x28 [color=#0000EE]
                   RenderImage {IMG} at (19,1) size 233x35 [border: (1px solid #0000EE)]
-                  RenderBR {BR} at (251,36) size 1x0
+                  RenderBR {BR} at (251,21) size 1x19
                   RenderInline {FONT} at (0,0) size 48x12
                     RenderText {#text} at (111,36) size 48x12
                       text run at (111,36) width 48: "Click Here!"
-                RenderBR {BR} at (158,45) size 1x0
+                RenderBR {BR} at (158,30) size 1x19
               RenderTableCell {TD} at (436,121) size 161x18 [r=2 c=2 rs=1 cs=1]
                 RenderInline {A} at (0,0) size 132x19 [color=#0000EE]
                   RenderInline {FONT} at (0,0) size 132x15 [color=#0066FF]
@@ -128,13 +128,13 @@ layer at (0,0) size 800x600
                   RenderInline {A} at (0,0) size 80x15 [color=#0000EE]
                     RenderText {#text} at (493,4) size 80x15
                       text run at (493,4) width 80: "WebMail< /A>"
-                RenderInline {A} at (0,0) size 1x19 [color=#0000EE]
+                RenderInline {A} at (0,0) size 0x19 [color=#0000EE]
                   RenderText {#text} at (0,0) size 0x0
             RenderTableRow {TR} at (0,181) size 600x3
               RenderTableCell {TD} at (2,181) size 597x3 [bgcolor=#99CCCC] [r=4 c=0 rs=1 cs=4]
-                RenderTable {TABLE} at (1,1) size 1x1
-                  RenderTableSection {TBODY} at (0,0) size 1x1
-                    RenderTableRow {TR} at (0,0) size 1x1
+                RenderTable {TABLE} at (1,1) size 0x1
+                  RenderTableSection {TBODY} at (0,0) size 0x1
+                    RenderTableRow {TR} at (0,0) size 0x1
                       RenderTableCell {TD} at (0,0) size 0x0 [r=0 c=0 rs=1 cs=1]
-layer at (289,78) size 183x14
-  RenderBlock {DIV} at (6,3) size 185x15
+layer at (270,78) size 211x14
+  RenderBlock {DIV} at (6,3) size 213x15

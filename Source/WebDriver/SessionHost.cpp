@@ -45,46 +45,38 @@ long SessionHost::sendCommandToBackend(const String& command, RefPtr<JSON::Objec
     long sequenceID = ++lastSequenceID;
     m_commandRequests.add(sequenceID, WTFMove(responseHandler));
     StringBuilder messageBuilder;
-    messageBuilder.appendLiteral("{\"id\":");
-    messageBuilder.appendNumber(sequenceID);
-    messageBuilder.appendLiteral(",\"method\":\"Automation.");
-    messageBuilder.append(command);
-    messageBuilder.append('"');
-    if (parameters) {
-        messageBuilder.appendLiteral(",\"params\":");
-        messageBuilder.append(parameters->toJSONString());
-    }
+    messageBuilder.append("{\"id\":", sequenceID, ",\"method\":\"Automation.", command, '"');
+    if (parameters)
+        messageBuilder.append(",\"params\":", parameters->toJSONString());
     messageBuilder.append('}');
-    sendMessageToBackend(sequenceID, messageBuilder.toString());
+    sendMessageToBackend(messageBuilder.toString());
 
     return sequenceID;
 }
 
 void SessionHost::dispatchMessage(const String& message)
 {
-    RefPtr<JSON::Value> messageValue;
-    if (!JSON::Value::parseJSON(message, messageValue))
+    auto messageValue = JSON::Value::parseJSON(message);
+    if (!messageValue)
         return;
 
-    RefPtr<JSON::Object> messageObject;
-    if (!messageValue->asObject(messageObject))
+    auto messageObject = messageValue->asObject();
+    if (!messageObject)
         return;
 
-    long sequenceID;
-    if (!messageObject->getInteger("id"_s, sequenceID))
+    auto sequenceID = messageObject->getInteger("id"_s);
+    if (!sequenceID)
         return;
 
-    auto responseHandler = m_commandRequests.take(sequenceID);
+    auto responseHandler = m_commandRequests.take(*sequenceID);
     ASSERT(responseHandler);
 
     CommandResponse response;
-    RefPtr<JSON::Object> errorObject;
-    if (messageObject->getObject("error"_s, errorObject)) {
+    if (auto errorObject = messageObject->getObject("error"_s)) {
         response.responseObject = WTFMove(errorObject);
         response.isError = true;
-    } else {
-        RefPtr<JSON::Object> resultObject;
-        if (messageObject->getObject("result"_s, resultObject) && resultObject->size())
+    } else if (auto resultObject = messageObject->getObject("result"_s)) {
+        if (resultObject->size())
             response.responseObject = WTFMove(resultObject);
     }
 

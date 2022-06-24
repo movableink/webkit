@@ -11,8 +11,10 @@
 
 #include <vector>
 
+#include "common/Color.h"
 #include "common/platform.h"
 #include "test_utils/ANGLETest.h"
+#include "test_utils/gl_raii.h"
 #include "util/EGLWindow.h"
 #include "util/OSWindow.h"
 #include "util/Timer.h"
@@ -48,37 +50,47 @@ class EGLSurfaceTest : public ANGLETest
         mOSWindow->initialize("EGLSurfaceTest", 64, 64);
     }
 
+    void tearDownContextAndSurface()
+    {
+        if (mDisplay == EGL_NO_DISPLAY)
+        {
+            return;
+        }
+
+        eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+
+        if (mWindowSurface != EGL_NO_SURFACE)
+        {
+            eglDestroySurface(mDisplay, mWindowSurface);
+            mWindowSurface = EGL_NO_SURFACE;
+        }
+
+        if (mPbufferSurface != EGL_NO_SURFACE)
+        {
+            eglDestroySurface(mDisplay, mPbufferSurface);
+            mPbufferSurface = EGL_NO_SURFACE;
+        }
+
+        if (mContext != EGL_NO_CONTEXT)
+        {
+            eglDestroyContext(mDisplay, mContext);
+            mContext = EGL_NO_CONTEXT;
+        }
+
+        if (mSecondContext != EGL_NO_CONTEXT)
+        {
+            eglDestroyContext(mDisplay, mSecondContext);
+            mSecondContext = EGL_NO_CONTEXT;
+        }
+    }
+
     // Release any resources created in the test body
     void testTearDown() override
     {
+        tearDownContextAndSurface();
+
         if (mDisplay != EGL_NO_DISPLAY)
         {
-            eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-
-            if (mWindowSurface != EGL_NO_SURFACE)
-            {
-                eglDestroySurface(mDisplay, mWindowSurface);
-                mWindowSurface = EGL_NO_SURFACE;
-            }
-
-            if (mPbufferSurface != EGL_NO_SURFACE)
-            {
-                eglDestroySurface(mDisplay, mPbufferSurface);
-                mPbufferSurface = EGL_NO_SURFACE;
-            }
-
-            if (mContext != EGL_NO_CONTEXT)
-            {
-                eglDestroyContext(mDisplay, mContext);
-                mContext = EGL_NO_CONTEXT;
-            }
-
-            if (mSecondContext != EGL_NO_CONTEXT)
-            {
-                eglDestroyContext(mDisplay, mSecondContext);
-                mSecondContext = EGL_NO_CONTEXT;
-            }
-
             eglTerminate(mDisplay);
             mDisplay = EGL_NO_DISPLAY;
         }
@@ -92,6 +104,7 @@ class EGLSurfaceTest : public ANGLETest
     void initializeDisplay()
     {
         GLenum platformType = GetParam().getRenderer();
+        GLenum deviceType   = GetParam().getDeviceType();
 
         std::vector<EGLint> displayAttributes;
         displayAttributes.push_back(EGL_PLATFORM_ANGLE_TYPE_ANGLE);
@@ -101,7 +114,7 @@ class EGLSurfaceTest : public ANGLETest
         displayAttributes.push_back(EGL_PLATFORM_ANGLE_MAX_VERSION_MINOR_ANGLE);
         displayAttributes.push_back(EGL_DONT_CARE);
         displayAttributes.push_back(EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE);
-        displayAttributes.push_back(EGL_PLATFORM_ANGLE_DEVICE_TYPE_HARDWARE_ANGLE);
+        displayAttributes.push_back(deviceType);
         displayAttributes.push_back(EGL_NONE);
 
         mDisplay = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE,
@@ -113,38 +126,90 @@ class EGLSurfaceTest : public ANGLETest
         ASSERT_TRUE(eglInitialize(mDisplay, &majorVersion, &minorVersion) == EGL_TRUE);
 
         eglBindAPI(EGL_OPENGL_ES_API);
-        ASSERT_TRUE(eglGetError() == EGL_SUCCESS);
+        ASSERT_EGL_SUCCESS();
+    }
+
+    void initializeSingleContext(EGLContext *context)
+    {
+        EGLint contextAttibutes[] = {EGL_CONTEXT_CLIENT_VERSION, GetParam().majorVersion, EGL_NONE};
+
+        *context = eglCreateContext(mDisplay, mConfig, nullptr, contextAttibutes);
+        ASSERT_EGL_SUCCESS();
     }
 
     void initializeContext()
     {
-        EGLint contextAttibutes[] = {EGL_CONTEXT_CLIENT_VERSION, GetParam().majorVersion, EGL_NONE};
+        // Only initialize the contexts once.
+        if (mContext == EGL_NO_CONTEXT)
+        {
+            initializeSingleContext(&mContext);
+        }
+        if (mSecondContext == EGL_NO_CONTEXT)
+        {
+            initializeSingleContext(&mSecondContext);
+        }
+    }
 
-        mContext = eglCreateContext(mDisplay, mConfig, nullptr, contextAttibutes);
-        ASSERT_TRUE(eglGetError() == EGL_SUCCESS);
+    void initializeWindowSurfaceWithAttribs(EGLConfig config,
+                                            const std::vector<EGLint> &additionalAttributes,
+                                            EGLenum expectedResult)
+    {
+        ASSERT_EQ(mWindowSurface, EGL_NO_SURFACE);
 
-        mSecondContext = eglCreateContext(mDisplay, mConfig, nullptr, contextAttibutes);
-        ASSERT_TRUE(eglGetError() == EGL_SUCCESS);
+        EGLint surfaceType = EGL_NONE;
+        eglGetConfigAttrib(mDisplay, mConfig, EGL_SURFACE_TYPE, &surfaceType);
+
+        if (surfaceType & EGL_WINDOW_BIT)
+        {
+            std::vector<EGLint> windowAttributes = additionalAttributes;
+            windowAttributes.push_back(EGL_NONE);
+
+            // Create first window surface
+            mWindowSurface = eglCreateWindowSurface(mDisplay, mConfig, mOSWindow->getNativeWindow(),
+                                                    windowAttributes.data());
+        }
+
+        ASSERT_EGLENUM_EQ(eglGetError(), expectedResult);
+    }
+
+    void initializeSurfaceWithAttribs(EGLConfig config,
+                                      const std::vector<EGLint> &additionalAttributes)
+    {
+        mConfig = config;
+
+        EGLint surfaceType = EGL_NONE;
+        eglGetConfigAttrib(mDisplay, mConfig, EGL_SURFACE_TYPE, &surfaceType);
+
+        if (surfaceType & EGL_WINDOW_BIT)
+        {
+            initializeWindowSurfaceWithAttribs(config, additionalAttributes, EGL_SUCCESS);
+        }
+
+        if (surfaceType & EGL_PBUFFER_BIT)
+        {
+            std::vector<EGLint> pbufferAttributes = additionalAttributes;
+
+            // Give pbuffer non-zero dimensions.
+            pbufferAttributes.push_back(EGL_WIDTH);
+            pbufferAttributes.push_back(64);
+            pbufferAttributes.push_back(EGL_HEIGHT);
+            pbufferAttributes.push_back(64);
+            pbufferAttributes.push_back(EGL_NONE);
+
+            mPbufferSurface = eglCreatePbufferSurface(mDisplay, mConfig, pbufferAttributes.data());
+            ASSERT_EGL_SUCCESS();
+        }
+
+        initializeContext();
     }
 
     void initializeSurface(EGLConfig config)
     {
-        mConfig = config;
-
-        std::vector<EGLint> surfaceAttributes;
-        surfaceAttributes.push_back(EGL_NONE);
-        surfaceAttributes.push_back(EGL_NONE);
-
-        // Create first window surface
-        mWindowSurface = eglCreateWindowSurface(mDisplay, mConfig, mOSWindow->getNativeWindow(),
-                                                &surfaceAttributes[0]);
-        ASSERT_TRUE(eglGetError() == EGL_SUCCESS);
-
-        mPbufferSurface = eglCreatePbufferSurface(mDisplay, mConfig, &surfaceAttributes[0]);
-        initializeContext();
+        std::vector<EGLint> additionalAttributes;
+        initializeSurfaceWithAttribs(config, additionalAttributes);
     }
 
-    void initializeSurfaceWithDefaultConfig()
+    EGLConfig chooseDefaultConfig(bool requireWindowSurface) const
     {
         const EGLint configAttributes[] = {EGL_RED_SIZE,
                                            EGL_DONT_CARE,
@@ -160,14 +225,24 @@ class EGLSurfaceTest : public ANGLETest
                                            EGL_DONT_CARE,
                                            EGL_SAMPLE_BUFFERS,
                                            0,
+                                           EGL_SURFACE_TYPE,
+                                           requireWindowSurface ? EGL_WINDOW_BIT : EGL_DONT_CARE,
                                            EGL_NONE};
 
         EGLint configCount;
         EGLConfig config;
-        ASSERT_TRUE(eglChooseConfig(mDisplay, configAttributes, &config, 1, &configCount) ||
-                    (configCount != 1) == EGL_TRUE);
+        if (eglChooseConfig(mDisplay, configAttributes, &config, 1, &configCount) != EGL_TRUE)
+            return nullptr;
+        if (configCount != 1)
+            return nullptr;
+        return config;
+    }
 
-        initializeSurface(config);
+    void initializeSurfaceWithDefaultConfig(bool requireWindowSurface)
+    {
+        EGLConfig defaultConfig = chooseDefaultConfig(requireWindowSurface);
+        ASSERT_NE(defaultConfig, nullptr);
+        initializeSurface(defaultConfig);
     }
 
     GLuint createProgram()
@@ -205,7 +280,7 @@ class EGLSurfaceTest : public ANGLETest
     void runMessageLoopTest(EGLSurface secondSurface, EGLContext secondContext)
     {
         eglMakeCurrent(mDisplay, mWindowSurface, mWindowSurface, mContext);
-        ASSERT_TRUE(eglGetError() == EGL_SUCCESS);
+        ASSERT_EGL_SUCCESS();
 
         // Make a second context current
         eglMakeCurrent(mDisplay, secondSurface, secondSurface, secondContext);
@@ -218,10 +293,10 @@ class EGLSurfaceTest : public ANGLETest
 
         mWindowSurface = eglCreateWindowSurface(mDisplay, mConfig, mOSWindow->getNativeWindow(),
                                                 &surfaceAttributes[0]);
-        ASSERT_TRUE(eglGetError() == EGL_SUCCESS);
+        ASSERT_EGL_SUCCESS();
 
         eglMakeCurrent(mDisplay, mWindowSurface, mWindowSurface, mContext);
-        ASSERT_TRUE(eglGetError() == EGL_SUCCESS);
+        ASSERT_EGL_SUCCESS();
 
         mOSWindow->signalTestEvent();
         mOSWindow->messageLoop();
@@ -230,6 +305,8 @@ class EGLSurfaceTest : public ANGLETest
         // Simple operation to test the FBO is set appropriately
         glClear(GL_COLOR_BUFFER_BIT);
     }
+
+    void drawQuadThenTearDown();
 
     EGLDisplay mDisplay;
     EGLSurface mWindowSurface;
@@ -240,6 +317,104 @@ class EGLSurfaceTest : public ANGLETest
     OSWindow *mOSWindow;
 };
 
+class EGLFloatSurfaceTest : public EGLSurfaceTest
+{
+  protected:
+    EGLFloatSurfaceTest() : EGLSurfaceTest()
+    {
+        setWindowWidth(512);
+        setWindowHeight(512);
+    }
+
+    void testSetUp() override
+    {
+        mOSWindow = OSWindow::New();
+        mOSWindow->initialize("EGLFloatSurfaceTest", 64, 64);
+    }
+
+    void testTearDown() override
+    {
+        EGLSurfaceTest::testTearDown();
+        glDeleteProgram(mProgram);
+    }
+
+    GLuint createProgram()
+    {
+        constexpr char kFS[] =
+            "precision highp float;\n"
+            "void main()\n"
+            "{\n"
+            "   gl_FragColor = vec4(1.0, 2.0, 3.0, 4.0);\n"
+            "}\n";
+        return CompileProgram(angle::essl1_shaders::vs::Simple(), kFS);
+    }
+
+    bool initializeSurfaceWithFloatConfig()
+    {
+        const EGLint configAttributes[] = {EGL_SURFACE_TYPE,
+                                           EGL_WINDOW_BIT,
+                                           EGL_RED_SIZE,
+                                           16,
+                                           EGL_GREEN_SIZE,
+                                           16,
+                                           EGL_BLUE_SIZE,
+                                           16,
+                                           EGL_ALPHA_SIZE,
+                                           16,
+                                           EGL_COLOR_COMPONENT_TYPE_EXT,
+                                           EGL_COLOR_COMPONENT_TYPE_FLOAT_EXT,
+                                           EGL_NONE,
+                                           EGL_NONE};
+
+        initializeDisplay();
+        EGLConfig config;
+        if (EGLWindow::FindEGLConfig(mDisplay, configAttributes, &config) == EGL_FALSE)
+        {
+            std::cout << "EGLConfig for a float surface is not supported, skipping test"
+                      << std::endl;
+            return false;
+        }
+
+        initializeSurface(config);
+
+        eglMakeCurrent(mDisplay, mWindowSurface, mWindowSurface, mContext);
+        mProgram = createProgram();
+        return true;
+    }
+
+    GLuint mProgram;
+};
+
+// Test clearing and checking the color is correct
+TEST_P(EGLFloatSurfaceTest, Clearing)
+{
+    ANGLE_SKIP_TEST_IF(!initializeSurfaceWithFloatConfig());
+
+    ASSERT_NE(0u, mProgram) << "shader compilation failed.";
+    ASSERT_GL_NO_ERROR();
+
+    GLColor32F clearColor(0.0f, 1.0f, 2.0f, 3.0f);
+    glClearColor(clearColor.R, clearColor.G, clearColor.B, clearColor.A);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ASSERT_GL_NO_ERROR();
+
+    EXPECT_PIXEL_COLOR32F_EQ(0, 0, clearColor);
+}
+
+// Test drawing and checking the color is correct
+TEST_P(EGLFloatSurfaceTest, Drawing)
+{
+    ANGLE_SKIP_TEST_IF(!initializeSurfaceWithFloatConfig());
+
+    ASSERT_NE(0u, mProgram) << "shader compilation failed.";
+    ASSERT_GL_NO_ERROR();
+
+    glUseProgram(mProgram);
+    drawQuad(mProgram, essl1_shaders::PositionAttrib(), 0.5f);
+
+    EXPECT_PIXEL_32F_EQ(0, 0, 1.0f, 2.0f, 3.0f, 4.0f);
+}
+
 class EGLSurfaceTest3 : public EGLSurfaceTest
 {};
 
@@ -247,14 +422,17 @@ class EGLSurfaceTest3 : public EGLSurfaceTest
 // at one time, blocking message loops. See http://crbug.com/475085
 TEST_P(EGLSurfaceTest, MessageLoopBug)
 {
-    // TODO(syoussefi): http://anglebug.com/3123
+    // http://anglebug.com/3123
     ANGLE_SKIP_TEST_IF(IsAndroid());
 
     // http://anglebug.com/3138
     ANGLE_SKIP_TEST_IF(IsOzone());
 
+    // http://anglebug.com/5485
+    ANGLE_SKIP_TEST_IF(IsIOS());
+
     initializeDisplay();
-    initializeSurfaceWithDefaultConfig();
+    initializeSurfaceWithDefaultConfig(true);
 
     runMessageLoopTest(EGL_NO_SURFACE, EGL_NO_CONTEXT);
 }
@@ -263,32 +441,33 @@ TEST_P(EGLSurfaceTest, MessageLoopBug)
 // instead of null.
 TEST_P(EGLSurfaceTest, MessageLoopBugContext)
 {
-    // TODO(syoussefi): http://anglebug.com/3123
+    // http://anglebug.com/3123
     ANGLE_SKIP_TEST_IF(IsAndroid());
 
     // http://anglebug.com/3138
     ANGLE_SKIP_TEST_IF(IsOzone());
 
-    initializeDisplay();
-    initializeSurfaceWithDefaultConfig();
+    // http://anglebug.com/5485
+    ANGLE_SKIP_TEST_IF(IsIOS());
 
+    initializeDisplay();
+    initializeSurfaceWithDefaultConfig(true);
+
+    ANGLE_SKIP_TEST_IF(!mPbufferSurface);
     runMessageLoopTest(mPbufferSurface, mSecondContext);
 }
 
 // Test a bug where calling makeCurrent twice would release the surface
 TEST_P(EGLSurfaceTest, MakeCurrentTwice)
 {
-    // TODO(syoussefi): http://anglebug.com/3123
-    ANGLE_SKIP_TEST_IF(IsAndroid());
-
     initializeDisplay();
-    initializeSurfaceWithDefaultConfig();
+    initializeSurfaceWithDefaultConfig(false);
 
     eglMakeCurrent(mDisplay, mWindowSurface, mWindowSurface, mContext);
-    ASSERT_TRUE(eglGetError() == EGL_SUCCESS);
+    ASSERT_EGL_SUCCESS();
 
     eglMakeCurrent(mDisplay, mWindowSurface, mWindowSurface, mContext);
-    ASSERT_TRUE(eglGetError() == EGL_SUCCESS);
+    ASSERT_EGL_SUCCESS();
 
     // Simple operation to test the FBO is set appropriately
     glClear(GL_COLOR_BUFFER_BIT);
@@ -297,11 +476,16 @@ TEST_P(EGLSurfaceTest, MakeCurrentTwice)
 // Test that the window surface is correctly resized after calling swapBuffers
 TEST_P(EGLSurfaceTest, ResizeWindow)
 {
-    // TODO(syoussefi): http://anglebug.com/3123
-    ANGLE_SKIP_TEST_IF(IsAndroid());
+    // http://anglebug.com/4453
+    ANGLE_SKIP_TEST_IF(isVulkanRenderer() && IsLinux() && IsIntel());
+    // Flaky on Linux SwANGLE http://anglebug.com/4453
+    ANGLE_SKIP_TEST_IF(IsLinux() && isSwiftshader());
+    // http://anglebug.com/5485
+    ANGLE_SKIP_TEST_IF(IsIOS());
+    ANGLE_SKIP_TEST_IF(IsLinux() && IsARM());
 
-    // Necessary for a window resizing test
-    mOSWindow->setVisible(true);
+    // Necessary for a window resizing test if there is no per-frame window size query
+    setWindowVisible(mOSWindow, true);
 
     GLenum platform               = GetParam().getRenderer();
     bool platformSupportsZeroSize = platform == EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE ||
@@ -309,8 +493,8 @@ TEST_P(EGLSurfaceTest, ResizeWindow)
     int minSize = platformSupportsZeroSize ? 0 : 1;
 
     initializeDisplay();
-    initializeSurfaceWithDefaultConfig();
-    initializeContext();
+    initializeSurfaceWithDefaultConfig(true);
+    ASSERT_NE(mWindowSurface, EGL_NO_SURFACE);
 
     eglMakeCurrent(mDisplay, mWindowSurface, mWindowSurface, mContext);
     eglSwapBuffers(mDisplay, mWindowSurface);
@@ -346,87 +530,139 @@ TEST_P(EGLSurfaceTest, ResizeWindow)
     ASSERT_EQ(64, height);
 }
 
-// Test that swap interval works.
-TEST_P(EGLSurfaceTest, SwapInterval)
+// Test that the backbuffer is correctly resized after calling swapBuffers
+TEST_P(EGLSurfaceTest, ResizeWindowWithDraw)
 {
-    // On OSX, maxInterval >= 1 is advertised, but is not implemented.  http://anglebug.com/3140
-    ANGLE_SKIP_TEST_IF(IsOSX());
-    // Flaky hang on Nexus 5X and 6P. http://anglebug.com/3364
-    ANGLE_SKIP_TEST_IF((IsNexus5X() || IsNexus6P()) && isGLESRenderer());
-    // Flaky hang on Ubuntu 19.04 NVIDIA Vulkan. http://anglebug.com/3618
-    // Maybe hang due to bug in NVIDIA Linux Vulkan driver. http://anglebug.com/3450
-    ANGLE_SKIP_TEST_IF(IsLinux() && IsNVIDIA() && isVulkanRenderer());
-    // Flaky on Linux NVIDIA OpenGL driver. http://anglebug.com/3807
-    ANGLE_SKIP_TEST_IF(IsLinux() && IsNVIDIA() && isGLRenderer());
+    // http://anglebug.com/4453
+    ANGLE_SKIP_TEST_IF(IsLinux());
+    // http://anglebug.com/5485
+    ANGLE_SKIP_TEST_IF(IsIOS());
+
+    // Necessary for a window resizing test if there is no per-frame window size query
+    setWindowVisible(mOSWindow, true);
 
     initializeDisplay();
-    initializeSurfaceWithDefaultConfig();
+    initializeSurfaceWithDefaultConfig(true);
     initializeContext();
+    ASSERT_NE(mWindowSurface, EGL_NO_SURFACE);
+
+    int size      = 64;
+    EGLint height = 0;
+    EGLint width  = 0;
 
     eglMakeCurrent(mDisplay, mWindowSurface, mWindowSurface, mContext);
     eglSwapBuffers(mDisplay, mWindowSurface);
     ASSERT_EGL_SUCCESS();
 
-    EGLint minInterval, maxInterval;
+    // Clear to red
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
 
-    ASSERT_TRUE(eglGetConfigAttrib(mDisplay, mConfig, EGL_MIN_SWAP_INTERVAL, &minInterval));
-    ASSERT_TRUE(eglGetConfigAttrib(mDisplay, mConfig, EGL_MAX_SWAP_INTERVAL, &maxInterval));
+    eglQuerySurface(mDisplay, mWindowSurface, EGL_HEIGHT, &height);
+    eglQuerySurface(mDisplay, mWindowSurface, EGL_WIDTH, &width);
+    ASSERT_EGL_SUCCESS();
 
-    for (int iter = 0; iter < 2; ++iter)
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::red);
+    EXPECT_PIXEL_COLOR_EQ(size - 1, 0, GLColor::red);
+    EXPECT_PIXEL_COLOR_EQ(size - 1, size - 1, GLColor::red);
+    EXPECT_PIXEL_COLOR_EQ(0, size - 1, GLColor::red);
+    EXPECT_PIXEL_COLOR_EQ(-1, -1, GLColor::transparentBlack);
+    EXPECT_PIXEL_COLOR_EQ(size, 0, GLColor::transparentBlack);
+    EXPECT_PIXEL_COLOR_EQ(0, size, GLColor::transparentBlack);
+    EXPECT_PIXEL_COLOR_EQ(size, size, GLColor::transparentBlack);
+
+    // set window's size small
+    size = 1;
+    mOSWindow->resize(size, size);
+
+    eglSwapBuffers(mDisplay, mWindowSurface);
+    ASSERT_EGL_SUCCESS();
+
+    // Clear to green
+    glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    eglQuerySurface(mDisplay, mWindowSurface, EGL_HEIGHT, &height);
+    eglQuerySurface(mDisplay, mWindowSurface, EGL_WIDTH, &width);
+    ASSERT_EGL_SUCCESS();
+
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::green);
+    EXPECT_PIXEL_COLOR_EQ(size - 1, 0, GLColor::green);
+    EXPECT_PIXEL_COLOR_EQ(size - 1, size - 1, GLColor::green);
+    EXPECT_PIXEL_COLOR_EQ(0, size - 1, GLColor::green);
+    EXPECT_PIXEL_COLOR_EQ(-1, -1, GLColor::transparentBlack);
+    EXPECT_PIXEL_COLOR_EQ(size, 0, GLColor::transparentBlack);
+    EXPECT_PIXEL_COLOR_EQ(0, size, GLColor::transparentBlack);
+    EXPECT_PIXEL_COLOR_EQ(size, size, GLColor::transparentBlack);
+
+    // set window's height large
+    size = 128;
+    mOSWindow->resize(size, size);
+
+    eglSwapBuffers(mDisplay, mWindowSurface);
+    ASSERT_EGL_SUCCESS();
+
+    // Clear to blue
+    glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    eglQuerySurface(mDisplay, mWindowSurface, EGL_HEIGHT, &height);
+    eglQuerySurface(mDisplay, mWindowSurface, EGL_WIDTH, &width);
+    ASSERT_EGL_SUCCESS();
+
+    EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::blue);
+    EXPECT_PIXEL_COLOR_EQ(size - 1, 0, GLColor::blue);
+    EXPECT_PIXEL_COLOR_EQ(size - 1, size - 1, GLColor::blue);
+    EXPECT_PIXEL_COLOR_EQ(0, size - 1, GLColor::blue);
+    EXPECT_PIXEL_COLOR_EQ(-1, -1, GLColor::transparentBlack);
+    EXPECT_PIXEL_COLOR_EQ(size, 0, GLColor::transparentBlack);
+    EXPECT_PIXEL_COLOR_EQ(0, size, GLColor::transparentBlack);
+    EXPECT_PIXEL_COLOR_EQ(size, size, GLColor::transparentBlack);
+}
+
+// Test that the window can be reset repeatedly before surface creation.
+TEST_P(EGLSurfaceTest, ResetNativeWindow)
+{
+    setWindowVisible(mOSWindow, true);
+
+    initializeDisplay();
+
+    for (int i = 0; i < 10; ++i)
     {
-        if (maxInterval >= 1)
-        {
-            Timer timer;
-
-            eglSwapInterval(mDisplay, 1);
-            timer.start();
-            for (int i = 0; i < 180; ++i)
-            {
-                eglSwapBuffers(mDisplay, mWindowSurface);
-            }
-            timer.stop();
-            ASSERT_EGL_SUCCESS();
-
-            // 120 frames at 60fps should take 3s.  At lower fps, it should take even longer.  At
-            // 144fps, it would take 1.25s.  Let's use 1s as a lower bound.
-            ASSERT_GT(timer.getElapsedTime(), 1);
-        }
-
-        if (minInterval <= 0)
-        {
-            Timer timer;
-
-            eglSwapInterval(mDisplay, 0);
-            timer.start();
-            for (int i = 0; i < 100; ++i)
-            {
-                eglSwapBuffers(mDisplay, mWindowSurface);
-
-                // Second eglSwapBuffers causes an EGL_BAD_SURFACE on Nvidia shield tv.
-                // http://anglebug.com/3144.
-                ANGLE_SKIP_TEST_IF(IsNVIDIAShield());
-            }
-            timer.stop();
-            ASSERT_EGL_SUCCESS();
-
-            // 100 no-op swaps should be fairly fast, though there is no guarantee how fast it can
-            // be. 10ms per swap is probably a safe upper bound.
-            //
-            // TODO(syoussefi): if a surface doesn't truly allow no-vsync, this can fail.  Until
-            // there's a way to query the exact minInterval from the surface, this test cannot be
-            // enabled.
-            // ASSERT_LT(timer.getElapsedTime(), 1);
-        }
+        mOSWindow->resetNativeWindow();
     }
+
+    initializeSurfaceWithDefaultConfig(true);
+    initializeContext();
+    ASSERT_NE(mWindowSurface, EGL_NO_SURFACE);
+
+    eglMakeCurrent(mDisplay, mWindowSurface, mWindowSurface, mContext);
+
+    eglSwapBuffers(mDisplay, mWindowSurface);
+    ASSERT_EGL_SUCCESS();
 }
 
 // Test creating a surface that supports a EGLConfig with 16bit
 // support GL_RGB565
 TEST_P(EGLSurfaceTest, CreateWithEGLConfig5650Support)
 {
-    const EGLint configAttributes[] = {
-        EGL_RED_SIZE,   5, EGL_GREEN_SIZE,   6, EGL_BLUE_SIZE,      5, EGL_ALPHA_SIZE, 0,
-        EGL_DEPTH_SIZE, 0, EGL_STENCIL_SIZE, 0, EGL_SAMPLE_BUFFERS, 0, EGL_NONE};
+    const EGLint configAttributes[] = {EGL_SURFACE_TYPE,
+                                       EGL_WINDOW_BIT,
+                                       EGL_RED_SIZE,
+                                       5,
+                                       EGL_GREEN_SIZE,
+                                       6,
+                                       EGL_BLUE_SIZE,
+                                       5,
+                                       EGL_ALPHA_SIZE,
+                                       0,
+                                       EGL_DEPTH_SIZE,
+                                       0,
+                                       EGL_STENCIL_SIZE,
+                                       0,
+                                       EGL_SAMPLE_BUFFERS,
+                                       0,
+                                       EGL_NONE};
 
     initializeDisplay();
     EGLConfig config;
@@ -453,9 +689,23 @@ TEST_P(EGLSurfaceTest, CreateWithEGLConfig5650Support)
 // support GL_RGBA4
 TEST_P(EGLSurfaceTest, CreateWithEGLConfig4444Support)
 {
-    const EGLint configAttributes[] = {
-        EGL_RED_SIZE,   4, EGL_GREEN_SIZE,   4, EGL_BLUE_SIZE,      4, EGL_ALPHA_SIZE, 4,
-        EGL_DEPTH_SIZE, 0, EGL_STENCIL_SIZE, 0, EGL_SAMPLE_BUFFERS, 0, EGL_NONE};
+    const EGLint configAttributes[] = {EGL_SURFACE_TYPE,
+                                       EGL_WINDOW_BIT,
+                                       EGL_RED_SIZE,
+                                       4,
+                                       EGL_GREEN_SIZE,
+                                       4,
+                                       EGL_BLUE_SIZE,
+                                       4,
+                                       EGL_ALPHA_SIZE,
+                                       4,
+                                       EGL_DEPTH_SIZE,
+                                       0,
+                                       EGL_STENCIL_SIZE,
+                                       0,
+                                       EGL_SAMPLE_BUFFERS,
+                                       0,
+                                       EGL_NONE};
 
     initializeDisplay();
     EGLConfig config;
@@ -482,9 +732,23 @@ TEST_P(EGLSurfaceTest, CreateWithEGLConfig4444Support)
 // support GL_RGB5_A1
 TEST_P(EGLSurfaceTest, CreateWithEGLConfig5551Support)
 {
-    const EGLint configAttributes[] = {
-        EGL_RED_SIZE,   5, EGL_GREEN_SIZE,   5, EGL_BLUE_SIZE,      5, EGL_ALPHA_SIZE, 1,
-        EGL_DEPTH_SIZE, 0, EGL_STENCIL_SIZE, 0, EGL_SAMPLE_BUFFERS, 0, EGL_NONE};
+    const EGLint configAttributes[] = {EGL_SURFACE_TYPE,
+                                       EGL_WINDOW_BIT,
+                                       EGL_RED_SIZE,
+                                       5,
+                                       EGL_GREEN_SIZE,
+                                       5,
+                                       EGL_BLUE_SIZE,
+                                       5,
+                                       EGL_ALPHA_SIZE,
+                                       1,
+                                       EGL_DEPTH_SIZE,
+                                       0,
+                                       EGL_STENCIL_SIZE,
+                                       0,
+                                       EGL_SAMPLE_BUFFERS,
+                                       0,
+                                       EGL_NONE};
 
     initializeDisplay();
     EGLConfig config;
@@ -510,9 +774,23 @@ TEST_P(EGLSurfaceTest, CreateWithEGLConfig5551Support)
 // Test creating a surface that supports a EGLConfig without alpha support
 TEST_P(EGLSurfaceTest, CreateWithEGLConfig8880Support)
 {
-    const EGLint configAttributes[] = {
-        EGL_RED_SIZE,   8, EGL_GREEN_SIZE,   8, EGL_BLUE_SIZE,      8, EGL_ALPHA_SIZE, 0,
-        EGL_DEPTH_SIZE, 0, EGL_STENCIL_SIZE, 0, EGL_SAMPLE_BUFFERS, 0, EGL_NONE};
+    const EGLint configAttributes[] = {EGL_SURFACE_TYPE,
+                                       EGL_WINDOW_BIT,
+                                       EGL_RED_SIZE,
+                                       8,
+                                       EGL_GREEN_SIZE,
+                                       8,
+                                       EGL_BLUE_SIZE,
+                                       8,
+                                       EGL_ALPHA_SIZE,
+                                       0,
+                                       EGL_DEPTH_SIZE,
+                                       0,
+                                       EGL_STENCIL_SIZE,
+                                       0,
+                                       EGL_SAMPLE_BUFFERS,
+                                       0,
+                                       EGL_NONE};
 
     initializeDisplay();
     EGLConfig config;
@@ -537,9 +815,23 @@ TEST_P(EGLSurfaceTest, CreateWithEGLConfig8880Support)
 
 TEST_P(EGLSurfaceTest, FixedSizeWindow)
 {
-    const EGLint configAttributes[] = {
-        EGL_RED_SIZE,   8, EGL_GREEN_SIZE,   8, EGL_BLUE_SIZE,      8, EGL_ALPHA_SIZE, 0,
-        EGL_DEPTH_SIZE, 0, EGL_STENCIL_SIZE, 0, EGL_SAMPLE_BUFFERS, 0, EGL_NONE};
+    const EGLint configAttributes[] = {EGL_SURFACE_TYPE,
+                                       EGL_WINDOW_BIT,
+                                       EGL_RED_SIZE,
+                                       8,
+                                       EGL_GREEN_SIZE,
+                                       8,
+                                       EGL_BLUE_SIZE,
+                                       8,
+                                       EGL_ALPHA_SIZE,
+                                       0,
+                                       EGL_DEPTH_SIZE,
+                                       0,
+                                       EGL_STENCIL_SIZE,
+                                       0,
+                                       EGL_SAMPLE_BUFFERS,
+                                       0,
+                                       EGL_NONE};
 
     initializeDisplay();
     ANGLE_SKIP_TEST_IF(EGLWindow::FindEGLConfig(mDisplay, configAttributes, &mConfig) == EGL_FALSE);
@@ -630,6 +922,11 @@ TEST_P(EGLSurfaceTest3, MakeCurrentDifferentSurfaces)
 
     // Use the same surface for both draw and read
     EXPECT_EGL_TRUE(eglMakeCurrent(mDisplay, firstPbufferSurface, firstPbufferSurface, mContext));
+
+    // TODO(http://www.anglebug.com/6284): Failing with OpenGL ES backend on Android.
+    // Must be after the eglMakeCurrent() so the renderer string is initialized.
+    ANGLE_SKIP_TEST_IF(IsOpenGLES() && IsAndroid());
+
     glClearColor(GLColor::red.R, GLColor::red.G, GLColor::red.B, GLColor::red.A);
     glClear(GL_COLOR_BUFFER_BIT);
     ASSERT_GL_NO_ERROR();
@@ -711,7 +1008,15 @@ TEST_P(EGLSurfaceTestD3D11, CreateDirectCompositionSurface)
     EGLConfig config;
     ASSERT_EGL_TRUE(EGLWindow::FindEGLConfig(mDisplay, configAttributes, &config));
 
-    const EGLint surfaceAttributes[] = {EGL_WIDTH, 64, EGL_HEIGHT, 64, EGL_NONE};
+    const EGLint surfaceAttributes[] = {EGL_WIDTH,
+                                        100,
+                                        EGL_HEIGHT,
+                                        100,
+                                        EGL_TEXTURE_OFFSET_X_ANGLE,
+                                        updateOffset.x,
+                                        EGL_TEXTURE_OFFSET_Y_ANGLE,
+                                        updateOffset.y,
+                                        EGL_NONE};
 
     EGLClientBuffer buffer = reinterpret_cast<EGLClientBuffer>(texture.Get());
     mPbufferSurface = eglCreatePbufferFromClientBuffer(mDisplay, EGL_D3D_TEXTURE_ANGLE, buffer,
@@ -729,6 +1034,128 @@ TEST_P(EGLSurfaceTestD3D11, CreateDirectCompositionSurface)
     drawWithProgram(program);
     EXPECT_GL_NO_ERROR();
     glDeleteProgram(program);
+}
+
+TEST_P(EGLSurfaceTestD3D11, CreateSurfaceWithTextureOffset)
+{
+    ANGLE_SKIP_TEST_IF(!IsEGLClientExtensionEnabled("EGL_ANGLE_platform_angle_d3d"));
+    initializeDisplay();
+
+    const EGLint configAttributes[] = {
+        EGL_RED_SIZE,   8, EGL_GREEN_SIZE,   8, EGL_BLUE_SIZE,      8, EGL_ALPHA_SIZE, 8,
+        EGL_DEPTH_SIZE, 0, EGL_STENCIL_SIZE, 0, EGL_SAMPLE_BUFFERS, 0, EGL_NONE};
+
+    EGLConfig config;
+    ASSERT_EGL_TRUE(EGLWindow::FindEGLConfig(mDisplay, configAttributes, &config));
+
+    mConfig = config;
+    initializeContext();
+
+    EGLAttrib device       = 0;
+    EGLAttrib newEglDevice = 0;
+    ASSERT_EGL_TRUE(eglQueryDisplayAttribEXT(mDisplay, EGL_DEVICE_EXT, &newEglDevice));
+    ASSERT_EGL_TRUE(eglQueryDeviceAttribEXT(reinterpret_cast<EGLDeviceEXT>(newEglDevice),
+                                            EGL_D3D11_DEVICE_ANGLE, &device));
+    angle::ComPtr<ID3D11Device> d3d11Device(reinterpret_cast<ID3D11Device *>(device));
+    ASSERT_TRUE(!!d3d11Device);
+
+    constexpr UINT kTextureWidth  = 100;
+    constexpr UINT kTextureHeight = 100;
+    constexpr Color<uint8_t> kOpaqueBlack(0, 0, 0, 255);
+    std::vector<Color<uint8_t>> textureData(kTextureWidth * kTextureHeight, kOpaqueBlack);
+
+    D3D11_SUBRESOURCE_DATA initialData = {};
+    initialData.pSysMem                = textureData.data();
+    initialData.SysMemPitch            = kTextureWidth * sizeof(kOpaqueBlack);
+
+    D3D11_TEXTURE2D_DESC desc = {};
+    desc.Format               = DXGI_FORMAT_B8G8R8A8_UNORM;
+    desc.Width                = kTextureWidth;
+    desc.Height               = kTextureHeight;
+    desc.ArraySize            = 1;
+    desc.MipLevels            = 1;
+    desc.SampleDesc.Count     = 1;
+    desc.Usage                = D3D11_USAGE_DEFAULT;
+    desc.BindFlags            = D3D11_BIND_RENDER_TARGET;
+    angle::ComPtr<ID3D11Texture2D> texture;
+    HRESULT hr = d3d11Device->CreateTexture2D(&desc, &initialData, &texture);
+    ASSERT_TRUE(SUCCEEDED(hr));
+
+    angle::ComPtr<ID3D11DeviceContext> d3d11Context;
+    d3d11Device->GetImmediateContext(&d3d11Context);
+
+    // Specify a texture offset of (50, 50) when rendering to the pbuffer surface.
+    const EGLint surfaceAttributes[] = {EGL_WIDTH,
+                                        kTextureWidth,
+                                        EGL_HEIGHT,
+                                        kTextureHeight,
+                                        EGL_TEXTURE_OFFSET_X_ANGLE,
+                                        50,
+                                        EGL_TEXTURE_OFFSET_Y_ANGLE,
+                                        50,
+                                        EGL_NONE};
+    EGLClientBuffer buffer           = reinterpret_cast<EGLClientBuffer>(texture.Get());
+    mPbufferSurface = eglCreatePbufferFromClientBuffer(mDisplay, EGL_D3D_TEXTURE_ANGLE, buffer,
+                                                       config, surfaceAttributes);
+    ASSERT_EGL_SUCCESS();
+
+    eglMakeCurrent(mDisplay, mPbufferSurface, mPbufferSurface, mContext);
+    ASSERT_EGL_SUCCESS();
+
+    // glClear should only clear subrect at offset (50, 50) without explicit scissor.
+    glClearColor(0, 0, 1, 1);  // Blue
+    glClear(GL_COLOR_BUFFER_BIT);
+    EXPECT_PIXEL_EQ(25, 25, 0, 0, 0, 255);
+    EXPECT_PIXEL_EQ(75, 75, 0, 0, 255, 255);
+    EXPECT_GL_NO_ERROR();
+
+    // Drawing with a shader should also update the same subrect only without explicit viewport.
+    GLuint program = createProgram();  // Red
+    ASSERT_NE(0u, program);
+    GLint positionLocation = glGetAttribLocation(program, angle::essl1_shaders::PositionAttrib());
+    glUseProgram(program);
+    const GLfloat vertices[] = {
+        -1.0f, 1.0f, 0.5f, -1.0f, -1.0f, 0.5f, 1.0f, -1.0f, 0.5f,
+        -1.0f, 1.0f, 0.5f, 1.0f,  -1.0f, 0.5f, 1.0f, 1.0f,  0.5f,
+    };
+    glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE, 0, vertices);
+    glEnableVertexAttribArray(positionLocation);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDisableVertexAttribArray(positionLocation);
+    glVertexAttribPointer(positionLocation, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+    EXPECT_PIXEL_EQ(25, 25, 0, 0, 0, 255);
+    EXPECT_PIXEL_EQ(75, 75, 255, 0, 0, 255);
+    EXPECT_GL_NO_ERROR();
+
+    glDeleteProgram(program);
+    EXPECT_GL_NO_ERROR();
+
+    // Blit framebuffer should also blit to the same subrect despite the dstX/Y arguments.
+    GLRenderbuffer renderBuffer;
+    glBindRenderbuffer(GL_RENDERBUFFER, renderBuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, 50, 50);
+    EXPECT_GL_NO_ERROR();
+
+    GLFramebuffer framebuffer;
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderBuffer);
+    EXPECT_GL_NO_ERROR();
+
+    glClearColor(0, 1, 0, 1);  // Green
+    glClear(GL_COLOR_BUFFER_BIT);
+    EXPECT_PIXEL_EQ(25, 25, 0, 255, 0, 255);
+    EXPECT_GL_NO_ERROR();
+
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0u);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
+    glBlitFramebuffer(0, 0, 50, 50, 0, 0, 50, 50, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    EXPECT_GL_NO_ERROR();
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0u);
+    EXPECT_PIXEL_EQ(25, 25, 0, 0, 0, 255);
+    EXPECT_PIXEL_EQ(75, 75, 0, 255, 0, 255);
+    EXPECT_GL_NO_ERROR();
 }
 
 TEST_P(EGLSurfaceTestD3D11, CreateSurfaceWithMSAA)
@@ -800,6 +1227,280 @@ TEST_P(EGLSurfaceTestD3D11, CreateSurfaceWithMSAA)
 
 #endif  // ANGLE_ENABLE_D3D11
 
+// Verify bliting between two surfaces works correctly.
+TEST_P(EGLSurfaceTest3, BlitBetweenSurfaces)
+{
+    initializeDisplay();
+    ASSERT_NE(mDisplay, EGL_NO_DISPLAY);
+
+    initializeSurfaceWithDefaultConfig(true);
+    ASSERT_NE(mWindowSurface, EGL_NO_SURFACE);
+    ASSERT_NE(mContext, EGL_NO_CONTEXT);
+
+    EGLSurface surface1;
+    EGLSurface surface2;
+
+    const EGLint surfaceAttributes[] = {
+        EGL_WIDTH, 64, EGL_HEIGHT, 64, EGL_NONE,
+    };
+
+    surface1 = eglCreatePbufferSurface(mDisplay, mConfig, surfaceAttributes);
+    ASSERT_EGL_SUCCESS();
+    surface2 = eglCreatePbufferSurface(mDisplay, mConfig, surfaceAttributes);
+    ASSERT_EGL_SUCCESS();
+
+    // Clear surface1.
+    EXPECT_EGL_TRUE(eglMakeCurrent(mDisplay, surface1, surface1, mContext));
+
+    // TODO(http://www.anglebug.com/6284): Failing with OpenGL ES backend on Android and Windows.
+    // Must be after the eglMakeCurrent() so the renderer string is initialized.
+    ANGLE_SKIP_TEST_IF(IsOpenGLES() && (IsAndroid() || IsWindows()));
+
+    glClearColor(GLColor::red.R, GLColor::red.G, GLColor::red.B, GLColor::red.A);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ASSERT_GL_NO_ERROR();
+
+    // Blit from surface1 to surface2.
+    EXPECT_EGL_TRUE(eglMakeCurrent(mDisplay, surface2, surface1, mContext));
+    glBlitFramebuffer(0, 0, 64, 64, 0, 0, 64, 64, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    ASSERT_GL_NO_ERROR();
+
+    // Confirm surface1 has the clear color.
+    EXPECT_EGL_TRUE(eglMakeCurrent(mDisplay, surface1, surface1, mContext));
+    EXPECT_PIXEL_COLOR_EQ(32, 32, GLColor::red);
+
+    // Confirm surface2 has the blited clear color.
+    EXPECT_EGL_TRUE(eglMakeCurrent(mDisplay, surface2, surface2, mContext));
+    EXPECT_PIXEL_COLOR_EQ(32, 32, GLColor::red);
+
+    eglDestroySurface(mDisplay, surface1);
+    eglDestroySurface(mDisplay, surface2);
+}
+
+// Verify bliting between two surfaces works correctly.
+TEST_P(EGLSurfaceTest3, BlitBetweenSurfacesWithDeferredClear)
+{
+    initializeDisplay();
+    ASSERT_NE(mDisplay, EGL_NO_DISPLAY);
+
+    initializeSurfaceWithDefaultConfig(true);
+    ASSERT_NE(mWindowSurface, EGL_NO_SURFACE);
+    ASSERT_NE(mContext, EGL_NO_CONTEXT);
+
+    EGLSurface surface1;
+    EGLSurface surface2;
+
+    const EGLint surfaceAttributes[] = {
+        EGL_WIDTH, 64, EGL_HEIGHT, 64, EGL_NONE,
+    };
+
+    surface1 = eglCreatePbufferSurface(mDisplay, mConfig, surfaceAttributes);
+    ASSERT_EGL_SUCCESS();
+    surface2 = eglCreatePbufferSurface(mDisplay, mConfig, surfaceAttributes);
+    ASSERT_EGL_SUCCESS();
+
+    // Clear surface1.
+    EXPECT_EGL_TRUE(eglMakeCurrent(mDisplay, surface1, surface1, mContext));
+
+    // TODO(http://www.anglebug.com/6284): Failing with OpenGL ES backend on Android and Windows.
+    // Must be after the eglMakeCurrent() so the renderer string is initialized.
+    ANGLE_SKIP_TEST_IF(IsOpenGLES() && (IsAndroid() || IsWindows()));
+
+    glClearColor(GLColor::red.R, GLColor::red.G, GLColor::red.B, GLColor::red.A);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ASSERT_GL_NO_ERROR();
+    // Force the clear to be flushed
+    EXPECT_PIXEL_COLOR_EQ(32, 32, GLColor::red);
+
+    // Clear to green, but don't read it back so the clear is deferred.
+    glClearColor(GLColor::green.R, GLColor::green.G, GLColor::green.B, GLColor::green.A);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ASSERT_GL_NO_ERROR();
+
+    // Blit from surface1 to surface2.
+    EXPECT_EGL_TRUE(eglMakeCurrent(mDisplay, surface2, surface1, mContext));
+    glBlitFramebuffer(0, 0, 64, 64, 0, 0, 64, 64, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    ASSERT_GL_NO_ERROR();
+
+    // Confirm surface1 has the clear color.
+    EXPECT_PIXEL_COLOR_EQ(32, 32, GLColor::green);
+
+    // Confirm surface2 has the blited clear color.
+    EXPECT_EGL_TRUE(eglMakeCurrent(mDisplay, surface2, surface2, mContext));
+    EXPECT_PIXEL_COLOR_EQ(32, 32, GLColor::green);
+
+    eglDestroySurface(mDisplay, surface1);
+    eglDestroySurface(mDisplay, surface2);
+}
+
+// Verify switching between a surface with robust resource init and one without still clears alpha.
+TEST_P(EGLSurfaceTest, RobustResourceInitAndEmulatedAlpha)
+{
+    // http://anglebug.com/5279
+    ANGLE_SKIP_TEST_IF(IsNVIDIA() && isGLRenderer() && IsLinux());
+
+    // http://anglebug.com/5280
+    ANGLE_SKIP_TEST_IF(IsAndroid() && IsNexus5X() && isGLESRenderer());
+
+    initializeDisplay();
+    ASSERT_NE(mDisplay, EGL_NO_DISPLAY);
+
+    ANGLE_SKIP_TEST_IF(
+        !IsEGLDisplayExtensionEnabled(mDisplay, "EGL_ANGLE_robust_resource_initialization"));
+
+    // Initialize and draw red to a Surface with robust resource init enabled.
+    constexpr EGLint kRGBAAttributes[] = {EGL_RED_SIZE,     8,
+                                          EGL_GREEN_SIZE,   8,
+                                          EGL_BLUE_SIZE,    8,
+                                          EGL_ALPHA_SIZE,   8,
+                                          EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+                                          EGL_NONE};
+
+    EGLint configCount   = 0;
+    EGLConfig rgbaConfig = nullptr;
+    ASSERT_EGL_TRUE(eglChooseConfig(mDisplay, kRGBAAttributes, &rgbaConfig, 1, &configCount));
+    ASSERT_EQ(configCount, 1);
+    ASSERT_NE(rgbaConfig, nullptr);
+
+    std::vector<EGLint> robustInitAttribs;
+    robustInitAttribs.push_back(EGL_ROBUST_RESOURCE_INITIALIZATION_ANGLE);
+    robustInitAttribs.push_back(EGL_TRUE);
+
+    initializeSurfaceWithAttribs(rgbaConfig, robustInitAttribs);
+    ASSERT_EGL_SUCCESS();
+    ASSERT_NE(mWindowSurface, EGL_NO_SURFACE);
+
+    initializeSingleContext(&mContext);
+    ASSERT_EGL_SUCCESS();
+    ASSERT_NE(mContext, EGL_NO_CONTEXT);
+
+    eglMakeCurrent(mDisplay, mWindowSurface, mWindowSurface, mContext);
+    ASSERT_EGL_SUCCESS();
+    eglSwapBuffers(mDisplay, mWindowSurface);
+
+    // RGBA robust init setup complete. Draw red and verify.
+    {
+        ANGLE_GL_PROGRAM(program, essl1_shaders::vs::Simple(), essl1_shaders::fs::Red());
+        glUseProgram(program);
+
+        drawQuad(program, essl1_shaders::PositionAttrib(), 0.5f);
+        ASSERT_GL_NO_ERROR();
+        EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::red);
+
+        eglSwapBuffers(mDisplay, mWindowSurface);
+    }
+
+    tearDownContextAndSurface();
+
+    // Create second RGB surface with robust resource disabled.
+    constexpr EGLint kRGBAttributes[] = {EGL_RED_SIZE,     8,
+                                         EGL_GREEN_SIZE,   8,
+                                         EGL_BLUE_SIZE,    8,
+                                         EGL_ALPHA_SIZE,   0,
+                                         EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+                                         EGL_NONE};
+
+    configCount         = 0;
+    EGLConfig rgbConfig = nullptr;
+    ASSERT_EGL_TRUE(eglChooseConfig(mDisplay, kRGBAttributes, &rgbConfig, 1, &configCount));
+    ASSERT_EQ(configCount, 1);
+    ASSERT_NE(rgbConfig, nullptr);
+
+    initializeSurface(rgbConfig);
+    ASSERT_EGL_SUCCESS();
+    ASSERT_NE(mWindowSurface, EGL_NO_SURFACE);
+
+    initializeSingleContext(&mContext);
+    ASSERT_EGL_SUCCESS();
+    ASSERT_NE(mContext, EGL_NO_CONTEXT);
+
+    eglMakeCurrent(mDisplay, mWindowSurface, mWindowSurface, mContext);
+    ASSERT_EGL_SUCCESS();
+
+    // RGB non-robust init setup complete. Draw red and verify.
+    {
+        ANGLE_GL_PROGRAM(program, essl1_shaders::vs::Simple(), essl1_shaders::fs::Red());
+        glUseProgram(program);
+
+        drawQuad(program, essl1_shaders::PositionAttrib(), 0.5f);
+        ASSERT_GL_NO_ERROR();
+        EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::red);
+
+        eglSwapBuffers(mDisplay, mWindowSurface);
+    }
+}
+
+void EGLSurfaceTest::drawQuadThenTearDown()
+{
+    initializeSingleContext(&mContext);
+
+    eglMakeCurrent(mDisplay, mWindowSurface, mWindowSurface, mContext);
+    ASSERT_EGL_SUCCESS();
+
+    {
+        ANGLE_GL_PROGRAM(greenProgram, essl1_shaders::vs::Simple(), essl1_shaders::fs::Green());
+        drawQuad(greenProgram, essl1_shaders::PositionAttrib(), 0.5f);
+        EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::green);
+        eglSwapBuffers(mDisplay, mWindowSurface);
+        ASSERT_EGL_SUCCESS();
+    }
+
+    tearDownContextAndSurface();
+}
+
+// Tests the EGL_ANGLE_create_surface_swap_interval extension if available.
+TEST_P(EGLSurfaceTest, CreateSurfaceSwapIntervalANGLE)
+{
+    initializeDisplay();
+    ASSERT_NE(mDisplay, EGL_NO_DISPLAY);
+
+    mConfig = chooseDefaultConfig(true);
+    ASSERT_NE(mConfig, nullptr);
+
+    if (IsEGLDisplayExtensionEnabled(mDisplay, "EGL_ANGLE_create_surface_swap_interval"))
+    {
+        // Test error conditions.
+        EGLint minSwapInterval = 0;
+        eglGetConfigAttrib(mDisplay, mConfig, EGL_MIN_SWAP_INTERVAL, &minSwapInterval);
+        ASSERT_EGL_SUCCESS();
+
+        if (minSwapInterval > 0)
+        {
+            std::vector<EGLint> min1SwapAttribs = {EGL_SWAP_INTERVAL_ANGLE, minSwapInterval - 1};
+            initializeWindowSurfaceWithAttribs(mConfig, min1SwapAttribs, EGL_BAD_ATTRIBUTE);
+        }
+
+        EGLint maxSwapInterval = 0;
+        eglGetConfigAttrib(mDisplay, mConfig, EGL_MAX_SWAP_INTERVAL, &maxSwapInterval);
+        ASSERT_EGL_SUCCESS();
+
+        if (maxSwapInterval < std::numeric_limits<EGLint>::max())
+        {
+            std::vector<EGLint> max1SwapAttribs = {EGL_SWAP_INTERVAL_ANGLE, maxSwapInterval + 1};
+            initializeWindowSurfaceWithAttribs(mConfig, max1SwapAttribs, EGL_BAD_ATTRIBUTE);
+        }
+
+        // Test valid min/max usage.
+        {
+            std::vector<EGLint> minSwapAttribs = {EGL_SWAP_INTERVAL_ANGLE, minSwapInterval};
+            initializeWindowSurfaceWithAttribs(mConfig, minSwapAttribs, EGL_SUCCESS);
+            drawQuadThenTearDown();
+        }
+
+        if (minSwapInterval != maxSwapInterval)
+        {
+            std::vector<EGLint> maxSwapAttribs = {EGL_SWAP_INTERVAL_ANGLE, maxSwapInterval};
+            initializeWindowSurfaceWithAttribs(mConfig, maxSwapAttribs, EGL_SUCCESS);
+            drawQuadThenTearDown();
+        }
+    }
+    else
+    {
+        // Test extension unavailable error.
+        std::vector<EGLint> swapInterval1Attribs = {EGL_SWAP_INTERVAL_ANGLE, 1};
+        initializeWindowSurfaceWithAttribs(mConfig, swapInterval1Attribs, EGL_BAD_ATTRIBUTE);
+    }
+}
 }  // anonymous namespace
 
 ANGLE_INSTANTIATE_TEST(EGLSurfaceTest,
@@ -811,8 +1512,23 @@ ANGLE_INSTANTIATE_TEST(EGLSurfaceTest,
                        WithNoFixture(ES2_OPENGLES()),
                        WithNoFixture(ES3_OPENGLES()),
                        WithNoFixture(ES2_VULKAN()),
+                       WithNoFixture(ES3_VULKAN()),
+                       WithNoFixture(ES2_VULKAN_SWIFTSHADER()),
+                       WithNoFixture(ES3_VULKAN_SWIFTSHADER()));
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(EGLFloatSurfaceTest);
+ANGLE_INSTANTIATE_TEST(EGLFloatSurfaceTest,
+                       WithNoFixture(ES2_OPENGL()),
+                       WithNoFixture(ES3_OPENGL()),
+                       WithNoFixture(ES2_VULKAN()),
                        WithNoFixture(ES3_VULKAN()));
-ANGLE_INSTANTIATE_TEST(EGLSurfaceTest3, WithNoFixture(ES3_VULKAN()));
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(EGLSurfaceTest3);
+ANGLE_INSTANTIATE_TEST(EGLSurfaceTest3,
+                       WithNoFixture(ES3_D3D11()),
+                       WithNoFixture(ES3_OPENGLES()),
+                       WithNoFixture(ES3_VULKAN()),
+                       WithNoFixture(ES3_VULKAN_SWIFTSHADER()));
 
 #if defined(ANGLE_ENABLE_D3D11)
 ANGLE_INSTANTIATE_TEST(EGLSurfaceTestD3D11, WithNoFixture(ES2_D3D11()), WithNoFixture(ES3_D3D11()));

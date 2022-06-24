@@ -31,22 +31,20 @@
 #include "AuthenticationCF.h"
 #include "Credential.h"
 #include "ProtectionSpace.h"
-#include <pal/spi/cf/CFNetworkSPI.h>
+#include <pal/spi/win/CFNetworkSPIWin.h>
 #include <wtf/RetainPtr.h>
 
 namespace WebCore {
     
-static inline CFURLCredentialRef copyCredentialFromProtectionSpace(CFURLProtectionSpaceRef protectionSpace)
+static inline RetainPtr<CFURLCredentialRef> copyCredentialFromProtectionSpace(CFURLProtectionSpaceRef protectionSpace)
 {
     auto storage = adoptCF(CFURLCredentialStorageCreate(kCFAllocatorDefault));
-    return CFURLCredentialStorageCopyDefaultCredentialForProtectionSpace(storage.get(), protectionSpace);
+    return adoptCF(CFURLCredentialStorageCopyDefaultCredentialForProtectionSpace(storage.get(), protectionSpace));
 }
 
 Credential CredentialStorage::getFromPersistentStorage(const ProtectionSpace& protectionSpace)
 {
-    auto protectionSpaceCF = adoptCF(createCF(protectionSpace));
-    auto credentialCF = adoptCF(copyCredentialFromProtectionSpace(protectionSpaceCF.get()));
-    return core(credentialCF.get());
+    return core(copyCredentialFromProtectionSpace(createCF(protectionSpace).get()).get());
 }
 
 } // namespace WebCore

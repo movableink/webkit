@@ -1,4 +1,5 @@
 # Copyright (c) 2009 Google Inc. All rights reserved.
+# Copyright (C) 2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -27,6 +28,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import datetime
+import logging
 import os
 import shutil
 import tempfile
@@ -34,8 +36,9 @@ import threading
 import unittest
 
 from webkitpy.common.system.executive import ScriptError
-from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.tool.bot.queueengine import QueueEngine, QueueEngineDelegate, TerminateQueue
+
+from webkitcorepy import OutputCapture
 
 
 class LoggingDelegate(QueueEngineDelegate):
@@ -53,7 +56,6 @@ class LoggingDelegate(QueueEngineDelegate):
         'process_work_item',
         'work_item_log_path',
         'should_continue_work_queue',
-        'stop_work_queue',
     ]
 
     def record(self, method_name):
@@ -122,7 +124,6 @@ class QueueEngineTest(unittest.TestCase):
         expected_callbacks = LoggingDelegate.expected_callbacks[:]
         expected_callbacks.remove('work_item_log_path')
         self._run_engine(delegate)
-        self.assertEqual(delegate.stop_message, "Delegate terminated queue.")
         self.assertEqual(delegate._callbacks, expected_callbacks)
         self.assertTrue(os.path.exists(os.path.join(self.temp_dir, "queue_log_path")))
 
@@ -146,21 +147,18 @@ class QueueEngineTest(unittest.TestCase):
             engine = QueueEngine("test-queue", delegate, threading.Event())
         if not termination_message:
             termination_message = "Delegate terminated queue."
-        expected_logs = "%s\n" % termination_message
-        OutputCapture().assert_outputs(self, engine.run, expected_logs=expected_logs)
+
+        with OutputCapture(level=logging.INFO) as captured:
+            engine.run()
+        self.assertEqual(captured.root.log.getvalue(), '{}\n'.format(termination_message))
 
     def _test_terminating_queue(self, exception, termination_message):
         work_item_index = LoggingDelegate.expected_callbacks.index('process_work_item')
-        # The terminating error should be handled right after process_work_item.
-        # There should be no other callbacks after stop_work_queue.
         expected_callbacks = LoggingDelegate.expected_callbacks[:work_item_index + 1]
-        expected_callbacks.append("stop_work_queue")
 
         delegate = RaisingDelegate(self, exception)
         self._run_engine(delegate, termination_message=termination_message)
-
         self.assertEqual(delegate._callbacks, expected_callbacks)
-        self.assertEqual(delegate.stop_message, termination_message)
 
     def test_terminating_error(self):
         self._test_terminating_queue(KeyboardInterrupt(), "User terminated queue.")

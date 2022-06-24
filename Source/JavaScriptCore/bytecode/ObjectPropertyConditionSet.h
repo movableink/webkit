@@ -27,6 +27,8 @@
 
 #include "ObjectPropertyCondition.h"
 #include <wtf/FastMalloc.h>
+#include <wtf/Hasher.h>
+#include <wtf/RefCountedFixedVector.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -41,52 +43,81 @@ namespace JSC {
 
 class ObjectPropertyConditionSet {
 public:
-    ObjectPropertyConditionSet() { }
+    using Conditions = ThreadSafeRefCountedFixedVector<ObjectPropertyCondition>;
+
+    ObjectPropertyConditionSet() = default;
     
     static ObjectPropertyConditionSet invalid()
     {
         ObjectPropertyConditionSet result;
-        result.m_data = adoptRef(new Data());
+        result.m_data = Conditions::create(0);
+        ASSERT(!result.isValid());
         return result;
     }
     
-    static ObjectPropertyConditionSet create(const Vector<ObjectPropertyCondition>& vector)
+    static ObjectPropertyConditionSet create(Vector<ObjectPropertyCondition>&& vector)
     {
         if (vector.isEmpty())
             return ObjectPropertyConditionSet();
         
         ObjectPropertyConditionSet result;
-        result.m_data = adoptRef(new Data());
-        result.m_data->vector = vector;
+        result.m_data = Conditions::createFromVector(WTFMove(vector));
+        ASSERT(result.isValid());
         return result;
     }
     
     bool isValid() const
     {
-        return !m_data || !m_data->vector.isEmpty();
+        return !m_data || !m_data->isEmpty();
     }
 
     bool isValidAndWatchable() const;
 
-    size_t size() const { return m_data ? m_data->vector.size() : 0; }
+    size_t size() const { return m_data ? m_data->size() : 0; }
     bool isEmpty() const
     {
         return !m_data;
     }
-    
-    typedef const ObjectPropertyCondition* iterator;
-    
-    iterator begin() const
+
+    using const_iterator = Conditions::const_iterator;
+
+    const_iterator begin() const
     {
         if (!m_data)
             return nullptr;
-        return m_data->vector.begin();
+        return m_data->cbegin();
     }
-    iterator end() const
+    const_iterator end() const
     {
         if (!m_data)
             return nullptr;
-        return m_data->vector.end();
+        return m_data->cend();
+    }
+
+    unsigned hash() const
+    {
+        Hasher hasher;
+        for (auto& condition : *this)
+            add(hasher, condition.hash());
+        return hasher.hash();
+    }
+
+    friend bool operator==(const ObjectPropertyConditionSet& lhs, const ObjectPropertyConditionSet& rhs)
+    {
+        if (lhs.size() != rhs.size())
+            return false;
+        auto liter = lhs.begin();
+        auto riter = rhs.begin();
+        for (; liter != lhs.end(); ++liter, ++riter) {
+            if (!(*liter == *riter))
+                return false;
+        }
+        return true;
+    }
+
+    friend bool operator!=(const ObjectPropertyConditionSet& lhs, const ObjectPropertyConditionSet& rhs)
+    {
+        return !(lhs == rhs);
     }
     
     ObjectPropertyCondition forObject(JSObject*) const;
@@ -123,63 +154,33 @@ public:
     
     void dumpInContext(PrintStream&, DumpContext*) const;
     void dump(PrintStream&) const;
-    
-    // Helpers for using this in a union.
-    void* releaseRawPointer()
-    {
-        return static_cast<void*>(m_data.leakRef());
-    }
-    static ObjectPropertyConditionSet adoptRawPointer(void* rawPointer)
-    {
-        ObjectPropertyConditionSet result;
-        result.m_data = adoptRef(static_cast<Data*>(rawPointer));
-        return result;
-    }
-    static ObjectPropertyConditionSet fromRawPointer(void* rawPointer)
-    {
-        ObjectPropertyConditionSet result;
-        result.m_data = static_cast<Data*>(rawPointer);
-        return result;
-    }
 
-    // FIXME: Everything below here should be private, but cannot be because of a bug in VS.
-    
     // Internally, this represents Invalid using a pointer to a Data that has an empty vector.
     
     // FIXME: This could be made more compact by having it internally use a vector that just has
     // the non-uid portion of ObjectPropertyCondition, and then requiring that the callers of all
     // of the APIs supply the uid.
-    
-    class Data : public ThreadSafeRefCounted<Data> {
-        WTF_MAKE_NONCOPYABLE(Data);
-        WTF_MAKE_FAST_ALLOCATED;
-        
-    public:
-        Data() { }
-        
-        Vector<ObjectPropertyCondition> vector;
-    };
-    
+
 private:
-    RefPtr<Data> m_data;
+    RefPtr<Conditions> m_data;
 };
 
 ObjectPropertyCondition generateConditionForSelfEquivalence(
     VM&, JSCell* owner, JSObject* object, UniquedStringImpl* uid);
 
 ObjectPropertyConditionSet generateConditionsForPropertyMiss(
-    VM&, JSCell* owner, ExecState*, Structure* headStructure, UniquedStringImpl* uid);
+    VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
 ObjectPropertyConditionSet generateConditionsForPropertySetterMiss(
-    VM&, JSCell* owner, ExecState*, Structure* headStructure, UniquedStringImpl* uid);
+    VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
 ObjectPropertyConditionSet generateConditionsForPrototypePropertyHit(
-    VM&, JSCell* owner, ExecState*, Structure* headStructure, JSObject* prototype,
+    VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
     UniquedStringImpl* uid);
 ObjectPropertyConditionSet generateConditionsForPrototypePropertyHitCustom(
-    VM&, JSCell* owner, ExecState*, Structure* headStructure, JSObject* prototype,
+    VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
     UniquedStringImpl* uid, unsigned attributes);
 
 ObjectPropertyConditionSet generateConditionsForInstanceOf(
-    VM&, JSCell* owner, ExecState*, Structure* headStructure, JSObject* prototype, bool shouldHit);
+    VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype, bool shouldHit);
 
 ObjectPropertyConditionSet generateConditionsForPrototypeEquivalenceConcurrently(
     VM&, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
@@ -194,8 +195,8 @@ struct PrototypeChainCachingStatus {
     bool flattenedDictionary;
 };
 
-Optional<PrototypeChainCachingStatus> preparePrototypeChainForCaching(JSGlobalObject*, JSCell* base, const PropertySlot&);
-Optional<PrototypeChainCachingStatus> preparePrototypeChainForCaching(JSGlobalObject*, JSCell* base, JSObject* target);
-Optional<PrototypeChainCachingStatus> preparePrototypeChainForCaching(JSGlobalObject*, Structure* base, JSObject* target);
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, const PropertySlot&);
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, JSObject* target);
+std::optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, Structure* base, JSObject* target);
 
 } // namespace JSC

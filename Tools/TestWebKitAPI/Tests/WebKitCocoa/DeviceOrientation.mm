@@ -25,21 +25,23 @@
 
 #import "config.h"
 
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
 
+#import "DeprecatedGlobalValues.h"
+#import "HTTPServer.h"
 #import "PlatformUtilities.h"
 #import "TestNavigationDelegate.h"
 #import "TestURLSchemeHandler.h"
 #import "TestWKWebView.h"
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKUIDelegatePrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <wtf/Function.h>
 #import <wtf/HashMap.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/text/StringHash.h>
 #import <wtf/text/WTFString.h>
 
-static RetainPtr<NSMutableArray> receivedMessages = adoptNS([@[] mutableCopy]);
 static bool didReceiveMessage;
 static bool askedClientForPermission;
 
@@ -74,15 +76,15 @@ Function<bool()> _decisionHandler;
     return self;
 }
 
-- (void)_webView:(WKWebView *)webView shouldAllowDeviceOrientationAndMotionAccessRequestedByFrame:(WKFrameInfo *)requestingFrame decisionHandler:(void (^)(BOOL))decisionHandler
+- (void)webView:(WKWebView *)webView requestDeviceOrientationAndMotionPermissionForOrigin:(WKSecurityOrigin*)origin initiatedByFrame:(WKFrameInfo *)requestingFrame decisionHandler:(void (^)(WKPermissionDecision))decisionHandler
 {
-    decisionHandler(_decisionHandler());
+    decisionHandler(_decisionHandler() ? WKPermissionDecisionGrant : WKPermissionDecisionDeny);
     askedClientForPermission = true;
 }
 
 @end
 
-enum class DeviceOrientationPermission { Granted, Denied, Default };
+enum class DeviceOrientationPermission { GrantedByClient, DeniedByClient, GrantedByUser, DeniedByUser };
 static void runDeviceOrientationTest(DeviceOrientationPermission deviceOrientationPermission)
 {
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
@@ -94,13 +96,17 @@ static void runDeviceOrientationTest(DeviceOrientationPermission deviceOrientati
 
     RetainPtr<DeviceOrientationPermissionUIDelegate> uiDelegate;
     switch (deviceOrientationPermission) {
-    case DeviceOrientationPermission::Granted:
+    case DeviceOrientationPermission::GrantedByClient:
         uiDelegate = adoptNS([[DeviceOrientationPermissionUIDelegate alloc] initWithHandler:[] { return true; }]);
         break;
-    case DeviceOrientationPermission::Denied:
+    case DeviceOrientationPermission::DeniedByClient:
         uiDelegate = adoptNS([[DeviceOrientationPermissionUIDelegate alloc] initWithHandler:[] { return false; }]);
         break;
-    case DeviceOrientationPermission::Default:
+    case DeviceOrientationPermission::GrantedByUser:
+        [webView _setDeviceOrientationUserPermissionHandlerForTesting:^{ return YES; }];
+        break;
+    case DeviceOrientationPermission::DeniedByUser:
+        [webView _setDeviceOrientationUserPermissionHandlerForTesting:^{ return NO; }];
         break;
     }
     [webView setUIDelegate:uiDelegate.get()];
@@ -116,11 +122,12 @@ static void runDeviceOrientationTest(DeviceOrientationPermission deviceOrientati
     didReceiveMessage = false;
 
     switch (deviceOrientationPermission) {
-    case DeviceOrientationPermission::Granted:
+    case DeviceOrientationPermission::GrantedByClient:
+    case DeviceOrientationPermission::GrantedByUser:
         EXPECT_WK_STREQ(@"granted", receivedMessages.get()[0]);
         break;
-    case DeviceOrientationPermission::Denied:
-    case DeviceOrientationPermission::Default:
+    case DeviceOrientationPermission::DeniedByClient:
+    case DeviceOrientationPermission::DeniedByUser:
         EXPECT_WK_STREQ(@"denied", receivedMessages.get()[0]);
         break;
     }
@@ -135,7 +142,7 @@ static void runDeviceOrientationTest(DeviceOrientationPermission deviceOrientati
 
     [webView _simulateDeviceOrientationChangeWithAlpha:1.0 beta:2.0 gamma:3.0];
 
-    if (deviceOrientationPermission == DeviceOrientationPermission::Granted) {
+    if (deviceOrientationPermission == DeviceOrientationPermission::GrantedByClient || deviceOrientationPermission == DeviceOrientationPermission::GrantedByUser) {
         TestWebKitAPI::Util::run(&didReceiveMessage);
         EXPECT_WK_STREQ(@"received-event", receivedMessages.get()[1]);
     } else {
@@ -145,19 +152,24 @@ static void runDeviceOrientationTest(DeviceOrientationPermission deviceOrientati
     didReceiveMessage = false;
 }
 
-TEST(DeviceOrientation, PermissionDeniedByDefault)
+TEST(DeviceOrientation, PermissionGrantedByUser)
 {
-    runDeviceOrientationTest(DeviceOrientationPermission::Default);
+    runDeviceOrientationTest(DeviceOrientationPermission::GrantedByUser);
 }
 
-TEST(DeviceOrientation, PermissionGranted)
+TEST(DeviceOrientation, PermissionDeniedByUser)
 {
-    runDeviceOrientationTest(DeviceOrientationPermission::Granted);
+    runDeviceOrientationTest(DeviceOrientationPermission::DeniedByUser);
 }
 
-TEST(DeviceOrientation, PermissionDenied)
+TEST(DeviceOrientation, PermissionGrantedByClient)
 {
-    runDeviceOrientationTest(DeviceOrientationPermission::Denied);
+    runDeviceOrientationTest(DeviceOrientationPermission::GrantedByClient);
+}
+
+TEST(DeviceOrientation, PermissionDeniedByClient)
+{
+    runDeviceOrientationTest(DeviceOrientationPermission::DeniedByClient);
 }
 
 TEST(DeviceOrientation, RememberPermissionForSession)
@@ -205,6 +217,9 @@ TEST(DeviceOrientation, RememberPermissionForSession)
     configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     configuration.get().websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"testHandler"];
+
+    auto preferences = [configuration preferences];
+    [preferences _setSecureContextChecksEnabled: NO];
 
     webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     [webView setUIDelegate:uiDelegate.get()];
@@ -319,46 +334,28 @@ function requestPermission() {
 </script>
 )TESTRESOURCE";
 
-enum class ShouldEnableSecureContextChecks { No, Yes };
-static void runPermissionSecureContextCheckTest(ShouldEnableSecureContextChecks shouldEnableSecureContextChecks)
+TEST(DeviceOrientation, PermissionSecureContextCheck)
 {
+    TestWebKitAPI::HTTPServer server({
+        { "/", { mainBytes } }
+    });
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     configuration.get().websiteDataStore = [WKWebsiteDataStore defaultDataStore];
     
-    auto preferences = [configuration preferences];
-    [preferences _setSecureContextChecksEnabled:shouldEnableSecureContextChecks == ShouldEnableSecureContextChecks::Yes ? YES : NO];
-
     auto messageHandler = adoptNS([[DeviceOrientationMessageHandler alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"testHandler"];
     
-    auto schemeHandler = adoptNS([[TestURLSchemeHandler alloc] init]);
-    [configuration setURLSchemeHandler:schemeHandler.get() forURLScheme:@"test"];
-    
-    [schemeHandler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
-        auto response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:@"text/html" expectedContentLength:0 textEncodingName:nil]);
-        [task didReceiveResponse:response.get()];
-        [task didReceiveData:[NSData dataWithBytes:mainBytes length:strlen(mainBytes)]];
-        [task didFinish];
-    }];
-
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     RetainPtr<DeviceOrientationPermissionUIDelegate> uiDelegate = adoptNS([[DeviceOrientationPermissionUIDelegate alloc] initWithHandler:[] { return true; }]);
     [webView setUIDelegate:uiDelegate.get()];
     
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"test://host/main.html"]];
-
-    [webView loadRequest:request];
+    [webView loadRequest:server.request()];
     [webView _test_waitForDidFinishNavigation];
     
     [webView evaluateJavaScript:@"requestPermission();" completionHandler:nil];
     
     TestWebKitAPI::Util::run(&didReceiveMessage);
     didReceiveMessage = false;
-
-    if (shouldEnableSecureContextChecks == ShouldEnableSecureContextChecks::Yes) {
-        EXPECT_WK_STREQ(@"denied", receivedMessages.get()[0]);
-        return;
-    }
 
     EXPECT_WK_STREQ(@"granted", receivedMessages.get()[0]);
     
@@ -378,14 +375,88 @@ static void runPermissionSecureContextCheckTest(ShouldEnableSecureContextChecks 
     EXPECT_WK_STREQ(@"received-event", receivedMessages.get()[1]);
 }
 
-TEST(DeviceOrientation, PermissionSecureContextCheck)
-{
-    runPermissionSecureContextCheckTest(ShouldEnableSecureContextChecks::Yes);
+@interface DeviceOrientationPermissionValidationDelegate : NSObject <WKUIDelegatePrivate>
+- (void)setValidationHandler:(Function<void(WKSecurityOrigin*, WKFrameInfo*)>&&)validationHandler;
+@end
+
+@implementation DeviceOrientationPermissionValidationDelegate {
+Function<void(WKSecurityOrigin*, WKFrameInfo*)> _validationHandler;
+}
+- (void)setValidationHandler:(Function<void(WKSecurityOrigin*, WKFrameInfo*)>&&)validationHandler {
+    _validationHandler = WTFMove(validationHandler);
 }
 
-TEST(DeviceOrientation, PermissionSecureContextCheckDisabled)
+- (void)webView:(WKWebView *)webView requestDeviceOrientationAndMotionPermissionForOrigin:(WKSecurityOrigin*)origin initiatedByFrame:(WKFrameInfo *)frame decisionHandler:(void (^)(WKPermissionDecision decision))decisionHandler {
+    if (_validationHandler)
+        _validationHandler(origin, frame);
+
+    askedClientForPermission  = true;
+    decisionHandler(WKPermissionDecisionGrant);
+}
+@end
+
+static const char* mainFrameText = R"DOCDOCDOC(
+<html><body>
+<iframe src='https://127.0.0.1:9091/frame' allow='accelerometer:https://127.0.0.1:9091;gyroscope:https://127.0.0.1:9091;magnetometer:https://127.0.0.1:9091'></iframe>
+</body></html>
+)DOCDOCDOC";
+static const char* frameText = R"DOCDOCDOC(
+<html><body></body></html>
+)DOCDOCDOC";
+
+TEST(WebKit, DeviceOrientationPermissionInIFrame)
 {
-    runPermissionSecureContextCheckTest(ShouldEnableSecureContextChecks::No);
+    TestWebKitAPI::HTTPServer server1({
+        { "/", { mainFrameText } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, nullptr, 9090);
+
+    TestWebKitAPI::HTTPServer server2({
+        { "/frame", { frameText } },
+    }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, nullptr, 9091);
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration.get()]);
+
+    auto permissionDelegate = adoptNS([[DeviceOrientationPermissionValidationDelegate alloc] init]);
+    [webView setUIDelegate:permissionDelegate.get()];
+
+    auto navigationDelegate = adoptNS([TestNavigationDelegate new]);
+    [navigationDelegate setDidReceiveAuthenticationChallenge:^(WKWebView *, NSURLAuthenticationChallenge *challenge, void (^callback)(NSURLSessionAuthChallengeDisposition, NSURLCredential *)) {
+        EXPECT_WK_STREQ(challenge.protectionSpace.authenticationMethod, NSURLAuthenticationMethodServerTrust);
+        callback(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust]);
+    }];
+    __block bool didFinishNavigation = false;
+    [navigationDelegate setDidFinishNavigation:^(WKWebView *, WKNavigation *) {
+        didFinishNavigation = true;
+    }];
+    RetainPtr<WKFrameInfo> frame;
+    [navigationDelegate setDecidePolicyForNavigationAction:[&](WKNavigationAction *action, void (^decisionHandler)(WKNavigationActionPolicy)) {
+        if (action.targetFrame && !action.targetFrame.isMainFrame)
+            frame = action.targetFrame;
+        decisionHandler(WKNavigationActionPolicyAllow);
+    }];
+
+    webView.get().navigationDelegate = navigationDelegate.get();
+
+    [webView loadRequest:server1.request()];
+    TestWebKitAPI::Util::run(&didFinishNavigation);
+
+    [permissionDelegate setValidationHandler:[&webView](WKSecurityOrigin *origin, WKFrameInfo *frame) {
+        EXPECT_WK_STREQ(origin.protocol, @"https");
+        EXPECT_WK_STREQ(origin.host, @"127.0.0.1");
+        EXPECT_EQ(origin.port, 9090);
+
+        EXPECT_WK_STREQ(frame.securityOrigin.protocol, @"https");
+        EXPECT_WK_STREQ(frame.securityOrigin.host, @"127.0.0.1");
+        EXPECT_EQ(frame.securityOrigin.port, 9091);
+        EXPECT_FALSE(frame.isMainFrame);
+        EXPECT_TRUE(frame.webView == webView);
+    }];
+
+    [webView evaluateJavaScript:@"DeviceOrientationEvent.requestPermission()" inFrame:frame.get() inContentWorld:WKContentWorld.pageWorld completionHandler: [&] (id result, NSError *error) { }];
+
+    TestWebKitAPI::Util::run(&askedClientForPermission);
+
 }
 
-#endif // PLATFORM(IOS_FAMILY)
+#endif // ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)

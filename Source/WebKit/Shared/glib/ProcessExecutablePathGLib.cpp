@@ -29,16 +29,15 @@
 
 #include <glib.h>
 #include <wtf/FileSystem.h>
-#include <wtf/glib/GLibUtilities.h>
 
 namespace WebKit {
 
 #if ENABLE(DEVELOPER_MODE)
 static String getExecutablePath()
 {
-    CString executablePath = getCurrentExecutablePath();
+    CString executablePath = FileSystem::currentExecutablePath();
     if (!executablePath.isNull())
-        return FileSystem::directoryName(FileSystem::stringFromFileSystemRepresentation(executablePath.data()));
+        return FileSystem::parentPath(FileSystem::stringFromFileSystemRepresentation(executablePath.data()));
     return { };
 }
 #endif
@@ -90,5 +89,16 @@ String executablePathOfNetworkProcess()
     return findWebKitProcess("WebKitNetworkProcess");
 #endif
 }
+
+#if ENABLE(GPU_PROCESS)
+String executablePathOfGPUProcess()
+{
+#if PLATFORM(WPE)
+    return findWebKitProcess("WPEGPUProcess");
+#else
+    return findWebKitProcess("WebKitGPUProcess");
+#endif
+}
+#endif
 
 } // namespace WebKit

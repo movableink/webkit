@@ -22,7 +22,7 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 
-#include "APIUserContentWorld.h"
+#include "APIContentWorld.h"
 #include "WebKitError.h"
 #include "WebKitNavigationPolicyDecision.h"
 #include "WebKitUserContentManagerPrivate.h"
@@ -30,6 +30,7 @@
 #include "WebPageProxy.h"
 #include "WebScriptMessageHandler.h"
 #include <wtf/URL.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -42,15 +43,24 @@ public:
     {
     }
 
-    void didPostMessage(WebPageProxy& page, const FrameInfoData&, WebCore::SerializedScriptValue& serializedScriptValue) override
+    void didPostMessage(WebPageProxy& page, FrameInfoData&&, API::ContentWorld&, WebCore::SerializedScriptValue& serializedScriptValue) override
     {
         String message = serializedScriptValue.toString();
         Vector<String> tokens = message.split(':');
-        if (tokens.size() != 2)
+        if (tokens.size() != 3)
             return;
 
         URL requestURL = URL({ }, page.pageLoadState().url());
-        m_inspectorProtocolHandler.inspect(requestURL.hostAndPort(), tokens[0].toUInt64(), tokens[1].toUInt64());
+        m_inspectorProtocolHandler.inspect(requestURL.hostAndPort(), parseIntegerAllowingTrailingJunk<uint64_t>(tokens[0]).value_or(0), parseIntegerAllowingTrailingJunk<uint64_t>(tokens[1]).value_or(0), tokens[2]);
+    }
+
+    bool supportsAsyncReply() override
+    {
+        return false;
+    }
+    
+    void didPostMessageWithAsyncReply(WebPageProxy&, FrameInfoData&&, API::ContentWorld&, WebCore::SerializedScriptValue&, WTF::Function<void(API::SerializedScriptValue*, const String&)>&&) override
+    {
     }
 
     ~ScriptMessageClient() { }
@@ -60,7 +70,6 @@ private:
 };
 
 RemoteInspectorProtocolHandler::RemoteInspectorProtocolHandler(WebKitWebContext* context)
-    : m_context(context)
 {
     webkit_web_context_register_uri_scheme(context, "inspector", [](WebKitURISchemeRequest* request, gpointer userData) {
         static_cast<RemoteInspectorProtocolHandler*>(userData)->handleRequest(request);
@@ -73,7 +82,7 @@ RemoteInspectorProtocolHandler::~RemoteInspectorProtocolHandler()
         g_object_weak_unref(G_OBJECT(webView), reinterpret_cast<GWeakNotify>(webViewDestroyed), this);
 
     for (auto* userContentManager : m_userContentManagers) {
-        webkitUserContentManagerGetUserContentControllerProxy(userContentManager)->removeUserMessageHandlerForName("inspector", API::UserContentWorld::normalWorld());
+        webkitUserContentManagerGetUserContentControllerProxy(userContentManager)->removeUserMessageHandlerForName("inspector", API::ContentWorld::pageContentWorld());
         g_object_weak_unref(G_OBJECT(userContentManager), reinterpret_cast<GWeakNotify>(userContentManagerDestroyed), this);
     }
 }
@@ -106,7 +115,7 @@ void RemoteInspectorProtocolHandler::handleRequest(WebKitURISchemeRequest* reque
     auto* userContentManager = webkit_web_view_get_user_content_manager(webView);
     auto userContentManagerResult = m_userContentManagers.add(userContentManager);
     if (userContentManagerResult.isNewEntry) {
-        auto handler = WebScriptMessageHandler::create(makeUnique<ScriptMessageClient>(*this), "inspector", API::UserContentWorld::normalWorld());
+        auto handler = WebScriptMessageHandler::create(makeUnique<ScriptMessageClient>(*this), "inspector", API::ContentWorld::pageContentWorld());
         webkitUserContentManagerGetUserContentControllerProxy(userContentManager)->addUserScriptMessageHandler(handler.get());
         g_object_weak_ref(G_OBJECT(userContentManager), reinterpret_cast<GWeakNotify>(userContentManagerDestroyed), this);
     }
@@ -115,50 +124,16 @@ void RemoteInspectorProtocolHandler::handleRequest(WebKitURISchemeRequest* reque
         return makeUnique<RemoteInspectorClient>(requestURL.host().utf8().data(), requestURL.port().value(), *this);
     }).iterator->value.get();
 
-    GString* html = g_string_new(
-        "<html><head><title>Remote inspector</title>"
-        "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />"
-        "<style>"
-        "  h1 { color: #babdb6; text-shadow: 0 1px 0 white; margin-bottom: 0; }"
-        "  html { font-family: -webkit-system-font; font-size: 11pt; color: #2e3436; padding: 20px 20px 0 20px; background-color: #f6f6f4; "
-        "         background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #eeeeec), color-stop(1, #f6f6f4));"
-        "         background-size: 100% 5em; background-repeat: no-repeat; }"
-        "  table { width: 100%; border-collapse: collapse; }"
-        "  table, td { border: 1px solid #d3d7cf; border-left: none; border-right: none; }"
-        "  p { margin-bottom: 30px; }"
-        "  td { padding: 15px; }"
-        "  td.data { width: 200px; }"
-        "  .targetname { font-weight: bold; }"
-        "  .targeturl { color: #babdb6; }"
-        "  td.input { width: 64px; }"
-        "  input { width: 100%; padding: 8px; }"
-        "</style>"
-        "</head><body><h1>Inspectable targets</h1>");
-    if (client->targets().isEmpty())
-        g_string_append(html, "<p>No targets found</p>");
-    else {
-        g_string_append(html, "<table>");
-        for (auto connectionID : client->targets().keys()) {
-            for (auto& target : client->targets().get(connectionID)) {
-                g_string_append_printf(html,
-                    "<tbody><tr>"
-                    "<td class=\"data\"><div class=\"targetname\">%s</div><div class=\"targeturl\">%s</div></td>"
-                    "<td class=\"input\"><input type=\"button\" value=\"Inspect\" onclick=\"window.webkit.messageHandlers.inspector.postMessage('%" G_GUINT64_FORMAT ":%" G_GUINT64_FORMAT "');\"></td>"
-                    "</tr></tbody>", target.name.data(), target.url.data(), connectionID, target.id);
-            }
-        }
-        g_string_append(html, "</table>");
-    }
-    g_string_append(html, "</body></html>");
+    auto* html = client->buildTargetListPage(RemoteInspectorClient::InspectorType::UI);
     gsize streamLength = html->len;
     GRefPtr<GInputStream> stream = adoptGRef(g_memory_input_stream_new_from_data(g_string_free(html, FALSE), streamLength, g_free));
     webkit_uri_scheme_request_finish(request, stream.get(), streamLength, "text/html");
 }
 
-void RemoteInspectorProtocolHandler::inspect(const String& hostAndPort, uint64_t connectionID, uint64_t tatgetID)
+void RemoteInspectorProtocolHandler::inspect(const String& hostAndPort, uint64_t connectionID, uint64_t tatgetID, const String& targetType)
 {
     if (auto* client = m_inspectorClients.get(hostAndPort))
-        client->inspect(connectionID, tatgetID);
+        client->inspect(connectionID, tatgetID, targetType);
 }
 
 void RemoteInspectorProtocolHandler::targetListChanged(RemoteInspectorClient& client)

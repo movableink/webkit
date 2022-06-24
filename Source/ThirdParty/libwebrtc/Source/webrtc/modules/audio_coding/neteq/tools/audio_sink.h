@@ -12,7 +12,7 @@
 #define MODULES_AUDIO_CODING_NETEQ_TOOLS_AUDIO_SINK_H_
 
 #include "api/audio/audio_frame.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 namespace test {
@@ -24,11 +24,11 @@ class AudioSink {
   AudioSink() {}
   virtual ~AudioSink() {}
 
-  // Writes |num_samples| from |audio| to the AudioSink. Returns true if
+  // Writes `num_samples` from `audio` to the AudioSink. Returns true if
   // successful, otherwise false.
   virtual bool WriteArray(const int16_t* audio, size_t num_samples) = 0;
 
-  // Writes |audio_frame| to the AudioSink. Returns true if successful,
+  // Writes `audio_frame` to the AudioSink. Returns true if successful,
   // otherwise false.
   bool WriteAudioFrame(const AudioFrame& audio_frame) {
     return WriteArray(audio_frame.data(), audio_frame.samples_per_channel_ *

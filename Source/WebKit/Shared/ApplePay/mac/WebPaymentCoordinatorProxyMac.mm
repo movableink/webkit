@@ -37,7 +37,11 @@ namespace WebKit {
 
 void WebPaymentCoordinatorProxy::platformCanMakePayments(CompletionHandler<void(bool)>&& completionHandler)
 {
-    if (!PAL::isPassKitFrameworkAvailable())
+#if HAVE(PASSKIT_MODULARIZATION)
+    if (!PAL::isPassKitMacHelperFrameworkAvailable())
+#else
+    if (!PAL::isPassKitCoreFrameworkAvailable())
+#endif
         return completionHandler(false);
 
     m_canMakePaymentsQueue->dispatch([theClass = retainPtr(PAL::getPKPaymentAuthorizationViewControllerClass()), completionHandler = WTFMove(completionHandler)]() mutable {
@@ -47,15 +51,19 @@ void WebPaymentCoordinatorProxy::platformCanMakePayments(CompletionHandler<void(
     });
 }
 
-void WebPaymentCoordinatorProxy::platformShowPaymentUI(const URL& originatingURL, const Vector<URL>& linkIconURLStrings, const WebCore::ApplePaySessionPaymentRequest& request, CompletionHandler<void(bool)>&& completionHandler)
+void WebPaymentCoordinatorProxy::platformShowPaymentUI(WebPageProxyIdentifier, const URL& originatingURL, const Vector<URL>& linkIconURLStrings, const WebCore::ApplePaySessionPaymentRequest& request, CompletionHandler<void(bool)>&& completionHandler)
 {
-    if (!PAL::isPassKitFrameworkAvailable())
+#if HAVE(PASSKIT_MODULARIZATION)
+    if (!PAL::isPassKitMacHelperFrameworkAvailable())
+#else
+    if (!PAL::isPassKitCoreFrameworkAvailable())
+#endif
         return completionHandler(false);
 
     auto paymentRequest = platformPaymentRequest(originatingURL, linkIconURLStrings, request);
 
     auto showPaymentUIRequestSeed = m_showPaymentUIRequestSeed;
-    auto weakThis = makeWeakPtr(*this);
+    WeakPtr weakThis { *this };
     [PAL::getPKPaymentAuthorizationViewControllerClass() requestViewControllerWithPaymentRequest:paymentRequest.get() completion:makeBlockPtr([paymentRequest, showPaymentUIRequestSeed, weakThis, completionHandler = WTFMove(completionHandler)](PKPaymentAuthorizationViewController *viewController, NSError *error) mutable {
         auto paymentCoordinatorProxy = weakThis.get();
         if (!paymentCoordinatorProxy)
@@ -85,7 +93,6 @@ void WebPaymentCoordinatorProxy::platformShowPaymentUI(const URL& originatingURL
         paymentCoordinatorProxy->m_sheetWindow = [NSWindow windowWithContentViewController:viewController];
 
         paymentCoordinatorProxy->m_sheetWindowWillCloseObserver = [[NSNotificationCenter defaultCenter] addObserverForName:NSWindowWillCloseNotification object:paymentCoordinatorProxy->m_sheetWindow.get() queue:nil usingBlock:[paymentCoordinatorProxy](NSNotification *) {
-            paymentCoordinatorProxy->hidePaymentUI();
             paymentCoordinatorProxy->didReachFinalState();
         }];
 
@@ -95,7 +102,7 @@ void WebPaymentCoordinatorProxy::platformShowPaymentUI(const URL& originatingURL
     }).get()];
 }
 
-void WebPaymentCoordinatorProxy::hidePaymentUI()
+void WebPaymentCoordinatorProxy::platformHidePaymentUI()
 {
     if (m_state == State::Activating) {
         ++m_showPaymentUIRequestSeed;
@@ -115,7 +122,6 @@ void WebPaymentCoordinatorProxy::hidePaymentUI()
 
     if (m_authorizationPresenter)
         m_authorizationPresenter->dismiss();
-    m_authorizationPresenter = nullptr;
 
     m_sheetWindow = nullptr;
 }

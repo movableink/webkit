@@ -11,23 +11,27 @@
 package org.webrtc;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
-import static org.robolectric.Shadows.shadowOf;
+import static org.mockito.Mockito.when;
 
 import android.graphics.Matrix;
+import android.graphics.SurfaceTexture;
 import android.media.MediaCodecInfo.CodecCapabilities;
 import android.media.MediaFormat;
 import android.os.Handler;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import org.chromium.testing.local.LocalRobolectricTestRunner;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -58,7 +62,7 @@ public class AndroidVideoDecoderTest {
     private boolean deliverDecodedFrameDone = true;
 
     public TestDecoder(MediaCodecWrapperFactory mediaCodecFactory, String codecName,
-        VideoCodecType codecType, int colorFormat, EglBase.Context sharedContext) {
+        VideoCodecMimeType codecType, int colorFormat, EglBase.Context sharedContext) {
       super(mediaCodecFactory, codecName, codecType, colorFormat, sharedContext);
     }
 
@@ -139,10 +143,10 @@ public class AndroidVideoDecoderTest {
   }
 
   private class TestDecoderBuilder {
-    private VideoCodecType codecType = VideoCodecType.VP8;
+    private VideoCodecMimeType codecType = VideoCodecMimeType.VP8;
     private boolean useSurface = true;
 
-    public TestDecoderBuilder setCodecType(VideoCodecType codecType) {
+    public TestDecoderBuilder setCodecType(VideoCodecMimeType codecType) {
       this.codecType = codecType;
       return this;
     }
@@ -160,11 +164,29 @@ public class AndroidVideoDecoderTest {
     }
   }
 
+  private static class FakeDecoderCallback implements VideoDecoder.Callback {
+    public final List<VideoFrame> decodedFrames;
+
+    public FakeDecoderCallback() {
+      decodedFrames = new ArrayList<>();
+    }
+
+    @Override
+    public void onDecodedFrame(VideoFrame frame, Integer decodeTimeMs, Integer qp) {
+      frame.retain();
+      decodedFrames.add(frame);
+    }
+
+    public void release() {
+      for (VideoFrame frame : decodedFrames) frame.release();
+      decodedFrames.clear();
+    }
+  }
+
   private EncodedImage createTestEncodedImage() {
     return EncodedImage.builder()
-        .setBuffer(ByteBuffer.wrap(ENCODED_TEST_DATA))
+        .setBuffer(ByteBuffer.wrap(ENCODED_TEST_DATA), null)
         .setFrameType(FrameType.VideoFrameKey)
-        .setCompleteFrame(true)
         .createEncodedImage();
   }
 
@@ -172,19 +194,29 @@ public class AndroidVideoDecoderTest {
   @Mock private SurfaceTextureHelper mockSurfaceTextureHelper;
   @Mock private VideoDecoder.Callback mockDecoderCallback;
   private FakeMediaCodecWrapper fakeMediaCodecWrapper;
+  private FakeDecoderCallback fakeDecoderCallback;
 
   @Before
   public void setUp() {
     MockitoAnnotations.initMocks(this);
+    when(mockSurfaceTextureHelper.getSurfaceTexture())
+        .thenReturn(new SurfaceTexture(/*texName=*/0));
     MediaFormat outputFormat = new MediaFormat();
     // TODO(sakal): Add more details to output format as needed.
     fakeMediaCodecWrapper = spy(new FakeMediaCodecWrapper(outputFormat));
+    fakeDecoderCallback = new FakeDecoderCallback();
+  }
+
+  @After
+  public void cleanUp() {
+    fakeDecoderCallback.release();
   }
 
   @Test
   public void testInit() {
     // Set-up.
-    AndroidVideoDecoder decoder = new TestDecoderBuilder().setCodecType(VideoCodecType.VP8).build();
+    AndroidVideoDecoder decoder =
+        new TestDecoderBuilder().setCodecType(VideoCodecMimeType.VP8).build();
 
     // Test.
     assertThat(decoder.initDecode(TEST_DECODER_SETTINGS, mockDecoderCallback))
@@ -200,7 +232,7 @@ public class AndroidVideoDecoderTest {
     assertThat(mediaFormat.getInteger(MediaFormat.KEY_HEIGHT))
         .isEqualTo(TEST_DECODER_SETTINGS.height);
     assertThat(mediaFormat.getString(MediaFormat.KEY_MIME))
-        .isEqualTo(VideoCodecType.VP8.mimeType());
+        .isEqualTo(VideoCodecMimeType.VP8.mimeType());
   }
 
   @Test
@@ -264,7 +296,7 @@ public class AndroidVideoDecoderTest {
 
     // Set-up.
     TestDecoder decoder = new TestDecoderBuilder().setUseSurface(/* useSurface = */ false).build();
-    decoder.initDecode(TEST_DECODER_SETTINGS, mockDecoderCallback);
+    decoder.initDecode(TEST_DECODER_SETTINGS, fakeDecoderCallback);
     decoder.decode(createTestEncodedImage(),
         new DecodeInfo(/* isMissingFrames= */ false, /* renderTimeMs= */ 0));
     fakeMediaCodecWrapper.addOutputData(
@@ -274,13 +306,8 @@ public class AndroidVideoDecoderTest {
     decoder.waitDeliverDecodedFrame();
 
     // Verify.
-    ArgumentCaptor<VideoFrame> videoFrameCaptor = ArgumentCaptor.forClass(VideoFrame.class);
-    verify(mockDecoderCallback)
-        .onDecodedFrame(videoFrameCaptor.capture(),
-            /* decodeTimeMs= */ any(Integer.class),
-            /* qp= */ any());
-
-    VideoFrame videoFrame = videoFrameCaptor.getValue();
+    assertThat(fakeDecoderCallback.decodedFrames).hasSize(1);
+    VideoFrame videoFrame = fakeDecoderCallback.decodedFrames.get(0);
     assertThat(videoFrame).isNotNull();
     assertThat(videoFrame.getRotatedWidth()).isEqualTo(TEST_DECODER_SETTINGS.width);
     assertThat(videoFrame.getRotatedHeight()).isEqualTo(TEST_DECODER_SETTINGS.height);
@@ -342,7 +369,7 @@ public class AndroidVideoDecoderTest {
   public void testDeliversRenderedBuffers() throws InterruptedException {
     // Set-up.
     TestDecoder decoder = new TestDecoderBuilder().build();
-    decoder.initDecode(TEST_DECODER_SETTINGS, mockDecoderCallback);
+    decoder.initDecode(TEST_DECODER_SETTINGS, fakeDecoderCallback);
     decoder.decode(createTestEncodedImage(),
         new DecodeInfo(/* isMissingFrames= */ false, /* renderTimeMs= */ 0));
     fakeMediaCodecWrapper.addOutputTexture(/* presentationTimestampUs= */ 0, /* flags= */ 0);
@@ -366,15 +393,12 @@ public class AndroidVideoDecoderTest {
     outputVideoFrame.release();
 
     // Verify.
-    ArgumentCaptor<VideoFrame> videoFrameCaptor = ArgumentCaptor.forClass(VideoFrame.class);
-    verify(mockDecoderCallback)
-        .onDecodedFrame(videoFrameCaptor.capture(),
-            /* decodeTimeMs= */ any(Integer.class),
-            /* qp= */ any());
-
-    VideoFrame videoFrame = videoFrameCaptor.getValue();
+    assertThat(fakeDecoderCallback.decodedFrames).hasSize(1);
+    VideoFrame videoFrame = fakeDecoderCallback.decodedFrames.get(0);
     assertThat(videoFrame).isNotNull();
     assertThat(videoFrame.getBuffer()).isEqualTo(outputTextureBuffer);
+
+    fakeDecoderCallback.release();
 
     verify(releaseCallback).run();
   }

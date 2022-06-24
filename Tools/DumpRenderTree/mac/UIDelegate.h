@@ -35,11 +35,12 @@
 #endif
 
 #import <WebKit/WebUIDelegate.h>
+#import <wtf/RetainPtr.h>
 
 @interface UIDelegate : NSObject <WebUIDelegate> {
 @private
     NSPoint windowOrigin;
-    NSMutableSet *m_pendingGeolocationPermissionListeners;
+    RetainPtr<NSMutableSet> m_pendingGeolocationPermissionListeners;
     NSTimer *m_timer;
     BOOL m_enableDragDestinationActionLoad;
 }
@@ -47,6 +48,6 @@
 - (void)resetWindowOrigin;
 - (void)didSetMockGeolocationPermission;
 - (int)numberOfPendingGeolocationPermissionRequests;
-- (void)resetToConsistentStateBeforeTesting:(const TestOptions&)options;
+- (void)resetToConsistentStateBeforeTesting:(const WTR::TestOptions&)options;
 
 @end

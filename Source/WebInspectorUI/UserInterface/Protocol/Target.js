@@ -25,14 +25,19 @@
 
 WI.Target = class Target extends WI.Object
 {
-    constructor(identifier, name, type, connection)
+    constructor(parentTarget, identifier, name, type, connection, {isPaused, isProvisional} = {})
     {
+        console.assert(parentTarget === null || parentTarget instanceof WI.Target);
+        console.assert(!isPaused || parentTarget.hasCommand("Target.setPauseOnStart"));
         super();
 
+        this._parentTarget = parentTarget;
         this._identifier = identifier;
         this._name = name;
         this._type = type;
         this._connection = connection;
+        this._isPaused = !!isPaused;
+        this._isProvisional = !!isProvisional;
         this._executionContext = null;
         this._mainResource = null;
         this._resourceCollection = new WI.ResourceCollection;
@@ -90,23 +95,43 @@ WI.Target = class Target extends WI.Object
             // Tell the backend we are initialized after all our initialization messages have been sent.
             // This allows an automatically paused backend to resume execution, but we want to ensure
             // our breakpoints were already sent to that backend.
-            // COMPATIBILITY (iOS 8): Inspector.initialized did not exist yet.
-            if (this.hasCommand("Inspector.initialized"))
+            if (this.hasDomain("Inspector"))
                 this.InspectorAgent.initialized();
         });
+
+        this._resumeIfPaused();
+    }
+
+    _resumeIfPaused()
+    {
+        if (this._isPaused) {
+            console.assert(this._parentTarget.hasCommand("Target.resume"));
+            this._parentTarget.TargetAgent.resume(this._identifier, (error) => {
+                if (error) {
+                    // Ignore errors if the target was destroyed after the command was sent.
+                    if (!this.isDestroyed)
+                        WI.reportInternalError(error);
+                    return;
+                }
+
+                this._isPaused = false;
+            });
+        }
     }
 
     activateExtraDomain(domainName)
     {
-        // FIXME: <https://webkit.org/b/201150> Web Inspector: remove "extra domains" concept now that domains can be added based on the debuggable type
+        // COMPATIBILITY (iOS 14.0): Inspector.activateExtraDomains was removed in favor of a declared debuggable type
 
         this._agents[domainName] = InspectorBackend._makeAgent(domainName, this);
     }
 
     // Agents
 
-    get AuditAgent() { return this._agents.Audit; }
+    get AnimationAgent() { return this._agents.Animation; }
     get ApplicationCacheAgent() { return this._agents.ApplicationCache; }
+    get AuditAgent() { return this._agents.Audit; }
+    get BrowserAgent() { return this._agents.Browser; }
     get CPUProfilerAgent() { return this._agents.CPUProfiler; }
     get CSSAgent() { return this._agents.CSS; }
     get CanvasAgent() { return this._agents.Canvas; }
@@ -149,6 +174,17 @@ WI.Target = class Target extends WI.Object
 
     // Public
 
+    get parentTarget() { return this._parentTarget; }
+
+    get rootTarget()
+    {
+        if (this._type === WI.TargetType.Page)
+            return this;
+        if (this._parentTarget)
+            return this._parentTarget.rootTarget;
+        return this;
+    }
+
     get identifier() { return this._identifier; }
     set identifier(identifier) { this._identifier = identifier; }
 
@@ -161,6 +197,10 @@ WI.Target = class Target extends WI.Object
 
     get resourceCollection() { return this._resourceCollection; }
     get extraScriptCollection() { return this._extraScriptCollection; }
+
+    get isProvisional() { return this._isProvisional; }
+    get isPaused() { return this._isPaused; }
+    get isDestroyed() { return this._isDestroyed; }
 
     get displayName() { return this._name; }
 
@@ -199,10 +239,20 @@ WI.Target = class Target extends WI.Object
         this.dispatchEventToListeners(WI.Target.Event.ScriptAdded, {script});
     }
 
+    didCommitProvisionalTarget()
+    {
+        console.assert(this._isProvisional);
+        this._isProvisional = false;
+    }
+
+    destroy()
+    {
+        this._isDestroyed = true;
+    }
+
     hasDomain(domainName)
     {
         console.assert(!domainName.includes(".") && !domainName.endsWith("Agent"));
-
         return domainName in this._agents;
     }
 

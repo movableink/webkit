@@ -9,7 +9,11 @@
     waitForEvent('durationchange');
     waitForEvent('loadedmetadata');
     waitForEvent('loadeddata');
-    waitForEventAndEnd('waiting');
+    waitForEventAndEnd('waiting', function() {
+        // TestRunner waits for the complete frame download before finishing, so having the video load stalled
+        // prevents TestRunner from finishing. Changing the src will abort the download and let the test finish.
+        video.src = "";
+    });
 
     waitForEvent('canplay', function () {
         run("video.play()");
@@ -26,5 +30,5 @@
     var mediaFile = findMediaFile("video", "../../../../media/content/long-test");
     var mimeType = mimeTypeForFile(mediaFile);
 
-    video.src = "http://127.0.0.1:8000/media/resources/serve-video.php?name=" + mediaFile + "&type=" + mimeType + "&stallOffset=100000&stallDuration=60&chunkSize=1024";
+    video.src = "http://127.0.0.1:8000/media/resources/serve_video.py?name=" + mediaFile + "&type=" + mimeType + "&stallOffset=100000&stallDuration=60&chunkSize=1024";
 </script>

@@ -182,6 +182,63 @@ template <> void derefGPtr(GMappedFile* ptr)
         g_mapped_file_unref(ptr);
 }
 
+template <> GDateTime* refGPtr(GDateTime* ptr)
+{
+    if (ptr)
+        g_date_time_ref(ptr);
+    return ptr;
+}
+
+template <> void derefGPtr(GDateTime* ptr)
+{
+    if (ptr)
+        g_date_time_unref(ptr);
+}
+
+template <> GDBusNodeInfo* refGPtr(GDBusNodeInfo* ptr)
+{
+    if (ptr)
+        g_dbus_node_info_ref(ptr);
+    return ptr;
+}
+
+template <> void derefGPtr(GDBusNodeInfo* ptr)
+{
+    if (ptr)
+        g_dbus_node_info_unref(ptr);
+}
+
+#if HAVE(GURI)
+template <> GUri* refGPtr(GUri* ptr)
+{
+    if (ptr)
+        g_uri_ref(ptr);
+    return ptr;
+}
+
+template <> void derefGPtr(GUri* ptr)
+{
+    if (ptr)
+        g_uri_unref(ptr);
+}
+#endif
+
+template <>
+GArray* refGPtr(GArray* ptr)
+{
+    if (ptr)
+        g_array_ref(ptr);
+
+    return ptr;
+}
+
+template <>
+void derefGPtr(GArray* ptr)
+{
+    if (ptr)
+        g_array_unref(ptr);
+}
+
 } // namespace WTF
 
 #endif // USE(GLIB)

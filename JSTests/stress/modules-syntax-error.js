@@ -21,7 +21,7 @@ function checkModuleSyntaxError(source, errorMessage) {
 
 checkModuleSyntaxError(String.raw`
 import {,} from "Cocoa"
-`, `SyntaxError: Unexpected token ','. Expected an imported name for the import declaration.:2`);
+`, `SyntaxError: Unexpected token ','. Expected an imported name or a module export name string for the import declaration.:2`);
 
 checkModuleSyntaxError(String.raw`
 import * from "Cocoa"
@@ -107,25 +107,25 @@ checkModuleSyntaxError(String.raw`
 function noTopLevel() {
     import * as from from "Cocoa"
 }
-`, `SyntaxError: Unexpected token '*'. import call expects exactly one argument.:3`);
+`, `SyntaxError: Unexpected token '*'. import call expects one or two arguments.:3`);
 
 checkModuleSyntaxError(String.raw`
 if (noTopLevel) {
     import * as from from "Cocoa"
 }
-`, `SyntaxError: Unexpected token '*'. import call expects exactly one argument.:3`);
+`, `SyntaxError: Unexpected token '*'. import call expects one or two arguments.:3`);
 
 checkModuleSyntaxError(String.raw`
 {
     import * as from from "Cocoa"
 }
-`, `SyntaxError: Unexpected token '*'. import call expects exactly one argument.:3`);
+`, `SyntaxError: Unexpected token '*'. import call expects one or two arguments.:3`);
 
 checkModuleSyntaxError(String.raw`
 for (var i = 0; i < 1000; ++i) {
     import * as from from "Cocoa"
 }
-`, `SyntaxError: Unexpected token '*'. import call expects exactly one argument.:3`);
+`, `SyntaxError: Unexpected token '*'. import call expects one or two arguments.:3`);
 
 checkModuleSyntaxError(String.raw`
 import for from "Cocoa";
@@ -158,7 +158,7 @@ import { for } from "Cocoa"
 
 checkModuleSyntaxError(String.raw`
 import a, { [assign] as c } from "Cocoa"
-`, `SyntaxError: Unexpected token '['. Expected an imported name for the import declaration.:2`);
+`, `SyntaxError: Unexpected token '['. Expected an imported name or a module export name string for the import declaration.:2`);
 
 checkModuleSyntaxError(String.raw`
 import d, { g as {obj} } from "Cappuccino"
@@ -166,7 +166,7 @@ import d, { g as {obj} } from "Cappuccino"
 
 checkModuleSyntaxError(String.raw`
 import d, { {obj} } from "Cappuccino"
-`, `SyntaxError: Unexpected token '{'. Expected an imported name for the import declaration.:2`);
+`, `SyntaxError: Unexpected token '{'. Expected an imported name or a module export name string for the import declaration.:2`);
 
 checkModuleSyntaxError(String.raw`
 import { binding
@@ -184,11 +184,11 @@ import { hello, binding as
 
 checkModuleSyntaxError(String.raw`
 export { , } from "Cocoa"
-`, `SyntaxError: Unexpected token ','. Expected a variable name for the export declaration.:2`);
+`, `SyntaxError: Unexpected token ','. Expected a variable name or a module export name string for the export declaration.:2`);
 
 checkModuleSyntaxError(String.raw`
 export { a, , } from "Cocoa"
-`, `SyntaxError: Unexpected token ','. Expected a variable name for the export declaration.:2`);
+`, `SyntaxError: Unexpected token ','. Expected a variable name or a module export name string for the export declaration.:2`);
 
 checkModuleSyntaxError(String.raw`
 export a from "Cocoa"
@@ -199,12 +199,29 @@ export a
 `, `SyntaxError: Unexpected identifier 'a'. Expected either a declaration or a variable statement.:2`);
 
 checkModuleSyntaxError(String.raw`
-export * as b from "Cocoa"
-`, `SyntaxError: Unexpected identifier 'as'. Expected 'from' before exported module name.:2`);
+export { * as b } from "Cocoa"
+`, `SyntaxError: Unexpected token '*'. Expected a variable name or a module export name string for the export declaration.:2`);
+
+checkModuleSyntaxError(String.raw`
+export * as b
+`, `SyntaxError: Unexpected end of script:3`);
+
+checkModuleSyntaxError(String.raw`
+export * as 42 from "Cocoa"
+`, `SyntaxError: Unexpected number '42'. Expected an exported name or a module export name string for the export declaration.:2`);
+
+checkModuleSyntaxError(String.raw`
+export const b = 42;
+export * as b from "mod"
+`, `SyntaxError: Cannot export a duplicate name 'b'.:4`);
 
 checkModuleSyntaxError(String.raw`
 export * "Cocoa"
 `, `SyntaxError: Unexpected string literal "Cocoa". Expected 'from' before exported module name.:2`);
+
+checkModuleSyntaxError(String.raw`
+export *
+`, `SyntaxError: Unexpected end of script:3`);
 
 checkModuleSyntaxError(String.raw`
 export const a;
@@ -299,6 +316,42 @@ for (var i = 0; i < 1000; ++i) {
 }
 `, `SyntaxError: Unexpected keyword 'export':3`);
 
+checkModuleSyntaxError(String.raw`
+import { "\ud800" as test } from "./ok.js"
+`, String.raw`SyntaxError: Unexpected string literal "\ud800". Expected a well-formed-unicode string for the module export name.:2`);
+
+checkModuleSyntaxError(String.raw`
+import { "test" } from "./ok.js"
+`, String.raw`SyntaxError: Unexpected token '}'. Expected 'as' after the module export name string.:2`);
+
+checkModuleSyntaxError(String.raw`
+export { "test" }
+`, String.raw`SyntaxError: Cannot use module export names if they reference variable names in the current module.:3`);
+
+checkModuleSyntaxError(String.raw`
+export { "test" as "ok" }
+`, String.raw`SyntaxError: Cannot use module export names if they reference variable names in the current module.:3`);
+
+checkModuleSyntaxError(String.raw`
+export { "\ud800" } from "./ok.js"
+`, String.raw`SyntaxError: Unexpected string literal "\ud800". Expected a well-formed-unicode string for the module export name.:2`);
+
+checkModuleSyntaxError(String.raw`
+export { ok as "\ud800" } from "./ok.js"
+`, String.raw`SyntaxError: Unexpected string literal "\ud800". Expected a well-formed-unicode string for the module export name.:2`);
+
+checkModuleSyntaxError(String.raw`
+export { "hello" as "\ud800" } from "./ok.js"
+`, String.raw`SyntaxError: Unexpected string literal "\ud800". Expected a well-formed-unicode string for the module export name.:2`);
+
+checkModuleSyntaxError(String.raw`
+export { "\ud800" as "hello" } from "./ok.js"
+`, String.raw`SyntaxError: Unexpected string literal "\ud800". Expected a well-formed-unicode string for the module export name.:2`);
+
+checkModuleSyntaxError(String.raw`
+export * as "\ud800" from "./ok.js"
+`, String.raw`SyntaxError: Unexpected string literal "\ud800". Expected a well-formed-unicode string for the module export name.:2`);
+
 // --------------- other ---------------------
 
 checkModuleSyntaxError(String.raw`
@@ -316,3 +369,11 @@ super.test();
 checkModuleSyntaxError(String.raw`
 super.test = 20;
 `, `SyntaxError: super is not valid in this context.:2`);
+
+checkModuleSyntaxError(String.raw`
+new import()
+`, `SyntaxError: Cannot use new with import.:2`);
+
+checkModuleSyntaxError(String.raw`
+new import
+`, `SyntaxError: Cannot use new with import.:3`);

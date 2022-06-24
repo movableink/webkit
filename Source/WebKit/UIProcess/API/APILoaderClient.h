@@ -26,7 +26,6 @@
 #pragma once
 
 #include "APIData.h"
-#include "PluginModuleInfo.h"
 #include "SameDocumentNavigationType.h"
 #include <WebCore/FrameLoaderTypes.h>
 #include <WebCore/LayoutMilestone.h>
@@ -38,7 +37,6 @@ class ResourceError;
 
 namespace WebKit {
 class AuthenticationChallengeProxy;
-class QuickLookDocumentData;
 class WebBackForwardListItem;
 class WebFrameProxy;
 class WebPageProxy;

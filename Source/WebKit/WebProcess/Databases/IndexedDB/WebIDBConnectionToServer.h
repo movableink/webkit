@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "MessageSender.h"
 #include "SandboxExtension.h"
 #include <WebCore/IDBConnectionToServer.h>
@@ -47,9 +45,6 @@ public:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&);
     void connectionToServerLost();
 
-    void ref() final { RefCounted<WebIDBConnectionToServer>::ref(); }
-    void deref() final { RefCounted<WebIDBConnectionToServer>::deref(); }
-
 private:
     WebIDBConnectionToServer();
 
@@ -60,7 +55,7 @@ private:
     void deleteDatabase(const WebCore::IDBRequestData&) final;
     void openDatabase(const WebCore::IDBRequestData&) final;
     void abortTransaction(const WebCore::IDBResourceIdentifier&) final;
-    void commitTransaction(const WebCore::IDBResourceIdentifier&) final;
+    void commitTransaction(const WebCore::IDBResourceIdentifier&, uint64_t pendingRequestCount) final;
     void didFinishHandlingVersionChangeTransaction(uint64_t databaseConnectionIdentifier, const WebCore::IDBResourceIdentifier&) final;
     void createObjectStore(const WebCore::IDBRequestData&, const WebCore::IDBObjectStoreInfo&) final;
     void deleteObjectStore(const WebCore::IDBRequestData&, const String& objectStoreName) final;
@@ -80,11 +75,10 @@ private:
     void databaseConnectionPendingClose(uint64_t databaseConnectionIdentifier) final;
     void databaseConnectionClosed(uint64_t databaseConnectionIdentifier) final;
     void abortOpenAndUpgradeNeeded(uint64_t databaseConnectionIdentifier, const WebCore::IDBResourceIdentifier& transactionIdentifier) final;
-    void didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const WebCore::IDBResourceIdentifier& requestIdentifier) final;
+    void didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const WebCore::IDBResourceIdentifier& requestIdentifier, const WebCore::IndexedDB::ConnectionClosedOnBehalfOfServer) final;
     void openDBRequestCancelled(const WebCore::IDBRequestData&) final;
-    void confirmDidCloseFromServer(uint64_t databaseConnectionIdentifier) final;
 
-    void getAllDatabaseNames(const WebCore::SecurityOriginData& topOrigin, const WebCore::SecurityOriginData& openingOrigin, uint64_t callbackID) final;
+    void getAllDatabaseNamesAndVersions(const WebCore::IDBResourceIdentifier&, const WebCore::ClientOrigin&) final;
 
     // Messages received from Network Process
     void didDeleteDatabase(const WebCore::IDBResultData&);
@@ -109,11 +103,9 @@ private:
     void didStartTransaction(const WebCore::IDBResourceIdentifier& transactionIdentifier, const WebCore::IDBError&);
     void didCloseFromServer(uint64_t databaseConnectionIdentifier, const WebCore::IDBError&);
     void notifyOpenDBRequestBlocked(const WebCore::IDBResourceIdentifier& requestIdentifier, uint64_t oldVersion, uint64_t newVersion);
-    void didGetAllDatabaseNames(uint64_t callbackID, const Vector<String>& databaseNames);
+    void didGetAllDatabaseNamesAndVersions(const WebCore::IDBResourceIdentifier&, Vector<WebCore::IDBDatabaseNameAndVersion>&&);
 
     Ref<WebCore::IDBClient::IDBConnectionToServer> m_connectionToServer;
 };
 
 } // namespace WebKit
-
-#endif // ENABLE(INDEXED_DATABASE)

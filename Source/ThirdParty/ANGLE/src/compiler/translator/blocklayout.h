@@ -79,8 +79,13 @@ class BlockLayoutEncoder
     BlockMemberInfo encodeType(GLenum type,
                                const std::vector<unsigned int> &arraySizes,
                                bool isRowMajorMatrix);
+    // Advance the offset based on struct size and array dimensions.  Size can be calculated with
+    // getShaderVariableSize() or equivalent.  |enterAggregateType|/|exitAggregateType| is necessary
+    // around this call.
+    BlockMemberInfo encodeArrayOfPreEncodedStructs(size_t size,
+                                                   const std::vector<unsigned int> &arraySizes);
 
-    size_t getCurrentOffset() const { return mCurrentOffset * kBytesPerComponent; }
+    size_t getCurrentOffset() const;
     size_t getShaderVariableSize(const ShaderVariable &structVar, bool isRowMajor);
 
     // Called when entering/exiting a structure variable.
@@ -111,10 +116,10 @@ class BlockLayoutEncoder
 };
 
 // Will return default values for everything.
-class DummyBlockEncoder : public BlockLayoutEncoder
+class StubBlockEncoder : public BlockLayoutEncoder
 {
   public:
-    DummyBlockEncoder() = default;
+    StubBlockEncoder() = default;
 
     void enterAggregateType(const ShaderVariable &structVar) override {}
     void exitAggregateType(const ShaderVariable &structVar) override {}
@@ -179,10 +184,10 @@ void GetInterfaceBlockInfo(const std::vector<ShaderVariable> &fields,
                            BlockLayoutMap *blockInfoOut);
 
 // Used for laying out the default uniform block on the Vulkan backend.
-void GetUniformBlockInfo(const std::vector<ShaderVariable> &uniforms,
-                         const std::string &prefix,
-                         BlockLayoutEncoder *encoder,
-                         BlockLayoutMap *blockInfoOut);
+void GetActiveUniformBlockInfo(const std::vector<ShaderVariable> &uniforms,
+                               const std::string &prefix,
+                               BlockLayoutEncoder *encoder,
+                               BlockLayoutMap *blockInfoOut);
 
 class ShaderVariableVisitor
 {
@@ -201,7 +206,7 @@ class ShaderVariableVisitor
     virtual void enterArrayElement(const ShaderVariable &arrayVar, unsigned int arrayElement) {}
     virtual void exitArrayElement(const ShaderVariable &arrayVar, unsigned int arrayElement) {}
 
-    virtual void visitSampler(const sh::ShaderVariable &sampler) {}
+    virtual void visitOpaqueObject(const sh::ShaderVariable &variable) {}
 
     virtual void visitVariable(const ShaderVariable &variable, bool isRowMajor) = 0;
 
@@ -225,10 +230,10 @@ class VariableNameVisitor : public ShaderVariableVisitor
     void exitArrayElement(const ShaderVariable &arrayVar, unsigned int arrayElement) override;
 
   protected:
-    virtual void visitNamedSampler(const sh::ShaderVariable &sampler,
-                                   const std::string &name,
-                                   const std::string &mappedName,
-                                   const std::vector<unsigned int> &arraySizes)
+    virtual void visitNamedOpaqueObject(const sh::ShaderVariable &variable,
+                                        const std::string &name,
+                                        const std::string &mappedName,
+                                        const std::vector<unsigned int> &arraySizes)
     {}
     virtual void visitNamedVariable(const ShaderVariable &variable,
                                     bool isRowMajor,
@@ -240,7 +245,7 @@ class VariableNameVisitor : public ShaderVariableVisitor
     std::string collapseMappedNameStack() const;
 
   private:
-    void visitSampler(const sh::ShaderVariable &sampler) final;
+    void visitOpaqueObject(const sh::ShaderVariable &variable) final;
     void visitVariable(const ShaderVariable &variable, bool isRowMajor) final;
 
     std::vector<std::string> mNameStack;
@@ -296,6 +301,20 @@ void TraverseShaderVariables(const std::vector<T> &vars,
     for (const T &var : vars)
     {
         TraverseShaderVariable(var, isRowMajorLayout, visitor);
+    }
+}
+
+template <typename T>
+void TraverseActiveShaderVariables(const std::vector<T> &vars,
+                                   bool isRowMajorLayout,
+                                   ShaderVariableVisitor *visitor)
+{
+    for (const T &var : vars)
+    {
+        if (var.active)
+        {
+            TraverseShaderVariable(var, isRowMajorLayout, visitor);
+        }
     }
 }
 }  // namespace sh

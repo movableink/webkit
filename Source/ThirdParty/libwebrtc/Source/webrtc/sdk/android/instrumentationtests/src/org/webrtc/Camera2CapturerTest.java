@@ -10,8 +10,6 @@
 
 package org.webrtc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import android.annotation.TargetApi;
@@ -22,12 +20,11 @@ import android.hardware.camera2.CameraManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.test.InstrumentationRegistry;
-import android.support.test.filters.LargeTest;
-import android.support.test.filters.MediumTest;
-import android.support.test.filters.SmallTest;
-import java.io.IOException;
+import androidx.annotation.Nullable;
+import androidx.test.filters.LargeTest;
+import androidx.test.filters.MediumTest;
+import androidx.test.filters.SmallTest;
 import java.util.concurrent.CountDownLatch;
-import javax.annotation.Nullable;
 import org.chromium.base.test.BaseJUnit4ClassRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -238,6 +235,12 @@ public class Camera2CapturerTest {
   @MediumTest
   public void testSwitchVideoCapturer() throws InterruptedException {
     fixtures.switchCamera();
+  }
+
+  @Test
+  @MediumTest
+  public void testSwitchVideoCapturerToSpecificCameraName() throws InterruptedException {
+    fixtures.switchCamera(true /* specifyCameraName */);
   }
 
   @Test

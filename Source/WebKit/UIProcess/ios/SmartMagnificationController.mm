@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "SmartMagnificationControllerMessages.h"
+#import "UserInterfaceIdiom.h"
 #import "ViewGestureGeometryCollectorMessages.h"
 #import "WKContentView.h"
 #import "WKScrollView.h"
@@ -36,12 +37,6 @@
 #import "WebPageMessages.h"
 #import "WebPageProxy.h"
 #import "WebProcessProxy.h"
-
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-
-#import "UIKitSPI.h"
-
-ALLOW_DEPRECATED_DECLARATIONS_END
 
 static const float smartMagnificationPanScrollThresholdZoomedOut = 60;
 static const float smartMagnificationPanScrollThresholdIPhone = 100;
@@ -68,7 +63,7 @@ SmartMagnificationController::~SmartMagnificationController()
 
 void SmartMagnificationController::handleSmartMagnificationGesture(FloatPoint origin)
 {
-    m_webPageProxy.process().send(Messages::ViewGestureGeometryCollector::CollectGeometryForSmartMagnificationGesture(origin), m_webPageProxy.webPageID());
+    m_webPageProxy.send(Messages::ViewGestureGeometryCollector::CollectGeometryForSmartMagnificationGesture(origin));
 }
 
 void SmartMagnificationController::handleResetMagnificationGesture(FloatPoint origin)
@@ -124,10 +119,10 @@ void SmartMagnificationController::didCollectGeometryForSmartMagnificationGestur
     float minimumScrollDistance;
     if ([m_contentView bounds].size.width <= m_webPageProxy.unobscuredContentRect().width())
         minimumScrollDistance = smartMagnificationPanScrollThresholdZoomedOut;
-    else if (currentUserInterfaceIdiomIsPad())
-        minimumScrollDistance = smartMagnificationPanScrollThresholdIPad;
-    else
+    else if (currentUserInterfaceIdiomIsSmallScreen())
         minimumScrollDistance = smartMagnificationPanScrollThresholdIPhone;
+    else
+        minimumScrollDistance = smartMagnificationPanScrollThresholdIPad;
 
     // For replaced elements like images, we want to fit the whole element
     // in the view, so scale it down enough to make both dimensions fit if possible.
@@ -137,13 +132,6 @@ void SmartMagnificationController::didCollectGeometryForSmartMagnificationGestur
 
     // FIXME: If we still don't zoom, send the tap along to text selection (see <rdar://problem/6810344>).
     [m_contentView _zoomToInitialScaleWithOrigin:origin];
-}
-
-void SmartMagnificationController::magnify(FloatPoint origin, FloatRect targetRect, FloatRect visibleContentRect, double viewportMinimumScale, double viewportMaximumScale)
-{
-    auto [adjustedTargetRect, minimumScale, maximumScale] = smartMagnificationTargetRectAndZoomScales(targetRect, viewportMinimumScale, viewportMaximumScale, true);
-
-    [m_contentView _zoomToRect:adjustedTargetRect withOrigin:origin fitEntireRect:NO minimumScale:minimumScale maximumScale:maximumScale minimumScrollDistance:0];
 }
 
 void SmartMagnificationController::scrollToRect(FloatPoint origin, FloatRect targetRect)

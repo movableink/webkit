@@ -23,11 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(MAC)
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
+#import "PlatformWebView.h"
 #import "TestProtocol.h"
 #import <WebKit/WKNavigationActionPrivate.h>
 #import <WebKit/WKProcessPoolPrivate.h>
@@ -37,7 +39,6 @@
 
 static bool shouldCancelNavigation;
 static bool shouldDelayDecision;
-static bool createdWebView;
 static bool decidedPolicy;
 static bool finishedNavigation;
 static RetainPtr<WKNavigationAction> action;
@@ -88,7 +89,7 @@ static NSString *secondURL = @"data:text/html,Second";
     action = navigationAction;
     newWebView = adoptNS([[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:configuration]);
 
-    createdWebView = true;
+    didCreateWebView = true;
     return newWebView.get();
 }
 
@@ -239,9 +240,9 @@ TEST(WebKit, DecidePolicyForNavigationActionOpenNewWindowAndDeallocSourceWebView
         [webView setNavigationDelegate:controller.get()];
         [webView setUIDelegate:controller.get()];
 
-        createdWebView = false;
+        didCreateWebView = false;
         [webView loadHTMLString:@"<script>window.open('http://webkit.org/destination.html')</script>" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
-        TestWebKitAPI::Util::run(&createdWebView);
+        TestWebKitAPI::Util::run(&didCreateWebView);
     }
 
     decidedPolicy = false;
@@ -256,6 +257,29 @@ TEST(WebKit, DecidePolicyForNavigationActionOpenNewWindowAndDeallocSourceWebView
     newWebView = nullptr;
     action = nullptr;
 }
+
+#if WK_HAVE_C_SPI
+TEST(WebKit, DecidePolicyForNewWindowAction)
+{
+    auto context = adoptWK(WKContextCreateWithConfiguration(nullptr));
+
+    TestWebKitAPI::PlatformWebView webView(context.get());
+
+    WKPagePolicyClientV1 policyClient;
+    memset(&policyClient, 0, sizeof(policyClient));
+    policyClient.base.version = 1;
+    policyClient.decidePolicyForNewWindowAction = [] (WKPageRef page, WKFrameRef frame, WKFrameNavigationType navigationType, WKEventModifiers modifiers, WKEventMouseButton mouseButton, WKURLRequestRef request, WKStringRef frameName, WKFramePolicyListenerRef listener, WKTypeRef userData, const void* clientInfo) {
+        EXPECT_TRUE(WKStringIsEqualToUTF8CString(adoptWK(WKURLCopyString(adoptWK(WKURLRequestCopyURL(request)).get())).get(), "https://webkit.org/"));
+        WKFramePolicyListenerIgnore(listener);
+        decidedPolicy = true;
+    };
+    WKPageSetPagePolicyClient(webView.page(), &policyClient.base);
+
+    WKPageLoadHTMLString(webView.page(), adoptWK(WKStringCreateWithUTF8CString("<body onload='anchorTag.click()'><a href='https://webkit.org/' id='anchorTag' target=_blank>link</a></body>")).get(), nullptr);
+
+    TestWebKitAPI::Util::run(&decidedPolicy);
+}
+#endif // WK_HAVE_C_SPI
 
 TEST(WebKit, DecidePolicyForNavigationActionForTargetedHyperlink)
 {
@@ -272,9 +296,9 @@ TEST(WebKit, DecidePolicyForNavigationActionForTargetedHyperlink)
     [webView loadHTMLString:@"<a style=\"display: block; height: 100%\" href=\"https://webkit.org/destination2.html\" target=\"B\">" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
     TestWebKitAPI::Util::run(&finishedNavigation);
 
-    createdWebView = false;
+    didCreateWebView = false;
     [webView evaluateJavaScript:@"window.open(\"https://webkit.org/destination1.html\", \"B\")" completionHandler:nil];
-    TestWebKitAPI::Util::run(&createdWebView);
+    TestWebKitAPI::Util::run(&didCreateWebView);
 
     EXPECT_EQ(WKNavigationTypeOther, [action navigationType]);
     EXPECT_TRUE([action sourceFrame] != [action targetFrame]);
@@ -359,9 +383,9 @@ TEST(WebKit, DecidePolicyForNavigationActionForTargetedWindowOpen)
     [webView loadHTMLString:@"<a style=\"display: block; height: 100%\" href=\"javascript:window.open('https://webkit.org/destination2.html', 'B')\">" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
     TestWebKitAPI::Util::run(&finishedNavigation);
 
-    createdWebView = false;
+    didCreateWebView = false;
     [webView evaluateJavaScript:@"window.open(\"https://webkit.org/destination1.html\", \"B\")" completionHandler:nil];
-    TestWebKitAPI::Util::run(&createdWebView);
+    TestWebKitAPI::Util::run(&didCreateWebView);
 
     EXPECT_EQ(WKNavigationTypeOther, [action navigationType]);
     EXPECT_TRUE([action sourceFrame] != [action targetFrame]);
@@ -408,9 +432,9 @@ TEST(WebKit, DecidePolicyForNavigationActionForTargetedFormSubmission)
     [webView loadHTMLString:@"<form action=\"https://webkit.org/destination1.html\" target=\"B\"><input type=\"submit\" name=\"submit\" value=\"Submit\" style=\"-webkit-appearance: none; height: 100%; width: 100%\"></form>" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
     TestWebKitAPI::Util::run(&finishedNavigation);
 
-    createdWebView = false;
+    didCreateWebView = false;
     [webView evaluateJavaScript:@"window.open(\"https://webkit.org/destination2.html\", \"B\")" completionHandler:nil];
-    TestWebKitAPI::Util::run(&createdWebView);
+    TestWebKitAPI::Util::run(&didCreateWebView);
 
     EXPECT_EQ(WKNavigationTypeOther, [action navigationType]);
     EXPECT_TRUE([action sourceFrame] != [action targetFrame]);
@@ -623,7 +647,6 @@ TEST(WebKit, DelayDecidePolicyForNavigationAction)
 }
 
 static size_t calls;
-static bool done;
 
 @interface DecidePolicyForNavigationActionFragmentDelegate : NSObject <WKNavigationDelegate>
 @end

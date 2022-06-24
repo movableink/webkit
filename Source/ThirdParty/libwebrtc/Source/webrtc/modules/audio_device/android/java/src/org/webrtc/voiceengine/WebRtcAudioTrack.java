@@ -18,9 +18,9 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Build;
 import android.os.Process;
+import androidx.annotation.Nullable;
 import java.lang.Thread;
 import java.nio.ByteBuffer;
-import javax.annotation.Nullable;
 import org.webrtc.ContextUtils;
 import org.webrtc.Logging;
 import org.webrtc.ThreadUtils;
@@ -78,7 +78,7 @@ public class WebRtcAudioTrack {
   private @Nullable AudioTrack audioTrack;
   private @Nullable AudioTrackThread audioThread;
 
-  // Samples to be played are replaced by zeros if |speakerMute| is set to true.
+  // Samples to be played are replaced by zeros if `speakerMute` is set to true.
   // Can be used to ensure that the speaker is fully muted.
   private static volatile boolean speakerMute;
   private byte[] emptyBytes;
@@ -215,9 +215,11 @@ public class WebRtcAudioTrack {
     }
   }
 
-  private boolean initPlayout(int sampleRate, int channels) {
+  private int initPlayout(int sampleRate, int channels, double bufferSizeFactor) {
     threadChecker.checkIsOnValidThread();
-    Logging.d(TAG, "initPlayout(sampleRate=" + sampleRate + ", channels=" + channels + ")");
+    Logging.d(TAG,
+        "initPlayout(sampleRate=" + sampleRate + ", channels=" + channels
+            + ", bufferSizeFactor=" + bufferSizeFactor + ")");
     final int bytesPerFrame = channels * (BITS_PER_SAMPLE / 8);
     byteBuffer = ByteBuffer.allocateDirect(bytesPerFrame * (sampleRate / BUFFERS_PER_SECOND));
     Logging.d(TAG, "byteBuffer.capacity: " + byteBuffer.capacity());
@@ -230,26 +232,26 @@ public class WebRtcAudioTrack {
     // Get the minimum buffer size required for the successful creation of an
     // AudioTrack object to be created in the MODE_STREAM mode.
     // Note that this size doesn't guarantee a smooth playback under load.
-    // TODO(henrika): should we extend the buffer size to avoid glitches?
     final int channelConfig = channelCountToConfiguration(channels);
-    final int minBufferSizeInBytes =
-        AudioTrack.getMinBufferSize(sampleRate, channelConfig, AudioFormat.ENCODING_PCM_16BIT);
-    Logging.d(TAG, "AudioTrack.getMinBufferSize: " + minBufferSizeInBytes);
+    final int minBufferSizeInBytes = (int) (AudioTrack.getMinBufferSize(sampleRate, channelConfig,
+                                                AudioFormat.ENCODING_PCM_16BIT)
+        * bufferSizeFactor);
+    Logging.d(TAG, "minBufferSizeInBytes: " + minBufferSizeInBytes);
     // For the streaming mode, data must be written to the audio sink in
     // chunks of size (given by byteBuffer.capacity()) less than or equal
-    // to the total buffer size |minBufferSizeInBytes|. But, we have seen
+    // to the total buffer size `minBufferSizeInBytes`. But, we have seen
     // reports of "getMinBufferSize(): error querying hardware". Hence, it
-    // can happen that |minBufferSizeInBytes| contains an invalid value.
+    // can happen that `minBufferSizeInBytes` contains an invalid value.
     if (minBufferSizeInBytes < byteBuffer.capacity()) {
       reportWebRtcAudioTrackInitError("AudioTrack.getMinBufferSize returns an invalid value.");
-      return false;
+      return -1;
     }
 
     // Ensure that prevision audio session was stopped correctly before trying
     // to create a new AudioTrack.
     if (audioTrack != null) {
       reportWebRtcAudioTrackInitError("Conflict with existing AudioTrack.");
-      return false;
+      return -1;
     }
     try {
       // Create an AudioTrack object and initialize its associated audio buffer.
@@ -271,7 +273,7 @@ public class WebRtcAudioTrack {
     } catch (IllegalArgumentException e) {
       reportWebRtcAudioTrackInitError(e.getMessage());
       releaseAudioResources();
-      return false;
+      return -1;
     }
 
     // It can happen that an AudioTrack is created but it was not successfully
@@ -280,11 +282,11 @@ public class WebRtcAudioTrack {
     if (audioTrack == null || audioTrack.getState() != AudioTrack.STATE_INITIALIZED) {
       reportWebRtcAudioTrackInitError("Initialization of audio track failed.");
       releaseAudioResources();
-      return false;
+      return -1;
     }
     logMainParameters();
     logMainParametersExtended();
-    return true;
+    return minBufferSizeInBytes;
   }
 
   private boolean startPlayout() {
@@ -431,6 +433,13 @@ public class WebRtcAudioTrack {
     }
   }
 
+  private int getBufferSizeInFrames() {
+    if (Build.VERSION.SDK_INT >= 23) {
+      return audioTrack.getBufferSizeInFrames();
+    }
+    return -1;
+  }
+
   private void logBufferCapacityInFrames() {
     if (Build.VERSION.SDK_INT >= 24) {
       Logging.d(TAG,
@@ -472,7 +481,7 @@ public class WebRtcAudioTrack {
 
   private native void nativeGetPlayoutData(int bytes, long nativeAudioRecord);
 
-  // Sets all samples to be played out to zero if |mute| is true, i.e.,
+  // Sets all samples to be played out to zero if `mute` is true, i.e.,
   // ensures that the speaker is muted.
   public static void setSpeakerMute(boolean mute) {
     Logging.w(TAG, "setSpeakerMute(" + mute + ")");

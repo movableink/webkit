@@ -28,11 +28,9 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "ArrayPrototype.h"
-#include "DFGClobberize.h"
 #include "DFGGraph.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 // FIXME: Remove this phase entirely by moving the addLazily() calls into either the backend or
 // into the phase that performs the optimization. Moving the calls into the backend makes the most
@@ -73,7 +71,7 @@ private:
     void handle()
     {
         switch (m_node->op()) {
-        case IsUndefined:
+        case TypeOfIsUndefined:
             handleMasqueradesAsUndefined();
             break;
             
@@ -85,6 +83,7 @@ private:
                 handleMasqueradesAsUndefined();
             break;
             
+        case ToBoolean:
         case LogicalNot:
         case Branch:
             switch (m_node->child1().useKind()) {

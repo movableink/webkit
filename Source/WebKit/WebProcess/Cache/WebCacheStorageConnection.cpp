@@ -47,7 +47,7 @@ WebCacheStorageConnection::WebCacheStorageConnection(WebCacheStorageProvider& pr
 
 WebCacheStorageConnection::~WebCacheStorageConnection()
 {
-    ASSERT(isMainThread());
+    ASSERT(isMainRunLoop());
 }
 
 IPC::Connection& WebCacheStorageConnection::connection()
@@ -70,9 +70,9 @@ void WebCacheStorageConnection::retrieveCaches(const WebCore::ClientOrigin& orig
     connection().sendWithAsyncReply(Messages::CacheStorageEngineConnection::Caches(origin, updateCounter), WTFMove(callback));
 }
 
-void WebCacheStorageConnection::retrieveRecords(uint64_t cacheIdentifier, const URL& url, WebCore::DOMCacheEngine::RecordsCallback&& callback)
+void WebCacheStorageConnection::retrieveRecords(uint64_t cacheIdentifier, WebCore::RetrieveRecordsOptions&& options, WebCore::DOMCacheEngine::RecordsCallback&& callback)
 {
-    connection().sendWithAsyncReply(Messages::CacheStorageEngineConnection::RetrieveRecords(cacheIdentifier, url), WTFMove(callback));
+    connection().sendWithAsyncReply(Messages::CacheStorageEngineConnection::RetrieveRecords(cacheIdentifier, options), WTFMove(callback));
 }
 
 void WebCacheStorageConnection::batchDeleteOperation(uint64_t cacheIdentifier, const WebCore::ResourceRequest& request, WebCore::CacheQueryOptions&& options, WebCore::DOMCacheEngine::RecordIdentifiersCallback&& callback)
@@ -107,7 +107,7 @@ void WebCacheStorageConnection::engineRepresentation(CompletionHandler<void(cons
 
 void WebCacheStorageConnection::updateQuotaBasedOnSpaceUsage(const WebCore::ClientOrigin& origin)
 {
-    connection().send(Messages::NetworkProcess::UpdateQuotaBasedOnSpaceUsageForTesting(WebProcess::singleton().sessionID(), origin), 0);
+    connection().send(Messages::NetworkConnectionToWebProcess::UpdateQuotaBasedOnSpaceUsageForTesting(origin), 0);
 }
 
 }

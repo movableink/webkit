@@ -23,13 +23,17 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "WKWebProcessPlugInFrame.h"
+#import <WebKit/WKWebProcessPlugInFrame.h>
 
+@class JSContext;
+@class JSValue;
 @class WKWebProcessPlugInBrowserContextController;
 
 @interface WKWebProcessPlugInFrame (WKPrivate)
 
 + (instancetype)lookUpFrameFromHandle:(_WKFrameHandle *)handle;
++ (instancetype)lookUpFrameFromJSContext:(JSContext *)context;
++ (instancetype)lookUpContentFrameFromWindowOrFrameElement:(JSValue *)value;
 
 @property (nonatomic, readonly) WKWebProcessPlugInBrowserContextController *_browserContextController;
 
@@ -37,6 +41,7 @@
 @property (nonatomic, readonly) NSArray *_certificateChain;
 @property (nonatomic, readonly) SecTrustRef _serverTrust;
 @property (nonatomic, readonly) NSURL *_provisionalURL;
+@property (nonatomic, readonly) NSString *_securityOrigin;
 
 @property (nonatomic, readonly) WKWebProcessPlugInFrame *_parentFrame;
 

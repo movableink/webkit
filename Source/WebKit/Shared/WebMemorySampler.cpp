@@ -143,10 +143,8 @@ void WebMemorySampler::initializeSandboxedLogFile(SandboxExtension::Handle&& sam
 
 void WebMemorySampler::writeHeaders()
 {
-    String processDetails = makeString("Process: ", processName(), " Pid: ", getCurrentProcessID(), '\n');
-
-    CString utf8String = processDetails.utf8();
-    FileSystem::writeToFile(m_sampleLogFile, utf8String.data(), utf8String.length());
+    auto processDetails = makeString("Process: ", processName(), " Pid: ", getCurrentProcessID(), '\n').utf8();
+    FileSystem::writeToFile(m_sampleLogFile, processDetails.data(), processDetails.length());
 }
 
 void WebMemorySampler::sampleTimerFired()
@@ -172,11 +170,9 @@ void WebMemorySampler::appendCurrentMemoryUsageToFile(FileSystem::PlatformFileHa
     if (!memoryStats.values.isEmpty()) {
         statString.append(separator);
         for (size_t i = 0; i < memoryStats.values.size(); ++i) {
-            statString.append('\n');
-            statString.append(separator);
-            statString.append(memoryStats.keys[i]);
+            statString.append('\n', separator, memoryStats.keys[i]);
             appendSpaces(statString, 35 - memoryStats.keys[i].length());
-            statString.appendNumber(memoryStats.values[i]);
+            statString.append(memoryStats.values[i]);
         }
     }
     statString.append('\n');

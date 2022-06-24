@@ -40,11 +40,6 @@
 namespace WebKit {
 using namespace WebCore;
 
-static bool layerShouldHaveBackingStore(TextureMapperLayer* layer)
-{
-    return layer->drawsContent() && layer->contentsAreVisible() && !layer->size().isEmpty();
-}
-
 CoordinatedGraphicsScene::CoordinatedGraphicsScene(CoordinatedGraphicsSceneClient* client)
     : m_client(client)
 {
@@ -73,15 +68,14 @@ void CoordinatedGraphicsScene::paintToCurrentGLContext(const TransformationMatri
     if (!currentRootLayer)
         return;
 
-    currentRootLayer->setTextureMapper(m_textureMapper.get());
-    bool sceneHasRunningAnimations = currentRootLayer->applyAnimationsRecursively(MonotonicTime::now());
-    m_textureMapper->beginPainting(PaintFlags);
-    m_textureMapper->beginClip(TransformationMatrix(), clipRect);
-
     if (currentRootLayer->transform() != matrix)
         currentRootLayer->setTransform(matrix);
 
-    currentRootLayer->paint();
+    bool sceneHasRunningAnimations = currentRootLayer->applyAnimationsRecursively(MonotonicTime::now());
+    m_textureMapper->beginPainting(PaintFlags);
+    m_textureMapper->beginClip(TransformationMatrix(), FloatRoundedRect(clipRect));
+
+    currentRootLayer->paint(*m_textureMapper);
     m_fpsCounter.updateFPSAndDisplay(*m_textureMapper, clipRect.location(), matrix);
     m_textureMapper->endClip();
     m_textureMapper->endPainting();
@@ -142,12 +136,6 @@ void updateBackingStore(TextureMapperLayer& layer,
     Nicosia::BackingStoreTextureMapperImpl::CompositionState& compositionState,
     const Nicosia::BackingStoreTextureMapperImpl::TileUpdate& update)
 {
-    if (!layerShouldHaveBackingStore(&layer)) {
-        layer.setBackingStore(nullptr);
-        compositionState.backingStore = nullptr;
-        return;
-    }
-
     if (!compositionState.backingStore)
         compositionState.backingStore = CoordinatedBackingStore::create();
     auto& backingStore = *compositionState.backingStore;
@@ -170,7 +158,7 @@ void updateImageBacking(TextureMapperLayer& layer,
     Nicosia::ImageBackingTextureMapperImpl::Update& update)
 {
     if (!update.isVisible) {
-        layer.setBackingStore(nullptr);
+        layer.setContentsLayer(nullptr);
         return;
     }
 
@@ -289,7 +277,7 @@ void CoordinatedGraphicsScene::updateSceneState()
             for (auto& compositionLayer : m_nicosia.state.layers) {
                 auto& layer = texmapLayer(*compositionLayer);
                 compositionLayer->commitState(
-                    [this, &layer, &compositionLayer, &layersByBacking]
+                    [&layer, &layersByBacking]
                     (const Nicosia::CompositionLayer::LayerState& layerState)
                     {
                         if (layerState.delta.positionChanged)
@@ -312,6 +300,8 @@ void CoordinatedGraphicsScene::updateSceneState()
                             layer.setContentsTilePhase(layerState.contentsTilePhase);
                             layer.setContentsTileSize(layerState.contentsTileSize);
                         }
+                        if (layerState.delta.contentsClippingRectChanged)
+                            layer.setContentsClippingRect(layerState.contentsClippingRect);
 
                         if (layerState.delta.opacityChanged)
                             layer.setOpacity(layerState.opacity);
@@ -320,6 +310,10 @@ void CoordinatedGraphicsScene::updateSceneState()
 
                         if (layerState.delta.filtersChanged)
                             layer.setFilters(layerState.filters);
+                        if (layerState.delta.backdropFiltersChanged)
+                            layer.setBackdropLayer(layerState.backdropLayer ? &texmapLayer(*layerState.backdropLayer) : nullptr);
+                        if (layerState.delta.backdropFiltersRectChanged)
+                            layer.setBackdropFiltersRect(layerState.backdropFiltersRect);
                         if (layerState.delta.animationsChanged)
                             layer.setAnimations(layerState.animations);
 
@@ -386,7 +380,7 @@ void CoordinatedGraphicsScene::updateSceneState()
             updateBackingStore(entry.layer.get(), compositionState, entry.update);
 
             if (compositionState.backingStore)
-                backingStoresWithPendingBuffers.add(makeRef(*compositionState.backingStore));
+                backingStoresWithPendingBuffers.add(*compositionState.backingStore);
         }
 
         layersByBacking.backingStore = { };
@@ -397,7 +391,7 @@ void CoordinatedGraphicsScene::updateSceneState()
             auto& proxy = entry.proxy.get();
             if (entry.needsActivation)
                 proxy.activateOnCompositingThread(this, &entry.layer.get());
-            proxiesForSwapping.add(makeRef(proxy));
+            proxiesForSwapping.add(proxy);
         }
 
         layersByBacking.contentLayer = { };
@@ -409,7 +403,7 @@ void CoordinatedGraphicsScene::updateSceneState()
             updateImageBacking(entry.layer.get(), compositionState, entry.update);
 
             if (compositionState.backingStore)
-                backingStoresWithPendingBuffers.add(makeRef(*compositionState.backingStore));
+                backingStoresWithPendingBuffers.add(*compositionState.backingStore);
         }
 
         layersByBacking.imageBacking = { };
@@ -434,9 +428,6 @@ void CoordinatedGraphicsScene::ensureRootLayer()
 
     // The root layer should not have zero size, or it would be optimized out.
     m_rootLayer->setSize(FloatSize(1.0, 1.0));
-
-    ASSERT(m_textureMapper);
-    m_rootLayer->setTextureMapper(m_textureMapper.get());
 }
 
 void CoordinatedGraphicsScene::purgeGLResources()

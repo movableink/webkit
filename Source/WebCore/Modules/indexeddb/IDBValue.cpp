@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBValue.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "SerializedScriptValue.h"
 #include <wtf/CrossThreadTask.h>
 
@@ -38,8 +36,8 @@ IDBValue::IDBValue()
 }
 
 IDBValue::IDBValue(const SerializedScriptValue& scriptValue)
-    : m_data(ThreadSafeDataBuffer::copyVector(scriptValue.data()))
-    , m_blobURLs(scriptValue.blobURLsIsolatedCopy())
+    : m_data(ThreadSafeDataBuffer::copyVector(scriptValue.wireBytes()))
+    , m_blobURLs(scriptValue.blobURLs())
 {
 }
 
@@ -49,7 +47,7 @@ IDBValue::IDBValue(const ThreadSafeDataBuffer& value)
 }
 
 IDBValue::IDBValue(const SerializedScriptValue& scriptValue, const Vector<String>& blobURLs, const Vector<String>& blobFilePaths)
-    : m_data(ThreadSafeDataBuffer::copyVector(scriptValue.data()))
+    : m_data(ThreadSafeDataBuffer::copyVector(scriptValue.wireBytes()))
     , m_blobURLs(blobURLs)
     , m_blobFilePaths(blobFilePaths)
 {
@@ -86,6 +84,19 @@ IDBValue IDBValue::isolatedCopy() const
     return result;
 }
 
-} // namespace WebCore
+size_t IDBValue::size() const
+{
+    size_t totalSize = 0;
 
-#endif // ENABLE(INDEXED_DATABASE)
+    for (auto& url : m_blobURLs)
+        totalSize += url.sizeInBytes();
+
+    for (auto& path : m_blobFilePaths)
+        totalSize += path.sizeInBytes();
+
+    totalSize += m_data.size();
+
+    return totalSize;
+}
+
+} // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,6 @@
 #import <JavaScriptCore/JavaScriptCore.h>
 
 #import "CurrentThisInsideBlockGetterTest.h"
-#import "DFGWorklist.h"
 #import "DateTests.h"
 #import "JSCast.h"
 #import "JSContextPrivate.h"
@@ -40,7 +39,13 @@
 #import "JSWrapperMapTests.h"
 #import "Regress141275.h"
 #import "Regress141809.h"
+#import <wtf/SafeStrerror.h>
 #import <wtf/spi/darwin/DataVaultSPI.h>
+
+
+#if PLATFORM(COCOA)
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
 
 #if __has_include(<libproc.h>)
 #define HAS_LIBPROC 1
@@ -51,8 +56,8 @@
 #import <pthread.h>
 #import <vector>
 #import <wtf/MemoryFootprint.h>
-#import <wtf/Optional.h>
 #import <wtf/DataLog.h>
+#import <wtf/RetainPtr.h>
 
 extern "C" void JSSynchronousGarbageCollectForDebugging(JSContextRef);
 extern "C" void JSSynchronousEdenCollectForDebugging(JSContextRef);
@@ -128,7 +133,7 @@ JSExportAs(testArgumentTypes,
 }
 - (void)callback:(JSValue *)function
 {
-    [function callWithArguments:[NSArray arrayWithObject:[NSNumber numberWithInt:42]]];
+    [function callWithArguments:@[@(42)]];
 }
 - (void)bogusCallback:(void(^)(int))function
 {
@@ -199,7 +204,7 @@ bool testXYZTested = false;
         return;
 
     JSValue *function = [m_onclickHandler value];
-    [function callWithArguments:[NSArray array]];
+    [function callWithArguments:@[]];
 }
 @end
 
@@ -217,7 +222,7 @@ bool testXYZTested = false;
 
 @implementation TinyDOMNode {
     NSMutableArray *m_children;
-    JSVirtualMachine *m_sharedVirtualMachine;
+    RetainPtr<JSVirtualMachine> m_sharedVirtualMachine;
 }
 
 - (id)initWithVirtualMachine:(JSVirtualMachine *)virtualMachine
@@ -228,9 +233,6 @@ bool testXYZTested = false;
 
     m_children = [[NSMutableArray alloc] initWithCapacity:0];
     m_sharedVirtualMachine = virtualMachine;
-#if !__has_feature(objc_arc)
-    [m_sharedVirtualMachine retain];
-#endif
 
     return self;
 }
@@ -551,20 +553,18 @@ static void runJITThreadLimitTests()
         checkResult(@"Number of FTL threads should have been updated", updatedNumberOfThreads == targetNumberOfThreads);
     };
 
-    checkResult(@"runJITThreadLimitTests() must run at the very beginning to test the case where the global JIT worklist was not initialized yet", !JSC::DFG::existingGlobalDFGWorklistOrNull() && !JSC::DFG::existingGlobalFTLWorklistOrNull());
-
     testDFG();
-    JSC::DFG::ensureGlobalDFGWorklist();
-    testDFG();
-
-    testFTL();
-    JSC::DFG::ensureGlobalFTLWorklist();
     testFTL();
 #endif // ENABLE(DFG_JIT)
 }
 
 static void testObjectiveCAPIMain()
 {
+    @autoreleasepool {
+        JSValue *value = [JSValue valueWithJSValueRef:nil inContext:nil];
+        checkResult(@"nil JSValue creation", !value);
+    }
+
     @autoreleasepool {
         JSVirtualMachine* vm = [[JSVirtualMachine alloc] init];
         JSContext* context = [[JSContext alloc] initWithVirtualMachine:vm];
@@ -1014,7 +1014,7 @@ static void testObjectiveCAPIMain()
     @autoreleasepool {
         JSContext *context = [[JSContext alloc] init];
         JSValue *result = [context evaluateScript:@"String(console)"];
-        checkResult(@"String(console)", [result isEqualToObject:@"[object Console]"]);
+        checkResult(@"String(console)", [result isEqualToObject:@"[object console]"]);
         result = [context evaluateScript:@"typeof console.log"];
         checkResult(@"typeof console.log", [result isEqualToObject:@"function"]);
     }
@@ -1171,10 +1171,8 @@ static void testObjectiveCAPIMain()
         JSContext *context = [[JSContext alloc] init];
         context[@"handleTheDictionary"] = ^(NSDictionary *dict) {
             NSDictionary *expectedDict = @{
-                @"foo" : [NSNumber numberWithInt:1],
-                @"bar" : @{
-                    @"baz": [NSNumber numberWithInt:2]
-                }
+                @"foo": @(1),
+                @"bar": @{ @"baz": @(2) }
             };
             checkResult(@"recursively convert nested dictionaries", [dict isEqualToDictionary:expectedDict]);
         };
@@ -1891,11 +1889,9 @@ static void checkModuleCodeRan(JSContext *context, JSValue *promise, JSValue *ex
 
 static void checkModuleWasRejected(JSContext *context, JSValue *promise)
 {
-    __block BOOL promiseWasRejected = false;
     [promise invokeMethod:@"then" withArguments:@[^() {
         checkResult(@"module was rejected as expected", NO);
     }, ^(JSValue *error) {
-        promiseWasRejected = true;
         NSLog(@"%@", [error toString]);
         checkResult(@"module graph was rejected with error", ![error isEqualWithTypeCoercionToObject:[JSValue valueWithNullInContext:context]]);
     }]];
@@ -2456,7 +2452,7 @@ static NSURL *resolvePathToScripts()
         const size_t maxLength = 10000;
         char cwd[maxLength];
         if (!getcwd(cwd, maxLength)) {
-            NSLog(@"getcwd errored with code: %s", strerror(errno));
+            NSLog(@"getcwd errored with code: %s", safeStrerror(errno).data());
             exit(1);
         }
         NSURL *cwdURL = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%s", cwd]];
@@ -2743,6 +2739,31 @@ static void testDependenciesMissingImport()
     }
 }
 
+static void testMicrotaskWithFunction()
+{
+    @autoreleasepool {
+#if PLATFORM(COCOA)
+        bool useLegacyDrain = !linkedOnOrAfter(SDKVersion::FirstThatDoesNotDrainTheMicrotaskQueueWhenCallingObjC);
+        if (useLegacyDrain)
+            return;
+#endif
+
+        JSContext *context = [[JSContext alloc] init];
+
+        JSValue *globalObject = context.globalObject;
+
+        auto block = ^() {
+            return 1+1;
+        };
+
+        [globalObject setValue:block forProperty:@"setTimeout"];
+        JSValue *arr = [context evaluateScript:@"var arr = []; (async () => { await 1; arr.push(3); })(); arr.push(1); setTimeout(); arr.push(2); arr;"];
+        checkResult(@"arr[0] should be 1", [arr[@0] toInt32] == 1);
+        checkResult(@"arr[1] should be 2", [arr[@1] toInt32] == 2);
+        checkResult(@"arr[2] should be 3", [arr[@2] toInt32] == 3);
+    }
+}
+
 @protocol ToString <JSExport>
 - (NSString *)toString;
 @end
@@ -2861,7 +2882,10 @@ void testObjectiveCAPI(const char* filter)
     RUN(promiseCreateRejected());
     RUN(parallelPromiseResolveTest());
 
-    testObjectiveCAPIMain();
+    RUN(testMicrotaskWithFunction());
+
+    if (!filter)
+        testObjectiveCAPIMain();
 }
 
 #else

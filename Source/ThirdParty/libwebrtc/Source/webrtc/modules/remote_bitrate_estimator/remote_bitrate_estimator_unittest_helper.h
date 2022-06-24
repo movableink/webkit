@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "modules/remote_bitrate_estimator/include/remote_bitrate_estimator.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 #include "system_wrappers/include/clock.h"
 #include "test/gtest.h"
 
@@ -122,11 +122,11 @@ class StreamGenerator {
   // Set the link capacity.
   void set_capacity_bps(int capacity_bps);
 
-  // Divides |bitrate_bps| among all streams. The allocated bitrate per stream
+  // Divides `bitrate_bps` among all streams. The allocated bitrate per stream
   // is decided by the initial allocation ratios.
   void SetBitrateBps(int bitrate_bps);
 
-  // Set the RTP timestamp offset for the stream identified by |ssrc|.
+  // Set the RTP timestamp offset for the stream identified by `ssrc`.
   void set_rtp_timestamp_offset(uint32_t ssrc, uint32_t offset);
 
   // TODO(holmer): Break out the channel simulation part from this class to make
@@ -158,15 +158,15 @@ class RemoteBitrateEstimatorTest : public ::testing::Test {
   void AddDefaultStream();
 
   // Helper to convert some time format to resolution used in absolute send time
-  // header extension, rounded upwards. |t| is the time to convert, in some
-  // resolution. |denom| is the value to divide |t| by to get whole seconds,
-  // e.g. |denom| = 1000 if |t| is in milliseconds.
+  // header extension, rounded upwards. `t` is the time to convert, in some
+  // resolution. `denom` is the value to divide `t` by to get whole seconds,
+  // e.g. `denom` = 1000 if `t` is in milliseconds.
   static uint32_t AbsSendTime(int64_t t, int64_t denom);
 
   // Helper to add two absolute send time values and keep it less than 1<<24.
   static uint32_t AddAbsSendTime(uint32_t t1, uint32_t t2);
 
-  // Helper to create a WebRtcRTPHeader containing the relevant data for the
+  // Helper to create an RTPHeader containing the relevant data for the
   // estimator (all other fields are cleared) and call IncomingPacket on the
   // estimator.
   void IncomingPacket(uint32_t ssrc,
@@ -183,8 +183,8 @@ class RemoteBitrateEstimatorTest : public ::testing::Test {
   // target bitrate after the call to this function.
   bool GenerateAndProcessFrame(uint32_t ssrc, uint32_t bitrate_bps);
 
-  // Run the bandwidth estimator with a stream of |number_of_frames| frames, or
-  // until it reaches |target_bitrate|.
+  // Run the bandwidth estimator with a stream of `number_of_frames` frames, or
+  // until it reaches `target_bitrate`.
   // Can for instance be used to run the estimator for some time to get it
   // into a steady state.
   uint32_t SteadyStateRun(uint32_t ssrc,

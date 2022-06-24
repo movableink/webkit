@@ -1,21 +1,9 @@
-LIBWEBRTC_MODULE = 
+LIBWEBRTC_MODULE = libwebrtc
+
+TO_LOWER = $(shell echo $(1) | tr [:upper:] [:lower:])
 
 ifeq (iosmac,$(SDK_VARIANT))
 	DISABLE_LIBWEBRTC = 1
-endif
-
-ifneq (,$(SDKROOT))
-	ifneq (,$(findstring iphone,$(SDKROOT)))
-		LIBWEBRTC_MODULE = libwebrtc
-	endif
-	ifneq (,$(findstring macosx,$(SDKROOT)))
-		LIBWEBRTC_MODULE = libwebrtc
-	endif
-	ifneq (,$(findstring watch,$(SDKROOT)))
-		LIBWEBRTC_MODULE = libwebrtc
-	endif
-else
-	LIBWEBRTC_MODULE = libwebrtc
 endif
 
 ifneq (,$(DISABLE_LIBWEBRTC))
@@ -24,22 +12,34 @@ endif
 
 MODULES = ANGLE $(LIBWEBRTC_MODULE)
 
+define build_target_for_each_module
+	for dir in $(MODULES); do \
+		${MAKE} $@ -C $$dir PATH_FROM_ROOT=$(PATH_FROM_ROOT)/$${dir}; \
+		exit_status=$$?; \
+		[ $$exit_status -ne 0 ] && exit $$exit_status; \
+	done; true
+endef
+
 all:
-	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
-	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+	@$(build_target_for_each_module)
 
-debug d development dev develop:
-	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
-	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+debug d:
+	@$(build_target_for_each_module)
 
-release r deployment dep deploy:
-	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
-	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+release r:
+	@$(build_target_for_each_module)
+
+release+assert ra:
+	@$(build_target_for_each_module)
+
+testing t:
+	@$(build_target_for_each_module)
 
 analyze:
-	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
-	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+	@$(build_target_for_each_module)
 
 clean:
-	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
-	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+	@$(build_target_for_each_module)
+
+installsrc:
+	@$(build_target_for_each_module)

@@ -36,8 +36,10 @@ WI.SourceMapResource = class SourceMapResource extends WI.Resource
 
         var inheritedMIMEType = this._sourceMap.originalSourceCode instanceof WI.Resource ? this._sourceMap.originalSourceCode.syntheticMIMEType : null;
 
-        var fileExtension = WI.fileExtensionForURL(url) || "";
-        var fileExtensionMIMEType = WI.mimeTypeForFileExtension(fileExtension, true);
+        let fileExtension = WI.fileExtensionForURL(url) || "";
+
+        // React serves JSX resources with "js" extension.
+        let fileExtensionMIMEType = fileExtension === "js" ? "text/jsx" : WI.mimeTypeForFileExtension(fileExtension, true);
 
         // FIXME: This is a layering violation. It should use a helper function on the
         // Resource base-class to set _mimeType and _type.
@@ -63,8 +65,19 @@ WI.SourceMapResource = class SourceMapResource extends WI.Resource
             resourceURLComponents.path = this.url;
 
         // Different schemes / hosts. Return the host + path of this resource.
-        if (resourceURLComponents.scheme !== sourceMappingBasePathURLComponents.scheme || resourceURLComponents.host !== sourceMappingBasePathURLComponents.host)
-            return resourceURLComponents.host + (resourceURLComponents.port ? (":" + resourceURLComponents.port) : "") + resourceURLComponents.path;
+        if (resourceURLComponents.scheme !== sourceMappingBasePathURLComponents.scheme || resourceURLComponents.host !== sourceMappingBasePathURLComponents.host) {
+            let subpath = "";
+            if (resourceURLComponents.host) {
+                subpath += resourceURLComponents.host;
+                if (resourceURLComponents.port)
+                    subpath += ":" + resourceURLComponents.port;
+                subpath += resourceURLComponents.path;
+            } else {
+                // Remove the leading "/" so there isn't an empty folder.
+                subpath += resourceURLComponents.path.substring(1);
+            }
+            return subpath;
+        }
 
         // Same host, but not a subpath of the base. This implies a ".." in the relative path.
         if (!resourceURLComponents.path.startsWith(sourceMappingBasePathURLComponents.path))
@@ -132,7 +145,7 @@ WI.SourceMapResource = class SourceMapResource extends WI.Resource
             });
         }
 
-        if (!InspectorBackend.hasDomain("Network"))
+        if (!this._target.hasCommand("Network.loadResource"))
             return sourceMapResourceLoadError.call(this);
 
         var frameIdentifier = null;

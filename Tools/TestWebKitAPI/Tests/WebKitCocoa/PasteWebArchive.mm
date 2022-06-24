@@ -23,10 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(MAC)
 
+#import "PasteboardUtilities.h"
 #import "PlatformUtilities.h"
 #import "TestWKWebView.h"
 #import <WebKit/WKPreferencesPrivate.h>
@@ -38,15 +39,6 @@
 @interface WKWebView ()
 - (void)paste:(id)sender;
 @end
-
-static RetainPtr<TestWKWebView> createWebViewWithCustomPasteboardDataEnabled()
-{
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 400)]);
-    auto preferences = (__bridge WKPreferencesRef)[[webView configuration] preferences];
-    WKPreferencesSetDataTransferItemsEnabled(preferences, true);
-    WKPreferencesSetCustomPasteboardDataEnabled(preferences, true);
-    return webView;
-}
 
 TEST(PasteWebArchive, ExposesHTMLTypeInDataTransfer)
 {
@@ -239,6 +231,49 @@ TEST(PasteWebArchive, StripsMSOListWhenMissingMSOHTMLElement)
     [webView stringByEvaluatingJavaScript:@"getSelection().modify('move', 'forward', 'lineboundary');"];
     EXPECT_WK_STREQ("rgb(255, 0, 0)", [webView stringByEvaluatingJavaScript:@"document.queryCommandValue('foreColor')"]);
 }
+
+TEST(PasteWebArchive, WebArchiveTypeIdentifier)
+{
+    NSURL *url = [NSURL URLWithString:@"file:///some-file.html"];
+    NSString *markup = @"<strong style='color: rgb(255, 0, 0);'>This is some text to copy.</strong>";
+
+    auto mainResource = adoptNS([[WebResource alloc] initWithData:[markup dataUsingEncoding:NSUTF8StringEncoding] URL:url MIMEType:@"text/html" textEncodingName:@"utf-8" frameName:nil]);
+    auto archive = adoptNS([[WebArchive alloc] initWithMainResource:mainResource.get() subresources:nil subframeArchives:nil]);
+
+    NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+    [pasteboard declareTypes:@[(__bridge NSString *)kUTTypeWebArchive] owner:nil];
+    [pasteboard setData:[archive data] forType:(__bridge NSString *)kUTTypeWebArchive];
+
+    auto webView = createWebViewWithCustomPasteboardDataEnabled();
+    [webView synchronouslyLoadTestPageNamed:@"paste-rtfd"];
+    [webView paste:nil];
+
+    EXPECT_WK_STREQ("[\"text/html\"]", [webView stringByEvaluatingJavaScript:@"JSON.stringify(clipboardData.types)"]);
+    [webView evaluateJavaScript:@"docment.body.innerHTML = clipboardData.values[0]" completionHandler:nil];
+    EXPECT_WK_STREQ("This is some text to copy.", [webView stringByEvaluatingJavaScript:@"document.querySelector('strong').textContent"]);
+    EXPECT_WK_STREQ("rgb(255, 0, 0)", [webView stringByEvaluatingJavaScript:@"getComputedStyle(document.querySelector('strong')).color"]);
+}
+
+#if ENABLE(DATA_DETECTION)
+
+TEST(PasteWebArchive, StripsDataDetectorsLinks)
+{
+    auto* url = [NSURL URLWithString:@"file:///some-file.html"];
+    auto* markup = [@"<!DOCTYPE html><html><body><span>Meeting <a href=\"x-apple-data-detectors://0\" dir=\"ltr\" x-apple-data-detectors=\"true\" x-apple-data-detectors-type=\"calendar-event\" x-apple-data-detectors-result=\"0\" style=\"color: currentcolor; text-decoration-color: rgba(128, 128, 128, 0.38); font-weight: bold;\">on Friday 11/6 at 4pm</a> at <a href=\"x-apple-data-detectors://1\" dir=\"ltr\" x-apple-data-detectors=\"true\" x-apple-data-detectors-type=\"address\" x-apple-data-detectors-result=\"1\" style=\"color: currentcolor; text-decoration-color: rgba(128, 128, 128, 0.38);\">1 Apple Park Way, Cupertino CA</a></span></body></html>" dataUsingEncoding:NSUTF8StringEncoding];
+    auto mainResource = adoptNS([[WebResource alloc] initWithData:markup URL:url MIMEType:@"text/html" textEncodingName:@"utf-8" frameName:nil]);
+    auto archive = adoptNS([[WebArchive alloc] initWithMainResource:mainResource.get() subresources:nil subframeArchives:nil]);
+
+    [[NSPasteboard generalPasteboard] declareTypes:@[WebArchivePboardType] owner:nil];
+    [[NSPasteboard generalPasteboard] setData:[archive data] forType:WebArchivePboardType];
+
+    auto webView = createWebViewWithCustomPasteboardDataEnabled();
+    [webView synchronouslyLoadTestPageNamed:@"paste-rtfd"];
+    [webView paste:nil];
+
+    EXPECT_WK_STREQ("Meeting&nbsp;<span dir=\"ltr\" style=\"font-weight: bold;\">on Friday 11/6 at 4pm</span>&nbsp;at&nbsp;<span dir=\"ltr\">1 Apple Park Way, Cupertino CA</span>", [webView stringByEvaluatingJavaScript:@"editor.innerHTML"]);
+}
+
+#endif // ENABLE(DATA_DETECTION)
 
 #endif // PLATFORM(MAC)
 

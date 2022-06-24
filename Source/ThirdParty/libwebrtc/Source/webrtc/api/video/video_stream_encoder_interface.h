@@ -13,16 +13,19 @@
 
 #include <vector>
 
-#include "api/rtpparameters.h"  // For DegradationPreference.
+#include "api/adaptation/resource.h"
+#include "api/fec_controller_override.h"
+#include "api/rtp_parameters.h"  // For DegradationPreference.
+#include "api/scoped_refptr.h"
+#include "api/units/data_rate.h"
+#include "api/video/video_bitrate_allocator.h"
+#include "api/video/video_layers_allocation.h"
 #include "api/video/video_sink_interface.h"
 #include "api/video/video_source_interface.h"
 #include "api/video_codecs/video_encoder.h"
 #include "api/video_codecs/video_encoder_config.h"
 
 namespace webrtc {
-
-// TODO(nisse): Move full declaration to api/.
-class VideoBitrateAllocationObserver;
 
 // This interface represents a class responsible for creating and driving the
 // encoder(s) for a single video stream. It is also responsible for adaptation
@@ -44,13 +47,30 @@ class VideoStreamEncoderInterface : public rtc::VideoSinkInterface<VideoFrame> {
    public:
     virtual void OnEncoderConfigurationChanged(
         std::vector<VideoStream> streams,
+        bool is_svc,
+        VideoEncoderConfig::ContentType content_type,
         int min_transmit_bitrate_bps) = 0;
+
+    virtual void OnBitrateAllocationUpdated(
+        const VideoBitrateAllocation& allocation) = 0;
+
+    virtual void OnVideoLayersAllocationUpdated(
+        VideoLayersAllocation allocation) = 0;
   };
 
+  // If the resource is overusing, the VideoStreamEncoder will try to reduce
+  // resolution or frame rate until no resource is overusing.
+  // TODO(https://crbug.com/webrtc/11565): When the ResourceAdaptationProcessor
+  // is moved to Call this method could be deleted altogether in favor of
+  // Call-level APIs only.
+  virtual void AddAdaptationResource(rtc::scoped_refptr<Resource> resource) = 0;
+  virtual std::vector<rtc::scoped_refptr<Resource>>
+  GetAdaptationResources() = 0;
+
   // Sets the source that will provide video frames to the VideoStreamEncoder's
-  // OnFrame method. |degradation_preference| control whether or not resolution
+  // OnFrame method. `degradation_preference` control whether or not resolution
   // or frame rate may be reduced. The VideoStreamEncoder registers itself with
-  // |source|, and signals adaptation decisions to the source in the form of
+  // `source`, and signals adaptation decisions to the source in the form of
   // VideoSinkWants.
   // TODO(nisse): When adaptation logic is extracted from this class,
   // it no longer needs to know the source.
@@ -58,8 +78,8 @@ class VideoStreamEncoderInterface : public rtc::VideoSinkInterface<VideoFrame> {
       rtc::VideoSourceInterface<VideoFrame>* source,
       const DegradationPreference& degradation_preference) = 0;
 
-  // Sets the |sink| that gets the encoded frames. |rotation_applied| means
-  // that the source must support rotation. Only set |rotation_applied| if the
+  // Sets the `sink` that gets the encoded frames. `rotation_applied` means
+  // that the source must support rotation. Only set `rotation_applied` if the
   // remote side does not support the rotation extension.
   virtual void SetSink(EncoderSink* sink, bool rotation_applied) = 0;
 
@@ -78,19 +98,32 @@ class VideoStreamEncoderInterface : public rtc::VideoSinkInterface<VideoFrame> {
   // Request a key frame. Used for signalling from the remote receiver.
   virtual void SendKeyFrame() = 0;
 
-  // Set the currently estimated network properties. A |bitrate_bps|
+  // Inform the encoder that a loss has occurred.
+  virtual void OnLossNotification(
+      const VideoEncoder::LossNotification& loss_notification) = 0;
+
+  // Set the currently estimated network properties. A `target_bitrate`
   // of zero pauses the encoder.
-  virtual void OnBitrateUpdated(uint32_t bitrate_bps,
+  // `stable_target_bitrate` is a filtered version of `target_bitrate`. It  is
+  // always less or equal to it. It can be used to avoid rapid changes of
+  // expensive encoding settings, such as resolution.
+  // `link_allocation` is the bandwidth available for this video stream on the
+  // network link. It is always at least `target_bitrate` but may be higher
+  // if we are not network constrained.
+  virtual void OnBitrateUpdated(DataRate target_bitrate,
+                                DataRate stable_target_bitrate,
+                                DataRate link_allocation,
                                 uint8_t fraction_lost,
-                                int64_t round_trip_time_ms) = 0;
+                                int64_t round_trip_time_ms,
+                                double cwnd_reduce_ratio) = 0;
 
-  // Register observer for the bitrate allocation between the temporal
-  // and spatial layers.
-  virtual void SetBitrateAllocationObserver(
-      VideoBitrateAllocationObserver* bitrate_observer) = 0;
+  // Set a FecControllerOverride, through which the encoder may override
+  // decisions made by FecController.
+  virtual void SetFecControllerOverride(
+      FecControllerOverride* fec_controller_override) = 0;
 
-  // Creates and configures an encoder with the given |config|. The
-  // |max_data_payload_length| is used to support single NAL unit
+  // Creates and configures an encoder with the given `config`. The
+  // `max_data_payload_length` is used to support single NAL unit
   // packetization for H.264.
   virtual void ConfigureEncoder(VideoEncoderConfig config,
                                 size_t max_data_payload_length) = 0;

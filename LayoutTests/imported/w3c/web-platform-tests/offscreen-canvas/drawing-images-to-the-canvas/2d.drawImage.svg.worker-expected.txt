@@ -1,3 +1,0 @@
-
-FAIL drawImage() of an SVG image Can't find variable: OffscreenCanvas
-

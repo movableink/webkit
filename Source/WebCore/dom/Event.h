@@ -26,11 +26,16 @@
 #include "DOMHighResTimeStamp.h"
 #include "EventInit.h"
 #include "EventInterfaces.h"
+#include "EventOptions.h"
 #include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <wtf/MonotonicTime.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/AtomString.h>
+
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
@@ -41,10 +46,10 @@ class ScriptExecutionContext;
 class Event : public ScriptWrappable, public RefCounted<Event> {
     WTF_MAKE_ISO_ALLOCATED(Event);
 public:
-    enum class IsTrusted : uint8_t { No, Yes };
-    enum class CanBubble : uint8_t { No, Yes };
-    enum class IsCancelable : uint8_t { No, Yes };
-    enum class IsComposed : uint8_t { No, Yes };
+    using IsTrusted = EventIsTrusted;
+    using CanBubble = EventCanBubble;
+    using IsCancelable = EventIsCancelable;
+    using IsComposed = EventIsComposed;
 
     enum PhaseType : uint8_t {
         NONE = 0,
@@ -70,7 +75,8 @@ public:
     void setTarget(RefPtr<EventTarget>&&);
 
     EventTarget* currentTarget() const { return m_currentTarget.get(); }
-    void setCurrentTarget(EventTarget*);
+    void setCurrentTarget(EventTarget*, std::optional<bool> isInShadowTree = std::nullopt);
+    bool currentTargetIsInShadowTree() const { return m_currentTargetIsInShadowTree; }
 
     unsigned short eventPhase() const { return m_eventPhase; }
     void setEventPhase(PhaseType phase) { m_eventPhase = phase; }
@@ -140,7 +146,9 @@ public:
     bool isBeingDispatched() const { return eventPhase(); }
 
     virtual EventTarget* relatedTarget() const { return nullptr; }
-    virtual void setRelatedTarget(EventTarget&) { }
+    virtual void setRelatedTarget(EventTarget*) { }
+
+    virtual String debugDescription() const;
 
 protected:
     explicit Event(IsTrusted = IsTrusted::No);
@@ -167,6 +175,7 @@ private:
     unsigned m_isDefaultEventHandlerIgnored : 1;
     unsigned m_isTrusted : 1;
     unsigned m_isExecutingPassiveEventListener : 1;
+    unsigned m_currentTargetIsInShadowTree : 1;
 
     unsigned m_eventPhase : 2;
 
@@ -205,6 +214,8 @@ inline void Event::setCancelBubble(bool cancel)
     if (cancel)
         m_propagationStopped = true;
 }
+
+WTF::TextStream& operator<<(WTF::TextStream&, const Event&);
 
 } // namespace WebCore
 

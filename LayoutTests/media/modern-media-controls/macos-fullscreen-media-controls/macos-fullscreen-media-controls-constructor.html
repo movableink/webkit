@@ -9,18 +9,19 @@ const mediaControls = new MacOSFullscreenMediaControls;
 
 shouldBeEqualToString("mediaControls.element.localName", "div");
 shouldBeEqualToString("mediaControls.element.className", "media-controls mac fullscreen");
-shouldBe("mediaControls.layoutTraits", "LayoutTraits.macOS | LayoutTraits.Fullscreen");
+shouldBeType("mediaControls.layoutTraits", "MacOSLayoutTraits");
+shouldBeTrue("mediaControls.layoutTraits.isFullscreen")
 
 debug("");
 debug("Controls bar");
 shouldBe("mediaControls.bottomControlsBar.children.length", "4");
-shouldBeTrue("mediaControls.bottomControlsBar.children[1] instanceof ButtonsContainer");
-shouldBeTrue("mediaControls.bottomControlsBar.children[2] instanceof ButtonsContainer");
-shouldBeTrue("mediaControls.bottomControlsBar.children[3] instanceof ButtonsContainer");
+shouldBeType("mediaControls.bottomControlsBar.children[1]", "ButtonsContainer");
+shouldBeType("mediaControls.bottomControlsBar.children[2]", "ButtonsContainer");
+shouldBeType("mediaControls.bottomControlsBar.children[3]", "ButtonsContainer");
 
 debug("");
 debug("Left container");
-shouldBe("mediaControls.bottomControlsBar.children[1].children", "[mediaControls.volumeDownButton, mediaControls.volumeSlider, mediaControls.volumeUpButton]");
+shouldBe("mediaControls.bottomControlsBar.children[1].children", "[mediaControls.volumeSlider, mediaControls.muteButton]");
 shouldBeEqualToString("mediaControls.bottomControlsBar.children[1].element.className", "buttons-container left");
 shouldBe("mediaControls.bottomControlsBar.children[1].leftMargin", "12");
 shouldBe("mediaControls.bottomControlsBar.children[1].rightMargin", "0");
@@ -36,11 +37,11 @@ shouldBe("mediaControls.bottomControlsBar.children[2].buttonMargin", "27");
 
 debug("");
 debug("Right container");
-shouldBe("mediaControls.bottomControlsBar.children[3].children", "[mediaControls.airplayButton, mediaControls.pipButton, mediaControls.tracksButton, mediaControls.fullscreenButton]");
+shouldBe("mediaControls.bottomControlsBar.children[3].children", "[mediaControls.airplayButton, mediaControls.pipButton, mediaControls.tracksButton, mediaControls.fullscreenButton, mediaControls.overflowButton]");
 shouldBeEqualToString("mediaControls.bottomControlsBar.children[3].element.className", "buttons-container right");
 shouldBe("mediaControls.bottomControlsBar.children[3].leftMargin", "12");
 shouldBe("mediaControls.bottomControlsBar.children[3].rightMargin", "12");
-shouldBe("mediaControls.bottomControlsBar.children[3].buttonMargin", "16");
+shouldBe("mediaControls.bottomControlsBar.children[3].buttonMargin", "24");
 
 debug("");
 

@@ -4,8 +4,8 @@
 // found in the LICENSE file.
 //
 // OutputVulkanGLSL:
-//   Code that outputs shaders that fit GL_KHR_vulkan_glsl.
-//   The shaders are then fed into glslang to spit out SPIR-V (libANGLE-side).
+//   Code that outputs shaders that fit GL_KHR_vulkan_glsl, to be fed to glslang to generate
+//   SPIR-V.
 //   See: https://www.khronos.org/registry/vulkan/specs/misc/GL_KHR_vulkan_glsl.txt
 //
 
@@ -13,63 +13,54 @@
 
 #include "compiler/translator/BaseTypes.h"
 #include "compiler/translator/Symbol.h"
+#include "compiler/translator/ValidateVaryingLocations.h"
 #include "compiler/translator/util.h"
 
 namespace sh
 {
 
-TOutputVulkanGLSL::TOutputVulkanGLSL(TInfoSinkBase &objSink,
-                                     ShArrayIndexClampingStrategy clampingStrategy,
-                                     ShHashFunction64 hashFunction,
-                                     NameMap &nameMap,
-                                     TSymbolTable *symbolTable,
-                                     sh::GLenum shaderType,
-                                     int shaderVersion,
-                                     ShShaderOutput output,
+TOutputVulkanGLSL::TOutputVulkanGLSL(TCompiler *compiler,
+                                     TInfoSinkBase &objSink,
+                                     bool enablePrecision,
                                      ShCompileOptions compileOptions)
-    : TOutputGLSL(objSink,
-                  clampingStrategy,
-                  hashFunction,
-                  nameMap,
-                  symbolTable,
-                  shaderType,
-                  shaderVersion,
-                  output,
-                  compileOptions)
+    : TOutputGLSL(compiler, objSink, compileOptions),
+      mNextUnusedBinding(0),
+      mNextUnusedInputLocation(0),
+      mNextUnusedOutputLocation(0),
+      mEnablePrecision(enablePrecision)
 {}
 
-// TODO(jmadill): This is not complete.
-void TOutputVulkanGLSL::writeLayoutQualifier(TIntermTyped *variable)
+void TOutputVulkanGLSL::writeLayoutQualifier(TIntermSymbol *symbol)
 {
-    const TType &type = variable->getType();
+    const TType &type = symbol->getType();
 
-    bool needsCustomLayout =
-        type.getQualifier() == EvqAttribute || type.getQualifier() == EvqFragmentOut ||
-        type.getQualifier() == EvqVertexIn || IsVarying(type.getQualifier()) ||
-        IsSampler(type.getBasicType()) || type.isInterfaceBlock() || IsImage(type.getBasicType());
+    bool needsSetBinding = IsSampler(type.getBasicType()) ||
+                           (type.isInterfaceBlock() && (type.getQualifier() == EvqUniform ||
+                                                        type.getQualifier() == EvqBuffer)) ||
+                           IsImage(type.getBasicType()) || IsSubpassInputType(type.getBasicType());
+    bool needsLocation = type.getQualifier() == EvqAttribute ||
+                         type.getQualifier() == EvqVertexIn ||
+                         type.getQualifier() == EvqFragmentOut || IsVarying(type.getQualifier());
+    bool needsInputAttachmentIndex = IsSubpassInputType(type.getBasicType());
+    bool needsSpecConstId          = type.getQualifier() == EvqSpecConst;
 
-    if (!NeedsToWriteLayoutQualifier(type) && !needsCustomLayout)
+    if (!NeedsToWriteLayoutQualifier(type) && !needsSetBinding && !needsLocation &&
+        !needsInputAttachmentIndex && !needsSpecConstId)
     {
         return;
     }
 
-    TInfoSinkBase &out = objSink();
+    TInfoSinkBase &out                      = objSink();
+    const TLayoutQualifier &layoutQualifier = type.getLayoutQualifier();
 
     // This isn't super clean, but it gets the job done.
-    // See corresponding code in GlslangWrapper.cpp.
-    TIntermSymbol *symbol = variable->getAsSymbolNode();
-    ASSERT(symbol);
-
-    ImmutableString name      = symbol->getName();
+    // See corresponding code in glslang_wrapper_utils.cpp.
     const char *blockStorage  = nullptr;
     const char *matrixPacking = nullptr;
 
-    // For interface blocks, use the block name instead.  When the layout qualifier is being
-    // replaced in the backend, that would be the name that's available.
     if (type.isInterfaceBlock())
     {
         const TInterfaceBlock *interfaceBlock = type.getInterfaceBlock();
-        name                                  = interfaceBlock->name();
         TLayoutBlockStorage storage           = interfaceBlock->blockStorage();
 
         // Make sure block storage format is specified.
@@ -87,37 +78,69 @@ void TOutputVulkanGLSL::writeLayoutQualifier(TIntermTyped *variable)
         {
             blockStorage = getBlockStorageString(storage);
         }
-
-        // We expect all interface blocks to have been transformed to column major, so we don't
-        // specify the packing.  Any remaining interface block qualified with row_major shouldn't
-        // have any matrices inside.
-        ASSERT(type.getLayoutQualifier().matrixPacking != EmpRowMajor ||
-               !interfaceBlock->containsMatrices());
     }
 
-    if (needsCustomLayout)
+    // Specify matrix packing if necessary.
+    if (layoutQualifier.matrixPacking != EmpUnspecified)
     {
-        out << "@@ LAYOUT-" << name << "(";
+        matrixPacking = getMatrixPackingString(layoutQualifier.matrixPacking);
     }
-    else
+    const char *kCommaSeparator = ", ";
+    const char *separator       = "";
+    out << "layout(";
+
+    // If the resource declaration is about input attachment, need to specify input_attachment_index
+    if (needsInputAttachmentIndex)
     {
-        out << "layout(";
+        out << "input_attachment_index=" << layoutQualifier.inputAttachmentIndex;
+        separator = kCommaSeparator;
+    }
+
+    // If it's a specialization constant, add that constant_id qualifier.
+    if (needsSpecConstId)
+    {
+        out << separator << "constant_id=" << layoutQualifier.location;
+    }
+
+    // If the resource declaration requires set & binding layout qualifiers, specify arbitrary
+    // ones.
+    if (needsSetBinding)
+    {
+        out << separator << "set=0, binding=" << nextUnusedBinding();
+        separator = kCommaSeparator;
+    }
+
+    if (needsLocation)
+    {
+        uint32_t location = 0;
+        if (layoutQualifier.index <= 0)
+        {
+            // Note: for index == 1 (dual source blending), don't count locations as they are
+            // expected to alias the color output locations.  Only one dual-source output is
+            // supported, so location will be always 0.
+            const unsigned int locationCount =
+                CalculateVaryingLocationCount(symbol->getType(), getShaderType());
+            location = IsShaderIn(type.getQualifier()) ? nextUnusedInputLocation(locationCount)
+                                                       : nextUnusedOutputLocation(locationCount);
+        }
+
+        out << separator << "location=" << location;
+        separator = kCommaSeparator;
     }
 
     // Output the list of qualifiers already known at this stage, i.e. everything other than
     // `location` and `set`/`binding`.
-    std::string otherQualifiers = getCommonLayoutQualifiers(variable);
+    std::string otherQualifiers = getCommonLayoutQualifiers(symbol);
 
-    const char *separator = "";
     if (blockStorage)
     {
         out << separator << blockStorage;
-        separator = ", ";
+        separator = kCommaSeparator;
     }
     if (matrixPacking)
     {
         out << separator << matrixPacking;
-        separator = ", ";
+        separator = kCommaSeparator;
     }
     if (!otherQualifiers.empty())
     {
@@ -125,50 +148,11 @@ void TOutputVulkanGLSL::writeLayoutQualifier(TIntermTyped *variable)
     }
 
     out << ") ";
-    if (needsCustomLayout)
-    {
-        out << "@@";
-    }
 }
 
-void TOutputVulkanGLSL::writeFieldLayoutQualifier(const TField *field)
-{
-    // We expect all interface blocks to have been transformed to column major, as Vulkan GLSL
-    // doesn't allow layout qualifiers on interface block fields.  Any remaining interface block
-    // qualified with row_major shouldn't have any matrices inside, so the qualifier can be
-    // dropped.
-}
-
-void TOutputVulkanGLSL::writeQualifier(TQualifier qualifier,
-                                       const TType &type,
-                                       const TSymbol *symbol)
-{
-    if (qualifier != EvqUniform && qualifier != EvqBuffer && qualifier != EvqAttribute &&
-        qualifier != EvqVertexIn && !sh::IsVarying(qualifier))
-    {
-        TOutputGLSLBase::writeQualifier(qualifier, type, symbol);
-        return;
-    }
-
-    if (symbol == nullptr)
-    {
-        return;
-    }
-
-    ImmutableString name = symbol->name();
-
-    // For interface blocks, use the block name instead.  When the qualifier is being replaced in
-    // the backend, that would be the name that's available.
-    if (type.isInterfaceBlock())
-    {
-        name = type.getInterfaceBlock()->name();
-    }
-
-    TInfoSinkBase &out = objSink();
-    out << "@@ QUALIFIER-" << name.data() << "(" << getMemoryQualifiers(type) << ") @@ ";
-}
-
-void TOutputVulkanGLSL::writeVariableType(const TType &type, const TSymbol *symbol)
+void TOutputVulkanGLSL::writeVariableType(const TType &type,
+                                          const TSymbol *symbol,
+                                          bool isFunctionArgument)
 {
     TType overrideType(type);
 
@@ -178,16 +162,17 @@ void TOutputVulkanGLSL::writeVariableType(const TType &type, const TSymbol *symb
         overrideType.setBasicType(EbtSampler2D);
     }
 
-    TOutputGLSL::writeVariableType(overrideType, symbol);
+    TOutputGLSL::writeVariableType(overrideType, symbol, isFunctionArgument);
 }
 
-void TOutputVulkanGLSL::writeStructType(const TStructure *structure)
+bool TOutputVulkanGLSL::writeVariablePrecision(TPrecision precision)
 {
-    if (!structDeclared(structure))
-    {
-        declareStruct(structure);
-        objSink() << ";\n";
-    }
+    if ((precision == EbpUndefined) || !mEnablePrecision)
+        return false;
+
+    TInfoSinkBase &out = objSink();
+    out << getPrecisionString(precision);
+    return true;
 }
 
 }  // namespace sh

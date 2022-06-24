@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ShareableBitmap.h"
+#include "ImageBufferBackendHandle.h"
 #include <WebCore/FloatRect.h>
 #include <WebCore/IOSurface.h>
 #include <WebCore/Region.h>
@@ -36,12 +36,16 @@ OBJC_CLASS CALayer;
 
 // FIXME: Make PlatformCALayerRemote.cpp Objective-C so we can include WebLayer.h here and share the typedef.
 namespace WebCore {
+class NativeImage;
+class ThreadSafeImageBufferFlusher;
 typedef Vector<WebCore::FloatRect, 5> RepaintRectList;
 }
 
 namespace WebKit {
 
 class PlatformCALayerRemote;
+class RemoteLayerBackingStoreCollection;
+enum class SwapBuffersDisplayRequirement : uint8_t;
 
 class RemoteLayerBackingStore {
     WTF_MAKE_NONCOPYABLE(RemoteLayerBackingStore);
@@ -50,39 +54,52 @@ public:
     RemoteLayerBackingStore(PlatformCALayerRemote*);
     ~RemoteLayerBackingStore();
 
-    void ensureBackingStore(WebCore::FloatSize, float scale, bool acceleratesDrawing, bool deepColor, bool isOpaque);
+    enum class Type : uint8_t {
+        IOSurface,
+        Bitmap
+    };
+
+    enum class IncludeDisplayList : bool { No, Yes };
+    void ensureBackingStore(Type, WebCore::FloatSize, float scale, bool deepColor, bool isOpaque, IncludeDisplayList);
 
     void setNeedsDisplay(const WebCore::IntRect);
     void setNeedsDisplay();
 
-    bool display();
+    void setContents(WTF::MachSendRight&& surfaceHandle);
+
+    SwapBuffersDisplayRequirement prepareBuffers(bool hasEmptyDirtyRegion);
+
+    // Returns true if the backing store changed.
+    bool prepareToDisplay();
+    void paintContents();
 
     WebCore::FloatSize size() const { return m_size; }
     float scale() const { return m_scale; }
-    bool acceleratesDrawing() const { return m_acceleratesDrawing; }
+    WebCore::PixelFormat pixelFormat() const;
+    Type type() const { return m_type; }
     bool isOpaque() const { return m_isOpaque; }
     unsigned bytesPerPixel() const;
 
     PlatformCALayerRemote* layer() const { return m_layer; }
 
     enum class LayerContentsType { IOSurface, CAMachPort };
-    void applyBackingStoreToLayer(CALayer *, LayerContentsType);
+    void applyBackingStoreToLayer(CALayer *, LayerContentsType, bool replayCGDisplayListsIntoBackingStore);
 
     void encode(IPC::Encoder&) const;
-    static bool decode(IPC::Decoder&, RemoteLayerBackingStore&);
+    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, RemoteLayerBackingStore&);
 
-    void enumerateRectsBeingDrawn(CGContextRef, void (^)(CGRect));
+    void enumerateRectsBeingDrawn(WebCore::GraphicsContext&, void (^)(WebCore::FloatRect));
 
     bool hasFrontBuffer() const
     {
-#if HAVE(IOSURFACE)
-        if (m_acceleratesDrawing)
-            return !!m_frontBuffer.surface;
-#endif
-        return !!m_frontBuffer.bitmap;
+        return m_contentsBufferHandle || !!m_frontBuffer.imageBuffer;
     }
 
-    RetainPtr<CGContextRef> takeFrontContextPendingFlush();
+    // Just for RemoteBackingStoreCollection.
+    void applySwappedBuffers(RefPtr<WebCore::ImageBuffer>&& front, RefPtr<WebCore::ImageBuffer>&& back, RefPtr<WebCore::ImageBuffer>&& secondaryBack);
+    WebCore::SetNonVolatileResult swapToValidFrontBuffer();
+
+    Vector<std::unique_ptr<WebCore::ThreadSafeImageBufferFlusher>> takePendingFlushers();
 
     enum class BufferType {
         Front,
@@ -90,62 +107,67 @@ public:
         SecondaryBack
     };
 
+    RefPtr<WebCore::ImageBuffer> bufferForType(BufferType) const;
+
     // Returns true if it was able to fulfill the request. This can fail when trying to mark an in-use surface as volatile.
-    bool setBufferVolatility(BufferType, bool isVolatile);
+    bool setBufferVolatile(BufferType);
+    WebCore::SetNonVolatileResult setFrontBufferNonVolatile();
+
+    bool hasEmptyDirtyRegion() const { return m_dirtyRegion.isEmpty() || m_size.isEmpty(); }
+    bool supportsPartialRepaint() const;
 
     MonotonicTime lastDisplayTime() const { return m_lastDisplayTime; }
 
-private:
-    void drawInContext(WebCore::GraphicsContext&, CGImageRef backImage);
     void clearBackingStore();
-    void swapToValidFrontBuffer();
 
-#if HAVE(IOSURFACE)
-    WebCore::IOSurface::Format surfaceBufferFormat() const;
-#endif
+private:
+    RemoteLayerBackingStoreCollection* backingStoreCollection() const;
 
-    WebCore::IntSize backingStoreSize() const;
-
-    PlatformCALayerRemote* m_layer;
-
-    WebCore::FloatSize m_size;
-    float m_scale;
-    bool m_isOpaque;
-
-    WebCore::Region m_dirtyRegion;
+    void drawInContext(WebCore::GraphicsContext&);
 
     struct Buffer {
-        RefPtr<ShareableBitmap> bitmap;
-#if HAVE(IOSURFACE)
-        std::unique_ptr<WebCore::IOSurface> surface;
-        bool isVolatile = false;
+        RefPtr<WebCore::ImageBuffer> imageBuffer;
+#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+        RefPtr<WebCore::ImageBuffer> displayListImageBuffer;
 #endif
-
         explicit operator bool() const
         {
-#if HAVE(IOSURFACE)
-            if (surface)
-                return true;
-#endif
-            if (bitmap)
-                return true;
-
-            return false;
+            return !!imageBuffer;
         }
 
         void discard();
     };
 
+    bool setBufferVolatile(Buffer&);
+    WebCore::SetNonVolatileResult setBufferNonVolatile(Buffer&);
+
+    PlatformCALayerRemote* m_layer;
+
+    WebCore::FloatSize m_size;
+    float m_scale { 1.0f };
+    bool m_isOpaque { false };
+
+    WebCore::Region m_dirtyRegion;
+
+    // Used in the WebContent Process.
     Buffer m_frontBuffer;
     Buffer m_backBuffer;
-#if HAVE(IOSURFACE)
     Buffer m_secondaryBackBuffer;
-    WTF::MachSendRight m_frontBufferSendRight;
+
+    // Used in the UI Process.
+    std::optional<ImageBufferBackendHandle> m_bufferHandle;
+    // FIXME: This should be removed and m_bufferHandle should be used to ref the buffer once ShareableBitmap::Handle
+    // can be encoded multiple times. http://webkit.org/b/234169
+    std::optional<MachSendRight> m_contentsBufferHandle;
+
+#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+    std::optional<ImageBufferBackendHandle> m_displayListBufferHandle;
 #endif
 
-    RetainPtr<CGContextRef> m_frontContextPendingFlush;
+    Vector<std::unique_ptr<WebCore::ThreadSafeImageBufferFlusher>> m_frontBufferFlushers;
 
-    bool m_acceleratesDrawing { false };
+    Type m_type;
+    IncludeDisplayList m_includeDisplayList { IncludeDisplayList::No };
     bool m_deepColor { false };
 
     WebCore::RepaintRectList m_paintingRects;
@@ -154,3 +176,23 @@ private:
 };
 
 } // namespace WebKit
+
+namespace WTF {
+
+template<> struct EnumTraits<WebKit::RemoteLayerBackingStore::Type> {
+    using values = EnumValues<
+        WebKit::RemoteLayerBackingStore::Type,
+        WebKit::RemoteLayerBackingStore::Type::IOSurface,
+        WebKit::RemoteLayerBackingStore::Type::Bitmap
+    >;
+};
+
+template<> struct EnumTraits<WebKit::RemoteLayerBackingStore::IncludeDisplayList> {
+    using values = EnumValues<
+        WebKit::RemoteLayerBackingStore::IncludeDisplayList,
+        WebKit::RemoteLayerBackingStore::IncludeDisplayList::No,
+        WebKit::RemoteLayerBackingStore::IncludeDisplayList::Yes
+    >;
+};
+
+} // namespace WTF

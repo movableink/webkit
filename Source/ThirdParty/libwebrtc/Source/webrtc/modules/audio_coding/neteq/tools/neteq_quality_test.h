@@ -14,12 +14,12 @@
 #include <fstream>
 #include <memory>
 
-#include "common_types.h"  // NOLINT(build/include)
-#include "modules/audio_coding/neteq/include/neteq.h"
+#include "api/audio_codecs/builtin_audio_decoder_factory.h"
+#include "api/neteq/neteq.h"
 #include "modules/audio_coding/neteq/tools/audio_sink.h"
 #include "modules/audio_coding/neteq/tools/input_audio_file.h"
 #include "modules/audio_coding/neteq/tools/rtp_generator.h"
-#include "rtc_base/flags.h"
+#include "system_wrappers/include/clock.h"
 #include "test/gtest.h"
 
 namespace webrtc {
@@ -35,7 +35,7 @@ enum LossModes {
 
 class LossModel {
  public:
-  virtual ~LossModel(){};
+  virtual ~LossModel() {}
   virtual bool Lost(int now_ms) = 0;
 };
 
@@ -96,18 +96,21 @@ class FixedLossModel : public LossModel {
 
 class NetEqQualityTest : public ::testing::Test {
  protected:
-  NetEqQualityTest(int block_duration_ms,
-                   int in_sampling_khz,
-                   int out_sampling_khz,
-                   NetEqDecoder decoder_type);
+  NetEqQualityTest(
+      int block_duration_ms,
+      int in_sampling_khz,
+      int out_sampling_khz,
+      const SdpAudioFormat& format,
+      const rtc::scoped_refptr<AudioDecoderFactory>& decoder_factory =
+          webrtc::CreateBuiltinAudioDecoderFactory());
   ~NetEqQualityTest() override;
 
   void SetUp() override;
 
   // EncodeBlock(...) does the following:
-  // 1. encodes a block of audio, saved in |in_data| and has a length of
-  // |block_size_samples| (samples per channel),
-  // 2. save the bit stream to |payload| of |max_bytes| bytes in size,
+  // 1. encodes a block of audio, saved in `in_data` and has a length of
+  // `block_size_samples` (samples per channel),
+  // 2. save the bit stream to `payload` of `max_bytes` bytes in size,
   // 3. returns the length of the payload (in bytes),
   virtual int EncodeBlock(int16_t* in_data,
                           size_t block_size_samples,
@@ -119,12 +122,12 @@ class NetEqQualityTest : public ::testing::Test {
   bool PacketLost();
 
   // DecodeBlock() decodes a block of audio using the payload stored in
-  // |payload_| with the length of |payload_size_bytes_| (bytes). The decoded
-  // audio is to be stored in |out_data_|.
+  // `payload_` with the length of `payload_size_bytes_` (bytes). The decoded
+  // audio is to be stored in `out_data_`.
   int DecodeBlock();
 
-  // Transmit() uses |rtp_generator_| to generate a packet and passes it to
-  // |neteq_|.
+  // Transmit() uses `rtp_generator_` to generate a packet and passes it to
+  // `neteq_`.
   int Transmit();
 
   // Runs encoding / transmitting / decoding.
@@ -133,7 +136,7 @@ class NetEqQualityTest : public ::testing::Test {
   // Write to log file. Usage Log() << ...
   std::ofstream& Log();
 
-  NetEqDecoder decoder_type_;
+  SdpAudioFormat audio_format_;
   const size_t channels_;
 
  private:

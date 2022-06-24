@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc.  All rights reserved.
  * Copyright (C) 2006 Michael Emmel mike.emmel@gmail.com
  * Copyright (C) 2008 Christian Dywan <christian@imendio.com>
  * Copyright (C) 2008 Collabora Ltd.
@@ -31,8 +31,10 @@
 #include "config.h"
 #include "PlatformScreen.h"
 
+#include "DestinationColorSpace.h"
 #include "FloatRect.h"
 #include "FrameView.h"
+#include "GtkUtilities.h"
 #include "HostWindow.h"
 #include "NotImplemented.h"
 #include "Widget.h"
@@ -46,6 +48,7 @@
 
 namespace WebCore {
 
+#if !USE(GTK4)
 static GdkVisual* systemVisual()
 {
     if (auto* screen = gdk_screen_get_default())
@@ -53,19 +56,27 @@ static GdkVisual* systemVisual()
 
     return nullptr;
 }
+#endif
 
 int screenDepth(Widget*)
 {
+#if !USE(GTK4)
     if (auto* visual = systemVisual())
         return gdk_visual_get_depth(visual);
+#endif
 
     return 24;
 }
 
 int screenDepthPerComponent(Widget*)
 {
-    if (auto* visual = systemVisual())
-        return gdk_visual_get_bits_per_rgb(visual);
+#if !USE(GTK4)
+    if (auto* visual = systemVisual()) {
+        int redDepth;
+        gdk_visual_get_red_pixel_details(visual, nullptr, nullptr, &redDepth);
+        return redDepth;
+    }
+#endif
 
     return 8;
 }
@@ -73,6 +84,11 @@ int screenDepthPerComponent(Widget*)
 bool screenIsMonochrome(Widget* widget)
 {
     return screenDepth(widget) < 2;
+}
+
+DestinationColorSpace screenColorSpace(Widget*)
+{
+    return DestinationColorSpace::SRGB();
 }
 
 bool screenHasInvertedColors()
@@ -83,29 +99,51 @@ bool screenHasInvertedColors()
 double screenDPI()
 {
     static const double defaultDpi = 96;
+#if !USE(GTK4)
     GdkScreen* screen = gdk_screen_get_default();
-    if (!screen)
-        return defaultDpi;
+    if (screen) {
+        double dpi = gdk_screen_get_resolution(screen);
+        if (dpi != -1)
+            return dpi;
+    }
+#endif
 
-    double dpi = gdk_screen_get_resolution(screen);
-    if (dpi != -1)
-        return dpi;
+    static GtkSettings* gtkSettings = gtk_settings_get_default();
+    if (gtkSettings) {
+        int gtkXftDpi;
+        g_object_get(gtkSettings, "gtk-xft-dpi", &gtkXftDpi, nullptr);
+        return gtkXftDpi / 1024.0;
+    }
 
     static double cachedDpi = 0;
     if (cachedDpi)
         return cachedDpi;
 
     static const double millimetresPerInch = 25.4;
-    double diagonalInPixels = std::hypot(gdk_screen_get_width(screen), gdk_screen_get_height(screen));
-    double diagonalInInches = std::hypot(gdk_screen_get_width_mm(screen), gdk_screen_get_height_mm(screen)) / millimetresPerInch;
+
+    GdkDisplay* display = gdk_display_get_default();
+    if (!display)
+        return defaultDpi;
+#if USE(GTK4)
+    GdkMonitor* monitor = GDK_MONITOR(g_list_model_get_item(gdk_display_get_monitors(display), 0));
+#else
+    GdkMonitor* monitor = gdk_display_get_monitor(display, 0);
+#endif
+    if (!monitor)
+        return defaultDpi;
+
+    GdkRectangle geometry;
+    gdk_monitor_get_geometry(monitor, &geometry);
+    double diagonalInPixels = std::hypot(geometry.width, geometry.height);
+    double diagonalInInches = std::hypot(gdk_monitor_get_width_mm(monitor), gdk_monitor_get_height_mm(monitor)) / millimetresPerInch;
     cachedDpi = diagonalInPixels / diagonalInInches;
 
     return cachedDpi;
 }
 
-static WTF::HashMap<void*, Function<void()>>& screenDPIObserverHandlersMap()
+static HashMap<void*, Function<void()>>& screenDPIObserverHandlersMap()
 {
-    static WTF::NeverDestroyed<WTF::HashMap<void*, Function<void()>>> handlersMap;
+    static NeverDestroyed<HashMap<void*, Function<void()>>> handlersMap;
     return handlersMap;
 }
 
@@ -137,34 +175,45 @@ void setScreenDPIObserverHandler(Function<void()>&& handler, void* context)
     }
 }
 
+static GRefPtr<GdkMonitor> currentScreenMonitor()
+{
+    GdkDisplay* display = gdk_display_get_default();
+    if (!display)
+        return nullptr;
+
+#if USE(GTK4)
+    return adoptGRef(static_cast<GdkMonitor*>(g_list_model_get_item(gdk_display_get_monitors(display), 0)));
+#else
+    auto* rootWindow = gdk_get_default_root_window();
+    if (!rootWindow)
+        return nullptr;
+
+    return gdk_display_get_monitor_at_window(display, rootWindow);
+#endif
+}
+
+
 FloatRect screenRect(Widget*)
 {
     GdkRectangle geometry;
-    GdkDisplay* display = gdk_display_get_default();
-    if (!display)
-        return { };
 
-    auto* monitor = gdk_display_get_monitor(display, 0);
+    auto monitor = currentScreenMonitor();
     if (!monitor)
         return { };
 
-    gdk_monitor_get_geometry(monitor, &geometry);
+    gdk_monitor_get_geometry(monitor.get(), &geometry);
 
     return FloatRect(geometry.x, geometry.y, geometry.width, geometry.height);
 }
 
 FloatRect screenAvailableRect(Widget*)
 {
-    GdkRectangle workArea;
-    GdkDisplay* display = gdk_display_get_default();
-    if (!display)
-        return { };
-
-    auto* monitor = gdk_display_get_monitor(display, 0);
+    auto monitor = currentScreenMonitor();
     if (!monitor)
         return { };
 
-    gdk_monitor_get_workarea(monitor, &workArea);
+    GdkRectangle workArea;
+    monitorWorkArea(monitor.get(), &workArea);
 
     return FloatRect(workArea.x, workArea.y, workArea.width, workArea.height);
 }

@@ -40,23 +40,20 @@ WI.ChangesDetailsSidebarPanel = class ChangesDetailsSidebarPanel extends WI.DOMD
         return nodeToInspect.nodeType() === Node.ELEMENT_NODE;
     }
 
-    shown()
+    attached()
     {
-        // `shown` may get called before initialLayout when Elements tab is opened.
-        // When Changes panel is selected, `shown` is called and this time it's after initialLayout.
-        if (this.didInitialLayout) {
-            this.needsLayout();
-            WI.Frame.addEventListener(WI.Frame.Event.MainResourceDidChange, this._mainResourceDidChange, this);
-        }
+        super.attached();
 
-        super.shown();
+        WI.Frame.addEventListener(WI.Frame.Event.MainResourceDidChange, this._mainResourceDidChange, this);
+        WI.CSSManager.addEventListener(WI.CSSManager.Event.ModifiedStylesChanged, this.needsLayout, this);
     }
 
     detached()
     {
-        super.detached();
-
         WI.Frame.removeEventListener(WI.Frame.Event.MainResourceDidChange, this._mainResourceDidChange, this);
+        WI.CSSManager.removeEventListener(WI.CSSManager.Event.ModifiedStylesChanged, this.needsLayout, this);
+
+        super.detached();
     }
 
     // Protected
@@ -148,7 +145,7 @@ WI.ChangesDetailsSidebarPanel = class ChangesDetailsSidebarPanel extends WI.DOMD
             propertyLineElement.classList.add("css-property-line", className);
 
             const delegate = null;
-            let stylePropertyView = new WI.SpreadsheetStyleProperty(delegate, cssProperty, {readOnly: true});
+            let stylePropertyView = new WI.SpreadsheetStyleProperty(delegate, cssProperty, {readOnly: true, hideDocumentation: true});
             propertyLineElement.append(WI.indentString(), stylePropertyView.element, "\n");
         }
 

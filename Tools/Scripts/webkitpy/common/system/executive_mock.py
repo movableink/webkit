@@ -29,28 +29,37 @@
 import logging
 import os
 
-from webkitpy.common.unicode_compatibility import BytesIO, unicode
+from webkitcorepy import BytesIO, string_utils, unicode
+
 from webkitpy.common.system.executive import ScriptError
 
 _log = logging.getLogger(__name__)
 
 
 class MockProcess(object):
-    def __init__(self, stdout='MOCK STDOUT\n', stderr=''):
+    def __init__(self, stdout='MOCK STDOUT\n', stderr='', returncode=0):
         self.pid = 42
-        self.stdout = BytesIO(stdout)
-        self.stderr = BytesIO(stderr)
+        self.stdout = BytesIO(string_utils.encode(stdout))
+        self.stderr = BytesIO(string_utils.encode(stderr))
         self.stdin = BytesIO()
-        self.returncode = 0
+        self._returncode = returncode
         self._is_running = False
+
+    @property
+    def returncode(self):
+        if self._is_running:
+            return None
+        return self._returncode
 
     def wait(self):
         self._is_running = False
         return self.returncode
 
-    def communicate(self, input=None):
+    def communicate(self, input=None, timeout=None):
         self._is_running = False
-        return (self.stdout, self.stderr)
+        stdout = self.stdout.read() if isinstance(self.stdout, BytesIO) else self.stdout
+        stderr = self.stderr.read() if isinstance(self.stderr, BytesIO) else self.stderr
+        return (stdout, stderr)
 
     def poll(self):
         if self._is_running:
@@ -88,7 +97,7 @@ class MockExecutive(object):
 
     def running_pids(self, process_name_filter):
         running_pids = []
-        for process_name, process_pid in self._running_pids.iteritems():
+        for process_name, process_pid in self._running_pids.items():
             if process_name_filter(process_name):
                 running_pids.append(process_pid)
 
@@ -99,7 +108,11 @@ class MockExecutive(object):
         if self._should_log:
             env_string = ""
             if env:
-                env_string = ", env=%s" % env
+                for key in sorted(env.keys()):
+                    if len(env_string):
+                        env_string += ", "
+                    env_string += "'{}': '{}'".format(key, env[key])
+                env_string = ", env={" + env_string + "}"
             _log.info("MOCK run_and_throw_if_fail: %s, cwd=%s%s" % (args, cwd, env_string))
         if self._should_throw_when_run.intersection(args):
             raise ScriptError("Exception for %s" % args, output="MOCK command output")
@@ -113,6 +126,7 @@ class MockExecutive(object):
                     args,
                     cwd=None,
                     input=None,
+                    stdout=None,
                     error_handler=None,
                     ignore_errors=False,
                     return_exit_code=False,
@@ -126,10 +140,14 @@ class MockExecutive(object):
         if self._should_log:
             env_string = ""
             if env:
-                env_string = ", env=%s" % env
+                for key in sorted(env.keys()):
+                    if len(env_string):
+                        env_string += ", "
+                    env_string += "'{}': '{}'".format(key, env[key])
+                env_string = ", env={" + env_string + "}"
             input_string = ""
             if input:
-                input_string = ", input=%s" % input
+                input_string = ", input=%s" % string_utils.decode(input, target_type=str)
             _log.info("MOCK run_command: %s, cwd=%s%s%s" % (args, cwd, env_string, input_string))
         output = "MOCK output of child process"
 

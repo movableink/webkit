@@ -32,6 +32,7 @@
 #import "WebAutomationSession.h"
 #import "_WKAutomationSessionConfiguration.h"
 #import "_WKAutomationSessionDelegate.h"
+#import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/WeakObjCPtr.h>
 
 @implementation _WKAutomationSession {
@@ -41,7 +42,7 @@
 
 - (instancetype)init
 {
-    return [self initWithConfiguration:[[[_WKAutomationSessionConfiguration alloc] init] autorelease]];
+    return [self initWithConfiguration:adoptNS([[_WKAutomationSessionConfiguration alloc] init]).get()];
 }
 
 - (instancetype)initWithConfiguration:(_WKAutomationSessionConfiguration *)configuration
@@ -58,6 +59,9 @@
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(_WKAutomationSession.class, self))
+        return;
+
     _session->setClient(nullptr);
     _session->~WebAutomationSession();
 
@@ -87,7 +91,7 @@
 
 - (_WKAutomationSessionConfiguration *)configuration
 {
-    return [[_configuration copy] autorelease];
+    return adoptNS([_configuration copy]).autorelease();
 }
 
 - (BOOL)isPaired

@@ -118,7 +118,7 @@ void WebCoreAVCFResourceLoader::invalidate()
 
     m_parent = nullptr;
 
-    callOnMainThread([protectedThis = makeRef(*this)] () mutable {
+    callOnMainThread([protectedThis = Ref { *this }] () mutable {
         protectedThis->stopLoading();
     });
 }
@@ -138,12 +138,12 @@ void WebCoreAVCFResourceLoader::responseReceived(CachedResource& resource, const
     notImplemented();
 }
 
-void WebCoreAVCFResourceLoader::dataReceived(CachedResource& resource, const char*, int)
+void WebCoreAVCFResourceLoader::dataReceived(CachedResource& resource, const SharedBuffer&)
 {
     fulfillRequestWithResource(resource);
 }
 
-void WebCoreAVCFResourceLoader::notifyFinished(CachedResource& resource)
+void WebCoreAVCFResourceLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
     if (resource.loadFailedOrCanceled()) {
         // <rdar://problem/13987417> Set the contentType of the contentInformationRequest to an empty

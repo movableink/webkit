@@ -27,38 +27,55 @@
 
 #if ENABLE(WEB_AUTHN)
 
+#include "WebAuthenticationFlags.h"
 #include "WebAuthenticationRequestData.h"
+#include <WebCore/AuthenticatorResponse.h>
 #include <WebCore/ExceptionData.h>
-#include <WebCore/PublicKeyCredentialData.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/spi/cocoa/SecuritySPI.h>
+
+OBJC_CLASS LAContext;
+
+namespace WebCore {
+class AuthenticatorAssertionResponse;
+}
 
 namespace WebKit {
 
 class Authenticator : public RefCounted<Authenticator>, public CanMakeWeakPtr<Authenticator> {
 public:
-    using Respond = Variant<WebCore::PublicKeyCredentialData, WebCore::ExceptionData>;
+    using Respond = std::variant<Ref<WebCore::AuthenticatorResponse>, WebCore::ExceptionData>;
 
     class Observer : public CanMakeWeakPtr<Observer> {
     public:
         virtual ~Observer() = default;
         virtual void respondReceived(Respond&&) = 0;
         virtual void downgrade(Authenticator* id, Ref<Authenticator>&& downgradedAuthenticator) = 0;
+        virtual void authenticatorStatusUpdated(WebAuthenticationStatus) = 0;
+        virtual void requestPin(uint64_t retries, CompletionHandler<void(const WTF::String&)>&&) = 0;
+        virtual void selectAssertionResponse(Vector<Ref<WebCore::AuthenticatorAssertionResponse>>&&, WebAuthenticationSource, CompletionHandler<void(WebCore::AuthenticatorAssertionResponse*)>&&) = 0;
+        virtual void decidePolicyForLocalAuthenticator(CompletionHandler<void(LocalAuthenticatorPolicy)>&&) = 0;
+        virtual void requestLAContextForUserVerification(CompletionHandler<void(LAContext *)>&&) = 0;
+        virtual void cancelRequest() = 0;
     };
 
     virtual ~Authenticator() = default;
 
-    void setObserver(Observer& observer) { m_observer = makeWeakPtr(observer); }
+    void setObserver(Observer& observer) { m_observer = observer; }
 
     // This operation is guaranteed to execute asynchronously.
     void handleRequest(const WebAuthenticationRequestData&);
+
+    void setWebAuthenticationModernEnabled(bool webAuthenticationModernEnabled) { m_webAuthenticationModernEnabled = webAuthenticationModernEnabled; }
 
 protected:
     Authenticator() = default;
 
     Observer* observer() const { return m_observer.get(); }
     const WebAuthenticationRequestData& requestData() const { return m_pendingRequestData; }
+    bool webAuthenticationModernEnabled() const { return m_webAuthenticationModernEnabled; }
 
     void receiveRespond(Respond&&) const;
 
@@ -68,6 +85,7 @@ private:
 
     WeakPtr<Observer> m_observer;
     WebAuthenticationRequestData m_pendingRequestData;
+    bool m_webAuthenticationModernEnabled { false };
 };
 
 } // namespace WebKit

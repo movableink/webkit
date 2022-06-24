@@ -31,14 +31,12 @@ char kTSanDefaultSuppressions[] =
     // rtc_unittests
     // https://code.google.com/p/webrtc/issues/detail?id=2080
     "race:rtc_base/logging.cc\n"
-    "race:rtc_base/sharedexclusivelock_unittest.cc\n"
-    "race:rtc_base/signalthread_unittest.cc\n"
 
     // rtc_pc_unittests
     // https://code.google.com/p/webrtc/issues/detail?id=2079
-    "race:rtc_base/testclient.cc\n"
-    "race:rtc_base/virtualsocketserver.cc\n"
-    "race:talk/p2p/base/stunserver_unittest.cc\n"
+    "race:rtc_base/test_client.cc\n"
+    "race:rtc_base/virtual_socket_server.cc\n"
+    "race:talk/p2p/base/stun_server_unittest.cc\n"
 
     // third_party/usrsctp
     // TODO(jiayl): https://code.google.com/p/webrtc/issues/detail?id=3492
@@ -46,6 +44,11 @@ char kTSanDefaultSuppressions[] =
 
     // https://code.google.com/p/webrtc/issues/detail?id=5151
     "race:sctp_close\n"
+
+    // lock-order-inversion in usrsctp
+    // TODO(orphis): https://crbug.com/webrtc/12823
+    "deadlock:usrsctp_conninput\n"
+    "deadlock:usrsctp_connect\n"
 
     // Potential deadlocks detected after roll in r6516.
     // https://code.google.com/p/webrtc/issues/detail?id=3509
@@ -64,6 +67,9 @@ char kTSanDefaultSuppressions[] =
     // destructor begins executing, which modifies the vtable.
     "race:*RTCStatsIntegrationTest_GetsStatsWhileDestroyingPeerConnections_"
     "Test::TestBody\n"
+
+    // http://crbug.com/244856
+    "race:libpulsecommon*.so\n"
 
     // End of suppressions.
     ;  // Please keep this semicolon.

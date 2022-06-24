@@ -7,51 +7,51 @@ layer at (0,0) size 800x110
         RenderText {#text} at (0,0) size 598x19
           text run at (0,0) width 598: "This tests that the Address Book AutoFill button renders. It can only be tested in the test tool."
       RenderBlock {DIV} at (0,36) size 784x50
-        RenderTextControl {INPUT} at (2,2) size 136x22 [bgcolor=#FFFFFF] [border: (1px solid #4C4C4C)]
-          RenderFlexibleBox {DIV} at (6,3) size 123x15
-            RenderBlock {DIV} at (0,0) size 96x14
-        RenderText {#text} at (139,1) size 5x19
-          text run at (139,1) width 5: " "
-        RenderTextControl {INPUT} at (145,2) size 136x22 [bgcolor=#FFFFFF] [border: (1px solid #4C4C4C)]
-          RenderFlexibleBox {DIV} at (6,3) size 123x15
-            RenderBlock {DIV} at (0,0) size 96x14
-        RenderText {#text} at (282,1) size 5x19
-          text run at (282,1) width 5: " "
-        RenderTextControl {INPUT} at (288,2) size 137x22 [bgcolor=#FFFFFF] [border: (1px solid #4C4C4C)]
-          RenderFlexibleBox {DIV} at (6,3) size 123x15
-            RenderBlock {DIV} at (0,0) size 96x14
-        RenderText {#text} at (426,1) size 5x19
-          text run at (426,1) width 5: " "
-        RenderTextControl {INPUT} at (432,2) size 136x22 [bgcolor=#FFFFFF] [border: (1px solid #4C4C4C)]
-          RenderFlexibleBox {DIV} at (6,3) size 123x15
-            RenderBlock {DIV} at (0,0) size 96x14
-        RenderTextControl {INPUT} at (571,2) size 136x22 [bgcolor=#FFFFFF] [border: (1px solid #4C4C4C)]
-          RenderFlexibleBox {DIV} at (6,3) size 123x15
-            RenderBlock {DIV} at (0,0) size 96x14
-        RenderTextControl {INPUT} at (2,27) size 136x22 [bgcolor=#FFFFFF] [border: (1px solid #4C4C4C)]
-          RenderFlexibleBox {DIV} at (6,3) size 123x15
-            RenderBlock {DIV} at (0,0) size 96x14
-layer at (17,57) size 95x14
-  RenderBlock {DIV} at (0,0) size 96x14
-layer at (160,57) size 95x14
-  RenderBlock {DIV} at (0,0) size 96x14
-layer at (303,57) size 95x14
-  RenderBlock {DIV} at (0,0) size 96x14
-layer at (447,57) size 95x14
-  RenderBlock {DIV} at (0,0) size 96x14
-layer at (586,57) size 95x14
-  RenderBlock {DIV} at (0,0) size 96x14
-layer at (17,82) size 95x14
-  RenderBlock {DIV} at (0,0) size 96x14
-layer at (115,58) size 22x12
-  RenderBlock {DIV} at (98,1) size 23x12 [bgcolor=#000000]
-layer at (258,58) size 22x12
-  RenderBlock {DIV} at (98,1) size 23x12 [bgcolor=#000000]
-layer at (402,58) size 22x12
-  RenderBlock {DIV} at (98,1) size 23x12 [bgcolor=#000000]
-layer at (545,58) size 22x12
-  RenderBlock {DIV} at (98,1) size 23x12 [bgcolor=#000000]
-layer at (684,58) size 22x12
-  RenderBlock {DIV} at (98,1) size 23x12 [bgcolor=#000000]
-layer at (115,83) size 22x12
-  RenderBlock {DIV} at (98,1) size 23x12 [bgcolor=#000000]
+        RenderTextControl {INPUT} at (2,2) size 155x22 [bgcolor=#FFFFFF] [border: (1px solid #3C3C4399)]
+          RenderFlexibleBox {DIV} at (6,3) size 143x15
+            RenderBlock {DIV} at (0,0) size 115x14
+        RenderText {#text} at (158,1) size 5x19
+          text run at (158,1) width 5: " "
+        RenderTextControl {INPUT} at (164,2) size 156x22 [bgcolor=#FFFFFF] [border: (1px solid #3C3C4399)]
+          RenderFlexibleBox {DIV} at (6,3) size 143x15
+            RenderBlock {DIV} at (0,0) size 115x14
+        RenderText {#text} at (321,1) size 5x19
+          text run at (321,1) width 5: " "
+        RenderTextControl {INPUT} at (327,2) size 156x22 [bgcolor=#FFFFFF] [border: (1px solid #3C3C4399)]
+          RenderFlexibleBox {DIV} at (6,3) size 143x15
+            RenderBlock {DIV} at (0,0) size 115x14
+        RenderText {#text} at (484,1) size 5x19
+          text run at (484,1) width 5: " "
+        RenderTextControl {INPUT} at (490,2) size 156x22 [bgcolor=#FFFFFF] [border: (1px solid #3C3C4399)]
+          RenderFlexibleBox {DIV} at (6,3) size 143x15
+            RenderBlock {DIV} at (0,0) size 115x14
+        RenderTextControl {INPUT} at (2,27) size 155x22 [bgcolor=#FFFFFF] [border: (1px solid #3C3C4399)]
+          RenderFlexibleBox {DIV} at (6,3) size 143x15
+            RenderBlock {DIV} at (0,0) size 115x14
+        RenderTextControl {INPUT} at (160,27) size 156x22 [bgcolor=#FFFFFF] [border: (1px solid #3C3C4399)]
+          RenderFlexibleBox {DIV} at (6,3) size 143x15
+            RenderBlock {DIV} at (0,0) size 115x14
+layer at (17,57) size 115x14 backgroundClip at (17,57) size 114x14 clip at (17,57) size 114x14
+  RenderBlock {DIV} at (0,0) size 115x14
+layer at (179,57) size 115x14
+  RenderBlock {DIV} at (0,0) size 115x14
+layer at (342,57) size 115x14
+  RenderBlock {DIV} at (0,0) size 115x14
+layer at (505,57) size 115x14
+  RenderBlock {DIV} at (0,0) size 115x14
+layer at (17,82) size 115x14 backgroundClip at (17,82) size 114x14 clip at (17,82) size 114x14
+  RenderBlock {DIV} at (0,0) size 115x14
+layer at (175,82) size 115x14
+  RenderBlock {DIV} at (0,0) size 115x14
+layer at (134,58) size 22x12
+  RenderBlock {DIV} at (117,1) size 23x12 [bgcolor=#000000]
+layer at (297,58) size 22x12
+  RenderBlock {DIV} at (117,1) size 23x12 [bgcolor=#000000]
+layer at (460,58) size 22x12
+  RenderBlock {DIV} at (117,1) size 23x12 [bgcolor=#000000]
+layer at (623,58) size 22x12
+  RenderBlock {DIV} at (117,1) size 23x12 [bgcolor=#000000]
+layer at (134,83) size 22x12
+  RenderBlock {DIV} at (117,1) size 23x12 [bgcolor=#000000]
+layer at (293,83) size 22x12
+  RenderBlock {DIV} at (117,1) size 23x12 [bgcolor=#000000]

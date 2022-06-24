@@ -157,8 +157,10 @@ PlatformCAAnimationWin::PlatformCAAnimationWin(AnimationType type, const String&
 {
     if (type == Basic)
         m_animation = adoptCF(CACFAnimationCreate(kCACFBasicAnimation));
-    else
+    else if (type == Keyframe)
         m_animation = adoptCF(CACFAnimationCreate(kCACFKeyframeAnimation));
+    else if (type == Group)
+        m_animation = adoptCF(CACFAnimationCreate(kCACFAnimationGroup));
     
     CACFAnimationSetKeyPath(m_animation.get(), keyPath.createCFString().get());
 }
@@ -169,6 +171,8 @@ PlatformCAAnimationWin::PlatformCAAnimationWin(PlatformAnimationRef animation)
         setType(Basic);
     else if (CACFAnimationGetClass(animation) == kCACFKeyframeAnimation)
         setType(Keyframe);
+    else if (CACFAnimationGetClass(animation) == kCACFAnimationGroup)
+        setType(Group);
     else {
         ASSERT_NOT_REACHED();
         return;
@@ -367,7 +371,8 @@ void PlatformCAAnimationWin::setFromValue(const WebCore::Color& value)
     if (animationType() != Basic)
         return;
 
-    CGFloat a[4] = { value.red(), value.green(), value.blue(), value.alpha() };
+    auto components = value.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+    CGFloat a[4] = { components.red, components.green, components.blue, components.alpha };
     RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(4, a));
     CACFAnimationSetFromValue(m_animation.get(), v.get());
 }
@@ -418,7 +423,8 @@ void PlatformCAAnimationWin::setToValue(const WebCore::Color& value)
     if (animationType() != Basic)
         return;
 
-    CGFloat a[4] = { value.red(), value.green(), value.blue(), value.alpha() };
+    auto components = value.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+    CGFloat a[4] = { components.red, components.green, components.blue, components.alpha };
     RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(4, a));
     CACFAnimationSetToValue(m_animation.get(), v.get());
 }
@@ -487,7 +493,8 @@ void PlatformCAAnimationWin::setValues(const Vector<WebCore::Color>& value)
         
     RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
-        CGFloat a[4] = { value[i].red(), value[i].green(), value[i].blue(), value[i].alpha() };
+        auto components = value[i].toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+        CGFloat a[4] = { components.red, components.green, components.blue, components.alpha };
         RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(4, a));
         CFArrayAppendValue(array.get(), v.get());
     }
@@ -548,6 +555,22 @@ void PlatformCAAnimationWin::setTimingFunctions(const Vector<const TimingFunctio
 void PlatformCAAnimationWin::copyTimingFunctionsFrom(const PlatformCAAnimation& value)
 {
     CACFAnimationSetTimingFunctions(m_animation.get(), CACFAnimationGetTimingFunctions(downcast<PlatformCAAnimationWin>(value).platformAnimation()));
+}
+
+void PlatformCAAnimationWin::setAnimations(const Vector<RefPtr<PlatformCAAnimation>>& value)
+{
+    auto array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
+    for (auto& animation : value) {
+        if (is<PlatformCAAnimationWin>(animation))
+            CFArrayAppendValue(array.get(), downcast<PlatformCAAnimationWin>(*animation).m_animation.get());
+    }
+
+    CACFAnimationSetAnimations(m_animation.get(), array.get());
+}
+
+void PlatformCAAnimationWin::copyAnimationsFrom(const PlatformCAAnimation& value)
+{
+    CACFAnimationSetAnimations(m_animation.get(), CACFAnimationGetAnimations(downcast<PlatformCAAnimationWin>(value).platformAnimation()));
 }
 
 #endif // PLATFORM(WIN)

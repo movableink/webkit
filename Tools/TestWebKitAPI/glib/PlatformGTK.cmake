@@ -6,23 +6,24 @@ list(APPEND WebKitGLibAPITests_SOURCES
 )
 
 list(APPEND WebKitGLibAPITests_INCLUDE_DIRECTORIES
-    ${DERIVED_SOURCES_JAVASCRIPCOREGTK_DIR}
-    ${DERIVED_SOURCES_WEBKIT2GTK_DIR}
-    ${FORWARDING_HEADERS_WEBKIT2GTK_DIR}
-    ${FORWARDING_HEADERS_WEBKIT2GTK_EXTENSION_DIR}
+    ${WebKit2Gtk_DERIVED_SOURCES_DIR}
+    ${WebKit2Gtk_FRAMEWORK_HEADERS_DIR}
+    ${WebKit2Gtk_FRAMEWORK_HEADERS_DIR}/webkit2gtk-${WEBKITGTK_API_VERSION}
+    ${WebKit2Gtk_FRAMEWORK_HEADERS_DIR}/webkit2gtk-webextension
 )
 
 list(APPEND WebKitGLibAPITests_SYSTEM_INCLUDE_DIRECTORIES
     ${ATSPI_INCLUDE_DIRS}
-    ${GTK3_INCLUDE_DIRS}
-    ${GTK_UNIX_PRINT_INCLUDE_DIRS}
 )
 
 list(APPEND WebKitGLibAPITest_LIBRARIES
     ${ATSPI_LIBRARIES}
-    ${GTK3_LIBRARIES}
-    ${GTK_UNIX_PRINT_LIBRARIES}
+    GTK::GTK
 )
+
+if (GTK_UNIX_PRINT_FOUND)
+    list(APPEND WebKitGLibAPITest_LIBRARIES GTK::UnixPrint)
+endif ()
 
 list(APPEND WebKitGLibAPIWebProcessTests
     ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGtk/AutocleanupsTest.cpp
@@ -41,13 +42,11 @@ ADD_WK2_TEST(TestDOMNodeFilter ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGtk/TestDO
 ADD_WK2_TEST(TestDOMXPathNSResolver ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGtk/TestDOMXPathNSResolver.cpp)
 ADD_WK2_TEST(TestInspector ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGtk/TestInspector.cpp)
 ADD_WK2_TEST(TestInspectorServer ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGtk/TestInspectorServer.cpp)
-ADD_WK2_TEST(TestOptionMenu ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGtk/TestOptionMenu.cpp)
 ADD_WK2_TEST(TestPrinting ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGtk/TestPrinting.cpp)
 ADD_WK2_TEST(TestWebKitFaviconDatabase ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWebKitFaviconDatabase.cpp)
 ADD_WK2_TEST(TestWebKitVersion ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGtk/TestWebKitVersion.cpp)
 ADD_WK2_TEST(TestWebViewEditor ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGtk/TestWebViewEditor.cpp)
 
 if (ATSPI_FOUND)
-    ADD_WK2_TEST(AccessibilityTestServer ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGtk/AccessibilityTestServer.cpp)
     ADD_WK2_TEST(TestWebKitAccessibility ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGtk/TestWebKitAccessibility.cpp)
 endif ()

@@ -7,8 +7,10 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
-#ifndef TEST_CODEC_FACTORY_H_
-#define TEST_CODEC_FACTORY_H_
+#ifndef VPX_TEST_CODEC_FACTORY_H_
+#define VPX_TEST_CODEC_FACTORY_H_
+
+#include <tuple>
 
 #include "./vpx_config.h"
 #include "vpx/vpx_decoder.h"
@@ -53,23 +55,22 @@ class CodecFactory {
 template <class T1>
 class CodecTestWithParam
     : public ::testing::TestWithParam<
-          std::tr1::tuple<const libvpx_test::CodecFactory *, T1> > {};
+          std::tuple<const libvpx_test::CodecFactory *, T1> > {};
 
 template <class T1, class T2>
 class CodecTestWith2Params
     : public ::testing::TestWithParam<
-          std::tr1::tuple<const libvpx_test::CodecFactory *, T1, T2> > {};
+          std::tuple<const libvpx_test::CodecFactory *, T1, T2> > {};
 
 template <class T1, class T2, class T3>
 class CodecTestWith3Params
     : public ::testing::TestWithParam<
-          std::tr1::tuple<const libvpx_test::CodecFactory *, T1, T2, T3> > {};
+          std::tuple<const libvpx_test::CodecFactory *, T1, T2, T3> > {};
 
 template <class T1, class T2, class T3, class T4>
 class CodecTestWith4Params
     : public ::testing::TestWithParam<
-          std::tr1::tuple<const libvpx_test::CodecFactory *, T1, T2, T3, T4> > {
-};
+          std::tuple<const libvpx_test::CodecFactory *, T1, T2, T3, T4> > {};
 
 /*
  * VP8 Codec Definitions
@@ -156,15 +157,15 @@ class VP8CodecFactory : public CodecFactory {
 
 const libvpx_test::VP8CodecFactory kVP8;
 
-#define VP8_INSTANTIATE_TEST_CASE(test, ...)                                \
-  INSTANTIATE_TEST_CASE_P(                                                  \
+#define VP8_INSTANTIATE_TEST_SUITE(test, ...)                               \
+  INSTANTIATE_TEST_SUITE_P(                                                 \
       VP8, test,                                                            \
       ::testing::Combine(                                                   \
           ::testing::Values(static_cast<const libvpx_test::CodecFactory *>( \
               &libvpx_test::kVP8)),                                         \
           __VA_ARGS__))
 #else
-#define VP8_INSTANTIATE_TEST_CASE(test, ...)
+#define VP8_INSTANTIATE_TEST_SUITE(test, ...)
 #endif  // CONFIG_VP8
 
 /*
@@ -252,16 +253,16 @@ class VP9CodecFactory : public CodecFactory {
 
 const libvpx_test::VP9CodecFactory kVP9;
 
-#define VP9_INSTANTIATE_TEST_CASE(test, ...)                                \
-  INSTANTIATE_TEST_CASE_P(                                                  \
+#define VP9_INSTANTIATE_TEST_SUITE(test, ...)                               \
+  INSTANTIATE_TEST_SUITE_P(                                                 \
       VP9, test,                                                            \
       ::testing::Combine(                                                   \
           ::testing::Values(static_cast<const libvpx_test::CodecFactory *>( \
               &libvpx_test::kVP9)),                                         \
           __VA_ARGS__))
 #else
-#define VP9_INSTANTIATE_TEST_CASE(test, ...)
+#define VP9_INSTANTIATE_TEST_SUITE(test, ...)
 #endif  // CONFIG_VP9
 
 }  // namespace libvpx_test
-#endif  // TEST_CODEC_FACTORY_H_
+#endif  // VPX_TEST_CODEC_FACTORY_H_

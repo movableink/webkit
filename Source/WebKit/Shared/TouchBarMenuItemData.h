@@ -24,7 +24,11 @@
  */
 
 #pragma once
+
+#if HAVE(TOUCH_BAR)
+
 #include "ArgumentCoders.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/text/WTFString.h>
 
 namespace IPC {
@@ -46,10 +50,9 @@ enum ItemType {
 struct TouchBarMenuItemData {
     explicit TouchBarMenuItemData() = default;
     explicit TouchBarMenuItemData(const WebCore::HTMLMenuItemElement&);
-    explicit TouchBarMenuItemData(const TouchBarMenuItemData&) = default;
     
     void encode(IPC::Encoder&) const;
-    static Optional<TouchBarMenuItemData> decode(IPC::Decoder&);
+    static std::optional<TouchBarMenuItemData> decode(IPC::Decoder&);
     
     ItemType type { ItemType::Button };
     String identifier;
@@ -90,4 +93,17 @@ inline bool operator!=(const TouchBarMenuItemData& lhs, const TouchBarMenuItemDa
     return !(lhs == rhs);
 }
 
-}
+} // namespace WebKit
+
+namespace WTF {
+
+template<> struct EnumTraits<WebKit::ItemType> {
+    using values = EnumValues<
+        WebKit::ItemType,
+        WebKit::ItemType::Button
+    >;
+};
+
+} // namespace WTF
+
+#endif // HAVE(TOUCH_BAR)

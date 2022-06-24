@@ -26,10 +26,10 @@
 #import "config.h"
 #import "IconLoadingDelegate.h"
 
-#include "WKNSData.h"
-#include "_WKIconLoadingDelegate.h"
-#include "_WKLinkIconParametersInternal.h"
-#include <wtf/BlockPtr.h>
+#import "WKNSData.h"
+#import "_WKIconLoadingDelegate.h"
+#import "_WKLinkIconParametersInternal.h"
+#import <wtf/BlockPtr.h>
 
 namespace WebKit {
 
@@ -70,7 +70,7 @@ IconLoadingDelegate::IconLoadingClient::~IconLoadingClient()
 
 typedef void (^IconLoadCompletionHandler)(NSData*);
 
-void IconLoadingDelegate::IconLoadingClient::getLoadDecisionForIcon(const WebCore::LinkIcon& linkIcon, WTF::CompletionHandler<void(WTF::Function<void(API::Data*, WebKit::CallbackBase::Error)>&&)>&& completionHandler)
+void IconLoadingDelegate::IconLoadingClient::getLoadDecisionForIcon(const WebCore::LinkIcon& linkIcon, CompletionHandler<void(CompletionHandler<void(API::Data*)>&&)>&& completionHandler)
 {
     if (!m_iconLoadingDelegate.m_delegateMethods.webViewShouldLoadIconWithParametersCompletionHandler) {
         completionHandler(nullptr);
@@ -88,11 +88,8 @@ void IconLoadingDelegate::IconLoadingClient::getLoadDecisionForIcon(const WebCor
     [delegate webView:m_iconLoadingDelegate.m_webView shouldLoadIconWithParameters:parameters.get() completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)] (IconLoadCompletionHandler loadCompletionHandler) mutable {
         ASSERT(RunLoop::isMain());
         if (loadCompletionHandler) {
-            completionHandler([loadCompletionHandler = Block_copy(loadCompletionHandler)](API::Data* data, WebKit::CallbackBase::Error error) {
-                if (error != CallbackBase::Error::None || !data)
-                    loadCompletionHandler(nil);
-                else
-                    loadCompletionHandler(wrapper(*data));
+            completionHandler([loadCompletionHandler = makeBlockPtr(loadCompletionHandler)](API::Data* data) {
+                loadCompletionHandler(wrapper(data));
             });
         } else
             completionHandler(nullptr);

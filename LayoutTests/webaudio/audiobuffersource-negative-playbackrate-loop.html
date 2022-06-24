@@ -4,7 +4,7 @@
     <title>audiobuffersource-negative-playbackrate-loop</title>
     <script src="../resources/js-test.js"></script>
     <script src="resources/audio-testing.js"></script>
-    <script src="resources/audiobuffersource-testing.js"></script>
+    <script src="resources/audiobuffersource-testing-legacy.js"></script>
 
     <script>
 
@@ -26,7 +26,7 @@
     function go() {
         jsTestIsAsync = true;
 
-        context = new webkitOfflineAudioContext(1, renderFrames, sampleRate);
+        context = new OfflineAudioContext(1, renderFrames, sampleRate);
 
         var bufferSource = context.createBufferSource();
         bufferSource.buffer = createRamp(context, 0, 127, sourceFrames);

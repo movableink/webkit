@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,12 @@
 
 #if HAVE(APP_SSO)
 
+#import "APINavigationAction.h"
 #import "DataReference.h"
+#import "WebPageProxy.h"
 #import <WebCore/ResourceResponse.h>
+
+#define AUTHORIZATIONSESSION_RELEASE_LOG(fmt, ...) RELEASE_LOG(AppSSO, "%p - [InitiatingAction=%s][State=%s] RedirectSOAuthorizationSession::" fmt, this, initiatingActionString(), stateString(), ##__VA_ARGS__)
 
 namespace WebKit {
 using namespace WebCore;
@@ -46,20 +50,25 @@ RedirectSOAuthorizationSession::RedirectSOAuthorizationSession(SOAuthorization *
 
 void RedirectSOAuthorizationSession::fallBackToWebPathInternal()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("fallBackToWebPathInternal: navigationAction=%p", navigationAction());
     invokeCallback(false);
 }
 
 void RedirectSOAuthorizationSession::abortInternal()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("abortInternal");
     invokeCallback(true);
 }
 
 void RedirectSOAuthorizationSession::completeInternal(const ResourceResponse& response, NSData *data)
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("completeInternal: httpState=%d, navigationAction=%p", response.httpStatusCode(), navigationAction());
+
     auto* navigationAction = this->navigationAction();
     ASSERT(navigationAction);
     auto* page = this->page();
     if ((response.httpStatusCode() != 302 && response.httpStatusCode() != 200) || !page) {
+        AUTHORIZATIONSESSION_RELEASE_LOG("completeInternal: httpState=%d page=%d, so falling back to web path.", response.httpStatusCode(), !!page);
         fallBackToWebPathInternal();
         return;
     }
@@ -75,8 +84,8 @@ void RedirectSOAuthorizationSession::completeInternal(const ResourceResponse& re
         if (!navigationAction->isProcessingUserGesture()) {
             page->setShouldSuppressSOAuthorizationInNextNavigationPolicyDecision();
             auto html = makeString("<script>location = '", response.httpHeaderFields().get(HTTPHeaderName::Location), "'</script>").utf8();
-            auto data = IPC::DataReference(reinterpret_cast<const uint8_t*>(html.data()), html.length());
-            page->loadData(data, "text/html"_s, "UTF-8"_s, navigationAction->request().url(), nullptr, navigationAction->shouldOpenExternalURLsPolicy());
+            auto data = IPC::DataReference(html.dataAsUInt8Ptr(), html.length());
+            page->loadData(data, "text/html"_s, "UTF-8"_s, navigationAction->request().url().string(), nullptr, navigationAction->shouldOpenExternalURLsPolicy());
             return;
         }
 #endif
@@ -90,8 +99,11 @@ void RedirectSOAuthorizationSession::completeInternal(const ResourceResponse& re
 
 void RedirectSOAuthorizationSession::beforeStart()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("beforeStart");
 }
 
 } // namespace WebKit
+
+#undef AUTHORIZATIONSESSION_RELEASE_LOG
 
 #endif

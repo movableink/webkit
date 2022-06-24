@@ -20,23 +20,31 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import webkitpy.thirdparty.autoinstalled.requests
+from webkitcorepy import BytesIO
 
-import collections
 import json
 import requests
+import sys
 import time
 import unittest
 
+try:
+    from collections.abc import Iterable, Mapping
+except ImportError:
+    from collections import Iterable, Mapping
+
 from webkitpy.results.upload import Upload
 from webkitpy.thirdparty import mock
+
+if sys.version_info > (3, 0):
+    basestring = str
 
 
 class UploadTest(unittest.TestCase):
 
     class Options(object):
         def __init__(self, **kwargs):
-            for key, value in kwargs.iteritems():
+            for key, value in kwargs.items():
                 setattr(self, key, value)
 
     class MockResponse(object):
@@ -51,9 +59,9 @@ class UploadTest(unittest.TestCase):
     def normalize(data):
         if isinstance(data, basestring):
             return str(data)
-        elif isinstance(data, collections.Mapping):
-            return dict(map(UploadTest.normalize, data.iteritems()))
-        elif isinstance(data, collections.Iterable):
+        elif isinstance(data, Mapping):
+            return dict(map(UploadTest.normalize, data.items()))
+        elif isinstance(data, Iterable):
             return type(data)(map(UploadTest.normalize, data))
         return data
 
@@ -228,12 +236,15 @@ class UploadTest(unittest.TestCase):
         )
 
         with mock.patch('requests.post', new=lambda url, headers={}, data={}, files={}, verify=True: self.MockResponse()):
-            self.assertTrue(upload.upload_archive('https://results.webkit.org', archive='content', log_line_func=lambda _: None))
+            self.assertTrue(upload.upload_archive('https://results.webkit.org', archive=BytesIO(b'content'), log_line_func=lambda _: None))
 
         with mock.patch('requests.post', new=lambda url, headers={}, data={}, files={}, verify=True: self.raise_requests_ConnectionError()):
             lines = []
-            self.assertFalse(upload.upload_archive('https://results.webkit.org', archive='content', log_line_func=lambda line: lines.append(line)))
-            self.assertEqual([' ' * 4 + 'Failed to upload test archive to https://results.webkit.org, results server not online'], lines)
+            self.assertTrue(upload.upload_archive('https://results.webkit.org', archive=BytesIO(b'content'), log_line_func=lambda line: lines.append(line)))
+            self.assertEqual([
+                ' ' * 4 + 'Failed to upload test archive to https://results.webkit.org, results server dropped connection, likely due to archive size (0.0 MB).',
+                ' ' * 4 + 'This error is not fatal, continuing'
+            ], lines)
 
         mock_404 = mock.patch('requests.post', new=lambda url, headers={}, data={}, files={}, verify=True: self.MockResponse(
             status_code=404,
@@ -245,4 +256,17 @@ class UploadTest(unittest.TestCase):
             self.assertEqual([
                 ' ' * 4 + 'Error uploading archive to https://results.webkit.org',
                 ' ' * 8 + 'No such address',
+            ], lines)
+
+        mock_413 = mock.patch('requests.post', new=lambda url, headers={}, data={}, files={}, verify=True: self.MockResponse(
+            status_code=413,
+            text=json.dumps(dict(description='Request Entity Too Large')),
+        ))
+        with mock_413:
+            lines = []
+            self.assertTrue(upload.upload_archive('https://results.webkit.org', archive='content', log_line_func=lambda line: lines.append(line)))
+            self.assertEqual([
+                ' ' * 4 + 'Upload to https://results.webkit.org failed:',
+                ' ' * 8 + 'Request Entity Too Large',
+                ' ' * 4 + 'This error is not fatal, continuing',
             ], lines)

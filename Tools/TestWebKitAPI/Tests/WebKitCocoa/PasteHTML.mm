@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(COCOA)
 
@@ -37,7 +37,7 @@
 #import <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include <MobileCoreServices/MobileCoreServices.h>
+#import <MobileCoreServices/MobileCoreServices.h>
 #endif
 
 @interface WKWebView ()
@@ -45,6 +45,9 @@
 @end
 
 #if PLATFORM(MAC)
+@interface WKWebView () <NSServicesMenuRequestor>
+@end
+
 void writeHTMLToPasteboard(NSString *html)
 {
     [[NSPasteboard generalPasteboard] declareTypes:@[WebCore::legacyHTMLPasteboardType()] owner:nil];
@@ -387,6 +390,24 @@ TEST(PasteHTML, DoesNotAddStandardFontFamily)
         [webView stringByEvaluatingJavaScript:@"getComputedStyle(document.body).fontFamily"]);
 }
 
+#if PLATFORM(MAC)
+
+TEST(PasteHTML, ReadSelectionFromPasteboard)
+{
+    auto generalPasteboard = NSPasteboard.generalPasteboard;
+    [generalPasteboard clearContents];
+    [generalPasteboard setString:@"Hello world" forType:NSPasteboardTypeString];
+
+    auto webView = createWebViewWithCustomPasteboardDataSetting(true);
+    [webView synchronouslyLoadHTMLString:@"<input autofocus>"];
+    [webView readSelectionFromPasteboard:generalPasteboard];
+
+    NSString *inputValue = [webView stringByEvaluatingJavaScript:@"document.querySelector('input').value"];
+    EXPECT_WK_STREQ(inputValue, "Hello world");
+}
+
+#endif // PLATFORM(MAC)
+
 #if ENABLE(DARK_MODE_CSS) && HAVE(OS_DARK_MODE_SUPPORT)
 
 TEST(PasteHTML, TransformColorsOfDarkContent)
@@ -418,6 +439,42 @@ TEST(PasteHTML, DoesNotTransformColorsOfLightContent)
     [webView paste:nil];
 
     EXPECT_WK_STREQ([webView stringByEvaluatingJavaScript:@"rich.querySelector('span').style.color"], @"rgb(101, 101, 101)");
+}
+
+TEST(PasteHTML, TransformColorsOfDarkContentButNotSemanticColor)
+{
+    auto webView = createWebViewWithCustomPasteboardDataSetting(true, true);
+    [webView forceDarkMode];
+
+    [webView synchronouslyLoadTestPageNamed:@"rich-color-filtered"];
+
+    [webView stringByEvaluatingJavaScript:@"document.body.style.color = '-apple-system-label';"];
+    writeHTMLToPasteboard(@"<span style='color: -apple-system-label'>hello</span><b style='color: #eee'>world</b>");
+
+    [webView stringByEvaluatingJavaScript:@"selectRichText()"];
+    [webView paste:nil];
+
+#if USE(APPKIT)
+    EXPECT_WK_STREQ([webView stringByEvaluatingJavaScript:@"rich.innerHTML"], @"hello<b style=\"color: rgb(21, 21, 21);\">world</b>");
+#else
+    EXPECT_WK_STREQ([webView stringByEvaluatingJavaScript:@"rich.innerHTML"],
+        @"<span style=\"-webkit-text-size-adjust: auto;\">hello</span><b style=\"-webkit-text-size-adjust: auto; color: rgb(21, 21, 21);\">world</b>");
+#endif
+}
+
+TEST(PasteHTML, DoesNotTransformColorsOfLightContentDuringOutdent)
+{
+    auto webView = createWebViewWithCustomPasteboardDataSetting(true, true);
+    [webView forceDarkMode];
+
+    [webView synchronouslyLoadTestPageNamed:@"rich-color-filtered"];
+
+    [webView stringByEvaluatingJavaScript:@"document.body.style = `color: -apple-system-label; caret-color: -apple-system-secondary-label; background-color: -apple-system-text-background;`;"];
+    [webView stringByEvaluatingJavaScript:@"rich.innerHTML = `<ul><li>hello</li><ul><li id='target'>world</li></ul></ul>`;"];
+
+    [webView stringByEvaluatingJavaScript:@"getSelection().setPosition(target, 0); document.execCommand('outdent');"];
+
+    EXPECT_WK_STREQ([webView stringByEvaluatingJavaScript:@"rich.innerHTML"], @"<ul><li>hello</li><li>world</li></ul>");
 }
 
 #endif // ENABLE(DARK_MODE_CSS) && HAVE(OS_DARK_MODE_SUPPORT)

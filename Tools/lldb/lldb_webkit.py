@@ -34,9 +34,10 @@ import string
 import struct
 
 
-def addSummaryAndSyntheticFormattersForRawBitmaskType(debugger, type_name, enumerator_value_to_name_map):
+def addSummaryAndSyntheticFormattersForRawBitmaskType(debugger, type_name, enumerator_value_to_name_map, flags_mask=None):
     class GeneratedRawBitmaskProvider(RawBitmaskProviderBase):
         ENUMERATOR_VALUE_TO_NAME_MAP = enumerator_value_to_name_map.copy()
+        FLAGS_MASK = flags_mask
 
     def raw_bitmask_summary_provider(valobj, dict):
         provider = GeneratedRawBitmaskProvider(valobj, dict)
@@ -66,6 +67,7 @@ def __lldb_init_module(debugger, dict):
     debugger.HandleCommand('type summary add --expand -F lldb_webkit.WTFHashSet_SummaryProvider -x "^WTF::HashSet<.+>$"')
     debugger.HandleCommand('type summary add --expand -F lldb_webkit.WTFMediaTime_SummaryProvider WTF::MediaTime')
     debugger.HandleCommand('type summary add --expand -F lldb_webkit.WTFOptionSet_SummaryProvider -x "^WTF::OptionSet<.+>$"')
+    debugger.HandleCommand('type summary add --expand -F lldb_webkit.WTFCompactPointerTuple_SummaryProvider -x "^WTF::CompactPointerTuple<.+,.+>$"')
 
     debugger.HandleCommand('type summary add -F lldb_webkit.WTFURL_SummaryProvider WTF::URL')
     debugger.HandleCommand('type summary add -F lldb_webkit.WebCoreColor_SummaryProvider WebCore::Color')
@@ -83,6 +85,8 @@ def __lldb_init_module(debugger, dict):
     debugger.HandleCommand('type summary add -F lldb_webkit.WebCoreFloatPoint_SummaryProvider WebCore::FloatPoint')
     debugger.HandleCommand('type summary add -F lldb_webkit.WebCoreFloatRect_SummaryProvider WebCore::FloatRect')
 
+    debugger.HandleCommand('type summary add -F lldb_webkit.WebCoreLength_SummaryProvider WebCore::Length')
+
     debugger.HandleCommand('type summary add -F lldb_webkit.WebCoreSecurityOrigin_SummaryProvider WebCore::SecurityOrigin')
     debugger.HandleCommand('type summary add -F lldb_webkit.WebCoreFrame_SummaryProvider WebCore::Frame')
 
@@ -93,6 +97,7 @@ def __lldb_init_module(debugger, dict):
     debugger.HandleCommand('type synthetic add -x "^WTF::Vector<.+>$" --python-class lldb_webkit.WTFVectorProvider')
     debugger.HandleCommand('type synthetic add -x "^WTF::HashTable<.+>$" --python-class lldb_webkit.WTFHashTableProvider')
     debugger.HandleCommand('type synthetic add -x "^WTF::OptionSet<.+>$" --python-class lldb_webkit.WTFOptionSetProvider')
+    debugger.HandleCommand('type synthetic add -x "^WTF::CompactPointerTuple<.+,.+>$" --python-class lldb_webkit.WTFCompactPointerTupleProvider')
 
     addSummaryAndSyntheticFormattersForRawBitmaskType(debugger, "WebEventFlags", {
         0x00010000: "WebEventFlagMaskLeftCommandKey",
@@ -105,6 +110,19 @@ def __lldb_init_module(debugger, dict):
         0x00400000: "WebEventFlagMaskRightOptionKey",
         0x01000000: "WebEventFlagMaskRightCommandKey",
     })
+
+    # AppKit
+    NSEventModifierFlagDeviceIndependentFlagsMask = 0xffff0000
+    addSummaryAndSyntheticFormattersForRawBitmaskType(debugger, "NSEventModifierFlags", {
+        1 << 16: "NSEventModifierFlagCapsLock",
+        1 << 17: "NSEventModifierFlagShift",
+        1 << 18: "NSEventModifierFlagControl",
+        1 << 19: "NSEventModifierFlagOption",
+        1 << 20: "NSEventModifierFlagCommand",
+        1 << 21: "NSEventModifierFlagNumericPad",
+        1 << 22: "NSEventModifierFlagHelp",
+        1 << 23: "NSEventModifierFlagFunction",
+    }, flags_mask=NSEventModifierFlagDeviceIndependentFlagsMask)
 
 
 def WTFString_SummaryProvider(valobj, dict):
@@ -168,6 +186,11 @@ def WTFMediaTime_SummaryProvider(valobj, dict):
     return "{ %d/%d, %f }" % (provider.timeValue(), provider.timeScale(), float(provider.timeValue()) / provider.timeScale())
 
 
+def WTFCompactPointerTuple_SummaryProvider(valobj, dict):
+    provider = WTFCompactPointerTupleProvider(valobj, dict)
+    return "{ type = %s }" % provider.type_as_string()
+
+
 def WebCoreColor_SummaryProvider(valobj, dict):
     provider = WebCoreColorProvider(valobj, dict)
     return "{ %s }" % provider.to_string()
@@ -228,6 +251,28 @@ def WebCoreFloatRect_SummaryProvider(valobj, dict):
     return "{ x = %s, y = %s, width = %s, height = %s }" % (provider.get_x(), provider.get_y(), provider.get_width(), provider.get_height())
 
 
+def WebCoreLength_SummaryProvider(valobj, dict):
+    provider = WebCoreLengthProvider(valobj, dict)
+    quirky = ' (quirky)' if provider.has_quirk() else ""
+
+    if (provider.is_auto()):
+        return "{ auto%s }" % (quirky)
+
+    if (provider.is_undefined()):
+        return "{ undefined%s }" % (quirky)
+
+    if (provider.is_calculated()):
+        return "{ calc%s }" % (quirky)
+
+    if (provider.is_fixed()):
+        return "{ %spx%s }" % (provider.get_numeric_value(), quirky)
+
+    if (provider.is_percent()):
+        return "{ %s%%%s }" % (provider.get_numeric_value(), quirky)
+
+    return "{ %s %s%s }" % (provider.get_type_string(), provider.get_numeric_value(), quirky)
+
+
 def WebCoreSecurityOrigin_SummaryProvider(valobj, dict):
     provider = WebCoreSecurityOriginProvider(valobj, dict)
     return '{ %s, domain = %s, hasUniversalAccess = %d }' % (provider.to_string(), provider.domain(), provider.has_universal_access())
@@ -262,13 +307,13 @@ def btjs(debugger, command, result, internal_dict):
     process = target.GetProcess()
     thread = process.GetSelectedThread()
 
-    if target.FindFunctions("JSC::ExecState::describeFrame").GetSize() or target.FindFunctions("_ZN3JSC9ExecState13describeFrameEv").GetSize():
+    if target.FindFunctions("JSC::CallFrame::describeFrame").GetSize() or target.FindFunctions("_ZN3JSC9CallFrame13describeFrameEv").GetSize():
         annotateJSFrames = True
     else:
         annotateJSFrames = False
 
     if not annotateJSFrames:
-        print("Warning: Can't find JSC::ExecState::describeFrame() in executable to annotate JavaScript frames")
+        print("Warning: Can't find JSC::CallFrame::describeFrame() in executable to annotate JavaScript frames")
 
     backtraceDepth = thread.GetNumFrames()
 
@@ -279,7 +324,8 @@ def btjs(debugger, command, result, internal_dict):
             return
 
     threadFormat = '* thread #{num}: tid = {tid:#x}, {pcAddr:' + addressFormat + '}, queue = \'{queueName}, stop reason = {stopReason}'
-    print(threadFormat.format(num=thread.GetIndexID(), tid=thread.GetThreadID(), pcAddr=thread.GetFrameAtIndex(0).GetPC(), queueName=thread.GetQueueName(), stopReason=thread.GetStopDescription(30)))
+    # FIXME: GetStopDescription needs to be pass a stupidly large length because lldb has weird utf-8 encoding errors if it's too small. See: rdar://problem/57980599
+    print(threadFormat.format(num=thread.GetIndexID(), tid=thread.GetThreadID(), pcAddr=thread.GetFrameAtIndex(0).GetPC(), queueName=thread.GetQueueName(), stopReason=thread.GetStopDescription(300)))
 
     for frame in thread:
         if backtraceDepth < 1:
@@ -291,13 +337,11 @@ def btjs(debugger, command, result, internal_dict):
 
         if annotateJSFrames and not frame or not frame.GetSymbol() or frame.GetSymbol().GetName() == "llint_entry":
             callFrame = frame.GetSP()
-            JSFrameDescription = frame.EvaluateExpression("((JSC::ExecState*)0x%x)->describeFrame()" % frame.GetFP()).GetSummary()
+            JSFrameDescription = frame.EvaluateExpression("((JSC::CallFrame*)0x%x)->describeFrame()" % frame.GetFP()).GetSummary()
             if not JSFrameDescription:
-                JSFrameDescription = frame.EvaluateExpression("((JSC::CallFrame*)0x%x)->describeFrame()" % frame.GetFP()).GetSummary()
-            if not JSFrameDescription:
-                JSFrameDescription = frame.EvaluateExpression("(char*)_ZN3JSC9ExecState13describeFrameEv(0x%x)" % frame.GetFP()).GetSummary()
+                JSFrameDescription = frame.EvaluateExpression("(char*)_ZN3JSC9CallFrame13describeFrameEv(0x%x)" % frame.GetFP()).GetSummary()
             if JSFrameDescription:
-                JSFrameDescription = string.strip(JSFrameDescription, '"')
+                JSFrameDescription = JSFrameDescription.strip('"')
                 frameFormat = '    frame #{num}: {addr:' + addressFormat + '} {desc}'
                 print(frameFormat.format(num=frame.GetFrameID(), addr=frame.GetPC(), desc=JSFrameDescription))
                 continue
@@ -358,6 +402,8 @@ def lstring_to_string(valobj, error, length=None):
 
     pointer = valobj.GetValueAsUnsigned()
     contents = valobj.GetProcess().ReadMemory(pointer, length, lldb.SBError())
+    if not contents:
+        return ""
 
     # lldb does not (currently) support returning unicode from python summary providers,
     # so potentially convert this to ascii by escaping
@@ -448,50 +494,98 @@ class WTFStringProvider:
 
 
 class WebCoreColorProvider:
+    SEMANTIC_FLAG                           = 1 << 0
+    USE_COLOR_FUNCTION_SERIALIZATION_FLAG   = 1 << 1
+    VALID_FLAG                              = 1 << 2
+    OUT_OF_LINE_FLAG                        = 1 << 3
+
+    COLOR_VALUE_MASK                        = (1 << 48) - 1 # only correct for 64-bit
+    FLAGS_SHIFT                             = 48
+    FLAGS_SIZE                              = 8
+    COLOR_SPACE_SHIFT                       = FLAGS_SHIFT + FLAGS_SIZE
+
     "Print a WebCore::Color"
     def __init__(self, valobj, dict):
         self.valobj = valobj
 
-    def _is_extended(self, rgba_and_flags):
-        return not bool(rgba_and_flags & 0x1)
+    def _is_out_of_line(self, rgba_and_flags):
+        flags = self._flags(rgba_and_flags)
+        return bool(flags & self.OUT_OF_LINE_FLAG)
 
     def _is_valid(self, rgba_and_flags):
-        # Assumes not extended.
-        return bool(rgba_and_flags & 0x2)
+        flags = self._flags(rgba_and_flags)
+        return bool(flags & self.VALID_FLAG)
 
     def _is_semantic(self, rgba_and_flags):
-        # Assumes not extended.
-        return bool(rgba_and_flags & 0x4)
+        flags = self._flags(rgba_and_flags)
+        return bool(flags & self.SEMANTIC_FLAG)
 
-    def _to_string_extended(self):
-        extended_color = self.valobj.GetChildMemberWithName('m_colorData').GetChildMemberWithName('extendedColor').Dereference()
-        profile = extended_color.GetChildMemberWithName('m_colorSpace').GetValue()
-        if profile == 'ColorSpaceSRGB':
-            profile = 'srgb'
-        elif profile == 'ColorSpaceDisplayP3':
-            profile = 'display-p3'
-        else:
-            profile = 'unknown'
-        red = float(extended_color.GetChildMemberWithName('m_red').GetValue())
-        green = float(extended_color.GetChildMemberWithName('m_green').GetValue())
-        blue = float(extended_color.GetChildMemberWithName('m_blue').GetValue())
-        alpha = float(extended_color.GetChildMemberWithName('m_alpha').GetValue())
-        return "color(%s %1.2f %1.2f %1.2f / %1.2f)" % (profile, red, green, blue, alpha)
+    def _color_space(self, rgba_and_flags):
+        return rgba_and_flags >> self.COLOR_SPACE_SHIFT
+
+    def _flags(self, rgba_and_flags):
+        return rgba_and_flags >> self.FLAGS_SHIFT
+
+    def _to_string_out_of_line(self):
+        rgba_and_flags = self.valobj.GetChildMemberWithName('m_colorAndFlags').GetValueAsUnsigned(0)
+
+        out_of_line_components_type = self.valobj.GetTarget().FindFirstType('WebCore::Color::OutOfLineComponents')
+        out_of_line_components = self.valobj.CreateValueFromAddress('out_of_line_components', rgba_and_flags & self.COLOR_VALUE_MASK, out_of_line_components_type)
+
+        color_space = self._color_space(rgba_and_flags)
+
+        # From ColorSpace.h.
+        color_spaces = [
+            'A98RGB',
+            'DisplayP3',
+            'ExtendedA98RGB',
+            'ExtendedDisplayP3',
+            'ExtendedLinearSRGB',
+            'ExtendedProPhotoRGB',
+            'ExtendedRec2020',
+            'ExtendedSRGB',
+            'HSL',
+            'HWB',
+            'LCH',
+            'Lab',
+            'LinearSRGB',
+            'OKLCH',
+            'OKLab',
+            'ProPhotoRGB',
+            'Rec2020',
+            'SRGB',
+            'XYZ_D50',
+            'XYZ_D65',
+        ]
+
+        profile = color_spaces[color_space] if color_space < len(color_spaces) else 'unknown'
+
+        color_components = out_of_line_components.GetChildMemberWithName('m_components')
+        std_array_elems = color_components.GetChildMemberWithName('components').GetChildMemberWithName('__elems_')
+
+        red = float(std_array_elems.GetChildAtIndex(0).GetValue())
+        green = float(std_array_elems.GetChildAtIndex(1).GetValue())
+        blue = float(std_array_elems.GetChildAtIndex(2).GetValue())
+        alpha = float(std_array_elems.GetChildAtIndex(3).GetValue())
+
+        semantic = ' semantic' if self._is_semantic(rgba_and_flags) else ""
+
+        return "color(%s %1.2f %1.2f %1.2f / %1.2f)%s" % (profile, red, green, blue, alpha, semantic)
 
     def to_string(self):
-        rgba_and_flags = self.valobj.GetChildMemberWithName('m_colorData').GetChildMemberWithName('rgbaAndFlags').GetValueAsUnsigned(0)
+        rgba_and_flags = self.valobj.GetChildMemberWithName('m_colorAndFlags').GetValueAsUnsigned(0)
 
-        if self._is_extended(rgba_and_flags):
-            return self._to_string_extended()
+        if self._is_out_of_line(rgba_and_flags):
+            return self._to_string_out_of_line()
 
         if not self._is_valid(rgba_and_flags):
             return 'invalid'
 
-        color = rgba_and_flags >> 32
-        red = (color >> 16) & 0xFF
-        green = (color >> 8) & 0xFF
-        blue = color & 0xFF
-        alpha = ((color >> 24) & 0xFF) / 255.0
+        color = rgba_and_flags & self.COLOR_VALUE_MASK
+        red = (color >> 24) & 0xFF
+        green = (color >> 16) & 0xFF
+        blue = (color >> 8) & 0xFF
+        alpha = (color & 0xFF) / 255.0
 
         semantic = ' semantic' if self._is_semantic(rgba_and_flags) else ""
 
@@ -633,6 +727,84 @@ class WebCoreFloatRectProvider:
 
     def get_height(self):
         return WebCoreFloatSizeProvider(self.valobj.GetChildMemberWithName('m_size'), dict).get_height()
+
+
+class WebCoreLengthProvider:
+    "Print a WebCore::Length"
+
+    AUTO_TYPE           = 0
+    RELATIVE_TYPE       = 1
+    PERCENT_TYPE        = 2
+    FIXED_TYPE          = 3
+    INTRINSIC_TYPE      = 4
+    MIN_INTRINSIC_TYPE  = 5
+    MIN_CONTENT_TYPE    = 6
+    MAX_CONTENT_TYPE    = 7
+    FILL_AVAILABLE_TYPE = 8
+    FIT_CONTENT_TYPE    = 9
+    CALCULATED_TYPE     = 10
+    UNDEFINED_TYPE      = 11
+
+    def __init__(self, valobj, dict):
+        self.valobj = valobj
+
+    def get_type(self):
+        return self.valobj.GetChildMemberWithName('m_type').GetValueAsUnsigned(0)
+
+    def get_type_string(self):
+        length_type = self.get_type()
+
+        type_names = [
+            "Auto",
+            "Relative",
+            "Percent",
+            "Fixed",
+            "Intrinsic",
+            "MinIntrinsic",
+            "MinContent",
+            "MaxContent",
+            "FillAvailable",
+            "FitContent",
+            "Calculated",
+            "Undefined",
+        ]
+
+        if (length_type <= self.UNDEFINED_TYPE):
+            return type_names[length_type]
+
+        return "Unknown"
+
+    def is_auto(self):
+        return self.get_type() == self.AUTO_TYPE
+
+    def is_undefined(self):
+        return self.get_type() == self.UNDEFINED_TYPE
+
+    def is_calculated(self):
+        return self.get_type() == self.CALCULATED_TYPE
+
+    def is_fixed(self):
+        return self.get_type() == self.FIXED_TYPE
+
+    def is_percent(self):
+        return self.get_type() == self.PERCENT_TYPE
+
+    def has_quirk(self):
+        return bool(self.valobj.GetChildMemberWithName('m_hasQuirk').GetValueAsUnsigned(0))
+
+    def is_float(self):
+        return bool(self.valobj.GetChildMemberWithName('m_isFloat').GetValueAsUnsigned(0))
+
+    def get_numeric_value(self):
+        length_type = self.get_type()
+        if (length_type == self.CALCULATED_TYPE):
+            return 0
+
+        if (self.is_float()):
+            return self.valobj.GetChildMemberWithName('m_floatValue').GetValue()
+
+        return self.valobj.GetChildMemberWithName('m_intValue').GetValueAsSigned()
+
 
 
 class WTFURLProvider:
@@ -836,12 +1008,99 @@ class WTFOptionSetProvider(FlagEnumerationProvider):
 
 class RawBitmaskProviderBase(FlagEnumerationProvider):
     ENUMERATOR_VALUE_TO_NAME_MAP = {}
+    FLAGS_MASK = None  # Useful when a bitmask represents multiple disjoint sets of flags (e.g. NSEventModifierFlags).
 
     def _enumerator_value_to_name_map(self):
         return self.ENUMERATOR_VALUE_TO_NAME_MAP
 
     def _bitmask(self):
-        return self.valobj.GetValueAsUnsigned(0)
+        result = self.valobj.GetValueAsUnsigned(0)
+        if self.FLAGS_MASK is not None:
+            result = result & self.FLAGS_MASK
+        return result
+
+
+class WTFCompactPointerTupleProvider(object):
+
+    TYPE_MASK = 0xFFFF000000000000
+    POINTER_MASK = ~TYPE_MASK
+
+    def __init__(self, valobj, internal_dict):
+        self.valobj = valobj
+        self._is32Bit = valobj.GetTarget().GetAddressByteSize() == 4
+        self._pointer = None
+        self._type = None
+        self.update()
+
+    def type_as_string(self):
+        if not self.is_human_readable_type():
+            return "%s" % self._type.GetValueAsUnsigned(0)
+        return "%s" % self._type.GetValue()
+
+    def is_human_readable_type(self):
+        # The default summary provider for uint8_t, unsigned char emits the ASCII printable character or equivalent
+        # C escape sequence (e.g. \a = 0x07). Typically the CompactPointerTuple is used to encode non-character integral
+        # data. In this context it is less readable to use the default summary provider. So, we don't.
+        return self.valobj.GetType().GetTemplateArgumentType(1).GetBasicType() != lldb.eBasicTypeUnsignedChar
+
+    # LLDB overrides
+    def has_children(self):
+        return self._type is not None and self._pointer is not None
+
+    def num_children(self):
+        if not self.has_children:
+            return 0
+        return 2
+
+    def get_child_index(self, name):
+        if name == '[0]':
+            return 0
+        if name == '[1]':
+            return 1
+        if self._is32Bit:
+            if name == 'm_pointer':
+                return 2
+            if name == 'm_type':
+                return 3
+        else:
+            if name == 'm_data':
+                return 2
+        return None
+
+    def get_child_at_index(self, index):
+        if index < 0 or not self.valobj.IsValid():
+            return None
+        if index == 0:
+            return self._pointer
+        if index == 1:
+            return self._type
+        if self._is32Bit:
+            if index == 2:
+                return self._pointer
+            if index == 3:
+                return self._type
+        else:
+            if index == 2:
+                return self.valobj.GetChildMemberWithName('m_data')
+        return None
+
+    def update(self):
+        if self._is32Bit:
+            self._pointer = self.valobj.GetChildMemberWithName('m_pointer')
+            self._type = self.valobj.GetChildMemberWithName('m_type')
+        else:
+            data = self.valobj.GetChildMemberWithName('m_data').GetValueAsUnsigned(0)
+            byte_order = self.valobj.GetTarget().GetByteOrder()
+            address_byte_size = self.valobj.GetTarget().GetAddressByteSize()
+
+            pointer_data = lldb.SBData.CreateDataFromUInt64Array(byte_order, address_byte_size, [data & self.POINTER_MASK])
+            self._pointer = self.valobj.CreateValueFromData('[0]', pointer_data, self.valobj.GetType().GetTemplateArgumentType(0))
+
+            type_data = lldb.SBData.CreateDataFromUInt64Array(byte_order, address_byte_size, [(data >> 48) & 0xFFFF])
+            type_to_use = self.valobj.GetType().GetTemplateArgumentType(1)
+            if not self.is_human_readable_type():
+                type_to_use = self.valobj.GetTarget().GetBasicType(lldb.eBasicTypeUnsignedInt)
+            self._type = self.valobj.CreateValueFromData('[1]', type_data, type_to_use)
 
 
 class WTFVectorProvider:
@@ -918,41 +1177,33 @@ class WTFHashTableProvider:
         self.valobj = valobj
         self.update()
 
+    def metadataWithIndex(self, index):
+        table_pointer = self.valobj.GetChildMemberWithName('m_tableForLLDB')
+        metadata_pointer = table_pointer.GetValueAsUnsigned() + 4 * index
+        byte_order = self.valobj.GetTarget().GetByteOrder()
+        address_byte_size = self.valobj.GetTarget().GetAddressByteSize()
+        pointer_data = lldb.SBData.CreateDataFromUInt64Array(byte_order, address_byte_size, [metadata_pointer])
+        return self.valobj.CreateValueFromData('[0]', pointer_data, table_pointer.GetType()).Dereference().GetValueAsUnsigned()
+
     def tableSize(self):
-        return self.valobj.GetChildMemberWithName('m_tableSize').GetValueAsUnsigned(0)
+        return self.metadataWithIndex(-1)
 
     def keyCount(self):
-        return self.valobj.GetChildMemberWithName('m_keyCount').GetValueAsUnsigned(0)
+        return self.metadataWithIndex(-3)
 
     # Synthetic children provider methods.
     def num_children(self):
-        return self.tableSize() + 5
+        return self.tableSize() + 1
 
     def get_child_index(self, name):
         if name == "m_table":
             return self.tableSize()
-        elif name == "m_tableSize":
-            return self.tableSize() + 1
-        elif name == "m_tableSizeMask":
-            return self.tableSize() + 2
-        elif name == "m_keyCount":
-            return self.tableSize() + 3
-        elif name == "m_deletedCount":
-            return self.tableSize() + 4
         else:
             return int(name.lstrip('[').rstrip(']'))
 
     def get_child_at_index(self, index):
         if index == self.tableSize():
             return self.valobj.GetChildMemberWithName('m_table')
-        elif index == self.tableSize() + 1:
-            return self.valobj.GetChildMemberWithName('m_tableSize')
-        elif index == self.tableSize() + 2:
-            return self.valobj.GetChildMemberWithName('m_tableSizeMask')
-        elif index == self.tableSize() + 3:
-            return self.valobj.GetChildMemberWithName('m_keyCount')
-        elif index == self.tableSize() + 4:
-            return self.valobj.GetChildMemberWithName('m_deletedCount')
         elif index < self.tableSize():
             table = self.valobj.GetChildMemberWithName('m_table')
             return table.CreateChildAtOffset('[' + str(index) + ']', index * self.data_size, self.data_type)

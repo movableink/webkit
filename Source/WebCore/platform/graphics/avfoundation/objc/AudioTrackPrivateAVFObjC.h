@@ -26,9 +26,10 @@
 #ifndef AudioTrackPrivateAVFObjC_h
 #define AudioTrackPrivateAVFObjC_h
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "AudioTrackPrivateAVF.h"
+#include <wtf/Observer.h>
 
 OBJC_CLASS AVAssetTrack;
 OBJC_CLASS AVPlayerItem;
@@ -75,14 +76,19 @@ private:
     AudioTrackPrivateAVFObjC(AVPlayerItemTrack*);
     AudioTrackPrivateAVFObjC(AVAssetTrack*);
     AudioTrackPrivateAVFObjC(MediaSelectionOptionAVFObjC&);
+    AudioTrackPrivateAVFObjC(std::unique_ptr<AVTrackPrivateAVFObjCImpl>&&);
 
     void resetPropertiesFromTrack();
+    void audioTrackConfigurationChanged();
     std::unique_ptr<AVTrackPrivateAVFObjCImpl> m_impl;
+
+    using AudioTrackConfigurationObserver = Observer<void()>;
+    AudioTrackConfigurationObserver m_audioTrackConfigurationObserver;
 };
 
 }
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)
 
 
 #endif // AudioTrackPrivateAVFObjC_h

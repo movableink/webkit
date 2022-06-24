@@ -26,14 +26,14 @@ TEST(ShaderVariableTest, FindInfoByMappedName)
     // };
     // B uni[2];
     ShaderVariable uni(0, 2);
-    uni.name       = "uni";
-    uni.mappedName = "m_uni";
-    uni.structName = "B";
+    uni.name              = "uni";
+    uni.mappedName        = "m_uni";
+    uni.structOrBlockName = "B";
     {
         ShaderVariable a(0, 3);
-        a.name       = "a";
-        a.mappedName = "m_a";
-        a.structName = "A";
+        a.name              = "a";
+        a.mappedName        = "m_a";
+        a.structOrBlockName = "A";
         {
             ShaderVariable x(GL_FLOAT, 2);
             x.name       = "x";
@@ -86,9 +86,9 @@ TEST(ShaderVariableTest, IsSameUniformWithDifferentFieldOrder)
     // };
     // uniform A uni;
     ShaderVariable vx_a;
-    vx_a.name       = "uni";
-    vx_a.mappedName = "m_uni";
-    vx_a.structName = "A";
+    vx_a.name              = "uni";
+    vx_a.mappedName        = "m_uni";
+    vx_a.structOrBlockName = "A";
     {
         ShaderVariable x(GL_FLOAT);
         x.name       = "x";
@@ -107,9 +107,9 @@ TEST(ShaderVariableTest, IsSameUniformWithDifferentFieldOrder)
     // };
     // uniform A uni;
     ShaderVariable fx_a;
-    fx_a.name       = "uni";
-    fx_a.mappedName = "m_uni";
-    fx_a.structName = "A";
+    fx_a.name              = "uni";
+    fx_a.mappedName        = "m_uni";
+    fx_a.structOrBlockName = "A";
     {
         ShaderVariable y(GL_FLOAT);
         y.name       = "y";
@@ -133,9 +133,9 @@ TEST(ShaderVariableTest, IsSameUniformWithDifferentStructNames)
     // };
     // uniform A uni;
     ShaderVariable vx_a;
-    vx_a.name       = "uni";
-    vx_a.mappedName = "m_uni";
-    vx_a.structName = "A";
+    vx_a.name              = "uni";
+    vx_a.mappedName        = "m_uni";
+    vx_a.structOrBlockName = "A";
     {
         ShaderVariable x(GL_FLOAT);
         x.name       = "x";
@@ -168,13 +168,13 @@ TEST(ShaderVariableTest, IsSameUniformWithDifferentStructNames)
         fx_a.fields.push_back(y);
     }
 
-    fx_a.structName = "B";
+    fx_a.structOrBlockName = "B";
     EXPECT_FALSE(vx_a.isSameUniformAtLinkTime(fx_a));
 
-    fx_a.structName = "A";
+    fx_a.structOrBlockName = "A";
     EXPECT_TRUE(vx_a.isSameUniformAtLinkTime(fx_a));
 
-    fx_a.structName = "";
+    fx_a.structOrBlockName = "";
     EXPECT_FALSE(vx_a.isSameUniformAtLinkTime(fx_a));
 }
 
@@ -446,6 +446,49 @@ TEST(ShaderVariableTest, IsSameVaryingWithDifferentName)
 
     fx.location = 0;
     EXPECT_TRUE(vx.isSameVaryingAtLinkTime(fx, 310));
+}
+
+// Test that using two consecutive underscores (__) can be used for declaring an identifier
+TEST(ShaderVariableTest, DoubleUnderscoresForIdentifier)
+{
+    ShBuiltInResources resources;
+    sh::InitBuiltInResources(&resources);
+
+    ShHandle compiler = sh::ConstructCompiler(GL_VERTEX_SHADER, SH_GLES3_SPEC,
+                                              SH_GLSL_COMPATIBILITY_OUTPUT, &resources);
+    EXPECT_NE(static_cast<ShHandle>(0), compiler);
+
+    const char *front_underscores[] = {
+        "#version 300 es\n"
+        "in vec4 __position;\n"
+        "out float v;\n"
+        "void main() {\n"
+        "  v = 1.0;\n"
+        "  gl_Position = __position;\n"
+        "}"};
+    EXPECT_TRUE(sh::Compile(compiler, front_underscores, 1, SH_OBJECT_CODE));
+
+    const char *middle_underscores[] = {
+        "#version 300 es\n"
+        "in vec4 position__in;\n"
+        "out float v;\n"
+        "void main() {\n"
+        "  v = 1.0;\n"
+        "  gl_Position = position__in;\n"
+        "}"};
+    EXPECT_TRUE(sh::Compile(compiler, middle_underscores, 1, SH_OBJECT_CODE));
+
+    const char *end_underscores[] = {
+        "#version 300 es\n"
+        "in vec4 position__;\n"
+        "out float v;\n"
+        "void main() {\n"
+        "  v = 1.0;\n"
+        "  gl_Position = position__;\n"
+        "}"};
+    EXPECT_TRUE(sh::Compile(compiler, end_underscores, 1, SH_OBJECT_CODE));
+
+    sh::Destruct(compiler);
 }
 
 }  // namespace sh

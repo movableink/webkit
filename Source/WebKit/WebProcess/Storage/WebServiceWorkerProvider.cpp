@@ -36,6 +36,7 @@
 #include <WebCore/Exception.h>
 #include <WebCore/ExceptionCode.h>
 #include <WebCore/LegacySchemeRegistry.h>
+#include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/ServiceWorkerJob.h>
 #include <wtf/text/WTFString.h>
 
@@ -58,12 +59,19 @@ WebCore::SWClientConnection& WebServiceWorkerProvider::serviceWorkerConnection()
     return WebProcess::singleton().ensureNetworkProcessConnection().serviceWorkerConnection();
 }
 
-WebCore::SWClientConnection* WebServiceWorkerProvider::existingServiceWorkerConnection()
+void WebServiceWorkerProvider::updateThrottleState(bool isThrottleable)
 {
     auto* networkProcessConnection = WebProcess::singleton().existingNetworkProcessConnection();
     if (!networkProcessConnection)
-        return nullptr;
-    return networkProcessConnection->existingServiceWorkerConnection();
+        return;
+    auto& connection = networkProcessConnection->serviceWorkerConnection();
+    if (isThrottleable != connection.isThrottleable())
+        connection.updateThrottleState();
+}
+
+void WebServiceWorkerProvider::terminateWorkerForTesting(WebCore::ServiceWorkerIdentifier identifier, CompletionHandler<void()>&& callback)
+{
+    WebProcess::singleton().ensureNetworkProcessConnection().serviceWorkerConnection().terminateWorkerForTesting(identifier, WTFMove(callback));
 }
 
 } // namespace WebKit

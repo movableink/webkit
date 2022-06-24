@@ -1,5 +1,0 @@
-2d.shadow.attributes.shadowOffset.initial
-
-
-FAIL OffscreenCanvas test: 2d.shadow.attributes.shadowOffset.initial null is not an object (evaluating 'ctx.shadowOffsetX')
-

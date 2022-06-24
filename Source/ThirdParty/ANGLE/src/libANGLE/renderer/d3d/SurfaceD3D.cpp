@@ -16,7 +16,6 @@
 #include "libANGLE/renderer/d3d/RenderTargetD3D.h"
 #include "libANGLE/renderer/d3d/RendererD3D.h"
 #include "libANGLE/renderer/d3d/SwapChainD3D.h"
-#include "libANGLE/renderer/d3d/d3d11/formatutils11.h"
 
 #include <EGL/eglext.h>
 #include <tchar.h>
@@ -107,7 +106,7 @@ egl::Error SurfaceD3D::initialize(const egl::Display *display)
     {
         ANGLE_TRY(mRenderer->getD3DTextureInfo(mState.config, mD3DTexture, mState.attributes,
                                                &mFixedWidth, &mFixedHeight, nullptr, nullptr,
-                                               &mColorFormat));
+                                               &mColorFormat, nullptr));
         if (mState.attributes.contains(EGL_GL_COLORSPACE))
         {
             if (mColorFormat->id != angle::FormatID::R8G8B8A8_TYPELESS &&
@@ -160,7 +159,19 @@ egl::Error SurfaceD3D::releaseTexImage(const gl::Context *, EGLint)
 
 egl::Error SurfaceD3D::getSyncValues(EGLuint64KHR *ust, EGLuint64KHR *msc, EGLuint64KHR *sbc)
 {
+    if (!mState.directComposition)
+    {
+        return egl::EglBadSurface()
+               << "getSyncValues: surface requires Direct Composition to be enabled";
+    }
+
     return mSwapChain->getSyncValues(ust, msc, sbc);
+}
+
+egl::Error SurfaceD3D::getMscRate(EGLint *numerator, EGLint *denominator)
+{
+    UNIMPLEMENTED();
+    return egl::EglBadAccess();
 }
 
 egl::Error SurfaceD3D::resetSwapChain(const egl::Display *display)

@@ -23,21 +23,21 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "ScrollerPairMac.h"
+#import "config.h"
+#import "ScrollerPairMac.h"
 
 #if PLATFORM(MAC)
 
-#include "RemoteScrollingTree.h"
-#include <WebCore/FloatPoint.h>
-#include <WebCore/IntRect.h>
-#include <WebCore/NSScrollerImpDetails.h>
-#include <WebCore/PlatformMouseEvent.h>
-#include <WebCore/PlatformWheelEvent.h>
-#include <WebCore/ScrollTypes.h>
-#include <WebCore/ScrollableArea.h>
-#include <WebCore/ScrollingTreeScrollingNode.h>
-#include <pal/spi/mac/NSScrollerImpSPI.h>
+#import "RemoteScrollingTree.h"
+#import <WebCore/FloatPoint.h>
+#import <WebCore/IntRect.h>
+#import <WebCore/NSScrollerImpDetails.h>
+#import <WebCore/PlatformMouseEvent.h>
+#import <WebCore/PlatformWheelEvent.h>
+#import <WebCore/ScrollTypes.h>
+#import <WebCore/ScrollableArea.h>
+#import <WebCore/ScrollingTreeScrollingNode.h>
+#import <pal/spi/mac/NSScrollerImpSPI.h>
 
 @interface WKScrollerImpPairDelegate : NSObject <NSScrollerImpPairDelegate> {
     WebKit::ScrollerPairMac* _scrollerPair;
@@ -144,14 +144,14 @@ ScrollerPairMac::~ScrollerPairMac()
 bool ScrollerPairMac::handleWheelEvent(const WebCore::PlatformWheelEvent& event)
 {
     switch (event.phase()) {
-    case WebCore::PlatformWheelEventPhaseBegan:
+    case WebCore::PlatformWheelEventPhase::Began:
         [m_scrollerImpPair beginScrollGesture];
         break;
-    case WebCore::PlatformWheelEventPhaseEnded:
-    case WebCore::PlatformWheelEventPhaseCancelled:
+    case WebCore::PlatformWheelEventPhase::Ended:
+    case WebCore::PlatformWheelEventPhase::Cancelled:
         [m_scrollerImpPair endScrollGesture];
         break;
-    case WebCore::PlatformWheelEventPhaseMayBegin:
+    case WebCore::PlatformWheelEventPhase::MayBegin:
         [m_scrollerImpPair beginScrollGesture];
         [m_scrollerImpPair contentAreaScrolled];
         break;

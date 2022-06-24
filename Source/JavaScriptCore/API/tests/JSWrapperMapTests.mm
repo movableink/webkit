@@ -28,6 +28,7 @@
 
 #import "APICast.h"
 #import "HeapCellInlines.h"
+#import "JSGlobalObjectInlines.h"
 #import "JSValue.h"
 
 #if JSC_OBJC_API_ENABLED
@@ -55,15 +56,16 @@ extern "C" void checkResult(NSString *description, bool passed);
 {
     JSContext* context = [[JSContext alloc] init];
     JSGlobalContextRef contextRef = JSGlobalContextRetain(context.JSGlobalContextRef);
-    JSC::ExecState* exec = toJS(contextRef);
+    JSC::JSGlobalObject* globalObject = toJS(contextRef);
+    JSC::VM& vm = globalObject->vm();
 
     context[@"TestClass"] = [TestClass class];
     JSValue* aWrapper = [context evaluateScript:@"new TestClass()"];
     JSValue* bWrapper = [context evaluateScript:@"new TestClass()"];
-    JSC::JSValue aValue = toJS(exec, aWrapper.JSValueRef);
-    JSC::JSValue bValue = toJS(exec, bWrapper.JSValueRef);
-    JSC::Structure* aStructure = aValue.structureOrNull();
-    JSC::Structure* bStructure = bValue.structureOrNull();
+    JSC::JSValue aValue = toJS(globalObject, aWrapper.JSValueRef);
+    JSC::JSValue bValue = toJS(globalObject, bWrapper.JSValueRef);
+    JSC::Structure* aStructure = aValue.structureOrNull(vm);
+    JSC::Structure* bStructure = bValue.structureOrNull(vm);
     checkResult(@"structure should not be null", !!aStructure);
     checkResult(@"both wrappers should share the same structure", aStructure == bStructure);
 }

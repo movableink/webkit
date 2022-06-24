@@ -1,7 +1,0 @@
-2d.shadow.composite.1
-
-Shadows are drawn using globalCompositeOperation
-
-
-FAIL Shadows are drawn using globalCompositeOperation null is not an object (evaluating 'ctx.fillStyle = '#f00'')
-

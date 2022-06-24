@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#ifndef Zone_h
-#define Zone_h
+#pragma once
 
 #include "FixedVector.h"
 #include "Mutex.h"
@@ -32,6 +31,8 @@
 #include "StaticPerProcess.h"
 #include <malloc/malloc.h>
 #include <mutex>
+
+#if !BUSE(LIBPAS)
 
 namespace bmalloc {
 
@@ -42,7 +43,7 @@ public:
     // Enough capacity to track a 64GB heap, so probably enough for anything.
     static constexpr size_t capacity = 2048;
 
-    Zone(std::lock_guard<Mutex>&);
+    Zone(const LockHolder&);
     Zone(task_t, memory_reader_t, vm_address_t);
 
     void addRange(Range);
@@ -73,4 +74,4 @@ inline void Zone::addRange(Range range)
 
 } // namespace bmalloc
 
-#endif // Zone_h
+#endif

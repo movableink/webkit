@@ -22,8 +22,9 @@
 
 import logging
 
+from webkitcorepy import Version
+
 from webkitpy.common.memoized import memoized
-from webkitpy.common.version import Version
 from webkitpy.port.config import apple_additions, Config
 from webkitpy.port.ios import IOSPort
 from webkitpy.xcode.device_type import DeviceType
@@ -37,17 +38,23 @@ class IOSSimulatorPort(IOSPort):
     port_name = "ios-simulator"
 
     FUTURE_VERSION = 'future'
-    ARCHITECTURES = ['x86_64', 'i386']
+    ARCHITECTURES = ['x86_64', 'i386', 'arm64']
     DEFAULT_ARCHITECTURE = 'x86_64'
 
     DEVICE_MANAGER = SimulatedDeviceManager
 
     DEFAULT_DEVICE_TYPES = [
-        DeviceType(hardware_family='iPhone', hardware_type='SE'),
+        DeviceType(hardware_family='iPhone', hardware_type='12'),
         DeviceType(hardware_family='iPad', hardware_type='(5th generation)'),
         DeviceType(hardware_family='iPhone', hardware_type='7'),
     ]
     SDK = apple_additions().get_sdk('iphonesimulator') if apple_additions() else 'iphonesimulator'
+
+    def architecture(self):
+        result = self.get_option('architecture') or self.host.platform.architecture()
+        if result == 'arm64e':
+            return 'arm64'
+        return result
 
     @staticmethod
     def _version_from_name(name):
@@ -79,7 +86,6 @@ class IOSSimulatorPort(IOSPort):
         return result
 
     def setup_environ_for_server(self, server_name=None):
-        _log.debug("setup_environ_for_server")
         env = super(IOSSimulatorPort, self).setup_environ_for_server(server_name)
         if server_name == self.driver_name():
             if self.get_option('leaks'):
@@ -113,7 +119,7 @@ class IPhoneSimulatorPort(IOSSimulatorPort):
 
     DEVICE_TYPE = DeviceType(hardware_family='iPhone')
     DEFAULT_DEVICE_TYPES = [
-        DeviceType(hardware_family='iPhone', hardware_type='SE'),
+        DeviceType(hardware_family='iPhone', hardware_type='12'),
         DeviceType(hardware_family='iPhone', hardware_type='7'),
     ]
 

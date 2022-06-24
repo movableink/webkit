@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Igalia S.L.
+ * Copyright (C) 2017, 2020 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,6 +26,7 @@
 #include "WebKitWebViewPrivate.h"
 #include <WebCore/Color.h>
 #include <WebCore/GtkUtilities.h>
+#include <WebCore/GtkVersioning.h>
 #include <WebCore/PlatformDisplay.h>
 #include <WebCore/PlatformScreen.h>
 #include <glib/gi18n-lib.h>
@@ -33,8 +34,24 @@
 
 gboolean webkitWebViewAuthenticate(WebKitWebView* webView, WebKitAuthenticationRequest* request)
 {
-    CredentialStorageMode credentialStorageMode = webkit_authentication_request_can_save_credentials(request) ? AllowPersistentStorage : DisallowPersistentStorage;
-    webkitWebViewBaseAddDialog(WEBKIT_WEB_VIEW_BASE(webView), webkitAuthenticationDialogNew(request, credentialStorageMode));
+    switch (webkit_authentication_request_get_scheme(request)) {
+    case WEBKIT_AUTHENTICATION_SCHEME_DEFAULT:
+    case WEBKIT_AUTHENTICATION_SCHEME_HTTP_BASIC:
+    case WEBKIT_AUTHENTICATION_SCHEME_HTTP_DIGEST:
+    case WEBKIT_AUTHENTICATION_SCHEME_HTML_FORM:
+    case WEBKIT_AUTHENTICATION_SCHEME_NTLM:
+    case WEBKIT_AUTHENTICATION_SCHEME_NEGOTIATE:
+    case WEBKIT_AUTHENTICATION_SCHEME_SERVER_TRUST_EVALUATION_REQUESTED:
+    case WEBKIT_AUTHENTICATION_SCHEME_UNKNOWN: {
+        CredentialStorageMode credentialStorageMode = webkit_authentication_request_can_save_credentials(request) ? AllowPersistentStorage : DisallowPersistentStorage;
+        webkitWebViewBaseAddDialog(WEBKIT_WEB_VIEW_BASE(webView), webkitAuthenticationDialogNew(request, credentialStorageMode));
+        break;
+    }
+    case WEBKIT_AUTHENTICATION_SCHEME_CLIENT_CERTIFICATE_REQUESTED:
+    case WEBKIT_AUTHENTICATION_SCHEME_CLIENT_CERTIFICATE_PIN_REQUESTED:
+        webkit_authentication_request_authenticate(request, nullptr);
+        break;
+    }
 
     return TRUE;
 }
@@ -53,11 +70,25 @@ static void fileChooserDialogResponseCallback(GtkFileChooser* dialog, gint respo
 {
     GRefPtr<WebKitFileChooserRequest> adoptedRequest = adoptGRef(request);
     if (responseID == GTK_RESPONSE_ACCEPT) {
-        GUniquePtr<GSList> filesList(gtk_file_chooser_get_filenames(dialog));
-        GRefPtr<GPtrArray> filesArray = adoptGRef(g_ptr_array_new());
-        for (GSList* file = filesList.get(); file; file = g_slist_next(file))
-            g_ptr_array_add(filesArray.get(), file->data);
-        g_ptr_array_add(filesArray.get(), 0);
+        GRefPtr<GPtrArray> filesArray = adoptGRef(g_ptr_array_new_with_free_func(g_free));
+#if USE(GTK4)
+        GRefPtr<GListModel> filesList = adoptGRef(gtk_file_chooser_get_files(dialog));
+        unsigned itemCount = g_list_model_get_n_items(filesList.get());
+        for (unsigned i = 0; i < itemCount; ++i) {
+            GRefPtr<GFile> file = adoptGRef(G_FILE(g_list_model_get_item(filesList.get(), i)));
+            if (gchar* filename = g_file_get_path(file.get()))
+                g_ptr_array_add(filesArray.get(), filename);
+        }
+#else
+        GSList* filesList = gtk_file_chooser_get_files(dialog);
+        for (GSList* file = filesList; file; file = g_slist_next(file)) {
+            if (gchar* filename = g_file_get_path(G_FILE(file->data)))
+                g_ptr_array_add(filesArray.get(), filename);
+        }
+        g_slist_free_full(filesList, g_object_unref);
+#endif
+        g_ptr_array_add(filesArray.get(), nullptr);
+
         webkit_file_chooser_request_select_files(adoptedRequest.get(), reinterpret_cast<const gchar* const*>(filesArray->pdata));
     } else
         webkit_file_chooser_request_cancel(adoptedRequest.get());
@@ -82,8 +113,10 @@ gboolean webkitWebViewRunFileChooser(WebKitWebView* webView, WebKitFileChooserRe
         gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(dialog), filter);
     gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), allowsMultipleSelection);
 
-    if (const gchar* const* selectedFiles = webkit_file_chooser_request_get_selected_files(request))
-        gtk_file_chooser_select_filename(GTK_FILE_CHOOSER(dialog), selectedFiles[0]);
+    if (const gchar* const* selectedFiles = webkit_file_chooser_request_get_selected_files(request)) {
+        GRefPtr<GFile> file = adoptGRef(g_file_new_for_path(selectedFiles[0]));
+        gtk_file_chooser_set_file(GTK_FILE_CHOOSER(dialog), file.get(), nullptr);
+    }
 
     g_signal_connect(dialog, "response", G_CALLBACK(fileChooserDialogResponseCallback), g_object_ref(request));
 
@@ -93,6 +126,8 @@ gboolean webkitWebViewRunFileChooser(WebKitWebView* webView, WebKitFileChooserRe
 }
 
 struct WindowStateEvent {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
     enum class Type { Maximize, Minimize, Restore };
 
     WindowStateEvent(Type type, CompletionHandler<void()>&& completionHandler)
@@ -122,6 +157,38 @@ struct WindowStateEvent {
 
 static const char* gWindowStateEventID = "wk-window-state-event";
 
+#if USE(GTK4)
+static void surfaceStateChangedCallback(GdkSurface* surface, GParamSpec*, WebKitWebView* view)
+{
+    auto* state = static_cast<WindowStateEvent*>(g_object_get_data(G_OBJECT(view), gWindowStateEventID));
+    if (!state) {
+        g_signal_handlers_disconnect_by_func(surface, reinterpret_cast<gpointer>(surfaceStateChangedCallback), view);
+        return;
+    }
+
+    auto surfaceState = gdk_toplevel_get_state(GDK_TOPLEVEL(surface));
+    bool eventCompleted = false;
+    switch (state->type) {
+    case WindowStateEvent::Type::Maximize:
+        if (surfaceState & GDK_TOPLEVEL_STATE_MAXIMIZED)
+            eventCompleted = true;
+        break;
+    case WindowStateEvent::Type::Minimize:
+        if ((surfaceState & GDK_TOPLEVEL_STATE_MINIMIZED) || !gdk_surface_get_mapped(surface))
+            eventCompleted = true;
+        break;
+    case WindowStateEvent::Type::Restore:
+        if (!(surfaceState & GDK_TOPLEVEL_STATE_MAXIMIZED) && !(surfaceState & GDK_TOPLEVEL_STATE_MINIMIZED))
+            eventCompleted = true;
+        break;
+    }
+
+    if (eventCompleted) {
+        g_signal_handlers_disconnect_by_func(surface, reinterpret_cast<gpointer>(surfaceStateChangedCallback), view);
+        g_object_set_data(G_OBJECT(view), gWindowStateEventID, nullptr);
+    }
+}
+#else
 static gboolean windowStateEventCallback(GtkWidget* window, GdkEventWindowState* event, WebKitWebView* view)
 {
     auto* state = static_cast<WindowStateEvent*>(g_object_get_data(G_OBJECT(view), gWindowStateEventID));
@@ -153,6 +220,21 @@ static gboolean windowStateEventCallback(GtkWidget* window, GdkEventWindowState*
 
     return FALSE;
 }
+#endif
+
+static void
+webkitWebViewMonitorWindowState(WebKitWebView* view, GtkWindow* window, WindowStateEvent::Type type, CompletionHandler<void()>&& completionHandler)
+{
+    g_object_set_data_full(G_OBJECT(view), gWindowStateEventID, new WindowStateEvent(type, WTFMove(completionHandler)), [](gpointer userData) {
+        delete static_cast<WindowStateEvent*>(userData);
+    });
+
+#if USE(GTK4)
+    g_signal_connect_object(gtk_native_get_surface(GTK_NATIVE(window)), "notify::state", G_CALLBACK(surfaceStateChangedCallback), view, G_CONNECT_AFTER);
+#else
+    g_signal_connect_object(window, "window-state-event", G_CALLBACK(windowStateEventCallback), view, G_CONNECT_AFTER);
+#endif
+}
 
 void webkitWebViewMaximizeWindow(WebKitWebView* view, CompletionHandler<void()>&& completionHandler)
 {
@@ -168,11 +250,9 @@ void webkitWebViewMaximizeWindow(WebKitWebView* view, CompletionHandler<void()>&
         return;
     }
 
-    g_object_set_data_full(G_OBJECT(view), gWindowStateEventID, new WindowStateEvent(WindowStateEvent::Type::Maximize, WTFMove(completionHandler)), [](gpointer userData) {
-        delete static_cast<WindowStateEvent*>(userData);
-    });
-    g_signal_connect_object(window, "window-state-event", G_CALLBACK(windowStateEventCallback), view, G_CONNECT_AFTER);
+    webkitWebViewMonitorWindowState(view, window, WindowStateEvent::Type::Maximize, WTFMove(completionHandler));
     gtk_window_maximize(window);
+
 #if ENABLE(DEVELOPER_MODE)
     // Xvfb doesn't support maximize, so we resize the window to the screen size.
     if (WebCore::PlatformDisplay::sharedDisplay().type() == WebCore::PlatformDisplay::Type::X11) {
@@ -196,11 +276,8 @@ void webkitWebViewMinimizeWindow(WebKitWebView* view, CompletionHandler<void()>&
     }
 
     auto* window = GTK_WINDOW(topLevel);
-    g_object_set_data_full(G_OBJECT(view), gWindowStateEventID, new WindowStateEvent(WindowStateEvent::Type::Minimize, WTFMove(completionHandler)), [](gpointer userData) {
-        delete static_cast<WindowStateEvent*>(userData);
-    });
-    g_signal_connect_object(window, "window-state-event", G_CALLBACK(windowStateEventCallback), view, G_CONNECT_AFTER);
-    gtk_window_iconify(window);
+    webkitWebViewMonitorWindowState(view, window, WindowStateEvent::Type::Minimize, WTFMove(completionHandler));
+    gtk_window_minimize(window);
     gtk_widget_hide(topLevel);
 }
 
@@ -218,14 +295,12 @@ void webkitWebViewRestoreWindow(WebKitWebView* view, CompletionHandler<void()>&&
         return;
     }
 
-    g_object_set_data_full(G_OBJECT(view), gWindowStateEventID, new WindowStateEvent(WindowStateEvent::Type::Restore, WTFMove(completionHandler)), [](gpointer userData) {
-        delete static_cast<WindowStateEvent*>(userData);
-    });
-    g_signal_connect_object(window, "window-state-event", G_CALLBACK(windowStateEventCallback), view, G_CONNECT_AFTER);
+    webkitWebViewMonitorWindowState(view, window, WindowStateEvent::Type::Restore, WTFMove(completionHandler));
     if (gtk_window_is_maximized(window))
         gtk_window_unmaximize(window);
     if (!gtk_widget_get_mapped(topLevel))
-        gtk_window_deiconify(window);
+        gtk_window_unminimize(window);
+
 #if ENABLE(DEVELOPER_MODE)
     // Xvfb doesn't support maximize, so we resize the window to the default size.
     if (WebCore::PlatformDisplay::sharedDisplay().type() == WebCore::PlatformDisplay::Type::X11) {
@@ -289,8 +364,8 @@ GtkWidget* webkit_web_view_new_with_context(WebKitWebContext* context)
  * You can also use this method to implement other process models based on %WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES,
  * like for example, sharing the same web process for all the views in the same security domain.
  *
- * The newly created #WebKitWebView will also have the same #WebKitUserContentManager
- * and #WebKitSettings as @web_view.
+ * The newly created #WebKitWebView will also have the same #WebKitUserContentManager,
+ * #WebKitSettings, and #WebKitWebsitePolicies as @web_view.
  *
  * Returns: (transfer full): The newly created #WebKitWebView widget
  *
@@ -304,6 +379,7 @@ GtkWidget* webkit_web_view_new_with_related_view(WebKitWebView* webView)
         "user-content-manager", webkit_web_view_get_user_content_manager(webView),
         "settings", webkit_web_view_get_settings(webView),
         "related-view", webView,
+        "website-policies", webkit_web_view_get_website_policies(webView),
         nullptr));
 }
 
@@ -403,5 +479,42 @@ void webkit_web_view_get_background_color(WebKitWebView* webView, GdkRGBA* rgba)
     g_return_if_fail(rgba);
 
     auto& page = *webkitWebViewBaseGetPage(reinterpret_cast<WebKitWebViewBase*>(webView));
-    *rgba = page.backgroundColor().valueOr(WebCore::Color::white);
+    *rgba = page.backgroundColor().value_or(WebCore::Color::white);
+}
+
+guint createShowOptionMenuSignal(WebKitWebViewClass* webViewClass)
+{
+    /**
+     * WebKitWebView::show-option-menu:
+     * @web_view: the #WebKitWebView on which the signal is emitted
+     * @menu: the #WebKitOptionMenu
+     * @event: the #GdkEvent that triggered the menu, or %NULL
+     * @rectangle: the option element area
+     *
+     * This signal is emitted when a select element in @web_view needs to display a
+     * dropdown menu. This signal can be used to show a custom menu, using @menu to get
+     * the details of all items that should be displayed. The area of the element in the
+     * #WebKitWebView is given as @rectangle parameter, it can be used to position the
+     * menu. If this was triggered by a user interaction, like a mouse click,
+     * @event parameter provides the #GdkEvent.
+     * To handle this signal asynchronously you should keep a ref of the @menu.
+     *
+     * The default signal handler will pop up a #GtkMenu.
+     *
+     * Returns: %TRUE to stop other handlers from being invoked for the event.
+     *   %FALSE to propagate the event further.
+     *
+     * Since: 2.18
+     */
+    return g_signal_new(
+        "show-option-menu",
+        G_TYPE_FROM_CLASS(webViewClass),
+        G_SIGNAL_RUN_LAST,
+        G_STRUCT_OFFSET(WebKitWebViewClass, show_option_menu),
+        g_signal_accumulator_true_handled, nullptr,
+        g_cclosure_marshal_generic,
+        G_TYPE_BOOLEAN, 3,
+        WEBKIT_TYPE_OPTION_MENU,
+        GDK_TYPE_EVENT | G_SIGNAL_TYPE_STATIC_SCOPE,
+        GDK_TYPE_RECTANGLE | G_SIGNAL_TYPE_STATIC_SCOPE);
 }

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Igalia S.L.
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,7 @@
 #include "config.h"
 #include "UserMediaPermissionRequestProxy.h"
 
+#include "MediaPermissionUtilities.h"
 #include "UserMediaPermissionRequestManagerProxy.h"
 #include <WebCore/CaptureDeviceManager.h>
 #include <WebCore/RealtimeMediaSourceCenter.h>
@@ -30,7 +31,14 @@
 namespace WebKit {
 using namespace WebCore;
 
-UserMediaPermissionRequestProxy::UserMediaPermissionRequestProxy(UserMediaPermissionRequestManagerProxy& manager, uint64_t userMediaID, FrameIdentifier mainFrameID, FrameIdentifier frameID, Ref<WebCore::SecurityOrigin>&& userMediaDocumentOrigin, Ref<WebCore::SecurityOrigin>&& topLevelDocumentOrigin, Vector<WebCore::CaptureDevice>&& audioDevices, Vector<WebCore::CaptureDevice>&& videoDevices, WebCore::MediaStreamRequest&& request)
+#if !PLATFORM(COCOA)
+Ref<UserMediaPermissionRequestProxy> UserMediaPermissionRequestProxy::create(UserMediaPermissionRequestManagerProxy& manager, WebCore::UserMediaRequestIdentifier userMediaID, WebCore::FrameIdentifier mainFrameID, WebCore::FrameIdentifier frameID, Ref<WebCore::SecurityOrigin>&& userMediaDocumentOrigin, Ref<WebCore::SecurityOrigin>&& topLevelDocumentOrigin, Vector<WebCore::CaptureDevice>&& audioDevices, Vector<WebCore::CaptureDevice>&& videoDevices, WebCore::MediaStreamRequest&& request, CompletionHandler<void(bool)>&& decisionCompletionHandler)
+{
+    return adoptRef(*new UserMediaPermissionRequestProxy(manager, userMediaID, mainFrameID, frameID, WTFMove(userMediaDocumentOrigin), WTFMove(topLevelDocumentOrigin), WTFMove(audioDevices), WTFMove(videoDevices), WTFMove(request), WTFMove(decisionCompletionHandler)));
+}
+#endif
+
+UserMediaPermissionRequestProxy::UserMediaPermissionRequestProxy(UserMediaPermissionRequestManagerProxy& manager, UserMediaRequestIdentifier userMediaID, FrameIdentifier mainFrameID, FrameIdentifier frameID, Ref<WebCore::SecurityOrigin>&& userMediaDocumentOrigin, Ref<WebCore::SecurityOrigin>&& topLevelDocumentOrigin, Vector<WebCore::CaptureDevice>&& audioDevices, Vector<WebCore::CaptureDevice>&& videoDevices, WebCore::MediaStreamRequest&& request, CompletionHandler<void(bool)>&& decisionCompletionHandler)
     : m_manager(&manager)
     , m_userMediaID(userMediaID)
     , m_mainFrameID(mainFrameID)
@@ -40,13 +48,14 @@ UserMediaPermissionRequestProxy::UserMediaPermissionRequestProxy(UserMediaPermis
     , m_eligibleVideoDevices(WTFMove(videoDevices))
     , m_eligibleAudioDevices(WTFMove(audioDevices))
     , m_request(WTFMove(request))
+    , m_decisionCompletionHandler(WTFMove(decisionCompletionHandler))
 {
 }
 
 #if ENABLE(MEDIA_STREAM)
 static inline void setDeviceAsFirst(Vector<CaptureDevice>& devices, const String& deviceID)
 {
-    size_t index = devices.findMatching([&deviceID](const auto& device) {
+    size_t index = devices.findIf([&deviceID](const auto& device) {
         return device.persistentId() == deviceID;
     });
     ASSERT(index != notFound);
@@ -98,6 +107,8 @@ void UserMediaPermissionRequestProxy::deny(UserMediaAccessDenialReason reason)
 void UserMediaPermissionRequestProxy::invalidate()
 {
     m_manager = nullptr;
+    if (m_decisionCompletionHandler)
+        m_decisionCompletionHandler(false);
 }
 
 Vector<String> UserMediaPermissionRequestProxy::videoDeviceUIDs() const
@@ -134,6 +145,72 @@ String convertEnumerationToString(UserMediaPermissionRequestProxy::UserMediaAcce
     static_assert(static_cast<size_t>(UserMediaPermissionRequestProxy::UserMediaAccessDenialReason::OtherFailure) == 6, "UserMediaPermissionRequestProxy::UserMediaAccessDenialReason::OtherFailure is not 6 as expected");
     ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
     return values[static_cast<size_t>(enumerationValue)];
+}
+
+void UserMediaPermissionRequestProxy::promptForGetDisplayMedia(UserMediaDisplayCapturePromptType promptType)
+{
+#if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
+    ASSERT(m_manager && canPromptForGetDisplayMedia() && promptType != UserMediaDisplayCapturePromptType::UserChoose);
+    if (!m_manager || !canPromptForGetDisplayMedia() || promptType != UserMediaDisplayCapturePromptType::UserChoose) {
+        deny(UserMediaAccessDenialReason::PermissionDenied);
+        return;
+    }
+
+    alertForPermission(m_manager->page(), MediaPermissionReason::ScreenCapture, topLevelDocumentSecurityOrigin().data(), [this, protectedThis = Ref { *this }](bool granted) {
+        if (!granted)
+            deny(UserMediaAccessDenialReason::PermissionDenied);
+        else
+            allow();
+    });
+#endif
+}
+
+void UserMediaPermissionRequestProxy::promptForGetUserMedia()
+{
+#if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
+    ASSERT(m_manager);
+    if (!m_manager) {
+        deny(UserMediaAccessDenialReason::PermissionDenied);
+        return;
+    }
+
+    MediaPermissionReason reason = MediaPermissionReason::Camera;
+    if (requiresAudioCapture())
+        reason = requiresVideoCapture() ? MediaPermissionReason::CameraAndMicrophone : MediaPermissionReason::Microphone;
+
+    alertForPermission(m_manager->page(), reason, topLevelDocumentSecurityOrigin().data(), [this, protectedThis = Ref { *this }](bool granted) {
+        if (!granted)
+            deny(UserMediaAccessDenialReason::PermissionDenied);
+        else
+            allow();
+    });
+#endif
+}
+
+void UserMediaPermissionRequestProxy::doDefaultAction()
+{
+#if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
+    if (requiresDisplayCapture()) {
+        if (!canPromptForGetDisplayMedia()) {
+            deny(UserMediaAccessDenialReason::PermissionDenied);
+            return;
+        }
+
+        promptForGetDisplayMedia();
+    } else
+        promptForGetUserMedia();
+#else
+    deny();
+#endif
+}
+
+bool UserMediaPermissionRequestProxy::canPromptForGetDisplayMedia()
+{
+#if ENABLE(MEDIA_STREAM) && PLATFORM(IOS)
+    return true;
+#else
+    return false;
+#endif
 }
 
 } // namespace WebKit

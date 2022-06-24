@@ -27,19 +27,30 @@
 
 #if ENABLE(MEDIA_STREAM) && PLATFORM(IOS_FAMILY)
 
+#include "AudioSession.h"
 #include "CoreAudioCaptureSource.h"
+#include <wtf/WeakHashSet.h>
 
 OBJC_CLASS WebCoreAudioCaptureSourceIOSListener;
 
 namespace WebCore {
 
-class CoreAudioCaptureSourceFactoryIOS final : public CoreAudioCaptureSourceFactory {
+class CoreAudioCaptureSourceFactoryIOS final : public CoreAudioCaptureSourceFactory, public AudioSession::InterruptionObserver  {
 public:
     CoreAudioCaptureSourceFactoryIOS();
     ~CoreAudioCaptureSourceFactoryIOS();
 
 private:
+    // AudioSession::InterruptionObserver.
+    void beginAudioSessionInterruption() { beginInterruption(); }
+    void endAudioSessionInterruption(AudioSession::MayResume) { endInterruption(); }
+
+    CaptureSourceOrError createAudioCaptureSource(const CaptureDevice&, String&&, const MediaConstraints*, PageIdentifier) final;
+    void addExtensiveObserver(ExtensiveObserver&) final;
+    void removeExtensiveObserver(ExtensiveObserver&) final;
+
     RetainPtr<WebCoreAudioCaptureSourceIOSListener> m_listener;
+    WeakHashSet<ExtensiveObserver> m_observers;
 };
 
 } // namespace WebCore

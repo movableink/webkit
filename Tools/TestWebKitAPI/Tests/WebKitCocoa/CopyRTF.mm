@@ -24,7 +24,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(COCOA)
 
@@ -34,7 +34,7 @@
 #import <wtf/RetainPtr.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include <MobileCoreServices/MobileCoreServices.h>
+#import <MobileCoreServices/MobileCoreServices.h>
 #endif
 
 #if USE(APPKIT)
@@ -139,5 +139,28 @@ TEST(CopyRTF, StripsDefaultTextColorOfLightContent)
 
     EXPECT_EQ(i, 3UL);
 }
+
+#if ENABLE(DATA_DETECTION)
+
+TEST(CopyRTF, StripsDataDetectorsLinks)
+{
+    auto attributedString = copyAttributedStringFromHTML(@"<a href=\"https://www.apple.com\">Apple</a> <a href=\"x-apple-data-detectors://0\" dir=\"ltr\" x-apple-data-detectors=\"true\" x-apple-data-detectors-type=\"calendar-event\" x-apple-data-detectors-result=\"0\" style=\"color: currentcolor; text-decoration-color: rgba(128, 128, 128, 0.38);\">on Friday 11/6 at 4pm</a>", false);
+
+    __block size_t i = 0;
+    [attributedString enumerateAttribute:NSLinkAttributeName inRange:NSMakeRange(0, [attributedString length]) options:0 usingBlock:^(id value, NSRange attributeRange, BOOL *stop) {
+        if (!i)
+            EXPECT_NOT_NULL(value);
+        else if (i == 1)
+            EXPECT_NULL(value);
+        else
+            FAIL();
+
+        ++i;
+    }];
+
+    EXPECT_EQ(i, 2UL);
+}
+
+#endif // ENABLE(DATA_DETECTION)
 
 #endif // PLATFORM(COCOA)

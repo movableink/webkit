@@ -26,22 +26,23 @@
 [
     Conditional=ACCESSIBILITY,
 ] interface AccessibilityController {
-    void enableEnhancedAccessibility(boolean enable);
+    undefined enableEnhancedAccessibility(boolean enable);
     readonly attribute boolean enhancedAccessibilityEnabled;
-
+    undefined setIsolatedTreeMode(boolean enable);
     readonly attribute DOMString platformName;
     readonly attribute AccessibilityUIElement rootElement;
     readonly attribute AccessibilityUIElement focusedElement;
     AccessibilityUIElement elementAtPoint(long x, long y);
     AccessibilityUIElement accessibleElementById(DOMString id);
+    undefined injectAccessibilityPreference(DOMString domain, DOMString key, DOMString value);
     
     boolean addNotificationListener(object functionCallback);
     boolean removeNotificationListener();
 
-    void logFocusEvents();
-    void logValueChangeEvents();
-    void logScrollingStartEvents();
-    void logAccessibilityEvents();
-    void resetToConsistentState();
+    undefined logFocusEvents();
+    undefined logValueChangeEvents();
+    undefined logScrollingStartEvents();
+    undefined logAccessibilityEvents();
+    undefined resetToConsistentState();
 };
 

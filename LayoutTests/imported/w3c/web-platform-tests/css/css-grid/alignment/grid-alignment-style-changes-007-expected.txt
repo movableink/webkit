@@ -1,9 +1,11 @@
-CONSOLE MESSAGE: line 190: No valid data-* attributes found in selector list : .after
 É
 É
 É
 
-PASS .before 1 
-PASS .before 2 
-PASS .before 3 
+PASS .before 1
+PASS .before 2
+PASS .before 3
+PASS .after 4
+PASS .after 5
+PASS .after 6
 

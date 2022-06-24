@@ -39,7 +39,7 @@ bar:
 
 	# Synthesized symbols are treated as local ones.
 # WAS call OPENSSL_ia32cap_get@PLT
-	call	OPENSSL_ia32cap_get
+	call	.LOPENSSL_ia32cap_get_local_target
 
 	# References to local labels are left as-is in the first file.
 .Llocal_label:
@@ -56,6 +56,8 @@ bar:
 .L2:
 
 	.quad .L2-.L1
+	.uleb128 .L2-.L1
+	.sleb128 .L2-.L1
 
 	# Local labels and their jumps are left alone.
 	.text
@@ -82,7 +84,17 @@ bar:
 
 # WAS .quad .L2-.L1
 	.quad	.L2_BCM_1-.L1_BCM_1
+# WAS .uleb128 .L2-.L1
+	.uleb128	.L2_BCM_1-.L1_BCM_1
+# WAS .sleb128 .L2-.L1
+	.sleb128	.L2_BCM_1-.L1_BCM_1
 
+# .byte was not parsed as a symbol-containing directive on the
+# assumption that it's too small to hold a pointer. But Clang
+# will store offsets in it.
+# WAS .byte   (.LBB231_40-.LBB231_19)>>2, 4, .Lfoo, (.Lfoo), .Lfoo<<400, (   .Lfoo ) <<  66
+	.byte	(.LBB231_40_BCM_1-.LBB231_19_BCM_1)>>2, 4, .Lfoo_BCM_1, (.Lfoo_BCM_1), .Lfoo_BCM_1<<400, (   .Lfoo_BCM_1 ) <<  66
+.byte   421
 .text
 .loc 1 2 0
 BORINGSSL_bcm_text_end:
@@ -90,6 +102,8 @@ BORINGSSL_bcm_text_end:
 bcm_redirector_memcpy:
 	jmp	memcpy@PLT
 .type OPENSSL_ia32cap_get, @function
+.globl OPENSSL_ia32cap_get
+.LOPENSSL_ia32cap_get_local_target:
 OPENSSL_ia32cap_get:
 	leaq OPENSSL_ia32cap_P(%rip), %rax
 	ret

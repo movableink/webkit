@@ -44,7 +44,7 @@ public:
 
     // ScalableImageDecoder
     String filenameExtension() const final { return "bmp"_s; }
-    void setData(SharedBuffer&, bool allDataReceived) final;
+    void setData(const FragmentedSharedBuffer&, bool allDataReceived) final;
     ScalableImageDecoderFrame* frameBufferAtIndex(size_t index) final;
     // CAUTION: setFailed() deletes |m_reader|. Be careful to avoid
     // accessing deleted memory, especially when calling this from inside
@@ -57,7 +57,7 @@ private:
 
     inline uint32_t readUint32(int offset) const
     {
-        return BMPImageReader::readUint32(m_data.get(), m_decodedOffset + offset);
+        return BMPImageReader::readUint32(*m_data, m_decodedOffset + offset);
     }
 
     // Decodes the image. If |onlySize| is true, stops decoding after

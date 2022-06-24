@@ -31,7 +31,6 @@ import logging
 from webkitpy.common.net.layouttestresults import LayoutTestResults
 from webkitpy.common.net.unittestresults import UnitTestResults
 from webkitpy.tool.bot.abstracttestresultsreader import AbstractTestResultsReader
-from webkitpy.tool.steps.runtests import RunTests
 
 _log = logging.getLogger(__name__)
 
@@ -49,7 +48,7 @@ class LayoutTestResultsReader(AbstractTestResultsReader):
     def _read_file_contents(self, path):
         try:
             return self._host.filesystem.read_text_file(path)
-        except IOError as e:  # File does not exist or can't be read.
+        except IOError:  # File does not exist or can't be read.
             return None
 
     # FIXME: This logic should move to the port object.

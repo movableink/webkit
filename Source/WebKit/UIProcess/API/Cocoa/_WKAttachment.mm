@@ -24,14 +24,16 @@
  */
 
 #import "config.h"
-#import "_WKAttachment.h"
+#import <WebKit/_WKAttachment.h>
 
 #import "APIAttachment.h"
 #import "WKErrorPrivate.h"
 #import "_WKAttachmentInternal.h"
 #import <WebCore/MIMETypeRegistry.h>
 #import <WebCore/SharedBuffer.h>
+#import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/CompletionHandler.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import <MobileCoreServices/MobileCoreServices.h>
@@ -104,6 +106,9 @@ static const NSInteger InvalidAttachmentErrorCode = 2;
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(_WKAttachment.class, self))
+        return;
+
     _attachment->~Attachment();
 
     [super dealloc];
@@ -119,7 +124,7 @@ static const NSInteger InvalidAttachmentErrorCode = 2;
     if (!_attachment->isValid())
         return nil;
 
-    return [[[_WKAttachmentInfo alloc] initWithFileWrapper:_attachment->fileWrapper() filePath:_attachment->filePath() mimeType:_attachment->mimeType() utiType:_attachment->utiType()] autorelease];
+    return adoptNS([[_WKAttachmentInfo alloc] initWithFileWrapper:_attachment->fileWrapper() filePath:_attachment->filePath() mimeType:_attachment->mimeType() utiType:_attachment->utiType()]).autorelease();
 }
 
 - (void)requestInfo:(void(^)(_WKAttachmentInfo *, NSError *))completionHandler
@@ -139,15 +144,16 @@ static const NSInteger InvalidAttachmentErrorCode = 2;
     // from the SPI client, the corresponding file path of the data is unknown, if it even exists at all.
     _attachment->setFilePath({ });
     _attachment->setFileWrapperAndUpdateContentType(fileWrapper, contentType);
-    _attachment->updateAttributes([capturedBlock = makeBlockPtr(completionHandler)] (auto error) {
-        if (!capturedBlock)
-            return;
-
-        if (error == WebKit::CallbackBase::Error::None)
+    _attachment->updateAttributes([capturedBlock = makeBlockPtr(completionHandler)] {
+        if (capturedBlock)
             capturedBlock(nil);
-        else
-            capturedBlock([NSError errorWithDomain:WKErrorDomain code:UnspecifiedAttachmentErrorCode userInfo:nil]);
     });
+}
+
+- (void)setData:(NSData *)data newContentType:(NSString *)newContentType
+{
+    auto fileWrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:data]);
+    [self setFileWrapper:fileWrapper.get() contentType:newContentType completion:nil];
 }
 
 - (void)setData:(NSData *)data newContentType:(NSString *)newContentType newFilename:(NSString *)newFilename completion:(void(^)(NSError *))completionHandler

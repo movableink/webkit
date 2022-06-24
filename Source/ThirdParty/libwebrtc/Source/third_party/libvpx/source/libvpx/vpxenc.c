@@ -50,12 +50,6 @@
 #endif
 #include "./y4minput.h"
 
-/* Swallow warnings about unused results of fread/fwrite */
-static size_t wrap_fread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
-  return fread(ptr, size, nmemb, stream);
-}
-#define fread wrap_fread
-
 static size_t wrap_fwrite(const void *ptr, size_t size, size_t nmemb,
                           FILE *stream) {
   return fwrite(ptr, size, nmemb, stream);
@@ -95,40 +89,14 @@ static void warn_or_exit_on_error(vpx_codec_ctx_t *ctx, int fatal,
   va_end(ap);
 }
 
-static int read_frame(struct VpxInputContext *input_ctx, vpx_image_t *img) {
-  FILE *f = input_ctx->file;
-  y4m_input *y4m = &input_ctx->y4m;
-  int shortread = 0;
-
-  if (input_ctx->file_type == FILE_TYPE_Y4M) {
-    if (y4m_input_fetch_frame(y4m, f, img) < 1) return 0;
-  } else {
-    shortread = read_yuv_frame(input_ctx, img);
-  }
-
-  return !shortread;
-}
-
-static int file_is_y4m(const char detect[4]) {
-  if (memcmp(detect, "YUV4", 4) == 0) {
-    return 1;
-  }
-  return 0;
-}
-
-static int fourcc_is_ivf(const char detect[4]) {
-  if (memcmp(detect, "DKIF", 4) == 0) {
-    return 1;
-  }
-  return 0;
-}
-
 static const arg_def_t help =
     ARG_DEF(NULL, "help", 0, "Show usage options and exit");
 static const arg_def_t debugmode =
     ARG_DEF("D", "debug", 0, "Debug mode (makes output deterministic)");
 static const arg_def_t outputfile =
     ARG_DEF("o", "output", 1, "Output filename");
+static const arg_def_t use_nv12 =
+    ARG_DEF(NULL, "nv12", 0, "Input file is NV12 ");
 static const arg_def_t use_yv12 =
     ARG_DEF(NULL, "yv12", 0, "Input file is YV12 ");
 static const arg_def_t use_i420 =
@@ -254,7 +222,8 @@ static const arg_def_t error_resilient =
 static const arg_def_t lag_in_frames =
     ARG_DEF(NULL, "lag-in-frames", 1, "Max number of frames to lag");
 
-static const arg_def_t *global_args[] = { &use_yv12,
+static const arg_def_t *global_args[] = { &use_nv12,
+                                          &use_yv12,
                                           &use_i420,
                                           &use_i422,
                                           &use_i444,
@@ -326,9 +295,9 @@ static const arg_def_t maxsection_pct =
     ARG_DEF(NULL, "maxsection-pct", 1, "GOP max bitrate (% of target)");
 static const arg_def_t corpus_complexity =
     ARG_DEF(NULL, "corpus-complexity", 1, "corpus vbr complexity midpoint");
-static const arg_def_t *rc_twopass_args[] = {
-  &bias_pct, &minsection_pct, &maxsection_pct, &corpus_complexity, NULL
-};
+static const arg_def_t *rc_twopass_args[] = { &bias_pct, &minsection_pct,
+                                              &maxsection_pct,
+                                              &corpus_complexity, NULL };
 
 static const arg_def_t kf_min_dist =
     ARG_DEF(NULL, "kf-min-dist", 1, "Minimum keyframe interval (frames)");
@@ -342,19 +311,19 @@ static const arg_def_t *kf_args[] = { &kf_min_dist, &kf_max_dist, &kf_disabled,
 static const arg_def_t noise_sens =
     ARG_DEF(NULL, "noise-sensitivity", 1, "Noise sensitivity (frames to blur)");
 static const arg_def_t sharpness =
-    ARG_DEF(NULL, "sharpness", 1, "Loop filter sharpness (0..7)");
+    ARG_DEF(NULL, "sharpness", 1,
+            "Increase sharpness at the expense of lower PSNR. (0..7)");
 static const arg_def_t static_thresh =
     ARG_DEF(NULL, "static-thresh", 1, "Motion detection threshold");
-static const arg_def_t auto_altref =
-    ARG_DEF(NULL, "auto-alt-ref", 1, "Enable automatic alt reference frames");
 static const arg_def_t arnr_maxframes =
     ARG_DEF(NULL, "arnr-maxframes", 1, "AltRef max frames (0..15)");
 static const arg_def_t arnr_strength =
     ARG_DEF(NULL, "arnr-strength", 1, "AltRef filter strength (0..6)");
-static const arg_def_t arnr_type = ARG_DEF(NULL, "arnr-type", 1, "AltRef type");
-static const struct arg_enum_list tuning_enum[] = {
-  { "psnr", VP8_TUNE_PSNR }, { "ssim", VP8_TUNE_SSIM }, { NULL, 0 }
-};
+static const arg_def_t arnr_type =
+    ARG_DEF(NULL, "arnr-type", 1, "AltRef filter type (1..3)");
+static const struct arg_enum_list tuning_enum[] = { { "psnr", VP8_TUNE_PSNR },
+                                                    { "ssim", VP8_TUNE_SSIM },
+                                                    { NULL, 0 } };
 static const arg_def_t tune_ssim =
     ARG_DEF_ENUM(NULL, "tune", 1, "Material to favor", tuning_enum);
 static const arg_def_t cq_level =
@@ -367,12 +336,14 @@ static const arg_def_t gf_cbr_boost_pct = ARG_DEF(
 #if CONFIG_VP8_ENCODER
 static const arg_def_t cpu_used_vp8 =
     ARG_DEF(NULL, "cpu-used", 1, "CPU Used (-16..16)");
+static const arg_def_t auto_altref_vp8 = ARG_DEF(
+    NULL, "auto-alt-ref", 1, "Enable automatic alt reference frames. (0..1)");
 static const arg_def_t token_parts =
     ARG_DEF(NULL, "token-parts", 1, "Number of token partitions to use, log2");
 static const arg_def_t screen_content_mode =
     ARG_DEF(NULL, "screen-content-mode", 1, "Screen content mode");
 static const arg_def_t *vp8_args[] = { &cpu_used_vp8,
-                                       &auto_altref,
+                                       &auto_altref_vp8,
                                        &noise_sens,
                                        &sharpness,
                                        &static_thresh,
@@ -405,12 +376,19 @@ static const int vp8_arg_ctrl_map[] = { VP8E_SET_CPUUSED,
 
 #if CONFIG_VP9_ENCODER
 static const arg_def_t cpu_used_vp9 =
-    ARG_DEF(NULL, "cpu-used", 1, "CPU Used (-8..8)");
+    ARG_DEF(NULL, "cpu-used", 1, "CPU Used (-9..9)");
+static const arg_def_t auto_altref_vp9 = ARG_DEF(
+    NULL, "auto-alt-ref", 1,
+    "Enable automatic alt reference frames, 2+ enables multi-layer. (0..6)");
 static const arg_def_t tile_cols =
     ARG_DEF(NULL, "tile-columns", 1, "Number of tile columns to use, log2");
 static const arg_def_t tile_rows =
     ARG_DEF(NULL, "tile-rows", 1,
             "Number of tile rows to use, log2 (set to 0 while threads > 1)");
+
+static const arg_def_t enable_tpl_model =
+    ARG_DEF(NULL, "enable-tpl", 1, "Enable temporal dependency model");
+
 static const arg_def_t lossless =
     ARG_DEF(NULL, "lossless", 1, "Lossless mode (0: false (default), 1: true)");
 static const arg_def_t frame_parallel_decoding = ARG_DEF(
@@ -487,15 +465,23 @@ static const arg_def_t target_level = ARG_DEF(
 static const arg_def_t row_mt =
     ARG_DEF(NULL, "row-mt", 1,
             "Enable row based non-deterministic multi-threading in VP9");
+
+static const arg_def_t disable_loopfilter =
+    ARG_DEF(NULL, "disable-loopfilter", 1,
+            "Control Loopfilter in VP9\n"
+            "0: Loopfilter on for all frames (default)\n"
+            "1: Loopfilter off for non reference frames\n"
+            "2: Loopfilter off for all frames");
 #endif
 
 #if CONFIG_VP9_ENCODER
 static const arg_def_t *vp9_args[] = { &cpu_used_vp9,
-                                       &auto_altref,
+                                       &auto_altref_vp9,
                                        &sharpness,
                                        &static_thresh,
                                        &tile_cols,
                                        &tile_rows,
+                                       &enable_tpl_model,
                                        &arnr_maxframes,
                                        &arnr_strength,
                                        &arnr_type,
@@ -516,6 +502,10 @@ static const arg_def_t *vp9_args[] = { &cpu_used_vp9,
                                        &max_gf_interval,
                                        &target_level,
                                        &row_mt,
+                                       &disable_loopfilter,
+// NOTE: The entries above have a corresponding entry in vp9_arg_ctrl_map. The
+// entries below do not have a corresponding entry in vp9_arg_ctrl_map. They
+// must be listed at the end of vp9_args.
 #if CONFIG_VP9_HIGHBITDEPTH
                                        &bitdeptharg,
                                        &inbitdeptharg,
@@ -527,6 +517,7 @@ static const int vp9_arg_ctrl_map[] = { VP8E_SET_CPUUSED,
                                         VP8E_SET_STATIC_THRESHOLD,
                                         VP9E_SET_TILE_COLUMNS,
                                         VP9E_SET_TILE_ROWS,
+                                        VP9E_SET_TPL,
                                         VP8E_SET_ARNR_MAXFRAMES,
                                         VP8E_SET_ARNR_STRENGTH,
                                         VP8E_SET_ARNR_TYPE,
@@ -547,12 +538,13 @@ static const int vp9_arg_ctrl_map[] = { VP8E_SET_CPUUSED,
                                         VP9E_SET_MAX_GF_INTERVAL,
                                         VP9E_SET_TARGET_LEVEL,
                                         VP9E_SET_ROW_MT,
+                                        VP9E_SET_DISABLE_LOOPFILTER,
                                         0 };
 #endif
 
 static const arg_def_t *no_args[] = { NULL };
 
-void show_help(FILE *fout, int shorthelp) {
+static void show_help(FILE *fout, int shorthelp) {
   int i;
   const int num_encoder = get_vpx_encoder_count();
 
@@ -601,230 +593,6 @@ void show_help(FILE *fout, int shorthelp) {
 void usage_exit(void) {
   show_help(stderr, 1);
   exit(EXIT_FAILURE);
-}
-
-#define mmin(a, b) ((a) < (b) ? (a) : (b))
-
-#if CONFIG_VP9_HIGHBITDEPTH
-static void find_mismatch_high(const vpx_image_t *const img1,
-                               const vpx_image_t *const img2, int yloc[4],
-                               int uloc[4], int vloc[4]) {
-  uint16_t *plane1, *plane2;
-  uint32_t stride1, stride2;
-  const uint32_t bsize = 64;
-  const uint32_t bsizey = bsize >> img1->y_chroma_shift;
-  const uint32_t bsizex = bsize >> img1->x_chroma_shift;
-  const uint32_t c_w =
-      (img1->d_w + img1->x_chroma_shift) >> img1->x_chroma_shift;
-  const uint32_t c_h =
-      (img1->d_h + img1->y_chroma_shift) >> img1->y_chroma_shift;
-  int match = 1;
-  uint32_t i, j;
-  yloc[0] = yloc[1] = yloc[2] = yloc[3] = -1;
-  plane1 = (uint16_t *)img1->planes[VPX_PLANE_Y];
-  plane2 = (uint16_t *)img2->planes[VPX_PLANE_Y];
-  stride1 = img1->stride[VPX_PLANE_Y] / 2;
-  stride2 = img2->stride[VPX_PLANE_Y] / 2;
-  for (i = 0, match = 1; match && i < img1->d_h; i += bsize) {
-    for (j = 0; match && j < img1->d_w; j += bsize) {
-      int k, l;
-      const int si = mmin(i + bsize, img1->d_h) - i;
-      const int sj = mmin(j + bsize, img1->d_w) - j;
-      for (k = 0; match && k < si; ++k) {
-        for (l = 0; match && l < sj; ++l) {
-          if (*(plane1 + (i + k) * stride1 + j + l) !=
-              *(plane2 + (i + k) * stride2 + j + l)) {
-            yloc[0] = i + k;
-            yloc[1] = j + l;
-            yloc[2] = *(plane1 + (i + k) * stride1 + j + l);
-            yloc[3] = *(plane2 + (i + k) * stride2 + j + l);
-            match = 0;
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  uloc[0] = uloc[1] = uloc[2] = uloc[3] = -1;
-  plane1 = (uint16_t *)img1->planes[VPX_PLANE_U];
-  plane2 = (uint16_t *)img2->planes[VPX_PLANE_U];
-  stride1 = img1->stride[VPX_PLANE_U] / 2;
-  stride2 = img2->stride[VPX_PLANE_U] / 2;
-  for (i = 0, match = 1; match && i < c_h; i += bsizey) {
-    for (j = 0; match && j < c_w; j += bsizex) {
-      int k, l;
-      const int si = mmin(i + bsizey, c_h - i);
-      const int sj = mmin(j + bsizex, c_w - j);
-      for (k = 0; match && k < si; ++k) {
-        for (l = 0; match && l < sj; ++l) {
-          if (*(plane1 + (i + k) * stride1 + j + l) !=
-              *(plane2 + (i + k) * stride2 + j + l)) {
-            uloc[0] = i + k;
-            uloc[1] = j + l;
-            uloc[2] = *(plane1 + (i + k) * stride1 + j + l);
-            uloc[3] = *(plane2 + (i + k) * stride2 + j + l);
-            match = 0;
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  vloc[0] = vloc[1] = vloc[2] = vloc[3] = -1;
-  plane1 = (uint16_t *)img1->planes[VPX_PLANE_V];
-  plane2 = (uint16_t *)img2->planes[VPX_PLANE_V];
-  stride1 = img1->stride[VPX_PLANE_V] / 2;
-  stride2 = img2->stride[VPX_PLANE_V] / 2;
-  for (i = 0, match = 1; match && i < c_h; i += bsizey) {
-    for (j = 0; match && j < c_w; j += bsizex) {
-      int k, l;
-      const int si = mmin(i + bsizey, c_h - i);
-      const int sj = mmin(j + bsizex, c_w - j);
-      for (k = 0; match && k < si; ++k) {
-        for (l = 0; match && l < sj; ++l) {
-          if (*(plane1 + (i + k) * stride1 + j + l) !=
-              *(plane2 + (i + k) * stride2 + j + l)) {
-            vloc[0] = i + k;
-            vloc[1] = j + l;
-            vloc[2] = *(plane1 + (i + k) * stride1 + j + l);
-            vloc[3] = *(plane2 + (i + k) * stride2 + j + l);
-            match = 0;
-            break;
-          }
-        }
-      }
-    }
-  }
-}
-#endif
-
-static void find_mismatch(const vpx_image_t *const img1,
-                          const vpx_image_t *const img2, int yloc[4],
-                          int uloc[4], int vloc[4]) {
-  const uint32_t bsize = 64;
-  const uint32_t bsizey = bsize >> img1->y_chroma_shift;
-  const uint32_t bsizex = bsize >> img1->x_chroma_shift;
-  const uint32_t c_w =
-      (img1->d_w + img1->x_chroma_shift) >> img1->x_chroma_shift;
-  const uint32_t c_h =
-      (img1->d_h + img1->y_chroma_shift) >> img1->y_chroma_shift;
-  int match = 1;
-  uint32_t i, j;
-  yloc[0] = yloc[1] = yloc[2] = yloc[3] = -1;
-  for (i = 0, match = 1; match && i < img1->d_h; i += bsize) {
-    for (j = 0; match && j < img1->d_w; j += bsize) {
-      int k, l;
-      const int si = mmin(i + bsize, img1->d_h) - i;
-      const int sj = mmin(j + bsize, img1->d_w) - j;
-      for (k = 0; match && k < si; ++k) {
-        for (l = 0; match && l < sj; ++l) {
-          if (*(img1->planes[VPX_PLANE_Y] +
-                (i + k) * img1->stride[VPX_PLANE_Y] + j + l) !=
-              *(img2->planes[VPX_PLANE_Y] +
-                (i + k) * img2->stride[VPX_PLANE_Y] + j + l)) {
-            yloc[0] = i + k;
-            yloc[1] = j + l;
-            yloc[2] = *(img1->planes[VPX_PLANE_Y] +
-                        (i + k) * img1->stride[VPX_PLANE_Y] + j + l);
-            yloc[3] = *(img2->planes[VPX_PLANE_Y] +
-                        (i + k) * img2->stride[VPX_PLANE_Y] + j + l);
-            match = 0;
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  uloc[0] = uloc[1] = uloc[2] = uloc[3] = -1;
-  for (i = 0, match = 1; match && i < c_h; i += bsizey) {
-    for (j = 0; match && j < c_w; j += bsizex) {
-      int k, l;
-      const int si = mmin(i + bsizey, c_h - i);
-      const int sj = mmin(j + bsizex, c_w - j);
-      for (k = 0; match && k < si; ++k) {
-        for (l = 0; match && l < sj; ++l) {
-          if (*(img1->planes[VPX_PLANE_U] +
-                (i + k) * img1->stride[VPX_PLANE_U] + j + l) !=
-              *(img2->planes[VPX_PLANE_U] +
-                (i + k) * img2->stride[VPX_PLANE_U] + j + l)) {
-            uloc[0] = i + k;
-            uloc[1] = j + l;
-            uloc[2] = *(img1->planes[VPX_PLANE_U] +
-                        (i + k) * img1->stride[VPX_PLANE_U] + j + l);
-            uloc[3] = *(img2->planes[VPX_PLANE_U] +
-                        (i + k) * img2->stride[VPX_PLANE_U] + j + l);
-            match = 0;
-            break;
-          }
-        }
-      }
-    }
-  }
-  vloc[0] = vloc[1] = vloc[2] = vloc[3] = -1;
-  for (i = 0, match = 1; match && i < c_h; i += bsizey) {
-    for (j = 0; match && j < c_w; j += bsizex) {
-      int k, l;
-      const int si = mmin(i + bsizey, c_h - i);
-      const int sj = mmin(j + bsizex, c_w - j);
-      for (k = 0; match && k < si; ++k) {
-        for (l = 0; match && l < sj; ++l) {
-          if (*(img1->planes[VPX_PLANE_V] +
-                (i + k) * img1->stride[VPX_PLANE_V] + j + l) !=
-              *(img2->planes[VPX_PLANE_V] +
-                (i + k) * img2->stride[VPX_PLANE_V] + j + l)) {
-            vloc[0] = i + k;
-            vloc[1] = j + l;
-            vloc[2] = *(img1->planes[VPX_PLANE_V] +
-                        (i + k) * img1->stride[VPX_PLANE_V] + j + l);
-            vloc[3] = *(img2->planes[VPX_PLANE_V] +
-                        (i + k) * img2->stride[VPX_PLANE_V] + j + l);
-            match = 0;
-            break;
-          }
-        }
-      }
-    }
-  }
-}
-
-static int compare_img(const vpx_image_t *const img1,
-                       const vpx_image_t *const img2) {
-  uint32_t l_w = img1->d_w;
-  uint32_t c_w = (img1->d_w + img1->x_chroma_shift) >> img1->x_chroma_shift;
-  const uint32_t c_h =
-      (img1->d_h + img1->y_chroma_shift) >> img1->y_chroma_shift;
-  uint32_t i;
-  int match = 1;
-
-  match &= (img1->fmt == img2->fmt);
-  match &= (img1->d_w == img2->d_w);
-  match &= (img1->d_h == img2->d_h);
-#if CONFIG_VP9_HIGHBITDEPTH
-  if (img1->fmt & VPX_IMG_FMT_HIGHBITDEPTH) {
-    l_w *= 2;
-    c_w *= 2;
-  }
-#endif
-
-  for (i = 0; i < img1->d_h; ++i)
-    match &= (memcmp(img1->planes[VPX_PLANE_Y] + i * img1->stride[VPX_PLANE_Y],
-                     img2->planes[VPX_PLANE_Y] + i * img2->stride[VPX_PLANE_Y],
-                     l_w) == 0);
-
-  for (i = 0; i < c_h; ++i)
-    match &= (memcmp(img1->planes[VPX_PLANE_U] + i * img1->stride[VPX_PLANE_U],
-                     img2->planes[VPX_PLANE_U] + i * img2->stride[VPX_PLANE_U],
-                     c_w) == 0);
-
-  for (i = 0; i < c_h; ++i)
-    match &= (memcmp(img1->planes[VPX_PLANE_V] + i * img1->stride[VPX_PLANE_V],
-                     img2->planes[VPX_PLANE_V] + i * img2->stride[VPX_PLANE_V],
-                     c_w) == 0);
-
-  return match;
 }
 
 #define NELEMENTS(x) (sizeof(x) / sizeof(x[0]))
@@ -943,6 +711,8 @@ static void parse_global_config(struct VpxEncoderConfig *global, char **argv) {
       global->deadline = VPX_DL_REALTIME;
     else if (arg_match(&arg, &use_yv12, argi))
       global->color_type = YV12;
+    else if (arg_match(&arg, &use_nv12, argi))
+      global->color_type = NV12;
     else if (arg_match(&arg, &use_i420, argi))
       global->color_type = I420;
     else if (arg_match(&arg, &use_i422, argi))
@@ -1010,57 +780,6 @@ static void parse_global_config(struct VpxEncoderConfig *global, char **argv) {
     warn("Enforcing one-pass encoding in realtime mode\n");
     global->passes = 1;
   }
-}
-
-static void open_input_file(struct VpxInputContext *input) {
-  /* Parse certain options from the input file, if possible */
-  input->file = strcmp(input->filename, "-") ? fopen(input->filename, "rb")
-                                             : set_binary_mode(stdin);
-
-  if (!input->file) fatal("Failed to open input file");
-
-  if (!fseeko(input->file, 0, SEEK_END)) {
-    /* Input file is seekable. Figure out how long it is, so we can get
-     * progress info.
-     */
-    input->length = ftello(input->file);
-    rewind(input->file);
-  }
-
-  /* Default to 1:1 pixel aspect ratio. */
-  input->pixel_aspect_ratio.numerator = 1;
-  input->pixel_aspect_ratio.denominator = 1;
-
-  /* For RAW input sources, these bytes will applied on the first frame
-   *  in read_frame().
-   */
-  input->detect.buf_read = fread(input->detect.buf, 1, 4, input->file);
-  input->detect.position = 0;
-
-  if (input->detect.buf_read == 4 && file_is_y4m(input->detect.buf)) {
-    if (y4m_input_open(&input->y4m, input->file, input->detect.buf, 4,
-                       input->only_i420) >= 0) {
-      input->file_type = FILE_TYPE_Y4M;
-      input->width = input->y4m.pic_w;
-      input->height = input->y4m.pic_h;
-      input->pixel_aspect_ratio.numerator = input->y4m.par_n;
-      input->pixel_aspect_ratio.denominator = input->y4m.par_d;
-      input->framerate.numerator = input->y4m.fps_n;
-      input->framerate.denominator = input->y4m.fps_d;
-      input->fmt = input->y4m.vpx_fmt;
-      input->bit_depth = input->y4m.bit_depth;
-    } else
-      fatal("Unsupported Y4M stream.");
-  } else if (input->detect.buf_read == 4 && fourcc_is_ivf(input->detect.buf)) {
-    fatal("IVF is not supported as input.");
-  } else {
-    input->file_type = FILE_TYPE_RAW;
-  }
-}
-
-static void close_input_file(struct VpxInputContext *input) {
-  fclose(input->file);
-  if (input->file_type == FILE_TYPE_Y4M) y4m_input_close(&input->y4m);
 }
 
 static struct stream_state *new_stream(struct VpxEncoderConfig *global,
@@ -1614,14 +1333,14 @@ static void encode_frame(struct stream_state *stream,
             vpx_img_alloc(NULL, VPX_IMG_FMT_I42016, cfg->g_w, cfg->g_h, 16);
       }
       I420Scale_16(
-          (uint16 *)img->planes[VPX_PLANE_Y], img->stride[VPX_PLANE_Y] / 2,
-          (uint16 *)img->planes[VPX_PLANE_U], img->stride[VPX_PLANE_U] / 2,
-          (uint16 *)img->planes[VPX_PLANE_V], img->stride[VPX_PLANE_V] / 2,
-          img->d_w, img->d_h, (uint16 *)stream->img->planes[VPX_PLANE_Y],
+          (uint16_t *)img->planes[VPX_PLANE_Y], img->stride[VPX_PLANE_Y] / 2,
+          (uint16_t *)img->planes[VPX_PLANE_U], img->stride[VPX_PLANE_U] / 2,
+          (uint16_t *)img->planes[VPX_PLANE_V], img->stride[VPX_PLANE_V] / 2,
+          img->d_w, img->d_h, (uint16_t *)stream->img->planes[VPX_PLANE_Y],
           stream->img->stride[VPX_PLANE_Y] / 2,
-          (uint16 *)stream->img->planes[VPX_PLANE_U],
+          (uint16_t *)stream->img->planes[VPX_PLANE_U],
           stream->img->stride[VPX_PLANE_U] / 2,
-          (uint16 *)stream->img->planes[VPX_PLANE_V],
+          (uint16_t *)stream->img->planes[VPX_PLANE_V],
           stream->img->stride[VPX_PLANE_V] / 2, stream->img->d_w,
           stream->img->d_h, kFilterBox);
       img = stream->img;
@@ -1917,6 +1636,7 @@ int main(int argc, const char **argv_) {
   int res = 0;
 
   memset(&input, 0, sizeof(input));
+  memset(&raw, 0, sizeof(raw));
   exec_name = argv_[0];
 
   /* Setup default input stream settings */
@@ -1940,6 +1660,7 @@ int main(int argc, const char **argv_) {
     case I444: input.fmt = VPX_IMG_FMT_I444; break;
     case I440: input.fmt = VPX_IMG_FMT_I440; break;
     case YV12: input.fmt = VPX_IMG_FMT_YV12; break;
+    case NV12: input.fmt = VPX_IMG_FMT_NV12; break;
   }
 
   {
@@ -2061,14 +1782,10 @@ int main(int argc, const char **argv_) {
       FOREACH_STREAM(show_stream_config(stream, &global, &input));
 
     if (pass == (global.pass ? global.pass - 1 : 0)) {
-      if (input.file_type == FILE_TYPE_Y4M)
-        /*The Y4M reader does its own allocation.
-          Just initialize this here to avoid problems if we never read any
-           frames.*/
-        memset(&raw, 0, sizeof(raw));
-      else
+      // The Y4M reader does its own allocation.
+      if (input.file_type != FILE_TYPE_Y4M) {
         vpx_img_alloc(&raw, input.fmt, input.width, input.height, 32);
-
+      }
       FOREACH_STREAM(stream->rate_hist = init_rate_histogram(
                          &stream->config.cfg, &global.framerate));
     }

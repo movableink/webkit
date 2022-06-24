@@ -60,7 +60,9 @@
             });
         } else {
             testFailed("Wrong host, no testRunner, or no internals.");
-            testRunner.notifyDone();
+            setEnableFeature(false, function() {
+                testRunner.notifyDone();
+            });
         }
     }
 </script>

@@ -27,16 +27,16 @@
 
 #if USE(QUICK_LOOK)
 
-#include "QuickLookDocumentData.h"
+#include <WebCore/LegacyPreviewLoaderClient.h>
 #include <WebCore/PageIdentifier.h>
-#include <WebCore/PreviewLoaderClient.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebKit {
 
 class WebFrame;
 
-class WebPreviewLoaderClient final : public WebCore::PreviewLoaderClient {
+class WebPreviewLoaderClient final : public WebCore::LegacyPreviewLoaderClient {
 public:
     static Ref<WebPreviewLoaderClient> create(const String& fileName, const String& uti, WebCore::PageIdentifier pageID)
     {
@@ -44,11 +44,9 @@ public:
     }
     ~WebPreviewLoaderClient();
 
-    static void didReceivePassword(const String&, WebCore::PageIdentifier);
-
 private:
     WebPreviewLoaderClient(const String& fileName, const String& uti, WebCore::PageIdentifier);
-    void didReceiveDataArray(CFArrayRef) override;
+    void didReceiveData(const WebCore::SharedBuffer&) override;
     void didFinishLoading() override;
     void didFail() override;
     bool supportsPasswordEntry() const override { return true; }
@@ -57,7 +55,7 @@ private:
     const String m_fileName;
     const String m_uti;
     const WebCore::PageIdentifier m_pageID;
-    QuickLookDocumentData m_data;
+    WebCore::SharedBufferBuilder m_buffer;
 };
 
 } // namespace WebKit

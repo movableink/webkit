@@ -1,5 +1,6 @@
 # Copyright (C) 2010 Google Inc. All rights reserved.
 # Copyright (C) 2010 Gabor Rapcsanyi (rgabor@inf.u-szeged.hu), University of Szeged
+# Copyright (C) 2021 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -28,19 +29,26 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+import attr
+
+from .test import Test
+
+
+@attr.s(frozen=True, slots=True)
 class TestInput(object):
-    """Groups information about a test for easy passing of data."""
+    """Information about a test needed to run it.
 
-    def __init__(self, test_name, timeout=None, needs_servers=None, reference_files=None, should_run_pixel_tests=None, should_dump_jsconsolelog_in_stderr=None):
-        # TestInput objects are normally constructed by the manager and passed
-        # to the workers, but these some fields are set lazily in the workers where possible
-        # because they require us to look at the filesystem and we want to be able to do that in parallel.
-        self.test_name = test_name
-        self.timeout = timeout  # in msecs; should rename this for consistency
-        self.needs_servers = needs_servers
-        self.reference_files = reference_files
-        self.should_run_pixel_tests = should_run_pixel_tests
-        self.should_dump_jsconsolelog_in_stderr = should_dump_jsconsolelog_in_stderr
+    This differs from a Test object insofar as it contains metadata not specific to the test,
+    derived from TestExpectations/test execution options (e.g., timeout).
+    """
+    test = attr.ib(type=Test)
+    timeout = attr.ib(default=None)  # type: Union[None, int, str]
+    is_slow = attr.ib(default=None)  # type: Optional[bool]
+    needs_servers = attr.ib(default=None)  # type: Optional[bool]
+    should_dump_jsconsolelog_in_stderr = attr.ib(default=None)  # type: Optional[bool]
+    reference_files = attr.ib(default=None)  # type: Optional[List[Tuple[str str]]]
+    should_run_pixel_test = attr.ib(default=None)  # type: Optional[bool]
 
-    def __repr__(self):
-        return "TestInput('%s', timeout=%s, needs_servers=%s, reference_files=%s, should_run_pixel_tests=%s, should_dump_jsconsolelog_in_stderr=%s)" % (self.test_name, self.timeout, self.needs_servers, self.reference_files, self.should_run_pixel_tests, self.should_dump_jsconsolelog_in_stderr)
+    @property
+    def test_name(self):
+        return self.test.test_path

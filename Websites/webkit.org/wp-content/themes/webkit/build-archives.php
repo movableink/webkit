@@ -10,9 +10,9 @@ class WebKitBuildArchives {
     private static $object = null;
 
     public static $platforms = array(
+        'mac-monterey-x86_64%20arm64'     => 'Monterey',
+        'mac-bigsur-x86_64%20arm64'     => 'Big Sur',
         'mac-catalina-x86_64'     => 'Catalina',
-        'mac-mojave-x86_64'     => 'Mojave',
-        'mac-highsierra-x86_64' => 'High Sierra',
     );
 
     public static function object() {
@@ -22,7 +22,7 @@ class WebKitBuildArchives {
     }
 
     private function call ($endpoint, $params = array()) {
-        $url = add_query_arg($params, 'https://q1tzqfy48e.execute-api.us-west-2.amazonaws.com/v2/' . $endpoint);
+        $url = add_query_arg($params, 'https://q1tzqfy48e.execute-api.us-west-2.amazonaws.com/v2_2/' . $endpoint);
         $api = wp_remote_get($url);
         $response = wp_remote_retrieve_body($api);
 
@@ -92,7 +92,7 @@ add_action('wp_head', function() { ?>
                     list.classList.add("current");
                 };
 
-            var currentHash = window.location.hash.length ? window.location.hash.replace("#", "") : "mac-catalina-x86_64";
+            var currentHash = window.location.hash.length ? window.location.hash.replace("#", "") : "mac-monterey-x86_64 arm64";
             for (var link of tabnav) {
                 link.addEventListener("click", currentTab);
                 if (link.className.indexOf(currentHash) !== -1)

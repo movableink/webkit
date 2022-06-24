@@ -36,6 +36,7 @@ struct RTC_EXPORT AudioEncoderOpusConfig {
   bool IsOk() const;  // Checks if the values are currently OK.
 
   int frame_size_ms;
+  int sample_rate_hz;
   size_t num_channels;
   enum class ApplicationMode { kVoip, kAudio };
   ApplicationMode application;
@@ -48,10 +49,10 @@ struct RTC_EXPORT AudioEncoderOpusConfig {
   bool cbr_enabled;
   int max_playback_rate_hz;
 
-  // |complexity| is used when the bitrate goes above
-  // |complexity_threshold_bps| + |complexity_threshold_window_bps|;
-  // |low_rate_complexity| is used when the bitrate falls below
-  // |complexity_threshold_bps| - |complexity_threshold_window_bps|. In the
+  // `complexity` is used when the bitrate goes above
+  // `complexity_threshold_bps` + `complexity_threshold_window_bps`;
+  // `low_rate_complexity` is used when the bitrate falls below
+  // `complexity_threshold_bps` - `complexity_threshold_window_bps`. In the
   // interval in the middle, we keep using the most recent of the two
   // complexity settings.
   int complexity;

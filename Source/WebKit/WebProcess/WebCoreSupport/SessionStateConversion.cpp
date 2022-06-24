@@ -43,7 +43,7 @@ static HTTPBody toHTTPBody(const FormData& formData)
         HTTPBody::Element element;
 
         switchOn(formDataElement.data,
-            [&] (const Vector<char>& bytes) {
+            [&] (const Vector<uint8_t>& bytes) {
                 element.type = HTTPBody::Element::Type::Data;
                 element.data = bytes;
             }, [&] (const FormDataElement::EncodedFileData& fileData) {
@@ -72,9 +72,9 @@ static FrameState toFrameState(const HistoryItem& historyItem)
     frameState.referrer = historyItem.referrer();
     frameState.target = historyItem.target();
 
-    frameState.documentState = historyItem.documentState();
+    frameState.setDocumentState(historyItem.documentState());
     if (RefPtr<SerializedScriptValue> stateObject = historyItem.stateObject())
-        frameState.stateObjectData = stateObject->data();
+        frameState.stateObjectData = stateObject->wireBytes();
 
     frameState.documentSequenceNumber = historyItem.documentSequenceNumber();
     frameState.itemSequenceNumber = historyItem.itemSequenceNumber();
@@ -99,10 +99,9 @@ static FrameState toFrameState(const HistoryItem& historyItem)
     frameState.obscuredInsets = historyItem.obscuredInsets();
 #endif
 
-    for (auto& childHistoryItem : historyItem.children()) {
-        FrameState childFrameState = toFrameState(childHistoryItem);
-        frameState.children.append(WTFMove(childFrameState));
-    }
+    frameState.children = historyItem.children().map([](auto& childHistoryItem) {
+        return toFrameState(childHistoryItem);
+    });
 
     return frameState;
 }
@@ -130,11 +129,11 @@ static Ref<FormData> toFormData(const HTTPBody& httpBody)
             break;
 
         case HTTPBody::Element::Type::File:
-            formData->appendFileRange(element.filePath, element.fileStart, element.fileLength.valueOr(BlobDataItem::toEndOfFile), element.expectedFileModificationTime);
+            formData->appendFileRange(element.filePath, element.fileStart, element.fileLength.value_or(BlobDataItem::toEndOfFile), element.expectedFileModificationTime);
             break;
 
         case HTTPBody::Element::Type::Blob:
-            formData->appendBlob(URL(URL(), element.blobURLString));
+            formData->appendBlob(URL { element.blobURLString });
             break;
         }
     }
@@ -148,11 +147,11 @@ static void applyFrameState(HistoryItem& historyItem, const FrameState& frameSta
     historyItem.setReferrer(frameState.referrer);
     historyItem.setTarget(frameState.target);
 
-    historyItem.setDocumentState(frameState.documentState);
+    historyItem.setDocumentState(frameState.documentState());
 
     if (frameState.stateObjectData) {
         Vector<uint8_t> stateObjectData = frameState.stateObjectData.value();
-        historyItem.setStateObject(SerializedScriptValue::adopt(WTFMove(stateObjectData)));
+        historyItem.setStateObject(SerializedScriptValue::createFromWireBytes(WTFMove(stateObjectData)));
     }
 
     historyItem.setDocumentSequenceNumber(frameState.documentSequenceNumber);

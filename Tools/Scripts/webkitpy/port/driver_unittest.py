@@ -27,6 +27,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
+import optparse
 
 from webkitpy.common.system.systemhost_mock import MockSystemHost
 
@@ -182,7 +183,7 @@ class DriverTest(unittest.TestCase):
         content_block = driver._read_block(0, "")
         self.assertEqual(content_block.content_type, 'image/png')
         self.assertEqual(content_block.content_hash, 'actual')
-        self.assertEqual(content_block.content, '12345678\n')
+        self.assertEqual(content_block.content, b'12345678\n')
         self.assertEqual(content_block.decoded_content, '12345678\n')
         driver._server_process = None
 
@@ -201,11 +202,11 @@ class DriverTest(unittest.TestCase):
         self.assertEqual(content_block.content_type, 'image/png')
         self.assertEqual(content_block.content_hash, 'actual')
         self.assertEqual(content_block.encoding, 'base64')
-        self.assertEqual(content_block.content, 'MTIzNDU2NzgK')
-        self.assertEqual(content_block.decoded_content, '12345678\n')
+        self.assertEqual(content_block.content, b'MTIzNDU2NzgK')
+        self.assertEqual(content_block.decoded_content, b'12345678\n')
 
     def test_no_timeout(self):
-        port = TestWebKitPort()
+        port = TestWebKitPort(options=optparse.Values({'enable_all_experimental_features': True}))
         port._config.build_directory = lambda configuration: '/mock-build'
         driver = Driver(port, 0, pixel_tests=True, no_timeout=True)
         if sys.platform.startswith('win'):
@@ -247,43 +248,43 @@ class DriverTest(unittest.TestCase):
             driver.stop()
 
         driver._server_process = FakeServerProcess(False)
-        assert_crash(driver, '', False, None, None)
+        assert_crash(driver, b'', False, None, None)
 
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(False)
         driver._driver_timed_out = False
-        assert_crash(driver, '#CRASHED\n', True, 'FakeServerProcess', 1234)
+        assert_crash(driver, b'#CRASHED\n', True, 'FakeServerProcess', 1234)
 
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(False)
         driver._driver_timed_out = False
-        assert_crash(driver, '#CRASHED - WebProcess\n', True, 'WebProcess', None)
+        assert_crash(driver, b'#CRASHED - WebProcess\n', True, 'WebProcess', None)
 
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(False)
         driver._driver_timed_out = False
-        assert_crash(driver, '#CRASHED - WebProcess (pid 8675)\n', True, 'WebProcess', 8675)
+        assert_crash(driver, b'#CRASHED - WebProcess (pid 8675)\n', True, 'WebProcess', 8675)
 
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(False)
         driver._driver_timed_out = False
-        assert_crash(driver, '#PROCESS UNRESPONSIVE - WebProcess (pid 8675)\n', True, None, None, True)
+        assert_crash(driver, b'#PROCESS UNRESPONSIVE - WebProcess (pid 8675)\n', True, None, None, True)
 
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(False)
         driver._driver_timed_out = False
-        assert_crash(driver, '#CRASHED - renderer (pid 8675)\n', True, 'renderer', 8675)
+        assert_crash(driver, b'#CRASHED - renderer (pid 8675)\n', True, 'renderer', 8675)
 
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(True)
         driver._driver_timed_out = False
-        assert_crash(driver, '', True, 'FakeServerProcess', 1234)
+        assert_crash(driver, b'', True, 'FakeServerProcess', 1234)
 
     def test_creating_a_port_does_not_write_to_the_filesystem(self):
         port = TestWebKitPort()
@@ -297,7 +298,7 @@ class DriverTest(unittest.TestCase):
         driver = Driver(port, 0, pixel_tests=True)
         driver.start(True, [])
         last_tmpdir = port._filesystem.last_tmpdir
-        self.assertNotEquals(last_tmpdir, None)
+        self.assertNotEqual(last_tmpdir, None)
         driver.stop()
         self.assertFalse(port._filesystem.isdir(last_tmpdir))
 
@@ -368,7 +369,7 @@ class DriverTest(unittest.TestCase):
                           'WAYLAND_DISPLAY': 'wayland-0',
                           'WAYLAND_SOCKET': 'wayland-socket-0',
                           'GDK_BACKEND': 'x11'}
-        environment_user = dict(environ_keep_yes.items() + environ_keep_no.items())
+        environment_user = dict(list(environ_keep_yes.items()) + list(environ_keep_no.items()))
         with patch('os.environ', environment_user):
             port = self.make_port()
             driver = Driver(port, None, pixel_tests=False)
@@ -400,7 +401,7 @@ class DriverTest(unittest.TestCase):
             driver = Driver(port, None, pixel_tests=False)
             driver.start(True, [])
             environ_driver = driver._setup_environ_for_test()
-            self.assertNotEquals(environ_driver['HOME'], environ_user['HOME'])
+            self.assertNotEqual(environ_driver['HOME'], environ_user['HOME'])
             self.assertIn(str(driver._driver_tempdir), environ_driver['HOME'])
             self.assertNotIn(str(driver._driver_tempdir), environ_user['HOME'])
             self.assertTrue(port._filesystem.isdir(environ_driver['HOME']))

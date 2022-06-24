@@ -23,30 +23,25 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WebDatabaseProvider_h
-#define WebDatabaseProvider_h
+#pragma once
 
+#include "IdentifierTypes.h"
 #include <WebCore/DatabaseProvider.h>
-#include <WebCore/InProcessIDBServer.h>
 #include <wtf/HashMap.h>
 
 namespace WebKit {
 
 class WebDatabaseProvider final : public WebCore::DatabaseProvider {
 public:
-    static Ref<WebDatabaseProvider> getOrCreate(uint64_t identifier);
+    static Ref<WebDatabaseProvider> getOrCreate(PageGroupIdentifier);
     virtual ~WebDatabaseProvider();
 
-#if ENABLE(INDEXED_DATABASE)
-    WebCore::IDBClient::IDBConnectionToServer& idbConnectionToServerForSession(const PAL::SessionID&) final;
-#endif
+    WebCore::IDBClient::IDBConnectionToServer& idbConnectionToServerForSession(PAL::SessionID) final;
 
 private:
-    explicit WebDatabaseProvider(uint64_t identifier);
+    explicit WebDatabaseProvider(PageGroupIdentifier);
 
-    const uint64_t m_identifier;
+    const PageGroupIdentifier m_identifier;
 };
 
 }
-
-#endif // WebDatabaseProvider_h

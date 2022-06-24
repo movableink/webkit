@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,343 +26,533 @@
 #include "config.h"
 #include "MediaRecorderPrivateWriterCocoa.h"
 
-#if ENABLE(MEDIA_STREAM) && USE(AVFOUNDATION)
+#if ENABLE(MEDIA_RECORDER)
 
+#include "AudioSampleBufferCompressor.h"
 #include "AudioStreamDescription.h"
 #include "Logging.h"
+#include "MediaRecorderPrivate.h"
+#include "MediaRecorderPrivateOptions.h"
 #include "MediaStreamTrackPrivate.h"
+#include "MediaUtilities.h"
+#include "VideoFrame.h"
+#include "VideoSampleBufferCompressor.h"
 #include "WebAudioBufferList.h"
 #include <AVFoundation/AVAssetWriter.h>
 #include <AVFoundation/AVAssetWriterInput.h>
-#include <pal/cf/CoreMediaSoftLink.h>
+#include <pal/avfoundation/MediaTimeAVFoundation.h>
+#include <pal/spi/cocoa/AVAssetWriterSPI.h>
+#include <wtf/BlockPtr.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/FileSystem.h>
+#include <wtf/cf/TypeCastsCF.h>
 
-#import <pal/cocoa/AVFoundationSoftLink.h>
+#include <pal/cf/CoreMediaSoftLink.h>
+#include <pal/cocoa/AVFoundationSoftLink.h>
 
-#undef AVEncoderBitRateKey
-#define AVEncoderBitRateKey getAVEncoderBitRateKeyWithFallback()
-#undef AVFormatIDKey
-#define AVFormatIDKey getAVFormatIDKeyWithFallback()
-#undef AVNumberOfChannelsKey
-#define AVNumberOfChannelsKey getAVNumberOfChannelsKeyWithFallback()
-#undef AVSampleRateKey
-#define AVSampleRateKey getAVSampleRateKeyWithFallback()
+@interface WebAVAssetWriterDelegate : NSObject <AVAssetWriterDelegate> {
+    WebCore::MediaRecorderPrivateWriter* m_writer;
+}
+
+- (instancetype)initWithWriter:(WebCore::MediaRecorderPrivateWriter&)writer;
+- (void)close;
+
+@end
+
+@implementation WebAVAssetWriterDelegate {
+};
+
+- (instancetype)initWithWriter:(WebCore::MediaRecorderPrivateWriter&)writer
+{
+    ASSERT(isMainThread());
+    self = [super init];
+    if (self)
+        self->m_writer = &writer;
+
+    return self;
+}
+
+- (void)assetWriter:(AVAssetWriter *)assetWriter didProduceFragmentedHeaderData:(NSData *)fragmentedHeaderData
+{
+    UNUSED_PARAM(assetWriter);
+    m_writer->appendData(static_cast<const uint8_t*>([fragmentedHeaderData bytes]), [fragmentedHeaderData length]);
+}
+
+- (void)assetWriter:(AVAssetWriter *)assetWriter didProduceFragmentedMediaData:(NSData *)fragmentedMediaData fragmentedMediaDataReport:(AVFragmentedMediaDataReport *)fragmentedMediaDataReport
+{
+    UNUSED_PARAM(assetWriter);
+    UNUSED_PARAM(fragmentedMediaDataReport);
+    m_writer->appendData(static_cast<const uint8_t*>([fragmentedMediaData bytes]), [fragmentedMediaData length]);
+}
+
+- (void)close
+{
+    m_writer = nullptr;
+}
+
+@end
 
 namespace WebCore {
 
-using namespace PAL;
-
-static NSString *getAVFormatIDKeyWithFallback()
+RefPtr<MediaRecorderPrivateWriter> MediaRecorderPrivateWriter::create(bool hasAudio, bool hasVideo, const MediaRecorderPrivateOptions& options)
 {
-    if (PAL::canLoad_AVFoundation_AVFormatIDKey())
-        return PAL::get_AVFoundation_AVFormatIDKey();
-
-    RELEASE_LOG_ERROR(Media, "Failed to load AVFormatIDKey");
-    return @"AVFormatIDKey";
-}
-
-static NSString *getAVNumberOfChannelsKeyWithFallback()
-{
-    if (PAL::canLoad_AVFoundation_AVNumberOfChannelsKey())
-        return PAL::get_AVFoundation_AVNumberOfChannelsKey();
-
-    RELEASE_LOG_ERROR(Media, "Failed to load AVNumberOfChannelsKey");
-    return @"AVNumberOfChannelsKey";
-}
-
-static NSString *getAVSampleRateKeyWithFallback()
-{
-    if (PAL::canLoad_AVFoundation_AVSampleRateKey())
-        return PAL::get_AVFoundation_AVSampleRateKey();
-
-    RELEASE_LOG_ERROR(Media, "Failed to load AVSampleRateKey");
-    return @"AVSampleRateKey";
-}
-
-static NSString *getAVEncoderBitRateKeyWithFallback()
-{
-    if (PAL::canLoad_AVFoundation_AVEncoderBitRateKey())
-        return PAL::get_AVFoundation_AVEncoderBitRateKey();
-
-    RELEASE_LOG_ERROR(Media, "Failed to load AVEncoderBitRateKey");
-    return @"AVEncoderBitRateKey";
-}
-
-RefPtr<MediaRecorderPrivateWriter> MediaRecorderPrivateWriter::create(const MediaStreamTrackPrivate* audioTrack, const MediaStreamTrackPrivate* videoTrack)
-{
-    NSString *directory = FileSystem::createTemporaryDirectory(@"videos");
-    NSString *filename = [NSString stringWithFormat:@"/%lld.mp4", CMClockGetTime(CMClockGetHostTimeClock()).value];
-    NSString *path = [directory stringByAppendingString:filename];
-
-    NSURL *outputURL = [NSURL fileURLWithPath:path];
-    String filePath = [path UTF8String];
-    NSError *error = nil;
-    auto avAssetWriter = adoptNS([PAL::allocAVAssetWriterInstance() initWithURL:outputURL fileType:AVFileTypeMPEG4 error:&error]);
-    if (error) {
-        RELEASE_LOG_ERROR(MediaStream, "create AVAssetWriter instance failed with error code %ld", (long)error.code);
+    auto writer = adoptRef(*new MediaRecorderPrivateWriter(hasAudio, hasVideo));
+    if (!writer->initialize(options))
         return nullptr;
-    }
-
-    auto writer = adoptRef(*new MediaRecorderPrivateWriter(WTFMove(avAssetWriter), WTFMove(filePath)));
-
-    if (audioTrack && !writer->setAudioInput())
-        return nullptr;
-
-    if (videoTrack) {
-        auto& settings = videoTrack->settings();
-        if (!writer->setVideoInput(settings.width(), settings.height()))
-            return nullptr;
-    }
-
-    return WTFMove(writer);
+    return writer;
 }
 
-MediaRecorderPrivateWriter::MediaRecorderPrivateWriter(RetainPtr<AVAssetWriter>&& avAssetWriter, String&& filePath)
-    : m_writer(WTFMove(avAssetWriter))
-    , m_path(WTFMove(filePath))
+void MediaRecorderPrivateWriter::compressedVideoOutputBufferCallback(void *mediaRecorderPrivateWriter, CMBufferQueueTriggerToken)
+{
+    callOnMainThread([weakWriter = WeakPtr { static_cast<MediaRecorderPrivateWriter*>(mediaRecorderPrivateWriter) }] {
+        if (weakWriter)
+            weakWriter->processNewCompressedVideoSampleBuffers();
+    });
+}
+
+void MediaRecorderPrivateWriter::compressedAudioOutputBufferCallback(void *mediaRecorderPrivateWriter, CMBufferQueueTriggerToken)
+{
+    callOnMainThread([weakWriter = WeakPtr { static_cast<MediaRecorderPrivateWriter*>(mediaRecorderPrivateWriter) }] {
+        if (weakWriter)
+            weakWriter->processNewCompressedAudioSampleBuffers();
+    });
+}
+
+MediaRecorderPrivateWriter::MediaRecorderPrivateWriter(bool hasAudio, bool hasVideo)
+    : m_hasAudio(hasAudio)
+    , m_hasVideo(hasVideo)
+    , m_lastVideoPresentationTime(PAL::kCMTimeInvalid)
+    , m_lastVideoDecodingTime(PAL::kCMTimeInvalid)
+    , m_resumedVideoTime(PAL::kCMTimeZero)
+    , m_currentVideoDuration(PAL::kCMTimeZero)
+    , m_currentAudioSampleTime(PAL::kCMTimeZero)
 {
 }
 
 MediaRecorderPrivateWriter::~MediaRecorderPrivateWriter()
 {
-    clear();
-}
-
-void MediaRecorderPrivateWriter::clear()
-{
-    if (m_videoInput) {
-        m_videoInput.clear();
-        dispatch_release(m_videoPullQueue);
-    }
-    if (m_audioInput) {
-        m_audioInput.clear();
-        dispatch_release(m_audioPullQueue);
-    }
-    if (m_writer)
+    m_pendingAudioSampleQueue.clear();
+    m_pendingVideoSampleQueue.clear();
+    if (m_writer) {
+        [m_writer cancelWriting];
         m_writer.clear();
+    }
+
+    if (m_writerDelegate)
+        [m_writerDelegate close];
+
+    if (auto completionHandler = WTFMove(m_fetchDataCompletionHandler))
+        completionHandler(nullptr, 0);
 }
 
-bool MediaRecorderPrivateWriter::setVideoInput(int width, int height)
+bool MediaRecorderPrivateWriter::initialize(const MediaRecorderPrivateOptions& options)
 {
-    ASSERT(!m_videoInput);
-    
-    NSDictionary *compressionProperties = @{
-        AVVideoAverageBitRateKey : [NSNumber numberWithInt:width * height * 12],
-        AVVideoExpectedSourceFrameRateKey : @(30),
-        AVVideoMaxKeyFrameIntervalKey : @(120),
-        AVVideoProfileLevelKey : AVVideoProfileLevelH264MainAutoLevel
-    };
-
-    NSDictionary *videoSettings = @{
-        AVVideoCodecKey: AVVideoCodecH264,
-        AVVideoWidthKey: [NSNumber numberWithInt:width],
-        AVVideoHeightKey: [NSNumber numberWithInt:height],
-        AVVideoCompressionPropertiesKey: compressionProperties
-    };
-    
-    m_videoInput = adoptNS([PAL::allocAVAssetWriterInputInstance() initWithMediaType:AVMediaTypeVideo outputSettings:videoSettings sourceFormatHint:nil]);
-    [m_videoInput setExpectsMediaDataInRealTime:true];
-    
-    if (![m_writer canAddInput:m_videoInput.get()]) {
-        m_videoInput = nullptr;
-        RELEASE_LOG_ERROR(MediaStream, "the video input is not allowed to add to the AVAssetWriter");
+    NSError *error = nil;
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    m_writer = adoptNS([PAL::allocAVAssetWriterInstance() initWithFileType:AVFileTypeMPEG4 error:&error]);
+    ALLOW_DEPRECATED_DECLARATIONS_END
+    if (error) {
+        RELEASE_LOG_ERROR(MediaStream, "create AVAssetWriter instance failed with error code %ld", (long)error.code);
         return false;
     }
-    [m_writer addInput:m_videoInput.get()];
-    m_videoPullQueue = dispatch_queue_create("WebCoreVideoRecordingPullBufferQueue", DISPATCH_QUEUE_SERIAL);
+
+    m_writerDelegate = adoptNS([[WebAVAssetWriterDelegate alloc] initWithWriter: *this]);
+    [m_writer setDelegate:m_writerDelegate.get()];
+
+    if (m_hasAudio) {
+        m_audioCompressor = AudioSampleBufferCompressor::create(compressedAudioOutputBufferCallback, this);
+        if (!m_audioCompressor)
+            return false;
+        if (options.audioBitsPerSecond)
+            m_audioCompressor->setBitsPerSecond(*options.audioBitsPerSecond);
+    }
+    if (m_hasVideo) {
+        m_videoCompressor = VideoSampleBufferCompressor::create(options.mimeType, compressedVideoOutputBufferCallback, this);
+        if (!m_videoCompressor)
+            return false;
+        if (options.videoBitsPerSecond)
+            m_videoCompressor->setBitsPerSecond(*options.videoBitsPerSecond);
+    }
+
     return true;
 }
 
-bool MediaRecorderPrivateWriter::setAudioInput()
+void MediaRecorderPrivateWriter::processNewCompressedVideoSampleBuffers()
 {
-    ASSERT(!m_audioInput);
+    ASSERT(m_hasVideo);
+    if (!m_videoFormatDescription) {
+        m_videoFormatDescription = PAL::CMSampleBufferGetFormatDescription(m_videoCompressor->getOutputSampleBuffer());
 
-    NSDictionary *audioSettings = @{
-        AVEncoderBitRateKey : @(28000),
-        AVFormatIDKey : @(kAudioFormatMPEG4AAC),
-        AVNumberOfChannelsKey : @(1),
-        AVSampleRateKey : @(22050)
-    };
+        if (m_hasAudio && !m_audioFormatDescription)
+            return;
 
-    m_audioInput = adoptNS([PAL::allocAVAssetWriterInputInstance() initWithMediaType:AVMediaTypeAudio outputSettings:audioSettings sourceFormatHint:nil]);
-    [m_audioInput setExpectsMediaDataInRealTime:true];
-    
-    if (![m_writer canAddInput:m_audioInput.get()]) {
-        m_audioInput = nullptr;
-        RELEASE_LOG_ERROR(MediaStream, "the audio input is not allowed to add to the AVAssetWriter");
-        return false;
+        startAssetWriter();
     }
-    [m_writer addInput:m_audioInput.get()];
-    m_audioPullQueue = dispatch_queue_create("WebCoreAudioRecordingPullBufferQueue", DISPATCH_QUEUE_SERIAL);
-    return true;
-}
 
-static inline RetainPtr<CMSampleBufferRef> copySampleBufferWithCurrentTimeStamp(CMSampleBufferRef originalBuffer)
-{
-    CMTime startTime = CMClockGetTime(CMClockGetHostTimeClock());
-    CMItemCount count = 0;
-    CMSampleBufferGetSampleTimingInfoArray(originalBuffer, 0, nil, &count);
-    
-    Vector<CMSampleTimingInfo> timeInfo(count);
-    CMSampleBufferGetSampleTimingInfoArray(originalBuffer, count, timeInfo.data(), &count);
-    
-    for (CMItemCount i = 0; i < count; i++) {
-        timeInfo[i].decodeTimeStamp = kCMTimeInvalid;
-        timeInfo[i].presentationTimeStamp = startTime;
-    }
-    
-    CMSampleBufferRef newBuffer = nullptr;
-    auto error = CMSampleBufferCreateCopyWithNewTiming(kCFAllocatorDefault, originalBuffer, count, timeInfo.data(), &newBuffer);
-    if (error)
-        return nullptr;
-    return adoptCF(newBuffer);
-}
-
-void MediaRecorderPrivateWriter::appendVideoSampleBuffer(CMSampleBufferRef sampleBuffer)
-{
-    ASSERT(m_videoInput);
-    if (m_isStopped)
+    if (!m_hasStartedWriting)
         return;
+    appendCompressedSampleBuffers();
+}
 
-    if (!m_hasStartedWriting) {
-        if (![m_writer startWriting]) {
-            m_isStopped = true;
-            RELEASE_LOG_ERROR(MediaStream, "create AVAssetWriter instance failed with error code %ld", (long)[m_writer error]);
+void MediaRecorderPrivateWriter::processNewCompressedAudioSampleBuffers()
+{
+    ASSERT(m_hasAudio);
+    if (!m_audioFormatDescription) {
+        m_audioFormatDescription = PAL::CMSampleBufferGetFormatDescription(m_audioCompressor->getOutputSampleBuffer());
+        if (m_hasVideo && !m_videoFormatDescription)
+            return;
+
+        startAssetWriter();
+    }
+
+    if (!m_hasStartedWriting)
+        return;
+    appendCompressedSampleBuffers();
+}
+
+void MediaRecorderPrivateWriter::startAssetWriter()
+{
+    if (m_hasVideo) {
+        m_videoAssetWriterInput = adoptNS([PAL::allocAVAssetWriterInputInstance() initWithMediaType:AVMediaTypeVideo outputSettings:nil sourceFormatHint:m_videoFormatDescription.get()]);
+        [m_videoAssetWriterInput setExpectsMediaDataInRealTime:true];
+        if (m_videoTransform)
+            m_videoAssetWriterInput.get().transform = *m_videoTransform;
+
+        if (![m_writer canAddInput:m_videoAssetWriterInput.get()]) {
+            RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPrivateWriter::startAssetWriter failed canAddInput for video");
             return;
         }
-        [m_writer startSessionAtSourceTime:CMClockGetTime(CMClockGetHostTimeClock())];
-        m_hasStartedWriting = true;
-        RefPtr<MediaRecorderPrivateWriter> protectedThis = this;
-        [m_videoInput requestMediaDataWhenReadyOnQueue:m_videoPullQueue usingBlock:[this, protectedThis = WTFMove(protectedThis)] {
-            do {
-                if (![m_videoInput isReadyForMoreMediaData])
-                    break;
-                auto locker = holdLock(m_videoLock);
-                if (m_videoBufferPool.isEmpty())
-                    break;
-                auto buffer = m_videoBufferPool.takeFirst();
-                locker.unlockEarly();
-                if (![m_videoInput appendSampleBuffer:buffer.get()])
-                    break;
-            } while (true);
-            if (m_isStopped && m_videoBufferPool.isEmpty()) {
-                [m_videoInput markAsFinished];
-                m_finishWritingVideoSemaphore.signal();
-            }
-        }];
+        [m_writer addInput:m_videoAssetWriterInput.get()];
+    }
+
+    if (m_hasAudio) {
+        m_audioAssetWriterInput = adoptNS([PAL::allocAVAssetWriterInputInstance() initWithMediaType:AVMediaTypeAudio outputSettings:nil sourceFormatHint:m_audioFormatDescription.get()]);
+        [m_audioAssetWriterInput setExpectsMediaDataInRealTime:true];
+        if (![m_writer canAddInput:m_audioAssetWriterInput.get()]) {
+            RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPrivateWriter::startAssetWriter failed canAddInput for audio");
+            return;
+        }
+        [m_writer addInput:m_audioAssetWriterInput.get()];
+    }
+
+    if (![m_writer startWriting]) {
+        RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPrivateWriter::startAssetWriter failed startWriting");
         return;
     }
-    auto bufferWithCurrentTime = copySampleBufferWithCurrentTimeStamp(sampleBuffer);
-    if (!bufferWithCurrentTime)
+
+    [m_writer startSessionAtSourceTime:PAL::kCMTimeZero];
+
+    appendCompressedSampleBuffers();
+
+    m_hasStartedWriting = true;
+}
+
+bool MediaRecorderPrivateWriter::appendCompressedAudioSampleBufferIfPossible()
+{
+    if (!m_audioCompressor)
+        return false;
+
+    auto buffer = m_audioCompressor->takeOutputSampleBuffer();
+    if (!buffer)
+        return false;
+
+    if (m_isFlushingSamples) {
+        m_pendingAudioSampleQueue.append(WTFMove(buffer));
+        return true;
+    }
+
+    while (!m_pendingAudioSampleQueue.isEmpty() && [m_audioAssetWriterInput isReadyForMoreMediaData])
+        [m_audioAssetWriterInput appendSampleBuffer:m_pendingAudioSampleQueue.takeFirst().get()];
+
+    if (![m_audioAssetWriterInput isReadyForMoreMediaData]) {
+        m_pendingAudioSampleQueue.append(WTFMove(buffer));
+        return true;
+    }
+
+    [m_audioAssetWriterInput appendSampleBuffer:buffer.get()];
+    return true;
+}
+
+bool MediaRecorderPrivateWriter::appendCompressedVideoSampleBufferIfPossible()
+{
+    if (!m_videoCompressor)
+        return false;
+
+    auto buffer = m_videoCompressor->takeOutputSampleBuffer();
+    if (!buffer)
+        return false;
+
+    if (m_isFlushingSamples) {
+        m_pendingVideoSampleQueue.append(WTFMove(buffer));
+        return true;
+    }
+
+    while (!m_pendingVideoSampleQueue.isEmpty() && [m_videoAssetWriterInput isReadyForMoreMediaData])
+        appendCompressedVideoSampleBuffer(m_pendingVideoSampleQueue.takeFirst().get());
+
+    if (![m_videoAssetWriterInput isReadyForMoreMediaData]) {
+        m_pendingVideoSampleQueue.append(WTFMove(buffer));
+        return true;
+    }
+
+    appendCompressedVideoSampleBuffer(buffer.get());
+    return true;
+}
+
+void MediaRecorderPrivateWriter::appendCompressedVideoSampleBuffer(CMSampleBufferRef buffer)
+{
+    ASSERT([m_videoAssetWriterInput isReadyForMoreMediaData]);
+    m_lastVideoPresentationTime = PAL::CMSampleBufferGetPresentationTimeStamp(buffer);
+    m_lastVideoDecodingTime = PAL::CMSampleBufferGetDecodeTimeStamp(buffer);
+    m_hasEncodedVideoSamples = true;
+
+    [m_videoAssetWriterInput appendSampleBuffer:buffer];
+}
+
+void MediaRecorderPrivateWriter::appendCompressedSampleBuffers()
+{
+    while (appendCompressedVideoSampleBufferIfPossible() || appendCompressedAudioSampleBufferIfPossible()) { };
+}
+
+static inline void appendEndsPreviousSampleDurationMarker(AVAssetWriterInput *assetWriterInput, CMTime presentationTimeStamp, CMTime decodingTimeStamp)
+{
+    CMSampleTimingInfo timingInfo = { PAL::kCMTimeInvalid, presentationTimeStamp, decodingTimeStamp};
+
+    CMSampleBufferRef buffer = NULL;
+    auto error = PAL::CMSampleBufferCreate(kCFAllocatorDefault, NULL, true, NULL, NULL, NULL, 0, 1, &timingInfo, 0, NULL, &buffer);
+    if (error) {
+        RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPrivateWriter appendEndsPreviousSampleDurationMarker failed CMSampleBufferCreate with %d", error);
         return;
+    }
+    auto sampleBuffer = adoptCF(buffer);
 
-    auto locker = holdLock(m_videoLock);
-    m_videoBufferPool.append(WTFMove(bufferWithCurrentTime));
+    PAL::CMSetAttachment(sampleBuffer.get(), PAL::kCMSampleBufferAttachmentKey_EndsPreviousSampleDuration, kCFBooleanTrue, kCMAttachmentMode_ShouldPropagate);
+    if (![assetWriterInput appendSampleBuffer:sampleBuffer.get()])
+        RELEASE_LOG_ERROR(MediaStream, "MediaRecorderPrivateWriter appendSampleBuffer to writer input failed");
 }
 
-static inline RetainPtr<CMFormatDescriptionRef> createAudioFormatDescription(const AudioStreamDescription& description)
+void MediaRecorderPrivateWriter::flushCompressedSampleBuffers(Function<void()>&& callback)
 {
-    auto basicDescription = WTF::get<const AudioStreamBasicDescription*>(description.platformDescription().description);
-    CMFormatDescriptionRef format = nullptr;
-    auto error = CMAudioFormatDescriptionCreate(kCFAllocatorDefault, basicDescription, 0, NULL, 0, NULL, NULL, &format);
-    if (error)
-        return nullptr;
-    return adoptCF(format);
+    bool hasPendingAudioSamples = !m_pendingAudioSampleQueue.isEmpty();
+    bool hasPendingVideoSamples = !m_pendingVideoSampleQueue.isEmpty();
+
+    if (m_hasEncodedVideoSamples) {
+        hasPendingVideoSamples |= ![m_videoAssetWriterInput isReadyForMoreMediaData];
+        if (!hasPendingVideoSamples)
+            appendEndsPreviousSampleDurationMarker(m_videoAssetWriterInput.get(), m_lastVideoPresentationTime, m_lastVideoDecodingTime);
+    }
+
+    if (!hasPendingAudioSamples && !hasPendingVideoSamples) {
+        callback();
+        return;
+    }
+
+    ASSERT(!m_isFlushingSamples);
+    m_isFlushingSamples = true;
+    auto block = makeBlockPtr([this, weakThis = WeakPtr { *this }, hasPendingAudioSamples, hasPendingVideoSamples, audioSampleQueue = WTFMove(m_pendingAudioSampleQueue), videoSampleQueue = WTFMove(m_pendingVideoSampleQueue), callback = WTFMove(callback)]() mutable {
+        if (!weakThis) {
+            callback();
+            return;
+        }
+
+        while (!audioSampleQueue.isEmpty() && [m_audioAssetWriterInput isReadyForMoreMediaData])
+            [m_audioAssetWriterInput appendSampleBuffer:audioSampleQueue.takeFirst().get()];
+
+        while (!videoSampleQueue.isEmpty() && [m_videoAssetWriterInput isReadyForMoreMediaData])
+            appendCompressedVideoSampleBuffer(videoSampleQueue.takeFirst().get());
+
+        if (!audioSampleQueue.isEmpty() || !videoSampleQueue.isEmpty() || (hasPendingVideoSamples && ![m_videoAssetWriterInput isReadyForMoreMediaData]))
+            return;
+
+        if (hasPendingAudioSamples)
+            [m_audioAssetWriterInput markAsFinished];
+        if (hasPendingVideoSamples) {
+            appendEndsPreviousSampleDurationMarker(m_videoAssetWriterInput.get(), m_lastVideoPresentationTime, m_lastVideoDecodingTime);
+            [m_videoAssetWriterInput markAsFinished];
+        }
+        m_isFlushingSamples = false;
+        callback();
+        finishedFlushingSamples();
+    });
+
+    if (hasPendingAudioSamples)
+        [m_audioAssetWriterInput requestMediaDataWhenReadyOnQueue:dispatch_get_main_queue() usingBlock:block.get()];
+    if (hasPendingVideoSamples)
+        [m_videoAssetWriterInput requestMediaDataWhenReadyOnQueue:dispatch_get_main_queue() usingBlock:block.get()];
 }
 
-static inline RetainPtr<CMSampleBufferRef> createAudioSampleBufferWithPacketDescriptions(CMFormatDescriptionRef format, size_t sampleCount)
+void MediaRecorderPrivateWriter::appendVideoFrame(VideoFrame& frame)
 {
-    CMTime startTime = CMClockGetTime(CMClockGetHostTimeClock());
-    CMSampleBufferRef sampleBuffer = nullptr;
-    auto error = CMAudioSampleBufferCreateWithPacketDescriptions(kCFAllocatorDefault, NULL, false, NULL, NULL, format, sampleCount, startTime, NULL, &sampleBuffer);
-    if (error)
-        return nullptr;
-    return adoptCF(sampleBuffer);
+    if (!m_firstVideoFrame) {
+        m_firstVideoFrame = true;
+        m_resumedVideoTime = PAL::CMClockGetTime(PAL::CMClockGetHostTimeClock());
+        if (frame.videoRotation() != MediaSample::VideoRotation::None || frame.videoMirrored()) {
+            m_videoTransform = CGAffineTransformMakeRotation(static_cast<int>(frame.videoRotation()) * M_PI / 180);
+            if (frame.videoMirrored())
+                m_videoTransform = CGAffineTransformScale(*m_videoTransform, -1, 1);
+        }
+    }
+
+    auto frameTime = PAL::CMTimeSubtract(PAL::CMClockGetTime(PAL::CMClockGetHostTimeClock()), m_resumedVideoTime);
+    frameTime = PAL::CMTimeAdd(frameTime, m_currentVideoDuration);
+    if (auto bufferWithCurrentTime = createVideoSampleBuffer(frame.pixelBuffer(), frameTime))
+        m_videoCompressor->addSampleBuffer(bufferWithCurrentTime.get());
 }
 
 void MediaRecorderPrivateWriter::appendAudioSampleBuffer(const PlatformAudioData& data, const AudioStreamDescription& description, const WTF::MediaTime&, size_t sampleCount)
 {
-    ASSERT(m_audioInput);
-    if ((!m_hasStartedWriting && m_videoInput) || m_isStopped)
-        return;
-    auto format = createAudioFormatDescription(description);
-    if (!format)
-        return;
-    if (m_isFirstAudioSample) {
-        if (!m_videoInput) {
-            // audio-only recording.
-            if (![m_writer startWriting]) {
-                m_isStopped = true;
-                return;
-            }
-            [m_writer startSessionAtSourceTime:CMClockGetTime(CMClockGetHostTimeClock())];
-            m_hasStartedWriting = true;
-        }
-        m_isFirstAudioSample = false;
-        RefPtr<MediaRecorderPrivateWriter> protectedThis = this;
-        [m_audioInput requestMediaDataWhenReadyOnQueue:m_audioPullQueue usingBlock:[this, protectedThis = WTFMove(protectedThis)] {
-            do {
-                if (![m_audioInput isReadyForMoreMediaData])
-                    break;
-                auto locker = holdLock(m_audioLock);
-                if (m_audioBufferPool.isEmpty())
-                    break;
-                auto buffer = m_audioBufferPool.takeFirst();
-                locker.unlockEarly();
-                [m_audioInput appendSampleBuffer:buffer.get()];
-            } while (true);
-            if (m_isStopped && m_audioBufferPool.isEmpty()) {
-                [m_audioInput markAsFinished];
-                m_finishWritingAudioSemaphore.signal();
-            }
-        }];
-    }
+    if (auto sampleBuffer = createAudioSampleBuffer(data, description, m_currentAudioSampleTime, sampleCount))
+        m_audioCompressor->addSampleBuffer(sampleBuffer.get());
+    m_currentAudioSampleTime = PAL::CMTimeAdd(m_currentAudioSampleTime, PAL::toCMTime(MediaTime(sampleCount, description.sampleRate())));
+}
 
-    auto sampleBuffer = createAudioSampleBufferWithPacketDescriptions(format.get(), sampleCount);
-    if (!sampleBuffer)
-        return;
-    auto error = CMSampleBufferSetDataBufferFromAudioBufferList(sampleBuffer.get(), kCFAllocatorDefault, kCFAllocatorDefault, 0, downcast<WebAudioBufferList>(data).list());
-    if (error)
-        return;
-
-    auto locker = holdLock(m_audioLock);
-    m_audioBufferPool.append(WTFMove(sampleBuffer));
+void MediaRecorderPrivateWriter::finishedFlushingSamples()
+{
+    if (m_shouldStopAfterFlushingSamples)
+        stopRecording();
 }
 
 void MediaRecorderPrivateWriter::stopRecording()
 {
-    m_isStopped = true;
-    if (!m_hasStartedWriting)
+    if (m_isFlushingSamples) {
+        m_shouldStopAfterFlushingSamples = true;
         return;
-    ASSERT([m_writer status] == AVAssetWriterStatusWriting);
-    if (m_videoInput)
-        m_finishWritingVideoSemaphore.wait();
+    }
 
-    if (m_audioInput)
-        m_finishWritingAudioSemaphore.wait();
-    auto weakPtr = makeWeakPtr(*this);
-    [m_writer finishWritingWithCompletionHandler:[this, weakPtr] {
-        m_finishWritingSemaphore.signal();
-        callOnMainThread([this, weakPtr] {
-            if (!weakPtr)
+    if (m_isStopped)
+        return;
+
+    m_isStopped = true;
+
+    if (m_videoCompressor)
+        m_videoCompressor->finish();
+    if (m_audioCompressor)
+        m_audioCompressor->finish();
+
+    m_isStopping = true;
+    // We hop to the main thread since finishing the video compressor might trigger starting the writer asynchronously.
+    callOnMainThread([this, weakThis = WeakPtr { *this }]() mutable {
+        if (!weakThis)
+            return;
+
+        auto whenFinished = [this, weakThis] {
+            if (!weakThis)
                 return;
+
+            m_isStopping = false;
             m_isStopped = false;
             m_hasStartedWriting = false;
-            m_isFirstAudioSample = true;
-            clear();
+
+            if (m_writer) {
+                [m_writer cancelWriting];
+                m_writer.clear();
+            }
+
+            if (m_fetchDataCompletionHandler)
+                m_fetchDataCompletionHandler(takeData(), 0);
+        };
+
+        if (!m_hasStartedWriting) {
+            whenFinished();
+            return;
+        }
+
+        ASSERT([m_writer status] == AVAssetWriterStatusWriting);
+        flushCompressedSampleBuffers([this, weakThis = WTFMove(weakThis), whenFinished = WTFMove(whenFinished)]() mutable {
+            if (!weakThis)
+                return;
+
+            ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+            [m_writer flush];
+            ALLOW_DEPRECATED_DECLARATIONS_END
+
+            [m_writer finishWritingWithCompletionHandler:[whenFinished = WTFMove(whenFinished)]() mutable {
+                callOnMainThread(WTFMove(whenFinished));
+            }];
         });
-    }];
+    });
 }
 
-RefPtr<SharedBuffer> MediaRecorderPrivateWriter::fetchData()
+void MediaRecorderPrivateWriter::fetchData(CompletionHandler<void(RefPtr<FragmentedSharedBuffer>&&, double)>&& completionHandler)
 {
-    if ((m_path.isEmpty() && !m_isStopped) || !m_hasStartedWriting)
-        return nullptr;
-    
-    m_finishWritingSemaphore.wait();
-    return SharedBuffer::createWithContentsOfFile(m_path);
+    m_fetchDataCompletionHandler = WTFMove(completionHandler);
+
+    if (m_isStopping)
+        return;
+
+    if (!m_hasStartedWriting) {
+        completeFetchData();
+        return;
+    }
+
+    flushCompressedSampleBuffers([weakThis = WeakPtr { *this }]() mutable {
+        if (!weakThis)
+            return;
+
+        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+        [weakThis->m_writer flush];
+        ALLOW_DEPRECATED_DECLARATIONS_END
+
+        callOnMainThread([weakThis = WTFMove(weakThis)] {
+            if (weakThis)
+                weakThis->completeFetchData();
+        });
+    });
+}
+
+void MediaRecorderPrivateWriter::completeFetchData()
+{
+    auto currentTimeCode = m_timeCode;
+    if (m_hasAudio)
+        m_timeCode = PAL::CMTimeGetSeconds(m_currentAudioSampleTime);
+    else {
+        auto sampleTime = PAL::CMTimeSubtract(PAL::CMClockGetTime(PAL::CMClockGetHostTimeClock()), m_resumedVideoTime);
+        m_timeCode = PAL::CMTimeGetSeconds(PAL::CMTimeAdd(sampleTime, m_currentVideoDuration));
+    }
+    m_fetchDataCompletionHandler(takeData(), currentTimeCode);
+}
+
+void MediaRecorderPrivateWriter::appendData(const uint8_t* data, size_t size)
+{
+    Locker locker { m_dataLock };
+    m_data.append(data, size);
+}
+
+RefPtr<FragmentedSharedBuffer> MediaRecorderPrivateWriter::takeData()
+{
+    Locker locker { m_dataLock };
+    return m_data.take();
+}
+
+void MediaRecorderPrivateWriter::pause()
+{
+    auto recordingDuration = PAL::CMTimeSubtract(PAL::CMClockGetTime(PAL::CMClockGetHostTimeClock()), m_resumedVideoTime);
+    m_currentVideoDuration = PAL::CMTimeAdd(recordingDuration, m_currentVideoDuration);
+}
+
+void MediaRecorderPrivateWriter::resume()
+{
+    m_resumedVideoTime = PAL::CMClockGetTime(PAL::CMClockGetHostTimeClock());
+}
+
+const String& MediaRecorderPrivateWriter::mimeType() const
+{
+    static NeverDestroyed<const String> audioMP4(MAKE_STATIC_STRING_IMPL("audio/mp4"));
+    static NeverDestroyed<const String> videoMP4(MAKE_STATIC_STRING_IMPL("video/mp4"));
+    // FIXME: we will need to support MIME type codecs parameter values.
+    return m_hasVideo ? videoMP4 : audioMP4;
+}
+
+unsigned MediaRecorderPrivateWriter::audioBitRate() const
+{
+    return m_audioCompressor ? m_audioCompressor->bitRate() : 0;
+}
+
+unsigned MediaRecorderPrivateWriter::videoBitRate() const
+{
+    return m_videoCompressor ? m_videoCompressor->bitRate() : 0;
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM) && USE(AVFOUNDATION)
+#endif // ENABLE(MEDIA_RECORDER)

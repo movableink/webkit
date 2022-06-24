@@ -29,8 +29,8 @@
 
 #include "NetworkCache.h"
 #include "NetworkProcessCreationParameters.h"
+#include "NetworkProcessProxyMessages.h"
 #include "NetworkSessionSoup.h"
-#include "ResourceCachesToClear.h"
 #include "WebCookieManager.h"
 #include "WebKitCachedResolver.h"
 #include <WebCore/CertificateInfo.h>
@@ -79,37 +79,38 @@ static CString buildAcceptLanguages(const Vector<String>& languages)
             continue;
 
         if (i)
-            builder.appendLiteral(",");
+            builder.append(",");
 
         builder.append(languages[i]);
 
         int quality = 100 - i * delta;
         if (quality > 0 && quality < 100) {
-            builder.appendLiteral(";q=");
             char buffer[8];
             g_ascii_formatd(buffer, 8, "%.2f", quality / 100.0);
-            builder.append(buffer);
+            builder.append(";q=", buffer);
         }
     }
 
     return builder.toString().utf8();
 }
 
-void NetworkProcess::getHostNamesWithHSTSCache(WebCore::NetworkStorageSession& storageSession, HashSet<String>& hostNames)
+HashSet<String> NetworkProcess::hostNamesWithHSTSCache(PAL::SessionID sessionID) const
 {
-    const auto* session = static_cast<NetworkSessionSoup*>(networkSession(storageSession.sessionID()));
+    HashSet<String> hostNames;
+    const auto* session = static_cast<NetworkSessionSoup*>(networkSession(sessionID));
     session->soupNetworkSession().getHostNamesWithHSTSCache(hostNames);
+    return hostNames;
 }
 
-void NetworkProcess::deleteHSTSCacheForHostNames(WebCore::NetworkStorageSession& storageSession, const Vector<String>& hostNames)
+void NetworkProcess::deleteHSTSCacheForHostNames(PAL::SessionID sessionID, const Vector<String>& hostNames)
 {
-    const auto* session = static_cast<NetworkSessionSoup*>(networkSession(storageSession.sessionID()));
+    const auto* session = static_cast<NetworkSessionSoup*>(networkSession(sessionID));
     session->soupNetworkSession().deleteHSTSCacheForHostNames(hostNames);
 }
 
-void NetworkProcess::clearHSTSCache(WebCore::NetworkStorageSession& storageSession, WallTime modifiedSince)
+void NetworkProcess::clearHSTSCache(PAL::SessionID sessionID, WallTime modifiedSince)
 {
-    const auto* session = static_cast<NetworkSessionSoup*>(networkSession(storageSession.sessionID()));
+    const auto* session = static_cast<NetworkSessionSoup*>(networkSession(sessionID));
     session->soupNetworkSession().clearHSTSCache(modifiedSince);
 }
 
@@ -124,9 +125,6 @@ void NetworkProcess::userPreferredLanguagesChanged(const Vector<String>& languag
 
 void NetworkProcess::platformInitializeNetworkProcess(const NetworkProcessCreationParameters& parameters)
 {
-    if (parameters.proxySettings.mode != SoupNetworkProxySettings::Mode::Default)
-        setNetworkProxySettings(parameters.proxySettings);
-
     GRefPtr<GResolver> cachedResolver = adoptGRef(webkitCachedResolverNew(adoptGRef(g_resolver_get_default())));
     g_resolver_set_default(cachedResolver.get());
 
@@ -136,23 +134,25 @@ void NetworkProcess::platformInitializeNetworkProcess(const NetworkProcessCreati
     if (!parameters.languages.isEmpty())
         userPreferredLanguagesChanged(parameters.languages);
 
-    setIgnoreTLSErrors(parameters.ignoreTLSErrors);
-
-    if (!parameters.hstsStorageDirectory.isEmpty())
-        SoupNetworkSession::setHSTSPersistentStorage(parameters.hstsStorageDirectory.utf8());
-    forEachNetworkSession([](const auto& session) {
-        static_cast<const NetworkSessionSoup&>(session).soupNetworkSession().setupHSTSEnforcer();
-    });
+#if ENABLE(PERIODIC_MEMORY_MONITOR)
+    // The periodic memory monitor is disabled by default in the network process. Enable
+    // it only if MemoryPressureHandler is not suppressed and there is a custom configuration
+    // for it.
+    if (!parameters.shouldSuppressMemoryPressureHandler && parameters.memoryPressureHandlerConfiguration) {
+        auto& memoryPressureHandler = MemoryPressureHandler::singleton();
+        memoryPressureHandler.setConfiguration(*parameters.memoryPressureHandlerConfiguration);
+        memoryPressureHandler.setShouldUsePeriodicMemoryMonitor(true);
+        memoryPressureHandler.setMemoryKillCallback([this] () {
+            parentProcessConnection()->send(Messages::NetworkProcessProxy::DidExceedMemoryLimit(), 0);
+        });
+    }
+#endif
 }
 
-std::unique_ptr<WebCore::NetworkStorageSession> NetworkProcess::platformCreateDefaultStorageSession() const
+void NetworkProcess::setIgnoreTLSErrors(PAL::SessionID sessionID, bool ignoreTLSErrors)
 {
-    return makeUnique<WebCore::NetworkStorageSession>(PAL::SessionID::defaultSessionID());
-}
-
-void NetworkProcess::setIgnoreTLSErrors(bool ignoreTLSErrors)
-{
-    SoupNetworkSession::setShouldIgnoreTLSErrors(ignoreTLSErrors);
+    if (auto* session = networkSession(sessionID))
+        static_cast<NetworkSessionSoup&>(*session).setIgnoreTLSErrors(ignoreTLSErrors);
 }
 
 void NetworkProcess::allowSpecificHTTPSCertificateForHost(const CertificateInfo& certificateInfo, const String& host)
@@ -160,20 +160,12 @@ void NetworkProcess::allowSpecificHTTPSCertificateForHost(const CertificateInfo&
     SoupNetworkSession::allowSpecificHTTPSCertificateForHost(certificateInfo, host);
 }
 
-void NetworkProcess::clearCacheForAllOrigins(uint32_t cachesToClear)
-{
-    if (cachesToClear == InMemoryResourceCachesOnly)
-        return;
-
-    clearDiskCache(-WallTime::infinity(), [] { });
-}
-
 void NetworkProcess::clearDiskCache(WallTime modifiedSince, CompletionHandler<void()>&& completionHandler)
 {
     auto aggregator = CallbackAggregator::create(WTFMove(completionHandler));
     forEachNetworkSession([modifiedSince, &aggregator](NetworkSession& session) {
         if (auto* cache = session.cache())
-            cache->clear(modifiedSince, [aggregator = aggregator.copyRef()] () { });
+            cache->clear(modifiedSince, [aggregator] () { });
     });
 }
 
@@ -182,33 +174,16 @@ void NetworkProcess::platformTerminate()
     notImplemented();
 }
 
-void NetworkProcess::setNetworkProxySettings(const SoupNetworkProxySettings& settings)
+void NetworkProcess::setNetworkProxySettings(PAL::SessionID sessionID, SoupNetworkProxySettings&& settings)
 {
-    SoupNetworkSession::setProxySettings(settings);
-    forEachNetworkSession([](const auto& session) {
-        static_cast<const NetworkSessionSoup&>(session).soupNetworkSession().setupProxy();
-    });
+    if (auto* session = networkSession(sessionID))
+        static_cast<NetworkSessionSoup&>(*session).setProxySettings(settings);
 }
 
-void NetworkProcess::platformPrepareToSuspend(CompletionHandler<void()>&& completionHandler)
+void NetworkProcess::setPersistentCredentialStorageEnabled(PAL::SessionID sessionID, bool enabled)
 {
-    notImplemented();
-    completionHandler();
-}
-
-void NetworkProcess::platformProcessDidResume()
-{
-    notImplemented();
-}
-
-void NetworkProcess::platformProcessDidTransitionToForeground()
-{
-    notImplemented();
-}
-
-void NetworkProcess::platformProcessDidTransitionToBackground()
-{
-    notImplemented();
+    if (auto* session = networkSession(sessionID))
+        static_cast<NetworkSessionSoup&>(*session).setPersistentCredentialStorageEnabled(enabled);
 }
 
 } // namespace WebKit

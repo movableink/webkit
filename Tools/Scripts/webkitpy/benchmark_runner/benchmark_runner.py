@@ -1,20 +1,19 @@
-#!/usr/bin/env python
-
 import json
 import logging
-import shutil
-import signal
-import subprocess
 import sys
-import tempfile
-import time
-import types
 import os
-import urlparse
 
-from benchmark_builder import BenchmarkBuilder
-from benchmark_results import BenchmarkResults
-from browser_driver.browser_driver_factory import BrowserDriverFactory
+from webkitpy.benchmark_runner.benchmark_builder import BenchmarkBuilder
+from webkitpy.benchmark_runner.benchmark_results import BenchmarkResults
+from webkitpy.benchmark_runner.browser_driver.browser_driver_factory import BrowserDriverFactory
+
+
+if sys.version_info > (3, 0):
+    def istext(a):
+        return isinstance(a, bytes) or isinstance(a, str)
+else:
+    def istext(a):
+        return isinstance(a, str) or isinstance(a, unicode)
 
 
 _log = logging.getLogger(__name__)
@@ -39,6 +38,8 @@ class BenchmarkRunner(object):
                 self._browser_path = browser_path
                 self._build_dir = os.path.abspath(build_dir) if build_dir else None
                 self._diagnose_dir = os.path.abspath(diagnose_dir) if diagnose_dir else None
+                if self._diagnose_dir:
+                    os.makedirs(self._diagnose_dir, exist_ok=True)
                 self._output_file = output_file
                 self._scale_unit = scale_unit
                 self._show_iteration_values = show_iteration_values
@@ -80,7 +81,7 @@ class BenchmarkRunner(object):
         debug_outputs = []
         try:
             self._browser_driver.prepare_initial_env(self._config)
-            for iteration in xrange(1, count + 1):
+            for iteration in range(1, count + 1):
                 _log.info('Start the iteration {current_iteration} of {iterations} for current benchmark'.format(current_iteration=iteration, iterations=count))
                 try:
                     self._browser_driver.prepare_env(self._config)
@@ -144,16 +145,16 @@ class BenchmarkRunner(object):
         assert(isinstance(a, type(b)))
         arg_type = type(a)
         # special handle for list type, and should be handle before equal check
-        if arg_type == types.ListType and len(a) and (type(a[0]) == types.StringType or type(a[0]) == types.UnicodeType):
+        if arg_type == list and len(a) and istext(a[0]):
             return a
-        if arg_type == types.DictType:
+        if arg_type == dict:
             result = {}
-            for key, value in a.items():
+            for key, value in list(a.items()):
                 if key in b:
                     result[key] = cls._merge(value, b[key])
                 else:
                     result[key] = value
-            for key, value in b.items():
+            for key, value in list(b.items()):
                 if key not in result:
                     result[key] = value
             return result

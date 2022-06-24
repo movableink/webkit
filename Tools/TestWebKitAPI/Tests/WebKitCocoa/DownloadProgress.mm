@@ -173,7 +173,7 @@ static void* progressObservingContext = &progressObservingContext;
     }
 
     if (m_progressSubscriber) {
-#if USE(NSPROGRESS_PUBLISHING_SPI)
+#if HAVE(NSPROGRESS_PUBLISHING_SPI)
         [NSProgress _removeSubscriber:m_progressSubscriber.get()];
 #else
         [NSProgress removeSubscriber:m_progressSubscriber.get()];
@@ -216,7 +216,7 @@ static void* progressObservingContext = &progressObservingContext;
             return static_cast<NSProgressUnpublishingHandler>(nil);
         });
 
-#if USE(NSPROGRESS_PUBLISHING_SPI)
+#if HAVE(NSPROGRESS_PUBLISHING_SPI)
         m_progressSubscriber = [NSProgress _addSubscriberForFileURL:m_progressURL.get() withPublishingHandler:publishingHandler.get()];
 #else
         m_progressSubscriber = [NSProgress addSubscriberForFileURL:m_progressURL.get() withPublishingHandler:publishingHandler.get()];
@@ -326,7 +326,7 @@ static void* progressObservingContext = &progressObservingContext;
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationResponse:(WKNavigationResponse *)navigationResponse decisionHandler:(void (^)(WKNavigationResponsePolicy))decisionHandler
 {
     if (m_startType == DownloadStartType::ConvertLoadToDownload)
-        decisionHandler(_WKNavigationResponsePolicyBecomeDownload);
+        decisionHandler(WKNavigationResponsePolicyDownload);
     else
         decisionHandler(WKNavigationResponsePolicyAllow);
 }
@@ -487,7 +487,7 @@ TEST(DownloadProgress, CancelDownloadWhenProgressIsCanceled)
     [testRunner.get() subscribeAndWaitForProgress];
     [testRunner.get() receiveData:50];
     [testRunner.get().progress cancel];
-    [testRunner.get() waitForDownloadCanceled];
+    [testRunner.get() waitForDownloadFailed];
     [testRunner.get() waitToLoseProgress];
 
     [testRunner.get() tearDown];

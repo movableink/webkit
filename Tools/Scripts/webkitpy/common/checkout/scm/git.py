@@ -31,12 +31,14 @@ import datetime
 import logging
 import re
 
+from webkitcorepy import string_utils
+
 from webkitpy.common.memoized import memoized
 from webkitpy.common.system.executive import Executive, ScriptError
 
-from .commitmessage import CommitMessage
-from .scm import AuthenticationError, SCM, commit_error_handler
-from .svn import SVNRepository
+from webkitpy.common.checkout.scm.commitmessage import CommitMessage
+from webkitpy.common.checkout.scm.scm import AuthenticationError, SCM, commit_error_handler
+from webkitpy.common.checkout.scm.svn import SVNRepository
 
 _log = logging.getLogger(__name__)
 
@@ -54,6 +56,7 @@ class Git(SCM, SVNRepository):
     # Git doesn't appear to document error codes, but seems to return
     # 1 or 128, mostly.
     ERROR_FILE_IS_MISSING = 128
+    GIT_SVN_ID_REGEXP = r"^\s*git-svn-id:\s(?P<svn_url>(?P<base_url>.*)/(branch)?(?P<svn_branch>(.*)))@(?P<svn_revision>\d+)\ (?P<svn_uuid>[a-fA-F0-9-]+)$"
 
     executable_name = 'git'
 
@@ -83,7 +86,7 @@ class Git(SCM, SVNRepository):
         # git_bits = platform.architecture(executable=git_path, bits='default')[0]
         # git_bits is just 'default', meaning the call failed.
         file_output = self.run(['file', path])
-        return re.search('x86_64', file_output)
+        return re.search('64', file_output)
 
     def _check_git_architecture(self):
         if not self._machine_is_64bit():
@@ -110,7 +113,7 @@ class Git(SCM, SVNRepository):
         try:
             executive = executive or Executive()
             return executive.run_command([cls.executable_name, 'rev-parse', '--is-inside-work-tree'], cwd=path, ignore_errors=True).rstrip() == "true"
-        except OSError as e:
+        except OSError:
             # The Windows bots seem to through a WindowsError when git isn't installed.
             return False
 
@@ -119,7 +122,7 @@ class Git(SCM, SVNRepository):
         try:
             executive = executive or Executive()
             return executive.run_command([cls.executable_name, 'clone', '-v', url, directory], ignore_errors=True)
-        except OSError as e:
+        except OSError:
             return False
 
     def find_checkout_root(self, path):
@@ -146,13 +149,13 @@ class Git(SCM, SVNRepository):
 
     @staticmethod
     def commit_success_regexp():
-        return "^Committed r(?P<svn_revision>\d+)$"
+        return r"^Committed r(?P<svn_revision>\d+)$"
 
     def discard_local_commits(self):
         self._run_git(['reset', '--hard', self.remote_branch_ref()])
 
     def local_commits(self):
-        return self._run_git(['log', '--pretty=oneline', 'HEAD...' + self.remote_branch_ref()]).splitlines()
+        return self._run_git(['log', '--no-abbrev-commit', '--pretty=oneline', 'HEAD...' + self.remote_branch_ref()]).splitlines()
 
     def rebase_in_progress(self):
         return self._filesystem.exists(self.absolute_path(self._filesystem.join('.git', 'rebase-apply')))
@@ -182,7 +185,7 @@ class Git(SCM, SVNRepository):
         return self._run_git(["rm", "-f"] + paths)
 
     def exists(self, path):
-        return_code = self._run_git(["show", "HEAD:%s" % path], return_exit_code=True, decode_output=False)
+        return_code = self._run_git(["show", "--no-abbrev-commit", "HEAD:%s" % path], return_exit_code=True, decode_output=False)
         return return_code != self.ERROR_FILE_IS_MISSING
 
     def _branch_from_ref(self, ref):
@@ -240,7 +243,7 @@ class Git(SCM, SVNRepository):
 
     def _changes_files_for_commit(self, git_commit):
         # --pretty="format:" makes git show not print the commit log header.
-        changed_files = self._run_git(["show", "--pretty=format:", "--name-only", git_commit])
+        changed_files = self._run_git(["show", "--no-abbrev-commit", "--pretty=format:", "--name-only", git_commit])
         # Strip blank lines which could appear at the top on older versions of git.
         return changed_files.lstrip().splitlines()
 
@@ -250,8 +253,8 @@ class Git(SCM, SVNRepository):
 
     def revisions_changing_file(self, path, limit=5):
         # git rev-list head --remove-empty --limit=5 -- path would be equivalent.
-        commit_ids = self._run_git(["log", "--remove-empty", "--pretty=format:%H", "-%s" % limit, "--", path]).splitlines()
-        return filter(lambda revision: revision, map(self.svn_revision_from_git_commit, commit_ids))
+        commit_ids = self._run_git(["log", "--no-abbrev-commit", "--remove-empty", "--pretty=format:%H", "-%s" % limit, "--", path]).splitlines()
+        return list(filter(lambda revision: revision, map(self.svn_revision_from_git_commit, commit_ids)))
 
     def conflicted_files(self):
         # We do not need to pass decode_output for this diff command
@@ -275,17 +278,39 @@ class Git(SCM, SVNRepository):
     def _most_recent_log_matching(self, grep_str, path):
         # We use '--grep=' + foo rather than '--grep', foo because
         # git 1.7.0.4 (and earlier) didn't support the separate arg.
-        return self._run_git(['log', '-1', '--grep=' + grep_str, '--date=iso', self.find_checkout_root(path)])
+        return self._run_git(['log', '--no-abbrev-commit', '-1', '--grep=' + grep_str, '--date=iso', self.find_checkout_root(path)])
 
     def _most_recent_log_for_revision(self, revision, path):
-        return self._run_git(['log', '-1', revision, '--date=iso', self.find_checkout_root(path)])
+        return self._run_git(['log', '--no-abbrev-commit', '-1', revision, '--date=iso', self.find_checkout_root(path)])
 
-    def svn_revision(self, path):
+    def _field_from_git_svn_id(self, path, field):
+        # Keep this in sync with the regex from git_svn_id_regexp() above.
+        allowed_fields = ['svn_url', 'base_url', 'svn_branch', 'svn_revision', 'svn_uuid']
+        if field not in allowed_fields:
+            raise ValueError("Unsupported field for git-svn-id: " + field)
+
         git_log = self._most_recent_log_matching('git-svn-id:', path)
-        match = re.search("^\s*git-svn-id:.*@(?P<svn_revision>\d+)\ ", git_log, re.MULTILINE)
+        match = re.search(self.GIT_SVN_ID_REGEXP, git_log, re.MULTILINE)
         if not match:
             return ""
-        return str(match.group('svn_revision'))
+        return str(match.group(field))
+
+    def svn_revision(self, path):
+        return self._field_from_git_svn_id(path, 'svn_revision')
+
+    def svn_branch(self, path):
+        return self._field_from_git_svn_id(path, 'svn_branch')
+
+    def svn_url(self, path):
+        return self._field_from_git_svn_id(path, 'svn_url')
+
+    def svn_repository_url(self):
+        git_command = ['svn', 'info']
+        status = self._run_git(git_command)
+        match = re.search(r'^URL: (?P<url>.*)$', status, re.MULTILINE)
+        if not match:
+            return ""
+        return match.group('url')
 
     def native_revision(self, path):
         return self._run_git(['-C', self.find_checkout_root(path), 'log', '-1', '--pretty=format:%H'])
@@ -298,17 +323,9 @@ class Git(SCM, SVNRepository):
             return result[6:]
         return result
 
-    def svn_url(self):
-        git_command = ['svn', 'info']
-        status = self._run_git(git_command)
-        match = re.search(r'^URL: (?P<url>.*)$', status, re.MULTILINE)
-        if not match:
-            return ""
-        return match.group('url')
-
     def timestamp_of_revision(self, path, revision):
         git_log = self._most_recent_log_matching('git-svn-id:.*@%s' % revision, path)
-        match = re.search("^Date:\s*(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) ([+-])(\d{2})(\d{2})$", git_log, re.MULTILINE)
+        match = re.search(r"^Date:\s*(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) ([+-])(\d{2})(\d{2})$", git_log, re.MULTILINE)
         if not match:
             return ""
 
@@ -331,7 +348,7 @@ class Git(SCM, SVNRepository):
         if not revision:
             return diff
 
-        return "Subversion Revision: " + revision + '\n' + diff
+        return string_utils.encode("Subversion Revision: ") + string_utils.encode(revision) + string_utils.encode('\n') + string_utils.encode(diff)
 
     def create_patch(self, git_commit=None, changed_files=None, git_index=False):
         """Returns a byte array (str()) representing the patch file.
@@ -369,12 +386,12 @@ class Git(SCM, SVNRepository):
     def _string_to_int_or_none(self, string):
         try:
             return int(string)
-        except ValueError as e:
+        except ValueError:
             return None
 
     @memoized
     def git_commit_from_svn_revision(self, svn_revision):
-        git_log = self._run_git(['log', '-1', '--grep=^\s*git-svn-id:.*@%s ' % svn_revision])
+        git_log = self._run_git(['log', '--no-abbrev-commit', '-1', r'--grep=^\s*git-svn-id:.*@%s ' % svn_revision])
         git_commit = re.search("^commit (?P<commit>[a-f0-9]{40})", git_log)
         if not git_commit:
             # FIXME: Alternatively we could offer to update the checkout? Or return None?
@@ -389,7 +406,7 @@ class Git(SCM, SVNRepository):
     def contents_at_revision(self, path, revision):
         """Returns a byte array (str()) containing the contents
         of path @ revision in the repository."""
-        return self._run_git(["show", "%s:%s" % (self.git_commit_from_svn_revision(revision), path)], decode_output=False)
+        return self._run_git(["show", "--no-abbrev-commit", "%s:%s" % (self.git_commit_from_svn_revision(revision), path)], decode_output=False)
 
     def diff_for_revision(self, revision):
         git_commit = self.git_commit_from_svn_revision(revision)
@@ -399,11 +416,11 @@ class Git(SCM, SVNRepository):
         return self._run_git(['diff', 'HEAD', '--no-renames', '--', path])
 
     def show_head(self, path):
-        return self._run_git(['show', 'HEAD:' + self.to_object_name(path)], decode_output=False)
+        return self._run_git(['show', '--no-abbrev-commit', 'HEAD:' + self.to_object_name(path)], decode_output=False)
 
     def committer_email_for_revision(self, revision):
         git_commit = self.git_commit_from_svn_revision(revision)
-        committer_email = self._run_git(["log", "-1", "--pretty=format:%ce", git_commit])
+        committer_email = self._run_git(["log", "--no-abbrev-commit", "-1", "--pretty=format:%ce", git_commit])
         # Git adds an extra @repository_hash to the end of every committer email, remove it:
         return committer_email.rsplit("@", 1)[0]
 
@@ -531,10 +548,10 @@ class Git(SCM, SVNRepository):
         # Use references so that we can avoid collisions, e.g. we don't want to operate on refs/heads/trunk if it exists.
         remote_branch_refs = self.read_git_config('svn-remote.svn.fetch', cwd=self.checkout_root, executive=self._executive)
         if not remote_branch_refs:
-            remote_master_ref = 'refs/remotes/origin/master'
-            if not self.branch_ref_exists(remote_master_ref):
-                raise ScriptError(message="Can't find a branch to diff against. svn-remote.svn.fetch is not in the git config and %s does not exist" % remote_master_ref)
-            return remote_master_ref
+            for ref in ['refs/remotes/origin/main', 'refs/remotes/origin/master']:
+                if self.branch_ref_exists(ref):
+                    return ref
+            raise ScriptError(message="Can't find a branch to diff against. svn-remote.svn.fetch is not in the git config and neither main nor master exist")
 
         # FIXME: What's the right behavior when there are multiple svn-remotes listed?
         # For now, just use the first one.

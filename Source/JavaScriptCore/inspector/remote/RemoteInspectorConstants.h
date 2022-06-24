@@ -56,7 +56,9 @@
 #define WIRUserInfoKey                          @"WIRUserInfoKey"
 #define WIRApplicationDictionaryKey             @"WIRApplicationDictionaryKey"
 #define WIRMessageDataKey                       @"WIRMessageDataKey"
+#define WIRMessageDataTypeKey                   @"WIRMessageDataTypeKey"
 #define WIRApplicationGetListingMessage         @"WIRApplicationGetListingMessage"
+#define WIRApplicationWakeUpDebuggablesMessage  @"WIRApplicationWakeUpDebuggablesMessage"
 #define WIRIndicateMessage                      @"WIRIndicateMessage"
 #define WIRIndicateEnabledKey                   @"WIRIndicateEnabledKey"
 #define WIRSenderKey                            @"WIRSenderKey"
@@ -74,12 +76,19 @@
 #define WIRConnectionDiedMessage                @"WIRConnectionDiedMessage"
 #define WIRTypeKey                              @"WIRTypeKey"
 #define WIRTypeAutomation                       @"WIRTypeAutomation"
+#define WIRTypeITML                             @"WIRTypeITML"
 #define WIRTypeJavaScript                       @"WIRTypeJavaScript"
 #define WIRTypePage                             @"WIRTypePage"
 #define WIRTypeServiceWorker                    @"WIRTypeServiceWorker"
 #define WIRTypeWeb                              @"WIRTypeWeb" // COMPATIBILITY (iOS 13): "Web" was split into "Page" (WebCore::Page) and "WebPage" (WebKit::WebPageProxy).
 #define WIRTypeWebPage                          @"WIRTypeWebPage"
 #define WIRAutomaticallyPause                   @"WIRAutomaticallyPause"
+#define WIRMessageDataTypeChunkSupportedKey     @"WIRMessageDataTypeChunkSupportedKey"
+
+// Allowed values for WIRMessageDataTypeKey.
+#define WIRMessageDataTypeFull                  @"WIRMessageDataTypeFull"
+#define WIRMessageDataTypeChunk                 @"WIRMessageDataTypeChunk"
+#define WIRMessageDataTypeFinalChunk            @"WIRMessageDataTypeFinalChunk"
 
 // Allowed values for WIRAutomationAvailabilityKey.
 #define WIRAutomationAvailabilityNotAvailable     @"WIRAutomationAvailabilityNotAvailable"
@@ -101,6 +110,7 @@
 
 // The value for WIRSessionCapabilitiesKey is a dictionary that holds these capability key-value pairs.
 
+#define WIRAcceptInsecureCertificatesKey               @"org.webkit.webdriver.accept-insecure-certificates"
 #define WIRAllowInsecureMediaCaptureCapabilityKey      @"org.webkit.webdriver.webrtc.allow-insecure-media-capture"
 #define WIRSuppressICECandidateFilteringCapabilityKey  @"org.webkit.webdriver.webrtc.suppress-ice-candidate-filtering"
 
@@ -118,3 +128,6 @@
 #define WIRProxyApplicationParentAuditDataKey   @"WIRProxyApplicationParentAuditData"
 #define WIRProxyApplicationSetupMessage         @"WIRProxyApplicationSetupMessage"
 #define WIRProxyApplicationSetupResponseMessage @"WIRProxyApplicationSetupResponseMessage"
+
+#define WIRRemoteInspectorEnabledKey            CFSTR("RemoteInspectorEnabled")
+#define WIRRemoteInspectorDomainName            CFSTR("com.apple.webinspectord")

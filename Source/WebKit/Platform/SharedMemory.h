@@ -28,11 +28,10 @@
 
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 
 #if USE(UNIX_DOMAIN_SOCKETS)
 #include "Attachment.h"
-#include <wtf/Optional.h>
 #endif
 
 #if OS(WINDOWS)
@@ -44,8 +43,12 @@ class Decoder;
 class Encoder;
 }
 
+namespace WebCore {
+class SharedBuffer;
+class FragmentedSharedBuffer;
+}
+
 #if OS(DARWIN) && !USE(UNIX_DOMAIN_SOCKETS)
-#include <mach/mach_port.h>
 namespace WTF {
 class MachSendRight;
 }
@@ -53,7 +56,9 @@ class MachSendRight;
 
 namespace WebKit {
 
-class SharedMemory : public RefCounted<SharedMemory> {
+enum class MemoryLedger { None, Default, Network, Media, Graphics, Neural };
+
+class SharedMemory : public ThreadSafeRefCounted<SharedMemory> {
 public:
     enum class Protection {
         ReadOnly,
@@ -70,10 +75,14 @@ public:
 
         bool isNull() const;
 
-        void clear();
+#if (OS(DARWIN) || OS(WINDOWS)) && !USE(UNIX_DOMAIN_SOCKETS)
+        size_t size() const { return m_size; }
+#endif
 
-        void encode(IPC::Encoder&) const;
-        static bool decode(IPC::Decoder&, Handle&);
+        // Take ownership of the memory for jetsam purposes.
+        void takeOwnershipOfMemory(MemoryLedger) const;
+
+        void clear();
 
 #if USE(UNIX_DOMAIN_SOCKETS)
         IPC::Attachment releaseAttachment() const;
@@ -81,7 +90,7 @@ public:
 #endif
 #if OS(WINDOWS)
         static void encodeHandle(IPC::Encoder&, HANDLE);
-        static Optional<HANDLE> decodeHandle(IPC::Decoder&);
+        static std::optional<HANDLE> decodeHandle(IPC::Decoder&);
 #endif
     private:
         friend class SharedMemory;
@@ -96,8 +105,23 @@ public:
 #endif
     };
 
+    struct IPCHandle {
+        IPCHandle() = default;
+        IPCHandle(Handle&& handle, uint64_t dataSize)
+            : handle(WTFMove(handle))
+            , dataSize(dataSize)
+        {
+        }
+        void encode(IPC::Encoder&) const;
+        static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, IPCHandle&);
+
+        Handle handle;
+        uint64_t dataSize { 0 };
+    };
+
+    // FIXME: Change these factory functions to return Ref<SharedMemory> and crash on failure.
     static RefPtr<SharedMemory> allocate(size_t);
-    static RefPtr<SharedMemory> create(void*, size_t, Protection);
+    static RefPtr<SharedMemory> copyBuffer(const WebCore::FragmentedSharedBuffer&);
     static RefPtr<SharedMemory> map(const Handle&, Protection);
 #if USE(UNIX_DOMAIN_SOCKETS)
     static RefPtr<SharedMemory> wrapMap(void*, size_t, int fileDescriptor);
@@ -123,8 +147,14 @@ public:
     HANDLE handle() const { return m_handle; }
 #endif
 
+#if PLATFORM(COCOA)
+    Protection protection() const { return m_protection; }
+#endif
+
     // Return the system page size in bytes.
     static unsigned systemPageSize();
+
+    Ref<WebCore::SharedBuffer> createSharedBuffer(size_t) const;
 
 private:
 #if OS(DARWIN)
@@ -138,7 +168,7 @@ private:
 #endif
 
 #if USE(UNIX_DOMAIN_SOCKETS)
-    Optional<int> m_fileDescriptor;
+    std::optional<int> m_fileDescriptor;
     bool m_isWrappingMap { false };
 #elif OS(DARWIN)
     mach_port_t m_port { MACH_PORT_NULL };

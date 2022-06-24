@@ -33,6 +33,7 @@
 #import "RemoteLayerTreeDrawingArea.h"
 #import "RemoteScrollingCoordinatorMessages.h"
 #import "RemoteScrollingCoordinatorTransaction.h"
+#import "RemoteScrollingUIState.h"
 #import "WebCoreArgumentCoders.h"
 #import "WebPage.h"
 #import "WebProcess.h"
@@ -42,7 +43,8 @@
 #import <WebCore/RenderLayerCompositor.h>
 #import <WebCore/RenderView.h>
 #import <WebCore/ScrollingTreeFixedNode.h>
-#import <WebCore/ScrollingTreeStickyNode.h>
+#import <WebCore/ScrollingTreeStickyNodeCocoa.h>
+
 
 namespace WebKit {
 using namespace WebCore;
@@ -61,7 +63,7 @@ RemoteScrollingCoordinator::~RemoteScrollingCoordinator()
 
 void RemoteScrollingCoordinator::scheduleTreeStateCommit()
 {
-    m_webPage->drawingArea()->scheduleCompositingLayerFlush();
+    m_webPage->drawingArea()->triggerRenderingUpdate();
 }
 
 bool RemoteScrollingCoordinator::coordinatesScrollingForFrameView(const FrameView& frameView) const
@@ -70,16 +72,25 @@ bool RemoteScrollingCoordinator::coordinatesScrollingForFrameView(const FrameVie
     return renderView && renderView->usesCompositing();
 }
 
-bool RemoteScrollingCoordinator::isRubberBandInProgress() const
+bool RemoteScrollingCoordinator::isRubberBandInProgress(ScrollingNodeID nodeID) const
 {
-    // FIXME: need to maintain state in the web process?
-    return false;
+    if (!nodeID)
+        return false;
+    return m_nodesWithActiveRubberBanding.contains(nodeID);
 }
 
-bool RemoteScrollingCoordinator::isScrollSnapInProgress() const
+bool RemoteScrollingCoordinator::isUserScrollInProgress(ScrollingNodeID nodeID) const
 {
-    // FIXME: need to maintain state in the web process?
-    return false;
+    if (!nodeID)
+        return false;
+    return m_nodesWithActiveUserScrolls.contains(nodeID);
+}
+
+bool RemoteScrollingCoordinator::isScrollSnapInProgress(ScrollingNodeID nodeID) const
+{
+    if (!nodeID)
+        return false;
+    return m_nodesWithActiveScrollSnap.contains(nodeID);
 }
 
 void RemoteScrollingCoordinator::setScrollPinningBehavior(ScrollPinningBehavior)
@@ -96,12 +107,39 @@ void RemoteScrollingCoordinator::buildTransaction(RemoteScrollingCoordinatorTran
 // Notification from the UI process that we scrolled.
 void RemoteScrollingCoordinator::scrollPositionChangedForNode(ScrollingNodeID nodeID, const FloatPoint& scrollPosition, bool syncLayerPosition)
 {
-    scheduleUpdateScrollPositionAfterAsyncScroll(nodeID, scrollPosition, WTF::nullopt, syncLayerPosition ? ScrollingLayerPositionAction::Sync : ScrollingLayerPositionAction::Set);
+    auto scrollUpdate = ScrollUpdate { nodeID, scrollPosition, { }, ScrollUpdateType::PositionUpdate, syncLayerPosition ? ScrollingLayerPositionAction::Sync : ScrollingLayerPositionAction::Set };
+    applyScrollUpdate(WTFMove(scrollUpdate));
 }
 
-void RemoteScrollingCoordinator::currentSnapPointIndicesChangedForNode(ScrollingNodeID nodeID, unsigned horizontal, unsigned vertical)
+void RemoteScrollingCoordinator::animatedScrollDidEndForNode(ScrollingNodeID nodeID)
+{
+    auto scrollUpdate = ScrollUpdate { nodeID, { }, { }, ScrollUpdateType::AnimatedScrollDidEnd };
+    applyScrollUpdate(WTFMove(scrollUpdate));
+}
+
+void RemoteScrollingCoordinator::currentSnapPointIndicesChangedForNode(ScrollingNodeID nodeID, std::optional<unsigned> horizontal, std::optional<unsigned> vertical)
 {
     setActiveScrollSnapIndices(nodeID, horizontal, vertical);
+}
+
+void RemoteScrollingCoordinator::scrollingStateInUIProcessChanged(const RemoteScrollingUIState& uiState)
+{
+    // FIXME: Also track m_nodesWithActiveRubberBanding.
+    if (uiState.changes().contains(RemoteScrollingUIState::Changes::ScrollSnapNodes))
+        m_nodesWithActiveScrollSnap = uiState.nodesWithActiveScrollSnap();
+
+    if (uiState.changes().contains(RemoteScrollingUIState::Changes::UserScrollNodes))
+        m_nodesWithActiveUserScrolls = uiState.nodesWithActiveUserScrolls();
+}
+
+void RemoteScrollingCoordinator::addNodeWithActiveRubberBanding(ScrollingNodeID nodeID)
+{
+    m_nodesWithActiveRubberBanding.add(nodeID);
+}
+
+void RemoteScrollingCoordinator::removeNodeWithActiveRubberBanding(ScrollingNodeID nodeID)
+{
+    m_nodesWithActiveRubberBanding.remove(nodeID);
 }
 
 } // namespace WebKit

@@ -11,17 +11,18 @@
 #ifndef MODULES_CONGESTION_CONTROLLER_GOOG_CC_DELAY_BASED_BWE_UNITTEST_HELPER_H_
 #define MODULES_CONGESTION_CONTROLLER_GOOG_CC_DELAY_BASED_BWE_UNITTEST_HELPER_H_
 
-#include <list>
-#include <map>
+#include <stddef.h>
+#include <stdint.h>
+
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
+#include "api/transport/field_trial_based_config.h"
+#include "api/transport/network_types.h"
 #include "modules/congestion_controller/goog_cc/acknowledged_bitrate_estimator.h"
 #include "modules/congestion_controller/goog_cc/delay_based_bwe.h"
-#include "modules/remote_bitrate_estimator/include/remote_bitrate_estimator.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 #include "system_wrappers/include/clock.h"
 #include "test/field_trial.h"
 #include "test/gtest.h"
@@ -29,13 +30,12 @@
 namespace webrtc {
 namespace test {
 
-class TestBitrateObserver : public RemoteBitrateObserver {
+class TestBitrateObserver {
  public:
   TestBitrateObserver() : updated_(false), latest_bitrate_(0) {}
-  ~TestBitrateObserver() override {}
+  ~TestBitrateObserver() {}
 
-  void OnReceiveBitrateChanged(const std::vector<uint32_t>& ssrcs,
-                               uint32_t bitrate) override;
+  void OnReceiveBitrateChanged(uint32_t bitrate);
 
   void Reset() { updated_ = false; }
 
@@ -58,7 +58,7 @@ class RtpStream {
   // previous frame, no frame will be generated. The frame is split into
   // packets.
   int64_t GenerateFrame(int64_t time_now_us,
-                        std::vector<PacketFeedback>* packets);
+                        std::vector<PacketResult>* packets);
 
   // The send-side time when the next frame can be generated.
   int64_t next_rtp_time() const;
@@ -74,7 +74,6 @@ class RtpStream {
   int fps_;
   int bitrate_bps_;
   int64_t next_rtp_time_;
-  uint16_t sequence_number_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(RtpStream);
 };
@@ -90,16 +89,16 @@ class StreamGenerator {
   // Set the link capacity.
   void set_capacity_bps(int capacity_bps);
 
-  // Divides |bitrate_bps| among all streams. The allocated bitrate per stream
+  // Divides `bitrate_bps` among all streams. The allocated bitrate per stream
   // is decided by the initial allocation ratios.
   void SetBitrateBps(int bitrate_bps);
 
-  // Set the RTP timestamp offset for the stream identified by |ssrc|.
+  // Set the RTP timestamp offset for the stream identified by `ssrc`.
   void set_rtp_timestamp_offset(uint32_t ssrc, uint32_t offset);
 
   // TODO(holmer): Break out the channel simulation part from this class to make
   // it possible to simulate different types of channels.
-  int64_t GenerateFrame(std::vector<PacketFeedback>* packets,
+  int64_t GenerateFrame(std::vector<PacketResult>* packets,
                         int64_t time_now_us);
 
  private:
@@ -114,10 +113,9 @@ class StreamGenerator {
 };
 }  // namespace test
 
-class DelayBasedBweTest : public ::testing::Test {
+class DelayBasedBweTest : public ::testing::TestWithParam<std::string> {
  public:
   DelayBasedBweTest();
-  explicit DelayBasedBweTest(const std::string& field_trial_string);
   ~DelayBasedBweTest() override;
 
  protected:
@@ -126,11 +124,9 @@ class DelayBasedBweTest : public ::testing::Test {
   // Helpers to insert a single packet into the delay-based BWE.
   void IncomingFeedback(int64_t arrival_time_ms,
                         int64_t send_time_ms,
-                        uint16_t sequence_number,
                         size_t payload_size);
   void IncomingFeedback(int64_t arrival_time_ms,
                         int64_t send_time_ms,
-                        uint16_t sequence_number,
                         size_t payload_size,
                         const PacedPacketInfo& pacing_info);
 
@@ -142,8 +138,8 @@ class DelayBasedBweTest : public ::testing::Test {
   // target bitrate after the call to this function.
   bool GenerateAndProcessFrame(uint32_t ssrc, uint32_t bitrate_bps);
 
-  // Run the bandwidth estimator with a stream of |number_of_frames| frames, or
-  // until it reaches |target_bitrate|.
+  // Run the bandwidth estimator with a stream of `number_of_frames` frames, or
+  // until it reaches `target_bitrate`.
   // Can for instance be used to run the estimator for some time to get it
   // into a steady state.
   uint32_t SteadyStateRun(uint32_t ssrc,
@@ -166,20 +162,21 @@ class DelayBasedBweTest : public ::testing::Test {
                               int64_t receiver_clock_offset_change_ms);
 
   static const uint32_t kDefaultSsrc;
+  FieldTrialBasedConfig field_trial_config_;
 
   std::unique_ptr<test::ScopedFieldTrials>
       field_trial;        // Must be initialized first.
   SimulatedClock clock_;  // Time at the receiver.
   test::TestBitrateObserver bitrate_observer_;
-  std::unique_ptr<AcknowledgedBitrateEstimator> acknowledged_bitrate_estimator_;
+  std::unique_ptr<AcknowledgedBitrateEstimatorInterface>
+      acknowledged_bitrate_estimator_;
   const std::unique_ptr<ProbeBitrateEstimator> probe_bitrate_estimator_;
   std::unique_ptr<DelayBasedBwe> bitrate_estimator_;
   std::unique_ptr<test::StreamGenerator> stream_generator_;
   int64_t arrival_time_offset_ms_;
   bool first_update_;
-
-  RTC_DISALLOW_COPY_AND_ASSIGN(DelayBasedBweTest);
 };
+
 }  // namespace webrtc
 
 #endif  // MODULES_CONGESTION_CONTROLLER_GOOG_CC_DELAY_BASED_BWE_UNITTEST_HELPER_H_

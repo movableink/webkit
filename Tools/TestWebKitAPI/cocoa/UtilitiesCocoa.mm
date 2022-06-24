@@ -23,8 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "Utilities.h"
+#import "config.h"
+#import "Utilities.h"
 
 namespace TestWebKitAPI {
 namespace Util {
@@ -33,6 +33,17 @@ void run(bool* done)
 {
     while (!*done)
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantPast]];
+}
+
+bool runFor(bool* done, double seconds)
+{
+    auto timeoutDate = [NSDate dateWithTimeIntervalSinceNow:seconds];
+    while (!*done) {
+        if ([timeoutDate compare:[NSDate date]] != NSOrderedDescending)
+            return false;
+        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantPast]];
+    }
+    return true;
 }
 
 void spinRunLoop(uint64_t count)

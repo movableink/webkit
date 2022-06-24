@@ -2,6 +2,7 @@ include(platform/Cairo.cmake)
 include(platform/Curl.cmake)
 include(platform/FreeType.cmake)
 include(platform/ImageDecoders.cmake)
+include(platform/OpenSSL.cmake)
 include(platform/TextureMapper.cmake)
 
 list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
@@ -16,6 +17,9 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
 list(APPEND WebCore_SOURCES
     editing/libwpe/EditorLibWPE.cpp
 
+    page/playstation/ResourceUsageOverlayPlayStation.cpp
+    page/playstation/ResourceUsageThreadPlayStation.cpp
+
     page/scrolling/nicosia/ScrollingCoordinatorNicosia.cpp
     page/scrolling/nicosia/ScrollingStateNodeNicosia.cpp
     page/scrolling/nicosia/ScrollingTreeFixedNode.cpp
@@ -24,32 +28,22 @@ list(APPEND WebCore_SOURCES
     page/scrolling/nicosia/ScrollingTreeOverflowScrollProxyNode.cpp
     page/scrolling/nicosia/ScrollingTreeOverflowScrollingNodeNicosia.cpp
     page/scrolling/nicosia/ScrollingTreePositionedNode.cpp
-    page/scrolling/nicosia/ScrollingTreeStickyNode.cpp
-
-    page/scrolling/generic/ScrollingThreadGeneric.cpp
+    page/scrolling/nicosia/ScrollingTreeScrollingNodeDelegateNicosia.cpp
+    page/scrolling/nicosia/ScrollingTreeStickyNodeNicosia.cpp
 
     platform/ScrollAnimationKinetic.cpp
     platform/ScrollAnimationSmooth.cpp
-    platform/UserAgentQuirks.cpp
 
     platform/generic/KeyedDecoderGeneric.cpp
     platform/generic/KeyedEncoderGeneric.cpp
-    platform/generic/ScrollAnimatorGeneric.cpp
 
     platform/graphics/GLContext.cpp
-    platform/graphics/GraphicsContext3DPrivate.cpp
     platform/graphics/PlatformDisplay.cpp
 
     platform/graphics/egl/GLContextEGL.cpp
     platform/graphics/egl/GLContextEGLLibWPE.cpp
 
     platform/graphics/libwpe/PlatformDisplayLibWPE.cpp
-
-    platform/graphics/opengl/Extensions3DOpenGLCommon.cpp
-    platform/graphics/opengl/Extensions3DOpenGLES.cpp
-    platform/graphics/opengl/GraphicsContext3DOpenGLCommon.cpp
-    platform/graphics/opengl/GraphicsContext3DOpenGLES.cpp
-    platform/graphics/opengl/TemporaryOpenGLSetting.cpp
 
     platform/libwpe/PasteboardLibWPE.cpp
     platform/libwpe/PlatformKeyboardEventLibWPE.cpp
@@ -62,8 +56,7 @@ list(APPEND WebCore_SOURCES
     platform/playstation/PlatformScreenPlayStation.cpp
     platform/playstation/ScrollbarThemePlayStation.cpp
     platform/playstation/UserAgentPlayStation.cpp
-
-    platform/posix/SharedBufferPOSIX.cpp
+    platform/playstation/WidgetPlayStation.cpp
 
     platform/text/Hyphenation.cpp
     platform/text/LocaleICU.cpp
@@ -82,16 +75,31 @@ set(WebCore_USER_AGENT_SCRIPTS
     ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsBase.js
 )
 
-list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-    ${LIBXML2_INCLUDE_DIR}
-    ${SQLITE_INCLUDE_DIR}
-    ${ZLIB_INCLUDE_DIRS}
-    ${WPE_INCLUDE_DIRS}
+list(APPEND WebCore_LIBRARIES
+    WPE::libwpe
 )
 
-list(APPEND WebCore_LIBRARIES
-    ${LIBXML2_LIBRARIES}
-    ${SQLITE_LIBRARIES}
-    ${ZLIB_LIBRARIES}
-    ${WPE_LIBRARIES}
+# Find the extras needed to copy for EGL besides the libraries
+set(EGL_EXTRAS)
+foreach (EGL_EXTRA_NAME ${EGL_EXTRA_NAMES})
+    find_file(${EGL_EXTRA_NAME}_FOUND ${EGL_EXTRA_NAME} PATH_SUFFIXES bin)
+    if (${EGL_EXTRA_NAME}_FOUND)
+        list(APPEND EGL_EXTRAS ${${EGL_EXTRA_NAME}_FOUND})
+    endif ()
+endforeach ()
+
+PLAYSTATION_COPY_REQUIREMENTS(WebCore_CopySharedLibs
+    FILES
+        ${CURL_LIBRARIES}
+        ${Cairo_LIBRARIES}
+        ${EGL_LIBRARIES}
+        ${EGL_EXTRAS}
+        ${FREETYPE_LIBRARIES}
+        ${Fontconfig_LIBRARIES}
+        ${HarfBuzz_LIBRARIES}
+        ${JPEG_LIBRARIES}
+        ${OPENSSL_LIBRARIES}
+        ${PNG_LIBRARIES}
+        ${WebKitRequirements_LIBRARY}
+        ${WebP_LIBRARIES}
 )

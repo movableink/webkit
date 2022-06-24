@@ -28,12 +28,16 @@
 
 #import <WebCore/ResourceRequest.h>
 #import <WebCore/SecurityOrigin.h>
+#import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/RefPtr.h>
 
 @implementation WKSecurityOrigin
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKSecurityOrigin.class, self))
+        return;
+
     _securityOrigin->~SecurityOrigin();
 
     [super dealloc];
@@ -46,17 +50,17 @@
 
 - (NSString *)protocol
 {
-    return _securityOrigin->securityOrigin().protocol();
+    return _securityOrigin->securityOrigin().protocol;
 }
 
 - (NSString *)host
 {
-    return _securityOrigin->securityOrigin().host();
+    return _securityOrigin->securityOrigin().host;
 }
 
 - (NSInteger)port
 {
-    return _securityOrigin->securityOrigin().port().valueOr(0);
+    return _securityOrigin->securityOrigin().port.value_or(0);
 }
 
 #pragma mark WKObject protocol implementation

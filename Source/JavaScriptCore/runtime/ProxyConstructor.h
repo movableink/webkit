@@ -43,12 +43,13 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info()); 
     }
 
-    void finishCreation(VM&, const char* name, JSGlobalObject*);
+    void finishCreation(VM&, JSGlobalObject*);
 
 private:
     ProxyConstructor(VM&, Structure*);
 
-    static EncodedJSValue getGetter(ExecState*, EncodedJSValue thisValue, PropertyName);
+    static EncodedJSValue getGetter(JSGlobalObject*, EncodedJSValue thisValue, PropertyName);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ProxyConstructor, InternalFunction);
 
 } // namespace JSC

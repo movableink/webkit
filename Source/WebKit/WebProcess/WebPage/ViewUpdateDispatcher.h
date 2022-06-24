@@ -23,8 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ViewUpdateDispatcher_h
-#define ViewUpdateDispatcher_h
+#pragma once
+
+#if ENABLE(UI_SIDE_COMPOSITING)
 
 #include "Connection.h"
 
@@ -53,15 +54,20 @@ private:
     void dispatchVisibleContentRectUpdate();
 
     struct UpdateData {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        UpdateData(const VisibleContentRectUpdateInfo& info, MonotonicTime timestamp)
+            : visibleContentRectUpdateInfo(info)
+            , oldestTimestamp(timestamp) { }
+
         VisibleContentRectUpdateInfo visibleContentRectUpdateInfo;
         MonotonicTime oldestTimestamp;
     };
 
     Ref<WorkQueue> m_queue;
-    Lock m_dataMutex;
-    HashMap<WebCore::PageIdentifier, UpdateData> m_latestUpdate;
+    Lock m_latestUpdateLock;
+    HashMap<WebCore::PageIdentifier, UniqueRef<UpdateData>> m_latestUpdate WTF_GUARDED_BY_LOCK(m_latestUpdateLock);
 };
 
 } // namespace WebKit
 
-#endif // ViewportUpdateDispatcher_h
+#endif // ENABLE(UI_SIDE_COMPOSITING)

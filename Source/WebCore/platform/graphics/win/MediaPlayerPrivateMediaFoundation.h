@@ -70,7 +70,7 @@ public:
     bool hasVideo() const final;
     bool hasAudio() const final;
 
-    void setVisible(bool) final;
+    void setPageIsVisible(bool) final;
 
     bool seeking() const final;
     void seek(float) final;
@@ -100,17 +100,23 @@ public:
 
     void paint(GraphicsContext&, const FloatRect&) final;
 
+    DestinationColorSpace colorSpace() final;
+
 private:
+    float maxTimeLoaded() const { return m_maxTimeLoaded; }
+
     WeakPtr<MediaPlayerPrivateMediaFoundation> m_weakThis;
     MediaPlayer* m_player;
     IntSize m_size;
     bool m_visible;
     bool m_loadingProgress;
     bool m_paused;
+    bool m_seeking { false };
+    bool m_sessionEnded { false };
     bool m_hasAudio;
     bool m_hasVideo;
-    bool m_preparingToPlay;
     float m_volume;
+    mutable float m_maxTimeLoaded { 0 };
     MediaPlayer::NetworkState m_networkState;
     MediaPlayer::ReadyState m_readyState;
 
@@ -151,7 +157,7 @@ private:
     void onSessionEnded();
 
     HWND hostWindow();
-    void invalidateFrameView();
+    void invalidateVideoArea();
 
     void addListener(MediaPlayerListener*);
     void removeListener(MediaPlayerListener*);
@@ -418,10 +424,6 @@ private:
 
         void paintCurrentFrame(GraphicsContext&, const FloatRect&);
 
-        float currentTime();
-
-        float maxTimeLoaded() const { return m_maxTimeLoaded; }
-
     private:
         ULONG m_refCount { 0 };
         Lock m_lock;
@@ -449,7 +451,6 @@ private:
         VideoSamplePool m_samplePool;
         unsigned m_tokenCounter { 0 };
         float m_rate { 1.0f };
-        float m_maxTimeLoaded { 0.0f };
 
         bool isActive() const;
 

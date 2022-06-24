@@ -27,7 +27,7 @@
 
 #include <WebCore/DisplayRefreshMonitor.h>
 
-#if USE(COORDINATED_GRAPHICS) && USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+#if USE(COORDINATED_GRAPHICS)
 #include <wtf/RunLoop.h>
 
 namespace WebKit {
@@ -57,11 +57,15 @@ public:
 private:
     ThreadedDisplayRefreshMonitor(WebCore::PlatformDisplayID, Client&);
 
+    bool startNotificationMechanism() final { return true; }
+    void stopNotificationMechanism() final { }
+
     void displayRefreshCallback();
     RunLoop::Timer<ThreadedDisplayRefreshMonitor> m_displayRefreshTimer;
     Client* m_client;
+    WebCore::DisplayUpdate m_currentUpdate;
 };
 
 } // namespace WebKit
 
-#endif // USE(COORDINATED_GRAPHICS) && USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+#endif // USE(COORDINATED_GRAPHICS)

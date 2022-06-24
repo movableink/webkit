@@ -39,27 +39,32 @@
 namespace WebKit {
 using namespace WebCore;
 
-NetworkSessionSoup::NetworkSessionSoup(NetworkProcess& networkProcess, NetworkSessionCreationParameters&& parameters)
+NetworkSessionSoup::NetworkSessionSoup(NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
     : NetworkSession(networkProcess, parameters)
     , m_networkSession(makeUnique<SoupNetworkSession>(m_sessionID))
+    , m_persistentCredentialStorageEnabled(parameters.persistentCredentialStorageEnabled)
 {
     auto* storageSession = networkStorageSession();
     ASSERT(storageSession);
+
+    storageSession->setCookieAcceptPolicy(parameters.cookieAcceptPolicy);
+
+    setIgnoreTLSErrors(parameters.ignoreTLSErrors);
+
+    if (parameters.proxySettings.mode != SoupNetworkProxySettings::Mode::Default)
+        setProxySettings(parameters.proxySettings);
 
     if (!parameters.cookiePersistentStoragePath.isEmpty())
         setCookiePersistentStorage(parameters.cookiePersistentStoragePath, parameters.cookiePersistentStorageType);
     else
         m_networkSession->setCookieJar(storageSession->cookieStorage());
 
-    storageSession->setCookieObserverHandler([this] {
-        this->networkProcess().supplement<WebCookieManager>()->notifyCookiesDidChange(m_sessionID);
-    });
+    if (!parameters.hstsStorageDirectory.isEmpty())
+        m_networkSession->setHSTSPersistentStorage(parameters.hstsStorageDirectory);
 }
 
 NetworkSessionSoup::~NetworkSessionSoup()
 {
-    if (auto* storageSession = networkProcess().storageSession(m_sessionID))
-        storageSession->setCookieObserverHandler(nullptr);
 }
 
 SoupSession* NetworkSessionSoup::soupSession() const
@@ -81,11 +86,7 @@ void NetworkSessionSoup::setCookiePersistentStorage(const String& storagePath, S
     case SoupCookiePersistentStorageType::SQLite:
         jar = adoptGRef(soup_cookie_jar_db_new(storagePath.utf8().data(), FALSE));
         break;
-    default:
-        ASSERT_NOT_REACHED();
     }
-
-    soup_cookie_jar_set_accept_policy(jar.get(), soup_cookie_jar_get_accept_policy(storageSession->cookieStorage()));
     storageSession->setCookieStorage(WTFMove(jar));
 
     m_networkSession->setCookieJar(storageSession->cookieStorage());
@@ -98,33 +99,55 @@ void NetworkSessionSoup::clearCredentials()
 #endif
 }
 
-static gboolean webSocketAcceptCertificateCallback(GTlsConnection*, GTlsCertificate* certificate, GTlsCertificateFlags errors, SoupMessage* soupMessage)
+#if USE(SOUP2)
+static gboolean webSocketAcceptCertificateCallback(GTlsConnection* connection, GTlsCertificate* certificate, GTlsCertificateFlags errors, NetworkSessionSoup* session)
 {
     if (DeprecatedGlobalSettings::allowsAnySSLCertificate())
         return TRUE;
 
-    return !SoupNetworkSession::checkTLSErrors(soupURIToURL(soup_message_get_uri(soupMessage)), certificate, errors);
+    auto* soupMessage = static_cast<SoupMessage*>(g_object_get_data(G_OBJECT(connection), "wk-soup-message"));
+    return !session->soupNetworkSession().checkTLSErrors(soupURIToURL(soup_message_get_uri(soupMessage)), certificate, errors);
 }
 
-static void webSocketMessageNetworkEventCallback(SoupMessage* soupMessage, GSocketClientEvent event, GIOStream* connection)
+static void webSocketMessageNetworkEventCallback(SoupMessage* soupMessage, GSocketClientEvent event, GIOStream* connection, NetworkSessionSoup* session)
 {
     if (event != G_SOCKET_CLIENT_TLS_HANDSHAKING)
         return;
 
-    g_signal_connect(connection, "accept-certificate", G_CALLBACK(webSocketAcceptCertificateCallback), soupMessage);
+    g_object_set_data(G_OBJECT(connection), "wk-soup-message", soupMessage);
+    g_signal_connect(connection, "accept-certificate", G_CALLBACK(webSocketAcceptCertificateCallback), session);
 }
+#endif
 
-std::unique_ptr<WebSocketTask> NetworkSessionSoup::createWebSocketTask(NetworkSocketChannel& channel, const ResourceRequest& request, const String& protocol)
+std::unique_ptr<WebSocketTask> NetworkSessionSoup::createWebSocketTask(WebPageProxyIdentifier, NetworkSocketChannel& channel, const ResourceRequest& request, const String& protocol, const ClientOrigin&, bool)
 {
-    GUniquePtr<SoupURI> soupURI = request.createSoupURI();
-    if (!soupURI)
+    GRefPtr<SoupMessage> soupMessage = request.createSoupMessage(blobRegistry());
+    if (!soupMessage)
         return nullptr;
 
-    GRefPtr<SoupMessage> soupMessage = adoptGRef(soup_message_new_from_uri(SOUP_METHOD_GET, soupURI.get()));
-    request.updateSoupMessage(soupMessage.get(), blobRegistry());
-    if (request.url().protocolIs("wss"))
-        g_signal_connect(soupMessage.get(), "network-event", G_CALLBACK(webSocketMessageNetworkEventCallback), nullptr);
-    return makeUnique<WebSocketTask>(channel, soupSession(), soupMessage.get(), protocol);
+    if (request.url().protocolIs("wss")) {
+#if USE(SOUP2)
+        g_signal_connect(soupMessage.get(), "network-event", G_CALLBACK(webSocketMessageNetworkEventCallback), this);
+#else
+        g_signal_connect(soupMessage.get(), "accept-certificate", G_CALLBACK(+[](SoupMessage* message, GTlsCertificate* certificate, GTlsCertificateFlags errors,  NetworkSessionSoup* session) -> gboolean {
+            if (DeprecatedGlobalSettings::allowsAnySSLCertificate())
+                return TRUE;
+
+            return !session->soupNetworkSession().checkTLSErrors(soup_message_get_uri(message), certificate, errors);
+        }), this);
+#endif
+    }
+    return makeUnique<WebSocketTask>(channel, request, soupSession(), soupMessage.get(), protocol);
+}
+
+void NetworkSessionSoup::setIgnoreTLSErrors(bool ignoreTLSErrors)
+{
+    m_networkSession->setIgnoreTLSErrors(ignoreTLSErrors);
+}
+
+void NetworkSessionSoup::setProxySettings(const SoupNetworkProxySettings& settings)
+{
+    m_networkSession->setProxySettings(settings);
 }
 
 } // namespace WebKit

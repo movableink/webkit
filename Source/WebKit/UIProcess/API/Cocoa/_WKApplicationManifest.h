@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,11 +23,15 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
+#import <Foundation/Foundation.h>
 #import <WebKit/WKFoundation.h>
 
-#import <Foundation/Foundation.h>
+#if TARGET_OS_IPHONE
+@class UIColor;
+#else
+@class NSColor;
+#endif
+@class _WKApplicationManifestIcon;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -38,6 +42,12 @@ typedef NS_ENUM(NSInteger, _WKApplicationManifestDisplayMode) {
     _WKApplicationManifestDisplayModeFullScreen,
 } WK_API_AVAILABLE(macos(10.13.4), ios(11.3));
 
+typedef NS_ENUM(NSInteger, _WKApplicationManifestIconPurpose) {
+    _WKApplicationManifestIconPurposeAny = (1 << 0),
+    _WKApplicationManifestIconPurposeMonochrome = (1 << 1),
+    _WKApplicationManifestIconPurposeMaskable = (1 << 2),
+} WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+
 WK_CLASS_AVAILABLE(macos(10.13.4), ios(11.3))
 @interface _WKApplicationManifest : NSObject <NSSecureCoding>
 
@@ -47,8 +57,25 @@ WK_CLASS_AVAILABLE(macos(10.13.4), ios(11.3))
 @property (nonatomic, readonly, nullable, copy) NSURL *scope;
 @property (nonatomic, readonly, copy) NSURL *startURL;
 @property (nonatomic, readonly) _WKApplicationManifestDisplayMode displayMode;
+@property (nonatomic, readonly, copy) NSArray<_WKApplicationManifestIcon *> *icons WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+
+#if TARGET_OS_IPHONE
+@property (nonatomic, readonly, nullable, copy) UIColor *themeColor WK_API_AVAILABLE(ios(15.0));
+#else
+@property (nonatomic, readonly, nullable, copy) NSColor *themeColor WK_API_AVAILABLE(macos(12.0));
+#endif
 
 + (_WKApplicationManifest *)applicationManifestFromJSON:(NSString *)json manifestURL:(nullable NSURL *)manifestURL documentURL:(nullable NSURL *)documentURL;
+
+@end
+
+WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
+@interface _WKApplicationManifestIcon : NSObject <NSSecureCoding>
+
+@property (nonatomic, readonly, copy) NSURL *src;
+@property (nonatomic, readonly, copy) NSArray<NSString *> *sizes;
+@property (nonatomic, readonly, copy) NSString *type;
+@property (nonatomic, readonly) NSArray<NSNumber *> *purposes;
 
 @end
 

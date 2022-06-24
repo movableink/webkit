@@ -11,9 +11,9 @@
 #include "api/audio_codecs/opus/audio_encoder_opus.h"
 #include "modules/audio_coding/neteq/tools/audio_loop.h"
 #include "rtc_base/format_macros.h"
-#include "rtc_base/timeutils.h"
+#include "rtc_base/time_utils.h"
 #include "test/gtest.h"
-#include "test/testsupport/fileutils.h"
+#include "test/testsupport/file_utils.h"
 #include "test/testsupport/perf_test.h"
 
 namespace webrtc {
@@ -59,7 +59,7 @@ int64_t RunComplexityTest(const AudioEncoderOpusConfig& config) {
 // mobiles, the regular complexity is 5, and we expect the resulting ratio to
 // be higher, since we have explicitly asked for a higher complexity setting at
 // the lower rate.
-TEST(AudioEncoderOpusComplexityAdaptationTest, AdaptationOn) {
+TEST(AudioEncoderOpusComplexityAdaptationTest, Adaptation_On) {
   // Create config.
   AudioEncoderOpusConfig config;
   // The limit -- including the hysteresis window -- at which the complexity
@@ -79,7 +79,7 @@ TEST(AudioEncoderOpusComplexityAdaptationTest, AdaptationOn) {
 // This test is identical to the one above, but without the complexity
 // adaptation enabled (neither on desktop, nor on mobile). The expectation is
 // that the resulting ratio is less than 100% at all times.
-TEST(AudioEncoderOpusComplexityAdaptationTest, AdaptationOff) {
+TEST(AudioEncoderOpusComplexityAdaptationTest, Adaptation_Off) {
   // Create config.
   AudioEncoderOpusConfig config;
   // The limit -- including the hysteresis window -- at which the complexity

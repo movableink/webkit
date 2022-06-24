@@ -8,9 +8,10 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "modules/audio_coding/audio_network_adaptor/util/threshold_curve.h"
+
 #include <memory>
 
-#include "modules/audio_coding/audio_network_adaptor/util/threshold_curve.h"
 #include "test/gtest.h"
 
 // A threshold curve divides 2D space into three domains - below, on and above
@@ -620,7 +621,7 @@ TEST(ThresholdCurveTest, NearlyIdenticalCurvesSecondContinuesOnOtherRightSide) {
 // The higher-left point must be given as the first point, and the lower-right
 // point must be given as the second.
 // This necessarily produces a non-positive slope.
-TEST(ThresholdCurveTest, WrongOrderPoints) {
+TEST(ThresholdCurveDeathTest, WrongOrderPoints) {
   std::unique_ptr<ThresholdCurve> curve;
   constexpr ThresholdCurve::Point left{5, 10};
   constexpr ThresholdCurve::Point right{10, 5};

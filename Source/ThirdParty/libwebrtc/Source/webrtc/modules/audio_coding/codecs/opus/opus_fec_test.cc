@@ -13,11 +13,11 @@
 #include "modules/audio_coding/codecs/opus/opus_interface.h"
 #include "rtc_base/format_macros.h"
 #include "test/gtest.h"
-#include "test/testsupport/fileutils.h"
+#include "test/testsupport/file_utils.h"
 
+using std::get;
 using std::string;
 using std::tuple;
-using std::get;
 using ::testing::TestWithParam;
 
 namespace webrtc {
@@ -70,7 +70,8 @@ class OpusFecTest : public TestWithParam<coding_param> {
 void OpusFecTest::SetUp() {
   channels_ = get<0>(GetParam());
   bit_rate_ = get<1>(GetParam());
-  printf("Coding %" PRIuS " channel signal at %d bps.\n", channels_, bit_rate_);
+  printf("Coding %" RTC_PRIuS " channel signal at %d bps.\n", channels_,
+         bit_rate_);
 
   in_filename_ = test::ResourcePath(get<2>(GetParam()), get<3>(GetParam()));
 
@@ -109,8 +110,8 @@ void OpusFecTest::SetUp() {
   int app = channels_ == 1 ? 0 : 1;
 
   // Create encoder memory.
-  EXPECT_EQ(0, WebRtcOpus_EncoderCreate(&opus_encoder_, channels_, app));
-  EXPECT_EQ(0, WebRtcOpus_DecoderCreate(&opus_decoder_, channels_));
+  EXPECT_EQ(0, WebRtcOpus_EncoderCreate(&opus_encoder_, channels_, app, 48000));
+  EXPECT_EQ(0, WebRtcOpus_DecoderCreate(&opus_decoder_, channels_, 48000));
   // Set bitrate.
   EXPECT_EQ(0, WebRtcOpus_SetBitRate(opus_encoder_, bit_rate_));
 }
@@ -153,7 +154,13 @@ void OpusFecTest::DecodeABlock(bool lost_previous, bool lost_current) {
           WebRtcOpus_DecodeFec(opus_decoder_, &bit_stream_[0], encoded_bytes_,
                                &out_data_[0], &audio_type);
     } else {
-      value_1 = WebRtcOpus_DecodePlc(opus_decoder_, &out_data_[0], 1);
+      // Call decoder PLC.
+      while (value_1 < static_cast<int>(block_length_sample_)) {
+        int ret = WebRtcOpus_Decode(opus_decoder_, NULL, 0, &out_data_[value_1],
+                                    &audio_type);
+        EXPECT_EQ(ret, sampling_khz_ * 10);  // Should return 10 ms of samples.
+        value_1 += ret;
+      }
     }
     EXPECT_EQ(static_cast<int>(block_length_sample_), value_1);
   }
@@ -211,8 +218,8 @@ TEST_P(OpusFecTest, RandomPacketLossTest) {
 
       time_now_ms += block_duration_ms_;
 
-      // |data_pointer_| is incremented and wrapped across
-      // |loop_length_samples_|.
+      // `data_pointer_` is incremented and wrapped across
+      // `loop_length_samples_`.
       data_pointer_ = (data_pointer_ + block_length_sample_ * channels_) %
                       loop_length_samples_;
     }
@@ -238,6 +245,6 @@ const coding_param param_set[] = {
                     string("pcm"))};
 
 // 64 kbps, stereo
-INSTANTIATE_TEST_CASE_P(AllTest, OpusFecTest, ::testing::ValuesIn(param_set));
+INSTANTIATE_TEST_SUITE_P(AllTest, OpusFecTest, ::testing::ValuesIn(param_set));
 
 }  // namespace webrtc

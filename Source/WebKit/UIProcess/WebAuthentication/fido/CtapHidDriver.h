@@ -37,7 +37,7 @@ namespace WebKit {
 // The following implements the CTAP HID protocol:
 // https://fidoalliance.org/specs/fido-v2.0-ps-20170927/fido-client-to-authenticator-protocol-v2.0-ps-20170927.html#usb
 // FSM: Idle => AllocateChannel => Ready
-class CtapHidDriver : public CtapDriver {
+class CtapHidDriver final : public CtapDriver {
 public:
     enum class State : uint8_t {
         Idle,
@@ -50,6 +50,7 @@ public:
     explicit CtapHidDriver(UniqueRef<HidConnection>&&);
 
     void transact(Vector<uint8_t>&& data, ResponseCallback&&) final;
+    void cancel() final;
 
 private:
     // Worker is the helper that maintains the transaction.
@@ -59,7 +60,7 @@ private:
         WTF_MAKE_FAST_ALLOCATED;
         WTF_MAKE_NONCOPYABLE(Worker);
     public:
-        using MessageCallback = Function<void(Optional<fido::FidoHidMessage>&&)>;
+        using MessageCallback = Function<void(std::optional<fido::FidoHidMessage>&&)>;
 
         enum class State : uint8_t  {
             Idle,
@@ -71,22 +72,25 @@ private:
         ~Worker();
 
         void transact(fido::FidoHidMessage&&, MessageCallback&&);
+        void cancel(fido::FidoHidMessage&&);
 
     private:
         void write(HidConnection::DataSent);
         void read(const Vector<uint8_t>&);
-        void returnMessage(Optional<fido::FidoHidMessage>&&);
+        void returnMessage();
+        void reset();
 
         UniqueRef<HidConnection> m_connection;
         State m_state { State::Idle };
-        Optional<fido::FidoHidMessage> m_requestMessage;
-        Optional<fido::FidoHidMessage> m_responseMessage;
+        std::optional<fido::FidoHidMessage> m_requestMessage;
+        std::optional<fido::FidoHidMessage> m_responseMessage;
         MessageCallback m_callback;
     };
 
-    void continueAfterChannelAllocated(Optional<fido::FidoHidMessage>&&);
-    void continueAfterResponseReceived(Optional<fido::FidoHidMessage>&&);
+    void continueAfterChannelAllocated(std::optional<fido::FidoHidMessage>&&);
+    void continueAfterResponseReceived(std::optional<fido::FidoHidMessage>&&);
     void returnResponse(Vector<uint8_t>&&);
+    void reset();
 
     UniqueRef<Worker> m_worker;
     State m_state { State::Idle };

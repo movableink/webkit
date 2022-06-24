@@ -34,12 +34,13 @@ WI.ComputedStyleSection = class ComputedStyleSection extends WI.View
 
         this._delegate = delegate;
         this._style = null;
-        this._styleTraces = [];
+        this._styleTraces = null;
         this._propertyViews = [];
 
         this._showsImplicitProperties = false;
         this._showsShorthandsInsteadOfLonghands = false;
         this._alwaysShowPropertyNames = new Set;
+        this._propertyVisibilityMode = WI.ComputedStyleSection.PropertyVisibilityMode.ShowAll;
         this._hideFilterNonMatchingProperties = false;
         this._filterText = null;
     }
@@ -108,6 +109,16 @@ WI.ComputedStyleSection = class ComputedStyleSection extends WI.View
         this.needsLayout();
     }
 
+    set propertyVisibilityMode(propertyVisibilityMode)
+    {
+        if (this._propertyVisibilityMode === propertyVisibilityMode)
+            return;
+
+        this._propertyVisibilityMode = propertyVisibilityMode;
+
+        this.needsLayout();
+    }
+
     set hideFilterNonMatchingProperties(value)
     {
         if (value === this._hideFilterNonMatchingProperties)
@@ -129,14 +140,36 @@ WI.ComputedStyleSection = class ComputedStyleSection extends WI.View
         else
             properties = this._style.properties;
 
-        properties.sort((a, b) => a.name.extendedLocaleCompare(b.name));
+        let propertyNameMap = new Map(properties.map((property) => [property.canonicalName, property]));
 
-        return properties.filter((property) => {
+        function hasNonImplicitLonghand(property) {
+            if (property.canonicalName === "all")
+                return false;
+
+            let longhandPropertyNames = WI.CSSKeywordCompletions.LonghandNamesForShorthandProperty.get(property.canonicalName);
+            if (!longhandPropertyNames)
+                return false;
+
+            for (let longhandPropertyName of longhandPropertyNames) {
+                let property = propertyNameMap.get(longhandPropertyName);
+                if (property && !property.implicit)
+                    return true;
+            }
+
+            return false;
+        }
+
+        let hideVariables = this._propertyVisibilityMode === ComputedStyleSection.PropertyVisibilityMode.HideVariables;
+        let hideNonVariables = this._propertyVisibilityMode === ComputedStyleSection.PropertyVisibilityMode.HideNonVariables;
+
+        properties = properties.filter((property) => {
             if (this._alwaysShowPropertyNames.has(property.canonicalName))
                 return true;
 
-            if (property.implicit && !this._showsImplicitProperties)
-                return false;
+            if (property.implicit && !this._showsImplicitProperties) {
+                if (!(this._showsShorthandsInsteadOfLonghands && property.isShorthand && hasNonImplicitLonghand(property)))
+                    return false;
+            }
 
             if (this._showsShorthandsInsteadOfLonghands) {
                 if (property.shorthandPropertyNames.length)
@@ -144,8 +177,17 @@ WI.ComputedStyleSection = class ComputedStyleSection extends WI.View
             } else if (property.isShorthand)
                 return false;
 
+            if (property.isVariable && hideVariables)
+                return false;
+
+            if (!property.isVariable && hideNonVariables)
+                return false;
+
             return true;
         });
+
+        properties.sort((a, b) => a.name.extendedLocaleCompare(b.name));
+        return properties;
     }
 
     layout()
@@ -187,12 +229,6 @@ WI.ComputedStyleSection = class ComputedStyleSection extends WI.View
 
         for (let propertyView of this._propertyViews)
             propertyView.detached();
-    }
-
-    hidden()
-    {
-        for (let propertyView of this._propertyViews)
-            propertyView.hidden();
     }
 
     applyFilter(filterText)
@@ -271,3 +307,9 @@ WI.ComputedStyleSection.Event = {
 };
 
 WI.ComputedStyleSection.StyleClassName = "computed-style-section";
+
+WI.ComputedStyleSection.PropertyVisibilityMode = {
+    ShowAll: Symbol("variable-visibility-show-all"),
+    HideVariables: Symbol("variable-visibility-hide-variables"),
+    HideNonVariables: Symbol("variable-visibility-hide-non-variables"),
+};

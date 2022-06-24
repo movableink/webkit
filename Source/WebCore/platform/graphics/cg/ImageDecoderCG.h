@@ -32,9 +32,9 @@ namespace WebCore {
 class ImageDecoderCG final : public ImageDecoder {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    ImageDecoderCG(SharedBuffer& data, AlphaOption, GammaAndColorProfileOption);
+    ImageDecoderCG(FragmentedSharedBuffer& data, AlphaOption, GammaAndColorProfileOption);
 
-    static Ref<ImageDecoderCG> create(SharedBuffer& data, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
+    static Ref<ImageDecoderCG> create(FragmentedSharedBuffer& data, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
     {
         return adoptRef(*new ImageDecoderCG(data, alphaOption, gammaAndColorProfileOption));
     }
@@ -50,26 +50,32 @@ public:
     RepetitionCount repetitionCount() const final;
     String uti() const final;
     String filenameExtension() const final;
-    Optional<IntPoint> hotSpot() const final;
+    String accessibilityDescription() const final;
+    std::optional<IntPoint> hotSpot() const final;
 
     IntSize frameSizeAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const final;
     bool frameIsCompleteAtIndex(size_t) const final;
-    ImageOrientation frameOrientationAtIndex(size_t) const final;
+    ImageDecoder::FrameMetadata frameMetadataAtIndex(size_t) const final;
 
     Seconds frameDurationAtIndex(size_t) const final;
     bool frameHasAlphaAtIndex(size_t) const final;
     bool frameAllowSubsamplingAtIndex(size_t) const final;
     unsigned frameBytesAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const final;
 
-    NativeImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) final;
+    PlatformImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) final;
 
-    void setData(SharedBuffer&, bool allDataReceived) final;
+    void setData(const FragmentedSharedBuffer&, bool allDataReceived) final;
     bool isAllDataReceived() const final { return m_isAllDataReceived; }
     void clearFrameBufferCache(size_t) final { }
 
-protected:
+    WEBCORE_EXPORT static void enableRestrictedDecoding();
+    static bool restrictedDecodingEnabled();
+
+private:
     bool m_isAllDataReceived { false };
+    mutable EncodedDataStatus m_encodedDataStatus { EncodedDataStatus::Unknown };
     RetainPtr<CGImageSourceRef> m_nativeDecoder;
+    static bool s_enableRestrictedDecoding;
 };
 
 }

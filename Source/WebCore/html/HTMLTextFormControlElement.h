@@ -25,6 +25,7 @@
 #pragma once
 
 #include "HTMLFormControlElementWithState.h"
+#include "PointerEventTypeNames.h"
 
 namespace WebCore {
 
@@ -33,9 +34,12 @@ class RenderTextControl;
 class TextControlInnerTextElement;
 class VisiblePosition;
 
+struct SimpleRange;
+
 enum class AutoFillButtonType : uint8_t { None, Credentials, Contacts, StrongPassword, CreditCard };
 enum TextFieldSelectionDirection { SelectionHasNoDirection, SelectionHasForwardDirection, SelectionHasBackwardDirection };
 enum TextFieldEventBehavior { DispatchNoEvent, DispatchChangeEvent, DispatchInputAndChangeEvent };
+enum TextControlSetValueSelection { SetSelectionToEnd, DoNotSet };
 
 class HTMLTextFormControlElement : public HTMLFormControlElementWithState {
     WTF_MAKE_ISO_ALLOCATED(HTMLTextFormControlElement);
@@ -58,9 +62,11 @@ public:
     // The derived class should return true if placeholder processing is needed.
     bool isPlaceholderVisible() const { return m_isPlaceholderVisible; }
     virtual bool supportsPlaceholder() const = 0;
-    String strippedPlaceholder() const;
     virtual HTMLElement* placeholderElement() const = 0;
     void updatePlaceholderVisibility();
+
+    WEBCORE_EXPORT void setCanShowPlaceholder(bool);
+    bool canShowPlaceholder() const { return m_canShowPlaceholder; }
 
     int indexForVisiblePosition(const VisiblePosition&) const;
     WEBCORE_EXPORT VisiblePosition visiblePositionForIndex(int index) const;
@@ -75,14 +81,17 @@ public:
     WEBCORE_EXPORT virtual ExceptionOr<void> setRangeText(const String& replacement, unsigned start, unsigned end, const String& selectionMode);
     void setSelectionRange(int start, int end, const String& direction, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
     WEBCORE_EXPORT void setSelectionRange(int start, int end, TextFieldSelectionDirection = SelectionHasNoDirection, SelectionRevealMode = SelectionRevealMode::DoNotReveal, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
-    RefPtr<Range> selection() const;
+
+    std::optional<SimpleRange> selection() const;
     String selectedText() const;
 
     void dispatchFormControlChangeEvent() final;
 
     virtual String value() const = 0;
 
+    virtual ExceptionOr<void> setValue(const String&, TextFieldEventBehavior = DispatchNoEvent, TextControlSetValueSelection = TextControlSetValueSelection::SetSelectionToEnd) = 0;
     virtual RefPtr<TextControlInnerTextElement> innerTextElement() const = 0;
+    virtual RefPtr<TextControlInnerTextElement> innerTextElementCreatingShadowSubtreeIfNeeded() = 0;
     virtual RenderStyle createInnerTextStyle(const RenderStyle&) = 0;
 
     void selectionChanged(bool shouldFireSelectEvent);
@@ -93,10 +102,6 @@ public:
     String directionForFormData() const;
 
     void setTextAsOfLastFormControlChangeEvent(const String& text) { m_textAsOfLastFormControlChangeEvent = text; }
-#if PLATFORM(IOS_FAMILY)
-    WEBCORE_EXPORT void hidePlaceholder();
-    WEBCORE_EXPORT void showPlaceholderIfNecessary();
-#endif
 
     WEBCORE_EXPORT virtual bool isInnerTextElementEditable() const;
 
@@ -142,9 +147,11 @@ private:
     int computeSelectionEnd() const;
     TextFieldSelectionDirection computeSelectionDirection() const;
 
-    void dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, FocusDirection) final;
+    void dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, const FocusOptions&) final;
     void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) final;
     bool childShouldCreateRenderer(const Node&) const override;
+    
+    void setHovered(bool, Style::InvalidationScope, HitTestRequest) final;
 
     unsigned indexForPosition(const Position&) const;
 
@@ -160,6 +167,9 @@ private:
     unsigned m_cachedSelectionDirection : 2;
     unsigned m_lastChangeWasUserEdit : 1;
     unsigned m_isPlaceholderVisible : 1;
+    unsigned m_canShowPlaceholder : 1;
+    
+    String m_pointerType { mousePointerEventType() };
 
     String m_textAsOfLastFormControlChangeEvent;
 
@@ -170,7 +180,7 @@ private:
     int m_minLength { -1 };
 };
 
-HTMLTextFormControlElement* enclosingTextFormControl(const Position&);
+WEBCORE_EXPORT HTMLTextFormControlElement* enclosingTextFormControl(const Position&);
 
 } // namespace WebCore
 

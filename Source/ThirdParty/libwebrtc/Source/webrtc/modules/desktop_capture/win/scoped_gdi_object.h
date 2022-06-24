@@ -13,7 +13,7 @@
 
 #include <windows.h>
 
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 namespace win {
@@ -58,27 +58,29 @@ class ScopedGDIObject {
 template <typename T>
 class DeleteObjectTraits {
  public:
+  DeleteObjectTraits() = delete;
+  DeleteObjectTraits(const DeleteObjectTraits&) = delete;
+  DeleteObjectTraits& operator=(const DeleteObjectTraits&) = delete;
+
   // Closes the handle.
   static void Close(T handle) {
     if (handle)
       DeleteObject(handle);
   }
-
- private:
-  RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(DeleteObjectTraits);
 };
 
 // The traits class that uses DestroyCursor() to close a handle.
 class DestroyCursorTraits {
  public:
+  DestroyCursorTraits() = delete;
+  DestroyCursorTraits(const DestroyCursorTraits&) = delete;
+  DestroyCursorTraits& operator=(const DestroyCursorTraits&) = delete;
+
   // Closes the handle.
   static void Close(HCURSOR handle) {
     if (handle)
       DestroyCursor(handle);
   }
-
- private:
-  RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(DestroyCursorTraits);
 };
 
 typedef ScopedGDIObject<HBITMAP, DeleteObjectTraits<HBITMAP> > ScopedBitmap;

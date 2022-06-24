@@ -52,8 +52,8 @@ namespace JSC {
 
 class CallFrame;
 class VM;
+class JSGlobalObject;
 class JSLock;
-using ExecState = CallFrame;
 
 // This class is used to protect the initialization of the legacy single 
 // shared VM.
@@ -70,7 +70,7 @@ class JSLockHolder {
 public:
     JS_EXPORT_PRIVATE JSLockHolder(VM*);
     JS_EXPORT_PRIVATE JSLockHolder(VM&);
-    JS_EXPORT_PRIVATE JSLockHolder(ExecState*);
+    JS_EXPORT_PRIVATE JSLockHolder(JSGlobalObject*);
 
     JS_EXPORT_PRIVATE ~JSLockHolder();
 
@@ -87,18 +87,18 @@ public:
     JS_EXPORT_PRIVATE void lock();
     JS_EXPORT_PRIVATE void unlock();
 
-    static void lock(ExecState*);
-    static void unlock(ExecState*);
+    static void lock(JSGlobalObject*);
+    static void unlock(JSGlobalObject*);
     static void lock(VM&);
     static void unlock(VM&);
 
     VM* vm() { return m_vm; }
 
-    Optional<RefPtr<Thread>> ownerThread() const
+    std::optional<RefPtr<Thread>> ownerThread() const
     {
         if (m_hasOwnerThread)
             return m_ownerThread;
-        return WTF::nullopt;
+        return std::nullopt;
     }
     bool currentThreadIsHoldingLock() { return m_hasOwnerThread && m_ownerThread.get() == &Thread::current(); }
 
@@ -107,7 +107,7 @@ public:
     class DropAllLocks {
         WTF_MAKE_NONCOPYABLE(DropAllLocks);
     public:
-        JS_EXPORT_PRIVATE DropAllLocks(ExecState*);
+        JS_EXPORT_PRIVATE DropAllLocks(JSGlobalObject*);
         JS_EXPORT_PRIVATE DropAllLocks(VM*);
         JS_EXPORT_PRIVATE DropAllLocks(VM&);
         JS_EXPORT_PRIVATE ~DropAllLocks();
@@ -145,10 +145,11 @@ private:
     // different thread, and an optional is vulnerable to races.
     // See https://bugs.webkit.org/show_bug.cgi?id=169042#c6
     bool m_hasOwnerThread { false };
+    bool m_shouldReleaseHeapAccess;
     RefPtr<Thread> m_ownerThread;
     intptr_t m_lockCount;
     unsigned m_lockDropDepth;
-    bool m_shouldReleaseHeapAccess;
+    uint32_t m_lastOwnerThread { 0 };
     VM* m_vm;
     AtomStringTable* m_entryAtomStringTable; 
 };

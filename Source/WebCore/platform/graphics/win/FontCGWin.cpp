@@ -34,7 +34,6 @@
 #include "GlyphBuffer.h"
 #include "GraphicsContext.h"
 #include "IntRect.h"
-#include "UniscribeController.h"
 #include "WebCoreTextRenderer.h"
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <wtf/MathExtras.h>
@@ -126,8 +125,8 @@ static CGPathRef createPathForGlyph(HDC hdc, Glyph glyph)
     return path;
 }
 
-void FontCascade::drawGlyphs(GraphicsContext& graphicsContext, const Font& font, const GlyphBuffer& glyphBuffer,
-    unsigned from, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode smoothingMode)
+void FontCascade::drawGlyphs(GraphicsContext& graphicsContext, const Font& font, const GlyphBufferGlyph* glyphs,
+    const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode smoothingMode)
 {
     CGContextRef cgContext = graphicsContext.platformContext();
     bool shouldUseFontSmoothing = WebCoreShouldUseFontSmoothing();
@@ -182,30 +181,30 @@ void FontCascade::drawGlyphs(GraphicsContext& graphicsContext, const Font& font,
     Color shadowColor;
     graphicsContext.getShadow(shadowOffset, shadowBlur, shadowColor);
 
-    bool hasSimpleShadow = graphicsContext.textDrawingMode() == TextModeFill && shadowColor.isValid() && !shadowBlur && (!graphicsContext.shadowsIgnoreTransforms() || graphicsContext.getCTM().isIdentityOrTranslationOrFlipped());
+    bool hasSimpleShadow = graphicsContext.textDrawingMode() == TextDrawingMode::Fill && shadowColor.isValid() && !shadowBlur && (!graphicsContext.shadowsIgnoreTransforms() || graphicsContext.getCTM().isIdentityOrTranslationOrFlipped());
     if (hasSimpleShadow) {
         // Paint simple shadows ourselves instead of relying on CG shadows, to avoid losing subpixel antialiasing.
         graphicsContext.clearShadow();
         Color fillColor = graphicsContext.fillColor();
-        Color shadowFillColor(shadowColor.red(), shadowColor.green(), shadowColor.blue(), shadowColor.alpha() * fillColor.alpha() / 255);
+        Color shadowFillColor = shadowColor.colorWithAlphaMultipliedBy(fillColor.alphaAsFloat());
         graphicsContext.setFillColor(shadowFillColor);
         float shadowTextX = point.x() + shadowOffset.width();
         // If shadows are ignoring transforms, then we haven't applied the Y coordinate flip yet, so down is negative.
         float shadowTextY = point.y() + shadowOffset.height() * (graphicsContext.shadowsIgnoreTransforms() ? -1 : 1);
         CGContextSetTextPosition(cgContext, shadowTextX, shadowTextY);
-        CGContextShowGlyphsWithAdvances(cgContext, glyphBuffer.glyphs(from), static_cast<const CGSize*>(glyphBuffer.advances(from)), numGlyphs);
+        CGContextShowGlyphsWithAdvances(cgContext, glyphs, advances, numGlyphs);
         if (font.syntheticBoldOffset()) {
             CGContextSetTextPosition(cgContext, point.x() + shadowOffset.width() + font.syntheticBoldOffset(), point.y() + shadowOffset.height());
-            CGContextShowGlyphsWithAdvances(cgContext, glyphBuffer.glyphs(from), static_cast<const CGSize*>(glyphBuffer.advances(from)), numGlyphs);
+            CGContextShowGlyphsWithAdvances(cgContext, glyphs, advances, numGlyphs);
         }
         graphicsContext.setFillColor(fillColor);
     }
 
     CGContextSetTextPosition(cgContext, point.x(), point.y());
-    CGContextShowGlyphsWithAdvances(cgContext, glyphBuffer.glyphs(from), static_cast<const CGSize*>(glyphBuffer.advances(from)), numGlyphs);
+    CGContextShowGlyphsWithAdvances(cgContext, glyphs, advances, numGlyphs);
     if (font.syntheticBoldOffset()) {
         CGContextSetTextPosition(cgContext, point.x() + font.syntheticBoldOffset(), point.y());
-        CGContextShowGlyphsWithAdvances(cgContext, glyphBuffer.glyphs(from), static_cast<const CGSize*>(glyphBuffer.advances(from)), numGlyphs);
+        CGContextShowGlyphsWithAdvances(cgContext, glyphs, advances, numGlyphs);
     }
 
     if (hasSimpleShadow)
@@ -410,50 +409,36 @@ void FontCascade::getPlatformGlyphAdvances(CGFontRef font, const CGAffineTransfo
 
     // <rdar://problem/7761165> The GDI back end in Core Graphics sometimes returns advances that
     // differ from what the font's hmtx table specifies. The following code corrects that.
-    CFDataRef hmtxTable = CGFontCopyTableForTag(font, 'hmtx');
+    auto hmtxTable = adoptCF(CGFontCopyTableForTag(font, 'hmtx'));
     if (!hmtxTable)
         return;
-    CFDataRef hheaTable = CGFontCopyTableForTag(font, 'hhea');
-    if (!hheaTable) {
-        CFRelease(hmtxTable);
+    auto hheaTable = adoptCF(CGFontCopyTableForTag(font, 'hhea'));
+    if (!hheaTable)
         return;
-    }
 
     const CFIndex hheaTableSize = 36;
     const ptrdiff_t hheaTableNumberOfHMetricsOffset = 34;
-    if (CFDataGetLength(hheaTable) < hheaTableSize) {
-        CFRelease(hmtxTable);
-        CFRelease(hheaTable);
+    if (CFDataGetLength(hheaTable.get()) < hheaTableSize)
         return;
-    }
 
-    unsigned short numberOfHMetrics = *reinterpret_cast<const unsigned short*>(CFDataGetBytePtr(hheaTable) + hheaTableNumberOfHMetricsOffset);
+    unsigned short numberOfHMetrics = *reinterpret_cast<const unsigned short*>(CFDataGetBytePtr(hheaTable.get()) + hheaTableNumberOfHMetricsOffset);
     numberOfHMetrics = ((numberOfHMetrics & 0xFF) << 8) | (numberOfHMetrics >> 8);
-    if (!numberOfHMetrics) {
-        CFRelease(hmtxTable);
-        CFRelease(hheaTable);
+    if (!numberOfHMetrics)
         return;
-    }
 
     if (glyph >= numberOfHMetrics)
         glyph = numberOfHMetrics - 1;
 
-    if (CFDataGetLength(hmtxTable) < 4 * (glyph + 1)) {
-        CFRelease(hmtxTable);
-        CFRelease(hheaTable);
+    if (CFDataGetLength(hmtxTable.get()) < 4 * (glyph + 1))
         return;
-    }
 
-    unsigned short advanceInDesignUnits = *reinterpret_cast<const unsigned short*>(CFDataGetBytePtr(hmtxTable) + 4 * glyph);
+    unsigned short advanceInDesignUnits = *reinterpret_cast<const unsigned short*>(CFDataGetBytePtr(hmtxTable.get()) + 4 * glyph);
     advanceInDesignUnits = ((advanceInDesignUnits & 0xFF) << 8) | (advanceInDesignUnits >> 8);
     CGSize horizontalAdvance = CGSizeMake(static_cast<CGFloat>(advanceInDesignUnits) / CGFontGetUnitsPerEm(font), 0);
     horizontalAdvance = CGSizeApplyAffineTransform(horizontalAdvance, m);
     advance.width = horizontalAdvance.width;
     if (!(style & kCGFontRenderingStyleSubpixelPositioning))
         advance.width = roundf(advance.width);
-
-    CFRelease(hheaTable);
-    CFRelease(hmtxTable);
 }
 
 }

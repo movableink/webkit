@@ -1,14 +1,15 @@
-CONSOLE MESSAGE: line 3: SyntaxError: Unexpected token '*'. import call expects exactly one argument.
-CONSOLE MESSAGE: line 3: SyntaxError: Unexpected token '*'. import call expects exactly one argument.
-CONSOLE MESSAGE: line 3: SyntaxError: Unexpected token '*'. import call expects exactly one argument.
+Blocked access to external URL https://www1.localhost:9443/workers/modules/resources/export-on-load-script.py
+CONSOLE MESSAGE: Importing a module script failed.
 
-Harness Error (FAIL), message = SyntaxError: Unexpected token '*'. import call expects exactly one argument.
+Harness Error (FAIL), message = Script error.
 
-FAIL Static import. promise_test: Unhandled rejection with value: "SyntaxError: Unexpected token '*'. import call expects exactly one argument."
-FAIL Nested static import. promise_test: Unhandled rejection with value: "SyntaxError: Unexpected token '*'. import call expects exactly one argument."
-FAIL Static import and then dynamic import. promise_test: Unhandled rejection with value: "SyntaxError: Unexpected token '*'. import call expects exactly one argument."
-FAIL Dynamic import. assert_array_equals: value is "Failed to do dynamic import: Error: Could not import the module './export-on-load-script.js'.", expected array
-FAIL Nested dynamic import. assert_array_equals: value is "Failed to do dynamic import: Error: Could not import the module './export-on-dynamic-import-script.js'.", expected array
-FAIL Dynamic import and then static import. assert_array_equals: value is "Failed to do dynamic import: Error: Could not import the module './export-on-static-import-script.js'.", expected array
-FAIL eval(import()). assert_array_equals: value is "Failed to do dynamic import: Error: Could not import the module './export-on-load-script.js'.", expected array
+PASS Static import.
+FAIL Static import (cross-origin). promise_test: Unhandled rejection with value: "Importing a module script failed."
+PASS Static import (redirect).
+PASS Nested static import.
+PASS Static import and then dynamic import.
+PASS Dynamic import.
+PASS Nested dynamic import.
+PASS Dynamic import and then static import.
+PASS eval(import()).
 

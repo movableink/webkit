@@ -35,13 +35,13 @@ namespace WebKit {
 
 void NavigationActionData::encode(IPC::Encoder& encoder) const
 {
-    encoder.encodeEnum(navigationType);
+    encoder << navigationType;
     encoder << modifiers;
-    encoder.encodeEnum(mouseButton);
-    encoder.encodeEnum(syntheticClickType);
+    encoder << mouseButton;
+    encoder << syntheticClickType;
     encoder << userGestureTokenIdentifier;
     encoder << canHandleRequest;
-    encoder.encodeEnum(shouldOpenExternalURLsPolicy);
+    encoder << shouldOpenExternalURLsPolicy;
     encoder << downloadAttribute;
     encoder << clickLocationInRootViewCoordinates;
     encoder << isRedirect;
@@ -51,110 +51,116 @@ void NavigationActionData::encode(IPC::Encoder& encoder) const
     encoder << requesterOrigin;
     encoder << targetBackForwardItemIdentifier;
     encoder << sourceBackForwardItemIdentifier;
-    encoder.encodeEnum(lockHistory);
-    encoder.encodeEnum(lockBackForwardList);
+    encoder << lockHistory;
+    encoder << lockBackForwardList;
     encoder << clientRedirectSourceForHistory;
-    encoder << adClickAttribution;
+    encoder << effectiveSandboxFlags;
+    encoder << privateClickMeasurement;
 }
 
-Optional<NavigationActionData> NavigationActionData::decode(IPC::Decoder& decoder)
+std::optional<NavigationActionData> NavigationActionData::decode(IPC::Decoder& decoder)
 {
     WebCore::NavigationType navigationType;
-    if (!decoder.decodeEnum(navigationType))
-        return WTF::nullopt;
+    if (!decoder.decode(navigationType))
+        return std::nullopt;
     
     OptionSet<WebEvent::Modifier> modifiers;
     if (!decoder.decode(modifiers))
-        return WTF::nullopt;
+        return std::nullopt;
 
     WebMouseEvent::Button mouseButton;
-    if (!decoder.decodeEnum(mouseButton))
-        return WTF::nullopt;
+    if (!decoder.decode(mouseButton))
+        return std::nullopt;
     
     WebMouseEvent::SyntheticClickType syntheticClickType;
-    if (!decoder.decodeEnum(syntheticClickType))
-        return WTF::nullopt;
+    if (!decoder.decode(syntheticClickType))
+        return std::nullopt;
     
-    Optional<uint64_t> userGestureTokenIdentifier;
+    std::optional<uint64_t> userGestureTokenIdentifier;
     decoder >> userGestureTokenIdentifier;
     if (!userGestureTokenIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
     
-    Optional<bool> canHandleRequest;
+    std::optional<bool> canHandleRequest;
     decoder >> canHandleRequest;
     if (!canHandleRequest)
-        return WTF::nullopt;
+        return std::nullopt;
     
     WebCore::ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy;
-    if (!decoder.decodeEnum(shouldOpenExternalURLsPolicy))
-        return WTF::nullopt;
+    if (!decoder.decode(shouldOpenExternalURLsPolicy))
+        return std::nullopt;
     
-    Optional<String> downloadAttribute;
+    std::optional<String> downloadAttribute;
     decoder >> downloadAttribute;
     if (!downloadAttribute)
-        return WTF::nullopt;
+        return std::nullopt;
     
     WebCore::FloatPoint clickLocationInRootViewCoordinates;
     if (!decoder.decode(clickLocationInRootViewCoordinates))
-        return WTF::nullopt;
+        return std::nullopt;
     
-    Optional<bool> isRedirect;
+    std::optional<bool> isRedirect;
     decoder >> isRedirect;
     if (!isRedirect)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<bool> treatAsSameOriginNavigation;
+    std::optional<bool> treatAsSameOriginNavigation;
     decoder >> treatAsSameOriginNavigation;
     if (!treatAsSameOriginNavigation)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<bool> hasOpenedFrames;
+    std::optional<bool> hasOpenedFrames;
     decoder >> hasOpenedFrames;
     if (!hasOpenedFrames)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<bool> openedByDOMWithOpener;
+    std::optional<bool> openedByDOMWithOpener;
     decoder >> openedByDOMWithOpener;
     if (!openedByDOMWithOpener)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<WebCore::SecurityOriginData> requesterOrigin;
+    std::optional<WebCore::SecurityOriginData> requesterOrigin;
     decoder >> requesterOrigin;
     if (!requesterOrigin)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<Optional<WebCore::BackForwardItemIdentifier>> targetBackForwardItemIdentifier;
+    std::optional<std::optional<WebCore::BackForwardItemIdentifier>> targetBackForwardItemIdentifier;
     decoder >> targetBackForwardItemIdentifier;
     if (!targetBackForwardItemIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<Optional<WebCore::BackForwardItemIdentifier>> sourceBackForwardItemIdentifier;
+    std::optional<std::optional<WebCore::BackForwardItemIdentifier>> sourceBackForwardItemIdentifier;
     decoder >> sourceBackForwardItemIdentifier;
     if (!sourceBackForwardItemIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
     WebCore::LockHistory lockHistory;
-    if (!decoder.decodeEnum(lockHistory))
-        return WTF::nullopt;
+    if (!decoder.decode(lockHistory))
+        return std::nullopt;
 
     WebCore::LockBackForwardList lockBackForwardList;
-    if (!decoder.decodeEnum(lockBackForwardList))
-        return WTF::nullopt;
+    if (!decoder.decode(lockBackForwardList))
+        return std::nullopt;
 
-    Optional<String> clientRedirectSourceForHistory;
+    std::optional<String> clientRedirectSourceForHistory;
     decoder >> clientRedirectSourceForHistory;
     if (!clientRedirectSourceForHistory)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<Optional<WebCore::AdClickAttribution>> adClickAttribution;
-    decoder >> adClickAttribution;
-    if (!adClickAttribution)
-        return WTF::nullopt;
+    std::optional<WebCore::SandboxFlags> effectiveSandboxFlags;
+    decoder >> effectiveSandboxFlags;
+    if (!effectiveSandboxFlags)
+        return std::nullopt;
+
+    std::optional<std::optional<WebCore::PrivateClickMeasurement>> privateClickMeasurement;
+    decoder >> privateClickMeasurement;
+    if (!privateClickMeasurement)
+        return std::nullopt;
 
     return {{ WTFMove(navigationType), modifiers, WTFMove(mouseButton), WTFMove(syntheticClickType), WTFMove(*userGestureTokenIdentifier),
         WTFMove(*canHandleRequest), WTFMove(shouldOpenExternalURLsPolicy), WTFMove(*downloadAttribute), WTFMove(clickLocationInRootViewCoordinates),
         WTFMove(*isRedirect), *treatAsSameOriginNavigation, *hasOpenedFrames, *openedByDOMWithOpener, WTFMove(*requesterOrigin),
-        WTFMove(*targetBackForwardItemIdentifier), WTFMove(*sourceBackForwardItemIdentifier), lockHistory, lockBackForwardList, WTFMove(*clientRedirectSourceForHistory), WTFMove(*adClickAttribution) }};
+        WTFMove(*targetBackForwardItemIdentifier), WTFMove(*sourceBackForwardItemIdentifier), lockHistory, lockBackForwardList, WTFMove(*clientRedirectSourceForHistory), *effectiveSandboxFlags, WTFMove(*privateClickMeasurement) }};
 }
 
 } // namespace WebKit

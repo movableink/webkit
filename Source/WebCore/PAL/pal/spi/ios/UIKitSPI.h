@@ -32,21 +32,21 @@ WTF_EXTERN_C_END
 #if USE(APPLE_INTERNAL_SDK)
 
 #import <UIKit/NSParagraphStyle_Private.h>
+#import <UIKit/NSTextAlternatives.h>
 #import <UIKit/NSTextAttachment_Private.h>
 #import <UIKit/NSTextList.h>
 #import <UIKit/UIApplicationSceneConstants.h>
 #import <UIKit/UIApplication_Private.h>
 #import <UIKit/UIColor_Private.h>
+#import <UIKit/UIFocusRingStyle.h>
 #import <UIKit/UIFont_Private.h>
 #import <UIKit/UIInterface_Private.h>
+#import <UIKit/UIPasteboard_Private.h>
 #import <UIKit/UIScreen_Private.h>
 #import <UIKit/UIViewController_Private.h>
-
-#if ENABLE(DATA_INTERACTION)
 #import <UIKit/NSItemProvider+UIKitAdditions.h>
 #import <UIKit/NSItemProvider+UIKitAdditions_Private.h>
 #import <UIKit/NSURL+UIItemProvider.h>
-#endif
 
 @interface UIApplication ()
 + (UIApplicationSceneClassicMode)_classicMode;
@@ -54,9 +54,6 @@ WTF_EXTERN_C_END
 - (CGFloat)_iOSMacScale;
 @end
 
-#if __has_include(<UIKit/UIFocusRingStyle.h>)
-#import <UIKit/UIFocusRingStyle.h>
-#endif
 
 #else // USE(APPLE_INTERNAL_SDK)
 
@@ -98,6 +95,10 @@ typedef enum {
 - (NSString *)markerForItemNumber:(NSInteger)itemNum;
 @end
 
+@interface NSTextAlternatives : NSObject
+@property (readonly) NSArray<NSString *> *alternativeStrings;
+@end
+
 @interface UIApplication ()
 - (BOOL)_isClassic;
 + (UIApplicationSceneClassicMode)_classicMode;
@@ -110,12 +111,35 @@ typedef enum {
 + (UIColor *)systemBrownColor;
 + (UIColor *)systemGrayColor;
 + (UIColor *)systemGreenColor;
++ (UIColor *)systemIndigoColor;
 + (UIColor *)systemOrangeColor;
 + (UIColor *)systemPinkColor;
 + (UIColor *)systemPurpleColor;
 + (UIColor *)systemRedColor;
-+ (UIColor *)systemYellowColor;
 + (UIColor *)systemTealColor;
++ (UIColor *)systemYellowColor;
+
++ (UIColor *)systemBackgroundColor;
++ (UIColor *)secondarySystemBackgroundColor;
++ (UIColor *)tertiarySystemBackgroundColor;
+
++ (UIColor *)systemFillColor;
++ (UIColor *)secondarySystemFillColor;
++ (UIColor *)tertiarySystemFillColor;
+
++ (UIColor *)systemGroupedBackgroundColor;
++ (UIColor *)secondarySystemGroupedBackgroundColor;
++ (UIColor *)tertiarySystemGroupedBackgroundColor;
+
++ (UIColor *)labelColor;
++ (UIColor *)secondaryLabelColor;
++ (UIColor *)tertiaryLabelColor;
++ (UIColor *)quaternaryLabelColor;
+
++ (UIColor *)placeholderTextColor;
+
++ (UIColor *)separatorColor;
++ (UIColor *)opaqueSeparatorColor;
 
 + (UIColor *)_disambiguated_due_to_CIImage_colorWithCGColor:(CGColorRef)cgColor;
 
@@ -143,24 +167,17 @@ typedef enum {
 @property (nonatomic, copy, setter=_setTitle:) NSString *_title;
 @end
 
-#endif // USE(APPLE_INTERNAL_SDK)
-
-#if ENABLE(FULL_KEYBOARD_ACCESS)
-@interface UIColor (IPI)
-+ (UIColor *)keyboardFocusIndicatorColor;
-@end
-
-@interface UIFocusRingStyle (Staging_47831886)
-+ (CGFloat)cornerRadius;
+@interface UIFocusRingStyle : NSObject
++ (CGFloat)borderThickness;
 + (CGFloat)maxAlpha;
 + (CGFloat)alphaThreshold;
 @end
-#endif
 
-#if HAVE(OS_DARK_MODE_SUPPORT)
-@interface UIColor (UIColorInternal)
+#endif // USE(APPLE_INTERNAL_SDK)
+
+@interface UIColor (IPI)
++ (UIColor *)keyboardFocusIndicatorColor;
 + (UIColor *)tableCellDefaultSelectionTintColor;
 @end
-#endif
 
 #endif // PLATFORM(IOS_FAMILY)

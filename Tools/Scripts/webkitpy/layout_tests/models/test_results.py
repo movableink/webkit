@@ -26,28 +26,26 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import sys
-if sys.version_info > (3, 0):
-    import pickle
-else:
-    import cPickle as pickle
-
 from webkitpy.layout_tests.models import test_failures
+from webkitpy.layout_tests.models.test import Test
+from webkitpy.layout_tests.models.test_input import TestInput
 
 
 class TestResult(object):
     """Data object containing the results of a single test."""
 
-    @staticmethod
-    def loads(string):
-        return pickle.loads(string)
-
-    def __init__(self, test_name, failures=None, test_run_time=None, has_stderr=False, reftest_type=None, pid=None, references=None):
-        self.test_name = test_name
+    def __init__(self, test_input, failures=None, test_run_time=None, has_stderr=False, reftest_type=None, pid=None, references=None):
+        # this takes a TestInput, and not a Test, as running the same Test with
+        # different input options can result in differing results
+        if not isinstance(test_input, TestInput):
+            # FIXME: figure out something better
+            # Changing all callers will be hard but probably worth it?
+            test_input = TestInput(Test(test_input))
+        self.test_input = test_input
         self.failures = failures or []
         self.test_run_time = test_run_time or 0  # The time taken to execute the test itself.
         self.has_stderr = has_stderr
-        self.reftest_type = reftest_type or []
+        self.reftest_type = sorted(reftest_type or [])
         self.pid = pid
         self.references = references or []
 
@@ -60,6 +58,10 @@ class TestResult(object):
         self.total_run_time = 0  # The time taken to run the test plus any references, compute diffs, etc.
         self.test_number = None
         self.is_other_crash = False
+
+    @property
+    def test_name(self):
+        return self.test_input.test_name
 
     def __eq__(self, other):
         return (self.test_name == other.test_name and
@@ -91,6 +93,3 @@ class TestResult(object):
             if type(failure) in failure_classes:
                 return True
         return False
-
-    def dumps(self):
-        return pickle.dumps(self)

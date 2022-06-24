@@ -7,13 +7,14 @@
 <body>
 <p id="description"></p>
 <div id="console"></div>
+<style>*[dir] { unicode-bidi: embed;}</style>
 <script>
 description('Tests to ensure MakeTextWritingDirection* modifies the direction of text and embed texts properly.');
 
 if (!window.testRunner)
     testFailed('This test requires testRunner');
 if (window.internals)
-    internals.settings.setEditingBehavior('win');
+    internals.settings.setEditingBehavior('windows');
 
 var testContainer = document.createElement("div");
 testContainer.contentEditable = true;

@@ -39,10 +39,13 @@
 #include <wtf/win/Win32Handle.h>
 #endif
 
+#if PLATFORM(COCOA)
+#include "XPCEventHandler.h"
+#endif
+
 #if PLATFORM(QT)
 #include <QProcess>
 #endif
-
 namespace WebKit {
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
@@ -61,15 +64,25 @@ public:
         virtual void didFinishLaunching(ProcessLauncher*, IPC::Connection::Identifier) = 0;
         virtual bool shouldConfigureJSCForTesting() const { return false; }
         virtual bool isJITEnabled() const { return true; }
+        virtual bool shouldEnableSharedArrayBuffer() const { return false; }
+        virtual bool shouldEnableCaptivePortalMode() const { return false; }
+#if PLATFORM(COCOA)
+        virtual RefPtr<XPCEventHandler> xpcEventHandler() const { return nullptr; }
+#endif
     };
     
     enum class ProcessType {
         Web,
-#if ENABLE(NETSCAPE_PLUGIN_API)
-        Plugin32,
-        Plugin64,
+        Network,
+#if ENABLE(GPU_PROCESS)
+        GPU,
 #endif
-        Network
+#if ENABLE(WEB_AUTHN)
+        WebAuthn,
+#endif
+#if ENABLE(BUBBLEWRAP_SANDBOX)
+        DBusProxy,
+#endif
     };
 
     struct LaunchOptions {
@@ -81,10 +94,15 @@ public:
         CString customWebContentServiceBundleIdentifier;
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-        HashMap<CString, SandboxPermission> extraWebProcessSandboxPaths;
+        HashMap<CString, SandboxPermission> extraSandboxPaths;
 #if ENABLE(DEVELOPER_MODE)
         String processCmdPrefix;
 #endif
+#endif
+
+#if PLATFORM(PLAYSTATION)
+        String processPath;
+        int32_t userId { -1 };
 #endif
     };
 
@@ -106,6 +124,10 @@ private:
     void didFinishLaunchingProcess(ProcessID, IPC::Connection::Identifier);
 
     void platformInvalidate();
+
+#if PLATFORM(COCOA)
+    void terminateXPCConnection();
+#endif
 
     Client* m_client;
 

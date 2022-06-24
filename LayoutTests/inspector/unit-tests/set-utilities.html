@@ -8,6 +8,16 @@ function test()
     let suite = InspectorTest.createSyncSuite("Set");
 
     suite.addTestCase({
+        name: "Set.prototype.find",
+        test() {
+            let set = new Set(["a", "b"]);
+            InspectorTest.expectEqual(set.find((item) => item === "b"), "b", "Set can find a item it holds.");
+            InspectorTest.expectEqual(set.find((item) => typeof item === "string"), "a", "Set finds the first item if the given predicate matches multiple items.");
+            InspectorTest.expectEqual(set.find((item) => typeof item === "number"), undefined, "Set returns 'undefined' when attempting to find an item if the given predicate doesn't match anything.");
+        },
+    });
+
+    suite.addTestCase({
         name: "Set.prototype.pushAll",
         test() {
             function test(iterable) {
@@ -96,10 +106,10 @@ function test()
 
             let set = new Set;
             set.add(key);
-            InspectorTest.expectTrue(set.take(key), "Set can take `key`.");
+            InspectorTest.expectEqual(set.take(key), key, "Set can take `key`.");
             InspectorTest.expectFalse(set.has(key), "Set no longer has `key`.");
-            InspectorTest.expectFalse(set.take(key), "Set can NOT take `key`.");
-            InspectorTest.expectFalse(set.take("DNE"), "Set can NOT take `DNE`, as it does NOT exist.");
+            InspectorTest.expectEqual(set.take(key), undefined, "Set can NOT take `key`.");
+            InspectorTest.expectEqual(set.take("DNE"), undefined, "Set can NOT take `DNE`, as it does NOT exist.");
         }
     });
 

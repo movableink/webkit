@@ -50,43 +50,36 @@ public:
 
         encoder << *m_data;
 
-        auto& elements = m_data->elements();
-        size_t fileCount = std::count_if(elements.begin(), elements.end(), [](auto& element) {
-            return WTF::holds_alternative<WebCore::FormDataElement::EncodedFileData>(element.data);
-        });
-
-        WebKit::SandboxExtension::HandleArray sandboxExtensionHandles;
-        sandboxExtensionHandles.allocate(fileCount);
-        size_t extensionIndex = 0;
-        for (auto& element : elements) {
-            if (auto* fileData = WTF::get_if<WebCore::FormDataElement::EncodedFileData>(element.data)) {
+        Vector<WebKit::SandboxExtension::Handle> sandboxExtensionHandles;
+        for (auto& element : m_data->elements()) {
+            if (auto* fileData = std::get_if<WebCore::FormDataElement::EncodedFileData>(&element.data)) {
                 const String& path = fileData->filename;
-                WebKit::SandboxExtension::createHandle(path, WebKit::SandboxExtension::Type::ReadOnly, sandboxExtensionHandles[extensionIndex++]);
+                if (auto handle = WebKit::SandboxExtension::createHandle(path, WebKit::SandboxExtension::Type::ReadOnly))
+                    sandboxExtensionHandles.append(WTFMove(*handle));
             }
         }
         encoder << sandboxExtensionHandles;
     }
 
-    static Optional<FormDataReference> decode(Decoder& decoder)
+    static std::optional<FormDataReference> decode(Decoder& decoder)
     {
-        Optional<bool> hasFormData;
+        std::optional<bool> hasFormData;
         decoder >> hasFormData;
         if (!hasFormData)
-            return WTF::nullopt;
+            return std::nullopt;
         if (!hasFormData.value())
             return FormDataReference { };
 
         auto formData = WebCore::FormData::decode(decoder);
         if (!formData)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<WebKit::SandboxExtension::HandleArray> sandboxExtensionHandles;
+        std::optional<Vector<WebKit::SandboxExtension::Handle>> sandboxExtensionHandles;
         decoder >> sandboxExtensionHandles;
         if (!sandboxExtensionHandles)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        for (size_t i = 0; i < sandboxExtensionHandles->size(); ++i)
-            WebKit::SandboxExtension::consumePermanently(sandboxExtensionHandles->at(i));
+        WebKit::SandboxExtension::consumePermanently(*sandboxExtensionHandles);
 
         return FormDataReference { formData.releaseNonNull() };
     }

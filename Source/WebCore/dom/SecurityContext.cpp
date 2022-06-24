@@ -29,6 +29,7 @@
 
 #include "ContentSecurityPolicy.h"
 #include "HTMLParserIdioms.h"
+#include "PolicyContainer.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginPolicy.h"
 #include <wtf/text/StringBuilder.h>
@@ -66,11 +67,13 @@ bool SecurityContext::isSecureTransitionTo(const URL& url) const
     if (!haveInitializedSecurityOrigin())
         return true;
 
-    return securityOriginPolicy()->origin().canAccess(SecurityOrigin::create(url).get());
+    return securityOriginPolicy()->origin().isSameOriginDomain(SecurityOrigin::create(url).get());
 }
 
-void SecurityContext::enforceSandboxFlags(SandboxFlags mask)
+void SecurityContext::enforceSandboxFlags(SandboxFlags mask, SandboxFlagsSource source)
 {
+    if (source != SandboxFlagsSource::CSP)
+        m_creationSandboxFlags |= mask;
     m_sandboxFlags |= mask;
 
     // The SandboxOrigin is stored redundantly in the security origin.
@@ -81,7 +84,7 @@ void SecurityContext::enforceSandboxFlags(SandboxFlags mask)
 bool SecurityContext::isSupportedSandboxPolicy(StringView policy)
 {
     static const char* const supportedPolicies[] = {
-        "allow-forms", "allow-same-origin", "allow-scripts", "allow-top-navigation", "allow-pointer-lock", "allow-popups", "allow-popups-to-escape-sandbox", "allow-top-navigation-by-user-activation", "allow-modals", "allow-storage-access-by-user-activation"
+        "allow-top-navigation-to-custom-protocols", "allow-forms", "allow-same-origin", "allow-scripts", "allow-top-navigation", "allow-pointer-lock", "allow-popups", "allow-popups-to-escape-sandbox", "allow-top-navigation-by-user-activation", "allow-modals", "allow-storage-access-by-user-activation"
     };
 
     for (auto* supportedPolicy : supportedPolicies) {
@@ -130,17 +133,18 @@ SandboxFlags SecurityContext::parseSandboxPolicy(const String& policy, String& i
             flags &= ~SandboxPropagatesToAuxiliaryBrowsingContexts;
         else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-top-navigation-by-user-activation"))
             flags &= ~SandboxTopNavigationByUserActivation;
+        else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-top-navigation-to-custom-protocols"))
+            flags &= ~SandboxTopNavigationToCustomProtocols;
         else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-modals"))
             flags &= ~SandboxModals;
         else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-storage-access-by-user-activation"))
             flags &= ~SandboxStorageAccessByUserActivation;
         else {
             if (numberOfTokenErrors)
-                tokenErrors.appendLiteral(", '");
+                tokenErrors.append(", '");
             else
                 tokenErrors.append('\'');
-            tokenErrors.append(sandboxToken);
-            tokenErrors.append('\'');
+            tokenErrors.append(sandboxToken, '\'');
             numberOfTokenErrors++;
         }
 
@@ -149,13 +153,27 @@ SandboxFlags SecurityContext::parseSandboxPolicy(const String& policy, String& i
 
     if (numberOfTokenErrors) {
         if (numberOfTokenErrors > 1)
-            tokenErrors.appendLiteral(" are invalid sandbox flags.");
+            tokenErrors.append(" are invalid sandbox flags.");
         else
-            tokenErrors.appendLiteral(" is an invalid sandbox flag.");
+            tokenErrors.append(" is an invalid sandbox flag.");
         invalidTokensErrorMessage = tokenErrors.toString();
     }
 
     return flags;
+}
+
+const CrossOriginOpenerPolicy& SecurityContext::crossOriginOpenerPolicy() const
+{
+    static NeverDestroyed<CrossOriginOpenerPolicy> coop;
+    return coop;
+}
+
+PolicyContainer SecurityContext::policyContainer() const
+{
+    return {
+        crossOriginEmbedderPolicy(),
+        crossOriginOpenerPolicy()
+    };
 }
 
 }

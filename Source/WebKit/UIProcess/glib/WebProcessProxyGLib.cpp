@@ -29,8 +29,10 @@
 #include "UserMessage.h"
 #include "WebProcessPool.h"
 #include "WebsiteDataStore.h"
-#include <WebCore/PlatformDisplay.h>
+#include <signal.h>
+#include <sys/types.h>
 #include <wtf/FileSystem.h>
+
 
 namespace WebKit {
 using namespace WebCore;
@@ -44,7 +46,7 @@ void WebProcessProxy::platformGetLaunchOptions(ProcessLauncher::LaunchOptions& l
         if (!dataStore) {
             // Prewarmed processes don't have a WebsiteDataStore yet, so use the primary WebsiteDataStore from the WebProcessPool.
             // The process won't be used if current WebsiteDataStore is different than the WebProcessPool primary one.
-            dataStore = m_processPool->websiteDataStore();
+            dataStore = WebsiteDataStore::defaultDataStore().ptr();
         }
 
         ASSERT(dataStore);
@@ -53,7 +55,7 @@ void WebProcessProxy::platformGetLaunchOptions(ProcessLauncher::LaunchOptions& l
         launchOptions.extraInitializationData.set("mediaKeysDirectory", dataStore->resolvedMediaKeysDirectory());
         launchOptions.extraInitializationData.set("applicationCacheDirectory", dataStore->resolvedApplicationCacheDirectory());
 
-        launchOptions.extraWebProcessSandboxPaths = m_processPool->sandboxPaths();
+        launchOptions.extraSandboxPaths = m_processPool->sandboxPaths();
     }
 }
 
@@ -68,4 +70,24 @@ void WebProcessProxy::sendMessageToWebContext(UserMessage&& message)
     sendMessageToWebContextWithReply(WTFMove(message), [](UserMessage&&) { });
 }
 
-};
+void WebProcessProxy::platformSuspendProcess()
+{
+    auto id = processIdentifier();
+    if (!id)
+        return;
+
+    RELEASE_LOG(Process, "%p - [PID=%i] WebProcessProxy::platformSuspendProcess", this, id);
+    kill(id, SIGSTOP);
+}
+
+void WebProcessProxy::platformResumeProcess()
+{
+    auto id = processIdentifier();
+    if (!id)
+        return;
+
+    RELEASE_LOG(Process, "%p - [PID=%i] WebProcessProxy::platformResumeProcess", this, id);
+    kill(id, SIGCONT);
+}
+
+} // namespace WebKit

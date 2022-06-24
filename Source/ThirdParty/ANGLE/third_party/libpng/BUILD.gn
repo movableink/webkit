@@ -4,6 +4,9 @@
 
 config("libpng_config") {
   include_dirs = [ "src" ]
+  if (is_clang) {
+    cflags = [ "-Wno-tautological-constant-out-of-range-compare" ]
+  }
 }
 
 static_library("libpng") {
@@ -24,12 +27,18 @@ static_library("libpng") {
     "src/pngwtran.c",
     "src/pngwutil.c",
   ]
+  if (target_cpu == "arm" || target_cpu == "arm64") {
+    sources += [
+      "src/arm/arm_init.c",
+      "src/arm/filter_neon.S",
+      "src/arm/filter_neon_intrinsics.c",
+      "src/arm/palette_neon_intrinsics.c",
+    ]
+  }
   if (is_win) {
     cflags = [ "/wd4028" ]
   }
   configs -= [ "//build/config/compiler:chromium_code" ]
   public_configs = [ ":libpng_config" ]
-  deps = [
-    "//third_party/zlib:zlib",
-  ]
+  deps = [ "//third_party/zlib:zlib" ]
 }

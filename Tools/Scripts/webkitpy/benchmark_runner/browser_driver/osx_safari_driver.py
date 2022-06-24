@@ -1,13 +1,11 @@
-#!/usr/bin/env python
-
-import itertools
 import logging
 import os
+import sys
+import re
 import subprocess
 import time
 
-from osx_browser_driver import OSXBrowserDriver
-from webkitpy.benchmark_runner.utils import force_remove
+from webkitpy.benchmark_runner.browser_driver.osx_browser_driver import OSXBrowserDriver
 
 
 _log = logging.getLogger(__name__)
@@ -27,19 +25,24 @@ class OSXSafariDriver(OSXBrowserDriver):
     def launch_url(self, url, options, browser_build_path, browser_path):
         args = ['/Applications/Safari.app/Contents/MacOS/Safari']
         env = {}
+        for key, value in os.environ.items():
+            if re.match(r"^__XPC_", key):
+                env[key] = value
         if browser_build_path:
             browser_build_absolute_path = os.path.abspath(browser_build_path)
             safari_app_in_build_path = os.path.join(browser_build_absolute_path, 'Safari.app/Contents/MacOS/Safari')
             has_safari_app = os.path.exists(safari_app_in_build_path)
             content_in_path = os.listdir(browser_build_absolute_path)
-            contains_frameworks = any(itertools.imap(lambda entry: entry.endswith('.framework'), os.listdir(browser_build_absolute_path)))
+            contains_frameworks = any(map(lambda entry: entry.endswith('.framework'), os.listdir(browser_build_absolute_path)))
 
             if has_safari_app:
                 args = [safari_app_in_build_path]
 
             if contains_frameworks:
-                env = {'DYLD_FRAMEWORK_PATH': browser_build_absolute_path, 'DYLD_LIBRARY_PATH': browser_build_absolute_path,
-                    '__XPC_DYLD_FRAMEWORK_PATH': browser_build_absolute_path, '__XPC_DYLD_LIBRARY_PATH': browser_build_absolute_path}
+                env['DYLD_FRAMEWORK_PATH'] = browser_build_absolute_path
+                env['DYLD_LIBRARY_PATH'] = browser_build_absolute_path
+                env['__XPC_DYLD_FRAMEWORK_PATH'] = browser_build_absolute_path
+                env['__XPC_DYLD_LIBRARY_PATH'] = browser_build_absolute_path
             elif not has_safari_app:
                 raise Exception('Could not find any framework "{}"'.format(browser_build_path))
 
@@ -62,7 +65,11 @@ class OSXSafariDriver(OSXBrowserDriver):
             _log.info('Checking if any open file is from "{}".'.format(browser_build_path))
             # Cannot use 'check_call' here as '+D' option will have non-zero return code when not all files under
             # specified folder are used.
-            process = subprocess.Popen(['/usr/sbin/lsof', '-a', '-p', str(self._safari_process.pid), '+D', browser_build_absolute_path], stdout=subprocess.PIPE)
+            process = subprocess.Popen(
+                ['/usr/sbin/lsof', '-a', '-p', str(self._safari_process.pid), '+D', browser_build_absolute_path],
+                stdout=subprocess.PIPE,
+                **(dict(encoding='utf-8') if sys.version_info >= (3, 6) else dict())
+            )
             output = process.communicate()[0]
             if has_safari_app:
                 assert 'Safari.app/Contents/MacOS/Safari' in output, 'Safari.app is not launched from "{}"'.format(browser_build_path)
@@ -72,7 +79,6 @@ class OSXSafariDriver(OSXBrowserDriver):
         subprocess.Popen(['open', '-a', args[0], url])
 
     def launch_driver(self, url, options, browser_build_path):
-        import webkitpy.thirdparty.autoinstalled.selenium
         from selenium import webdriver
         driver = webdriver.Safari(quiet=False)
         self._launch_webdriver(url=url, driver=driver)

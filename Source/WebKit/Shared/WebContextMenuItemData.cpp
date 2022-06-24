@@ -42,25 +42,28 @@ WebContextMenuItemData::WebContextMenuItemData()
     , m_action(WebCore::ContextMenuItemTagNoAction)
     , m_enabled(true)
     , m_checked(false)
+    , m_indentationLevel(0)
 {
 }
 
-WebContextMenuItemData::WebContextMenuItemData(WebCore::ContextMenuItemType type, WebCore::ContextMenuAction action, const String& title, bool enabled, bool checked)
+WebContextMenuItemData::WebContextMenuItemData(WebCore::ContextMenuItemType type, WebCore::ContextMenuAction action, const String& title, bool enabled, bool checked, unsigned indentationLevel)
     : m_type(type)
     , m_action(action)
     , m_title(title)
     , m_enabled(enabled)
     , m_checked(checked)
+    , m_indentationLevel(indentationLevel)
 {
     ASSERT(type == WebCore::ActionType || type == WebCore::CheckableActionType || type == WebCore::SeparatorType);
 }
 
-WebContextMenuItemData::WebContextMenuItemData(WebCore::ContextMenuAction action, const String& title, bool enabled, const Vector<WebContextMenuItemData>& submenu)
+WebContextMenuItemData::WebContextMenuItemData(WebCore::ContextMenuAction action, const String& title, bool enabled, const Vector<WebContextMenuItemData>& submenu, unsigned indentationLevel)
     : m_type(WebCore::SubmenuType)
     , m_action(action)
     , m_title(title)
     , m_enabled(enabled)
     , m_checked(false)
+    , m_indentationLevel(indentationLevel)
     , m_submenu(submenu)
 {
 }
@@ -77,15 +80,16 @@ WebContextMenuItemData::WebContextMenuItemData(const WebCore::ContextMenuItem& i
     
     m_enabled = item.enabled();
     m_checked = item.checked();
+    m_indentationLevel = item.indentationLevel();
 }
 
 ContextMenuItem WebContextMenuItemData::core() const
 {
     if (m_type != SubmenuType)
-        return ContextMenuItem(m_type, m_action, m_title, m_enabled, m_checked);
+        return ContextMenuItem(m_type, m_action, m_title, m_enabled, m_checked, m_indentationLevel);
     
     Vector<ContextMenuItem> subMenuItems = coreItems(m_submenu);
-    return ContextMenuItem(m_action, m_title, m_enabled, m_checked, subMenuItems);
+    return ContextMenuItem(m_action, m_title, m_enabled, m_checked, subMenuItems, m_indentationLevel);
 }
 
 API::Object* WebContextMenuItemData::userData() const
@@ -100,73 +104,72 @@ void WebContextMenuItemData::setUserData(API::Object* userData)
     
 void WebContextMenuItemData::encode(IPC::Encoder& encoder) const
 {
-    encoder.encodeEnum(m_type);
-    encoder.encodeEnum(m_action);
+    encoder << m_type;
+    encoder << m_action;
     encoder << m_title;
     encoder << m_checked;
     encoder << m_enabled;
+    encoder << m_indentationLevel;
     encoder << m_submenu;
 }
 
-Optional<WebContextMenuItemData> WebContextMenuItemData::decode(IPC::Decoder& decoder)
+std::optional<WebContextMenuItemData> WebContextMenuItemData::decode(IPC::Decoder& decoder)
 {
     WebCore::ContextMenuItemType type;
-    if (!decoder.decodeEnum(type))
-        return WTF::nullopt;
+    if (!decoder.decode(type))
+        return std::nullopt;
 
     WebCore::ContextMenuAction action;
-    if (!decoder.decodeEnum(action))
-        return WTF::nullopt;
+    if (!decoder.decode(action))
+        return std::nullopt;
 
     String title;
     if (!decoder.decode(title))
-        return WTF::nullopt;
+        return std::nullopt;
 
     bool checked;
     if (!decoder.decode(checked))
-        return WTF::nullopt;
+        return std::nullopt;
 
     bool enabled;
     if (!decoder.decode(enabled))
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<Vector<WebContextMenuItemData>> submenu;
+    unsigned indentationLevel;
+    if (!decoder.decode(indentationLevel))
+        return std::nullopt;
+
+    std::optional<Vector<WebContextMenuItemData>> submenu;
     decoder >> submenu;
     if (!submenu)
-        return WTF::nullopt;
+        return std::nullopt;
 
     switch (type) {
     case WebCore::ActionType:
     case WebCore::SeparatorType:
     case WebCore::CheckableActionType:
-        return {{ type, action, title, enabled, checked }};
+        return {{ type, action, title, enabled, checked, indentationLevel }};
         break;
     case WebCore::SubmenuType:
-        return {{ action, title, enabled, WTFMove(*submenu) }};
+        return {{ action, title, enabled, WTFMove(*submenu), indentationLevel }};
         break;
     }
     ASSERT_NOT_REACHED();
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 Vector<WebContextMenuItemData> kitItems(const Vector<WebCore::ContextMenuItem>& coreItemVector)
 {
-    Vector<WebContextMenuItemData> result;
-    result.reserveCapacity(coreItemVector.size());
-    for (unsigned i = 0; i < coreItemVector.size(); ++i)
-        result.append(WebContextMenuItemData(coreItemVector[i]));
-    
-    return result;
+    return coreItemVector.map([](auto& item) {
+        return WebContextMenuItemData { item };
+    });
 }
 
 Vector<ContextMenuItem> coreItems(const Vector<WebContextMenuItemData>& kitItemVector)
 {
-    Vector<ContextMenuItem> result;
-    result.reserveCapacity(kitItemVector.size());
-    for (unsigned i = 0; i < kitItemVector.size(); ++i)
-        result.append(kitItemVector[i].core());
-    
-    return result;
+    return kitItemVector.map([](auto& item) {
+        return item.core();
+    });
 }
 
 } // namespace WebKit

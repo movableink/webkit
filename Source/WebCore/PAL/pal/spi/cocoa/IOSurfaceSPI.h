@@ -71,6 +71,7 @@ size_t IOSurfaceGetHeight(IOSurfaceRef buffer);
 size_t IOSurfaceGetPropertyMaximum(CFStringRef property);
 size_t IOSurfaceGetWidth(IOSurfaceRef buffer);
 OSType IOSurfaceGetPixelFormat(IOSurfaceRef buffer);
+void IOSurfaceIncrementUseCount(IOSurfaceRef buffer);
 Boolean IOSurfaceIsInUse(IOSurfaceRef buffer);
 IOReturn IOSurfaceLock(IOSurfaceRef buffer, uint32_t options, uint32_t *seed);
 IOSurfaceRef IOSurfaceLookupFromMachPort(mach_port_t);
@@ -88,6 +89,28 @@ WTF_EXTERN_C_END
 
 #import <IOSurface/IOSurfaceTypes.h>
 
+WTF_EXTERN_C_BEGIN
+
+#if HAVE(IOSURFACE_SET_OWNERSHIP) || HAVE(IOSURFACE_SET_OWNERSHIP_IDENTITY)
+typedef CF_ENUM(int, IOSurfaceMemoryLedgerTags) {
+    kIOSurfaceMemoryLedgerTagDefault     = 0x00000001,
+    kIOSurfaceMemoryLedgerTagNetwork     = 0x00000002,
+    kIOSurfaceMemoryLedgerTagMedia       = 0x00000003,
+    kIOSurfaceMemoryLedgerTagGraphics    = 0x00000004,
+    kIOSurfaceMemoryLedgerTagNeural      = 0x00000005,
+};
+#endif
+
+#if HAVE(IOSURFACE_SET_OWNERSHIP)
+IOReturn IOSurfaceSetOwnership(IOSurfaceRef buffer, task_t newOwner, int newLedgerTag, uint32_t newLedgerOptions);
+#endif
+
+#if HAVE(IOSURFACE_SET_OWNERSHIP_IDENTITY)
+kern_return_t IOSurfaceSetOwnershipIdentity(IOSurfaceRef buffer, mach_port_t task_id_token, int newLedgerTag, uint32_t newLedgerOptions);
+#endif
+
+WTF_EXTERN_C_END
+
 #endif
 
 WTF_EXTERN_C_BEGIN
@@ -103,7 +126,7 @@ WTF_EXTERN_C_END
 
 #else
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED < 110000
+#if PLATFORM(WATCHOS) || PLATFORM(APPLETV)
 typedef uint32_t IOSurfaceID;
 #endif
 

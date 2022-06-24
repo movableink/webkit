@@ -26,29 +26,33 @@
 #ifndef TextTrackRepresentationCocoa_h
 #define TextTrackRepresentationCocoa_h
 
-#if (PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))) && ENABLE(VIDEO_TRACK)
+#if (PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))) && ENABLE(VIDEO)
 
-#import "TextTrackRepresentation.h"
-#import <QuartzCore/CALayer.h>
-#import <wtf/RetainPtr.h>
+#include "TextTrackRepresentation.h"
+#include <QuartzCore/CALayer.h>
+#include <wtf/RetainPtr.h>
+#include <wtf/WeakPtr.h>
 
 @class WebCoreTextTrackRepresentationCocoaHelper;
 
 namespace WebCore {
 
-class TextTrackRepresentationCocoa final : public TextTrackRepresentation {
+class TextTrackRepresentationCocoa final : public TextTrackRepresentation, public CanMakeWeakPtr<TextTrackRepresentationCocoa, WeakPtrFactoryInitialization::Eager> {
 public:
     explicit TextTrackRepresentationCocoa(TextTrackRepresentationClient&);
     virtual ~TextTrackRepresentationCocoa();
 
     TextTrackRepresentationClient& client() const { return m_client; }
 
-    PlatformLayer* platformLayer() override { return m_layer.get(); }
-    IntRect bounds() const override;
+    PlatformLayer* platformLayer() final { return m_layer.get(); }
+
+    IntRect bounds() const final;
+    void boundsChanged();
 
 private:
-    void update() override;
-    void setContentScale(float) override;
+    void update() final;
+    void setContentScale(float) final;
+    void setHidden(bool) const final;
 
     TextTrackRepresentationClient& m_client;
     RetainPtr<CALayer> m_layer;
@@ -57,6 +61,6 @@ private:
 
 }
 
-#endif // (PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))) && ENABLE(VIDEO_TRACK)
+#endif // (PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))) && ENABLE(VIDEO)
 
 #endif // TextTrackRepresentationCocoa_h

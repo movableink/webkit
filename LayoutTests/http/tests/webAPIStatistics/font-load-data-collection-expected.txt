@@ -3,21 +3,11 @@ Tests for font loading data collection in ResourceLoadStatistics plist by loadin
 mmmmmmmmmmlli
 Resource load statistics:
 
-High level domain: 127.0.0.1
-    lastSeen: 0
+Registrable domain: 127.0.0.1
     hadUserInteraction: No
     mostRecentUserInteraction: -1
     grandfathered: No
+    IsScheduledForAllButCookieDataRemoval: No
     isPrevalentResource: No
     isVeryPrevalentResource: No
     dataRecordsRemoved: 0
-    fontsFailedToLoad:
-        Fransiscan
-        Andale
-        notARealFont
-    fontsSuccessfullyLoaded:
-        Times
-    topFrameRegistrableDomainsWhichAccessedWebAPIs:
-        127.0.0.1: 5
-    canvasReadData: No
-

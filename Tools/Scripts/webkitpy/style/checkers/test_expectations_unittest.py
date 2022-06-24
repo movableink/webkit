@@ -26,12 +26,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import os
-import sys
 import unittest
 
-from test_expectations import TestExpectationsChecker
 from webkitpy.common.host_mock import MockHost
+from webkitpy.style.checkers.test_expectations import TestExpectationsChecker
 
 
 class ErrorCollector(object):
@@ -102,7 +100,7 @@ class TestExpectationsTestCase(unittest.TestCase):
         elif expected_output:
             self.assertEqual(expected_output, self._error_collector.get_errors())
         else:
-            self.assertNotEquals('', self._error_collector.get_errors())
+            self.assertNotEqual('', self._error_collector.get_errors())
 
         # Note that a patch might change a line that introduces errors elsewhere, but we
         # don't want to lint the whole file (it can unfairly punish patches for pre-existing errors).

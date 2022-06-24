@@ -11,8 +11,8 @@
 #ifndef MODULES_DESKTOP_CAPTURE_WIN_DXGI_TEXTURE_MAPPING_H_
 #define MODULES_DESKTOP_CAPTURE_WIN_DXGI_TEXTURE_MAPPING_H_
 
-#include <D3D11.h>
-#include <DXGI1_2.h>
+#include <d3d11.h>
+#include <dxgi1_2.h>
 
 #include "modules/desktop_capture/desktop_geometry.h"
 #include "modules/desktop_capture/desktop_region.h"
@@ -27,7 +27,7 @@ namespace webrtc {
 class DxgiTextureMapping : public DxgiTexture {
  public:
   // Creates a DxgiTextureMapping instance. Caller must maintain the lifetime
-  // of input |duplication| to make sure it outlives this instance.
+  // of input `duplication` to make sure it outlives this instance.
   explicit DxgiTextureMapping(IDXGIOutputDuplication* duplication);
 
   ~DxgiTextureMapping() override;

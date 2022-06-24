@@ -28,7 +28,7 @@
 #if WK_HAVE_C_SPI
 
 #include "InjectedBundleTest.h"
-#include <WebKit/WKBundlePageGroup.h>
+#include <WebKit/WKBundlePagePrivate.h>
 #include <WebKit/WKBundlePrivate.h>
 #include <WebKit/WKBundleScriptWorld.h>
 #include <WebKit/WKRetainPtr.h>
@@ -42,22 +42,19 @@ public:
         : InjectedBundleTest(identifier)
     { }
 
-    virtual void initialize(WKBundleRef bundle, WKTypeRef userData)
+    void didCreatePage(WKBundleRef bundle, WKBundlePageRef page) override
     {
-        assert(WKGetTypeID(userData) == WKBundlePageGroupGetTypeID());
-        WKBundlePageGroupRef pageGroup = static_cast<WKBundlePageGroupRef>(userData);
-
-        WKRetainPtr<WKStringRef> source = adoptWK(WKStringCreateWithUTF8CString(
+        auto source = adoptWK(WKStringCreateWithUTF8CString(
             "window.onload = function () {\n"
             "    const form = document.getElementById('test').parentNode;\n"
             "    alert(form.tagName != 'FORM' ? 'PASS: [OverrideBuiltins] was not disabled' : 'FAIL: [OverrideBuiltins] was disabled');\n"
             "}\n"));
 
         auto normalWorld = WKBundleScriptWorldNormalWorld();
-        WKBundleAddUserScript(bundle, pageGroup, normalWorld, source.get(), 0, 0, 0, kWKInjectAtDocumentEnd, kWKInjectInAllFrames);
+        WKBundlePageAddUserScriptInWorld(page, source.get(), normalWorld, kWKInjectAtDocumentEnd, kWKInjectInAllFrames);
 
         auto isolatedWorld = WKBundleScriptWorldCreateWorld();
-        WKBundleAddUserScript(bundle, pageGroup, isolatedWorld, source.get(), 0, 0, 0, kWKInjectAtDocumentEnd, kWKInjectInAllFrames);
+        WKBundlePageAddUserScriptInWorld(page, source.get(), isolatedWorld, kWKInjectAtDocumentEnd, kWKInjectInAllFrames);
     }
 };
 
@@ -67,12 +64,9 @@ public:
         : InjectedBundleTest(identifier)
     { }
 
-    virtual void initialize(WKBundleRef bundle, WKTypeRef userData)
+    void didCreatePage(WKBundleRef bundle, WKBundlePageRef page) override
     {
-        assert(WKGetTypeID(userData) == WKBundlePageGroupGetTypeID());
-        WKBundlePageGroupRef pageGroup = static_cast<WKBundlePageGroupRef>(userData);
-
-        WKRetainPtr<WKStringRef> source = adoptWK(WKStringCreateWithUTF8CString(
+        auto source = adoptWK(WKStringCreateWithUTF8CString(
             "window.onload = function () {\n"
             "    const form = document.getElementById('test').parentNode;\n"
             "    alert(form.tagName === 'FORM' ? 'PASS: [OverrideBuiltins] was disabled' : 'FAIL: [OverrideBuiltins] was not disabled');\n"
@@ -80,11 +74,11 @@ public:
 
         auto normalWorld = WKBundleScriptWorldNormalWorld();
         WKBundleScriptWorldDisableOverrideBuiltinsBehavior(normalWorld);
-        WKBundleAddUserScript(bundle, pageGroup, normalWorld, source.get(), 0, 0, 0, kWKInjectAtDocumentEnd, kWKInjectInAllFrames);
+        WKBundlePageAddUserScriptInWorld(page, source.get(), normalWorld, kWKInjectAtDocumentEnd, kWKInjectInAllFrames);
 
         auto isolatedWorld = WKBundleScriptWorldCreateWorld();
         WKBundleScriptWorldDisableOverrideBuiltinsBehavior(isolatedWorld);
-        WKBundleAddUserScript(bundle, pageGroup, isolatedWorld, source.get(), 0, 0, 0, kWKInjectAtDocumentEnd, kWKInjectInAllFrames);
+        WKBundlePageAddUserScriptInWorld(page, source.get(), isolatedWorld, kWKInjectAtDocumentEnd, kWKInjectInAllFrames);
     }
 };
 

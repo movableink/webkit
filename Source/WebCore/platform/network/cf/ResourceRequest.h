@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2022 Apple Inc.  All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -69,11 +69,7 @@ public:
     {
     }
 #else
-    ResourceRequest(NSURLRequest *nsRequest)
-        : ResourceRequestBase()
-        , m_nsRequest(nsRequest)
-    {
-    }
+    WEBCORE_EXPORT ResourceRequest(NSURLRequest *);
 #endif
 
     WEBCORE_EXPORT void updateFromDelegatePreservingOldProperties(const ResourceRequest&);
@@ -94,6 +90,8 @@ public:
     WEBCORE_EXPORT static void setHTTPPipeliningEnabled(bool);
 
     static bool resourcePrioritiesEnabled();
+
+    WEBCORE_EXPORT void replacePlatformRequest(HTTPBodyUpdatePolicy);
 
 private:
     friend class ResourceRequestBase;
@@ -127,7 +125,7 @@ inline bool ResourceRequest::resourcePrioritiesEnabled()
 }
 
 #if PLATFORM(COCOA)
-NSURLRequest *copyRequestWithStorageSession(CFURLStorageSessionRef, NSURLRequest *);
+RetainPtr<NSURLRequest> copyRequestWithStorageSession(CFURLStorageSessionRef, NSURLRequest *);
 WEBCORE_EXPORT NSCachedURLResponse *cachedResponseForRequest(CFURLStorageSessionRef, NSURLRequest *);
 #endif
 

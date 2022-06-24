@@ -8,6 +8,8 @@ list(APPEND WTF_PUBLIC_HEADERS
 )
 
 list(APPEND WTF_SOURCES
+    generic/WorkQueueGeneric.cpp
+
     text/win/StringWin.cpp
     text/win/TextBreakIteratorInternalICUWin.cpp
 
@@ -15,15 +17,14 @@ list(APPEND WTF_SOURCES
     win/DbgHelperWin.cpp
     win/FileSystemWin.cpp
     win/LanguageWin.cpp
+    win/LoggingWin.cpp
     win/MainThreadWin.cpp
     win/MemoryFootprintWin.cpp
     win/MemoryPressureHandlerWin.cpp
     win/OSAllocatorWin.cpp
     win/PathWalker.cpp
     win/RunLoopWin.cpp
-    win/ThreadSpecificWin.cpp
     win/ThreadingWin.cpp
-    win/WorkQueueWin.cpp
 )
 
 list(APPEND WTF_LIBRARIES
@@ -35,8 +36,10 @@ list(APPEND WTF_LIBRARIES
 if (USE_CF)
     list(APPEND WTF_PUBLIC_HEADERS
         cf/CFURLExtras.h
+        cf/SpanCF.h
         cf/TypeCastsCF.h
 
+        text/cf/StringConcatenateCF.h
         text/cf/TextBreakIteratorCF.h
     )
     list(APPEND WTF_SOURCES

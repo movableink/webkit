@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,14 +29,23 @@
 #import "PlatformCAAnimationRemote.h"
 #import "PlatformCALayerRemote.h"
 #import "RemoteLayerTreeHost.h"
-#import "RemoteLayerTreeViews.h"
 #import <QuartzCore/QuartzCore.h>
 #import <WebCore/PlatformCAFilters.h>
 #import <WebCore/ScrollbarThemeMac.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/BlockObjCExceptions.h>
+#import <wtf/cocoa/VectorCocoa.h>
+
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/SeparatedLayerAdditions.h>
+#else
+static void configureSeparatedLayer(CALayer *) { }
+#endif
+#endif
 
 #if PLATFORM(IOS_FAMILY)
+#import "RemoteLayerTreeViews.h"
 #import <UIKit/UIView.h>
 #import <UIKitSPI.h>
 #endif
@@ -68,10 +77,10 @@
     }
 
     // Remove views at the end.
-    NSMutableArray *viewsToRemove = nil;
+    RetainPtr<NSMutableArray> viewsToRemove;
     auto appendViewToRemove = [&viewsToRemove](UIView *view) {
         if (!viewsToRemove)
-            viewsToRemove = [[NSMutableArray alloc] init];
+            viewsToRemove = adoptNS([[NSMutableArray alloc] init]);
 
         [viewsToRemove addObject:view];
     };
@@ -83,10 +92,8 @@
             appendViewToRemove(subview);
     }
 
-    if (viewsToRemove) {
+    if (viewsToRemove)
         [viewsToRemove makeObjectsPerformSelector:@selector(removeFromSuperview)];
-        [viewsToRemove release];
-    }
 }
 
 @end
@@ -95,7 +102,7 @@
 namespace WebKit {
 using namespace WebCore;
 
-static CGColorRef cgColorFromColor(const Color& color)
+static RetainPtr<CGColorRef> cgColorFromColor(const Color& color)
 {
     if (!color.isValid())
         return nil;
@@ -120,7 +127,7 @@ static NSString *toCAFilterType(PlatformCALayer::FilterType type)
 
 static void updateCustomAppearance(CALayer *layer, GraphicsLayer::CustomAppearance customAppearance)
 {
-#if ENABLE(RUBBER_BANDING)
+#if HAVE(RUBBER_BANDING)
     switch (customAppearance) {
     case GraphicsLayer::CustomAppearance::None:
     case GraphicsLayer::CustomAppearance::DarkBackdrop:
@@ -159,10 +166,10 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
         layer.bounds = properties.bounds;
     
     if (properties.changedProperties & RemoteLayerTreeTransaction::BackgroundColorChanged)
-        layer.backgroundColor = cgColorFromColor(properties.backgroundColor);
+        layer.backgroundColor = cgColorFromColor(properties.backgroundColor).get();
 
     if (properties.changedProperties & RemoteLayerTreeTransaction::BorderColorChanged)
-        layer.borderColor = cgColorFromColor(properties.borderColor);
+        layer.borderColor = cgColorFromColor(properties.borderColor).get();
 
     if (properties.changedProperties & RemoteLayerTreeTransaction::BorderWidthChanged)
         layer.borderWidth = properties.borderWidth;
@@ -229,10 +236,10 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
         CAShapeLayer *shapeLayer = (CAShapeLayer *)layer;
         switch (properties.windRule) {
         case WindRule::NonZero:
-            shapeLayer.fillRule = @"non-zero";
+            shapeLayer.fillRule = kCAFillRuleNonZero;
             break;
         case WindRule::EvenOdd:
-            shapeLayer.fillRule = @"even-odd";
+            shapeLayer.fillRule = kCAFillRuleEvenOdd;
             break;
         }
     }
@@ -248,7 +255,7 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
     {
         RemoteLayerBackingStore* backingStore = properties.backingStore.get();
         if (backingStore && properties.backingStoreAttached)
-            backingStore->applyBackingStoreToLayer(layer, layerContentsType);
+            backingStore->applyBackingStoreToLayer(layer, layerContentsType, layerTreeHost->replayCGDisplayListsIntoBackingStore());
         else {
             layer.contents = nil;
             layer.contentsOpaque = NO;
@@ -266,14 +273,31 @@ void RemoteLayerTreePropertyApplier::applyPropertiesToLayer(CALayer *layer, Remo
 
     if (properties.changedProperties & RemoteLayerTreeTransaction::CustomAppearanceChanged)
         updateCustomAppearance(layer, properties.customAppearance);
+
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    if (properties.changedProperties & RemoteLayerTreeTransaction::SeparatedChanged) {
+        layer.separated = properties.isSeparated;
+        if (properties.isSeparated)
+            configureSeparatedLayer(layer);
+    }
+
+#if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
+    if (properties.changedProperties & RemoteLayerTreeTransaction::SeparatedPortalChanged) {
+        // FIXME: Implement SeparatedPortalChanged.
+    }
+
+    if (properties.changedProperties & RemoteLayerTreeTransaction::DescendentOfSeparatedPortalChanged) {
+        // FIXME: Implement DescendentOfSeparatedPortalChanged.
+    }
+#endif
+#endif
 }
 
 void RemoteLayerTreePropertyApplier::applyProperties(RemoteLayerTreeNode& node, RemoteLayerTreeHost* layerTreeHost, const RemoteLayerTreeTransaction::LayerProperties& properties, const RelatedLayerMap& relatedLayers, RemoteLayerBackingStore::LayerContentsType layerContentsType)
 {
-    BEGIN_BLOCK_OBJC_EXCEPTIONS;
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
 
     applyPropertiesToLayer(node.layer(), layerTreeHost, properties, layerContentsType);
-    updateChildren(node, properties, relatedLayers);
     updateMask(node, properties, relatedLayers);
 
     if (properties.changedProperties & RemoteLayerTreeTransaction::EventRegionChanged)
@@ -283,11 +307,13 @@ void RemoteLayerTreePropertyApplier::applyProperties(RemoteLayerTreeNode& node, 
     applyPropertiesToUIView(node.uiView(), properties, relatedLayers);
 #endif
 
-    END_BLOCK_OBJC_EXCEPTIONS;
+    END_BLOCK_OBJC_EXCEPTIONS
 }
 
-void RemoteLayerTreePropertyApplier::updateChildren(RemoteLayerTreeNode& node, const RemoteLayerTreeTransaction::LayerProperties& properties, const RelatedLayerMap& relatedLayers)
+void RemoteLayerTreePropertyApplier::applyHierarchyUpdates(RemoteLayerTreeNode& node, const RemoteLayerTreeTransaction::LayerProperties& properties, const RelatedLayerMap& relatedLayers)
 {
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
+
     if (!properties.changedProperties.contains(RemoteLayerTreeTransaction::ChildrenChanged))
         return;
 
@@ -313,35 +339,30 @@ void RemoteLayerTreePropertyApplier::updateChildren(RemoteLayerTreeNode& node, c
 
     if (hasViewChildren()) {
         ASSERT(node.uiView());
-
-        RetainPtr<NSMutableArray> subviews = adoptNS([[NSMutableArray alloc] initWithCapacity:properties.children.size()]);
-        for (auto& child : properties.children) {
+        [contentView() _web_setSubviews:createNSArray(properties.children, [&] (auto& child) -> UIView * {
             auto* childNode = relatedLayers.get(child);
             ASSERT(childNode);
             if (!childNode)
-                continue;
+                return nil;
             ASSERT(childNode->uiView());
-            [subviews addObject:childNode->uiView()];
-        }
-
-        [contentView() _web_setSubviews:subviews.get()];
+            return childNode->uiView();
+        }).get()];
         return;
     }
 #endif
 
-    RetainPtr<NSMutableArray> sublayers = adoptNS([[NSMutableArray alloc] initWithCapacity:properties.children.size()]);
-    for (auto& child : properties.children) {
+    node.layer().sublayers = createNSArray(properties.children, [&] (auto& child) -> CALayer * {
         auto* childNode = relatedLayers.get(child);
         ASSERT(childNode);
         if (!childNode)
-            continue;
+            return nil;
 #if PLATFORM(IOS_FAMILY)
         ASSERT(!childNode->uiView());
 #endif
-        [sublayers addObject:childNode->layer()];
-    }
+        return childNode->layer();
+    }).get();
 
-    node.layer().sublayers = sublayers.get();
+    END_BLOCK_OBJC_EXCEPTIONS
 }
 
 void RemoteLayerTreePropertyApplier::updateMask(RemoteLayerTreeNode& node, const RemoteLayerTreeTransaction::LayerProperties& properties, const RelatedLayerMap& relatedLayers)

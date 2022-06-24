@@ -8,9 +8,16 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+
+#include "rtc_base/checks.h"
 #include "system_wrappers/include/metrics.h"
 #include "test/gtest.h"
 
+#if RTC_METRICS_ENABLED
 namespace webrtc {
 
 namespace {
@@ -158,3 +165,4 @@ TEST_F(MetricsDefaultTest, TestMinMaxBucket) {
 }
 
 }  // namespace webrtc
+#endif

@@ -70,6 +70,12 @@
 #endif
 #if PLATFORM(COCOA) && defined(__OBJC__)
 #import <WebKit/WebKit.h>
+#if PLATFORM(MACCATALYST)
+// Many tests depend on WebKitLegacy.h being implicitly included; however,
+// on macCatalyst, WebKit.h does not include WebKitLegacy.h, so we need
+// to do it explicitly here.
+#import <WebKit/WebKitLegacy.h>
+#endif
 #endif
 
 #endif
@@ -83,7 +89,11 @@
 #endif
 
 #ifdef __cplusplus
+// The TestJSC executable doesn't use gtest it uses glib's testing
+#if !defined(BUILDING_TestJSC) && !defined(NO_GTEST_USAGE)
+#undef UniversalPrint
 #include <gtest/gtest.h>
+#endif
 #include <wtf/Assertions.h>
 #undef new
 #undef delete
@@ -101,10 +111,22 @@
 #define WK_HAVE_C_SPI 1
 #endif
 
-#if !PLATFORM(APPLETV)
+// FIXME: Move this to PlatformHave.h.
+#if !PLATFORM(APPLETV) && !PLATFORM(MACCATALYST) && !PLATFORM(WATCHOS)
 #define HAVE_SSL 1
 #endif
 
+// FIXME: Move this to PlatformHave.h.
 #if PLATFORM(MAC) || PLATFORM(IOS)
 #define HAVE_PDFKIT 1
+#endif
+
+// FIXME: Move this to PlatformHave.h.
+#if PLATFORM(IOS_FAMILY) && !(PLATFORM(MACCATALYST) && __MAC_OS_X_VERSION_MIN_REQUIRED < 110000)
+#define HAVE_UIWEBVIEW 1
+#endif
+
+// FIXME: Move this to PlatformHave.h.
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 110000) || (PLATFORM(IOS_FAMILY) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000)
+#define HAVE_TLS_VERSION_DURING_CHALLENGE 1
 #endif

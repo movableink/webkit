@@ -37,9 +37,9 @@
 #import <WebCore/ThreadCheck.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <WebCore/WebScriptObjectPrivate.h>
+#import <variant>
 #import <wtf/GetPtr.h>
 #import <wtf/URL.h>
-#import <wtf/Variant.h>
 
 #define IMPL reinterpret_cast<WebCore::HTMLOptionsCollection*>(_internal)
 
@@ -90,7 +90,7 @@
     WebCore::JSMainThreadNullState state;
     if (!option)
         raiseTypeErrorException();
-    raiseOnDOMError(IMPL->add(core(option), Optional<WebCore::HTMLOptionsCollection::HTMLElementOrInt> { static_cast<int>(index) }));
+    raiseOnDOMError(IMPL->add(core(option), std::optional<WebCore::HTMLOptionsCollection::HTMLElementOrInt> { static_cast<int>(index) }));
 }
 
 - (void)remove:(unsigned)index
@@ -113,12 +113,12 @@ DOMHTMLOptionsCollection *kit(WebCore::HTMLOptionsCollection* value)
     if (!value)
         return nil;
     if (DOMHTMLOptionsCollection *wrapper = getDOMWrapper(value))
-        return [[wrapper retain] autorelease];
-    DOMHTMLOptionsCollection *wrapper = [[DOMHTMLOptionsCollection alloc] _init];
+        return retainPtr(wrapper).autorelease();
+    auto wrapper = adoptNS([[DOMHTMLOptionsCollection alloc] _init]);
     wrapper->_internal = reinterpret_cast<DOMObjectInternal*>(value);
     value->ref();
-    addDOMWrapper(wrapper, value);
-    return [wrapper autorelease];
+    addDOMWrapper(wrapper.get(), value);
+    return wrapper.autorelease();
 }
 
 #undef IMPL

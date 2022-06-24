@@ -28,6 +28,7 @@
 #include <wtf/FileSystem.h>
 #include <wtf/FunctionDispatcher.h>
 #include <wtf/SHA1.h>
+#include <wtf/Span.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -35,8 +36,13 @@
 #include <wtf/OSObjectPtr.h>
 #endif
 
-#if USE(SOUP)
-#include <WebCore/GRefPtrSoup.h>
+#if USE(GLIB)
+#include <wtf/glib/GRefPtr.h>
+#endif
+
+#if USE(CURL)
+#include <variant>
+#include <wtf/Box.h>
 #endif
 
 namespace WebKit {
@@ -53,31 +59,29 @@ public:
     ~Data() { }
 
     static Data empty();
-#if !OS(WINDOWS)
-    static Data adoptMap(void* map, size_t, int fd);
-#endif
+    static Data adoptMap(FileSystem::MappedFileData&&, FileSystem::PlatformFileHandle);
 
 #if PLATFORM(COCOA)
     enum class Backing { Buffer, Map };
     Data(OSObjectPtr<dispatch_data_t>&&, Backing = Backing::Buffer);
 #endif
-#if USE(SOUP)
-    Data(GRefPtr<SoupBuffer>&&, int fd = -1);
-#elif OS(WINDOWS)
-    explicit Data(Vector<uint8_t>&&);
-    Data(FileSystem::PlatformFileHandle, size_t offset, size_t);
+#if USE(GLIB)
+    Data(GRefPtr<GBytes>&&, FileSystem::PlatformFileHandle fd = FileSystem::invalidPlatformFileHandle);
+#elif USE(CURL)
+    Data(std::variant<Vector<uint8_t>, FileSystem::MappedFileData>&&);
 #endif
     bool isNull() const;
     bool isEmpty() const { return !m_size; }
 
     const uint8_t* data() const;
     size_t size() const { return m_size; }
+    Span<const uint8_t> span() const { return { data(), size() }; }
     bool isMap() const { return m_isMap; }
     RefPtr<SharedMemory> tryCreateSharedMemory() const;
 
     Data subrange(size_t offset, size_t) const;
 
-    bool apply(const Function<bool (const uint8_t*, size_t)>&) const;
+    bool apply(const Function<bool(Span<const uint8_t>)>&) const;
 
     Data mapToFile(const String& path) const;
 
@@ -85,19 +89,19 @@ public:
     dispatch_data_t dispatchData() const { return m_dispatchData.get(); }
 #endif
 
-#if USE(SOUP)
-    SoupBuffer* soupBuffer() const { return m_buffer.get(); }
+#if USE(GLIB)
+    GBytes* bytes() const { return m_buffer.get(); }
 #endif
 private:
 #if PLATFORM(COCOA)
     mutable OSObjectPtr<dispatch_data_t> m_dispatchData;
 #endif
-#if USE(SOUP)
-    mutable GRefPtr<SoupBuffer> m_buffer;
-    int m_fileDescriptor { -1 };
+#if USE(GLIB)
+    mutable GRefPtr<GBytes> m_buffer;
+    FileSystem::PlatformFileHandle m_fileDescriptor { FileSystem::invalidPlatformFileHandle };
 #endif
-#if OS(WINDOWS)
-    Vector<uint8_t> m_buffer;
+#if USE(CURL)
+    Box<std::variant<Vector<uint8_t>, FileSystem::MappedFileData>> m_buffer;
 #endif
     mutable const uint8_t* m_data { nullptr };
     size_t m_size { 0 };
@@ -106,22 +110,11 @@ private:
 
 Data concatenate(const Data&, const Data&);
 bool bytesEqual(const Data&, const Data&);
-#if !OS(WINDOWS)
-Data adoptAndMapFile(int, size_t offset, size_t);
-#else
 Data adoptAndMapFile(FileSystem::PlatformFileHandle, size_t offset, size_t);
-#endif
-#if USE(GLIB) && !PLATFORM(WIN)
-Data adoptAndMapFile(GFileIOStream*, size_t offset, size_t);
-#endif
-#if !OS(WINDOWS)
 Data mapFile(const char* path);
-#endif
 Data mapFile(const String& path);
 
-using Salt = std::array<uint8_t, 8>;
-
-Optional<Salt> readOrMakeSalt(const String& path);
+using Salt = FileSystem::Salt;
 SHA1::Digest computeSHA1(const Data&, const Salt&);
 
 }

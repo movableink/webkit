@@ -20,6 +20,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from webkitcorepy import unicode
+
 from webkitpy.common.config.urls import ewsserver_default_host
 from webkitpy.common.net.networktransaction import NetworkTransaction
 
@@ -32,7 +34,7 @@ class EWSServer:
     def __init__(self, host=ewsserver_default_host, use_https=True, browser=None):
         self.host = host
         self.use_https = bool(use_https)
-        from webkitpy.thirdparty.autoinstalled.mechanize import Browser
+        from mechanize import Browser
         self._browser = browser or Browser()
         self._browser.set_handle_robots(False)
 

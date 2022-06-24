@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,9 +43,15 @@ public:
     using Base = JSCell;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.structureChainSpace();
+    }
+
     static StructureChain* create(VM&, JSObject*);
-    WriteBarrier<Structure>* head() { return m_vector.get(); }
-    static void visitChildren(JSCell*, SlotVisitor&);
+    StructureID* head() { return m_vector.get(); }
+    DECLARE_VISIT_CHILDREN;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
@@ -59,8 +65,8 @@ private:
 
     void finishCreation(VM&, JSObject* head);
 
-    StructureChain(VM&, Structure*, WriteBarrier<Structure>*);
-    AuxiliaryBarrier<WriteBarrier<Structure>*> m_vector;
+    StructureChain(VM&, Structure*, StructureID*);
+    AuxiliaryBarrier<StructureID*> m_vector;
 };
 
 } // namespace JSC

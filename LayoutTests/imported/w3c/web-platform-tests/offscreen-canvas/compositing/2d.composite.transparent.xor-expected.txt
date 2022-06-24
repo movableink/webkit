@@ -1,5 +1,0 @@
-2d.composite.transparent.xor
-
-
-FAIL OffscreenCanvas test: 2d.composite.transparent.xor null is not an object (evaluating 'ctx.fillStyle = 'rgba(0, 255, 0, 0.5)'')
-

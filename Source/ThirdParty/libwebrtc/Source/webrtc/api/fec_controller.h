@@ -14,7 +14,7 @@
 #include <memory>
 #include <vector>
 
-#include "common_types.h"  // NOLINT(build/include)
+#include "api/video/video_frame_type.h"
 #include "modules/include/module_fec_types.h"
 
 namespace webrtc {
@@ -38,7 +38,7 @@ class VCMProtectionCallback {
 // FecController calculates how much of the allocated network
 // capacity that can be used by an encoder and how much that
 // is needed for redundant packets such as FEC and NACK. It uses an
-// implementation of |VCMProtectionCallback| to set new FEC parameters and get
+// implementation of `VCMProtectionCallback` to set new FEC parameters and get
 // the bitrate currently used for FEC and NACK.
 // Usage:
 // Setup by calling SetProtectionMethod and SetEncodingData.
@@ -74,8 +74,9 @@ class FecController {
                                   int64_t round_trip_time_ms) = 0;
 
   // Informs of encoded output.
-  virtual void UpdateWithEncodedData(size_t encoded_image_length,
-                                     FrameType encoded_image_frametype) = 0;
+  virtual void UpdateWithEncodedData(
+      size_t encoded_image_length,
+      VideoFrameType encoded_image_frametype) = 0;
 
   // Returns whether this FEC Controller needs Loss Vector Mask as input.
   virtual bool UseLossVectorMask() = 0;

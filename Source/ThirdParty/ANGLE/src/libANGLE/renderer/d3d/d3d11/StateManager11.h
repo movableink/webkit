@@ -44,7 +44,7 @@ class ShaderConstants11 : angle::NonCopyable
                           const D3D11_VIEWPORT &dxViewport,
                           bool is9_3,
                           bool presentPathFast);
-    bool onFirstVertexChange(GLint firstVertex, GLint baseVertex);
+    bool onFirstVertexChange(GLint firstVertex);
     void onImageLayerChange(gl::ShaderType shaderType, unsigned int imageIndex, int layer);
     void onSamplerChange(gl::ShaderType shaderType,
                          unsigned int samplerIndex,
@@ -53,6 +53,7 @@ class ShaderConstants11 : angle::NonCopyable
     void onImageChange(gl::ShaderType shaderType,
                        unsigned int imageIndex,
                        const gl::ImageUnit &imageUnit);
+    void onClipControlChange(bool lowerLeft, bool zeroToOne);
 
     angle::Result updateBuffer(const gl::Context *context,
                                Renderer11 *renderer,
@@ -69,7 +70,10 @@ class ShaderConstants11 : angle::NonCopyable
               viewCoords{.0f},
               viewScale{.0f},
               multiviewWriteToViewportIndex{.0f},
-              firstVertex{0}
+              clipControlOrigin{-1.0f},
+              clipControlZeroToOne{.0f},
+              firstVertex{0},
+              padding{.0f, .0f}
         {}
 
         float depthRange[4];
@@ -81,8 +85,19 @@ class ShaderConstants11 : angle::NonCopyable
         // whenever a multi-view draw framebuffer is made active.
         float multiviewWriteToViewportIndex;
 
+        // EXT_clip_control
+        // Multiplied with Y coordinate: -1.0 for GL_LOWER_LEFT_EXT, 1.0f for GL_UPPER_LEFT_EXT
+        float clipControlOrigin;
+        // 0.0 for GL_NEGATIVE_ONE_TO_ONE_EXT, 1.0 for GL_ZERO_TO_ONE_EXT
+        float clipControlZeroToOne;
+
         uint32_t firstVertex;
+
+        // Added here to manually pad the struct to 16 byte boundary
+        float padding[2];
     };
+    static_assert(sizeof(Vertex) % 16u == 0,
+                  "D3D11 constant buffers must be multiples of 16 bytes");
 
     struct Pixel
     {
@@ -91,8 +106,8 @@ class ShaderConstants11 : angle::NonCopyable
               viewCoords{.0f},
               depthFront{.0f},
               viewScale{.0f},
-              multiviewWriteToViewportIndex(0),
-              padding(0)
+              multiviewWriteToViewportIndex{.0f},
+              padding{.0f}
         {}
 
         float depthRange[4];
@@ -107,6 +122,7 @@ class ShaderConstants11 : angle::NonCopyable
         // Added here to manually pad the struct.
         float padding;
     };
+    static_assert(sizeof(Pixel) % 16u == 0, "D3D11 constant buffers must be multiples of 16 bytes");
 
     struct Compute
     {
@@ -173,7 +189,9 @@ class StateManager11 final : angle::NonCopyable
 
     void deinitialize();
 
-    void syncState(const gl::Context *context, const gl::State::DirtyBits &dirtyBits);
+    void syncState(const gl::Context *context,
+                   const gl::State::DirtyBits &dirtyBits,
+                   gl::Command command);
 
     angle::Result updateStateForCompute(const gl::Context *context,
                                         GLuint numGroupsX,
@@ -239,7 +257,9 @@ class StateManager11 final : angle::NonCopyable
                               gl::DrawElementsType indexTypeOrInvalid,
                               const void *indices,
                               GLsizei instanceCount,
-                              GLint baseVertex);
+                              GLint baseVertex,
+                              GLuint baseInstance,
+                              bool promoteDynamic);
 
     void setShaderResourceShared(gl::ShaderType shaderType,
                                  UINT resourceSlot,
@@ -313,15 +333,17 @@ class StateManager11 final : angle::NonCopyable
                                              ID3D11Resource *resource);
 
     angle::Result syncBlendState(const gl::Context *context,
-                                 const gl::BlendState &blendState,
+                                 const gl::BlendStateExt &blendStateExt,
                                  const gl::ColorF &blendColor,
-                                 unsigned int sampleMask);
+                                 unsigned int sampleMask,
+                                 bool sampleAlphaToCoverage,
+                                 bool emulateConstantAlpha);
 
     angle::Result syncDepthStencilState(const gl::Context *context);
 
     angle::Result syncRasterizerState(const gl::Context *context, gl::PrimitiveMode mode);
 
-    void syncScissorRectangle(const gl::Rectangle &scissor, bool enabled);
+    void syncScissorRectangle(const gl::Context *context);
 
     void syncViewport(const gl::Context *context);
 
@@ -461,8 +483,10 @@ class StateManager11 final : angle::NonCopyable
     DirtyBits mGraphicsDirtyBitsMask;
     DirtyBits mComputeDirtyBitsMask;
 
+    bool mCurSampleAlphaToCoverage;
+
     // Blend State
-    gl::BlendState mCurBlendState;
+    gl::BlendStateExt mCurBlendStateExt;
     gl::ColorF mCurBlendColor;
     unsigned int mCurSampleMask;
 
@@ -485,6 +509,10 @@ class StateManager11 final : angle::NonCopyable
     gl::Rectangle mCurViewport;
     float mCurNear;
     float mCurFar;
+
+    // Currently applied offset to viewport and scissor
+    gl::Offset mCurViewportOffset;
+    gl::Offset mCurScissorOffset;
 
     // Things needed in viewport state
     ShaderConstants11 mShaderConstants;
@@ -591,6 +619,8 @@ class StateManager11 final : angle::NonCopyable
 
     // ANGLE_multiview.
     bool mIsMultiviewEnabled;
+
+    bool mIndependentBlendStates;
 
     // Driver Constants.
     gl::ShaderMap<d3d11::Buffer> mShaderDriverConstantBuffers;

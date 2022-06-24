@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2012 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,9 +27,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-from webkitpy.layout_tests.models import test_expectations
-
 from webkitpy.common.net import resultsjsonparser
+from webkitpy.common.iteration_compatibility import iteritems
+from webkitpy.layout_tests.models import test_expectations
 
 
 TestExpectations = test_expectations.TestExpectations
@@ -39,7 +38,7 @@ TestExpectationParser = test_expectations.TestExpectationParser
 
 class BuildBotPrinter(object):
     # This output is parsed by buildbots and must only be changed in coordination with buildbot scripts (see webkit.org's
-    # Tools/BuildSlaveSupport/build.webkit.org-config/master.cfg: RunWebKitTests._parseNewRunWebKitTestsOutput
+    # Tools/CISupport/build-webkit-org/master.cfg: RunWebKitTests._parseNewRunWebKitTestsOutput
     # and chromium.org's buildbot/master.chromium/scripts/master/log_parser/webkit_test_command.py).
 
     def __init__(self, stream, debug_logging):
@@ -128,7 +127,7 @@ class BuildBotPrinter(object):
         if len(passes) or len(flaky) or len(regressions):
             self._print("")
         if len(passes):
-            for key, tests in passes.iteritems():
+            for key, tests in iteritems(passes):
                 self._print("%s: (%d)" % (key, len(tests)))
                 tests.sort()
                 for test in tests:
@@ -138,7 +137,7 @@ class BuildBotPrinter(object):
 
         if len(flaky):
             descriptions = TestExpectations.EXPECTATION_DESCRIPTIONS
-            for key, tests in flaky.iteritems():
+            for key, tests in iteritems(flaky):
                 result = TestExpectations.EXPECTATIONS[key.lower()]
                 self._print("Unexpected flakiness: %s (%d)" % (descriptions[result], len(tests)))
                 tests.sort()
@@ -146,17 +145,14 @@ class BuildBotPrinter(object):
                 for test in tests:
                     result = resultsjsonparser.result_for_test(summarized_results['tests'], test)
                     actual = result['actual'].split(" ")
-                    expected = result['expected'].split(" ")
-                    result = TestExpectations.EXPECTATIONS[key.lower()]
-                    # FIXME: clean this up once the old syntax is gone
-                    new_expectations_list = [TestExpectationParser._inverted_expectation_tokens[exp] for exp in list(set(actual) | set(expected))]
+                    new_expectations_list = [TestExpectationParser._inverted_expectation_tokens[exp] for exp in list(set(actual))]
                     self._print("  %s [ %s ]" % (test, " ".join(new_expectations_list)))
                 self._print("")
             self._print("")
 
         if len(regressions):
             descriptions = TestExpectations.EXPECTATION_DESCRIPTIONS
-            for key, tests in regressions.iteritems():
+            for key, tests in iteritems(regressions):
                 result = TestExpectations.EXPECTATIONS[key.lower()]
                 self._print("Regressions: Unexpected %s (%d)" % (descriptions[result], len(tests)))
                 tests.sort()

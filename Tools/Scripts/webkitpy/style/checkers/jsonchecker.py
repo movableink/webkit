@@ -24,7 +24,6 @@
 
 import json
 import re
-from sets import Set
 
 
 class JSONChecker(object):
@@ -70,7 +69,7 @@ class JSONFeaturesChecker(JSONChecker):
                 self._handle_style_error(0, 'json/syntax', 5, '"features" key not found, the key is mandatory.')
                 return
 
-            specification_name_set = Set()
+            specification_name_set = set()
             if 'specification' in features_definition:
                 previous_specification_name = ''
                 for specification_object in features_definition['specification']:
@@ -165,7 +164,7 @@ class JSONCSSPropertiesChecker(JSONChecker):
         self.validate_type(property_name, property_key, key, value, bool)
 
     def validate_string(self, property_name, property_key, key, value):
-        self.validate_type(property_name, property_key, key, value, basestring)
+        self.validate_type(property_name, property_key, key, value, str)
 
     def validate_array(self, property_name, property_key, key, value):
         self.validate_type(property_name, property_key, key, value, list)
@@ -199,6 +198,16 @@ class JSONCSSPropertiesChecker(JSONChecker):
                 self.check_codegen_properties(property_name, entry)
         else:
             self.check_codegen_properties(property_name, value)
+
+    def validate_logical_property_group(self, property_name, property_key, key, value):
+        self.validate_type(property_name, property_key, key, value, dict)
+
+        for subKey, value in value.items():
+            if subKey in ('name', 'resolver'):
+                self.validate_string(property_name, key, subKey, value)
+            else:
+                self._handle_style_error(0, 'json/syntax', 5, 'dictionary for "%s" of property "%s" has unexpected key "%s".' % (key, property_name, subKey))
+                return
 
     def validate_status(self, property_name, property_key, key, value):
         if isinstance(value, dict):
@@ -274,10 +283,12 @@ class JSONCSSPropertiesChecker(JSONChecker):
         keys_and_validators = {
             'aliases': self.validate_array,
             'auto-functions': self.validate_boolean,
+            'color-property': self.validate_boolean,
             'comment': self.validate_string,
             'conditional-converter': self.validate_string,
             'converter': self.validate_string,
             'custom': self.validate_string,
+            'descriptor-only': self.validate_boolean,
             'enable-if': self.validate_string,
             'fill-layer-property': self.validate_boolean,
             'font-property': self.validate_boolean,
@@ -285,13 +296,18 @@ class JSONCSSPropertiesChecker(JSONChecker):
             'high-priority': self.validate_boolean,
             'initial': self.validate_string,
             'internal-only': self.validate_boolean,
+            'logical-property-group': self.validate_logical_property_group,
             'longhands': self.validate_array,
             'name-for-methods': self.validate_string,
             'no-default-color': self.validate_boolean,
+            'related-property': self.validate_string,
             'runtime-flag': self.validate_string,
             'setter': self.validate_string,
+            'settings-flag': self.validate_string,
+            'sink-priority': self.validate_boolean,
             'skip-builder': self.validate_boolean,
             'skip-codegen': self.validate_boolean,
+            'synonym': self.validate_string,
             'svg': self.validate_boolean,
             'visited-link-color-support': self.validate_boolean,
         }

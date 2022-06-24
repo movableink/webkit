@@ -44,12 +44,11 @@ public:
 
     DECLARE_INFO;
 
-protected:
-    void finishCreation(VM&, WebAssemblyLinkErrorPrototype*);
-
 private:
     WebAssemblyLinkErrorConstructor(VM&, Structure*);
+    void finishCreation(VM&, WebAssemblyLinkErrorPrototype*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(WebAssemblyLinkErrorConstructor, InternalFunction);
 
 } // namespace JSC
 

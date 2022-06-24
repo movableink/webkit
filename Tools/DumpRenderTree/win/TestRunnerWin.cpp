@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,6 +66,8 @@ TestRunner::~TestRunner()
     COMPtr<IWebViewEditing> viewEditing;
     if (FAILED(webView->QueryInterface(&viewEditing)))
         return;
+    viewEditing->setEditable(FALSE);
+
     COMPtr<IWebEditingDelegate> delegate;
     if (FAILED(viewEditing->editingDelegate(&delegate)))
         return;
@@ -107,6 +109,11 @@ void TestRunner::clearAllApplicationCaches()
         return;
 
     applicationCache->deleteAllApplicationCaches();
+}
+
+void TestRunner::stopLoading()
+{
+    // FIXME: Not implemented.
 }
 
 long long TestRunner::applicationCacheDiskUsageForOrigin(JSStringRef url)
@@ -152,7 +159,6 @@ JSValueRef TestRunner::originsWithApplicationCache(JSContextRef context)
     fprintf(testResult, "ERROR: TestRunner::originsWithApplicationCache(JSContextRef) not implemented\n");
     return JSValueMakeUndefined(context);
 }
-
 
 void TestRunner::clearAllDatabases()
 {
@@ -402,23 +408,6 @@ void TestRunner::setAppCacheMaximumSize(unsigned long long size)
     applicationCache->setMaximumSize(size);
 }
 
-void TestRunner::setAuthorAndUserStylesEnabled(bool flag)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(webView->preferences(&preferences)))
-        return;
-
-    COMPtr<IWebPreferencesPrivate> prefsPrivate(Query, preferences);
-    if (!prefsPrivate)
-        return;
-
-    prefsPrivate->setAuthorAndUserStylesEnabled(flag);
-}
-
 void TestRunner::setCustomPolicyDelegate(bool setDelegate, bool permissive)
 {
     COMPtr<IWebView> webView;
@@ -527,134 +516,6 @@ void TestRunner::setPrivateBrowsingEnabled(bool privateBrowsingEnabled)
         return;
 
     preferences->setPrivateBrowsingEnabled(privateBrowsingEnabled);
-}
-
-void TestRunner::setXSSAuditorEnabled(bool enabled)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(webView->preferences(&preferences)))
-        return;
-
-    COMPtr<IWebPreferencesPrivate> prefsPrivate(Query, preferences);
-    if (!prefsPrivate)
-        return;
-
-    prefsPrivate->setXSSAuditorEnabled(enabled);
-}
-
-void TestRunner::setSpatialNavigationEnabled(bool enabled)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(webView->preferences(&preferences)))
-        return;
-
-    COMPtr<IWebPreferencesPrivate6> prefsPrivate(Query, preferences);
-    if (!prefsPrivate)
-        return;
-
-    prefsPrivate->setSpatialNavigationEnabled(enabled);
-}
-
-void TestRunner::setAllowUniversalAccessFromFileURLs(bool enabled)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(webView->preferences(&preferences)))
-        return;
-
-    COMPtr<IWebPreferencesPrivate> prefsPrivate(Query, preferences);
-    if (!prefsPrivate)
-        return;
-
-    prefsPrivate->setAllowUniversalAccessFromFileURLs(enabled);
-}
-
-void TestRunner::setAllowFileAccessFromFileURLs(bool enabled)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(webView->preferences(&preferences)))
-        return;
-
-    COMPtr<IWebPreferencesPrivate> prefsPrivate(Query, preferences);
-    if (!prefsPrivate)
-        return;
-
-    prefsPrivate->setAllowFileAccessFromFileURLs(enabled);
-}
-
-void TestRunner::setNeedsStorageAccessFromFileURLsQuirk(bool needsQuirk)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(webView->preferences(&preferences)))
-        return;
-
-    COMPtr<IWebPreferencesPrivate> prefsPrivate(Query, preferences);
-    if (!prefsPrivate)
-        return;
-
-    // FIXME: <https://webkit.org/b/164575> Call IWebPreferencesPrivate method when available.
-}
-
-void TestRunner::setPopupBlockingEnabled(bool enabled)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(webView->preferences(&preferences)))
-        return;
-
-    preferences->setJavaScriptCanOpenWindowsAutomatically(!enabled);
-}
-
-void TestRunner::setPluginsEnabled(bool flag)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(webView->preferences(&preferences)))
-        return;
-
-    preferences->setPlugInsEnabled(flag);
-}
-
-void TestRunner::setJavaScriptCanAccessClipboard(bool enabled)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(webView->preferences(&preferences)))
-        return;
-
-    COMPtr<IWebPreferencesPrivate> prefsPrivate(Query, preferences);
-    if (!prefsPrivate)
-        return;
-
-    prefsPrivate->setJavaScriptCanAccessClipboard(enabled);
 }
 
 void TestRunner::setAutomaticLinkDetectionEnabled(bool)
@@ -875,25 +736,6 @@ void TestRunner::dispatchPendingLoadRequests()
     viewPrivate->dispatchPendingLoadRequests();
 }
 
-void TestRunner::overridePreference(JSStringRef key, JSStringRef value)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(webView->preferences(&preferences)))
-        return;
-
-    COMPtr<IWebPreferencesPrivate> prefsPrivate(Query, preferences);
-    if (!prefsPrivate)
-        return;
-
-    _bstr_t keyBSTR(JSStringCopyBSTR(key), false);
-    _bstr_t valueBSTR(JSStringCopyBSTR(value), false);
-    prefsPrivate->setPreferenceForTest(keyBSTR, valueBSTR);
-}
-
 void TestRunner::removeAllVisitedLinks()
 {
     COMPtr<IWebHistory> history;
@@ -964,7 +806,7 @@ static void CALLBACK waitUntilDoneWatchdogFired(HWND, UINT, UINT_PTR, DWORD)
 void TestRunner::setWaitToDump(bool waitUntilDone)
 {
     m_waitToDump = waitUntilDone;
-    if (m_waitToDump && !waitToDumpWatchdog)
+    if (m_waitToDump && !waitToDumpWatchdog && useTimeoutWatchdog)
         waitToDumpWatchdog = SetTimer(0, 0, m_timeout, waitUntilDoneWatchdogFired);
 }
 
@@ -1072,22 +914,22 @@ static _bstr_t bstrT(JSStringRef jsString)
     return _bstr_t(JSStringCopyBSTR(jsString), false);
 }
 
-void TestRunner::addOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
+void TestRunner::addOriginAccessAllowListEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
 {
-    COMPtr<IWebViewPrivate2> webView;
+    COMPtr<IWebViewPrivate> webView;
     if (FAILED(WebKitCreateInstance(__uuidof(WebView), 0, __uuidof(webView), reinterpret_cast<void**>(&webView))))
         return;
 
-    webView->addOriginAccessWhitelistEntry(bstrT(sourceOrigin).GetBSTR(), bstrT(destinationProtocol).GetBSTR(), bstrT(destinationHost).GetBSTR(), allowDestinationSubdomains);
+    webView->addOriginAccessAllowListEntry(bstrT(sourceOrigin).GetBSTR(), bstrT(destinationProtocol).GetBSTR(), bstrT(destinationHost).GetBSTR(), allowDestinationSubdomains);
 }
 
-void TestRunner::removeOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
+void TestRunner::removeOriginAccessAllowListEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
 {
-    COMPtr<IWebViewPrivate2> webView;
+    COMPtr<IWebViewPrivate> webView;
     if (FAILED(WebKitCreateInstance(__uuidof(WebView), 0, __uuidof(webView), reinterpret_cast<void**>(&webView))))
         return;
 
-    webView->removeOriginAccessWhitelistEntry(bstrT(sourceOrigin).GetBSTR(), bstrT(destinationProtocol).GetBSTR(), bstrT(destinationHost).GetBSTR(), allowDestinationSubdomains);
+    webView->removeOriginAccessAllowListEntry(bstrT(sourceOrigin).GetBSTR(), bstrT(destinationProtocol).GetBSTR(), bstrT(destinationHost).GetBSTR(), allowDestinationSubdomains);
 }
 
 void TestRunner::setScrollbarPolicy(JSStringRef orientation, JSStringRef policy)
@@ -1122,23 +964,6 @@ void TestRunner::addUserStyleSheet(JSStringRef source, bool allFrames)
 
     webView->addUserStyleSheetToGroup(_bstr_t(L"org.webkit.DumpRenderTree").GetBSTR(), world.get(), bstrT(source).GetBSTR(),
         nullptr, 0, nullptr, 0, nullptr, allFrames ? WebInjectInAllFrames : WebInjectInTopFrameOnly);
-}
-
-void TestRunner::setDeveloperExtrasEnabled(bool enabled)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebPreferences> preferences;
-    if (FAILED(webView->preferences(&preferences)))
-        return;
-
-    COMPtr<IWebPreferencesPrivate> prefsPrivate(Query, preferences);
-    if (!prefsPrivate)
-        return;
-
-    prefsPrivate->setDeveloperExtrasEnabled(enabled);
 }
 
 void TestRunner::showWebInspector()
@@ -1277,19 +1102,6 @@ void TestRunner::apiTestGoToCurrentBackForwardItem()
     webView->goToBackForwardItem(item.get(), &success);
 }
 
-void TestRunner::setWebViewEditable(bool editable)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebViewEditing> viewEditing;
-    if (FAILED(webView->QueryInterface(&viewEditing)))
-        return;
-
-    viewEditing->setEditable(editable);
-}
-
 void TestRunner::authenticateSession(JSStringRef, JSStringRef, JSStringRef)
 {
     fprintf(testResult, "ERROR: TestRunner::authenticateSession() not implemented\n");
@@ -1330,6 +1142,22 @@ void TestRunner::addChromeInputField()
 void TestRunner::removeChromeInputField()
 {
     fprintf(testResult, "ERROR: TestRunner::removeChromeInputField() not implemented\n");
+}
+
+void TestRunner::setTextInChromeInputField(const String&)
+{
+    fprintf(testResult, "ERROR: TestRunner::setTextInChromeInputField() not implemented\n");
+}
+
+void TestRunner::selectChromeInputField()
+{
+    fprintf(testResult, "ERROR: TestRunner::selectChromeInputField() not implemented\n");
+}
+
+String TestRunner::getSelectedTextInChromeInputField()
+{
+    fprintf(testResult, "ERROR: TestRunner::getSelectedTextInChromeInputField() not implemented\n");
+    return { };
 }
 
 void TestRunner::focusWebView()
@@ -1416,7 +1244,19 @@ void TestRunner::setSpellCheckerLoggingEnabled(bool enabled)
     fprintf(testResult, "ERROR: TestRunner::setSpellCheckerLoggingEnabled() not implemented\n");
 }
 
-void TestRunner::setSpellCheckerResults(JSContextRef, JSObjectRef)
+void TestRunner::setShouldInvertColors(bool shouldInvertColors)
 {
-    fprintf(testResult, "ERROR: TestRunner::setSpellCheckerResults() not implemented\n");
+    COMPtr<IWebView> webView;
+    if (FAILED(frame->webView(&webView)))
+        return;
+
+    COMPtr<IWebPreferences> preferences;
+    if (FAILED(webView->preferences(&preferences)))
+        return;
+
+    COMPtr<IWebPreferencesPrivate> prefsPrivate(Query, preferences);
+    if (!prefsPrivate)
+        return;
+
+    prefsPrivate->setShouldInvertColors(shouldInvertColors);
 }

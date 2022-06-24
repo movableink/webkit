@@ -46,6 +46,7 @@ WK_EXPORT extern NSString * const _WKMenuItemIdentifierOpenLinkInNewWindow WK_AP
 WK_EXPORT extern NSString * const _WKMenuItemIdentifierOpenMediaInNewWindow WK_API_AVAILABLE(macos(10.14), ios(12.0));
 WK_EXPORT extern NSString * const _WKMenuItemIdentifierPaste WK_API_AVAILABLE(macos(10.12), ios(10.0));
 WK_EXPORT extern NSString * const _WKMenuItemIdentifierReload WK_API_AVAILABLE(macos(10.12), ios(10.0));
+WK_EXPORT extern NSString * const _WKMenuItemIdentifierRevealImage WK_API_AVAILABLE(macos(12.0), ios(15.0));
 WK_EXPORT extern NSString * const _WKMenuItemIdentifierSearchWeb WK_API_AVAILABLE(macos(10.12), ios(10.0));
 WK_EXPORT extern NSString * const _WKMenuItemIdentifierShowHideMediaControls WK_API_AVAILABLE(macos(10.12), ios(10.0));
 WK_EXPORT extern NSString * const _WKMenuItemIdentifierToggleEnhancedFullScreen WK_API_AVAILABLE(macos(10.14), ios(12.0));
@@ -53,3 +54,15 @@ WK_EXPORT extern NSString * const _WKMenuItemIdentifierToggleFullScreen WK_API_A
 
 WK_EXPORT extern NSString * const _WKMenuItemIdentifierShareMenu WK_API_AVAILABLE(macos(10.12), ios(10.0));
 WK_EXPORT extern NSString * const _WKMenuItemIdentifierSpeechMenu WK_API_AVAILABLE(macos(10.12), ios(10.0));
+
+WK_EXPORT extern NSString * const _WKMenuItemIdentifierAddHighlightToCurrentQuickNote WK_API_AVAILABLE(macos(12.0), ios(15.0));
+WK_EXPORT extern NSString * const _WKMenuItemIdentifierAddHighlightToNewQuickNote WK_API_AVAILABLE(macos(12.0), ios(15.0));
+
+WK_EXPORT extern NSString * const _WKMenuItemIdentifierTranslate WK_API_AVAILABLE(macos(12.0), ios(15.0));
+WK_EXPORT extern NSString * const _WKMenuItemIdentifierCopyCroppedImage WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+
+WK_EXPORT extern NSString * const _WKMenuItemIdentifierSpellingMenu WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+WK_EXPORT extern NSString * const _WKMenuItemIdentifierShowSpellingPanel WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+WK_EXPORT extern NSString * const _WKMenuItemIdentifierCheckSpelling WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+WK_EXPORT extern NSString * const _WKMenuItemIdentifierCheckSpellingWhileTyping WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+WK_EXPORT extern NSString * const _WKMenuItemIdentifierCheckGrammarWithSpelling WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));

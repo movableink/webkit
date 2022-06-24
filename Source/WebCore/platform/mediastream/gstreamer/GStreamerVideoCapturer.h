@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Metrological Group B.V.
+ * Copyright (C) 2020 Igalia S.L.
  * Author: Thibault Saunier <tsaunier@igalia.com>
  * Author: Alejandro G. Castro  <alex@igalia.com>
  *
@@ -21,7 +22,7 @@
 
 #pragma once
 
-#if ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC) && USE(GSTREAMER)
+#if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 
 #include "GStreamerCapturer.h"
 
@@ -29,18 +30,25 @@
 
 namespace WebCore {
 
-class GStreamerVideoCapturer : public GStreamerCapturer {
+class GStreamerVideoCapturer final : public GStreamerCapturer {
 public:
     GStreamerVideoCapturer(GStreamerCaptureDevice);
-    GStreamerVideoCapturer(const char* source_factory);
+    GStreamerVideoCapturer(const char* source_factory, CaptureDevice::DeviceType);
 
+    GstElement* createSource() final;
     GstElement* createConverter() final;
     const char* name() final { return "Video"; }
 
     bool setSize(int width, int height);
     bool setFrameRate(double);
     GstVideoInfo getBestFormat();
+
+    void setPipewireFD(int fd) { m_fd = fd; }
+    std::optional<int> pipewireFD() const { return m_fd; }
+
+private:
+    std::optional<int> m_fd;
 };
 
 } // namespace WebCore
-#endif // ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC) && USE(GSTREAMER)
+#endif // ENABLE(MEDIA_STREAM) && USE(GSTREAMER)

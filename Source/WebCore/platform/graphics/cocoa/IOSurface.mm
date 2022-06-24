@@ -26,26 +26,25 @@
 #import "config.h"
 #import "IOSurface.h"
 
-#if HAVE(IOSURFACE)
-
-#import "GraphicsContext3D.h"
+#import "DestinationColorSpace.h"
 #import "GraphicsContextCG.h"
 #import "HostWindow.h"
 #import "IOSurfacePool.h"
 #import "ImageBuffer.h"
-#import "ImageBufferDataCG.h"
 #import "Logging.h"
 #import "PlatformScreen.h"
+#import "ProcessIdentity.h"
 #import <pal/spi/cg/CoreGraphicsSPI.h>
-#import <pal/spi/cocoa/IOSurfaceSPI.h>
 #import <wtf/Assertions.h>
 #import <wtf/MachSendRight.h>
 #import <wtf/MathExtras.h>
 #import <wtf/text/TextStream.h>
 
+#import "CoreVideoSoftLink.h"
+
 namespace WebCore {
 
-inline std::unique_ptr<IOSurface> IOSurface::surfaceFromPool(IntSize size, IntSize contextSize, CGColorSpaceRef colorSpace, Format pixelFormat)
+inline std::unique_ptr<IOSurface> IOSurface::surfaceFromPool(IntSize size, IntSize contextSize, const DestinationColorSpace& colorSpace, Format pixelFormat)
 {
     auto cachedSurface = IOSurfacePool::sharedPool().takeSurface(size, colorSpace, pixelFormat);
     if (!cachedSurface)
@@ -55,12 +54,12 @@ inline std::unique_ptr<IOSurface> IOSurface::surfaceFromPool(IntSize size, IntSi
     return cachedSurface;
 }
 
-std::unique_ptr<IOSurface> IOSurface::create(IntSize size, CGColorSpaceRef colorSpace, Format pixelFormat)
+std::unique_ptr<IOSurface> IOSurface::create(IntSize size, const DestinationColorSpace& colorSpace, Format pixelFormat)
 {
     return IOSurface::create(size, size, colorSpace, pixelFormat);
 }
 
-std::unique_ptr<IOSurface> IOSurface::create(IntSize size, IntSize contextSize, CGColorSpaceRef colorSpace, Format pixelFormat)
+std::unique_ptr<IOSurface> IOSurface::create(IntSize size, IntSize contextSize, const DestinationColorSpace& colorSpace, Format pixelFormat)
 {
     if (auto cachedSurface = surfaceFromPool(size, contextSize, colorSpace, pixelFormat)) {
         LOG_WITH_STREAM(IOSurface, stream << "IOSurface::create took from pool: " << *cachedSurface);
@@ -77,13 +76,13 @@ std::unique_ptr<IOSurface> IOSurface::create(IntSize size, IntSize contextSize, 
     return surface;
 }
 
-std::unique_ptr<IOSurface> IOSurface::createFromSendRight(const MachSendRight&& sendRight, CGColorSpaceRef colorSpace)
+std::unique_ptr<IOSurface> IOSurface::createFromSendRight(const MachSendRight&& sendRight, const DestinationColorSpace& colorSpace)
 {
     auto surface = adoptCF(IOSurfaceLookupFromMachPort(sendRight.sendRight()));
     return IOSurface::createFromSurface(surface.get(), colorSpace);
 }
 
-std::unique_ptr<IOSurface> IOSurface::createFromSurface(IOSurfaceRef surface, CGColorSpaceRef colorSpace)
+std::unique_ptr<IOSurface> IOSurface::createFromSurface(IOSurfaceRef surface, const DestinationColorSpace& colorSpace)
 {
     return std::unique_ptr<IOSurface>(new IOSurface(surface, colorSpace));
 }
@@ -96,7 +95,7 @@ std::unique_ptr<IOSurface> IOSurface::createFromImage(CGImageRef image)
     size_t width = CGImageGetWidth(image);
     size_t height = CGImageGetHeight(image);
 
-    auto surface = IOSurface::create(IntSize(width, height), CGImageGetColorSpace(image));
+    auto surface = IOSurface::create(IntSize(width, height), DestinationColorSpace { CGImageGetColorSpace(image) });
     if (!surface)
         return nullptr;
     auto surfaceContext = surface->ensurePlatformContext();
@@ -109,13 +108,6 @@ void IOSurface::moveToPool(std::unique_ptr<IOSurface>&& surface)
 {
     IOSurfacePool::sharedPool().addSurface(WTFMove(surface));
 }
-
-#if USE(IOSURFACE_CANVAS_BACKING_STORE)
-std::unique_ptr<IOSurface> IOSurface::createFromImageBuffer(std::unique_ptr<ImageBuffer> imageBuffer)
-{
-    return WTFMove(imageBuffer->m_data.surface);
-}
-#endif
 
 static NSDictionary *optionsForBiplanarSurface(IntSize size, unsigned pixelFormat, size_t firstPlaneBytesPerPixel, size_t secondPlaneBytesPerPixel)
 {
@@ -189,7 +181,7 @@ static NSDictionary *optionsFor32BitSurface(IntSize size, unsigned pixelFormat)
 
 }
 
-IOSurface::IOSurface(IntSize size, IntSize contextSize, CGColorSpaceRef colorSpace, Format format, bool& success)
+IOSurface::IOSurface(IntSize size, IntSize contextSize, const DestinationColorSpace& colorSpace, Format format, bool& success)
     : m_colorSpace(colorSpace)
     , m_size(size)
     , m_contextSize(contextSize)
@@ -197,11 +189,12 @@ IOSurface::IOSurface(IntSize size, IntSize contextSize, CGColorSpaceRef colorSpa
     ASSERT(!success);
     ASSERT(contextSize.width() <= size.width());
     ASSERT(contextSize.height() <= size.height());
+    ASSERT(!size.isEmpty());
 
     NSDictionary *options;
 
     switch (format) {
-    case Format::RGBA:
+    case Format::BGRA:
         options = optionsFor32BitSurface(size, 'BGRA');
         break;
 #if HAVE(IOSURFACE_RGB10)
@@ -221,10 +214,10 @@ IOSurface::IOSurface(IntSize size, IntSize contextSize, CGColorSpaceRef colorSpa
     if (success)
         m_totalBytes = IOSurfaceGetAllocSize(m_surface.get());
     else
-        RELEASE_LOG_ERROR(Layers, "Surface creation failed for size: (%d %d) and format: (%d)", size.width(), size.height(), format);
+        RELEASE_LOG_ERROR(Layers, "IOSurface creation failed for size: (%d %d) and format: (%d)", size.width(), size.height(), format);
 }
 
-IOSurface::IOSurface(IOSurfaceRef surface, CGColorSpaceRef colorSpace)
+IOSurface::IOSurface(IOSurfaceRef surface, const DestinationColorSpace& colorSpace)
     : m_colorSpace(colorSpace)
     , m_surface(surface)
 {
@@ -232,22 +225,85 @@ IOSurface::IOSurface(IOSurfaceRef surface, CGColorSpaceRef colorSpace)
     m_totalBytes = IOSurfaceGetAllocSize(surface);
 }
 
-IntSize IOSurface::maximumSize()
+IOSurface::~IOSurface() = default;
+
+static constexpr IntSize maxSurfaceDimensionCA()
 {
+    // Match limits imposed by Core Animation. FIXME: should have API for this <rdar://problem/25454148>
+#if PLATFORM(IOS_FAMILY)
+    constexpr int maxSurfaceDimension = 8 * 1024;
+#else
+    // IOSurface::maximumSize() can return { INT_MAX, INT_MAX } when hardware acceleration is unavailable.
+    constexpr int maxSurfaceDimension = 32 * 1024;
+#endif
+    return { maxSurfaceDimension, maxSurfaceDimension };
+}
+
+static IntSize computeMaximumSurfaceSize()
+{
+#if PLATFORM(IOS)
+    return maxSurfaceDimensionCA();
+#else
     IntSize maxSize(clampToInteger(IOSurfaceGetPropertyMaximum(kIOSurfaceWidth)), clampToInteger(IOSurfaceGetPropertyMaximum(kIOSurfaceHeight)));
 
     // Protect against maxSize being { 0, 0 }.
-    const int iOSMaxSurfaceDimensionLowerBound = 1024;
+    constexpr int maxSurfaceDimensionLowerBound = 1024;
 
-#if PLATFORM(IOS_FAMILY)
-    // Match limits imposed by Core Animation. FIXME: should have API for this <rdar://problem/25454148>
-    const int iOSMaxSurfaceDimension = 8 * 1024;
-#else
-    // IOSurface::maximumSize() can return { INT_MAX, INT_MAX } when hardware acceleration is unavailable.
-    const int iOSMaxSurfaceDimension = 32 * 1024;
+    return maxSize.constrainedBetween({ maxSurfaceDimensionLowerBound, maxSurfaceDimensionLowerBound }, maxSurfaceDimensionCA() );
 #endif
+}
 
-    return maxSize.constrainedBetween({ iOSMaxSurfaceDimensionLowerBound, iOSMaxSurfaceDimensionLowerBound }, { iOSMaxSurfaceDimension, iOSMaxSurfaceDimension });
+static WTF::Atomic<IntSize>& surfaceMaximumSize()
+{
+    static WTF::Atomic<IntSize> maximumSize;
+    return maximumSize;
+}
+
+void IOSurface::setMaximumSize(IntSize size)
+{
+    ASSERT(!size.isEmpty());
+    surfaceMaximumSize().store(size);
+}
+
+IntSize IOSurface::maximumSize()
+{
+    auto size = surfaceMaximumSize().load();
+    if (size.isEmpty()) {
+        auto computedSize = computeMaximumSurfaceSize();
+        surfaceMaximumSize().store(computedSize);
+        return computedSize;
+    }
+    return size;
+}
+
+static WTF::Atomic<size_t>& surfaceBytesPerRowAlignment()
+{
+    static WTF::Atomic<size_t> alignment = 0;
+    return alignment;
+}
+
+size_t IOSurface::bytesPerRowAlignment()
+{
+    auto alignment = surfaceBytesPerRowAlignment().load();
+    if (!alignment) {
+        surfaceBytesPerRowAlignment().store(IOSurfaceGetPropertyAlignment(kIOSurfaceBytesPerRow));
+        alignment = surfaceBytesPerRowAlignment().load();
+        // A return value for IOSurfaceGetPropertyAlignment(kIOSurfaceBytesPerRow) of 1 is invalid.
+        // See https://developer.apple.com/documentation/iosurface/1419453-iosurfacegetpropertyalignment?language=objc
+        // This likely means that the sandbox is blocking access to the IOSurface IOKit class,
+        // and that IOSurface::bytesPerRowAlignment() has been called before IOSurface::setBytesPerRowAlignment.
+        if (alignment <= 1) {
+            RELEASE_LOG_ERROR(Layers, "Sandbox does not allow IOSurface IOKit access.");
+            // 64 bytes is currently the alignment on all platforms.
+            alignment = 64;
+        }
+    }
+    return alignment;
+}
+
+void IOSurface::setBytesPerRowAlignment(size_t bytesPerRowAlignment)
+{
+    surfaceBytesPerRowAlignment().store(bytesPerRowAlignment);
 }
 
 MachSendRight IOSurface::createSendRight() const
@@ -281,13 +337,13 @@ CGContextRef IOSurface::ensurePlatformContext(const HostWindow* hostWindow)
     if (m_cgContext)
         return m_cgContext.get();
 
-    CGBitmapInfo bitmapInfo = kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host;
+    CGBitmapInfo bitmapInfo = static_cast<CGBitmapInfo>(kCGImageAlphaPremultipliedFirst) | static_cast<CGBitmapInfo>(kCGBitmapByteOrder32Host);
 
     size_t bitsPerComponent = 8;
     size_t bitsPerPixel = 32;
     
     switch (format()) {
-    case Format::RGBA:
+    case Format::BGRA:
         break;
 #if HAVE(IOSURFACE_RGB10)
     case Format::RGB10:
@@ -296,7 +352,7 @@ CGContextRef IOSurface::ensurePlatformContext(const HostWindow* hostWindow)
         // but for an IOSurface-to-IOSurface copy, there should be no conversion.
         bitsPerComponent = 16;
         bitsPerPixel = 64;
-        bitmapInfo = kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder16Host | kCGBitmapFloatComponents;
+        bitmapInfo = static_cast<CGBitmapInfo>(kCGImageAlphaPremultipliedLast) | static_cast<CGBitmapInfo>(kCGBitmapByteOrder16Host) | static_cast<CGBitmapInfo>(kCGBitmapFloatComponents);
         break;
 #endif
     case Format::YUV422:
@@ -304,9 +360,9 @@ CGContextRef IOSurface::ensurePlatformContext(const HostWindow* hostWindow)
         break;
     }
     
-    m_cgContext = adoptCF(CGIOSurfaceContextCreate(m_surface.get(), m_contextSize.width(), m_contextSize.height(), bitsPerComponent, bitsPerPixel, m_colorSpace.get(), bitmapInfo));
+    m_cgContext = adoptCF(CGIOSurfaceContextCreate(m_surface.get(), m_contextSize.width(), m_contextSize.height(), bitsPerComponent, bitsPerPixel, m_colorSpace.platformColorSpace(), bitmapInfo));
 
-#if PLATFORM(MAC) && ENABLE(WEBPROCESS_WINDOWSERVER_BLOCKING)
+#if PLATFORM(MAC)
     if (auto displayMask = primaryOpenGLDisplayMask()) {
         if (hostWindow && hostWindow->displayID())
             displayMask = displayMaskForDisplay(hostWindow->displayID());
@@ -326,18 +382,23 @@ GraphicsContext& IOSurface::ensureGraphicsContext()
     if (m_graphicsContext)
         return *m_graphicsContext;
 
-    m_graphicsContext = makeUnique<GraphicsContext>(ensurePlatformContext());
+    m_graphicsContext = makeUnique<GraphicsContextCG>(ensurePlatformContext());
     m_graphicsContext->setIsAcceleratedContext(true);
 
     return *m_graphicsContext;
 }
 
-IOSurface::SurfaceState IOSurface::state() const
+SetNonVolatileResult IOSurface::state() const
 {
     uint32_t previousState = 0;
     IOReturn ret = IOSurfaceSetPurgeable(m_surface.get(), kIOSurfacePurgeableKeepCurrent, &previousState);
     ASSERT_UNUSED(ret, ret == kIOReturnSuccess);
-    return previousState == kIOSurfacePurgeableEmpty ? IOSurface::SurfaceState::Empty : IOSurface::SurfaceState::Valid;
+    return previousState == kIOSurfacePurgeableEmpty ? SetNonVolatileResult::Empty : SetNonVolatileResult::Valid;
+}
+
+IOSurfaceSeed IOSurface::seed() const
+{
+    return IOSurfaceGetSeed(m_surface.get());
 }
 
 bool IOSurface::isVolatile() const
@@ -348,23 +409,23 @@ bool IOSurface::isVolatile() const
     return previousState != kIOSurfacePurgeableNonVolatile;
 }
 
-IOSurface::SurfaceState IOSurface::setIsVolatile(bool isVolatile)
+SetNonVolatileResult IOSurface::setVolatile(bool isVolatile)
 {
     uint32_t previousState = 0;
     IOReturn ret = IOSurfaceSetPurgeable(m_surface.get(), isVolatile ? kIOSurfacePurgeableVolatile : kIOSurfacePurgeableNonVolatile, &previousState);
     ASSERT_UNUSED(ret, ret == kIOReturnSuccess);
 
     if (previousState == kIOSurfacePurgeableEmpty)
-        return IOSurface::SurfaceState::Empty;
+        return SetNonVolatileResult::Empty;
 
-    return IOSurface::SurfaceState::Valid;
+    return SetNonVolatileResult::Valid;
 }
 
 IOSurface::Format IOSurface::format() const
 {
     unsigned pixelFormat = IOSurfaceGetPixelFormat(m_surface.get());
     if (pixelFormat == 'BGRA')
-        return Format::RGBA;
+        return Format::BGRA;
 
 #if HAVE(IOSURFACE_RGB10)
     if (pixelFormat == 'w30r')
@@ -378,12 +439,14 @@ IOSurface::Format IOSurface::format() const
         return Format::YUV422;
 
     ASSERT_NOT_REACHED();
-    return Format::RGBA;
+    return Format::BGRA;
 }
 
 IOSurfaceID IOSurface::surfaceID() const
 {
-#if PLATFORM(IOS_FAMILY) && (!USE(APPLE_INTERNAL_SDK) || __IPHONE_OS_VERSION_MIN_REQUIRED < 110000)
+// FIXME: Should be able to do this even without the Apple internal SDK.
+// FIXME: Should be able to do this on watchOS and tvOS.
+#if PLATFORM(IOS_FAMILY) && (!USE(APPLE_INTERNAL_SDK) || PLATFORM(WATCHOS) || PLATFORM(APPLETV))
     return 0;
 #else
     return IOSurfaceGetID(m_surface.get());
@@ -459,17 +522,62 @@ void IOSurface::convertToFormat(std::unique_ptr<IOSurface>&& inSurface, Format f
 
 #endif // HAVE(IOSURFACE_ACCELERATOR)
 
+void IOSurface::setOwnershipIdentity(const ProcessIdentity& resourceOwner)
+{
+    setOwnershipIdentity(m_surface.get(), resourceOwner);
+}
+
+void IOSurface::setOwnershipIdentity(IOSurfaceRef surface, const ProcessIdentity& resourceOwner)
+{
+#if HAVE(IOSURFACE_SET_OWNERSHIP_IDENTITY) && HAVE(TASK_IDENTITY_TOKEN)
+    ASSERT(resourceOwner);
+    ASSERT(surface);
+    task_id_token_t ownerTaskIdToken = resourceOwner.taskIdToken();
+    auto result = IOSurfaceSetOwnershipIdentity(surface, ownerTaskIdToken, kIOSurfaceMemoryLedgerTagGraphics, 0);
+    if (result != kIOReturnSuccess)
+        RELEASE_LOG_ERROR(IOSurface, "IOSurface::setOwnershipIdentity: Failed to claim ownership of IOSurface %p, task id token: %d, error: %d", surface, (int)ownerTaskIdToken, result);
+#else
+    UNUSED_PARAM(surface);
+    UNUSED_PARAM(resourceOwner);
+#endif
+}
+
 void IOSurface::migrateColorSpaceToProperties()
 {
-    auto colorSpaceProperties = adoptCF(CGColorSpaceCopyPropertyList(m_colorSpace.get()));
+    auto colorSpaceProperties = adoptCF(CGColorSpaceCopyPropertyList(m_colorSpace.platformColorSpace()));
     IOSurfaceSetValue(m_surface.get(), kIOSurfaceColorSpace, colorSpaceProperties.get());
 }
 
-static TextStream& operator<<(TextStream& ts, IOSurface::Format format)
+IOSurface::Format IOSurface::formatForPixelFormat(PixelFormat format)
 {
     switch (format) {
-    case IOSurface::Format::RGBA:
-        ts << "RGBA";
+    case PixelFormat::RGBA8:
+        RELEASE_ASSERT_NOT_REACHED();
+        return IOSurface::Format::BGRA;
+    case PixelFormat::BGRA8:
+        return IOSurface::Format::BGRA;
+#if HAVE(IOSURFACE_RGB10)
+    case PixelFormat::RGB10:
+        return IOSurface::Format::RGB10;
+    case PixelFormat::RGB10A8:
+        return IOSurface::Format::RGB10A8;
+#else
+    case PixelFormat::RGB10:
+    case PixelFormat::RGB10A8:
+        RELEASE_ASSERT_NOT_REACHED();
+        return IOSurface::Format::BGRA;
+#endif
+    }
+
+    ASSERT_NOT_REACHED();
+    return IOSurface::Format::BGRA;
+}
+
+TextStream& operator<<(TextStream& ts, IOSurface::Format format)
+{
+    switch (format) {
+    case IOSurface::Format::BGRA:
+        ts << "BGRA";
         break;
     case IOSurface::Format::YUV422:
         ts << "YUV422";
@@ -486,13 +594,13 @@ static TextStream& operator<<(TextStream& ts, IOSurface::Format format)
     return ts;
 }
 
-static TextStream& operator<<(TextStream& ts, IOSurface::SurfaceState state)
+static TextStream& operator<<(TextStream& ts, SetNonVolatileResult state)
 {
     switch (state) {
-    case IOSurface::SurfaceState::Valid:
+    case SetNonVolatileResult::Valid:
         ts << "valid";
         break;
-    case IOSurface::SurfaceState::Empty:
+    case SetNonVolatileResult::Empty:
         ts << "empty";
         break;
     }
@@ -505,5 +613,3 @@ TextStream& operator<<(TextStream& ts, const IOSurface& surface)
 }
 
 } // namespace WebCore
-
-#endif // HAVE(IOSURFACE)

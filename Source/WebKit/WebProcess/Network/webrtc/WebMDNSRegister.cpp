@@ -36,25 +36,26 @@
 namespace WebKit {
 using namespace WebCore;
 
-void WebMDNSRegister::finishedRegisteringMDNSName(uint64_t identifier, LibWebRTCProvider::MDNSNameOrError&& result)
+void WebMDNSRegister::finishedRegisteringMDNSName(MDNSRegisterIdentifier identifier, String&& name, std::optional<MDNSRegisterError> error)
 {
     auto pendingRegistration = m_pendingRegistrations.take(identifier);
     if (!pendingRegistration.callback)
         return;
 
-    if (result.has_value()) {
+    if (!error) {
         auto iterator = m_registeringDocuments.find(pendingRegistration.documentIdentifier);
-        if (iterator == m_registeringDocuments.end())
+        if (iterator == m_registeringDocuments.end()) {
+            pendingRegistration.callback(name, WebCore::MDNSRegisterError::DNSSD);
             return;
-        iterator->value.add(pendingRegistration.ipAddress, result.value());
+        }
+        iterator->value.add(pendingRegistration.ipAddress, name);
     }
 
-    pendingRegistration.callback(WTFMove(result));
+    pendingRegistration.callback(name, error);
 }
 
-void WebMDNSRegister::unregisterMDNSNames(uint64_t documentIdentifier)
+void WebMDNSRegister::unregisterMDNSNames(ScriptExecutionContextIdentifier identifier)
 {
-    auto identifier = makeObjectIdentifier<DocumentIdentifierType>(documentIdentifier);
     if (m_registeringDocuments.take(identifier).isEmpty())
         return;
 
@@ -62,24 +63,25 @@ void WebMDNSRegister::unregisterMDNSNames(uint64_t documentIdentifier)
     connection.send(Messages::NetworkMDNSRegister::UnregisterMDNSNames { identifier }, 0);
 }
 
-void WebMDNSRegister::registerMDNSName(uint64_t documentIdentifier, const String& ipAddress, CompletionHandler<void(LibWebRTCProvider::MDNSNameOrError&&)>&& callback)
+void WebMDNSRegister::registerMDNSName(ScriptExecutionContextIdentifier identifier, const String& ipAddress, CompletionHandler<void(const String&, std::optional<MDNSRegisterError>)>&& callback)
 {
-    auto identifier = makeObjectIdentifier<DocumentIdentifierType>(documentIdentifier);
     auto& map = m_registeringDocuments.ensure(identifier, [] {
         return HashMap<String, String> { };
     }).iterator->value;
 
     auto iterator = map.find(ipAddress);
     if (iterator != map.end()) {
-        callback(iterator->value);
+        callback(iterator->value, { });
         return;
     }
 
-    m_pendingRegistrations.add(++m_pendingRequestsIdentifier, PendingRegistration { WTFMove(callback), identifier, ipAddress });
+    auto requestIdentifier = MDNSRegisterIdentifier::generate();
+    m_pendingRegistrations.add(requestIdentifier, PendingRegistration { WTFMove(callback), identifier, ipAddress });
 
+    // FIXME: Use async reply.
     auto& connection = WebProcess::singleton().ensureNetworkProcessConnection().connection();
-    if (!connection.send(Messages::NetworkMDNSRegister::RegisterMDNSName { m_pendingRequestsIdentifier, identifier, ipAddress }, 0))
-        finishedRegisteringMDNSName(m_pendingRequestsIdentifier, makeUnexpected(MDNSRegisterError::Internal));
+    if (!connection.send(Messages::NetworkMDNSRegister::RegisterMDNSName { requestIdentifier, identifier, ipAddress }, 0))
+        finishedRegisteringMDNSName(requestIdentifier, { }, MDNSRegisterError::Internal);
 }
 
 } // namespace WebKit

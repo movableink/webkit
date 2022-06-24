@@ -1,3 +1,0 @@
-
-FAIL Miter joins are not drawn when the miter limit is exceeded Can't find variable: OffscreenCanvas
-

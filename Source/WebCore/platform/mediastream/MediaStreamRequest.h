@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,33 +25,44 @@
 
 #pragma once
 
+#include <wtf/EnumTraits.h>
+
 #if ENABLE(MEDIA_STREAM)
 
 #include "MediaConstraints.h"
+#include "PageIdentifier.h"
 
 namespace WebCore {
 
 struct MediaStreamRequest {
-    enum class Type { UserMedia, DisplayMedia };
-    Type type;
+    enum class Type { UserMedia, DisplayMedia, DisplayMediaWithAudio };
+    Type type { Type::UserMedia };
     MediaConstraints audioConstraints;
     MediaConstraints videoConstraints;
+    bool isUserGesturePriviledged { false };
+    PageIdentifier pageIdentifier;
 
     template<class Encoder>
     void encode(Encoder& encoder) const
     {
-        encoder.encodeEnum(type);
+        encoder << type;
         encoder << audioConstraints;
         encoder << videoConstraints;
+        encoder << isUserGesturePriviledged;
+        encoder << pageIdentifier;
     }
 
-    template <class Decoder> static Optional<MediaStreamRequest> decode(Decoder& decoder)
+    template <class Decoder> static std::optional<MediaStreamRequest> decode(Decoder& decoder)
     {
         MediaStreamRequest request;
-        if (decoder.decodeEnum(request.type) && decoder.decode(request.audioConstraints) && decoder.decode(request.videoConstraints))
-            return request;
+        if (!decoder.decode(request.type)
+            || !decoder.decode(request.audioConstraints)
+            || !decoder.decode(request.videoConstraints)
+            || !decoder.decode(request.isUserGesturePriviledged)
+            || !decoder.decode(request.pageIdentifier))
+            return std::nullopt;
 
-        return WTF::nullopt;
+        return request;
     }
 };
 
@@ -62,7 +73,7 @@ struct MediaStreamRequest {
 namespace WebCore {
 
 struct MediaStreamRequest {
-    enum class Type { UserMedia, DisplayMedia };
+    enum class Type { UserMedia, DisplayMedia, DisplayMediaWithAudio };
     Type type;
 };
 
@@ -72,14 +83,13 @@ struct MediaStreamRequest {
 
 namespace WTF {
 
-template<> struct EnumTraits<WebCore::MediaStreamRequest> {
+template<> struct EnumTraits<WebCore::MediaStreamRequest::Type> {
     using values = EnumValues<
         WebCore::MediaStreamRequest::Type,
         WebCore::MediaStreamRequest::Type::UserMedia,
-        WebCore::MediaStreamRequest::Type::DisplayMedia
+        WebCore::MediaStreamRequest::Type::DisplayMedia,
+        WebCore::MediaStreamRequest::Type::DisplayMediaWithAudio
     >;
 };
 
 } // namespace WTF
-
-

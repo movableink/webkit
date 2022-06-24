@@ -17,16 +17,19 @@ Example #1: Nested Stubs
 THEAD, TFOOT table
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -38,8 +41,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -54,16 +57,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {28, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -75,8 +81,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -91,16 +97,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {29, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -112,8 +121,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -132,16 +141,19 @@ AXRequired: 0
 
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -153,8 +165,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -169,16 +181,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -190,8 +205,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -206,16 +221,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -227,8 +245,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -247,29 +265,32 @@ AXRequired: 0
 
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXColumn
 AXSubrole: (null)
 AXRoleDescription: column
 AXChildren: <array of size 4>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 4>
+AXHelp:
 AXParent: <AXColumn>
 AXSize: NSSize: {21, 120}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXColumn>
 AXSelectedTextMarkerRange: (null)
-AXStartTextMarker: (null)
-AXEndTextMarker: (null)
+AXStartTextMarker: <AXColumn>
+AXEndTextMarker: <AXColumn>
 AXVisited: 0
 AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXColumn>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXColumn>
 AXEditableAncestor: (null)
@@ -281,29 +302,32 @@ AXVisibleRows: <array of size 4>
 AXElementBusy: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXColumn
 AXSubrole: (null)
 AXRoleDescription: column
 AXChildren: <array of size 4>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 4>
+AXHelp:
 AXParent: <AXColumn>
 AXSize: NSSize: {28, 120}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXColumn>
 AXSelectedTextMarkerRange: (null)
-AXStartTextMarker: (null)
-AXEndTextMarker: (null)
+AXStartTextMarker: <AXColumn>
+AXEndTextMarker: <AXColumn>
 AXVisited: 0
 AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXColumn>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXColumn>
 AXEditableAncestor: (null)
@@ -315,29 +339,32 @@ AXVisibleRows: <array of size 4>
 AXElementBusy: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXColumn
 AXSubrole: (null)
 AXRoleDescription: column
 AXChildren: <array of size 4>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 4>
+AXHelp:
 AXParent: <AXColumn>
 AXSize: NSSize: {29, 120}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXColumn>
 AXSelectedTextMarkerRange: (null)
-AXStartTextMarker: (null)
-AXEndTextMarker: (null)
+AXStartTextMarker: <AXColumn>
+AXEndTextMarker: <AXColumn>
 AXVisited: 0
 AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXColumn>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXColumn>
 AXEditableAncestor: (null)
@@ -353,16 +380,19 @@ AXElementBusy: 0
 
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
 AXChildren: <array of size 3>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 3>
+AXHelp:
 AXParent: <AXRow>
 AXSize: NSSize: {76, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXRow>
@@ -374,8 +404,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRow>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXRow>
 AXEditableAncestor: (null)
@@ -384,16 +414,19 @@ AXIndex: 0
 AXElementBusy: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
 AXChildren: <array of size 3>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 3>
+AXHelp:
 AXParent: <AXRow>
 AXSize: NSSize: {76, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXRow>
@@ -405,8 +438,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRow>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXRow>
 AXEditableAncestor: (null)
@@ -415,16 +448,19 @@ AXIndex: 1
 AXElementBusy: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
 AXChildren: <array of size 3>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 3>
+AXHelp:
 AXParent: <AXRow>
 AXSize: NSSize: {76, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXRow>
@@ -436,8 +472,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRow>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXRow>
 AXEditableAncestor: (null)
@@ -446,16 +482,19 @@ AXIndex: 2
 AXElementBusy: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
 AXChildren: <array of size 3>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 3>
+AXHelp:
 AXParent: <AXRow>
 AXSize: NSSize: {76, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXRow>
@@ -467,8 +506,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRow>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXRow>
 AXEditableAncestor: (null)
@@ -481,16 +520,19 @@ AXElementBusy: 0
 
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -502,8 +544,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -518,16 +560,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {28, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -539,8 +584,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -555,16 +600,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {29, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -576,8 +624,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -592,16 +640,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -613,8 +664,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -629,16 +680,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {28, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -650,8 +704,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -666,16 +720,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {29, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -687,8 +744,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -703,16 +760,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -724,8 +784,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -740,16 +800,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {28, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -761,8 +824,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -777,16 +840,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {29, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -798,8 +864,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -814,16 +880,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -835,8 +904,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -851,16 +920,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {28, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -872,8 +944,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -888,16 +960,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {29, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -909,8 +984,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -929,29 +1004,32 @@ AXRequired: 0
 
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group
 AXChildren: <array of size 3>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 3>
+AXHelp:
 AXParent: <AXGroup>
 AXSize: NSSize: {77, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXGroup>
 AXSelectedTextMarkerRange: (null)
-AXStartTextMarker: (null)
-AXEndTextMarker: (null)
+AXStartTextMarker: <AXGroup>
+AXEndTextMarker: <AXGroup>
 AXVisited: 0
 AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXGroup>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXGroup>
 AXEditableAncestor: (null)
@@ -967,16 +1045,19 @@ AXElementBusy: 0
 Multi-TBODY table
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -988,8 +1069,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1004,16 +1085,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {28, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1025,8 +1109,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1041,16 +1125,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {29, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1062,8 +1149,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1082,16 +1169,19 @@ AXRequired: 0
 
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1103,8 +1193,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1119,16 +1209,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1140,8 +1233,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1156,16 +1249,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1177,8 +1273,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1197,29 +1293,32 @@ AXRequired: 0
 
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXColumn
 AXSubrole: (null)
 AXRoleDescription: column
 AXChildren: <array of size 4>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 4>
+AXHelp:
 AXParent: <AXColumn>
 AXSize: NSSize: {21, 120}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXColumn>
 AXSelectedTextMarkerRange: (null)
-AXStartTextMarker: (null)
-AXEndTextMarker: (null)
+AXStartTextMarker: <AXColumn>
+AXEndTextMarker: <AXColumn>
 AXVisited: 0
 AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXColumn>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXColumn>
 AXEditableAncestor: (null)
@@ -1231,29 +1330,32 @@ AXVisibleRows: <array of size 4>
 AXElementBusy: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXColumn
 AXSubrole: (null)
 AXRoleDescription: column
 AXChildren: <array of size 4>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 4>
+AXHelp:
 AXParent: <AXColumn>
 AXSize: NSSize: {28, 120}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXColumn>
 AXSelectedTextMarkerRange: (null)
-AXStartTextMarker: (null)
-AXEndTextMarker: (null)
+AXStartTextMarker: <AXColumn>
+AXEndTextMarker: <AXColumn>
 AXVisited: 0
 AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXColumn>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXColumn>
 AXEditableAncestor: (null)
@@ -1265,29 +1367,32 @@ AXVisibleRows: <array of size 4>
 AXElementBusy: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXColumn
 AXSubrole: (null)
 AXRoleDescription: column
 AXChildren: <array of size 4>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 4>
+AXHelp:
 AXParent: <AXColumn>
 AXSize: NSSize: {29, 120}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXColumn>
 AXSelectedTextMarkerRange: (null)
-AXStartTextMarker: (null)
-AXEndTextMarker: (null)
+AXStartTextMarker: <AXColumn>
+AXEndTextMarker: <AXColumn>
 AXVisited: 0
 AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXColumn>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXColumn>
 AXEditableAncestor: (null)
@@ -1303,16 +1408,19 @@ AXElementBusy: 0
 
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
 AXChildren: <array of size 3>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 3>
+AXHelp:
 AXParent: <AXRow>
 AXSize: NSSize: {76, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXRow>
@@ -1324,8 +1432,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRow>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXRow>
 AXEditableAncestor: (null)
@@ -1334,16 +1442,19 @@ AXIndex: 0
 AXElementBusy: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
 AXChildren: <array of size 3>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 3>
+AXHelp:
 AXParent: <AXRow>
 AXSize: NSSize: {76, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXRow>
@@ -1355,8 +1466,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRow>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXRow>
 AXEditableAncestor: (null)
@@ -1365,16 +1476,19 @@ AXIndex: 1
 AXElementBusy: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
 AXChildren: <array of size 3>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 3>
+AXHelp:
 AXParent: <AXRow>
 AXSize: NSSize: {76, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXRow>
@@ -1386,8 +1500,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRow>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXRow>
 AXEditableAncestor: (null)
@@ -1396,16 +1510,19 @@ AXIndex: 2
 AXElementBusy: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXRow
 AXSubrole: (null)
 AXRoleDescription: row
 AXChildren: <array of size 3>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 3>
+AXHelp:
 AXParent: <AXRow>
 AXSize: NSSize: {76, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXRow>
@@ -1417,8 +1534,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRow>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXRow>
 AXEditableAncestor: (null)
@@ -1431,16 +1548,19 @@ AXElementBusy: 0
 
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1452,8 +1572,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1468,16 +1588,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {28, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1489,8 +1612,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1505,16 +1628,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {29, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1526,8 +1652,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1542,16 +1668,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1563,8 +1692,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1579,16 +1708,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {28, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1600,8 +1732,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1616,16 +1748,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {29, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1637,8 +1772,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1653,16 +1788,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1674,8 +1812,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1690,16 +1828,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {28, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1711,8 +1852,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1727,16 +1868,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {29, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1748,8 +1892,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1764,16 +1908,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {21, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1785,8 +1932,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1801,16 +1948,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {28, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1822,8 +1972,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1838,16 +1988,19 @@ AXElementBusy: 0
 AXRequired: 0
 
 ------------
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXCell
 AXSubrole: (null)
 AXRoleDescription: cell
 AXChildren: <array of size 1>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 1>
+AXHelp:
 AXParent: <AXCell>
 AXSize: NSSize: {29, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXCell>
@@ -1859,8 +2012,8 @@ AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXCell>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXCell>
 AXEditableAncestor: (null)
@@ -1879,29 +2032,32 @@ AXRequired: 0
 
 --------------------------
 
+AXHasDocumentRoleAncestor: 0
+AXHasWebApplicationAncestor: 0
 AXRole: AXGroup
 AXSubrole: (null)
 AXRoleDescription: group
 AXChildren: <array of size 3>
-AXHelp: 
+AXChildrenInNavigationOrder: <array of size 3>
+AXHelp:
 AXParent: <AXGroup>
 AXSize: NSSize: {77, 30}
-AXTitle: 
-AXDescription: 
-AXValue: 
+AXTitle:
+AXDescription:
+AXValue:
 AXFocused: 0
 AXEnabled: 1
 AXWindow: <AXGroup>
 AXSelectedTextMarkerRange: (null)
-AXStartTextMarker: (null)
-AXEndTextMarker: (null)
+AXStartTextMarker: <AXGroup>
+AXEndTextMarker: <AXGroup>
 AXVisited: 0
 AXLinkedUIElements: <array of size 0>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXGroup>
-AXLanguage: 
-AXDOMIdentifier: 
+AXLanguage:
+AXDOMIdentifier:
 AXDOMClassList: <array of size 0>
 AXFocusableAncestor: <AXGroup>
 AXEditableAncestor: (null)

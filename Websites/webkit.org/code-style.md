@@ -22,7 +22,7 @@ int main()
 }
 ```
 
-[](#indentation-namespace) The contents of an outermost `namespace` block (and any nested namespaces with the same scope) should not be indented. The contents of other nested namespaces should be indented.
+[](#indentation-namespace) The contents of namespaces should not be indented.
 
 ###### Right:
 
@@ -36,7 +36,12 @@ class Document {
 };
 
 namespace NestedNamespace {
+
+class OtherDocument {
+    OtherDocument();
     ...
+};
+
 }
 
 } // namespace WebCore
@@ -49,7 +54,29 @@ Document::Document()
     ...
 }
 
+namespace NestedNamespace {
+
+OtherDocument::OtherDocument()
+{
+    ...
+}
+
+} // namespace NestedNamespace
+
 } // namespace WebCore
+```
+
+###### Right:
+
+```cpp
+// PrivateClickMeasurementDatabase.h
+namespace WebKit::PCM {
+
+class Database {
+    ...
+};
+
+} // namespace WebKit::PCM
 ```
 
 ###### Wrong:
@@ -234,6 +261,22 @@ f (a, b);
 f( a, b );
 ```
 
+[](#spacing-lambda-paren) Do not place spaces between square brackets and parentheses of a lambda function but do place a space before braces.
+
+###### Right:
+
+```cpp
+[](int x) { return x; }
+[this] { return m_member; }
+```
+
+###### Wrong:
+
+```cpp
+[] (int x) { return x; }
+[this]{ return m_member; }
+```
+
 [](#spacing-braced-init) When initializing an object, place a space before the leading brace as well as between the braces and their content.
 
 ###### Right:
@@ -275,6 +318,20 @@ block = ^ (int, int){
 ...
 };
 
+```
+
+[](#spacing-objc-protocol) In Objective-C, do not place a space between the type name and the protocol name.
+
+###### Right:
+
+```cpp
+id<MTLDevice> device = ...;
+```
+
+###### Wrong:
+
+```cpp
+id <MTLDevice> device = ...;
 ```
 
 ### Line breaking
@@ -879,6 +936,22 @@ for (unsigned i = 0; i < frameViewsCount; ++i)
 const Vector<RefPtr<FrameView> >::iterator end = frameViews.end();
 for (Vector<RefPtr<FrameView> >::iterator it = frameViews.begin(); it != end; ++it)
     (*it)->updateLayoutAndStyleIfNeededRecursive();
+```
+
+[](#punctuation-omit-lambda-paren) Omit parentheses for a C++ lambda whenever possible.
+
+###### Right:
+
+```cpp
+[this] { return m_member; }
+[this]() mutable { return doWork(WTFMove(m_object)); }
+```
+
+###### Wrong:
+
+```cpp
+[this]() { return m_member; }
+[]() { return static_cast<unsigned>(-1); }
 ```
 
 ### Pointers and References

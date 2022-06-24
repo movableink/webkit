@@ -57,6 +57,7 @@ CFUUIDRef CGDisplayCreateUUIDFromDisplayID(uint32_t displayID);
 // running layout tests.
 
 static int installColorProfile = false;
+static int preferIntegratedGPU = false;
 static uint32_t assertionIDForDisplaySleep = 0;
 static uint32_t assertionIDForSystemSleep = 0;
 
@@ -74,19 +75,24 @@ static NSURL *colorProfileURLForDisplay(NSString *displayUUIDString)
     CFDictionaryRef deviceInfo = ColorSyncDeviceCopyDeviceInfo(kColorSyncDisplayDeviceClass, uuid);
     CFRelease(uuid);
     if (!deviceInfo) {
-        NSLog(@"No display attached to system; not setting main display's color profile.");
+        NSLog(@"Could not retrieve device info from ColorSync; not setting main display's color profile.");
         return nil;
     }
 
+    CFStringRef profileID = CFSTR("1");
     CFURLRef profileURL = nil;
-    CFDictionaryRef profileInfo = (CFDictionaryRef)CFDictionaryGetValue(deviceInfo, kColorSyncCustomProfiles);
-    if (profileInfo)
-        profileURL = (CFURLRef)CFDictionaryGetValue(profileInfo, CFSTR("1"));
-    else {
-        profileInfo = (CFDictionaryRef)CFDictionaryGetValue(deviceInfo, kColorSyncFactoryProfiles);
-        CFDictionaryRef factoryProfile = (CFDictionaryRef)CFDictionaryGetValue(profileInfo, CFSTR("1"));
-        if (factoryProfile)
-            profileURL = (CFURLRef)CFDictionaryGetValue(factoryProfile, kColorSyncDeviceProfileURL);
+
+    CFDictionaryRef factoryProfiles = (CFDictionaryRef)CFDictionaryGetValue(deviceInfo, kColorSyncFactoryProfiles);
+    if (factoryProfiles)
+        profileID = (CFStringRef)CFDictionaryGetValue(factoryProfiles, kColorSyncDeviceDefaultProfileID);
+
+    CFDictionaryRef customProfiles = (CFDictionaryRef)CFDictionaryGetValue(deviceInfo, kColorSyncCustomProfiles);
+    if (customProfiles)
+        profileURL = (CFURLRef)CFDictionaryGetValue(customProfiles, profileID);
+    if (!profileURL && factoryProfiles) {
+        CFDictionaryRef profile = (CFDictionaryRef)CFDictionaryGetValue(factoryProfiles, profileID);
+        if (profile)
+            profileURL = (CFURLRef)CFDictionaryGetValue(profile, kColorSyncDeviceProfileURL);
     }
     
     if (!profileURL) {
@@ -104,13 +110,13 @@ static NSArray *displayUUIDStrings()
 {
     NSMutableArray *result = [NSMutableArray array];
 
-    static const uint32_t maxDisplayCount = 10;
+    enum { maxDisplayCount = 10 };
     CGDirectDisplayID displayIDs[maxDisplayCount] = { 0 };
     uint32_t displayCount = 0;
     
-    CGError err = CGGetActiveDisplayList(maxDisplayCount, displayIDs, &displayCount);
+    CGError err = CGGetOnlineDisplayList(maxDisplayCount, displayIDs, &displayCount);
     if (err != kCGErrorSuccess) {
-        NSLog(@"Error %d getting active display list; not setting display color profile.", err);
+        NSLog(@"Error %d getting online display list; not setting display color profile.", err);
         return nil;
     }
 
@@ -215,7 +221,7 @@ static void simpleSignalHandler(int sig)
     exit(128 + sig);
 }
 
-void lockDownDiscreteGraphics()
+static void lockDownDiscreteGraphics()
 {
     mach_port_t masterPort;
     kern_return_t kernResult = IOMasterPort(bootstrap_port, &masterPort);
@@ -247,7 +253,7 @@ void lockDownDiscreteGraphics()
         NSLog(@"IOObjectRelease() failed in %s with kernResult = %d", __FUNCTION__, kernResult);
 }
 
-void addSleepAssertions()
+static void addSleepAssertions()
 {
     CFStringRef assertionName = CFSTR("WebKit LayoutTestHelper");
     CFStringRef assertionDetails = CFSTR("WebKit layout-test helper tool is preventing sleep.");
@@ -261,6 +267,7 @@ int main(int argc, char* argv[])
 {
     struct option options[] = {
         { "install-color-profile", no_argument, &installColorProfile, true },
+        { "prefer-integrated-gpu", no_argument, &preferIntegratedGPU, true },
     };
 
     int option;
@@ -279,7 +286,8 @@ int main(int argc, char* argv[])
     signal(SIGTERM, simpleSignalHandler);
 
     addSleepAssertions();
-    lockDownDiscreteGraphics();
+    if (!preferIntegratedGPU)
+        lockDownDiscreteGraphics();
 
     // Save off the current profile, and then install the layout test profile.
     installLayoutTestColorProfile();

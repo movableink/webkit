@@ -28,9 +28,12 @@
 
 #include "ShareableBitmap.h"
 #include "WKSharedAPICast.h"
+#include "WKString.h"
 #include "WebImage.h"
 #include <WebCore/ColorSpace.h>
 #include <WebCore/GraphicsContext.h>
+#include <WebCore/ImageBufferUtilitiesCG.h>
+#include <WebCore/NativeImage.h>
 
 CGImageRef WKImageCreateCGImage(WKImageRef imageRef)
 {
@@ -46,7 +49,8 @@ WKImageRef WKImageCreateFromCGImage(CGImageRef imageRef, WKImageOptions options)
     if (!imageRef)
         return nullptr;
     
-    WebCore::IntSize imageSize(CGImageGetWidth(imageRef), CGImageGetHeight(imageRef));
+    auto nativeImage = WebCore::NativeImage::create(imageRef);
+    WebCore::IntSize imageSize = nativeImage->size();
     auto webImage = WebKit::WebImage::create(imageSize, WebKit::toImageOptions(options));
 
     auto graphicsContext = webImage->bitmap().createGraphicsContext();
@@ -54,8 +58,16 @@ WKImageRef WKImageCreateFromCGImage(CGImageRef imageRef, WKImageOptions options)
         return nullptr;
 
     WebCore::FloatRect rect(WebCore::FloatPoint(0, 0), imageSize);
+    
     graphicsContext->clearRect(rect);
-    graphicsContext->drawNativeImage(imageRef, imageSize, rect, rect);
+    graphicsContext->drawNativeImage(*nativeImage, imageSize, rect, rect);
     return toAPI(webImage.leakRef());
 }
 
+WKStringRef WKImageCreateDataURLFromImage(CGImageRef imageRef)
+{
+    String mimeType { "image/png"_s };
+    auto destinationUTI = WebCore::utiFromImageBufferMIMEType(mimeType);
+    auto value = WebCore::dataURL(imageRef, destinationUTI.get(), mimeType, { });
+    return WKStringCreateWithUTF8CString(value.utf8().data());
+}

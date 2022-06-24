@@ -12,17 +12,18 @@
 #define MODULES_AUDIO_CODING_NETEQ_MOCK_MOCK_RED_PAYLOAD_SPLITTER_H_
 
 #include "modules/audio_coding/neteq/red_payload_splitter.h"
-
 #include "test/gmock.h"
 
 namespace webrtc {
 
 class MockRedPayloadSplitter : public RedPayloadSplitter {
  public:
-  MOCK_METHOD1(SplitRed, bool(PacketList* packet_list));
-  MOCK_METHOD2(CheckRedPayloads,
-               void(PacketList* packet_list,
-                    const DecoderDatabase& decoder_database));
+  MOCK_METHOD(bool, SplitRed, (PacketList * packet_list), (override));
+  MOCK_METHOD(void,
+              CheckRedPayloads,
+              (PacketList * packet_list,
+               const DecoderDatabase& decoder_database),
+              (override));
 };
 
 }  // namespace webrtc

@@ -62,6 +62,9 @@ public:
         virtual void willChangeHasOnlySecureContent() = 0;
         virtual void didChangeHasOnlySecureContent() = 0;
 
+        virtual void willChangeNegotiatedLegacyTLS() { };
+        virtual void didChangeNegotiatedLegacyTLS() { };
+
         virtual void willChangeEstimatedProgress() = 0;
         virtual void didChangeEstimatedProgress() = 0;
 
@@ -97,14 +100,14 @@ public:
         class Token {
         public:
             Token(Transaction& transaction)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
                 : m_pageLoadState(*transaction.m_pageLoadState)
 #endif
             {
                 transaction.m_pageLoadState->m_mayHaveUncommittedChanges = true;
             }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
             PageLoadState& m_pageLoadState;
 #endif
         };
@@ -140,6 +143,8 @@ public:
     String activeURL() const;
 
     bool hasOnlySecureContent() const;
+    bool hasNegotiatedLegacyTLS() const;
+    void negotiatedLegacyTLS(const Transaction::Token&);
 
     double estimatedProgress() const;
     bool networkRequestsInProgress() const { return m_committedState.networkRequestsInProgress; }
@@ -158,7 +163,7 @@ public:
     void didReceiveServerRedirectForProvisionalLoad(const Transaction::Token&, const String& url);
     void didFailProvisionalLoad(const Transaction::Token&);
 
-    void didCommitLoad(const Transaction::Token&, WebCertificateInfo&, bool hasInsecureContent);
+    void didCommitLoad(const Transaction::Token&, WebCertificateInfo&, bool hasInsecureContent, bool usedLegacyTLS);
     void didFinishLoad(const Transaction::Token&);
     void didFailLoad(const Transaction::Token&);
 
@@ -170,6 +175,7 @@ public:
 
     const String& title() const;
     void setTitle(const Transaction::Token&, const String&);
+    void setTitleFromSafeBrowsingWarning(const Transaction::Token&, const String&);
 
     bool canGoBack() const;
     void setCanGoBack(const Transaction::Token&, bool);
@@ -200,18 +206,9 @@ private:
     Vector<Observer*> m_observers;
 
     struct Data {
-        Data()
-            : state(State::Finished)
-            , hasInsecureContent(false)
-            , canGoBack(false)
-            , canGoForward(false)
-            , estimatedProgress(0)
-            , networkRequestsInProgress(false)
-        {
-        }
-
-        State state;
-        bool hasInsecureContent;
+        State state { State::Finished };
+        bool hasInsecureContent { false };
+        bool negotiatedLegacyTLS { false };
 
         PendingAPIRequest pendingAPIRequest;
 
@@ -221,14 +218,15 @@ private:
         String unreachableURL;
 
         String title;
+        String titleFromSafeBrowsingWarning;
 
         URL resourceDirectoryURL;
 
-        bool canGoBack;
-        bool canGoForward;
+        bool canGoBack { false };
+        bool canGoForward { false };
 
-        double estimatedProgress;
-        bool networkRequestsInProgress;
+        double estimatedProgress { 0 };
+        bool networkRequestsInProgress { false };
 
         RefPtr<WebCertificateInfo> certificateInfo;
     };

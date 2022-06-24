@@ -1,21 +1,30 @@
 find_library(COCOA_LIBRARY Cocoa)
 find_library(COREFOUNDATION_LIBRARY CoreFoundation)
 find_library(READLINE_LIBRARY Readline)
+find_library(SECURITY_LIBRARY Security)
 list(APPEND WTF_LIBRARIES
     ${COREFOUNDATION_LIBRARY}
     ${COCOA_LIBRARY}
     ${READLINE_LIBRARY}
+    ${SECURITY_LIBRARY}
 )
 
 list(APPEND WTF_PUBLIC_HEADERS
     WeakObjCPtr.h
 
     cf/CFURLExtras.h
+    cf/SpanCF.h
     cf/TypeCastsCF.h
 
+    cocoa/CrashReporter.h
     cocoa/Entitlements.h
     cocoa/NSURLExtras.h
+    cocoa/RuntimeApplicationChecksCocoa.h
     cocoa/SoftLinking.h
+    cocoa/SpanCocoa.h
+    cocoa/TollFreeBridging.h
+    cocoa/TypeCastsCocoa.h
+    cocoa/VectorCocoa.h
 
     darwin/WeakLinking.h
 
@@ -23,11 +32,16 @@ list(APPEND WTF_PUBLIC_HEADERS
     spi/cf/CFStringSPI.h
 
     spi/cocoa/CFXPCBridgeSPI.h
+    spi/cocoa/CrashReporterClientSPI.h
     spi/cocoa/MachVMSPI.h
+    spi/cocoa/NSLocaleSPI.h
+    spi/cocoa/NSObjCRuntimeSPI.h
     spi/cocoa/SecuritySPI.h
     spi/cocoa/objcSPI.h
 
+    spi/darwin/CodeSignSPI.h
     spi/darwin/DataVaultSPI.h
+    spi/darwin/OSVariantSPI.h
     spi/darwin/ProcessMemoryFootprint.h
     spi/darwin/SandboxSPI.h
     spi/darwin/XPCSPI.h
@@ -35,38 +49,43 @@ list(APPEND WTF_PUBLIC_HEADERS
 
     spi/mac/MetadataSPI.h
 
+    text/cf/StringConcatenateCF.h
     text/cf/TextBreakIteratorCF.h
 )
 
 list(APPEND WTF_SOURCES
     BlockObjCExceptions.mm
+    ProcessPrivilege.cpp
+    TranslatedProcess.cpp
 
     cf/CFURLExtras.cpp
     cf/FileSystemCF.cpp
     cf/LanguageCF.cpp
     cf/RunLoopCF.cpp
-    cf/RunLoopTimerCF.cpp
     cf/SchedulePairCF.cpp
     cf/URLCF.cpp
 
     cocoa/AutodrainedPool.cpp
-    cocoa/CPUTimeCocoa.cpp
+    cocoa/CrashReporter.cpp
     cocoa/Entitlements.mm
     cocoa/FileSystemCocoa.mm
+    cocoa/LanguageCocoa.mm
+    cocoa/LoggingCocoa.mm
     cocoa/MachSendRight.cpp
     cocoa/MainThreadCocoa.mm
     cocoa/MemoryFootprintCocoa.cpp
     cocoa/MemoryPressureHandlerCocoa.mm
     cocoa/NSURLExtras.mm
     cocoa/ResourceUsageCocoa.cpp
+    cocoa/RuntimeApplicationChecksCocoa.cpp
+    cocoa/SystemTracingCocoa.cpp
     cocoa/URLCocoa.mm
     cocoa/WorkQueueCocoa.cpp
 
-    mac/DeprecatedSymbolsUsedBySafari.mm
     mac/FileSystemMac.mm
-    mac/RunLoopMac.mm
     mac/SchedulePairMac.mm
 
+    posix/CPUTimePOSIX.cpp
     posix/FileSystemPOSIX.cpp
     posix/OSAllocatorPOSIX.cpp
     posix/ThreadingPOSIX.cpp
@@ -98,6 +117,3 @@ list(APPEND WTF_SOURCES
     ${WTF_DERIVED_SOURCES_DIR}/mach_excServer.c
     ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
 )
-
-WEBKIT_CREATE_FORWARDING_HEADERS(WebKitLegacy DIRECTORIES ${WebKitLegacy_FORWARDING_HEADERS_DIRECTORIES} FILES ${WebKitLegacy_FORWARDING_HEADERS_FILES})
-WEBKIT_CREATE_FORWARDING_HEADERS(WebKit DIRECTORIES ${FORWARDING_HEADERS_DIR}/WebKitLegacy)

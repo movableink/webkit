@@ -10,11 +10,12 @@
 
 #include <stddef.h>
 #include <stdio.h>
+
+#include <memory>
 #include <random>
 
-#include "absl/memory/memory.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/nullsocketserver.h"
+#include "rtc_base/null_socket_server.h"
 #include "rtc_base/thread.h"
 #include "test/gtest.h"
 
@@ -83,7 +84,7 @@ TEST(SanitizersDeathTest, UndefinedSanitizer) {
 class IncrementThread : public Thread {
  public:
   explicit IncrementThread(int* value)
-      : Thread(absl::make_unique<NullSocketServer>()), value_(value) {}
+      : Thread(std::make_unique<NullSocketServer>()), value_(value) {}
 
   void Run() override {
     ++*value_;
@@ -109,7 +110,7 @@ void DataRace() {
   thread2.Join();
   // TSan seems to mess with gtest's death detection.
   // Fail intentionally, and rely on detecting the error message.
-  RTC_CHECK(false);
+  RTC_CHECK_NOTREACHED();
 }
 
 TEST(SanitizersDeathTest, ThreadSanitizer) {

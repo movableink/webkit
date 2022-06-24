@@ -45,9 +45,9 @@ WI.CanvasContentView = class CanvasContentView extends WI.ContentView
 
         this._refreshButtonNavigationItem = new WI.ButtonNavigationItem("refresh", WI.UIString("Refresh"), "Images/ReloadFull.svg", 13, 13);
         this._refreshButtonNavigationItem.visibilityPriority = WI.NavigationItem.VisibilityPriority.Low;
-        this._refreshButtonNavigationItem.addEventListener(WI.ButtonNavigationItem.Event.Clicked, this.refreshPreview, this);
+        this._refreshButtonNavigationItem.addEventListener(WI.ButtonNavigationItem.Event.Clicked, this.handleRefreshButtonClicked, this);
 
-        this._showGridButtonNavigationItem = new WI.ActivateButtonNavigationItem("show-grid", WI.UIString("Show transparency grid"), WI.UIString("Hide transparency grid"), "Images/NavigationItemCheckers.svg", 13, 13);
+        this._showGridButtonNavigationItem = new WI.ActivateButtonNavigationItem("show-grid", WI.repeatedUIString.showTransparencyGridTooltip(), WI.UIString("Hide transparency grid"), "Images/NavigationItemCheckers.svg", 13, 13);
         this._showGridButtonNavigationItem.addEventListener(WI.ButtonNavigationItem.Event.Clicked, this._showGridButtonClicked, this);
         this._showGridButtonNavigationItem.visibilityPriority = WI.NavigationItem.VisibilityPriority.Low;
         this._showGridButtonNavigationItem.activated = !!WI.settings.showImageGrid.value;
@@ -77,6 +77,11 @@ WI.CanvasContentView = class CanvasContentView extends WI.ContentView
         });
     }
 
+    handleRefreshButtonClicked()
+    {
+        this.refreshPreview();
+    }
+
     // Protected
 
     initialLayout()
@@ -99,6 +104,12 @@ WI.CanvasContentView = class CanvasContentView extends WI.ContentView
             let subtitle = titles.appendChild(document.createElement("span"));
             subtitle.className = "subtitle";
             subtitle.textContent = WI.Canvas.displayNameForContextType(this.representedObject.contextType);
+
+            if (this.representedObject.contextAttributes.colorSpace) {
+                let subtitle = titles.appendChild(document.createElement("span"));
+                subtitle.className = "color-space";
+                subtitle.textContent = "(" + WI.Canvas.displayNameForColorSpace(this.representedObject.contextAttributes.colorSpace) + ")";
+            }
 
             let navigationBar = new WI.NavigationBar;
 
@@ -191,13 +202,6 @@ WI.CanvasContentView = class CanvasContentView extends WI.ContentView
         this._updateImageGrid();
     }
 
-    shown()
-    {
-        super.shown();
-
-        this.refreshPreview();
-    }
-
     attached()
     {
         super.attached();
@@ -223,19 +227,26 @@ WI.CanvasContentView = class CanvasContentView extends WI.ContentView
         });
 
         WI.settings.showImageGrid.addEventListener(WI.Setting.Event.Changed, this._updateImageGrid, this);
+
+        this.refreshPreview();
     }
 
     detached()
     {
-        this.representedObject.removeEventListener(null, null, this);
-        this.representedObject.shaderProgramCollection.removeEventListener(null, null, this);
+        this.representedObject.removeEventListener(WI.Canvas.Event.MemoryChanged, this._updateMemoryCost, this);
+        this.representedObject.removeEventListener(WI.Canvas.Event.RecordingStarted, this.needsLayout, this);
+        this.representedObject.removeEventListener(WI.Canvas.Event.RecordingProgress, this.needsLayout, this);
+        this.representedObject.removeEventListener(WI.Canvas.Event.RecordingStopped, this.needsLayout, this);
+        this.representedObject.shaderProgramCollection.removeEventListener(WI.Collection.Event.ItemAdded, this.needsLayout, this);
+        this.representedObject.shaderProgramCollection.removeEventListener(WI.Collection.Event.ItemRemoved, this.needsLayout, this);
 
         if (this._canvasNode) {
-            this._canvasNode.removeEventListener(null, null, this);
+            this._canvasNode.removeEventListener(WI.DOMNode.Event.AttributeModified, this._refreshPixelSize, this);
+            this._canvasNode.removeEventListener(WI.DOMNode.Event.AttributeRemoved, this._refreshPixelSize, this);
             this._canvasNode = null;
         }
 
-        WI.settings.showImageGrid.removeEventListener(null, null, this);
+        WI.settings.showImageGrid.removeEventListener(WI.Setting.Event.Changed, this._updateImageGrid, this);
 
         super.detached();
     }
@@ -291,11 +302,6 @@ WI.CanvasContentView = class CanvasContentView extends WI.ContentView
 
     _populateCanvasElementButtonContextMenu(contextMenu)
     {
-        if (this._canvasNode)
-            WI.appendContextMenuItemsForDOMNode(contextMenu, this._canvasNode);
-
-        contextMenu.appendSeparator();
-
         contextMenu.appendItem(WI.UIString("Log Canvas Context"), () => {
             WI.RemoteObject.resolveCanvasContext(this.representedObject, WI.RuntimeManager.ConsoleObjectGroup, (remoteObject) => {
                 if (!remoteObject)
@@ -306,6 +312,11 @@ WI.CanvasContentView = class CanvasContentView extends WI.ContentView
                 WI.consoleLogViewController.appendImmediateExecutionWithResult(text, remoteObject, addSpecialUserLogClass);
             });
         });
+
+        contextMenu.appendSeparator();
+
+        if (this._canvasNode)
+            WI.appendContextMenuItemsForDOMNode(contextMenu, this._canvasNode);
     }
 
     _showGridButtonClicked()

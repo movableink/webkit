@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,13 +27,7 @@
 #include "JSPromisePrototype.h"
 
 #include "BuiltinNames.h"
-#include "Error.h"
-#include "JSCBuiltins.h"
 #include "JSCInlines.h"
-#include "JSFunction.h"
-#include "JSGlobalObject.h"
-#include "JSPromise.h"
-#include "Microtask.h"
 
 namespace JSC {
 
@@ -45,7 +39,7 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSPromisePrototype);
 
 namespace JSC {
 
-const ClassInfo JSPromisePrototype::s_info = { "PromisePrototype", &Base::s_info, &promisePrototypeTable, nullptr, CREATE_METHOD_TABLE(JSPromisePrototype) };
+const ClassInfo JSPromisePrototype::s_info = { "Promise", &Base::s_info, &promisePrototypeTable, nullptr, CREATE_METHOD_TABLE(JSPromisePrototype) };
 
 /* Source for JSPromisePrototype.lut.h
 @begin promisePrototypeTable
@@ -56,7 +50,7 @@ const ClassInfo JSPromisePrototype::s_info = { "PromisePrototype", &Base::s_info
 
 JSPromisePrototype* JSPromisePrototype::create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
 {
-    JSPromisePrototype* object = new (NotNull, allocateCell<JSPromisePrototype>(vm.heap)) JSPromisePrototype(vm, structure);
+    JSPromisePrototype* object = new (NotNull, allocateCell<JSPromisePrototype>(vm)) JSPromisePrototype(vm, structure);
     object->finishCreation(vm, globalObject);
     object->addOwnInternalSlots(vm, globalObject);
     return object;
@@ -76,7 +70,7 @@ void JSPromisePrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
     putDirectWithoutTransition(vm, vm.propertyNames->builtinNames().thenPublicName(), globalObject->promiseProtoThenFunction(), static_cast<unsigned>(PropertyAttribute::DontEnum));
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(vm, "Promise"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 void JSPromisePrototype::addOwnInternalSlots(VM& vm, JSGlobalObject* globalObject)

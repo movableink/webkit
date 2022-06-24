@@ -79,27 +79,37 @@ bool PlatformCALayer::canHaveBackingStore() const
         || m_layerType == LayerType::LayerTypeTiledBackingTileLayer;
 }
 
-void PlatformCALayer::drawRepaintIndicator(CGContextRef context, PlatformCALayer* platformCALayer, int repaintCount, CGColorRef customBackgroundColor)
+void PlatformCALayer::drawRepaintIndicator(GraphicsContext& graphicsContext, PlatformCALayer* platformCALayer, int repaintCount, Color customBackgroundColor)
 {
-    char text[16]; // that's a lot of repaints
-    snprintf(text, sizeof(text), "%d", repaintCount);
-    
-    FloatRect indicatorBox = platformCALayer->bounds();\
-    indicatorBox.setLocation( { 1, 1 } );
-    indicatorBox.setSize(FloatSize(12 + 10 * strlen(text), 27));
+    const float verticalMargin = 2.5;
+    const float horizontalMargin = 5;
+    const unsigned fontSize = 22;
+    constexpr auto backgroundColor = SRGBA<uint8_t> { 128, 64, 255 };
+    constexpr auto acceleratedContextLabelColor = Color::red;
+    constexpr auto unacceleratedContextLabelColor = Color::white;
+    constexpr auto linearGlyphMaskOutlineColor = Color::black.colorWithAlphaByte(192);
+    constexpr auto displayListBorderColor = Color::black.colorWithAlphaByte(166);
 
-    CGContextStateSaver stateSaver(context);
-    
-    CGContextSetAlpha(context, 0.5f);
-    CGContextBeginTransparencyLayerWithRect(context, indicatorBox, 0);
-    
-    if (customBackgroundColor)
-        CGContextSetFillColorWithColor(context, customBackgroundColor);
-    else
-        CGContextSetRGBFillColor(context, 0, 0.5f, 0.25f, 1);
-    
+    TextRun textRun(String::number(repaintCount));
+
+    FontCascadeDescription fontDescription;
+    fontDescription.setOneFamily("Helvetica");
+    fontDescription.setSpecifiedSize(fontSize);
+    fontDescription.setComputedSize(fontSize);
+
+    FontCascade cascade(WTFMove(fontDescription));
+    cascade.update(nullptr);
+
+    float textWidth = cascade.width(textRun);
+
+    GraphicsContextStateSaver stateSaver(graphicsContext);
+
+    graphicsContext.beginTransparencyLayer(0.5f);
+
+    graphicsContext.setFillColor(customBackgroundColor.isValid() ? customBackgroundColor : backgroundColor);
+    FloatRect indicatorBox(1, 1, horizontalMargin * 2 + textWidth, verticalMargin * 2 + fontSize);
     if (platformCALayer->isOpaque())
-        CGContextFillRect(context, indicatorBox);
+        graphicsContext.fillRect(indicatorBox);
     else {
         Path boundsPath;
         boundsPath.moveTo(indicatorBox.maxXMinYCorner());
@@ -111,32 +121,24 @@ void PlatformCALayer::drawRepaintIndicator(CGContextRef context, PlatformCALayer
         boundsPath.addLineTo(FloatPoint(indicatorBox.x() + cornerChunk, indicatorBox.y()));
         boundsPath.closeSubpath();
 
-        CGContextAddPath(context, boundsPath.platformPath());
-        CGContextFillPath(context);
+        graphicsContext.fillPath(boundsPath);
     }
 
     if (platformCALayer->owner()->isUsingDisplayListDrawing(platformCALayer)) {
-        CGContextSetRGBStrokeColor(context, 0, 0, 0, 0.65);
-        CGContextSetLineWidth(context, 2);
-        CGContextStrokeRect(context, indicatorBox);
+        graphicsContext.setStrokeColor(displayListBorderColor);
+        graphicsContext.strokeRect(indicatorBox, 2);
     }
-
-    CGFloat strokeWidthAsPercentageOfFontSize = 0;
-    Color strokeColor;
 
     if (!platformCALayer->isOpaque() && platformCALayer->supportsSubpixelAntialiasedText() && platformCALayer->acceleratesDrawing()) {
-        strokeColor = Color(0, 0, 0, 200);
-        strokeWidthAsPercentageOfFontSize = -4.5; // Negative means "stroke and fill"; see docs for kCTStrokeWidthAttributeName.
+        graphicsContext.setStrokeColor(linearGlyphMaskOutlineColor);
+        graphicsContext.setStrokeThickness(4.5);
+        graphicsContext.setTextDrawingMode(TextDrawingModeFlags { TextDrawingMode::Fill, TextDrawingMode::Stroke });
     }
 
-    if (platformCALayer->acceleratesDrawing())
-        CGContextSetRGBFillColor(context, 1, 0, 0, 1);
-    else
-        CGContextSetRGBFillColor(context, 1, 1, 1, 1);
-    
-    platformCALayer->drawTextAtPoint(context, indicatorBox.x() + 5, indicatorBox.y() + 22, CGSizeMake(1, -1), 22, text, strlen(text), strokeWidthAsPercentageOfFontSize, strokeColor);
-    
-    CGContextEndTransparencyLayer(context);
+    graphicsContext.setFillColor(platformCALayer->acceleratesDrawing() ? acceleratedContextLabelColor : unacceleratedContextLabelColor);
+
+    graphicsContext.drawText(cascade, textRun, FloatPoint(indicatorBox.x() + horizontalMargin, indicatorBox.y() + fontSize));
+    graphicsContext.endTransparencyLayer();
 }
 
 void PlatformCALayer::flipContext(CGContextRef context, CGFloat height)
@@ -157,11 +159,12 @@ void PlatformCALayer::drawTextAtPoint(CGContextRef context, CGFloat x, CGFloat y
         kCTStrokeWidthAttributeName,
         kCTStrokeColorAttributeName,
     };
+    auto strokeCGColor = cachedCGColor(strokeColor);
     CFTypeRef values[] = {
         font.get(),
         kCFBooleanTrue,
         strokeWidthNumber.get(),
-        cachedCGColor(strokeColor),
+        strokeCGColor.get(),
     };
 
     auto attributes = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys, values, WTF_ARRAY_LENGTH(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
@@ -196,6 +199,15 @@ LayerPool& PlatformCALayer::layerPool()
     return *sharedPool;
 }
 
+void PlatformCALayer::clearContents()
+{
+    setContents(nullptr);
+}
+
+void PlatformCALayer::dumpAdditionalProperties(TextStream&, OptionSet<PlatformLayerTreeAsTextFlags>)
+{
+}
+
 TextStream& operator<<(TextStream& ts, PlatformCALayer::LayerType layerType)
 {
     switch (layerType) {
@@ -218,9 +230,6 @@ TextStream& operator<<(TextStream& ts, PlatformCALayer::LayerType layerType)
         break;
     case PlatformCALayer::LayerTypeRootLayer:
         ts << "root-layer";
-        break;
-    case PlatformCALayer::LayerTypeEditableImageLayer:
-        ts << "editable-image";
         break;
     case PlatformCALayer::LayerTypeBackdropLayer:
         ts << "backdrop-layer";
@@ -246,6 +255,11 @@ TextStream& operator<<(TextStream& ts, PlatformCALayer::LayerType layerType)
     case PlatformCALayer::LayerTypeDarkSystemBackdropLayer:
         ts << "dark-system-backdrop-layer";
         break;
+#if ENABLE(MODEL_ELEMENT)
+    case PlatformCALayer::LayerTypeModelLayer:
+        ts << "model-layer";
+        break;
+#endif
     }
     return ts;
 }

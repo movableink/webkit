@@ -1,7 +1,0 @@
-2d.line.join.invalid
-
-Setting lineJoin to invalid values is ignored
-
-
-FAIL Setting lineJoin to invalid values is ignored null is not an object (evaluating 'ctx.lineJoin = 'bevel'')
-

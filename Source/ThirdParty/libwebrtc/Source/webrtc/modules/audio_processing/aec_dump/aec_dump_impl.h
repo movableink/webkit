@@ -15,12 +15,10 @@
 #include <string>
 #include <vector>
 
-#include "api/audio/audio_frame.h"
 #include "modules/audio_processing/aec_dump/capture_stream_info.h"
 #include "modules/audio_processing/aec_dump/write_to_file_task.h"
 #include "modules/audio_processing/include/aec_dump.h"
 #include "rtc_base/ignore_wundef.h"
-#include "rtc_base/platform_file.h"
 #include "rtc_base/race_checker.h"
 #include "rtc_base/system/file_wrapper.h"
 #include "rtc_base/task_queue.h"
@@ -46,7 +44,7 @@ namespace webrtc {
 class AecDumpImpl : public AecDump {
  public:
   // Does member variables initialization shared across all c-tors.
-  AecDumpImpl(std::unique_ptr<FileWrapper> debug_file,
+  AecDumpImpl(FileWrapper debug_file,
               int64_t max_log_size_bytes,
               rtc::TaskQueue* worker_queue);
 
@@ -56,12 +54,18 @@ class AecDumpImpl : public AecDump {
                         int64_t time_now_ms) override;
   void AddCaptureStreamInput(const AudioFrameView<const float>& src) override;
   void AddCaptureStreamOutput(const AudioFrameView<const float>& src) override;
-  void AddCaptureStreamInput(const AudioFrame& frame) override;
-  void AddCaptureStreamOutput(const AudioFrame& frame) override;
+  void AddCaptureStreamInput(const int16_t* const data,
+                             int num_channels,
+                             int samples_per_channel) override;
+  void AddCaptureStreamOutput(const int16_t* const data,
+                              int num_channels,
+                              int samples_per_channel) override;
   void AddAudioProcessingState(const AudioProcessingState& state) override;
   void WriteCaptureStreamMessage() override;
 
-  void WriteRenderStreamMessage(const AudioFrame& frame) override;
+  void WriteRenderStreamMessage(const int16_t* const data,
+                                int num_channels,
+                                int samples_per_channel) override;
   void WriteRenderStreamMessage(
       const AudioFrameView<const float>& src) override;
 
@@ -73,7 +77,7 @@ class AecDumpImpl : public AecDump {
  private:
   std::unique_ptr<WriteToFileTask> CreateWriteToFileTask();
 
-  std::unique_ptr<FileWrapper> debug_file_;
+  FileWrapper debug_file_;
   int64_t num_bytes_left_for_log_ = 0;
   rtc::RaceChecker race_checker_;
   rtc::TaskQueue* worker_queue_;

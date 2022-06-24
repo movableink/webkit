@@ -12,10 +12,10 @@
 #define RTC_BASE_RANDOM_H_
 
 #include <stdint.h>
+
 #include <limits>
 
 #include "rtc_base/checks.h"
-#include "rtc_base/constructormagic.h"
 
 namespace webrtc {
 
@@ -33,6 +33,10 @@ class Random {
   // webrtc/rtc_base and make sure that it works the same way across platforms.
   // See also discussion here: https://codereview.webrtc.org/1623543002/
   explicit Random(uint64_t seed);
+
+  Random() = delete;
+  Random(const Random&) = delete;
+  Random& operator=(const Random&) = delete;
 
   // Return pseudo-random integer of the specified type.
   // We need to limit the size to 32 bits to keep the output close to uniform.
@@ -62,7 +66,8 @@ class Random {
   double Exponential(double lambda);
 
  private:
-  // Outputs a nonzero 64-bit random number.
+  // Outputs a nonzero 64-bit random number using Xorshift algorithm.
+  // https://en.wikipedia.org/wiki/Xorshift
   uint64_t NextOutput() {
     state_ ^= state_ >> 12;
     state_ ^= state_ << 25;
@@ -72,8 +77,6 @@ class Random {
   }
 
   uint64_t state_;
-
-  RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(Random);
 };
 
 // Return pseudo-random number in the interval [0.0, 1.0).

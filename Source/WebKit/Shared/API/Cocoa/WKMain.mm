@@ -23,12 +23,24 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "WKMain.h"
+#import "config.h"
+#import "WKMain.h"
 
-#include "XPCServiceEntryPoint.h"
+#import "PCMDaemonEntryPoint.h"
+#import "WebPushDaemonMain.h"
+#import "XPCServiceEntryPoint.h"
 
 int WKXPCServiceMain(int argc, const char** argv)
 {
     return WebKit::XPCServiceMain(argc, argv);
+}
+
+int WKAdAttributionDaemonMain(int argc, const char** argv)
+{
+    return WebKit::PCMDaemonMain(argc, argv);
+}
+
+int WKWebPushDaemonMain(int argc, char** argv)
+{
+    return WebKit::WebPushDaemonMain(argc, argv);
 }

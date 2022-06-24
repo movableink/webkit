@@ -37,6 +37,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <wtf/Assertions.h>
+#include <wtf/SafeStrerror.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/UniStdExtras.h>
 
@@ -45,6 +46,10 @@
 #include <QSocketNotifier>
 #elif USE(GLIB)
 #include <gio/gio.h>
+#endif
+
+#if OS(DARWIN)
+#define MSG_NOSIGNAL 0
 #endif
 
 // Although it's available on Darwin, SOCK_SEQPACKET seems to work differently
@@ -67,7 +72,20 @@ static const size_t attachmentMaxAmount = 254;
 class AttachmentInfo {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    AttachmentInfo() = default;
+    AttachmentInfo()
+    {
+        // The entire AttachmentInfo is passed to write(), so we have to zero our
+        // padding bytes to avoid writing uninitialized memory.
+        memset(static_cast<void*>(this), 0, sizeof(*this));
+    }
+
+    AttachmentInfo(const AttachmentInfo& info)
+    {
+        memset(static_cast<void*>(this), 0, sizeof(*this));
+        *this = info;
+    }
+
+    AttachmentInfo& operator=(const AttachmentInfo&) = default;
 
     void setType(Attachment::Type type) { m_type = type; }
     Attachment::Type type() const { return m_type; }
@@ -88,9 +106,10 @@ public:
     bool isNull() const { return m_isNull; }
 
 private:
-    Attachment::Type m_type { Attachment::Uninitialized };
-    bool m_isNull { false };
-    size_t m_size { 0 };
+    // The AttachmentInfo will be copied using memcpy, so all members must be trivially copyable.
+    Attachment::Type m_type;
+    bool m_isNull;
+    size_t m_size;
 };
 
 static_assert(sizeof(MessageInfo) + sizeof(AttachmentInfo) * attachmentMaxAmount <= messageMaxSize, "messageMaxSize is too small.");
@@ -132,6 +151,13 @@ void Connection::platformInvalidate()
     m_socketNotifier = 0;
 #endif
 
+#if PLATFORM(PLAYSTATION)
+    if (m_socketMonitor) {
+        m_socketMonitor->detach();
+        m_socketMonitor = nullptr;
+    }
+#endif
+
     m_socketDescriptor = -1;
     m_isConnected = false;
 }
@@ -163,7 +189,7 @@ bool Connection::processMessage()
 
     uint8_t* messageData = m_readBuffer.data();
     MessageInfo messageInfo;
-    memcpy(&messageInfo, messageData, sizeof(messageInfo));
+    memcpy(static_cast<void*>(&messageInfo), messageData, sizeof(messageInfo));
     messageData += sizeof(messageInfo);
 
     if (messageInfo.attachmentCount() > attachmentMaxAmount || (!messageInfo.isBodyOutOfLine() && messageInfo.bodySize() > messageMaxSize)) {
@@ -180,7 +206,7 @@ bool Connection::processMessage()
     Vector<AttachmentInfo> attachmentInfo(attachmentCount);
 
     if (attachmentCount) {
-        memcpy(attachmentInfo.data(), messageData, sizeof(AttachmentInfo) * attachmentCount);
+        memcpy(static_cast<void*>(attachmentInfo.data()), messageData, sizeof(AttachmentInfo) * attachmentCount);
         messageData += sizeof(AttachmentInfo) * attachmentCount;
 
         for (size_t i = 0; i < attachmentCount; ++i) {
@@ -217,6 +243,9 @@ bool Connection::processMessage()
                 fd = m_fileDescriptors[fdIndex++];
             attachments[attachmentCount - i - 1] = Attachment(fd);
             break;
+        case Attachment::CustomWriterType:
+            attachments[attachmentCount - i - 1] = Attachment(Attachment::CustomWriter(m_socketDescriptor));
+            break;
         case Attachment::Uninitialized:
             attachments[attachmentCount - i - 1] = Attachment();
         default:
@@ -248,7 +277,10 @@ bool Connection::processMessage()
     if (messageInfo.isBodyOutOfLine())
         messageBody = reinterpret_cast<uint8_t*>(oolMessageBody->data());
 
-    auto decoder = makeUnique<Decoder>(messageBody, messageInfo.bodySize(), nullptr, WTFMove(attachments));
+    auto decoder = Decoder::create(messageBody, messageInfo.bodySize(), WTFMove(attachments));
+    ASSERT(decoder);
+    if (!decoder)
+        return false;
 
     processIncomingMessage(WTFMove(decoder));
 
@@ -292,12 +324,18 @@ static ssize_t readBytesFromSocket(int socketDescriptor, Vector<uint8_t>& buffer
     message.msg_iovlen = 1;
 
     while (true) {
-        ssize_t bytesRead = recvmsg(socketDescriptor, &message, 0);
+        ssize_t bytesRead = recvmsg(socketDescriptor, &message, MSG_NOSIGNAL);
 
         if (bytesRead < 0) {
             if (errno == EINTR)
                 continue;
 
+            buffer.shrink(previousBufferSize);
+            return -1;
+        }
+
+        if (message.msg_flags & MSG_CTRUNC) {
+            // Control data has been discarded, which is expected by processMessage(), so consider this a read failure.
             buffer.shrink(previousBufferSize);
             return -1;
         }
@@ -345,8 +383,13 @@ void Connection::readyReadHandler()
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 return;
 
+            if (errno == ECONNRESET) {
+                connectionDidClose();
+                return;
+            }
+
             if (m_isConnected) {
-                WTFLogAlways("Error receiving IPC message on socket %d in process %d: %s", m_socketDescriptor, getpid(), strerror(errno));
+                WTFLogAlways("Error receiving IPC message on socket %d in process %d: %s", m_socketDescriptor, getpid(), safeStrerror(errno).data());
                 connectionDidClose();
             }
             return;
@@ -400,6 +443,27 @@ bool Connection::open()
     });
 #endif
 
+#if PLATFORM(PLAYSTATION)
+    m_socketMonitor = Thread::create("SocketMonitor", [protectedThis] {
+        {
+            int fd;
+            while ((fd = protectedThis->m_socketDescriptor) != -1) {
+                int maxFd = fd;
+                fd_set fdSet;
+                FD_ZERO(&fdSet);
+                FD_SET(fd, &fdSet);
+
+                if (-1 != select(maxFd + 1, &fdSet, 0, 0, 0)) {
+                    if (FD_ISSET(fd, &fdSet))
+                        protectedThis->readyReadHandler();
+                }
+            }
+
+        }
+    });
+    return true;
+#endif
+
     // Schedule a call to readyReadHandler. Data may have arrived before installation of the signal handler.
     m_connectionQueue->dispatch([protectedThis] {
         protectedThis->readyReadHandler();
@@ -413,7 +477,7 @@ bool Connection::platformCanSendOutgoingMessages() const
     return !m_pendingOutputMessage;
 }
 
-bool Connection::sendOutgoingMessage(std::unique_ptr<Encoder> encoder)
+bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
 {
 #if PLATFORM(QT)
     ASSERT(m_socketNotifier);
@@ -421,7 +485,7 @@ bool Connection::sendOutgoingMessage(std::unique_ptr<Encoder> encoder)
 
     COMPILE_ASSERT(sizeof(MessageInfo) + attachmentMaxAmount * sizeof(size_t) <= messageMaxSize, AttachmentsFitToMessageInline);
 
-    UnixMessage outputMessage(*encoder);
+    UnixMessage outputMessage(encoder.get());
     if (outputMessage.attachments().size() > (attachmentMaxAmount - 1)) {
         ASSERT_NOT_REACHED();
         return false;
@@ -466,6 +530,7 @@ bool Connection::sendOutputMessage(UnixMessage& outputMessage)
 
     Vector<AttachmentInfo> attachmentInfo;
     MallocPtr<char> attachmentFDBuffer;
+    bool hasCustomWriterAttachments { false };
 
     auto& attachments = outputMessage.attachments();
     if (!attachments.isEmpty()) {
@@ -507,6 +572,9 @@ bool Connection::sendOutputMessage(UnixMessage& outputMessage)
                 } else
                     attachmentInfo[i].setNull();
                 break;
+            case Attachment::CustomWriterType:
+                hasCustomWriterAttachments = true;
+                break;
             case Attachment::Uninitialized:
             default:
                 break;
@@ -526,17 +594,17 @@ bool Connection::sendOutputMessage(UnixMessage& outputMessage)
 
     message.msg_iovlen = iovLength;
 
-    while (sendmsg(m_socketDescriptor, &message, 0) == -1) {
+    while (sendmsg(m_socketDescriptor, &message, MSG_NOSIGNAL) == -1) {
         if (errno == EINTR)
             continue;
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
 #if USE(GLIB) && !PLATFORM(QT)
             m_pendingOutputMessage = makeUnique<UnixMessage>(WTFMove(outputMessage));
-            m_writeSocketMonitor.start(m_socket.get(), G_IO_OUT, m_connectionQueue->runLoop(), [this, protectedThis = makeRef(*this)] (GIOCondition condition) -> gboolean {
+            m_writeSocketMonitor.start(m_socket.get(), G_IO_OUT, m_connectionQueue->runLoop(), [this, protectedThis = Ref { *this }] (GIOCondition condition) -> gboolean {
                 if (condition & G_IO_OUT) {
                     ASSERT(m_pendingOutputMessage);
                     // We can't stop the monitor from this lambda, because stop destroys the lambda.
-                    m_connectionQueue->dispatch([this, protectedThis = makeRef(*this)] {
+                    m_connectionQueue->dispatch([this, protectedThis = Ref { *this }] {
                         m_writeSocketMonitor.stop();
                         auto message = WTFMove(m_pendingOutputMessage);
                         if (m_isConnected) {
@@ -559,10 +627,31 @@ bool Connection::sendOutputMessage(UnixMessage& outputMessage)
 #endif
         }
 
+#if OS(LINUX)
+        // Linux can return EPIPE instead of ECONNRESET
+        if (errno == EPIPE || errno == ECONNRESET)
+#else
+        if (errno == ECONNRESET)
+#endif
+        {
+            connectionDidClose();
+            return false;
+        }
+
         if (m_isConnected)
-            WTFLogAlways("Error sending IPC message: %s", strerror(errno));
+            WTFLogAlways("Error sending IPC message: %s", safeStrerror(errno).data());
         return false;
     }
+
+    if (hasCustomWriterAttachments) {
+        for (auto& attachment : attachments) {
+            if (attachment.type() == Attachment::CustomWriterType) {
+                ASSERT(std::holds_alternative<Attachment::CustomWriterFunc>(attachment.customWriter()));
+                std::get<Attachment::CustomWriterFunc>(attachment.customWriter())(m_socketDescriptor);
+            }
+        }
+    }
+
     return true;
 }
 

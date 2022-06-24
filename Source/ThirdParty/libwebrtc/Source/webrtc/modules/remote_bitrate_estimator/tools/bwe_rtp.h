@@ -11,25 +11,15 @@
 #ifndef MODULES_REMOTE_BITRATE_ESTIMATOR_TOOLS_BWE_RTP_H_
 #define MODULES_REMOTE_BITRATE_ESTIMATOR_TOOLS_BWE_RTP_H_
 
-#include <string>
+#include <memory>
 
-namespace webrtc {
-class Clock;
-class RemoteBitrateEstimator;
-class RemoteBitrateObserver;
-class RtpHeaderParser;
-namespace test {
-class RtpFileReader;
-}
-}  // namespace webrtc
+#include "modules/rtp_rtcp/include/rtp_header_extension_map.h"
+#include "test/rtp_file_reader.h"
 
-bool ParseArgsAndSetupEstimator(int argc,
-                                char** argv,
-                                webrtc::Clock* clock,
-                                webrtc::RemoteBitrateObserver* observer,
-                                webrtc::test::RtpFileReader** rtp_reader,
-                                webrtc::RtpHeaderParser** parser,
-                                webrtc::RemoteBitrateEstimator** estimator,
-                                std::string* estimator_used);
+bool ParseArgsAndSetupRtpReader(
+    int argc,
+    char** argv,
+    std::unique_ptr<webrtc::test::RtpFileReader>& rtp_reader,
+    webrtc::RtpHeaderExtensionMap& rtp_header_extensions);
 
 #endif  // MODULES_REMOTE_BITRATE_ESTIMATOR_TOOLS_BWE_RTP_H_

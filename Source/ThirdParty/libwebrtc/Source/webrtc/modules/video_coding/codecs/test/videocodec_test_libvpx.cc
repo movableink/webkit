@@ -8,20 +8,20 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include <memory>
 #include <vector>
 
-#include "absl/memory/memory.h"
 #include "api/test/create_videocodec_test_fixture.h"
 #include "api/test/video/function_video_encoder_factory.h"
 #include "api/video_codecs/sdp_video_format.h"
-#include "media/base/mediaconstants.h"
-#include "media/engine/internaldecoderfactory.h"
-#include "media/engine/internalencoderfactory.h"
+#include "media/base/media_constants.h"
+#include "media/engine/internal_decoder_factory.h"
+#include "media/engine/internal_encoder_factory.h"
 #include "media/engine/simulcast_encoder_adapter.h"
 #include "modules/video_coding/utility/vp8_header_parser.h"
 #include "modules/video_coding/utility/vp9_uncompressed_header_parser.h"
 #include "test/gtest.h"
-#include "test/testsupport/fileutils.h"
+#include "test/testsupport/file_utils.h"
 
 namespace webrtc {
 namespace test {
@@ -45,11 +45,9 @@ class QpFrameChecker : public VideoCodecTestFixture::EncodedFrameChecker {
                          const EncodedImage& encoded_frame) const override {
     int qp;
     if (codec == kVideoCodecVP8) {
-      EXPECT_TRUE(
-          vp8::GetQp(encoded_frame._buffer, encoded_frame._length, &qp));
+      EXPECT_TRUE(vp8::GetQp(encoded_frame.data(), encoded_frame.size(), &qp));
     } else if (codec == kVideoCodecVP9) {
-      EXPECT_TRUE(
-          vp9::GetQp(encoded_frame._buffer, encoded_frame._length, &qp));
+      EXPECT_TRUE(vp9::GetQp(encoded_frame.data(), encoded_frame.size(), &qp));
     } else {
       RTC_NOTREACHED();
     }
@@ -96,11 +94,11 @@ TEST(VideoCodecTestLibvpx, HighBitrateVP9) {
   config.SetCodecSettings(cricket::kVp9CodecName, 1, 1, 1, false, true, false,
                           kCifWidth, kCifHeight);
   config.num_frames = kNumFramesShort;
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
-  std::vector<RateProfile> rate_profiles = {{500, 30, kNumFramesShort}};
+  std::vector<RateProfile> rate_profiles = {{500, 30, 0}};
 
   std::vector<RateControlThresholds> rc_thresholds = {
       {5, 1, 0, 1, 0.3, 0.1, 0, 1}};
@@ -114,19 +112,19 @@ TEST(VideoCodecTestLibvpx, ChangeBitrateVP9) {
   auto config = CreateConfig();
   config.SetCodecSettings(cricket::kVp9CodecName, 1, 1, 1, false, true, false,
                           kCifWidth, kCifHeight);
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
   std::vector<RateProfile> rate_profiles = {
-      {200, 30, 100},  // target_kbps, input_fps, frame_index_rate_update
-      {700, 30, 200},
-      {500, 30, kNumFramesLong}};
+      {200, 30, 0},  // target_kbps, input_fps, frame_num
+      {700, 30, 100},
+      {500, 30, 200}};
 
   std::vector<RateControlThresholds> rc_thresholds = {
       {5, 2, 0, 1, 0.5, 0.1, 0, 1},
       {15, 3, 0, 1, 0.5, 0.1, 0, 0},
-      {10, 2, 0, 1, 0.5, 0.1, 0, 0}};
+      {11, 2, 0, 1, 0.5, 0.1, 0, 0}};
 
   std::vector<QualityThresholds> quality_thresholds = {
       {34, 33, 0.90, 0.88}, {38, 35, 0.95, 0.91}, {35, 34, 0.93, 0.90}};
@@ -138,14 +136,14 @@ TEST(VideoCodecTestLibvpx, ChangeFramerateVP9) {
   auto config = CreateConfig();
   config.SetCodecSettings(cricket::kVp9CodecName, 1, 1, 1, false, true, false,
                           kCifWidth, kCifHeight);
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
   std::vector<RateProfile> rate_profiles = {
-      {100, 24, 100},  // target_kbps, input_fps, frame_index_rate_update
-      {100, 15, 200},
-      {100, 10, kNumFramesLong}};
+      {100, 24, 0},  // target_kbps, input_fps, frame_num
+      {100, 15, 100},
+      {100, 10, 200}};
 
   // Framerate mismatch should be lower for lower framerate.
   std::vector<RateControlThresholds> rc_thresholds = {
@@ -155,7 +153,7 @@ TEST(VideoCodecTestLibvpx, ChangeFramerateVP9) {
 
   // Quality should be higher for lower framerates for the same content.
   std::vector<QualityThresholds> quality_thresholds = {
-      {33, 32, 0.89, 0.87}, {33.5, 32, 0.90, 0.86}, {33.5, 31.5, 0.90, 0.85}};
+      {33, 32, 0.88, 0.86}, {33.5, 32, 0.90, 0.86}, {33.5, 31.5, 0.90, 0.85}};
 
   fixture->RunTest(rate_profiles, &rc_thresholds, &quality_thresholds, nullptr);
 }
@@ -165,11 +163,11 @@ TEST(VideoCodecTestLibvpx, DenoiserOnVP9) {
   config.SetCodecSettings(cricket::kVp9CodecName, 1, 1, 1, true, true, false,
                           kCifWidth, kCifHeight);
   config.num_frames = kNumFramesShort;
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
-  std::vector<RateProfile> rate_profiles = {{500, 30, kNumFramesShort}};
+  std::vector<RateProfile> rate_profiles = {{500, 30, 0}};
 
   std::vector<RateControlThresholds> rc_thresholds = {
       {5, 1, 0, 1, 0.3, 0.1, 0, 1}};
@@ -183,14 +181,14 @@ TEST(VideoCodecTestLibvpx, VeryLowBitrateVP9) {
   auto config = CreateConfig();
   config.SetCodecSettings(cricket::kVp9CodecName, 1, 1, 1, false, true, true,
                           kCifWidth, kCifHeight);
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
-  std::vector<RateProfile> rate_profiles = {{50, 30, kNumFramesLong}};
+  std::vector<RateProfile> rate_profiles = {{50, 30, 0}};
 
   std::vector<RateControlThresholds> rc_thresholds = {
-      {15, 3, 75, 1, 0.5, 0.4, 1, 1}};
+      {15, 3, 75, 1, 0.5, 0.4, 2, 1}};
 
   std::vector<QualityThresholds> quality_thresholds = {{28, 25, 0.80, 0.65}};
 
@@ -207,11 +205,11 @@ TEST(VideoCodecTestLibvpx, HighBitrateVP8) {
   config.SetCodecSettings(cricket::kVp8CodecName, 1, 1, 1, true, true, false,
                           kCifWidth, kCifHeight);
   config.num_frames = kNumFramesShort;
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
-  std::vector<RateProfile> rate_profiles = {{500, 30, kNumFramesShort}};
+  std::vector<RateProfile> rate_profiles = {{500, 30, 0}};
 
   std::vector<RateControlThresholds> rc_thresholds = {
       {5, 1, 0, 1, 0.2, 0.1, 0, 1}};
@@ -224,33 +222,18 @@ TEST(VideoCodecTestLibvpx, HighBitrateVP8) {
   fixture->RunTest(rate_profiles, &rc_thresholds, &quality_thresholds, nullptr);
 }
 
-// The tests below are currently disabled for Android. For ARM, the encoder
-// uses |cpu_speed| = 12, as opposed to default |cpu_speed| <= 6 for x86,
-// which leads to significantly different quality. The quality and rate control
-// settings in the tests below are defined for encoder speed setting
-// |cpu_speed| <= ~6. A number of settings would need to be significantly
-// modified for the |cpu_speed| = 12 case. For now, keep the tests below
-// disabled on Android. Some quality parameter in the above test has been
-// adjusted to also pass for |cpu_speed| <= 12.
-
-// TODO(webrtc:9267): Fails on iOS
-#if defined(WEBRTC_ANDROID) || defined(WEBRTC_IOS)
-#define MAYBE_ChangeBitrateVP8 DISABLED_ChangeBitrateVP8
-#else
-#define MAYBE_ChangeBitrateVP8 ChangeBitrateVP8
-#endif
 TEST(VideoCodecTestLibvpx, MAYBE_ChangeBitrateVP8) {
   auto config = CreateConfig();
   config.SetCodecSettings(cricket::kVp8CodecName, 1, 1, 1, true, true, false,
                           kCifWidth, kCifHeight);
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
   std::vector<RateProfile> rate_profiles = {
-      {200, 30, 100},  // target_kbps, input_fps, frame_index_rate_update
-      {800, 30, 200},
-      {500, 30, kNumFramesLong}};
+      {200, 30, 0},  // target_kbps, input_fps, frame_num
+      {800, 30, 100},
+      {500, 30, 200}};
 
   std::vector<RateControlThresholds> rc_thresholds = {
       {5, 1, 0, 1, 0.2, 0.1, 0, 1},
@@ -267,43 +250,37 @@ TEST(VideoCodecTestLibvpx, MAYBE_ChangeBitrateVP8) {
   fixture->RunTest(rate_profiles, &rc_thresholds, &quality_thresholds, nullptr);
 }
 
-// TODO(webrtc:9267): Fails on iOS
-#if defined(WEBRTC_ANDROID) || defined(WEBRTC_IOS)
-#define MAYBE_ChangeFramerateVP8 DISABLED_ChangeFramerateVP8
-#else
-#define MAYBE_ChangeFramerateVP8 ChangeFramerateVP8
-#endif
 TEST(VideoCodecTestLibvpx, MAYBE_ChangeFramerateVP8) {
   auto config = CreateConfig();
   config.SetCodecSettings(cricket::kVp8CodecName, 1, 1, 1, true, true, false,
                           kCifWidth, kCifHeight);
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
   std::vector<RateProfile> rate_profiles = {
-      {80, 24, 100},  // target_kbps, input_fps, frame_index_rate_update
-      {80, 15, 200},
-      {80, 10, kNumFramesLong}};
+      {80, 24, 0},  // target_kbps, input_fps, frame_index_rate_update
+      {80, 15, 100},
+      {80, 10, 200}};
 
 #if defined(WEBRTC_ARCH_ARM) || defined(WEBRTC_ARCH_ARM64)
   std::vector<RateControlThresholds> rc_thresholds = {
-      {10, 2, 60, 1, 0.3, 0.3, 0, 1},
+      {10, 2.42, 60, 1, 0.3, 0.3, 0, 1},
       {10, 2, 30, 1, 0.3, 0.3, 0, 0},
       {10, 2, 10, 1, 0.3, 0.2, 0, 0}};
 #else
   std::vector<RateControlThresholds> rc_thresholds = {
-      {10, 2, 20, 1, 0.3, 0.1, 0, 1},
-      {5, 2, 5, 1, 0.3, 0.1, 0, 0},
+      {10, 2, 20, 1, 0.3, 0.15, 0, 1},
+      {5, 2, 5, 1, 0.3, 0.15, 0, 0},
       {4, 2, 1, 1, 0.3, 0.2, 0, 0}};
 #endif
 
 #if defined(WEBRTC_ARCH_ARM) || defined(WEBRTC_ARCH_ARM64)
   std::vector<QualityThresholds> quality_thresholds = {
-      {31, 30, 0.85, 0.84}, {31.5, 30.5, 0.86, 0.84}, {30.5, 29, 0.83, 0.78}};
+      {31, 30, 0.85, 0.84}, {31.4, 30.5, 0.86, 0.84}, {30.5, 29, 0.83, 0.78}};
 #else
   std::vector<QualityThresholds> quality_thresholds = {
-      {31, 30, 0.87, 0.86}, {32, 31, 0.89, 0.86}, {32, 30, 0.87, 0.82}};
+      {31, 30, 0.87, 0.85}, {32, 31, 0.88, 0.85}, {32, 30, 0.87, 0.82}};
 #endif
   fixture->RunTest(rate_profiles, &rc_thresholds, &quality_thresholds, nullptr);
 }
@@ -317,16 +294,15 @@ TEST(VideoCodecTestLibvpx, MAYBE_TemporalLayersVP8) {
   auto config = CreateConfig();
   config.SetCodecSettings(cricket::kVp8CodecName, 1, 1, 3, true, true, false,
                           kCifWidth, kCifHeight);
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
-  std::vector<RateProfile> rate_profiles = {{200, 30, 150},
-                                            {400, 30, kNumFramesLong}};
+  std::vector<RateProfile> rate_profiles = {{200, 30, 0}, {400, 30, 150}};
 
 #if defined(WEBRTC_ARCH_ARM) || defined(WEBRTC_ARCH_ARM64)
   std::vector<RateControlThresholds> rc_thresholds = {
-      {10, 1, 2, 1, 0.2, 0.1, 0, 1}, {12, 2, 3, 1, 0.2, 0.1, 0, 1}};
+      {10, 1, 2.1, 1, 0.2, 0.1, 0, 1}, {12, 2, 3, 1, 0.2, 0.1, 0, 1}};
 #else
   std::vector<RateControlThresholds> rc_thresholds = {
       {5, 1, 0, 1, 0.2, 0.1, 0, 1}, {10, 2, 0, 1, 0.2, 0.1, 0, 1}};
@@ -342,8 +318,7 @@ TEST(VideoCodecTestLibvpx, MAYBE_TemporalLayersVP8) {
   fixture->RunTest(rate_profiles, &rc_thresholds, &quality_thresholds, nullptr);
 }
 
-// TODO(webrtc:9267): Fails on iOS
-#if defined(WEBRTC_ANDROID) || defined(WEBRTC_IOS)
+#if defined(WEBRTC_ANDROID)
 #define MAYBE_MultiresVP8 DISABLED_MultiresVP8
 #else
 #define MAYBE_MultiresVP8 MultiresVP8
@@ -355,14 +330,18 @@ TEST(VideoCodecTestLibvpx, MAYBE_MultiresVP8) {
   config.num_frames = 100;
   config.SetCodecSettings(cricket::kVp8CodecName, 3, 1, 3, true, true, false,
                           1280, 720);
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
-  std::vector<RateProfile> rate_profiles = {{1500, 30, config.num_frames}};
-
+  std::vector<RateProfile> rate_profiles = {{1500, 30, 0}};
+#if defined(WEBRTC_ARCH_ARM) || defined(WEBRTC_ARCH_ARM64)
+  std::vector<RateControlThresholds> rc_thresholds = {
+      {4.1, 1.04, 7, 0.18, 0.14, 0.08, 0, 1}};
+#else
   std::vector<RateControlThresholds> rc_thresholds = {
       {5, 1, 5, 1, 0.3, 0.1, 0, 1}};
+#endif
   std::vector<QualityThresholds> quality_thresholds = {{34, 32, 0.90, 0.88}};
 
   fixture->RunTest(rate_profiles, &rc_thresholds, &quality_thresholds, nullptr);
@@ -380,13 +359,13 @@ TEST(VideoCodecTestLibvpx, MAYBE_SimulcastVP8) {
   config.num_frames = 100;
   config.SetCodecSettings(cricket::kVp8CodecName, 3, 1, 3, true, true, false,
                           1280, 720);
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
 
   InternalEncoderFactory internal_encoder_factory;
   std::unique_ptr<VideoEncoderFactory> adapted_encoder_factory =
-      absl::make_unique<FunctionVideoEncoderFactory>([&]() {
-        return absl::make_unique<SimulcastEncoderAdapter>(
+      std::make_unique<FunctionVideoEncoderFactory>([&]() {
+        return std::make_unique<SimulcastEncoderAdapter>(
             &internal_encoder_factory, SdpVideoFormat(cricket::kVp8CodecName));
       });
   std::unique_ptr<InternalDecoderFactory> internal_decoder_factory(
@@ -396,7 +375,7 @@ TEST(VideoCodecTestLibvpx, MAYBE_SimulcastVP8) {
       CreateVideoCodecTestFixture(config, std::move(internal_decoder_factory),
                                   std::move(adapted_encoder_factory));
 
-  std::vector<RateProfile> rate_profiles = {{1500, 30, config.num_frames}};
+  std::vector<RateProfile> rate_profiles = {{1500, 30, 0}};
 
   std::vector<RateControlThresholds> rc_thresholds = {
       {20, 5, 90, 1, 0.5, 0.3, 0, 1}};
@@ -417,11 +396,11 @@ TEST(VideoCodecTestLibvpx, MAYBE_SvcVP9) {
   config.num_frames = 100;
   config.SetCodecSettings(cricket::kVp9CodecName, 1, 3, 3, true, true, false,
                           1280, 720);
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
-  std::vector<RateProfile> rate_profiles = {{1500, 30, config.num_frames}};
+  std::vector<RateProfile> rate_profiles = {{1500, 30, 0}};
 
   std::vector<RateControlThresholds> rc_thresholds = {
       {5, 1, 5, 1, 0.3, 0.1, 0, 1}};
@@ -438,14 +417,13 @@ TEST(VideoCodecTestLibvpx, DISABLED_MultiresVP8RdPerf) {
   config.print_frame_level_stats = true;
   config.SetCodecSettings(cricket::kVp8CodecName, 3, 1, 3, true, true, false,
                           1280, 720);
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
   std::map<size_t, std::vector<VideoStatistics>> rd_stats;
   for (size_t bitrate_kbps : kBitrateRdPerfKbps) {
-    std::vector<RateProfile> rate_profiles = {
-        {bitrate_kbps, 30, config.num_frames}};
+    std::vector<RateProfile> rate_profiles = {{bitrate_kbps, 30, 0}};
 
     fixture->RunTest(rate_profiles, nullptr, nullptr, nullptr);
 
@@ -465,14 +443,13 @@ TEST(VideoCodecTestLibvpx, DISABLED_SvcVP9RdPerf) {
   config.print_frame_level_stats = true;
   config.SetCodecSettings(cricket::kVp9CodecName, 1, 3, 3, true, true, false,
                           1280, 720);
-  const auto frame_checker = absl::make_unique<QpFrameChecker>();
+  const auto frame_checker = std::make_unique<QpFrameChecker>();
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateVideoCodecTestFixture(config);
 
   std::map<size_t, std::vector<VideoStatistics>> rd_stats;
   for (size_t bitrate_kbps : kBitrateRdPerfKbps) {
-    std::vector<RateProfile> rate_profiles = {
-        {bitrate_kbps, 30, config.num_frames}};
+    std::vector<RateProfile> rate_profiles = {{bitrate_kbps, 30, 0}};
 
     fixture->RunTest(rate_profiles, nullptr, nullptr, nullptr);
 

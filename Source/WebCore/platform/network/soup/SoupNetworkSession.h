@@ -23,9 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SoupNetworkSession_h
-#define SoupNetworkSession_h
+#pragma once
 
+#include "SoupNetworkProxySettings.h"
 #include <gio/gio.h>
 #include <glib-object.h>
 #include <pal/SessionID.h>
@@ -37,14 +37,12 @@
 typedef struct _SoupCache SoupCache;
 typedef struct _SoupCookieJar SoupCookieJar;
 typedef struct _SoupMessage SoupMessage;
-typedef struct _SoupRequest SoupRequest;
 typedef struct _SoupSession SoupSession;
 
 namespace WebCore {
 
 class CertificateInfo;
 class ResourceError;
-struct SoupNetworkProxySettings;
 
 class SoupNetworkSession {
     WTF_MAKE_NONCOPYABLE(SoupNetworkSession); WTF_MAKE_FAST_ALLOCATED;
@@ -57,19 +55,17 @@ public:
     void setCookieJar(SoupCookieJar*);
     SoupCookieJar* cookieJar() const;
 
-    static void setHSTSPersistentStorage(const CString& hstsStorageDirectory);
-    void setupHSTSEnforcer();
+    void setHSTSPersistentStorage(const String& hstsStorageDirectory);
 
     static void clearOldSoupCache(const String& cacheDirectory);
 
-    static void setProxySettings(const SoupNetworkProxySettings&);
-    void setupProxy();
+    void setProxySettings(const SoupNetworkProxySettings&);
 
     static void setInitialAcceptLanguages(const CString&);
     void setAcceptLanguages(const CString&);
 
-    static void setShouldIgnoreTLSErrors(bool);
-    static Optional<ResourceError> checkTLSErrors(const URL&, GTlsCertificate*, GTlsCertificateFlags);
+    WEBCORE_EXPORT void setIgnoreTLSErrors(bool);
+    std::optional<ResourceError> checkTLSErrors(const URL&, GTlsCertificate*, GTlsCertificateFlags);
     static void allowSpecificHTTPSCertificateForHost(const CertificateInfo&, const String& host);
 
     void getHostNamesWithHSTSCache(HashSet<String>&);
@@ -81,8 +77,8 @@ private:
 
     GRefPtr<SoupSession> m_soupSession;
     PAL::SessionID m_sessionID;
+    bool m_ignoreTLSErrors { false };
+    SoupNetworkProxySettings m_proxySettings;
 };
 
 } // namespace WebCore
-
-#endif

@@ -4,15 +4,10 @@
 </head>
 <body>
 <script>
-if (window.internals)
-    window.internals.settings.setIndexedDBWorkersEnabled(true);
-
 if (window.testRunner) {
     testRunner.dumpAsText();
     testRunner.dumpChildFramesAsText();
     testRunner.waitUntilDone();
-    testRunner.setCanOpenWindows(true);
-    testRunner.setCloseRemainingWindowsWhenComplete(true);
     internals.settings.setStorageBlockingPolicy('BlockThirdParty');
 }
 

@@ -26,9 +26,8 @@
 #include "config.h"
 
 #include "APICast.h"
-#include "JSCJSValueInlines.h"
-#include "JSObject.h"
-
+#include "JSGlobalObjectInlines.h"
+#include "MarkedJSValueRefArray.h"
 #include <JavaScriptCore/JSContextRefPrivate.h>
 #include <JavaScriptCore/JSObjectRefPrivate.h>
 #include <JavaScriptCore/JavaScript.h>
@@ -39,8 +38,13 @@
 #include <wtf/Vector.h>
 #include <wtf/text/StringCommon.h>
 
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
 extern "C" void configureJSCForTesting();
 extern "C" int testCAPIViaCpp(const char* filter);
+extern "C" void JSSynchronousGarbageCollectForDebugging(JSContextRef);
 
 class APIString {
     WTF_MAKE_NONCOPYABLE(APIString);
@@ -48,6 +52,11 @@ public:
 
     APIString(const char* string)
         : m_string(JSStringCreateWithUTF8CString(string))
+    {
+    }
+
+    APIString(const String& string)
+        : APIString(string.utf8().data())
     {
     }
 
@@ -72,9 +81,9 @@ public:
         APIString print("print");
         JSObjectRef printFunction = JSObjectMakeFunctionWithCallback(m_context, print, [] (JSContextRef ctx, JSObjectRef, JSObjectRef, size_t argumentCount, const JSValueRef arguments[], JSValueRef*) {
 
-            JSC::ExecState* exec = toJS(ctx);
+            JSC::JSGlobalObject* globalObject = toJS(ctx);
             for (unsigned i = 0; i < argumentCount; i++)
-                dataLog(toJS(exec, arguments[i]));
+                dataLog(toJS(globalObject, arguments[i]));
             dataLogLn();
             return JSValueMakeUndefined(ctx);
         });
@@ -88,7 +97,7 @@ public:
     }
 
     operator JSGlobalContextRef() { return m_context; }
-    operator JSC::ExecState*() { return toJS(m_context); }
+    operator JSC::JSGlobalObject*() { return toJS(m_context); }
 
 private:
     JSGlobalContextRef m_context;
@@ -142,6 +151,12 @@ public:
     void promiseUnhandledRejection();
     void promiseUnhandledRejectionFromUnhandledRejectionCallback();
     void promiseEarlyHandledRejections();
+    void promiseDrainDoesNotEatExceptions();
+    void topCallFrameAccess();
+    void markedJSValueArrayAndGC();
+    void classDefinitionWithJSSubclass();
+    void proxyReturnedWithJSSubclassing();
+    void testJSObjectSetOnGlobalObjectSubclassDefinition();
 
     int failed() const { return m_failed; }
 
@@ -160,6 +175,8 @@ private:
     ScriptResult callFunction(const char* functionSource, ArgumentTypes... arguments);
     template<typename... ArgumentTypes>
     bool functionReturnsTrue(const char* functionSource, ArgumentTypes... arguments);
+
+    bool scriptResultIs(ScriptResult, JSValueRef);
 
     // Ways to make sets of interesting things.
     APIVector<JSObjectRef> interestingObjects();
@@ -235,6 +252,13 @@ bool TestAPI::functionReturnsTrue(const char* functionSource, ArgumentTypes... a
     if (!result)
         return false;
     return JSValueIsStrictEqual(context, trueValue, result.value());
+}
+
+bool TestAPI::scriptResultIs(ScriptResult result, JSValueRef value)
+{
+    if (!result)
+        return false;
+    return JSValueIsStrictEqual(context, result.value(), value);
 }
 
 template<typename... Strings>
@@ -522,7 +546,7 @@ void TestAPI::promiseRejectTrue()
 
 void TestAPI::promiseUnhandledRejection()
 {
-    JSObjectRef reject;
+    JSObjectRef reject = nullptr;
     JSValueRef exception = nullptr;
     static auto promise = JSObjectMakeDeferredPromise(context, nullptr, &reject, &exception);
     check(!exception, "creating a (reject-only) deferred promise should not throw");
@@ -590,6 +614,132 @@ void TestAPI::promiseEarlyHandledRejections()
     check(!callbackCalled, "unhandled rejection callback should not be called for asynchronous early-handled rejection");
 }
 
+void TestAPI::promiseDrainDoesNotEatExceptions()
+{
+#if PLATFORM(COCOA)
+    bool useLegacyDrain = !linkedOnOrAfter(SDKVersion::FirstThatDoesNotDrainTheMicrotaskQueueWhenCallingObjC);
+    if (useLegacyDrain)
+        return;
+#endif
+
+    ScriptResult result = callFunction("(function() { Promise.resolve().then(() => { throw 2; }); throw 1; })");
+    check(!result, "function should throw an error");
+    check(JSValueIsNumber(context, result.error()) && JSValueToNumber(context, result.error(), nullptr) == 1, "exception payload should have been 1");
+}
+
+void TestAPI::topCallFrameAccess()
+{
+    {
+        JSObjectRef function = JSValueToObject(context, evaluateScript("(function () { })").value(), nullptr);
+        APIString argumentsString("arguments");
+        auto arguments = JSObjectGetProperty(context, function, argumentsString, nullptr);
+        check(JSValueIsNull(context, arguments), "vm.topCallFrame access from C++ world should use nullptr internally for arguments");
+    }
+    {
+        JSObjectRef arguments = JSValueToObject(context, evaluateScript("(function ok(v) { return ok.arguments; })(42)").value(), nullptr);
+        check(!JSValueIsNull(context, arguments), "vm.topCallFrame is materialized and we found the caller function's arguments");
+    }
+    {
+        JSObjectRef function = JSValueToObject(context, evaluateScript("(function () { })").value(), nullptr);
+        APIString callerString("caller");
+        auto caller = JSObjectGetProperty(context, function, callerString, nullptr);
+        check(JSValueIsNull(context, caller), "vm.topCallFrame access from C++ world should use nullptr internally for caller");
+    }
+    {
+        JSObjectRef caller = JSValueToObject(context, evaluateScript("(function () { return (function ok(v) { return ok.caller; })(42); })()").value(), nullptr);
+        check(!JSValueIsNull(context, caller), "vm.topCallFrame is materialized and we found the caller function's caller");
+    }
+    {
+        JSObjectRef caller = JSValueToObject(context, evaluateScript("(function ok(v) { return ok.caller; })(42)").value(), nullptr);
+        check(JSValueIsNull(context, caller), "vm.topCallFrame is materialized and we found the caller function's caller, but the caller is global code");
+    }
+}
+
+void TestAPI::markedJSValueArrayAndGC()
+{
+    auto testMarkedJSValueArray = [&] (unsigned count) {
+        auto* globalObject = toJS(context);
+        JSC::JSLockHolder locker(globalObject->vm());
+        JSC::MarkedJSValueRefArray values(context, count);
+        for (unsigned index = 0; index < count; ++index) {
+            JSValueRef string = JSValueMakeString(context, APIString(makeString("Prefix", index)));
+            values[index] = string;
+        }
+        JSSynchronousGarbageCollectForDebugging(context);
+        bool ok = true;
+        for (unsigned index = 0; index < count; ++index) {
+            JSValueRef string = JSValueMakeString(context, APIString(makeString("Prefix", index)));
+            if (!JSValueIsStrictEqual(context, values[index], string))
+                ok = false;
+        }
+        check(ok, "Held JSString should be alive and correct.");
+    };
+    testMarkedJSValueArray(4);
+    testMarkedJSValueArray(1000);
+}
+
+void TestAPI::classDefinitionWithJSSubclass()
+{
+    const static JSClassDefinition definition = kJSClassDefinitionEmpty;
+    static JSClassRef jsClass = JSClassCreate(&definition);
+
+    auto constructor = [] (JSContextRef ctx, JSObjectRef, size_t, const JSValueRef*, JSValueRef*) -> JSObjectRef {
+        return JSObjectMake(ctx, jsClass, nullptr);
+    };
+
+    JSObjectRef Superclass = JSObjectMakeConstructor(context, jsClass, constructor);
+
+    ScriptResult result = callFunction("(function (Superclass) { class Subclass extends Superclass { method() { return 'value'; } }; return new Subclass(); })", Superclass);
+    check(!!result, "creating a subclass should not throw.");
+    check(JSValueIsObject(context, result.value()), "result of construction should have been an object.");
+    JSObjectRef subclass = const_cast<JSObjectRef>(result.value());
+
+    check(JSObjectHasProperty(context, subclass, APIString("method")), "subclass should have derived classes functions.");
+    check(functionReturnsTrue("(function (subclass, Superclass) { return subclass instanceof Superclass; })", subclass, Superclass), "JS subclass should instanceof the Superclass");
+
+    JSClassRelease(jsClass);
+}
+
+void TestAPI::proxyReturnedWithJSSubclassing()
+{
+    const static JSClassDefinition definition = kJSClassDefinitionEmpty;
+    static JSClassRef jsClass = JSClassCreate(&definition);
+    static TestAPI& test = *this;
+
+    auto constructor = [] (JSContextRef ctx, JSObjectRef, size_t, const JSValueRef*, JSValueRef*) -> JSObjectRef {
+        ScriptResult result = test.callFunction("(function (object) { return new Proxy(object, { getPrototypeOf: () => { globalThis.triggeredProxy = true; return object.__proto__; }}); })", JSObjectMake(ctx, jsClass, nullptr));
+        test.check(!!result, "creating a proxy should not throw");
+        test.check(JSValueIsObject(ctx, result.value()), "result of proxy creation should have been an object.");
+        return const_cast<JSObjectRef>(result.value());
+    };
+
+    JSObjectRef Superclass = JSObjectMakeConstructor(context, jsClass, constructor);
+
+    ScriptResult result = callFunction("(function (Superclass) { class Subclass extends Superclass { method() { return 'value'; } }; return new Subclass(); })", Superclass);
+    check(!!result, "creating a subclass should not throw.");
+    check(JSValueIsObject(context, result.value()), "result of construction should have been an object.");
+    JSObjectRef subclass = const_cast<JSObjectRef>(result.value());
+
+    check(scriptResultIs(evaluateScript("globalThis.triggeredProxy"), JSValueMakeUndefined(context)), "creating a subclass should not have triggered the proxy");
+    check(functionReturnsTrue("(function (subclass, Superclass) { return subclass.__proto__ == Superclass.prototype; })", subclass, Superclass), "proxy's prototype should match Superclass.prototype");
+}
+
+void TestAPI::testJSObjectSetOnGlobalObjectSubclassDefinition()
+{
+    JSClassDefinition globalClassDef = kJSClassDefinitionEmpty;
+    globalClassDef.className = "CustomGlobalClass";
+    JSClassRef globalClassRef = JSClassCreate(&globalClassDef);
+
+    JSContextRef context = JSGlobalContextCreate(globalClassRef);
+    JSObjectRef newObject = JSObjectMake(context, nullptr, nullptr);
+
+    JSObjectRef globalObject = JSContextGetGlobalObject(context);
+    APIString propertyName("myObject");
+    JSObjectSetProperty(context, globalObject, propertyName, newObject, 0, nullptr);
+
+    check(JSEvaluateScript(context, propertyName, globalObject, nullptr, 1, nullptr) == newObject, "Setting a property on a custom global object should set the property");
+}
+
 void configureJSCForTesting()
 {
     JSC::Config::configureForTesting();
@@ -616,6 +766,7 @@ int testCAPIViaCpp(const char* filter)
         return !filter || WTF::findIgnoringASCIICaseWithoutLength(testName, filter) != WTF::notFound;
     };
 
+    RUN(topCallFrameAccess());
     RUN(basicSymbol());
     RUN(symbolsTypeof());
     RUN(symbolsDescription());
@@ -627,12 +778,15 @@ int testCAPIViaCpp(const char* filter)
     RUN(promiseRejectTrue());
     RUN(promiseUnhandledRejection());
     RUN(promiseUnhandledRejectionFromUnhandledRejectionCallback());
+    RUN(promiseDrainDoesNotEatExceptions());
     RUN(promiseEarlyHandledRejections());
+    RUN(markedJSValueArrayAndGC());
+    RUN(classDefinitionWithJSSubclass());
+    RUN(proxyReturnedWithJSSubclassing());
+    RUN(testJSObjectSetOnGlobalObjectSubclassDefinition());
 
-    if (tasks.isEmpty()) {
-        dataLogLn("Filtered all tests: ERROR");
-        return 1;
-    }
+    if (tasks.isEmpty())
+        return 0;
 
     Lock lock;
 
@@ -646,7 +800,7 @@ int testCAPIViaCpp(const char* filter)
                 for (;;) {
                     RefPtr<SharedTask<void(TestAPI&)>> task;
                     {
-                        LockHolder locker(lock);
+                        Locker locker { lock };
                         if (tasks.isEmpty())
                             break;
                         task = tasks.takeFirst();

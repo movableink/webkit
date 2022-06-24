@@ -30,6 +30,7 @@
 #include <wtf/Lock.h>
 #include <wtf/Vector.h>
 #include <wtf/WorkQueue.h>
+#include <memory>
 #include <string>
 #include <thread>
 
@@ -41,7 +42,7 @@ static const char* simpleTestLabel = "simpleTest";
 static const char* longTestLabel = "longTest";
 static const char* thirdTestLabel = "thirdTest";
 static const char* dispatchAfterLabel = "dispatchAfter";
-    
+
 TEST(WTF_WorkQueue, Simple)
 {
     Lock m_lock;
@@ -60,7 +61,7 @@ TEST(WTF_WorkQueue, Simple)
     int initialRefCount = queue->refCount();
     EXPECT_EQ(1, initialRefCount);
 
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
     queue->dispatch([&](void) {
         m_functionCallOrder.append(simpleTestLabel);
         calledSimpleTest = true;
@@ -73,18 +74,18 @@ TEST(WTF_WorkQueue, Simple)
     });
 
     queue->dispatch([&](void) {
-        LockHolder locker(m_lock);
+        Locker locker { m_lock };
         m_functionCallOrder.append(thirdTestLabel);
         calledThirdTest = true;
 
         EXPECT_TRUE(calledSimpleTest);
         EXPECT_TRUE(calledLongTest);
         EXPECT_TRUE(calledThirdTest);
-        
+
         m_testCompleted.notifyOne();
     });
 
-    EXPECT_GT(queue->refCount(), 1);
+    EXPECT_GT(queue->refCount(), 1U);
 
     m_testCompleted.wait(m_lock);
 
@@ -107,15 +108,15 @@ TEST(WTF_WorkQueue, TwoQueues)
     bool calledSimpleTest = false;
     bool calledLongTest = false;
     bool calledThirdTest = false;
-    
+
     auto queue1 = WorkQueue::create("com.apple.WebKit.Test.twoQueues1");
     auto queue2 = WorkQueue::create("com.apple.WebKit.Test.twoQueues2");
 
-    EXPECT_EQ(1, queue1->refCount());
-    EXPECT_EQ(1, queue2->refCount());
+    EXPECT_EQ(1U, queue1->refCount());
+    EXPECT_EQ(1U, queue2->refCount());
 
-    LockHolder locker(m_lock);
-    
+    Locker locker { m_lock };
+
     queue1->dispatch([&](void) {
         m_functionCallOrder.append(simpleTestLabel);
         calledSimpleTest = true;
@@ -124,7 +125,7 @@ TEST(WTF_WorkQueue, TwoQueues)
     queue2->dispatch([&](void) {
         std::this_thread::sleep_for(50ms);
 
-        LockHolder locker(m_lock);
+        Locker locker { m_lock };
 
         // Will fail if queue2 took the mutex before queue1.
         EXPECT_TRUE(calledThirdTest);
@@ -135,10 +136,10 @@ TEST(WTF_WorkQueue, TwoQueues)
     });
 
     queue1->dispatch([&](void) {
-        LockHolder locker(m_lock);
+        Locker locker { m_lock };
         m_functionCallOrder.append(thirdTestLabel);
         calledThirdTest = true;
-        
+
         m_testQueue1Completed.notifyOne();
     });
 
@@ -171,17 +172,17 @@ TEST(WTF_WorkQueue, DispatchAfter)
 
     auto queue = WorkQueue::create("com.apple.WebKit.Test.dispatchAfter");
 
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
 
     queue->dispatch([&](void) {
-        LockHolder locker(m_lock);
+        Locker locker { m_lock };
         m_functionCallOrder.append(simpleTestLabel);
         calledSimpleTest = true;
         m_testCompleted.notifyOne();
     });
 
     queue->dispatchAfter(500_ms, [&](void) {
-        LockHolder locker(m_lock);
+        Locker locker { m_lock };
         m_functionCallOrder.append(dispatchAfterLabel);
         calledDispatchAfterTest = true;
         m_dispatchAfterTestCompleted.notifyOne();
@@ -191,7 +192,7 @@ TEST(WTF_WorkQueue, DispatchAfter)
 
     EXPECT_TRUE(calledSimpleTest);
     EXPECT_FALSE(calledDispatchAfterTest);
-    
+
     m_dispatchAfterTestCompleted.wait(m_lock);
 
     EXPECT_TRUE(calledSimpleTest);
@@ -211,11 +212,11 @@ TEST(WTF_WorkQueue, DestroyOnSelf)
     bool completed = false;
 
     {
-        LockHolder locker(lock);
+        Locker locker { lock };
         {
             auto queue = WorkQueue::create("com.apple.WebKit.Test.dispatchAfter");
             queue->dispatchAfter(500_ms, [&](void) {
-                LockHolder locker(lock);
+                Locker locker { lock };
                 dispatchAfterTestStarted.wait(lock, [&] {
                     return started;
                 });
@@ -227,12 +228,130 @@ TEST(WTF_WorkQueue, DestroyOnSelf)
         dispatchAfterTestStarted.notifyOne();
     }
     {
-        LockHolder locker(lock);
+        Locker locker { lock };
         dispatchAfterTestCompleted.wait(lock, [&] {
             return completed;
         });
         WTF::sleep(100_ms);
     }
+}
+
+TEST(WTF_WorkQueue, DispatchSync)
+{
+    auto queue = WorkQueue::create("com.apple.WebKit.Test.dispatchSync");
+    std::atomic<bool> firstAsyncTaskRan = false;
+    std::atomic<bool> secondAsyncTaskRan = false;
+    std::atomic<bool> firstSyncTaskTaskRan = false;
+    std::atomic<bool> secondSyncTaskTaskRan = false;
+    queue->dispatch([&] {
+        EXPECT_FALSE(firstAsyncTaskRan);
+        EXPECT_FALSE(firstSyncTaskTaskRan);
+        EXPECT_FALSE(secondAsyncTaskRan);
+        EXPECT_FALSE(secondSyncTaskTaskRan);
+        firstAsyncTaskRan = true;
+    });
+    queue->dispatchSync([&] {
+        EXPECT_TRUE(firstAsyncTaskRan);
+        EXPECT_FALSE(firstSyncTaskTaskRan);
+        EXPECT_FALSE(secondAsyncTaskRan);
+        EXPECT_FALSE(secondSyncTaskTaskRan);
+        firstSyncTaskTaskRan = true;
+    });
+    EXPECT_TRUE(firstSyncTaskTaskRan);
+    queue->dispatch([&] {
+        EXPECT_TRUE(firstAsyncTaskRan);
+        EXPECT_TRUE(firstSyncTaskTaskRan);
+        EXPECT_FALSE(secondAsyncTaskRan);
+        EXPECT_FALSE(secondSyncTaskTaskRan);
+        secondAsyncTaskRan = true;
+    });
+    queue->dispatchSync([&] {
+        EXPECT_TRUE(firstAsyncTaskRan);
+        EXPECT_TRUE(firstSyncTaskTaskRan);
+        EXPECT_TRUE(secondAsyncTaskRan);
+        EXPECT_FALSE(secondSyncTaskTaskRan);
+        secondSyncTaskTaskRan = true;
+    });
+    EXPECT_TRUE(secondSyncTaskTaskRan);
+}
+
+// Tests that the Function passed to WorkQueue::dispatch is destructed on the thread that
+// runs the Function. It is a common pattern to capture a owning reference into a Function
+// and dispatch that to a queue to ensure ordering (or thread affinity) of the object destruction.
+TEST(WTF_WorkQueue, DestroyDispatchedOnDispatchQueue)
+{
+    std::atomic<size_t> counter = 0;
+    class DestructionWorkQueueTester {
+    public:
+        DestructionWorkQueueTester(std::atomic<size_t>& counter)
+            : m_counter(counter)
+        {
+        }
+        ~DestructionWorkQueueTester()
+        {
+            EXPECT_NE(m_createdInThread, Thread::current().uid());
+            m_counter++;
+        }
+    private:
+        uint32_t m_createdInThread = Thread::current().uid();
+        std::atomic<size_t>& m_counter;
+    };
+    constexpr size_t queueCount = 50;
+    constexpr size_t iterationCount = 10000;
+    RefPtr<WorkQueue> queue[queueCount];
+    for (size_t i = 0; i < queueCount; ++i)
+        queue[i] = WorkQueue::create("com.apple.WebKit.Test.destroyDispatchedOnDispatchQueue", WorkQueue::QOS::UserInteractive);
+
+    for (size_t i = 0; i < iterationCount; ++i) {
+        for (size_t j = 0; j < queueCount; ++j)
+            queue[j]->dispatch([instance = std::make_unique<DestructionWorkQueueTester>(counter)]() { }); // NOLINT
+    }
+    for (size_t j = 0; j < queueCount; ++j)
+        queue[j]->dispatchSync([] { });
+    EXPECT_EQ(queueCount * iterationCount, counter);
+}
+
+namespace {
+struct AssertionTestHolder {
+    const RefPtr<WorkQueue> queue { WorkQueue::create("com.apple.WebKit.Test.ThreadSafetyAnalysisAssertIsCurrentWorks", WorkQueue::QOS::UserInteractive) };
+    size_t counter WTF_GUARDED_BY_CAPABILITY(*queue) { 0 };
+    size_t result { 0 }; // This is here to support the result assertion. The compiler doesn't allow us to obtain the `counter` otherwise.
+
+    void testTask()
+    {
+        assertIsCurrent(*queue); // This is being tested.
+        ++counter;
+    }
+    void computeResult() WTF_REQUIRES_CAPABILITY(*queue) // This is being tested.
+    {
+        result = ++counter;
+    }
+    template<typename T> void testTaskThatFailsToCompile()
+    {
+        ++counter;
+    }
+};
+}
+
+TEST(WTF_WorkQueue, ThreadSafetyAnalysisAssertIsCurrentWorks)
+{
+    constexpr size_t queueCount = 50;
+    constexpr size_t iterationCount = 10000;
+
+    AssertionTestHolder holders[queueCount];
+    for (size_t i = 0; i < iterationCount; ++i) {
+        for (auto& holder : holders)
+            holder.queue->dispatch([&holder] { holder.testTask(); });
+    }
+// #define TEST_COMPILE_FAILURE
+#ifdef TEST_COMPILE_FAILURE
+    for (auto& holder : holders)
+        holder.queue->dispatchSync([&holder] { holder.testTaskThatFailsToCompile<int>(); });
+#endif
+    for (auto& holder : holders)
+        holder.queue->dispatchSync([&holder] { assertIsCurrent(*holder.queue); holder.computeResult(); });
+    for (auto& holder : holders)
+        EXPECT_EQ(iterationCount + 1, holder.result);
 }
 
 } // namespace TestWebKitAPI

@@ -26,15 +26,18 @@
 #include "config.h"
 #include "FontGenericFamilies.h"
 
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/Language.h>
 
 namespace WebCore {
 
-static bool setGenericFontFamilyForScript(ScriptFontFamilyMap& fontMap, const AtomString& family, UScriptCode script)
+using namespace WebKitFontFamilyNames;
+
+static bool setGenericFontFamilyForScript(ScriptFontFamilyMap& fontMap, const String& family, UScriptCode script)
 {
     if (family.isEmpty())
         return fontMap.remove(static_cast<int>(script));
-    auto& familyInMap = fontMap.add(static_cast<int>(script), AtomString { }).iterator->value;
+    auto& familyInMap = fontMap.add(static_cast<int>(script), String { }).iterator->value;
     if (familyInMap == family)
         return false;
     familyInMap = family;
@@ -64,7 +67,7 @@ static void languageChanged(void*)
     cachedUserPrefersSimplified() = computeUserPrefersSimplified();
 }
 
-static const AtomString& genericFontFamilyForScript(const ScriptFontFamilyMap& fontMap, UScriptCode script)
+static const String& genericFontFamilyForScript(const ScriptFontFamilyMap& fontMap, UScriptCode script)
 {
     ScriptFontFamilyMap::const_iterator it = fontMap.find(static_cast<int>(script));
     if (it != fontMap.end())
@@ -83,78 +86,132 @@ static const AtomString& genericFontFamilyForScript(const ScriptFontFamilyMap& f
 
 FontGenericFamilies::FontGenericFamilies()
 {
-    addLanguageChangeObserver(this, &languageChanged);
-    languageChanged(nullptr);
+    static std::once_flag once;
+    std::call_once(once, [&] {
+        addLanguageChangeObserver(&once, &languageChanged);
+        languageChanged(nullptr);
+    });
 }
 
-const AtomString& FontGenericFamilies::standardFontFamily(UScriptCode script) const
+FontGenericFamilies FontGenericFamilies::isolatedCopy() const &
+{
+    FontGenericFamilies copy;
+    copy.m_standardFontFamilyMap = crossThreadCopy(m_standardFontFamilyMap);
+    copy.m_serifFontFamilyMap = crossThreadCopy(m_serifFontFamilyMap);
+    copy.m_fixedFontFamilyMap = crossThreadCopy(m_fixedFontFamilyMap);
+    copy.m_sansSerifFontFamilyMap = crossThreadCopy(m_sansSerifFontFamilyMap);
+    copy.m_cursiveFontFamilyMap = crossThreadCopy(m_cursiveFontFamilyMap);
+    copy.m_fantasyFontFamilyMap = crossThreadCopy(m_fantasyFontFamilyMap);
+    copy.m_pictographFontFamilyMap = crossThreadCopy(m_pictographFontFamilyMap);
+    return copy;
+}
+
+FontGenericFamilies FontGenericFamilies::isolatedCopy() &&
+{
+    FontGenericFamilies copy;
+    copy.m_standardFontFamilyMap = crossThreadCopy(WTFMove(m_standardFontFamilyMap));
+    copy.m_serifFontFamilyMap = crossThreadCopy(WTFMove(m_serifFontFamilyMap));
+    copy.m_fixedFontFamilyMap = crossThreadCopy(WTFMove(m_fixedFontFamilyMap));
+    copy.m_sansSerifFontFamilyMap = crossThreadCopy(WTFMove(m_sansSerifFontFamilyMap));
+    copy.m_cursiveFontFamilyMap = crossThreadCopy(WTFMove(m_cursiveFontFamilyMap));
+    copy.m_fantasyFontFamilyMap = crossThreadCopy(WTFMove(m_fantasyFontFamilyMap));
+    copy.m_pictographFontFamilyMap = crossThreadCopy(WTFMove(m_pictographFontFamilyMap));
+    return copy;
+}
+
+const String& FontGenericFamilies::standardFontFamily(UScriptCode script) const
 {
     return genericFontFamilyForScript(m_standardFontFamilyMap, script);
 }
 
-const AtomString& FontGenericFamilies::fixedFontFamily(UScriptCode script) const
+const String& FontGenericFamilies::fixedFontFamily(UScriptCode script) const
 {
     return genericFontFamilyForScript(m_fixedFontFamilyMap, script);
 }
 
-const AtomString& FontGenericFamilies::serifFontFamily(UScriptCode script) const
+const String& FontGenericFamilies::serifFontFamily(UScriptCode script) const
 {
     return genericFontFamilyForScript(m_serifFontFamilyMap, script);
 }
 
-const AtomString& FontGenericFamilies::sansSerifFontFamily(UScriptCode script) const
+const String& FontGenericFamilies::sansSerifFontFamily(UScriptCode script) const
 {
     return genericFontFamilyForScript(m_sansSerifFontFamilyMap, script);
 }
 
-const AtomString& FontGenericFamilies::cursiveFontFamily(UScriptCode script) const
+const String& FontGenericFamilies::cursiveFontFamily(UScriptCode script) const
 {
     return genericFontFamilyForScript(m_cursiveFontFamilyMap, script);
 }
 
-const AtomString& FontGenericFamilies::fantasyFontFamily(UScriptCode script) const
+const String& FontGenericFamilies::fantasyFontFamily(UScriptCode script) const
 {
     return genericFontFamilyForScript(m_fantasyFontFamilyMap, script);
 }
 
-const AtomString& FontGenericFamilies::pictographFontFamily(UScriptCode script) const
+const String& FontGenericFamilies::pictographFontFamily(UScriptCode script) const
 {
     return genericFontFamilyForScript(m_pictographFontFamilyMap, script);
 }
 
-bool FontGenericFamilies::setStandardFontFamily(const AtomString& family, UScriptCode script)
+bool FontGenericFamilies::setStandardFontFamily(const String& family, UScriptCode script)
 {
     return setGenericFontFamilyForScript(m_standardFontFamilyMap, family, script);
 }
 
-bool FontGenericFamilies::setFixedFontFamily(const AtomString& family, UScriptCode script)
+bool FontGenericFamilies::setFixedFontFamily(const String& family, UScriptCode script)
 {
     return setGenericFontFamilyForScript(m_fixedFontFamilyMap, family, script);
 }
 
-bool FontGenericFamilies::setSerifFontFamily(const AtomString& family, UScriptCode script)
+bool FontGenericFamilies::setSerifFontFamily(const String& family, UScriptCode script)
 {
     return setGenericFontFamilyForScript(m_serifFontFamilyMap, family, script);
 }
 
-bool FontGenericFamilies::setSansSerifFontFamily(const AtomString& family, UScriptCode script)
+bool FontGenericFamilies::setSansSerifFontFamily(const String& family, UScriptCode script)
 {
     return setGenericFontFamilyForScript(m_sansSerifFontFamilyMap, family, script);
 }
 
-bool FontGenericFamilies::setCursiveFontFamily(const AtomString& family, UScriptCode script)
+bool FontGenericFamilies::setCursiveFontFamily(const String& family, UScriptCode script)
 {
     return setGenericFontFamilyForScript(m_cursiveFontFamilyMap, family, script);
 }
 
-bool FontGenericFamilies::setFantasyFontFamily(const AtomString& family, UScriptCode script)
+bool FontGenericFamilies::setFantasyFontFamily(const String& family, UScriptCode script)
 {
     return setGenericFontFamilyForScript(m_fantasyFontFamilyMap, family, script);
 }
 
-bool FontGenericFamilies::setPictographFontFamily(const AtomString& family, UScriptCode script)
+bool FontGenericFamilies::setPictographFontFamily(const String& family, UScriptCode script)
 {
     return setGenericFontFamilyForScript(m_pictographFontFamilyMap, family, script);
+}
+
+const String* FontGenericFamilies::fontFamily(FamilyNamesIndex family, UScriptCode script) const
+{
+    switch (family) {
+    case FamilyNamesIndex::CursiveFamily:
+        return &cursiveFontFamily(script);
+    case FamilyNamesIndex::FantasyFamily:
+        return &fantasyFontFamily(script);
+    case FamilyNamesIndex::MonospaceFamily:
+        return &fixedFontFamily(script);
+    case FamilyNamesIndex::PictographFamily:
+        return &pictographFontFamily(script);
+    case FamilyNamesIndex::SansSerifFamily:
+        return &sansSerifFontFamily(script);
+    case FamilyNamesIndex::SerifFamily:
+        return &serifFontFamily(script);
+    case FamilyNamesIndex::StandardFamily:
+        return &standardFontFamily(script);
+    case FamilyNamesIndex::SystemUiFamily:
+        return nullptr;
+    }
+
+    ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 }

@@ -12,11 +12,15 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 #include <vector>
 
+#include "absl/types/optional.h"
 #include "api/array_view.h"
 
 namespace webrtc {
+
+class RtpGenericFrameDescriptorExtension;
 
 // Data to put on the wire for FrameDescriptor rtp header extension.
 class RtpGenericFrameDescriptor {
@@ -33,11 +37,6 @@ class RtpGenericFrameDescriptor {
   void SetFirstPacketInSubFrame(bool first) { beginning_of_subframe_ = first; }
   bool LastPacketInSubFrame() const { return end_of_subframe_; }
   void SetLastPacketInSubFrame(bool last) { end_of_subframe_ = last; }
-
-  bool FirstSubFrameInFrame() const { return beginning_of_frame_; }
-  void SetFirstSubFrameInFrame(bool first) { beginning_of_frame_ = first; }
-  bool LastSubFrameInFrame() const { return end_of_frame_; }
-  void SetLastSubFrameInFrame(bool last) { end_of_frame_ = last; }
 
   // Properties below undefined if !FirstPacketInSubFrame()
   // Valid range for temporal layer: [0, 7]
@@ -62,14 +61,9 @@ class RtpGenericFrameDescriptor {
   // Returns false on failure, i.e. number of dependencies is too large.
   bool AddFrameDependencyDiff(uint16_t fdiff);
 
-  void SetByteRepresentation(rtc::ArrayView<const uint8_t> representation);
-  rtc::ArrayView<const uint8_t> GetByteRepresentation();
-
  private:
   bool beginning_of_subframe_ = false;
   bool end_of_subframe_ = false;
-  bool beginning_of_frame_ = false;
-  bool end_of_frame_ = false;
 
   uint16_t frame_id_ = 0;
   uint8_t spatial_layers_ = 1;
@@ -78,8 +72,6 @@ class RtpGenericFrameDescriptor {
   uint16_t frame_deps_id_diffs_[kMaxNumFrameDependencies];
   int width_ = 0;
   int height_ = 0;
-
-  std::vector<uint8_t> byte_representation_;
 };
 
 }  // namespace webrtc

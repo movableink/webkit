@@ -25,7 +25,7 @@
 #include "config.h"
 #include "ContentChangeObserver.h"
 
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(CONTENT_CHANGE_OBSERVER)
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DOMTimer.h"
@@ -133,34 +133,38 @@ bool ContentChangeObserver::isConsideredVisible(const Node& node)
     return true;
 }
 
-enum class ElementHadRenderer { No, Yes };
-static bool isConsideredClickable(const Element& candidateElement, ElementHadRenderer hadRenderer)
+bool ContentChangeObserver::isConsideredActionableContent(const Element& candidateElement, ElementHadRenderer hadRenderer) const
 {
-    auto& element = const_cast<Element&>(candidateElement);
-    if (element.isInUserAgentShadowTree())
-        return false;
-
-    if (is<HTMLIFrameElement>(element))
+    if (m_document.quirks().shouldTooltipPreventFromProceedingWithClick(candidateElement))
         return true;
 
-    if (is<HTMLImageElement>(element)) {
-        // This is required to avoid HTMLImageElement's touch callout override logic. See rdar://problem/48937767.
-        return element.Element::willRespondToMouseClickEvents();
-    }
+    auto isConsideredClickable = [&] {
+        auto& element = const_cast<Element&>(candidateElement);
+        if (element.isInUserAgentShadowTree())
+            return false;
 
-    bool hasRenderer = element.renderer();
-    auto willRespondToMouseClickEvents = element.willRespondToMouseClickEvents();
-    if (willRespondToMouseClickEvents || !hasRenderer || hadRenderer == ElementHadRenderer::No)
-        return willRespondToMouseClickEvents;
-
-    // In case when the content already had renderers it's not sufficient to check the candidate element only since it might just be the container for the clickable content.  
-    for (auto& descendant : descendantsOfType<RenderElement>(*element.renderer())) {
-        if (!descendant.element())
-            continue;
-        if (descendant.element()->willRespondToMouseClickEvents())
+        if (is<HTMLIFrameElement>(element))
             return true;
-    }
-    return false;
+
+        if (is<HTMLImageElement>(element)) {
+            // This is required to avoid HTMLImageElement's touch callout override logic. See rdar://problem/48937767.
+            return element.Element::willRespondToMouseClickEvents();
+        }
+        bool hasRenderer = element.renderer();
+        auto willRespondToMouseClickEvents = element.willRespondToMouseClickEvents();
+        if (willRespondToMouseClickEvents || !hasRenderer || hadRenderer == ElementHadRenderer::No)
+            return willRespondToMouseClickEvents;
+
+        // In case when the content already had renderers it's not sufficient to check the candidate element only since it might just be the container for the clickable content.  
+        for (auto& descendant : descendantsOfType<RenderElement>(*element.renderer())) {
+            if (!descendant.element())
+                continue;
+            if (descendant.element()->willRespondToMouseClickEvents())
+                return true;
+        }
+        return false;
+    };
+    return isConsideredClickable();
 }
 
 ContentChangeObserver::ContentChangeObserver(Document& document)
@@ -223,7 +227,7 @@ void ContentChangeObserver::didAddTransition(const Element& element, const Anima
         return;
     if (!transition.isDurationSet() || !transition.isPropertySet())
         return;
-    if (!isObservedPropertyForTransition(transition.property()))
+    if (!isObservedPropertyForTransition(transition.property().id))
         return;
     auto transitionEnd = Seconds { transition.duration() + std::max<double>(0, transition.isDelaySet() ? transition.delay() : 0) };
     if (transitionEnd > maximumDelayForTransitions)
@@ -247,15 +251,15 @@ void ContentChangeObserver::didFinishTransition(const Element& element, CSSPrope
         return;
     LOG_WITH_STREAM(ContentObservation, stream << "didFinishTransition: transition finished (" << &element << ").");
 
-    // isConsideredClickable may trigger style update through Node::computeEditability. Let's adjust the state in the next runloop.
-    callOnMainThread([weakThis = makeWeakPtr(*this), targetElement = makeWeakPtr(element)] {
+    // isConsideredActionableContent may trigger style update through Node::computeEditability. Let's adjust the state in the next runloop.
+    callOnMainThread([weakThis = WeakPtr { *this }, targetElement = WeakPtr { element }] {
         if (!weakThis || !targetElement)
             return;
         if (isVisuallyHidden(*targetElement)) {
             weakThis->adjustObservedState(Event::EndedTransitionButFinalStyleIsNotDefiniteYet);
             return;
         }
-        if (isConsideredClickable(*targetElement, ElementHadRenderer::Yes))
+        if (weakThis->isConsideredActionableContent(*targetElement, ElementHadRenderer::Yes))
             weakThis->elementDidBecomeVisible(*targetElement);
         weakThis->adjustObservedState(Event::CompletedTransition);
     });
@@ -419,7 +423,7 @@ void ContentChangeObserver::elementDidBecomeHidden(const Element& element)
     // Candidate element is no longer visible.
     if (!m_visibilityCandidateList.remove(element))
         return;
-    ASSERT(hasVisibleChangeState());
+//    ASSERT(hasVisibleChangeState());
     if (m_visibilityCandidateList.computesEmpty())
         setHasIndeterminateState();
 }
@@ -468,6 +472,12 @@ void ContentChangeObserver::mouseMovedDidFinish()
     LOG(ContentObservation, "mouseMovedDidFinish: mouseMoved finished.");
     adjustObservedState(Event::EndedMouseMovedEventDispatching);
     setMouseMovedEventIsBeingDispatched(false);
+}
+
+void ContentChangeObserver::willNotProceedWithFixedObservationTimeWindow()
+{
+    ASSERT(!isMouseMovedEventBeingDispatched());
+    adjustObservedState(Event::WillNotProceedWithFixedObservationTimeWindow);
 }
 
 void ContentChangeObserver::setShouldObserveNextStyleRecalc(bool shouldObserve)
@@ -561,6 +571,10 @@ void ContentChangeObserver::adjustObservedState(Event event)
             notifyClientIfNeeded();
             return;
         }
+        if (event == Event::WillNotProceedWithFixedObservationTimeWindow) {
+            notifyClientIfNeeded();
+            return;
+        }
     }
     // These events (DOM timer, transition and style recalc) could trigger style changes that are candidates to visibility checking.
     {
@@ -645,10 +659,10 @@ ContentChangeObserver::StyleChangeScope::StyleChangeScope(Document& document, co
 ContentChangeObserver::StyleChangeScope::~StyleChangeScope()
 {
     // Do we track this element?
-    if (!m_wasHidden.hasValue())
+    if (!m_wasHidden.has_value())
         return;
 
-    if (!isConsideredClickable(m_element, m_hadRenderer ? ElementHadRenderer::Yes : ElementHadRenderer::No))
+    if (!m_contentChangeObserver.isConsideredActionableContent(m_element, m_hadRenderer ? ElementHadRenderer::Yes : ElementHadRenderer::No))
         return;
 
     auto wasVisible = !m_wasHidden.value();
@@ -711,4 +725,4 @@ ContentChangeObserver::DOMTimerScope::~DOMTimerScope()
 
 }
 
-#endif // PLATFORM(IOS_FAMILY)
+#endif // ENABLE(CONTENT_CHANGE_OBSERVER)

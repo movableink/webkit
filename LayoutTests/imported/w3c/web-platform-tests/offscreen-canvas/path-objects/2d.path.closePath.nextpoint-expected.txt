@@ -1,5 +1,0 @@
-2d.path.closePath.nextpoint
-
-
-FAIL OffscreenCanvas test: 2d.path.closePath.nextpoint null is not an object (evaluating 'ctx.fillStyle = '#f00'')
-

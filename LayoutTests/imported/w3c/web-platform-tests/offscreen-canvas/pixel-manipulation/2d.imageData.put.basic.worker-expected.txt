@@ -1,3 +1,0 @@
-
-FAIL putImageData() puts image data from getImageData() onto the canvas Can't find variable: OffscreenCanvas
-

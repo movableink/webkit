@@ -1,8 +1,8 @@
 
-PASS big element listing 
+PASS big element listing
 a abbr acronym
 address
-b bdo big
+applet b bdo big
 blockquote
 
 button

@@ -33,6 +33,7 @@
 #import <WebCore/FrameView.h>
 #import <WebCore/Page.h>
 #import <WebCore/PopupMenuClient.h>
+#import <pal/spi/mac/NSCellSPI.h>
 #import <pal/system/mac/PopupMenu.h>
 #import <wtf/BlockObjCExceptions.h>
 
@@ -125,7 +126,7 @@ void PopupMenuMac::populate()
     }
 }
 
-void PopupMenuMac::show(const IntRect& r, FrameView* v, int index)
+void PopupMenuMac::show(const IntRect& r, FrameView* v, int selectedIndex)
 {
     populate();
     int numItems = [m_popup numberOfItems];
@@ -134,18 +135,18 @@ void PopupMenuMac::show(const IntRect& r, FrameView* v, int index)
             m_client->popupDidHide();
         return;
     }
-    ASSERT(numItems > index);
+    ASSERT(numItems > selectedIndex);
 
-    // Workaround for crazy bug where a selected index of -1 for a menu with only 1 item will cause a blank menu.
-    if (index == -1 && numItems == 2 && !m_client->shouldPopOver() && ![[m_popup itemAtIndex:1] isEnabled])
-        index = 0;
+    // Workaround for crazy bug where a selectedIndex of -1 for a menu with only 1 item will cause a blank menu.
+    if (selectedIndex == -1 && numItems == 2 && !m_client->shouldPopOver() && ![[m_popup itemAtIndex:1] isEnabled])
+        selectedIndex = 0;
 
     NSView* view = v->documentView();
 
     TextDirection textDirection = m_client->menuStyle().textDirection();
 
     [m_popup attachPopUpWithFrame:r inView:view];
-    [m_popup selectItemAtIndex:index];
+    [m_popup selectItemAtIndex:selectedIndex];
     [m_popup setUserInterfaceLayoutDirection:textDirection == TextDirection::LTR ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
 
     NSMenu *menu = [m_popup menu];
@@ -191,9 +192,9 @@ void PopupMenuMac::show(const IntRect& r, FrameView* v, int index)
     
     if (Page* page = frame->page()) {
         WebView* webView = kit(page);
-        BEGIN_BLOCK_OBJC_EXCEPTIONS;
+        BEGIN_BLOCK_OBJC_EXCEPTIONS
         CallUIDelegate(webView, @selector(webView:willPopupMenu:), menu);
-        END_BLOCK_OBJC_EXCEPTIONS;
+        END_BLOCK_OBJC_EXCEPTIONS
     }
 
     NSControlSize controlSize;
@@ -207,9 +208,14 @@ void PopupMenuMac::show(const IntRect& r, FrameView* v, int index)
     case PopupMenuStyle::PopupMenuSizeMini:
         controlSize = NSControlSizeMini;
         break;
+#if HAVE(LARGE_CONTROL_SIZE)
+    case PopupMenuStyle::PopupMenuSizeLarge:
+        controlSize = NSControlSizeLarge;
+        break;
+#endif
     }
 
-    PAL::popUpMenu(menu, location, roundf(NSWidth(r)), dummyView.get(), index, toNSFont(font), controlSize, !m_client->menuStyle().hasDefaultAppearance());
+    PAL::popUpMenu(menu, location, roundf(NSWidth(r)), dummyView.get(), selectedIndex, toNSFont(font), controlSize, !m_client->menuStyle().hasDefaultAppearance());
 
     [m_popup dismissPopUp];
     [dummyView removeFromSuperview];
@@ -224,7 +230,7 @@ void PopupMenuMac::show(const IntRect& r, FrameView* v, int index)
     if (!m_client->shouldPopOver())
         newIndex--;
 
-    if (index != newIndex && newIndex >= 0)
+    if (selectedIndex != newIndex && newIndex >= 0)
         m_client->valueChanged(newIndex);
 
     // Give the frame a chance to fix up its event state, since the popup eats all the

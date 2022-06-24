@@ -27,6 +27,7 @@
 
 #include "WTFStringUtilities.h"
 #include <limits>
+#include <sstream>
 #include <wtf/MathExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -69,6 +70,16 @@ TEST(WTF, StringASCII)
     // Regular String.
     output = String("foobar"_s).ascii();
     EXPECT_STREQ("foobar", output.data());
+}
+
+TEST(WTF, StringStartsWithEmptyVsNull)
+{
+    String nullString;
+    String emptyString = WTF::emptyString();
+    String stringWithCharacters("hello");
+
+    EXPECT_TRUE(stringWithCharacters.startsWith(nullString));
+    EXPECT_TRUE(stringWithCharacters.startsWith(emptyString));
 }
 
 static inline const char* testStringNumberFixedPrecision(double number)
@@ -216,6 +227,19 @@ TEST(WTF, StringNumber)
     EXPECT_STREQ("1.1e+30", testStringNumber(1.1e30));
 }
 
+TEST(WTF, StringNumberIntMin)
+{
+    constexpr int intMin = std::numeric_limits<int>::min();
+    String result = String::number(intMin);
+
+    std::stringstream stringStream;
+    stringStream << intMin;
+    std::string expectedString;
+    stringStream >> expectedString;
+
+    EXPECT_TRUE(result == String(expectedString.c_str()));
+}
+
 TEST(WTF, StringReplaceWithLiteral)
 {
     // Cases for 8Bit source.
@@ -261,58 +285,6 @@ TEST(WTF, StringIsolatedCopy)
     String original = "1234";
     auto copy = WTFMove(original).isolatedCopy();
     EXPECT_FALSE(original.impl() == copy.impl());
-}
-
-TEST(WTF, StringToInt)
-{
-    bool ok = false;
-
-    EXPECT_EQ(0, String().toInt());
-    EXPECT_EQ(0, String().toInt(&ok));
-    EXPECT_FALSE(ok);
-
-    EXPECT_EQ(0, emptyString().toInt());
-    EXPECT_EQ(0, emptyString().toInt(&ok));
-    EXPECT_FALSE(ok);
-
-    EXPECT_EQ(0, String("0").toInt());
-    EXPECT_EQ(0, String("0").toInt(&ok));
-    EXPECT_TRUE(ok);
-
-    EXPECT_EQ(1, String("1").toInt());
-    EXPECT_EQ(1, String("1").toInt(&ok));
-    EXPECT_TRUE(ok);
-
-    EXPECT_EQ(2147483647, String("2147483647").toInt());
-    EXPECT_EQ(2147483647, String("2147483647").toInt(&ok));
-    EXPECT_TRUE(ok);
-
-    EXPECT_EQ(0, String("2147483648").toInt());
-    EXPECT_EQ(0, String("2147483648").toInt(&ok));
-    EXPECT_FALSE(ok);
-
-    EXPECT_EQ(-2147483648, String("-2147483648").toInt());
-    EXPECT_EQ(-2147483648, String("-2147483648").toInt(&ok));
-    EXPECT_TRUE(ok);
-
-    EXPECT_EQ(0, String("-2147483649").toInt());
-    EXPECT_EQ(0, String("-2147483649").toInt(&ok));
-    EXPECT_FALSE(ok);
-
-    // fail if we see leading junk
-    EXPECT_EQ(0, String("x1").toInt());
-    EXPECT_EQ(0, String("x1").toInt(&ok));
-    EXPECT_FALSE(ok);
-
-    // succeed if we see leading spaces
-    EXPECT_EQ(1, String(" 1").toInt());
-    EXPECT_EQ(1, String(" 1").toInt(&ok));
-    EXPECT_TRUE(ok);
-
-    // silently ignore trailing junk
-    EXPECT_EQ(1, String("1x").toInt());
-    EXPECT_EQ(1, String("1x").toInt(&ok));
-    EXPECT_TRUE(ok);
 }
 
 TEST(WTF, StringToDouble)

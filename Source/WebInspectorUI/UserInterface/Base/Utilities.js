@@ -30,6 +30,13 @@ var ellipsis = "\u2026";
 var zeroWidthSpace = "\u200b";
 var multiplicationSign = "\u00d7";
 
+function xor(a, b)
+{
+    if (a)
+        return b ? false : a;
+    return b || false;
+}
+
 Object.defineProperty(Object, "shallowCopy",
 {
     value(object)
@@ -146,6 +153,18 @@ Object.defineProperty(Map.prototype, "getOrInitialize",
     }
 });
 
+Object.defineProperty(Set.prototype, "find",
+{
+    value(predicate)
+    {
+        for (let item of this) {
+            if (predicate(item, this))
+                return item;
+        }
+        return undefined;
+    },
+});
+
 Object.defineProperty(Set.prototype, "addAll",
 {
     value(iterable)
@@ -159,10 +178,12 @@ Object.defineProperty(Set.prototype, "take",
 {
     value(key)
     {
-        let exists = this.has(key);
-        if (exists)
+        if (this.has(key)) {
             this.delete(key);
-        return exists;
+            return key;
+        }
+
+        return undefined;
     }
 });
 
@@ -472,6 +493,29 @@ Object.defineProperty(DocumentFragment.prototype, "createChild",
     value: Element.prototype.createChild
 });
 
+(function() {
+    const fontSymbol = Symbol("font");
+
+    Object.defineProperty(HTMLInputElement.prototype, "autosize",
+    {
+        value(extra = 0)
+        {
+            extra += 6; // UserAgent styles add 1px padding and 2px border.
+            if (this.type === "number")
+                extra += 13; // Number input inner spin button width.
+            extra += 2; // Add extra pixels for the cursor.
+
+            WI.ImageUtilities.scratchCanvasContext2D((context) => {
+                this[fontSymbol] ||= window.getComputedStyle(this).font;
+
+                context.font = this[fontSymbol];
+                let textMetrics = context.measureText(this.value || this.placeholder);
+                this.style.setProperty("width", (textMetrics.width + extra) + "px");
+            });
+        },
+    });
+})();
+
 Object.defineProperty(Event.prototype, "stop",
 {
     value()
@@ -729,7 +773,7 @@ Object.defineProperty(String.prototype, "isLowerCase",
 {
     value()
     {
-        return String(this) === this.toLowerCase();
+        return /^[a-z]+$/.test(this);
     }
 });
 
@@ -737,7 +781,7 @@ Object.defineProperty(String.prototype, "isUpperCase",
 {
     value()
     {
-        return String(this) === this.toUpperCase();
+        return /^[A-Z]+$/.test(this);
     }
 });
 
@@ -1211,6 +1255,25 @@ Object.defineProperty(Math, "roundTo",
     }
 });
 
+// https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Matrix_math_for_the_web#Multiplying_a_matrix_and_a_point
+Object.defineProperty(Math, "multiplyMatrixByVector",
+{
+    value(matrix, vector)
+    {
+        let height = matrix.length;
+        let width = matrix[0].length;
+        console.assert(width === vector.length);
+
+        let result = Array(width).fill(0);
+        for (let i = 0; i < width; ++i) {
+            for (let rowIndex = 0; rowIndex < height; ++rowIndex)
+                result[i] += vector[rowIndex] * matrix[i][rowIndex];
+        }
+
+        return result;
+    }
+});
+
 Object.defineProperty(Number, "constrain",
 {
     value(num, min, max)
@@ -1293,29 +1356,29 @@ Object.defineProperty(Number, "secondsToString",
 
 Object.defineProperty(Number, "bytesToString",
 {
-    value(bytes, higherResolution)
+    value(bytes, higherResolution, bytesThreshold)
     {
-        if (higherResolution === undefined)
-            higherResolution = true;
+        higherResolution ??= true;
+        bytesThreshold ??= 1000;
 
-        if (Math.abs(bytes) < 1024)
+        if (Math.abs(bytes) < bytesThreshold)
             return WI.UIString("%.0f B").format(bytes);
 
-        let kilobytes = bytes / 1024;
-        if (Math.abs(kilobytes) < 1024) {
+        let kilobytes = bytes / 1000;
+        if (Math.abs(kilobytes) < 1000) {
             if (higherResolution || Math.abs(kilobytes) < 10)
                 return WI.UIString("%.2f KB").format(kilobytes);
             return WI.UIString("%.1f KB").format(kilobytes);
         }
 
-        let megabytes = kilobytes / 1024;
-        if (Math.abs(megabytes) < 1024) {
+        let megabytes = kilobytes / 1000;
+        if (Math.abs(megabytes) < 1000) {
             if (higherResolution || Math.abs(megabytes) < 10)
                 return WI.UIString("%.2f MB").format(megabytes);
             return WI.UIString("%.1f MB").format(megabytes);
         }
 
-        let gigabytes = megabytes / 1024;
+        let gigabytes = megabytes / 1000;
         if (higherResolution || Math.abs(gigabytes) < 10)
             return WI.UIString("%.2f GB").format(gigabytes);
         return WI.UIString("%.1f GB").format(gigabytes);
@@ -1329,13 +1392,13 @@ Object.defineProperty(Number, "abbreviate",
         if (num < 1000)
             return num.toLocaleString();
 
-        if (num < 1000000)
+        if (num < 1_000_000)
             return WI.UIString("%.1fK").format(Math.round(num / 100) / 10);
 
-        if (num < 1000000000)
-            return WI.UIString("%.1fM").format(Math.round(num / 100000) / 10);
+        if (num < 1_000_000_000)
+            return WI.UIString("%.1fM").format(Math.round(num / 100_000) / 10);
 
-        return WI.UIString("%.1fB").format(Math.round(num / 100000000) / 10);
+        return WI.UIString("%.1fB").format(Math.round(num / 100_000_000) / 10);
     }
 });
 
@@ -1594,6 +1657,11 @@ function appendWebInspectorConsoleEvaluationSourceURL(string)
     return "\n//# sourceURL=__WebInspectorConsoleEvaluation__\n" + string;
 }
 
+function isWebInspectorBootstrapScript(url)
+{
+    return url === WI.NetworkManager.bootstrapScriptURL;
+}
+
 function isWebInspectorInternalScript(url)
 {
     return url === "__WebInspectorInternal__";
@@ -1683,3 +1751,17 @@ function insertObjectIntoSortedArray(object, array, comparator)
 {
     array.splice(insertionIndexForObjectInListSortedByFunction(object, array, comparator), 0, object);
 }
+
+WI.setReentrantCheck = function(object, key)
+{
+    key = "__checkReentrant_" + key;
+    object[key] = (object[key] || 0) + 1;
+    return object[key] === 1;
+};
+
+WI.clearReentrantCheck = function(object, key)
+{
+    key = "__checkReentrant_" + key;
+    object[key] = (object[key] || 0) - 1;
+    return object[key] === 0;
+};

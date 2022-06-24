@@ -1,3 +1,0 @@
-
-FAIL void methods return undefined Can't find variable: OffscreenCanvas
-

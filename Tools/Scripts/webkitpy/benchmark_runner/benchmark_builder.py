@@ -1,15 +1,18 @@
-#!/usr/bin/env python
-
 import logging
 import tempfile
 import os
-import urllib
 import shutil
 import subprocess
+import sys
 import tarfile
 
 from webkitpy.benchmark_runner.utils import get_path_from_project_root, force_remove
 from zipfile import ZipFile
+
+if sys.version_info > (3, 0):
+    from urllib.request import urlretrieve
+else:
+    from urllib import urlretrieve
 
 
 _log = logging.getLogger(__name__)
@@ -22,7 +25,7 @@ class BenchmarkBuilder(object):
         self._driver = driver
 
     def __enter__(self):
-        self._web_root = tempfile.mkdtemp()
+        self._web_root = tempfile.mkdtemp(dir="/tmp")
         self._dest = os.path.join(self._web_root, self._name)
         if 'local_copy' in self._plan:
             self._copy_benchmark_to_temp_dir(self._plan['local_copy'])
@@ -70,7 +73,7 @@ class BenchmarkBuilder(object):
 
         archive_path = os.path.join(self._web_root, 'archive.' + archive_type)
         _log.info('Downloading %s to %s' % (archive_url, archive_path))
-        urllib.urlretrieve(archive_url, archive_path)
+        urlretrieve(archive_url, archive_path)
 
         if archive_type == 'zip':
             with ZipFile(archive_path, 'r') as archive:
@@ -79,7 +82,7 @@ class BenchmarkBuilder(object):
             with tarfile.open(archive_path, 'r:gz') as archive:
                 archive.extractall(self._dest)
 
-        unarchived_files = filter(lambda name: not name.startswith('.'), os.listdir(self._dest))
+        unarchived_files = [name for name in os.listdir(self._dest) if not name.startswith('.')]
         if len(unarchived_files) == 1:
             first_file = os.path.join(self._dest, unarchived_files[0])
             if os.path.isdir(first_file):

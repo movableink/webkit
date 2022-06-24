@@ -60,11 +60,23 @@ public:
     void searchWithSpotlight() override;
     void showContextMenu() override;
 
+#if ENABLE(IMAGE_ANALYSIS)
+    bool supportsLookUpInImages() final { return false; }
+#endif
+
+#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
+    bool supportsCopyCroppedImage() final { return false; }
+#endif
+
 #if ENABLE(SERVICE_CONTROLS)
     // WebSharingServicePickerClient
     void sharingServicePickerWillBeDestroyed(WebSharingServicePickerController &) override;
     WebCore::FloatRect screenRectForCurrentSharingServicePickerItem(WebSharingServicePickerController &) override;
     RetainPtr<NSImage> imageForCurrentSharingServicePickerItem(WebSharingServicePickerController &) override;
+#endif
+
+#if HAVE(TRANSLATION_UI_SERVICES)
+    void handleTranslation(const WebCore::TranslationContextMenuInfo&) final;
 #endif
 
 private:

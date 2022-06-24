@@ -42,6 +42,8 @@ public:
 private:
     UniqueRef<AuthenticatorTransportService> createService(WebCore::AuthenticatorTransport, AuthenticatorTransportService::Observer&) const final;
     void respondReceivedInternal(Respond&&) final;
+    void filterTransports(TransportSet&) const;
+    void runPresenterInternal(const TransportSet&) final { }
 
     WebCore::MockWebAuthenticationConfiguration m_testConfiguration;
 };

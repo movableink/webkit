@@ -26,30 +26,27 @@
 #include "config.h"
 #include "JSJavaScriptCallFramePrototype.h"
 
-#include "Error.h"
-#include "Identifier.h"
 #include "JSCInlines.h"
-#include "JSFunction.h"
 #include "JSJavaScriptCallFrame.h"
-
-using namespace JSC;
 
 namespace Inspector {
 
+using namespace JSC;
+
 // Functions.
-static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFramePrototypeFunctionEvaluateWithScopeExtension(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFramePrototypeFunctionScopeDescriptions(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(jsJavaScriptCallFramePrototypeFunctionEvaluateWithScopeExtension);
+static JSC_DECLARE_HOST_FUNCTION(jsJavaScriptCallFramePrototypeFunctionScopeDescriptions);
 
 // Attributes.
-static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeCaller(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeSourceID(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeLine(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeColumn(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeFunctionName(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeScopeChain(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeThisObject(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeType(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameIsTailDeleted(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeCaller);
+static JSC_DECLARE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeSourceID);
+static JSC_DECLARE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeLine);
+static JSC_DECLARE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeColumn);
+static JSC_DECLARE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeFunctionName);
+static JSC_DECLARE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeScopeChain);
+static JSC_DECLARE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeThisObject);
+static JSC_DECLARE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeType);
+static JSC_DECLARE_HOST_FUNCTION(jsJavaScriptCallFrameIsTailDeleted);
 
 const ClassInfo JSJavaScriptCallFramePrototype::s_info = { "JavaScriptCallFrame", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSJavaScriptCallFramePrototype) };
 
@@ -72,7 +69,7 @@ void JSJavaScriptCallFramePrototype::finishCreation(VM& vm, JSGlobalObject* glob
     JSC_NATIVE_GETTER_WITHOUT_TRANSITION("isTailDeleted", jsJavaScriptCallFrameIsTailDeleted, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
 }
 
-EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFramePrototypeFunctionEvaluateWithScopeExtension(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(jsJavaScriptCallFramePrototypeFunctionEvaluateWithScopeExtension, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -80,12 +77,12 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFramePrototypeFunctionEvaluateWithS
     JSValue thisValue = callFrame->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(vm, thisValue);
     if (!castedThis)
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(globalObject, scope);
 
-    return JSValue::encode(castedThis->evaluateWithScopeExtension(callFrame));
+    return JSValue::encode(castedThis->evaluateWithScopeExtension(globalObject, callFrame));
 }
 
-EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFramePrototypeFunctionScopeDescriptions(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(jsJavaScriptCallFramePrototypeFunctionScopeDescriptions, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -93,12 +90,12 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFramePrototypeFunctionScopeDescript
     JSValue thisValue = callFrame->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(vm, thisValue);
     if (!castedThis)
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(globalObject, scope);
 
-    return JSValue::encode(castedThis->scopeDescriptions(callFrame));
+    return JSValue::encode(castedThis->scopeDescriptions(globalObject));
 }
 
-EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeCaller(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeCaller, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -106,12 +103,12 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeCaller(JSGlobalObject
     JSValue thisValue = callFrame->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(vm, thisValue);
     if (!castedThis)
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(globalObject, scope);
 
-    return JSValue::encode(castedThis->caller(callFrame));
+    return JSValue::encode(castedThis->caller(globalObject));
 }
 
-EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeSourceID(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeSourceID, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -119,12 +116,12 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeSourceID(JSGlobalObje
     JSValue thisValue = callFrame->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(vm, thisValue);
     if (!castedThis)
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(globalObject, scope);
 
-    return JSValue::encode(castedThis->sourceID(callFrame));
+    return JSValue::encode(castedThis->sourceID(globalObject));
 }
 
-EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeLine(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeLine, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -132,12 +129,12 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeLine(JSGlobalObject* 
     JSValue thisValue = callFrame->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(vm, thisValue);
     if (!castedThis)
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(globalObject, scope);
 
-    return JSValue::encode(castedThis->line(callFrame));
+    return JSValue::encode(castedThis->line(globalObject));
 }
 
-EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeColumn(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeColumn, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -145,12 +142,12 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeColumn(JSGlobalObject
     JSValue thisValue = callFrame->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(vm, thisValue);
     if (!castedThis)
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(globalObject, scope);
 
-    return JSValue::encode(castedThis->column(callFrame));
+    return JSValue::encode(castedThis->column(globalObject));
 }
 
-EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeFunctionName(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeFunctionName, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -158,12 +155,12 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeFunctionName(JSGlobal
     JSValue thisValue = callFrame->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(vm, thisValue);
     if (!castedThis)
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(globalObject, scope);
 
-    return JSValue::encode(castedThis->functionName(callFrame));
+    return JSValue::encode(castedThis->functionName(globalObject));
 }
 
-EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeScopeChain(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeScopeChain, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -171,12 +168,12 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeScopeChain(JSGlobalOb
     JSValue thisValue = callFrame->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(vm, thisValue);
     if (!castedThis)
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(globalObject, scope);
 
-    return JSValue::encode(castedThis->scopeChain(callFrame));
+    return JSValue::encode(castedThis->scopeChain(globalObject));
 }
 
-EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeThisObject(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeThisObject, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -184,12 +181,12 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeThisObject(JSGlobalOb
     JSValue thisValue = callFrame->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(vm, thisValue);
     if (!castedThis)
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(globalObject, scope);
 
-    return JSValue::encode(castedThis->thisObject(callFrame));
+    return JSValue::encode(castedThis->thisObject(globalObject));
 }
 
-EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeType(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(jsJavaScriptCallFrameAttributeType, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -197,12 +194,12 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeType(JSGlobalObject* 
     JSValue thisValue = callFrame->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(vm, thisValue);
     if (!castedThis)
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(globalObject, scope);
 
-    return JSValue::encode(castedThis->type(callFrame));
+    return JSValue::encode(castedThis->type(globalObject));
 }
 
-EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameIsTailDeleted(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(jsJavaScriptCallFrameIsTailDeleted, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -210,9 +207,9 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameIsTailDeleted(JSGlobalObject* 
     JSValue thisValue = callFrame->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(vm, thisValue);
     if (!castedThis)
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(globalObject, scope);
 
-    return JSValue::encode(castedThis->isTailDeleted(callFrame));
+    return JSValue::encode(castedThis->isTailDeleted(globalObject));
 }
 
 } // namespace Inspector

@@ -23,10 +23,12 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "WebKitAgnosticTest.h"
-
-#include <wtf/RetainPtr.h>
+#import "config.h"
+#import "TestNavigationDelegate.h"
+#import "TestWKWebView.h"
+#import "WebKitAgnosticTest.h"
+#import <Carbon/Carbon.h>
+#import <wtf/RetainPtr.h>
 
 @interface NSApplication (TestWebKitAPINSApplicationDetails)
 - (void)_setCurrentEvent:(NSEvent *)event;
@@ -73,6 +75,17 @@ TEST_F(AcceptsFirstMouse, WebKit)
 TEST_F(AcceptsFirstMouse, WebKit2)
 {
     runWebKit2Test();
+}
+
+TEST(WebKit2, AcceptsFirstMouseDuringWebProcessLaunch)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 400)]);
+    [webView loadHTMLString:@"<body>" baseURL:nil];
+
+    auto mouseEvent = [NSEvent mouseEventWithType:NSEventTypeLeftMouseDown location:NSMakePoint(1, 1) modifierFlags:0 timestamp:GetCurrentEventTime() windowNumber:[webView window].windowNumber context:NSGraphicsContext.currentContext eventNumber:1 clickCount:1 pressure:0];
+    [webView acceptsFirstMouse:mouseEvent];
+
+    [webView _test_waitForDidFinishNavigation];
 }
 
 } // namespace TestWebKitAPI

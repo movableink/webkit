@@ -44,8 +44,8 @@
         run('sourceBuffer.appendBuffer(samples)');
         await waitFor(sourceBuffer, 'updateend');
 
-        bufferedSamples = internals.bufferedSamplesForTrackID(sourceBuffer, 1);
-        enqueuedSamples = internals.enqueuedSamplesForTrackID(sourceBuffer, 1);
+        bufferedSamples = await internals.bufferedSamplesForTrackId(sourceBuffer, 1);
+        enqueuedSamples = await internals.enqueuedSamplesForTrackID(sourceBuffer, 1);
 
         consoleWrite("Buffered:");
         bufferedSamples.forEach(consoleWrite);

@@ -13,11 +13,13 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 #include <string>
 
+#include "absl/strings/string_view.h"
 #include "api/video/video_bitrate_allocation.h"
 #include "api/video/video_codec_type.h"
-#include "common_types.h"  // NOLINT(build/include)
+#include "api/video_codecs/spatial_layer.h"
 #include "rtc_base/system/rtc_export.h"
 
 namespace webrtc {
@@ -47,13 +49,10 @@ struct VideoCodecVP8 {
   int keyFrameInterval;
 };
 
-enum class InterLayerPredMode {
-  kOn,       // Allow inter-layer prediction for all frames.
-             // Frame of low spatial layer can be used for
-             // prediction of next spatial layer frame.
-  kOff,      // Encoder produces independent spatial layers.
-  kOnKeyPic  // Allow inter-layer prediction only for frames
-             // within key picture.
+enum class InterLayerPredMode : int {
+  kOff = 0,      // Inter-layer prediction is disabled.
+  kOn = 1,       // Inter-layer prediction is enabled.
+  kOnKeyPic = 2  // Inter-layer prediction is enabled but limited to key frames.
 };
 
 // VP9 specific.
@@ -82,12 +81,7 @@ struct VideoCodecH264 {
   }
   bool frameDroppingOn;
   int keyFrameInterval;
-  // These are NULL/0 if not externally negotiated.
-  const uint8_t* spsData;
-  size_t spsLen;
-  const uint8_t* ppsData;
-  size_t ppsLen;
-  H264::Profile profile;
+  uint8_t numberOfTemporalLayers;
 };
 
 // Translates from name of codec to codec type and vice versa.
@@ -107,18 +101,24 @@ class RTC_EXPORT VideoCodec {
  public:
   VideoCodec();
 
+  // Scalability mode as described in
+  // https://www.w3.org/TR/webrtc-svc/#scalabilitymodes*
+  // or value 'NONE' to indicate no scalability.
+  absl::string_view ScalabilityMode() const { return scalability_mode_; }
+  void SetScalabilityMode(absl::string_view scalability_mode) {
+    scalability_mode_ = std::string(scalability_mode);
+  }
+
   // Public variables. TODO(hta): Make them private with accessors.
   VideoCodecType codecType;
-  unsigned char plType;
 
   // TODO(nisse): Change to int, for consistency.
   uint16_t width;
   uint16_t height;
 
-  unsigned int startBitrate;   // kilobits/sec.
-  unsigned int maxBitrate;     // kilobits/sec.
-  unsigned int minBitrate;     // kilobits/sec.
-  unsigned int targetBitrate;  // kilobits/sec.
+  unsigned int startBitrate;  // kilobits/sec.
+  unsigned int maxBitrate;    // kilobits/sec.
+  unsigned int minBitrate;    // kilobits/sec.
 
   uint32_t maxFramerate;
 
@@ -128,7 +128,7 @@ class RTC_EXPORT VideoCodec {
 
   unsigned int qpMax;
   unsigned char numberOfSimulcastStreams;
-  SimulcastStream simulcastStream[kMaxSimulcastStreams];
+  SpatialLayer simulcastStream[kMaxSimulcastStreams];
   SpatialLayer spatialLayers[kMaxSpatialLayers];
 
   VideoCodecMode mode;
@@ -146,6 +146,9 @@ class RTC_EXPORT VideoCodec {
     int64_t delay_ms;
     uint16_t outlier_ratio_percent;
   } timing_frame_thresholds;
+
+  // Legacy Google conference mode flag for simulcast screenshare
+  bool legacy_conference_mode;
 
   bool operator==(const VideoCodec& other) const = delete;
   bool operator!=(const VideoCodec& other) const = delete;
@@ -165,6 +168,7 @@ class RTC_EXPORT VideoCodec {
   // TODO(hta): Consider replacing the union with a pointer type.
   // This will allow removing the VideoCodec* types from this file.
   VideoCodecUnion codec_specific_;
+  std::string scalability_mode_;
 };
 
 }  // namespace webrtc

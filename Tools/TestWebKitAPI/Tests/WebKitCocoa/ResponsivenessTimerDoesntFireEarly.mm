@@ -23,17 +23,16 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(MAC)
 
-#include "PlatformUtilities.h"
-#include "PlatformWebView.h"
-#include "TestWKWebView.h"
-#include <wtf/RetainPtr.h>
+#import "DeprecatedGlobalValues.h"
+#import "PlatformUtilities.h"
+#import "PlatformWebView.h"
+#import "TestWKWebView.h"
+#import <wtf/RetainPtr.h>
 
-static bool didFinishLoad;
-static bool didBecomeUnresponsive;
 static bool didBrieflyPause;
 
 static void didReceiveMessageFromInjectedBundle(WKContextRef, WKStringRef messageName, WKTypeRef, const void*)

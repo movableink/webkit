@@ -60,7 +60,7 @@ static const guint16 g_sessionStateVersion = 2;
 // Use our own enum types to ensure the serialized format even if the core enums change.
 enum ExternalURLsPolicy {
     Allow,
-    AllowExternalSchemes,
+    AllowExternalSchemesButNotAppLinks,
     NotAllow
 };
 
@@ -69,8 +69,8 @@ static inline unsigned toExternalURLsPolicy(WebCore::ShouldOpenExternalURLsPolic
     switch (policy) {
     case WebCore::ShouldOpenExternalURLsPolicy::ShouldAllow:
         return ExternalURLsPolicy::Allow;
-    case WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemes:
-        return ExternalURLsPolicy::AllowExternalSchemes;
+    case WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks:
+        return ExternalURLsPolicy::AllowExternalSchemesButNotAppLinks;
     case WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow:
         return ExternalURLsPolicy::NotAllow;
     }
@@ -83,8 +83,8 @@ static inline WebCore::ShouldOpenExternalURLsPolicy toWebCoreExternalURLsPolicy(
     switch (policy) {
     case ExternalURLsPolicy::Allow:
         return WebCore::ShouldOpenExternalURLsPolicy::ShouldAllow;
-    case ExternalURLsPolicy::AllowExternalSchemes:
-        return WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemes;
+    case ExternalURLsPolicy::AllowExternalSchemesButNotAppLinks:
+        return WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks;
     case ExternalURLsPolicy::NotAllow:
         return WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow;
     }
@@ -162,7 +162,7 @@ static inline void encodeFrameState(GVariantBuilder* sessionBuilder, const Frame
     g_variant_builder_add(sessionBuilder, "s", frameState.referrer.utf8().data());
     g_variant_builder_add(sessionBuilder, "s", frameState.target.utf8().data());
     g_variant_builder_open(sessionBuilder, G_VARIANT_TYPE("as"));
-    for (const auto& state : frameState.documentState)
+    for (const auto& state : frameState.documentState())
         g_variant_builder_add(sessionBuilder, "s", state.utf8().data());
     g_variant_builder_close(sessionBuilder);
     if (!frameState.stateObjectData)
@@ -305,10 +305,12 @@ static inline void decodeFrameState(GVariant* frameStateVariant, FrameState& fra
         frameState.referrer = String::fromUTF8(referrer);
     frameState.target = String::fromUTF8(target);
     if (gsize documentStateLength = g_variant_iter_n_children(documentStateIter.get())) {
-        frameState.documentState.reserveInitialCapacity(documentStateLength);
+        Vector<String> documentState;
+        documentState.reserveInitialCapacity(documentStateLength);
         const char* documentStateString;
         while (g_variant_iter_next(documentStateIter.get(), "&s", &documentStateString))
-            frameState.documentState.uncheckedAppend(String::fromUTF8(documentStateString));
+            documentState.uncheckedAppend(String::fromUTF8(documentStateString));
+        frameState.setDocumentState(documentState);
     }
     if (stateObjectDataIter) {
         Vector<uint8_t> stateObjectVector;

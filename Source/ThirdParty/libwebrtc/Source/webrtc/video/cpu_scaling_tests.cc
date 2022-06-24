@@ -8,9 +8,22 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include <limits>
+#include <vector>
+
+#include "api/rtp_parameters.h"
+#include "api/video/video_frame.h"
+#include "api/video/video_sink_interface.h"
+#include "api/video/video_source_interface.h"
+#include "api/video_codecs/video_encoder_config.h"
+#include "call/video_receive_stream.h"
+#include "call/video_send_stream.h"
+#include "rtc_base/checks.h"
+#include "rtc_base/event.h"
 #include "test/call_test.h"
 #include "test/field_trial.h"
 #include "test/frame_generator_capturer.h"
+#include "test/gtest.h"
 
 namespace webrtc {
 namespace {
@@ -74,7 +87,7 @@ void CpuOveruseTest::RunTestAndCheckForAdaptation(
         case DegradationPreference::BALANCED:
           if (wants.max_pixel_count == std::numeric_limits<int>::max() &&
               wants.max_framerate_fps == std::numeric_limits<int>::max()) {
-            // |adapt_counters_| map in VideoStreamEncoder is reset when
+            // `adapt_counters_` map in VideoStreamEncoder is reset when
             // balanced mode is set.
             break;
           }

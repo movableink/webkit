@@ -8,14 +8,16 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "modules/utility/source/process_thread_impl.h"
+
 #include <memory>
 #include <utility>
 
+#include "api/task_queue/queued_task.h"
+#include "api/task_queue/task_queue_test.h"
 #include "modules/include/module.h"
-#include "modules/utility/source/process_thread_impl.h"
 #include "rtc_base/location.h"
-#include "rtc_base/task_queue.h"
-#include "rtc_base/timeutils.h"
+#include "rtc_base/time_utils.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
 
@@ -35,12 +37,12 @@ static const int kEventWaitTimeout = 500;
 
 class MockModule : public Module {
  public:
-  MOCK_METHOD0(TimeUntilNextProcess, int64_t());
-  MOCK_METHOD0(Process, void());
-  MOCK_METHOD1(ProcessThreadAttached, void(ProcessThread*));
+  MOCK_METHOD(int64_t, TimeUntilNextProcess, (), (override));
+  MOCK_METHOD(void, Process, (), (override));
+  MOCK_METHOD(void, ProcessThreadAttached, (ProcessThread*), (override));
 };
 
-class RaiseEventTask : public rtc::QueuedTask {
+class RaiseEventTask : public QueuedTask {
  public:
   RaiseEventTask(rtc::Event* event) : event_(event) {}
   bool Run() override {
@@ -308,5 +310,22 @@ TEST(ProcessThreadImpl, PostTask) {
   EXPECT_TRUE(task_ran.Wait(kEventWaitTimeout));
   thread.Stop();
 }
+
+class ProcessThreadFactory : public TaskQueueFactory {
+ public:
+  ~ProcessThreadFactory() override = default;
+  std::unique_ptr<TaskQueueBase, TaskQueueDeleter> CreateTaskQueue(
+      absl::string_view name,
+      Priority priority) const override {
+    ProcessThreadImpl* process_thread = new ProcessThreadImpl("thread");
+    process_thread->Start();
+    return std::unique_ptr<TaskQueueBase, TaskQueueDeleter>(process_thread);
+  }
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    ProcessThread,
+    TaskQueueTest,
+    testing::Values(std::make_unique<ProcessThreadFactory>));
 
 }  // namespace webrtc

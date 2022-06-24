@@ -27,6 +27,7 @@
 #include <gtk/gtk.h>
 #include <webkit2/WebKitCredential.h>
 #include <webkit2/WebKitDefines.h>
+#include <webkit2/WebKitSecurityOrigin.h>
 
 G_BEGIN_DECLS
 
@@ -67,6 +68,7 @@ struct _WebKitAuthenticationRequestClass {
  * @WEBKIT_AUTHENTICATION_SCHEME_NEGOTIATE: Negotiate (or SPNEGO) authentication scheme as defined in RFC 4559.
  * @WEBKIT_AUTHENTICATION_SCHEME_CLIENT_CERTIFICATE_REQUESTED: Client Certificate Authentication (see RFC 2246).
  * @WEBKIT_AUTHENTICATION_SCHEME_SERVER_TRUST_EVALUATION_REQUESTED: Server Trust Authentication.
+ * @WEBKIT_AUTHENTICATION_SCHEME_CLIENT_CERTIFICATE_PIN_REQUESTED: Client certificate PIN required for use. Since: 2.34
  * @WEBKIT_AUTHENTICATION_SCHEME_UNKNOWN: Authentication scheme unknown.
  *
  * Enum values representing the authentication scheme.
@@ -82,6 +84,7 @@ typedef enum {
     WEBKIT_AUTHENTICATION_SCHEME_NEGOTIATE = 6,
     WEBKIT_AUTHENTICATION_SCHEME_CLIENT_CERTIFICATE_REQUESTED = 7,
     WEBKIT_AUTHENTICATION_SCHEME_SERVER_TRUST_EVALUATION_REQUESTED = 8,
+    WEBKIT_AUTHENTICATION_SCHEME_CLIENT_CERTIFICATE_PIN_REQUESTED = 9,
     WEBKIT_AUTHENTICATION_SCHEME_UNKNOWN = 100,
 } WebKitAuthenticationScheme;
 
@@ -92,14 +95,25 @@ webkit_authentication_request_get_type                (void);
 WEBKIT_API gboolean
 webkit_authentication_request_can_save_credentials    (WebKitAuthenticationRequest *request);
 
+WEBKIT_API void
+webkit_authentication_request_set_can_save_credentials(WebKitAuthenticationRequest *request,
+                                                       gboolean                     enabled);
+
 WEBKIT_API WebKitCredential *
 webkit_authentication_request_get_proposed_credential (WebKitAuthenticationRequest *request);
+
+WEBKIT_API void
+webkit_authentication_request_set_proposed_credential (WebKitAuthenticationRequest *request,
+                                                       WebKitCredential            *credential);
 
 WEBKIT_API const gchar *
 webkit_authentication_request_get_host                (WebKitAuthenticationRequest *request);
 
 WEBKIT_API guint
 webkit_authentication_request_get_port                (WebKitAuthenticationRequest *request);
+
+WEBKIT_API WebKitSecurityOrigin *
+webkit_authentication_request_get_security_origin     (WebKitAuthenticationRequest *request);
 
 WEBKIT_API const gchar *
 webkit_authentication_request_get_realm               (WebKitAuthenticationRequest *request);
@@ -119,6 +133,9 @@ webkit_authentication_request_authenticate            (WebKitAuthenticationReque
 
 WEBKIT_API void
 webkit_authentication_request_cancel                  (WebKitAuthenticationRequest *request);
+
+WEBKIT_API GTlsPasswordFlags
+webkit_authentication_request_get_certificate_pin_flags (WebKitAuthenticationRequest* request);
 
 G_END_DECLS
 

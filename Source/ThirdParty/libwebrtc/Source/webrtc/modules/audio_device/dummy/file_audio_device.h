@@ -17,13 +17,10 @@
 #include <string>
 
 #include "modules/audio_device/audio_device_generic.h"
-#include "rtc_base/criticalsection.h"
+#include "rtc_base/platform_thread.h"
+#include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/system/file_wrapper.h"
-#include "rtc_base/timeutils.h"
-
-namespace rtc {
-class PlatformThread;
-}  // namespace rtc
+#include "rtc_base/time_utils.h"
 
 namespace webrtc {
 
@@ -31,8 +28,8 @@ namespace webrtc {
 // and plays out into a file.
 class FileAudioDevice : public AudioDeviceGeneric {
  public:
-  // Constructs a file audio device with |id|. It will read audio from
-  // |inputFilename| and record output audio to |outputFilename|.
+  // Constructs a file audio device with `id`. It will read audio from
+  // `inputFilename` and record output audio to `outputFilename`.
   //
   // The input file should be a readable 48k stereo raw file, and the output
   // file should point to a writable location. The output format will also be
@@ -127,8 +124,8 @@ class FileAudioDevice : public AudioDeviceGeneric {
   void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) override;
 
  private:
-  static bool RecThreadFunc(void*);
-  static bool PlayThreadFunc(void*);
+  static void RecThreadFunc(void*);
+  static void PlayThreadFunc(void*);
   bool RecThreadProcess();
   bool PlayThreadProcess();
 
@@ -139,23 +136,22 @@ class FileAudioDevice : public AudioDeviceGeneric {
   int8_t* _playoutBuffer;    // In bytes.
   uint32_t _recordingFramesLeft;
   uint32_t _playoutFramesLeft;
-  rtc::CriticalSection _critSect;
+  Mutex mutex_;
 
   size_t _recordingBufferSizeIn10MS;
   size_t _recordingFramesIn10MS;
   size_t _playoutFramesIn10MS;
 
-  // TODO(pbos): Make plain members instead of pointers and stop resetting them.
-  std::unique_ptr<rtc::PlatformThread> _ptrThreadRec;
-  std::unique_ptr<rtc::PlatformThread> _ptrThreadPlay;
+  rtc::PlatformThread _ptrThreadRec;
+  rtc::PlatformThread _ptrThreadPlay;
 
   bool _playing;
   bool _recording;
   int64_t _lastCallPlayoutMillis;
   int64_t _lastCallRecordMillis;
 
-  FileWrapper& _outputFile;
-  FileWrapper& _inputFile;
+  FileWrapper _outputFile;
+  FileWrapper _inputFile;
   std::string _outputFilename;
   std::string _inputFilename;
 };

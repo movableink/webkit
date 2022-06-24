@@ -27,7 +27,6 @@
 #include "WebKitDOMHTMLPrivate.h"
 
 #include <WebCore/HTMLAnchorElement.h>
-#include <WebCore/HTMLAppletElement.h>
 #include <WebCore/HTMLAreaElement.h>
 #include <WebCore/HTMLAudioElement.h>
 #include <WebCore/HTMLBRElement.h>
@@ -52,7 +51,6 @@
 #include <WebCore/HTMLIFrameElement.h>
 #include <WebCore/HTMLImageElement.h>
 #include <WebCore/HTMLInputElement.h>
-#include <WebCore/HTMLKeygenElement.h>
 #include <WebCore/HTMLLIElement.h>
 #include <WebCore/HTMLLabelElement.h>
 #include <WebCore/HTMLLegendElement.h>
@@ -85,7 +83,6 @@
 #include <WebCore/HTMLUListElement.h>
 #include <WebCore/HTMLVideoElement.h>
 #include "WebKitDOMHTMLAnchorElementPrivate.h"
-#include "WebKitDOMHTMLAppletElementPrivate.h"
 #include "WebKitDOMHTMLAreaElementPrivate.h"
 #include "WebKitDOMHTMLBRElementPrivate.h"
 #include "WebKitDOMHTMLBaseElementPrivate.h"
@@ -150,7 +147,6 @@ using namespace WebCore::HTMLNames;
 
 #define FOR_EACH_HTML_TAG(macro) \
     macro(a, Anchor) \
-    macro(applet, Applet) \
     macro(area, Area) \
     macro(base, Base) \
     macro(blockquote, Quote) \

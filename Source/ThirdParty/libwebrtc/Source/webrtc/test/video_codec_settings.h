@@ -25,9 +25,7 @@ const int64_t kTestTimingFramesDelayMs = 200;
 const uint16_t kTestOutlierFrameSizePercent = 250;
 
 static void CodecSettings(VideoCodecType codec_type, VideoCodec* settings) {
-  memset(settings, 0, sizeof(VideoCodec));
-
-  settings->plType = kTestPayloadType;
+  *settings = {};
 
   settings->width = kTestWidth;
   settings->height = kTestHeight;
@@ -35,7 +33,6 @@ static void CodecSettings(VideoCodecType codec_type, VideoCodec* settings) {
   settings->startBitrate = kTestStartBitrateKbps;
   settings->maxBitrate = 0;
   settings->minBitrate = kTestMinBitrateKbps;
-  settings->targetBitrate = 0;
 
   settings->maxFramerate = kTestFrameRate;
 
@@ -45,7 +42,8 @@ static void CodecSettings(VideoCodecType codec_type, VideoCodec* settings) {
   settings->numberOfSimulcastStreams = 0;
 
   settings->timing_frame_thresholds = {
-      kTestTimingFramesDelayMs, kTestOutlierFrameSizePercent,
+      kTestTimingFramesDelayMs,
+      kTestOutlierFrameSizePercent,
   };
 
   settings->codecType = codec_type;
@@ -59,12 +57,6 @@ static void CodecSettings(VideoCodecType codec_type, VideoCodec* settings) {
     case kVideoCodecH264:
       // TODO(brandtr): Set |qpMax| here, when the OpenH264 wrapper supports it.
       *(settings->H264()) = VideoEncoder::GetDefaultH264Settings();
-      return;
-    case kVideoCodecI420:
-      // Bitrate needed for this size and framerate.
-      settings->startBitrate =
-          3 * kTestWidth * kTestHeight * 8 * kTestFrameRate / 1000 / 2;
-      settings->maxBitrate = settings->startBitrate;
       return;
     default:
       return;

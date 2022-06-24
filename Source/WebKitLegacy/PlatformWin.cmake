@@ -1,33 +1,34 @@
 if (${WTF_PLATFORM_WIN_CAIRO})
     add_definitions(-DUSE_CAIRO=1 -DUSE_CURL=1 -DWEBKIT_EXPORTS=1)
     list(APPEND WebKitLegacy_PRIVATE_INCLUDE_DIRECTORIES
-        ${CAIRO_INCLUDE_DIRS}
         "${WEBKIT_LIBRARIES_DIR}/include"
     )
     list(APPEND WebKitLegacy_SOURCES_Classes
         win/WebDownloadCURL.cpp
         win/WebURLAuthenticationChallengeSenderCURL.cpp
     )
-    list(APPEND WebKitLegacy_LIBRARIES
-        ${OPENSSL_LIBRARIES}
-        PRIVATE mfuuid.lib
-        PRIVATE strmiids.lib
+    list(APPEND WebKitLegacy_PRIVATE_LIBRARIES
+        $<TARGET_OBJECTS:WebCore>
+        MediaFoundation
+        OpenSSL::SSL
+        mfuuid.lib
+        strmiids.lib
     )
 else ()
     list(APPEND WebKitLegacy_SOURCES_Classes
         win/WebDownloadCFNet.cpp
         win/WebURLAuthenticationChallengeSenderCFNet.cpp
     )
-    list(APPEND WebKitLegacy_LIBRARIES
-        PRIVATE CFNetwork${DEBUG_SUFFIX}
-        PRIVATE CoreGraphics${DEBUG_SUFFIX}
-        PRIVATE CoreText${DEBUG_SUFFIX}
-        PRIVATE QuartzCore${DEBUG_SUFFIX}
-        PRIVATE libdispatch${DEBUG_SUFFIX}
-        PRIVATE ${LIBXML2_LIBRARIES}
-        PRIVATE ${LIBXSLT_LIBRARIES}
-        PRIVATE ${SQLITE_LIBRARIES}
-        PRIVATE ${ZLIB_LIBRARIES}
+    list(APPEND WebKitLegacy_PRIVATE_LIBRARIES
+        CFNetwork${DEBUG_SUFFIX}
+        CoreGraphics${DEBUG_SUFFIX}
+        CoreText${DEBUG_SUFFIX}
+        QuartzCore${DEBUG_SUFFIX}
+        libdispatch${DEBUG_SUFFIX}
+        libxml2${DEBUG_SUFFIX}
+        libxslt${DEBUG_SUFFIX}
+        zdll${DEBUG_SUFFIX}
+        SQLite3${DEBUG_SUFFIX}
     )
 endif ()
 
@@ -44,7 +45,6 @@ list(APPEND WebKitLegacy_PRIVATE_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}/../include/private/JavaScriptCore"
     "${CMAKE_BINARY_DIR}/../include/private/WebCore"
     "${WEBKITLEGACY_DIR}/win"
-    "${WEBKITLEGACY_DIR}/win/plugins"
     "${WEBKITLEGACY_DIR}/win/WebCoreSupport"
     "${WebKitLegacy_DERIVED_SOURCES_DIR}/include"
     "${WebKitLegacy_DERIVED_SOURCES_DIR}/Interfaces"
@@ -188,25 +188,11 @@ list(APPEND WebKitLegacy_SOURCES_Classes
     win/WebView.cpp
     win/WebWorkersPrivate.cpp
 
-    win/plugins/PluginDatabase.cpp
-    win/plugins/PluginDatabaseWin.cpp
-    win/plugins/PluginDebug.cpp
-    win/plugins/PluginMainThreadScheduler.cpp
-    win/plugins/PluginMessageThrottlerWin.cpp
-    win/plugins/PluginPackage.cpp
-    win/plugins/PluginPackageWin.cpp
-    win/plugins/PluginStream.cpp
-    win/plugins/PluginView.cpp
-    win/plugins/PluginViewWin.cpp
-    win/plugins/npapi.cpp
-
     win/storage/WebDatabaseProvider.cpp
 )
 
 list(APPEND WebKitLegacy_SOURCES_WebCoreSupport
     win/WebCoreSupport/AcceleratedCompositingContext.cpp
-    win/WebCoreSupport/EmbeddedWidget.cpp
-    win/WebCoreSupport/EmbeddedWidget.h
     win/WebCoreSupport/WebChromeClient.cpp
     win/WebCoreSupport/WebChromeClient.h
     win/WebCoreSupport/WebContextMenuClient.cpp
@@ -231,6 +217,8 @@ list(APPEND WebKitLegacy_SOURCES_WebCoreSupport
     win/WebCoreSupport/WebPlatformStrategies.h
     win/WebCoreSupport/WebPluginInfoProvider.cpp
     win/WebCoreSupport/WebPluginInfoProvider.h
+    win/WebCoreSupport/WebProgressTrackerClient.cpp
+    win/WebCoreSupport/WebProgressTrackerClient.h
     win/WebCoreSupport/WebVisitedLinkStore.cpp
     win/WebCoreSupport/WebVisitedLinkStore.h
 )
@@ -245,46 +233,37 @@ if (USE_CF)
     )
 endif ()
 
-if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-    enable_language(ASM_MASM)
-    if (MSVC)
-        set(MASM_EXECUTABLE ml64)
-        set(MASM_FLAGS /c /Fo)
-        add_custom_command(
-            OUTPUT ${WebKitLegacy_DERIVED_SOURCES_DIR}/PaintHooks.obj
-            MAIN_DEPENDENCY win/plugins/PaintHooks.asm
-            COMMAND ${MASM_EXECUTABLE} ${MASM_FLAGS}
-                ${WebKitLegacy_DERIVED_SOURCES_DIR}/PaintHooks.obj
-                ${CMAKE_CURRENT_SOURCE_DIR}/win/plugins/PaintHooks.asm
-            VERBATIM)
-        list(APPEND WebKitLegacy_SOURCES
-            ${WebKitLegacy_DERIVED_SOURCES_DIR}/PaintHooks.obj
-        )
-    else ()
-        list(APPEND WebKitLegacy_SOURCES
-            win/plugins/PaintHooks.asm
-        )
-    endif ()
-endif ()
+
+set(WebKitLegacy_WEB_PREFERENCES_TEMPLATES
+    ${WEBKITLEGACY_DIR}/win/Scripts/PreferencesTemplates/WebPreferencesDefinitions.h.erb
+    ${WEBKITLEGACY_DIR}/win/Scripts/PreferencesTemplates/WebViewPreferencesChangedGenerated.cpp.erb
+)
+
+set(WebKitLegacy_WEB_PREFERENCES
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml
+    ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml
+)
+
+set_source_files_properties(${WebKitLegacy_WEB_PREFERENCES} PROPERTIES GENERATED TRUE)
+
+add_custom_command(
+    OUTPUT ${WebKitLegacy_DERIVED_SOURCES_DIR}/WebPreferencesDefinitions.h ${WebKitLegacy_DERIVED_SOURCES_DIR}/WebViewPreferencesChangedGenerated.cpp
+    DEPENDS ${WebKitLegacy_WEB_PREFERENCES_TEMPLATES} ${WebKitLegacy_WEB_PREFERENCES} WTF_CopyPreferences
+    COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/GeneratePreferences.rb --frontend WebKitLegacy --base ${WTF_SCRIPTS_DIR}/Preferences/WebPreferences.yaml --debug ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml --experimental ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml --internal ${WTF_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml --outputDir "${WebKitLegacy_DERIVED_SOURCES_DIR}" --template ${WEBKITLEGACY_DIR}/win/Scripts/PreferencesTemplates/WebPreferencesDefinitions.h.erb --template ${WEBKITLEGACY_DIR}/win/Scripts/PreferencesTemplates/WebViewPreferencesChangedGenerated.cpp.erb
+    VERBATIM)
+
+list(APPEND WebKitLegacy_SOURCES
+    ${WebKitLegacy_DERIVED_SOURCES_DIR}/WebPreferencesDefinitions.h
+    ${WebKitLegacy_DERIVED_SOURCES_DIR}/WebViewPreferencesChangedGenerated.cpp
+)
 
 list(APPEND WebKitLegacy_SOURCES ${WebKitLegacy_INCLUDES} ${WebKitLegacy_SOURCES_Classes} ${WebKitLegacy_SOURCES_WebCoreSupport})
 
 source_group(Includes FILES ${WebKitLegacy_INCLUDES})
 source_group(Classes FILES ${WebKitLegacy_SOURCES_Classes})
 source_group(WebCoreSupport FILES ${WebKitLegacy_SOURCES_WebCoreSupport})
-
-# Build the COM interface:
-macro(GENERATE_INTERFACE _infile _defines _depends)
-    get_filename_component(_filewe ${_infile} NAME_WE)
-    add_custom_command(
-        OUTPUT  ${WebKitLegacy_DERIVED_SOURCES_DIR}/Interfaces/${_filewe}.h
-        MAIN_DEPENDENCY ${_infile}
-        DEPENDS ${_depends}
-        COMMAND midl.exe /I "${CMAKE_CURRENT_SOURCE_DIR}/win/Interfaces" /I "${CMAKE_CURRENT_SOURCE_DIR}/win/Interfaces/Accessible2" /I "${WebKitLegacy_DERIVED_SOURCES_DIR}/include" /I "${CMAKE_CURRENT_SOURCE_DIR}/win" /WX /char signed /env win32 /tlb "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${_filewe}.tlb" /out "${WebKitLegacy_DERIVED_SOURCES_DIR}/Interfaces" /h "${WebKitLegacy_DERIVED_SOURCES_DIR}/Interfaces/${_filewe}.h" /iid "${_filewe}_i.c" ${_defines} "${CMAKE_CURRENT_SOURCE_DIR}/${_infile}"
-        USES_TERMINAL VERBATIM)
-    set_source_files_properties(${WebKitLegacy_DERIVED_SOURCES_DIR}/Interfaces/${_filewe}.h PROPERTIES GENERATED TRUE)
-    set_source_files_properties(${WebKitLegacy_DERIVED_SOURCES_DIR}/Interfaces/${_filewe}_i.c PROPERTIES GENERATED TRUE)
-endmacro()
 
 set(MIDL_DEFINES /D\ \"__PRODUCTION__=01\")
 
@@ -383,22 +362,38 @@ set(WEBKITLEGACY_IDL_DEPENDENCIES
     "${WebKitLegacy_DERIVED_SOURCES_DIR}/include/autoversion.h"
 )
 
+# Build the COM interface:
+function(GENERATE_INTERFACE _infile)
+    cmake_parse_arguments(opt "HEADER_ONLY" "" "" ${ARGN})
+    get_filename_component(_filewe ${_infile} NAME_WE)
+    set(output ${WebKitLegacy_DERIVED_SOURCES_DIR}/Interfaces/${_filewe}.h)
+    if (NOT ${opt_HEADER_ONLY})
+        list(APPEND output ${WebKitLegacy_DERIVED_SOURCES_DIR}/Interfaces/${_filewe}_i.c)
+    endif ()
+    add_custom_command(
+        OUTPUT ${output}
+        MAIN_DEPENDENCY ${_infile}
+        DEPENDS ${WEBKITLEGACY_IDL_DEPENDENCIES}
+        COMMAND midl.exe /I "${CMAKE_CURRENT_SOURCE_DIR}/win/Interfaces" /I "${CMAKE_CURRENT_SOURCE_DIR}/win/Interfaces/Accessible2" /I "${WebKitLegacy_DERIVED_SOURCES_DIR}/include" /I "${CMAKE_CURRENT_SOURCE_DIR}/win" /WX /char signed /env win32 /tlb "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${_filewe}.tlb" /out "${WebKitLegacy_DERIVED_SOURCES_DIR}/Interfaces" /h "${WebKitLegacy_DERIVED_SOURCES_DIR}/Interfaces/${_filewe}.h" /iid "${_filewe}_i.c" ${MIDL_DEFINES} "${CMAKE_CURRENT_SOURCE_DIR}/${_infile}"
+        USES_TERMINAL VERBATIM)
+endfunction()
+
 add_custom_command(
     OUTPUT ${WebKitLegacy_DERIVED_SOURCES_DIR}/include/autoversion.h
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMAND ${PERL_EXECUTABLE} ${WEBKIT_LIBRARIES_DIR}/tools/scripts/auto-version.pl ${WebKitLegacy_DERIVED_SOURCES_DIR}
     VERBATIM)
 
-GENERATE_INTERFACE(win/Interfaces/WebKit.idl ${MIDL_DEFINES} "${WEBKITLEGACY_IDL_DEPENDENCIES}")
-GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleApplication.idl ${MIDL_DEFINES} "${WEBKITLEGACY_IDL_DEPENDENCIES}")
-GENERATE_INTERFACE(win/Interfaces/Accessible2/Accessible2.idl ${MIDL_DEFINES} "${WEBKITLEGACY_IDL_DEPENDENCIES}")
-GENERATE_INTERFACE(win/Interfaces/Accessible2/Accessible2_2.idl ${MIDL_DEFINES} "${WEBKITLEGACY_IDL_DEPENDENCIES}")
-GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleRelation.idl ${MIDL_DEFINES} "${WEBKITLEGACY_IDL_DEPENDENCIES}")
-GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleStates.idl ${MIDL_DEFINES} "${WEBKITLEGACY_IDL_DEPENDENCIES}")
-GENERATE_INTERFACE(win/Interfaces/Accessible2/IA2CommonTypes.idl ${MIDL_DEFINES} "${WEBKITLEGACY_IDL_DEPENDENCIES}")
-GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleEditableText.idl ${MIDL_DEFINES} "${WEBKITLEGACY_IDL_DEPENDENCIES}")
-GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleText.idl ${MIDL_DEFINES} "${WEBKITLEGACY_IDL_DEPENDENCIES}")
-GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleText2.idl ${MIDL_DEFINES} "${WEBKITLEGACY_IDL_DEPENDENCIES}")
+GENERATE_INTERFACE(win/Interfaces/WebKit.idl)
+GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleApplication.idl)
+GENERATE_INTERFACE(win/Interfaces/Accessible2/Accessible2.idl)
+GENERATE_INTERFACE(win/Interfaces/Accessible2/Accessible2_2.idl)
+GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleRelation.idl)
+GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleStates.idl HEADER_ONLY)
+GENERATE_INTERFACE(win/Interfaces/Accessible2/IA2CommonTypes.idl HEADER_ONLY)
+GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleEditableText.idl)
+GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleText.idl)
+GENERATE_INTERFACE(win/Interfaces/Accessible2/AccessibleText2.idl)
 
 add_library(WebKitLegacyGUID STATIC
     "${WebKitLegacy_DERIVED_SOURCES_DIR}/Interfaces/WebKit.h"
@@ -422,31 +417,31 @@ add_library(WebKitLegacyGUID STATIC
 )
 set_target_properties(WebKitLegacyGUID PROPERTIES OUTPUT_NAME WebKitGUID${DEBUG_SUFFIX})
 
-list(APPEND WebKitLegacy_LIBRARIES
-    PRIVATE Comctl32
-    PRIVATE Comsupp
-    PRIVATE Crypt32
-    PRIVATE D2d1
-    PRIVATE Dwrite
-    PRIVATE dxguid
-    PRIVATE Iphlpapi
-    PRIVATE Psapi
-    PRIVATE Rpcrt4
-    PRIVATE Shlwapi
-    PRIVATE Usp10
-    PRIVATE Version
-    PRIVATE Winmm
-    PRIVATE WebKitGUID${DEBUG_SUFFIX}
-    PRIVATE WindowsCodecs
+list(APPEND WebKitLegacy_PRIVATE_LIBRARIES
+    Comctl32
+    Comsupp
+    Crypt32
+    D2d1
+    Dwrite
+    Iphlpapi
+    Psapi
+    Rpcrt4
+    Shlwapi
+    Usp10
+    Version
+    WebKitLegacyGUID
+    WindowsCodecs
+    Winmm
+    dxguid
 )
 
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /FORCE:MULTIPLE")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
 
 # We need the webkit libraries to come before the system default libraries to prevent symbol conflicts with uuid.lib.
 # To do this we add system default libs as webkit libs and zero out system default libs.
 string(REPLACE " " "\;" CXX_LIBS ${CMAKE_CXX_STANDARD_LIBRARIES})
-list(APPEND WebKitLegacy_LIBRARIES ${CXX_LIBS})
+list(APPEND WebKitLegacy_PRIVATE_LIBRARIES ${CXX_LIBS})
 set(CMAKE_CXX_STANDARD_LIBRARIES "")
 
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${MSVC_RUNTIME_LINKER_FLAGS}")
@@ -483,9 +478,14 @@ WEBKIT_MAKE_FORWARDING_HEADERS(WebKitLegacyGUID
     FLATTENED
 )
 if (NOT INTERNAL_BUILD)
-    add_dependencies(WebKitLegacyFrameworkHeaders WebCorePrivateFrameworkHeaders)
+    add_dependencies(WebKitLegacyFrameworkHeaders WebCore_CopyPrivateHeaders)
 endif ()
 
 set(WebKitLegacy_OUTPUT_NAME
     WebKit${DEBUG_SUFFIX}
+)
+
+list(APPEND WebKitLegacy_PRIVATE_DEFINITIONS
+    STATICALLY_LINKED_WITH_PAL
+    STATICALLY_LINKED_WITH_WebCore
 )

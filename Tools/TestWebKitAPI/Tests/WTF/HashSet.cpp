@@ -29,9 +29,12 @@
 #include "DeletedAddressOfOperator.h"
 #include "MoveOnly.h"
 #include "RefLogger.h"
+#include "Test.h"
 #include <functional>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
+#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/StringHash.h>
 
 namespace TestWebKitAPI {
 
@@ -44,7 +47,7 @@ template<unsigned size>
 void testInitialCapacity()
 {
     const unsigned initialCapacity = WTF::HashTableCapacityForSize<size>::value;
-    HashSet<int, DefaultHash<int>::Hash, InitialCapacityTestHashTraits<initialCapacity> > testSet;
+    HashSet<int, DefaultHash<int>, InitialCapacityTestHashTraits<initialCapacity> > testSet;
 
     // Initial capacity is null.
     ASSERT_EQ(0u, testSet.capacity());
@@ -55,8 +58,8 @@ void testInitialCapacity()
         ASSERT_EQ(initialCapacity, static_cast<unsigned>(testSet.capacity()));
     }
 
-    // Adding items up to less than half the capacity should not change the capacity.
-    unsigned capacityLimit = initialCapacity / 2 - 1;
+    // Adding items up to less than 3/4 of the capacity should not change the capacity.
+    unsigned capacityLimit = initialCapacity * 3 / 4 - 1;
     for (size_t i = size; i < capacityLimit; ++i) {
         testSet.add(i);
         ASSERT_EQ(initialCapacity, static_cast<unsigned>(testSet.capacity()));
@@ -67,11 +70,11 @@ void testInitialCapacity()
     EXPECT_GT(static_cast<unsigned>(testSet.capacity()), initialCapacity);
 }
 
-template<unsigned size> void generateTestCapacityUpToSize();
-template<> void generateTestCapacityUpToSize<0>()
+template<unsigned size> inline void generateTestCapacityUpToSize();
+template<> inline void generateTestCapacityUpToSize<0>()
 {
 }
-template<unsigned size> void generateTestCapacityUpToSize()
+template<unsigned size> inline void generateTestCapacityUpToSize()
 {
     generateTestCapacityUpToSize<size - 1>();
     testInitialCapacity<size>();
@@ -170,6 +173,9 @@ TEST(WTF_HashSet, UniquePtrKey_RemoveUsingRawPointer)
     ConstructorDestructorCounter::TestingScope scope;
 
     HashSet<std::unique_ptr<ConstructorDestructorCounter>> set;
+#if !CHECK_HASHTABLE_ITERATORS &&!DUMP_HASHTABLE_STATS_PER_TABLE
+    static_assert(sizeof(set) == sizeof(void*));
+#endif
 
     auto uniquePtr = makeUnique<ConstructorDestructorCounter>();
     ConstructorDestructorCounter* ptr = uniquePtr.get();
@@ -315,7 +321,7 @@ TEST(WTF_HashSet, RefPtrNotZeroedBeforeDeref)
     // value.
     // A zero would be a incorrect outcome as it would mean we nulled the bucket before an opaque
     // call.
-    EXPECT_TRUE(observer->observedBucket == observer.get() || observer->observedBucket == RefPtr<DerefObserver>::hashTableDeletedValue());
+    EXPECT_TRUE(observer->observedBucket == observer.get() || observer->observedBucket == RefPtr<DerefObserver>::PtrTraits::hashTableDeletedValue());
     EXPECT_EQ(observer->count, 0u);
 }
 
@@ -398,7 +404,7 @@ TEST(WTF_HashSet, Ref)
 
         auto aOut = set.take(&a);
         ASSERT_TRUE(static_cast<bool>(aOut));
-        ASSERT_EQ(&a, aOut.value().ptr());
+        ASSERT_EQ(&a, aOut.get());
     }
 
     ASSERT_STREQ("ref(a) deref(a) ", takeLogStr().c_str());
@@ -413,7 +419,7 @@ TEST(WTF_HashSet, Ref)
 
         auto aOut = set.takeAny();
         ASSERT_TRUE(static_cast<bool>(aOut));
-        ASSERT_EQ(&a, aOut.value().ptr());
+        ASSERT_EQ(&a, aOut.get());
     }
 
     ASSERT_STREQ("ref(a) deref(a) ", takeLogStr().c_str());
@@ -448,6 +454,16 @@ TEST(WTF_HashSet, Ref)
         }
     }
     ASSERT_STREQ("deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) deref(a) ", takeLogStr().c_str());
+
+    {
+        RefLogger a("a");
+
+        HashSet<Ref<RefLogger>> set;
+        Ref<RefLogger> ref(a);
+        set.add(WTFMove(ref));
+        HashSet<Ref<RefLogger>> set2(set);
+    }
+    ASSERT_STREQ("ref(a) ref(a) deref(a) deref(a) ", takeLogStr().c_str());
 }
 
 TEST(WTF_HashSet, DeletedAddressOfOperator)
@@ -501,6 +517,52 @@ TEST(WTF_HashSet, RemoveIfShrinkToBestSize)
     set1.checkConsistency();
     ASSERT_EQ(set1.size(), originalCapacity / 2 - 1);
     ASSERT_EQ(set1.capacity(), originalCapacity);
+}
+
+TEST(WTF_HashSet, ReserveInitialCapacity)
+{
+    HashSet<String> set;
+    EXPECT_EQ(0u, set.size());
+    EXPECT_EQ(0u, set.capacity());
+
+    set.reserveInitialCapacity(9999);
+    EXPECT_EQ(0u, set.size());
+    EXPECT_EQ(32768u, set.capacity());
+
+    for (int i = 0; i < 9999; ++i)
+        set.add(makeString("foo", i));
+    EXPECT_EQ(9999u, set.size());
+    EXPECT_EQ(32768u, set.capacity());
+    EXPECT_TRUE(set.contains("foo3"_str));
+
+    for (int i = 0; i < 9999; ++i)
+        set.add(makeString("excess", i));
+    EXPECT_EQ(9999u + 9999u, set.size());
+    EXPECT_EQ(32768u + 32768u, set.capacity());
+
+    for (int i = 0; i < 9999; ++i)
+        EXPECT_TRUE(set.remove(makeString("foo", i)));
+    EXPECT_EQ(9999u, set.size());
+    EXPECT_EQ(32768u, set.capacity());
+
+    for (int i = 0; i < 9999; ++i)
+        EXPECT_TRUE(set.remove(makeString("excess", i)));
+    EXPECT_EQ(0u, set.size());
+    EXPECT_EQ(8u, set.capacity());
+
+    HashSet<String> set2;
+    set2.reserveInitialCapacity(9999);
+    EXPECT_FALSE(set2.remove("foo1"_s));
+
+    for (int i = 0; i < 2000; ++i)
+        set2.add(makeString("foo", i));
+    EXPECT_EQ(2000u, set2.size());
+    EXPECT_EQ(32768u, set2.capacity());
+
+    for (int i = 0; i < 2000; ++i)
+        EXPECT_TRUE(set2.remove(makeString("foo", i)));
+    EXPECT_EQ(0u, set2.size());
+    EXPECT_EQ(8u, set2.capacity());
 }
 
 } // namespace TestWebKitAPI

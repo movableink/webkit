@@ -31,6 +31,13 @@
 namespace WebKit {
 using namespace WebCore;
 
+RefPtr<SecurityOrigin> NetworkResourceLoadParameters::parentOrigin() const
+{
+    if (frameAncestorOrigins.isEmpty())
+        return nullptr;
+    return frameAncestorOrigins.first();
+}
+
 void NetworkResourceLoadParameters::encode(IPC::Encoder& encoder) const
 {
     encoder << identifier;
@@ -44,21 +51,12 @@ void NetworkResourceLoadParameters::encode(IPC::Encoder& encoder) const
     if (request.httpBody()) {
         request.httpBody()->encode(encoder);
 
-        const Vector<FormDataElement>& elements = request.httpBody()->elements();
-        size_t fileCount = 0;
-        for (size_t i = 0, count = elements.size(); i < count; ++i) {
-            if (WTF::holds_alternative<FormDataElement::EncodedFileData>(elements[i].data))
-                ++fileCount;
-        }
-
-        SandboxExtension::HandleArray requestBodySandboxExtensions;
-        requestBodySandboxExtensions.allocate(fileCount);
-        size_t extensionIndex = 0;
-        for (size_t i = 0, count = elements.size(); i < count; ++i) {
-            const FormDataElement& element = elements[i];
-            if (auto* fileData = WTF::get_if<FormDataElement::EncodedFileData>(element.data)) {
+        Vector<SandboxExtension::Handle> requestBodySandboxExtensions;
+        for (const FormDataElement& element : request.httpBody()->elements()) {
+            if (auto* fileData = std::get_if<FormDataElement::EncodedFileData>(&element.data)) {
                 const String& path = fileData->filename;
-                SandboxExtension::createHandle(path, SandboxExtension::Type::ReadOnly, requestBodySandboxExtensions[extensionIndex++]);
+                if (auto handle = SandboxExtension::createHandle(path, SandboxExtension::Type::ReadOnly))
+                    requestBodySandboxExtensions.append(WTFMove(*handle));
             }
         }
         encoder << requestBodySandboxExtensions;
@@ -66,26 +64,30 @@ void NetworkResourceLoadParameters::encode(IPC::Encoder& encoder) const
 
     if (request.url().isLocalFile()) {
         SandboxExtension::Handle requestSandboxExtension;
-#if HAVE(SANDBOX_ISSUE_READ_EXTENSION_TO_PROCESS_BY_AUDIT_TOKEN)
-        if (networkProcessAuditToken)
-            SandboxExtension::createHandleForReadByAuditToken(request.url().fileSystemPath(), *networkProcessAuditToken, requestSandboxExtension);
-        else
-            SandboxExtension::createHandle(request.url().fileSystemPath(), SandboxExtension::Type::ReadOnly, requestSandboxExtension);
-#else
-        SandboxExtension::createHandle(request.url().fileSystemPath(), SandboxExtension::Type::ReadOnly, requestSandboxExtension);
+#if HAVE(AUDIT_TOKEN)
+        if (networkProcessAuditToken) {
+            if (auto handle = SandboxExtension::createHandleForReadByAuditToken(request.url().fileSystemPath(), *networkProcessAuditToken))
+                requestSandboxExtension = WTFMove(*handle);
+        } else
 #endif
+        {
+            if (auto handle = SandboxExtension::createHandle(request.url().fileSystemPath(), SandboxExtension::Type::ReadOnly))
+                requestSandboxExtension = WTFMove(*handle);
+        }
+
         encoder << requestSandboxExtension;
     }
 
-    encoder.encodeEnum(contentSniffingPolicy);
-    encoder.encodeEnum(contentEncodingSniffingPolicy);
-    encoder.encodeEnum(storedCredentialsPolicy);
-    encoder.encodeEnum(clientCredentialPolicy);
-    encoder.encodeEnum(shouldPreconnectOnly);
+    encoder << contentSniffingPolicy;
+    encoder << contentEncodingSniffingPolicy;
+    encoder << storedCredentialsPolicy;
+    encoder << clientCredentialPolicy;
+    encoder << shouldPreconnectOnly;
     encoder << shouldClearReferrerOnHTTPSToHTTPRedirect;
     encoder << needsCertificateInfo;
     encoder << isMainFrameNavigation;
     encoder << isMainResourceNavigationForAnyFrame;
+    encoder << shouldRelaxThirdPartyCookieBlocking;
     encoder << maximumBufferingTime;
 
     encoder << static_cast<bool>(sourceOrigin);
@@ -96,189 +98,302 @@ void NetworkResourceLoadParameters::encode(IPC::Encoder& encoder) const
         encoder << *topOrigin;
     encoder << options;
     encoder << cspResponseHeaders;
+    encoder << parentCrossOriginEmbedderPolicy;
+    encoder << crossOriginEmbedderPolicy;
     encoder << originalRequestHeaders;
 
     encoder << shouldRestrictHTTPResponseAccess;
 
-    encoder.encodeEnum(preflightPolicy);
+    encoder << preflightPolicy;
 
     encoder << shouldEnableCrossOriginResourcePolicy;
 
     encoder << frameAncestorOrigins;
-    encoder << isHTTPSUpgradeEnabled;
+    encoder << pageHasResourceLoadClient;
+    encoder << parentFrameID;
+    encoder << crossOriginAccessControlCheckEnabled;
+
+    encoder << documentURL;
+
+    encoder << isCrossOriginOpenerPolicyEnabled;
+    encoder << isDisplayingInitialEmptyDocument;
+    encoder << effectiveSandboxFlags;
+    encoder << openerURL;
+    encoder << sourceCrossOriginOpenerPolicy;
+
+    encoder << navigationID;
+    encoder << navigationRequester;
 
 #if ENABLE(SERVICE_WORKER)
     encoder << serviceWorkersMode;
     encoder << serviceWorkerRegistrationIdentifier;
     encoder << httpHeadersToKeep;
+    encoder << navigationPreloadIdentifier;
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
     encoder << mainDocumentURL;
     encoder << userContentControllerIdentifier;
 #endif
+    
+    encoder << isNavigatingToAppBoundDomain;
+    encoder << hadMainFrameMainResourcePrivateRelayed;
 }
 
-Optional<NetworkResourceLoadParameters> NetworkResourceLoadParameters::decode(IPC::Decoder& decoder)
+std::optional<NetworkResourceLoadParameters> NetworkResourceLoadParameters::decode(IPC::Decoder& decoder)
 {
     NetworkResourceLoadParameters result;
 
     if (!decoder.decode(result.identifier))
-        return WTF::nullopt;
+        return std::nullopt;
         
-    Optional<WebPageProxyIdentifier> webPageProxyID;
+    std::optional<WebPageProxyIdentifier> webPageProxyID;
     decoder >> webPageProxyID;
     if (!webPageProxyID)
-        return WTF::nullopt;
+        return std::nullopt;
     result.webPageProxyID = *webPageProxyID;
 
-    Optional<PageIdentifier> webPageID;
+    std::optional<PageIdentifier> webPageID;
     decoder >> webPageID;
     if (!webPageID)
-        return WTF::nullopt;
+        return std::nullopt;
     result.webPageID = *webPageID;
 
     if (!decoder.decode(result.webFrameID))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(result.parentPID))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(result.request))
-        return WTF::nullopt;
+        return std::nullopt;
 
     bool hasHTTPBody;
     if (!decoder.decode(hasHTTPBody))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (hasHTTPBody) {
         RefPtr<FormData> formData = FormData::decode(decoder);
         if (!formData)
-            return WTF::nullopt;
+            return std::nullopt;
         result.request.setHTTPBody(WTFMove(formData));
 
-        Optional<SandboxExtension::HandleArray> requestBodySandboxExtensionHandles;
+        std::optional<Vector<SandboxExtension::Handle>> requestBodySandboxExtensionHandles;
         decoder >> requestBodySandboxExtensionHandles;
         if (!requestBodySandboxExtensionHandles)
-            return WTF::nullopt;
-        for (size_t i = 0; i < requestBodySandboxExtensionHandles->size(); ++i) {
-            if (auto extension = SandboxExtension::create(WTFMove(requestBodySandboxExtensionHandles->at(i))))
+            return std::nullopt;
+        for (auto& handle : WTFMove(*requestBodySandboxExtensionHandles)) {
+            if (auto extension = SandboxExtension::create(WTFMove(handle)))
                 result.requestBodySandboxExtensions.append(WTFMove(extension));
         }
     }
 
     if (result.request.url().isLocalFile()) {
-        Optional<SandboxExtension::Handle> resourceSandboxExtensionHandle;
+        std::optional<SandboxExtension::Handle> resourceSandboxExtensionHandle;
         decoder >> resourceSandboxExtensionHandle;
         if (!resourceSandboxExtensionHandle)
-            return WTF::nullopt;
+            return std::nullopt;
         result.resourceSandboxExtension = SandboxExtension::create(WTFMove(*resourceSandboxExtensionHandle));
     }
 
-    if (!decoder.decodeEnum(result.contentSniffingPolicy))
-        return WTF::nullopt;
-    if (!decoder.decodeEnum(result.contentEncodingSniffingPolicy))
-        return WTF::nullopt;
-    if (!decoder.decodeEnum(result.storedCredentialsPolicy))
-        return WTF::nullopt;
-    if (!decoder.decodeEnum(result.clientCredentialPolicy))
-        return WTF::nullopt;
-    if (!decoder.decodeEnum(result.shouldPreconnectOnly))
-        return WTF::nullopt;
+    if (!decoder.decode(result.contentSniffingPolicy))
+        return std::nullopt;
+    if (!decoder.decode(result.contentEncodingSniffingPolicy))
+        return std::nullopt;
+    if (!decoder.decode(result.storedCredentialsPolicy))
+        return std::nullopt;
+    if (!decoder.decode(result.clientCredentialPolicy))
+        return std::nullopt;
+    if (!decoder.decode(result.shouldPreconnectOnly))
+        return std::nullopt;
     if (!decoder.decode(result.shouldClearReferrerOnHTTPSToHTTPRedirect))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.needsCertificateInfo))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.isMainFrameNavigation))
-        return WTF::nullopt;
+        return std::nullopt;
     if (!decoder.decode(result.isMainResourceNavigationForAnyFrame))
-        return WTF::nullopt;
+        return std::nullopt;
+    if (!decoder.decode(result.shouldRelaxThirdPartyCookieBlocking))
+        return std::nullopt;
     if (!decoder.decode(result.maximumBufferingTime))
-        return WTF::nullopt;
+        return std::nullopt;
 
     bool hasSourceOrigin;
     if (!decoder.decode(hasSourceOrigin))
-        return WTF::nullopt;
+        return std::nullopt;
     if (hasSourceOrigin) {
         result.sourceOrigin = SecurityOrigin::decode(decoder);
         if (!result.sourceOrigin)
-            return WTF::nullopt;
+            return std::nullopt;
     }
 
     bool hasTopOrigin;
     if (!decoder.decode(hasTopOrigin))
-        return WTF::nullopt;
+        return std::nullopt;
     if (hasTopOrigin) {
         result.topOrigin = SecurityOrigin::decode(decoder);
         if (!result.topOrigin)
-            return WTF::nullopt;
+            return std::nullopt;
     }
 
-    Optional<FetchOptions> options;
+    std::optional<FetchOptions> options;
     decoder >> options;
     if (!options)
-        return WTF::nullopt;
+        return std::nullopt;
     result.options = *options;
 
     if (!decoder.decode(result.cspResponseHeaders))
-        return WTF::nullopt;
-    if (!decoder.decode(result.originalRequestHeaders))
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<bool> shouldRestrictHTTPResponseAccess;
+    std::optional<WebCore::CrossOriginEmbedderPolicy> parentCrossOriginEmbedderPolicy;
+    decoder >> parentCrossOriginEmbedderPolicy;
+    if (!parentCrossOriginEmbedderPolicy)
+        return std::nullopt;
+    result.parentCrossOriginEmbedderPolicy = WTFMove(*parentCrossOriginEmbedderPolicy);
+
+    std::optional<WebCore::CrossOriginEmbedderPolicy> crossOriginEmbedderPolicy;
+    decoder >> crossOriginEmbedderPolicy;
+    if (!crossOriginEmbedderPolicy)
+        return std::nullopt;
+    result.crossOriginEmbedderPolicy = WTFMove(*crossOriginEmbedderPolicy);
+
+    if (!decoder.decode(result.originalRequestHeaders))
+        return std::nullopt;
+
+    std::optional<bool> shouldRestrictHTTPResponseAccess;
     decoder >> shouldRestrictHTTPResponseAccess;
     if (!shouldRestrictHTTPResponseAccess)
-        return WTF::nullopt;
+        return std::nullopt;
     result.shouldRestrictHTTPResponseAccess = *shouldRestrictHTTPResponseAccess;
 
-    if (!decoder.decodeEnum(result.preflightPolicy))
-        return WTF::nullopt;
+    if (!decoder.decode(result.preflightPolicy))
+        return std::nullopt;
 
-    Optional<bool> shouldEnableCrossOriginResourcePolicy;
+    std::optional<bool> shouldEnableCrossOriginResourcePolicy;
     decoder >> shouldEnableCrossOriginResourcePolicy;
     if (!shouldEnableCrossOriginResourcePolicy)
-        return WTF::nullopt;
+        return std::nullopt;
     result.shouldEnableCrossOriginResourcePolicy = *shouldEnableCrossOriginResourcePolicy;
 
     if (!decoder.decode(result.frameAncestorOrigins))
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<bool> isHTTPSUpgradeEnabled;
-    decoder >> isHTTPSUpgradeEnabled;
-    if (!isHTTPSUpgradeEnabled)
-        return WTF::nullopt;
-    result.isHTTPSUpgradeEnabled = *isHTTPSUpgradeEnabled;
+    std::optional<bool> pageHasResourceLoadClient;
+    decoder >> pageHasResourceLoadClient;
+    if (!pageHasResourceLoadClient)
+        return std::nullopt;
+    result.pageHasResourceLoadClient = *pageHasResourceLoadClient;
+    
+    std::optional<std::optional<FrameIdentifier>> parentFrameID;
+    decoder >> parentFrameID;
+    if (!parentFrameID)
+        return std::nullopt;
+    result.parentFrameID = WTFMove(*parentFrameID);
+
+    std::optional<bool> crossOriginAccessControlCheckEnabled;
+    decoder >> crossOriginAccessControlCheckEnabled;
+    if (!crossOriginAccessControlCheckEnabled)
+        return std::nullopt;
+    result.crossOriginAccessControlCheckEnabled = *crossOriginAccessControlCheckEnabled;
+    
+    std::optional<URL> documentURL;
+    decoder >> documentURL;
+    if (!documentURL)
+        return std::nullopt;
+    result.documentURL = *documentURL;
+
+    std::optional<bool> isCrossOriginOpenerPolicyEnabled;
+    decoder >> isCrossOriginOpenerPolicyEnabled;
+    if (!isCrossOriginOpenerPolicyEnabled)
+        return std::nullopt;
+    result.isCrossOriginOpenerPolicyEnabled = *isCrossOriginOpenerPolicyEnabled;
+
+    std::optional<bool> isDisplayingInitialEmptyDocument;
+    decoder >> isDisplayingInitialEmptyDocument;
+    if (!isDisplayingInitialEmptyDocument)
+        return std::nullopt;
+    result.isDisplayingInitialEmptyDocument = *isDisplayingInitialEmptyDocument;
+
+    std::optional<SandboxFlags> effectiveSandboxFlags;
+    decoder >> effectiveSandboxFlags;
+    if (!effectiveSandboxFlags)
+        return std::nullopt;
+    result.effectiveSandboxFlags = *effectiveSandboxFlags;
+
+    std::optional<URL> openerURL;
+    decoder >> openerURL;
+    if (!openerURL)
+        return std::nullopt;
+    result.openerURL = WTFMove(*openerURL);
+
+    std::optional<CrossOriginOpenerPolicy> sourceCrossOriginOpenerPolicy;
+    decoder >> sourceCrossOriginOpenerPolicy;
+    if (!sourceCrossOriginOpenerPolicy)
+        return std::nullopt;
+    result.sourceCrossOriginOpenerPolicy = WTFMove(*sourceCrossOriginOpenerPolicy);
+
+    std::optional<uint64_t> navigationID;
+    decoder >> navigationID;
+    if (!navigationID)
+        return std::nullopt;
+    result.navigationID = *navigationID;
+
+    std::optional<std::optional<NavigationRequester>> navigationRequester;
+    decoder >> navigationRequester;
+    if (!navigationRequester)
+        return std::nullopt;
+
+    result.navigationRequester = WTFMove(*navigationRequester);
 
 #if ENABLE(SERVICE_WORKER)
-    Optional<ServiceWorkersMode> serviceWorkersMode;
+    std::optional<ServiceWorkersMode> serviceWorkersMode;
     decoder >> serviceWorkersMode;
     if (!serviceWorkersMode)
-        return WTF::nullopt;
+        return std::nullopt;
     result.serviceWorkersMode = *serviceWorkersMode;
 
-    Optional<Optional<ServiceWorkerRegistrationIdentifier>> serviceWorkerRegistrationIdentifier;
+    std::optional<std::optional<ServiceWorkerRegistrationIdentifier>> serviceWorkerRegistrationIdentifier;
     decoder >> serviceWorkerRegistrationIdentifier;
     if (!serviceWorkerRegistrationIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
     result.serviceWorkerRegistrationIdentifier = *serviceWorkerRegistrationIdentifier;
 
-    Optional<OptionSet<HTTPHeadersToKeepFromCleaning>> httpHeadersToKeep;
+    std::optional<OptionSet<HTTPHeadersToKeepFromCleaning>> httpHeadersToKeep;
     decoder >> httpHeadersToKeep;
     if (!httpHeadersToKeep)
-        return WTF::nullopt;
+        return std::nullopt;
     result.httpHeadersToKeep = WTFMove(*httpHeadersToKeep);
+
+    std::optional<std::optional<FetchIdentifier>> navigationPreloadIdentifier;
+    decoder >> navigationPreloadIdentifier;
+    if (!navigationPreloadIdentifier)
+        return std::nullopt;
+    result.navigationPreloadIdentifier = *navigationPreloadIdentifier;
 #endif
 
 #if ENABLE(CONTENT_EXTENSIONS)
     if (!decoder.decode(result.mainDocumentURL))
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<Optional<UserContentControllerIdentifier>> userContentControllerIdentifier;
+    std::optional<std::optional<UserContentControllerIdentifier>> userContentControllerIdentifier;
     decoder >> userContentControllerIdentifier;
     if (!userContentControllerIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
     result.userContentControllerIdentifier = *userContentControllerIdentifier;
 #endif
+
+    std::optional<std::optional<NavigatingToAppBoundDomain>> isNavigatingToAppBoundDomain;
+    decoder >> isNavigatingToAppBoundDomain;
+    if (!isNavigatingToAppBoundDomain)
+        return std::nullopt;
+    result.isNavigatingToAppBoundDomain = *isNavigatingToAppBoundDomain;
+    
+    std::optional<bool> hadMainFrameMainResourcePrivateRelayed;
+    decoder >> hadMainFrameMainResourcePrivateRelayed;
+    if (!hadMainFrameMainResourcePrivateRelayed)
+        return std::nullopt;
+    result.hadMainFrameMainResourcePrivateRelayed = *hadMainFrameMainResourcePrivateRelayed;
 
     return result;
 }

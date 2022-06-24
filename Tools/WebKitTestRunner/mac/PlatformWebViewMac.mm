@@ -35,6 +35,7 @@
 #import <WebKit/WKWebViewConfiguration.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/text/WTFString.h>
 
 @interface WKWebView ()
 - (WKPageRef)_pageForTesting;
@@ -61,18 +62,18 @@ PlatformWebView::PlatformWebView(WKWebViewConfiguration* configuration, const Te
     , m_options(options)
 {
     // FIXME: Not sure this is the best place for this; maybe we should have API to set this so we can do it from TestController?
-    if (m_options.useRemoteLayerTree)
+    if (m_options.useRemoteLayerTree())
         [[NSUserDefaults standardUserDefaults] setValue:@YES forKey:@"WebKit2UseRemoteLayerTreeDrawingArea"];
 
-    RetainPtr<WKWebViewConfiguration> copiedConfiguration = adoptNS([configuration copy]);
-    WKPreferencesSetThreadedScrollingEnabled((__bridge WKPreferencesRef)[copiedConfiguration preferences], m_options.useThreadedScrolling);
+    auto copiedConfiguration = adoptNS([configuration copy]);
+    WKPreferencesSetThreadedScrollingEnabled((__bridge WKPreferencesRef)[copiedConfiguration preferences], m_options.useThreadedScrolling());
 
-    NSRect rect = NSMakeRect(0, 0, TestController::viewWidth, TestController::viewHeight);
+    NSRect rect = NSMakeRect(0, 0, options.viewWidth(), options.viewHeight());
     m_view = [[TestRunnerWKWebView alloc] initWithFrame:rect configuration:copiedConfiguration.get()];
     [m_view _setWindowOcclusionDetectionEnabled:NO];
 
     NSScreen *firstScreen = [[NSScreen screens] objectAtIndex:0];
-    NSRect windowRect = m_options.shouldShowWebView ? NSOffsetRect(rect, 100, 100) : NSOffsetRect(rect, -10000, [firstScreen frame].size.height - rect.size.height + 10000);
+    NSRect windowRect = m_options.shouldShowWindow() ? NSOffsetRect(rect, 100, 100) : NSOffsetRect(rect, -10000, [firstScreen frame].size.height - rect.size.height + 10000);
     m_window = [[WebKitTestRunnerWindow alloc] initWithContentRect:windowRect styleMask:NSWindowStyleMaskBorderless backing:(NSBackingStoreType)_NSBackingStoreUnbuffered defer:YES];
     m_window.platformWebView = this;
     [m_window setColorSpace:[firstScreen colorSpace]];
@@ -149,14 +150,13 @@ void PlatformWebView::didInitializeClients()
 
 void PlatformWebView::addChromeInputField()
 {
-    NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 100, 20)];
-    textField.tag = 1;
-    [[m_window contentView] addSubview:textField];
-    [textField release];
+    auto textField = adoptNS([[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 100, 20)]);
+    [textField setTag:1];
+    [[m_window contentView] addSubview:textField.get()];
 
     NSView *view = platformView();
     [textField setNextKeyView:view];
-    [view setNextKeyView:textField];
+    [view setNextKeyView:textField.get()];
 }
 
 void PlatformWebView::removeChromeInputField()
@@ -166,6 +166,19 @@ void PlatformWebView::removeChromeInputField()
         [textField removeFromSuperview];
         makeWebViewFirstResponder();
     }
+}
+
+void PlatformWebView::setTextInChromeInputField(const String&)
+{
+}
+
+void PlatformWebView::selectChromeInputField()
+{
+}
+
+String PlatformWebView::getSelectedTextInChromeInputField()
+{
+    return { };
 }
 
 void PlatformWebView::addToWindow()
@@ -223,10 +236,10 @@ void PlatformWebView::changeWindowScaleIfNeeded(float newScale)
 
     // Instead of re-constructing the current window, let's fake resize it to ensure that the scale change gets picked up.
     forceWindowFramesChanged();
+
     // Changing the scaling factor on the window does not trigger NSWindowDidChangeBackingPropertiesNotification. We need to send the notification manually.
-    RetainPtr<NSMutableDictionary> notificationUserInfo = adoptNS([[NSMutableDictionary alloc] initWithCapacity:1]);
-    [notificationUserInfo setObject:[NSNumber numberWithDouble:currentScale] forKey:NSBackingPropertyOldScaleFactorKey];
-    [[NSNotificationCenter defaultCenter] postNotificationName:NSWindowDidChangeBackingPropertiesNotification object:m_window userInfo:notificationUserInfo.get()];
+    NSDictionary *userInfo = @{ NSBackingPropertyOldScaleFactorKey: @(currentScale) };
+    [[NSNotificationCenter defaultCenter] postNotificationName:NSWindowDidChangeBackingPropertiesNotification object:m_window userInfo:userInfo];
 }
 
 void PlatformWebView::forceWindowFramesChanged()

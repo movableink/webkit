@@ -1,3 +1,0 @@
-
-FAIL arc() from 0 to pi does not draw anything in the wrong half Can't find variable: OffscreenCanvas
-

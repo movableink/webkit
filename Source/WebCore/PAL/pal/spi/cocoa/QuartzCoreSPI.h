@@ -48,6 +48,14 @@
 #import <QuartzCore/CARenderCG.h>
 #endif
 
+#if PLATFORM(IOS_FAMILY)
+#import <QuartzCore/CADisplayLinkPrivate.h>
+#endif
+
+#if ENABLE(ARKIT_INLINE_PREVIEW)
+#import <QuartzCore/CAFenceHandle.h>
+#endif
+
 #endif // __OBJC__
 
 #else
@@ -55,11 +63,28 @@
 #ifdef __OBJC__
 typedef struct _CARenderContext CARenderContext;
 
+#if PLATFORM(IOS_FAMILY)
+@interface CADisplayLink ()
+@property (readonly, nonatomic) CFTimeInterval maximumRefreshRate;
+@end
+#endif
+
+#if ENABLE(ARKIT_INLINE_PREVIEW)
+@interface CAFenceHandle : NSObject
+@end
+
+@interface CAFenceHandle ()
+- (mach_port_t)copyPort;
+- (void)invalidate;
+@end
+#endif
+
 @interface CAContext : NSObject
 @end
 
 @interface CAContext ()
 + (NSArray *)allContexts;
++ (CAContext *)currentContext;
 + (CAContext *)localContext;
 + (CAContext *)remoteContextWithOptions:(NSDictionary *)dict;
 #if PLATFORM(MAC)
@@ -74,7 +99,7 @@ typedef struct _CARenderContext CARenderContext;
 - (void)setFencePort:(mach_port_t)port;
 - (void)setFencePort:(mach_port_t)port commitHandler:(void(^)(void))block;
 
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
+#if PLATFORM(MAC)
 + (void)setAllowsCGSConnections:(BOOL)flag;
 #endif
 
@@ -86,6 +111,11 @@ typedef struct _CARenderContext CARenderContext;
 @property (strong) CALayer *layer;
 @property CGColorSpaceRef colorSpace;
 @property (readonly) CARenderContext* renderContext;
+
+#if ENABLE(ARKIT_INLINE_PREVIEW_IOS)
+-(BOOL)addFence:(CAFenceHandle *)handle;
+#endif
+
 @end
 
 @interface CALayer ()
@@ -103,6 +133,9 @@ typedef struct _CARenderContext CARenderContext;
 @property BOOL needsLayoutOnGeometryChange;
 @property BOOL shadowPathIsBounds;
 @property BOOL continuousCorners;
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+@property (getter=isSeparated) BOOL separated;
+#endif
 @end
 
 #if ENABLE(FILTERS_LEVEL_2)
@@ -140,7 +173,10 @@ typedef enum {
 
 @interface CATransaction ()
 + (void)addCommitHandler:(void(^)(void))block forPhase:(CATransactionPhase)phase;
++ (void)activate;
 + (CATransactionPhase)currentPhase;
++ (void)synchronize;
++ (uint32_t)currentState;
 @end
 
 @interface CALayerHost : CALayer
@@ -156,6 +192,12 @@ typedef enum {
 - (float)_solveForInput:(float)t;
 @end
 
+@interface CAPortalLayer : CALayer
+@property (weak) CALayer *sourceLayer;
+@property BOOL matchesPosition;
+@property BOOL matchesTransform;
+@end
+
 #endif // __OBJC__
 
 #endif
@@ -165,22 +207,8 @@ WTF_EXTERN_C_BEGIN
 // FIXME: Declare these functions even when USE(APPLE_INTERNAL_SDK) is true once we can fix <rdar://problem/26584828> in a better way.
 #if !USE(APPLE_INTERNAL_SDK)
 void CARenderServerCaptureLayerWithTransform(mach_port_t, uint32_t clientId, uint64_t layerId, uint32_t slotId, int32_t ox, int32_t oy, const CATransform3D*);
-
-#if HAVE(IOSURFACE)
 void CARenderServerRenderLayerWithTransform(mach_port_t server_port, uint32_t client_id, uint64_t layer_id, IOSurfaceRef, int32_t ox, int32_t oy, const CATransform3D*);
 void CARenderServerRenderDisplayLayerWithTransformAndTimeOffset(mach_port_t, CFStringRef display_name, uint32_t client_id, uint64_t layer_id, IOSurfaceRef, int32_t ox, int32_t oy, const CATransform3D*, CFTimeInterval);
-#else
-typedef struct CARenderServerBuffer* CARenderServerBufferRef;
-CARenderServerBufferRef CARenderServerCreateBuffer(size_t, size_t);
-void CARenderServerDestroyBuffer(CARenderServerBufferRef);
-size_t CARenderServerGetBufferWidth(CARenderServerBufferRef);
-size_t CARenderServerGetBufferHeight(CARenderServerBufferRef);
-size_t CARenderServerGetBufferRowBytes(CARenderServerBufferRef);
-uint8_t* CARenderServerGetBufferData(CARenderServerBufferRef);
-size_t CARenderServerGetBufferDataSize(CARenderServerBufferRef);
-
-bool CARenderServerRenderLayerWithTransform(mach_port_t, uint32_t client_id, uint64_t layer_id, CARenderServerBufferRef, int32_t ox, int32_t oy, const CATransform3D*);
-#endif
 #endif // USE(APPLE_INTERNAL_SDK)
 
 typedef struct _CAMachPort *CAMachPortRef;

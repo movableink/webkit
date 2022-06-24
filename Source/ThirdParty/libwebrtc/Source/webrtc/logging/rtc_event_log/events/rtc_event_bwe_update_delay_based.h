@@ -12,23 +12,25 @@
 #define LOGGING_RTC_EVENT_LOG_EVENTS_RTC_EVENT_BWE_UPDATE_DELAY_BASED_H_
 
 #include <stdint.h>
+
 #include <memory>
 
-#include "logging/rtc_event_log/events/rtc_event.h"
+#include "api/network_state_predictor.h"
+#include "api/rtc_event_log/rtc_event.h"
+#include "api/units/timestamp.h"
 
 namespace webrtc {
 
-enum class BandwidthUsage;
-
 class RtcEventBweUpdateDelayBased final : public RtcEvent {
  public:
+  static constexpr Type kType = Type::BweUpdateDelayBased;
+
   RtcEventBweUpdateDelayBased(int32_t bitrate_bps,
                               BandwidthUsage detector_state);
   ~RtcEventBweUpdateDelayBased() override;
 
-  Type GetType() const override;
-
-  bool IsConfigEvent() const override;
+  Type GetType() const override { return kType; }
+  bool IsConfigEvent() const override { return false; }
 
   std::unique_ptr<RtcEventBweUpdateDelayBased> Copy() const;
 
@@ -40,6 +42,23 @@ class RtcEventBweUpdateDelayBased final : public RtcEvent {
 
   const int32_t bitrate_bps_;
   const BandwidthUsage detector_state_;
+};
+
+struct LoggedBweDelayBasedUpdate {
+  LoggedBweDelayBasedUpdate() = default;
+  LoggedBweDelayBasedUpdate(Timestamp timestamp,
+                            int32_t bitrate_bps,
+                            BandwidthUsage detector_state)
+      : timestamp(timestamp),
+        bitrate_bps(bitrate_bps),
+        detector_state(detector_state) {}
+
+  int64_t log_time_us() const { return timestamp.us(); }
+  int64_t log_time_ms() const { return timestamp.ms(); }
+
+  Timestamp timestamp = Timestamp::MinusInfinity();
+  int32_t bitrate_bps;
+  BandwidthUsage detector_state;
 };
 
 }  // namespace webrtc

@@ -27,7 +27,6 @@
 
 #include "WebsiteAutoplayPolicy.h"
 #include "WebsiteAutoplayQuirk.h"
-#include "WebsiteDataStoreParameters.h"
 #include "WebsiteLegacyOverflowScrollingTouchPolicy.h"
 #include "WebsiteMediaSourcePolicy.h"
 #include "WebsiteMetaViewportPolicy.h"
@@ -35,6 +34,8 @@
 #include "WebsiteSimulatedMouseEventsDispatchPolicy.h"
 #include <WebCore/CustomHeaderFields.h>
 #include <WebCore/DeviceOrientationOrMotionPermissionState.h>
+#include <WebCore/DocumentLoader.h>
+#include <WebCore/FrameLoaderTypes.h>
 #include <wtf/OptionSet.h>
 
 namespace IPC {
@@ -52,6 +53,7 @@ struct WebsitePoliciesData {
     static void applyToDocumentLoader(WebsitePoliciesData&&, WebCore::DocumentLoader&);
 
     bool contentBlockersEnabled { true };
+    HashMap<WTF::String, Vector<WTF::String>> activeContentRuleListActionPatterns;
     OptionSet<WebsiteAutoplayQuirk> allowedAutoplayQuirks;
     WebsiteAutoplayPolicy autoplayPolicy { WebsiteAutoplayPolicy::Default };
 #if ENABLE(DEVICE_ORIENTATION)
@@ -59,18 +61,22 @@ struct WebsitePoliciesData {
 #endif
     Vector<WebCore::CustomHeaderFields> customHeaderFields;
     WebsitePopUpPolicy popUpPolicy { WebsitePopUpPolicy::Default };
-    Optional<WebsiteDataStoreParameters> websiteDataStoreParameters;
     String customUserAgent;
-    String customJavaScriptUserAgentAsSiteSpecificQuirks;
+    String customUserAgentAsSiteSpecificQuirks;
     String customNavigatorPlatform;
     WebsiteMetaViewportPolicy metaViewportPolicy { WebsiteMetaViewportPolicy::Default };
     WebsiteMediaSourcePolicy mediaSourcePolicy { WebsiteMediaSourcePolicy::Default };
     WebsiteSimulatedMouseEventsDispatchPolicy simulatedMouseEventsDispatchPolicy { WebsiteSimulatedMouseEventsDispatchPolicy::Default };
     WebsiteLegacyOverflowScrollingTouchPolicy legacyOverflowScrollingTouchPolicy { WebsiteLegacyOverflowScrollingTouchPolicy::Default };
     bool allowContentChangeObserverQuirk { false };
+    WebCore::AllowsContentJavaScript allowsContentJavaScript { WebCore::AllowsContentJavaScript::Yes };
+    WebCore::MouseEventPolicy mouseEventPolicy { WebCore::MouseEventPolicy::Default };
+    WebCore::ModalContainerObservationPolicy modalContainerObservationPolicy { WebCore::ModalContainerObservationPolicy::Disabled };
+    WebCore::ColorSchemePreference colorSchemePreference { WebCore::ColorSchemePreference::NoPreference };
+    bool idempotentModeAutosizingOnlyHonorsPercentages { false };
 
     void encode(IPC::Encoder&) const;
-    static Optional<WebsitePoliciesData> decode(IPC::Decoder&);
+    static std::optional<WebsitePoliciesData> decode(IPC::Decoder&);
 };
 
 } // namespace WebKit

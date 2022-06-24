@@ -25,6 +25,7 @@
 
 #import "config.h"
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import <WebCore/SQLiteFileSystem.h>
@@ -35,9 +36,6 @@
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <WebKit/_WKUserStyleSheet.h>
 #import <wtf/RetainPtr.h>
-
-static bool readyToContinue;
-static RetainPtr<WKScriptMessage> lastScriptMessage;
 
 @interface StoreBlobMessageHandler : NSObject <WKScriptMessageHandler>
 @end
@@ -52,7 +50,7 @@ static RetainPtr<WKScriptMessage> lastScriptMessage;
 
 @end
 
-TEST(IndexedDB, StoreBlobThenDelete)
+TEST(IndexedDB, StoreBlobThenRemoveData)
 {
     RetainPtr<StoreBlobMessageHandler> handler = adoptNS([[StoreBlobMessageHandler alloc] init]);
     RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
@@ -67,7 +65,7 @@ TEST(IndexedDB, StoreBlobThenDelete)
     EXPECT_WK_STREQ(@"Success", (NSString *)[lastScriptMessage body]);
 
     NSString *hash = WebCore::SQLiteFileSystem::computeHashForFileName("StoreBlobToBeDeleted");
-    NSString *originDirectory = @"~/Library/WebKit/TestWebKitAPI/WebsiteData/IndexedDB/v1/file__0/";
+    NSString *originDirectory = @"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/WebsiteData/IndexedDB/v1/file__0/";
     NSString *databaseDirectory = [[originDirectory stringByAppendingString:hash] stringByExpandingTildeInPath];
     NSString *blobFilePath = [databaseDirectory stringByAppendingPathComponent:@"1.blob"];
     NSString *databaseFilePath = [databaseDirectory stringByAppendingPathComponent:@"IndexedDB.sqlite3"];
@@ -89,7 +87,7 @@ TEST(IndexedDB, StoreBlobThenDelete)
     [[NSFileManager defaultManager] copyItemAtPath:databaseFilePath toPath:fakeShmPath error:nil];
     [[NSFileManager defaultManager] copyItemAtPath:databaseFilePath toPath:fakeWalPath error:nil];
 
-    // Make some other .blob files in the database directory to later validate that only appropriate files are deleted.
+    // Make some other .blob files in the database directory to later validate all blob files in the directory are deleted.
     NSString *otherBlob1 = [databaseDirectory stringByAppendingPathComponent:@"7182.blob"];
     NSString *otherBlob2 = [databaseDirectory stringByAppendingPathComponent:@"1a.blob"];
     NSString *otherBlob3 = [databaseDirectory stringByAppendingPathComponent:@"a1.blob"];
@@ -104,13 +102,12 @@ TEST(IndexedDB, StoreBlobThenDelete)
         EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:blobFilePath]);
         EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:databaseFilePath]);
 
-        // Make sure the fake blob file with a valid blob file name is gone.
+        // Make sure all fake blob file are gone.
         EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:otherBlob1]);
 
-        // Make sure the fake blob files with invalid blob file names are still there.
-        EXPECT_TRUE([[NSFileManager defaultManager] fileExistsAtPath:otherBlob2]);
-        EXPECT_TRUE([[NSFileManager defaultManager] fileExistsAtPath:otherBlob3]);
-        EXPECT_TRUE([[NSFileManager defaultManager] fileExistsAtPath:otherBlob4]);
+        EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:otherBlob2]);
+        EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:otherBlob3]);
+        EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:otherBlob4]);
 
         // Make sure everything related to the fake database is gone.
         EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:fakeShmPath]);
@@ -125,4 +122,38 @@ TEST(IndexedDB, StoreBlobThenDelete)
         readyToContinue = true;
     }];
     TestWebKitAPI::Util::run(&readyToContinue);
+}
+
+TEST(IndexedDB, StoreBlobThenDeleteDatabase)
+{
+    auto handler = adoptNS([[StoreBlobMessageHandler alloc] init]);
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [[configuration userContentController] addScriptMessageHandler:handler.get() name:@"testHandler"];
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    NSURLRequest *request = [NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"StoreBlobToBeDeleted" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]];
+    [webView loadRequest:request];
+    TestWebKitAPI::Util::run(&readyToContinue);
+    EXPECT_WK_STREQ(@"Success", (NSString *)[lastScriptMessage body]);
+
+    NSString *hash = WebCore::SQLiteFileSystem::computeHashForFileName("StoreBlobToBeDeleted");
+    NSString *originDirectory = @"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/WebsiteData/IndexedDB/v1/file__0/";
+    NSString *databaseDirectory = [[originDirectory stringByAppendingString:hash] stringByExpandingTildeInPath];
+    NSString *blobFilePath = [databaseDirectory stringByAppendingPathComponent:@"1.blob"];
+    NSString *databaseFilePath = [databaseDirectory stringByAppendingPathComponent:@"IndexedDB.sqlite3"];
+
+    EXPECT_TRUE([[NSFileManager defaultManager] fileExistsAtPath:blobFilePath]);
+    EXPECT_TRUE([[NSFileManager defaultManager] fileExistsAtPath:databaseFilePath]);
+
+    // Add a .blob file that is not created by IndexedDB API.
+    NSString *anotherBlobFilePath = [databaseDirectory stringByAppendingPathComponent:@"7182.blob"];
+    [[NSFileManager defaultManager] copyItemAtPath:blobFilePath toPath:anotherBlobFilePath error:nil];
+
+    readyToContinue = false;
+    [webView evaluateJavaScript:@"deleteDatabase(() => { sendMessage('Delete success'); })" completionHandler:nil];
+    TestWebKitAPI::Util::run(&readyToContinue);
+    EXPECT_WK_STREQ(@"Delete success", (NSString *)[lastScriptMessage body]);
+
+    EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:blobFilePath]);
+    EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:databaseFilePath]);
+    EXPECT_TRUE([[NSFileManager defaultManager] fileExistsAtPath:anotherBlobFilePath]);
 }

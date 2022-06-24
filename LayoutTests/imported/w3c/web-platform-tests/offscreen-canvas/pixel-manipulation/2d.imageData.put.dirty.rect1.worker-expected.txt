@@ -1,3 +1,0 @@
-
-FAIL putImageData() only modifies areas inside the dirty rectangle, using width and height Can't find variable: OffscreenCanvas
-

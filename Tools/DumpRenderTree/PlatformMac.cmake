@@ -11,11 +11,6 @@ add_definitions(-iframework ${QUARTZ_LIBRARY}/Frameworks -iframework ${CORESERVI
 link_directories(../../WebKitLibraries)
 include_directories(../../WebKitLibraries)
 
-list(APPEND TestNetscapePlugIn_LIBRARIES
-    ${QUARTZ_LIBRARY}
-    WebKit
-)
-
 list(APPEND DumpRenderTree_LIBRARIES
     ${CARBON_LIBRARY}
     ${QUARTZ_LIBRARY}
@@ -23,33 +18,17 @@ list(APPEND DumpRenderTree_LIBRARIES
 )
 
 list(APPEND DumpRenderTree_INCLUDE_DIRECTORIES
-    cg
-    cf
-    mac
-    mac/InternalHeaders/WebKit
-    TestNetscapePlugIn
-    ${FORWARDING_HEADERS_DIR}
-    ${FORWARDING_HEADERS_DIR}/WebCore
-    ${FORWARDING_HEADERS_DIR}/WebKit
-    ${FORWARDING_HEADERS_DIR}/WebKitLegacy
+    ${DumpRenderTree_DIR}/cg
+    ${DumpRenderTree_DIR}/cf
+    ${DumpRenderTree_DIR}/cocoa
+    ${DumpRenderTree_DIR}/mac
+    ${DumpRenderTree_DIR}/mac/InternalHeaders/WebKit
+    ${DumpRenderTree_DIR}/TestNetscapePlugIn
     ${WEBCORE_DIR}/testing/cocoa
     ${WEBKITLEGACY_DIR}
-    ${WEBKIT_TESTRUNNER_SHARED_DIR}/cocoa
-    ${WEBKIT_TESTRUNNER_SHARED_DIR}/spi
-)
-
-# Common ${TestNetscapePlugIn_SOURCES} from CMakeLists.txt are C++ source files.
-list(APPEND TestNetscapePlugIn_Cpp_SOURCES
-    ${TestNetscapePlugIn_SOURCES}
-)
-
-list(APPEND TestNetscapePlugIn_ObjCpp_SOURCES
-    TestNetscapePlugIn/PluginObjectMac.mm
-)
-
-set(TestNetscapePlugIn_SOURCES
-    ${TestNetscapePlugIn_Cpp_SOURCES}
-    ${TestNetscapePlugIn_ObjCpp_SOURCES}
+    ${WebKitTestRunner_SHARED_DIR}/cocoa
+    ${WebKitTestRunner_SHARED_DIR}/mac
+    ${WebKitTestRunner_SHARED_DIR}/spi
 )
 
 # Common ${DumpRenderTree_SOURCES} from CMakeLists.txt are C++ source files.
@@ -73,6 +52,7 @@ list(APPEND DumpRenderTree_Cpp_SOURCES
 
 list(APPEND DumpRenderTree_ObjCpp_SOURCES
     DefaultPolicyDelegate.mm
+    cocoa/UIScriptControllerCocoa.mm
     mac/AccessibilityCommonMac.mm
     mac/AccessibilityControllerMac.mm
     mac/AccessibilityNotificationHandler.mm
@@ -98,8 +78,8 @@ list(APPEND DumpRenderTree_ObjCpp_SOURCES
     mac/UIDelegate.mm
     mac/UIScriptControllerMac.mm
     mac/WorkQueueItemMac.mm
-    ${WEBKIT_TESTRUNNER_SHARED_DIR}/cocoa/ClassMethodSwizzler.mm
-    ${WEBKIT_TESTRUNNER_SHARED_DIR}/cocoa/LayoutTestSpellChecker.mm
+    ${WebKitTestRunner_SHARED_DIR}/cocoa/ClassMethodSwizzler.mm
+    ${WebKitTestRunner_SHARED_DIR}/cocoa/LayoutTestSpellChecker.mm
 )
 
 set(DumpRenderTree_SOURCES
@@ -110,14 +90,6 @@ set(DumpRenderTree_SOURCES
 
 foreach (_file ${DumpRenderTree_ObjC_SOURCES})
     set_source_files_properties(${_file} PROPERTIES COMPILE_FLAGS "-std=c99")
-endforeach ()
-
-foreach (_file ${DumpRenderTree_Cpp_SOURCES} ${TestNetscapePlugIn_Cpp_SOURCES})
-    set_source_files_properties(${_file} PROPERTIES COMPILE_FLAGS "-std=c++17")
-endforeach ()
-
-foreach (_file ${DumpRenderTree_ObjCpp_SOURCES} ${TestNetscapePlugIn_ObjCpp_SOURCES})
-    set_source_files_properties(${_file} PROPERTIES COMPILE_FLAGS "-ObjC++ -std=c++17")
 endforeach ()
 
 set(DumpRenderTree_RESOURCES
@@ -137,5 +109,7 @@ set(DumpRenderTree_RESOURCES
 
 file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/DumpRenderTree.resources)
 foreach (_file ${DumpRenderTree_RESOURCES})
-    file(COPY ${TOOLS_DIR}/DumpRenderTree/fonts/${_file} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/DumpRenderTree.resources)
+    if (NOT EXISTS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/DumpRenderTree.resources/${_file})
+        file(COPY ${TOOLS_DIR}/DumpRenderTree/fonts/${_file} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/DumpRenderTree.resources)
+    endif ()
 endforeach ()

@@ -27,6 +27,7 @@
 
 #if ENABLE(MEDIA_STREAM) && PLATFORM(MAC)
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestWKWebView.h"
@@ -34,12 +35,10 @@
 #import <WebKit/WKUIDelegatePrivate.h>
 #import <WebKit/WKWebView.h>
 #import <WebKit/WKWebViewConfiguration.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
 
-static bool wasPrompted = false;
 static bool shouldDeny = false;
 static _WKCaptureDevices requestedDevices = 0;
-static bool receivedScriptMessage = false;
-static RetainPtr<WKScriptMessage> lastScriptMessage;
 
 @interface GetDisplayMediaMessageHandler : NSObject <WKScriptMessageHandler>
 @end
@@ -101,14 +100,15 @@ public:
 
         auto preferences = [m_configuration preferences];
         preferences._mediaCaptureRequiresSecureConnection = NO;
-        preferences._mediaDevicesEnabled = YES;
+        m_configuration.get()._mediaCaptureEnabled = YES;
         preferences._mockCaptureDevicesEnabled = YES;
         preferences._screenCaptureEnabled = YES;
 
-        m_webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:m_configuration.get()]);
+        m_webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:m_configuration.get() addToWindow:YES]);
 
         m_uiDelegate = adoptNS([[GetDisplayMediaUIDelegate alloc] init]);
         m_webView.get().UIDelegate = m_uiDelegate.get();
+        [m_webView focus];
 
         [m_webView synchronouslyLoadTestPageNamed:@"getDisplayMedia"];
     }
@@ -180,8 +180,7 @@ TEST_F(GetDisplayMediaTest, PromptOnceAfterDenial)
     shouldDeny = true;
     promptForCapture(@"{ video: true }", false);
     shouldDeny = false;
-    promptForCapture(@"{ video: true }", false);
-    promptForCapture(@"{ video: true }", false);
+    promptForCapture(@"{ video: true }", true);
 }
 
 } // namespace TestWebKitAPI

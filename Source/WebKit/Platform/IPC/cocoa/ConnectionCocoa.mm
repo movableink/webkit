@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,17 +28,21 @@
 
 #import "DataReference.h"
 #import "ImportanceAssertion.h"
+#import "Logging.h"
 #import "MachMessage.h"
 #import "MachPort.h"
 #import "MachUtilities.h"
+#import "ReasonSPI.h"
 #import "WKCrashReporter.h"
 #import <WebCore/AXObjectCache.h>
 #import <mach/mach_error.h>
 #import <mach/vm_map.h>
 #import <sys/mman.h>
+#import <wtf/HexNumber.h>
 #import <wtf/MachSendRight.h>
 #import <wtf/RunLoop.h>
 #import <wtf/spi/darwin/XPCSPI.h>
+#import <wtf/text/StringConcatenate.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import "ProcessAssertion.h"
@@ -85,7 +89,7 @@ private:
         : m_xpcConnection(xpcConnection)
         , m_watchdogTimer(RunLoop::main(), this, &ConnectionTerminationWatchdog::watchdogTimerFired)
 #if PLATFORM(IOS_FAMILY)
-        , m_assertion(makeUnique<WebKit::ProcessAndUIAssertion>(xpc_connection_get_pid(m_xpcConnection.get()), "ConnectionTerminationWatchdog"_s, WebKit::AssertionState::Background))
+        , m_assertion(WebKit::ProcessAndUIAssertion::create(xpc_connection_get_pid(m_xpcConnection.get()), "ConnectionTerminationWatchdog"_s, WebKit::ProcessAssertionType::Background))
 #endif
     {
         m_watchdogTimer.startOneShot(interval);
@@ -93,14 +97,14 @@ private:
     
     void watchdogTimerFired()
     {
-        xpc_connection_kill(m_xpcConnection.get(), SIGKILL);
+        terminateWithReason(m_xpcConnection.get(), WebKit::ReasonCode::WatchdogTimerFired, "ConnectionTerminationWatchdog::watchdogTimerFired");
         delete this;
     }
 
     OSObjectPtr<xpc_connection_t> m_xpcConnection;
     RunLoop::Timer<ConnectionTerminationWatchdog> m_watchdogTimer;
 #if PLATFORM(IOS_FAMILY)
-    std::unique_ptr<WebKit::ProcessAndUIAssertion> m_assertion;
+    Ref<WebKit::ProcessAndUIAssertion> m_assertion;
 #endif
 };
     
@@ -141,8 +145,7 @@ void Connection::platformInvalidate()
     ASSERT(m_receivePort);
 
     // Unregister our ports.
-    dispatch_source_cancel(m_sendSource);
-    dispatch_release(m_sendSource);
+    dispatch_source_cancel(m_sendSource.get());
     m_sendSource = nullptr;
     m_sendPort = MACH_PORT_NULL;
 
@@ -151,8 +154,7 @@ void Connection::platformInvalidate()
 
 void Connection::cancelReceiveSource()
 {
-    dispatch_source_cancel(m_receiveSource);
-    dispatch_release(m_receiveSource);
+    dispatch_source_cancel(m_receiveSource.get());
     m_receiveSource = nullptr;
     m_receivePort = MACH_PORT_NULL;
 }
@@ -213,8 +215,8 @@ bool Connection::open()
         m_isConnected = true;
         
         // Send the initialize message, which contains a send right for the server to use.
-        auto encoder = makeUnique<Encoder>("IPC", "InitializeConnection", 0);
-        encoder->encode(MachPort(m_receivePort, MACH_MSG_TYPE_MAKE_SEND));
+        auto encoder = makeUniqueRef<Encoder>(MessageName::InitializeConnection, 0);
+        encoder.get() << MachPort(m_receivePort, MACH_MSG_TYPE_MAKE_SEND);
 
         initializeSendSource();
 
@@ -224,25 +226,22 @@ bool Connection::open()
     // Change the message queue length for the receive port.
     setMachPortQueueLength(m_receivePort, MACH_PORT_QLIMIT_LARGE);
 
-    m_receiveSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_MACH_RECV, m_receivePort, 0, m_connectionQueue->dispatchQueue());
-    dispatch_source_set_event_handler(m_receiveSource, [this, protectedThis = makeRefPtr(this)] {
+    m_receiveSource = adoptOSObject(dispatch_source_create(DISPATCH_SOURCE_TYPE_MACH_RECV, m_receivePort, 0, m_connectionQueue->dispatchQueue()));
+    dispatch_source_set_event_handler(m_receiveSource.get(), [this, protectedThis = Ref { *this }] {
         receiveSourceEventHandler();
     });
-    dispatch_source_set_cancel_handler(m_receiveSource, [protectedThis = makeRefPtr(this), receivePort = m_receivePort] {
+    dispatch_source_set_cancel_handler(m_receiveSource.get(), [protectedThis = Ref { *this }, receivePort = m_receivePort] {
 #if !PLATFORM(WATCHOS)
-        mach_port_unguard(mach_task_self(), receivePort, reinterpret_cast<mach_port_context_t>(protectedThis.get()));
+        mach_port_unguard(mach_task_self(), receivePort, reinterpret_cast<mach_port_context_t>(protectedThis.ptr()));
 #endif
         mach_port_mod_refs(mach_task_self(), receivePort, MACH_PORT_RIGHT_RECEIVE, -1);
     });
 
-    ref();
-    dispatch_async(m_connectionQueue->dispatchQueue(), ^{
-        dispatch_resume(m_receiveSource);
+    m_connectionQueue->dispatch([strongRef = Ref { *this }, this] {
+        dispatch_resume(m_receiveSource.get());
 
         if (m_sendSource)
-            dispatch_resume(m_sendSource);
-
-        deref();
+            dispatch_resume(m_sendSource.get());
     });
 
     return true;
@@ -272,10 +271,12 @@ bool Connection::sendMessage(std::unique_ptr<MachMessage> message)
         return false;
 
     default:
+        auto messageName = message->messageName();
+        auto errorMessage = makeString("Unhandled error code 0x", hex(kr), ", message '", description(messageName), "' (", messageName, ')');
 #if !PLATFORM(QT)
-        WebKit::setCrashReportApplicationSpecificInformation((__bridge CFStringRef)[NSString stringWithFormat:@"Unhandled error code %x, message '%s::%s'", kr, message->messageReceiverName().data(), message->messageName().data()]);
+        WebKit::logAndSetCrashLogMessage(errorMessage.utf8().data());
 #endif
-        CRASH();
+        CRASH_WITH_INFO(kr, WTF::enumToUnderlyingType(messageName));
     }
 }
 
@@ -284,7 +285,7 @@ bool Connection::platformCanSendOutgoingMessages() const
     return !m_pendingOutgoingMachMessage && !m_isInitializingSendSource;
 }
 
-bool Connection::sendOutgoingMessage(std::unique_ptr<Encoder> encoder)
+bool Connection::sendOutgoingMessage(UniqueRef<Encoder>&& encoder)
 {
     ASSERT(!m_pendingOutgoingMachMessage && !m_isInitializingSendSource);
 
@@ -297,16 +298,24 @@ bool Connection::sendOutgoingMessage(std::unique_ptr<Encoder> encoder)
 
     bool messageBodyIsOOL = false;
     auto messageSize = MachMessage::messageSize(encoder->bufferSize(), numberOfPortDescriptors, messageBodyIsOOL);
+    if (UNLIKELY(messageSize.hasOverflowed()))
+        return false;
+
     if (messageSize > inlineMessageMaxSize) {
         messageBodyIsOOL = true;
         messageSize = MachMessage::messageSize(0, numberOfPortDescriptors, messageBodyIsOOL);
+        if (UNLIKELY(messageSize.hasOverflowed()))
+            return false;
     }
 
-    auto message = MachMessage::create(encoder->messageReceiverName().toString(), encoder->messageName().toString(), messageSize);
+    size_t safeMessageSize = messageSize;
+    auto message = MachMessage::create(encoder->messageName(), safeMessageSize);
+    if (!message)
+        return false;
 
     auto* header = message->header();
     header->msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, 0);
-    header->msgh_size = messageSize;
+    header->msgh_size = safeMessageSize;
     header->msgh_remote_port = m_sendPort;
     header->msgh_local_port = MACH_PORT_NULL;
     header->msgh_id = messageBodyIsOOL ? outOfLineBodyMessageID : inlineBodyMessageID;
@@ -357,20 +366,20 @@ bool Connection::sendOutgoingMessage(std::unique_ptr<Encoder> encoder)
 
 void Connection::initializeSendSource()
 {
-    m_sendSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_MACH_SEND, m_sendPort, DISPATCH_MACH_SEND_DEAD | DISPATCH_MACH_SEND_POSSIBLE, m_connectionQueue->dispatchQueue());
+    m_sendSource = adoptOSObject(dispatch_source_create(DISPATCH_SOURCE_TYPE_MACH_SEND, m_sendPort, DISPATCH_MACH_SEND_DEAD | DISPATCH_MACH_SEND_POSSIBLE, m_connectionQueue->dispatchQueue()));
     m_isInitializingSendSource = true;
 
-    dispatch_source_set_registration_handler(m_sendSource, [this, protectedThis = makeRefPtr(this)] {
+    dispatch_source_set_registration_handler(m_sendSource.get(), [this, protectedThis = Ref { *this }] {
         if (!m_sendSource)
             return;
         m_isInitializingSendSource = false;
         resumeSendSource();
     });
-    dispatch_source_set_event_handler(m_sendSource, [this, protectedThis = makeRefPtr(this)] {
+    dispatch_source_set_event_handler(m_sendSource.get(), [this, protectedThis = Ref { *this }] {
         if (!m_sendSource)
             return;
 
-        unsigned long data = dispatch_source_get_data(m_sendSource);
+        unsigned long data = dispatch_source_get_data(m_sendSource.get());
 
         if (data & DISPATCH_MACH_SEND_DEAD) {
             connectionDidClose();
@@ -384,12 +393,13 @@ void Connection::initializeSendSource()
         }
     });
 
-    ASSERT(MACH_PORT_VALID(m_sendPort));
-    mach_port_t sendPort = m_sendPort;
-    dispatch_source_set_cancel_handler(m_sendSource, ^{
-        // Release our send right.
-        deallocateSendRightSafely(sendPort);
-    });
+    if (MACH_PORT_VALID(m_sendPort)) {
+        mach_port_t sendPort = m_sendPort;
+        dispatch_source_set_cancel_handler(m_sendSource.get(), ^{
+            // Release our send right.
+            deallocateSendRightSafely(sendPort);
+        });
+    }
 }
 
 void Connection::resumeSendSource()
@@ -400,39 +410,57 @@ void Connection::resumeSendSource()
     sendOutgoingMessages();
 }
 
-static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header)
+static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header, size_t bufferSize)
 {
+    if (UNLIKELY(header->msgh_size > bufferSize)) {
+        RELEASE_LOG_FAULT(IPC, "createMessageDecoder: msgh_size is greater than bufferSize (header->msgh_size: %lu, bufferSize: %lu)", static_cast<unsigned long>(header->msgh_size), bufferSize);
+        ASSERT_NOT_REACHED();
+        return nullptr;
+    }
+
     if (!(header->msgh_bits & MACH_MSGH_BITS_COMPLEX)) {
         // We have a simple message.
         uint8_t* body = reinterpret_cast<uint8_t*>(header + 1);
-        size_t bodySize = header->msgh_size - sizeof(mach_msg_header_t);
+        auto bodySize = CheckedSize { header->msgh_size } - sizeof(mach_msg_header_t);
+        if (UNLIKELY(bodySize.hasOverflowed())) {
+            RELEASE_LOG_FAULT(IPC, "createMessageDecoder: Overflow when computing bodySize (header->msgh_size: %lu, sizeof(mach_msg_header_t): %lu)", static_cast<unsigned long>(header->msgh_size), sizeof(mach_msg_header_t));
+            ASSERT_NOT_REACHED();
+            return nullptr;
+        }
 
-        return makeUnique<Decoder>(body, bodySize, nullptr, Vector<Attachment> { });
+        return Decoder::create(body, bodySize, { });
     }
 
-    bool messageBodyIsOOL = header->msgh_id == outOfLineBodyMessageID;
-
     mach_msg_body_t* body = reinterpret_cast<mach_msg_body_t*>(header + 1);
-    mach_msg_size_t numDescriptors = body->msgh_descriptor_count;
-    ASSERT(numDescriptors);
+    mach_msg_size_t numberOfPortDescriptors = body->msgh_descriptor_count;
+    ASSERT(numberOfPortDescriptors);
+    if (UNLIKELY(!numberOfPortDescriptors))
+        return nullptr;
+
+    auto sizeWithPortDescriptors = CheckedSize { sizeof(mach_msg_header_t) + sizeof(mach_msg_body_t) } + CheckedSize { numberOfPortDescriptors } * sizeof(mach_msg_port_descriptor_t);
+    if (UNLIKELY(sizeWithPortDescriptors.hasOverflowed() || sizeWithPortDescriptors.value() > bufferSize)) {
+        RELEASE_LOG_FAULT(IPC, "createMessageDecoder: Overflow when computing sizeWithPortDescriptors (numberOfPortDescriptors: %lu)", static_cast<unsigned long>(numberOfPortDescriptors));
+        ASSERT_NOT_REACHED();
+        return nullptr;
+    }
 
     uint8_t* descriptorData = reinterpret_cast<uint8_t*>(body + 1);
 
     // If the message body was sent out-of-line, don't treat the last descriptor
     // as an attachment, since it is really the message body.
-    if (messageBodyIsOOL)
-        --numDescriptors;
+    bool messageBodyIsOOL = header->msgh_id == outOfLineBodyMessageID;
+    mach_msg_size_t numberOfAttachments = messageBodyIsOOL ? numberOfPortDescriptors - 1 : numberOfPortDescriptors;
 
     // Build attachment list
-    Vector<Attachment> attachments(numDescriptors);
+    Vector<Attachment> attachments(numberOfAttachments);
 
-    for (mach_msg_size_t i = 0; i < numDescriptors; ++i) {
+    for (mach_msg_size_t i = 0; i < numberOfAttachments; ++i) {
         mach_msg_descriptor_t* descriptor = reinterpret_cast<mach_msg_descriptor_t*>(descriptorData);
         ASSERT(descriptor->type.type == MACH_MSG_PORT_DESCRIPTOR);
         if (descriptor->type.type != MACH_MSG_PORT_DESCRIPTOR)
             return nullptr;
 
-        attachments[numDescriptors - i - 1] = Attachment(descriptor->port.name, descriptor->port.disposition);
+        attachments[numberOfAttachments - i - 1] = Attachment { descriptor->port.name, descriptor->port.disposition };
         descriptorData += sizeof(mach_msg_port_descriptor_t);
     }
 
@@ -444,16 +472,24 @@ static std::unique_ptr<Decoder> createMessageDecoder(mach_msg_header_t* header)
 
         uint8_t* messageBody = static_cast<uint8_t*>(descriptor->out_of_line.address);
         size_t messageBodySize = descriptor->out_of_line.size;
+        descriptor->out_of_line.deallocate = false; // We are taking ownership of the memory.
 
-        return makeUnique<Decoder>(messageBody, messageBodySize, [](const uint8_t* buffer, size_t length) {
+        return Decoder::create(messageBody, messageBodySize, [](const uint8_t* buffer, size_t length) {
+            // FIXME: <rdar://problem/62086358> bufferDeallocator block ignores mach_msg_ool_descriptor_t->deallocate
             vm_deallocate(mach_task_self(), reinterpret_cast<vm_address_t>(buffer), length);
         }, WTFMove(attachments));
     }
 
     uint8_t* messageBody = descriptorData;
-    size_t messageBodySize = header->msgh_size - (descriptorData - reinterpret_cast<uint8_t*>(header));
+    ASSERT((reinterpret_cast<uint8_t*>(header) + sizeWithPortDescriptors.value()) == messageBody);
+    auto messageBodySize = header->msgh_size - sizeWithPortDescriptors;
+    if (UNLIKELY(messageBodySize.hasOverflowed())) {
+        RELEASE_LOG_FAULT(IPC, "createMessageDecoder: Overflow when computing bodySize (header->msgh_size: %lu, sizeWithPortDescriptors: %lu)", static_cast<unsigned long>(header->msgh_size), static_cast<unsigned long>(sizeWithPortDescriptors.value()));
+        ASSERT_NOT_REACHED();
+        return nullptr;
+    }
 
-    return makeUnique<Decoder>(messageBody, messageBodySize, nullptr, WTFMove(attachments));
+    return Decoder::create(messageBody, messageBodySize, WTFMove(attachments));
 }
 
 // The receive buffer size should always include the maximum trailer size.
@@ -482,8 +518,9 @@ static mach_msg_header_t* readFromMachPort(mach_port_t machPort, ReceiveBuffer& 
 
     if (kr != MACH_MSG_SUCCESS) {
 #if !PLATFORM(QT)
-#if !ASSERT_DISABLED
-        WebKit::setCrashReportApplicationSpecificInformation((__bridge CFStringRef)[NSString stringWithFormat:@"Unhandled error code %x from mach_msg, receive port is %x", kr, machPort]);
+#if ASSERT_ENABLED
+        auto errorMessage = makeString("Unhandled error code 0x", hex(kr), " from mach_msg, receive port is 0x", hex(machPort));
+        WebKit::logAndSetCrashLogMessage(errorMessage.utf8().data());
 #endif
 #endif
         ASSERT_NOT_REACHED();
@@ -518,15 +555,15 @@ void Connection::receiveSourceEventHandler()
         return;
     }
 
-    std::unique_ptr<Decoder> decoder = createMessageDecoder(header);
+    std::unique_ptr<Decoder> decoder = createMessageDecoder(header, buffer.size());
     if (!decoder)
         return;
 
 #if PLATFORM(MAC) || (PLATFORM(QT) && USE(MACH_PORTS))
-    decoder->setImportanceAssertion(makeUnique<ImportanceAssertion>(header));
+    decoder->setImportanceAssertion(ImportanceAssertion { header });
 #endif
 
-    if (decoder->messageReceiverName() == "IPC" && decoder->messageName() == "InitializeConnection") {
+    if (decoder->messageName() == MessageName::InitializeConnection) {
         ASSERT(m_isServer);
         ASSERT(!m_isConnected);
         ASSERT(!m_sendPort);
@@ -554,7 +591,7 @@ void Connection::receiveSourceEventHandler()
                 deallocateSendRightSafely(previousNotificationPort);
 
             initializeSendSource();
-            dispatch_resume(m_sendSource);
+            dispatch_resume(m_sendSource.get());
         }
 
         m_isConnected = true;
@@ -565,29 +602,6 @@ void Connection::receiveSourceEventHandler()
         return;
     }
 
-#if !PLATFORM(IOS_FAMILY)
-    if (decoder->messageReceiverName() == "IPC" && decoder->messageName() == "SetExceptionPort") {
-        if (m_isServer) {
-            // Server connections aren't supposed to have their exception ports overridden. Treat this as an invalid message.
-            StringReference messageReceiverNameReference = decoder->messageReceiverName();
-            String messageReceiverName(String(messageReceiverNameReference.data(), messageReceiverNameReference.size()));
-            StringReference messageNameReference = decoder->messageName();
-            String messageName(String(messageNameReference.data(), messageNameReference.size()));
-
-            RunLoop::main().dispatch([protectedThis = makeRef(*this), messageReceiverName = WTFMove(messageReceiverName), messageName = WTFMove(messageName)]() mutable {
-                protectedThis->dispatchDidReceiveInvalidMessage(messageReceiverName.utf8(), messageName.utf8());
-            });
-            return;
-        }
-        MachPort exceptionPort;
-        if (!decoder->decode(exceptionPort))
-            return;
-
-        setMachExceptionPort(exceptionPort.port());
-        return;
-    }
-#endif
-
     processIncomingMessage(WTFMove(decoder));
 }    
 
@@ -596,10 +610,10 @@ IPC::Connection::Identifier Connection::identifier() const
     return Identifier(m_isServer ? m_receivePort : m_sendPort, m_xpcConnection);
 }
 
-Optional<audit_token_t> Connection::getAuditToken()
+std::optional<audit_token_t> Connection::getAuditToken()
 {
     if (!m_xpcConnection)
-        return WTF::nullopt;
+        return std::nullopt;
     
     audit_token_t auditToken;
     xpc_connection_get_audit_token(m_xpcConnection.get(), &auditToken);
@@ -609,15 +623,15 @@ Optional<audit_token_t> Connection::getAuditToken()
 bool Connection::kill()
 {
     if (m_xpcConnection) {
-        xpc_connection_kill(m_xpcConnection.get(), SIGKILL);
+        terminateWithReason(m_xpcConnection.get(), WebKit::ReasonCode::ConnectionKilled, "Connection::kill");
         m_wasKilled = true;
         return true;
     }
 
     return false;
 }
-    
-static void AccessibilityProcessSuspendedNotification(bool suspended)
+
+void AccessibilityProcessSuspendedNotification(bool suspended)
 {
 #if PLATFORM(MAC) || (PLATFORM(QT) && USE(MACH_PORTS))
     _AXUIElementNotifyProcessSuspendStatus(suspended ? AXSuspendStatusSuspended : AXSuspendStatusRunning);
@@ -627,7 +641,7 @@ static void AccessibilityProcessSuspendedNotification(bool suspended)
     UNUSED_PARAM(suspended);
 #endif
 }
-    
+
 void Connection::willSendSyncMessage(OptionSet<SendSyncOption> sendSyncOptions)
 {
     if (sendSyncOptions.contains(IPC::SendSyncOption::InformPlatformProcessWillSuspend) && WebCore::AXObjectCache::accessibilityEnabled())

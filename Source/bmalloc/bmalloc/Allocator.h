@@ -23,13 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#ifndef Allocator_h
-#define Allocator_h
+#pragma once
 
 #include "BExport.h"
 #include "BumpAllocator.h"
 #include "FailureAction.h"
 #include <array>
+
+#if !BUSE(LIBPAS)
 
 namespace bmalloc {
 
@@ -54,8 +55,8 @@ public:
 
 private:
     void* allocateImpl(size_t, FailureAction);
-    void* allocateImpl(size_t alignment, size_t, FailureAction);
-    void* reallocateImpl(void*, size_t, FailureAction);
+    BEXPORT void* allocateImpl(size_t alignment, size_t, FailureAction);
+    BEXPORT void* reallocateImpl(void*, size_t, FailureAction);
 
     bool allocateFastCase(size_t, void*&);
     BEXPORT void* allocateSlowCase(size_t, FailureAction);
@@ -96,4 +97,4 @@ inline void* Allocator::allocateImpl(size_t size, FailureAction action)
 
 } // namespace bmalloc
 
-#endif // Allocator_h
+#endif

@@ -28,10 +28,13 @@
 
 import time
 
+from webkitcorepy import string_utils
+
 from webkitpy.port import Port, Driver, DriverOutput
 from webkitpy.layout_tests.models.test_configuration import TestConfiguration
 from webkitpy.common.system.crashlogs import CrashLogs
 from webkitpy.common.version_name_map import PUBLIC_TABLE, VersionNameMap
+from webkitpy.port.image_diff import ImageDiffResult
 
 
 # This sets basic expectations for a test. Each individual expectation
@@ -99,21 +102,22 @@ class TestList(object):
     def __getitem__(self, item):
         return self.tests[item]
 
+
 #
 # These numbers may need to be updated whenever we add or delete tests.
 #
-TOTAL_TESTS = 77
-TOTAL_SKIPS = 9
-TOTAL_RETRIES = 15
+TOTAL_TESTS = 75
+TOTAL_SKIPS = 11
+TOTAL_RETRIES = 11
 
-UNEXPECTED_PASSES = 7
-UNEXPECTED_FAILURES = 18
+UNEXPECTED_PASSES = 6
+UNEXPECTED_FAILURES = 14
 
 
 def unit_test_list():
-    silent_audio = "RIFF2\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x22\x56\x00\x00\x44\xAC\x00\x00\x02\x00\x10\x00data\x0E\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-    silent_audio_with_single_bit_difference = "RIFF2\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x22\x56\x00\x00\x44\xAC\x00\x00\x02\x00\x10\x00data\x0E\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-    audio2 = "RIFF2\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x22\x56\x00\x00\x44\xAC\x00\x00\x02\x00\x10\x00data\x0E\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    silent_audio = b"RIFF2\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x22\x56\x00\x00\x44\xAC\x00\x00\x02\x00\x10\x00data\x0E\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    silent_audio_with_single_bit_difference = b"RIFF2\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x22\x56\x00\x00\x44\xAC\x00\x00\x02\x00\x10\x00data\x0E\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    audio2 = b"RIFF2\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x22\x56\x00\x00\x44\xAC\x00\x00\x02\x00\x10\x00data\x0E\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
     tests = TestList()
     tests.add('failures/expected/crash.html', crash=True)
     tests.add('failures/expected/exception.html', exception=True)
@@ -231,28 +235,12 @@ layer at (0,0) size 800x34
     tests.add('failures/unexpected/reftest-nopixel.html', actual_checksum=None, actual_image=None, is_reftest=True)
     tests.add('failures/unexpected/reftest-nopixel-expected.html', actual_checksum=None, actual_image=None, is_reftest=True)
     # FIXME: Add a reftest which crashes.
-    tests.add('reftests/foo/test.html')
-    tests.add('reftests/foo/test-ref.html')
-
-    tests.add('reftests/foo/multiple-match-success.html', actual_checksum='abc', actual_image='abc')
-    tests.add('reftests/foo/multiple-match-failure.html', actual_checksum='abc', actual_image='abc')
-    tests.add('reftests/foo/multiple-mismatch-success.html', actual_checksum='abc', actual_image='abc')
-    tests.add('reftests/foo/multiple-mismatch-failure.html', actual_checksum='abc', actual_image='abc')
-    tests.add('reftests/foo/multiple-both-success.html', actual_checksum='abc', actual_image='abc')
-    tests.add('reftests/foo/multiple-both-failure.html', actual_checksum='abc', actual_image='abc')
-
-    tests.add('reftests/foo/matching-ref.html', actual_checksum='abc', actual_image='abc')
-    tests.add('reftests/foo/mismatching-ref.html', actual_checksum='def', actual_image='def')
-    tests.add('reftests/foo/second-mismatching-ref.html', actual_checksum='ghi', actual_image='ghi')
-
-    # The following files shouldn't be treated as reftests
-    tests.add_reftest('reftests/foo/unlistedtest.html', 'reftests/foo/unlistedtest-expected.html', same_image=True)
-    tests.add('reftests/foo/reference/bar/common.html')
-    tests.add('reftests/foo/reftest/bar/shared.html')
 
     tests.add('websocket/tests/passes/text.html')
 
     # For testing test are properly included from platform directories.
+    tests.add('platform/test-mac-leopard/passes/platform-specific-test.html')
+    tests.add('platform/test-mac-leopard/platform-specific-dir/platform-specific-test.html')
     tests.add('platform/test-mac-leopard/http/test.html')
     tests.add('platform/test-win-7sp0/http/test.html')
 
@@ -272,6 +260,11 @@ layer at (0,0) size 800x34
         actual_image='image_not_in_pixeldir-pngtEXtchecksum\x00checksum_fail',
         expected_image='image_not_in_pixeldir-pngtEXtchecksum\x00checksum-png')
 
+    tests.add('corner-cases/ews/directory-skipped/failure.html', expected_text='ok-txt', actual_text='text_fail-txt')
+    tests.add('corner-cases/ews/directory-skipped/timeout.html', timeout=True)
+    tests.add('corner-cases/ews/directory-flaky/failure.html', expected_text='ok-txt', actual_text='text_fail-txt')
+    tests.add('corner-cases/ews/directory-flaky/timeout.html', timeout=True)
+
     return tests
 
 
@@ -281,6 +274,7 @@ layer at (0,0) size 800x34
 
 LAYOUT_TEST_DIR = '/test.checkout/LayoutTests'
 PERF_TEST_DIR = '/test.checkout/PerformanceTests'
+TEST_DIR = '/mock-checkout'
 
 
 # Here we synthesize an in-memory filesystem from the test list
@@ -315,26 +309,8 @@ Bug(test) failures/expected/keyboard.html [ WontFix ]
 Bug(test) failures/expected/exception.html [ WontFix ]
 Bug(test) failures/unexpected/pass.html [ Failure ]
 Bug(test) passes/skipped/skip.html [ Skip ]
-""")
-
-    filesystem.maybe_make_directory(LAYOUT_TEST_DIR + '/reftests/foo')
-    filesystem.write_text_file(LAYOUT_TEST_DIR + '/reftests/foo/reftest.list', """
-== test.html test-ref.html
-
-== multiple-match-success.html mismatching-ref.html
-== multiple-match-success.html matching-ref.html
-== multiple-match-failure.html mismatching-ref.html
-== multiple-match-failure.html second-mismatching-ref.html
-!= multiple-mismatch-success.html mismatching-ref.html
-!= multiple-mismatch-success.html second-mismatching-ref.html
-!= multiple-mismatch-failure.html mismatching-ref.html
-!= multiple-mismatch-failure.html matching-ref.html
-== multiple-both-success.html matching-ref.html
-== multiple-both-success.html mismatching-ref.html
-!= multiple-both-success.html second-mismatching-ref.html
-== multiple-both-failure.html matching-ref.html
-!= multiple-both-failure.html second-mismatching-ref.html
-!= multiple-both-failure.html matching-ref.html
+Bug(test) corner-cases/ews/directory-skipped [ Skip ]
+Bug(test) corner-cases/ews/directory-flaky [ Pass Timeout Failure ]
 """)
 
     # FIXME: This test was only being ignored because of missing a leading '/'.
@@ -346,7 +322,13 @@ Bug(test) passes/skipped/skip.html [ Skip ]
         dirname = filesystem.join(LAYOUT_TEST_DIR, test.name[0:test.name.rfind('/')])
         base = test.base
         filesystem.maybe_make_directory(dirname)
-        filesystem.write_binary_file(filesystem.join(dirname, base + suffix), contents)
+
+        path = filesystem.join(dirname, base + suffix)
+        if contents is None:
+            if filesystem.exists(path):
+                filesystem.remove(path)
+        else:
+            filesystem.write_binary_file(path, contents)
 
     # Add each test and the expected output, if any.
     test_list = unit_test_list()
@@ -360,8 +342,11 @@ Bug(test) passes/skipped/skip.html [ Skip ]
         add_file(test, '-expected.txt', test.expected_text)
         add_file(test, '-expected.png', test.expected_image)
 
-    # Clear the list of written files so that we can watch what happens during testing.
-    filesystem.clear_written_files()
+
+def add_checkout_information_json_to_mock_filesystem(filesystem):
+    if not filesystem.exists(TEST_DIR):
+        filesystem.maybe_make_directory(TEST_DIR)
+    filesystem.write_text_file(TEST_DIR + '/checkout_information.json', '{ "branch": "trunk", "id": "2738499" }')
 
 
 class TestPort(Port):
@@ -421,9 +406,6 @@ class TestPort(Port):
     def default_child_processes(self, **kwargs):
         return 1
 
-    def worker_startup_delay_secs(self):
-        return 0
-
     def check_build(self):
         return True
 
@@ -434,22 +416,35 @@ class TestPort(Port):
         return 'Release'
 
     def diff_image(self, expected_contents, actual_contents, tolerance=None):
+        expected_contents = string_utils.encode(expected_contents)
+        actual_contents = string_utils.encode(actual_contents)
         diffed = actual_contents != expected_contents
         if not actual_contents and not expected_contents:
-            return (None, 0, None)
+            return ImageDiffResult(passed=True, diff_image=None, difference=0, tolerance=tolerance or 0)
+
         if not actual_contents or not expected_contents:
-            return (True, 0, None)
-        if 'ref' in expected_contents:
+            return ImageDiffResult(passed=False, diff_image=b'', difference=0, tolerance=tolerance or 0)
+
+        if b'ref' in expected_contents:
             assert tolerance == 0
         if diffed:
-            return ("< %s\n---\n> %s\n" % (expected_contents, actual_contents), 1, None)
-        return (None, 0, None)
+            return ImageDiffResult(
+                passed=False,
+                diff_image="< {}\n---\n> {}\n".format(
+                    string_utils.decode(expected_contents, target_type=str),
+                    string_utils.decode(actual_contents, target_type=str),
+                ),
+                difference=1,
+                tolerance=tolerance or 0,
+                fuzzy_data={'max_difference': 10, 'total_pixels': 20})
+
+        return ImageDiffResult(passed=True, diff_image=None, difference=0, tolerance=tolerance or 0, fuzzy_data={'max_difference': 0, 'total_pixels': 0})
 
     def layout_tests_dir(self):
-        return LAYOUT_TEST_DIR
+        return self._filesystem.abspath(LAYOUT_TEST_DIR)
 
     def perf_tests_dir(self):
-        return PERF_TEST_DIR
+        return self._filesystem.abspath(PERF_TEST_DIR)
 
     def webkit_base(self):
         return '/test.checkout'
@@ -493,9 +488,6 @@ class TestPort(Port):
 
     def _path_to_lighttpd_modules(self):
         return "/usr/lib/lighttpd"
-
-    def _path_to_lighttpd_php(self):
-        return "/usr/bin/php-cgi"
 
     def _path_to_apache(self):
         return "/usr/sbin/httpd"
@@ -563,7 +555,7 @@ class TestDriver(Driver):
         test_args = test_input.args or []
         test = self._port._tests[test_name]
         if test.keyboard:
-            raise KeyboardInterrupt
+            raise KeyboardInterrupt()
         if test.exception:
             raise ValueError('exception from ' + test_name)
         if test.hang:

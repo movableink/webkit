@@ -24,23 +24,35 @@
  */
 
 @class ExtensionManagerWindowController;
+@class SettingsController;
 
 @interface BrowserAppDelegate : NSObject <NSApplicationDelegate> {
     NSMutableSet *_browserWindowControllers;
+    SettingsController *_settingsController;
     ExtensionManagerWindowController *_extensionManagerWindowController;
+
+    IBOutlet NSMenu *_settingsMenu;
 
     IBOutlet NSMenuItem *_newWebKit1WindowItem;
     IBOutlet NSMenuItem *_newWebKit2WindowItem;
     IBOutlet NSMenuItem *_newWebKit1EditorItem;
     IBOutlet NSMenuItem *_newWebKit2EditorItem;
+
+    bool _openNewWindowAtStartup;
 }
 
 - (void)browserWindowWillClose:(NSWindow *)window;
 
 - (void)didChangeSettings;
 
-@property (readonly) WKUserContentController *userContentContoller;
+@property (readonly, nonatomic) WKUserContentController *userContentContoller;
+@property (readonly, nonatomic) SettingsController *settingsController;
+@property (readonly, nonatomic) WKPreferences *defaultPreferences;
 
 @end
 
-WKPreferences *defaultPreferences(void);
+@interface NSApplication (MiniBrowserApplicationExtensions)
+
+- (BrowserAppDelegate *)browserAppDelegate;
+
+@end

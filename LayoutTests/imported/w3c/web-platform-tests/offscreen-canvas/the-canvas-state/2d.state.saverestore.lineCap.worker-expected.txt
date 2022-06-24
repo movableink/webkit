@@ -1,3 +1,0 @@
-
-FAIL save()/restore() works for lineCap Can't find variable: OffscreenCanvas
-

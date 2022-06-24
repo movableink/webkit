@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright (C) 2011 Igalia S.L.
 # Copyright (C) 2012 Gustavo Noronha Silva <gns@gnome.org>
 # Copyright (C) 2012 Intel Corporation
@@ -24,7 +24,7 @@ import shlex
 import subprocess
 import sys
 
-jhbuild_revision = 'b1d2ebdef165435c048c59192a32ba69d4f2c6dd'
+jhbuild_revision = '93d37507d0fbf550aa3e96b5d632f3772c0189f0'
 
 def determine_platform():
     if '--gtk' in sys.argv:
@@ -61,7 +61,7 @@ def jhbuild_at_expected_revision():
     if process.returncode != 0:
         raise Exception('failed to find jhbuild revision: %s' % err)
 
-    return output.strip() == jhbuild_revision
+    return output.strip().decode('utf-8', 'ignore') == jhbuild_revision
 
 
 def update_jhbuild():
@@ -119,7 +119,7 @@ def ensure_jhbuild(platform):
 
 # Work-around the fact that we may get called from inside the jhbuild environment
 # which will cause problems if we just cleaned the jhbuild install root
-if os.environ.has_key('UNDER_JHBUILD') and os.environ.has_key('ACLOCAL_FLAGS'):
+if 'UNDER_JHBUILD' in os.environ and 'ACLOCAL_FLAGS' in os.environ:
     del os.environ['ACLOCAL_FLAGS']
 
 ensure_jhbuild(platform)

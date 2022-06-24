@@ -35,6 +35,7 @@ import os
 import re
 import socket
 
+from webkitpy.common.iteration_compatibility import iteritems
 from webkitpy.layout_tests.servers import http_server_base
 
 
@@ -89,17 +90,19 @@ class LayoutTestApacheHttpd(http_server_base.HttpServerBase):
 
         # FIXME: We shouldn't be calling a protected method of _port_obj!
         executable = self._port_obj._path_to_apache()
-        config_file_path = self._copy_apache_config_file(self.tests_dir, output_dir)
+        config_file_path = self._copy_apache_config_file(output_dir)
 
         start_cmd = [executable,
             '-f', config_file_path,
             '-C', 'DocumentRoot "%s"' % document_root,
             '-c', 'TypesConfig "%s"' % mime_types_path,
-            '-c', 'PHPINIDir "%s"' % php_ini_dir,
             '-c', 'CustomLog "%s" common' % access_log,
             '-c', 'ErrorLog "%s"' % error_log,
             '-c', 'PidFile "%s"' % self._pid_file,
             '-k', "start"]
+
+        if 'php' in self._filesystem.read_text_file(config_file_path):
+            start_cmd.extend(['-c', 'PHPINIDir "{}"'.format(php_ini_dir)])
 
         for (alias, path) in self.aliases():
             start_cmd.extend(['-c', 'Alias %s "%s"' % (alias, path)])
@@ -134,7 +137,7 @@ class LayoutTestApacheHttpd(http_server_base.HttpServerBase):
                 start_cmd += ['-C', 'Listen [::1]:%d' % port]
 
         if additional_dirs:
-            for alias, path in additional_dirs.iteritems():
+            for alias, path in iteritems(additional_dirs):
                 start_cmd += ['-c', 'Alias %s "%s"' % (alias, path),
                         # Disable CGI handler for additional dirs.
                         '-c', '<Location %s>' % alias,
@@ -151,10 +154,9 @@ class LayoutTestApacheHttpd(http_server_base.HttpServerBase):
         self._start_cmd = start_cmd
         self._stop_cmd = stop_cmd
 
-    def _copy_apache_config_file(self, test_dir, output_dir):
+    def _copy_apache_config_file(self, output_dir):
         """Copy apache config file and returns the path to use.
         Args:
-          test_dir: absolute path to the LayoutTests directory.
           output_dir: absolute path to the layout test results directory.
         """
         httpd_config = self._port_obj._path_to_apache_config_file()
@@ -177,7 +179,26 @@ class LayoutTestApacheHttpd(http_server_base.HttpServerBase):
     def platform(self):
         return self._port_obj.host.platform
 
+    def _remove_stale_shm_segments(self):
+        stale_segments = []
+        process = self._executive.popen(['ipcs', '-m'], stdout=self._executive.PIPE)
+        process.wait()
+        for line in process.stdout.read().splitlines()[3:]:
+            parsed_line = [token for token in line.split(b' ') if token]
+            if not parsed_line:
+                continue
+            if int(parsed_line[5]) == 0:
+                stale_segments.append(parsed_line[1].decode('utf-8'))
+
+        if stale_segments:
+            ipcrm_cmd = ['ipcrm', '-m', ' '.join(stale_segments)]
+            process = self._executive.popen(ipcrm_cmd)
+            process.wait()
+
     def _spawn_process(self):
+        if self.platform.is_linux():
+            self._remove_stale_shm_segments()
+
         _log.debug('Starting %s server, cmd="%s"' % (self._name, str(self._start_cmd)))
         retval, err = self._run(self._start_cmd)
         if retval or len(err):

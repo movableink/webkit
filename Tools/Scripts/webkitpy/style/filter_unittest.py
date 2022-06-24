@@ -23,10 +23,11 @@
 """Unit tests for filter.py."""
 
 import unittest
+import os
 
-from filter import _CategoryFilter as CategoryFilter
-from filter import validate_filter_rules
-from filter import FilterConfiguration
+from webkitpy.style.filter import _CategoryFilter as CategoryFilter
+from webkitpy.style.filter import validate_filter_rules
+from webkitpy.style.filter import FilterConfiguration
 
 # On Testing __eq__() and __ne__():
 #
@@ -234,7 +235,7 @@ class FilterConfigurationTest(unittest.TestCase):
     def test_path_with_different_case(self):
         """Test a path that differs only in case."""
         base_rules = ["-"]
-        path_specific = [(["Foo/"], ["+whitespace"])]
+        path_specific = [([os.path.join("Foo", "")], ["+whitespace"])]
         user_rules = []
 
         config = self._config(base_rules, path_specific, user_rules)

@@ -1,6 +1,16 @@
-CONSOLE MESSAGE: line 50: TypeError: undefined is not an object (evaluating 'context.audioWorklet.addModule')
 
-FAIL 
-      Test onprocessorerror handler in AudioWorkletNode
-     TypeError: undefined is not an object (evaluating 'context.audioWorklet.addModule')
+PASS # AUDIT TASK RUNNER STARTED.
+PASS Executing "constructor-error"
+PASS Executing "process-error"
+PASS Audit report
+PASS > [constructor-error]
+PASS   onprocessorerror argument should be an ErrorEvent when
+                the constructor of AudioWorkletProcessor has an error. is true.
+PASS < [constructor-error] All assertions passed. (total 1 assertions)
+PASS > [process-error]
+PASS   onprocessorerror argument should be an ErrorEvent when
+                the process method of the AudioWorkletProcessor method
+                has an error. is true.
+PASS < [process-error] All assertions passed. (total 1 assertions)
+PASS # AUDIT TASK RUNNER FINISHED: 2 tasks ran successfully.
 

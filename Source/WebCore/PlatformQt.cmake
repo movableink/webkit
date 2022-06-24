@@ -114,6 +114,7 @@ list(APPEND WebCore_SOURCES
 #    platform/graphics/PlatformDisplay.cpp
     platform/graphics/WOFFFileFormat.cpp
 
+    platform/graphics/cairo/FontCairoHarfbuzzNG.cpp
 
     platform/graphics/harfbuzz/ComplexTextControllerHarfBuzz.cpp
 
@@ -127,7 +128,6 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/FontCacheQt.cpp
     platform/graphics/qt/FontCascadeQt.cpp
     platform/graphics/qt/FontCustomPlatformDataQt.cpp
-    platform/graphics/qt/FontHarfbuzzQt.cpp
     platform/graphics/qt/FontPlatformDataQt.cpp
     platform/graphics/qt/FontQt.cpp
     platform/graphics/qt/GlyphPageTreeNodeQt.cpp

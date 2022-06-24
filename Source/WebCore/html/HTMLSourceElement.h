@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "HTMLElement.h"
 #include "Timer.h"
 
@@ -52,17 +53,15 @@ private:
 
     // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    void suspend(ReasonForSuspension) final;
-    void resume() final;
     void stop() final;
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
 
-    void errorEventTimerFired();
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
-    Timer m_errorEventTimer;
-    bool m_shouldRescheduleErrorEventOnResume { false };
-    mutable Optional<RefPtr<const MediaQuerySet>> m_cachedParsedMediaAttribute;
+    TaskCancellationGroup m_errorEventCancellationGroup;
+    bool m_shouldCallSourcesChanged { false };
+    mutable std::optional<RefPtr<const MediaQuerySet>> m_cachedParsedMediaAttribute;
 };
 
 } // namespace WebCore

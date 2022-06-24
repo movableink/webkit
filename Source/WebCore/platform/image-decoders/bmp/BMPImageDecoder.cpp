@@ -46,14 +46,14 @@ BMPImageDecoder::BMPImageDecoder(AlphaOption alphaOption, GammaAndColorProfileOp
 {
 }
 
-void BMPImageDecoder::setData(SharedBuffer& data, bool allDataReceived)
+void BMPImageDecoder::setData(const FragmentedSharedBuffer& data, bool allDataReceived)
 {
     if (failed())
         return;
 
     ScalableImageDecoder::setData(data, allDataReceived);
     if (m_reader)
-        m_reader->setData(&data);
+        m_reader->setData(*m_data);
 }
 
 ScalableImageDecoderFrame* BMPImageDecoder::frameBufferAtIndex(size_t index)
@@ -99,7 +99,7 @@ bool BMPImageDecoder::decodeHelper(bool onlySize)
 
     if (!m_reader) {
         m_reader = makeUnique<BMPImageReader>(this, m_decodedOffset, imgDataOffset, false);
-        m_reader->setData(m_data.get());
+        m_reader->setData(*m_data);
     }
 
     if (!m_frameBufferCache.isEmpty())

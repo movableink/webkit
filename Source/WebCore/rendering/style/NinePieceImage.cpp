@@ -223,13 +223,13 @@ void NinePieceImage::paint(GraphicsContext& graphicsContext, RenderElement* rend
             continue;
 
         if (isCornerPiece(piece)) {
-            graphicsContext.drawImage(*image, destinationRects[piece], sourceRects[piece], op);
+            graphicsContext.drawImage(*image, destinationRects[piece], sourceRects[piece], { op, ImageOrientation::FromImage });
             continue;
         }
 
         Image::TileRule hRule = isHorizontalPiece(piece) ? static_cast<Image::TileRule>(horizontalRule()) : Image::StretchTile;
         Image::TileRule vRule = isVerticalPiece(piece) ? static_cast<Image::TileRule>(verticalRule()) : Image::StretchTile;
-        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, op);
+        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, { op, ImageOrientation::FromImage });
     }
 }
 
@@ -287,6 +287,17 @@ bool NinePieceImage::Data::operator==(const Data& other) const
 TextStream& operator<<(TextStream& ts, const NinePieceImage& image)
 {
     ts << "style-image " << image.image() << " slices " << image.imageSlices();
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, NinePieceImageRule rule)
+{
+    switch (rule) {
+    case NinePieceImageRule::Stretch: ts << "stretch"; break;
+    case NinePieceImageRule::Round: ts << "round"; break;
+    case NinePieceImageRule::Space: ts << "space"; break;
+    case NinePieceImageRule::Repeat: ts << "repeat"; break;
+    }
     return ts;
 }
 

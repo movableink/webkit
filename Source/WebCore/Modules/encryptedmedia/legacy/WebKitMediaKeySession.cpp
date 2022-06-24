@@ -29,50 +29,55 @@
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
 
 #include "Document.h"
+#include "EventLoop.h"
 #include "EventNames.h"
+#include "Logging.h"
 #include "Page.h"
 #include "SecurityOriginData.h"
 #include "Settings.h"
 #include "WebKitMediaKeyError.h"
 #include "WebKitMediaKeyMessageEvent.h"
 #include "WebKitMediaKeys.h"
+#include <JavaScriptCore/Uint8Array.h>
 #include <wtf/FileSystem.h>
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/LoggerHelper.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebKitMediaKeySession);
 
-Ref<WebKitMediaKeySession> WebKitMediaKeySession::create(ScriptExecutionContext& context, WebKitMediaKeys& keys, const String& keySystem)
+Ref<WebKitMediaKeySession> WebKitMediaKeySession::create(Document& document, WebKitMediaKeys& keys, const String& keySystem)
 {
-    auto session = adoptRef(*new WebKitMediaKeySession(context, keys, keySystem));
+    auto session = adoptRef(*new WebKitMediaKeySession(document, keys, keySystem));
     session->suspendIfNeeded();
     return session;
 }
 
-WebKitMediaKeySession::WebKitMediaKeySession(ScriptExecutionContext& context, WebKitMediaKeys& keys, const String& keySystem)
-    : ActiveDOMObject(&context)
+WebKitMediaKeySession::WebKitMediaKeySession(Document& document, WebKitMediaKeys& keys, const String& keySystem)
+    : ActiveDOMObject(&document)
+#if !RELEASE_LOG_DISABLED
+    , m_logger(document.logger())
+    , m_logIdentifier(LoggerHelper::uniqueLogIdentifier())
+#endif
     , m_keys(&keys)
     , m_keySystem(keySystem)
-    , m_asyncEventQueue(MainThreadGenericEventQueue::create(*this))
     , m_session(keys.cdm().createSession(*this))
     , m_keyRequestTimer(*this, &WebKitMediaKeySession::keyRequestTimerFired)
     , m_addKeyTimer(*this, &WebKitMediaKeySession::addKeyTimerFired)
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
     if (m_session)
         m_sessionId = m_session->sessionId();
 }
 
 WebKitMediaKeySession::~WebKitMediaKeySession()
 {
-    if (m_session)
-        m_session->setClient(nullptr);
-
-    m_asyncEventQueue->cancelAllEvents();
+    ALWAYS_LOG(LOGIDENTIFIER);
 }
-
 void WebKitMediaKeySession::close()
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
     if (m_session) {
         m_session->releaseKeys();
         m_session = nullptr;
@@ -86,6 +91,7 @@ RefPtr<ArrayBuffer> WebKitMediaKeySession::cachedKeyForKeyId(const String& keyId
 
 void WebKitMediaKeySession::generateKeyRequest(const String& mimeType, Ref<Uint8Array>&& initData)
 {
+    ALWAYS_LOG(LOGIDENTIFIER, "mimeType: ", mimeType);
     m_pendingKeyRequests.append({ mimeType, WTFMove(initData) });
     m_keyRequestTimer.startOneShot(0_s);
 }
@@ -139,9 +145,12 @@ ExceptionOr<void> WebKitMediaKeySession::update(Ref<Uint8Array>&& key)
     // The addKey(key) method must run the following steps:
     // 1. If the first or second argument [sic] is an empty array, throw an InvalidAccessError.
     // NOTE: the reference to a "second argument" is a spec bug.
-    if (!key->length())
+    if (!key->length()) {
+        ERROR_LOG(LOGIDENTIFIER, "error: empty key");
         return Exception { InvalidAccessError };
+    }
 
+    ALWAYS_LOG(LOGIDENTIFIER);
     // 2. Schedule a task to handle the call, providing key.
     m_pendingKeys.append(WTFMove(key));
     m_addKeyTimer.startOneShot(0_s);
@@ -183,7 +192,7 @@ void WebKitMediaKeySession::addKeyTimerFired()
         if (didStoreKey) {
             auto keyaddedEvent = Event::create(eventNames().webkitkeyaddedEvent, Event::CanBubble::No, Event::IsCancelable::No);
             keyaddedEvent->setTarget(this);
-            m_asyncEventQueue->enqueueEvent(WTFMove(keyaddedEvent));
+            queueTaskToDispatchEvent(*this, TaskSource::Networking, WTFMove(keyaddedEvent));
 
             ASSERT(m_keys);
             m_keys->keyAdded();
@@ -205,18 +214,20 @@ void WebKitMediaKeySession::addKeyTimerFired()
 
 void WebKitMediaKeySession::sendMessage(Uint8Array* message, String destinationURL)
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
     auto event = WebKitMediaKeyMessageEvent::create(eventNames().webkitkeymessageEvent, message, destinationURL);
     event->setTarget(this);
-    m_asyncEventQueue->enqueueEvent(WTFMove(event));
+    queueTaskToDispatchEvent(*this, TaskSource::Networking, WTFMove(event));
 }
 
 void WebKitMediaKeySession::sendError(MediaKeyErrorCode errorCode, uint32_t systemCode)
 {
+    ALWAYS_LOG(LOGIDENTIFIER, "errorCode: ", (unsigned)errorCode, ", systemCode: ", systemCode);
     m_error = WebKitMediaKeyError::create(errorCode, systemCode);
 
     auto keyerrorEvent = Event::create(eventNames().webkitkeyerrorEvent, Event::CanBubble::No, Event::IsCancelable::No);
     keyerrorEvent->setTarget(this);
-    m_asyncEventQueue->enqueueEvent(WTFMove(keyerrorEvent));
+    queueTaskToDispatchEvent(*this, TaskSource::Networking, WTFMove(keyerrorEvent));
 }
 
 String WebKitMediaKeySession::mediaKeysStorageDirectory() const
@@ -236,9 +247,9 @@ String WebKitMediaKeySession::mediaKeysStorageDirectory() const
     return FileSystem::pathByAppendingComponent(storageDirectory, document->securityOrigin().data().databaseIdentifier());
 }
 
-bool WebKitMediaKeySession::hasPendingActivity() const
+bool WebKitMediaKeySession::virtualHasPendingActivity() const
 {
-    return (m_keys && m_session) || m_asyncEventQueue->hasPendingEvents();
+    return m_keys && m_session;
 }
 
 void WebKitMediaKeySession::stop()
@@ -251,11 +262,12 @@ const char* WebKitMediaKeySession::activeDOMObjectName() const
     return "WebKitMediaKeySession";
 }
 
-bool WebKitMediaKeySession::shouldPreventEnteringBackForwardCache_DEPRECATED() const
+#if !RELEASE_LOG_DISABLED
+WTFLogChannel& WebKitMediaKeySession::logChannel() const
 {
-    // FIXME: This should never prevent entering the back/forward cache.
-    return true;
+    return LogEME;
 }
+#endif
 
 }
 

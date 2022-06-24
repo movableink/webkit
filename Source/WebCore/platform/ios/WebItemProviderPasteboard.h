@@ -23,13 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import <CoreGraphics/CoreGraphics.h>
+
 #if TARGET_OS_IPHONE
-
 #import <WebCore/AbstractPasteboard.h>
+#endif
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
-
-struct CGSize;
+#if TARGET_OS_IOS
 
 typedef NS_ENUM(NSInteger, WebPreferredPresentationStyle) {
     WebPreferredPresentationStyleUnspecified,
@@ -114,5 +114,4 @@ WEBCORE_EXPORT @interface WebItemProviderPasteboard : NSObject<AbstractPasteboar
 
 NS_ASSUME_NONNULL_END
 
-#endif // __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
-#endif // TARGET_OS_IPHONE
+#endif // TARGET_OS_IOS

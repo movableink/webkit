@@ -34,6 +34,10 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ThreadingPrimitives.h>
 
+#if !PLATFORM(COCOA)
+#include <WebCore/NotImplemented.h>
+#endif
+
 namespace WebKit {
 
 Ref<WebPreferences> WebPreferences::create(const String& identifier, const String& keyPrefix, const String& globalDebugKeyPrefix)
@@ -49,7 +53,7 @@ Ref<WebPreferences> WebPreferences::createWithLegacyDefaults(const String& ident
     preferences->registerDefaultBoolValueForKey(WebPreferencesKey::javaEnabledKey(), true);
     preferences->registerDefaultBoolValueForKey(WebPreferencesKey::javaEnabledForLocalFilesKey(), true);
     preferences->registerDefaultBoolValueForKey(WebPreferencesKey::pluginsEnabledKey(), true);
-    preferences->registerDefaultUInt32ValueForKey(WebPreferencesKey::storageBlockingPolicyKey(), WebCore::SecurityOrigin::AllowAllStorage);
+    preferences->registerDefaultUInt32ValueForKey(WebPreferencesKey::storageBlockingPolicyKey(), static_cast<uint32_t>(WebCore::StorageBlockingPolicy::AllowAll));
     return preferences;
 }
 
@@ -72,7 +76,7 @@ WebPreferences::WebPreferences(const WebPreferences& other)
 
 WebPreferences::~WebPreferences()
 {
-    ASSERT(m_pages.isEmpty());
+    ASSERT(m_pages.computesEmpty());
 }
 
 Ref<WebPreferences> WebPreferences::copy() const
@@ -82,20 +86,69 @@ Ref<WebPreferences> WebPreferences::copy() const
 
 void WebPreferences::addPage(WebPageProxy& webPageProxy)
 {
-    ASSERT(!m_pages.contains(&webPageProxy));
-    m_pages.add(&webPageProxy);
+    ASSERT(!m_pages.contains(webPageProxy));
+    m_pages.add(webPageProxy);
 }
 
 void WebPreferences::removePage(WebPageProxy& webPageProxy)
 {
-    ASSERT(m_pages.contains(&webPageProxy));
-    m_pages.remove(&webPageProxy);
+    ASSERT(m_pages.contains(webPageProxy));
+    m_pages.remove(webPageProxy);
 }
 
 void WebPreferences::update()
 {
+    if (m_updateBatchCount) {
+        m_needUpdateAfterBatch = true;
+        return;
+    }
+        
     for (auto& webPageProxy : m_pages)
-        webPageProxy->preferencesDidChange();
+        webPageProxy.preferencesDidChange();
+}
+
+void WebPreferences::startBatchingUpdates()
+{
+    if (!m_updateBatchCount)
+        m_needUpdateAfterBatch = false;
+
+    ++m_updateBatchCount;
+}
+
+void WebPreferences::endBatchingUpdates()
+{
+    ASSERT(m_updateBatchCount > 0);
+    --m_updateBatchCount;
+    if (!m_updateBatchCount && m_needUpdateAfterBatch)
+        update();
+}
+
+void WebPreferences::setBoolValueForKey(const String& key, bool value)
+{
+    if (!m_store.setBoolValueForKey(key, value))
+        return;
+    updateBoolValueForKey(key, value);
+}
+
+void WebPreferences::setDoubleValueForKey(const String& key, double value)
+{
+    if (!m_store.setDoubleValueForKey(key, value))
+        return;
+    updateDoubleValueForKey(key, value);
+}
+
+void WebPreferences::setUInt32ValueForKey(const String& key, uint32_t value)
+{
+    if (!m_store.setUInt32ValueForKey(key, value))
+        return;
+    updateUInt32ValueForKey(key, value);
+}
+
+void WebPreferences::setStringValueForKey(const String& key, const String& value)
+{
+    if (!m_store.setStringValueForKey(key, value))
+        return;
+    updateStringValueForKey(key, value);
 }
 
 void WebPreferences::updateStringValueForKey(const String& key, const String& value)
@@ -113,24 +166,11 @@ void WebPreferences::updateBoolValueForKey(const String& key, bool value)
 void WebPreferences::updateBoolValueForInternalDebugFeatureKey(const String& key, bool value)
 {
     if (key == WebPreferencesKey::processSwapOnCrossSiteNavigationEnabledKey()) {
-        for (auto* page : m_pages)
-            page->process().processPool().configuration().setProcessSwapsOnNavigation(value);
+        for (auto& page : m_pages)
+            page.process().processPool().configuration().setProcessSwapsOnNavigation(value);
 
         return;
     }
-    if (key == WebPreferencesKey::captureAudioInUIProcessEnabledKey()) {
-        for (auto* page : m_pages)
-            page->process().processPool().configuration().setShouldCaptureAudioInUIProcess(value);
-
-        return;
-    }
-    if (key == WebPreferencesKey::captureVideoInUIProcessEnabledKey()) {
-        for (auto* page : m_pages)
-            page->process().processPool().configuration().setShouldCaptureVideoInUIProcess(value);
-
-        return;
-    }
-
     update(); // FIXME: Only send over the changed key and value.
 }
 
@@ -164,30 +204,6 @@ void WebPreferences::deleteKey(const String& key)
     update(); // FIXME: Only send over the changed key and value.
 }
 
-#define DEFINE_PREFERENCE_GETTER_AND_SETTERS(KeyUpper, KeyLower, TypeName, Type, DefaultValue, HumanReadableName, HumanReadableDescription) \
-    void WebPreferences::set##KeyUpper(const Type& value) \
-    { \
-        if (!m_store.set##TypeName##ValueForKey(WebPreferencesKey::KeyLower##Key(), value)) \
-            return; \
-        update##TypeName##ValueForKey(WebPreferencesKey::KeyLower##Key(), value); \
-    } \
-    \
-    void WebPreferences::delete##KeyUpper() \
-    { \
-        deleteKey(WebPreferencesKey::KeyLower##Key()); \
-    } \
-    \
-    Type WebPreferences::KeyLower() const \
-    { \
-        return m_store.get##TypeName##ValueForKey(WebPreferencesKey::KeyLower##Key()); \
-    } \
-
-FOR_EACH_WEBKIT_PREFERENCE(DEFINE_PREFERENCE_GETTER_AND_SETTERS)
-FOR_EACH_WEBKIT_DEBUG_PREFERENCE(DEFINE_PREFERENCE_GETTER_AND_SETTERS)
-
-#undef DEFINE_PREFERENCE_GETTER_AND_SETTERS
-
-
 void WebPreferences::registerDefaultBoolValueForKey(const String& key, bool value)
 {
     m_store.setOverrideDefaultsBoolValueForKey(key, value);
@@ -203,5 +219,68 @@ void WebPreferences::registerDefaultUInt32ValueForKey(const String& key, uint32_
     if (platformGetUInt32UserValueForKey(key, userValue))
         m_store.setUInt32ValueForKey(key, userValue);
 }
+
+#if !PLATFORM(COCOA) && !PLATFORM(GTK)
+void WebPreferences::platformInitializeStore()
+{
+    notImplemented();
+}
+#endif
+
+#if !PLATFORM(COCOA)
+void WebPreferences::platformUpdateStringValueForKey(const String&, const String&)
+{
+    notImplemented();
+}
+
+void WebPreferences::platformUpdateBoolValueForKey(const String&, bool)
+{
+    notImplemented();
+}
+
+void WebPreferences::platformUpdateUInt32ValueForKey(const String&, uint32_t)
+{
+    notImplemented();
+}
+
+void WebPreferences::platformUpdateDoubleValueForKey(const String&, double)
+{
+    notImplemented();
+}
+
+void WebPreferences::platformUpdateFloatValueForKey(const String&, float)
+{
+    notImplemented();
+}
+
+void WebPreferences::platformDeleteKey(const String&)
+{
+    notImplemented();
+}
+
+bool WebPreferences::platformGetStringUserValueForKey(const String&, String&)
+{
+    notImplemented();
+    return false;
+}
+
+bool WebPreferences::platformGetBoolUserValueForKey(const String&, bool&)
+{
+    notImplemented();
+    return false;
+}
+
+bool WebPreferences::platformGetUInt32UserValueForKey(const String&, uint32_t&)
+{
+    notImplemented();
+    return false;
+}
+
+bool WebPreferences::platformGetDoubleUserValueForKey(const String&, double&)
+{
+    notImplemented();
+    return false;
+}
+#endif
 
 } // namespace WebKit

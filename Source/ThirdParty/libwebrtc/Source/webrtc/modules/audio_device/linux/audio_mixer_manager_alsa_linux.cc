@@ -8,8 +8,9 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "modules/audio_device/linux/audio_device_alsa_linux.h"
 #include "modules/audio_device/linux/audio_mixer_manager_alsa_linux.h"
+
+#include "modules/audio_device/linux/audio_device_alsa_linux.h"
 #include "rtc_base/logging.h"
 
 // Accesses ALSA functions through our late-binding symbol table instead of
@@ -26,14 +27,14 @@ AudioMixerManagerLinuxALSA::AudioMixerManagerLinuxALSA()
       _inputMixerHandle(NULL),
       _outputMixerElement(NULL),
       _inputMixerElement(NULL) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << " created";
+  RTC_DLOG(LS_INFO) << __FUNCTION__ << " created";
 
   memset(_outputMixerStr, 0, kAdmMaxDeviceNameSize);
   memset(_inputMixerStr, 0, kAdmMaxDeviceNameSize);
 }
 
 AudioMixerManagerLinuxALSA::~AudioMixerManagerLinuxALSA() {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << " destroyed";
+  RTC_DLOG(LS_INFO) << __FUNCTION__ << " destroyed";
   Close();
 }
 
@@ -42,20 +43,23 @@ AudioMixerManagerLinuxALSA::~AudioMixerManagerLinuxALSA() {
 // ============================================================================
 
 int32_t AudioMixerManagerLinuxALSA::Close() {
-  RTC_LOG(LS_VERBOSE) << __FUNCTION__;
+  RTC_DLOG(LS_VERBOSE) << __FUNCTION__;
 
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
 
-  CloseSpeaker();
-  CloseMicrophone();
+  CloseSpeakerLocked();
+  CloseMicrophoneLocked();
 
   return 0;
 }
 
 int32_t AudioMixerManagerLinuxALSA::CloseSpeaker() {
-  RTC_LOG(LS_VERBOSE) << __FUNCTION__;
+  MutexLock lock(&mutex_);
+  return CloseSpeakerLocked();
+}
 
-  rtc::CritScope lock(&_critSect);
+int32_t AudioMixerManagerLinuxALSA::CloseSpeakerLocked() {
+  RTC_DLOG(LS_VERBOSE) << __FUNCTION__;
 
   int errVal = 0;
 
@@ -85,9 +89,12 @@ int32_t AudioMixerManagerLinuxALSA::CloseSpeaker() {
 }
 
 int32_t AudioMixerManagerLinuxALSA::CloseMicrophone() {
-  RTC_LOG(LS_VERBOSE) << __FUNCTION__;
+  MutexLock lock(&mutex_);
+  return CloseMicrophoneLocked();
+}
 
-  rtc::CritScope lock(&_critSect);
+int32_t AudioMixerManagerLinuxALSA::CloseMicrophoneLocked() {
+  RTC_DLOG(LS_VERBOSE) << __FUNCTION__;
 
   int errVal = 0;
 
@@ -127,7 +134,7 @@ int32_t AudioMixerManagerLinuxALSA::OpenSpeaker(char* deviceName) {
   RTC_LOG(LS_VERBOSE) << "AudioMixerManagerLinuxALSA::OpenSpeaker(name="
                       << deviceName << ")";
 
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
 
   int errVal = 0;
 
@@ -180,7 +187,8 @@ int32_t AudioMixerManagerLinuxALSA::OpenSpeaker(char* deviceName) {
   if (errVal < 0) {
     RTC_LOG(LS_ERROR)
         << "snd_mixer_selem_register(_outputMixerHandle, NULL, NULL), "
-        << "error: " << LATE(snd_strerror)(errVal);
+           "error: "
+        << LATE(snd_strerror)(errVal);
     _outputMixerHandle = NULL;
     return -1;
   }
@@ -202,7 +210,7 @@ int32_t AudioMixerManagerLinuxALSA::OpenMicrophone(char* deviceName) {
   RTC_LOG(LS_VERBOSE) << "AudioMixerManagerLinuxALSA::OpenMicrophone(name="
                       << deviceName << ")";
 
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
 
   int errVal = 0;
 
@@ -261,7 +269,8 @@ int32_t AudioMixerManagerLinuxALSA::OpenMicrophone(char* deviceName) {
   if (errVal < 0) {
     RTC_LOG(LS_ERROR)
         << "snd_mixer_selem_register(_inputMixerHandle, NULL, NULL), "
-        << "error: " << LATE(snd_strerror)(errVal);
+           "error: "
+        << LATE(snd_strerror)(errVal);
 
     _inputMixerHandle = NULL;
     return -1;
@@ -280,13 +289,13 @@ int32_t AudioMixerManagerLinuxALSA::OpenMicrophone(char* deviceName) {
 }
 
 bool AudioMixerManagerLinuxALSA::SpeakerIsInitialized() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
+  RTC_DLOG(LS_INFO) << __FUNCTION__;
 
   return (_outputMixerHandle != NULL);
 }
 
 bool AudioMixerManagerLinuxALSA::MicrophoneIsInitialized() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
+  RTC_DLOG(LS_INFO) << __FUNCTION__;
 
   return (_inputMixerHandle != NULL);
 }
@@ -295,7 +304,7 @@ int32_t AudioMixerManagerLinuxALSA::SetSpeakerVolume(uint32_t volume) {
   RTC_LOG(LS_VERBOSE) << "AudioMixerManagerLinuxALSA::SetSpeakerVolume(volume="
                       << volume << ")";
 
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
 
   if (_outputMixerElement == NULL) {
     RTC_LOG(LS_WARNING) << "no avaliable output mixer element exists";
@@ -498,7 +507,7 @@ int32_t AudioMixerManagerLinuxALSA::SetSpeakerMute(bool enable) {
   RTC_LOG(LS_VERBOSE) << "AudioMixerManagerLinuxALSA::SetSpeakerMute(enable="
                       << enable << ")";
 
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
 
   if (_outputMixerElement == NULL) {
     RTC_LOG(LS_WARNING) << "no avaliable output mixer element exists";
@@ -571,7 +580,7 @@ int32_t AudioMixerManagerLinuxALSA::SetMicrophoneMute(bool enable) {
   RTC_LOG(LS_VERBOSE) << "AudioMixerManagerLinuxALSA::SetMicrophoneMute(enable="
                       << enable << ")";
 
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
 
   if (_inputMixerElement == NULL) {
     RTC_LOG(LS_WARNING) << "no avaliable input mixer element exists";
@@ -646,7 +655,7 @@ int32_t AudioMixerManagerLinuxALSA::SetMicrophoneVolume(uint32_t volume) {
       << "AudioMixerManagerLinuxALSA::SetMicrophoneVolume(volume=" << volume
       << ")";
 
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
 
   if (_inputMixerElement == NULL) {
     RTC_LOG(LS_WARNING) << "no avaliable input mixer element exists";

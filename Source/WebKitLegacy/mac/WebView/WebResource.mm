@@ -38,10 +38,11 @@
 #import <WebCore/ArchiveResource.h>
 #import <WebCore/LegacyWebArchive.h>
 #import <WebCore/RuntimeApplicationChecks.h>
-#import <WebCore/TextEncoding.h>
 #import <WebCore/ThreadCheck.h>
+#import <WebCore/WebCoreJITOperations.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <WebCore/WebCoreURLResponse.h>
+#import <pal/text/TextEncoding.h>
 #import <wtf/MainThread.h>
 #import <wtf/RefPtr.h>
 #import <wtf/RunLoop.h>
@@ -67,8 +68,9 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 + (void)initialize
 {
 #if !PLATFORM(IOS_FAMILY)
-    JSC::initializeThreading();
-    RunLoop::initializeMainRunLoop();
+    JSC::initialize();
+    WTF::initializeMainThread();
+    WebCore::populateJITOperations();
 #endif
 }
 
@@ -161,21 +163,21 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 - (void)encodeWithCoder:(NSCoder *)encoder
 {
     auto* resource = _private->coreResource.get();
-    
-    NSData *data = nil;
+
+    RetainPtr<NSData> data;
     NSURL *url = nil;
     NSString *mimeType = nil, *textEncoding = nil, *frameName = nil;
     NSURLResponse *response = nil;
-    
+
     if (resource) {
-        data = resource->data().createNSData().get();
+        data = resource->data().makeContiguous()->createNSData();
         url = resource->url();
         mimeType = resource->mimeType();
         textEncoding = resource->textEncoding();
         frameName = resource->frameName();
         response = resource->response().nsURLResponse();
     }
-    [encoder encodeObject:data forKey:WebResourceDataKey];
+    [encoder encodeObject:data.get() forKey:WebResourceDataKey];
     [encoder encodeObject:url forKey:WebResourceURLKey];
     [encoder encodeObject:mimeType forKey:WebResourceMIMETypeKey];
     [encoder encodeObject:textEncoding forKey:WebResourceTextEncodingNameKey];
@@ -200,7 +202,7 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 
     if (!_private->coreResource)
         return nil;
-    return _private->coreResource->data().createNSData().autorelease();
+    return _private->coreResource->data().makeContiguous()->createNSData().autorelease();
 }
 
 - (NSURL *)URL
@@ -261,7 +263,7 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     return self;
 }
 
-- (WebCore::ArchiveResource&)_coreResource
+- (NakedRef<WebCore::ArchiveResource>)_coreResource
 {
     return *_private->coreResource;
 }
@@ -300,7 +302,7 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
         return nil;
     }
 
-    auto coreResource = ArchiveResource::create(SharedBuffer::create(copyData ? [[data copy] autorelease] : data), URL, MIMEType, textEncodingName, frameName, response);
+    auto coreResource = ArchiveResource::create(SharedBuffer::create(copyData ? adoptNS([data copy]).get() : data), URL, MIMEType, textEncodingName, frameName, response);
     if (!coreResource) {
         [self release];
         return nil;
@@ -336,12 +338,12 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 #if !PLATFORM(IOS_FAMILY)
 - (NSFileWrapper *)_fileWrapperRepresentation
 {
-    NSFileWrapper *wrapper = [[[NSFileWrapper alloc] initRegularFileWithContents:[self data]] autorelease];
+    auto wrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:[self data]]);
     NSString *filename = [self _suggestedFilename];
     if (!filename || ![filename length])
         filename = [[self URL] _webkit_suggestedFilenameWithMIMEType:[self MIMEType]];
     [wrapper setPreferredFilename:filename];
-    return wrapper;
+    return wrapper.autorelease();
 }
 #endif
 
@@ -352,21 +354,21 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     NSURLResponse *response = nil;
     if (_private->coreResource)
         response = _private->coreResource->response().nsURLResponse();
-    return response ? response : [[[NSURLResponse alloc] init] autorelease];        
+    return response ? response : adoptNS([[NSURLResponse alloc] init]).autorelease();
 }
 
 - (NSString *)_stringValue
 {
     WebCoreThreadViolationCheckRoundTwo();
 
-    WebCore::TextEncoding encoding;
+    PAL::TextEncoding encoding;
     if (_private->coreResource)
         encoding = _private->coreResource->textEncoding();
     if (!encoding.isValid())
-        encoding = WindowsLatin1Encoding();
+        encoding = PAL::WindowsLatin1Encoding();
     
-    SharedBuffer* coreData = _private->coreResource ? &_private->coreResource->data() : nullptr;
-    return encoding.decode(reinterpret_cast<const char*>(coreData ? coreData->data() : nullptr), coreData ? coreData->size() : 0);
+    FragmentedSharedBuffer* coreData = _private->coreResource ? &_private->coreResource->data() : nullptr;
+    return encoding.decode(reinterpret_cast<const char*>(coreData ? coreData->makeContiguous()->data() : nullptr), coreData ? coreData->size() : 0);
 }
 
 @end

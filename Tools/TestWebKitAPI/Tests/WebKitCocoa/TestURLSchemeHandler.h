@@ -23,8 +23,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
 #import <WebKit/WebKit.h>
 
 @interface TestURLSchemeHandler : NSObject <WKURLSchemeHandler>
@@ -33,3 +31,5 @@
 @property (nonatomic, copy) void (^stopURLSchemeTaskHandler)(WKWebView *, id <WKURLSchemeTask>);
 
 @end
+
+void respond(id<WKURLSchemeTask>, const char* html);

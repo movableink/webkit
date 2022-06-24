@@ -30,6 +30,7 @@
 #include "IntSizeHash.h"
 #include "OrientationNotifier.h"
 #include "RealtimeVideoCaptureSource.h"
+#include "Timer.h"
 #include <wtf/Lock.h>
 #include <wtf/text/StringHash.h>
 
@@ -53,11 +54,10 @@ class ImageTransferSessionVT;
 
 class AVVideoCaptureSource : public RealtimeVideoCaptureSource, private OrientationNotifier::Observer {
 public:
-    static CaptureSourceOrError create(String&& id, String&& hashSalt, const MediaConstraints*);
+    static CaptureSourceOrError create(const CaptureDevice&, String&& hashSalt, const MediaConstraints*, PageIdentifier);
 
     WEBCORE_EXPORT static VideoCaptureFactory& factory();
 
-    enum class InterruptionReason { None, VideoNotAllowedInBackground, AudioInUse, VideoInUse, VideoNotAllowedInSideBySide };
     void captureSessionBeginInterruption(RetainPtr<NSNotification>);
     void captureSessionEndInterruption(RetainPtr<NSNotification>);
     void deviceDisconnected(RetainPtr<NSNotification>);
@@ -70,7 +70,7 @@ public:
     void captureDeviceSuspendedDidChange();
 
 private:
-    AVVideoCaptureSource(AVCaptureDevice*, String&& id, String&& hashSalt);
+    AVVideoCaptureSource(AVCaptureDevice*, const CaptureDevice&, String&& hashSalt, PageIdentifier);
     virtual ~AVVideoCaptureSource();
 
     void clearSession();
@@ -107,7 +107,6 @@ private:
 
     bool setFrameRateConstraint(double minFrameRate, double maxFrameRate);
 
-    void processNewFrame(Ref<MediaSample>&&);
     IntSize sizeForPreset(NSString*);
 
     AVCaptureDevice* device() const { return m_device.get(); }
@@ -115,6 +114,9 @@ private:
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const override { return "AVVideoCaptureSource"; }
 #endif
+
+    void updateVerifyCapturingTimer();
+    void verifyIsCapturing();
 
     RefPtr<MediaSample> m_buffer;
     RetainPtr<AVCaptureVideoDataOutput> m_videoOutput;
@@ -124,19 +126,26 @@ private:
     int m_deviceOrientation { 0 };
     MediaSample::VideoRotation m_sampleRotation { MediaSample::VideoRotation::None };
 
-    Optional<RealtimeMediaSourceSettings> m_currentSettings;
-    Optional<RealtimeMediaSourceCapabilities> m_capabilities;
+    std::optional<RealtimeMediaSourceSettings> m_currentSettings;
+    std::optional<RealtimeMediaSourceCapabilities> m_capabilities;
     RetainPtr<WebCoreAVVideoCaptureSourceObserver> m_objcObserver;
     RetainPtr<AVCaptureSession> m_session;
     RetainPtr<AVCaptureDevice> m_device;
 
-    Lock m_presetMutex;
     RefPtr<AVVideoPreset> m_currentPreset;
-    IntSize m_currentSize;
+    RefPtr<AVVideoPreset> m_appliedPreset;
+    RetainPtr<AVFrameRateRange> m_appliedFrameRateRange;
+
     double m_currentFrameRate;
-    InterruptionReason m_interruption { InterruptionReason::None };
-    int m_framesToDropAtStartup { 0 };
+    bool m_interrupted { false };
     bool m_isRunning { false };
+
+    static constexpr Seconds verifyCaptureInterval = 30_s;
+    static const uint64_t framesToDropWhenStarting = 4;
+
+    Timer m_verifyCapturingTimer;
+    uint64_t m_framesCount { 0 };
+    uint64_t m_lastFramesCount { 0 };
 };
 
 } // namespace WebCore

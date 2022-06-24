@@ -61,15 +61,21 @@ static const struct argument kArguments[] = {
         "-ocsp-response", kOptionalArgument, "OCSP response file to send",
     },
     {
+        "-echconfig-key",
+        kOptionalArgument,
+        "File containing the private key corresponding to the ECHConfig.",
+    },
+    {
+        "-echconfig",
+        kOptionalArgument,
+        "File containing one ECHConfig.",
+    },
+    {
         "-loop", kBooleanArgument,
         "The server will continue accepting new sequential connections.",
     },
     {
         "-early-data", kBooleanArgument, "Allow early data",
-    },
-    {
-        "-tls13-variant", kOptionalArgument,
-        "Enable the specified experimental TLS 1.3 variant",
     },
     {
         "-www", kBooleanArgument,
@@ -150,26 +156,6 @@ static bssl::UniquePtr<X509> MakeSelfSignedCert(EVP_PKEY *evp_pkey,
     return nullptr;
   }
   return x509;
-}
-
-static bool GetTLS13Variant(tls13_variant_t *out, const std::string &in) {
-  if (in == "draft23") {
-    *out = tls13_draft23;
-    return true;
-  }
-  if (in == "draft28") {
-    *out = tls13_draft28;
-    return true;
-  }
-  if (in == "rfc") {
-    *out = tls13_rfc;
-    return true;
-  }
-  if (in == "all") {
-    *out = tls13_all;
-    return true;
-  }
-  return false;
 }
 
 static void InfoCallback(const SSL *ssl, int type, int value) {
@@ -285,6 +271,47 @@ bool Server(const std::vector<std::string> &args) {
     }
   }
 
+  if (args_map.count("-echconfig-key") + args_map.count("-echconfig") == 1) {
+    fprintf(stderr,
+            "-echconfig and -echconfig-key must be specified together.\n");
+    return false;
+  }
+
+  if (args_map.count("-echconfig-key") != 0) {
+    std::string echconfig_key_path = args_map["-echconfig-key"];
+    std::string echconfig_path = args_map["-echconfig"];
+
+    // Load the ECH private key.
+    ScopedFILE echconfig_key_file(fopen(echconfig_key_path.c_str(), "rb"));
+    std::vector<uint8_t> echconfig_key;
+    if (echconfig_key_file == nullptr ||
+        !ReadAll(&echconfig_key, echconfig_key_file.get())) {
+      fprintf(stderr, "Error reading %s\n", echconfig_key_path.c_str());
+      return false;
+    }
+
+    // Load the ECHConfig.
+    ScopedFILE echconfig_file(fopen(echconfig_path.c_str(), "rb"));
+    std::vector<uint8_t> echconfig;
+    if (echconfig_file == nullptr ||
+        !ReadAll(&echconfig, echconfig_file.get())) {
+      fprintf(stderr, "Error reading %s\n", echconfig_path.c_str());
+      return false;
+    }
+
+    bssl::UniquePtr<SSL_ECH_SERVER_CONFIG_LIST> configs(
+        SSL_ECH_SERVER_CONFIG_LIST_new());
+    if (!configs ||
+        !SSL_ECH_SERVER_CONFIG_LIST_add(configs.get(),
+                                        /*is_retry_config=*/1, echconfig.data(),
+                                        echconfig.size(), echconfig_key.data(),
+                                        echconfig_key.size()) ||
+        !SSL_CTX_set1_ech_server_config_list(ctx.get(), configs.get())) {
+      fprintf(stderr, "Error setting server's ECHConfig and private key\n");
+      return false;
+    }
+  }
+
   if (args_map.count("-cipher") != 0 &&
       !SSL_CTX_set_strict_cipher_list(ctx.get(), args_map["-cipher"].c_str())) {
     fprintf(stderr, "Failed setting cipher list\n");
@@ -329,16 +356,6 @@ bool Server(const std::vector<std::string> &args) {
 
   if (args_map.count("-early-data") != 0) {
     SSL_CTX_set_early_data_enabled(ctx.get(), 1);
-  }
-
-  if (args_map.count("-tls13-variant") != 0) {
-    tls13_variant_t variant;
-    if (!GetTLS13Variant(&variant, args_map["-tls13-variant"])) {
-      fprintf(stderr, "Unknown TLS 1.3 variant: %s\n",
-              args_map["-tls13-variant"].c_str());
-      return false;
-    }
-    SSL_CTX_set_tls13_variant(ctx.get(), variant);
   }
 
   if (args_map.count("-debug") != 0) {

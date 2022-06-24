@@ -24,18 +24,20 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(COCOA)
 
+#import "PasteboardUtilities.h"
 #import "PlatformUtilities.h"
 #import "TestWKWebView.h"
+#import <WebCore/ColorCocoa.h>
 #import <WebKit/WKPreferencesPrivate.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include <MobileCoreServices/MobileCoreServices.h>
+#import <MobileCoreServices/MobileCoreServices.h>
 #endif
 
 @interface WKWebView ()
@@ -44,29 +46,37 @@
 @end
 
 #if PLATFORM(MAC)
-NSString *readHTMLFromPasteboard()
+
+@interface WKWebView () <NSServicesMenuRequestor>
+@end
+
+NSData *readHTMLDataFromPasteboard()
+{
+    return [[NSPasteboard generalPasteboard] dataForType:NSHTMLPboardType];
+}
+
+NSString *readHTMLStringFromPasteboard()
 {
     return [[NSPasteboard generalPasteboard] stringForType:NSHTMLPboardType];
 }
-#else
-NSString *readHTMLFromPasteboard()
-{
-    id value = [[UIPasteboard generalPasteboard] valueForPasteboardType:(__bridge NSString *)kUTTypeHTML];
-    if ([value isKindOfClass:[NSData class]])
-        value = [[[NSString alloc] initWithData:(NSData *)value encoding:NSUTF8StringEncoding] autorelease];
-    ASSERT([value isKindOfClass:[NSString class]]);
-    return (NSString *)value;
-}
-#endif
 
-static RetainPtr<TestWKWebView> createWebViewWithCustomPasteboardDataEnabled()
+#else
+
+NSData *readHTMLDataFromPasteboard()
 {
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 400, 400)]);
-    auto preferences = (__bridge WKPreferencesRef)[[webView configuration] preferences];
-    WKPreferencesSetDataTransferItemsEnabled(preferences, true);
-    WKPreferencesSetCustomPasteboardDataEnabled(preferences, true);
-    return webView;
+    return [[UIPasteboard generalPasteboard] dataForPasteboardType:(__bridge NSString *)kUTTypeHTML];
 }
+
+NSString *readHTMLStringFromPasteboard()
+{
+    RetainPtr<id> value = [[UIPasteboard generalPasteboard] valueForPasteboardType:(__bridge NSString *)kUTTypeHTML];
+    if ([value isKindOfClass:[NSData class]])
+        value = adoptNS([[NSString alloc] initWithData:(NSData *)value encoding:NSUTF8StringEncoding]);
+    ASSERT([value isKindOfClass:[NSString class]]);
+    return (NSString *)value.autorelease();
+}
+
+#endif
 
 TEST(CopyHTML, Sanitizes)
 {
@@ -80,11 +90,116 @@ TEST(CopyHTML, Sanitizes)
     EXPECT_TRUE([webView stringByEvaluatingJavaScript:@"didPaste"].boolValue);
     EXPECT_WK_STREQ("<meta content=\"secret\"><b onmouseover=\"dangerousCode()\">hello</b><!-- secret-->, world<script>dangerousCode()</script>",
         [webView stringByEvaluatingJavaScript:@"pastedHTML"]);
-    String htmlInNativePasteboard = readHTMLFromPasteboard();
+    String htmlInNativePasteboard = readHTMLStringFromPasteboard();
     EXPECT_TRUE(htmlInNativePasteboard.contains("hello"));
     EXPECT_TRUE(htmlInNativePasteboard.contains(", world"));
     EXPECT_FALSE(htmlInNativePasteboard.contains("secret"));
     EXPECT_FALSE(htmlInNativePasteboard.contains("dangerousCode"));
 }
 
+TEST(CopyHTML, SanitizationPreservesCharacterSetInSelectedText)
+{
+    auto webView = createWebViewWithCustomPasteboardDataEnabled();
+    [webView synchronouslyLoadHTMLString:@"<!DOCTYPE html>"
+        "<body>"
+        "<meta charset='utf-8'>"
+        "<span id='copy'>我叫謝文昇</span>"
+        "<script>getSelection().selectAllChildren(copy);</script>"
+        "</body>"];
+    [webView copy:nil];
+    [webView waitForNextPresentationUpdate];
+
+    NSString *copiedMarkup = readHTMLStringFromPasteboard();
+    EXPECT_TRUE([copiedMarkup containsString:@"<span "]);
+    EXPECT_TRUE([copiedMarkup containsString:@"我叫謝文昇"]);
+    EXPECT_TRUE([copiedMarkup containsString:@"</span>"]);
+
+    auto attributedString = adoptNS([[NSAttributedString alloc] initWithData:readHTMLDataFromPasteboard() options:@{ NSDocumentTypeDocumentOption: NSHTMLTextDocumentType } documentAttributes:nil error:nil]);
+    EXPECT_WK_STREQ("我叫謝文昇", [attributedString string]);
+}
+
+TEST(CopyHTML, SanitizationPreservesCharacterSet)
+{
+    Vector<std::pair<RetainPtr<NSString>, RetainPtr<NSData>>, 3> markupStringsAndData;
+    auto webView = createWebViewWithCustomPasteboardDataEnabled();
+    for (NSString *encodingName in @[ @"utf-8", @"windows-1252", @"bogus-encoding" ]) {
+        [webView synchronouslyLoadHTMLString:[NSString stringWithFormat:@"<!DOCTYPE html>"
+            "<body>"
+            "<meta charset='%@'>"
+            "<p id='copy'>Copy me</p>"
+            "<script>"
+            "copy.addEventListener('copy', e => {"
+            "    e.clipboardData.setData('text/html', `<span style='color: red;'>我叫謝文昇</span>`);"
+            "    e.preventDefault();"
+            "});"
+            "getSelection().selectAllChildren(copy);"
+            "</script>"
+            "</body>", encodingName]];
+        [webView copy:nil];
+        [webView waitForNextPresentationUpdate];
+
+        markupStringsAndData.append({ readHTMLStringFromPasteboard(), readHTMLDataFromPasteboard() });
+    }
+
+    for (auto& [copiedMarkup, copiedData] : markupStringsAndData) {
+        EXPECT_TRUE([copiedMarkup containsString:@"<span "]);
+        EXPECT_TRUE([copiedMarkup containsString:@"color: red;"]);
+        EXPECT_TRUE([copiedMarkup containsString:@"我叫謝文昇"]);
+        EXPECT_TRUE([copiedMarkup containsString:@"</span>"]);
+
+        NSError *attributedStringConversionError = nil;
+
+        auto attributedString = adoptNS([[NSAttributedString alloc] initWithData:copiedData.get() options:@{ NSDocumentTypeDocumentOption: NSHTMLTextDocumentType } documentAttributes:nil error:&attributedStringConversionError]);
+        EXPECT_WK_STREQ("我叫謝文昇", [attributedString string]);
+
+        __block BOOL foundColorAttribute = NO;
+        [attributedString enumerateAttribute:NSForegroundColorAttributeName inRange:NSMakeRange(0, 5) options:0 usingBlock:^(WebCore::CocoaColor *color, NSRange range, BOOL*) {
+            CGFloat redComponent = 0;
+            CGFloat greenComponent = 0;
+            CGFloat blueComponent = 0;
+            [color getRed:&redComponent green:&greenComponent blue:&blueComponent alpha:nil];
+
+            EXPECT_EQ(1., redComponent);
+            EXPECT_EQ(0., greenComponent);
+            EXPECT_EQ(0., blueComponent);
+            foundColorAttribute = YES;
+        }];
+        EXPECT_TRUE(foundColorAttribute);
+    }
+}
+
+#if PLATFORM(MAC)
+
+TEST(CopyHTML, ItemTypesWhenCopyingWebContent)
+{
+    auto webView = createWebViewWithCustomPasteboardDataEnabled();
+    [webView synchronouslyLoadHTMLString:@"<strong style='color: rgb(255, 0, 0);'>This is some text to copy.</strong>"];
+    [webView stringByEvaluatingJavaScript:@"getSelection().selectAllChildren(document.body)"];
+    [webView copy:nil];
+    [webView waitForNextPresentationUpdate];
+
+    NSArray<NSPasteboardItem *> *items = NSPasteboard.generalPasteboard.pasteboardItems;
+    EXPECT_EQ(1U, items.count);
+
+    NSArray<NSPasteboardType> *types = items.firstObject.types;
+    EXPECT_TRUE([types containsObject:(__bridge NSString *)kUTTypeWebArchive]);
+    EXPECT_TRUE([types containsObject:(__bridge NSString *)NSPasteboardTypeRTF]);
+    EXPECT_TRUE([types containsObject:(__bridge NSString *)NSPasteboardTypeString]);
+    EXPECT_TRUE([types containsObject:(__bridge NSString *)NSPasteboardTypeHTML]);
+}
+
+TEST(CopyHTML, WriteRichTextSelectionToPasteboard)
+{
+    auto webView = createWebViewWithCustomPasteboardDataEnabled();
+    [webView synchronouslyLoadHTMLString:@"<strong style='color: rgb(255, 0, 0);'>This is some text to copy.</strong>"];
+    [webView stringByEvaluatingJavaScript:@"getSelection().selectAllChildren(document.body)"];
+
+    auto pasteboard = [NSPasteboard pasteboardWithUniqueName];
+    [webView writeSelectionToPasteboard:pasteboard types:@[ (__bridge NSString *)kUTTypeWebArchive ]];
+
+    EXPECT_GT([pasteboard dataForType:(__bridge NSString *)kUTTypeWebArchive].length, 0U);
+}
+
 #endif // PLATFORM(MAC)
+
+#endif // PLATFORM(COCOA)

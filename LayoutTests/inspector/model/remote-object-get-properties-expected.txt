@@ -79,12 +79,15 @@ ALL PROPERTIES:
     reduce
     reduceRight
     map
-    entries
     keys
+    entries
     find
+    findLast
     findIndex
+    findLastIndex
     includes
     copyWithin
+    at
     constructor
     Symbol(Symbol.iterator)
     Symbol(Symbol.unscopables)
@@ -132,12 +135,15 @@ OWN PROPERTIES:
     reduce
     reduceRight
     map
-    entries
     keys
+    entries
     find
+    findLast
     findIndex
+    findLastIndex
     includes
     copyWithin
+    at
     constructor
     Symbol(Symbol.iterator)
     Symbol(Symbol.unscopables)
@@ -170,12 +176,15 @@ DISPLAYABLE PROPERTIES:
     reduce
     reduceRight
     map
-    entries
     keys
+    entries
     find
+    findLast
     findIndex
+    findLastIndex
     includes
     copyWithin
+    at
     constructor
     Symbol(Symbol.iterator)
     Symbol(Symbol.unscopables)
@@ -208,12 +217,15 @@ ALL PROPERTIES:
     reduce
     reduceRight
     map
-    entries
     keys
+    entries
     find
+    findLast
     findIndex
+    findLastIndex
     includes
     copyWithin
+    at
     constructor
     Symbol(Symbol.iterator)
     Symbol(Symbol.unscopables)
@@ -277,6 +289,7 @@ ALL PROPERTIES:
     CAPTURING_PHASE
     AT_TARGET
     BUBBLING_PHASE
+    Symbol(Symbol.toStringTag)
     toString
     toLocaleString
     valueOf
@@ -360,31 +373,29 @@ type: function
 description: function () { console.log(arguments); }
 
 OWN PROPERTIES:
-    arguments
-    caller
+    prototype
     length
     name
-    prototype
     __proto__
 
 DISPLAYABLE PROPERTIES:
-    arguments
-    caller
+    prototype
     length
     name
-    prototype
+    arguments
+    caller
     __proto__
 
 ALL PROPERTIES:
-    arguments
-    caller
+    prototype
     length
     name
-    prototype
     toString
     apply
     call
     bind
+    arguments
+    caller
     constructor
     Symbol(Symbol.hasInstance)
     toLocaleString
@@ -407,8 +418,8 @@ description: function unboundFunction() {
 }
 
 OWN PROPERTIES:
-    name
     length
+    name
     __proto__
     targetFunction
     boundThis
@@ -417,8 +428,8 @@ OWN PROPERTIES:
 DISPLAYABLE PROPERTIES:
     length
     name
-    caller
     arguments
+    caller
     __proto__
     targetFunction
     boundThis
@@ -431,8 +442,8 @@ ALL PROPERTIES:
     apply
     call
     bind
-    caller
     arguments
+    caller
     constructor
     Symbol(Symbol.hasInstance)
     toLocaleString
@@ -462,6 +473,7 @@ OWN PROPERTIES:
     Symbol(sym)
     Symbol(sym)
     Symbol()
+    Symbol(Symbol.toStringTag)
     __proto__
 
 DISPLAYABLE PROPERTIES:
@@ -471,6 +483,7 @@ DISPLAYABLE PROPERTIES:
     Symbol(sym)
     Symbol(sym)
     Symbol()
+    Symbol(Symbol.toStringTag)
     __proto__
 
 ALL PROPERTIES:
@@ -480,6 +493,7 @@ ALL PROPERTIES:
     Symbol(sym)
     Symbol(sym)
     Symbol()
+    Symbol(Symbol.toStringTag)
     toString
     toLocaleString
     valueOf
@@ -491,6 +505,65 @@ ALL PROPERTIES:
     __lookupGetter__
     __lookupSetter__
     constructor
+    __proto__
+-----------------------------------------------------
+
+-----------------------------------------------------
+EXPRESSION: window.objectWithSymbolToStringTag
+type: object
+description: Foo
+
+OWN PROPERTIES:
+    Symbol(Symbol.toStringTag)
+    __proto__
+
+DISPLAYABLE PROPERTIES:
+    Symbol(Symbol.toStringTag)
+    __proto__
+
+ALL PROPERTIES:
+    Symbol(Symbol.toStringTag)
+    toString
+    toLocaleString
+    valueOf
+    hasOwnProperty
+    propertyIsEnumerable
+    isPrototypeOf
+    __defineGetter__
+    __defineSetter__
+    __lookupGetter__
+    __lookupSetter__
+    constructor
+    __proto__
+-----------------------------------------------------
+
+-----------------------------------------------------
+EXPRESSION: window.objectWithShadowedSymbolToStringTag
+type: object
+description: Foo
+
+OWN PROPERTIES:
+    __proto__
+
+DISPLAYABLE PROPERTIES:
+    __proto__
+
+ALL PROPERTIES:
+    constructor
+    addEventListener
+    removeEventListener
+    dispatchEvent
+    Symbol(Symbol.toStringTag)
+    toString
+    toLocaleString
+    valueOf
+    hasOwnProperty
+    propertyIsEnumerable
+    isPrototypeOf
+    __defineGetter__
+    __defineSetter__
+    __lookupGetter__
+    __lookupSetter__
     __proto__
 -----------------------------------------------------
 
@@ -520,6 +593,7 @@ ALL PROPERTIES:
     item
     namedItem
     Symbol(Symbol.iterator)
+    Symbol(Symbol.toStringTag)
     toString
     toLocaleString
     valueOf

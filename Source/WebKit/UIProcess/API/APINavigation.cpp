@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,8 @@
 
 #include "WebBackForwardListItem.h"
 #include "WebNavigationState.h"
+#include <WebCore/ResourceRequest.h>
+#include <WebCore/ResourceResponse.h>
 #include <wtf/DebugUtilities.h>
 #include <wtf/HexNumber.h>
 
@@ -35,8 +37,24 @@ namespace API {
 using namespace WebCore;
 using namespace WebKit;
 
+static constexpr Seconds navigationActivityTimeout { 30_s };
+
+SubstituteData::SubstituteData(Vector<uint8_t>&& content, const ResourceResponse& response, WebCore::SubstituteData::SessionHistoryVisibility sessionHistoryVisibility)
+    : SubstituteData(WTFMove(content), response.mimeType(), response.textEncodingName(), response.url().string(), nullptr, sessionHistoryVisibility)
+{
+}
+
+
 Navigation::Navigation(WebNavigationState& state)
     : m_navigationID(state.generateNavigationID())
+    , m_clientNavigationActivity(navigationActivityTimeout)
+{
+}
+
+Navigation::Navigation(WebNavigationState& state, WebBackForwardListItem* currentAndTargetItem)
+    : m_navigationID(state.generateNavigationID())
+    , m_reloadItem(currentAndTargetItem)
+    , m_clientNavigationActivity(navigationActivityTimeout)
 {
 }
 
@@ -44,9 +62,10 @@ Navigation::Navigation(WebNavigationState& state, WebCore::ResourceRequest&& req
     : m_navigationID(state.generateNavigationID())
     , m_originalRequest(WTFMove(request))
     , m_currentRequest(m_originalRequest)
+    , m_redirectChain { m_originalRequest.url() }
     , m_fromItem(fromItem)
+    , m_clientNavigationActivity(navigationActivityTimeout)
 {
-    m_redirectChain.append(m_originalRequest.url());
 }
 
 Navigation::Navigation(WebNavigationState& state, WebBackForwardListItem& targetItem, WebBackForwardListItem* fromItem, FrameLoadType backForwardFrameLoadType)
@@ -56,11 +75,19 @@ Navigation::Navigation(WebNavigationState& state, WebBackForwardListItem& target
     , m_targetItem(&targetItem)
     , m_fromItem(fromItem)
     , m_backForwardFrameLoadType(backForwardFrameLoadType)
+    , m_clientNavigationActivity(navigationActivityTimeout)
 {
 }
 
 Navigation::Navigation(WebKit::WebNavigationState& state, std::unique_ptr<SubstituteData>&& substituteData)
     : Navigation(state)
+{
+    ASSERT(substituteData);
+    m_substituteData = WTFMove(substituteData);
+}
+
+Navigation::Navigation(WebKit::WebNavigationState& state, WebCore::ResourceRequest&& simulatedRequest, std::unique_ptr<SubstituteData>&& substituteData, WebKit::WebBackForwardListItem* fromItem)
+    : Navigation(state, WTFMove(simulatedRequest), fromItem)
 {
     ASSERT(substituteData);
     m_substituteData = WTFMove(substituteData);

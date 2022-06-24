@@ -26,11 +26,11 @@
 #import "config.h"
 #import "NetworkProcess.h"
 
-#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
+#if PLATFORM(IOS_FAMILY)
 
 #import "NetworkCache.h"
 #import "NetworkProcessCreationParameters.h"
-#import "ResourceCachesToClear.h"
+#import "ProcessAssertion.h"
 #import "SandboxInitializationParameters.h"
 #import "SecItemShim.h"
 #import <WebCore/CertificateInfo.h>
@@ -40,7 +40,8 @@
 #import <wtf/cocoa/Entitlements.h>
 
 namespace WebKit {
-using namespace WebCore;
+
+#if !PLATFORM(MACCATALYST)
 
 void NetworkProcess::initializeProcess(const AuxiliaryProcessInitializationParameters&)
 {
@@ -54,22 +55,6 @@ void NetworkProcess::initializeProcessName(const AuxiliaryProcessInitializationP
 
 void NetworkProcess::initializeSandbox(const AuxiliaryProcessInitializationParameters&, SandboxInitializationParameters&)
 {
-}
-
-void NetworkProcess::allowSpecificHTTPSCertificateForHost(const CertificateInfo& certificateInfo, const String& host)
-{
-    [NSURLRequest setAllowsSpecificHTTPSCertificate:(NSArray *)certificateInfo.certificateChain() forHost:host];
-}
-
-void NetworkProcess::clearCacheForAllOrigins(uint32_t cachesToClear)
-{
-    ResourceCachesToClear resourceCachesToClear = static_cast<ResourceCachesToClear>(cachesToClear);
-    if (resourceCachesToClear == InMemoryResourceCachesOnly)
-        return;
-    forEachNetworkSession([](NetworkSession& session) {
-        if (auto* cache = session.cache())
-            cache->clear();
-    });
 }
 
 void NetworkProcess::platformInitializeNetworkProcess(const NetworkProcessCreationParameters& parameters)
@@ -86,10 +71,43 @@ void NetworkProcess::platformTerminate()
     notImplemented();
 }
 
+static bool disableServiceWorkerEntitlementTestingOverride;
+
 bool NetworkProcess::parentProcessHasServiceWorkerEntitlement() const
 {
-    static bool hasEntitlement = WTF::hasEntitlement(parentProcessConnection()->xpcConnection(), "com.apple.developer.WebKit.ServiceWorkers");
+    if (disableServiceWorkerEntitlementTestingOverride)
+        return false;
+
+    static bool hasEntitlement = WTF::hasEntitlement(parentProcessConnection()->xpcConnection(), "com.apple.developer.WebKit.ServiceWorkers") || WTF::hasEntitlement(parentProcessConnection()->xpcConnection(), "com.apple.developer.web-browser");
     return hasEntitlement;
+}
+
+void NetworkProcess::disableServiceWorkerEntitlement()
+{
+    disableServiceWorkerEntitlementTestingOverride = true;
+}
+
+void NetworkProcess::clearServiceWorkerEntitlementOverride(CompletionHandler<void()>&& completionHandler)
+{
+    disableServiceWorkerEntitlementTestingOverride = false;
+    completionHandler();
+}
+
+#endif // !PLATFORM(MACCATALYST)
+
+void NetworkProcess::setIsHoldingLockedFiles(bool isHoldingLockedFiles)
+{
+    if (!isHoldingLockedFiles) {
+        m_holdingLockedFileAssertion = nullptr;
+        return;
+    }
+
+    if (m_holdingLockedFileAssertion && m_holdingLockedFileAssertion->isValid())
+        return;
+
+    // We synchronously take a process assertion when beginning a SQLite transaction so that we don't get suspended
+    // while holding a locked file. We would get killed if suspended while holding locked files.
+    m_holdingLockedFileAssertion = ProcessAssertion::create(getCurrentProcessID(), "Network Process is holding locked files"_s, ProcessAssertionType::FinishTaskInterruptable, ProcessAssertion::Mode::Sync);
 }
 
 } // namespace WebKit

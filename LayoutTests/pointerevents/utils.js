@@ -12,6 +12,7 @@ function target_test(...args)
     let continutation = args[impliedOptions ? 0 : 1];
     let description = args[impliedOptions ? 1 : 2];
 
+    options.name = options.name || "div";
     options.x = options.x || 0;
     options.y = options.y || 0;
     options.width = options.width || "100%";
@@ -24,7 +25,7 @@ function target_test(...args)
 
 function makeTarget(test, options)
 {
-    const target = document.body.appendChild(document.createElement("div"));
+    const target = document.body.appendChild(document.createElement(options.name));
     target.setAttribute("style", `
         position: absolute;
         left: ${options.x};
@@ -98,12 +99,12 @@ class EventTracker
     assertMatchesEvents(expectedEvents)
     {
         assert_true(!!this.events.length, "Event tracker saw some events.");
-        assert_equals(expectedEvents.length, this.events.length, "Expected events and actual events have the same length.");
+        assert_equals(this.events.length, expectedEvents.length, "Expected events and actual events have the same length.");
         for (let i = 0; i < expectedEvents.length; ++i) {
             const expectedEvent = expectedEvents[i];
             const actualEvent = this.events[i];
             for (let property of Object.getOwnPropertyNames(expectedEvent))
-                assert_equals(expectedEvent[property], actualEvent[property], `Property ${property} matches for event at index ${i}.`);
+                assert_equals(actualEvent[property], expectedEvent[property], `Property ${property} matches for event at index ${i}.`);
         }
     }
 }
@@ -124,23 +125,27 @@ const ui = new (class UIController {
     swipe(from, to)
     {
         const durationInSeconds = 0.1;
-        return new Promise(resolve => this._run(`uiController.dragFromPointToPoint(${from.x}, ${from.y}, ${to.x}, ${to.y}, ${durationInSeconds})`).then(() =>
+        return new Promise(resolve => this._run('dragFromPointToPoint', `${from.x}, ${from.y}, ${to.x}, ${to.y}, ${durationInSeconds}`).then(() =>
             setTimeout(resolve, durationInSeconds * 1000)
         ));
     }
 
     tap(options)
     {
-        return this._run(`uiController.singleTapAtPoint(${options.x}, ${options.y})`);
+        return this._run('singleTapAtPoint', `${options.x}, ${options.y}`);
+    }
+
+    doubleTap(options)
+    {
+        return this._run('doubleTapAtPoint', `${options.x}, ${options.y}, 0`);
     }
 
     doubleTapToZoom(options)
     {
         const durationInSeconds = 0.35;
-        return new Promise(resolve => this._run(`uiController.doubleTapAtPoint(${options.x}, ${options.y}, 0)`).then(() =>
+        return new Promise(resolve => this._run('doubleTapAtPoint', `${options.x}, ${options.y}, 0`).then(() =>
             setTimeout(resolve, durationInSeconds * 1000)
         ));
-        return this._run();
     }
 
     pinchOut(options)
@@ -213,20 +218,18 @@ const ui = new (class UIController {
         options.azimuthAngle = options.azimuthAngle || 0;
         options.altitudeAngle = options.altitudeAngle || 0;
         options.pressure = options.pressure || 0;
-        return this._run(`uiController.stylusTapAtPoint(${options.x}, ${options.y}, ${options.azimuthAngle}, ${options.altitudeAngle}, ${options.pressure})`);
+        return this._run('stylusTapAtPoint', `${options.x}, ${options.y}, ${options.azimuthAngle}, ${options.altitudeAngle}, ${options.pressure}`);
     }
 
     _runEvents(events)
     {
-        return this._run(`uiController.sendEventStream('${JSON.stringify({ events })}')`);
+        return this._run('sendEventStream', `'${JSON.stringify({ events })}'`);
     }
 
-    _run(command)
+    _run(command, args)
     {
-        return new Promise(resolve => testRunner.runUIScript(`(function() {
-            (function() { ${command} })();
-            uiController.uiScriptComplete();
-        })();`, resolve));
+        const script = `uiController.${command}(${args}, () => uiController.uiScriptComplete());`;
+        return new Promise(resolve => testRunner.runUIScript(script, resolve));
     }
 
 })();

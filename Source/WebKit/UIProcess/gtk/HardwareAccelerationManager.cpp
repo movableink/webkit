@@ -41,9 +41,14 @@ HardwareAccelerationManager::HardwareAccelerationManager()
     : m_canUseHardwareAcceleration(true)
     , m_forceHardwareAcceleration(false)
 {
-#if !ENABLE(OPENGL)
+#if !ENABLE(WEBGL)
     m_canUseHardwareAcceleration = false;
     return;
+#endif
+
+#if USE(GTK4)
+    RELEASE_ASSERT(AcceleratedBackingStore::checkRequirements());
+    m_forceHardwareAcceleration = true;
 #endif
 
     const char* disableCompositing = getenv("WEBKIT_DISABLE_COMPOSITING_MODE");

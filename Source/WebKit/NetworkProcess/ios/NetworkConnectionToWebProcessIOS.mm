@@ -25,9 +25,11 @@
 
 #import "config.h"
 #import "NetworkConnectionToWebProcess.h"
+#import "NetworkProcessProxyMessages.h"
 
 #if PLATFORM(IOS_FAMILY)
 
+#import "NetworkProcess.h"
 #import "NetworkSessionCocoa.h"
 #import "PaymentAuthorizationController.h"
 
@@ -52,6 +54,13 @@ UIViewController *NetworkConnectionToWebProcess::paymentCoordinatorPresentingVie
     return nil;
 }
 
+#if ENABLE(APPLE_PAY_REMOTE_UI_USES_SCENE)
+void NetworkConnectionToWebProcess::getWindowSceneIdentifierForPaymentPresentation(WebPageProxyIdentifier webPageProxyIdentifier, CompletionHandler<void(const String&)>&& completionHandler)
+{
+    networkProcess().parentProcessConnection()->sendWithAsyncReply(Messages::NetworkProcessProxy::GetWindowSceneIdentifierForPaymentPresentation(webPageProxyIdentifier), WTFMove(completionHandler));
+}
+#endif
+
 const String& NetworkConnectionToWebProcess::paymentCoordinatorBoundInterfaceIdentifier(const WebPaymentCoordinatorProxy&)
 {
     if (auto* session = static_cast<NetworkSessionCocoa*>(networkSession()))
@@ -62,7 +71,7 @@ const String& NetworkConnectionToWebProcess::paymentCoordinatorBoundInterfaceIde
 const String& NetworkConnectionToWebProcess::paymentCoordinatorCTDataConnectionServiceType(const WebPaymentCoordinatorProxy&)
 {
     if (auto* session = static_cast<NetworkSessionCocoa*>(networkSession()))
-        return session->ctDataConnectionServiceType();
+        return session->dataConnectionServiceType();
     return emptyString();
 }
 
@@ -85,11 +94,11 @@ std::unique_ptr<PaymentAuthorizationPresenter> NetworkConnectionToWebProcess::pa
     return makeUnique<PaymentAuthorizationController>(coordinator, request);
 }
 
-void NetworkConnectionToWebProcess::paymentCoordinatorAddMessageReceiver(WebPaymentCoordinatorProxy&, const IPC::StringReference&, IPC::MessageReceiver&)
+void NetworkConnectionToWebProcess::paymentCoordinatorAddMessageReceiver(WebPaymentCoordinatorProxy&, IPC::ReceiverName, IPC::MessageReceiver&)
 {
 }
 
-void NetworkConnectionToWebProcess::paymentCoordinatorRemoveMessageReceiver(WebPaymentCoordinatorProxy&, const IPC::StringReference&)
+void NetworkConnectionToWebProcess::paymentCoordinatorRemoveMessageReceiver(WebPaymentCoordinatorProxy&, IPC::ReceiverName)
 {
 }
 

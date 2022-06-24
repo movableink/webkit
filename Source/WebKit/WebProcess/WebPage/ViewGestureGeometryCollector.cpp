@@ -39,6 +39,7 @@
 #include <WebCore/HTMLTextFormControlElement.h>
 #include <WebCore/HitTestResult.h>
 #include <WebCore/ImageDocument.h>
+#include <WebCore/Range.h>
 #include <WebCore/RenderView.h>
 #include <WebCore/TextIterator.h>
 
@@ -83,7 +84,7 @@ void ViewGestureGeometryCollector::collectGeometryForSmartMagnificationGesture(F
 {
     FloatRect visibleContentRect = m_webPage.mainFrameView()->unobscuredContentRectIncludingScrollbars();
 
-    if (m_webPage.mainWebFrame()->handlesPageScaleGesture())
+    if (m_webPage.mainWebFrame().handlesPageScaleGesture())
         return;
 
     double viewportMinimumScale;
@@ -136,7 +137,7 @@ struct FontSizeAndCount {
     unsigned count;
 };
 
-Optional<std::pair<double, double>> ViewGestureGeometryCollector::computeTextLegibilityScales(double& viewportMinimumScale, double& viewportMaximumScale)
+std::optional<std::pair<double, double>> ViewGestureGeometryCollector::computeTextLegibilityScales(double& viewportMinimumScale, double& viewportMaximumScale)
 {
     static const unsigned fontSizeBinningInterval = 2;
     static const double maximumNumberOfTextRunsToConsider = 200;
@@ -149,19 +150,18 @@ Optional<std::pair<double, double>> ViewGestureGeometryCollector::computeTextLeg
     if (m_cachedTextLegibilityScales)
         return m_cachedTextLegibilityScales;
 
-    auto document = makeRefPtr(m_webPage.mainFrame()->document());
+    RefPtr document = m_webPage.mainFrame()->document();
     if (!document)
-        return WTF::nullopt;
+        return std::nullopt;
 
     document->updateLayoutIgnorePendingStylesheets();
 
-    auto documentRange = Range::create(*document, {{ document->documentElement(), Position::PositionIsBeforeAnchor }}, {{ document->documentElement(), Position::PositionIsAfterAnchor }});
     HashSet<Node*> allTextNodes;
     HashMap<unsigned, unsigned> fontSizeToCountMap;
     unsigned numberOfIterations = 0;
     unsigned totalSampledTextLength = 0;
 
-    for (TextIterator documentTextIterator { documentRange.ptr(), TextIteratorEntersTextControls }; !documentTextIterator.atEnd(); documentTextIterator.advance()) {
+    for (TextIterator documentTextIterator { makeRangeSelectingNodeContents(*document), TextIteratorBehavior::EntersTextControls }; !documentTextIterator.atEnd(); documentTextIterator.advance()) {
         if (++numberOfIterations >= maximumNumberOfTextRunsToConsider)
             break;
 
@@ -181,10 +181,9 @@ Optional<std::pair<double, double>> ViewGestureGeometryCollector::computeTextLeg
         totalSampledTextLength += textLength;
     }
 
-    Vector<FontSizeAndCount> sortedFontSizesAndCounts;
-    sortedFontSizesAndCounts.reserveCapacity(fontSizeToCountMap.size());
-    for (auto& entry : fontSizeToCountMap)
-        sortedFontSizesAndCounts.append({ entry.key, entry.value });
+    auto sortedFontSizesAndCounts = WTF::map(fontSizeToCountMap, [](auto& entry) {
+        return FontSizeAndCount { entry.key, entry.value };
+    });
 
     std::sort(sortedFontSizesAndCounts.begin(), sortedFontSizesAndCounts.end(), [] (auto& first, auto& second) {
         return first.fontSize < second.fontSize;
@@ -244,16 +243,14 @@ void ViewGestureGeometryCollector::computeMinimumAndMaximumViewportScales(double
 #endif
 }
 
-#if PLATFORM(MAC)
+#if !PLATFORM(IOS_FAMILY)
 void ViewGestureGeometryCollector::collectGeometryForMagnificationGesture()
 {
     FloatRect visibleContentRect = m_webPage.mainFrameView()->unobscuredContentRectIncludingScrollbars();
-    bool frameHandlesMagnificationGesture = m_webPage.mainWebFrame()->handlesPageScaleGesture();
+    bool frameHandlesMagnificationGesture = m_webPage.mainWebFrame().handlesPageScaleGesture();
     m_webPage.send(Messages::ViewGestureController::DidCollectGeometryForMagnificationGesture(visibleContentRect, frameHandlesMagnificationGesture));
 }
-#endif
 
-#if !PLATFORM(IOS_FAMILY)
 void ViewGestureGeometryCollector::setRenderTreeSizeNotificationThreshold(uint64_t size)
 {
     m_renderTreeSizeNotificationThreshold = size;

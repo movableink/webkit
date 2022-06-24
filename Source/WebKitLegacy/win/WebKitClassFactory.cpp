@@ -56,6 +56,7 @@
 #include "WebView.h"
 #include "WebWorkersPrivate.h"
 #include <JavaScriptCore/InitializeThreading.h>
+#include <WebCore/WebCoreJITOperations.h>
 #include <wtf/MainThread.h>
 #include <wtf/SoftLinking.h>
 
@@ -63,8 +64,9 @@
 WebKitClassFactory::WebKitClassFactory(CLSID targetClass)
     : m_targetClass(targetClass)
 {
-    JSC::initializeThreading();
+    JSC::initialize();
     WTF::initializeMainThread();
+    WebCore::populateJITOperations();
 
     gClassCount++;
     gClassNameCount().add("WebKitClassFactory");

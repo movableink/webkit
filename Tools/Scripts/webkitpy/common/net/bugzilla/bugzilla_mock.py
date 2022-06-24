@@ -31,8 +31,6 @@ import datetime
 import logging
 
 from webkitpy.common.net.bugzilla.bug import Bug
-from webkitpy.common.net.bugzilla.bugzilla import Bugzilla
-from webkitpy.common.net.bugzilla.attachment import Attachment
 from webkitpy.common.config.committers import CommitterList, Reviewer
 
 _log = logging.getLogger(__name__)
@@ -122,7 +120,7 @@ _patch6 = {  # Valid committer, but no reviewer.
     "id": 10005,
     "bug_id": 50003,
     "url": "http://example.com/10002",
-    "name": "ROLLOUT of r3489",
+    "name": "REVERT of r3489",
     "is_obsolete": False,
     "is_patch": True,
     "commit-queue": "+",
@@ -151,19 +149,6 @@ _patch8 = {  # Resolved bug, without review flag, not marked obsolete (maybe alr
     "is_obsolete": False,
     "is_patch": True,
     "attacher_email": "eric@webkit.org",
-}
-
-_patch9 = {
-    'id': 10008,
-    'bug_id': 50007,
-    'url': 'http://example.com/10008',
-    'name': 'Patch9',
-    'is_obsolete': False,
-    'is_patch': True,
-    'review': '?',
-    'commit-queue': '-',
-    'attacher_email': 'dbates@webkit.org',
-    'attach_date': datetime.datetime.today(),
 }
 
 # This matches one of Bug.unassigned_emails
@@ -236,7 +221,7 @@ _bug4 = {
                   },
                  {"comment_date":  datetime.datetime(2011, 6, 11, 9, 4, 3),
                   "comment_email": "bar@foo.com",
-                  "text": "Rolled out in <https://trac.webkit.org/changeset/26",
+                  "text": "Reverted in <https://trac.webkit.org/changeset/26",
                   },
                  ],
 }
@@ -293,23 +278,6 @@ _bug7 = {
 }
 
 
-_bug8 = {
-    'id': 50007,
-    'title': 'Security bug with a patch needing review.',
-    'reporter_email': 'dbates@webkit.org',
-    'assigned_to_email': 'foo@foo.com',
-    'cc_emails': [],
-    'attachments': [_patch9],
-    'bug_status': 'ASSIGNED',
-    'groups': frozenset(['Security-Sensitive']),
-    'comments': [{'comment_date':  datetime.datetime(2011, 6, 11, 9, 4, 3),
-                  'comment_email': 'bar@foo.com',
-                  'text': 'Message1.\nCommitted r35: <https://trac.webkit.org/changeset/35>',
-                  },
-                 ],
-}
-
-
 class MockBugzillaQueries(object):
 
     def __init__(self, bugzilla):
@@ -323,17 +291,15 @@ class MockBugzillaQueries(object):
         bugs_with_commit_queued_patches = filter(
                 lambda bug: bug.commit_queued_patches(),
                 self._all_bugs())
-        return map(lambda bug: bug.id(), bugs_with_commit_queued_patches)
+        return list(map(lambda bug: bug.id(), bugs_with_commit_queued_patches))
 
-    def fetch_attachment_ids_from_review_queue(self, since=None, only_security_bugs=False):
+    def fetch_attachment_ids_from_review_queue(self, since=None):
         unreviewed_patches = sum([bug.unreviewed_patches()
                                   for bug in self._all_bugs()], [])
         if since:
             unreviewed_patches = [patch for patch in unreviewed_patches
                                         if patch.attach_date() >= since]
-        if only_security_bugs:
-            unreviewed_patches = filter(lambda patch: patch.bug().is_security_sensitive(), unreviewed_patches)
-        return map(lambda patch: patch.id(), unreviewed_patches)
+        return list(map(lambda patch: patch.id(), unreviewed_patches))
 
     def fetch_patches_from_commit_queue(self):
         return sum([bug.commit_queued_patches()
@@ -342,7 +308,7 @@ class MockBugzillaQueries(object):
     def fetch_bug_ids_from_pending_commit_list(self):
         bugs_with_reviewed_patches = filter(lambda bug: bug.reviewed_patches(),
                                             self._all_bugs())
-        bug_ids = map(lambda bug: bug.id(), bugs_with_reviewed_patches)
+        bug_ids = list(map(lambda bug: bug.id(), bugs_with_reviewed_patches))
         # NOTE: This manual hack here is to allow testing logging in
         # test_assign_to_committer the real pending-commit query on bugzilla
         # will return bugs with patches which have r+, but are also obsolete.
@@ -378,10 +344,16 @@ class MockBugzilla(object):
 
     bug_server_url = "http://example.com"
 
-    bug_cache = _id_to_object_dictionary(_bug1, _bug2, _bug3, _bug4, _bug5, _bug6, _bug7, _bug8)
+    bug_cache = _id_to_object_dictionary(_bug1, _bug2, _bug3, _bug4, _bug5, _bug6, _bug7)
 
-    attachment_cache = _id_to_object_dictionary(_patch1, _patch2, _patch3, _patch4, _patch5, _patch6,
-                                                _patch7, _patch8, _patch9)
+    attachment_cache = _id_to_object_dictionary(_patch1,
+                                                _patch2,
+                                                _patch3,
+                                                _patch4,
+                                                _patch5,
+                                                _patch6,
+                                                _patch7,
+                                                _patch8)
 
     def __init__(self):
         self.queries = MockBugzillaQueries(self)
@@ -423,23 +395,18 @@ class MockBugzilla(object):
     def set_override_patch(self, patch):
         self._override_patch = patch
 
-    def fetch_attachment(self, attachment_id, throw_on_access_error=False):
+    def fetch_attachment(self, attachment_id):
         if self._override_patch:
             return self._override_patch
 
-        attachment_dictionary = self.attachment_cache.get(int(attachment_id))
+        attachment_dictionary = self.attachment_cache.get(attachment_id)
         if not attachment_dictionary:
             print("MOCK: fetch_attachment: %s is not a known attachment id" % attachment_id)
             return None
         bug = self.fetch_bug(attachment_dictionary["bug_id"])
-        if bug.is_security_sensitive() and throw_on_access_error:
-            raise Bugzilla.AccessError(attachment_id, Bugzilla.AccessError.NOT_PERMITTED, 'Bug Access Denied')
         for attachment in bug.attachments(include_obsolete=True):
             if attachment.id() == int(attachment_id):
                 return attachment
-
-    def fetch_attachment_contents(self, attachment_id):
-        return 'Patch'
 
     def bug_url_for_bug_id(self, bug_id):
         return "%s/%s" % (self.bug_server_url, bug_id)
@@ -470,7 +437,7 @@ class MockBugzilla(object):
 
     def post_comment_to_bug(self, bug_id, comment_text, cc=None, see_also=None):
         _log.info("MOCK bug comment: bug_id=%s, cc=%s, see_also=%s\n--- Begin comment ---\n%s\n--- End comment ---\n" % (
-                  bug_id, cc, see_also, comment_text))
+                  bug_id, sorted(cc or []) or None, see_also, comment_text))
 
     def add_attachment_to_bug(self, bug_id, file_or_string, description, filename=None, comment_text=None, mimetype=None):
         _log.info("MOCK add_attachment_to_bug: bug_id=%s, description=%s filename=%s mimetype=%s" %
@@ -494,11 +461,6 @@ class MockBugzilla(object):
             _log.info("-- Begin comment --")
             _log.info(comment_text)
             _log.info("-- End comment --")
-        bug = self.fetch_bug(bug_id)
-        if bug.bug_dictionary:
-            patches = bug.patches()
-            if len(patches) == 1:
-                return patches[0].id()
         return '10001'
 
     def add_cc_to_bug(self, bug_id, ccs):
@@ -510,7 +472,7 @@ class MockBugzilla(object):
     def reopen_bug(self, bug_id, message):
         _log.info("MOCK reopen_bug %s with comment '%s'" % (bug_id, message))
 
-    def close_bug_as_fixed(self, bug_id, message):
+    def close_bug_as_fixed(self, bug_id, comment_text=None):
         pass
 
     def clear_attachment_flags(self, attachment_id, message):

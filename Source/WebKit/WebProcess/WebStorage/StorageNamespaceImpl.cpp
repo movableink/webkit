@@ -27,9 +27,9 @@
 #include "StorageNamespaceImpl.h"
 
 #include "NetworkProcessConnection.h"
+#include "NetworkStorageManagerMessages.h"
 #include "StorageAreaImpl.h"
 #include "StorageAreaMap.h"
-#include "StorageManagerSetMessages.h"
 #include "WebPage.h"
 #include "WebPageGroupProxy.h"
 #include "WebProcess.h"
@@ -59,15 +59,15 @@ Ref<StorageNamespaceImpl> StorageNamespaceImpl::createSessionStorageNamespace(Id
 
 Ref<StorageNamespaceImpl> StorageNamespaceImpl::createLocalStorageNamespace(Identifier identifier, unsigned quotaInBytes)
 {
-    return adoptRef(*new StorageNamespaceImpl(StorageType::Local, identifier, WTF::nullopt, nullptr, quotaInBytes));
+    return adoptRef(*new StorageNamespaceImpl(StorageType::Local, identifier, std::nullopt, nullptr, quotaInBytes));
 }
 
 Ref<StorageNamespaceImpl> StorageNamespaceImpl::createTransientLocalStorageNamespace(Identifier identifier, WebCore::SecurityOrigin& topLevelOrigin, uint64_t quotaInBytes)
 {
-    return adoptRef(*new StorageNamespaceImpl(StorageType::TransientLocal, identifier, WTF::nullopt, &topLevelOrigin, quotaInBytes));
+    return adoptRef(*new StorageNamespaceImpl(StorageType::TransientLocal, identifier, std::nullopt, &topLevelOrigin, quotaInBytes));
 }
 
-StorageNamespaceImpl::StorageNamespaceImpl(WebCore::StorageType storageType, Identifier storageNamespaceID, const Optional<PageIdentifier>& pageIdentifier, WebCore::SecurityOrigin* topLevelOrigin, unsigned quotaInBytes)
+StorageNamespaceImpl::StorageNamespaceImpl(WebCore::StorageType storageType, Identifier storageNamespaceID, const std::optional<PageIdentifier>& pageIdentifier, WebCore::SecurityOrigin* topLevelOrigin, unsigned quotaInBytes)
     : m_storageType(storageType)
     , m_storageNamespaceID(storageNamespaceID)
     , m_sessionPageID(pageIdentifier)
@@ -95,24 +95,17 @@ PAL::SessionID StorageNamespaceImpl::sessionID() const
     return WebProcess::singleton().sessionID();
 }
 
-void StorageNamespaceImpl::didDestroyStorageAreaMap(StorageAreaMap& map)
+void StorageNamespaceImpl::destroyStorageAreaMap(StorageAreaMap& map)
 {
     m_storageAreaMaps.remove(map.securityOrigin().data());
 }
 
-Ref<StorageArea> StorageNamespaceImpl::storageArea(const SecurityOriginData& securityOriginData)
+Ref<StorageArea> StorageNamespaceImpl::storageArea(const SecurityOrigin& securityOrigin)
 {
-    RefPtr<StorageAreaMap> map;
-
-    auto securityOrigin = securityOriginData.securityOrigin();
-    auto& slot = m_storageAreaMaps.add(securityOrigin->data(), nullptr).iterator->value;
-    if (!slot) {
-        map = StorageAreaMap::create(this, WTFMove(securityOrigin));
-        slot = map.get();
-    } else
-        map = slot;
-
-    return StorageAreaImpl::create(map.releaseNonNull());
+    auto& map = m_storageAreaMaps.ensure(securityOrigin.data(), [&] {
+        return makeUnique<StorageAreaMap>(*this, securityOrigin);
+    }).iterator->value;
+    return StorageAreaImpl::create(*map);
 }
 
 Ref<StorageNamespace> StorageNamespaceImpl::copy(Page& newPage)
@@ -121,7 +114,7 @@ Ref<StorageNamespace> StorageNamespaceImpl::copy(Page& newPage)
     ASSERT(m_storageType == StorageType::Session);
 
     if (auto networkProcessConnection = WebProcess::singleton().existingNetworkProcessConnection())
-        networkProcessConnection->connection().send(Messages::StorageManagerSet::CloneSessionStorageNamespace(sessionID(), m_storageNamespaceID, WebPage::fromCorePage(newPage).sessionStorageNamespaceIdentifier()), 0);
+        networkProcessConnection->connection().send(Messages::NetworkStorageManager::CloneSessionStorageNamespace(m_storageNamespaceID, WebPage::fromCorePage(newPage).sessionStorageNamespaceIdentifier()), 0);
 
     return adoptRef(*new StorageNamespaceImpl(m_storageType, WebPage::fromCorePage(newPage).sessionStorageNamespaceIdentifier(), WebPage::fromCorePage(newPage).identifier(), m_topLevelOrigin.get(), m_quotaInBytes));
 }
@@ -137,10 +130,10 @@ PageIdentifier StorageNamespaceImpl::sessionStoragePageID() const
     return *m_sessionPageID;
 }
 
-uint64_t StorageNamespaceImpl::pageGroupID() const
+PageGroupIdentifier StorageNamespaceImpl::pageGroupID() const
 {
     ASSERT(m_storageType == StorageType::Local || m_storageType == StorageType::TransientLocal);
-    return m_storageNamespaceID.toUInt64();
+    return makeObjectIdentifier<PageGroupIdentifierType>(m_storageNamespaceID.toUInt64());
 }
 
 } // namespace WebKit

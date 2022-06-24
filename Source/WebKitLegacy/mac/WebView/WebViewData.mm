@@ -40,12 +40,15 @@
 #import <WebCore/RunLoopObserver.h>
 #import <WebCore/TextIndicatorWindow.h>
 #import <WebCore/ValidationBubble.h>
+#import <WebCore/WebCoreJITOperations.h>
 #import <wtf/MainThread.h>
 #import <wtf/RunLoop.h>
+#import <wtf/SetForScope.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import "WebGeolocationProviderIOS.h"
 #import <WebCore/RuntimeApplicationChecks.h>
+#import <WebCore/WebCoreThread.h>
 #import <WebCore/WebCoreThreadInternal.h>
 #endif
 
@@ -69,7 +72,7 @@ static CFRunLoopRef currentRunLoop()
     // we still allow this, see <rdar://problem/7403328>. Since the race condition and subsequent
     // crash are especially troublesome for iBooks, we never allow the observer to be added to the
     // main run loop in iBooks.
-    if (WebCore::IOSApplication::isIBooks())
+    if (WebCore::CocoaApplication::isIBooks())
         return WebThreadRunLoop();
 #endif
     return CFRunLoopGetCurrent();
@@ -107,6 +110,9 @@ WebViewLayerFlushScheduler::~WebViewLayerFlushScheduler()
 
 void WebViewLayerFlushScheduler::schedule()
 {
+    if (m_insideCallback)
+        m_rescheduledInsideCallback = true;
+
     m_runLoopObserver->schedule(currentRunLoop());
 }
 
@@ -117,9 +123,19 @@ void WebViewLayerFlushScheduler::invalidate()
 
 void WebViewLayerFlushScheduler::layerFlushCallback()
 {
+#if PLATFORM(IOS_FAMILY)
+    // Normally the layer flush callback happens before the web lock auto-unlock observer runs.
+    // However if the flush is rescheduled from the callback it may get pushed past it, to the next cycle.
+    WebThreadLock();
+#endif
+
     @autoreleasepool {
         RefPtr<LayerFlushController> protector = m_flushController;
-        if (m_flushController->flushLayers())
+
+        SetForScope insideCallbackScope(m_insideCallback, true);
+        m_rescheduledInsideCallback = false;
+
+        if (m_flushController->flushLayers() && !m_rescheduledInsideCallback)
             invalidate();
     }
 }
@@ -167,8 +183,9 @@ void WebViewLayerFlushScheduler::layerFlushCallback()
 + (void)initialize
 {
 #if !PLATFORM(IOS_FAMILY)
-    JSC::initializeThreading();
-    RunLoop::initializeMainRunLoop();
+    JSC::initialize();
+    WTF::initializeMainThread();
+    WebCore::populateJITOperations();
 #endif
 }
 
@@ -206,9 +223,7 @@ void WebViewLayerFlushScheduler::layerFlushCallback()
 
     pluginDatabaseClientCount++;
 
-#if USE(DICTATION_ALTERNATIVES)
     m_alternativeTextUIController = makeUnique<WebCore::AlternativeTextUIController>();
-#endif
 
     return self;
 }
@@ -222,37 +237,6 @@ void WebViewLayerFlushScheduler::layerFlushCallback()
 #endif
 #if ENABLE(VIDEO)
     ASSERT(!fullscreenController);
-#endif
-
-    [applicationNameForUserAgent release];
-#if !PLATFORM(IOS_FAMILY)
-    [backgroundColor release];
-#else
-    CGColorRelease(backgroundColor);
-#endif
-    [inspector release];
-    [currentNodeHighlight release];
-#if PLATFORM(MAC)
-    [immediateActionController release];
-#endif
-    [hostWindow release];
-    [policyDelegateForwarder release];
-    [UIDelegateForwarder release];
-    [frameLoadDelegateForwarder release];
-    [editingDelegateForwarder release];
-    [mediaStyle release];
-
-#if ENABLE(REMOTE_INSPECTOR)
-#if PLATFORM(IOS_FAMILY)
-    [indicateLayer release];
-#endif
-#endif
-
-#if PLATFORM(IOS_FAMILY)
-    [UIKitDelegateForwarder release];
-    [formDelegateForwarder release];
-    [_caretChangeListeners release];
-    [_fixedPositionContent release];
 #endif
 
     [super dealloc];

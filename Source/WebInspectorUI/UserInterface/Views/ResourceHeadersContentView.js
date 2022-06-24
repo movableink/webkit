@@ -122,17 +122,19 @@ WI.ResourceHeadersContentView = class ResourceHeadersContentView extends WI.Cont
         }
     }
 
-    hidden()
+    detached()
     {
-        super.hidden();
-
         if (this._popover)
             this._popover.dismiss();
+
+        super.detached();
     }
 
     closed()
     {
-        this._resource.removeEventListener(null, null, this);
+        this._resource.removeEventListener(WI.Resource.Event.MetricsDidChange, this._resourceMetricsDidChange, this);
+        this._resource.removeEventListener(WI.Resource.Event.RequestHeadersDidChange, this._resourceRequestHeadersDidChange, this);
+        this._resource.removeEventListener(WI.Resource.Event.ResponseReceived, this._resourceResponseReceived, this);
 
         super.closed();
     }
@@ -233,7 +235,7 @@ WI.ResourceHeadersContentView = class ResourceHeadersContentView extends WI.Cont
         case WI.Resource.ResponseSource.ServiceWorker:
             return WI.UIString("Service Worker");
         case WI.Resource.ResponseSource.InspectorOverride:
-            return WI.UIString("Inspector Override");
+            return WI.UIString("Local Override");
         case WI.Resource.ResponseSource.Unknown:
         default:
             return null;
@@ -249,7 +251,7 @@ WI.ResourceHeadersContentView = class ResourceHeadersContentView extends WI.Cont
 
         for (let redirect of this._resource.redirects)
             this._summarySection.appendKeyValuePair(WI.UIString("URL"), redirect.url.insertWordBreakCharacters(), "url");
-        this._summarySection.appendKeyValuePair(WI.UIString("URL"), this._resource.url.insertWordBreakCharacters(), "url");
+        this._summarySection.appendKeyValuePair(WI.UIString("URL"), this._resource.displayURL.insertWordBreakCharacters(), "url");
 
         let status = emDash;
         if (!isNaN(this._resource.statusCode))
@@ -477,7 +479,12 @@ WI.ResourceHeadersContentView = class ResourceHeadersContentView extends WI.Cont
 
     _perfomSearchOnKeyValuePairs()
     {
-        let searchRegex = WI.SearchUtilities.regExpForString(this._searchQuery, WI.SearchUtilities.defaultSettings);
+        let searchRegex = WI.SearchUtilities.searchRegExpForString(this._searchQuery, WI.SearchUtilities.defaultSettings);
+        if (!searchRegex) {
+            this.searchCleared();
+            this.dispatchEventToListeners(WI.TextEditor.Event.NumberOfSearchResultsDidChange);
+            return;
+        }
 
         let elements = this.element.querySelectorAll(".key, .value");
         for (let element of elements) {

@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- webkit-test-runner [ internal:WebAPIStatisticsEnabled=true ] -->
+<!DOCTYPE html><!-- webkit-test-runner [ WebAPIStatisticsEnabled=true ] -->
 <head>
     <meta charset="UTF-8">
     <title>Test for screen functions accessed data collection in resource load statistics</title>
@@ -19,8 +19,6 @@
     }
 
     function runTestRunnerTest() {
-        testRunner.setStatisticsNotifyPagesWhenDataRecordsWereScanned(true);
-
         testRunner.installStatisticsDidScanDataRecordsCallback(completeTest);
     
         var availTop = screen.availTop;
@@ -39,7 +37,6 @@
         testRunner.dumpResourceLoadStatistics();
         testRunner.waitUntilDone();
         internals.setResourceLoadStatisticsEnabled(true);
-        testRunner.setWebAPIStatisticsEnabled(true);
         runTestRunnerTest();
     }
 </script>

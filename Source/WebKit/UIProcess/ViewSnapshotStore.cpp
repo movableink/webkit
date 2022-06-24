@@ -58,14 +58,14 @@ void ViewSnapshotStore::didAddImageToSnapshot(ViewSnapshot& snapshot)
 {
     bool isNewEntry = m_snapshotsWithImages.add(&snapshot).isNewEntry;
     ASSERT_UNUSED(isNewEntry, isNewEntry);
-    m_snapshotCacheSize += snapshot.imageSizeInBytes();
+    m_snapshotCacheSize += snapshot.estimatedImageSizeInBytes();
 }
 
 void ViewSnapshotStore::willRemoveImageFromSnapshot(ViewSnapshot& snapshot)
 {
     bool removed = m_snapshotsWithImages.remove(&snapshot);
     ASSERT_UNUSED(removed, removed);
-    m_snapshotCacheSize -= snapshot.imageSizeInBytes();
+    m_snapshotCacheSize -= snapshot.estimatedImageSizeInBytes();
 }
 
 void ViewSnapshotStore::pruneSnapshots(WebPageProxy& webPageProxy)
@@ -89,7 +89,7 @@ void ViewSnapshotStore::recordSnapshot(WebPageProxy& webPageProxy, WebBackForwar
 
     webPageProxy.willRecordNavigationSnapshot(item);
 
-    auto snapshot = webPageProxy.takeViewSnapshot();
+    auto snapshot = webPageProxy.takeViewSnapshot(std::nullopt);
     if (!snapshot)
         return;
 

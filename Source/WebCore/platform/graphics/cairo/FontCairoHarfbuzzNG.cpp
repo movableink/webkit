@@ -27,7 +27,7 @@
 #include "config.h"
 #include "FontCascade.h"
 
-#if USE(CAIRO)
+//#if USE(CAIRO)
 
 #include "CharacterProperties.h"
 #include "FontCache.h"
@@ -138,7 +138,7 @@ const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* original
             return fallbackFont;
     }
 
-    if (auto systemFallback = FontCache::singleton().systemFallbackForCharacters(m_fontDescription, baseFont, IsForPlatformFont::No, preferColoredFont ? FontCache::PreferColoredFont::Yes : FontCache::PreferColoredFont::No, characters, length)) {
+    if (auto systemFallback = FontCache::forCurrentThread().systemFallbackForCharacters(m_fontDescription, baseFont, IsForPlatformFont::No, preferColoredFont ? FontCache::PreferColoredFont::Yes : FontCache::PreferColoredFont::No, characters, length)) {
         if (systemFallback->canRenderCombiningCharacterSequence(characters, length) && (!preferColoredFont || systemFallback->platformData().isColorBitmapFont()))
             return systemFallback.get();
 
@@ -152,4 +152,4 @@ const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* original
 
 } // namespace WebCore
 
-#endif // USE(CAIRO)
+//#endif // USE(CAIRO)

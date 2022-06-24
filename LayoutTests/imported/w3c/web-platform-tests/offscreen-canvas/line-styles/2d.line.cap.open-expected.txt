@@ -1,7 +1,0 @@
-2d.line.cap.open
-
-Line caps are drawn at the corners of an unclosed rectangle
-
-
-FAIL Line caps are drawn at the corners of an unclosed rectangle null is not an object (evaluating 'ctx.fillStyle = '#f00'')
-

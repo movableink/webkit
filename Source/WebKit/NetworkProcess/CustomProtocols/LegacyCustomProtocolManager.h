@@ -25,10 +25,13 @@
 
 #pragma once
 
+#include "DataReference.h"
+#include "LegacyCustomProtocolID.h"
 #include "MessageReceiver.h"
 #include "NetworkProcessSupplement.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/Lock.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
@@ -37,10 +40,6 @@
 OBJC_CLASS NSURLSessionConfiguration;
 OBJC_CLASS WKCustomProtocol;
 #endif
-
-namespace IPC {
-class DataReference;
-} // namespace IPC
 
 namespace WebCore {
 class ResourceError;
@@ -69,10 +68,10 @@ public:
     typedef RetainPtr<WKCustomProtocol> CustomProtocol;
 #endif
 
-    uint64_t addCustomProtocol(CustomProtocol&&);
-    void removeCustomProtocol(uint64_t customProtocolID);
-    void startLoading(uint64_t customProtocolID, const WebCore::ResourceRequest&);
-    void stopLoading(uint64_t customProtocolID);
+    LegacyCustomProtocolID addCustomProtocol(CustomProtocol&&);
+    void removeCustomProtocol(LegacyCustomProtocolID);
+    void startLoading(LegacyCustomProtocolID, const WebCore::ResourceRequest&);
+    void stopLoading(LegacyCustomProtocolID);
 
 #if PLATFORM(COCOA)
     void registerProtocolClass(NSURLSessionConfiguration*);
@@ -86,29 +85,28 @@ private:
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
-    void didFailWithError(uint64_t customProtocolID, const WebCore::ResourceError&);
-    void didLoadData(uint64_t customProtocolID, const IPC::DataReference&);
-    void didReceiveResponse(uint64_t customProtocolID, const WebCore::ResourceResponse&, uint32_t cacheStoragePolicy);
-    void didFinishLoading(uint64_t customProtocolID);
-    void wasRedirectedToRequest(uint64_t customProtocolID, const WebCore::ResourceRequest&, const WebCore::ResourceResponse& redirectResponse);
+    void didFailWithError(LegacyCustomProtocolID, const WebCore::ResourceError&);
+    void didLoadData(LegacyCustomProtocolID, const IPC::DataReference&);
+    void didReceiveResponse(LegacyCustomProtocolID, const WebCore::ResourceResponse&, uint32_t cacheStoragePolicy);
+    void didFinishLoading(LegacyCustomProtocolID);
+    void wasRedirectedToRequest(LegacyCustomProtocolID, const WebCore::ResourceRequest&, const WebCore::ResourceResponse& redirectResponse);
 
     void registerProtocolClass();
 
     NetworkProcess& m_networkProcess;
 
-    typedef HashMap<uint64_t, CustomProtocol> CustomProtocolMap;
-    CustomProtocolMap m_customProtocolMap;
-    Lock m_customProtocolMapMutex;
+    typedef HashMap<LegacyCustomProtocolID, CustomProtocol> CustomProtocolMap;
+    CustomProtocolMap m_customProtocolMap WTF_GUARDED_BY_LOCK(m_customProtocolMapLock);
+    Lock m_customProtocolMapLock;
 
 #if PLATFORM(COCOA)
-    HashSet<String, ASCIICaseInsensitiveHash> m_registeredSchemes;
-    Lock m_registeredSchemesMutex;
+    HashSet<String, ASCIICaseInsensitiveHash> m_registeredSchemes WTF_GUARDED_BY_LOCK(m_registeredSchemesLock);
+    Lock m_registeredSchemesLock;
 
     // WKCustomProtocol objects can be removed from the m_customProtocolMap from multiple threads.
     // We return a RetainPtr here because it is unsafe to return a raw pointer since the object might immediately be destroyed from a different thread.
-    RetainPtr<WKCustomProtocol> protocolForID(uint64_t customProtocolID);
+    RetainPtr<WKCustomProtocol> protocolForID(LegacyCustomProtocolID);
 #endif
 };
 
 } // namespace WebKit
-

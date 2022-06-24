@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.12)
+
 include(WebKitCommon)
 
 add_definitions(
@@ -48,12 +49,6 @@ include_directories(
     "${DERIVED_SOURCES_DIR}/WebKitQuartzCoreAdditions"
     "${CMAKE_BINARY_DIR}/../include/private"
 )
-
-if (${MSVC_CXX_ARCHITECTURE_ID} STREQUAL "X86")
-    link_directories($(WINDOWSSDKDIR)Lib/$(WINDOWSSDKLIBVERSION)/um/x86)
-else ()
-    link_directories($(WINDOWSSDKDIR)Lib/$(WINDOWSSDKLIBVERSION)/um/x64)
-endif ()
 
 add_library(WebKitQuartzCoreAdditions SHARED ${WebKitQuartzCoreAdditions_SOURCES})
 set_target_properties(WebKitQuartzCoreAdditions PROPERTIES OUTPUT_NAME WebKitQuartzCoreAdditions${DEBUG_SUFFIX})

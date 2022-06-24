@@ -42,17 +42,17 @@ public:
     MediaDeviceSandboxExtensions(MediaDeviceSandboxExtensions&&) = default;
     MediaDeviceSandboxExtensions& operator=(MediaDeviceSandboxExtensions&&) = default;
 
-    MediaDeviceSandboxExtensions(Vector<String> ids, SandboxExtension::HandleArray&& handles);
+    MediaDeviceSandboxExtensions(Vector<String> ids, Vector<SandboxExtension::Handle>&& handles);
 
     std::pair<String, RefPtr<SandboxExtension>> operator[](size_t i);
     size_t size() const;
 
     void encode(IPC::Encoder&) const;
-    static bool decode(IPC::Decoder&, MediaDeviceSandboxExtensions&);
+    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, MediaDeviceSandboxExtensions&);
 
 private:
     Vector<String> m_ids;
-    SandboxExtension::HandleArray m_handles;
+    Vector<SandboxExtension::Handle> m_handles;
 };
 
 } // namespace WebKit

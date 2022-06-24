@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,12 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+    template<typename CellType, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.scriptFetchParametersSpace<mode>();
+    }
+
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(JSScriptFetchParametersType, StructureFlags), info());
@@ -49,7 +55,7 @@ public:
 
     static JSScriptFetchParameters* create(VM& vm, Structure* structure, Ref<ScriptFetchParameters>&& parameters)
     {
-        auto* result = new (NotNull, allocateCell<JSScriptFetchParameters>(vm.heap)) JSScriptFetchParameters(vm, structure, WTFMove(parameters));
+        auto* result = new (NotNull, allocateCell<JSScriptFetchParameters>(vm)) JSScriptFetchParameters(vm, structure, WTFMove(parameters));
         result->finishCreation(vm);
         return result;
     }

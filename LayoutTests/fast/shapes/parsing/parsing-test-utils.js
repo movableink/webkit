@@ -38,8 +38,8 @@ var validShapeValues = [
     "inset(10px 20px 30px 40px round 5px 6px 7px 8px / 50px 60px 70px 80px)",
     "inset(10px round 0px / 10px)",
 
-    ["inset(calc(25%*3 - 10in) 0 0 0)", "inset(calc(75% - 10in) 0px 0px)", "inset(calc(75% - 960px) 0px 0px)"],
-    ["inset(10px 10px 10px 10px round calc(25%*3 - 10in))", "inset(10px round calc(75% - 10in))", "inset(10px round calc(75% - 960px))"],
+    ["inset(calc(25%*3 - 10in) 0 0 0)", "inset(calc(75% - 960px) 0px 0px)", "inset(calc(75% - 960px) 0px 0px)"],
+    ["inset(10px 10px 10px 10px round calc(25%*3 - 10in))", "inset(10px round calc(75% - 960px))", "inset(10px round calc(75% - 960px))"],
 
     ["circle()", "circle(at 50% 50%)", "circle(at 50% 50%)"],
     ["circle(farthest-side)", "circle(farthest-side at 50% 50%)", "circle(farthest-side at 50% 50%)"],
@@ -52,7 +52,6 @@ var validShapeValues = [
     ["circle(at 10px 10px)", "circle(at 10px 10px)", "circle(at 10px 10px)"],
     ["circle(at top left)", "circle(at 0% 0%)", "circle(at 0% 0%)"],
     ["circle(at right bottom)", "circle(at 100% 100%)", "circle(at 100% 100%)"],
-    ["circle(10px at left top 10px)", "circle(10px at 0% 10px)", "circle(10px at 0% 10px)"],
     ["circle(10px at top 10px left 10px)", "circle(10px at 10px 10px)", "circle(10px at 10px 10px)"],
     ["circle(10px at right 10% bottom 10%)", "circle(10px at 90% 90%)"],
     ["circle(10px at right 0px bottom 0px)", "circle(10px at 100% 100%)"],
@@ -66,7 +65,6 @@ var validShapeValues = [
     ["ellipse(at 10px 10px)", "ellipse(at 10px 10px)", "ellipse(at 10px 10px)"],
     ["ellipse(at top left)", "ellipse(at 0% 0%)", "ellipse(at 0% 0%)"],
     ["ellipse(at right bottom)", "ellipse(at 100% 100%)", "ellipse(at 100% 100%)"],
-    ["ellipse(10px 20px at left top 10px)", "ellipse(10px 20px at 0% 10px)", "ellipse(10px 20px at 0% 10px)"],
     ["ellipse(10px 20px at top 10px left 10px)", "ellipse(10px 20px at 10px 10px)", "ellipse(10px 20px at 10px 10px)"],
     ["ellipse(10px 20px at right 10px bottom 10px)", "ellipse(10px 20px at right 10px bottom 10px)"],
     ["ellipse(10px 10px at right 10% bottom 10%)", "ellipse(10px 10px at 90% 90%)"],
@@ -79,8 +77,8 @@ var validShapeValues = [
     ["polygon(10px 20px, 30px 40px, 40px 50px)", "polygon(10px 20px, 30px 40px, 40px 50px)"],
     ["polygon(evenodd, 10px 20px, 30px 40px, 40px 50px)", "polygon(evenodd, 10px 20px, 30px 40px, 40px 50px)"],
     ["polygon(nonzero, 10px 20px, 30px 40px, 40px 50px)", "polygon(10px 20px, 30px 40px, 40px 50px)"],
-    ["polygon(10px calc(10in))", "polygon(10px calc(10in))", "polygon(10px 960px)"],
-    ["polygon(calc(10in) 10px)", "polygon(calc(10in) 10px)", "polygon(960px 10px)"],
+    ["polygon(10px calc(10in))", "polygon(10px calc(960px))", "polygon(10px 960px)"],
+    ["polygon(calc(10in) 10px)", "polygon(calc(960px) 10px)", "polygon(960px 10px)"],
 
     "content-box",
     "padding-box",

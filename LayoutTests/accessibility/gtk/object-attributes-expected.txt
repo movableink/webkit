@@ -35,7 +35,7 @@ AXChildren: 0
 AXPosition:  { 8.00000, 8.00000 }
 AXSize: { 784.000, 37.0000 }
 AXTitle: Heading Level 1
-AXDescription: 
+AXDescription:
 AXValue: Heading Level 1
 AXFocusable: 0
 AXFocused: 0
@@ -46,7 +46,7 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: computed-role:heading, level:1, tag:h1, toolkit:WebKitGtk
+AXPlatformAttributes: computed-role:heading, level:1, tag:h1
 ------------
 AXRole: AXHeading
 AXParent: AXWebArea
@@ -54,7 +54,7 @@ AXChildren: 0
 AXPosition:  { 8.00000, 66.0000 }
 AXSize: { 784.000, 28.0000 }
 AXTitle: Heading Level 2
-AXDescription: 
+AXDescription:
 AXValue: Heading Level 2
 AXFocusable: 0
 AXFocused: 0
@@ -65,7 +65,7 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: computed-role:heading, level:2, tag:h2, toolkit:WebKitGtk
+AXPlatformAttributes: computed-role:heading, level:2, tag:h2
 ------------
 AXRole: AXHeading
 AXParent: AXWebArea
@@ -73,7 +73,7 @@ AXChildren: 0
 AXPosition:  { 8.00000, 113.000 }
 AXSize: { 784.000, 23.0000 }
 AXTitle: Heading Level 3
-AXDescription: 
+AXDescription:
 AXValue: Heading Level 3
 AXFocusable: 0
 AXFocused: 0
@@ -84,7 +84,7 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: computed-role:heading, level:3, tag:h3, toolkit:WebKitGtk
+AXPlatformAttributes: computed-role:heading, level:3, tag:h3
 ------------
 AXRole: AXHeading
 AXParent: AXWebArea
@@ -92,7 +92,7 @@ AXChildren: 0
 AXPosition:  { 8.00000, 156.000 }
 AXSize: { 784.000, 19.0000 }
 AXTitle: Heading Level 4
-AXDescription: 
+AXDescription:
 AXValue: Heading Level 4
 AXFocusable: 0
 AXFocused: 0
@@ -103,7 +103,7 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: computed-role:heading, level:4, tag:h4, toolkit:WebKitGtk
+AXPlatformAttributes: computed-role:heading, level:4, tag:h4
 ------------
 AXRole: AXHeading
 AXParent: AXWebArea
@@ -111,7 +111,7 @@ AXChildren: 0
 AXPosition:  { 8.00000, 196.000 }
 AXSize: { 784.000, 17.0000 }
 AXTitle: Heading Level 5
-AXDescription: 
+AXDescription:
 AXValue: Heading Level 5
 AXFocusable: 0
 AXFocused: 0
@@ -122,7 +122,7 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: computed-role:heading, level:5, tag:h5, toolkit:WebKitGtk
+AXPlatformAttributes: computed-role:heading, level:5, tag:h5
 ------------
 AXRole: AXHeading
 AXParent: AXWebArea
@@ -130,7 +130,7 @@ AXChildren: 0
 AXPosition:  { 8.00000, 237.000 }
 AXSize: { 784.000, 13.0000 }
 AXTitle: Heading Level 6
-AXDescription: 
+AXDescription:
 AXValue: Heading Level 6
 AXFocusable: 0
 AXFocused: 0
@@ -141,16 +141,16 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: computed-role:heading, level:6, tag:h6, toolkit:WebKitGtk
+AXPlatformAttributes: computed-role:heading, level:6, tag:h6
 ------------
 AXRole: AXSection
 AXParent: AXWebArea
 AXChildren: 1
 AXPosition:  { 8.00000, 274.000 }
 AXSize: { 784.000, 19.0000 }
-AXTitle: 
-AXDescription: 
-AXValue: Link
+AXTitle:
+AXDescription:
+AXValue:
 AXFocusable: 0
 AXFocused: 0
 AXSelectable: 0
@@ -160,15 +160,15 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: toolkit:WebKitGtk
+AXPlatformAttributes:
 ------------
 AXRole: AXSection
 AXParent: AXWebArea
 AXChildren: 0
 AXPosition:  { 10.0000, 294.000 }
 AXSize: { 23.0000, 21.0000 }
-AXTitle: 
-AXDescription: 
+AXTitle:
+AXDescription:
 AXValue: foo
 AXFocusable: 0
 AXFocused: 0
@@ -179,15 +179,15 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: tag:td, toolkit:WebKitGtk
+AXPlatformAttributes: tag:td
 ------------
 AXRole: AXSection
 AXParent: AXWebArea
 AXChildren: 0
 AXPosition:  { 35.0000, 294.000 }
 AXSize: { 22.0000, 21.0000 }
-AXTitle: 
-AXDescription: 
+AXTitle:
+AXDescription:
 AXValue: bar
 AXFocusable: 0
 AXFocused: 0
@@ -198,15 +198,15 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: tag:td, toolkit:WebKitGtk
+AXPlatformAttributes: tag:td
 ------------
 AXRole: AXTable
 AXParent: AXWebArea
 AXChildren: 3
 AXPosition:  { 8.00000, 316.000 }
 AXSize: { 81.0000, 77.0000 }
-AXTitle: 
-AXDescription: 
+AXTitle:
+AXDescription:
 AXFocusable: 0
 AXFocused: 0
 AXSelectable: 0
@@ -216,15 +216,15 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: computed-role:table, tag:table, toolkit:WebKitGtk
+AXPlatformAttributes: computed-role:table, tag:table
 ------------
 AXRole: AXDeletion
 AXParent: AXWebArea
 AXChildren: 0
 AXPosition:  { 8.00000, 392.000 }
 AXSize: { 784.000, 19.0000 }
-AXTitle: 
-AXDescription: 
+AXTitle:
+AXDescription:
 AXValue: foo
 AXFocusable: 0
 AXFocused: 0
@@ -235,15 +235,15 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: xml-roles:deletion, computed-role:deletion, tag:del, toolkit:WebKitGtk
+AXPlatformAttributes: computed-role:deletion, tag:del, xml-roles:deletion
 ------------
 AXRole: AXInsertion
 AXParent: AXWebArea
 AXChildren: 0
 AXPosition:  { 8.00000, 410.000 }
 AXSize: { 784.000, 19.0000 }
-AXTitle: 
-AXDescription: 
+AXTitle:
+AXDescription:
 AXValue: bar
 AXFocusable: 0
 AXFocused: 0
@@ -254,15 +254,15 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: xml-roles:insertion, computed-role:insertion, tag:ins, toolkit:WebKitGtk
+AXPlatformAttributes: computed-role:insertion, tag:ins, xml-roles:insertion
 ------------
 AXRole: AXStatic
 AXParent: AXWebArea
 AXChildren: 0
 AXPosition:  { 8.00000, 428.000 }
 AXSize: { 784.000, 19.0000 }
-AXTitle: 
-AXDescription: 
+AXTitle:
+AXDescription:
 AXValue: baz
 AXFocusable: 0
 AXFocused: 0
@@ -273,17 +273,17 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: computed-role:time, tag:time, toolkit:WebKitGtk
+AXPlatformAttributes: computed-role:time, tag:time
 ------------
 AXRole: AXParagraph
 AXParent: AXWebArea
 AXChildren: 2
 AXPosition:  { 8.00000, 462.000 }
 AXSize: { 784.000, 53.0000 }
-AXTitle: 
-AXDescription: 
+AXTitle:
+AXDescription:
 AXValue: This tests the exposure of Atk object attributes.<\n><\n>On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE".<\n><\n><\n>
-AXFocusable: 1
+AXFocusable: 0
 AXFocused: 0
 AXSelectable: 0
 AXSelected: 0
@@ -292,7 +292,7 @@ AXEnabled: 1
 AXExpanded: 0
 AXRequired: 0
 AXChecked: 0
-AXPlatformAttributes: computed-role:paragraph, html-id:description, tag:p, toolkit:WebKitGtk
+AXPlatformAttributes: computed-role:paragraph, tag:p
 ------------
 
 PASS successfullyParsed is true

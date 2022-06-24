@@ -23,11 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#if USE(UICONTEXTMENU)
 
 #import <wtf/WeakObjCPtr.h>
-
-#if PLATFORM(IOS) && USE(UICONTEXTMENU)
 
 @protocol _UIClickInteractionDriverDelegate;
 @protocol _UIClickInteractionDriving <NSObject>
@@ -40,12 +38,14 @@
     CGFloat _allowableMovement;
     RetainPtr<UIGestureRecognizer> _primaryGestureRecognizer;
     NSTimeInterval _touchDuration;
+    BOOL _cancelsTouchesInView;
 }
 
 - (void)begin:(void(^)(BOOL))completionHandler;
 - (void)clickDown;
 - (void)clickUp;
 - (void)end;
++ (BOOL)prefersCancelsTouchesInView;
 @end
 
-#endif
+#endif // USE(UICONTEXTMENU)

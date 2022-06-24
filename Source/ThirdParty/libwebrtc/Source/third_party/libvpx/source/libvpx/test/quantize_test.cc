@@ -9,12 +9,14 @@
  */
 
 #include <string.h>
+#include <tuple>
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
-#include "./vpx_config.h"
 #include "./vp8_rtcd.h"
+#include "./vpx_config.h"
 #include "test/acm_random.h"
+#include "test/bench.h"
 #include "test/clear_system_state.h"
 #include "test/register_state_check.h"
 #include "test/util.h"
@@ -33,10 +35,10 @@ const int kNumBlockEntries = 16;
 
 typedef void (*VP8Quantize)(BLOCK *b, BLOCKD *d);
 
-typedef std::tr1::tuple<VP8Quantize, VP8Quantize> VP8QuantizeParam;
+typedef std::tuple<VP8Quantize, VP8Quantize> VP8QuantizeParam;
 
 using libvpx_test::ACMRandom;
-using std::tr1::make_tuple;
+using std::make_tuple;
 
 // Create and populate a VP8_COMP instance which has a complete set of
 // quantization inputs as well as a second MACROBLOCKD for output.
@@ -44,9 +46,9 @@ class QuantizeTestBase {
  public:
   virtual ~QuantizeTestBase() {
     vp8_remove_compressor(&vp8_comp_);
-    vp8_comp_ = NULL;
+    vp8_comp_ = nullptr;
     vpx_free(macroblockd_dst_);
-    macroblockd_dst_ = NULL;
+    macroblockd_dst_ = nullptr;
     libvpx_test::ClearSystemState();
   }
 
@@ -116,12 +118,17 @@ class QuantizeTestBase {
 };
 
 class QuantizeTest : public QuantizeTestBase,
-                     public ::testing::TestWithParam<VP8QuantizeParam> {
+                     public ::testing::TestWithParam<VP8QuantizeParam>,
+                     public AbstractBench {
  protected:
   virtual void SetUp() {
     SetupCompressor();
     asm_quant_ = GET_PARAM(0);
     c_quant_ = GET_PARAM(1);
+  }
+
+  virtual void Run() {
+    asm_quant_(&vp8_comp_->mb.block[0], &macroblockd_dst_->block[0]);
   }
 
   void RunComparison() {
@@ -139,6 +146,7 @@ class QuantizeTest : public QuantizeTestBase,
   VP8Quantize asm_quant_;
   VP8Quantize c_quant_;
 };
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(QuantizeTest);
 
 TEST_P(QuantizeTest, TestZeroInput) {
   FillCoeffConstant(0);
@@ -166,8 +174,15 @@ TEST_P(QuantizeTest, TestMultipleQ) {
   }
 }
 
+TEST_P(QuantizeTest, DISABLED_Speed) {
+  FillCoeffRandom();
+
+  RunNTimes(10000000);
+  PrintMedian("vp8 quantize");
+}
+
 #if HAVE_SSE2
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SSE2, QuantizeTest,
     ::testing::Values(
         make_tuple(&vp8_fast_quantize_b_sse2, &vp8_fast_quantize_b_c),
@@ -175,26 +190,27 @@ INSTANTIATE_TEST_CASE_P(
 #endif  // HAVE_SSE2
 
 #if HAVE_SSSE3
-INSTANTIATE_TEST_CASE_P(SSSE3, QuantizeTest,
-                        ::testing::Values(make_tuple(&vp8_fast_quantize_b_ssse3,
-                                                     &vp8_fast_quantize_b_c)));
+INSTANTIATE_TEST_SUITE_P(
+    SSSE3, QuantizeTest,
+    ::testing::Values(make_tuple(&vp8_fast_quantize_b_ssse3,
+                                 &vp8_fast_quantize_b_c)));
 #endif  // HAVE_SSSE3
 
 #if HAVE_SSE4_1
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SSE4_1, QuantizeTest,
     ::testing::Values(make_tuple(&vp8_regular_quantize_b_sse4_1,
                                  &vp8_regular_quantize_b_c)));
 #endif  // HAVE_SSE4_1
 
 #if HAVE_NEON
-INSTANTIATE_TEST_CASE_P(NEON, QuantizeTest,
-                        ::testing::Values(make_tuple(&vp8_fast_quantize_b_neon,
-                                                     &vp8_fast_quantize_b_c)));
+INSTANTIATE_TEST_SUITE_P(NEON, QuantizeTest,
+                         ::testing::Values(make_tuple(&vp8_fast_quantize_b_neon,
+                                                      &vp8_fast_quantize_b_c)));
 #endif  // HAVE_NEON
 
 #if HAVE_MSA
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MSA, QuantizeTest,
     ::testing::Values(
         make_tuple(&vp8_fast_quantize_b_msa, &vp8_fast_quantize_b_c),
@@ -202,7 +218,7 @@ INSTANTIATE_TEST_CASE_P(
 #endif  // HAVE_MSA
 
 #if HAVE_MMI
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MMI, QuantizeTest,
     ::testing::Values(
         make_tuple(&vp8_fast_quantize_b_mmi, &vp8_fast_quantize_b_c),

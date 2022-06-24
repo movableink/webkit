@@ -28,7 +28,6 @@
 #include "CacheStorageEngineCache.h"
 #include "NetworkCacheStorage.h"
 #include <WebCore/ClientOrigin.h>
-#include <WebCore/StorageQuotaUser.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Deque.h>
 
@@ -42,12 +41,13 @@ namespace CacheStorage {
 
 class Engine;
 
-class Caches final : public RefCounted<Caches>, private WebCore::StorageQuotaUser {
+class Caches final : public RefCounted<Caches> {
 public:
-    static Ref<Caches> create(Engine&, WebCore::ClientOrigin&&, String&& rootPath, WebCore::StorageQuotaManager&);
+    static String cachesSizeFilename(const String& cachesRootsPath);
+    static Ref<Caches> create(Engine&, WebCore::ClientOrigin&&, String&& rootPath);
     ~Caches();
 
-    static void retrieveOriginFromDirectory(const String& folderPath, WorkQueue&, WTF::CompletionHandler<void(Optional<WebCore::ClientOrigin>&&)>&&);
+    static void retrieveOriginFromDirectory(const String& folderPath, WorkQueue&, WTF::CompletionHandler<void(std::optional<WebCore::ClientOrigin>&&)>&&);
 
     void initialize(WebCore::DOMCacheEngine::CompletionCallback&&);
     void open(const String& name, WebCore::DOMCacheEngine::CacheIdentifierCallback&&);
@@ -78,24 +78,19 @@ public:
 
     void clear(WTF::CompletionHandler<void()>&&);
     void clearMemoryRepresentation();
-    void resetSpaceUsed();
 
     uint64_t storageSize() const;
+    void updateSizeFile(CompletionHandler<void()>&&);
 
 private:
-    Caches(Engine&, WebCore::ClientOrigin&&, String&& rootPath, WebCore::StorageQuotaManager&);
-
-    // StorageQuotaUser API.
-    uint64_t spaceUsed() const final { return m_size; }
+    Caches(Engine&, WebCore::ClientOrigin&&, String&& rootPath);
 
     void initializeSize();
     void readCachesFromDisk(WTF::Function<void(Expected<Vector<Cache>, WebCore::DOMCacheEngine::Error>&&)>&&);
     void writeCachesToDisk(WebCore::DOMCacheEngine::CompletionCallback&&);
 
-    void whenInitialized(CompletionHandler<void()>&&) final;
-
     void storeOrigin(WebCore::DOMCacheEngine::CompletionCallback&&);
-    static Optional<WebCore::ClientOrigin> readOrigin(const NetworkCache::Data&);
+    static std::optional<WebCore::ClientOrigin> readOrigin(const NetworkCache::Data&);
 
     Cache* find(const String& name);
     void clearPendingWritingCachesToDiskCallbacks();
@@ -114,12 +109,11 @@ private:
     Vector<Cache> m_caches;
     Vector<Cache> m_removedCaches;
     RefPtr<NetworkCache::Storage> m_storage;
-    HashMap<NetworkCache::Key, WebCore::DOMCacheEngine::Record> m_volatileStorage;
-    mutable Optional<NetworkCache::Salt> m_volatileSalt;
+    HashMap<NetworkCache::Key, std::unique_ptr<WebCore::DOMCacheEngine::Record>> m_volatileStorage;
+    mutable std::optional<NetworkCache::Salt> m_volatileSalt;
     Vector<WebCore::DOMCacheEngine::CompletionCallback> m_pendingInitializationCallbacks;
     bool m_isWritingCachesToDisk { false };
-    Deque<CompletionHandler<void(Optional<WebCore::DOMCacheEngine::Error>)>> m_pendingWritingCachesToDiskCallbacks;
-    WeakPtr<WebCore::StorageQuotaManager> m_quotaManager;
+    Deque<CompletionHandler<void(std::optional<WebCore::DOMCacheEngine::Error>)>> m_pendingWritingCachesToDiskCallbacks;
 };
 
 } // namespace CacheStorage

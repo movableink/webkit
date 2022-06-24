@@ -1,4 +1,4 @@
 
 
-PASS Check that we received a message from the child frame 
+PASS Violation report status OK.
 

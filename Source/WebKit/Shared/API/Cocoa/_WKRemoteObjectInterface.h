@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,9 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WKFoundation.h>
-
 #import <Foundation/Foundation.h>
+#import <WebKit/WKFoundation.h>
 
 WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
 @interface _WKRemoteObjectInterface : NSObject
@@ -40,8 +39,7 @@ WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
 - (NSSet *)classesForSelector:(SEL)selector argumentIndex:(NSUInteger)argumentIndex ofReply:(BOOL)ofReply;
 - (void)setClasses:(NSSet *)classes forSelector:(SEL)selector argumentIndex:(NSUInteger)argumentIndex ofReply:(BOOL)ofReply;
 
-// FIXME: Deprecate these.
-- (NSSet *)classesForSelector:(SEL)selector argumentIndex:(NSUInteger)argumentIndex;
-- (void)setClasses:(NSSet *)classes forSelector:(SEL)selector argumentIndex:(NSUInteger)argumentIndex;
+- (NSSet *)classesForSelector:(SEL)selector argumentIndex:(NSUInteger)argumentIndex WK_API_DEPRECATED_WITH_REPLACEMENT("-classesForSelector:argumentIndex:ofReply:", macos(10.10, 12.0), ios(8.0, 15.0));
+- (void)setClasses:(NSSet *)classes forSelector:(SEL)selector argumentIndex:(NSUInteger)argumentIndex WK_API_DEPRECATED_WITH_REPLACEMENT("-setClasses:forSelector:argumentIndex:ofReply:", macos(10.10, 12.0), ios(8.0, 15.0));
 
 @end

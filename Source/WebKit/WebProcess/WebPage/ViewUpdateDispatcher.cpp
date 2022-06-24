@@ -26,11 +26,12 @@
 #include "config.h"
 #include "ViewUpdateDispatcher.h"
 
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(UI_SIDE_COMPOSITING)
 
 #include "ViewUpdateDispatcherMessages.h"
 #include "WebPage.h"
 #include "WebProcess.h"
+#include <WebCore/PageIdentifier.h>
 #include <wtf/RunLoop.h>
 
 namespace WebKit {
@@ -47,27 +48,28 @@ ViewUpdateDispatcher::ViewUpdateDispatcher()
 
 ViewUpdateDispatcher::~ViewUpdateDispatcher()
 {
+    ASSERT_NOT_REACHED();
 }
 
 void ViewUpdateDispatcher::initializeConnection(IPC::Connection* connection)
 {
-    connection->addWorkQueueMessageReceiver(Messages::ViewUpdateDispatcher::messageReceiverName(), m_queue.get(), this);
+    connection->addWorkQueueMessageReceiver(Messages::ViewUpdateDispatcher::messageReceiverName(), m_queue.get(), *this);
 }
 
 void ViewUpdateDispatcher::visibleContentRectUpdate(WebCore::PageIdentifier pageID, const VisibleContentRectUpdateInfo& visibleContentRectUpdateInfo)
 {
     bool updateListWasEmpty;
     {
-        LockHolder locker(&m_dataMutex);
+        Locker locker { m_latestUpdateLock };
         updateListWasEmpty = m_latestUpdate.isEmpty();
         auto iterator = m_latestUpdate.find(pageID);
         if (iterator == m_latestUpdate.end())
-            m_latestUpdate.set<UpdateData>(pageID, { visibleContentRectUpdateInfo, visibleContentRectUpdateInfo.timestamp() });
+            m_latestUpdate.set(pageID, makeUniqueRef<UpdateData>(visibleContentRectUpdateInfo, visibleContentRectUpdateInfo.timestamp()));
         else
-            iterator->value.visibleContentRectUpdateInfo = visibleContentRectUpdateInfo;
+            iterator->value.get().visibleContentRectUpdateInfo = visibleContentRectUpdateInfo;
     }
     if (updateListWasEmpty) {
-        RunLoop::main().dispatch([protectedThis = makeRef(*this)]() mutable {
+        RunLoop::main().dispatch([protectedThis = Ref { *this }]() mutable {
             protectedThis->dispatchVisibleContentRectUpdate();
         });
     }
@@ -75,18 +77,18 @@ void ViewUpdateDispatcher::visibleContentRectUpdate(WebCore::PageIdentifier page
 
 void ViewUpdateDispatcher::dispatchVisibleContentRectUpdate()
 {
-    HashMap<PageIdentifier, UpdateData> update;
+    HashMap<WebCore::PageIdentifier, UniqueRef<UpdateData>> update;
     {
-        LockHolder locker(&m_dataMutex);
-        update = WTFMove(m_latestUpdate);
+        Locker locker { m_latestUpdateLock };
+        update = std::exchange(m_latestUpdate, { });
     }
 
     for (auto& slot : update) {
         if (WebPage* webPage = WebProcess::singleton().webPage(slot.key))
-            webPage->updateVisibleContentRects(slot.value.visibleContentRectUpdateInfo, slot.value.oldestTimestamp);
+            webPage->updateVisibleContentRects(slot.value.get().visibleContentRectUpdateInfo, slot.value.get().oldestTimestamp);
     }
 }
 
 } // namespace WebKit
 
-#endif // PLATFORM(IOS_FAMILY)
+#endif // ENABLE(UI_SIDE_COMPOSITING)

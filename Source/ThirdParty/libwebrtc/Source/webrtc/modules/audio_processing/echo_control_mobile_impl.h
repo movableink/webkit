@@ -13,6 +13,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 #include <memory>
 #include <vector>
 
@@ -30,9 +31,6 @@ class EchoControlMobileImpl {
 
   ~EchoControlMobileImpl();
 
-  int Enable(bool enable);
-  bool is_enabled() const;
-
   // Recommended settings for particular audio routes. In general, the louder
   // the echo is expected to be, the higher this value should be set. The
   // preferred setting may vary from device to device.
@@ -44,7 +42,7 @@ class EchoControlMobileImpl {
     kLoudSpeakerphone
   };
 
-  // Sets echo control appropriate for the audio routing |mode| on the device.
+  // Sets echo control appropriate for the audio routing `mode` on the device.
   // It can and should be updated during a call if the audio routing changes.
   int set_routing_mode(RoutingMode mode);
   RoutingMode routing_mode() const;
@@ -75,13 +73,13 @@ class EchoControlMobileImpl {
 
   int Configure();
 
-  bool enabled_ = false;
-
   RoutingMode routing_mode_;
   bool comfort_noise_enabled_;
 
   std::vector<std::unique_ptr<Canceller>> cancellers_;
   std::unique_ptr<StreamProperties> stream_properties_;
+  std::vector<std::array<int16_t, 160>> low_pass_reference_;
+  bool reference_copied_ = false;
 };
 }  // namespace webrtc
 

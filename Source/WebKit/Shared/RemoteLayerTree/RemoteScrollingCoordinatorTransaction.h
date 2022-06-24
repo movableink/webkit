@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(UI_SIDE_COMPOSITING)
+
 #include <WebCore/ScrollingStateTree.h>
 
 namespace IPC {
@@ -36,25 +38,23 @@ namespace WebKit {
 
 class RemoteScrollingCoordinatorTransaction {
 public:
-#if ENABLE(ASYNC_SCROLLING)
     void setStateTreeToEncode(std::unique_ptr<WebCore::ScrollingStateTree> stateTree) { m_scrollingStateTree = WTFMove(stateTree); }
     std::unique_ptr<WebCore::ScrollingStateTree>& scrollingStateTree() { return m_scrollingStateTree; }
-#endif // ENABLE(ASYNC_SCROLLING)
 
     void encode(IPC::Encoder&) const;
-    static bool decode(IPC::Decoder&, RemoteScrollingCoordinatorTransaction&);
+    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, RemoteScrollingCoordinatorTransaction&);
 
 #if !defined(NDEBUG) || !LOG_DISABLED
-    WTF::CString description() const;
+    String description() const;
     void dump() const;
 #endif
 
 private:
-#if ENABLE(ASYNC_SCROLLING)
-    bool decode(IPC::Decoder&);
+    WARN_UNUSED_RETURN bool decode(IPC::Decoder&);
     
     std::unique_ptr<WebCore::ScrollingStateTree> m_scrollingStateTree;
-#endif // ENABLE(ASYNC_SCROLLING)
 };
 
 } // namespace WebKit
+
+#endif // ENABLE(UI_SIDE_COMPOSITING)

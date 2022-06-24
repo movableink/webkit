@@ -31,20 +31,25 @@
 #import "APIHitTestResult.h"
 #import "APIIconLoadingClient.h"
 #import "APIPageConfiguration.h"
+#import "AppKitSPI.h"
 #import "WKBrowsingContextGroupPrivate.h"
 #import "WKNSData.h"
 #import "WKProcessGroupPrivate.h"
+#import "WKWebViewMac.h"
 #import "WebBackForwardListItem.h"
 #import "WebKit2Initialize.h"
 #import "WebPageGroup.h"
 #import "WebPageProxy.h"
-#import "WebPreferencesKeys.h"
+#import "WebPreferences.h"
 #import "WebProcessPool.h"
 #import "WebViewImpl.h"
 #import "_WKLinkIconParametersInternal.h"
+#import <WebCore/WebCoreObjCExtras.h>
+#import <WebCore/WebViewVisualIdentificationOverlay.h>
 #import <WebKit/WKDragDestinationAction.h>
 #import <pal/spi/cocoa/AVKitSPI.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/NakedRef.h>
 
 @interface WKViewData : NSObject {
 @public
@@ -61,6 +66,11 @@
 
 #if HAVE(TOUCH_BAR)
 @interface WKView () <NSTouchBarProvider>
+@end
+#endif
+
+#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
+@interface WKView () <NSScrollViewSeparatorTrackingAdapter>
 @end
 #endif
 
@@ -87,6 +97,9 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKView.class, self))
+        return;
+
     _data->_impl->page().setIconLoadingClient(nullptr);
     _data->_impl = nullptr;
 
@@ -192,6 +205,7 @@ WEBCORE_COMMAND(alignJustified)
 WEBCORE_COMMAND(alignLeft)
 WEBCORE_COMMAND(alignRight)
 WEBCORE_COMMAND(copy)
+WEBCORE_COMMAND(copyFont)
 WEBCORE_COMMAND(cut)
 WEBCORE_COMMAND(delete)
 WEBCORE_COMMAND(deleteBackward)
@@ -265,6 +279,7 @@ WEBCORE_COMMAND(pageUp)
 WEBCORE_COMMAND(pageUpAndModifySelection)
 WEBCORE_COMMAND(paste)
 WEBCORE_COMMAND(pasteAsPlainText)
+WEBCORE_COMMAND(pasteFont)
 WEBCORE_COMMAND(scrollPageDown)
 WEBCORE_COMMAND(scrollPageUp)
 WEBCORE_COMMAND(scrollLineDown)
@@ -310,7 +325,9 @@ WEBCORE_COMMAND(yankAndSelect)
     return _data->_impl->readSelectionFromPasteboard(pasteboard);
 }
 
+ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (void)changeFont:(id)sender
+ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     _data->_impl->changeFontFromFontManager();
 }
@@ -324,11 +341,9 @@ individual methods here with Mac-specific code.
 Editing-related methods still unimplemented that are implemented in WebKit1:
 
 - (void)complete:(id)sender;
-- (void)copyFont:(id)sender;
 - (void)makeBaseWritingDirectionLeftToRight:(id)sender;
 - (void)makeBaseWritingDirectionNatural:(id)sender;
 - (void)makeBaseWritingDirectionRightToLeft:(id)sender;
-- (void)pasteFont:(id)sender;
 - (void)scrollLineDown:(id)sender;
 - (void)scrollLineUp:(id)sender;
 - (void)showGuessPanel:(id)sender;
@@ -501,11 +516,6 @@ Some other editing-related methods still unimplemented:
     _data->_impl->swipeWithEvent(event);
 }
 
-- (void)mouseMoved:(NSEvent *)event
-{
-    _data->_impl->mouseMoved(event);
-}
-
 - (void)mouseDown:(NSEvent *)event
 {
     _data->_impl->mouseDown(event);
@@ -519,16 +529,6 @@ Some other editing-related methods still unimplemented:
 - (void)mouseDragged:(NSEvent *)event
 {
     _data->_impl->mouseDragged(event);
-}
-
-- (void)mouseEntered:(NSEvent *)event
-{
-    _data->_impl->mouseEntered(event);
-}
-
-- (void)mouseExited:(NSEvent *)event
-{
-    _data->_impl->mouseExited(event);
 }
 
 - (void)otherMouseDown:(NSEvent *)event
@@ -869,17 +869,23 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     _data->_impl->removeTrackingRects(tags, count);
 }
 
+ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (NSString *)view:(NSView *)view stringForToolTip:(NSToolTipTag)tag point:(NSPoint)point userData:(void *)data
+ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     return _data->_impl->stringForToolTip(tag);
 }
 
+ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (void)pasteboardChangedOwner:(NSPasteboard *)pasteboard
+ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     _data->_impl->pasteboardChangedOwner(pasteboard);
 }
 
+ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (void)pasteboard:(NSPasteboard *)pasteboard provideDataForType:(NSString *)type
+ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     _data->_impl->provideDataForPasteboard(pasteboard, type);
 }
@@ -889,11 +895,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     return _data->_impl->namesOfPromisedFilesDroppedAtDestination(dropDestination);
-}
-
-- (void)_web_grantDOMPasteAccess
-{
-    _data->_impl->handleDOMPasteRequestWithResult(WebCore::DOMPasteAccessResponse::GrantedForGesture);
 }
 
 - (void)maybeInstallIconLoadingClient
@@ -915,18 +916,15 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     private:
         typedef void (^IconLoadCompletionHandler)(NSData*);
 
-        void getLoadDecisionForIcon(const WebCore::LinkIcon& linkIcon, WTF::CompletionHandler<void(WTF::Function<void(API::Data*, WebKit::CallbackBase::Error)>&&)>&& completionHandler) override
+        void getLoadDecisionForIcon(const WebCore::LinkIcon& linkIcon, CompletionHandler<void(CompletionHandler<void(API::Data*)>&&)>&& completionHandler) override
         {
             RetainPtr<_WKLinkIconParameters> parameters = adoptNS([[_WKLinkIconParameters alloc] _initWithLinkIcon:linkIcon]);
 
             [m_wkView _shouldLoadIconWithParameters:parameters.get() completionHandler:makeBlockPtr([completionHandler = WTFMove(completionHandler)](IconLoadCompletionHandler loadCompletionHandler) mutable {
                 ASSERT(RunLoop::isMain());
                 if (loadCompletionHandler) {
-                    completionHandler([loadCompletionHandler = BlockPtr<void (NSData *)>(loadCompletionHandler)](API::Data* data, WebKit::CallbackBase::Error error) {
-                        if (error != WebKit::CallbackBase::Error::None || !data)
-                            loadCompletionHandler(nil);
-                        else
-                            loadCompletionHandler(wrapper(*data));
+                    completionHandler([loadCompletionHandler = makeBlockPtr(loadCompletionHandler)](API::Data* data) {
+                        loadCompletionHandler(wrapper(data));
                     });
                 } else
                     completionHandler(nullptr);
@@ -941,7 +939,7 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         _data->_impl->page().setIconLoadingClient(makeUnique<IconLoadingClient>(self));
 }
 
-- (instancetype)initWithFrame:(NSRect)frame processPool:(WebKit::WebProcessPool&)processPool configuration:(Ref<API::PageConfiguration>&&)configuration
+- (instancetype)initWithFrame:(NSRect)frame processPool:(NakedRef<WebKit::WebProcessPool>)processPool configuration:(Ref<API::PageConfiguration>&&)configuration
 {
     self = [super initWithFrame:frame];
     if (!self)
@@ -950,9 +948,10 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     WebKit::InitializeWebKit2();
 
     _data = [[WKViewData alloc] init];
-    _data->_impl = makeUnique<WebKit::WebViewImpl>(self, nullptr, processPool, WTFMove(configuration));
+    _data->_impl = makeUnique<WebKit::WebViewImpl>(self, nullptr, processPool.get(), WTFMove(configuration));
 
     [self maybeInstallIconLoadingClient];
+    [WebViewVisualIdentificationOverlay installForWebViewIfNeeded:self kind:@"WKView" deprecated:YES];
 
     return self;
 }
@@ -1118,6 +1117,24 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 #endif // HAVE(TOUCH_BAR)
 
+#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
+
+- (NSRect)scrollViewFrame
+{
+    if (!_data->_impl)
+        return NSZeroRect;
+    return _data->_impl->scrollViewFrame();
+}
+
+- (BOOL)hasScrolledContentsUnderTitlebar
+{
+    if (!_data->_impl)
+        return NO;
+    return _data->_impl->hasScrolledContentsUnderTitlebar();
+}
+
+#endif // HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
+
 #if ENABLE(DRAG_SUPPORT)
 
 - (NSString *)filePromiseProvider:(NSFilePromiseProvider *)filePromiseProvider fileNameForType:(NSString *)fileType
@@ -1184,7 +1201,8 @@ static WebCore::UserInterfaceLayoutDirection toUserInterfaceLayoutDirection(NSUs
     configuration->setPageGroup(WebKit::toImpl(pageGroupRef));
     configuration->setRelatedPage(WebKit::toImpl(relatedPage));
 #if PLATFORM(MAC)
-    configuration->preferenceValues().set(WebKit::WebPreferencesKey::systemLayoutDirectionKey(), WebKit::WebPreferencesStore::Value(static_cast<uint32_t>(toUserInterfaceLayoutDirection(self.userInterfaceLayoutDirection))));
+    configuration->setPreferences(&configuration->pageGroup()->preferences());
+    configuration->preferences()->setSystemLayoutDirection(static_cast<uint32_t>(toUserInterfaceLayoutDirection(self.userInterfaceLayoutDirection)));
 #endif
 
     return [self initWithFrame:frame processPool:*WebKit::toImpl(contextRef) configuration:WTFMove(configuration)];
@@ -1258,6 +1276,16 @@ static WebCore::UserInterfaceLayoutDirection toUserInterfaceLayoutDirection(NSUs
     _data->_impl->setMinimumSizeForAutoLayout(NSSizeToCGSize(minimumSizeForAutoLayout));
 }
 
+- (NSSize)sizeToContentAutoSizeMaximumSize
+{
+    return NSSizeFromCGSize(_data->_impl->sizeToContentAutoSizeMaximumSize());
+}
+
+- (void)setSizeToContentAutoSizeMaximumSize:(NSSize)sizeToContentAutoSizeMaximumSize
+{
+    _data->_impl->setSizeToContentAutoSizeMaximumSize(NSSizeToCGSize(sizeToContentAutoSizeMaximumSize));
+}
+
 - (BOOL)shouldExpandToViewHeightForAutoLayout
 {
     return _data->_impl->shouldExpandToViewHeightForAutoLayout();
@@ -1280,7 +1308,7 @@ static WebCore::UserInterfaceLayoutDirection toUserInterfaceLayoutDirection(NSUs
 
 - (NSColor *)underlayColor
 {
-    return _data->_impl->underlayColor();
+    return _data->_impl->underlayColor().autorelease();
 }
 
 - (void)setUnderlayColor:(NSColor *)underlayColor
@@ -1296,16 +1324,6 @@ static WebCore::UserInterfaceLayoutDirection toUserInterfaceLayoutDirection(NSUs
 - (void)_setInspectorAttachmentView:(NSView *)newView
 {
     _data->_impl->setInspectorAttachmentView(newView);
-}
-
-- (BOOL)_requiresUserActionForEditingControlsManager
-{
-    return _data->_impl->requiresUserActionForEditingControlsManager();
-}
-
-- (void)_setRequiresUserActionForEditingControlsManager:(BOOL)requiresUserAction
-{
-    _data->_impl->setRequiresUserActionForEditingControlsManager(requiresUserAction);
 }
 
 - (NSView *)fullScreenPlaceholderView
@@ -1466,40 +1484,6 @@ static WebCore::UserInterfaceLayoutDirection toUserInterfaceLayoutDirection(NSUs
     return _data->_impl->totalHeightOfBanners();
 }
 
-static Optional<WebCore::ScrollbarOverlayStyle> toCoreScrollbarStyle(_WKOverlayScrollbarStyle scrollbarStyle)
-{
-    switch (scrollbarStyle) {
-    case _WKOverlayScrollbarStyleDark:
-        return WebCore::ScrollbarOverlayStyleDark;
-    case _WKOverlayScrollbarStyleLight:
-        return WebCore::ScrollbarOverlayStyleLight;
-    case _WKOverlayScrollbarStyleDefault:
-        return WebCore::ScrollbarOverlayStyleDefault;
-    case _WKOverlayScrollbarStyleAutomatic:
-    default:
-        break;
-    }
-
-    return WTF::nullopt;
-}
-
-static _WKOverlayScrollbarStyle toAPIScrollbarStyle(Optional<WebCore::ScrollbarOverlayStyle> coreScrollbarStyle)
-{
-    if (!coreScrollbarStyle)
-        return _WKOverlayScrollbarStyleAutomatic;
-
-    switch (coreScrollbarStyle.value()) {
-    case WebCore::ScrollbarOverlayStyleDark:
-        return _WKOverlayScrollbarStyleDark;
-    case WebCore::ScrollbarOverlayStyleLight:
-        return _WKOverlayScrollbarStyleLight;
-    case WebCore::ScrollbarOverlayStyleDefault:
-        return _WKOverlayScrollbarStyleDefault;
-    default:
-        return _WKOverlayScrollbarStyleAutomatic;
-    }
-}
-
 - (void)_setOverlayScrollbarStyle:(_WKOverlayScrollbarStyle)scrollbarStyle
 {
     _data->_impl->setOverlayScrollbarStyle(toCoreScrollbarStyle(scrollbarStyle));
@@ -1512,7 +1496,7 @@ static _WKOverlayScrollbarStyle toAPIScrollbarStyle(Optional<WebCore::ScrollbarO
 
 - (NSColor *)_pageExtendedBackgroundColor
 {
-    return _data->_impl->pageExtendedBackgroundColor();
+    return _data->_impl->pageExtendedBackgroundColor().autorelease();
 }
 
 - (BOOL)isUsingUISideCompositing
@@ -1545,6 +1529,11 @@ static _WKOverlayScrollbarStyle toAPIScrollbarStyle(Optional<WebCore::ScrollbarO
 - (void)_gestureEventWasNotHandledByWebCore:(NSEvent *)event
 {
     _data->_impl->gestureEventWasNotHandledByWebCoreFromViewOnly(event);
+}
+
+- (void)_simulateMouseMove:(NSEvent *)event
+{
+    _data->_impl->mouseMoved(event);
 }
 
 - (void)smartMagnifyWithEvent:(NSEvent *)event
@@ -1702,6 +1691,21 @@ static _WKOverlayScrollbarStyle toAPIScrollbarStyle(Optional<WebCore::ScrollbarO
 - (BOOL)_useSystemAppearance
 {
     return _data->_impl->useSystemAppearance();
+}
+
+- (BOOL)acceptsPreviewPanelControl:(QLPreviewPanel *)panel
+{
+    return _data->_impl->acceptsPreviewPanelControl(panel);
+}
+
+- (void)beginPreviewPanelControl:(QLPreviewPanel *)panel
+{
+    _data->_impl->beginPreviewPanelControl(panel);
+}
+
+- (void)endPreviewPanelControl:(QLPreviewPanel *)panel
+{
+    _data->_impl->endPreviewPanelControl(panel);
 }
 
 @end

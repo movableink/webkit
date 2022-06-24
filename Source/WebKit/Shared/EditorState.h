@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,20 @@
 #pragma once
 
 #include "ArgumentCoders.h"
+#include "IdentifierTypes.h"
 #include <WebCore/Color.h>
+#include <WebCore/ElementContext.h>
 #include <WebCore/FontAttributes.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/WritingDirection.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include <WebCore/SelectionRect.h>
+#include <WebCore/SelectionGeometry.h>
+#endif
+
+#if USE(DICTATION_ALTERNATIVES)
+#include <WebCore/DictationContext.h>
 #endif
 
 namespace WTF {
@@ -65,47 +71,46 @@ enum ListType {
 };
 
 struct EditorState {
+    EditorStateIdentifier identifier;
+    String originIdentifierForPasteboard;
     bool shouldIgnoreSelectionChanges { false };
-
     bool selectionIsNone { true }; // This will be false when there is a caret selection.
     bool selectionIsRange { false };
+    bool selectionIsRangeInsideImageOverlay { false };
     bool isContentEditable { false };
     bool isContentRichlyEditable { false };
     bool isInPasswordField { false };
     bool isInPlugin { false };
     bool hasComposition { false };
-    bool isMissingPostLayoutData { false };
-
-#if PLATFORM(IOS_FAMILY)
-    WebCore::IntRect firstMarkedRect;
-    WebCore::IntRect lastMarkedRect;
-    String markedText;
+    bool triggeredByAccessibilitySelectionChange { false };
+#if PLATFORM(MAC)
+    bool canEnableAutomaticSpellingCorrection { true };
 #endif
+    
 #if PLATFORM(QT)
     // The anchor, cursor represent either the selection or composition, depending
     // whether a composition exists or not.
     unsigned cursorPosition { 0 };
     unsigned anchorPosition { 0 };
-
+    
     WebCore::IntRect cursorRect;
     WebCore::IntRect editorRect;
     WebCore::IntRect compositionRect;
-
+    
     uint64_t inputMethodHints { 0 };
-
+    
     WTF::String selectedText;
     WTF::String surroundingText;
 #endif
-
-    String originIdentifierForPasteboard;
+    
+    bool isMissingPostLayoutData { true };
 
     struct PostLayoutData {
         uint32_t typingAttributes { AttributeNone };
-#if PLATFORM(IOS_FAMILY) || PLATFORM(GTK)
+#if PLATFORM(IOS_FAMILY) || PLATFORM(GTK) || PLATFORM(WPE)
         WebCore::IntRect caretRectAtStart;
 #endif
 #if PLATFORM(COCOA)
-        WebCore::IntRect focusedElementRect;
         uint64_t selectedTextLength { 0 };
         uint32_t textAlignment { NoAlignment };
         WebCore::Color textColor { WebCore::Color::black };
@@ -113,12 +118,20 @@ struct EditorState {
         WebCore::WritingDirection baseWritingDirection { WebCore::WritingDirection::Natural };
 #endif
 #if PLATFORM(IOS_FAMILY)
+        WebCore::IntRect selectionClipRect;
         WebCore::IntRect caretRectAtEnd;
-        Vector<WebCore::SelectionRect> selectionRects;
+        Vector<WebCore::SelectionGeometry> selectionGeometries;
+        Vector<WebCore::SelectionGeometry> markedTextRects;
+        String markedText;
+        WebCore::IntRect markedTextCaretRectAtStart;
+        WebCore::IntRect markedTextCaretRectAtEnd;
         String wordAtSelection;
         UChar32 characterAfterSelection { 0 };
         UChar32 characterBeforeSelection { 0 };
         UChar32 twoCharacterBeforeSelection { 0 };
+#if USE(DICTATION_ALTERNATIVES)
+        Vector<WebCore::DictationContext> dictationContextsForSelection;
+#endif
         bool isReplaceAllowed { false };
         bool hasContent { false };
         bool isStableStateUpdate { false };
@@ -129,28 +142,35 @@ struct EditorState {
         bool atStartOfSentence { false };
         bool selectionStartIsAtParagraphBoundary { false };
         bool selectionEndIsAtParagraphBoundary { false };
+        std::optional<WebCore::ElementContext> selectedEditableImage;
 #endif
 #if PLATFORM(MAC)
+        WebCore::IntRect selectionBoundingRect;
         uint64_t candidateRequestStartPosition { 0 };
         String paragraphContextForCandidateRequest;
         String stringForCandidateRequest;
 #endif
+#if PLATFORM(GTK) || PLATFORM(WPE)
+        String surroundingContext;
+        uint64_t surroundingContextCursorPosition { 0 };
+        uint64_t surroundingContextSelectionPosition { 0 };
+#endif
 
-        Optional<WebCore::FontAttributes> fontAttributes;
+        std::optional<WebCore::FontAttributes> fontAttributes;
 
         bool canCut { false };
         bool canCopy { false };
         bool canPaste { false };
 
         void encode(IPC::Encoder&) const;
-        static bool decode(IPC::Decoder&, PostLayoutData&);
+        static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, PostLayoutData&);
     };
 
     const PostLayoutData& postLayoutData() const;
     PostLayoutData& postLayoutData();
 
     void encode(IPC::Encoder&) const;
-    static bool decode(IPC::Decoder&, EditorState&);
+    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, EditorState&);
 
 private:
     PostLayoutData m_postLayoutData;

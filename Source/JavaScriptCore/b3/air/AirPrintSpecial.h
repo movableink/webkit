@@ -26,13 +26,15 @@
 #pragma once
 
 #if ENABLE(B3_JIT)
-#if ENABLE(MASM_PROBE)
 
 #include "AirInst.h"
 #include "AirSpecial.h"
 #include "MacroAssemblerPrinter.h"
 
 namespace JSC {
+
+class CCallHelpers;
+
 namespace Printer {
 
 typedef Vector<B3::Air::Arg> ArgList;
@@ -89,30 +91,29 @@ struct Printer<Reg> : public PrintRecord {
 
 namespace B3 { namespace Air {
 
-class PrintSpecial : public Special {
+class PrintSpecial final : public Special {
 public:
     PrintSpecial(Printer::PrintRecordList*);
-    ~PrintSpecial();
+    ~PrintSpecial() final;
     
     // You cannot use this register to pass arguments. It just so happens that this register is not
     // used for arguments in the C calling convention. By the way, this is the only thing that causes
     // this special to be specific to C calls.
     static constexpr GPRReg scratchRegister = GPRInfo::nonArgGPR0;
     
-protected:
+private:
     void forEachArg(Inst&, const ScopedLambda<Inst::EachArgCallback>&) final;
     bool isValid(Inst&) final;
     bool admitsStack(Inst&, unsigned argIndex) final;
     bool admitsExtendedOffsetAddr(Inst&, unsigned) final;
     void reportUsedRegisters(Inst&, const RegisterSet&) final;
-    CCallHelpers::Jump generate(Inst&, CCallHelpers&, GenerationContext&) final;
+    MacroAssembler::Jump generate(Inst&, CCallHelpers&, GenerationContext&) final;
     RegisterSet extraEarlyClobberedRegs(Inst&) final;
     RegisterSet extraClobberedRegs(Inst&) final;
     
     void dumpImpl(PrintStream&) const final;
     void deepDumpImpl(PrintStream&) const final;
     
-private:
     static constexpr unsigned specialArgOffset = 0;
     static constexpr unsigned numSpecialArgs = 1;
     static constexpr unsigned calleeArgOffset = numSpecialArgs;
@@ -129,5 +130,4 @@ private:
 
 } } } // namespace JSC::B3::Air
 
-#endif // ENABLE(MASM_PROBE)
 #endif // ENABLE(B3_JIT)

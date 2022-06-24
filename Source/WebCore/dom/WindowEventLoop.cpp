@@ -26,64 +26,147 @@
 #include "config.h"
 #include "WindowEventLoop.h"
 
+#include "CommonVM.h"
+#include "CustomElementReactionQueue.h"
 #include "Document.h"
+#include "HTMLSlotElement.h"
+#include "Microtasks.h"
+#include "MutationObserver.h"
+#include "SecurityOrigin.h"
+#include "ThreadGlobalData.h"
+#include <wtf/RunLoop.h>
 
 namespace WebCore {
 
-Ref<WindowEventLoop> WindowEventLoop::create()
+static HashMap<String, WindowEventLoop*>& windowEventLoopMap()
 {
-    return adoptRef(*new WindowEventLoop);
+    RELEASE_ASSERT(isMainThread());
+    static NeverDestroyed<HashMap<String, WindowEventLoop*>> map;
+    return map.get();
 }
 
-WindowEventLoop::WindowEventLoop()
+static String agentClusterKeyOrNullIfUnique(const SecurityOrigin& origin)
 {
+    auto computeKey = [&] {
+        // https://html.spec.whatwg.org/multipage/webappapis.html#obtain-agent-cluster-key
+        if (origin.isUnique())
+            return origin.toString();
+        RegistrableDomain registrableDomain { origin.data() };
+        if (registrableDomain.isEmpty())
+            return origin.toString();
+        return makeString(origin.protocol(), "://", registrableDomain.string());
+    };
+    auto key = computeKey();
+    if (key.isEmpty() || key == "null"_s)
+        return { };
+    return key;
 }
 
-void WindowEventLoop::queueTask(TaskSource source, Document& document, TaskFunction&& task)
+Ref<WindowEventLoop> WindowEventLoop::eventLoopForSecurityOrigin(const SecurityOrigin& origin)
 {
-    if (!m_activeTaskCount) {
-        callOnMainThread([eventLoop = makeRef(*this)] () {
-            eventLoop->run();
-        });
+    auto key = agentClusterKeyOrNullIfUnique(origin);
+    if (key.isNull())
+        return create({ });
+
+    auto addResult = windowEventLoopMap().add(key, nullptr);
+    if (UNLIKELY(addResult.isNewEntry)) {
+        auto newEventLoop = create(key);
+        addResult.iterator->value = newEventLoop.ptr();
+        return newEventLoop;
     }
-    ++m_activeTaskCount;
-    m_tasks.append(Task { source, WTFMove(task), document.identifier() });
+    return *addResult.iterator->value;
 }
 
-void WindowEventLoop::suspend(Document&)
+inline Ref<WindowEventLoop> WindowEventLoop::create(const String& agentClusterKey)
+{
+    return adoptRef(*new WindowEventLoop(agentClusterKey));
+}
+
+inline WindowEventLoop::WindowEventLoop(const String& agentClusterKey)
+    : m_agentClusterKey(agentClusterKey)
+    , m_timer(*this, &WindowEventLoop::didReachTimeToRun)
+    , m_perpetualTaskGroupForSimilarOriginWindowAgents(*this)
 {
 }
 
-void WindowEventLoop::resume(Document& document)
+WindowEventLoop::~WindowEventLoop()
 {
-    if (!m_documentIdentifiersForSuspendedTasks.contains(document.identifier()))
+    if (m_agentClusterKey.isNull())
         return;
+    auto didRemove = windowEventLoopMap().remove(m_agentClusterKey);
+    RELEASE_ASSERT(didRemove);
+}
 
-    callOnMainThread([eventLoop = makeRef(*this)] () {
-        eventLoop->run();
+void WindowEventLoop::scheduleToRun()
+{
+    m_timer.startOneShot(0_s);
+}
+
+bool WindowEventLoop::isContextThread() const
+{
+    return isMainThread();
+}
+
+MicrotaskQueue& WindowEventLoop::microtaskQueue()
+{
+    if (!m_microtaskQueue)
+        m_microtaskQueue = makeUnique<MicrotaskQueue>(commonVM());
+    return *m_microtaskQueue;
+}
+
+void WindowEventLoop::didReachTimeToRun()
+{
+    Ref protectedThis { *this }; // Executing tasks may remove the last reference to this WindowEventLoop.
+    run();
+}
+
+void WindowEventLoop::queueMutationObserverCompoundMicrotask()
+{
+    if (m_mutationObserverCompoundMicrotaskQueuedFlag)
+        return;
+    m_mutationObserverCompoundMicrotaskQueuedFlag = true;
+    m_perpetualTaskGroupForSimilarOriginWindowAgents.queueMicrotask([this] {
+        // We can't make a Ref to WindowEventLoop in the lambda capture as that would result in a reference cycle & leak.
+        Ref protectedThis { *this };
+        m_mutationObserverCompoundMicrotaskQueuedFlag = false;
+
+        // FIXME: This check doesn't exist in the spec.
+        if (m_deliveringMutationRecords)
+            return;
+        m_deliveringMutationRecords = true;
+        MutationObserver::notifyMutationObservers(*this);
+        m_deliveringMutationRecords = false;
     });
 }
 
-void WindowEventLoop::run()
+CustomElementQueue& WindowEventLoop::backupElementQueue()
 {
-    m_activeTaskCount = 0;
-    Vector<Task> tasks = WTFMove(m_tasks);
-    m_documentIdentifiersForSuspendedTasks.clear();
-    Vector<Task> remainingTasks;
-    for (auto& task : tasks) {
-        auto* document = Document::allDocumentsMap().get(task.documentIdentifier);
-        if (!document || document->activeDOMObjectsAreStopped())
-            continue;
-        if (document->activeDOMObjectsAreSuspended()) {
-            m_documentIdentifiersForSuspendedTasks.add(task.documentIdentifier);
-            remainingTasks.append(WTFMove(task));
-            continue;
-        }
-        task.task();
+    if (!m_processingBackupElementQueue) {
+        m_processingBackupElementQueue = true;
+        m_perpetualTaskGroupForSimilarOriginWindowAgents.queueMicrotask([this] {
+            // We can't make a Ref to WindowEventLoop in the lambda capture as that would result in a reference cycle & leak.
+            Ref protectedThis { *this };
+            m_processingBackupElementQueue = false;
+            ASSERT(m_customElementQueue);
+            CustomElementReactionQueue::processBackupQueue(*m_customElementQueue);
+        });
     }
-    for (auto& task : m_tasks)
-        remainingTasks.append(WTFMove(task));
-    m_tasks = WTFMove(remainingTasks);
+    if (!m_customElementQueue)
+        m_customElementQueue = makeUnique<CustomElementQueue>();
+    return *m_customElementQueue;
+}
+
+void WindowEventLoop::breakToAllowRenderingUpdate()
+{
+#if PLATFORM(MAC)
+    // On Mac rendering updates happen in a runloop observer.
+    // Avoid running timers and doing other work (like processing asyncronous IPC) until it is completed.
+
+    // FIXME: Also bail out from the task loop in EventLoop::run().
+    threadGlobalData().threadTimers().breakFireLoopForRenderingUpdate();
+
+    RunLoop::main().suspendFunctionDispatchForCurrentCycle();
+#endif
 }
 
 } // namespace WebCore

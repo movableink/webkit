@@ -32,6 +32,12 @@ struct RTC_EXPORT AudioProcessingStats {
   // Only reported if level estimation is enabled in AudioProcessing::Config.
   absl::optional<int> output_rms_dbfs;
 
+  // True if voice is detected in the last capture frame, after processing.
+  // It is conservative in flagging audio as speech, with low likelihood of
+  // incorrectly flagging a frame as voice.
+  // Only reported if voice detection is enabled in AudioProcessing::Config.
+  absl::optional<bool> voice_detected;
+
   // AEC Statistics.
   // ERL = 10log_10(P_far / P_echo)
   absl::optional<double> echo_return_loss;
@@ -44,9 +50,9 @@ struct RTC_EXPORT AudioProcessingStats {
   // The delay metrics consists of the delay median and standard deviation. It
   // also consists of the fraction of delay estimates that can make the echo
   // cancellation perform poorly. The values are aggregated until the first
-  // call to |GetStatistics()| and afterwards aggregated and updated every
+  // call to `GetStatistics()` and afterwards aggregated and updated every
   // second. Note that if there are several clients pulling metrics from
-  // |GetStatistics()| during a session the first call from any of them will
+  // `GetStatistics()` during a session the first call from any of them will
   // change to one second aggregation window for all.
   absl::optional<int32_t> delay_median_ms;
   absl::optional<int32_t> delay_standard_deviation_ms;
@@ -58,7 +64,7 @@ struct RTC_EXPORT AudioProcessingStats {
 
   // The instantaneous delay estimate produced in the AEC. The unit is in
   // milliseconds and the value is the instantaneous value at the time of the
-  // call to |GetStatistics()|.
+  // call to `GetStatistics()`.
   absl::optional<int32_t> delay_ms;
 };
 

@@ -21,6 +21,7 @@
 #include "config.h"
 #include "JSTestCallbackFunctionWithTypedefs.h"
 
+#include "JSDOMConvertBase.h"
 #include "JSDOMConvertNullable.h"
 #include "JSDOMConvertNumbers.h"
 #include "JSDOMConvertSequences.h"
@@ -33,9 +34,9 @@
 namespace WebCore {
 using namespace JSC;
 
-JSTestCallbackFunctionWithTypedefs::JSTestCallbackFunctionWithTypedefs(JSObject* callback, JSDOMGlobalObject* globalObject)
-    : TestCallbackFunctionWithTypedefs(globalObject->scriptExecutionContext())
-    , m_data(new JSCallbackDataStrong(callback, globalObject, this))
+JSTestCallbackFunctionWithTypedefs::JSTestCallbackFunctionWithTypedefs(VM& vm, JSObject* callback)
+    : TestCallbackFunctionWithTypedefs(jsCast<JSDOMGlobalObject*>(callback->globalObject(vm))->scriptExecutionContext())
+    , m_data(new JSCallbackDataStrong(vm, callback, this))
 {
 }
 
@@ -53,28 +54,28 @@ JSTestCallbackFunctionWithTypedefs::~JSTestCallbackFunctionWithTypedefs()
 #endif
 }
 
-CallbackResult<typename IDLVoid::ImplementationType> JSTestCallbackFunctionWithTypedefs::handleEvent(typename IDLSequence<IDLNullable<IDLLong>>::ParameterType sequenceArg, typename IDLLong::ParameterType longArg)
+CallbackResult<typename IDLUndefined::ImplementationType> JSTestCallbackFunctionWithTypedefs::handleEvent(typename IDLSequence<IDLNullable<IDLLong>>::ParameterType sequenceArg, typename IDLLong::ParameterType longArg)
 {
     if (!canInvokeCallback())
         return CallbackResultType::UnableToExecute;
 
     Ref<JSTestCallbackFunctionWithTypedefs> protectedThis(*this);
 
-    auto& globalObject = *m_data->globalObject();
+    auto& globalObject = *jsCast<JSDOMGlobalObject*>(scriptExecutionContext()->globalObject());
     auto& vm = globalObject.vm();
 
     JSLockHolder lock(vm);
-    auto& state = *globalObject.globalExec();
+    auto& lexicalGlobalObject = globalObject;
     JSValue thisValue = jsUndefined();
     MarkedArgumentBuffer args;
-    args.append(toJS<IDLSequence<IDLNullable<IDLLong>>>(state, globalObject, sequenceArg));
+    args.append(toJS<IDLSequence<IDLNullable<IDLLong>>>(lexicalGlobalObject, globalObject, sequenceArg));
     args.append(toJS<IDLLong>(longArg));
     ASSERT(!args.hasOverflowed());
 
     NakedPtr<JSC::Exception> returnedException;
-    m_data->invokeCallback(thisValue, args, JSCallbackData::CallbackType::Function, Identifier(), returnedException);
+    m_data->invokeCallback(vm, thisValue, args, JSCallbackData::CallbackType::Function, Identifier(), returnedException);
     if (returnedException) {
-        reportException(&state, returnedException);
+        reportException(&lexicalGlobalObject, returnedException);
         return CallbackResultType::ExceptionThrown;
      }
 

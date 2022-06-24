@@ -41,6 +41,7 @@ WebCore::ResourceError blockedByContentBlockerError(const WebCore::ResourceReque
 WebCore::ResourceError cannotShowURLError(const WebCore::ResourceRequest&);
 WebCore::ResourceError wasBlockedByRestrictionsError(const WebCore::ResourceRequest&);
 WebCore::ResourceError interruptedForPolicyChangeError(const WebCore::ResourceRequest&);
+WebCore::ResourceError ftpDisabledError(const WebCore::ResourceRequest&);
 WebCore::ResourceError failedCustomProtocolSyncLoad(const WebCore::ResourceRequest&);
 #if ENABLE(CONTENT_FILTERING)
 WebCore::ResourceError blockedByContentFilterError(const WebCore::ResourceRequest&);
@@ -48,7 +49,6 @@ WebCore::ResourceError blockedByContentFilterError(const WebCore::ResourceReques
 WebCore::ResourceError cannotShowMIMETypeError(const WebCore::ResourceResponse&);
 WebCore::ResourceError fileDoesNotExistError(const WebCore::ResourceResponse&);
 WebCore::ResourceError pluginWillHandleLoadError(const WebCore::ResourceResponse&);
-WebCore::ResourceError internalError(const URL&);
 
 #if USE(SOUP)
 WebCore::ResourceError downloadNetworkError(const URL&, const WTF::String&);

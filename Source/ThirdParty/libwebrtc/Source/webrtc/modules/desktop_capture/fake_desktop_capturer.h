@@ -13,7 +13,6 @@
 
 #include <memory>
 
-#include "modules/desktop_capture/desktop_capture_types.h"
 #include "modules/desktop_capture/desktop_capturer.h"
 #include "modules/desktop_capture/desktop_frame_generator.h"
 #include "modules/desktop_capture/shared_memory.h"
@@ -40,8 +39,8 @@ class RTC_EXPORT FakeDesktopCapturer : public DesktopCapturer {
   // Decides the result which will be returned in next Capture() callback.
   void set_result(DesktopCapturer::Result result);
 
-  // Uses the |generator| provided as DesktopFrameGenerator, FakeDesktopCapturer
-  // does not take the ownership of |generator|.
+  // Uses the `generator` provided as DesktopFrameGenerator, FakeDesktopCapturer
+  // does not take the ownership of `generator`.
   void set_frame_generator(DesktopFrameGenerator* generator);
 
   // Count of DesktopFrame(s) have been returned by this instance. This field

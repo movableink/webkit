@@ -1,7 +1,0 @@
-2d.imageData.get.order.rows
-
-getImageData() returns topmost rows first
-
-
-FAIL getImageData() returns topmost rows first null is not an object (evaluating 'ctx.fillStyle = '#fff'')
-

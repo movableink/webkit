@@ -20,31 +20,41 @@ Google Inc.
  Michael Bai
  John Bauman
  Peter Beverloo
+ Eric Binet
  Steve Block
  Rachel Blum
  Eric Boren
  Henry Bridge
+ Victor Costan
+ James Dong
  Nat Duca
  Courtney Goeltzenleuchter
+ Tobin Ehlis
+ Ian Elliott
+ Scott Graham
  Peter Kasting
  Vangelis Kokkevis
+ Charlie Lao
+ Jiacheng Lu
  Zhenyao Mo
  Daniel Nicoara
+ Kai Ninomiya
+ Cody Northrop
  Alastair Patrick
  Alok Priyadarshi
  Kenneth Russell
+ Jonah Ryan-Davis
  Brian Salomon
+ Justin Schuh
  Gregg Tavares
+ thestig@chromium.org
  Jeff Timanus
+ Tim Van Patten
  Ben Vanik
  Adrienne Walker
- thestig@chromium.org
- Justin Schuh
- Scott Graham
  Corentin Wallez
- Kai Ninomiya
- Victor Costan
  Shahbaz Youssefi
+ Hailin Zhang
 
 Adobe Systems Inc.
  Alexandru Chiculita
@@ -62,6 +72,7 @@ The Qt Company Ltd.
 
 Imagination Technologies Ltd.
  Gregoire Payen de La Garanderie
+ Kyle Griffiths
 
 Intel Corporation
  Jin Yang
@@ -90,6 +101,7 @@ Mozilla Corp.
  Benoit Jacob
  Makoto Kato
  Vladimir Vukicevic
+ Josh Matthews
 
 Turbulenz
  Michael Braithwaite
@@ -116,6 +128,7 @@ Microsoft Corporation
  Rafael Cintron
  James Clarke
  Nathan Zabriskie
+ Patrick To
 
 Microsoft Open Technologies, Inc.
  Cooper Partin
@@ -142,6 +155,7 @@ Advanced Micro Devices, Inc.
 
 LG Electronics, Inc.
  Jani Hautakangas
+ Ivan Murashov
 
 IBM Inc.
  Junliang Yan
@@ -156,10 +170,49 @@ Samsung Electronics, Inc.
  Hyunseok Ko
  Jaedon Lee
  Jeff Vigil
+ Kevin Jung
  Kyeongmin Kim
+ Mahmoud Kharsa
  Minkyu Jeong
  Mohan Maiya
+ Peter Mowry
  Sangwon Park
+ Saurabh Badenkal
+ Younggwan Kim
 
 Arm Ltd.
  Fei Yang
+ Xinyi He
+ Sunny Sun
+ Xiaoxuan Liu
+ Ancheng Qiao
+ Amy Liu
+ Jian Li
+ Cheryl Wei
+
+Broadcom Inc.
+ Gary Sweet
+
+Facebook, Inc.
+ Artem Bolgar
+
+The Khronos Group, Inc.
+ Alexey Knyazev
+
+Igalia, S.L.
+ Jose Dapena Paz
+
+Numfum GmbH
+ Carl Woffenden
+
+Collabora, Ltd.
+ Lubosz Sarnecki
+
+LunarG, Inc.
+ Mark Lobodzinski
+
+Valve Corporation
+ Steven Noonan
+
+Yandex LLC
+ Andrew Naumov

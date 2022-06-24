@@ -210,6 +210,16 @@ static gboolean browserCellRendererVariantCellRendererActivate(GtkCellRenderer *
     return TRUE;
 }
 
+#if GTK_CHECK_VERSION(3, 98, 5)
+static void browserCellRendererVariantCellRendererSnapshot(GtkCellRenderer *cell, GtkSnapshot *snapshot, GtkWidget *widget, const GdkRectangle *bgArea, const GdkRectangle *cellArea, GtkCellRendererState flags)
+{
+    GtkCellRenderer *renderer = browserCellRendererVariantGetRendererForValue(BROWSER_CELL_RENDERER_VARIANT(cell));
+    if (!renderer)
+        return;
+
+    GTK_CELL_RENDERER_GET_CLASS(renderer)->snapshot(renderer, snapshot, widget, bgArea, cellArea, flags);
+}
+#else
 static void browserCellRendererVariantCellRendererRender(GtkCellRenderer *cell, cairo_t *cr, GtkWidget *widget, const GdkRectangle *bgArea, const GdkRectangle *cellArea, GtkCellRendererState flags)
 {
     GtkCellRenderer *renderer = browserCellRendererVariantGetRendererForValue(BROWSER_CELL_RENDERER_VARIANT(cell));
@@ -218,6 +228,7 @@ static void browserCellRendererVariantCellRendererRender(GtkCellRenderer *cell, 
 
     GTK_CELL_RENDERER_GET_CLASS(renderer)->render(renderer, cr, widget, bgArea, cellArea, flags);
 }
+#endif
 
 static GtkCellEditable *browserCellRendererVariantCellRendererStartEditing(GtkCellRenderer *cell, GdkEvent *event, GtkWidget *widget, const gchar *path, const GdkRectangle *bgArea, const GdkRectangle *cellArea, GtkCellRendererState flags)
 {
@@ -282,13 +293,13 @@ static void browser_cell_renderer_variant_init(BrowserCellRendererVariant *rende
 
     renderer->toggleRenderer = gtk_cell_renderer_toggle_new();
     g_object_set(G_OBJECT(renderer->toggleRenderer), "xalign", 0.0, NULL);
-    g_object_ref_sink(renderer->toggleRenderer);
+    renderer->toggleRenderer = g_object_ref_sink(renderer->toggleRenderer);
 
     renderer->textRenderer = gtk_cell_renderer_text_new();
     g_signal_connect_swapped(renderer->textRenderer, "edited",
                              G_CALLBACK(browserCellRendererVariantCellRendererTextEdited), renderer);
     g_object_set(G_OBJECT(renderer->textRenderer), "editable", TRUE, NULL);
-    g_object_ref_sink(renderer->textRenderer);
+    renderer->textRenderer = g_object_ref_sink(renderer->textRenderer);
 
     renderer->spinRenderer = gtk_cell_renderer_spin_new();
     g_signal_connect_swapped(renderer->spinRenderer, "edited",
@@ -306,7 +317,11 @@ static void browser_cell_renderer_variant_class_init(BrowserCellRendererVariantC
     gobjectClass->finalize = browserCellRendererVariantFinalize;
 
     cellRendererClass->activate = browserCellRendererVariantCellRendererActivate;
+#if GTK_CHECK_VERSION(3, 98, 5)
+    cellRendererClass->snapshot = browserCellRendererVariantCellRendererSnapshot;
+#else
     cellRendererClass->render = browserCellRendererVariantCellRendererRender;
+#endif
     cellRendererClass->start_editing = browserCellRendererVariantCellRendererStartEditing;
     cellRendererClass->get_preferred_width = browserCellRendererVariantCellRendererGetPreferredWidth;
     cellRendererClass->get_preferred_height = browserCellRendererVariantCellRendererGetPreferredHeight;

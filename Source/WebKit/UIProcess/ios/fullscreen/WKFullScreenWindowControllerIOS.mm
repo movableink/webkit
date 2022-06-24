@@ -24,16 +24,17 @@
  */
 
 #import "config.h"
-
-#if PLATFORM(IOS_FAMILY) && ENABLE(FULLSCREEN_API)
 #import "WKFullScreenWindowControllerIOS.h"
 
+#if PLATFORM(IOS_FAMILY) && ENABLE(FULLSCREEN_API)
+
 #import "UIKitSPI.h"
+#import "VideoFullscreenManagerProxy.h"
 #import "WKFullScreenViewController.h"
 #import "WKFullscreenStackView.h"
 #import "WKWebView.h"
 #import "WKWebViewInternal.h"
-#import "WKWebViewPrivate.h"
+#import "WKWebViewPrivateForTesting.h"
 #import "WebFullScreenManagerProxy.h"
 #import "WebPageProxy.h"
 #import <Foundation/Foundation.h>
@@ -44,6 +45,8 @@
 #import <WebCore/GeometryUtilities.h>
 #import <WebCore/IntRect.h>
 #import <WebCore/LocalizedStrings.h>
+#import <WebCore/VideoFullscreenInterfaceAVKit.h>
+#import <WebCore/VideoFullscreenModel.h>
 #import <WebCore/ViewportArguments.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <pal/spi/cocoa/NSStringSPI.h>
@@ -53,9 +56,12 @@
 #import <wtf/cocoa/NSURLExtras.h>
 #import <wtf/spi/cocoa/SecuritySPI.h>
 
-
 #if !HAVE(URL_FORMATTING)
 SOFT_LINK_PRIVATE_FRAMEWORK_OPTIONAL(LinkPresentation)
+#endif
+
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+#include <WebKitAdditions/WKFullscreenWindowControllerAdditions.h>
 #endif
 
 namespace WebKit {
@@ -115,7 +121,7 @@ struct WKWebViewState {
         [[webView scrollView] setContentInset:_savedEdgeInset];
         [[webView scrollView] setContentOffset:_savedContentOffset];
         [[webView scrollView] setScrollIndicatorInsets:_savedScrollIndicatorInsets];
-        if (auto* page = webView._page) {
+        if (auto page = webView._page) {
             page->setTopContentInset(_savedTopContentInset);
             page->setForceAlwaysUserScalable(_savedForceAlwaysUserScalable);
         }
@@ -135,7 +141,7 @@ struct WKWebViewState {
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         _savedScrollIndicatorInsets = [[webView scrollView] scrollIndicatorInsets];
 ALLOW_DEPRECATED_DECLARATIONS_END
-        if (auto* page = webView._page) {
+        if (auto page = webView._page) {
             _savedTopContentInset = page->topContentInset();
             _savedForceAlwaysUserScalable = page->forceAlwaysUserScalable();
         }
@@ -424,6 +430,13 @@ static const NSTimeInterval kAnimationDuration = 0.2;
 
 #pragma mark -
 
+@interface WKFullScreenWindowController (VideoFullscreenManagerProxyClient)
+- (void)didEnterPictureInPicture;
+- (void)didExitPictureInPicture;
+@end
+
+#pragma mark -
+
 @implementation WKFullScreenWindowController {
     RetainPtr<WKFullScreenPlaceholderView> _webViewPlaceholder;
 
@@ -433,13 +446,18 @@ static const NSTimeInterval kAnimationDuration = 0.2;
     RetainPtr<UIWindow> _window;
     RetainPtr<UIViewController> _rootViewController;
 
-    RefPtr<WebKit::VoidCallback> _repaintCallback;
     RetainPtr<UIViewController> _viewControllerForPresentation;
     RetainPtr<WKFullScreenViewController> _fullscreenViewController;
     RetainPtr<UISwipeGestureRecognizer> _startDismissGestureRecognizer;
     RetainPtr<UIPanGestureRecognizer> _interactivePanDismissGestureRecognizer;
     RetainPtr<UIPinchGestureRecognizer> _interactivePinchDismissGestureRecognizer;
     RetainPtr<WKFullScreenInteractiveTransition> _interactiveDismissTransitionCoordinator;
+
+    std::unique_ptr<WebKit::VideoFullscreenManagerProxy::VideoInPictureInPictureDidChangeObserver> _pipObserver;
+    BOOL _shouldReturnToFullscreenFromPictureInPicture;
+    BOOL _enterFullscreenNeedsExitPictureInPicture;
+    BOOL _returnToFullscreenFromPictureInPicture;
+    BOOL _blocksReturnToFullscreenFromPictureInPicture;
 
     CGRect _initialFrame;
     CGRect _finalFrame;
@@ -448,6 +466,8 @@ static const NSTimeInterval kAnimationDuration = 0.2;
     BOOL _EVOrganizationNameIsValid;
     BOOL _inInteractiveDismiss;
     BOOL _exitRequested;
+    BOOL _enterRequested;
+    BOOL _exitingFullScreen;
 
     RetainPtr<id> _notificationListener;
 }
@@ -490,22 +510,13 @@ static const NSTimeInterval kAnimationDuration = 0.2;
 #pragma mark -
 #pragma mark External Interface
 
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/WKFullScreenWindowControllerIOSAdditions.mm>
-#else
-static RetainPtr<UIWindow> makeWindowFromView(UIView *)
-{
-    return adoptNS([[UIWindow alloc] init]);
-}
-#endif
-
 - (void)enterFullScreen
 {
     if ([self isFullScreen])
         return;
 
     RetainPtr<WKWebView> webView = self._webView;
-    auto* page = [webView _page];
+    auto page = [webView _page];
     auto* manager = self._manager;
     if (!page || !manager)
         return;
@@ -513,14 +524,15 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
     [self _invalidateEVOrganizationName];
 
     _fullScreenState = WebKit::WaitingToEnterFullScreen;
+    _blocksReturnToFullscreenFromPictureInPicture = manager->blocksReturnToFullscreenFromPictureInPicture();
 
-    _window = makeWindowFromView(webView.get());
+    _window = adoptNS([[UIWindow alloc] initWithWindowScene:[[webView window] windowScene]]);
     [_window setBackgroundColor:[UIColor clearColor]];
     [_window setWindowLevel:UIWindowLevelNormal - 1];
     [_window setHidden:NO];
 
     _rootViewController = [[UIViewController alloc] init];
-    _rootViewController.get().view = [[[UIView alloc] initWithFrame:_window.get().bounds] autorelease];
+    _rootViewController.get().view = adoptNS([[UIView alloc] initWithFrame:_window.get().bounds]).get();
     _rootViewController.get().view.backgroundColor = [UIColor clearColor];
     _rootViewController.get().view.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
     [_rootViewController setModalPresentationStyle:UIModalPresentationCustom];
@@ -533,7 +545,7 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
     [_fullscreenViewController setTransitioningDelegate:self];
     [_fullscreenViewController setModalPresentationCapturesStatusBarAppearance:YES];
     [_fullscreenViewController setTarget:self];
-    [_fullscreenViewController setAction:@selector(requestExitFullScreen)];
+    [_fullscreenViewController setExitFullScreenAction:@selector(requestExitFullScreen)];
     _fullscreenViewController.get().view.frame = _rootViewController.get().view.bounds;
     [self _updateLocationInfo];
 
@@ -567,7 +579,7 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
     WKSnapshotConfiguration* config = nil;
     [webView takeSnapshotWithConfiguration:config completionHandler:^(UIImage * snapshotImage, NSError * error) {
         RetainPtr<WKWebView> webView = self._webView;
-        auto* page = [self._webView _page];
+        auto page = [self._webView _page];
         if (!page)
             return;
 
@@ -576,8 +588,6 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
         
         [[_webViewPlaceholder layer] setContents:(id)[snapshotImage CGImage]];
         WebKit::replaceViewWithView(webView.get(), _webViewPlaceholder.get());
-
-        WebKit::WKWebViewState().applyTo(webView.get());
         
         [webView setAutoresizingMask:(UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight)];
         [webView setFrame:[_window bounds]];
@@ -596,9 +606,7 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
         arguments.userZoom = 1;
         page->setOverrideViewportArguments(arguments);
 
-        _repaintCallback = WebKit::VoidCallback::create([protectedSelf = retainPtr(self), self](WebKit::CallbackBase::Error) {
-            _repaintCallback = nullptr;
-
+        page->forceRepaint([protectedSelf = retainPtr(self), self] {
             if (_exitRequested) {
                 _exitRequested = NO;
                 [self _exitFullscreenImmediately];
@@ -613,7 +621,6 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
             ASSERT_NOT_REACHED();
             [self _exitFullscreenImmediately];
         });
-        page->forceRepaint(_repaintCallback.copyRef());
 
         [CATransaction commit];
     }];
@@ -654,19 +661,66 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
             return;
         }
 
-        auto* page = [self._webView _page];
+        WebKit::WKWebViewState().applyTo(webView.get());
+        auto page = [self._webView _page];
         auto* manager = self._manager;
         if (page && manager) {
             [self._webView becomeFirstResponder];
             manager->didEnterFullScreen();
             manager->setAnimatingFullScreen(false);
             page->setSuppressVisibilityUpdates(false);
+
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+            configureViewForEnteringFullscreen(_fullscreenViewController.get().view, kAnimationDuration, _finalFrame.size);
+#endif
+
+            if (auto* videoFullscreenManager = self._videoFullscreenManager) {
+                if (!_pipObserver) {
+                    _pipObserver = WTF::makeUnique<WebKit::VideoFullscreenManagerProxy::VideoInPictureInPictureDidChangeObserver>([self] (bool inPiP) {
+                        if (inPiP)
+                            [self didEnterPictureInPicture];
+                        else
+                            [self didExitPictureInPicture];
+                    });
+                    videoFullscreenManager->addVideoInPictureInPictureDidChangeObserver(*_pipObserver);
+                }
+                if (auto* videoFullscreenInterface = videoFullscreenManager ? videoFullscreenManager->controlsManagerInterface() : nullptr) {
+                    if (_returnToFullscreenFromPictureInPicture)
+                        videoFullscreenInterface->preparedToReturnToStandby();
+                    else if (videoFullscreenInterface->inPictureInPicture()) {
+                        if (auto* model = videoFullscreenInterface->videoFullscreenModel()) {
+                            _enterFullscreenNeedsExitPictureInPicture = YES;
+                            model->requestFullscreenMode(WebCore::HTMLMediaElementEnums::VideoFullscreenModeNone);
+                        }
+                    }
+                }
+            }
+
+            _returnToFullscreenFromPictureInPicture = NO;
+
             return;
         }
 
         ASSERT_NOT_REACHED();
         [self _exitFullscreenImmediately];
     }];
+}
+
+- (void)requestEnterFullScreen
+{
+    if (_fullScreenState != WebKit::NotInFullScreen)
+        return;
+
+    // Switch the active tab if needed
+    if (auto* page = [self._webView _page].get())
+        page->fullscreenMayReturnToInline();
+
+    if (auto* manager = self._manager) {
+        manager->requestEnterFullScreen();
+        return;
+    }
+
+    ASSERT_NOT_REACHED();
 }
 
 - (void)requestExitFullScreen
@@ -678,6 +732,7 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
 
     if (auto* manager = self._manager) {
         manager->requestExitFullScreen();
+        _exitingFullScreen = YES;
         return;
     }
 
@@ -692,6 +747,7 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
         return;
     }
     _fullScreenState = WebKit::WaitingToExitFullScreen;
+    _exitingFullScreen = YES;
 
     if (auto* manager = self._manager) {
         manager->setAnimatingFullScreen(true);
@@ -716,18 +772,25 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
     _finalFrame.size = WebKit::sizeExpandedToSize(_finalFrame.size, CGSizeMake(1, 1));
     _finalFrame = WebKit::safeInlineRect(_finalFrame, [_rootViewController view].frame.size);
 
-    if (auto* page = [self._webView _page])
+    if (auto page = [self._webView _page])
         page->setSuppressVisibilityUpdates(true);
 
-    [_fullscreenViewController setPrefersStatusBarHidden:NO];
+    CompletionHandler<void()> completionHandler = [strongSelf = retainPtr(self), self] () mutable {
+        [_fullscreenViewController setPrefersStatusBarHidden:NO];
 
-    if (_interactiveDismissTransitionCoordinator) {
-        [_interactiveDismissTransitionCoordinator finishInteractiveTransition];
-        _interactiveDismissTransitionCoordinator = nil;
-        return;
-    }
+        if (_interactiveDismissTransitionCoordinator) {
+            [_interactiveDismissTransitionCoordinator finishInteractiveTransition];
+            _interactiveDismissTransitionCoordinator = nil;
+            return;
+        }
 
-    [self _dismissFullscreenViewController];
+        [self _dismissFullscreenViewController];
+    };
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+    configureViewForExitingFullscreen(_fullscreenViewController.get().view, kAnimationDuration, [[_fullscreenViewController view] frame].size, WTFMove(completionHandler));
+#else
+    completionHandler();
+#endif
 }
 
 - (void)_completedExitFullScreen
@@ -748,8 +811,8 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
     [webView becomeFirstResponder];
 
     _viewState.applyTo(webView.get());
-    if (auto* page = [webView _page])
-        page->setOverrideViewportArguments(WTF::nullopt);
+    if (auto page = [webView _page])
+        page->setOverrideViewportArguments(std::nullopt);
 
     [webView setNeedsLayout];
     [webView layoutIfNeeded];
@@ -762,29 +825,37 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
         manager->didExitFullScreen();
     }
 
+    auto* videoFullscreenInterface = self._videoFullscreenManager ? self._videoFullscreenManager->controlsManagerInterface() : nullptr;
+    _shouldReturnToFullscreenFromPictureInPicture = videoFullscreenInterface && videoFullscreenInterface->inPictureInPicture();
+
     [_window setHidden:YES];
     _window = nil;
 
-    if (_repaintCallback) {
-        _repaintCallback->invalidate(WebKit::CallbackBase::Error::OwnerWasInvalidated);
-        ASSERT(!_repaintCallback);
-    }
-
-    _repaintCallback = WebKit::VoidCallback::create([protectedSelf = retainPtr(self), self](WebKit::CallbackBase::Error) {
-        _repaintCallback = nullptr;
+    CompletionHandler<void()> completionHandler([protectedSelf = retainPtr(self), self] {
         _webViewPlaceholder.get().parent = nil;
         [_webViewPlaceholder removeFromSuperview];
 
-        if (auto* page = [self._webView _page])
+        if (auto page = [self._webView _page]) {
             page->setSuppressVisibilityUpdates(false);
+            page->setNeedsDOMWindowResizeEvent();
+        }
+
+        _exitRequested = NO;
+        _exitingFullScreen = NO;
+        if (_enterRequested) {
+            _enterRequested = NO;
+            [self requestEnterFullScreen];
+        }
     });
 
-    if (auto* page = [self._webView _page])
-        page->forceRepaint(_repaintCallback.copyRef());
+    auto* page = [self._webView _page].get();
+    if (page && page->isViewFocused())
+        page->forceRepaint(WTFMove(completionHandler));
     else
-        _repaintCallback->performCallback();
+        completionHandler();
 
     [_fullscreenViewController setPrefersStatusBarHidden:YES];
+    [_fullscreenViewController invalidate];
     _fullscreenViewController = nil;
 }
 
@@ -811,10 +882,39 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
     if (superview)
         return;
 
-    dispatch_async(dispatch_get_main_queue(), ^{
+    RunLoop::main().dispatch([self, strongSelf = retainPtr(self)] {
         if ([_webViewPlaceholder superview] == nil && [_webViewPlaceholder parent] == self)
             [self close];
     });
+}
+
+- (void)didEnterPictureInPicture
+{
+    _shouldReturnToFullscreenFromPictureInPicture = !_blocksReturnToFullscreenFromPictureInPicture;
+
+    if (_fullScreenState == WebKit::InFullScreen)
+        [self requestExitFullScreen];
+}
+
+- (void)didExitPictureInPicture
+{
+    if (!_enterFullscreenNeedsExitPictureInPicture && _shouldReturnToFullscreenFromPictureInPicture) {
+        auto* videoFullscreenInterface = self._videoFullscreenManager ? self._videoFullscreenManager->controlsManagerInterface() : nullptr;
+        if (videoFullscreenInterface && videoFullscreenInterface->returningToStandby()) {
+            if (!_exitingFullScreen) {
+                if (_fullScreenState == WebKit::InFullScreen)
+                    videoFullscreenInterface->preparedToReturnToStandby();
+                else
+                    [self requestEnterFullScreen];
+            } else
+                _enterRequested = YES;
+
+            _returnToFullscreenFromPictureInPicture = YES;
+            return;
+        }
+    }
+
+    _enterFullscreenNeedsExitPictureInPicture = NO;
 }
 
 #pragma mark -
@@ -881,8 +981,10 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
 
 - (void)_exitFullscreenImmediately
 {
-    if (![self isFullScreen])
+    if (_fullScreenState == WebKit::NotInFullScreen)
         return;
+
+    _shouldReturnToFullscreenFromPictureInPicture = false;
 
     auto* manager = self._manager;
     if (manager)
@@ -893,7 +995,7 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
     RetainPtr<WKWebView> webView = self._webView;
     _webViewPlaceholder.get().parent = nil;
     WebKit::replaceViewWithView(_webViewPlaceholder.get(), webView.get());
-    if (auto* page = [webView _page])
+    if (auto page = [webView _page])
         page->setSuppressVisibilityUpdates(false);
     _webViewPlaceholder = nil;
 }
@@ -929,34 +1031,28 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
     if (!trust)
         return nil;
 
-    NSDictionary *infoDictionary = [(__bridge NSDictionary *)SecTrustCopyInfo(trust) autorelease];
+    auto infoDictionary = adoptCF(SecTrustCopyInfo(trust));
     // If SecTrustCopyInfo returned NULL then it's likely that the SecTrustRef has not been evaluated
     // and the only way to get the information we need is to call SecTrustEvaluate ourselves.
     if (!infoDictionary) {
-        SecTrustResultType result = kSecTrustResultProceed;
-
-        // FIXME: This is deprecated <rdar://problem/45894288>.
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        OSStatus err = SecTrustEvaluate(trust, &result);
-        ALLOW_DEPRECATED_DECLARATIONS_END
-
-        if (err == noErr)
-            infoDictionary = [(__bridge NSDictionary *)SecTrustCopyInfo(trust) autorelease];
+        if (!SecTrustEvaluateWithError(trust, nullptr))
+            return nil;
+        infoDictionary = adoptCF(SecTrustCopyInfo(trust));
         if (!infoDictionary)
             return nil;
     }
 
     // Make sure that the EV certificate is valid against our certificate chain.
-    id hasEV = [infoDictionary objectForKey:(__bridge NSString *)kSecTrustInfoExtendedValidationKey];
+    id hasEV = [(__bridge NSDictionary *)infoDictionary.get() objectForKey:(__bridge NSString *)kSecTrustInfoExtendedValidationKey];
     if (![hasEV isKindOfClass:[NSValue class]] || ![hasEV boolValue])
         return nil;
 
     // Make sure that we could contact revocation server and it is still valid.
-    id isNotRevoked = [infoDictionary objectForKey:(__bridge NSString *)kSecTrustInfoRevocationKey];
+    id isNotRevoked = [(__bridge NSDictionary *)infoDictionary.get() objectForKey:(__bridge NSString *)kSecTrustInfoRevocationKey];
     if (![isNotRevoked isKindOfClass:[NSValue class]] || ![isNotRevoked boolValue])
         return nil;
 
-    _EVOrganizationName = [infoDictionary objectForKey:(__bridge NSString *)kSecTrustInfoCompanyNameKey];
+    _EVOrganizationName = [(__bridge NSDictionary *)infoDictionary.get() objectForKey:(__bridge NSString *)kSecTrustInfoCompanyNameKey];
     return _EVOrganizationName.get();
 }
 
@@ -991,8 +1087,15 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
 
 - (WebKit::WebFullScreenManagerProxy*)_manager
 {
-    if (auto* page = [self._webView _page])
+    if (auto page = [self._webView _page])
         return page->fullScreenManager();
+    return nullptr;
+}
+
+- (WebKit::VideoFullscreenManagerProxy*)_videoFullscreenManager
+{
+    if (auto page = [self._webView _page])
+        return page->videoFullscreenManager();
     return nullptr;
 }
 
@@ -1006,6 +1109,11 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
 
 - (void)_dismissFullscreenViewController
 {
+    if (!_fullscreenViewController) {
+        [self _completedExitFullScreen];
+        return;
+    }
+
     [_fullscreenViewController setAnimating:YES];
     [_fullscreenViewController dismissViewControllerAnimated:YES completion:^{
         if (![self._webView _page])
@@ -1049,11 +1157,6 @@ static RetainPtr<UIWindow> makeWindowFromView(UIView *)
 
 - (void)_interactivePinchDismissChanged:(id)sender
 {
-    if (!_inInteractiveDismiss && _interactivePinchDismissGestureRecognizer.get().state == UIGestureRecognizerStateBegan) {
-        [self _startToDismissFullscreenChanged:sender];
-        return;
-    }
-
     CGFloat scale = [_interactivePinchDismissGestureRecognizer scale];
     CGFloat velocity = [_interactivePinchDismissGestureRecognizer velocity];
     CGFloat progress = std::min(1., std::max(0., 1 - scale));

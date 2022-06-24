@@ -9,6 +9,11 @@
  */
 
 #include "modules/congestion_controller/pcc/monitor_interval.h"
+
+#include <stddef.h>
+
+#include <cmath>
+
 #include "rtc_base/logging.h"
 
 namespace webrtc {
@@ -42,7 +47,7 @@ void PccMonitorInterval::OnPacketsFeedback(
       feedback_collection_done_ = true;
       return;
     }
-    if (packet_result.receive_time.IsInfinite()) {
+    if (!packet_result.IsReceived()) {
       lost_packets_sent_time_.push_back(packet_result.sent_packet.send_time);
     } else {
       received_packets_.push_back(

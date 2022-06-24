@@ -14,20 +14,23 @@
 #include <map>
 #include <vector>
 
+#include "absl/types/optional.h"
+#include "api/array_view.h"
+#include "api/call/bitrate_allocation.h"
+#include "api/fec_controller_override.h"
+#include "api/video/video_layers_allocation.h"
 #include "call/rtp_config.h"
 #include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
-#include "modules/utility/include/process_thread.h"
+#include "modules/rtp_rtcp/source/rtp_sequence_number_map.h"
 #include "modules/video_coding/include/video_codec_interface.h"
 
 namespace webrtc {
 class VideoBitrateAllocation;
 struct FecProtectionParams;
 
-class RtpVideoSenderInterface : public EncodedImageCallback {
+class RtpVideoSenderInterface : public EncodedImageCallback,
+                                public FecControllerOverride {
  public:
-  virtual void RegisterProcessThread(ProcessThread* module_process_thread) = 0;
-  virtual void DeRegisterProcessThread() = 0;
-
   // RtpVideoSender will only route packets if being active, all
   // packets will be dropped otherwise.
   virtual void SetActive(bool active) = 0;
@@ -44,9 +47,9 @@ class RtpVideoSenderInterface : public EncodedImageCallback {
 
   virtual void OnBitrateAllocationUpdated(
       const VideoBitrateAllocation& bitrate) = 0;
-  virtual void OnBitrateUpdated(uint32_t bitrate_bps,
-                                uint8_t fraction_loss,
-                                int64_t rtt,
+  virtual void OnVideoLayersAllocationUpdated(
+      const VideoLayersAllocation& allocation) = 0;
+  virtual void OnBitrateUpdated(BitrateAllocationUpdate update,
                                 int framerate) = 0;
   virtual void OnTransportOverheadChanged(
       size_t transport_overhead_bytes_per_packet) = 0;
@@ -55,6 +58,12 @@ class RtpVideoSenderInterface : public EncodedImageCallback {
   virtual void SetEncodingData(size_t width,
                                size_t height,
                                size_t num_temporal_layers) = 0;
+  virtual std::vector<RtpSequenceNumberMap::Info> GetSentRtpPacketInfos(
+      uint32_t ssrc,
+      rtc::ArrayView<const uint16_t> sequence_numbers) const = 0;
+
+  // Implements FecControllerOverride.
+  void SetFecAllowed(bool fec_allowed) override = 0;
 };
 }  // namespace webrtc
 #endif  // CALL_RTP_VIDEO_SENDER_INTERFACE_H_

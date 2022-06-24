@@ -23,13 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #import "PlatformUtilities.h"
 #import "TestWKWebView.h"
-
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <wtf/RetainPtr.h>
 
 #if PLATFORM(MAC)
@@ -365,7 +365,6 @@ TEST(VideoControlsManager, VideoControlsManagerTearsDownMediaControlsOnDealloc)
         if ([webView respondsToSelector:@selector(_interactWithMediaControlsForTesting)])
             [webView _interactWithMediaControlsForTesting];
 
-        [webView release];
         finishedTest = true;
     }];
 
@@ -464,6 +463,25 @@ TEST(VideoControlsManager, VideoControlsManagerPageWithEnormousVideo)
 
     [webView loadTestPageNamed:@"enormous-video-with-sound"];
     [webView expectControlsManager:NO afterReceivingMessage:@"playing"];
+}
+
+TEST(VideoControlsManager, VideoControlsManagerDoesNotChangeValuesExposedToJavaScript)
+{
+    RetainPtr<VideoControlsManagerTestWebView> webView = setUpWebViewForTestingVideoControlsManager(NSMakeRect(0, 0, 500, 500));
+
+    // A large video with audio should have a controls manager even if it is played via script like this video.
+    // So the expectation is YES.
+    [webView loadTestPageNamed:@"large-video-with-audio"];
+    [webView waitForMediaControlsToShow];
+    [webView _updateMediaPlaybackControlsManager];
+
+    EXPECT_EQ(1.0, [[webView objectByEvaluatingJavaScript:@"document.getElementsByTagName('video')[0].playbackRate"] doubleValue]);
+    EXPECT_EQ(1.0, [[webView objectByEvaluatingJavaScript:@"document.getElementsByTagName('video')[0].defaultPlaybackRate"] doubleValue]);
+
+    [webView objectByEvaluatingJavaScript:@"document.getElementsByTagName('video')[0].playbackRate = 2.0;"];
+
+    EXPECT_EQ(2.0, [[webView objectByEvaluatingJavaScript:@"document.getElementsByTagName('video')[0].playbackRate"] doubleValue]);
+    EXPECT_EQ(1.0, [[webView objectByEvaluatingJavaScript:@"document.getElementsByTagName('video')[0].defaultPlaybackRate"] doubleValue]);
 }
 
 } // namespace TestWebKitAPI

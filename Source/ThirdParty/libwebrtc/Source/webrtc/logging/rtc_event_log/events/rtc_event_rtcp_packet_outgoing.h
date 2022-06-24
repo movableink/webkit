@@ -12,22 +12,24 @@
 #define LOGGING_RTC_EVENT_LOG_EVENTS_RTC_EVENT_RTCP_PACKET_OUTGOING_H_
 
 #include <stdint.h>
+
 #include <memory>
 
 #include "api/array_view.h"
-#include "logging/rtc_event_log/events/rtc_event.h"
+#include "api/rtc_event_log/rtc_event.h"
 #include "rtc_base/buffer.h"
 
 namespace webrtc {
 
 class RtcEventRtcpPacketOutgoing final : public RtcEvent {
  public:
+  static constexpr Type kType = Type::RtcpPacketOutgoing;
+
   explicit RtcEventRtcpPacketOutgoing(rtc::ArrayView<const uint8_t> packet);
   ~RtcEventRtcpPacketOutgoing() override;
 
-  Type GetType() const override;
-
-  bool IsConfigEvent() const override;
+  Type GetType() const override { return kType; }
+  bool IsConfigEvent() const override { return false; }
 
   std::unique_ptr<RtcEventRtcpPacketOutgoing> Copy() const;
 

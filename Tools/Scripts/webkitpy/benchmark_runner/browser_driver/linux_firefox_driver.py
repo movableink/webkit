@@ -26,7 +26,7 @@
 
 import os
 
-from linux_browser_driver import LinuxBrowserDriver
+from webkitpy.benchmark_runner.browser_driver.linux_browser_driver import LinuxBrowserDriver
 
 
 class LinuxFirefoxDriver(LinuxBrowserDriver):
@@ -41,7 +41,6 @@ class LinuxFirefoxDriver(LinuxBrowserDriver):
         super(LinuxFirefoxDriver, self).launch_url(url, options, browser_build_path, browser_path)
 
     def launch_driver(self, url, options, browser_build_path):
-        import webkitpy.thirdparty.autoinstalled.selenium
         from selenium import webdriver
         from selenium.webdriver.firefox.options import Options
         options = Options()

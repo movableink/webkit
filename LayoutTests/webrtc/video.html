@@ -1,4 +1,4 @@
-<!doctype html>
+<!doctype html><!-- webkit-test-runner [ WebRTCRemoteVideoFrameEnabled=true ] -->
 <html>
     <head>
         <meta charset="utf-8">
@@ -49,12 +49,14 @@ promise_test(async (test) => {
         testRunner.setUserMediaPermission(true);
 
     const localStream = await navigator.mediaDevices.getUserMedia({video: {advanced: [{width:{min:640}}, {height:{min:480} } ]}});
+    const localStream2 = new MediaStream([localStream.getVideoTracks()[0]]); 
     if (window.internals)
         assert_true(internals.pageMediaState().includes('HasActiveVideoCaptureDevice'), "Unexpected HasActiveVideoCaptureDevice");
     const stream = await new Promise((resolve, reject) => {
         createConnections((firstConnection) => {
             pc1 = firstConnection;
-            firstConnection.addTrack(localStream.getVideoTracks()[0], localStream);
+            const sender = firstConnection.addTrack(localStream.getVideoTracks()[0]);
+            sender.setStreams(localStream, localStream2);
         }, (secondConnection) => {
             pc2 = secondConnection;
             secondConnection.ontrack = (trackEvent) => {
@@ -62,6 +64,9 @@ promise_test(async (test) => {
                 assert_true(trackEvent.receiver instanceof RTCRtpReceiver);
                 assert_true(Array.isArray(trackEvent.streams), "Array.isArray() should return true");
                 assert_true(Object.isFrozen(trackEvent.streams), "Object.isFrozen() should return true");
+                assert_equals(trackEvent.streams.length, 2);
+                assert_equals(trackEvent.streams[0].id, localStream.id, "first stream id");
+                assert_equals(trackEvent.streams[1].id, localStream2.id, "second stream id");
                 assert_equals(trackEvent.track.id, localStream.getVideoTracks()[0].id);
                 assert_equals(trackEvent.track, trackEvent.streams[0].getVideoTracks()[0]);
                 resolve(trackEvent.streams[0]);
@@ -121,6 +126,24 @@ promise_test(async (test) => {
 
     await checkVideoIsUpdated(true);
 }, "Call setParameters to reenable sending a given encoding");
+
+promise_test(async (test) => {
+    const sender = pc1.getSenders()[0];
+    let p = sender.getParameters();
+    p.encodings[0].scaleResolutionDownBy = 2;
+    await sender.setParameters(p);
+
+    assert_equals(sender.getParameters().encodings[0].scaleResolutionDownBy, 2, "encodings[0].scaleResolutionDownBy should be 2");
+    assert_equals(video.videoWidth, 640);
+    assert_equals(video.videoHeight, 480);
+
+    let counter = 0;
+    while (++counter < 50 && video.videoWidth == 640)
+        await waitFor(200);
+
+    assert_equals(video.videoWidth, 320);
+    assert_equals(video.videoHeight, 240);
+}, "Call setParameters to reduce size by two");
         </script>
     </body>
 </html>

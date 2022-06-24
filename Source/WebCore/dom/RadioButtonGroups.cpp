@@ -59,11 +59,9 @@ inline bool RadioButtonGroup::isValid() const
 
 Vector<Ref<HTMLInputElement>> RadioButtonGroup::members() const
 {
-    Vector<Ref<HTMLInputElement>> sortedMembers;
-    for (auto& memeber : m_members)
-        sortedMembers.append(memeber);
+    auto sortedMembers = copyToVectorOf<Ref<HTMLInputElement>>(m_members);
     std::sort(sortedMembers.begin(), sortedMembers.end(), [](auto& a, auto& b) {
-        return documentOrderComparator(a.ptr(), b.ptr());
+        return is_lt(treeOrder<ComposedTree>(a, b));
     });
     return sortedMembers;
 }
@@ -79,7 +77,7 @@ void RadioButtonGroup::setCheckedButton(HTMLInputElement* button)
     if (hadCheckedButton != willHaveCheckedButton)
         setNeedsStyleRecalcForAllButtons();
 
-    m_checkedButton = makeWeakPtr(button);
+    m_checkedButton = button;
     if (oldCheckedButton)
         oldCheckedButton->setChecked(false);
 }
@@ -87,7 +85,7 @@ void RadioButtonGroup::setCheckedButton(HTMLInputElement* button)
 void RadioButtonGroup::add(HTMLInputElement& button)
 {
     ASSERT(button.isRadioButton());
-    if (!m_members.add(&button).isNewEntry)
+    if (!m_members.add(button).isNewEntry)
         return;
     bool groupWasValid = isValid();
     if (button.isRequired())
@@ -228,7 +226,8 @@ void RadioButtonGroups::updateCheckedState(HTMLInputElement& element)
     ASSERT(element.isRadioButton());
     if (element.name().isEmpty())
         return;
-    m_nameToGroupMap.get(element.name().impl())->updateCheckedState(element);
+    if (auto* group = m_nameToGroupMap.get(element.name().impl()))
+        group->updateCheckedState(element);
 }
 
 void RadioButtonGroups::requiredStateChanged(HTMLInputElement& element)
@@ -237,7 +236,8 @@ void RadioButtonGroups::requiredStateChanged(HTMLInputElement& element)
     if (element.name().isEmpty())
         return;
     auto* group = m_nameToGroupMap.get(element.name().impl());
-    ASSERT(group);
+    if (!group)
+        return;
     group->requiredStateChanged(element);
 }
 
@@ -254,7 +254,10 @@ bool RadioButtonGroups::hasCheckedButton(const HTMLInputElement& element) const
     const AtomString& name = element.name();
     if (name.isEmpty())
         return element.checked();
-    return m_nameToGroupMap.get(name.impl())->checkedButton();
+    auto* group = m_nameToGroupMap.get(name.impl());
+    if (!group)
+        return false; // FIXME: Update the radio button group before author script had a chance to run in didFinishInsertingNode().
+    return group->checkedButton();
 }
 
 bool RadioButtonGroups::isInRequiredGroup(HTMLInputElement& element) const

@@ -29,7 +29,6 @@
 
 #include "APICallbackFunction.h"
 #include "APICast.h"
-#include "IsoSubspacePerVM.h"
 #include "JSCClassPrivate.h"
 #include "JSCContextPrivate.h"
 #include "JSDestructibleObjectHeapCellType.h"
@@ -53,16 +52,29 @@ static JSObjectRef callAsConstructor(JSContextRef callerContext, JSObjectRef con
 
 const ClassInfo JSCCallbackFunction::s_info = { "CallbackFunction", &InternalFunction::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSCCallbackFunction) };
 
-JSCCallbackFunction* JSCCallbackFunction::create(VM& vm, JSGlobalObject* globalObject, const String& name, Type type, JSCClass* jscClass, GRefPtr<GClosure>&& closure, GType returnType, Optional<Vector<GType>>&& parameters)
+static JSC_DECLARE_HOST_FUNCTION(callJSCCallbackFunction);
+static JSC_DECLARE_HOST_FUNCTION(constructJSCCallbackFunction);
+
+JSC_DEFINE_HOST_FUNCTION(callJSCCallbackFunction, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return APICallbackFunction::callImpl<JSCCallbackFunction>(globalObject, callFrame);
+}
+
+JSC_DEFINE_HOST_FUNCTION(constructJSCCallbackFunction, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    return APICallbackFunction::constructImpl<JSCCallbackFunction>(globalObject, callFrame);
+}
+
+JSCCallbackFunction* JSCCallbackFunction::create(VM& vm, JSGlobalObject* globalObject, const String& name, Type type, JSCClass* jscClass, GRefPtr<GClosure>&& closure, GType returnType, std::optional<Vector<GType>>&& parameters)
 {
     Structure* structure = globalObject->glibCallbackFunctionStructure();
-    JSCCallbackFunction* function = new (NotNull, allocateCell<JSCCallbackFunction>(vm.heap)) JSCCallbackFunction(vm, structure, type, jscClass, WTFMove(closure), returnType, WTFMove(parameters));
-    function->finishCreation(vm, name);
+    JSCCallbackFunction* function = new (NotNull, allocateCell<JSCCallbackFunction>(vm)) JSCCallbackFunction(vm, structure, type, jscClass, WTFMove(closure), returnType, WTFMove(parameters));
+    function->finishCreation(vm, 0, name);
     return function;
 }
 
-JSCCallbackFunction::JSCCallbackFunction(VM& vm, Structure* structure, Type type, JSCClass* jscClass, GRefPtr<GClosure>&& closure, GType returnType, Optional<Vector<GType>>&& parameters)
-    : InternalFunction(vm, structure, APICallbackFunction::call<JSCCallbackFunction>, type == Type::Constructor ? APICallbackFunction::construct<JSCCallbackFunction> : nullptr)
+JSCCallbackFunction::JSCCallbackFunction(VM& vm, Structure* structure, Type type, JSCClass* jscClass, GRefPtr<GClosure>&& closure, GType returnType, std::optional<Vector<GType>>&& parameters)
+    : InternalFunction(vm, structure, callJSCCallbackFunction, type == Type::Constructor ? constructJSCCallbackFunction : nullptr)
     , m_functionCallback(callAsFunction)
     , m_constructCallback(callAsConstructor)
     , m_type(type)
@@ -79,7 +91,7 @@ JSCCallbackFunction::JSCCallbackFunction(VM& vm, Structure* structure, Type type
 JSValueRef JSCCallbackFunction::call(JSContextRef callerContext, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     JSLockHolder locker(toJS(callerContext));
-    auto context = jscContextGetOrCreate(toGlobalRef(globalObject()->globalExec()));
+    auto context = jscContextGetOrCreate(toGlobalRef(globalObject()));
     auto* jsContext = jscContextGetJSContext(context.get());
 
     if (m_type == Type::Constructor) {
@@ -101,7 +113,7 @@ JSValueRef JSCCallbackFunction::call(JSContextRef callerContext, JSObjectRef thi
     // GClosure always expect to have at least the instance parameter.
     bool addInstance = instance || (m_parameters && m_parameters->isEmpty());
 
-    auto parameterCount = m_parameters ? std::min(m_parameters->size(), argumentCount) : 1;
+    auto parameterCount = m_parameters ? m_parameters->size() : 1;
     if (addInstance)
         parameterCount++;
     auto* values = static_cast<GValue*>(g_alloca(sizeof(GValue) * parameterCount));
@@ -114,8 +126,11 @@ JSValueRef JSCCallbackFunction::call(JSContextRef callerContext, JSObjectRef thi
         firstParameter = 1;
     }
     if (m_parameters) {
-        for (size_t i = firstParameter; i < parameterCount && !*exception; ++i)
-            jscContextJSValueToGValue(context.get(), arguments[i - firstParameter], m_parameters.value()[i - firstParameter], &values[i], exception);
+        for (size_t i = firstParameter; i < parameterCount && !*exception; ++i) {
+            auto argumentIndex = i - firstParameter;
+            jscContextJSValueToGValue(context.get(), argumentIndex < argumentCount ? arguments[argumentIndex] : JSValueMakeUndefined(jsContext),
+                m_parameters.value()[argumentIndex], &values[i], exception);
+        }
     } else {
         auto* parameters = g_ptr_array_new_full(argumentCount, g_object_unref);
         for (size_t i = 0; i < argumentCount; ++i)
@@ -150,7 +165,7 @@ JSValueRef JSCCallbackFunction::call(JSContextRef callerContext, JSObjectRef thi
 JSObjectRef JSCCallbackFunction::construct(JSContextRef callerContext, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     JSLockHolder locker(toJS(callerContext));
-    auto context = jscContextGetOrCreate(toGlobalRef(globalObject()->globalExec()));
+    auto context = jscContextGetOrCreate(toGlobalRef(globalObject()));
     auto* jsContext = jscContextGetJSContext(context.get());
 
     if (m_returnType == G_TYPE_NONE) {
@@ -170,13 +185,13 @@ JSObjectRef JSCCallbackFunction::construct(JSContextRef callerContext, size_t ar
         g_closure_invoke(m_closure.get(), &returnValue, 1, &dummyValue, nullptr);
         g_value_unset(&dummyValue);
     } else {
-        auto parameterCount = m_parameters ? std::min(m_parameters->size(), argumentCount) : 1;
+        auto parameterCount = m_parameters ? m_parameters->size() : 1;
         auto* values = static_cast<GValue*>(g_alloca(sizeof(GValue) * parameterCount));
         memset(values, 0, sizeof(GValue) * parameterCount);
 
         if (m_parameters) {
             for (size_t i = 0; i < parameterCount && !*exception; ++i)
-                jscContextJSValueToGValue(context.get(), arguments[i], m_parameters.value()[i], &values[i], exception);
+                jscContextJSValueToGValue(context.get(), i < argumentCount ? arguments[i] : JSValueMakeUndefined(jsContext), m_parameters.value()[i], &values[i], exception);
         } else {
             auto* parameters = g_ptr_array_new_full(argumentCount, g_object_unref);
             for (size_t i = 0; i < argumentCount; ++i)
@@ -221,12 +236,6 @@ JSObjectRef JSCCallbackFunction::construct(JSContextRef callerContext, size_t ar
 void JSCCallbackFunction::destroy(JSCell* cell)
 {
     static_cast<JSCCallbackFunction*>(cell)->JSCCallbackFunction::~JSCCallbackFunction();
-}
-
-IsoSubspace* JSCCallbackFunction::subspaceForImpl(VM& vm)
-{
-    NeverDestroyed<IsoSubspacePerVM> perVM([] (VM& vm) -> IsoSubspacePerVM::SubspaceParameters { return ISO_SUBSPACE_PARAMETERS(vm.destructibleObjectHeapCellType.get(), JSCCallbackFunction); });
-    return &perVM.get().forVM(vm);
 }
 
 } // namespace JSC

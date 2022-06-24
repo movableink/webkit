@@ -97,15 +97,4 @@ bool RtpGenericFrameDescriptor::AddFrameDependencyDiff(uint16_t fdiff) {
   return true;
 }
 
-void RtpGenericFrameDescriptor::SetByteRepresentation(
-    rtc::ArrayView<const uint8_t> byte_representation) {
-  byte_representation_.assign(byte_representation.begin(),
-                              byte_representation.end());
-}
-
-rtc::ArrayView<const uint8_t>
-RtpGenericFrameDescriptor::GetByteRepresentation() {
-  return byte_representation_;
-}
-
 }  // namespace webrtc

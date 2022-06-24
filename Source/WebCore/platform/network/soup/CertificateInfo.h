@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "CertificateInfoBase.h"
+#include "CertificateSummary.h"
 #include "NotImplemented.h"
 #include <libsoup/soup.h>
 #include <wtf/Vector.h>
@@ -40,13 +40,15 @@ namespace WebCore {
 class ResourceError;
 class ResourceResponse;
 
-class CertificateInfo  : public CertificateInfoBase {
+class CertificateInfo {
 public:
     CertificateInfo();
     explicit CertificateInfo(const WebCore::ResourceResponse&);
     explicit CertificateInfo(const WebCore::ResourceError&);
-    explicit CertificateInfo(GTlsCertificate*, GTlsCertificateFlags);
-    ~CertificateInfo();
+    CertificateInfo(GTlsCertificate*, GTlsCertificateFlags);
+    WEBCORE_EXPORT ~CertificateInfo();
+
+    CertificateInfo isolatedCopy() const;
 
     GTlsCertificate* certificate() const { return m_certificate.get(); }
     void setCertificate(GTlsCertificate* certificate) { m_certificate = certificate; }
@@ -55,7 +57,7 @@ public:
 
     bool containsNonRootSHA1SignedCertificate() const { notImplemented(); return false; }
 
-    Optional<SummaryInfo> summaryInfo() const { notImplemented(); return WTF::nullopt; }
+    std::optional<CertificateSummary> summary() const;
 
     bool isEmpty() const { return !m_certificate; }
 
@@ -73,18 +75,21 @@ template<> struct Coder<GRefPtr<GByteArray>> {
     static void encode(Encoder &encoder, const GRefPtr<GByteArray>& byteArray)
     {
         encoder << static_cast<uint32_t>(byteArray->len);
-        encoder.encodeFixedLengthData(byteArray->data, byteArray->len);
+        encoder.encodeFixedLengthData({ byteArray->data, byteArray->len });
     }
 
-    static bool decode(Decoder &decoder, GRefPtr<GByteArray>& byteArray)
+    static std::optional<GRefPtr<GByteArray>> decode(Decoder& decoder)
     {
-        uint32_t size;
-        if (!decoder.decode(size))
-            return false;
+        std::optional<uint32_t> size;
+        decoder >> size;
+        if (!size)
+            return std::nullopt;
 
-        byteArray = adoptGRef(g_byte_array_sized_new(size));
-        g_byte_array_set_size(byteArray.get(), size);
-        return decoder.decodeFixedLengthData(byteArray->data, size);
+        GRefPtr<GByteArray> byteArray = adoptGRef(g_byte_array_sized_new(*size));
+        g_byte_array_set_size(byteArray.get(), *size);
+        if (!decoder.decodeFixedLengthData({ byteArray->data, *size }))
+            return std::nullopt;
+        return byteArray;
     }
 };
 
@@ -139,25 +144,29 @@ template<> struct Coder<WebCore::CertificateInfo> {
         encoder << static_cast<uint32_t>(certificateInfo.tlsErrors());
     }
 
-    static bool decode(Decoder& decoder, WebCore::CertificateInfo& certificateInfo)
+    static std::optional<WebCore::CertificateInfo> decode(Decoder& decoder)
     {
-        Vector<GRefPtr<GByteArray>> certificatesDataList;
-        if (!decoder.decode(certificatesDataList))
-            return false;
+        std::optional<Vector<GRefPtr<GByteArray>>> certificatesDataList;
+        decoder >> certificatesDataList;
+        if (!certificatesDataList)
+            return std::nullopt;
 
-        if (certificatesDataList.isEmpty())
-            return true;
-        auto certificate = certificateFromCertificatesDataList(certificatesDataList);
+        WebCore::CertificateInfo certificateInfo;
+        if (certificatesDataList->isEmpty())
+            return certificateInfo;
+
+        auto certificate = certificateFromCertificatesDataList(certificatesDataList.value());
         if (!certificate)
-            return false;
+            return std::nullopt;
         certificateInfo.setCertificate(certificate.get());
 
-        uint32_t tlsErrors;
-        if (!decoder.decode(tlsErrors))
-            return false;
-        certificateInfo.setTLSErrors(static_cast<GTlsCertificateFlags>(tlsErrors));
+        std::optional<uint32_t> tlsErrors;
+        decoder >> tlsErrors;
+        if (!tlsErrors)
+            return std::nullopt;
+        certificateInfo.setTLSErrors(static_cast<GTlsCertificateFlags>(*tlsErrors));
 
-        return true;
+        return certificateInfo;
     }
 };
 

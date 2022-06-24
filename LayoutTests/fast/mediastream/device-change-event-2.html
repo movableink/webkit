@@ -20,6 +20,8 @@
     }
 
     promise_test(async (test) => {
+        // Trigger monitoring of device changes.
+        navigator.mediaDevices.ondevicechange = () => { };
     
         await setup(test);
 
@@ -30,7 +32,9 @@
         let devices2 = await navigator.mediaDevices.enumerateDevices();
 
         assert_true(!!devices.length, "check there are some devices");
-        assert_array_equals(devices, devices2);
+        assert_equals(devices.length, devices2.length, "devices length");
+        assert_not_equals(devices[0], devices2[0], "devices are different");
+        assert_equals(devices[0].deviceId, devices2[0].deviceId, "same deviceIds");
 
         testRunner.clearMockMediaDevices();
         await new Promise((resolve, reject) => {
@@ -65,6 +69,8 @@
         assert_equals(devices[0].kind, "audioinput");
         assert_equals(devices[0].label, "my mic");
 
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio : { deviceId : "id2" } });
+        assert_equals(micStream.getAudioTracks()[0].label, "my mic");
     }, "'devicechange' event fired when device list changes");
 
     promise_test(async (test) => {

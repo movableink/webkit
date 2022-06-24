@@ -185,7 +185,7 @@ int WebEditorClient::spellCheckerDocumentTag()
     return 0;
 }
 
-bool WebEditorClient::shouldBeginEditing(WebCore::Range* range)
+bool WebEditorClient::shouldBeginEditing(const WebCore::SimpleRange& range)
 {
     COMPtr<IWebEditingDelegate> ed;
     if (FAILED(m_webView->editingDelegate(&ed)) || !ed.get())
@@ -200,7 +200,7 @@ bool WebEditorClient::shouldBeginEditing(WebCore::Range* range)
     return shouldBegin;
 }
 
-bool WebEditorClient::shouldEndEditing(Range* range)
+bool WebEditorClient::shouldEndEditing(const WebCore::SimpleRange& range)
 {
     COMPtr<IWebEditingDelegate> ed;
     if (FAILED(m_webView->editingDelegate(&ed)) || !ed.get())
@@ -240,12 +240,10 @@ void WebEditorClient::respondToChangedSelection(Frame*)
 
 void WebEditorClient::discardedComposition(Frame*)
 {
-    notImplemented();
 }
 
 void WebEditorClient::canceledComposition()
 {
-    notImplemented();
 }
 
 void WebEditorClient::didEndEditing()
@@ -257,20 +255,18 @@ void WebEditorClient::didEndEditing()
 
 void WebEditorClient::didWriteSelectionToPasteboard()
 {
-    notImplemented();
 }
 
-void WebEditorClient::willWriteSelectionToPasteboard(WebCore::Range*)
+void WebEditorClient::willWriteSelectionToPasteboard(const std::optional<WebCore::SimpleRange>&)
+{
+}
+
+void WebEditorClient::getClientPasteboardData(const std::optional<WebCore::SimpleRange>&, Vector<String>&, Vector<RefPtr<WebCore::SharedBuffer> >&)
 {
     notImplemented();
 }
 
-void WebEditorClient::getClientPasteboardDataForRange(WebCore::Range*, Vector<String>&, Vector<RefPtr<WebCore::SharedBuffer> >&)
-{
-    notImplemented();
-}
-
-bool WebEditorClient::shouldDeleteRange(Range* range)
+bool WebEditorClient::shouldDeleteRange(const std::optional<WebCore::SimpleRange>& range)
 {
     COMPtr<IWebEditingDelegate> ed;
     if (FAILED(m_webView->editingDelegate(&ed)) || !ed.get())
@@ -300,7 +296,7 @@ static WebViewInsertAction kit(EditorInsertAction action)
     return WebViewInsertActionTyped;
 }
 
-bool WebEditorClient::shouldInsertNode(Node* node, Range* insertingRange, EditorInsertAction givenAction)
+bool WebEditorClient::shouldInsertNode(Node& node, const std::optional<WebCore::SimpleRange>& insertingRange, EditorInsertAction givenAction)
 { 
     COMPtr<IWebEditingDelegate> editingDelegate;
     if (FAILED(m_webView->editingDelegate(&editingDelegate)) || !editingDelegate.get())
@@ -310,7 +306,7 @@ bool WebEditorClient::shouldInsertNode(Node* node, Range* insertingRange, Editor
     if (!insertingDOMRange)
         return true;
 
-    COMPtr<IDOMNode> insertDOMNode(AdoptCOM, DOMNode::createInstance(node));
+    COMPtr<IDOMNode> insertDOMNode(AdoptCOM, DOMNode::createInstance(&node));
     if (!insertDOMNode)
         return true;
 
@@ -324,7 +320,7 @@ bool WebEditorClient::shouldInsertNode(Node* node, Range* insertingRange, Editor
     return shouldInsert;
 }
 
-bool WebEditorClient::shouldInsertText(const String& str, Range* insertingRange, EditorInsertAction givenAction)
+bool WebEditorClient::shouldInsertText(const String& str, const std::optional<WebCore::SimpleRange>& insertingRange, EditorInsertAction givenAction)
 {
     COMPtr<IWebEditingDelegate> editingDelegate;
     if (FAILED(m_webView->editingDelegate(&editingDelegate)) || !editingDelegate.get())
@@ -342,7 +338,14 @@ bool WebEditorClient::shouldInsertText(const String& str, Range* insertingRange,
     return shouldInsert;
 }
 
-bool WebEditorClient::shouldChangeSelectedRange(WebCore::Range* currentRange, WebCore::Range* proposedRange, WebCore::EAffinity selectionAffinity, bool flag)
+static WebSelectionAffinity toWebSelectionAffinity(WebCore::Affinity affinity)
+{
+    if (affinity == WebCore::Affinity::Upstream)
+        return WebSelectionAffinityUpstream;
+    return WebSelectionAffinityDownstream;
+}
+
+bool WebEditorClient::shouldChangeSelectedRange(const std::optional<WebCore::SimpleRange>& currentRange, const std::optional<WebCore::SimpleRange>& proposedRange, WebCore::Affinity selectionAffinity, bool flag)
 {
     COMPtr<IWebEditingDelegate> ed;
     if (FAILED(m_webView->editingDelegate(&ed)) || !ed.get())
@@ -352,26 +355,23 @@ bool WebEditorClient::shouldChangeSelectedRange(WebCore::Range* currentRange, We
     COMPtr<IDOMRange> proposedIDOMRange(AdoptCOM, DOMRange::createInstance(proposedRange));
 
     BOOL shouldChange = FALSE;
-    if (FAILED(ed->shouldChangeSelectedDOMRange(m_webView, currentIDOMRange.get(), proposedIDOMRange.get(), static_cast<WebSelectionAffinity>(selectionAffinity), flag, &shouldChange)))
+    if (FAILED(ed->shouldChangeSelectedDOMRange(m_webView, currentIDOMRange.get(), proposedIDOMRange.get(), toWebSelectionAffinity(selectionAffinity), flag, &shouldChange)))
         return true;
 
     return shouldChange;
 }
 
-bool WebEditorClient::shouldApplyStyle(StyleProperties*, Range*)
+bool WebEditorClient::shouldApplyStyle(const StyleProperties&, const std::optional<SimpleRange>&)
 {
-    notImplemented();
     return true;
 }
 
 void WebEditorClient::didApplyStyle()
 {
-    notImplemented();
 }
 
-bool WebEditorClient::shouldMoveRangeAfterDelete(Range*, Range*)
+bool WebEditorClient::shouldMoveRangeAfterDelete(const WebCore::SimpleRange&, const WebCore::SimpleRange&)
 {
-    notImplemented();
     return true;
 }
 
@@ -790,14 +790,18 @@ void WebEditorClient::checkGrammarOfString(StringView text, Vector<GrammarDetail
         if (enumDetailsObj->Next(1, &detailObj, &fetched) != S_OK)
             break;
 
-        GrammarDetail detail;
-        if (FAILED(detailObj->length(&detail.length)))
+        int length;
+        if (FAILED(detailObj->length(&length)))
             continue;
-        if (FAILED(detailObj->location(&detail.location)))
+        int location;
+        if (FAILED(detailObj->location(&location)))
             continue;
         BString userDesc;
         if (FAILED(detailObj->userDescription(&userDesc)))
             continue;
+
+        GrammarDetail detail;
+        detail.range = CharacterRange(location, length);
         detail.userDescription = String(userDesc, SysStringLen(userDesc));
 
         COMPtr<IEnumSpellingGuesses> enumGuessesObj;
@@ -826,7 +830,7 @@ void WebEditorClient::updateSpellingUIWithGrammarString(const String& string, co
         guessesBSTRs.append(guess.release());
     }
     BString userDescriptionBSTR(detail.userDescription);
-    ed->updateSpellingUIWithGrammarString(BString(string), detail.location, detail.length, userDescriptionBSTR, guessesBSTRs.data(), (int)guessesBSTRs.size());
+    ed->updateSpellingUIWithGrammarString(BString(string), detail.range.location, detail.range.length, userDescriptionBSTR, guessesBSTRs.data(), (int)guessesBSTRs.size());
     for (unsigned i = 0; i < guessesBSTRs.size(); i++)
         SysFreeString(guessesBSTRs[i]);
 }
@@ -887,7 +891,7 @@ void WebEditorClient::willSetInputMethodState()
 {
 }
 
-void WebEditorClient::setInputMethodState(bool enabled)
+void WebEditorClient::setInputMethodState(WebCore::Element* element)
 {
-    m_webView->setInputMethodState(enabled);
+    m_webView->setInputMethodState(element && element->shouldUseInputMethod());
 }

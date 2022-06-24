@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "WebPageMessages.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
+#include <wtf/UUID.h>
 
 namespace WebKit {
 
@@ -45,14 +46,14 @@ void GeolocationPermissionRequestManagerProxy::invalidateRequests()
     m_pendingRequests.clear();
 }
 
-Ref<GeolocationPermissionRequestProxy> GeolocationPermissionRequestManagerProxy::createRequest(uint64_t geolocationID)
+Ref<GeolocationPermissionRequestProxy> GeolocationPermissionRequestManagerProxy::createRequest(GeolocationIdentifier geolocationID)
 {
     auto request = GeolocationPermissionRequestProxy::create(this, geolocationID);
     m_pendingRequests.add(geolocationID, request.ptr());
     return request;
 }
 
-void GeolocationPermissionRequestManagerProxy::didReceiveGeolocationPermissionDecision(uint64_t geolocationID, bool allowed)
+void GeolocationPermissionRequestManagerProxy::didReceiveGeolocationPermissionDecision(GeolocationIdentifier geolocationID, bool allowed)
 {
     if (!m_page.hasRunningProcess())
         return;
@@ -62,12 +63,28 @@ void GeolocationPermissionRequestManagerProxy::didReceiveGeolocationPermissionDe
         return;
 
 #if ENABLE(GEOLOCATION)
-    m_page.process().send(Messages::WebPage::DidReceiveGeolocationPermissionDecision(geolocationID, allowed), m_page.webPageID());
+    String authorizationToken = allowed ? createVersion4UUIDString() : String();
+    if (!authorizationToken.isNull())
+        m_validAuthorizationTokens.add(authorizationToken);
+    m_page.send(Messages::WebPage::DidReceiveGeolocationPermissionDecision(geolocationID, authorizationToken));
 #else
     UNUSED_PARAM(allowed);
 #endif
 
     m_pendingRequests.remove(it);
+}
+
+bool GeolocationPermissionRequestManagerProxy::isValidAuthorizationToken(const String& authorizationToken) const
+{
+    return !authorizationToken.isNull() && m_validAuthorizationTokens.contains(authorizationToken);
+}
+
+void GeolocationPermissionRequestManagerProxy::revokeAuthorizationToken(const String& authorizationToken)
+{
+    ASSERT(isValidAuthorizationToken(authorizationToken));
+    if (!isValidAuthorizationToken(authorizationToken))
+        return;
+    m_validAuthorizationTokens.remove(authorizationToken);
 }
 
 } // namespace WebKit

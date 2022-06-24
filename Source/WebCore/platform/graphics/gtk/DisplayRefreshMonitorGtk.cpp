@@ -26,12 +26,14 @@
 #include "config.h"
 #include "DisplayRefreshMonitorGtk.h"
 
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+#if !USE(GTK4)
 
 #include <gtk/gtk.h>
 #include <wtf/RunLoop.h>
 
 namespace WebCore {
+
+constexpr FramesPerSecond DefaultFramesPerSecond = 60;
 
 DisplayRefreshMonitorGtk::DisplayRefreshMonitorGtk(PlatformDisplayID displayID)
     : DisplayRefreshMonitor(displayID)
@@ -40,53 +42,72 @@ DisplayRefreshMonitorGtk::DisplayRefreshMonitorGtk(PlatformDisplayID displayID)
 
 DisplayRefreshMonitorGtk::~DisplayRefreshMonitorGtk()
 {
-    if (m_window)
-        gtk_widget_destroy(m_window);
+    ASSERT(!m_window);
 }
 
 static void onFrameClockUpdate(GdkFrameClock*, DisplayRefreshMonitorGtk* monitor)
 {
-    monitor->displayLinkFired();
+    monitor->displayLinkCallbackFired();
 }
 
-bool DisplayRefreshMonitorGtk::requestRefreshCallback()
+void DisplayRefreshMonitorGtk::displayLinkCallbackFired()
 {
-    if (!isActive())
-        return false;
+    displayLinkFired(m_currentUpdate);
+    m_currentUpdate = m_currentUpdate.nextUpdate();
+}
 
+void DisplayRefreshMonitorGtk::stop()
+{
+    if (!m_window)
+        return;
+
+    auto* frameClock = gtk_widget_get_frame_clock(m_window);
+    ASSERT(frameClock);
+    g_signal_handlers_disconnect_matched(frameClock, G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
+
+    gtk_widget_destroy(m_window);
+    m_window = nullptr;
+}
+
+bool DisplayRefreshMonitorGtk::startNotificationMechanism()
+{
+    if (m_clockIsActive)
+        return true;
+
+    GdkFrameClock* frameClock;
     if (!m_window) {
         // GdkFrameClockIdle is private in GDK, so we need to create a toplevel to get its frame clock.
         m_window = gtk_offscreen_window_new();
         gtk_widget_realize(m_window);
 
-        auto* frameClock = gtk_widget_get_frame_clock(m_window);
-        if (!frameClock)
-            return false;
-
+        frameClock = gtk_widget_get_frame_clock(m_window);
+        ASSERT(frameClock);
         g_signal_connect(frameClock, "update", G_CALLBACK(onFrameClockUpdate), this);
-        gdk_frame_clock_begin_updating(frameClock);
+    } else
+        frameClock = gtk_widget_get_frame_clock(m_window);
 
-        setIsActive(true);
-    }
+    ASSERT(frameClock);
+    gdk_frame_clock_begin_updating(frameClock);
 
-    LockHolder lock(mutex());
-    setIsScheduled(true);
+    // FIXME: Use gdk_frame_clock_get_refresh_info to get the correct frame rate.
+    m_currentUpdate = { 0, DefaultFramesPerSecond };
+
+    m_clockIsActive = true;
     return true;
 }
 
-void DisplayRefreshMonitorGtk::displayLinkFired()
+void DisplayRefreshMonitorGtk::stopNotificationMechanism()
 {
-    {
-        LockHolder lock(mutex());
-        if (!isPreviousFrameDone())
-            return;
+    if (!m_clockIsActive)
+        return;
 
-        setIsPreviousFrameDone(false);
-    }
-    ASSERT(isMainThread());
-    handleDisplayRefreshedNotificationOnMainThread(this);
+    auto* frameClock = gtk_widget_get_frame_clock(m_window);
+    ASSERT(frameClock);
+    gdk_frame_clock_end_updating(frameClock);
+
+    m_clockIsActive = false;    
 }
 
 } // namespace WebCore
 
-#endif // USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+#endif // !USE(GTK4)

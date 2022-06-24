@@ -1,9 +1,7 @@
-//@ runBigIntEnabled
-
 assert = {
     sameValue: function (input, expected, message) {
         if (input !== expected)
-            throw new Error(message);
+            throw new Error(message + " input: " + input + " != expected: " + expected);
     }
 };
 

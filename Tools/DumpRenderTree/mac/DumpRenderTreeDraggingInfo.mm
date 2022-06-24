@@ -36,7 +36,6 @@
 #import "DumpRenderTreeFileDraggingSource.h"
 #import "DumpRenderTreePasteboard.h"
 #import "EventSendingController.h"
-#import <WebKit/WebKit.h>
 #import <wtf/RetainPtr.h>
 
 @interface DumpRenderTreeFilePromiseReceiver : NSFilePromiseReceiver {
@@ -53,7 +52,7 @@
 
 @implementation DumpRenderTreeFilePromiseReceiver
 
-@synthesize draggingSource=_draggingSource;
+@synthesize draggingSource = _draggingSource;
 
 - (instancetype)initWithPromisedUTIs:(NSArray<NSString *> *)promisedUTIs
 {
@@ -274,13 +273,7 @@ static NSMutableArray<NSFilePromiseReceiver *> *allFilePromiseReceivers()
         [receiver setDraggingSource:draggingSource];
         [allFilePromiseReceivers() addObject:receiver.get()];
 
-#if HAVE(NSDRAGGINGITEM_INITWITHITEM)
         auto item = adoptNS([[NSDraggingItem alloc] _initWithItem:receiver.get()]);
-#else
-        auto item = adoptNS([[NSDraggingItem alloc] initWithPasteboardWriter:(id <NSPasteboardWriting>)receiver.get()]); // FIXME: <https://webkit.org/b/194060> Pass an object of the right type.
-        [item setItem:receiver.get()];
-#endif
-
         block(item.get(), 0, &stop);
         if (stop)
             return;

@@ -10,7 +10,7 @@ if (window.testRunner && window.internals)
 function clickElement(element) {
     let x = element.offsetLeft + 2;
     let y = element.offsetTop + 2;
-    let supportsTouchEvents = "TouchEvent" in window;
+    let supportsTouchEvents = "ontouchstart" in window;
     if (supportsTouchEvents && window.testRunner && testRunner.runUIScript)
         testRunner.runUIScript("(function() { uiController.singleTapAtPoint(" + x + ", " + y + ", function() { /* Do nothing */ }); })();", function() { /* Do nothing */ });
     else if (window.eventSender) {
@@ -88,7 +88,7 @@ function test()
 </head>
 <body onload="runTest()">
 <p>Tests for Resource.Type.Ping.</p>
-<a id="a204" href="#a204" ping="resources/ping.php?status=204">Ping 204</a>
-<a id="a404" href="#a404" ping="resources/ping.php?status=404">Ping 404</a>
+<a id="a204" href="#a204" ping="resources/ping.py?status=204">Ping 204</a>
+<a id="a404" href="#a404" ping="resources/ping.py?status=404">Ping 404</a>
 </body>
 </html>

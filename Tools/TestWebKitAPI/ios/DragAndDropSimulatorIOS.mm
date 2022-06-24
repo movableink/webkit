@@ -23,27 +23,24 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "DragAndDropSimulator.h"
+#import "config.h"
+#import "DragAndDropSimulator.h"
 
-#if ENABLE(DRAG_SUPPORT) && PLATFORM(IOS_FAMILY)
+#if ENABLE(DRAG_SUPPORT) && PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
 
 #import "InstanceMethodSwizzler.h"
 #import "PlatformUtilities.h"
+#import "Test.h"
 #import "UIKitSPI.h"
-
 #import <UIKit/UIDragInteraction.h>
 #import <UIKit/UIDragItem.h>
 #import <UIKit/UIDropInteraction.h>
 #import <UIKit/UIInteraction.h>
-#import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/_WKFocusedElementInfo.h>
 #import <WebKit/_WKFormInputSession.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/SoftLinking.h>
-
-SOFT_LINK_FRAMEWORK(UIKit)
-SOFT_LINK(UIKit, UIApplicationInstantiateSingleton, void, (Class singletonClass), (singletonClass))
 
 using namespace TestWebKitAPI;
 
@@ -176,7 +173,7 @@ using namespace TestWebKitAPI;
 {
     auto items = adoptNS([[NSMutableArray alloc] init]);
     for (NSItemProvider *itemProvider in providers)
-        [items addObject:[[[UIDragItem alloc] initWithItemProvider:itemProvider] autorelease]];
+        [items addObject:adoptNS([[UIDragItem alloc] initWithItemProvider:itemProvider]).get()];
 
     return [super initWithItems:items.get() location:locationInWindow window:window allowMove:allowMove];
 }
@@ -347,9 +344,9 @@ IGNORE_WARNINGS_END
 - (instancetype)initWithWebViewFrame:(CGRect)frame configuration:(WKWebViewConfiguration *)configuration
 {
     if (configuration)
-        return [self initWithWebView:[[[TestWKWebView alloc] initWithFrame:frame configuration:configuration] autorelease]];
+        return [self initWithWebView:adoptNS([[TestWKWebView alloc] initWithFrame:frame configuration:configuration]).get()];
 
-    return [self initWithWebView:[[[TestWKWebView alloc] initWithFrame:frame] autorelease]];
+    return [self initWithWebView:adoptNS([[TestWKWebView alloc] initWithFrame:frame]).get()];
 }
 
 - (instancetype)initWithWebView:(TestWKWebView *)webView
@@ -496,7 +493,7 @@ IGNORE_WARNINGS_END
                 defaultPreview = adoptNS([[UITargetedDragPreview alloc] initWithView:_webView.get()]);
             }
 
-            id <UIDropInteractionDelegate_Staging_31075005> delegate = (id <UIDropInteractionDelegate_Staging_31075005>)[_webView dropInteractionDelegate];
+            id <UIDropInteractionDelegate_Private> delegate = (id <UIDropInteractionDelegate_Private>)[_webView dropInteractionDelegate];
             UIDropInteraction *interaction = [_webView dropInteraction];
             [_dropPreviews addObject:[delegate dropInteraction:interaction previewForDroppingItem:item withDefault:defaultPreview.get()] ?: NSNull.null];
             [_delayedDropPreviews addObject:NSNull.null];
@@ -504,11 +501,16 @@ IGNORE_WARNINGS_END
                 if (preview)
                     [_delayedDropPreviews setObject:preview atIndexedSubscript:dropPreviewIndex];
 
-                if (!--numberOfPendingPreviews)
+                if (!--numberOfPendingPreviews) {
                     _isDoneWaitingForDelayedDropPreviews = true;
+                    [self _expectNoDropPreviewsWithUnparentedContainerViews];
+                }
             }];
             ++dropPreviewIndex;
         }
+
+        [self _expectNoDropPreviewsWithUnparentedContainerViews];
+
         [[_webView dropInteractionDelegate] dropInteraction:[_webView dropInteraction] performDrop:_dropSession.get()];
         _phase = DragAndDropPhasePerformingDrop;
 
@@ -830,11 +832,46 @@ IGNORE_WARNINGS_END
     _dropAnimationCompletionBlocks.append(makeBlockPtr(completion));
 }
 
+- (void)_expectNoDropPreviewsWithUnparentedContainerViews
+{
+    auto checkDropPreview = [&](id dropPreviewOrNull) {
+        if (![dropPreviewOrNull isKindOfClass:UITargetedPreview.class])
+            return;
+
+        auto *previewContainer = [(UITargetedDragPreview *)dropPreviewOrNull target].container;
+        if (!previewContainer)
+            return;
+
+        if ([previewContainer isKindOfClass:UIWindow.class])
+            return;
+
+        EXPECT_NOT_NULL(previewContainer.window);
+    };
+
+    for (id dropPreviewOrNull in _dropPreviews.get())
+        checkDropPreview(dropPreviewOrNull);
+
+    for (id dropPreviewOrNull in _delayedDropPreviews.get())
+        checkDropPreview(dropPreviewOrNull);
+}
+
 - (void)_invokeDropAnimationCompletionBlocksAndConcludeDrop
 {
+    [self _expectNoDropPreviewsWithUnparentedContainerViews];
     for (auto block : std::exchange(_dropAnimationCompletionBlocks, { }))
         block(UIViewAnimatingPositionEnd);
     [[_webView dropInteractionDelegate] dropInteraction:[_webView dropInteraction] concludeDrop:_dropSession.get()];
+}
+
+- (BOOL)containsDraggedType:(NSString *)expectedType
+{
+    for (NSItemProvider *itemProvider in self.sourceItemProviders) {
+        for (NSString *type in itemProvider.registeredTypeIdentifiers) {
+            if ([type isEqualToString:expectedType])
+                return YES;
+        }
+    }
+    return NO;
 }
 
 #pragma mark - WKUIDelegatePrivate
@@ -866,7 +903,7 @@ IGNORE_WARNINGS_END
     if (!self.overrideDragUpdateBlock)
         return proposal;
 
-    return [[[UIDropProposal alloc] initWithDropOperation:self.overrideDragUpdateBlock(proposal.operation, session)] autorelease];
+    return adoptNS([[UIDropProposal alloc] initWithDropOperation:self.overrideDragUpdateBlock(proposal.operation, session)]).autorelease();
 }
 
 - (NSArray *)_webView:(WKWebView *)webView adjustedDataInteractionItemProvidersForItemProvider:(NSItemProvider *)itemProvider representingObjects:(NSArray *)representingObjects additionalData:(NSDictionary *)additionalData
@@ -924,4 +961,4 @@ IGNORE_WARNINGS_END
 
 @end
 
-#endif // ENABLE(DRAG_SUPPORT) && PLATFORM(IOS_FAMILY)
+#endif // ENABLE(DRAG_SUPPORT) && PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)

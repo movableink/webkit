@@ -27,6 +27,7 @@
 #define PlatformWebView_h
 
 #include <wtf/FastMalloc.h>
+#include <wtf/Noncopyable.h>
 
 #if USE(CG)
 #include <CoreGraphics/CGGeometry.h>
@@ -66,6 +67,9 @@ typedef WPEToolingBackends::HeadlessViewBackend *PlatformWindow;
 #elif PLATFORM(WIN)
 typedef WKViewRef PlatformWKView;
 typedef HWND PlatformWindow;
+#elif PLATFORM(PLAYSTATION)
+typedef WKViewRef PlatformWKView;
+typedef void* PlatformWindow;
 #endif
 typedef uint32_t WKEventModifiers;
 
@@ -73,6 +77,7 @@ namespace TestWebKitAPI {
 
 class PlatformWebView {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(PlatformWebView);
 public:
     explicit PlatformWebView(WKPageConfigurationRef);
     explicit PlatformWebView(WKContextRef, WKPageGroupRef = 0);
@@ -91,14 +96,14 @@ public:
     void simulateAltKeyPress();
     void simulateRightClick(unsigned x, unsigned y);
     void simulateMouseMove(unsigned x, unsigned y, WKEventModifiers = 0);
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(PLAYSTATION)
     void simulateButtonClick(WKEventMouseButton, unsigned x, unsigned y, WKEventModifiers);
 #endif
 
 private:
 #if PLATFORM(MAC)
     void initialize(WKPageConfigurationRef, Class wkViewSubclass);
-#elif PLATFORM(GTK) || PLATFORM(WPE) || PLATFORM(WIN)
+#else
     void initialize(WKPageConfigurationRef);
 #endif
 #if PLATFORM(WIN)

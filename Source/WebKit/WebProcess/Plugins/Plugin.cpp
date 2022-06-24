@@ -26,9 +26,15 @@
 #include "config.h"
 #include "Plugin.h"
 
+#include "LayerTreeContext.h"
+#include "PluginController.h"
 #include "WebCoreArgumentCoders.h"
 #include <WebCore/IntPoint.h>
 #include <wtf/SetForScope.h>
+
+#if PLATFORM(COCOA)
+#include "LayerHostingContext.h"
+#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -42,7 +48,7 @@ void Plugin::Parameters::encode(IPC::Encoder& encoder) const
     encoder << isFullFramePlugin;
     encoder << shouldUseManualLoader;
 #if PLATFORM(COCOA)
-    encoder.encodeEnum(layerHostingMode);
+    encoder << layerHostingMode;
 #endif
 }
 
@@ -64,31 +70,21 @@ bool Plugin::Parameters::decode(IPC::Decoder& decoder, Parameters& parameters)
     if (!decoder.decode(parameters.shouldUseManualLoader))
         return false;
 #if PLATFORM(COCOA)
-    if (!decoder.decodeEnum(parameters.layerHostingMode))
+    if (!decoder.decode(parameters.layerHostingMode))
         return false;
 #endif
-    if (parameters.names.size() != parameters.values.size()) {
-        decoder.markInvalid();
+    if (parameters.names.size() != parameters.values.size())
         return false;
-    }
 
     return true;
 }
 
-Plugin::Plugin(PluginType type)
-    : m_type(type)
-    , m_pluginController(0)
-{
-}
+Plugin::Plugin() = default;
+Plugin::~Plugin() = default;
 
-Plugin::~Plugin()
-{
-}
-
-bool Plugin::initialize(PluginController* pluginController, const Parameters& parameters)
+bool Plugin::initialize(PluginController& pluginController, const Parameters& parameters)
 {
     ASSERT(!m_pluginController);
-    ASSERT(pluginController);
 
     m_pluginController = pluginController;
 
@@ -98,7 +94,7 @@ bool Plugin::initialize(PluginController* pluginController, const Parameters& pa
 void Plugin::destroyPlugin()
 {
     ASSERT(!m_isBeingDestroyed);
-    SetForScope<bool> scope { m_isBeingDestroyed, true };
+    SetForScope scope { m_isBeingDestroyed, true };
 
     destroy();
 
@@ -114,5 +110,22 @@ IntPoint Plugin::convertToRootView(const IntPoint&) const
     ASSERT_NOT_REACHED();
     return IntPoint();
 }
+
+PluginController* Plugin::controller()
+{
+    return m_pluginController.get();
+}
+
+const PluginController* Plugin::controller() const
+{
+    return m_pluginController.get();
+}
+
+#if PLATFORM(COCOA)
+WebCore::FloatSize Plugin::pdfDocumentSizeForPrinting() const
+{
+    return { };
+}
+#endif
 
 } // namespace WebKit

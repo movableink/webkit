@@ -10,10 +10,11 @@
 
 #include "modules/desktop_capture/win/dxgi_texture_mapping.h"
 
-#include <DXGI.h>
-#include <DXGI1_2.h>
 #include <comdef.h>
+#include <dxgi.h>
+#include <dxgi1_2.h>
 
+#include "modules/desktop_capture/win/desktop_capture_utils.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 
@@ -36,9 +37,8 @@ bool DxgiTextureMapping::CopyFromTexture(
   if (error.Error() != S_OK) {
     *rect() = {0};
     RTC_LOG(LS_ERROR)
-        << "Failed to map the IDXGIOutputDuplication to a bitmap, "
-           "error "
-        << error.ErrorMessage() << ", code " << error.Error();
+        << "Failed to map the IDXGIOutputDuplication to a bitmap: "
+        << desktop_capture::utils::ComErrorToString(error);
     return false;
   }
 
@@ -48,8 +48,8 @@ bool DxgiTextureMapping::CopyFromTexture(
 bool DxgiTextureMapping::DoRelease() {
   _com_error error = duplication_->UnMapDesktopSurface();
   if (error.Error() != S_OK) {
-    RTC_LOG(LS_ERROR) << "Failed to unmap the IDXGIOutputDuplication, error "
-                      << error.ErrorMessage() << ", code " << error.Error();
+    RTC_LOG(LS_ERROR) << "Failed to unmap the IDXGIOutputDuplication: "
+                      << desktop_capture::utils::ComErrorToString(error);
     return false;
   }
   return true;

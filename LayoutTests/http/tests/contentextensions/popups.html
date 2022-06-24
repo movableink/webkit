@@ -1,11 +1,8 @@
 <html> 
 <body>
 <script> 
-if (window.testRunner) {
+if (window.testRunner)
     testRunner.dumpAsText();
-    testRunner.setCanOpenWindows(true);
-    testRunner.setCloseRemainingWindowsWhenComplete(true);
-}
 
 win = window.open("about:blank");
 alert(win ? "FAIL" : "about:blank successfully blocked");

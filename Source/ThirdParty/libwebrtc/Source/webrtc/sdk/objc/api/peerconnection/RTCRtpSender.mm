@@ -17,7 +17,7 @@
 #import "base/RTCLogging.h"
 #import "helpers/NSString+StdString.h"
 
-#include "api/mediastreaminterface.h"
+#include "api/media_stream_interface.h"
 
 @implementation RTCRtpSender {
   RTCPeerConnectionFactory *_factory;
@@ -55,6 +55,23 @@
   if (!_nativeRtpSender->SetTrack(track.nativeTrack)) {
     RTCLogError(@"RTCRtpSender(%p): Failed to set track %@", self, track);
   }
+}
+
+- (NSArray<NSString *> *)streamIds {
+  std::vector<std::string> nativeStreamIds = _nativeRtpSender->stream_ids();
+  NSMutableArray *streamIds = [NSMutableArray arrayWithCapacity:nativeStreamIds.size()];
+  for (const auto &s : nativeStreamIds) {
+    [streamIds addObject:[NSString stringForStdString:s]];
+  }
+  return streamIds;
+}
+
+- (void)setStreamIds:(NSArray<NSString *> *)streamIds {
+  std::vector<std::string> nativeStreamIds;
+  for (NSString *streamId in streamIds) {
+    nativeStreamIds.push_back([streamId UTF8String]);
+  }
+  _nativeRtpSender->SetStreams(nativeStreamIds);
 }
 
 - (NSString *)description {

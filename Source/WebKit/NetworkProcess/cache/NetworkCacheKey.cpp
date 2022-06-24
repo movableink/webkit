@@ -94,7 +94,7 @@ static void hashString(SHA1& sha1, const String& string)
     }
     auto cString = string.utf8();
     // Include terminating null byte.
-    sha1.addBytes(reinterpret_cast<const uint8_t*>(cString.data()), cString.length() + 1);
+    sha1.addBytes(cString.dataAsUInt8Ptr(), cString.length() + 1);
 }
 
 Key::HashType Key::computeHash(const Salt& salt) const
@@ -173,9 +173,47 @@ void Key::encode(WTF::Persistence::Encoder& encoder) const
     encoder << m_partitionHash;
 }
 
-bool Key::decode(WTF::Persistence::Decoder& decoder, Key& key)
+std::optional<Key> Key::decode(WTF::Persistence::Decoder& decoder)
 {
-    return decoder.decode(key.m_partition) && decoder.decode(key.m_type) && decoder.decode(key.m_identifier) && decoder.decode(key.m_range) && decoder.decode(key.m_hash) && decoder.decode(key.m_partitionHash);
+    Key key;
+    
+    std::optional<String> partition;
+    decoder >> partition;
+    if (!partition)
+        return std::nullopt;
+    key.m_partition = WTFMove(*partition);
+
+    std::optional<String> type;
+    decoder >> type;
+    if (!type)
+        return std::nullopt;
+    key.m_type = WTFMove(*type);
+
+    std::optional<String> identifier;
+    decoder >> identifier;
+    if (!identifier)
+        return std::nullopt;
+    key.m_identifier = WTFMove(*identifier);
+
+    std::optional<String> range;
+    decoder >> range;
+    if (!range)
+        return std::nullopt;
+    key.m_range = WTFMove(*range);
+
+    std::optional<HashType> hash;
+    decoder >> hash;
+    if (!hash)
+        return std::nullopt;
+    key.m_hash = WTFMove(*hash);
+
+    std::optional<HashType> partitionHash;
+    decoder >> partitionHash;
+    if (!partitionHash)
+        return std::nullopt;
+    key.m_partitionHash = WTFMove(*partitionHash);
+
+    return { WTFMove(key) };
 }
 
 }

@@ -9,6 +9,7 @@
 
 #include "libANGLE/renderer/d3d/d3d11/renderer11_utils.h"
 
+#include <versionhelpers.h>
 #include <algorithm>
 
 #include "common/debug.h"
@@ -24,12 +25,12 @@
 #include "libANGLE/renderer/d3d/d3d11/Context11.h"
 #include "libANGLE/renderer/d3d/d3d11/RenderTarget11.h"
 #include "libANGLE/renderer/d3d/d3d11/Renderer11.h"
-#include "libANGLE/renderer/d3d/d3d11/dxgi_support_table.h"
 #include "libANGLE/renderer/d3d/d3d11/formatutils11.h"
 #include "libANGLE/renderer/d3d/d3d11/texture_format_table.h"
 #include "libANGLE/renderer/driver_utils.h"
+#include "libANGLE/renderer/dxgi_support_table.h"
 #include "platform/FeaturesD3D.h"
-#include "platform/Platform.h"
+#include "platform/PlatformMethods.h"
 
 namespace rx
 {
@@ -38,20 +39,6 @@ namespace d3d11_gl
 {
 namespace
 {
-// Standard D3D sample positions from
-// https://msdn.microsoft.com/en-us/library/windows/desktop/ff476218.aspx
-using SamplePositionsArray                                            = std::array<float, 32>;
-static constexpr std::array<SamplePositionsArray, 5> kSamplePositions = {
-    {{{0.5f, 0.5f}},
-     {{0.75f, 0.75f, 0.25f, 0.25f}},
-     {{0.375f, 0.125f, 0.875f, 0.375f, 0.125f, 0.625f, 0.625f, 0.875f}},
-     {{0.5625f, 0.3125f, 0.4375f, 0.6875f, 0.8125f, 0.5625f, 0.3125f, 0.1875f, 0.1875f, 0.8125f,
-       0.0625f, 0.4375f, 0.6875f, 0.9375f, 0.9375f, 0.0625f}},
-     {{0.5625f, 0.5625f, 0.4375f, 0.3125f, 0.3125f, 0.625f,  0.75f,   0.4375f,
-       0.1875f, 0.375f,  0.625f,  0.8125f, 0.8125f, 0.6875f, 0.6875f, 0.1875f,
-       0.375f,  0.875f,  0.5f,    0.0625f, 0.25f,   0.125f,  0.125f,  0.75f,
-       0.0f,    0.5f,    0.9375f, 0.25f,   0.875f,  0.9375f, 0.0625f, 0.0f}}}};
-
 // TODO(xinghua.cao@intel.com): Get a more accurate limit.
 static D3D_FEATURE_LEVEL kMinimumFeatureLevelForES31 = D3D_FEATURE_LEVEL_11_0;
 
@@ -123,6 +110,7 @@ gl::TextureCaps GenerateTextureFormatCaps(gl::Version maxClientVersion,
         (support.query(formatInfo.rtvFormat, D3D11_FORMAT_SUPPORT_RENDER_TARGET)) ||
         (support.query(formatInfo.dsvFormat, D3D11_FORMAT_SUPPORT_DEPTH_STENCIL));
     textureCaps.renderbuffer = textureCaps.textureAttachment;
+    textureCaps.blendable    = textureCaps.renderbuffer;
 
     DXGI_FORMAT renderFormat = DXGI_FORMAT_UNKNOWN;
     if (formatInfo.dsvFormat != DXGI_FORMAT_UNKNOWN)
@@ -379,7 +367,7 @@ bool GetShaderTextureLODSupport(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumSimultaneousRenderTargets(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumSimultaneousRenderTargets(D3D_FEATURE_LEVEL featureLevel)
 {
     // From http://msdn.microsoft.com/en-us/library/windows/desktop/ff476150.aspx
     // ID3D11Device::CreateInputLayout
@@ -406,7 +394,7 @@ size_t GetMaximumSimultaneousRenderTargets(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximum2DTextureSize(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximum2DTextureSize(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -430,7 +418,7 @@ size_t GetMaximum2DTextureSize(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumCubeMapTextureSize(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumCubeMapTextureSize(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -454,7 +442,7 @@ size_t GetMaximumCubeMapTextureSize(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximum2DTextureArraySize(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximum2DTextureArraySize(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -477,7 +465,7 @@ size_t GetMaximum2DTextureArraySize(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximum3DTextureSize(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximum3DTextureSize(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -500,7 +488,7 @@ size_t GetMaximum3DTextureSize(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumViewportSize(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumViewportSize(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -526,7 +514,7 @@ size_t GetMaximumViewportSize(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumDrawIndexedIndexCount(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumDrawIndexedIndexCount(D3D_FEATURE_LEVEL featureLevel)
 {
     // D3D11 allows up to 2^32 elements, but we report max signed int for convenience since
     // that's what's
@@ -556,7 +544,7 @@ size_t GetMaximumDrawIndexedIndexCount(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumDrawVertexCount(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumDrawVertexCount(D3D_FEATURE_LEVEL featureLevel)
 {
     // D3D11 allows up to 2^32 elements, but we report max signed int for convenience since
     // that's what's
@@ -584,7 +572,7 @@ size_t GetMaximumDrawVertexCount(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumVertexInputSlots(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumVertexInputSlots(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -610,7 +598,7 @@ size_t GetMaximumVertexInputSlots(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumVertexUniformVectors(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumVertexUniformVectors(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -635,7 +623,7 @@ size_t GetMaximumVertexUniformVectors(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumVertexUniformBlocks(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumVertexUniformBlocks(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -661,7 +649,7 @@ size_t GetMaximumVertexUniformBlocks(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetReservedVertexOutputVectors(D3D_FEATURE_LEVEL featureLevel)
+int GetReservedVertexOutputVectors(D3D_FEATURE_LEVEL featureLevel)
 {
     // According to The OpenGL ES Shading Language specifications
     // (Language Version 1.00 section 10.16, Language Version 3.10 section 12.21)
@@ -696,7 +684,7 @@ size_t GetReservedVertexOutputVectors(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumVertexOutputVectors(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumVertexOutputVectors(D3D_FEATURE_LEVEL featureLevel)
 {
     static_assert(gl::IMPLEMENTATION_MAX_VARYING_VECTORS == D3D11_VS_OUTPUT_REGISTER_COUNT,
                   "Unexpected D3D11 constant value.");
@@ -724,7 +712,7 @@ size_t GetMaximumVertexOutputVectors(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumVertexTextureUnits(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumVertexTextureUnits(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -750,7 +738,7 @@ size_t GetMaximumVertexTextureUnits(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumPixelUniformVectors(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumPixelUniformVectors(D3D_FEATURE_LEVEL featureLevel)
 {
     // TODO(geofflang): Remove hard-coded limit once the gl-uniform-arrays test can pass
     switch (featureLevel)
@@ -776,7 +764,7 @@ size_t GetMaximumPixelUniformVectors(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumPixelUniformBlocks(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumPixelUniformBlocks(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -802,7 +790,7 @@ size_t GetMaximumPixelUniformBlocks(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumPixelInputVectors(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumPixelInputVectors(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -827,7 +815,7 @@ size_t GetMaximumPixelInputVectors(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumPixelTextureUnits(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumPixelTextureUnits(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -852,7 +840,7 @@ size_t GetMaximumPixelTextureUnits(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-std::array<GLuint, 3> GetMaxComputeWorkGroupCount(D3D_FEATURE_LEVEL featureLevel)
+std::array<GLint, 3> GetMaxComputeWorkGroupCount(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -861,13 +849,12 @@ std::array<GLuint, 3> GetMaxComputeWorkGroupCount(D3D_FEATURE_LEVEL featureLevel
             return {{D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION,
                      D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION,
                      D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION}};
-            break;
         default:
             return {{0, 0, 0}};
     }
 }
 
-std::array<GLuint, 3> GetMaxComputeWorkGroupSize(D3D_FEATURE_LEVEL featureLevel)
+std::array<GLint, 3> GetMaxComputeWorkGroupSize(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -875,13 +862,12 @@ std::array<GLuint, 3> GetMaxComputeWorkGroupSize(D3D_FEATURE_LEVEL featureLevel)
         case D3D_FEATURE_LEVEL_11_0:
             return {{D3D11_CS_THREAD_GROUP_MAX_X, D3D11_CS_THREAD_GROUP_MAX_Y,
                      D3D11_CS_THREAD_GROUP_MAX_Z}};
-            break;
         default:
             return {{0, 0, 0}};
     }
 }
 
-size_t GetMaxComputeWorkGroupInvocations(D3D_FEATURE_LEVEL featureLevel)
+int GetMaxComputeWorkGroupInvocations(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -893,7 +879,7 @@ size_t GetMaxComputeWorkGroupInvocations(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-unsigned int GetMaxComputeSharedMemorySize(D3D_FEATURE_LEVEL featureLevel)
+int GetMaxComputeSharedMemorySize(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -902,13 +888,13 @@ unsigned int GetMaxComputeSharedMemorySize(D3D_FEATURE_LEVEL featureLevel)
         // https://docs.microsoft.com/en-us/windows/desktop/direct3dhlsl/dx-graphics-hlsl-variable-syntax
         case D3D_FEATURE_LEVEL_11_1:
         case D3D_FEATURE_LEVEL_11_0:
-            return 32768u;
+            return 32768;
         default:
-            return 0u;
+            return 0;
     }
 }
 
-size_t GetMaximumComputeUniformVectors(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumComputeUniformVectors(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -920,7 +906,7 @@ size_t GetMaximumComputeUniformVectors(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumComputeUniformBlocks(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumComputeUniformBlocks(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -933,7 +919,7 @@ size_t GetMaximumComputeUniformBlocks(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumComputeTextureUnits(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumComputeTextureUnits(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -1151,7 +1137,7 @@ size_t GetMaximumConstantBufferSize(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumStreamOutputBuffers(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumStreamOutputBuffers(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -1175,7 +1161,7 @@ size_t GetMaximumStreamOutputBuffers(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumStreamOutputInterleavedComponents(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumStreamOutputInterleavedComponents(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -1197,7 +1183,7 @@ size_t GetMaximumStreamOutputInterleavedComponents(D3D_FEATURE_LEVEL featureLeve
     }
 }
 
-size_t GetMaximumStreamOutputSeparateComponents(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumStreamOutputSeparateComponents(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -1223,7 +1209,7 @@ size_t GetMaximumStreamOutputSeparateComponents(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-size_t GetMaximumRenderToBufferWindowSize(D3D_FEATURE_LEVEL featureLevel)
+int GetMaximumRenderToBufferWindowSize(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -1253,11 +1239,8 @@ IntelDriverVersion GetIntelDriverVersion(const Optional<LARGE_INTEGER> driverVer
     if (!driverVersion.valid())
         return IntelDriverVersion(0);
 
-    // According to http://www.intel.com/content/www/us/en/support/graphics-drivers/000005654.html,
-    // only the fourth part is necessary since it stands for the driver specific unique version
-    // number.
-    WORD part = LOWORD(driverVersion.value().LowPart);
-    return IntelDriverVersion(part);
+    DWORD lowPart = driverVersion.value().LowPart;
+    return IntelDriverVersion(HIWORD(lowPart) * 10000 + LOWORD(lowPart));
 }
 
 }  // anonymous namespace
@@ -1304,9 +1287,9 @@ unsigned int GetReservedFragmentUniformVectors(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-gl::Version GetMaximumClientVersion(D3D_FEATURE_LEVEL featureLevel)
+gl::Version GetMaximumClientVersion(const Renderer11DeviceCaps &caps)
 {
-    switch (featureLevel)
+    switch (caps.featureLevel)
     {
         case D3D_FEATURE_LEVEL_11_1:
         case D3D_FEATURE_LEVEL_11_0:
@@ -1315,6 +1298,14 @@ gl::Version GetMaximumClientVersion(D3D_FEATURE_LEVEL featureLevel)
             return gl::Version(3, 0);
 
         case D3D_FEATURE_LEVEL_10_0:
+            if (caps.allowES3OnFL10_0)
+            {
+                return gl::Version(3, 0);
+            }
+            else
+            {
+                return gl::Version(2, 0);
+            }
         case D3D_FEATURE_LEVEL_9_3:
         case D3D_FEATURE_LEVEL_9_2:
         case D3D_FEATURE_LEVEL_9_1:
@@ -1363,7 +1354,7 @@ bool IsMultiviewSupported(D3D_FEATURE_LEVEL featureLevel)
     }
 }
 
-unsigned int GetMaxSampleMaskWords(D3D_FEATURE_LEVEL featureLevel)
+int GetMaxSampleMaskWords(D3D_FEATURE_LEVEL featureLevel)
 {
     switch (featureLevel)
     {
@@ -1372,14 +1363,14 @@ unsigned int GetMaxSampleMaskWords(D3D_FEATURE_LEVEL featureLevel)
         case D3D_FEATURE_LEVEL_11_0:
         case D3D_FEATURE_LEVEL_10_1:
         case D3D_FEATURE_LEVEL_10_0:
-            return 1u;
+            return 1;
         case D3D_FEATURE_LEVEL_9_3:
         case D3D_FEATURE_LEVEL_9_2:
         case D3D_FEATURE_LEVEL_9_1:
-            return 0u;
+            return 0;
         default:
             UNREACHABLE();
-            return 0u;
+            return 0;
     }
 }
 
@@ -1387,6 +1378,7 @@ void GenerateCaps(ID3D11Device *device,
                   ID3D11DeviceContext *deviceContext,
                   const Renderer11DeviceCaps &renderer11DeviceCaps,
                   const angle::FeaturesD3D &features,
+                  const char *description,
                   gl::Caps *caps,
                   gl::TextureCapsMap *textureCapsMap,
                   gl::Extensions *extensions,
@@ -1396,8 +1388,9 @@ void GenerateCaps(ID3D11Device *device,
     const gl::FormatSet &allFormats = gl::GetAllSizedInternalFormats();
     for (GLenum internalFormat : allFormats)
     {
-        gl::TextureCaps textureCaps = GenerateTextureFormatCaps(
-            GetMaximumClientVersion(featureLevel), internalFormat, device, renderer11DeviceCaps);
+        gl::TextureCaps textureCaps =
+            GenerateTextureFormatCaps(GetMaximumClientVersion(renderer11DeviceCaps), internalFormat,
+                                      device, renderer11DeviceCaps);
         textureCapsMap->insert(internalFormat, textureCaps);
 
         if (gl::GetSizedInternalFormatInfo(internalFormat).compressed)
@@ -1409,10 +1402,10 @@ void GenerateCaps(ID3D11Device *device,
     // GL core feature limits
     // Reserve MAX_UINT for D3D11's primitive restart.
     caps->maxElementIndex  = static_cast<GLint64>(std::numeric_limits<unsigned int>::max() - 1);
-    caps->max3DTextureSize = static_cast<GLuint>(GetMaximum3DTextureSize(featureLevel));
-    caps->max2DTextureSize = static_cast<GLuint>(GetMaximum2DTextureSize(featureLevel));
-    caps->maxCubeMapTextureSize = static_cast<GLuint>(GetMaximumCubeMapTextureSize(featureLevel));
-    caps->maxArrayTextureLayers = static_cast<GLuint>(GetMaximum2DTextureArraySize(featureLevel));
+    caps->max3DTextureSize = GetMaximum3DTextureSize(featureLevel);
+    caps->max2DTextureSize = GetMaximum2DTextureSize(featureLevel);
+    caps->maxCubeMapTextureSize = GetMaximumCubeMapTextureSize(featureLevel);
+    caps->maxArrayTextureLayers = GetMaximum2DTextureArraySize(featureLevel);
 
     // Unimplemented, set to minimum required
     caps->maxLODBias = 2.0f;
@@ -1422,12 +1415,11 @@ void GenerateCaps(ID3D11Device *device,
 
     // Maximum draw buffers and color attachments are the same, max color attachments could
     // eventually be increased to 16
-    caps->maxDrawBuffers = static_cast<GLuint>(GetMaximumSimultaneousRenderTargets(featureLevel));
-    caps->maxColorAttachments =
-        static_cast<GLuint>(GetMaximumSimultaneousRenderTargets(featureLevel));
+    caps->maxDrawBuffers      = GetMaximumSimultaneousRenderTargets(featureLevel);
+    caps->maxColorAttachments = GetMaximumSimultaneousRenderTargets(featureLevel);
 
     // D3D11 has the same limit for viewport width and height
-    caps->maxViewportWidth  = static_cast<GLuint>(GetMaximumViewportSize(featureLevel));
+    caps->maxViewportWidth  = GetMaximumViewportSize(featureLevel);
     caps->maxViewportHeight = caps->maxViewportWidth;
 
     // Choose a reasonable maximum, enforced in the shader.
@@ -1439,8 +1431,8 @@ void GenerateCaps(ID3D11Device *device,
     caps->maxAliasedLineWidth = 1.0f;
 
     // Primitive count limits
-    caps->maxElementsIndices  = static_cast<GLuint>(GetMaximumDrawIndexedIndexCount(featureLevel));
-    caps->maxElementsVertices = static_cast<GLuint>(GetMaximumDrawVertexCount(featureLevel));
+    caps->maxElementsIndices  = GetMaximumDrawIndexedIndexCount(featureLevel);
+    caps->maxElementsVertices = GetMaximumDrawVertexCount(featureLevel);
 
     // Program and shader binary formats (no supported shader binary formats)
     caps->programBinaryFormats.push_back(GL_PROGRAM_BINARY_ANGLE);
@@ -1464,20 +1456,18 @@ void GenerateCaps(ID3D11Device *device,
     caps->maxServerWaitTimeout = 0;
 
     // Vertex shader limits
-    caps->maxVertexAttributes = static_cast<GLuint>(GetMaximumVertexInputSlots(featureLevel));
-    caps->maxVertexUniformVectors =
-        static_cast<GLuint>(GetMaximumVertexUniformVectors(featureLevel));
+    caps->maxVertexAttributes     = GetMaximumVertexInputSlots(featureLevel);
+    caps->maxVertexUniformVectors = GetMaximumVertexUniformVectors(featureLevel);
     if (features.skipVSConstantRegisterZero.enabled)
     {
         caps->maxVertexUniformVectors -= 1;
     }
     caps->maxShaderUniformComponents[gl::ShaderType::Vertex] = caps->maxVertexUniformVectors * 4;
     caps->maxShaderUniformBlocks[gl::ShaderType::Vertex] =
-        static_cast<GLuint>(GetMaximumVertexUniformBlocks(featureLevel));
-    caps->maxVertexOutputComponents =
-        static_cast<GLuint>(GetMaximumVertexOutputVectors(featureLevel)) * 4;
+        GetMaximumVertexUniformBlocks(featureLevel);
+    caps->maxVertexOutputComponents = GetMaximumVertexOutputVectors(featureLevel) * 4;
     caps->maxShaderTextureImageUnits[gl::ShaderType::Vertex] =
-        static_cast<GLuint>(GetMaximumVertexTextureUnits(featureLevel));
+        GetMaximumVertexTextureUnits(featureLevel);
 
     // Vertex Attribute Bindings are emulated on D3D11.
     caps->maxVertexAttribBindings = caps->maxVertexAttributes;
@@ -1488,38 +1478,35 @@ void GenerateCaps(ID3D11Device *device,
     caps->maxVertexAttribStride = 2048;
 
     // Fragment shader limits
-    caps->maxFragmentUniformVectors =
-        static_cast<GLuint>(GetMaximumPixelUniformVectors(featureLevel));
+    caps->maxFragmentUniformVectors = GetMaximumPixelUniformVectors(featureLevel);
     caps->maxShaderUniformComponents[gl::ShaderType::Fragment] =
         caps->maxFragmentUniformVectors * 4;
     caps->maxShaderUniformBlocks[gl::ShaderType::Fragment] =
-        static_cast<GLuint>(GetMaximumPixelUniformBlocks(featureLevel));
-    caps->maxFragmentInputComponents =
-        static_cast<GLuint>(GetMaximumPixelInputVectors(featureLevel)) * 4;
+        GetMaximumPixelUniformBlocks(featureLevel);
+    caps->maxFragmentInputComponents = GetMaximumPixelInputVectors(featureLevel) * 4;
     caps->maxShaderTextureImageUnits[gl::ShaderType::Fragment] =
-        static_cast<GLuint>(GetMaximumPixelTextureUnits(featureLevel));
+        GetMaximumPixelTextureUnits(featureLevel);
     caps->minProgramTexelOffset = GetMinimumTexelOffset(featureLevel);
     caps->maxProgramTexelOffset = GetMaximumTexelOffset(featureLevel);
 
     // Compute shader limits
-    caps->maxComputeWorkGroupCount = GetMaxComputeWorkGroupCount(featureLevel);
-    caps->maxComputeWorkGroupSize  = GetMaxComputeWorkGroupSize(featureLevel);
-    caps->maxComputeWorkGroupInvocations =
-        static_cast<GLuint>(GetMaxComputeWorkGroupInvocations(featureLevel));
-    caps->maxComputeSharedMemorySize = GetMaxComputeSharedMemorySize(featureLevel);
+    caps->maxComputeWorkGroupCount       = GetMaxComputeWorkGroupCount(featureLevel);
+    caps->maxComputeWorkGroupSize        = GetMaxComputeWorkGroupSize(featureLevel);
+    caps->maxComputeWorkGroupInvocations = GetMaxComputeWorkGroupInvocations(featureLevel);
+    caps->maxComputeSharedMemorySize     = GetMaxComputeSharedMemorySize(featureLevel);
     caps->maxShaderUniformComponents[gl::ShaderType::Compute] =
-        static_cast<GLuint>(GetMaximumComputeUniformVectors(featureLevel)) * 4;
+        GetMaximumComputeUniformVectors(featureLevel) * 4;
     caps->maxShaderUniformBlocks[gl::ShaderType::Compute] =
-        static_cast<GLuint>(GetMaximumComputeUniformBlocks(featureLevel));
+        GetMaximumComputeUniformBlocks(featureLevel);
     caps->maxShaderTextureImageUnits[gl::ShaderType::Compute] =
-        static_cast<GLuint>(GetMaximumComputeTextureUnits(featureLevel));
+        GetMaximumComputeTextureUnits(featureLevel);
 
     SetUAVRelatedResourceLimits(featureLevel, caps);
 
     // Aggregate shader limits
     caps->maxUniformBufferBindings = caps->maxShaderUniformBlocks[gl::ShaderType::Vertex] +
                                      caps->maxShaderUniformBlocks[gl::ShaderType::Fragment];
-    caps->maxUniformBlockSize = GetMaximumConstantBufferSize(featureLevel);
+    caps->maxUniformBlockSize = static_cast<GLuint64>(GetMaximumConstantBufferSize(featureLevel));
 
     // TODO(oetuaho): Get a more accurate limit. For now using the minimum requirement for GLES 3.1.
     caps->maxUniformLocations = 1024;
@@ -1549,19 +1536,17 @@ void GenerateCaps(ID3D11Device *device,
             static_cast<GLint64>(caps->maxShaderUniformComponents[shaderType]);
     }
 
-    caps->maxVaryingComponents =
-        static_cast<GLuint>(GetMaximumVertexOutputVectors(featureLevel)) * 4;
-    caps->maxVaryingVectors = static_cast<GLuint>(GetMaximumVertexOutputVectors(featureLevel));
+    caps->maxVaryingComponents         = GetMaximumVertexOutputVectors(featureLevel) * 4;
+    caps->maxVaryingVectors            = GetMaximumVertexOutputVectors(featureLevel);
     caps->maxCombinedTextureImageUnits = caps->maxShaderTextureImageUnits[gl::ShaderType::Vertex] +
                                          caps->maxShaderTextureImageUnits[gl::ShaderType::Fragment];
 
     // Transform feedback limits
     caps->maxTransformFeedbackInterleavedComponents =
-        static_cast<GLuint>(GetMaximumStreamOutputInterleavedComponents(featureLevel));
-    caps->maxTransformFeedbackSeparateAttributes =
-        static_cast<GLuint>(GetMaximumStreamOutputBuffers(featureLevel));
+        GetMaximumStreamOutputInterleavedComponents(featureLevel);
+    caps->maxTransformFeedbackSeparateAttributes = GetMaximumStreamOutputBuffers(featureLevel);
     caps->maxTransformFeedbackSeparateComponents =
-        static_cast<GLuint>(GetMaximumStreamOutputSeparateComponents(featureLevel));
+        GetMaximumStreamOutputSeparateComponents(featureLevel);
 
     // Defer the computation of multisample limits to Context::updateCaps() where max*Samples values
     // are determined according to available sample counts for each individual format.
@@ -1575,94 +1560,119 @@ void GenerateCaps(ID3D11Device *device,
 
     // Framebuffer limits
     caps->maxFramebufferSamples = std::numeric_limits<GLint>::max();
-    caps->maxFramebufferWidth =
-        static_cast<GLuint>(GetMaximumRenderToBufferWindowSize(featureLevel));
-    caps->maxFramebufferHeight = caps->maxFramebufferWidth;
+    caps->maxFramebufferWidth   = GetMaximumRenderToBufferWindowSize(featureLevel);
+    caps->maxFramebufferHeight  = caps->maxFramebufferWidth;
 
     // Texture gather offset limits
     caps->minProgramTextureGatherOffset = GetMinimumTextureGatherOffset(featureLevel);
     caps->maxProgramTextureGatherOffset = GetMaximumTextureGatherOffset(featureLevel);
+
+    caps->maxTextureAnisotropy        = GetMaximumAnisotropy(featureLevel);
+    caps->queryCounterBitsTimeElapsed = 64;
+    caps->queryCounterBitsTimestamp = 0;  // Timestamps cannot be supported due to D3D11 limitations
+    caps->maxDualSourceDrawBuffers  = 1;
 
     // GL extension support
     extensions->setTextureExtensionSupport(*textureCapsMap);
 
     // Explicitly disable GL_OES_compressed_ETC1_RGB8_texture because it's emulated and never
     // becomes core. WebGL doesn't want to expose it unless there is native support.
-    extensions->compressedETC1RGB8Texture = false;
+    extensions->compressedETC1RGB8TextureOES    = false;
+    extensions->compressedETC1RGB8SubTextureEXT = false;
 
-    extensions->elementIndexUint            = true;
-    extensions->getProgramBinary            = true;
-    extensions->rgb8rgba8                   = true;
-    extensions->readFormatBGRA              = true;
-    extensions->pixelBufferObject           = true;
-    extensions->mapBuffer                   = true;
-    extensions->mapBufferRange              = true;
-    extensions->textureNPOT                 = GetNPOTTextureSupport(featureLevel);
-    extensions->drawBuffers                 = GetMaximumSimultaneousRenderTargets(featureLevel) > 1;
-    extensions->textureStorage              = true;
-    extensions->textureFilterAnisotropic    = true;
-    extensions->maxTextureAnisotropy        = GetMaximumAnisotropy(featureLevel);
-    extensions->occlusionQueryBoolean       = GetOcclusionQuerySupport(featureLevel);
-    extensions->fence                       = GetEventQuerySupport(featureLevel);
-    extensions->disjointTimerQuery          = true;
-    extensions->queryCounterBitsTimeElapsed = 64;
-    extensions->queryCounterBitsTimestamp =
-        0;  // Timestamps cannot be supported due to D3D11 limitations
-    extensions->robustness = true;
+    extensions->elementIndexUintOES = true;
+    extensions->getProgramBinaryOES = true;
+    extensions->rgb8Rgba8OES        = true;
+    extensions->readFormatBgraEXT   = true;
+    extensions->pixelBufferObjectNV = true;
+    extensions->mapbufferOES        = true;
+    extensions->mapBufferRangeEXT   = true;
+    extensions->textureNpotOES      = GetNPOTTextureSupport(featureLevel);
+    extensions->drawBuffersEXT      = GetMaximumSimultaneousRenderTargets(featureLevel) > 1;
+    extensions->drawBuffersIndexedEXT =
+        (renderer11DeviceCaps.featureLevel >= D3D_FEATURE_LEVEL_10_1);
+    extensions->drawBuffersIndexedOES       = extensions->drawBuffersIndexedEXT;
+    extensions->textureStorageEXT           = true;
+    extensions->textureFilterAnisotropicEXT = true;
+    extensions->occlusionQueryBooleanEXT    = GetOcclusionQuerySupport(featureLevel);
+    extensions->fenceNV                     = GetEventQuerySupport(featureLevel);
+    extensions->disjointTimerQueryEXT       = true;
+    extensions->robustnessEXT               = true;
     // Direct3D guarantees to return zero for any resource that is accessed out of bounds.
     // See https://msdn.microsoft.com/en-us/library/windows/desktop/ff476332(v=vs.85).aspx
     // and https://msdn.microsoft.com/en-us/library/windows/desktop/ff476900(v=vs.85).aspx
-    extensions->robustBufferAccessBehavior = true;
-    extensions->blendMinMax                = true;
+    extensions->robustBufferAccessBehaviorKHR = true;
+    extensions->blendMinmaxEXT                = true;
     // https://docs.microsoft.com/en-us/windows/desktop/direct3ddxgi/format-support-for-direct3d-11-0-feature-level-hardware
-    extensions->floatBlend             = true;
-    extensions->framebufferBlit        = GetFramebufferBlitSupport(featureLevel);
-    extensions->framebufferMultisample = GetFramebufferMultisampleSupport(featureLevel);
-    extensions->instancedArraysANGLE   = GetInstancingSupport(featureLevel);
-    extensions->instancedArraysEXT     = GetInstancingSupport(featureLevel);
-    extensions->packReverseRowOrder    = true;
-    extensions->standardDerivatives    = GetDerivativeInstructionSupport(featureLevel);
-    extensions->shaderTextureLOD       = GetShaderTextureLODSupport(featureLevel);
-    extensions->fragDepth              = true;
-    extensions->multiview              = IsMultiviewSupported(featureLevel);
-    extensions->multiview2             = IsMultiviewSupported(featureLevel);
-    if (extensions->multiview || extensions->multiview2)
+    extensions->floatBlendEXT               = true;
+    extensions->framebufferBlitANGLE        = GetFramebufferBlitSupport(featureLevel);
+    extensions->framebufferBlitNV           = extensions->framebufferBlitANGLE;
+    extensions->framebufferMultisampleANGLE = GetFramebufferMultisampleSupport(featureLevel);
+    extensions->instancedArraysANGLE        = GetInstancingSupport(featureLevel);
+    extensions->instancedArraysEXT          = GetInstancingSupport(featureLevel);
+    extensions->packReverseRowOrderANGLE    = true;
+    extensions->standardDerivativesOES      = GetDerivativeInstructionSupport(featureLevel);
+    extensions->shaderTextureLodEXT         = GetShaderTextureLODSupport(featureLevel);
+    extensions->fragDepthEXT                = true;
+    extensions->multiviewOVR                = IsMultiviewSupported(featureLevel);
+    extensions->multiview2OVR               = IsMultiviewSupported(featureLevel);
+    if (extensions->multiviewOVR || extensions->multiview2OVR)
     {
-        extensions->maxViews =
-            std::min(static_cast<GLuint>(gl::IMPLEMENTATION_ANGLE_MULTIVIEW_MAX_VIEWS),
-                     std::min(static_cast<GLuint>(GetMaximum2DTextureArraySize(featureLevel)),
-                              GetMaxViewportAndScissorRectanglesPerPipeline(featureLevel)));
+        caps->maxViews = std::min(static_cast<GLuint>(GetMaximum2DTextureArraySize(featureLevel)),
+                                  GetMaxViewportAndScissorRectanglesPerPipeline(featureLevel));
     }
-    extensions->textureUsage       = true;  // This could be false since it has no effect in D3D11
-    extensions->discardFramebuffer = true;
-    extensions->translatedShaderSource           = true;
-    extensions->fboRenderMipmap                  = false;
-    extensions->debugMarker                      = true;
-    extensions->eglImage                         = true;
-    extensions->eglImageExternal                 = true;
-    extensions->eglImageExternalEssl3            = true;
-    extensions->eglStreamConsumerExternal        = true;
-    extensions->unpackSubimage                   = true;
-    extensions->packSubimage                     = true;
-    extensions->lossyETCDecode                   = true;
-    extensions->syncQuery                        = GetEventQuerySupport(featureLevel);
-    extensions->copyTexture                      = true;
-    extensions->copyCompressedTexture            = true;
-    extensions->textureStorageMultisample2DArray = true;
-    extensions->multiviewMultisample     = ((extensions->multiview || extensions->multiview2) &&
-                                        extensions->textureStorageMultisample2DArray);
-    extensions->copyTexture3d            = true;
-    extensions->textureBorderClamp       = true;
-    extensions->textureMultisample       = true;
-    extensions->provokingVertex          = true;
-    extensions->blendFuncExtended        = true;
-    extensions->maxDualSourceDrawBuffers = 1;
-    extensions->texture3DOES                     = true;
-    extensions->baseVertexBaseInstance           = true;
+    extensions->textureUsageANGLE = true;  // This could be false since it has no effect in D3D11
+    extensions->discardFramebufferEXT               = true;
+    extensions->translatedShaderSourceANGLE         = true;
+    extensions->fboRenderMipmapOES                  = true;
+    extensions->debugMarkerEXT                      = true;
+    extensions->EGLImageOES                         = true;
+    extensions->EGLImageExternalOES                 = true;
+    extensions->EGLImageExternalWrapModesEXT        = true;
+    extensions->EGLImageExternalEssl3OES            = true;
+    extensions->EGLStreamConsumerExternalNV         = true;
+    extensions->unpackSubimageEXT                   = true;
+    extensions->packSubimageNV                      = true;
+    extensions->lossyEtcDecodeANGLE                 = true;
+    extensions->syncQueryCHROMIUM                   = GetEventQuerySupport(featureLevel);
+    extensions->copyTextureCHROMIUM                 = true;
+    extensions->copyCompressedTextureCHROMIUM       = true;
+    extensions->textureStorageMultisample2dArrayOES = true;
+    extensions->multiviewMultisampleANGLE =
+        ((extensions->multiviewOVR || extensions->multiview2OVR) &&
+         extensions->textureStorageMultisample2dArrayOES);
+    extensions->copyTexture3dANGLE      = true;
+    extensions->textureBorderClampOES   = true;
+    extensions->multiDrawIndirectEXT    = true;
+    extensions->textureMultisampleANGLE = true;
+    extensions->provokingVertexANGLE    = true;
+    extensions->blendFuncExtendedEXT    = true;
+    // http://anglebug.com/4926
+    extensions->texture3DOES                             = false;
+    extensions->baseVertexBaseInstanceANGLE              = true;
+    extensions->baseVertexBaseInstanceShaderBuiltinANGLE = true;
+    extensions->drawElementsBaseVertexOES                = true;
+    extensions->drawElementsBaseVertexEXT                = true;
+    if (!strstr(description, "Adreno"))
+    {
+        extensions->multisampledRenderToTextureEXT = true;
+    }
+    extensions->videoTextureWEBGL = true;
 
     // D3D11 cannot support reading depth texture as a luminance texture.
     // It treats it as a red-channel-only texture.
     extensions->depthTextureOES = false;
+
+    // readPixels on depth & stencil not working with D3D11 backend.
+    extensions->readDepthNV         = false;
+    extensions->readStencilNV       = false;
+    extensions->depthBufferFloat2NV = false;
+
+    // GL_EXT_clip_control
+    extensions->clipControlEXT = (renderer11DeviceCaps.featureLevel >= D3D_FEATURE_LEVEL_9_3);
+
+    // GL_KHR_parallel_shader_compile
+    extensions->parallelShaderCompileKHR = true;
 
     // D3D11 Feature Level 10_0+ uses SV_IsFrontFace in HLSL to emulate gl_FrontFacing.
     // D3D11 Feature Level 9_3 doesn't support SV_IsFrontFace, and has no equivalent, so can't
@@ -1700,16 +1710,6 @@ void GenerateCaps(ID3D11Device *device,
     // if the Client Version >= 3, since devices affected by this issue don't support ES3+.
     limitations->attributeZeroRequiresZeroDivisorInEXT = true;
 #endif
-}
-
-void GetSamplePosition(GLsizei sampleCount, size_t index, GLfloat *xy)
-{
-    size_t indexKey = static_cast<size_t>(ceil(log2(sampleCount)));
-    ASSERT(indexKey < kSamplePositions.size() &&
-           (2 * index + 1) < kSamplePositions[indexKey].size());
-
-    xy[0] = kSamplePositions[indexKey][2 * index];
-    xy[1] = kSamplePositions[indexKey][2 * index + 1];
 }
 
 }  // namespace d3d11_gl
@@ -2141,10 +2141,12 @@ void MakeValidSize(bool isImage,
                    int *levelOffset)
 {
     const DXGIFormatSize &dxgiFormatInfo = d3d11::GetDXGIFormatSizeInfo(format);
+    bool validFormat                     = format != DXGI_FORMAT_UNKNOWN;
+    bool validImage                      = isImage && validFormat;
 
     int upsampleCount = 0;
     // Don't expand the size of full textures that are at least (blockWidth x blockHeight) already.
-    if (isImage || *requestWidth < static_cast<GLsizei>(dxgiFormatInfo.blockWidth) ||
+    if (validImage || *requestWidth < static_cast<GLsizei>(dxgiFormatInfo.blockWidth) ||
         *requestHeight < static_cast<GLsizei>(dxgiFormatInfo.blockHeight))
     {
         while (*requestWidth % dxgiFormatInfo.blockWidth != 0 ||
@@ -2155,6 +2157,20 @@ void MakeValidSize(bool isImage,
             upsampleCount++;
         }
     }
+    else if (validFormat)
+    {
+        if (*requestWidth % dxgiFormatInfo.blockWidth != 0)
+        {
+            *requestWidth = roundUp(*requestWidth, static_cast<GLsizei>(dxgiFormatInfo.blockWidth));
+        }
+
+        if (*requestHeight % dxgiFormatInfo.blockHeight != 0)
+        {
+            *requestHeight =
+                roundUp(*requestHeight, static_cast<GLsizei>(dxgiFormatInfo.blockHeight));
+        }
+    }
+
     if (levelOffset)
     {
         *levelOffset = upsampleCount;
@@ -2177,28 +2193,35 @@ angle::Result GenerateInitialTextureData(
     const d3d11::DXGIFormatSize &dxgiFormatInfo =
         d3d11::GetDXGIFormatSizeInfo(d3dFormatInfo.texFormat);
 
-    unsigned int rowPitch     = dxgiFormatInfo.pixelBytes * width;
-    unsigned int depthPitch   = rowPitch * height;
-    unsigned int maxImageSize = depthPitch * depth;
+    using CheckedSize        = angle::CheckedNumeric<size_t>;
+    CheckedSize rowPitch     = CheckedSize(dxgiFormatInfo.pixelBytes) * CheckedSize(width);
+    CheckedSize depthPitch   = rowPitch * CheckedSize(height);
+    CheckedSize maxImageSize = depthPitch * CheckedSize(depth);
+
+    Context11 *context11 = GetImplAs<Context11>(context);
+    ANGLE_CHECK_GL_ALLOC(context11, maxImageSize.IsValid());
 
     angle::MemoryBuffer *scratchBuffer = nullptr;
-    ANGLE_CHECK_GL_ALLOC(GetImplAs<Context11>(context),
-                         context->getScratchBuffer(maxImageSize, &scratchBuffer));
+    ANGLE_CHECK_GL_ALLOC(context11,
+                         context->getScratchBuffer(maxImageSize.ValueOrDie(), &scratchBuffer));
 
-    d3dFormatInfo.dataInitializerFunction(width, height, depth, scratchBuffer->data(), rowPitch,
-                                          depthPitch);
+    d3dFormatInfo.dataInitializerFunction(width, height, depth, scratchBuffer->data(),
+                                          rowPitch.ValueOrDie(), depthPitch.ValueOrDie());
 
     for (unsigned int i = 0; i < mipLevels; i++)
     {
         unsigned int mipWidth  = std::max(width >> i, 1U);
         unsigned int mipHeight = std::max(height >> i, 1U);
 
-        unsigned int mipRowPitch   = dxgiFormatInfo.pixelBytes * mipWidth;
-        unsigned int mipDepthPitch = mipRowPitch * mipHeight;
+        using CheckedUINT         = angle::CheckedNumeric<UINT>;
+        CheckedUINT mipRowPitch   = CheckedUINT(dxgiFormatInfo.pixelBytes) * CheckedUINT(mipWidth);
+        CheckedUINT mipDepthPitch = mipRowPitch * CheckedUINT(mipHeight);
+
+        ANGLE_CHECK_GL_ALLOC(context11, mipRowPitch.IsValid() && mipDepthPitch.IsValid());
 
         outSubresourceData->at(i).pSysMem          = scratchBuffer->data();
-        outSubresourceData->at(i).SysMemPitch      = mipRowPitch;
-        outSubresourceData->at(i).SysMemSlicePitch = mipDepthPitch;
+        outSubresourceData->at(i).SysMemPitch      = mipRowPitch.ValueOrDie();
+        outSubresourceData->at(i).SysMemSlicePitch = mipDepthPitch.ValueOrDie();
     }
 
     return angle::Result::Continue;
@@ -2236,6 +2259,12 @@ void SetPositionLayerTexCoord3DVertex(PositionLayerTexCoord3DVertex *vertex,
 BlendStateKey::BlendStateKey()
 {
     memset(this, 0, sizeof(BlendStateKey));
+    blendStateExt = gl::BlendStateExt();
+}
+
+BlendStateKey::BlendStateKey(const BlendStateKey &other)
+{
+    memcpy(this, &other, sizeof(BlendStateKey));
 }
 
 bool operator==(const BlendStateKey &a, const BlendStateKey &b)
@@ -2263,42 +2292,30 @@ bool operator!=(const RasterizerStateKey &a, const RasterizerStateKey &b)
     return !(a == b);
 }
 
-HRESULT SetDebugName(ID3D11DeviceChild *resource, const char *name)
+HRESULT SetDebugName(ID3D11DeviceChild *resource,
+                     const char *internalName,
+                     const std::string *khrDebugName)
 {
-#if defined(_DEBUG)
-    UINT existingDataSize = 0;
-    resource->GetPrivateData(WKPDID_D3DDebugObjectName, &existingDataSize, nullptr);
-    // Don't check the HRESULT- if it failed then that probably just means that no private data
-    // exists yet
-
-    if (existingDataSize > 0)
+    // Prepend ANGLE to separate names from other components in the same process.
+    std::string d3dName = "ANGLE";
+    bool sendNameToD3D  = false;
+    if (internalName && internalName[0] != '\0')
     {
-        // In some cases, ANGLE will try to apply two names to one object, which causes
-        // a D3D SDK Layers warning. This can occur if, for example, you 'create' two objects
-        // (e.g.Rasterizer States) with identical DESCs on the same device. D3D11 will optimize
-        // these calls and return the same object both times.
-        static const char *multipleNamesUsed = "Multiple names set by ANGLE";
-
-        // Remove the existing name
-        HRESULT hr = resource->SetPrivateData(WKPDID_D3DDebugObjectName, 0, nullptr);
-        if (FAILED(hr))
-        {
-            return hr;
-        }
-
-        // Apply the new name
-        return resource->SetPrivateData(WKPDID_D3DDebugObjectName,
-                                        static_cast<unsigned int>(strlen(multipleNamesUsed)),
-                                        multipleNamesUsed);
+        d3dName += std::string("_") + internalName;
+        sendNameToD3D = true;
     }
-    else
+    if (khrDebugName && !khrDebugName->empty())
+    {
+        d3dName += std::string("_") + *khrDebugName;
+        sendNameToD3D = true;
+    }
+    // If both internalName and khrDebugName are empty, avoid sending the string to d3d.
+    if (sendNameToD3D)
     {
         return resource->SetPrivateData(WKPDID_D3DDebugObjectName,
-                                        static_cast<unsigned int>(strlen(name)), name);
+                                        static_cast<UINT>(d3dName.size()), d3dName.c_str());
     }
-#else
     return S_OK;
-#endif
 }
 
 // Keep this in cpp file where it has visibility of Renderer11.h, otherwise calling
@@ -2314,7 +2331,7 @@ angle::Result LazyResource<ResourceT>::resolveImpl(d3d::Context *context,
     if (!mResource.valid())
     {
         ANGLE_TRY(renderer->allocateResource(context, desc, initData, &mResource));
-        mResource.setDebugName(name);
+        mResource.setInternalName(name);
     }
     return angle::Result::Continue;
 }
@@ -2382,13 +2399,15 @@ void InitializeFeatures(const Renderer11DeviceCaps &deviceCaps,
                         const DXGI_ADAPTER_DESC &adapterDesc,
                         angle::FeaturesD3D *features)
 {
-    bool isNvidia                  = IsNvidia(adapterDesc.VendorId);
-    bool isIntel                   = IsIntel(adapterDesc.VendorId);
-    bool isSkylake                 = false;
-    bool isBroadwell               = false;
-    bool isHaswell                 = false;
-    bool isAMD                     = IsAMD(adapterDesc.VendorId);
-    bool isFeatureLevel9_3         = (deviceCaps.featureLevel <= D3D_FEATURE_LEVEL_9_3);
+    bool isNvidia          = IsNvidia(adapterDesc.VendorId);
+    bool isIntel           = IsIntel(adapterDesc.VendorId);
+    bool isSkylake         = false;
+    bool isBroadwell       = false;
+    bool isHaswell         = false;
+    bool isIvyBridge       = false;
+    bool isAMD             = IsAMD(adapterDesc.VendorId);
+    bool isFeatureLevel9_3 = (deviceCaps.featureLevel <= D3D_FEATURE_LEVEL_9_3);
+
     IntelDriverVersion capsVersion = IntelDriverVersion(0);
     if (isIntel)
     {
@@ -2397,6 +2416,7 @@ void InitializeFeatures(const Renderer11DeviceCaps &deviceCaps,
         isSkylake   = IsSkylake(adapterDesc.DeviceId);
         isBroadwell = IsBroadwell(adapterDesc.DeviceId);
         isHaswell   = IsHaswell(adapterDesc.DeviceId);
+        isIvyBridge = IsIvyBridge(adapterDesc.DeviceId);
     }
 
     if (isNvidia)
@@ -2411,46 +2431,54 @@ void InitializeFeatures(const Renderer11DeviceCaps &deviceCaps,
             // Disable the workaround to fix a second driver bug on newer NVIDIA.
             ANGLE_FEATURE_CONDITION(
                 features, depthStencilBlitExtraCopy,
-                (part1 <= 13u && part2 < 6881) && isNvidia && driverVersionValid)
+                (part1 <= 13u && part2 < 6881) && isNvidia && driverVersionValid);
         }
         else
         {
             ANGLE_FEATURE_CONDITION(features, depthStencilBlitExtraCopy,
-                                    isNvidia && !driverVersionValid)
+                                    isNvidia && !driverVersionValid);
         }
     }
 
-    ANGLE_FEATURE_CONDITION(features, mrtPerfWorkaround, true)
-    ANGLE_FEATURE_CONDITION(features, zeroMaxLodWorkaround, isFeatureLevel9_3)
-    ANGLE_FEATURE_CONDITION(features, useInstancedPointSpriteEmulation, isFeatureLevel9_3)
+    ANGLE_FEATURE_CONDITION(features, mrtPerfWorkaround, true);
+    ANGLE_FEATURE_CONDITION(features, zeroMaxLodWorkaround, isFeatureLevel9_3);
+    ANGLE_FEATURE_CONDITION(features, useInstancedPointSpriteEmulation, isFeatureLevel9_3);
+    ANGLE_FEATURE_CONDITION(features, allowES3OnFL10_0, false);
 
     // TODO(jmadill): Disable workaround when we have a fixed compiler DLL.
-    ANGLE_FEATURE_CONDITION(features, expandIntegerPowExpressions, true)
+    ANGLE_FEATURE_CONDITION(features, expandIntegerPowExpressions, true);
 
-    ANGLE_FEATURE_CONDITION(features, flushAfterEndingTransformFeedback, isNvidia)
-    ANGLE_FEATURE_CONDITION(features, getDimensionsIgnoresBaseLevel, isNvidia)
-    ANGLE_FEATURE_CONDITION(features, skipVSConstantRegisterZero, isNvidia)
-    ANGLE_FEATURE_CONDITION(features, forceAtomicValueResolution, isNvidia)
+    ANGLE_FEATURE_CONDITION(features, flushAfterEndingTransformFeedback, isNvidia);
+    ANGLE_FEATURE_CONDITION(features, getDimensionsIgnoresBaseLevel, isNvidia);
+    ANGLE_FEATURE_CONDITION(features, skipVSConstantRegisterZero, isNvidia);
+    ANGLE_FEATURE_CONDITION(features, forceAtomicValueResolution, isNvidia);
 
-    ANGLE_FEATURE_CONDITION(features, preAddTexelFetchOffsets, isIntel)
-    ANGLE_FEATURE_CONDITION(features, useSystemMemoryForConstantBuffers, isIntel)
+    ANGLE_FEATURE_CONDITION(features, preAddTexelFetchOffsets, isIntel);
+    ANGLE_FEATURE_CONDITION(features, useSystemMemoryForConstantBuffers, isIntel);
 
     ANGLE_FEATURE_CONDITION(features, callClearTwice,
-                            isIntel && isSkylake && capsVersion < IntelDriverVersion(4771))
+                            isIntel && isSkylake && capsVersion >= IntelDriverVersion(160000) &&
+                                capsVersion < IntelDriverVersion(164771));
     ANGLE_FEATURE_CONDITION(features, emulateIsnanFloat,
-                            isIntel && isSkylake && capsVersion < IntelDriverVersion(4542))
-    ANGLE_FEATURE_CONDITION(
-        features, rewriteUnaryMinusOperator,
-        isIntel && (isBroadwell || isHaswell) && capsVersion < IntelDriverVersion(4624))
+                            isIntel && isSkylake && capsVersion >= IntelDriverVersion(160000) &&
+                                capsVersion < IntelDriverVersion(164542));
+    ANGLE_FEATURE_CONDITION(features, rewriteUnaryMinusOperator,
+                            isIntel && (isBroadwell || isHaswell) &&
+                                capsVersion >= IntelDriverVersion(150000) &&
+                                capsVersion < IntelDriverVersion(154624));
 
-    ANGLE_FEATURE_CONDITION(features, addDummyTextureNoRenderTarget,
-                            isIntel && capsVersion < IntelDriverVersion(4815))
+    ANGLE_FEATURE_CONDITION(features, addMockTextureNoRenderTarget,
+                            isIntel && capsVersion >= IntelDriverVersion(160000) &&
+                                capsVersion < IntelDriverVersion(164815));
 
-    // Haswell drivers occasionally corrupt (small?) (vertex?) texture data uploads.
-    ANGLE_FEATURE_CONDITION(features, setDataFasterThanImageUpload, !(isBroadwell || isHaswell))
+    // Haswell/Ivybridge drivers occasionally corrupt (small?) (vertex?) texture data uploads.
+    ANGLE_FEATURE_CONDITION(features, setDataFasterThanImageUpload,
+                            !(isIvyBridge || isBroadwell || isHaswell));
 
     ANGLE_FEATURE_CONDITION(features, disableB5G6R5Support,
-                            (isIntel && capsVersion < IntelDriverVersion(4539)) || isAMD)
+                            (isIntel && capsVersion >= IntelDriverVersion(150000) &&
+                             capsVersion < IntelDriverVersion(154539)) ||
+                                isAMD);
 
     // TODO(jmadill): Disable when we have a fixed driver version.
     // The tiny stencil texture workaround involves using CopySubresource or UpdateSubresource on a
@@ -2458,15 +2486,22 @@ void InitializeFeatures(const Renderer11DeviceCaps &deviceCaps,
     // possible to support ES3 on these devices, there is no need for the workaround to begin with
     // (anglebug.com/1572).
     ANGLE_FEATURE_CONDITION(features, emulateTinyStencilTextures,
-                            isAMD && !(deviceCaps.featureLevel < D3D_FEATURE_LEVEL_10_1))
+                            isAMD && !(deviceCaps.featureLevel < D3D_FEATURE_LEVEL_10_1));
 
     // If the VPAndRTArrayIndexFromAnyShaderFeedingRasterizer feature is not available, we have to
     // select the viewport / RT array index in the geometry shader.
     ANGLE_FEATURE_CONDITION(features, selectViewInGeometryShader,
-                            !deviceCaps.supportsVpRtIndexWriteFromVertexShader)
+                            !deviceCaps.supportsVpRtIndexWriteFromVertexShader);
 
-    // Never clear for robust resource init.  This matches Chrome's texture clearning behaviour.
-    ANGLE_FEATURE_CONDITION(features, allowClearForRobustResourceInit, false)
+    // NVidia drivers have no trouble clearing textures without showing corruption.
+    // Intel and AMD drivers that have trouble have been blocklisted by Chromium. In the case of
+    // Intel, they've been blocklisted to the DX9 runtime.
+    ANGLE_FEATURE_CONDITION(features, allowClearForRobustResourceInit, true);
+
+    // Allow translating uniform block to StructuredBuffer on Windows 10. This is targeted
+    // to work around a slow fxc compile performance issue with dynamic uniform indexing.
+    ANGLE_FEATURE_CONDITION(features, allowTranslateUniformBlockToStructuredBuffer,
+                            IsWin10OrGreater());
 
     // Call platform hooks for testing overrides.
     auto *platform = ANGLEPlatformCurrent();

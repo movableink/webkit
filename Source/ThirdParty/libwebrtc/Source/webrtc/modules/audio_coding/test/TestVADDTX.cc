@@ -23,36 +23,46 @@
 #include "api/audio_codecs/opus/audio_encoder_opus.h"
 #include "modules/audio_coding/codecs/cng/audio_encoder_cng.h"
 #include "modules/audio_coding/test/PCMFile.h"
-#include "modules/audio_coding/test/utility.h"
 #include "rtc_base/strings/string_builder.h"
-#include "test/testsupport/fileutils.h"
+#include "test/gtest.h"
+#include "test/testsupport/file_utils.h"
 
 namespace webrtc {
 
-ActivityMonitor::ActivityMonitor() {
+MonitoringAudioPacketizationCallback::MonitoringAudioPacketizationCallback(
+    AudioPacketizationCallback* next)
+    : next_(next) {
   ResetStatistics();
 }
 
-int32_t ActivityMonitor::InFrameType(FrameType frame_type) {
-  counter_[frame_type]++;
-  return 0;
+int32_t MonitoringAudioPacketizationCallback::SendData(
+    AudioFrameType frame_type,
+    uint8_t payload_type,
+    uint32_t timestamp,
+    const uint8_t* payload_data,
+    size_t payload_len_bytes,
+    int64_t absolute_capture_timestamp_ms) {
+  counter_[static_cast<int>(frame_type)]++;
+  return next_->SendData(frame_type, payload_type, timestamp, payload_data,
+                         payload_len_bytes, absolute_capture_timestamp_ms);
 }
 
-void ActivityMonitor::PrintStatistics() {
+void MonitoringAudioPacketizationCallback::PrintStatistics() {
   printf("\n");
-  printf("kEmptyFrame       %u\n", counter_[kEmptyFrame]);
-  printf("kAudioFrameSpeech %u\n", counter_[kAudioFrameSpeech]);
-  printf("kAudioFrameCN     %u\n", counter_[kAudioFrameCN]);
-  printf("kVideoFrameKey    %u\n", counter_[kVideoFrameKey]);
-  printf("kVideoFrameDelta  %u\n", counter_[kVideoFrameDelta]);
+  printf("kEmptyFrame       %u\n",
+         counter_[static_cast<int>(AudioFrameType::kEmptyFrame)]);
+  printf("kAudioFrameSpeech %u\n",
+         counter_[static_cast<int>(AudioFrameType::kAudioFrameSpeech)]);
+  printf("kAudioFrameCN     %u\n",
+         counter_[static_cast<int>(AudioFrameType::kAudioFrameCN)]);
   printf("\n\n");
 }
 
-void ActivityMonitor::ResetStatistics() {
+void MonitoringAudioPacketizationCallback::ResetStatistics() {
   memset(counter_, 0, sizeof(counter_));
 }
 
-void ActivityMonitor::GetStatistics(uint32_t* counter) {
+void MonitoringAudioPacketizationCallback::GetStatistics(uint32_t* counter) {
   memcpy(counter, counter_, sizeof(counter_));
 }
 
@@ -67,11 +77,13 @@ TestVadDtx::TestVadDtx()
           AudioCodingModule::Config(decoder_factory_))),
       acm_receive_(AudioCodingModule::Create(
           AudioCodingModule::Config(decoder_factory_))),
-      channel_(new Channel),
-      monitor_(new ActivityMonitor) {
-  EXPECT_EQ(0, acm_send_->RegisterTransportCallback(channel_.get()));
+      channel_(std::make_unique<Channel>()),
+      packetization_callback_(
+          std::make_unique<MonitoringAudioPacketizationCallback>(
+              channel_.get())) {
+  EXPECT_EQ(
+      0, acm_send_->RegisterTransportCallback(packetization_callback_.get()));
   channel_->RegisterReceiverACM(acm_receive_.get());
-  EXPECT_EQ(0, acm_send_->RegisterVADCallback(monitor_.get()));
 }
 
 bool TestVadDtx::RegisterCodec(const SdpAudioFormat& codec_format,
@@ -94,8 +106,9 @@ bool TestVadDtx::RegisterCodec(const SdpAudioFormat& codec_format,
   channel_->SetIsStereo(encoder->NumChannels() > 1);
   acm_send_->SetEncoder(std::move(encoder));
 
-  EXPECT_EQ(true,
-            acm_receive_->RegisterReceiveCodec(payload_type, codec_format));
+  std::map<int, SdpAudioFormat> receive_codecs = {{payload_type, codec_format}};
+  acm_receive_->SetReceiveCodecs(receive_codecs);
+
   return added_comfort_noise;
 }
 
@@ -107,7 +120,7 @@ void TestVadDtx::Run(std::string in_filename,
                      std::string out_filename,
                      bool append,
                      const int* expects) {
-  monitor_->ResetStatistics();
+  packetization_callback_->ResetStatistics();
 
   PCMFile in_file;
   in_file.Open(in_filename, frequency, "rb");
@@ -142,12 +155,12 @@ void TestVadDtx::Run(std::string in_filename,
   out_file.Close();
 
 #ifdef PRINT_STAT
-  monitor_->PrintStatistics();
+  packetization_callback_->PrintStatistics();
 #endif
 
-  uint32_t stats[5];
-  monitor_->GetStatistics(stats);
-  monitor_->ResetStatistics();
+  uint32_t stats[3];
+  packetization_callback_->GetStatistics(stats);
+  packetization_callback_->ResetStatistics();
 
   for (const auto& st : stats) {
     int i = &st - stats;  // Calculate the current position in stats.
@@ -207,41 +220,48 @@ void TestWebRtcVadDtx::Test(bool new_outfile, bool expect_dtx_enabled) {
 
 // Following is the implementation of TestOpusDtx.
 void TestOpusDtx::Perform() {
-  // If we set other codec than Opus, DTX cannot be switched on.
-  RegisterCodec({"ISAC", 16000, 1}, absl::nullopt);
-  EXPECT_EQ(-1, acm_send_->EnableOpusDtx());
-  EXPECT_EQ(0, acm_send_->DisableOpusDtx());
-
   int expects[] = {0, 1, 0, 0, 0};
 
   // Register Opus as send codec
   std::string out_filename =
       webrtc::test::OutputPath() + "testOpusDtx_outFile_mono.pcm";
   RegisterCodec({"opus", 48000, 2}, absl::nullopt);
-  EXPECT_EQ(0, acm_send_->DisableOpusDtx());
+  acm_send_->ModifyEncoder([](std::unique_ptr<AudioEncoder>* encoder_ptr) {
+    (*encoder_ptr)->SetDtx(false);
+  });
 
   Run(webrtc::test::ResourcePath("audio_coding/testfile32kHz", "pcm"), 32000, 1,
       out_filename, false, expects);
 
-  EXPECT_EQ(0, acm_send_->EnableOpusDtx());
-  expects[kEmptyFrame] = 1;
-  expects[kAudioFrameCN] = 1;
+  acm_send_->ModifyEncoder([](std::unique_ptr<AudioEncoder>* encoder_ptr) {
+    (*encoder_ptr)->SetDtx(true);
+  });
+  expects[static_cast<int>(AudioFrameType::kEmptyFrame)] = 1;
+  expects[static_cast<int>(AudioFrameType::kAudioFrameCN)] = 1;
   Run(webrtc::test::ResourcePath("audio_coding/testfile32kHz", "pcm"), 32000, 1,
       out_filename, true, expects);
 
   // Register stereo Opus as send codec
   out_filename = webrtc::test::OutputPath() + "testOpusDtx_outFile_stereo.pcm";
   RegisterCodec({"opus", 48000, 2, {{"stereo", "1"}}}, absl::nullopt);
-  EXPECT_EQ(0, acm_send_->DisableOpusDtx());
-  expects[kEmptyFrame] = 0;
-  expects[kAudioFrameCN] = 0;
+  acm_send_->ModifyEncoder([](std::unique_ptr<AudioEncoder>* encoder_ptr) {
+    (*encoder_ptr)->SetDtx(false);
+  });
+  expects[static_cast<int>(AudioFrameType::kEmptyFrame)] = 0;
+  expects[static_cast<int>(AudioFrameType::kAudioFrameCN)] = 0;
   Run(webrtc::test::ResourcePath("audio_coding/teststereo32kHz", "pcm"), 32000,
       2, out_filename, false, expects);
 
-  EXPECT_EQ(0, acm_send_->EnableOpusDtx());
+  acm_send_->ModifyEncoder([](std::unique_ptr<AudioEncoder>* encoder_ptr) {
+    (*encoder_ptr)->SetDtx(true);
+    // The default bitrate will not generate frames recognized as CN on desktop
+    // since the frames will be encoded as CELT. Set a low target bitrate to get
+    // consistent behaviour across platforms.
+    (*encoder_ptr)->OnReceivedTargetAudioBitrate(24000);
+  });
 
-  expects[kEmptyFrame] = 1;
-  expects[kAudioFrameCN] = 1;
+  expects[static_cast<int>(AudioFrameType::kEmptyFrame)] = 1;
+  expects[static_cast<int>(AudioFrameType::kAudioFrameCN)] = 1;
   Run(webrtc::test::ResourcePath("audio_coding/teststereo32kHz", "pcm"), 32000,
       2, out_filename, true, expects);
 }

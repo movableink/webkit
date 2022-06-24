@@ -1,39 +1,51 @@
 set(WebKitGLibAPITests_SOURCES
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/LoadTrackingTest.cpp
-    ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/TestMain.cpp
+    ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/WebKitTestServer.cpp
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib/WebViewTest.cpp
 )
 
 set(WebKitGLibAPITests_INCLUDE_DIRECTORIES
-    ${FORWARDING_HEADERS_DIR}
+    ${CMAKE_BINARY_DIR}
+    ${TOOLS_DIR}/TestWebKitAPI
     ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib
     ${TOOLS_DIR}/TestWebKitAPI/glib/WebKitGLib
+    # FIXME Should we add a _PRIVATE_INCLUDE_DIRECTORIES for this?
+    ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}
+    ${JavaScriptCoreGLib_FRAMEWORK_HEADERS_DIR}
+    ${JavaScriptCore_FRAMEWORK_HEADERS_DIR}
+    ${JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS_DIR}
+    ${PAL_FRAMEWORK_HEADERS_DIR}
+    ${WTF_FRAMEWORK_HEADERS_DIR}
+    ${WebCore_PRIVATE_FRAMEWORK_HEADERS}
 )
 
 set(WebKitGLibAPITests_SYSTEM_INCLUDE_DIRECTORIES
-    ${CAIRO_INCLUDE_DIRS}
+    ${GIO_UNIX_INCLUDE_DIRS}
     ${GLIB_INCLUDE_DIRS}
+    ${GSTREAMER_AUDIO_INCLUDE_DIRS}
     ${GSTREAMER_INCLUDE_DIRS}
     ${LIBSOUP_INCLUDE_DIRS}
 )
 
 set(WebKitAPITest_LIBRARIES
-    WebKit::JavaScriptCore
-    WebKit
+    WebKit::WebKit
+)
+
+set(WebKitGLibAPITestsCore_LIBRARIES
+    WebKit::WebKit
 )
 
 set(WebKitGLibAPITest_LIBRARIES
-    ${WebKitAPITest_LIBRARIES}
-    WebKitGLibAPITestsCore
     ${GLIB_LIBRARIES}
     ${LIBSOUP_LIBRARIES}
+    ${WebKitAPITest_LIBRARIES}
+    WebKitGLibAPITestsCore
 )
 
 set(WebKitGLibAPITestExtension_LIBRARIES
-    WebKit::JavaScriptCore
-    WebKit
     ${GLIB_LIBRARIES}
+    WebKit::WebKit
 )
 
 set(WebKitGLibAPIWebProcessTests
@@ -54,6 +66,9 @@ macro(ADD_WK2_TEST_WEB_EXTENSION extension_name)
     set_target_properties(${extension_name} PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${TEST_LIBRARY_DIR}
     )
+    target_compile_definitions(${extension_name} PUBLIC ${WebKitGLibAPITests_DEFINITIONS})
+    target_include_directories(${extension_name} PUBLIC ${WebKitGLibAPITests_INCLUDE_DIRECTORIES})
+    target_include_directories(${extension_name} SYSTEM PUBLIC ${WebKitGLibAPITests_SYSTEM_INCLUDE_DIRECTORIES})
     target_link_libraries(${extension_name} ${WebKitGLibAPITestExtension_LIBRARIES})
 
     if (COMPILER_IS_GCC_OR_CLANG)
@@ -82,20 +97,22 @@ WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 set(TEST_RESOURCES_DIR ${TEST_BINARY_DIR}/resources)
 file(MAKE_DIRECTORY ${TEST_RESOURCES_DIR})
 
-add_definitions(
-    -DWEBKIT_TEST_PLUGIN_DIR="${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/plugins"
-    -DWEBKIT_EXEC_PATH="${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
-    -DWEBKIT_SRC_DIR="${CMAKE_SOURCE_DIR}"
-    -DWEBKIT_TEST_WEB_EXTENSIONS_DIR="${TEST_LIBRARY_DIR}"
-    -DWEBKIT_INJECTED_BUNDLE_PATH="${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
-    -DWEBKIT_TEST_RESOURCES_DIR="${TEST_RESOURCES_DIR}"
+set(WebKitGLibAPITests_DEFINITIONS
+    NO_GTEST_USAGE
+    WEBKIT_TEST_PLUGIN_DIR="${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/plugins"
+    WEBKIT_EXEC_PATH="${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+    WEBKIT_SRC_DIR="${CMAKE_SOURCE_DIR}"
+    WEBKIT_TEST_WEB_EXTENSIONS_DIR="${TEST_LIBRARY_DIR}"
+    WEBKIT_INJECTED_BUNDLE_PATH="${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
+    WEBKIT_TEST_RESOURCES_DIR="${TEST_RESOURCES_DIR}"
 )
 
-include_directories(${WebKitGLibAPITests_INCLUDE_DIRECTORIES})
-include_directories(SYSTEM ${WebKitGLibAPITests_SYSTEM_INCLUDE_DIRECTORIES})
-
 add_library(WebKitGLibAPITestsCore STATIC ${WebKitGLibAPITests_SOURCES})
-target_link_libraries(WebKitGLibAPITestsCore WebKit)
+target_include_directories(WebKitGLibAPITestsCore PUBLIC ${WebKitGLibAPITests_INCLUDE_DIRECTORIES})
+target_include_directories(WebKitGLibAPITestsCore SYSTEM PUBLIC ${WebKitGLibAPITests_SYSTEM_INCLUDE_DIRECTORIES})
+target_compile_definitions(WebKitGLibAPITestsCore PRIVATE BUILDING_TestWebKit)
+target_compile_definitions(WebKitGLibAPITestsCore PUBLIC ${WebKitGLibAPITests_DEFINITIONS})
+target_link_libraries(WebKitGLibAPITestsCore ${WebKitGLibAPITestsCore_LIBRARIES})
 
 if (COMPILER_IS_GCC_OR_CLANG)
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebKitGLibAPITestsCore -Wno-unused-parameter)
@@ -127,6 +144,7 @@ ADD_WK2_TEST(TestEditor ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestEditor.c
 ADD_WK2_TEST(TestFrame ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestFrame.cpp)
 ADD_WK2_TEST(TestLoaderClient ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestLoaderClient.cpp)
 ADD_WK2_TEST(TestMultiprocess ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestMultiprocess.cpp)
+ADD_WK2_TEST(TestOptionMenu ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestOptionMenu.cpp)
 ADD_WK2_TEST(TestResources ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestResources.cpp)
 ADD_WK2_TEST(TestSSL ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestSSL.cpp)
 ADD_WK2_TEST(TestUIClient ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestUIClient.cpp)
@@ -143,6 +161,7 @@ ADD_WK2_TEST(TestWebsiteData ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestWeb
 ADD_WK2_TEST(TestConsoleMessage ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestConsoleMessage.cpp)
 ADD_WK2_TEST(TestDOMElement ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestDOMElement.cpp)
 ADD_WK2_TEST(TestGeolocationManager ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestGeolocationManager.cpp)
+ADD_WK2_TEST(TestInputMethodContext ${TOOLS_DIR}/TestWebKitAPI/Tests/WebKitGLib/TestInputMethodContext.cpp)
 
 # FIXME: Enable for WPE
 if (PORT STREQUAL "GTK")
@@ -156,17 +175,28 @@ macro(ADD_WPE_QT_TEST test_name)
         AUTOMOC ON
         CXX_STANDARD 17
     )
-    target_compile_definitions(${test_name} PUBLIC QT_NO_KEYWORDS=1)
-    target_link_libraries(${test_name} ${WPEQtAPITest_LIBRARIES})
     target_include_directories(${test_name} SYSTEM PRIVATE ${WPEQtAPITests_INCLUDE_DIRECTORIES})
     target_include_directories(${test_name} PRIVATE
-      ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt)
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${CMAKE_SOURCE_DIR}/Source/WebKit/UIProcess/API/wpe/qt
+    )
+    target_compile_definitions(${test_name} PUBLIC
+        ${WebKitGLibAPITests_DEFINITIONS}
+        QT_NO_KEYWORDS=1
+    )
+    target_link_libraries(${test_name} ${WPEQtAPITest_LIBRARIES})
 endmacro()
 
 if (PORT STREQUAL "WPE" AND ENABLE_WPE_QT_API)
     set(WPEQtAPITests_INCLUDE_DIRECTORIES
-        ${Qt5_INCLUDE_DIRS}
+        ${CMAKE_BINARY_DIR}
+        ${JavaScriptCoreGLib_DERIVED_SOURCES_DIR}
+        ${JavaScriptCoreGLib_FRAMEWORK_HEADERS_DIR}
+        ${GLIB_INCLUDE_DIRS}
+        ${LIBSOUP_INCLUDE_DIRS}
         ${Qt5Test_INCLUDE_DIRS}
+        ${Qt5_INCLUDE_DIRS}
+        ${TOOLS_DIR}/TestWebKitAPI
     )
     set(WPEQtAPITest_LIBRARIES
          ${WebKitAPITest_LIBRARIES}

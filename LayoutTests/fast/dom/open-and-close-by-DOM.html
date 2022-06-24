@@ -4,7 +4,6 @@
 <script>
     if (window.testRunner) {
         testRunner.dumpAsText();
-        testRunner.setCanOpenWindows();
         testRunner.waitUntilDone();
     }
 
@@ -39,8 +38,6 @@
         document.getElementById('anchorLink').dispatchEvent(event);
 
         if (window.testRunner) {
-            testRunner.setCloseRemainingWindowsWhenComplete();
-
             start = new Date();
             myInterval = setInterval(checkIfDone, 500);        
 
@@ -56,7 +53,7 @@ To run the test manually click the link below.
 <br/>
 <div id="console" />
 <br/>
-<a href="resources/middle.html" id="anchorLink" target="_blank">Open new window that will close itself</a>
+<a href="resources/middle.html" id="anchorLink" target="_blank" rel="opener">Open new window that will close itself</a>
 <br/><br/>
 
 </body>

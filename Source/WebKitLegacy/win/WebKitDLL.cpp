@@ -37,7 +37,6 @@
 #include "WebStorageNamespaceProvider.h"
 #include <WebCore/COMPtr.h>
 #include <WebCore/Page.h>
-#include <WebCore/PageGroup.h>
 #include <WebCore/PlatformDisplay.h>
 #include <WebCore/RenderThemeWin.h>
 #include <WebCore/SharedBuffer.h>
@@ -163,14 +162,11 @@ STDAPI LocalServerDidDie()
 void shutDownWebKit()
 {
     WebKit::WebStorageNamespaceProvider::closeLocalStorage();
-#if USE(EGL)
-    PlatformDisplay::shutDownEglDisplays();
-#endif
 }
 
 //FIXME: We should consider moving this to a new file for cross-project functionality
-WEBKIT_API RefPtr<WebCore::SharedBuffer> loadResourceIntoBuffer(const char* name);
-RefPtr<WebCore::SharedBuffer> loadResourceIntoBuffer(const char* name)
+WEBKIT_API RefPtr<WebCore::FragmentedSharedBuffer> loadResourceIntoBuffer(const char* name);
+RefPtr<WebCore::FragmentedSharedBuffer> loadResourceIntoBuffer(const char* name)
 {
     int idr;
     // temporary hack to get resource id

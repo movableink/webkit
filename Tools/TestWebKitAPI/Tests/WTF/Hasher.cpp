@@ -28,7 +28,6 @@
 #include <array>
 #include <limits>
 #include <wtf/Hasher.h>
-#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 
 namespace TestWebKitAPI {
@@ -124,7 +123,8 @@ TEST(WTF, Hasher_floatingPoint)
 {
     EXPECT_EQ(zero64BitHash, computeHash(0.0));
     EXPECT_EQ(1264532604U, computeHash(-0.0)); // Note, not same as hash of 0.0.
-    EXPECT_EQ(one64BitHash, computeHash(std::numeric_limits<double>::denorm_min()));
+    if (std::numeric_limits<double>::has_denorm == std::denorm_present)
+        EXPECT_EQ(one64BitHash, computeHash(std::numeric_limits<double>::denorm_min()));
 
     EXPECT_EQ(2278399980U, computeHash(1.0));
     EXPECT_EQ(3870689297U, computeHash(-1.0));
@@ -141,7 +141,8 @@ TEST(WTF, Hasher_floatingPoint)
 
     EXPECT_EQ(zero32BitHash, computeHash(0.0f));
     EXPECT_EQ(2425683428U, computeHash(-0.0f)); // Note, not same as hash of 0.0f.
-    EXPECT_EQ(one32BitHash, computeHash(std::numeric_limits<float>::denorm_min()));
+    if (std::numeric_limits<float>::has_denorm == std::denorm_present)
+        EXPECT_EQ(one32BitHash, computeHash(std::numeric_limits<float>::denorm_min()));
 
     EXPECT_EQ(1081575966U, computeHash(1.0f));
     EXPECT_EQ(3262093188U, computeHash(-1.0f));
@@ -168,7 +169,7 @@ TEST(WTF, Hasher_multiple)
     EXPECT_EQ(zero32BitHash, computeHash(std::array<int, 1> { { 0 } }));
     EXPECT_EQ(zero32BitHash, computeHash(Vector<int> { 0 }));
     EXPECT_EQ(zero32BitHash, computeHash(Vector<int, 1> { 0 }));
-    EXPECT_EQ(zero32BitHash, computeHash(Optional<int> { WTF::nullopt }));
+    EXPECT_EQ(zero32BitHash, computeHash(std::optional<int> { std::nullopt }));
     EXPECT_EQ(zero32BitHash, computeHash(std::make_tuple(0)));
 
     EXPECT_EQ(one64BitHash, computeHash(1, 0));
@@ -176,7 +177,7 @@ TEST(WTF, Hasher_multiple)
     EXPECT_EQ(one64BitHash, computeHash(std::make_pair(1, 0)));
     EXPECT_EQ(one64BitHash, computeHash(std::array<int, 2> { { 1, 0 } }));
     EXPECT_EQ(one64BitHash, computeHash({ 1, 0 }));
-    EXPECT_EQ(one64BitHash, computeHash(Optional<int> { 0 }));
+    EXPECT_EQ(one64BitHash, computeHash(std::optional<int> { 0 }));
     EXPECT_EQ(one64BitHash, computeHash(Vector<int> { { 1, 0 } }));
     EXPECT_EQ(one64BitHash, computeHash(Vector<int, 1> { { 1, 0 } }));
 
@@ -186,6 +187,17 @@ TEST(WTF, Hasher_multiple)
     EXPECT_EQ(1652352321U, computeHash(1, 2, 3, 4));
     EXPECT_EQ(1652352321U, computeHash(std::make_tuple(1, 2, 3, 4)));
     EXPECT_EQ(1652352321U, computeHash(std::make_pair(std::make_pair(1, 2), std::make_pair(3, 4))));
+}
+
+TEST(WTF, Hasher_pointer)
+{
+    char* nullPtr = nullptr;
+    char* onePtr = nullPtr + 1;
+    char* ffffffPtr = nullPtr + 0xffffff;
+
+    EXPECT_EQ(computeHash(static_cast<uintptr_t>(0)), computeHash(nullPtr));
+    EXPECT_EQ(computeHash(static_cast<uintptr_t>(0x1)), computeHash(onePtr));
+    EXPECT_EQ(computeHash(static_cast<uintptr_t>(0xffffff)), computeHash(ffffffPtr));
 }
 
 struct HasherAddCustom1 { };
@@ -199,7 +211,7 @@ struct HasherAddCustom2 { };
 
 void add(Hasher& hasher, const HasherAddCustom2&)
 {
-    add(hasher, { 1, 2, 3, 4 });
+    add(hasher, std::initializer_list<int> { 1, 2, 3, 4 });
 }
 
 TEST(WTF, Hasher_custom)
@@ -207,8 +219,6 @@ TEST(WTF, Hasher_custom)
     EXPECT_EQ(1652352321U, computeHash(HasherAddCustom1 { }));
     EXPECT_EQ(1652352321U, computeHash(HasherAddCustom2 { }));
 }
-
-#if 0 // FIXME: Add support for tuple-like classes.
 
 struct HasherAddTupleLikeClass1 {
     std::array<int, 4> array { { 1, 2, 3, 4 } };
@@ -219,34 +229,46 @@ struct HasherAddTupleLikeClass2 {
     std::array<int, 4> array { { 1, 2, 3, 4 } };
 };
 
+template<size_t i> int get(const HasherAddTupleLikeClass2& object)
+{
+    return object.array[i];
+}
+
+struct HasherAddTupleLikeClass3 {
+    int a = 1;
+    double b = 2;
+    
+    template<size_t i> decltype(auto) get() const
+    {
+        if constexpr (!i)
+            return a;
+        if constexpr (i == 1)
+            return b;
+    }
+};
+
 }
 
 namespace std {
 
-// FIXME: Documentation at cppreference.cpp says std::tuple_size is a struct, but it's a class in current macOS tools.
-// FIXME: It's inelegant to inject this into the std namespace. Is that really how a tuple-like class needs to be defined?
-// FIXME: This is so inconvenient that I am not sure it's something we want to do for lots of classes in WebKit.
-template<> class std::tuple_size<TestWebKitAPI::HasherAddTupleLikeClass1> : public std::integral_constant<size_t, std::tuple_size<decltype(TestWebKitAPI::HasherAddTupleLikeClass1::array)>::value> { };
+template<> class tuple_size<TestWebKitAPI::HasherAddTupleLikeClass1> : public integral_constant<size_t, 4> { };
+template<size_t I> class tuple_element<I, TestWebKitAPI::HasherAddTupleLikeClass1> { public: using type = int; };
 
-template<> class std::tuple_size<TestWebKitAPI::HasherAddTupleLikeClass2> : public std::integral_constant<size_t, std::tuple_size<decltype(TestWebKitAPI::HasherAddTupleLikeClass2::array)>::value> { };
+template<> class tuple_size<TestWebKitAPI::HasherAddTupleLikeClass2> : public integral_constant<size_t, 4> { };
+template<size_t I> class tuple_element<I, TestWebKitAPI::HasherAddTupleLikeClass2> { public: using type = int; };
+
+template<> class tuple_size<TestWebKitAPI::HasherAddTupleLikeClass3> : public integral_constant<size_t, 2> { };
+template<size_t I> class tuple_element<I, TestWebKitAPI::HasherAddTupleLikeClass3> { public: using type = decltype(declval<TestWebKitAPI::HasherAddTupleLikeClass3>().template get<I>()); };
 
 }
 
 namespace TestWebKitAPI {
 
-// FIXME: Is it OK for the get to be in the class's namespace and rely on argument-dependent lookup?
-// Or does this function template need to be moved into the std namespace like the tuple_size specialization?
-template<size_t i> int get(const HasherAddTupleLikeClass2& object)
-{
-    return get<i>(object.array);
-}
-
 TEST(WTF, Hasher_tupleLike)
 {
     EXPECT_EQ(1652352321U, computeHash(HasherAddTupleLikeClass1 { }));
     EXPECT_EQ(1652352321U, computeHash(HasherAddTupleLikeClass2 { }));
+    EXPECT_EQ(3489601216U, computeHash(HasherAddTupleLikeClass3 { }));
 }
-
-#endif
 
 } // namespace TestWebKitAPI

@@ -22,6 +22,7 @@
 
 #include "APINavigationAction.h"
 #include "APINavigationClient.h"
+#include "FrameInfoData.h"
 #include "WebKitBackForwardListPrivate.h"
 #include "WebKitNavigationPolicyDecisionPrivate.h"
 #include "WebKitPrivate.h"
@@ -42,7 +43,7 @@ public:
     }
 
 private:
-    void didStartProvisionalNavigation(WebPageProxy&, API::Navigation*, API::Object* /* userData */) override
+    void didStartProvisionalNavigation(WebPageProxy&, const ResourceRequest&, API::Navigation*, API::Object* /* userData */) override
     {
         webkitWebViewLoadChanged(m_webView, WEBKIT_LOAD_STARTED);
     }
@@ -52,9 +53,9 @@ private:
         webkitWebViewLoadChanged(m_webView, WEBKIT_LOAD_REDIRECTED);
     }
 
-    void didFailProvisionalNavigationWithError(WebPageProxy&, WebFrameProxy& frame, API::Navigation*, const ResourceError& resourceError, API::Object* /* userData */) override
+    void didFailProvisionalNavigationWithError(WebPageProxy&, FrameInfoData&& frameInfo, API::Navigation*, const ResourceError& resourceError, API::Object* /* userData */) override
     {
-        if (!frame.isMainFrame())
+        if (!frameInfo.isMainFrame)
             return;
         GUniquePtr<GError> error(g_error_new_literal(g_quark_from_string(resourceError.domain().utf8().data()),
             toWebKitError(resourceError.errorCode()), resourceError.localizedDescription().utf8().data()));
@@ -75,9 +76,9 @@ private:
         webkitWebViewLoadChanged(m_webView, WEBKIT_LOAD_FINISHED);
     }
 
-    void didFailNavigationWithError(WebPageProxy&, WebFrameProxy& frame, API::Navigation*, const ResourceError& resourceError, API::Object* /* userData */) override
+    void didFailNavigationWithError(WebPageProxy&, const FrameInfoData& frameInfo, API::Navigation*, const ResourceError& resourceError, API::Object* /* userData */) override
     {
-        if (!frame.isMainFrame())
+        if (!frameInfo.isMainFrame)
             return;
         GUniquePtr<GError> error(g_error_new_literal(g_quark_from_string(resourceError.domain().utf8().data()),
             toWebKitError(resourceError.errorCode()), resourceError.localizedDescription().utf8().data()));
@@ -114,12 +115,27 @@ private:
         case ProcessTerminationReason::ExceededMemoryLimit:
             webkitWebViewWebProcessTerminated(m_webView, WEBKIT_WEB_PROCESS_EXCEEDED_MEMORY_LIMIT);
             return true;
-        case ProcessTerminationReason::ExceededCPULimit:
         case ProcessTerminationReason::RequestedByClient:
+            webkitWebViewWebProcessTerminated(m_webView, WEBKIT_WEB_PROCESS_TERMINATED_BY_API);
+            return true;
+        case ProcessTerminationReason::ExceededCPULimit:
+        case ProcessTerminationReason::RequestedByNetworkProcess:
         case ProcessTerminationReason::NavigationSwap:
+        case ProcessTerminationReason::RequestedByGPUProcess:
+        case ProcessTerminationReason::ExceededProcessCountLimit:
             break;
         }
         return false;
+    }
+
+    void processDidBecomeResponsive(WebKit::WebPageProxy&) override
+    {
+        webkitWebViewSetIsWebProcessResponsive(m_webView, true);
+    }
+
+    void processDidBecomeUnresponsive(WebKit::WebPageProxy&) override
+    {
+        webkitWebViewSetIsWebProcessResponsive(m_webView, false);
     }
 
     void decidePolicyForNavigationAction(WebPageProxy&, Ref<API::NavigationAction>&& navigationAction, Ref<WebFramePolicyListenerProxy>&& listener, API::Object* /* userData */) override

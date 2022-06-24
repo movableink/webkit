@@ -47,10 +47,9 @@ typedef RetainPtr<NSDictionary> TargetListing;
 
 #if USE(GLIB)
 #include <wtf/glib/GRefPtr.h>
+#include <wtf/glib/SocketConnection.h>
 typedef GRefPtr<GVariant> TargetListing;
 typedef struct _GCancellable GCancellable;
-typedef struct _GDBusConnection GDBusConnection;
-typedef struct _GDBusInterfaceVTable GDBusInterfaceVTable;
 #endif
 
 #if USE(INSPECTOR_SOCKET_SERVER)
@@ -80,7 +79,7 @@ class JS_EXPORT_PRIVATE RemoteInspector final
 #endif
 {
 public:
-    class Client {
+    class JS_EXPORT_PRIVATE Client {
     public:
         struct Capabilities {
             bool remoteAutomationAllowed : 1;
@@ -90,12 +89,21 @@ public:
 
         struct SessionCapabilities {
             bool acceptInsecureCertificates { false };
-#if USE(GLIB)
+#if USE(GLIB) || USE(INSPECTOR_SOCKET_SERVER)
             Vector<std::pair<String, String>> certificates;
+            struct Proxy {
+                String type;
+                std::optional<String> ftpURL;
+                std::optional<String> httpURL;
+                std::optional<String> httpsURL;
+                std::optional<String> socksURL;
+                Vector<String> ignoreAddressList;
+            };
+            std::optional<Proxy> proxy;
 #endif
 #if PLATFORM(COCOA)
-            Optional<bool> allowInsecureMediaCapture;
-            Optional<bool> suppressICECandidateFiltering;
+            std::optional<bool> allowInsecureMediaCapture;
+            std::optional<bool> suppressICECandidateFiltering;
 #endif
         };
 
@@ -104,11 +112,22 @@ public:
         virtual String browserName() const { return { }; }
         virtual String browserVersion() const { return { }; }
         virtual void requestAutomationSession(const String& sessionIdentifier, const SessionCapabilities&) = 0;
+        virtual void requestedDebuggablesToWakeUp() { };
+#if USE(INSPECTOR_SOCKET_SERVER)
+        virtual void closeAutomationSession() = 0;
+#endif
     };
 
+#if PLATFORM(COCOA)
+    static void setNeedMachSandboxExtension(bool needExtension) { needMachSandboxExtension = needExtension; }
+#endif
+#if USE(GLIB)
+    static void setInspectorServerAddress(CString&& address) { s_inspectorServerAddress = WTFMove(address); }
+    static const CString& inspectorServerAddress() { return s_inspectorServerAddress; }
+#endif
     static void startDisabled();
     static RemoteInspector& singleton();
-    friend class NeverDestroyed<RemoteInspector>;
+    friend class LazyNeverDestroyed<RemoteInspector>;
 
     void registerTarget(RemoteControllableTarget*);
     void unregisterTarget(RemoteControllableTarget*);
@@ -118,7 +137,7 @@ public:
     RemoteInspector::Client* client() const { return m_client; }
     void setClient(RemoteInspector::Client*);
     void clientCapabilitiesDidChange();
-    Optional<RemoteInspector::Client::Capabilities> clientCapabilities() const { return m_clientCapabilities; }
+    std::optional<RemoteInspector::Client::Capabilities> clientCapabilities() const { return m_clientCapabilities; }
 
     void setupFailed(TargetID);
     void setupCompleted(TargetID);
@@ -169,8 +188,8 @@ private:
     void setupXPCConnectionIfNeeded();
 #endif
 #if USE(GLIB)
-    void setupConnection(GRefPtr<GDBusConnection>&&);
-    static const GDBusInterfaceVTable s_interfaceVTable;
+    void setupConnection(Ref<SocketConnection>&&);
+    static const SocketConnection::MessageHandlers& messageHandlers();
 
     void receivedGetTargetListMessage();
     void receivedSetupMessage(TargetID);
@@ -196,14 +215,15 @@ private:
     void sendAutomaticInspectionCandidateMessage();
 
 #if PLATFORM(COCOA)
-    void xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*, NSString *messageName, NSDictionary *userInfo) override;
-    void xpcConnectionFailed(RemoteInspectorXPCConnection*) override;
-    void xpcConnectionUnhandledMessage(RemoteInspectorXPCConnection*, xpc_object_t) override;
+    void xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*, NSString *messageName, NSDictionary *userInfo) final;
+    void xpcConnectionFailed(RemoteInspectorXPCConnection*) final;
+    void xpcConnectionUnhandledMessage(RemoteInspectorXPCConnection*, xpc_object_t) final;
 
     void receivedSetupMessage(NSDictionary *userInfo);
     void receivedDataMessage(NSDictionary *userInfo);
     void receivedDidCloseMessage(NSDictionary *userInfo);
     void receivedGetListingMessage(NSDictionary *userInfo);
+    void receivedWakeUpDebuggables(NSDictionary *userInfo);
     void receivedIndicateMessage(NSDictionary *userInfo);
     void receivedProxyApplicationSetupMessage(NSDictionary *userInfo);
     void receivedConnectionDiedMessage(NSDictionary *userInfo);
@@ -212,8 +232,8 @@ private:
     void receivedAutomationSessionRequestMessage(NSDictionary *userInfo);
 #endif
 #if USE(INSPECTOR_SOCKET_SERVER)
-    HashMap<String, CallHandler>& dispatchMap() override;
-    void didClose(ConnectionID) override;
+    HashMap<String, CallHandler>& dispatchMap() final;
+    void didClose(RemoteInspectorSocketEndpoint&, ConnectionID) final;
 
     void sendWebInspectorEvent(const String&);
 
@@ -221,10 +241,19 @@ private:
     void setupTarget(const Event&);
     void frontendDidClose(const Event&);
     void sendMessageToBackend(const Event&);
+    void startAutomationSession(const Event&);
+
+    void receivedAutomationSessionRequestMessage(const Event&);
 
     String backendCommands() const;
 #endif
     static bool startEnabled;
+#if PLATFORM(COCOA)
+    static std::atomic<bool> needMachSandboxExtension;
+#endif
+#if USE(GLIB)
+    static CString s_inspectorServerAddress;
+#endif
 
     // Targets can be registered from any thread at any time.
     // Any target can send messages over the XPC connection.
@@ -238,22 +267,23 @@ private:
 
 #if PLATFORM(COCOA)
     RefPtr<RemoteInspectorXPCConnection> m_relayConnection;
+    bool m_shouldReconnectToRelayOnFailure { false };
 #endif
 #if USE(GLIB)
-    GRefPtr<GDBusConnection> m_dbusConnection;
+    RefPtr<SocketConnection> m_socketConnection;
     GRefPtr<GCancellable> m_cancellable;
 #endif
 
 #if USE(INSPECTOR_SOCKET_SERVER)
     // Connection from RemoteInspectorClient or WebDriver.
-    Optional<ConnectionID> m_clientConnection;
+    std::optional<ConnectionID> m_clientConnection;
     bool m_readyToPushListings { false };
 
     String m_backendCommandsPath;
 #endif
 
     RemoteInspector::Client* m_client { nullptr };
-    Optional<RemoteInspector::Client::Capabilities> m_clientCapabilities;
+    std::optional<RemoteInspector::Client::Capabilities> m_clientCapabilities;
 
 #if PLATFORM(COCOA)
     dispatch_queue_t m_xpcQueue;
@@ -267,6 +297,7 @@ private:
     ProcessID m_parentProcessIdentifier { 0 };
 #if PLATFORM(COCOA)
     RetainPtr<CFDataRef> m_parentProcessAuditData;
+    bool m_messageDataTypeChunkSupported { false };
 #endif
     bool m_shouldSendParentProcessInformation { false };
     bool m_automaticInspectionEnabled { false };

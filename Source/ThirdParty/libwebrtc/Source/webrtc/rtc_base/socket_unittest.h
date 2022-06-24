@@ -19,13 +19,12 @@ namespace rtc {
 // Generic socket tests, to be used when testing individual socketservers.
 // Derive your specific test class from SocketTest, install your
 // socketserver, and call the SocketTest test methods.
-class SocketTest : public testing::Test {
+class SocketTest : public ::testing::Test {
  protected:
-  SocketTest()
+  explicit SocketTest(rtc::SocketFactory* socket_factory)
       : kIPv4Loopback(INADDR_LOOPBACK),
         kIPv6Loopback(in6addr_loopback),
-        ss_(nullptr) {}
-  void SetUp() override;
+        socket_factory_(socket_factory) {}
   void TestConnectIPv4();
   void TestConnectIPv6();
   void TestConnectWithDnsLookupIPv4();
@@ -46,6 +45,8 @@ class SocketTest : public testing::Test {
   void TestServerCloseIPv6();
   void TestCloseInClosedCallbackIPv4();
   void TestCloseInClosedCallbackIPv6();
+  void TestDeleteInReadCallbackIPv4();
+  void TestDeleteInReadCallbackIPv6();
   void TestSocketServerWaitIPv4();
   void TestSocketServerWaitIPv6();
   void TestTcpIPv4();
@@ -83,6 +84,7 @@ class SocketTest : public testing::Test {
   void ClientCloseDuringConnectInternal(const IPAddress& loopback);
   void ServerCloseInternal(const IPAddress& loopback);
   void CloseInClosedCallbackInternal(const IPAddress& loopback);
+  void DeleteInReadCallbackInternal(const IPAddress& loopback);
   void SocketServerWaitInternal(const IPAddress& loopback);
   void SingleFlowControlCallbackInternal(const IPAddress& loopback);
   void UdpInternal(const IPAddress& loopback);
@@ -90,7 +92,7 @@ class SocketTest : public testing::Test {
   void GetSetOptionsInternal(const IPAddress& loopback);
   void SocketRecvTimestamp(const IPAddress& loopback);
 
-  SocketServer* ss_;
+  SocketFactory* socket_factory_;
 };
 
 // For unbound sockets, GetLocalAddress / GetRemoteAddress return AF_UNSPEC

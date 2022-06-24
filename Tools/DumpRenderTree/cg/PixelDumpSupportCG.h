@@ -47,9 +47,9 @@ typedef HBITMAP PlatformBitmapBuffer;
 
 class BitmapContext : public RefCounted<BitmapContext> {
 public:
-    static Ref<BitmapContext> createByAdoptingBitmapAndContext(PlatformBitmapBuffer buffer, CGContextRef context)
+    static Ref<BitmapContext> createByAdoptingBitmapAndContext(PlatformBitmapBuffer buffer, RetainPtr<CGContextRef>&& context)
     {
-        return adoptRef(*new BitmapContext(buffer, context));
+        return adoptRef(*new BitmapContext(buffer, WTFMove(context)));
     }
 
     ~BitmapContext()
@@ -63,18 +63,21 @@ public:
     }
 
     CGContextRef cgContext() const { return m_context.get(); }
+    
+    double scaleFactor() const { return m_scaleFactor; }
+    void setScaleFactor(double scaleFactor) { m_scaleFactor = scaleFactor; }
 
 private:
 
-    BitmapContext(PlatformBitmapBuffer buffer, CGContextRef context)
+    BitmapContext(PlatformBitmapBuffer buffer, RetainPtr<CGContextRef>&& context)
         : m_buffer(buffer)
-        , m_context(adoptCF(context))
+        , m_context(WTFMove(context))
     {
     }
 
     PlatformBitmapBuffer m_buffer;
     RetainPtr<CGContextRef> m_context;
-
+    double m_scaleFactor { 1.0 };
 };
 
 #if PLATFORM(COCOA)

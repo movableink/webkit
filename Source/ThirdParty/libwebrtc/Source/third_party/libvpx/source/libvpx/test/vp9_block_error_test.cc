@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <string>
+#include <tuple>
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
@@ -35,7 +36,7 @@ typedef int64_t (*HBDBlockErrorFunc)(const tran_low_t *coeff,
                                      intptr_t block_size, int64_t *ssz,
                                      int bps);
 
-typedef std::tr1::tuple<HBDBlockErrorFunc, HBDBlockErrorFunc, vpx_bit_depth_t>
+typedef std::tuple<HBDBlockErrorFunc, HBDBlockErrorFunc, vpx_bit_depth_t>
     BlockErrorParam;
 
 typedef int64_t (*BlockErrorFunc)(const tran_low_t *coeff,
@@ -66,6 +67,7 @@ class BlockErrorTest : public ::testing::TestWithParam<BlockErrorParam> {
   HBDBlockErrorFunc error_block_op_;
   HBDBlockErrorFunc ref_error_block_op_;
 };
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(BlockErrorTest);
 
 TEST_P(BlockErrorTest, OperationCheck) {
   ACMRandom rnd(ACMRandom::DeterministicSeed());
@@ -168,7 +170,7 @@ TEST_P(BlockErrorTest, ExtremeValues) {
       << "First failed at test case " << first_failure;
 }
 
-using std::tr1::make_tuple;
+using std::make_tuple;
 
 #if HAVE_SSE2
 const BlockErrorParam sse2_block_error_tests[] = {
@@ -184,12 +186,12 @@ const BlockErrorParam sse2_block_error_tests[] = {
              &BlockError8BitWrapper<vp9_block_error_c>, VPX_BITS_8)
 };
 
-INSTANTIATE_TEST_CASE_P(SSE2, BlockErrorTest,
-                        ::testing::ValuesIn(sse2_block_error_tests));
+INSTANTIATE_TEST_SUITE_P(SSE2, BlockErrorTest,
+                         ::testing::ValuesIn(sse2_block_error_tests));
 #endif  // HAVE_SSE2
 
 #if HAVE_AVX2
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     AVX2, BlockErrorTest,
     ::testing::Values(make_tuple(&BlockError8BitWrapper<vp9_block_error_avx2>,
                                  &BlockError8BitWrapper<vp9_block_error_c>,

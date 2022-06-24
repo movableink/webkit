@@ -80,10 +80,9 @@ static bool didReportException = false;
 
 - (void)webView:(WebView *)webView didCreateJavaScriptContext:(JSContext *)context forFrame:(WebFrame *)frame
 {
-    MyConsole *myConsole = [[MyConsole alloc] init];
-    context[@"myConsole"] = myConsole;
+    auto myConsole = adoptNS([[MyConsole alloc] init]);
+    context[@"myConsole"] = myConsole.get();
     context.exceptionHandler = nil;
-    [myConsole release];
 
     context[@"windowCallback"] = ^(JSValue *thisObject){
         didCallWindowCallback = true;
@@ -94,7 +93,7 @@ static bool didReportException = false;
     };
 
     context[@"callMeBack"] = ^(JSValue *functionValue) {
-        [functionValue callWithArguments:[NSArray array]];
+        [functionValue callWithArguments:@[]];
     };
 
     context[@"checkForMyCustomProperty"] = ^(JSValue *element) {

@@ -54,13 +54,13 @@ void ScrollingTreePositionedNode::commitStateBeforeChildren(const ScrollingState
 {
     const ScrollingStatePositionedNode& positionedStateNode = downcast<ScrollingStatePositionedNode>(stateNode);
 
-    if (positionedStateNode.hasChangedProperty(ScrollingStateNode::Layer))
+    if (positionedStateNode.hasChangedProperty(ScrollingStateNode::Property::Layer))
         m_layer = static_cast<CALayer*>(positionedStateNode.layer());
 
-    if (positionedStateNode.hasChangedProperty(ScrollingStatePositionedNode::RelatedOverflowScrollingNodes))
+    if (positionedStateNode.hasChangedProperty(ScrollingStateNode::Property::RelatedOverflowScrollingNodes))
         m_relatedOverflowScrollingNodes = positionedStateNode.relatedOverflowScrollingNodes();
 
-    if (positionedStateNode.hasChangedProperty(ScrollingStatePositionedNode::LayoutConstraintData))
+    if (positionedStateNode.hasChangedProperty(ScrollingStateNode::Property::LayoutConstraintData))
         m_constraints = positionedStateNode.layoutConstraints();
 
     if (!m_relatedOverflowScrollingNodes.isEmpty())
@@ -93,7 +93,7 @@ void ScrollingTreePositionedNode::applyLayerPositions()
     [m_layer _web_setLayerTopLeftPosition:layerPosition - m_constraints.alignmentOffset()];
 }
 
-void ScrollingTreePositionedNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingTreePositionedNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ts << "positioned node";
     ScrollingTreeNode::dumpProperties(ts, behavior);
@@ -101,7 +101,7 @@ void ScrollingTreePositionedNode::dumpProperties(TextStream& ts, ScrollingStateT
     ts.dumpProperty("layout constraints", m_constraints);
     ts.dumpProperty("related overflow nodes", m_relatedOverflowScrollingNodes.size());
 
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeNodeIDs) {
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs) {
         if (!m_relatedOverflowScrollingNodes.isEmpty()) {
             TextStream::GroupScope scope(ts);
             ts << "overflow nodes";

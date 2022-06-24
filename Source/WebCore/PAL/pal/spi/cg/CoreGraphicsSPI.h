@@ -33,16 +33,26 @@
 #endif
 
 #if PLATFORM(MAC)
-#include <ColorSync/ColorSync.h>
+#include <pal/spi/cocoa/IOKitSPI.h>
 #endif
 
 #if USE(APPLE_INTERNAL_SDK)
 
-#if PLATFORM(MAC)
-#include <ColorSync/ColorSyncPriv.h>
+#if HAVE(CPP20_INCOMPATIBLE_INTERNAL_HEADERS)
+#define CGCOLORTAGGEDPOINTER_H_
 #endif
+
+#include <CoreGraphics/CGContextDelegatePrivate.h>
 #include <CoreGraphics/CGFontCache.h>
+#include <CoreGraphics/CGPathPrivate.h>
+#include <CoreGraphics/CGShadingPrivate.h>
+#include <CoreGraphics/CGStylePrivate.h>
 #include <CoreGraphics/CoreGraphicsPrivate.h>
+
+#if PLATFORM(MAC)
+#include <CoreGraphics/CGAccessibility.h>
+#include <CoreGraphics/CGEventPrivate.h>
+#endif
 
 #else
 
@@ -55,19 +65,12 @@ struct CGFontHMetrics {
     int minRightSideBearing;
 };
 
-struct CGFontDescriptor {
-    CGRect bbox;
-    CGFloat ascent;
-    CGFloat descent;
-    CGFloat capHeight;
-    CGFloat italicAngle;
-    CGFloat stemV;
-    CGFloat stemH;
-    CGFloat avgWidth;
-    CGFloat maxWidth;
-    CGFloat missingWidth;
-    CGFloat leading;
-    CGFloat xHeight;
+typedef CF_ENUM (int32_t, CGContextDelegateCallbackName)
+{
+    deDrawImage = 7,
+    deDrawGlyphs = 8,
+    deBeginLayer = 17,
+    deEndLayer = 18,
 };
 
 typedef const struct CGColorTransform* CGColorTransformRef;
@@ -176,6 +179,22 @@ typedef struct CGFocusRingStyle CGFocusRingStyle;
 
 #endif // PLATFORM(COCOA)
 
+struct CGShadowStyle {
+    unsigned a;
+    CGFloat b;
+    CGFloat azimuth;
+    CGFloat c;
+    CGFloat height;
+    CGFloat radius;
+    CGFloat d;
+};
+typedef struct CGShadowStyle CGShadowStyle;
+
+typedef CF_ENUM (int32_t, CGStyleType)
+{
+    kCGStyleShadow = 1,
+};
+
 #if PLATFORM(MAC)
 
 typedef CF_ENUM(uint32_t, CGSNotificationType) {
@@ -190,6 +209,12 @@ static const CGSNotificationType kCGSessionConsoleDisconnect = (CGSNotificationT
 
 #endif // PLATFORM(MAC)
 
+typedef struct CGContextDelegate *CGContextDelegateRef;
+typedef void (*CGContextDelegateCallback)(void);
+typedef struct CGRenderingState *CGRenderingStateRef;
+typedef struct CGGState *CGGStateRef;
+typedef struct CGStyle *CGStyleRef;
+
 #endif // USE(APPLE_INTERNAL_SDK)
 
 #if PLATFORM(COCOA)
@@ -200,7 +225,6 @@ typedef uint32_t CGSWindowID;
 
 typedef CGSWindowID* CGSWindowIDList;
 typedef struct CF_BRIDGED_TYPE(id) CGSRegionObject* CGSRegionObj;
-typedef struct CF_BRIDGED_TYPE(id) CGStyle* CGStyleRef;
 
 typedef void* CGSNotificationArg;
 typedef void* CGSNotificationData;
@@ -213,6 +237,7 @@ typedef void (*CGSNotifyProcPtr)(CGSNotificationType, void* data, uint32_t data_
 
 WTF_EXTERN_C_BEGIN
 
+bool CGColorTransformConvertColorComponents(CGColorTransformRef, CGColorSpaceRef, CGColorRenderingIntent, const CGFloat srcComponents[], CGFloat dstComponents[]);
 CGColorRef CGColorTransformConvertColor(CGColorTransformRef, CGColorRef, CGColorRenderingIntent);
 CGColorTransformRef CGColorTransformCreate(CGColorSpaceRef, CFDictionaryRef attributes);
 
@@ -230,7 +255,6 @@ void CGContextResetClip(CGContextRef);
 CGContextType CGContextGetType(CGContextRef);
 
 CFStringRef CGFontCopyFamilyName(CGFontRef);
-bool CGFontGetDescriptor(CGFontRef, CGFontDescriptor*);
 bool CGFontGetGlyphAdvancesForStyle(CGFontRef, const CGAffineTransform* , CGFontRenderingStyle, const CGGlyph[], size_t count, CGSize advances[]);
 void CGFontGetGlyphsForUnichars(CGFontRef, const UniChar[], CGGlyph[], size_t count);
 const CGFontHMetrics* CGFontGetHMetrics(CGFontRef);
@@ -248,6 +272,28 @@ void CGContextSetFontAntialiasingStyle(CGContextRef, CGFontAntialiasingStyle);
 bool CGContextGetAllowsFontSubpixelPositioning(CGContextRef);
 bool CGContextDrawsWithCorrectShadowOffsets(CGContextRef);
 CGPatternRef CGPatternCreateWithImage2(CGImageRef, CGAffineTransform, CGPatternTiling);
+
+CGContextDelegateRef CGContextDelegateCreate(void* info);
+void CGContextDelegateSetCallback(CGContextDelegateRef, CGContextDelegateCallbackName, CGContextDelegateCallback);
+CGContextRef CGContextCreateWithDelegate(CGContextDelegateRef, CGContextType, CGRenderingStateRef, CGGStateRef);
+void* CGContextDelegateGetInfo(CGContextDelegateRef);
+void CGContextDelegateRelease(CGContextDelegateRef);
+CGFloat CGGStateGetAlpha(CGGStateRef);
+CGFontRef CGGStateGetFont(CGGStateRef);
+CGFloat CGGStateGetFontSize(CGGStateRef);
+const CGAffineTransform *CGGStateGetCTM(CGGStateRef);
+CGColorRef CGGStateGetFillColor(CGGStateRef);
+CGColorRef CGGStateGetStrokeColor(CGGStateRef);
+CGStyleRef CGGStateGetStyle(CGGStateRef);
+CGStyleType CGStyleGetType(CGStyleRef);
+const void *CGStyleGetData(CGStyleRef);
+CGColorRef CGStyleGetColor(CGStyleRef);
+bool CGColorSpaceEqualToColorSpace(CGColorSpaceRef, CGColorSpaceRef);
+CFStringRef CGColorSpaceCopyICCProfileDescription(CGColorSpaceRef);
+
+#if HAVE(CGPATH_GET_NUMBER_OF_ELEMENTS)
+size_t CGPathGetNumberOfElements(CGPathRef);
+#endif
 
 #if HAVE(IOSURFACE)
 CGContextRef CGIOSurfaceContextCreate(IOSurfaceRef, size_t, size_t, size_t, size_t, CGColorSpaceRef, CGBitmapInfo);
@@ -279,15 +325,18 @@ CGRect* CGSNextRect(const CGSRegionEnumeratorObj);
 CGSRegionEnumeratorObj CGSRegionEnumerator(CGRegionRef);
 CGStyleRef CGStyleCreateFocusRingWithColor(const CGFocusRingStyle*, CGColorRef);
 void CGContextSetStyle(CGContextRef, CGStyleRef);
-
 void CGContextDrawConicGradient(CGContextRef, CGGradientRef, CGPoint center, CGFloat angle);
-
-#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400) || (PLATFORM(IOS_FAMILY) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 120000)
 void CGPathAddUnevenCornersRoundedRect(CGMutablePathRef, const CGAffineTransform *, CGRect, const CGSize corners[4]);
+bool CGFontRenderingGetFontSmoothingDisabled(void);
+CGShadingRef CGShadingCreateConic(CGColorSpaceRef, CGPoint center, CGFloat angle, CGFunctionRef);
+
+#if HAVE(CORE_GRAPHICS_GRADIENT_CREATE_WITH_OPTIONS)
+CGGradientRef CGGradientCreateWithColorComponentsAndOptions(CGColorSpaceRef, const CGFloat*, const CGFloat*, size_t, CFDictionaryRef);
+CGGradientRef CGGradientCreateWithColorsAndOptions(CGColorSpaceRef, CFArrayRef, const CGFloat*, CFDictionaryRef);
 #endif
 
-#if HAVE(CG_FONT_RENDERING_GET_FONT_SMOOTHING_DISABLED)
-bool CGFontRenderingGetFontSmoothingDisabled(void);
+#if HAVE(CORE_GRAPHICS_PREMULTIPLIED_INTERPOLATION_GRADIENT)
+extern const CFStringRef kCGGradientInterpolatesPremultiplied;
 #endif
 
 #endif // PLATFORM(COCOA)
@@ -304,7 +353,8 @@ void CGContextSetFocusRingWithColor(CGContextRef, CGFloat blur, CGColorRef, cons
 #endif // PLATFORM(WIN)
 
 #if PLATFORM(MAC)
-void CGSShutdownServerConnections(void);
+
+bool CGDisplayUsesForceToGray(void);
 
 CGSConnectionID CGSMainConnectionID(void);
 CFArrayRef CGSHWCaptureWindowList(CGSConnectionID, CGSWindowIDList windowList, CGSWindowCount, CGSWindowCaptureOptions);
@@ -313,19 +363,38 @@ CGError CGSCopyConnectionProperty(CGSConnectionID, CGSConnectionID ownerCid, CFS
 CGError CGSGetScreenRectForWindow(CGSConnectionID, CGSWindowID, CGRect *);
 CGError CGSRegisterConnectionNotifyProc(CGSConnectionID, CGSNotifyConnectionProcPtr, CGSNotificationType, void* arg);
 CGError CGSRegisterNotifyProc(CGSNotifyProcPtr, CGSNotificationType, void* arg);
-bool ColorSyncProfileIsWideGamut(ColorSyncProfileRef);
 
 size_t CGDisplayModeGetPixelsWide(CGDisplayModeRef);
 size_t CGDisplayModeGetPixelsHigh(CGDisplayModeRef);
 
-#if ENABLE(WEBPROCESS_WINDOWSERVER_BLOCKING)
 CGError CGSSetDenyWindowServerConnections(bool);
-
 typedef int32_t CGSDisplayID;
 CGSDisplayID CGSMainDisplayID(void);
 
-#endif // ENABLE(WEBPROCESS_WINDOWSERVER_BLOCKING)
-
+IOHIDEventRef CGEventCopyIOHIDEvent(CGEventRef);
 #endif // PLATFORM(MAC)
+
+#if ENABLE(PDFKIT_PLUGIN) && !USE(APPLE_INTERNAL_SDK)
+
+extern const off_t kCGDataProviderIndeterminateSize;
+extern const CFStringRef kCGDataProviderHasHighLatency;
+
+typedef void (*CGDataProviderGetByteRangesCallback)(void *info,
+    CFMutableArrayRef buffers, const CFRange *ranges, size_t count);
+    
+struct CGDataProviderDirectAccessRangesCallbacks {
+    unsigned version;
+    CGDataProviderGetBytesAtPositionCallback getBytesAtPosition;
+    CGDataProviderGetByteRangesCallback getBytesInRanges;
+    CGDataProviderReleaseInfoCallback releaseInfo;
+};
+typedef struct CGDataProviderDirectAccessRangesCallbacks CGDataProviderDirectAccessRangesCallbacks;
+
+extern void CGDataProviderSetProperty(CGDataProviderRef, CFStringRef key, CFTypeRef value);
+extern CGDataProviderRef CGDataProviderCreateMultiRangeDirectAccess(
+    void *info, off_t size,
+    const CGDataProviderDirectAccessRangesCallbacks *);
+
+#endif // ENABLE(PDFKIT_PLUGIN) && !USE(APPLE_INTERNAL_SDK)
 
 WTF_EXTERN_C_END

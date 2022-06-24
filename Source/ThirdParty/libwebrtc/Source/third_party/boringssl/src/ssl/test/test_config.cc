@@ -27,6 +27,8 @@
 
 #include "../../crypto/internal.h"
 #include "../internal.h"
+#include "handshake_util.h"
+#include "mock_quic_transport.h"
 #include "test_state.h"
 
 namespace {
@@ -51,182 +53,227 @@ T *FindField(TestConfig *config, const Flag<T> (&flags)[N], const char *flag) {
 }
 
 const Flag<bool> kBoolFlags[] = {
-  { "-server", &TestConfig::is_server },
-  { "-dtls", &TestConfig::is_dtls },
-  { "-fallback-scsv", &TestConfig::fallback_scsv },
-  { "-require-any-client-certificate",
-    &TestConfig::require_any_client_certificate },
-  { "-false-start", &TestConfig::false_start },
-  { "-async", &TestConfig::async },
-  { "-write-different-record-sizes",
-    &TestConfig::write_different_record_sizes },
-  { "-cbc-record-splitting", &TestConfig::cbc_record_splitting },
-  { "-partial-write", &TestConfig::partial_write },
-  { "-no-tls13", &TestConfig::no_tls13 },
-  { "-no-tls12", &TestConfig::no_tls12 },
-  { "-no-tls11", &TestConfig::no_tls11 },
-  { "-no-tls1", &TestConfig::no_tls1 },
-  { "-no-ticket", &TestConfig::no_ticket },
-  { "-enable-channel-id", &TestConfig::enable_channel_id },
-  { "-shim-writes-first", &TestConfig::shim_writes_first },
-  { "-expect-session-miss", &TestConfig::expect_session_miss },
-  { "-decline-alpn", &TestConfig::decline_alpn },
-  { "-select-empty-alpn", &TestConfig::select_empty_alpn },
-  { "-expect-extended-master-secret",
-    &TestConfig::expect_extended_master_secret },
-  { "-enable-ocsp-stapling", &TestConfig::enable_ocsp_stapling },
-  { "-enable-signed-cert-timestamps",
-    &TestConfig::enable_signed_cert_timestamps },
-  { "-implicit-handshake", &TestConfig::implicit_handshake },
-  { "-use-early-callback", &TestConfig::use_early_callback },
-  { "-fail-early-callback", &TestConfig::fail_early_callback },
-  { "-install-ddos-callback", &TestConfig::install_ddos_callback },
-  { "-fail-ddos-callback", &TestConfig::fail_ddos_callback },
-  { "-fail-cert-callback", &TestConfig::fail_cert_callback },
-  { "-handshake-never-done", &TestConfig::handshake_never_done },
-  { "-use-export-context", &TestConfig::use_export_context },
-  { "-tls-unique", &TestConfig::tls_unique },
-  { "-expect-ticket-renewal", &TestConfig::expect_ticket_renewal },
-  { "-expect-no-session", &TestConfig::expect_no_session },
-  { "-expect-ticket-supports-early-data",
-    &TestConfig::expect_ticket_supports_early_data },
-  { "-use-ticket-callback", &TestConfig::use_ticket_callback },
-  { "-renew-ticket", &TestConfig::renew_ticket },
-  { "-enable-early-data", &TestConfig::enable_early_data },
-  { "-check-close-notify", &TestConfig::check_close_notify },
-  { "-shim-shuts-down", &TestConfig::shim_shuts_down },
-  { "-verify-fail", &TestConfig::verify_fail },
-  { "-verify-peer", &TestConfig::verify_peer },
-  { "-verify-peer-if-no-obc", &TestConfig::verify_peer_if_no_obc },
-  { "-expect-verify-result", &TestConfig::expect_verify_result },
-  { "-renegotiate-once", &TestConfig::renegotiate_once },
-  { "-renegotiate-freely", &TestConfig::renegotiate_freely },
-  { "-renegotiate-ignore", &TestConfig::renegotiate_ignore },
-  { "-forbid-renegotiation-after-handshake",
-    &TestConfig::forbid_renegotiation_after_handshake },
-  { "-p384-only", &TestConfig::p384_only },
-  { "-enable-all-curves", &TestConfig::enable_all_curves },
-  { "-use-old-client-cert-callback",
-    &TestConfig::use_old_client_cert_callback },
-  { "-send-alert", &TestConfig::send_alert },
-  { "-peek-then-read", &TestConfig::peek_then_read },
-  { "-enable-grease", &TestConfig::enable_grease },
-  { "-use-exporter-between-reads", &TestConfig::use_exporter_between_reads },
-  { "-retain-only-sha256-client-cert",
-    &TestConfig::retain_only_sha256_client_cert },
-  { "-expect-sha256-client-cert",
-    &TestConfig::expect_sha256_client_cert },
-  { "-read-with-unfinished-write", &TestConfig::read_with_unfinished_write },
-  { "-expect-secure-renegotiation",
-    &TestConfig::expect_secure_renegotiation },
-  { "-expect-no-secure-renegotiation",
-    &TestConfig::expect_no_secure_renegotiation },
-  { "-expect-session-id", &TestConfig::expect_session_id },
-  { "-expect-no-session-id", &TestConfig::expect_no_session_id },
-  { "-expect-accept-early-data", &TestConfig::expect_accept_early_data },
-  { "-expect-reject-early-data", &TestConfig::expect_reject_early_data },
-  { "-expect-no-offer-early-data", &TestConfig::expect_no_offer_early_data },
-  { "-no-op-extra-handshake", &TestConfig::no_op_extra_handshake },
-  { "-handshake-twice", &TestConfig::handshake_twice },
-  { "-allow-unknown-alpn-protos", &TestConfig::allow_unknown_alpn_protos },
-  { "-enable-ed25519", &TestConfig::enable_ed25519 },
-  { "-use-custom-verify-callback", &TestConfig::use_custom_verify_callback },
-  { "-allow-false-start-without-alpn",
-    &TestConfig::allow_false_start_without_alpn },
-  { "-ignore-tls13-downgrade", &TestConfig::ignore_tls13_downgrade },
-  { "-expect-tls13-downgrade", &TestConfig::expect_tls13_downgrade },
-  { "-handoff", &TestConfig::handoff },
-  { "-no-rsa-pss-rsae-certs", &TestConfig::no_rsa_pss_rsae_certs },
-  { "-use-ocsp-callback", &TestConfig::use_ocsp_callback },
-  { "-set-ocsp-in-callback", &TestConfig::set_ocsp_in_callback },
-  { "-decline-ocsp-callback", &TestConfig::decline_ocsp_callback },
-  { "-fail-ocsp-callback", &TestConfig::fail_ocsp_callback },
-  { "-install-cert-compression-algs",
-    &TestConfig::install_cert_compression_algs },
-  { "-is-handshaker-supported", &TestConfig::is_handshaker_supported },
-  { "-handshaker-resume", &TestConfig::handshaker_resume },
-  { "-reverify-on-resume", &TestConfig::reverify_on_resume },
-  { "-jdk11-workaround", &TestConfig::jdk11_workaround },
+    {"-server", &TestConfig::is_server},
+    {"-dtls", &TestConfig::is_dtls},
+    {"-quic", &TestConfig::is_quic},
+    {"-fallback-scsv", &TestConfig::fallback_scsv},
+    {"-enable-ech-grease", &TestConfig::enable_ech_grease},
+    {"-require-any-client-certificate",
+     &TestConfig::require_any_client_certificate},
+    {"-false-start", &TestConfig::false_start},
+    {"-async", &TestConfig::async},
+    {"-write-different-record-sizes",
+     &TestConfig::write_different_record_sizes},
+    {"-cbc-record-splitting", &TestConfig::cbc_record_splitting},
+    {"-partial-write", &TestConfig::partial_write},
+    {"-no-tls13", &TestConfig::no_tls13},
+    {"-no-tls12", &TestConfig::no_tls12},
+    {"-no-tls11", &TestConfig::no_tls11},
+    {"-no-tls1", &TestConfig::no_tls1},
+    {"-no-ticket", &TestConfig::no_ticket},
+    {"-enable-channel-id", &TestConfig::enable_channel_id},
+    {"-shim-writes-first", &TestConfig::shim_writes_first},
+    {"-expect-session-miss", &TestConfig::expect_session_miss},
+    {"-decline-alpn", &TestConfig::decline_alpn},
+    {"-reject-alpn", &TestConfig::reject_alpn},
+    {"-select-empty-alpn", &TestConfig::select_empty_alpn},
+    {"-defer-alps", &TestConfig::defer_alps},
+    {"-expect-extended-master-secret",
+     &TestConfig::expect_extended_master_secret},
+    {"-enable-ocsp-stapling", &TestConfig::enable_ocsp_stapling},
+    {"-enable-signed-cert-timestamps",
+     &TestConfig::enable_signed_cert_timestamps},
+    {"-implicit-handshake", &TestConfig::implicit_handshake},
+    {"-use-early-callback", &TestConfig::use_early_callback},
+    {"-fail-early-callback", &TestConfig::fail_early_callback},
+    {"-install-ddos-callback", &TestConfig::install_ddos_callback},
+    {"-fail-ddos-callback", &TestConfig::fail_ddos_callback},
+    {"-fail-cert-callback", &TestConfig::fail_cert_callback},
+    {"-handshake-never-done", &TestConfig::handshake_never_done},
+    {"-use-export-context", &TestConfig::use_export_context},
+    {"-tls-unique", &TestConfig::tls_unique},
+    {"-expect-ticket-renewal", &TestConfig::expect_ticket_renewal},
+    {"-expect-no-session", &TestConfig::expect_no_session},
+    {"-expect-ticket-supports-early-data",
+     &TestConfig::expect_ticket_supports_early_data},
+    {"-use-ticket-callback", &TestConfig::use_ticket_callback},
+    {"-renew-ticket", &TestConfig::renew_ticket},
+    {"-enable-early-data", &TestConfig::enable_early_data},
+    {"-check-close-notify", &TestConfig::check_close_notify},
+    {"-shim-shuts-down", &TestConfig::shim_shuts_down},
+    {"-verify-fail", &TestConfig::verify_fail},
+    {"-verify-peer", &TestConfig::verify_peer},
+    {"-verify-peer-if-no-obc", &TestConfig::verify_peer_if_no_obc},
+    {"-expect-verify-result", &TestConfig::expect_verify_result},
+    {"-renegotiate-once", &TestConfig::renegotiate_once},
+    {"-renegotiate-freely", &TestConfig::renegotiate_freely},
+    {"-renegotiate-ignore", &TestConfig::renegotiate_ignore},
+    {"-renegotiate-explicit", &TestConfig::renegotiate_explicit},
+    {"-forbid-renegotiation-after-handshake",
+     &TestConfig::forbid_renegotiation_after_handshake},
+    {"-use-old-client-cert-callback",
+     &TestConfig::use_old_client_cert_callback},
+    {"-send-alert", &TestConfig::send_alert},
+    {"-peek-then-read", &TestConfig::peek_then_read},
+    {"-enable-grease", &TestConfig::enable_grease},
+    {"-use-exporter-between-reads", &TestConfig::use_exporter_between_reads},
+    {"-retain-only-sha256-client-cert",
+     &TestConfig::retain_only_sha256_client_cert},
+    {"-expect-sha256-client-cert", &TestConfig::expect_sha256_client_cert},
+    {"-read-with-unfinished-write", &TestConfig::read_with_unfinished_write},
+    {"-expect-secure-renegotiation", &TestConfig::expect_secure_renegotiation},
+    {"-expect-no-secure-renegotiation",
+     &TestConfig::expect_no_secure_renegotiation},
+    {"-expect-session-id", &TestConfig::expect_session_id},
+    {"-expect-no-session-id", &TestConfig::expect_no_session_id},
+    {"-expect-accept-early-data", &TestConfig::expect_accept_early_data},
+    {"-expect-reject-early-data", &TestConfig::expect_reject_early_data},
+    {"-expect-no-offer-early-data", &TestConfig::expect_no_offer_early_data},
+    {"-no-op-extra-handshake", &TestConfig::no_op_extra_handshake},
+    {"-handshake-twice", &TestConfig::handshake_twice},
+    {"-allow-unknown-alpn-protos", &TestConfig::allow_unknown_alpn_protos},
+    {"-use-custom-verify-callback", &TestConfig::use_custom_verify_callback},
+    {"-allow-false-start-without-alpn",
+     &TestConfig::allow_false_start_without_alpn},
+    {"-handoff", &TestConfig::handoff},
+    {"-handshake-hints", &TestConfig::handshake_hints},
+    {"-allow-hint-mismatch", &TestConfig::allow_hint_mismatch},
+    {"-use-ocsp-callback", &TestConfig::use_ocsp_callback},
+    {"-set-ocsp-in-callback", &TestConfig::set_ocsp_in_callback},
+    {"-decline-ocsp-callback", &TestConfig::decline_ocsp_callback},
+    {"-fail-ocsp-callback", &TestConfig::fail_ocsp_callback},
+    {"-install-cert-compression-algs",
+     &TestConfig::install_cert_compression_algs},
+    {"-is-handshaker-supported", &TestConfig::is_handshaker_supported},
+    {"-handshaker-resume", &TestConfig::handshaker_resume},
+    {"-reverify-on-resume", &TestConfig::reverify_on_resume},
+    {"-enforce-rsa-key-usage", &TestConfig::enforce_rsa_key_usage},
+    {"-jdk11-workaround", &TestConfig::jdk11_workaround},
+    {"-server-preference", &TestConfig::server_preference},
+    {"-export-traffic-secrets", &TestConfig::export_traffic_secrets},
+    {"-key-update", &TestConfig::key_update},
+    {"-expect-delegated-credential-used",
+     &TestConfig::expect_delegated_credential_used},
+    {"-expect-hrr", &TestConfig::expect_hrr},
+    {"-expect-no-hrr", &TestConfig::expect_no_hrr},
+    {"-wait-for-debugger", &TestConfig::wait_for_debugger},
 };
 
 const Flag<std::string> kStringFlags[] = {
-  { "-write-settings", &TestConfig::write_settings },
-  { "-key-file", &TestConfig::key_file },
-  { "-cert-file", &TestConfig::cert_file },
-  { "-expect-server-name", &TestConfig::expected_server_name },
-  { "-advertise-npn", &TestConfig::advertise_npn },
-  { "-expect-next-proto", &TestConfig::expected_next_proto },
-  { "-select-next-proto", &TestConfig::select_next_proto },
-  { "-send-channel-id", &TestConfig::send_channel_id },
-  { "-host-name", &TestConfig::host_name },
-  { "-advertise-alpn", &TestConfig::advertise_alpn },
-  { "-expect-alpn", &TestConfig::expected_alpn },
-  { "-expect-late-alpn", &TestConfig::expected_late_alpn },
-  { "-expect-advertised-alpn", &TestConfig::expected_advertised_alpn },
-  { "-select-alpn", &TestConfig::select_alpn },
-  { "-psk", &TestConfig::psk },
-  { "-psk-identity", &TestConfig::psk_identity },
-  { "-srtp-profiles", &TestConfig::srtp_profiles },
-  { "-cipher", &TestConfig::cipher },
-  { "-export-label", &TestConfig::export_label },
-  { "-export-context", &TestConfig::export_context },
-  { "-expect-peer-cert-file", &TestConfig::expect_peer_cert_file },
-  { "-use-client-ca-list", &TestConfig::use_client_ca_list },
-  { "-expect-client-ca-list", &TestConfig::expected_client_ca_list },
-  { "-expect-msg-callback", &TestConfig::expect_msg_callback },
-  { "-handshaker-path", &TestConfig::handshaker_path },
+    {"-write-settings", &TestConfig::write_settings},
+    {"-key-file", &TestConfig::key_file},
+    {"-cert-file", &TestConfig::cert_file},
+    {"-expect-server-name", &TestConfig::expect_server_name},
+    {"-advertise-npn", &TestConfig::advertise_npn},
+    {"-expect-next-proto", &TestConfig::expect_next_proto},
+    {"-select-next-proto", &TestConfig::select_next_proto},
+    {"-send-channel-id", &TestConfig::send_channel_id},
+    {"-host-name", &TestConfig::host_name},
+    {"-advertise-alpn", &TestConfig::advertise_alpn},
+    {"-expect-alpn", &TestConfig::expect_alpn},
+    {"-expect-late-alpn", &TestConfig::expect_late_alpn},
+    {"-expect-advertised-alpn", &TestConfig::expect_advertised_alpn},
+    {"-select-alpn", &TestConfig::select_alpn},
+    {"-psk", &TestConfig::psk},
+    {"-psk-identity", &TestConfig::psk_identity},
+    {"-srtp-profiles", &TestConfig::srtp_profiles},
+    {"-cipher", &TestConfig::cipher},
+    {"-export-label", &TestConfig::export_label},
+    {"-export-context", &TestConfig::export_context},
+    {"-expect-peer-cert-file", &TestConfig::expect_peer_cert_file},
+    {"-use-client-ca-list", &TestConfig::use_client_ca_list},
+    {"-expect-client-ca-list", &TestConfig::expect_client_ca_list},
+    {"-expect-msg-callback", &TestConfig::expect_msg_callback},
+    {"-handshaker-path", &TestConfig::handshaker_path},
+    {"-delegated-credential", &TestConfig::delegated_credential},
+    {"-expect-early-data-reason", &TestConfig::expect_early_data_reason},
+    {"-quic-early-data-context", &TestConfig::quic_early_data_context},
+};
+
+// TODO(davidben): When we can depend on C++17 or Abseil, switch this to
+// std::optional or absl::optional.
+const Flag<std::unique_ptr<std::string>> kOptionalStringFlags[] = {
+    {"-expect-peer-application-settings",
+     &TestConfig::expect_peer_application_settings},
 };
 
 const Flag<std::string> kBase64Flags[] = {
-  { "-expect-certificate-types", &TestConfig::expected_certificate_types },
-  { "-expect-channel-id", &TestConfig::expected_channel_id },
-  { "-token-binding-params", &TestConfig::send_token_binding_params },
-  { "-expect-ocsp-response", &TestConfig::expected_ocsp_response },
-  { "-expect-signed-cert-timestamps",
-    &TestConfig::expected_signed_cert_timestamps },
-  { "-ocsp-response", &TestConfig::ocsp_response },
-  { "-signed-cert-timestamps", &TestConfig::signed_cert_timestamps },
-  { "-ticket-key", &TestConfig::ticket_key },
-  { "-quic-transport-params", &TestConfig::quic_transport_params },
-  { "-expected-quic-transport-params",
-    &TestConfig::expected_quic_transport_params },
+    {"-expect-certificate-types", &TestConfig::expect_certificate_types},
+    {"-expect-channel-id", &TestConfig::expect_channel_id},
+    {"-token-binding-params", &TestConfig::send_token_binding_params},
+    {"-expect-ocsp-response", &TestConfig::expect_ocsp_response},
+    {"-expect-signed-cert-timestamps",
+     &TestConfig::expect_signed_cert_timestamps},
+    {"-ocsp-response", &TestConfig::ocsp_response},
+    {"-signed-cert-timestamps", &TestConfig::signed_cert_timestamps},
+    {"-ticket-key", &TestConfig::ticket_key},
+    {"-quic-transport-params", &TestConfig::quic_transport_params},
+    {"-expect-quic-transport-params",
+     &TestConfig::expect_quic_transport_params},
 };
 
 const Flag<int> kIntFlags[] = {
-  { "-port", &TestConfig::port },
-  { "-resume-count", &TestConfig::resume_count },
-  { "-expected-token-binding-param",
-    &TestConfig::expected_token_binding_param },
-  { "-min-version", &TestConfig::min_version },
-  { "-max-version", &TestConfig::max_version },
-  { "-expect-version", &TestConfig::expect_version },
-  { "-mtu", &TestConfig::mtu },
-  { "-export-early-keying-material",
-    &TestConfig::export_early_keying_material },
-  { "-export-keying-material", &TestConfig::export_keying_material },
-  { "-expect-total-renegotiations", &TestConfig::expect_total_renegotiations },
-  { "-expect-peer-signature-algorithm",
-    &TestConfig::expect_peer_signature_algorithm },
-  { "-expect-curve-id", &TestConfig::expect_curve_id },
-  { "-initial-timeout-duration-ms", &TestConfig::initial_timeout_duration_ms },
-  { "-max-cert-list", &TestConfig::max_cert_list },
-  { "-expect-cipher-aes", &TestConfig::expect_cipher_aes },
-  { "-expect-cipher-no-aes", &TestConfig::expect_cipher_no_aes },
-  { "-resumption-delay", &TestConfig::resumption_delay },
-  { "-max-send-fragment", &TestConfig::max_send_fragment },
-  { "-read-size", &TestConfig::read_size },
-  { "-expect-ticket-age-skew", &TestConfig::expect_ticket_age_skew },
-  { "-tls13-variant", &TestConfig::tls13_variant },
+    {"-port", &TestConfig::port},
+    {"-resume-count", &TestConfig::resume_count},
+    {"-expect-token-binding-param", &TestConfig::expect_token_binding_param},
+    {"-min-version", &TestConfig::min_version},
+    {"-max-version", &TestConfig::max_version},
+    {"-expect-version", &TestConfig::expect_version},
+    {"-mtu", &TestConfig::mtu},
+    {"-export-keying-material", &TestConfig::export_keying_material},
+    {"-expect-total-renegotiations", &TestConfig::expect_total_renegotiations},
+    {"-expect-peer-signature-algorithm",
+     &TestConfig::expect_peer_signature_algorithm},
+    {"-expect-curve-id", &TestConfig::expect_curve_id},
+    {"-initial-timeout-duration-ms", &TestConfig::initial_timeout_duration_ms},
+    {"-max-cert-list", &TestConfig::max_cert_list},
+    {"-expect-cipher-aes", &TestConfig::expect_cipher_aes},
+    {"-expect-cipher-no-aes", &TestConfig::expect_cipher_no_aes},
+    {"-expect-cipher", &TestConfig::expect_cipher},
+    {"-resumption-delay", &TestConfig::resumption_delay},
+    {"-max-send-fragment", &TestConfig::max_send_fragment},
+    {"-read-size", &TestConfig::read_size},
+    {"-expect-ticket-age-skew", &TestConfig::expect_ticket_age_skew},
+    {"-quic-use-legacy-codepoint", &TestConfig::quic_use_legacy_codepoint},
+    {"-early-write-after-message", &TestConfig::early_write_after_message},
 };
 
 const Flag<std::vector<int>> kIntVectorFlags[] = {
-  { "-signing-prefs", &TestConfig::signing_prefs },
-  { "-verify-prefs", &TestConfig::verify_prefs },
-  { "-expect-peer-verify-pref",
-    &TestConfig::expected_peer_verify_prefs },
+    {"-signing-prefs", &TestConfig::signing_prefs},
+    {"-verify-prefs", &TestConfig::verify_prefs},
+    {"-expect-peer-verify-pref", &TestConfig::expect_peer_verify_prefs},
+    {"-curves", &TestConfig::curves},
+    {"-ech-is-retry-config", &TestConfig::ech_is_retry_config},
 };
 
-bool ParseFlag(char *flag, int argc, char **argv, int *i,
+const Flag<std::vector<std::string>> kBase64VectorFlags[] = {
+    {"-ech-server-config", &TestConfig::ech_server_configs},
+    {"-ech-server-key", &TestConfig::ech_server_keys},
+};
+
+const Flag<std::vector<std::pair<std::string, std::string>>>
+    kStringPairVectorFlags[] = {
+        {"-application-settings", &TestConfig::application_settings},
+};
+
+bool DecodeBase64(std::string *out, const std::string &in) {
+  size_t len;
+  if (!EVP_DecodedLength(&len, in.size())) {
+    fprintf(stderr, "Invalid base64: %s.\n", in.c_str());
+    return false;
+  }
+  std::vector<uint8_t> buf(len);
+  if (!EVP_DecodeBase64(buf.data(), &len, buf.size(),
+                        reinterpret_cast<const uint8_t *>(in.data()),
+                        in.size())) {
+    fprintf(stderr, "Invalid base64: %s.\n", in.c_str());
+    return false;
+  }
+  out->assign(reinterpret_cast<const char *>(buf.data()), len);
+  return true;
+}
+
+bool ParseFlag(const char *flag, int argc, char **argv, int *i,
                bool skip, TestConfig *out_config) {
   bool *bool_field = FindField(out_config, kBoolFlags, flag);
   if (bool_field != NULL) {
@@ -240,7 +287,7 @@ bool ParseFlag(char *flag, int argc, char **argv, int *i,
   if (string_field != NULL) {
     *i = *i + 1;
     if (*i >= argc) {
-      fprintf(stderr, "Missing parameter\n");
+      fprintf(stderr, "Missing parameter.\n");
       return false;
     }
     if (!skip) {
@@ -249,28 +296,33 @@ bool ParseFlag(char *flag, int argc, char **argv, int *i,
     return true;
   }
 
+  std::unique_ptr<std::string> *optional_string_field =
+      FindField(out_config, kOptionalStringFlags, flag);
+  if (optional_string_field != NULL) {
+    *i = *i + 1;
+    if (*i >= argc) {
+      fprintf(stderr, "Missing parameter.\n");
+      return false;
+    }
+    if (!skip) {
+      optional_string_field->reset(new std::string(argv[*i]));
+    }
+    return true;
+  }
+
   std::string *base64_field = FindField(out_config, kBase64Flags, flag);
   if (base64_field != NULL) {
     *i = *i + 1;
     if (*i >= argc) {
-      fprintf(stderr, "Missing parameter\n");
+      fprintf(stderr, "Missing parameter.\n");
       return false;
     }
-    size_t len;
-    if (!EVP_DecodedLength(&len, strlen(argv[*i]))) {
-      fprintf(stderr, "Invalid base64: %s\n", argv[*i]);
-      return false;
-    }
-    std::unique_ptr<uint8_t[]> decoded(new uint8_t[len]);
-    if (!EVP_DecodeBase64(decoded.get(), &len, len,
-                          reinterpret_cast<const uint8_t *>(argv[*i]),
-                          strlen(argv[*i]))) {
-      fprintf(stderr, "Invalid base64: %s\n", argv[*i]);
+    std::string value;
+    if (!DecodeBase64(&value, argv[*i])) {
       return false;
     }
     if (!skip) {
-      base64_field->assign(reinterpret_cast<const char *>(decoded.get()),
-                           len);
+      *base64_field = std::move(value);
     }
     return true;
   }
@@ -279,7 +331,7 @@ bool ParseFlag(char *flag, int argc, char **argv, int *i,
   if (int_field) {
     *i = *i + 1;
     if (*i >= argc) {
-      fprintf(stderr, "Missing parameter\n");
+      fprintf(stderr, "Missing parameter.\n");
       return false;
     }
     if (!skip) {
@@ -293,7 +345,7 @@ bool ParseFlag(char *flag, int argc, char **argv, int *i,
   if (int_vector_field) {
     *i = *i + 1;
     if (*i >= argc) {
-      fprintf(stderr, "Missing parameter\n");
+      fprintf(stderr, "Missing parameter.\n");
       return false;
     }
 
@@ -304,17 +356,68 @@ bool ParseFlag(char *flag, int argc, char **argv, int *i,
     return true;
   }
 
-  fprintf(stderr, "Unknown argument: %s\n", flag);
+  std::vector<std::string> *base64_vector_field =
+      FindField(out_config, kBase64VectorFlags, flag);
+  if (base64_vector_field) {
+    *i = *i + 1;
+    if (*i >= argc) {
+      fprintf(stderr, "Missing parameter.\n");
+      return false;
+    }
+    std::string value;
+    if (!DecodeBase64(&value, argv[*i])) {
+      return false;
+    }
+    // Each instance of the flag adds to the list.
+    if (!skip) {
+      base64_vector_field->push_back(std::move(value));
+    }
+    return true;
+  }
+
+  std::vector<std::pair<std::string, std::string>> *string_pair_vector_field =
+      FindField(out_config, kStringPairVectorFlags, flag);
+  if (string_pair_vector_field) {
+    *i = *i + 1;
+    if (*i >= argc) {
+      fprintf(stderr, "Missing parameter.\n");
+      return false;
+    }
+    const char *comma = strchr(argv[*i], ',');
+    if (!comma) {
+      fprintf(
+          stderr,
+          "Parameter should be a comma-separated triple composed of two base64 "
+          "strings followed by \"true\" or \"false\".\n");
+      return false;
+    }
+    // Each instance of the flag adds to the list.
+    if (!skip) {
+      string_pair_vector_field->push_back(std::make_pair(
+          std::string(argv[*i], comma - argv[*i]), std::string(comma + 1)));
+    }
+    return true;
+  }
+
+  fprintf(stderr, "Unknown argument: %s.\n", flag);
   return false;
 }
 
-const char kInit[] = "-on-initial";
-const char kResume[] = "-on-resume";
-const char kRetry[] = "-on-retry";
+// RemovePrefix checks if |*str| begins with |prefix| + "-". If so, it advances
+// |*str| past |prefix| (but not past the "-") and returns true. Otherwise, it
+// returns false and leaves |*str| unmodified.
+bool RemovePrefix(const char **str, const char *prefix) {
+  size_t prefix_len = strlen(prefix);
+  if (strncmp(*str, prefix, strlen(prefix)) == 0 && (*str)[prefix_len] == '-') {
+    *str += strlen(prefix);
+    return true;
+  }
+  return false;
+}
 
 }  // namespace
 
-bool ParseConfig(int argc, char **argv,
+bool ParseConfig(int argc, char **argv, bool is_shim,
                  TestConfig *out_initial,
                  TestConfig *out_resume,
                  TestConfig *out_retry) {
@@ -322,21 +425,36 @@ bool ParseConfig(int argc, char **argv,
   out_initial->argv = out_resume->argv = out_retry->argv = argv;
   for (int i = 0; i < argc; i++) {
     bool skip = false;
-    char *flag = argv[i];
-    if (strncmp(flag, kInit, strlen(kInit)) == 0) {
-      if (!ParseFlag(flag + strlen(kInit), argc, argv, &i, skip, out_initial)) {
+    const char *flag = argv[i];
+
+    // -on-shim and -on-handshaker prefixes enable flags only on the shim or
+    // handshaker.
+    if (RemovePrefix(&flag, "-on-shim")) {
+      if (!is_shim) {
+        skip = true;
+      }
+    } else if (RemovePrefix(&flag, "-on-handshaker")) {
+      if (is_shim) {
+        skip = true;
+      }
+    }
+
+    // The following prefixes allow different configurations for each of the
+    // initial, resumption, and 0-RTT retry handshakes.
+    if (RemovePrefix(&flag, "-on-initial")) {
+      if (!ParseFlag(flag, argc, argv, &i, skip, out_initial)) {
         return false;
       }
-    } else if (strncmp(flag, kResume, strlen(kResume)) == 0) {
-      if (!ParseFlag(flag + strlen(kResume), argc, argv, &i, skip,
-                     out_resume)) {
+    } else if (RemovePrefix(&flag, "-on-resume")) {
+      if (!ParseFlag(flag, argc, argv, &i, skip, out_resume)) {
         return false;
       }
-    } else if (strncmp(flag, kRetry, strlen(kRetry)) == 0) {
-      if (!ParseFlag(flag + strlen(kRetry), argc, argv, &i, skip, out_retry)) {
+    } else if (RemovePrefix(&flag, "-on-retry")) {
+      if (!ParseFlag(flag, argc, argv, &i, skip, out_retry)) {
         return false;
       }
     } else {
+      // Unprefixed flags apply to all three.
       int i_init = i;
       int i_resume = i;
       if (!ParseFlag(flag, argc, argv, &i_init, skip, out_initial) ||
@@ -400,9 +518,9 @@ static int ServerNameCallback(SSL *ssl, int *out_alert, void *arg) {
   const TestConfig *config = GetTestConfig(ssl);
   const char *server_name = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
   if (server_name == nullptr ||
-      std::string(server_name) != config->expected_server_name) {
-    fprintf(stderr, "servername mismatch (got %s; want %s)\n", server_name,
-            config->expected_server_name.c_str());
+      std::string(server_name) != config->expect_server_name) {
+    fprintf(stderr, "servername mismatch (got %s; want %s).\n", server_name,
+            config->expect_server_name.c_str());
     return SSL_TLSEXT_ERR_ALERT_FATAL;
   }
 
@@ -446,7 +564,7 @@ static void MessageCallback(int is_write, int version, int content_type,
   if (content_type == SSL3_RT_HEADER) {
     if (len !=
         (config->is_dtls ? DTLS1_RT_HEADER_LENGTH : SSL3_RT_HEADER_LENGTH)) {
-      fprintf(stderr, "Incorrect length for record header: %zu\n", len);
+      fprintf(stderr, "Incorrect length for record header: %zu.\n", len);
       state->msg_callback_ok = false;
     }
     return;
@@ -456,7 +574,7 @@ static void MessageCallback(int is_write, int version, int content_type,
   switch (content_type) {
     case 0:
       if (version != SSL2_VERSION) {
-        fprintf(stderr, "Incorrect version for V2ClientHello: %x\n", version);
+        fprintf(stderr, "Incorrect version for V2ClientHello: %x.\n", version);
         state->msg_callback_ok = false;
         return;
       }
@@ -482,6 +600,9 @@ static void MessageCallback(int is_write, int version, int content_type,
       char text[16];
       snprintf(text, sizeof(text), "hs %d\n", type);
       state->msg_callback_text += text;
+      if (!is_write) {
+        state->last_message_received = type;
+      }
       return;
     }
 
@@ -506,7 +627,7 @@ static void MessageCallback(int is_write, int version, int content_type,
       return;
 
     default:
-      fprintf(stderr, "Invalid content_type: %d\n", content_type);
+      fprintf(stderr, "Invalid content_type: %d.\n", content_type);
       state->msg_callback_ok = false;
   }
 }
@@ -573,10 +694,6 @@ static void InfoCallback(const SSL *ssl, int type, int val) {
       abort();
     }
     GetTestState(ssl)->handshake_done = true;
-
-    // Callbacks may be called again on a new handshake.
-    GetTestState(ssl)->ticket_decrypt_done = false;
-    GetTestState(ssl)->alpn_select_done = false;
   }
 }
 
@@ -614,13 +731,29 @@ static int AlpnSelectCallback(SSL *ssl, const uint8_t **out, uint8_t *outlen,
   if (config->decline_alpn) {
     return SSL_TLSEXT_ERR_NOACK;
   }
+  if (config->reject_alpn) {
+    return SSL_TLSEXT_ERR_ALERT_FATAL;
+  }
 
-  if (!config->expected_advertised_alpn.empty() &&
-      (config->expected_advertised_alpn.size() != inlen ||
-       OPENSSL_memcmp(config->expected_advertised_alpn.data(), in, inlen) !=
+  if (!config->expect_advertised_alpn.empty() &&
+      (config->expect_advertised_alpn.size() != inlen ||
+       OPENSSL_memcmp(config->expect_advertised_alpn.data(), in, inlen) !=
            0)) {
-    fprintf(stderr, "bad ALPN select callback inputs\n");
+    fprintf(stderr, "bad ALPN select callback inputs.\n");
     exit(1);
+  }
+
+  if (config->defer_alps) {
+    for (const auto &pair : config->application_settings) {
+      if (!SSL_add_application_settings(
+              ssl, reinterpret_cast<const uint8_t *>(pair.first.data()),
+              pair.first.size(),
+              reinterpret_cast<const uint8_t *>(pair.second.data()),
+              pair.second.size())) {
+        fprintf(stderr, "error configuring ALPS.\n");
+        exit(1);
+      }
+    }
   }
 
   assert(config->select_alpn.empty() || !config->select_empty_alpn);
@@ -631,12 +764,12 @@ static int AlpnSelectCallback(SSL *ssl, const uint8_t **out, uint8_t *outlen,
 
 static bool CheckVerifyCallback(SSL *ssl) {
   const TestConfig *config = GetTestConfig(ssl);
-  if (!config->expected_ocsp_response.empty()) {
+  if (!config->expect_ocsp_response.empty()) {
     const uint8_t *data;
     size_t len;
     SSL_get0_ocsp_response(ssl, &data, &len);
     if (len == 0) {
-      fprintf(stderr, "OCSP response not available in verify callback\n");
+      fprintf(stderr, "OCSP response not available in verify callback.\n");
       return false;
     }
   }
@@ -805,7 +938,7 @@ static std::vector<std::string> DecodeHexStrings(
   for (const auto &part : parts) {
     std::string binary;
     if (!HexDecode(&binary, part)) {
-      fprintf(stderr, "Bad hex string: %s\n", part.c_str());
+      fprintf(stderr, "Bad hex string: %s.\n", part.c_str());
       return ret;
     }
 
@@ -844,22 +977,22 @@ static bssl::UniquePtr<STACK_OF(X509_NAME)> DecodeHexX509Names(
 
 static bool CheckPeerVerifyPrefs(SSL *ssl) {
   const TestConfig *config = GetTestConfig(ssl);
-  if (!config->expected_peer_verify_prefs.empty()) {
+  if (!config->expect_peer_verify_prefs.empty()) {
     const uint16_t *peer_sigalgs;
     size_t num_peer_sigalgs =
         SSL_get0_peer_verify_algorithms(ssl, &peer_sigalgs);
-    if (config->expected_peer_verify_prefs.size() != num_peer_sigalgs) {
+    if (config->expect_peer_verify_prefs.size() != num_peer_sigalgs) {
       fprintf(stderr,
               "peer verify preferences length mismatch (got %zu, wanted %zu)\n",
-              num_peer_sigalgs, config->expected_peer_verify_prefs.size());
+              num_peer_sigalgs, config->expect_peer_verify_prefs.size());
       return false;
     }
     for (size_t i = 0; i < num_peer_sigalgs; i++) {
       if (static_cast<int>(peer_sigalgs[i]) !=
-          config->expected_peer_verify_prefs[i]) {
+          config->expect_peer_verify_prefs[i]) {
         fprintf(stderr,
                 "peer verify preference %zu mismatch (got %04x, wanted %04x\n",
-                i, peer_sigalgs[i], config->expected_peer_verify_prefs[i]);
+                i, peer_sigalgs[i], config->expect_peer_verify_prefs[i]);
         return false;
       }
     }
@@ -874,29 +1007,29 @@ static bool CheckCertificateRequest(SSL *ssl) {
     return false;
   }
 
-  if (!config->expected_certificate_types.empty()) {
+  if (!config->expect_certificate_types.empty()) {
     const uint8_t *certificate_types;
     size_t certificate_types_len =
         SSL_get0_certificate_types(ssl, &certificate_types);
-    if (certificate_types_len != config->expected_certificate_types.size() ||
+    if (certificate_types_len != config->expect_certificate_types.size() ||
         OPENSSL_memcmp(certificate_types,
-                       config->expected_certificate_types.data(),
+                       config->expect_certificate_types.data(),
                        certificate_types_len) != 0) {
-      fprintf(stderr, "certificate types mismatch\n");
+      fprintf(stderr, "certificate types mismatch.\n");
       return false;
     }
   }
 
-  if (!config->expected_client_ca_list.empty()) {
+  if (!config->expect_client_ca_list.empty()) {
     bssl::UniquePtr<STACK_OF(X509_NAME)> expected =
-        DecodeHexX509Names(config->expected_client_ca_list);
+        DecodeHexX509Names(config->expect_client_ca_list);
     const size_t num_expected = sk_X509_NAME_num(expected.get());
 
     const STACK_OF(X509_NAME) *received = SSL_get_client_CA_list(ssl);
     const size_t num_received = sk_X509_NAME_num(received);
 
     if (num_received != num_expected) {
-      fprintf(stderr, "expected %u names in CertificateRequest but got %u\n",
+      fprintf(stderr, "expected %u names in CertificateRequest but got %u.\n",
               static_cast<unsigned>(num_expected),
               static_cast<unsigned>(num_received));
       return false;
@@ -905,7 +1038,7 @@ static bool CheckCertificateRequest(SSL *ssl) {
     for (size_t i = 0; i < num_received; i++) {
       if (X509_NAME_cmp(sk_X509_NAME_value(received, i),
                         sk_X509_NAME_value(expected.get(), i)) != 0) {
-        fprintf(stderr, "names in CertificateRequest differ at index #%d\n",
+        fprintf(stderr, "names in CertificateRequest differ at index #%d.\n",
                 static_cast<unsigned>(i));
         return false;
       }
@@ -950,10 +1083,15 @@ static int ClientCertCallback(SSL *ssl, X509 **out_x509, EVP_PKEY **out_pkey) {
   return 1;
 }
 
+static ssl_private_key_result_t AsyncPrivateKeyComplete(SSL *ssl, uint8_t *out,
+                                                        size_t *out_len,
+                                                        size_t max_out);
+
 static ssl_private_key_result_t AsyncPrivateKeySign(
     SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out,
     uint16_t signature_algorithm, const uint8_t *in, size_t in_len) {
   TestState *test_state = GetTestState(ssl);
+  test_state->used_private_key = true;
   if (!test_state->private_key_result.empty()) {
     fprintf(stderr, "AsyncPrivateKeySign called with operation pending.\n");
     abort();
@@ -994,8 +1132,7 @@ static ssl_private_key_result_t AsyncPrivateKeySign(
   }
   test_state->private_key_result.resize(len);
 
-  // The signature will be released asynchronously in |AsyncPrivateKeyComplete|.
-  return ssl_private_key_retry;
+  return AsyncPrivateKeyComplete(ssl, out, out_len, max_out);
 }
 
 static ssl_private_key_result_t AsyncPrivateKeyDecrypt(SSL *ssl, uint8_t *out,
@@ -1004,6 +1141,7 @@ static ssl_private_key_result_t AsyncPrivateKeyDecrypt(SSL *ssl, uint8_t *out,
                                                        const uint8_t *in,
                                                        size_t in_len) {
   TestState *test_state = GetTestState(ssl);
+  test_state->used_private_key = true;
   if (!test_state->private_key_result.empty()) {
     fprintf(stderr, "AsyncPrivateKeyDecrypt called with operation pending.\n");
     abort();
@@ -1022,8 +1160,7 @@ static ssl_private_key_result_t AsyncPrivateKeyDecrypt(SSL *ssl, uint8_t *out,
 
   test_state->private_key_result.resize(*out_len);
 
-  // The decryption will be released asynchronously in |AsyncPrivateComplete|.
-  return ssl_private_key_retry;
+  return AsyncPrivateKeyComplete(ssl, out, out_len, max_out);
 }
 
 static ssl_private_key_result_t AsyncPrivateKeyComplete(SSL *ssl, uint8_t *out,
@@ -1036,9 +1173,9 @@ static ssl_private_key_result_t AsyncPrivateKeyComplete(SSL *ssl, uint8_t *out,
     abort();
   }
 
-  if (test_state->private_key_retries < 2) {
+  if (GetTestConfig(ssl)->async && test_state->private_key_retries < 2) {
     // Only return the decryption on the second attempt, to test both incomplete
-    // |decrypt| and |decrypt_complete|.
+    // |sign|/|decrypt| and |complete|.
     return ssl_private_key_retry;
   }
 
@@ -1072,7 +1209,10 @@ static bool InstallCertificate(SSL *ssl) {
   if (pkey) {
     TestState *test_state = GetTestState(ssl);
     const TestConfig *config = GetTestConfig(ssl);
-    if (config->async) {
+    if (config->async || config->handshake_hints) {
+      // Install a custom private key if testing asynchronous callbacks, or if
+      // testing handshake hints. In the handshake hints case, we wish to check
+      // that hints only mismatch when allowed.
       test_state->private_key = std::move(pkey);
       SSL_set_private_key_method(ssl, &g_async_private_key_method);
     } else if (!SSL_use_PrivateKey(ssl, pkey.get())) {
@@ -1093,37 +1233,20 @@ static bool InstallCertificate(SSL *ssl) {
 
 static enum ssl_select_cert_result_t SelectCertificateCallback(
     const SSL_CLIENT_HELLO *client_hello) {
-  const TestConfig *config = GetTestConfig(client_hello->ssl);
-  GetTestState(client_hello->ssl)->early_callback_called = true;
+  SSL *ssl = client_hello->ssl;
+  const TestConfig *config = GetTestConfig(ssl);
+  TestState *test_state = GetTestState(ssl);
+  test_state->early_callback_called = true;
 
-  if (!config->expected_server_name.empty()) {
-    const uint8_t *extension_data;
-    size_t extension_len;
-    CBS extension, server_name_list, host_name;
-    uint8_t name_type;
-
-    if (!SSL_early_callback_ctx_extension_get(
-            client_hello, TLSEXT_TYPE_server_name, &extension_data,
-            &extension_len)) {
-      fprintf(stderr, "Could not find server_name extension.\n");
+  if (!config->expect_server_name.empty()) {
+    const char *server_name =
+        SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+    if (server_name == nullptr ||
+        std::string(server_name) != config->expect_server_name) {
+      fprintf(stderr,
+              "Server name mismatch in early callback (got %s; want %s).\n",
+              server_name, config->expect_server_name.c_str());
       return ssl_select_cert_error;
-    }
-
-    CBS_init(&extension, extension_data, extension_len);
-    if (!CBS_get_u16_length_prefixed(&extension, &server_name_list) ||
-        CBS_len(&extension) != 0 ||
-        !CBS_get_u8(&server_name_list, &name_type) ||
-        name_type != TLSEXT_NAMETYPE_host_name ||
-        !CBS_get_u16_length_prefixed(&server_name_list, &host_name) ||
-        CBS_len(&server_name_list) != 0) {
-      fprintf(stderr, "Could not decode server_name extension.\n");
-      return ssl_select_cert_error;
-    }
-
-    if (!CBS_mem_equal(&host_name,
-                       (const uint8_t *)config->expected_server_name.data(),
-                       config->expected_server_name.size())) {
-      fprintf(stderr, "Server name mismatch.\n");
     }
   }
 
@@ -1131,20 +1254,82 @@ static enum ssl_select_cert_result_t SelectCertificateCallback(
     return ssl_select_cert_error;
   }
 
-  // Install the certificate in the early callback.
-  if (config->use_early_callback) {
-    bool early_callback_ready =
-        GetTestState(client_hello->ssl)->early_callback_ready;
-    if (config->async && !early_callback_ready) {
-      // Install the certificate asynchronously.
-      return ssl_select_cert_retry;
-    }
-    if (!InstallCertificate(client_hello->ssl)) {
-      return ssl_select_cert_error;
-    }
+  // Simulate some asynchronous work in the early callback.
+  if ((config->use_early_callback || test_state->get_handshake_hints_cb) &&
+      config->async && !test_state->early_callback_ready) {
+    return ssl_select_cert_retry;
   }
+
+  if (test_state->get_handshake_hints_cb &&
+      !test_state->get_handshake_hints_cb(client_hello)) {
+    return ssl_select_cert_error;
+  }
+
+  if (config->use_early_callback && !InstallCertificate(ssl)) {
+    return ssl_select_cert_error;
+  }
+
   return ssl_select_cert_success;
 }
+
+static int SetQuicReadSecret(SSL *ssl, enum ssl_encryption_level_t level,
+                             const SSL_CIPHER *cipher, const uint8_t *secret,
+                             size_t secret_len) {
+  MockQuicTransport *quic_transport = GetTestState(ssl)->quic_transport.get();
+  if (quic_transport == nullptr) {
+    fprintf(stderr, "No QUIC transport.\n");
+    return 0;
+  }
+  return quic_transport->SetReadSecret(level, cipher, secret, secret_len);
+}
+
+static int SetQuicWriteSecret(SSL *ssl, enum ssl_encryption_level_t level,
+                              const SSL_CIPHER *cipher, const uint8_t *secret,
+                              size_t secret_len) {
+  MockQuicTransport *quic_transport = GetTestState(ssl)->quic_transport.get();
+  if (quic_transport == nullptr) {
+    fprintf(stderr, "No QUIC transport.\n");
+    return 0;
+  }
+  return quic_transport->SetWriteSecret(level, cipher, secret, secret_len);
+}
+
+static int AddQuicHandshakeData(SSL *ssl, enum ssl_encryption_level_t level,
+                                const uint8_t *data, size_t len) {
+  MockQuicTransport *quic_transport = GetTestState(ssl)->quic_transport.get();
+  if (quic_transport == nullptr) {
+    fprintf(stderr, "No QUIC transport.\n");
+    return 0;
+  }
+  return quic_transport->WriteHandshakeData(level, data, len);
+}
+
+static int FlushQuicFlight(SSL *ssl) {
+  MockQuicTransport *quic_transport = GetTestState(ssl)->quic_transport.get();
+  if (quic_transport == nullptr) {
+    fprintf(stderr, "No QUIC transport.\n");
+    return 0;
+  }
+  return quic_transport->Flush();
+}
+
+static int SendQuicAlert(SSL *ssl, enum ssl_encryption_level_t level,
+                         uint8_t alert) {
+  MockQuicTransport *quic_transport = GetTestState(ssl)->quic_transport.get();
+  if (quic_transport == nullptr) {
+    fprintf(stderr, "No QUIC transport.\n");
+    return 0;
+  }
+  return quic_transport->SendAlert(level, alert);
+}
+
+static const SSL_QUIC_METHOD g_quic_method = {
+    SetQuicReadSecret,
+    SetQuicWriteSecret,
+    AddQuicHandshakeData,
+    FlushQuicFlight,
+    SendQuicAlert,
+};
 
 bssl::UniquePtr<SSL_CTX> TestConfig::SetupCtx(SSL_CTX *old_ctx) const {
   bssl::UniquePtr<SSL_CTX> ssl_ctx(
@@ -1155,12 +1340,6 @@ bssl::UniquePtr<SSL_CTX> TestConfig::SetupCtx(SSL_CTX *old_ctx) const {
 
   CRYPTO_once(&once, init_once);
   SSL_CTX_set0_buffer_pool(ssl_ctx.get(), g_pool);
-
-  // Enable TLS 1.3 for tests.
-  if (!is_dtls &&
-      !SSL_CTX_set_max_proto_version(ssl_ctx.get(), TLS1_3_VERSION)) {
-    return nullptr;
-  }
 
   std::string cipher_list = "ALL";
   if (!cipher.empty()) {
@@ -1194,7 +1373,8 @@ bssl::UniquePtr<SSL_CTX> TestConfig::SetupCtx(SSL_CTX *old_ctx) const {
                                      NULL);
   }
 
-  if (!select_alpn.empty() || decline_alpn || select_empty_alpn) {
+  if (!select_alpn.empty() || decline_alpn || reject_alpn ||
+      select_empty_alpn) {
     SSL_CTX_set_alpn_select_cb(ssl_ctx.get(), AlpnSelectCallback, NULL);
   }
 
@@ -1205,7 +1385,10 @@ bssl::UniquePtr<SSL_CTX> TestConfig::SetupCtx(SSL_CTX *old_ctx) const {
   SSL_CTX_set_info_callback(ssl_ctx.get(), InfoCallback);
   SSL_CTX_sess_set_new_cb(ssl_ctx.get(), NewSessionCallback);
 
-  if (use_ticket_callback) {
+  if (use_ticket_callback || handshake_hints) {
+    // If using handshake hints, always enable the ticket callback, so we can
+    // check that hints only mismatch when allowed. The ticket callback also
+    // uses a constant key, which simplifies the test.
     SSL_CTX_set_tlsext_ticket_key_cb(ssl_ctx.get(), TicketKeyCallback);
   }
 
@@ -1237,7 +1420,7 @@ bssl::UniquePtr<SSL_CTX> TestConfig::SetupCtx(SSL_CTX *old_ctx) const {
     SSL_CTX_set_grease_enabled(ssl_ctx.get(), 1);
   }
 
-  if (!expected_server_name.empty()) {
+  if (!expect_server_name.empty()) {
     SSL_CTX_set_tlsext_servername_callback(ssl_ctx.get(), ServerNameCallback);
   }
 
@@ -1245,18 +1428,8 @@ bssl::UniquePtr<SSL_CTX> TestConfig::SetupCtx(SSL_CTX *old_ctx) const {
     SSL_CTX_set_early_data_enabled(ssl_ctx.get(), 1);
   }
 
-  SSL_CTX_set_tls13_variant(ssl_ctx.get(),
-                            static_cast<enum tls13_variant_t>(tls13_variant));
-
   if (allow_unknown_alpn_protos) {
     SSL_CTX_set_allow_unknown_alpn_protos(ssl_ctx.get(), 1);
-  }
-
-  if (enable_ed25519) {
-    SSL_CTX_set_ed25519_enabled(ssl_ctx.get(), 1);
-  }
-  if (no_rsa_pss_rsae_certs) {
-    SSL_CTX_set_rsa_pss_rsae_certs_enabled(ssl_ctx.get(), 0);
   }
 
   if (!verify_prefs.empty()) {
@@ -1271,10 +1444,6 @@ bssl::UniquePtr<SSL_CTX> TestConfig::SetupCtx(SSL_CTX *old_ctx) const {
 
   if (allow_false_start_without_alpn) {
     SSL_CTX_set_false_start_allowed_without_alpn(ssl_ctx.get(), 1);
-  }
-
-  if (ignore_tls13_downgrade) {
-    SSL_CTX_set_ignore_tls13_downgrade(ssl_ctx.get(), 1);
   }
 
   if (use_ocsp_callback) {
@@ -1293,7 +1462,6 @@ bssl::UniquePtr<SSL_CTX> TestConfig::SetupCtx(SSL_CTX *old_ctx) const {
                                              ticket_key.size())) {
     return nullptr;
   }
-
 
   if (install_cert_compression_algs &&
       (!SSL_CTX_add_cert_compression_alg(
@@ -1341,6 +1509,14 @@ bssl::UniquePtr<SSL_CTX> TestConfig::SetupCtx(SSL_CTX *old_ctx) const {
     abort();
   }
 
+  if (server_preference) {
+    SSL_CTX_set_options(ssl_ctx.get(), SSL_OP_CIPHER_SERVER_PREFERENCE);
+  }
+
+  if (is_quic) {
+    SSL_CTX_set_quic_method(ssl_ctx.get(), &g_quic_method);
+  }
+
   return ssl_ctx;
 }
 
@@ -1368,11 +1544,11 @@ static unsigned PskClientCallback(SSL *ssl, const char *hint,
   // Account for the trailing '\0' for the identity.
   if (config->psk_identity.size() >= max_identity_len ||
       config->psk.size() > max_psk_len) {
-    fprintf(stderr, "PSK buffers too small\n");
+    fprintf(stderr, "PSK buffers too small.\n");
     return 0;
   }
 
-  BUF_strlcpy(out_identity, config->psk_identity.c_str(), max_identity_len);
+  OPENSSL_strlcpy(out_identity, config->psk_identity.c_str(), max_identity_len);
   OPENSSL_memcpy(out_psk, config->psk.data(), config->psk.size());
   return config->psk.size();
 }
@@ -1387,7 +1563,7 @@ static unsigned PskServerCallback(SSL *ssl, const char *identity,
   }
 
   if (config->psk.size() > max_psk_len) {
-    fprintf(stderr, "PSK buffers too small\n");
+    fprintf(stderr, "PSK buffers too small.\n");
     return 0;
   }
 
@@ -1441,7 +1617,7 @@ static int CertCallback(SSL *ssl, void *arg) {
 }
 
 bssl::UniquePtr<SSL> TestConfig::NewSSL(
-    SSL_CTX *ssl_ctx, SSL_SESSION *session, bool is_resume,
+    SSL_CTX *ssl_ctx, SSL_SESSION *session,
     std::unique_ptr<TestState> test_state) const {
   bssl::UniquePtr<SSL> ssl(SSL_new(ssl_ctx));
   if (!ssl) {
@@ -1455,7 +1631,6 @@ bssl::UniquePtr<SSL> TestConfig::NewSSL(
     if (!SetTestState(ssl.get(), std::move(test_state))) {
       return nullptr;
     }
-    GetTestState(ssl.get())->is_resume = is_resume;
   }
 
   if (fallback_scsv && !SSL_set_mode(ssl.get(), SSL_MODE_SEND_FALLBACK_SCSV)) {
@@ -1499,6 +1674,9 @@ bssl::UniquePtr<SSL> TestConfig::NewSSL(
   if (reverify_on_resume) {
     SSL_CTX_set_reverify_on_resume(ssl_ctx, 1);
   }
+  if (enforce_rsa_key_usage) {
+    SSL_set_enforce_rsa_key_usage(ssl.get(), 1);
+  }
   if (no_tls13) {
     SSL_set_options(ssl.get(), SSL_OP_NO_TLSv1_3);
   }
@@ -1514,8 +1692,41 @@ bssl::UniquePtr<SSL> TestConfig::NewSSL(
   if (no_ticket) {
     SSL_set_options(ssl.get(), SSL_OP_NO_TICKET);
   }
-  if (!expected_channel_id.empty() || enable_channel_id) {
+  if (!expect_channel_id.empty() || enable_channel_id) {
     SSL_set_tls_channel_id_enabled(ssl.get(), 1);
+  }
+  if (enable_ech_grease) {
+    SSL_set_enable_ech_grease(ssl.get(), 1);
+  }
+  if (ech_server_configs.size() != ech_server_keys.size() ||
+      ech_server_configs.size() != ech_is_retry_config.size()) {
+    fprintf(stderr,
+            "-ech-server-config, -ech-server-key, and -ech-is-retry-config "
+            "flags must match.\n");
+    return nullptr;
+  }
+  if (!ech_server_configs.empty()) {
+    bssl::UniquePtr<SSL_ECH_SERVER_CONFIG_LIST> config_list(
+        SSL_ECH_SERVER_CONFIG_LIST_new());
+    if (!config_list) {
+      return nullptr;
+    }
+    for (size_t i = 0; i < ech_server_configs.size(); i++) {
+      const std::string &ech_config = ech_server_configs[i];
+      const std::string &ech_private_key = ech_server_keys[i];
+      const int is_retry_config = ech_is_retry_config[i];
+      if (!SSL_ECH_SERVER_CONFIG_LIST_add(
+              config_list.get(), is_retry_config,
+              reinterpret_cast<const uint8_t *>(ech_config.data()),
+              ech_config.size(),
+              reinterpret_cast<const uint8_t *>(ech_private_key.data()),
+              ech_private_key.size())) {
+        return nullptr;
+      }
+    }
+    if (!SSL_CTX_set1_ech_server_config_list(ssl_ctx, config_list.get())) {
+      return nullptr;
+    }
   }
   if (!send_channel_id.empty()) {
     SSL_set_tls_channel_id_enabled(ssl.get(), 1);
@@ -1538,9 +1749,21 @@ bssl::UniquePtr<SSL> TestConfig::NewSSL(
     return nullptr;
   }
   if (!advertise_alpn.empty() &&
-      SSL_set_alpn_protos(ssl.get(), (const uint8_t *)advertise_alpn.data(),
-                          advertise_alpn.size()) != 0) {
+      SSL_set_alpn_protos(
+          ssl.get(), reinterpret_cast<const uint8_t *>(advertise_alpn.data()),
+          advertise_alpn.size()) != 0) {
     return nullptr;
+  }
+  if (!defer_alps) {
+    for (const auto &pair : application_settings) {
+      if (!SSL_add_application_settings(
+              ssl.get(), reinterpret_cast<const uint8_t *>(pair.first.data()),
+              pair.first.size(),
+              reinterpret_cast<const uint8_t *>(pair.second.data()),
+              pair.second.size())) {
+        return nullptr;
+      }
+    }
   }
   if (!psk.empty()) {
     SSL_set_psk_client_callback(ssl.get(), PskClientCallback);
@@ -1586,23 +1809,43 @@ bssl::UniquePtr<SSL> TestConfig::NewSSL(
   if (renegotiate_ignore) {
     SSL_set_renegotiate_mode(ssl.get(), ssl_renegotiate_ignore);
   }
+  if (renegotiate_explicit) {
+    SSL_set_renegotiate_mode(ssl.get(), ssl_renegotiate_explicit);
+  }
   if (!check_close_notify) {
     SSL_set_quiet_shutdown(ssl.get(), 1);
   }
-  if (p384_only) {
-    int nid = NID_secp384r1;
-    if (!SSL_set1_curves(ssl.get(), &nid, 1)) {
-      return nullptr;
-    }
-  }
-  if (enable_all_curves) {
-    static const int kAllCurves[] = {
-        NID_secp224r1, NID_X9_62_prime256v1, NID_secp384r1,
-        NID_secp521r1, NID_X25519,
-    };
-    if (!SSL_set1_curves(ssl.get(), kAllCurves,
-                         OPENSSL_ARRAY_SIZE(kAllCurves))) {
-      return nullptr;
+  if (!curves.empty()) {
+    std::vector<int> nids;
+    for (auto curve : curves) {
+      switch (curve) {
+        case SSL_CURVE_SECP224R1:
+          nids.push_back(NID_secp224r1);
+          break;
+
+        case SSL_CURVE_SECP256R1:
+          nids.push_back(NID_X9_62_prime256v1);
+          break;
+
+        case SSL_CURVE_SECP384R1:
+          nids.push_back(NID_secp384r1);
+          break;
+
+        case SSL_CURVE_SECP521R1:
+          nids.push_back(NID_secp521r1);
+          break;
+
+        case SSL_CURVE_X25519:
+          nids.push_back(NID_X25519);
+          break;
+
+        case SSL_CURVE_CECPQ2:
+          nids.push_back(NID_CECPQ2);
+          break;
+      }
+      if (!SSL_set1_curves(ssl.get(), &nids[0], nids.size())) {
+        return nullptr;
+      }
     }
   }
   if (initial_timeout_duration_ms > 0) {
@@ -1616,6 +1859,9 @@ bssl::UniquePtr<SSL> TestConfig::NewSSL(
   }
   if (max_send_fragment > 0) {
     SSL_set_max_send_fragment(ssl.get(), max_send_fragment);
+  }
+  if (quic_use_legacy_codepoint != -1) {
+    SSL_set_quic_use_legacy_codepoint(ssl.get(), quic_use_legacy_codepoint);
   }
   if (!quic_transport_params.empty()) {
     if (!SSL_set_quic_transport_params(
@@ -1640,6 +1886,50 @@ bssl::UniquePtr<SSL> TestConfig::NewSSL(
       SSL_SESSION_up_ref(session);
       GetTestState(ssl.get())->pending_session.reset(session);
     }
+  }
+
+  if (!delegated_credential.empty()) {
+    std::string::size_type comma = delegated_credential.find(',');
+    if (comma == std::string::npos) {
+      fprintf(stderr,
+              "failed to find comma in delegated credential argument.\n");
+      return nullptr;
+    }
+
+    const std::string dc_hex = delegated_credential.substr(0, comma);
+    const std::string pkcs8_hex = delegated_credential.substr(comma + 1);
+    std::string dc, pkcs8;
+    if (!HexDecode(&dc, dc_hex) || !HexDecode(&pkcs8, pkcs8_hex)) {
+      fprintf(stderr, "failed to hex decode delegated credential argument.\n");
+      return nullptr;
+    }
+
+    CBS dc_cbs(bssl::Span<const uint8_t>(
+        reinterpret_cast<const uint8_t *>(dc.data()), dc.size()));
+    CBS pkcs8_cbs(bssl::Span<const uint8_t>(
+        reinterpret_cast<const uint8_t *>(pkcs8.data()), pkcs8.size()));
+
+    bssl::UniquePtr<EVP_PKEY> priv(EVP_parse_private_key(&pkcs8_cbs));
+    if (!priv) {
+      fprintf(stderr, "failed to parse delegated credential private key.\n");
+      return nullptr;
+    }
+
+    bssl::UniquePtr<CRYPTO_BUFFER> dc_buf(
+        CRYPTO_BUFFER_new_from_CBS(&dc_cbs, nullptr));
+    if (!SSL_set1_delegated_credential(ssl.get(), dc_buf.get(),
+                                      priv.get(), nullptr)) {
+      fprintf(stderr, "SSL_set1_delegated_credential failed.\n");
+      return nullptr;
+    }
+  }
+
+  if (!quic_early_data_context.empty() &&
+      !SSL_set_quic_early_data_context(
+          ssl.get(),
+          reinterpret_cast<const uint8_t *>(quic_early_data_context.data()),
+          quic_early_data_context.size())) {
+    return nullptr;
   }
 
   return ssl;

@@ -32,6 +32,9 @@ TEST_P(MemoryObjectTest, MemoryObjectShouldBeMemoryObject)
 {
     ANGLE_SKIP_TEST_IF(!EnsureGLExtensionEnabled("GL_EXT_memory_object"));
 
+    // http://anglebug.com/5381
+    ANGLE_SKIP_TEST_IF(IsLinux() && IsAMD() && IsDesktopOpenGL());
+
     constexpr GLsizei kMemoryObjectCount = 2;
     GLuint memoryObjects[kMemoryObjectCount];
     glCreateMemoryObjectsEXT(kMemoryObjectCount, memoryObjects);
@@ -53,6 +56,9 @@ TEST_P(MemoryObjectTest, ShouldFailValidationOnImportFdUnsupportedHandleType)
 {
     ANGLE_SKIP_TEST_IF(!EnsureGLExtensionEnabled("GL_EXT_memory_object_fd"));
 
+    // http://anglebug.com/5381
+    ANGLE_SKIP_TEST_IF(IsLinux() && IsAMD() && IsDesktopOpenGL());
+
     {
         GLMemoryObject memoryObject;
         GLsizei deviceMemorySize = 1;
@@ -64,16 +70,47 @@ TEST_P(MemoryObjectTest, ShouldFailValidationOnImportFdUnsupportedHandleType)
     EXPECT_GL_NO_ERROR();
 }
 
+// Test memory object queries
+TEST_P(MemoryObjectTest, MemoryObjectQueries)
+{
+    ANGLE_SKIP_TEST_IF(!EnsureGLExtensionEnabled("GL_EXT_memory_object"));
+
+    // http://anglebug.com/5381
+    ANGLE_SKIP_TEST_IF(IsLinux() && IsAMD() && IsDesktopOpenGL());
+
+    GLMemoryObject memoryObject;
+
+    // Validate that the initial state of GL_DEDICATED_MEMORY_OBJECT_EXT is GL_FALSE
+    {
+        GLint dedicatedMemory = 0;
+        glGetMemoryObjectParameterivEXT(memoryObject, GL_DEDICATED_MEMORY_OBJECT_EXT,
+                                        &dedicatedMemory);
+        EXPECT_GL_NO_ERROR();
+        EXPECT_GL_FALSE(dedicatedMemory);
+    }
+
+    // Change GL_DEDICATED_MEMORY_OBJECT_EXT to GL_TRUE
+    {
+        GLint dedicatedMemory = GL_TRUE;
+        glMemoryObjectParameterivEXT(memoryObject, GL_DEDICATED_MEMORY_OBJECT_EXT,
+                                     &dedicatedMemory);
+        EXPECT_GL_NO_ERROR();
+    }
+
+    // Confirm that GL_DEDICATED_MEMORY_OBJECT_EXT is now TRUE
+    {
+        GLint dedicatedMemory = 0;
+        glGetMemoryObjectParameterivEXT(memoryObject, GL_DEDICATED_MEMORY_OBJECT_EXT,
+                                        &dedicatedMemory);
+        EXPECT_GL_NO_ERROR();
+        EXPECT_GL_TRUE(dedicatedMemory);
+    }
+
+    EXPECT_GL_NO_ERROR();
+}
+
 // Use this to select which configurations (e.g. which renderer, which GLES major version) these
 // tests should be run against.
-ANGLE_INSTANTIATE_TEST(MemoryObjectTest,
-                       ES2_D3D9(),
-                       ES2_D3D11(),
-                       ES3_D3D11(),
-                       ES2_OPENGL(),
-                       ES3_OPENGL(),
-                       ES2_OPENGLES(),
-                       ES3_OPENGLES(),
-                       ES2_VULKAN());
+ANGLE_INSTANTIATE_TEST_ES2_AND_ES3(MemoryObjectTest);
 
 }  // namespace angle

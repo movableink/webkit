@@ -339,6 +339,7 @@ application/vnd.yamaha.hv-script
 application/vnd.yamaha.hv-voice
 application/vnd.yellowriver-custom-menu
 application/voicexml+xml	vxml
+application/wasm	wasm
 application/watcherinfo+xml
 application/whoispp-query
 application/whoispp-response
@@ -515,6 +516,7 @@ model/vnd.gtw
 model/vnd.mts
 model/vnd.parasolid.transmit.binary
 model/vnd.parasolid.transmit.text
+model/vnd.usdz+zip usdz
 model/vnd.vtu
 model/vrml			wrl vrml
 multipart/alternative
@@ -578,7 +580,7 @@ video/h263-2000
 video/jpeg
 video/mp1s
 video/mp2p
-video/mp2t
+video/mp2t			ts
 video/mp4			mp4
 video/mp4v-es
 video/mpv
@@ -595,6 +597,7 @@ video/vnd.mpegurl		mxu m4u
 video/vnd.nokia.interleaved-multimedia
 video/vnd.objectvideo
 video/vnd.vivo
+video/webm			webm
 video/x-dv			dv dif
 video/x-msvideo			avi
 video/x-sgi-movie		movie

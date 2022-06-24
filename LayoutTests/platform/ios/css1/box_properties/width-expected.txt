@@ -9,8 +9,11 @@ layer at (0,0) size 800x1396
       RenderBlock {PRE} at (0,36) size 784x42
         RenderText {#text} at (0,0) size 149x42
           text run at (0,0) width 149: ".one {width: 50px;}"
+          text run at (148,0) width 1: " "
           text run at (0,14) width 141: ".two {width: 50%;}"
+          text run at (140,14) width 1: " "
           text run at (0,28) width 149: "TABLE {width: 50%;}"
+          text run at (148,28) width 1: " "
       RenderBlock {HR} at (0,91) size 784x2 [border: (1px inset #000000)]
       RenderBlock (anonymous) at (0,101) size 784x50
         RenderImage {IMG} at (0,0) size 50x50
@@ -46,8 +49,8 @@ layer at (0,0) size 800x1396
                   text run at (4,4) width 161: "TABLE Testing Section"
           RenderTableRow {TR} at (0,28) size 390x587
             RenderTableCell {TD} at (0,307) size 13x29 [bgcolor=#C0C0C0] [border: (1px inset #808080)] [r=1 c=0 rs=1 cs=1]
-              RenderText {#text} at (4,4) size 4x20
-                text run at (4,5) width 4: " "
+              RenderText {#text} at (4,3) size 4x21
+                text run at (4,4) width 4: " "
             RenderTableCell {TD} at (12,28) size 379x587 [border: (1px inset #808080)] [r=1 c=1 rs=1 cs=1]
               RenderBlock (anonymous) at (4,4) size 370x50
                 RenderImage {IMG} at (0,0) size 50x50
@@ -66,7 +69,7 @@ layer at (0,0) size 800x1396
                 RenderText {#text} at (0,0) size 182x179
                   text run at (0,0) width 163: "This paragraph should be"
                   text run at (0,20) width 170: "half the width of its parent"
-                  text run at (0,40) width 170: "element (either the BODY"
+                  text run at (0,40) width 169: "element (either the BODY"
                   text run at (0,60) width 166: "or the table, which should"
                   text run at (0,80) width 174: "itself be half as wide as the"
                   text run at (0,100) width 113: "BODY element). "

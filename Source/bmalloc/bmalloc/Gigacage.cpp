@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,21 +27,29 @@
 
 #include "CryptoRandom.h"
 #include "Environment.h"
+#include "Mutex.h"
 #include "ProcessCheck.h"
 #include "StaticPerProcess.h"
 #include "VMAllocate.h"
 #include "Vector.h"
 #include "bmalloc.h"
 #include <cstdio>
-#include <mutex>
 
 #if BOS(DARWIN)
 #include <mach/mach.h>
 #endif
 
+#if BUSE(LIBPAS)
+#include "iso_heap.h"
+#endif
+
 #if GIGACAGE_ENABLED
 
 namespace Gigacage {
+
+#if !BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+Config g_gigacageConfig;
+#endif
 
 struct Callback {
     Callback() { }
@@ -56,12 +64,12 @@ struct Callback {
     void* argument { nullptr };
 };
 
-}
+} // namespace Gigacage
 
 namespace bmalloc {
 
 struct PrimitiveDisableCallbacks : public StaticPerProcess<PrimitiveDisableCallbacks> {
-    PrimitiveDisableCallbacks(std::lock_guard<Mutex>&) { }
+    PrimitiveDisableCallbacks(const LockHolder&) { }
     
     Vector<Gigacage::Callback> callbacks;
 };
@@ -79,71 +87,11 @@ namespace Gigacage {
 // If this were less than 32GB, those OOB accesses could reach outside of the cage.
 constexpr size_t gigacageRunway = 32llu * bmalloc::Sizes::GB;
 
-alignas(configSizeToProtect) Config g_gigacageConfig;
+bool disablePrimitiveGigacageRequested = false;
 
 using namespace bmalloc;
 
 namespace {
-
-#if BOS(DARWIN)
-enum {
-    AllowPermissionChangesAfterThis = false,
-    DisallowPermissionChangesAfterThis = true
-};
-#endif
-
-static void freezeGigacageConfig()
-{
-    int result;
-#if BOS(DARWIN)
-    result = vm_protect(mach_task_self(), reinterpret_cast<vm_address_t>(&g_gigacageConfig), configSizeToProtect, AllowPermissionChangesAfterThis, VM_PROT_READ);
-#else
-    result = mprotect(&g_gigacageConfig, configSizeToProtect, PROT_READ);
-#endif
-    RELEASE_BASSERT(!result);
-}
-
-static void unfreezeGigacageConfig()
-{
-    RELEASE_BASSERT(!g_gigacageConfig.isPermanentlyFrozen);
-    int result;
-#if BOS(DARWIN)
-    result = vm_protect(mach_task_self(), reinterpret_cast<vm_address_t>(&g_gigacageConfig), configSizeToProtect, AllowPermissionChangesAfterThis, VM_PROT_READ | VM_PROT_WRITE);
-#else
-    result = mprotect(&g_gigacageConfig, configSizeToProtect, PROT_READ | PROT_WRITE);
-#endif
-    RELEASE_BASSERT(!result);
-}
-
-static void permanentlyFreezeGigacageConfig()
-{
-    if (!g_gigacageConfig.isPermanentlyFrozen) {
-        unfreezeGigacageConfig();
-        g_gigacageConfig.isPermanentlyFrozen = true;
-    }
-
-    // There's no going back now!
-    int result;
-#if BOS(DARWIN)
-    result = vm_protect(mach_task_self(), reinterpret_cast<vm_address_t>(&g_gigacageConfig), configSizeToProtect, DisallowPermissionChangesAfterThis, VM_PROT_READ);
-#else
-    result = mprotect(&g_gigacageConfig, configSizeToProtect, PROT_READ);
-#endif
-    RELEASE_BASSERT(!result);
-}
-
-class UnfreezeGigacageConfigScope {
-public:
-    UnfreezeGigacageConfigScope()
-    {
-        unfreezeGigacageConfig();
-    }
-    
-    ~UnfreezeGigacageConfigScope()
-    {
-        freezeGigacageConfig();
-    }
-};
 
 size_t runwaySize(Kind kind)
 {
@@ -171,10 +119,12 @@ void ensureGigacage()
 
             if (!shouldBeEnabled())
                 return;
-            
+
+#if BENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
             // We might only get page size alignment, but that's also the minimum
             // alignment we need for freezing the Config.
-            RELEASE_BASSERT(!(reinterpret_cast<size_t>(&g_gigacageConfig) & (vmPageSize() - 1)));
+            RELEASE_BASSERT(!(reinterpret_cast<size_t>(&WebConfig::g_config) & (vmPageSize() - 1)));
+#endif
 
             Kind shuffledKinds[NumberOfKinds];
             for (unsigned i = 0; i < NumberOfKinds; ++i)
@@ -197,7 +147,7 @@ void ensureGigacage()
                 return roundUpToMultipleOf(alignment(kind), totalSize);
             };
             auto bump = [] (Kind kind, size_t totalSize) -> size_t {
-                return totalSize + size(kind);
+                return totalSize + maxSize(kind);
             };
             
             size_t totalSize = 0;
@@ -223,8 +173,26 @@ void ensureGigacage()
             size_t nextCage = 0;
             for (Kind kind : shuffledKinds) {
                 nextCage = alignTo(kind, nextCage);
-                g_gigacageConfig.setBasePtr(kind, reinterpret_cast<char*>(base) + nextCage);
+                void* gigacageBasePtr = reinterpret_cast<char*>(base) + nextCage;
+                g_gigacageConfig.setBasePtr(kind, gigacageBasePtr);
                 nextCage = bump(kind, nextCage);
+
+                uint64_t random[2];
+                cryptoRandom(reinterpret_cast<unsigned char*>(random), sizeof(random));
+                size_t gigacageSize = maxSize(kind);
+                size_t size = roundDownToMultipleOf(vmPageSize(), gigacageSize - (random[0] % maximumCageSizeReductionForSlide));
+                g_gigacageConfig.setAllocSize(kind, size);
+                ptrdiff_t offset = roundDownToMultipleOf(vmPageSize(), random[1] % (gigacageSize - size));
+                void* thisBase = reinterpret_cast<unsigned char*>(gigacageBasePtr) + offset;
+                g_gigacageConfig.setAllocBasePtr(kind, thisBase);
+
+#if BUSE(LIBPAS)
+                bmalloc_force_auxiliary_heap_into_reserved_memory(
+                    &api::heapForKind(kind),
+                    reinterpret_cast<uintptr_t>(thisBase),
+                    reinterpret_cast<uintptr_t>(thisBase) + size);
+#endif
+                
                 if (runwaySize(kind) > 0) {
                     char* runway = reinterpret_cast<char*>(base) + nextCage;
                     // Make OOB accesses into the runway crash.
@@ -237,7 +205,6 @@ void ensureGigacage()
             g_gigacageConfig.totalSize = totalSize;
             vmDeallocatePhysicalPages(base, totalSize);
             g_gigacageConfig.isEnabled = true;
-            freezeGigacageConfig();
         });
 }
 
@@ -247,9 +214,9 @@ void disablePrimitiveGigacage()
         fprintf(stderr, "FATAL: Disabling Primitive gigacage is forbidden, but we don't want that in this process.\n");
 
     RELEASE_BASSERT(!g_gigacageConfig.disablingPrimitiveGigacageIsForbidden);
-    RELEASE_BASSERT(!g_gigacageConfig.isPermanentlyFrozen);
 
     ensureGigacage();
+    disablePrimitiveGigacageRequested = true;
     if (!g_gigacageConfig.basePtrs[Primitive]) {
         // It was never enabled. That means that we never even saved any callbacks. Or, we had already disabled
         // it before, and already called the callbacks.
@@ -257,12 +224,10 @@ void disablePrimitiveGigacage()
     }
     
     PrimitiveDisableCallbacks& callbacks = *PrimitiveDisableCallbacks::get();
-    std::unique_lock<Mutex> lock(PrimitiveDisableCallbacks::mutex());
+    UniqueLockHolder lock(PrimitiveDisableCallbacks::mutex());
     for (Callback& callback : callbacks.callbacks)
         callback.function(callback.argument);
     callbacks.callbacks.shrink(0);
-    UnfreezeGigacageConfigScope unfreezeScope;
-    g_gigacageConfig.basePtrs[Primitive] = nullptr;
 }
 
 void addPrimitiveDisableCallback(void (*function)(void*), void* argument)
@@ -275,14 +240,14 @@ void addPrimitiveDisableCallback(void (*function)(void*), void* argument)
     }
     
     PrimitiveDisableCallbacks& callbacks = *PrimitiveDisableCallbacks::get();
-    std::unique_lock<Mutex> lock(PrimitiveDisableCallbacks::mutex());
+    UniqueLockHolder lock(PrimitiveDisableCallbacks::mutex());
     callbacks.callbacks.push(Callback(function, argument));
 }
 
 void removePrimitiveDisableCallback(void (*function)(void*), void* argument)
 {
     PrimitiveDisableCallbacks& callbacks = *PrimitiveDisableCallbacks::get();
-    std::unique_lock<Mutex> lock(PrimitiveDisableCallbacks::mutex());
+    UniqueLockHolder lock(PrimitiveDisableCallbacks::mutex());
     for (size_t i = 0; i < callbacks.callbacks.size(); ++i) {
         if (callbacks.callbacks[i].function == function
             && callbacks.callbacks[i].argument == argument) {
@@ -309,17 +274,9 @@ void forbidDisablingPrimitiveGigacage()
     RELEASE_BASSERT(g_gigacageConfig.shouldBeEnabledHasBeenCalled
         && (GIGACAGE_ALLOCATION_CAN_FAIL || !g_gigacageConfig.shouldBeEnabled || verifyGigacageIsEnabled()));
 
-    if (!g_gigacageConfig.disablingPrimitiveGigacageIsForbidden) {
-        unfreezeGigacageConfig();
+    if (!g_gigacageConfig.disablingPrimitiveGigacageIsForbidden)
         g_gigacageConfig.disablingPrimitiveGigacageIsForbidden = true;
-    }
-    permanentlyFreezeGigacageConfig();
-    RELEASE_BASSERT(isDisablingPrimitiveGigacageForbidden());
-}
-
-BNO_INLINE bool isDisablingPrimitiveGigacageForbidden()
-{
-    return g_gigacageConfig.disablingPrimitiveGigacageIsForbidden;
+    RELEASE_BASSERT(disablingPrimitiveGigacageIsForbidden());
 }
 
 bool shouldBeEnabled()
@@ -349,6 +306,26 @@ bool shouldBeEnabled()
             g_gigacageConfig.shouldBeEnabled = true;
         });
     return g_gigacageConfig.shouldBeEnabled;
+}
+
+void* allocBase(Kind kind)
+{
+    return g_gigacageConfig.allocBasePtr(kind);
+}
+
+size_t size(Kind kind)
+{
+    return g_gigacageConfig.allocSize(kind);
+}
+
+size_t footprint(Kind kind)
+{
+#if BUSE(LIBPAS)
+    BUNUSED(kind);
+    return 0;
+#else
+    return PerProcess<PerHeapKind<Heap>>::get()->at(heapKind(kind)).footprint();
+#endif
 }
 
 } // namespace Gigacage

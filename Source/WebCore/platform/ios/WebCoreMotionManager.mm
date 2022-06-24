@@ -28,11 +28,13 @@
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(DEVICE_ORIENTATION)
 
+#import "DeviceMotionClientIOS.h"
+#import "MotionManagerClient.h"
 #import "WebCoreObjCExtras.h"
 #import "WebCoreThreadRun.h"
 #import <CoreLocation/CoreLocation.h>
-#import <CoreMotion/CoreMotion.h>
 #import <objc/objc-runtime.h>
+#import <pal/spi/cocoa/CoreMotionSPI.h>
 #import <wtf/MathExtras.h>
 #import <wtf/SoftLinking.h>
 
@@ -87,41 +89,39 @@ static const double kGravity = 9.80665;
 
     if (m_headingAvailable)
         [m_locationManager stopUpdatingHeading];
-    [m_locationManager release];
 
     if (m_gyroAvailable)
         [m_motionManager stopDeviceMotionUpdates];
     else
         [m_motionManager stopAccelerometerUpdates];
-    [m_motionManager release];
 
     [super dealloc];
 }
 
-- (void)addMotionClient:(WebCore::DeviceMotionClientIOS *)client
+- (void)addMotionClient:(WebCore::MotionManagerClient *)client
 {
-    m_deviceMotionClients.add(client);
+    m_deviceMotionClients.add(*client);
     if (m_initialized)
         [self checkClientStatus];
 }
 
-- (void)removeMotionClient:(WebCore::DeviceMotionClientIOS *)client
+- (void)removeMotionClient:(WebCore::MotionManagerClient *)client
 {
-    m_deviceMotionClients.remove(client);
+    m_deviceMotionClients.remove(*client);
     if (m_initialized)
         [self checkClientStatus];
 }
 
-- (void)addOrientationClient:(WebCore::DeviceOrientationClientIOS *)client
+- (void)addOrientationClient:(WebCore::MotionManagerClient *)client
 {
-    m_deviceOrientationClients.add(client);
+    m_deviceOrientationClients.add(*client);
     if (m_initialized)
         [self checkClientStatus];
 }
 
-- (void)removeOrientationClient:(WebCore::DeviceOrientationClientIOS *)client
+- (void)removeOrientationClient:(WebCore::MotionManagerClient *)client
 {
-    m_deviceOrientationClients.remove(client);
+    m_deviceOrientationClients.remove(*client);
     if (m_initialized)
         [self checkClientStatus];
 }
@@ -140,16 +140,16 @@ static const double kGravity = 9.80665;
 {
     ASSERT(!WebThreadIsCurrent());
 
-    m_motionManager = [allocCMMotionManagerInstance() init];
+    m_motionManager = adoptNS([allocCMMotionManagerInstance() init]);
 
-    m_gyroAvailable = m_motionManager.deviceMotionAvailable;
+    m_gyroAvailable = m_motionManager.get().deviceMotionAvailable;
 
     if (m_gyroAvailable)
-        m_motionManager.deviceMotionUpdateInterval = kMotionUpdateInterval;
+        [m_motionManager setDeviceMotionUpdateInterval:kMotionUpdateInterval];
     else
-        m_motionManager.accelerometerUpdateInterval = kMotionUpdateInterval;
+        [m_motionManager setAccelerometerUpdateInterval:kMotionUpdateInterval];
 
-    m_locationManager = [allocCLLocationManagerInstance() init];
+    m_locationManager = adoptNS([allocCLLocationManagerInstance() init]);
     m_headingAvailable = [getCLLocationManagerClass() headingAvailable];
 
     m_initialized = YES;
@@ -169,7 +169,7 @@ static const double kGravity = 9.80665;
     // be no chance that m_motionManager has not been created.
     ASSERT(m_motionManager);
 
-    if (m_deviceMotionClients.size() || m_deviceOrientationClients.size()) {
+    if (m_deviceMotionClients.computeSize() || m_deviceOrientationClients.computeSize()) {
         if (m_gyroAvailable)
             [m_motionManager startDeviceMotionUpdates];
         else
@@ -178,18 +178,11 @@ static const double kGravity = 9.80665;
         if (m_headingAvailable)
             [m_locationManager startUpdatingHeading];
 
-        if (!m_updateTimer) {
-            m_updateTimer = [[NSTimer scheduledTimerWithTimeInterval:kMotionUpdateInterval
-                                                              target:self
-                                                            selector:@selector(update)
-                                                            userInfo:nil
-                                                             repeats:YES] retain];
-        }
+        if (!m_updateTimer)
+            m_updateTimer = [NSTimer scheduledTimerWithTimeInterval:kMotionUpdateInterval target:self selector:@selector(update) userInfo:nil repeats:YES];
     } else {
-        NSTimer *timer = m_updateTimer;
+        [m_updateTimer invalidate];
         m_updateTimer = nil;
-        [timer invalidate];
-        [timer release];
 
         if (m_gyroAvailable)
             [m_motionManager stopDeviceMotionUpdates];
@@ -209,11 +202,11 @@ static const double kGravity = 9.80665;
         return;
     
     // We should, however, guard for the case where the managers return nil data.
-    CMDeviceMotion *deviceMotion = m_motionManager.deviceMotion;
+    CMDeviceMotion *deviceMotion = [m_motionManager deviceMotion];
     if (m_gyroAvailable && deviceMotion)
-        [self sendMotionData:deviceMotion withHeading:m_locationManager.heading];
+        [self sendMotionData:deviceMotion withHeading:[m_locationManager heading]];
     else {
-        if (CMAccelerometerData *accelerometerData = m_motionManager.accelerometerData)
+        if (CMAccelerometerData *accelerometerData = [m_motionManager accelerometerData])
             [self sendAccelerometerData:accelerometerData];
     }
 }
@@ -223,8 +216,15 @@ static const double kGravity = 9.80665;
     WebThreadRun(^{
         CMAcceleration accel = newAcceleration.acceleration;
 
-        for (auto& client : copyToVector(m_deviceMotionClients))
-            client->motionChanged(0, 0, 0, accel.x * kGravity, accel.y * kGravity, accel.z * kGravity, 0, 0, 0);
+        Vector<WeakPtr<WebCore::MotionManagerClient>> motionClients;
+        motionClients.reserveInitialCapacity(m_deviceMotionClients.computeSize());
+        for (auto& client : m_deviceMotionClients)
+            motionClients.uncheckedAppend(client);
+
+        for (auto& client : motionClients) {
+            if (client)
+                client->motionChanged(0, 0, 0, accel.x * kGravity, accel.y * kGravity, accel.z * kGravity, std::nullopt, std::nullopt, std::nullopt);
+        }
     });
 }
 
@@ -241,13 +241,23 @@ static const double kGravity = 9.80665;
 
         CMRotationRate rotationRate = newMotion.rotationRate;
 
-        for (auto& client : copyToVector(m_deviceMotionClients))
-            client->motionChanged(userAccel.x * kGravity, userAccel.y * kGravity, userAccel.z * kGravity, totalAccel.x * kGravity, totalAccel.y * kGravity, totalAccel.z * kGravity, rad2deg(rotationRate.x), rad2deg(rotationRate.y), rad2deg(rotationRate.z));
+        Vector<WeakPtr<WebCore::MotionManagerClient>> motionClients;
+        motionClients.reserveInitialCapacity(m_deviceMotionClients.computeSize());
+        for (auto& client : m_deviceMotionClients)
+            motionClients.uncheckedAppend(client);
+        
+        for (auto& client : motionClients) {
+            if (client)
+                client->motionChanged(userAccel.x * kGravity, userAccel.y * kGravity, userAccel.z * kGravity, totalAccel.x * kGravity, totalAccel.y * kGravity, totalAccel.z * kGravity, rad2deg(rotationRate.x), rad2deg(rotationRate.y), rad2deg(rotationRate.z));
+        }
 
         CMAttitude* attitude = newMotion.attitude;
 
-        auto orientationClients = copyToVector(m_deviceOrientationClients);
-
+        Vector<WeakPtr<WebCore::MotionManagerClient>> orientationClients;
+        orientationClients.reserveInitialCapacity(m_deviceOrientationClients.computeSize());
+        for (auto& client : m_deviceOrientationClients)
+            orientationClients.uncheckedAppend(client);
+        
         // Compose the raw motion data to an intermediate ZXY-based 3x3 rotation
         // matrix (R) where [z=attitude.yaw, x=attitude.pitch, y=attitude.roll]
         // in the form:
@@ -319,8 +329,10 @@ static const double kGravity = 9.80665;
         double heading = (m_headingAvailable && newHeading) ? newHeading.magneticHeading : 0;
         double headingAccuracy = (m_headingAvailable && newHeading) ? newHeading.headingAccuracy : -1;
 
-        for (size_t i = 0; i < orientationClients.size(); ++i)
-            orientationClients[i]->orientationChanged(alpha, beta, gamma, heading, headingAccuracy);
+        for (size_t i = 0; i < orientationClients.size(); ++i) {
+            if (orientationClients[i])
+                orientationClients[i]->orientationChanged(alpha, beta, gamma, heading, headingAccuracy);
+        }
     });
 }
 

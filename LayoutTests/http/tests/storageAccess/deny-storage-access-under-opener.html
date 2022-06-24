@@ -6,7 +6,7 @@
     <script>
         description("Tests that a cross-origin window from a prevalent domain without user interaction is denied storage access under its opener.");
         jsTestIsAsync = true;
-
+        
         window.addEventListener("message", receiveMessage, false);
 
         function finishTest() {
@@ -39,19 +39,16 @@
         const resourcePath = "/storageAccess/resources";
         const thirdPartyBaseUrl = thirdPartyOrigin + resourcePath;
         const firstPartyCookieName = "firstPartyCookie";
-        const subPathToGetCookies = "/get-cookies.php?name1=" + firstPartyCookieName;
+        const subPathToGetCookies = "/get-cookies.py?name1=" + firstPartyCookieName;
 
         let newWin;
         setEnableFeature(true, function() {
-            testRunner.setCanOpenWindows();
-
             testRunner.setStatisticsPrevalentResource(thirdPartyOrigin, true, function() {
                 if (!testRunner.isStatisticsPrevalentResource(thirdPartyOrigin))
                     testFailed("Host did not get set as prevalent resource.");
                 if (testRunner.isStatisticsHasHadUserInteraction(thirdPartyOrigin))
                     testFailed("Host logged for user interaction.");
                 testRunner.dumpChildFramesAsText();
-                testRunner.setCloseRemainingWindowsWhenComplete(true);
 
                 testRunner.statisticsUpdateCookieBlocking(function () {
                     newWin = window.open(thirdPartyOrigin + "/storageAccess/resources/set-cookie-and-report-back.html", "testWindow");

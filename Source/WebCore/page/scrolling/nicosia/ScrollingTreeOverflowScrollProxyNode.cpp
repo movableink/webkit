@@ -55,12 +55,12 @@ void ScrollingTreeOverflowScrollProxyNode::commitStateBeforeChildren(const Scrol
 {
     const ScrollingStateOverflowScrollProxyNode& overflowProxyStateNode = downcast<ScrollingStateOverflowScrollProxyNode>(stateNode);
 
-    if (overflowProxyStateNode.hasChangedProperty(ScrollingStateNode::Layer)) {
+    if (overflowProxyStateNode.hasChangedProperty(ScrollingStateNode::Property::Layer)) {
         auto* layer = static_cast<Nicosia::PlatformLayer*>(stateNode.layer());
         m_layer = downcast<Nicosia::CompositionLayer>(layer);
     }
 
-    if (overflowProxyStateNode.hasChangedProperty(ScrollingStateOverflowScrollProxyNode::OverflowScrollingNode))
+    if (overflowProxyStateNode.hasChangedProperty(ScrollingStateNode::Property::OverflowScrollingNode))
         m_overflowScrollingNodeID = overflowProxyStateNode.overflowScrollingNode();
 
     if (m_overflowScrollingNodeID) {
@@ -84,7 +84,7 @@ void ScrollingTreeOverflowScrollProxyNode::applyLayerPositions()
     }
 
     LOG_WITH_STREAM(Scrolling, stream << "ScrollingTreeOverflowScrollProxyNode " << scrollingNodeID() << " applyLayerPositions: setting bounds origin to " << scrollOffset);
-    m_layer->accessStaging(
+    m_layer->updateState(
         [&scrollOffset](Nicosia::CompositionLayer::LayerState& state)
         {
             state.boundsOrigin = scrollOffset;
@@ -92,7 +92,7 @@ void ScrollingTreeOverflowScrollProxyNode::applyLayerPositions()
         });
 }
 
-void ScrollingTreeOverflowScrollProxyNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingTreeOverflowScrollProxyNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ts << "overflow scroll proxy node";
     ScrollingTreeNode::dumpProperties(ts, behavior);
@@ -102,7 +102,7 @@ void ScrollingTreeOverflowScrollProxyNode::dumpProperties(TextStream& ts, Scroll
         ts.dumpProperty("related overflow scrolling node scroll position", scrollPosition);
     }
 
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeNodeIDs)
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
         ts.dumpProperty("overflow scrolling node", m_overflowScrollingNodeID);
 }
 

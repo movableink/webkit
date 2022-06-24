@@ -7,7 +7,7 @@ description("Testing an <code>IconButton</code> has a blue background-color when
 
 window.jsTestIsAsync = true;
 
-const button = new Button({ layoutDelegate: { layoutTraits: LayoutTraits.macOS }, iconName: Icons.Pause });
+const button = new Button({ layoutDelegate: { layoutTraits: new MacOSLayoutTraits(LayoutTraits.Mode.Inline) }, iconName: Icons.Pause });
 document.body.appendChild(button.element);
 
 
@@ -15,12 +15,12 @@ scheduler.frameDidFire = function ()
 {
 
 debug("Confirm inital icon button color.");
-shouldBeEqualToString("window.getComputedStyle(button.image.element).backgroundColor", "rgba(255, 255, 255, 0.54902)");
+shouldBeEqualToString("window.getComputedStyle(button.image.element).backgroundColor", "rgba(255, 255, 255, 0.55)");
 
 button.element.focus();
 
 debug("Confirm icon button color changed after focus.");
-shouldNotBeEqualToString("window.getComputedStyle(button.image.element).backgroundColor", "rgba(255, 255, 255, 0.54902)");
+shouldNotBeEqualToString("window.getComputedStyle(button.image.element).backgroundColor", "rgba(255, 255, 255, 0.55)");
 
 finishJSTest();
 

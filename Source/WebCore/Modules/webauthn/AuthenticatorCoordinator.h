@@ -31,19 +31,26 @@
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 
+namespace WebAuthn {
+enum class Scope;
+}
+
 namespace WebCore {
 
 class AbortSignal;
 class AuthenticatorCoordinatorClient;
 class BasicCredential;
-class SecurityOrigin;
+class Document;
 
 struct PublicKeyCredentialCreationOptions;
 struct PublicKeyCredentialRequestOptions;
+struct CredentialRequestOptions;
+struct SecurityOriginData;
 
 template<typename IDLType> class DOMPromiseDeferred;
 
 using CredentialPromise = DOMPromiseDeferred<IDLNullable<IDLInterface<BasicCredential>>>;
+using ScopeAndCrossOriginParent = std::pair<WebAuthn::Scope, std::optional<SecurityOriginData>>;
 
 class AuthenticatorCoordinator final {
     WTF_MAKE_FAST_ALLOCATED;
@@ -53,9 +60,12 @@ public:
     WEBCORE_EXPORT void setClient(std::unique_ptr<AuthenticatorCoordinatorClient>&&);
 
     // The following methods implement static methods of PublicKeyCredential.
-    void create(const SecurityOrigin&, const PublicKeyCredentialCreationOptions&, bool sameOriginWithAncestors, RefPtr<AbortSignal>&&, CredentialPromise&&) const;
-    void discoverFromExternalSource(const SecurityOrigin&, const PublicKeyCredentialRequestOptions&, bool sameOriginWithAncestors, RefPtr<AbortSignal>&&, CredentialPromise&&) const;
+    void create(const Document&, const PublicKeyCredentialCreationOptions&, WebAuthn::Scope, RefPtr<AbortSignal>&&, CredentialPromise&&) const;
+    void discoverFromExternalSource(const Document&, CredentialRequestOptions&&, const ScopeAndCrossOriginParent&, CredentialPromise&&) const;
     void isUserVerifyingPlatformAuthenticatorAvailable(DOMPromiseDeferred<IDLBoolean>&&) const;
+    void isConditionalMediationAvailable(DOMPromiseDeferred<IDLBoolean>&&) const;
+
+    void resetUserGestureRequirement();
 
 private:
     AuthenticatorCoordinator() = default;

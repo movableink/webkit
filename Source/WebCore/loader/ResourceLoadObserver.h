@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ResourceLoadStatistics.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -38,13 +39,19 @@ class ResourceResponse;
 class ResourceLoadObserver {
     WTF_MAKE_FAST_ALLOCATED;
 public:
+    using TopFrameDomain = WebCore::RegistrableDomain;
+    using SubResourceDomain = WebCore::RegistrableDomain;
+
+    // https://fetch.spec.whatwg.org/#request-destination-script-like
+    enum class FetchDestinationIsScriptLike : bool { Yes, No };
+
     WEBCORE_EXPORT static ResourceLoadObserver& shared();
     WEBCORE_EXPORT static ResourceLoadObserver* sharedIfExists();
     WEBCORE_EXPORT static void setShared(ResourceLoadObserver&);
     
     virtual ~ResourceLoadObserver() { }
 
-    virtual void logSubresourceLoading(const Frame*, const ResourceRequest& /* newRequest */, const ResourceResponse& /* redirectResponse */) { }
+    virtual void logSubresourceLoading(const Frame*, const ResourceRequest& /* newRequest */, const ResourceResponse& /* redirectResponse */, FetchDestinationIsScriptLike) { }
     virtual void logWebSocketLoading(const URL& /* targetURL */, const URL& /* mainFrameURL */) { }
     virtual void logUserInteractionWithReducedTimeResolution(const Document&) { }
     virtual void logFontLoad(const Document&, const String& /* familyName */, bool /* loadStatus */) { }
@@ -52,12 +59,18 @@ public:
     virtual void logCanvasWriteOrMeasure(const Document&, const String& /* textWritten */) { }
     virtual void logNavigatorAPIAccessed(const Document&, const ResourceLoadStatistics::NavigatorAPI) { }
     virtual void logScreenAPIAccessed(const Document&, const ResourceLoadStatistics::ScreenAPI) { }
+    virtual void logSubresourceLoadingForTesting(const RegistrableDomain& /* firstPartyDomain */, const RegistrableDomain& /* thirdPartyDomain */, bool /* shouldScheduleNotification */) { }
 
     virtual String statisticsForURL(const URL&) { return { }; }
-    virtual void updateCentralStatisticsStore() { }
+    virtual void updateCentralStatisticsStore(CompletionHandler<void()>&& completionHandler) { completionHandler(); }
     virtual void clearState() { }
     
     virtual bool hasStatistics() const { return false; }
+
+    virtual void setDomainsWithUserInteraction(HashSet<RegistrableDomain>&&) { }
+    virtual void setDomainsWithCrossPageStorageAccess(HashMap<TopFrameDomain, SubResourceDomain>&&, CompletionHandler<void()>&& completionHandler) { completionHandler(); }
+    virtual bool hasCrossPageStorageAccess(const SubResourceDomain&, const TopFrameDomain&) const { return false; }
+    virtual bool hasHadUserInteraction(const RegistrableDomain&) const { return false; }
 };
     
 } // namespace WebCore

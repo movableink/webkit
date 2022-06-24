@@ -23,15 +23,34 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "PlatformUtilities.h"
+#import "config.h"
+#import "PlatformUtilities.h"
 
-#include <wtf/RetainPtr.h>
-#include <wtf/StdLibExtras.h>
-#include <wtf/UniqueArray.h>
+#import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
+#import <wtf/UniqueArray.h>
 
 namespace TestWebKitAPI {
 namespace Util {
+
+#if PLATFORM(MAC)
+
+NSString *toNS(WKStringRef string)
+{
+    size_t bufferSize = WKStringGetMaximumUTF8CStringSize(string) + 1;
+    auto buffer = makeUniqueWithoutFastMallocCheck<char[]>(bufferSize);
+    size_t stringLength = WKStringGetUTF8CString(string, buffer.get(), bufferSize);
+    buffer[stringLength] = '\0';
+
+    return [NSString stringWithUTF8String:buffer.get()];
+}
+
+NSString *toNS(WKRetainPtr<WKStringRef> string)
+{
+    return toNS(string.get());
+}
+
+#endif // PLATFORM(MAC)
 
 std::string toSTD(NSString *string)
 {
@@ -52,6 +71,25 @@ bool jsonMatchesExpectedValues(NSString *jsonString, NSDictionary *expected)
     if (error)
         NSLog(@"Encountered error: %@ while serializing JSON string.", error);
     return [expected isEqualToDictionary:result];
+}
+
+void waitForConditionWithLogging(std::function<bool()>&& condition, NSTimeInterval loggingTimeout, NSString *message, ...)
+{
+    NSDate *startTime = [NSDate date];
+    BOOL exceededLoggingTimeout = NO;
+    while ([[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantPast]]) {
+        if (condition())
+            break;
+
+        if (exceededLoggingTimeout || [[NSDate date] timeIntervalSinceDate:startTime] < loggingTimeout)
+            continue;
+
+        va_list args;
+        va_start(args, message);
+        NSLogv(message, args);
+        va_end(args);
+        exceededLoggingTimeout = YES;
+    }
 }
 
 NSString * const TestPlugInClassNameParameter = @"TestPlugInPrincipalClassName";

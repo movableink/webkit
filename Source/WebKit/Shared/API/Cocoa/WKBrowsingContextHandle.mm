@@ -32,14 +32,14 @@
 
 @implementation WKBrowsingContextHandle
 
-- (id)_initWithPageProxy:(WebKit::WebPageProxy&)page
+- (id)_initWithPageProxy:(NakedRef<WebKit::WebPageProxy>)page
 {
-    return [self _initWithPageProxyID:page.identifier() andWebPageID:page.webPageID()];
+    return [self _initWithPageProxyID:page->identifier() andWebPageID:page->webPageID()];
 }
 
-- (id)_initWithPage:(WebKit::WebPage&)page
+- (id)_initWithPage:(NakedRef<WebKit::WebPage>)page
 {
-    return [self _initWithPageProxyID:page.webPageProxyIdentifier() andWebPageID:page.identifier()];
+    return [self _initWithPageProxyID:page->webPageProxyIdentifier() andWebPageID:page->identifier()];
 }
 
 - (id)_initWithPageProxyID:(WebKit::WebPageProxyIdentifier)pageProxyID andWebPageID:(WebCore::PageIdentifier)webPageID
@@ -55,7 +55,7 @@
 
 - (NSUInteger)hash
 {
-    return WTF::pairIntHash(_pageProxyID.toUInt64(), _webPageID.toUInt64());
+    return computeHash(_pageProxyID, _webPageID);
 }
 
 - (BOOL)isEqual:(id)object
@@ -86,6 +86,16 @@
 + (BOOL)supportsSecureCoding
 {
     return YES;
+}
+
+- (id)copyWithZone:(NSZone *)zone
+{
+    return [[WKBrowsingContextHandle allocWithZone:zone] _initWithPageProxyID:_pageProxyID andWebPageID:_webPageID];
+}
+
+- (NSString *)description
+{
+    return [NSString stringWithFormat:@"<%@: %p; pageProxyID = %llu; webPageID = %llu>", NSStringFromClass(self.class), self, _pageProxyID.toUInt64(), _webPageID.toUInt64()];
 }
 
 @end

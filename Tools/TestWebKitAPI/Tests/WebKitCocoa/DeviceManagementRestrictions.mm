@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #import "PlatformUtilities.h"
 #import "Test.h"
@@ -42,7 +42,7 @@ TEST(WebKit, DeviceManagementRestrictions)
     [dataStoreConfiguration setAllLoadsBlockedByDeviceManagementRestrictionsForTesting:YES];
 
     RetainPtr<WKWebViewConfiguration> webViewConfiguration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    [webViewConfiguration setWebsiteDataStore:[[[WKWebsiteDataStore alloc] _initWithConfiguration:dataStoreConfiguration.get()] autorelease]];
+    [webViewConfiguration setWebsiteDataStore:adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:dataStoreConfiguration.get()]).get()];
 
     RetainPtr<TestWKWebView> webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectZero configuration:webViewConfiguration.get() addToWindow:YES]);
 

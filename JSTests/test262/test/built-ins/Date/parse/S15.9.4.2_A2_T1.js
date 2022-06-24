@@ -6,11 +6,5 @@ info: The "length" property of the "parse" is 1
 esid: sec-date.parse
 description: The "length" property of the "parse" is 1
 ---*/
-
-if (Date.parse.hasOwnProperty("length") !== true) {
-  $ERROR('#1: The parse has a "length" property');
-}
-
-if (Date.parse.length !== 1) {
-  $ERROR('#2: The "length" property of the parse is 1');
-}
+assert.sameValue(Date.parse.hasOwnProperty("length"), true, 'Date.parse.hasOwnProperty("length") must return true');
+assert.sameValue(Date.parse.length, 1, 'The value of Date.parse.length is expected to be 1');

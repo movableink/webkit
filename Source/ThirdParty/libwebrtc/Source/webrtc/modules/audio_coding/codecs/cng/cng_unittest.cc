@@ -12,7 +12,7 @@
 
 #include "modules/audio_coding/codecs/cng/webrtc_cng.h"
 #include "test/gtest.h"
-#include "test/testsupport/fileutils.h"
+#include "test/testsupport/file_utils.h"
 
 namespace webrtc {
 
@@ -39,6 +39,8 @@ class CngTest : public ::testing::Test {
 
   int16_t speech_data_[640];  // Max size of CNG internal buffers.
 };
+
+class CngDeathTest : public CngTest {};
 
 void CngTest::SetUp() {
   FILE* input_file;
@@ -69,7 +71,7 @@ void CngTest::TestCngEncode(int sample_rate_hz, int quality) {
 
 #if GTEST_HAS_DEATH_TEST && !defined(WEBRTC_ANDROID)
 // Create CNG encoder, init with faulty values, free CNG encoder.
-TEST_F(CngTest, CngInitFail) {
+TEST_F(CngDeathTest, CngInitFail) {
   // Call with too few parameters.
   EXPECT_DEATH(
       {
@@ -86,7 +88,7 @@ TEST_F(CngTest, CngInitFail) {
 }
 
 // Encode Cng with too long input vector.
-TEST_F(CngTest, CngEncodeTooLong) {
+TEST_F(CngDeathTest, CngEncodeTooLong) {
   rtc::Buffer sid_data;
 
   // Create encoder.

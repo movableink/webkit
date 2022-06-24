@@ -65,7 +65,7 @@ void PatchpointSpecial::forEachArg(Inst& inst, const ScopedLambda<Inst::EachArgC
         callback(inst.args[argIndex], role, bankForType(argType), widthForType(argType));
     }
 
-    forEachArgImpl(0, argIndex, inst, SameAsRep, WTF::nullopt, callback, WTF::nullopt);
+    forEachArgImpl(0, argIndex, inst, SameAsRep, std::nullopt, callback, std::nullopt);
     argIndex += inst.origin->numChildren();
 
     for (unsigned i = patchpoint->numGPScratchRegisters; i--;)
@@ -146,7 +146,7 @@ bool PatchpointSpecial::admitsExtendedOffsetAddr(Inst& inst, unsigned argIndex)
     return admitsStack(inst, argIndex);
 }
 
-CCallHelpers::Jump PatchpointSpecial::generate(Inst& inst, CCallHelpers& jit, Air::GenerationContext& context)
+MacroAssembler::Jump PatchpointSpecial::generate(Inst& inst, CCallHelpers& jit, Air::GenerationContext& context)
 {
     const Procedure& procedure = code().proc();
     PatchpointValue* value = inst.origin->as<PatchpointValue>();
@@ -170,7 +170,7 @@ CCallHelpers::Jump PatchpointSpecial::generate(Inst& inst, CCallHelpers& jit, Ai
     
     value->m_generator->run(jit, params);
 
-    return CCallHelpers::Jump();
+    return MacroAssembler::Jump();
 }
 
 bool PatchpointSpecial::isTerminal(Inst& inst)

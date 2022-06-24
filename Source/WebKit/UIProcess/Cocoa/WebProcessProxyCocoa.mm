@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,26 +26,54 @@
 #import "config.h"
 #import "WebProcessProxy.h"
 
+#import "AccessibilitySupportSPI.h"
+#import "CodeSigning.h"
 #import "HighPerformanceGPUManager.h"
 #import "Logging.h"
 #import "ObjCObjectGraph.h"
 #import "SandboxUtilities.h"
+#import "SharedBufferCopy.h"
 #import "WKBrowsingContextControllerInternal.h"
 #import "WKBrowsingContextHandleInternal.h"
 #import "WKTypeRefWrapper.h"
 #import "WebProcessMessages.h"
 #import "WebProcessPool.h"
+#import <WebCore/RuntimeApplicationChecks.h>
+#import <WebCore/WebMAudioUtilitiesCocoa.h>
 #import <sys/sysctl.h>
 #import <wtf/NeverDestroyed.h>
+#import <wtf/Scope.h>
+#import <wtf/cocoa/Entitlements.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/spi/darwin/SandboxSPI.h>
+
+#if PLATFORM(IOS_FAMILY)
+#import "AccessibilitySupportSPI.h"
+#endif
+
+#if ENABLE(REMOTE_INSPECTOR)
+#import "WebInspectorUtilities.h"
+#import <JavaScriptCore/RemoteInspectorConstants.h>
+#endif
+
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
+#include <WebCore/CaptionUserPreferencesMediaAF.h>
+#endif
+
+#if PLATFORM(MAC)
+#include "TCCSoftLink.h"
+#endif
+
+#import <pal/cf/AudioToolboxSoftLink.h>
 
 namespace WebKit {
 
 static const Seconds unexpectedActivityDuration = 10_s;
 
-const HashSet<String>& WebProcessProxy::platformPathsWithAssumedReadAccess()
+const MemoryCompactLookupOnlyRobinHoodHashSet<String>& WebProcessProxy::platformPathsWithAssumedReadAccess()
 {
-    static NeverDestroyed<HashSet<String>> platformPathsWithAssumedReadAccess(std::initializer_list<String> {
+    static NeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashSet<String>> platformPathsWithAssumedReadAccess(std::initializer_list<String> {
         [NSBundle bundleWithIdentifier:@"com.apple.WebCore"].resourcePath.stringByStandardizingPath,
         [NSBundle bundleWithIdentifier:@"com.apple.WebKit"].resourcePath.stringByStandardizingPath
     });
@@ -127,21 +155,6 @@ RefPtr<ObjCObjectGraph> WebProcessProxy::transformObjectsToHandles(ObjCObjectGra
     return ObjCObjectGraph::create(ObjCObjectGraph::transform(objectGraph.rootObject(), Transformer()).get());
 }
 
-bool WebProcessProxy::platformIsBeingDebugged() const
-{
-    // If the UI process is sandboxed and lacks 'process-info-pidinfo', it cannot find out whether other processes are being debugged.
-    if (currentProcessIsSandboxed() && !!sandbox_check(getpid(), "process-info-pidinfo", SANDBOX_CHECK_NO_REPORT))
-        return false;
-
-    struct kinfo_proc info;
-    int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, processIdentifier() };
-    size_t size = sizeof(info);
-    if (sysctl(mib, WTF_ARRAY_LENGTH(mib), &info, &size, nullptr, 0) == -1)
-        return false;
-
-    return info.kp_proc.p_flag & P_TRACED;
-}
-
 static Vector<String>& mediaTypeCache()
 {
     ASSERT(RunLoop::isMain());
@@ -156,7 +169,7 @@ void WebProcessProxy::cacheMediaMIMETypes(const Vector<String>& types)
 
     mediaTypeCache() = types;
     for (auto& process : processPool().processes()) {
-        if (process != this)
+        if (process.ptr() != this)
             cacheMediaMIMETypesInternal(types);
     }
 }
@@ -179,33 +192,136 @@ Vector<String> WebProcessProxy::mediaMIMETypes() const
 void WebProcessProxy::requestHighPerformanceGPU()
 {
     LOG(WebGL, "WebProcessProxy::requestHighPerformanceGPU()");
-    HighPerformanceGPUManager::singleton().addProcessRequiringHighPerformance(this);
+    HighPerformanceGPUManager::singleton().addProcessRequiringHighPerformance(*this);
 }
 
 void WebProcessProxy::releaseHighPerformanceGPU()
 {
     LOG(WebGL, "WebProcessProxy::releaseHighPerformanceGPU()");
-    HighPerformanceGPUManager::singleton().removeProcessRequiringHighPerformance(this);
+    HighPerformanceGPUManager::singleton().removeProcessRequiringHighPerformance(*this);
 }
 #endif
 
-#if PLATFORM(IOS_FAMILY)
-void WebProcessProxy::processWasUnexpectedlyUnsuspended()
+#if ENABLE(REMOTE_INSPECTOR)
+bool WebProcessProxy::shouldEnableRemoteInspector()
 {
-    if (m_throttler.shouldBeRunnable()) {
-        // The process becoming unsuspended was not unexpected; it likely was notified of its running state
-        // before receiving a procsessDidResume() message from the UIProcess.
+#if PLATFORM(IOS_FAMILY)
+    return CFPreferencesGetAppIntegerValue(WIRRemoteInspectorEnabledKey, WIRRemoteInspectorDomainName, nullptr);
+#else
+    return CFPreferencesGetAppIntegerValue(CFSTR("ShowDevelopMenu"), bundleIdentifierForSandboxBroker(), nullptr);
+#endif
+}
+
+void WebProcessProxy::enableRemoteInspectorIfNeeded()
+{
+    if (!shouldEnableRemoteInspector())
         return;
+    send(Messages::WebProcess::EnableRemoteWebInspector(), 0);
+}
+#endif
+
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
+void WebProcessProxy::setCaptionDisplayMode(WebCore::CaptionUserPreferences::CaptionDisplayMode displayMode)
+{
+    WebCore::CaptionUserPreferencesMediaAF::platformSetCaptionDisplayMode(displayMode);
+}
+
+void WebProcessProxy::setCaptionLanguage(const String& language)
+{
+    WebCore::CaptionUserPreferencesMediaAF::platformSetPreferredLanguage(language);
+}
+#endif
+
+void WebProcessProxy::unblockAccessibilityServerIfNeeded()
+{
+    if (m_hasSentMessageToUnblockAccessibilityServer)
+        return;
+#if PLATFORM(IOS_FAMILY)
+    if (!_AXSApplicationAccessibilityEnabled())
+        return;
+#endif
+    if (!processIdentifier())
+        return;
+    if (!canSendMessage())
+        return;
+
+    Vector<SandboxExtension::Handle> handleArray;
+#if PLATFORM(IOS_FAMILY)
+    handleArray = SandboxExtension::createHandlesForMachLookup({ "com.apple.iphone.axserver-systemwide"_s, "com.apple.frontboard.systemappservices"_s }, connection() ? connection()->getAuditToken() : std::nullopt);
+    ASSERT(handleArray.size() == 2);
+#endif
+
+    send(Messages::WebProcess::UnblockServicesRequiredByAccessibility(handleArray), 0);
+    m_hasSentMessageToUnblockAccessibilityServer = true;
+}
+
+Vector<String> WebProcessProxy::platformOverrideLanguages() const
+{
+    static const NeverDestroyed<Vector<String>> overrideLanguages = makeVector<String>([[NSUserDefaults standardUserDefaults] valueForKey:@"AppleLanguages"]);
+    return overrideLanguages;
+}
+
+#if PLATFORM(MAC)
+void WebProcessProxy::isAXAuthenticated(audit_token_t auditToken, CompletionHandler<void(bool)>&& completionHandler)
+{
+    auto authenticated = TCCAccessCheckAuditToken(get_TCC_kTCCServiceAccessibility(), auditToken, nullptr);
+    completionHandler(authenticated);
+}
+#endif
+
+void WebProcessProxy::sendAudioComponentRegistrations()
+{
+    using namespace PAL;
+
+    if (!PAL::isAudioToolboxCoreFrameworkAvailable() || !PAL::canLoad_AudioToolboxCore_AudioComponentFetchServerRegistrations())
+        return;
+
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), [weakThis = WeakPtr { *this }] () mutable {
+        CFDataRef registrations { nullptr };
+
+        WebCore::registerOpusDecoderIfNeeded();
+        WebCore::registerVorbisDecoderIfNeeded();
+        if (noErr != AudioComponentFetchServerRegistrations(&registrations) || !registrations)
+            return;
+
+        RunLoop::main().dispatch([weakThis = WTFMove(weakThis), registrations = adoptCF(registrations)] () {
+            if (!weakThis)
+                return;
+
+            auto registrationData = WebCore::SharedBuffer::create(registrations.get());
+            weakThis->send(Messages::WebProcess::ConsumeAudioComponentRegistrations(IPC::SharedBufferCopy(WTFMove(registrationData))), 0);
+        });
+    });
+}
+
+bool WebProcessProxy::messageSourceIsValidWebContentProcess()
+{
+    if (!hasConnection()) {
+        ASSERT_NOT_REACHED();
+        return false;
     }
 
-    // The WebProcess was awakened by something other than the UIProcess. Take out an assertion for a
-    // limited duration to allow whatever task needs to be accomplished time to complete.
-    RELEASE_LOG(ProcessSuspension, "%p - WebProcessProxy::processWasUnexpectedlyUnsuspended()", this);
-    auto backgroundActivityTimeoutHandler = [activityToken = m_throttler.backgroundActivityToken(), weakThis = makeWeakPtr(this)] {
-        RELEASE_LOG(ProcessSuspension, "%p - WebProcessProxy::processWasUnexpectedlyUnsuspended() - lambda, background activity timed out", weakThis.get());
-    };
-    m_unexpectedActivityTimer = makeUnique<WebCore::DeferrableOneShotTimer>(WTFMove(backgroundActivityTimeoutHandler), unexpectedActivityDuration);
-}
+#if USE(APPLE_INTERNAL_SDK)
+#if PLATFORM(IOS)
+    // FIXME(rdar://80908833): On iOS, we can only perform the below checks for platform binaries until rdar://80908833 is fixed.
+    if (!currentProcessIsPlatformBinary())
+        return true;
 #endif
+
+    // WebKitTestRunner does not pass the isPlatformBinary check, we should return early in this case.
+    if (isRunningTest(WebCore::applicationBundleIdentifier()))
+        return true;
+
+    // Confirm that the connection is from a WebContent process:
+    auto [signingIdentifier, isPlatformBinary] = codeSigningIdentifierAndPlatformBinaryStatus(connection()->xpcConnection());
+
+    if (!isPlatformBinary || !signingIdentifier.startsWith("com.apple.WebKit.WebContent")) {
+        RELEASE_LOG_ERROR(Process, "Process is not an entitled WebContent process.");
+        return false;
+    }
+#endif
+
+    return true;
+}
 
 }

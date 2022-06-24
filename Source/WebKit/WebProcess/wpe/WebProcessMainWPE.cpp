@@ -25,21 +25,29 @@
  */
 
 #include "config.h"
-#include "WebProcessMainUnix.h"
+#include "WebProcessMain.h"
 
 #include "AuxiliaryProcessMain.h"
 #include "WebProcess.h"
 #include <glib.h>
 
-#if ENABLE(ACCESSIBILITY)
+#if USE(ATK)
 #include <atk-bridge.h>
 #include <atk/atk.h>
+#endif
+
+#if USE(GCRYPT)
+#include <pal/crypto/gcrypt/Initialization.h>
+#endif
+
+#if USE(GSTREAMER)
+#include <gst/gst.h>
 #endif
 
 namespace WebKit {
 using namespace WebCore;
 
-#if ENABLE(ACCESSIBILITY)
+#if USE(ATK)
 static void initializeAccessibility()
 {
     auto* atkUtilClass = ATK_UTIL_CLASS(g_type_class_ref(ATK_TYPE_UTIL));
@@ -72,10 +80,14 @@ static void initializeAccessibility()
 }
 #endif
 
-class WebProcessMain final : public AuxiliaryProcessMainBase {
+class WebProcessMainWPE final : public AuxiliaryProcessMainBase<WebProcess> {
 public:
     bool platformInitialize() override
     {
+#if USE(GCRYPT)
+        PAL::GCrypt::initialize();
+#endif
+
 #if ENABLE(DEVELOPER_MODE)
         if (g_getenv("WEBKIT2_PAUSE_WEB_PROCESS_ON_LAUNCH"))
             WTF::sleep(30_s);
@@ -85,17 +97,24 @@ public:
         // FIXME: This should be probably called in other processes as well.
         g_set_prgname("WPEWebProcess");
 
-#if ENABLE(ACCESSIBILITY)
+#if USE(ATK)
         initializeAccessibility();
 #endif
 
         return true;
     }
+
+    void platformFinalize() override
+    {
+#if USE(GSTREAMER)
+        gst_deinit();
+#endif
+    }
 };
 
-int WebProcessMainUnix(int argc, char** argv)
+int WebProcessMain(int argc, char** argv)
 {
-    return AuxiliaryProcessMain<WebProcess, WebProcessMain>(argc, argv);
+    return AuxiliaryProcessMain<WebProcessMainWPE>(argc, argv);
 }
 
 } // namespace WebKit

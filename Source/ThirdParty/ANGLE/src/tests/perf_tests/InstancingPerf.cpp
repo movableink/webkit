@@ -276,7 +276,7 @@ void InstancingPerfBenchmark::drawBenchmark()
     // Animatino makes the test more interesting visually, but also eats up many CPU cycles.
     if (params.animationEnabled)
     {
-        float time = static_cast<float>(mTimer.getElapsedTime());
+        float time = static_cast<float>(mTimer.getElapsedWallClockTime());
 
         for (size_t pointIndex = 0; pointIndex < mTranslateData.size(); ++pointIndex)
         {
@@ -330,13 +330,6 @@ InstancingPerfParams InstancingPerfD3D11Params()
     return params;
 }
 
-InstancingPerfParams InstancingPerfD3D9Params()
-{
-    InstancingPerfParams params;
-    params.eglParameters = D3D9();
-    return params;
-}
-
 InstancingPerfParams InstancingPerfOpenGLOrGLESParams()
 {
     InstancingPerfParams params;
@@ -351,7 +344,6 @@ TEST_P(InstancingPerfBenchmark, Run)
 
 ANGLE_INSTANTIATE_TEST(InstancingPerfBenchmark,
                        InstancingPerfD3D11Params(),
-                       InstancingPerfD3D9Params(),
                        InstancingPerfOpenGLOrGLESParams());
 
 }  // anonymous namespace

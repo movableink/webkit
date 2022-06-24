@@ -30,13 +30,13 @@
 
 #include "DataReference.h"
 #include "WebCoreArgumentCoders.h"
-#include <wtf/Optional.h>
+#include <WebCore/LibWebRTCEnumTraits.h>
 
 namespace WebKit {
 
 void RTCPacketOptions::encode(IPC::Encoder& encoder) const
 {
-    encoder.encodeEnum(options.dscp);
+    encoder << options.dscp;
     encoder << safeCast<int32_t>(options.packet_id);
     encoder << options.packet_time_params.rtp_sendtime_extension_id;
 
@@ -47,47 +47,47 @@ void RTCPacketOptions::encode(IPC::Encoder& encoder) const
     encoder << options.packet_time_params.srtp_packet_index;
 }
 
-Optional<RTCPacketOptions> RTCPacketOptions::decode(IPC::Decoder& decoder)
+std::optional<RTCPacketOptions> RTCPacketOptions::decode(IPC::Decoder& decoder)
 {
     rtc::PacketTimeUpdateParams params;
     rtc::PacketOptions options;
 
     rtc::DiffServCodePoint dscp;
-    if (!decoder.decodeEnum(dscp))
-        return WTF::nullopt;
+    if (!decoder.decode(dscp))
+        return std::nullopt;
     options.dscp = dscp;
 
-    Optional<int32_t> packetId;
+    std::optional<int32_t> packetId;
     decoder >> packetId;
     if (!packetId)
-        return WTF::nullopt;
+        return std::nullopt;
     options.packet_id = packetId.value();
 
-    Optional<int> rtpSendtimeExtensionId;
+    std::optional<int> rtpSendtimeExtensionId;
     decoder >> rtpSendtimeExtensionId;
     if (!rtpSendtimeExtensionId)
-        return WTF::nullopt;
+        return std::nullopt;
     params.rtp_sendtime_extension_id = rtpSendtimeExtensionId.value();
 
-    Optional<int64_t> srtpAuthTagLength;
+    std::optional<int64_t> srtpAuthTagLength;
     decoder >> srtpAuthTagLength;
     if (!srtpAuthTagLength)
-        return WTF::nullopt;
+        return std::nullopt;
     params.srtp_auth_tag_len = srtpAuthTagLength.value();
 
     if (params.srtp_auth_tag_len > 0) {
         IPC::DataReference srtpAuthKey;
         if (!decoder.decode(srtpAuthKey))
-            return WTF::nullopt;
+            return std::nullopt;
 
         params.srtp_auth_key = std::vector<char>(static_cast<size_t>(srtpAuthKey.size()));
         memcpy(params.srtp_auth_key.data(), reinterpret_cast<const char*>(srtpAuthKey.data()), srtpAuthKey.size() * sizeof(char));
     }
 
-    Optional<int64_t> srtpPacketIndex;
+    std::optional<int64_t> srtpPacketIndex;
     decoder >> srtpPacketIndex;
     if (!srtpPacketIndex)
-        return WTF::nullopt;
+        return std::nullopt;
     params.srtp_packet_index = srtpPacketIndex.value();
 
     options.packet_time_params = WTFMove(params);

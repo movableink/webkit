@@ -25,17 +25,17 @@
 
 #pragma once
 
+#include "AuxiliaryProcessCreationParameters.h"
 #include "CacheModel.h"
 #include "SandboxExtension.h"
-#include "WebsiteDataStoreParameters.h"
 #include <WebCore/Cookie.h>
 #include <wtf/ProcessID.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 #if USE(SOUP)
-#include "HTTPCookieAcceptPolicy.h"
-#include <WebCore/SoupNetworkProxySettings.h>
+#include <WebCore/HTTPCookieAcceptPolicy.h>
+#include <wtf/MemoryPressureHandler.h>
 #endif
 
 namespace IPC {
@@ -45,21 +45,29 @@ class Encoder;
 
 namespace WebKit {
 
+struct WebsiteDataStoreParameters;
+
 struct NetworkProcessCreationParameters {
     NetworkProcessCreationParameters();
+    NetworkProcessCreationParameters(NetworkProcessCreationParameters&&);
+    ~NetworkProcessCreationParameters();
+    NetworkProcessCreationParameters& operator=(NetworkProcessCreationParameters&&);
 
     void encode(IPC::Encoder&) const;
-    static bool decode(IPC::Decoder&, NetworkProcessCreationParameters&);
+    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, NetworkProcessCreationParameters&);
+
+    AuxiliaryProcessCreationParameters auxiliaryProcessParameters;
 
     CacheModel cacheModel { CacheModel::DocumentViewer };
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     Vector<uint8_t> uiProcessCookieStorageIdentifier;
 #endif
 #if PLATFORM(IOS_FAMILY)
     SandboxExtension::Handle cookieStorageDirectoryExtensionHandle;
     SandboxExtension::Handle containerCachesDirectoryExtensionHandle;
     SandboxExtension::Handle parentBundleDirectoryExtensionHandle;
+    SandboxExtension::Handle tempDirectoryExtensionHandle;
 #endif
     bool shouldSuppressMemoryPressureHandler { false };
 
@@ -67,22 +75,13 @@ struct NetworkProcessCreationParameters {
 
 #if PLATFORM(COCOA)
     String uiProcessBundleIdentifier;
-    uint32_t uiProcessSDKVersion { 0 };
-#if PLATFORM(IOS_FAMILY)
-    String ctDataConnectionServiceType;
-#endif
     RetainPtr<CFDataRef> networkATSContext;
-    bool storageAccessAPIEnabled;
-    bool suppressesConnectionTerminationOnSystemChange;
 #endif
 
-    WebsiteDataStoreParameters defaultDataStoreParameters;
-    
 #if USE(SOUP)
-    HTTPCookieAcceptPolicy cookieAcceptPolicy { HTTPCookieAcceptPolicy::AlwaysAccept };
-    bool ignoreTLSErrors { false };
+    WebCore::HTTPCookieAcceptPolicy cookieAcceptPolicy { WebCore::HTTPCookieAcceptPolicy::AlwaysAccept };
     Vector<String> languages;
-    WebCore::SoupNetworkProxySettings proxySettings;
+    std::optional<MemoryPressureHandler::Configuration> memoryPressureHandlerConfiguration;
 #endif
 
 #if PLATFORM(QT)
@@ -94,20 +93,11 @@ struct NetworkProcessCreationParameters {
     Vector<String> urlSchemesRegisteredAsBypassingContentSecurityPolicy;
     Vector<String> urlSchemesRegisteredAsLocal;
     Vector<String> urlSchemesRegisteredAsNoAccess;
-    Vector<String> urlSchemesRegisteredAsCanDisplayOnlyIfCanRequest;
-    Vector<String> urlSchemesRegisteredAsCORSEnabled;
 
-#if ENABLE(SERVICE_WORKER)
-    String serviceWorkerRegistrationDirectory;
-    SandboxExtension::Handle serviceWorkerRegistrationDirectoryExtensionHandle;
-    Vector<String> urlSchemesServiceWorkersCanHandle;
-    bool shouldDisableServiceWorkerProcessTerminationDelay { false };
-#endif
-    bool shouldEnableITPDatabase { false };
-    bool enableAdClickAttributionDebugMode { false };
-    String hstsStorageDirectory;
-    SandboxExtension::Handle hstsStorageDirectoryExtensionHandle;
-    bool enableLegacyTLS { false };
+    bool enablePrivateClickMeasurement { true };
+    bool ftpEnabled { false };
+
+    Vector<WebsiteDataStoreParameters> websiteDataStoreParameters;
 };
 
 } // namespace WebKit

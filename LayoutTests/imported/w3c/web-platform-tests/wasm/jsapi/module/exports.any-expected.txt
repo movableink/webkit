@@ -1,8 +1,13 @@
 
-PASS Missing arguments 
-PASS Non-Module arguments 
-PASS Branding 
-PASS Empty module 
-PASS Empty module: array caching 
-FAIL exports WebAssembly.Module doesn't parse at byte 87: 3th Export isn't immutable, named 'global' (evaluating 'new WebAssembly.Module(buffer)')
+PASS Missing arguments
+PASS Non-Module arguments
+PASS Branding
+PASS Return type
+PASS Empty module
+PASS Empty module: array caching
+PASS exports
+PASS exports with empty name: function
+PASS exports with empty name: table
+PASS exports with empty name: global
+PASS Stray argument
 

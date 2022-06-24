@@ -82,18 +82,16 @@ WI.CPUTimelineView = class CPUTimelineView extends WI.TimelineView
 
     // Public
 
-    shown()
+    attached()
     {
-        super.shown();
+        super.attached();
 
-        if (this._timelineRuler)
-            this._timelineRuler.updateLayout(WI.View.LayoutReason.Resize);
+        this._timelineRuler?.needsLayout(WI.View.LayoutReason.Resize);
     }
 
     closed()
     {
-        console.assert(this.representedObject instanceof WI.Timeline);
-        this.representedObject.removeEventListener(null, null, this);
+        this.representedObject.removeEventListener(WI.Timeline.Event.RecordAdded, this._cpuTimelineRecordAdded, this);
     }
 
     reset()
@@ -439,7 +437,9 @@ WI.CPUTimelineView = class CPUTimelineView extends WI.TimelineView
 
         let graphStartTime = this.startTime;
         let graphEndTime = this.endTime;
-        let visibleEndTime = Math.min(this.endTime, this.currentTime);
+
+        // When viewing a timeline recording from JSON, this.currentTime is always 0.
+        let visibleEndTime = Math.min(this.endTime, this.currentTime) || this.endTime;
         let visibleDuration = visibleEndTime - graphStartTime;
 
         let discontinuities = this._recording.discontinuitiesInTimeRange(graphStartTime, visibleEndTime);
@@ -1104,29 +1104,24 @@ WI.CPUTimelineView = class CPUTimelineView extends WI.TimelineView
 
         this._clearEnergyImpactText();
 
-        if (average === 0) {
-             // Zero. (0% CPU, mapped to 0)
-            this._energyImpactLabelElement.textContent = WI.UIString("Low");
-            this._energyImpactLabelElement.classList.add("low");
-            this._energyChart.value = 0;
-        } else if (average <= CPUTimelineView.lowEnergyThreshold) {
+        if (average <= CPUTimelineView.lowEnergyThreshold) {
             // Low. (<=3% CPU, mapped to 0-10)
-            this._energyImpactLabelElement.textContent = WI.UIString("Low");
+            this._energyImpactLabelElement.textContent = WI.UIString("Low", "Low @ Timeline Energy Impact", "Energy Impact: Low");
             this._energyImpactLabelElement.classList.add("low");
             this._energyChart.value = mapWithBias(average, 0, CPUTimelineView.lowEnergyThreshold, 0, CPUTimelineView.lowEnergyGraphBoundary, 0.85);
         } else if (average <= CPUTimelineView. mediumEnergyThreshold) {
             // Medium (3%-30% CPU, mapped to 10-70)
-            this._energyImpactLabelElement.textContent = WI.UIString("Medium");
+            this._energyImpactLabelElement.textContent = WI.UIString("Medium", "Medium @ Timeline Energy Impact", "Energy Impact: Medium")
             this._energyImpactLabelElement.classList.add("medium");
             this._energyChart.value = mapWithBias(average, CPUTimelineView.lowEnergyThreshold, CPUTimelineView.mediumEnergyThreshold, CPUTimelineView.lowEnergyGraphBoundary, CPUTimelineView.mediumEnergyGraphBoundary, 0.6);
         } else if (average < CPUTimelineView. highEnergyThreshold) {
             // High. (30%-100% CPU, mapped to 70-100)
-            this._energyImpactLabelElement.textContent = WI.UIString("High");
+            this._energyImpactLabelElement.textContent = WI.UIString("High", "High @ Timeline Energy Impact", "Energy Impact: High")
             this._energyImpactLabelElement.classList.add("high");
             this._energyChart.value = mapWithBias(average, CPUTimelineView.mediumEnergyThreshold, CPUTimelineView.highEnergyThreshold, CPUTimelineView.mediumEnergyGraphBoundary, CPUTimelineView.highEnergyGraphBoundary, 0.9);
         } else {
             // Very High. (>100% CPU, mapped to 100)
-            this._energyImpactLabelElement.textContent = WI.UIString("Very High");
+            this._energyImpactLabelElement.textContent = WI.UIString("Very High", "Very High @ Timeline Energy Impact", "Energy Impact: Very High")
             this._energyImpactLabelElement.classList.add("high");
             this._energyChart.value = 100;
         }

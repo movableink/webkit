@@ -27,6 +27,8 @@
     Conditional=ACCESSIBILITY,
 ] interface AccessibilityUIElement {
     boolean isEqual(AccessibilityUIElement otherElement);
+    readonly attribute DOMString domIdentifier;
+    readonly attribute boolean isIsolatedObject;
 
     // Document information
     readonly attribute DOMString documentEncoding;
@@ -38,10 +40,10 @@
     unsigned long indexOfChild(AccessibilityUIElement child);
     AccessibilityUIElement linkedUIElementAtIndex(unsigned long index);
     AccessibilityUIElement selectedChildAtIndex(unsigned long index);
-    void setSelectedChild(AccessibilityUIElement element);
-    void setSelectedChildAtIndex(unsigned long index);
-    void removeSelectionAtIndex(unsigned long index);
-    void clearSelectedChildren();
+    undefined setSelectedChild(AccessibilityUIElement element);
+    undefined setSelectedChildAtIndex(unsigned long index);
+    undefined removeSelectionAtIndex(unsigned long index);
+    undefined clearSelectedChildren();
     AccessibilityUIElement titleUIElement();
     AccessibilityUIElement parentElement();
     
@@ -66,13 +68,14 @@
     object uiElementArrayAttributeValue(DOMString attr);
     AccessibilityUIElement uiElementAttributeValue(DOMString attr);  
     boolean boolAttributeValue(DOMString attr);
-    void setBoolAttributeValue(DOMString attr, boolean value);
+    undefined attributeValueAsync(DOMString attributeName, object callbackFunction);
+    undefined setBoolAttributeValue(DOMString attr, boolean value);
     boolean isAttributeSupported(DOMString attr);
     boolean isAttributeSettable(DOMString attr);
     boolean isPressActionSupported();
     boolean isIncrementActionSupported();
     boolean isDecrementActionSupported();
-    void setValue(DOMString value);
+    undefined setValue(DOMString value);
 
     readonly attribute DOMString stringValue;
     readonly attribute long intValue;
@@ -89,6 +92,8 @@
     readonly attribute boolean isMultiSelectable;
     readonly attribute boolean isExpanded;
     readonly attribute boolean isChecked;
+    readonly attribute DOMString currentStateValue;
+    readonly attribute DOMString sortDirection;
     readonly attribute boolean isIndeterminate;
     readonly attribute boolean isVisible;
     readonly attribute boolean isCollapsed;
@@ -97,12 +102,15 @@
     readonly attribute boolean isIgnored;
     readonly attribute boolean isSingleLine;
     readonly attribute boolean isMultiLine;
+    readonly attribute boolean isOnScreen;
     readonly attribute boolean isOffScreen;
     readonly attribute boolean isValid;
     readonly attribute long hierarchicalLevel;
     readonly attribute boolean ariaIsGrabbed;
     readonly attribute DOMString ariaDropEffects;
     readonly attribute DOMString classList;
+    readonly attribute DOMString embeddedImageDescription;
+    readonly attribute object imageOverlayElements;
 
     readonly attribute long x;
     readonly attribute long y;
@@ -110,21 +118,23 @@
     readonly attribute long height;
     readonly attribute long clickPointX;
     readonly attribute long clickPointY;
+    readonly attribute DOMString lineRectsAndText;
 
+    readonly attribute object children;
     readonly attribute long childrenCount;
     readonly attribute long selectedChildrenCount;
     readonly attribute long rowCount;
     readonly attribute long columnCount;
 
     // Actions.
-    void increment();
-    void decrement();
-    void asyncIncrement();
-    void asyncDecrement();
-    void press();
-    void syncPress();
-    void showMenu();
-    boolean dismiss();
+    undefined increment();
+    undefined decrement();
+    undefined asyncIncrement();
+    undefined asyncDecrement();
+    undefined press();
+    undefined syncPress();
+    undefined showMenu();
+    undefined dismiss();
 
     // Attribute info.
     DOMString allAttributes();
@@ -150,7 +160,10 @@
     AccessibilityUIElement disclosedByRow();
     AccessibilityUIElement disclosedRowAtIndex(unsigned long index);
     AccessibilityUIElement rowAtIndex(unsigned long index);
-    boolean isInTableCell();
+    readonly attribute boolean isInCell;
+    readonly attribute boolean isInTable;
+    readonly attribute boolean isInLandmark;
+    readonly attribute boolean isInList;
     long indexInTable();
     DOMString rowIndexRange();
     DOMString columnIndexRange();
@@ -159,6 +172,8 @@
     object columnHeaders();
     object rowHeaders();
 
+    object detailsElements();
+    object errorMessageElements();
     AccessibilityUIElement ariaOwnsElementAtIndex(unsigned long index);
     AccessibilityUIElement ariaOwnsReferencingElementAtIndex(unsigned long index);
     AccessibilityUIElement ariaFlowToElementAtIndex(unsigned long index);
@@ -194,11 +209,11 @@
     readonly attribute AccessibilityUIElement horizontalScrollbar;
     readonly attribute AccessibilityUIElement verticalScrollbar;
 
-    void scrollToMakeVisible();
-    void scrollToGlobalPoint(long x, long y);
-    void scrollToMakeVisibleWithSubFocus(long x, long y, long width, long height);
+    undefined scrollToMakeVisible();
+    undefined scrollToGlobalPoint(long x, long y);
+    undefined scrollToMakeVisibleWithSubFocus(long x, long y, long width, long height);
 
-    void takeFocus();
+    undefined takeFocus();
     boolean scrollPageDown();
     boolean scrollPageUp();
     boolean scrollPageLeft();
@@ -206,11 +221,13 @@
 
     // Text markers.
     AccessibilityTextMarkerRange lineTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
+    long lineIndexForTextMarker(AccessibilityTextMarker textMarker);
     AccessibilityTextMarkerRange misspellingTextMarkerRange(AccessibilityTextMarkerRange start, boolean forward);
     AccessibilityTextMarkerRange textMarkerRangeForElement(AccessibilityUIElement element);
     AccessibilityTextMarkerRange textMarkerRangeForMarkers(AccessibilityTextMarker startMarker, AccessibilityTextMarker endMarker);
+    AccessibilityTextMarkerRange textMarkerRangeForRange(unsigned long location, unsigned long length);
     AccessibilityTextMarkerRange selectedTextMarkerRange();
-    void resetSelectedTextMarkerRange();
+    undefined resetSelectedTextMarkerRange();
     boolean replaceTextInRange(DOMString string, long position, long length);
     boolean insertText(DOMString text);
     AccessibilityTextMarker startTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange range);
@@ -222,6 +239,7 @@
     AccessibilityTextMarker nextTextMarker(AccessibilityTextMarker marker);
     AccessibilityUIElement accessibilityElementForTextMarker(AccessibilityTextMarker marker);
     DOMString stringForTextMarkerRange(AccessibilityTextMarkerRange range);
+    DOMString rectsForTextMarkerRange(AccessibilityTextMarkerRange range, DOMString searchText);
     DOMString attributedStringForTextMarkerRange(AccessibilityTextMarkerRange range);
     DOMString attributedStringForTextMarkerRangeWithOptions(AccessibilityTextMarkerRange range, boolean includeSpellCheck);
     long textMarkerRangeLength(AccessibilityTextMarkerRange range);
@@ -231,7 +249,7 @@
     AccessibilityTextMarker textMarkerForIndex(long textIndex);
     readonly attribute AccessibilityTextMarker startTextMarker;
     readonly attribute AccessibilityTextMarker endTextMarker;
-    boolean setSelectedVisibleTextRange(AccessibilityTextMarkerRange range);
+    boolean setSelectedTextMarkerRange(AccessibilityTextMarkerRange range);
     AccessibilityTextMarkerRange leftWordTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
     AccessibilityTextMarkerRange rightWordTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
     AccessibilityTextMarker previousWordStartTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
@@ -248,6 +266,7 @@
     readonly attribute DOMString supportedActions;
     readonly attribute DOMString mathPostscriptsDescription;
     readonly attribute DOMString mathPrescriptsDescription;
+    readonly attribute object mathRootRadicand;
 
     readonly attribute DOMString pathDescription;
 
@@ -258,16 +277,20 @@
     readonly attribute long elementTextLength;
     readonly attribute DOMString stringForSelection;
     object elementsForRange(unsigned long location, unsigned long length);
-    void increaseTextSelection();
-    void decreaseTextSelection();
+    undefined increaseTextSelection();
+    undefined decreaseTextSelection();
     AccessibilityUIElement linkedElement();
     AccessibilityUIElement headerElementAtIndex(unsigned long index);
     // This will simulate the accessibilityDidBecomeFocused API in UIKit.
-    void assistiveTechnologySimulatedFocus();
+    undefined assistiveTechnologySimulatedFocus();
     readonly attribute boolean isSearchField;
     readonly attribute boolean isTextArea;
 
-    // Fieldset
+    readonly attribute boolean hasDocumentRoleAncestor;
+    readonly attribute boolean hasWebApplicationAncestor;
+    readonly attribute boolean isInDescriptionListDetail;
+    readonly attribute boolean isInDescriptionListTerm;
+
     readonly attribute boolean hasContainedByFieldsetTrait;
     AccessibilityUIElement fieldsetAncestorElement();
 

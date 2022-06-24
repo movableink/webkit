@@ -39,7 +39,7 @@ TEST(AbortableTaskQueue, AsyncTasks)
     AbortableTaskQueue taskQueue;
     bool testFinished { false };
     int currentStep { 0 };
-    RunLoop::initializeMainRunLoop();
+    WTF::initializeMainThread();
 
     auto backgroundThreadFunction = [&]() {
         EXPECT_FALSE(isMainThread());
@@ -101,11 +101,11 @@ TEST(AbortableTaskQueue, SyncTasks)
     bool testFinished { false };
     bool destructedResponseFlag { false };
     int currentStep { 0 };
-    RunLoop::initializeMainRunLoop();
+    WTF::initializeMainThread();
 
     auto backgroundThreadFunction = [&]() {
         EXPECT_FALSE(isMainThread());
-        Optional<FancyResponse> response = taskQueue.enqueueTaskAndWait<FancyResponse>([&]() -> FancyResponse {
+        std::optional<FancyResponse> response = taskQueue.enqueueTaskAndWait<FancyResponse>([&]() -> FancyResponse {
             EXPECT_TRUE(isMainThread());
             currentStep++;
             EXPECT_EQ(1, currentStep);
@@ -117,7 +117,7 @@ TEST(AbortableTaskQueue, SyncTasks)
         EXPECT_TRUE(response);
         EXPECT_FALSE(destructedResponseFlag);
         EXPECT_EQ(100, response->fancyInt);
-        response = WTF::nullopt;
+        response = std::nullopt;
         EXPECT_TRUE(destructedResponseFlag);
         RunLoop::main().dispatch([&]() {
             testFinished = true;
@@ -147,7 +147,7 @@ public:
 
         void waitMyTurn()
         {
-            LockHolder lock(m_scheduler.m_mutex);
+            Locker locker { m_scheduler.m_mutex };
             m_scheduler.m_currentThreadChanged.wait(m_scheduler.m_mutex, [this]() {
                 return m_scheduler.m_currentThread == m_thisThread;
             });
@@ -155,7 +155,7 @@ public:
 
         void yieldToThread(ThreadEnum nextThread)
         {
-            LockHolder lock(m_scheduler.m_mutex);
+            Locker locker { m_scheduler.m_mutex };
             m_scheduler.m_currentThread = nextThread;
             m_scheduler.m_currentThreadChanged.notifyAll();
         }
@@ -183,7 +183,7 @@ TEST(AbortableTaskQueue, Abort)
 
     AbortableTaskQueue taskQueue;
     bool testFinished { false };
-    RunLoop::initializeMainRunLoop();
+    WTF::initializeMainThread();
 
     auto backgroundThreadFunction = [&]() {
         EXPECT_FALSE(isMainThread());
@@ -203,7 +203,7 @@ TEST(AbortableTaskQueue, Abort)
             EXPECT_TRUE(false);
         });
         // This call must return immediately because we are aborting.
-        Optional<FancyResponse> response = taskQueue.enqueueTaskAndWait<FancyResponse>([]() -> FancyResponse {
+        std::optional<FancyResponse> response = taskQueue.enqueueTaskAndWait<FancyResponse>([]() -> FancyResponse {
             // This task should not have been able to run under the scheduling of this test.
             EXPECT_TRUE(false);
             return FancyResponse(100);
@@ -240,12 +240,12 @@ TEST(AbortableTaskQueue, AbortBeforeSyncTaskRun)
 {
     AbortableTaskQueue taskQueue;
     bool testFinished { false };
-    RunLoop::initializeMainRunLoop();
+    WTF::initializeMainThread();
 
     auto backgroundThreadFunction = [&]() {
         EXPECT_FALSE(isMainThread());
 
-        Optional<FancyResponse> response = taskQueue.enqueueTaskAndWait<FancyResponse>([]() -> FancyResponse {
+        std::optional<FancyResponse> response = taskQueue.enqueueTaskAndWait<FancyResponse>([]() -> FancyResponse {
             // This task should not have been able to run under the scheduling of this test.
             EXPECT_TRUE(false);
             return FancyResponse(100);
@@ -277,14 +277,14 @@ TEST(AbortableTaskQueue, AbortedBySyncTaskHandler)
     bool testFinished { false };
     int currentStep { 0 };
     bool destructedResponseFlag { false };
-    RunLoop::initializeMainRunLoop();
+    WTF::initializeMainThread();
 
     auto backgroundThreadFunction = [&]() {
         EXPECT_FALSE(isMainThread());
         currentStep++;
         EXPECT_EQ(1, currentStep);
 
-        Optional<FancyResponse> response = taskQueue.enqueueTaskAndWait<FancyResponse>([&]() -> FancyResponse {
+        std::optional<FancyResponse> response = taskQueue.enqueueTaskAndWait<FancyResponse>([&]() -> FancyResponse {
             currentStep++;
             EXPECT_EQ(2, currentStep);
             taskQueue.startAborting();

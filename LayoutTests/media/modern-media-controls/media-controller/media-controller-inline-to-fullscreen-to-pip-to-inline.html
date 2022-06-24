@@ -9,30 +9,33 @@ window.jsTestIsAsync = true;
 
 description("Testing that entering fullscreen, then going into picture-in-picture and then going back to inline presents inline controls.");
 
-if (window.internals)
-    window.internals.settings.setAllowsPictureInPictureMediaPlayback(true);
+if (window.internals) {
+    internals.settings.setAllowsPictureInPictureMediaPlayback(true);
+    internals.setMockVideoPresentationModeEnabled(true);
+}
 
 const media = document.querySelector("video");
 const shadowRoot = window.internals.shadowRoot(media);
 
 media.addEventListener("play", () => {
     debug("");
-    debug("Media started playing, we pause it and enter fullscreen by clicking on the matching button.");
     shouldBeTrue("shadowRoot.querySelector('.media-controls').classList.contains('inline')");
+    debug("Media started playing, we pause it and enter fullscreen by clicking on the matching button.");
 
     media.pause();
     window.requestAnimationFrame(() => clickOnElement(shadowRoot.querySelector("button.fullscreen")));
 });
 
-let previousPresentationMode = media.webkitPresentationMode;
-media.addEventListener("webkitpresentationmodechanged", () => {
-    if (previousPresentationMode === media.webkitPresentationMode)
-        return;
-
-    previousPresentationMode = media.webkitPresentationMode;
-
+media.addEventListener("webkitpresentationmodechanged", async () => {
     debug("");
     debug(`Media received a webkitpresentationmodechanged event, media.webkitPresentationMode = ${media.webkitPresentationMode}.`);
+
+    if (window.internals) {
+        await new Promise((resolve, reject) => {
+            setTimeout(reject, 2000);
+            shouldBecomeEqual("internals.isChangingPresentationMode(media)", "false", resolve);
+        });
+    }
 
     switch (media.webkitPresentationMode) {
     case "fullscreen":

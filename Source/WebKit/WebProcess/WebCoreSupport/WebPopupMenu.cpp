@@ -28,6 +28,7 @@
 #include "WebPageProxyMessages.h"
 #include "WebProcess.h"
 #include <WebCore/FrameView.h>
+#include <WebCore/NotImplemented.h>
 #include <WebCore/PopupMenuClient.h>
 
 namespace WebKit {
@@ -85,20 +86,20 @@ Vector<WebPopupItem> WebPopupMenu::populateItems()
     
     for (size_t i = 0; i < size; ++i) {
         if (m_popupClient->itemIsSeparator(i))
-            items.append(WebPopupItem(WebPopupItem::Separator));
+            items.append(WebPopupItem(WebPopupItem::Type::Separator));
         else {
             // FIXME: Add support for styling the font.
             // FIXME: Add support for styling the foreground and background colors.
             // FIXME: Find a way to customize text color when an item is highlighted.
             PopupMenuStyle itemStyle = m_popupClient->itemStyle(i);
-            items.append(WebPopupItem(WebPopupItem::Item, m_popupClient->itemText(i), itemStyle.textDirection(), itemStyle.hasTextDirectionOverride(), m_popupClient->itemToolTip(i), m_popupClient->itemAccessibilityText(i), m_popupClient->itemIsEnabled(i), m_popupClient->itemIsLabel(i), m_popupClient->itemIsSelected(i)));
+            items.append(WebPopupItem(WebPopupItem::Type::Item, m_popupClient->itemText(i), itemStyle.textDirection(), itemStyle.hasTextDirectionOverride(), m_popupClient->itemToolTip(i), m_popupClient->itemAccessibilityText(i), m_popupClient->itemIsEnabled(i), m_popupClient->itemIsLabel(i), m_popupClient->itemIsSelected(i)));
         }
     }
 
     return items;
 }
 
-void WebPopupMenu::show(const IntRect& rect, FrameView* view, int index)
+void WebPopupMenu::show(const IntRect& rect, FrameView* view, int selectedIndex)
 {
     // FIXME: We should probably inform the client to also close the menu.
     Vector<WebPopupItem> items = populateItems();
@@ -108,6 +109,8 @@ void WebPopupMenu::show(const IntRect& rect, FrameView* view, int index)
         return;
     }
 
+    RELEASE_ASSERT_WITH_MESSAGE(selectedIndex == -1 || static_cast<unsigned>(selectedIndex) < items.size(), "Invalid selectedIndex (%d) for popup menu with %lu items", selectedIndex, items.size());
+
     m_page->setActivePopupMenu(this);
 
     // Move to page coordinates
@@ -116,13 +119,7 @@ void WebPopupMenu::show(const IntRect& rect, FrameView* view, int index)
     PlatformPopupMenuData platformData;
     setUpPlatformData(pageCoordinates, platformData);
 
-    WebProcess::singleton().parentProcessConnection()->send(Messages::WebPageProxy::ShowPopupMenu(pageCoordinates, static_cast<uint64_t>(m_popupClient->menuStyle().textDirection()), items, index, platformData), m_page->identifier());
-
-#if USE(DIRECT2D)
-    // Don't destroy the shared handle in the WebContent process. It will be destroyed in the UIProcess.
-    platformData.m_notSelectedBackingStore->leakSharedResource();
-    platformData.m_selectedBackingStore->leakSharedResource();
-#endif
+    WebProcess::singleton().parentProcessConnection()->send(Messages::WebPageProxy::ShowPopupMenu(pageCoordinates, static_cast<uint64_t>(m_popupClient->menuStyle().textDirection()), items, selectedIndex, platformData), m_page->identifier());
 }
 
 void WebPopupMenu::hide()
@@ -138,5 +135,12 @@ void WebPopupMenu::hide()
 void WebPopupMenu::updateFromElement()
 {
 }
+
+#if !PLATFORM(COCOA) && !PLATFORM(WIN)
+void WebPopupMenu::setUpPlatformData(const WebCore::IntRect&, PlatformPopupMenuData&)
+{
+    notImplemented();
+}
+#endif
 
 } // namespace WebKit

@@ -11,16 +11,23 @@
 #ifndef RTC_TOOLS_NETWORK_TESTER_TEST_CONTROLLER_H_
 #define RTC_TOOLS_NETWORK_TESTER_TEST_CONTROLLER_H_
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include <array>
-#include <limits>
 #include <memory>
 #include <string>
-#include <utility>
 
-#include "p2p/base/basicpacketsocketfactory.h"
-#include "rtc_base/asyncpacketsocket.h"
-#include "rtc_base/constructormagic.h"
+#include "absl/types/optional.h"
+#include "api/sequence_checker.h"
+#include "p2p/base/basic_packet_socket_factory.h"
+#include "rtc_base/async_packet_socket.h"
+#include "rtc_base/constructor_magic.h"
 #include "rtc_base/ignore_wundef.h"
+#include "rtc_base/socket_address.h"
+#include "rtc_base/synchronization/mutex.h"
+#include "rtc_base/third_party/sigslot/sigslot.h"
+#include "rtc_base/thread_annotations.h"
 #include "rtc_tools/network_tester/packet_logger.h"
 #include "rtc_tools/network_tester/packet_sender.h"
 
@@ -61,12 +68,12 @@ class TestController : public sigslot::has_slots<> {
                     size_t len,
                     const rtc::SocketAddress& remote_addr,
                     const int64_t& packet_time_us);
-  rtc::ThreadChecker test_controller_thread_checker_;
-  rtc::SequencedTaskChecker packet_sender_checker_;
+  SequenceChecker test_controller_thread_checker_;
+  SequenceChecker packet_sender_checker_;
   rtc::BasicPacketSocketFactory socket_factory_;
   const std::string config_file_path_;
   PacketLogger packet_logger_;
-  rtc::CriticalSection local_test_done_lock_;
+  Mutex local_test_done_lock_;
   bool local_test_done_ RTC_GUARDED_BY(local_test_done_lock_);
   bool remote_test_done_;
   std::array<char, kEthernetMtu> send_data_;

@@ -25,17 +25,13 @@
 
 #include "config.h"
 
-#if ENABLE(VIDEO) && USE(GSTREAMER) && ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO) && USE(GSTREAMER)
 
 #include "TrackPrivateBaseGStreamer.h"
 
 #include "GStreamerCommon.h"
-#include "Logging.h"
 #include "TrackPrivateBase.h"
-#include <glib-object.h>
-#include <gst/gst.h>
 #include <gst/tag/tag.h>
-#include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/CString.h>
 
 GST_DEBUG_CATEGORY_EXTERN(webkit_media_player_debug);
@@ -43,31 +39,90 @@ GST_DEBUG_CATEGORY_EXTERN(webkit_media_player_debug);
 
 namespace WebCore {
 
-TrackPrivateBaseGStreamer::TrackPrivateBaseGStreamer(TrackPrivateBase* owner, gint index, GRefPtr<GstPad> pad)
+AtomString TrackPrivateBaseGStreamer::generateUniquePlaybin2StreamID(TrackType trackType, unsigned index)
+{
+    auto prefix = [trackType]() -> char {
+        switch (trackType) {
+        case TrackPrivateBaseGStreamer::TrackType::Audio:
+            return 'A';
+        case TrackPrivateBaseGStreamer::TrackType::Video:
+            return 'V';
+        case TrackPrivateBaseGStreamer::TrackType::Text:
+            return 'T';
+        default:
+            ASSERT_NOT_REACHED();
+            return 'U';
+        }
+    }();
+
+    return makeString(prefix, index);
+}
+
+static GRefPtr<GstPad> findBestUpstreamPad(GRefPtr<GstPad> pad)
+{
+    GRefPtr<GstPad> sinkPad = pad;
+    GRefPtr<GstPad> peerSrcPad;
+
+    peerSrcPad = adoptGRef(gst_pad_get_peer(sinkPad.get()));
+    // Some tag events with language tags don't reach the webkittextcombiner pads on time.
+    // It's better to listen for them in the earlier upstream ghost pads.
+    if (GST_IS_GHOST_PAD(peerSrcPad.get()))
+        sinkPad = adoptGRef(gst_ghost_pad_get_target(GST_GHOST_PAD(peerSrcPad.get())));
+    return sinkPad;
+}
+
+TrackPrivateBaseGStreamer::TrackPrivateBaseGStreamer(TrackType type, TrackPrivateBase* owner, unsigned index, GRefPtr<GstPad>&& pad, bool shouldHandleStreamStartEvent)
     : m_notifier(MainThreadNotifier<MainThreadNotification>::create())
     , m_index(index)
-    , m_pad(pad)
+    , m_type(type)
     , m_owner(owner)
+    , m_shouldHandleStreamStartEvent(shouldHandleStreamStartEvent)
 {
+    setPad(WTFMove(pad));
     ASSERT(m_pad);
-
-    g_signal_connect_swapped(m_pad.get(), "notify::active", G_CALLBACK(activeChangedCallback), this);
-    g_signal_connect_swapped(m_pad.get(), "notify::tags", G_CALLBACK(tagsChangedCallback), this);
 
     // We can't call notifyTrackOfTagsChanged() directly, because we need tagsChanged() to setup m_tags.
     tagsChanged();
 }
 
-TrackPrivateBaseGStreamer::TrackPrivateBaseGStreamer(TrackPrivateBase* owner, gint index, GRefPtr<GstStream> stream)
+TrackPrivateBaseGStreamer::TrackPrivateBaseGStreamer(TrackType type, TrackPrivateBase* owner, unsigned index, GRefPtr<GstStream>&& stream)
     : m_notifier(MainThreadNotifier<MainThreadNotification>::create())
     , m_index(index)
-    , m_stream(stream)
+    , m_stream(WTFMove(stream))
+    , m_type(type)
     , m_owner(owner)
 {
     ASSERT(m_stream);
+    m_id = gst_stream_get_stream_id(m_stream.get());
 
     // We can't call notifyTrackOfTagsChanged() directly, because we need tagsChanged() to setup m_tags.
     tagsChanged();
+}
+
+void TrackPrivateBaseGStreamer::setPad(GRefPtr<GstPad>&& pad)
+{
+    if (m_bestUpstreamPad && m_eventProbe)
+        gst_pad_remove_probe(m_bestUpstreamPad.get(), m_eventProbe);
+
+    m_pad = WTFMove(pad);
+    m_bestUpstreamPad = findBestUpstreamPad(m_pad);
+    m_id = generateUniquePlaybin2StreamID(m_type, m_index);
+
+    m_eventProbe = gst_pad_add_probe(m_bestUpstreamPad.get(), GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM, [] (GstPad*, GstPadProbeInfo* info, gpointer userData) -> GstPadProbeReturn {
+        auto* track = static_cast<TrackPrivateBaseGStreamer*>(userData);
+        switch (GST_EVENT_TYPE(gst_pad_probe_info_get_event(info))) {
+        case GST_EVENT_TAG:
+            tagsChangedCallback(track);
+            break;
+        case GST_EVENT_STREAM_START:
+            if (track->m_shouldHandleStreamStartEvent)
+                track->streamChanged();
+            break;
+        default:
+            break;
+        }
+        return GST_PAD_PROBE_OK;
+    }, this, nullptr);
 }
 
 TrackPrivateBaseGStreamer::~TrackPrivateBaseGStreamer()
@@ -85,16 +140,14 @@ void TrackPrivateBaseGStreamer::disconnect()
 
     m_notifier->cancelPendingNotifications();
 
-    if (!m_pad)
-        return;
+    if (m_bestUpstreamPad && m_eventProbe) {
+        gst_pad_remove_probe(m_bestUpstreamPad.get(), m_eventProbe);
+        m_eventProbe = 0;
+        m_bestUpstreamPad.clear();
+    }
 
-    g_signal_handlers_disconnect_matched(m_pad.get(), G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, this);
-    m_pad.clear();
-}
-
-void TrackPrivateBaseGStreamer::activeChangedCallback(TrackPrivateBaseGStreamer* track)
-{
-    track->m_notifier->notify(MainThreadNotification::ActiveChanged, [track] { track->notifyTrackOfActiveChanged(); });
+    if (m_pad)
+        m_pad.clear();
 }
 
 void TrackPrivateBaseGStreamer::tagsChangedCallback(TrackPrivateBaseGStreamer* track)
@@ -105,36 +158,37 @@ void TrackPrivateBaseGStreamer::tagsChangedCallback(TrackPrivateBaseGStreamer* t
 void TrackPrivateBaseGStreamer::tagsChanged()
 {
     GRefPtr<GstTagList> tags;
-    if (m_pad) {
-        if (g_object_class_find_property(G_OBJECT_GET_CLASS(m_pad.get()), "tags"))
-            g_object_get(m_pad.get(), "tags", &tags.outPtr(), nullptr);
-        else
-            tags = adoptGRef(gst_tag_list_new_empty());
-    }
-    else if (m_stream)
+    if (m_bestUpstreamPad) {
+        GRefPtr<GstEvent> tagEvent;
+        guint i = 0;
+        // Prefer the tag event having a language tag, if available.
+        do {
+            tagEvent = adoptGRef(gst_pad_get_sticky_event(m_bestUpstreamPad.get(), GST_EVENT_TAG, i));
+            if (tagEvent) {
+                GstTagList* tagsFromEvent;
+                gst_event_parse_tag(tagEvent.get(), &tagsFromEvent);
+                tags = adoptGRef(gst_tag_list_copy(tagsFromEvent));
+                String language;
+                if (getTag(tags.get(), GST_TAG_LANGUAGE_CODE, language))
+                    break;
+            }
+            i++;
+        } while (tagEvent);
+    } else if (m_stream)
         tags = adoptGRef(gst_stream_get_tags(m_stream.get()));
-    else
+
+    if (!tags)
         tags = adoptGRef(gst_tag_list_new_empty());
 
     GST_DEBUG("Inspecting track at index %d with tags: %" GST_PTR_FORMAT, m_index, tags.get());
     {
-        LockHolder lock(m_tagMutex);
+        Locker locker { m_tagMutex };
         m_tags.swap(tags);
     }
 
-    m_notifier->notify(MainThreadNotification::TagsChanged, [this] { notifyTrackOfTagsChanged(); });
-}
-
-void TrackPrivateBaseGStreamer::notifyTrackOfActiveChanged()
-{
-    if (!m_pad)
-        return;
-
-    gboolean active = false;
-    if (g_object_class_find_property(G_OBJECT_GET_CLASS(m_pad.get()), "active"))
-        g_object_get(m_pad.get(), "active", &active, nullptr);
-
-    setActive(active);
+    m_notifier->notify(MainThreadNotification::TagsChanged, [this] {
+        notifyTrackOfTagsChanged();
+    });
 }
 
 bool TrackPrivateBaseGStreamer::getLanguageCode(GstTagList* tags, AtomString& value)
@@ -169,7 +223,7 @@ void TrackPrivateBaseGStreamer::notifyTrackOfTagsChanged()
 
     GRefPtr<GstTagList> tags;
     {
-        LockHolder lock(m_tagMutex);
+        Locker locker { m_tagMutex };
         tags.swap(m_tags);
     }
 
@@ -191,6 +245,23 @@ void TrackPrivateBaseGStreamer::notifyTrackOfTagsChanged()
         client->languageChanged(m_language);
 }
 
+void TrackPrivateBaseGStreamer::notifyTrackOfStreamChanged()
+{
+    GUniquePtr<char> streamId(gst_pad_get_stream_id(m_pad.get()));
+    if (!streamId)
+        return;
+
+    GST_INFO("Track %d got stream start for stream %s.", m_index, streamId.get());
+    m_id = streamId.get();
+}
+
+void TrackPrivateBaseGStreamer::streamChanged()
+{
+    m_notifier->notify(MainThreadNotification::StreamChanged, [this] {
+        notifyTrackOfStreamChanged();
+    });
+}
+
 } // namespace WebCore
 
-#endif // ENABLE(VIDEO) && USE(GSTREAMER) && ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO) && USE(GSTREAMER)

@@ -22,9 +22,10 @@
 
 import logging
 
+from webkitcorepy import Version
+
 from webkitpy.common.memoized import memoized
 from webkitpy.common.system.crashlogs import CrashLogs
-from webkitpy.common.version import Version
 from webkitpy.port.config import apple_additions
 from webkitpy.port.ios import IOSPort
 
@@ -80,6 +81,9 @@ class IOSDevicePort(IOSPort):
             if crashlog:
                 return (stderr, crashlog)
         return (stderr, None)
+
+    def supports_layout_tests(self):
+        return self.DEVICE_MANAGER is not None
 
     @memoized
     def device_version(self):

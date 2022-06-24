@@ -10,13 +10,8 @@
 #ifndef CALL_PACKET_RECEIVER_H_
 #define CALL_PACKET_RECEIVER_H_
 
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "api/mediatypes.h"
-#include "rtc_base/copyonwritebuffer.h"
+#include "api/media_types.h"
+#include "rtc_base/copy_on_write_buffer.h"
 
 namespace webrtc {
 

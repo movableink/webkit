@@ -35,14 +35,18 @@ def view_source_url(local_path):
 
 
 def view_revision_url(revision_number):
-    return "https://trac.webkit.org/changeset/%s" % revision_number
+    return 'https://commits.webkit.org/r{}'.format(revision_number)
 
 
-contribution_guidelines = "http://webkit.org/coding/contributing.html"
+def view_identifier_url(identifier):
+    return "https://commits.webkit.org/{}".format(identifier)
+
+
+contribution_guidelines = "https://webkit.org/coding/contributing.html"
 
 bug_server_domain = "webkit.org"
 bug_server_host = "bugs." + bug_server_domain
-_bug_server_regex = "https?://%s/" % re.sub('\.', '\\.', bug_server_host)
+_bug_server_regex = "https?://%s/" % re.sub(r'\.', '\\.', bug_server_host)
 bug_server_url = "https://%s/" % bug_server_host
 bug_url_long = _bug_server_regex + r"show_bug\.cgi\?id=(?P<bug_id>\d+)(&ctype=xml|&excludefield=attachmentdata)*"
 bug_url_short = r"https?\://%s/b/(?P<bug_id>\d+)" % bug_server_domain
@@ -53,9 +57,8 @@ direct_attachment_url = r"https?://bug-(?P<bug_id>\d+)-attachments.%s/attachment
 buildbot_url = "https://build.webkit.org"
 
 svn_server_host = "svn.webkit.org"
-svn_server_realm = "<http://svn.webkit.org:80> Mac OS Forge"
+svn_server_realm = "<https://svn.webkit.org:443> Mac OS Forge"
 
-statusserver_default_host = "webkit-queues.webkit.org"
 ewsserver_default_host = "ews.webkit.org"
 
 

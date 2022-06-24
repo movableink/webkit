@@ -13,13 +13,14 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 #include <memory>
 #include <vector>
 
 #include "absl/types/optional.h"
 #include "api/array_view.h"
 #include "rtc_base/buffer.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 
@@ -52,8 +53,8 @@ class AudioDecoder {
     // Returns true if this packet contains DTX.
     virtual bool IsDtxPacket() const;
 
-    // Decodes this frame of audio and writes the result in |decoded|.
-    // |decoded| must be large enough to store as many samples as indicated by a
+    // Decodes this frame of audio and writes the result in `decoded`.
+    // `decoded` must be large enough to store as many samples as indicated by a
     // call to Duration() . On success, returns an absl::optional containing the
     // total number of samples across all channels, as well as whether the
     // decoder produced comfort noise or speech. On failure, returns an empty
@@ -84,18 +85,22 @@ class AudioDecoder {
   // Let the decoder parse this payload and prepare zero or more decodable
   // frames. Each frame must be between 10 ms and 120 ms long. The caller must
   // ensure that the AudioDecoder object outlives any frame objects returned by
-  // this call. The decoder is free to swap or move the data from the |payload|
-  // buffer. |timestamp| is the input timestamp, in samples, corresponding to
+  // this call. The decoder is free to swap or move the data from the `payload`
+  // buffer. `timestamp` is the input timestamp, in samples, corresponding to
   // the start of the payload.
   virtual std::vector<ParseResult> ParsePayload(rtc::Buffer&& payload,
                                                 uint32_t timestamp);
 
-  // Decodes |encode_len| bytes from |encoded| and writes the result in
-  // |decoded|. The maximum bytes allowed to be written into |decoded| is
-  // |max_decoded_bytes|. Returns the total number of samples across all
-  // channels. If the decoder produced comfort noise, |speech_type|
+  // TODO(bugs.webrtc.org/10098): The Decode and DecodeRedundant methods are
+  // obsolete; callers should call ParsePayload instead. For now, subclasses
+  // must still implement DecodeInternal.
+
+  // Decodes `encode_len` bytes from `encoded` and writes the result in
+  // `decoded`. The maximum bytes allowed to be written into `decoded` is
+  // `max_decoded_bytes`. Returns the total number of samples across all
+  // channels. If the decoder produced comfort noise, `speech_type`
   // is set to kComfortNoise, otherwise it is kSpeech. The desired output
-  // sample rate is provided in |sample_rate_hz|, which must be valid for the
+  // sample rate is provided in `sample_rate_hz`, which must be valid for the
   // codec at hand.
   int Decode(const uint8_t* encoded,
              size_t encoded_len,
@@ -118,11 +123,11 @@ class AudioDecoder {
 
   // Calls the packet-loss concealment of the decoder to update the state after
   // one or several lost packets. The caller has to make sure that the
-  // memory allocated in |decoded| should accommodate |num_frames| frames.
+  // memory allocated in `decoded` should accommodate `num_frames` frames.
   virtual size_t DecodePlc(size_t num_frames, int16_t* decoded);
 
   // Asks the decoder to generate packet-loss concealment and append it to the
-  // end of |concealment_audio|. The concealment audio should be in
+  // end of `concealment_audio`. The concealment audio should be in
   // channel-interleaved format, with as many channels as the last decoded
   // packet produced. The implementation must produce at least
   // requested_samples_per_channel, or nothing at all. This is a signal to the
@@ -131,36 +136,29 @@ class AudioDecoder {
   // with the decoded audio on either side of the concealment.
   // Note: The default implementation of GeneratePlc will be deleted soon. All
   // implementations must provide their own, which can be a simple as a no-op.
-  // TODO(bugs.webrtc.org/9676): Remove default impementation.
+  // TODO(bugs.webrtc.org/9676): Remove default implementation.
   virtual void GeneratePlc(size_t requested_samples_per_channel,
                            rtc::BufferT<int16_t>* concealment_audio);
 
   // Resets the decoder state (empty buffers etc.).
   virtual void Reset() = 0;
 
-  // Notifies the decoder of an incoming packet to NetEQ.
-  virtual int IncomingPacket(const uint8_t* payload,
-                             size_t payload_len,
-                             uint16_t rtp_sequence_number,
-                             uint32_t rtp_timestamp,
-                             uint32_t arrival_timestamp);
-
   // Returns the last error code from the decoder.
   virtual int ErrorCode();
 
-  // Returns the duration in samples-per-channel of the payload in |encoded|
-  // which is |encoded_len| bytes long. Returns kNotImplemented if no duration
+  // Returns the duration in samples-per-channel of the payload in `encoded`
+  // which is `encoded_len` bytes long. Returns kNotImplemented if no duration
   // estimate is available, or -1 in case of an error.
   virtual int PacketDuration(const uint8_t* encoded, size_t encoded_len) const;
 
   // Returns the duration in samples-per-channel of the redandant payload in
-  // |encoded| which is |encoded_len| bytes long. Returns kNotImplemented if no
+  // `encoded` which is `encoded_len` bytes long. Returns kNotImplemented if no
   // duration estimate is available, or -1 in case of an error.
   virtual int PacketDurationRedundant(const uint8_t* encoded,
                                       size_t encoded_len) const;
 
   // Detects whether a packet has forward error correction. The packet is
-  // comprised of the samples in |encoded| which is |encoded_len| bytes long.
+  // comprised of the samples in `encoded` which is `encoded_len` bytes long.
   // Returns true if the packet has FEC and false otherwise.
   virtual bool PacketHasFec(const uint8_t* encoded, size_t encoded_len) const;
 

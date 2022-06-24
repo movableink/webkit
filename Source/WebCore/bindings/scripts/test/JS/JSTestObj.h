@@ -24,7 +24,6 @@
 #include "JSDOMConvertEnumeration.h"
 #include "JSDOMWrapper.h"
 #include "TestObj.h"
-#include <JavaScriptCore/CallData.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -34,7 +33,7 @@ public:
     using Base = JSDOMWrapper<TestObj>;
     static JSTestObj* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, Ref<TestObj>&& impl)
     {
-        JSTestObj* ptr = new (NotNull, JSC::allocateCell<JSTestObj>(globalObject->vm().heap)) JSTestObj(structure, *globalObject, WTFMove(impl));
+        JSTestObj* ptr = new (NotNull, JSC::allocateCell<JSTestObj>(globalObject->vm())) JSTestObj(structure, *globalObject, WTFMove(impl));
         ptr->finishCreation(globalObject->vm());
         return ptr;
     }
@@ -42,54 +41,58 @@ public:
     static JSC::JSObject* createPrototype(JSC::VM&, JSDOMGlobalObject&);
     static JSC::JSObject* prototype(JSC::VM&, JSDOMGlobalObject&);
     static TestObj* toWrapped(JSC::VM&, JSC::JSValue);
-    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
-    static bool getOwnPropertySlotByIndex(JSC::JSObject*, JSC::ExecState*, unsigned propertyName, JSC::PropertySlot&);
-    static void getOwnPropertyNames(JSC::JSObject*, JSC::ExecState*, JSC::PropertyNameArray&, JSC::EnumerationMode = JSC::EnumerationMode());
-    static JSC::CallType getCallData(JSC::JSCell*, JSC::CallData&);
-
+    static bool getOwnPropertySlot(JSC::JSObject*, JSC::JSGlobalObject*, JSC::PropertyName, JSC::PropertySlot&);
+    static bool getOwnPropertySlotByIndex(JSC::JSObject*, JSC::JSGlobalObject*, unsigned propertyName, JSC::PropertySlot&);
+    static void getOwnPropertyNames(JSC::JSObject*, JSC::JSGlobalObject*, JSC::PropertyNameArray&, JSC::DontEnumPropertiesMode);
     static void destroy(JSC::JSCell*);
 
     DECLARE_INFO;
 
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
     {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
+        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info(), JSC::MayHaveIndexedAccessors);
     }
 
     static JSC::JSValue getConstructor(JSC::VM&, const JSC::JSGlobalObject*);
-    static JSC::JSObject* serialize(JSC::ExecState&, JSTestObj& thisObject, JSDOMGlobalObject&, JSC::ThrowScope&);
     mutable JSC::WriteBarrier<JSC::Unknown> m_cachedAttribute1;
     mutable JSC::WriteBarrier<JSC::Unknown> m_cachedAttribute2;
 #if ENABLE(CONDITION)
     mutable JSC::WriteBarrier<JSC::Unknown> m_cachedAttribute3;
 #endif
-    static void visitChildren(JSCell*, JSC::SlotVisitor&);
+    template<typename, JSC::SubspaceAccess mode> static JSC::GCClient::IsoSubspace* subspaceFor(JSC::VM& vm)
+    {
+        if constexpr (mode == JSC::SubspaceAccess::Concurrently)
+            return nullptr;
+        return subspaceForImpl(vm);
+    }
+    static JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm);
+    DECLARE_VISIT_CHILDREN;
 
     static void analyzeHeap(JSCell*, JSC::HeapAnalyzer&);
 
     // Custom attributes
-    JSC::JSValue customAttr(JSC::ExecState&) const;
-    void setCustomAttr(JSC::ExecState&, JSC::JSValue);
+    JSC::JSValue customAttr(JSC::JSGlobalObject&) const;
+    void setCustomAttr(JSC::JSGlobalObject&, JSC::JSValue);
 
     // Custom functions
-    JSC::JSValue customMethod(JSC::ExecState&);
-    JSC::JSValue customMethodWithArgs(JSC::ExecState&);
-    static JSC::JSValue classMethod2(JSC::ExecState&);
-    JSC::JSValue testCustomPromiseFunction(JSC::ExecState&, Ref<DeferredPromise>&&);
-    static JSC::JSValue testStaticCustomPromiseFunction(JSC::ExecState&, Ref<DeferredPromise>&&);
-    JSC::JSValue testCustomReturnsOwnPromiseFunction(JSC::ExecState&);
+    JSC::JSValue customMethod(JSC::JSGlobalObject&, JSC::CallFrame&);
+    JSC::JSValue customMethodWithArgs(JSC::JSGlobalObject&, JSC::CallFrame&);
+    static JSC::JSValue classMethod2(JSC::JSGlobalObject&, JSC::CallFrame&);
+    JSC::JSValue testCustomPromiseFunction(JSC::JSGlobalObject&, JSC::CallFrame&, Ref<DeferredPromise>&&);
+    static JSC::JSValue testStaticCustomPromiseFunction(JSC::JSGlobalObject&, JSC::CallFrame&, Ref<DeferredPromise>&&);
+    JSC::JSValue testCustomReturnsOwnPromiseFunction(JSC::JSGlobalObject&, JSC::CallFrame&);
 public:
-    static constexpr unsigned StructureFlags = Base::StructureFlags | JSC::HasStaticPropertyTable | JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesGetCallData | JSC::OverridesGetOwnPropertySlot | JSC::OverridesGetPropertyNames;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | JSC::HasStaticPropertyTable | JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesGetOwnPropertyNames | JSC::OverridesGetOwnPropertySlot;
 protected:
     JSTestObj(JSC::Structure*, JSDOMGlobalObject&, Ref<TestObj>&&);
 
     void finishCreation(JSC::VM&);
 };
 
-class JSTestObjOwner : public JSC::WeakHandleOwner {
+class JSTestObjOwner final : public JSC::WeakHandleOwner {
 public:
-    virtual bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::SlotVisitor&, const char**);
-    virtual void finalize(JSC::Handle<JSC::Unknown>, void* context);
+    bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::AbstractSlotVisitor&, const char**) final;
+    void finalize(JSC::Handle<JSC::Unknown>, void* context) final;
 };
 
 inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, TestObj*)
@@ -103,39 +106,45 @@ inline void* wrapperKey(TestObj* wrappableObject)
     return wrappableObject;
 }
 
-JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TestObj&);
-inline JSC::JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, TestObj* impl) { return impl ? toJS(state, globalObject, *impl) : JSC::jsNull(); }
-JSC::JSValue toJSNewlyCreated(JSC::ExecState*, JSDOMGlobalObject*, Ref<TestObj>&&);
-inline JSC::JSValue toJSNewlyCreated(JSC::ExecState* state, JSDOMGlobalObject* globalObject, RefPtr<TestObj>&& impl) { return impl ? toJSNewlyCreated(state, globalObject, impl.releaseNonNull()) : JSC::jsNull(); }
+JSC::JSValue toJS(JSC::JSGlobalObject*, JSDOMGlobalObject*, TestObj&);
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, TestObj* impl) { return impl ? toJS(lexicalGlobalObject, globalObject, *impl) : JSC::jsNull(); }
+JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject*, Ref<TestObj>&&);
+inline JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, RefPtr<TestObj>&& impl) { return impl ? toJSNewlyCreated(lexicalGlobalObject, globalObject, impl.releaseNonNull()) : JSC::jsNull(); }
 
 template<> struct JSDOMWrapperConverterTraits<TestObj> {
     using WrapperClass = JSTestObj;
     using ToWrappedReturnType = TestObj*;
 };
 String convertEnumerationToString(TestObj::EnumType);
-template<> JSC::JSString* convertEnumerationToJS(JSC::ExecState&, TestObj::EnumType);
+template<> JSC::JSString* convertEnumerationToJS(JSC::JSGlobalObject&, TestObj::EnumType);
 
-template<> Optional<TestObj::EnumType> parseEnumeration<TestObj::EnumType>(JSC::ExecState&, JSC::JSValue);
+template<> std::optional<TestObj::EnumType> parseEnumeration<TestObj::EnumType>(JSC::JSGlobalObject&, JSC::JSValue);
 template<> const char* expectedEnumerationValues<TestObj::EnumType>();
 
-String convertEnumerationToString(TestObj::Optional);
-template<> JSC::JSString* convertEnumerationToJS(JSC::ExecState&, TestObj::Optional);
+String convertEnumerationToString(TestObj::EnumTrailingComma);
+template<> JSC::JSString* convertEnumerationToJS(JSC::JSGlobalObject&, TestObj::EnumTrailingComma);
 
-template<> Optional<TestObj::Optional> parseEnumeration<TestObj::Optional>(JSC::ExecState&, JSC::JSValue);
+template<> std::optional<TestObj::EnumTrailingComma> parseEnumeration<TestObj::EnumTrailingComma>(JSC::JSGlobalObject&, JSC::JSValue);
+template<> const char* expectedEnumerationValues<TestObj::EnumTrailingComma>();
+
+String convertEnumerationToString(TestObj::Optional);
+template<> JSC::JSString* convertEnumerationToJS(JSC::JSGlobalObject&, TestObj::Optional);
+
+template<> std::optional<TestObj::Optional> parseEnumeration<TestObj::Optional>(JSC::JSGlobalObject&, JSC::JSValue);
 template<> const char* expectedEnumerationValues<TestObj::Optional>();
 
 String convertEnumerationToString(AlternateEnumName);
-template<> JSC::JSString* convertEnumerationToJS(JSC::ExecState&, AlternateEnumName);
+template<> JSC::JSString* convertEnumerationToJS(JSC::JSGlobalObject&, AlternateEnumName);
 
-template<> Optional<AlternateEnumName> parseEnumeration<AlternateEnumName>(JSC::ExecState&, JSC::JSValue);
+template<> std::optional<AlternateEnumName> parseEnumeration<AlternateEnumName>(JSC::JSGlobalObject&, JSC::JSValue);
 template<> const char* expectedEnumerationValues<AlternateEnumName>();
 
 #if ENABLE(Condition1)
 
 String convertEnumerationToString(TestObj::EnumA);
-template<> JSC::JSString* convertEnumerationToJS(JSC::ExecState&, TestObj::EnumA);
+template<> JSC::JSString* convertEnumerationToJS(JSC::JSGlobalObject&, TestObj::EnumA);
 
-template<> Optional<TestObj::EnumA> parseEnumeration<TestObj::EnumA>(JSC::ExecState&, JSC::JSValue);
+template<> std::optional<TestObj::EnumA> parseEnumeration<TestObj::EnumA>(JSC::JSGlobalObject&, JSC::JSValue);
 template<> const char* expectedEnumerationValues<TestObj::EnumA>();
 
 #endif
@@ -143,9 +152,9 @@ template<> const char* expectedEnumerationValues<TestObj::EnumA>();
 #if ENABLE(Condition1) && ENABLE(Condition2)
 
 String convertEnumerationToString(TestObj::EnumB);
-template<> JSC::JSString* convertEnumerationToJS(JSC::ExecState&, TestObj::EnumB);
+template<> JSC::JSString* convertEnumerationToJS(JSC::JSGlobalObject&, TestObj::EnumB);
 
-template<> Optional<TestObj::EnumB> parseEnumeration<TestObj::EnumB>(JSC::ExecState&, JSC::JSValue);
+template<> std::optional<TestObj::EnumB> parseEnumeration<TestObj::EnumB>(JSC::JSGlobalObject&, JSC::JSValue);
 template<> const char* expectedEnumerationValues<TestObj::EnumB>();
 
 #endif
@@ -153,60 +162,60 @@ template<> const char* expectedEnumerationValues<TestObj::EnumB>();
 #if ENABLE(Condition1) || ENABLE(Condition2)
 
 String convertEnumerationToString(TestObj::EnumC);
-template<> JSC::JSString* convertEnumerationToJS(JSC::ExecState&, TestObj::EnumC);
+template<> JSC::JSString* convertEnumerationToJS(JSC::JSGlobalObject&, TestObj::EnumC);
 
-template<> Optional<TestObj::EnumC> parseEnumeration<TestObj::EnumC>(JSC::ExecState&, JSC::JSValue);
+template<> std::optional<TestObj::EnumC> parseEnumeration<TestObj::EnumC>(JSC::JSGlobalObject&, JSC::JSValue);
 template<> const char* expectedEnumerationValues<TestObj::EnumC>();
 
 #endif
 
 String convertEnumerationToString(TestObj::Kind);
-template<> JSC::JSString* convertEnumerationToJS(JSC::ExecState&, TestObj::Kind);
+template<> JSC::JSString* convertEnumerationToJS(JSC::JSGlobalObject&, TestObj::Kind);
 
-template<> Optional<TestObj::Kind> parseEnumeration<TestObj::Kind>(JSC::ExecState&, JSC::JSValue);
+template<> std::optional<TestObj::Kind> parseEnumeration<TestObj::Kind>(JSC::JSGlobalObject&, JSC::JSValue);
 template<> const char* expectedEnumerationValues<TestObj::Kind>();
 
 String convertEnumerationToString(TestObj::Size);
-template<> JSC::JSString* convertEnumerationToJS(JSC::ExecState&, TestObj::Size);
+template<> JSC::JSString* convertEnumerationToJS(JSC::JSGlobalObject&, TestObj::Size);
 
-template<> Optional<TestObj::Size> parseEnumeration<TestObj::Size>(JSC::ExecState&, JSC::JSValue);
+template<> std::optional<TestObj::Size> parseEnumeration<TestObj::Size>(JSC::JSGlobalObject&, JSC::JSValue);
 template<> const char* expectedEnumerationValues<TestObj::Size>();
 
 String convertEnumerationToString(TestObj::Confidence);
-template<> JSC::JSString* convertEnumerationToJS(JSC::ExecState&, TestObj::Confidence);
+template<> JSC::JSString* convertEnumerationToJS(JSC::JSGlobalObject&, TestObj::Confidence);
 
-template<> Optional<TestObj::Confidence> parseEnumeration<TestObj::Confidence>(JSC::ExecState&, JSC::JSValue);
+template<> std::optional<TestObj::Confidence> parseEnumeration<TestObj::Confidence>(JSC::JSGlobalObject&, JSC::JSValue);
 template<> const char* expectedEnumerationValues<TestObj::Confidence>();
 
-template<> TestObj::Dictionary convertDictionary<TestObj::Dictionary>(JSC::ExecState&, JSC::JSValue);
+template<> TestObj::Dictionary convertDictionary<TestObj::Dictionary>(JSC::JSGlobalObject&, JSC::JSValue);
 
-JSC::JSObject* convertDictionaryToJS(JSC::ExecState&, JSDOMGlobalObject&, const TestObj::Dictionary&);
+JSC::JSObject* convertDictionaryToJS(JSC::JSGlobalObject&, JSDOMGlobalObject&, const TestObj::Dictionary&);
 
-template<> TestObj::DictionaryThatShouldNotTolerateNull convertDictionary<TestObj::DictionaryThatShouldNotTolerateNull>(JSC::ExecState&, JSC::JSValue);
+template<> TestObj::DictionaryThatShouldNotTolerateNull convertDictionary<TestObj::DictionaryThatShouldNotTolerateNull>(JSC::JSGlobalObject&, JSC::JSValue);
 
-template<> TestObj::DictionaryThatShouldTolerateNull convertDictionary<TestObj::DictionaryThatShouldTolerateNull>(JSC::ExecState&, JSC::JSValue);
+template<> TestObj::DictionaryThatShouldTolerateNull convertDictionary<TestObj::DictionaryThatShouldTolerateNull>(JSC::JSGlobalObject&, JSC::JSValue);
 
-template<> AlternateDictionaryName convertDictionary<AlternateDictionaryName>(JSC::ExecState&, JSC::JSValue);
+template<> AlternateDictionaryName convertDictionary<AlternateDictionaryName>(JSC::JSGlobalObject&, JSC::JSValue);
 
-template<> TestObj::ParentDictionary convertDictionary<TestObj::ParentDictionary>(JSC::ExecState&, JSC::JSValue);
+template<> TestObj::ParentDictionary convertDictionary<TestObj::ParentDictionary>(JSC::JSGlobalObject&, JSC::JSValue);
 
-template<> TestObj::ChildDictionary convertDictionary<TestObj::ChildDictionary>(JSC::ExecState&, JSC::JSValue);
+template<> TestObj::ChildDictionary convertDictionary<TestObj::ChildDictionary>(JSC::JSGlobalObject&, JSC::JSValue);
 
 #if ENABLE(Condition1)
 
-template<> TestObj::ConditionalDictionaryA convertDictionary<TestObj::ConditionalDictionaryA>(JSC::ExecState&, JSC::JSValue);
+template<> TestObj::ConditionalDictionaryA convertDictionary<TestObj::ConditionalDictionaryA>(JSC::JSGlobalObject&, JSC::JSValue);
 
 #endif
 
 #if ENABLE(Condition1) && ENABLE(Condition2)
 
-template<> TestObj::ConditionalDictionaryB convertDictionary<TestObj::ConditionalDictionaryB>(JSC::ExecState&, JSC::JSValue);
+template<> TestObj::ConditionalDictionaryB convertDictionary<TestObj::ConditionalDictionaryB>(JSC::JSGlobalObject&, JSC::JSValue);
 
 #endif
 
 #if ENABLE(Condition1) || ENABLE(Condition2)
 
-template<> TestObj::ConditionalDictionaryC convertDictionary<TestObj::ConditionalDictionaryC>(JSC::ExecState&, JSC::JSValue);
+template<> TestObj::ConditionalDictionaryC convertDictionary<TestObj::ConditionalDictionaryC>(JSC::JSGlobalObject&, JSC::JSValue);
 
 #endif
 

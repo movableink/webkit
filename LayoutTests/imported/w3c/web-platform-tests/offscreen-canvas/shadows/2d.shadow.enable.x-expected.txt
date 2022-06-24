@@ -1,7 +1,0 @@
-2d.shadow.enable.x
-
-Shadows are drawn if shadowOffsetX is set
-
-
-FAIL Shadows are drawn if shadowOffsetX is set null is not an object (evaluating 'ctx.globalCompositeOperation = 'destination-atop'')
-

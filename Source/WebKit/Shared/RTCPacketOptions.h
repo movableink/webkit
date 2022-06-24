@@ -28,7 +28,7 @@
 #if USE(LIBWEBRTC)
 
 #include <WebCore/LibWebRTCMacros.h>
-#include <webrtc/rtc_base/asyncpacketsocket.h>
+#include <webrtc/rtc_base/async_packet_socket.h>
 #include <wtf/Forward.h>
 
 namespace IPC {
@@ -40,7 +40,7 @@ namespace WebKit {
 
 struct RTCPacketOptions {
     void encode(IPC::Encoder&) const;
-    static Optional<RTCPacketOptions> decode(IPC::Decoder&);
+    static std::optional<RTCPacketOptions> decode(IPC::Decoder&);
 
     rtc::PacketOptions options;
 };

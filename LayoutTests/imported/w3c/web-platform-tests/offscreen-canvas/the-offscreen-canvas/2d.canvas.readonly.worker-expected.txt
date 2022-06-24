@@ -1,3 +1,0 @@
-
-FAIL canvas is readonly Can't find variable: OffscreenCanvas
-

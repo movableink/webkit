@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,10 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 #import "PlatformCALayerRemote.h"
 
 #import "PlatformCALayerRemoteCustom.h"
+#import "PlatformCALayerRemoteModelHosting.h"
 #import "PlatformCALayerRemoteTiledBacking.h"
 #import "RemoteLayerBackingStore.h"
 #import "RemoteLayerTreeContext.h"
@@ -63,12 +64,12 @@ Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(PlatformLayer *platform
     return PlatformCALayerRemoteCustom::create(platformLayer, owner, context);
 }
 
-Ref<PlatformCALayerRemote> PlatformCALayerRemote::createForEmbeddedView(LayerType layerType, GraphicsLayer::EmbeddedViewID embeddedViewID, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+#if ENABLE(MODEL_ELEMENT)
+Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(Ref<WebCore::Model> model, WebCore::PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
 {
-    RefPtr<PlatformCALayerRemote> layer = adoptRef(new PlatformCALayerRemote(layerType, embeddedViewID, owner, context));
-    context.layerDidEnterContext(*layer, layerType);
-    return layer.releaseNonNull();
+    return PlatformCALayerRemoteModelHosting::create(model, owner, context);
 }
+#endif
 
 Ref<PlatformCALayerRemote> PlatformCALayerRemote::create(const PlatformCALayerRemote& other, WebCore::PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
 {
@@ -87,12 +88,6 @@ PlatformCALayerRemote::PlatformCALayerRemote(LayerType layerType, PlatformCALaye
         m_properties.contentsScale = owner->platformCALayerDeviceScaleFactor();
         m_properties.notePropertiesChanged(RemoteLayerTreeTransaction::ContentsScaleChanged);
     }
-}
-
-PlatformCALayerRemote::PlatformCALayerRemote(LayerType layerType, GraphicsLayer::EmbeddedViewID embeddedViewID, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
-    : PlatformCALayerRemote(layerType, owner, context)
-{
-    m_embeddedViewID = embeddedViewID;
 }
 
 PlatformCALayerRemote::PlatformCALayerRemote(const PlatformCALayerRemote& other, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
@@ -131,6 +126,12 @@ void PlatformCALayerRemote::moveToContext(RemoteLayerTreeContext& context)
     context.layerDidEnterContext(*this, layerType());
 
     m_properties.notePropertiesChanged(m_properties.everChangedProperties);
+}
+
+void PlatformCALayerRemote::populateCreationProperties(RemoteLayerTreeTransaction::LayerCreationProperties& properties, const RemoteLayerTreeContext& context, PlatformCALayer::LayerType type)
+{
+    properties.layerID = layerID();
+    properties.type = type;
 }
 
 void PlatformCALayerRemote::updateClonedLayerProperties(PlatformCALayerRemote& clone, bool copyContents) const
@@ -172,12 +173,12 @@ void PlatformCALayerRemote::recursiveBuildTransaction(RemoteLayerTreeContext& co
     ASSERT(!m_properties.backingStore || owner());
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&context == m_context);
     
-    if (m_properties.backingStore && (!owner() || !owner()->platformCALayerDrawsContent())) {
+    bool usesBackingStore = owner() && (owner()->platformCALayerDrawsContent() || owner()->platformCALayerDelegatesDisplay(this));
+    if (m_properties.backingStore && !usesBackingStore) {
         m_properties.backingStore = nullptr;
         m_properties.notePropertiesChanged(RemoteLayerTreeTransaction::BackingStoreChanged);
     }
-
-    if (m_properties.backingStore && m_properties.backingStoreAttached && m_properties.backingStore->display())
+    if (m_properties.backingStore && m_properties.backingStoreAttached && m_properties.backingStore->prepareToDisplay())
         m_properties.notePropertiesChanged(RemoteLayerTreeTransaction::BackingStoreChanged);
 
     if (m_properties.changedProperties) {
@@ -232,7 +233,13 @@ void PlatformCALayerRemote::updateBackingStore()
 
     ASSERT(m_properties.backingStoreAttached);
 
-    m_properties.backingStore->ensureBackingStore(m_properties.bounds.size(), m_properties.contentsScale, m_acceleratesDrawing, m_wantsDeepColorBackingStore, m_properties.opaque);
+    auto type = m_acceleratesDrawing ? RemoteLayerBackingStore::Type::IOSurface : RemoteLayerBackingStore::Type::Bitmap;
+    auto includeDisplayList = RemoteLayerBackingStore::IncludeDisplayList::No;
+#if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+    if (m_context->useCGDisplayListsForDOMRendering())
+        includeDisplayList = RemoteLayerBackingStore::IncludeDisplayList::Yes;
+#endif
+    m_properties.backingStore->ensureBackingStore(type, m_properties.bounds.size(), m_properties.contentsScale, m_wantsDeepColorBackingStore, m_properties.opaque, includeDisplayList);
 }
 
 void PlatformCALayerRemote::setNeedsDisplayInRect(const FloatRect& rect)
@@ -676,7 +683,27 @@ CFTypeRef PlatformCALayerRemote::contents() const
 
 void PlatformCALayerRemote::setContents(CFTypeRef value)
 {
+    if (!m_properties.backingStore)
+        return;
+    if (!value)
+        m_properties.backingStore->clearBackingStore();
 }
+
+#if HAVE(IOSURFACE)
+void PlatformCALayerRemote::setContents(const WebCore::IOSurface& surface)
+{
+    ASSERT(m_acceleratesDrawing);
+    ensureBackingStore();
+    m_properties.backingStore->setContents(surface.createSendRight());
+}
+
+void PlatformCALayerRemote::setContents(const WTF::MachSendRight& surfaceHandle)
+{
+    ASSERT(m_acceleratesDrawing);
+    ensureBackingStore();
+    m_properties.backingStore->setContents(surfaceHandle.copySendRight());
+}
+#endif
 
 void PlatformCALayerRemote::setContentsRect(const FloatRect& value)
 {
@@ -881,17 +908,58 @@ void PlatformCALayerRemote::setEventRegion(const WebCore::EventRegion& eventRegi
     m_properties.notePropertiesChanged(RemoteLayerTreeTransaction::EventRegionChanged);
 }
 
-GraphicsLayer::EmbeddedViewID PlatformCALayerRemote::embeddedViewID() const
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+bool PlatformCALayerRemote::isSeparated() const
 {
-    return m_embeddedViewID;
+    return m_properties.isSeparated;
 }
+
+void PlatformCALayerRemote::setIsSeparated(bool value)
+{
+    if (m_properties.isSeparated == value)
+        return;
+
+    m_properties.isSeparated = value;
+    m_properties.notePropertiesChanged(RemoteLayerTreeTransaction::SeparatedChanged);
+}
+
+#if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
+bool PlatformCALayerRemote::isSeparatedPortal() const
+{
+    return m_properties.isSeparatedPortal;
+}
+
+void PlatformCALayerRemote::setIsSeparatedPortal(bool value)
+{
+    if (m_properties.isSeparatedPortal == value)
+        return;
+
+    m_properties.isSeparatedPortal = value;
+    m_properties.notePropertiesChanged(RemoteLayerTreeTransaction::SeparatedPortalChanged);
+}
+
+bool PlatformCALayerRemote::isDescendentOfSeparatedPortal() const
+{
+    return m_properties.isDescendentOfSeparatedPortal;
+}
+
+void PlatformCALayerRemote::setIsDescendentOfSeparatedPortal(bool value)
+{
+    if (m_properties.isDescendentOfSeparatedPortal == value)
+        return;
+
+    m_properties.isDescendentOfSeparatedPortal = value;
+    m_properties.notePropertiesChanged(RemoteLayerTreeTransaction::DescendentOfSeparatedPortalChanged);
+}
+#endif
+#endif
 
 Ref<PlatformCALayer> PlatformCALayerRemote::createCompatibleLayer(PlatformCALayer::LayerType layerType, PlatformCALayerClient* client) const
 {
     return PlatformCALayerRemote::create(layerType, client, *m_context);
 }
 
-void PlatformCALayerRemote::enumerateRectsBeingDrawn(CGContextRef context, void (^block)(CGRect))
+void PlatformCALayerRemote::enumerateRectsBeingDrawn(WebCore::GraphicsContext& context, void (^block)(WebCore::FloatRect))
 {
     m_properties.backingStore->enumerateRectsBeingDrawn(context, block);
 }

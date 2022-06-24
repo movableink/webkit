@@ -1,8 +1,8 @@
 <!DOCTYPE HTML>
 <title>Document.prototype.elementsFromPoint on SVG text content elements</title>
 <link rel="help" href="https://drafts.csswg.org/cssom-view/#dom-document-elementsfrompoint">
-<script src="../../../../../resources/testharness.js"></script>
-<script src="../../../../../resources/testharnessreport.js"></script>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
 <script src="resources/elementsFromPoint.js"></script>
 <style>
 html, body {
@@ -24,7 +24,7 @@ text {
     </defs>
     <text id="text1" x="10" y="50">Some text</text>
     <text id="text2" x="10" y="110"><tspan id="tspan1">Some text</tspan></text>
-    <text id="text3"><textPath id="textpath1" xlink:href="#path">Some text</textpath></text>
+    <text id="text3"><textPath id="textpath1" xlink:href="#path">Some text</textPath></text>
     <text id="text4" x="10" y="230">Text under<tspan id="tspan2" x="10">Text over</tspan></text>
   </svg>
 </div>

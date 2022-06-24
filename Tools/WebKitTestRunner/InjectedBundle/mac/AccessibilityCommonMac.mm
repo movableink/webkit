@@ -31,7 +31,10 @@
 #import "config.h"
 #import "AccessibilityCommonMac.h"
 
+#import "JSWrapper.h"
+#import "StringFunctions.h"
 #import <JavaScriptCore/JSStringRefCF.h>
+#import <objc/runtime.h>
 
 @implementation NSString (JSStringRefAdditions)
 
@@ -40,7 +43,7 @@
     if (!jsStringRef)
         return nil;
 
-    return CFBridgingRelease(JSStringCopyCFString(kCFAllocatorDefault, jsStringRef));
+    return adoptCF(JSStringCopyCFString(kCFAllocatorDefault, jsStringRef)).bridgingAutorelease();
 }
 
 - (JSRetainPtr<JSStringRef>)createJSStringRef
@@ -48,59 +51,98 @@
     return adopt(JSStringCreateWithCFString((__bridge CFStringRef)self));
 }
 
+@end
+
 namespace WTR {
+
+Class webAccessibilityObjectWrapperClass()
+{
+    static Class cls = objc_getClass("WebAccessibilityObjectWrapper");
+    ASSERT(cls);
+    return cls;
+}
+
+static JSObjectRef makeJSArray(JSContextRef context, NSArray *array)
+{
+    NSUInteger count = array.count;
+    JSValueRef arguments[count];
+    for (NSUInteger i = 0; i < count; i++)
+        arguments[i] = makeValueRefForValue(context, [array objectAtIndex:i]);
+    return JSObjectMakeArray(context, count, arguments, nullptr);
+}
+
+JSObjectRef makeJSArray(NSArray *array)
+{
+    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(InjectedBundle::singleton().page()->page());
+    JSContextRef context = WKBundleFrameGetJavaScriptContext(mainFrame);
+    return makeJSArray(context, array);
+}
+
+static JSObjectRef makeJSObject(JSContextRef context, NSDictionary *dictionary)
+{
+    auto object = JSObjectMake(context, nullptr, nullptr);
+    [dictionary enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL *) {
+        if (JSValueRef propertyValue = makeValueRefForValue(context, obj))
+            JSObjectSetProperty(context, object, [key createJSStringRef].get(), propertyValue, kJSPropertyAttributeNone, nullptr);
+    }];
+    return object;
+}
+
+JSValueRef makeValueRefForValue(JSContextRef context, id value)
+{
+    if ([value isKindOfClass:[NSString class]])
+        return JSValueMakeString(context, [value createJSStringRef].get());
+    if ([value isKindOfClass:[NSNumber class]]) {
+        if (!strcmp([value objCType], @encode(BOOL)) || !strcmp([value objCType], "c"))
+            return JSValueMakeBoolean(context, [value boolValue]);
+        return JSValueMakeNumber(context, [value doubleValue]);
+    }
+    if ([value isKindOfClass:webAccessibilityObjectWrapperClass()])
+        return toJS(context, WTR::AccessibilityUIElement::create(static_cast<PlatformUIElement>(value)).ptr());
+    if ([value isKindOfClass:[NSDictionary class]])
+        return makeJSObject(context, value);
+    if ([value isKindOfClass:[NSArray class]])
+        return makeJSArray(context, value);
+    return nullptr;
+}
 
 NSDictionary *searchPredicateParameterizedAttributeForSearchCriteria(JSContextRef context, AccessibilityUIElement *startElement, bool isDirectionNext, unsigned resultsLimit, JSValueRef searchKey, JSStringRef searchText, bool visibleOnly, bool immediateDescendantsOnly)
 {
     NSMutableDictionary *parameterizedAttribute = [NSMutableDictionary dictionary];
-    
+
     if (startElement && startElement->platformUIElement())
-        [parameterizedAttribute setObject:(id)startElement->platformUIElement() forKey:@"AXStartElement"];
-    
+        [parameterizedAttribute setObject:startElement->platformUIElement() forKey:@"AXStartElement"];
+
     [parameterizedAttribute setObject:(isDirectionNext) ? @"AXDirectionNext" : @"AXDirectionPrevious" forKey:@"AXDirection"];
-    
+
     [parameterizedAttribute setObject:@(resultsLimit) forKey:@"AXResultsLimit"];
-    
+
     if (searchKey) {
         id searchKeyParameter = nil;
-        if (JSValueIsString(context, searchKey)) {
-            auto searchKeyString = adopt(JSValueToStringCopy(context, searchKey, nullptr));
-            if (searchKeyString)
-                searchKeyParameter = [NSString stringWithJSStringRef:searchKeyString.get()];
-        } else if (JSValueIsObject(context, searchKey)) {
+        if (JSValueIsString(context, searchKey))
+            searchKeyParameter = toWTFString(context, searchKey);
+        else if (JSValueIsObject(context, searchKey)) {
             JSObjectRef searchKeyArray = JSValueToObject(context, searchKey, nullptr);
-            unsigned searchKeyArrayLength = 0;
-            
-            auto lengthPropertyString = adopt(JSStringCreateWithUTF8CString("length"));
-            JSValueRef searchKeyArrayLengthValue = JSObjectGetProperty(context, searchKeyArray, lengthPropertyString.get(), nullptr);
-            if (searchKeyArrayLengthValue && JSValueIsNumber(context, searchKeyArrayLengthValue))
-                searchKeyArrayLength = static_cast<unsigned>(JSValueToNumber(context, searchKeyArrayLengthValue, nullptr));
-            
+            unsigned searchKeyArrayLength = arrayLength(context, searchKeyArray);
             for (unsigned i = 0; i < searchKeyArrayLength; ++i) {
-                JSValueRef searchKeyValue = JSObjectGetPropertyAtIndex(context, searchKeyArray, i, nullptr);
-                JSStringRef searchKeyString = JSValueToStringCopy(context, searchKeyValue, nullptr);
-                if (searchKeyString) {
-                    if (!searchKeyParameter)
-                        searchKeyParameter = [NSMutableArray array];
-                    [searchKeyParameter addObject:[NSString stringWithJSStringRef:searchKeyString]];
-                    JSStringRelease(searchKeyString);
-                }
+                auto searchKey = toWTFString(context, JSObjectGetPropertyAtIndex(context, searchKeyArray, i, nullptr));
+                if (!searchKeyParameter)
+                    searchKeyParameter = [NSMutableArray array];
+                [searchKeyParameter addObject:searchKey];
             }
         }
         if (searchKeyParameter)
             [parameterizedAttribute setObject:searchKeyParameter forKey:@"AXSearchKey"];
     }
-    
+
     if (searchText && JSStringGetLength(searchText))
-        [parameterizedAttribute setObject:[NSString stringWithJSStringRef:searchText] forKey:@"AXSearchText"];
-    
+        [parameterizedAttribute setObject:toWTFString(searchText) forKey:@"AXSearchText"];
+
     [parameterizedAttribute setObject:@(visibleOnly) forKey:@"AXVisibleOnly"];
-    
     [parameterizedAttribute setObject:@(immediateDescendantsOnly) forKey:@"AXImmediateDescendantsOnly"];
-    
+
     return parameterizedAttribute;
 }
-    
+
 } // namespace WTR
 
-@end

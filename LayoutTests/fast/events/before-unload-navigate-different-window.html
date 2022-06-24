@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html><!-- webkit-test-runner [ JavaScriptCanOpenWindowsAutomatically=true ] -->
 <html>
 <body>
 <p>This tests navigating a different window during beforeunload event. The page load should succeed.</p>
@@ -41,9 +41,6 @@ function endTest() {
 if (window.testRunner) {
     testRunner.dumpAsText();
     testRunner.waitUntilDone();
-    testRunner.setCanOpenWindows()
-    testRunner.setPopupBlockingEnabled(false);
-    testRunner.setCloseRemainingWindowsWhenComplete(true);
     startTest();
     document.querySelector('button').remove();
 }

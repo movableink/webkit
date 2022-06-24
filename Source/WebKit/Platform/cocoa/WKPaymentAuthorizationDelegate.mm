@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,31 +28,32 @@
 
 #if USE(PASSKIT) && ENABLE(APPLE_PAY)
 
+#import "PaymentAuthorizationPresenter.h"
+#import <WebCore/ApplePayShippingMethod.h>
 #import <WebCore/Payment.h>
 #import <WebCore/PaymentMethod.h>
 #import <WebCore/PaymentSessionError.h>
+#import <wtf/RunLoop.h>
+#import <wtf/URL.h>
+
+#import <pal/cocoa/PassKitSoftLink.h>
 
 @implementation WKPaymentAuthorizationDelegate {
-    BOOL _didReachFinalState;
     RetainPtr<NSArray<PKPaymentSummaryItem *>> _summaryItems;
+#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
+    RetainPtr<PKShippingMethods> _availableShippingMethods;
+#else
     RetainPtr<NSArray<PKShippingMethod *>> _shippingMethods;
+#endif
     RetainPtr<NSError> _sessionError;
-    WeakPtr<WebKit::PaymentAuthorizationPresenter> _presenter;
     WebKit::DidAuthorizePaymentCompletion _didAuthorizePaymentCompletion;
     WebKit::DidRequestMerchantSessionCompletion _didRequestMerchantSessionCompletion;
     WebKit::DidSelectPaymentMethodCompletion _didSelectPaymentMethodCompletion;
     WebKit::DidSelectShippingContactCompletion _didSelectShippingContactCompletion;
     WebKit::DidSelectShippingMethodCompletion _didSelectShippingMethodCompletion;
-}
-
-- (NSArray<PKPaymentSummaryItem *> *)summaryItems
-{
-    return _summaryItems.get();
-}
-
-- (NSArray<PKShippingMethod *> *)shippingMethods
-{
-    return _shippingMethods.get();
+#if HAVE(PASSKIT_COUPON_CODE)
+    WebKit::DidChangeCouponCodeCompletion _didChangeCouponCodeCompletion;
+#endif
 }
 
 - (void)completeMerchantValidation:(PKPaymentMerchantSession *)session error:(NSError *)error
@@ -62,37 +63,110 @@
 
 - (void)completePaymentMethodSelection:(PKPaymentRequestPaymentMethodUpdate *)paymentMethodUpdate
 {
-    PKPaymentRequestPaymentMethodUpdate *update = paymentMethodUpdate ?: [[PAL::allocPKPaymentRequestPaymentMethodUpdateInstance() initWithPaymentSummaryItems:_summaryItems.get()] autorelease];
-    _summaryItems = adoptNS([update.paymentSummaryItems copy]);
-    std::exchange(_didSelectPaymentMethodCompletion, nil)(update);
+    RetainPtr update = paymentMethodUpdate;
+    if (update) {
+        _summaryItems = adoptNS([[update paymentSummaryItems] copy]);
+#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
+        _availableShippingMethods = adoptNS([[update availableShippingMethods] copy]);
+#elif HAVE(PASSKIT_UPDATE_SHIPPING_METHODS_WHEN_CHANGING_SUMMARY_ITEMS)
+        _shippingMethods = adoptNS([[update shippingMethods] copy]);
+#endif
+    } else {
+        update = adoptNS([PAL::allocPKPaymentRequestPaymentMethodUpdateInstance() initWithPaymentSummaryItems:_summaryItems.get()]);
+#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
+        [update setAvailableShippingMethods:_availableShippingMethods.get()];
+#elif HAVE(PASSKIT_UPDATE_SHIPPING_METHODS_WHEN_CHANGING_SUMMARY_ITEMS)
+        [update setShippingMethods:_shippingMethods.get()];
+#endif
+    }
+
+    std::exchange(_didSelectPaymentMethodCompletion, nil)(update.get());
 }
 
-- (void)completePaymentSession:(PKPaymentAuthorizationStatus)status errors:(NSArray<NSError *> *)errors didReachFinalState:(BOOL)didReachFinalState
+- (void)completePaymentSession:(PKPaymentAuthorizationStatus)status errors:(NSArray<NSError *> *)errors
 {
-    _didReachFinalState = didReachFinalState;
     auto result = adoptNS([PAL::allocPKPaymentAuthorizationResultInstance() initWithStatus:status errors:errors]);
     std::exchange(_didAuthorizePaymentCompletion, nil)(result.get());
 }
 - (void)completeShippingContactSelection:(PKPaymentRequestShippingContactUpdate *)shippingContactUpdate
 {
-    PKPaymentRequestShippingContactUpdate *update = shippingContactUpdate ?: [[PAL::allocPKPaymentRequestShippingContactUpdateInstance() initWithErrors:@[] paymentSummaryItems:_summaryItems.get() shippingMethods:_shippingMethods.get()] autorelease];
-    _summaryItems = adoptNS([update.paymentSummaryItems copy]);
-    _shippingMethods = adoptNS([update.shippingMethods copy]);
-    std::exchange(_didSelectShippingContactCompletion, nil)(update);
+    RetainPtr update = shippingContactUpdate;
+    if (update) {
+        _summaryItems = adoptNS([[update paymentSummaryItems] copy]);
+#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
+        _availableShippingMethods = adoptNS([[update availableShippingMethods] copy]);
+#else
+        _shippingMethods = adoptNS([[update shippingMethods] copy]);
+#endif
+    } else {
+        update = adoptNS([PAL::allocPKPaymentRequestShippingContactUpdateInstance() initWithPaymentSummaryItems:_summaryItems.get()]);
+#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
+        [update setAvailableShippingMethods:_availableShippingMethods.get()];
+#else
+        [update setShippingMethods:_shippingMethods.get()];
+#endif
+    }
+
+    std::exchange(_didSelectShippingContactCompletion, nil)(update.get());
 }
 
 - (void)completeShippingMethodSelection:(PKPaymentRequestShippingMethodUpdate *)shippingMethodUpdate
 {
-    PKPaymentRequestShippingMethodUpdate *update = shippingMethodUpdate ?: [[PAL::allocPKPaymentRequestShippingMethodUpdateInstance() initWithPaymentSummaryItems:_summaryItems.get()] autorelease];
-    _summaryItems = adoptNS([update.paymentSummaryItems copy]);
-    std::exchange(_didSelectShippingMethodCompletion, nil)(update);
+    RetainPtr update = shippingMethodUpdate;
+    if (update) {
+        _summaryItems = adoptNS([[update paymentSummaryItems] copy]);
+#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
+        _availableShippingMethods = adoptNS([[update availableShippingMethods] copy]);
+#elif HAVE(PASSKIT_UPDATE_SHIPPING_METHODS_WHEN_CHANGING_SUMMARY_ITEMS)
+        _shippingMethods = adoptNS([[update shippingMethods] copy]);
+#endif
+    } else {
+        update = adoptNS([PAL::allocPKPaymentRequestShippingMethodUpdateInstance() initWithPaymentSummaryItems:_summaryItems.get()]);
+#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
+        [update setAvailableShippingMethods:_availableShippingMethods.get()];
+#elif HAVE(PASSKIT_UPDATE_SHIPPING_METHODS_WHEN_CHANGING_SUMMARY_ITEMS)
+        [update setShippingMethods:_shippingMethods.get()];
+#endif
+    }
+
+    std::exchange(_didSelectShippingMethodCompletion, nil)(update.get());
 }
+
+#if HAVE(PASSKIT_COUPON_CODE)
+
+- (void)completeCouponCodeChange:(PKPaymentRequestCouponCodeUpdate *)couponCodeUpdate
+{
+    RetainPtr update = couponCodeUpdate;
+    if (update) {
+        _summaryItems = adoptNS([[update paymentSummaryItems] copy]);
+#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
+        _availableShippingMethods = adoptNS([[update availableShippingMethods] copy]);
+#else
+        _shippingMethods = adoptNS([[update shippingMethods] copy]);
+#endif
+    } else {
+        update = adoptNS([PAL::allocPKPaymentRequestCouponCodeUpdateInstance() initWithPaymentSummaryItems:_summaryItems.get()]);
+#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
+        [update setAvailableShippingMethods:_availableShippingMethods.get()];
+#else
+        [update setShippingMethods:_shippingMethods.get()];
+#endif
+    }
+
+    std::exchange(_didChangeCouponCodeCompletion, nil)(update.get());
+}
+
+#endif // HAVE(PASSKIT_COUPON_CODE)
 
 - (void)invalidate
 {
     if (_didAuthorizePaymentCompletion)
-        [self completePaymentSession:PKPaymentAuthorizationStatusFailure errors:@[] didReachFinalState:YES];
+        [self completePaymentSession:PKPaymentAuthorizationStatusFailure errors:@[ ]];
 }
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/WKPaymentAuthorizationDelegateAdditionsAfter.mm>
+#endif
 
 @end
 
@@ -103,9 +177,13 @@
     if (!(self = [super init]))
         return nil;
 
-    _presenter = makeWeakPtr(presenter);
+    _presenter = presenter;
     _request = request;
+#if HAVE(PASSKIT_DEFAULT_SHIPPING_METHOD)
+    _availableShippingMethods = request.availableShippingMethods;
+#else
     _shippingMethods = request.shippingMethods;
+#endif
     _summaryItems = request.paymentSummaryItems;
     return self;
 }
@@ -117,7 +195,7 @@
 
     auto presenter = _presenter.get();
     if (!presenter)
-        return [self completePaymentSession:PKPaymentAuthorizationStatusFailure errors:@[ ] didReachFinalState:YES];
+        return [self completePaymentSession:PKPaymentAuthorizationStatusFailure errors:@[ ]];
 
     presenter->client().presenterDidAuthorizePayment(*presenter, WebCore::Payment(payment));
 }
@@ -125,7 +203,7 @@
 - (void)_didFinish
 {
     if (auto presenter = _presenter.get())
-        presenter->client().presenterDidFinish(*presenter, { std::exchange(_sessionError, nil) }, _didReachFinalState);
+        presenter->client().presenterDidFinish(*presenter, { std::exchange(_sessionError, nil) });
 }
 
 - (void)_didRequestMerchantSession:(WebKit::DidRequestMerchantSessionCompletion::BlockType)completion
@@ -137,7 +215,7 @@
         if (error)
             LOG_ERROR("PKCanMakePaymentsWithMerchantIdentifierAndDomain error %@", error);
 
-        dispatch_async(dispatch_get_main_queue(), ^{
+        RunLoop::main().dispatch([self, protectedSelf = retainPtr(self), merchantURL = retainPtr(merchantURL)] {
             ASSERT(_didRequestMerchantSessionCompletion);
 
             auto presenter = _presenter.get();
@@ -146,7 +224,7 @@
                 return;
             }
 
-            presenter->client().presenterWillValidateMerchant(*presenter, merchantURL);
+            presenter->client().presenterWillValidateMerchant(*presenter, merchantURL.get());
         });
     }];
 }
@@ -175,16 +253,50 @@
     presenter->client().presenterDidSelectShippingContact(*presenter, WebCore::PaymentContact(contact));
 }
 
-static WebCore::ApplePaySessionPaymentRequest::ShippingMethod toShippingMethod(PKShippingMethod *shippingMethod)
+#if HAVE(PASSKIT_SHIPPING_METHOD_DATE_COMPONENTS_RANGE)
+
+static WebCore::ApplePayDateComponents toDateComponents(NSDateComponents *dateComponents)
+{
+    ASSERT(dateComponents);
+
+    WebCore::ApplePayDateComponents result;
+    result.years = dateComponents.year;
+    result.months = dateComponents.month;
+    result.days = dateComponents.day;
+    result.hours = dateComponents.hour;
+    return result;
+}
+
+static WebCore::ApplePayDateComponentsRange toDateComponentsRange(PKDateComponentsRange *dateComponentsRange)
+{
+    ASSERT(dateComponentsRange);
+
+    WebCore::ApplePayDateComponentsRange result;
+    result.startDateComponents = toDateComponents(dateComponentsRange.startDateComponents);
+    result.endDateComponents = toDateComponents(dateComponentsRange.endDateComponents);
+    return result;
+}
+
+#endif // HAVE(PASSKIT_SHIPPING_METHOD_DATE_COMPONENTS_RANGE)
+
+static WebCore::ApplePayShippingMethod toShippingMethod(PKShippingMethod *shippingMethod, bool selected)
 {
     ASSERT(shippingMethod);
 
-    WebCore::ApplePaySessionPaymentRequest::ShippingMethod result;
+    WebCore::ApplePayShippingMethod result;
     result.amount = shippingMethod.amount.stringValue;
     result.detail = shippingMethod.detail;
     result.identifier = shippingMethod.identifier;
     result.label = shippingMethod.label;
-
+#if HAVE(PASSKIT_SHIPPING_METHOD_DATE_COMPONENTS_RANGE)
+    if (shippingMethod.dateComponentsRange)
+        result.dateComponentsRange = toDateComponentsRange(shippingMethod.dateComponentsRange);
+#endif
+#if ENABLE(APPLE_PAY_SELECTED_SHIPPING_METHOD)
+    result.selected = selected;
+#else
+    UNUSED_PARAM(selected);
+#endif
     return result;
 }
 
@@ -197,8 +309,24 @@ static WebCore::ApplePaySessionPaymentRequest::ShippingMethod toShippingMethod(P
     if (!presenter)
         return [self completeShippingMethodSelection:nil];
 
-    presenter->client().presenterDidSelectShippingMethod(*presenter, toShippingMethod(shippingMethod));
+    presenter->client().presenterDidSelectShippingMethod(*presenter, toShippingMethod(shippingMethod, true));
 }
+
+#if HAVE(PASSKIT_COUPON_CODE)
+
+- (void)_didChangeCouponCode:(NSString *)couponCode completion:(void (^)(PKPaymentRequestCouponCodeUpdate *update))completion
+{
+    ASSERT(!_didChangeCouponCodeCompletion);
+    _didChangeCouponCodeCompletion = completion;
+
+    auto presenter = _presenter.get();
+    if (!presenter)
+        return [self completeCouponCodeChange:nil];
+
+    presenter->client().presenterDidChangeCouponCode(*presenter, couponCode);
+}
+
+#endif // HAVE(PASSKIT_COUPON_CODE)
 
 - (void) NO_RETURN_DUE_TO_ASSERT _getPaymentServicesMerchantURL:(void(^)(NSURL *, NSError *))completion
 {
@@ -208,7 +336,7 @@ static WebCore::ApplePaySessionPaymentRequest::ShippingMethod toShippingMethod(P
 
 - (void)_willFinishWithError:(NSError *)error
 {
-    if (![error.domain isEqualToString:PAL::get_PassKit_PKPassKitErrorDomain()])
+    if (![error.domain isEqualToString:PKPassKitErrorDomain])
         return;
 
     _sessionError = error;

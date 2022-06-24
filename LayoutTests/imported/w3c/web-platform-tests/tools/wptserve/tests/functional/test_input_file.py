@@ -1,8 +1,9 @@
-from wptserve.request import InputFile
 from io import BytesIO
+
 import pytest
 
-wptserve = pytest.importorskip("wptserve")
+from wptserve.request import InputFile
+
 bstr = b'This is a test document\nWith new lines\nSeveral in fact...'
 rfile = ''
 test_file = ''  # This will be used to test the InputFile functions against

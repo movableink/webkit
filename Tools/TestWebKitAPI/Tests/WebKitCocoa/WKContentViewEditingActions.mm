@@ -27,11 +27,17 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+#import "InstanceMethodSwizzler.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
+#import "TestInputDelegate.h"
 #import "TestNavigationDelegate.h"
+#import "TestUIMenuBuilder.h"
 #import "TestWKWebView.h"
 #import "UIKitSPI.h"
+#import "WKWebViewConfigurationExtras.h"
+#import <WebCore/LocalizedStrings.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WebKit.h>
 #import <wtf/RetainPtr.h>
 
@@ -71,4 +77,80 @@ TEST(WebKit, InvokeShareWithoutSelection)
     [webView waitForNextPresentationUpdate];
 }
 
-#endif
+#if ENABLE(IMAGE_ANALYSIS)
+
+#if ENABLE(APP_HIGHLIGHTS)
+
+TEST(WebKit, AppHighlightsInImageOverlays)
+{
+    auto configuration = retainPtr([WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"WebProcessPlugInWithInternals" configureJSCForTesting:YES]);
+    [configuration _setAppHighlightsEnabled:YES];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView synchronouslyLoadTestPageNamed:@"simple-image-overlay"];
+    [webView stringByEvaluatingJavaScript:@"selectImageOverlay()"];
+    [webView waitForNextPresentationUpdate];
+
+    auto menuBuilder = adoptNS([[TestUIMenuBuilder alloc] init]);
+    [webView buildMenuWithBuilder:menuBuilder.get()];
+    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToNewQuickNote()]);
+    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToCurrentQuickNote()]);
+
+    [webView synchronouslyLoadTestPageNamed:@"simple"];
+    [webView selectAll:nil];
+    [webView waitForNextPresentationUpdate];
+
+    [menuBuilder reset];
+    [webView buildMenuWithBuilder:menuBuilder.get()];
+    EXPECT_NOT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToNewQuickNote()]);
+    EXPECT_NULL([menuBuilder actionWithTitle:WebCore::contextMenuItemTagAddHighlightToCurrentQuickNote()]);
+}
+
+#endif // ENABLE(APP_HIGHLIGHTS)
+
+static BOOL gCanPerformActionWithSenderResult = NO;
+static BOOL canPerformActionWithSender(id /* instance */, SEL, SEL /* action */, id /* sender */)
+{
+    return gCanPerformActionWithSenderResult;
+}
+
+TEST(WebKit, CaptureTextFromCamera)
+{
+    gCanPerformActionWithSenderResult = YES;
+    InstanceMethodSwizzler swizzler { UIResponder.class, @selector(canPerformAction:withSender:), reinterpret_cast<IMP>(canPerformActionWithSender) };
+
+    auto inputDelegate = adoptNS([[TestInputDelegate alloc] init]);
+    [inputDelegate setFocusStartsInputSessionPolicyHandler:[] (WKWebView *, id <_WKFocusedElementInfo>) {
+        return _WKFocusStartsInputSessionPolicyAllow;
+    }];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+    [webView _setInputDelegate:inputDelegate.get()];
+    auto contentView = [webView textInputContentView];
+
+    [webView synchronouslyLoadHTMLString:@"<input value='foo' autofocus><input value='bar' readonly>"];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_EQ([webView targetForAction:@selector(captureTextFromCamera:) withSender:nil], contentView);
+    EXPECT_TRUE([webView canPerformAction:@selector(captureTextFromCamera:) withSender:nil]);
+
+    [webView selectAll:nil];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_TRUE([webView canPerformAction:@selector(captureTextFromCamera:) withSender:nil]);
+    EXPECT_FALSE([webView canPerformAction:@selector(captureTextFromCamera:) withSender:UIMenuController.sharedMenuController]);
+
+    [webView collapseToEnd];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_TRUE([webView canPerformAction:@selector(captureTextFromCamera:) withSender:nil]);
+
+    gCanPerformActionWithSenderResult = NO;
+    EXPECT_FALSE([webView canPerformAction:@selector(captureTextFromCamera:) withSender:nil]);
+
+    gCanPerformActionWithSenderResult = YES;
+    [webView objectByEvaluatingJavaScript:@"document.querySelector('input[readonly]').focus()"];
+    [webView waitForNextPresentationUpdate];
+    EXPECT_FALSE([webView canPerformAction:@selector(captureTextFromCamera:) withSender:nil]);
+}
+
+#endif // ENABLE(IMAGE_ANALYSIS)
+
+#endif // PLATFORM(IOS_FAMILY)

@@ -101,14 +101,15 @@ function sleepFor(duration) {
     });
 }
 
-function testExpectedEventually(testFuncString, expected, comparison)
+function testExpectedEventually(testFuncString, expected, comparison, timeout)
 {
     return new Promise(async resolve => {
         var success;
         var observed;
+        var timeSlept = 0;
         if (comparison === undefined)
             comparison = '==';
-        while (true) {
+        while (timeout === undefined || timeSlept < timeout) {
             try {
                 let {success, observed} = compare(testFuncString, expected, comparison);
                 if (success) {
@@ -117,12 +118,15 @@ function testExpectedEventually(testFuncString, expected, comparison)
                     return;
                 }
                 await sleepFor(1);
+                timeSlept++;
             } catch (ex) {
                 consoleWrite(ex);
                 resolve();
                 return;
             }
         }
+        reportExpected(success, testFuncString, comparison, expected, observed, "AFTER TIMEOUT");
+        resolve();
     });
 }
 
@@ -145,7 +149,7 @@ function testArraysEqual(testFuncString, expected)
 
 var testNumber = 0;
 
-function reportExpected(success, testFuncString, comparison, expected, observed)
+function reportExpected(success, testFuncString, comparison, expected, observed, explanation)
 {
     testNumber++;
 
@@ -154,8 +158,11 @@ function reportExpected(success, testFuncString, comparison, expected, observed)
     if (printFullTestDetails || !success)
         msg = "EXPECTED (<em>" + testFuncString + " </em>" + comparison + " '<em>" + expected + "</em>')";
 
-    if (!success)
+    if (!success) {
         msg +=  ", OBSERVED '<em>" + observed + "</em>'";
+        if (explanation !== undefined)
+            msg += ", " + explanation;
+    }
 
     logResult(success, msg);
 }
@@ -186,14 +193,54 @@ function run(testFuncString)
     }
 }
 
-function waitFor(element, type, silent) {
-    return new Promise(resolve => {
+function waitForEventWithTimeout(element, type, time, message) {
+    let listener = new Promise(resolve => {
         element.addEventListener(type, event => {
-            if (!silent)
-                consoleWrite(`EVENT(${event.type})`);
             resolve(event);
         }, { once: true });
     });
+    let timeout = new Promise((resolve) => {
+        setTimeout(resolve, time, 'timeout');
+    });
+
+    return Promise.race([
+        listener, 
+        timeout,
+    ]).then(result => {
+        if (result === 'timeout') {
+            Promise.reject(new Error(message));
+            return;
+        }
+        
+        consoleWrite(`EVENT(${result.type})`);
+        return Promise.resolve(result);
+    });
+}
+
+function waitFor(element, type, silent, success) {
+    return new Promise(resolve => {
+        element.addEventListener(type, event => {
+            if (silent) {
+                resolve(event);
+                return;
+            }
+
+            if (success !== undefined)
+                logResult(success, `EVENT(${event.type})`);
+            else
+                consoleWrite(`EVENT(${event.type})`);
+            
+            resolve(event);
+        }, { once: true });
+    });
+}
+
+function waitForAndSucceed(element, type) {
+    return waitFor(element, type, false, true);
+}
+
+function waitForAndFail(element, type) {
+    return waitFor(element, type, false, false);
 }
 
 function waitForEventOnce(eventName, func, endit)

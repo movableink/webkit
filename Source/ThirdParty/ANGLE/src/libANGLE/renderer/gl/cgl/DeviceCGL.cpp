@@ -6,7 +6,9 @@
 
 // DeviceCGL.cpp: CGL implementation of egl::Device
 
-#if __has_include(<Cocoa/Cocoa.h>)
+#include "common/platform.h"
+
+#if defined(ANGLE_PLATFORM_MACOS) || defined(ANGLE_PLATFORM_MACCATALYST)
 
 #    include "libANGLE/renderer/gl/cgl/DeviceCGL.h"
 
@@ -56,4 +58,4 @@ void DeviceCGL::generateExtensions(egl::DeviceExtensions *outExtensions) const
 
 }  // namespace rx
 
-#endif  // __has_include(<Cocoa/Cocoa.h>)
+#endif  // defined(ANGLE_PLATFORM_MACOS) || defined(ANGLE_PLATFORM_MACCATALYST)

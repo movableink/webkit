@@ -32,15 +32,18 @@
 #import "ApplePayPaymentMethodType.h"
 #import <pal/spi/cocoa/PassKitSPI.h>
 
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/PaymentMethodCocoaAdditions.mm>
-#else
 namespace WebCore {
-static void finishConverting(PKPaymentMethod *, ApplePayPaymentMethod&) { }
-}
-#endif
 
-namespace WebCore {
+static void finishConverting(PKPaymentMethod *paymentMethod, ApplePayPaymentMethod& result)
+{
+#if HAVE(PASSKIT_INSTALLMENTS)
+    if (NSString *bindToken = paymentMethod.bindToken)
+        result.bindToken = bindToken;
+#else
+    UNUSED_PARAM(paymentMethod);
+    UNUSED_PARAM(result);
+#endif
+}
 
 static ApplePayPaymentPass::ActivationState convert(PKPaymentPassActivationState paymentPassActivationState)
 {
@@ -58,10 +61,10 @@ static ApplePayPaymentPass::ActivationState convert(PKPaymentPassActivationState
     }
 }
 
-static Optional<ApplePayPaymentPass> convert(PKPaymentPass *paymentPass)
+static std::optional<ApplePayPaymentPass> convert(PKPaymentPass *paymentPass)
 {
     if (!paymentPass)
-        return WTF::nullopt;
+        return std::nullopt;
 
     ApplePayPaymentPass result;
 
@@ -78,7 +81,7 @@ static Optional<ApplePayPaymentPass> convert(PKPaymentPass *paymentPass)
     return result;
 }
 
-static Optional<ApplePayPaymentMethod::Type> convert(PKPaymentMethodType paymentMethodType)
+static std::optional<ApplePayPaymentMethod::Type> convert(PKPaymentMethodType paymentMethodType)
 {
     switch (paymentMethodType) {
     case PKPaymentMethodTypeDebit:
@@ -90,8 +93,47 @@ static Optional<ApplePayPaymentMethod::Type> convert(PKPaymentMethodType payment
     case PKPaymentMethodTypeStore:
         return ApplePayPaymentMethod::Type::Store;
     case PKPaymentMethodTypeUnknown:
-        return WTF::nullopt;
+    default:
+        return std::nullopt;
     }
+}
+
+static void convert(CNLabeledValue<CNPostalAddress*> *postalAddress, ApplePayPaymentContact &result)
+{
+    if (NSString *street = postalAddress.value.street)
+        result.addressLines = { String { street } };
+    result.subLocality = postalAddress.value.subLocality;
+    result.locality = postalAddress.value.city;
+    result.subAdministrativeArea = postalAddress.value.subAdministrativeArea;
+    result.administrativeArea = postalAddress.value.state;
+    result.postalCode = postalAddress.value.postalCode;
+    result.country = postalAddress.value.country;
+    result.countryCode = postalAddress.value.ISOCountryCode;
+}
+
+static std::optional<ApplePayPaymentContact> convert(CNContact *billingContact)
+{
+    if (!billingContact)
+        return std::nullopt;
+
+    ApplePayPaymentContact result;
+    
+    if (auto firstPhoneNumber = billingContact.phoneNumbers.firstObject)
+        result.phoneNumber = firstPhoneNumber.value.stringValue;
+    
+    if (auto firstEmailAddress = billingContact.emailAddresses.firstObject)
+        result.emailAddress = firstEmailAddress.value;
+    
+    result.givenName = billingContact.givenName;
+    result.familyName = billingContact.familyName;
+    
+    result.phoneticGivenName = billingContact.phoneticGivenName;
+    result.phoneticFamilyName = billingContact.phoneticFamilyName;
+    
+    if (CNLabeledValue<CNPostalAddress*> *firstPostalAddress = billingContact.postalAddresses.firstObject)
+        convert(firstPostalAddress, result);
+
+    return result;
 }
 
 static ApplePayPaymentMethod convert(PKPaymentMethod *paymentMethod)
@@ -102,7 +144,7 @@ static ApplePayPaymentMethod convert(PKPaymentMethod *paymentMethod)
         result.displayName = displayName;
     if (NSString *network = paymentMethod.network)
         result.network = network;
-
+    result.billingContact = convert(paymentMethod.billingAddress);
     result.type = convert(paymentMethod.type);
     result.paymentPass = convert(paymentMethod.paymentPass);
 

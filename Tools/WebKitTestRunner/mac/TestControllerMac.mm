@@ -26,6 +26,7 @@
 #import "config.h"
 #import "TestController.h"
 
+#import "LayoutTestSpellChecker.h"
 #import "PlatformWebView.h"
 #import "PoseAsClass.h"
 #import "TestInvocation.h"
@@ -44,10 +45,18 @@
 #import <WebKit/_WKUserContentExtensionStore.h>
 #import <WebKit/_WKUserContentExtensionStorePrivate.h>
 #import <mach-o/dyld.h>
-#import <wtf/ObjCRuntimeExtras.h>
 
 @interface NSSound ()
 + (void)_setAlertType:(NSUInteger)alertType;
+@end
+
+@interface WKTRSessionDelegate : NSObject <NSURLSessionDataDelegate>
+@end
+@implementation WKTRSessionDelegate
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition, NSURLCredential *credential))completionHandler
+{
+    completionHandler(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust]);
+}
 @end
 
 namespace WTR {
@@ -61,12 +70,54 @@ static PlatformWindow wtr_NSApplication_keyWindow(id self, SEL _cmd)
     return WTR::PlatformWebView::keyWindow();
 }
 
-void TestController::platformInitialize()
+static __weak NSMenu *gCurrentPopUpMenu = nil;
+static void setSwizzledPopUpMenu(NSMenu *menu)
+{
+    if (gCurrentPopUpMenu == menu)
+        return;
+
+    if ([menu.delegate respondsToSelector:@selector(menuWillOpen:)])
+        [menu.delegate menuWillOpen:menu];
+
+    gCurrentPopUpMenu = menu;
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:NSMenuDidBeginTrackingNotification object:nil];
+    });
+}
+
+static void swizzledPopUpContextMenu(Class, SEL, NSMenu *menu, NSEvent *event, NSView *)
+{
+    ASSERT(event);
+    setSwizzledPopUpMenu(menu);
+}
+
+static void swizzledPopUpMenu(id, SEL, NSMenu *menu, NSPoint, CGFloat, NSView *, NSInteger, NSFont *, NSUInteger, NSDictionary *)
+{
+    setSwizzledPopUpMenu(menu);
+}
+
+static void swizzledCancelTracking(NSMenu *menu, SEL)
+{
+    if (menu != gCurrentPopUpMenu)
+        return;
+
+    gCurrentPopUpMenu = nil;
+
+    if ([menu.delegate respondsToSelector:@selector(menuDidClose:)])
+        [menu.delegate menuDidClose:menu];
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:NSMenuDidEndTrackingNotification object:nil];
+    });
+}
+
+void TestController::platformInitialize(const Options& options)
 {
     poseAsClass("WebKitTestRunnerPasteboard", "NSPasteboard");
     poseAsClass("WebKitTestRunnerEvent", "NSEvent");
     
-    cocoaPlatformInitialize();
+    cocoaPlatformInitialize(options);
 
     [NSSound _setAlertType:0];
 
@@ -79,6 +130,14 @@ void TestController::platformInitialize()
     }
     
     method_setImplementation(keyWindowMethod, (IMP)wtr_NSApplication_keyWindow);
+
+    static InstanceMethodSwizzler cancelTrackingSwizzler { NSMenu.class, @selector(cancelTracking), reinterpret_cast<IMP>(swizzledCancelTracking) };
+    static ClassMethodSwizzler menuPopUpSwizzler { NSMenu.class, @selector(popUpContextMenu:withEvent:forView:), reinterpret_cast<IMP>(swizzledPopUpContextMenu) };
+    static InstanceMethodSwizzler carbonMenuPopUpSwizzler {
+        NSClassFromString(@"NSCarbonMenuImpl"),
+        NSSelectorFromString(@"popUpMenu:atLocation:width:forView:withSelectedItem:withFont:withFlags:withOptions:"),
+        reinterpret_cast<IMP>(swizzledPopUpMenu)
+    };
 }
 
 void TestController::platformDestroy()
@@ -97,39 +156,49 @@ void TestController::initializeTestPluginDirectory()
     m_testPluginDirectory.adopt(WKStringCreateWithCFString((__bridge CFStringRef)[[NSBundle mainBundle] bundlePath]));
 }
 
-void TestController::platformResetPreferencesToConsistentValues()
+bool TestController::platformResetStateToConsistentValues(const TestOptions& options)
 {
-}
+    [LayoutTestSpellChecker uninstallAndReset];
 
-void TestController::platformResetStateToConsistentValues(const TestOptions& options)
-{
     cocoaResetStateToConsistentValues(options);
 
     while ([NSApp nextEventMatchingMask:NSEventMaskGesture | NSEventMaskScrollWheel untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES]) {
         // Clear out (and ignore) any pending gesture and scroll wheel events.
     }
+    
+    return true;
 }
 
-void TestController::updatePlatformSpecificTestOptionsForTest(TestOptions& options, const std::string&) const
+TestFeatures TestController::platformSpecificFeatureDefaultsForTest(const TestCommand&) const
 {
-    options.useThreadedScrolling = true;
-    options.useRemoteLayerTree = shouldUseRemoteLayerTree();
-    options.shouldShowWebView = shouldShowWebView();
+    TestFeatures features;
+    features.boolTestRunnerFeatures.insert({ "useThreadedScrolling", true });
+    return features;
 }
 
+#if ENABLE(CONTENT_EXTENSIONS)
 void TestController::configureContentExtensionForTest(const TestInvocation& test)
 {
     if (!test.urlContains("contentextensions/"))
         return;
 
-    RetainPtr<CFURLRef> testURL = adoptCF(WKURLCopyCFURL(kCFAllocatorDefault, test.url()));
+    auto testURL = adoptCF(WKURLCopyCFURL(kCFAllocatorDefault, test.url()));
     NSURL *filterURL = [(__bridge NSURL *)testURL.get() URLByAppendingPathExtension:@"json"];
 
-    NSStringEncoding encoding;
-    NSString *contentExtensionString = [[NSString alloc] initWithContentsOfURL:filterURL usedEncoding:&encoding error:NULL];
-    if (!contentExtensionString)
-        return;
-    
+    __block RetainPtr<NSString> contentExtensionString;
+    __block bool doneFetchingContentExtension = false;
+    auto delegate = adoptNS([WKTRSessionDelegate new]);
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration] delegate:delegate.get() delegateQueue:[NSOperationQueue mainQueue]];
+    NSURLSessionDataTask *task = [session dataTaskWithRequest:[NSURLRequest requestWithURL:filterURL] completionHandler:^(NSData * data, NSURLResponse *response, NSError *error) {
+        ASSERT(data);
+        ASSERT(response);
+        ASSERT(!error);
+        contentExtensionString = adoptNS([[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+        doneFetchingContentExtension = true;
+    }];
+    [task resume];
+    platformRunUntil(doneFetchingContentExtension, noTimeout);
+
     __block bool doneCompiling = false;
 
     NSURL *tempDir;
@@ -139,7 +208,7 @@ void TestController::configureContentExtensionForTest(const TestInvocation& test
     } else
         tempDir = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:@"ContentExtensions"] isDirectory:YES];
 
-    [[_WKUserContentExtensionStore storeWithURL:tempDir] compileContentExtensionForIdentifier:@"TestContentExtensions" encodedContentExtension:contentExtensionString completionHandler:^(_WKUserContentFilter *filter, NSError *error)
+    [[_WKUserContentExtensionStore storeWithURL:tempDir] compileContentExtensionForIdentifier:@"TestContentExtensions" encodedContentExtension:contentExtensionString.get() completionHandler:^(_WKUserContentFilter *filter, NSError *error)
     {
         if (!error)
             [mainWebView()->platformView().configuration.userContentController _addUserContentFilter:filter];
@@ -149,6 +218,7 @@ void TestController::configureContentExtensionForTest(const TestInvocation& test
     }];
     platformRunUntil(doneCompiling, noTimeout);
 }
+#endif
 
 void TestController::platformConfigureViewForTest(const TestInvocation& test)
 {
@@ -156,7 +226,7 @@ void TestController::platformConfigureViewForTest(const TestInvocation& test)
 
 static NSSet *allowedFontFamilySet()
 {
-    static NSSet *fontFamilySet = [[NSSet setWithObjects:
+    static NeverDestroyed<RetainPtr<NSSet>> fontFamilySet = [NSSet setWithObjects:
         @"Ahem",
         @"Al Bayan",
         @"American Typewriter",
@@ -264,6 +334,8 @@ static NSSet *allowedFontFamilySet()
         @"Songti TC",
         @"STFangsong",
         @"STHeiti",
+        @"STIX Two Math",
+        @"STIX Two Text",
         @"STIXGeneral",
         @"STIXSizeOneSym",
         @"STKaiti",
@@ -284,30 +356,30 @@ static NSSet *allowedFontFamilySet()
         @"Wingdings",
         @"Zapf Dingbats",
         @"Zapfino",
-        nil] retain];
+        nil];
 
-    return fontFamilySet;
+    return fontFamilySet.get().get();
 }
 
 static NSSet *systemHiddenFontFamilySet()
 {
-    static NSSet *fontFamilySet = [[NSSet setWithObjects:
+    static NeverDestroyed<RetainPtr<NSSet>> fontFamilySet = [NSSet setWithObjects:
         @".LucidaGrandeUI",
-        nil] retain];
+        nil];
 
-    return fontFamilySet;
+    return fontFamilySet.get().get();
 }
 
-static WKRetainPtr<WKArrayRef> generateWhitelist()
+static WKRetainPtr<WKArrayRef> generateFontAllowList()
 {
-    WKRetainPtr<WKMutableArrayRef> result = adoptWK(WKMutableArrayCreate());
+    auto result = adoptWK(WKMutableArrayCreate());
     for (NSString *fontFamily in allowedFontFamilySet()) {
         NSArray *fontsForFamily = [[NSFontManager sharedFontManager] availableMembersOfFontFamily:fontFamily];
-        WKRetainPtr<WKStringRef> familyInFont = adoptWK(WKStringCreateWithUTF8CString([fontFamily UTF8String]));
+        auto familyInFont = adoptWK(WKStringCreateWithUTF8CString([fontFamily UTF8String]));
         WKArrayAppendItem(result.get(), familyInFont.get());
         for (NSArray *fontInfo in fontsForFamily) {
             // Font name is the first entry in the array.
-            WKRetainPtr<WKStringRef> fontName = adoptWK(WKStringCreateWithUTF8CString([[fontInfo objectAtIndex:0] UTF8String]));
+            auto fontName = adoptWK(WKStringCreateWithUTF8CString([[fontInfo objectAtIndex:0] UTF8String]));
             WKArrayAppendItem(result.get(), fontName.get());
         }
     }
@@ -323,13 +395,13 @@ void TestController::platformInitializeContext()
     // Testing uses a private session, which is memory only. However creating one instantiates a shared NSURLCache,
     // and if we haven't created one yet, the default one will be created on disk.
     // Making the shared cache memory-only avoids touching the file system.
-    RetainPtr<NSURLCache> sharedCache =
+    auto sharedCache =
         adoptNS([[NSURLCache alloc] initWithMemoryCapacity:1024 * 1024
                                       diskCapacity:0
                                           diskPath:nil]);
     [NSURLCache setSharedURLCache:sharedCache.get()];
 
-    WKContextSetFontWhitelist(m_context.get(), generateWhitelist().get());
+    WKContextSetFontAllowList(m_context.get(), generateFontAllowList().get());
 }
 
 void TestController::setHidden(bool hidden)
@@ -359,7 +431,12 @@ void TestController::abortModal()
 
 const char* TestController::platformLibraryPathForTesting()
 {
-    return [[@"~/Library/Application Support/DumpRenderTree" stringByExpandingTildeInPath] UTF8String];
+    static NeverDestroyed<RetainPtr<NSString>> platformLibraryPath;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        platformLibraryPath.get() = [@"~/Library/Application Support/DumpRenderTree" stringByExpandingTildeInPath];
+    });
+    return [platformLibraryPath.get() UTF8String];
 }
 
 } // namespace WTR

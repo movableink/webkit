@@ -37,8 +37,9 @@ class DeferredPromise;
 class Frame;
 class Navigator;
 class Pasteboard;
+class PasteboardCustomData;
 
-class Clipboard final : public RefCounted<Clipboard>, public EventTargetWithInlineData, public CanMakeWeakPtr<Clipboard> {
+class Clipboard final : public RefCounted<Clipboard>, public EventTargetWithInlineData {
     WTF_MAKE_ISO_ALLOCATED(Clipboard);
 public:
     static Ref<Clipboard> create(Navigator&);
@@ -67,14 +68,52 @@ private:
     struct Session {
         std::unique_ptr<Pasteboard> pasteboard;
         Vector<Ref<ClipboardItem>> items;
-        int changeCount;
+        int64_t changeCount;
     };
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    Optional<Session> m_activeSession;
+    Pasteboard& activePasteboard();
+
+    enum class SessionIsValid { No, Yes };
+    SessionIsValid updateSessionValidity();
+
+    class ItemWriter : public RefCounted<ItemWriter> {
+    public:
+        static Ref<ItemWriter> create(Clipboard& clipboard, Ref<DeferredPromise>&& promise)
+        {
+            return adoptRef(*new ItemWriter(clipboard, WTFMove(promise)));
+        }
+
+        ~ItemWriter();
+
+        void write(const Vector<RefPtr<ClipboardItem>>&);
+        void invalidate();
+
+    private:
+        ItemWriter(Clipboard&, Ref<DeferredPromise>&&);
+
+        void setData(std::optional<PasteboardCustomData>&&, size_t index);
+        void didSetAllData();
+        void reject();
+
+        WeakPtr<Clipboard> m_clipboard;
+        Vector<std::optional<PasteboardCustomData>> m_dataToWrite;
+        RefPtr<DeferredPromise> m_promise;
+        unsigned m_pendingItemCount;
+        std::unique_ptr<Pasteboard> m_pasteboard;
+#if PLATFORM(COCOA)
+        int64_t m_changeCountAtStart { 0 };
+#endif
+    };
+
+    void didResolveOrReject(ItemWriter&);
+
+    std::optional<Session> m_activeSession;
     WeakPtr<Navigator> m_navigator;
+    Vector<std::optional<PasteboardCustomData>> m_dataToWrite;
+    RefPtr<ItemWriter> m_activeItemWriter;
 };
 
 } // namespace WebCore

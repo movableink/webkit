@@ -29,7 +29,7 @@
 #if PLATFORM(MAC)
 
 #import "APIHitTestResult.h"
-#import "ColorSpaceData.h"
+#import "AppKitSPI.h"
 #import "DataReference.h"
 #import "DownloadProxy.h"
 #import "DrawingAreaProxy.h"
@@ -48,9 +48,11 @@
 #import "WKStringCF.h"
 #import "WKViewInternal.h"
 #import "WKWebViewInternal.h"
+#import "WKWebViewPrivateForTesting.h"
 #import "WebColorPickerMac.h"
 #import "WebContextMenuProxyMac.h"
 #import "WebDataListSuggestionsDropdownMac.h"
+#import "WebDateTimePickerMac.h"
 #import "WebEditCommandProxy.h"
 #import "WebPageProxy.h"
 #import "WebPopupMenuProxyMac.h"
@@ -61,7 +63,9 @@
 #import "_WKThumbnailView.h"
 #import <WebCore/AlternativeTextUIController.h>
 #import <WebCore/BitmapImage.h>
+#import <WebCore/ColorMac.h>
 #import <WebCore/Cursor.h>
+#import <WebCore/DestinationColorSpace.h>
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/DragItem.h>
 #import <WebCore/FloatRect.h>
@@ -77,16 +81,14 @@
 #import <WebCore/TextUndoInsertionMarkupMac.h>
 #import <WebCore/ValidationBubble.h>
 #import <WebCore/WebCoreCALayerExtras.h>
+#import <pal/spi/mac/NSApplicationSPI.h>
 #import <wtf/ProcessPrivilege.h>
+#import <wtf/RetainPtr.h>
 #import <wtf/text/CString.h>
 #import <wtf/text/WTFString.h>
 
-#if USE(DICTATION_ALTERNATIVES)
-#import <AppKit/NSTextAlternatives.h>
-#endif
-
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-#include <WebCore/WebMediaSessionManager.h>
+#import <WebCore/WebMediaSessionManager.h>
 #endif
 
 static NSString * const kAXLoadCompleteNotification = @"AXLoadComplete";
@@ -102,24 +104,20 @@ static NSString * const kAXLoadCompleteNotification = @"AXLoadComplete";
 #endif
 
 namespace WebKit {
+
 using namespace WebCore;
 
-PageClientImpl::PageClientImpl(NSView* view, WKWebView *webView)
+PageClientImpl::PageClientImpl(NSView *view, WKWebView *webView)
     : PageClientImplCocoa(webView)
     , m_view(view)
-#if USE(DICTATION_ALTERNATIVES)
-    , m_alternativeTextUIController(makeUnique<AlternativeTextUIController>())
-#endif
 {
 }
 
-PageClientImpl::~PageClientImpl()
-{
-}
+PageClientImpl::~PageClientImpl() = default;
 
 void PageClientImpl::setImpl(WebViewImpl& impl)
 {
-    m_impl = makeWeakPtr(impl);
+    m_impl = impl;
 }
 
 std::unique_ptr<DrawingAreaProxy> PageClientImpl::createDrawingAreaProxy(WebProcessProxy& process)
@@ -132,7 +130,7 @@ void PageClientImpl::setViewNeedsDisplay(const WebCore::Region&)
     ASSERT_NOT_REACHED();
 }
 
-void PageClientImpl::requestScroll(const FloatPoint& scrollPosition, const IntPoint& scrollOrigin)
+void PageClientImpl::requestScroll(const FloatPoint& scrollPosition, const IntPoint& scrollOrigin, ScrollIsAnimated)
 {
 }
 
@@ -164,7 +162,7 @@ bool PageClientImpl::isViewWindowActive()
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanCommunicateWithWindowServer));
     NSWindow *activeViewWindow = activeWindow();
-    return activeViewWindow.isKeyWindow || [NSApp keyWindow] == activeViewWindow;
+    return activeViewWindow.isKeyWindow || (activeViewWindow && [NSApp keyWindow] == activeViewWindow);
 }
 
 bool PageClientImpl::isViewFocused()
@@ -246,7 +244,7 @@ void PageClientImpl::viewWillMoveToAnotherWindow()
     clearAllEditCommands();
 }
 
-ColorSpaceData PageClientImpl::colorSpace()
+WebCore::DestinationColorSpace PageClientImpl::colorSpace()
 {
     return m_impl->colorSpace();
 }
@@ -265,9 +263,7 @@ void PageClientImpl::processDidExit()
 void PageClientImpl::pageClosed()
 {
     m_impl->pageClosed();
-#if USE(DICTATION_ALTERNATIVES)
-    m_alternativeTextUIController->clear();
-#endif
+    PageClientImplCocoa::pageClosed();
 }
 
 void PageClientImpl::didRelaunchProcess()
@@ -285,11 +281,12 @@ void PageClientImpl::toolTipChanged(const String& oldToolTip, const String& newT
     m_impl->toolTipChanged(oldToolTip, newToolTip);
 }
 
-void PageClientImpl::didCommitLoadForMainFrame(const String& mimeType, bool useCustomContentProvider)
+void PageClientImpl::didCommitLoadForMainFrame(const String&, bool)
 {
     m_impl->updateSupportsArbitraryLayoutModes();
     m_impl->dismissContentRelativeChildWindowsWithAnimation(true);
     m_impl->clearPromisedDragImage();
+    m_impl->pageDidScroll({0, 0});
 }
 
 void PageClientImpl::didFinishLoadingDataForCustomContentProvider(const String& suggestedFilename, const IPC::DataReference& dataReference)
@@ -333,6 +330,11 @@ void PageClientImpl::setCursor(const WebCore::Cursor& cursor)
         return;
 
     [platformCursor set];
+
+    if (cursor.type() == WebCore::Cursor::Type::None) {
+        if ([NSCursor respondsToSelector:@selector(hideUntilChanged)])
+            [NSCursor hideUntilChanged];
+    }
 }
 
 void PageClientImpl::setCursorHiddenUntilMouseMoves(bool hiddenUntilMouseMoves)
@@ -349,12 +351,34 @@ void PageClientImpl::registerEditCommand(Ref<WebEditCommandProxy>&& command, Und
     m_impl->registerEditCommand(WTFMove(command), undoOrRedo);
 }
 
-#if USE(INSERTION_UNDO_GROUPING)
 void PageClientImpl::registerInsertionUndoGrouping()
 {
     registerInsertionUndoGroupingWithUndoManager([m_view undoManager]);
 }
-#endif
+
+#if ENABLE(UI_PROCESS_PDF_HUD)
+
+void PageClientImpl::createPDFHUD(PDFPluginIdentifier identifier, const WebCore::IntRect& rect)
+{
+    m_impl->createPDFHUD(identifier, rect);
+}
+
+void PageClientImpl::updatePDFHUDLocation(PDFPluginIdentifier identifier, const WebCore::IntRect& rect)
+{
+    m_impl->updatePDFHUDLocation(identifier, rect);
+}
+
+void PageClientImpl::removePDFHUD(PDFPluginIdentifier identifier)
+{
+    m_impl->removePDFHUD(identifier);
+}
+
+void PageClientImpl::removeAllPDFHUDs()
+{
+    m_impl->removeAllPDFHUDs();
+}
+
+#endif // ENABLE(UI_PROCESS_PDF_HUD)
 
 void PageClientImpl::clearAllEditCommands()
 {
@@ -376,11 +400,11 @@ void PageClientImpl::startDrag(const WebCore::DragItem& item, const ShareableBit
     m_impl->startDrag(item, image);
 }
 
-void PageClientImpl::setPromisedDataForImage(const String& pasteboardName, Ref<SharedBuffer>&& imageBuffer, const String& filename, const String& extension, const String& title, const String& url, const String& visibleURL, RefPtr<SharedBuffer>&& archiveBuffer)
+void PageClientImpl::setPromisedDataForImage(const String& pasteboardName, Ref<FragmentedSharedBuffer>&& imageBuffer, const String& filename, const String& extension, const String& title, const String& url, const String& visibleURL, RefPtr<FragmentedSharedBuffer>&& archiveBuffer, const String& originIdentifier)
 {
     auto image = BitmapImage::create();
     image->setData(WTFMove(imageBuffer), true);
-    m_impl->setPromisedDataForImage(image.ptr(), filename, extension, title, url, visibleURL, archiveBuffer.get(), pasteboardName);
+    m_impl->setPromisedDataForImage(image.ptr(), filename, extension, title, url, visibleURL, archiveBuffer.get(), pasteboardName, originIdentifier);
 }
 
 void PageClientImpl::updateSecureInputState()
@@ -420,9 +444,7 @@ void PageClientImpl::pinnedStateDidChange()
     
 IntPoint PageClientImpl::screenToRootView(const IntPoint& point)
 {
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    NSPoint windowCoord = [[m_view window] convertScreenToBase:point];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+    NSPoint windowCoord = [m_view.window convertPointFromScreen:point];
     return IntPoint([m_view convertPoint:windowCoord fromView:nil]);
 }
     
@@ -430,9 +452,7 @@ IntRect PageClientImpl::rootViewToScreen(const IntRect& rect)
 {
     NSRect tempRect = rect;
     tempRect = [m_view convertRect:tempRect toView:nil];
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    tempRect.origin = [[m_view window] convertBaseToScreen:tempRect.origin];
-    ALLOW_DEPRECATED_DECLARATIONS_END
+    tempRect.origin = [m_view.window convertPointToScreen:tempRect.origin];
     return enclosingIntRect(tempRect);
 }
 
@@ -458,17 +478,43 @@ void PageClientImpl::doneWithKeyEvent(const NativeWebKeyboardEvent& event, bool 
     m_impl->doneWithKeyEvent(event.nativeEvent(), eventWasHandled);
 }
 
+#if ENABLE(IMAGE_ANALYSIS)
+
+void PageClientImpl::requestTextRecognition(const URL& imageURL, const ShareableBitmap::Handle& imageData, const String& identifier, CompletionHandler<void(TextRecognitionResult&&)>&& completion)
+{
+    m_impl->requestTextRecognition(imageURL, imageData, identifier, WTFMove(completion));
+}
+
+void PageClientImpl::computeHasImageAnalysisResults(const URL& imageURL, ShareableBitmap& imageBitmap, ImageAnalysisType type, CompletionHandler<void(bool)>&& completion)
+{
+    m_impl->computeHasImageAnalysisResults(imageURL, imageBitmap, type, WTFMove(completion));
+}
+
+#endif // ENABLE(IMAGE_ANALYSIS)
+
 RefPtr<WebPopupMenuProxy> PageClientImpl::createPopupMenuProxy(WebPageProxy& page)
 {
     return WebPopupMenuProxyMac::create(m_view, page);
 }
 
 #if ENABLE(CONTEXT_MENUS)
+
 Ref<WebContextMenuProxy> PageClientImpl::createContextMenuProxy(WebPageProxy& page, ContextMenuContextData&& context, const UserData& userData)
 {
     return WebContextMenuProxyMac::create(m_view, page, WTFMove(context), userData);
 }
-#endif
+
+void PageClientImpl::didShowContextMenu()
+{
+    [m_webView _didShowContextMenu];
+}
+
+void PageClientImpl::didDismissContextMenu()
+{
+    [m_webView _didDismissContextMenu];
+}
+
+#endif // ENABLE(CONTEXT_MENUS)
 
 #if ENABLE(INPUT_TYPE_COLOR)
 RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy* page, const WebCore::Color& initialColor, const WebCore::IntRect& rect, Vector<WebCore::Color>&& suggestions)
@@ -484,12 +530,19 @@ RefPtr<WebDataListSuggestionsDropdown> PageClientImpl::createDataListSuggestions
 }
 #endif
 
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+RefPtr<WebDateTimePicker> PageClientImpl::createDateTimePicker(WebPageProxy& page)
+{
+    return WebDateTimePickerMac::create(page, m_view);
+}
+#endif
+
 Ref<ValidationBubble> PageClientImpl::createValidationBubble(const String& message, const ValidationBubble::Settings& settings)
 {
     return ValidationBubble::create(m_view, message, settings);
 }
 
-void PageClientImpl::showSafeBrowsingWarning(const SafeBrowsingWarning& warning, CompletionHandler<void(Variant<WebKit::ContinueUnsafeLoad, URL>&&)>&& completionHandler)
+void PageClientImpl::showSafeBrowsingWarning(const SafeBrowsingWarning& warning, CompletionHandler<void(std::variant<WebKit::ContinueUnsafeLoad, URL>&&)>&& completionHandler)
 {
     if (!m_impl)
         return completionHandler(ContinueUnsafeLoad::Yes);
@@ -513,12 +566,12 @@ void PageClientImpl::clearSafeBrowsingWarningIfForMainFrameNavigation()
     m_impl->clearSafeBrowsingWarningIfForMainFrameNavigation();
 }
 
-void PageClientImpl::setTextIndicator(Ref<TextIndicator> textIndicator, WebCore::TextIndicatorWindowLifetime lifetime)
+void PageClientImpl::setTextIndicator(Ref<TextIndicator> textIndicator, WebCore::TextIndicatorLifetime lifetime)
 {
     m_impl->setTextIndicator(textIndicator.get(), lifetime);
 }
 
-void PageClientImpl::clearTextIndicator(WebCore::TextIndicatorWindowDismissalAnimation dismissalAnimation)
+void PageClientImpl::clearTextIndicator(WebCore::TextIndicatorDismissalAnimation dismissalAnimation)
 {
     m_impl->clearTextIndicatorWithAnimation(dismissalAnimation);
 }
@@ -534,6 +587,14 @@ void PageClientImpl::accessibilityWebProcessTokenReceived(const IPC::DataReferen
 }
     
 void PageClientImpl::enterAcceleratedCompositingMode(const LayerTreeContext& layerTreeContext)
+{
+    ASSERT(!layerTreeContext.isEmpty());
+
+    CALayer *renderLayer = [CALayer _web_renderLayerWithContextID:layerTreeContext.contextID];
+    m_impl->enterAcceleratedCompositingWithRootLayer(renderLayer);
+}
+
+void PageClientImpl::didFirstLayerFlush(const LayerTreeContext& layerTreeContext)
 {
     ASSERT(!layerTreeContext.isEmpty());
 
@@ -564,7 +625,7 @@ CALayer *PageClientImpl::acceleratedCompositingRootLayer() const
     return m_impl->acceleratedCompositingRootLayer();
 }
 
-RefPtr<ViewSnapshot> PageClientImpl::takeViewSnapshot()
+RefPtr<ViewSnapshot> PageClientImpl::takeViewSnapshot(std::optional<WebCore::IntRect>&&)
 {
     return m_impl->takeViewSnapshot();
 }
@@ -593,24 +654,14 @@ void PageClientImpl::gestureEventWasNotHandledByWebCore(const NativeWebGestureEv
 }
 #endif
 
-void PageClientImpl::pluginFocusOrWindowFocusChanged(uint64_t pluginComplexTextInputIdentifier, bool pluginHasFocusAndWindowHasFocus)
-{
-    m_impl->pluginFocusOrWindowFocusChanged(pluginHasFocusAndWindowHasFocus, pluginComplexTextInputIdentifier);
-}
-
-void PageClientImpl::setPluginComplexTextInputState(uint64_t pluginComplexTextInputIdentifier, PluginComplexTextInputState pluginComplexTextInputState)
-{
-    m_impl->setPluginComplexTextInputStateAndIdentifier(pluginComplexTextInputState, pluginComplexTextInputIdentifier);
-}
-
 void PageClientImpl::didPerformDictionaryLookup(const DictionaryPopupInfo& dictionaryPopupInfo)
 {
     m_impl->prepareForDictionaryLookup();
 
     DictionaryLookup::showPopup(dictionaryPopupInfo, m_view, [this](TextIndicator& textIndicator) {
-        m_impl->setTextIndicator(textIndicator, TextIndicatorWindowLifetime::Permanent);
+        m_impl->setTextIndicator(textIndicator, WebCore::TextIndicatorLifetime::Permanent);
     }, nullptr, [this]() {
-        m_impl->clearTextIndicatorWithAnimation(WebCore::TextIndicatorWindowDismissalAnimation::None);
+        m_impl->clearTextIndicatorWithAnimation(WebCore::TextIndicatorDismissalAnimation::None);
     });
 }
 
@@ -668,8 +719,7 @@ void PageClientImpl::recommendedScrollbarStyleDidChange(ScrollbarStyle newStyle)
     else
         options |= NSTrackingActiveInKeyWindow;
 
-    RetainPtr<NSTrackingArea> trackingArea = adoptNS([[NSTrackingArea alloc] initWithRect:[m_view frame] options:options owner:m_view userInfo:nil]);
-    m_impl->setPrimaryTrackingArea(trackingArea.get());
+    m_impl->updatePrimaryTrackingAreaOptions(options);
 }
 
 void PageClientImpl::intrinsicContentSizeDidChange(const IntSize& intrinsicContentSize)
@@ -682,18 +732,7 @@ bool PageClientImpl::executeSavedCommandBySelector(const String& selectorString)
     return m_impl->executeSavedCommandBySelector(NSSelectorFromString(selectorString));
 }
 
-#if USE(DICTATION_ALTERNATIVES)
-uint64_t PageClientImpl::addDictationAlternatives(const RetainPtr<NSTextAlternatives>& alternatives)
-{
-    return m_alternativeTextUIController->addAlternatives(alternatives);
-}
-
-void PageClientImpl::removeDictationAlternatives(uint64_t dictationContext)
-{
-    m_alternativeTextUIController->removeAlternatives(dictationContext);
-}
-
-void PageClientImpl::showDictationAlternativeUI(const WebCore::FloatRect& boundingBoxOfDictatedText, uint64_t dictationContext)
+void PageClientImpl::showDictationAlternativeUI(const WebCore::FloatRect& boundingBoxOfDictatedText, WebCore::DictationContext dictationContext)
 {
     if (!isViewVisible() || !isViewInWindow())
         return;
@@ -701,12 +740,6 @@ void PageClientImpl::showDictationAlternativeUI(const WebCore::FloatRect& boundi
         m_impl->handleAcceptedAlternativeText(acceptedAlternative);
     });
 }
-
-Vector<String> PageClientImpl::dictationAlternatives(uint64_t dictationContext)
-{
-    return m_alternativeTextUIController->alternativesForContext(dictationContext);
-}
-#endif
 
 void PageClientImpl::setEditableElementIsFocused(bool editableElementIsFocused)
 {
@@ -807,18 +840,18 @@ void PageClientImpl::didFirstVisuallyNonEmptyLayoutForMainFrame()
         gestureController->didFirstVisuallyNonEmptyLayoutForMainFrame();
 }
 
-void PageClientImpl::didFinishLoadForMainFrame()
+void PageClientImpl::didFinishNavigation(API::Navigation* navigation)
 {
     if (auto gestureController = m_impl->gestureController())
-        gestureController->didFinishLoadForMainFrame();
+        gestureController->didFinishNavigation(navigation);
 
     NSAccessibilityPostNotification(NSAccessibilityUnignoredAncestor(m_view), kAXLoadCompleteNotification);
 }
 
-void PageClientImpl::didFailLoadForMainFrame()
+void PageClientImpl::didFailNavigation(API::Navigation* navigation)
 {
     if (auto gestureController = m_impl->gestureController())
-        gestureController->didFailLoadForMainFrame();
+        gestureController->didFailNavigation(navigation);
 
     NSAccessibilityPostNotification(NSAccessibilityUnignoredAncestor(m_view), kAXLoadCompleteNotification);
 }
@@ -918,14 +951,20 @@ _WKRemoteObjectRegistry *PageClientImpl::remoteObjectRegistry()
     return m_impl->remoteObjectRegistry();
 }
 
-void PageClientImpl::didFinishProcessingAllPendingMouseEvents()
+void PageClientImpl::pageDidScroll(const WebCore::IntPoint& scrollPosition)
 {
-    m_impl->didFinishProcessingAllPendingMouseEvents();
+    m_impl->pageDidScroll(scrollPosition);
 }
 
 void PageClientImpl::didRestoreScrollPosition()
 {
     m_impl->didRestoreScrollPosition();
+}
+
+void PageClientImpl::requestScrollToRect(const WebCore::FloatRect& targetRect, const WebCore::FloatPoint& origin)
+{
+    // FIXME: Add additional logic to avoid Note Pip.
+    m_impl->scrollToRect(targetRect, origin);
 }
 
 bool PageClientImpl::windowIsFrontWindowUnderMouse(const NativeWebMouseEvent& event)
@@ -955,10 +994,46 @@ void PageClientImpl::takeFocus(WebCore::FocusDirection direction)
     m_impl->takeFocus(direction);
 }
 
-void PageClientImpl::requestDOMPasteAccess(const WebCore::IntRect& elementRect, const String& originIdentifier, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&& completion)
+void PageClientImpl::requestDOMPasteAccess(WebCore::DOMPasteAccessCategory pasteAccessCategory, const WebCore::IntRect& elementRect, const String& originIdentifier, CompletionHandler<void(WebCore::DOMPasteAccessResponse)>&& completion)
 {
-    m_impl->requestDOMPasteAccess(elementRect, originIdentifier, WTFMove(completion));
+    m_impl->requestDOMPasteAccess(pasteAccessCategory, elementRect, originIdentifier, WTFMove(completion));
 }
+
+
+void PageClientImpl::makeViewBlank(bool makeBlank)
+{
+    m_impl->acceleratedCompositingRootLayer().opacity = makeBlank ? 0 : 1;
+}
+
+#if HAVE(APP_ACCENT_COLORS)
+WebCore::Color PageClientImpl::accentColor()
+{
+    return WebCore::colorFromCocoaColor([NSApp _effectiveAccentColor]);
+}
+#endif
+
+#if HAVE(TRANSLATION_UI_SERVICES) && ENABLE(CONTEXT_MENUS)
+
+bool PageClientImpl::canHandleContextMenuTranslation() const
+{
+    return m_impl->canHandleContextMenuTranslation();
+}
+
+void PageClientImpl::handleContextMenuTranslation(const TranslationContextMenuInfo& info)
+{
+    m_impl->handleContextMenuTranslation(info);
+}
+
+#endif // HAVE(TRANSLATION_UI_SERVICES) && ENABLE(CONTEXT_MENUS)
+
+#if ENABLE(DATA_DETECTION)
+
+void PageClientImpl::handleClickForDataDetectionResult(const DataDetectorElementInfo& info, const IntPoint& clickLocation)
+{
+    m_impl->handleClickForDataDetectionResult(info, clickLocation);
+}
+
+#endif
 
 } // namespace WebKit
 

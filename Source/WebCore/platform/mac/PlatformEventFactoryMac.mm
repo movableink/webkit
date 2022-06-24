@@ -23,8 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "PlatformEventFactoryMac.h"
+#import "config.h"
+#import "PlatformEventFactoryMac.h"
 
 #if PLATFORM(MAC)
 
@@ -169,41 +169,36 @@ static int clickCountForEvent(NSEvent *event)
     }
 }
 
+static PlatformWheelEventPhase phaseFromNSEventPhase(NSEventPhase eventPhase)
+{
+    switch (eventPhase) {
+    case NSEventPhaseNone:
+        return PlatformWheelEventPhase::None;
+    case NSEventPhaseBegan:
+        return PlatformWheelEventPhase::Began;
+    case NSEventPhaseStationary:
+        return PlatformWheelEventPhase::Stationary;
+    case NSEventPhaseChanged:
+        return PlatformWheelEventPhase::Changed;
+    case NSEventPhaseEnded:
+        return PlatformWheelEventPhase::Ended;
+    case NSEventPhaseCancelled:
+        return PlatformWheelEventPhase::Cancelled;
+    case NSEventPhaseMayBegin:
+        return PlatformWheelEventPhase::MayBegin;
+    }
+
+    return PlatformWheelEventPhase::None;
+}
+
 static PlatformWheelEventPhase momentumPhaseForEvent(NSEvent *event)
 {
-    uint32_t phase = PlatformWheelEventPhaseNone;
-
-    if ([event momentumPhase] & NSEventPhaseBegan)
-        phase |= PlatformWheelEventPhaseBegan;
-    if ([event momentumPhase] & NSEventPhaseStationary)
-        phase |= PlatformWheelEventPhaseStationary;
-    if ([event momentumPhase] & NSEventPhaseChanged)
-        phase |= PlatformWheelEventPhaseChanged;
-    if ([event momentumPhase] & NSEventPhaseEnded)
-        phase |= PlatformWheelEventPhaseEnded;
-    if ([event momentumPhase] & NSEventPhaseCancelled)
-        phase |= PlatformWheelEventPhaseCancelled;
-
-    return static_cast<PlatformWheelEventPhase>(phase);
+    return phaseFromNSEventPhase([event momentumPhase]);
 }
 
 static PlatformWheelEventPhase phaseForEvent(NSEvent *event)
 {
-    uint32_t phase = PlatformWheelEventPhaseNone; 
-    if ([event phase] & NSEventPhaseBegan)
-        phase |= PlatformWheelEventPhaseBegan;
-    if ([event phase] & NSEventPhaseStationary)
-        phase |= PlatformWheelEventPhaseStationary;
-    if ([event phase] & NSEventPhaseChanged)
-        phase |= PlatformWheelEventPhaseChanged;
-    if ([event phase] & NSEventPhaseEnded)
-        phase |= PlatformWheelEventPhaseEnded;
-    if ([event phase] & NSEventPhaseCancelled)
-        phase |= PlatformWheelEventPhaseCancelled;
-    if ([event momentumPhase] & NSEventPhaseMayBegin)
-        phase |= PlatformWheelEventPhaseMayBegin;
-
-    return static_cast<PlatformWheelEventPhase>(phase);
+    return phaseFromNSEventPhase([event phase]);
 }
 
 static inline String textFromEvent(NSEvent* event)
@@ -612,9 +607,9 @@ static CFTimeInterval cachedStartupTimeIntervalSince1970()
     return systemStartupTime;
 }
 
-WallTime eventTimeStampSince1970(NSEvent* event)
+WallTime eventTimeStampSince1970(NSTimeInterval timestamp)
 {
-    return WallTime::fromRawSeconds(static_cast<double>(cachedStartupTimeIntervalSince1970() + [event timestamp]));
+    return WallTime::fromRawSeconds(static_cast<double>(cachedStartupTimeIntervalSince1970() + timestamp));
 }
 
 static inline bool isKeyUpEvent(NSEvent *event)
@@ -725,7 +720,7 @@ public:
         }
 
         m_modifiers = modifiersForEvent(event);
-        m_timestamp = eventTimeStampSince1970(event);
+        m_timestamp = eventTimeStampSince1970(event.timestamp);
 
         // PlatformMouseEvent
         m_position = pointForEvent(event, windowView);
@@ -733,9 +728,7 @@ public:
         m_button = mouseButtonForEvent(event);
         m_buttons = currentlyPressedMouseButtons();
         m_clickCount = clickCountForEvent(event);
-#if ENABLE(POINTER_LOCK)
         m_movementDelta = IntPoint(event.deltaX, event.deltaY);
-#endif
 
         m_force = 0;
         int stage = eventIsPressureEvent ? event.stage : correspondingPressureEvent.stage;
@@ -762,7 +755,7 @@ public:
         // PlatformEvent
         m_type = PlatformEvent::Wheel;
         m_modifiers = modifiersForEvent(event);
-        m_timestamp = eventTimeStampSince1970(event);
+        m_timestamp = eventTimeStampSince1970(event.timestamp);
 
         // PlatformWheelEvent
         m_position = pointForEvent(event, windowView);
@@ -801,7 +794,7 @@ public:
         // PlatformEvent
         m_type = isKeyUpEvent(event) ? PlatformEvent::KeyUp : PlatformEvent::KeyDown;
         m_modifiers = modifiersForEvent(event);
-        m_timestamp = eventTimeStampSince1970(event);
+        m_timestamp = eventTimeStampSince1970(event.timestamp);
 
         // PlatformKeyboardEvent
         m_text = textFromEvent(event);

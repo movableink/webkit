@@ -31,19 +31,25 @@
 #include "WebSocketTaskSoup.h"
 #else
 
+#include "DataReference.h"
+
 namespace WebKit {
+
+struct SessionSet;
 
 class WebSocketTask {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     typedef uint64_t TaskIdentifier;
 
-    void sendString(const String&, CompletionHandler<void()>&&) { }
+    void sendString(const IPC::DataReference&, CompletionHandler<void()>&&) { }
     void sendData(const IPC::DataReference&, CompletionHandler<void()>&&) { }
     void close(int32_t code, const String& reason) { }
 
     void cancel() { }
     void resume() { }
+    
+    SessionSet* sessionSet() { return nullptr; }
 };
 
 } // namespace WebKit

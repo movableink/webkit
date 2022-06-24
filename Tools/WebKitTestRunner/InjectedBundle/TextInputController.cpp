@@ -26,10 +26,12 @@
 #include "config.h"
 #include "TextInputController.h"
 
+#include "DictionaryFunctions.h"
 #include "InjectedBundle.h"
 #include "InjectedBundlePage.h"
 #include "JSTextInputController.h"
 #include "StringFunctions.h"
+#include <WebKit/WKBundleFrame.h>
 #include <WebKit/WKBundlePagePrivate.h>
 
 namespace WTR {
@@ -39,27 +41,43 @@ Ref<TextInputController> TextInputController::create()
     return adoptRef(*new TextInputController);
 }
 
-TextInputController::TextInputController()
-{
-}
-
-TextInputController::~TextInputController()
-{
-}
-
 JSClassRef TextInputController::wrapperClass()
 {
     return JSTextInputController::textInputControllerClass();
 }
 
-void TextInputController::makeWindowObject(JSContextRef context, JSObjectRef windowObject, JSValueRef* exception)
+void TextInputController::makeWindowObject(JSContextRef context)
 {
-    setProperty(context, windowObject, "textInputController", this, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete, exception);
+    setGlobalObjectProperty(context, "textInputController", this);
 }
 
-void TextInputController::setMarkedText(JSStringRef text, int from, int length, bool suppressUnderline)
+static WKArrayRef createCompositionHighlightData(JSContextRef context, JSValueRef jsHighlightsValue)
 {
-    WKBundlePageSetComposition(InjectedBundle::singleton().page()->page(), toWK(text).get(), from, length, suppressUnderline);
+    if (!jsHighlightsValue || !JSValueIsArray(context, jsHighlightsValue))
+        return nullptr;
+
+    auto result = WKMutableArrayCreate();
+    auto array = const_cast<JSObjectRef>(jsHighlightsValue);
+    unsigned length = arrayLength(context, array);
+    for (unsigned i = 0; i < length; ++i) {
+        auto value = JSObjectGetPropertyAtIndex(context, array, i, nullptr);
+        if (!value || !JSValueIsObject(context, value))
+            continue;
+        auto object = const_cast<JSObjectRef>(value);
+        auto dictionary = adoptWK(WKMutableDictionaryCreate());
+        setValue(dictionary, "from", static_cast<uint64_t>(numericProperty(context, object, "from")));
+        setValue(dictionary, "length", static_cast<uint64_t>(numericProperty(context, object, "length")));
+        setValue(dictionary, "color", toWK(stringProperty(context, object, "color")));
+        WKArrayAppendItem(result, dictionary.get());
+    }
+    return result;
+}
+
+void TextInputController::setMarkedText(JSStringRef text, int from, int length, bool suppressUnderline, JSValueRef jsHighlightsValue)
+{
+    auto page = InjectedBundle::singleton().page()->page();
+    auto highlights = adoptWK(createCompositionHighlightData(WKBundleFrameGetJavaScriptContext(WKBundlePageGetMainFrame(page)), jsHighlightsValue));
+    WKBundlePageSetComposition(page, toWK(text).get(), from, length, suppressUnderline, highlights.get());
 }
 
 bool TextInputController::hasMarkedText()

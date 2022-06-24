@@ -22,11 +22,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-/* media controls */
+#if defined(ENABLE_VIDEO) && ENABLE_VIDEO && !(defined(ENABLE_MODERN_MEDIA_CONTROLS) && ENABLE_MODERN_MEDIA_CONTROLS)
 
-body:-webkit-full-page-media {
-    background-color: rgb(38, 38, 38);
-}
+/* media controls */
 
 audio {
     width: 200px;
@@ -291,3 +289,5 @@ video::-webkit-media-text-track-container u {
 video::-webkit-media-text-track-container i {
     font-style: italic;
 }
+
+#endif

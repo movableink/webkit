@@ -9,11 +9,17 @@ layer at (0,0) size 800x1606
       RenderBlock {PRE} at (0,36) size 784x84
         RenderText {#text} at (0,0) size 422x84
           text run at (0,0) width 406: ".zero {background-color: silver; padding-bottom: 0;}"
+          text run at (405,0) width 1: " "
           text run at (0,14) width 414: ".one {padding-bottom: 0.5in; background-color: aqua;}"
+          text run at (413,14) width 1: " "
           text run at (0,28) width 406: ".two {padding-bottom: 25px; background-color: aqua;}"
+          text run at (405,28) width 1: " "
           text run at (0,42) width 414: ".three {padding-bottom: 5em; background-color: aqua;}"
+          text run at (413,42) width 1: " "
           text run at (0,56) width 406: ".four {padding-bottom: 25%; background-color: aqua;}"
+          text run at (405,56) width 1: " "
           text run at (0,70) width 422: ".five {padding-bottom: -20px; background-color: aqua;}"
+          text run at (421,70) width 1: " "
       RenderBlock {HR} at (0,133) size 784x2 [border: (1px inset #000000)]
       RenderBlock {P} at (0,151) size 784x20 [bgcolor=#C0C0C0]
         RenderText {#text} at (0,0) size 208x19
@@ -55,8 +61,8 @@ layer at (0,0) size 800x1606
                   text run at (4,4) width 161: "TABLE Testing Section"
           RenderTableRow {TR} at (0,28) size 782x708
             RenderTableCell {TD} at (0,367) size 12x29 [bgcolor=#C0C0C0] [border: (1px inset #808080)] [r=1 c=0 rs=1 cs=1]
-              RenderText {#text} at (4,4) size 4x20
-                text run at (4,5) width 4: " "
+              RenderText {#text} at (4,3) size 4x21
+                text run at (4,4) width 4: " "
             RenderTableCell {TD} at (12,28) size 770x708 [border: (1px inset #808080)] [r=1 c=1 rs=1 cs=1]
               RenderBlock {P} at (4,4) size 762x20 [bgcolor=#C0C0C0]
                 RenderText {#text} at (0,0) size 208x19

@@ -36,10 +36,18 @@ use lib $FindBin::Bin;
 use webkitdirs;
 use webkitperl::FeatureList qw(getFeatureOptionList);
 use POSIX;
+use Text::ParseWords;
 
 sub writeCongrats();
 
 prohibitUnknownPort();
+
+if (shouldUseFlatpak()) {
+    print "Building flatpak based environment\n";
+    my @command = (File::Spec->catfile(sourceDir(), "Tools", "Scripts", "build-jsc"));
+    runInFlatpak(@command);
+}
+
 
 my $shouldRunStaticAnalyzer = 0;
 my $minimal = 0;
@@ -47,12 +55,12 @@ my $coverageSupport = 0;
 my $showHelp = 0;
 my $ftlJIT = int(isAppleCocoaWebKit() && !willUseIOSSimulatorSDK() || ((isARM64() || isX86_64()) && (isGtk() || isJSCOnly())));
 my $forceCLoop = 0;
-my $cli = 0;
 my $makeArgs = "";
 my @cmakeArgs;
 my $buildDir = "";
-my $copyLibraries = 1;
 my $startTime = time();
+my $useCCache = -1;
+my $exportCompileCommands = 0;
 
 my @features = getFeatureOptionList();
 
@@ -69,7 +77,7 @@ foreach (@features) {
 }
 
 # Additional environment parameters
-push @ARGV, split(/ /, $ENV{'BUILD_JSC_ARGS'}) if ($ENV{'BUILD_JSC_ARGS'});
+push @ARGV, parse_line('\s+', 0, $ENV{'BUILD_JSC_ARGS'}) if ($ENV{'BUILD_JSC_ARGS'});
 
 my $programName = basename($0);
 my $usage = <<EOF;
@@ -78,12 +86,13 @@ Usage: $programName [options] [options to pass to build system]
   --[no-]analyze                Toggle code static analysis (default: $shouldRunStaticAnalyzer)
   --[no-]coverage               Toggle code coverage support (default: $coverageSupport)
   --[no-]ftl-jit                Toggle FTL JIT support (default: $ftlJIT)
-  --[no-]copy-libraries         Toggle whether to copy libraries (default: $copyLibraries)
   --cloop                       Use C Loop interpreter (default: $forceCLoop)
-  --cli                         Build the new jsc command line interface (default: $cli)
   --makeargs=<arguments>        Optional Makefile flags
   --cmakeargs=<arguments>       One or more optional CMake flags (e.g. --cmakeargs="-DFOO=bar -DCMAKE_PREFIX_PATH=/usr/local")
   --build-dir=<path>            Build out of tree in directory at <path>
+
+  --[no-]use-ccache             Enable (or disable) CCache, if available
+  --export-compile-commands     Generate compile_commands.json (Apple platforms only)
 EOF
 
 my %options = (
@@ -92,11 +101,11 @@ my %options = (
     'help' => \$showHelp,
     'ftl-jit!' => \$ftlJIT,
     'cloop!' => \$forceCLoop,
-    'cli!' => \$cli,
-    'copy-libraries!' => \$copyLibraries,
     'makeargs=s' => \$makeArgs,
     'cmakeargs=s' => \@cmakeArgs,
-    'build-dir=s' => \$buildDir
+    'build-dir=s' => \$buildDir,
+    'use-ccache!' => \$useCCache,
+    'export-compile-commands' => \$exportCompileCommands
 );
 
 foreach (@features) {
@@ -127,6 +136,14 @@ if (isWinCairo() || (isJSCOnly() && isWindows())) {
     (system("python Tools/Scripts/update-webkit-wincairo-libs.py") == 0) or die;
 }
 
+if ($useCCache == 1) {
+    $ENV{'WK_USE_CCACHE'} = "YES";
+} elsif ($useCCache == 0) {
+    $ENV{'WK_USE_CCACHE'} = "NO";
+}
+
+$ENV{'EXPORT_COMPILE_COMMANDS'} = "YES" if $exportCompileCommands;
+
 checkRequiredSystemConfig();
 setConfiguration();
 chdirWebKit();
@@ -140,6 +157,17 @@ if ($forceCLoop) {
 }
 
 if (isCMakeBuild()) {
+    if (scalar(@ARGV) > 0) {
+        foreach (@ARGV) {
+            my $arg = $_;
+            if ($arg =~ /^-.*/) {
+                print STDERR "Unrecognized option `$arg'\n";
+            } else {
+                print STDERR "Stray anonymous argument `$arg'\n";
+            }
+        }
+        exit 2;
+    }
     if ($forceCLoop) {
         push @cmakeArgs, " -DENABLE_JIT=OFF";
         push @cmakeArgs, " -DENABLE_C_LOOP=ON";
@@ -185,13 +213,6 @@ if (isAppleCocoaWebKit()) {
             push @options, $option unless $option eq "";
         }
     }
-
-    if ($copyLibraries) {
-        my @copyLibrariesArgs = ("perl", "Tools/Scripts/copy-webkitlibraries-to-product-directory");
-        push @copyLibrariesArgs, "--device" if willUseIOSDeviceSDK();
-        push @copyLibrariesArgs, productDir();
-        (system(@copyLibrariesArgs) == 0) or die;
-    }
 }
 
 sub buildMyProject
@@ -200,7 +221,31 @@ sub buildMyProject
     my $result;
     chdir $projectDirectory or die "Can't find $projectName directory to build from";
     if (isAppleCocoaWebKit()) {
-        $result = system "sh", "-c", ('xcodebuild -project ' . $projectName . '.xcodeproj "$@" | grep -v setenv && exit ${PIPESTATUS[0]}'), "xcodebuild",  @options, @ARGV, @additionalSupportOptions;
+        my $compilerFlags = 'GCC_PREPROCESSOR_ADDITIONS="';
+        if ($forceCLoop) {
+            $compilerFlags .= "ENABLE_JIT=0 ENABLE_C_LOOP=1";
+        }
+        $compilerFlags .= '"';
+
+        my $extraCommands = "";
+        foreach (@ARGV) {
+            # Ensure that if somebody passes in a flag like `ARCHS="i386 x86_64"` we
+            # maintain the quotes around "i386 x86_64".
+            my $arg = $_;
+            if ($arg =~ m/=/) {
+                $arg =~ s/=/="/;
+                $arg = $arg . "\"";
+            }
+            $extraCommands .= " " . $arg;
+        }
+
+        my $command = "make " . (lc configuration()) . " " . $compilerFlags . " " . $extraCommands;
+
+        print "\n";
+        print "building ", $projectName, "\n";
+        print "running build command '", $command, "' in ", $projectDirectory, "\n\n";
+
+        $result = system $command;
     } else {
         die "Building not defined for this platform!\n";
     }
@@ -222,6 +267,6 @@ sub writeCongrats()
 buildMyProject("Source/bmalloc", "bmalloc");
 buildMyProject("Source/WTF", "WTF");
 buildMyProject("Source/JavaScriptCore", "JavaScriptCore");
-if (isAppleCocoaWebKit() && $cli) {
-    buildMyProject("Tools/jsc-cli", "jsc-cli");
+if (isAppleCocoaWebKit()) {
+    writeCongrats();
 }

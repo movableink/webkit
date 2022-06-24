@@ -42,6 +42,8 @@ WI.DOMStorageManager = class DOMStorageManager extends WI.Object
 
     activateExtraDomain(domain)
     {
+        // COMPATIBILITY (iOS 14.0): Inspector.activateExtraDomains was removed in favor of a declared debuggable type
+
         console.assert(domain === "DOMStorage");
 
         for (let target of WI.targets)
@@ -97,7 +99,8 @@ WI.DOMStorageManager = class DOMStorageManager extends WI.Object
                 target.DOMStorageAgent.disable();
         }
 
-        WI.Frame.removeEventListener(null, null, this);
+        WI.Frame.removeEventListener(WI.Frame.Event.MainResourceDidChange, this._mainResourceDidChange, this);
+        WI.Frame.removeEventListener(WI.Frame.Event.SecurityOriginDidChange, this._securityOriginDidChange, this);
 
         this._reset();
     }
@@ -131,13 +134,13 @@ WI.DOMStorageManager = class DOMStorageManager extends WI.Object
             domStorage.itemAdded(key, value);
     }
 
-    itemUpdated(storageId, key, oldValue, value)
+    itemUpdated(storageId, key, oldValue, newValue)
     {
         console.assert(this._enabled);
 
         let domStorage = this._domStorageForIdentifier(storageId);
         if (domStorage)
-            domStorage.itemUpdated(key, oldValue, value);
+            domStorage.itemUpdated(key, oldValue, newValue);
     }
 
     // InspectorObserver
@@ -212,7 +215,7 @@ WI.DOMStorageManager = class DOMStorageManager extends WI.Object
         if (!this._enabled)
             return;
 
-        if (!InspectorBackend.hasDomain("DOMStorage"))
+        if (!InspectorBackend.hasCommand("Page.getCookies"))
             return;
 
         // Add the host of the frame that changed the main resource to the list of hosts there could be cookies for.

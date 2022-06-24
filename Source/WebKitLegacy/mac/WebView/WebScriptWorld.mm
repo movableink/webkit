@@ -66,7 +66,7 @@ static WorldMap& allWorlds()
 
 - (id)init
 {
-    return [self initWithWorld:WebCore::ScriptController::createWorld()];
+    return [self initWithWorld:WebCore::ScriptController::createWorld("WebScriptWorld"_s, WebCore::ScriptController::WorldType::User)];
 }
 
 - (void)unregisterWorld
@@ -92,7 +92,7 @@ static WorldMap& allWorlds()
 
 + (WebScriptWorld *)world
 {
-    return [[[self alloc] init] autorelease];
+    return adoptNS([[self alloc] init]).autorelease();
 }
 
 + (WebScriptWorld *)scriptWorldForGlobalContext:(JSGlobalContextRef)context
@@ -124,7 +124,7 @@ WebCore::DOMWrapperWorld* core(WebScriptWorld *world)
     if (WebScriptWorld *existingWorld = allWorlds().get(&world))
         return existingWorld;
 
-    return [[[self alloc] initWithWorld:world] autorelease];
+    return adoptNS([[self alloc] initWithWorld:world]).autorelease();
 }
 
 @end

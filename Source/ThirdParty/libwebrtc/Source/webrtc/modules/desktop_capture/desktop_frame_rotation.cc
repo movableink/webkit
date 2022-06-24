@@ -10,8 +10,6 @@
 
 #include "modules/desktop_capture/desktop_frame_rotation.h"
 
-#include <string.h>
-
 #include "rtc_base/checks.h"
 #include "third_party/libyuv/include/libyuv/rotate_argb.h"
 
@@ -99,7 +97,7 @@ void RotateDesktopFrame(const DesktopFrame& source,
                         DesktopFrame* target) {
   RTC_DCHECK(target);
   RTC_DCHECK(DesktopRect::MakeSize(source.size()).ContainsRect(source_rect));
-  // The rectangle in |target|.
+  // The rectangle in `target`.
   const DesktopRect target_rect =
       RotateAndOffsetRect(source_rect, source.size(), rotation, target_offset);
   RTC_DCHECK(DesktopRect::MakeSize(target->size()).ContainsRect(target_rect));

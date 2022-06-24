@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Metrological Group B.V.
+ * Copyright (C) 2020 Igalia S.L.
  * Author: Thibault Saunier <tsaunier@igalia.com>
  * Author: Alejandro G. Castro  <alex@igalia.com>
  *
@@ -21,32 +22,53 @@
 
 #include "config.h"
 
-#if ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC) && USE(GSTREAMER)
+#if ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 #include "GStreamerAudioCapturer.h"
 
+#if USE(LIBWEBRTC)
 #include "LibWebRTCAudioFormat.h"
-
-#include <gst/app/gstappsink.h>
+#endif
 
 namespace WebCore {
 
+#if USE(LIBWEBRTC)
+static constexpr size_t s_audioCaptureSampleRate = LibWebRTCAudioFormat::sampleRate;
+#else
+static constexpr size_t s_audioCaptureSampleRate = 48000;
+#endif
+
 GStreamerAudioCapturer::GStreamerAudioCapturer(GStreamerCaptureDevice device)
-    : GStreamerCapturer(device, adoptGRef(gst_caps_new_simple("audio/x-raw", "rate", G_TYPE_INT, LibWebRTCAudioFormat::sampleRate, nullptr)))
+    : GStreamerCapturer(device, adoptGRef(gst_caps_new_simple("audio/x-raw", "rate", G_TYPE_INT, s_audioCaptureSampleRate, nullptr)))
 {
 }
 
 GStreamerAudioCapturer::GStreamerAudioCapturer()
-    : GStreamerCapturer("appsrc", adoptGRef(gst_caps_new_simple("audio/x-raw", "rate", G_TYPE_INT, LibWebRTCAudioFormat::sampleRate, nullptr)))
+    : GStreamerCapturer("appsrc", adoptGRef(gst_caps_new_simple("audio/x-raw", "rate", G_TYPE_INT, s_audioCaptureSampleRate, nullptr)), CaptureDevice::DeviceType::Microphone)
 {
 }
 
 GstElement* GStreamerAudioCapturer::createConverter()
 {
-    auto converter = gst_parse_bin_from_description("audioconvert ! audioresample", TRUE, nullptr);
+    auto* bin = gst_bin_new(nullptr);
+    auto* audioconvert = gst_element_factory_make("audioconvert", nullptr);
+    auto* audioresample = gst_element_factory_make("audioresample", nullptr);
+    gst_bin_add_many(GST_BIN_CAST(bin), audioconvert, audioresample, nullptr);
+    gst_element_link(audioconvert, audioresample);
 
-    ASSERT(converter);
+#if USE(GSTREAMER_WEBRTC)
+    if (auto* webrtcdsp = makeGStreamerElement("webrtcdsp", nullptr)) {
+        g_object_set(webrtcdsp, "echo-cancel", false, "voice-detection", true, nullptr);
+        gst_bin_add(GST_BIN_CAST(bin), webrtcdsp);
+        gst_element_link(webrtcdsp, audioconvert);
+    }
+#endif
 
-    return converter;
+    if (auto pad = adoptGRef(gst_bin_find_unlinked_pad(GST_BIN_CAST(bin), GST_PAD_SRC)))
+        gst_element_add_pad(GST_ELEMENT_CAST(bin), gst_ghost_pad_new("src", pad.get()));
+    if (auto pad = adoptGRef(gst_bin_find_unlinked_pad(GST_BIN_CAST(bin), GST_PAD_SINK)))
+        gst_element_add_pad(GST_ELEMENT_CAST(bin), gst_ghost_pad_new("sink", pad.get()));
+
+    return bin;
 }
 
 bool GStreamerAudioCapturer::setSampleRate(int sampleRate)
@@ -71,4 +93,4 @@ bool GStreamerAudioCapturer::setSampleRate(int sampleRate)
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC) && USE(GSTREAMER)
+#endif // ENABLE(MEDIA_STREAM) && USE(GSTREAMER)

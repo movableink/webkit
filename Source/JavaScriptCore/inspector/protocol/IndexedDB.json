@@ -1,6 +1,5 @@
 {
     "domain": "IndexedDB",
-    "featureGuard": "ENABLE(INDEXED_DATABASE)",
     "debuggableTypes": ["page", "web-page"],
     "targetTypes": ["page"],
     "types": [

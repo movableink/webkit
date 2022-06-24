@@ -78,11 +78,11 @@ public:
     SourceCodeKey(
         const UnlinkedSourceCode& sourceCode, const String& name, SourceCodeType codeType, JSParserStrictMode strictMode, 
         JSParserScriptMode scriptMode, DerivedContextType derivedContextType, EvalContextType evalContextType, bool isArrowFunctionContext,
-        OptionSet<CodeGenerationMode> codeGenerationMode, Optional<int> functionConstructorParametersEndPosition)
+        OptionSet<CodeGenerationMode> codeGenerationMode, std::optional<int> functionConstructorParametersEndPosition)
             : m_sourceCode(sourceCode)
             , m_name(name)
             , m_flags(codeType, strictMode, scriptMode, derivedContextType, evalContextType, isArrowFunctionContext, codeGenerationMode)
-            , m_functionConstructorParametersEndPosition(functionConstructorParametersEndPosition.valueOr(-1))
+            , m_functionConstructorParametersEndPosition(functionConstructorParametersEndPosition.value_or(-1))
             , m_hash(sourceCode.hash() ^ m_flags.bits())
     {
     }
@@ -106,7 +106,7 @@ public:
     // providers cache their strings to make this efficient.
     StringView string() const { return m_sourceCode.view(); }
 
-    StringView host() const { return m_sourceCode.provider().url().host(); }
+    StringView host() const { return m_sourceCode.provider().sourceOrigin().url().host(); }
 
     bool operator==(const SourceCodeKey& other) const
     {

@@ -32,6 +32,7 @@
 #include <webkit2/WebKitAutomationSession.h>
 #include <webkit2/WebKitBackForwardList.h>
 #include <webkit2/WebKitBackForwardListItem.h>
+#include <webkit2/WebKitColorChooserRequest.h>
 #include <webkit2/WebKitContextMenu.h>
 #include <webkit2/WebKitContextMenuActions.h>
 #include <webkit2/WebKitContextMenuItem.h>
@@ -45,15 +46,17 @@
 #include <webkit2/WebKitEnumTypes.h>
 #include <webkit2/WebKitError.h>
 #include <webkit2/WebKitFaviconDatabase.h>
-#include <webkit2/WebKitColorChooserRequest.h>
 #include <webkit2/WebKitFileChooserRequest.h>
 #include <webkit2/WebKitFindController.h>
 #include <webkit2/WebKitFormSubmissionRequest.h>
 #include <webkit2/WebKitGeolocationManager.h>
 #include <webkit2/WebKitGeolocationPermissionRequest.h>
 #include <webkit2/WebKitHitTestResult.h>
+#include <webkit2/WebKitInputMethodContext.h>
 #include <webkit2/WebKitInstallMissingMediaPluginsPermissionRequest.h>
 #include <webkit2/WebKitJavascriptResult.h>
+#include <webkit2/WebKitMediaKeySystemPermissionRequest.h>
+#include <webkit2/WebKitMemoryPressureSettings.h>
 #include <webkit2/WebKitMimeInfo.h>
 #include <webkit2/WebKitNavigationAction.h>
 #include <webkit2/WebKitNavigationPolicyDecision.h>
@@ -64,6 +67,7 @@
 #include <webkit2/WebKitOptionMenuItem.h>
 #include <webkit2/WebKitPermissionRequest.h>
 #include <webkit2/WebKitPlugin.h>
+#include <webkit2/WebKitPointerLockPermissionRequest.h>
 #include <webkit2/WebKitPrintCustomWidget.h>
 #include <webkit2/WebKitPrintOperation.h>
 #include <webkit2/WebKitResponsePolicyDecision.h>
@@ -74,6 +78,7 @@
 #include <webkit2/WebKitURIRequest.h>
 #include <webkit2/WebKitURIResponse.h>
 #include <webkit2/WebKitURISchemeRequest.h>
+#include <webkit2/WebKitURISchemeResponse.h>
 #include <webkit2/WebKitURIUtilities.h>
 #include <webkit2/WebKitUserContent.h>
 #include <webkit2/WebKitUserContentFilterStore.h>
@@ -88,6 +93,7 @@
 #include <webkit2/WebKitWebViewBase.h>
 #include <webkit2/WebKitWebViewSessionState.h>
 #include <webkit2/WebKitWebsiteData.h>
+#include <webkit2/WebKitWebsiteDataAccessPermissionRequest.h>
 #include <webkit2/WebKitWebsiteDataManager.h>
 #include <webkit2/WebKitWindowProperties.h>
 

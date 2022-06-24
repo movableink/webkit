@@ -30,6 +30,10 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
+namespace WebCore {
+struct RetrieveRecordsOptions;
+}
+
 namespace WebKit {
 
 namespace CacheStorage {
@@ -48,6 +52,8 @@ struct RecordInformation {
     URL url;
     bool hasVaryStar { false };
     HashMap<String, String> varyHeaders;
+
+    RecordInformation isolatedCopy() &&;
 };
 
 class AsynchronousPutTaskCounter;
@@ -66,7 +72,7 @@ public:
     const String& uniqueName() const { return m_uniqueName; }
     bool isActive() const { return m_state != State::Uninitialized; }
 
-    void retrieveRecords(const URL&, WebCore::DOMCacheEngine::RecordsCallback&&);
+    void retrieveRecords(const WebCore::RetrieveRecordsOptions&, WebCore::DOMCacheEngine::RecordsCallback&&);
     WebCore::DOMCacheEngine::CacheInfo info() const { return { m_identifier, m_name }; }
 
     void put(Vector<WebCore::DOMCacheEngine::Record>&&, WebCore::DOMCacheEngine::RecordIdentifiersCallback&&);
@@ -77,7 +83,7 @@ public:
     void dispose();
     void clearMemoryRepresentation();
 
-    static Optional<WebCore::DOMCacheEngine::Record> decode(const NetworkCache::Storage::Record&);
+    static std::optional<WebCore::DOMCacheEngine::Record> decode(const NetworkCache::Storage::Record&);
     static NetworkCache::Storage::Record encode(const RecordInformation&, const WebCore::DOMCacheEngine::Record&);
 
     struct DecodedRecord {
@@ -91,7 +97,9 @@ public:
         uint64_t size { 0 };
         WebCore::DOMCacheEngine::Record record;
     };
-    static Optional<DecodedRecord> decodeRecordHeader(const NetworkCache::Storage::Record&);
+    static std::optional<DecodedRecord> decodeRecordHeader(const NetworkCache::Storage::Record&);
+
+    bool hasPendingOpeningCallbacks() const { return !m_pendingOpeningCallbacks.isEmpty(); }
 
 private:
     Vector<RecordInformation>* recordsFromURL(const URL&);
@@ -102,7 +110,7 @@ private:
 
     RecordInformation toRecordInformation(const WebCore::DOMCacheEngine::Record&);
 
-    void finishOpening(WebCore::DOMCacheEngine::CompletionCallback&&, Optional<WebCore::DOMCacheEngine::Error>&&);
+    void finishOpening(WebCore::DOMCacheEngine::CompletionCallback&&, std::optional<WebCore::DOMCacheEngine::Error>&&);
     void retrieveRecord(const RecordInformation&, Ref<ReadRecordTaskCounter>&&);
 
     void readRecordsList(WebCore::DOMCacheEngine::CompletionCallback&&);

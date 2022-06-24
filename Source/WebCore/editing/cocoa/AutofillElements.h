@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,6 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #include "HTMLInputElement.h"
 
 namespace WebCore {
@@ -30,13 +32,15 @@ namespace WebCore {
 class AutofillElements {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT static Optional<AutofillElements> computeAutofillElements(Ref<HTMLInputElement>);
+    WEBCORE_EXPORT static std::optional<AutofillElements> computeAutofillElements(Ref<HTMLInputElement>);
     WEBCORE_EXPORT void autofill(String, String);
 
     const HTMLInputElement* username() const { return m_username.get(); }
 private:
-    AutofillElements(RefPtr<HTMLInputElement>&&, RefPtr<HTMLInputElement>&&);
+    AutofillElements(RefPtr<HTMLInputElement>&&, RefPtr<HTMLInputElement>&&, RefPtr<HTMLInputElement>&&);
     RefPtr<HTMLInputElement> m_username;
     RefPtr<HTMLInputElement> m_password;
+    RefPtr<HTMLInputElement> m_secondPassword;
 };
+
 } // namespace WebCore

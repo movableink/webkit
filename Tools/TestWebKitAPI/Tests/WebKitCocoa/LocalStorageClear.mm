@@ -25,6 +25,7 @@
 
 #import "config.h"
 
+#import "DeprecatedGlobalValues.h"
 #import "InstanceMethodSwizzler.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
@@ -35,8 +36,6 @@
 #import <WebKit/WebKit.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <wtf/RetainPtr.h>
-
-static bool readyToContinue;
 
 @interface LocalStorageClearMessageHandler : NSObject <WKScriptMessageHandler>
 @end
@@ -71,12 +70,12 @@ TEST(WKWebView, LocalStorageClear)
         webView = nil;
     }
 
-    NSString *dbPath = [@"~/Library/WebKit/TestWebKitAPI/WebsiteData/LocalStorage/file__0.localstorage" stringByExpandingTildeInPath];
-    NSString *dbSHMPath = [@"~/Library/WebKit/TestWebKitAPI/WebsiteData/LocalStorage/file__0.localstorage-shm" stringByExpandingTildeInPath];
-    NSString *dbWALPath = [@"~/Library/WebKit/TestWebKitAPI/WebsiteData/LocalStorage/file__0.localstorage-wal" stringByExpandingTildeInPath];
-    NSString *trackerPath = [@"~/Library/WebKit/TestWebKitAPI/WebsiteData/LocalStorage/StorageTracker.db" stringByExpandingTildeInPath];
-    NSString *trackerSHMPath = [@"~/Library/WebKit/TestWebKitAPI/WebsiteData/LocalStorage/StorageTracker.db-shm" stringByExpandingTildeInPath];
-    NSString *trackerWALPath = [@"~/Library/WebKit/TestWebKitAPI/WebsiteData/LocalStorage/StorageTracker.db-wal" stringByExpandingTildeInPath];
+    NSString *dbPath = [@"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/WebsiteData/LocalStorage/file__0.localstorage" stringByExpandingTildeInPath];
+    NSString *dbSHMPath = [@"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/WebsiteData/LocalStorage/file__0.localstorage-shm" stringByExpandingTildeInPath];
+    NSString *dbWALPath = [@"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/WebsiteData/LocalStorage/file__0.localstorage-wal" stringByExpandingTildeInPath];
+    NSString *trackerPath = [@"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/WebsiteData/LocalStorage/StorageTracker.db" stringByExpandingTildeInPath];
+    NSString *trackerSHMPath = [@"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/WebsiteData/LocalStorage/StorageTracker.db-shm" stringByExpandingTildeInPath];
+    NSString *trackerWALPath = [@"~/Library/WebKit/com.apple.WebKit.TestWebKitAPI/WebsiteData/LocalStorage/StorageTracker.db-wal" stringByExpandingTildeInPath];
 
     [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
         EXPECT_FALSE([[NSFileManager defaultManager] fileExistsAtPath:dbPath]);
@@ -110,7 +109,7 @@ NSString *defaultWebsiteCacheDirectory()
 #if PLATFORM(IOS_FAMILY)
     return nil;
 #else
-    return @"~/Library/Caches/TestWebKitAPI/WebKit";
+    return @"~/Library/Caches/com.apple.WebKit.TestWebKitAPI/WebKit";
 #endif
 }
 

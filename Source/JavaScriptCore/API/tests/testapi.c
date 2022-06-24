@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define ASSERT_DISABLED 0
+#define ASSERT_ENABLED 1
 #include "config.h"
 
 #if USE(CF)
@@ -1018,12 +1018,14 @@ static JSValueRef functionGC(JSContextRef context, JSObjectRef function, JSObjec
 
 static JSStaticValue globalObject_staticValues[] = {
     { "globalStaticValue", globalObject_get, globalObject_set, kJSPropertyAttributeNone },
+    { "globalStaticValue2", globalObject_get, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontEnum },
     { 0, 0, 0, 0 }
 };
 
 static JSStaticFunction globalObject_staticFunctions[] = {
     { "globalStaticFunction", globalObject_call, kJSPropertyAttributeNone },
     { "globalStaticFunction2", globalObject_call, kJSPropertyAttributeNone },
+    { "globalStaticFunction3", globalObject_call, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontEnum },
     { "gc", functionGC, kJSPropertyAttributeNone },
     { 0, 0, 0 }
 };
@@ -1624,7 +1626,7 @@ int main(int argc, char* argv[])
         failed = 1;
     } else
         printf("PASS: Correctly returned null for invalid JSON data.\n");
-    JSValueRef exception;
+    JSValueRef exception = NULL;
     JSStringRef str = JSValueCreateJSONString(context, jsonObject, 0, 0);
     if (!JSStringIsEqualToUTF8CString(str, "{\"aProperty\":true}")) {
         printf("FAIL: Did not correctly serialise with indent of 0.\n");
@@ -1995,6 +1997,19 @@ int main(int argc, char* argv[])
     JSStringRelease(sourceURL);
     JSStringRelease(sourceURLKey);
 
+    JSGlobalContextSetEvalEnabled(context, false, jsOneIString);
+    exception = NULL;
+    script = JSStringCreateWithUTF8CString("eval(\"3\");");
+    JSEvaluateScript(context, script, NULL, NULL, 1, &exception);
+    ASSERT(exception);
+    JSStringRelease(script);
+    exception = NULL;
+    script = JSStringCreateWithUTF8CString("Function(\"return 3;\");");
+    JSEvaluateScript(context, script, NULL, NULL, 1, &exception);
+    ASSERT(exception);
+    JSStringRelease(script);
+    JSGlobalContextSetEvalEnabled(context, true, NULL);
+
     // Verify that creating a constructor for a class with no static functions does not trigger
     // an assert inside putDirect or lead to a crash during GC. <https://bugs.webkit.org/show_bug.cgi?id=25785>
     nullDefinition = kJSClassDefinitionEmpty;
@@ -2106,10 +2121,8 @@ int main(int argc, char* argv[])
         JSGlobalContextRelease(context);
     }
     failed |= testTypedArrayCAPI();
-    failed |= testExecutionTimeLimit();
     failed |= testFunctionOverrides();
     failed |= testGlobalContextWithFinalizer();
-    failed |= testPingPongStackOverflow();
     failed |= testJSONParse();
     failed |= testJSObjectGetProxyTarget();
 
@@ -2160,7 +2173,19 @@ int main(int argc, char* argv[])
     globalObjectSetPrototypeTest();
     globalObjectPrivatePropertyTest();
 
-    failed = finalizeMultithreadedMultiVMExecutionTest() || failed;
+    failed |= finalizeMultithreadedMultiVMExecutionTest();
+
+    // Don't run these tests till after the MultithreadedMultiVMExecutionTest has finished.
+    // 1. testPingPongStackOverflow() changes stack size per thread configuration at runtime to very small value,
+    // which can cause stack-overflow on MultithreadedMultiVMExecutionTest test.
+    // 2. testExecutionTimeLimit() modifies JIT options at runtime
+    // as part of its testing. This can wreak havoc on the rest of the system that
+    // expects the options to be frozen. Ideally, we'll find a way for testExecutionTimeLimit()
+    // to do its work without changing JIT options, but that is not easy to do.
+    //
+    // For now, we'll just run them here at the end as a workaround.
+    failed |= testPingPongStackOverflow();
+    failed |= testExecutionTimeLimit();
 
     if (failed) {
         printf("FAIL: Some tests failed.\n");

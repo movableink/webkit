@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,8 @@
 #import "runtime_array.h"
 #import "runtime_object.h"
 #import <JavaScriptCore/Error.h>
+#import <JavaScriptCore/IsoSubspacePerVM.h>
+#import <JavaScriptCore/JSDestructibleObjectHeapCellType.h>
 #import <JavaScriptCore/JSGlobalObject.h>
 #import <JavaScriptCore/JSLock.h>
 #import <wtf/RetainPtr.h>
@@ -42,6 +44,8 @@ using namespace WebCore;
 
 namespace JSC {
 namespace Bindings {
+
+static JSC_DECLARE_HOST_FUNCTION(convertObjCFallbackObjectToPrimitive);
 
 ClassStructPtr webScriptObjectClass()
 {
@@ -92,27 +96,27 @@ ObjcField::ObjcField(CFStringRef name)
 {
 }
 
-JSValue ObjcField::valueFromInstance(ExecState* exec, const Instance* instance) const
+JSValue ObjcField::valueFromInstance(JSGlobalObject* lexicalGlobalObject, const Instance* instance) const
 {
-    VM& vm = exec->vm();
+    VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue result = jsUndefined();
     
     id targetObject = (static_cast<const ObjcInstance*>(instance))->getObject();
 
-    JSLock::DropAllLocks dropAllLocks(exec); // Can't put this inside the @try scope because it unwinds incorrectly.
+    JSLock::DropAllLocks dropAllLocks(lexicalGlobalObject); // Can't put this inside the @try scope because it unwinds incorrectly.
 
     @try {
         if (id objcValue = [targetObject valueForKey:(__bridge NSString *)_name.get()])
-            result = convertObjcValueToValue(exec, &objcValue, ObjcObjectType, instance->rootObject());
+            result = convertObjcValueToValue(lexicalGlobalObject, &objcValue, ObjcObjectType, instance->rootObject());
         {
-            JSLockHolder lock(exec);
-            ObjcInstance::moveGlobalExceptionToExecState(exec);
+            JSLockHolder lock(lexicalGlobalObject);
+            ObjcInstance::moveGlobalExceptionToExecState(lexicalGlobalObject);
         }
     } @catch(NSException* localException) {
-        JSLockHolder lock(exec);
-        throwError(exec, scope, [localException reason]);
+        JSLockHolder lock(lexicalGlobalObject);
+        throwError(lexicalGlobalObject, scope, [localException reason]);
     }
 
     // Work around problem in some versions of GCC where result gets marked volatile and
@@ -120,35 +124,35 @@ JSValue ObjcField::valueFromInstance(ExecState* exec, const Instance* instance) 
     return const_cast<JSValue&>(result);
 }
 
-static id convertValueToObjcObject(ExecState* exec, JSValue value)
+static id convertValueToObjcObject(JSGlobalObject* lexicalGlobalObject, JSValue value)
 {
-    VM& vm = exec->vm();
-    RefPtr<RootObject> rootObject = findRootObject(vm.vmEntryGlobalObject(exec));
+    VM& vm = lexicalGlobalObject->vm();
+    RefPtr<RootObject> rootObject = findRootObject(vm.deprecatedVMEntryGlobalObject(lexicalGlobalObject));
     if (!rootObject)
         return nil;
     return [webScriptObjectClass() _convertValueToObjcValue:value originRootObject:rootObject.get() rootObject:rootObject.get()];
 }
 
-bool ObjcField::setValueToInstance(ExecState* exec, const Instance* instance, JSValue aValue) const
+bool ObjcField::setValueToInstance(JSGlobalObject* lexicalGlobalObject, const Instance* instance, JSValue aValue) const
 {
-    JSC::VM& vm = exec->vm();
+    JSC::VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     id targetObject = (static_cast<const ObjcInstance*>(instance))->getObject();
-    id value = convertValueToObjcObject(exec, aValue);
+    id value = convertValueToObjcObject(lexicalGlobalObject, aValue);
 
-    JSLock::DropAllLocks dropAllLocks(exec); // Can't put this inside the @try scope because it unwinds incorrectly.
+    JSLock::DropAllLocks dropAllLocks(lexicalGlobalObject); // Can't put this inside the @try scope because it unwinds incorrectly.
 
     @try {
         [targetObject setValue:value forKey:(__bridge NSString *)_name.get()];
         {
-            JSLockHolder lock(exec);
-            ObjcInstance::moveGlobalExceptionToExecState(exec);
+            JSLockHolder lock(lexicalGlobalObject);
+            ObjcInstance::moveGlobalExceptionToExecState(lexicalGlobalObject);
         }
         return true;
     } @catch(NSException* localException) {
-        JSLockHolder lock(exec);
-        throwError(exec, scope, [localException reason]);
+        JSLockHolder lock(lexicalGlobalObject);
+        throwError(lexicalGlobalObject, scope, [localException reason]);
         return false;
     }
 }
@@ -161,54 +165,54 @@ ObjcArray::ObjcArray(ObjectStructPtr a, RefPtr<RootObject>&& rootObject)
 {
 }
 
-bool ObjcArray::setValueAt(ExecState* exec, unsigned int index, JSValue aValue) const
+bool ObjcArray::setValueAt(JSGlobalObject* lexicalGlobalObject, unsigned int index, JSValue aValue) const
 {
-    JSC::VM& vm = exec->vm();
+    JSC::VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (![_array.get() respondsToSelector:@selector(insertObject:atIndex:)]) {
-        throwTypeError(exec, scope, "Array is not mutable."_s);
+    if (![_array respondsToSelector:@selector(insertObject:atIndex:)]) {
+        throwTypeError(lexicalGlobalObject, scope, "Array is not mutable."_s);
         return false;
     }
 
-    if (index > [_array.get() count]) {
-        throwException(exec, scope, createRangeError(exec, "Index exceeds array size."));
+    if (index > [_array count]) {
+        throwException(lexicalGlobalObject, scope, createRangeError(lexicalGlobalObject, "Index exceeds array size."));
         return false;
     }
     
     // Always try to convert the value to an ObjC object, so it can be placed in the
     // array.
-    ObjcValue oValue = convertValueToObjcValue (exec, aValue, ObjcObjectType);
+    ObjcValue oValue = convertValueToObjcValue (lexicalGlobalObject, aValue, ObjcObjectType);
 
     @try {
-        [_array.get() insertObject:(__bridge id)oValue.objectValue atIndex:index];
+        [_array insertObject:(__bridge id)oValue.objectValue atIndex:index];
         return true;
     } @catch(NSException* localException) {
-        throwException(exec, scope, createError(exec, "Objective-C exception."));
+        throwException(lexicalGlobalObject, scope, createError(lexicalGlobalObject, "Objective-C exception."));
         return false;
     }
 }
 
-JSValue ObjcArray::valueAt(ExecState* exec, unsigned int index) const
+JSValue ObjcArray::valueAt(JSGlobalObject* lexicalGlobalObject, unsigned int index) const
 {
-    JSC::VM& vm = exec->vm();
+    JSC::VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (index > [_array.get() count])
-        return throwException(exec, scope, createRangeError(exec, "Index exceeds array size."));
+    if (index > [_array count])
+        return throwException(lexicalGlobalObject, scope, createRangeError(lexicalGlobalObject, "Index exceeds array size."));
     @try {
-        id obj = [_array.get() objectAtIndex:index];
+        id obj = [_array objectAtIndex:index];
         if (obj)
-            return convertObjcValueToValue (exec, &obj, ObjcObjectType, m_rootObject.get());
+            return convertObjcValueToValue (lexicalGlobalObject, &obj, ObjcObjectType, m_rootObject.get());
     } @catch(NSException* localException) {
-        return throwException(exec, scope, createError(exec, "Objective-C exception."));
+        return throwException(lexicalGlobalObject, scope, createError(lexicalGlobalObject, "Objective-C exception."));
     }
     return jsUndefined();
 }
 
 unsigned int ObjcArray::getLength() const
 {
-    return [_array.get() count];
+    return [_array count];
 }
 
 const ClassInfo ObjcFallbackObjectImp::s_info = { "ObjcFallbackObject", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ObjcFallbackObjectImp) };
@@ -230,28 +234,36 @@ void ObjcFallbackObjectImp::finishCreation(JSGlobalObject* globalObject)
     VM& vm = globalObject->vm();
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
+    putDirect(vm, vm.propertyNames->toPrimitiveSymbol,
+        JSFunction::create(vm, globalObject, 0, "[Symbol.toPrimitive]"_s, convertObjCFallbackObjectToPrimitive),
+        static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
-bool ObjcFallbackObjectImp::getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot& slot)
+bool ObjcFallbackObjectImp::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
+    VM& vm = globalObject->vm();
+    if (propertyName.uid() == vm.propertyNames->toPrimitiveSymbol.impl())
+        return JSObject::getOwnPropertySlot(object, globalObject, propertyName, slot);
     // keep the prototype from getting called instead of just returning false
     slot.setUndefined();
     return true;
 }
 
-bool ObjcFallbackObjectImp::put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&)
+bool ObjcFallbackObjectImp::put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&)
 {
     return false;
 }
 
-static EncodedJSValue JSC_HOST_CALL callObjCFallbackObject(JSGlobalObject* globalObject, CallFrame* callFrame)
+static JSC_DECLARE_HOST_FUNCTION(callObjCFallbackObject);
+
+JSC_DEFINE_HOST_FUNCTION(callObjCFallbackObject, (JSGlobalObject* lexicalGlobalObject, CallFrame* callFrame))
 {
-    JSC::VM& vm = globalObject->vm();
+    JSC::VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
     if (!thisValue.inherits<ObjCRuntimeObject>(vm))
-        return throwVMTypeError(callFrame, scope);
+        return throwVMTypeError(lexicalGlobalObject, scope);
 
     JSValue result = jsUndefined();
 
@@ -259,7 +271,7 @@ static EncodedJSValue JSC_HOST_CALL callObjCFallbackObject(JSGlobalObject* globa
     ObjcInstance* objcInstance = runtimeObject->getInternalObjCInstance();
 
     if (!objcInstance)
-        return JSValue::encode(RuntimeObject::throwInvalidAccessError(callFrame, scope));
+        return JSValue::encode(throwRuntimeObjectInvalidAccessError(lexicalGlobalObject, scope));
     
     objcInstance->begin();
 
@@ -270,7 +282,7 @@ static EncodedJSValue JSC_HOST_CALL callObjCFallbackObject(JSGlobalObject* globa
         std::unique_ptr<ObjcMethod> fallbackMethod(makeUnique<ObjcMethod>(objcClass->isa(), @selector(invokeUndefinedMethodFromWebScript:withArguments:)));
         const String& nameIdentifier = static_cast<ObjcFallbackObjectImp*>(callFrame->jsCallee())->propertyName();
         fallbackMethod->setJavaScriptName(nameIdentifier.createCFString().get());
-        result = objcInstance->invokeObjcMethod(callFrame, fallbackMethod.get());
+        result = objcInstance->invokeObjcMethod(lexicalGlobalObject, callFrame, fallbackMethod.get());
     }
             
     objcInstance->end();
@@ -278,29 +290,39 @@ static EncodedJSValue JSC_HOST_CALL callObjCFallbackObject(JSGlobalObject* globa
     return JSValue::encode(result);
 }
 
-CallType ObjcFallbackObjectImp::getCallData(JSCell* cell, CallData& callData)
+CallData ObjcFallbackObjectImp::getCallData(JSCell* cell)
 {
+    CallData callData;
+
     ObjcFallbackObjectImp* thisObject = jsCast<ObjcFallbackObjectImp*>(cell);
     id targetObject = thisObject->_instance->getObject();
-    if (![targetObject respondsToSelector:@selector(invokeUndefinedMethodFromWebScript:withArguments:)])
-        return CallType::None;
-    callData.native.function = callObjCFallbackObject;
-    return CallType::Host;
+    if ([targetObject respondsToSelector:@selector(invokeUndefinedMethodFromWebScript:withArguments:)]) {
+        callData.type = CallData::Type::Native;
+        callData.native.function = callObjCFallbackObject;
+    }
+
+    return callData;
 }
 
-bool ObjcFallbackObjectImp::deleteProperty(JSCell*, ExecState*, PropertyName)
+bool ObjcFallbackObjectImp::deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&)
 {
     return false;
 }
 
-JSValue ObjcFallbackObjectImp::defaultValue(const JSObject* object, ExecState* exec, PreferredPrimitiveType)
+JSC_DEFINE_HOST_FUNCTION(convertObjCFallbackObjectToPrimitive, (JSGlobalObject* lexicalGlobalObject, CallFrame* callFrame))
 {
-    VM& vm = exec->vm();
-    const ObjcFallbackObjectImp* thisObject = jsCast<const ObjcFallbackObjectImp*>(object);
-    return thisObject->_instance->getValueOfUndefinedField(exec, Identifier::fromString(vm, thisObject->m_item));
+    VM& vm = lexicalGlobalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto* thisObject = jsDynamicCast<ObjcFallbackObjectImp*>(vm, callFrame->thisValue());
+    if (!thisObject)
+        return throwVMTypeError(lexicalGlobalObject, scope, "ObjcFallbackObject[Symbol.toPrimitive] method called on incompatible |this| value."_s);
+
+    scope.release();
+    return JSValue::encode(thisObject->getInternalObjCInstance()->getValueOfUndefinedField(lexicalGlobalObject, Identifier::fromString(vm, thisObject->propertyName())));
 }
 
-bool ObjcFallbackObjectImp::toBoolean(ExecState *) const
+bool ObjcFallbackObjectImp::toBoolean(JSGlobalObject*) const
 {
     id targetObject = _instance->getObject();
     
@@ -310,5 +332,13 @@ bool ObjcFallbackObjectImp::toBoolean(ExecState *) const
     return false;
 }
 
+JSC::GCClient::IsoSubspace* ObjcFallbackObjectImp::subspaceForImpl(JSC::VM& vm)
+{
+    static NeverDestroyed<JSC::IsoSubspacePerVM> perVM([] (JSC::Heap& heap) {
+        return ISO_SUBSPACE_PARAMETERS(heap.destructibleObjectHeapCellType, ObjcFallbackObjectImp);
+    });
+    return &perVM.get().clientIsoSubspaceforVM(vm);
 }
-}
+
+} // namespace Bindings
+} // namespace JSC

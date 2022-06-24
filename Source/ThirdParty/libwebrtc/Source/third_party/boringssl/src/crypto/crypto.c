@@ -16,6 +16,8 @@
 
 #include <openssl/cpu.h>
 
+#include "fipsmodule/rand/fork_detect.h"
+#include "fipsmodule/rand/internal.h"
 #include "internal.h"
 
 
@@ -36,8 +38,8 @@
 #define BORINGSSL_NO_STATIC_INITIALIZER
 #endif
 
-#endif  /* !OPENSSL_NO_ASM && (OPENSSL_X86 || OPENSSL_X86_64 ||
-                               OPENSSL_ARM || OPENSSL_AARCH64) */
+#endif  // !NO_ASM && !STATIC_ARMCAP &&
+        // (X86 || X86_64 || ARM || AARCH64 || PPC64LE)
 
 
 // Our assembly does not use the GOT to reference symbols, which means
@@ -60,8 +62,7 @@
 // that tests the capability values will still skip the constructor but, so
 // far, the init constructor function only sets the capability variables.
 
-#if defined(OPENSSL_X86) || defined(OPENSSL_X86_64)
-
+#if defined(BORINGSSL_DISPATCH_TEST)
 // This value must be explicitly initialised to zero in order to work around a
 // bug in libtool or the linker on OS X.
 //
@@ -69,6 +70,12 @@
 // archive, linking on OS X will fail to resolve common symbols. By
 // initialising it to zero, it becomes a "data symbol", which isn't so
 // affected.
+HIDDEN uint8_t BORINGSSL_function_hit[7] = {0};
+#endif
+
+#if defined(OPENSSL_X86) || defined(OPENSSL_X86_64)
+
+// This value must be explicitly initialized to zero. See similar comment above.
 HIDDEN uint32_t OPENSSL_ia32cap_P[4] = {0};
 
 #elif defined(OPENSSL_PPC64LE)
@@ -167,6 +174,15 @@ int CRYPTO_has_asm(void) {
 #else
   return 1;
 #endif
+}
+
+void CRYPTO_pre_sandbox_init(void) {
+  // Read from /proc/cpuinfo if needed.
+  CRYPTO_library_init();
+  // Open /dev/urandom if needed.
+  CRYPTO_init_sysrand();
+  // Set up MADV_WIPEONFORK state if needed.
+  CRYPTO_get_fork_generation();
 }
 
 const char *SSLeay_version(int which) { return OpenSSL_version(which); }

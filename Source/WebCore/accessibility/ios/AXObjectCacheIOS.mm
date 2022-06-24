@@ -36,69 +36,80 @@
 
 namespace WebCore {
     
-void AXObjectCache::detachWrapper(AccessibilityObject* obj, AccessibilityDetachmentType)
-{
-    [obj->wrapper() detach];
-    obj->setWrapper(nullptr);
-}
-
-void AXObjectCache::attachWrapper(AccessibilityObject* obj)
+void AXObjectCache::attachWrapper(AXCoreObject* obj)
 {
     RetainPtr<AccessibilityObjectWrapper> wrapper = adoptNS([[WebAccessibilityObjectWrapper alloc] initWithAccessibilityObject:obj]);
     obj->setWrapper(wrapper.get());
 }
 
-void AXObjectCache::postPlatformNotification(AccessibilityObject* obj, AXNotification notification)
+String AXObjectCache::notificationPlatformName(AXNotification notification)
 {
-    if (!obj)
-        return;
+    String name;
 
-    NSString *notificationString = nil;
     switch (notification) {
-        case AXActiveDescendantChanged:
-        case AXFocusedUIElementChanged:
-            [obj->wrapper() postFocusChangeNotification];
-            notificationString = @"AXFocusChanged";
-            break;
-        case AXSelectedTextChanged:
-            [obj->wrapper() postSelectedTextChangeNotification];
-            break;
-        case AXLayoutComplete:
-            [obj->wrapper() postLayoutChangeNotification];
-            break;
-        case AXLiveRegionChanged:
-            [obj->wrapper() postLiveRegionChangeNotification];
-            break;
-        case AXLiveRegionCreated:
-            [obj->wrapper() postLiveRegionCreatedNotification];
-            break;
-        case AXChildrenChanged:
-            [obj->wrapper() postChildrenChangedNotification];
-            break;
-        case AXLoadComplete:
-            [obj->wrapper() postLoadCompleteNotification];
-            break;
-        case AXInvalidStatusChanged:
-            [obj->wrapper() postInvalidStatusChangedNotification];
-            break;
-        case AXValueChanged:
-            [obj->wrapper() postValueChangedNotification];
-            break;
-        case AXExpandedChanged:
-            [obj->wrapper() postExpandedChangedNotification];
-            break;
-        case AXSelectedChildrenChanged:
-        case AXCheckedStateChanged:
-        default:
-            break;
+    case AXActiveDescendantChanged:
+    case AXFocusedUIElementChanged:
+        name = "AXFocusChanged";
+        break;
+    case AXImageOverlayChanged:
+        name = "AXImageOverlayChanged";
+        break;
+    case AXPageScrolled:
+        name = "AXPageScrolled";
+        break;
+    case AXSelectedStateChanged:
+        name = "AXSelectedCellsChanged";
+        break;
+    case AXSelectedTextChanged:
+        name = "AXSelectedTextChanged";
+        break;
+    case AXLiveRegionChanged:
+    case AXLiveRegionCreated:
+        name = "AXLiveRegionChanged";
+        break;
+    case AXInvalidStatusChanged:
+        name = "AXInvalidStatusChanged";
+        break;
+    case AXCheckedStateChanged:
+    case AXValueChanged:
+        name = "AXValueChanged";
+        break;
+    case AXExpandedChanged:
+        name = "AXExpandedChanged";
+        break;
+    case AXCurrentStateChanged:
+        name = "AXCurrentStateChanged";
+        break;
+    case AXSortDirectionChanged:
+        name = "AXSortDirectionChanged";
+        break;
+    default:
+        break;
     }
-    
-    // Used by DRT to know when notifications are posted.
-    if (notificationString)
-        [obj->wrapper() accessibilityPostedNotification:notificationString];
+
+    return name;
 }
 
-void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject* object, const AXTextStateChangeIntent&, const VisibleSelection&)
+void AXObjectCache::postPlatformNotification(AXCoreObject* object, AXNotification notification)
+{
+    if (!object)
+        return;
+
+    // iOS notifications must ultimately call UIKit UIAccessibilityPostNotification.
+    // But WebCore is not linked with UIKit. So a workaround is to override the wrapper's
+    // postNotification method in the system WebKitAccessibility bundle that does link UIKit.
+    String notificationName = notificationPlatformName(notification);
+    if (notificationName.isEmpty())
+        return;
+
+    [object->wrapper() postNotification:notificationName];
+
+    // To simulate AX notifications for LayoutTests on the simulator, call
+    // the wrapper's accessibilityPostedNotification.
+    [object->wrapper() accessibilityPostedNotification:notificationName];
+}
+
+void AXObjectCache::postTextStateChangePlatformNotification(AXCoreObject* object, const AXTextStateChangeIntent&, const VisibleSelection&)
 {
     postPlatformNotification(object, AXSelectedTextChanged);
 }
@@ -108,12 +119,12 @@ void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject*
     postPlatformNotification(object, AXValueChanged);
 }
 
-void AXObjectCache::postTextReplacementPlatformNotification(AccessibilityObject* object, AXTextEditType, const String&, AXTextEditType, const String&, const VisiblePosition&)
+void AXObjectCache::postTextReplacementPlatformNotification(AXCoreObject* object, AXTextEditType, const String&, AXTextEditType, const String&, const VisiblePosition&)
 {
     postPlatformNotification(object, AXValueChanged);
 }
 
-void AXObjectCache::postTextReplacementPlatformNotificationForTextControl(AccessibilityObject* object, const String&, const String&, HTMLTextFormControlElement&)
+void AXObjectCache::postTextReplacementPlatformNotificationForTextControl(AXCoreObject* object, const String&, const String&, HTMLTextFormControlElement&)
 {
     postPlatformNotification(object, AXValueChanged);
 }
@@ -129,7 +140,7 @@ void AXObjectCache::frameLoadingEventPlatformNotification(AccessibilityObject* a
 
 void AXObjectCache::platformHandleFocusedUIElementChanged(Node*, Node* newNode)
 {
-    postNotification(newNode, AXFocusedUIElementChanged, TargetElement, PostAsynchronously);
+    postNotification(newNode, AXFocusedUIElementChanged);
 }
 
 void AXObjectCache::handleScrolledToAnchor(const Node*)

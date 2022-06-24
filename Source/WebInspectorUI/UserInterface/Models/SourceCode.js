@@ -25,9 +25,12 @@
 
 WI.SourceCode = class SourceCode extends WI.Object
 {
-    constructor()
+    constructor(url)
     {
         super();
+
+        this._url = url;
+        this._urlComponents = null;
 
         this._originalRevision = new WI.SourceCodeRevision(this);
         this._currentRevision = this._originalRevision;
@@ -66,7 +69,6 @@ WI.SourceCode = class SourceCode extends WI.Object
 
     get currentRevision()
     {
-        this._initializeCurrentRevisionIfNeeded();
         return this._currentRevision;
     }
 
@@ -85,14 +87,33 @@ WI.SourceCode = class SourceCode extends WI.Object
         this.dispatchEventToListeners(WI.SourceCode.Event.ContentDidChange);
     }
 
+    get editableRevision()
+    {
+        if (this._currentRevision === this._originalRevision)
+            this._currentRevision = this._originalRevision.copy();
+        return this._currentRevision;
+    }
+
     get content()
     {
-        return this.currentRevision.content;
+        return this._currentRevision.content;
+    }
+
+    get base64Encoded()
+    {
+        return this._currentRevision.base64Encoded;
     }
 
     get url()
     {
-        // To be overridden by subclasses.
+        return this._url;
+    }
+
+    get urlComponents()
+    {
+        if (!this._urlComponents)
+            this._urlComponents = parseURL(this._url);
+        return this._urlComponents;
     }
 
     get contentIdentifier()
@@ -118,6 +139,12 @@ WI.SourceCode = class SourceCode extends WI.Object
             return false;
         let contentIdentifier = this.contentIdentifier;
         return contentIdentifier && !isWebKitInjectedScript(contentIdentifier);
+    }
+
+    get localResourceOverride()
+    {
+        // Overridden by subclasses if needed.
+        return null;
     }
 
     get sourceMaps()
@@ -181,7 +208,8 @@ WI.SourceCode = class SourceCode extends WI.Object
         if (this._ignoreRevisionContentDidChangeEvent)
             return;
 
-        if (revision !== this.currentRevision)
+        console.assert(revision === this._currentRevision);
+        if (revision !== this._currentRevision)
             return;
 
         this.handleCurrentRevisionContentChange();
@@ -221,12 +249,6 @@ WI.SourceCode = class SourceCode extends WI.Object
 
     // Private
 
-    _initializeCurrentRevisionIfNeeded()
-    {
-        if (this._currentRevision === this._originalRevision)
-            this.currentRevision = this._originalRevision.copy();
-    }
-
     _processContent(parameters)
     {
         // Different backend APIs return one of `content, `body`, `text`, or `scriptSource`.
@@ -248,8 +270,6 @@ WI.SourceCode = class SourceCode extends WI.Object
             blobContent: content instanceof Blob ? content : null,
         });
         this._ignoreRevisionContentDidChangeEvent = false;
-
-        this._initializeCurrentRevisionIfNeeded();
 
         // FIXME: Returning the content in this promise is misleading. It may not be current content
         // now, and it may become out-dated later on. We should drop content from this promise

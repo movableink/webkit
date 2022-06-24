@@ -21,6 +21,8 @@
 
 #include "LoadTrackingTest.h"
 #include "WebKitTestServer.h"
+#include "WebKitWebsitePolicies.h"
+#include <WebCore/SoupVersioning.h>
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/text/CString.h>
 
@@ -32,19 +34,21 @@ public:
 
     enum PolicyDecisionResponse {
         Use,
+        UseWithPolicy,
         Ignore,
         Download,
         None
     };
 
-    PolicyClientTest()
-        : LoadTrackingTest()
-        , m_policyDecisionResponse(None)
-        , m_policyDecisionTypeFilter(0)
-        , m_respondToPolicyDecisionAsynchronously(false)
-        , m_haltMainLoopAfterMakingDecision(false)
+    static void testHandlerMessageReceivedCallback(WebKitUserContentManager* userContentManager, WebKitJavascriptResult* javascriptResult, PolicyClientTest* test)
     {
-        g_signal_connect(m_webView, "decide-policy", G_CALLBACK(decidePolicyCallback), this);
+        GUniquePtr<char> valueString(WebViewTest::javascriptResultToCString(javascriptResult));
+        if (g_str_equal(valueString.get(), "autoplayed"))
+            test->m_autoplayed = true;
+        else if (g_str_equal(valueString.get(), "did-not-play"))
+            test->m_autoplayed = false;
+
+        g_main_loop_quit(test->m_mainLoop);
     }
 
     static gboolean quitMainLoopLater(GMainLoop* loop)
@@ -58,6 +62,9 @@ public:
         switch (test->m_policyDecisionResponse) {
         case Use:
             webkit_policy_decision_use(decision);
+            break;
+        case UseWithPolicy:
+            webkit_policy_decision_use_with_policies(decision, test->m_websitePolicies.get());
             break;
         case Ignore:
             webkit_policy_decision_ignore(decision);
@@ -98,11 +105,45 @@ public:
         return FALSE;
     }
 
-    PolicyDecisionResponse m_policyDecisionResponse;
-    int m_policyDecisionTypeFilter;
-    bool m_respondToPolicyDecisionAsynchronously;
-    bool m_haltMainLoopAfterMakingDecision;
+    PolicyClientTest()
+        : LoadTrackingTest()
+    {
+        g_signal_connect(m_webView, "decide-policy", G_CALLBACK(decidePolicyCallback), this);
+        webkit_user_content_manager_register_script_message_handler(m_userContentManager.get(), "testHandler");
+        g_signal_connect(m_userContentManager.get(), "script-message-received::testHandler", G_CALLBACK(testHandlerMessageReceivedCallback), this);
+    }
+
+    bool loadURIAndWaitForAutoPlayed(const char* uri, WebKitAutoplayPolicy policy)
+    {
+        m_autoplayed = std::nullopt;
+        m_websitePolicies = adoptGRef(webkit_website_policies_new_with_policies("autoplay", policy, nullptr));
+        m_policyDecisionResponse = PolicyClientTest::UseWithPolicy;
+
+        loadURI(uri);
+        // Run until the user content messages come back from the test HTML.
+        g_main_loop_run(m_mainLoop);
+        return m_autoplayed.value_or(false);
+    }
+
+    bool runJSAndWaitForAutoPlayed(const char* script)
+    {
+        runJavaScriptWithoutForcedUserGesturesAndWaitUntilFinished(script, nullptr);
+
+        // Spin until autoplay status is reported, the run JS API can
+        // complete its main loop before the promises in autoplay-check fire.
+        while (!m_autoplayed.has_value())
+            g_main_loop_run(m_mainLoop);
+
+        return *m_autoplayed;
+    }
+
+    PolicyDecisionResponse m_policyDecisionResponse { None };
+    int m_policyDecisionTypeFilter { 0 };
+    bool m_respondToPolicyDecisionAsynchronously { false };
+    bool m_haltMainLoopAfterMakingDecision { false };
+    std::optional<bool> m_autoplayed;
     GRefPtr<WebKitPolicyDecision> m_previousPolicyDecision;
+    GRefPtr<WebKitWebsitePolicies> m_websitePolicies;
 };
 
 static void testNavigationPolicy(PolicyClientTest* test, gconstpointer)
@@ -250,23 +291,63 @@ static void testNewWindowPolicy(PolicyClientTest* test, gconstpointer)
     g_assert_false(data.triedToOpenWindow);
 }
 
+#if USE(SOUP2)
 static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
+#else
+static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
+#endif
 {
-    if (message->method != SOUP_METHOD_GET) {
-        soup_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED);
+    if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+        soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
         return;
     }
 
     if (g_str_equal(path, "/")) {
         static const char* responseString = "<html><body>Testing!</body></html>";
-        soup_message_set_status(message, SOUP_STATUS_OK);
-        soup_message_body_append(message->response_body, SOUP_MEMORY_STATIC, responseString, strlen(responseString));
-        soup_message_body_complete(message->response_body);
+        soup_server_message_set_status(message, SOUP_STATUS_OK, nullptr);
+        auto* responseBody = soup_server_message_get_response_body(message);
+        soup_message_body_append(responseBody, SOUP_MEMORY_STATIC, responseString, strlen(responseString));
+        soup_message_body_complete(responseBody);
     } else if (g_str_equal(path, "/redirect")) {
-        soup_message_set_status(message, SOUP_STATUS_MOVED_PERMANENTLY);
-        soup_message_headers_append(message->response_headers, "Location", "/");
+        soup_server_message_set_status(message, SOUP_STATUS_MOVED_PERMANENTLY, nullptr);
+        soup_message_headers_append(soup_server_message_get_response_headers(message), "Location", "/");
     } else
-        soup_message_set_status(message, SOUP_STATUS_NOT_FOUND);
+        soup_server_message_set_status(message, SOUP_STATUS_NOT_FOUND, nullptr);
+}
+
+static void testAutoplayPolicy(PolicyClientTest* test, gconstpointer)
+{
+    // The web view must be realized for the video to start playback.
+    test->showInWindow();
+
+    test->m_policyDecisionTypeFilter = WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION;
+
+    const char* resourceName = "autoplay-check.html";
+    GUniquePtr<char> resourcePath(g_build_filename(Test::getResourcesDir(Test::WebKit2Resources).data(), resourceName, nullptr));
+    GUniquePtr<char> resourceURL(g_filename_to_uri(resourcePath.get(), nullptr, nullptr));
+
+    g_assert_false(test->loadURIAndWaitForAutoPlayed(resourceURL.get(), WEBKIT_AUTOPLAY_DENY));
+
+    // Async test
+    test->m_respondToPolicyDecisionAsynchronously = true;
+    g_assert_false(test->loadURIAndWaitForAutoPlayed(resourceURL.get(), WEBKIT_AUTOPLAY_DENY));
+    test->m_respondToPolicyDecisionAsynchronously = false;
+    g_assert_true(test->loadURIAndWaitForAutoPlayed(resourceURL.get(), WEBKIT_AUTOPLAY_ALLOW));
+    g_assert_false(test->loadURIAndWaitForAutoPlayed(resourceURL.get(), WEBKIT_AUTOPLAY_ALLOW_WITHOUT_SOUND));
+
+    // Now check dynamically updating the loader policies
+    g_assert_false(test->loadURIAndWaitForAutoPlayed(resourceURL.get(), WEBKIT_AUTOPLAY_DENY));
+    // Check that JS can not side-step the active policy
+    g_assert_false(test->runJSAndWaitForAutoPlayed("playVideo();"));
+
+    // Silent audio track tests
+    resourceName = "autoplay-no-audio-check.html";
+    resourcePath.reset(g_build_filename(Test::getResourcesDir(Test::WebKit2Resources).data(), resourceName, nullptr));
+    resourceURL.reset(g_filename_to_uri(resourcePath.get(), nullptr, nullptr));
+
+    g_assert_false(test->loadURIAndWaitForAutoPlayed(resourceURL.get(), WEBKIT_AUTOPLAY_DENY));
+    g_assert_true(test->loadURIAndWaitForAutoPlayed(resourceURL.get(), WEBKIT_AUTOPLAY_ALLOW));
+    g_assert_true(test->loadURIAndWaitForAutoPlayed(resourceURL.get(), WEBKIT_AUTOPLAY_ALLOW_WITHOUT_SOUND));
 }
 
 void beforeAll()
@@ -276,6 +357,10 @@ void beforeAll()
 
     PolicyClientTest::add("WebKitPolicyClient", "navigation-policy", testNavigationPolicy);
     PolicyClientTest::add("WebKitPolicyClient", "response-policy", testResponsePolicy);
+    PolicyClientTest::add("WebKitPolicyClient", "autoplay-policy", testAutoplayPolicy);
+    // WARNING: This test must come last, it uses racey constructs that
+    // interfere nondeterminisically with any test running after it.
+    // https://bugs.webkit.org/show_bug.cgi?id=213190
     PolicyClientTest::add("WebKitPolicyClient", "new-window-policy", testNewWindowPolicy);
 }
 

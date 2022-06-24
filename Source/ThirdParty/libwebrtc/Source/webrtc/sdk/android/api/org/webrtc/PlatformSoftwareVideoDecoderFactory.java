@@ -10,10 +10,23 @@
 
 package org.webrtc;
 
-import javax.annotation.Nullable;
+import android.media.MediaCodecInfo;
+import androidx.annotation.Nullable;
+import java.util.Arrays;
 
 /** Factory for Android platform software VideoDecoders. */
 public class PlatformSoftwareVideoDecoderFactory extends MediaCodecVideoDecoderFactory {
+  /**
+   * Default allowed predicate.
+   */
+  private static final Predicate<MediaCodecInfo> defaultAllowedPredicate =
+      new Predicate<MediaCodecInfo>() {
+        @Override
+        public boolean test(MediaCodecInfo arg) {
+          return MediaCodecUtils.isSoftwareOnly(arg);
+        }
+      };
+
   /**
    * Creates a PlatformSoftwareVideoDecoderFactory that supports surface texture rendering.
    *
@@ -21,7 +34,6 @@ public class PlatformSoftwareVideoDecoderFactory extends MediaCodecVideoDecoderF
    *                      this disables texture support.
    */
   public PlatformSoftwareVideoDecoderFactory(@Nullable EglBase.Context sharedContext) {
-    super(sharedContext, /* prefixWhitelist= */ MediaCodecUtils.SOFTWARE_IMPLEMENTATION_PREFIXES,
-        /* prefixBlacklist= */ new String[] {});
+    super(sharedContext, defaultAllowedPredicate);
   }
 }

@@ -23,15 +23,17 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
+
+#import <wtf/RetainPtr.h>
 
 namespace TestWebKitAPI {
 
 TEST(WebKitLegacy, SubresourceErrorCrash)
 {
-    WebView *webView = [[WebView alloc] initWithFrame:NSZeroRect frameName:@"" groupName:@""];
-    [webView.mainFrame loadHTMLString:@"<link rel=stylesheet href='x-error:error'>" baseURL:nil];
-    [webView release];
+    auto webView = adoptNS([[WebView alloc] initWithFrame:NSZeroRect frameName:@"" groupName:@""]);
+    [[webView mainFrame] loadHTMLString:@"<link rel=stylesheet href='x-error:error'>" baseURL:nil];
+    webView = nil;
 }
 
 } // namespace TestWebKitAPI

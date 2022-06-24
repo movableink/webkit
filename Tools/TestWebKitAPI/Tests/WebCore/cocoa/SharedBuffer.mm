@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,24 +45,59 @@ static void expectDataArraysEqual(NSArray<NSData *> *expected, NSArray<NSData *>
     }
 }
 
-TEST_F(SharedBufferTest, createNSDataArray)
+TEST_F(FragmentedSharedBufferTest, createNSDataArray)
 {
     @autoreleasepool {
-        auto buffer = SharedBuffer::create();
-        expectDataArraysEqual(nil, buffer->createNSDataArray().get());
+        SharedBufferBuilder builder;
+        builder.empty();
+        expectDataArraysEqual(nil, builder.get()->createNSDataArray().get());
 
         NSData *helloData = [NSData dataWithBytes:"hello" length:5];
-        buffer->append((const char*)helloData.bytes, helloData.length);
-        expectDataArraysEqual(@[ helloData ], buffer->createNSDataArray().get());
+        builder.append((const char*)helloData.bytes, helloData.length);
+        expectDataArraysEqual(@[ helloData ], builder.get()->createNSDataArray().get());
 
         NSData *worldData = [NSData dataWithBytes:"world" length:5];
-        buffer->append((__bridge CFDataRef)worldData);
-        expectDataArraysEqual(@[ helloData, worldData ], buffer->createNSDataArray().get());
+        builder.append((__bridge CFDataRef)worldData);
+        expectDataArraysEqual(@[ helloData, worldData ], builder.get()->createNSDataArray().get());
 
         expectDataArraysEqual(@[ helloData ], SharedBuffer::create(helloData)->createNSDataArray().get());
         expectDataArraysEqual(@[ worldData ], SharedBuffer::create((__bridge CFDataRef)worldData)->createNSDataArray().get());
 
         expectDataArraysEqual(@[ [NSData dataWithContentsOfFile:tempFilePath()] ], SharedBuffer::createWithContentsOfFile(tempFilePath())->createNSDataArray().get());
+    }
+}
+
+TEST_F(FragmentedSharedBufferTest, createNSDataForDataSegment)
+{
+    @autoreleasepool {
+        SharedBufferBuilder builder;
+
+        NSData *helloData = [NSData dataWithBytes:"hello" length:5];
+        builder.append((const char*)helloData.bytes, helloData.length);
+
+        NSData *worldData = [NSData dataWithBytes:"world" length:5];
+        builder.append((__bridge CFDataRef)worldData);
+
+        NSArray *expectedData = @[ helloData, worldData ];
+        NSUInteger expectedSize = helloData.length + worldData.length;
+
+        NSUInteger segmentCount = 0;
+        for (auto& segment : *builder.get())
+            EXPECT_TRUE([segment.segment->createNSData() isEqualToData:expectedData[segmentCount++]]);
+        EXPECT_EQ(expectedData.count, segmentCount);
+
+        NSUInteger position = 0;
+        segmentCount = 0;
+        while (builder.size() > position) {
+            auto incrementalData = builder.get()->getSomeData(position);
+            EXPECT_TRUE([incrementalData.createNSData() isEqualToData:expectedData[segmentCount++]]);
+            position += incrementalData.size();
+        }
+        EXPECT_EQ(expectedData.count, segmentCount);
+
+        auto lastByte = builder.get()->getSomeData(expectedSize - 1);
+        EXPECT_TRUE([lastByte.createNSData() isEqualToData:[@"d" dataUsingEncoding:NSASCIIStringEncoding]]);
+        EXPECT_EQ(1LU, lastByte.size());
     }
 }
 

@@ -1,3 +1,230 @@
+2022-02-15  Yosef Or Boczko  <yoseforb@gmail.com>
+
+        l10n: Updated Hebrew translation of WebKitGTK
+        https://bugs.webkit.org/show_bug.cgi?id=236603
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * he.po:
+
+2021-11-24  David Kilzer  <ddkilzer@apple.com>
+
+        Compiler should be able to check localized format strings for consistency
+        <https://webkit.org/b/232686>
+        <rdar://problem/84994345>
+
+        Reviewed by Darin Adler.
+
+        * CMakeLists.txt:
+        (add_custom_command: xgettext):
+        - Add WEB_UI_FORMAT_STRING to list of macros containing
+          localizable strings.
+
+2021-09-13  Piotr Drąg  <piotrdrag@gmail.com>
+
+        [GTK][l10n] Updated Polish translation of WebKitGTK for 2.34
+        https://bugs.webkit.org/show_bug.cgi?id=229921
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * pl.po:
+
+2021-08-15  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        French translation of webkit.HEAD
+        https://bugs.webkit.org/show_bug.cgi?id=229119
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * fr.po:
+
+2021-07-23  Anders Jonsson  <anders.jonsson@norsjovallen.se>
+
+        Updated Swedish translation
+        https://bugs.webkit.org/show_bug.cgi?id=228206
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * sv.po:
+
+2021-07-23  Yuri Chornoivan  <yurchor@ukr.net>
+
+        [GTK] [l10n] Updated Ukrainian translation of WebKitGTK+
+        https://bugs.webkit.org/show_bug.cgi?id=228188
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * uk.po:
+
+2021-07-23  Rafael Fontenelle  <rafaelff@gnome.org>
+
+        [l10n] [pt_BR] Updated Brazilian Portuguese translation
+        https://bugs.webkit.org/show_bug.cgi?id=227623
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * pt_BR.po:
+
+2021-06-03  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Update Danish translation for WebkitGTK
+        https://bugs.webkit.org/show_bug.cgi?id=226565
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * da.po:
+
+2021-06-03  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Updated Swedish translation
+        https://bugs.webkit.org/show_bug.cgi?id=226558
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * sv.po:
+
+2021-06-03  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] [l10n] Updated Ukrainian translation of WebKitGTK+
+        https://bugs.webkit.org/show_bug.cgi?id=226419
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * uk.po:
+
+2021-05-04  Anders Jonsson  <anders.jonsson@norsjovallen.se>
+
+        Updated Swedish translation
+        https://bugs.webkit.org/show_bug.cgi?id=225309
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * sv.po:
+
+2021-03-18  Piotr Drąg  <piotrdrag@gmail.com>
+
+        [GTK][l10n] Updated Polish translation of WebKitGTK for 2.32
+        https://bugs.webkit.org/show_bug.cgi?id=223149
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * pl.po:
+
+2021-03-08  Dingzhong Chen  <wsxy162@gmail.com>
+
+        [GTK] Update Simplified Chinese translation
+        https://bugs.webkit.org/show_bug.cgi?id=222845
+
+        Reviewed by Carlos Garcia Campos.
+
+        * zh_CN.po:
+
+2021-02-22  Yuri Chornoivan  <yurchor@ukr.net>
+
+        [GTK] [l10n] Updated Ukrainian translation of WebKitGTK+
+        https://bugs.webkit.org/show_bug.cgi?id=220992
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * uk.po:
+
+2021-01-26  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [SOUP] Stop using SoupRequest API to load files in preparation for libsoup3
+        https://bugs.webkit.org/show_bug.cgi?id=220509
+
+        Reviewed by Adrian Perez de Castro.
+
+        * POTFILES.in: Add WebKitDirectoryInputStream.cpp
+
+2020-09-18  Rafael Fontenelle  <rafaelff@gnome.org>
+
+        [l10n] [pt_BR] Updated Brazilian Portuguese translation
+        https://bugs.webkit.org/show_bug.cgi?id=216436
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * pt_BR.po:
+
+2020-08-17  Piotr Drąg  <piotrdrag@gmail.com>
+
+        [GTK][l10n] Updated Polish translation of WebKitGTK for 2.30
+        https://bugs.webkit.org/show_bug.cgi?id=215547
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * pl.po:
+
+2020-06-18  Yuri Chornoivan  <yurchor@ukr.net>
+
+        [GTK] [l10n] Updated Ukrainian translation of WebKitGTK
+        https://bugs.webkit.org/show_bug.cgi?id=212844
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * uk.po:
+
+2020-05-20  Yuri Chornoivan  <yurchor@ukr.net>
+
+        [GTK] [l10n] Updated Ukrainian translation of WebKitGTK+
+        https://bugs.webkit.org/show_bug.cgi?id=209798
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * uk.po:
+
+2020-03-05  Piotr Drąg  <piotrdrag@gmail.com>
+
+        [GTK][l10n] Updated Polish translation of WebKitGTK for 2.28
+        https://bugs.webkit.org/show_bug.cgi?id=208410
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * pl.po:
+
+2020-02-17  Yuchen Guo  <egyc@live.com>
+
+        Updated Simplified Chinese translation
+        https://bugs.webkit.org/show_bug.cgi?id=207685
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * zh_CN.po:
+
+2020-01-28  Devin Rousso  <drousso@apple.com>
+
+        Unreviewed, speculative gtk build fix after r255214
+
+        * POTFILES.in:
+        * da.po:
+        * de.po:
+        * es.po:
+        * fr.po:
+        * id.po:
+        * it.po:
+        * pl.po:
+        * pt_BR.po:
+        * sv.po:
+        * uk.po:
+
+2019-11-25  Rafael Fontenelle  <rafaelff@gnome.org>
+
+        [l10n] [pt_BR] Updated Brazilian Portuguese translation
+        https://bugs.webkit.org/show_bug.cgi?id=204564
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * pt_BR.po:
+
+2019-11-25  Yuri Chornoivan  <yurchor@ukr.net>
+
+        [GTK] [l10n] Updated Ukrainian translation of WebKitGTK+
+        https://bugs.webkit.org/show_bug.cgi?id=204057
+
+        Rubber-stamped by Carlos Garcia Campos.
+
+        * uk.po:
+
 2019-10-15  Carlos Garcia Campos  <cgarcia@igalia.com>
 
         [GTK][WPE] Add user messages API

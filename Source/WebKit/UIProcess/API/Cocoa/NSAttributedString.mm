@@ -28,17 +28,17 @@
 #import "NSAttributedStringPrivate.h"
 
 #import "WKErrorInternal.h"
-#import "WKNavigationActionPrivate.h"
-#import "WKNavigationDelegate.h"
-#import "WKPreferences.h"
-#import "WKProcessPoolPrivate.h"
-#import "WKWebViewConfigurationPrivate.h"
-#import "WKWebViewPrivate.h"
-#import "WKWebsiteDataStore.h"
-#import "_WKProcessPoolConfiguration.h"
+#import <WebKit/WKNavigationActionPrivate.h>
+#import <WebKit/WKNavigationDelegate.h>
+#import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKProcessPoolPrivate.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
+#import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebsiteDataStore.h>
+#import <WebKit/_WKProcessPoolConfiguration.h>
 #import <wtf/Deque.h>
 #import <wtf/MemoryPressureHandler.h>
-#import <wtf/RetainPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import <UIKitSPI.h>
@@ -127,34 +127,40 @@ constexpr NSUInteger maximumWebViewCacheSize = 3;
     return cache;
 }
 
-static WKWebViewConfiguration *configuration;
+static RetainPtr<WKWebViewConfiguration>& globalConfiguration()
+{
+    static NeverDestroyed<RetainPtr<WKWebViewConfiguration>> configuration;
+    return configuration;
+}
 
 + (WKWebViewConfiguration *)configuration
 {
+    auto& configuration = globalConfiguration();
     if (!configuration) {
-        configuration = [[WKWebViewConfiguration alloc] init];
-        configuration.processPool = [[[WKProcessPool alloc] init] autorelease];
-        configuration.websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
-        configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeAll;
-        configuration._allowsJavaScriptMarkup = NO;
-        configuration._allowsMetaRefresh = NO;
-        configuration._attachmentElementEnabled = YES;
-        configuration._invisibleAutoplayNotPermitted = YES;
-        configuration._mediaDataLoadsAutomatically = NO;
-        configuration._needsStorageAccessFromFileURLsQuirk = NO;
+        configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+        [configuration setProcessPool:adoptNS([[WKProcessPool alloc] init]).get()];
+        [configuration setWebsiteDataStore:[WKWebsiteDataStore nonPersistentDataStore]];
+        [configuration setMediaTypesRequiringUserActionForPlayback:WKAudiovisualMediaTypeAll];
+        [configuration _setAllowsJavaScriptMarkup:NO];
+        [configuration _setAllowsMetaRefresh:NO];
+        [configuration _setAttachmentElementEnabled:YES];
+        [configuration _setInvisibleAutoplayNotPermitted:YES];
+        [configuration _setMediaDataLoadsAutomatically:NO];
+        [configuration _setNeedsStorageAccessFromFileURLsQuirk:NO];
 #if PLATFORM(IOS_FAMILY)
-        configuration.allowsInlineMediaPlayback = NO;
-        configuration._alwaysRunsAtForegroundPriority = YES;
+        [configuration setAllowsInlineMediaPlayback:NO];
+        [configuration _setClientNavigationsRunAtForegroundPriority:YES];
 #endif
+
+        [configuration preferences]._defaultFontSize = 12;
     }
 
-    return configuration;
+    return configuration.get();
 }
 
 + (void)clearConfiguration
 {
-    [configuration release];
-    configuration = nil;
+    globalConfiguration() = nil;
 }
 
 + (RetainPtr<WKWebView>)retrieveOrCreateWebView
@@ -269,12 +275,18 @@ static WKWebViewConfiguration *configuration;
             webView = nil;
 
             // Make the string be an instance of the receiver class.
-            if (attributedString && self != attributedString.class)
-                attributedString = [[[self alloc] initWithAttributedString:attributedString] autorelease];
+            RetainPtr<NSAttributedString> newAttributedString;
+            if (attributedString && self != attributedString.class) {
+                newAttributedString = adoptNS([[self alloc] initWithAttributedString:attributedString]);
+                attributedString = newAttributedString.get();
+            }
 
             // Make the document attributes immutable.
-            if ([attributes isKindOfClass:NSMutableDictionary.class])
-                attributes = [[[NSDictionary alloc] initWithDictionary:attributes] autorelease];
+            RetainPtr<NSDictionary<NSAttributedStringDocumentAttributeKey, id>> newAttributes;
+            if ([attributes isKindOfClass:NSMutableDictionary.class]) {
+                newAttributes = adoptNS([[NSDictionary alloc] initWithDictionary:attributes]);
+                attributes = newAttributes.get();
+            }
 
             completionHandler(attributedString, attributes, error);
         };
@@ -310,7 +322,7 @@ static WKWebViewConfiguration *configuration;
             [webView _getContentsAsAttributedStringWithCompletionHandler:^(NSAttributedString *attributedString, NSDictionary<NSAttributedStringDocumentAttributeKey, id> *documentAttributes, NSError *error) {
                 if (error)
                     return cancel(WKErrorUnknown, error);
-                finish([[attributedString retain] autorelease], [[documentAttributes retain] autorelease], nil);
+                finish(attributedString, documentAttributes, nil);
             }];
         };
 

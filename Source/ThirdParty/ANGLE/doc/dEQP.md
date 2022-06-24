@@ -29,7 +29,7 @@ The `gtest` targets support wildcards via the `--gtest_filter` argument,
 but have different test names.
 
 The tests lists are sourced from the Android CTS masters in
-`third_party/deqp/src/android/cts/master`. See `gles2-master.txt`,
+`third_party/VK-GL-CTS/src/android/cts/master`. See `gles2-master.txt`,
 `gles3-master.txt`, `gles31-master.txt` and `egl-master.txt`.
 
 If you're running a full test suite, it might take very long time. Running in
@@ -46,6 +46,8 @@ To specify the exact platform for ANGLE + dEQP, use the arguments:
   * `--deqp-egl-display-type=angle-d3d11-fl93` for D3D11 Feature level 9_3
   * `--deqp-egl-display-type=angle-gl` for OpenGL Desktop (OSX, Linux and Windows)
   * `--deqp-egl-display-type=angle-gles` for OpenGL ES (Android/ChromeOS, some Windows platforms)
+  * `--deqp-egl-display-type=angle-metal` for Metal (Mac)
+  * `--deqp-egl-display-type=angle-swiftshader` for Vulkan with SwiftShader as driver (Android, Linux, Mac, Windows)
   * `--deqp-egl-display-type=angle-vulkan` for Vulkan (Android, Linux, Windows)
 
 The flag `--use-angle=X` has the same effect as `--deqp-egl-display-type=angle-X`.
@@ -67,5 +69,18 @@ for instructions on how to run Cherry on Linux or Windows.
 
 ANGLE also supports the same set of targets built with GoogleTest, for running
 on the bots. We don't currently recommend using these for local debugging, but
-we do maintain lists of test expectations in `src/tests/deqp_support`. When
+we do maintain lists of test expectations in `src/tests/deqp_support` (see
+[Handling Test Failures](TestingAndProcesses.md)). When
 you fix tests, please remove the suppression(s) from the relevant files!
+
+### Running dEQP on Android
+
+Running the tests not using the test runner is tricky, but is necessary in order to get a complete TestResults.qpa from the dEQP tests (since the runner shards the tests, only the results of the last shard will be available when using the test runner). First, use the runner to install the APK, test data and test expectations on the device. After the tests start running, the test runner can be stopped with Ctrl+C. Then, run
+```
+adb shell am start -a android.intent.action.MAIN -n org.chromium.native_test/.NativeUnitTestNativeActivity -e org.chromium.native_test.NativeTest.StdoutFile /sdcard/chromium_tests_root/out.txt
+```
+After the tests finish, get the results with
+```
+adb pull /sdcard/chromium_tests_root/gen/vk_gl_cts_data/data/TestResults.qpa .
+```
+Note: this location might change, one can double-check with `adb logcat -d | grep qpa`.

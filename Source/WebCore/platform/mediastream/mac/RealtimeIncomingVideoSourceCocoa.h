@@ -30,10 +30,14 @@
 #if USE(LIBWEBRTC)
 
 #include "RealtimeIncomingVideoSource.h"
+#include "VideoFrame.h"
 
-using CMSampleBufferRef = struct opaqueCMSampleBuffer*;
 using CVPixelBufferPoolRef = struct __CVPixelBufferPool*;
 using CVPixelBufferRef = struct __CVBuffer*;
+
+namespace webrtc {
+enum class BufferType;
+};
 
 namespace WebCore {
 
@@ -43,26 +47,26 @@ public:
 
 private:
     RealtimeIncomingVideoSourceCocoa(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&, String&&);
-    void processNewSample(CMSampleBufferRef, unsigned, unsigned, MediaSample::VideoRotation);
     RetainPtr<CVPixelBufferRef> pixelBufferFromVideoFrame(const webrtc::VideoFrame&);
-    CVPixelBufferPoolRef pixelBufferPool(size_t width, size_t height);
+    CVPixelBufferPoolRef pixelBufferPool(size_t width, size_t height, webrtc::BufferType);
+    RefPtr<VideoFrame> toVideoFrame(const webrtc::VideoFrame&, MediaSample::VideoRotation);
+    Ref<VideoFrame> createVideoSampleFromCVPixelBuffer(CVPixelBufferRef, MediaSample::VideoRotation, int64_t);
 
     // rtc::VideoSinkInterface
     void OnFrame(const webrtc::VideoFrame&) final;
 
-    RetainPtr<CMSampleBufferRef> m_buffer;
     RetainPtr<CVPixelBufferRef> m_blackFrame;
     int m_blackFrameWidth { 0 };
     int m_blackFrameHeight { 0 };
 #if !RELEASE_LOG_DISABLED
     size_t m_numberOfFrames { 0 };
 #endif
-    RetainPtr<CVPixelBufferPoolRef> m_pixelBufferPool;
+    Lock m_pixelBufferPoolLock;
+    RetainPtr<CVPixelBufferPoolRef> m_pixelBufferPool WTF_GUARDED_BY_LOCK(m_pixelBufferPoolLock);
     size_t m_pixelBufferPoolWidth { 0 };
     size_t m_pixelBufferPoolHeight { 0 };
+    webrtc::BufferType m_pixelBufferPoolBufferType;
 };
-
-RetainPtr<CVPixelBufferRef> createBlackPixelBuffer(size_t width, size_t height);
 
 } // namespace WebCore
 

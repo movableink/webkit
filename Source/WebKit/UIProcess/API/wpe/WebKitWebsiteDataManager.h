@@ -27,6 +27,8 @@
 #include <gio/gio.h>
 #include <wpe/WebKitCookieManager.h>
 #include <wpe/WebKitDefines.h>
+#include <wpe/WebKitMemoryPressureSettings.h>
+#include <wpe/WebKitNetworkProxySettings.h>
 #include <wpe/WebKitWebsiteData.h>
 
 G_BEGIN_DECLS
@@ -37,6 +39,21 @@ G_BEGIN_DECLS
 #define WEBKIT_WEBSITE_DATA_MANAGER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  WEBKIT_TYPE_WEBSITE_DATA_MANAGER, WebKitWebsiteDataManagerClass))
 #define WEBKIT_IS_WEBSITE_DATA_MANAGER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),  WEBKIT_TYPE_WEBSITE_DATA_MANAGER))
 #define WEBKIT_WEBSITE_DATA_MANAGER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),  WEBKIT_TYPE_WEBSITE_DATA_MANAGER, WebKitWebsiteDataManagerClass))
+
+/**
+ * WebKitTLSErrorsPolicy:
+ * @WEBKIT_TLS_ERRORS_POLICY_IGNORE: Ignore TLS errors.
+ * @WEBKIT_TLS_ERRORS_POLICY_FAIL: TLS errors will emit
+ *   #WebKitWebView::load-failed-with-tls-errors and, if the signal is handled,
+ *   finish the load. In case the signal is not handled,
+ *   #WebKitWebView::load-failed is emitted before the load finishes.
+ *
+ * Enum values used to denote the TLS errors policy.
+ */
+typedef enum {
+    WEBKIT_TLS_ERRORS_POLICY_IGNORE,
+    WEBKIT_TLS_ERRORS_POLICY_FAIL
+} WebKitTLSErrorsPolicy;
 
 typedef struct _WebKitWebsiteDataManager        WebKitWebsiteDataManager;
 typedef struct _WebKitWebsiteDataManagerClass   WebKitWebsiteDataManagerClass;
@@ -93,8 +110,43 @@ webkit_website_data_manager_get_websql_directory                      (WebKitWeb
 WEBKIT_API const gchar *
 webkit_website_data_manager_get_hsts_cache_directory                  (WebKitWebsiteDataManager *manager);
 
+WEBKIT_API const gchar *
+webkit_website_data_manager_get_itp_directory                         (WebKitWebsiteDataManager *manager);
+
+WEBKIT_API const gchar *
+webkit_website_data_manager_get_service_worker_registrations_directory(WebKitWebsiteDataManager *manager);
+
+WEBKIT_API const gchar *
+webkit_website_data_manager_get_dom_cache_directory                   (WebKitWebsiteDataManager *manager);
+
 WEBKIT_API WebKitCookieManager *
 webkit_website_data_manager_get_cookie_manager                        (WebKitWebsiteDataManager *manager);
+
+WEBKIT_API void
+webkit_website_data_manager_set_itp_enabled                           (WebKitWebsiteDataManager *manager,
+                                                                       gboolean                  enabled);
+
+WEBKIT_API gboolean
+webkit_website_data_manager_get_itp_enabled                           (WebKitWebsiteDataManager *manager);
+
+WEBKIT_API void
+webkit_website_data_manager_set_persistent_credential_storage_enabled (WebKitWebsiteDataManager *manager,
+                                                                       gboolean                  enabled);
+
+WEBKIT_API gboolean
+webkit_website_data_manager_get_persistent_credential_storage_enabled (WebKitWebsiteDataManager *manager);
+
+WEBKIT_API void
+webkit_website_data_manager_set_tls_errors_policy                     (WebKitWebsiteDataManager *manager,
+                                                                       WebKitTLSErrorsPolicy     policy);
+
+WEBKIT_API WebKitTLSErrorsPolicy
+webkit_website_data_manager_get_tls_errors_policy                     (WebKitWebsiteDataManager *manager);
+
+WEBKIT_API void
+webkit_website_data_manager_set_network_proxy_settings                (WebKitWebsiteDataManager *manager,
+                                                                       WebKitNetworkProxyMode    proxy_mode,
+                                                                       WebKitNetworkProxySettings *proxy_settings);
 
 WEBKIT_API void
 webkit_website_data_manager_fetch                                     (WebKitWebsiteDataManager *manager,
@@ -131,6 +183,63 @@ WEBKIT_API gboolean
 webkit_website_data_manager_clear_finish                               (WebKitWebsiteDataManager *manager,
                                                                         GAsyncResult             *result,
                                                                         GError                  **error);
+
+WEBKIT_API void
+webkit_website_data_manager_set_memory_pressure_settings               (WebKitMemoryPressureSettings *settings);
+
+
+#define WEBKIT_TYPE_ITP_FIRST_PARTY   (webkit_itp_first_party_get_type())
+
+typedef struct _WebKitITPFirstParty WebKitITPFirstParty;
+
+WEBKIT_API GType
+webkit_itp_first_party_get_type                        (void);
+
+WEBKIT_API WebKitITPFirstParty *
+webkit_itp_first_party_ref                             (WebKitITPFirstParty      *itp_first_party);
+
+WEBKIT_API void
+webkit_itp_first_party_unref                           (WebKitITPFirstParty      *itp_first_party);
+
+WEBKIT_API const char *
+webkit_itp_first_party_get_domain                      (WebKitITPFirstParty      *itp_first_party);
+
+WEBKIT_API gboolean
+webkit_itp_first_party_get_website_data_access_allowed (WebKitITPFirstParty      *itp_first_party);
+
+WEBKIT_API GDateTime *
+webkit_itp_first_party_get_last_update_time            (WebKitITPFirstParty      *itp_first_party);
+
+
+#define WEBKIT_TYPE_ITP_THIRD_PARTY   (webkit_itp_third_party_get_type())
+
+typedef struct _WebKitITPThirdParty WebKitITPThirdParty;
+
+WEBKIT_API GType
+webkit_itp_third_party_get_type                        (void);
+
+WEBKIT_API WebKitITPThirdParty *
+webkit_itp_third_party_ref                             (WebKitITPThirdParty      *itp_third_party);
+
+WEBKIT_API void
+webkit_itp_third_party_unref                           (WebKitITPThirdParty      *itp_third_party);
+
+WEBKIT_API const char *
+webkit_itp_third_party_get_domain                      (WebKitITPThirdParty      *itp_third_party);
+
+WEBKIT_API GList *
+webkit_itp_third_party_get_first_parties               (WebKitITPThirdParty      *itp_third_party);
+
+
+WEBKIT_API void
+webkit_website_data_manager_get_itp_summary            (WebKitWebsiteDataManager *manager,
+                                                        GCancellable             *cancellable,
+                                                        GAsyncReadyCallback       callback,
+                                                        gpointer                  user_data);
+WEBKIT_API GList *
+webkit_website_data_manager_get_itp_summary_finish     (WebKitWebsiteDataManager *manager,
+                                                        GAsyncResult             *result,
+                                                        GError                  **error);
 
 G_END_DECLS
 

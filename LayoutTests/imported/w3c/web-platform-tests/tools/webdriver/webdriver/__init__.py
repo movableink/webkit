@@ -1,14 +1,15 @@
 # flake8: noqa
 
-from client import (
+from .client import (
     Cookies,
     Element,
     Find,
     Frame,
     Session,
+    ShadowRoot,
     Timeouts,
     Window)
-from error import (
+from .error import (
     ElementNotSelectableException,
     ElementNotVisibleException,
     InvalidArgumentException,
@@ -34,3 +35,5 @@ from error import (
     UnknownMethodException,
     UnsupportedOperationException,
     WebDriverException)
+from .bidi import (
+    BidiSession)

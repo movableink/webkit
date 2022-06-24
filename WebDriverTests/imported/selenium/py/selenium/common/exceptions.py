@@ -40,18 +40,6 @@ class WebDriverException(Exception):
         return exception_msg
 
 
-class ErrorInResponseException(WebDriverException):
-    """
-    Thrown when an error has occurred on the server side.
-
-    This may happen when communicating with the firefox extension
-    or the remote driver server.
-    """
-    def __init__(self, response, msg):
-        WebDriverException.__init__(self, msg)
-        self.response = response
-
-
 class InvalidSwitchToTargetException(WebDriverException):
     """
     Thrown when frame or window target to be switched doesn't exist.
@@ -133,10 +121,10 @@ class InvalidElementStateException(WebDriverException):
 
 class UnexpectedAlertPresentException(WebDriverException):
     """
-    Thrown when an unexpected alert is appeared.
+    Thrown when an unexpected alert has appeared.
 
-    Usually raised when when an expected modal is blocking webdriver form executing any
-    more commands.
+    Usually raised when  an unexpected modal is blocking the webdriver from executing
+    commands.
     """
     def __init__(self, msg=None, screen=None, stacktrace=None, alert_text=None):
         super(UnexpectedAlertPresentException, self).__init__(msg, screen, stacktrace)
@@ -170,7 +158,7 @@ class ElementNotVisibleException(InvalidElementStateException):
 class ElementNotInteractableException(InvalidElementStateException):
     """
     Thrown when an element is present in the DOM but interactions
-    with that element will hit another element do to paint order
+    with that element will hit another element due to paint order
     """
     pass
 
@@ -285,7 +273,7 @@ class ScreenshotException(WebDriverException):
 class ElementClickInterceptedException(WebDriverException):
     """
     The Element Click command could not be completed because the element receiving the events
-    is obscuring the element that was requested clicked.
+    is obscuring the element that was requested to be clicked.
     """
     pass
 
@@ -300,7 +288,7 @@ class InsecureCertificateException(WebDriverException):
 
 class InvalidCoordinatesException(WebDriverException):
     """
-    The coordinates provided to an interactions operation are invalid.
+    The coordinates provided to an interaction's operation are invalid.
     """
     pass
 
@@ -322,6 +310,6 @@ class SessionNotCreatedException(WebDriverException):
 
 class UnknownMethodException(WebDriverException):
     """
-    The requested command matched a known URL but did not match an method for that URL.
+    The requested command matched a known URL but did not match any methods for that URL.
     """
     pass

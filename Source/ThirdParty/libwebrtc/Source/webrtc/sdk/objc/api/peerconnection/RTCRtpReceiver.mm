@@ -16,7 +16,7 @@
 #import "base/RTCLogging.h"
 #import "helpers/NSString+StdString.h"
 
-#include "api/mediastreaminterface.h"
+#include "api/media_stream_interface.h"
 
 namespace webrtc {
 
@@ -51,13 +51,6 @@ void RtpReceiverDelegateAdapter::OnFirstPacketReceived(
 - (RTCRtpParameters *)parameters {
   return [[RTCRtpParameters alloc]
       initWithNativeParameters:_nativeRtpReceiver->GetParameters()];
-}
-
-- (void)setParameters:(RTCRtpParameters *)parameters {
-  if (!_nativeRtpReceiver->SetParameters(parameters.nativeParameters)) {
-    RTCLogError(@"RTCRtpReceiver(%p): Failed to set parameters: %@", self,
-        parameters);
-  }
 }
 
 - (nullable RTCMediaStreamTrack *)track {

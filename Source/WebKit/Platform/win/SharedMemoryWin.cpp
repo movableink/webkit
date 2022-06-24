@@ -27,8 +27,7 @@
 #include "config.h"
 #include "SharedMemory.h"
 
-#include "Decoder.h"
-#include "Encoder.h"
+#include "ArgumentCoder.h"
 #include <wtf/RefPtr.h>
 
 namespace WebKit {
@@ -62,16 +61,45 @@ bool SharedMemory::Handle::isNull() const
     return !m_handle;
 }
 
-void SharedMemory::Handle::encode(IPC::Encoder& encoder) const
+void SharedMemory::IPCHandle::encode(IPC::Encoder& encoder) const
 {
-    encoder << static_cast<uint64_t>(m_size);
-
-    encodeHandle(encoder, m_handle);
+    encoder << static_cast<uint64_t>(handle.m_size);
+    encoder << dataSize;
+    handle.encodeHandle(encoder, handle.m_handle);
 
     // Hand off ownership of our HANDLE to the receiving process. It will close it for us.
     // FIXME: If the receiving process crashes before it receives the memory, the memory will be
     // leaked. See <http://webkit.org/b/47502>.
-    m_handle = 0;
+    handle.m_handle = 0;
+}
+
+bool SharedMemory::IPCHandle::decode(IPC::Decoder& decoder, IPCHandle& ipcHandle)
+{
+    ASSERT_ARG(ipcHandle, !ipcHandle.handle.m_handle);
+    ASSERT_ARG(ipcHandle, !ipcHandle.handle.m_size);
+
+    SharedMemory::Handle handle;
+
+    uint64_t bufferSize;
+    if (!decoder.decode(bufferSize))
+        return false;
+
+    uint64_t dataLength;
+    if (!decoder.decode(dataLength))
+        return false;
+    
+    if (dataLength != bufferSize)
+        return false;
+    
+    auto processSpecificHandle = handle.decodeHandle(decoder);
+    if (!processSpecificHandle)
+        return false;
+
+    handle.m_handle = processSpecificHandle.value();
+    handle.m_size = bufferSize;
+    ipcHandle.handle = WTFMove(handle);
+    ipcHandle.dataSize = dataLength;
+    return true;
 }
 
 void SharedMemory::Handle::encodeHandle(IPC::Encoder& encoder, HANDLE handle)
@@ -110,37 +138,19 @@ static bool getDuplicatedHandle(HANDLE sourceHandle, DWORD sourcePID, HANDLE& du
     return success;
 }
 
-bool SharedMemory::Handle::decode(IPC::Decoder& decoder, Handle& handle)
-{
-    ASSERT_ARG(handle, !handle.m_handle);
-    ASSERT_ARG(handle, !handle.m_size);
-
-    uint64_t size;
-    if (!decoder.decode(size))
-        return false;
-
-    auto processSpecificHandle = decodeHandle(decoder);
-    if (!processSpecificHandle)
-        return false;
-
-    handle.m_handle = processSpecificHandle.value();
-    handle.m_size = size;
-    return true;
-}
-
-Optional<HANDLE> SharedMemory::Handle::decodeHandle(IPC::Decoder& decoder)
+std::optional<HANDLE> SharedMemory::Handle::decodeHandle(IPC::Decoder& decoder)
 {
     uint64_t sourceHandle;
     if (!decoder.decode(sourceHandle))
-        return WTF::nullopt;
+        return std::nullopt;
 
     uint32_t sourcePID;
     if (!decoder.decode(sourcePID))
-        return WTF::nullopt;
+        return std::nullopt;
 
     HANDLE duplicatedHandle;
     if (!getDuplicatedHandle(reinterpret_cast<HANDLE>(sourceHandle), sourcePID, duplicatedHandle))
-        return WTF::nullopt;
+        return std::nullopt;
 
     return duplicatedHandle;
 }

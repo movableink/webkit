@@ -27,7 +27,7 @@
 #include "ActivateFonts.h"
 
 #include <fontconfig/fontconfig.h>
-#include <wtf/glib/GLibUtilities.h>
+#include <wtf/FileSystem.h>
 #include <wtf/glib/GUniquePtr.h>
 
 namespace WTR {
@@ -40,7 +40,7 @@ CString topLevelPath()
     // If the environment variable wasn't provided then assume we were built into
     // WebKitBuild/Debug or WebKitBuild/Release. Obviously this will fail if the build
     // directory is non-standard, but we can't do much more about this.
-    GUniquePtr<char> parentPath(g_path_get_dirname(getCurrentExecutablePath().data()));
+    GUniquePtr<char> parentPath(g_path_get_dirname(FileSystem::currentExecutablePath().data()));
     GUniquePtr<char> layoutTestsPath(g_build_filename(parentPath.get(), "..", "..", "..", nullptr));
     GUniquePtr<char> absoluteTopLevelPath(realpath(layoutTestsPath.get(), 0));
     return absoluteTopLevelPath.get();
@@ -58,8 +58,13 @@ CString getOutputDir()
 
 static CString getFontsPath()
 {
+    // Try flatpak sandbox path.
+    GUniquePtr<char>fontsPath(g_build_filename("/usr", "share", "webkitgtk-test-fonts", NULL));
+    if (g_file_test(fontsPath.get(), static_cast<GFileTest>(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)))
+        return fontsPath.get();
+
     CString webkitOutputDir = getOutputDir();
-    GUniquePtr<char> fontsPath(g_build_filename(webkitOutputDir.data(), "DependenciesWPE", "Root", "webkitgtk-test-fonts", nullptr));
+    fontsPath.reset(g_build_filename(webkitOutputDir.data(), "DependenciesWPE", "Root", "webkitgtk-test-fonts", nullptr));
     if (g_file_test(fontsPath.get(), static_cast<GFileTest>(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)))
         return fontsPath.get();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,14 @@
 #include <wtf/Lock.h>
 #include <wtf/Vector.h>
 
+namespace JSC {
+class AbstractSlotVisitor;
+}
+
+namespace WTF {
+class AbstractLocker;
+};
+
 namespace WebCore {
 
 class ScriptExecutionContext;
@@ -45,13 +53,13 @@ public:
     static Ref<WebGLProgram> create(WebGLRenderingContextBase&);
     virtual ~WebGLProgram();
 
-    static HashMap<WebGLProgram*, WebGLRenderingContextBase*>& instances(const WTF::LockHolder&);
-    static Lock& instancesMutex();
+    static HashMap<WebGLProgram*, WebGLRenderingContextBase*>& instances() WTF_REQUIRES_LOCK(instancesLock());
+    static Lock& instancesLock() WTF_RETURNS_LOCK(s_instancesLock);
 
     void contextDestroyed() final;
 
     unsigned numActiveAttribLocations();
-    GC3Dint getActiveAttribLocation(GC3Duint index);
+    GCGLint getActiveAttribLocation(GCGLuint index);
 
     bool isUsingVertexAttrib0();
 
@@ -66,22 +74,35 @@ public:
     // Also, we invalidate the cached program info.
     void increaseLinkCount();
 
-    WebGLShader* getAttachedShader(GC3Denum);
-    bool attachShader(WebGLShader*);
-    bool detachShader(WebGLShader*);
+    WebGLShader* getAttachedShader(GCGLenum);
+    bool attachShader(const AbstractLocker&, WebGLShader*);
+    bool detachShader(const AbstractLocker&, WebGLShader*);
+    
+    void setRequiredTransformFeedbackBufferCount(int count)
+    {
+        m_requiredTransformFeedbackBufferCountAfterNextLink = count;
+    }
+    int requiredTransformFeedbackBufferCount()
+    {
+        cacheInfoIfNeeded();
+        return m_requiredTransformFeedbackBufferCount;
+    }
 
-protected:
-    WebGLProgram(WebGLRenderingContextBase&);
-
-    void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
+    void addMembersToOpaqueRoots(const AbstractLocker&, JSC::AbstractSlotVisitor&);
 
 private:
-    void cacheActiveAttribLocations(GraphicsContext3D*);
+    WebGLProgram(WebGLRenderingContextBase&);
+
+    void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
+
+    void cacheActiveAttribLocations(GraphicsContextGL*);
     void cacheInfoIfNeeded();
 
-    Vector<GC3Dint> m_activeAttribLocations;
+    static Lock s_instancesLock;
 
-    GC3Dint m_linkStatus { 0 };
+    Vector<GCGLint> m_activeAttribLocations;
+
+    GCGLint m_linkStatus { 0 };
 
     // This is used to track whether a WebGLUniformLocation belongs to this program or not.
     unsigned m_linkCount { 0 };
@@ -90,6 +111,8 @@ private:
     RefPtr<WebGLShader> m_fragmentShader;
 
     bool m_infoValid { true };
+    int m_requiredTransformFeedbackBufferCountAfterNextLink { 0 };
+    int m_requiredTransformFeedbackBufferCount { 0 };
 };
 
 } // namespace WebCore

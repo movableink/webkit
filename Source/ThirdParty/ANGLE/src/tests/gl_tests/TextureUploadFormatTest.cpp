@@ -102,7 +102,8 @@ struct TexFormat final
 template <const uint8_t bits>
 constexpr uint32_t EncodeNormUint(const float val)
 {
-    return static_cast<uint32_t>(val * (UINT32_MAX >> (32 - bits)) + 0.5);  // round-half-up
+    return static_cast<uint32_t>(val * static_cast<float>(UINT32_MAX >> (32 - bits)) +
+                                 0.5f);  // round-half-up
 }
 
 }  // anonymous namespace
@@ -142,7 +143,7 @@ void EncodeThenZeroAndCopy(DestT &dest, const float srcVals[4])
 // Test all internalFormat/unpackFormat/unpackType combinations from ES3.0.
 TEST_P(TextureUploadFormatTest, All)
 {
-    ANGLE_SKIP_TEST_IF(IsD3D9() || IsD3D11_FL93());
+    ANGLE_SKIP_TEST_IF(IsD3D9());
 
     constexpr char kVertShaderES2[]     = R"(
         void main()
@@ -232,9 +233,24 @@ TEST_P(TextureUploadFormatTest, All)
             case GL_RG:
                 expected = {refVals[0], refVals[1], 0, 255};
                 break;
-            case GL_RED:
             case GL_DEPTH_COMPONENT:
             case GL_DEPTH_STENCIL:
+                // Metal back-end requires swizzle feature to return (depth, 0, 0, 1) from sampling
+                // a depth texture.
+                // http://anglebug.com/5243
+                if (IsMetal() && !IsMetalTextureSwizzleAvailable())
+                {
+                    // If texture swizzle is not supported, we should only compare the first
+                    // component.
+                    expected = {refVals[0], actual[1], actual[2], actual[3]};
+                }
+                else
+                {
+
+                    expected = {refVals[0], 0, 0, 255};
+                }
+                break;
+            case GL_RED:
                 expected = {refVals[0], 0, 0, 255};
                 break;
 
@@ -361,7 +377,7 @@ TEST_P(TextureUploadFormatTest, All)
             (EncodeNormUint<4>(srcVals[2]) << 4) | (EncodeNormUint<4>(srcVals[3]) << 0))};
         ZeroAndCopy(srcBuffer, src);
 
-        // fnTest({GL_RGBA4, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4}, {16,16,16,16});
+        fnTest({GL_RGBA4, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4}, {16, 16, 16, 16});
         fnTest({GL_RGBA, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4}, {16, 16, 16, 16});
     }
 
@@ -372,7 +388,6 @@ TEST_P(TextureUploadFormatTest, All)
             (EncodeNormUint<5>(srcVals[2]) << 1) | (EncodeNormUint<1>(srcVals[3]) << 0))};
         ZeroAndCopy(srcBuffer, src);
 
-        fnTest({GL_RGBA4, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1}, {8, 8, 8, 255});
         fnTest({GL_RGBA, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1}, {8, 8, 8, 255});
     }
 
@@ -608,11 +623,4 @@ TEST_P(TextureUploadFormatTest, All)
     EXPECT_GL_NO_ERROR();
 }
 
-ANGLE_INSTANTIATE_TEST(TextureUploadFormatTest,
-                       ES3_D3D11(),
-                       ES2_D3D9(),
-                       ES2_OPENGL(),
-                       ES3_OPENGL(),
-                       ES2_OPENGLES(),
-                       ES3_OPENGLES(),
-                       ES2_VULKAN());
+ANGLE_INSTANTIATE_TEST_ES2_AND_ES3(TextureUploadFormatTest);

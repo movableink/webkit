@@ -31,16 +31,23 @@
 
 #if USE(GLIB)
 #include <wtf/glib/GRefPtr.h>
-typedef struct _GDBusConnection GDBusConnection;
-typedef struct _GDBusInterfaceVTable GDBusInterfaceVTable;
+#include <wtf/glib/SocketConnection.h>
 typedef struct _GSubprocess GSubprocess;
+#elif USE(INSPECTOR_SOCKET_SERVER)
+#include <JavaScriptCore/RemoteInspectorConnectionClient.h>
+#include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
 #endif
 
 namespace WebDriver {
 
 struct ConnectToBrowserAsyncData;
 
-class SessionHost {
+class SessionHost
+#if USE(INSPECTOR_SOCKET_SERVER)
+    : public Inspector::RemoteInspectorConnectionClient
+#endif
+{
     WTF_MAKE_FAST_ALLOCATED(SessionHost);
 public:
     explicit SessionHost(Capabilities&& capabilities)
@@ -49,13 +56,16 @@ public:
     }
     ~SessionHost();
 
+#if USE(INSPECTOR_SOCKET_SERVER)
+    void setHostAddress(const String& ip, uint16_t port) { m_targetIp = ip; m_targetPort = port; }
+#endif
     bool isConnected() const;
 
     const String& sessionID() const { return m_sessionID; }
     const Capabilities& capabilities() const { return m_capabilities; }
 
-    void connectToBrowser(Function<void (Optional<String> error)>&&);
-    void startAutomationSession(Function<void (bool, Optional<String>)>&&);
+    void connectToBrowser(Function<void (std::optional<String> error)>&&);
+    void startAutomationSession(Function<void (bool, std::optional<String>)>&&);
 
     struct CommandResponse {
         RefPtr<JSON::Object> responseObject;
@@ -71,19 +81,31 @@ private:
     };
 
     void inspectorDisconnected();
-    void sendMessageToBackend(long, const String&);
+    void sendMessageToBackend(const String&);
     void dispatchMessage(const String&);
 
 #if USE(GLIB)
-    static void dbusConnectionClosedCallback(SessionHost*);
-    static const GDBusInterfaceVTable s_interfaceVTable;
-    void launchBrowser(Function<void (Optional<String> error)>&&);
+    static const SocketConnection::MessageHandlers& messageHandlers();
+    void connectionDidClose();
+    void launchBrowser(Function<void (std::optional<String> error)>&&);
     void connectToBrowser(std::unique_ptr<ConnectToBrowserAsyncData>&&);
     bool matchCapabilities(GVariant*);
     bool buildSessionCapabilities(GVariantBuilder*) const;
-    void setupConnection(GRefPtr<GDBusConnection>&&);
+    void setupConnection(Ref<SocketConnection>&&);
+    void didStartAutomationSession(GVariant*);
     void setTargetList(uint64_t connectionID, Vector<Target>&&);
     void sendMessageToFrontend(uint64_t connectionID, uint64_t targetID, const char* message);
+#elif USE(INSPECTOR_SOCKET_SERVER)
+    HashMap<String, CallHandler>& dispatchMap() override;
+    void didClose(Inspector::RemoteInspectorSocketEndpoint&, Inspector::ConnectionID) final;
+    void sendWebInspectorEvent(const String&);
+
+    void receivedSetTargetList(const struct Event&);
+    void receivedSendMessageToFrontend(const struct Event&);
+    void receivedStartAutomationSessionReturn(const struct Event&);
+
+    std::optional<Vector<Target>> parseTargetList(const struct Event&);
+    void setTargetList(uint64_t connectionID, Vector<Target>&&);
 #endif
 
     Capabilities m_capabilities;
@@ -95,10 +117,15 @@ private:
     HashMap<long, Function<void (CommandResponse&&)>> m_commandRequests;
 
 #if USE(GLIB)
-    Function<void (bool, Optional<String>)> m_startSessionCompletionHandler;
+    Function<void (bool, std::optional<String>)> m_startSessionCompletionHandler;
     GRefPtr<GSubprocess> m_browser;
-    GRefPtr<GDBusConnection> m_dbusConnection;
+    RefPtr<SocketConnection> m_socketConnection;
     GRefPtr<GCancellable> m_cancellable;
+#elif USE(INSPECTOR_SOCKET_SERVER)
+    String m_targetIp;
+    uint16_t m_targetPort { 0 };
+    Function<void(bool, std::optional<String>)> m_startSessionCompletionHandler;
+    std::optional<Inspector::ConnectionID> m_clientID;
 #endif
 };
 

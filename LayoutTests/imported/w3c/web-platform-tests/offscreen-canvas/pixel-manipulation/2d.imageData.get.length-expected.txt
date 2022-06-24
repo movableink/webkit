@@ -1,7 +1,0 @@
-2d.imageData.get.length
-
-getImageData() returns a correctly-sized Uint8ClampedArray
-
-
-FAIL getImageData() returns a correctly-sized Uint8ClampedArray null is not an object (evaluating 'ctx.getImageData')
-

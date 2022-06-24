@@ -38,14 +38,16 @@ class ImageVk : public ImageImpl
 
     angle::Result orphan(const gl::Context *context, egl::ImageSibling *sibling) override;
 
+    egl::Error exportVkImage(void *vkImage, void *vkImageCreateInfo) override;
+
     vk::ImageHelper *getImage() const { return mImage; }
     gl::TextureType getImageTextureType() const { return mImageTextureType; }
-    uint32_t getImageLevel() const { return mImageLevel; }
+    gl::LevelIndex getImageLevel() const { return mImageLevel; }
     uint32_t getImageLayer() const { return mImageLayer; }
 
   private:
     gl::TextureType mImageTextureType;
-    uint32_t mImageLevel;
+    gl::LevelIndex mImageLevel;
     uint32_t mImageLayer;
 
     bool mOwnsImage;

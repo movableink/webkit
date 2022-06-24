@@ -2,13 +2,13 @@
 <script>
 if (window.testRunner) {
     testRunner.dumpAsText();
-    testRunner.overridePreference("WebKitDefaultTextEncodingName", "koi8-r");
+    internals.settings.setDefaultTextEncodingName("koi8-r");
     testRunner.setCustomPolicyDelegate(true, true);
     testRunner.waitForPolicyDelegate();
 }
 </script>
 <p>Downloaded file name should be "SUССЕSS.txt" (letters "CCE" are Cyrillic).</p>
-<a href="resources/literal-koi8-r.php" id=link>Click Me</a>
+<a href="resources/literal-koi8-r.py" id=link>Click Me</a>
 
 <script>
 if (window.eventSender) {

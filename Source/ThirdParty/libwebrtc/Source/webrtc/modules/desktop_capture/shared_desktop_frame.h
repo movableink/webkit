@@ -11,18 +11,19 @@
 #ifndef MODULES_DESKTOP_CAPTURE_SHARED_DESKTOP_FRAME_H_
 #define MODULES_DESKTOP_CAPTURE_SHARED_DESKTOP_FRAME_H_
 
+#include <memory>
+
+#include "api/scoped_refptr.h"
 #include "modules/desktop_capture/desktop_frame.h"
-#include "rtc_base/constructormagic.h"
-#include "rtc_base/refcount.h"
-#include "rtc_base/refcountedobject.h"
-#include "rtc_base/scoped_ref_ptr.h"
+#include "rtc_base/constructor_magic.h"
+#include "rtc_base/ref_counted_object.h"
 #include "rtc_base/system/rtc_export.h"
 
 namespace webrtc {
 
 // SharedDesktopFrame is a DesktopFrame that may have multiple instances all
 // sharing the same buffer.
-class RTC_EXPORT SharedDesktopFrame : public DesktopFrame {
+class RTC_EXPORT SharedDesktopFrame final : public DesktopFrame {
  public:
   ~SharedDesktopFrame() override;
 
@@ -39,7 +40,7 @@ class RTC_EXPORT SharedDesktopFrame : public DesktopFrame {
   // Returns the underlying instance of DesktopFrame.
   DesktopFrame* GetUnderlyingFrame();
 
-  // Returns whether |this| and |other| share the underlying DesktopFrame.
+  // Returns whether `this` and `other` share the underlying DesktopFrame.
   bool ShareFrameWith(const SharedDesktopFrame& other) const;
 
   // Creates a clone of this object.
@@ -50,7 +51,7 @@ class RTC_EXPORT SharedDesktopFrame : public DesktopFrame {
   bool IsShared();
 
  private:
-  typedef rtc::RefCountedObject<std::unique_ptr<DesktopFrame>> Core;
+  typedef rtc::FinalRefCountedObject<std::unique_ptr<DesktopFrame>> Core;
 
   SharedDesktopFrame(rtc::scoped_refptr<Core> core);
 

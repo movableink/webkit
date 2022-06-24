@@ -26,13 +26,82 @@
 #include "config.h"
 #include "WebPage.h"
 
+#include "EditorState.h"
+#include "InputMethodState.h"
 #include "UserMessage.h"
 #include "WebKitExtensionManager.h"
 #include "WebKitUserMessage.h"
 #include "WebKitWebExtension.h"
+#include "WebKitWebPageAccessibilityObject.h"
 #include "WebKitWebPagePrivate.h"
+#include "WebPageProxyMessages.h"
+#include <WebCore/Editor.h>
+#include <WebCore/Frame.h>
+#include <WebCore/FrameView.h>
+#include <WebCore/HTMLInputElement.h>
+#include <WebCore/HTMLTextAreaElement.h>
+#include <WebCore/Range.h>
+#include <WebCore/TextIterator.h>
+#include <WebCore/UserAgent.h>
+#include <WebCore/VisiblePosition.h>
+#include <WebCore/VisibleUnits.h>
 
 namespace WebKit {
+using namespace WebCore;
+
+void WebPage::platformInitialize(const WebPageCreationParameters&)
+{
+#if ENABLE(ACCESSIBILITY)
+    // Create the accessible object (the plug) that will serve as the
+    // entry point to the Web process, and send a message to the UI
+    // process to connect the two worlds through the accessibility
+    // object there specifically placed for that purpose (the socket).
+#if USE(ATK)
+    auto isValidPlugID = [](const char* plugID) -> bool {
+        if (!plugID || plugID[0] != ':')
+            return false;
+
+        auto* p = g_strrstr(plugID, ":");
+        if (!p)
+            return false;
+
+        if (!g_variant_is_object_path(p + 1))
+            return false;
+
+        GUniquePtr<char> name(g_strndup(plugID, p - plugID));
+        if (!g_dbus_is_unique_name(name.get()))
+            return false;
+
+        return true;
+    };
+
+    m_accessibilityObject = adoptGRef(webkitWebPageAccessibilityObjectNew(this));
+    GUniquePtr<gchar> plugID(atk_plug_get_id(ATK_PLUG(m_accessibilityObject.get())));
+    if (isValidPlugID(plugID.get()))
+        send(Messages::WebPageProxy::BindAccessibilityTree(String(plugID.get())));
+#elif USE(ATSPI)
+#if PLATFORM(GTK) && USE(GTK4)
+    // FIXME: we need a way to connect DOM and app a11y tree in GTK4.
+#else
+    if (auto* page = corePage()) {
+        m_accessibilityRootObject = AccessibilityRootAtspi::create(*page);
+        m_accessibilityRootObject->registerObject([&](const String& plugID) {
+            if (!plugID.isEmpty())
+                send(Messages::WebPageProxy::BindAccessibilityTree(plugID));
+        });
+    }
+#endif
+#endif
+#endif
+}
+
+void WebPage::platformDetach()
+{
+#if USE(ATSPI)
+    if (m_accessibilityRootObject)
+        m_accessibilityRootObject->unregisterObject();
+#endif
+}
 
 void WebPage::sendMessageToWebExtensionWithReply(UserMessage&& message, CompletionHandler<void(UserMessage&&)>&& completionHandler)
 {
@@ -54,6 +123,105 @@ void WebPage::sendMessageToWebExtensionWithReply(UserMessage&& message, Completi
 void WebPage::sendMessageToWebExtension(UserMessage&& message)
 {
     sendMessageToWebExtensionWithReply(WTFMove(message), [](UserMessage&&) { });
+}
+
+void WebPage::getPlatformEditorState(Frame& frame, EditorState& result) const
+{
+    if (result.isMissingPostLayoutData || !frame.view() || frame.view()->needsLayout())
+        return;
+
+    auto& postLayoutData = result.postLayoutData();
+    postLayoutData.caretRectAtStart = frame.selection().absoluteCaretBounds();
+
+    const VisibleSelection& selection = frame.selection().selection();
+    if (selection.isNone())
+        return;
+
+#if PLATFORM(GTK)
+    const Editor& editor = frame.editor();
+    if (selection.isRange()) {
+        if (editor.selectionHasStyle(CSSPropertyFontWeight, "bold") == TriState::True)
+            postLayoutData.typingAttributes |= AttributeBold;
+        if (editor.selectionHasStyle(CSSPropertyFontStyle, "italic") == TriState::True)
+            postLayoutData.typingAttributes |= AttributeItalics;
+        if (editor.selectionHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "underline") == TriState::True)
+            postLayoutData.typingAttributes |= AttributeUnderline;
+        if (editor.selectionHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "line-through") == TriState::True)
+            postLayoutData.typingAttributes |= AttributeStrikeThrough;
+    } else if (selection.isCaret()) {
+        if (editor.selectionStartHasStyle(CSSPropertyFontWeight, "bold"))
+            postLayoutData.typingAttributes |= AttributeBold;
+        if (editor.selectionStartHasStyle(CSSPropertyFontStyle, "italic"))
+            postLayoutData.typingAttributes |= AttributeItalics;
+        if (editor.selectionStartHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "underline"))
+            postLayoutData.typingAttributes |= AttributeUnderline;
+        if (editor.selectionStartHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "line-through"))
+            postLayoutData.typingAttributes |= AttributeStrikeThrough;
+    }
+#endif
+
+    if (selection.isContentEditable()) {
+        auto selectionStart = selection.visibleStart();
+        auto surroundingStart = startOfEditableContent(selectionStart);
+        auto surroundingRange = makeSimpleRange(surroundingStart, endOfEditableContent(selectionStart));
+        auto compositionRange = frame.editor().compositionRange();
+        if (surroundingRange && compositionRange && contains<ComposedTree>(*surroundingRange, *compositionRange)) {
+            auto beforeText = plainText({ surroundingRange->start, compositionRange->start });
+            postLayoutData.surroundingContext = beforeText + plainText({ compositionRange->end, surroundingRange->end });
+            postLayoutData.surroundingContextCursorPosition = beforeText.length();
+            postLayoutData.surroundingContextSelectionPosition = postLayoutData.surroundingContextCursorPosition;
+        } else {
+            auto cursorPositionRange = makeSimpleRange(surroundingStart, selectionStart);
+            auto selectionPositionRange = makeSimpleRange(surroundingStart, selection.visibleEnd());
+            postLayoutData.surroundingContext = surroundingRange ? plainText(*surroundingRange) : emptyString();
+            postLayoutData.surroundingContextCursorPosition = cursorPositionRange ? characterCount(*cursorPositionRange) : 0;
+            postLayoutData.surroundingContextSelectionPosition = selectionPositionRange ? characterCount(*selectionPositionRange): 0;
+        }
+    }
+}
+
+static std::optional<InputMethodState> inputMethodSateForElement(Element* element)
+{
+    if (!element || !element->shouldUseInputMethod())
+        return std::nullopt;
+
+    InputMethodState state;
+    if (is<HTMLInputElement>(*element)) {
+        auto& inputElement = downcast<HTMLInputElement>(*element);
+        state.setPurposeForInputElement(inputElement);
+#if ENABLE(AUTOCAPITALIZE)
+        state.addHintsForAutocapitalizeType(inputElement.autocapitalizeType());
+#endif
+    } else if (is<HTMLTextAreaElement>(*element) || (element->hasEditableStyle() && is<HTMLElement>(*element))) {
+        auto& htmlElement = downcast<HTMLElement>(*element);
+        state.setPurposeOrHintForInputMode(htmlElement.canonicalInputMode());
+#if ENABLE(AUTOCAPITALIZE)
+        state.addHintsForAutocapitalizeType(htmlElement.autocapitalizeType());
+#endif
+    }
+
+    if (element->isSpellCheckingEnabled())
+        state.hints.add(InputMethodState::Hint::Spellcheck);
+
+    return state;
+}
+
+void WebPage::setInputMethodState(Element* element)
+{
+    auto state = inputMethodSateForElement(element);
+    if (m_inputMethodState == state)
+        return;
+
+    m_inputMethodState = state;
+    send(Messages::WebPageProxy::SetInputMethodState(state));
+}
+
+String WebPage::platformUserAgent(const URL& url) const
+{
+    if (url.isNull() || !m_page->settings().needsSiteSpecificQuirks())
+        return String();
+
+    return WebCore::standardUserAgentForURL(url);
 }
 
 } // namespace WebKit

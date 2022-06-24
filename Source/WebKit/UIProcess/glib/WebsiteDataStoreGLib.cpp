@@ -54,6 +54,11 @@ WTF::String WebsiteDataStore::defaultCacheStorageDirectory()
     return cacheDirectoryFileSystemRepresentation(FileSystem::pathByAppendingComponent(FileSystem::stringFromFileSystemRepresentation(g_get_prgname()), "CacheStorage"));
 }
 
+WTF::String WebsiteDataStore::defaultGeneralStorageDirectory()
+{
+    return websiteDataDirectoryFileSystemRepresentation(BASE_DIRECTORY G_DIR_SEPARATOR_S "storage");
+}
+
 WTF::String WebsiteDataStore::defaultIndexedDBDatabaseDirectory()
 {
     return websiteDataDirectoryFileSystemRepresentation(BASE_DIRECTORY G_DIR_SEPARATOR_S "databases" G_DIR_SEPARATOR_S "indexeddb");
@@ -91,10 +96,10 @@ WTF::String WebsiteDataStore::defaultHSTSDirectory()
 
 WTF::String WebsiteDataStore::defaultResourceLoadStatisticsDirectory()
 {
-    return websiteDataDirectoryFileSystemRepresentation(BASE_DIRECTORY G_DIR_SEPARATOR_S "ResourceLoadStatistics");
+    return websiteDataDirectoryFileSystemRepresentation(BASE_DIRECTORY G_DIR_SEPARATOR_S "itp");
 }
 
-WTF::String WebsiteDataStore::cacheDirectoryFileSystemRepresentation(const WTF::String& directoryName)
+WTF::String WebsiteDataStore::cacheDirectoryFileSystemRepresentation(const WTF::String& directoryName, ShouldCreateDirectory)
 {
     return FileSystem::pathByAppendingComponent(FileSystem::stringFromFileSystemRepresentation(g_get_user_cache_dir()), directoryName);
 }
@@ -102,6 +107,11 @@ WTF::String WebsiteDataStore::cacheDirectoryFileSystemRepresentation(const WTF::
 WTF::String WebsiteDataStore::websiteDataDirectoryFileSystemRepresentation(const WTF::String& directoryName)
 {
     return FileSystem::pathByAppendingComponent(FileSystem::stringFromFileSystemRepresentation(g_get_user_data_dir()), directoryName);
+}
+
+void WebsiteDataStore::platformRemoveRecentSearches(WallTime)
+{
+    notImplemented();
 }
 
 } // namespace API

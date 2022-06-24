@@ -26,13 +26,19 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
+
+from webkitcorepy import StringIO
+
 from webkitpy.common.config import urls
 from webkitpy.common.checkout.changelog import ChangeLog, parse_bug_id_from_changelog
 from webkitpy.common.checkout.commitinfo import CommitInfo
 from webkitpy.common.checkout.scm import CommitMessage
 from webkitpy.common.memoized import memoized
 from webkitpy.common.system.executive import ScriptError
-from webkitpy.common.unicode_compatibility import StringIO
+
+if sys.version_info > (3, 0):
+    from functools import reduce
 
 
 # This class represents the WebKit-specific parts of the checkout (like ChangeLogs).
@@ -117,7 +123,7 @@ class Checkout(object):
         # expect absolute paths, so this method returns absolute paths.
         if not changed_files:
             changed_files = self._scm.changed_files(git_commit)
-        return filter(predicate, map(self._scm.absolute_path, changed_files))
+        return list(filter(predicate, list(map(self._scm.absolute_path, changed_files))))
 
     def modified_changelogs(self, git_commit, changed_files=None):
         return self._modified_files_matching_predicate(git_commit, self.is_path_to_changelog, changed_files=changed_files)
@@ -144,12 +150,12 @@ class Checkout(object):
         commit_infos = sorted(self.recent_commit_infos_for_files(changed_files), key=lambda info: info.revision(), reverse=True)
         reviewers = filter(lambda person: person and person.can_review, sum(map(lambda info: [info.reviewer(), info.author()], commit_infos), []))
         unique_reviewers = reduce(lambda suggestions, reviewer: suggestions + [reviewer if reviewer not in suggestions else None], reviewers, [])
-        return filter(lambda reviewer: reviewer, unique_reviewers)
+        return list(filter(lambda reviewer: reviewer, unique_reviewers))
 
     def bug_id_for_this_commit(self, git_commit, changed_files=None):
         try:
             return parse_bug_id_from_changelog(self.commit_message_for_this_commit(git_commit, changed_files).message())
-        except ScriptError as e:
+        except ScriptError:
             pass  # We might not have ChangeLogs.
 
     def apply_patch(self, patch):

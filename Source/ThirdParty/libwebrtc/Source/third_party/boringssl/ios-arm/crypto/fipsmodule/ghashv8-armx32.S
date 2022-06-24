@@ -1,10 +1,11 @@
 // This file is generated from a similarly-named Perl script in the BoringSSL
 // source tree. Do not edit by hand.
 
-#if defined(__has_feature)
+#if !defined(__has_feature)
+#define __has_feature(x) 0
+#endif
 #if __has_feature(memory_sanitizer) && !defined(OPENSSL_NO_ASM)
 #define OPENSSL_NO_ASM
-#endif
 #endif
 
 #if !defined(OPENSSL_NO_ASM)
@@ -24,6 +25,7 @@
 #endif
 .align	4
 _gcm_init_v8:
+	AARCH64_VALID_CALL_TARGET
 	vld1.64	{q9},[r1]		@ load input H
 	vmov.i8	q11,#0xe1
 	vshl.i64	q11,q11,#57		@ 0xc2.0
@@ -77,6 +79,7 @@ _gcm_init_v8:
 #endif
 .align	4
 _gcm_gmult_v8:
+	AARCH64_VALID_CALL_TARGET
 	vld1.64	{q9},[r0]		@ load Xi
 	vmov.i8	q11,#0xe1
 	vld1.64	{q12,q13},[r1]	@ load twisted H, ...
@@ -121,6 +124,7 @@ _gcm_gmult_v8:
 #endif
 .align	4
 _gcm_ghash_v8:
+	AARCH64_VALID_CALL_TARGET
 	vstmdb	sp!,{d8,d9,d10,d11,d12,d13,d14,d15}		@ 32-bit ABI says so
 	vld1.64	{q0},[r0]		@ load [rotated] Xi
 						@ "[rotated]" means that

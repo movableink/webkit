@@ -101,6 +101,8 @@ class WebDriverTestRunner(object):
                     elif status in ['XPASS', 'XPASS_TIMEOUT']:
                         results.setdefault(status, []).append(os.path.join(os.path.dirname(result.test), subtest))
                         passed_count += 1
+            elif result.status == 'ERROR':  # Harness execution error
+                results.setdefault('FAIL', []).append(result.test)
             else:
                 # FIXME: handle other results.
                 pass
@@ -163,5 +165,5 @@ class WebDriverTestRunner(object):
         if directory and not os.path.exists(directory):
             os.makedirs(directory)
 
-        with open(output_path, 'wb') as fp:
+        with open(output_path, 'w') as fp:
             json.dump(json_results, fp)

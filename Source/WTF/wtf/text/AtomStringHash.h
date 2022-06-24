@@ -45,6 +45,7 @@ namespace WTF {
         }
 
         static constexpr bool safeToCompareToEmptyOrDeleted = false;
+        static constexpr bool hasHashInValue = true;
     };
 
     template<> struct HashTraits<WTF::AtomString> : SimpleClassHashTraits<WTF::AtomString> {
@@ -63,6 +64,7 @@ namespace WTF {
         }
     };
 
+    template<> struct DefaultHash<AtomString> : AtomStringHash { };
 }
 
 using WTF::AtomStringHash;

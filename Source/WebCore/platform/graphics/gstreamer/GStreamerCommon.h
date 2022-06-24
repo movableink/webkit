@@ -61,76 +61,154 @@ inline bool webkitGstCheckVersion(guint major, guint minor, guint micro)
 
 GstPad* webkitGstGhostPadFromStaticTemplate(GstStaticPadTemplate*, const gchar* name, GstPad* target);
 #if ENABLE(VIDEO)
-bool getVideoSizeAndFormatFromCaps(GstCaps*, WebCore::IntSize&, GstVideoFormat&, int& pixelAspectRatioNumerator, int& pixelAspectRatioDenominator, int& stride);
-Optional<FloatSize> getVideoResolutionFromCaps(const GstCaps*);
+bool getVideoSizeAndFormatFromCaps(const GstCaps*, WebCore::IntSize&, GstVideoFormat&, int& pixelAspectRatioNumerator, int& pixelAspectRatioDenominator, int& stride);
+std::optional<FloatSize> getVideoResolutionFromCaps(const GstCaps*);
 bool getSampleVideoInfo(GstSample*, GstVideoInfo&);
 #endif
 const char* capsMediaType(const GstCaps*);
 bool doCapsHaveType(const GstCaps*, const char*);
 bool areEncryptedCaps(const GstCaps*);
 Vector<String> extractGStreamerOptionsFromCommandLine();
-bool initializeGStreamer(Optional<Vector<String>>&& = WTF::nullopt);
-bool initializeGStreamerAndRegisterWebKitElements();
+void setGStreamerOptionsFromUIProcess(Vector<String>&&);
+bool ensureGStreamerInitialized();
+void registerWebKitGStreamerElements();
 unsigned getGstPlayFlag(const char* nick);
 uint64_t toGstUnsigned64Time(const MediaTime&);
+#if ENABLE(THUNDER)
+bool isThunderRanked();
+#endif
 
 inline GstClockTime toGstClockTime(const MediaTime &mediaTime)
 {
     return static_cast<GstClockTime>(toGstUnsigned64Time(mediaTime));
 }
 
-class GstMappedBuffer : public ThreadSafeRefCounted<GstMappedBuffer> {
+inline MediaTime fromGstClockTime(GstClockTime time)
+{
+    if (!GST_CLOCK_TIME_IS_VALID(time))
+        return MediaTime::invalidTime();
+
+    return MediaTime(GST_TIME_AS_USECONDS(time), G_USEC_PER_SEC);
+}
+
+class GstMappedBuffer {
+    WTF_MAKE_NONCOPYABLE(GstMappedBuffer);
 public:
-    static RefPtr<GstMappedBuffer> create(GstBuffer* buffer, GstMapFlags flags)
+
+    GstMappedBuffer(GstMappedBuffer&& other)
+        : m_buffer(other.m_buffer)
+        , m_info(other.m_info)
+        , m_isValid(other.m_isValid)
     {
-        GstMapInfo info;
-        if (!gst_buffer_map(buffer, &info, flags))
-            return nullptr;
-        return adoptRef(new GstMappedBuffer(buffer, WTFMove(info)));
+        other.m_isValid = false;
+    }
+
+    // This GstBuffer is [ transfer none ], meaning that no reference
+    // is increased. Hence, this buffer must outlive the mapped
+    // buffer.
+    GstMappedBuffer(GstBuffer* buffer, GstMapFlags flags)
+        : m_buffer(buffer)
+    {
+        ASSERT(GST_IS_BUFFER(buffer));
+        m_isValid = gst_buffer_map(m_buffer, &m_info, flags);
     }
 
     // Unfortunately, GST_MAP_READWRITE is defined out of line from the MapFlags
     // enum as an int, and C++ is careful to not implicity convert it to an enum.
-    static RefPtr<GstMappedBuffer> create(GstBuffer* buffer, int flags)
+    GstMappedBuffer(GstBuffer* buffer, int flags)
+        : GstMappedBuffer(buffer, static_cast<GstMapFlags>(flags)) { }
+    GstMappedBuffer(const GRefPtr<GstBuffer>& buffer, GstMapFlags flags)
+        : GstMappedBuffer(buffer.get(), flags) { }
+
+    virtual ~GstMappedBuffer()
     {
-        return GstMappedBuffer::create(buffer, static_cast<GstMapFlags>(flags));
+        unmapEarly();
     }
 
-    ~GstMappedBuffer()
+    void unmapEarly()
     {
-        gst_buffer_unmap(m_buffer, &m_info);
+        if (m_isValid) {
+            m_isValid = false;
+            gst_buffer_unmap(m_buffer, &m_info);
+        }
     }
 
-    uint8_t* data() { return static_cast<uint8_t*>(m_info.data); }
-    const uint8_t* data() const { return static_cast<uint8_t*>(m_info.data); }
-    size_t size() const { return static_cast<size_t>(m_info.size); }
-    bool isSharable() const { return !(m_info.flags & GST_MAP_WRITE); }
-    Ref<SharedBuffer> createSharedBuffer();
+    bool isValid() const { return m_isValid; }
+    uint8_t* data() { RELEASE_ASSERT(m_isValid); return static_cast<uint8_t*>(m_info.data); }
+    const uint8_t* data() const { RELEASE_ASSERT(m_isValid); return static_cast<uint8_t*>(m_info.data); }
+    size_t size() const { ASSERT(m_isValid); return m_isValid ? static_cast<size_t>(m_info.size) : 0; }
+    Vector<uint8_t> createVector() const;
+
+    explicit operator bool() const { return m_isValid; }
+    bool operator!() const { return !m_isValid; }
 
 private:
-    GstMappedBuffer(GstBuffer* buffer, GstMapInfo&& info)
-        : m_buffer(buffer)
-        , m_info(WTFMove(info))
-    {
-    }
-
     friend bool operator==(const GstMappedBuffer&, const GstMappedBuffer&);
     friend bool operator==(const GstMappedBuffer&, const GstBuffer*);
     friend bool operator==(const GstBuffer* a, const GstMappedBuffer& b) { return operator==(b, a); }
 
     GstBuffer* m_buffer { nullptr };
     GstMapInfo m_info;
+    bool m_isValid { false };
+};
+
+// This class maps only buffers in GST_MAP_READ mode to be able to
+// bump the reference count and keep it alive during the life of this
+// object.
+class GstMappedOwnedBuffer : public GstMappedBuffer, public ThreadSafeRefCounted<GstMappedOwnedBuffer> {
+
+public:
+    static RefPtr<GstMappedOwnedBuffer> create(GRefPtr<GstBuffer>&& buffer)
+    {
+        auto* mappedBuffer = new GstMappedOwnedBuffer(WTFMove(buffer));
+        if (!mappedBuffer->isValid()) {
+            delete mappedBuffer;
+            return nullptr;
+        }
+
+        return adoptRef(mappedBuffer);
+    }
+
+    static RefPtr<GstMappedOwnedBuffer> create(const GRefPtr<GstBuffer>& buffer)
+    {
+        return create(GRefPtr(buffer));
+    }
+
+    // This GstBuffer is [ transfer none ], meaning the reference
+    // count is increased during the life of this object.
+    static RefPtr<GstMappedOwnedBuffer> create(GstBuffer* buffer)
+    {
+        return create(GRefPtr(buffer));
+    }
+
+    virtual ~GstMappedOwnedBuffer()
+    {
+        unmapEarly();
+    }
+
+    Ref<SharedBuffer> createSharedBuffer();
+
+private:
+    GstMappedOwnedBuffer(GRefPtr<GstBuffer>&& buffer)
+        : GstMappedBuffer(buffer, GST_MAP_READ)
+        , m_ownedBuffer(WTFMove(buffer)) { }
+
+    GRefPtr<GstBuffer> m_ownedBuffer;
 };
 
 inline bool operator==(const GstMappedBuffer& a, const GstMappedBuffer& b)
 {
-    return a.size() == b.size() && !gst_buffer_memcmp(a.m_buffer, 0, b.data(), b.size());
+    ASSERT(a.isValid());
+    ASSERT(b.isValid());
+    return a.isValid() && b.isValid() && a.size() == b.size() && !gst_buffer_memcmp(a.m_buffer, 0, b.data(), b.size());
 }
 
 inline bool operator==(const GstMappedBuffer& a, const GstBuffer* b)
 {
+    ASSERT(a.isValid());
+    ASSERT(GST_IS_BUFFER(b));
     GstBuffer* nonConstB = const_cast<GstBuffer*>(b);
-    return a.size() == gst_buffer_get_size(nonConstB) && !gst_buffer_memcmp(nonConstB, 0, a.data(), a.size());
+    return a.isValid() && GST_IS_BUFFER(b) && a.size() == gst_buffer_get_size(nonConstB) && !gst_buffer_memcmp(nonConstB, 0, a.data(), a.size());
 }
 
 class GstMappedFrame {
@@ -216,14 +294,123 @@ private:
 };
 
 
-void connectSimpleBusMessageCallback(GstElement* pipeline);
-void disconnectSimpleBusMessageCallback(GstElement* pipeline);
+void connectSimpleBusMessageCallback(GstElement*, Function<void(GstMessage*)>&& = [](GstMessage*) { });
+void disconnectSimpleBusMessageCallback(GstElement*);
 
-enum class GstVideoDecoderPlatform { ImxVPU, Video4Linux };
+enum class GstVideoDecoderPlatform { ImxVPU, Video4Linux, OpenMAX };
+
+bool isGStreamerPluginAvailable(const char* name);
+bool gstElementFactoryEquals(GstElement*, const char* name);
+
+GstElement* createAutoAudioSink(const String& role);
+GstElement* createPlatformAudioSink(const String& role);
+
+bool webkitGstSetElementStateSynchronously(GstElement*, GstState, Function<bool(GstMessage*)>&& = [](GstMessage*) -> bool {
+    return true;
+});
+
+GstBuffer* gstBufferNewWrappedFast(void* data, size_t length);
+
+// These functions should be used for elements not provided by WebKit itself and not provided by GStreamer -core.
+GstElement* makeGStreamerElement(const char* factoryName, const char* name);
+GstElement* makeGStreamerBin(const char* description, bool ghostUnlinkedPads);
+
+String gstStructureToJSONString(const GstStructure*);
 
 }
 
 #ifndef GST_BUFFER_DTS_OR_PTS
 #define GST_BUFFER_DTS_OR_PTS(buffer) (GST_BUFFER_DTS_IS_VALID(buffer) ? GST_BUFFER_DTS(buffer) : GST_BUFFER_PTS(buffer))
 #endif
+
+// In GStreamer 1.20 gst_audio_format_fill_silence() will be deprecated in favor of
+// gst_audio_format_info_fill_silence().
+#if GST_CHECK_VERSION(1, 20, 0)
+#define webkitGstAudioFormatFillSilence gst_audio_format_info_fill_silence
+#else
+#define webkitGstAudioFormatFillSilence gst_audio_format_fill_silence
+#endif
+
+// In GStreamer 1.20 gst_element_get_request_pad() was renamed to gst_element_request_pad_simple(),
+// so create an alias for older versions.
+#if !GST_CHECK_VERSION(1, 20, 0)
+#define gst_element_request_pad_simple gst_element_get_request_pad
+#endif
+
+// We can't pass macros as template parameters, so we need to wrap them in inline functions.
+inline void gstObjectLock(void* object) { GST_OBJECT_LOCK(object); }
+inline void gstObjectUnlock(void* object) { GST_OBJECT_UNLOCK(object); }
+inline void gstPadStreamLock(GstPad* pad) { GST_PAD_STREAM_LOCK(pad); }
+inline void gstPadStreamUnlock(GstPad* pad) { GST_PAD_STREAM_UNLOCK(pad); }
+
+using GstObjectLocker = ExternalLocker<void, gstObjectLock, gstObjectUnlock>;
+using GstPadStreamLocker = ExternalLocker<GstPad, gstPadStreamLock, gstPadStreamUnlock>;
+
+template <typename T>
+class GstIteratorAdaptor {
+public:
+    GstIteratorAdaptor(GUniquePtr<GstIterator>&& iter)
+        : m_iter(WTFMove(iter))
+    { }
+
+    class iterator {
+    public:
+        iterator(GstIterator* iter, gboolean done = FALSE)
+            : m_iter(iter)
+            , m_done(done)
+        { }
+
+        T* operator*()
+        {
+            return m_currentValue;
+        }
+
+        iterator& operator++()
+        {
+            GValue value = G_VALUE_INIT;
+            switch (gst_iterator_next(m_iter, &value)) {
+            case GST_ITERATOR_OK:
+                m_currentValue = static_cast<T*>(g_value_get_object(&value));
+                g_value_reset(&value);
+                break;
+            case GST_ITERATOR_DONE:
+                m_done = TRUE;
+                m_currentValue = nullptr;
+                break;
+            default:
+                ASSERT_NOT_REACHED_WITH_MESSAGE("Unexpected iterator invalidation");
+            }
+            return *this;
+        }
+
+        bool operator==(const iterator& other) const
+        {
+            return m_iter == other.m_iter && m_done == other.m_done;
+        }
+        bool operator!=(const iterator& other) const { return !(*this == other); }
+
+    private:
+        GstIterator* m_iter;
+        gboolean m_done;
+        T* m_currentValue { nullptr };
+    };
+
+    iterator begin()
+    {
+        ASSERT(!m_started);
+        m_started = true;
+        iterator iter { m_iter.get() };
+        return ++iter;
+    }
+
+    iterator end()
+    {
+        return { m_iter.get(), TRUE };
+    }
+
+private:
+    GUniquePtr<GstIterator> m_iter;
+    bool m_started { false };
+};
+
 #endif // USE(GSTREAMER)

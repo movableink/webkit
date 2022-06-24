@@ -11,6 +11,8 @@
 #ifndef MODULES_VIDEO_PROCESSING_UTIL_DENOISER_FILTER_C_H_
 #define MODULES_VIDEO_PROCESSING_UTIL_DENOISER_FILTER_C_H_
 
+#include <stdint.h>
+
 #include "modules/video_processing/util/denoiser_filter.h"
 
 namespace webrtc {
@@ -18,10 +20,6 @@ namespace webrtc {
 class DenoiserFilterC : public DenoiserFilter {
  public:
   DenoiserFilterC() {}
-  void CopyMem16x16(const uint8_t* src,
-                    int src_stride,
-                    uint8_t* dst,
-                    int dst_stride) override;
   uint32_t Variance16x8(const uint8_t* a,
                         int a_stride,
                         const uint8_t* b,

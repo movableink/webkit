@@ -26,8 +26,6 @@
 #include "config.h"
 #include "MemoryBackingStoreTransaction.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyRangeData.h"
 #include "IDBValue.h"
 #include "IndexedDB.h"
@@ -211,7 +209,7 @@ void MemoryBackingStoreTransaction::abort()
 {
     LOG(IndexedDB, "MemoryBackingStoreTransaction::abort()");
 
-    SetForScope<bool> change(m_isAborting, true);
+    SetForScope change(m_isAborting, true);
 
     for (const auto& iterator : m_originalIndexNames)
         iterator.key->rename(iterator.value);
@@ -292,5 +290,3 @@ void MemoryBackingStoreTransaction::finish()
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

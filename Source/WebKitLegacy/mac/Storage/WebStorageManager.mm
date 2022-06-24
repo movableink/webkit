@@ -30,9 +30,9 @@
 #import "WebSecurityOriginInternal.h"
 #import "WebStorageNamespaceProvider.h"
 #import "WebStorageTrackerClient.h"
-#import <WebCore/PageGroup.h>
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/SecurityOriginData.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 using namespace WebCore;
 
@@ -59,17 +59,9 @@ NSString * const WebStorageDidModifyOriginNotification = @"WebStorageDidModifyOr
 
 - (NSArray *)origins
 {
-    auto coreOrigins = WebKit::StorageTracker::tracker().origins();
-
-    NSMutableArray *webOrigins = [[NSMutableArray alloc] initWithCapacity:coreOrigins.size()];
-
-    for (auto& origin : coreOrigins) {
-        WebSecurityOrigin *webOrigin = [[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:origin.securityOrigin().ptr()];
-        [webOrigins addObject:webOrigin];
-        [webOrigin release];
-    }
-
-    return [webOrigins autorelease];
+    return createNSArray(WebKit::StorageTracker::tracker().origins(), [] (auto& origin) {
+        return adoptNS([[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:origin.securityOrigin().ptr()]);
+    }).autorelease();
 }
 
 - (void)deleteAllOrigins
@@ -104,19 +96,19 @@ NSString * const WebStorageDidModifyOriginNotification = @"WebStorageDidModifyOr
 
 + (NSString *)_storageDirectoryPath
 {
-    static NSString *sLocalStoragePath;
+    static NeverDestroyed<RetainPtr<NSString>> sLocalStoragePath;
     static dispatch_once_t flag;
     dispatch_once(&flag, ^{
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-        sLocalStoragePath = [defaults objectForKey:WebStorageDirectoryDefaultsKey];
-        if (!sLocalStoragePath || ![sLocalStoragePath isKindOfClass:[NSString class]]) {
+        RetainPtr<NSString> localStoragePath = [defaults objectForKey:WebStorageDirectoryDefaultsKey];
+        if (!localStoragePath || ![localStoragePath isKindOfClass:[NSString class]]) {
             NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES);
             NSString *libraryDirectory = [paths objectAtIndex:0];
-            sLocalStoragePath = [libraryDirectory stringByAppendingPathComponent:@"WebKit/LocalStorage"];
+            localStoragePath = [libraryDirectory stringByAppendingPathComponent:@"WebKit/LocalStorage"];
         }
-        sLocalStoragePath = [[sLocalStoragePath stringByStandardizingPath] retain];
+        sLocalStoragePath.get() = [localStoragePath stringByStandardizingPath];
     });
-    return sLocalStoragePath;
+    return sLocalStoragePath.get().get();
 }
 
 + (void)setStorageDatabaseIdleInterval:(double)interval

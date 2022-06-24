@@ -23,10 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GeolocationProviderMock_h
-#define GeolocationProviderMock_h
+#pragma once
 
 #include <WebKit/WKRetainPtr.h>
+#include <optional>
 #include <wtf/FastMalloc.h>
 
 namespace WTR {
@@ -37,7 +37,7 @@ public:
     GeolocationProviderMock(WKContextRef);
     ~GeolocationProviderMock();
 
-    void setPosition(double latitude, double longitude, double accuracy, bool providesAltitude, double altitude, bool providesAltitudeAccuracy, double altitudeAccuracy, bool providesHeading, double heading, bool providesSpeed, double speed, bool providesFloorLevel, double floorLevel);
+    void setPosition(double latitude, double longitude, double accuracy, std::optional<double> altitude, std::optional<double> altitudeAccuracy, std::optional<double> heading, std::optional<double> speed, std::optional<double> floorLevel);
     void setPositionUnavailableError(WKStringRef errorMessage);
 
     void startUpdating(WKGeolocationManagerRef);
@@ -60,5 +60,3 @@ private:
 };
 
 } // namespace WTR
-
-#endif // GeolocationProviderMock_h

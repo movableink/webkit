@@ -31,8 +31,9 @@ extern "C" {
 
 // FIXME: Remove these after <rdar://problem/30772033> is fixed.
 void NetworkServiceInitializer();
-void PluginServiceInitializer();
 void WebContentServiceInitializer();
+void GPUServiceInitializer();
+void WebAuthnServiceInitializer();
 
 #ifdef __cplusplus
 }

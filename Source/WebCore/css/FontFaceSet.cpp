@@ -28,6 +28,7 @@
 
 #include "DOMPromiseProxy.h"
 #include "Document.h"
+#include "EventLoop.h"
 #include "FontFace.h"
 #include "FrameLoader.h"
 #include "JSDOMBinding.h"
@@ -40,49 +41,49 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(FontFaceSet);
 
-Ref<FontFaceSet> FontFaceSet::create(Document& document, const Vector<RefPtr<FontFace>>& initialFaces)
+Ref<FontFaceSet> FontFaceSet::create(ScriptExecutionContext& context, const Vector<RefPtr<FontFace>>& initialFaces)
 {
-    Ref<FontFaceSet> result = adoptRef(*new FontFaceSet(document, initialFaces));
+    Ref<FontFaceSet> result = adoptRef(*new FontFaceSet(context, initialFaces));
     result->suspendIfNeeded();
     return result;
 }
 
-Ref<FontFaceSet> FontFaceSet::create(Document& document, CSSFontFaceSet& backing)
+Ref<FontFaceSet> FontFaceSet::create(ScriptExecutionContext& context, CSSFontFaceSet& backing)
 {
-    Ref<FontFaceSet> result = adoptRef(*new FontFaceSet(document, backing));
+    Ref<FontFaceSet> result = adoptRef(*new FontFaceSet(context, backing));
     result->suspendIfNeeded();
     return result;
 }
 
-FontFaceSet::FontFaceSet(Document& document, const Vector<RefPtr<FontFace>>& initialFaces)
-    : ActiveDOMObject(document)
+FontFaceSet::FontFaceSet(ScriptExecutionContext& context, const Vector<RefPtr<FontFace>>& initialFaces)
+    : ActiveDOMObject(&context)
     , m_backing(CSSFontFaceSet::create())
     , m_readyPromise(makeUniqueRef<ReadyPromise>(*this, &FontFaceSet::readyPromiseResolve))
-    , m_taskQueue(SuspendableTaskQueue::create(document))
 {
-    m_backing->addClient(*this);
+    m_backing->addFontEventClient(*this);
     for (auto& face : initialFaces)
         add(*face);
 }
 
-FontFaceSet::FontFaceSet(Document& document, CSSFontFaceSet& backing)
-    : ActiveDOMObject(document)
+FontFaceSet::FontFaceSet(ScriptExecutionContext& context, CSSFontFaceSet& backing)
+    : ActiveDOMObject(&context)
     , m_backing(backing)
     , m_readyPromise(makeUniqueRef<ReadyPromise>(*this, &FontFaceSet::readyPromiseResolve))
-    , m_taskQueue(SuspendableTaskQueue::create(document))
 {
-    if (document.frame())
-        m_isFirstLayoutDone = document.frame()->loader().stateMachine().firstLayoutDone();
+    if (is<Document>(context)) {
+        auto& document = downcast<Document>(context);
+        if (document.frame())
+            m_isDocumentLoaded = document.loadEventFinished() && !document.processingLoadEvent();
+    }
 
-    if (m_isFirstLayoutDone && !backing.hasActiveFontFaces())
+    if (m_isDocumentLoaded && !backing.hasActiveFontFaces())
         m_readyPromise->resolve(*this);
 
-    m_backing->addClient(*this);
+    m_backing->addFontEventClient(*this);
 }
 
 FontFaceSet::~FontFaceSet()
 {
-    m_backing->removeClient(*this);
 }
 
 FontFaceSet::Iterator::Iterator(FontFaceSet& set)
@@ -92,9 +93,9 @@ FontFaceSet::Iterator::Iterator(FontFaceSet& set)
 
 RefPtr<FontFace> FontFaceSet::Iterator::next()
 {
-    if (m_index == m_target->size())
+    if (m_index >= m_target->size())
         return nullptr;
-    return m_target->backing()[m_index++].wrapper();
+    return m_target->backing()[m_index++].wrapper(m_target->scriptExecutionContext());
 }
 
 FontFaceSet::PendingPromise::PendingPromise(LoadPromise&& promise)
@@ -106,23 +107,31 @@ FontFaceSet::PendingPromise::~PendingPromise() = default;
 
 bool FontFaceSet::has(FontFace& face) const
 {
+    if (face.backing().cssConnection())
+        m_backing->updateStyleIfNeeded();
     return m_backing->hasFace(face.backing());
 }
 
-size_t FontFaceSet::size() const
+size_t FontFaceSet::size()
 {
+    m_backing->updateStyleIfNeeded();
     return m_backing->faceCount();
 }
 
-FontFaceSet& FontFaceSet::add(FontFace& face)
+ExceptionOr<FontFaceSet&> FontFaceSet::add(FontFace& face)
 {
-    if (!m_backing->hasFace(face.backing()))
-        m_backing->add(face.backing());
+    if (m_backing->hasFace(face.backing()))
+        return *this;
+    if (face.backing().cssConnection())
+        return Exception(InvalidModificationError);
+    m_backing->add(face.backing());
     return *this;
 }
 
 bool FontFaceSet::remove(FontFace& face)
 {
+    if (face.backing().cssConnection())
+        return false;
     bool result = m_backing->hasFace(face.backing());
     if (result)
         m_backing->remove(face.backing());
@@ -131,12 +140,16 @@ bool FontFaceSet::remove(FontFace& face)
 
 void FontFaceSet::clear()
 {
-    while (m_backing->faceCount())
-        m_backing->remove(m_backing.get()[0]);
+    auto facesPartitionIndex = m_backing->facesPartitionIndex();
+    while (m_backing->faceCount() > facesPartitionIndex) {
+        m_backing->remove(m_backing.get()[m_backing->faceCount() - 1]);
+        ASSERT(m_backing->facesPartitionIndex() == facesPartitionIndex);
+    }
 }
 
 void FontFaceSet::load(const String& font, const String& text, LoadPromise&& promise)
 {
+    m_backing->updateStyleIfNeeded();
     auto matchingFacesResult = m_backing->matchingFacesExcludingPreinstalledFonts(font, text);
     if (matchingFacesResult.hasException()) {
         promise.reject(matchingFacesResult.releaseException());
@@ -163,7 +176,7 @@ void FontFaceSet::load(const String& font, const String& text, LoadPromise&& pro
     bool waiting = false;
 
     for (auto& face : matchingFaces) {
-        pendingPromise->faces.append(face.get().wrapper());
+        pendingPromise->faces.append(face.get().wrapper(scriptExecutionContext()));
         if (face.get().status() == CSSFontFace::Status::Success)
             continue;
         waiting = true;
@@ -177,11 +190,14 @@ void FontFaceSet::load(const String& font, const String& text, LoadPromise&& pro
 
 ExceptionOr<bool> FontFaceSet::check(const String& family, const String& text)
 {
+    m_backing->updateStyleIfNeeded();
     return m_backing->check(family, text);
 }
     
 auto FontFaceSet::status() const -> LoadStatus
 {
+    m_backing->updateStyleIfNeeded();
+
     switch (m_backing->status()) {
     case CSSFontFaceSet::Status::Loading:
         return LoadStatus::Loading;
@@ -190,32 +206,6 @@ auto FontFaceSet::status() const -> LoadStatus
     }
     ASSERT_NOT_REACHED();
     return LoadStatus::Loaded;
-}
-
-void FontFaceSet::startedLoading()
-{
-    // FIXME: Fire a "loading" event asynchronously.
-}
-
-void FontFaceSet::didFirstLayout()
-{
-    m_isFirstLayoutDone = true;
-    if (!m_backing->hasActiveFontFaces() && !m_readyPromise->isFulfilled()) {
-        m_taskQueue->enqueueTask([this] {
-            if (!m_readyPromise->isFulfilled())
-                m_readyPromise->resolve(*this);
-        });
-    }
-}
-
-void FontFaceSet::completedLoading()
-{
-    if (m_isFirstLayoutDone && !m_readyPromise->isFulfilled()) {
-        m_taskQueue->enqueueTask([this] {
-            if (!m_readyPromise->isFulfilled())
-                m_readyPromise->resolve(*this);
-        });
-    }
 }
 
 void FontFaceSet::faceFinished(CSSFontFace& face, CSSFontFace::Status newStatus)
@@ -227,22 +217,38 @@ void FontFaceSet::faceFinished(CSSFontFace& face, CSSFontFace::Status newStatus)
     if (pendingPromises.isEmpty())
         return;
 
-    m_taskQueue->enqueueTask([pendingPromises = WTFMove(pendingPromises), newStatus] {
-        for (auto& pendingPromise : pendingPromises) {
-            if (pendingPromise->hasReachedTerminalState)
-                continue;
-            if (newStatus == CSSFontFace::Status::Success) {
-                if (pendingPromise->hasOneRef()) {
-                    pendingPromise->promise->resolve(pendingPromise->faces);
-                    pendingPromise->hasReachedTerminalState = true;
-                }
-            } else {
-                ASSERT(newStatus == CSSFontFace::Status::Failure);
-                pendingPromise->promise->reject(NetworkError);
+    for (auto& pendingPromise : pendingPromises) {
+        if (pendingPromise->hasReachedTerminalState)
+            continue;
+        if (newStatus == CSSFontFace::Status::Success) {
+            if (pendingPromise->hasOneRef()) {
+                pendingPromise->promise->resolve(pendingPromise->faces);
                 pendingPromise->hasReachedTerminalState = true;
             }
+        } else {
+            ASSERT(newStatus == CSSFontFace::Status::Failure);
+            pendingPromise->promise->reject(NetworkError);
+            pendingPromise->hasReachedTerminalState = true;
         }
-    });
+    }
+}
+
+void FontFaceSet::startedLoading()
+{
+    // FIXME: Fire a "loading" event asynchronously.
+}
+
+void FontFaceSet::documentDidFinishLoading()
+{
+    m_isDocumentLoaded = true;
+    if (!m_backing->hasActiveFontFaces() && !m_readyPromise->isFulfilled())
+        m_readyPromise->resolve(*this);
+}
+
+void FontFaceSet::completedLoading()
+{
+    if (m_isDocumentLoaded && !m_readyPromise->isFulfilled())
+        m_readyPromise->resolve(*this);
 }
 
 FontFaceSet& FontFaceSet::readyPromiseResolve()

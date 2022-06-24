@@ -1,3 +1,0 @@
-
-FAIL isPointInPath() works on unclosed subpaths Can't find variable: OffscreenCanvas
-

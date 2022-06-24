@@ -17,23 +17,24 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
+#include <sys/select.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <new>
+#include <string>
 
-#include "media/base/videocommon.h"
+#include "api/scoped_refptr.h"
+#include "media/base/video_common.h"
+#include "modules/video_capture/video_capture.h"
 #include "rtc_base/logging.h"
-#include "rtc_base/refcount.h"
-#include "rtc_base/refcountedobject.h"
-#include "rtc_base/scoped_ref_ptr.h"
+#include "rtc_base/ref_counted_object.h"
 
 namespace webrtc {
 namespace videocapturemodule {
 rtc::scoped_refptr<VideoCaptureModule> VideoCaptureImpl::Create(
     const char* deviceUniqueId) {
-  rtc::scoped_refptr<VideoCaptureModuleV4L2> implementation(
-      new rtc::RefCountedObject<VideoCaptureModuleV4L2>());
+  auto implementation = rtc::make_ref_counted<VideoCaptureModuleV4L2>();
 
   if (implementation->Init(deviceUniqueId) != 0)
     return nullptr;
@@ -113,7 +114,7 @@ int32_t VideoCaptureModuleV4L2::StartCapture(
     }
   }
 
-  rtc::CritScope cs(&_captureCritSect);
+  MutexLock lock(&capture_lock_);
   // first open /dev/video device
   char device[20];
   sprintf(device, "/dev/video%d", (int)_deviceId);
@@ -239,11 +240,15 @@ int32_t VideoCaptureModuleV4L2::StartCapture(
   }
 
   // start capture thread;
-  if (!_captureThread) {
-    _captureThread.reset(new rtc::PlatformThread(
-        VideoCaptureModuleV4L2::CaptureThread, this, "CaptureThread"));
-    _captureThread->Start();
-    _captureThread->SetPriority(rtc::kHighPriority);
+  if (_captureThread.empty()) {
+    quit_ = false;
+    _captureThread = rtc::PlatformThread::SpawnJoinable(
+        [this] {
+          while (CaptureProcess()) {
+          }
+        },
+        "CaptureThread",
+        rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kHigh));
   }
 
   // Needed to start UVC camera - from the uvcview application
@@ -259,13 +264,16 @@ int32_t VideoCaptureModuleV4L2::StartCapture(
 }
 
 int32_t VideoCaptureModuleV4L2::StopCapture() {
-  if (_captureThread) {
-    // Make sure the capture thread stop stop using the critsect.
-    _captureThread->Stop();
-    _captureThread.reset();
+  if (!_captureThread.empty()) {
+    {
+      MutexLock lock(&capture_lock_);
+      quit_ = true;
+    }
+    // Make sure the capture thread stops using the mutex.
+    _captureThread.Finalize();
   }
 
-  rtc::CritScope cs(&_captureCritSect);
+  MutexLock lock(&capture_lock_);
   if (_captureStarted) {
     _captureStarted = false;
 
@@ -350,21 +358,17 @@ bool VideoCaptureModuleV4L2::CaptureStarted() {
   return _captureStarted;
 }
 
-bool VideoCaptureModuleV4L2::CaptureThread(void* obj) {
-  return static_cast<VideoCaptureModuleV4L2*>(obj)->CaptureProcess();
-}
 bool VideoCaptureModuleV4L2::CaptureProcess() {
   int retVal = 0;
   fd_set rSet;
   struct timeval timeout;
-
-  rtc::CritScope cs(&_captureCritSect);
 
   FD_ZERO(&rSet);
   FD_SET(_deviceFd, &rSet);
   timeout.tv_sec = 1;
   timeout.tv_usec = 0;
 
+  // _deviceFd written only in StartCapture, when this thread isn't running.
   retVal = select(_deviceFd + 1, &rSet, NULL, NULL, &timeout);
   if (retVal < 0 && errno != EINTR)  // continue if interrupted
   {
@@ -378,30 +382,38 @@ bool VideoCaptureModuleV4L2::CaptureProcess() {
     return true;
   }
 
-  if (_captureStarted) {
-    struct v4l2_buffer buf;
-    memset(&buf, 0, sizeof(struct v4l2_buffer));
-    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    buf.memory = V4L2_MEMORY_MMAP;
-    // dequeue a buffer - repeat until dequeued properly!
-    while (ioctl(_deviceFd, VIDIOC_DQBUF, &buf) < 0) {
-      if (errno != EINTR) {
-        RTC_LOG(LS_INFO) << "could not sync on a buffer on device "
-                         << strerror(errno);
-        return true;
-      }
-    }
-    VideoCaptureCapability frameInfo;
-    frameInfo.width = _currentWidth;
-    frameInfo.height = _currentHeight;
-    frameInfo.videoType = _captureVideoType;
+  {
+    MutexLock lock(&capture_lock_);
 
-    // convert to to I420 if needed
-    IncomingFrame((unsigned char*)_pool[buf.index].start, buf.bytesused,
-                  frameInfo);
-    // enqueue the buffer again
-    if (ioctl(_deviceFd, VIDIOC_QBUF, &buf) == -1) {
-      RTC_LOG(LS_INFO) << "Failed to enqueue capture buffer";
+    if (quit_) {
+      return false;
+    }
+
+    if (_captureStarted) {
+      struct v4l2_buffer buf;
+      memset(&buf, 0, sizeof(struct v4l2_buffer));
+      buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      buf.memory = V4L2_MEMORY_MMAP;
+      // dequeue a buffer - repeat until dequeued properly!
+      while (ioctl(_deviceFd, VIDIOC_DQBUF, &buf) < 0) {
+        if (errno != EINTR) {
+          RTC_LOG(LS_INFO) << "could not sync on a buffer on device "
+                           << strerror(errno);
+          return true;
+        }
+      }
+      VideoCaptureCapability frameInfo;
+      frameInfo.width = _currentWidth;
+      frameInfo.height = _currentHeight;
+      frameInfo.videoType = _captureVideoType;
+
+      // convert to to I420 if needed
+      IncomingFrame((unsigned char*)_pool[buf.index].start, buf.bytesused,
+                    frameInfo);
+      // enqueue the buffer again
+      if (ioctl(_deviceFd, VIDIOC_QBUF, &buf) == -1) {
+        RTC_LOG(LS_INFO) << "Failed to enqueue capture buffer";
+      }
     }
   }
   usleep(0);

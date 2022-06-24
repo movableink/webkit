@@ -24,13 +24,14 @@ initialState:
     font: "10px sans-serif"
     textAlign: "start"
     textBaseline: "alphabetic"
-    direction: "ltr"
+    direction: "inherit"
     strokeStyle: "#000000"
     fillStyle: "#000000"
     imageSmoothingEnabled: true
     imageSmoothingQuality: "low"
     setPath: [""]
   parameters:
+    0: {"colorSpace":"srgb","desynchronized":false}
   content: <filtered>
 frames:
   0: (duration)
@@ -652,7 +653,7 @@ frames:
         1: (anonymous function)
         2: executeFrameFunction
   48: (duration)
-    0: setCompositeOperation("undefined")
+    0: setCompositeOperation("")
       swizzleTypes: [String]
       trace:
         0: setCompositeOperation
@@ -695,14 +696,8 @@ frames:
         0: setFillColor
         1: (anonymous function)
         2: executeFrameFunction
-    5: setFillColor(9, 10, 11, 12, 13)
-      swizzleTypes: [Number, Number, Number, Number, Number]
-      trace:
-        0: setFillColor
-        1: (anonymous function)
-        2: executeFrameFunction
   50: (duration)
-    0: setLineCap("undefined")
+    0: setLineCap("")
       swizzleTypes: [String]
       trace:
         0: setLineCap
@@ -722,7 +717,7 @@ frames:
         1: (anonymous function)
         2: executeFrameFunction
   52: (duration)
-    0: setLineJoin("undefined")
+    0: setLineJoin("")
       swizzleTypes: [String]
       trace:
         0: setLineJoin
@@ -791,8 +786,8 @@ frames:
         0: setShadow
         1: (anonymous function)
         2: executeFrameFunction
-    5: setShadow(24, 25, 26, 27, 28, 29, 30, 31)
-      swizzleTypes: [Number, Number, Number, Number, Number, Number, Number, Number]
+    5: setShadow(24, 25, 26, 27, 28, 29, 30)
+      swizzleTypes: [Number, Number, Number, Number, Number, Number, Number]
       trace:
         0: setShadow
         1: (anonymous function)
@@ -824,12 +819,6 @@ frames:
         2: executeFrameFunction
     4: setStrokeColor(5, 6, 7, 8)
       swizzleTypes: [Number, Number, Number, Number]
-      trace:
-        0: setStrokeColor
-        1: (anonymous function)
-        2: executeFrameFunction
-    5: setStrokeColor(9, 10, 11, 12, 13)
-      swizzleTypes: [Number, Number, Number, Number, Number]
       trace:
         0: setStrokeColor
         1: (anonymous function)
@@ -1028,4 +1017,23 @@ frames:
       trace:
         0: (anonymous function)
         1: executeFrameFunction
+  75: (duration)
+    0: roundRect(0, 0, 50, 50, 42)
+      swizzleTypes: [Number, Number, Number, Number, Number]
+      trace:
+        0: roundRect
+        1: (anonymous function)
+        2: executeFrameFunction
+    1: roundRect(0, 0, 50, 50, [23])
+      swizzleTypes: [Number, Number, Number, Number, Array]
+      trace:
+        0: roundRect
+        1: (anonymous function)
+        2: executeFrameFunction
+    2: roundRect(0, 0, 150, 150, [{"x":24,"y":42,"z":0,"w":1}])
+      swizzleTypes: [Number, Number, Number, Number, Array]
+      trace:
+        0: roundRect
+        1: (anonymous function)
+        2: executeFrameFunction
 

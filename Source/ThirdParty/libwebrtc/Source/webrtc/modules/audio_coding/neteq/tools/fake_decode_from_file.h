@@ -20,7 +20,6 @@
 
 namespace webrtc {
 namespace test {
-
 // Provides an AudioDecoder implementation that delivers audio data from a file.
 // The "encoded" input should contain information about what RTP timestamp the
 // encoding represents, and how many samples the decoder should produce for that
@@ -38,6 +37,9 @@ class FakeDecodeFromFile : public AudioDecoder {
 
   ~FakeDecodeFromFile() = default;
 
+  std::vector<ParseResult> ParsePayload(rtc::Buffer&& payload,
+                                        uint32_t timestamp) override;
+
   void Reset() override {}
 
   int SampleRateHz() const override { return sample_rate_hz_; }
@@ -52,9 +54,9 @@ class FakeDecodeFromFile : public AudioDecoder {
 
   int PacketDuration(const uint8_t* encoded, size_t encoded_len) const override;
 
-  // Helper method. Writes |timestamp|, |samples| and
-  // |original_payload_size_bytes| to |encoded| in a format that the
-  // FakeDecodeFromFile decoder will understand. |encoded| must be at least 12
+  // Helper method. Writes `timestamp`, `samples` and
+  // `original_payload_size_bytes` to `encoded` in a format that the
+  // FakeDecodeFromFile decoder will understand. `encoded` must be at least 12
   // bytes long.
   static void PrepareEncoded(uint32_t timestamp,
                              size_t samples,

@@ -9,6 +9,7 @@
  */
 
 #include "modules/audio_coding/audio_network_adaptor/bitrate_controller.h"
+
 #include "rtc_base/numerics/safe_conversions.h"
 #include "test/field_trial.h"
 #include "test/gtest.h"
@@ -84,7 +85,7 @@ TEST(AnaBitrateControllerTest, ChangeBitrateOnTargetBitrateChanged) {
                                                       1000 /
                                                       kInitialFrameLengthMs;
   // Frame length unchanged, bitrate changes in accordance with
-  // |metrics.target_audio_bitrate_bps| and |metrics.overhead_bytes_per_packet|.
+  // `metrics.target_audio_bitrate_bps` and `metrics.overhead_bytes_per_packet`.
   UpdateNetworkMetrics(&controller, kTargetBitrateBps, kOverheadBytesPerPacket);
   CheckDecision(&controller, kInitialFrameLengthMs, kBitrateBps);
 }

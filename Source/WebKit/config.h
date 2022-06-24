@@ -33,13 +33,6 @@
 #include <pal/ExportMacros.h>
 #include <wtf/DisallowCType.h>
 
-#if PLATFORM(WIN)
-#undef WEBCORE_EXPORT
-#define WEBCORE_EXPORT WTF_EXPORT_DECLARATION
-#undef WEBCORE_TESTSUPPORT_EXPORT
-#define WEBCORE_TESTSUPPORT_EXPORT WTF_EXPORT_DECLARATION
-#endif // PLATFORM(WIN)
-
 #ifdef __cplusplus
 
 // These undefs match up with defines in WebKit2Prefix.h for Mac OS X.
@@ -67,7 +60,7 @@
 #define USE_CREDENTIAL_STORAGE_WITH_NETWORK_SESSION 1
 #endif
 
-// ENABLE_WEBDRIVER_ACTIONS_API represents whether mouse, keyboard or touch interactions are defined
-#if ENABLE(WEBDRIVER_MOUSE_INTERACTIONS) || ENABLE(WEBDRIVER_KEYBOARD_INTERACTIONS) || ENABLE(WEBDRIVER_TOUCH_INTERACTIONS)
+// ENABLE_WEBDRIVER_ACTIONS_API represents whether mouse, keyboard, touch or wheel interactions are defined
+#if ENABLE(WEBDRIVER_MOUSE_INTERACTIONS) || ENABLE(WEBDRIVER_KEYBOARD_INTERACTIONS) || ENABLE(WEBDRIVER_TOUCH_INTERACTIONS) || ENABLE(WEBDRIVER_WHEEL_INTERACTIONS)
 #define ENABLE_WEBDRIVER_ACTIONS_API 1
 #endif

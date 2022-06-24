@@ -29,12 +29,12 @@
 #include "PerProcess.h"
 #include <climits>
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
-IsoTLSEntry::IsoTLSEntry(size_t alignment, size_t size)
-    : m_offset(UINT_MAX)
-    , m_alignment(alignment)
-    , m_size(size)
+IsoTLSEntry::IsoTLSEntry(size_t size)
+    : m_size(size)
 {
 }
 
@@ -44,3 +44,4 @@ IsoTLSEntry::~IsoTLSEntry()
 
 } // namespace bmalloc
 
+#endif

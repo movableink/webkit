@@ -11,8 +11,10 @@
 #ifndef MODULES_VIDEO_CODING_CODECS_MULTIPLEX_INCLUDE_AUGMENTED_VIDEO_FRAME_BUFFER_H_
 #define MODULES_VIDEO_CODING_CODECS_MULTIPLEX_INCLUDE_AUGMENTED_VIDEO_FRAME_BUFFER_H_
 
+#include <cstdint>
 #include <memory>
 
+#include "api/scoped_refptr.h"
 #include "api/video/video_frame_buffer.h"
 
 namespace webrtc {
@@ -43,6 +45,12 @@ class AugmentedVideoFrameBuffer : public VideoFrameBuffer {
 
   // Get the I140 Buffer from the underlying frame buffer
   rtc::scoped_refptr<I420BufferInterface> ToI420() final;
+  // Returns GetI420() of the underlying VideoFrameBuffer.
+  // TODO(hbos): AugmentedVideoFrameBuffer should not return a type (such as
+  // kI420) without also implementing that type's interface (i.e.
+  // I420BufferInterface). Either implement all possible Type's interfaces or
+  // return kNative.
+  const I420BufferInterface* GetI420() const final;
 
  private:
   uint16_t augmenting_data_size_;

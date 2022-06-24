@@ -40,7 +40,12 @@ WI.DOMNodeDetailsSidebarPanel = class DOMNodeDetailsSidebarPanel extends WI.DOMD
 
     closed()
     {
-        WI.domManager.removeEventListener(null, null, this);
+        if (this.didInitialLayout) {
+            WI.domManager.removeEventListener(WI.DOMManager.Event.AttributeModified, this._attributesChanged, this);
+            WI.domManager.removeEventListener(WI.DOMManager.Event.AttributeRemoved, this._attributesChanged, this);
+            WI.domManager.removeEventListener(WI.DOMManager.Event.CharacterDataModified, this._characterDataModified, this);
+            WI.domManager.removeEventListener(WI.DOMManager.Event.CustomElementStateChanged, this._customElementStateChanged, this);
+        }
 
         super.closed();
     }
@@ -63,59 +68,40 @@ WI.DOMNodeDetailsSidebarPanel = class DOMNodeDetailsSidebarPanel extends WI.DOMD
 
         var identityGroup = new WI.DetailsSectionGroup([this._identityNodeTypeRow, this._identityNodeNameRow, this._identityNodeValueRow, this._identityNodeContentSecurityPolicyHashRow]);
         var identitySection = new WI.DetailsSection("dom-node-identity", WI.UIString("Identity"), [identityGroup]);
+        this.contentView.element.appendChild(identitySection.element);
 
         this._attributesDataGridRow = new WI.DetailsSectionDataGridRow(null, WI.UIString("No Attributes"));
 
         var attributesGroup = new WI.DetailsSectionGroup([this._attributesDataGridRow]);
         var attributesSection = new WI.DetailsSection("dom-node-attributes", WI.UIString("Attributes"), [attributesGroup]);
+        this.contentView.element.appendChild(attributesSection.element);
 
-        this._propertiesRow = new WI.DetailsSectionRow;
-
-        var propertiesGroup = new WI.DetailsSectionGroup([this._propertiesRow]);
-        var propertiesSection = new WI.DetailsSection("dom-node-properties", WI.UIString("Properties"), [propertiesGroup]);
-
-        let eventListenersFilterElement = WI.ImageUtilities.useSVGSymbol("Images/FilterFieldGlyph.svg", "filter", WI.UIString("Grouping Method"));
-
-        let eventListenersGroupMethodSelectElement = eventListenersFilterElement.appendChild(document.createElement("select"));
-        eventListenersGroupMethodSelectElement.addEventListener("change", (event) => {
-            this._eventListenerGroupingMethodSetting.value = eventListenersGroupMethodSelectElement.value;
-
-            this._refreshEventListeners();
-        });
-
-        function createOption(text, value) {
-            let optionElement = eventListenersGroupMethodSelectElement.appendChild(document.createElement("option"));
-            optionElement.value = value;
-            optionElement.textContent = text;
+        if (InspectorBackend.hasCommand("DOM.resolveNode")) {
+            this._propertiesRow = new WI.DetailsSectionRow;
+            let propertiesGroup = new WI.DetailsSectionGroup([this._propertiesRow]);
+            let propertiesSection = new WI.DetailsSection("dom-node-properties", WI.UIString("Properties"), [propertiesGroup]);
+            this.contentView.element.appendChild(propertiesSection.element);
         }
 
-        createOption(WI.UIString("Group by Event"), WI.DOMNodeDetailsSidebarPanel.EventListenerGroupingMethod.Event);
-        createOption(WI.UIString("Group by Target"), WI.DOMNodeDetailsSidebarPanel.EventListenerGroupingMethod.Target);
-
-        eventListenersGroupMethodSelectElement.value = this._eventListenerGroupingMethodSetting.value;
+        let eventListenersFilterElement = WI.ImageUtilities.useSVGSymbol("Images/Filter.svg", "filter", WI.UIString("Grouping Method"));
+        WI.addMouseDownContextMenuHandlers(eventListenersFilterElement, this._populateEventListenersFilterContextMenu.bind(this));
 
         this._eventListenersSectionGroup = new WI.DetailsSectionGroup;
         let eventListenersSection = new WI.DetailsSection("dom-node-event-listeners", WI.UIString("Event Listeners"), [this._eventListenersSectionGroup], eventListenersFilterElement);
-
-        this.contentView.element.appendChild(identitySection.element);
-        this.contentView.element.appendChild(attributesSection.element);
-        this.contentView.element.appendChild(propertiesSection.element);
         this.contentView.element.appendChild(eventListenersSection.element);
 
-        if (WI.sharedApp.hasExtraDomains) {
-            let target = WI.assumingMainTarget();
-            if (target.hasCommand("DOM.getDataBindingsForNode")) {
-                this._dataBindingsSection = new WI.DetailsSection("dom-node-data-bindings", WI.UIString("Data Bindings"), []);
-                this.contentView.element.appendChild(this._dataBindingsSection.element);
-            }
-            if (target.hasCommand("DOM.getAssociatedDataForNode")) {
-                this._associatedDataGrid = new WI.DetailsSectionRow(WI.UIString("No Associated Data"));
+        if (InspectorBackend.hasCommand("DOM.getDataBindingsForNode")) {
+            this._dataBindingsSection = new WI.DetailsSection("dom-node-data-bindings", WI.UIString("Data Bindings"), []);
+            this.contentView.element.appendChild(this._dataBindingsSection.element);
+        }
 
-                let associatedDataGroup = new WI.DetailsSectionGroup([this._associatedDataGrid]);
+        if (InspectorBackend.hasCommand("DOM.getAssociatedDataForNode")) {
+            this._associatedDataGrid = new WI.DetailsSectionRow(WI.UIString("No Associated Data"));
 
-                let associatedSection = new WI.DetailsSection("dom-node-associated-data", WI.UIString("Associated Data"), [associatedDataGroup]);
-                this.contentView.element.appendChild(associatedSection.element);
-            }
+            let associatedDataGroup = new WI.DetailsSectionGroup([this._associatedDataGrid]);
+
+            let associatedSection = new WI.DetailsSection("dom-node-associated-data", WI.UIString("Associated Data"), [associatedDataGroup]);
+            this.contentView.element.appendChild(associatedSection.element);
         }
 
         if (this._accessibilitySupported()) {
@@ -157,7 +143,7 @@ WI.DOMNodeDetailsSidebarPanel = class DOMNodeDetailsSidebarPanel extends WI.DOMD
     {
         super.layout();
 
-        if (!this.domNode)
+        if (!this.domNode || this.domNode.destroyed)
             return;
 
         this._refreshIdentity();
@@ -240,6 +226,9 @@ WI.DOMNodeDetailsSidebarPanel = class DOMNodeDetailsSidebarPanel extends WI.DOMD
 
     _refreshProperties()
     {
+        if (!this._propertiesRow)
+            return;
+
         if (this._nodeRemoteObject) {
             this._nodeRemoteObject.release();
             this._nodeRemoteObject = null;
@@ -278,6 +267,12 @@ WI.DOMNodeDetailsSidebarPanel = class DOMNodeDetailsSidebarPanel extends WI.DOMD
             const args = undefined;
             const generatePreview = false;
             object.callFunction(inspectedPage_node_collectPrototypes, args, generatePreview, nodePrototypesReady.bind(this));
+        }).catch((error) => {
+            // Bail if the DOM node changed while we were waiting for the async response.
+            if (this.domNode !== domNode)
+                return;
+
+            console.assert(false, "Cannot resolve node.", error, domNode);
         });
 
         function nodePrototypesReady(error, object, wasThrown)
@@ -370,7 +365,8 @@ WI.DOMNodeDetailsSidebarPanel = class DOMNodeDetailsSidebarPanel extends WI.DOMD
             }
 
             const defaultCollapsedSettingValue = true;
-            let section = new WI.DetailsSection(`${title}-event-listener-section`, title, groups, optionsElement, defaultCollapsedSettingValue);
+            let identifier = `${options.identifier ?? title}-event-listener-section`;
+            let section = new WI.DetailsSection(identifier, title, groups, optionsElement, defaultCollapsedSettingValue);
             section.element.classList.add("event-listener-section");
             return section;
         }
@@ -422,8 +418,9 @@ WI.DOMNodeDetailsSidebarPanel = class DOMNodeDetailsSidebarPanel extends WI.DOMD
                 eventListenersForTarget.sort((a, b) => a.type.toLowerCase().extendedLocaleCompare(b.type.toLowerCase()));
 
                 let title = target === windowTargetIdentifier ? WI.unlocalizedString("window") : target.displayName;
+                let identifier = target === windowTargetIdentifier ? WI.unlocalizedString("window") : target.unescapedSelector;
 
-                let section = createEventListenerSection(title, eventListenersForTarget, {hideTarget: true});
+                let section = createEventListenerSection(title, eventListenersForTarget, {hideTarget: true, identifier});
                 if (target instanceof WI.DOMNode)
                     WI.bindInteractionsForNodeToElement(target, section.titleElement, {ignoreClick: true});
                 rows.push(section);
@@ -897,6 +894,20 @@ WI.DOMNodeDetailsSidebarPanel = class DOMNodeDetailsSidebarPanel extends WI.DOMD
         }
 
         domNode.accessibilityProperties(accessibilityPropertiesCallback.bind(this));
+    }
+
+    _populateEventListenersFilterContextMenu(contextMenu)
+    {
+        let addGroupingMethodCheckboxItem = (label, groupingMethod) => {
+            contextMenu.appendCheckboxItem(label, () => {
+                this._eventListenerGroupingMethodSetting.value = groupingMethod;
+
+                this._refreshEventListeners();
+            }, this._eventListenerGroupingMethodSetting.value === groupingMethod);
+        };
+
+        addGroupingMethodCheckboxItem(WI.UIString("Group by Event", "Group by Event @ Node Event Listeners", "Group DOM event listeners by DOM event"), WI.DOMNodeDetailsSidebarPanel.EventListenerGroupingMethod.Event);
+        addGroupingMethodCheckboxItem(WI.UIString("Group by Target", "Group by Target @ Node Event Listeners", "Group DOM event listeners by DOM node"), WI.DOMNodeDetailsSidebarPanel.EventListenerGroupingMethod.Target);
     }
 
     _eventListenersChanged(event)

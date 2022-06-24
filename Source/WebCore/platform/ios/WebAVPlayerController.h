@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if PLATFORM(IOS_FAMILY) && HAVE(AVKIT)
+#if PLATFORM(COCOA) && HAVE(AVKIT)
 
 #import <pal/spi/cocoa/AVKitSPI.h>
 
@@ -33,30 +33,40 @@ class PlaybackSessionInterfaceAVKit;
 }
 
 @interface WebAVMediaSelectionOption : NSObject
+- (instancetype)initWithMediaType:(AVMediaType)type displayName:(NSString *)displayName;
+
 @property (retain) NSString *localizedDisplayName;
+@property (nonatomic, readonly) AVMediaType mediaType;
+
 @end
 
-@interface WebAVPlayerController : NSObject {
+WEBCORE_EXPORT @interface WebAVPlayerController : NSObject {
     WebAVMediaSelectionOption *_currentAudioMediaSelectionOption;
     WebAVMediaSelectionOption *_currentLegibleMediaSelectionOption;
     BOOL _pictureInPictureInterrupted;
     BOOL _muted;
 }
 
-@property (retain) AVPlayerController* playerControllerProxy;
-@property (assign) WebCore::PlaybackSessionModel* delegate;
-@property (assign) WebCore::PlaybackSessionInterfaceAVKit* playbackSessionInterface;
+- (void)setAllowsPictureInPicture:(BOOL)allowsPictureInPicture;
+
+@property (retain) AVPlayerController *playerControllerProxy;
+@property (assign /*weak*/) WebCore::PlaybackSessionModel* delegate;
+@property (assign /*weak*/) WebCore::PlaybackSessionInterfaceAVKit* playbackSessionInterface;
 
 @property (readonly) BOOL canScanForward;
 @property BOOL canScanBackward;
 @property (readonly) BOOL canSeekToBeginning;
 @property (readonly) BOOL canSeekToEnd;
 @property (readonly) BOOL isScrubbing;
+@property (readonly) BOOL canSeekFrameBackward;
+@property (readonly) BOOL canSeekFrameForward;
+@property (readonly) BOOL hasContentChapters;
 
 @property BOOL canPlay;
 @property (getter=isPlaying) BOOL playing;
 @property BOOL canPause;
 @property BOOL canTogglePlayback;
+@property double defaultPlaybackRate;
 @property double rate;
 @property BOOL canSeek;
 @property NSTimeInterval contentDuration;
@@ -89,7 +99,7 @@ class PlaybackSessionInterfaceAVKit;
 @property AVPlayerControllerExternalPlaybackType externalPlaybackType;
 @property (retain) NSString *externalPlaybackAirPlayDeviceLocalizedName;
 @property BOOL allowsExternalPlayback;
-@property (getter=isPictureInPicturePossible) BOOL pictureInPicturePossible;
+@property (readonly, getter=isPictureInPicturePossible) BOOL pictureInPicturePossible;
 @property (getter=isPictureInPictureInterrupted) BOOL pictureInPictureInterrupted;
 
 @property NSTimeInterval seekableTimeRangesLastModifiedTime;
@@ -97,7 +107,9 @@ class PlaybackSessionInterfaceAVKit;
 
 @property (NS_NONATOMIC_IOSONLY, retain, readwrite) AVValueTiming *minTiming;
 @property (NS_NONATOMIC_IOSONLY, retain, readwrite) AVValueTiming *maxTiming;
+
+- (void)setDefaultPlaybackRate:(double)defaultPlaybackRate fromJavaScript:(BOOL)fromJavaScript;
+- (void)setRate:(double)rate fromJavaScript:(BOOL)fromJavaScript;
 @end
 
 #endif
-

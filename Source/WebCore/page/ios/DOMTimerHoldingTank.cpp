@@ -26,9 +26,7 @@
 #include "config.h"
 #include "DOMTimerHoldingTank.h"
 
-#if PLATFORM(IOS_FAMILY)
-
-#include <wtf/HashSet.h>
+#if ENABLE(CONTENT_CHANGE_OBSERVER)
 
 namespace WebCore {
 
@@ -79,4 +77,4 @@ inline void DOMTimerHoldingTank::stopExceededMaximumHoldTimer()
 
 } // namespace WebCore
 
-#endif // PLATFORM(IOS_FAMILY)
+#endif // ENABLE(CONTENT_CHANGE_OBSERVER)

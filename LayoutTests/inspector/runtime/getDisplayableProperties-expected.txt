@@ -25,18 +25,18 @@ Properties:
     "length"     =>  0 (number)  [configurable | isOwn]
     "prototype"  =>  "Test" (object)  [isOwn]
     "name"       =>  "Test" (string)  [configurable | isOwn]
-    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
     "arguments"  =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
     "__proto__"  =>  "function () {\n    [native code]\n}" (function)  [writable | configurable | isOwn]
 
 -- Running test case: Runtime.getDisplayableProperties.BoundConstructor
 Evaluating expression...
 Getting displayable properties...
 Properties:
-    "name"       =>  "bound Test" (string)  [configurable | isOwn]
     "length"     =>  0 (number)  [configurable | isOwn]
-    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "name"       =>  "bound Test" (string)  [configurable | isOwn]
     "arguments"  =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
     "__proto__"  =>  "function () {\n    [native code]\n}" (function)  [writable | configurable | isOwn]
 Internal Properties:
     "targetFunction"  =>  "class Test { }" (function class)  []
@@ -46,10 +46,10 @@ Internal Properties:
 Evaluating expression...
 Getting displayable properties...
 Properties:
-    "name"       =>  "bound Test" (string)  [configurable | isOwn]
     "length"     =>  0 (number)  [configurable | isOwn]
-    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "name"       =>  "bound Test" (string)  [configurable | isOwn]
     "arguments"  =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
     "__proto__"  =>  "function () {\n    [native code]\n}" (function)  [writable | configurable | isOwn]
 Internal Properties:
     "targetFunction"  =>  "class Test { }" (function class)  []
@@ -60,32 +60,32 @@ Internal Properties:
 Evaluating expression...
 Getting displayable properties...
 Properties:
-    "arguments"  =>  null (object null)  [isOwn]
-    "caller"     =>  null (object null)  [isOwn]
     "length"     =>  3 (number)  [configurable | isOwn]
     "name"       =>  "" (string)  [configurable | isOwn]
     "prototype"  =>  "Object" (object)  [writable | isOwn]
+    "arguments"  =>  null (object null)  [configurable | nativeGetter]
+    "caller"     =>  null (object null)  [configurable | nativeGetter]
     "__proto__"  =>  "function () {\n    [native code]\n}" (function)  [writable | configurable | isOwn]
 
 -- Running test case: Runtime.getDisplayableProperties.FunctionNoParameters
 Evaluating expression...
 Getting displayable properties...
 Properties:
-    "arguments"  =>  null (object null)  [isOwn]
-    "caller"     =>  null (object null)  [isOwn]
     "length"     =>  0 (number)  [configurable | isOwn]
     "name"       =>  "" (string)  [configurable | isOwn]
     "prototype"  =>  "Object" (object)  [writable | isOwn]
+    "arguments"  =>  null (object null)  [configurable | nativeGetter]
+    "caller"     =>  null (object null)  [configurable | nativeGetter]
     "__proto__"  =>  "function () {\n    [native code]\n}" (function)  [writable | configurable | isOwn]
 
 -- Running test case: Runtime.getDisplayableProperties.BoundFunction
 Evaluating expression...
 Getting displayable properties...
 Properties:
-    "name"       =>  "bound " (string)  [configurable | isOwn]
     "length"     =>  3 (number)  [configurable | isOwn]
-    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "name"       =>  "bound " (string)  [configurable | isOwn]
     "arguments"  =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
     "__proto__"  =>  "function () {\n    [native code]\n}" (function)  [writable | configurable | isOwn]
 Internal Properties:
     "targetFunction"  =>  "function (a, b, c){}" (function)  []
@@ -95,10 +95,10 @@ Internal Properties:
 Evaluating expression...
 Getting displayable properties...
 Properties:
-    "name"       =>  "bound " (string)  [configurable | isOwn]
     "length"     =>  0 (number)  [configurable | isOwn]
-    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "name"       =>  "bound " (string)  [configurable | isOwn]
     "arguments"  =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
     "__proto__"  =>  "function () {\n    [native code]\n}" (function)  [writable | configurable | isOwn]
 Internal Properties:
     "targetFunction"  =>  "function (a, b, c){}" (function)  []
@@ -109,10 +109,10 @@ Internal Properties:
 Evaluating expression...
 Getting displayable properties...
 Properties:
-    "name"       =>  "bound " (string)  [configurable | isOwn]
     "length"     =>  0 (number)  [configurable | isOwn]
-    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "name"       =>  "bound " (string)  [configurable | isOwn]
     "arguments"  =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
     "__proto__"  =>  "function () {\n    [native code]\n}" (function)  [writable | configurable | isOwn]
 Internal Properties:
     "targetFunction"  =>  "function (){}" (function)  []
@@ -122,10 +122,10 @@ Internal Properties:
 Evaluating expression...
 Getting displayable properties...
 Properties:
-    "name"       =>  "bound " (string)  [configurable | isOwn]
     "length"     =>  0 (number)  [configurable | isOwn]
-    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "name"       =>  "bound " (string)  [configurable | isOwn]
     "arguments"  =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
+    "caller"     =>  "TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context." (object error)  [wasThrown]
     "__proto__"  =>  "function () {\n    [native code]\n}" (function)  [writable | configurable | isOwn]
 Internal Properties:
     "targetFunction"  =>  "function (){}" (function)  []
@@ -163,7 +163,6 @@ Properties:
 -- Running test case: Runtime.getDisplayableProperties.fetchCount.Object
 Evaluating expression...
 Getting displayable properties with fetchCount 5...
-ASSERT: Should only get 5 properties.
 Properties:
     "A"          =>  0 (number)  [writable | enumerable | configurable | isOwn]
     "Y"          =>  1 (number)  [writable | enumerable | configurable | isOwn]
@@ -194,7 +193,6 @@ Properties:
 -- Running test case: Runtime.getDisplayableProperties.fetchCount.Array
 Evaluating expression...
 Getting displayable properties with fetchCount 5...
-ASSERT: Should only get 5 properties.
 Properties:
     "0"          =>  "A" (string)  [writable | enumerable | configurable | isOwn]
     "1"          =>  "Y" (string)  [writable | enumerable | configurable | isOwn]

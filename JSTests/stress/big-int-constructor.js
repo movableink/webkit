@@ -1,5 +1,3 @@
-//@ runBigIntEnabled
-
 function assert(a) {
     if (!a)
         throw new Error("Bad assertion");
@@ -228,6 +226,16 @@ o = {
 n = BigInt(o);
 assert(n.toString() === "3256");
 
+o = {
+    [Symbol.toPrimitive](hint) {
+        this.toPrimitiveHint = hint;
+        return 42;
+    }
+}
+
+n = BigInt(o);
+assert(o.toPrimitiveHint === "number");
+
 // Assertion thows
 
 assertThrowSyntaxError("aba");
@@ -247,7 +255,6 @@ assertThrowTypeError(undefined);
 assertThrowTypeError(Symbol("a"));
 assertThrowRangeError(0.5);
 assertThrowRangeError(-.5);
-assertThrowRangeError(9007199254740992);
 assertThrowRangeError(Infinity);
 assertThrowRangeError(-Infinity);
 assertThrowRangeError(NaN);

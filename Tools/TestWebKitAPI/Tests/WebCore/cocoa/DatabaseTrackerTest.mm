@@ -23,14 +23,14 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
-#include <WebCore/DatabaseTracker.h>
-#include <WebCore/OriginLock.h>
-#include <WebCore/SQLiteDatabase.h>
-#include <WebCore/SQLiteStatement.h>
-#include <WebCore/SecurityOriginData.h>
-#include <wtf/FileSystem.h>
+#import <WebCore/DatabaseTracker.h>
+#import <WebCore/OriginLock.h>
+#import <WebCore/SQLiteDatabase.h>
+#import <WebCore/SQLiteStatement.h>
+#import <WebCore/SecurityOriginData.h>
+#import <wtf/FileSystem.h>
 
 using namespace WebCore;
 
@@ -44,9 +44,8 @@ TEST(DatabaseTracker, DeleteDatabaseFileIfEmpty)
     String databaseFilePath = FileSystem::openTemporaryFile("tempEmptyDatabase", handle);
     FileSystem::closeFile(handle);
 
-    long long fileSize;
-    FileSystem::getFileSize(databaseFilePath, fileSize);
-    EXPECT_EQ(0, fileSize);
+    auto fileSize = FileSystem::fileSize(databaseFilePath).value_or(0);
+    EXPECT_EQ(0U, fileSize);
 
     EXPECT_TRUE(DatabaseTracker::deleteDatabaseFileIfEmpty(databaseFilePath));
 
@@ -66,20 +65,20 @@ static void addToDatabasesTable(const String& databasePath, const SecurityOrigin
     SQLiteDatabase database;
     database.open(databasePath);
 
-    SQLiteStatement addDatabaseStatement(database, "INSERT INTO Databases (origin, name, path) VALUES (?, ?, ?);");
-    addDatabaseStatement.prepare();
-    addDatabaseStatement.bindText(1, origin.databaseIdentifier());
-    addDatabaseStatement.bindText(2, newDatabaseName);
-    addDatabaseStatement.bindText(3, newDatabasePath);
-    addDatabaseStatement.executeCommand();
+    if (auto addDatabaseStatement = database.prepareStatement("INSERT INTO Databases (origin, name, path) VALUES (?, ?, ?);"_s)) {
+        addDatabaseStatement->bindText(1, origin.databaseIdentifier());
+        addDatabaseStatement->bindText(2, newDatabaseName);
+        addDatabaseStatement->bindText(3, newDatabasePath);
+        addDatabaseStatement->executeCommand();
+    }
 
     database.close();
 }
 
 static void removeDirectoryAndAllContents(const String& directoryPath)
 {
-    for (const auto& file : FileSystem::listDirectory(directoryPath, "*"))
-        EXPECT_TRUE(FileSystem::deleteFile(file));
+    for (auto& fileName : FileSystem::listDirectory(directoryPath))
+        EXPECT_TRUE(FileSystem::deleteFile(FileSystem::pathByAppendingComponent(directoryPath, fileName)));
 
     if (FileSystem::fileExists(directoryPath))
         EXPECT_TRUE(FileSystem::deleteEmptyDirectory(directoryPath));

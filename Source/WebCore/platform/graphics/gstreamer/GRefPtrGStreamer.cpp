@@ -23,6 +23,16 @@
 #if USE(GSTREAMER)
 #include <gst/gst.h>
 
+#if USE(GSTREAMER_GL)
+#include <gst/gl/egl/gsteglimage.h>
+#endif
+
+#if USE(GSTREAMER_WEBRTC)
+#define GST_USE_UNSTABLE_API
+#include <gst/webrtc/webrtc.h>
+#undef GST_USE_UNSTABLE_API
+#endif
+
 namespace WTF {
 
 template<> GRefPtr<GstMiniObject> adoptGRef(GstMiniObject* ptr)
@@ -59,6 +69,27 @@ template <> GstElement* refGPtr<GstElement>(GstElement* ptr)
 }
 
 template <> void derefGPtr<GstElement>(GstElement* ptr)
+{
+    if (ptr)
+        gst_object_unref(ptr);
+}
+
+
+template <> GRefPtr<GstPlugin> adoptGRef(GstPlugin* ptr)
+{
+    ASSERT(!ptr || !g_object_is_floating(ptr));
+    return GRefPtr<GstPlugin>(ptr, GRefPtrAdopt);
+}
+
+template <> GstPlugin* refGPtr<GstPlugin>(GstPlugin* ptr)
+{
+    if (ptr)
+        gst_object_ref_sink(GST_OBJECT(ptr));
+
+    return ptr;
+}
+
+template <> void derefGPtr<GstPlugin>(GstPlugin* ptr)
 {
     if (ptr)
         gst_object_unref(ptr);
@@ -410,6 +441,28 @@ template <> void derefGPtr<GstStreamCollection>(GstStreamCollection* ptr)
         gst_object_unref(ptr);
 }
 
+template <>
+GRefPtr<GstClock> adoptGRef(GstClock* ptr)
+{
+    return GRefPtr<GstClock>(ptr, GRefPtrAdopt);
+}
+
+template <>
+GstClock* refGPtr<GstClock>(GstClock* ptr)
+{
+    if (ptr)
+        gst_object_ref(GST_OBJECT_CAST(ptr));
+
+    return ptr;
+}
+
+template <>
+void derefGPtr<GstClock>(GstClock* ptr)
+{
+    if (ptr)
+        gst_object_unref(ptr);
+}
+
 template <> GRefPtr<WebKitVideoSink> adoptGRef(WebKitVideoSink* ptr)
 {
     ASSERT(!ptr || !g_object_is_floating(ptr));
@@ -502,7 +555,184 @@ template<> void derefGPtr<GstGLContext>(GstGLContext* ptr)
         gst_object_unref(GST_OBJECT(ptr));
 }
 
+template <> GRefPtr<GstEGLImage> adoptGRef(GstEGLImage* ptr)
+{
+    return GRefPtr<GstEGLImage>(ptr, GRefPtrAdopt);
+}
+
+template <> GstEGLImage* refGPtr<GstEGLImage>(GstEGLImage* ptr)
+{
+    if (ptr)
+        gst_egl_image_ref(ptr);
+    return ptr;
+}
+
+template <> void derefGPtr<GstEGLImage>(GstEGLImage* ptr)
+{
+    if (ptr)
+        gst_egl_image_unref(ptr);
+}
+
 #endif // USE(GSTREAMER_GL)
+
+template <>
+GRefPtr<GstEncodingProfile> adoptGRef(GstEncodingProfile* ptr)
+{
+    return GRefPtr<GstEncodingProfile>(ptr, GRefPtrAdopt);
+}
+
+template <>
+GstEncodingProfile* refGPtr<GstEncodingProfile>(GstEncodingProfile* ptr)
+{
+    if (ptr)
+        gst_encoding_profile_ref(ptr);
+
+    return ptr;
+}
+
+template<>
+void derefGPtr<GstEncodingProfile>(GstEncodingProfile* ptr)
+{
+    if (ptr)
+        gst_encoding_profile_unref(ptr);
+}
+
+#if USE(GSTREAMER_WEBRTC)
+
+template <> GRefPtr<GstWebRTCRTPReceiver> adoptGRef(GstWebRTCRTPReceiver* ptr)
+{
+    return GRefPtr<GstWebRTCRTPReceiver>(ptr, GRefPtrAdopt);
+}
+
+template <> GstWebRTCRTPReceiver* refGPtr<GstWebRTCRTPReceiver>(GstWebRTCRTPReceiver* ptr)
+{
+    if (ptr)
+        gst_object_ref(GST_OBJECT(ptr));
+
+    return ptr;
+}
+
+template <> void derefGPtr<GstWebRTCRTPReceiver>(GstWebRTCRTPReceiver* ptr)
+{
+    if (ptr)
+        gst_object_unref(ptr);
+}
+
+template <> GRefPtr<GstWebRTCRTPSender> adoptGRef(GstWebRTCRTPSender* ptr)
+{
+    return GRefPtr<GstWebRTCRTPSender>(ptr, GRefPtrAdopt);
+}
+
+template <> GstWebRTCRTPSender* refGPtr<GstWebRTCRTPSender>(GstWebRTCRTPSender* ptr)
+{
+    if (ptr)
+        gst_object_ref(GST_OBJECT(ptr));
+
+    return ptr;
+}
+
+template <> void derefGPtr<GstWebRTCRTPSender>(GstWebRTCRTPSender* ptr)
+{
+    if (ptr)
+        gst_object_unref(ptr);
+}
+
+template <> GRefPtr<GstWebRTCRTPTransceiver> adoptGRef(GstWebRTCRTPTransceiver* ptr)
+{
+    return GRefPtr<GstWebRTCRTPTransceiver>(ptr, GRefPtrAdopt);
+}
+
+template <> GstWebRTCRTPTransceiver* refGPtr<GstWebRTCRTPTransceiver>(GstWebRTCRTPTransceiver* ptr)
+{
+    if (ptr)
+        gst_object_ref(GST_OBJECT(ptr));
+
+    return ptr;
+}
+
+template <> void derefGPtr<GstWebRTCRTPTransceiver>(GstWebRTCRTPTransceiver* ptr)
+{
+    if (ptr)
+        gst_object_unref(ptr);
+}
+
+template <> GRefPtr<GstWebRTCDataChannel> adoptGRef(GstWebRTCDataChannel* ptr)
+{
+    return GRefPtr<GstWebRTCDataChannel>(ptr, GRefPtrAdopt);
+}
+
+template <> GstWebRTCDataChannel* refGPtr<GstWebRTCDataChannel>(GstWebRTCDataChannel* ptr)
+{
+    if (ptr)
+        g_object_ref(G_OBJECT(ptr));
+
+    return ptr;
+}
+
+template <> void derefGPtr<GstWebRTCDataChannel>(GstWebRTCDataChannel* ptr)
+{
+    if (ptr)
+        g_object_unref(ptr);
+}
+
+template <> GRefPtr<GstWebRTCDTLSTransport> adoptGRef(GstWebRTCDTLSTransport* ptr)
+{
+    return GRefPtr<GstWebRTCDTLSTransport>(ptr, GRefPtrAdopt);
+}
+
+template <> GstWebRTCDTLSTransport* refGPtr<GstWebRTCDTLSTransport>(GstWebRTCDTLSTransport* ptr)
+{
+    if (ptr)
+        gst_object_ref(GST_OBJECT(ptr));
+
+    return ptr;
+}
+
+template <> void derefGPtr<GstWebRTCDTLSTransport>(GstWebRTCDTLSTransport* ptr)
+{
+    if (ptr)
+        gst_object_unref(ptr);
+}
+
+template <> GRefPtr<GstWebRTCICETransport> adoptGRef(GstWebRTCICETransport* ptr)
+{
+    return GRefPtr<GstWebRTCICETransport>(ptr, GRefPtrAdopt);
+}
+
+template <> GstWebRTCICETransport* refGPtr<GstWebRTCICETransport>(GstWebRTCICETransport* ptr)
+{
+    if (ptr)
+        gst_object_ref(GST_OBJECT(ptr));
+
+    return ptr;
+}
+
+template <> void derefGPtr<GstWebRTCICETransport>(GstWebRTCICETransport* ptr)
+{
+    if (ptr)
+        gst_object_unref(ptr);
+}
+
+template<> GRefPtr<GstPromise> adoptGRef(GstPromise* ptr)
+{
+    return GRefPtr<GstPromise>(ptr, GRefPtrAdopt);
+}
+
+template<> GstPromise* refGPtr<GstPromise>(GstPromise* ptr)
+{
+    if (ptr)
+        gst_promise_ref(ptr);
+
+    return ptr;
+}
+
+template<> void derefGPtr<GstPromise>(GstPromise* ptr)
+{
+    if (ptr)
+        gst_promise_unref(ptr);
+}
+
+#endif // USE(GSTREAMER_WEBRTC)
 
 } // namespace WTF
 

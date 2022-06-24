@@ -11,7 +11,7 @@
 #include "modules/video_coding/decoding_state.h"
 
 #include "common_video/h264/h264_common.h"
-#include "modules/include/module_common_types.h"
+#include "modules/include/module_common_types_public.h"
 #include "modules/video_coding/frame_buffer.h"
 #include "modules/video_coding/jitter_buffer_common.h"
 #include "modules/video_coding/packet.h"
@@ -55,21 +55,22 @@ uint16_t VCMDecodingState::sequence_num() const {
 }
 
 bool VCMDecodingState::IsOldFrame(const VCMFrameBuffer* frame) const {
-  assert(frame != NULL);
+  RTC_DCHECK(frame);
   if (in_initial_state_)
     return false;
   return !IsNewerTimestamp(frame->Timestamp(), time_stamp_);
 }
 
 bool VCMDecodingState::IsOldPacket(const VCMPacket* packet) const {
-  assert(packet != NULL);
+  RTC_DCHECK(packet);
   if (in_initial_state_)
     return false;
   return !IsNewerTimestamp(packet->timestamp, time_stamp_);
 }
 
 void VCMDecodingState::SetState(const VCMFrameBuffer* frame) {
-  assert(frame != NULL && frame->GetHighSeqNum() >= 0);
+  RTC_DCHECK(frame);
+  RTC_CHECK_GE(frame->GetHighSeqNum(), 0);
   if (!UsingFlexibleMode(frame))
     UpdateSyncState(frame);
   sequence_num_ = static_cast<uint16_t>(frame->GetHighSeqNum());
@@ -100,7 +101,7 @@ void VCMDecodingState::SetState(const VCMFrameBuffer* frame) {
     uint16_t frame_index = picture_id_ % kFrameDecodedLength;
     if (in_initial_state_) {
       frame_decoded_cleared_to_ = frame_index;
-    } else if (frame->FrameType() == kVideoFrameKey) {
+    } else if (frame->FrameType() == VideoFrameType::kVideoFrameKey) {
       memset(frame_decoded_, 0, sizeof(frame_decoded_));
       frame_decoded_cleared_to_ = frame_index;
     } else {
@@ -150,7 +151,7 @@ bool VCMDecodingState::UpdateEmptyFrame(const VCMFrameBuffer* frame) {
 }
 
 void VCMDecodingState::UpdateOldPacket(const VCMPacket* packet) {
-  assert(packet != NULL);
+  RTC_DCHECK(packet);
   if (packet->timestamp == time_stamp_) {
     // Late packet belonging to the last decoded frame - make sure we update the
     // last decoded sequence number.
@@ -176,7 +177,8 @@ void VCMDecodingState::UpdateSyncState(const VCMFrameBuffer* frame) {
   if (frame->TemporalId() == kNoTemporalIdx ||
       frame->Tl0PicId() == kNoTl0PicIdx) {
     full_sync_ = true;
-  } else if (frame->FrameType() == kVideoFrameKey || frame->LayerSync()) {
+  } else if (frame->FrameType() == VideoFrameType::kVideoFrameKey ||
+             frame->LayerSync()) {
     full_sync_ = true;
   } else if (full_sync_) {
     // Verify that we are still in sync.
@@ -203,11 +205,11 @@ bool VCMDecodingState::ContinuousFrame(const VCMFrameBuffer* frame) const {
   // - Sequence numbers.
   // Return true when in initial state.
   // Note that when a method is not applicable it will return false.
-  assert(frame != NULL);
+  RTC_DCHECK(frame);
   // A key frame is always considered continuous as it doesn't refer to any
   // frames and therefore won't introduce any errors even if prior frames are
   // missing.
-  if (frame->FrameType() == kVideoFrameKey &&
+  if (frame->FrameType() == VideoFrameType::kVideoFrameKey &&
       HaveSpsAndPps(frame->GetNaluInfos())) {
     return true;
   }
@@ -296,7 +298,7 @@ bool VCMDecodingState::UsingFlexibleMode(const VCMFrameBuffer* frame) const {
       frame->CodecSpecific()->codecSpecific.VP9.flexible_mode;
   if (is_flexible_mode && frame->PictureId() == kNoPictureId) {
     RTC_LOG(LS_WARNING) << "Frame is marked as using flexible mode but no"
-                        << "picture id is set.";
+                           "picture id is set.";
     return false;
   }
   return is_flexible_mode;

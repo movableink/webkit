@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,11 +24,27 @@
  */
 
 #import "config.h"
-#import "_WKRemoteWebInspectorViewController.h"
+#import "_WKRemoteWebInspectorViewControllerInternal.h"
 
 #if PLATFORM(MAC)
 
-#import "RemoteWebInspectorProxy.h"
+#import "APIDebuggableInfo.h"
+#import "APIInspectorConfiguration.h"
+#import "DebuggableInfoData.h"
+#import "RemoteWebInspectorUIProxy.h"
+#import "WKWebViewInternal.h"
+#import "_WKInspectorConfigurationInternal.h"
+#import "_WKInspectorDebuggableInfoInternal.h"
+
+#if ENABLE(INSPECTOR_EXTENSIONS)
+#import "APIInspectorExtension.h"
+#import "WKError.h"
+#import "WebInspectorUIExtensionControllerProxy.h"
+#import "_WKInspectorExtensionInternal.h"
+#import <wtf/BlockPtr.h>
+#endif
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface _WKRemoteWebInspectorViewController ()
 - (void)sendMessageToBackend:(NSString *)message;
@@ -37,15 +53,15 @@
 
 namespace WebKit {
 
-class _WKRemoteWebInspectorProxyClient final : public RemoteWebInspectorProxyClient {
+class _WKRemoteWebInspectorUIProxyClient final : public RemoteWebInspectorUIProxyClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    _WKRemoteWebInspectorProxyClient(_WKRemoteWebInspectorViewController *controller)
+    _WKRemoteWebInspectorUIProxyClient(_WKRemoteWebInspectorViewController *controller)
         : m_controller(controller)
     {
     }
 
-    virtual ~_WKRemoteWebInspectorProxyClient()
+    virtual ~_WKRemoteWebInspectorUIProxyClient()
     {
     }
 
@@ -58,6 +74,11 @@ public:
     {
         [m_controller closeFromFrontend];
     }
+    
+    Ref<API::InspectorConfiguration> configurationForRemoteInspector(RemoteWebInspectorUIProxy& inspector) override
+    {
+        return static_cast<API::InspectorConfiguration&>([m_controller.configuration _apiObject]);
+    }
 
 private:
     _WKRemoteWebInspectorViewController *m_controller;
@@ -66,20 +87,28 @@ private:
 } // namespace WebKit
 
 @implementation _WKRemoteWebInspectorViewController {
-    RefPtr<WebKit::RemoteWebInspectorProxy> m_remoteInspectorProxy;
-    std::unique_ptr<WebKit::_WKRemoteWebInspectorProxyClient> m_remoteInspectorClient;
+    std::unique_ptr<WebKit::_WKRemoteWebInspectorUIProxyClient> m_remoteInspectorClient;
+    _WKInspectorConfiguration *_configuration;
 }
 
-- (instancetype)init
+- (instancetype)initWithConfiguration:(_WKInspectorConfiguration *)configuration
 {
     if (!(self = [super init]))
         return nil;
 
-    m_remoteInspectorProxy = WebKit::RemoteWebInspectorProxy::create();
-    m_remoteInspectorClient = makeUnique<WebKit::_WKRemoteWebInspectorProxyClient>(self);
+    _configuration = [configuration copy];
+
+    m_remoteInspectorProxy = WebKit::RemoteWebInspectorUIProxy::create();
+    m_remoteInspectorClient = makeUnique<WebKit::_WKRemoteWebInspectorUIProxyClient>(self);
     m_remoteInspectorProxy->setClient(m_remoteInspectorClient.get());
 
     return self;
+}
+
+- (void)dealloc
+{
+    [_configuration release];
+    [super dealloc];
 }
 
 - (NSWindow *)window
@@ -92,28 +121,9 @@ private:
     return m_remoteInspectorProxy->webView();
 }
 
-static String debuggableTypeString(WKRemoteWebInspectorDebuggableType debuggableType)
+- (void)loadForDebuggable:(_WKInspectorDebuggableInfo *)debuggableInfo backendCommandsURL:(NSURL *)backendCommandsURL
 {
-    switch (debuggableType) {
-    case WKRemoteWebInspectorDebuggableTypeJavaScript:
-        return "javascript"_s;
-    case WKRemoteWebInspectorDebuggableTypePage:
-        return "page"_s;
-    case WKRemoteWebInspectorDebuggableTypeServiceWorker:
-        return "service-worker"_s;
-    case WKRemoteWebInspectorDebuggableTypeWebPage:
-        return "web-page"_s;
-
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    case WKRemoteWebInspectorDebuggableTypeWeb:
-        return "web-page"_s;
-ALLOW_DEPRECATED_DECLARATIONS_END
-    }
-}
-
-- (void)loadForDebuggableType:(WKRemoteWebInspectorDebuggableType)debuggableType backendCommandsURL:(NSURL *)backendCommandsURL
-{
-    m_remoteInspectorProxy->load(debuggableTypeString(debuggableType), backendCommandsURL.absoluteString);
+    m_remoteInspectorProxy->load(static_cast<API::DebuggableInfo&>([debuggableInfo _apiObject]), backendCommandsURL.absoluteString);
 }
 
 - (void)close
@@ -131,6 +141,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     m_remoteInspectorProxy->sendMessageToFrontend(message);
 }
 
+// MARK: RemoteWebInspectorUIProxyClient methods
+
 - (void)sendMessageToBackend:(NSString *)message
 {
     if (_delegate && [_delegate respondsToSelector:@selector(inspectorViewController:sendMessageToBackend:)])
@@ -143,6 +155,96 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         [_delegate inspectorViewControllerInspectorDidClose:self];
 }
 
+// MARK: _WKRemoteWebInspectorViewControllerPrivate methods
+
+- (void)_setDiagnosticLoggingDelegate:(id<_WKDiagnosticLoggingDelegate> _Nullable)delegate
+{
+    self.webView._diagnosticLoggingDelegate = delegate;
+    m_remoteInspectorProxy->setDiagnosticLoggingAvailable(!!delegate);
+}
+
+// MARK: _WKInspectorExtensionHost methods
+
+- (WKWebView *)extensionHostWebView
+{
+    return self.webView;
+}
+
+- (void)registerExtensionWithID:(NSString *)extensionID extensionBundleIdentifier:(NSString *)extensionBundleIdentifier displayName:(NSString *)displayName completionHandler:(void(^)(NSError *, _WKInspectorExtension * _Nullable))completionHandler
+{
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    // If this method is called prior to creating a frontend with -loadForDebuggable:backendCommandsURL:, it will not succeed.
+    if (!m_remoteInspectorProxy->extensionController()) {
+        completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedFailureReasonErrorKey: Inspector::extensionErrorToString(Inspector::ExtensionError::InvalidRequest) }], nil);
+        return;
+    }
+
+    m_remoteInspectorProxy->extensionController()->registerExtension(extensionID, extensionBundleIdentifier, displayName, [protectedExtensionID = retainPtr(extensionID), protectedSelf = retainPtr(self), capturedBlock = makeBlockPtr(completionHandler)] (Expected<RefPtr<API::InspectorExtension>, Inspector::ExtensionError> result) mutable {
+        if (!result) {
+            capturedBlock([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedFailureReasonErrorKey: Inspector::extensionErrorToString(result.error()) }], nil);
+            return;
+        }
+
+        capturedBlock(nil, wrapper(result.value()));
+    });
+#else
+    completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil], nil);
+#endif
+}
+
+- (void)unregisterExtension:(_WKInspectorExtension *)extension completionHandler:(void(^)(NSError *))completionHandler
+{
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    // If this method is called prior to creating a frontend with -loadForDebuggable:backendCommandsURL:, it will not succeed.
+    if (!m_remoteInspectorProxy->extensionController()) {
+        completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedFailureReasonErrorKey: Inspector::extensionErrorToString(Inspector::ExtensionError::InvalidRequest) }]);
+        return;
+    }
+    m_remoteInspectorProxy->extensionController()->unregisterExtension(extension.extensionID, [protectedSelf = retainPtr(self), capturedBlock = makeBlockPtr(completionHandler)] (Expected<void, Inspector::ExtensionError> result) mutable {
+        if (!result) {
+            capturedBlock([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedFailureReasonErrorKey: Inspector::extensionErrorToString(result.error()) }]);
+            return;
+        }
+
+        capturedBlock(nil);
+    });
+#else
+    completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:nil]);
+#endif
+}
+
+- (void)showConsole
+{
+    m_remoteInspectorProxy->showConsole();
+}
+
+- (void)showResources
+{
+    m_remoteInspectorProxy->showResources();
+}
+
+- (void)showExtensionTabWithIdentifier:(NSString *)extensionTabIdentifier completionHandler:(void(^)(NSError * _Nullable))completionHandler
+{
+#if ENABLE(INSPECTOR_EXTENSIONS)
+    // It is an error to call this method prior to creating a frontend (i.e., with -connect or -show).
+    if (!m_remoteInspectorProxy->extensionController()) {
+        completionHandler([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedFailureReasonErrorKey: Inspector::extensionErrorToString(Inspector::ExtensionError::InvalidRequest)}]);
+        return;
+    }
+
+    m_remoteInspectorProxy->extensionController()->showExtensionTab(extensionTabIdentifier, [protectedSelf = retainPtr(self), capturedBlock = makeBlockPtr(completionHandler)] (Expected<void, Inspector::ExtensionError>&& result) mutable {
+        if (!result) {
+            capturedBlock([NSError errorWithDomain:WKErrorDomain code:WKErrorUnknown userInfo:@{ NSLocalizedFailureReasonErrorKey: Inspector::extensionErrorToString(result.error())}]);
+            return;
+        }
+
+        capturedBlock(nil);
+    });
+#endif
+}
+
 @end
+
+NS_ASSUME_NONNULL_END
 
 #endif // PLATFORM(MAC)

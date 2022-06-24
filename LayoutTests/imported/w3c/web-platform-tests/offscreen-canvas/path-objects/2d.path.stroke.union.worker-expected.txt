@@ -1,3 +1,0 @@
-
-FAIL Strokes in opposite directions are unioned, not subtracted Can't find variable: OffscreenCanvas
-

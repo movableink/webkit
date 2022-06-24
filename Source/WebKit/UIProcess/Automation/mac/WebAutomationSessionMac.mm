@@ -30,7 +30,7 @@
 
 #import "Logging.h"
 #import "WebAutomationSessionMacros.h"
-#import "WebInspectorProxy.h"
+#import "WebInspectorUIProxy.h"
 #import "WebPageProxy.h"
 #import "_WKAutomationSession.h"
 #import <Carbon/Carbon.h>
@@ -42,9 +42,9 @@
 namespace WebKit {
 using namespace WebCore;
 
-#pragma mark Commands for Platform: 'macOS'
+#pragma mark Commands for 'PLATFORM(MAC)'
 
-void WebAutomationSession::inspectBrowsingContext(const String& handle, const bool* optionalEnableAutoCapturing, Ref<InspectBrowsingContextCallback>&& callback)
+void WebAutomationSession::inspectBrowsingContext(const Inspector::Protocol::Automation::BrowsingContextHandle& handle, std::optional<bool>&& enableAutoCapturing, Ref<InspectBrowsingContextCallback>&& callback)
 {
     WebPageProxy* page = webPageProxyForHandle(handle);
     if (!page)
@@ -57,10 +57,10 @@ void WebAutomationSession::inspectBrowsingContext(const String& handle, const bo
     // Don't bring the inspector to front since this may be done automatically.
     // We just want it loaded so it can pause if a breakpoint is hit during a command.
     if (page->inspector()) {
-        page->inspector()->connect();
+        page->inspector()->show();
 
         // Start collecting profile information immediately so the entire session is captured.
-        if (optionalEnableAutoCapturing && *optionalEnableAutoCapturing)
+        if (enableAutoCapturing && *enableAutoCapturing)
             page->inspector()->togglePageProfiling();
     }
 }
@@ -73,13 +73,16 @@ static const void *synthesizedAutomationEventAssociatedObjectKey = &synthesizedA
 void WebAutomationSession::sendSynthesizedEventsToPage(WebPageProxy& page, NSArray *eventsToSend)
 {
     NSWindow *window = page.platformWindow();
+    [window makeKeyAndOrderFront:nil];
+    page.makeFirstResponder();
 
     for (NSEvent *event in eventsToSend) {
         LOG(Automation, "Sending event[%p] to window[%p]: %@", event, window, event);
 
         // Take focus back in case the Inspector became focused while the prior command or
         // NSEvent was delivered to the window.
-        [window becomeKeyWindow];
+        [window makeKeyAndOrderFront:nil];
+        page.makeFirstResponder();
 
         markEventAsSynthesizedForAutomation(event);
         [window sendEvent:event];
@@ -133,11 +136,13 @@ static WebMouseEvent::Button automationMouseButtonToPlatformMouseButton(MouseBut
     }
 }
 
-void WebAutomationSession::platformSimulateMouseInteraction(WebPageProxy& page, MouseInteraction interaction, MouseButton button, const WebCore::IntPoint& locationInViewport, OptionSet<WebEvent::Modifier> keyModifiers)
+void WebAutomationSession::platformSimulateMouseInteraction(WebPageProxy& page, MouseInteraction interaction, MouseButton button, const WebCore::IntPoint& locationInViewport, OptionSet<WebEvent::Modifier> keyModifiers, const String& pointerType)
 {
+    UNUSED_PARAM(pointerType);
+
     IntRect windowRect;
 
-    IntPoint locationInView = WebCore::IntPoint(locationInViewport.x(), locationInViewport.y() + page.topContentInset());
+    IntPoint locationInView = locationInViewport + IntPoint(0, page.topContentInset());
     page.rootViewToWindow(IntRect(locationInView, IntSize()), windowRect);
     IntPoint locationInWindow = windowRect.location();
 
@@ -225,6 +230,25 @@ void WebAutomationSession::platformSimulateMouseInteraction(WebPageProxy& page, 
 
     sendSynthesizedEventsToPage(page, eventsToBeSent.get());
 }
+
+OptionSet<WebEvent::Modifier> WebAutomationSession::platformWebModifiersFromRaw(unsigned modifiers)
+{
+    OptionSet<WebEvent::Modifier> webModifiers;
+
+    if (modifiers & NSEventModifierFlagCommand)
+        webModifiers.add(WebEvent::Modifier::MetaKey);
+    if (modifiers & NSEventModifierFlagOption)
+        webModifiers.add(WebEvent::Modifier::AltKey);
+    if (modifiers & NSEventModifierFlagControl)
+        webModifiers.add(WebEvent::Modifier::ControlKey);
+    if (modifiers & NSEventModifierFlagShift)
+        webModifiers.add(WebEvent::Modifier::ShiftKey);
+    if (modifiers & NSEventModifierFlagCapsLock)
+        webModifiers.add(WebEvent::Modifier::CapsLockKey);
+
+    return webModifiers;
+}
+
 #endif // ENABLE(WEBDRIVER_MOUSE_INTERACTIONS)
 
 #if ENABLE(WEBDRIVER_KEYBOARD_INTERACTIONS)
@@ -389,15 +413,23 @@ static int keyCodeForVirtualKey(VirtualKey key)
     switch (key) {
     case VirtualKey::Shift:
         return kVK_Shift;
+    case VirtualKey::ShiftRight:
+        return kVK_RightShift;
     case VirtualKey::Control:
         return kVK_Control;
+    case VirtualKey::ControlRight:
+        return kVK_RightControl;
     case VirtualKey::Alternate:
         return kVK_Option;
+    case VirtualKey::AlternateRight:
+        return kVK_RightOption;
     case VirtualKey::Meta:
         // The 'meta' key does not exist on Apple keyboards and is usually
         // mapped to the Command key when using third-party keyboards.
     case VirtualKey::Command:
         return kVK_Command;
+    case VirtualKey::MetaRight:
+        return kVK_RightCommand;
     case VirtualKey::Help:
         return kVK_Help;
     case VirtualKey::Backspace:
@@ -418,26 +450,36 @@ static int keyCodeForVirtualKey(VirtualKey key)
     case VirtualKey::Escape:
         return kVK_Escape;
     case VirtualKey::PageUp:
+    case VirtualKey::PageUpRight:
         return kVK_PageUp;
     case VirtualKey::PageDown:
+    case VirtualKey::PageDownRight:
         return kVK_PageDown;
     case VirtualKey::End:
+    case VirtualKey::EndRight:
         return kVK_End;
     case VirtualKey::Home:
+    case VirtualKey::HomeRight:
         return kVK_Home;
     case VirtualKey::LeftArrow:
+    case VirtualKey::LeftArrowRight:
         return kVK_LeftArrow;
     case VirtualKey::UpArrow:
+    case VirtualKey::UpArrowRight:
         return kVK_UpArrow;
     case VirtualKey::RightArrow:
+    case VirtualKey::RightArrowRight:
         return kVK_RightArrow;
     case VirtualKey::DownArrow:
+    case VirtualKey::DownArrowRight:
         return kVK_DownArrow;
     case VirtualKey::Insert:
+    case VirtualKey::InsertRight:
         // The 'insert' key does not exist on Apple keyboards and has no keyCode.
         // The semantics are unclear so just abort and do nothing.
         return 0;
     case VirtualKey::Delete:
+    case VirtualKey::DeleteRight:
         return kVK_ForwardDelete;
     case VirtualKey::Space:
         return kVK_Space;
@@ -583,7 +625,7 @@ static NSEventModifierFlags eventModifierFlagsForVirtualKey(VirtualKey key)
     }
 }
 
-void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& page, KeyboardInteraction interaction, WTF::Variant<VirtualKey, CharKey>&& key)
+void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& page, KeyboardInteraction interaction, std::variant<VirtualKey, CharKey>&& key)
 {
     // FIXME: this function and the Automation protocol enum should probably adopt key names
     // from W3C UIEvents standard. For more details: https://w3c.github.io/uievents-code/
@@ -591,8 +633,8 @@ void WebAutomationSession::platformSimulateKeyboardInteraction(WebPageProxy& pag
     bool isStickyModifier = false;
     NSEventModifierFlags changedModifiers = 0;
     int keyCode = 0;
-    Optional<unichar> charCode;
-    Optional<unichar> charCodeIgnoringModifiers;
+    std::optional<unichar> charCode;
+    std::optional<unichar> charCodeIgnoringModifiers;
 
     WTF::switchOn(key,
         [&] (VirtualKey virtualKey) {

@@ -76,7 +76,7 @@ public:
     static ptrdiff_t documentScopeMemoryOffset() { return OBJECT_OFFSETOF(TreeScope, m_documentScope); }
 
     // https://dom.spec.whatwg.org/#retarget
-    Node& retargetToScope(Node&) const;
+    Ref<Node> retargetToScope(Node&) const;
 
     WEBCORE_EXPORT Node* ancestorNodeInThisScope(Node*) const;
     WEBCORE_EXPORT Element* ancestorElementInThisScope(Element*) const;
@@ -104,7 +104,7 @@ public:
     // for an anchor with the given name. ID matching is always case sensitive, but
     // Anchor name matching is case sensitive in strict mode and not case sensitive in
     // quirks mode for historical compatibility reasons.
-    Element* findAnchor(const String& name);
+    Element* findAnchor(StringView name);
 
     ContainerNode& rootNode() const { return m_rootNode; }
 
@@ -123,7 +123,7 @@ protected:
         m_documentScope = document;
     }
 
-    Node* nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint);
+    RefPtr<Node> nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint);
 
 private:
 

@@ -27,18 +27,14 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import print_function
-import json
-import sys
 import unittest
 
-from webkitpy.common.system.outputcapture import OutputCapture
-from webkitpy.layout_tests.models.test_configuration import *
-from webkitpy.port import builders
-from webkitpy.thirdparty.mock import Mock
 from webkitpy.tool.mocktool import MockTool
 from webkitpy.common.system.executive_mock import MockExecutive
 from webkitpy.common.host_mock import MockHost
 from webkitpy.tool.servers.gardeningserver import *
+
+from webkitcorepy import OutputCapture
 
 
 class TestPortFactory(object):
@@ -89,12 +85,15 @@ class GardeningServerTest(unittest.TestCase):
         handler = TestGardeningHTTPRequestHandler(server or MockServer())
         handler.path = path
         handler.body = body
-        OutputCapture().assert_outputs(self, handler.do_POST, expected_stderr=expected_stderr, expected_stdout=expected_stdout)
+        with OutputCapture() as captured:
+            handler.do_POST()
+        self.assertEqual(captured.stdout, expected_stdout)
+        self.assertEqual(captured.stderr, expected_stderr)
 
-    def disabled_test_rollout(self):
-        expected_stderr = "MOCK run_command: ['echo', 'rollout', '--force-clean', '--non-interactive', '2314', 'MOCK rollout reason'], cwd=/mock-checkout\n"
+    def disabled_test_revert(self):
+        expected_stderr = "MOCK run_command: ['echo', 'revert', '--force-clean', '--non-interactive', '2314', 'MOCK revert reason'], cwd=/mock-checkout\n"
         expected_stdout = "== Begin Response ==\nsuccess\n== End Response ==\n"
-        self._post_to_path("/rollout?revision=2314&reason=MOCK+rollout+reason", expected_stderr=expected_stderr, expected_stdout=expected_stdout)
+        self._post_to_path("/revert?revision=2314&reason=MOCK+revert+reason", expected_stderr=expected_stderr, expected_stdout=expected_stdout)
 
     def disabled_test_rebaselineall(self):
         expected_stderr = "MOCK run_command: ['echo', 'rebaseline-json'], cwd=/mock-checkout, input={\"user-scripts/another-test.html\":{\"%s\": [%s]}}\n"

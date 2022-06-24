@@ -29,54 +29,34 @@ WI.ColorPicker = class ColorPicker extends WI.Object
     {
         super();
 
-        this._colorWheel = new WI.ColorWheel(this, 200);
+        this._colorSquare = new WI.ColorSquare(this, 200);
 
-        this._brightnessSlider = new WI.Slider;
-        this._brightnessSlider.delegate = this;
-        this._brightnessSlider.element.classList.add("brightness");
+        this._hueSlider = new WI.Slider;
+        this._hueSlider.delegate = this;
+        this._hueSlider.element.classList.add("hue");
 
         this._opacitySlider = new WI.Slider;
         this._opacitySlider.delegate = this;
         this._opacitySlider.element.classList.add("opacity");
 
-        let colorInputsContainerElement = document.createElement("div");
-        colorInputsContainerElement.classList.add("color-inputs");
+        this._colorInputs = [];
+        this._colorInputsFormat = null;
+        this._colorInputsHasAlpha = null;
 
-        let createColorInput = (label, {min, max, step, units} = {}) => {
-            let containerElement = colorInputsContainerElement.createChild("div");
-
-            containerElement.append(label);
-
-            let numberInputElement = containerElement.createChild("input");
-            numberInputElement.type = "number";
-            numberInputElement.min = min || 0;
-            numberInputElement.max = max || 100;
-            numberInputElement.step = step || 1;
-            numberInputElement.addEventListener("input", this._handleColorInputInput.bind(this));
-
-            if (units && units.length)
-                containerElement.append(units);
-
-            return {containerElement, numberInputElement};
-        };
-
-        this._colorInputs = new Map([
-            ["R", createColorInput("R", {max: 255})],
-            ["G", createColorInput("G", {max: 255})],
-            ["B", createColorInput("B", {max: 255})],
-            ["H", createColorInput("H", {max: 360})],
-            ["S", createColorInput("S", {units: "%"})],
-            ["L", createColorInput("L", {units: "%"})],
-            ["A", createColorInput("A", {max: 1, step: 0.01})]
-        ]);
+        this._colorInputsContainerElement = document.createElement("div");
+        this._colorInputsContainerElement.classList.add("color-inputs");
+        this._colorInputsContainerElement.addEventListener("input", this._handleColorInputsContainerInput.bind(this));
 
         this._element = document.createElement("div");
         this._element.classList.add("color-picker");
 
-        this._element.appendChild(this._colorWheel.element);
-        this._element.appendChild(this._brightnessSlider.element);
-        this._element.appendChild(this._opacitySlider.element);
-        this._element.appendChild(colorInputsContainerElement);
+        let wrapper = this._element.appendChild(document.createElement("div"));
+        wrapper.className = "wrapper";
+        wrapper.appendChild(this._colorSquare.element);
+        wrapper.appendChild(this._hueSlider.element);
+        wrapper.appendChild(this._opacitySlider.element);
+
+        this._element.appendChild(this._colorInputsContainerElement);
 
         this._opacity = 0;
         this._opacityPattern = "url(Images/Checkers.svg)";
@@ -90,21 +70,8 @@ WI.ColorPicker = class ColorPicker extends WI.Object
 
     // Public
 
-    get element()
-    {
-        return this._element;
-    }
-
-    set brightness(brightness)
-    {
-        if (brightness === this._brightness)
-            return;
-
-        this._colorWheel.brightness = brightness;
-
-        this._updateColor();
-        this._updateSliders(this._colorWheel.rawColor, this._colorWheel.tintedColor);
-    }
+    get element() { return this._element; }
+    get colorSquare() { return this._colorSquare; }
 
     set opacity(opacity)
     {
@@ -113,11 +80,6 @@ WI.ColorPicker = class ColorPicker extends WI.Object
 
         this._opacity = opacity;
         this._updateColor();
-    }
-
-    get colorWheel()
-    {
-        return this._colorWheel;
     }
 
     get color()
@@ -131,20 +93,17 @@ WI.ColorPicker = class ColorPicker extends WI.Object
 
         this._dontUpdateColor = true;
 
-        let formatChanged = !this._color || this._color.format !== color.format;
-
         this._color = color;
 
-        this._colorWheel.tintedColor = this._color;
-        this._brightnessSlider.value = this._colorWheel.brightness / 100;
+        this._colorSquare.tintedColor = this._color;
+
+        this._hueSlider.value = this._color.hsl[0] / 360;
 
         this._opacitySlider.value = this._color.alpha;
-        this._updateSliders(this._colorWheel.rawColor, this._color);
+        this._updateOpacitySlider();
 
         this._showColorComponentInputs();
-
-        if (formatChanged)
-            this._handleFormatChange();
+        this._updateColorGamut();
 
         this._dontUpdateColor = false;
     }
@@ -152,22 +111,29 @@ WI.ColorPicker = class ColorPicker extends WI.Object
     set enableColorComponentInputs(value)
     {
         this._enableColorComponentInputs = value;
-
-        this._showColorComponentInputs();
+        this._element.classList.toggle("hide-inputs", !this._enableColorComponentInputs);
     }
 
-    colorWheelColorDidChange(colorWheel)
+    focus()
+    {
+        this._colorSquare.element.focus();
+    }
+
+    colorSquareColorDidChange(colorSquare)
     {
         this._updateColor();
-        this._updateSliders(this._colorWheel.rawColor, this._colorWheel.tintedColor);
+        this._updateOpacitySlider();
     }
 
     sliderValueDidChange(slider, value)
     {
         if (slider === this._opacitySlider)
             this.opacity = value;
-        else if (slider === this._brightnessSlider)
-            this.brightness = value * 100;
+        else if (slider === this._hueSlider) {
+            this._colorSquare.hue = value * 360;
+            this._updateColor();
+            this._updateOpacitySlider();
+        }
     }
 
     // Private
@@ -180,68 +146,72 @@ WI.ColorPicker = class ColorPicker extends WI.Object
         let opacity = Math.round(this._opacity * 100) / 100;
 
         let format = this._color.format;
+        let gamut = this._color.gamut;
         let components = null;
         if (format === WI.Color.Format.HSL || format === WI.Color.Format.HSLA) {
-            components = this._colorWheel.tintedColor.hsl.concat(opacity);
+            components = this._colorSquare.tintedColor.hsl.concat(opacity);
             if (opacity !== 1)
                 format = WI.Color.Format.HSLA;
-        } else {
-            components = this._colorWheel.tintedColor.rgb.concat(opacity);
+        } else if (format === WI.Color.Format.ColorFunction)
+            components = this._colorSquare.tintedColor.normalizedRGB.concat(opacity);
+        else {
+            components = this._colorSquare.tintedColor.rgb.concat(opacity);
             if (opacity !== 1 && format === WI.Color.Format.RGB)
                 format = WI.Color.Format.RGBA;
         }
 
-        let formatChanged = this._color.format === format;
-
-        this._color = new WI.Color(format, components);
+        this._color = new WI.Color(format, components, gamut);
 
         this._showColorComponentInputs();
 
         this.dispatchEventToListeners(WI.ColorPicker.Event.ColorChanged, {color: this._color});
 
-        if (formatChanged)
-            this._handleFormatChange();
+        this._updateColorGamut();
     }
 
-    _updateSliders(rawColor, tintedColor)
+    _updateOpacitySlider()
     {
-        var rgb = this._colorWheel.tintedColor.rgb;
-        var opaque = new WI.Color(WI.Color.Format.RGBA, rgb.concat(1)).toString();
-        var transparent = new WI.Color(WI.Color.Format.RGBA, rgb.concat(0)).toString();
+        let color = this._colorSquare.tintedColor;
 
-        this._brightnessSlider.element.style.setProperty("background-image", `linear-gradient(90deg, black, ${rawColor}, white)`);
-
-        this._opacitySlider.element.style.setProperty("background-image", "linear-gradient(90deg, " + transparent + ", " + opaque + "), " + this._opacityPattern);
+        let rgb = color.format === WI.Color.Format.ColorFunction ? color.normalizedRGB : color.rgb;
+        let gamut = color.gamut;
+        let format = gamut === WI.Color.Gamut.DisplayP3 ? WI.Color.Format.ColorFunction : WI.Color.Format.RGBA;
+        let opaque = new WI.Color(format, rgb.concat(1), gamut).toString();
+        let transparent = new WI.Color(format, rgb.concat(0), gamut).toString();
+        this._opacitySlider.element.style.setProperty("background-image", "linear-gradient(0deg, " + transparent + ", " + opaque + "), " + this._opacityPattern);
     }
 
-    _handleFormatChange()
+    _updateColorGamut()
     {
-        this._element.classList.toggle("hide-inputs", this._color.format !== WI.Color.Format.Keyword
-            && this._color.format !== WI.Color.Format.RGB
-            && this._color.format !== WI.Color.Format.RGBA
-            && this._color.format !== WI.Color.Format.HEX
-            && this._color.format !== WI.Color.Format.ShortHEX
-            && this._color.format !== WI.Color.Format.HEXAlpha
-            && this._color.format !== WI.Color.Format.ShortHEXAlpha
-            && this._color.format !== WI.Color.Format.HSL
-            && this._color.format !== WI.Color.Format.HSLA);
-
-        this.dispatchEventToListeners(WI.ColorPicker.Event.FormatChanged);
+        this._element.classList.toggle("gamut-p3", this._color.gamut === WI.Color.Gamut.DisplayP3);
     }
 
-    _showColorComponentInputs()
+    _createColorInputsIfNeeded()
     {
-        for (let {containerElement} of this._colorInputs.values())
-            containerElement.hidden = true;
-
-        if (!this._enableColorComponentInputs)
+        let hasAlpha = this._color.alpha !== 1;
+        if ((this._color.format === this._colorInputsFormat) && (hasAlpha === this._colorInputsHasAlpha))
             return;
 
-        function updateColorInput(key, value) {
-            let {containerElement, numberInputElement} = this._colorInputs.get(key);
-            numberInputElement.value = value;
-            containerElement.hidden = false;
-        }
+        this._colorInputsFormat = this._color.format;
+        this._colorInputsHasAlpha = hasAlpha;
+
+        this._colorInputs = [];
+        this._colorInputsContainerElement.removeChildren();
+
+        let createColorInput = (label, {max, step, units} = {}) => {
+            let containerElement = this._colorInputsContainerElement.createChild("div");
+            containerElement.append(label);
+
+            let numberInputElement = containerElement.createChild("input");
+            numberInputElement.type = "number";
+            numberInputElement.min = 0;
+            numberInputElement.max = max;
+            numberInputElement.step = step || 1;
+            this._colorInputs.push(numberInputElement);
+
+            if (units && units.length)
+                containerElement.append(units);
+        };
 
         switch (this._color.format) {
         case WI.Color.Format.RGB:
@@ -251,90 +221,88 @@ WI.ColorPicker = class ColorPicker extends WI.Object
         case WI.Color.Format.HEXAlpha:
         case WI.Color.Format.ShortHEXAlpha:
         case WI.Color.Format.Keyword:
-            var [r, g, b] = this._color.rgb;
-            updateColorInput.call(this, "R", Math.round(r));
-            updateColorInput.call(this, "G", Math.round(g));
-            updateColorInput.call(this, "B", Math.round(b));
+            createColorInput("R", {max: 255});
+            createColorInput("G", {max: 255});
+            createColorInput("B", {max: 255});
             break;
 
         case WI.Color.Format.HSL:
         case WI.Color.Format.HSLA:
-            var [h, s, l] = this._color.hsl;
-            updateColorInput.call(this, "H", h.maxDecimals(2));
-            updateColorInput.call(this, "S", s.maxDecimals(2));
-            updateColorInput.call(this, "L", l.maxDecimals(2));
+            createColorInput("H", {max: 360});
+            createColorInput("S", {max: 100, units: "%"});
+            createColorInput("L", {max: 100, units: "%"});
+            break;
+
+        case WI.Color.Format.ColorFunction:
+            createColorInput("R", {max: 1, step: 0.01});
+            createColorInput("G", {max: 1, step: 0.01});
+            createColorInput("B", {max: 1, step: 0.01});
             break;
 
         default:
+            console.error(`Unknown color format: ${this._color.format}`);
             return;
         }
 
-        if ((this._color.format === WI.Color.Format.Keyword && this._color.alpha !== 1)
+        if (this._color.alpha !== 1
             || this._color.format === WI.Color.Format.RGBA
             || this._color.format === WI.Color.Format.HSLA
             || this._color.format === WI.Color.Format.HEXAlpha
             || this._color.format === WI.Color.Format.ShortHEXAlpha) {
-            updateColorInput.call(this, "A", this._color.alpha);
+            createColorInput("A", {max: 1, step: 0.01});
         }
     }
 
-    _handleColorInputInput(event)
+    _showColorComponentInputs()
     {
-        if (!this._enableColorComponentInputs) {
-            WI.reportInternalError("Input event fired for disabled color component input");
+        if (!this._enableColorComponentInputs)
             return;
-        }
 
-        let r = this._colorInputs.get("R").numberInputElement.value;
-        let g = this._colorInputs.get("G").numberInputElement.value;
-        let b = this._colorInputs.get("B").numberInputElement.value;
-        let h = this._colorInputs.get("H").numberInputElement.value;
-        let s = this._colorInputs.get("S").numberInputElement.value;
-        let l = this._colorInputs.get("L").numberInputElement.value;
-        let a = this._colorInputs.get("A").numberInputElement.value;
+        this._createColorInputsIfNeeded();
 
-        let colorString = "";
-        let oldFormat = this._color.format;
-
-        switch (oldFormat) {
+        let components = [];
+        switch (this._color.format) {
         case WI.Color.Format.RGB:
+        case WI.Color.Format.RGBA:
         case WI.Color.Format.HEX:
         case WI.Color.Format.ShortHEX:
-        case WI.Color.Format.Keyword:
-            colorString = `rgb(${r}, ${g}, ${b})`;
-            break;
-
-        case WI.Color.Format.RGBA:
         case WI.Color.Format.HEXAlpha:
         case WI.Color.Format.ShortHEXAlpha:
-            colorString = `rgba(${r}, ${g}, ${b}, ${a})`;
+        case WI.Color.Format.Keyword:
+            components = this._color.rgb.map((value) => Math.round(value));
             break;
 
         case WI.Color.Format.HSL:
-            colorString = `hsl(${h}, ${s}%, ${l}%)`;
+        case WI.Color.Format.HSLA:
+            components = this._color.hsl.map((value) => value.maxDecimals(2));
             break;
 
-        case WI.Color.Format.HSLA:
-            colorString = `hsla(${h}, ${s}%, ${l}%, ${a})`;
+        case WI.Color.Format.ColorFunction:
+            components = this._color.normalizedRGB.map((value) => value.maxDecimals(4));
             break;
 
         default:
-            WI.reportInternalError(`Input event fired for invalid color format "${this._color.format}"`);
-            return;
+            console.error(`Unknown color format: ${this._color.format}`);
         }
 
-        let newColor = WI.Color.fromString(colorString);
-        if (newColor.toString() === this._color.toString())
-            return;
+        if (this._color.alpha !== 1)
+            components.push(this._color.alpha);
 
-        this.color = newColor;
-        this._color.format = oldFormat;
+        console.assert(this._colorInputs.length === components.length);
+        for (let i = 0; i < components.length; ++i)
+            this._colorInputs[i].value = components[i];
+    }
 
+    _handleColorInputsContainerInput(event)
+    {
+        let components = this._colorInputs.map((input) => {
+            return isNaN(input.valueAsNumber) ? 0 : input.valueAsNumber;
+        });
+        this.color = new WI.Color(this._color.format, components, this._color.gamut);
         this.dispatchEventToListeners(WI.ColorPicker.Event.ColorChanged, {color: this._color});
     }
 };
 
 WI.ColorPicker.Event = {
     ColorChanged: "css-color-picker-color-changed",
-    FormatChanged: "css-color-picker-format-changed",
 };

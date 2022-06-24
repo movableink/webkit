@@ -31,6 +31,8 @@
 import logging
 import re
 
+from webkitcorepy import string_utils
+
 _log = logging.getLogger(__name__)
 
 
@@ -56,11 +58,11 @@ def git_diff_to_svn_diff(line):
     """
     # FIXME: This list should be a class member on DiffParser.
     # These regexp patterns should be compiled once instead of every time.
-    conversion_patterns = (("^diff --git \w/(.+) \w/(?P<FilePath>.+)", lambda matched: "Index: " + matched.group('FilePath') + "\n"),
+    conversion_patterns = ((r"^diff --git \w/(.+) \w/(?P<FilePath>.+)", lambda matched: "Index: " + matched.group('FilePath') + "\n"),
                            ("^new file.*", lambda matched: "\n"),
-                           ("^index (([0-9a-f]{7}\.\.[0-9a-f]{7})|([0-9a-f]{40}\.\.[0-9a-f]{40})) [0-9]{6}", lambda matched: "===================================================================\n"),
-                           ("^--- \w/(?P<FilePath>.+)", lambda matched: "--- " + matched.group('FilePath') + "\n"),
-                           ("^\+\+\+ \w/(?P<FilePath>.+)", lambda matched: "+++ " + matched.group('FilePath') + "\n"))
+                           (r"^index (([0-9a-f]{7}\.\.[0-9a-f]{7})|([0-9a-f]{40}\.\.[0-9a-f]{40})) [0-9]{6}", lambda matched: "===================================================================\n"),
+                           (r"^--- \w/(?P<FilePath>.+)", lambda matched: "--- " + matched.group('FilePath') + "\n"),
+                           (r"^\+\+\+ \w/(?P<FilePath>.+)", lambda matched: "+++ " + matched.group('FilePath') + "\n"))
 
     for pattern, conversion in conversion_patterns:
         matched = match(pattern, line)
@@ -84,6 +86,8 @@ def get_diff_converter(lines):
              converter from git to SVN.
     """
     for i, line in enumerate(lines[:-1]):
+        line = string_utils.decode(line)
+
         # Stop when we find the first patch
         if line[:3] == "+++" and lines[i + 1] == "---":
             break
@@ -152,7 +156,7 @@ class DiffParser(object):
         new_diff_line = None
         transform_line = get_diff_converter(diff_input)
         for line in diff_input:
-            line = line.rstrip("\n")
+            line = string_utils.decode(line).rstrip("\n")
             line = transform_line(line)
 
             file_declaration = match(r"^Index: (?P<FilePath>.+)", line)

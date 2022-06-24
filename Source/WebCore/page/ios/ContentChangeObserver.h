@@ -25,10 +25,11 @@
 
 #pragma once
 
-#if PLATFORM(IOS_FAMILY)
+#if ENABLE(CONTENT_CHANGE_OBSERVER)
 
 #include "CSSPropertyNames.h"
 #include "Document.h"
+#include "Element.h"
 #include "PlatformEvent.h"
 #include "RenderStyleConstants.h"
 #include "Timer.h"
@@ -71,7 +72,9 @@ public:
     void rendererWillBeDestroyed(const Element&);
     void willNotProceedWithClick();
 
-    void setHiddenTouchTarget(Element& targetElement) { m_hiddenTouchTargetElement = makeWeakPtr(targetElement); }
+    void willNotProceedWithFixedObservationTimeWindow();
+
+    void setHiddenTouchTarget(Element& targetElement) { m_hiddenTouchTargetElement = targetElement; }
     void resetHiddenTouchTarget() { m_hiddenTouchTargetElement = { }; }
     Element* hiddenTouchTarget() const { return m_hiddenTouchTargetElement.get(); }
 
@@ -83,7 +86,7 @@ public:
     private:
         ContentChangeObserver& m_contentChangeObserver;
         const Element& m_element;
-        Optional<bool> m_wasHidden;
+        std::optional<bool> m_wasHidden;
         bool m_hadRenderer { false };
     };
 
@@ -179,6 +182,9 @@ private:
     bool visibleRendererWasDestroyed(const Element& element) const { return m_elementsWithDestroyedVisibleRenderer.contains(&element); }
     bool shouldObserveVisibilityChangeForElement(const Element&);
 
+    enum class ElementHadRenderer { No, Yes };
+    bool isConsideredActionableContent(const Element&, ElementHadRenderer) const;
+
     enum class Event {
         StartedTouchStartEventDispatching,
         EndedTouchStartEventDispatching,
@@ -197,6 +203,7 @@ private:
         CanceledTransition,
         StartedFixedObservationTimeWindow,
         EndedFixedObservationTimeWindow,
+        WillNotProceedWithFixedObservationTimeWindow,
         ElementDidBecomeVisible
     };
     void adjustObservedState(Event);
@@ -237,4 +244,4 @@ inline void ContentChangeObserver::setShouldObserveDOMTimerSchedulingAndTransiti
 }
 
 }
-#endif
+#endif // ENABLE(CONTENT_CHANGE_OBSERVER)

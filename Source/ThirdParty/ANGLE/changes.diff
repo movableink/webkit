@@ -1,80 +1,288 @@
-From e29224ba15b723527c541859d0767393b1f2e905 Mon Sep 17 00:00:00 2001
-From: Don <don.j.olmstead@gmail.com>
-Date: Thu, 9 May 2019 12:12:42 -0700
-Subject: [PATCH 1/2] Add licensing clarification
-
----
- src/compiler/preprocessor/ExpressionParser.cpp | 2 ++
- src/compiler/translator/glslang_tab.cpp        | 2 ++
- src/compiler/translator/glslang_tab.h          | 2 ++
- 3 files changed, 6 insertions(+)
-
-diff --git a/src/compiler/preprocessor/ExpressionParser.cpp b/src/compiler/preprocessor/ExpressionParser.cpp
-index 1b71ef75a..5c2b9e7a0 100644
---- a/src/compiler/preprocessor/ExpressionParser.cpp
-+++ b/src/compiler/preprocessor/ExpressionParser.cpp
-@@ -1,5 +1,7 @@
- /* A Bison parser, made by GNU Bison 3.0.4.  */
+diff --git a/.gitignore b/.gitignore
+index 5502cca..fdabb39 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -63,6 +63,7 @@
+ /third_party/qemu-linux-x64
+ /third_party/qemu-mac-x64
+ /third_party/r8/lib
++third_party/r8/*.jar
+ /third_party/rapidjson/src
+ /third_party/requests/src
+ /third_party/six
+diff --git a/scripts/run_code_generation.py b/scripts/run_code_generation.py
+index adc9bd9..a6ef39f 100755
+--- a/scripts/run_code_generation.py
++++ b/scripts/run_code_generation.py
+@@ -256,8 +256,11 @@ def main():
+                 f = open(os.path.basename(script), "r")
+                 if subprocess.call([get_executable_name(f.readline()),
+                                     os.path.basename(script)]) != 0:
++                    print('Error Running ' + name + ' code generator')
+                     sys.exit(1)
+                 f.close()
++            else:
++                print('Verifying ' + name + ' code generator')
  
-+/* Apple Note: For the avoidance of doubt, Apple elects to distribute this file under the terms of the BSD license. */
-+
- /* Bison implementation for Yacc-like parsers in C
- 
-    Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
-diff --git a/src/compiler/translator/glslang_tab.cpp b/src/compiler/translator/glslang_tab.cpp
-index e49325c03..5fe7c4943 100644
---- a/src/compiler/translator/glslang_tab.cpp
-+++ b/src/compiler/translator/glslang_tab.cpp
-@@ -1,5 +1,7 @@
- /* A Bison parser, made by GNU Bison 3.0.4.  */
- 
-+/* Apple Note: For the avoidance of doubt, Apple elects to distribute this file under the terms of the BSD license. */
-+
- /* Bison implementation for Yacc-like parsers in C
- 
-    Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
-diff --git a/src/compiler/translator/glslang_tab.h b/src/compiler/translator/glslang_tab.h
-index 5ffee8a4c..3774e91d1 100644
---- a/src/compiler/translator/glslang_tab.h
-+++ b/src/compiler/translator/glslang_tab.h
-@@ -1,5 +1,7 @@
- /* A Bison parser, made by GNU Bison 3.0.4.  */
- 
-+/* Apple Note: For the avoidance of doubt, Apple elects to distribute this file under the terms of the BSD license. */
-+
- /* Bison interface for Yacc-like parsers in C
- 
-    Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
--- 
-2.19.0.605.g01d371f741-goog
-
-
-From c17fff937db47af831017b044acf11d20286620f Mon Sep 17 00:00:00 2001
-From: James Darpinian <jdarpinian@chromium.org>
-Date: Wed, 11 Sep 2019 18:12:01 -0700
-Subject: [PATCH 2/2] Disable -Wglobal-constructors false positives
-
----
- src/common/utilities.cpp | 3 +++
- src/libANGLE/State.cpp   | 3 +++
- 2 files changed, 6 insertions(+)
-
+         # Update the hash dictionary.
+         all_new_hashes[fname] = new_hashes
 diff --git a/src/common/utilities.cpp b/src/common/utilities.cpp
-index 44f925dad..38ddd43d7 100644
+index ebe282c..758fb06 100644
 --- a/src/common/utilities.cpp
 +++ b/src/common/utilities.cpp
-@@ -6,6 +6,9 @@
+@@ -6,6 +6,12 @@
  
  // utilities.cpp: Conversion functions and other utility routines.
  
 +// Older clang versions have a false positive on this warning here.
-+#pragma clang diagnostic ignored "-Wglobal-constructors"
++// TODO(dino): Is this still necessary?
++#if defined(__clang__)
++#    pragma clang diagnostic ignored "-Wglobal-constructors"
++#endif
 +
  #include "common/utilities.h"
- #include <GLSLANG/ShaderVars.h>
+ #include "GLES3/gl3.h"
  #include "common/mathutil.h"
+diff --git a/src/compiler/preprocessor/preprocessor_tab_autogen.cpp b/src/compiler/preprocessor/preprocessor_tab_autogen.cpp
+index 4711774..9eab1b3 100644
+--- a/src/compiler/preprocessor/preprocessor_tab_autogen.cpp
++++ b/src/compiler/preprocessor/preprocessor_tab_autogen.cpp
+@@ -1,5 +1,8 @@
+ /* A Bison parser, made by GNU Bison 3.3.2.  */
+ 
++/* Apple Note: For the avoidance of doubt, Apple elects to distribute this file under the terms of
++ * the BSD license. */
++
+ /* Bison implementation for Yacc-like parsers in C
+ 
+    Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2019 Free Software Foundation,
+diff --git a/src/compiler/translator/CodeGen.cpp b/src/compiler/translator/CodeGen.cpp
+index 497ef88..47213c9 100644
+--- a/src/compiler/translator/CodeGen.cpp
++++ b/src/compiler/translator/CodeGen.cpp
+@@ -23,6 +23,9 @@
+ #ifdef ANGLE_ENABLE_METAL
+ #    include "compiler/translator/TranslatorMetalDirect.h"
+ #endif  // ANGLE_ENABLE_METAL
++#ifdef ANGLE_ENABLE_METAL_SPIRV
++#    include "compiler/translator/TranslatorMetal.h"
++#endif  // ANGLE_ENABLE_METAL_SPIRV
+ 
+ #ifdef ANGLE_ENABLE_METAL_SPIRV
+ #    include "compiler/translator/TranslatorMetal.h"
+diff --git a/src/compiler/translator/TranslatorMetalDirect.cpp b/src/compiler/translator/TranslatorMetalDirect.cpp
+index 7f665c1..5958101 100644
+--- a/src/compiler/translator/TranslatorMetalDirect.cpp
++++ b/src/compiler/translator/TranslatorMetalDirect.cpp
+@@ -950,7 +950,6 @@ bool TranslatorMetalDirect::translateImpl(TInfoSinkBase &sink,
+                 getSymbolTable().findBuiltIn(ImmutableString("gl_PointSize"), getShaderVersion()));
+             DeclareRightBeforeMain(*root, *pointSize);
+         }
+-
+         if (FindSymbolNode(root, BuiltInVariable::gl_VertexIndex()->name()))
+         {
+             if (!ReplaceVariable(this, root, BuiltInVariable::gl_VertexIndex(), &kgl_VertexIDMetal))
+diff --git a/src/compiler/translator/TranslatorMetalDirect/EmitMetal.cpp b/src/compiler/translator/TranslatorMetalDirect/EmitMetal.cpp
+index 019cfcf..25c911e 100644
+--- a/src/compiler/translator/TranslatorMetalDirect/EmitMetal.cpp
++++ b/src/compiler/translator/TranslatorMetalDirect/EmitMetal.cpp
+@@ -1740,7 +1740,6 @@ void GenMetalTraverser::emitFunctionSignature(const TFunction &func)
+         const TVariable &param = *func.getParam(i);
+         emitFunctionParameter(func, param);
+     }
+-
+     if (isTraversingVertexMain)
+     {
+         mOut << " @@XFB-Bindings@@ ";
+diff --git a/src/compiler/translator/TranslatorMetalDirect/EnvironmentVariable.h b/src/compiler/translator/TranslatorMetalDirect/EnvironmentVariable.h
+new file mode 100644
+index 0000000..d823fc7
+--- /dev/null
++++ b/src/compiler/translator/TranslatorMetalDirect/EnvironmentVariable.h
+@@ -0,0 +1,45 @@
++//
++// Copyright 2020 The ANGLE Project Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++//
++
++#ifndef COMPILER_TRANSLATOR_TRANSLATORMETALDIRECT_ENVIRONMENTVARIABLE_H_
++#define COMPILER_TRANSLATOR_TRANSLATORMETALDIRECT_ENVIRONMENTVARIABLE_H_
++
++#include <cstdlib>
++#include <string>
++
++#include "common/debug.h"
++
++namespace sh
++{
++
++inline bool readBoolEnvVar(const char *var)
++{
++    const char *str = std::getenv(var);
++    if (str == nullptr)
++    {
++        return false;
++    }
++    if (strcmp(str, "0") == 0)
++    {
++        return false;
++    }
++    ASSERT(strcmp(str, "1") == 0);
++    return true;
++}
++
++inline std::string readStringEnvVar(const char *var)
++{
++    const char *str = std::getenv(var);
++    if (str == nullptr)
++    {
++        return "";
++    }
++    return str;
++}
++
++}  // namespace sh
++
++#endif  // COMPILER_TRANSLATOR_TRANSLATORMETALDIRECT_ENVIRONMENTVARIABLE_H_
+diff --git a/src/compiler/translator/TranslatorMetalDirect/IdGen.cpp b/src/compiler/translator/TranslatorMetalDirect/IdGen.cpp
+index 81ff272..9d2b43b 100644
+--- a/src/compiler/translator/TranslatorMetalDirect/IdGen.cpp
++++ b/src/compiler/translator/TranslatorMetalDirect/IdGen.cpp
+@@ -25,7 +25,7 @@ Name IdGen::createNewName(size_t count,
+ {
+     const unsigned id = mNext++;
+     char idBuffer[std::numeric_limits<unsigned>::digits10 + 1];
+-    sprintf(idBuffer, "%u", id);
++    snprintf(idBuffer, sizeof(idBuffer), "%u", id);
+ 
+     mNewNameBuffer.clear();
+     mNewNameBuffer += '_';
+diff --git a/src/compiler/translator/TranslatorMetalDirect/ModifyStruct.cpp b/src/compiler/translator/TranslatorMetalDirect/ModifyStruct.cpp
+index bcc5d65..60758fb 100644
+--- a/src/compiler/translator/TranslatorMetalDirect/ModifyStruct.cpp
++++ b/src/compiler/translator/TranslatorMetalDirect/ModifyStruct.cpp
+@@ -601,7 +601,7 @@ class ConvertStructState : angle::NonCopyable
+     void pushNamePath(unsigned extra)
+     {
+         char buffer[std::numeric_limits<unsigned>::digits10 + 1];
+-        sprintf(buffer, "%u", extra);
++        snprintf(buffer, sizeof(buffer), "%u", extra);
+         pushNamePath(buffer);
+     }
+ 
+diff --git a/src/compiler/translator/glslang_tab_autogen.cpp b/src/compiler/translator/glslang_tab_autogen.cpp
+index 82837bf..2c580b5 100644
+--- a/src/compiler/translator/glslang_tab_autogen.cpp
++++ b/src/compiler/translator/glslang_tab_autogen.cpp
+@@ -1,5 +1,8 @@
+ /* A Bison parser, made by GNU Bison 3.3.2.  */
+ 
++/* Apple Note: For the avoidance of doubt, Apple elects to distribute this file under the terms of
++ * the BSD license. */
++
+ /* Bison implementation for Yacc-like parsers in C
+ 
+    Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2019 Free Software Foundation,
+diff --git a/src/compiler/translator/glslang_tab_autogen.h b/src/compiler/translator/glslang_tab_autogen.h
+index d2eab0b..2ec2d2c 100644
+--- a/src/compiler/translator/glslang_tab_autogen.h
++++ b/src/compiler/translator/glslang_tab_autogen.h
+@@ -1,5 +1,8 @@
+ /* A Bison parser, made by GNU Bison 3.3.2.  */
+ 
++/* Apple Note: For the avoidance of doubt, Apple elects to distribute this file under the terms of
++ * the BSD license. */
++
+ /* Bison interface for Yacc-like parsers in C
+ 
+    Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2019 Free Software Foundation,
+diff --git a/src/compiler/translator/glslang_wrapper.cpp b/src/compiler/translator/glslang_wrapper.cpp
+index 187f350..3de7597 100644
+--- a/src/compiler/translator/glslang_wrapper.cpp
++++ b/src/compiler/translator/glslang_wrapper.cpp
+@@ -10,6 +10,7 @@
+ //   This file is separated as glslang's header contains conflicting macro definitions with ANGLE's.
+ //
+ 
++#include "common/spirv/spirv_types.h"
+ #include "compiler/translator/glslang_wrapper.h"
+ 
+ // glslang has issues with some specific warnings.
+diff --git a/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.cpp b/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.cpp
+index 55e2f8b..4237558 100644
+--- a/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.cpp
++++ b/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.cpp
+@@ -10,6 +10,7 @@
+ #include "compiler/translator/tree_util/IntermNode_util.h"
+ #include "compiler/translator/tree_util/IntermTraverse.h"
+ 
++#if defined(ANGLE_ENABLE_GLSL) && defined(ANGLE_ENABLE_APPLE_WORKAROUNDS)
+ namespace sh
+ {
+ 
+@@ -70,5 +71,5 @@ bool UnfoldShortCircuitAST(TCompiler *compiler, TIntermBlock *root)
+     root->traverse(&traverser);
+     return traverser.updateTree(compiler, root);
+ }
+-
++#endif
+ }  // namespace sh
+diff --git a/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h b/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h
+index ad3cc08..75069c5 100644
+--- a/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h
++++ b/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h
+@@ -11,7 +11,7 @@
+ #define COMPILER_TRANSLATOR_TREEOPS_APPLE_UNFOLDSHORTCIRCUITAST_H_
+ 
+ #include "common/angleutils.h"
+-
++#include "common/debug.h"
+ namespace sh
+ {
+ 
+diff --git a/src/libANGLE/Context.cpp b/src/libANGLE/Context.cpp
+index 685b235..93b6676 100755
+--- a/src/libANGLE/Context.cpp
++++ b/src/libANGLE/Context.cpp
+@@ -9207,7 +9207,7 @@ egl::Error Context::setDefaultFramebuffer(egl::Surface *drawSurface, egl::Surfac
+     ASSERT(mCurrentDrawSurface == nullptr);
+     ASSERT(mCurrentReadSurface == nullptr);
+ 
+-    Framebuffer *newDefaultFramebuffer = nullptr;
++    std::unique_ptr<gl::Framebuffer> newDefaultFramebuffer;
+ 
+     mCurrentDrawSurface = drawSurface;
+     mCurrentReadSurface = readSurface;
+@@ -9219,7 +9219,7 @@ egl::Error Context::setDefaultFramebuffer(egl::Surface *drawSurface, egl::Surfac
+     }
+     else
+     {
+-        newDefaultFramebuffer = new Framebuffer(this, mImplementation.get(), readSurface);
++        newDefaultFramebuffer = std::make_unique<gl::Framebuffer>(this, mImplementation.get(), readSurface);
+     }
+     ASSERT(newDefaultFramebuffer);
+ 
+@@ -9230,14 +9230,14 @@ egl::Error Context::setDefaultFramebuffer(egl::Surface *drawSurface, egl::Surfac
+ 
+     // Update default framebuffer, the binding of the previous default
+     // framebuffer (or lack of) will have a nullptr.
+-    mState.mFramebufferManager->setDefaultFramebuffer(newDefaultFramebuffer);
++    mState.mFramebufferManager->setDefaultFramebuffer(newDefaultFramebuffer.release());
+     if (mState.getDrawFramebuffer() == nullptr)
+     {
+-        bindDrawFramebuffer(newDefaultFramebuffer->id());
++        bindDrawFramebuffer(mState.mFramebufferManager->getDefaultFramebuffer()->id());
+     }
+     if (mState.getReadFramebuffer() == nullptr)
+     {
+-        bindReadFramebuffer(newDefaultFramebuffer->id());
++        bindReadFramebuffer(mState.mFramebufferManager->getDefaultFramebuffer()->id());
+     }
+ 
+     return egl::NoError();
 diff --git a/src/libANGLE/State.cpp b/src/libANGLE/State.cpp
-index cbd3f6632..1421b8636 100644
+index 2f7c3dc..4a87f0d 100644
 --- a/src/libANGLE/State.cpp
 +++ b/src/libANGLE/State.cpp
 @@ -6,6 +6,9 @@
@@ -87,6 +295,748 @@ index cbd3f6632..1421b8636 100644
  #include "libANGLE/State.h"
  
  #include <string.h>
--- 
-2.19.0.605.g01d371f741-goog
-
+diff --git a/src/libANGLE/Surface.cpp b/src/libANGLE/Surface.cpp
+index 1cd8a00..8b2186e 100644
+--- a/src/libANGLE/Surface.cpp
++++ b/src/libANGLE/Surface.cpp
+@@ -624,10 +624,10 @@ Error Surface::getBufferAge(const gl::Context *context, EGLint *age) const
+     return mImplementation->getBufferAge(context, age);
+ }
+ 
+-gl::Framebuffer *Surface::createDefaultFramebuffer(const gl::Context *context,
++std::unique_ptr<gl::Framebuffer> Surface::createDefaultFramebuffer(const gl::Context *context,
+                                                                    egl::Surface *readSurface)
+ {
+-    return new gl::Framebuffer(context, this, readSurface);
++    return std::make_unique<gl::Framebuffer>(context, this, readSurface);
+ }
+ 
+ gl::InitState Surface::initState(const gl::ImageIndex & /*imageIndex*/) const
+diff --git a/src/libANGLE/Surface.h b/src/libANGLE/Surface.h
+index 98a3b86..0856a62 100644
+--- a/src/libANGLE/Surface.h
++++ b/src/libANGLE/Surface.h
+@@ -105,7 +105,7 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
+     void setFixedWidth(EGLint width);
+     void setFixedHeight(EGLint height);
+ 
+-    gl::Framebuffer *createDefaultFramebuffer(const gl::Context *context,
++    std::unique_ptr<gl::Framebuffer> createDefaultFramebuffer(const gl::Context *context,
+                                                               egl::Surface *readSurface);
+ 
+     const Config *getConfig() const;
+@@ -216,8 +216,6 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
+     ~Surface() override;
+     rx::FramebufferAttachmentObjectImpl *getAttachmentImpl() const override;
+ 
+-    gl::Framebuffer *createDefaultFramebuffer(const Display *display);
+-
+     // ANGLE-only method, used internally
+     friend class gl::Texture;
+     Error releaseTexImageFromTexture(const gl::Context *context);
+diff --git a/src/libANGLE/renderer/driver_utils.cpp b/src/libANGLE/renderer/driver_utils.cpp
+index bfdf0ff..6e50976 100644
+--- a/src/libANGLE/renderer/driver_utils.cpp
++++ b/src/libANGLE/renderer/driver_utils.cpp
+@@ -164,6 +164,10 @@ const char *GetVendorString(uint32_t vendorId)
+             return "Qualcomm";
+         case VENDOR_ID_SAMSUNG:
+             return "Samsung Electronics Co., Ltd.";
++        case VENDOR_ID_VMWARE:
++            return "VMware";
++        case VENDOR_ID_VIVANTE:
++            return "Vivante";
+         case 0xba5eba11:  // Mock vendor ID used for tests.
+             return "Test";
+         case 0:
+diff --git a/src/libANGLE/renderer/gl/cgl/IOSurfaceSurfaceCGL.cpp b/src/libANGLE/renderer/gl/cgl/IOSurfaceSurfaceCGL.cpp
+index a2b44d2..20ec85a 100644
+--- a/src/libANGLE/renderer/gl/cgl/IOSurfaceSurfaceCGL.cpp
++++ b/src/libANGLE/renderer/gl/cgl/IOSurfaceSurfaceCGL.cpp
+@@ -250,12 +250,10 @@ bool IOSurfaceSurfaceCGL::validateAttributes(EGLClientBuffer buffer,
+         return false;
+     }
+ 
+-    // Check that the format matches this IOSurface plane
+-    if (IOSurfaceGetBytesPerElementOfPlane(ioSurface, plane) !=
+-        kIOSurfaceFormats[formatIndex].componentBytes)
+-    {
+-        return false;
+-    }
++    // FIXME: Check that the format matches this IOSurface plane for pixel formats that we know of.
++    // We could map IOSurfaceGetPixelFormat to expected type plane and format type.
++    // However, the caller might supply us non-public pixel format, which makes exhaustive checks
++    // problematic.
+ 
+     return true;
+ }
+diff --git a/src/libANGLE/renderer/glslang_wrapper_utils.h b/src/libANGLE/renderer/glslang_wrapper_utils.h
+index d27715d..75d252f 100644
+--- a/src/libANGLE/renderer/glslang_wrapper_utils.h
++++ b/src/libANGLE/renderer/glslang_wrapper_utils.h
+@@ -10,7 +10,6 @@
+ #define LIBANGLE_RENDERER_GLSLANG_WRAPPER_UTILS_H_
+ 
+ #include <functional>
+-
+ #include "common/spirv/spirv_types.h"
+ #include "libANGLE/renderer/ProgramImpl.h"
+ #include "libANGLE/renderer/renderer_utils.h"
+@@ -158,7 +157,7 @@ void GlslangAssignTransformFeedbackLocations(gl::ShaderType shaderType,
+                                              bool isTransformFeedbackStage,
+                                              GlslangProgramInterfaceInfo *programInterfaceInfo,
+                                              ShaderInterfaceVariableInfoMap *variableInfoMapOut);
+-
++#if ANGLE_ENABLE_METAL_SPIRV
+ // Retrieves the compiled SPIR-V code for each shader stage, and calls |GlslangAssignLocations|.
+ void GlslangGetShaderSpirvCode(const GlslangSourceOptions &options,
+                                const gl::ProgramState &programState,
+@@ -171,6 +170,7 @@ angle::Result GlslangTransformSpirvCode(const GlslangSpirvOptions &options,
+                                         const ShaderInterfaceVariableInfoMap &variableInfoMap,
+                                         const angle::spirv::Blob &initialSpirvBlob,
+                                         angle::spirv::Blob *spirvBlobOut);
++#endif
+ 
+ }  // namespace rx
+ 
+diff --git a/src/libANGLE/renderer/metal/BufferMtl.mm b/src/libANGLE/renderer/metal/BufferMtl.mm
+index 279923f..900aea8 100644
+--- a/src/libANGLE/renderer/metal/BufferMtl.mm
++++ b/src/libANGLE/renderer/metal/BufferMtl.mm
+@@ -365,7 +365,7 @@
+     {
+         if (buffer.offset == offset)
+         {
+-            return &buffer;
++            return static_cast<ConversionBufferMtl *>(&buffer);
+         }
+     }
+ 
+@@ -520,7 +520,7 @@
+         default:
+             // dynamic buffer, allow up to 10 update per frame/encoding without
+             // waiting for GPU.
+-            if (adjustedSize <= mtl::kSharedMemBufferMaxBufSizeHint)
++            if (adjustedSize <= kConvertedElementArrayBufferInitialSize)
+             {
+                 maxBuffers = 10;
+                 mBufferPool.setAlwaysUseSharedMem();
+diff --git a/src/libANGLE/renderer/metal/DisplayMtl.mm b/src/libANGLE/renderer/metal/DisplayMtl.mm
+index df9a6e6..6552432 100644
+--- a/src/libANGLE/renderer/metal/DisplayMtl.mm
++++ b/src/libANGLE/renderer/metal/DisplayMtl.mm
+@@ -254,9 +254,10 @@ bool IsMetalDisplayAvailable()
+         }
+     }
+ 
+-    NSMutableArray<id<MTLDevice>> *externalGPUs   = [[NSMutableArray alloc] init];
+-    NSMutableArray<id<MTLDevice>> *integratedGPUs = [[NSMutableArray alloc] init];
+-    NSMutableArray<id<MTLDevice>> *discreteGPUs   = [[NSMutableArray alloc] init];
++    auto externalGPUs = mtl::adoptObjCObj<NSMutableArray<id<MTLDevice>>>([[NSMutableArray alloc] init]);
++    auto integratedGPUs = mtl::adoptObjCObj<NSMutableArray<id<MTLDevice>>>([[NSMutableArray alloc] init]);
++    auto discreteGPUs = mtl::adoptObjCObj<NSMutableArray<id<MTLDevice>>>([[NSMutableArray alloc] init]);
++
+     for (id<MTLDevice> device in deviceList.get())
+     {
+         if (device.removable)
+@@ -278,7 +279,7 @@ bool IsMetalDisplayAvailable()
+     if (attribs.get(EGL_POWER_PREFERENCE_ANGLE, 0) == EGL_HIGH_POWER_ANGLE)
+     {
+         // Search for a discrete GPU first.
+-        for (id<MTLDevice> device in discreteGPUs)
++        for (id<MTLDevice> device in discreteGPUs.get())
+         {
+             if (![device isHeadless])
+                 return device;
+@@ -287,7 +288,7 @@ bool IsMetalDisplayAvailable()
+     else if (attribs.get(EGL_POWER_PREFERENCE_ANGLE, 0) == EGL_LOW_POWER_ANGLE)
+     {
+         // If we've selected a low power device, look through integrated devices.
+-        for (id<MTLDevice> device in integratedGPUs)
++        for (id<MTLDevice> device in integratedGPUs.get())
+         {
+             if (![device isHeadless])
+                 return device;
+@@ -310,6 +311,17 @@ bool IsMetalDisplayAvailable()
+         }
+     }
+ 
++    // Default to use a low power device, look through integrated devices.
++    for (id<MTLDevice> device in integratedGPUs.get())
++    {
++        if (![device isHeadless])
++            return device;
++    }
++
++    // If we selected a low power device and there's no low-power devices avaialble, return the
++    // first (default) device.
++    if (deviceList.get().count > 0)
++        return deviceList[0];
+ #endif
+     // If we can't find anything, or are on a platform that doesn't support power options, create a
+     // default device.
+@@ -1203,8 +1215,7 @@ bool IsMetalDisplayAvailable()
+ bool DisplayMtl::supports32BitFloatFiltering() const
+ {
+ #if (defined(__MAC_11_0) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_11_0) ||        \
+-    (defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_14_0) || \
+-    (defined(__TVOS_14_0) && __TV_OS_VERSION_MIN_REQUIRED >= __TVOS_14_0)
++    (defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_14_0)
+     if (@available(ios 14.0, macOS 11.0, *))
+     {
+         return [mMetalDevice supports32BitFloatFiltering];
+diff --git a/src/libANGLE/renderer/metal/FrameBufferMtl.mm b/src/libANGLE/renderer/metal/FrameBufferMtl.mm
+index 9b47460..fcce2e2 100644
+--- a/src/libANGLE/renderer/metal/FrameBufferMtl.mm
++++ b/src/libANGLE/renderer/metal/FrameBufferMtl.mm
+@@ -1661,5 +1661,4 @@ void RoundValueAndAdjustCorrespondingValue(float a,
+ 
+     return angle::Result::Continue;
+ }
+-
+ }
+diff --git a/src/libANGLE/renderer/metal/IOSurfaceSurfaceMtl.mm b/src/libANGLE/renderer/metal/IOSurfaceSurfaceMtl.mm
+index ab7283a..1000867 100644
+--- a/src/libANGLE/renderer/metal/IOSurfaceSurfaceMtl.mm
++++ b/src/libANGLE/renderer/metal/IOSurfaceSurfaceMtl.mm
+@@ -219,12 +219,10 @@ int FindIOSurfaceFormatIndex(GLenum internalFormat, GLenum type)
+         return false;
+     }
+ 
+-    // Check that the format matches this IOSurface plane
+-    if (IOSurfaceGetBytesPerElementOfPlane(ioSurface, plane) !=
+-        kIOSurfaceFormats[formatIndex].componentBytes)
+-    {
+-        return false;
+-    }
++    // FIXME: Check that the format matches this IOSurface plane for pixel formats that we know of.
++    // We could map IOSurfaceGetPixelFormat to expected type plane and format type.
++    // However, the caller might supply us non-public pixel format, which makes exhaustive checks
++    // problematic.
+ 
+     return true;
+ }
+diff --git a/src/libANGLE/renderer/metal/ProgramMtl.mm b/src/libANGLE/renderer/metal/ProgramMtl.mm
+index f14f15c..4ae9f8f 100644
+--- a/src/libANGLE/renderer/metal/ProgramMtl.mm
++++ b/src/libANGLE/renderer/metal/ProgramMtl.mm
+@@ -589,7 +589,7 @@ void InitArgumentBufferEncoder(mtl::Context *context,
+ 
+     mtl::TranslatedShaderInfo *translatedMslInfo = &mMslShaderTranslateInfo[shaderType];
+     ProgramShaderObjVariantMtl *shaderVariant;
+-    MTLFunctionConstantValues *funcConstants = nil;
++    mtl::AutoObjCObj<MTLFunctionConstantValues> funcConstants;
+ 
+     if (shaderType == gl::ShaderType::Vertex)
+     {
+@@ -639,7 +639,7 @@ void InitArgumentBufferEncoder(mtl::Context *context,
+                     [NSString stringWithUTF8String:sh::mtl::kRasterizerDiscardEnabledConstName];
+             }
+ 
+-            funcConstants = [[MTLFunctionConstantValues alloc] init];
++            funcConstants = mtl::adoptObjCObj([[MTLFunctionConstantValues alloc] init]);
+             [funcConstants setConstantValue:&emulateDiscard
+                                        type:MTLDataTypeBool
+                                    withName:discardEnabledStr];
+@@ -675,14 +675,15 @@ void InitArgumentBufferEncoder(mtl::Context *context,
+                     [NSString stringWithUTF8String:sh::mtl::kCoverageMaskEnabledConstName];
+             }
+             
+-            NSString *depthWriteEnabledStr =
+-                [NSString stringWithUTF8String:sh::mtl::kDepthWriteEnabledConstName];
+ 
+-            funcConstants = [[MTLFunctionConstantValues alloc] init];
++            funcConstants = mtl::adoptObjCObj([[MTLFunctionConstantValues alloc] init]);
+             [funcConstants setConstantValue:&emulateCoverageMask
+                                        type:MTLDataTypeBool
+                                    withName:coverageMaskEnabledStr];
+             
++            NSString *depthWriteEnabledStr = 
++                [NSString stringWithUTF8String:sh::mtl::kDepthWriteEnabledConstName];
++            
+             MTLPixelFormat depthPixelFormat =
+                 (MTLPixelFormat)renderPipelineDesc.outputDescriptor.depthAttachmentPixelFormat;
+             BOOL fragDepthWriteEnabled = depthPixelFormat != MTLPixelFormatInvalid;
+@@ -705,12 +706,12 @@ void InitArgumentBufferEncoder(mtl::Context *context,
+         setConstantValue:&(context->getDisplay()->getFeatures().allowSamplerCompareLod.enabled)
+                     type:MTLDataTypeBool
+                 withName:@"ANGLEUseSampleCompareLod"];
++
+     // Create Metal shader object
+     ANGLE_MTL_OBJC_SCOPE
+     {
+         ANGLE_TRY(CreateMslShader(context, translatedMslInfo->metalLibrary, SHADER_ENTRY_NAME,
+-                                  funcConstants, &shaderVariant->metalShader));
+-        [funcConstants ANGLE_MTL_AUTORELEASE];
++                                  funcConstants.get(), &shaderVariant->metalShader));
+     }
+ 
+     // Store reference to the translated source for easily querying mapped bindings later.
+diff --git a/src/libANGLE/renderer/metal/SurfaceMtl.mm b/src/libANGLE/renderer/metal/SurfaceMtl.mm
+index 6855e45..daa0e59 100644
+--- a/src/libANGLE/renderer/metal/SurfaceMtl.mm
++++ b/src/libANGLE/renderer/metal/SurfaceMtl.mm
+@@ -775,5 +775,4 @@
+ {
+     mSize.height = height;
+ }
+-
+ }
+diff --git a/src/libANGLE/renderer/metal/VertexArrayMtl.h b/src/libANGLE/renderer/metal/VertexArrayMtl.h
+index 86e6a28..f57ae66 100644
+--- a/src/libANGLE/renderer/metal/VertexArrayMtl.h
++++ b/src/libANGLE/renderer/metal/VertexArrayMtl.h
+@@ -151,7 +151,7 @@ class VertexArrayMtl : public VertexArrayImpl
+     mtl::BufferPool mDynamicIndexData;
+ 
+     std::vector<uint32_t> mEmulatedInstanceAttribs;
+-
++    bool mElementArrayDirty = true;
+     bool mVertexArrayDirty = true;
+ };
+ }  // namespace rx
+diff --git a/src/libANGLE/renderer/metal/VertexArrayMtl.mm b/src/libANGLE/renderer/metal/VertexArrayMtl.mm
+index ba0c505..682b711 100644
+--- a/src/libANGLE/renderer/metal/VertexArrayMtl.mm
++++ b/src/libANGLE/renderer/metal/VertexArrayMtl.mm
+@@ -273,6 +273,7 @@ inline void SetDefaultVertexBufferLayout(mtl::VertexBufferLayoutDesc *layout)
+             case gl::VertexArray::DIRTY_BIT_ELEMENT_ARRAY_BUFFER:
+             case gl::VertexArray::DIRTY_BIT_ELEMENT_ARRAY_BUFFER_DATA:
+             {
++                mElementArrayDirty = true;
+                 break;
+             }
+ 
+@@ -475,7 +476,21 @@ inline void SetDefaultVertexBufferLayout(mtl::VertexBufferLayoutDesc *layout)
+                 }
+ 
+                 desc.layouts[bufferIdx].stride = mCurrentArrayBufferStrides[v];
++            }
++        }  // for (v)
++    }
++
++    if(dirty || mElementArrayDirty)
++    {
++        mElementArrayDirty = false;
++        const gl::ProgramExecutable *executable = glContext->getState().getProgramExecutable();
++        const gl::AttributesMask &programActiveAttribsMask =
++                executable->getActiveAttribLocationsMask();
+ 
++        for (uint32_t v = 0; v < mtl::kMaxVertexAttribs; ++v)
++        {
++            uint32_t bufferIdx    = mtl::kVboBindingIndexStart + v;
++            uint32_t bufferOffset = static_cast<uint32_t>(mCurrentArrayBufferOffsets[v]);
+             if (mCurrentArrayBuffers[v])
+             {
+                 cmdEncoder->setVertexBuffer(mCurrentArrayBuffers[v]->getCurrentBuffer(),
+@@ -488,10 +503,11 @@ inline void SetDefaultVertexBufferLayout(mtl::VertexBufferLayoutDesc *layout)
+                 cmdEncoder->setVertexBytes(mCurrentArrayInlineDataPointers[v],
+                                            mCurrentArrayInlineDataSizes[v], bufferIdx);
+             }
++
+         }
+-        }  // for (v)
+     }
+ 
++
+     *vertexDescChanged = dirty;
+ 
+     return angle::Result::Continue;
+diff --git a/src/libANGLE/renderer/metal/mtl_buffer_pool.h b/src/libANGLE/renderer/metal/mtl_buffer_pool.h
+index c3be11f..204ebb9 100644
+--- a/src/libANGLE/renderer/metal/mtl_buffer_pool.h
++++ b/src/libANGLE/renderer/metal/mtl_buffer_pool.h
+@@ -126,7 +126,7 @@ class BufferPool
+ 
+     size_t mBuffersAllocated;
+     size_t mMaxBuffers;
+-    BufferPoolMemPolicy mMemPolicy;
++    BufferPoolMemPolicy mMemPolicy = BufferPoolMemPolicy::Auto;
+     bool mAlwaysAllocateNewBuffer;
+ };
+ 
+diff --git a/src/libANGLE/renderer/metal/mtl_format_map.json b/src/libANGLE/renderer/metal/mtl_format_map.json
+index c4520cd..a4e8c69 100644
+--- a/src/libANGLE/renderer/metal/mtl_format_map.json
++++ b/src/libANGLE/renderer/metal/mtl_format_map.json
+@@ -121,14 +121,6 @@
+             "ASTC_12x12_SRGB_BLOCK": "MTLPixelFormatASTC_12x12_sRGB"
+         },
+         "map_sim": {
+-            "PVRTC1_RGB_4BPP_UNORM_BLOCK": "MTLPixelFormatPVRTC_RGB_4BPP",
+-            "PVRTC1_RGB_2BPP_UNORM_BLOCK": "MTLPixelFormatPVRTC_RGB_2BPP",
+-            "PVRTC1_RGBA_4BPP_UNORM_BLOCK": "MTLPixelFormatPVRTC_RGBA_4BPP",
+-            "PVRTC1_RGBA_2BPP_UNORM_BLOCK": "MTLPixelFormatPVRTC_RGBA_2BPP",
+-            "PVRTC1_RGB_2BPP_UNORM_SRGB_BLOCK": "MTLPixelFormatPVRTC_RGB_2BPP_sRGB",
+-            "PVRTC1_RGB_4BPP_UNORM_SRGB_BLOCK": "MTLPixelFormatPVRTC_RGB_4BPP_sRGB",
+-            "PVRTC1_RGBA_2BPP_UNORM_SRGB_BLOCK": "MTLPixelFormatPVRTC_RGBA_2BPP_sRGB",
+-            "PVRTC1_RGBA_4BPP_UNORM_SRGB_BLOCK": "MTLPixelFormatPVRTC_RGBA_4BPP_sRGB",
+             "ETC1_R8G8B8_UNORM_BLOCK": "MTLPixelFormatETC2_RGB8",
+             "ETC2_R8G8B8_UNORM_BLOCK": "MTLPixelFormatETC2_RGB8",
+             "ETC2_R8G8B8_SRGB_BLOCK": "MTLPixelFormatETC2_RGB8_sRGB",
+diff --git a/src/libANGLE/renderer/metal/mtl_format_table_autogen.mm b/src/libANGLE/renderer/metal/mtl_format_table_autogen.mm
+index 9d19c85..b5d90ff 100644
+--- a/src/libANGLE/renderer/metal/mtl_format_table_autogen.mm
++++ b/src/libANGLE/renderer/metal/mtl_format_table_autogen.mm
+@@ -1152,54 +1152,6 @@
+             this->actualFormatId = angle::FormatID::ETC2_R8G8B8_UNORM_BLOCK;
+             break;
+ 
+-        case angle::FormatID::PVRTC1_RGBA_2BPP_UNORM_BLOCK:
+-
+-            this->metalFormat    = MTLPixelFormatPVRTC_RGBA_2BPP;
+-            this->actualFormatId = angle::FormatID::PVRTC1_RGBA_2BPP_UNORM_BLOCK;
+-            break;
+-
+-        case angle::FormatID::PVRTC1_RGBA_2BPP_UNORM_SRGB_BLOCK:
+-
+-            this->metalFormat    = MTLPixelFormatPVRTC_RGBA_2BPP_sRGB;
+-            this->actualFormatId = angle::FormatID::PVRTC1_RGBA_2BPP_UNORM_SRGB_BLOCK;
+-            break;
+-
+-        case angle::FormatID::PVRTC1_RGBA_4BPP_UNORM_BLOCK:
+-
+-            this->metalFormat    = MTLPixelFormatPVRTC_RGBA_4BPP;
+-            this->actualFormatId = angle::FormatID::PVRTC1_RGBA_4BPP_UNORM_BLOCK;
+-            break;
+-
+-        case angle::FormatID::PVRTC1_RGBA_4BPP_UNORM_SRGB_BLOCK:
+-
+-            this->metalFormat    = MTLPixelFormatPVRTC_RGBA_4BPP_sRGB;
+-            this->actualFormatId = angle::FormatID::PVRTC1_RGBA_4BPP_UNORM_SRGB_BLOCK;
+-            break;
+-
+-        case angle::FormatID::PVRTC1_RGB_2BPP_UNORM_BLOCK:
+-
+-            this->metalFormat    = MTLPixelFormatPVRTC_RGB_2BPP;
+-            this->actualFormatId = angle::FormatID::PVRTC1_RGB_2BPP_UNORM_BLOCK;
+-            break;
+-
+-        case angle::FormatID::PVRTC1_RGB_2BPP_UNORM_SRGB_BLOCK:
+-
+-            this->metalFormat    = MTLPixelFormatPVRTC_RGB_2BPP_sRGB;
+-            this->actualFormatId = angle::FormatID::PVRTC1_RGB_2BPP_UNORM_SRGB_BLOCK;
+-            break;
+-
+-        case angle::FormatID::PVRTC1_RGB_4BPP_UNORM_BLOCK:
+-
+-            this->metalFormat    = MTLPixelFormatPVRTC_RGB_4BPP;
+-            this->actualFormatId = angle::FormatID::PVRTC1_RGB_4BPP_UNORM_BLOCK;
+-            break;
+-
+-        case angle::FormatID::PVRTC1_RGB_4BPP_UNORM_SRGB_BLOCK:
+-
+-            this->metalFormat    = MTLPixelFormatPVRTC_RGB_4BPP_sRGB;
+-            this->actualFormatId = angle::FormatID::PVRTC1_RGB_4BPP_UNORM_SRGB_BLOCK;
+-            break;
+-
+         case angle::FormatID::D16_UNORM:
+ 
+             this->metalFormat    = MTLPixelFormatDepth32Float;
+diff --git a/src/libANGLE/renderer/metal/mtl_render_utils.mm b/src/libANGLE/renderer/metal/mtl_render_utils.mm
+index 1613ee9..e075295 100644
+--- a/src/libANGLE/renderer/metal/mtl_render_utils.mm
++++ b/src/libANGLE/renderer/metal/mtl_render_utils.mm
+@@ -2540,45 +2540,13 @@ ANGLE_INLINE void SetPipelineState(ComputeCommandEncoder *encoder,
+                                             bool sRGBMipmap,
+                                             NativeTexLevelArray *mipmapOutputViews)
+ {
+-    // Only support 3D texture for now.
+-    ASSERT(srcTexture->textureType() == MTLTextureType3D);
+-
+     MTLSize threadGroupSize;
+     uint32_t slices                             = 1;
+     id<MTLComputePipelineState> computePipeline = nil;
+-
+-    ensure3DMipGeneratorPipelineInitialized(contextMtl);
+-    computePipeline = m3DMipGeneratorPipeline;
+-    threadGroupSize =
+-        MTLSizeMake(kGenerateMipThreadGroupSizePerDim, kGenerateMipThreadGroupSizePerDim,
+-                    kGenerateMipThreadGroupSizePerDim);
+-
+     // The compute shader supports up to 4 mipmaps generated per pass.
+     // See shaders/gen_mipmap.metal
+     uint32_t maxMipsPerBatch = 4;
+ 
+-    if (threadGroupSize.width * threadGroupSize.height * threadGroupSize.depth >
+-            computePipeline.maxTotalThreadsPerThreadgroup ||
+-        ANGLE_UNLIKELY(
+-            !contextMtl->getDisplay()->getFeatures().allowGenMultipleMipsPerPass.enabled))
+-    {
+-        // Multiple mipmaps generation is not supported due to hardware's thread group size limits.
+-        // Fallback to generate one mip per pass and reduce thread group size.
+-        if (ANGLE_UNLIKELY(threadGroupSize.width * threadGroupSize.height >
+-                           computePipeline.maxTotalThreadsPerThreadgroup))
+-        {
+-            // Even with reduced thread group size, we cannot proceed.
+-            // HACK: use blit command encoder to generate mipmaps if it is not possible
+-            // to use compute shader due to hardware limits.
+-            BlitCommandEncoder *blitEncoder = contextMtl->getBlitCommandEncoder();
+-            blitEncoder->generateMipmapsForTexture(srcTexture);
+-            return angle::Result::Continue;
+-        }
+-
+-        threadGroupSize.depth = 1;
+-        maxMipsPerBatch       = 1;
+-    }
+-
+     ComputeCommandEncoder *cmdEncoder = contextMtl->getComputeCommandEncoder();
+     ASSERT(cmdEncoder);
+ 
+@@ -2615,8 +2583,29 @@ ANGLE_INLINE void SetPipelineState(ComputeCommandEncoder *encoder,
+             UNREACHABLE();
+     }
+ 
+-    Generate3DMipmapUniform options;
++    if (threadGroupSize.width * threadGroupSize.height * threadGroupSize.depth >
++            computePipeline.maxTotalThreadsPerThreadgroup ||
++        ANGLE_UNLIKELY(
++            !contextMtl->getDisplay()->getFeatures().allowGenMultipleMipsPerPass.enabled))
++    {
++        // Multiple mipmaps generation is not supported due to hardware's thread group size limits.
++        // Fallback to generate one mip per pass and reduce thread group size.
++        if (ANGLE_UNLIKELY(threadGroupSize.width * threadGroupSize.height >
++                           computePipeline.maxTotalThreadsPerThreadgroup))
++        {
++            // Even with reduced thread group size, we cannot proceed.
++            // HACK: use blit command encoder to generate mipmaps if it is not possible
++            // to use compute shader due to hardware limits.
++            BlitCommandEncoder *blitEncoder = contextMtl->getBlitCommandEncoder();
++            blitEncoder->generateMipmapsForTexture(srcTexture);
++            return angle::Result::Continue;
++        }
++
++        threadGroupSize.depth = 1;
++        maxMipsPerBatch       = 1;
++    }
+ 
++    Generate3DMipmapUniform options;
+     uint32_t remainMips             = srcTexture->mipmapLevels() - 1;
+     MipmapNativeLevel batchSrcLevel = kZeroNativeMipLevel;
+     options.srcLevel                = batchSrcLevel.get();
+diff --git a/src/libANGLE/renderer/metal/mtl_resource_spi.h b/src/libANGLE/renderer/metal/mtl_resource_spi.h
+index 3eaa9a6..2ecf7b4 100644
+--- a/src/libANGLE/renderer/metal/mtl_resource_spi.h
++++ b/src/libANGLE/renderer/metal/mtl_resource_spi.h
+@@ -1,9 +1,63 @@
+-//
+-// Copyright 2021 The ANGLE Project Authors. All rights reserved.
+-// Use of this source code is governed by a BSD-style license that can be
+-// found in the LICENSE file.
++/*
++ * Copyright (C) 2021 Apple Inc. All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
++ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
++ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
++ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
++ * THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
+ //
+ // mtl_resource_spi.h:
+-//    Used to set Metal resource ownership identity with SPI.
+-//    Purposefully empty header file. Actual implementation will be hosted in WebKit.
++//    Used to set Metal resource ownership identity with SPI
+ //
++
++#ifndef LIBANGLE_RENDERER_METAL_RESOURCE_SPI_H_
++#define LIBANGLE_RENDERER_METAL_RESOURCE_SPI_H_
++
++#import "common/apple/apple_platform.h"
++
++#if ANGLE_USE_METAL_OWNERSHIP_IDENTITY
++
++#    import <Metal/MTLResource_Private.h>
++#    import <Metal/Metal.h>
++#    import <mach/mach_types.h>
++
++namespace rx
++{
++namespace mtl
++{
++inline void setOwnerWithIdentity(id<MTLResource> resource, task_id_token_t identityToken)
++{
++    if (identityToken != TASK_ID_TOKEN_NULL)
++    {
++        kern_return_t kr = [(id<MTLResourceSPI>)resource setOwnerWithIdentity:identityToken];
++        if (ANGLE_UNLIKELY(kr != KERN_SUCCESS))
++        {
++            ERR() << "setOwnerWithIdentity failed with: %s (%x)" << mach_error_string(kr) << kr;
++            ASSERT(false);
++        }
++    }
++    return;
++}
++}
++}
++#endif
++
++#endif /* LIBANGLE_RENDERER_METAL_RESOURCE_SPI_H_ */
+diff --git a/src/libANGLE/renderer/metal/mtl_resources.h b/src/libANGLE/renderer/metal/mtl_resources.h
+index 8b8eb26..19a9740 100644
+--- a/src/libANGLE/renderer/metal/mtl_resources.h
++++ b/src/libANGLE/renderer/metal/mtl_resources.h
+@@ -345,7 +345,9 @@ class Texture final : public Resource,
+     size_t mEstimatedByteSize = 0;
+ };
+ 
+-class Buffer final : public Resource, public WrappedObject<id<MTLBuffer>>
++class Buffer final : public Resource,
++                     public WrappedObject<id<MTLBuffer>>,
++                     public std::enable_shared_from_this<Buffer>
+ {
+   public:
+     static angle::Result MakeBuffer(ContextMtl *context,
+diff --git a/src/libANGLE/renderer/metal/mtl_resources.mm b/src/libANGLE/renderer/metal/mtl_resources.mm
+index 8c05fc2..0f9b53b 100644
+--- a/src/libANGLE/renderer/metal/mtl_resources.mm
++++ b/src/libANGLE/renderer/metal/mtl_resources.mm
+@@ -35,12 +35,14 @@ inline NSUInteger GetMipSize(NSUInteger baseSize, const MipmapNativeLevel level)
+ // Asynchronously synchronize the content of a resource between GPU memory and its CPU cache.
+ // NOTE: This operation doesn't finish immediately upon function's return.
+ template <class T>
+-void InvokeCPUMemSync(ContextMtl *context, mtl::BlitCommandEncoder *blitEncoder, T *resource)
++void InvokeCPUMemSync(ContextMtl *context,
++                      mtl::BlitCommandEncoder *blitEncoder,
++                      const std::shared_ptr<T> &resource)
+ {
+ #if TARGET_OS_OSX || TARGET_OS_MACCATALYST
+     if (blitEncoder)
+     {
+-        blitEncoder->synchronizeResource(resource);
++        blitEncoder->synchronizeResource(resource.get());
+ 
+         resource->resetCPUReadMemNeedSync();
+         resource->setCPUReadMemSyncPending(true);
+@@ -49,7 +51,7 @@ void InvokeCPUMemSync(ContextMtl *context, mtl::BlitCommandEncoder *blitEncoder,
+ }
+ 
+ template <class T>
+-void EnsureCPUMemWillBeSynced(ContextMtl *context, T *resource)
++void EnsureCPUMemWillBeSynced(ContextMtl *context, const std::shared_ptr<T> &resource)
+ {
+ #if TARGET_OS_OSX || TARGET_OS_MACCATALYST
+     // Make sure GPU & CPU contents are synchronized.
+@@ -512,12 +514,12 @@ void EnsureCPUMemWillBeSynced(ContextMtl *context, T *resource)
+ 
+ void Texture::syncContent(ContextMtl *context, mtl::BlitCommandEncoder *blitEncoder)
+ {
+-    InvokeCPUMemSync(context, blitEncoder, this);
++    InvokeCPUMemSync(context, blitEncoder, shared_from_this());
+ }
+ 
+ void Texture::syncContentIfNeeded(ContextMtl *context)
+ {
+-    EnsureCPUMemWillBeSynced(context, this);
++    EnsureCPUMemWillBeSynced(context, shared_from_this());
+ }
+ 
+ bool Texture::isCPUAccessible() const
+@@ -982,7 +984,7 @@ void EnsureCPUMemWillBeSynced(ContextMtl *context, T *resource)
+ 
+ void Buffer::syncContent(ContextMtl *context, mtl::BlitCommandEncoder *blitEncoder)
+ {
+-    InvokeCPUMemSync(context, blitEncoder, this);
++    InvokeCPUMemSync(context, blitEncoder, shared_from_this());
+ }
+ 
+ const uint8_t *Buffer::mapReadOnly(ContextMtl *context)
+@@ -1003,7 +1005,7 @@ void EnsureCPUMemWillBeSynced(ContextMtl *context, T *resource)
+     {
+         CommandQueue &cmdQueue = context->cmdQueue();
+ 
+-        EnsureCPUMemWillBeSynced(context, this);
++        EnsureCPUMemWillBeSynced(context, shared_from_this());
+ 
+         if (this->isBeingUsedByGPU(context))
+         {
+diff --git a/src/libANGLE/renderer/metal/mtl_utils.h b/src/libANGLE/renderer/metal/mtl_utils.h
+index d218c13..b236d92 100644
+--- a/src/libANGLE/renderer/metal/mtl_utils.h
++++ b/src/libANGLE/renderer/metal/mtl_utils.h
+@@ -105,11 +105,9 @@ AutoObjCPtr<id<MTLLibrary>> CreateShaderLibrary(
+     bool enableFastMath,
+     AutoObjCPtr<NSError *> *error);
+ 
+-AutoObjCPtr<id<MTLLibrary>> CreateShaderLibraryFromBinary(
+-    id<MTLDevice> metalDevice,
++AutoObjCPtr<id<MTLLibrary>> CreateShaderLibraryFromBinary(id<MTLDevice> metalDevice,
+                                                           const uint8_t *binarySource,
+                                                           size_t binarySourceLen,
+-    NSDictionary<NSString *, NSObject *> *substitutionDictionary,
+                                                           AutoObjCPtr<NSError *> *error);
+ 
+ bool SupportsAppleGPUFamily(id<MTLDevice> device, uint8_t appleFamily);
+diff --git a/src/tests/angle_unittests.gni b/src/tests/angle_unittests.gni
+index 61345f8..dd70b9f 100644
+--- a/src/tests/angle_unittests.gni
++++ b/src/tests/angle_unittests.gni
+@@ -166,6 +166,8 @@ if (is_android) {
+       [ "compiler_tests/ImmutableString_test_autogen.cpp" ]
+ }
+ 
++angle_unittests_msl_sources = [ "../tests/compiler_tests/MSLOutput_test.cpp" ]
++
+ if (!is_android && !is_fuchsia) {
+   angle_unittests_sources += [ "test_utils/runner/TestSuite_unittest.cpp" ]
+ }
+diff --git a/src/tests/deqp_support/deqp_egl_test_expectations.txt b/src/tests/deqp_support/deqp_egl_TestExpectations
+similarity index 100%
+rename from src/tests/deqp_support/deqp_egl_test_expectations.txt
+rename to src/tests/deqp_support/deqp_egl_TestExpectations
+diff --git a/src/tests/deqp_support/deqp_gles2_test_expectations.txt b/src/tests/deqp_support/deqp_gles2_TestExpectations
+similarity index 100%
+rename from src/tests/deqp_support/deqp_gles2_test_expectations.txt
+rename to src/tests/deqp_support/deqp_gles2_TestExpectations
+diff --git a/src/tests/deqp_support/deqp_gles31_test_expectations.txt b/src/tests/deqp_support/deqp_gles31_TestExpectations
+similarity index 100%
+rename from src/tests/deqp_support/deqp_gles31_test_expectations.txt
+rename to src/tests/deqp_support/deqp_gles31_TestExpectations
+diff --git a/src/tests/deqp_support/deqp_gles31_rotate_test_expectations.txt b/src/tests/deqp_support/deqp_gles31_rotate_TestExpectations
+similarity index 100%
+rename from src/tests/deqp_support/deqp_gles31_rotate_test_expectations.txt
+rename to src/tests/deqp_support/deqp_gles31_rotate_TestExpectations
+diff --git a/src/tests/deqp_support/deqp_gles3_test_expectations.txt b/src/tests/deqp_support/deqp_gles3_TestExpectations
+similarity index 100%
+rename from src/tests/deqp_support/deqp_gles3_test_expectations.txt
+rename to src/tests/deqp_support/deqp_gles3_TestExpectations
+diff --git a/src/tests/deqp_support/deqp_gles3_rotate_test_expectations.txt b/src/tests/deqp_support/deqp_gles3_rotate_TestExpectations
+similarity index 100%
+rename from src/tests/deqp_support/deqp_gles3_rotate_test_expectations.txt
+rename to src/tests/deqp_support/deqp_gles3_rotate_TestExpectations
+diff --git a/src/tests/deqp_support/deqp_khr_gles2_test_expectations.txt b/src/tests/deqp_support/deqp_khr_gles2_TestExpectations
+similarity index 100%
+rename from src/tests/deqp_support/deqp_khr_gles2_test_expectations.txt
+rename to src/tests/deqp_support/deqp_khr_gles2_TestExpectations
+diff --git a/src/tests/deqp_support/deqp_khr_gles31_test_expectations.txt b/src/tests/deqp_support/deqp_khr_gles31_TestExpectations
+similarity index 100%
+rename from src/tests/deqp_support/deqp_khr_gles31_test_expectations.txt
+rename to src/tests/deqp_support/deqp_khr_gles31_TestExpectations
+diff --git a/src/tests/deqp_support/deqp_khr_gles32_test_expectations.txt b/src/tests/deqp_support/deqp_khr_gles32_TestExpectations
+similarity index 100%
+rename from src/tests/deqp_support/deqp_khr_gles32_test_expectations.txt
+rename to src/tests/deqp_support/deqp_khr_gles32_TestExpectations
+diff --git a/src/tests/deqp_support/deqp_khr_gles3_test_expectations.txt b/src/tests/deqp_support/deqp_khr_gles3_TestExpectations
+similarity index 100%
+rename from src/tests/deqp_support/deqp_khr_gles3_test_expectations.txt
+rename to src/tests/deqp_support/deqp_khr_gles3_TestExpectations
+diff --git a/third_party/r8/custom_d8.jar b/third_party/r8/custom_d8.jar
+deleted file mode 100644
+index 99a9106..0000000
+Binary files a/third_party/r8/custom_d8.jar and /dev/null differ

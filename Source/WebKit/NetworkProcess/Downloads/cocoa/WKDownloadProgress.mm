@@ -46,7 +46,7 @@ static NSString * const countOfBytesReceivedKeyPath = @"countOfBytesReceived";
 - (void)performCancel
 {
     if (m_download)
-        m_download->cancel();
+        m_download->cancel([](auto&) { }, WebKit::Download::IgnoreDidFailCallback::No);
     m_download = nullptr;
 }
 
@@ -56,7 +56,7 @@ static NSString * const countOfBytesReceivedKeyPath = @"countOfBytesReceived";
         return nil;
 
     m_task = task;
-    m_download = makeWeakPtr(download);
+    m_download = download;
 
     [task addObserver:self forKeyPath:countOfBytesExpectedToReceiveKeyPath options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:WKDownloadProgressBytesExpectedToReceiveCountContext];
     [task addObserver:self forKeyPath:countOfBytesReceivedKeyPath options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionInitial context:WKDownloadProgressBytesReceivedContext];
@@ -68,19 +68,15 @@ static NSString * const countOfBytesReceivedKeyPath = @"countOfBytesReceived";
 
     self.cancellable = YES;
     self.cancellationHandler = makeBlockPtr([weakSelf = WeakObjCPtr<WKDownloadProgress> { self }] () mutable {
-        if (!RunLoop::isMain()) {
-            RunLoop::main().dispatch([weakSelf = WTFMove(weakSelf)] {
-                [weakSelf performCancel];
-            });
-            return;
-        }
-        [weakSelf performCancel];
+        ensureOnMainRunLoop([weakSelf = WTFMove(weakSelf)] {
+            [weakSelf performCancel];
+        });
     }).get();
 
     return self;
 }
 
-#if USE(NSPROGRESS_PUBLISHING_SPI)
+#if HAVE(NSPROGRESS_PUBLISHING_SPI)
 - (void)_publish
 #else
 - (void)publish
@@ -89,20 +85,20 @@ static NSString * const countOfBytesReceivedKeyPath = @"countOfBytesReceived";
     BOOL consumedExtension = m_sandboxExtension->consume();
     ASSERT_UNUSED(consumedExtension, consumedExtension);
 
-#if USE(NSPROGRESS_PUBLISHING_SPI)
+#if HAVE(NSPROGRESS_PUBLISHING_SPI)
     [super _publish];
 #else
     [super publish];
 #endif
 }
 
-#if USE(NSPROGRESS_PUBLISHING_SPI)
+#if HAVE(NSPROGRESS_PUBLISHING_SPI)
 - (void)_unpublish
 #else
 - (void)unpublish
 #endif
 {
-#if USE(NSPROGRESS_PUBLISHING_SPI)
+#if HAVE(NSPROGRESS_PUBLISHING_SPI)
     [super _unpublish];
 #else
     [super unpublish];

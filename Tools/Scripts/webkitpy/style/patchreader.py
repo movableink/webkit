@@ -31,6 +31,8 @@
 import logging
 import re
 
+from webkitcorepy import string_utils
+
 from webkitpy.common.checkout.diff_parser import DiffParser
 from webkitpy.common.system.executive import Executive
 from webkitpy.common.system.filesystem import FileSystem
@@ -55,17 +57,18 @@ class PatchReader(object):
     def check(self, patch_string, fs=None):
         """Check style in the given patch."""
         fs = fs or FileSystem()
+        patch_string = string_utils.decode(patch_string, target_type=str)
         patch_files = DiffParser(patch_string.splitlines()).files
 
         # If the user uses git, checking subversion config file only once is enough.
         call_only_once = True
 
-        for path, diff_file in patch_files.iteritems():
+        for path, diff_file in patch_files.items():
             line_numbers = diff_file.added_or_modified_line_numbers()
             _log.debug('Found %s new or modified lines in: %s' % (len(line_numbers), path))
 
             if not line_numbers:
-                match = re.search("\s*png$", path)
+                match = re.search(r"\s*png$", path)
                 if match and fs.exists(path):
                     if call_only_once:
                         self._text_file_reader.process_file(file_path=path, line_numbers=None)

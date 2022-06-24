@@ -36,7 +36,7 @@
 #import "WKKeyboardScrollingAnimator.h"
 #import "WKUIDelegatePrivate.h"
 #import "WKWebEvent.h"
-#import "WKWebViewInternal.h"
+#import "WKWebViewIOS.h"
 #import "WebPageProxy.h"
 #import "_WKWebViewPrintFormatterInternal.h"
 #import <MobileCoreServices/MobileCoreServices.h>
@@ -49,7 +49,69 @@
 #import <wtf/cocoa/Entitlements.h>
 #import <wtf/cocoa/NSURLExtras.h>
 
-@interface WKPDFView () <PDFHostViewControllerDelegate, WKActionSheetAssistantDelegate>
+#if HAVE(UIFINDINTERACTION)
+
+@interface WKPDFFoundTextRange : UITextRange
+
+@property (nonatomic) NSUInteger index;
+
++ (WKPDFFoundTextRange *)foundTextRangeWithIndex:(NSUInteger)index;
+
+@end
+
+@interface WKPDFFoundTextPosition : UITextPosition
+
+@property (nonatomic) NSUInteger index;
+
++ (WKPDFFoundTextPosition *)textPositionWithIndex:(NSUInteger)index;
+
+@end
+
+@implementation WKPDFFoundTextRange
+
++ (WKPDFFoundTextRange *)foundTextRangeWithIndex:(NSUInteger)index
+{
+    auto range = adoptNS([[WKPDFFoundTextRange alloc] init]);
+    [range setIndex:index];
+    return range.autorelease();
+}
+
+- (WKPDFFoundTextPosition *)start
+{
+    WKPDFFoundTextPosition *position = [WKPDFFoundTextPosition textPositionWithIndex:self.index];
+    return position;
+}
+
+- (UITextPosition *)end
+{
+    return self.start;
+}
+
+- (BOOL)isEmpty
+{
+    return NO;
+}
+
+@end
+
+@implementation WKPDFFoundTextPosition
+
++ (WKPDFFoundTextPosition *)textPositionWithIndex:(NSUInteger)index
+{
+    auto position = adoptNS([[WKPDFFoundTextPosition alloc] init]);
+    [position setIndex:index];
+    return position.autorelease();
+}
+
+@end
+
+#endif // HAVE(UIFINDINTERACTION)
+
+@interface WKPDFView () <PDFHostViewControllerDelegate, WKActionSheetAssistantDelegate
+#if HAVE(UIFINDINTERACTION)
+    , _UITextSearching
+#endif
+>
 @end
 
 @implementation WKPDFView {
@@ -61,7 +123,7 @@
     NSUInteger _findStringCount;
     NSUInteger _findStringMaxCount;
     RetainPtr<UIView> _fixedOverlayView;
-    Optional<NSUInteger> _focusedSearchResultIndex;
+    std::optional<NSUInteger> _focusedSearchResultIndex;
     NSInteger _focusedSearchResultPendingOffset;
     RetainPtr<PDFHostViewController> _hostViewController;
     CGSize _overlaidAccessoryViewsInset;
@@ -72,6 +134,10 @@
     WeakObjCPtr<WKWebView> _webView;
     RetainPtr<WKKeyboardScrollViewAnimator> _keyboardScrollingAnimator;
     RetainPtr<WKShareSheet> _shareSheet;
+#if HAVE(UIFINDINTERACTION)
+    RetainPtr<id<_UITextSearchAggregator>> _searchAggregator;
+    RetainPtr<NSString> _searchString;
+#endif
 }
 
 - (void)dealloc
@@ -86,6 +152,10 @@
     [_pageNumberIndicator removeFromSuperview];
     [_keyboardScrollingAnimator invalidate];
     std::memset(_passwordForPrinting.mutableData(), 0, _passwordForPrinting.length());
+#if HAVE(UIFINDINTERACTION)
+    _searchAggregator = nil;
+    _searchString = nil;
+#endif
     [super dealloc];
 }
 
@@ -120,11 +190,7 @@
     if (!(self = [super initWithFrame:frame webView:webView]))
         return nil;
 
-#if USE(PDFKIT_BACKGROUND_COLOR)
     UIColor *backgroundColor = PDFHostViewController.backgroundColor;
-#else
-    UIColor *backgroundColor = UIColor.grayColor;
-#endif
     self.backgroundColor = backgroundColor;
     webView.scrollView.backgroundColor = backgroundColor;
 
@@ -140,7 +206,7 @@
     _suggestedFilename = adoptNS([filename copy]);
 
     [PDFHostViewController createHostView:[self, weakSelf = WeakObjCPtr<WKPDFView>(self)](PDFHostViewController *hostViewController) {
-        ASSERT(isMainThread());
+        ASSERT(isMainRunLoop());
 
         WKPDFView *autoreleasedSelf = weakSelf.getAutoreleased();
         if (!autoreleasedSelf)
@@ -262,7 +328,7 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
     _findString = nil;
     _findStringCount = 0;
     _findStringMaxCount = 0;
-    _focusedSearchResultIndex = WTF::nullopt;
+    _focusedSearchResultIndex = std::nullopt;
     _focusedSearchResultPendingOffset = 0;
 }
 
@@ -367,12 +433,8 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
 
 + (BOOL)web_requiresCustomSnapshotting
 {
-#if HAVE(PDFHOSTVIEWCONTROLLER_SNAPSHOTTING)
     static bool hasGlobalCaptureEntitlement = WTF::processHasEntitlement("com.apple.QuartzCore.global-capture");
     return !hasGlobalCaptureEntitlement;
-#else
-    return false;
-#endif
 }
 
 - (void)web_scrollViewDidScroll:(UIScrollView *)scrollView
@@ -404,12 +466,10 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
 
 - (void)web_snapshotRectInContentViewCoordinates:(CGRect)rectInContentViewCoordinates snapshotWidth:(CGFloat)snapshotWidth completionHandler:(void (^)(CGImageRef))completionHandler
 {
-#if HAVE(PDFHOSTVIEWCONTROLLER_SNAPSHOTTING)
     CGRect rectInHostViewCoordinates = [self._contentView convertRect:rectInContentViewCoordinates toView:[_hostViewController view]];
     [_hostViewController snapshotViewRect:rectInHostViewCoordinates snapshotWidth:@(snapshotWidth) afterScreenUpdates:NO withResult:^(UIImage *image) {
         completionHandler(image.CGImage);
     }];
-#endif
 }
 
 - (NSData *)web_dataRepresentation
@@ -442,6 +502,24 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
 
 - (void)pdfHostViewController:(PDFHostViewController *)controller findStringUpdate:(NSUInteger)numFound done:(BOOL)done
 {
+#if HAVE(UIFINDINTERACTION)
+    if (_searchAggregator) {
+        if (!done)
+            return;
+
+        for (NSUInteger index = 0; index < numFound; index++) {
+            WKPDFFoundTextRange *range = [WKPDFFoundTextRange foundTextRangeWithIndex:index];
+            [_searchAggregator foundRange:range forSearchString:_searchString.get() inDocument:nil];
+        }
+
+        [_searchAggregator finishedSearching];
+
+        _searchAggregator = nil;
+        _searchString = nil;
+        return;
+    }
+#endif
+
     if (numFound > _findStringMaxCount && !done) {
         [controller cancelFindStringWithHighlightsCleared:NO];
         done = YES;
@@ -495,12 +573,15 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
     positionInformation.url = url;
 
     _positionInformation = WTFMove(positionInformation);
+
 #if ENABLE(DATA_DETECTION)
-    if (WebCore::DataDetection::canBePresentedByDataDetectors(_positionInformation.url))
-        [_actionSheetAssistant showDataDetectorsSheet];
-    else
+    if (WebCore::DataDetection::canBePresentedByDataDetectors(_positionInformation.url)) {
+        [_actionSheetAssistant showDataDetectorsUIForPositionInformation:positionInformation];
+        return;
+    }
 #endif
-        [_actionSheetAssistant showLinkSheet];
+
+    [_actionSheetAssistant showLinkSheet];
 }
 
 - (void)pdfHostViewController:(PDFHostViewController *)controller didLongPressURL:(NSURL *)url atLocation:(CGPoint)location withAnnotationRect:(CGRect)annotationRect
@@ -516,7 +597,7 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
 - (void)pdfHostViewControllerExtensionProcessDidCrash:(PDFHostViewController *)controller
 {
     // FIXME 40916725: PDFKit should dispatch this message to the main thread like it does for other delegate messages.
-    dispatch_async(dispatch_get_main_queue(), [webView = _webView] {
+    RunLoop::main().dispatch([webView = _webView] {
         if (auto page = [webView _page])
             page->dispatchProcessDidTerminate(WebKit::ProcessTerminationReason::Crash);
     });
@@ -525,7 +606,7 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
 
 #pragma mark WKActionSheetAssistantDelegate
 
-- (Optional<WebKit::InteractionInformationAtPosition>)positionInformationForActionSheetAssistant:(WKActionSheetAssistant *)assistant
+- (std::optional<WebKit::InteractionInformationAtPosition>)positionInformationForActionSheetAssistant:(WKActionSheetAssistant *)assistant
 {
     return _positionInformation;
 }
@@ -535,10 +616,12 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
     if (action != WebKit::SheetAction::Copy)
         return;
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     NSDictionary *representations = @{
-        (NSString *)kUTTypeUTF8PlainText : (NSString *)_positionInformation.url,
+        (NSString *)kUTTypeUTF8PlainText : (NSString *)_positionInformation.url.string(),
         (NSString *)kUTTypeURL : (NSURL *)_positionInformation.url,
     };
+ALLOW_DEPRECATED_DECLARATIONS_END
 
     [UIPasteboard generalPasteboard].items = @[ representations ];
 }
@@ -592,7 +675,7 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
     return page->uiClient().actionsForElement(element, WTFMove(defaultActions));
 }
 
-- (NSDictionary *)dataDetectionContextForActionSheetAssistant:(WKActionSheetAssistant *)assistant
+- (NSDictionary *)dataDetectionContextForActionSheetAssistant:(WKActionSheetAssistant *)assistant positionInformation:(const WebKit::InteractionInformationAtPosition&)positionInformation
 {
     auto webView = _webView.getAutoreleased();
     if (!webView)
@@ -604,6 +687,64 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
 
     return [uiDelegate _dataDetectionContextForWebView:webView];
 }
+
+#pragma mark _UITextSearching
+
+#if HAVE(UIFINDINTERACTION)
+
+- (UITextRange *)selectedTextRange
+{
+    return nil;
+}
+
+- (NSComparisonResult)compareFoundRange:(UITextRange *)fromRange toRange:(UITextRange *)toRange inDocument:(_UITextSearchDocumentIdentifier)document
+{
+    auto from = dynamic_objc_cast<WKPDFFoundTextPosition>(fromRange.start);
+    if (!from)
+        return NSOrderedSame;
+
+    auto to = dynamic_objc_cast<WKPDFFoundTextPosition>(toRange.start);
+    if (!to)
+        return NSOrderedSame;
+
+    NSInteger offset = from.index - to.index;
+
+    if (offset < 0)
+        return NSOrderedAscending;
+
+    if (offset > 0)
+        return NSOrderedDescending;
+
+    return NSOrderedSame;
+}
+
+- (void)performTextSearchWithQueryString:(NSString *)string usingOptions:(_UITextSearchOptions *)options resultAggregator:(id<_UITextSearchAggregator>)aggregator
+{
+    [_hostViewController cancelFindString];
+    _searchAggregator = aggregator;
+    _searchString = string;
+    [_hostViewController findString:string withOptions:options.stringCompareOptions];
+}
+
+- (void)decorateFoundTextRange:(UITextRange *)range inDocument:(_UITextSearchDocumentIdentifier)document usingStyle:(_UIFoundTextStyle)style
+{
+    if (style != _UIFoundTextStyleHighlighted)
+        return;
+
+    auto foundTextRange = dynamic_objc_cast<WKPDFFoundTextRange>(range);
+    if (!foundTextRange)
+        return;
+
+    [_hostViewController focusOnSearchResultAtIndex:foundTextRange.index];
+}
+
+- (void)clearAllDecoratedFoundText
+{
+    [_hostViewController cancelFindString];
+    _searchAggregator = nil;
+}
+
+#endif // HAVE(UIFINDINTERACTION)
 
 @end
 
@@ -622,17 +763,27 @@ static NSStringCompareOptions stringCompareOptions(_WKFindOptions findOptions)
 
     auto dataProvider = adoptCF(CGDataProviderCreateWithCFData((CFDataRef)_data.get()));
     auto pdfDocument = adoptCF(CGPDFDocumentCreateWithProvider(dataProvider.get()));
-    if (!CGPDFDocumentIsUnlocked(pdfDocument.get()))
-        CGPDFDocumentUnlockWithPassword(pdfDocument.get(), _passwordForPrinting.data());
+    if (!CGPDFDocumentIsUnlocked(pdfDocument.get())) {
+        if (!CGPDFDocumentUnlockWithPassword(pdfDocument.get(), _passwordForPrinting.data()))
+            return nullptr;
+    }
+
+    if (!CGPDFDocumentAllowsPrinting(pdfDocument.get()))
+        return nullptr;
 
     _documentForPrinting = WTFMove(pdfDocument);
     return _documentForPrinting.get();
 }
 
+- (BOOL)_wk_printFormatterRequiresMainThread
+{
+    return YES;
+}
+
 - (NSUInteger)_wk_pageCountForPrintFormatter:(_WKWebViewPrintFormatter *)printFormatter
 {
     CGPDFDocumentRef documentForPrinting = [self _ensureDocumentForPrinting];
-    if (!CGPDFDocumentAllowsPrinting(documentForPrinting))
+    if (!documentForPrinting)
         return 0;
 
     size_t pageCount = CGPDFDocumentGetNumberOfPages(documentForPrinting);

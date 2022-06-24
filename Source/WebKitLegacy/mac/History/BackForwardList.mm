@@ -24,9 +24,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#include "BackForwardList.h"
+#import "BackForwardList.h"
 
-#include <WebCore/BackForwardCache.h>
+#import <WebCore/BackForwardCache.h>
 
 using namespace WebCore;
 
@@ -143,7 +143,7 @@ void BackForwardList::forwardListWithLimit(int limit, Vector<Ref<HistoryItem>>& 
     list.clear();
     if (!m_entries.size())
         return;
-        
+
     unsigned lastEntry = m_entries.size() - 1;
     if (m_current < lastEntry) {
         int last = std::min(m_current + limit, lastEntry);
@@ -256,7 +256,7 @@ void BackForwardList::removeItem(HistoryItem& item)
     }
 }
 
-bool BackForwardList::containsItem(HistoryItem& entry)
+bool BackForwardList::containsItem(const HistoryItem& entry) const
 {
-    return m_entryHash.contains(&entry);
+    return m_entryHash.contains(const_cast<HistoryItem*>(&entry));
 }

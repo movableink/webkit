@@ -27,7 +27,7 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <WebKit/WebKit.h>
+#import <WebKit/WebKitLegacy.h>
 
 @interface EventSendingController : NSObject <DOMEventListener>
 {
@@ -37,6 +37,10 @@
     NSTimeInterval lastClick;
     int eventNumber;
     double timeOffset;
+#if PLATFORM(MAC)
+    BOOL _sentWheelPhaseEndOrCancel;
+    BOOL _sentMomentumPhaseEnd;
+#endif
 #if PLATFORM(IOS_FAMILY)
     NSMutableArray* touches;
     unsigned currentTouchIdentifier;
@@ -53,6 +57,11 @@
 - (void)enableDOMUIEventLogging:(WebScriptObject *)node;
 
 - (void)handleEvent:(DOMEvent *)event;
+
+#if PLATFORM(MAC)
+// Timestamp is mach_absolute_time() units.
+- (void)sendScrollEventAt:(NSPoint)mouseLocation deltaX:(double)deltaX deltaY:(double)deltaY units:(CGScrollEventUnit)units wheelPhase:(CGGesturePhase)wheelPhase momentumPhase:(CGMomentumScrollPhase)momentumPhase timestamp:(uint64_t)timestamp;
+#endif
 
 @end
 

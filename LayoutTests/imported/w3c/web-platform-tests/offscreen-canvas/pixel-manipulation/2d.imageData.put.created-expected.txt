@@ -1,7 +1,0 @@
-2d.imageData.put.created
-
-putImageData() puts image data from createImageData() onto the canvas
-
-
-FAIL putImageData() puts image data from createImageData() onto the canvas null is not an object (evaluating 'ctx.createImageData')
-

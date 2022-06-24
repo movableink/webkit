@@ -36,11 +36,11 @@
 namespace WebCore {
 
 class MainThreadSharedTimer final : public SharedTimer {
-    friend class WTF::NeverDestroyed<MainThreadSharedTimer>;
+    friend class NeverDestroyed<MainThreadSharedTimer>;
 public:
     static MainThreadSharedTimer& singleton();
 
-    void setFiredFunction(WTF::Function<void()>&&) override;
+    void setFiredFunction(Function<void()>&&) override;
     void setFireInterval(Seconds) override;
     void stop() override;
     void invalidate() override;
@@ -53,10 +53,13 @@ public:
     bool hasFiredFunction() const { return bool(m_firedFunction); }
 #endif
 
+    WEBCORE_EXPORT static bool& shouldSetupPowerObserver();
+    WEBCORE_EXPORT static void restartSharedTimer();
+
 private:
     MainThreadSharedTimer();
 
-    WTF::Function<void()> m_firedFunction;
+    Function<void()> m_firedFunction;
 #if !USE(CF) && !OS(WINDOWS) && !PLATFORM(QT)
     RunLoop::Timer<MainThreadSharedTimer> m_timer;
 #endif

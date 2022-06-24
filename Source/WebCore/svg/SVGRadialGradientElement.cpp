@@ -29,6 +29,7 @@
 #include "FloatPoint.h"
 #include "RadialGradientAttributes.h"
 #include "RenderSVGResourceRadialGradient.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGStopElement.h"
 #include "SVGUnitTypes.h"
@@ -112,11 +113,8 @@ static void setGradientAttributes(SVGGradientElement& element, RadialGradientAtt
     if (!attributes.hasGradientTransform() && element.hasAttribute(SVGNames::gradientTransformAttr))
         attributes.setGradientTransform(element.gradientTransform().concatenate());
 
-    if (!attributes.hasStops()) {
-        const Vector<Gradient::ColorStop>& stops(element.buildStops());
-        if (!stops.isEmpty())
-            attributes.setStops(stops);
-    }
+    if (!attributes.hasStops())
+        attributes.setStops(element.buildStops());
 
     if (isRadial) {
         SVGRadialGradientElement& radial = downcast<SVGRadialGradientElement>(element);

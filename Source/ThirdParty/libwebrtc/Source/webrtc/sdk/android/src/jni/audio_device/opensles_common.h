@@ -14,9 +14,10 @@
 #include <SLES/OpenSLES.h>
 #include <stddef.h>
 
+#include "api/ref_counted_base.h"
+#include "api/sequence_checker.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
-#include "rtc_base/thread_checker.h"
 
 namespace webrtc {
 
@@ -65,16 +66,17 @@ typedef ScopedSLObject<SLObjectItf, const SLObjectItf_*> ScopedSLObjectItf;
 // a reference to it. The engine object is only created at the first call
 // since OpenSL ES for Android only supports a single engine per application.
 // Subsequent calls returns the already created engine.
-// Note: This class must be used single threaded and this is enfored by a thread
-// checker.
-class OpenSLEngineManager {
+// Note: This class must be used single threaded and this is enforced by a
+// thread checker.
+class OpenSLEngineManager
+    : public rtc::RefCountedNonVirtual<OpenSLEngineManager> {
  public:
   OpenSLEngineManager();
-  ~OpenSLEngineManager();
+  ~OpenSLEngineManager() = default;
   SLObjectItf GetOpenSLEngine();
 
  private:
-  rtc::ThreadChecker thread_checker_;
+  SequenceChecker thread_checker_;
   // This object is the global entry point of the OpenSL ES API.
   // After creating the engine object, the application can obtain this object‘s
   // SLEngineItf interface. This interface contains creation methods for all

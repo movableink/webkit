@@ -28,12 +28,19 @@
 #include "MessageReceiver.h"
 #include "SandboxExtension.h"
 #include "SharedMemory.h"
-#include <wtf/Forward.h>
-#include <wtf/HashSet.h>
+#include <WebCore/PageIdentifier.h>
+#include <wtf/HashMap.h>
+#include <wtf/WeakHashSet.h>
+
+namespace IPC {
+class SharedBufferCopy;
+}
 
 namespace WebCore {
+enum class DataOwnerType : uint8_t;
 class Color;
 class PasteboardCustomData;
+class SelectionData;
 struct PasteboardImage;
 struct PasteboardItemInfo;
 struct PasteboardURL;
@@ -42,9 +49,9 @@ struct PasteboardWebContent;
 
 namespace WebKit {
 
+enum class PasteboardAccessIntent : bool;
 class WebFrameProxy;
 class WebProcessProxy;
-struct WebSelectionData;
 
 class WebPasteboardProxy : public IPC::MessageReceiver {
     WTF_MAKE_NONCOPYABLE(WebPasteboardProxy);
@@ -55,61 +62,72 @@ public:
     void addWebProcessProxy(WebProcessProxy&);
     void removeWebProcessProxy(WebProcessProxy&);
 
+#if PLATFORM(COCOA)
+    void revokeAccess(WebProcessProxy&);
+    void grantAccessToCurrentData(WebProcessProxy&, const String& pasteboardName);
+    void grantAccessToCurrentTypes(WebProcessProxy&, const String& pasteboardName);
+#endif
+
 #if PLATFORM(GTK)
     void setPrimarySelectionOwner(WebFrameProxy*);
+    WebFrameProxy* primarySelectionOwner() const { return m_primarySelectionOwner; }
     void didDestroyFrame(WebFrameProxy*);
 #endif
 
     WebPasteboardProxy();
-    
-    typedef HashSet<WebProcessProxy*> WebProcessProxyList;
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
-    void didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, std::unique_ptr<IPC::Encoder>&) override;
+    bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) override;
+
+    WebProcessProxy* webProcessProxyForConnection(IPC::Connection&) const;
 
 #if PLATFORM(IOS_FAMILY)
-    void writeURLToPasteboard(const WebCore::PasteboardURL&, const String& pasteboardName);
-    void writeWebContentToPasteboard(const WebCore::PasteboardWebContent&, const String& pasteboardName);
-    void writeImageToPasteboard(const WebCore::PasteboardImage&, const String& pasteboardName);
-    void writeStringToPasteboard(const String& pasteboardType, const String&, const String& pasteboardName);
-    void updateSupportedTypeIdentifiers(const Vector<String>& identifiers, const String& pasteboardName);
+    void writeURLToPasteboard(IPC::Connection&, const WebCore::PasteboardURL&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>);
+    void writeWebContentToPasteboard(IPC::Connection&, const WebCore::PasteboardWebContent&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>);
+    void writeImageToPasteboard(IPC::Connection&, const WebCore::PasteboardImage&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>);
+    void writeStringToPasteboard(IPC::Connection&, const String& pasteboardType, const String&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>);
+    void updateSupportedTypeIdentifiers(const Vector<String>& identifiers, const String& pasteboardName, std::optional<WebCore::PageIdentifier>);
 #endif
 #if PLATFORM(COCOA)
-    void getNumberOfFiles(const String& pasteboardName, CompletionHandler<void(uint64_t)>&&);
-    void getPasteboardTypes(const String& pasteboardName, CompletionHandler<void(Vector<String>&&)>&&);
-    void getPasteboardPathnamesForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, CompletionHandler<void(Vector<String>&& pathnames, SandboxExtension::HandleArray&&)>&&);
-    void getPasteboardStringForType(const String& pasteboardName, const String& pasteboardType, CompletionHandler<void(String&&)>&&);
-    void getPasteboardStringsForType(const String& pasteboardName, const String& pasteboardType, CompletionHandler<void(Vector<String>&&)>&&);
-    void getPasteboardBufferForType(const String& pasteboardName, const String& pasteboardType, CompletionHandler<void(SharedMemory::Handle&&, uint64_t)>&&);
-    void pasteboardCopy(const String& fromPasteboard, const String& toPasteboard, CompletionHandler<void(uint64_t)>&&);
-    void getPasteboardChangeCount(const String& pasteboardName, CompletionHandler<void(uint64_t)>&&);
-    void getPasteboardUniqueName(CompletionHandler<void(String&&)>&&);
-    void getPasteboardColor(const String& pasteboardName, CompletionHandler<void(WebCore::Color&&)>&&);
-    void getPasteboardURL(const String& pasteboardName, CompletionHandler<void(const String&)>&&);
-    void addPasteboardTypes(const String& pasteboardName, const Vector<String>& pasteboardTypes, CompletionHandler<void(uint64_t)>&&);
-    void setPasteboardTypes(const String& pasteboardName, const Vector<String>& pasteboardTypes, CompletionHandler<void(uint64_t)>&&);
-    void setPasteboardURL(IPC::Connection&, const WebCore::PasteboardURL&, const String& pasteboardName, CompletionHandler<void(uint64_t)>&&);
-    void setPasteboardColor(const String&, const WebCore::Color&, CompletionHandler<void(uint64_t)>&&);
-    void setPasteboardStringForType(const String& pasteboardName, const String& pasteboardType, const String&, CompletionHandler<void(uint64_t)>&&);
-    void setPasteboardBufferForType(const String& pasteboardName, const String& pasteboardType, const SharedMemory::Handle&, uint64_t size, CompletionHandler<void(uint64_t)>&&);
+    void getNumberOfFiles(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(uint64_t)>&&);
+    void getPasteboardTypes(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(Vector<String>&&)>&&);
+    void getPasteboardPathnamesForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(Vector<String>&& pathnames, Vector<SandboxExtension::Handle>&&)>&&);
+    void getPasteboardStringForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(String&&)>&&);
+    void getPasteboardStringsForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(Vector<String>&&)>&&);
+    void getPasteboardBufferForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(SharedMemory::IPCHandle&&)>&&);
+    void getPasteboardChangeCount(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t)>&&);
+    void getPasteboardColor(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(WebCore::Color&&)>&&);
+    void getPasteboardURL(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(const String&)>&&);
+    void addPasteboardTypes(IPC::Connection&, const String& pasteboardName, const Vector<String>& pasteboardTypes, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t)>&&);
+    void setPasteboardTypes(IPC::Connection&, const String& pasteboardName, const Vector<String>& pasteboardTypes, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t)>&&);
+    void setPasteboardURL(IPC::Connection&, const WebCore::PasteboardURL&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t)>&&);
+    void setPasteboardColor(IPC::Connection&, const String&, const WebCore::Color&, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t)>&&);
+    void setPasteboardStringForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, const String&, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t)>&&);
+    void setPasteboardBufferForType(IPC::Connection&, const String& pasteboardName, const String& pasteboardType, const SharedMemory::IPCHandle&, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t)>&&);
 #endif
 
-    void readStringFromPasteboard(size_t index, const String& pasteboardType, const String& pasteboardName, CompletionHandler<void(String&&)>&&);
-    void readURLFromPasteboard(size_t index, const String& pasteboardName, CompletionHandler<void(String&& url, String&& title)>&&);
-    void readBufferFromPasteboard(size_t index, const String& pasteboardType, const String& pasteboardName, CompletionHandler<void(SharedMemory::Handle&&, uint64_t size)>&&);
-    void getPasteboardItemsCount(const String& pasteboardName, CompletionHandler<void(uint64_t)>&&);
-    void informationForItemAtIndex(size_t index, const String& pasteboardName, CompletionHandler<void(WebCore::PasteboardItemInfo&&)>&&);
-    void allPasteboardItemInfo(const String& pasteboardName, CompletionHandler<void(Vector<WebCore::PasteboardItemInfo>&&)>&&);
+    void readStringFromPasteboard(IPC::Connection&, size_t index, const String& pasteboardType, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(String&&)>&&);
+    void readURLFromPasteboard(IPC::Connection&, size_t index, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(String&& url, String&& title)>&&);
+    void readBufferFromPasteboard(IPC::Connection&, std::optional<size_t> index, const String& pasteboardType, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(SharedMemory::IPCHandle&&)>&&);
+    void getPasteboardItemsCount(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(uint64_t)>&&);
+    void informationForItemAtIndex(IPC::Connection&, size_t index, const String& pasteboardName, int64_t changeCount, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(std::optional<WebCore::PasteboardItemInfo>&&)>&&);
+    void allPasteboardItemInfo(IPC::Connection&, const String& pasteboardName, int64_t changeCount, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(std::optional<Vector<WebCore::PasteboardItemInfo>>&&)>&&);
 
-    void writeCustomData(const Vector<WebCore::PasteboardCustomData>&, const String& pasteboardName, CompletionHandler<void(uint64_t)>&&);
-    void typesSafeForDOMToReadAndWrite(const String& pasteboardName, const String& origin, CompletionHandler<void(Vector<String>&&)>&&);
+    void writeCustomData(IPC::Connection&, const Vector<WebCore::PasteboardCustomData>&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(int64_t)>&&);
+    void typesSafeForDOMToReadAndWrite(IPC::Connection&, const String& pasteboardName, const String& origin, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(Vector<String>&&)>&&);
+    void containsStringSafeForDOMToReadForType(IPC::Connection&, const String&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(bool)>&&);
+    void containsURLStringSuitableForLoading(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(bool)>&&);
+    void urlStringSuitableForLoading(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, CompletionHandler<void(String&& url, String&& title)>&&);
 
 #if PLATFORM(GTK)
-    void writeToClipboard(const String& pasteboardName, const WebSelectionData&);
-    void readFromClipboard(const String& pasteboardName, CompletionHandler<void(WebSelectionData&&)>&&);
+    void getTypes(const String& pasteboardName, CompletionHandler<void(Vector<String>&&)>&&);
+    void readText(const String& pasteboardName, CompletionHandler<void(String&&)>&&);
+    void readFilePaths(const String& pasteboardName, CompletionHandler<void(Vector<String>&&)>&&);
+    void readBuffer(const String& pasteboardName, const String& pasteboardType, CompletionHandler<void(IPC::SharedBufferCopy&&)>&&);
+    void writeToClipboard(const String& pasteboardName, WebCore::SelectionData&&);
+    void clearClipboard(const String& pasteboardName);
 
     WebFrameProxy* m_primarySelectionOwner { nullptr };
-    WebFrameProxy* m_frameWritingToClipboard { nullptr };
 #endif // PLATFORM(GTK)
 
 #if USE(LIBWPE)
@@ -118,7 +136,31 @@ public:
     void writeStringToPasteboard(const String& pasteboardType, const String&);
 #endif
 
-    WebProcessProxyList m_webProcessProxyList;
+#if PLATFORM(COCOA)
+    bool canAccessPasteboardTypes(IPC::Connection&, const String& pasteboardName) const;
+    bool canAccessPasteboardData(IPC::Connection&, const String& pasteboardName) const;
+    void didModifyContentsOfPasteboard(IPC::Connection&, const String& pasteboardName, int64_t previousChangeCount, int64_t newChangeCount);
+
+    enum class PasteboardAccessType : uint8_t { Types, TypesAndData };
+    std::optional<PasteboardAccessType> accessType(IPC::Connection&, const String& pasteboardName) const;
+    void grantAccess(WebProcessProxy&, const String& pasteboardName, PasteboardAccessType);
+
+    std::optional<WebCore::DataOwnerType> determineDataOwner(IPC::Connection&, const String& pasteboardName, std::optional<WebCore::PageIdentifier>, PasteboardAccessIntent) const;
+#endif
+
+    WeakHashSet<WebProcessProxy> m_webProcessProxySet;
+
+#if PLATFORM(COCOA)
+    struct PasteboardAccessInformation {
+        int64_t changeCount { 0 };
+        Vector<std::pair<WeakPtr<WebProcessProxy>, PasteboardAccessType>> processes;
+
+        void grantAccess(WebProcessProxy&, PasteboardAccessType);
+        void revokeAccess(WebProcessProxy&);
+        std::optional<PasteboardAccessType> accessType(WebProcessProxy&) const;
+    };
+    HashMap<String, PasteboardAccessInformation> m_pasteboardNameToAccessInformationMap;
+#endif
 };
 
 } // namespace WebKit

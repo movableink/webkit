@@ -37,23 +37,24 @@ void WebUserScriptData::encode(IPC::Encoder& encoder) const
     encoder << userScript;
 }
 
-Optional<WebUserScriptData> WebUserScriptData::decode(IPC::Decoder& decoder)
+std::optional<WebUserScriptData> WebUserScriptData::decode(IPC::Decoder& decoder)
 {
-    Optional<uint64_t> identifier;
+    std::optional<uint64_t> identifier;
     decoder >> identifier;
     if (!identifier)
-        return WTF::nullopt;
+        return std::nullopt;
     
-    Optional<uint64_t> worldIdentifier;
+    std::optional<ContentWorldIdentifier> worldIdentifier;
     decoder >> worldIdentifier;
     if (!worldIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
     
-    WebCore::UserScript userScript;
-    if (!decoder.decode(userScript))
-        return WTF::nullopt;
+    std::optional<WebCore::UserScript> userScript;
+    decoder >> userScript;
+    if (!userScript)
+        return std::nullopt;
     
-    return {{ WTFMove(*identifier), WTFMove(*worldIdentifier), WTFMove(userScript) }};
+    return {{ WTFMove(*identifier), WTFMove(*worldIdentifier), WTFMove(*userScript) }};
 }
 
 void WebUserStyleSheetData::encode(IPC::Encoder& encoder) const
@@ -63,21 +64,21 @@ void WebUserStyleSheetData::encode(IPC::Encoder& encoder) const
     encoder << userStyleSheet;
 }
 
-Optional<WebUserStyleSheetData> WebUserStyleSheetData::decode(IPC::Decoder& decoder)
+std::optional<WebUserStyleSheetData> WebUserStyleSheetData::decode(IPC::Decoder& decoder)
 {
-    Optional<uint64_t> identifier;
+    std::optional<uint64_t> identifier;
     decoder >> identifier;
     if (!identifier)
-        return WTF::nullopt;
+        return std::nullopt;
     
-    Optional<uint64_t> worldIdentifier;
+    std::optional<ContentWorldIdentifier> worldIdentifier;
     decoder >> worldIdentifier;
     if (!worldIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
     
     WebCore::UserStyleSheet userStyleSheet;
     if (!decoder.decode(userStyleSheet))
-        return WTF::nullopt;
+        return std::nullopt;
     
     return {{ WTFMove(*identifier), WTFMove(*worldIdentifier), WTFMove(userStyleSheet) }};
 }
@@ -90,22 +91,22 @@ void WebScriptMessageHandlerData::encode(IPC::Encoder& encoder) const
     encoder << name;
 }
 
-Optional<WebScriptMessageHandlerData> WebScriptMessageHandlerData::decode(IPC::Decoder& decoder)
+std::optional<WebScriptMessageHandlerData> WebScriptMessageHandlerData::decode(IPC::Decoder& decoder)
 {
-    Optional<uint64_t> identifier;
+    std::optional<uint64_t> identifier;
     decoder >> identifier;
     if (!identifier)
-        return WTF::nullopt;
+        return std::nullopt;
     
-    Optional<uint64_t> worldIdentifier;
+    std::optional<ContentWorldIdentifier> worldIdentifier;
     decoder >> worldIdentifier;
     if (!worldIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
     
-    Optional<String> name;
+    std::optional<String> name;
     decoder >> name;
     if (!name)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return {{ WTFMove(*identifier), WTFMove(*worldIdentifier), WTFMove(*name) }};
 }

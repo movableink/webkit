@@ -1,3 +1,0 @@
-
-FAIL arc() with lineWidth > 2*radius is drawn sensibly Can't find variable: OffscreenCanvas
-

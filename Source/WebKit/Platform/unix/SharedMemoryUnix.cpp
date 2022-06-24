@@ -29,6 +29,7 @@
 #if USE(UNIX_DOMAIN_SOCKETS)
 #include "SharedMemory.h"
 
+#include "ArgumentCoders.h"
 #include "Decoder.h"
 #include "Encoder.h"
 #include <errno.h>
@@ -40,6 +41,7 @@
 #include <unistd.h>
 #include <wtf/Assertions.h>
 #include <wtf/RandomNumber.h>
+#include <wtf/SafeStrerror.h>
 #include <wtf/UniStdExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -47,6 +49,10 @@
 #if HAVE(LINUX_MEMFD_H)
 #include <linux/memfd.h>
 #include <sys/syscall.h>
+#endif
+
+#if PLATFORM(PLAYSTATION)
+#include "ArgumentCoders.h"
 #endif
 
 namespace WebKit {
@@ -72,20 +78,25 @@ bool SharedMemory::Handle::isNull() const
     return m_attachment.fileDescriptor() == -1;
 }
 
-void SharedMemory::Handle::encode(IPC::Encoder& encoder) const
+void SharedMemory::IPCHandle::encode(IPC::Encoder& encoder) const
 {
-    encoder << releaseAttachment();
+    encoder << handle.releaseAttachment();
+    encoder << dataSize;
 }
 
-bool SharedMemory::Handle::decode(IPC::Decoder& decoder, Handle& handle)
+bool SharedMemory::IPCHandle::decode(IPC::Decoder& decoder, IPCHandle& ipcHandle)
 {
-    ASSERT_ARG(handle, handle.isNull());
-
+    ASSERT_ARG(ipcHandle.handle, ipcHandle.handle.isNull());
     IPC::Attachment attachment;
     if (!decoder.decode(attachment))
         return false;
 
-    handle.adoptAttachment(WTFMove(attachment));
+    uint64_t dataSize;
+    if (!decoder.decode(dataSize))
+        return false;
+
+    ipcHandle.handle.adoptAttachment(WTFMove(attachment));
+    ipcHandle.dataSize = dataSize;
     return true;
 }
 
@@ -135,6 +146,11 @@ static int createSharedMemory()
     }
 #endif
 
+#if HAVE(SHM_ANON)
+    do {
+        fileDescriptor = shm_open(SHM_ANON, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+    } while (fileDescriptor == -1 && errno == EINTR);
+#else
     CString tempName;
     for (int tries = 0; fileDescriptor == -1 && tries < 10; ++tries) {
         String name = String("/WK2SharedMemory.") + String::number(static_cast<unsigned>(WTF::randomNumber() * (std::numeric_limits<unsigned>::max() + 1.0)));
@@ -147,6 +163,7 @@ static int createSharedMemory()
 
     if (fileDescriptor != -1)
         shm_unlink(tempName.data());
+#endif
 
     return fileDescriptor;
 }
@@ -155,7 +172,7 @@ RefPtr<SharedMemory> SharedMemory::allocate(size_t size)
 {
     int fileDescriptor = createSharedMemory();
     if (fileDescriptor == -1) {
-        WTFLogAlways("Failed to create shared memory: %s", strerror(errno));
+        WTFLogAlways("Failed to create shared memory: %s", safeStrerror(errno).data());
         return nullptr;
     }
 
@@ -190,7 +207,7 @@ RefPtr<SharedMemory> SharedMemory::map(const Handle& handle, Protection protecti
         return nullptr;
 
     RefPtr<SharedMemory> instance = wrapMap(data, handle.m_attachment.size(), -1);
-    instance->m_fileDescriptor = WTF::nullopt;
+    instance->m_fileDescriptor = std::nullopt;
     instance->m_isWrappingMap = false;
     return instance;
 }

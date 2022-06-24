@@ -67,17 +67,17 @@ static LocalizedStringMap frameworkLocStrings()
 class LocalizedString {
     WTF_MAKE_NONCOPYABLE(LocalizedString);
 public:
-    LocalizedString(CFStringRef string)
-        : m_cfString(string)
+    LocalizedString(RetainPtr<CFStringRef>&& string)
+        : m_cfString(WTFMove(string))
     {
-        ASSERT_ARG(string, string);
+        ASSERT(m_cfString);
     }
 
     operator LPCTSTR() const;
-    operator CFStringRef() const { return m_cfString; }
+    operator CFStringRef() const { return m_cfString.get(); }
 
 private:
-    CFStringRef m_cfString;
+    RetainPtr<CFStringRef> m_cfString;
     mutable String m_string;
 };
 
@@ -86,7 +86,7 @@ LocalizedString::operator LPCTSTR() const
     if (!m_string.isEmpty())
         return m_string.wideCharacters().data();
 
-    m_string = m_cfString;
+    m_string = m_cfString.get();
 
     for (unsigned int i = 1; i < m_string.length(); i++)
         if (m_string[i] == '@' && (m_string[i - 1] == '%' || (i > 2 && m_string[i - 1] == '$' && m_string[i - 2] >= '1' && m_string[i - 2] <= '9' && m_string[i - 3] == '%')))
@@ -95,19 +95,19 @@ LocalizedString::operator LPCTSTR() const
     return m_string.wideCharacters().data();
 }
 
-static CFBundleRef createWebKitBundle()
+static void createWebKitBundle()
 {
-    static CFBundleRef bundle;
+    static NeverDestroyed<RetainPtr<CFBundleRef>> bundle;
     static bool initialized;
 
     if (initialized)
-        return bundle;
+        return;
     initialized = true;
 
     WCHAR pathStr[MAX_PATH];
     DWORD length = ::GetModuleFileNameW(gInstance, pathStr, MAX_PATH);
     if (!length || (length == MAX_PATH && GetLastError() == ERROR_INSUFFICIENT_BUFFER))
-        return 0;
+        return;
 
     bool found = false;
     for (int i = length - 1; i >= 0; i--) {
@@ -122,22 +122,20 @@ static CFBundleRef createWebKitBundle()
         }
     }
     if (!found)
-        return 0;
+        return;
 
     if (wcscat_s(pathStr, MAX_PATH, L"\\WebKit.resources"))
-        return 0;
+        return;
 
     String bundlePathString(pathStr);
     if (!bundlePathString)
-        return 0;
+        return;
 
-    CFURLRef bundleURLRef = CFURLCreateWithFileSystemPath(0, bundlePathString.createCFString().get(), kCFURLWindowsPathStyle, true);
+    auto bundleURLRef = adoptCF(CFURLCreateWithFileSystemPath(0, bundlePathString.createCFString().get(), kCFURLWindowsPathStyle, true));
     if (!bundleURLRef)
-        return 0;
+        return;
 
-    bundle = CFBundleCreate(0, bundleURLRef);
-    CFRelease(bundleURLRef);
-    return bundle;
+    bundle.get() = adoptCF(CFBundleCreate(0, bundleURLRef.get()));
 }
 
 static CFBundleRef cfBundleForStringsBundle(WebLocalizableStringsBundle* stringsBundle)
@@ -154,7 +152,7 @@ static CFBundleRef cfBundleForStringsBundle(WebLocalizableStringsBundle* strings
     return stringsBundle->bundle;
 }
 
-static CFStringRef copyLocalizedStringFromBundle(WebLocalizableStringsBundle* stringsBundle, const String& key)
+static RetainPtr<CFStringRef> copyLocalizedStringFromBundle(WebLocalizableStringsBundle* stringsBundle, const String& key)
 {
     static CFStringRef notFound = CFSTR("localized string not found");
 
@@ -162,7 +160,7 @@ static CFStringRef copyLocalizedStringFromBundle(WebLocalizableStringsBundle* st
     if (!bundle)
         return notFound;
 
-    CFStringRef result = CFCopyLocalizedStringWithDefaultValue(key.createCFString().get(), 0, bundle, notFound, 0);
+    auto result = adoptCF(CFCopyLocalizedStringWithDefaultValue(key.createCFString().get(), 0, bundle, notFound, 0));
 
     ASSERT_WITH_MESSAGE(result != notFound, "could not find localizable string %s in bundle", key.utf8().data());
     return result;
@@ -171,12 +169,12 @@ static CFStringRef copyLocalizedStringFromBundle(WebLocalizableStringsBundle* st
 static LocalizedString* findCachedString(WebLocalizableStringsBundle* stringsBundle, const String& key)
 {
     if (!stringsBundle) {
-        auto locker = holdLock(mainBundleLocStringsLock);
+        Locker locker { mainBundleLocStringsLock };
         return mainBundleLocStrings().get(key);
     }
 
     if (stringsBundle->bundle == WebKitLocalizableStringsBundle.bundle) {
-        auto locker = holdLock(frameworkLocStringsLock);
+        Locker locker { frameworkLocStringsLock };
         return frameworkLocStrings().get(key);
     }
 
@@ -186,12 +184,12 @@ static LocalizedString* findCachedString(WebLocalizableStringsBundle* stringsBun
 static void cacheString(WebLocalizableStringsBundle* stringsBundle, const String& key, LocalizedString* value)
 {
     if (!stringsBundle) {
-        auto locker = holdLock(mainBundleLocStringsLock);
+        Locker locker { mainBundleLocStringsLock };
         mainBundleLocStrings().set(key, value);
         return;
     }
 
-    auto locker = holdLock(frameworkLocStringsLock);
+    Locker locker { frameworkLocStringsLock };
     frameworkLocStrings().set(key, value);
 }
 

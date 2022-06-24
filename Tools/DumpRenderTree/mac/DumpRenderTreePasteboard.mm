@@ -35,50 +35,51 @@
 
 #import "DumpRenderTreeMac.h"
 #import "NSPasteboardAdditions.h"
-#import <WebCore/LegacyNSPasteboardTypes.h>
-#import <WebKit/WebTypesInternal.h>
 #import <objc/runtime.h>
 #import <wtf/Assertions.h>
 #import <wtf/HashMap.h>
 #import <wtf/ListHashSet.h>
+#import <wtf/Lock.h>
 #import <wtf/RetainPtr.h>
 
 @interface LocalPasteboard : NSPasteboard {
     RetainPtr<id> _owner;
     RetainPtr<NSString> _pasteboardName;
+    RetainPtr<NSArray<NSPasteboardItem *>> _cachedPasteboardItems;
     NSInteger _changeCount;
 
     ListHashSet<RetainPtr<CFStringRef>, WTF::RetainPtrObjectHash<CFStringRef>> _types;
+    ListHashSet<RetainPtr<CFStringRef>, WTF::RetainPtrObjectHash<CFStringRef>> _originalTypes;
     HashMap<RetainPtr<CFStringRef>, RetainPtr<CFDataRef>, WTF::RetainPtrObjectHash<CFStringRef>, WTF::RetainPtrObjectHashTraits<CFStringRef>> _data;
 }
 
 -(id)initWithName:(NSString *)name;
 @end
 
-static NSMutableDictionary *localPasteboards;
+static Lock localPasteboardsLock;
+static RetainPtr<NSMutableDictionary> localPasteboards WTF_GUARDED_BY_LOCK(localPasteboardsLock);
 
 @implementation DumpRenderTreePasteboard
 
 // Return a local pasteboard so we don't disturb the real pasteboards when running tests.
 + (NSPasteboard *)_pasteboardWithName:(NSString *)name
 {
-    static int number = 0;
+    Locker locker { localPasteboardsLock };
+    static uint64_t number WTF_GUARDED_BY_LOCK(localPasteboardsLock) = 0;
     if (!name)
-        name = [NSString stringWithFormat:@"LocalPasteboard%d", ++number];
+        name = [NSString stringWithFormat:@"LocalPasteboard%llu", ++number];
     if (!localPasteboards)
-        localPasteboards = [[NSMutableDictionary alloc] init];
-    LocalPasteboard *pasteboard = [localPasteboards objectForKey:name];
-    if (pasteboard)
+        localPasteboards = adoptNS([[NSMutableDictionary alloc] init]);
+    if (LocalPasteboard *pasteboard = [localPasteboards objectForKey:name])
         return pasteboard;
-    pasteboard = [[LocalPasteboard alloc] initWithName:name];
-    [localPasteboards setObject:pasteboard forKey:name];
-    [pasteboard release];
-    return pasteboard;
+    auto pasteboard = adoptNS([[LocalPasteboard alloc] initWithName:name]);
+    [localPasteboards setObject:pasteboard.get() forKey:name];
+    return pasteboard.get();
 }
 
 + (void)releaseLocalPasteboards
 {
-    [localPasteboards release];
+    Locker locker { localPasteboardsLock };
     localPasteboards = nil;
 }
 
@@ -86,7 +87,7 @@ static NSMutableDictionary *localPasteboards;
 // of the usual WebScriptObject that is passed around
 - (NSInteger)declareType:(NSString *)type owner:(id)newOwner
 {
-    return [self declareTypes:[NSArray arrayWithObject:type] owner:newOwner];
+    return [self declareTypes:@[type] owner:newOwner];
 }
 
 @end
@@ -121,10 +122,10 @@ static NSMutableDictionary *localPasteboards;
 
 - (NSInteger)declareTypes:(NSArray *)newTypes owner:(id)newOwner
 {
-    _types.clear();
-    _data.clear();
+    [self _clearContentsWithoutUpdatingChangeCount];
 
-    return [self addTypes:newTypes owner:newOwner];
+    [self _addTypesWithoutUpdatingChangeCount:newTypes owner:newOwner];
+    return ++_changeCount;
 }
 
 static bool isUTI(NSString *type)
@@ -142,17 +143,37 @@ static RetainPtr<CFStringRef> toUTI(NSString *type)
     return adoptCF(UTTypeCreatePreferredIdentifierForTag(kUTTagClassNSPboardType, (__bridge CFStringRef)type, nullptr));
 }
 
-- (NSInteger)addTypes:(NSArray *)newTypes owner:(id)newOwner
+- (void)_clearContentsWithoutUpdatingChangeCount
 {
-    if (_owner != newOwner) {
-        _owner = newOwner;
+    _cachedPasteboardItems = nil;
+    _types.clear();
+    _originalTypes.clear();
+    _data.clear();
+}
+
+- (NSInteger)clearContents
+{
+    [self _clearContentsWithoutUpdatingChangeCount];
+    return ++_changeCount;
+}
+
+- (NSInteger)addTypes:(NSArray<NSPasteboardType> *)newTypes owner:(id)newOwner
+{
+    auto previousOwner = _owner;
+    [self _addTypesWithoutUpdatingChangeCount:newTypes owner:newOwner];
+    if (previousOwner != newOwner)
         ++_changeCount;
-    }
-
-    for (NSString *type in newTypes)
-        _types.add(toUTI(type));
-
     return _changeCount;
+}
+
+- (void)_addTypesWithoutUpdatingChangeCount:(NSArray *)newTypes owner:(id)newOwner
+{
+    _owner = newOwner;
+
+    for (NSString *type in newTypes) {
+        _types.add(toUTI(type));
+        _originalTypes.add((__bridge CFStringRef)type);
+    }
 }
 
 - (NSInteger)changeCount
@@ -222,10 +243,11 @@ static RetainPtr<CFStringRef> toUTI(NSString *type)
 
 - (BOOL)writeObjects:(NSArray<id <NSPasteboardWriting>> *)objects
 {
+    auto items = adoptNS([[NSMutableArray<NSPasteboardItem *> alloc] initWithCapacity:objects.count]);
     for (id <NSPasteboardWriting> object in objects) {
+        ASSERT([object isKindOfClass:NSPasteboardItem.class]);
+        [items addObject:(NSPasteboardItem *)object];
         for (NSString *type in [object writableTypesForPasteboard:self]) {
-            ASSERT(UTTypeIsDeclared((__bridge CFStringRef)type) || UTTypeIsDynamic((__bridge CFStringRef)type));
-
             [self addTypes:@[ type ] owner:self];
 
             id propertyList = [object pasteboardPropertyListForType:type];
@@ -236,18 +258,29 @@ static RetainPtr<CFStringRef> toUTI(NSString *type)
         }
     }
 
+    _cachedPasteboardItems = items.get();
     return YES;
 }
 
 - (NSArray<NSPasteboardItem *> *)pasteboardItems
 {
+    if (_cachedPasteboardItems)
+        return _cachedPasteboardItems.get();
+
     auto item = adoptNS([[NSPasteboardItem alloc] init]);
+    for (auto& type : _originalTypes) {
+        if (!_data.contains(toUTI((__bridge NSString *)type.get())))
+            [_owner pasteboard:self provideDataForType:(__bridge NSString *)type.get()];
+    }
+
     for (const auto& typeAndData : _data) {
         NSData *data = (__bridge NSData *)typeAndData.value.get();
         NSString *type = (__bridge NSString *)typeAndData.key.get();
         [item setData:data forType:[NSPasteboard _modernPasteboardType:type]];
     }
-    return @[ item.get() ];
+
+    _cachedPasteboardItems = @[ item.get() ];
+    return _cachedPasteboardItems.get();
 }
 
 @end

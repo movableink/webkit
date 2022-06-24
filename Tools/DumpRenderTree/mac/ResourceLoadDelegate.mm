@@ -31,8 +31,8 @@
 
 #import "DumpRenderTree.h"
 #import "TestRunner.h"
-#import <WebKit/WebKit.h>
 #import <WebKit/WebDataSourcePrivate.h>
+#import <WebKit/WebKitLegacy.h>
 #import <wtf/Assertions.h>
 
 using namespace std;
@@ -172,20 +172,19 @@ BOOL isAllowedHost(NSString *host)
         }
     }
 
-    if (disallowedURLs && CFSetContainsValue(disallowedURLs, (__bridge CFURLRef)url))
+    if (disallowedURLs && CFSetContainsValue(disallowedURLs.get(), (__bridge CFURLRef)url))
         return nil;
 
-    NSMutableURLRequest *newRequest = [request mutableCopy];
+    auto newRequest = adoptNS([request mutableCopy]);
     const set<string>& clearHeaders = gTestRunner->willSendRequestClearHeaders();
     for (set<string>::const_iterator header = clearHeaders.begin(); header != clearHeaders.end(); ++header) {
-        NSString *nsHeader = [[NSString alloc] initWithUTF8String:header->c_str()];
-        [newRequest setValue:nil forHTTPHeaderField:nsHeader];
-        [nsHeader release];
+        auto nsHeader = adoptNS([[NSString alloc] initWithUTF8String:header->c_str()]);
+        [newRequest setValue:nil forHTTPHeaderField:nsHeader.get()];
     }
     if (auto* destination = gTestRunner->redirectionDestinationForURL([[url absoluteString] UTF8String]))
         [newRequest setURL:[NSURL URLWithString:[NSString stringWithUTF8String:destination]]];
 
-    return [newRequest autorelease];
+    return newRequest.autorelease();
 }
 
 - (void)webView:(WebView *)wv resource:(id)identifier didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge fromDataSource:(WebDataSource *)dataSource

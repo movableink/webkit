@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018, 2019 Igalia S.L
+ * Copyright (C) 2018, 2019, 2021 Igalia S.L
  * Copyright (C) 2018, 2019 Zodiac Inflight Innovations
  *
  * This library is free software; you can redistribute it and/or
@@ -18,12 +18,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include "config.h"
 #include "WPEQtViewBackend.h"
 
 #include "WPEQtView.h"
 #include <QGuiApplication>
 #include <QOpenGLFunctions>
+#include <QtGlobal>
 
 static PFNGLEGLIMAGETARGETTEXTURE2DOESPROC imageTargetTexture2DOES;
 
@@ -65,7 +65,7 @@ std::unique_ptr<WPEQtViewBackend> WPEQtViewBackend::create(const QSizeF& size, Q
     if (!eglContext)
         return nullptr;
 
-    return makeUnique<WPEQtViewBackend>(size, eglDisplay, eglContext, context, view);
+    return std::make_unique<WPEQtViewBackend>(size, eglDisplay, eglContext, context, view);
 }
 
 WPEQtViewBackend::WPEQtViewBackend(const QSizeF& size, EGLDisplay display, EGLContext eglContext, QPointer<QOpenGLContext> context, QPointer<WPEQtView> view)
@@ -209,7 +209,7 @@ GLuint WPEQtViewBackend::texture(QOpenGLContext* context)
 
 void WPEQtViewBackend::displayImage(struct wpe_fdo_egl_exported_image* image)
 {
-    RELEASE_ASSERT(!m_lockedImage);
+    Q_ASSUME(!m_lockedImage);
     m_lockedImage = image;
     if (m_view)
         m_view->triggerUpdate();
@@ -297,17 +297,25 @@ void WPEQtViewBackend::dispatchMouseReleaseEvent(QMouseEvent* event)
     wpe_view_backend_dispatch_pointer_event(backend(), &wpeEvent);
 }
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+#define QWHEEL_POSITION position()
+#else
+#define QWHEEL_POSITION posF()
+#endif
+
 void WPEQtViewBackend::dispatchWheelEvent(QWheelEvent* event)
 {
     QPoint delta = event->angleDelta();
-    uint32_t axis = delta.y() == event->y();
     QPoint numDegrees = delta / 8;
-    QPoint numSteps = numDegrees / 15;
-    int32_t length = numSteps.y() ? numSteps.y() : numSteps.x();
-    struct wpe_input_axis_event wpeEvent = { wpe_input_axis_event_type_motion,
-        static_cast<uint32_t>(event->timestamp()),
-        event->x(), event->y(), axis, length, modifiers() };
-    wpe_view_backend_dispatch_axis_event(backend(), &wpeEvent);
+    struct wpe_input_axis_2d_event wpeEvent;
+    if (delta.y() == event->QWHEEL_POSITION.y())
+        wpeEvent.x_axis = numDegrees.x();
+    else
+        wpeEvent.y_axis = numDegrees.y();
+    wpeEvent.base.type = static_cast<wpe_input_axis_event_type>(wpe_input_axis_event_type_mask_2d | wpe_input_axis_event_type_motion_smooth);
+    wpeEvent.base.x = event->QWHEEL_POSITION.x();
+    wpeEvent.base.y = event->QWHEEL_POSITION.y();
+    wpe_view_backend_dispatch_axis_event(backend(), &wpeEvent.base);
 }
 
 void WPEQtViewBackend::dispatchKeyEvent(QKeyEvent* event, bool state)

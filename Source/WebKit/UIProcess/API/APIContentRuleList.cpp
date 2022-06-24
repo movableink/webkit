@@ -29,18 +29,52 @@
 #if ENABLE(CONTENT_EXTENSIONS)
 
 #include "WebCompiledContentRuleList.h"
+#include <WebCore/CombinedURLFilters.h>
+#include <WebCore/URLFilterParser.h>
 
 namespace API {
 
-ContentRuleList::ContentRuleList(const WTF::String& name, Ref<WebKit::WebCompiledContentRuleList>&& contentRuleList, WebKit::NetworkCache::Data&& mappedFile)
-    : m_name(name)
-    , m_compiledRuleList(WTFMove(contentRuleList))
+ContentRuleList::ContentRuleList(Ref<WebKit::WebCompiledContentRuleList>&& contentRuleList, WebKit::NetworkCache::Data&& mappedFile)
+    : m_compiledRuleList(WTFMove(contentRuleList))
     , m_mappedFile(WTFMove(mappedFile))
 {
 }
 
 ContentRuleList::~ContentRuleList()
 {
+}
+
+const WTF::String& ContentRuleList::name() const
+{
+    return m_compiledRuleList->data().identifier;
+}
+
+bool ContentRuleList::supportsRegularExpression(const WTF::String& regex)
+{
+    using namespace WebCore::ContentExtensions;
+    CombinedURLFilters combinedURLFilters;
+    URLFilterParser urlFilterParser(combinedURLFilters);
+
+    switch (urlFilterParser.addPattern(regex, false, 0)) {
+    case URLFilterParser::Ok:
+    case URLFilterParser::MatchesEverything:
+        return true;
+    case URLFilterParser::NonASCII:
+    case URLFilterParser::UnsupportedCharacterClass:
+    case URLFilterParser::BackReference:
+    case URLFilterParser::ForwardReference:
+    case URLFilterParser::MisplacedStartOfLine:
+    case URLFilterParser::WordBoundary:
+    case URLFilterParser::AtomCharacter:
+    case URLFilterParser::Group:
+    case URLFilterParser::Disjunction:
+    case URLFilterParser::MisplacedEndOfLine:
+    case URLFilterParser::EmptyPattern:
+    case URLFilterParser::YarrError:
+    case URLFilterParser::InvalidQuantifier:
+        break;
+    }
+    return false;
 }
 
 } // namespace API

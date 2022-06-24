@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,10 +42,11 @@ private:
     void sizeDidChange() override;
     void colorSpaceDidChange() override;
     void minimumSizeForAutoLayoutDidChange() override;
+    void sizeToContentAutoSizeMaximumSizeDidChange() override;
 
     void enterAcceleratedCompositingMode(uint64_t backingStoreStateID, const LayerTreeContext&) override;
-    void exitAcceleratedCompositingMode(uint64_t backingStoreStateID, const UpdateInfo&) override;
     void updateAcceleratedCompositingMode(uint64_t backingStoreStateID, const LayerTreeContext&) override;
+    void didFirstLayerFlush(uint64_t /* backingStoreStateID */, const LayerTreeContext&) override;
 
     void adjustTransientZoom(double scale, WebCore::FloatPoint origin) override;
     void commitTransientZoom(double scale, WebCore::FloatPoint origin) override;
@@ -72,11 +73,14 @@ private:
     // The last minimum layout size we sent to the web process.
     WebCore::IntSize m_lastSentMinimumSizeForAutoLayout;
 
+    // The last maxmium size for size-to-content auto-sizing we sent to the web process.
+    WebCore::IntSize m_lastSentSizeToContentAutoSizeMaximumSize;
+
     CallbackMap m_callbacks;
 };
 
 } // namespace WebKit
 
-SPECIALIZE_TYPE_TRAITS_DRAWING_AREA_PROXY(TiledCoreAnimationDrawingAreaProxy, DrawingAreaTypeTiledCoreAnimation)
+SPECIALIZE_TYPE_TRAITS_DRAWING_AREA_PROXY(TiledCoreAnimationDrawingAreaProxy, DrawingAreaType::TiledCoreAnimation)
 
 #endif // !PLATFORM(IOS_FAMILY)

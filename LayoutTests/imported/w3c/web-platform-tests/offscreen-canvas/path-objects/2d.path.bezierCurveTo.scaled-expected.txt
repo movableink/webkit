@@ -1,5 +1,0 @@
-2d.path.bezierCurveTo.scaled
-
-
-FAIL OffscreenCanvas test: 2d.path.bezierCurveTo.scaled null is not an object (evaluating 'ctx.fillStyle = '#f00'')
-

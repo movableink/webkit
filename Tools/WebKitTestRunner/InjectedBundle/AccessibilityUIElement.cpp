@@ -35,6 +35,7 @@ namespace WTR {
 
 Ref<AccessibilityUIElement> AccessibilityUIElement::create(PlatformUIElement uiElement)
 {
+    RELEASE_ASSERT(uiElement);
     return adoptRef(*new AccessibilityUIElement(uiElement));
 }
     
@@ -54,6 +55,13 @@ bool AccessibilityUIElement::isValid() const
 {
     return m_element;            
 }
+
+#if !ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+bool AccessibilityUIElement::isIsolatedObject() const
+{
+    return false;
+}
+#endif
 
 // iOS specific methods
 #if !PLATFORM(IOS_FAMILY)
@@ -77,28 +85,44 @@ RefPtr<AccessibilityUIElement> AccessibilityUIElement::fieldsetAncestorElement()
 bool AccessibilityUIElement::isSearchField() const { return false; }
 bool AccessibilityUIElement::isTextArea() const { return false; }
 RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::textMarkerRangeMatchesTextNearMarkers(JSStringRef, AccessibilityTextMarker*, AccessibilityTextMarker*) { return nullptr; }
-bool AccessibilityUIElement::dismiss() { return false; }
 JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForElement() { return nullptr; }
-bool AccessibilityUIElement::isInTableCell() const { return false; }
+bool AccessibilityUIElement::isInTable() const { return false; }
+bool AccessibilityUIElement::isInLandmark() const { return false; }
+bool AccessibilityUIElement::isInList() const { return false; }
 #endif
     
 // Unsupported methods on various platforms. As they're implemented on other platforms this list should be modified.
-#if PLATFORM(COCOA) || !HAVE(ACCESSIBILITY)
+#if PLATFORM(COCOA) || !ENABLE(ACCESSIBILITY)
 JSRetainPtr<JSStringRef> AccessibilityUIElement::characterAtOffset(int) { return nullptr; }
 JSRetainPtr<JSStringRef> AccessibilityUIElement::wordAtOffset(int) { return nullptr; }
 JSRetainPtr<JSStringRef> AccessibilityUIElement::lineAtOffset(int) { return nullptr; }
 JSRetainPtr<JSStringRef> AccessibilityUIElement::sentenceAtOffset(int) { return nullptr; }
 #endif
 
-#if !PLATFORM(MAC) || !HAVE(ACCESSIBILITY)
+#if !PLATFORM(MAC) || !ENABLE(ACCESSIBILITY)
+int AccessibilityUIElement::lineIndexForTextMarker(AccessibilityTextMarker*) const { return -1; }
+RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::textMarkerRangeForRange(unsigned, unsigned) { return nullptr; }
 RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::selectedTextMarkerRange() { return nullptr; }
 void AccessibilityUIElement::resetSelectedTextMarkerRange() { }
 void AccessibilityUIElement::setBoolAttributeValue(JSStringRef, bool) { }
 void AccessibilityUIElement::setValue(JSStringRef) { }
 JSValueRef AccessibilityUIElement::searchTextWithCriteria(JSContextRef, JSValueRef, JSStringRef, JSStringRef) { return nullptr; }
+bool AccessibilityUIElement::isOnScreen() const { return true; }
+JSValueRef AccessibilityUIElement::mathRootRadicand() const { return { }; }
 #endif
 
-#if !PLATFORM(COCOA) || !HAVE(ACCESSIBILITY)
+#if !PLATFORM(COCOA) || !ENABLE(ACCESSIBILITY)
+RefPtr<AccessibilityUIElement> AccessibilityUIElement::focusedElement() const { return nullptr; }
+
+bool AccessibilityUIElement::hasDocumentRoleAncestor() const { return false; }
+bool AccessibilityUIElement::hasWebApplicationAncestor() const { return false; }
+bool AccessibilityUIElement::isInDescriptionListDetail() const { return false; }
+bool AccessibilityUIElement::isInDescriptionListTerm() const { return false; }
+bool AccessibilityUIElement::isInCell() const { return false; }
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::domIdentifier() const { return nullptr; }
+JSRetainPtr<JSStringRef> AccessibilityUIElement::sortDirection() const { return nullptr; }
+JSRetainPtr<JSStringRef> AccessibilityUIElement::lineRectsAndText() const { return { }; }
 RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::leftWordTextMarkerRangeForTextMarker(AccessibilityTextMarker*) { return nullptr; }
 RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::rightWordTextMarkerRangeForTextMarker(AccessibilityTextMarker*) { return nullptr; }
 RefPtr<AccessibilityTextMarker> AccessibilityUIElement::previousWordStartTextMarkerForTextMarker(AccessibilityTextMarker*) { return nullptr; }
@@ -110,7 +134,13 @@ RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::sentenceTextMarkerR
 RefPtr<AccessibilityTextMarker> AccessibilityUIElement::nextSentenceEndTextMarkerForTextMarker(AccessibilityTextMarker*) { return nullptr; }
 RefPtr<AccessibilityTextMarker> AccessibilityUIElement::previousSentenceStartTextMarkerForTextMarker(AccessibilityTextMarker*) { return nullptr; }
 RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::misspellingTextMarkerRange(AccessibilityTextMarkerRange*, bool) { return nullptr; }
-#endif
+void AccessibilityUIElement::dismiss() { }
+JSValueRef AccessibilityUIElement::children() const { return { }; }
+JSValueRef AccessibilityUIElement::detailsElements() const { return { }; }
+JSValueRef AccessibilityUIElement::errorMessageElements() const { return { }; }
+JSValueRef AccessibilityUIElement::imageOverlayElements() const { return { }; }
+JSRetainPtr<JSStringRef> AccessibilityUIElement::embeddedImageDescription() const { return nullptr; }
+#endif // !PLATFORM(COCOA) || !ENABLE(ACCESSIBILITY)
 
 } // namespace WTR
 #endif // ENABLE(ACCESSIBILITY)

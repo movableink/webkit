@@ -24,6 +24,7 @@
  */
 
 #import "config.h"
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "WTFStringUtilities.h"
 
@@ -31,7 +32,7 @@
 #import <WebKit/WebViewPrivate.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include <MobileCoreServices/MobileCoreServices.h>
+#import <MobileCoreServices/MobileCoreServices.h>
 #endif
 
 #if PLATFORM(MAC)
@@ -61,7 +62,6 @@ static void writeRTFDToPasteboard(NSData *data)
 }
 @end
 
-static bool didFinishLoad = false;
 static bool didAlert = false;
 
 @implementation SubresourceForBlobURLFrameLoadDelegate

@@ -28,21 +28,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-import errno
 import logging
 import math
 import re
-import os
-import signal
-import socket
-import subprocess
-import sys
-import time
 
-from webkitpy.layout_tests.controllers.test_result_writer import TestResultWriter
 from webkitpy.port.driver import DriverInput
-from webkitpy.port.driver import DriverOutput
 
 DEFAULT_TEST_RUNNER_COUNT = 4
 
@@ -126,7 +116,7 @@ class PerfTest(object):
         return self._port.create_driver(worker_number=0, no_timeout=no_timeout)
 
     def run(self, time_out_ms, no_timeout=False):
-        for _ in xrange(self._test_runner_count):
+        for _ in range(self._test_runner_count):
             driver = self._create_driver(no_timeout)
             try:
                 if not self._run_with_driver(driver, time_out_ms):
@@ -168,8 +158,13 @@ class PerfTest(object):
         stdev = math.sqrt(square_sum / (len(sorted_values) - 1)) if len(sorted_values) > 1 else 0
 
         _log.info('RESULT %s= %s %s' % (test_name, mean, unit))
-        _log.info('median= %s %s, stdev= %s %s, min= %s %s, max= %s %s' %
-            (median, unit, stdev, unit, sorted_values[0], unit, sorted_values[-1], unit))
+        _log.info('median= {median} {unit}, stdev= {stdev} {unit}, min= {min} {unit}, max= {max} {unit}'.format(
+            median=median,
+            stdev=round(stdev, 10),
+            min=sorted_values[0],
+            max=sorted_values[-1],
+            unit=unit,
+        ))
 
     _description_regex = re.compile(r'^Description: (?P<description>.*)$', re.IGNORECASE)
     _metrics_regex = re.compile(r'^(?P<subtest>[A-Za-z0-9\(\[].+?)?:(?P<metric>[A-Z][A-Za-z]+)(:(?P<aggregator>[A-Z][A-Za-z]+))? -> \[(?P<values>(\d+(\.\d+)?)(, \d+(\.\d+)?)+)\] (?P<unit>[a-z/]+)?$')
@@ -180,7 +175,6 @@ class PerfTest(object):
         if self.run_failed(output):
             return False
 
-        current_metric = None
         for line in re.split('\n', output.text):
             description_match = self._description_regex.match(line)
             if description_match:
@@ -193,7 +187,7 @@ class PerfTest(object):
                 return False
 
             metric = self._ensure_metrics(metric_match.group('metric'), metric_match.group('subtest'), metric_match.group('unit'), metric_match.group('aggregator'))
-            metric.append_group(map(lambda value: float(value), metric_match.group('values').split(', ')))
+            metric.append_group(list(map(lambda value: float(value), metric_match.group('values').split(', '))))
 
         return True
 
@@ -247,18 +241,19 @@ class PerfTest(object):
         return '\n'.join(filtered_lines)
 
     _lines_to_ignore = [
-        re.compile("^\s+$"),
+        re.compile(r"^\s+$"),
         # Following are for handle existing test like Dromaeo
         re.compile(re.escape("""main frame - has 1 onunload handler(s)""")),
-        re.compile('frame \"[^"]+\" - has \d+ onunload handler\(s\)'),
+        re.compile('frame \"[^"]+\" - has \\d+ onunload handler\\(s\\)'),
         # Following is for html5.html
         re.compile(re.escape("""Blocked access to external URL http://www.whatwg.org/specs/web-apps/current-work/""")),
         re.compile(r"CONSOLE MESSAGE: (line \d+: )?Blocked script execution in '[A-Za-z0-9\-\.:]+' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."),
         re.compile(r"CONSOLE MESSAGE: (line \d+: )?Not allowed to load local resource"),
         # Speedometer 2.0
-        re.compile(r'CONSOLE MESSAGE: line \d+: DEBUG: -------------------------------'),
-        re.compile(r'CONSOLE MESSAGE: line \d+: DEBUG: Ember\s+: (\d\.)+'),
-        re.compile(r'CONSOLE MESSAGE: line \d+: DEBUG: jQuery\s+: (\d\.)+'),
+        re.compile(r'CONSOLE MESSAGE: (line \d+: )?DEBUG: -------------------------------'),
+        re.compile(r'CONSOLE MESSAGE: (line \d+: )?DEBUG: Ember\s+: (\d\.)+'),
+        re.compile(r'CONSOLE MESSAGE: (line \d+: )?DEBUG: jQuery\s+: (\d\.)+'),
+        re.compile(r"CONSOLE MESSAGE: Consider using 'dppx' units instead of '.+"),
     ]
 
     _errors_to_ignore_in_sierra = [

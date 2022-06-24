@@ -62,7 +62,7 @@ class MeteredStream(object):
         self._last_partial_line = ''
         self._last_write_time = 0.0
         self._throttle_delay_in_secs = 0.066 if self._erasing else 10.0
-        self._number_of_columns = sys.maxint
+        self._number_of_columns = sys.maxsize
         if self._isatty and number_of_columns:
             self._number_of_columns = number_of_columns
 
@@ -109,6 +109,7 @@ class MeteredStream(object):
 
         try:
             self._stream.write(timestamp_string + txt)
+            self._stream.flush()
         except UnicodeEncodeError:
             output = ''
             for c in timestamp_string + txt:
@@ -117,14 +118,15 @@ class MeteredStream(object):
                 except UnicodeEncodeError:
                     output += '?'
             self._stream.write(output)
+            self._stream.flush()
 
     def writeln(self, txt, now=None, pid=None):
         self.write(self._ensure_newline(txt), now, pid)
 
     def _erase_last_partial_line(self):
-        num_chars = len(self._last_partial_line)
         self._stream.write(self._erasure(self._last_partial_line))
         self._last_partial_line = ''
+        self._stream.flush()
 
     def flush(self):
         if self._last_partial_line:

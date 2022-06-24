@@ -24,36 +24,26 @@
  */
 
 #include "config.h"
-#include "WebEvent.h"
+#include "WebMouseEvent.h"
 
 #include "WebCoreArgumentCoders.h"
 
 namespace WebKit {
 using namespace WebCore;
 
-WebMouseEvent::WebMouseEvent()
-    : WebEvent()
-    , m_button(static_cast<uint32_t>(NoButton))
-    , m_deltaX(0)
-    , m_deltaY(0)
-    , m_deltaZ(0)
-    , m_clickCount(0)
-#if PLATFORM(MAC)
-    , m_eventNumber(-1)
-    , m_menuTypeForEvent(0)
-#endif
-{
-}
+WebMouseEvent::WebMouseEvent() = default;
 
 #if PLATFORM(MAC)
-WebMouseEvent::WebMouseEvent(Type type, Button button, unsigned short buttons, const IntPoint& position, const IntPoint& globalPosition, float deltaX, float deltaY, float deltaZ, int clickCount, OptionSet<Modifier> modifiers, WallTime timestamp, double force, SyntheticClickType syntheticClickType, int eventNumber, int menuType)
+WebMouseEvent::WebMouseEvent(Type type, Button button, unsigned short buttons, const IntPoint& positionInView, const IntPoint& globalPosition, float deltaX, float deltaY, float deltaZ, int clickCount, OptionSet<Modifier> modifiers, WallTime timestamp, double force, SyntheticClickType syntheticClickType, int eventNumber, int menuType, GestureWasCancelled gestureWasCancelled)
+#elif PLATFORM(GTK)
+WebMouseEvent::WebMouseEvent(Type type, Button button, unsigned short buttons, const IntPoint& positionInView, const IntPoint& globalPosition, float deltaX, float deltaY, float deltaZ, int clickCount, OptionSet<Modifier> modifiers, WallTime timestamp, double force, SyntheticClickType syntheticClickType, PlatformMouseEvent::IsTouch isTouchEvent, WebCore::PointerID pointerId, const String& pointerType, GestureWasCancelled gestureWasCancelled)
 #else
-WebMouseEvent::WebMouseEvent(Type type, Button button, unsigned short buttons, const IntPoint& position, const IntPoint& globalPosition, float deltaX, float deltaY, float deltaZ, int clickCount, OptionSet<Modifier> modifiers, WallTime timestamp, double force, SyntheticClickType syntheticClickType)
+WebMouseEvent::WebMouseEvent(Type type, Button button, unsigned short buttons, const IntPoint& positionInView, const IntPoint& globalPosition, float deltaX, float deltaY, float deltaZ, int clickCount, OptionSet<Modifier> modifiers, WallTime timestamp, double force, SyntheticClickType syntheticClickType, WebCore::PointerID pointerId, const String& pointerType, GestureWasCancelled gestureWasCancelled)
 #endif
     : WebEvent(type, modifiers, timestamp)
     , m_button(button)
     , m_buttons(buttons)
-    , m_position(position)
+    , m_position(positionInView)
     , m_globalPosition(globalPosition)
     , m_deltaX(deltaX)
     , m_deltaY(deltaY)
@@ -62,9 +52,16 @@ WebMouseEvent::WebMouseEvent(Type type, Button button, unsigned short buttons, c
 #if PLATFORM(MAC)
     , m_eventNumber(eventNumber)
     , m_menuTypeForEvent(menuType)
+#elif PLATFORM(GTK)
+    , m_isTouchEvent(isTouchEvent)
 #endif
     , m_force(force)
     , m_syntheticClickType(syntheticClickType)
+#if !PLATFORM(MAC)
+    , m_pointerId(pointerId)
+    , m_pointerType(pointerType)
+#endif
+    , m_gestureWasCancelled(gestureWasCancelled)
 {
     ASSERT(isMouseEventType(type));
 }
@@ -84,9 +81,14 @@ void WebMouseEvent::encode(IPC::Encoder& encoder) const
 #if PLATFORM(MAC)
     encoder << m_eventNumber;
     encoder << m_menuTypeForEvent;
+#elif PLATFORM(GTK)
+    encoder << m_isTouchEvent;
 #endif
     encoder << m_force;
     encoder << m_syntheticClickType;
+    encoder << m_pointerId;
+    encoder << m_pointerType;
+    encoder << m_gestureWasCancelled;
 }
 
 bool WebMouseEvent::decode(IPC::Decoder& decoder, WebMouseEvent& result)
@@ -115,11 +117,20 @@ bool WebMouseEvent::decode(IPC::Decoder& decoder, WebMouseEvent& result)
         return false;
     if (!decoder.decode(result.m_menuTypeForEvent))
         return false;
+#elif PLATFORM(GTK)
+    if (!decoder.decode(result.m_isTouchEvent))
+        return false;
 #endif
     if (!decoder.decode(result.m_force))
         return false;
 
     if (!decoder.decode(result.m_syntheticClickType))
+        return false;
+    if (!decoder.decode(result.m_pointerId))
+        return false;
+    if (!decoder.decode(result.m_pointerType))
+        return false;
+    if (!decoder.decode(result.m_gestureWasCancelled))
         return false;
 
     return true;

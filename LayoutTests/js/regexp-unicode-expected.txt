@@ -86,6 +86,21 @@ PASS re1.test("𐐀") is false
 PASS re2.test("A") is true
 PASS re2.test("￿") is false
 PASS re2.test("𒍅") is true
+PASS /[𐰁�#�]/u.exec("𐰁").toString() is "𐰁"
+PASS /[�𐰁�]/u.exec("𐰁").toString() is "𐰁"
+PASS /[�#�𐰁]/u.exec("𐰁").toString() is "𐰁"
+PASS /[�𐰁�]/u.exec("𐰁").toString() is "𐰁"
+PASS /[𐰁�#�]{2}/u.exec("𐰁") is null
+PASS /[�𐰁�]{2}/u.exec("𐰁") is null
+PASS /[�#�𐰁]{2}/u.exec("𐰁") is null
+PASS /[�𐰁�]{2}/u.exec("𐰁") is null
+PASS /�|�|𐰁/u.exec("𐰁").toString() is "𐰁"
+PASS /�|𐰁|�/u.exec("𐰁").toString() is "𐰁"
+PASS /�|�|𐰁/u.exec("�").toString() is "�"
+PASS /�|𐰁|�/u.exec("�").toString() is "�"
+PASS /�𐰁/u.exec("𐰁") is null
+PASS /�𐰁/u.exec("�") is null
+PASS "�𐰁".match(/�𐰁/u)[0].length is 3
 PASS /𝌆{2}/u.test("𝌆𝌆") is true
 PASS /𝌆{2}/u.test("𝌆𝌆") is true
 PASS "𐐅𐐅𐐅𐐅".match(/𐐅{3}/u)[0] is "𐐅𐐅𐐅"
@@ -163,31 +178,37 @@ PASS "Testing ሴ\n1 2 3".match(/g [က-𐃿]$\n1/um)[0] is "g ሴ\n1"
 PASS "Testing 𐃰\n1 2 3".match(/g [က-𐃿]$\n1/um)[0] is "g 𐃰\n1"
 PASS "this is ba test".match(/is b\cha test/u)[0].length is 11
 PASS new RegExp("\\/", "u").source is "\\/"
-PASS r = new RegExp("\\u{110000}", "u") threw exception SyntaxError: Invalid regular expression: invalid unicode {} escape.
+PASS r = new RegExp("\\u{110000}", "u") threw exception SyntaxError: Invalid regular expression: invalid Unicode code point \u{} escape.
 PASS r = new RegExp("𐐅{2147483648}", "u") threw exception SyntaxError: Invalid regular expression: pattern exceeds string length limits.
-PASS r = new RegExp("\\-", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern.
-PASS r = new RegExp("\\a", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern.
-PASS r = new RegExp("[\\a]", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern.
-PASS r = new RegExp("[\\b]", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern.
-PASS r = new RegExp("[\\B]", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern.
-PASS r = new RegExp("\\x", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern.
-PASS r = new RegExp("[\\x]", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern.
-PASS r = new RegExp("\\u", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern.
-PASS r = new RegExp("[\\u]", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern.
-PASS r = new RegExp("\\u{", "u") threw exception SyntaxError: Invalid regular expression: invalid unicode {} escape.
-PASS r = new RegExp("\\u{\udead", "u") threw exception SyntaxError: Invalid regular expression: invalid unicode {} escape.
-PASS /\1/u threw exception SyntaxError: Invalid regular expression: invalid backreference for unicode pattern.
-PASS /\2/u threw exception SyntaxError: Invalid regular expression: invalid backreference for unicode pattern.
-PASS /\3/u threw exception SyntaxError: Invalid regular expression: invalid backreference for unicode pattern.
-PASS /\4/u threw exception SyntaxError: Invalid regular expression: invalid backreference for unicode pattern.
-PASS /\5/u threw exception SyntaxError: Invalid regular expression: invalid backreference for unicode pattern.
-PASS /\6/u threw exception SyntaxError: Invalid regular expression: invalid backreference for unicode pattern.
-PASS /\7/u threw exception SyntaxError: Invalid regular expression: invalid backreference for unicode pattern.
-PASS /\8/u threw exception SyntaxError: Invalid regular expression: invalid backreference for unicode pattern.
-PASS /\9/u threw exception SyntaxError: Invalid regular expression: invalid backreference for unicode pattern.
+PASS /{/u threw exception SyntaxError: Invalid regular expression: incomplete {} quantifier for Unicode pattern.
+PASS /[a-\d]/u threw exception SyntaxError: Invalid regular expression: invalid range in character class for Unicode pattern.
+PASS /]/u threw exception SyntaxError: Invalid regular expression: unmatched ] or } bracket for Unicode pattern.
+PASS /\5/u threw exception SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern.
+PASS /\01/u threw exception SyntaxError: Invalid regular expression: invalid octal escape for Unicode pattern.
+PASS /[\23]/u threw exception SyntaxError: Invalid regular expression: invalid octal escape for Unicode pattern.
+PASS /\c9/u threw exception SyntaxError: Invalid regular expression: invalid \c escape for Unicode pattern.
+PASS r = new RegExp("\\-", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern.
+PASS r = new RegExp("\\a", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern.
+PASS r = new RegExp("[\\a]", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern.
+PASS r = new RegExp("[\\B]", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern.
+PASS r = new RegExp("\\x", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern.
+PASS r = new RegExp("[\\x]", "u") threw exception SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern.
+PASS r = new RegExp("\\u", "u") threw exception SyntaxError: Invalid regular expression: invalid Unicode \u escape.
+PASS r = new RegExp("[\\u]", "u") threw exception SyntaxError: Invalid regular expression: invalid Unicode \u escape.
+PASS r = new RegExp("\\u{", "u") threw exception SyntaxError: Invalid regular expression: invalid Unicode code point \u{} escape.
+PASS r = new RegExp("\\u{\udead", "u") threw exception SyntaxError: Invalid regular expression: invalid Unicode code point \u{} escape.
+PASS /\1/u threw exception SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern.
+PASS /\2/u threw exception SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern.
+PASS /\3/u threw exception SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern.
+PASS /\4/u threw exception SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern.
+PASS /\5/u threw exception SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern.
+PASS /\6/u threw exception SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern.
+PASS /\7/u threw exception SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern.
+PASS /\8/u threw exception SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern.
+PASS /\9/u threw exception SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern.
 PASS /(.)\1/u did not throw exception.
 PASS /(.)(.)\2/u did not throw exception.
-PASS /(.)(.)\3/u threw exception SyntaxError: Invalid regular expression: invalid backreference for unicode pattern.
+PASS /(.)(.)\3/u threw exception SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern.
 PASS /\1/ did not throw exception.
 PASS /\2/ did not throw exception.
 PASS /\3/ did not throw exception.

@@ -11,6 +11,7 @@
 #define TEST_TEST_MAIN_LIB_H_
 
 #include <memory>
+#include <string>
 
 namespace webrtc {
 
@@ -24,6 +25,8 @@ class TestMain {
   // Initializes test environment. Clients can add their own initialization
   // steps after call to this method and before running tests.
   // Returns 0 if initialization was successful and non 0 otherwise.
+  virtual int Init() = 0;
+  // Temporary for backward compatibility
   virtual int Init(int* argc, char* argv[]) = 0;
 
   // Runs test end return result error code. 0 - no errors.
@@ -31,6 +34,8 @@ class TestMain {
 
  protected:
   TestMain() = default;
+
+  std::string field_trials_;
 };
 
 }  // namespace webrtc

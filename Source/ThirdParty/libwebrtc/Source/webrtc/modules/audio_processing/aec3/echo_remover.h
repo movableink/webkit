@@ -26,7 +26,9 @@ namespace webrtc {
 class EchoRemover {
  public:
   static EchoRemover* Create(const EchoCanceller3Config& config,
-                             int sample_rate_hz);
+                             int sample_rate_hz,
+                             size_t num_render_channels,
+                             size_t num_capture_channels);
   virtual ~EchoRemover() = default;
 
   // Get current metrics.
@@ -40,14 +42,18 @@ class EchoRemover {
       bool capture_signal_saturation,
       const absl::optional<DelayEstimate>& external_delay,
       RenderBuffer* render_buffer,
-      std::vector<std::vector<float>>* capture) = 0;
-
-  // Returns the internal delay estimate in blocks.
-  virtual absl::optional<int> Delay() const = 0;
+      std::vector<std::vector<std::vector<float>>>* linear_output,
+      std::vector<std::vector<std::vector<float>>>* capture) = 0;
 
   // Updates the status on whether echo leakage is detected in the output of the
   // echo remover.
   virtual void UpdateEchoLeakageStatus(bool leakage_detected) = 0;
+
+  // Specifies whether the capture output will be used. The purpose of this is
+  // to allow the echo remover to deactivate some of the processing when the
+  // resulting output is anyway not used, for instance when the endpoint is
+  // muted.
+  virtual void SetCaptureOutputUsage(bool capture_output_used) = 0;
 };
 
 }  // namespace webrtc

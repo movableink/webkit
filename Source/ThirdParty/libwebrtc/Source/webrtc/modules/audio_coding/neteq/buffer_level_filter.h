@@ -12,8 +12,9 @@
 #define MODULES_AUDIO_CODING_NETEQ_BUFFER_LEVEL_FILTER_H_
 
 #include <stddef.h>
+#include <stdint.h>
 
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 
@@ -23,21 +24,24 @@ class BufferLevelFilter {
   virtual ~BufferLevelFilter() {}
   virtual void Reset();
 
-  // Updates the filter. Current buffer size is |buffer_size_packets| (Q0).
-  // If |time_stretched_samples| is non-zero, the value is converted to the
-  // corresponding number of packets, and is subtracted from the filtered
-  // value (thus bypassing the filter operation). |packet_len_samples| is the
-  // number of audio samples carried in each incoming packet.
-  virtual void Update(size_t buffer_size_packets,
-                      int time_stretched_samples,
-                      size_t packet_len_samples);
+  // Updates the filter. Current buffer size is `buffer_size_samples`.
+  // `time_stretched_samples` is subtracted from the filtered value (thus
+  // bypassing the filter operation).
+  virtual void Update(size_t buffer_size_samples, int time_stretched_samples);
 
-  // Set the current target buffer level (obtained from
-  // DelayManager::base_target_level()). Used to select the appropriate
-  // filter coefficient.
-  virtual void SetTargetBufferLevel(int target_buffer_level);
+  // Set the filtered buffer level to a particular value directly. This should
+  // only be used in case of large changes in buffer size, such as buffer
+  // flushes.
+  virtual void SetFilteredBufferLevel(int buffer_size_samples);
 
-  virtual int filtered_current_level() const;
+  // The target level is used to select the appropriate filter coefficient.
+  virtual void SetTargetBufferLevel(int target_buffer_level_ms);
+
+  // Returns filtered current level in number of samples.
+  virtual int filtered_current_level() const {
+    // Round to nearest whole sample.
+    return (int64_t{filtered_current_level_} + (1 << 7)) >> 8;
+  }
 
  private:
   int level_factor_;  // Filter factor for the buffer level filter in Q8.

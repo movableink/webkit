@@ -13,15 +13,13 @@
 
 #include <map>
 #include <memory>
-#include <unordered_set>
 
+#include "api/sequence_checker.h"
 #include "audio/audio_transport_impl.h"
 #include "audio/null_audio_poller.h"
 #include "call/audio_state.h"
-#include "rtc_base/constructormagic.h"
-#include "rtc_base/criticalsection.h"
-#include "rtc_base/refcount.h"
-#include "rtc_base/thread_checker.h"
+#include "rtc_base/containers/flat_set.h"
+#include "rtc_base/ref_count.h"
 
 namespace webrtc {
 
@@ -30,9 +28,14 @@ class AudioReceiveStream;
 
 namespace internal {
 
-class AudioState final : public webrtc::AudioState {
+class AudioState : public webrtc::AudioState {
  public:
   explicit AudioState(const AudioState::Config& config);
+
+  AudioState() = delete;
+  AudioState(const AudioState&) = delete;
+  AudioState& operator=(const AudioState&) = delete;
+
   ~AudioState() override;
 
   AudioProcessing* audio_processing() override;
@@ -41,7 +44,6 @@ class AudioState final : public webrtc::AudioState {
   void SetPlayout(bool enabled) override;
   void SetRecording(bool enabled) override;
 
-  Stats GetAudioInputStats() const override;
   void SetStereoChannelSwapping(bool enable) override;
 
   AudioDeviceModule* audio_device_module() {
@@ -60,21 +62,14 @@ class AudioState final : public webrtc::AudioState {
   void RemoveSendingStream(webrtc::AudioSendStream* stream);
 
  private:
-  // rtc::RefCountInterface implementation.
-  void AddRef() const override;
-  rtc::RefCountReleaseStatus Release() const override;
-
   void UpdateAudioTransportWithSendingStreams();
+  void UpdateNullAudioPollerState();
 
-  rtc::ThreadChecker thread_checker_;
-  rtc::ThreadChecker process_thread_checker_;
+  SequenceChecker thread_checker_;
+  SequenceChecker process_thread_checker_;
   const webrtc::AudioState::Config config_;
   bool recording_enabled_ = true;
   bool playout_enabled_ = true;
-
-  // Reference count; implementation copied from rtc::RefCountedObject.
-  // TODO(nisse): Use RefCountedObject or RefCountedBase instead.
-  mutable volatile int ref_count_ = 0;
 
   // Transports mixed audio from the mixer to the audio device and
   // recorded audio to the sending streams.
@@ -85,14 +80,12 @@ class AudioState final : public webrtc::AudioState {
   // stats are still updated.
   std::unique_ptr<NullAudioPoller> null_audio_poller_;
 
-  std::unordered_set<webrtc::AudioReceiveStream*> receiving_streams_;
+  webrtc::flat_set<webrtc::AudioReceiveStream*> receiving_streams_;
   struct StreamProperties {
     int sample_rate_hz = 0;
     size_t num_channels = 0;
   };
   std::map<webrtc::AudioSendStream*, StreamProperties> sending_streams_;
-
-  RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(AudioState);
 };
 }  // namespace internal
 }  // namespace webrtc

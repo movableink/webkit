@@ -1,3 +1,0 @@
-
-FAIL arc() with negative radius throws INDEX_SIZE_ERR Can't find variable: OffscreenCanvas
-

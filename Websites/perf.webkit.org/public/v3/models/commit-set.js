@@ -74,6 +74,12 @@ class CommitSet extends DataModelObject {
     commitsWithTestability() { return this.commits().filter((commit) => !!commit.testability()); }
     commits() { return  Array.from(this._repositoryToCommitMap.values()); }
 
+    areAllRootsAvailable(earliestCreationTime)
+    {
+        return this.allRootFiles().every(rootFile => this.customRoots().includes(rootFile)
+            || (!rootFile.deletedAt() && rootFile.createdAt() >= earliestCreationTime));
+    }
+
     revisionForRepository(repository)
     {
         var commit = this._repositoryToCommitMap.get(repository);
@@ -102,7 +108,17 @@ class CommitSet extends DataModelObject {
         return this._latestCommitTime;
     }
 
+    equalsIgnoringRoot(other)
+    {
+        return this._equalsOptionallyIgnoringRoot(other, true);
+    }
+
     equals(other)
+    {
+        return this._equalsOptionallyIgnoringRoot(other, false);
+    }
+
+    _equalsOptionallyIgnoringRoot(other, ignoringRoot)
     {
         if (this._repositories.length != other._repositories.length)
             return false;
@@ -111,7 +127,7 @@ class CommitSet extends DataModelObject {
                 return false;
             if (this.patchForRepository(repository) != other.patchForRepository(repository))
                 return false;
-            if (this.rootForRepository(repository) != other.rootForRepository(repository))
+            if (this.rootForRepository(repository) != other.rootForRepository(repository) && !ignoringRoot)
                 return false;
             if (this.ownerCommitForRepository(repository) != other.ownerCommitForRepository(repository))
                 return false;
@@ -276,14 +292,15 @@ class MeasurementCommitSet extends CommitSet {
             const commitId = values[0];
             const repositoryId = values[1];
             const revision = values[2];
-            const order = values[3];
-            const time = values[4];
+            const revisionIdentifier = values[3];
+            const order = values[4];
+            const time = values[5];
             const repository = Repository.findById(repositoryId);
             if (!repository)
                 continue;
 
             // FIXME: Add a flag to remember the fact this commit log is incomplete.
-            const commit = CommitLog.ensureSingleton(commitId, {id: commitId, repository, revision, order, time});
+            const commit = CommitLog.ensureSingleton(commitId, {id: commitId, repository, revision, revisionIdentifier, order, time});
             this._repositoryToCommitMap.set(repository, commit);
             this._repositories.push(repository);
         }

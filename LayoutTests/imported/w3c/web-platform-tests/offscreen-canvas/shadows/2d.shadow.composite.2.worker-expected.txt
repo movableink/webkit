@@ -1,3 +1,0 @@
-
-FAIL Shadows are drawn using globalCompositeOperation Can't find variable: OffscreenCanvas
-

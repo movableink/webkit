@@ -25,16 +25,16 @@
 
 #pragma once
 
-#import "UIScriptController.h"
+#import "UIScriptControllerCocoa.h"
 
 #if PLATFORM(IOS_FAMILY)
 
 namespace WTR {
 
-class UIScriptControllerIOS : public UIScriptController {
+class UIScriptControllerIOS : public UIScriptControllerCocoa {
 public:
     explicit UIScriptControllerIOS(UIScriptContext& context)
-        : UIScriptController(context)
+        : UIScriptControllerCocoa(context)
     {
     }
 
@@ -43,12 +43,14 @@ public:
     double zoomScale() const override;
     double contentOffsetX() const override;
     double contentOffsetY() const override;
-    void scrollToOffset(long x, long y) override;
-    void immediateScrollToOffset(long x, long y) override;
+    void scrollToOffset(long x, long y, ScrollToOptions*) override;
+    void immediateScrollToOffset(long x, long y, ScrollToOptions*) override;
     void immediateZoomToScale(double scale) override;
     double minimumZoomScale() const override;
     double maximumZoomScale() const override;
     JSObjectRef contentVisibleRect() const override;
+    void copyText(JSStringRef) override;
+    void setSpellCheckerResults(JSValueRef) override { }
 };
 
 }

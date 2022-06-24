@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2015 Apple Inc.  All rights reserved.
+ * Copyright (C) 2005-2020 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,8 @@
 #include "PixelDumpSupport.h"
 #include "PolicyDelegate.h"
 #include "ResourceLoadDelegate.h"
+#include "TestCommand.h"
+#include "TestFeatures.h"
 #include "TestOptions.h"
 #include "TestRunner.h"
 #include "UIDelegate.h"
@@ -46,6 +48,7 @@
 #include "WorkQueue.h"
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <JavaScriptCore/InitializeThreading.h>
 #include <JavaScriptCore/Options.h>
 #include <JavaScriptCore/TestRunnerUtils.h>
 #include <WebKitLegacy/WebKit.h>
@@ -98,7 +101,6 @@ static bool dumpPixelsForAllTests = false;
 static bool dumpPixelsForCurrentTest = false;
 static bool threaded = false;
 static bool dumpTree = true;
-static bool useTimeoutWatchdog = true;
 static bool forceComplexText = false;
 static bool dumpAllPixels;
 static bool useAcceleratedDrawing = true; // Not used
@@ -130,6 +132,7 @@ HWND webViewWindow;
 RefPtr<TestRunner> gTestRunner;
 
 UINT_PTR waitToDumpWatchdog = 0;
+bool useTimeoutWatchdog = true;
 
 void setPersistentUserStyleSheetLocation(CFStringRef url)
 {
@@ -229,14 +232,23 @@ static String libraryPathForDumpRenderTree()
 }
 #endif
 
-string toUTF8(BSTR bstr)
+std::string toUTF8(BSTR bstr)
 {
     return toUTF8(bstr, SysStringLen(bstr));
 }
 
-string toUTF8(const wstring& wideString)
+std::string toUTF8(const wstring& wideString)
 {
     return toUTF8(wideString.c_str(), wideString.length());
+}
+
+static std::string toUTF8(CFStringRef input)
+{
+    CFIndex maximumURLLengthAsUTF8 = CFStringGetMaximumSizeForEncoding(CFStringGetLength(input), kCFStringEncodingUTF8) + 1;
+    Vector<char> buffer(maximumURLLengthAsUTF8 + 1, 0);
+    CFStringGetCString(input, buffer.data(), maximumURLLengthAsUTF8, kCFStringEncodingUTF8);
+
+    return buffer.data();
 }
 
 wstring cfStringRefToWString(CFStringRef cfStr)
@@ -245,6 +257,19 @@ wstring cfStringRefToWString(CFStringRef cfStr)
     CFStringGetCharacters(cfStr, CFRangeMake(0, CFStringGetLength(cfStr)), (UniChar *)v.data());
 
     return wstring(v.data(), v.size());
+}
+
+static _bstr_t toBSTR(const std::string& input)
+{
+    return input.c_str();
+}
+
+static _bstr_t toBSTR(CFStringRef input)
+{
+    size_t stringLength = CFStringGetLength(input);
+    Vector<UniChar> buffer(stringLength + 1, 0);
+    CFStringGetCharacters(input, CFRangeMake(0, stringLength), buffer.data());
+    return reinterpret_cast<wchar_t*>(buffer.data());
 }
 
 static LRESULT CALLBACK DumpRenderTreeWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -488,6 +513,13 @@ static wstring dumpFramesAsText(IWebFrame* frame)
         }
     }
 
+    // To keep things tidy, strip all trailing spaces: they are not a meaningful part of dumpAsText test output.
+    std::wstring::size_type spacePosition;
+    while ((spacePosition = result.find(L" \n")) != std::wstring::npos)
+        result.erase(spacePosition, 1);
+    while (!result.empty() && result.back() == ' ')
+        result.pop_back();
+
     return result;
 }
 
@@ -562,32 +594,34 @@ static void dumpHistoryItem(IWebHistoryItem* item, int indent, bool current)
     fputc('\n', testResult);
 
     unsigned kidsCount;
-    SAFEARRAY* arrPtr;
-    if (FAILED(itemPrivate->children(&kidsCount, &arrPtr)) || !kidsCount)
+    SAFEARRAY* arrayPtr;
+    if (FAILED(itemPrivate->children(&kidsCount, &arrayPtr)) || !kidsCount)
         return;
+
+    std::unique_ptr<SAFEARRAY, decltype(&::SafeArrayDestroy)> array(arrayPtr, ::SafeArrayDestroy);
 
     Vector<COMPtr<IUnknown> > kidsVector;
 
     LONG lowerBound;
-    if (FAILED(::SafeArrayGetLBound(arrPtr, 1, &lowerBound)))
-        goto exit;
+    if (FAILED(::SafeArrayGetLBound(array.get(), 1, &lowerBound)))
+        return;
 
     LONG upperBound;
-    if (FAILED(::SafeArrayGetUBound(arrPtr, 1, &upperBound)))
-        goto exit;
+    if (FAILED(::SafeArrayGetUBound(array.get(), 1, &upperBound)))
+        return;
 
     LONG length = upperBound - lowerBound + 1;
     if (!length)
-        goto exit;
+        return;
     ASSERT(length == kidsCount);
 
     IUnknown** safeArrayData;
-    if (FAILED(::SafeArrayAccessData(arrPtr, (void**)&safeArrayData)))
-        goto exit;
+    if (FAILED(::SafeArrayAccessData(array.get(), (void**)&safeArrayData)))
+        return;
 
     for (int i = 0; i < length; ++i)
         kidsVector.append(safeArrayData[i]);
-    ::SafeArrayUnaccessData(arrPtr);
+    ::SafeArrayUnaccessData(array.get());
 
     // must sort to eliminate arbitrary result ordering which defeats reproducible testing
     qsort(kidsVector.data(), kidsCount, sizeof(kidsVector[0]), compareHistoryItems);
@@ -597,10 +631,6 @@ static void dumpHistoryItem(IWebHistoryItem* item, int indent, bool current)
         kidsVector[i]->QueryInterface(&item);
         dumpHistoryItem(item.get(), indent + 4, false);
     }
-
-exit:
-    if (arrPtr && SUCCEEDED(::SafeArrayUnlock(arrPtr)))
-        ::SafeArrayDestroy(arrPtr);
 }
 
 static void dumpBackForwardList(IWebView* webView)
@@ -775,11 +805,6 @@ static bool shouldDumpAsText(const char* pathOrURL)
     return strstr(pathOrURL, "/dumpAsText/") || strstr(pathOrURL, "\\dumpAsText\\");
 }
 
-static bool shouldEnableDeveloperExtras(const char* pathOrURL)
-{
-    return true;
-}
-
 static void enableExperimentalFeatures(IWebPreferences* preferences)
 {
     COMPtr<IWebPreferencesPrivate7> prefsPrivate { Query, preferences };
@@ -796,22 +821,29 @@ static void enableExperimentalFeatures(IWebPreferences* preferences)
     prefsPrivate->setVisualViewportAPIEnabled(TRUE);
     prefsPrivate->setCSSOMViewScrollingAPIEnabled(TRUE);
     prefsPrivate->setResizeObserverEnabled(TRUE);
-    prefsPrivate->setWebAnimationsEnabled(TRUE);
+    prefsPrivate->setWebAnimationsCompositeOperationsEnabled(TRUE);
+    prefsPrivate->setWebAnimationsMutableTimelinesEnabled(TRUE);
+    prefsPrivate->setCSSCustomPropertiesAndValuesEnabled(TRUE);
     prefsPrivate->setServerTimingEnabled(TRUE);
+    prefsPrivate->setAspectRatioOfImgFromWidthAndHeightEnabled(TRUE);
     // FIXME: WebGL2
     // FIXME: WebRTC
+    prefsPrivate->setCSSOMViewSmoothScrollingEnabled(TRUE);
 }
 
 static void resetWebPreferencesToConsistentValues(IWebPreferences* preferences)
 {
     ASSERT(preferences);
 
-    enableExperimentalFeatures(preferences);
-
     preferences->setAutosaves(FALSE);
 
-    COMPtr<IWebPreferencesPrivate6> prefsPrivate(Query, preferences);
+    COMPtr<IWebPreferencesPrivate8> prefsPrivate(Query, preferences);
     ASSERT(prefsPrivate);
+
+    prefsPrivate->resetForTesting();
+
+    enableExperimentalFeatures(preferences);
+
     prefsPrivate->setFullScreenEnabled(TRUE);
 
 #ifdef USE_MAC_FONTS
@@ -830,6 +862,8 @@ static void resetWebPreferencesToConsistentValues(IWebPreferences* preferences)
     static _bstr_t pictographFamily(TEXT("Segoe UI Symbol"));
 #endif
 
+    prefsPrivate->setAllowTopNavigationToDataURLs(TRUE);
+    prefsPrivate->setModernUnprefixedWebAudioEnabled(TRUE);
     prefsPrivate->setAllowUniversalAccessFromFileURLs(TRUE);
     prefsPrivate->setAllowFileAccessFromFileURLs(TRUE);
     preferences->setStandardFontFamily(standardFamily);
@@ -846,12 +880,10 @@ static void resetWebPreferencesToConsistentValues(IWebPreferences* preferences)
     preferences->setJavaEnabled(FALSE);
     preferences->setJavaScriptEnabled(TRUE);
     preferences->setEditableLinkBehavior(WebKitEditableLinkOnlyLiveWithShiftKey);
-    preferences->setTabsToLinks(FALSE);
     preferences->setDOMPasteAllowed(TRUE);
     preferences->setShouldPrintBackgrounds(TRUE);
     preferences->setCacheModel(WebCacheModelDocumentBrowser);
     prefsPrivate->setXSSAuditorEnabled(FALSE);
-    prefsPrivate->setExperimentalNotificationsEnabled(FALSE);
     preferences->setPlugInsEnabled(TRUE);
     preferences->setTextAreasAreResizable(TRUE);
     preferences->setUsesPageCache(FALSE);
@@ -862,19 +894,13 @@ static void resetWebPreferencesToConsistentValues(IWebPreferences* preferences)
     preferences->setJavaScriptCanOpenWindowsAutomatically(TRUE);
     prefsPrivate->setJavaScriptCanAccessClipboard(TRUE);
     prefsPrivate->setOfflineWebApplicationCacheEnabled(TRUE);
-    prefsPrivate->setDeveloperExtrasEnabled(FALSE);
     prefsPrivate->setJavaScriptRuntimeFlags(WebKitJavaScriptRuntimeFlagsAllEnabled);
     // Set JS experiments enabled: YES
     preferences->setLoadsImagesAutomatically(TRUE);
     prefsPrivate->setLoadsSiteIconsIgnoringImageLoadingPreference(FALSE);
     prefsPrivate->setFrameFlatteningEnabled(FALSE);
-    prefsPrivate->setSpatialNavigationEnabled(FALSE);
     if (persistentUserStyleSheetLocation) {
-        size_t stringLength = CFStringGetLength(persistentUserStyleSheetLocation.get());
-        Vector<UniChar> urlCharacters(stringLength + 1, 0);
-        CFStringGetCharacters(persistentUserStyleSheetLocation.get(), CFRangeMake(0, stringLength), urlCharacters.data());
-        _bstr_t url(reinterpret_cast<wchar_t*>(urlCharacters.data()));
-        preferences->setUserStyleSheetLocation(url);
+        preferences->setUserStyleSheetLocation(toBSTR(persistentUserStyleSheetLocation.get()));
         preferences->setUserStyleSheetEnabled(TRUE);
     } else
         preferences->setUserStyleSheetEnabled(FALSE);
@@ -890,31 +916,35 @@ static void resetWebPreferencesToConsistentValues(IWebPreferences* preferences)
 
     preferences->setFontSmoothing(FontSmoothingTypeStandard);
 
-    prefsPrivate->setFetchAPIEnabled(TRUE);
-    prefsPrivate->setShadowDOMEnabled(TRUE);
-    prefsPrivate->setCustomElementsEnabled(TRUE);
-    prefsPrivate->setResourceTimingEnabled(TRUE);
-    prefsPrivate->setUserTimingEnabled(TRUE);
+    prefsPrivate->setWebSQLEnabled(true);
+
     prefsPrivate->setDataTransferItemsEnabled(TRUE);
     prefsPrivate->clearNetworkLoaderSession();
+
+    prefsPrivate->setSpeechRecognitionEnabled(TRUE);
 
     setAlwaysAcceptCookies(false);
 }
 
-static void setWebPreferencesForTestOptions(IWebPreferences* preferences, const TestOptions& options)
+template<typename T> T webPreferenceFeatureValue(const std::string& key, const std::unordered_map<std::string, T>& map)
 {
-    COMPtr<IWebPreferencesPrivate7> prefsPrivate { Query, preferences };
+    auto it = map.find(key);
+    ASSERT(it != map.end());
+    return it->second;
+}
 
-    prefsPrivate->setWebAnimationsCSSIntegrationEnabled(options.enableWebAnimationsCSSIntegration);
-    prefsPrivate->setMenuItemElementEnabled(options.enableMenuItemElement);
-    prefsPrivate->setKeygenElementEnabled(options.enableKeygenElement);
-    prefsPrivate->setModernMediaControlsEnabled(options.enableModernMediaControls);
-    prefsPrivate->setIsSecureContextAttributeEnabled(options.enableIsSecureContextAttribute);
-    prefsPrivate->setInspectorAdditionsEnabled(options.enableInspectorAdditions);
-    prefsPrivate->setRequestIdleCallbackEnabled(options.enableRequestIdleCallback);
-    prefsPrivate->setAsyncClipboardAPIEnabled(options.enableAsyncClipboardAPI);
-    preferences->setPrivateBrowsingEnabled(options.useEphemeralSession);
-    preferences->setUsesPageCache(options.enableBackForwardCache);
+static void setWebPreferencesForTestOptions(IWebPreferences* preferences, const WTR::TestOptions& options)
+{
+    COMPtr<IWebPreferencesPrivate8> prefsPrivate { Query, preferences };
+
+    preferences->setPrivateBrowsingEnabled(options.useEphemeralSession());
+
+    // FIXME: Remove this once there is a viable mechanism for reseting WebPreferences between tests,
+    // at which point, we will not need to manually reset every supported preference for each test.
+    for (const auto& key : options.supportedBoolWebPreferenceFeatures())
+        prefsPrivate->setBoolPreferenceForTesting(toBSTR(WTR::TestOptions::toWebKitLegacyPreferenceKey(key)), webPreferenceFeatureValue(key, options.boolWebPreferenceFeatures()));
+    for (const auto& key : options.supportedUInt32WebPreferenceFeatures())
+        prefsPrivate->setUInt32PreferenceForTesting(toBSTR(WTR::TestOptions::toWebKitLegacyPreferenceKey(key)), webPreferenceFeatureValue(key, options.uint32WebPreferenceFeatures()));
 }
 
 static String applicationId()
@@ -951,7 +981,7 @@ static void setDefaultsToConsistentValuesForTesting()
 #endif
 }
 
-static void setJSCOptions(const TestOptions& options)
+static void setJSCOptions(const WTR::TestOptions& options)
 {
     static WTF::StringBuilder savedOptions;
 
@@ -960,13 +990,13 @@ static void setJSCOptions(const TestOptions& options)
         savedOptions.clear();
     }
 
-    if (options.jscOptions.length()) {
+    if (!options.jscOptions().empty()) {
         JSC::Options::dumpAllOptionsInALine(savedOptions);
-        JSC::Options::setOptions(options.jscOptions.c_str());
+        JSC::Options::setOptions(options.jscOptions().c_str());
     }
 }
 
-static void resetWebViewToConsistentStateBeforeTesting(const TestOptions& options)
+static void resetWebViewToConsistentStateBeforeTesting(const WTR::TestOptions& options)
 {
     setJSCOptions(options);
 
@@ -1015,8 +1045,13 @@ static void resetWebViewToConsistentStateBeforeTesting(const TestOptions& option
 
     COMPtr<IWebPreferences> preferences;
     if (SUCCEEDED(webView->preferences(&preferences))) {
+        COMPtr<IWebPreferencesPrivate8> prefsPrivate { Query, preferences };
+        prefsPrivate->startBatchingUpdates();
+
         resetWebPreferencesToConsistentValues(preferences.get());
         setWebPreferencesForTestOptions(preferences.get(), options);
+
+        prefsPrivate->stopBatchingUpdates();
     }
 
     TestRunner::setSerializeHTTPLoads(false);
@@ -1042,7 +1077,7 @@ static void resetWebViewToConsistentStateBeforeTesting(const TestOptions& option
     if (webViewPrivate && SUCCEEDED(webViewPrivate->viewWindow(&viewWindow)) && viewWindow)
         ::SetFocus(viewWindow);
 
-    webViewPrivate->resetOriginAccessWhitelists();
+    webViewPrivate->resetOriginAccessAllowLists();
 
     sharedUIDelegate->resetUndoManager();
 
@@ -1069,7 +1104,7 @@ static void sizeWebViewForCurrentTest()
 
 static String findFontFallback(const char* pathOrUrl)
 {
-    String pathToFontFallback = FileSystem::directoryName(pathOrUrl);
+    String pathToFontFallback = FileSystem::parentPath(pathOrUrl);
 
     wchar_t fullPath[_MAX_PATH];
     if (!_wfullpath(fullPath, pathToFontFallback.wideCharacters().data(), _MAX_PATH))
@@ -1153,61 +1188,55 @@ static bool handleControlCommand(const char* command)
     return false;
 }
 
+static WTR::TestOptions testOptionsForTest(const WTR::TestCommand& command)
+{
+    WTR::TestFeatures features = WTR::TestOptions::defaults();
+    WTR::merge(features, WTR::hardcodedFeaturesBasedOnPathForTest(command));
+    WTR::merge(features, WTR::featureDefaultsFromTestHeaderForTest(command, WTR::TestOptions::keyTypeMapping()));
+
+    return WTR::TestOptions { WTFMove(features) };
+}
+
 static void runTest(const string& inputLine)
 {
     ASSERT(!inputLine.empty());
 
-    TestCommand command = parseInputLine(inputLine);
+    auto command = WTR::parseInputLine(inputLine);
     const string& pathOrURL = command.pathOrURL;
     dumpPixelsForCurrentTest = command.shouldDumpPixels || dumpPixelsForAllTests;
 
     static _bstr_t methodBStr(TEXT("GET"));
 
-    CFStringRef str = CFStringCreateWithCString(0, pathOrURL.c_str(), kCFStringEncodingWindowsLatin1);
+    auto str = adoptCF(CFStringCreateWithCString(0, pathOrURL.c_str(), kCFStringEncodingWindowsLatin1));
     if (!str) {
         fprintf(stderr, "Failed to parse \"%s\" as UTF-8\n", pathOrURL.c_str());
         return;
     }
 
-    CFURLRef url = CFURLCreateWithString(0, str, 0);
-
+    auto url = adoptCF(CFURLCreateWithString(0, str.get(), 0));
     if (!url)
-        url = CFURLCreateWithFileSystemPath(0, str, kCFURLWindowsPathStyle, false);
-
-    CFRelease(str);
+        url = adoptCF(CFURLCreateWithFileSystemPath(0, str.get(), kCFURLWindowsPathStyle, false));
 
     if (!url) {
         fprintf(stderr, "Failed to parse \"%s\" as a URL\n", pathOrURL.c_str());
         return;
     }
 
-    String hostName = String(adoptCF(CFURLCopyHostName(url)).get());
-
+    String hostName = String(adoptCF(CFURLCopyHostName(url.get())).get());
     String fallbackPath = findFontFallback(pathOrURL.c_str());
 
-    str = CFURLGetString(url);
+    auto urlCFString = CFURLGetString(url.get());
 
-    CFIndex length = CFStringGetLength(str);
+    auto urlBStr = toBSTR(urlCFString);
+    ASSERT(urlBStr.length() == CFStringGetLength(urlCFString));
 
-    Vector<UniChar> buffer(length + 1, 0);
-    CFStringGetCharacters(str, CFRangeMake(0, length), buffer.data());
-
-    _bstr_t urlBStr(reinterpret_cast<wchar_t*>(buffer.data()));
-    ASSERT(urlBStr.length() == length);
-
-    CFIndex maximumURLLengthAsUTF8 = CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8) + 1;
-    Vector<char> testURL(maximumURLLengthAsUTF8 + 1, 0);
-    CFStringGetCString(str, testURL.data(), maximumURLLengthAsUTF8, kCFStringEncodingUTF8);
-
-    CFRelease(url);
-
-    TestOptions options { command.pathOrURL, command.absolutePath };
+    auto options = testOptionsForTest(command);
 
     resetWebViewToConsistentStateBeforeTesting(options);
 
-    ::gTestRunner = TestRunner::create(testURL.data(), command.expectedPixelHash);
-    ::gTestRunner->setCustomTimeout(command.timeout);
-    ::gTestRunner->setDumpJSConsoleLogInStdErr(command.dumpJSConsoleLogInStdErr || options.dumpJSConsoleLogInStdErr);
+    ::gTestRunner = TestRunner::create(toUTF8(urlCFString), command.expectedPixelHash);
+    ::gTestRunner->setCustomTimeout(command.timeout.milliseconds());
+    ::gTestRunner->setDumpJSConsoleLogInStdErr(command.dumpJSConsoleLogInStdErr || options.dumpJSConsoleLogInStdErr());
 
     topLoadingFrame = nullptr;
     done = false;
@@ -1217,6 +1246,8 @@ static void runTest(const string& inputLine)
     sizeWebViewForCurrentTest();
     ::gTestRunner->setIconDatabaseEnabled(false);
     ::gTestRunner->clearAllApplicationCaches();
+
+    ::gTestRunner->clearAllDatabases();
 
     if (shouldLogFrameLoadDelegates(pathOrURL.c_str()))
         ::gTestRunner->setDumpFrameLoadCallbacks(true);
@@ -1233,12 +1264,9 @@ static void runTest(const string& inputLine)
         }
     }
 
-    if (shouldEnableDeveloperExtras(pathOrURL.c_str())) {
-        ::gTestRunner->setDeveloperExtrasEnabled(true);
-        if (shouldDumpAsText(pathOrURL.c_str())) {
-            ::gTestRunner->setDumpAsText(true);
-            ::gTestRunner->setGeneratePixelResults(false);
-        }
+    if (shouldDumpAsText(pathOrURL.c_str())) {
+        ::gTestRunner->setDumpAsText(true);
+        ::gTestRunner->setGeneratePixelResults(false);
     }
 
     COMPtr<IWebHistory> history;
@@ -1269,10 +1297,15 @@ static void runTest(const string& inputLine)
         request->setAllowsAnyHTTPSCertificate();
     frame->loadRequest(request.get());
 
-    while (!done) {
+    while (true) {
 #if USE(CF)
         CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, true);
 #endif
+        if (done) {
+            // Post WM_QUIT to ensure that all deferred tasks are dispatched before quitting the run loop.
+            PostQuitMessage(0);
+        }
+
         if (!::GetMessage(&msg, 0, 0, 0))
             break;
 
@@ -1290,23 +1323,15 @@ static void runTest(const string& inputLine)
 
     // If the test page could have possibly opened the Web Inspector frontend,
     // then try to close it in case it was accidentally left open.
-    if (shouldEnableDeveloperExtras(pathOrURL.c_str())) {
-        ::gTestRunner->closeWebInspector();
-        ::gTestRunner->setDeveloperExtrasEnabled(false);
-    }
+    ::gTestRunner->closeWebInspector();
 
-    if (::gTestRunner->closeRemainingWindowsWhenComplete()) {
-        Vector<HWND> windows = openWindows();
-        unsigned size = windows.size();
-        for (unsigned i = 0; i < size; i++) {
-            HWND window = windows[i];
 
-            // Don't try to close the main window
-            if (window == hostWindow)
-                continue;
+    for (HWND window : Vector(openWindows())) {
+        // Don't try to close the main window
+        if (window == hostWindow)
+            continue;
 
-            ::DestroyWindow(window);
-        }
+        ::DestroyWindow(window);
     }
 
     resetWebViewToConsistentStateBeforeTesting(options);
@@ -1590,6 +1615,10 @@ int main(int argc, const char* argv[])
     setDefaultsToConsistentValuesForTesting();
 
     Vector<const char*> tests = initializeGlobalsFromCommandLineOptions(argc, argv);
+
+    JSC::initialize();
+    WTF::initializeMainThread();
+    WebCoreTestSupport::populateJITOperations();
 
     // FIXME - need to make DRT pass with Windows native controls <http://bugs.webkit.org/show_bug.cgi?id=25592>
     COMPtr<IWebPreferences> tmpPreferences;

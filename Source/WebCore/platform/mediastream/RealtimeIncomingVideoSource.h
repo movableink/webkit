@@ -37,7 +37,7 @@
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
-#include <webrtc/api/mediastreaminterface.h>
+#include <webrtc/api/media_stream_interface.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 
@@ -50,15 +50,11 @@ class CaptureDevice;
 class RealtimeIncomingVideoSource
     : public RealtimeMediaSource
     , private rtc::VideoSinkInterface<webrtc::VideoFrame>
+    , private webrtc::ObserverInterface
 {
 public:
     static Ref<RealtimeIncomingVideoSource> create(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&, String&&);
-    ~RealtimeIncomingVideoSource()
-    {
-        stop();
-    }
-
-    void setSourceTrack(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&);
+    ~RealtimeIncomingVideoSource();
 
 protected:
     RealtimeIncomingVideoSource(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&, String&&);
@@ -66,7 +62,9 @@ protected:
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const final { return "RealtimeIncomingVideoSource"; }
 #endif
-    
+
+    static VideoFrameTimeMetadata metadataFromVideoFrame(const webrtc::VideoFrame&);
+
 private:
     // RealtimeMediaSource API
     void startProducingData() final;
@@ -78,7 +76,10 @@ private:
 
     bool isIncomingVideoSource() const final { return true; }
 
-    Optional<RealtimeMediaSourceSettings> m_currentSettings;
+    // webrtc::ObserverInterface API
+    void OnChanged() final;
+
+    std::optional<RealtimeMediaSourceSettings> m_currentSettings;
     rtc::scoped_refptr<webrtc::VideoTrackInterface> m_videoTrack;
 
 #if !RELEASE_LOG_DISABLED

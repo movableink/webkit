@@ -23,13 +23,16 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "MemoryRelease.h"
+#import "config.h"
+#import "MemoryRelease.h"
 
 #import "FontFamilySpecificationCoreText.h"
 #import "GCController.h"
+#import "HTMLNameCache.h"
 #import "IOSurfacePool.h"
 #import "LayerPool.h"
+#import "LocaleCocoa.h"
+#import "SubimageCacheWithTimer.h"
 #import "SystemFontDatabaseCoreText.h"
 #import <notify.h>
 #import <pal/spi/ios/GraphicsServicesSPI.h>
@@ -44,9 +47,7 @@ namespace WebCore {
 
 void platformReleaseMemory(Critical)
 {
-#if USE(PLATFORM_SYSTEM_FALLBACK_LIST)
     SystemFontDatabaseCoreText::singleton().clear();
-#endif
     clearFontFamilySpecificationCoreTextCache();
 
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(IOS_FAMILY_SIMULATOR) && !PLATFORM(MACCATALYST)
@@ -54,6 +55,8 @@ void platformReleaseMemory(Critical)
     GSFontInitialize();
     GSFontPurgeFontCache();
 #endif
+
+    LocaleCocoa::releaseMemory();
 
     for (auto& pool : LayerPool::allLayerPools())
         pool->drain();
@@ -63,14 +66,24 @@ void platformReleaseMemory(Critical)
     tileControllerMemoryHandler().trimUnparentedTilesToTarget(0);
 #endif
 
-#if HAVE(IOSURFACE)
     IOSurfacePool::sharedPool().discardAllSurfaces();
+
+#if CACHE_SUBIMAGES
+    SubimageCacheWithTimer::clear();
+#endif
+}
+
+void platformReleaseGraphicsMemory(Critical)
+{
+    IOSurfacePool::sharedPool().discardAllSurfaces();
+
+#if CACHE_SUBIMAGES
+    SubimageCacheWithTimer::clear();
 #endif
 }
 
 void jettisonExpensiveObjectsOnTopLevelNavigation()
 {
-#if PLATFORM(IOS_FAMILY)
     // Protect against doing excessive jettisoning during repeated navigations.
     const auto minimumTimeSinceNavigation = 2_s;
 
@@ -82,10 +95,13 @@ void jettisonExpensiveObjectsOnTopLevelNavigation()
     if (!shouldJettison)
         return;
 
+#if PLATFORM(IOS_FAMILY)
     // Throw away linked JS code. Linked code is tied to a global object and is not reusable.
     // The immediate memory savings outweigh the cost of recompilation in case we go back again.
     GCController::singleton().deleteAllLinkedCode(JSC::DeleteAllCodeIfNotCollecting);
 #endif
+
+    HTMLNameCache::clear();
 }
 
 void registerMemoryReleaseNotifyCallbacks()

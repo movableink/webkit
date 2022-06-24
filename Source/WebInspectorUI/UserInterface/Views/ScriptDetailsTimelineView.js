@@ -43,11 +43,7 @@ WI.ScriptDetailsTimelineView = class ScriptDetailsTimelineView extends WI.Timeli
         columns.location.icon = true;
         columns.location.width = "15%";
 
-        if (!InspectorBackend.hasDomain("ScriptProfiler")) {
-            // COMPATIBILITY(iOS 9): ScriptProfiler did not exist yet, we had call counts, not samples.
-            columns.callCount.title = WI.UIString("Calls");
-        } else
-            columns.callCount.title = WI.UIString("Samples");
+        columns.callCount.title = WI.UIString("Samples");
         columns.callCount.width = "5%";
         columns.callCount.aligned = "right";
 
@@ -94,24 +90,10 @@ WI.ScriptDetailsTimelineView = class ScriptDetailsTimelineView extends WI.Timeli
 
     get showsLiveRecordingData() { return false; }
 
-    shown()
-    {
-        super.shown();
-
-        this._dataGrid.shown();
-    }
-
-    hidden()
-    {
-        this._dataGrid.hidden();
-
-        super.hidden();
-    }
-
     closed()
     {
-        console.assert(this.representedObject instanceof WI.Timeline);
-        this.representedObject.removeEventListener(null, null, this);
+        this.representedObject.removeEventListener(WI.Timeline.Event.RecordAdded, this._scriptTimelineRecordAdded, this);
+        this.representedObject.removeEventListener(WI.Timeline.Event.Refreshed, this._scriptTimelineRecordRefreshed, this);
 
         this._dataGrid.closed();
     }

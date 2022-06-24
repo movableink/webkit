@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #import "APICast.h"
 #import "DateInstance.h"
@@ -36,6 +36,7 @@
 #import "JSValueInternal.h"
 #import "JSValuePrivate.h"
 #import "JSWrapperMap.h"
+#import "MarkedJSValueRefArray.h"
 #import "ObjcRuntimeExtras.h"
 #import "JSCInlines.h"
 #import "JSCJSValue.h"
@@ -45,7 +46,6 @@
 #import <wtf/HashMap.h>
 #import <wtf/HashSet.h>
 #import <wtf/Lock.h>
-#import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/Vector.h>
 #import <wtf/text/WTFString.h>
 #import <wtf/text/StringHash.h>
@@ -71,9 +71,11 @@ NSString * const JSPropertyDescriptorSetKey = @"set";
 
 - (void)dealloc
 {
-    JSValueUnprotect([_context JSGlobalContextRef], m_value);
-    [_context release];
-    _context = nil;
+    if (_context) {
+        JSValueUnprotect([_context JSGlobalContextRef], m_value);
+        [_context release];
+        _context = nil;
+    }
     [super dealloc];
 }
 
@@ -398,37 +400,65 @@ inline Expected<Result, JSValueRef> performPropertyOperation(NSStringFunction st
 
 - (BOOL)isUndefined
 {
+#if !CPU(ADDRESS64)
     return JSValueIsUndefined([_context JSGlobalContextRef], m_value);
+#else
+    return toJS(m_value).isUndefined();
+#endif
 }
 
 - (BOOL)isNull
 {
+#if !CPU(ADDRESS64)
     return JSValueIsNull([_context JSGlobalContextRef], m_value);
+#else
+    return toJS(m_value).isNull();
+#endif
 }
 
 - (BOOL)isBoolean
 {
+#if !CPU(ADDRESS64)
     return JSValueIsBoolean([_context JSGlobalContextRef], m_value);
+#else
+    return toJS(m_value).isBoolean();
+#endif
 }
 
 - (BOOL)isNumber
 {
+#if !CPU(ADDRESS64)
     return JSValueIsNumber([_context JSGlobalContextRef], m_value);
+#else
+    return toJS(m_value).isNumber();
+#endif
 }
 
 - (BOOL)isString
 {
+#if !CPU(ADDRESS64)
     return JSValueIsString([_context JSGlobalContextRef], m_value);
+#else
+    return toJS(m_value).isString();
+#endif
 }
 
 - (BOOL)isObject
 {
+#if !CPU(ADDRESS64)
     return JSValueIsObject([_context JSGlobalContextRef], m_value);
+#else
+    return toJS(m_value).isObject();
+#endif
 }
 
 - (BOOL)isSymbol
 {
+#if !CPU(ADDRESS64)
     return JSValueIsSymbol([_context JSGlobalContextRef], m_value);
+#else
+    return toJS(m_value).isSymbol();
+#endif
 }
 
 - (BOOL)isArray
@@ -472,8 +502,12 @@ inline Expected<Result, JSValueRef> performPropertyOperation(NSStringFunction st
 
 - (JSValue *)callWithArguments:(NSArray *)argumentArray
 {
+    JSC::JSGlobalObject* globalObject = toJS([_context JSGlobalContextRef]);
+    JSC::VM& vm = globalObject->vm();
+    JSC::JSLockHolder locker(vm);
+
     NSUInteger argumentCount = [argumentArray count];
-    JSValueRef arguments[argumentCount];
+    JSC::MarkedJSValueRefArray arguments([_context JSGlobalContextRef], argumentCount);
     for (unsigned i = 0; i < argumentCount; ++i)
         arguments[i] = objectToValue(_context, [argumentArray objectAtIndex:i]);
 
@@ -482,7 +516,7 @@ inline Expected<Result, JSValueRef> performPropertyOperation(NSStringFunction st
     if (exception)
         return [_context valueFromNotifyException:exception];
 
-    JSValueRef result = JSObjectCallAsFunction([_context JSGlobalContextRef], object, 0, argumentCount, arguments, &exception);
+    JSValueRef result = JSObjectCallAsFunction([_context JSGlobalContextRef], object, 0, argumentCount, arguments.data(), &exception);
     if (exception)
         return [_context valueFromNotifyException:exception];
 
@@ -491,8 +525,12 @@ inline Expected<Result, JSValueRef> performPropertyOperation(NSStringFunction st
 
 - (JSValue *)constructWithArguments:(NSArray *)argumentArray
 {
+    JSC::JSGlobalObject* globalObject = toJS([_context JSGlobalContextRef]);
+    JSC::VM& vm = globalObject->vm();
+    JSC::JSLockHolder locker(vm);
+
     NSUInteger argumentCount = [argumentArray count];
-    JSValueRef arguments[argumentCount];
+    JSC::MarkedJSValueRefArray arguments([_context JSGlobalContextRef], argumentCount);
     for (unsigned i = 0; i < argumentCount; ++i)
         arguments[i] = objectToValue(_context, [argumentArray objectAtIndex:i]);
 
@@ -501,7 +539,7 @@ inline Expected<Result, JSValueRef> performPropertyOperation(NSStringFunction st
     if (exception)
         return [_context valueFromNotifyException:exception];
 
-    JSObjectRef result = JSObjectCallAsConstructor([_context JSGlobalContextRef], object, argumentCount, arguments, &exception);
+    JSObjectRef result = JSObjectCallAsConstructor([_context JSGlobalContextRef], object, argumentCount, arguments.data(), &exception);
     if (exception)
         return [_context valueFromNotifyException:exception];
 
@@ -510,8 +548,12 @@ inline Expected<Result, JSValueRef> performPropertyOperation(NSStringFunction st
 
 - (JSValue *)invokeMethod:(NSString *)method withArguments:(NSArray *)arguments
 {
+    JSC::JSGlobalObject* globalObject = toJS([_context JSGlobalContextRef]);
+    JSC::VM& vm = globalObject->vm();
+    JSC::JSLockHolder locker(vm);
+
     NSUInteger argumentCount = [arguments count];
-    JSValueRef argumentArray[argumentCount];
+    JSC::MarkedJSValueRefArray argumentArray([_context JSGlobalContextRef], argumentCount);
     for (unsigned i = 0; i < argumentCount; ++i)
         argumentArray[i] = objectToValue(_context, [arguments objectAtIndex:i]);
 
@@ -529,7 +571,7 @@ inline Expected<Result, JSValueRef> performPropertyOperation(NSStringFunction st
     if (exception)
         return [_context valueFromNotifyException:exception];
 
-    JSValueRef result = JSObjectCallAsFunction([_context JSGlobalContextRef], object, thisObject, argumentCount, argumentArray, &exception);
+    JSValueRef result = JSObjectCallAsFunction([_context JSGlobalContextRef], object, thisObject, argumentCount, argumentArray.data(), &exception);
     if (exception)
         return [_context valueFromNotifyException:exception];
 
@@ -691,8 +733,8 @@ inline id JSContainerConvertor::convert(JSValueRef value)
 
 void JSContainerConvertor::add(Task task)
 {
-    JSC::ExecState* exec = toJS(m_context);
-    m_jsValues.append(JSC::Strong<JSC::Unknown>(exec->vm(), toJSForGC(exec, task.js)));
+    JSC::JSGlobalObject* globalObject = toJS(m_context);
+    m_jsValues.append(JSC::Strong<JSC::Unknown>(globalObject->vm(), toJSForGC(globalObject, task.js)));
     m_objectMap.add(task.js, task.objc);
     if (task.type != ContainerNone)
         m_worklist.append(task);
@@ -709,17 +751,17 @@ JSContainerConvertor::Task JSContainerConvertor::take()
 #if ENABLE(REMOTE_INSPECTOR)
 static void reportExceptionToInspector(JSGlobalContextRef context, JSC::JSValue exceptionValue)
 {
-    JSC::ExecState* exec = toJS(context);
-    JSC::VM& vm = exec->vm();
+    JSC::JSGlobalObject* globalObject = toJS(context);
+    JSC::VM& vm = globalObject->vm();
     JSC::Exception* exception = JSC::Exception::create(vm, exceptionValue);
-    vm.vmEntryGlobalObject(exec)->inspectorController().reportAPIException(exec, exception);
+    globalObject->inspectorController().reportAPIException(globalObject, exception);
 }
 #endif
 
 static JSContainerConvertor::Task valueToObjectWithoutCopy(JSGlobalContextRef context, JSValueRef value)
 {
-    JSC::ExecState* exec = toJS(context);
-    JSC::VM& vm = exec->vm();
+    JSC::JSGlobalObject* globalObject = toJS(context);
+    JSC::VM& vm = globalObject->vm();
 
     if (!JSValueIsObject(context, value)) {
         id primitive;
@@ -729,11 +771,11 @@ static JSContainerConvertor::Task valueToObjectWithoutCopy(JSGlobalContextRef co
             // Normalize the number, so it will unique correctly in the hash map -
             // it's nicer not to leak this internal implementation detail!
             value = JSValueMakeNumber(context, JSValueToNumber(context, value, 0));
-            primitive = [NSNumber numberWithDouble:JSValueToNumber(context, value, 0)];
+            primitive = @(JSValueToNumber(context, value, 0));
         } else if (JSValueIsString(context, value)) {
             // Would be nice to unique strings, too.
             auto jsstring = adoptRef(JSValueToStringCopy(context, value, 0));
-            primitive = CFBridgingRelease(JSStringCopyCFString(kCFAllocatorDefault, jsstring.get()));
+            primitive = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, jsstring.get())).bridgingAutorelease();
         } else if (JSValueIsNull(context, value))
             primitive = [NSNull null];
         else {
@@ -824,7 +866,7 @@ id valueToNumber(JSGlobalContextRef context, JSValueRef value, JSValueRef* excep
         return JSValueToBoolean(context, value) ? @YES : @NO;
 
     double result = JSValueToNumber(context, value, exception);
-    return [NSNumber numberWithDouble:*exception ? std::numeric_limits<double>::quiet_NaN() : result];
+    return @(*exception ? std::numeric_limits<double>::quiet_NaN() : result);
 }
 
 id valueToString(JSGlobalContextRef context, JSValueRef value, JSValueRef* exception)
@@ -841,7 +883,7 @@ id valueToString(JSGlobalContextRef context, JSValueRef value, JSValueRef* excep
         return nil;
     }
 
-    return CFBridgingRelease(JSStringCopyCFString(kCFAllocatorDefault, jsstring.get()));
+    return adoptCF(JSStringCopyCFString(kCFAllocatorDefault, jsstring.get())).bridgingAutorelease();
 }
 
 id valueToDate(JSGlobalContextRef context, JSValueRef value, JSValueRef* exception)
@@ -940,8 +982,8 @@ JSValueRef ObjcContainerConvertor::convert(id object)
 
 void ObjcContainerConvertor::add(ObjcContainerConvertor::Task task)
 {
-    JSC::ExecState* exec = toJS(m_context.JSGlobalContextRef);
-    m_jsValues.append(JSC::Strong<JSC::Unknown>(exec->vm(), toJSForGC(exec, task.js)));
+    JSC::JSGlobalObject* globalObject = toJS(m_context.JSGlobalContextRef);
+    m_jsValues.append(JSC::Strong<JSC::Unknown>(globalObject->vm(), toJSForGC(globalObject, task.js)));
     m_objectMap.add(task.objc, task.js);
     if (task.type != ContainerNone)
         m_worklist.append(task);
@@ -1068,8 +1110,10 @@ JSValueRef valueInternalValue(JSValue * value)
 
 - (JSValue *)initWithValue:(JSValueRef)value inContext:(JSContext *)context
 {
-    if (!value || !context)
+    if (!value || !context) {
+        [self release];
         return nil;
+    }
 
     self = [super init];
     if (!self)
@@ -1169,7 +1213,7 @@ static StructHandlers* createStructHandlerMap()
 static StructTagHandler* handerForStructTag(const char* encodedType)
 {
     static Lock handerForStructTagLock;
-    LockHolder lockHolder(&handerForStructTagLock);
+    Locker lockHolder { handerForStructTagLock };
 
     static StructHandlers* structHandlers = createStructHandlerMap();
 

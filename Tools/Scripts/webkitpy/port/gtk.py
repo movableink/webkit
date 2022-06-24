@@ -29,21 +29,23 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-import subprocess
 import uuid
 import logging
+import shlex
 
+import webkitpy
 from webkitpy.common.system import path
 from webkitpy.common.memoized import memoized
 from webkitpy.layout_tests.models.test_configuration import TestConfiguration
 from webkitpy.port.base import Port
-from webkitpy.port.pulseaudio_sanitizer import PulseAudioSanitizer
 from webkitpy.port.xvfbdriver import XvfbDriver
 from webkitpy.port.westondriver import WestonDriver
 from webkitpy.port.xorgdriver import XorgDriver
 from webkitpy.port.waylanddriver import WaylandDriver
 from webkitpy.port.linux_get_crash_log import GDBCrashLogGenerator
 from webkitpy.port.leakdetector_valgrind import LeakDetectorValgrind
+
+from webkitcorepy import decorators
 
 _log = logging.getLogger(__name__)
 
@@ -53,7 +55,6 @@ class GtkPort(Port):
 
     def __init__(self, *args, **kwargs):
         super(GtkPort, self).__init__(*args, **kwargs)
-        self._pulseaudio_sanitizer = PulseAudioSanitizer()
         self._display_server = self.get_option("display_server")
 
         if self.get_option("leaks"):
@@ -105,14 +106,9 @@ class GtkPort(Port):
 
     def setup_test_run(self, device_type=None):
         super(GtkPort, self).setup_test_run(device_type)
-        self._pulseaudio_sanitizer.unload_pulseaudio_module()
 
         if self.get_option("leaks"):
             self._leakdetector.clean_leaks_files_from_results_directory()
-
-    def clean_up_test_run(self):
-        super(GtkPort, self).clean_up_test_run()
-        self._pulseaudio_sanitizer.restore_pulseaudio_module()
 
     def setup_environ_for_server(self, server_name=None):
         environment = super(GtkPort, self).setup_environ_for_server(server_name)
@@ -122,33 +118,38 @@ class GtkPort(Port):
         environment['TEST_RUNNER_INJECTED_BUNDLE_FILENAME'] = self._build_path('lib', 'libTestRunnerInjectedBundle.so')
         environment['TEST_RUNNER_TEST_PLUGIN_PATH'] = self._build_path('lib', 'plugins')
         self._copy_value_from_environ_if_set(environment, 'WEBKIT_OUTPUTDIR')
+        self._copy_value_from_environ_if_set(environment, 'WEBKIT_JHBUILD')
         self._copy_value_from_environ_if_set(environment, 'WEBKIT_TOP_LEVEL')
-        self._copy_value_from_environ_if_set(environment, 'USE_PLAYBIN3')
-        self._copy_value_from_environ_if_set(environment, 'GST_DEBUG')
-        self._copy_value_from_environ_if_set(environment, 'GST_DEBUG_DUMP_DOT_DIR')
-        self._copy_value_from_environ_if_set(environment, 'GST_DEBUG_FILE')
-        self._copy_value_from_environ_if_set(environment, 'GST_DEBUG_NO_COLOR')
+        self._copy_value_from_environ_if_set(environment, 'WEBKIT_DEBUG')
+        self._copy_value_from_environ_if_set(environment, 'WEBKIT_GST_USE_PLAYBIN3')
+        for gst_variable in ('DEBUG', 'DEBUG_DUMP_DOT_DIR', 'DEBUG_FILE', 'DEBUG_NO_COLOR',
+                             'PLUGIN_SCANNER', 'PLUGIN_PATH', 'PLUGIN_SYSTEM_PATH', 'REGISTRY',
+                             'PLUGIN_PATH_1_0'):
+            self._copy_value_from_environ_if_set(environment, 'GST_%s' % gst_variable)
+
+        gst_feature_rank_override = environment.get('GST_PLUGIN_FEATURE_RANK')
+        environment['GST_PLUGIN_FEATURE_RANK'] = 'fakeaudiosink:max'
+        if gst_feature_rank_override:
+            environment['GST_PLUGIN_FEATURE_RANK'] += ',%s' % gst_feature_rank_override
 
         # Configure the software libgl renderer if jhbuild ready and we test inside a virtualized window system
         if self._driver_class() in [XvfbDriver, WestonDriver] and (self._should_use_jhbuild() or self._is_flatpak()):
             if self._should_use_jhbuild():
                 llvmpipe_libgl_path = self.host.executive.run_command(self._jhbuild_wrapper + ['printenv', 'LLVMPIPE_LIBGL_PATH'],
                                                                     ignore_errors=True).strip()
+                dri_libgl_path = os.path.join(llvmpipe_libgl_path, "dri")
             else:  # in flatpak
-                llvmpipe_libgl_path = "/app/softGL/lib"
+                llvmpipe_libgl_path = "/usr/lib/x86_64-linux-gnu/"
+                dri_libgl_path = os.path.join(llvmpipe_libgl_path, "GL", "lib", "dri")
 
-            dri_libgl_path = os.path.join(llvmpipe_libgl_path, "dri")
             if os.path.exists(os.path.join(llvmpipe_libgl_path, "libGL.so")) and os.path.exists(os.path.join(dri_libgl_path, "swrast_dri.so")):
                 # Make sure va-api support gets disabled because it's incompatible with Mesa's softGL driver.
                 environment['LIBVA_DRIVER_NAME'] = "null"
                 # Force the Gallium llvmpipe software rasterizer
                 environment['LIBGL_ALWAYS_SOFTWARE'] = "1"
                 environment['LIBGL_DRIVERS_PATH'] = dri_libgl_path
-                environment['LD_LIBRARY_PATH'] = llvmpipe_libgl_path
-                if os.environ.get('LD_LIBRARY_PATH'):
-                    environment['LD_LIBRARY_PATH'] += ':%s' % os.environ.get('LD_LIBRARY_PATH')
             else:
-                _log.warning("Can't find Gallium llvmpipe driver. Try to run update-webkitgtk-libs or update-webkitgtk-flatpak")
+                _log.warning("Can't find Gallium llvmpipe driver. Try to run update-webkitgtk-libs or update-webkit-flatpak")
         if self.get_option("leaks"):
             # Turn off GLib memory optimisations https://wiki.gnome.org/Valgrind.
             environment['G_SLICE'] = 'always-malloc'
@@ -185,8 +186,12 @@ class GtkPort(Port):
     def _path_to_driver(self):
         return self._built_executables_path(self.driver_name())
 
+    @decorators.Memoize()
     def _path_to_image_diff(self):
         return self._built_executables_path('ImageDiff')
+
+    def _path_to_default_image_diff(self):
+        return self._path_to_image_diff()
 
     def _path_to_webcore_library(self):
         gtk_library_names = [
@@ -203,15 +208,21 @@ class GtkPort(Port):
 
     def _search_paths(self):
         search_paths = []
+
+        if self._is_gtk4_build():
+            search_paths.append(self.port_name + "4")
+
         if self._driver_class() in [WaylandDriver, WestonDriver]:
             search_paths.append(self.port_name + "-wayland")
+
         search_paths.append(self.port_name)
+        search_paths.append('glib')
         search_paths.append('wk2')
         search_paths.extend(self.get_option("additional_platform_directory", []))
         return search_paths
 
     def default_baseline_search_path(self, **kwargs):
-        return map(self._webkit_baseline_path, self._search_paths())
+        return list(map(self._webkit_baseline_path, self._search_paths()))
 
     def _port_specific_expectations_files(self, **kwargs):
         return [self._filesystem.join(self._webkit_baseline_path(p), 'TestExpectations') for p in reversed(self._search_paths())]
@@ -227,18 +238,18 @@ class GtkPort(Port):
         self._leakdetector.parse_and_print_leaks_detail(leaks_files)
 
     def show_results_html_file(self, results_filename):
-        self._run_script("run-minibrowser", [path.abspath_to_uri(self.host.platform, results_filename)])
+        self.run_minibrowser([path.abspath_to_uri(self.host.platform, results_filename)])
 
     def check_sys_deps(self):
         return super(GtkPort, self).check_sys_deps() and self._driver_class().check_driver(self)
 
     def _get_crash_log(self, name, pid, stdout, stderr, newer_than, target_host=None):
         return GDBCrashLogGenerator(self._executive, name, pid, newer_than,
-            self._filesystem, self._path_to_driver).generate_crash_log(stdout, stderr)
+                                    self._filesystem, self._path_to_driver, self.port_name, self.get_option('configuration')).generate_crash_log(stdout, stderr)
 
     def test_expectations_file_position(self):
-        # GTK port baseline search path is gtk -> wk2 -> generic (as gtk-wk2 and gtk baselines are merged), so port test expectations file is at third to last position.
-        return 2
+        # GTK port baseline search path is gtk -> glib -> wk2 -> generic (as gtk-wk2 and gtk baselines are merged), so port test expectations file is at third to last position.
+        return 3
 
     def build_webkit_command(self, build_style=None):
         command = super(GtkPort, self).build_webkit_command(build_style)
@@ -250,3 +261,38 @@ class GtkPort(Port):
         command = super(GtkPort, self).run_webkit_tests_command()
         command.append("--gtk")
         return command
+
+    def configuration_for_upload(self, host=None):
+        configuration = super(GtkPort, self).configuration_for_upload(host=host)
+        configuration['platform'] = 'GTK'
+        configuration['version_name'] = self._display_server.capitalize() if self._display_server else 'Xvfb'
+        return configuration
+
+    def run_minibrowser(self, args):
+        miniBrowser = self._build_path('bin', 'MiniBrowser')
+        if not self._filesystem.isfile(miniBrowser):
+            print("%s not found... Did you run build-webkit?" % miniBrowser)
+            return 1
+        command = [miniBrowser]
+        if os.environ.get("WEBKIT_MINI_BROWSER_PREFIX"):
+            command = shlex.split(os.environ["WEBKIT_MINI_BROWSER_PREFIX"]) + command
+
+        if self._should_use_jhbuild():
+            command = self._jhbuild_wrapper + command
+        return self._executive.run_command(command + args, cwd=self.webkit_base(), stdout=None, return_stderr=False, decode_output=False)
+
+    @memoized
+    def _is_gtk4_build(self):
+        try:
+            libdir = self._build_path('lib')
+            candidates = self._filesystem.glob(os.path.join(libdir, 'libwebkit2gtk-*.so'))
+            if not candidates:
+                return False
+            if len(candidates) > 1:
+                _log.warning("Multiple WebKit2GTK libraries found. Skipping GTK4 detection.")
+                return False
+            return os.path.basename(candidates[0]) == 'libwebkit2gtk-5.0.so'
+
+        except (webkitpy.common.system.executive.ScriptError, IOError, OSError):
+            return False
+        return False

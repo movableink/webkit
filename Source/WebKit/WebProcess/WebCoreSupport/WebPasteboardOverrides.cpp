@@ -26,9 +26,11 @@
 #include "config.h"
 #include "WebPasteboardOverrides.h"
 
+#include <WebCore/PasteboardItemInfo.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebKit {
+using namespace WebCore;
 
 WebPasteboardOverrides& WebPasteboardOverrides::sharedPasteboardOverrides()
 {
@@ -69,18 +71,27 @@ void WebPasteboardOverrides::removeOverride(const String& pasteboardName, const 
 
 Vector<String> WebPasteboardOverrides::overriddenTypes(const String& pasteboardName)
 {
-    Vector<String> result;
-
     auto it = m_overridesMap.find(pasteboardName);
     if (it == m_overridesMap.end())
-        return result;
+        return { };
 
     ASSERT(it->value);
 
-    for (String& type : it->value->keys())
-        result.append(type);
+    return copyToVector(it->value->keys());
+}
 
-    return result;
+std::optional<WebCore::PasteboardItemInfo> WebPasteboardOverrides::overriddenInfo(const String& pasteboardName)
+{
+    auto types = this->overriddenTypes(pasteboardName);
+    if (types.isEmpty())
+        return std::nullopt;
+
+    PasteboardItemInfo item;
+    item.platformTypesByFidelity = types;
+    // FIXME: This is currently appropriate for all clients that rely on PasteboardItemInfo, but we may need to adjust
+    // this in the future so that we don't treat 'inline' types such as plain text as uploaded files.
+    item.platformTypesForFileUpload = types;
+    return { WTFMove(item) };
 }
 
 bool WebPasteboardOverrides::getDataForOverride(const String& pasteboardName, const String& type, Vector<uint8_t>& data) const
@@ -94,18 +105,6 @@ bool WebPasteboardOverrides::getDataForOverride(const String& pasteboardName, co
         return false;
 
     data = typeIterator->value;
-    return true;
-}
-
-bool WebPasteboardOverrides::getDataForOverride(const String& pasteboardName, const String& type, Vector<char>& data) const
-{
-    Vector<uint8_t> foundBuffer;
-    if (!getDataForOverride(pasteboardName, type, foundBuffer))
-        return false;
-
-    data.resize(foundBuffer.size());
-    memcpy(data.data(), foundBuffer.data(), foundBuffer.size());
-
     return true;
 }
 

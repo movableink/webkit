@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,20 +26,24 @@
 #pragma once
 
 #include "APIObject.h"
-#include <WebCore/StorageQuotaManager.h>
 #include <wtf/URL.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebKit {
 
+namespace WebPushD {
+struct WebPushDaemonConnectionConfiguration;
+}
+
 enum class IsPersistent : bool { No, Yes };
+enum class WillCopyPathsFromExistingConfiguration : bool { No, Yes };
 
 class WebsiteDataStoreConfiguration : public API::ObjectImpl<API::Object::Type::WebsiteDataStoreConfiguration> {
 public:
-    static Ref<WebsiteDataStoreConfiguration> create(IsPersistent isPersistent) { return adoptRef(*new WebsiteDataStoreConfiguration(isPersistent)); }
-    WebsiteDataStoreConfiguration(IsPersistent);
+    static Ref<WebsiteDataStoreConfiguration> create(IsPersistent isPersistent, WillCopyPathsFromExistingConfiguration willCopyPaths = WillCopyPathsFromExistingConfiguration::No) { return adoptRef(*new WebsiteDataStoreConfiguration(isPersistent, willCopyPaths)); }
+    WebsiteDataStoreConfiguration(IsPersistent, WillCopyPathsFromExistingConfiguration = WillCopyPathsFromExistingConfiguration::No);
 
-    Ref<WebsiteDataStoreConfiguration> copy();
+    Ref<WebsiteDataStoreConfiguration> copy() const;
 
     bool isPersistent() const { return m_isPersistent == IsPersistent::Yes; }
 
@@ -55,6 +59,9 @@ public:
     const String& mediaKeysStorageDirectory() const { return m_mediaKeysStorageDirectory; }
     void setMediaKeysStorageDirectory(String&& directory) { m_mediaKeysStorageDirectory = WTFMove(directory); }
     
+    const String& alternativeServicesDirectory() const { return m_alternativeServicesDirectory; }
+    void setAlternativeServicesDirectory(String&& directory) { m_alternativeServicesDirectory = WTFMove(directory); }
+
     const String& javaScriptConfigurationDirectory() const { return m_javaScriptConfigurationDirectory; }
     void setJavaScriptConfigurationDirectory(String&& directory) { m_javaScriptConfigurationDirectory = WTFMove(directory); }
     
@@ -63,18 +70,26 @@ public:
 
     const String& webSQLDatabaseDirectory() const { return m_webSQLDatabaseDirectory; }
     void setWebSQLDatabaseDirectory(String&& directory) { m_webSQLDatabaseDirectory = WTFMove(directory); }
-#if USE(GLIB) // According to r245075 this will eventually move here.
+
     const String& hstsStorageDirectory() const { return m_hstsStorageDirectory; }
     void setHSTSStorageDirectory(String&& directory) { m_hstsStorageDirectory = WTFMove(directory); }
-#endif
+
     const String& localStorageDirectory() const { return m_localStorageDirectory; }
     void setLocalStorageDirectory(String&& directory) { m_localStorageDirectory = WTFMove(directory); }
+
+#if ENABLE(ARKIT_INLINE_PREVIEW)
+    const String& modelElementCacheDirectory() const { return m_modelElementCacheDirectory; }
+    void setModelElementCacheDirectory(String&& directory) { m_modelElementCacheDirectory = WTFMove(directory); }
+#endif
 
     const String& boundInterfaceIdentifier() const { return m_boundInterfaceIdentifier; }
     void setBoundInterfaceIdentifier(String&& identifier) { m_boundInterfaceIdentifier = WTFMove(identifier); }
 
     bool allowsCellularAccess() const { return m_allowsCellularAccess; }
     void setAllowsCellularAccess(bool allows) { m_allowsCellularAccess = allows; }
+
+    bool legacyTLSEnabled() const { return m_legacyTLSEnabled; }
+    void setLegacyTLSEnabled(bool enabled) { m_legacyTLSEnabled = enabled; }
 
     bool fastServerTrustEvaluationEnabled() const { return m_fastServerTrustEvaluationEnabled; }
     void setFastServerTrustEvaluationEnabled(bool enabled) { m_fastServerTrustEvaluationEnabled = enabled; }
@@ -84,10 +99,13 @@ public:
 
     bool testingSessionEnabled() const { return m_testingSessionEnabled; }
     void setTestingSessionEnabled(bool enabled) { m_testingSessionEnabled = enabled; }
-    
+
+    bool staleWhileRevalidateEnabled() const { return m_staleWhileRevalidateEnabled; }
+    void setStaleWhileRevalidateEnabled(bool enabled) { m_staleWhileRevalidateEnabled = enabled; }
+
     unsigned testSpeedMultiplier() const { return m_testSpeedMultiplier; }
     void setTestSpeedMultiplier(unsigned multiplier) { m_testSpeedMultiplier = multiplier; }
-    
+
 #if PLATFORM(COCOA)
     CFDictionaryRef proxyConfiguration() const { return m_proxyConfiguration.get(); }
     void setProxyConfiguration(CFDictionaryRef configuration) { m_proxyConfiguration = configuration; }
@@ -102,12 +120,21 @@ public:
     const String& resourceLoadStatisticsDirectory() const { return m_resourceLoadStatisticsDirectory; }
     void setResourceLoadStatisticsDirectory(String&& directory) { m_resourceLoadStatisticsDirectory = WTFMove(directory); }
 
+    const String& privateClickMeasurementStorageDirectory() const { return m_privateClickMeasurementStorageDirectory; }
+    void setPrivateClickMeasurementStorageDirectory(String&& directory) { m_privateClickMeasurementStorageDirectory = WTFMove(directory); }
+
     const String& networkCacheDirectory() const { return m_networkCacheDirectory; }
     void setNetworkCacheDirectory(String&& directory) { m_networkCacheDirectory = WTFMove(directory); }
     
     const String& cacheStorageDirectory() const { return m_cacheStorageDirectory; }
     void setCacheStorageDirectory(String&& directory) { m_cacheStorageDirectory = WTFMove(directory); }
-    
+
+    const String& generalStorageDirectory() const { return m_generalStorageDirectory; }
+    void setGeneralStorageDirectory(String&& directory) { m_generalStorageDirectory = WTFMove(directory); }
+
+    bool shouldUseCustomStoragePaths() const { return m_shouldUseCustomStoragePaths; }
+    void setShouldUseCustomStoragePaths(bool use) { m_shouldUseCustomStoragePaths = use; }
+
     const String& applicationCacheFlatFileSubdirectoryName() const { return m_applicationCacheFlatFileSubdirectoryName; }
     void setApplicationCacheFlatFileSubdirectoryName(String&& directory) { m_applicationCacheFlatFileSubdirectoryName = WTFMove(directory); }
     
@@ -117,15 +144,12 @@ public:
     bool serviceWorkerProcessTerminationDelayEnabled() const { return m_serviceWorkerProcessTerminationDelayEnabled; }
     void setServiceWorkerProcessTerminationDelayEnabled(bool enabled) { m_serviceWorkerProcessTerminationDelayEnabled = enabled; }
 
-    const HashSet<String> serviceWorkerRegisteredSchemes() const { return m_serviceWorkerRegisteredSchemes; }
-    void registerServiceWorkerScheme(String&& scheme) { m_serviceWorkerRegisteredSchemes.add(scheme); }
-    
     const String& sourceApplicationBundleIdentifier() const { return m_sourceApplicationBundleIdentifier; }
     void setSourceApplicationBundleIdentifier(String&& identifier) { m_sourceApplicationBundleIdentifier = WTFMove(identifier); }
 
     const String& sourceApplicationSecondaryIdentifier() const { return m_sourceApplicationSecondaryIdentifier; }
     void setSourceApplicationSecondaryIdentifier(String&& identifier) { m_sourceApplicationSecondaryIdentifier = WTFMove(identifier); }
-
+    
     const URL& httpProxy() const { return m_httpProxy; }
     void setHTTPProxy(URL&& proxy) { m_httpProxy = WTFMove(proxy); }
 
@@ -138,17 +162,55 @@ public:
     bool allLoadsBlockedByDeviceManagementRestrictionsForTesting() const { return m_allLoadsBlockedByDeviceManagementRestrictionsForTesting; }
     void setAllLoadsBlockedByDeviceManagementRestrictionsForTesting(bool blocked) { m_allLoadsBlockedByDeviceManagementRestrictionsForTesting = blocked; }
 
+    bool webPushDaemonUsesMockBundlesForTesting() const { return m_webPushDaemonUsesMockBundlesForTesting; }
+    void setWebPushDaemonUsesMockBundlesForTesting(bool usesMockBundles) { m_webPushDaemonUsesMockBundlesForTesting = usesMockBundles; }
+    WebPushD::WebPushDaemonConnectionConfiguration webPushDaemonConnectionConfiguration() const;
+
     const String& dataConnectionServiceType() const { return m_dataConnectionServiceType; }
     void setDataConnectionServiceType(String&& type) { m_dataConnectionServiceType = WTFMove(type); }
     
     bool suppressesConnectionTerminationOnSystemChange() const { return m_suppressesConnectionTerminationOnSystemChange; }
     void setSuppressesConnectionTerminationOnSystemChange(bool suppresses) { m_suppressesConnectionTerminationOnSystemChange = suppresses; }
 
+    bool allowsServerPreconnect() const { return m_allowsServerPreconnect; }
+    void setAllowsServerPreconnect(bool allows) { m_allowsServerPreconnect = allows; }
+
+    bool preventsSystemHTTPProxyAuthentication() const { return m_preventsSystemHTTPProxyAuthentication; }
+    void setPreventsSystemHTTPProxyAuthentication(bool prevents) { m_preventsSystemHTTPProxyAuthentication = prevents; }
+
+    bool requiresSecureHTTPSProxyConnection() const { return m_requiresSecureHTTPSProxyConnection; };
+    void setRequiresSecureHTTPSProxyConnection(bool requiresSecureProxy) { m_requiresSecureHTTPSProxyConnection = requiresSecureProxy; }
+
+    bool shouldRunServiceWorkersOnMainThreadForTesting() const { return m_shouldRunServiceWorkersOnMainThreadForTesting; }
+    void setShouldRunServiceWorkersOnMainThreadForTesting(bool shouldRunOnMainThread) { m_shouldRunServiceWorkersOnMainThreadForTesting = shouldRunOnMainThread; }
+
+    const URL& standaloneApplicationURL() const { return m_standaloneApplicationURL; }
+    void setStandaloneApplicationURL(URL&& url) { m_standaloneApplicationURL = WTFMove(url); }
+
+    bool enableInAppBrowserPrivacyForTesting() const { return m_enableInAppBrowserPrivacyForTesting; }
+    void setEnableInAppBrowserPrivacyForTesting(bool value) { m_enableInAppBrowserPrivacyForTesting = value; }
+    
+    bool allowsHSTSWithUntrustedRootCertificate() const { return m_allowsHSTSWithUntrustedRootCertificate; }
+    void setAllowsHSTSWithUntrustedRootCertificate(bool allows) { m_allowsHSTSWithUntrustedRootCertificate = allows; }
+    
+    void setPCMMachServiceName(String&& name) { m_pcmMachServiceName = WTFMove(name); }
+    const String& pcmMachServiceName() const { return m_pcmMachServiceName; }
+
+    void setWebPushMachServiceName(String&& name) { m_webPushMachServiceName = WTFMove(name); }
+    const String& webPushMachServiceName() const { return m_webPushMachServiceName; }
+
+#if !HAVE(NSURLSESSION_WEBSOCKET)
+    bool shouldAcceptInsecureCertificatesForWebSockets() const { return m_shouldAcceptInsecureCertificatesForWebSockets; }
+    void setShouldAcceptInsecureCertificatesForWebSockets(bool accept) { m_shouldAcceptInsecureCertificatesForWebSockets = accept; }
+#endif
+
 private:
     IsPersistent m_isPersistent { IsPersistent::No };
 
+    bool m_shouldUseCustomStoragePaths;
     String m_cacheStorageDirectory;
-    uint64_t m_perOriginStorageQuota { WebCore::StorageQuotaManager::defaultQuota() };
+    String m_generalStorageDirectory;
+    uint64_t m_perOriginStorageQuota;
     String m_networkCacheDirectory;
     String m_applicationCacheDirectory;
     String m_applicationCacheFlatFileSubdirectoryName { "Files"_s };
@@ -156,16 +218,22 @@ private:
     String m_indexedDBDatabaseDirectory;
     String m_serviceWorkerRegistrationDirectory;
     String m_webSQLDatabaseDirectory;
-#if USE(GLIB)
     String m_hstsStorageDirectory;
+#if ENABLE(ARKIT_INLINE_PREVIEW)
+    String m_modelElementCacheDirectory;
+#endif
+#if USE(GLIB)
     bool m_networkCacheSpeculativeValidationEnabled { true };
 #else
     bool m_networkCacheSpeculativeValidationEnabled { false };
 #endif
+    bool m_staleWhileRevalidateEnabled { true };
     String m_localStorageDirectory;
     String m_mediaKeysStorageDirectory;
+    String m_alternativeServicesDirectory;
     String m_deviceIdHashSaltsStorageDirectory;
     String m_resourceLoadStatisticsDirectory;
+    String m_privateClickMeasurementStorageDirectory;
     String m_javaScriptConfigurationDirectory;
     String m_cookieStorageFile;
     String m_sourceApplicationBundleIdentifier;
@@ -176,13 +244,26 @@ private:
     URL m_httpsProxy;
     bool m_deviceManagementRestrictionsEnabled { false };
     bool m_allLoadsBlockedByDeviceManagementRestrictionsForTesting { false };
+    bool m_webPushDaemonUsesMockBundlesForTesting { false };
     bool m_allowsCellularAccess { true };
+    bool m_legacyTLSEnabled { true };
     bool m_fastServerTrustEvaluationEnabled { false };
     bool m_serviceWorkerProcessTerminationDelayEnabled { true };
     bool m_testingSessionEnabled { false };
     bool m_suppressesConnectionTerminationOnSystemChange { false };
+    bool m_allowsServerPreconnect { true };
+    bool m_preventsSystemHTTPProxyAuthentication { false };
+    bool m_requiresSecureHTTPSProxyConnection { false };
+    bool m_shouldRunServiceWorkersOnMainThreadForTesting { false };
     unsigned m_testSpeedMultiplier { 1 };
-    HashSet<String> m_serviceWorkerRegisteredSchemes;
+    URL m_standaloneApplicationURL;
+    bool m_enableInAppBrowserPrivacyForTesting { false };
+    bool m_allowsHSTSWithUntrustedRootCertificate { false };
+    String m_pcmMachServiceName;
+    String m_webPushMachServiceName;
+#if !HAVE(NSURLSESSION_WEBSOCKET)
+    bool m_shouldAcceptInsecureCertificatesForWebSockets { false };
+#endif
 #if PLATFORM(COCOA)
     RetainPtr<CFDictionaryRef> m_proxyConfiguration;
 #endif

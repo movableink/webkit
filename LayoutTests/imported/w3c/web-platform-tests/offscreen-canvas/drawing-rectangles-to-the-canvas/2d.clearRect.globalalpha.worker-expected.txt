@@ -1,3 +1,0 @@
-
-FAIL clearRect is not affected by globalAlpha Can't find variable: OffscreenCanvas
-

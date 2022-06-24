@@ -107,7 +107,6 @@ void AcceleratedCompositingContext::initialize()
     m_context->makeContextCurrent();
 
     m_textureMapper = TextureMapperGL::create();
-    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).layer().setTextureMapper(m_textureMapper.get());
 
     scheduleLayerFlush();
 }
@@ -183,7 +182,7 @@ void AcceleratedCompositingContext::compositeLayersToContext(CompositePurpose pu
     }
 
     m_textureMapper->beginPainting();
-    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).layer().paint();
+    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).layer().paint(*m_textureMapper);
     m_fpsCounter.updateFPSAndDisplay(*m_textureMapper);
     m_textureMapper->endPainting();
 
@@ -282,7 +281,7 @@ bool AcceleratedCompositingContext::flushPendingLayerChanges()
     if (!frameView->flushCompositingStateIncludingSubframes())
         return false;
 
-    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers();
+    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers(*m_textureMapper);
     return true;
 }
 
@@ -297,11 +296,7 @@ void AcceleratedCompositingContext::flushAndRenderLayers()
     if (!enabled())
         return;
 
-    Frame& frame = core(&m_webView)->mainFrame();
-    if (!frame.contentRenderer() || !frame.view())
-        return;
-
-    frame.view()->updateLayoutAndStyleIfNeededRecursive();
+    core(&m_webView)->isolatedUpdateRendering();
 
     if (!enabled())
         return;
@@ -335,6 +330,14 @@ void AcceleratedCompositingContext::paintContents(const GraphicsLayer*, Graphics
 float AcceleratedCompositingContext::deviceScaleFactor() const
 {
     return m_webView.deviceScaleFactor();
+}
+
+String AcceleratedCompositingContext::layerTreeAsString() const
+{
+    if (!m_rootLayer)
+        return { };
+
+    return m_rootLayer->layerTreeAsText(AllLayerTreeAsTextOptions);
 }
 
 #endif // USE(TEXTURE_MAPPER_GL)

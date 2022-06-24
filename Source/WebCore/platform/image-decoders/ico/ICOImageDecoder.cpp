@@ -52,7 +52,7 @@ ICOImageDecoder::ICOImageDecoder(AlphaOption alphaOption, GammaAndColorProfileOp
 
 ICOImageDecoder::~ICOImageDecoder() = default;
 
-void ICOImageDecoder::setData(SharedBuffer& data, bool allDataReceived)
+void ICOImageDecoder::setData(const FragmentedSharedBuffer& data, bool allDataReceived)
 {
     if (failed())
         return;
@@ -61,7 +61,7 @@ void ICOImageDecoder::setData(SharedBuffer& data, bool allDataReceived)
 
     for (BMPReaders::iterator i(m_bmpReaders.begin()); i != m_bmpReaders.end(); ++i) {
         if (*i)
-            (*i)->setData(&data);
+            (*i)->setData(*m_data);
     }
     for (size_t i = 0; i < m_pngDecoders.size(); ++i)
         setDataForPNGDecoderAtIndex(i);
@@ -109,7 +109,7 @@ bool ICOImageDecoder::setFailed()
     return ScalableImageDecoder::setFailed();
 }
 
-Optional<IntPoint> ICOImageDecoder::hotSpot() const
+std::optional<IntPoint> ICOImageDecoder::hotSpot() const
 {
     // When unspecified, the default frame is always frame 0. This is consistent with
     // BitmapImage where currentFrame() starts at 0 and only increases when animation is
@@ -117,10 +117,10 @@ Optional<IntPoint> ICOImageDecoder::hotSpot() const
     return hotSpotAtIndex(0);
 }
 
-Optional<IntPoint> ICOImageDecoder::hotSpotAtIndex(size_t index) const
+std::optional<IntPoint> ICOImageDecoder::hotSpotAtIndex(size_t index) const
 {
     if (index >= m_dirEntries.size() || m_fileType != CURSOR)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return m_dirEntries[index].m_hotSpot;
 }
@@ -196,7 +196,7 @@ bool ICOImageDecoder::decodeAtIndex(size_t index)
             // we must not resize it again later (see caution in frameCount()).
             ASSERT(m_frameBufferCache.size() == m_dirEntries.size());
             m_bmpReaders[index] = makeUnique<BMPImageReader>(this, dirEntry.m_imageOffset, 0, true);
-            m_bmpReaders[index]->setData(m_data.get());
+            m_bmpReaders[index]->setData(*m_data);
             m_bmpReaders[index]->setBuffer(&m_frameBufferCache[index]);
         }
         m_frameSize = dirEntry.m_size;
@@ -315,7 +315,7 @@ ICOImageDecoder::ImageType ICOImageDecoder::imageTypeAtIndex(size_t index)
     const uint32_t imageOffset = m_dirEntries[index].m_imageOffset;
     if ((imageOffset > m_data->size()) || ((m_data->size() - imageOffset) < 4))
         return Unknown;
-    return strncmp(&m_data->data()[imageOffset], "\x89PNG", 4) ? BMP : PNG;
+    return memcmp(&m_data->data()[imageOffset], "\x89PNG", 4) ? BMP : PNG;
 }
 
 }

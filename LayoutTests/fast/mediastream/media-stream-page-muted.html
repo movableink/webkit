@@ -4,9 +4,6 @@
     <title>mediastream page muted</title>
     <script src="../../resources/js-test-pre.js"></script>
     <script>
-        if (window.internals)
-            internals.setDisableGetDisplayMediaUserGestureConstraint(true);
-
         async function checkPageState(activeState, inactiveState) {
             await new Promise((resolve, reject) => {
                 let retryCount = 0;
@@ -69,14 +66,27 @@
             });
         }
 
-        async function createScreenCaptureStream() {
+        function createScreenCaptureStream() {
+            let resolveCallback, rejectCallback;
+            let promise = new Promise((resolve, reject) => {
+                resolveCallback = resolve;
+                rejectCallback = reject;
+            });
             debug("<br>*** Creating screen capture stream");
-			displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-            shouldBeType("displayStream", "Object");
-            shouldBe("displayStream.getTracks().length", "1");
-            shouldBe("displayStream.getVideoTracks().length", "1");
-            screenCaptureTrack = displayStream.getVideoTracks()[0];
-            shouldBeFalse("screenCaptureTrack.muted");
+            window.internals.withUserGesture(async () => {
+                try {
+                    displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    shouldBeType("displayStream", "Object");
+                    shouldBe("displayStream.getTracks().length", "1");
+                    shouldBe("displayStream.getVideoTracks().length", "1");
+                    screenCaptureTrack = displayStream.getVideoTracks()[0];
+                    shouldBeFalse("screenCaptureTrack.muted");
+                    resolveCallback();
+                } catch(e) {
+                    rejectCallback(e);
+                }
+            });
+            return promise;
         }
 
         async function createCameraMicrophoneStream() {
@@ -104,7 +114,7 @@
             shouldBeFalse("microphoneCaptureTrack.muted");
             shouldBeFalse("cameraCaptureTrack.muted");
 
-            await checkPageState("HasMutedDisplayCaptureDevice", "HasActiveDisplayCaptureDevice");
+            await checkPageState("HasMutedScreenCaptureDevice", "HasActiveScreenCaptureDevice");
             await checkPageState("HasActiveAudioCaptureDevice", "HasMutedAudioCaptureDevice");
             await checkPageState("HasActiveAudioCaptureDevice", "HasMutedAudioCaptureDevice");
         }
@@ -123,7 +133,7 @@
             shouldBeTrue("microphoneCaptureTrack.muted");
             shouldBeTrue("cameraCaptureTrack.muted");
 
-            await checkPageState("HasMutedDisplayCaptureDevice", "HasActiveDisplayCaptureDevice");
+            await checkPageState("HasMutedScreenCaptureDevice", "HasActiveScreenCaptureDevice");
             await checkPageState("HasMutedAudioCaptureDevice", "HasActiveAudioCaptureDevice");
             await checkPageState("HasMutedVideoCaptureDevice", "HasActiveVideoCaptureDevice");
         }
@@ -142,7 +152,7 @@
             shouldBeFalse("microphoneCaptureTrack.muted");
             shouldBeFalse("cameraCaptureTrack.muted");
 
-            await checkPageState("HasMutedDisplayCaptureDevice", "HasActiveDisplayCaptureDevice");
+            await checkPageState("HasMutedScreenCaptureDevice", "HasActiveScreenCaptureDevice");
             await checkPageState("HasActiveAudioCaptureDevice", "HasMutedAudioCaptureDevice");
             await checkPageState("HasActiveAudioCaptureDevice", "HasMutedAudioCaptureDevice");
         }
@@ -160,20 +170,16 @@
             shouldBeFalse("microphoneCaptureTrack.muted");
             shouldBeFalse("cameraCaptureTrack.muted");
 
-            await checkPageState("HasActiveDisplayCaptureDevice", "HasMutedDisplayCaptureDevice");
+            await checkPageState("HasActiveScreenCaptureDevice", "HasMutedScreenCaptureDevice");
             await checkPageState("HasActiveAudioCaptureDevice", "HasMutedAudioCaptureDevice");
             await checkPageState("HasActiveAudioCaptureDevice", "HasMutedAudioCaptureDevice");
         }
 
         jsTestIsAsync = true;
-        if (window.testRunner) {
-            testRunner.setUserMediaPermission(true);
+        if (window.testRunner)
             testRunner.waitUntilDone();
-        }
-        if (window.internals) {
-            window.internals.setMockMediaCaptureDevicesEnabled(true);
+        if (window.internals)
             window.internals.settings.setScreenCaptureEnabled(true);
-        }
 
         (async function() {
             try {

@@ -4,7 +4,7 @@
     <title>video-orientation-canvas</title>
     <script src="video-test.js"></script>
     <script>
-        let redColor = new Uint8ClampedArray([210, 0, 0, 255]);
+        let redColor = new Uint8ClampedArray([208, 30, 0, 255]);
         var context;
 
         function arraysAreApproximatelyEqual(arrayString, expected, tolerance) {
@@ -64,7 +64,6 @@
             context = canvas3.getContext('2d');
             context.drawImage(video3, 0, 0);
             arraysAreApproximatelyEqual('context.getImageData(200, 237, 1, 1).data', redColor, 5);
-
 
             endTest();
         });

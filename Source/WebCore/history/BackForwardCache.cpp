@@ -45,6 +45,7 @@
 #include "IgnoreOpensDuringUnloadCountIncrementer.h"
 #include "Logging.h"
 #include "Page.h"
+#include "Quirks.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #include "SubframeLoader.h"
@@ -79,7 +80,7 @@ static bool canCacheFrame(Frame& frame, DiagnosticLoggingClient& diagnosticLoggi
 
     // Prevent page caching if a subframe is still in provisional load stage.
     // We only do this check for subframes because the main frame is reused when navigating to a new page.
-    if (!frame.isMainFrame() && frameLoader.state() == FrameStateProvisional) {
+    if (!frame.isMainFrame() && frameLoader.state() == FrameState::Provisional) {
         PCLOG("   -Frame is in provisional load stage");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::provisionalLoadKey());
         return false;
@@ -92,6 +93,11 @@ static bool canCacheFrame(Frame& frame, DiagnosticLoggingClient& diagnosticLoggi
 
     if (!frame.document()) {
         PCLOG("   -Frame has no document");
+        return false;
+    }
+
+    if (frame.document()->shouldPreventEnteringBackForwardCacheForTesting()) {
+        PCLOG("   -Back/Forward caching is disabled for testing");
         return false;
     }
 
@@ -116,15 +122,22 @@ static bool canCacheFrame(Frame& frame, DiagnosticLoggingClient& diagnosticLoggi
         PCLOG(" Determining if subframe with URL (", currentURL.string(), ") can be cached:");
 
     bool isCacheable = true;
+
+    if (frame.isMainFrame() && frame.document()->quirks().shouldBypassBackForwardCache()) {
+        PCLOG("   -Disabled by site-specific quirk");
+        logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::siteSpecificQuirkKey());
+        isCacheable = false;
+    }
+
     // Do not cache error pages (these can be recognized as pages with substitute data or unreachable URLs).
     if (documentLoader->substituteData().isValid() && !documentLoader->substituteData().failingURL().isEmpty()) {
         PCLOG("   -Frame is an error page");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::isErrorPageKey());
         isCacheable = false;
     }
-    if (frameLoader.subframeLoader().containsPlugins() && !frame.page()->settings().backForwardCacheSupportsPlugins()) {
-        PCLOG("   -Frame contains plugins");
-        logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::hasPluginsKey());
+    if (frame.isMainFrame() && frame.document() && frame.document()->url().protocolIs("https") && documentLoader->response().cacheControlContainsNoStore()) {
+        PCLOG("   -Frame is HTTPS, and cache control prohibits storing");
+        logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::httpsNoStoreKey());
         isCacheable = false;
     }
     if (frame.isMainFrame() && !frameLoader.history().currentItem()) {
@@ -150,18 +163,6 @@ static bool canCacheFrame(Frame& frame, DiagnosticLoggingClient& diagnosticLoggi
     if (documentLoader->isStopping()) {
         PCLOG("   -DocumentLoader is in the middle of stopping");
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::documentLoaderStoppingKey());
-        isCacheable = false;
-    }
-
-    Vector<ActiveDOMObject*> unsuspendableObjects;
-    if (frame.document() && !frame.document()->canSuspendActiveDOMObjectsForDocumentSuspension(&unsuspendableObjects)) {
-        PCLOG("   -The document cannot suspend its active DOM Objects");
-        for (auto* activeDOMObject : unsuspendableObjects) {
-            PCLOG("    - Unsuspendable: ", activeDOMObject->activeDOMObjectName());
-            diagnosticLoggingClient.logDiagnosticMessage(DiagnosticLoggingKeys::unsuspendableDOMObjectKey(), activeDOMObject->activeDOMObjectName(), ShouldSample::No);
-            UNUSED_PARAM(activeDOMObject);
-        }
-        logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::cannotSuspendActiveDOMObjectsKey());
         isCacheable = false;
     }
 
@@ -316,7 +317,7 @@ bool BackForwardCache::canCache(Page& page) const
 
 void BackForwardCache::pruneToSizeNow(unsigned size, PruningReason pruningReason)
 {
-    SetForScope<unsigned> change(m_maxSize, size);
+    SetForScope change(m_maxSize, size);
     prune(pruningReason);
 }
 
@@ -355,7 +356,7 @@ void BackForwardCache::markPagesForContentsSizeChanged(Page& page)
     }
 }
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 void BackForwardCache::markPagesForCaptionPreferencesChanged()
 {
     for (auto& item : m_items) {
@@ -383,10 +384,9 @@ static String pruningReasonToDiagnosticLoggingKey(PruningReason pruningReason)
 
 static void setBackForwardCacheState(Page& page, Document::BackForwardCacheState BackForwardCacheState)
 {
-    for (Frame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (auto* document = frame->document())
-            document->setBackForwardCacheState(BackForwardCacheState);
-    }
+    page.forEachDocument([&] (Document& document) {
+        document.setBackForwardCacheState(BackForwardCacheState);
+    });
 }
 
 // When entering back/forward cache, tear down the render tree before setting the in-cache flag.
@@ -415,10 +415,49 @@ static void firePageHideEventRecursively(Frame& frame)
     // https://html.spec.whatwg.org/multipage/browsers.html#unload-a-document
     IgnoreOpensDuringUnloadCountIncrementer ignoreOpensDuringUnloadCountIncrementer(document);
 
-    frame.loader().stopLoading(UnloadEventPolicyUnloadAndPageHide);
+    frame.loader().stopLoading(UnloadEventPolicy::UnloadAndPageHide);
 
     for (RefPtr<Frame> child = frame.tree().firstChild(); child; child = child->tree().nextSibling())
         firePageHideEventRecursively(*child);
+}
+
+std::unique_ptr<CachedPage> BackForwardCache::trySuspendPage(Page& page, ForceSuspension forceSuspension)
+{
+    page.mainFrame().loader().stopForBackForwardCache();
+
+    if (forceSuspension == ForceSuspension::No && !canCache(page))
+        return nullptr;
+
+    ASSERT_WITH_MESSAGE(!page.isUtilityPage(), "Utility pages such as SVGImage pages should never go into BackForwardCache");
+
+    setBackForwardCacheState(page, Document::AboutToEnterBackForwardCache);
+
+    // Focus the main frame, defocusing a focused subframe (if we have one). We do this here,
+    // before the page enters the back/forward cache, while we still can dispatch DOM blur/focus events.
+    if (CheckedRef focusController { page.focusController() }; focusController->focusedFrame())
+        focusController->setFocusedFrame(&page.mainFrame());
+
+    // Fire the pagehide event in all frames.
+    firePageHideEventRecursively(page.mainFrame());
+
+    destroyRenderTree(page.mainFrame());
+
+    // Stop all loads again before checking if we can still cache the page after firing the pagehide
+    // event, since the page may have started ping loads in its pagehide event handler.
+    page.mainFrame().loader().stopForBackForwardCache();
+
+    // Check that the page is still page-cacheable after firing the pagehide event. The JS event handlers
+    // could have altered the page in a way that could prevent caching.
+    if (forceSuspension == ForceSuspension::No && !canCache(page)) {
+        setBackForwardCacheState(page, Document::NotInBackForwardCache);
+        return nullptr;
+    }
+
+    setBackForwardCacheState(page, Document::InBackForwardCache);
+
+    // Make sure we don't fire any JS events in this scope.
+    ScriptDisallowedScope::InMainThread scriptDisallowedScope;
+    return makeUnique<CachedPage>(page);
 }
 
 bool BackForwardCache::addIfCacheable(HistoryItem& item, Page* page)
@@ -429,43 +468,15 @@ bool BackForwardCache::addIfCacheable(HistoryItem& item, Page* page)
     if (!page)
         return false;
 
-    page->mainFrame().loader().stopForBackForwardCache();
-
-    if (!canCache(*page))
+    auto cachedPage = trySuspendPage(*page, ForceSuspension::No);
+    if (!cachedPage)
         return false;
-
-    ASSERT_WITH_MESSAGE(!page->isUtilityPage(), "Utility pages such as SVGImage pages should never go into BackForwardCache");
-
-    setBackForwardCacheState(*page, Document::AboutToEnterBackForwardCache);
-
-    // Focus the main frame, defocusing a focused subframe (if we have one). We do this here,
-    // before the page enters the back/forward cache, while we still can dispatch DOM blur/focus events.
-    if (page->focusController().focusedFrame())
-        page->focusController().setFocusedFrame(&page->mainFrame());
-
-    // Fire the pagehide event in all frames.
-    firePageHideEventRecursively(page->mainFrame());
-
-    destroyRenderTree(page->mainFrame());
-
-    // Stop all loads again before checking if we can still cache the page after firing the pagehide
-    // event, since the page may have started ping loads in its pagehide event handler.
-    page->mainFrame().loader().stopForBackForwardCache();
-
-    // Check that the page is still page-cacheable after firing the pagehide event. The JS event handlers
-    // could have altered the page in a way that could prevent caching.
-    if (!canCache(*page)) {
-        setBackForwardCacheState(*page, Document::NotInBackForwardCache);
-        return false;
-    }
-
-    setBackForwardCacheState(*page, Document::InBackForwardCache);
 
     {
         // Make sure we don't fire any JS events in this scope.
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-        item.setCachedPage(makeUnique<CachedPage>(*page));
+        item.setCachedPage(WTFMove(cachedPage));
         item.m_pruningReason = PruningReason::None;
         m_items.add(&item);
     }
@@ -474,6 +485,13 @@ bool BackForwardCache::addIfCacheable(HistoryItem& item, Page* page)
     RELEASE_LOG(BackForwardCache, "BackForwardCache::addIfCacheable item: %s, size: %u / %u", item.identifier().string().utf8().data(), pageCount(), maxSize());
 
     return true;
+}
+
+std::unique_ptr<CachedPage> BackForwardCache::suspendPage(Page& page)
+{
+    RELEASE_LOG(BackForwardCache, "BackForwardCache::suspendPage()");
+
+    return trySuspendPage(page, ForceSuspension::Yes);
 }
 
 std::unique_ptr<CachedPage> BackForwardCache::take(HistoryItem& item, Page* page)
@@ -500,9 +518,9 @@ std::unique_ptr<CachedPage> BackForwardCache::take(HistoryItem& item, Page* page
 
 void BackForwardCache::removeAllItemsForPage(Page& page)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     ASSERT_WITH_MESSAGE(!m_isInRemoveAllItemsForPage, "We should not reenter this method");
-    SetForScope<bool> inRemoveAllItemsForPageScope { m_isInRemoveAllItemsForPage, true };
+    SetForScope inRemoveAllItemsForPageScope { m_isInRemoveAllItemsForPage, true };
 #endif
 
     for (auto it = m_items.begin(); it != m_items.end();) {

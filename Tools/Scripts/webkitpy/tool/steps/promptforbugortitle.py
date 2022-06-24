@@ -26,10 +26,17 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import re
+import sys
+
 from webkitpy.tool.steps.abstractstep import AbstractStep
 from webkitpy.tool.steps.options import Options
-from urlparse import urlparse
-import re
+
+if sys.version_info > (3, 0):
+    from urllib.parse import urlparse
+else:
+    from urlparse import urlparse
+
 
 class PromptForBugOrTitle(AbstractStep):
     @classmethod
@@ -47,7 +54,7 @@ class PromptForBugOrTitle(AbstractStep):
         # Otherwise we assume it's a bug subject.
         try:
             state["bug_id"] = int(user_response)
-        except ValueError as TypeError:
+        except ValueError:
             parsed_url = None
             try:
                 parsed_url = urlparse(user_response)
@@ -56,7 +63,7 @@ class PromptForBugOrTitle(AbstractStep):
                 pass
 
             if parsed_url and re.match("bugs.webkit.org", parsed_url.netloc):
-                    match = re.match("id=(?P<bug_id>\d+)", parsed_url.query)
+                    match = re.match(r"id=(?P<bug_id>\d+)", parsed_url.query)
                     if match:
                         state["bug_id"] = int(match.group("bug_id"))
                         return

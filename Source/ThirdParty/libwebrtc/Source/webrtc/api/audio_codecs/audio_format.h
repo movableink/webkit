@@ -12,6 +12,7 @@
 #define API_AUDIO_CODECS_AUDIO_FORMAT_H_
 
 #include <stddef.h>
+
 #include <map>
 #include <string>
 
@@ -32,9 +33,13 @@ struct RTC_EXPORT SdpAudioFormat {
                  int clockrate_hz,
                  size_t num_channels,
                  const Parameters& param);
+  SdpAudioFormat(absl::string_view name,
+                 int clockrate_hz,
+                 size_t num_channels,
+                 Parameters&& param);
   ~SdpAudioFormat();
 
-  // Returns true if this format is compatible with |o|. In SDP terminology:
+  // Returns true if this format is compatible with `o`. In SDP terminology:
   // would it represent the same codec between an offer and an answer? As
   // opposed to operator==, this method disregards codec parameters.
   bool Matches(const SdpAudioFormat& o) const;

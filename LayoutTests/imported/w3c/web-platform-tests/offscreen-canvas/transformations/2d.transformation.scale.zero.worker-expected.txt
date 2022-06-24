@@ -1,3 +1,0 @@
-
-FAIL scale() with a scale factor of zero works Can't find variable: OffscreenCanvas
-

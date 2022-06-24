@@ -10,12 +10,16 @@
 
 #include "modules/desktop_capture/linux/x_server_pixel_buffer.h"
 
+#include <X11/Xutil.h>
+#include <stdint.h>
 #include <string.h>
+#include <sys/ipc.h>
 #include <sys/shm.h>
 
 #include "modules/desktop_capture/desktop_frame.h"
 #include "modules/desktop_capture/linux/window_list_utils.h"
 #include "modules/desktop_capture/linux/x_error_trap.h"
+#include "modules/desktop_capture/linux/x_window_property.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 
@@ -23,9 +27,9 @@ namespace webrtc {
 
 namespace {
 
-// Returns the number of bits |mask| has to be shifted left so its last
+// Returns the number of bits `mask` has to be shifted left so its last
 // (most-significant) bit set becomes the most-significant bit of the word.
-// When |mask| is 0 the function returns 31.
+// When `mask` is 0 the function returns 31.
 uint32_t MaskToShift(uint32_t mask) {
   int shift = 0;
   if ((mask & 0xffff0000u) == 0) {
@@ -50,7 +54,7 @@ uint32_t MaskToShift(uint32_t mask) {
   return shift;
 }
 
-// Returns true if |image| is in RGB format.
+// Returns true if `image` is in RGB format.
 bool IsXImageRGBFormat(XImage* image) {
   return image->bits_per_pixel == 32 && image->red_mask == 0xff0000 &&
          image->green_mask == 0xff00 && image->blue_mask == 0xff;
@@ -62,8 +66,12 @@ void FastBlit(XImage* x_image,
               uint8_t* src_pos,
               const DesktopRect& rect,
               DesktopFrame* frame) {
+  RTC_DCHECK_LE(frame->top_left().x(), rect.left());
+  RTC_DCHECK_LE(frame->top_left().y(), rect.top());
+
   int src_stride = x_image->bytes_per_line;
-  int dst_x = rect.left(), dst_y = rect.top();
+  int dst_x = rect.left() - frame->top_left().x();
+  int dst_y = rect.top() - frame->top_left().y();
 
   uint8_t* dst_pos = frame->data() + frame->stride() * dst_y;
   dst_pos += dst_x * DesktopFrame::kBytesPerPixel;
@@ -81,8 +89,12 @@ void SlowBlit(XImage* x_image,
               uint8_t* src_pos,
               const DesktopRect& rect,
               DesktopFrame* frame) {
+  RTC_DCHECK_LE(frame->top_left().x(), rect.left());
+  RTC_DCHECK_LE(frame->top_left().y(), rect.top());
+
   int src_stride = x_image->bytes_per_line;
-  int dst_x = rect.left(), dst_y = rect.top();
+  int dst_x = rect.left() - frame->top_left().x();
+  int dst_y = rect.top() - frame->top_left().y();
   int width = rect.width(), height = rect.height();
 
   uint32_t red_mask = x_image->red_mask;
@@ -169,13 +181,26 @@ void XServerPixelBuffer::ReleaseSharedMemorySegment() {
   shm_segment_info_ = nullptr;
 }
 
-bool XServerPixelBuffer::Init(Display* display, Window window) {
+bool XServerPixelBuffer::Init(XAtomCache* cache, Window window) {
   Release();
-  display_ = display;
+  display_ = cache->display();
 
   XWindowAttributes attributes;
   if (!GetWindowRect(display_, window, &window_rect_, &attributes)) {
     return false;
+  }
+
+  if (cache->IccProfile() != None) {
+    // `window` is the root window when doing screen capture.
+    XWindowProperty<uint8_t> icc_profile_property(cache->display(), window,
+                                                  cache->IccProfile());
+    if (icc_profile_property.is_valid() && icc_profile_property.size() > 0) {
+      icc_profile_ = std::vector<uint8_t>(
+          icc_profile_property.data(),
+          icc_profile_property.data() + icc_profile_property.size());
+    } else {
+      RTC_LOG(LS_WARNING) << "Failed to get icc profile";
+    }
   }
 
   window_ = window;
@@ -258,7 +283,7 @@ bool XServerPixelBuffer::InitPixmaps(int depth) {
         window_rect_.width(), window_rect_.height(), depth);
     XSync(display_, False);
     if (error_trap.GetLastErrorAndDisable() != 0) {
-      // |shm_pixmap_| is not not valid because the request was not processed
+      // `shm_pixmap_` is not not valid because the request was not processed
       // by the X Server, so zero it.
       shm_pixmap_ = 0;
       return false;
@@ -344,6 +369,9 @@ bool XServerPixelBuffer::CaptureRect(const DesktopRect& rect,
   } else {
     SlowBlit(image, data, rect, frame);
   }
+
+  if (!icc_profile_.empty())
+    frame->set_icc_profile(icc_profile_);
 
   return true;
 }

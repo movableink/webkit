@@ -1,4 +1,5 @@
 # Copyright (C) 2009 Google Inc. All rights reserved.
+# Copyright (C) 2019-2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -26,16 +27,24 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 import os
+import sys
 import tempfile
 import unittest
 
 from webkitpy.common.net.credentials import Credentials
-from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.common.system.user_mock import MockUser
 from webkitpy.thirdparty.mock import Mock
 from webkitpy.tool.mocktool import MockOptions
 from webkitpy.common.system.executive_mock import MockExecutive
+
+from webkitcorepy import OutputCapture
+
+if sys.version_info > (3, 0):
+    input_func = input
+else:
+    input_func = raw_input
 
 
 # FIXME: Other unit tests probably want this class.
@@ -107,17 +116,19 @@ password: "SECRETSAUCE"
 
         # Note, we ignore the captured output because it is already covered
         # by the test case CredentialsTest._assert_security_call (below).
-        outputCapture = OutputCapture()
-        outputCapture.capture_output()
-        self.assertIsNone(credentials._run_security_tool("find-internet-password"))
-        outputCapture.restore_output()
+        with OutputCapture():
+            self.assertIsNone(credentials._run_security_tool("find-internet-password"))
 
     def _assert_security_call(self, username=None):
         executive_mock = Mock()
         credentials = MockedCredentials("example.com", executive=executive_mock)
 
-        expected_logs = "Reading Keychain for example.com account and password.  Click \"Allow\" to continue...\n"
-        OutputCapture().assert_outputs(self, credentials._run_security_tool, ["find-internet-password", username], expected_logs=expected_logs)
+        with OutputCapture(level=logging.INFO) as captured:
+            credentials._run_security_tool('find-internet-password', username)
+        self.assertEqual(
+            captured.root.log.getvalue(),
+            'Reading Keychain for example.com account and password.  Click "Allow" to continue...\n'
+        )
 
         security_args = ["/usr/bin/security", "find-internet-password", "-g", "-s", "example.com"]
         if username:
@@ -193,11 +204,11 @@ password: "SECRETSAUCE"
 
         class FakeUser(MockUser):
             @classmethod
-            def prompt(cls, message, repeat=1, raw_input=raw_input):
+            def prompt(cls, message, repeat=1, raw_input=input_func):
                 return "test@webkit.org"
 
             @classmethod
-            def prompt_password(cls, message, repeat=1, raw_input=raw_input):
+            def prompt_password(cls, message, repeat=1, raw_input=input_func):
                 raise AssertionError("should not prompt for password")
 
         with _TemporaryDirectory(suffix="not_a_git_repo") as temp_dir_path:
@@ -223,11 +234,11 @@ password: "SECRETSAUCE"
 
         class FakeUser(MockUser):
             @classmethod
-            def prompt(cls, message, repeat=1, raw_input=raw_input):
+            def prompt(cls, message, repeat=1, raw_input=input_func):
                 return "test@webkit.org"
 
             @classmethod
-            def prompt_password(cls, message, repeat=1, raw_input=raw_input):
+            def prompt_password(cls, message, repeat=1, raw_input=input_func):
                 return "NOMNOMNOM"
 
         with _TemporaryDirectory(suffix="not_a_git_repo") as temp_dir_path:

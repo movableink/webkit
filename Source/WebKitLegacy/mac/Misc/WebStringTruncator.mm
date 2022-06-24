@@ -32,6 +32,7 @@
 #import <WebCore/FontCascade.h>
 #import <WebCore/FontPlatformData.h>
 #import <WebCore/StringTruncator.h>
+#import <WebCore/WebCoreJITOperations.h>
 #import <wtf/MainThread.h>
 #import <wtf/NeverDestroyed.h>
 
@@ -50,19 +51,20 @@ static WebCore::FontCascade& fontFromNSFont(NSFont *font)
 
 + (void)initialize
 {
-    JSC::initializeThreading();
+    JSC::initialize();
     WTF::initializeMainThread();
+    WebCore::populateJITOperations();
 }
 
 + (NSString *)centerTruncateString:(NSString *)string toWidth:(float)maxWidth
 {
-    static NSFont *menuFont = [[NSFont menuFontOfSize:0] retain];
+    static NeverDestroyed<RetainPtr<NSFont>> menuFont = [NSFont menuFontOfSize:0];
 
-    ASSERT(menuFont);
-    if (!menuFont)
+    ASSERT(menuFont.get());
+    if (!menuFont.get())
         return nil;
 
-    return WebCore::StringTruncator::centerTruncate(string, maxWidth, fontFromNSFont(menuFont));
+    return WebCore::StringTruncator::centerTruncate(string, maxWidth, fontFromNSFont(menuFont.get().get()));
 }
 
 + (NSString *)centerTruncateString:(NSString *)string toWidth:(float)maxWidth withFont:(NSFont *)font

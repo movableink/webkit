@@ -34,8 +34,10 @@ void ImageVk::onDestroy(const egl::Display *display)
 
     if (mImage != nullptr && mOwnsImage)
     {
+        // TODO: We need to handle the case that EGLImage used in two context that aren't shared.
+        // https://issuetracker.google.com/169868803
         mImage->releaseImage(renderer);
-        mImage->releaseStagingBuffer(renderer);
+        mImage->releaseStagedUpdates(renderer);
         SafeDelete(mImage);
     }
     else if (egl::IsExternalImageTarget(mState.target))
@@ -45,6 +47,11 @@ void ImageVk::onDestroy(const egl::Display *display)
             GetImplAs<ExternalImageSiblingVk>(GetAs<egl::ExternalImageSibling>(mState.source));
         externalImageSibling->release(renderer);
         mImage = nullptr;
+
+        // This is called as a special case where resources may be allocated by the caller, without
+        // the caller ever issuing a draw command to free them. Specifically, SurfaceFlinger
+        // optimistically allocates EGLImages that it may never draw to.
+        renderer->cleanupCompletedCommandsGarbage();
     }
 }
 
@@ -52,12 +59,16 @@ egl::Error ImageVk::initialize(const egl::Display *display)
 {
     if (egl::IsTextureTarget(mState.target))
     {
-        TextureVk *textureVk = GetImplAs<TextureVk>(GetAs<gl::Texture>(mState.source));
-
-        // Make sure the texture has created its backing storage
         ASSERT(mContext != nullptr);
         ContextVk *contextVk = vk::GetImpl(mContext);
-        ANGLE_TRY(ResultToEGL(textureVk->ensureImageInitialized(contextVk)));
+        TextureVk *textureVk = GetImplAs<TextureVk>(GetAs<gl::Texture>(mState.source));
+
+        // Make sure the texture uses renderable format
+        ANGLE_TRY(ResultToEGL(textureVk->ensureRenderable(contextVk)));
+
+        // Make sure the texture has created its backing storage
+        ANGLE_TRY(ResultToEGL(
+            textureVk->ensureImageInitialized(contextVk, ImageMipLevels::EnabledLevels)));
 
         mImage = &textureVk->getImage();
 
@@ -66,12 +77,11 @@ egl::Error ImageVk::initialize(const egl::Display *display)
         mOwnsImage = false;
 
         mImageTextureType = mState.imageIndex.getType();
-        mImageLevel       = mState.imageIndex.getLevelIndex();
+        mImageLevel       = gl::LevelIndex(mState.imageIndex.getLevelIndex());
         mImageLayer       = mState.imageIndex.hasLayer() ? mState.imageIndex.getLayerIndex() : 0;
     }
     else
     {
-        RendererVk *renderer = nullptr;
         if (egl::IsRenderbufferTarget(mState.target))
         {
             RenderbufferVk *renderbufferVk =
@@ -79,7 +89,6 @@ egl::Error ImageVk::initialize(const egl::Display *display)
             mImage = renderbufferVk->getImage();
 
             ASSERT(mContext != nullptr);
-            renderer = vk::GetImpl(mContext)->getRenderer();
         }
         else if (egl::IsExternalImageTarget(mState.target))
         {
@@ -88,7 +97,6 @@ egl::Error ImageVk::initialize(const egl::Display *display)
             mImage = externalImageSibling->getImage();
 
             ASSERT(mContext == nullptr);
-            renderer = vk::GetImpl(display)->getRenderer();
         }
         else
         {
@@ -96,14 +104,9 @@ egl::Error ImageVk::initialize(const egl::Display *display)
             return egl::EglBadAccess();
         }
 
-        // Make sure a staging buffer is ready to use to upload data
-        mImage->initStagingBuffer(renderer, mImage->getFormat(), vk::kStagingBufferFlags,
-                                  vk::kStagingBufferSize);
-
-        mOwnsImage = false;
-
+        mOwnsImage        = false;
         mImageTextureType = gl::TextureType::_2D;
-        mImageLevel       = 0;
+        mImageLevel       = gl::LevelIndex(0);
         mImageLayer       = 0;
     }
 
@@ -144,9 +147,15 @@ angle::Result ImageVk::orphan(const gl::Context *context, egl::ImageSibling *sib
     ContextVk *contextVk = vk::GetImpl(context);
 
     // Flush the context to make sure the fence has been submitted.
-    ANGLE_TRY(contextVk->flushImpl(nullptr));
+    return contextVk->flushImpl(nullptr, RenderPassClosureReason::ImageOrphan);
+}
 
-    return angle::Result::Continue;
+egl::Error ImageVk::exportVkImage(void *vkImage, void *vkImageCreateInfo)
+{
+    *reinterpret_cast<VkImage *>(vkImage) = mImage->getImage().getHandle();
+    auto *info = reinterpret_cast<VkImageCreateInfo *>(vkImageCreateInfo);
+    *info      = mImage->getVkImageCreateInfo();
+    return egl::NoError();
 }
 
 }  // namespace rx

@@ -26,13 +26,12 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import cStringIO as StringIO
 import logging
-import sys
 import re
 import tempfile
 
-from webkitpy.tool.steps.abstractstep import AbstractStep
+from webkitcorepy import StringIO
+
 from webkitpy.common.system.executive import Executive, ScriptError
 from webkitpy.common.checkout import diff_parser
 
@@ -45,7 +44,7 @@ class HasLanded(confirmdiff.ConfirmDiff):
 
     @classmethod
     def convert_to_svn(cls, diff):
-        lines = StringIO.StringIO(diff).readlines()
+        lines = StringIO(diff).readlines()
         convert = diff_parser.get_diff_converter(lines)
         return "".join(convert(x) for x in lines)
 
@@ -53,7 +52,7 @@ class HasLanded(confirmdiff.ConfirmDiff):
     def strip_change_log(cls, diff):
         output = []
         skipping = False
-        for line in StringIO.StringIO(diff).readlines():
+        for line in StringIO(diff).readlines():
             indexline = re.match("^Index: ([^\\n]*/)?([^/\\n]*)$", line)
             if skipping and indexline:
                 skipping = False
@@ -82,7 +81,7 @@ class HasLanded(confirmdiff.ConfirmDiff):
         try:
             return executive.run_command(
                 ["interdiff", diff1_patch.name, diff2_patch.name], decode_output=False)
-        except ScriptError as e:
+        except ScriptError:
             _log.warning("Unable to find interdiff util (part of GNU difftools package) which is required.")
             raise
 

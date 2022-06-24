@@ -17,10 +17,9 @@ import android.media.MediaCodecInfo;
 import android.media.MediaCodecInfo.CodecCapabilities;
 import android.media.MediaCodecList;
 import android.os.Build;
+import androidx.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import javax.annotation.Nullable;
 
 /** Factory for decoders backed by Android MediaCodec API. */
 @SuppressWarnings("deprecation") // API level 16 requires use of deprecated methods.
@@ -28,28 +27,26 @@ class MediaCodecVideoDecoderFactory implements VideoDecoderFactory {
   private static final String TAG = "MediaCodecVideoDecoderFactory";
 
   private final @Nullable EglBase.Context sharedContext;
-  private final String[] prefixWhitelist;
-  private final String[] prefixBlacklist;
+  private final @Nullable Predicate<MediaCodecInfo> codecAllowedPredicate;
 
   /**
-   * MediaCodecVideoDecoderFactory will support codecs whitelisted excluding those blacklisted.
+   * MediaCodecVideoDecoderFactory with support of codecs filtering.
    *
    * @param sharedContext The textures generated will be accessible from this context. May be null,
    *                      this disables texture support.
-   * @param prefixWhitelist List of codec prefixes to be whitelisted.
-   * @param prefixBlacklist List of codec prefixes to be blacklisted.
+   * @param codecAllowedPredicate optional predicate to test if codec allowed. All codecs are
+   *                              allowed when predicate is not provided.
    */
-  public MediaCodecVideoDecoderFactory(
-      @Nullable EglBase.Context sharedContext, String[] prefixWhitelist, String[] prefixBlacklist) {
+  public MediaCodecVideoDecoderFactory(@Nullable EglBase.Context sharedContext,
+      @Nullable Predicate<MediaCodecInfo> codecAllowedPredicate) {
     this.sharedContext = sharedContext;
-    this.prefixWhitelist = Arrays.copyOf(prefixWhitelist, prefixWhitelist.length);
-    this.prefixBlacklist = Arrays.copyOf(prefixBlacklist, prefixBlacklist.length);
+    this.codecAllowedPredicate = codecAllowedPredicate;
   }
 
   @Nullable
   @Override
   public VideoDecoder createDecoder(VideoCodecInfo codecType) {
-    VideoCodecType type = VideoCodecType.valueOf(codecType.getName());
+    VideoCodecMimeType type = VideoCodecMimeType.valueOf(codecType.getName());
     MediaCodecInfo info = findCodecForType(type);
 
     if (info == null) {
@@ -67,12 +64,12 @@ class MediaCodecVideoDecoderFactory implements VideoDecoderFactory {
     List<VideoCodecInfo> supportedCodecInfos = new ArrayList<VideoCodecInfo>();
     // Generate a list of supported codecs in order of preference:
     // VP8, VP9, H264 (high profile), and H264 (baseline profile).
-    for (VideoCodecType type :
-        new VideoCodecType[] {VideoCodecType.VP8, VideoCodecType.VP9, VideoCodecType.H264}) {
+    for (VideoCodecMimeType type : new VideoCodecMimeType[] {VideoCodecMimeType.VP8,
+             VideoCodecMimeType.VP9, VideoCodecMimeType.H264, VideoCodecMimeType.AV1}) {
       MediaCodecInfo codec = findCodecForType(type);
       if (codec != null) {
         String name = type.name();
-        if (type == VideoCodecType.H264 && isH264HighProfileSupported(codec)) {
+        if (type == VideoCodecMimeType.H264 && isH264HighProfileSupported(codec)) {
           supportedCodecInfos.add(new VideoCodecInfo(
               name, MediaCodecUtils.getCodecProperties(type, /* highProfile= */ true)));
         }
@@ -85,7 +82,7 @@ class MediaCodecVideoDecoderFactory implements VideoDecoderFactory {
     return supportedCodecInfos.toArray(new VideoCodecInfo[supportedCodecInfos.size()]);
   }
 
-  private @Nullable MediaCodecInfo findCodecForType(VideoCodecType type) {
+  private @Nullable MediaCodecInfo findCodecForType(VideoCodecMimeType type) {
     // HW decoding is not supported on builds before KITKAT.
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
       return null;
@@ -112,8 +109,7 @@ class MediaCodecVideoDecoderFactory implements VideoDecoderFactory {
   }
 
   // Returns true if the given MediaCodecInfo indicates a supported encoder for the given type.
-  private boolean isSupportedCodec(MediaCodecInfo info, VideoCodecType type) {
-    String name = info.getName();
+  private boolean isSupportedCodec(MediaCodecInfo info, VideoCodecMimeType type) {
     if (!MediaCodecUtils.codecSupportsType(info, type)) {
       return false;
     }
@@ -123,25 +119,14 @@ class MediaCodecVideoDecoderFactory implements VideoDecoderFactory {
         == null) {
       return false;
     }
-    return isWhitelisted(name) && !isBlacklisted(name);
+    return isCodecAllowed(info);
   }
 
-  private boolean isWhitelisted(String name) {
-    for (String prefix : prefixWhitelist) {
-      if (name.startsWith(prefix)) {
-        return true;
-      }
+  private boolean isCodecAllowed(MediaCodecInfo info) {
+    if (codecAllowedPredicate == null) {
+      return true;
     }
-    return false;
-  }
-
-  private boolean isBlacklisted(String name) {
-    for (String prefix : prefixBlacklist) {
-      if (name.startsWith(prefix)) {
-        return true;
-      }
-    }
-    return false;
+    return codecAllowedPredicate.test(info);
   }
 
   private boolean isH264HighProfileSupported(MediaCodecInfo info) {

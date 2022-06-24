@@ -23,10 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NativeWebMouseEvent_h
-#define NativeWebMouseEvent_h
+#pragma once
 
-#include "WebEvent.h"
+#include "WebMouseEvent.h"
+#include <WebCore/PointerID.h>
 
 #if USE(APPKIT)
 #include <wtf/RetainPtr.h>
@@ -35,7 +35,11 @@ OBJC_CLASS NSView;
 
 #if PLATFORM(GTK)
 #include <WebCore/GUniquePtrGtk.h>
+#if USE(GTK4)
+typedef struct _GdkEvent GdkEvent;
+#else
 typedef union _GdkEvent GdkEvent;
+#endif
 #endif
 
 #if PLATFORM(QT)
@@ -66,9 +70,14 @@ public:
     NativeWebMouseEvent(QMouseEvent*, const QTransform& fromItemTransform, int eventClickCount);
 #elif PLATFORM(GTK)
     NativeWebMouseEvent(const NativeWebMouseEvent&);
-    NativeWebMouseEvent(GdkEvent*, int);
+    NativeWebMouseEvent(GdkEvent*, int, std::optional<WebCore::FloatSize>);
+    NativeWebMouseEvent(GdkEvent*, const WebCore::IntPoint&, int, std::optional<WebCore::FloatSize>);
+    NativeWebMouseEvent(Type, Button, unsigned short buttons, const WebCore::IntPoint& position, const WebCore::IntPoint& globalPosition, int clickCount, OptionSet<Modifier> modifiers, std::optional<WebCore::FloatSize>, WebCore::PointerID, const String& pointerType, WebCore::PlatformMouseEvent::IsTouch isTouchEvent);
+    explicit NativeWebMouseEvent(const WebCore::IntPoint&);
 #elif PLATFORM(IOS_FAMILY)
     NativeWebMouseEvent(::WebEvent *);
+    NativeWebMouseEvent(Type, Button, unsigned short buttons, const WebCore::IntPoint& position, const WebCore::IntPoint& globalPosition, float deltaX, float deltaY, float deltaZ, int clickCount, OptionSet<Modifier>, WallTime timestamp, double force, GestureWasCancelled, const String& pointerType);
+    NativeWebMouseEvent(const NativeWebMouseEvent&, const WebCore::IntPoint& position, const WebCore::IntPoint& globalPosition, float deltaX, float deltaY, float deltaZ);
 #elif USE(LIBWPE)
     NativeWebMouseEvent(struct wpe_input_pointer_event*, float deviceScaleFactor);
 #elif PLATFORM(WIN)
@@ -104,5 +113,3 @@ private:
 };
 
 } // namespace WebKit
-
-#endif // NativeWebMouseEvent_h

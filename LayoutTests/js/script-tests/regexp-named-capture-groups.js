@@ -15,25 +15,32 @@ shouldBe('execResult1.groups.year', '"2001"');
 shouldBe('Object.getOwnPropertyNames(execResult1).sort()', '["0","1","2","3","groups","index","input","length"]');
 shouldBe('Object.getOwnPropertyNames(execResult1.groups).sort()', '["day","month","year"]');
 
-var matchResult1 = src1.match(re1);
+var matchResult1 = src1.match(new RegExp(re1, 'd'));
 shouldBe('matchResult1[0]', '"01/02/2001"');
 shouldBe('matchResult1.groups.month', '"01"');
 shouldBe('matchResult1.groups.day', '"02"');
 shouldBe('matchResult1.groups.year', '"2001"');
-shouldBe('Object.getOwnPropertyNames(matchResult1).sort()', '["0","1","2","3","groups","index","input","length"]');
+shouldBe('matchResult1.indices.groups.month', '[0,2]');
+shouldBe('matchResult1.indices.groups.day', '[3,5]');
+shouldBe('matchResult1.indices.groups.year', '[6,10]');
+shouldBe('Object.getOwnPropertyNames(matchResult1).sort()', '["0","1","2","3","groups","index","indices","input","length"]');
 shouldBe('Object.getOwnPropertyNames(matchResult1.groups).sort()', '["day","month","year"]');
+shouldBe('Object.getOwnPropertyNames(matchResult1.indices.groups).sort()', '["day","month","year"]');
 
-var re2 = /(?<first_name>\w+)\s(?:(?<middle_initial>\w\.)\s)?(?<last_name>\w+)/;
+var re2 = /(?<first_name>\w+)\s(?:(?<middle_initial>\w\.)\s)?(?<last_name>\w+)/d;
 var matchResult2a = "John W. Smith".match(re2);
 
 shouldBe('matchResult2a[0]', '"John W. Smith"');
 shouldBe('matchResult2a[1]', '"John"');
 shouldBe('matchResult2a[2]', '"W."');
 shouldBe('matchResult2a[3]', '"Smith"');
+shouldBe('matchResult2a.indices[1]', '[0,4]');
+shouldBe('matchResult2a.indices[2]', '[5,7]');
+shouldBe('matchResult2a.indices[3]', '[8,13]');
 shouldBe('matchResult2a[1]', 'matchResult2a.groups.first_name');
 shouldBe('matchResult2a[2]', 'matchResult2a.groups.middle_initial');
 shouldBe('matchResult2a[3]', 'matchResult2a.groups.last_name');
-shouldBe('Object.getOwnPropertyNames(matchResult1).sort()', '["0","1","2","3","groups","index","input","length"]');
+shouldBe('Object.getOwnPropertyNames(matchResult1).sort()', '["0","1","2","3","groups","index","indices","input","length"]');
 
 // Verify that named groups that aren't matched are undefined.
 var matchResult2b = "Sally Brown".match(re2);
@@ -42,10 +49,13 @@ shouldBe('matchResult2b[0]', '"Sally Brown"');
 shouldBe('matchResult2b[1]', '"Sally"');
 shouldBeUndefined('matchResult2b[2]');
 shouldBe('matchResult2b[3]', '"Brown"');
+shouldBe('matchResult2b.indices[1]', '[0,5]');
+shouldBeUndefined('matchResult2b.indices[2]');
+shouldBe('matchResult2b.indices[3]', '[6,11]');
 shouldBe('matchResult2b[1]', 'matchResult2b.groups.first_name');
 shouldBe('matchResult2b[2]', 'matchResult2b.groups.middle_initial');
 shouldBe('matchResult2b[3]', 'matchResult2b.groups.last_name');
-shouldBe('Object.getOwnPropertyNames(matchResult1).sort()', '["0","1","2","3","groups","index","input","length"]');
+shouldBe('Object.getOwnPropertyNames(matchResult1).sort()', '["0","1","2","3","groups","index","indices","input","length"]');
 
 // Verify that named backreferences work.
 var re3 = /^(?<part1>.*):(?<part2>.*):\k<part2>:\k<part1>$/;
@@ -85,9 +95,9 @@ shouldBe('"Give me a \\\'k\\\'!".match(/Give me a \\\'\\\k\\\'/)[0]', '"Give me 
 shouldBe('"Give me \\\'k2\\\'!".match(/Give me \\\'\\\k2\\\'/)[0]', '"Give me \\\'k2\\\'"');
 shouldBe('"Give me a \\\'kat\\\'!".match(/Give me a \\\'\\\kat\\\'/)[0]', '"Give me a \\\'kat\\\'"');
 // Verify that named back references for non-existing named group matches the k<groupName> throw for unicode patterns.
-shouldThrow('"Give me a \\\'k\\\'!".match(/Give me a \\\'\\\k\\\'/u)[0]', '"SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern"');
-shouldThrow('"Give me \\\'k2\\\'!".match(/Give me \\\'\\\k2\\\'/u)[0]', '"SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern"');
-shouldThrow('"Give me a \\\'kat\\\'!".match(/Give me a \\\'\\\kat\\\'/u)[0]', '"SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern"');
+shouldThrow('"Give me a \\\'k\\\'!".match(/Give me a \\\'\\\k\\\'/u)[0]', '"SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern"');
+shouldThrow('"Give me \\\'k2\\\'!".match(/Give me \\\'\\\k2\\\'/u)[0]', '"SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern"');
+shouldThrow('"Give me a \\\'kat\\\'!".match(/Give me a \\\'\\\kat\\\'/u)[0]', '"SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern"');
 
 // Check invalid group name specifiers in a replace string.
 shouldBe('"10/20/1930".replace(/(?<month>\\d{2})\\\/(?<day>\\d{2})\\\/(?<year>\\d{4})/, "$<day>-$<mouth>-$<year>")', '"20--1930"');
@@ -104,6 +114,12 @@ shouldThrow('let r = new RegExp("/(?<g\u{1019b}oupName1>abc)/u")', '"SyntaxError
 shouldThrow('let r = new RegExp("/(?<\u200cgroupName1>abc)/u")', '"SyntaxError: Invalid regular expression: invalid group specifier name"');
 shouldThrow('let r = new RegExp("/(?<\u200dgroupName1>abc)/u")', '"SyntaxError: Invalid regular expression: invalid group specifier name"');
 
+// Check that invalid \u escape errors are not get overriden.
+shouldThrow('/(?<\\u>.)/u', '"SyntaxError: Invalid regular expression: invalid Unicode \\\\u escape"');
+shouldThrow('/\\k<\\uzzz>/u', '"SyntaxError: Invalid regular expression: invalid Unicode \\\\u escape"');
+shouldThrow('/(?<\\u{>.)/u', '"SyntaxError: Invalid regular expression: invalid Unicode code point \\\\u{} escape"');
+shouldThrow('/\\k<\\u{0>/u', '"SyntaxError: Invalid regular expression: invalid Unicode code point \\\\u{} escape"');
+
 // Check the named forward references work
 shouldBe('"XzzXzz".match(/\\\k<z>X(?<z>z*)X\\\k<z>/)', '["XzzXzz", "zz"]');
 shouldBe('"XzzXzz".match(/\\\k<z>X(?<z>z*)X\\\k<z>/u)', '["XzzXzz", "zz"]');
@@ -111,6 +127,7 @@ shouldBe('"1122332211".match(/\\\k<ones>\\\k<twos>\\\k<threes>(?<ones>1*)(?<twos
 shouldBe('"1122332211".match(/\\\k<ones>\\\k<twos>\\\k<threes>(?<ones>1*)(?<twos>2*)(?<threes>3*)\\\k<threes>\\\k<twos>\\\k<ones>/u)', '["1122332211", "11", "22", "3"]');
 
 // Check that a named forward reference for a non-existent named capture
-// matches for non-unicode patterns and throws for unicode patterns.
+// matches for non-Unicode patterns w/o a named group and throws for patterns with a named group or Unicode flag.
 shouldBe('"\\\k<z>XzzX".match(/\\\k<z>X(z*)X/)', '["k<z>XzzX", "zz"]');
-shouldThrow('"\\\k<z>XzzX".match(/\\\k<z>X(z*)X/u)', '"SyntaxError: Invalid regular expression: invalid backreference for unicode pattern"');
+shouldThrow('"\\\k<z>XzzX".match(/\\\k<z>X(z*)X/u)', '"SyntaxError: Invalid regular expression: invalid \\\\k<> named backreference"');
+shouldThrow('/\\\k<xxx(?<a>y)(/', '"SyntaxError: Invalid regular expression: invalid \\\\k<> named backreference"');

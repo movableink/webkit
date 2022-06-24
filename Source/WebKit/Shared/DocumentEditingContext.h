@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,11 @@
 #if PLATFORM(IOS_FAMILY)
 
 #include "ArgumentCoders.h"
-#include "AttributedString.h"
-#include "ElementContext.h"
+#include <WebCore/AttributedString.h>
+#include <WebCore/ElementContext.h>
 #include <WebCore/FloatRect.h>
 #include <WebCore/TextGranularity.h>
 #include <wtf/OptionSet.h>
-#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 
 OBJC_CLASS UIWKDocumentContext;
@@ -47,26 +46,28 @@ struct DocumentEditingContextRequest {
         Rects = 1 << 2,
         Spatial = 1 << 3,
         Annotation = 1 << 4,
+        MarkedTextRects = 1 << 5,
+        SpatialAndCurrentSelection = 1 << 6,
     };
 
     OptionSet<Options> options;
 
-    WebCore::TextGranularity surroundingGranularity { WebCore::CharacterGranularity };
+    WebCore::TextGranularity surroundingGranularity { WebCore::TextGranularity::CharacterGranularity };
     int64_t granularityCount { 0 };
 
     WebCore::FloatRect rect;
 
-    Optional<WebKit::ElementContext> textInputContext;
+    std::optional<WebCore::ElementContext> textInputContext;
 };
 
 struct DocumentEditingContext {
     UIWKDocumentContext *toPlatformContext(OptionSet<WebKit::DocumentEditingContextRequest::Options>);
 
-    AttributedString contextBefore;
-    AttributedString selectedText;
-    AttributedString contextAfter;
-    AttributedString markedText;
-    AttributedString annotatedText;
+    WebCore::AttributedString contextBefore;
+    WebCore::AttributedString selectedText;
+    WebCore::AttributedString contextAfter;
+    WebCore::AttributedString markedText;
+    WebCore::AttributedString annotatedText;
 
     struct Range {
         uint64_t location { 0 };
@@ -88,23 +89,40 @@ struct DocumentEditingContext {
 namespace IPC {
 template<> struct ArgumentCoder<WebKit::DocumentEditingContext::Range> {
     static void encode(Encoder&, const WebKit::DocumentEditingContext::Range&);
-    static Optional<WebKit::DocumentEditingContext::Range> decode(Decoder&);
+    static std::optional<WebKit::DocumentEditingContext::Range> decode(Decoder&);
 };
 
 template<> struct ArgumentCoder<WebKit::DocumentEditingContext::TextRectAndRange> {
     static void encode(Encoder&, const WebKit::DocumentEditingContext::TextRectAndRange&);
-    static Optional<WebKit::DocumentEditingContext::TextRectAndRange> decode(Decoder&);
+    static std::optional<WebKit::DocumentEditingContext::TextRectAndRange> decode(Decoder&);
 };
 
 template<> struct ArgumentCoder<WebKit::DocumentEditingContext> {
     static void encode(Encoder&, const WebKit::DocumentEditingContext&);
-    static Optional<WebKit::DocumentEditingContext> decode(Decoder&);
+    static std::optional<WebKit::DocumentEditingContext> decode(Decoder&);
 };
 
 template<> struct ArgumentCoder<WebKit::DocumentEditingContextRequest> {
     static void encode(Encoder&, const WebKit::DocumentEditingContextRequest&);
-    static Optional<WebKit::DocumentEditingContextRequest> decode(Decoder&);
+    static std::optional<WebKit::DocumentEditingContextRequest> decode(Decoder&);
 };
 }
 
-#endif
+namespace WTF {
+
+template<> struct EnumTraits<WebKit::DocumentEditingContextRequest::Options> {
+    using values = EnumValues<
+        WebKit::DocumentEditingContextRequest::Options,
+        WebKit::DocumentEditingContextRequest::Options::Text,
+        WebKit::DocumentEditingContextRequest::Options::AttributedText,
+        WebKit::DocumentEditingContextRequest::Options::Rects,
+        WebKit::DocumentEditingContextRequest::Options::Spatial,
+        WebKit::DocumentEditingContextRequest::Options::Annotation,
+        WebKit::DocumentEditingContextRequest::Options::MarkedTextRects,
+        WebKit::DocumentEditingContextRequest::Options::SpatialAndCurrentSelection
+    >;
+};
+
+} // namespace WTF
+
+#endif // PLATFORM(IOS_FAMILY)

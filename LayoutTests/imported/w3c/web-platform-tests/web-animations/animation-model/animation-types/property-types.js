@@ -617,7 +617,7 @@ const visibilityType = {
                                          composite });
       testAnimationSamples(animation, idlName,
                            [{ time: 0,    expected: 'visible' },
-                            { time: 1000, expected: 'visible' }]);
+                            { time: 1000, expected: 'hidden' }]);
     }, `${property}: onto "visible"`);
 
     test(t => {
@@ -1074,6 +1074,7 @@ const transformListType = {
       const target = createTestElement(t, setup);
       const animation = target.animate(
         {
+          // perspective(0) is treated as perspective(1px)
           [idlName]: ['perspective(0)', 'perspective(10px)'],
         },
         1000
@@ -1081,7 +1082,7 @@ const transformListType = {
       testAnimationSampleMatrices(animation, idlName,
         [{ time: 500,  expected: [ 1, 0, 0, 0,
                                    0, 1, 0, 0,
-                                   0, 0, 1, -0.05,
+                                   0, 0, 1, -0.55,
                                    0, 0, 0, 1 ] }]);
     }, `${property}: perspective`);
 
@@ -2205,7 +2206,7 @@ const filterListType = {
         [{ time: 500,
            // Per the spec: The initial value for interpolation is all length values
            // set to 0 and the used color set to transparent.
-           expected: 'blur(5px) drop-shadow(rgba(0, 0, 255, 0.4) 5px 5px 5px' }]);
+           expected: 'blur(5px) drop-shadow(rgba(0, 0, 255, 0.4) 5px 5px 5px)' }]);
     }, `${property}: interpolate different length of filter-function-list`
        + ' with drop-shadow function');
 

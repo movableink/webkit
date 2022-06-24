@@ -56,9 +56,9 @@ WI.ShaderProgramContentView = class ShaderProgramContentView extends WI.ContentV
             textEditor.readOnly = false;
             textEditor.addEventListener(WI.TextEditor.Event.Focused, this._editorFocused, this);
             textEditor.addEventListener(WI.TextEditor.Event.NumberOfSearchResultsDidChange, this._numberOfSearchResultsDidChange, this);
-            textEditor.addEventListener(WI.TextEditor.Event.ContentDidChange, (event) => {
+            textEditor.addEventListener(WI.TextEditor.Event.ContentDidChange, function(event) {
                 contentDidChangeDebouncer.delayForTime(250, event);
-            }, this);
+            }, textEditor);
 
             switch (shaderType) {
             case WI.ShaderProgram.ShaderType.Compute:
@@ -85,28 +85,22 @@ WI.ShaderProgramContentView = class ShaderProgramContentView extends WI.ContentV
             container.classList.add("shader", shaderType);
             container.classList.toggle("shares-vertex-fragment-shader", sharesVertexFragmentShader);
 
-            return {container, textEditor};
+            return textEditor;
         };
 
         switch (this.representedObject.programType) {
         case WI.ShaderProgram.ProgramType.Compute: {
-            let computeEditor = createEditor(WI.ShaderProgram.ShaderType.Compute);
-            this._computeContainer = computeEditor.container;
-            this._computeEditor = computeEditor.textEditor;
+            this._computeEditor = createEditor(WI.ShaderProgram.ShaderType.Compute);
 
             this._lastActiveEditor = this._computeEditor;
             break;
         }
 
         case WI.ShaderProgram.ProgramType.Render: {
-            let vertexEditor = createEditor(WI.ShaderProgram.ShaderType.Vertex);
-            this._vertexContainer = vertexEditor.container;
-            this._vertexEditor = vertexEditor.textEditor;
+            this._vertexEditor = createEditor(WI.ShaderProgram.ShaderType.Vertex);
 
             if (!sharesVertexFragmentShader) {
-                let fragmentEditor = createEditor(WI.ShaderProgram.ShaderType.Fragment);
-                this._fragmentContainer = fragmentEditor.container;
-                this._fragmentEditor = fragmentEditor.textEditor;
+                this._fragmentEditor = createEditor(WI.ShaderProgram.ShaderType.Fragment);
             }
 
             this._lastActiveEditor = this._vertexEditor;
@@ -124,40 +118,11 @@ WI.ShaderProgramContentView = class ShaderProgramContentView extends WI.ContentV
 
     // Protected
 
-    shown()
+    attached()
     {
-        super.shown();
-
-        switch (this.representedObject.programType) {
-        case WI.ShaderProgram.ProgramType.Compute:
-            this._computeEditor.shown();
-            break;
-
-        case WI.ShaderProgram.ProgramType.Render:
-            this._vertexEditor.shown();
-            if (!this.representedObject.sharesVertexFragmentShader)
-                this._fragmentEditor.shown();
-            break;
-        }
+        super.attached();
 
         this._refreshContent();
-    }
-
-    hidden()
-    {
-        switch (this.representedObject.programType) {
-        case WI.ShaderProgram.ProgramType.Compute:
-            this._computeEditor.hidden();
-            break;
-
-        case WI.ShaderProgram.ProgramType.Render:
-            this._vertexEditor.hidden();
-            if (!this.representedObject.sharesVertexFragmentShader)
-                this._fragmentEditor.hidden();
-            break;
-        }
-
-        super.hidden();
     }
 
     get supportsSave()
@@ -194,8 +159,8 @@ WI.ShaderProgramContentView = class ShaderProgramContentView extends WI.ContentV
         console.assert(extension);
 
         return {
-            url: WI.FileUtilities.inspectorURLForFilename(filename + extension),
             content: this._lastActiveEditor.string,
+            suggestedName: filename + extension,
             forceSaveAs: true,
         };
     }
@@ -254,24 +219,28 @@ WI.ShaderProgramContentView = class ShaderProgramContentView extends WI.ContentV
 
     _refreshContent()
     {
-        let createCallback = (container, textEditor) => {
+        let spinnerContainer = null;
+
+        if (!this.didInitialLayout) {
+            spinnerContainer = this.element.appendChild(document.createElement("div"));
+            spinnerContainer.className = "spinner-container";
+            spinnerContainer.appendChild((new WI.IndeterminateProgressSpinner).element);
+
+            this._contentErrorMessageElement?.remove();
+        }
+
+        let createCallback = (textEditor) => {
             return (source) => {
+                spinnerContainer?.remove();
+
                 if (source === null) {
-                    container.remove();
-                    return;
-                }
-
-                if (!container.parentNode) {
-                    switch (container) {
-                    case this._computeContainer:
-                    case this._vertexContainer:
-                        this.element.insertAdjacentElement("afterbegin", container);
-                        break;
-
-                    case this._fragmentContainer:
-                        this.element.insertAdjacentElement("beforeend", container);
-                        break;
+                    if (!this._contentErrorMessageElement) {
+                        const isError = true;
+                        this._contentErrorMessageElement = WI.createMessageTextView(WI.UIString("An error occurred trying to load the resource."), isError);
                     }
+                    if (!this._contentErrorMessageElement.parentNode)
+                        this.element.appendChild(this._contentErrorMessageElement);
+                    return;
                 }
 
                 textEditor.string = source || "";
@@ -280,13 +249,13 @@ WI.ShaderProgramContentView = class ShaderProgramContentView extends WI.ContentV
 
         switch (this.representedObject.programType) {
         case WI.ShaderProgram.ProgramType.Compute:
-            this.representedObject.requestShaderSource(WI.ShaderProgram.ShaderType.Compute, createCallback(this._computeContainer, this._computeEditor));
+            this.representedObject.requestShaderSource(WI.ShaderProgram.ShaderType.Compute, createCallback(this._computeEditor));
             return;
 
         case WI.ShaderProgram.ProgramType.Render:
-            this.representedObject.requestShaderSource(WI.ShaderProgram.ShaderType.Vertex, createCallback(this._vertexContainer, this._vertexEditor));
+            this.representedObject.requestShaderSource(WI.ShaderProgram.ShaderType.Vertex, createCallback(this._vertexEditor));
             if (!this.representedObject.sharesVertexFragmentShader)
-                this.representedObject.requestShaderSource(WI.ShaderProgram.ShaderType.Fragment, createCallback(this._fragmentContainer, this._fragmentEditor));
+                this.representedObject.requestShaderSource(WI.ShaderProgram.ShaderType.Fragment, createCallback(this._fragmentEditor));
             return;
         }
 

@@ -47,7 +47,7 @@ LocalStorageNamespace::~LocalStorageNamespace()
     ASSERT(!RunLoop::isMain());
 }
 
-StorageArea& LocalStorageNamespace::getOrCreateStorageArea(SecurityOriginData&& securityOrigin, IsEphemeral isEphemeral, Ref<WorkQueue>&& workQueue)
+StorageArea& LocalStorageNamespace::getOrCreateStorageArea(SecurityOriginData&& securityOrigin, IsEphemeral isEphemeral, Ref<SuspendableWorkQueue>&& workQueue)
 {
     ASSERT(!RunLoop::isMain());
     return *m_storageAreaMap.ensure(securityOrigin, [&]() mutable {
@@ -68,6 +68,20 @@ void LocalStorageNamespace::clearAllStorageAreas()
     ASSERT(!RunLoop::isMain());
     for (auto& storageArea : m_storageAreaMap.values())
         storageArea->clear();
+}
+
+void LocalStorageNamespace::flushAndClose(const SecurityOriginData& origin)
+{
+    ASSERT(!RunLoop::isMain());
+    if (auto* storageArea = m_storageAreaMap.get(origin))
+        storageArea->close();
+}
+
+
+void LocalStorageNamespace::removeStorageArea(const SecurityOriginData& origin)
+{
+    ASSERT(!RunLoop::isMain());
+    m_storageAreaMap.remove(origin);
 }
 
 Vector<SecurityOriginData> LocalStorageNamespace::ephemeralOrigins() const

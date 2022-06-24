@@ -26,6 +26,7 @@
 #pragma once
 
 #include <WebCore/WritingMode.h>
+#include <wtf/EnumTraits.h>
 #include <wtf/text/WTFString.h>
 
 namespace IPC {
@@ -36,7 +37,7 @@ class Encoder;
 namespace WebKit {
 
 struct WebPopupItem {
-    enum Type {
+    enum class Type : bool {
         Separator,
         Item
     };
@@ -46,7 +47,7 @@ struct WebPopupItem {
     WebPopupItem(Type, const String& text, WebCore::TextDirection, bool hasTextDirectionOverride, const String& toolTip, const String& accessibilityText, bool isEnabled, bool isLabel, bool isSelected);
 
     void encode(IPC::Encoder&) const;
-    static Optional<WebPopupItem> decode(IPC::Decoder&);
+    static std::optional<WebPopupItem> decode(IPC::Decoder&);
 
     Type m_type;
     String m_text;

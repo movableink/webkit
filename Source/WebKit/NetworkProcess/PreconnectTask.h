@@ -37,11 +37,16 @@ namespace WebKit {
 class NetworkLoad;
 class NetworkLoadParameters;
 class NetworkProcess;
+class NetworkSession;
 
 class PreconnectTask final : public NetworkLoadClient {
 public:
-    PreconnectTask(NetworkProcess&, PAL::SessionID, NetworkLoadParameters&&, CompletionHandler<void(const WebCore::ResourceError&)>&& completionHandler = { });
+    PreconnectTask(NetworkSession&, NetworkLoadParameters&&, CompletionHandler<void(const WebCore::ResourceError&, const WebCore::NetworkLoadMetrics&)>&&);
     ~PreconnectTask();
+
+    void setH2PingCallback(const URL&, CompletionHandler<void(Expected<WTF::Seconds, WebCore::ResourceError>&&)>&&);
+    void setTimeout(Seconds);
+    void start();
 
 private:
     // NetworkLoadClient.
@@ -49,15 +54,16 @@ private:
     bool isAllowedToAskUserForCredentials() const final { return false; }
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) final;
     void willSendRedirectedRequest(WebCore::ResourceRequest&&, WebCore::ResourceRequest&& redirectRequest, WebCore::ResourceResponse&& redirectResponse) final;
-    void didReceiveResponse(WebCore::ResourceResponse&&, ResponseCompletionHandler&&) final;
-    void didReceiveBuffer(Ref<WebCore::SharedBuffer>&&, int reportedEncodedDataLength) final;
+    void didReceiveResponse(WebCore::ResourceResponse&&, PrivateRelayed, ResponseCompletionHandler&&) final;
+    void didReceiveBuffer(const WebCore::FragmentedSharedBuffer&, int reportedEncodedDataLength) final;
     void didFinishLoading(const WebCore::NetworkLoadMetrics&) final;
     void didFailLoading(const WebCore::ResourceError&) final;
 
-    void didFinish(const WebCore::ResourceError&);
+    void didFinish(const WebCore::ResourceError&, const WebCore::NetworkLoadMetrics&);
 
     std::unique_ptr<NetworkLoad> m_networkLoad;
-    CompletionHandler<void(const WebCore::ResourceError&)> m_completionHandler;
+    CompletionHandler<void(const WebCore::ResourceError&, const WebCore::NetworkLoadMetrics&)> m_completionHandler;
+    Seconds m_timeout;
     WebCore::Timer m_timeoutTimer;
 };
 

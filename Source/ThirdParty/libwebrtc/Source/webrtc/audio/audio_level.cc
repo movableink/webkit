@@ -17,31 +17,38 @@ namespace webrtc {
 namespace voe {
 
 AudioLevel::AudioLevel()
-    : abs_max_(0), count_(0), current_level_full_range_(0) {
-  WebRtcSpl_Init();
-}
+    : abs_max_(0), count_(0), current_level_full_range_(0) {}
 
 AudioLevel::~AudioLevel() {}
 
+void AudioLevel::Reset() {
+  MutexLock lock(&mutex_);
+  abs_max_ = 0;
+  count_ = 0;
+  current_level_full_range_ = 0;
+  total_energy_ = 0.0;
+  total_duration_ = 0.0;
+}
+
 int16_t AudioLevel::LevelFullRange() const {
-  rtc::CritScope cs(&crit_sect_);
+  MutexLock lock(&mutex_);
   return current_level_full_range_;
 }
 
-void AudioLevel::Clear() {
-  rtc::CritScope cs(&crit_sect_);
+void AudioLevel::ResetLevelFullRange() {
+  MutexLock lock(&mutex_);
   abs_max_ = 0;
   count_ = 0;
   current_level_full_range_ = 0;
 }
 
 double AudioLevel::TotalEnergy() const {
-  rtc::CritScope cs(&crit_sect_);
+  MutexLock lock(&mutex_);
   return total_energy_;
 }
 
 double AudioLevel::TotalDuration() const {
-  rtc::CritScope cs(&crit_sect_);
+  MutexLock lock(&mutex_);
   return total_duration_;
 }
 
@@ -56,12 +63,15 @@ void AudioLevel::ComputeLevel(const AudioFrame& audioFrame, double duration) {
 
   // Protect member access using a lock since this method is called on a
   // dedicated audio thread in the RecordedDataIsAvailable() callback.
-  rtc::CritScope cs(&crit_sect_);
+  MutexLock lock(&mutex_);
 
   if (abs_value > abs_max_)
     abs_max_ = abs_value;
 
-  // Update level approximately 10 times per second
+  // Update level approximately 9 times per second, assuming audio frame
+  // duration is approximately 10 ms. (The update frequency is every
+  // 11th (= |kUpdateFrequency+1|) call: 1000/(11*10)=9.09..., we should
+  // probably change this behavior, see https://crbug.com/webrtc/10784).
   if (count_++ == kUpdateFrequency) {
     current_level_full_range_ = abs_max_;
 

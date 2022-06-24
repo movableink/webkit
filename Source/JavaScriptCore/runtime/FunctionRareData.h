@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 
 namespace JSC {
 
+class ExecutableBase;
 class JSGlobalObject;
 class LLIntOffsetsExtractor;
 namespace DFG {
@@ -50,24 +51,28 @@ public:
     typedef JSCell Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    static FunctionRareData* create(VM&, JSFunction*);
+    static FunctionRareData* create(VM&, ExecutableBase*);
 
     static constexpr bool needsDestruction = true;
+
+    template<typename CellType, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.functionRareDataSpace<mode>();
+    }
+
     static void destroy(JSCell*);
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     DECLARE_INFO;
 
     static inline ptrdiff_t offsetOfObjectAllocationProfile() { return OBJECT_OFFSETOF(FunctionRareData, m_objectAllocationProfile); }
     static inline ptrdiff_t offsetOfAllocationProfileWatchpointSet() { return OBJECT_OFFSETOF(FunctionRareData, m_allocationProfileWatchpointSet); }
     static inline ptrdiff_t offsetOfInternalFunctionAllocationProfile() { return OBJECT_OFFSETOF(FunctionRareData, m_internalFunctionAllocationProfile); }
-    static inline ptrdiff_t offsetOfBoundFunctionStructure() { return OBJECT_OFFSETOF(FunctionRareData, m_boundFunctionStructure); }
-    static inline ptrdiff_t offsetOfAllocationProfileClearingWatchpoint() { return OBJECT_OFFSETOF(FunctionRareData, m_allocationProfileClearingWatchpoint); }
-    static inline ptrdiff_t offsetOfHasReifiedLength() { return OBJECT_OFFSETOF(FunctionRareData, m_hasReifiedLength); }
-    static inline ptrdiff_t offsetOfHasReifiedName() { return OBJECT_OFFSETOF(FunctionRareData, m_hasReifiedName); }
+    static inline ptrdiff_t offsetOfExecutable() { return OBJECT_OFFSETOF(FunctionRareData, m_executable); }
 
     ObjectAllocationProfileWithPrototype* objectAllocationProfile()
     {
@@ -89,10 +94,10 @@ public:
     bool isObjectAllocationProfileInitialized() { return !m_objectAllocationProfile.isNull(); }
 
     Structure* internalFunctionAllocationStructure() { return m_internalFunctionAllocationProfile.structure(); }
-    Structure* createInternalFunctionAllocationStructureFromBase(VM& vm, JSGlobalObject* globalObject, JSObject* prototype, Structure* baseStructure)
+    Structure* createInternalFunctionAllocationStructureFromBase(VM& vm, JSGlobalObject* baseGlobalObject, JSObject* prototype, Structure* baseStructure)
     {
         initializeAllocationProfileWatchpointSet();
-        return m_internalFunctionAllocationProfile.createAllocationStructureFromBase(vm, globalObject, this, prototype, baseStructure);
+        return m_internalFunctionAllocationProfile.createAllocationStructureFromBase(vm, baseGlobalObject, this, prototype, baseStructure);
     }
     void clearInternalFunctionAllocationProfile(const char* reason)
     {
@@ -106,24 +111,36 @@ public:
             m_allocationProfileWatchpointSet.startWatching();
     }
 
-    Structure* getBoundFunctionStructure() { return m_boundFunctionStructure.get(); }
-    void setBoundFunctionStructure(VM& vm, Structure* structure) { m_boundFunctionStructure.set(vm, this, structure); }
+    Structure* getBoundFunctionStructure() { return m_boundFunctionStructureID.get(); }
+    void setBoundFunctionStructure(VM& vm, Structure* structure) { m_boundFunctionStructureID.set(vm, this, structure); }
+
+    ExecutableBase* executable() const { return m_executable.get(); }
 
     bool hasReifiedLength() const { return m_hasReifiedLength; }
     void setHasReifiedLength() { m_hasReifiedLength = true; }
     bool hasReifiedName() const { return m_hasReifiedName; }
     void setHasReifiedName() { m_hasReifiedName = true; }
 
+    bool hasModifiedLengthForNonHostFunction() const { return m_hasModifiedLengthForNonHostFunction; }
+    void setHasModifiedLengthForNonHostFunction()
+    {
+        m_hasModifiedLengthForNonHostFunction = true;
+    }
+    bool hasModifiedNameForNonHostFunction() const { return m_hasModifiedNameForNonHostFunction; }
+    void setHasModifiedNameForNonHostFunction()
+    {
+        m_hasModifiedNameForNonHostFunction = true;
+    }
+
     bool hasAllocationProfileClearingWatchpoint() const { return !!m_allocationProfileClearingWatchpoint; }
     Watchpoint* createAllocationProfileClearingWatchpoint();
     class AllocationProfileClearingWatchpoint;
 
-protected:
-    FunctionRareData(VM&, JSFunction*);
-    ~FunctionRareData();
-
 private:
     friend class LLIntOffsetsExtractor;
+
+    explicit FunctionRareData(VM&, ExecutableBase*);
+    ~FunctionRareData();
 
     // Ideally, there would only be one allocation profile for subclassing but due to Reflect.construct we
     // have two. There are some pros and cons in comparison to our current system to using the same profile
@@ -141,10 +158,13 @@ private:
     ObjectAllocationProfileWithPrototype m_objectAllocationProfile;
     InlineWatchpointSet m_allocationProfileWatchpointSet;
     InternalFunctionAllocationProfile m_internalFunctionAllocationProfile;
-    WriteBarrier<Structure> m_boundFunctionStructure;
+    WriteBarrierStructureID m_boundFunctionStructureID;
+    WriteBarrier<ExecutableBase> m_executable;
     std::unique_ptr<AllocationProfileClearingWatchpoint> m_allocationProfileClearingWatchpoint;
-    bool m_hasReifiedLength { false };
-    bool m_hasReifiedName { false };
+    bool m_hasReifiedLength : 1;
+    bool m_hasReifiedName : 1;
+    bool m_hasModifiedLengthForNonHostFunction : 1;
+    bool m_hasModifiedNameForNonHostFunction : 1;
 };
 
 class FunctionRareData::AllocationProfileClearingWatchpoint final : public Watchpoint {

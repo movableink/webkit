@@ -31,13 +31,31 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "CDMClearKey.h"
+#include "CDMProxy.h"
+
+#if ENABLE(THUNDER)
+#include "CDMThunder.h"
+#endif
 
 namespace WebCore {
 
 void CDMFactory::platformRegisterFactories(Vector<CDMFactory*>& factories)
 {
-    factories.append(&CDMFactoryClearKey::singleton());
+#if ENABLE(THUNDER)
+    factories.append(&CDMFactoryThunder::singleton());
+#else
+    UNUSED_PARAM(factories);
+#endif
+}
+
+Vector<CDMProxyFactory*> CDMProxyFactory::platformRegisterFactories()
+{
+    Vector<CDMProxyFactory*> factories;
+#if ENABLE(THUNDER)
+    factories.reserveInitialCapacity(1);
+    factories.uncheckedAppend(&CDMFactoryThunder::singleton());
+#endif
+    return factories;
 }
 
 } // namespace WebCore

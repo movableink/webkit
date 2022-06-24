@@ -32,14 +32,15 @@
 #import "WebKitLogging.h"
 #import "WebNSObjectExtras.h"
 #import "WebResourceInternal.h"
-#import "WebTypesInternal.h"
 #import <JavaScriptCore/InitializeThreading.h>
 #import <WebCore/ArchiveResource.h>
 #import <WebCore/LegacyWebArchive.h>
 #import <WebCore/ThreadCheck.h>
+#import <WebCore/WebCoreJITOperations.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/MainThread.h>
 #import <wtf/RunLoop.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 using namespace WebCore;
 
@@ -51,9 +52,9 @@ static NSString * const WebSubframeArchivesKey = @"WebSubframeArchives";
 
 @interface WebArchivePrivate : NSObject {
 @public
-    WebResource *cachedMainResource;
-    NSArray *cachedSubresources;
-    NSArray *cachedSubframeArchives;
+    RetainPtr<WebResource> cachedMainResource;
+    RetainPtr<NSArray> cachedSubresources;
+    RetainPtr<NSArray> cachedSubframeArchives;
 @private
     RefPtr<LegacyWebArchive> coreArchive;
 }
@@ -68,8 +69,9 @@ static NSString * const WebSubframeArchivesKey = @"WebSubframeArchives";
 + (void)initialize
 {
 #if !PLATFORM(IOS_FAMILY)
-    JSC::initializeThreading();
-    RunLoop::initializeMainRunLoop();
+    JSC::initialize();
+    WTF::initializeMainThread();
+    WebCore::populateJITOperations();
 #endif
 }
 
@@ -108,10 +110,6 @@ static NSString * const WebSubframeArchivesKey = @"WebSubframeArchives";
 {
     if (WebCoreObjCScheduleDeallocateOnMainThread([WebArchivePrivate class], self))
         return;
-    
-    [cachedMainResource release];
-    [cachedSubresources release];
-    [cachedSubframeArchives release];
     
     [super dealloc];
 }
@@ -153,21 +151,21 @@ static BOOL isArrayOfClass(id object, Class elementClass)
 
     _private = [[WebArchivePrivate alloc] init];
 
-    _private->cachedMainResource = [mainResource retain];
+    _private->cachedMainResource = mainResource;
     if (!_private->cachedMainResource) {
         [self release];
         return nil;
     }
     
     if (!subresources || isArrayOfClass(subresources, [WebResource class]))
-        _private->cachedSubresources = [subresources retain];
+        _private->cachedSubresources = subresources;
     else {
         [self release];
         return nil;
     }
 
     if (!subframeArchives || isArrayOfClass(subframeArchives, [WebArchive class]))
-        _private->cachedSubframeArchives = [subframeArchives retain];
+        _private->cachedSubframeArchives = subframeArchives;
     else {
         [self release];
         return nil;
@@ -175,13 +173,13 @@ static BOOL isArrayOfClass(id object, Class elementClass)
 
     Vector<Ref<ArchiveResource>> coreResources;
     for (WebResource *subresource in subresources)
-        coreResources.append([subresource _coreResource]);
+        coreResources.append([subresource _coreResource].get());
 
     Vector<Ref<LegacyWebArchive>> coreArchives;
     for (WebArchive *subframeArchive in subframeArchives)
         coreArchives.append(*[subframeArchive->_private coreArchive]);
 
-    [_private setCoreArchive:LegacyWebArchive::create([mainResource _coreResource], WTFMove(coreResources), WTFMove(coreArchives))];
+    [_private setCoreArchive:LegacyWebArchive::create([mainResource _coreResource].get(), WTFMove(coreResources), WTFMove(coreArchives))];
     return self;
 }
 
@@ -266,11 +264,12 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     if (!_private->cachedMainResource) {
         if (auto* coreArchive = [_private coreArchive]) {
             if (auto* mainResource = coreArchive->mainResource())
-                _private->cachedMainResource = [[WebResource alloc] _initWithCoreResource:*mainResource];
+                _private->cachedMainResource = adoptNS([[WebResource alloc] _initWithCoreResource:*mainResource]);
         }
     }
     
-    return [[_private->cachedMainResource retain] autorelease];
+    auto cachedMainResourceCopy = _private->cachedMainResource;
+    return cachedMainResourceCopy.autorelease();
 }
 
 - (NSArray *)subresources
@@ -280,24 +279,22 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     // Currently from WebKit API perspective, WebArchives are entirely immutable once created
     // If they ever become mutable, we'll need to rethink this.     
     if (!_private->cachedSubresources) {
-        LegacyWebArchive* coreArchive = [_private coreArchive];
+        auto coreArchive = [_private coreArchive];
         if (!coreArchive)
-            _private->cachedSubresources = [[NSArray alloc] init];
+            _private->cachedSubresources = adoptNS([[NSArray alloc] init]);
         else {
-            auto& subresources = coreArchive->subresources();
-            NSMutableArray *mutableArray = [[NSMutableArray alloc] initWithCapacity:subresources.size()];
-            _private->cachedSubresources = mutableArray;
-            for (auto& subresource : subresources) {
-                if (WebResource *resource = [[WebResource alloc] _initWithCoreResource:subresource.get()]) {
-                    [mutableArray addObject:resource];
-                    [resource release];
-                }
-            }
+            _private->cachedSubresources = createNSArray(coreArchive->subresources(), [] (auto& subresource) {
+                return adoptNS([[WebResource alloc] _initWithCoreResource:subresource.get()]);
+            });
         }
     }
     // Maintain the WebKit 3 behavior of this API, which is documented and
     // relied upon by some clients, of returning nil if there are no subresources.
-    return [_private->cachedSubresources count] ? [[_private->cachedSubresources retain] autorelease] : nil;
+    if (![_private->cachedSubresources count])
+        return nil;
+
+    auto cachedSubresourcesCopy = _private->cachedSubresources;
+    return cachedSubresourcesCopy.autorelease();
 }
 
 - (NSArray *)subframeArchives
@@ -309,20 +306,16 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     if (!_private->cachedSubframeArchives) {
         auto* coreArchive = [_private coreArchive];
         if (!coreArchive)
-            _private->cachedSubframeArchives = [[NSArray alloc] init];
+            _private->cachedSubframeArchives = adoptNS([[NSArray alloc] init]);
         else {
-            auto& subframeArchives = coreArchive->subframeArchives();
-            auto mutableArray = [[NSMutableArray alloc] initWithCapacity:subframeArchives.size()];
-            _private->cachedSubframeArchives = mutableArray;
-            for (unsigned i = 0; i < subframeArchives.size(); ++i) {
-                WebArchive *archive = [[WebArchive alloc] _initWithCoreLegacyWebArchive:static_cast<LegacyWebArchive*>(subframeArchives[i].ptr())];
-                [mutableArray addObject:archive];
-                [archive release];
-            }
+            _private->cachedSubframeArchives = createNSArray(coreArchive->subframeArchives(), [] (auto& archive) {
+                return adoptNS([[WebArchive alloc] _initWithCoreLegacyWebArchive:static_cast<LegacyWebArchive*>(archive.ptr())]);
+            });
         }
     }
     
-    return [[_private->cachedSubframeArchives retain] autorelease];
+    auto cachedSubframeArchivesCopy = _private->cachedSubframeArchives;
+    return cachedSubframeArchivesCopy.autorelease();
 }
 
 - (NSData *)data
@@ -341,7 +334,7 @@ static BOOL isArrayOfClass(id object, Class elementClass)
 #endif
     LOG(Timing, "Serializing web archive to raw CFPropertyList data took %f seconds", duration);
         
-    return [[(NSData *)data.get() retain] autorelease];
+    return retainPtr((NSData *)data.get()).autorelease();
 }
 
 @end

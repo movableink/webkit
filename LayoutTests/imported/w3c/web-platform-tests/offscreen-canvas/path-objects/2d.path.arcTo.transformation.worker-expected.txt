@@ -1,3 +1,0 @@
-
-FAIL arcTo joins up to the last subpath point correctly Can't find variable: OffscreenCanvas
-

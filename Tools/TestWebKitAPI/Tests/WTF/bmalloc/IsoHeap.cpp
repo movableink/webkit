@@ -28,6 +28,9 @@
 #if !USE(SYSTEM_MALLOC)
 
 #include <bmalloc/bmalloc.h>
+
+#if !BUSE(LIBPAS)
+
 #include <bmalloc/AllIsoHeapsInlines.h>
 #include <bmalloc/Environment.h>
 #include <bmalloc/IsoHeapInlines.h>
@@ -78,8 +81,9 @@ static void assertHasObjects(IsoHeap<heapType>& heap, std::set<void*> pointers)
         return;
     }
     auto& impl = heap.impl();
-    std::lock_guard<bmalloc::Mutex> locker(impl.lock);
+    std::scoped_lock<bmalloc::Mutex> locker(impl.lock);
     impl.forEachLiveObject(
+        locker,
         [&] (void* object) {
             pointers.erase(object);
         });
@@ -94,8 +98,9 @@ static void assertHasOnlyObjects(IsoHeap<heapType>& heap, std::set<void*> pointe
         return;
     }
     auto& impl = heap.impl();
-    std::lock_guard<bmalloc::Mutex> locker(impl.lock);
+    std::scoped_lock<bmalloc::Mutex> locker(impl.lock);
     impl.forEachLiveObject(
+        locker,
         [&] (void* object) {
             EXPECT_EQ(pointers.erase(object), 1U);
         });
@@ -108,15 +113,11 @@ static void assertClean(IsoHeap<heapType>& heap)
     scavengeThisThread();
     if (!Environment::get()->isDebugHeapEnabled()) {
         auto& impl = heap.impl();
-        {
-            std::lock_guard<bmalloc::Mutex> locker(impl.lock);
-            EXPECT_FALSE(impl.numLiveObjects());
-        }
+        EXPECT_FALSE(impl.numLiveObjects());
     }
     heap.scavenge();
     if (!Environment::get()->isDebugHeapEnabled()) {
         auto& impl = heap.impl();
-        std::lock_guard<bmalloc::Mutex> locker(impl.lock);
         EXPECT_FALSE(impl.numCommittedPages());
     }
 }
@@ -187,19 +188,12 @@ TEST(bmalloc, IsoFlipFlopFragmentedPagesScavengeInMiddle)
         ptrs[i] = nullptr;
     }
     heap.scavenge();
-    unsigned numCommittedPagesBefore;
     auto& impl = heap.impl();
-    {
-        std::lock_guard<bmalloc::Mutex> locker(impl.lock);
-        numCommittedPagesBefore = impl.numCommittedPages();
-    }
+    unsigned numCommittedPagesBefore = impl.numCommittedPages();
     assertHasOnlyObjects(heap, toptrset(ptrs));
     for (unsigned i = ptrs.size() / 2; i--;)
         ptrs.push_back(heap.allocate());
-    {
-        std::lock_guard<bmalloc::Mutex> locker(impl.lock);
-        EXPECT_EQ(numCommittedPagesBefore, impl.numCommittedPages());
-    }
+    EXPECT_EQ(numCommittedPagesBefore, impl.numCommittedPages());
     for (void* ptr : ptrs)
         heap.deallocate(ptr);
     assertClean(heap);
@@ -220,19 +214,12 @@ TEST(bmalloc, IsoFlipFlopFragmentedPagesScavengeInMiddle288)
         ptrs[i] = nullptr;
     }
     heap.scavenge();
-    unsigned numCommittedPagesBefore;
     auto& impl = heap.impl();
-    {
-        std::lock_guard<bmalloc::Mutex> locker(impl.lock);
-        numCommittedPagesBefore = impl.numCommittedPages();
-    }
+    unsigned numCommittedPagesBefore = impl.numCommittedPages();
     assertHasOnlyObjects(heap, toptrset(ptrs));
     for (unsigned i = ptrs.size() / 2; i--;)
         ptrs.push_back(heap.allocate());
-    {
-        std::lock_guard<bmalloc::Mutex> locker(impl.lock);
-        EXPECT_EQ(numCommittedPagesBefore, impl.numCommittedPages());
-    }
+    EXPECT_EQ(numCommittedPagesBefore, impl.numCommittedPages());
     for (void* ptr : ptrs)
         heap.deallocate(ptr);
     assertClean(heap);
@@ -296,6 +283,11 @@ TEST(bmalloc, BisoMallocedInline)
 
 TEST(bmalloc, ScavengedMemoryShouldBeReused)
 {
+    if (Environment::get()->isDebugHeapEnabled()) {
+        printf("    skipping test because DebugHeap.\n");
+        return;
+    }
+
     static IsoHeap<double> heap;
 
     auto run = [] (unsigned numPagesToCommit) {
@@ -4651,5 +4643,7 @@ TEST(bmalloc, IsoHeapMultipleThreadsWhileIterating)
     for (auto& thread : threads)
         thread->waitForCompletion();
 }
+
+#endif
 
 #endif

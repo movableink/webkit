@@ -57,7 +57,13 @@ WI.DOMTreeUpdater = function(treeOutline)
 WI.DOMTreeUpdater.prototype = {
     close: function()
     {
-        WI.domManager.removeEventListener(null, null, this);
+        WI.domManager.removeEventListener(WI.DOMManager.Event.NodeInserted, this._nodeInserted, this);
+        WI.domManager.removeEventListener(WI.DOMManager.Event.NodeRemoved, this._nodeRemoved, this);
+        WI.domManager.removeEventListener(WI.DOMManager.Event.AttributeModified, this._attributesUpdated, this);
+        WI.domManager.removeEventListener(WI.DOMManager.Event.AttributeRemoved, this._attributesUpdated, this);
+        WI.domManager.removeEventListener(WI.DOMManager.Event.CharacterDataModified, this._characterDataModified, this);
+        WI.domManager.removeEventListener(WI.DOMManager.Event.DocumentUpdated, this._documentUpdated, this);
+        WI.domManager.removeEventListener(WI.DOMManager.Event.ChildNodeCountUpdated, this._childNodeCountUpdated, this);
     },
 
     _documentUpdated: function(event)
@@ -97,7 +103,11 @@ WI.DOMTreeUpdater.prototype = {
 
     _nodeRemoved: function(event)
     {
-        this._recentlyDeletedNodes.set(event.data.node, {parent: event.data.parent});
+        let parent = event.data.parent;
+        if (!parent)
+            return;
+
+        this._recentlyDeletedNodes.set(event.data.node, {parent});
         if (this._treeOutline._visible)
             this._updateModifiedNodesDebouncer.delayForFrame();
     },
@@ -124,7 +134,7 @@ WI.DOMTreeUpdater.prototype = {
         this._recentlyDeletedNodes.forEach(markNodeParentForUpdate);
 
         for (let parentTreeElement of parentElementsToUpdate) {
-            if (parentTreeElement.treeOutline) {
+            if (parentTreeElement.treeOutline && parentTreeElement.listItemElement) {
                 parentTreeElement.updateTitle();
                 parentTreeElement.updateChildren();
             }
@@ -133,7 +143,7 @@ WI.DOMTreeUpdater.prototype = {
         for (let node of this._recentlyModifiedNodes.values()) {
             let nodeTreeElement = this._treeOutline.findTreeElement(node);
             if (!nodeTreeElement)
-                return;
+                continue;
 
             for (let [attribute, nodes] of this._recentlyModifiedAttributes.entries()) {
                 // Don't report textContent changes as attribute modifications.

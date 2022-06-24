@@ -29,7 +29,7 @@
             }
 
             .noInherit {
-                scroll-snap-type: mandatory;
+                scroll-snap-type: both mandatory;
                 scroll-snap-align: center;
                 scroll-padding: 20px;
                 scroll-snap-margin: 0 1px;
@@ -43,21 +43,21 @@
             }
 
             .inheritAlign {
-                scroll-snap-type: mandatory;
+                scroll-snap-type: both mandatory;
                 scroll-snap-align: inherit;
                 scroll-padding: 20px;
                 scroll-snap-margin: 0 1px;
             }
 
             .inheritPadding {
-                scroll-snap-type: mandatory;
+                scroll-snap-type: both mandatory;
                 scroll-snap-align: center;
                 scroll-padding: inherit;
                 scroll-snap-margin: 0 1px;
             }
 
             .inheritMargin {
-                scroll-snap-type: mandatory;
+                scroll-snap-type: both mandatory;
                 scroll-snap-align: center;
                 scroll-padding: 20px;
                 scroll-snap-margin: inherit;
@@ -162,7 +162,7 @@
         shouldBeEmptyString("noInherit.style['scroll-snap-type']");
         shouldBeEqualToString("window.getComputedStyle(noInherit).getPropertyValue('scroll-snap-type')", "both mandatory");
         shouldBeEmptyString("noInherit.style['scroll-snap-align']");
-        shouldBeEqualToString("window.getComputedStyle(noInherit).getPropertyValue('scroll-snap-align')", "center center");
+        shouldBeEqualToString("window.getComputedStyle(noInherit).getPropertyValue('scroll-snap-align')", "center");
         shouldBeEmptyString("noInherit.style['scroll-padding']");
         shouldBeEmptyString("noInherit.style['scroll-padding-left']");
         shouldBeEmptyString("noInherit.style['scroll-padding-right']");
@@ -179,9 +179,9 @@
 
         var inheritType = document.getElementById('inheritType');
         shouldBeEqualToString("inheritType.style['scroll-snap-type']", "inherit");
-        shouldBeEqualToString("window.getComputedStyle(inheritType).getPropertyValue('scroll-snap-type')", "x proximity");
+        shouldBeEqualToString("window.getComputedStyle(inheritType).getPropertyValue('scroll-snap-type')", "x");
         shouldBeEmptyString("inheritType.style['scroll-snap-align']");
-        shouldBeEqualToString("window.getComputedStyle(inheritType).getPropertyValue('scroll-snap-align')", "center center");
+        shouldBeEqualToString("window.getComputedStyle(inheritType).getPropertyValue('scroll-snap-align')", "center");
         shouldBeEmptyString("inheritType.style['scroll-padding']");
         shouldBeEmptyString("inheritType.style['scroll-padding-left']");
         shouldBeEmptyString("inheritType.style['scroll-padding-right']");
@@ -219,7 +219,7 @@
         shouldBeEmptyString("inheritPadding.style['scroll-snap-type']");
         shouldBeEqualToString("window.getComputedStyle(inheritPadding).getPropertyValue('scroll-snap-type')", "both mandatory");
         shouldBeEmptyString("inheritPadding.style['scroll-snap-align']");
-        shouldBeEqualToString("window.getComputedStyle(inheritPadding).getPropertyValue('scroll-snap-align')", "center center");
+        shouldBeEqualToString("window.getComputedStyle(inheritPadding).getPropertyValue('scroll-snap-align')", "center");
         shouldBeEqualToString("inheritPadding.style['scroll-padding']", "inherit");
         shouldBeEqualToString("inheritPadding.style['scroll-padding-left']", "inherit");
         shouldBeEqualToString("inheritPadding.style['scroll-padding-right']", "inherit");
@@ -238,7 +238,7 @@
         shouldBeEmptyString("inheritMargin.style['scroll-snap-type']");
         shouldBeEqualToString("window.getComputedStyle(inheritMargin).getPropertyValue('scroll-snap-type')", "both mandatory");
         shouldBeEmptyString("inheritMargin.style['scroll-snap-align']");
-        shouldBeEqualToString("window.getComputedStyle(inheritMargin).getPropertyValue('scroll-snap-align')", "center center");
+        shouldBeEqualToString("window.getComputedStyle(inheritMargin).getPropertyValue('scroll-snap-align')", "center");
         shouldBeEmptyString("inheritMargin.style['scroll-padding']");
         shouldBeEmptyString("inheritMargin.style['scroll-padding-left']");
         shouldBeEmptyString("inheritMargin.style['scroll-padding-right']");
@@ -255,7 +255,7 @@
 
         var inheritAll = document.getElementById('inheritAll');
         shouldBeEqualToString("inheritAll.style['scroll-snap-type']", "inherit");
-        shouldBeEqualToString("window.getComputedStyle(inheritAll).getPropertyValue('scroll-snap-type')", "x proximity");
+        shouldBeEqualToString("window.getComputedStyle(inheritAll).getPropertyValue('scroll-snap-type')", "x");
         shouldBeEqualToString("inheritAll.style['scroll-snap-align']", "inherit");
         shouldBeEqualToString("window.getComputedStyle(inheritAll).getPropertyValue('scroll-snap-align')", "start end");
         shouldBeEqualToString("inheritAll.style['scroll-padding']", "inherit");
@@ -276,13 +276,13 @@
         shouldBeEmptyString("inheritNone.style['scroll-snap-type']");
         shouldBeEqualToString("window.getComputedStyle(inheritNone).getPropertyValue('scroll-snap-type')", "none");
         shouldBeEmptyString("inheritNone.style['scroll-snap-align']");
-        shouldBeEqualToString("window.getComputedStyle(inheritNone).getPropertyValue('scroll-snap-align')", "none none");
+        shouldBeEqualToString("window.getComputedStyle(inheritNone).getPropertyValue('scroll-snap-align')", "none");
         shouldBeEmptyString("inheritNone.style['scroll-padding']");
         shouldBeEmptyString("inheritNone.style['scroll-padding-left']");
         shouldBeEmptyString("inheritNone.style['scroll-padding-right']");
         shouldBeEmptyString("inheritNone.style['scroll-padding-top']");
         shouldBeEmptyString("inheritNone.style['scroll-padding-bottom']");
-        shouldBeEqualToString("window.getComputedStyle(inheritNone).getPropertyValue('scroll-padding')", "0px");
+        shouldBeEqualToString("window.getComputedStyle(inheritNone).getPropertyValue('scroll-padding')", "auto");
         shouldBeEmptyString("inheritNone.style['scroll-snap-margin']");
         shouldBeEmptyString("inheritNone.style['scroll-snap-margin-left']");
         shouldBeEmptyString("inheritNone.style['scroll-snap-margin-right']");

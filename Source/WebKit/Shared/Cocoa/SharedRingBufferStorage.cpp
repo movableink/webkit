@@ -28,39 +28,108 @@
 
 #if USE(MEDIATOOLBOX)
 
+#include <WebCore/CARingBuffer.h>
+
 namespace WebKit {
 
-void SharedRingBufferStorage::setStorage(RefPtr<SharedMemory>&& storage)
+ReadOnlySharedRingBufferStorage::ReadOnlySharedRingBufferStorage(const SharedMemory::Handle& handle)
+    : m_storage(SharedMemory::map(handle, SharedMemory::Protection::ReadOnly))
 {
-    ASSERT(storage || !m_readOnly);
+}
+
+void* ReadOnlySharedRingBufferStorage::data()
+{
+    return m_storage ? static_cast<Byte*>(m_storage->data()) + sizeof(FrameBounds) : nullptr;
+}
+
+auto ReadOnlySharedRingBufferStorage::sharedFrameBounds() const -> const FrameBounds*
+{
+    return m_storage ? reinterpret_cast<const FrameBounds*>(m_storage->data()) : nullptr;
+}
+
+auto ReadOnlySharedRingBufferStorage::sharedFrameBounds() -> FrameBounds*
+{
+    return m_storage ? reinterpret_cast<FrameBounds*>(m_storage->data()) : nullptr;
+}
+
+void ReadOnlySharedRingBufferStorage::getCurrentFrameBounds(uint64_t& startFrame, uint64_t& endFrame)
+{
+    startFrame = m_startFrame;
+    endFrame = m_endFrame;
+}
+
+void ReadOnlySharedRingBufferStorage::flush()
+{
+    m_startFrame = m_endFrame = 0;
+}
+
+void ReadOnlySharedRingBufferStorage::updateFrameBounds()
+{
+    auto* sharedBounds = sharedFrameBounds();
+    if (!sharedBounds) {
+        m_startFrame = m_endFrame = 0;
+        return;
+    }
+    unsigned boundsBufferIndex = sharedBounds->boundsBufferIndex.load(std::memory_order_acquire);
+    if (UNLIKELY(boundsBufferIndex >= boundsBufferSize)) {
+        m_startFrame = m_endFrame = 0;
+        return;
+    }
+    auto pair = sharedBounds->boundsBuffer[boundsBufferIndex];
+    m_startFrame = pair.first;
+    m_endFrame = pair.second;
+}
+
+size_t ReadOnlySharedRingBufferStorage::size() const
+{
+    if (!m_storage || m_storage->size() < sizeof(FrameBounds))
+        return 0;
+    return m_storage->size() - sizeof(FrameBounds);
+}
+
+bool ReadOnlySharedRingBufferStorage::allocate(size_t byteCount, const WebCore::CAAudioStreamDescription& format, size_t frameCount)
+{
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+void SharedRingBufferStorage::setStorage(RefPtr<SharedMemory>&& storage, const WebCore::CAAudioStreamDescription& format, size_t frameCount)
+{
     m_storage = WTFMove(storage);
-    if (m_client)
-        m_client->storageChanged(m_storage.get());
+    if (m_storageChangedHandler)
+        m_storageChangedHandler(m_storage.get(), format, frameCount);
 }
 
-void SharedRingBufferStorage::setReadOnly(bool readOnly)
+bool SharedRingBufferStorage::allocate(size_t byteCount, const WebCore::CAAudioStreamDescription& format, size_t frameCount)
 {
-    ASSERT(m_storage || !readOnly);
-    m_readOnly = readOnly;
-}
+    auto sharedMemory = SharedMemory::allocate(byteCount + sizeof(FrameBounds));
+    if (!sharedMemory)
+        return false;
 
-void SharedRingBufferStorage::allocate(size_t byteCount)
-{
-    if (!m_readOnly)
-        setStorage(SharedMemory::allocate(byteCount));
+    new (NotNull, sharedMemory->data()) FrameBounds;
+    setStorage(WTFMove(sharedMemory), format, frameCount);
+    return true;
 }
 
 void SharedRingBufferStorage::deallocate()
 {
-    if (!m_readOnly)
-        setStorage(nullptr);
+    setStorage(nullptr, { }, 0);
 }
 
-void* SharedRingBufferStorage::data()
+void SharedRingBufferStorage::setCurrentFrameBounds(uint64_t startFrame, uint64_t endFrame)
 {
-    return m_storage ? m_storage->data() : nullptr;
+    m_startFrame = startFrame;
+    m_endFrame = endFrame;
+
+    auto* sharedBounds = sharedFrameBounds();
+    if (!sharedBounds)
+        return;
+
+    unsigned indexToWrite = (sharedBounds->boundsBufferIndex.load(std::memory_order_acquire) + 1) % boundsBufferSize;
+    sharedBounds->boundsBuffer[indexToWrite] = std::make_pair(startFrame, endFrame);
+    sharedBounds->boundsBufferIndex.store(indexToWrite, std::memory_order_release);
 }
 
-}
+} // namespace WebKit
 
 #endif

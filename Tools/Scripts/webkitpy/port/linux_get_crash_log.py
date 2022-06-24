@@ -27,27 +27,31 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import datetime
 import os
 import re
-import shutil
 import subprocess
 import tempfile
 import time
 
+from webkitcorepy import string_utils
+
 from webkitpy.common.system.executive import ScriptError
+from webkitpy.common.webkit_finder import WebKitFinder
 
 
 class GDBCrashLogGenerator(object):
     _find_pid_regex = re.compile(r'PID: (\d+) \(.*\)')
 
-    def __init__(self, executive, name, pid, newer_than, filesystem, path_to_driver):
+    def __init__(self, executive, name, pid, newer_than, filesystem, path_to_driver, port_name, configuration):
         self.name = name
         self.pid = pid
         self.newer_than = newer_than
         self._filesystem = filesystem
         self._path_to_driver = path_to_driver
         self._executive = executive
+        self._port_name = port_name
+        self._configuration = configuration
+        self._webkit_finder = WebKitFinder(filesystem)
 
     def _get_gdb_output(self, coredump_path):
         process_name = self._filesystem.join(os.path.dirname(str(self._path_to_driver())), self.name)
@@ -56,7 +60,7 @@ class GDBCrashLogGenerator(object):
         stdout, stderr = proc.communicate()
         errors = [stderr_line.strip().decode('utf8', 'ignore') for stderr_line in stderr.splitlines()]
         if proc.returncode != 0:
-            stdout = ('ERROR: The gdb process exited with non-zero return code %s\n\n' % proc.returncode) + stdout
+            stdout = (b'ERROR: The gdb process exited with non-zero return code %s\n\n' % str(proc.returncode).encode('utf8', 'ignore')) + stdout
         return (stdout.decode('utf8', 'ignore'), errors)
 
     def _get_tmp_file_name(self, coredumpctl, filename):
@@ -66,6 +70,9 @@ class GDBCrashLogGenerator(object):
         return filename
 
     def _get_trace_from_systemd(self, coredumpctl, pid):
+        if os.path.isfile("/.flatpak-info"):
+            return self._get_trace_from_flatpak()
+
         # Letting up to 5 seconds for the backtrace to be generated on the systemd side
         for try_number in range(5):
             if try_number != 0:
@@ -75,7 +82,7 @@ class GDBCrashLogGenerator(object):
             try:
                 info = self._executive.run_command(coredumpctl + ['info', "--since=" + time.strftime("%a %Y-%m-%d %H:%M:%S %Z", time.localtime(self.newer_than))],
                     return_stderr=True)
-            except ScriptError, OSError:
+            except (ScriptError, OSError):
                 continue
 
             found_newer = False
@@ -91,11 +98,32 @@ class GDBCrashLogGenerator(object):
                         temp_file.name], return_exit_code=True):
                     continue
 
-                res = self._get_gdb_output(self._get_tmp_file_name(coredumpctl, temp_file.name))
-
-                return res
+                return self._get_gdb_output(self._get_tmp_file_name(coredumpctl, temp_file.name))
 
         return '', []
+
+    def _get_trace_from_flatpak(self):
+        if self.newer_than:
+            coredump_since = "--gdb-stack-trace=@%f" % self.newer_than
+        else:
+            coredump_since = "--gdb-stack-trace"
+        webkit_flatpak_path = self._webkit_finder.path_to_script('webkit-flatpak')
+        cmd = ['flatpak-spawn', '--host']
+
+        # Forward WEBKIT_FLATPAK_USER_DIR so webkit-flatpak can use the same flatpak
+        # install as the current one.
+        user_dir = os.environ.get('WEBKIT_FLATPAK_USER_DIR')
+        if user_dir:
+            cmd.append("--env=WEBKIT_FLATPAK_USER_DIR=%s" % user_dir)
+
+        cmd.extend([webkit_flatpak_path, '--%s' % self._port_name,
+                    "--%s" % self._configuration.lower(), "--verbose", coredump_since])
+
+        proc = self._executive.popen(cmd, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        crash_log, stderr = proc.communicate()
+        crash_log = string_utils.decode(crash_log, errors='ignore')
+        errors = string_utils.decode(stderr or '<empty>', errors='ignore').splitlines()
+        return crash_log, errors
 
     def generate_crash_log(self, stdout, stderr):
         pid_representation = str(self.pid or '<unknown>')
@@ -129,11 +157,12 @@ class GDBCrashLogGenerator(object):
         elif coredumpctl:
             crash_log, errors = self._get_trace_from_systemd(coredumpctl, pid_representation)
 
-        stderr_lines = errors + str(stderr or '<empty>').decode('utf8', 'ignore').splitlines()
+        stderr_lines = errors + string_utils.decode(stderr or '<empty>', errors='ignore').splitlines()
         errors_str = '\n'.join(('STDERR: ' + stderr_line) for stderr_line in stderr_lines)
         cppfilt_proc = self._executive.popen(
             ['c++filt'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        errors_str = cppfilt_proc.communicate(errors_str)[0]
+        errors_str = cppfilt_proc.communicate(string_utils.encode(errors_str))[0]
+        errors_str = string_utils.decode(errors_str, errors='ignore')
 
         if not crash_log:
             if not log_directory:

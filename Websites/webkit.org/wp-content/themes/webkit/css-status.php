@@ -29,7 +29,7 @@ function xhrPromise(url) {
     });
 }
 
-var origin = new URL("https://<?php echo strpos(WP_HOST, "webkit.org") !== false ? "svn.webkit.org" : WP_HOST; ?>/");
+var origin = new URL("<?php echo strpos(WP_HOST, "webkit.org") !== false ? "https://svn.webkit.org" : WP_HOME; ?>/");
 var loadCSSProperties = xhrPromise(new URL("/repository/webkit/trunk/Source/WebCore/css/CSSProperties.json", origin));
 
 </script>
@@ -1600,7 +1600,8 @@ function initializeStatusPage() {
     {
         (unprefixedPropertyObj['codegen-properties'].aliases = unprefixedPropertyObj['codegen-properties'].aliases || []).push(prefixedPropertyObj.name);
 
-        for (var valueObj of prefixedPropertyObj.values) {
+        var prefixedValues = Array.from(prefixedPropertyObj.values);
+        for (var valueObj of prefixedValues) {
             if (!findValueByName(unprefixedPropertyObj.values, valueObj.value))
                 prefixedPropertyObj.values.push(valueObj);
         }

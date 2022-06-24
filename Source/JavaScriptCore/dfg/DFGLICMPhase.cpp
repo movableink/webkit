@@ -30,13 +30,11 @@
 
 #include "DFGAbstractInterpreterInlines.h"
 #include "DFGAtTailAbstractState.h"
-#include "DFGBasicBlockInlines.h"
 #include "DFGClobberSet.h"
 #include "DFGClobberize.h"
 #include "DFGControlEquivalenceAnalysis.h"
 #include "DFGEdgeDominates.h"
 #include "DFGGraph.h"
-#include "DFGInsertionSet.h"
 #include "DFGMayExit.h"
 #include "DFGNaturalLoops.h"
 #include "DFGPhase.h"
@@ -183,6 +181,9 @@ public:
         // tend to hoist dominators before dominatees.
         Vector<const NaturalLoop*> loopStack;
         bool changed = false;
+
+        WeakRandom random { Options::seedForLICMFuzzer() };
+
         for (BasicBlock* block : m_graph.blocksInPreOrder()) {
             if (!block->cfaHasVisited)
                 continue;
@@ -215,8 +216,15 @@ public:
                 Node*& nodeRef = block->at(nodeIndex);
                 if (nodeRef->op() == ForceOSRExit)
                     break;
-                for (unsigned stackIndex = loopStack.size(); stackIndex--;)
+                for (unsigned stackIndex = loopStack.size(); stackIndex--;) {
+                    if (UNLIKELY(Options::useLICMFuzzing())) {
+                        bool shouldAttemptHoist = random.returnTrueWithProbability(Options::allowHoistingLICMProbability());
+                        if (!shouldAttemptHoist)
+                            continue;
+                    }
+
                     changed |= attemptHoist(block, nodeRef, loopStack[stackIndex]);
+                }
             }
         }
 

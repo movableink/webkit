@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "Concurrency.h"
+#include "ECMAMode.h"
 #include "JSExportMacros.h"
 #include "PureNaN.h"
 #include <functional>
@@ -34,12 +36,15 @@
 #include <wtf/HashTraits.h>
 #include <wtf/MathExtras.h>
 #include <wtf/MediaTime.h>
+#include <wtf/Nonmovable.h>
+#include <wtf/StdIntExtras.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TriState.h>
 
 namespace JSC {
 
 class AssemblyHelpers;
+class DeletePropertySlot;
 class JSBigInt;
 class CallFrame;
 class JSCell;
@@ -53,7 +58,6 @@ class PropertyName;
 class PropertySlot;
 class PutPropertySlot;
 class Structure;
-using ExecState = CallFrame;
 #if ENABLE(DFG_JIT)
 namespace DFG {
 class JITCompiler;
@@ -69,23 +73,18 @@ class CLoop;
 
 struct ClassInfo;
 struct DumpContext;
-struct Instruction;
 struct MethodTable;
 enum class Unknown { };
 
 template <class T, typename Traits> class WriteBarrierBase;
 template<class T>
 using WriteBarrierTraitsSelect = typename std::conditional<std::is_same<T, Unknown>::value,
-    DumbValueTraits<T>, DumbPtrTraits<T>
+    RawValueTraits<T>, RawPtrTraits<T>
 >::type;
 
-enum PreferredPrimitiveType { NoPreference, PreferNumber, PreferString };
-enum ECMAMode { StrictMode, NotStrictMode };
+enum PreferredPrimitiveType : uint8_t { NoPreference, PreferNumber, PreferString };
 
-enum class CallType : unsigned;
 struct CallData;
-enum class ConstructType : unsigned;
-struct ConstructData;
 
 typedef int64_t EncodedJSValue;
     
@@ -130,8 +129,11 @@ bool isInt52(double);
 enum class SourceCodeRepresentation : uint8_t {
     Other,
     Integer,
-    Double
+    Double,
+    LinkTimeConstant,
 };
+
+extern JS_EXPORT_PRIVATE const ASCIILiteral SymbolCoercionError;
 
 class JSValue {
     friend struct EncodedJSValueHashTraits;
@@ -175,6 +177,9 @@ public:
     enum JSTrueTag { JSTrue };
     enum JSFalseTag { JSFalse };
     enum JSCellTag { JSCellType };
+#if USE(BIGINT32)
+    enum EncodeAsBigInt32Tag { EncodeAsBigInt32 };
+#endif
     enum EncodeAsDoubleTag { EncodeAsDouble };
 
     JSValue();
@@ -184,6 +189,9 @@ public:
     JSValue(JSFalseTag);
     JSValue(JSCell* ptr);
     JSValue(const JSCell* ptr);
+#if USE(BIGINT32)
+    JSValue(EncodeAsBigInt32Tag, int32_t);
+#endif
 
     // Numbers
     JSValue(EncodeAsDoubleTag, double);
@@ -211,21 +219,26 @@ public:
 
     int32_t asInt32() const;
     uint32_t asUInt32() const;
+    std::optional<uint32_t> tryGetAsUint32Index();
+    std::optional<int32_t> tryGetAsInt32();
     int64_t asAnyInt() const;
     uint32_t asUInt32AsAnyInt() const;
     int32_t asInt32AsAnyInt() const;
     double asDouble() const;
     bool asBoolean() const;
     double asNumber() const;
+#if USE(BIGINT32)
+    int32_t bigInt32AsInt32() const; // must only be called on a BigInt32
+#endif
     
     int32_t asInt32ForArithmetic() const; // Boolean becomes an int, but otherwise like asInt32().
 
     // Querying the type.
     bool isEmpty() const;
-    bool isFunction(VM&) const;
-    bool isCallable(VM&, CallType&, CallData&) const;
+    bool isCallable(VM&) const;
+    template<Concurrency> TriState isCallableWithConcurrency(VM&) const;
     bool isConstructor(VM&) const;
-    bool isConstructor(VM&, ConstructType&, ConstructData&) const;
+    template<Concurrency> TriState isConstructorWithConcurrency(VM&) const;
     bool isUndefined() const;
     bool isNull() const;
     bool isUndefinedOrNull() const;
@@ -236,6 +249,8 @@ public:
     bool isNumber() const;
     bool isString() const;
     bool isBigInt() const;
+    bool isHeapBigInt() const;
+    bool isBigInt32() const;
     bool isSymbol() const;
     bool isPrimitive() const;
     bool isGetterSetter() const;
@@ -244,94 +259,102 @@ public:
     bool inherits(VM&, const ClassInfo*) const;
     template<typename Target> bool inherits(VM&) const;
     const ClassInfo* classInfoOrNull(VM&) const;
-        
+
     // Extracting the value.
-    bool getString(ExecState*, WTF::String&) const;
-    WTF::String getString(ExecState*) const; // null string if not a string
+    bool getString(JSGlobalObject*, WTF::String&) const;
+    WTF::String getString(JSGlobalObject*) const; // null string if not a string
     JSObject* getObject() const; // 0 if not an object
 
     // Extracting integer values.
     bool getUInt32(uint32_t&) const;
         
     // Basic conversions.
-    JSValue toPrimitive(ExecState*, PreferredPrimitiveType = NoPreference) const;
-    bool getPrimitiveNumber(ExecState*, double& number, JSValue&);
-
-    bool toBoolean(ExecState*) const;
+    JSValue toPrimitive(JSGlobalObject*, PreferredPrimitiveType = NoPreference) const;
+    bool toBoolean(JSGlobalObject*) const;
     TriState pureToBoolean() const;
 
     // toNumber conversion is expected to be side effect free if an exception has
-    // been set in the ExecState already.
-    double toNumber(ExecState*) const;
-    
-    Variant<JSBigInt*, double> toNumeric(ExecState*) const;
-    Variant<JSBigInt*, int32_t> toBigIntOrInt32(ExecState*) const;
+    // been set in the CallFrame already.
+    double toNumber(JSGlobalObject*) const;
+
+    JSValue toNumeric(JSGlobalObject*) const;
+    JSValue toBigIntOrInt32(JSGlobalObject*) const;
+    JSBigInt* asHeapBigInt() const;
 
     // toNumber conversion if it can be done without side effects.
-    Optional<double> toNumberFromPrimitive() const;
+    std::optional<double> toNumberFromPrimitive() const;
 
-    JSString* toString(ExecState*) const; // On exception, this returns the empty string.
-    JSString* toStringOrNull(ExecState*) const; // On exception, this returns null, to make exception checks faster.
-    Identifier toPropertyKey(ExecState*) const;
-    WTF::String toWTFString(ExecState*) const;
-    JSObject* toObject(ExecState*) const;
-    JSObject* toObject(ExecState*, JSGlobalObject*) const;
+    JSString* toString(JSGlobalObject*) const; // On exception, this returns the empty string.
+    JSString* toStringOrNull(JSGlobalObject*) const; // On exception, this returns null, to make exception checks faster.
+    Identifier toPropertyKey(JSGlobalObject*) const;
+    JSValue toPropertyKeyValue(JSGlobalObject*) const;
+    WTF::String toWTFString(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE WTF::String toWTFStringForConsole(JSGlobalObject*) const;
+    JSObject* toObject(JSGlobalObject*) const;
 
     // Integer conversions.
-    JS_EXPORT_PRIVATE double toInteger(ExecState*) const;
-    JS_EXPORT_PRIVATE double toIntegerPreserveNaN(ExecState*) const;
-    int32_t toInt32(ExecState*) const;
-    uint32_t toUInt32(ExecState*) const;
-    uint32_t toIndex(ExecState*, const char* errorName) const;
-    double toLength(ExecState*) const;
+    JS_EXPORT_PRIVATE double toIntegerPreserveNaN(JSGlobalObject*) const;
+    double toIntegerOrInfinity(JSGlobalObject*) const;
+    int32_t toInt32(JSGlobalObject*) const;
+    uint32_t toUInt32(JSGlobalObject*) const;
+    uint32_t toIndex(JSGlobalObject*, const char* errorName) const;
+    size_t toTypedArrayIndex(JSGlobalObject*, const char* errorName) const;
+    double toLength(JSGlobalObject*) const;
+
+    JS_EXPORT_PRIVATE JSValue toBigInt(JSGlobalObject*) const;
+    int64_t toBigInt64(JSGlobalObject*) const;
+    uint64_t toBigUInt64(JSGlobalObject*) const;
+
+    std::optional<uint32_t> toUInt32AfterToNumeric(JSGlobalObject*) const;
 
     // Floating point conversions (this is a convenience function for WebCore;
     // single precision float is not a representation used in JS or JSC).
-    float toFloat(ExecState* exec) const { return static_cast<float>(toNumber(exec)); }
+    float toFloat(JSGlobalObject* globalObject) const { return static_cast<float>(toNumber(globalObject)); }
 
     // Object operations, with the toObject operation included.
-    JSValue get(ExecState*, PropertyName) const;
-    JSValue get(ExecState*, PropertyName, PropertySlot&) const;
-    JSValue get(ExecState*, unsigned propertyName) const;
-    JSValue get(ExecState*, unsigned propertyName, PropertySlot&) const;
-    JSValue get(ExecState*, uint64_t propertyName) const;
+    JSValue get(JSGlobalObject*, PropertyName) const;
+    JSValue get(JSGlobalObject*, PropertyName, PropertySlot&) const;
+    JSValue get(JSGlobalObject*, unsigned propertyName) const;
+    JSValue get(JSGlobalObject*, unsigned propertyName, PropertySlot&) const;
+    JSValue get(JSGlobalObject*, uint64_t propertyName) const;
 
-    bool getPropertySlot(ExecState*, PropertyName, PropertySlot&) const;
-    template<typename CallbackWhenNoException> typename std::result_of<CallbackWhenNoException(bool, PropertySlot&)>::type getPropertySlot(ExecState*, PropertyName, CallbackWhenNoException) const;
-    template<typename CallbackWhenNoException> typename std::result_of<CallbackWhenNoException(bool, PropertySlot&)>::type getPropertySlot(ExecState*, PropertyName, PropertySlot&, CallbackWhenNoException) const;
+    template<typename T, typename PropertyNameType>
+    T getAs(JSGlobalObject*, PropertyNameType) const;
 
-    bool getOwnPropertySlot(ExecState*, PropertyName, PropertySlot&) const;
+    bool getPropertySlot(JSGlobalObject*, PropertyName, PropertySlot&) const;
+    template<typename CallbackWhenNoException> typename std::invoke_result<CallbackWhenNoException, bool, PropertySlot&>::type getPropertySlot(JSGlobalObject*, PropertyName, CallbackWhenNoException) const;
+    template<typename CallbackWhenNoException> typename std::invoke_result<CallbackWhenNoException, bool, PropertySlot&>::type getPropertySlot(JSGlobalObject*, PropertyName, PropertySlot&, CallbackWhenNoException) const;
 
-    bool put(ExecState*, PropertyName, JSValue, PutPropertySlot&);
-    bool putInline(ExecState*, PropertyName, JSValue, PutPropertySlot&);
-    JS_EXPORT_PRIVATE bool putToPrimitive(ExecState*, PropertyName, JSValue, PutPropertySlot&);
-    JS_EXPORT_PRIVATE bool putToPrimitiveByIndex(ExecState*, unsigned propertyName, JSValue, bool shouldThrow);
-    bool putByIndex(ExecState*, unsigned propertyName, JSValue, bool shouldThrow);
+    bool getOwnPropertySlot(JSGlobalObject*, PropertyName, PropertySlot&) const;
 
-    JSValue toThis(ExecState*, ECMAMode) const;
+    bool put(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
+    bool putInline(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
+    JS_EXPORT_PRIVATE bool putToPrimitive(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
+    JS_EXPORT_PRIVATE bool putToPrimitiveByIndex(JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
+    bool putByIndex(JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
 
-    static bool equal(ExecState*, JSValue v1, JSValue v2);
-    static bool equalSlowCase(ExecState*, JSValue v1, JSValue v2);
-    static bool equalSlowCaseInline(ExecState*, JSValue v1, JSValue v2);
-    static bool strictEqual(ExecState*, JSValue v1, JSValue v2);
-    static bool strictEqualSlowCase(ExecState*, JSValue v1, JSValue v2);
-    static bool strictEqualSlowCaseInline(ExecState*, JSValue v1, JSValue v2);
+    JSValue getPrototype(JSGlobalObject*) const;
+    JSValue toThis(JSGlobalObject*, ECMAMode) const;
+
+    static bool equal(JSGlobalObject*, JSValue v1, JSValue v2);
+    static bool equalSlowCase(JSGlobalObject*, JSValue v1, JSValue v2);
+    static bool equalSlowCaseInline(JSGlobalObject*, JSValue v1, JSValue v2);
+    static bool strictEqual(JSGlobalObject*, JSValue v1, JSValue v2);
+    static bool strictEqualForCells(JSGlobalObject*, JSCell* v1, JSCell* v2);
     static TriState pureStrictEqual(JSValue v1, JSValue v2);
 
     bool isCell() const;
     JSCell* asCell() const;
-    JS_EXPORT_PRIVATE bool isValidCallee();
 
-    Structure* structureOrNull() const;
-    JSValue structureOrUndefined() const;
+    Structure* structureOrNull(VM&) const;
 
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
     void dumpInContextAssumingStructure(PrintStream&, DumpContext*, Structure*) const;
     void dumpForBacktrace(PrintStream&) const;
 
-    JS_EXPORT_PRIVATE JSObject* synthesizePrototype(ExecState*) const;
-    bool requireObjectCoercible(ExecState*) const;
+    JS_EXPORT_PRIVATE JSObject* synthesizePrototype(JSGlobalObject*) const;
+    bool requireObjectCoercible(JSGlobalObject*) const;
 
     // Constants used for Int52. Int52 isn't part of JSValue right now, but JSValues may be
     // converted to Int52s and back again.
@@ -413,11 +436,20 @@ public:
      * These values have the following properties:
      * - Bit 1 (OtherTag) is set for all four values, allowing real pointers to be
      *   quickly distinguished from all immediate values, including these invalid pointers.
-     * - With bit 3 is masked out (UndefinedTag) Undefined and Null share the
+     * - With bit 3 masked out (UndefinedTag), Undefined and Null share the
      *   same value, allowing null & undefined to be quickly detected.
      *
      * No valid JSValue will have the bit pattern 0x0, this is used to represent array
      * holes, and as a C++ 'no value' result (e.g. JSValue() has an internal value of 0).
+     *
+     * When USE(BIGINT32), we have a special representation for BigInts that are small (32-bit at most):
+     *      0000:XXXX:XXXX:0012
+     * This representation works because of the following things:
+     * - It cannot be confused with a Double or Integer thanks to the top bits
+     * - It cannot be confused with a pointer to a Cell, thanks to bit 1 which is set to true
+     * - It cannot be confused with a pointer to wasm thanks to bit 0 which is set to false
+     * - It cannot be confused with true/false because bit 2 is set to false
+     * - It cannot be confused for null/undefined because bit 4 is set to true
      */
 
     // This value is 2^49, used to encode doubles such that the encoded value will begin
@@ -427,11 +459,19 @@ public:
     // If all bits in the mask are set, this indicates an integer number,
     // if any but not all are set this value is a double precision number.
     static constexpr int64_t NumberTag = 0xfffe000000000000ll;
+    // The following constant is used for a trick in the implementation of strictEq, to detect if either of the arguments is a double
+    static constexpr int64_t LowestOfHighBits = 1ULL << 49;
+    static_assert(LowestOfHighBits & NumberTag);
+    static_assert(!((LowestOfHighBits>>1) & NumberTag));
 
     // All non-numeric (bool, null, undefined) immediates have bit 2 set.
     static constexpr int32_t OtherTag       = 0x2;
     static constexpr int32_t BoolTag        = 0x4;
     static constexpr int32_t UndefinedTag   = 0x8;
+#if USE(BIGINT32)
+    static constexpr int32_t BigInt32Tag    = 0x12;
+    static constexpr int64_t BigInt32Mask   = NumberTag | BigInt32Tag;
+#endif
     // Combined integer value for non-numeric immediates.
     static constexpr int32_t ValueFalse     = OtherTag | BoolTag | false;
     static constexpr int32_t ValueTrue      = OtherTag | BoolTag | true;
@@ -479,11 +519,11 @@ private:
     JSValue(HashTableDeletedValueTag);
 
     inline const JSValue asValue() const { return *this; }
-    JS_EXPORT_PRIVATE double toNumberSlowCase(ExecState*) const;
-    JS_EXPORT_PRIVATE JSString* toStringSlowCase(ExecState*, bool returnEmptyStringOnError) const;
-    JS_EXPORT_PRIVATE WTF::String toWTFStringSlowCase(ExecState*) const;
-    JS_EXPORT_PRIVATE JSObject* toObjectSlowCase(ExecState*, JSGlobalObject*) const;
-    JS_EXPORT_PRIVATE JSValue toThisSlowCase(ExecState*, ECMAMode) const;
+    JS_EXPORT_PRIVATE double toNumberSlowCase(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE JSString* toStringSlowCase(JSGlobalObject*, bool returnEmptyStringOnError) const;
+    JS_EXPORT_PRIVATE WTF::String toWTFStringSlowCase(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE JSObject* toObjectSlowCase(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE JSValue toThisSlowCase(JSGlobalObject*, ECMAMode) const;
 
     EncodedValueDescriptor u;
 };
@@ -545,6 +585,13 @@ inline JSValue jsBoolean(bool b)
 {
     return b ? JSValue(JSValue::JSTrue) : JSValue(JSValue::JSFalse);
 }
+
+#if USE(BIGINT32)
+ALWAYS_INLINE JSValue jsBigInt32(int32_t intValue)
+{
+    return JSValue(JSValue::EncodeAsBigInt32, intValue);
+}
+#endif
 
 ALWAYS_INLINE JSValue jsDoubleNumber(double d)
 {
@@ -634,6 +681,43 @@ inline bool operator!=(const JSCell* a, const JSValue b) { return JSValue(a) != 
 bool isThisValueAltered(const PutPropertySlot&, JSObject* baseObject);
 
 // See section 7.2.9: https://tc39.github.io/ecma262/#sec-samevalue
-bool sameValue(ExecState*, JSValue a, JSValue b);
+bool sameValue(JSGlobalObject*, JSValue a, JSValue b);
+
+#if COMPILER(GCC_COMPATIBLE)
+ALWAYS_INLINE void ensureStillAliveHere(JSValue value)
+{
+#if USE(JSVALUE64)
+    asm volatile ("" : : "g"(bitwise_cast<uint64_t>(value)) : "memory");
+#else
+    asm volatile ("" : : "g"(value.payload()) : "memory");
+#endif
+}
+#else
+JS_EXPORT_PRIVATE void ensureStillAliveHere(JSValue);
+#endif
+
+// Use EnsureStillAliveScope when you have a data structure that includes GC pointers, and you need
+// to remove it from the DOM and then use it in the same scope. For example, a 'once' event listener
+// needs to be removed from the DOM and then fired.
+class EnsureStillAliveScope {
+    WTF_FORBID_HEAP_ALLOCATION;
+    WTF_MAKE_NONCOPYABLE(EnsureStillAliveScope);
+    WTF_MAKE_NONMOVABLE(EnsureStillAliveScope);
+public:
+    EnsureStillAliveScope(JSValue value)
+        : m_value(value)
+    {
+    }
+
+    ~EnsureStillAliveScope()
+    {
+        ensureStillAliveHere(m_value);
+    }
+
+    JSValue value() const { return m_value; }
+
+private:
+    JSValue m_value;
+};
 
 } // namespace JSC

@@ -8,23 +8,38 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include <string.h>
+
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "absl/memory/memory.h"
-#include "rtc_base/asynctcpsocket.h"
+#include "rtc_base/async_packet_socket.h"
+#include "rtc_base/async_tcp_socket.h"
+#include "rtc_base/async_udp_socket.h"
 #include "rtc_base/gunit.h"
+#include "rtc_base/ip_address.h"
 #include "rtc_base/logging.h"
-#include "rtc_base/natserver.h"
-#include "rtc_base/natsocketfactory.h"
-#include "rtc_base/nethelpers.h"
+#include "rtc_base/nat_server.h"
+#include "rtc_base/nat_socket_factory.h"
+#include "rtc_base/nat_types.h"
+#include "rtc_base/net_helpers.h"
 #include "rtc_base/network.h"
-#include "rtc_base/physicalsocketserver.h"
-#include "rtc_base/testclient.h"
-#include "rtc_base/virtualsocketserver.h"
+#include "rtc_base/physical_socket_server.h"
+#include "rtc_base/socket.h"
+#include "rtc_base/socket_address.h"
+#include "rtc_base/socket_factory.h"
+#include "rtc_base/socket_server.h"
+#include "rtc_base/test_client.h"
+#include "rtc_base/third_party/sigslot/sigslot.h"
+#include "rtc_base/thread.h"
+#include "rtc_base/virtual_socket_server.h"
+#include "test/gtest.h"
 
-using namespace rtc;
+namespace rtc {
+namespace {
 
 bool CheckReceive(TestClient* client,
                   bool should_receive,
@@ -40,8 +55,8 @@ TestClient* CreateTestClient(SocketFactory* factory,
       absl::WrapUnique(AsyncUDPSocket::Create(factory, local_addr)));
 }
 
-TestClient* CreateTCPTestClient(AsyncSocket* socket) {
-  return new TestClient(absl::make_unique<AsyncTCPSocket>(socket, false));
+TestClient* CreateTCPTestClient(Socket* socket) {
+  return new TestClient(std::make_unique<AsyncTCPSocket>(socket, false));
 }
 
 // Tests that when sending from internal_addr to external_addrs through the
@@ -186,10 +201,8 @@ bool TestConnectivity(const SocketAddress& src, const IPAddress& dst) {
   // internal address used for the NAT. Things like firewalls can break that, so
   // check to see if it's worth even trying with this ip.
   std::unique_ptr<PhysicalSocketServer> pss(new PhysicalSocketServer());
-  std::unique_ptr<AsyncSocket> client(
-      pss->CreateAsyncSocket(src.family(), SOCK_DGRAM));
-  std::unique_ptr<AsyncSocket> server(
-      pss->CreateAsyncSocket(src.family(), SOCK_DGRAM));
+  std::unique_ptr<Socket> client(pss->CreateSocket(src.family(), SOCK_DGRAM));
+  std::unique_ptr<Socket> server(pss->CreateSocket(src.family(), SOCK_DGRAM));
   if (client->Bind(SocketAddress(src.ipaddr(), 0)) != 0 ||
       server->Bind(SocketAddress(dst, 0)) != 0) {
     return false;
@@ -206,8 +219,8 @@ bool TestConnectivity(const SocketAddress& src, const IPAddress& dst) {
 }
 
 void TestPhysicalInternal(const SocketAddress& int_addr) {
-  BasicNetworkManager network_manager;
-  network_manager.set_ipv6_enabled(true);
+  PhysicalSocketServer socket_server;
+  BasicNetworkManager network_manager(nullptr, &socket_server);
   network_manager.StartUpdating();
   // Process pending messages so the network list is updated.
   Thread::Current()->ProcessMessages(0);
@@ -308,7 +321,7 @@ TEST(NatTest, TestVirtualIPv6) {
   }
 }
 
-class NatTcpTest : public testing::Test, public sigslot::has_slots<> {
+class NatTcpTest : public ::testing::Test, public sigslot::has_slots<> {
  public:
   NatTcpTest()
       : int_addr_("192.168.0.1", 0),
@@ -331,13 +344,13 @@ class NatTcpTest : public testing::Test, public sigslot::has_slots<> {
     ext_thread_->Start();
   }
 
-  void OnConnectEvent(AsyncSocket* socket) { connected_ = true; }
+  void OnConnectEvent(Socket* socket) { connected_ = true; }
 
-  void OnAcceptEvent(AsyncSocket* socket) {
+  void OnAcceptEvent(Socket* socket) {
     accepted_.reset(server_->Accept(nullptr));
   }
 
-  void OnCloseEvent(AsyncSocket* socket, int error) {}
+  void OnCloseEvent(Socket* socket, int error) {}
 
   void ConnectEvents() {
     server_->SignalReadEvent.connect(this, &NatTcpTest::OnAcceptEvent);
@@ -353,17 +366,17 @@ class NatTcpTest : public testing::Test, public sigslot::has_slots<> {
   std::unique_ptr<Thread> ext_thread_;
   std::unique_ptr<NATServer> nat_;
   std::unique_ptr<NATSocketFactory> natsf_;
-  std::unique_ptr<AsyncSocket> client_;
-  std::unique_ptr<AsyncSocket> server_;
-  std::unique_ptr<AsyncSocket> accepted_;
+  std::unique_ptr<Socket> client_;
+  std::unique_ptr<Socket> server_;
+  std::unique_ptr<Socket> accepted_;
 };
 
 TEST_F(NatTcpTest, DISABLED_TestConnectOut) {
-  server_.reset(ext_vss_->CreateAsyncSocket(AF_INET, SOCK_STREAM));
+  server_.reset(ext_vss_->CreateSocket(AF_INET, SOCK_STREAM));
   server_->Bind(ext_addr_);
   server_->Listen(5);
 
-  client_.reset(natsf_->CreateAsyncSocket(AF_INET, SOCK_STREAM));
+  client_.reset(natsf_->CreateSocket(AF_INET, SOCK_STREAM));
   EXPECT_GE(0, client_->Bind(int_addr_));
   EXPECT_GE(0, client_->Connect(server_->GetLocalAddress()));
 
@@ -387,4 +400,6 @@ TEST_F(NatTcpTest, DISABLED_TestConnectOut) {
   out->Send(buf, len);
   EXPECT_TRUE(in->CheckNextPacket(buf, len, &trans_addr));
 }
-// #endif
+
+}  // namespace
+}  // namespace rtc

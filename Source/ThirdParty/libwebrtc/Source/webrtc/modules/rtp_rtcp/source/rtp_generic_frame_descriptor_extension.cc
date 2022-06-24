@@ -17,14 +17,18 @@ namespace {
 
 constexpr uint8_t kFlagBeginOfSubframe = 0x80;
 constexpr uint8_t kFlagEndOfSubframe = 0x40;
-constexpr uint8_t kFlagFirstSubframe = 0x20;
-constexpr uint8_t kFlagLastSubframe = 0x10;
+
+// In version 00, the flags F and L in the first byte correspond to
+// kFlagFirstSubframeV00 and kFlagLastSubframeV00. In practice, they were
+// always set to `true`.
+constexpr uint8_t kFlagFirstSubframeV00 = 0x20;
+constexpr uint8_t kFlagLastSubframeV00 = 0x10;
+
 constexpr uint8_t kFlagDependencies = 0x08;
 constexpr uint8_t kMaskTemporalLayer = 0x07;
 
 constexpr uint8_t kFlagMoreDependencies = 0x01;
 constexpr uint8_t kFlageXtendedOffset = 0x02;
-
 }  // namespace
 //       0 1 2 3 4 5 6 7
 //      +-+-+-+-+-+-+-+-+
@@ -52,10 +56,9 @@ constexpr uint8_t kFlageXtendedOffset = 0x02;
 //      +---------------+
 //      |      ...      |
 //      +-+-+-+-+-+-+-+-+
-constexpr RTPExtensionType RtpGenericFrameDescriptorExtension::kId;
-constexpr char RtpGenericFrameDescriptorExtension::kUri[];
+constexpr RTPExtensionType RtpGenericFrameDescriptorExtension00::kId;
 
-bool RtpGenericFrameDescriptorExtension::Parse(
+bool RtpGenericFrameDescriptorExtension00::Parse(
     rtc::ArrayView<const uint8_t> data,
     RtpGenericFrameDescriptor* descriptor) {
   if (data.empty()) {
@@ -65,8 +68,6 @@ bool RtpGenericFrameDescriptorExtension::Parse(
   bool begins_subframe = (data[0] & kFlagBeginOfSubframe) != 0;
   descriptor->SetFirstPacketInSubFrame(begins_subframe);
   descriptor->SetLastPacketInSubFrame((data[0] & kFlagEndOfSubframe) != 0);
-  descriptor->SetFirstSubFrameInFrame((data[0] & kFlagFirstSubframe) != 0);
-  descriptor->SetLastSubFrameInFrame((data[0] & kFlagLastSubframe) != 0);
 
   // Parse Subframe details provided in 1st packet of subframe.
   if (!begins_subframe) {
@@ -108,7 +109,7 @@ bool RtpGenericFrameDescriptorExtension::Parse(
   return true;
 }
 
-size_t RtpGenericFrameDescriptorExtension::ValueSize(
+size_t RtpGenericFrameDescriptorExtension00::ValueSize(
     const RtpGenericFrameDescriptor& descriptor) {
   if (!descriptor.FirstPacketInSubFrame())
     return 1;
@@ -125,15 +126,16 @@ size_t RtpGenericFrameDescriptorExtension::ValueSize(
   return size;
 }
 
-bool RtpGenericFrameDescriptorExtension::Write(
+bool RtpGenericFrameDescriptorExtension00::Write(
     rtc::ArrayView<uint8_t> data,
     const RtpGenericFrameDescriptor& descriptor) {
   RTC_CHECK_EQ(data.size(), ValueSize(descriptor));
   uint8_t base_header =
       (descriptor.FirstPacketInSubFrame() ? kFlagBeginOfSubframe : 0) |
-      (descriptor.LastPacketInSubFrame() ? kFlagEndOfSubframe : 0) |
-      (descriptor.FirstSubFrameInFrame() ? kFlagFirstSubframe : 0) |
-      (descriptor.LastSubFrameInFrame() ? kFlagLastSubframe : 0);
+      (descriptor.LastPacketInSubFrame() ? kFlagEndOfSubframe : 0);
+  base_header |= kFlagFirstSubframeV00;
+  base_header |= kFlagLastSubframeV00;
+
   if (!descriptor.FirstPacketInSubFrame()) {
     data[0] = base_header;
     return true;

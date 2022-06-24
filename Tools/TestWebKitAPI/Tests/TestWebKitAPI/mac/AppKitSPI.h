@@ -27,12 +27,19 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 
+#if HAVE(CPP20_INCOMPATIBLE_INTERNAL_HEADERS)
+#define CGCOLORTAGGEDPOINTER_H_
+#endif
+
 #import <AppKit/NSInspectorBar.h>
 #import <AppKit/NSInspectorBarItemController.h>
 #import <AppKit/NSInspectorBar_Private.h>
 #import <AppKit/NSTextInputClient_Private.h>
-#import <AppKit/NSTextInputContext_Private.h>
 #import <AppKit/NSWindow_Private.h>
+
+#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
+#import <AppKit/NSScrollViewSeparatorTrackingAdapter_Private.h>
+#endif
 
 #else
 
@@ -40,11 +47,7 @@
 - (void)selectedRangeWithCompletionHandler:(void(^)(NSRange selectedRange))completionHandler;
 - (void)markedRangeWithCompletionHandler:(void(^)(NSRange markedRange))completionHandler;
 - (void)hasMarkedTextWithCompletionHandler:(void(^)(BOOL hasMarkedText))completionHandler;
-@end
-
-@interface NSTextInputContext (WebKitSupport)
-- (void)handleEvent:(NSEvent *)event completionHandler:(void(^)(BOOL handled))completionHandler;
-- (void)handleEventByInputMethod:(NSEvent *)event completionHandler:(void(^)(BOOL handled))completionHandler;
+- (void)attributedSubstringForProposedRange:(NSRange)range completionHandler:(void(^)(NSAttributedString *, NSRange actualRange))completionHandler;
 @end
 
 @protocol NSInspectorBarClient <NSObject>
@@ -83,6 +86,13 @@ NSString * const NSInspectorBarTextAlignmentItemIdentifier = @"NSInspectorBarTex
 - (NSInspectorBar *)inspectorBar;
 - (void)setInspectorBar:(NSInspectorBar *)bar;
 @end
+
+#if HAVE(NSSCROLLVIEW_SEPARATOR_TRACKING_ADAPTER)
+@protocol NSScrollViewSeparatorTrackingAdapter
+@property (readonly) NSRect scrollViewFrame;
+@property (readonly) BOOL hasScrolledContentsUnderTitlebar;
+@end
+#endif
 
 #endif
 

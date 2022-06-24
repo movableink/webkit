@@ -53,65 +53,14 @@
 namespace WebKit {
 namespace NetworkCache {
 
-#if !OS(WINDOWS)
-static DirectoryEntryType directoryEntryType(uint8_t dtype)
-{
-    switch (dtype) {
-    case DT_DIR:
-        return DirectoryEntryType::Directory;
-    case DT_REG:
-        return DirectoryEntryType::File;
-    default:
-        ASSERT_NOT_REACHED();
-        return DirectoryEntryType::File;
-    }
-    return DirectoryEntryType::File;
-}
-#endif
-
 void traverseDirectory(const String& path, const Function<void (const String&, DirectoryEntryType)>& function)
 {
-#if !OS(WINDOWS)
-    DIR* dir = opendir(FileSystem::fileSystemRepresentation(path).data());
-    if (!dir)
-        return;
-    dirent* dp;
-    while ((dp = readdir(dir))) {
-        if (dp->d_type != DT_DIR && dp->d_type != DT_REG)
-            continue;
-        const char* name = dp->d_name;
-        if (!strcmp(name, ".") || !strcmp(name, ".."))
-            continue;
-        auto nameString = String::fromUTF8(name);
-        if (nameString.isNull())
-            continue;
-        function(nameString, directoryEntryType(dp->d_type));
-    }
-    closedir(dir);
-#else
     auto entries = FileSystem::listDirectory(path);
     for (auto& entry : entries) {
-        auto type = FileSystem::fileIsDirectory(entry, FileSystem::ShouldFollowSymbolicLinks::No) ? DirectoryEntryType::Directory : DirectoryEntryType::File;
+        auto entryPath = FileSystem::pathByAppendingComponent(path, entry);
+        auto type = FileSystem::fileType(entryPath) == FileSystem::FileType::Directory ? DirectoryEntryType::Directory : DirectoryEntryType::File;
         function(entry, type);
     }
-#endif
-}
-
-void deleteDirectoryRecursively(const String& path)
-{
-    traverseDirectory(path, [&path](const String& name, DirectoryEntryType type) {
-        String entryPath = FileSystem::pathByAppendingComponent(path, name);
-        switch (type) {
-        case DirectoryEntryType::File:
-            FileSystem::deleteFile(entryPath);
-            break;
-        case DirectoryEntryType::Directory:
-            deleteDirectoryRecursively(entryPath);
-            break;
-        // This doesn't follow symlinks.
-        }
-    });
-    FileSystem::deleteEmptyDirectory(path);
 }
 
 FileTimes fileTimes(const String& path)
@@ -133,9 +82,9 @@ FileTimes fileTimes(const String& path)
     return { WallTime::fromRawSeconds(g_ascii_strtoull(birthtimeString, nullptr, 10)),
         WallTime::fromRawSeconds(g_file_info_get_attribute_uint64(fileInfo.get(), "time::modified")) };
 #elif OS(WINDOWS)
-    auto createTime = FileSystem::getFileCreationTime(path);
-    auto modifyTime = FileSystem::getFileModificationTime(path);
-    return { createTime.valueOr(WallTime()), modifyTime.valueOr(WallTime()) };
+    auto createTime = FileSystem::fileCreationTime(path);
+    auto modifyTime = FileSystem::fileModificationTime(path);
+    return { valueOrDefault(createTime), valueOrDefault(modifyTime) };
 #endif
 }
 
@@ -147,18 +96,7 @@ void updateFileModificationTimeIfNeeded(const String& path)
         if (WallTime::now() - times.modification < 1_h)
             return;
     }
-#if !OS(WINDOWS)
-    // This really updates both the access time and the modification time.
-    utimes(FileSystem::fileSystemRepresentation(path).data(), nullptr);
-#else
-    FILETIME time;
-    GetSystemTimeAsFileTime(&time);
-    auto file = CreateFile(path.wideCharacters().data(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (file == INVALID_HANDLE_VALUE)
-        return;
-    SetFileTime(file, &time, &time, &time);
-    CloseHandle(file);
-#endif
+    FileSystem::updateFileModificationTime(path);
 }
 
 }

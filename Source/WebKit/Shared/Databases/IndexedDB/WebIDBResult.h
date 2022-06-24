@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "SandboxExtension.h"
 #include <WebCore/IDBResultData.h>
 #include <wtf/Noncopyable.h>
@@ -45,7 +43,7 @@ public:
     {
     }
 
-    WebIDBResult(const WebCore::IDBResultData& resultData, SandboxExtension::HandleArray&& handles)
+    WebIDBResult(const WebCore::IDBResultData& resultData, Vector<SandboxExtension::Handle>&& handles)
         : m_resultData(resultData)
         , m_handles(WTFMove(handles))
     {
@@ -55,16 +53,14 @@ public:
     WebIDBResult& operator=(WebIDBResult&&) = default;
 
     const WebCore::IDBResultData& resultData() const { return m_resultData; }
-    const SandboxExtension::HandleArray& handles() const { return m_handles; }
+    const Vector<SandboxExtension::Handle>& handles() const { return m_handles; }
 
     void encode(IPC::Encoder&) const;
-    static bool decode(IPC::Decoder&, WebIDBResult&);
+    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, WebIDBResult&);
 
 private:
     WebCore::IDBResultData m_resultData;
-    SandboxExtension::HandleArray m_handles;
+    Vector<SandboxExtension::Handle> m_handles;
 };
 
 } // namespace WebKit
-
-#endif // ENABLE(INDEXED_DATABASE)

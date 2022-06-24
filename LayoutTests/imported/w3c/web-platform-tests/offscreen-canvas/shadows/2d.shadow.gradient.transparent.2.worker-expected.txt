@@ -1,3 +1,0 @@
-
-FAIL Shadows are not drawn for transparent parts of gradient fills Can't find variable: OffscreenCanvas
-

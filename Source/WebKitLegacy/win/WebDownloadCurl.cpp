@@ -42,8 +42,8 @@
 #include <WebCore/ResourceHandle.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/ResourceResponse.h>
-#include <WebCore/TextEncoding.h>
 #include <io.h>
+#include <pal/text/TextEncoding.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <wtf/FileSystem.h>
@@ -213,8 +213,8 @@ void WebDownload::didReceiveResponse(const ResourceResponse& response)
 
         String suggestedFilename = response.suggestedFilename();
         if (suggestedFilename.isEmpty())
-            suggestedFilename = FileSystem::pathGetFileName(response.url().string());
-        suggestedFilename = decodeURLEscapeSequences(suggestedFilename);
+            suggestedFilename = FileSystem::pathFileName(response.url().string());
+        suggestedFilename = PAL::decodeURLEscapeSequences(suggestedFilename);
         BString suggestedFilenameBSTR(suggestedFilename);
         m_delegate->decideDestinationWithSuggestedFilename(this, suggestedFilenameBSTR);
     }

@@ -41,6 +41,7 @@ static const uint32_t sessionStateDataVersion = 2;
 static const CFStringRef sessionHistoryKey = CFSTR("SessionHistory");
 static const CFStringRef provisionalURLKey = CFSTR("ProvisionalURL");
 static const CFStringRef renderTreeSizeKey = CFSTR("RenderTreeSize");
+static const CFStringRef isAppInitiatedKey = CFSTR("IsAppInitiated");
 
 // Session history keys.
 static const uint32_t sessionHistoryVersion = 1;
@@ -68,12 +69,16 @@ static const uint32_t maximumSessionStateDataSize = std::numeric_limits<uint32_t
 
 template<typename T> void isValidEnum(T);
 
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HistoryEntryDataEncoder);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HistoryEntryDataEncoder);
+
 class HistoryEntryDataEncoder {
 public:
     HistoryEntryDataEncoder()
         : m_bufferSize(0)
         , m_bufferCapacity(512)
-        , m_buffer(MallocPtr<uint8_t>::malloc(m_bufferCapacity))
+        , m_buffer(MallocPtr<uint8_t, HistoryEntryDataEncoderMalloc>::malloc(m_bufferCapacity))
         , m_bufferPointer(m_buffer.get())
     {
         // Keep format compatibility by encoding an unused uint64_t here.
@@ -190,7 +195,7 @@ public:
         return *this << static_cast<uint32_t>(value);
     }
 
-    MallocPtr<uint8_t> finishEncoding(size_t& size)
+    MallocPtr<uint8_t, HistoryEntryDataEncoderMalloc> finishEncoding(size_t& size)
     {
         size = m_bufferSize;
         return WTFMove(m_buffer);
@@ -244,7 +249,7 @@ private:
 
     size_t m_bufferSize;
     size_t m_bufferCapacity;
-    MallocPtr<uint8_t> m_buffer;
+    MallocPtr<uint8_t, HistoryEntryDataEncoderMalloc> m_buffer;
     uint8_t* m_bufferPointer;
 };
 
@@ -285,8 +290,8 @@ static void encodeFormDataElement(HistoryEntryDataEncoder& encoder, const HTTPBo
         encoder << false;
 
         encoder << element.fileStart;
-        encoder << element.fileLength.valueOr(-1);
-        encoder << element.expectedFileModificationTime.valueOr(WallTime::nan()).secondsSinceEpoch().value();
+        encoder << element.fileLength.value_or(-1);
+        encoder << element.expectedFileModificationTime.value_or(WallTime::nan()).secondsSinceEpoch().value();
         break;
 
     case HTTPBody::Element::Type::Blob:
@@ -319,9 +324,7 @@ static void encodeFrameStateNode(HistoryEntryDataEncoder& encoder, const FrameSt
 {
     encoder << static_cast<uint64_t>(frameState.children.size());
 
-    RELEASE_ASSERT(!frameState.isDestructed);
     for (const auto& childFrameState : frameState.children) {
-        RELEASE_ASSERT(!childFrameState.isDestructed);
         encoder << childFrameState.originalURLString;
         encoder << childFrameState.urlString;
 
@@ -330,8 +333,9 @@ static void encodeFrameStateNode(HistoryEntryDataEncoder& encoder, const FrameSt
 
     encoder << frameState.documentSequenceNumber;
 
-    encoder << static_cast<uint64_t>(frameState.documentState.size());
-    for (const auto& documentState : frameState.documentState)
+    frameState.validateDocumentState();
+    encoder << static_cast<uint64_t>(frameState.documentState().size());
+    for (const auto& documentState : frameState.documentState())
         encoder << documentState;
 
     if (frameState.httpBody) {
@@ -369,7 +373,7 @@ static void encodeFrameStateNode(HistoryEntryDataEncoder& encoder, const FrameSt
 #endif
 }
 
-static MallocPtr<uint8_t> encodeSessionHistoryEntryData(const FrameState& frameState, size_t& bufferSize)
+static MallocPtr<uint8_t, HistoryEntryDataEncoderMalloc> encodeSessionHistoryEntryData(const FrameState& frameState, size_t& bufferSize)
 {
     HistoryEntryDataEncoder encoder;
 
@@ -381,7 +385,7 @@ static MallocPtr<uint8_t> encodeSessionHistoryEntryData(const FrameState& frameS
 
 static RetainPtr<CFDataRef> encodeSessionHistoryEntryData(const FrameState& frameState)
 {
-    static CFAllocatorRef fastMallocDeallocator;
+    static NeverDestroyed<RetainPtr<CFAllocatorRef>> fastMallocDeallocator;
 
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -394,17 +398,17 @@ static RetainPtr<CFDataRef> encodeSessionHistoryEntryData(const FrameState& fram
             nullptr, // allocate
             nullptr, // reallocate
             [](void *ptr, void *info) {
-                WTF::fastFree(ptr);
+                HistoryEntryDataEncoderMalloc::free(ptr);
             },
             nullptr, // preferredSize
         };
-        fastMallocDeallocator = CFAllocatorCreate(kCFAllocatorDefault, &context);
+        fastMallocDeallocator.get() = adoptCF(CFAllocatorCreate(kCFAllocatorDefault, &context));
     });
 
     size_t bufferSize;
     auto buffer = encodeSessionHistoryEntryData(frameState, bufferSize);
 
-    return adoptCF(CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, buffer.leakPtr(), bufferSize, fastMallocDeallocator));
+    return adoptCF(CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, buffer.leakPtr(), bufferSize, fastMallocDeallocator.get().get()));
 }
 
 static RetainPtr<CFDictionaryRef> createDictionary(std::initializer_list<std::pair<CFStringRef, CFTypeRef>> keyValuePairs)
@@ -478,18 +482,21 @@ RefPtr<API::Data> encodeLegacySessionState(const SessionState& sessionState)
     auto sessionHistoryDictionary = encodeSessionHistory(sessionState.backForwardListState);
     auto provisionalURLString = sessionState.provisionalURL.isNull() ? nullptr : sessionState.provisionalURL.string().createCFString();
     RetainPtr<CFNumberRef> renderTreeSizeNumber(adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt64Type, &sessionState.renderTreeSize)));
+    RetainPtr<CFBooleanRef> isAppInitiated = adoptCF(sessionState.isAppInitiated ? kCFBooleanTrue : kCFBooleanFalse);
 
     RetainPtr<CFDictionaryRef> stateDictionary;
     if (provisionalURLString) {
         stateDictionary = createDictionary({
             { sessionHistoryKey, sessionHistoryDictionary.get() },
             { provisionalURLKey, provisionalURLString.get() },
-            { renderTreeSizeKey, renderTreeSizeNumber.get() }
+            { renderTreeSizeKey, renderTreeSizeNumber.get() },
+            { isAppInitiatedKey, isAppInitiated.get() }
         });
     } else {
         stateDictionary = createDictionary({
             { sessionHistoryKey, sessionHistoryDictionary.get() },
-            { renderTreeSizeKey, renderTreeSizeNumber.get() }
+            { renderTreeSizeKey, renderTreeSizeNumber.get() },
+            { isAppInitiatedKey, isAppInitiated.get() }
         });
     }
 
@@ -508,7 +515,7 @@ RefPtr<API::Data> encodeLegacySessionState(const SessionState& sessionState)
     CFIndex length = CFDataGetLength(data.get());
 
     size_t bufferSize = length + sizeof(uint32_t);
-    auto buffer = MallocPtr<uint8_t>::malloc(bufferSize);
+    auto buffer = MallocPtr<uint8_t, HistoryEntryDataEncoderMalloc>::malloc(bufferSize);
 
     // Put the session state version number at the start of the buffer
     buffer.get()[0] = (sessionStateDataVersion & 0xff000000) >> 24;
@@ -520,7 +527,7 @@ RefPtr<API::Data> encodeLegacySessionState(const SessionState& sessionState)
     CFDataGetBytes(data.get(), CFRangeMake(0, length), buffer.get() + sizeof(uint32_t));
 
     return API::Data::createWithoutCopying(buffer.leakPtr(), bufferSize, [] (unsigned char* buffer, const void* context) {
-        fastFree(buffer);
+        HistoryEntryDataEncoderMalloc::free(buffer);
     }, nullptr);
 }
 
@@ -709,13 +716,13 @@ public:
 #endif
 
     template<typename T>
-    auto operator>>(Optional<T>& value) -> typename std::enable_if<std::is_enum<T>::value, HistoryEntryDataDecoder&>::type
+    auto operator>>(std::optional<T>& value) -> typename std::enable_if<std::is_enum<T>::value, HistoryEntryDataDecoder&>::type
     {
         uint32_t underlyingEnumValue;
         *this >> underlyingEnumValue;
 
         if (!isValid() || !isValidEnum(static_cast<T>(underlyingEnumValue)))
-            value = WTF::nullopt;
+            value = std::nullopt;
         else
             value = static_cast<T>(underlyingEnumValue);
 
@@ -795,7 +802,7 @@ private:
 
 static void decodeFormDataElement(HistoryEntryDataDecoder& decoder, HTTPBody::Element& formDataElement)
 {
-    Optional<FormDataElementType> elementType;
+    std::optional<FormDataElementType> elementType;
     decoder >> elementType;
     if (!elementType)
         return;
@@ -895,6 +902,7 @@ static void decodeBackForwardTreeNode(HistoryEntryDataDecoder& decoder, FrameSta
     uint64_t documentStateVectorSize;
     decoder >> documentStateVectorSize;
 
+    Vector<String> documentState;
     for (uint64_t i = 0; i < documentStateVectorSize; ++i) {
         String state;
         decoder >> state;
@@ -902,8 +910,9 @@ static void decodeBackForwardTreeNode(HistoryEntryDataDecoder& decoder, FrameSta
         if (!decoder.isValid())
             return;
 
-        frameState.documentState.append(WTFMove(state));
+        documentState.append(WTFMove(state));
     }
+    frameState.setDocumentState(documentState, FrameState::ShouldValidate::Yes);
 
     String formContentType;
     decoder >> formContentType;
@@ -956,7 +965,7 @@ static void decodeBackForwardTreeNode(HistoryEntryDataDecoder& decoder, FrameSta
 #endif
 }
 
-static bool decodeSessionHistoryEntryData(const uint8_t* buffer, size_t bufferSize, FrameState& mainFrameState)
+static WARN_UNUSED_RETURN bool decodeSessionHistoryEntryData(const uint8_t* buffer, size_t bufferSize, FrameState& mainFrameState)
 {
     HistoryEntryDataDecoder decoder { buffer, bufferSize };
 
@@ -971,12 +980,12 @@ static bool decodeSessionHistoryEntryData(const uint8_t* buffer, size_t bufferSi
     return decoder.finishDecoding();
 }
 
-static bool decodeSessionHistoryEntryData(CFDataRef historyEntryData, FrameState& mainFrameState)
+static WARN_UNUSED_RETURN bool decodeSessionHistoryEntryData(CFDataRef historyEntryData, FrameState& mainFrameState)
 {
     return decodeSessionHistoryEntryData(CFDataGetBytePtr(historyEntryData), static_cast<size_t>(CFDataGetLength(historyEntryData)), mainFrameState);
 }
 
-static bool decodeSessionHistoryEntry(CFDictionaryRef entryDictionary, BackForwardListItemState& backForwardListItemState)
+static WARN_UNUSED_RETURN bool decodeSessionHistoryEntry(CFDictionaryRef entryDictionary, BackForwardListItemState& backForwardListItemState)
 {
     auto title = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(entryDictionary, sessionHistoryEntryTitleKey));
     if (!title)
@@ -1001,7 +1010,7 @@ static bool decodeSessionHistoryEntry(CFDictionaryRef entryDictionary, BackForwa
         CFNumberGetValue(rawShouldOpenExternalURLsPolicy, kCFNumberSInt64Type, &value);
         shouldOpenExternalURLsPolicy = static_cast<WebCore::ShouldOpenExternalURLsPolicy>(value);
     } else
-        shouldOpenExternalURLsPolicy = WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemes;
+        shouldOpenExternalURLsPolicy = WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks;
 
     if (!decodeSessionHistoryEntryData(historyEntryData, backForwardListItemState.pageState.mainFrameState))
         return false;
@@ -1014,7 +1023,7 @@ static bool decodeSessionHistoryEntry(CFDictionaryRef entryDictionary, BackForwa
     return true;
 }
 
-static bool decodeSessionHistoryEntries(CFArrayRef entriesArray, Vector<BackForwardListItemState>& entries)
+static WARN_UNUSED_RETURN bool decodeSessionHistoryEntries(CFArrayRef entriesArray, Vector<BackForwardListItemState>& entries)
 {
     for (CFIndex i = 0, size = CFArrayGetCount(entriesArray); i < size; ++i) {
         auto entryDictionary = dynamic_cf_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(entriesArray, i));
@@ -1031,7 +1040,7 @@ static bool decodeSessionHistoryEntries(CFArrayRef entriesArray, Vector<BackForw
     return true;
 }
 
-static bool decodeV0SessionHistory(CFDictionaryRef sessionHistoryDictionary, BackForwardListState& backForwardListState)
+static WARN_UNUSED_RETURN bool decodeV0SessionHistory(CFDictionaryRef sessionHistoryDictionary, BackForwardListState& backForwardListState)
 {
     auto currentIndexNumber = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(sessionHistoryDictionary, sessionHistoryCurrentIndexKey));
     if (!currentIndexNumber)
@@ -1067,12 +1076,12 @@ static bool decodeV0SessionHistory(CFDictionaryRef sessionHistoryDictionary, Bac
     return true;
 }
 
-static bool decodeV1SessionHistory(CFDictionaryRef sessionHistoryDictionary, BackForwardListState& backForwardListState)
+static WARN_UNUSED_RETURN bool decodeV1SessionHistory(CFDictionaryRef sessionHistoryDictionary, BackForwardListState& backForwardListState)
 {
     auto currentIndexNumber = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(sessionHistoryDictionary, sessionHistoryCurrentIndexKey));
     if (!currentIndexNumber) {
         // No current index means the dictionary represents an empty session.
-        backForwardListState.currentIndex = WTF::nullopt;
+        backForwardListState.currentIndex = std::nullopt;
         backForwardListState.items = { };
         return true;
     }
@@ -1098,7 +1107,7 @@ static bool decodeV1SessionHistory(CFDictionaryRef sessionHistoryDictionary, Bac
     return true;
 }
 
-static bool decodeSessionHistory(CFDictionaryRef backForwardListDictionary, BackForwardListState& backForwardListState)
+static WARN_UNUSED_RETURN bool decodeSessionHistory(CFDictionaryRef backForwardListDictionary, BackForwardListState& backForwardListState)
 {
     auto sessionHistoryVersionNumber = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(backForwardListDictionary, sessionHistoryVersionKey));
     if (!sessionHistoryVersionNumber) {
@@ -1137,7 +1146,7 @@ bool decodeLegacySessionState(const uint8_t* bytes, size_t size, SessionState& s
     }
 
     if (auto provisionalURLString = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(sessionStateDictionary, provisionalURLKey))) {
-        sessionState.provisionalURL = URL(URL(), provisionalURLString);
+        sessionState.provisionalURL = URL { provisionalURLString };
         if (!sessionState.provisionalURL.isValid())
             return false;
     }
@@ -1146,6 +1155,11 @@ bool decodeLegacySessionState(const uint8_t* bytes, size_t size, SessionState& s
         CFNumberGetValue(renderTreeSize, kCFNumberSInt64Type, &sessionState.renderTreeSize);
     else
         sessionState.renderTreeSize = 0;
+
+    if (auto isAppInitiated = dynamic_cf_cast<CFBooleanRef>(CFDictionaryGetValue(sessionStateDictionary, isAppInitiatedKey)))
+        sessionState.isAppInitiated = isAppInitiated == kCFBooleanTrue;
+    else
+        sessionState.isAppInitiated = true;
 
     return true;
 }

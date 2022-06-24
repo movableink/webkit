@@ -7,13 +7,21 @@ function logDebug(callback)
         console.log(callback());
 }
 
-function dispatchMouseActions(actions)
+function pause(duration) {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve();
+        }, duration);
+    });
+}
+
+function dispatchMouseActions(actions, pointerType)
 {
     if (!window.eventSender)
         return Promise.reject(new Error("window.eventSender is undefined."));
 
     return new Promise(resolve => {
-        setTimeout(() => {
+        setTimeout(async () => {
             eventSender.dragMode = false;
 
             for (let action of actions) {
@@ -27,15 +35,19 @@ function dispatchMouseActions(actions)
                         origin.y = bounds.top + 1;
                     }
                     logDebug(() => `eventSender.mouseMoveTo(${action.x + origin.x}, ${action.y + origin.y})`);
-                    eventSender.mouseMoveTo(action.x + origin.x, action.y + origin.y);
+                    eventSender.mouseMoveTo(action.x + origin.x, action.y + origin.y, pointerType);
                     break;
                 case "pointerDown":
                     logDebug(() => `eventSender.mouseDown()`);
-                    eventSender.mouseDown(action.button);
+                    eventSender.mouseDown(action.button, [], pointerType);
                     break;
                 case "pointerUp":
                     logDebug(() => `eventSender.mouseUp()`);
-                    eventSender.mouseUp(action.button);
+                    eventSender.mouseUp(action.button, [], pointerType);
+                    break;
+                case "pause":
+                    logDebug(() => `pause(${action.duration})`);
+                    await pause(action.duration);
                     break;
                 default:
                     return Promise.reject(new Error(`Unknown action type "${action.type}".`));
@@ -74,7 +86,7 @@ function dispatchTouchActions(actions, options = { insertPauseAfterPointerUp: fa
             timeOffset
         };
 
-        let timeOffsetIncrease = 0.05;
+        let timeOffsetIncrease = 0;
 
         switch (action.type) {
         case "pointerMove":
@@ -105,23 +117,23 @@ function dispatchTouchActions(actions, options = { insertPauseAfterPointerUp: fa
             break;
         case "pause":
             timeOffsetIncrease = action.duration / 1000;
-            touch.phase = "stationary";
-            if (!pointerDown)
-                id++;
             break;
         default:
             return Promise.reject(new Error(`Unknown action type "${action.type}".`));
         }
 
-        x = touch.x;
-        y = touch.y;
+        if (action.type !== "pause") {
+            x = touch.x;
+            y = touch.y;
+        }
 
         if (!pointerDown && touch.phase == "moved")
             continue;
 
         timeOffset += timeOffsetIncrease;
 
-        events.push(command);
+        if (action.type !== "pause")
+            events.push(command);
     }
 
     const stream = JSON.stringify({ events });
@@ -143,43 +155,78 @@ window.test_driver_internal.send_keys = function(element, keys)
 
     // https://seleniumhq.github.io/selenium/docs/api/py/webdriver/selenium.webdriver.common.keys.html
     // FIXME: Add more cases.
-    // FIXME: Add the support for modifier keys.
     const SeleniumCharCodeToEventSenderKey = {
-        0xE003: 'delete',
-        0xE004: '\t',
-        0xE00D: ' ',
-        0xE012: 'leftArrow',
-        0xE013: 'upArrow',
-        0xE014: 'rightArrow',
-        0xE015: 'downArrow',
+        0xE003: { key: 'delete' },
+        0XE004: { key: '\t' },
+        0XE005: { key: 'clear' },
+        0XE006: { key: '\r' },
+        0XE007: { key: '\n' },
+        0xE008: { key: 'leftShift', modifier: 'shiftKey' },
+        0xE009: { key: 'leftControl', modifier: 'ctrlKey' },
+        0xE00A: { key: 'leftAlt', modifier: 'altKey' },
+        0XE00C: { key: 'escape' },
+        0xE00D: { key: ' ' },
+        0XE00E: { key: 'pageUp' },
+        0XE00F: { key: 'pageDown' },
+        0XE010: { key: 'end' },
+        0XE011: { key: 'home' },
+        0xE012: { key: 'leftArrow' },
+        0xE013: { key: 'upArrow' },
+        0xE014: { key: 'rightArrow' },
+        0xE015: { key: 'downArrow' },
+        0XE016: { key: 'insert' },
+        0XE017: { key: 'delete' },
+        0XE018: { key: ';' },
+        0XE019: { key: '=' },
+        0XE031: { key: 'F1' },
+        0XE032: { key: 'F2' },
+        0XE033: { key: 'F3' },
+        0XE034: { key: 'F4' },
+        0XE035: { key: 'F5' },
+        0XE036: { key: 'F6' },
+        0XE037: { key: 'F7' },
+        0XE038: { key: 'F8' },
+        0XE039: { key: 'F9' },
+        0XE03A: { key: 'F10' },
+        0XE03B: { key: 'F11' },
+        0XE03C: { key: 'F12' },
+        0xE03D: { key: 'leftMeta', modifier: 'metaKey' },
     };
 
     function convertSeleniumKeyCode(key)
     {
         const code = key.charCodeAt(0);
-        return SeleniumCharCodeToEventSenderKey[code] || key;
+        return SeleniumCharCodeToEventSenderKey[code] || { key: key };
     }
 
     const keyList = [];
-    for (const key of keys)
-        keyList.push(convertSeleniumKeyCode(key));
+    const modifiers = [];
+    for (const key of keys) {
+        let convertedKey = convertSeleniumKeyCode(key);
+        keyList.push(convertedKey.key);
+        if (convertedKey.modifier)
+          modifiers.push(convertedKey.modifier);
+    }
 
     if (testRunner.isIOSFamily && testRunner.isWebKit2) {
         return new Promise((resolve) => {
             testRunner.runUIScript(`
                 const keyList = JSON.parse('${JSON.stringify(keyList)}');
                 for (const key of keyList)
-                    uiController.keyDown(key);`, resolve);
+                    uiController.keyDown(key, modifiers);`, resolve);
         });
     }
 
     for (const key of keyList)
-        eventSender.keyDown(key);
+        eventSender.keyDown(key, modifiers);
     return Promise.resolve();
 }
 
 window.test_driver_internal.click = function (element, coords)
 {
+    if (!window.testRunner)
+        return Promise.resolve();
+
     if (!window.eventSender)
         return Promise.reject(new Error("window.eventSender is undefined."));
 
@@ -222,7 +269,7 @@ window.test_driver_internal.action_sequence = function(sources)
         return Promise.reject(new Error(`Unknown pointer type pointer type "${action.parameters.pointerType}".`));
 
     const pointerType = pointerSource.parameters.pointerType;
-    if (pointerType !== "mouse" && pointerType !== "touch")
+    if (pointerType !== "mouse" && pointerType !== "touch" && pointerType !== "pen")
         return Promise.reject(new Error(`Unknown pointer type "${pointerType}".`));
 
     // If we have a "none" source, let's inject any pause with non-zero durations into the pointer source
@@ -241,8 +288,21 @@ window.test_driver_internal.action_sequence = function(sources)
 
     if (pointerType === "touch")
         return dispatchTouchActions(pointerSource.actions);
-    if ("createTouch" in document)
+    if (testRunner.isIOSFamily && "createTouch" in document)
         return dispatchTouchActions(pointerSource.actions, { insertPauseAfterPointerUp: true });
-    if (pointerType === "mouse")
-        return dispatchMouseActions(pointerSource.actions);
+    if (pointerType === "mouse" || pointerType === "pen")
+        return dispatchMouseActions(pointerSource.actions, pointerType);
 };
+
+window.test_driver_internal.set_permission = function(permission_params, context=null)
+{
+    if (window.testRunner && permission_params.descriptor.name == "geolocation") {
+        setInterval(() => {
+            window.testRunner.setMockGeolocationPosition(51.478, -0.166, 100);
+        }, 100);
+        testRunner.setGeolocationPermission(permission_params.state == "granted");
+        return Promise.resolve();
+    }
+    return Promise.reject(new Error("unimplemented"));
+};
+

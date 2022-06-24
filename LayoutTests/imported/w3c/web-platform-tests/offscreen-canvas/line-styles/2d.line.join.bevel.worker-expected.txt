@@ -1,3 +1,0 @@
-
-FAIL lineJoin 'bevel' is rendered correctly Can't find variable: OffscreenCanvas
-

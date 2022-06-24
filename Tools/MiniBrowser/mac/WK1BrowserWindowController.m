@@ -60,19 +60,32 @@
 
     [_webView _listenForLayoutMilestones:WebDidFirstLayout | WebDidFirstVisuallyNonEmptyLayout | WebDidHitRelevantRepaintedObjectsAreaThreshold];
 
+    SettingsController *settingsController = [[NSApplication sharedApplication] browserAppDelegate].settingsController;
+    if (settingsController.customUserAgent)
+        _webView.customUserAgent = settingsController.customUserAgent;
+
     [self didChangeSettings];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(userAgentDidChange:) name:kUserAgentChangedNotificationName object:nil];
 
     [containerView addSubview:_webView];
 }
 
 - (void)dealloc
 {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     [_webView setFrameLoadDelegate:nil];
     [_webView setUIDelegate:nil];
     [_webView setResourceLoadDelegate:nil];
     [_webView release];
 
     [super dealloc];
+}
+
+- (void)userAgentDidChange:(NSNotification *)notification
+{
+    SettingsController *settingsController = [[NSApplication sharedApplication] browserAppDelegate].settingsController;
+    _webView.customUserAgent = settingsController.customUserAgent;
+    [_webView reload:nil];
 }
 
 - (void)loadURLString:(NSString *)urlString
@@ -130,11 +143,16 @@ static BOOL areEssentiallyEqual(double a, double b)
     return (fabs(a - b) <= tolerance);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-implementations"
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
+#pragma GCC diagnostic pop
 {
     SEL action = [menuItem action];
 
     if (action == @selector(saveAsPDF:))
+        return NO;
+    if (action == @selector(saveAsWebArchive:))
         return NO;
 
     if (action == @selector(zoomIn:))
@@ -148,6 +166,8 @@ static BOOL areEssentiallyEqual(double a, double b)
         [menuItem setTitle:[_webView isHidden] ? @"Show Web View" : @"Hide Web View"];
     else if (action == @selector(removeReinsertWebView:))
         [menuItem setTitle:[_webView window] ? @"Remove Web View" : @"Insert Web View"];
+    else if (action == @selector(toggleFullWindowWebView:))
+        [menuItem setTitle:[self webViewFillsWindow] ? @"Inset Web View" : @"Fit Web View to Window"];
     else if (action == @selector(toggleZoomMode:))
         [menuItem setState:_zoomTextOnly ? NSControlStateValueOn : NSControlStateValueOff];
     else if (action == @selector(toggleEditable:))
@@ -171,10 +191,13 @@ static BOOL areEssentiallyEqual(double a, double b)
 
     if (action == @selector(goBack:))
         return [_webView canGoBack];
-    
+
     if (action == @selector(goForward:))
         return [_webView canGoForward];
-    
+
+    if (action == @selector(showCertificate:))
+        return NO;
+
     return YES;
 }
 
@@ -190,7 +213,7 @@ static BOOL areEssentiallyEqual(double a, double b)
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-    [(BrowserAppDelegate *)[[NSApplication sharedApplication] delegate] browserWindowWillClose:self.window];
+    [[[NSApplication sharedApplication] browserAppDelegate] browserWindowWillClose:self.window];
     [self autorelease];
 }
 
@@ -299,12 +322,10 @@ static BOOL areEssentiallyEqual(double a, double b)
 
 - (void)didChangeSettings
 {
-    SettingsController *settings = [SettingsController shared];
+    SettingsController *settings = [[NSApplication sharedApplication] browserAppDelegate].settingsController;
 
-    [[WebPreferences standardPreferences] setSubpixelCSSOMElementMetricsEnabled:settings.subPixelCSSOMMetricsEnabled];
     [[WebPreferences standardPreferences] setShowDebugBorders:settings.layerBordersVisible];
-    [[WebPreferences standardPreferences] setSimpleLineLayoutEnabled:settings.simpleLineLayoutEnabled];
-    [[WebPreferences standardPreferences] setSimpleLineLayoutDebugBordersEnabled:settings.simpleLineLayoutDebugBordersEnabled];
+    [[WebPreferences standardPreferences] setLegacyLineLayoutVisualCoverageEnabled:settings.legacyLineLayoutVisualCoverageEnabled];
     [[WebPreferences standardPreferences] setShowRepaintCounter:settings.layerBordersVisible];
     [[WebPreferences standardPreferences] setSuppressesIncrementalRendering:settings.incrementalRenderingSuppressed];
     [[WebPreferences standardPreferences] setAcceleratedDrawingEnabled:settings.acceleratedDrawingEnabled];
@@ -316,6 +337,8 @@ static BOOL areEssentiallyEqual(double a, double b)
     [[WebPreferences standardPreferences] setPunchOutWhiteBackgroundsInDarkMode:settings.punchOutWhiteBackgroundsInDarkMode];
 
     _webView._useSystemAppearance = settings.useSystemAppearance;
+
+    [self setWebViewFillsWindow:settings.webViewFillsWindow];
 
     BOOL useTransparentWindows = settings.useTransparentWindows;
     if (useTransparentWindows != !self.window.isOpaque) {

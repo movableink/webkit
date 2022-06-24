@@ -25,15 +25,13 @@
 
 #include "cmakeconfig.h"
 
-#include "HeadlessViewBackend.h"
-#include "WindowViewBackend.h"
-#if ENABLE_WEB_AUDIO || ENABLE_VIDEO
-#include <gst/gst.h>
-#endif
+#include "BuildRevision.h"
+#include <WPEToolingBackends/HeadlessViewBackend.h>
+#include <WPEToolingBackends/WindowViewBackend.h>
 #include <memory>
 #include <wpe/webkit.h>
 
-#if defined(HAVE_ACCESSIBILITY) && HAVE_ACCESSIBILITY
+#if defined(ENABLE_ACCESSIBILITY) && ENABLE_ACCESSIBILITY
 #include <atk/atk.h>
 #endif
 
@@ -48,7 +46,9 @@ static const char* cookiesFile;
 static const char* cookiesPolicy;
 static const char* proxy;
 const char* bgColor;
+static gboolean enableITP;
 static gboolean printVersion;
+static GHashTable* openViews;
 
 static const GOptionEntry commandLineOptions[] =
 {
@@ -62,6 +62,7 @@ static const GOptionEntry commandLineOptions[] =
     { "ignore-tls-errors", 0, 0, G_OPTION_ARG_NONE, &ignoreTLSErrors, "Ignore TLS errors", nullptr },
     { "content-filter", 0, 0, G_OPTION_ARG_FILENAME, &contentFilter, "JSON with content filtering rules", "FILE" },
     { "bg-color", 0, 0, G_OPTION_ARG_STRING, &bgColor, "Window background color. Default: white", "COLOR" },
+    { "enable-itp", 0, 0, G_OPTION_ARG_NONE, &enableITP, "Enable Intelligent Tracking Prevention (ITP)", nullptr },
     { "version", 'v', 0, G_OPTION_ARG_NONE, &printVersion, "Print the WPE version", nullptr },
     { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &uriArguments, nullptr, "[URL]" },
     { nullptr, 0, 0, G_OPTION_ARG_NONE, nullptr, nullptr, nullptr }
@@ -135,11 +136,11 @@ static std::unique_ptr<WPEToolingBackends::ViewBackend> createViewBackend(uint32
     return std::make_unique<WPEToolingBackends::WindowViewBackend>(width, height);
 }
 
-typedef struct {
+struct FilterSaveData {
     GMainLoop* mainLoop { nullptr };
     WebKitUserContentFilter* filter { nullptr };
     GError* error { nullptr };
-} FilterSaveData;
+};
 
 static void filterSavedCallback(WebKitUserContentFilterStore *store, GAsyncResult *result, FilterSaveData *data)
 {
@@ -149,7 +150,8 @@ static void filterSavedCallback(WebKitUserContentFilterStore *store, GAsyncResul
 
 static void webViewClose(WebKitWebView* webView, gpointer)
 {
-    g_object_unref(webView);
+    // Hash table key delete func takes care of unref'ing the view
+    g_hash_table_remove(openViews, webView);
 }
 
 static WebKitWebView* createWebView(WebKitWebView* webView, WebKitNavigationAction*, gpointer)
@@ -167,7 +169,10 @@ static WebKitWebView* createWebView(WebKitWebView* webView, WebKitNavigationActi
     auto* newWebView = webkit_web_view_new_with_related_view(viewBackend, webView);
     webkit_web_view_set_settings(newWebView, webkit_web_view_get_settings(webView));
 
+    g_signal_connect(newWebView, "create", G_CALLBACK(createWebView), nullptr);
     g_signal_connect(newWebView, "close", G_CALLBACK(webViewClose), nullptr);
+
+    g_hash_table_add(openViews, newWebView);
 
     return newWebView;
 }
@@ -180,9 +185,6 @@ int main(int argc, char *argv[])
 
     GOptionContext* context = g_option_context_new(nullptr);
     g_option_context_add_main_entries(context, commandLineOptions, nullptr);
-#if ENABLE_WEB_AUDIO || ENABLE_VIDEO
-    g_option_context_add_group(context, gst_init_get_option_group());
-#endif
 
     GError* error = nullptr;
     if (!g_option_context_parse(context, &argc, &argv, &error)) {
@@ -199,8 +201,8 @@ int main(int argc, char *argv[])
             webkit_get_major_version(),
             webkit_get_minor_version(),
             webkit_get_micro_version());
-        if (g_strcmp0(SVN_REVISION, "tarball"))
-            g_print(" (%s)", SVN_REVISION);
+        if (g_strcmp0(BUILD_REVISION, "tarball"))
+            g_print(" (%s)", BUILD_REVISION);
         g_print("\n");
         return 0;
     }
@@ -215,7 +217,20 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    auto* webContext = (privateMode || automationMode) ? webkit_web_context_new_ephemeral() : webkit_web_context_get_default();
+    auto* manager = (privateMode || automationMode) ? webkit_website_data_manager_new_ephemeral() : webkit_website_data_manager_new(nullptr);
+    webkit_website_data_manager_set_itp_enabled(manager, enableITP);
+
+    if (proxy) {
+        auto* webkitProxySettings = webkit_network_proxy_settings_new(proxy, ignoreHosts);
+        webkit_website_data_manager_set_network_proxy_settings(manager, WEBKIT_NETWORK_PROXY_MODE_CUSTOM, webkitProxySettings);
+        webkit_network_proxy_settings_free(webkitProxySettings);
+    }
+
+    if (ignoreTLSErrors)
+        webkit_website_data_manager_set_tls_errors_policy(manager, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
+
+    auto* webContext = webkit_web_context_new_with_website_data_manager(manager);
+    g_object_unref(manager);
 
     if (cookiesPolicy) {
         auto* cookieManager = webkit_web_context_get_cookie_manager(webContext);
@@ -230,12 +245,6 @@ int main(int argc, char *argv[])
         auto* cookieManager = webkit_web_context_get_cookie_manager(webContext);
         auto storageType = g_str_has_suffix(cookiesFile, ".txt") ? WEBKIT_COOKIE_PERSISTENT_STORAGE_TEXT : WEBKIT_COOKIE_PERSISTENT_STORAGE_SQLITE;
         webkit_cookie_manager_set_persistent_storage(cookieManager, cookiesFile, storageType);
-    }
-
-    if (proxy) {
-        auto* webkitProxySettings = webkit_network_proxy_settings_new(proxy, ignoreHosts);
-        webkit_web_context_set_network_proxy_settings(webContext, WEBKIT_NETWORK_PROXY_MODE_CUSTOM, webkitProxySettings);
-        webkit_network_proxy_settings_free(webkitProxySettings);
     }
 
     const char* singleprocess = g_getenv("MINIBROWSER_SINGLEPROCESS");
@@ -290,19 +299,20 @@ int main(int argc, char *argv[])
     g_object_unref(settings);
 
     backendPtr->setInputClient(std::make_unique<InputClient>(loop, webView));
-#if defined(HAVE_ACCESSIBILITY) && HAVE_ACCESSIBILITY
+#if defined(ENABLE_ACCESSIBILITY) && ENABLE_ACCESSIBILITY
     auto* accessible = wpe_view_backend_dispatch_get_accessible(wpeBackend);
     if (ATK_IS_OBJECT(accessible))
         backendPtr->setAccessibleChild(ATK_OBJECT(accessible));
 #endif
 
+    openViews = g_hash_table_new_full(nullptr, nullptr, g_object_unref, nullptr);
+
     webkit_web_context_set_automation_allowed(webContext, automationMode);
     g_signal_connect(webContext, "automation-started", G_CALLBACK(automationStartedCallback), webView);
     g_signal_connect(webView, "permission-request", G_CALLBACK(decidePermissionRequest), nullptr);
     g_signal_connect(webView, "create", G_CALLBACK(createWebView), nullptr);
-
-    if (ignoreTLSErrors)
-        webkit_web_context_set_tls_errors_policy(webContext, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
+    g_signal_connect(webView, "close", G_CALLBACK(webViewClose), nullptr);
+    g_hash_table_add(openViews, webView);
 
     WebKitColor color;
     if (bgColor && webkit_color_parse(&color, bgColor))
@@ -325,7 +335,9 @@ int main(int argc, char *argv[])
 
     g_main_loop_run(loop);
 
-    g_object_unref(webView);
+    g_hash_table_destroy(openViews);
+
+
     if (privateMode || automationMode)
         g_object_unref(webContext);
     g_main_loop_unref(loop);

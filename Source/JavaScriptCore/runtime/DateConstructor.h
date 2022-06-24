@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -34,7 +34,7 @@ public:
 
     static DateConstructor* create(VM& vm, Structure* structure, DatePrototype* datePrototype, GetterSetter*)
     {
-        DateConstructor* constructor = new (NotNull, allocateCell<DateConstructor>(vm.heap)) DateConstructor(vm, structure);
+        DateConstructor* constructor = new (NotNull, allocateCell<DateConstructor>(vm)) DateConstructor(vm, structure);
         constructor->finishCreation(vm, datePrototype);
         return constructor;
     }
@@ -46,14 +46,13 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
     }
 
-protected:
-    void finishCreation(VM&, DatePrototype*);
-
 private:
     DateConstructor(VM&, Structure*);
+    void finishCreation(VM&, DatePrototype*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(DateConstructor, InternalFunction);
 
-JSObject* constructDate(ExecState*, JSGlobalObject*, JSValue newTarget, const ArgList&);
+JSObject* constructDate(JSGlobalObject*, JSValue newTarget, const ArgList&);
 JSValue dateNowImpl();
 
 } // namespace JSC

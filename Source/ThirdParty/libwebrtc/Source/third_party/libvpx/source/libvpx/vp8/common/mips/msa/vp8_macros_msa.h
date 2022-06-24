@@ -8,8 +8,8 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#ifndef VP8_COMMON_MIPS_MSA_VP8_MACROS_MSA_H_
-#define VP8_COMMON_MIPS_MSA_VP8_MACROS_MSA_H_
+#ifndef VPX_VP8_COMMON_MIPS_MSA_VP8_MACROS_MSA_H_
+#define VPX_VP8_COMMON_MIPS_MSA_VP8_MACROS_MSA_H_
 
 #include <msa.h>
 
@@ -122,10 +122,10 @@
     const uint8_t *psrc_m = (const uint8_t *)(psrc); \
     uint32_t val_m;                                  \
                                                      \
-    asm volatile("ulw  %[val_m],  %[psrc_m]  \n\t"   \
-                                                     \
-                 : [val_m] "=r"(val_m)               \
-                 : [psrc_m] "m"(*psrc_m));           \
+    asm volatile("lwr %[val_m], 0(%[psrc_m]) \n\t"   \
+                 "lwl %[val_m], 3(%[psrc_m]) \n\t"   \
+                 : [val_m] "=&r"(val_m)              \
+                 : [psrc_m] "r"(psrc_m));            \
                                                      \
     val_m;                                           \
   })
@@ -136,10 +136,10 @@
     const uint8_t *psrc_m = (const uint8_t *)(psrc); \
     uint64_t val_m = 0;                              \
                                                      \
-    asm volatile("uld  %[val_m],  %[psrc_m]  \n\t"   \
-                                                     \
-                 : [val_m] "=r"(val_m)               \
-                 : [psrc_m] "m"(*psrc_m));           \
+    asm volatile("ldr %[val_m], 0(%[psrc_m]) \n\t"   \
+                 "ldl %[val_m], 7(%[psrc_m]) \n\t"   \
+                 : [val_m] "=&r"(val_m)              \
+                 : [psrc_m] "r"(psrc_m));            \
                                                      \
     val_m;                                           \
   })
@@ -1757,4 +1757,4 @@
                                                                 \
     tmp1_m;                                                     \
   })
-#endif /* VP8_COMMON_MIPS_MSA_VP8_MACROS_MSA_H_ */
+#endif  // VPX_VP8_COMMON_MIPS_MSA_VP8_MACROS_MSA_H_

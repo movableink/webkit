@@ -27,12 +27,15 @@
 
 #include "CertificateInfo.h"
 #include <openssl/ssl.h>
-#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 
 namespace OpenSSL {
 
-Optional<WebCore::CertificateInfo> createCertificateInfo(X509_STORE_CTX*);
-Optional<WebCore::CertificateInfo::SummaryInfo> createSummaryInfo(const Vector<uint8_t>& pem);
+std::unique_ptr<WebCore::CertificateInfo> createCertificateInfo(SSL*);
+std::optional<WebCore::CertificateInfo> createCertificateInfo(X509_STORE_CTX*);
+std::optional<WebCore::CertificateSummary> createSummaryInfo(const Vector<uint8_t>& pem);
+
+String tlsVersion(const SSL*);
+String tlsCipherName(const SSL*);
 
 } // namespace OpenSSL

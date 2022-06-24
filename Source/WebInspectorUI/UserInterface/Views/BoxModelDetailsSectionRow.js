@@ -32,6 +32,9 @@ WI.BoxModelDetailsSectionRow = class BoxModelDetailsSectionRow extends WI.Detail
         this.element.classList.add("box-model");
 
         this._nodeStyles = null;
+
+        this._outermostBox = null;
+        this._outermostBoxWidth = NaN;
     }
 
     // Public
@@ -50,7 +53,17 @@ WI.BoxModelDetailsSectionRow = class BoxModelDetailsSectionRow extends WI.Detail
         if (this._nodeStyles && this._nodeStyles.computedStyle)
             this._nodeStyles.computedStyle.addEventListener(WI.CSSStyleDeclaration.Event.PropertiesChanged, this._refresh, this);
 
+        this.element.classList.remove("hovered");
         this._refresh();
+    }
+
+    get minimumWidth()
+    {
+        if (isNaN(this._outermostBoxWidth) && this._outermostBox) {
+            const margin = 6; // Keep this in sync with `.details-section .row.box-model .box`.
+            this._outermostBoxWidth = this._outermostBox.realOffsetWidth + margin;
+        }
+        return this._outermostBoxWidth || 0;
     }
 
     // Private
@@ -67,8 +80,7 @@ WI.BoxModelDetailsSectionRow = class BoxModelDetailsSectionRow extends WI.Detail
 
     _getPropertyValue(style, propertyName)
     {
-        const dontCreateIfMissing = true;
-        let property = style.propertyForName(propertyName, dontCreateIfMissing);
+        let property = style.propertyForName(propertyName);
         if (!property)
             return null;
         return property.value;
@@ -114,12 +126,12 @@ WI.BoxModelDetailsSectionRow = class BoxModelDetailsSectionRow extends WI.Detail
     {
         event.stopPropagation();
 
-        var nodeId = showHighlight ? this.nodeStyles.node.id : 0;
-        if (nodeId) {
+        let node = showHighlight ? this.nodeStyles.node : null;
+        if (node) {
             if (this._highlightMode === mode)
                 return;
             this._highlightMode = mode;
-            WI.domManager.highlightDOMNode(nodeId, mode);
+            node.highlight(this._highlightMode);
         } else {
             this._highlightMode = null;
             WI.domManager.hideDOMNodeHighlight();
@@ -127,7 +139,7 @@ WI.BoxModelDetailsSectionRow = class BoxModelDetailsSectionRow extends WI.Detail
 
         for (var i = 0; this._boxElements && i < this._boxElements.length; ++i) {
             var element = this._boxElements[i];
-            if (nodeId && (mode === "all" || element._name === mode))
+            if (node && (mode === "all" || element._name === mode))
                 element.classList.add("active");
             else
                 element.classList.remove("active");
@@ -235,7 +247,9 @@ WI.BoxModelDetailsSectionRow = class BoxModelDetailsSectionRow extends WI.Detail
             return;
         }
 
-        var previousBox = null;
+        this._outermostBox = null;
+        this._outermostBoxWidth = NaN;
+
         for (let name of ["content", "padding", "border", "margin", "position"]) {
 
             if (name === "margin" && noMarginDisplayType[displayProperty.value])
@@ -303,8 +317,8 @@ WI.BoxModelDetailsSectionRow = class BoxModelDetailsSectionRow extends WI.Detail
                 boxElement.appendChild(document.createElement("br"));
                 boxElement.appendChild(leftElement);
 
-                if (previousBox)
-                    boxElement.appendChild(previousBox);
+                if (this._outermostBox)
+                    boxElement.appendChild(this._outermostBox);
 
                 boxElement.appendChild(rightElement);
                 boxElement.appendChild(document.createElement("br"));
@@ -318,10 +332,10 @@ WI.BoxModelDetailsSectionRow = class BoxModelDetailsSectionRow extends WI.Detail
                     boxElement.appendChild(borderBottomRightRadiusElement);
             }
 
-            previousBox = boxElement;
+            this._outermostBox = boxElement;
         }
 
-        metricsElement.appendChild(previousBox);
+        metricsElement.appendChild(this._outermostBox);
         metricsElement.addEventListener("mouseover", this._highlightDOMNode.bind(this, false, ""), false);
 
         this.hideEmptyMessage();

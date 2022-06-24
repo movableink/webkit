@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc.  All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,13 @@
 #pragma once
 
 #include "FontDescription.h"
+#include "ShouldLocalizeAxisNames.h"
 
 #include <CoreText/CTFont.h>
 
 namespace WebCore {
+
+class FontCreationContext;
 
 struct SynthesisPair {
     explicit SynthesisPair(bool needsSyntheticBold, bool needsSyntheticOblique)
@@ -50,11 +53,19 @@ struct SynthesisPair {
     bool needsSyntheticOblique;
 };
 
-RetainPtr<CTFontRef> preparePlatformFont(CTFontRef, const FontDescription&, const FontFeatureSettings* fontFaceFeatures, const FontVariantSettings* fontFaceVariantSettings, FontSelectionSpecifiedCapabilities fontFaceCapabilities, bool applyWeightWidthSlopeVariations = true);
-SynthesisPair computeNecessarySynthesis(CTFontRef, const FontDescription&, bool isPlatformFont = false);
-RetainPtr<CTFontRef> platformFontWithFamilySpecialCase(const AtomString& family, const FontDescription&, float size, AllowUserInstalledFonts);
+struct VariationDefaults {
+    String axisName;
+    float defaultValue;
+    float minimumValue;
+    float maximumValue;
+};
+
+typedef HashMap<FontTag, VariationDefaults, FourCharacterTagHash, FourCharacterTagHashTraits> VariationDefaultsMap;
+
+RetainPtr<CTFontRef> preparePlatformFont(CTFontRef, const FontDescription&, const FontCreationContext&, bool applyWeightWidthSlopeVariations = true);
+enum class ShouldComputePhysicalTraits : bool { No, Yes };
+SynthesisPair computeNecessarySynthesis(CTFontRef, const FontDescription&, ShouldComputePhysicalTraits = ShouldComputePhysicalTraits::No, bool isPlatformFont = false);
 RetainPtr<CTFontRef> platformFontWithFamily(const AtomString& family, FontSelectionRequest, TextRenderingMode, float size);
-bool requiresCustomFallbackFont(UChar32 character);
 FontSelectionCapabilities capabilitiesForFontDescriptor(CTFontDescriptorRef);
 void addAttributesForInstalledFonts(CFMutableDictionaryRef attributes, AllowUserInstalledFonts);
 RetainPtr<CTFontRef> createFontForInstalledFonts(CTFontDescriptorRef, CGFloat size, AllowUserInstalledFonts);
@@ -62,4 +73,5 @@ RetainPtr<CTFontRef> createFontForInstalledFonts(CTFontRef, AllowUserInstalledFo
 void addAttributesForWebFonts(CFMutableDictionaryRef attributes, AllowUserInstalledFonts);
 RetainPtr<CFSetRef> installedFontMandatoryAttributes(AllowUserInstalledFonts);
 
+VariationDefaultsMap defaultVariationValues(CTFontRef, ShouldLocalizeAxisNames);
 }

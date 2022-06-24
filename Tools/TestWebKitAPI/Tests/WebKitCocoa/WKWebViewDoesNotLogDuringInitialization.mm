@@ -31,7 +31,10 @@
 #import <WebKit/WebKit.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <fcntl.h>
+#import <wtf/RetainPtr.h>
 
+// FIXME: Re-enable this test once webkit.org/b/231459 is resolved.
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 120000) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED < 150000)
 TEST(WKWebView, InitializingWebViewWithEphemeralStorageDoesNotLog)
 {
     // Replace stderr with a nonblocking pipe that we can read from.
@@ -41,12 +44,12 @@ TEST(WKWebView, InitializingWebViewWithEphemeralStorageDoesNotLog)
     dup2(p[1], STDERR_FILENO);
     close(p[1]);
 
-    WKWebViewConfiguration *configuration = [[WKWebViewConfiguration alloc] init];
-    _WKProcessPoolConfiguration *processPoolConfiguration = [[_WKProcessPoolConfiguration alloc] init];
-    configuration.processPool = [[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration];
-    configuration.websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto processPoolConfiguration = adoptNS([[_WKProcessPoolConfiguration alloc] init]);
+    [configuration setProcessPool:adoptNS([[WKProcessPool alloc] _initWithConfiguration:processPoolConfiguration.get()]).get()];
+    [configuration setWebsiteDataStore:[WKWebsiteDataStore nonPersistentDataStore]];
 
-    [[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration];
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
 
     FILE *stderrFileHandle = fdopen(p[0], "r");
     char buffer[1024];
@@ -55,3 +58,4 @@ TEST(WKWebView, InitializingWebViewWithEphemeralStorageDoesNotLog)
         FAIL();
     }
 }
+#endif

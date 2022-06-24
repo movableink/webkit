@@ -16,6 +16,9 @@ const mediaController = createControls(shadowRoot, media, null);
 const button = document.body.appendChild(document.createElement("button"));
 button.textContent = "Enter Fullscreen";
 
+if (window.internals)
+    internals.setMockVideoPresentationModeEnabled(true);
+
 function enterFullscreen()
 {
     if (!("eventSender" in window)) {
@@ -38,17 +41,20 @@ function enterFullscreen()
     eventSender.mouseUp();
 }
 
-media.addEventListener("webkitfullscreenchange", function() {
+function toggleFullscreen()
+{
     if (media.webkitDisplayingFullscreen) {
         debug("Media entered fullscreen");
-        shouldBe("mediaController.layoutTraits", "LayoutTraits.macOS | LayoutTraits.Fullscreen");
-        shouldBeTrue("mediaController.controls instanceof MacOSFullscreenMediaControls");
+        shouldBeType("mediaController.layoutTraits", "MacOSLayoutTraits");
+        shouldBeTrue("mediaController.layoutTraits.isFullscreen");
+        shouldBeType("mediaController.controls", "MacOSFullscreenMediaControls");
         debug("");
         media.webkitExitFullscreen()
     } else {
         debug("Media exited fullscreen");
-        shouldBe("mediaController.layoutTraits", "LayoutTraits.macOS | LayoutTraits.Inline");
-        shouldBeTrue("mediaController.controls instanceof MacOSInlineMediaControls");
+        shouldBeType("mediaController.layoutTraits", "MacOSLayoutTraits");
+        shouldBeFalse("mediaController.layoutTraits.isFullscreen");
+        shouldBeType("mediaController.controls", "MacOSInlineMediaControls");
 
         debug("");
         shadowRoot.host.remove();
@@ -56,6 +62,13 @@ media.addEventListener("webkitfullscreenchange", function() {
         button.remove();
         finishJSTest();
     }
+}
+
+media.addEventListener("webkitfullscreenchange", function() {
+    if (window.internals)
+        shouldBecomeEqual("internals.isChangingPresentationMode(media)", "false", toggleFullscreen);
+    else
+        toggleFullscreen();
 });
 
 media.addEventListener("loadedmetadata", enterFullscreen);

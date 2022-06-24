@@ -13,55 +13,56 @@
 
 #include "absl/types/optional.h"
 #include "api/video/encoded_frame.h"
-#include "common_types.h"  // NOLINT(build/include)
-#include "modules/include/module_common_types.h"
-#include "modules/rtp_rtcp/source/rtp_generic_frame_descriptor.h"
 
 namespace webrtc {
-namespace video_coding {
-
-class PacketBuffer;
 
 class RtpFrameObject : public EncodedFrame {
  public:
-  RtpFrameObject(PacketBuffer* packet_buffer,
-                 uint16_t first_seq_num,
+  RtpFrameObject(uint16_t first_seq_num,
                  uint16_t last_seq_num,
-                 size_t frame_size,
+                 bool markerBit,
                  int times_nacked,
-                 int64_t received_time);
+                 int64_t first_packet_received_time,
+                 int64_t last_packet_received_time,
+                 uint32_t rtp_timestamp,
+                 int64_t ntp_time_ms,
+                 const VideoSendTiming& timing,
+                 uint8_t payload_type,
+                 VideoCodecType codec,
+                 VideoRotation rotation,
+                 VideoContentType content_type,
+                 const RTPVideoHeader& video_header,
+                 const absl::optional<webrtc::ColorSpace>& color_space,
+                 RtpPacketInfos packet_infos,
+                 rtc::scoped_refptr<EncodedImageBuffer> image_buffer);
 
-  ~RtpFrameObject();
+  ~RtpFrameObject() override;
   uint16_t first_seq_num() const;
   uint16_t last_seq_num() const;
   int times_nacked() const;
-  enum FrameType frame_type() const;
+  VideoFrameType frame_type() const;
   VideoCodecType codec_type() const;
-  void SetBitstream(rtc::ArrayView<const uint8_t> bitstream);
-  bool GetBitstream(uint8_t* destination) const override;
   int64_t ReceivedTime() const override;
   int64_t RenderTime() const override;
   bool delayed_by_retransmission() const override;
-  absl::optional<RTPVideoHeader> GetRtpVideoHeader() const;
-  absl::optional<RtpGenericFrameDescriptor> GetGenericFrameDescriptor() const;
-  absl::optional<FrameMarking> GetFrameMarking() const;
+  const RTPVideoHeader& GetRtpVideoHeader() const;
+
+  uint8_t* mutable_data() { return image_buffer_->data(); }
 
  private:
-  void AllocateBitstreamBuffer(size_t frame_size);
-
-  rtc::scoped_refptr<PacketBuffer> packet_buffer_;
-  enum FrameType frame_type_;
+  // Reference for mutable access.
+  rtc::scoped_refptr<EncodedImageBuffer> image_buffer_;
+  RTPVideoHeader rtp_video_header_;
   VideoCodecType codec_type_;
   uint16_t first_seq_num_;
   uint16_t last_seq_num_;
-  int64_t received_time_;
+  int64_t last_packet_received_time_;
 
   // Equal to times nacked of the packet with the highet times nacked
   // belonging to this frame.
   int times_nacked_;
 };
 
-}  // namespace video_coding
 }  // namespace webrtc
 
 #endif  // MODULES_VIDEO_CODING_FRAME_OBJECT_H_

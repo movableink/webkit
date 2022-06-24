@@ -3,7 +3,7 @@
 <title>drawImage ImageBitmap test</title>
 <script src="/resources/testharness.js"></script>
 <script src="/resources/testharnessreport.js"></script>
-<script src="/common/canvas-tests.js"></script>
+<script src="/html/canvas/resources/canvas-tests.js"></script>
 <script src="common.js"></script>
 <link rel="stylesheet" href="/common/canvas-tests.css">
 <body>
@@ -119,7 +119,7 @@
         }).then(function(imageBitmap) {
             imageBitmap.close();
             let [canvas, ctx] = create9x9CanvasWith2dContext();
-            assert_throws("InvalidStateError", function () {
+            assert_throws_dom("InvalidStateError", function () {
                 ctx.drawImage(imageBitmap, 0, 0);
             }, "A closed ImageBitmap can't be drawn.");
         });
@@ -134,11 +134,12 @@
             return createImageBitmap(img);
         }).then(function(imageBitmap) {
             let [canvas, ctx] = create9x9CanvasWith2dContext();
-            assert_throws("IndexSizeError", function () {
-                ctx.drawImage(imageBitmap, 0, 0, 0, 0, 0, 0, 9, 9);
-            }, "drawImage with an empty source rectangle should fail.");
+            ctx.drawImage(imageBitmap, 0, 0, 0, 0, 0, 0, 9, 9);
+            _assertPixel(canvas, 0,0, 0,0,0,0, "8,8", "0,0,0,0");
+            _assertPixel(canvas, 4,4, 0,0,0,0, "8,8", "0,0,0,0");
+            _assertPixel(canvas, 8,8, 0,0,0,0, "8,8", "0,0,0,0");
         });
-    }, "drawImage throws with IndexSizeError if the source rectangle of the ImageBitmap is empty");
+    }, "drawImage does not draw if the source rectangle of the ImageBitmap is empty");
 })();
 </script>
 </body>

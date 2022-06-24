@@ -13,7 +13,6 @@
 #include <memory>
 #include <vector>
 
-#include "absl/memory/memory.h"
 #include "absl/strings/match.h"
 #include "modules/audio_coding/codecs/ilbc/audio_encoder_ilbc.h"
 #include "rtc_base/numerics/safe_conversions.h"
@@ -33,7 +32,7 @@ int GetIlbcBitrate(int ptime) {
       // 50 bytes per frame of 30 ms => (approx) 13333 bits/s.
       return 13333;
     default:
-      RTC_FATAL();
+      RTC_CHECK_NOTREACHED();
   }
 }
 }  // namespace
@@ -76,7 +75,7 @@ std::unique_ptr<AudioEncoder> AudioEncoderIlbc::MakeAudioEncoder(
     int payload_type,
     absl::optional<AudioCodecPairId> /*codec_pair_id*/) {
   RTC_DCHECK(config.IsOk());
-  return absl::make_unique<AudioEncoderIlbcImpl>(config, payload_type);
+  return std::make_unique<AudioEncoderIlbcImpl>(config, payload_type);
 }
 
 }  // namespace webrtc

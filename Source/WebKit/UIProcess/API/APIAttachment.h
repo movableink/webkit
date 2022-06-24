@@ -28,16 +28,18 @@
 #if ENABLE(ATTACHMENT_ELEMENT)
 
 #include "APIObject.h"
+#include "GenericCallback.h"
 #include "WKBase.h"
-#include "WebPageProxy.h"
 #include <wtf/RefPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 OBJC_CLASS NSFileWrapper;
+OBJC_CLASS NSString;
 
 namespace WebCore {
 class SharedBuffer;
+class FragmentedSharedBuffer;
 }
 
 namespace WebKit {
@@ -54,7 +56,7 @@ public:
     enum class InsertionState : uint8_t { NotInserted, Inserted };
 
     const WTF::String& identifier() const { return m_identifier; }
-    void updateAttributes(Function<void(WebKit::CallbackBase::Error)>&&);
+    void updateAttributes(CompletionHandler<void()>&&);
 
     void invalidate();
     bool isValid() const { return !!m_webPage; }
@@ -81,8 +83,11 @@ public:
 
     bool isEmpty() const;
 
-    RefPtr<WebCore::SharedBuffer> enclosingImageData() const;
-    Optional<uint64_t> fileSizeForDisplay() const;
+    RefPtr<WebCore::FragmentedSharedBuffer> enclosingImageData() const;
+#if PLATFORM(COCOA)
+    NSData *enclosingImageNSData() const;
+#endif
+    std::optional<uint64_t> fileSizeForDisplay() const;
 
     void setHasEnclosingImage(bool hasEnclosingImage) { m_hasEnclosingImage = hasEnclosingImage; }
     bool hasEnclosingImage() const { return m_hasEnclosingImage; }

@@ -69,14 +69,13 @@ public:
 
     void videoControlsManagerDidChange();
 
-    void close();
-
 protected:
     WebFullScreenManager(WebPage*);
 
     void setPIPStandbyElement(WebCore::HTMLVideoElement*);
 
     void setAnimatingFullScreen(bool);
+    void requestEnterFullScreen();
     void requestExitFullScreen();
     void saveScrollPosition();
     void restoreScrollPosition();
@@ -95,6 +94,10 @@ protected:
 #if ENABLE(VIDEO)
     RefPtr<WebCore::HTMLVideoElement> m_pipStandbyElement;
 #endif
+
+private:
+    void close();
+    bool m_closing { false };
 };
 
 } // namespace WebKit

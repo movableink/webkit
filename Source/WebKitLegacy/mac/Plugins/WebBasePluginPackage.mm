@@ -30,17 +30,15 @@
 
 #import "WebKitLogging.h"
 #import "WebKitNSStringExtras.h"
-#import "WebNetscapePluginPackage.h"
 #import "WebPluginPackage.h"
-#import "WebTypesInternal.h"
 #import <JavaScriptCore/InitializeThreading.h>
+#import <WebCore/WebCoreJITOperations.h>
 #import <algorithm>
 #import <mach-o/arch.h>
 #import <mach-o/fat.h>
 #import <mach-o/loader.h>
 #import <wtf/Assertions.h>
 #import <wtf/MainThread.h>
-#import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/RunLoop.h>
 #import <wtf/Vector.h>
 #import <wtf/text/CString.h>
@@ -60,25 +58,15 @@
 + (void)initialize
 {
 #if !PLATFORM(IOS_FAMILY)
-    JSC::initializeThreading();
-    RunLoop::initializeMainRunLoop();
+    JSC::initialize();
+    WTF::initializeMainThread();
+    WebCore::populateJITOperations();
 #endif
 }
 
 + (WebBasePluginPackage *)pluginWithPath:(NSString *)pluginPath
 {
-    
-    WebBasePluginPackage *pluginPackage = [[WebPluginPackage alloc] initWithPath:pluginPath];
-
-    if (!pluginPackage) {
-#if ENABLE(NETSCAPE_PLUGIN_API)
-        pluginPackage = [[WebNetscapePluginPackage alloc] initWithPath:pluginPath];
-#else
-        return nil;
-#endif
-    }
-
-    return [pluginPackage autorelease];
+    return adoptNS([[WebPluginPackage alloc] initWithPath:pluginPath]).autorelease();
 }
 
 - (id)initWithPath:(NSString *)pluginPath
@@ -183,7 +171,7 @@
     pluginInfo.desc = description;
 
     pluginInfo.isApplicationPlugin = false;
-    pluginInfo.clientLoadPolicy = WebCore::PluginLoadClientPolicyUndefined;
+    pluginInfo.clientLoadPolicy = WebCore::PluginLoadClientPolicy::Undefined;
 #if PLATFORM(MAC)
     pluginInfo.bundleIdentifier = self.bundleIdentifier;
     pluginInfo.versionString = self.bundleVersion;
@@ -331,7 +319,9 @@ static inline void swapIntsInHeader(uint32_t* rawData, size_t length)
     if (!archs || !numArchs)
         return NO;
     
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     const NXArchInfo* localArch = NXGetLocalArchInfo();
+ALLOW_DEPRECATED_DECLARATIONS_END
     if (!localArch)
         return NO;
     
@@ -344,7 +334,9 @@ static inline void swapIntsInHeader(uint32_t* rawData, size_t length)
     cputype = CPU_TYPE_X86_64;
 #endif
     
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     return NXFindBestFatArch(cputype, cpusubtype, archs, numArchs) != 0;
+ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
 - (UInt32)versionNumber
@@ -377,15 +369,11 @@ static inline void swapIntsInHeader(uint32_t* rawData, size_t length)
 
 - (String)bundleVersion
 {
-    CFDictionaryRef infoDictionary = CFBundleGetInfoDictionary(cfBundle.get());
+    auto infoDictionary = CFBundleGetInfoDictionary(cfBundle.get());
     if (!infoDictionary)
         return String();
 
-    CFTypeRef bundleVersionString = CFDictionaryGetValue(infoDictionary, kCFBundleVersionKey);
-    if (!bundleVersionString || CFGetTypeID(bundleVersionString) != CFStringGetTypeID())
-        return String();
-
-    return reinterpret_cast<CFStringRef>(bundleVersionString);
+    return dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(infoDictionary, kCFBundleVersionKey));
 }
 
 @end

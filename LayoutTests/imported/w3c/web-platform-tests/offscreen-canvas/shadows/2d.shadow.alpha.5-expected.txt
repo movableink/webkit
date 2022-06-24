@@ -1,7 +1,0 @@
-2d.shadow.alpha.5
-
-Shadows of shapes with alpha components are drawn correctly
-
-
-FAIL Shadows of shapes with alpha components are drawn correctly null is not an object (evaluating 'ctx.fillStyle = '#f00'')
-

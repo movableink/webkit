@@ -37,6 +37,7 @@
 #import <WebCore/FrameView.h>
 #import <WebCore/Page.h>
 #import <WebCore/TextIndicator.h>
+#import <WebCore/TranslationContextMenuInfo.h>
 #import <wtf/text/WTFString.h>
 
 namespace WebKit {
@@ -93,6 +94,15 @@ void WebContextMenuClient::searchWithSpotlight()
 
     m_page->send(Messages::WebPageProxy::SearchWithSpotlight(selectedString));
 }
+
+#if HAVE(TRANSLATION_UI_SERVICES)
+
+void WebContextMenuClient::handleTranslation(const WebCore::TranslationContextMenuInfo& info)
+{
+    m_page->send(Messages::WebPageProxy::HandleContextMenuTranslation(info));
+}
+
+#endif // HAVE(TRANSLATION_UI_SERVICES)
 
 } // namespace WebKit
 

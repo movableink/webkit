@@ -23,8 +23,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
 #if ENABLE(DRAG_SUPPORT)
 
 #import "TestWKWebView.h"
@@ -140,6 +138,8 @@ typedef NSDictionary<NSNumber *, NSValue *> *ProgressToCGPointValueMap;
 - (NSArray<NSURL *> *)receivePromisedFiles;
 
 #endif // PLATFORM(MAC)
+
+- (BOOL)containsDraggedType:(NSString *)type;
 
 @end
 

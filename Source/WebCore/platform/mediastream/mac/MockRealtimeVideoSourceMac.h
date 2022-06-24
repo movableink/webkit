@@ -34,6 +34,7 @@
 
 #include "MockRealtimeVideoSource.h"
 #include "PixelBufferConformerCV.h"
+#include <wtf/WorkQueue.h>
 
 typedef struct __CVBuffer *CVBufferRef;
 typedef CVBufferRef CVImageBufferRef;
@@ -46,11 +47,13 @@ class ImageTransferSessionVT;
 
 class MockRealtimeVideoSourceMac final : public MockRealtimeVideoSource {
 public:
-    virtual ~MockRealtimeVideoSourceMac() = default;
+    static Ref<MockRealtimeVideoSource> createForMockDisplayCapturer(String&& deviceID, String&& name, String&& hashSalt, PageIdentifier);
+
+    ~MockRealtimeVideoSourceMac() = default;
 
 private:
     friend class MockRealtimeVideoSource;
-    MockRealtimeVideoSourceMac(String&& deviceID, String&& name, String&& hashSalt);
+    MockRealtimeVideoSourceMac(String&& deviceID, String&& name, String&& hashSalt, PageIdentifier);
 
     PlatformLayer* platformLayer() const;
     void updateSampleBuffer() final;
@@ -58,6 +61,7 @@ private:
 
     std::unique_ptr<ImageTransferSessionVT> m_imageTransferSession;
     IntSize m_presetSize;
+    Ref<WorkQueue> m_workQueue;
 };
 
 } // namespace WebCore

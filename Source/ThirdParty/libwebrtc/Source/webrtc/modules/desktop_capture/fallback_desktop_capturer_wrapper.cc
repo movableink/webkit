@@ -10,8 +10,11 @@
 
 #include "modules/desktop_capture/fallback_desktop_capturer_wrapper.h"
 
+#include <stddef.h>
+
 #include <utility>
 
+#include "api/sequence_checker.h"
 #include "rtc_base/checks.h"
 #include "system_wrappers/include/metrics.h"
 
@@ -24,13 +27,13 @@ namespace {
 // implementations only.
 class SharedMemoryFactoryProxy : public SharedMemoryFactory {
  public:
-  // Users should maintain the lifetime of |factory| to ensure it overlives
+  // Users should maintain the lifetime of `factory` to ensure it overlives
   // current instance.
   static std::unique_ptr<SharedMemoryFactory> Create(
       SharedMemoryFactory* factory);
   ~SharedMemoryFactoryProxy() override;
 
-  // Forwards CreateSharedMemory() calls to |factory_|. Users should always call
+  // Forwards CreateSharedMemory() calls to `factory_`. Users should always call
   // this function in one thread. Users should not call this function after the
   // SharedMemoryFactory which current instance created from has been destroyed.
   std::unique_ptr<SharedMemory> CreateSharedMemory(size_t size) override;
@@ -39,7 +42,7 @@ class SharedMemoryFactoryProxy : public SharedMemoryFactory {
   explicit SharedMemoryFactoryProxy(SharedMemoryFactory* factory);
 
   SharedMemoryFactory* factory_ = nullptr;
-  rtc::ThreadChecker thread_checker_;
+  SequenceChecker thread_checker_;
 };
 
 }  // namespace
@@ -61,7 +64,7 @@ SharedMemoryFactoryProxy::~SharedMemoryFactoryProxy() = default;
 
 std::unique_ptr<SharedMemory> SharedMemoryFactoryProxy::CreateSharedMemory(
     size_t size) {
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   return factory_->CreateSharedMemory(size);
 }
 
@@ -78,15 +81,15 @@ FallbackDesktopCapturerWrapper::~FallbackDesktopCapturerWrapper() = default;
 
 void FallbackDesktopCapturerWrapper::Start(
     DesktopCapturer::Callback* callback) {
+  callback_ = callback;
   // FallbackDesktopCapturerWrapper catchs the callback of the main capturer,
   // and checks its return value to decide whether the secondary capturer should
   // be involved.
   main_capturer_->Start(this);
   // For the secondary capturer, we do not have a backup plan anymore, so
   // FallbackDesktopCapturerWrapper won't check its return value any more. It
-  // will directly return to the input |callback|.
+  // will directly return to the input `callback`.
   secondary_capturer_->Start(callback);
-  callback_ = callback;
 }
 
 void FallbackDesktopCapturerWrapper::SetSharedMemoryFactory(

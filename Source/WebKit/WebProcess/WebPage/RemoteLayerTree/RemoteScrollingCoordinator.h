@@ -42,6 +42,7 @@ namespace WebKit {
 
 class WebPage;
 class RemoteScrollingCoordinatorTransaction;
+class RemoteScrollingUIState;
 
 class RemoteScrollingCoordinator : public WebCore::AsyncScrollingCoordinator, public IPC::MessageReceiver {
 public:
@@ -51,6 +52,11 @@ public:
     }
 
     void buildTransaction(RemoteScrollingCoordinatorTransaction&);
+
+    void scrollingStateInUIProcessChanged(const RemoteScrollingUIState&);
+
+    void addNodeWithActiveRubberBanding(WebCore::ScrollingNodeID);
+    void removeNodeWithActiveRubberBanding(WebCore::ScrollingNodeID);
 
 private:
     RemoteScrollingCoordinator(WebPage*);
@@ -62,18 +68,25 @@ private:
     bool coordinatesScrollingForFrameView(const WebCore::FrameView&) const override;
     void scheduleTreeStateCommit() override;
 
-    bool isRubberBandInProgress() const override;
+    bool isRubberBandInProgress(WebCore::ScrollingNodeID) const final;
+    bool isUserScrollInProgress(WebCore::ScrollingNodeID) const final;
+    bool isScrollSnapInProgress(WebCore::ScrollingNodeID) const final;
+
     void setScrollPinningBehavior(WebCore::ScrollPinningBehavior) override;
-    bool isScrollSnapInProgress() const override;
 
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
     
     // Respond to UI process changes.
     void scrollPositionChangedForNode(WebCore::ScrollingNodeID, const WebCore::FloatPoint& scrollPosition, bool syncLayerPosition);
-    void currentSnapPointIndicesChangedForNode(WebCore::ScrollingNodeID, unsigned horizontal, unsigned vertical);
+    void animatedScrollDidEndForNode(WebCore::ScrollingNodeID);
+    void currentSnapPointIndicesChangedForNode(WebCore::ScrollingNodeID, std::optional<unsigned> horizontal, std::optional<unsigned> vertical);
 
     WebPage* m_webPage;
+
+    HashSet<WebCore::ScrollingNodeID> m_nodesWithActiveRubberBanding;
+    HashSet<WebCore::ScrollingNodeID> m_nodesWithActiveScrollSnap;
+    HashSet<WebCore::ScrollingNodeID> m_nodesWithActiveUserScrolls;
 };
 
 } // namespace WebKit

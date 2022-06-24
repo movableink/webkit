@@ -70,17 +70,16 @@ unsigned int GetReservedVertexUniformVectors(D3D_FEATURE_LEVEL featureLevel);
 
 unsigned int GetReservedFragmentUniformVectors(D3D_FEATURE_LEVEL featureLevel);
 
-gl::Version GetMaximumClientVersion(D3D_FEATURE_LEVEL featureLevel);
+gl::Version GetMaximumClientVersion(const Renderer11DeviceCaps &caps);
 void GenerateCaps(ID3D11Device *device,
                   ID3D11DeviceContext *deviceContext,
                   const Renderer11DeviceCaps &renderer11DeviceCaps,
                   const angle::FeaturesD3D &features,
+                  const char *description,
                   gl::Caps *caps,
                   gl::TextureCapsMap *textureCapsMap,
                   gl::Extensions *extensions,
                   gl::Limitations *limitations);
-
-void GetSamplePosition(GLsizei sampleCount, size_t index, GLfloat *xy);
 
 D3D_FEATURE_LEVEL GetMinimumFeatureLevelForES31();
 
@@ -147,13 +146,13 @@ struct BlendStateKey final
 {
     // This will zero-initialize the struct, including padding.
     BlendStateKey();
+    BlendStateKey(const BlendStateKey &other);
 
-    gl::BlendState blendState;
+    gl::BlendStateExt blendStateExt;
 
-    // An int so struct size rounds nicely.
-    uint32_t rtvMax;
-
-    uint8_t rtvMasks[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT];
+    // Use two 16-bit ints to round the struct nicely.
+    uint16_t rtvMax;
+    uint16_t sampleAlphaToCoverage;
 };
 
 bool operator==(const BlendStateKey &a, const BlendStateKey &b);

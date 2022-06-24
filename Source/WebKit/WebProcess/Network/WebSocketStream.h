@@ -25,15 +25,15 @@
 
 #pragma once
 
+#include "DataReference.h"
 #include "MessageReceiver.h"
 #include "MessageSender.h"
 #include <WebCore/SocketStreamHandle.h>
-#include <wtf/Identified.h>
+#include <WebCore/WebSocketIdentifier.h>
 
 namespace IPC {
 class Connection;
 class Decoder;
-class DataReference;
 }
 
 namespace WebCore {
@@ -42,17 +42,17 @@ class SocketStreamError;
 
 namespace WebKit {
 
-class WebSocketStream : public IPC::MessageSender, public IPC::MessageReceiver, public WebCore::SocketStreamHandle, public Identified<WebSocketStream> {
+class WebSocketStream : public IPC::MessageSender, public IPC::MessageReceiver, public WebCore::SocketStreamHandle {
 public:
-    static Ref<WebSocketStream> create(const URL&, WebCore::SocketStreamHandleClient&, const String& credentialPartition);
+    static Ref<WebSocketStream> create(const URL&, WebCore::SocketStreamHandleClient&, WebCore::WebSocketIdentifier, const String& credentialPartition);
     static void networkProcessCrashed();
-    static WebSocketStream* streamWithIdentifier(uint64_t);
+    static WebSocketStream* streamWithIdentifier(WebCore::WebSocketIdentifier);
     
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&);
     
     // SocketStreamHandle
     void platformSend(const uint8_t*, size_t, Function<void(bool)>&&) final;
-    void platformSendHandshake(const uint8_t*, size_t, const Optional<WebCore::CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&);
+    void platformSendHandshake(const uint8_t*, size_t, const std::optional<WebCore::CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&);
     void platformClose() final;
     size_t bufferedAmount() final;
 
@@ -72,9 +72,10 @@ private:
     IPC::Connection* messageSenderConnection() const final;
     uint64_t messageSenderDestinationID() const final;
 
-    WebSocketStream(const URL&, WebCore::SocketStreamHandleClient&, const String& credentialPartition);
+    WebSocketStream(const URL&, WebCore::SocketStreamHandleClient&, WebCore::WebSocketIdentifier, const String& credentialPartition);
     ~WebSocketStream();
 
+    WebCore::WebSocketIdentifier m_identifier;
     size_t m_bufferedAmount { 0 };
     WebCore::SocketStreamHandleClient& m_client;
     HashMap<uint64_t, Function<void(bool)>> m_sendDataCallbacks;

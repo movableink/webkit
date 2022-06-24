@@ -9,7 +9,7 @@ description: Use for-in statement
 
 // CHECK#1
 for (var prop in this) {
-  if (prop === "NaN") {
-    $ERROR('#1: The NaN is DontEnum');
-  }
+  assert.notSameValue(prop, "NaN", 'The value of prop is not "NaN"');
 }
+
+// TODO: Convert to verifyProperty() format.

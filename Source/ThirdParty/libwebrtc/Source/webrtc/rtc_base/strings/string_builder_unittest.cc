@@ -10,8 +10,9 @@
 
 #include "rtc_base/strings/string_builder.h"
 
+#include <string.h>
+
 #include "rtc_base/checks.h"
-#include "rtc_base/stringutils.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
 
@@ -58,7 +59,7 @@ TEST(SimpleStringBuilder, StdString) {
 // off.
 #if (GTEST_HAS_DEATH_TEST && !defined(WEBRTC_ANDROID)) || !RTC_DCHECK_IS_ON
 
-TEST(SimpleStringBuilder, BufferOverrunConstCharP) {
+TEST(SimpleStringBuilderDeathTest, BufferOverrunConstCharP) {
   char sb_buf[4];
   SimpleStringBuilder sb(sb_buf);
   const char* const msg = "This is just too much";
@@ -66,11 +67,11 @@ TEST(SimpleStringBuilder, BufferOverrunConstCharP) {
   EXPECT_DEATH(sb << msg, "");
 #else
   sb << msg;
-  EXPECT_THAT(sb.str(), testing::StrEq("Thi"));
+  EXPECT_THAT(sb.str(), ::testing::StrEq("Thi"));
 #endif
 }
 
-TEST(SimpleStringBuilder, BufferOverrunStdString) {
+TEST(SimpleStringBuilderDeathTest, BufferOverrunStdString) {
   char sb_buf[4];
   SimpleStringBuilder sb(sb_buf);
   sb << 12;
@@ -79,11 +80,11 @@ TEST(SimpleStringBuilder, BufferOverrunStdString) {
   EXPECT_DEATH(sb << msg, "");
 #else
   sb << msg;
-  EXPECT_THAT(sb.str(), testing::StrEq("12A"));
+  EXPECT_THAT(sb.str(), ::testing::StrEq("12A"));
 #endif
 }
 
-TEST(SimpleStringBuilder, BufferOverrunInt) {
+TEST(SimpleStringBuilderDeathTest, BufferOverrunInt) {
   char sb_buf[4];
   SimpleStringBuilder sb(sb_buf);
   constexpr int num = -12345;
@@ -95,11 +96,11 @@ TEST(SimpleStringBuilder, BufferOverrunInt) {
   // the append has no effect or that it's truncated at the point where the
   // buffer ends.
   EXPECT_THAT(sb.str(),
-              testing::AnyOf(testing::StrEq(""), testing::StrEq("-12")));
+              ::testing::AnyOf(::testing::StrEq(""), ::testing::StrEq("-12")));
 #endif
 }
 
-TEST(SimpleStringBuilder, BufferOverrunDouble) {
+TEST(SimpleStringBuilderDeathTest, BufferOverrunDouble) {
   char sb_buf[5];
   SimpleStringBuilder sb(sb_buf);
   constexpr double num = 123.456;
@@ -108,11 +109,11 @@ TEST(SimpleStringBuilder, BufferOverrunDouble) {
 #else
   sb << num;
   EXPECT_THAT(sb.str(),
-              testing::AnyOf(testing::StrEq(""), testing::StrEq("123.")));
+              ::testing::AnyOf(::testing::StrEq(""), ::testing::StrEq("123.")));
 #endif
 }
 
-TEST(SimpleStringBuilder, BufferOverrunConstCharPAlreadyFull) {
+TEST(SimpleStringBuilderDeathTest, BufferOverrunConstCharPAlreadyFull) {
   char sb_buf[4];
   SimpleStringBuilder sb(sb_buf);
   sb << 123;
@@ -121,11 +122,11 @@ TEST(SimpleStringBuilder, BufferOverrunConstCharPAlreadyFull) {
   EXPECT_DEATH(sb << msg, "");
 #else
   sb << msg;
-  EXPECT_THAT(sb.str(), testing::StrEq("123"));
+  EXPECT_THAT(sb.str(), ::testing::StrEq("123"));
 #endif
 }
 
-TEST(SimpleStringBuilder, BufferOverrunIntAlreadyFull) {
+TEST(SimpleStringBuilderDeathTest, BufferOverrunIntAlreadyFull) {
   char sb_buf[4];
   SimpleStringBuilder sb(sb_buf);
   sb << "xyz";
@@ -134,7 +135,7 @@ TEST(SimpleStringBuilder, BufferOverrunIntAlreadyFull) {
   EXPECT_DEATH(sb << num, "");
 #else
   sb << num;
-  EXPECT_THAT(sb.str(), testing::StrEq("xyz"));
+  EXPECT_THAT(sb.str(), ::testing::StrEq("xyz"));
 #endif
 }
 
@@ -156,7 +157,7 @@ TEST(StringBuilder, NumbersAndChars) {
   sb << 1 << ":" << 2.1 << ":" << 2.2f << ":" << 78187493520ll << ":"
      << 78187493520ul;
   EXPECT_THAT(sb.str(),
-              testing::MatchesRegex("1:2.10*:2.20*:78187493520:78187493520"));
+              ::testing::MatchesRegex("1:2.10*:2.20*:78187493520:78187493520"));
 }
 
 TEST(StringBuilder, Format) {

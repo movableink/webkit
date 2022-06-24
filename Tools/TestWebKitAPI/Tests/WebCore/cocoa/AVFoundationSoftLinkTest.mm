@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(COCOA)
 
@@ -48,16 +48,19 @@ TEST(AVFoundationSoftLink, Classes)
     EXPECT_NE(PAL::getAVAssetReaderClass(), nullptr);
     EXPECT_NE(PAL::getAVAssetWriterClass(), nullptr);
     EXPECT_NE(PAL::getAVAssetWriterInputClass(), nullptr);
-    EXPECT_NE(PAL::getAVCaptureSessionClass(), nullptr);
+    EXPECT_NE(PAL::getAVMutableAudioMixClass(), nullptr);
+    EXPECT_NE(PAL::getAVMutableAudioMixInputParametersClass(), nullptr);
+
+#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
     EXPECT_NE(PAL::getAVCaptureConnectionClass(), nullptr);
     EXPECT_NE(PAL::getAVCaptureDeviceClass(), nullptr);
     EXPECT_NE(PAL::getAVCaptureDeviceFormatClass(), nullptr);
     EXPECT_NE(PAL::getAVCaptureDeviceInputClass(), nullptr);
     EXPECT_NE(PAL::getAVCaptureOutputClass(), nullptr);
+    EXPECT_NE(PAL::getAVCaptureSessionClass(), nullptr);
     EXPECT_NE(PAL::getAVCaptureVideoDataOutputClass(), nullptr);
     EXPECT_NE(PAL::getAVFrameRateRangeClass(), nullptr);
-    EXPECT_NE(PAL::getAVMutableAudioMixClass(), nullptr);
-    EXPECT_NE(PAL::getAVMutableAudioMixInputParametersClass(), nullptr);
+#endif
 
 #if HAVE(AVSTREAMSESSION) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
     EXPECT_NE(PAL::getAVStreamSessionClass(), nullptr);
@@ -72,7 +75,11 @@ TEST(AVFoundationSoftLink, Classes)
     EXPECT_NE(PAL::getAVSpeechSynthesisVoiceClass(), nullptr);
 #endif
 
-#if HAVE(MEDIA_PLAYER) && !PLATFORM(WATCHOS)
+#if HAVE(AVAUDIO_ROUTING_ARBITER)
+    EXPECT_NE(PAL::getAVAudioRoutingArbiterClass(), nullptr);
+#endif
+
+#if !PLATFORM(WATCHOS)
     EXPECT_NE(PAL::getAVRouteDetectorClass(), nullptr);
 #endif
 
@@ -138,15 +145,11 @@ TEST(AVFoundationSoftLink, Constants)
     if (PAL::canLoad_AVFoundation_AVSampleRateKey())
         EXPECT_TRUE([AVSampleRateKey isEqualToString:@"AVSampleRateKey"]);
 
-#if PLATFORM(MAC) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000) || PLATFORM(WATCHOS) || PLATFORM(APPLETV)
     EXPECT_TRUE(PAL::canLoad_AVFoundation_AVURLAssetOutOfBandMIMETypeKey());
     EXPECT_TRUE([AVURLAssetOutOfBandMIMETypeKey isEqualToString:@"AVURLAssetOutOfBandMIMETypeKey"]);
-#endif
 
-#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 120000) || PLATFORM(WATCHOS) || PLATFORM(APPLETV)
     EXPECT_TRUE(PAL::canLoad_AVFoundation_AVURLAssetUseClientURLLoadingExclusively());
     EXPECT_TRUE([AVURLAssetUseClientURLLoadingExclusively isEqualToString:@"AVURLAssetUseClientURLLoadingExclusively"]);
-#endif
 
 #if ENABLE(ENCRYPTED_MEDIA) && HAVE(AVCONTENTKEYSESSION)
     EXPECT_TRUE(PAL::canLoad_AVFoundation_AVContentKeySystemFairPlayStreaming());
@@ -158,23 +161,18 @@ TEST(AVFoundationSoftLink, Constants)
     EXPECT_TRUE([AVContentKeyRequestProtocolVersionsKey isEqualToString:@"ProtocolVersionsKey"]);
 #endif
 
-#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101500) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 130000) || PLATFORM(WATCHOS) || PLATFORM(APPLETV)
+#if PLATFORM(MAC) || PLATFORM(IOS) || PLATFORM(WATCHOS) || PLATFORM(APPLETV)
     EXPECT_TRUE(PAL::canLoad_AVFoundation_AVVideoCodecTypeHEVCWithAlpha());
     EXPECT_TRUE([AVVideoCodecTypeHEVCWithAlpha isEqualToString:@"muxa"]);
 #endif
 
 #if PLATFORM(MAC)
-    EXPECT_TRUE([AVStreamDataParserContentKeyRequestProtocolVersionsKey isEqualToString:@"AVContentKeyRequestProtocolVersionsKey"]);
+    EXPECT_TRUE([PAL::get_AVFoundation_AVStreamDataParserContentKeyRequestProtocolVersionsKey() isEqualToString:@"AVContentKeyRequestProtocolVersionsKey"]);
 #endif
 
 #if PLATFORM(IOS_FAMILY)
     EXPECT_TRUE([AVURLAssetBoundNetworkInterfaceName isEqualToString:@"AVURLAssetBoundNetworkInterfaceName"]);
     EXPECT_TRUE([AVURLAssetClientBundleIdentifierKey isEqualToString:@"AVURLAssetClientBundleIdentifierKey"]);
-    EXPECT_TRUE([AVCaptureSessionRuntimeErrorNotification isEqualToString:@"AVCaptureSessionRuntimeErrorNotification"]);
-    EXPECT_TRUE([AVCaptureSessionWasInterruptedNotification isEqualToString:@"AVCaptureSessionWasInterruptedNotification"]);
-    EXPECT_TRUE([AVCaptureSessionInterruptionEndedNotification isEqualToString:@"AVCaptureSessionInterruptionEndedNotification"]);
-    EXPECT_TRUE([AVCaptureSessionInterruptionReasonKey isEqualToString:@"AVCaptureSessionInterruptionReasonKey"]);
-    EXPECT_TRUE([AVCaptureSessionErrorKey isEqualToString:@"AVCaptureSessionErrorKey"]);
     EXPECT_TRUE([AVAudioSessionCategoryAmbient isEqualToString:@"AVAudioSessionCategoryAmbient"]);
     EXPECT_TRUE([AVAudioSessionCategorySoloAmbient isEqualToString:@"AVAudioSessionCategorySoloAmbient"]);
     EXPECT_TRUE([AVAudioSessionCategoryPlayback isEqualToString:@"AVAudioSessionCategoryPlayback"]);
@@ -186,8 +184,24 @@ TEST(AVFoundationSoftLink, Constants)
     EXPECT_TRUE([AVAudioSessionInterruptionNotification isEqualToString:@"AVAudioSessionInterruptionNotification"]);
     EXPECT_TRUE([AVAudioSessionInterruptionTypeKey isEqualToString:@"AVAudioSessionInterruptionTypeKey"]);
     EXPECT_TRUE([AVAudioSessionInterruptionOptionKey isEqualToString:@"AVAudioSessionInterruptionOptionKey"]);
-    EXPECT_TRUE([AVRouteDetectorMultipleRoutesDetectedDidChangeNotification isEqualToString:@"AVRouteDetectorMultipleRoutesDetectedDidChangeNotification"]);
+#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
+    EXPECT_TRUE([AVCaptureSessionErrorKey isEqualToString:@"AVCaptureSessionErrorKey"]);
+    EXPECT_TRUE([AVCaptureSessionRuntimeErrorNotification isEqualToString:@"AVCaptureSessionRuntimeErrorNotification"]);
+    EXPECT_TRUE([AVCaptureSessionWasInterruptedNotification isEqualToString:@"AVCaptureSessionWasInterruptedNotification"]);
+    EXPECT_TRUE([AVCaptureSessionInterruptionEndedNotification isEqualToString:@"AVCaptureSessionInterruptionEndedNotification"]);
+    EXPECT_TRUE([AVCaptureSessionInterruptionReasonKey isEqualToString:@"AVCaptureSessionInterruptionReasonKey"]);
 #endif
+
+#endif
+
+#if !PLATFORM(WATCHOS)
+    EXPECT_TRUE([PAL::AVRouteDetectorMultipleRoutesDetectedDidChangeNotification isEqualToString:@"AVRouteDetectorMultipleRoutesDetectedDidChangeNotification"]);
+#endif
+
+#if HAVE(AVROUTEPICKERVIEW)
+    EXPECT_TRUE([PAL::AVOutputContextOutputDevicesDidChangeNotification isEqualToString:@"AVOutputContextOutputDevicesDidChangeNotification"]);
+#endif // HAVE(AVROUTEPICKERVIEW)
+
 }
 
 #endif // PLATFORM(COCOA)

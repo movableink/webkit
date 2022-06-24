@@ -28,7 +28,6 @@
 
 #if ENABLE(MAC_GESTURE_EVENTS)
 
-#import "WebEvent.h"
 #import "WebGestureEvent.h"
 #import <WebCore/IntPoint.h>
 #import <WebCore/PlatformEventFactoryMac.h>
@@ -63,7 +62,7 @@ NativeWebGestureEvent::NativeWebGestureEvent(NSEvent *event, NSView *view)
     : WebGestureEvent(
         webEventTypeForNSEvent(event),
         OptionSet<WebEvent::Modifier> { },
-        WebCore::eventTimeStampSince1970(event),
+        WebCore::eventTimeStampSince1970(event.timestamp),
         WebCore::IntPoint(pointForEvent(event, view)),
         event.type == NSEventTypeMagnify ? event.magnification : 0,
         event.type == NSEventTypeRotate ? event.rotation : 0)

@@ -1,31 +1,43 @@
-TOOLS_MODULE = Tools
+ifeq ($(USE_WORKSPACE),YES)
 
-ifeq (iosmac,$(SDK_VARIANT))
-	DISABLE_WEBKIT_TOOLS = 1
-endif
+SCHEME = All Modules
+SCRIPTS_PATH = Tools/Scripts
+include Makefile.shared
 
-ifneq (,$(DISABLE_WEBKIT_TOOLS))
-	TOOLS_MODULE =
-endif
+else
 
-MODULES = WebKitLibraries Source $(TOOLS_MODULE)
+MODULES = Source Tools
+
+define build_target_for_each_module
+	for dir in $(MODULES); do \
+		${MAKE} $@ -C $$dir PATH_FROM_ROOT=$(PATH_FROM_ROOT)/$${dir}; \
+		exit_status=$$?; \
+		[ $$exit_status -ne 0 ] && exit $$exit_status; \
+	done; true
+endef
 
 all:
-	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
-	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+	@$(build_target_for_each_module)
 
 debug d:
-	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
-	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+	@$(build_target_for_each_module)
 
 release r:
-	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
-	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+	@$(build_target_for_each_module)
+
+release+assert ra:
+	@$(build_target_for_each_module)
+
+testing t:
+	@$(build_target_for_each_module)
 
 analyze:
-	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
-	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+	@$(build_target_for_each_module)
 
 clean:
-	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \
-	if [ $$exit_status -ne 0 ]; then exit $$exit_status; fi; done
+	@$(build_target_for_each_module)
+
+installsrc:
+	$(build_target_for_each_module)
+
+endif # USE_WORKSPACE

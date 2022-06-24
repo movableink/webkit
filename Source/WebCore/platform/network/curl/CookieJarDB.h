@@ -25,6 +25,7 @@
 #pragma once
 
 #include "Cookie.h"
+#include "CookieJar.h"
 #include "SQLiteDatabase.h"
 #include "SQLiteStatement.h"
 #include <wtf/HashMap.h>
@@ -56,12 +57,15 @@ public:
     void setAcceptPolicy(CookieAcceptPolicy policy) { m_acceptPolicy = policy; }
     CookieAcceptPolicy acceptPolicy() const { return m_acceptPolicy; }
 
-    Optional<Vector<Cookie>> searchCookies(const URL& firstParty, const URL& requestUrl, const Optional<bool>& httpOnly, const Optional<bool>& secure, const Optional<bool>& session);
-    bool setCookie(const URL& firstParty, const URL&, const String& cookie, Source);
+    HashSet<String> allDomains();
+    std::optional<Vector<Cookie>> searchCookies(const URL& firstParty, const URL& requestUrl, const std::optional<bool>& httpOnly, const std::optional<bool>& secure, const std::optional<bool>& session);
+    Vector<Cookie> getAllCookies();
+    bool setCookie(const URL& firstParty, const URL&, const String& cookie, Source, std::optional<Seconds> cappedLifetime = std::nullopt);
     bool setCookie(const Cookie&);
 
     bool deleteCookie(const String& url, const String& name);
     bool deleteCookies(const String& url);
+    bool deleteCookiesForHostname(const String& hostname, IncludeHttpOnlyCookies);
     bool deleteAllCookies();
 
     WEBCORE_EXPORT CookieJarDB(const String& databasePath);
@@ -89,9 +93,9 @@ private:
     void verifySchemaVersion();
     void deleteAllTables();
 
-    void createPrepareStatement(const String&);
+    void createPrepareStatement(ASCIILiteral);
     SQLiteStatement& preparedStatement(const String&);
-    bool executeSql(const String&);
+    bool executeSQLStatement(Expected<SQLiteStatement, int>&&);
 
     bool deleteCookieInternal(const String& name, const String& domain, const String& path);
     bool hasHttpOnlyCookie(const String& name, const String& domain, const String& path);

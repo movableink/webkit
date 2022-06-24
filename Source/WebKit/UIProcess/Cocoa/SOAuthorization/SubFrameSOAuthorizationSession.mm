@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,17 +38,12 @@
 namespace WebKit {
 using namespace WebCore;
 
+#define AUTHORIZATIONSESSION_RELEASE_LOG(fmt, ...) RELEASE_LOG(AppSSO, "%p - [InitiatingAction=%s][State=%s] SubFrameSOAuthorizationSession::" fmt, this, initiatingActionString(), stateString(), ##__VA_ARGS__)
+
 namespace {
 
 const char* soAuthorizationPostDidStartMessageToParent = "<script>parent.postMessage('SOAuthorizationDidStart', '*');</script>";
 const char* soAuthorizationPostDidCancelMessageToParent = "<script>parent.postMessage('SOAuthorizationDidCancel', '*');</script>";
-
-static inline Vector<uint8_t> convertBytesToVector(const uint8_t byteArray[], const size_t length)
-{
-    Vector<uint8_t> result;
-    result.append(byteArray, length);
-    return result;
-}
 
 } // namespace
 
@@ -76,34 +71,40 @@ SubFrameSOAuthorizationSession::~SubFrameSOAuthorizationSession()
 
 void SubFrameSOAuthorizationSession::fallBackToWebPathInternal()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("fallBackToWebPathInternal: navigationAction=%p", navigationAction());
     ASSERT(navigationAction());
-    appendRequestToLoad(URL(navigationAction()->request().url()), convertBytesToVector(reinterpret_cast<const uint8_t*>(soAuthorizationPostDidCancelMessageToParent), strlen(soAuthorizationPostDidCancelMessageToParent)));
+    appendRequestToLoad(URL(navigationAction()->request().url()), Vector { reinterpret_cast<const uint8_t*>(soAuthorizationPostDidCancelMessageToParent), strlen(soAuthorizationPostDidCancelMessageToParent) });
     appendRequestToLoad(URL(navigationAction()->request().url()), String(navigationAction()->request().httpReferrer()));
 }
 
 void SubFrameSOAuthorizationSession::abortInternal()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("abortInternal");
+    fallBackToWebPathInternal();
 }
 
 void SubFrameSOAuthorizationSession::completeInternal(const WebCore::ResourceResponse& response, NSData *data)
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("completeInternal: httpState=%d", response.httpStatusCode());
     if (response.httpStatusCode() != 200) {
         fallBackToWebPathInternal();
         return;
     }
-    appendRequestToLoad(URL(response.url()), convertBytesToVector(reinterpret_cast<const uint8_t*>(data.bytes), data.length));
+    appendRequestToLoad(URL(response.url()), Vector { reinterpret_cast<const uint8_t*>(data.bytes), data.length });
 }
 
 void SubFrameSOAuthorizationSession::beforeStart()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("beforeStart");
     // Cancelled the current load before loading the data to post SOAuthorizationDidStart to the parent frame.
     invokeCallback(true);
     ASSERT(navigationAction());
-    appendRequestToLoad(URL(navigationAction()->request().url()), convertBytesToVector(reinterpret_cast<const uint8_t*>(soAuthorizationPostDidStartMessageToParent), strlen(soAuthorizationPostDidStartMessageToParent)));
+    appendRequestToLoad(URL(navigationAction()->request().url()), Vector { reinterpret_cast<const uint8_t*>(soAuthorizationPostDidStartMessageToParent), strlen(soAuthorizationPostDidStartMessageToParent) });
 }
 
 void SubFrameSOAuthorizationSession::didFinishLoad()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("didFinishLoad");
     auto* page = this->page();
     if (!page)
         return;
@@ -124,6 +125,7 @@ void SubFrameSOAuthorizationSession::appendRequestToLoad(URL&& url, Supplement&&
 
 void SubFrameSOAuthorizationSession::loadRequestToFrame()
 {
+    AUTHORIZATIONSESSION_RELEASE_LOG("loadRequestToFrame");
     auto* page = this->page();
     if (!page || m_requestsToLoad.isEmpty())
         return;
@@ -140,5 +142,7 @@ void SubFrameSOAuthorizationSession::loadRequestToFrame()
 }
 
 } // namespace WebKit
+
+#undef AUTHORIZATIONSESSION_RELEASE_LOG
 
 #endif

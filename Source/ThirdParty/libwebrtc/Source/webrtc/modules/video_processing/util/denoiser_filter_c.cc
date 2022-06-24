@@ -8,22 +8,12 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include <stdlib.h>
-
 #include "modules/video_processing/util/denoiser_filter_c.h"
 
-namespace webrtc {
+#include <stdlib.h>
+#include <string.h>
 
-void DenoiserFilterC::CopyMem16x16(const uint8_t* src,
-                                   int src_stride,
-                                   uint8_t* dst,
-                                   int dst_stride) {
-  for (int i = 0; i < 16; i++) {
-    memcpy(dst, src, 16);
-    src += src_stride;
-    dst += dst_stride;
-  }
-}
+namespace webrtc {
 
 uint32_t DenoiserFilterC::Variance16x8(const uint8_t* a,
                                        int a_stride,
@@ -81,7 +71,7 @@ DenoiserDecision DenoiserFilterC::MbDenoise(const uint8_t* mc_running_avg_y,
       diff = mc_running_avg_y[c] - sig[c];
       absdiff = abs(diff);
 
-      // When |diff| <= |3 + shift_inc1|, use pixel value from
+      // When `diff` <= |3 + shift_inc1|, use pixel value from
       // last denoised raw.
       if (absdiff <= 3 + shift_inc1) {
         running_avg_y[c] = mc_running_avg_y[c];

@@ -30,6 +30,8 @@
 import logging
 import re
 
+from webkitcorepy import string_utils
+
 from webkitpy.common.system.executive import ScriptError
 
 _log = logging.getLogger(__name__)
@@ -78,8 +80,9 @@ class LeakDetector(object):
     def _parse_leaks_output(self, leaks_output):
         if not leaks_output:
             return 0, 0, 0
-        _, count, bytes = re.search(r'Process (?P<pid>\d+): (?P<count>\d+) leaks? for (?P<bytes>\d+) total', leaks_output).groups()
-        excluded_match = re.search(r'(?P<excluded>\d+) leaks? excluded', leaks_output)
+        leaks_output = string_utils.encode(leaks_output)
+        _, count, bytes = re.search(b'Process (?P<pid>\\d+): (?P<count>\\d+) leaks? for (?P<bytes>\\d+) total', leaks_output).groups()
+        excluded_match = re.search(b'(?P<excluded>\\d+) leaks? excluded', leaks_output)
         excluded = excluded_match.group('excluded') if excluded_match else 0
         return int(count), int(excluded), int(bytes)
 

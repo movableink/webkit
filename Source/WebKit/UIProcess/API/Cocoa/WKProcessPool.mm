@@ -28,17 +28,21 @@
 
 #import "AutomationClient.h"
 #import "CacheModel.h"
-#import "DownloadClient.h"
+#import "DownloadManager.h"
+#import "LegacyDownloadClient.h"
 #import "Logging.h"
-#import "PluginProcessManager.h"
 #import "SandboxUtilities.h"
 #import "UIGamepadProvider.h"
+#import "WKAPICast.h"
+#import "WKDownloadInternal.h"
 #import "WKObject.h"
 #import "WKWebViewInternal.h"
 #import "WKWebsiteDataStoreInternal.h"
+#import "WebAuthnProcessProxy.h"
 #import "WebBackForwardCache.h"
 #import "WebCertificateInfo.h"
 #import "WebCookieManagerProxy.h"
+#import "WebNotificationManagerProxy.h"
 #import "WebProcessCache.h"
 #import "WebProcessMessages.h"
 #import "WebProcessPool.h"
@@ -48,19 +52,27 @@
 #import "_WKDownloadInternal.h"
 #import "_WKProcessPoolConfigurationInternal.h"
 #import <WebCore/CertificateInfo.h>
+#import <WebCore/HTTPCookieAcceptPolicyCocoa.h>
 #import <WebCore/PluginData.h>
+#import <WebCore/RegistrableDomain.h>
+#import <WebCore/WebCoreObjCExtras.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
-#import <pal/spi/cocoa/NSKeyedArchiverSPI.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import <WebCore/WebCoreThreadSystemInterface.h>
 #import "WKGeolocationProviderIOS.h"
 #endif
 
-static WKProcessPool *sharedProcessPool;
+static RetainPtr<WKProcessPool>& sharedProcessPool()
+{
+    static NeverDestroyed<RetainPtr<WKProcessPool>> sharedProcessPool;
+    return sharedProcessPool;
+}
 
 @implementation WKProcessPool {
     WeakObjCPtr<id <_WKAutomationDelegate>> _automationDelegate;
@@ -90,6 +102,9 @@ static WKProcessPool *sharedProcessPool;
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKProcessPool.class, self))
+        return;
+
     _processPool->~WebProcessPool();
 
     [super dealloc];
@@ -102,7 +117,7 @@ static WKProcessPool *sharedProcessPool;
 
 - (void)encodeWithCoder:(NSCoder *)coder
 {
-    if (self == sharedProcessPool) {
+    if (self == sharedProcessPool()) {
         [coder encodeBool:YES forKey:@"isSharedProcessPool"];
         return;
     }
@@ -154,19 +169,17 @@ static WKProcessPool *sharedProcessPool;
 {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        sharedProcessPool = [[WKProcessPool alloc] init];
+        sharedProcessPool() = adoptNS([[WKProcessPool alloc] init]);
     });
 
-    return sharedProcessPool;
+    return sharedProcessPool().get();
 }
 
 + (NSArray<WKProcessPool *> *)_allProcessPoolsForTesting
 {
-    auto& allPools = WebKit::WebProcessPool::allProcessPools();
-    auto nsAllPools = adoptNS([[NSMutableArray alloc] initWithCapacity:allPools.size()]);
-    for (auto* pool : allPools)
-        [nsAllPools addObject:wrapper(*pool)];
-    return nsAllPools.autorelease();
+    return createNSArray(WebKit::WebProcessPool::allProcessPools(), [] (auto& pool) {
+        return wrapper(pool.get());
+    }).autorelease();
 }
 
 + (NSURL *)_websiteDataURLForContainerWithURL:(NSURL *)containerURL
@@ -185,9 +198,17 @@ static WKProcessPool *sharedProcessPool;
     return [url URLByAppendingPathComponent:@"WebsiteData" isDirectory:YES];
 }
 
++ (pid_t)_webAuthnProcessIdentifier
+{
+#if ENABLE(WEB_AUTHN)
+    return WebKit::WebAuthnProcessProxy::singleton().processIdentifier();
+#else
+    return 0;
+#endif
+}
+
 - (void)_setAllowsSpecificHTTPSCertificate:(NSArray *)certificateChain forHost:(NSString *)host
 {
-    _processPool->allowSpecificHTTPSCertificateForHost(WebKit::WebCertificateInfo::create(WebCore::CertificateInfo((__bridge CFArrayRef)certificateChain)).ptr(), host);
 }
 
 - (void)_registerURLSchemeAsCanDisplayOnlyIfCanRequest:(NSString *)scheme
@@ -195,30 +216,27 @@ static WKProcessPool *sharedProcessPool;
     _processPool->registerURLSchemeAsCanDisplayOnlyIfCanRequest(scheme);
 }
 
+- (void)_registerURLSchemeAsSecure:(NSString *)scheme
+{
+    _processPool->registerURLSchemeAsSecure(scheme);
+}
+
+- (void)_registerURLSchemeAsBypassingContentSecurityPolicy:(NSString *)scheme
+{
+    _processPool->registerURLSchemeAsBypassingContentSecurityPolicy(scheme);
+}
+
+- (void)_setDomainRelaxationForbiddenForURLScheme:(NSString *)scheme
+{
+    _processPool->setDomainRelaxationForbiddenForURLScheme(scheme);
+}
+
 - (void)_setCanHandleHTTPSServerTrustEvaluation:(BOOL)value
 {
 }
 
-static WebKit::HTTPCookieAcceptPolicy toHTTPCookieAcceptPolicy(NSHTTPCookieAcceptPolicy policy)
-{
-    switch (static_cast<NSUInteger>(policy)) {
-    case NSHTTPCookieAcceptPolicyAlways:
-        return WebKit::HTTPCookieAcceptPolicy::AlwaysAccept;
-    case NSHTTPCookieAcceptPolicyNever:
-        return WebKit::HTTPCookieAcceptPolicy::Never;
-    case NSHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain:
-        return WebKit::HTTPCookieAcceptPolicy::OnlyFromMainDocumentDomain;
-    case NSHTTPCookieAcceptPolicyExclusivelyFromMainDocumentDomain:
-        return WebKit::HTTPCookieAcceptPolicy::ExclusivelyFromMainDocumentDomain;
-    }
-
-    ASSERT_NOT_REACHED();
-    return WebKit::HTTPCookieAcceptPolicy::AlwaysAccept;
-}
-
 - (void)_setCookieAcceptPolicy:(NSHTTPCookieAcceptPolicy)policy
 {
-    _processPool->supplement<WebKit::WebCookieManagerProxy>()->setHTTPCookieAcceptPolicy(PAL::SessionID::defaultSessionID(), toHTTPCookieAcceptPolicy(policy), []() { });
 }
 
 - (id)_objectForBundleParameter:(NSString *)parameter
@@ -229,7 +247,7 @@ static WebKit::HTTPCookieAcceptPolicy toHTTPCookieAcceptPolicy(NSHTTPCookieAccep
 - (void)_setObject:(id <NSCopying, NSSecureCoding>)object forBundleParameter:(NSString *)parameter
 {
     auto copy = adoptNS([(NSObject *)object copy]);
-    auto keyedArchiver = secureArchiver();
+    auto keyedArchiver = adoptNS([[NSKeyedArchiver alloc] initRequiringSecureCoding:YES]);
 
     @try {
         [keyedArchiver encodeObject:copy.get() forKey:@"parameter"];
@@ -250,7 +268,7 @@ static WebKit::HTTPCookieAcceptPolicy toHTTPCookieAcceptPolicy(NSHTTPCookieAccep
 - (void)_setObjectsForBundleParametersWithDictionary:(NSDictionary *)dictionary
 {
     auto copy = adoptNS([[NSDictionary alloc] initWithDictionary:dictionary copyItems:YES]);
-    auto keyedArchiver = secureArchiver();
+    auto keyedArchiver = adoptNS([[NSKeyedArchiver alloc] initRequiringSecureCoding:YES]);
 
     @try {
         [keyedArchiver encodeObject:copy.get() forKey:@"parameters"];
@@ -267,99 +285,16 @@ static WebKit::HTTPCookieAcceptPolicy toHTTPCookieAcceptPolicy(NSHTTPCookieAccep
 
 #if !TARGET_OS_IPHONE
 
-#if ENABLE(NETSCAPE_PLUGIN_API)
-
-static bool isPluginLoadClientPolicyAcceptable(unsigned policy)
-{
-    return policy <= WebCore::PluginLoadClientPolicyMaximum;
-}
-static HashMap<String, HashMap<String, HashMap<String, uint8_t>>> toPluginLoadClientPoliciesHashMap(NSDictionary* dictionary)
-{
-    __block HashMap<String, HashMap<String, HashMap<String, uint8_t>>> pluginLoadClientPolicies;
-    [dictionary enumerateKeysAndObjectsUsingBlock:^(id nsHost, id nsPoliciesForHost, BOOL *stop) {
-        if (![nsHost isKindOfClass:[NSString class]]) {
-            RELEASE_LOG_ERROR(Plugins, "_resetPluginLoadClientPolicies was called with dictionary in wrong format");
-            return;
-        }
-        if (![nsPoliciesForHost isKindOfClass:[NSDictionary class]]) {
-            RELEASE_LOG_ERROR(Plugins, "_resetPluginLoadClientPolicies was called with dictionary in wrong format");
-            return;
-        }
-
-        String host = (NSString *)nsHost;
-        __block HashMap<String, HashMap<String, uint8_t>> policiesForHost;
-        [nsPoliciesForHost enumerateKeysAndObjectsUsingBlock:^(id nsIdentifier, id nsVersionsToPolicies, BOOL *stop) {
-            if (![nsIdentifier isKindOfClass:[NSString class]]) {
-                RELEASE_LOG_ERROR(Plugins, "_resetPluginLoadClientPolicies was called with dictionary in wrong format");
-                return;
-            }
-            if (![nsVersionsToPolicies isKindOfClass:[NSDictionary class]]) {
-                RELEASE_LOG_ERROR(Plugins, "_resetPluginLoadClientPolicies was called with dictionary in wrong format");
-                return;
-            }
-
-            String bundleIdentifier = (NSString *)nsIdentifier;
-            __block HashMap<String, uint8_t> versionsToPolicies;
-            [nsVersionsToPolicies enumerateKeysAndObjectsUsingBlock:^(id nsVersion, id nsPolicy, BOOL *stop) {
-                if (![nsVersion isKindOfClass:[NSString class]]) {
-                    RELEASE_LOG_ERROR(Plugins, "_resetPluginLoadClientPolicies was called with dictionary in wrong format");
-                    return;
-                }
-                if (![nsPolicy isKindOfClass:[NSNumber class]]) {
-                    RELEASE_LOG_ERROR(Plugins, "_resetPluginLoadClientPolicies was called with dictionary in wrong format");
-                    return;
-                }
-                unsigned policy = ((NSNumber *)nsPolicy).unsignedIntValue;
-                if (!isPluginLoadClientPolicyAcceptable(policy)) {
-                    RELEASE_LOG_ERROR(Plugins, "_resetPluginLoadClientPolicies was called with dictionary in wrong format");
-                    return;
-                }
-                String version = (NSString *)nsVersion;
-                versionsToPolicies.add(version, static_cast<uint8_t>(policy));
-            }];
-            if (!versionsToPolicies.isEmpty())
-                policiesForHost.add(bundleIdentifier, WTFMove(versionsToPolicies));
-        }];
-        if (!policiesForHost.isEmpty())
-            pluginLoadClientPolicies.add(host, WTFMove(policiesForHost));
-    }];
-    return pluginLoadClientPolicies;
-}
-
-static NSDictionary *policiesHashMapToDictionary(const HashMap<String, HashMap<String, HashMap<String, uint8_t>>>& map)
-{
-    auto policies = adoptNS([[NSMutableDictionary alloc] initWithCapacity:map.size()]);
-    for (auto& hostPair : map) {
-        NSString *host = hostPair.key;
-        policies.get()[host] = adoptNS([[NSMutableDictionary alloc] initWithCapacity:hostPair.value.size()]).get();
-        for (auto& bundleIdentifierPair : hostPair.value) {
-            NSString *bundlerIdentifier = bundleIdentifierPair.key;
-            policies.get()[host][bundlerIdentifier] = adoptNS([[NSMutableDictionary alloc] initWithCapacity:bundleIdentifierPair.value.size()]).get();
-            for (auto& versionPair : bundleIdentifierPair.value) {
-                NSString *version = versionPair.key;
-                policies.get()[host][bundlerIdentifier][version] = adoptNS([[NSNumber alloc] initWithUnsignedInt:versionPair.value]).get();
-            }
-        }
-    }
-    return policies.autorelease();
-}
-
-#endif
-
 - (void)_resetPluginLoadClientPolicies:(NSDictionary *)policies
 {
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    _processPool->resetPluginLoadClientPolicies(toPluginLoadClientPoliciesHashMap(policies));
-#endif
 }
 
 -(NSDictionary *)_pluginLoadClientPolicies
 {
-    auto& map = _processPool->pluginLoadClientPolicies();
-    return policiesHashMapToDictionary(map);
+    return @{ };
 }
-#endif
 
+#endif
 
 - (id <_WKDownloadDelegate>)_downloadDelegate
 {
@@ -369,7 +304,7 @@ static NSDictionary *policiesHashMapToDictionary(const HashMap<String, HashMap<S
 - (void)_setDownloadDelegate:(id <_WKDownloadDelegate>)downloadDelegate
 {
     _downloadDelegate = downloadDelegate;
-    _processPool->setDownloadClient(makeUniqueRef<WebKit::DownloadClient>(downloadDelegate));
+    _processPool->setLegacyDownloadClient(adoptRef(*new WebKit::LegacyDownloadClient(downloadDelegate)));
 }
 
 - (id <_WKAutomationDelegate>)_automationDelegate
@@ -428,34 +363,14 @@ static NSDictionary *policiesHashMapToDictionary(const HashMap<String, HashMap<S
     _processPool->clearSupportedPlugins();
 }
 
-- (void)_terminateNetworkProcess
+- (void)_terminateServiceWorkers
 {
-    _processPool->terminateNetworkProcess();
-}
-
-- (void)_sendNetworkProcessWillSuspendImminently
-{
-    _processPool->sendNetworkProcessWillSuspendImminentlyForTesting();
-}
-
-- (void)_sendNetworkProcessDidResume
-{
-    _processPool->sendNetworkProcessDidResume();
-}
-
-- (void)_terminateServiceWorkerProcesses
-{
-    _processPool->terminateServiceWorkerProcesses();
+    _processPool->terminateServiceWorkers();
 }
 
 - (void)_setUseSeparateServiceWorkerProcess:(BOOL)useSeparateServiceWorkerProcess
 {
-    _processPool->setUseSeparateServiceWorkerProcess(useSeparateServiceWorkerProcess);
-}
-
-- (pid_t)_networkProcessIdentifier
-{
-    return _processPool->networkProcessIdentifier();
+    WebKit::WebProcessPool::setUseSeparateServiceWorkerProcess(useSeparateServiceWorkerProcess);
 }
 
 - (pid_t)_prewarmedProcessIdentifier
@@ -465,7 +380,11 @@ static NSDictionary *policiesHashMapToDictionary(const HashMap<String, HashMap<S
 
 - (void)_syncNetworkProcessCookies
 {
-    _processPool->syncNetworkProcessCookies();
+}
+
+- (void)_clearWebProcessCache
+{
+    _processPool->webProcessCache().clear();
 }
 
 - (size_t)_webProcessCount
@@ -473,14 +392,34 @@ static NSDictionary *policiesHashMapToDictionary(const HashMap<String, HashMap<S
     return _processPool->processes().size();
 }
 
+- (pid_t)_gpuProcessIdentifier
+{
+#if ENABLE(GPU_PROCESS)
+    auto* gpuProcess = _processPool->gpuProcess();
+    return gpuProcess ? gpuProcess->processIdentifier() : 0;
+#else
+    return 0;
+#endif
+}
+
+- (BOOL)_hasAudibleMediaActivity
+{
+    return _processPool->hasAudibleMediaActivity() ? YES : NO;
+}
+
+- (BOOL)_requestWebProcessTermination:(pid_t)pid
+{
+    for (auto& process : _processPool->processes()) {
+        if (process->processIdentifier() == pid)
+            process->requestTermination(WebKit::ProcessTerminationReason::RequestedByClient);
+        return YES;
+    }
+    return NO;
+}
+
 - (void)_makeNextWebProcessLaunchFailForTesting
 {
     _processPool->setShouldMakeNextWebProcessLaunchFailForTesting(true);
-}
-
-- (void)_makeNextNetworkProcessLaunchFailForTesting
-{
-    _processPool->setShouldMakeNextNetworkProcessLaunchFailForTesting(true);
 }
 
 - (BOOL)_hasPrewarmedWebProcess
@@ -523,11 +462,7 @@ static NSDictionary *policiesHashMapToDictionary(const HashMap<String, HashMap<S
 
 - (size_t)_pluginProcessCount
 {
-#if !PLATFORM(IOS_FAMILY)
-    return WebKit::PluginProcessManager::singleton().pluginProcesses().size();
-#else
     return 0;
-#endif
 }
 
 - (NSUInteger)_maximumSuspendedPageCount
@@ -561,6 +496,33 @@ static NSDictionary *policiesHashMapToDictionary(const HashMap<String, HashMap<S
 #endif
 }
 
++ (void)_setLinkedOnOrBeforeEverythingForTesting
+{
+    setApplicationSDKVersion(0);
+    setLinkedOnOrAfterOverride(LinkedOnOrAfterOverride::BeforeEverything);
+}
+
++ (void)_setLinkedOnOrAfterEverythingForTesting
+{
+    [self _setLinkedOnOrAfterEverything];
+}
+
++ (void)_setLinkedOnOrAfterEverything
+{
+    setApplicationSDKVersion(std::numeric_limits<uint32_t>::max());
+    setLinkedOnOrAfterOverride(LinkedOnOrAfterOverride::AfterEverything);
+}
+
++ (void)_setCaptivePortalModeEnabledGloballyForTesting:(BOOL)isEnabled
+{
+    WebKit::setCaptivePortalModeEnabledGloballyForTesting(!!isEnabled);
+}
+
++ (void)_clearCaptivePortalModeEnabledGloballyForTesting
+{
+    WebKit::setCaptivePortalModeEnabledGloballyForTesting(std::nullopt);
+}
+
 - (BOOL)_isCookieStoragePartitioningEnabled
 {
     return _processPool->cookieStoragePartitioningEnabled();
@@ -569,28 +531,6 @@ static NSDictionary *policiesHashMapToDictionary(const HashMap<String, HashMap<S
 - (void)_setCookieStoragePartitioningEnabled:(BOOL)enabled
 {
     _processPool->setCookieStoragePartitioningEnabled(enabled);
-}
-
-- (BOOL)_isStorageAccessAPIEnabled
-{
-    return _processPool->storageAccessAPIEnabled();
-}
-
-- (void)_setStorageAccessAPIEnabled:(BOOL)enabled
-{
-    _processPool->setStorageAccessAPIEnabled(enabled);
-}
-
-- (void)_synthesizeAppIsBackground:(BOOL)background
-{
-    _processPool->synthesizeAppIsBackground(background);
-}
-
-- (void)_setAllowsAnySSLCertificateForServiceWorker:(BOOL)allows
-{
-#if ENABLE(SERVICE_WORKER)
-    _processPool->setAllowsAnySSLCertificateForServiceWorker(allows);
-#endif
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -608,39 +548,21 @@ static NSDictionary *policiesHashMapToDictionary(const HashMap<String, HashMap<S
 }
 #endif // PLATFORM(IOS_FAMILY)
 
-- (_WKDownload *)_downloadURLRequest:(NSURLRequest *)request originatingWebView:(WKWebView *)webView
-{
-    return nil;
-}
-
-- (_WKDownload *)_resumeDownloadFromData:(NSData *)resumeData path:(NSString *)path originatingWebView:(WKWebView *)webView
-{
-    return nil;
-}
-
 - (_WKDownload *)_downloadURLRequest:(NSURLRequest *)request websiteDataStore:(WKWebsiteDataStore *)dataStore originatingWebView:(WKWebView *)webView
 {
-    return wrapper(_processPool->download(*dataStore->_websiteDataStore, [webView _page], request));
+    return [_WKDownload downloadWithDownload:wrapper(_processPool->download(*dataStore->_websiteDataStore, [webView _page], request))];
 }
 
 - (_WKDownload *)_resumeDownloadFromData:(NSData *)resumeData websiteDataStore:(WKWebsiteDataStore *)dataStore  path:(NSString *)path originatingWebView:(WKWebView *)webView
 {
-    return wrapper(_processPool->resumeDownload(*dataStore->_websiteDataStore, [webView _page], API::Data::createWithoutCopying(resumeData).get(), path));
+    return [_WKDownload downloadWithDownload:wrapper(_processPool->resumeDownload(*dataStore->_websiteDataStore, [webView _page], API::Data::createWithoutCopying(resumeData).get(), path, WebKit::CallDownloadDidStart::No))];
 }
 
 - (void)_getActivePagesOriginsInWebProcessForTesting:(pid_t)pid completionHandler:(void(^)(NSArray<NSString *> *))completionHandler
 {
     _processPool->activePagesOriginsInWebProcessForTesting(pid, [completionHandler = makeBlockPtr(completionHandler)] (Vector<String>&& activePagesOrigins) {
-        NSMutableArray<NSString *> *array = [[[NSMutableArray alloc] initWithCapacity:activePagesOrigins.size()] autorelease];
-        for (auto& origin : activePagesOrigins)
-            [array addObject:origin];
-        completionHandler(array);
+        completionHandler(createNSArray(activePagesOrigins).get());
     });
-}
-
-- (BOOL)_networkProcessHasEntitlementForTesting:(NSString *)entitlement
-{
-    return _processPool->networkProcessHasEntitlementForTesting(entitlement);
 }
 
 - (void)_clearPermanentCredentialsForProtectionSpace:(NSURLProtectionSpace *)protectionSpace
@@ -648,9 +570,58 @@ static NSDictionary *policiesHashMapToDictionary(const HashMap<String, HashMap<S
     _processPool->clearPermanentCredentialsForProtectionSpace(WebCore::ProtectionSpace(protectionSpace));
 }
 
-- (void)_allowAnyTLSCertificateForWebSocketTesting
+- (void)_seedResourceLoadStatisticsForTestingWithFirstParty:(NSURL *)firstPartyURL thirdParty:(NSURL *)thirdPartyURL shouldScheduleNotification:(BOOL)shouldScheduleNotification completionHandler:(void(^)(void))completionHandler
 {
-    _processPool->setAllowsAnySSLCertificateForWebSocket(true);
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+    _processPool->seedResourceLoadStatisticsForTesting(WebCore::RegistrableDomain { firstPartyURL }, WebCore::RegistrableDomain { thirdPartyURL }, shouldScheduleNotification, [completionHandler = makeBlockPtr(completionHandler)] () {
+        completionHandler();
+    });
+#else
+    UNUSED_PARAM(firstPartyURL);
+    UNUSED_PARAM(thirdPartyURL);
+    UNUSED_PARAM(shouldScheduleNotification);
+    UNUSED_PARAM(completionHandler);
+#endif
+}
+
++ (void)_setWebProcessCountLimit:(unsigned)limit
+{
+    WebKit::WebProcessProxy::setProcessCountLimit(limit);
+}
+
+- (void)_garbageCollectJavaScriptObjectsForTesting
+{
+    _processPool->garbageCollectJavaScriptObjects();
+}
+
+- (size_t)_numberOfConnectedGamepadsForTesting
+{
+    return _processPool->numberOfConnectedGamepadsForTesting(WebKit::WebProcessPool::GamepadType::All);
+}
+
+- (size_t)_numberOfConnectedHIDGamepadsForTesting
+{
+    return _processPool->numberOfConnectedGamepadsForTesting(WebKit::WebProcessPool::GamepadType::HID);
+}
+
+- (size_t)_numberOfConnectedGameControllerFrameworkGamepadsForTesting
+{
+    return _processPool->numberOfConnectedGamepadsForTesting(WebKit::WebProcessPool::GamepadType::GameControllerFramework);
+}
+
+- (void)_setUsesOnlyHIDGamepadProviderForTesting:(BOOL)usesHIDProvider
+{
+    _processPool->setUsesOnlyHIDGamepadProviderForTesting(usesHIDProvider);
+}
+
+- (void)_terminateAllWebContentProcesses
+{
+    _processPool->terminateAllWebContentProcesses();
+}
+
+- (WKNotificationManagerRef)_notificationManagerForTesting
+{
+    return WebKit::toAPI(_processPool->supplement<WebKit::WebNotificationManagerProxy>());
 }
 
 @end

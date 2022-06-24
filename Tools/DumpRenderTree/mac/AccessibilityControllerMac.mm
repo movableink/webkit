@@ -30,6 +30,7 @@
 #import "AccessibilityCommonMac.h"
 #import "AccessibilityNotificationHandler.h"
 #import "AccessibilityUIElement.h"
+#import "JSBasics.h"
 #import <AppKit/NSColor.h>
 #import <Foundation/Foundation.h>
 #import <JavaScriptCore/JSStringRef.h>
@@ -74,7 +75,7 @@ AccessibilityUIElement AccessibilityController::rootElement()
 static id findAccessibleObjectById(id obj, NSString *idAttribute)
 {
     BEGIN_AX_OBJC_EXCEPTIONS
-    id objIdAttribute = [obj accessibilityAttributeValue:@"AXDRTElementIdAttribute"];
+    id objIdAttribute = [obj accessibilityAttributeValue:@"AXDOMIdentifier"];
     if ([objIdAttribute isKindOfClass:[NSString class]] && [objIdAttribute isEqualToString:idAttribute])
         return obj;
     END_AX_OBJC_EXCEPTIONS
@@ -89,7 +90,7 @@ static id findAccessibleObjectById(id obj, NSString *idAttribute)
     }
     END_AX_OBJC_EXCEPTIONS
 
-    return nullptr;
+    return nil;
 }
 
 AccessibilityUIElement AccessibilityController::accessibleElementById(JSStringRef idAttributeRef)
@@ -158,5 +159,5 @@ bool AccessibilityController::enhancedAccessibilityEnabled()
 
 JSRetainPtr<JSStringRef> AccessibilityController::platformName() const
 {
-    return adopt(JSStringCreateWithUTF8CString("mac"));
+    return WTR::createJSString("mac");
 }

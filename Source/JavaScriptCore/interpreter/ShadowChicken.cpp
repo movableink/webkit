@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,8 @@
 #include "ShadowChicken.h"
 
 #include "CodeBlock.h"
-#include "JSCInlines.h"
 #include "ShadowChickenInlines.h"
+#include "VMTrapsInlines.h"
 #include <wtf/ListDump.h>
 
 namespace JSC {
@@ -99,14 +99,14 @@ ShadowChicken::~ShadowChicken()
     fastFree(m_log);
 }
 
-void ShadowChicken::log(VM& vm, ExecState* exec, const Packet& packet)
+void ShadowChicken::log(VM& vm, CallFrame* callFrame, const Packet& packet)
 {
     // This write is allowed because we construct the log with space for 1 additional packet.
     *m_logCursor++ = packet;
-    update(vm, exec);
+    update(vm, callFrame);
 }
 
-void ShadowChicken::update(VM& vm, ExecState* exec)
+void ShadowChicken::update(VM& vm, CallFrame* callFrame)
 {
     if (ShadowChickenInternal::verbose) {
         dataLog("Running update on: ", *this, "\n");
@@ -121,7 +121,7 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
     // where we bottomed out after making any call. If we bottomed out but made no calls then 'exec'
     // will tell us. That's why "highestPointSinceLastTime" will go no lower than exec. The third
     // rule, based on comparing to the current real stack, is executed in a later loop.
-    CallFrame* highestPointSinceLastTime = exec;
+    CallFrame* highestPointSinceLastTime = callFrame;
     for (unsigned i = logCursorIndex; i--;) {
         Packet packet = m_log[i];
         if (packet.isPrologue()) {
@@ -165,7 +165,7 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
     if (ShadowChickenInternal::verbose)
         dataLog("    Revised stack: ", listDump(m_stack), "\n");
     
-    // The log-based and exec-based rules require that ShadowChicken was enabled. The point of
+    // The log-based and callFrame-based rules require that ShadowChicken was enabled. The point of
     // ShadowChicken is to give sensible-looking results even if we had not logged. This means that
     // we need to reconcile the shadow stack and the real stack by actually looking at the real
     // stack. This reconciliation allows the shadow stack to have extra tail-deleted frames, but it
@@ -173,7 +173,7 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
     if (!m_stack.isEmpty()) {
         Vector<Frame> stackRightNow;
         StackVisitor::visit(
-            exec, &vm, [&] (StackVisitor& visitor) -> StackVisitor::Status {
+            callFrame, vm, [&] (StackVisitor& visitor) -> StackVisitor::Status {
                 if (visitor->isInlinedFrame())
                     return StackVisitor::Continue;
                 if (visitor->isWasmFrame()) {
@@ -294,7 +294,7 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
     
     Vector<Frame> toPush;
     StackVisitor::visit(
-        exec, &vm, [&] (StackVisitor& visitor) -> StackVisitor::Status {
+        callFrame, vm, [&] (StackVisitor& visitor) -> StackVisitor::Status {
             if (visitor->isInlinedFrame()) {
                 // FIXME: Handle inlining.
                 // https://bugs.webkit.org/show_bug.cgi?id=155686
@@ -329,7 +329,7 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
             bool isTailDeleted = false;
             JSScope* scope = nullptr;
             CodeBlock* codeBlock = callFrame->codeBlock();
-            JSValue scopeValue = callFrame->bytecodeOffset() && codeBlock && codeBlock->scopeRegister().isValid()
+            JSValue scopeValue = callFrame->bytecodeIndex() && codeBlock && codeBlock->scopeRegister().isValid()
                 ? callFrame->registers()[codeBlock->scopeRegister().offset()].jsValue()
                 : jsUndefined();
             if (!scopeValue.isUndefined() && codeBlock->wasCompiledWithDebuggingOpcodes()) {
@@ -441,7 +441,9 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
         dataLog("    After clean-up: ", *this, "\n");
 }
 
-void ShadowChicken::visitChildren(SlotVisitor& visitor)
+// We don't need a SlotVisitor version of this because ShadowChicken is only used by the
+// Debugger, and is therefore not on the critical path for performance.
+void ShadowChicken::visitChildren(AbstractSlotVisitor& visitor)
 {
     for (unsigned i = m_logCursor - m_log; i--;) {
         JSObject* callee = m_log[i].callee;
@@ -484,17 +486,18 @@ void ShadowChicken::dump(PrintStream& out) const
     out.print("]}");
 }
 
-JSArray* ShadowChicken::functionsOnStack(ExecState* exec)
+JSArray* ShadowChicken::functionsOnStack(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
+    DeferTermination deferScope(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSArray* result = constructEmptyArray(exec, 0);
+    JSArray* result = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     iterate(
-        vm, exec,
+        vm, callFrame,
         [&] (const Frame& frame) -> bool {
-            result->push(exec, frame.callee);
+            result->push(globalObject, frame.callee);
             scope.releaseAssertNoException(); // This function is only called from tests.
             return true;
         });

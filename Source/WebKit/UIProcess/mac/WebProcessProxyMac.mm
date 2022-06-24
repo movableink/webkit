@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,13 +29,10 @@
 
 #if PLATFORM(MAC)
 
+#import "CodeSigning.h"
 #import "WKFullKeyboardAccessWatcher.h"
+#import <signal.h>
 #import <wtf/ProcessPrivilege.h>
-
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
-#import <Kernel/kern/cs_blobs.h>
-#import <wtf/spi/cocoa/SecuritySPI.h>
-#endif
 
 namespace WebKit {
 
@@ -46,7 +43,6 @@ bool WebProcessProxy::fullKeyboardAccessEnabled()
 
 bool WebProcessProxy::shouldAllowNonValidInjectedCode() const
 {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
     static bool isSystemWebKit = [] {
         NSBundle *webkit2Bundle = [NSBundle bundleForClass:NSClassFromString(@"WKWebView")];
         return [webkit2Bundle.bundlePath hasPrefix:@"/System/"];
@@ -55,31 +51,50 @@ bool WebProcessProxy::shouldAllowNonValidInjectedCode() const
     if (!isSystemWebKit)
         return false;
 
-    static bool isPlatformBinary = SecTaskGetCodeSignStatus(adoptCF(SecTaskCreateFromSelf(kCFAllocatorDefault)).get()) & CS_PLATFORM_BINARY;
+    static bool isPlatformBinary = currentProcessIsPlatformBinary();
     if (isPlatformBinary)
         return false;
 
     const String& path = m_processPool->configuration().injectedBundlePath();
     return !path.isEmpty() && !path.startsWith("/System/");
-#else
-    return false;
-#endif
 }
 
-#if ENABLE(WEBPROCESS_WINDOWSERVER_BLOCKING)
-void WebProcessProxy::startDisplayLink(unsigned observerID, uint32_t displayID)
+void WebProcessProxy::startDisplayLink(DisplayLinkObserverID observerID, WebCore::PlatformDisplayID displayID, WebCore::FramesPerSecond preferredFramesPerSecond)
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanCommunicateWithWindowServer));
     ASSERT(connection());
-    processPool().startDisplayLink(*connection(), observerID, displayID);
+    processPool().startDisplayLink(*connection(), observerID, displayID, preferredFramesPerSecond);
 }
 
-void WebProcessProxy::stopDisplayLink(unsigned observerID, uint32_t displayID)
+void WebProcessProxy::stopDisplayLink(DisplayLinkObserverID observerID, WebCore::PlatformDisplayID displayID)
 {
     ASSERT(connection());
     processPool().stopDisplayLink(*connection(), observerID, displayID);
 }
-#endif
+
+void WebProcessProxy::setDisplayLinkPreferredFramesPerSecond(DisplayLinkObserverID observerID, WebCore::PlatformDisplayID displayID, WebCore::FramesPerSecond preferredFramesPerSecond)
+{
+    ASSERT(connection());
+    processPool().setDisplayLinkPreferredFramesPerSecond(*connection(), observerID, displayID, preferredFramesPerSecond);
+}
+
+void WebProcessProxy::platformSuspendProcess()
+{
+    RELEASE_LOG(Process, "%p - [PID=%i] WebProcessProxy::platformSuspendProcess", this, processIdentifier());
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    if (auto* connection = this->connection())
+        xpc_connection_kill(connection->xpcConnection(), SIGSTOP);
+    ALLOW_DEPRECATED_DECLARATIONS_END
+}
+
+void WebProcessProxy::platformResumeProcess()
+{
+    RELEASE_LOG(Process, "%p - [PID=%i] WebProcessProxy::platformResumeProcess", this, processIdentifier());
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    if (auto* connection = this->connection())
+        xpc_connection_kill(connection->xpcConnection(), SIGCONT);
+    ALLOW_DEPRECATED_DECLARATIONS_END
+}
 
 } // namespace WebKit
 

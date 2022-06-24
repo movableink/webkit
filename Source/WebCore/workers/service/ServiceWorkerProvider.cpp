@@ -33,6 +33,7 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "LegacySchemeRegistry.h"
+#include "Page.h"
 #include "SWClientConnection.h"
 
 namespace WebCore {
@@ -52,26 +53,6 @@ ServiceWorkerProvider& ServiceWorkerProvider::singleton()
 void ServiceWorkerProvider::setSharedProvider(ServiceWorkerProvider& newProvider)
 {
     sharedProvider = &newProvider;
-}
-
-bool ServiceWorkerProvider::mayHaveServiceWorkerRegisteredForOrigin(const SecurityOriginData& origin)
-{
-    auto* connection = existingServiceWorkerConnection();
-    if (!connection)
-        return m_mayHaveRegisteredServiceWorkers;
-
-    return connection->mayHaveServiceWorkerRegisteredForOrigin(origin);
-}
-
-void ServiceWorkerProvider::registerServiceWorkerClients()
-{
-    setMayHaveRegisteredServiceWorkers();
-    for (auto* document : Document::allDocuments()) {
-        if (!document->page() || document->page()->mainFrame().loader().client().isServiceWorkerFrameLoaderClient())
-            continue;
-        if (LegacySchemeRegistry::canServiceWorkersHandleURLScheme(document->url().protocol().toStringWithoutCopying()))
-            document->setServiceWorkerConnection(&serviceWorkerConnection());
-    }
 }
 
 } // namespace WebCore

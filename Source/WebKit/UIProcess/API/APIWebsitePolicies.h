@@ -27,6 +27,7 @@
 
 #include "APIObject.h"
 #include "WebContentMode.h"
+#include "WebUserContentControllerProxy.h"
 #include "WebsiteAutoplayPolicy.h"
 #include "WebsiteAutoplayQuirk.h"
 #include "WebsiteLegacyOverflowScrollingTouchPolicy.h"
@@ -36,6 +37,8 @@
 #include "WebsiteSimulatedMouseEventsDispatchPolicy.h"
 #include <WebCore/CustomHeaderFields.h>
 #include <WebCore/DeviceOrientationOrMotionPermissionState.h>
+#include <WebCore/DocumentLoader.h>
+#include <WebCore/FrameLoaderTypes.h>
 #include <WebCore/HTTPHeaderField.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
@@ -55,8 +58,13 @@ public:
 
     Ref<WebsitePolicies> copy() const;
 
+    WebKit::WebsitePoliciesData data();
+
     bool contentBlockersEnabled() const { return m_contentBlockersEnabled; }
     void setContentBlockersEnabled(bool enabled) { m_contentBlockersEnabled = enabled; }
+    
+    void setActiveContentRuleListActionPatterns(HashMap<WTF::String, Vector<WTF::String>>&& patterns) { m_activeContentRuleListActionPatterns = WTFMove(patterns); }
+    const HashMap<WTF::String, Vector<WTF::String>>& activeContentRuleListActionPatterns() const { return m_activeContentRuleListActionPatterns; }
     
     OptionSet<WebKit::WebsiteAutoplayQuirk> allowedAutoplayQuirks() const { return m_allowedAutoplayQuirks; }
     void setAllowedAutoplayQuirks(OptionSet<WebKit::WebsiteAutoplayQuirk> quirks) { m_allowedAutoplayQuirks = quirks; }
@@ -80,14 +88,15 @@ public:
 
     WebKit::WebsiteDataStore* websiteDataStore() const { return m_websiteDataStore.get(); }
     void setWebsiteDataStore(RefPtr<WebKit::WebsiteDataStore>&&);
-
-    WebKit::WebsitePoliciesData data();
+    
+    WebKit::WebUserContentControllerProxy* userContentController() const { return m_userContentController.get(); }
+    void setUserContentController(RefPtr<WebKit::WebUserContentControllerProxy>&&);
 
     void setCustomUserAgent(const WTF::String& customUserAgent) { m_customUserAgent = customUserAgent; }
     const WTF::String& customUserAgent() const { return m_customUserAgent; }
 
-    void setCustomJavaScriptUserAgentAsSiteSpecificQuirks(const WTF::String& customUserAgent) { m_customJavaScriptUserAgentAsSiteSpecificQuirks = customUserAgent; }
-    const WTF::String& customJavaScriptUserAgentAsSiteSpecificQuirks() const { return m_customJavaScriptUserAgentAsSiteSpecificQuirks; }
+    void setCustomUserAgentAsSiteSpecificQuirks(const WTF::String& customUserAgent) { m_customUserAgentAsSiteSpecificQuirks = customUserAgent; }
+    const WTF::String& customUserAgentAsSiteSpecificQuirks() const { return m_customUserAgentAsSiteSpecificQuirks; }
 
     void setCustomNavigatorPlatform(const WTF::String& customNavigatorPlatform) { m_customNavigatorPlatform = customNavigatorPlatform; }
     const WTF::String& customNavigatorPlatform() const { return m_customNavigatorPlatform; }
@@ -116,10 +125,29 @@ public:
     bool allowContentChangeObserverQuirk() const { return m_allowContentChangeObserverQuirk; }
     void setAllowContentChangeObserverQuirk(bool allow) { m_allowContentChangeObserverQuirk = allow; }
 
-private:
-    WebsitePolicies(bool contentBlockersEnabled, OptionSet<WebKit::WebsiteAutoplayQuirk>, WebKit::WebsiteAutoplayPolicy, Vector<WebCore::HTTPHeaderField>&&, Vector<WebCore::CustomHeaderFields>&&, WebKit::WebsitePopUpPolicy, RefPtr<WebKit::WebsiteDataStore>&&);
+    WebCore::AllowsContentJavaScript allowsContentJavaScript() const { return m_allowsContentJavaScript; }
+    void setAllowsContentJavaScript(WebCore::AllowsContentJavaScript allows) { m_allowsContentJavaScript = allows; }
 
+    bool captivePortalModeEnabled() const;
+    void setCaptivePortalModeEnabled(std::optional<bool> captivePortalModeEnabled) { m_captivePortalModeEnabled = captivePortalModeEnabled; }
+    bool isCaptivePortalModeExplicitlySet() const { return !!m_captivePortalModeEnabled; }
+
+    WebCore::ColorSchemePreference colorSchemePreference() const { return m_colorSchemePreference; }
+    void setColorSchemePreference(WebCore::ColorSchemePreference colorSchemePreference) { m_colorSchemePreference = colorSchemePreference; }
+
+    WebCore::MouseEventPolicy mouseEventPolicy() const { return m_mouseEventPolicy; }
+    void setMouseEventPolicy(WebCore::MouseEventPolicy policy) { m_mouseEventPolicy = policy; }
+
+    WebCore::ModalContainerObservationPolicy modalContainerObservationPolicy() const { return m_modalContainerObservationPolicy; }
+    void setModalContainerObservationPolicy(WebCore::ModalContainerObservationPolicy policy) { m_modalContainerObservationPolicy = policy; }
+
+    bool idempotentModeAutosizingOnlyHonorsPercentages() const { return m_idempotentModeAutosizingOnlyHonorsPercentages; }
+    void setIdempotentModeAutosizingOnlyHonorsPercentages(bool idempotentModeAutosizingOnlyHonorsPercentages) { m_idempotentModeAutosizingOnlyHonorsPercentages = idempotentModeAutosizingOnlyHonorsPercentages; }
+
+private:
+    // FIXME: replace most or all of these members with a WebsitePoliciesData.
     bool m_contentBlockersEnabled { true };
+    HashMap<WTF::String, Vector<WTF::String>> m_activeContentRuleListActionPatterns;
     OptionSet<WebKit::WebsiteAutoplayQuirk> m_allowedAutoplayQuirks;
     WebKit::WebsiteAutoplayPolicy m_autoplayPolicy { WebKit::WebsiteAutoplayPolicy::Default };
 #if ENABLE(DEVICE_ORIENTATION)
@@ -129,8 +157,9 @@ private:
     Vector<WebCore::CustomHeaderFields> m_customHeaderFields;
     WebKit::WebsitePopUpPolicy m_popUpPolicy { WebKit::WebsitePopUpPolicy::Default };
     RefPtr<WebKit::WebsiteDataStore> m_websiteDataStore;
+    RefPtr<WebKit::WebUserContentControllerProxy> m_userContentController;
     WTF::String m_customUserAgent;
-    WTF::String m_customJavaScriptUserAgentAsSiteSpecificQuirks;
+    WTF::String m_customUserAgentAsSiteSpecificQuirks;
     WTF::String m_customNavigatorPlatform;
     WebKit::WebContentMode m_preferredContentMode { WebKit::WebContentMode::Recommended };
     WebKit::WebsiteMetaViewportPolicy m_metaViewportPolicy { WebKit::WebsiteMetaViewportPolicy::Default };
@@ -140,6 +169,12 @@ private:
     bool m_allowSiteSpecificQuirksToOverrideContentMode { false };
     WTF::String m_applicationNameForDesktopUserAgent;
     bool m_allowContentChangeObserverQuirk { false };
+    WebCore::AllowsContentJavaScript m_allowsContentJavaScript { WebCore::AllowsContentJavaScript::Yes };
+    WebCore::MouseEventPolicy m_mouseEventPolicy { WebCore::MouseEventPolicy::Default };
+    WebCore::ModalContainerObservationPolicy m_modalContainerObservationPolicy { WebCore::ModalContainerObservationPolicy::Disabled };
+    bool m_idempotentModeAutosizingOnlyHonorsPercentages { false };
+    std::optional<bool> m_captivePortalModeEnabled;
+    WebCore::ColorSchemePreference m_colorSchemePreference { WebCore::ColorSchemePreference::NoPreference };
 };
 
 } // namespace API

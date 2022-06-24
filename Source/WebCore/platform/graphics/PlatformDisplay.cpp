@@ -47,15 +47,26 @@
 #endif
 
 #if PLATFORM(GTK)
-#include <gtk/gtk.h>
+#include "GtkVersioning.h"
 #endif
 
 #if PLATFORM(GTK) && PLATFORM(X11)
+#if USE(GTK4)
+#include <gdk/x11/gdkx.h>
+#else
 #include <gdk/gdkx.h>
+#endif
+#if defined(None)
+#undef None
+#endif
 #endif
 
 #if PLATFORM(GTK) && PLATFORM(WAYLAND)
+#if USE(GTK4)
+#include <gdk/wayland/gdkwayland.h>
+#else
 #include <gdk/gdkwayland.h>
+#endif
 #endif
 
 #if USE(EGL)
@@ -69,6 +80,14 @@
 #include <wtf/NeverDestroyed.h>
 #endif
 
+#if USE(ATSPI) || USE(ATK)
+#include <wtf/glib/GUniquePtr.h>
+#endif
+
+#if USE(GLIB)
+#include <wtf/glib/GRefPtr.h>
+#endif
+
 namespace WebCore {
 
 std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
@@ -77,21 +96,27 @@ std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
     if (gtk_init_check(nullptr, nullptr)) {
         GdkDisplay* display = gdk_display_manager_get_default_display(gdk_display_manager_get());
 #if PLATFORM(X11)
-        if (GDK_IS_X11_DISPLAY(display))
-            return PlatformDisplayX11::create(GDK_DISPLAY_XDISPLAY(display));
+        if (GDK_IS_X11_DISPLAY(display)) {
+            auto platformDisplay = PlatformDisplayX11::create(GDK_DISPLAY_XDISPLAY(display));
+#if USE(ATSPI) && USE(GTK4)
+            if (const char* atspiBusAddress = static_cast<const char*>(g_object_get_data(G_OBJECT(display), "-gtk-atspi-bus-address")))
+                platformDisplay->m_accessibilityBusAddress = String::fromUTF8(atspiBusAddress);
+#endif
+            return platformDisplay;
+        }
 #endif
 #if PLATFORM(WAYLAND)
-        if (GDK_IS_WAYLAND_DISPLAY(display))
-            return PlatformDisplayWayland::create(gdk_wayland_display_get_wl_display(display));
+        if (GDK_IS_WAYLAND_DISPLAY(display)) {
+            auto platformDisplay = PlatformDisplayWayland::create(gdk_wayland_display_get_wl_display(display));
+#if USE(ATSPI) && USE(GTK4)
+            if (const char* atspiBusAddress = static_cast<const char*>(g_object_get_data(G_OBJECT(display), "-gtk-atspi-bus-address")))
+                platformDisplay->m_accessibilityBusAddress = String::fromUTF8(atspiBusAddress);
+#endif
+            return platformDisplay;
+        }
 #endif
     }
 #endif // PLATFORM(GTK)
-
-#if USE(WPE_RENDERER)
-    return PlatformDisplayLibWPE::create();
-#elif PLATFORM(WIN)
-    return PlatformDisplayWin::create();
-#endif
 
 #if PLATFORM(WAYLAND)
     if (auto platformDisplay = PlatformDisplayWayland::create())
@@ -110,11 +135,22 @@ std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
     return PlatformDisplayX11::create(nullptr);
 #endif
 
+#if USE(WPE_RENDERER)
+    return PlatformDisplayLibWPE::create();
+#elif PLATFORM(WIN)
+    return PlatformDisplayWin::create();
+#endif
+
     RELEASE_ASSERT_NOT_REACHED();
 }
 
 PlatformDisplay& PlatformDisplay::sharedDisplay()
 {
+#if PLATFORM(WIN)
+    // ANGLE D3D renderer isn't thread-safe. Don't destruct it on non-main threads which calls _exit().
+    static PlatformDisplay* display = createPlatformDisplay().release();
+    return *display;
+#else
     static std::once_flag onceFlag;
     IGNORE_CLANG_WARNINGS_BEGIN("exit-time-destructors")
     static std::unique_ptr<PlatformDisplay> display;
@@ -123,6 +159,7 @@ PlatformDisplay& PlatformDisplay::sharedDisplay()
         display = createPlatformDisplay();
     });
     return *display;
+#endif
 }
 
 static PlatformDisplay* s_sharedDisplayForCompositing;
@@ -147,7 +184,7 @@ PlatformDisplay::PlatformDisplay(NativeDisplayOwned displayOwned)
 
 PlatformDisplay::~PlatformDisplay()
 {
-#if USE(EGL)
+#if USE(EGL) && !PLATFORM(WIN)
     ASSERT(m_eglDisplay == EGL_NO_DISPLAY);
 #endif
     if (s_sharedDisplayForCompositing == this)
@@ -221,29 +258,84 @@ void PlatformDisplay::initializeEGLDisplay()
         // EGL atexit handlers and the PlatformDisplay destructor.
         // See https://bugs.webkit.org/show_bug.cgi?id=157973.
         eglAtexitHandlerInitialized = true;
-        std::atexit(shutDownEglDisplays);
+        std::atexit([] {
+            while (!eglDisplays().isEmpty()) {
+                auto* display = eglDisplays().takeAny();
+                display->terminateEGLDisplay();
+            }
+        });
     }
 #endif
 }
 
 void PlatformDisplay::terminateEGLDisplay()
 {
+#if ENABLE(VIDEO) && USE(GSTREAMER_GL)
+    m_gstGLDisplay = nullptr;
+    m_gstGLContext = nullptr;
+#endif
     m_sharingGLContext = nullptr;
     ASSERT(m_eglDisplayInitialized);
     if (m_eglDisplay == EGL_NO_DISPLAY)
         return;
+    eglMakeCurrent(m_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     eglTerminate(m_eglDisplay);
     m_eglDisplay = EGL_NO_DISPLAY;
 }
 
-void PlatformDisplay::shutDownEglDisplays()
-{
-    while (!eglDisplays().isEmpty()) {
-        auto* display = eglDisplays().takeAny();
-        display->terminateEGLDisplay();
-    }
-}
-
 #endif // USE(EGL)
+
+#if USE(LCMS)
+cmsHPROFILE PlatformDisplay::colorProfile() const
+{
+    if (!m_iccProfile)
+        m_iccProfile = LCMSProfilePtr(cmsCreate_sRGBProfile());
+    return m_iccProfile.get();
+}
+#endif
+
+#if USE(ATSPI) || USE(ATK)
+const String& PlatformDisplay::accessibilityBusAddress() const
+{
+    if (m_accessibilityBusAddress)
+        return m_accessibilityBusAddress.value();
+
+    const char* address = g_getenv("AT_SPI_BUS_ADDRESS");
+    if (address && *address) {
+        m_accessibilityBusAddress = String::fromUTF8(address);
+        return m_accessibilityBusAddress.value();
+    }
+
+    auto platformAddress = plartformAccessibilityBusAddress();
+    if (!platformAddress.isEmpty()) {
+        m_accessibilityBusAddress = platformAddress;
+        return m_accessibilityBusAddress.value();
+    }
+
+    GRefPtr<GDBusConnection> sessionBus = adoptGRef(g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr));
+    if (sessionBus.get()) {
+        GRefPtr<GDBusMessage> message = adoptGRef(g_dbus_message_new_method_call("org.a11y.Bus", "/org/a11y/bus", "org.a11y.Bus", "GetAddress"));
+        g_dbus_message_set_body(message.get(), g_variant_new("()"));
+        GRefPtr<GDBusMessage> reply = adoptGRef(g_dbus_connection_send_message_with_reply_sync(sessionBus.get(), message.get(),
+            G_DBUS_SEND_MESSAGE_FLAGS_NONE, 30000, nullptr, nullptr, nullptr));
+        if (reply) {
+            GUniqueOutPtr<GError> error;
+            if (g_dbus_message_to_gerror(reply.get(), &error.outPtr())) {
+                if (!g_error_matches(error.get(), G_DBUS_ERROR, G_DBUS_ERROR_SERVICE_UNKNOWN))
+                    WTFLogAlways("Can't find a11y bus: %s", error->message);
+            } else {
+                GUniqueOutPtr<char> a11yAddress;
+                g_variant_get(g_dbus_message_get_body(reply.get()), "(s)", &a11yAddress.outPtr());
+                m_accessibilityBusAddress = String::fromUTF8(a11yAddress.get());
+                return m_accessibilityBusAddress.value();
+            }
+        }
+    }
+
+    WTFLogAlways("Could not determine the accessibility bus address");
+    m_accessibilityBusAddress = String();
+    return m_accessibilityBusAddress.value();
+}
+#endif
 
 } // namespace WebCore

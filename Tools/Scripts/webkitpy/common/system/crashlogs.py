@@ -1,5 +1,5 @@
 # Copyright (c) 2011, Google Inc. All rights reserved.
-# Copyright (c) 2015, Apple Inc. All rights reserved.
+# Copyright (c) 2015, 2021 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -28,10 +28,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import datetime
+import json
 import logging
 import re
 
-from webkitpy.common import unicode_compatibility
+from webkitcorepy import string_utils
 
 
 _log = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ class CrashLogs(object):
         if self._host.platform.is_mac() or self._host.platform.is_ios():
             return self._find_newest_log_darwin(process_name, pid, include_errors, newer_than)
         elif self._host.platform.is_win():
-            return self._find_newest_log_win(process_name, pid, include_errors, newer_than)
+            return self._find_newest_log_win(pid, include_errors, newer_than)
         return None
 
     def find_all_logs(self, include_errors=False, newer_than=None):
@@ -65,8 +66,21 @@ class CrashLogs(object):
         contents = self._host.symbolicate_crash_log_if_needed(path)
         if not contents:
             return (None, None, None)
+
+        lines = contents.splitlines()
+        if len(lines) >= 2 and lines[0].startswith('{') and lines[1].startswith('{'):
+            try:
+                json.loads(lines[0])
+                decoded = json.loads('\n'.join(lines[1:]))
+                name = decoded.get('procName')
+                pid = decoded.get('pid')
+                if name and pid:
+                    return (name, pid, contents)
+            except ValueError:
+                pass
+
         is_sandbox_violation = False
-        for line in contents.splitlines():
+        for line in lines:
             if line.startswith('Sandbox Violation:'):
                 is_sandbox_violation = True
             match = CrashLogs.DARWIN_PROCESS_REGEX.match(line)
@@ -79,7 +93,7 @@ class CrashLogs(object):
             if self._crash_logs_to_skip and fs.join(dirpath, basename) in self._crash_logs_to_skip:
                 return False
             return (basename.startswith(process_name + '_') and (basename.endswith('.crash')) or
-                    (process_name in basename  and basename.endswith('.ips')))
+                    (process_name in basename and basename.endswith('.ips')))
 
         logs = self._host.filesystem.files_under(self._crash_log_directory, file_filter=is_crash_log)
         errors = ''
@@ -100,7 +114,7 @@ class CrashLogs(object):
             return errors
         return None
 
-    def _find_newest_log_win(self, process_name, pid, include_errors, newer_than):
+    def _find_newest_log_win(self, pid, include_errors, newer_than):
         def is_crash_log(fs, dirpath, basename):
             if self._crash_logs_to_skip and fs.join(dirpath, basename) in self._crash_logs_to_skip:
                 return False
@@ -111,7 +125,7 @@ class CrashLogs(object):
         for path in reversed(sorted(logs)):
             try:
                 if not newer_than or self._host.filesystem.mtime(path) > newer_than:
-                    log_file = unicode_compatibility.decode_if_necessary(self._host.filesystem.read_binary_file(path), 'ascii', 'ignore')
+                    log_file = string_utils.decode(self._host.filesystem.read_binary_file(path), encoding='ascii', errors='ignore')
                     match = self.GLOBAL_PID_REGEX.search(log_file)
                     if match:
                         if int(match.group('pid')) == pid:
@@ -186,7 +200,7 @@ class CrashLogs(object):
         return crash_logs
 
     def get_timestamp_from_log(self, log_contents):
-        date_match = re.search('Date/Time:\s+(.+?)\n', log_contents)
+        date_match = re.search('Date/Time:\\s+(.+?)\n', log_contents)
         if not date_match:
             return None
         try:

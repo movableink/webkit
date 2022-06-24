@@ -23,9 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
-#if PLATFORM(WATCHOS)
+#if HAVE(PEPPER_UI_CORE)
 
 #import "UIKitSPI.h"
 
@@ -72,4 +70,4 @@
 
 @end
 
-#endif
+#endif // HAVE(PEPPER_UI_CORE)

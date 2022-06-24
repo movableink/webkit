@@ -60,32 +60,24 @@ Class kitClass(WebCore::StyleSheet* impl)
 
 Class kitClass(WebCore::CSSRule* impl)
 {
-    switch (impl->type()) {
-    case WebCore::CSSRule::UNKNOWN_RULE:
+    switch (impl->styleRuleType()) {
+    case WebCore::StyleRuleType::Unknown:
         return [DOMCSSUnknownRule class];
-    case WebCore::CSSRule::STYLE_RULE:
+    case WebCore::StyleRuleType::Style:
         return [DOMCSSStyleRule class];
-    case WebCore::CSSRule::CHARSET_RULE:
+    case WebCore::StyleRuleType::Charset:
         return [DOMCSSCharsetRule class];
-    case WebCore::CSSRule::IMPORT_RULE:
+    case WebCore::StyleRuleType::Import:
         return [DOMCSSImportRule class];
-    case WebCore::CSSRule::MEDIA_RULE:
+    case WebCore::StyleRuleType::Media:
         return [DOMCSSMediaRule class];
-    case WebCore::CSSRule::FONT_FACE_RULE:
+    case WebCore::StyleRuleType::FontFace:
         return [DOMCSSFontFaceRule class];
-    case WebCore::CSSRule::PAGE_RULE:
+    case WebCore::StyleRuleType::Page:
         return [DOMCSSPageRule class];
-    case WebCore::CSSRule::KEYFRAMES_RULE:
-    case WebCore::CSSRule::NAMESPACE_RULE:
-    case WebCore::CSSRule::KEYFRAME_RULE:
-    case WebCore::CSSRule::SUPPORTS_RULE:
-#if ENABLE(CSS_DEVICE_ADAPTATION)
-    case WebCore::CSSRule::WEBKIT_VIEWPORT_RULE:
-#endif
+    default:
         return [DOMCSSRule class];
     }
-    ASSERT_NOT_REACHED();
-    return nil;
 }
 
 //------------------------------------------------------------------------------------------
@@ -98,12 +90,9 @@ Class kitClass(WebCore::DeprecatedCSSOMValue* impl)
         return [DOMCSSPrimitiveValue class];
     case WebCore::DeprecatedCSSOMValue::CSS_VALUE_LIST:
         return [DOMCSSValueList class];
-    case WebCore::DeprecatedCSSOMValue::CSS_INHERIT:
-    case WebCore::DeprecatedCSSOMValue::CSS_CUSTOM:
+    default:
         return [DOMCSSValue class];
     }
-    ASSERT_NOT_REACHED();
-    return nil;
 }
 
 //------------------------------------------------------------------------------------------

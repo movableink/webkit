@@ -3,13 +3,13 @@
 <body>
 This tests setting caret inside a blockquote with a large offset and running execCommand('Delete').  WebKit should not crash and you should see PASS below:
 <div id="test" contentEditable="true">
-<blockquote type="cite" id="blockquote" style="font-size: 0px; -webkit-min-logical-height: 4px;"><br></blockquote>
+<blockquote type="cite" id="blockquote" style="font-size: 0px; min-block-size: 4px;"><br></blockquote>
 </div>
 <script>
 if (window.testRunner)
     testRunner.dumpAsText();
 
-window.getSelection().setPosition(document.getElementById('blockquote'), 2000000000);
+window.getSelection().setPosition(document.getElementById('blockquote'), document.getElementById('blockquote').childNodes.length);
 document.execCommand("Delete");
 
 var test = document.getElementById('test');

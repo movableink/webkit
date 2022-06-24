@@ -32,7 +32,6 @@
 #include "NetworkProcess.h"
 #include "SecItemRequestData.h"
 #include "SecItemResponseData.h"
-#include "SecItemShimLibrary.h"
 #include "SecItemShimProxyMessages.h"
 #include <Security/Security.h>
 #include <atomic>
@@ -64,13 +63,13 @@ static WeakPtr<NetworkProcess>& globalNetworkProcess()
     return networkProcess.get();
 }
 
-static Optional<SecItemResponseData> sendSecItemRequest(SecItemRequestData::Type requestType, CFDictionaryRef query, CFDictionaryRef attributesToMatch = 0)
+static std::optional<SecItemResponseData> sendSecItemRequest(SecItemRequestData::Type requestType, CFDictionaryRef query, CFDictionaryRef attributesToMatch = 0)
 {
-    Optional<SecItemResponseData> response;
+    std::optional<SecItemResponseData> response;
 
     if (RunLoop::isMain()) {
         if (!globalNetworkProcess()->parentProcessConnection()->sendSync(Messages::SecItemShimProxy::SecItemRequestSync(SecItemRequestData(requestType, query, attributesToMatch)), Messages::SecItemShimProxy::SecItemRequestSync::Reply(response), 0))
-            return WTF::nullopt;
+            return std::nullopt;
         return response;
     }
 
@@ -141,9 +140,8 @@ static OSStatus webSecItemDelete(CFDictionaryRef query)
 
 void initializeSecItemShim(NetworkProcess& process)
 {
-    globalNetworkProcess() = makeWeakPtr(process);
+    globalNetworkProcess() = process;
 
-#if PLATFORM(IOS_FAMILY)
     struct _CFNFrameworksStubs stubs = {
         .version = 0,
         .SecItem_stub_CopyMatching = webSecItemCopyMatching,
@@ -153,19 +151,6 @@ void initializeSecItemShim(NetworkProcess& process)
     };
 
     _CFURLConnectionSetFrameworkStubs(&stubs);
-#endif
-
-#if PLATFORM(MAC)
-    const SecItemShimCallbacks callbacks = {
-        webSecItemCopyMatching,
-        webSecItemAdd,
-        webSecItemUpdate,
-        webSecItemDelete
-    };
-    
-    SecItemShimInitializeFunc func = reinterpret_cast<SecItemShimInitializeFunc>(dlsym(RTLD_DEFAULT, "WebKitSecItemShimInitialize"));
-    func(callbacks);
-#endif
 }
 
 } // namespace WebKit

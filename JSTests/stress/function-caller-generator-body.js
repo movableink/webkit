@@ -1,5 +1,10 @@
 //@ runDefault
 
+function shouldBe(actual, expected) {
+    if (actual !== expected)
+        throw new Error('bad value: ' + actual);
+}
+
 (function thingy() {
     function bar()
     {
@@ -8,17 +13,8 @@
     
     function* foo()
     {
-        bar();
+        shouldBe(bar(), null);
     }
     
-    var ok = false;
-    try {
-        foo().next();
-        ok = true;
-    } catch (e) {
-        if (e.toString() != "TypeError: Function.caller used to retrieve generator body")
-            throw "Error: bad error: " + e;
-    }
-    if (ok)
-        throw "Error: did not throw error";
+    foo().next();
 })();

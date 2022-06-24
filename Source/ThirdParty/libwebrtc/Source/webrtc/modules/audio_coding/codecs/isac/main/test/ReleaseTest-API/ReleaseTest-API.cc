@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
 #include <iostream>
 
 /* include API */
@@ -40,8 +41,6 @@
 #define CLOCKS_PER_SEC 1000 /* Runtime statistics */
 #endif
 #endif
-
-using namespace std;
 
 int main(int argc, char* argv[]) {
   char inname[100], outname[100], bottleneck_file[100], vadfile[100];
@@ -92,7 +91,6 @@ int main(int argc, char* argv[]) {
   size_t maxStreamLen60 = 0;
   short sampFreqKHz = 32;
   short samplesIn10Ms;
-  short useAssign = 0;
   // FILE logFile;
   bool doTransCoding = false;
   int32_t rateTransCoding = 0;
@@ -187,7 +185,6 @@ int main(int argc, char* argv[]) {
   /* Loop over all command line arguments */
   CodingMode = 0;
   testNum = 0;
-  useAssign = 0;
   // logFile = NULL;
   char transCodingFileName[500];
   int16_t totFileLoop = 0;
@@ -209,11 +206,6 @@ int main(int argc, char* argv[]) {
       rateTransCoding = atoi(argv[i]);
       i++;
       strcpy(transCodingFileName, argv[i]);
-    }
-
-    /*Should we use assign API*/
-    if (!strcmp("-assign", argv[i])) {
-      useAssign = 1;
     }
 
     /* Set Sampling Rate */
@@ -425,27 +417,27 @@ int main(int argc, char* argv[]) {
   printf("Output file: %s\n\n", outname);
   if ((inp = fopen(inname, "rb")) == NULL) {
     printf("  Error iSAC Cannot read file %s.\n", inname);
-    cout << flush;
+    std::cout << std::flush;
     exit(1);
   }
 
   if ((outp = fopen(outname, "wb")) == NULL) {
     printf("  Error iSAC Cannot write file %s.\n", outname);
-    cout << flush;
+    std::cout << std::flush;
     getc(stdin);
     exit(1);
   }
   if (VADusage) {
     if ((vadp = fopen(vadfile, "rb")) == NULL) {
       printf("  Error iSAC Cannot read file %s.\n", vadfile);
-      cout << flush;
+      std::cout << std::flush;
       exit(1);
     }
   }
 
   if ((bandwidthp = fopen("bwe.pcm", "wb")) == NULL) {
     printf("  Error iSAC Cannot read file %s.\n", "bwe.pcm");
-    cout << flush;
+    std::cout << std::flush;
     exit(1);
   }
 
@@ -453,26 +445,14 @@ int main(int argc, char* argv[]) {
 
   /* Initialize the ISAC and BN structs */
   if (testNum != 8) {
-    if (!useAssign) {
-      err = WebRtcIsac_Create(&ISAC_main_inst);
-      WebRtcIsac_SetEncSampRate(ISAC_main_inst, sampFreqKHz * 1000);
-      WebRtcIsac_SetDecSampRate(ISAC_main_inst,
-                                sampFreqKHz >= 32 ? 32000 : 16000);
-    } else {
-      /* Test the Assign functions */
-      int sss;
-      void* ppp;
-      err = WebRtcIsac_AssignSize(&sss);
-      ppp = malloc(sss);
-      err = WebRtcIsac_Assign(&ISAC_main_inst, ppp);
-      WebRtcIsac_SetEncSampRate(ISAC_main_inst, sampFreqKHz * 1000);
-      WebRtcIsac_SetDecSampRate(ISAC_main_inst,
-                                sampFreqKHz >= 32 ? 32000 : 16000);
-    }
+    err = WebRtcIsac_Create(&ISAC_main_inst);
+    WebRtcIsac_SetEncSampRate(ISAC_main_inst, sampFreqKHz * 1000);
+    WebRtcIsac_SetDecSampRate(ISAC_main_inst,
+                              sampFreqKHz >= 32 ? 32000 : 16000);
     /* Error check */
     if (err < 0) {
       printf("\n\n Error in create.\n\n");
-      cout << flush;
+      std::cout << std::flush;
       exit(EXIT_FAILURE);
     }
   }
@@ -508,7 +488,7 @@ int main(int argc, char* argv[]) {
   if (testNum != 1) {
     if (WebRtcIsac_EncoderInit(ISAC_main_inst, CodingMode) < 0) {
       printf("Error could not initialize the encoder \n");
-      cout << flush;
+      std::cout << std::flush;
       return 0;
     }
   }
@@ -520,7 +500,7 @@ int main(int argc, char* argv[]) {
       /* exit if returned with error */
       errtype = WebRtcIsac_GetErrorCode(ISAC_main_inst);
       printf("\n\n Error in initialization (control): %d.\n\n", errtype);
-      cout << flush;
+      std::cout << std::flush;
       if (testNum == 0) {
         exit(EXIT_FAILURE);
       }
@@ -534,7 +514,7 @@ int main(int argc, char* argv[]) {
       errtype = WebRtcIsac_GetErrorCode(ISAC_main_inst);
 
       printf("\n\n Error in Control BWE: %d.\n\n", errtype);
-      cout << flush;
+      std::cout << std::flush;
       exit(EXIT_FAILURE);
     }
   }
@@ -545,7 +525,7 @@ int main(int argc, char* argv[]) {
       /* exit if returned with error */
       errtype = WebRtcIsac_GetErrorCode(ISAC_main_inst);
       printf("\n\n Error in SetMaxPayloadSize: %d.\n\n", errtype);
-      cout << flush;
+      std::cout << std::flush;
       exit(EXIT_FAILURE);
     }
   }
@@ -555,14 +535,14 @@ int main(int argc, char* argv[]) {
       /* exit if returned with error */
       errtype = WebRtcIsac_GetErrorCode(ISAC_main_inst);
       printf("\n\n Error in SetMaxRateInBytes: %d.\n\n", errtype);
-      cout << flush;
+      std::cout << std::flush;
       exit(EXIT_FAILURE);
     }
   }
 
   *speechType = 1;
 
-  cout << "\n" << flush;
+  std::cout << "\n" << std::flush;
 
   length_file = 0;
   int16_t bnIdxTC = 0;
@@ -575,7 +555,7 @@ int main(int argc, char* argv[]) {
       if (err < 0) {
         errtype = WebRtcIsac_GetErrorCode(ISAC_main_inst);
         printf("\n\n Error in encoderinit: %d.\n\n", errtype);
-        cout << flush;
+        std::cout << std::flush;
       }
 
       WebRtcIsac_DecoderInit(ISAC_main_inst);
@@ -613,7 +593,7 @@ int main(int argc, char* argv[]) {
 
           printf("\nError: Streamsize out of range %d\n",
                  stream_len_int - payloadSize);
-          cout << flush;
+          std::cout << std::flush;
         }
 
         WebRtcIsac_GetUplinkBw(ISAC_main_inst, &sendBN);
@@ -671,7 +651,7 @@ int main(int argc, char* argv[]) {
         /* exit if returned with error */
         errtype = WebRtcIsac_GetErrorCode(ISAC_main_inst);
         fprintf(stderr, "Error in encoder: %d.\n", errtype);
-        cout << flush;
+        std::cout << std::flush;
         exit(0);
       }
       stream_len = static_cast<size_t>(stream_len_int);
@@ -787,7 +767,7 @@ int main(int argc, char* argv[]) {
           }
 
           printf("Error: in decoder: %d.", errtype);
-          cout << flush;
+          std::cout << std::flush;
           if (testNum == 0) {
             printf("\n\n");
           }
@@ -804,7 +784,7 @@ int main(int argc, char* argv[]) {
           printf("\n\n");
         }
         printf("    Error: in getFrameLen %d.", errtype);
-        cout << flush;
+        std::cout << std::flush;
         if (testNum == 0) {
           printf("\n\n");
         }
@@ -840,7 +820,7 @@ int main(int argc, char* argv[]) {
           printf("\n\n");
         }
         printf("    Error: in decoder %d.", errtype);
-        cout << flush;
+        std::cout << std::flush;
         if (testNum == 0) {
           printf("\n\n");
         }
@@ -851,7 +831,7 @@ int main(int argc, char* argv[]) {
           printf("\n\n");
         }
         printf("    Error: in decoding the transcoded stream");
-        cout << flush;
+        std::cout << std::flush;
         if (testNum == 0) {
           printf("\n\n");
         }
@@ -907,7 +887,7 @@ int main(int argc, char* argv[]) {
 #endif
   }
   printf("\n");
-  printf("total bits               = %" PRIuS " bits\n", totalbits);
+  printf("total bits               = %" RTC_PRIuS " bits\n", totalbits);
   printf("measured average bitrate = %0.3f kbits/s\n",
          (double)totalbits * (sampFreqKHz) / totalsmpls);
   if (doTransCoding) {
@@ -926,11 +906,13 @@ int main(int argc, char* argv[]) {
          (100 * runtime / length_file));
 
   if (maxStreamLen30 != 0) {
-    printf("Maximum payload size 30ms Frames %" PRIuS " bytes (%0.3f kbps)\n",
+    printf("Maximum payload size 30ms Frames %" RTC_PRIuS
+           " bytes (%0.3f kbps)\n",
            maxStreamLen30, maxStreamLen30 * 8 / 30.);
   }
   if (maxStreamLen60 != 0) {
-    printf("Maximum payload size 60ms Frames %" PRIuS " bytes (%0.3f kbps)\n",
+    printf("Maximum payload size 60ms Frames %" RTC_PRIuS
+           " bytes (%0.3f kbps)\n",
            maxStreamLen60, maxStreamLen60 * 8 / 60.);
   }
   // fprintf(stderr, "\n");
@@ -939,11 +921,11 @@ int main(int argc, char* argv[]) {
   fprintf(stderr, "   %0.1f kbps",
           (double)totalbits * (sampFreqKHz) / totalsmpls);
   if (maxStreamLen30 != 0) {
-    fprintf(stderr, "   plmax-30ms %" PRIuS " bytes (%0.0f kbps)",
+    fprintf(stderr, "   plmax-30ms %" RTC_PRIuS " bytes (%0.0f kbps)",
             maxStreamLen30, maxStreamLen30 * 8 / 30.);
   }
   if (maxStreamLen60 != 0) {
-    fprintf(stderr, "   plmax-60ms %" PRIuS " bytes (%0.0f kbps)",
+    fprintf(stderr, "   plmax-60ms %" RTC_PRIuS " bytes (%0.0f kbps)",
             maxStreamLen60, maxStreamLen60 * 8 / 60.);
   }
   if (doTransCoding) {

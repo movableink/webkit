@@ -26,16 +26,19 @@
 #include "config.h"
 #include "StyleSharingResolver.h"
 
-#include "DocumentRuleSets.h"
+#include "ElementInlines.h"
 #include "ElementRuleCollector.h"
 #include "FullscreenManager.h"
+#include "HTMLDialogElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "NodeRenderStyle.h"
 #include "RenderStyle.h"
 #include "SVGElement.h"
 #include "ShadowRoot.h"
+#include "StyleResolver.h"
 #include "StyleScope.h"
+#include "StyleScopeRuleSets.h"
 #include "StyleUpdate.h"
 #include "StyledElement.h"
 #include "VisitedLinkState.h"
@@ -54,10 +57,10 @@ struct SharingResolver::Context {
     InsideLink elementLinkState;
 };
 
-SharingResolver::SharingResolver(const Document& document, const DocumentRuleSets& ruleSets, const SelectorFilter& selectorFilter)
+SharingResolver::SharingResolver(const Document& document, const ScopeRuleSets& ruleSets, SelectorMatchingState& selectorMatchingState)
     : m_document(document)
     , m_ruleSets(ruleSets)
-    , m_selectorFilter(selectorFilter)
+    , m_selectorMatchingState(selectorMatchingState)
 {
 }
 
@@ -68,15 +71,14 @@ static inline bool parentElementPreventsSharing(const Element& parentElement)
 
 static inline bool elementHasDirectionAuto(const Element& element)
 {
-    // FIXME: This line is surprisingly hot, we may wish to inline hasDirectionAuto into StyleResolver.
     return is<HTMLElement>(element) && downcast<HTMLElement>(element).hasDirectionAuto();
 }
 
-std::unique_ptr<RenderStyle> SharingResolver::resolve(const Element& searchElement, const Update& update)
+std::unique_ptr<RenderStyle> SharingResolver::resolve(const Styleable& searchStyleable, const Update& update)
 {
-    if (!is<StyledElement>(searchElement))
+    if (!is<StyledElement>(searchStyleable.element))
         return nullptr;
-    auto& element = downcast<StyledElement>(searchElement);
+    auto& element = downcast<StyledElement>(searchStyleable.element);
     if (!element.parentElement())
         return nullptr;
     auto& parentElement = *element.parentElement();
@@ -100,6 +102,13 @@ std::unique_ptr<RenderStyle> SharingResolver::resolve(const Element& searchEleme
     if (elementHasDirectionAuto(element))
         return nullptr;
     if (element.shadowRoot() && !element.shadowRoot()->styleScope().resolver().ruleSets().authorStyle().hostPseudoClassRules().isEmpty())
+        return nullptr;
+    if (auto* keyframeEffectStack = searchStyleable.keyframeEffectStack()) {
+        if (keyframeEffectStack->hasEffectWithImplicitKeyframes())
+            return nullptr;
+    }
+    // FIXME: Do something smarter here, for example RuleSet based matching like with attribute/sibling selectors.
+    if (Scope::forNode(element).usesHasPseudoClass())
         return nullptr;
 
     Context context {
@@ -170,33 +179,6 @@ Node* SharingResolver::locateCousinList(const Element* parent) const
     return nullptr;
 }
 
-static bool canShareStyleWithControl(const HTMLFormControlElement& element, const HTMLFormControlElement& formElement)
-{
-    if (!is<HTMLInputElement>(formElement) || !is<HTMLInputElement>(element))
-        return false;
-
-    auto& thisInputElement = downcast<HTMLInputElement>(formElement);
-    auto& otherInputElement = downcast<HTMLInputElement>(element);
-
-    if (thisInputElement.isAutoFilled() != otherInputElement.isAutoFilled())
-        return false;
-    if (thisInputElement.shouldAppearChecked() != otherInputElement.shouldAppearChecked())
-        return false;
-    if (thisInputElement.isRequired() != otherInputElement.isRequired())
-        return false;
-
-    if (formElement.isDisabledFormControl() != element.isDisabledFormControl())
-        return false;
-
-    if (formElement.isInRange() != element.isInRange())
-        return false;
-
-    if (formElement.isOutOfRange() != element.isOutOfRange())
-        return false;
-
-    return true;
-}
-
 bool SharingResolver::canShareStyleWithElement(const Context& context, const StyledElement& candidateElement) const
 {
     auto& element = context.element;
@@ -223,32 +205,45 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
         return false;
     if (candidateElement.focused() != element.focused())
         return false;
+    if (candidateElement.hasFocusVisible() != element.hasFocusVisible())
+        return false;
+    if (candidateElement.hasFocusWithin() != element.hasFocusWithin())
+        return false;
+    if (candidateElement.isBeingDragged() != element.isBeingDragged())
+        return false;
     if (candidateElement.shadowPseudoId() != element.shadowPseudoId())
+        return false;
+    if (element.isInShadowTree() && candidateElement.partNames() != element.partNames())
         return false;
     if (&candidateElement == m_document.cssTarget())
         return false;
     if (!sharingCandidateHasIdenticalStyleAffectingAttributes(context, candidateElement))
         return false;
-    if (const_cast<StyledElement&>(candidateElement).additionalPresentationAttributeStyle() != const_cast<StyledElement&>(element).additionalPresentationAttributeStyle())
+    if (const_cast<StyledElement&>(candidateElement).additionalPresentationalHintStyle() != const_cast<StyledElement&>(element).additionalPresentationalHintStyle())
         return false;
     if (candidateElement.affectsNextSiblingElementStyle() || candidateElement.styleIsAffectedByPreviousSibling())
-        return false;
-    if (candidateElement.styleAffectedByFocusWithin() || element.styleAffectedByFocusWithin())
         return false;
 
     auto& candidateElementId = candidateElement.idForStyleResolution();
     if (!candidateElementId.isNull() && m_ruleSets.features().idsInRules.contains(candidateElementId))
         return false;
 
-    bool isControl = is<HTMLFormControlElement>(candidateElement);
-
-    if (isControl != is<HTMLFormControlElement>(element))
+    if (is<HTMLFormControlElement>(candidateElement) || is<HTMLFormControlElement>(element))
         return false;
 
-    if (isControl && !canShareStyleWithControl(downcast<HTMLFormControlElement>(element), downcast<HTMLFormControlElement>(candidateElement)))
+    // HTMLFormElement can get the :valid/invalid pseudo classes
+    if (candidateElement.matchesValidPseudoClass() != element.matchesValidPseudoClass())
         return false;
 
-    if (style->transitions() || style->animations())
+    // HTMLProgressElement is not a HTMLFormControlElement
+    if (candidateElement.matchesIndeterminatePseudoClass() != element.matchesIndeterminatePseudoClass())
+        return false;
+
+    // HTMLOptionElement is not a HTMLFormControlElement
+    if (candidateElement.matchesDefaultPseudoClass() != element.matchesDefaultPseudoClass())
+        return false;
+
+    if (candidateElement.hasKeyframeEffects(PseudoId::None))
         return false;
 
     // Turn off style sharing for elements that can gain layers for reasons outside of the style system.
@@ -266,6 +261,7 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
         return false;
 
     if (candidateElement.elementData() != element.elementData()) {
+        // Attributes that are optimized as "common attribute selectors".
         if (candidateElement.attributeWithoutSynchronization(HTMLNames::readonlyAttr) != element.attributeWithoutSynchronization(HTMLNames::readonlyAttr))
             return false;
         if (candidateElement.isSVGElement()) {
@@ -275,21 +271,21 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
             if (candidateElement.attributeWithoutSynchronization(HTMLNames::typeAttr) != element.attributeWithoutSynchronization(HTMLNames::typeAttr))
                 return false;
         }
+
+        // Elements that may get StyleAdjuster's inert attribute adjustment.
+        if (m_document.settings().inertAttributeEnabled() && candidateElement.hasAttributeWithoutSynchronization(HTMLNames::inertAttr) != element.hasAttributeWithoutSynchronization(HTMLNames::inertAttr))
+            return false;
     }
 
-    if (candidateElement.matchesValidPseudoClass() != element.matchesValidPseudoClass())
-        return false;
-
-    if (element.matchesInvalidPseudoClass() != element.matchesValidPseudoClass())
-        return false;
-
-    if (candidateElement.matchesIndeterminatePseudoClass() != element.matchesIndeterminatePseudoClass())
-        return false;
-
-    if (candidateElement.matchesDefaultPseudoClass() != element.matchesDefaultPseudoClass())
-        return false;
-
     if (candidateElement.shadowRoot() && !candidateElement.shadowRoot()->styleScope().resolver().ruleSets().authorStyle().hostPseudoClassRules().isEmpty())
+        return false;
+
+#if ENABLE(WHEEL_EVENT_REGIONS)
+    if (candidateElement.hasEventListeners() || element.hasEventListeners())
+        return false;
+#endif
+
+    if (&candidateElement == m_document.activeModalDialog() || &element == m_document.activeModalDialog())
         return false;
 
 #if ENABLE(FULLSCREEN_API)
@@ -304,8 +300,8 @@ bool SharingResolver::styleSharingCandidateMatchesRuleSet(const StyledElement& e
     if (!ruleSet)
         return false;
 
-    ElementRuleCollector collector(const_cast<StyledElement&>(element), m_ruleSets, &m_selectorFilter);
-    return collector.hasAnyMatchingRules(ruleSet);
+    ElementRuleCollector collector(element, m_ruleSets, &m_selectorMatchingState);
+    return collector.hasAnyMatchingRules(*ruleSet);
 }
 
 bool SharingResolver::sharingCandidateHasIdenticalStyleAffectingAttributes(const Context& context, const StyledElement& sharingCandidate) const
@@ -332,7 +328,7 @@ bool SharingResolver::sharingCandidateHasIdenticalStyleAffectingAttributes(const
     } else if (sharingCandidate.hasClass() && classNamesAffectedByRules(sharingCandidate.classNames()))
         return false;
 
-    if (const_cast<StyledElement&>(element).presentationAttributeStyle() != const_cast<StyledElement&>(sharingCandidate).presentationAttributeStyle())
+    if (const_cast<StyledElement&>(element).presentationalHintStyle() != const_cast<StyledElement&>(sharingCandidate).presentationalHintStyle())
         return false;
 
     return true;

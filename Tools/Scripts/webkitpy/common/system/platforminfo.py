@@ -27,13 +27,18 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
 import logging
 import re
 import sys
+import platform
 
-from webkitpy.common.version import Version
+from webkitcorepy import Version
+
+from webkitpy.common.memoized import memoized
 from webkitpy.common.version_name_map import PUBLIC_TABLE, INTERNAL_TABLE, VersionNameMap
-from webkitpy.common.system.executive import Executive
+from webkitpy.common.system.executive import Executive, ScriptError
+from webkitpy.port.config import apple_additions
 
 
 _log = logging.getLogger(__name__)
@@ -54,8 +59,9 @@ class PlatformInfo(object):
     newer than one known to the code.
     """
 
-    def __init__(self, sys_module, platform_module, executive):
-        self._executive = executive
+    def __init__(self, sys_module=None, platform_module=None, executive=None):
+        sys_module = sys_module or sys
+        self._executive = executive or Executive()
         self._platform_module = platform_module
         self.os_name = self._determine_os_name(sys_module.platform)
         self.os_version = None
@@ -63,12 +69,16 @@ class PlatformInfo(object):
         self._is_cygwin = sys_module.platform == 'cygwin'
 
         if self.os_name.startswith('mac'):
-            self.os_version = Version.from_string(platform_module.mac_ver()[0])
+            # Work around for <rdar://problem/70069051>
+            if apple_additions() and getattr(apple_additions(), 'os_version', None):
+                self.os_version = apple_additions().os_version(self._executive)
+            else:
+                self.os_version = Version.from_string(self._executive.run_command(['sw_vers', '-productVersion']).rstrip())
         elif self.os_name.startswith('win'):
             self.os_version = self._win_version()
         else:
             # Most other platforms (namely iOS) return conforming version strings.
-            version = re.search(r'\d+.\d+.\d+', platform_module.release())
+            version = re.search(r'\d+.\d+(.\d+)?', (platform_module or platform).release())
             if version:
                 self.os_version = Version.from_string(version.group(0))
             else:
@@ -104,15 +114,33 @@ class PlatformInfo(object):
     def is_netbsd(self):
         return self.os_name == 'netbsd'
 
+    @memoized
+    def architecture(self):
+        try:
+            # Windows doesn't have built in uname, nor guarantee of
+            # os.uname()
+            if os.name == 'nt':
+                return platform.uname()[4]
+
+            # os.uname() won't work on embedded devices, we may support multiple architectures for a single embedded platform
+            output = self._executive.run_command(['uname', '-m']).rstrip()
+            if output:
+                if self.is_mac() and output != 'x86_64':
+                    output = 'arm64'
+                return output
+        except ScriptError:
+            pass
+        return os.uname()[4]
+
     def display_name(self):
         # platform.platform() returns Darwin information for Mac, which is just confusing.
         if self.is_mac():
-            return "Mac OS X %s" % self._platform_module.mac_ver()[0]
+            return "Mac OS X %s" % (self._platform_module or platform).mac_ver()[0]
 
         # Returns strings like:
         # Linux-2.6.18-194.3.1.el5-i686-with-redhat-5.5-Final
         # Windows-2008ServerR2-6.1.7600
-        return self._platform_module.platform()
+        return (self._platform_module or platform).platform()
 
     def os_version_name(self, table=None):
         if not self.os_version:
@@ -159,6 +187,7 @@ class PlatformInfo(object):
             return self._executive.run_command(['/usr/bin/sw_vers', '-buildVersion'], return_stderr=False, ignore_errors=True).rstrip()
         return None
 
+    @memoized
     def xcode_sdk_version(self, sdk_name):
         if self.is_mac():
             # Assumes that xcrun does not write to standard output on failure (e.g. SDK does not exist).
@@ -173,16 +202,18 @@ class PlatformInfo(object):
         output = self._executive.run_command(['xcrun', 'simctl', 'list'], return_stderr=False)
         return (line for line in output.splitlines())
 
+    @memoized
     def xcode_version(self):
-        if not self.is_mac():
+        if not self.xcode_sdk_version('macosx'):
             raise NotImplementedError
         return Version.from_string(self._executive.run_command(['xcodebuild', '-version']).split()[1])
 
+    @memoized
     def available_sdks(self):
-        if not self.is_mac():
+        if not self.xcode_sdk_version('macosx'):
             return []
 
-        XCODE_SDK_REGEX = re.compile('\-sdk (?P<sdk>\D+)\d+\.\d+(?P<specifier>\D*)')
+        XCODE_SDK_REGEX = re.compile(r'\-sdk (?P<sdk>\D+)\d+\.\d+(?P<specifier>\D*)')
         output = self._executive.run_command(['xcodebuild', '-showsdks'], return_stderr=False)
 
         sdks = list()
@@ -216,8 +247,8 @@ class PlatformInfo(object):
         return Version.from_iterable(match_object.groups())
 
     def _win_version_str(self):
-        version = self._platform_module.win32_ver()[1]
+        version = (self._platform_module or platform).win32_ver()[1]
         if version:
             return version
         # Note that this should only ever be called on windows, so this should always work.
-        return self._executive.run_command(['cmd', '/c', 'ver'], decode_output=False)
+        return self._executive.run_command(['cmd', '/c', 'ver'], decode_output=True)

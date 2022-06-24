@@ -887,7 +887,7 @@ class TestResultsController
                 testList += ',';
         }
 
-        return 'http://webkit-test-results.webkit.org/dashboards/flakiness_dashboard.html#showAllRuns=true&tests=' + encodeURIComponent(testList);
+        return 'https://results.webkit.org/?suite=layout-tests&test=' + encodeURIComponent(testList);
     }
 
     _updatePageTitle()
@@ -1415,8 +1415,8 @@ class FailuresSectionBuilder extends SectionBuilder {
                     result += TestResultsController.resultLink(testPrefix, '-actual.png', 'actual');
                 }
 
-                let diff = testResult.info.image_diff_percent;
-                result += TestResultsController.resultLink(testPrefix, '-diff.png', 'diff (' + diff + '%)');
+                const diff = Math.max(testResult.info.image_diff_percent, 0.01).toFixed(2);
+                result += TestResultsController.resultLink(testPrefix, '-diff.png', `diff (${diff}%)`);
             }
         }
         

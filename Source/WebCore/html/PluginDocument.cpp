@@ -25,7 +25,6 @@
 #include "config.h"
 #include "PluginDocument.h"
 
-#include "CustomHeaderFields.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -59,7 +58,7 @@ private:
     {
     }
 
-    void appendBytes(DocumentWriter&, const char*, size_t) final;
+    void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
     void createDocumentStructure();
 
     HTMLEmbedElement* m_embedElement { nullptr };
@@ -74,7 +73,7 @@ void PluginDocumentParser::createDocumentStructure()
     rootElement->insertedByParser();
 
     if (document.frame())
-        document.frame()->injectUserScripts(InjectAtDocumentStart);
+        document.frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 
 #if PLATFORM(IOS_FAMILY)
     // Should not be able to zoom into standalone plug-in documents.
@@ -102,22 +101,23 @@ void PluginDocumentParser::createDocumentStructure()
     embedElement->setAttributeWithoutSynchronization(srcAttr, document.url().string());
     
     ASSERT(document.loader());
-    if (auto loader = makeRefPtr(document.loader()))
+    if (RefPtr loader = document.loader())
         m_embedElement->setAttributeWithoutSynchronization(typeAttr, loader->writer().mimeType());
 
     document.setPluginElement(*m_embedElement);
 
     body->appendChild(embedElement);
+    document.setHasVisuallyNonEmptyCustomContent();
 }
 
-void PluginDocumentParser::appendBytes(DocumentWriter&, const char*, size_t)
+void PluginDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
 {
     if (m_embedElement)
         return;
 
     createDocumentStructure();
 
-    auto frame = makeRefPtr(document()->frame());
+    RefPtr frame = document()->frame();
     if (!frame)
         return;
 
@@ -130,19 +130,21 @@ void PluginDocumentParser::appendBytes(DocumentWriter&, const char*, size_t)
     // can synchronously redirect data to the plugin.
     frame->view()->flushAnyPendingPostLayoutTasks();
 
-    if (RenderWidget* renderer = m_embedElement->renderWidget()) {
-        if (RefPtr<Widget> widget = renderer->widget()) {
+    if (auto renderer = m_embedElement->renderWidget()) {
+        if (RefPtr widget = renderer->widget()) {
             frame->loader().client().redirectDataToPlugin(*widget);
+
             // In a plugin document, the main resource is the plugin. If we have a null widget, that means
             // the loading of the plugin was cancelled, which gives us a null mainResourceLoader(), so we
             // need to have this call in a null check of the widget or of mainResourceLoader().
-            frame->loader().activeDocumentLoader()->setMainResourceDataBufferingPolicy(DataBufferingPolicy::DoNotBufferData);
+            if (auto loader = frame->loader().activeDocumentLoader())
+                loader->setMainResourceDataBufferingPolicy(DataBufferingPolicy::DoNotBufferData);
         }
     }
 }
 
 PluginDocument::PluginDocument(Frame& frame, const URL& url)
-    : HTMLDocument(&frame, url, PluginDocumentClass)
+    : HTMLDocument(&frame, frame.settings(), url, { }, { DocumentClass::Plugin })
 {
     setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
     lockCompatibilityMode();
@@ -182,8 +184,8 @@ void PluginDocument::cancelManualPluginLoad()
         return;
 
     auto& frameLoader = frame()->loader();
-    auto& documentLoader = *frameLoader.activeDocumentLoader();
-    documentLoader.cancelMainResourceLoad(frameLoader.cancelledError(documentLoader.request()));
+    if (auto documentLoader = frameLoader.activeDocumentLoader())
+        documentLoader->cancelMainResourceLoad(frameLoader.cancelledError(documentLoader->request()));
     m_shouldLoadPluginManually = false;
 }
 

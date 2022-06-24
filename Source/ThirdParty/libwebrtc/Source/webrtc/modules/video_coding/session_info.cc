@@ -9,6 +9,16 @@
  */
 
 #include "modules/video_coding/session_info.h"
+
+#include <string.h>
+
+#include <vector>
+
+#include "absl/types/variant.h"
+#include "modules/include/module_common_types.h"
+#include "modules/include/module_common_types_public.h"
+#include "modules/video_coding/codecs/interface/common_constants.h"
+#include "modules/video_coding/codecs/vp8/include/vp8_globals.h"
 #include "modules/video_coding/jitter_buffer_common.h"
 #include "modules/video_coding/packet.h"
 #include "rtc_base/logging.h"
@@ -25,8 +35,7 @@ uint16_t BufferToUWord16(const uint8_t* dataBuffer) {
 
 VCMSessionInfo::VCMSessionInfo()
     : complete_(false),
-      decodable_(false),
-      frame_type_(kVideoFrameDelta),
+      frame_type_(VideoFrameType::kVideoFrameDelta),
       packets_(),
       empty_seq_num_low_(-1),
       empty_seq_num_high_(-1),
@@ -39,7 +48,7 @@ void VCMSessionInfo::UpdateDataPointers(const uint8_t* old_base_ptr,
                                         const uint8_t* new_base_ptr) {
   for (PacketIterator it = packets_.begin(); it != packets_.end(); ++it)
     if ((*it).dataPtr != NULL) {
-      assert(old_base_ptr != NULL && new_base_ptr != NULL);
+      RTC_DCHECK(old_base_ptr != NULL && new_base_ptr != NULL);
       (*it).dataPtr = new_base_ptr + ((*it).dataPtr - old_base_ptr);
     }
 }
@@ -156,8 +165,7 @@ void VCMSessionInfo::SetGofInfo(const GofInfoVP9& gof_info, size_t idx) {
 
 void VCMSessionInfo::Reset() {
   complete_ = false;
-  decodable_ = false;
-  frame_type_ = kVideoFrameDelta;
+  frame_type_ = VideoFrameType::kVideoFrameDelta;
   packets_.clear();
   empty_seq_num_low_ = -1;
   empty_seq_num_high_ = -1;
@@ -280,38 +288,11 @@ void VCMSessionInfo::UpdateCompleteSession() {
   }
 }
 
-void VCMSessionInfo::UpdateDecodableSession(const FrameData& frame_data) {
-  // Irrelevant if session is already complete or decodable
-  if (complete_ || decodable_)
-    return;
-  // TODO(agalusza): Account for bursty loss.
-  // TODO(agalusza): Refine these values to better approximate optimal ones.
-  // Do not decode frames if the RTT is lower than this.
-  const int64_t kRttThreshold = 100;
-  // Do not decode frames if the number of packets is between these two
-  // thresholds.
-  const float kLowPacketPercentageThreshold = 0.2f;
-  const float kHighPacketPercentageThreshold = 0.8f;
-  if (frame_data.rtt_ms < kRttThreshold || frame_type_ == kVideoFrameKey ||
-      !HaveFirstPacket() ||
-      (NumPackets() <= kHighPacketPercentageThreshold *
-                           frame_data.rolling_average_packets_per_frame &&
-       NumPackets() > kLowPacketPercentageThreshold *
-                          frame_data.rolling_average_packets_per_frame))
-    return;
-
-  decodable_ = true;
-}
-
 bool VCMSessionInfo::complete() const {
   return complete_;
 }
 
-bool VCMSessionInfo::decodable() const {
-  return decodable_;
-}
-
-// Find the end of the NAL unit which the packet pointed to by |packet_it|
+// Find the end of the NAL unit which the packet pointed to by `packet_it`
 // belongs to. Returns an iterator to the last packet of the frame if the end
 // of the NAL unit wasn't found.
 VCMSessionInfo::PacketIterator VCMSessionInfo::FindNaluEnd(
@@ -366,7 +347,7 @@ VCMSessionInfo::PacketIterator VCMSessionInfo::FindNextPartitionBeginning(
 
 VCMSessionInfo::PacketIterator VCMSessionInfo::FindPartitionEnd(
     PacketIterator it) const {
-  assert((*it).codec == kVideoCodecVP8);
+  RTC_DCHECK_EQ((*it).codec(), kVideoCodecVP8);
   PacketIterator prev_it = it;
   const int partition_id =
       absl::get<RTPVideoHeaderVP8>((*it).video_header.video_type_header)
@@ -437,9 +418,8 @@ bool VCMSessionInfo::HaveLastPacket() const {
 
 int VCMSessionInfo::InsertPacket(const VCMPacket& packet,
                                  uint8_t* frame_buffer,
-                                 VCMDecodeErrorMode decode_error_mode,
                                  const FrameData& frame_data) {
-  if (packet.frameType == kEmptyFrame) {
+  if (packet.video_header.frame_type == VideoFrameType::kEmptyFrame) {
     // Update sequence number of an empty packet.
     // Only media packets are inserted into the packet list.
     InformOfEmptyPacket(packet.seqNum);
@@ -463,9 +443,9 @@ int VCMSessionInfo::InsertPacket(const VCMPacket& packet,
       (*rit).sizeBytes > 0)
     return -2;
 
-  if (packet.codec == kVideoCodecH264) {
-    frame_type_ = packet.frameType;
-    if (packet.is_first_packet_in_frame &&
+  if (packet.codec() == kVideoCodecH264) {
+    frame_type_ = packet.video_header.frame_type;
+    if (packet.is_first_packet_in_frame() &&
         (first_packet_seq_num_ == -1 ||
          IsNewerSequenceNumber(first_packet_seq_num_, packet.seqNum))) {
       first_packet_seq_num_ = packet.seqNum;
@@ -481,9 +461,9 @@ int VCMSessionInfo::InsertPacket(const VCMPacket& packet,
     // Placing check here, as to properly account for duplicate packets.
     // Check if this is first packet (only valid for some codecs)
     // Should only be set for one packet per session.
-    if (packet.is_first_packet_in_frame && first_packet_seq_num_ == -1) {
+    if (packet.is_first_packet_in_frame() && first_packet_seq_num_ == -1) {
       // The first packet in a frame signals the frame type.
-      frame_type_ = packet.frameType;
+      frame_type_ = packet.video_header.frame_type;
       // Store the sequence number for the first packet.
       first_packet_seq_num_ = static_cast<int>(packet.seqNum);
     } else if (first_packet_seq_num_ != -1 &&
@@ -492,10 +472,11 @@ int VCMSessionInfo::InsertPacket(const VCMPacket& packet,
           << "Received packet with a sequence number which is out "
              "of frame boundaries";
       return -3;
-    } else if (frame_type_ == kEmptyFrame && packet.frameType != kEmptyFrame) {
+    } else if (frame_type_ == VideoFrameType::kEmptyFrame &&
+               packet.video_header.frame_type != VideoFrameType::kEmptyFrame) {
       // Update the frame type with the type of the first media packet.
       // TODO(mikhal): Can this trigger?
-      frame_type_ = packet.frameType;
+      frame_type_ = packet.video_header.frame_type;
     }
 
     // Track the marker bit, should only be set for one packet per session.
@@ -510,15 +491,12 @@ int VCMSessionInfo::InsertPacket(const VCMPacket& packet,
     }
   }
 
-  // The insert operation invalidates the iterator |rit|.
+  // The insert operation invalidates the iterator `rit`.
   PacketIterator packet_list_it = packets_.insert(rit.base(), packet);
 
   size_t returnLength = InsertBuffer(frame_buffer, packet_list_it);
   UpdateCompleteSession();
-  if (decode_error_mode == kWithErrors)
-    decodable_ = true;
-  else if (decode_error_mode == kSelectiveErrors)
-    UpdateDecodableSession(frame_data);
+
   return static_cast<int>(returnLength);
 }
 

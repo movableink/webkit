@@ -95,10 +95,12 @@ void PageLoadState::commitChanges()
 
     bool canGoBackChanged = m_committedState.canGoBack != m_uncommittedState.canGoBack;
     bool canGoForwardChanged = m_committedState.canGoForward != m_uncommittedState.canGoForward;
-    bool titleChanged = m_committedState.title != m_uncommittedState.title;
+    bool titleChanged = m_committedState.title != m_uncommittedState.title
+        || m_committedState.titleFromSafeBrowsingWarning != m_uncommittedState.titleFromSafeBrowsingWarning;
     bool isLoadingChanged = isLoading(m_committedState) != isLoading(m_uncommittedState);
     bool activeURLChanged = activeURL(m_committedState) != activeURL(m_uncommittedState);
     bool hasOnlySecureContentChanged = hasOnlySecureContent(m_committedState) != hasOnlySecureContent(m_uncommittedState);
+    bool negotiatedLegacyTLSChanged = m_committedState.negotiatedLegacyTLS != m_uncommittedState.negotiatedLegacyTLS;
     bool estimatedProgressChanged = estimatedProgress(m_committedState) != estimatedProgress(m_uncommittedState);
     bool networkRequestsInProgressChanged = m_committedState.networkRequestsInProgress != m_uncommittedState.networkRequestsInProgress;
     bool certificateInfoChanged = m_committedState.certificateInfo != m_uncommittedState.certificateInfo;
@@ -115,6 +117,8 @@ void PageLoadState::commitChanges()
         callObserverCallback(&Observer::willChangeActiveURL);
     if (hasOnlySecureContentChanged)
         callObserverCallback(&Observer::willChangeHasOnlySecureContent);
+    if (negotiatedLegacyTLSChanged)
+        callObserverCallback(&Observer::willChangeNegotiatedLegacyTLS);
     if (estimatedProgressChanged)
         callObserverCallback(&Observer::willChangeEstimatedProgress);
     if (networkRequestsInProgressChanged)
@@ -135,6 +139,8 @@ void PageLoadState::commitChanges()
         callObserverCallback(&Observer::didChangeEstimatedProgress);
     if (hasOnlySecureContentChanged)
         callObserverCallback(&Observer::didChangeHasOnlySecureContent);
+    if (negotiatedLegacyTLSChanged)
+        callObserverCallback(&Observer::didChangeNegotiatedLegacyTLS);
     if (activeURLChanged)
         callObserverCallback(&Observer::didChangeActiveURL);
     if (isLoadingChanged)
@@ -162,6 +168,7 @@ void PageLoadState::reset(const Transaction::Token& token)
     m_lastUnreachableURL = String();
 
     m_uncommittedState.title = String();
+    m_uncommittedState.titleFromSafeBrowsingWarning = { };
 
     m_uncommittedState.estimatedProgress = 0;
     m_uncommittedState.networkRequestsInProgress = false;
@@ -219,6 +226,17 @@ bool PageLoadState::hasOnlySecureContent(const Data& data)
 bool PageLoadState::hasOnlySecureContent() const
 {
     return hasOnlySecureContent(m_committedState);
+}
+
+bool PageLoadState::hasNegotiatedLegacyTLS() const
+{
+    return m_committedState.negotiatedLegacyTLS;
+}
+
+void PageLoadState::negotiatedLegacyTLS(const Transaction::Token& token)
+{
+    ASSERT_UNUSED(token, &token.m_pageLoadState == this);
+    m_uncommittedState.negotiatedLegacyTLS = true;
 }
 
 double PageLoadState::estimatedProgress(const Data& data)
@@ -301,7 +319,7 @@ void PageLoadState::didFailProvisionalLoad(const Transaction::Token& token)
     m_uncommittedState.unreachableURL = m_lastUnreachableURL;
 }
 
-void PageLoadState::didCommitLoad(const Transaction::Token& token, WebCertificateInfo& certificateInfo, bool hasInsecureContent)
+void PageLoadState::didCommitLoad(const Transaction::Token& token, WebCertificateInfo& certificateInfo, bool hasInsecureContent, bool usedLegacyTLS)
 {
     ASSERT_UNUSED(token, &token.m_pageLoadState == this);
     ASSERT(m_uncommittedState.state == State::Provisional);
@@ -312,8 +330,10 @@ void PageLoadState::didCommitLoad(const Transaction::Token& token, WebCertificat
 
     m_uncommittedState.url = m_uncommittedState.provisionalURL;
     m_uncommittedState.provisionalURL = String();
+    m_uncommittedState.negotiatedLegacyTLS = usedLegacyTLS;
 
     m_uncommittedState.title = String();
+    m_uncommittedState.titleFromSafeBrowsingWarning = { };
 }
 
 void PageLoadState::didFinishLoad(const Transaction::Token& token)
@@ -358,6 +378,9 @@ void PageLoadState::setUnreachableURL(const Transaction::Token& token, const Str
 
 const String& PageLoadState::title() const
 {
+    if (!m_committedState.titleFromSafeBrowsingWarning.isNull())
+        return m_committedState.titleFromSafeBrowsingWarning;
+
     return m_committedState.title;
 }
 
@@ -365,6 +388,12 @@ void PageLoadState::setTitle(const Transaction::Token& token, const String& titl
 {
     ASSERT_UNUSED(token, &token.m_pageLoadState == this);
     m_uncommittedState.title = title;
+}
+
+void PageLoadState::setTitleFromSafeBrowsingWarning(const Transaction::Token& token, const String& title)
+{
+    ASSERT_UNUSED(token, &token.m_pageLoadState == this);
+    m_uncommittedState.titleFromSafeBrowsingWarning = title;
 }
 
 bool PageLoadState::canGoBack() const
@@ -448,7 +477,7 @@ void PageLoadState::didChangeProcessIsResponsive()
 
 void PageLoadState::callObserverCallback(void (Observer::*callback)())
 {
-    auto protectedPage = makeRef(m_webPageProxy);
+    Ref protectedPage { m_webPageProxy };
 
     auto observerCopy = m_observers;
     for (auto* observer : observerCopy) {

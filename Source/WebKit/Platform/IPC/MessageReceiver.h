@@ -26,6 +26,7 @@
 #pragma once
 
 #include <wtf/Assertions.h>
+#include <wtf/WeakPtr.h>
 
 namespace IPC {
 
@@ -33,17 +34,22 @@ class Connection;
 class Decoder;
 class Encoder;
 
-class MessageReceiver {
+class MessageReceiver : public CanMakeWeakPtr<MessageReceiver> {
 public:
     virtual ~MessageReceiver()
     {
         ASSERT(!m_messageReceiverMapCount);
     }
 
-    virtual void didReceiveMessage(Connection&, Decoder&) = 0;
-    virtual void didReceiveSyncMessage(Connection&, Decoder&, std::unique_ptr<Encoder>&)
+    virtual void didReceiveMessage(Connection&, Decoder&)
     {
         ASSERT_NOT_REACHED();
+    }
+
+    virtual bool didReceiveSyncMessage(Connection&, Decoder&, UniqueRef<Encoder>&)
+    {
+        ASSERT_NOT_REACHED();
+        return false;
     }
 
 private:
@@ -51,7 +57,7 @@ private:
 
     void willBeAddedToMessageReceiverMap()
     {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         m_messageReceiverMapCount++;
 #endif
     }
@@ -59,12 +65,12 @@ private:
     void willBeRemovedFromMessageReceiverMap()
     {
         ASSERT(m_messageReceiverMapCount);
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         m_messageReceiverMapCount--;
 #endif
     }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     unsigned m_messageReceiverMapCount { 0 };
 #endif
 };

@@ -1,17 +1,13 @@
-//@ requireOptions("--useWeakRefs=true")
-
 asyncTestStart(1);
 
 function makeWeakRef() { return new WeakRef({foo: 1 }); }
 noInline(makeWeakRef);
 
-let loopCount = 10000;
-
+// Turns out the test times out if we turn the event loop 10000 times...
+let loopCount = globalThis.window ? 300 : 10000;
 function turnEventLoop() {
     return new Promise(function(resolve, reject) {
         if (globalThis.window) {
-            // Turns out the test times out if we turn the event loop 10000 times...
-            loopCount = 1000;
             window.setTimeout(() => {
                 resolve();
             }, 0);
@@ -41,7 +37,7 @@ async function test() {
     }
     gc();
 
-    if (weakRefs.find((weak) => weak.deref() === null) === undefined)
+    if (weakRefs.find((weak) => weak.deref() === undefined) === undefined)
         throw new Error("No weak ref value was collected");
     asyncTestPassed();
 }

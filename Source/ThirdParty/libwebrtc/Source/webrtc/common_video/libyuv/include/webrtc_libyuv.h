@@ -17,21 +17,32 @@
 
 #include <stdint.h>
 #include <stdio.h>
+
 #include <vector>
 
+#include "api/scoped_refptr.h"
 #include "api/video/video_frame.h"
 #include "api/video/video_frame_buffer.h"
-#include "common_types.h"  // NOLINT(build/include)
-#include "rtc_base/scoped_ref_ptr.h"
+#include "rtc_base/system/rtc_export.h"
 
 namespace webrtc {
 
+enum class VideoType {
+  kUnknown,
+  kI420,
+  kIYUV,
+  kRGB24,
+  kARGB,
+  kRGB565,
+  kYUY2,
+  kYV12,
+  kUYVY,
+  kMJPEG,
+  kBGRA,
+};
+
 // This is the max PSNR value our algorithms can return.
 const double kPerfectPSNR = 48.0f;
-
-// TODO(nisse): Some downstream apps call CalcBufferSize with
-// ::webrtc::kI420 as the first argument. Delete after they are updated.
-const VideoType kI420 = VideoType::kI420;
 
 // Calculate the required buffer size.
 // Input:
@@ -41,16 +52,6 @@ const VideoType kI420 = VideoType::kI420;
 // Return value:    :The required size in bytes to accommodate the specified
 //                   video frame.
 size_t CalcBufferSize(VideoType type, int width, int height);
-
-// TODO(mikhal): Add unit test for these two functions and determine location.
-// Print VideoFrame to file
-// Input:
-//    - frame       : Reference to video frame.
-//    - file        : pointer to file object. It is assumed that the file is
-//                    already open for writing.
-// Return value: 0 if OK, < 0 otherwise.
-int PrintVideoFrame(const VideoFrame& frame, FILE* file);
-int PrintVideoFrame(const I420BufferInterface& frame, FILE* file);
 
 // Extract buffer from VideoFrame or I420BufferInterface (consecutive
 // planes, no stride)
@@ -77,6 +78,14 @@ int ConvertFromI420(const VideoFrame& src_frame,
                     int dst_sample_size,
                     uint8_t* dst_frame);
 
+rtc::scoped_refptr<I420BufferInterface> ScaleVideoFrameBuffer(
+    const I420BufferInterface& source,
+    int dst_width,
+    int dst_height);
+
+double I420SSE(const I420BufferInterface& ref_buffer,
+               const I420BufferInterface& test_buffer);
+
 // Compute PSNR for an I420 frame (all planes).
 // Returns the PSNR in decibel, to a maximum of kInfinitePSNR.
 double I420PSNR(const VideoFrame* ref_frame, const VideoFrame* test_frame);
@@ -89,9 +98,9 @@ double I420SSIM(const I420BufferInterface& ref_buffer,
                 const I420BufferInterface& test_buffer);
 
 // Helper function for scaling NV12 to NV12.
-// If the |src_width| and |src_height| matches the |dst_width| and |dst_height|,
-// then |tmp_buffer| is not used. In other cases, the minimum size of
-// |tmp_buffer| should be:
+// If the `src_width` and `src_height` matches the `dst_width` and `dst_height`,
+// then `tmp_buffer` is not used. In other cases, the minimum size of
+// `tmp_buffer` should be:
 //   (src_width/2) * (src_height/2) * 2 + (dst_width/2) * (dst_height/2) * 2
 void NV12Scale(uint8_t* tmp_buffer,
                const uint8_t* src_y,
@@ -110,7 +119,7 @@ void NV12Scale(uint8_t* tmp_buffer,
 // Helper class for directly converting and scaling NV12 to I420. The Y-plane
 // will be scaled directly to the I420 destination, which makes this faster
 // than separate NV12->I420 + I420->I420 scaling.
-class NV12ToI420Scaler {
+class RTC_EXPORT NV12ToI420Scaler {
  public:
   NV12ToI420Scaler();
   ~NV12ToI420Scaler();

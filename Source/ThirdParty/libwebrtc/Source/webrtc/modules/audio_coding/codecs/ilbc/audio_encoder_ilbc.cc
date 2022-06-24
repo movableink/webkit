@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <cstdint>
 
-#include "common_types.h"
 #include "modules/audio_coding/codecs/ilbc/ilbc.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/numerics/safe_conversions.h"
@@ -23,12 +22,6 @@ namespace webrtc {
 namespace {
 
 const int kSampleRateHz = 8000;
-
-AudioEncoderIlbcConfig CreateConfig(const CodecInst& codec_inst) {
-  AudioEncoderIlbcConfig config;
-  config.frame_size_ms = codec_inst.pacsize / 8;
-  return config;
-}
 
 int GetIlbcBitrate(int ptime) {
   switch (ptime) {
@@ -41,7 +34,7 @@ int GetIlbcBitrate(int ptime) {
       // 50 bytes per frame of 30 ms => (approx) 13333 bits/s.
       return 13333;
     default:
-      RTC_FATAL();
+      RTC_CHECK_NOTREACHED();
   }
 }
 
@@ -57,9 +50,6 @@ AudioEncoderIlbcImpl::AudioEncoderIlbcImpl(const AudioEncoderIlbcConfig& config,
   RTC_CHECK(config.IsOk());
   Reset();
 }
-
-AudioEncoderIlbcImpl::AudioEncoderIlbcImpl(const CodecInst& codec_inst)
-    : AudioEncoderIlbcImpl(CreateConfig(codec_inst), codec_inst.pltype) {}
 
 AudioEncoderIlbcImpl::~AudioEncoderIlbcImpl() {
   RTC_CHECK_EQ(0, WebRtcIlbcfix_EncoderFree(encoder_));
@@ -137,6 +127,12 @@ void AudioEncoderIlbcImpl::Reset() {
   num_10ms_frames_buffered_ = 0;
 }
 
+absl::optional<std::pair<TimeDelta, TimeDelta>>
+AudioEncoderIlbcImpl::GetFrameLengthRange() const {
+  return {{TimeDelta::Millis(num_10ms_frames_per_packet_ * 10),
+           TimeDelta::Millis(num_10ms_frames_per_packet_ * 10)}};
+}
+
 size_t AudioEncoderIlbcImpl::RequiredOutputSizeBytes() const {
   switch (num_10ms_frames_per_packet_) {
     case 2:
@@ -148,7 +144,7 @@ size_t AudioEncoderIlbcImpl::RequiredOutputSizeBytes() const {
     case 6:
       return 2 * 50;
     default:
-      RTC_FATAL();
+      RTC_CHECK_NOTREACHED();
   }
 }
 

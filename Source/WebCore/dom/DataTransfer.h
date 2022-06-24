@@ -2,7 +2,7 @@
  * Copyright (C) 2001 Peter Kelly (pmk@post.com)
  * Copyright (C) 2001 Tobias Anton (anton@stud.fbi.fh-darmstadt.de)
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2003-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -39,13 +39,15 @@ class Element;
 class FileList;
 class File;
 class Pasteboard;
-enum class WebContentReadingPolicy;
+class ScriptExecutionContext;
+enum class WebContentReadingPolicy : bool;
 
 class DataTransfer : public RefCounted<DataTransfer> {
 public:
     // https://html.spec.whatwg.org/multipage/dnd.html#drag-data-store-mode
     enum class StoreMode { Invalid, ReadWrite, Readonly, Protected };
 
+    static Ref<DataTransfer> create();
     static Ref<DataTransfer> createForCopyAndPaste(const Document&, StoreMode, std::unique_ptr<Pasteboard>&&);
     static Ref<DataTransfer> createForInputEvent(const String& plainText, const String& htmlText);
 
@@ -57,11 +59,12 @@ public:
     String effectAllowed() const;
     void setEffectAllowed(const String&);
 
-    DataTransferItemList& items();
+    DataTransferItemList& items(Document&);
     Vector<String> types() const;
     Vector<String> typesForItemList() const;
 
-    FileList& files() const;
+    FileList& files(Document*) const;
+    FileList& files(Document&) const;
 
     void clearData(const String& type = String());
 
@@ -71,7 +74,7 @@ public:
     void setData(const String& type, const String& data);
     void setDataFromItemList(const String& type, const String& data);
 
-    void setDragImage(Element*, int x, int y);
+    void setDragImage(Element&, int x, int y);
 
     void makeInvalidForSecurity() { m_storeMode = StoreMode::Invalid; }
 
@@ -86,17 +89,17 @@ public:
     void commitToPasteboard(Pasteboard&);
 
 #if ENABLE(DRAG_SUPPORT)
-    static Ref<DataTransfer> createForDrag();
+    static Ref<DataTransfer> createForDrag(const Document&);
     static Ref<DataTransfer> createForDragStartEvent(const Document&);
-    static Ref<DataTransfer> createForDrop(const Document&, std::unique_ptr<Pasteboard>&&, DragOperation, bool draggingFiles);
-    static Ref<DataTransfer> createForUpdatingDropTarget(const Document&, std::unique_ptr<Pasteboard>&&, DragOperation, bool draggingFiles);
+    static Ref<DataTransfer> createForDrop(const Document&, std::unique_ptr<Pasteboard>&&, OptionSet<DragOperation>, bool draggingFiles);
+    static Ref<DataTransfer> createForUpdatingDropTarget(const Document&, std::unique_ptr<Pasteboard>&&, OptionSet<DragOperation>, bool draggingFiles);
 
     bool dropEffectIsUninitialized() const { return m_dropEffect == "uninitialized"; }
 
-    DragOperation sourceOperation() const;
-    DragOperation destinationOperation() const;
-    void setSourceOperation(DragOperation);
-    void setDestinationOperation(DragOperation);
+    OptionSet<DragOperation> sourceOperationMask() const;
+    OptionSet<DragOperation> destinationOperationMask() const;
+    void setSourceOperationMask(OptionSet<DragOperation>);
+    void setDestinationOperationMask(OptionSet<DragOperation>);
 
     void setDragHasStarted() { m_shouldUpdateDragImage = true; }
     DragImageRef createDragImage(IntPoint& dragLocation) const;
@@ -105,14 +108,16 @@ public:
 
     void moveDragState(Ref<DataTransfer>&&);
     bool hasDragImage() const;
+
+    IntPoint dragLocation() const { return m_dragLocation; }
 #endif
 
     void didAddFileToItemList();
-    void updateFileList();
+    void updateFileList(ScriptExecutionContext*);
 
 private:
     enum class Type { CopyAndPaste, DragAndDropData, DragAndDropFiles, InputEvent };
-    DataTransfer(StoreMode, std::unique_ptr<Pasteboard>, Type = Type::CopyAndPaste);
+    DataTransfer(StoreMode, std::unique_ptr<Pasteboard>, Type = Type::CopyAndPaste, String&& effectAllowed = "uninitialized"_s);
 
 #if ENABLE(DRAG_SUPPORT)
     bool forDrag() const { return m_type == Type::DragAndDropData || m_type == Type::DragAndDropFiles; }
@@ -127,7 +132,7 @@ private:
 
     enum class AddFilesType { No, Yes };
     Vector<String> types(AddFilesType) const;
-    Vector<Ref<File>> filesFromPasteboardAndItemList() const;
+    Vector<Ref<File>> filesFromPasteboardAndItemList(ScriptExecutionContext*) const;
 
     String m_originIdentifier;
     StoreMode m_storeMode;

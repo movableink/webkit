@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,16 +25,22 @@
 
 #import <Foundation/Foundation.h>
 #import <WebKit/WKFoundation.h>
-
-@class WKWebView;
-@class _WKFrameHandle;
+#import <WebKit/_WKInspectorExtensionHost.h>
+#import <WebKit/_WKInspectorIBActions.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class WKWebView;
+@class _WKFrameHandle;
+@class _WKInspectorExtension;
+@protocol _WKInspectorDelegate;
+
 WK_CLASS_AVAILABLE(macos(10.14.4), ios(12.2))
-@interface _WKInspector : NSObject
+@interface _WKInspector : NSObject <_WKInspectorExtensionHost, _WKInspectorIBActions>
 
 - (instancetype)init NS_UNAVAILABLE;
+
+@property (nonatomic, weak) id <_WKInspectorDelegate> delegate WK_API_AVAILABLE(macos(12.0), ios(15.0));
 
 @property (nonatomic, readonly) WKWebView *webView;
 @property (nonatomic, readonly) BOOL isConnected;
@@ -44,11 +50,7 @@ WK_CLASS_AVAILABLE(macos(10.14.4), ios(12.2))
 @property (nonatomic, readonly) BOOL isElementSelectionActive;
 
 - (void)connect;
-- (void)show;
 - (void)hide;
-- (void)close;
-- (void)showConsole;
-- (void)showResources;
 - (void)showMainResourceForFrame:(_WKFrameHandle *)frame;
 - (void)attach;
 - (void)detach;

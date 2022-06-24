@@ -7,13 +7,12 @@ PASS ArrayBuffer.length is 1
 FAIL AudioContext.length should be 0. Threw exception ReferenceError: Can't find variable: AudioContext
 FAIL AutocompleteErrorEvent.length should be 1. Threw exception ReferenceError: Can't find variable: AutocompleteErrorEvent
 PASS AnimationEvent.length is 1
-PASS BeforeLoadEvent.length is 1
 PASS Blob.length is 0
 PASS CloseEvent.length is 1
 PASS CustomEvent.length is 1
 FAIL DOMFormData.length should be 0. Threw exception ReferenceError: Can't find variable: DOMFormData
 PASS DOMParser.length is 0
-PASS DataView.length is 3
+PASS DataView.length is 1
 PASS ErrorEvent.length is 1
 PASS Event.length is 1
 PASS EventSource.length is 1
@@ -45,11 +44,9 @@ PASS Uint8Array.length is 3
 PASS Uint8ClampedArray.length is 3
 PASS VTTCue.length is 3
 PASS WebGLContextEvent.length is 1
-PASS WebKitAnimationEvent.length is 1
 PASS WebKitCSSMatrix.length is 0
 PASS WebKitMutationObserver.length is 1
 PASS WebKitPoint.length is 0
-PASS WebKitTransitionEvent.length is 1
 PASS WebSocket.length is 1
 PASS Worker.length is 1
 PASS URL.length is 1

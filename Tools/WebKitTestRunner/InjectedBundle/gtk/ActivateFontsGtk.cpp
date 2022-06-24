@@ -34,23 +34,9 @@
 #include "InjectedBundleUtilities.h"
 #include <fontconfig/fontconfig.h>
 #include <gtk/gtk.h>
-#include <wtf/glib/GLibUtilities.h>
 #include <wtf/glib/GUniquePtr.h>
 
 namespace WTR {
-
-void initializeGtkSettings()
-{
-    GtkSettings* settings = gtk_settings_get_default();
-    if (!settings)
-        return;
-    g_object_set(settings, 
-        "gtk-xft-dpi", 98304,
-        "gtk-xft-antialias", 1,
-        "gtk-xft-hinting", 0,
-        "gtk-font-name", "Liberation Sans 12",
-        "gtk-xft-rgba", "none", nullptr);
-}
 
 CString getOutputDir()
 {
@@ -65,8 +51,13 @@ CString getOutputDir()
 
 static CString getFontsPath()
 {
+    // Try flatpak sandbox path.
+    GUniquePtr<char>fontsPath(g_build_filename("/usr", "share", "webkitgtk-test-fonts", NULL));
+    if (g_file_test(fontsPath.get(), static_cast<GFileTest>(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)))
+        return fontsPath.get();
+
     CString webkitOutputDir = getOutputDir();
-    GUniquePtr<char> fontsPath(g_build_filename(webkitOutputDir.data(), "DependenciesGTK", "Root", "webkitgtk-test-fonts", nullptr));
+    fontsPath.reset(g_build_filename(webkitOutputDir.data(), "DependenciesGTK", "Root", "webkitgtk-test-fonts", nullptr));
     if (g_file_test(fontsPath.get(), static_cast<GFileTest>(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)))
         return fontsPath.get();
 
@@ -151,7 +142,6 @@ void initializeFontConfigSetting()
 
 void activateFonts()
 {
-    initializeGtkSettings();
     initializeFontConfigSetting();
 }
 

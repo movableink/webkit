@@ -45,7 +45,7 @@
                         return;
                     }
 
-                    BrowserAppDelegate* appDelegate = (BrowserAppDelegate *)[[NSApplication sharedApplication] delegate];
+                    BrowserAppDelegate* appDelegate = [[NSApplication sharedApplication] browserAppDelegate];
                     [appDelegate.userContentContoller _addUserContentFilter:extension];
                 }];
             }
@@ -69,7 +69,10 @@
 - (IBAction)add:(id)sender
 {
     NSOpenPanel *openPanel = [[NSOpenPanel openPanel] retain];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     openPanel.allowedFileTypes = @[ @"public.json" ];
+#pragma clang diagnostic pop
     
     [openPanel beginSheetModalForWindow:self.window completionHandler:^(NSInteger result)
     {
@@ -104,7 +107,7 @@
 
             [arrayController addObject:identifier];
 
-            BrowserAppDelegate* appDelegate = (BrowserAppDelegate *)[[NSApplication sharedApplication] delegate];
+            BrowserAppDelegate* appDelegate = [[NSApplication sharedApplication] browserAppDelegate];
             [appDelegate.userContentContoller _addUserContentFilter:extension];
         }];
     }];
@@ -133,7 +136,7 @@
         [installedContentExtensions release];
 
         [arrayController removeObjectAtArrangedObjectIndex:index];
-        BrowserAppDelegate* appDelegate = (BrowserAppDelegate *)[[NSApplication sharedApplication] delegate];
+        BrowserAppDelegate* appDelegate = [[NSApplication sharedApplication] browserAppDelegate];
         [appDelegate.userContentContoller _removeUserContentFilter:identifierToRemove];
     }];
 }

@@ -22,7 +22,9 @@
 
 #include "JSCContextPrivate.h"
 #include "JSCVirtualMachinePrivate.h"
+#include "JSContextRef.h"
 #include <wtf/HashMap.h>
+#include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/glib/WTFGType.h>
 
@@ -33,7 +35,7 @@
  * @see_also: JSCContext
  *
  * JSCVirtualMachine represents a group of JSCContext<!-- -->s. It allows
- * concurrent JavaScript exeution by creating a different instance of
+ * concurrent JavaScript execution by creating a different instance of
  * JSCVirtualMachine in each thread.
  *
  * To create a group of JSCContext<!-- -->s pass the same JSCVirtualMachine
@@ -49,22 +51,26 @@ WEBKIT_DEFINE_TYPE(JSCVirtualMachine, jsc_virtual_machine, G_TYPE_OBJECT)
 
 static Lock wrapperCacheMutex;
 
-static HashMap<JSContextGroupRef, JSCVirtualMachine*>& wrapperMap()
+static HashMap<JSContextGroupRef, JSCVirtualMachine*>& wrapperMap() WTF_REQUIRES_LOCK(wrapperCacheMutex)
 {
-    static NeverDestroyed<HashMap<JSContextGroupRef, JSCVirtualMachine*>> map;
-    return map;
+    static LazyNeverDestroyed<HashMap<JSContextGroupRef, JSCVirtualMachine*>> shared;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        shared.construct();
+    });
+    return shared;
 }
 
 static void addWrapper(JSContextGroupRef group, JSCVirtualMachine* vm)
 {
-    std::lock_guard<Lock> lock(wrapperCacheMutex);
+    Locker locker { wrapperCacheMutex };
     ASSERT(!wrapperMap().contains(group));
     wrapperMap().set(group, vm);
 }
 
 static void removeWrapper(JSContextGroupRef group)
 {
-    std::lock_guard<Lock> lock(wrapperCacheMutex);
+    Locker locker { wrapperCacheMutex };
     ASSERT(wrapperMap().contains(group));
     wrapperMap().remove(group);
 }

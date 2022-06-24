@@ -34,6 +34,8 @@
 #include <algorithm>
 #include <cstdlib>
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 Allocator::Allocator(Heap& heap, Deallocator& deallocator)
@@ -76,7 +78,7 @@ void* Allocator::reallocateImpl(void* object, size_t newSize, FailureAction acti
         break;
     }
     case ObjectType::Large: {
-        std::unique_lock<Mutex> lock(Heap::mutex());
+        UniqueLockHolder lock(Heap::mutex());
         oldSize = m_heap.largeSize(lock, object);
 
         if (newSize < oldSize && newSize > smallMax) {
@@ -122,7 +124,7 @@ BNO_INLINE void Allocator::refillAllocatorSlowCase(BumpAllocator& allocator, siz
 {
     BumpRangeCache& bumpRangeCache = m_bumpRangeCaches[sizeClass];
 
-    std::unique_lock<Mutex> lock(Heap::mutex());
+    UniqueLockHolder lock(Heap::mutex());
     m_deallocator.processObjectLog(lock);
     m_heap.allocateSmallBumpRanges(lock, sizeClass, allocator, bumpRangeCache, m_deallocator.lineCache(lock), action);
 }
@@ -137,7 +139,7 @@ BINLINE void Allocator::refillAllocator(BumpAllocator& allocator, size_t sizeCla
 
 BNO_INLINE void* Allocator::allocateLarge(size_t size, FailureAction action)
 {
-    std::unique_lock<Mutex> lock(Heap::mutex());
+    UniqueLockHolder lock(Heap::mutex());
     return m_heap.allocateLarge(lock, alignment, size, action);
 }
 
@@ -170,3 +172,5 @@ void* Allocator::allocateSlowCase(size_t size, FailureAction action)
 }
 
 } // namespace bmalloc
+
+#endif

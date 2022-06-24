@@ -8,23 +8,44 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include <memory>
+
+#include "api/task_queue/task_queue_base.h"
 #include "api/test/simulated_network.h"
 #include "api/test/video/function_video_encoder_factory.h"
 #include "call/fake_network_pipe.h"
 #include "call/simulated_network.h"
-#include "media/engine/internaldecoderfactory.h"
+#include "media/engine/internal_decoder_factory.h"
+#include "modules/include/module_common_types_public.h"
 #include "modules/rtp_rtcp/source/byte_io.h"
+#include "modules/rtp_rtcp/source/rtp_packet.h"
 #include "modules/video_coding/codecs/vp8/include/vp8.h"
+#include "rtc_base/synchronization/mutex.h"
 #include "test/call_test.h"
 #include "test/field_trial.h"
+#include "test/gmock.h"
 #include "test/gtest.h"
 #include "test/rtcp_packet_parser.h"
 
+using ::testing::Contains;
+using ::testing::Not;
+
 namespace webrtc {
+namespace {
+enum : int {  // The first valid value is 1.
+  kTransportSequenceNumberExtensionId = 1,
+  kVideoRotationExtensionId,
+};
+}  // namespace
 
 class FecEndToEndTest : public test::CallTest {
  public:
-  FecEndToEndTest() = default;
+  FecEndToEndTest() {
+    RegisterRtpExtension(RtpExtension(RtpExtension::kTransportSequenceNumberUri,
+                                      kTransportSequenceNumberExtensionId));
+    RegisterRtpExtension(RtpExtension(RtpExtension::kVideoRotationUri,
+                                      kVideoRotationExtensionId));
+  }
 };
 
 TEST_F(FecEndToEndTest, ReceivesUlpfec) {
@@ -39,20 +60,20 @@ TEST_F(FecEndToEndTest, ReceivesUlpfec) {
 
    private:
     Action OnSendRtp(const uint8_t* packet, size_t length) override {
-      rtc::CritScope lock(&crit_);
-      RTPHeader header;
-      EXPECT_TRUE(parser_->Parse(packet, length, &header));
+      MutexLock lock(&mutex_);
+      RtpPacket rtp_packet;
+      EXPECT_TRUE(rtp_packet.Parse(packet, length));
 
-      EXPECT_TRUE(header.payloadType == kVideoSendPayloadType ||
-                  header.payloadType == kRedPayloadType)
+      EXPECT_TRUE(rtp_packet.PayloadType() == kVideoSendPayloadType ||
+                  rtp_packet.PayloadType() == kRedPayloadType)
           << "Unknown payload type received.";
-      EXPECT_EQ(kVideoSendSsrcs[0], header.ssrc) << "Unknown SSRC received.";
+      EXPECT_EQ(kVideoSendSsrcs[0], rtp_packet.Ssrc())
+          << "Unknown SSRC received.";
 
       // Parse RED header.
       int encapsulated_payload_type = -1;
-      if (header.payloadType == kRedPayloadType) {
-        encapsulated_payload_type =
-            static_cast<int>(packet[header.headerLength]);
+      if (rtp_packet.PayloadType() == kRedPayloadType) {
+        encapsulated_payload_type = rtp_packet.payload()[0];
 
         EXPECT_TRUE(encapsulated_payload_type == kVideoSendPayloadType ||
                     encapsulated_payload_type == kUlpfecPayloadType)
@@ -68,8 +89,8 @@ TEST_F(FecEndToEndTest, ReceivesUlpfec) {
       // corresponding timestamps that were dropped.
       if (num_packets_sent_++ > 100 && random_.Rand(1, 100) <= 5) {
         if (encapsulated_payload_type == kVideoSendPayloadType) {
-          dropped_sequence_numbers_.insert(header.sequenceNumber);
-          dropped_timestamps_.insert(header.timestamp);
+          dropped_sequence_numbers_.insert(rtp_packet.SequenceNumber());
+          dropped_timestamps_.insert(rtp_packet.Timestamp());
         }
         return DROP_PACKET;
       }
@@ -78,7 +99,7 @@ TEST_F(FecEndToEndTest, ReceivesUlpfec) {
     }
 
     void OnFrame(const VideoFrame& video_frame) override {
-      rtc::CritScope lock(&crit_);
+      MutexLock lock(&mutex_);
       // Rendering frame with timestamp of packet that was dropped -> FEC
       // protection worked.
       auto it = dropped_timestamps_.find(video_frame.timestamp());
@@ -99,7 +120,7 @@ TEST_F(FecEndToEndTest, ReceivesUlpfec) {
       encoder_config->codec_type = kVideoCodecVP8;
       VideoReceiveStream::Decoder decoder =
           test::CreateMatchingDecoder(*send_config);
-      decoder.decoder_factory = &decoder_factory_;
+      (*receive_configs)[0].decoder_factory = &decoder_factory_;
       (*receive_configs)[0].decoders.clear();
       (*receive_configs)[0].decoders.push_back(decoder);
 
@@ -117,15 +138,15 @@ TEST_F(FecEndToEndTest, ReceivesUlpfec) {
           << "Timed out waiting for dropped frames to be rendered.";
     }
 
-    rtc::CriticalSection crit_;
+    Mutex mutex_;
     std::unique_ptr<VideoEncoder> encoder_;
     test::FunctionVideoEncoderFactory encoder_factory_;
     InternalDecoderFactory decoder_factory_;
-    std::set<uint32_t> dropped_sequence_numbers_ RTC_GUARDED_BY(crit_);
+    std::set<uint32_t> dropped_sequence_numbers_ RTC_GUARDED_BY(mutex_);
     // Several packets can have the same timestamp.
-    std::multiset<uint32_t> dropped_timestamps_ RTC_GUARDED_BY(crit_);
+    std::multiset<uint32_t> dropped_timestamps_ RTC_GUARDED_BY(mutex_);
     Random random_;
-    int num_packets_sent_ RTC_GUARDED_BY(crit_);
+    int num_packets_sent_ RTC_GUARDED_BY(mutex_);
   } test;
 
   RunBaseTest(&test);
@@ -149,36 +170,41 @@ class FlexfecRenderObserver : public test::EndToEndTest,
 
  private:
   Action OnSendRtp(const uint8_t* packet, size_t length) override {
-    rtc::CritScope lock(&crit_);
-    RTPHeader header;
-    EXPECT_TRUE(parser_->Parse(packet, length, &header));
+    MutexLock lock(&mutex_);
+    RtpPacket rtp_packet;
+    EXPECT_TRUE(rtp_packet.Parse(packet, length));
 
-    EXPECT_TRUE(header.payloadType ==
-                    test::CallTest::kFakeVideoSendPayloadType ||
-                header.payloadType == test::CallTest::kFlexfecPayloadType ||
-                (enable_nack_ &&
-                 header.payloadType == test::CallTest::kSendRtxPayloadType))
+    EXPECT_TRUE(
+        rtp_packet.PayloadType() == test::CallTest::kFakeVideoSendPayloadType ||
+        rtp_packet.PayloadType() == test::CallTest::kFlexfecPayloadType ||
+        (enable_nack_ &&
+         rtp_packet.PayloadType() == test::CallTest::kSendRtxPayloadType))
         << "Unknown payload type received.";
     EXPECT_TRUE(
-        header.ssrc == test::CallTest::kVideoSendSsrcs[0] ||
-        header.ssrc == test::CallTest::kFlexfecSendSsrc ||
-        (enable_nack_ && header.ssrc == test::CallTest::kSendRtxSsrcs[0]))
+        rtp_packet.Ssrc() == test::CallTest::kVideoSendSsrcs[0] ||
+        rtp_packet.Ssrc() == test::CallTest::kFlexfecSendSsrc ||
+        (enable_nack_ && rtp_packet.Ssrc() == test::CallTest::kSendRtxSsrcs[0]))
         << "Unknown SSRC received.";
 
     // To reduce test flakiness, always let FlexFEC packets through.
-    if (header.payloadType == test::CallTest::kFlexfecPayloadType) {
-      EXPECT_EQ(test::CallTest::kFlexfecSendSsrc, header.ssrc);
+    if (rtp_packet.PayloadType() == test::CallTest::kFlexfecPayloadType) {
+      EXPECT_EQ(test::CallTest::kFlexfecSendSsrc, rtp_packet.Ssrc());
 
       return SEND_PACKET;
     }
 
     // To reduce test flakiness, always let RTX packets through.
-    if (header.payloadType == test::CallTest::kSendRtxPayloadType) {
-      EXPECT_EQ(test::CallTest::kSendRtxSsrcs[0], header.ssrc);
+    if (rtp_packet.PayloadType() == test::CallTest::kSendRtxPayloadType) {
+      EXPECT_EQ(test::CallTest::kSendRtxSsrcs[0], rtp_packet.Ssrc());
+
+      if (rtp_packet.payload_size() == 0) {
+        // Pure padding packet.
+        return SEND_PACKET;
+      }
 
       // Parse RTX header.
       uint16_t original_sequence_number =
-          ByteReader<uint16_t>::ReadBigEndian(&packet[header.headerLength]);
+          ByteReader<uint16_t>::ReadBigEndian(rtp_packet.payload().data());
 
       // From the perspective of FEC, a retransmitted packet is no longer
       // dropped, so remove it from list of dropped packets.
@@ -186,7 +212,7 @@ class FlexfecRenderObserver : public test::EndToEndTest,
           dropped_sequence_numbers_.find(original_sequence_number);
       if (seq_num_it != dropped_sequence_numbers_.end()) {
         dropped_sequence_numbers_.erase(seq_num_it);
-        auto ts_it = dropped_timestamps_.find(header.timestamp);
+        auto ts_it = dropped_timestamps_.find(rtp_packet.Timestamp());
         EXPECT_NE(ts_it, dropped_timestamps_.end());
         dropped_timestamps_.erase(ts_it);
       }
@@ -197,11 +223,12 @@ class FlexfecRenderObserver : public test::EndToEndTest,
     // Simulate 5% video packet loss after rampup period. Record the
     // corresponding timestamps that were dropped.
     if (num_packets_sent_++ > 100 && random_.Rand(1, 100) <= 5) {
-      EXPECT_EQ(test::CallTest::kFakeVideoSendPayloadType, header.payloadType);
-      EXPECT_EQ(test::CallTest::kVideoSendSsrcs[0], header.ssrc);
+      EXPECT_EQ(test::CallTest::kFakeVideoSendPayloadType,
+                rtp_packet.PayloadType());
+      EXPECT_EQ(test::CallTest::kVideoSendSsrcs[0], rtp_packet.Ssrc());
 
-      dropped_sequence_numbers_.insert(header.sequenceNumber);
-      dropped_timestamps_.insert(header.timestamp);
+      dropped_sequence_numbers_.insert(rtp_packet.SequenceNumber());
+      dropped_timestamps_.insert(rtp_packet.Timestamp());
 
       return DROP_PACKET;
     }
@@ -221,7 +248,7 @@ class FlexfecRenderObserver : public test::EndToEndTest,
         EXPECT_EQ(1U, report_blocks.size());
         EXPECT_EQ(test::CallTest::kFlexfecSendSsrc,
                   report_blocks[0].source_ssrc());
-        rtc::CritScope lock(&crit_);
+        MutexLock lock(&mutex_);
         received_flexfec_rtcp_ = true;
       }
     }
@@ -229,25 +256,25 @@ class FlexfecRenderObserver : public test::EndToEndTest,
     return SEND_PACKET;
   }
 
-  test::PacketTransport* CreateSendTransport(
-      test::SingleThreadedTaskQueueForTesting* task_queue,
+  std::unique_ptr<test::PacketTransport> CreateSendTransport(
+      TaskQueueBase* task_queue,
       Call* sender_call) override {
     // At low RTT (< kLowRttNackMs) -> NACK only, no FEC.
     const int kNetworkDelayMs = 100;
     BuiltInNetworkBehaviorConfig config;
     config.queue_delay_ms = kNetworkDelayMs;
-    return new test::PacketTransport(
+    return std::make_unique<test::PacketTransport>(
         task_queue, sender_call, this, test::PacketTransport::kSender,
         test::CallTest::payload_type_map_,
-        absl::make_unique<FakeNetworkPipe>(
+        std::make_unique<FakeNetworkPipe>(
             Clock::GetRealTimeClock(),
-            absl::make_unique<SimulatedNetwork>(config)));
+            std::make_unique<SimulatedNetwork>(config)));
   }
 
   void OnFrame(const VideoFrame& video_frame) override {
     EXPECT_EQ(kVideoRotation_90, video_frame.rotation());
 
-    rtc::CritScope lock(&crit_);
+    MutexLock lock(&mutex_);
     // Rendering frame with timestamp of packet that was dropped -> FEC
     // protection worked.
     auto it = dropped_timestamps_.find(video_frame.timestamp());
@@ -287,7 +314,7 @@ class FlexfecRenderObserver : public test::EndToEndTest,
 
   void ModifyFlexfecConfigs(
       std::vector<FlexfecReceiveStream::Config>* receive_configs) override {
-    (*receive_configs)[0].local_ssrc = kFlexfecLocalSsrc;
+    (*receive_configs)[0].rtp.local_ssrc = kFlexfecLocalSsrc;
   }
 
   void PerformTest() override {
@@ -295,13 +322,13 @@ class FlexfecRenderObserver : public test::EndToEndTest,
         << "Timed out waiting for dropped frames to be rendered.";
   }
 
-  rtc::CriticalSection crit_;
-  std::set<uint32_t> dropped_sequence_numbers_ RTC_GUARDED_BY(crit_);
+  Mutex mutex_;
+  std::set<uint32_t> dropped_sequence_numbers_ RTC_GUARDED_BY(mutex_);
   // Several packets can have the same timestamp.
-  std::multiset<uint32_t> dropped_timestamps_ RTC_GUARDED_BY(crit_);
+  std::multiset<uint32_t> dropped_timestamps_ RTC_GUARDED_BY(mutex_);
   const bool enable_nack_;
   const bool expect_flexfec_rtcp_;
-  bool received_flexfec_rtcp_ RTC_GUARDED_BY(crit_);
+  bool received_flexfec_rtcp_ RTC_GUARDED_BY(mutex_);
   Random random_;
   int num_packets_sent_;
 };
@@ -334,27 +361,26 @@ TEST_F(FecEndToEndTest, ReceivedUlpfecPacketsNotNacked) {
 
    private:
     Action OnSendRtp(const uint8_t* packet, size_t length) override {
-      rtc::CritScope lock_(&crit_);
-      RTPHeader header;
-      EXPECT_TRUE(parser_->Parse(packet, length, &header));
+      MutexLock lock_(&mutex_);
+      RtpPacket rtp_packet;
+      EXPECT_TRUE(rtp_packet.Parse(packet, length));
 
       int encapsulated_payload_type = -1;
-      if (header.payloadType == kRedPayloadType) {
-        encapsulated_payload_type =
-            static_cast<int>(packet[header.headerLength]);
+      if (rtp_packet.PayloadType() == kRedPayloadType) {
+        encapsulated_payload_type = rtp_packet.payload()[0];
         if (encapsulated_payload_type != kFakeVideoSendPayloadType)
           EXPECT_EQ(kUlpfecPayloadType, encapsulated_payload_type);
       } else {
-        EXPECT_EQ(kFakeVideoSendPayloadType, header.payloadType);
+        EXPECT_EQ(kFakeVideoSendPayloadType, rtp_packet.PayloadType());
       }
 
       if (has_last_sequence_number_ &&
-          !IsNewerSequenceNumber(header.sequenceNumber,
+          !IsNewerSequenceNumber(rtp_packet.SequenceNumber(),
                                  last_sequence_number_)) {
         // Drop retransmitted packets.
         return DROP_PACKET;
       }
-      last_sequence_number_ = header.sequenceNumber;
+      last_sequence_number_ = rtp_packet.SequenceNumber();
       has_last_sequence_number_ = true;
 
       bool ulpfec_packet = encapsulated_payload_type == kUlpfecPayloadType;
@@ -365,14 +391,14 @@ TEST_F(FecEndToEndTest, ReceivedUlpfecPacketsNotNacked) {
         case kDropEveryOtherPacketUntilUlpfec:
           if (ulpfec_packet) {
             state_ = kDropAllMediaPacketsUntilUlpfec;
-          } else if (header.sequenceNumber % 2 == 0) {
+          } else if (rtp_packet.SequenceNumber() % 2 == 0) {
             return DROP_PACKET;
           }
           break;
         case kDropAllMediaPacketsUntilUlpfec:
           if (!ulpfec_packet)
             return DROP_PACKET;
-          ulpfec_sequence_number_ = header.sequenceNumber;
+          ulpfec_sequence_number_ = rtp_packet.SequenceNumber();
           state_ = kDropOneMediaPacket;
           break;
         case kDropOneMediaPacket:
@@ -380,18 +406,17 @@ TEST_F(FecEndToEndTest, ReceivedUlpfecPacketsNotNacked) {
             return DROP_PACKET;
           state_ = kPassOneMediaPacket;
           return DROP_PACKET;
-          break;
         case kPassOneMediaPacket:
           if (ulpfec_packet)
             return DROP_PACKET;
           // Pass one media packet after dropped packet after last FEC,
           // otherwise receiver might never see a seq_no after
-          // |ulpfec_sequence_number_|
+          // `ulpfec_sequence_number_`
           state_ = kVerifyUlpfecPacketNotInNackList;
           break;
         case kVerifyUlpfecPacketNotInNackList:
           // Continue to drop packets. Make sure no frame can be decoded.
-          if (ulpfec_packet || header.sequenceNumber % 2 == 0)
+          if (ulpfec_packet || rtp_packet.SequenceNumber() % 2 == 0)
             return DROP_PACKET;
           break;
       }
@@ -399,13 +424,12 @@ TEST_F(FecEndToEndTest, ReceivedUlpfecPacketsNotNacked) {
     }
 
     Action OnReceiveRtcp(const uint8_t* packet, size_t length) override {
-      rtc::CritScope lock_(&crit_);
+      MutexLock lock_(&mutex_);
       if (state_ == kVerifyUlpfecPacketNotInNackList) {
         test::RtcpPacketParser rtcp_parser;
         rtcp_parser.Parse(packet, length);
         const std::vector<uint16_t>& nacks = rtcp_parser.nack()->packet_ids();
-        EXPECT_TRUE(std::find(nacks.begin(), nacks.end(),
-                              ulpfec_sequence_number_) == nacks.end())
+        EXPECT_THAT(nacks, Not(Contains(ulpfec_sequence_number_)))
             << "Got nack for ULPFEC packet";
         if (!nacks.empty() &&
             IsNewerSequenceNumber(nacks.back(), ulpfec_sequence_number_)) {
@@ -415,20 +439,20 @@ TEST_F(FecEndToEndTest, ReceivedUlpfecPacketsNotNacked) {
       return SEND_PACKET;
     }
 
-    test::PacketTransport* CreateSendTransport(
-        test::SingleThreadedTaskQueueForTesting* task_queue,
+    std::unique_ptr<test::PacketTransport> CreateSendTransport(
+        TaskQueueBase* task_queue,
         Call* sender_call) override {
       // At low RTT (< kLowRttNackMs) -> NACK only, no FEC.
       // Configure some network delay.
       const int kNetworkDelayMs = 50;
       BuiltInNetworkBehaviorConfig config;
       config.queue_delay_ms = kNetworkDelayMs;
-      return new test::PacketTransport(
+      return std::make_unique<test::PacketTransport>(
           task_queue, sender_call, this, test::PacketTransport::kSender,
           payload_type_map_,
-          absl::make_unique<FakeNetworkPipe>(
+          std::make_unique<FakeNetworkPipe>(
               Clock::GetRealTimeClock(),
-              absl::make_unique<SimulatedNetwork>(config)));
+              std::make_unique<SimulatedNetwork>(config)));
     }
 
     // TODO(holmer): Investigate why we don't send FEC packets when the bitrate
@@ -462,7 +486,7 @@ TEST_F(FecEndToEndTest, ReceivedUlpfecPacketsNotNacked) {
           send_config->rtp.payload_type;
       (*receive_configs)[0].decoders[0].video_format =
           SdpVideoFormat(send_config->rtp.payload_name);
-      (*receive_configs)[0].decoders[0].decoder_factory = &decoder_factory_;
+      (*receive_configs)[0].decoder_factory = &decoder_factory_;
     }
 
     void PerformTest() override {
@@ -479,8 +503,8 @@ TEST_F(FecEndToEndTest, ReceivedUlpfecPacketsNotNacked) {
       kVerifyUlpfecPacketNotInNackList,
     } state_;
 
-    rtc::CriticalSection crit_;
-    uint16_t ulpfec_sequence_number_ RTC_GUARDED_BY(&crit_);
+    Mutex mutex_;
+    uint16_t ulpfec_sequence_number_ RTC_GUARDED_BY(&mutex_);
     bool has_last_sequence_number_;
     uint16_t last_sequence_number_;
     test::FunctionVideoEncoderFactory encoder_factory_;

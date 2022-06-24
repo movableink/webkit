@@ -26,10 +26,23 @@
 #import "config.h"
 #import "_WKUserInitiatedActionInternal.h"
 
+#import <WebCore/WebCoreObjCExtras.h>
+
 @implementation _WKUserInitiatedAction
+
+- (instancetype)init
+{
+    if (!(self = [super init]))
+        return nil;
+    API::Object::constructInWrapper<API::UserInitiatedAction>(self);
+    return self;
+}
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(_WKUserInitiatedAction.class, self))
+        return;
+
     _userInitiatedAction->~UserInitiatedAction();
 
     [super dealloc];

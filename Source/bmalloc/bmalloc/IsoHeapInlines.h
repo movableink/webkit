@@ -43,6 +43,18 @@
 
 namespace bmalloc { namespace api {
 
+#if BENABLE_MALLOC_HEAP_BREAKDOWN
+template<typename Type>
+IsoHeap<Type>::IsoHeap(const char* heapClass)
+    : m_zone(malloc_create_zone(0, 0))
+{
+    if (heapClass)
+        malloc_set_zone_name(m_zone, heapClass);
+}
+#endif
+
+#if !BUSE(LIBPAS)
+
 template<typename Type>
 void* IsoHeap<Type>::allocate()
 {
@@ -99,12 +111,14 @@ auto IsoHeap<Type>::impl() -> IsoHeapImpl<Config>&
     return *m_impl;
 }
 
+#endif // !BUSE(LIBPAS)
+
 // This is most appropraite for template classes.
 #define MAKE_BISO_MALLOCED_INLINE(isoType) \
 public: \
     static ::bmalloc::api::IsoHeap<isoType>& bisoHeap() \
     { \
-        static ::bmalloc::api::IsoHeap<isoType> heap; \
+        static ::bmalloc::api::IsoHeap<isoType> heap("WebKit_"#isoType); \
         return heap; \
     } \
     \
@@ -126,12 +140,12 @@ public: \
     void operator delete[](void* p) = delete; \
 using webkitFastMalloced = int; \
 private: \
-using __makeBisoMallocedInlineMacroSemicolonifier = int
+using __makeBisoMallocedInlineMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
 
 #define MAKE_BISO_MALLOCED_IMPL(isoType) \
 ::bmalloc::api::IsoHeap<isoType>& isoType::bisoHeap() \
 { \
-    static ::bmalloc::api::IsoHeap<isoType> heap; \
+    static ::bmalloc::api::IsoHeap<isoType> heap("WebKit "#isoType); \
     return heap; \
 } \
 \
@@ -152,7 +166,7 @@ struct MakeBisoMallocedImplMacroSemicolonifier##isoType { }
 template<> \
 ::bmalloc::api::IsoHeap<isoType>& isoType::bisoHeap() \
 { \
-    static ::bmalloc::api::IsoHeap<isoType> heap; \
+    static ::bmalloc::api::IsoHeap<isoType> heap("WebKit_"#isoType); \
     return heap; \
 } \
 \

@@ -10,35 +10,48 @@
 
 #include <memory>
 
+#include "absl/memory/memory.h"
 #include "api/audio/audio_frame.h"
-#include "common_types.h"  // NOLINT(build/include)
-#include "modules/audio_coding/neteq/tools/neteq_external_decoder_test.h"
+#include "api/audio_codecs/audio_decoder.h"
+#include "api/audio_codecs/builtin_audio_decoder_factory.h"
+#include "api/neteq/neteq.h"
+#include "modules/audio_coding/neteq/default_neteq_factory.h"
 #include "modules/audio_coding/neteq/tools/rtp_generator.h"
+#include "rtc_base/ref_counted_object.h"
+#include "system_wrappers/include/clock.h"
+#include "test/audio_decoder_proxy_factory.h"
 #include "test/gmock.h"
 
 namespace webrtc {
 namespace test {
 
+namespace {
+
+std::unique_ptr<NetEq> CreateNetEq(
+    const NetEq::Config& config,
+    Clock* clock,
+    const rtc::scoped_refptr<AudioDecoderFactory>& decoder_factory) {
+  return DefaultNetEqFactory().CreateNetEq(config, decoder_factory, clock);
+}
+
+}  // namespace
+
 using ::testing::_;
-using ::testing::SetArgPointee;
 using ::testing::Return;
+using ::testing::SetArgPointee;
 
 class MockAudioDecoder final : public AudioDecoder {
  public:
-  // TODO(nisse): Valid overrides commented out, because the gmock
-  // methods don't use any override declarations, and we want to avoid
-  // warnings from -Winconsistent-missing-override. See
-  // http://crbug.com/428099.
   static const int kPacketDuration = 960;  // 48 kHz * 20 ms
 
   MockAudioDecoder(int sample_rate_hz, size_t num_channels)
       : sample_rate_hz_(sample_rate_hz),
         num_channels_(num_channels),
         fec_enabled_(false) {}
-  ~MockAudioDecoder() /* override */ { Die(); }
-  MOCK_METHOD0(Die, void());
+  ~MockAudioDecoder() override { Die(); }
+  MOCK_METHOD(void, Die, ());
 
-  MOCK_METHOD0(Reset, void());
+  MOCK_METHOD(void, Reset, (), (override));
 
   class MockFrame : public AudioDecoder::EncodedAudioFrame {
    public:
@@ -66,7 +79,7 @@ class MockAudioDecoder final : public AudioDecoder {
   };
 
   std::vector<ParseResult> ParsePayload(rtc::Buffer&& payload,
-                                        uint32_t timestamp) /* override */ {
+                                        uint32_t timestamp) override {
     std::vector<ParseResult> results;
     if (fec_enabled_) {
       std::unique_ptr<MockFrame> fec_frame(new MockFrame(num_channels_));
@@ -79,23 +92,22 @@ class MockAudioDecoder final : public AudioDecoder {
     return results;
   }
 
-  int PacketDuration(const uint8_t* encoded, size_t encoded_len) const
-  /* override */ {
+  int PacketDuration(const uint8_t* encoded,
+                     size_t encoded_len) const override {
     ADD_FAILURE() << "Since going through ParsePayload, PacketDuration should "
                      "never get called.";
     return kPacketDuration;
   }
 
-  bool PacketHasFec(const uint8_t* encoded, size_t encoded_len) const
-  /* override */ {
+  bool PacketHasFec(const uint8_t* encoded, size_t encoded_len) const override {
     ADD_FAILURE() << "Since going through ParsePayload, PacketHasFec should "
                      "never get called.";
     return fec_enabled_;
   }
 
-  int SampleRateHz() const /* override */ { return sample_rate_hz_; }
+  int SampleRateHz() const override { return sample_rate_hz_; }
 
-  size_t Channels() const /* override */ { return num_channels_; }
+  size_t Channels() const override { return num_channels_; }
 
   void set_fec_enabled(bool enable_fec) { fec_enabled_ = enable_fec; }
 
@@ -106,7 +118,7 @@ class MockAudioDecoder final : public AudioDecoder {
                      size_t encoded_len,
                      int sample_rate_hz,
                      int16_t* decoded,
-                     SpeechType* speech_type) /* override */ {
+                     SpeechType* speech_type) override {
     ADD_FAILURE() << "Since going through ParsePayload, DecodeInternal should "
                      "never get called.";
     return -1;
@@ -118,10 +130,12 @@ class MockAudioDecoder final : public AudioDecoder {
   bool fec_enabled_;
 };
 
-class NetEqNetworkStatsTest : public NetEqExternalDecoderTest {
+class NetEqNetworkStatsTest {
  public:
   static const int kPayloadSizeByte = 30;
   static const int kFrameSizeMs = 20;
+  static const uint8_t kPayloadType = 95;
+  static const int kOutputLengthMs = 10;
 
   enum logic {
     kIgnore,
@@ -141,22 +155,23 @@ class NetEqNetworkStatsTest : public NetEqExternalDecoderTest {
     logic accelerate_rate;
     logic secondary_decoded_rate;
     logic secondary_discarded_rate;
-    logic clockdrift_ppm;
     logic added_zero_samples;
     NetEqNetworkStatistics stats_ref;
   };
 
-  NetEqNetworkStatsTest(NetEqDecoder codec,
-                        int sample_rate_hz,
-                        MockAudioDecoder* decoder)
-      : NetEqExternalDecoderTest(codec, sample_rate_hz, decoder),
-        external_decoder_(decoder),
-        samples_per_ms_(sample_rate_hz / 1000),
+  NetEqNetworkStatsTest(const SdpAudioFormat& format, MockAudioDecoder* decoder)
+      : decoder_(decoder),
+        decoder_factory_(
+            rtc::make_ref_counted<AudioDecoderProxyFactory>(decoder)),
+        samples_per_ms_(format.clockrate_hz / 1000),
         frame_size_samples_(kFrameSizeMs * samples_per_ms_),
-        rtp_generator_(new test::RtpGenerator(samples_per_ms_)),
+        rtp_generator_(new RtpGenerator(samples_per_ms_)),
         last_lost_time_(0),
         packet_loss_interval_(0xffffffff) {
-    Init();
+    NetEq::Config config;
+    config.sample_rate_hz = format.clockrate_hz;
+    neteq_ = CreateNetEq(config, Clock::GetRealTimeClock(), decoder_factory_);
+    neteq_->RegisterPayloadType(kPayloadType, format);
   }
 
   bool Lost(uint32_t send_time) {
@@ -173,14 +188,14 @@ class NetEqNetworkStatsTest : public NetEqExternalDecoderTest {
                            : 0xffffffff);
   }
 
-  // |stats_ref|
+  // `stats_ref`
   // expects.x = -1, do not care
-  // expects.x = 0, 'x' in current stats should equal 'x' in |stats_ref|
-  // expects.x = 1, 'x' in current stats should < 'x' in |stats_ref|
-  // expects.x = 2, 'x' in current stats should > 'x' in |stats_ref|
+  // expects.x = 0, 'x' in current stats should equal 'x' in `stats_ref`
+  // expects.x = 1, 'x' in current stats should < 'x' in `stats_ref`
+  // expects.x = 2, 'x' in current stats should > 'x' in `stats_ref`
   void CheckNetworkStatistics(NetEqNetworkStatsCheck expects) {
     NetEqNetworkStatistics stats;
-    neteq()->NetworkStatistics(&stats);
+    neteq_->NetworkStatistics(&stats);
 
 #define CHECK_NETEQ_NETWORK_STATS(x)           \
   switch (expects.x) {                         \
@@ -200,27 +215,21 @@ class NetEqNetworkStatsTest : public NetEqExternalDecoderTest {
     CHECK_NETEQ_NETWORK_STATS(current_buffer_size_ms);
     CHECK_NETEQ_NETWORK_STATS(preferred_buffer_size_ms);
     CHECK_NETEQ_NETWORK_STATS(jitter_peaks_found);
-    CHECK_NETEQ_NETWORK_STATS(packet_loss_rate);
     CHECK_NETEQ_NETWORK_STATS(expand_rate);
     CHECK_NETEQ_NETWORK_STATS(speech_expand_rate);
     CHECK_NETEQ_NETWORK_STATS(preemptive_rate);
     CHECK_NETEQ_NETWORK_STATS(accelerate_rate);
     CHECK_NETEQ_NETWORK_STATS(secondary_decoded_rate);
     CHECK_NETEQ_NETWORK_STATS(secondary_discarded_rate);
-    CHECK_NETEQ_NETWORK_STATS(clockdrift_ppm);
-    CHECK_NETEQ_NETWORK_STATS(added_zero_samples);
 
 #undef CHECK_NETEQ_NETWORK_STATS
-
-    // Compare with CurrentDelay, which should be identical.
-    EXPECT_EQ(stats.current_buffer_size_ms, neteq()->CurrentDelayMs());
   }
 
   void RunTest(int num_loops, NetEqNetworkStatsCheck expects) {
     uint32_t time_now;
     uint32_t next_send_time;
 
-    // Initiate |last_lost_time_|.
+    // Initiate `last_lost_time_`.
     time_now = next_send_time = last_lost_time_ = rtp_generator_->GetRtpHeader(
         kPayloadType, frame_size_samples_, &rtp_header_);
     for (int k = 0; k < num_loops; ++k) {
@@ -230,18 +239,25 @@ class NetEqNetworkStatsTest : public NetEqExternalDecoderTest {
             kPayloadType, frame_size_samples_, &rtp_header_);
         if (!Lost(next_send_time)) {
           static const uint8_t payload[kPayloadSizeByte] = {0};
-          InsertPacket(rtp_header_, payload, next_send_time);
+          ASSERT_EQ(NetEq::kOK, neteq_->InsertPacket(rtp_header_, payload));
         }
       }
-      GetOutputAudio(&output_frame_);
+      bool muted = true;
+      EXPECT_EQ(NetEq::kOK, neteq_->GetAudio(&output_frame_, &muted));
+      ASSERT_FALSE(muted);
+      EXPECT_EQ(decoder_->Channels(), output_frame_.num_channels_);
+      EXPECT_EQ(static_cast<size_t>(kOutputLengthMs * samples_per_ms_),
+                output_frame_.samples_per_channel_);
+      EXPECT_EQ(48000, neteq_->last_output_sample_rate_hz());
+
       time_now += kOutputLengthMs;
     }
     CheckNetworkStatistics(expects);
-    neteq()->FlushBuffers();
+    neteq_->FlushBuffers();
   }
 
   void DecodeFecTest() {
-    external_decoder_->set_fec_enabled(false);
+    decoder_->set_fec_enabled(false);
     NetEqNetworkStatsCheck expects = {kIgnore,  // current_buffer_size_ms
                                       kIgnore,  // preferred_buffer_size_ms
                                       kIgnore,  // jitter_peaks_found
@@ -252,21 +268,18 @@ class NetEqNetworkStatsTest : public NetEqExternalDecoderTest {
                                       kEqual,   // accelerate_rate
                                       kEqual,   // decoded_fec_rate
                                       kEqual,   // discarded_fec_rate
-                                      kIgnore,  // clockdrift_ppm
                                       kEqual,   // added_zero_samples
-                                      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+                                      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
     RunTest(50, expects);
 
     // Next we introduce packet losses.
     SetPacketLossRate(0.1);
-    expects.stats_ref.packet_loss_rate = 1337;
     expects.stats_ref.expand_rate = expects.stats_ref.speech_expand_rate = 1065;
     RunTest(50, expects);
 
     // Next we enable FEC.
-    external_decoder_->set_fec_enabled(true);
+    decoder_->set_fec_enabled(true);
     // If FEC fills in the lost packets, no packet loss will be counted.
-    expects.stats_ref.packet_loss_rate = 0;
     expects.stats_ref.expand_rate = expects.stats_ref.speech_expand_rate = 0;
     expects.stats_ref.secondary_decoded_rate = 2006;
     expects.stats_ref.secondary_discarded_rate = 14336;
@@ -284,9 +297,8 @@ class NetEqNetworkStatsTest : public NetEqExternalDecoderTest {
                                       kEqual,   // accelerate_rate
                                       kEqual,   // decoded_fec_rate
                                       kEqual,   // discard_fec_rate
-                                      kIgnore,  // clockdrift_ppm
                                       kEqual,   // added_zero_samples
-                                      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+                                      {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
     RunTest(50, expects);
 
     SetPacketLossRate(1);
@@ -296,10 +308,13 @@ class NetEqNetworkStatsTest : public NetEqExternalDecoderTest {
   }
 
  private:
-  MockAudioDecoder* external_decoder_;
+  MockAudioDecoder* decoder_;
+  rtc::scoped_refptr<AudioDecoderProxyFactory> decoder_factory_;
+  std::unique_ptr<NetEq> neteq_;
+
   const int samples_per_ms_;
   const size_t frame_size_samples_;
-  std::unique_ptr<test::RtpGenerator> rtp_generator_;
+  std::unique_ptr<RtpGenerator> rtp_generator_;
   RTPHeader rtp_header_;
   uint32_t last_lost_time_;
   uint32_t packet_loss_interval_;
@@ -308,21 +323,21 @@ class NetEqNetworkStatsTest : public NetEqExternalDecoderTest {
 
 TEST(NetEqNetworkStatsTest, DecodeFec) {
   MockAudioDecoder decoder(48000, 1);
-  NetEqNetworkStatsTest test(NetEqDecoder::kDecoderOpus, 48000, &decoder);
+  NetEqNetworkStatsTest test(SdpAudioFormat("opus", 48000, 2), &decoder);
   test.DecodeFecTest();
   EXPECT_CALL(decoder, Die()).Times(1);
 }
 
 TEST(NetEqNetworkStatsTest, StereoDecodeFec) {
   MockAudioDecoder decoder(48000, 2);
-  NetEqNetworkStatsTest test(NetEqDecoder::kDecoderOpus, 48000, &decoder);
+  NetEqNetworkStatsTest test(SdpAudioFormat("opus", 48000, 2), &decoder);
   test.DecodeFecTest();
   EXPECT_CALL(decoder, Die()).Times(1);
 }
 
 TEST(NetEqNetworkStatsTest, NoiseExpansionTest) {
   MockAudioDecoder decoder(48000, 1);
-  NetEqNetworkStatsTest test(NetEqDecoder::kDecoderOpus, 48000, &decoder);
+  NetEqNetworkStatsTest test(SdpAudioFormat("opus", 48000, 2), &decoder);
   test.NoiseExpansionTest();
   EXPECT_CALL(decoder, Die()).Times(1);
 }

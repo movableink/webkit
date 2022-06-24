@@ -10,15 +10,14 @@
 
 #import <ReplayKit/ReplayKit.h>
 
-#import <WebRTC/RTCLogging.h>
+#import "sdk/objc/base/RTCLogging.h"
 
 #import "ARDAppClient.h"
 
 @protocol ARDExternalSampleDelegate;
 
 API_AVAILABLE(ios(10.0))
-@interface ARDBroadcastSampleHandler
-    : RPBroadcastSampleHandler<ARDAppClientDelegate>
+@interface ARDBroadcastSampleHandler : RPBroadcastSampleHandler <ARDAppClientDelegate>
 
 @property(nonatomic, strong) id<ARDExternalSampleDelegate> capturer;
 

@@ -27,15 +27,11 @@
 
 #if ENABLE(WEBGL)
 
-#include <JavaScriptCore/Float32Array.h>
-#include <JavaScriptCore/Int32Array.h>
-#include <JavaScriptCore/Uint32Array.h>
-#include <JavaScriptCore/Uint8Array.h>
+#include <JavaScriptCore/Forward.h>
 
 namespace JSC {
 class CallFrame;
 class JSValue;
-using ExecState = CallFrame;
 }
 
 namespace WebCore {
@@ -45,11 +41,13 @@ class WebGLBuffer;
 class WebGLFramebuffer;
 class WebGLProgram;
 class WebGLRenderbuffer;
+class WebGLSampler;
 class WebGLTexture;
+class WebGLTransformFeedback;
 class WebGLVertexArrayObject;
 class WebGLVertexArrayObjectOES;
 
-using WebGLAny = Variant<
+using WebGLAny = std::variant<
     std::nullptr_t,
     bool,
     int,
@@ -59,6 +57,7 @@ using WebGLAny = Variant<
     String,
     Vector<bool>,
     Vector<int>,
+    Vector<unsigned>,
     RefPtr<Float32Array>,
     RefPtr<Int32Array>,
     RefPtr<Uint32Array>,
@@ -70,6 +69,8 @@ using WebGLAny = Variant<
     RefPtr<WebGLTexture>,
     RefPtr<WebGLVertexArrayObjectOES>
 #if ENABLE(WEBGL2)
+    , RefPtr<WebGLSampler>
+    , RefPtr<WebGLTransformFeedback>
     , RefPtr<WebGLVertexArrayObject>
 #endif
 >;

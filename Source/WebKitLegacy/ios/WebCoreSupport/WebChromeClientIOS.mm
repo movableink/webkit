@@ -63,6 +63,7 @@
 #import <WebCore/WebCoreThreadMessage.h>
 #import <wtf/HashMap.h>
 #import <wtf/RefPtr.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 NSString * const WebOpenPanelConfigurationAllowMultipleFilesKey = @"WebOpenPanelConfigurationAllowMultipleFilesKey";
 NSString * const WebOpenPanelConfigurationMediaCaptureTypeKey = @"WebOpenPanelConfigurationMediaCaptureTypeKey";
@@ -132,11 +133,7 @@ void WebChromeClientIOS::runOpenPanel(Frame&, FileChooser& chooser)
 {
     auto& settings = chooser.settings();
     BOOL allowMultipleFiles = settings.allowsMultipleFiles;
-    WebOpenPanelResultListener *listener = [[WebOpenPanelResultListener alloc] initWithChooser:chooser];
-
-    NSMutableArray *mimeTypes = [NSMutableArray arrayWithCapacity:settings.acceptMIMETypes.size()];
-    for (auto& type : settings.acceptMIMETypes)
-        [mimeTypes addObject:type];
+    auto listener = adoptNS([[WebOpenPanelResultListener alloc] initWithChooser:chooser]);
 
     WebMediaCaptureType captureType = WebMediaCaptureTypeNone;
 #if ENABLE(MEDIA_CAPTURE)
@@ -144,18 +141,16 @@ void WebChromeClientIOS::runOpenPanel(Frame&, FileChooser& chooser)
 #endif
     NSDictionary *configuration = @{
         WebOpenPanelConfigurationAllowMultipleFilesKey: @(allowMultipleFiles),
-        WebOpenPanelConfigurationMimeTypesKey: mimeTypes,
+        WebOpenPanelConfigurationMimeTypesKey: createNSArray(settings.acceptMIMETypes).get(),
         WebOpenPanelConfigurationMediaCaptureTypeKey: @(captureType)
     };
 
     if (WebThreadIsCurrent()) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [[webView() _UIKitDelegateForwarder] webView:webView() runOpenPanelForFileButtonWithResultListener:listener configuration:configuration];
+        RunLoop::main().dispatch([this, listener = WTFMove(listener), configuration = retainPtr(configuration)] {
+            [[webView() _UIKitDelegateForwarder] webView:webView() runOpenPanelForFileButtonWithResultListener:listener.get() configuration:configuration.get()];
         });
     } else
-        [[webView() _UIKitDelegateForwarder] webView:webView() runOpenPanelForFileButtonWithResultListener:listener configuration:configuration];
-
-    [listener release];
+        [[webView() _UIKitDelegateForwarder] webView:webView() runOpenPanelForFileButtonWithResultListener:listener.get() configuration:configuration];
 }
 
 void WebChromeClientIOS::showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&)
@@ -278,7 +273,7 @@ void WebChromeClientIOS::restoreFormNotifications()
         m_formNotificationSuppressions = 0;
 }
 
-void WebChromeClientIOS::elementDidFocus(WebCore::Element& element)
+void WebChromeClientIOS::elementDidFocus(WebCore::Element& element, const WebCore::FocusOptions&)
 {
     if (m_formNotificationSuppressions <= 0)
         [[webView() _UIKitDelegateForwarder] webView:webView() elementDidFocusNode:kit(&element)];

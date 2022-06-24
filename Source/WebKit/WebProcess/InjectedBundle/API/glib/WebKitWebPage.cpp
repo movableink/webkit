@@ -59,7 +59,6 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/glib/WTFGType.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/StringBuilder.h>
 
 using namespace WebKit;
 using namespace WebCore;
@@ -79,9 +78,11 @@ enum {
 
 enum {
     PROP_0,
-
-    PROP_URI
+    PROP_URI,
+    N_PROPERTIES,
 };
+
+static GParamSpec* sObjProperties[N_PROPERTIES] = { nullptr, };
 
 struct _WebKitWebPagePrivate {
     WebPage* webPage;
@@ -149,7 +150,7 @@ static void webkitWebPageSetURI(WebKitWebPage* webPage, const CString& uri)
         return;
 
     webPage->priv->uri = uri;
-    g_object_notify(G_OBJECT(webPage), "uri");
+    g_object_notify_by_pspec(G_OBJECT(webPage), sObjProperties[PROP_URI]);
 }
 
 static void webkitWebPageDidSendConsoleMessage(WebKitWebPage* webPage, MessageSource source, MessageLevel level, const String& message, unsigned lineNumber, const String& sourceID)
@@ -217,6 +218,19 @@ private:
             webkitScriptWorldWindowObjectCleared(wkWorld, m_webPage, webkitFrameGetOrCreate(&frame));
     }
 
+    void globalObjectIsAvailableForFrame(WebPage&, WebFrame& frame, DOMWrapperWorld& world) override
+    {
+        // Force the creation of the JavaScript context for existing WebKitScriptWorlds to
+        // ensure WebKitScriptWorld::window-object-cleared signal is emitted.
+        auto injectedWorld = InjectedBundleScriptWorld::getOrCreate(world);
+        if (webkitScriptWorldGet(injectedWorld.ptr()))
+            frame.jsContextForWorld(injectedWorld.ptr());
+    }
+
+    void serviceWorkerGlobalObjectIsAvailableForFrame(WebPage&, WebFrame&, DOMWrapperWorld&) override
+    {
+    }
+
     WebKitWebPage* m_webPage;
 };
 
@@ -229,17 +243,17 @@ public:
     }
 
 private:
-    void didInitiateLoadForResource(WebPage& page, WebFrame& frame, uint64_t identifier, const ResourceRequest& request, bool) override
+    void didInitiateLoadForResource(WebPage& page, WebFrame& frame, WebCore::ResourceLoaderIdentifier identifier, const ResourceRequest& request, bool) override
     {
         API::Dictionary::MapType message;
         message.set(String::fromUTF8("Page"), &page);
         message.set(String::fromUTF8("Frame"), &frame);
-        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier));
+        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier.toUInt64()));
         message.set(String::fromUTF8("Request"), API::URLRequest::create(request));
         WebProcess::singleton().injectedBundle()->postMessage(String::fromUTF8("WebPage.DidInitiateLoadForResource"), API::Dictionary::create(WTFMove(message)).ptr());
     }
 
-    void willSendRequestForFrame(WebPage& page, WebFrame&, uint64_t identifier, ResourceRequest& resourceRequest, const ResourceResponse& redirectResourceResponse) override
+    void willSendRequestForFrame(WebPage& page, WebFrame&, WebCore::ResourceLoaderIdentifier identifier, ResourceRequest& resourceRequest, const ResourceResponse& redirectResourceResponse) override
     {
         GRefPtr<WebKitURIRequest> request = adoptGRef(webkitURIRequestCreateForResourceRequest(resourceRequest));
         GRefPtr<WebKitURIResponse> redirectResponse = !redirectResourceResponse.isNull() ? adoptGRef(webkitURIResponseCreateForResourceResponse(redirectResourceResponse)) : nullptr;
@@ -252,71 +266,61 @@ private:
         }
 
         webkitURIRequestGetResourceRequest(request.get(), resourceRequest);
-        resourceRequest.setInitiatingPageID(page.webPageProxyIdentifier().toUInt64());
 
         API::Dictionary::MapType message;
         message.set(String::fromUTF8("Page"), &page);
-        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier));
+        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier.toUInt64()));
         message.set(String::fromUTF8("Request"), API::URLRequest::create(resourceRequest));
         if (!redirectResourceResponse.isNull())
             message.set(String::fromUTF8("RedirectResponse"), API::URLResponse::create(redirectResourceResponse));
         WebProcess::singleton().injectedBundle()->postMessage(String::fromUTF8("WebPage.DidSendRequestForResource"), API::Dictionary::create(WTFMove(message)).ptr());
     }
 
-    void didReceiveResponseForResource(WebPage& page, WebFrame&, uint64_t identifier, const ResourceResponse& response) override
+    void didReceiveResponseForResource(WebPage& page, WebFrame&, WebCore::ResourceLoaderIdentifier identifier, const ResourceResponse& response) override
     {
         API::Dictionary::MapType message;
         message.set(String::fromUTF8("Page"), &page);
-        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier));
+        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier.toUInt64()));
         message.set(String::fromUTF8("Response"), API::URLResponse::create(response));
         WebProcess::singleton().injectedBundle()->postMessage(String::fromUTF8("WebPage.DidReceiveResponseForResource"), API::Dictionary::create(WTFMove(message)).ptr());
 
         // Post on the console as well to be consistent with the inspector.
         if (response.httpStatusCode() >= 400) {
-            StringBuilder errorMessage;
-            errorMessage.appendLiteral("Failed to load resource: the server responded with a status of ");
-            errorMessage.appendNumber(response.httpStatusCode());
-            errorMessage.appendLiteral(" (");
-            errorMessage.append(response.httpStatusText());
-            errorMessage.append(')');
-            webkitWebPageDidSendConsoleMessage(m_webPage, MessageSource::Network, MessageLevel::Error, errorMessage.toString(), 0, response.url().string());
+            String errorMessage = makeString("Failed to load resource: the server responded with a status of ", response.httpStatusCode(), " (", response.httpStatusText(), ')');
+            webkitWebPageDidSendConsoleMessage(m_webPage, MessageSource::Network, MessageLevel::Error, errorMessage, 0, response.url().string());
         }
     }
 
-    void didReceiveContentLengthForResource(WebPage& page, WebFrame&, uint64_t identifier, uint64_t contentLength) override
+    void didReceiveContentLengthForResource(WebPage& page, WebFrame&, WebCore::ResourceLoaderIdentifier identifier, uint64_t contentLength) override
     {
         API::Dictionary::MapType message;
         message.set(String::fromUTF8("Page"), &page);
-        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier));
+        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier.toUInt64()));
         message.set(String::fromUTF8("ContentLength"), API::UInt64::create(contentLength));
         WebProcess::singleton().injectedBundle()->postMessage(String::fromUTF8("WebPage.DidReceiveContentLengthForResource"), API::Dictionary::create(WTFMove(message)).ptr());
     }
 
-    void didFinishLoadForResource(WebPage& page, WebFrame&, uint64_t identifier) override
+    void didFinishLoadForResource(WebPage& page, WebFrame&, WebCore::ResourceLoaderIdentifier identifier) override
     {
         API::Dictionary::MapType message;
         message.set(String::fromUTF8("Page"), &page);
-        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier));
+        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier.toUInt64()));
         WebProcess::singleton().injectedBundle()->postMessage(String::fromUTF8("WebPage.DidFinishLoadForResource"), API::Dictionary::create(WTFMove(message)).ptr());
     }
 
-    void didFailLoadForResource(WebPage& page, WebFrame&, uint64_t identifier, const ResourceError& error) override
+    void didFailLoadForResource(WebPage& page, WebFrame&, WebCore::ResourceLoaderIdentifier identifier, const ResourceError& error) override
     {
         API::Dictionary::MapType message;
         message.set(String::fromUTF8("Page"), &page);
-        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier));
+        message.set(String::fromUTF8("Identifier"), API::UInt64::create(identifier.toUInt64()));
         message.set(String::fromUTF8("Error"), API::Error::create(error));
         WebProcess::singleton().injectedBundle()->postMessage(String::fromUTF8("WebPage.DidFailLoadForResource"), API::Dictionary::create(WTFMove(message)).ptr());
 
         // Post on the console as well to be consistent with the inspector.
         if (!error.isCancellation()) {
-            StringBuilder errorMessage;
-            errorMessage.appendLiteral("Failed to load resource");
-            if (!error.localizedDescription().isEmpty()) {
-                errorMessage.appendLiteral(": ");
-                errorMessage.append(error.localizedDescription());
-            }
-            webkitWebPageDidSendConsoleMessage(m_webPage, MessageSource::Network, MessageLevel::Error, errorMessage.toString(), 0, error.failingURL());
+            auto errorDescription = error.localizedDescription();
+            auto errorMessage = makeString("Failed to load resource", errorDescription.isEmpty() ? "" : ": ", errorDescription);
+            webkitWebPageDidSendConsoleMessage(m_webPage, MessageSource::Network, MessageLevel::Error, errorMessage, 0, error.failingURL().string());
         }
     }
 
@@ -440,15 +444,15 @@ static void webkit_web_page_class_init(WebKitWebPageClass* klass)
      *
      * The current active URI of the #WebKitWebPage.
      */
-    g_object_class_install_property(
-        gObjectClass,
-        PROP_URI,
+    sObjProperties[PROP_URI] =
         g_param_spec_string(
             "uri",
             _("URI"),
             _("The current active URI of the web page"),
             0,
-            WEBKIT_PARAM_READABLE));
+            WEBKIT_PARAM_READABLE);
+
+    g_object_class_install_properties(gObjectClass, N_PROPERTIES, sObjProperties);
 
     /**
      * WebKitWebPage::document-loaded:
@@ -746,7 +750,7 @@ void webkitWebPageDidReceiveMessage(WebKitWebPage* page, const String& messageNa
                 Color savedBackgroundColor;
                 if (transparentBackground) {
                     savedBackgroundColor = frameView->baseBackgroundColor();
-                    frameView->setBaseBackgroundColor(Color::transparent);
+                    frameView->setBaseBackgroundColor(Color::transparentBlack);
                 }
                 snapshotImage = webPage->scaledSnapshotWithOptions(snapshotRect, 1, snapshotOptions | SnapshotOptionsShareable);
                 if (transparentBackground)
@@ -839,7 +843,7 @@ WebKitFrame* webkit_web_page_get_main_frame(WebKitWebPage* webPage)
 {
     g_return_val_if_fail(WEBKIT_IS_WEB_PAGE(webPage), 0);
 
-    return webkitFrameGetOrCreate(webPage->priv->webPage->mainWebFrame());
+    return webkitFrameGetOrCreate(&webPage->priv->webPage->mainWebFrame());
 }
 
 /**

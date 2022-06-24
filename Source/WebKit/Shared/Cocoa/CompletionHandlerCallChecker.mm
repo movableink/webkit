@@ -29,7 +29,7 @@
 #import <mutex>
 #import <objc/runtime.h>
 #import <wtf/Ref.h>
-#import "VersionChecks.h"
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
 namespace WebKit {
 

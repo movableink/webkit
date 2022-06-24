@@ -28,9 +28,11 @@
 #if ENABLE(FULLSCREEN_API)
 
 #include "MessageReceiver.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Seconds.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 class IntRect;
@@ -62,32 +64,47 @@ public:
     virtual ~WebFullScreenManagerProxy();
 
     bool isFullScreen();
+    bool blocksReturnToFullscreenFromPictureInPicture() const;
     void close();
+
+    enum class FullscreenState : uint8_t {
+        NotInFullscreen,
+        EnteringFullscreen,
+        InFullscreen,
+        ExitingFullscreen,
+    };
+    FullscreenState fullscreenState() const { return m_fullscreenState; }
 
     void willEnterFullScreen();
     void didEnterFullScreen();
     void willExitFullScreen();
     void didExitFullScreen();
     void setAnimatingFullScreen(bool);
+    void requestEnterFullScreen();
     void requestExitFullScreen();
     void saveScrollPosition();
     void restoreScrollPosition();
     void setFullscreenInsets(const WebCore::FloatBoxExtent&);
     void setFullscreenAutoHideDuration(Seconds);
     void setFullscreenControlsHidden(bool);
+    void closeWithCallback(CompletionHandler<void()>&&);
 
 private:
     void supportsFullScreen(bool withKeyboard, CompletionHandler<void(bool)>&&);
-    void enterFullScreen();
+    void enterFullScreen(bool blocksReturnToFullscreenFromPictureInPicture);
     void exitFullScreen();
     void beganEnterFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame);
     void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame);
+    void callCloseCompletionHandlers();
 
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
-    void didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, std::unique_ptr<IPC::Encoder>&) override;
+    bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) override;
 
     WebPageProxy& m_page;
     WebFullScreenManagerProxyClient& m_client;
+    FullscreenState m_fullscreenState { FullscreenState::NotInFullscreen };
+    bool m_blocksReturnToFullscreenFromPictureInPicture { false };
+    Vector<CompletionHandler<void()>> m_closeCompletionHandlers;
 };
 
 } // namespace WebKit

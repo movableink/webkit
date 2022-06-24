@@ -30,7 +30,7 @@
 
 #include <CoreFoundation/CFError.h>
 #include <CFNetwork/CFNetworkErrors.h>
-#include <pal/spi/cf/CFNetworkSPI.h>
+#include <pal/spi/win/CFNetworkSPIWin.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/URL.h>
 
@@ -45,8 +45,8 @@ ResourceError::ResourceError(CFErrorRef cfError)
         setType((CFErrorGetCode(m_platformError.get()) == kCFURLErrorTimedOut) ? Type::Timeout : Type::General);
 }
 
-ResourceError::ResourceError(const String& domain, int errorCode, const URL& failingURL, const String& localizedDescription, CFDataRef certificate)
-    : ResourceErrorBase(domain, errorCode, failingURL, localizedDescription, Type::General)
+ResourceError::ResourceError(const String& domain, int errorCode, const URL& failingURL, const String& localizedDescription, CFDataRef certificate, IsSanitized isSanitized)
+    : ResourceErrorBase(domain, errorCode, failingURL, localizedDescription, Type::General, isSanitized)
     , m_dataIsUpToDate(true)
     , m_certificate(certificate)
 {
@@ -120,7 +120,7 @@ void ResourceError::platformLazyInit()
     if (userInfo.get()) {
         CFStringRef failingURLString = (CFStringRef) CFDictionaryGetValue(userInfo.get(), failingURLStringKey);
         if (failingURLString)
-            m_failingURL = URL(URL(), failingURLString);
+            m_failingURL = URL { failingURLString };
         else {
             CFURLRef failingURL = (CFURLRef) CFDictionaryGetValue(userInfo.get(), failingURLKey);
             if (failingURL) {

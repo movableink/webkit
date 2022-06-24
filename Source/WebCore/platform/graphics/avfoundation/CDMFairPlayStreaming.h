@@ -41,7 +41,7 @@ public:
 
     virtual ~CDMFactoryFairPlayStreaming();
 
-    std::unique_ptr<CDMPrivate> createCDM(const String&) override;
+    std::unique_ptr<CDMPrivate> createCDM(const String&, const CDMPrivateClient&) override;
     bool supportsKeySystem(const String&) override;
 
 private:
@@ -52,14 +52,21 @@ private:
 class CDMPrivateFairPlayStreaming final : public CDMPrivate {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    CDMPrivateFairPlayStreaming();
+    CDMPrivateFairPlayStreaming(const CDMPrivateClient&);
     virtual ~CDMPrivateFairPlayStreaming();
 
-    bool supportsInitDataType(const AtomString&) const override;
+#if !RELEASE_LOG_DISABLED
+    void setLogIdentifier(const void* logIdentifier) final { m_logIdentifier = logIdentifier; }
+    const Logger& logger() const { return m_logger; };
+    const void* logIdentifier() const { return m_logIdentifier; }
+    const char* logClassName() const { return "CDMPrivateFairPlayStreaming"; }
+#endif
+
+    Vector<AtomString> supportedInitDataTypes() const override;
     bool supportsConfiguration(const CDMKeySystemConfiguration&) const override;
     bool supportsConfigurationWithRestrictions(const CDMKeySystemConfiguration&, const CDMRestrictions&) const override;
-    bool supportsSessionTypeWithConfiguration(CDMSessionType&, const CDMKeySystemConfiguration&) const override;
-    bool supportsRobustness(const String&) const override;
+    bool supportsSessionTypeWithConfiguration(const CDMSessionType&, const CDMKeySystemConfiguration&) const override;
+    Vector<AtomString> supportedRobustnesses() const override;
     CDMRequirement distinctiveIdentifiersRequirement(const CDMKeySystemConfiguration&, const CDMRestrictions&) const override;
     CDMRequirement persistentStateRequirement(const CDMKeySystemConfiguration&, const CDMRestrictions&) const override;
     bool distinctiveIdentifiersAreUniquePerOriginAndClearable(const CDMKeySystemConfiguration&) const override;
@@ -67,19 +74,25 @@ public:
     void loadAndInitialize() override;
     bool supportsServerCertificates() const override;
     bool supportsSessions() const override;
-    bool supportsInitData(const AtomString&, const SharedBuffer&) const override;
-    RefPtr<SharedBuffer> sanitizeResponse(const SharedBuffer&) const override;
-    Optional<String> sanitizeSessionId(const String&) const override;
+    bool supportsInitData(const AtomString&, const FragmentedSharedBuffer&) const override;
+    RefPtr<FragmentedSharedBuffer> sanitizeResponse(const FragmentedSharedBuffer&) const override;
+    std::optional<String> sanitizeSessionId(const String&) const override;
 
     static const AtomString& sinfName();
-    static Optional<Vector<Ref<SharedBuffer>>> extractKeyIDsSinf(const SharedBuffer&);
-    static RefPtr<SharedBuffer> sanitizeSinf(const SharedBuffer&);
+    static std::optional<Vector<Ref<FragmentedSharedBuffer>>> extractKeyIDsSinf(const FragmentedSharedBuffer&);
+    static RefPtr<FragmentedSharedBuffer> sanitizeSinf(const FragmentedSharedBuffer&);
 
     static const AtomString& skdName();
-    static Optional<Vector<Ref<SharedBuffer>>> extractKeyIDsSkd(const SharedBuffer&);
-    static RefPtr<SharedBuffer> sanitizeSkd(const SharedBuffer&);
+    static std::optional<Vector<Ref<FragmentedSharedBuffer>>> extractKeyIDsSkd(const FragmentedSharedBuffer&);
+    static RefPtr<FragmentedSharedBuffer> sanitizeSkd(const FragmentedSharedBuffer&);
 
     static const Vector<FourCC>& validFairPlayStreamingSchemes();
+
+private:
+#if !RELEASE_LOG_DISABLED
+    Ref<const Logger> m_logger;
+    const void* m_logIdentifier { nullptr };
+#endif
 };
 
 }

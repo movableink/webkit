@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,11 @@
 
 #if !PLATFORM(IOS_FAMILY)
 
-#import "ColorSpaceData.h"
 #import "DrawingAreaMessages.h"
 #import "DrawingAreaProxyMessages.h"
 #import "LayerTreeContext.h"
 #import "WebPageProxy.h"
+#import "WebPageProxyMessages.h"
 #import "WebProcessProxy.h"
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/BlockPtr.h>
@@ -43,7 +43,7 @@ using namespace IPC;
 using namespace WebCore;
 
 TiledCoreAnimationDrawingAreaProxy::TiledCoreAnimationDrawingAreaProxy(WebPageProxy& webPageProxy, WebProcessProxy& process)
-    : DrawingAreaProxy(DrawingAreaTypeTiledCoreAnimation, webPageProxy, process)
+    : DrawingAreaProxy(DrawingAreaType::TiledCoreAnimation, webPageProxy, process)
     , m_isWaitingForDidUpdateGeometry(false)
 {
 }
@@ -89,20 +89,32 @@ void TiledCoreAnimationDrawingAreaProxy::minimumSizeForAutoLayoutDidChange()
     sendUpdateGeometry();
 }
 
+void TiledCoreAnimationDrawingAreaProxy::sizeToContentAutoSizeMaximumSizeDidChange()
+{
+    if (!m_webPageProxy.hasRunningProcess())
+        return;
+
+    // We only want one UpdateGeometry message in flight at once, so if we've already sent one but
+    // haven't yet received the reply we'll just return early here.
+    if (m_isWaitingForDidUpdateGeometry)
+        return;
+
+    sendUpdateGeometry();
+}
+
 void TiledCoreAnimationDrawingAreaProxy::enterAcceleratedCompositingMode(uint64_t backingStoreStateID, const LayerTreeContext& layerTreeContext)
 {
     m_webPageProxy.enterAcceleratedCompositingMode(layerTreeContext);
 }
 
-void TiledCoreAnimationDrawingAreaProxy::exitAcceleratedCompositingMode(uint64_t backingStoreStateID, const UpdateInfo&)
-{
-    // This should never be called.
-    ASSERT_NOT_REACHED();
-}
-
 void TiledCoreAnimationDrawingAreaProxy::updateAcceleratedCompositingMode(uint64_t backingStoreStateID, const LayerTreeContext& layerTreeContext)
 {
     m_webPageProxy.updateAcceleratedCompositingMode(layerTreeContext);
+}
+
+void TiledCoreAnimationDrawingAreaProxy::didFirstLayerFlush(uint64_t /* backingStoreStateID */, const LayerTreeContext& layerTreeContext)
+{
+    m_webPageProxy.didFirstLayerFlush(layerTreeContext);
 }
 
 void TiledCoreAnimationDrawingAreaProxy::didUpdateGeometry()
@@ -112,10 +124,11 @@ void TiledCoreAnimationDrawingAreaProxy::didUpdateGeometry()
     m_isWaitingForDidUpdateGeometry = false;
 
     IntSize minimumSizeForAutoLayout = m_webPageProxy.minimumSizeForAutoLayout();
+    IntSize sizeToContentAutoSizeMaximumSize = m_webPageProxy.sizeToContentAutoSizeMaximumSize();
 
     // If the WKView was resized while we were waiting for a DidUpdateGeometry reply from the web process,
     // we need to resend the new size here.
-    if (m_lastSentSize != m_size || m_lastSentMinimumSizeForAutoLayout != minimumSizeForAutoLayout)
+    if (m_lastSentSize != m_size || m_lastSentMinimumSizeForAutoLayout != minimumSizeForAutoLayout || m_lastSentSizeToContentAutoSizeMaximumSize != sizeToContentAutoSizeMaximumSize)
         sendUpdateGeometry();
 }
 
@@ -128,6 +141,7 @@ void TiledCoreAnimationDrawingAreaProxy::waitForDidUpdateActivityState(ActivityS
 void TiledCoreAnimationDrawingAreaProxy::willSendUpdateGeometry()
 {
     m_lastSentMinimumSizeForAutoLayout = m_webPageProxy.minimumSizeForAutoLayout();
+    m_lastSentSizeToContentAutoSizeMaximumSize = m_webPageProxy.sizeToContentAutoSizeMaximumSize();
     m_lastSentSize = m_size;
     m_isWaitingForDidUpdateGeometry = true;
 }

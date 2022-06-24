@@ -10,12 +10,14 @@
 
 #include "modules/rtp_rtcp/source/rtp_format.h"
 
-#include "absl/memory/memory.h"
+#include <memory>
+
 #include "absl/types/variant.h"
 #include "modules/rtp_rtcp/source/rtp_format_h264.h"
 #include "modules/rtp_rtcp/source/rtp_format_video_generic.h"
 #include "modules/rtp_rtcp/source/rtp_format_vp8.h"
 #include "modules/rtp_rtcp/source/rtp_format_vp9.h"
+#include "modules/rtp_rtcp/source/rtp_packetizer_av1.h"
 #include "modules/video_coding/codecs/h264/include/h264_globals.h"
 #include "modules/video_coding/codecs/vp8/include/vp8_globals.h"
 #include "modules/video_coding/codecs/vp9/include/vp9_globals.h"
@@ -24,34 +26,40 @@
 namespace webrtc {
 
 std::unique_ptr<RtpPacketizer> RtpPacketizer::Create(
-    VideoCodecType type,
+    absl::optional<VideoCodecType> type,
     rtc::ArrayView<const uint8_t> payload,
     PayloadSizeLimits limits,
     // Codec-specific details.
-    const RTPVideoHeader& rtp_video_header,
-    FrameType frame_type,
-    const RTPFragmentationHeader* fragmentation) {
-  switch (type) {
+    const RTPVideoHeader& rtp_video_header) {
+  if (!type) {
+    // Use raw packetizer.
+    return std::make_unique<RtpPacketizerGeneric>(payload, limits);
+  }
+
+  switch (*type) {
     case kVideoCodecH264: {
-      RTC_CHECK(fragmentation);
       const auto& h264 =
           absl::get<RTPVideoHeaderH264>(rtp_video_header.video_type_header);
-      return absl::make_unique<RtpPacketizerH264>(
-          payload, limits, h264.packetization_mode, *fragmentation);
+      return std::make_unique<RtpPacketizerH264>(payload, limits,
+                                                 h264.packetization_mode);
     }
     case kVideoCodecVP8: {
       const auto& vp8 =
           absl::get<RTPVideoHeaderVP8>(rtp_video_header.video_type_header);
-      return absl::make_unique<RtpPacketizerVp8>(payload, limits, vp8);
+      return std::make_unique<RtpPacketizerVp8>(payload, limits, vp8);
     }
     case kVideoCodecVP9: {
       const auto& vp9 =
           absl::get<RTPVideoHeaderVP9>(rtp_video_header.video_type_header);
-      return absl::make_unique<RtpPacketizerVp9>(payload, limits, vp9);
+      return std::make_unique<RtpPacketizerVp9>(payload, limits, vp9);
     }
+    case kVideoCodecAV1:
+      return std::make_unique<RtpPacketizerAv1>(
+          payload, limits, rtp_video_header.frame_type,
+          rtp_video_header.is_last_frame_in_picture);
     default: {
-      return absl::make_unique<RtpPacketizerGeneric>(
-          payload, limits, rtp_video_header, frame_type);
+      return std::make_unique<RtpPacketizerGeneric>(payload, limits,
+                                                    rtp_video_header);
     }
   }
 }
@@ -133,16 +141,4 @@ std::vector<int> RtpPacketizer::SplitAboutEqually(
   return result;
 }
 
-RtpDepacketizer* RtpDepacketizer::Create(VideoCodecType type) {
-  switch (type) {
-    case kVideoCodecH264:
-      return new RtpDepacketizerH264();
-    case kVideoCodecVP8:
-      return new RtpDepacketizerVp8();
-    case kVideoCodecVP9:
-      return new RtpDepacketizerVp9();
-    default:
-      return new RtpDepacketizerGeneric();
-  }
-}
 }  // namespace webrtc

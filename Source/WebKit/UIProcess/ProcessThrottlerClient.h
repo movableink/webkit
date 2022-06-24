@@ -30,15 +30,16 @@
 
 namespace WebKit {
 
+enum class IsSuspensionImminent : bool;
+
 class ProcessThrottlerClient {
 public:
     virtual ~ProcessThrottlerClient() { }
 
-    virtual void sendProcessWillSuspendImminently() = 0;
-    virtual void sendPrepareToSuspend() = 0;
-    virtual void sendCancelPrepareToSuspend() = 0;
+    virtual void sendPrepareToSuspend(IsSuspensionImminent, CompletionHandler<void()>&&) = 0;
     virtual void sendProcessDidResume() = 0;
-    virtual void didSetAssertionState(AssertionState) = 0;
+    virtual void didSetAssertionType(ProcessAssertionType) { };
+    virtual ASCIILiteral clientName() const = 0;
 };
 
 } // namespace WebKit

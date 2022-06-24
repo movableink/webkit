@@ -8,17 +8,54 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include <stddef.h>
+#include <stdint.h>
+
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "absl/types/optional.h"
+#include "api/rtp_headers.h"
+#include "api/task_queue/task_queue_base.h"
+#include "api/test/simulated_network.h"
+#include "api/video_codecs/sdp_video_format.h"
 #include "api/video_codecs/video_encoder_config.h"
+#include "call/call.h"
 #include "call/fake_network_pipe.h"
+#include "call/rtp_config.h"
 #include "call/simulated_network.h"
+#include "call/simulated_packet_receiver.h"
+#include "call/video_receive_stream.h"
+#include "call/video_send_stream.h"
+#include "modules/rtp_rtcp/source/rtcp_packet/dlrr.h"
+#include "modules/rtp_rtcp/source/rtcp_packet/target_bitrate.h"
+#include "rtc_base/event.h"
+#include "rtc_base/synchronization/mutex.h"
+#include "rtc_base/thread_annotations.h"
+#include "system_wrappers/include/clock.h"
 #include "test/call_test.h"
 #include "test/field_trial.h"
 #include "test/gtest.h"
 #include "test/rtcp_packet_parser.h"
+#include "test/rtp_rtcp_observer.h"
 
 namespace webrtc {
+namespace {
+enum : int {  // The first valid value is 1.
+  kColorSpaceExtensionId = 1,
+  kTransportSequenceNumberExtensionId,
+};
+}  // namespace
 
-class ExtendedReportsEndToEndTest : public test::CallTest {};
+class ExtendedReportsEndToEndTest : public test::CallTest {
+ public:
+  ExtendedReportsEndToEndTest() {
+    RegisterRtpExtension(RtpExtension(RtpExtension::kTransportSequenceNumberUri,
+                                      kTransportSequenceNumberExtensionId));
+  }
+};
 
 class RtcpXrObserver : public test::EndToEndTest {
  public:
@@ -46,7 +83,7 @@ class RtcpXrObserver : public test::EndToEndTest {
  private:
   // Receive stream should send RR packets (and RRTR packets if enabled).
   Action OnReceiveRtcp(const uint8_t* packet, size_t length) override {
-    rtc::CritScope lock(&crit_);
+    MutexLock lock(&mutex_);
     test::RtcpPacketParser parser;
     EXPECT_TRUE(parser.Parse(packet, length));
 
@@ -63,7 +100,7 @@ class RtcpXrObserver : public test::EndToEndTest {
   }
   // Send stream should send SR packets (and DLRR packets if enabled).
   Action OnSendRtcp(const uint8_t* packet, size_t length) override {
-    rtc::CritScope lock(&crit_);
+    MutexLock lock(&mutex_);
     test::RtcpPacketParser parser;
     EXPECT_TRUE(parser.Parse(packet, length));
 
@@ -121,17 +158,17 @@ class RtcpXrObserver : public test::EndToEndTest {
     return enable_zero_target_bitrate_ ? 2 : 1;
   }
 
-  test::PacketTransport* CreateSendTransport(
-      test::SingleThreadedTaskQueueForTesting* task_queue,
+  std::unique_ptr<test::PacketTransport> CreateSendTransport(
+      TaskQueueBase* task_queue,
       Call* sender_call) {
     auto network =
-        absl::make_unique<SimulatedNetwork>(forward_transport_config_);
+        std::make_unique<SimulatedNetwork>(forward_transport_config_);
     send_simulated_network_ = network.get();
-    return new test::PacketTransport(
+    return std::make_unique<test::PacketTransport>(
         task_queue, sender_call, this, test::PacketTransport::kSender,
         test::CallTest::payload_type_map_,
-        absl::make_unique<FakeNetworkPipe>(Clock::GetRealTimeClock(),
-                                           std::move(network)));
+        std::make_unique<FakeNetworkPipe>(Clock::GetRealTimeClock(),
+                                          std::move(network)));
   }
 
   void ModifyVideoConfigs(
@@ -161,16 +198,16 @@ class RtcpXrObserver : public test::EndToEndTest {
 
   static const int kNumRtcpReportPacketsToObserve = 5;
 
-  rtc::CriticalSection crit_;
+  Mutex mutex_;
   const bool enable_rrtr_;
   const bool expect_target_bitrate_;
   const bool enable_zero_target_bitrate_;
   const VideoEncoderConfig::ContentType content_type_;
   int sent_rtcp_sr_;
-  int sent_rtcp_rr_ RTC_GUARDED_BY(&crit_);
-  int sent_rtcp_rrtr_ RTC_GUARDED_BY(&crit_);
-  bool sent_rtcp_target_bitrate_ RTC_GUARDED_BY(&crit_);
-  bool sent_zero_rtcp_target_bitrate_ RTC_GUARDED_BY(&crit_);
+  int sent_rtcp_rr_ RTC_GUARDED_BY(&mutex_);
+  int sent_rtcp_rrtr_ RTC_GUARDED_BY(&mutex_);
+  bool sent_rtcp_target_bitrate_ RTC_GUARDED_BY(&mutex_);
+  bool sent_zero_rtcp_target_bitrate_ RTC_GUARDED_BY(&mutex_);
   int sent_rtcp_dlrr_;
   BuiltInNetworkBehaviorConfig forward_transport_config_;
   SimulatedNetwork* send_simulated_network_;
@@ -209,7 +246,7 @@ TEST_F(ExtendedReportsEndToEndTest,
 }
 
 TEST_F(ExtendedReportsEndToEndTest,
-       TestExtendedReportsWithoutRrtrWithTargetBitrateFromFieldTrial) {
+       TestExtendedReportsWithoutRrtrWithTargetBitrateExplicitlySet) {
   test::ScopedFieldTrials field_trials("WebRTC-Target-Bitrate-Rtcp/Enabled/");
   RtcpXrObserver test(/*enable_rrtr=*/false, /*expect_target_bitrate=*/true,
                       /*enable_zero_target_bitrate=*/false,

@@ -1,16 +1,16 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import json
 import logging
-import platform
 import os
 import sys
+import time
 
-from browser_driver.browser_driver_factory import BrowserDriverFactory
-from benchmark_runner import BenchmarkRunner
-from webdriver_benchmark_runner import WebDriverBenchmarkRunner
-from webserver_benchmark_runner import WebServerBenchmarkRunner
+from webkitpy.benchmark_runner.browser_driver.browser_driver_factory import BrowserDriverFactory
+from webkitpy.benchmark_runner.benchmark_runner import BenchmarkRunner
+from webkitpy.benchmark_runner.webdriver_benchmark_runner import WebDriverBenchmarkRunner
+from webkitpy.benchmark_runner.webserver_benchmark_runner import WebServerBenchmarkRunner
 
 
 _log = logging.getLogger(__name__)
@@ -32,8 +32,13 @@ def default_browser():
     return 'safari'
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Run browser based performance benchmarks. To run a single benchmark in the recommended way, use run-benchmark --plan. To see the vailable benchmarks, use run-benchmark --list-plans.')
+def default_diagnose_dir():
+    return '/tmp/run-benchmark-diagnostics-{}/'.format(int(time.time()))
+
+
+def config_argument_parser():
+    diagnose_directory = default_diagnose_dir()
+    parser = argparse.ArgumentParser(description='Run browser based performance benchmarks. To run a single benchmark in the recommended way, use run-benchmark --plan. To see the vailable benchmarks, use run-benchmark --list-plans. This script passes through the __XPC variables in its environment to the Safari process.')
     mutual_group = parser.add_mutually_exclusive_group(required=True)
     mutual_group.add_argument('--plan', help='Run a specific benchmark plan (e.g. speedometer, jetstream).')
     mutual_group.add_argument('--list-plans', action='store_true', help='List all available benchmark plans.')
@@ -41,13 +46,13 @@ def parse_args():
     mutual_group.add_argument('--read-results-json', dest='json_file', help='Instead of running a benchmark, format the output saved in JSON_FILE.')
     parser.add_argument('--output-file', default=None, help='Save detailed results to OUTPUT in JSON format. By default, results will not be saved.')
     parser.add_argument('--count', type=int, help='Number of times to run the benchmark (e.g. 5).')
-    parser.add_argument('--driver', default=WebServerBenchmarkRunner.name, choices=benchmark_runner_subclasses.keys(), help='Use the specified benchmark driver. Defaults to %s.' % WebServerBenchmarkRunner.name)
+    parser.add_argument('--driver', default=WebServerBenchmarkRunner.name, choices=list(benchmark_runner_subclasses.keys()), help='Use the specified benchmark driver. Defaults to %s.' % WebServerBenchmarkRunner.name)
     parser.add_argument('--browser', default=default_browser(), choices=BrowserDriverFactory.available_browsers(), help='Browser to run the nechmark in. Defaults to %s.' % default_browser())
     parser.add_argument('--platform', default=default_platform(), choices=BrowserDriverFactory.available_platforms(), help='Platform that this script is running on. Defaults to %s.' % default_platform())
     parser.add_argument('--local-copy', help='Path to a local copy of the benchmark (e.g. PerformanceTests/SunSpider/).')
     parser.add_argument('--device-id', default=None, help='Undocumented option for mobile device testing.')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging.')
-    parser.add_argument('--diagnose-directory', dest='diagnose_dir', default=None, help='Directory for storing diagnose information on test failure. It\'s up to browser driver implementation when this option is not specified.')
+    parser.add_argument('--diagnose-directory', dest='diagnose_dir', default=diagnose_directory, help='Directory for storing diagnose information on test failure. Defaults to {}.'.format(diagnose_directory))
     parser.add_argument('--no-adjust-unit', dest='scale_unit', action='store_false', help="Don't convert to scientific notation.")
     parser.add_argument('--show-iteration-values', dest='show_iteration_values', action='store_true', help="Show the measured value for each iteration in addition to averages.")
 
@@ -55,6 +60,13 @@ def parse_args():
     group.add_argument('--browser-path', help='Specify the path to a non-default copy of the target browser as a path to the .app.')
     group.add_argument('--build-directory', dest='build_dir', help='Path to the browser executable (e.g. WebKitBuild/Release/).')
 
+    return parser
+
+
+# FIXME: Remove default arguments when all dependent scripts adopt this change.
+def parse_args(parser=None):
+    if parser is None:
+        parser = config_argument_parser()
     args = parser.parse_args()
 
     if args.debug:
@@ -127,4 +139,4 @@ def format_logger(logger):
 
 
 def main():
-    return start(parse_args())
+    return start(parse_args(config_argument_parser()))

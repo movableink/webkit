@@ -1,3 +1,2011 @@
+2022-03-12  Tim Horton  <timothy_horton@apple.com>
+
+        Adopt FALLBACK_PLATFORM_NAME in place of FALLBACK_PLATFORM
+        https://bugs.webkit.org/show_bug.cgi?id=237809
+
+        Reviewed by Per Arne Vollan.
+
+        * gtest/xcode/Config/SDKVariant.xcconfig:
+
+2022-03-10  Elliott Williams  <emw@apple.com>
+
+        [XCBuild] Fix GeneratedSources dependency validation errors
+        https://bugs.webkit.org/show_bug.cgi?id=237490
+
+        Reviewed by Alexey Proskuryakov.
+        
+        In gtest's static library target, replace the folder reference containing headers with file
+        references for each copied header. This allows XCBuild to correctly plan incremental builds
+        when these headers change.
+                
+        * gtest/xcode/Config/StaticLibraryTarget.xcconfig:
+        * gtest/xcode/gtest.xcodeproj/project.pbxproj:
+
+2022-02-10  Tim Nguyen  <ntim@apple.com>
+
+        Import PDF.js v2.12.313 to the WebKit repo
+        https://bugs.webkit.org/show_bug.cgi?id=236452
+
+        Reviewed by Brent Fulgham.
+
+        Add bundle from https://mozilla.github.io/pdf.js/getting_started/#download (Modern browsers version)
+
+        Delete the following:
+        - Sourcemaps (.js.map files)
+        - Example PDF file (compressed.tracemonkey-pldi-09.pdf)
+
+        * pdfjs/LICENSE: Added.
+        * pdfjs/build/pdf.js: Added.
+        (webpackUniversalModuleDefinition):
+        (return.):
+        (return):
+        * pdfjs/build/pdf.sandbox.js: Added.
+        (webpackUniversalModuleDefinition):
+        (return.):
+        * pdfjs/build/pdf.worker.js: Added.
+        (webpackUniversalModuleDefinition):
+        (return.):
+        (return):
+        * pdfjs/web/cmaps/78-EUC-H.bcmap: Added.
+        * pdfjs/web/cmaps/78-EUC-V.bcmap: Added.
+        * pdfjs/web/cmaps/78-H.bcmap: Added.
+        * pdfjs/web/cmaps/78-RKSJ-H.bcmap: Added.
+        * pdfjs/web/cmaps/78-RKSJ-V.bcmap: Added.
+        * pdfjs/web/cmaps/78-V.bcmap: Added.
+        * pdfjs/web/cmaps/78ms-RKSJ-H.bcmap: Added.
+        * pdfjs/web/cmaps/78ms-RKSJ-V.bcmap: Added.
+        * pdfjs/web/cmaps/83pv-RKSJ-H.bcmap: Added.
+        * pdfjs/web/cmaps/90ms-RKSJ-H.bcmap: Added.
+        * pdfjs/web/cmaps/90ms-RKSJ-V.bcmap: Added.
+        * pdfjs/web/cmaps/90msp-RKSJ-H.bcmap: Added.
+        * pdfjs/web/cmaps/90msp-RKSJ-V.bcmap: Added.
+        * pdfjs/web/cmaps/90pv-RKSJ-H.bcmap: Added.
+        * pdfjs/web/cmaps/90pv-RKSJ-V.bcmap: Added.
+        * pdfjs/web/cmaps/Add-H.bcmap: Added.
+        * pdfjs/web/cmaps/Add-RKSJ-H.bcmap: Added.
+        * pdfjs/web/cmaps/Add-RKSJ-V.bcmap: Added.
+        * pdfjs/web/cmaps/Add-V.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-CNS1-0.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-CNS1-1.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-CNS1-2.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-CNS1-3.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-CNS1-4.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-CNS1-5.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-CNS1-6.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-CNS1-UCS2.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-GB1-0.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-GB1-1.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-GB1-2.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-GB1-3.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-GB1-4.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-GB1-5.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-GB1-UCS2.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Japan1-0.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Japan1-1.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Japan1-2.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Japan1-3.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Japan1-4.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Japan1-5.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Japan1-6.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Japan1-UCS2.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Korea1-0.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Korea1-1.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Korea1-2.bcmap: Added.
+        * pdfjs/web/cmaps/Adobe-Korea1-UCS2.bcmap: Added.
+        * pdfjs/web/cmaps/B5-H.bcmap: Added.
+        * pdfjs/web/cmaps/B5-V.bcmap: Added.
+        * pdfjs/web/cmaps/B5pc-H.bcmap: Added.
+        * pdfjs/web/cmaps/B5pc-V.bcmap: Added.
+        * pdfjs/web/cmaps/CNS-EUC-H.bcmap: Added.
+        * pdfjs/web/cmaps/CNS-EUC-V.bcmap: Added.
+        * pdfjs/web/cmaps/CNS1-H.bcmap: Added.
+        * pdfjs/web/cmaps/CNS1-V.bcmap: Added.
+        * pdfjs/web/cmaps/CNS2-H.bcmap: Added.
+        * pdfjs/web/cmaps/CNS2-V.bcmap: Added.
+        * pdfjs/web/cmaps/ETHK-B5-H.bcmap: Added.
+        * pdfjs/web/cmaps/ETHK-B5-V.bcmap: Added.
+        * pdfjs/web/cmaps/ETen-B5-H.bcmap: Added.
+        * pdfjs/web/cmaps/ETen-B5-V.bcmap: Added.
+        * pdfjs/web/cmaps/ETenms-B5-H.bcmap: Added.
+        * pdfjs/web/cmaps/ETenms-B5-V.bcmap: Added.
+        * pdfjs/web/cmaps/EUC-H.bcmap: Added.
+        * pdfjs/web/cmaps/EUC-V.bcmap: Added.
+        * pdfjs/web/cmaps/Ext-H.bcmap: Added.
+        * pdfjs/web/cmaps/Ext-RKSJ-H.bcmap: Added.
+        * pdfjs/web/cmaps/Ext-RKSJ-V.bcmap: Added.
+        * pdfjs/web/cmaps/Ext-V.bcmap: Added.
+        * pdfjs/web/cmaps/GB-EUC-H.bcmap: Added.
+        * pdfjs/web/cmaps/GB-EUC-V.bcmap: Added.
+        * pdfjs/web/cmaps/GB-H.bcmap: Added.
+        * pdfjs/web/cmaps/GB-V.bcmap: Added.
+        * pdfjs/web/cmaps/GBK-EUC-H.bcmap: Added.
+        * pdfjs/web/cmaps/GBK-EUC-V.bcmap: Added.
+        * pdfjs/web/cmaps/GBK2K-H.bcmap: Added.
+        * pdfjs/web/cmaps/GBK2K-V.bcmap: Added.
+        * pdfjs/web/cmaps/GBKp-EUC-H.bcmap: Added.
+        * pdfjs/web/cmaps/GBKp-EUC-V.bcmap: Added.
+        * pdfjs/web/cmaps/GBT-EUC-H.bcmap: Added.
+        * pdfjs/web/cmaps/GBT-EUC-V.bcmap: Added.
+        * pdfjs/web/cmaps/GBT-H.bcmap: Added.
+        * pdfjs/web/cmaps/GBT-V.bcmap: Added.
+        * pdfjs/web/cmaps/GBTpc-EUC-H.bcmap: Added.
+        * pdfjs/web/cmaps/GBTpc-EUC-V.bcmap: Added.
+        * pdfjs/web/cmaps/GBpc-EUC-H.bcmap: Added.
+        * pdfjs/web/cmaps/GBpc-EUC-V.bcmap: Added.
+        * pdfjs/web/cmaps/H.bcmap: Added.
+        * pdfjs/web/cmaps/HKdla-B5-H.bcmap: Added.
+        * pdfjs/web/cmaps/HKdla-B5-V.bcmap: Added.
+        * pdfjs/web/cmaps/HKdlb-B5-H.bcmap: Added.
+        * pdfjs/web/cmaps/HKdlb-B5-V.bcmap: Added.
+        * pdfjs/web/cmaps/HKgccs-B5-H.bcmap: Added.
+        * pdfjs/web/cmaps/HKgccs-B5-V.bcmap: Added.
+        * pdfjs/web/cmaps/HKm314-B5-H.bcmap: Added.
+        * pdfjs/web/cmaps/HKm314-B5-V.bcmap: Added.
+        * pdfjs/web/cmaps/HKm471-B5-H.bcmap: Added.
+        * pdfjs/web/cmaps/HKm471-B5-V.bcmap: Added.
+        * pdfjs/web/cmaps/HKscs-B5-H.bcmap: Added.
+        * pdfjs/web/cmaps/HKscs-B5-V.bcmap: Added.
+        * pdfjs/web/cmaps/Hankaku.bcmap: Added.
+        * pdfjs/web/cmaps/Hiragana.bcmap: Added.
+        * pdfjs/web/cmaps/KSC-EUC-H.bcmap: Added.
+        * pdfjs/web/cmaps/KSC-EUC-V.bcmap: Added.
+        * pdfjs/web/cmaps/KSC-H.bcmap: Added.
+        * pdfjs/web/cmaps/KSC-Johab-H.bcmap: Added.
+        * pdfjs/web/cmaps/KSC-Johab-V.bcmap: Added.
+        * pdfjs/web/cmaps/KSC-V.bcmap: Added.
+        * pdfjs/web/cmaps/KSCms-UHC-H.bcmap: Added.
+        * pdfjs/web/cmaps/KSCms-UHC-HW-H.bcmap: Added.
+        * pdfjs/web/cmaps/KSCms-UHC-HW-V.bcmap: Added.
+        * pdfjs/web/cmaps/KSCms-UHC-V.bcmap: Added.
+        * pdfjs/web/cmaps/KSCpc-EUC-H.bcmap: Added.
+        * pdfjs/web/cmaps/KSCpc-EUC-V.bcmap: Added.
+        * pdfjs/web/cmaps/Katakana.bcmap: Added.
+        * pdfjs/web/cmaps/LICENSE: Added.
+        * pdfjs/web/cmaps/NWP-H.bcmap: Added.
+        * pdfjs/web/cmaps/NWP-V.bcmap: Added.
+        * pdfjs/web/cmaps/RKSJ-H.bcmap: Added.
+        * pdfjs/web/cmaps/RKSJ-V.bcmap: Added.
+        * pdfjs/web/cmaps/Roman.bcmap: Added.
+        * pdfjs/web/cmaps/UniCNS-UCS2-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniCNS-UCS2-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniCNS-UTF16-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniCNS-UTF16-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniCNS-UTF32-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniCNS-UTF32-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniCNS-UTF8-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniCNS-UTF8-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniGB-UCS2-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniGB-UCS2-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniGB-UTF16-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniGB-UTF16-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniGB-UTF32-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniGB-UTF32-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniGB-UTF8-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniGB-UTF8-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS-UCS2-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS-UCS2-HW-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS-UCS2-HW-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS-UCS2-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS-UTF16-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS-UTF16-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS-UTF32-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS-UTF32-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS-UTF8-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS-UTF8-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS2004-UTF16-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS2004-UTF16-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS2004-UTF32-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS2004-UTF32-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS2004-UTF8-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniJIS2004-UTF8-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJISPro-UCS2-HW-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJISPro-UCS2-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJISPro-UTF8-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJISX0213-UTF32-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniJISX0213-UTF32-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniJISX02132004-UTF32-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniJISX02132004-UTF32-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniKS-UCS2-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniKS-UCS2-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniKS-UTF16-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniKS-UTF16-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniKS-UTF32-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniKS-UTF32-V.bcmap: Added.
+        * pdfjs/web/cmaps/UniKS-UTF8-H.bcmap: Added.
+        * pdfjs/web/cmaps/UniKS-UTF8-V.bcmap: Added.
+        * pdfjs/web/cmaps/V.bcmap: Added.
+        * pdfjs/web/cmaps/WP-Symbol.bcmap: Added.
+        * pdfjs/web/debugger.js: Added.
+        (FontInspector.FontInspectorClosure.removeSelection):
+        (FontInspector.FontInspectorClosure.resetSelection):
+        (FontInspector.FontInspectorClosure.selectFont):
+        (FontInspector.FontInspectorClosure.textLayerClick):
+        (FontInspector.FontInspectorClosure.return.init):
+        (FontInspector.FontInspectorClosure.return.cleanup):
+        (FontInspector.FontInspectorClosure.return.get active):
+        (FontInspector.FontInspectorClosure.return.set active):
+        (FontInspector.FontInspectorClosure.return.properties):
+        (FontInspector.FontInspectorClosure.return.fontAdded):
+        (FontInspector):
+        (StepperManager.StepperManagerClosure.return.init):
+        (StepperManager.StepperManagerClosure.return.cleanup):
+        (StepperManager.StepperManagerClosure.return.create):
+        (StepperManager.StepperManagerClosure.return.selectStepper):
+        (StepperManager.StepperManagerClosure.return.saveBreakPoints):
+        (StepperManager):
+        (const.Stepper.StepperClosure.c):
+        (const.Stepper.StepperClosure.simplifyArgs):
+        (const.Stepper.StepperClosure.Stepper):
+        (const.Stepper.StepperClosure.Stepper.prototype.init):
+        (const.Stepper.StepperClosure.Stepper.prototype.updateOperatorList.cboxOnClick):
+        (const.Stepper.StepperClosure.Stepper.prototype.updateOperatorList):
+        (const.Stepper.StepperClosure.Stepper.prototype.getNextBreakPoint):
+        (const.Stepper.StepperClosure.Stepper.prototype.breakIt):
+        (const.Stepper.StepperClosure.Stepper.prototype.goTo):
+        (const.Stepper):
+        (Stats.Stats):
+        (Stats.Stats.getStatIndex):
+        (Stats):
+        (window.PDFBug):
+        * pdfjs/web/images/annotation-check.svg: Added.
+        * pdfjs/web/images/annotation-comment.svg: Added.
+        * pdfjs/web/images/annotation-help.svg: Added.
+        * pdfjs/web/images/annotation-insert.svg: Added.
+        * pdfjs/web/images/annotation-key.svg: Added.
+        * pdfjs/web/images/annotation-newparagraph.svg: Added.
+        * pdfjs/web/images/annotation-noicon.svg: Added.
+        * pdfjs/web/images/annotation-note.svg: Added.
+        * pdfjs/web/images/annotation-paragraph.svg: Added.
+        * pdfjs/web/images/findbarButton-next.svg: Added.
+        * pdfjs/web/images/findbarButton-previous.svg: Added.
+        * pdfjs/web/images/grab.cur: Added.
+        * pdfjs/web/images/grabbing.cur: Added.
+        * pdfjs/web/images/loading-dark.svg: Added.
+        * pdfjs/web/images/loading-icon.gif: Added.
+        * pdfjs/web/images/loading.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-documentProperties.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-firstPage.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-handTool.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-lastPage.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-rotateCcw.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-rotateCw.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-scrollHorizontal.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-scrollPage.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-scrollVertical.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-scrollWrapped.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-selectTool.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-spreadEven.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-spreadNone.svg: Added.
+        * pdfjs/web/images/secondaryToolbarButton-spreadOdd.svg: Added.
+        * pdfjs/web/images/shadow.png: Added.
+        * pdfjs/web/images/toolbarButton-bookmark.svg: Added.
+        * pdfjs/web/images/toolbarButton-currentOutlineItem.svg: Added.
+        * pdfjs/web/images/toolbarButton-download.svg: Added.
+        * pdfjs/web/images/toolbarButton-menuArrow.svg: Added.
+        * pdfjs/web/images/toolbarButton-openFile.svg: Added.
+        * pdfjs/web/images/toolbarButton-pageDown.svg: Added.
+        * pdfjs/web/images/toolbarButton-pageUp.svg: Added.
+        * pdfjs/web/images/toolbarButton-presentationMode.svg: Added.
+        * pdfjs/web/images/toolbarButton-print.svg: Added.
+        * pdfjs/web/images/toolbarButton-search.svg: Added.
+        * pdfjs/web/images/toolbarButton-secondaryToolbarToggle.svg: Added.
+        * pdfjs/web/images/toolbarButton-sidebarToggle.svg: Added.
+        * pdfjs/web/images/toolbarButton-viewAttachments.svg: Added.
+        * pdfjs/web/images/toolbarButton-viewLayers.svg: Added.
+        * pdfjs/web/images/toolbarButton-viewOutline.svg: Added.
+        * pdfjs/web/images/toolbarButton-viewThumbnail.svg: Added.
+        * pdfjs/web/images/toolbarButton-zoomIn.svg: Added.
+        * pdfjs/web/images/toolbarButton-zoomOut.svg: Added.
+        * pdfjs/web/images/treeitem-collapsed.svg: Added.
+        * pdfjs/web/images/treeitem-expanded.svg: Added.
+        * pdfjs/web/locale/ach/viewer.properties: Added.
+        * pdfjs/web/locale/af/viewer.properties: Added.
+        * pdfjs/web/locale/an/viewer.properties: Added.
+        * pdfjs/web/locale/ar/viewer.properties: Added.
+        * pdfjs/web/locale/ast/viewer.properties: Added.
+        * pdfjs/web/locale/az/viewer.properties: Added.
+        * pdfjs/web/locale/be/viewer.properties: Added.
+        * pdfjs/web/locale/bg/viewer.properties: Added.
+        * pdfjs/web/locale/bn/viewer.properties: Added.
+        * pdfjs/web/locale/bo/viewer.properties: Added.
+        * pdfjs/web/locale/br/viewer.properties: Added.
+        * pdfjs/web/locale/brx/viewer.properties: Added.
+        * pdfjs/web/locale/bs/viewer.properties: Added.
+        * pdfjs/web/locale/ca/viewer.properties: Added.
+        * pdfjs/web/locale/cak/viewer.properties: Added.
+        * pdfjs/web/locale/ckb/viewer.properties: Added.
+        * pdfjs/web/locale/cs/viewer.properties: Added.
+        * pdfjs/web/locale/cy/viewer.properties: Added.
+        * pdfjs/web/locale/da/viewer.properties: Added.
+        * pdfjs/web/locale/de/viewer.properties: Added.
+        * pdfjs/web/locale/dsb/viewer.properties: Added.
+        * pdfjs/web/locale/el/viewer.properties: Added.
+        * pdfjs/web/locale/en-CA/viewer.properties: Added.
+        * pdfjs/web/locale/en-GB/viewer.properties: Added.
+        * pdfjs/web/locale/en-US/viewer.properties: Added.
+        * pdfjs/web/locale/eo/viewer.properties: Added.
+        * pdfjs/web/locale/es-AR/viewer.properties: Added.
+        * pdfjs/web/locale/es-CL/viewer.properties: Added.
+        * pdfjs/web/locale/es-ES/viewer.properties: Added.
+        * pdfjs/web/locale/es-MX/viewer.properties: Added.
+        * pdfjs/web/locale/et/viewer.properties: Added.
+        * pdfjs/web/locale/eu/viewer.properties: Added.
+        * pdfjs/web/locale/fa/viewer.properties: Added.
+        * pdfjs/web/locale/ff/viewer.properties: Added.
+        * pdfjs/web/locale/fi/viewer.properties: Added.
+        * pdfjs/web/locale/fr/viewer.properties: Added.
+        * pdfjs/web/locale/fy-NL/viewer.properties: Added.
+        * pdfjs/web/locale/ga-IE/viewer.properties: Added.
+        * pdfjs/web/locale/gd/viewer.properties: Added.
+        * pdfjs/web/locale/gl/viewer.properties: Added.
+        * pdfjs/web/locale/gn/viewer.properties: Added.
+        * pdfjs/web/locale/gu-IN/viewer.properties: Added.
+        * pdfjs/web/locale/he/viewer.properties: Added.
+        * pdfjs/web/locale/hi-IN/viewer.properties: Added.
+        * pdfjs/web/locale/hr/viewer.properties: Added.
+        * pdfjs/web/locale/hsb/viewer.properties: Added.
+        * pdfjs/web/locale/hu/viewer.properties: Added.
+        * pdfjs/web/locale/hy-AM/viewer.properties: Added.
+        * pdfjs/web/locale/hye/viewer.properties: Added.
+        * pdfjs/web/locale/ia/viewer.properties: Added.
+        * pdfjs/web/locale/id/viewer.properties: Added.
+        * pdfjs/web/locale/is/viewer.properties: Added.
+        * pdfjs/web/locale/it/viewer.properties: Added.
+        * pdfjs/web/locale/ja/viewer.properties: Added.
+        * pdfjs/web/locale/ka/viewer.properties: Added.
+        * pdfjs/web/locale/kab/viewer.properties: Added.
+        * pdfjs/web/locale/kk/viewer.properties: Added.
+        * pdfjs/web/locale/km/viewer.properties: Added.
+        * pdfjs/web/locale/kn/viewer.properties: Added.
+        * pdfjs/web/locale/ko/viewer.properties: Added.
+        * pdfjs/web/locale/lij/viewer.properties: Added.
+        * pdfjs/web/locale/lo/viewer.properties: Added.
+        * pdfjs/web/locale/locale.properties: Added.
+        * pdfjs/web/locale/lt/viewer.properties: Added.
+        * pdfjs/web/locale/ltg/viewer.properties: Added.
+        * pdfjs/web/locale/lv/viewer.properties: Added.
+        * pdfjs/web/locale/meh/viewer.properties: Added.
+        * pdfjs/web/locale/mk/viewer.properties: Added.
+        * pdfjs/web/locale/mr/viewer.properties: Added.
+        * pdfjs/web/locale/ms/viewer.properties: Added.
+        * pdfjs/web/locale/my/viewer.properties: Added.
+        * pdfjs/web/locale/nb-NO/viewer.properties: Added.
+        * pdfjs/web/locale/ne-NP/viewer.properties: Added.
+        * pdfjs/web/locale/nl/viewer.properties: Added.
+        * pdfjs/web/locale/nn-NO/viewer.properties: Added.
+        * pdfjs/web/locale/oc/viewer.properties: Added.
+        * pdfjs/web/locale/pa-IN/viewer.properties: Added.
+        * pdfjs/web/locale/pl/viewer.properties: Added.
+        * pdfjs/web/locale/pt-BR/viewer.properties: Added.
+        * pdfjs/web/locale/pt-PT/viewer.properties: Added.
+        * pdfjs/web/locale/rm/viewer.properties: Added.
+        * pdfjs/web/locale/ro/viewer.properties: Added.
+        * pdfjs/web/locale/ru/viewer.properties: Added.
+        * pdfjs/web/locale/sat/viewer.properties: Added.
+        * pdfjs/web/locale/sc/viewer.properties: Added.
+        * pdfjs/web/locale/scn/viewer.properties: Added.
+        * pdfjs/web/locale/sco/viewer.properties: Added.
+        * pdfjs/web/locale/si/viewer.properties: Added.
+        * pdfjs/web/locale/sk/viewer.properties: Added.
+        * pdfjs/web/locale/sl/viewer.properties: Added.
+        * pdfjs/web/locale/son/viewer.properties: Added.
+        * pdfjs/web/locale/sq/viewer.properties: Added.
+        * pdfjs/web/locale/sr/viewer.properties: Added.
+        * pdfjs/web/locale/sv-SE/viewer.properties: Added.
+        * pdfjs/web/locale/szl/viewer.properties: Added.
+        * pdfjs/web/locale/ta/viewer.properties: Added.
+        * pdfjs/web/locale/te/viewer.properties: Added.
+        * pdfjs/web/locale/tg/viewer.properties: Added.
+        * pdfjs/web/locale/th/viewer.properties: Added.
+        * pdfjs/web/locale/tl/viewer.properties: Added.
+        * pdfjs/web/locale/tr/viewer.properties: Added.
+        * pdfjs/web/locale/trs/viewer.properties: Added.
+        * pdfjs/web/locale/uk/viewer.properties: Added.
+        * pdfjs/web/locale/ur/viewer.properties: Added.
+        * pdfjs/web/locale/uz/viewer.properties: Added.
+        * pdfjs/web/locale/vi/viewer.properties: Added.
+        * pdfjs/web/locale/wo/viewer.properties: Added.
+        * pdfjs/web/locale/xh/viewer.properties: Added.
+        * pdfjs/web/locale/zh-CN/viewer.properties: Added.
+        * pdfjs/web/locale/zh-TW/viewer.properties: Added.
+        * pdfjs/web/standard_fonts/FoxitDingbats.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitFixed.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitFixedBold.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitFixedBoldItalic.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitFixedItalic.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitSans.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitSansBold.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitSansBoldItalic.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitSansItalic.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitSerif.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitSerifBold.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitSerifBoldItalic.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitSerifItalic.pfb: Added.
+        * pdfjs/web/standard_fonts/FoxitSymbol.pfb: Added.
+        * pdfjs/web/standard_fonts/LICENSE_FOXIT: Added.
+        * pdfjs/web/standard_fonts/LICENSE_LIBERATION: Added.
+        * pdfjs/web/standard_fonts/LiberationSans-Bold.ttf: Added.
+        * pdfjs/web/standard_fonts/LiberationSans-BoldItalic.ttf: Added.
+        * pdfjs/web/standard_fonts/LiberationSans-Italic.ttf: Added.
+        * pdfjs/web/standard_fonts/LiberationSans-Regular.ttf: Added.
+        * pdfjs/web/viewer.css: Added.
+        (.textLayer):
+        (.textLayer span,):
+        (.textLayer span.markedContent):
+        (.textLayer .highlight):
+        (.textLayer .highlight.appended):
+        (.textLayer .highlight.begin):
+        (.textLayer .highlight.end):
+        (.textLayer .highlight.middle):
+        (.textLayer .highlight.selected):
+        (.textLayer ::-moz-selection):
+        (.textLayer ::selection):
+        (.textLayer br::-moz-selection):
+        (.textLayer br::selection):
+        (.textLayer .endOfContent):
+        (.textLayer .endOfContent.active):
+        (:root):
+        (.annotationLayer section):
+        (.annotationLayer .linkAnnotation > a,):
+        (.annotationLayer .buttonWidgetAnnotation.pushButton > canvas):
+        (.annotationLayer .linkAnnotation > a:hover,):
+        (.annotationLayer .textAnnotation img):
+        (.annotationLayer .textWidgetAnnotation input,):
+        (.annotationLayer .choiceWidgetAnnotation select option):
+        (.annotationLayer .buttonWidgetAnnotation.radioButton input):
+        (.annotationLayer .textWidgetAnnotation textarea):
+        (.annotationLayer .textWidgetAnnotation input[disabled],):
+        (.annotationLayer .textWidgetAnnotation input:hover,):
+        (.annotationLayer .textWidgetAnnotation input:focus,):
+        (.annotationLayer .textWidgetAnnotation input :focus,):
+        (.annotationLayer .buttonWidgetAnnotation.checkBox input:checked:before,):
+        (.annotationLayer .buttonWidgetAnnotation.checkBox input:checked:before):
+        (.annotationLayer .buttonWidgetAnnotation.checkBox input:checked:after):
+        (.annotationLayer .buttonWidgetAnnotation.radioButton input:checked:before):
+        (.annotationLayer .textWidgetAnnotation input.comb):
+        (.annotationLayer .textWidgetAnnotation input.comb:focus):
+        (.annotationLayer .buttonWidgetAnnotation.checkBox input,):
+        (.annotationLayer .popupWrapper):
+        (.annotationLayer .popup):
+        (.annotationLayer .popup > *):
+        (.annotationLayer .popup h1):
+        (.annotationLayer .popupDate):
+        (.annotationLayer .popupContent):
+        (.annotationLayer .richText > *):
+        (.annotationLayer .highlightAnnotation,):
+        (.xfaLayer .highlight):
+        (.xfaLayer .highlight.appended):
+        (.xfaLayer .highlight.begin):
+        (.xfaLayer .highlight.end):
+        (.xfaLayer .highlight.middle):
+        (.xfaLayer .highlight.selected):
+        (.xfaLayer ::-moz-selection):
+        (.xfaLayer ::selection):
+        (.xfaPage):
+        (.xfaContentarea):
+        (.xfaPrintOnly):
+        (.xfaLayer):
+        (.xfaLayer *):
+        (.xfaLayer div):
+        (.xfaLayer svg):
+        (.xfaLayer svg *):
+        (.xfaLayer a):
+        (.xfaRich li):
+        (.xfaFont):
+        (.xfaCaption):
+        (.xfaCaptionForCheckButton):
+        (.xfaLabel):
+        (.xfaLeft):
+        (.xfaRight):
+        (.xfaLeft > .xfaCaption,):
+        (.xfaTop):
+        (.xfaBottom):
+        (.xfaTop > .xfaCaption,):
+        (.xfaBorder):
+        (.xfaWrapped):
+        (.xfaTextfield:focus,):
+        (.xfaCheckbox:focus,):
+        (.xfaTextfield,):
+        (.xfaTop > .xfaTextfield,):
+        (.xfaButton):
+        (.xfaLink):
+        (.xfaCheckbox,):
+        (.xfaRich):
+        (.xfaImage):
+        (.xfaLrTb,):
+        (.xfaLr):
+        (.xfaRl):
+        (.xfaTb > div):
+        (.xfaPosition):
+        (.xfaArea):
+        (.xfaValignMiddle):
+        (.xfaTable):
+        (.xfaTable .xfaRow):
+        (.xfaTable .xfaRlRow):
+        (.xfaTable .xfaRlRow > div):
+        (.xfaNonInteractive input,):
+        (@media print .xfaTextfield,):
+        (@media print .xfaSelect):
+        (@media screen and (forced-colors: active) :root):
+        (.pdfViewer):
+        (.pdfViewer .canvasWrapper):
+        (.pdfViewer .page):
+        (.pdfViewer .dummyPage):
+        (.pdfViewer.removePageBorders .page):
+        (.pdfViewer.singlePageView):
+        (.pdfViewer.singlePageView .page):
+        (.pdfViewer.scrollHorizontal,):
+        (.pdfViewer.removePageBorders,):
+        (.spread .page,):
+        (.pdfViewer.removePageBorders .spread .page,):
+        (.pdfViewer .page canvas):
+        (.pdfViewer .page canvas[hidden]):
+        (.pdfViewer .page .loadingIcon):
+        (.pdfViewer .page .loadingIcon.notVisible):
+        (.pdfViewer.enablePermissions .textLayer span):
+        (.pdfPresentationMode .pdfViewer):
+        (.pdfPresentationMode .spread):
+        (.pdfPresentationMode .pdfViewer .page):
+        (@media (prefers-color-scheme: dark) :root):
+        (*):
+        (html):
+        (body):
+        (body,):
+        (.hidden):
+        ([hidden]):
+        (#viewerContainer.pdfPresentationMode:-webkit-full-screen):
+        (#viewerContainer.pdfPresentationMode:fullscreen):
+        (.pdfPresentationMode:-webkit-full-screen a:not(.internalLink)):
+        (.pdfPresentationMode:fullscreen a:not(.internalLink)):
+        (.pdfPresentationMode:-webkit-full-screen .textLayer span):
+        (.pdfPresentationMode:fullscreen .textLayer span):
+        (.pdfPresentationMode.pdfPresentationModeControls > *,):
+        (#outerContainer):
+        (#sidebarContainer):
+        (html[dir="ltr"] #sidebarContainer):
+        (html[dir="rtl"] #sidebarContainer):
+        (#outerContainer.sidebarResizing #sidebarContainer):
+        (#outerContainer.sidebarMoving #sidebarContainer,):
+        (html[dir="ltr"] #outerContainer.sidebarOpen #sidebarContainer):
+        (html[dir="rtl"] #outerContainer.sidebarOpen #sidebarContainer):
+        (#mainContainer):
+        (#sidebarContent):
+        (html[dir="ltr"] #sidebarContent):
+        (html[dir="rtl"] #sidebarContent):
+        (#viewerContainer):
+        (#viewerContainer:not(.pdfPresentationMode)):
+        (#outerContainer.sidebarResizing #viewerContainer):
+        (html[dir="ltr"]):
+        (html[dir="rtl"]):
+        (.toolbar):
+        (#toolbarContainer):
+        (#toolbarSidebar):
+        (html[dir="ltr"] #toolbarSidebar):
+        (html[dir="rtl"] #toolbarSidebar):
+        (html[dir="ltr"] #toolbarSidebar .toolbarButton):
+        (html[dir="rtl"] #toolbarSidebar .toolbarButton):
+        (html[dir="ltr"] #toolbarSidebarRight .toolbarButton):
+        (html[dir="rtl"] #toolbarSidebarRight .toolbarButton):
+        (#sidebarResizer):
+        (html[dir="ltr"] #sidebarResizer):
+        (html[dir="rtl"] #sidebarResizer):
+        (#toolbarContainer,):
+        (#toolbarViewer):
+        (#loadingBar):
+        (html[dir="ltr"] #loadingBar):
+        (html[dir="rtl"] #loadingBar):
+        (html[dir="ltr"] #outerContainer.sidebarOpen #loadingBar):
+        (html[dir="rtl"] #outerContainer.sidebarOpen #loadingBar):
+        (#outerContainer.sidebarResizing #loadingBar):
+        (#loadingBar .progress):
+        (@-webkit-keyframes progressIndeterminate):
+        (100%):
+        (@keyframes progressIndeterminate):
+        (#loadingBar .progress.indeterminate):
+        (#loadingBar .progress.indeterminate .glimmer):
+        (.findbar,):
+        (.findbar):
+        (.findbar > div):
+        (.findbar.wrapContainers > div):
+        (.findbar.wrapContainers > div#findbarMessageContainer):
+        (html[dir="ltr"] .findbar):
+        (html[dir="rtl"] .findbar):
+        (.findbar .splitToolbarButton):
+        (html[dir="ltr"] .findbar .splitToolbarButton):
+        (html[dir="rtl"] .findbar .splitToolbarButton):
+        (.findbar .splitToolbarButton > .toolbarButton):
+        (.findbar .splitToolbarButton > .toolbarButton::before):
+        (.findbar .splitToolbarButton > .findNext):
+        (html[dir="ltr"] .findbar .splitToolbarButton > .findNext):
+        (html[dir="rtl"] .findbar .splitToolbarButton > .findNext):
+        (.findbar input[type="checkbox"]):
+        (.findbar label):
+        (.findbar label:hover,):
+        (html[dir="ltr"] #findInput):
+        (html[dir="rtl"] #findInput):
+        (.findbar .toolbarField[type="checkbox"]:checked + .toolbarLabel):
+        (#findInput):
+        (#findInput::-moz-placeholder):
+        (#findInput::placeholder):
+        (#findInput[data-status="pending"]):
+        (html[dir="rtl"] #findInput[data-status="pending"]):
+        (#findInput[data-status="notFound"]):
+        (.secondaryToolbar):
+        (html[dir="ltr"] .secondaryToolbar):
+        (html[dir="rtl"] .secondaryToolbar):
+        (#secondaryToolbarButtonContainer):
+        (.doorHanger,):
+        (.doorHanger:after,):
+        (.doorHanger:after):
+        (.doorHangerRight:after):
+        (.doorHanger:before,):
+        (html[dir="ltr"] .doorHanger:after,):
+        (html[dir="ltr"] .doorHanger:before,):
+        (html[dir="rtl"] .doorHanger:after,):
+        (html[dir="rtl"] .doorHanger:before,):
+        (#findResultsCount):
+        (#findMsg):
+        (#findMsg:empty):
+        (#toolbarViewerMiddle):
+        (html[dir="ltr"] #toolbarViewerLeft,):
+        (html[dir="ltr"] #toolbarViewerRight,):
+        (html[dir="ltr"] #toolbarViewerLeft > *,):
+        (html[dir="rtl"] #toolbarViewerLeft > *,):
+        (.splitToolbarButton):
+        (html[dir="ltr"] .splitToolbarButton > .toolbarButton):
+        (html[dir="rtl"] .splitToolbarButton > .toolbarButton):
+        (.toolbarButton,):
+        (.overlayButton:hover,):
+        (.overlayButton:hover > span,):
+        (.toolbarButton > span):
+        (.toolbarButton[disabled],):
+        (.splitToolbarButton.toggled .toolbarButton):
+        (.splitToolbarButton > .toolbarButton:hover,):
+        (.splitToolbarButton > .toolbarButton):
+        (html[dir="ltr"] .splitToolbarButton > .toolbarButton:first-child,):
+        (html[dir="ltr"] .splitToolbarButton > .toolbarButton:last-child,):
+        (.splitToolbarButtonSeparator):
+        (.findbar .splitToolbarButtonSeparator):
+        (html[dir="ltr"] .splitToolbarButtonSeparator):
+        (html[dir="rtl"] .splitToolbarButtonSeparator):
+        (html[dir="ltr"] #toolbarViewerLeft > .toolbarButton:first-child,):
+        (html[dir="ltr"] #toolbarViewerRight > .toolbarButton:last-child,):
+        (.toolbarButton:hover,):
+        (.secondaryToolbarButton:hover,):
+        (.toolbarButton.toggled,):
+        (.secondaryToolbarButton.toggled::before):
+        (.toolbarButton.toggled::before):
+        (.toolbarButton.toggled:hover:active,):
+        (.dropdownToolbarButton):
+        (.dropdownToolbarButton::after):
+        (html[dir="ltr"] .dropdownToolbarButton::after):
+        (html[dir="rtl"] .dropdownToolbarButton::after):
+        (.dropdownToolbarButton > select):
+        (html[dir="ltr"] .dropdownToolbarButton > select):
+        (html[dir="rtl"] .dropdownToolbarButton > select):
+        (.dropdownToolbarButton > select:hover,):
+        (.dropdownToolbarButton > select > option):
+        (#customScaleOption):
+        (#pageWidthOption):
+        (.toolbarButtonSpacer):
+        (.toolbarButton::before,):
+        (.dropdownToolbarButton:hover::after,):
+        (.toolbarButton::before):
+        (.toolbarButton:hover::before,):
+        (.secondaryToolbarButton::before):
+        (html[dir="ltr"] .secondaryToolbarButton::before):
+        (html[dir="rtl"] .secondaryToolbarButton::before):
+        (.toolbarButton#sidebarToggle::before):
+        (html[dir="rtl"] .toolbarButton#sidebarToggle::before):
+        (.toolbarButton#secondaryToolbarToggle::before):
+        (html[dir="rtl"] .toolbarButton#secondaryToolbarToggle::before):
+        (.toolbarButton.findPrevious::before):
+        (.toolbarButton.findNext::before):
+        (.toolbarButton.pageUp::before):
+        (.toolbarButton.pageDown::before):
+        (.toolbarButton.zoomOut::before):
+        (.toolbarButton.zoomIn::before):
+        (.toolbarButton.presentationMode::before,):
+        (.toolbarButton.print::before,):
+        (.toolbarButton.openFile::before,):
+        (.toolbarButton.download::before,):
+        (.secondaryToolbarButton.bookmark):
+        (.bookmark[href="#"]):
+        (.toolbarButton.bookmark::before,):
+        (#viewThumbnail.toolbarButton::before):
+        (#viewOutline.toolbarButton::before):
+        (html[dir="rtl"] #viewOutline.toolbarButton::before):
+        (#viewAttachments.toolbarButton::before):
+        (#viewLayers.toolbarButton::before):
+        (#currentOutlineItem.toolbarButton::before):
+        (html[dir="rtl"] #currentOutlineItem.toolbarButton::before):
+        (#viewFind.toolbarButton::before):
+        (.toolbarButton.pdfSidebarNotification::after):
+        (html[dir="ltr"] .toolbarButton.pdfSidebarNotification::after):
+        (html[dir="rtl"] .toolbarButton.pdfSidebarNotification::after):
+        (.secondaryToolbarButton):
+        (html[dir="ltr"] .secondaryToolbarButton):
+        (html[dir="rtl"] .secondaryToolbarButton):
+        (html[dir="ltr"] .secondaryToolbarButton > span):
+        (html[dir="rtl"] .secondaryToolbarButton > span):
+        (.secondaryToolbarButton.firstPage::before):
+        (.secondaryToolbarButton.lastPage::before):
+        (.secondaryToolbarButton.rotateCcw::before):
+        (.secondaryToolbarButton.rotateCw::before):
+        (.secondaryToolbarButton.selectTool::before):
+        (.secondaryToolbarButton.handTool::before):
+        (.secondaryToolbarButton.scrollPage::before):
+        (.secondaryToolbarButton.scrollVertical::before):
+        (.secondaryToolbarButton.scrollHorizontal::before):
+        (.secondaryToolbarButton.scrollWrapped::before):
+        (.secondaryToolbarButton.spreadNone::before):
+        (.secondaryToolbarButton.spreadOdd::before):
+        (.secondaryToolbarButton.spreadEven::before):
+        (.secondaryToolbarButton.documentProperties::before):
+        (.verticalToolbarSeparator):
+        (html[dir="ltr"] .verticalToolbarSeparator):
+        (html[dir="rtl"] .verticalToolbarSeparator):
+        (.horizontalToolbarSeparator):
+        (.toolbarField):
+        (.toolbarField[type="checkbox"]):
+        (html[dir="ltr"] .toolbarField[type="checkbox"]):
+        (html[dir="rtl"] .toolbarField[type="checkbox"]):
+        (.toolbarField.pageNumber):
+        (.toolbarField.pageNumber.visiblePageIsLoading):
+        (.toolbarField.pageNumber::-webkit-inner-spin-button,):
+        (.toolbarField:focus):
+        (.toolbarLabel):
+        (html[dir="ltr"] #numPages.toolbarLabel):
+        (html[dir="rtl"] #numPages.toolbarLabel):
+        (#thumbnailView):
+        (#thumbnailView > a:active,):
+        (.thumbnail):
+        (html[dir="ltr"] .thumbnail):
+        (html[dir="rtl"] .thumbnail):
+        (#thumbnailView > a:last-of-type > .thumbnail):
+        (#thumbnailView > a:last-of-type > .thumbnail:not([data-loaded])):
+        (.thumbnail:not([data-loaded])):
+        (.thumbnailImage):
+        (.thumbnailSelectionRing):
+        (a:focus > .thumbnail > .thumbnailSelectionRing > .thumbnailImage,):
+        (a:focus > .thumbnail > .thumbnailSelectionRing,):
+        (.thumbnail.selected > .thumbnailSelectionRing > .thumbnailImage):
+        (.thumbnail.selected > .thumbnailSelectionRing):
+        (#outlineView,):
+        (html[dir="ltr"] .treeWithDeepNesting > .treeItem,):
+        (html[dir="rtl"] .treeWithDeepNesting > .treeItem,):
+        (.treeItem > a):
+        (html[dir="ltr"] .treeItem > a):
+        (html[dir="rtl"] .treeItem > a):
+        (#layersView .treeItem > a > *):
+        (html[dir="ltr"] #layersView .treeItem > a > label):
+        (html[dir="rtl"] #layersView .treesItem > a > label):
+        (.treeItemToggler):
+        (.treeItemToggler::before):
+        (.treeItemToggler.treeItemsHidden::before):
+        (html[dir="rtl"] .treeItemToggler.treeItemsHidden::before):
+        (.treeItemToggler.treeItemsHidden ~ .treeItems):
+        (html[dir="ltr"] .treeItemToggler):
+        (html[dir="rtl"] .treeItemToggler):
+        (html[dir="ltr"] .treeItemToggler::before):
+        (html[dir="rtl"] .treeItemToggler::before):
+        (.treeItem.selected > a):
+        (.treeItemToggler:hover,):
+        (::-moz-selection):
+        (::selection):
+        (#errorWrapper):
+        (#errorMessageLeft):
+        (#errorMessageRight):
+        (#errorMoreInfo):
+        (.overlayButton):
+        (#overlayContainer):
+        (#overlayContainer > *):
+        (#overlayContainer > .container):
+        (#overlayContainer > .container > .dialog):
+        (.dialog > .row):
+        (.dialog > .row > *):
+        (.dialog .toolbarField):
+        (.dialog .separator):
+        (.dialog .buttonRow):
+        (.dialog :link):
+        (#passwordOverlay > .dialog):
+        (#passwordOverlay .toolbarField):
+        (#documentPropertiesOverlay > .dialog):
+        (#documentPropertiesOverlay .row > *):
+        (html[dir="ltr"] #documentPropertiesOverlay .row > *):
+        (html[dir="rtl"] #documentPropertiesOverlay .row > *):
+        (#documentPropertiesOverlay .row > span):
+        (#documentPropertiesOverlay .row > p):
+        (#documentPropertiesOverlay .buttonRow):
+        (.clearBoth):
+        (.fileInput):
+        (#PDFBug):
+        (#PDFBug .controls):
+        (#PDFBug .panels):
+        (#PDFBug .panels > div):
+        (#PDFBug button.active):
+        (.debuggerShowText):
+        (.debuggerHideText:hover):
+        (#PDFBug .stats):
+        (#PDFBug .stats .title):
+        (#PDFBug table):
+        (#PDFBug table.showText):
+        (#PDFBug table.showText,):
+        (#PDFBug table.showText td.advance):
+        (#viewer.textLayer-visible .textLayer):
+        (#viewer.textLayer-visible .canvasWrapper):
+        (#viewer.textLayer-visible .canvasWrapper canvas):
+        (#viewer.textLayer-visible .textLayer span):
+        (#viewer.textLayer-hover .textLayer span:hover):
+        (#viewer.textLayer-shadow .textLayer span):
+        (.grab-to-pan-grab):
+        (.grab-to-pan-grab:active,):
+        (@page):
+        (#printContainer):
+        (@media print body):
+        (@media print #sidebarContainer,):
+        (@media print #viewerContainer):
+        (@media print #mainContainer,):
+        (@media print .page):
+        (@media print .page[data-loaded]):
+        (@media print .fileInput):
+        (@media print body[data-pdfjsprinting] #outerContainer):
+        (@media print body[data-pdfjsprinting] #printContainer):
+        (@media print #printContainer):
+        (@media print #printContainer > .printedPage):
+        (@media print #printContainer > .xfaPrintedPage .xfaPage):
+        (@media print #printContainer > .xfaPrintedPage):
+        (@media print #printContainer > .printedPage canvas,):
+        (.visibleLargeView,):
+        (@media all and (max-width: 900px) #toolbarViewerMiddle):
+        (@media all and (max-width: 840px) #sidebarContainer):
+        (@media all and (max-width: 840px) html[dir="ltr"] #outerContainer.sidebarOpen #viewerContainer):
+        (@media all and (max-width: 840px) html[dir="rtl"] #outerContainer.sidebarOpen #viewerContainer):
+        (@media all and (max-width: 840px) #outerContainer .hiddenLargeView,):
+        (@media all and (max-width: 840px) #outerContainer .visibleLargeView,):
+        (@media all and (max-width: 770px) #outerContainer .hiddenLargeView):
+        (@media all and (max-width: 770px) #outerContainer .visibleLargeView):
+        (@media all and (max-width: 700px) #outerContainer .hiddenMediumView):
+        (@media all and (max-width: 700px) #outerContainer .visibleMediumView):
+        (@media all and (max-width: 640px) .hiddenSmallView,):
+        (@media all and (max-width: 640px) .visibleSmallView):
+        (@media all and (max-width: 640px) .toolbarButtonSpacer):
+        (@media all and (max-width: 640px) html[dir="ltr"] .findbar):
+        (@media all and (max-width: 640px) html[dir="rtl"] .findbar):
+        (@media all and (max-width: 535px) #scaleSelectContainer):
+        * pdfjs/web/viewer.html: Added.
+        * pdfjs/web/viewer.js: Added.
+        (exports.checkOnBlobSupport):
+        (exports.checkCanvasSizeLimitation):
+        (exports.AppOptions):
+        (exports.AppOptions.get const):
+        (exports.AppOptions.getAll):
+        (exports.AppOptions.set userOptions):
+        (exports.AppOptions.remove):
+        (exports.AppOptions._hasUserOptions):
+        (__webpack_require__.DefaultExternalServices):
+        (__webpack_require__.DefaultExternalServices.updateFindControlState):
+        (__webpack_require__.DefaultExternalServices.updateFindMatchesCount):
+        (__webpack_require__.DefaultExternalServices.initPassiveLoading):
+        (__webpack_require__.DefaultExternalServices.async fallback):
+        (__webpack_require__.DefaultExternalServices.reportTelemetry):
+        (__webpack_require__.DefaultExternalServices.createDownloadManager):
+        (__webpack_require__.DefaultExternalServices.createPreferences):
+        (__webpack_require__.DefaultExternalServices.createL10n):
+        (__webpack_require__.DefaultExternalServices.createScripting):
+        (__webpack_require__.DefaultExternalServices.get supportsIntegratedFind):
+        (__webpack_require__.DefaultExternalServices.get supportsDocumentFonts):
+        (__webpack_require__.DefaultExternalServices.get supportedMouseWheelZoomModifierKeys):
+        (__webpack_require__.DefaultExternalServices.get isInAutomation):
+        (__webpack_require__.const.PDFViewerApplication.async initialize):
+        (__webpack_require__.const.PDFViewerApplication.async _readPreferences):
+        (__webpack_require__.const.PDFViewerApplication.async _parseHashParameters):
+        (__webpack_require__.const.PDFViewerApplication.async _initializeL10n):
+        (__webpack_require__.const.PDFViewerApplication._forceCssTheme):
+        (__webpack_require__.const.PDFViewerApplication.async _initializeViewerComponents):
+        (__webpack_require__.const.PDFViewerApplication.run):
+        (__webpack_require__.const.PDFViewerApplication.get initialized):
+        (__webpack_require__.const.PDFViewerApplication.get initializedPromise):
+        (__webpack_require__.const.PDFViewerApplication.zoomIn):
+        (__webpack_require__.const.PDFViewerApplication.zoomOut):
+        (__webpack_require__.const.PDFViewerApplication.zoomReset):
+        (__webpack_require__.const.PDFViewerApplication.get pagesCount):
+        (__webpack_require__.const.PDFViewerApplication.get page):
+        (__webpack_require__.const.PDFViewerApplication.set page):
+        (__webpack_require__.const.PDFViewerApplication.get supportsPrinting):
+        (__webpack_require__.const.PDFViewerApplication.get supportsFullscreen):
+        (__webpack_require__.const.PDFViewerApplication.get supportsIntegratedFind):
+        (__webpack_require__.const.PDFViewerApplication.get supportsDocumentFonts):
+        (__webpack_require__.const.PDFViewerApplication.get loadingBar):
+        (__webpack_require__.const.PDFViewerApplication.get supportedMouseWheelZoomModifierKeys):
+        (__webpack_require__.const.PDFViewerApplication.initPassiveLoading):
+        (__webpack_require__.const.PDFViewerApplication.setTitleUsingUrl):
+        (__webpack_require__.const.PDFViewerApplication.setTitle):
+        (__webpack_require__.const.PDFViewerApplication.get _docFilename):
+        (__webpack_require__.const.PDFViewerApplication._hideViewBookmark):
+        (__webpack_require__.const.PDFViewerApplication._cancelIdleCallbacks):
+        (__webpack_require__.const.PDFViewerApplication.async close):
+        (__webpack_require__.const.PDFViewerApplication.async open):
+        (__webpack_require__.const.PDFViewerApplication._ensureDownloadComplete):
+        (__webpack_require__.const.PDFViewerApplication.async download):
+        (__webpack_require__.const.PDFViewerApplication.):
+        (__webpack_require__.):
+        (__webpack_require__):
+
+2022-02-02  Elliott Williams  <emw@apple.com>
+
+        [XCBuild] Users of libgtest.a depend on headers from gtest.framework
+        https://bugs.webkit.org/show_bug.cgi?id=236045
+
+        Reviewed by Alexey Proskuryakov.
+
+        In Make-based sequential builds, gtest's dynamic target builds, even though we don't use
+        it. Downstream projects were relying on that target to build and produce a gtest.framework
+        with headers in it.
+
+        Instead, configure gtest's static target to copy the project's `include` directory into
+        build products. Headers are copied to $BUILT_PRODUCTS_DIR/usr/lib/include/gtest.
+
+        * gtest/xcode/gtest.xcodeproj/project.pbxproj: Added folder reference to `include`.
+
+2022-01-18  Alex Christensen  <achristensen@webkit.org>
+
+        Use c++2a instead of gnu++2a for Cocoa builds
+        https://bugs.webkit.org/show_bug.cgi?id=234936
+
+        Reviewed by Sam Weinig.
+
+        * gtest/xcode/Config/General.xcconfig:
+
+2022-01-10  Alex Christensen  <achristensen@webkit.org>
+
+        Start using C++20
+        https://bugs.webkit.org/show_bug.cgi?id=233963
+
+        Reviewed by Yusuke Suzuki.
+
+        * gtest/xcode/Config/General.xcconfig:
+
+2022-01-07  Alex Christensen  <achristensen@webkit.org>
+
+        Unreviewed, reverting r287698.
+
+        Broke an internal build
+
+        Reverted changeset:
+
+        "Start using C++20"
+        https://bugs.webkit.org/show_bug.cgi?id=233963
+        https://commits.webkit.org/r287698
+
+2022-01-06  Alex Christensen  <achristensen@webkit.org>
+
+        Start using C++20
+        https://bugs.webkit.org/show_bug.cgi?id=233963
+
+        Reviewed by Yusuke Suzuki.
+
+        * gtest/xcode/Config/General.xcconfig:
+
+2021-10-14  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        All the SDKVariant.xcconfig files should match
+        https://bugs.webkit.org/show_bug.cgi?id=231663
+
+        Reviewed by Youenn Fablet.
+
+        * gtest/xcode/Config/SDKVariant.xcconfig:
+
+2021-05-29  Sam Weinig  <weinig@apple.com>
+
+        Remove selective compilation of libwebrtc as TestWebKitAPI depends on it for boringssl, so it is always needed
+        https://bugs.webkit.org/show_bug.cgi?id=226430
+
+        Reviewed by Tim Horton.
+
+        r244568 made TestWebKitAPI require linking the built boringssl from 
+        the libwebrtc, so it really can't be selectively compiled. Over time,
+        we have re-enabled essentially all the platforms, when the intent of
+        disabling it at all originally was to avoid double building it for
+        Mac Catalyst, which we retain.
+
+        * Makefile:
+
+2021-04-20  Kimmo Kinnunen  <kkinnunen@apple.com>
+
+        gtest.a exports symbols, causing link-time warning: direct access in function ... means the weak symbol cannot be overridden at runtime. This was likely caused by different translation units being compiled with different visibility settings.
+        https://bugs.webkit.org/show_bug.cgi?id=224812
+
+        Reviewed by Alexey Proskuryakov.
+
+        Compile and use gtest as a static library that does not export any symbols.
+        Fixes link-time warnings about mismatch of symbol visibility. The error occurs when
+        gtest.a is compiled exporting symbols with default visibility, but the clients use the library
+        and hide the symbols via ld flags.
+
+        * gtest/xcode/Config/StaticLibraryTarget.xcconfig:
+        Compile the static gtest with GTEST_API_=
+
+2021-04-07  Don Olmstead  <don.olmstead@sony.com>
+
+        [PlayStation] Do not include <any> in gtest because it requires RTTI
+        https://bugs.webkit.org/show_bug.cgi?id=224281
+
+        Reviewed by Ross Kirsling.
+
+        To determine platform capabilities gtest looks to see if a platform is using a minimum
+        C++ version and whether it has a required header. In the PlayStation's case it sees that
+        the <any> header is present with the requisite version of C++ so it defines support for it
+        and includes the header. However in the PlayStation's case to use <any> RTTI must be
+        enabled and if it isn't an error is generated.
+
+        This patch adds a way to short circuit GTEST_INTERNAL values for ports. An upstream fix is
+        in review at https://github.com/google/googletest/pull/3345 and if landed then the next
+        update to gtest can remove this patch.
+
+        * gtest/PlatformPlayStation.cmake:
+        * gtest/README.WebKit: Added.
+        * gtest/include/gtest/internal/gtest-port.h:
+
+2021-04-07  Don Olmstead  <don.olmstead@sony.com>
+
+        [CMake] Add WebKit::gtest target
+        https://bugs.webkit.org/show_bug.cgi?id=224203
+
+        Reviewed by Adrian Perez de Castro.
+
+        Create a WebKit::gtest target that propagates the include directories and required
+        preprocessor directives to dependencies.
+
+        Use Modern CMake functions for describing the target.
+
+        * gtest/CMakeLists.txt:
+        * gtest/PlatformPlayStation.cmake:
+
+2021-03-23  Ross Kirsling  <ross.kirsling@sony.com>
+
+        Update googletest to 1a8ecf1
+        https://bugs.webkit.org/show_bug.cgi?id=223607
+
+        Reviewed by Don Olmstead.
+
+        * gtest/:
+        Update googletest, but...
+
+        * gtest/CMakeLists.txt:
+        Keep our own build files, just add the new file.
+
+        * gtest/xcode/:
+        Keep our own build files, but it seems that after 1.10.0, googletest is just "live at HEAD",
+        so ditch Scripts/versiongenerate.py.
+
+        * gtest/README.WebKit: Removed.
+        * gtest/changes.diff: Removed.
+        It appears that our fix for FreeBSD has been upstreamed.
+
+2021-02-24  Tim Horton  <timothy_horton@apple.com>
+
+        Fix linker warnings building gtest for macCatalyst
+        https://bugs.webkit.org/show_bug.cgi?id=222346
+        <rdar://problem/74405116>
+
+        Reviewed by Alexey Proskuryakov.
+
+        * gtest/xcode/Config/FrameworkTarget.xcconfig:
+        * gtest/xcode/Config/General.xcconfig:
+        Work around a linker warning about macCatalyst by not specifying
+        an INSTALL_NAME that is outside of /System/iOSSupport, where all
+        macCatalyst-only binaries must live.
+
+2021-01-08  Ryan Hostetler  <rhost@apple.com>
+
+        Add support for source caching between platforms
+        https://bugs.webkit.org/show_bug.cgi?id=220439
+        rdar://72905725
+
+        Reviewed by Andy Estes.
+
+        Include all libwebrtc target soruces in the installsrc phase.
+
+2020-12-25  Yusuke Suzuki  <ysuzuki@apple.com>
+
+        Update capstone
+        https://bugs.webkit.org/show_bug.cgi?id=219941
+
+        Reviewed by Michael Catanzaro.
+
+        * capstone/CMakeLists.txt:
+        * capstone/Source/.gitignore:
+        * capstone/Source/.travis.yml:
+        * capstone/Source/CMakeLists.txt:
+        * capstone/Source/COMPILE.TXT:
+        * capstone/Source/COMPILE_CMAKE.TXT:
+        * capstone/Source/COMPILE_MSVC.TXT:
+        * capstone/Source/CREDITS.TXT:
+        * capstone/Source/ChangeLog-capstone:
+        * capstone/Source/HACK.TXT:
+        * capstone/Source/LEB128.h:
+        (decodeULEB128):
+        * capstone/Source/MCDisassembler.h:
+        * capstone/Source/MCFixedLenDisassembler.h:
+        * capstone/Source/MCInst.c:
+        (MCInst_Init):
+        (MCInst_clear):
+        (MCInst_insert0):
+        (MCInst_setOpcode):
+        (MCInst_setOpcodePub):
+        (MCInst_getOpcode):
+        (MCInst_getOpcodePub):
+        (MCInst_getOperand):
+        (MCInst_getNumOperands):
+        (MCInst_addOperand2):
+        (MCOperand_isValid):
+        (MCOperand_isReg):
+        (MCOperand_isImm):
+        (MCOperand_isFPImm):
+        (MCOperand_getReg):
+        (MCOperand_setReg):
+        (MCOperand_getImm):
+        (MCOperand_setImm):
+        (MCOperand_getFPImm):
+        (MCOperand_setFPImm):
+        (MCOperand_CreateReg1):
+        (MCOperand_CreateReg0):
+        (MCOperand_CreateImm1):
+        (MCOperand_CreateImm0):
+        (MCOperand_Init): Deleted.
+        * capstone/Source/MCInst.h:
+        * capstone/Source/MCInstrDesc.c:
+        (MCOperandInfo_isPredicate):
+        (MCOperandInfo_isOptionalDef):
+        * capstone/Source/MCInstrDesc.h:
+        * capstone/Source/MCRegisterInfo.c:
+        (MCRegisterInfo_InitMCRegisterInfo):
+        (DiffListIterator_init):
+        (DiffListIterator_getVal):
+        (DiffListIterator_next):
+        (DiffListIterator_isValid):
+        (MCRegisterInfo_getMatchingSuperReg):
+        (MCRegisterInfo_getSubReg):
+        (MCRegisterInfo_getRegClass):
+        (MCRegisterClass_contains):
+        * capstone/Source/MCRegisterInfo.h:
+        * capstone/Source/Makefile:
+        * capstone/Source/MathExtras.h:
+        (Hi_32):
+        (Lo_32):
+        (isUIntN):
+        (isMask_32):
+        (isMask_64):
+        (isShiftedMask_32):
+        (isShiftedMask_64):
+        (isPowerOf2_32):
+        (CountLeadingZeros_32):
+        (CountLeadingOnes_32):
+        (CountLeadingZeros_64):
+        (CountLeadingOnes_64):
+        (CountTrailingZeros_32):
+        (CountTrailingOnes_32):
+        (CountTrailingZeros_64):
+        (CountTrailingOnes_64):
+        (CountPopulation_32):
+        (CountPopulation_64):
+        (Log2_32):
+        (Log2_64):
+        (Log2_32_Ceil):
+        (Log2_64_Ceil):
+        (GreatestCommonDivisor64):
+        (BitsToDouble):
+        (BitsToFloat):
+        (DoubleToBits):
+        (FloatToBits):
+        (MinAlign):
+        (NextPowerOf2):
+        (RoundUpToAlignment):
+        (OffsetToAlignment):
+        (abs64):
+        (SignExtend32):
+        (SignExtend64):
+        (countLeadingZeros):
+        * capstone/Source/README.md:
+        * capstone/Source/SPONSORS.TXT: Added.
+        * capstone/Source/SStream.c:
+        (SStream_Init):
+        (SStream_concat0):
+        (SStream_concat):
+        (printInt64Bang):
+        (printUInt64Bang):
+        (printInt64):
+        (printInt32BangDec):
+        (printInt32Bang):
+        (printInt32):
+        (printUInt32Bang):
+        (printUInt32):
+        * capstone/Source/SStream.h:
+        * capstone/Source/arch/ARM/ARMAddressingModes.h:
+        (ARM_AM_getAddrOpcStr):
+        (ARM_AM_getShiftOpcStr):
+        (ARM_AM_getShiftOpcEncoding):
+        (ARM_AM_getAMSubModeStr):
+        (rotr32):
+        (rotl32):
+        (getSORegOpc):
+        (getSORegOffset):
+        (ARM_AM_getSORegShOp):
+        (getSOImmValImm):
+        (getSOImmValRot):
+        (getSOImmValRotate):
+        (getSOImmVal):
+        (isSOImmTwoPartVal):
+        (getSOImmTwoPartFirst):
+        (getSOImmTwoPartSecond):
+        (getThumbImmValShift):
+        (isThumbImmShiftedVal):
+        (getThumbImm16ValShift):
+        (isThumbImm16ShiftedVal):
+        (getThumbImmNonShiftedVal):
+        (getT2SOImmValSplatVal):
+        (getT2SOImmValRotateVal):
+        (getT2SOImmVal):
+        (getT2SOImmValRotate):
+        (isT2SOImmTwoPartVal):
+        (getT2SOImmTwoPartFirst):
+        (getT2SOImmTwoPartSecond):
+        (ARM_AM_getAM2Opc):
+        (getAM2Offset):
+        (getAM2Op):
+        (getAM2ShiftOpc):
+        (getAM2IdxMode):
+        (getAM3Opc):
+        (getAM3Offset):
+        (getAM3Op):
+        (getAM3IdxMode):
+        (getAM4SubMode):
+        (getAM4ModeImm):
+        (ARM_AM_getAM5Opc):
+        (ARM_AM_getAM5Offset):
+        (ARM_AM_getAM5Op):
+        (createNEONModImm):
+        (getNEONModImmOpCmode):
+        (getNEONModImmVal):
+        (ARM_AM_decodeNEONModImm):
+        (getFPImmFloat):
+        * capstone/Source/arch/ARM/ARMBaseInfo.h:
+        (ARMCC_getOppositeCondition):
+        (ARMCC_ARMCondCodeToString):
+        (ARM_PROC_IFlagsToString):
+        (ARM_PROC_IModToString):
+        (ARM_MB_MemBOptToString):
+        (ARM_ISB_InstSyncBOptToString):
+        (isARMLowRegister):
+        (ARMII_AddrModeToString):
+        * capstone/Source/arch/ARM/ARMDisassembler.c:
+        (ITStatus_push_back):
+        (ITStatus_instrInITBlock):
+        (ITStatus_instrLastInITBlock):
+        (ITStatus_getITCC):
+        (ITStatus_advanceITState):
+        (ITStatus_setITState):
+        (Check):
+        (ARM_getFeatureBits):
+        (DecodePredicateOperand):
+        (ARM_init):
+        (checkDecodedInstruction):
+        (_ARM_getInstruction):
+        (AddThumb1SBit):
+        (AddThumbPredicate):
+        (UpdateThumbVFPPredicate):
+        (_Thumb_getInstruction):
+        (Thumb_getInstruction):
+        (ARM_getInstruction):
+        (DecodeGPRnopcRegisterClass):
+        (DecodeGPRwithAPSRRegisterClass):
+        (DecodetGPRRegisterClass):
+        (DecodetcGPRRegisterClass):
+        (DecoderGPRRegisterClass):
+        (DecodeDPRRegisterClass):
+        (DecodeDPR_8RegisterClass):
+        (DecodeDPR_VFP2RegisterClass):
+        (DecodeDPairRegisterClass):
+        (DecodeCCOutOperand):
+        (DecodeSORegImmOperand):
+        (DecodeSORegRegOperand):
+        (DecodeRegListOperand):
+        (DecodeSPRRegListOperand):
+        (DecodeDPRRegListOperand):
+        (DecodeBitfieldMaskOperand):
+        (DecodeCopMemInstruction):
+        (DecodeAddrMode2IdxInstruction):
+        (DecodeSORegMemOperand):
+        (DecodeAddrMode3Instruction):
+        (DecodeRFEInstruction):
+        (DecodeQADDInstruction):
+        (DecodeMemMultipleWritebackInstruction):
+        (DecodeCPSInstruction):
+        (DecodeT2CPSInstruction):
+        (DecodeT2MOVTWInstruction):
+        (DecodeArmMOVTWInstruction):
+        (DecodeSMLAInstruction):
+        (DecodeAddrModeImm12Operand):
+        (DecodeAddrMode5Operand):
+        (DecodeAddrMode7Operand):
+        (DecodeT2BInstruction):
+        (DecodeBranchImmInstruction):
+        (DecodeAddrMode6Operand):
+        (DecodeVLDInstruction):
+        (DecodeVLDST1Instruction):
+        (DecodeVLDST2Instruction):
+        (DecodeVLDST3Instruction):
+        (DecodeVLDST4Instruction):
+        (DecodeVSTInstruction):
+        (DecodeVLD1DupInstruction):
+        (DecodeVLD2DupInstruction):
+        (DecodeVLD3DupInstruction):
+        (DecodeVLD4DupInstruction):
+        (DecodeNEONModImmInstruction):
+        (DecodeVSHLMaxInstruction):
+        (DecodeShiftRight8Imm):
+        (DecodeShiftRight16Imm):
+        (DecodeShiftRight32Imm):
+        (DecodeShiftRight64Imm):
+        (DecodeTBLInstruction):
+        (DecodeThumbAddSpecialReg):
+        (DecodeThumbBROperand):
+        (DecodeT2BROperand):
+        (DecodeThumbCmpBROperand):
+        (DecodeThumbAddrModeRR):
+        (DecodeThumbAddrModeIS):
+        (DecodeThumbAddrModePC):
+        (DecodeThumbAddrModeSP):
+        (DecodeT2AddrModeSOReg):
+        (DecodeT2LoadShift):
+        (DecodeT2LoadImm8):
+        (DecodeT2LoadImm12):
+        (DecodeT2LoadT):
+        (DecodeT2LoadLabel):
+        (DecodeT2Imm8S4):
+        (DecodeT2AddrModeImm8s4):
+        (DecodeT2AddrModeImm0_1020s4):
+        (DecodeT2Imm8):
+        (DecodeT2AddrModeImm8):
+        (DecodeT2LdStPre):
+        (DecodeT2AddrModeImm12):
+        (DecodeThumbAddSPImm):
+        (DecodeThumbAddSPReg):
+        (DecodeThumbCPS):
+        (DecodePostIdxReg):
+        (DecodeThumbBLXOffset):
+        (DecodeCoprocessor):
+        (DecodeThumbTableBranch):
+        (DecodeThumb2BCCInstruction):
+        (DecodeT2SOImm):
+        (DecodeThumbBCCTargetOperand):
+        (DecodeThumbBLTargetOperand):
+        (DecodeMemBarrierOption):
+        (DecodeInstSyncBarrierOption):
+        (DecodeMSRMask):
+        (DecodeBankedReg):
+        (DecodeDoubleRegLoad):
+        (DecodeDoubleRegStore):
+        (DecodeLDRPreImm):
+        (DecodeLDRPreReg):
+        (DecodeSTRPreImm):
+        (DecodeSTRPreReg):
+        (DecodeVLD1LN):
+        (DecodeVST1LN):
+        (DecodeVLD2LN):
+        (DecodeVST2LN):
+        (DecodeVLD3LN):
+        (DecodeVST3LN):
+        (DecodeVLD4LN):
+        (DecodeVST4LN):
+        (DecodeVMOVSRR):
+        (DecodeVMOVRRS):
+        (DecodeIT):
+        (DecodeT2LDRDPreInstruction):
+        (DecodeT2STRDPreInstruction):
+        (DecodeT2Adr):
+        (DecodeT2ShifterImmOperand):
+        (DecodeSwap):
+        (DecodeVCVTD):
+        (DecodeVCVTQ):
+        (DecodeLDR):
+        (DecodeMRRC2):
+        * capstone/Source/arch/ARM/ARMGenAsmWriter.inc:
+        * capstone/Source/arch/ARM/ARMGenDisassemblerTables.inc:
+        * capstone/Source/arch/ARM/ARMGenInstrInfo.inc:
+        * capstone/Source/arch/ARM/ARMGenRegisterInfo.inc:
+        * capstone/Source/arch/ARM/ARMInstPrinter.c:
+        (get_op_access):
+        (set_mem_access):
+        (op_addImm):
+        (ARM_getRegName):
+        (translateShiftImm):
+        (printRegImmShift):
+        (printRegName):
+        (ARM_printInst):
+        (printOperand):
+        (printThumbLdrLabelOperand):
+        (printSORegRegOperand):
+        (printSORegImmOperand):
+        (printAM2PreOrOffsetIndexOp):
+        (printAddrModeTBB):
+        (printAddrModeTBH):
+        (printAddrMode2Operand):
+        (printAddrMode2OffsetOperand):
+        (printAM3PreOrOffsetIndexOp):
+        (printAddrMode3Operand):
+        (printAddrMode3OffsetOperand):
+        (printPostIdxImm8Operand):
+        (printPostIdxRegOperand):
+        (printPostIdxImm8s4Operand):
+        (printAddrMode5Operand):
+        (printAddrMode6Operand):
+        (printAddrMode7Operand):
+        (printAddrMode6OffsetOperand):
+        (printBitfieldInvMaskImmOperand):
+        (printMemBOption):
+        (printInstSyncBOption):
+        (printShiftImmOperand):
+        (printPKHLSLShiftImm):
+        (printPKHASRShiftImm):
+        (printRegisterList):
+        (printGPRPairOperand):
+        (printSetendOperand):
+        (printCPSIMod):
+        (printCPSIFlag):
+        (printMSRMaskOperand):
+        (printBankedRegOperand):
+        (printPredicateOperand):
+        (printMandatoryPredicateOperand):
+        (printSBitModifierOperand):
+        (printNoHashImmediate):
+        (printPImmediate):
+        (printCImmediate):
+        (printCoprocOptionImm):
+        (printAdrLabelOperand):
+        (printThumbS4ImmOperand):
+        (printThumbSRImm):
+        (printThumbITMask):
+        (printThumbAddrModeRROperand):
+        (printThumbAddrModeImm5SOperand):
+        (printThumbAddrModeImm5S1Operand):
+        (printThumbAddrModeImm5S2Operand):
+        (printThumbAddrModeImm5S4Operand):
+        (printThumbAddrModeSPOperand):
+        (printT2SOOperand):
+        (printAddrModeImm12Operand):
+        (printT2AddrModeImm8Operand):
+        (printT2AddrModeImm8s4Operand):
+        (printT2AddrModeImm0_1020s4Operand):
+        (printT2AddrModeImm8OffsetOperand):
+        (printT2AddrModeImm8s4OffsetOperand):
+        (printT2AddrModeSoRegOperand):
+        (printFPImmOperand):
+        (printNEONModImmOperand):
+        (printImmPlusOneOperand):
+        (printRotImmOperand):
+        (printModImmOperand):
+        (printFBits16):
+        (printFBits32):
+        (printVectorIndex):
+        (printVectorListOne):
+        (printVectorListTwo):
+        (printVectorListTwoSpaced):
+        (printVectorListThree):
+        (printVectorListFour):
+        (printVectorListOneAllLanes):
+        (printVectorListTwoAllLanes):
+        (printVectorListThreeAllLanes):
+        (printVectorListFourAllLanes):
+        (printVectorListTwoSpacedAllLanes):
+        (printVectorListThreeSpacedAllLanes):
+        (printVectorListFourSpacedAllLanes):
+        (printVectorListThreeSpaced):
+        (printVectorListFourSpaced):
+        (ARM_addVectorDataType):
+        (ARM_addVectorDataSize):
+        (ARM_addReg):
+        (ARM_addUserMode):
+        (ARM_addSysReg):
+        * capstone/Source/arch/ARM/ARMMapping.c:
+        (ARM_reg_name2):
+        (ARM_insn_name):
+        (ARM_rel_branch):
+        (ARM_blx_to_arm_mode):
+        (ARM_reg_access):
+        * capstone/Source/arch/ARM/ARMMapping.h:
+        * capstone/Source/arch/ARM/ARMMappingInsn.inc:
+        * capstone/Source/arch/ARM/ARMMappingInsnOp.inc:
+        * capstone/Source/arch/ARM/ARMModule.c:
+        (ARM_global_init):
+        (ARM_option):
+        (init): Deleted.
+        (option): Deleted.
+        (ARM_enable): Deleted.
+        * capstone/Source/arch/ARM/ARMModule.h: Added.
+        * capstone/Source/arch/Mips/MipsDisassembler.c:
+        (getFeatureBits):
+        (Mips_init):
+        (readInstruction16):
+        (readInstruction32):
+        (MipsDisassembler_getInstruction):
+        (Mips_getInstruction):
+        (getReg):
+        (DecodeINSVE_DF_4):
+        (DecodeAddiGroupBranch_4):
+        (DecodeDaddiGroupBranch_4):
+        (DecodeBlezlGroupBranch_4):
+        (DecodeBgtzlGroupBranch_4):
+        (DecodeBgtzGroupBranch_4):
+        (DecodeBlezGroupBranch_4):
+        (DecodeCPU16RegsRegisterClass):
+        (DecodeGPR64RegisterClass):
+        (DecodeGPRMM16RegisterClass):
+        (DecodeGPRMM16ZeroRegisterClass):
+        (DecodeGPRMM16MovePRegisterClass):
+        (DecodeGPR32RegisterClass):
+        (DecodePtrRegisterClass):
+        (DecodeDSPRRegisterClass):
+        (DecodeFGR64RegisterClass):
+        (DecodeFGR32RegisterClass):
+        (DecodeCCRRegisterClass):
+        (DecodeFCCRegisterClass):
+        (DecodeCCRegisterClass):
+        (DecodeFGRCCRegisterClass):
+        (DecodeMem):
+        (DecodeCacheOp):
+        (DecodeCacheOpMM):
+        (DecodeCacheOpR6):
+        (DecodeSyncI):
+        (DecodeMSA128Mem):
+        (DecodeMemMMImm4):
+        (DecodeMemMMSPImm5Lsl2):
+        (DecodeMemMMGPImm7Lsl2):
+        (DecodeMemMMReglistImm4Lsl2):
+        (DecodeMemMMImm12):
+        (DecodeMemMMImm16):
+        (DecodeFMem):
+        (DecodeFMem2):
+        (DecodeFMem3):
+        (DecodeFMemCop2R6):
+        (DecodeSpecial3LlSc):
+        (DecodeHWRegsRegisterClass):
+        (DecodeAFGR64RegisterClass):
+        (DecodeACC64DSPRegisterClass):
+        (DecodeHI32DSPRegisterClass):
+        (DecodeLO32DSPRegisterClass):
+        (DecodeMSA128BRegisterClass):
+        (DecodeMSA128HRegisterClass):
+        (DecodeMSA128WRegisterClass):
+        (DecodeMSA128DRegisterClass):
+        (DecodeMSACtrlRegisterClass):
+        (DecodeCOP2RegisterClass):
+        (DecodeBranchTarget):
+        (DecodeJumpTarget):
+        (DecodeBranchTarget21):
+        (DecodeBranchTarget26):
+        (DecodeBranchTarget7MM):
+        (DecodeBranchTarget10MM):
+        (DecodeBranchTargetMM):
+        (DecodeJumpTargetMM):
+        (DecodeAddiur2Simm7):
+        (DecodeUImm6Lsl2):
+        (DecodeLiSimm7):
+        (DecodeSimm4):
+        (DecodeSimm16):
+        (DecodeLSAImm):
+        (DecodeInsSize):
+        (DecodeExtSize):
+        (DecodeSimm19Lsl2):
+        (DecodeSimm18Lsl3):
+        (DecodeSimm9SP):
+        (DecodeANDI16Imm):
+        (DecodeUImm5lsl2):
+        (DecodeRegListOperand):
+        (DecodeRegListOperand16):
+        (DecodeMovePRegPair):
+        (DecodeSimm23Lsl2):
+        * capstone/Source/arch/Mips/MipsDisassembler.h:
+        * capstone/Source/arch/Mips/MipsGenAsmWriter.inc:
+        * capstone/Source/arch/Mips/MipsGenDisassemblerTables.inc:
+        * capstone/Source/arch/Mips/MipsGenInstrInfo.inc:
+        * capstone/Source/arch/Mips/MipsGenRegisterInfo.inc:
+        * capstone/Source/arch/Mips/MipsInstPrinter.c:
+        (set_mem_access):
+        (isReg):
+        (MipsFCCToString):
+        (printRegName):
+        (Mips_printInst):
+        (printOperand):
+        (printUnsignedImm):
+        (printUnsignedImm8):
+        (printMemOperand):
+        (printMemOperandEA):
+        (printFCCOperand):
+        (printRegisterPair):
+        (printAlias1):
+        (printAlias2):
+        (printAlias):
+        (printRegisterList):
+        * capstone/Source/arch/Mips/MipsMapping.c:
+        (Mips_get_insn_id):
+        (Mips_group_name):
+        (Mips_map_insn):
+        (Mips_map_register):
+        * capstone/Source/arch/Mips/MipsMappingInsn.inc:
+        * capstone/Source/arch/Mips/MipsModule.c:
+        (updated_mode):
+        (Mips_global_init):
+        (Mips_option):
+        (init): Deleted.
+        (option): Deleted.
+        (Mips_enable): Deleted.
+        * capstone/Source/arch/Mips/MipsModule.h: Added.
+        * capstone/Source/capstone.pc.in:
+        * capstone/Source/cmake.sh: Added.
+        * capstone/Source/config.mk:
+        * capstone/Source/cs.c:
+        (cs_version):
+        (cs_support):
+        (cs_errno):
+        (cs_strerror):
+        (cs_open):
+        (cs_close):
+        (fill_insn):
+        (skipdata_size):
+        (cs_option):
+        (skipdata_opstr):
+        (cs_disasm):
+        (cs_disasm_ex):
+        (cs_free):
+        (cs_malloc):
+        (cs_disasm_iter):
+        (cs_reg_name):
+        (cs_insn_name):
+        (cs_group_name):
+        (cs_insn_group):
+        (cs_reg_read):
+        (cs_reg_write):
+        (cs_op_count):
+        (cs_op_index):
+        (cs_regs_access):
+        (cs_kern_os_calloc): Deleted.
+        * capstone/Source/cs_priv.h:
+        * capstone/Source/functions.mk:
+        * capstone/Source/include/capstone/arm.h:
+        * capstone/Source/include/capstone/arm64.h:
+        * capstone/Source/include/capstone/capstone.h:
+        * capstone/Source/include/capstone/evm.h:
+        * capstone/Source/include/capstone/m680x.h:
+        * capstone/Source/include/capstone/m68k.h:
+        * capstone/Source/include/capstone/mips.h:
+        * capstone/Source/include/capstone/mos65xx.h: Added.
+        * capstone/Source/include/capstone/platform.h:
+        * capstone/Source/include/capstone/ppc.h:
+        * capstone/Source/include/capstone/sparc.h:
+        * capstone/Source/include/capstone/systemz.h:
+        * capstone/Source/include/capstone/tms320c64x.h:
+        * capstone/Source/include/capstone/x86.h:
+        * capstone/Source/include/capstone/xcore.h:
+        * capstone/Source/include/platform.h: Copied from Source/ThirdParty/capstone/Source/include/capstone/platform.h.
+        * capstone/Source/include/windowsce/stdint.h:
+        * capstone/Source/make.sh:
+        * capstone/Source/nmake-x86.bat: Removed.
+        * capstone/Source/nmake.bat:
+        * capstone/Source/pkgconfig.mk:
+        * capstone/Source/utils.c:
+        (make_id2insn):
+        (insn_find):
+        (name2id):
+        (id2name):
+        (count_positive):
+        (count_positive8):
+        (cs_strdup):
+        (cs_snprintf):
+        (arr_exist8):
+        (arr_exist):
+        * capstone/Source/utils.h:
+        * capstone/capstone-Revision.txt:
+
+2020-12-21  Ryan Hostetler  <rhost@apple.com>
+
+        $(findstring iphone,$(SDKROOT)) fails when SDKROOT is not lowercase
+        https://bugs.webkit.org/show_bug.cgi?id=219993
+        rdar://72436093
+
+        Reviewed by Darin Adler.
+
+        Update SDKROOT evaluation to be lowercase and SDK filename only.
+
+        * Makefile:
+
+2020-12-04  Adam Roben  <aroben@apple.com>
+
+        More FALLBACK_PLATFORM adoption
+        https://bugs.webkit.org/show_bug.cgi?id=219545
+
+        Reviewed by Tim Horton.
+
+        * gtest/xcode/Config/SDKVariant.xcconfig:
+        WK_EMPTY_$(THIS_IS_NOT_EMPTY) evaluates to the empty string, not to
+        NO.
+
+2020-12-03  Adam Roben  <aroben@apple.com>
+
+        Adopt FALLBACK_PLATFORM
+        https://bugs.webkit.org/show_bug.cgi?id=219504
+
+        Reviewed by Tim Horton.
+
+        * gtest/xcode/Config/SDKVariant.xcconfig: Use FALLBACK_PLATFORM it if
+        it's defined, otherwise use PLATFORM_NAME as before.
+
+2020-10-12  Luming Yin  <luming_yin@apple.com>
+
+        [macOS] Workaround for MAC_OS_X_VERSION_MAJOR incorrectly including minor version when building 
+        with Xcode 12 on macOS Big Sur SUs
+        https://bugs.webkit.org/show_bug.cgi?id=217602
+        rdar://70194453
+
+        Reviewed by Darin Adler.
+
+        The previous workaround turns out to be ineffective because we can't set the value of 
+        TARGET_MAC_OS_X_VERSION_MAJOR based on a previous value of itself. Introduce a new 
+        variable TARGET_MAC_OS_X_VERSION_MAJOR to determine whether we need to explicitly 
+        adjust MAC_OS_X_VERSION_MAJOR to 110000.
+
+        * gtest/xcode/Config/General.xcconfig:
+
+2020-10-12  Luming Yin  <luming_yin@apple.com>
+
+        [macOS] Workaround for MAC_OS_X_VERSION_MAJOR incorrectly including minor version when building 
+        with Xcode 12 on macOS Big Sur SUs
+        https://bugs.webkit.org/show_bug.cgi?id=217602
+        rdar://70194453
+
+        Reviewed by Darin Adler.
+
+        Due to a bug in Xcode (rdar://70185899), Xcode 12.0 and Xcode 12.1 Beta incorrectly includes the 
+        minor release number in MAC_OS_X_VERSION_MAJOR, which causes Debug and Release builds of WebKit 
+        to be misconfigured when building on macOS Big Sur SUs, leading to webpages failing to load.
+
+        To work around the Xcode bug, when the MAC_OS_X_VERSION_MAJOR includes the minor version number, 
+        drop the minor version number by explicitly setting TARGET_MAC_OS_X_VERSION_MAJOR to 110000.
+
+        Note: This change should be reverted after <rdar://70185899> is resolved.
+
+        * gtest/xcode/Config/General.xcconfig:
+
+2020-10-04  Ryan Hostetler  <rhost@apple.com>
+
+        Submission failure with "make: *** No rule to make target `installsrc'. Stop"
+        https://bugs.webkit.org/show_bug.cgi?id=214696
+        <rdar://problem/62268104>
+
+        Reviewed by Darin Adler.
+
+        Add installsrc phase to support xbs submitproject for WebKit repository.
+        This change allows internal tools to submit and build in a single step.
+
+        * Makefile:
+
+2020-09-22  Keith Rollin  <krollin@apple.com>
+
+        Unify debug and release target aliases
+        https://bugs.webkit.org/show_bug.cgi?id=216863
+        <rdar://problem/69407746>
+
+        Reviewed by Tim Horton.
+
+        All Makefiles have "debug", "d", "release", and "r" for build
+        targets. Others -- but not all -- also include "dev", "develop",
+        "development", "dep", "deploy", and "deployment". Because of this
+        inconsistency, trying to use those additional targets didn't work. It
+        looks like all Makefiles used to support all of those targets, but
+        some got dropped along the way. For instance, the top-level Makefile
+        and Source/Makefile dropped them in 2013 as part of Bug 107863. And it
+        looks like WebKitLibraries/Makefile never had them. Given that those
+        additional targets don't work, it seems like no one uses them, so
+        let's remove them completely.
+
+        * Makefile:
+
+2020-09-22  Keith Rollin  <krollin@apple.com>
+
+        Refactor build rules in Makefiles and Makefile.shared
+        https://bugs.webkit.org/show_bug.cgi?id=216806
+        <rdar://problem/69332316>
+
+        Reviewed by David Kilzer.
+
+        Factor out the common aspects of the build rules in Makefile.shared
+        and the various Makefiles. This allows us to more easily see what's
+        different between the various build targets, and to apply uniform
+        changes across all of the targets.
+
+        * Makefile:
+
+2020-08-05  Tim Horton  <timothy_horton@apple.com>
+
+        Remove all references to non-existent 10.16
+        https://bugs.webkit.org/show_bug.cgi?id=215202
+
+        Reviewed by Wenson Hsieh.
+
+        * gtest/xcode/Config/DebugProject.xcconfig:
+        * gtest/xcode/Config/ReleaseProject.xcconfig:
+
+2020-07-22  Conrad Shultz  <conrad_shultz@apple.com>
+
+        Update macOS Version macros
+        https://bugs.webkit.org/show_bug.cgi?id=214653
+
+        Reviewed by Tim Horton.
+
+        * gtest/xcode/Config/DebugProject.xcconfig:
+        * gtest/xcode/Config/ReleaseProject.xcconfig:
+
+2020-06-30  Andy Estes  <aestes@apple.com>
+
+        [Xcode] Enable the "My Mac (Mac Catalyst)" destination in WebKit Xcode projects
+        https://bugs.webkit.org/show_bug.cgi?id=213740
+
+        Reviewed by Darin Adler.
+
+        * gtest/xcode/Config/General.xcconfig: Set SUPPORTS_MACCATALYST to YES to tell Xcode that
+        this project supports building for Mac Catalyst.
+
+2020-06-22  Tim Horton  <timothy_horton@apple.com>
+
+        Update macOS version macros
+        https://bugs.webkit.org/show_bug.cgi?id=213484
+
+        Reviewed by Alexey Proskuryakov.
+
+        * gtest/xcode/Config/DebugProject.xcconfig:
+        * gtest/xcode/Config/ReleaseProject.xcconfig:
+
+2020-05-14  Daniel Bates  <dabates@apple.com>
+
+        Include LocalOverrides.xcconfig in all Tools projects
+        https://bugs.webkit.org/show_bug.cgi?id=211789
+
+        Reviewed by Dan Bernstein.
+
+        Matches what is done for all Source projects so as to support local overriding of configs.
+        Only allow overrides when building for Debug and Release. Again, this matches what is
+        being done for Source projects.
+
+        * gtest/xcode/Config/DebugProject.xcconfig:
+        * gtest/xcode/Config/ReleaseProject.xcconfig:
+
+2020-04-25  Darin Adler  <darin@apple.com>
+
+        [Cocoa] Deal with another round of Xcode upgrade checks
+        https://bugs.webkit.org/show_bug.cgi?id=211027
+
+        Reviewed by Alexey Proskuryakov.
+
+        * gtest/xcode/gtest.xcodeproj/project.pbxproj: Bump the upgrade check version.
+        Add a harmless base localization, rename English localization to en,
+        remove Japanese, French, German; this project contains nothing localized.
+
+2020-04-03  David Kilzer  <ddkilzer@apple.com>
+
+        [Xcode] Replace ASAN_OTHER_CFLAGS and ASAN_OTHER_CPLUSPLUSFLAGS with $(inherited)
+        <https://webkit.org/b/209963>
+        <rdar://problem/61257504>
+
+        Reviewed by Alexey Proskuryakov.
+
+        * gtest/xcode/Config/General.xcconfig:
+        - Remove ASAN_OTHER_CFLAGS, ASAN_OTHER_CPLUSPLUSFLAGS and
+          ASAN_OTHER_LDFLAGS.
+
+2020-03-01  Ting-Wei Lan  <lantw44@gmail.com>
+
+        Re-add the patch used to work around gtest linking failure on FreeBSD
+        https://bugs.webkit.org/show_bug.cgi?id=208409
+
+        Reviewed by Michael Catanzaro.
+
+        The patch was added in https://bugs.webkit.org/show_bug.cgi?id=138420 to
+        fix gtest linking error on FreeBSD. However, it was accidentally dropped
+        in r235613, the commit updating gtest, causing the error to happen
+        again. Re-add it to fix the build on FreeBSD.
+
+        * gtest/src/gtest-death-test.cc:
+
+2020-01-24  Sergio Villar Senin  <svillar@igalia.com>
+
+        Remove WebVR from the tree
+        https://bugs.webkit.org/show_bug.cgi?id=206739
+
+        Reviewed by Darin Adler.
+
+        Removed as WebVR is gone and this is no longer needed.
+
+        * openvr/CMakeLists.txt: Removed.
+        * openvr/LICENSE: Removed.
+        * openvr/README.md: Removed.
+        * openvr/README.webkit: Removed.
+        * openvr/Toolchain-clang.cmake: Removed.
+        * openvr/headers/openvr.h: Removed.
+        * openvr/headers/openvr_api.cs: Removed.
+        * openvr/headers/openvr_api.json: Removed.
+        * openvr/headers/openvr_capi.h: Removed.
+        * openvr/headers/openvr_driver.h: Removed.
+        * openvr/patches/Path_WriteBinaryFile-fix-return-condition.patch: Removed.
+        * openvr/patches/cmake-build.patch: Removed.
+        * openvr/src/CMakeLists.txt: Removed.
+        * openvr/src/Info.plist: Removed.
+        * openvr/src/README: Removed.
+        * openvr/src/ivrclientcore.h: Removed.
+        * openvr/src/json/json-forwards.h: Removed.
+        * openvr/src/json/json.h: Removed.
+        * openvr/src/jsoncpp.cpp: Removed.
+        * openvr/src/openvr_api_public.cpp: Removed.
+        * openvr/src/vrcommon/dirtools_public.cpp: Removed.
+        * openvr/src/vrcommon/dirtools_public.h: Removed.
+        * openvr/src/vrcommon/envvartools_public.cpp: Removed.
+        * openvr/src/vrcommon/envvartools_public.h: Removed.
+        * openvr/src/vrcommon/hmderrors_public.cpp: Removed.
+        * openvr/src/vrcommon/hmderrors_public.h: Removed.
+        * openvr/src/vrcommon/pathtools_public.cpp: Removed.
+        * openvr/src/vrcommon/pathtools_public.h: Removed.
+        * openvr/src/vrcommon/sharedlibtools_public.cpp: Removed.
+        * openvr/src/vrcommon/sharedlibtools_public.h: Removed.
+        * openvr/src/vrcommon/strtools_public.cpp: Removed.
+        * openvr/src/vrcommon/strtools_public.h: Removed.
+        * openvr/src/vrcommon/vrpathregistry_public.cpp: Removed.
+        * openvr/src/vrcommon/vrpathregistry_public.h: Removed.
+
+2020-01-21  Keith Rollin  <krollin@apple.com>
+
+        Fix tvOS values in SUPPORTED_PLATFORMS
+        https://bugs.webkit.org/show_bug.cgi?id=206435
+        <rdar://problem/58674587>
+
+        Reviewed by Alexey Proskuryakov.
+
+        A number of targets in WebKit have 'tvos' and 'tvsimulator' in
+        SUPPORTED_PLATFORMS. The correct values are 'appletvos' and
+        'appletvsimulator'. These should be updated to the correct ones as the
+        wrong values prevent the tvOS run destination from being usable in the
+        UI to build for tvOS.
+
+        * gtest/xcode/Config/General.xcconfig:
+
+2020-01-08  Mark Lam  <mark.lam@apple.com>
+
+        Rename testing build configuration to release+assert, and add new testing build configuration.
+        https://bugs.webkit.org/show_bug.cgi?id=205954
+
+        Reviewed by Yusuke Suzuki.
+
+        * Makefile:
+
+2020-01-07  Keith Miller  <keith_miller@apple.com>
+
+        Add a testing target to make that is release + assertions
+        https://bugs.webkit.org/show_bug.cgi?id=205895
+
+        Reviewed by Mark Lam.
+
+        * Makefile:
+
+2019-11-01  Tim Horton  <timothy_horton@apple.com>
+
+        macCatalyst: Get TestWebKitAPI building
+        https://bugs.webkit.org/show_bug.cgi?id=203728
+
+        Reviewed by Alexey Proskuryakov.
+
+        * gtest/xcode/Config/General.xcconfig:
+        * gtest/xcode/Config/SDKVariant.xcconfig: Added.
+        Add SDKVariant.xcconfig to gtest so that it builds into the correct directory.
+
 2019-08-29  Keith Rollin  <krollin@apple.com>
 
         Update .xcconfig symbols to reflect the current set of past and future product versions.

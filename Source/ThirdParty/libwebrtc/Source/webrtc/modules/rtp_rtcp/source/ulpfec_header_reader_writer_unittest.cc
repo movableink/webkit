@@ -8,18 +8,19 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "modules/rtp_rtcp/source/ulpfec_header_reader_writer.h"
+
 #include <string.h>
 
 #include <memory>
 #include <utility>
 
+#include "api/scoped_refptr.h"
 #include "modules/rtp_rtcp/source/byte_io.h"
 #include "modules/rtp_rtcp/source/forward_error_correction.h"
 #include "modules/rtp_rtcp/source/forward_error_correction_internal.h"
-#include "modules/rtp_rtcp/source/ulpfec_header_reader_writer.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/random.h"
-#include "rtc_base/scoped_ref_ptr.h"
 #include "test/gtest.h"
 
 namespace webrtc {
@@ -51,9 +52,10 @@ std::unique_ptr<Packet> WriteHeader(const uint8_t* packet_mask,
                                     size_t packet_mask_size) {
   UlpfecHeaderWriter writer;
   std::unique_ptr<Packet> written_packet(new Packet());
-  written_packet->length = kMediaPacketLength;
-  for (size_t i = 0; i < written_packet->length; ++i) {
-    written_packet->data[i] = i;  // Actual content doesn't matter.
+  written_packet->data.SetSize(kMediaPacketLength);
+  uint8_t* data = written_packet->data.MutableData();
+  for (size_t i = 0; i < written_packet->data.size(); ++i) {
+    data[i] = i;  // Actual content doesn't matter.
   }
   writer.FinalizeFecHeader(kMediaSsrc, kMediaStartSeqNum, packet_mask,
                            packet_mask_size, written_packet.get());
@@ -65,8 +67,7 @@ std::unique_ptr<ReceivedFecPacket> ReadHeader(const Packet& written_packet) {
   std::unique_ptr<ReceivedFecPacket> read_packet(new ReceivedFecPacket());
   read_packet->ssrc = kMediaSsrc;
   read_packet->pkt = rtc::scoped_refptr<Packet>(new Packet());
-  memcpy(read_packet->pkt->data, written_packet.data, written_packet.length);
-  read_packet->pkt->length = written_packet.length;
+  read_packet->pkt->data = written_packet.data;
   EXPECT_TRUE(reader.ReadFecHeader(read_packet.get()));
   return read_packet;
 }
@@ -82,15 +83,16 @@ void VerifyHeaders(size_t expected_fec_header_size,
   EXPECT_EQ(kMediaStartSeqNum, read_packet.seq_num_base);
   EXPECT_EQ(kUlpfecPacketMaskOffset, read_packet.packet_mask_offset);
   ASSERT_EQ(expected_packet_mask_size, read_packet.packet_mask_size);
-  EXPECT_EQ(written_packet.length - expected_fec_header_size,
+  EXPECT_EQ(written_packet.data.size() - expected_fec_header_size,
             read_packet.protection_length);
   EXPECT_EQ(0, memcmp(expected_packet_mask,
-                      &read_packet.pkt->data[read_packet.packet_mask_offset],
+                      read_packet.pkt->data.MutableData() +
+                          read_packet.packet_mask_offset,
                       read_packet.packet_mask_size));
   // Verify that the call to ReadFecHeader did not tamper with the payload.
-  EXPECT_EQ(0, memcmp(&written_packet.data[expected_fec_header_size],
-                      &read_packet.pkt->data[expected_fec_header_size],
-                      written_packet.length - expected_fec_header_size));
+  EXPECT_EQ(0, memcmp(written_packet.data.data() + expected_fec_header_size,
+                      read_packet.pkt->data.cdata() + expected_fec_header_size,
+                      written_packet.data.size() - expected_fec_header_size));
 }
 
 }  // namespace
@@ -106,8 +108,7 @@ TEST(UlpfecHeaderReaderTest, ReadsSmallHeader) {
   const size_t packet_length = sizeof(packet);
   ReceivedFecPacket read_packet;
   read_packet.pkt = rtc::scoped_refptr<Packet>(new Packet());
-  memcpy(read_packet.pkt->data, packet, packet_length);
-  read_packet.pkt->length = packet_length;
+  read_packet.pkt->data.SetData(packet, packet_length);
 
   UlpfecHeaderReader reader;
   EXPECT_TRUE(reader.ReadFecHeader(&read_packet));
@@ -131,8 +132,7 @@ TEST(UlpfecHeaderReaderTest, ReadsLargeHeader) {
   const size_t packet_length = sizeof(packet);
   ReceivedFecPacket read_packet;
   read_packet.pkt = rtc::scoped_refptr<Packet>(new Packet());
-  memcpy(read_packet.pkt->data, packet, packet_length);
-  read_packet.pkt->length = packet_length;
+  read_packet.pkt->data.SetData(packet, packet_length);
 
   UlpfecHeaderReader reader;
   EXPECT_TRUE(reader.ReadFecHeader(&read_packet));
@@ -148,16 +148,17 @@ TEST(UlpfecHeaderWriterTest, FinalizesSmallHeader) {
   const size_t packet_mask_size = kUlpfecPacketMaskSizeLBitClear;
   auto packet_mask = GeneratePacketMask(packet_mask_size, 0xabcd);
   Packet written_packet;
-  written_packet.length = kMediaPacketLength;
-  for (size_t i = 0; i < written_packet.length; ++i) {
-    written_packet.data[i] = i;
+  written_packet.data.SetSize(kMediaPacketLength);
+  uint8_t* data = written_packet.data.MutableData();
+  for (size_t i = 0; i < written_packet.data.size(); ++i) {
+    data[i] = i;
   }
 
   UlpfecHeaderWriter writer;
   writer.FinalizeFecHeader(kMediaSsrc, kMediaStartSeqNum, packet_mask.get(),
                            packet_mask_size, &written_packet);
 
-  const uint8_t* packet = written_packet.data;
+  const uint8_t* packet = written_packet.data.cdata();
   EXPECT_EQ(0x00, packet[0] & 0x80);  // E bit.
   EXPECT_EQ(0x00, packet[0] & 0x40);  // L bit.
   EXPECT_EQ(kMediaStartSeqNum, ByteReader<uint16_t>::ReadBigEndian(packet + 2));
@@ -172,16 +173,17 @@ TEST(UlpfecHeaderWriterTest, FinalizesLargeHeader) {
   const size_t packet_mask_size = kUlpfecPacketMaskSizeLBitSet;
   auto packet_mask = GeneratePacketMask(packet_mask_size, 0xabcd);
   Packet written_packet;
-  written_packet.length = kMediaPacketLength;
-  for (size_t i = 0; i < written_packet.length; ++i) {
-    written_packet.data[i] = i;
+  written_packet.data.SetSize(kMediaPacketLength);
+  uint8_t* data = written_packet.data.MutableData();
+  for (size_t i = 0; i < written_packet.data.size(); ++i) {
+    data[i] = i;
   }
 
   UlpfecHeaderWriter writer;
   writer.FinalizeFecHeader(kMediaSsrc, kMediaStartSeqNum, packet_mask.get(),
                            packet_mask_size, &written_packet);
 
-  const uint8_t* packet = written_packet.data;
+  const uint8_t* packet = written_packet.data.cdata();
   EXPECT_EQ(0x00, packet[0] & 0x80);  // E bit.
   EXPECT_EQ(0x40, packet[0] & 0x40);  // L bit.
   EXPECT_EQ(kMediaStartSeqNum, ByteReader<uint16_t>::ReadBigEndian(packet + 2));

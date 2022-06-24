@@ -26,7 +26,7 @@
 #import "config.h"
 #import "LayoutTestSpellChecker.h"
 
-#import <JavaScriptCore/JSRetainPtr.h>
+#import "JSBasics.h"
 #import <objc/runtime.h>
 #import <wtf/Assertions.h>
 #import <wtf/BlockPtr.h>
@@ -35,7 +35,7 @@
 
 using TextCheckingCompletionHandler = void(^)(NSInteger, NSArray<NSTextCheckingResult *> *, NSOrthography *, NSInteger);
 
-static LayoutTestSpellChecker *globalSpellChecker = nil;
+static RetainPtr<LayoutTestSpellChecker> globalSpellChecker;
 static BOOL hasSwizzledLayoutTestSpellChecker = NO;
 static IMP globallySwizzledSharedSpellCheckerImplementation;
 static Method originalSharedSpellCheckerMethod;
@@ -44,9 +44,9 @@ static LayoutTestSpellChecker *ensureGlobalLayoutTestSpellChecker()
 {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        globalSpellChecker = [[LayoutTestSpellChecker alloc] init];
+        globalSpellChecker = adoptNS([[LayoutTestSpellChecker alloc] init]);
     });
-    return globalSpellChecker;
+    return globalSpellChecker.get();
 }
 
 static const char *stringForCorrectionResponse(NSCorrectionResponse correctionResponse)
@@ -169,7 +169,7 @@ static NSTextCheckingType nsTextCheckingType(JSStringRef jsType)
 
 @implementation LayoutTestSpellChecker
 
-@synthesize spellCheckerLoggingEnabled=_spellCheckerLoggingEnabled;
+@synthesize spellCheckerLoggingEnabled = _spellCheckerLoggingEnabled;
 
 + (instancetype)checker
 {
@@ -209,13 +209,14 @@ static NSTextCheckingType nsTextCheckingType(JSStringRef jsType)
     _results = adoptNS(results.copy);
 }
 
-- (void)setResultsFromJSObject:(JSObjectRef)resultsObject inContext:(JSContextRef)context
+- (void)setResultsFromJSValue:(JSValueRef)resultsValue inContext:(JSContextRef)context
 {
-    auto fromPropertyName = adopt(JSStringCreateWithUTF8CString("from"));
-    auto toPropertyName = adopt(JSStringCreateWithUTF8CString("to"));
-    auto typePropertyName = adopt(JSStringCreateWithUTF8CString("type"));
-    auto replacementPropertyName = adopt(JSStringCreateWithUTF8CString("replacement"));
-    auto detailsPropertyName = adopt(JSStringCreateWithUTF8CString("details"));
+    auto resultsObject = JSValueToObject(context, resultsValue, nullptr);
+    auto fromPropertyName = WTR::createJSString("from");
+    auto toPropertyName = WTR::createJSString("to");
+    auto typePropertyName = WTR::createJSString("type");
+    auto replacementPropertyName = WTR::createJSString("replacement");
+    auto detailsPropertyName = WTR::createJSString("details");
     auto results = adoptNS([[NSMutableDictionary alloc] init]);
 
     // FIXME: Using the Objective-C API would make this logic easier to follow.
@@ -227,31 +228,27 @@ static NSTextCheckingType nsTextCheckingType(JSStringRef jsType)
         auto resultsForWord = adoptNS([[NSMutableArray alloc] init]);
         for (size_t resultIndex = 0; resultIndex < JSPropertyNameArrayGetCount(resultsArrayPropertyNames); ++resultIndex) {
             auto resultsObject = JSValueToObject(context, JSObjectGetPropertyAtIndex(context, resultsArray, resultIndex, nullptr), nullptr);
-            long fromValue = lroundl(JSValueToNumber(context, JSObjectGetProperty(context, resultsObject, fromPropertyName.get(), nullptr), nullptr));
-            long toValue = lroundl(JSValueToNumber(context, JSObjectGetProperty(context, resultsObject, toPropertyName.get(), nullptr), nullptr));
-            auto typeValue = adopt(JSValueToStringCopy(context, JSObjectGetProperty(context, resultsObject, typePropertyName.get(), nullptr), nullptr));
+            long fromValue = JSValueToNumber(context, JSObjectGetProperty(context, resultsObject, fromPropertyName.get(), nullptr), nullptr);
+            long toValue = JSValueToNumber(context, JSObjectGetProperty(context, resultsObject, toPropertyName.get(), nullptr), nullptr);
+            auto typeValue = WTR::createJSString(context, JSObjectGetProperty(context, resultsObject, typePropertyName.get(), nullptr));
             auto replacementValue = JSObjectGetProperty(context, resultsObject, replacementPropertyName.get(), nullptr);
             RetainPtr<CFStringRef> replacementText;
-            if (!JSValueIsUndefined(context, replacementValue)) {
-                auto replacementJSString = adopt(JSValueToStringCopy(context, replacementValue, nullptr));
-                replacementText = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, replacementJSString.get()));
-            }
+            if (!JSValueIsUndefined(context, replacementValue))
+                replacementText = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, WTR::createJSString(context, replacementValue).get()));
             auto details = adoptNS([[NSMutableArray alloc] init]);
             auto detailsValue = JSObjectGetProperty(context, resultsObject, detailsPropertyName.get(), nullptr);
             if (!JSValueIsUndefined(context, detailsValue)) {
                 auto detailsObject = JSValueToObject(context, detailsValue, nullptr);
                 auto detailsObjectProperties = JSObjectCopyPropertyNames(context, detailsObject);
                 for (size_t detailIndex = 0; detailIndex < JSPropertyNameArrayGetCount(detailsObjectProperties); ++detailIndex) {
-                    auto detail = adoptNS([[NSMutableDictionary alloc] init]);
                     auto detailObject = JSValueToObject(context, JSObjectGetPropertyAtIndex(context, detailsObject, detailIndex, nullptr), nullptr);
                     long from = lroundl(JSValueToNumber(context, JSObjectGetProperty(context, detailObject, fromPropertyName.get(), nullptr), nullptr));
                     long to = lroundl(JSValueToNumber(context, JSObjectGetProperty(context, detailObject, toPropertyName.get(), nullptr), nullptr));
-                    [detail setObject:[NSValue valueWithRange:NSMakeRange(from, to - from)] forKey:NSGrammarRange];
-                    [details addObject:detail.get()];
+                    [details addObject:@{ NSGrammarRange: [NSValue valueWithRange:NSMakeRange(from, to - from)] }];
                 }
                 JSPropertyNameArrayRelease(detailsObjectProperties);
             }
-            [resultsForWord addObject:[[[LayoutTestTextCheckingResult alloc] initWithType:nsTextCheckingType(typeValue.get()) range:NSMakeRange(fromValue, toValue - fromValue) replacement:(__bridge NSString *)replacementText.get() details:details.get()] autorelease]];
+            [resultsForWord addObject:adoptNS([[LayoutTestTextCheckingResult alloc] initWithType:nsTextCheckingType(typeValue.get()) range:NSMakeRange(fromValue, toValue - fromValue) replacement:(__bridge NSString *)replacementText.get() details:details.get()]).get()];
         }
         auto cfTextToCheck = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, textToCheck));
         [results setObject:resultsForWord.get() forKey:(__bridge NSString *)cfTextToCheck.get()];

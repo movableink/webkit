@@ -44,6 +44,11 @@
     BOOL _suppressPageCountRecalc;
 }
 
+- (BOOL)requiresMainThread
+{
+    return self._webView._printProvider._wk_printFormatterRequiresMainThread;
+}
+
 - (_WKFrameHandle *)frameToPrint
 {
     return _frameToPrint.get();
@@ -63,7 +68,7 @@
 
 - (void)_setSnapshotPaperRect:(CGRect)paperRect
 {
-    SetForScope<BOOL> suppressPageCountRecalc(_suppressPageCountRecalc, YES);
+    SetForScope suppressPageCountRecalc(_suppressPageCountRecalc, YES);
     UIPrintPageRenderer *printPageRenderer = self.printPageRenderer;
     printPageRenderer.paperRect = paperRect;
     printPageRenderer.printableRect = paperRect;
@@ -91,8 +96,11 @@
 
 - (void)drawInRect:(CGRect)rect forPageAtIndex:(NSInteger)pageIndex
 {
-    if (!_printedDocument)
+    if (!_printedDocument) {
         _printedDocument = self._webView._printProvider._wk_printedDocument;
+        if (!_printedDocument)
+            return;
+    }
 
     NSInteger offsetFromStartPage = pageIndex - self.startPage;
     if (offsetFromStartPage < 0)

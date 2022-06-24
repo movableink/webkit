@@ -20,6 +20,7 @@
 #include "config.h"
 #include "WebKitProtocolHandler.h"
 
+#include "BuildRevision.h"
 #include "WebKitError.h"
 #include "WebKitVersion.h"
 #include "WebKitWebView.h"
@@ -28,7 +29,6 @@
 #include <WebCore/IntRect.h>
 #include <WebCore/PlatformDisplay.h>
 #include <WebCore/PlatformScreen.h>
-#include <cairo.h>
 #include <gio/gio.h>
 #include <wtf/URL.h>
 #include <wtf/glib/GRefPtr.h>
@@ -38,20 +38,32 @@
 #include <sys/utsname.h>
 #endif
 
+#if USE(CAIRO)
+#include <cairo.h>
+#endif
+
 #if PLATFORM(GTK)
 #include <gtk/gtk.h>
 
 #if PLATFORM(WAYLAND) && USE(WPE_RENDERER)
+#include <wpe/wpe.h>
 #include <wpe/fdo.h>
 #endif
 #endif
 
 #if PLATFORM(X11)
 #include <WebCore/PlatformDisplayX11.h>
+#if USE(GLX)
+#include <GL/glx.h>
+#endif
 #endif
 
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
+#elif USE(OPENGL_ES)
+#include <GLES2/gl2.h>
+#else
+#include <WebCore/OpenGLShims.h>
 #endif
 
 #if USE(EGL)
@@ -62,15 +74,14 @@
 #endif
 #endif
 
-#if USE(GLX)
-#include <GL/glx.h>
+#if USE(GSTREAMER)
+#include <gst/gst.h>
 #endif
 
 namespace WebKit {
 using namespace WebCore;
 
 WebKitProtocolHandler::WebKitProtocolHandler(WebKitWebContext* context)
-    : m_context(context)
 {
     webkit_web_context_register_uri_scheme(context, "webkit", [](WebKitURISchemeRequest* request, gpointer userData) {
         static_cast<WebKitProtocolHandler*>(userData)->handleRequest(request);
@@ -194,7 +205,7 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
         "  <td><div class=\"titlename\">WebKit version</div></td>"
         "  <td>%s %d.%d.%d (%s)</td>"
         " </tbody></tr>",
-        webkitPortName(), WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, WEBKIT_MICRO_VERSION, SVN_REVISION);
+        webkitPortName(), WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, WEBKIT_MICRO_VERSION, BUILD_REVISION);
 
 #if OS(UNIX)
     struct utsname osName;
@@ -215,12 +226,24 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
         " </tbody></tr>",
         g_getenv("XDG_CURRENT_DESKTOP"));
 
+#if USE(CAIRO)
     g_string_append_printf(html,
         " <tbody><tr>"
         "  <td><div class=\"titlename\">Cairo version</div></td>"
         "  <td>%s (build) %s (runtime)</td>"
         " </tbody></tr>",
         CAIRO_VERSION_STRING, cairo_version_string());
+#endif
+
+#if USE(GSTREAMER)
+    GUniquePtr<char> gstVersion(gst_version_string());
+    g_string_append_printf(html,
+        " <tbody><tr>"
+        "  <td><div class=\"titlename\">GStreamer version</div></td>"
+        "  <td>%d.%d.%d (build) %s (runtime)</td>"
+        " </tbody></tr>",
+        GST_VERSION_MAJOR, GST_VERSION_MINOR, GST_VERSION_MICRO, gstVersion.get());
+#endif
 
 #if PLATFORM(GTK)
     g_string_append_printf(html,
@@ -236,10 +259,18 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
         g_string_append_printf(html,
             " <tbody><tr>"
             "  <td><div class=\"titlename\">WPE version</div></td>"
-            "  <td>%d.%d.%d (using fdo backend %d.%d.%d)</td>"
+            "  <td>%d.%d.%d (build) %d.%d.%d (runtime)</td>"
+            " </tbody></tr>",
+            WPE_MAJOR_VERSION, WPE_MINOR_VERSION, WPE_MICRO_VERSION,
+            wpe_get_major_version(), wpe_get_minor_version(), wpe_get_micro_version());
+
+        g_string_append_printf(html,
+            " <tbody><tr>"
+            "  <td><div class=\"titlename\">WPEBackend-fdo version</div></td>"
+            "  <td>%d.%d.%d (build) %d.%d.%d (runtime)</td>"
             " </tbody></tr>",
             WPE_FDO_MAJOR_VERSION, WPE_FDO_MINOR_VERSION, WPE_FDO_MICRO_VERSION,
-            WPE_MAJOR_VERSION, WPE_MINOR_VERSION, WPE_MICRO_VERSION);
+            wpe_fdo_get_major_version(), wpe_fdo_get_minor_version(), wpe_fdo_get_micro_version());
     }
 #endif
 #endif
@@ -272,7 +303,14 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
         "  <td><div class=\"titlename\">Type</div></td>"
         "  <td>%s</td>"
         " </tbody></tr>",
-        PlatformDisplay::sharedDisplay().type() == PlatformDisplay::Type::Wayland ? "Wayland" : "X11");
+#if PLATFORM(WAYLAND)
+        PlatformDisplay::sharedDisplay().type() == PlatformDisplay::Type::Wayland ? "Wayland" :
+#endif
+#if PLATFORM(X11)
+        PlatformDisplay::sharedDisplay().type() == PlatformDisplay::Type::X11 ? "X11" :
+#endif
+        "Unknown"
+    );
 #endif
 
     auto rect = IntRect(screenRect(nullptr));
@@ -325,6 +363,7 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
         " </tbody></tr>",
         hardwareAccelerationPolicy(request));
 
+#if ENABLE(WEBGL)
     g_string_append_printf(html,
         " <tbody><tr>"
         "  <td><div class=\"titlename\">WebGL enabled</div></td>"
@@ -458,6 +497,7 @@ void WebKitProtocolHandler::handleGPU(WebKitURISchemeRequest* request)
             eglQueryString(eglDisplay, EGL_EXTENSIONS));
     }
 #endif
+#endif // ENABLE(WEBGL)
 
     g_string_append(html, "<table>");
 

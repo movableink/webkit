@@ -26,7 +26,7 @@ function load() {
 
     buffer = context.createBuffer();
     framebuffer = context.createFramebuffer();
-    uniformLocation = context.getUniformLocation(program, "test");
+    uniformLocation = context.getUniformLocation(program, "testUniform");
     renderbuffer = context.createRenderbuffer();
     shader = context.createShader(context.VERTEX_SHADER);
     texture = context.createTexture();
@@ -324,9 +324,6 @@ function performActions() {
         },
         () => {
             context.readPixels(1, 2, 3, 4, 5, 6, float32Array);
-        },
-        () => {
-            context.releaseShaderCompiler();
         },
         () => {
             context.renderbufferStorage(1, 2, 3, 4);

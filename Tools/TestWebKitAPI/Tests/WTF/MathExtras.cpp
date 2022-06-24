@@ -93,20 +93,24 @@ TEST(WTF, clampToIntegerFloat)
     // This test is inaccurate as floats will round the min / max integer
     // due to the narrow mantissa. However it will properly checks within
     // (close to the extreme) and outside the integer range.
-    float maxInt = std::numeric_limits<int>::max();
+    float overflowInt = maxPlusOne<int>;
+    float maxInt = overflowInt;
+    for (int i = 0; overflowInt == maxInt; i++)
+        maxInt = overflowInt - i;
+
     float minInt = std::numeric_limits<int>::min();
-    float overflowInt = maxInt * 1.1;
-    float underflowInt = minInt * 1.1;
+    float underflowInt = minInt;
+    for (int i = 0; underflowInt == minInt; i++)
+        underflowInt = minInt - i;
 
     EXPECT_GT(overflowInt, maxInt);
     EXPECT_LT(underflowInt, minInt);
 
-    // If maxInt == 2^31 - 1 (ie on I32 architecture), the closest float used to represent it is 2^31.
-    EXPECT_NEAR(clampToInteger(maxInt), maxInt, 1);
-    EXPECT_EQ(clampToInteger(minInt), minInt);
+    EXPECT_EQ(clampToInteger(maxInt), static_cast<int>(maxInt));
+    EXPECT_EQ(clampToInteger(minInt), std::numeric_limits<int>::min());
 
-    EXPECT_NEAR(clampToInteger(overflowInt), maxInt, 1);
-    EXPECT_EQ(clampToInteger(underflowInt), minInt);
+    EXPECT_EQ(clampToInteger(overflowInt), std::numeric_limits<int>::max());
+    EXPECT_EQ(clampToInteger(underflowInt), std::numeric_limits<int>::min());
 }
 
 TEST(WTF, clampToIntegerDouble)
@@ -424,6 +428,39 @@ TEST(WTF, clampSignedToUnsigned)
     testClampSignedToUnsigned<uint32_t, int64_t>();
     testClampSignedToUnsigned<uint16_t, int32_t>();
     testClampSignedToUnsigned<uint16_t, int64_t>();
+}
+
+TEST(WTF, clampNaNToInteger)
+{
+    // clampTo<>() currently returns the mininum range value when the input is NaN.
+    EXPECT_EQ(std::numeric_limits<int>::min(), clampTo<int>(std::numeric_limits<double>::quiet_NaN()));
+    EXPECT_EQ(std::numeric_limits<int>::min(), clampTo<int>(std::numeric_limits<float>::quiet_NaN()));
+    EXPECT_EQ(std::numeric_limits<unsigned>::min(), clampTo<unsigned>(std::numeric_limits<double>::quiet_NaN()));
+    EXPECT_EQ(std::numeric_limits<unsigned>::min(), clampTo<unsigned>(std::numeric_limits<float>::quiet_NaN()));
+    EXPECT_EQ(-30, clampTo<int>(std::numeric_limits<double>::quiet_NaN(), -30, -10));
+    EXPECT_EQ(10U, clampTo<unsigned>(std::numeric_limits<double>::quiet_NaN(), 10, 20));
+    EXPECT_EQ(-30, clampTo<int>(std::numeric_limits<float>::quiet_NaN(), -30, -10));
+    EXPECT_EQ(10U, clampTo<unsigned>(std::numeric_limits<float>::quiet_NaN(), 10, 20));
+}
+
+TEST(WTF, clampInfinityToInteger)
+{
+    EXPECT_EQ(std::numeric_limits<int>::max(), clampTo<int>(std::numeric_limits<double>::infinity()));
+    EXPECT_EQ(std::numeric_limits<int>::min(), clampTo<int>(-std::numeric_limits<double>::infinity()));
+    EXPECT_EQ(std::numeric_limits<int>::max(), clampTo<int>(std::numeric_limits<float>::infinity()));
+    EXPECT_EQ(std::numeric_limits<int>::min(), clampTo<int>(-std::numeric_limits<float>::infinity()));
+    EXPECT_EQ(std::numeric_limits<unsigned>::max(), clampTo<unsigned>(std::numeric_limits<double>::infinity()));
+    EXPECT_EQ(std::numeric_limits<unsigned>::min(), clampTo<unsigned>(-std::numeric_limits<double>::infinity()));
+    EXPECT_EQ(std::numeric_limits<unsigned>::max(), clampTo<unsigned>(std::numeric_limits<float>::infinity()));
+    EXPECT_EQ(std::numeric_limits<unsigned>::min(), clampTo<unsigned>(-std::numeric_limits<float>::infinity()));
+    EXPECT_EQ(10, clampTo<int>(std::numeric_limits<double>::infinity(), -10, 10));
+    EXPECT_EQ(-10, clampTo<int>(-std::numeric_limits<double>::infinity(), -10, 10));
+    EXPECT_EQ(20U, clampTo<unsigned>(std::numeric_limits<double>::infinity(), 10, 20));
+    EXPECT_EQ(10U, clampTo<unsigned>(-std::numeric_limits<double>::infinity(), 10, 20));
+    EXPECT_EQ(10, clampTo<int>(std::numeric_limits<float>::infinity(), -10, 10));
+    EXPECT_EQ(-10, clampTo<int>(-std::numeric_limits<float>::infinity(), -10, 10));
+    EXPECT_EQ(20U, clampTo<unsigned>(std::numeric_limits<float>::infinity(), 10, 20));
+    EXPECT_EQ(10U, clampTo<unsigned>(-std::numeric_limits<float>::infinity(), 10, 20));
 }
 
 TEST(WTF, roundUpToPowerOfTwo)

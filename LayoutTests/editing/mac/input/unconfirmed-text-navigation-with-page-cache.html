@@ -1,4 +1,4 @@
-<!-- webkit-test-runner [ enableBackForwardCache=true ] -->
+<!-- webkit-test-runner [ UsesBackForwardCache=true ] -->
 <html>
 <head>
 <title>Test what happens when navigating from a page with unconfirmed inline input when the page is cacheable</title>
@@ -7,9 +7,6 @@
 <body>
 <script>
 jsTestIsAsync = true;
-
-if (window.testRunner)
-    testRunner.setCanOpenWindows();
 
 // Window we will be controlling.
 var target;

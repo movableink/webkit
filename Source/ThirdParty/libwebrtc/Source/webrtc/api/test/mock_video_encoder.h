@@ -20,36 +20,52 @@ namespace webrtc {
 
 class MockEncodedImageCallback : public EncodedImageCallback {
  public:
-  MockEncodedImageCallback();
-  ~MockEncodedImageCallback();
-  MOCK_METHOD3(OnEncodedImage,
-               Result(const EncodedImage& encodedImage,
-                      const CodecSpecificInfo* codecSpecificInfo,
-                      const RTPFragmentationHeader* fragmentation));
+  MOCK_METHOD(Result,
+              OnEncodedImage,
+              (const EncodedImage&, const CodecSpecificInfo*),
+              (override));
+  MOCK_METHOD(void, OnDroppedFrame, (DropReason reason), (override));
 };
 
 class MockVideoEncoder : public VideoEncoder {
  public:
-  MockVideoEncoder();
-  ~MockVideoEncoder();
-  MOCK_CONST_METHOD2(Version, int32_t(int8_t* version, int32_t length));
-  MOCK_METHOD3(InitEncode,
-               int32_t(const VideoCodec* codecSettings,
-                       int32_t numberOfCores,
-                       size_t maxPayloadSize));
-  MOCK_METHOD3(Encode,
-               int32_t(const VideoFrame& inputImage,
-                       const CodecSpecificInfo* codecSpecificInfo,
-                       const std::vector<FrameType>* frame_types));
-  MOCK_METHOD1(RegisterEncodeCompleteCallback,
-               int32_t(EncodedImageCallback* callback));
-  MOCK_METHOD0(Release, int32_t());
-  MOCK_METHOD0(Reset, int32_t());
-  MOCK_METHOD2(SetRates, int32_t(uint32_t newBitRate, uint32_t frameRate));
-  MOCK_METHOD2(SetRateAllocation,
-               int32_t(const VideoBitrateAllocation& newBitRate,
-                       uint32_t frameRate));
-  MOCK_CONST_METHOD0(GetEncoderInfo, EncoderInfo(void));
+  MOCK_METHOD(void,
+              SetFecControllerOverride,
+              (FecControllerOverride*),
+              (override));
+  MOCK_METHOD(int32_t,
+              InitEncode,
+              (const VideoCodec*, int32_t numberOfCores, size_t maxPayloadSize),
+              (override));
+  MOCK_METHOD(int32_t,
+              InitEncode,
+              (const VideoCodec*, const VideoEncoder::Settings& settings),
+              (override));
+
+  MOCK_METHOD(int32_t,
+              Encode,
+              (const VideoFrame& inputImage,
+               const std::vector<VideoFrameType>*),
+              (override));
+  MOCK_METHOD(int32_t,
+              RegisterEncodeCompleteCallback,
+              (EncodedImageCallback*),
+              (override));
+  MOCK_METHOD(int32_t, Release, (), (override));
+  MOCK_METHOD(void,
+              SetRates,
+              (const RateControlParameters& parameters),
+              (override));
+  MOCK_METHOD(void,
+              OnPacketLossRateUpdate,
+              (float packet_loss_rate),
+              (override));
+  MOCK_METHOD(void, OnRttUpdate, (int64_t rtt_ms), (override));
+  MOCK_METHOD(void,
+              OnLossNotification,
+              (const LossNotification& loss_notification),
+              (override));
+  MOCK_METHOD(EncoderInfo, GetEncoderInfo, (), (const, override));
 };
 
 }  // namespace webrtc

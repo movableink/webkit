@@ -39,6 +39,7 @@ InspectorBackend.Connection = class InspectorBackendConnection
         this._pendingResponses = new Map;
         this._deferredCallbacks = [];
         this._target = null;
+        this._provisionalMessages = [];
     }
 
     // Public
@@ -52,6 +53,20 @@ InspectorBackend.Connection = class InspectorBackendConnection
     {
         console.assert(!this._target);
         this._target = target;
+    }
+
+    addProvisionalMessage(message)
+    {
+        console.assert(this.target && this.target.isProvisional);
+        this._provisionalMessages.push(message);
+    }
+
+    dispatchProvisionalMessages()
+    {
+        console.assert(this.target && !this.target.isProvisional);
+        for (let message of this._provisionalMessages)
+            this.dispatch(message);
+        this._provisionalMessages = [];
     }
 
     dispatch(message)
@@ -87,7 +102,7 @@ InspectorBackend.Connection = class InspectorBackendConnection
     {
         console.assert(this._pendingResponses.size >= 0);
 
-        if (messageObject.error && messageObject.error.code !== -32000)
+        if (messageObject.error && messageObject.error.code !== -32_000)
             console.error("Request with id = " + messageObject["id"] + " failed. " + JSON.stringify(messageObject.error));
 
         let sequenceId = messageObject["id"];
@@ -284,38 +299,29 @@ InspectorBackend.BackendConnection = class InspectorBackendBackendConnection ext
 
 InspectorBackend.WorkerConnection = class InspectorBackendWorkerConnection extends InspectorBackend.Connection
 {
-    constructor(parentTarget, workerId)
-    {
-        super();
-
-        this._parentTarget = parentTarget;
-        this._workerId = workerId;
-
-        console.assert(this._parentTarget.hasCommand("Worker.sendMessageToWorker"));
-    }
-
     sendMessageToBackend(message)
     {
-        // Ignore errors if a worker went away quickly.
-        this._parentTarget.WorkerAgent.sendMessageToWorker(this._workerId, message).catch(function(){});
+        let workerId = this.target.identifier;
+        this.target.parentTarget.WorkerAgent.sendMessageToWorker(workerId, message).catch((error) => {
+            // Ignore errors if a worker went away quickly.
+            if (this.target.isDestroyed)
+                return;
+            WI.reportInternalError(error);
+        });
     }
 };
 
 InspectorBackend.TargetConnection = class InspectorBackendTargetConnection extends InspectorBackend.Connection
 {
-    constructor(parentTarget, targetId)
-    {
-        super();
-
-        this._parentTarget = parentTarget;
-        this._targetId = targetId;
-
-        console.assert(this._parentTarget.hasCommand("Target.sendMessageToTarget"));
-    }
-
     sendMessageToBackend(message)
     {
-        this._parentTarget.TargetAgent.sendMessageToTarget(this._targetId, message);
+        let targetId = this.target.identifier;
+        this.target.parentTarget.TargetAgent.sendMessageToTarget(targetId, message).catch((error) => {
+            // Ignore errors if the target was destroyed after the command was dispatched.
+            if (this.target.isDestroyed)
+                return;
+            WI.reportInternalError(error);
+        });
     }
 };
 

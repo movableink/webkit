@@ -8,30 +8,83 @@
 
 import("../../../webrtc.gni")
 
-rtc_source_set("agc") {
+rtc_source_set("gain_control_interface") {
+  sources = [ "gain_control.h" ]
+}
+
+rtc_library("agc") {
   sources = [
     "agc_manager_direct.cc",
     "agc_manager_direct.h",
   ]
   configs += [ "..:apm_debug_dump" ]
   deps = [
+    ":clipping_predictor",
+    ":clipping_predictor_evaluator",
+    ":gain_control_interface",
     ":gain_map",
     ":level_estimation",
     "..:apm_logging",
-    "..:gain_control_interface",
-    "../../..:webrtc_common",
+    "..:audio_buffer",
+    "..:audio_frame_view",
+    "../../../common_audio",
+    "../../../common_audio:common_audio_c",
     "../../../rtc_base:checks",
     "../../../rtc_base:gtest_prod",
     "../../../rtc_base:logging",
-    "../../../rtc_base:macromagic",
+    "../../../rtc_base:rtc_base_approved",
     "../../../rtc_base:safe_minmax",
+    "../../../system_wrappers:field_trial",
     "../../../system_wrappers:metrics",
-    "../agc2:level_estimation_agc",
     "../vad",
   ]
+  absl_deps = [ "//third_party/abseil-cpp/absl/types:optional" ]
 }
 
-rtc_source_set("level_estimation") {
+rtc_library("clipping_predictor") {
+  sources = [
+    "clipping_predictor.cc",
+    "clipping_predictor.h",
+  ]
+  deps = [
+    ":clipping_predictor_level_buffer",
+    ":gain_map",
+    "..:api",
+    "..:audio_frame_view",
+    "../../../common_audio",
+    "../../../rtc_base:checks",
+    "../../../rtc_base:logging",
+    "../../../rtc_base:safe_minmax",
+  ]
+  absl_deps = [ "//third_party/abseil-cpp/absl/types:optional" ]
+}
+
+rtc_library("clipping_predictor_evaluator") {
+  sources = [
+    "clipping_predictor_evaluator.cc",
+    "clipping_predictor_evaluator.h",
+  ]
+  deps = [
+    "../../../rtc_base:checks",
+    "../../../rtc_base:logging",
+  ]
+  absl_deps = [ "//third_party/abseil-cpp/absl/types:optional" ]
+}
+
+rtc_library("clipping_predictor_level_buffer") {
+  sources = [
+    "clipping_predictor_level_buffer.cc",
+    "clipping_predictor_level_buffer.h",
+  ]
+  deps = [
+    "../../../rtc_base:checks",
+    "../../../rtc_base:logging",
+    "../../../rtc_base:rtc_base_approved",
+  ]
+  absl_deps = [ "//third_party/abseil-cpp/absl/types:optional" ]
+}
+
+rtc_library("level_estimation") {
   sources = [
     "agc.cc",
     "agc.h",
@@ -41,14 +94,12 @@ rtc_source_set("level_estimation") {
     "utility.h",
   ]
   deps = [
-    "../../..:webrtc_common",
     "../../../rtc_base:checks",
-    "../../../rtc_base:macromagic",
     "../vad",
   ]
 }
 
-rtc_source_set("agc_legacy_c") {
+rtc_library("legacy_agc") {
   visibility = [
     ":*",
     "..:*",
@@ -57,21 +108,20 @@ rtc_source_set("agc_legacy_c") {
      # this.
 
   sources = [
-    "legacy/analog_agc.c",
+    "legacy/analog_agc.cc",
     "legacy/analog_agc.h",
-    "legacy/digital_agc.c",
+    "legacy/digital_agc.cc",
     "legacy/digital_agc.h",
     "legacy/gain_control.h",
   ]
 
   deps = [
-    "../../..:webrtc_common",
     "../../../common_audio",
     "../../../common_audio:common_audio_c",
-    "../../../common_audio/third_party/fft4g",
+    "../../../common_audio/third_party/ooura:fft_size_256",
     "../../../rtc_base:checks",
     "../../../rtc_base:rtc_base_approved",
-    "../../../system_wrappers:cpu_features_api",
+    "../../../system_wrappers",
   ]
 
   if (rtc_build_with_neon) {
@@ -80,47 +130,42 @@ rtc_source_set("agc_legacy_c") {
       suppressed_configs += [ "//build/config/compiler:compiler_arm_fpu" ]
       cflags = [ "-mfpu=neon" ]
     }
-
-    # Disable LTO on NEON targets due to compiler bug.
-    # TODO(fdegans): Enable this. See crbug.com/408997.
-    if (rtc_use_lto) {
-      cflags -= [
-        "-flto",
-        "-ffat-lto-objects",
-      ]
-    }
   }
 }
 
 rtc_source_set("gain_map") {
-  sources = [
-    "gain_map_internal.h",
-  ]
+  sources = [ "gain_map_internal.h" ]
 }
 
 if (rtc_include_tests) {
-  rtc_source_set("agc_unittests") {
+  rtc_library("agc_unittests") {
     testonly = true
     sources = [
       "agc_manager_direct_unittest.cc",
+      "clipping_predictor_evaluator_unittest.cc",
+      "clipping_predictor_level_buffer_unittest.cc",
+      "clipping_predictor_unittest.cc",
       "loudness_histogram_unittest.cc",
       "mock_agc.h",
     ]
     configs += [ "..:apm_debug_dump" ]
 
-    if ((!build_with_chromium || is_win) && is_clang) {
-      # Suppress warnings from the Chromium Clang plugin (bugs.webrtc.org/163).
-      suppressed_configs += [ "//build/config/clang:find_bad_constructs" ]
-    }
-
     deps = [
       ":agc",
+      ":clipping_predictor",
+      ":clipping_predictor_evaluator",
+      ":clipping_predictor_level_buffer",
+      ":gain_control_interface",
       ":level_estimation",
       "..:mocks",
-      "../../..:webrtc_common",
+      "../../../rtc_base:checks",
+      "../../../rtc_base:rtc_base_approved",
+      "../../../rtc_base:safe_conversions",
+      "../../../test:field_trial",
       "../../../test:fileutils",
       "../../../test:test_support",
       "//testing/gtest",
     ]
+    absl_deps = [ "//third_party/abseil-cpp/absl/types:optional" ]
   }
 }

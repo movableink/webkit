@@ -77,11 +77,11 @@ WKFrameLoadState WKBundleFrameGetFrameLoadState(WKBundleFrameRef frameRef)
         return kWKFrameLoadStateFinished;
 
     switch (coreFrame->loader().state()) {
-    case WebCore::FrameStateProvisional:
+    case WebCore::FrameState::Provisional:
         return kWKFrameLoadStateProvisional;
-    case WebCore::FrameStateCommittedPage:
+    case WebCore::FrameState::CommittedPage:
         return kWKFrameLoadStateCommitted;
-    case WebCore::FrameStateComplete:
+    case WebCore::FrameState::Complete:
         return kWKFrameLoadStateFinished;
     }
 
@@ -163,7 +163,7 @@ WKStringRef WKBundleFrameCopyLayerTreeAsText(WKBundleFrameRef frameRef)
 
 bool WKBundleFrameAllowsFollowingLink(WKBundleFrameRef frameRef, WKURLRef urlRef)
 {
-    return WebKit::toImpl(frameRef)->allowsFollowingLink(URL(URL(), WebKit::toWTFString(urlRef)));
+    return WebKit::toImpl(frameRef)->allowsFollowingLink(URL { WebKit::toWTFString(urlRef) });
 }
 
 bool WKBundleFrameHandlesPageScaleGesture(WKBundleFrameRef frameRef)
@@ -208,12 +208,12 @@ bool WKBundleFrameGetDocumentBackgroundColor(WKBundleFrameRef frameRef, double* 
 
 WKStringRef WKBundleFrameCopySuggestedFilenameForResourceWithURL(WKBundleFrameRef frameRef, WKURLRef urlRef)
 {
-    return WebKit::toCopiedAPI(WebKit::toImpl(frameRef)->suggestedFilenameForResourceWithURL(URL(URL(), WebKit::toWTFString(urlRef))));
+    return WebKit::toCopiedAPI(WebKit::toImpl(frameRef)->suggestedFilenameForResourceWithURL(URL { WebKit::toWTFString(urlRef) }));
 }
 
 WKStringRef WKBundleFrameCopyMIMETypeForResourceWithURL(WKBundleFrameRef frameRef, WKURLRef urlRef)
 {
-    return WebKit::toCopiedAPI(WebKit::toImpl(frameRef)->mimeTypeForResourceWithURL(URL(URL(), WebKit::toWTFString(urlRef))));
+    return WebKit::toCopiedAPI(WebKit::toImpl(frameRef)->mimeTypeForResourceWithURL(URL { WebKit::toWTFString(urlRef) }));
 }
 
 bool WKBundleFrameContainsAnyFormElements(WKBundleFrameRef frameRef)
@@ -281,9 +281,9 @@ WKSecurityOriginRef WKBundleFrameCopySecurityOrigin(WKBundleFrameRef frameRef)
 
 void WKBundleFrameFocus(WKBundleFrameRef frameRef)
 {
-    WebCore::Frame* coreFrame = WebKit::toImpl(frameRef)->coreFrame();
+    RefPtr coreFrame = WebKit::toImpl(frameRef)->coreFrame();
     if (!coreFrame)
         return;
 
-    coreFrame->page()->focusController().setFocusedFrame(coreFrame);
+    CheckedRef(coreFrame->page()->focusController())->setFocusedFrame(coreFrame.get());
 }

@@ -2,17 +2,16 @@
 (translate
   (x 0.00)
   (y 0.00))
-(save
-  (restore-index 4))
+(save)
 (set-state
-  (change-flags 1024)
+  (change-flags 512)
   (shadow-blur 12.00)
   (shadow-offset width=10 height=20)
+  (shadow-color #000000)
   (shadows-use-legacy-radius 0))
 (fill-composited-rect
-  (extent at (43,50) size 134x137)
   (rect at (50,50) size 100x100)
   (color #0000FF)
   (composite-operation source-over)
-  (blend-mode normal))
+  (blend-mode normal) extent at (43,50) size 134x137)
 (restore)

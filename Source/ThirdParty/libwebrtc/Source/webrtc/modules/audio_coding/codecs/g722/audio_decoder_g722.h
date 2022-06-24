@@ -12,7 +12,7 @@
 #define MODULES_AUDIO_CODING_CODECS_G722_AUDIO_DECODER_G722_H_
 
 #include "api/audio_codecs/audio_decoder.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 typedef struct WebRtcG722DecInst G722DecInst;
 
@@ -60,11 +60,11 @@ class AudioDecoderG722StereoImpl final : public AudioDecoder {
                      SpeechType* speech_type) override;
 
  private:
-  // Splits the stereo-interleaved payload in |encoded| into separate payloads
+  // Splits the stereo-interleaved payload in `encoded` into separate payloads
   // for left and right channels. The separated payloads are written to
-  // |encoded_deinterleaved|, which must hold at least |encoded_len| samples.
+  // `encoded_deinterleaved`, which must hold at least `encoded_len` samples.
   // The left channel starts at offset 0, while the right channel starts at
-  // offset encoded_len / 2 into |encoded_deinterleaved|.
+  // offset encoded_len / 2 into `encoded_deinterleaved`.
   void SplitStereoPacket(const uint8_t* encoded,
                          size_t encoded_len,
                          uint8_t* encoded_deinterleaved);

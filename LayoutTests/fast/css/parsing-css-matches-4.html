@@ -30,10 +30,6 @@ var validSelectorsPart2 = [
     ".class",
     ":last-child",
 
-    // Pseudo elements.
-    "::first-letter",
-    "::before",
-
     // Compound selectors.
     "foobar#id.class",
     "#id:empty",
@@ -44,7 +40,7 @@ var validSelectorsPart2 = [
 
     // Functional pseudo classes.
     ":-webkit-any(.selector, #tama, #hanayo, #midoriko)",
-    ":nth-child(even of a, b, c)",
+    ":nth-child(2n of a, b, c)",
 ];
 
 /* Try all combinations, each value is unique to the others. */

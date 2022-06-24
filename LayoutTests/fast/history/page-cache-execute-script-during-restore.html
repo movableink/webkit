@@ -1,4 +1,4 @@
-<!-- webkit-test-runner [ enableBackForwardCache=true ] -->
+<!-- webkit-test-runner [ UsesBackForwardCache=true ] -->
 <!DOCTYPE html>
 <html>
 <body>
@@ -16,8 +16,10 @@ if (window.testRunner) {
 }
 
 window.addEventListener("pageshow", (event) => {
-    if (event.persisted)
+    if (event.persisted) {
+        requestAnimationFrame(finish);
         return;
+    }
     if (window.testRunner)
         setTimeout(runTest, 0);
 });

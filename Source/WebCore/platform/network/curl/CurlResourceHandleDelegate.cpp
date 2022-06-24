@@ -36,6 +36,7 @@
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "ResourceHandleInternal.h"
+#include "SecurityOrigin.h"
 
 #include <wtf/CompletionHandler.h>
 
@@ -88,12 +89,10 @@ static void handleCookieHeaders(ResourceHandleInternal* d, const ResourceRequest
 {
     static const auto setCookieHeader = "set-cookie: ";
 
-    const auto& storageSession = *d->m_context->storageSession();
-    const auto& cookieJar = storageSession.cookieStorage();
     for (const auto& header : response.headers) {
         if (header.startsWithIgnoringASCIICase(setCookieHeader)) {
             const auto contents = header.right(header.length() - strlen(setCookieHeader));
-            cookieJar.setCookiesFromHTTPResponse(storageSession, request.firstPartyForCookies(), response.url, contents);
+            d->m_context->storageSession()->setCookiesFromHTTPResponse(request.firstPartyForCookies(), response.url, contents);
         }
     }
 }
@@ -108,7 +107,7 @@ void CurlResourceHandleDelegate::curlDidReceiveResponse(CurlRequest& request, Cu
 
     m_response = ResourceResponse(receivedResponse);
     m_response.setCertificateInfo(WTFMove(receivedResponse.certificateInfo));
-    m_response.setDeprecatedNetworkLoadMetrics(WTFMove(receivedResponse.networkLoadMetrics));
+    m_response.setDeprecatedNetworkLoadMetrics(Box<NetworkLoadMetrics>::create(WTFMove(receivedResponse.networkLoadMetrics)));
 
     handleCookieHeaders(d(), request.resourceRequest(), receivedResponse);
 
@@ -128,7 +127,7 @@ void CurlResourceHandleDelegate::curlDidReceiveResponse(CurlRequest& request, Cu
         URL cacheUrl = m_response.url();
         cacheUrl.removeFragmentIdentifier();
 
-        if (CurlCacheManager::singleton().getCachedResponse(cacheUrl, m_response)) {
+        if (CurlCacheManager::singleton().getCachedResponse(cacheUrl.string(), m_response)) {
             if (d()->m_addedCacheValidationHeaders) {
                 m_response.setHTTPStatusCode(200);
                 m_response.setHTTPStatusText("OK");
@@ -138,23 +137,23 @@ void CurlResourceHandleDelegate::curlDidReceiveResponse(CurlRequest& request, Cu
 
     CurlCacheManager::singleton().didReceiveResponse(m_handle, m_response);
 
-    m_handle.didReceiveResponse(ResourceResponse(m_response), [this, protectedHandle = makeRef(m_handle)] {
+    m_handle.didReceiveResponse(ResourceResponse(m_response), [this, protectedHandle = Ref { m_handle }] {
         m_handle.continueAfterDidReceiveResponse();
     });
 }
 
-void CurlResourceHandleDelegate::curlDidReceiveBuffer(CurlRequest&, Ref<SharedBuffer>&& buffer)
+void CurlResourceHandleDelegate::curlDidReceiveData(CurlRequest&, const SharedBuffer& buffer)
 {
     ASSERT(isMainThread());
 
     if (cancelledOrClientless())
         return;
 
-    CurlCacheManager::singleton().didReceiveData(m_handle, buffer->data(), buffer->size());
-    client()->didReceiveBuffer(&m_handle, WTFMove(buffer), buffer->size());
+    CurlCacheManager::singleton().didReceiveData(m_handle, buffer);
+    client()->didReceiveBuffer(&m_handle, buffer, buffer.size());
 }
 
-void CurlResourceHandleDelegate::curlDidComplete(CurlRequest&, NetworkLoadMetrics&&)
+void CurlResourceHandleDelegate::curlDidComplete(CurlRequest&, NetworkLoadMetrics&& metrics)
 {
     ASSERT(isMainThread());
 
@@ -162,7 +161,7 @@ void CurlResourceHandleDelegate::curlDidComplete(CurlRequest&, NetworkLoadMetric
         return;
 
     CurlCacheManager::singleton().didFinishLoading(m_handle);
-    client()->didFinishLoading(&m_handle);
+    client()->didFinishLoading(&m_handle, WTFMove(metrics));
 }
 
 void CurlResourceHandleDelegate::curlDidFailWithError(CurlRequest&, ResourceError&& resourceError, CertificateInfo&&)

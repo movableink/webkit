@@ -31,7 +31,7 @@
 #include "FormDataStreamCFNet.h"
 #include "NetworkingContext.h"
 #include "ResourceHandle.h"
-#include <pal/spi/cf/CFNetworkSPI.h>
+#include <pal/spi/win/CFNetworkSPIWin.h>
 
 namespace WebCore {
 
@@ -60,7 +60,7 @@ void ResourceHandleCFURLConnectionDelegate::release(const void* clientInfo)
 
 CFURLRequestRef ResourceHandleCFURLConnectionDelegate::willSendRequestCallback(CFURLConnectionRef, CFURLRequestRef cfRequest, CFURLResponseRef originalRedirectResponse, const void* clientInfo)
 {
-    return static_cast<ResourceHandleCFURLConnectionDelegate*>(const_cast<void*>(clientInfo))->willSendRequest(cfRequest, originalRedirectResponse);
+    return static_cast<ResourceHandleCFURLConnectionDelegate*>(const_cast<void*>(clientInfo))->willSendRequest(cfRequest, originalRedirectResponse).leakRef();
 }
 
 void ResourceHandleCFURLConnectionDelegate::didReceiveResponseCallback(CFURLConnectionRef connection, CFURLResponseRef cfResponse, const void* clientInfo)
@@ -138,7 +138,7 @@ ResourceRequest ResourceHandleCFURLConnectionDelegate::createResourceRequest(CFU
 {
     ResourceRequest request;
     CFHTTPMessageRef httpMessage = CFURLResponseGetHTTPResponse(redirectResponse);
-    if (httpMessage && CFHTTPMessageGetResponseStatusCode(httpMessage) == 307) {
+    if (httpMessage && (CFHTTPMessageGetResponseStatusCode(httpMessage) == 307 || CFHTTPMessageGetResponseStatusCode(httpMessage) == 308)) {
         RetainPtr<CFStringRef> lastHTTPMethod = m_handle->lastHTTPMethod().createCFString();
         RetainPtr<CFStringRef> newMethod = adoptCF(CFURLRequestCopyHTTPRequestMethod(cfRequest));
         if (CFStringCompareWithOptions(lastHTTPMethod.get(), newMethod.get(), CFRangeMake(0, CFStringGetLength(lastHTTPMethod.get())), kCFCompareCaseInsensitive)) {

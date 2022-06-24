@@ -21,7 +21,7 @@
 #include "modules/desktop_capture/fake_desktop_capturer.h"
 #include "modules/desktop_capture/mock_desktop_capturer_callback.h"
 #include "rtc_base/random.h"
-#include "rtc_base/timeutils.h"
+#include "rtc_base/time_utils.h"
 #include "system_wrappers/include/cpu_features_wrapper.h"
 #include "test/gtest.h"
 
@@ -29,9 +29,9 @@ namespace webrtc {
 
 namespace {
 
-// Compares and asserts |frame|.updated_region() equals to |rects|. This
-// function does not care about the order of the |rects| and it does not expect
-// DesktopRegion to return an exact area for each rectangle in |rects|.
+// Compares and asserts `frame`.updated_region() equals to `rects`. This
+// function does not care about the order of the `rects` and it does not expect
+// DesktopRegion to return an exact area for each rectangle in `rects`.
 template <template <typename, typename...> class T = std::initializer_list,
           typename... Rect>
 void AssertUpdatedRegionIs(const DesktopFrame& frame,
@@ -43,10 +43,10 @@ void AssertUpdatedRegionIs(const DesktopFrame& frame,
   ASSERT_TRUE(frame.updated_region().Equals(region));
 }
 
-// Compares and asserts |frame|.updated_region() covers all rectangles in
-// |rects|, but does not cover areas other than a kBlockSize expansion. This
-// function does not care about the order of the |rects|, and it does not expect
-// DesktopRegion to return an exact area of each rectangle in |rects|.
+// Compares and asserts `frame`.updated_region() covers all rectangles in
+// `rects`, but does not cover areas other than a kBlockSize expansion. This
+// function does not care about the order of the `rects`, and it does not expect
+// DesktopRegion to return an exact area of each rectangle in `rects`.
 template <template <typename, typename...> class T = std::initializer_list,
           typename... Rect>
 void AssertUpdatedRegionCovers(const DesktopFrame& frame,
@@ -56,13 +56,13 @@ void AssertUpdatedRegionCovers(const DesktopFrame& frame,
     region.AddRect(rect);
   }
 
-  // Intersect of |rects| and |frame|.updated_region() should be |rects|. i.e.
-  // |frame|.updated_region() should be a superset of |rects|.
+  // Intersect of `rects` and `frame`.updated_region() should be `rects`. i.e.
+  // `frame`.updated_region() should be a superset of `rects`.
   DesktopRegion intersect(region);
   intersect.IntersectWith(frame.updated_region());
   ASSERT_TRUE(region.Equals(intersect));
 
-  // Difference between |rects| and |frame|.updated_region() should not cover
+  // Difference between `rects` and `frame`.updated_region() should not cover
   // areas which have larger than twice of kBlockSize width and height.
   //
   // Explanation of the 'twice' of kBlockSize (indeed kBlockSize * 2 - 2) is
@@ -106,8 +106,8 @@ void AssertUpdatedRegionCovers(const DesktopFrame& frame,
 }
 
 // Executes a DesktopCapturerDifferWrapper::Capture() and compares its output
-// DesktopFrame::updated_region() with |updated_region| if |check_result| is
-// true. If |exactly_match| is true, AssertUpdatedRegionIs() will be used,
+// DesktopFrame::updated_region() with `updated_region` if `check_result` is
+// true. If `exactly_match` is true, AssertUpdatedRegionIs() will be used,
 // otherwise AssertUpdatedRegionCovers() will be used.
 template <template <typename, typename...> class T = std::initializer_list,
           typename... Rect>
@@ -117,21 +117,22 @@ void ExecuteDifferWrapperCase(BlackWhiteDesktopFramePainter* frame_painter,
                               const T<DesktopRect, Rect...>& updated_region,
                               bool check_result,
                               bool exactly_match) {
-  EXPECT_CALL(*callback,
-              OnCaptureResultPtr(DesktopCapturer::Result::SUCCESS, testing::_))
+  EXPECT_CALL(*callback, OnCaptureResultPtr(DesktopCapturer::Result::SUCCESS,
+                                            ::testing::_))
       .Times(1)
-      .WillOnce(testing::Invoke([&updated_region, check_result, exactly_match](
-                                    DesktopCapturer::Result result,
-                                    std::unique_ptr<DesktopFrame>* frame) {
-        ASSERT_EQ(result, DesktopCapturer::Result::SUCCESS);
-        if (check_result) {
-          if (exactly_match) {
-            AssertUpdatedRegionIs(**frame, updated_region);
-          } else {
-            AssertUpdatedRegionCovers(**frame, updated_region);
-          }
-        }
-      }));
+      .WillOnce(
+          ::testing::Invoke([&updated_region, check_result, exactly_match](
+                                DesktopCapturer::Result result,
+                                std::unique_ptr<DesktopFrame>* frame) {
+            ASSERT_EQ(result, DesktopCapturer::Result::SUCCESS);
+            if (check_result) {
+              if (exactly_match) {
+                AssertUpdatedRegionIs(**frame, updated_region);
+              } else {
+                AssertUpdatedRegionCovers(**frame, updated_region);
+              }
+            }
+          }));
   for (const auto& rect : updated_region) {
     frame_painter->updated_region()->AddRect(rect);
   }
@@ -143,8 +144,8 @@ void ExecuteDifferWrapperCase(BlackWhiteDesktopFramePainter* frame_painter,
 // DesktopFrame into black.
 void ExecuteCapturer(DesktopCapturerDifferWrapper* capturer,
                      MockDesktopCapturerCallback* callback) {
-  EXPECT_CALL(*callback,
-              OnCaptureResultPtr(DesktopCapturer::Result::SUCCESS, testing::_))
+  EXPECT_CALL(*callback, OnCaptureResultPtr(DesktopCapturer::Result::SUCCESS,
+                                            ::testing::_))
       .Times(1);
   capturer->CaptureFrame();
 }
@@ -168,11 +169,11 @@ void ExecuteDifferWrapperTest(bool with_hints,
 
   capturer.Start(&callback);
 
-  EXPECT_CALL(callback,
-              OnCaptureResultPtr(DesktopCapturer::Result::SUCCESS, testing::_))
+  EXPECT_CALL(callback, OnCaptureResultPtr(DesktopCapturer::Result::SUCCESS,
+                                           ::testing::_))
       .Times(1)
-      .WillOnce(testing::Invoke([](DesktopCapturer::Result result,
-                                   std::unique_ptr<DesktopFrame>* frame) {
+      .WillOnce(::testing::Invoke([](DesktopCapturer::Result result,
+                                     std::unique_ptr<DesktopFrame>* frame) {
         ASSERT_EQ(result, DesktopCapturer::Result::SUCCESS);
         AssertUpdatedRegionIs(**frame,
                               {DesktopRect::MakeSize((*frame)->size())});

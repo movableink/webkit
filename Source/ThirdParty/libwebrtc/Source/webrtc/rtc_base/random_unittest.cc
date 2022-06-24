@@ -8,13 +8,14 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "rtc_base/random.h"
+
 #include <math.h>
 
 #include <limits>
 #include <vector>
 
-#include "rtc_base/numerics/mathutils.h"  // unsigned difference
-#include "rtc_base/random.h"
+#include "rtc_base/numerics/math_utils.h"  // unsigned difference
 #include "test/gtest.h"
 
 namespace webrtc {
@@ -119,7 +120,7 @@ void BucketTestSignedInterval(unsigned int bucket_count,
 
   ASSERT_GE(high, low);
   ASSERT_GE(bucket_count, 2u);
-  uint32_t interval = unsigned_difference<int32_t>(high, low) + 1;
+  uint32_t interval = webrtc_impl::unsigned_difference<int32_t>(high, low) + 1;
   uint32_t numbers_per_bucket;
   if (interval == 0) {
     // The computation high - low + 1 should be 2^32 but overflowed
@@ -135,7 +136,8 @@ void BucketTestSignedInterval(unsigned int bucket_count,
     int32_t sample = prng->Rand(low, high);
     EXPECT_LE(low, sample);
     EXPECT_GE(high, sample);
-    buckets[unsigned_difference<int32_t>(sample, low) / numbers_per_bucket]++;
+    buckets[webrtc_impl::unsigned_difference<int32_t>(sample, low) /
+            numbers_per_bucket]++;
   }
 
   for (unsigned int i = 0; i < bucket_count; i++) {

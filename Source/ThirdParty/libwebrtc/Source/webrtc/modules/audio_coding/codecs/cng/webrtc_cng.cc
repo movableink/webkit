@@ -51,7 +51,6 @@ const int16_t WebRtcCng_kCorrWindow[WEBRTC_CNG_MAX_LPC_ORDER] = {
 
 ComfortNoiseDecoder::ComfortNoiseDecoder() {
   /* Needed to get the right function pointers in SPLIB. */
-  WebRtcSpl_Init();
   Reset();
 }
 
@@ -194,10 +193,10 @@ bool ComfortNoiseDecoder::Generate(rtc::ArrayView<int16_t> out_data,
   WebRtcSpl_ScaleVector(excitation, excitation, dec_used_scale_factor_,
                         num_samples, 13);
 
-  /* |lpPoly| - Coefficients in Q12.
-   * |excitation| - Speech samples.
-   * |nst->dec_filtstate| - State preservation.
-   * |out_data| - Filtered speech samples. */
+  /* `lpPoly` - Coefficients in Q12.
+   * `excitation` - Speech samples.
+   * `nst->dec_filtstate` - State preservation.
+   * `out_data` - Filtered speech samples. */
   WebRtcSpl_FilterAR(lpPoly, WEBRTC_CNG_MAX_LPC_ORDER + 1, excitation,
                      num_samples, dec_filtstate_, WEBRTC_CNG_MAX_LPC_ORDER,
                      dec_filtstateLow_, WEBRTC_CNG_MAX_LPC_ORDER,
@@ -217,8 +216,6 @@ ComfortNoiseEncoder::ComfortNoiseEncoder(int fs, int interval, int quality)
       enc_seed_(7777) /* For debugging only. */ {
   RTC_CHECK_GT(quality, 0);
   RTC_CHECK_LE(quality, WEBRTC_CNG_MAX_LPC_ORDER);
-  /* Needed to get the right function pointers in SPLIB. */
-  WebRtcSpl_Init();
 }
 
 void ComfortNoiseEncoder::Reset(int fs, int interval, int quality) {
@@ -398,7 +395,7 @@ size_t ComfortNoiseEncoder::Encode(rtc::ArrayView<const int16_t> speech,
 }
 
 namespace {
-/* Values in |k| are Q15, and |a| Q12. */
+/* Values in `k` are Q15, and `a` Q12. */
 void WebRtcCng_K2a16(int16_t* k, int useOrder, int16_t* a) {
   int16_t any[WEBRTC_SPL_MAX_LPC_ORDER + 1];
   int16_t* aptr;

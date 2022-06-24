@@ -21,28 +21,43 @@
 
 #pragma once
 
-#if ENABLE(VIDEO) && ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC)
-
-#include "MediaStreamPrivate.h"
-#include "MediaStreamTrackPrivate.h"
+#if ENABLE(VIDEO) && ENABLE(MEDIA_STREAM) && USE(GSTREAMER)
 
 #include <gst/gst.h>
+
+namespace WebCore {
+class MediaStreamPrivate;
+class MediaStreamTrackPrivate;
+}
 
 #define WEBKIT_MEDIA_TRACK_TAG_WIDTH "webkit-media-stream-width"
 #define WEBKIT_MEDIA_TRACK_TAG_HEIGHT "webkit-media-stream-height"
 #define WEBKIT_MEDIA_TRACK_TAG_KIND "webkit-media-stream-kind"
 
-namespace WebCore {
-
-typedef struct _WebKitMediaStreamSrc WebKitMediaStreamSrc;
-
 #define WEBKIT_MEDIA_STREAM_SRC(o) (G_TYPE_CHECK_INSTANCE_CAST((o), WEBKIT_TYPE_MEDIA_STREAM_SRC, WebKitMediaStreamSrc))
 #define WEBKIT_IS_MEDIA_STREAM_SRC(o) (G_TYPE_CHECK_INSTANCE_TYPE((o), WEBKIT_TYPE_MEDIA_STREAM_SRC))
-#define WEBKIT_TYPE_MEDIA_STREAM_SRC (webkit_media_stream_src_get_type())
-GType webkit_media_stream_src_get_type(void) G_GNUC_CONST;
-bool webkitMediaStreamSrcSetStream(WebKitMediaStreamSrc*, MediaStreamPrivate*);
-bool webkitMediaStreamSrcAddTrack(WebKitMediaStreamSrc*, MediaStreamTrackPrivate*, bool onlyTrack);
-GstElement * webkitMediaStreamSrcNew(void);
-} // WebCore
+#define WEBKIT_MEDIA_STREAM_SRC_CAST(o) ((WebKitMediaStreamSrc*) o)
 
-#endif // ENABLE(VIDEO) && ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC)
+#define WEBKIT_TYPE_MEDIA_STREAM_SRC (webkit_media_stream_src_get_type())
+GType webkit_media_stream_src_get_type(void);
+
+typedef struct _WebKitMediaStreamSrc WebKitMediaStreamSrc;
+typedef struct _WebKitMediaStreamSrcClass WebKitMediaStreamSrcClass;
+typedef struct _WebKitMediaStreamSrcPrivate WebKitMediaStreamSrcPrivate;
+
+struct _WebKitMediaStreamSrc {
+    GstBin parent;
+    WebKitMediaStreamSrcPrivate* priv;
+};
+
+struct _WebKitMediaStreamSrcClass {
+    GstBinClass parentClass;
+};
+
+GstElement* webkitMediaStreamSrcNew();
+void webkitMediaStreamSrcSetStream(WebKitMediaStreamSrc*, WebCore::MediaStreamPrivate*, bool isVideoPlayer);
+void webkitMediaStreamSrcAddTrack(WebKitMediaStreamSrc*, WebCore::MediaStreamTrackPrivate*, bool onlyTrack);
+void webkitMediaStreamSrcConfigureAudioTracks(WebKitMediaStreamSrc*, float volume, bool isMuted, bool isPlaying);
+void webkitMediaStreamSrcSignalEndOfStream(WebKitMediaStreamSrc*);
+
+#endif // ENABLE(VIDEO) && ENABLE(MEDIA_STREAM) && USE(GSTREAMER)

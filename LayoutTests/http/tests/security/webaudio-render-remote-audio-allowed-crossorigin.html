@@ -15,9 +15,9 @@
         audio.crossOrigin = "anonymous";
         let mediaFile = findMediaFile("audio", "../../media/resources/1000Hz-sin");
         let type = mimeTypeForExtension(mediaFile.split('.').pop());
-        audio.src = "http://localhost:8080/security/resources/video-cross-origin-allow.php?name=" + mediaFile + "&type=" + type;
+        audio.src = "http://localhost:8080/security/resources/video-cross-origin-allow.py?name=" + mediaFile + "&type=" + type;
 
-        context = new webkitAudioContext();
+        context = new AudioContext();
         let mediaSource = context.createMediaElementSource(audio);
         let analyser = context.createAnalyser();
         analyser.fftSize = 32;
@@ -30,18 +30,20 @@
 
         window.outputArray = new Float32Array(analyser.frequencyBinCount);
         window.silentArray = new Float32Array(analyser.frequencyBinCount);
-        silentArray.fill(analyser.minDecibels);
+        silentArray.fill(-Infinity);
 
         var intervalToken = setInterval(() => {
             analyser.getFloatFrequencyData(outputArray);
         }, 30);
 
         audio.addEventListener("ended", event => {
-            clearInterval(intervalToken);
-            context.suspend().then(() => {
-                shouldNotBe("outputArray", "silentArray");
-                finishJSTest();
-            });
+            setTimeout(function() {
+                clearInterval(intervalToken);
+                context.suspend().then(() => {
+                    shouldNotBe("outputArray", "silentArray");
+                    finishJSTest();
+                })
+            }, 100);
         });
     }
     window.addEventListener('load', go);

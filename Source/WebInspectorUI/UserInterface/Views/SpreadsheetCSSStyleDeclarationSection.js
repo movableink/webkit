@@ -58,65 +58,70 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
         return this._style.editable;
     }
 
+    set propertyVisibilityMode(propertyVisibilityMode)
+    {
+        this._propertiesEditor.propertyVisibilityMode = propertyVisibilityMode;
+    }
+
     initialLayout()
     {
         super.initialLayout();
 
-        if (WI.settings.experimentalEnableStylesIcons.value) {
-            let iconClassName = null;
-            switch (this._style.type) {
-            case WI.CSSStyleDeclaration.Type.Rule:
-                console.assert(this._style.ownerRule);
-                if (this._style.inherited) {
-                    iconClassName = "inherited-style-rule-icon";
-                    break;
-                }
-
-                switch (this._style.ownerRule.type) {
-                case WI.CSSStyleSheet.Type.Author:
-                    iconClassName = "author-style-rule-icon";
-                    break;
-                case WI.CSSStyleSheet.Type.User:
-                    iconClassName = "user-style-rule-icon";
-                    break;
-                case WI.CSSStyleSheet.Type.UserAgent:
-                    iconClassName = "user-agent-style-rule-icon";
-                    break;
-                case WI.CSSStyleSheet.Type.Inspector:
-                    iconClassName = "inspector-style-rule-icon";
-                    break;
-                }
-                break;
-            case WI.CSSStyleDeclaration.Type.Inline:
-            case WI.CSSStyleDeclaration.Type.Attribute:
-                if (this._style.inherited)
-                    iconClassName = "inherited-element-style-rule-icon";
-                else
-                    iconClassName = WI.DOMTreeElementPathComponent.DOMElementIconStyleClassName;
+        let iconClassName = null;
+        switch (this._style.type) {
+        case WI.CSSStyleDeclaration.Type.Rule:
+            console.assert(this._style.ownerRule);
+            if (this._style.inherited) {
+                iconClassName = "inherited-style-rule-icon";
                 break;
             }
-            console.assert(iconClassName);
-            this._element.classList.add("has-icon", iconClassName);
-        }
 
-        let groupings = this._style.groupings.filter((grouping) => grouping.text !== "all");
+            switch (this._style.ownerRule.type) {
+            case WI.CSSStyleSheet.Type.Author:
+                iconClassName = "author-style-rule-icon";
+                break;
+            case WI.CSSStyleSheet.Type.User:
+                iconClassName = "user-style-rule-icon";
+                break;
+            case WI.CSSStyleSheet.Type.UserAgent:
+                iconClassName = "user-agent-style-rule-icon";
+                break;
+            case WI.CSSStyleSheet.Type.Inspector:
+                iconClassName = "inspector-style-rule-icon";
+                break;
+            }
+            break;
+        case WI.CSSStyleDeclaration.Type.Inline:
+        case WI.CSSStyleDeclaration.Type.Attribute:
+            if (this._style.inherited)
+                iconClassName = "inherited-element-style-rule-icon";
+            else
+                iconClassName = WI.DOMTreeElementPathComponent.DOMElementIconStyleClassName;
+            break;
+        }
+        console.assert(iconClassName);
+        this._element.classList.add("has-icon", iconClassName);
+
+        let groupings = this._style.groupings.filter((grouping) => !grouping.isMedia || grouping.text !== "all").reverse();
         if (groupings.length) {
             let groupingsElement = this.element.appendChild(document.createElement("div"));
             groupingsElement.classList.add("header-groupings");
 
             let currentGroupingType = null;
+            let currentGroupingHadText = false;
             let groupingTypeElement = null;
             this._groupingElements = groupings.map((grouping) => {
-                if (grouping.type !== currentGroupingType) {
+                if (grouping.type !== currentGroupingType || !grouping.text || !currentGroupingHadText) {
                     groupingTypeElement = groupingsElement.appendChild(document.createElement("div"));
                     groupingTypeElement.classList.add("grouping");
                     groupingTypeElement.textContent = grouping.prefix + " ";
                     currentGroupingType = grouping.type;
                 } else
-                    groupingTypeElement.append(", ");
+                    groupingTypeElement.append(grouping.isLayer && grouping.text ? "." : ", ");
 
+                currentGroupingHadText = !!grouping.text;
                 let span = groupingTypeElement.appendChild(document.createElement("span"));
-                span.textContent = grouping.text;
+                span.textContent = grouping.text ?? "";
                 return span;
             });
         }
@@ -140,12 +145,12 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
 
         if (this._style.selectorEditable) {
             this._selectorTextField = new WI.SpreadsheetSelectorField(this, this._selectorElement);
-            this._selectorTextField.addEventListener(WI.SpreadsheetSelectorField.Event.StartedEditing, (event) => {
+            this._selectorTextField.addEventListener(WI.SpreadsheetSelectorField.Event.StartedEditing, function(event) {
                 this._headerElement.classList.add("editing-selector");
-            });
-            this._selectorTextField.addEventListener(WI.SpreadsheetSelectorField.Event.StoppedEditing, (event) => {
+            }, this);
+            this._selectorTextField.addEventListener(WI.SpreadsheetSelectorField.Event.StoppedEditing, function(event) {
                 this._headerElement.classList.remove("editing-selector");
-            });
+            }, this);
 
             this._selectorElement.tabIndex = 0;
         }
@@ -187,11 +192,6 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
 
         if (this._shouldFocusSelectorElement)
             this.startEditingRuleSelector();
-    }
-
-    hidden()
-    {
-        this._propertiesEditor.hidden();
     }
 
     startEditingRuleSelector()
@@ -291,6 +291,11 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
             this._delegate.spreadsheetCSSStyleDeclarationSectionSelectProperty(property);
     }
 
+    spreadsheetCSSStyleDeclarationEditorSetAllPropertyVisibilityMode(editor, propertyVisibilityMode)
+    {
+        this._delegate?.spreadsheetCSSStyleDeclarationSectionSetAllPropertyVisibilityMode?.(this, propertyVisibilityMode);
+    }
+
     applyFilter(filterText)
     {
         this._filterText = filterText;
@@ -352,14 +357,12 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
             selectorElement.classList.add(WI.SpreadsheetCSSStyleDeclarationSection.MatchedSelectorElementStyleClassName);
         };
 
-        if (WI.settings.experimentalEnableStylesIcons.value) {
-            if (!this._iconElement) {
-                this._iconElement = document.createElement("img");
-                this._iconElement.classList.add("icon");
-                WI.addMouseDownContextMenuHandlers(this._iconElement, this._populateIconElementContextMenu.bind(this));
-            }
-            this._selectorElement.appendChild(this._iconElement);
+        if (!this._iconElement) {
+            this._iconElement = document.createElement("img");
+            this._iconElement.classList.add("icon");
+            WI.addMouseDownContextMenuHandlers(this._iconElement, this._populateIconElementContextMenu.bind(this));
         }
+        this._selectorElement.appendChild(this._iconElement);
 
         switch (this._style.type) {
         case WI.CSSStyleDeclaration.Type.Rule:
@@ -480,7 +483,7 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
     _populateIconElementContextMenu(contextMenu)
     {
         contextMenu.appendItem(WI.UIString("Copy Rule"), () => {
-            InspectorFrontendHost.copyText(this._style.generateCSSRuleString());
+            InspectorFrontendHost.copyText(this._style.generateFormattedText({includeGroupingsAndSelectors: true, multiline: true}));
         });
 
         if (this._style.editable && this._style.properties.length) {
@@ -491,7 +494,7 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
             });
         }
 
-        if (!this._style.inherited) {
+        if (!this._style.inherited && InspectorBackend.hasCommand("CSS.addRule")) {
             let generateSelector = () => {
                 if (this._style.type === WI.CSSStyleDeclaration.Type.Attribute)
                     return this._style.node.displayName;
@@ -530,7 +533,9 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
 
                         let pseudoClassSelector = ":" + pseudoClass;
                         contextMenu.appendItem(WI.UIString("Add %s Rule").format(pseudoClassSelector), () => {
-                            this._style.node.setPseudoClassEnabled(pseudoClass, true);
+                            if (WI.cssManager.canForcePseudoClasses())
+                                this._style.node.setPseudoClassEnabled(pseudoClass, true);
+
                             addPseudoRule(pseudoClassSelector);
                         });
                     }
@@ -562,6 +567,7 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
                 WI.showSourceCodeLocation(this._style.ownerRule.sourceCodeLocation, {
                     ignoreNetworkTab: true,
                     ignoreSearchTab: true,
+                    initiatorHint: WI.TabBrowser.TabNavigationInitiator.ContextMenu,
                 });
             });
         }
@@ -640,7 +646,7 @@ WI.SpreadsheetCSSStyleDeclarationSection = class SpreadsheetCSSStyleDeclarationS
         let node = this._style.node;
 
         if (!this._style.ownerRule) {
-            WI.domManager.highlightDOMNode(node.id);
+            node.highlight();
             return;
         }
 

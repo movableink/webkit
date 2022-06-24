@@ -42,6 +42,9 @@
 
 static NSString * const unblockURLHostKey { @"unblockURLHost" };
 static NSString * const unreachableURLKey { @"unreachableURL" };
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+static NSString * const unblockedAfterRequestKey { @"unblockedAfterRequest" };
+#endif
 
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
 static NSString * const webFilterEvaluatorKey { @"webFilterEvaluator" };
@@ -95,32 +98,43 @@ bool ContentFilterUnblockHandler::needsUIProcess() const
 void ContentFilterUnblockHandler::encode(NSCoder *coder) const
 {
     ASSERT_ARG(coder, coder.allowsKeyedCoding && coder.requiresSecureCoding);
-    BEGIN_BLOCK_OBJC_EXCEPTIONS;
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
     [coder encodeObject:m_unblockURLHost forKey:unblockURLHostKey];
     [coder encodeObject:(NSURL *)m_unreachableURL forKey:unreachableURLKey];
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
     [coder encodeObject:m_webFilterEvaluator.get() forKey:webFilterEvaluatorKey];
 #endif
-    END_BLOCK_OBJC_EXCEPTIONS;
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    [coder encodeObject:m_unblockedAfterRequest forKey:unblockedAfterRequestKey];
+#endif
+
+    END_BLOCK_OBJC_EXCEPTIONS
 }
 
 bool ContentFilterUnblockHandler::decode(NSCoder *coder, ContentFilterUnblockHandler& unblockHandler)
 {
     ASSERT_ARG(coder, coder.allowsKeyedCoding && coder.requiresSecureCoding);
-    BEGIN_BLOCK_OBJC_EXCEPTIONS;
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
     unblockHandler.m_unblockURLHost = [coder decodeObjectOfClass:[NSString class] forKey:unblockURLHostKey];
     unblockHandler.m_unreachableURL = [coder decodeObjectOfClass:[NSURL class] forKey:unreachableURLKey];
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
     unblockHandler.m_webFilterEvaluator = [coder decodeObjectOfClass:getWebFilterEvaluatorClass() forKey:webFilterEvaluatorKey];
 #endif
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    unblockHandler.m_unblockedAfterRequest = [coder decodeObjectOfClass:[NSNumber class] forKey:unblockedAfterRequestKey];
+#endif
     return true;
-    END_BLOCK_OBJC_EXCEPTIONS;
+    END_BLOCK_OBJC_EXCEPTIONS
     return false;
 }
 
 bool ContentFilterUnblockHandler::canHandleRequest(const ResourceRequest& request) const
 {
-    if (!m_unblockRequester) {
+    if (!m_unblockRequester
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+        && !m_unblockedAfterRequest
+#endif
+        ) {
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
         if (!m_webFilterEvaluator)
             return false;
@@ -137,23 +151,12 @@ bool ContentFilterUnblockHandler::canHandleRequest(const ResourceRequest& reques
     return isUnblockRequest;
 }
 
-static inline void dispatchToMainThread(void (^block)())
-{
-    dispatch_async(dispatch_get_main_queue(), ^{
-#if PLATFORM(IOS_FAMILY)
-        WebThreadRun(block);
-#else
-        block();
-#endif
-    });
-}
-
 void ContentFilterUnblockHandler::requestUnblockAsync(DecisionHandlerFunction decisionHandler) const
 {
 #if HAVE(PARENTAL_CONTROLS_WITH_UNBLOCK_HANDLER)
     if (m_webFilterEvaluator) {
         [m_webFilterEvaluator unblockWithCompletion:[decisionHandler](BOOL unblocked, NSError *) {
-            dispatchToMainThread([decisionHandler, unblocked] {
+            callOnMainThread([decisionHandler, unblocked] {
                 LOG(ContentFiltering, "WebFilterEvaluator %s the unblock request.\n", unblocked ? "allowed" : "did not allow");
                 decisionHandler(unblocked);
             });
@@ -161,15 +164,29 @@ void ContentFilterUnblockHandler::requestUnblockAsync(DecisionHandlerFunction de
         return;
     }
 #endif
-
-    if (m_unblockRequester) {
-        m_unblockRequester([decisionHandler](bool unblocked) {
-            dispatchToMainThread([decisionHandler, unblocked] {
+    auto unblockRequester = m_unblockRequester;
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    if (!unblockRequester && m_unblockedAfterRequest) {
+        unblockRequester = [unblocked = m_unblockedAfterRequest.boolValue](ContentFilterUnblockHandler::DecisionHandlerFunction function) {
+            function(unblocked);
+        };
+    }
+#endif
+    if (unblockRequester) {
+        unblockRequester([decisionHandler](bool unblocked) {
+            callOnMainThread([decisionHandler, unblocked] {
                 decisionHandler(unblocked);
             });
         });
     }
 }
+
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+void ContentFilterUnblockHandler::setUnblockedAfterRequest(bool unblocked)
+{
+    m_unblockedAfterRequest = [NSNumber numberWithBool:unblocked];
+}
+#endif
 
 } // namespace WebCore
 

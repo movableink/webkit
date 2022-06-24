@@ -23,14 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+#import "config.h"
 #import "AccessibilityTextMarker.h"
 
 namespace WTR {
 
 bool AccessibilityTextMarker::isEqual(AccessibilityTextMarker* other)
 {
-    return [(__bridge id)platformTextMarker() isEqual:(__bridge id)other->platformTextMarker()];
+    return [platformTextMarker() isEqual:other->platformTextMarker()];
 }
 
 } // namespace WTR
-

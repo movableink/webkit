@@ -12,23 +12,26 @@
 #define LOGGING_RTC_EVENT_LOG_EVENTS_RTC_EVENT_PROBE_CLUSTER_CREATED_H_
 
 #include <stdint.h>
+
 #include <memory>
 
-#include "logging/rtc_event_log/events/rtc_event.h"
+#include "api/rtc_event_log/rtc_event.h"
+#include "api/units/timestamp.h"
 
 namespace webrtc {
 
 class RtcEventProbeClusterCreated final : public RtcEvent {
  public:
+  static constexpr Type kType = Type::ProbeClusterCreated;
+
   RtcEventProbeClusterCreated(int32_t id,
                               int32_t bitrate_bps,
                               uint32_t min_probes,
                               uint32_t min_bytes);
   ~RtcEventProbeClusterCreated() override = default;
 
-  Type GetType() const override;
-
-  bool IsConfigEvent() const override;
+  Type GetType() const override { return kType; }
+  bool IsConfigEvent() const override { return false; }
 
   std::unique_ptr<RtcEventProbeClusterCreated> Copy() const;
 
@@ -44,6 +47,29 @@ class RtcEventProbeClusterCreated final : public RtcEvent {
   const int32_t bitrate_bps_;
   const uint32_t min_probes_;
   const uint32_t min_bytes_;
+};
+
+struct LoggedBweProbeClusterCreatedEvent {
+  LoggedBweProbeClusterCreatedEvent() = default;
+  LoggedBweProbeClusterCreatedEvent(Timestamp timestamp,
+                                    int32_t id,
+                                    int32_t bitrate_bps,
+                                    uint32_t min_packets,
+                                    uint32_t min_bytes)
+      : timestamp(timestamp),
+        id(id),
+        bitrate_bps(bitrate_bps),
+        min_packets(min_packets),
+        min_bytes(min_bytes) {}
+
+  int64_t log_time_us() const { return timestamp.us(); }
+  int64_t log_time_ms() const { return timestamp.ms(); }
+
+  Timestamp timestamp = Timestamp::MinusInfinity();
+  int32_t id;
+  int32_t bitrate_bps;
+  uint32_t min_packets;
+  uint32_t min_bytes;
 };
 
 }  // namespace webrtc

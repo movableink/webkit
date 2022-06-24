@@ -12,12 +12,12 @@
 
 #include <stddef.h>
 
+#include "api/scoped_refptr.h"
 #include "modules/audio_device/audio_device_config.h"  // IWYU pragma: keep
 #include "modules/audio_device/audio_device_generic.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
-#include "rtc_base/refcountedobject.h"
-#include "rtc_base/scoped_ref_ptr.h"
+#include "rtc_base/ref_counted_object.h"
 #include "system_wrappers/include/metrics.h"
 
 #if defined(_WIN32)
@@ -26,7 +26,7 @@
 #endif
 #elif defined(WEBRTC_ANDROID)
 #include <stdlib.h>
-#if defined(AUDIO_DEVICE_INCLUDE_ANDROID_AAUDIO)
+#if defined(WEBRTC_AUDIO_DEVICE_INCLUDE_ANDROID_AAUDIO)
 #include "modules/audio_device/android/aaudio_player.h"
 #include "modules/audio_device/android/aaudio_recorder.h"
 #endif
@@ -37,14 +37,14 @@
 #include "modules/audio_device/android/opensles_player.h"
 #include "modules/audio_device/android/opensles_recorder.h"
 #elif defined(WEBRTC_LINUX)
-#if defined(LINUX_ALSA)
+#if defined(WEBRTC_ENABLE_LINUX_ALSA)
 #include "modules/audio_device/linux/audio_device_alsa_linux.h"
 #endif
-#if defined(LINUX_PULSE)
+#if defined(WEBRTC_ENABLE_LINUX_PULSE)
 #include "modules/audio_device/linux/audio_device_pulse_linux.h"
 #endif
 #elif defined(WEBRTC_IOS)
-#include "modules/audio_device/ios/audio_device_ios.h"
+#include "sdk/objc/native/src/audio/audio_device_ios.h"
 #elif defined(WEBRTC_MAC)
 #include "modules/audio_device/mac/audio_device_mac.h"
 #endif
@@ -71,15 +71,17 @@
 namespace webrtc {
 
 rtc::scoped_refptr<AudioDeviceModule> AudioDeviceModule::Create(
-    const AudioLayer audio_layer) {
-  RTC_LOG(INFO) << __FUNCTION__;
-  return AudioDeviceModule::CreateForTest(audio_layer);
+    AudioLayer audio_layer,
+    TaskQueueFactory* task_queue_factory) {
+  RTC_DLOG(INFO) << __FUNCTION__;
+  return AudioDeviceModule::CreateForTest(audio_layer, task_queue_factory);
 }
 
 // static
 rtc::scoped_refptr<AudioDeviceModuleForTest> AudioDeviceModule::CreateForTest(
-    const AudioLayer audio_layer) {
-  RTC_LOG(INFO) << __FUNCTION__;
+    AudioLayer audio_layer,
+    TaskQueueFactory* task_queue_factory) {
+  RTC_DLOG(INFO) << __FUNCTION__;
 
   // The "AudioDeviceModule::kWindowsCoreAudio2" audio layer has its own
   // dedicated factory method which should be used instead.
@@ -90,43 +92,37 @@ rtc::scoped_refptr<AudioDeviceModuleForTest> AudioDeviceModule::CreateForTest(
   }
 
   // Create the generic reference counted (platform independent) implementation.
-  rtc::scoped_refptr<AudioDeviceModuleImpl> audioDevice(
-      new rtc::RefCountedObject<AudioDeviceModuleImpl>(audio_layer));
+  auto audio_device = rtc::make_ref_counted<AudioDeviceModuleImpl>(
+      audio_layer, task_queue_factory);
 
   // Ensure that the current platform is supported.
-  if (audioDevice->CheckPlatform() == -1) {
+  if (audio_device->CheckPlatform() == -1) {
     return nullptr;
   }
 
   // Create the platform-dependent implementation.
-  if (audioDevice->CreatePlatformSpecificObjects() == -1) {
+  if (audio_device->CreatePlatformSpecificObjects() == -1) {
     return nullptr;
   }
 
   // Ensure that the generic audio buffer can communicate with the platform
   // specific parts.
-  if (audioDevice->AttachAudioBuffer() == -1) {
+  if (audio_device->AttachAudioBuffer() == -1) {
     return nullptr;
   }
 
-  return audioDevice;
+  return audio_device;
 }
 
-// TODO(bugs.webrtc.org/7306): deprecated.
-rtc::scoped_refptr<AudioDeviceModule> AudioDeviceModule::Create(
-    const int32_t id,
-    const AudioLayer audio_layer) {
-  RTC_LOG(INFO) << __FUNCTION__;
-  return AudioDeviceModule::Create(audio_layer);
-}
-
-AudioDeviceModuleImpl::AudioDeviceModuleImpl(const AudioLayer audioLayer)
-    : audio_layer_(audioLayer) {
-  RTC_LOG(INFO) << __FUNCTION__;
+AudioDeviceModuleImpl::AudioDeviceModuleImpl(
+    AudioLayer audio_layer,
+    TaskQueueFactory* task_queue_factory)
+    : audio_layer_(audio_layer), audio_device_buffer_(task_queue_factory) {
+  RTC_DLOG(INFO) << __FUNCTION__;
 }
 
 int32_t AudioDeviceModuleImpl::CheckPlatform() {
-  RTC_LOG(INFO) << __FUNCTION__;
+  RTC_DLOG(INFO) << __FUNCTION__;
   // Ensure that the current platform is supported
   PlatformType platform(kPlatformNotSupported);
 #if defined(_WIN32)
@@ -226,13 +222,13 @@ int32_t AudioDeviceModuleImpl::CreatePlatformSpecificObjects() {
     audio_device_.reset(new AudioDeviceTemplate<AudioRecordJni, OpenSLESPlayer>(
         audio_layer, audio_manager));
   } else if (audio_layer == kAndroidAAudioAudio) {
-#if defined(AUDIO_DEVICE_INCLUDE_ANDROID_AAUDIO)
+#if defined(WEBRTC_AUDIO_DEVICE_INCLUDE_ANDROID_AAUDIO)
     // AAudio based audio for both input and output.
     audio_device_.reset(new AudioDeviceTemplate<AAudioRecorder, AAudioPlayer>(
         audio_layer, audio_manager));
 #endif
   } else if (audio_layer == kAndroidJavaInputAndAAudioOutputAudio) {
-#if defined(AUDIO_DEVICE_INCLUDE_ANDROID_AAUDIO)
+#if defined(WEBRTC_AUDIO_DEVICE_INCLUDE_ANDROID_AAUDIO)
     // Java audio for input and AAudio for output audio (i.e. mixed APIs).
     audio_device_.reset(new AudioDeviceTemplate<AudioRecordJni, AAudioPlayer>(
         audio_layer, audio_manager));
@@ -244,12 +240,13 @@ int32_t AudioDeviceModuleImpl::CreatePlatformSpecificObjects() {
 // END #if defined(WEBRTC_ANDROID)
 
 // Linux ADM implementation.
-// Note that, LINUX_ALSA is always defined by default when WEBRTC_LINUX is
-// defined. LINUX_PULSE depends on the 'rtc_include_pulse_audio' build flag.
+// Note that, WEBRTC_ENABLE_LINUX_ALSA is always defined by default when
+// WEBRTC_LINUX is defined. WEBRTC_ENABLE_LINUX_PULSE depends on the
+// 'rtc_include_pulse_audio' build flag.
 // TODO(bugs.webrtc.org/9127): improve support and make it more clear that
 // PulseAudio is the default selection.
 #elif defined(WEBRTC_LINUX)
-#if !defined(LINUX_PULSE)
+#if !defined(WEBRTC_ENABLE_LINUX_PULSE)
   // Build flag 'rtc_include_pulse_audio' is set to false. In this mode:
   // - kPlatformDefaultAudio => ALSA, and
   // - kLinuxAlsaAudio => ALSA, and
@@ -276,13 +273,14 @@ int32_t AudioDeviceModuleImpl::CreatePlatformSpecificObjects() {
     audio_device_.reset(new AudioDeviceLinuxALSA());
     RTC_LOG(WARNING) << "Linux ALSA APIs will be utilized.";
   }
-#endif  // #if !defined(LINUX_PULSE)
+#endif  // #if !defined(WEBRTC_ENABLE_LINUX_PULSE)
 #endif  // #if defined(WEBRTC_LINUX)
 
 // iOS ADM implementation.
 #if defined(WEBRTC_IOS)
   if (audio_layer == kPlatformDefaultAudio) {
-    audio_device_.reset(new AudioDeviceIOS());
+    audio_device_.reset(
+        new ios_adm::AudioDeviceIOS(/*bypass_voice_processing=*/false));
     RTC_LOG(INFO) << "iPhone Audio APIs will be utilized.";
   }
 // END #if defined(WEBRTC_IOS)
@@ -548,11 +546,14 @@ int32_t AudioDeviceModuleImpl::SetStereoRecording(bool enable) {
   RTC_LOG(INFO) << __FUNCTION__ << "(" << enable << ")";
   CHECKinitialized_();
   if (audio_device_->RecordingIsInitialized()) {
-    RTC_LOG(WARNING) << "recording in stereo is not supported";
+    RTC_LOG(LERROR)
+        << "unable to set stereo mode after recording is initialized";
     return -1;
   }
   if (audio_device_->SetStereoRecording(enable) == -1) {
-    RTC_LOG(WARNING) << "failed to change stereo recording";
+    if (enable) {
+      RTC_LOG(WARNING) << "failed to enable stereo recording";
+    }
     return -1;
   }
   int8_t nChannels(1);
@@ -908,6 +909,14 @@ int32_t AudioDeviceModuleImpl::EnableBuiltInNS(bool enable) {
   int32_t ok = audio_device_->EnableBuiltInNS(enable);
   RTC_LOG(INFO) << "output: " << ok;
   return ok;
+}
+
+int32_t AudioDeviceModuleImpl::GetPlayoutUnderrunCount() const {
+  RTC_LOG(INFO) << __FUNCTION__;
+  CHECKinitialized_();
+  int32_t underrunCount = audio_device_->GetPlayoutUnderrunCount();
+  RTC_LOG(INFO) << "output: " << underrunCount;
+  return underrunCount;
 }
 
 #if defined(WEBRTC_IOS)

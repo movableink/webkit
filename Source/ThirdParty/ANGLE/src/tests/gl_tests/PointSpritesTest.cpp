@@ -22,8 +22,7 @@ constexpr char kVertexShaderSource[] =
             gl_Position  = vPosition;
         })";
 
-// TODO(ynovikov): Improve the tests to work with point size 1. http://anglebug.com/2553
-constexpr GLfloat kMinMaxPointSize = 2.0f;
+constexpr GLfloat kMinMaxPointSize = 1.0f;
 
 class PointSpritesTest : public ANGLETest
 {
@@ -120,10 +119,6 @@ class PointSpritesTest : public ANGLETest
 // https://www.khronos.org/registry/webgl/sdk/tests/conformance/glsl/variables/gl-pointcoord.html
 TEST_P(PointSpritesTest, PointCoordAndPointSizeCompliance)
 {
-    // TODO(jmadill): Investigate potential AMD driver bug.
-    // http://anglebug.com/1643
-    ANGLE_SKIP_TEST_IF(IsAMD() && IsDesktopOpenGL() && IsWindows());
-
     constexpr char fs[] =
         R"(precision mediump float;
         void main()
@@ -142,10 +137,6 @@ TEST_P(PointSpritesTest, PointCoordAndPointSizeCompliance)
 // main function.
 TEST_P(PointSpritesTest, UsingPointCoordInsideFunction)
 {
-    // TODO(jmadill): Investigate potential AMD driver bug.
-    // http://anglebug.com/1643
-    ANGLE_SKIP_TEST_IF(IsAMD() && IsDesktopOpenGL() && IsWindows());
-
     constexpr char fs[] =
         R"(precision mediump float;
         void foo() 
@@ -167,10 +158,6 @@ TEST_P(PointSpritesTest, UsingPointCoordInsideFunction)
 // https://www.khronos.org/registry/webgl/sdk/tests/conformance/rendering/point-no-attributes.html
 TEST_P(PointSpritesTest, PointWithoutAttributesCompliance)
 {
-    // TODO(jmadill): Investigate potential AMD driver bug.
-    // http://anglebug.com/1643
-    ANGLE_SKIP_TEST_IF(IsAMD() && IsDesktopOpenGL() && IsWindows());
-
     GLfloat pointSizeRange[2] = {};
     glGetFloatv(GL_ALIASED_POINT_SIZE_RANGE, pointSizeRange);
     GLfloat maxPointSize = pointSizeRange[1];
@@ -198,10 +185,6 @@ TEST_P(PointSpritesTest, PointWithoutAttributesCompliance)
 // https://www.khronos.org/registry/webgl/sdk/tests/conformance/rendering/point-with-gl-pointcoord-in-fragment-shader.html
 TEST_P(PointSpritesTest, PointCoordRegressionTest)
 {
-    // TODO(jmadill): Investigate potential AMD driver bug.
-    // http://anglebug.com/1643
-    ANGLE_SKIP_TEST_IF(IsAMD() && IsDesktopOpenGL() && IsWindows());
-
     GLfloat pointSizeRange[2] = {};
     glGetFloatv(GL_ALIASED_POINT_SIZE_RANGE, pointSizeRange);
     GLfloat maxPointSize = pointSizeRange[1];
@@ -274,10 +257,6 @@ void main()
 // https://www.khronos.org/registry/webgl/sdk/tests/conformance/rendering/point-size.html
 TEST_P(PointSpritesTest, PointSizeEnabledCompliance)
 {
-    // TODO(jmadill): Investigate potential AMD driver bug.
-    // http://anglebug.com/1643
-    ANGLE_SKIP_TEST_IF(IsAMD() && IsDesktopOpenGL() && IsWindows());
-
     constexpr char kFS[] = R"(precision mediump float;
 varying vec4 color;
 
@@ -417,6 +396,9 @@ void main(void)
 // spites.
 TEST_P(PointSpritesTest, PointSpriteAlternatingDrawTypes)
 {
+    // TODO(anglebug.com/4349): Investigate possible ARM driver bug.
+    ANGLE_SKIP_TEST_IF(IsFuchsia() && IsARM() && IsVulkan());
+
     GLfloat pointSizeRange[2] = {};
     glGetFloatv(GL_ALIASED_POINT_SIZE_RANGE, pointSizeRange);
     GLfloat maxPointSize = pointSizeRange[1];
@@ -480,6 +462,12 @@ TEST_P(PointSpritesTest, PointSizeAboveMaxIsClamped)
     // rendered at all on AMD. http://anglebug.com/2113
     ANGLE_SKIP_TEST_IF(IsAMD() && IsVulkan());
 
+    // TODO(anglebug.com/5491)
+    ANGLE_SKIP_TEST_IF(IsIOS() && IsOpenGLES());
+
+    // TODO(anglebug.com/6800)
+    ANGLE_SKIP_TEST_IF(IsMetal() && IsAMD());
+
     GLfloat pointSizeRange[2] = {};
     glGetFloatv(GL_ALIASED_POINT_SIZE_RANGE, pointSizeRange);
     GLfloat maxPointSize = pointSizeRange[1];
@@ -541,9 +529,4 @@ TEST_P(PointSpritesTest, PointSizeAboveMaxIsClamped)
 // We test on D3D11 9_3 because the existing D3D11 PointSprite implementation
 // uses Geometry Shaders which are not supported for 9_3.
 // D3D9 and D3D11 are also tested to ensure no regressions.
-ANGLE_INSTANTIATE_TEST(PointSpritesTest,
-                       ES2_D3D9(),
-                       ES2_D3D11(),
-                       ES2_OPENGL(),
-                       ES2_OPENGLES(),
-                       ES2_VULKAN());
+ANGLE_INSTANTIATE_TEST_ES2(PointSpritesTest);

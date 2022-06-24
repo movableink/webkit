@@ -10,11 +10,10 @@
 
 #include "common_video/libyuv/include/webrtc_libyuv.h"
 
-#include <string.h>
+#include <cstdint>
 
 #include "api/video/i420_buffer.h"
 #include "common_video/include/video_frame_buffer.h"
-#include "rtc_base/bind.h"
 #include "rtc_base/checks.h"
 #include "third_party/libyuv/include/libyuv.h"
 
@@ -26,8 +25,6 @@ size_t CalcBufferSize(VideoType type, int width, int height) {
   size_t buffer_size = 0;
   switch (type) {
     case VideoType::kI420:
-    case VideoType::kNV12:
-    case VideoType::kNV21:
     case VideoType::kIYUV:
     case VideoType::kYV12: {
       int half_width = (width + 1) >> 1;
@@ -35,9 +32,7 @@ size_t CalcBufferSize(VideoType type, int width, int height) {
       buffer_size = width * height + half_width * half_height * 2;
       break;
     }
-    case VideoType::kARGB4444:
     case VideoType::kRGB565:
-    case VideoType::kARGB1555:
     case VideoType::kYUY2:
     case VideoType::kUYVY:
       buffer_size = width * height * 2;
@@ -54,43 +49,6 @@ size_t CalcBufferSize(VideoType type, int width, int height) {
       break;
   }
   return buffer_size;
-}
-
-static int PrintPlane(const uint8_t* buf,
-                      int width,
-                      int height,
-                      int stride,
-                      FILE* file) {
-  for (int i = 0; i < height; i++, buf += stride) {
-    if (fwrite(buf, 1, width, file) != static_cast<unsigned int>(width))
-      return -1;
-  }
-  return 0;
-}
-
-// TODO(nisse): Belongs with the test code?
-int PrintVideoFrame(const I420BufferInterface& frame, FILE* file) {
-  int width = frame.width();
-  int height = frame.height();
-  int chroma_width = frame.ChromaWidth();
-  int chroma_height = frame.ChromaHeight();
-
-  if (PrintPlane(frame.DataY(), width, height, frame.StrideY(), file) < 0) {
-    return -1;
-  }
-  if (PrintPlane(frame.DataU(), chroma_width, chroma_height, frame.StrideU(),
-                 file) < 0) {
-    return -1;
-  }
-  if (PrintPlane(frame.DataV(), chroma_width, chroma_height, frame.StrideV(),
-                 file) < 0) {
-    return -1;
-  }
-  return 0;
-}
-
-int PrintVideoFrame(const VideoFrame& frame, FILE* file) {
-  return PrintVideoFrame(*frame.video_frame_buffer()->ToI420(), file);
 }
 
 int ExtractBuffer(const rtc::scoped_refptr<I420BufferInterface>& input_frame,
@@ -135,8 +93,6 @@ int ConvertVideoType(VideoType video_type) {
       return libyuv::FOURCC_YV12;
     case VideoType::kRGB24:
       return libyuv::FOURCC_24BG;
-    case VideoType::kABGR:
-      return libyuv::FOURCC_ABGR;
     case VideoType::kRGB565:
       return libyuv::FOURCC_RGBP;
     case VideoType::kYUY2:
@@ -145,18 +101,10 @@ int ConvertVideoType(VideoType video_type) {
       return libyuv::FOURCC_UYVY;
     case VideoType::kMJPEG:
       return libyuv::FOURCC_MJPG;
-    case VideoType::kNV21:
-      return libyuv::FOURCC_NV21;
-    case VideoType::kNV12:
-      return libyuv::FOURCC_NV12;
     case VideoType::kARGB:
       return libyuv::FOURCC_ARGB;
     case VideoType::kBGRA:
       return libyuv::FOURCC_BGRA;
-    case VideoType::kARGB4444:
-      return libyuv::FOURCC_R444;
-    case VideoType::kARGB1555:
-      return libyuv::FOURCC_RGBO;
   }
   RTC_NOTREACHED();
   return libyuv::FOURCC_ANY;
@@ -174,10 +122,6 @@ int ConvertFromI420(const VideoFrame& src_frame,
       dst_frame, dst_sample_size, src_frame.width(), src_frame.height(),
       ConvertVideoType(dst_video_type));
 }
-
-// Helper functions for keeping references alive.
-void KeepBufferRefs(rtc::scoped_refptr<webrtc::VideoFrameBuffer>,
-                    rtc::scoped_refptr<webrtc::VideoFrameBuffer>) {}
 
 rtc::scoped_refptr<I420ABufferInterface> ScaleI420ABuffer(
     const I420ABufferInterface& buffer,
@@ -197,8 +141,41 @@ rtc::scoped_refptr<I420ABufferInterface> ScaleI420ABuffer(
       yuv_buffer->StrideY(), yuv_buffer->DataU(), yuv_buffer->StrideU(),
       yuv_buffer->DataV(), yuv_buffer->StrideV(), axx_buffer->DataY(),
       axx_buffer->StrideY(),
-      rtc::Bind(&KeepBufferRefs, yuv_buffer, axx_buffer));
+      // To keep references alive.
+      [yuv_buffer, axx_buffer] {});
   return merged_buffer;
+}
+
+rtc::scoped_refptr<I420BufferInterface> ScaleVideoFrameBuffer(
+    const I420BufferInterface& source,
+    int dst_width,
+    int dst_height) {
+  rtc::scoped_refptr<I420Buffer> scaled_buffer =
+      I420Buffer::Create(dst_width, dst_height);
+  scaled_buffer->ScaleFrom(source);
+  return scaled_buffer;
+}
+
+double I420SSE(const I420BufferInterface& ref_buffer,
+               const I420BufferInterface& test_buffer) {
+  RTC_DCHECK_EQ(ref_buffer.width(), test_buffer.width());
+  RTC_DCHECK_EQ(ref_buffer.height(), test_buffer.height());
+  const uint64_t width = test_buffer.width();
+  const uint64_t height = test_buffer.height();
+  const uint64_t sse_y = libyuv::ComputeSumSquareErrorPlane(
+      ref_buffer.DataY(), ref_buffer.StrideY(), test_buffer.DataY(),
+      test_buffer.StrideY(), width, height);
+  const int width_uv = (width + 1) >> 1;
+  const int height_uv = (height + 1) >> 1;
+  const uint64_t sse_u = libyuv::ComputeSumSquareErrorPlane(
+      ref_buffer.DataU(), ref_buffer.StrideU(), test_buffer.DataU(),
+      test_buffer.StrideU(), width_uv, height_uv);
+  const uint64_t sse_v = libyuv::ComputeSumSquareErrorPlane(
+      ref_buffer.DataV(), ref_buffer.StrideV(), test_buffer.DataV(),
+      test_buffer.StrideV(), width_uv, height_uv);
+  const double samples = width * height + 2 * (width_uv * height_uv);
+  const double sse = sse_y + sse_u + sse_v;
+  return sse / (samples * 255.0 * 255.0);
 }
 
 // Compute PSNR for an I420A frame (all planes). Can upscale test frame.

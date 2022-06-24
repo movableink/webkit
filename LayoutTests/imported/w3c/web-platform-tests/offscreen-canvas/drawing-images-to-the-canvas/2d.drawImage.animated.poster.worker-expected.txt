@@ -1,3 +1,0 @@
-
-FAIL drawImage() of an APNG draws the poster frame Can't find variable: OffscreenCanvas
-

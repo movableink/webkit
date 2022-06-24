@@ -103,15 +103,19 @@ Ref<HTMLTextAreaElement> HTMLTextAreaElement::create(const QualifiedName& tagNam
     return textArea;
 }
 
+Ref<HTMLTextAreaElement> HTMLTextAreaElement::create(Document& document)
+{
+    return create(textareaTag, document, nullptr);
+}
+
 void HTMLTextAreaElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 {
-    root.appendChild(TextControlInnerTextElement::create(document()));
-    updateInnerTextElementEditability();
+    root.appendChild(TextControlInnerTextElement::create(document(), isInnerTextElementEditable()));
 }
 
 const AtomString& HTMLTextAreaElement::formControlType() const
 {
-    static NeverDestroyed<const AtomString> textarea("textarea", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> textarea("textarea", AtomString::ConstructFromLiteral);
     return textarea;
 }
 
@@ -132,10 +136,10 @@ void HTMLTextAreaElement::childrenChanged(const ChildChange& change)
     if (m_isDirty)
         setInnerTextValue(value());
     else
-        setNonDirtyValue(defaultValue());
+        setNonDirtyValue(defaultValue(),  TextControlSetValueSelection::DoNotSet);
 }
 
-bool HTMLTextAreaElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLTextAreaElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == alignAttr) {
         // Don't map 'align' attribute.  This matches what Firefox, Opera and IE do.
@@ -145,21 +149,21 @@ bool HTMLTextAreaElement::isPresentationAttribute(const QualifiedName& name) con
 
     if (name == wrapAttr)
         return true;
-    return HTMLTextFormControlElement::isPresentationAttribute(name);
+    return HTMLTextFormControlElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLTextAreaElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLTextAreaElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == wrapAttr) {
         if (shouldWrapText()) {
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWhiteSpace, CSSValuePreWrap);
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWordWrap, CSSValueBreakWord);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValuePreWrap);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWordWrap, CSSValueBreakWord);
         } else {
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWhiteSpace, CSSValuePre);
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWordWrap, CSSValueNormal);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValuePre);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWordWrap, CSSValueNormal);
         }
     } else
-        HTMLTextFormControlElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLTextFormControlElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -218,7 +222,7 @@ RenderPtr<RenderElement> HTMLTextAreaElement::createElementRenderer(RenderStyle&
     return createRenderer<RenderTextControlMultiLine>(*this, WTFMove(style));
 }
 
-bool HTMLTextAreaElement::appendFormData(DOMFormData& formData, bool)
+bool HTMLTextAreaElement::appendFormData(DOMFormData& formData)
 {
     if (name().isEmpty())
         return false;
@@ -237,7 +241,7 @@ bool HTMLTextAreaElement::appendFormData(DOMFormData& formData, bool)
 
 void HTMLTextAreaElement::reset()
 {
-    setNonDirtyValue(defaultValue());
+    setNonDirtyValue(defaultValue(), TextControlSetValueSelection::SetSelectionToEnd);
 }
 
 bool HTMLTextAreaElement::hasCustomFocusLogic() const
@@ -263,13 +267,14 @@ bool HTMLTextAreaElement::isMouseFocusable() const
 
 void HTMLTextAreaElement::updateFocusAppearance(SelectionRestorationMode restorationMode, SelectionRevealMode revealMode)
 {
-    if (restorationMode == SelectionRestorationMode::SetDefault || !hasCachedSelection()) {
+    if (restorationMode == SelectionRestorationMode::RestoreOrSelectAll && hasCachedSelection())
+        restoreCachedSelection(revealMode, Element::defaultFocusTextStateChangeIntent());
+    else {
         // If this is the first focus, set a caret at the beginning of the text.  
         // This matches some browsers' behavior; see bug 11746 Comment #15.
         // http://bugs.webkit.org/show_bug.cgi?id=11746#c15
         setSelectionRange(0, 0, SelectionHasNoDirection, revealMode, Element::defaultFocusTextStateChangeIntent());
-    } else
-        restoreCachedSelection(revealMode, Element::defaultFocusTextStateChangeIntent());
+    }
 }
 
 void HTMLTextAreaElement::defaultEventHandler(Event& event)
@@ -284,12 +289,13 @@ void HTMLTextAreaElement::defaultEventHandler(Event& event)
 
 void HTMLTextAreaElement::subtreeHasChanged()
 {
-    setChangedSinceLastFormControlChangeEvent(true);
     setFormControlValueMatchesRenderer(false);
     updateValidity();
 
     if (!focused())
         return;
+
+    setChangedSinceLastFormControlChangeEvent(true);
 
     if (RefPtr<Frame> frame = document().frame())
         frame->editor().textDidChangeInTextArea(this);
@@ -317,7 +323,8 @@ void HTMLTextAreaElement::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&
     // If the text field has no focus, we don't need to take account of the
     // selection length. The selection is the source of text drag-and-drop in
     // that case, and nothing in the text field will be removed.
-    unsigned selectionLength = focused() ? computeLengthForSubmission(plainText(document().frame()->selection().selection().toNormalizedRange().get())) : 0;
+    auto selectionRange = focused() ? document().frame()->selection().selection().toNormalizedRange() : std::nullopt;
+    unsigned selectionLength = selectionRange ? computeLengthForSubmission(plainText(*selectionRange)) : 0;
     ASSERT(currentLength >= selectionLength);
     unsigned baseLength = currentLength - selectionLength;
     unsigned appendableLength = unsignedMaxLength > baseLength ? unsignedMaxLength - baseLength : 0;
@@ -336,6 +343,11 @@ RefPtr<TextControlInnerTextElement> HTMLTextAreaElement::innerTextElement() cons
         return nullptr;
     
     return childrenOfType<TextControlInnerTextElement>(*root).first();
+}
+
+RefPtr<TextControlInnerTextElement> HTMLTextAreaElement::innerTextElementCreatingShadowSubtreeIfNeeded()
+{
+    return innerTextElement();
 }
 
 void HTMLTextAreaElement::rendererWillBeDestroyed()
@@ -362,21 +374,22 @@ String HTMLTextAreaElement::value() const
     return m_value;
 }
 
-void HTMLTextAreaElement::setValue(const String& value)
+ExceptionOr<void> HTMLTextAreaElement::setValue(const String& value, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
 {
-    setValueCommon(value);
+    setValueCommon(value, eventBehavior, selection);
     m_isDirty = true;
     updateValidity();
+    return { };
 }
 
-void HTMLTextAreaElement::setNonDirtyValue(const String& value)
+void HTMLTextAreaElement::setNonDirtyValue(const String& value, TextControlSetValueSelection selection)
 {
-    setValueCommon(value);
+    setValueCommon(value, TextFieldEventBehavior::DispatchNoEvent, selection);
     m_isDirty = false;
     updateValidity();
 }
 
-void HTMLTextAreaElement::setValueCommon(const String& newValue)
+void HTMLTextAreaElement::setValueCommon(const String& newValue, TextFieldEventBehavior, TextControlSetValueSelection selection)
 {
     m_wasModifiedByUser = false;
     // Code elsewhere normalizes line endings added by the user via the keyboard or pasting.
@@ -397,10 +410,14 @@ void HTMLTextAreaElement::setValueCommon(const String& newValue)
     invalidateStyleForSubtree();
     setFormControlValueMatchesRenderer(true);
 
-    // Set the caret to the end of the text value.
     if (document().focusedElement() == this) {
         unsigned endOfString = m_value.length();
         setSelectionRange(endOfString, endOfString);
+    }  else if (selection == TextControlSetValueSelection::SetSelectionToEnd) {
+        // We don't change text selection here but need to update caret to
+        // the end of the text value except for initialize.
+        unsigned endOfString = m_value.length();
+        cacheSelection(endOfString, endOfString, SelectionHasNoDirection);
     }
 
     setTextAsOfLastFormControlChangeEvent(normalizedValue);
@@ -498,9 +515,10 @@ bool HTMLTextAreaElement::isValidValue(const String& candidate) const
     return !valueMissing(candidate) && !tooShort(candidate, IgnoreDirtyFlag) && !tooLong(candidate, IgnoreDirtyFlag);
 }
 
-void HTMLTextAreaElement::accessKeyAction(bool)
+bool HTMLTextAreaElement::accessKeyAction(bool)
 {
     focus();
+    return false;
 }
 
 void HTMLTextAreaElement::setCols(unsigned cols)
@@ -530,7 +548,7 @@ bool HTMLTextAreaElement::matchesReadWritePseudoClass() const
 
 void HTMLTextAreaElement::updatePlaceholderText()
 {
-    String placeholderText = strippedPlaceholder();
+    auto& placeholderText = attributeWithoutSynchronization(placeholderAttr);
     if (placeholderText.isEmpty()) {
         if (m_placeholder) {
             userAgentShadowRoot()->removeChild(*m_placeholder);
@@ -563,7 +581,7 @@ void HTMLTextAreaElement::copyNonAttributePropertiesFromElement(const Element& s
 {
     auto& sourceElement = downcast<HTMLTextAreaElement>(source);
 
-    setValueCommon(sourceElement.value());
+    setValueCommon(sourceElement.value(), DispatchNoEvent, TextControlSetValueSelection::SetSelectionToEnd);
     m_isDirty = sourceElement.m_isDirty;
     HTMLTextFormControlElement::copyNonAttributePropertiesFromElement(source);
 

@@ -30,7 +30,7 @@
 #import "TestNavigationDelegate.h"
 #import "TestWKWebView.h"
 #import <WebKit/WebKit.h>
-#import <wtf/RetainPtr.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 TEST(WKWebView, GetContentsShouldReturnString)
 {
@@ -43,6 +43,39 @@ TEST(WKWebView, GetContentsShouldReturnString)
     [webView _getContentsAsStringWithCompletionHandler:^(NSString *string, NSError *error) {
         EXPECT_NULL(error);
         EXPECT_WK_STREQ(@"Simple HTML file.", string);
+        finished = true;
+    }];
+
+    TestWebKitAPI::Util::run(&finished);
+}
+
+TEST(WKWebView, GetContentsShouldFailWhenClosingPage)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+
+    [webView synchronouslyLoadTestPageNamed:@"simple"];
+
+    __block bool finished = false;
+
+    [webView _getContentsAsStringWithCompletionHandlerKeepIPCConnectionAliveForTesting:^(NSString *string, NSError *error) {
+        finished = true;
+    }];
+
+    [webView _close];
+
+    TestWebKitAPI::Util::run(&finished);
+}
+
+TEST(WKWebView, GetContentsOfAllFramesShouldReturnString)
+{
+    RetainPtr<TestWKWebView> webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+
+    [webView synchronouslyLoadHTMLString:@"<body>beep<iframe srcdoc=\"meep\">herp</iframe><iframe srcdoc=\"moop\">derp</iframe></body>"];
+
+    __block bool finished = false;
+
+    [webView _getContentsOfAllFramesAsStringWithCompletionHandler:^(NSString *string) {
+        EXPECT_WK_STREQ(@"beep\n\nmeep\n\nmoop", string);
         finished = true;
     }];
 
@@ -91,6 +124,45 @@ TEST(WKWebView, GetContentsShouldReturnAttributedString)
 #else
         EXPECT_WK_STREQ(@"kCGColorSpaceModelRGB 1 0 0 1 ", dynamic_objc_cast<UIColor>(documentAttributes[NSBackgroundColorDocumentAttribute]).description);
 #endif
+
+        finished = true;
+    }];
+
+    TestWebKitAPI::Util::run(&finished);
+}
+
+TEST(WKWebView, GetContentsWithOpticallySizedFontShouldReturnAttributedString)
+{
+    RetainPtr<TestWKWebView> webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+
+    [webView synchronouslyLoadHTMLString:@"<body style='font-family: system-ui; font-weight: 100; font-size: 16px; text-rendering: optimizeLegibility'>Hello</body>"];
+
+    __block bool finished = false;
+
+    [webView _getContentsAsAttributedStringWithCompletionHandler:^(NSAttributedString *attributedString, NSDictionary<NSAttributedStringDocumentAttributeKey, id> *documentAttributes, NSError *error) {
+        EXPECT_NOT_NULL(attributedString);
+        EXPECT_NOT_NULL(documentAttributes);
+        EXPECT_NULL(error);
+
+        __block size_t i = 0;
+        [attributedString enumerateAttributesInRange:NSMakeRange(0, attributedString.length) options:0 usingBlock:^(NSDictionary *attributes, NSRange attributeRange, BOOL* stop) {
+            auto *substring = [attributedString attributedSubstringFromRange:attributeRange];
+
+            if (!i) {
+                EXPECT_WK_STREQ(@"Hello", substring.string);
+
+#if USE(APPKIT)
+                EXPECT_EQ([dynamic_objc_cast<NSFont>(attributes[NSFontAttributeName]) pointSize], 16);
+#else
+                EXPECT_EQ([dynamic_objc_cast<UIFont>(attributes[NSFontAttributeName]) pointSize], 16);
+#endif
+            } else
+                ASSERT_NOT_REACHED();
+
+            ++i;
+        }];
+
+        EXPECT_EQ(i, 1UL);
 
         finished = true;
     }];

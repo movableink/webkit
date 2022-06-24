@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2019 Apple Inc. All rights reserved.
+* Copyright (C) 2019-2020 Apple Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -25,20 +25,27 @@
 
 #pragma once
 
-#if ENABLE(RESOURCE_LOAD_STATISTICS)
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
 
 #include <WebCore/PageIdentifier.h>
 #include <WebCore/ResourceLoadObserver.h>
+#include <WebCore/ResourceLoadStatistics.h>
 #include <WebCore/Timer.h>
 #include <wtf/Forward.h>
 
 namespace WebKit {
 
+class WebPage;
+
 class WebResourceLoadObserver final : public WebCore::ResourceLoadObserver {
 public:
-    WebResourceLoadObserver();
-    
-    void logSubresourceLoading(const WebCore::Frame*, const WebCore::ResourceRequest& newRequest, const WebCore::ResourceResponse& redirectResponse) final;
+    using TopFrameDomain = WebCore::RegistrableDomain;
+    using SubFrameDomain = WebCore::RegistrableDomain;
+
+    WebResourceLoadObserver(WebCore::ResourceLoadStatistics::IsEphemeral);
+    ~WebResourceLoadObserver();
+
+    void logSubresourceLoading(const WebCore::Frame*, const WebCore::ResourceRequest& newRequest, const WebCore::ResourceResponse& redirectResponse, FetchDestinationIsScriptLike) final;
     void logWebSocketLoading(const URL& targetURL, const URL& mainFrameURL) final;
     void logUserInteractionWithReducedTimeResolution(const WebCore::Document&) final;
     void logFontLoad(const WebCore::Document&, const String& familyName, bool loadStatus) final;
@@ -46,29 +53,41 @@ public:
     void logCanvasWriteOrMeasure(const WebCore::Document&, const String& textWritten) final;
     void logNavigatorAPIAccessed(const WebCore::Document&, const WebCore::ResourceLoadStatistics::NavigatorAPI) final;
     void logScreenAPIAccessed(const WebCore::Document&, const WebCore::ResourceLoadStatistics::ScreenAPI) final;
+    void logSubresourceLoadingForTesting(const WebCore::RegistrableDomain& firstPartyDomain, const WebCore::RegistrableDomain& thirdPartyDomain, bool shouldScheduleNotification);
 
 #if !RELEASE_LOG_DISABLED
     static void setShouldLogUserInteraction(bool);
 #endif
 
     String statisticsForURL(const URL&) final;
-    void updateCentralStatisticsStore() final;
+    void updateCentralStatisticsStore(CompletionHandler<void()>&&) final;
     void clearState() final;
     
     bool hasStatistics() const final { return !m_resourceStatisticsMap.isEmpty(); }
+
+    void setDomainsWithUserInteraction(HashSet<WebCore::RegistrableDomain>&& domains) final { m_domainsWithUserInteraction = WTFMove(domains); }
+    void setDomainsWithCrossPageStorageAccess(HashMap<TopFrameDomain, SubFrameDomain>&&, CompletionHandler<void()>&&) final;
+    bool hasHadUserInteraction(const WebCore::RegistrableDomain&) const final;
+    bool hasCrossPageStorageAccess(const SubFrameDomain&, const TopFrameDomain&) const final;
 
 private:
     WebCore::ResourceLoadStatistics& ensureResourceStatisticsForRegistrableDomain(const WebCore::RegistrableDomain&);
     void scheduleNotificationIfNeeded();
 
     Vector<WebCore::ResourceLoadStatistics> takeStatistics();
-    void requestStorageAccessUnderOpener(const WebCore::RegistrableDomain& domainInNeedOfStorageAccess, WebCore::PageIdentifier openerPageID, WebCore::Document& openerDocument);
+    void requestStorageAccessUnderOpener(const WebCore::RegistrableDomain& domainInNeedOfStorageAccess, WebPage& openerPage, WebCore::Document& openerDocument);
 
-    HashMap<WebCore::RegistrableDomain, WebCore::ResourceLoadStatistics> m_resourceStatisticsMap;
+    bool isEphemeral() const { return m_isEphemeral == WebCore::ResourceLoadStatistics::IsEphemeral::Yes; }
+
+    WebCore::ResourceLoadStatistics::IsEphemeral m_isEphemeral { WebCore::ResourceLoadStatistics::IsEphemeral::No };
+
+    HashMap<WebCore::RegistrableDomain, std::unique_ptr<WebCore::ResourceLoadStatistics>> m_resourceStatisticsMap;
     HashMap<WebCore::RegistrableDomain, WTF::WallTime> m_lastReportedUserInteractionMap;
 
     WebCore::Timer m_notificationTimer;
 
+    HashSet<WebCore::RegistrableDomain> m_domainsWithUserInteraction;
+    HashMap<TopFrameDomain, HashSet<SubFrameDomain>> m_domainsWithCrossPageStorageAccess;
 #if !RELEASE_LOG_DISABLED
     uint64_t m_loggingCounter { 0 };
     static bool shouldLogUserInteraction;
@@ -77,4 +96,4 @@ private:
 
 } // namespace WebKit
 
-#endif // ENABLE(RESOURCE_LOAD_STATISTICS)
+#endif // ENABLE(INTELLIGENT_TRACKING_PREVENTION)

@@ -1,5 +1,5 @@
 # Copyright (C) 2010 Google Inc. All rights reserved.
-# Copyright (C) 2017 Apple Inc. All rights reserved.
+# Copyright (C) 2017-2021 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -41,12 +41,14 @@ class Options(object):
     check_style_filter = make_option("--check-style-filter", action="store", type="string", dest="check_style_filter", default=None, help="Filter style-checker rules (see check-webkit-style --help).")
     clean = make_option("--no-clean", action="store_false", dest="clean", default=True, help="Don't check if the working directory is clean before applying patches")
     close_bug = make_option("--no-close", action="store_false", dest="close_bug", default=True, help="Leave bug open after landing.")
+    comment_bug = make_option("--no-comment", action="store_false", dest="comment_bug", default=True, help="Don't add a comment on the bug after landing.")
     comment = make_option("--comment", action="store", type="string", dest="comment", help="Comment to post to bug.")
     component = make_option("--component", action="store", type="string", dest="component", help="Component for the new bug.")
     confirm = make_option("--no-confirm", action="store_false", dest="confirm", default=True, help="Skip confirmation steps.")
     description = make_option("-m", "--description", action="store", type="string", dest="description", help="Description string for the attachment")
     email = make_option("--email", action="store", type="string", dest="email", help="Email address to use in ChangeLogs.")
     ews = make_option('--no-ews', action='store_false', dest='ews', default=True, help='Do not submit the patch to EWS for analysis (only applies when using --no-review).')
+    fast_cq = make_option("--fast-cq", "--fast-commit-queue", "--fastcq", action='store_true', dest='fast_cq', default=False, help='Enable fast-commit-queue mode for this patch, that skips building and testing.')
     force_clean = make_option("--force-clean", action="store_true", dest="force_clean", default=False, help="Clean working directory before applying patches (removes local changes and commits)")
     git_commit = make_option("-g", "--git-commit", action="store", dest="git_commit", help="Operate on a local commit. If a range, the commits are squashed into one. <ref>.... includes the working copy changes. UPSTREAM can be used for the upstream/tracking branch.")
     group = make_option("--group", action="store", dest="group", default=None, help="")
@@ -66,3 +68,4 @@ class Options(object):
     update = make_option("--no-update", action="store_false", dest="update", default=True, help="Don't update the working directory.")
     update_changelogs = make_option("--update-changelogs", action="store_true", dest="update_changelogs", default=False, help="Update existing ChangeLog entries with new date, bug description, and touched files/functions.")
     changelog_count = make_option("--changelog-count", action="store", type="int", dest="changelog_count", help="Number of changelogs to parse.")
+    format_cpp_files = make_option("--no-format-cpp-files", action="store_false", dest="format_cpp_files", default=True, help="Skip formatting of C/C++ files.")

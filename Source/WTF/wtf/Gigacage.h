@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +28,12 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/StdLibExtras.h>
 
-#if defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
+#if USE(SYSTEM_MALLOC)
 #define GIGACAGE_ENABLED 0
 
 namespace Gigacage {
+
+constexpr bool hasCapacityToUseLargeGigacage = OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH) > 36;
 
 const size_t primitiveGigacageMask = 0;
 const size_t jsValueGigacageMask = 0;
@@ -51,10 +53,6 @@ inline void removePrimitiveDisableCallback(void (*)(void*), void*) { }
 
 inline void forbidDisablingPrimitiveGigacage() { }
 
-inline bool isDisablingPrimitiveGigacageForbidden() { return false; }
-inline bool isPrimitiveGigacagePermanentlyEnabled() { return false; }
-inline bool canPrimitiveGigacageBeDisabled() { return true; }
-
 ALWAYS_INLINE const char* name(Kind kind)
 {
     switch (kind) {
@@ -70,8 +68,13 @@ ALWAYS_INLINE const char* name(Kind kind)
 }
 
 ALWAYS_INLINE bool contains(const void*) { return false; }
+ALWAYS_INLINE bool disablingPrimitiveGigacageIsForbidden() { return false; }
+ALWAYS_INLINE bool isEnabled() { return false; }
 ALWAYS_INLINE bool isEnabled(Kind) { return false; }
 ALWAYS_INLINE size_t mask(Kind) { return 0; }
+ALWAYS_INLINE size_t footprint(Kind) { return 0; }
+ALWAYS_INLINE size_t maxSize(Kind) { return 0; }
+ALWAYS_INLINE size_t size(Kind) { return 0; }
 
 template<typename T>
 inline T* caged(Kind, T* ptr) { return ptr; }

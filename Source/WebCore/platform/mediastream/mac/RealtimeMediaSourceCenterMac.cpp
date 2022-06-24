@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,62 +36,33 @@
 #include "AVVideoCaptureSource.h"
 #include "CoreAudioCaptureSource.h"
 #include "DisplayCaptureManagerCocoa.h"
+#include "DisplayCaptureSourceCocoa.h"
 #include "Logging.h"
 #include "MediaStreamPrivate.h"
-#include "ScreenDisplayCaptureSourceMac.h"
-#include "WindowDisplayCaptureSourceMac.h"
 #include <wtf/MainThread.h>
 
 namespace WebCore {
 
 class VideoCaptureSourceFactoryMac final : public VideoCaptureFactory {
 public:
-    CaptureSourceOrError createVideoCaptureSource(const CaptureDevice& device, String&& hashSalt, const MediaConstraints* constraints) final
+    CaptureSourceOrError createVideoCaptureSource(const CaptureDevice& device, String&& hashSalt, const MediaConstraints* constraints, PageIdentifier pageIdentifier) final
     {
         ASSERT(device.type() == CaptureDevice::DeviceType::Camera);
-        return AVVideoCaptureSource::create(String { device.persistentId() }, WTFMove(hashSalt), constraints);
+        return AVVideoCaptureSource::create(device, WTFMove(hashSalt), constraints, pageIdentifier);
     }
 
 private:
-#if PLATFORM(IOS_FAMILY)
-    void setVideoCapturePageState(bool interrupted, bool pageMuted)
-    {
-        if (activeSource())
-            activeSource()->setInterrupted(interrupted, pageMuted);
-    }
-#endif
-
     CaptureDeviceManager& videoCaptureDeviceManager() { return AVCaptureDeviceManager::singleton(); }
 };
 
 class DisplayCaptureSourceFactoryMac final : public DisplayCaptureFactory {
 public:
-    CaptureSourceOrError createDisplayCaptureSource(const CaptureDevice& device, const MediaConstraints* constraints) final
+    CaptureSourceOrError createDisplayCaptureSource(const CaptureDevice& device, String&& hashSalt, const MediaConstraints* constraints, PageIdentifier pageIdentifier) final
     {
-#if PLATFORM(IOS_FAMILY)
-        UNUSED_PARAM(device);
-        UNUSED_PARAM(constraints);
-#endif
-        switch (device.type()) {
-        case CaptureDevice::DeviceType::Screen:
-#if PLATFORM(MAC)
-            return ScreenDisplayCaptureSourceMac::create(String { device.persistentId() }, constraints);
-#endif
-        case CaptureDevice::DeviceType::Window:
-#if PLATFORM(MAC)
-            return WindowDisplayCaptureSourceMac::create(String { device.persistentId() }, constraints);
-#endif
-        case CaptureDevice::DeviceType::Microphone:
-        case CaptureDevice::DeviceType::Camera:
-        case CaptureDevice::DeviceType::Unknown:
-            ASSERT_NOT_REACHED();
-            break;
-        }
-
-        return { };
+        return DisplayCaptureSourceCocoa::create(device, WTFMove(hashSalt), constraints, pageIdentifier);
     }
 private:
-    CaptureDeviceManager& displayCaptureDeviceManager() { return DisplayCaptureManagerCocoa::singleton(); }
+    DisplayCaptureManager& displayCaptureDeviceManager() { return DisplayCaptureManagerCocoa::singleton(); }
 };
 
 AudioCaptureFactory& RealtimeMediaSourceCenter::defaultAudioCaptureFactory()

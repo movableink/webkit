@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebProcessPool.h"
 
+#include "MemoryPressureMonitor.h"
 #include "NetworkProcessCreationParameters.h"
 #include "NetworkProcessMessages.h"
 #include "WebCookieManagerProxy.h"
@@ -35,29 +36,17 @@
 
 namespace WebKit {
 
+std::optional<MemoryPressureHandler::Configuration> WebProcessPool::s_networkProcessMemoryPressureHandlerConfiguration;
+
 void WebProcessPool::platformInitializeNetworkProcess(NetworkProcessCreationParameters& parameters)
 {
-    NetworkSessionCreationParameters& defaultSessionParameters = parameters.defaultDataStoreParameters.networkSessionParameters;
-    supplement<WebCookieManagerProxy>()->getCookiePersistentStorage(defaultSessionParameters.sessionID, defaultSessionParameters.cookiePersistentStoragePath, defaultSessionParameters.cookiePersistentStorageType);
-
-    parameters.cookieAcceptPolicy = m_initialHTTPCookieAcceptPolicy;
-    parameters.ignoreTLSErrors = m_ignoreTLSErrors;
     parameters.languages = userPreferredLanguages();
-    parameters.proxySettings = m_networkProxySettings;
+    parameters.memoryPressureHandlerConfiguration = s_networkProcessMemoryPressureHandlerConfiguration;
+
+#if OS(LINUX)
+    if (MemoryPressureMonitor::disabled())
+        parameters.shouldSuppressMemoryPressureHandler = true;
+#endif // OS(LINUX)
 }
 
-void WebProcessPool::setIgnoreTLSErrors(bool ignoreTLSErrors)
-{
-    m_ignoreTLSErrors = ignoreTLSErrors;
-    if (networkProcess())
-        networkProcess()->send(Messages::NetworkProcess::SetIgnoreTLSErrors(m_ignoreTLSErrors), 0);
-}
-
-void WebProcessPool::setNetworkProxySettings(const WebCore::SoupNetworkProxySettings& settings)
-{
-    m_networkProxySettings = settings;
-    if (m_networkProcess)
-        m_networkProcess->send(Messages::NetworkProcess::SetNetworkProxySettings(m_networkProxySettings), 0);
-}
-
-}
+} // namespace WebKit

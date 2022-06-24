@@ -1,4 +1,5 @@
 # Copyright (C) 2012 Google Inc. All rights reserved.
+# Copyright (C) 2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -28,18 +29,19 @@
 
 """Integration tests for run_perf_tests."""
 
-import StringIO
 import datetime
 import json
+import logging
 import re
 import unittest
 
 from webkitpy.common.host_mock import MockHost
-from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.port.driver import DriverOutput
 from webkitpy.port.test import TestPort
 from webkitpy.performance_tests.perftest import PerfTest
 from webkitpy.performance_tests.perftestsrunner import PerfTestsRunner
+
+from webkitcorepy import OutputCapture
 
 
 class EventTargetWrapperTestData:
@@ -228,28 +230,28 @@ class MainTest(unittest.TestCase):
     def test_run_test_set_for_parser_tests(self):
         runner, port = self.create_runner()
         tests = self._tests_for_runner(runner, ['Bindings/event-target-wrapper.html', 'Parser/some-parser.html'])
-        output = OutputCapture()
-        output.capture_output()
-        try:
+        with OutputCapture(level=logging.INFO) as capturer:
             unexpected_result_count = runner._run_tests_set(tests)
-        finally:
-            stdout, stderr, log = output.restore_output()
+
         self.assertEqual(unexpected_result_count, 0)
-        self.assertEqual(self._normalize_output(log), EventTargetWrapperTestData.output + SomeParserTestData.output)
+        self.assertEqual(
+            self._normalize_output(capturer.root.log.getvalue()),
+            EventTargetWrapperTestData.output + SomeParserTestData.output,
+        )
 
     def test_run_memory_test(self):
         runner, port = self.create_runner_and_setup_results_template()
         runner._timestamp = 123456789
         port.host.filesystem.write_text_file(runner._base_path + '/Parser/memory-test.html', 'some content')
 
-        output = OutputCapture()
-        output.capture_output()
-        try:
+        with OutputCapture(level=logging.INFO) as capturer:
             unexpected_result_count = runner.run()
-        finally:
-            stdout, stderr, log = output.restore_output()
+
         self.assertEqual(unexpected_result_count, 0)
-        self.assertEqual(self._normalize_output(log), MemoryTestData.output + '\nMOCK: user.open_url: file://...\n')
+        self.assertEqual(
+            self._normalize_output(capturer.root.log.getvalue()),
+            MemoryTestData.output + '\nMOCK: user.open_url: file://...\n',
+        )
         parser_tests = self._load_output_json(runner)[0]['tests']['Parser']['tests']
         self.assertEqual(parser_tests['memory-test']['metrics']['Time'], MemoryTestData.results)
         self.assertEqual(parser_tests['memory-test']['metrics']['JSHeap'], MemoryTestData.js_heap_results)
@@ -260,15 +262,14 @@ class MainTest(unittest.TestCase):
         runner._timestamp = 123456789
         port.host.filesystem.write_text_file(runner._base_path + '/Parser/test-with-subtests.html', 'some content')
 
-        output = OutputCapture()
-        output.capture_output()
-        try:
+        with OutputCapture(level=logging.INFO) as capturer:
             unexpected_result_count = runner.run()
-        finally:
-            stdout, stderr, log = output.restore_output()
 
         self.assertEqual(unexpected_result_count, 0)
-        self.assertEqual(self._normalize_output(log), TestWithSubtestsData.output + '\nMOCK: user.open_url: file://...\n')
+        self.assertEqual(
+            self._normalize_output(capturer.root.log.getvalue()),
+            TestWithSubtestsData.output + '\nMOCK: user.open_url: file://...\n',
+        )
         parser_tests = self._load_output_json(runner)[0]['tests']['Parser']['tests']
         self.maxDiff = None
         self.assertEqual(parser_tests['test-with-subtests'], TestWithSubtestsData.results)
@@ -290,25 +291,21 @@ class MainTest(unittest.TestCase):
         runner._upload_json = mock_upload_json
         runner._timestamp = 123456789
         runner._utc_timestamp = datetime.datetime(2013, 2, 8, 15, 19, 37, 460000)
-        output_capture = OutputCapture()
-        output_capture.capture_output()
-        try:
+        with OutputCapture(level=logging.INFO) as capturer:
             self.assertEqual(runner.run(), expected_exit_code)
-        finally:
-            stdout, stderr, logs = output_capture.restore_output()
 
         if not expected_exit_code and compare_logs:
             expected_logs = ''
-            for i in xrange(repeat):
+            for i in range(repeat):
                 runs = ' (Run %d of %d)' % (i + 1, repeat) if repeat > 1 else ''
                 expected_logs += 'Running 2 tests%s\n' % runs + EventTargetWrapperTestData.output + SomeParserTestData.output
             if results_shown:
                 expected_logs += 'MOCK: user.open_url: file://...\n'
-            self.assertEqual(self._normalize_output(logs), expected_logs)
+            self.assertEqual(self._normalize_output(capturer.root.log.getvalue()), expected_logs)
 
         self.assertEqual(uploaded[0], upload_succeeds)
 
-        return logs
+        return capturer.root.log.getvalue()
 
     _event_target_wrapper_and_inspector_results = {
         "Bindings":
@@ -449,23 +446,23 @@ class MainTest(unittest.TestCase):
         port.host.filesystem.write_text_file('/mock-checkout/output.json', '{"another bad json": "1"}')
         self._test_run_with_json_output(runner, port.host.filesystem, expected_exit_code=PerfTestsRunner.EXIT_CODE_BAD_MERGE)
 
-    def test_run_with_slave_config_json(self):
+    def test_run_with_worker_config_json(self):
         runner, port = self.create_runner_and_setup_results_template(args=['--output-json-path=/mock-checkout/output.json',
-            '--slave-config-json-path=/mock-checkout/slave-config.json', '--test-results-server=some.host'])
-        port.host.filesystem.write_text_file('/mock-checkout/slave-config.json', '{"key": "value"}')
+            '--worker-config-json-path=/mock-checkout/worker-config.json', '--test-results-server=some.host'])
+        port.host.filesystem.write_text_file('/mock-checkout/worker-config.json', '{"key": "value"}')
         self._test_run_with_json_output(runner, port.host.filesystem, upload_succeeds=True)
         self.assertEqual(self._load_output_json(runner), [{
             "buildTime": "2013-02-08T15:19:37.460000", "tests": self._event_target_wrapper_and_inspector_results,
             "revisions": {"WebKit": {"timestamp": "2013-02-01 08:48:05 +0000", "revision": "5678"}}, "builderKey": "value"}])
 
-    def test_run_with_bad_slave_config_json(self):
+    def test_run_with_bad_worker_config_json(self):
         runner, port = self.create_runner_and_setup_results_template(args=['--output-json-path=/mock-checkout/output.json',
-            '--slave-config-json-path=/mock-checkout/slave-config.json', '--test-results-server=some.host'])
+            '--worker-config-json-path=/mock-checkout/worker-config.json', '--test-results-server=some.host'])
         logs = self._test_run_with_json_output(runner, port.host.filesystem, expected_exit_code=PerfTestsRunner.EXIT_CODE_BAD_SOURCE_JSON)
-        self.assertTrue('Missing slave configuration JSON file: /mock-checkout/slave-config.json' in logs)
-        port.host.filesystem.write_text_file('/mock-checkout/slave-config.json', 'bad json')
+        self.assertTrue('Missing worker configuration JSON file: /mock-checkout/worker-config.json' in logs)
+        port.host.filesystem.write_text_file('/mock-checkout/worker-config.json', 'bad json')
         self._test_run_with_json_output(runner, port.host.filesystem, expected_exit_code=PerfTestsRunner.EXIT_CODE_BAD_SOURCE_JSON)
-        port.host.filesystem.write_text_file('/mock-checkout/slave-config.json', '["another bad json"]')
+        port.host.filesystem.write_text_file('/mock-checkout/worker-config.json', '["another bad json"]')
         self._test_run_with_json_output(runner, port.host.filesystem, expected_exit_code=PerfTestsRunner.EXIT_CODE_BAD_SOURCE_JSON)
 
     def test_run_with_multiple_repositories(self):
@@ -493,8 +490,8 @@ class MainTest(unittest.TestCase):
     def test_run_with_upload_json_should_generate_perf_webkit_json(self):
         runner, port = self.create_runner_and_setup_results_template(args=['--output-json-path=/mock-checkout/output.json',
             '--test-results-server', 'some.host', '--platform', 'platform1', '--builder-name', 'builder1', '--build-number', '123',
-            '--slave-config-json-path=/mock-checkout/slave-config.json'])
-        port.host.filesystem.write_text_file('/mock-checkout/slave-config.json', '{"key": "value1"}')
+            '--worker-config-json-path=/mock-checkout/worker-config.json'])
+        port.host.filesystem.write_text_file('/mock-checkout/worker-config.json', '{"key": "value1"}')
 
         self._test_run_with_json_output(runner, port.host.filesystem, upload_succeeds=True)
         generated_json = json.loads(port.host.filesystem.files['/mock-checkout/output.json'])
@@ -509,10 +506,10 @@ class MainTest(unittest.TestCase):
         self.assertEqual(output['builderName'], 'builder1')
         self.assertEqual(output['builderKey'], 'value1')
         self.assertEqual(output['revisions'], {'WebKit': {'revision': '5678', 'timestamp': '2013-02-01 08:48:05 +0000'}})
-        self.assertEqual(output['tests'].keys(), ['Bindings', 'Parser'])
+        self.assertEqual(list(output['tests'].keys()), ['Bindings', 'Parser'])
         self.assertEqual(sorted(output['tests']['Bindings'].keys()), ['tests', 'url'])
         self.assertEqual(output['tests']['Bindings']['url'], 'https://trac.webkit.org/browser/trunk/PerformanceTests/Bindings')
-        self.assertEqual(output['tests']['Bindings']['tests'].keys(), ['event-target-wrapper'])
+        self.assertEqual(list(output['tests']['Bindings']['tests'].keys()), ['event-target-wrapper'])
         self.assertEqual(output['tests']['Bindings']['tests']['event-target-wrapper'], {
             'url': 'https://trac.webkit.org/browser/trunk/PerformanceTests/Bindings/event-target-wrapper.html',
             'metrics': {'Time': {'current': [[1486.0, 1471.0, 1510.0, 1505.0, 1478.0, 1490.0]] * 4}}})

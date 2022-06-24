@@ -45,7 +45,7 @@
 #endif
 #endif
 
-#if TARGET_OS_IPHONE && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
+#if TARGET_OS_IOS
 @protocol UIDropSession;
 #endif
 
@@ -107,6 +107,10 @@ enum {
     WebMenuItemTagToggleVideoFullscreen,
     WebMenuItemTagShareMenu,
     WebMenuItemTagToggleVideoEnhancedFullscreen,
+    WebMenuItemTagAddHighlightToCurrentQuickNote,
+    WebMenuItemTagAddHighlightToNewQuickNote,
+    WebMenuItemTagRevealImage,
+    WebMenuItemTagTranslate,
 };
 
 // Deprecated; remove when there are no more clients.
@@ -298,8 +302,9 @@ extern NSString *WebConsoleMessageErrorMessageLevel;
 - (void)webViewSupportedOrientationsUpdated:(WebView *)sender;
 
 - (BOOL)webViewCanCheckGeolocationAuthorizationStatus:(WebView *)sender;
+#endif
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
+#if TARGET_OS_IOS
 /*!
  @method webView:dragDestinationActionMaskForSession:
  @param sender The WebView sending the delegate method
@@ -307,7 +312,6 @@ extern NSString *WebConsoleMessageErrorMessageLevel;
  @abstract May be implemented to adjust which destination actions are allowed upon dropping the given session.
  */
 - (WebDragDestinationAction)webView:(WebView *)sender dragDestinationActionMaskForSession:(id <UIDropSession>)session;
-#endif
 #endif
 
 - (NSData *)webCryptoMasterKeyForWebView:(WebView *)sender;

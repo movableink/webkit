@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (C) 2017 Igalia S.L.
 #
@@ -60,7 +60,7 @@ configure_logging(logging.DEBUG if options.verbose else logging.INFO)
 
 try:
     port = Host().port_factory.get(options.platform, options)
-except NotImplementedError, e:
+except NotImplementedError as e:
     _log.error(str(e))
     sys.exit(-1)
 
@@ -76,12 +76,11 @@ if port.name() in ['gtk', 'wpe']:
         import jhbuildutils
 
         if not jhbuildutils.enter_jhbuild_environment_if_available(port.name()):
-            print '***'
-            print '*** Warning: jhbuild environment not present and not running in flatpak.'
-            print '*** Run update-webkitgtk-libs or update-webkitgtk-flatpak before build-webkit to ensure proper testing..'
-            print '***'
+            print('***')
+            print('*** Warning: jhbuild environment not present and not running in flatpak.')
+            print('*** Run update-webkitgtk-libs or update-webkit-flatpak before build-webkit to ensure proper testing..')
+            print('***')
 
-port._display_server = options.display_server
 runner = WebDriverTestRunner(port)
 runner.run(args)
 runner.teardown()

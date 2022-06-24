@@ -14,25 +14,29 @@ if (window.testRunner) {
 
 var n = 0;
 
-window.onerror = function() {
+function finishIfNeeded()
+{
     if (++n === 2) {
         document.querySelector('pre').textContent = 'PASS';
         if (window.testRunner)
             testRunner.notifyDone();
     }
+}
+
+window.onerror = function() {
+    finishIfNeeded();
     return true;
 };
+
+onmessage = () => {
+    finishIfNeeded();
+}
 
 requestAnimationFrame(postMessage);
 setTimeout(postMessage);
 
 if (window.testRunner)
     testRunner.displayAndTrackRepaints();
-
-setTimeout(function() {
-    if (window.testRunner)
-        testRunner.notifyDone();
-}, 50);
 
 </script>
 </body>

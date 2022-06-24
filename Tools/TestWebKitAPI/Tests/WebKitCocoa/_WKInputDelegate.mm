@@ -23,8 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestWKWebView.h"
@@ -35,7 +36,6 @@
 #import <wtf/BlockPtr.h>
 #import <wtf/RetainPtr.h>
 
-static bool done;
 static bool willSubmitFormValuesCalled;
 
 @interface InputDelegate : NSObject <_WKInputDelegate, WKURLSchemeHandler>

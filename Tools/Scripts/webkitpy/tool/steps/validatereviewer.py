@@ -36,7 +36,6 @@ from webkitpy.tool.steps.options import Options
 _log = logging.getLogger(__name__)
 
 
-# FIXME: Some of this logic should probably be unified with CommitterValidator?
 class ValidateReviewer(AbstractStep):
     @classmethod
     def options(cls):
@@ -51,6 +50,9 @@ class ValidateReviewer(AbstractStep):
             return
         for changelog_path in self.cached_lookup(state, "changelogs"):
             changelog_entry = ChangeLog(changelog_path).latest_entry()
+            if not changelog_entry:
+                _log.error('Invalid ChangeLog at {}'.format(changelog_path))
+                sys.exit(1)
             if changelog_entry.has_valid_reviewer():
                 continue
             reviewer_text = changelog_entry.reviewer_text()

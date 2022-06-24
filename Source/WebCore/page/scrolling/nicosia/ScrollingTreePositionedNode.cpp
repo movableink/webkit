@@ -56,15 +56,15 @@ void ScrollingTreePositionedNode::commitStateBeforeChildren(const ScrollingState
 {
     const ScrollingStatePositionedNode& positionedStateNode = downcast<ScrollingStatePositionedNode>(stateNode);
 
-    if (positionedStateNode.hasChangedProperty(ScrollingStateNode::Layer)) {
+    if (positionedStateNode.hasChangedProperty(ScrollingStateNode::Property::Layer)) {
         auto* layer = static_cast<Nicosia::PlatformLayer*>(positionedStateNode.layer());
         m_layer = downcast<Nicosia::CompositionLayer>(layer);
     }
 
-    if (positionedStateNode.hasChangedProperty(ScrollingStatePositionedNode::RelatedOverflowScrollingNodes))
+    if (positionedStateNode.hasChangedProperty(ScrollingStateNode::Property::RelatedOverflowScrollingNodes))
         m_relatedOverflowScrollingNodes = positionedStateNode.relatedOverflowScrollingNodes();
 
-    if (positionedStateNode.hasChangedProperty(ScrollingStatePositionedNode::LayoutConstraintData))
+    if (positionedStateNode.hasChangedProperty(ScrollingStateNode::Property::LayoutConstraintData))
         m_constraints = positionedStateNode.layoutConstraints();
 
     if (!m_relatedOverflowScrollingNodes.isEmpty())
@@ -90,7 +90,7 @@ void ScrollingTreePositionedNode::applyLayerPositions()
     layerPosition -= m_constraints.alignmentOffset();
 
     ASSERT(m_layer);
-    m_layer->accessStaging(
+    m_layer->updateState(
         [&layerPosition](Nicosia::CompositionLayer::LayerState& state)
         {
             state.position = layerPosition;
@@ -98,7 +98,7 @@ void ScrollingTreePositionedNode::applyLayerPositions()
         });
 }
 
-void ScrollingTreePositionedNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingTreePositionedNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ts << "positioned node";
     ScrollingTreeNode::dumpProperties(ts, behavior);
@@ -106,7 +106,7 @@ void ScrollingTreePositionedNode::dumpProperties(TextStream& ts, ScrollingStateT
     ts.dumpProperty("layout constraints", m_constraints);
     ts.dumpProperty("related overflow nodes", m_relatedOverflowScrollingNodes.size());
 
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeNodeIDs) {
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs) {
         if (!m_relatedOverflowScrollingNodes.isEmpty()) {
             TextStream::GroupScope scope(ts);
             ts << "overflow nodes";

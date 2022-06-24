@@ -31,7 +31,7 @@
 #if ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)
 
 #include "ScrollingTreeFrameScrollingNode.h"
-
+#include "ScrollingTreeScrollingNodeDelegateNicosia.h"
 #include <wtf/RefPtr.h>
 
 namespace Nicosia {
@@ -39,11 +39,15 @@ class CompositionLayer;
 }
 
 namespace WebCore {
+class ScrollAnimation;
+class ScrollAnimationKinetic;
 
 class ScrollingTreeFrameScrollingNodeNicosia final : public ScrollingTreeFrameScrollingNode {
 public:
     static Ref<ScrollingTreeFrameScrollingNode> create(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
     virtual ~ScrollingTreeFrameScrollingNodeNicosia();
+
+    RefPtr<Nicosia::CompositionLayer> rootContentsLayer() const { return m_rootContentsLayer; }
 
 private:
     ScrollingTreeFrameScrollingNodeNicosia(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
@@ -51,12 +55,13 @@ private:
     void commitStateBeforeChildren(const ScrollingStateNode&) override;
     void commitStateAfterChildren(const ScrollingStateNode&) override;
 
-    ScrollingEventResult handleWheelEvent(const PlatformWheelEvent&) override;
+    bool startAnimatedScrollToPosition(FloatPoint) override;
+    void stopAnimatedScroll() override;
+    void serviceScrollAnimation(MonotonicTime) final;
 
-    FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollPositionClamp) const override;
-
-    void currentScrollPositionChanged() override;
-
+    WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, EventTargeting) override;
+    FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping) const override;
+    void currentScrollPositionChanged(ScrollType, ScrollingLayerPositionAction) override;
     void repositionScrollingLayers() override;
     void repositionRelatedLayers() override;
 
@@ -66,6 +71,8 @@ private:
     RefPtr<Nicosia::CompositionLayer> m_contentShadowLayer;
     RefPtr<Nicosia::CompositionLayer> m_headerLayer;
     RefPtr<Nicosia::CompositionLayer> m_footerLayer;
+
+    ScrollingTreeScrollingNodeDelegateNicosia m_delegate;
 };
 
 } // namespace WebCore

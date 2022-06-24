@@ -3,5 +3,5 @@ Description
 The tests that secureConnectionStart has a non-zero value.
 
 
-FAIL Test that secureConnectionStart is not zero undefined is not an object (evaluating 'entry.secureConnectionStart')
+PASS Test that secureConnectionStart is not zero
 

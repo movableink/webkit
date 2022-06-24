@@ -63,8 +63,14 @@ enum class BaseInstanceOption
     UseBaseInstance
 };
 
-using DrawBaseVertexBaseInstanceTestParams =
-    std::tuple<angle::PlatformParameters, BaseVertexOption, BaseInstanceOption>;
+enum class BufferDataUsageOption
+{
+    StaticDraw,
+    DynamicDraw
+};
+
+using DrawBaseVertexBaseInstanceTestParams = std::
+    tuple<angle::PlatformParameters, BaseVertexOption, BaseInstanceOption, BufferDataUsageOption>;
 
 struct PrintToStringParamName
 {
@@ -72,10 +78,12 @@ struct PrintToStringParamName
         const ::testing::TestParamInfo<DrawBaseVertexBaseInstanceTestParams> &info) const
     {
         ::std::stringstream ss;
-        ss << (std::get<2>(info.param) == BaseInstanceOption::UseBaseInstance ? "UseBaseInstance_"
+        ss << std::get<0>(info.param) << "_"
+           << (std::get<3>(info.param) == BufferDataUsageOption::StaticDraw ? "_StaticDraw"
+                                                                            : "_DynamicDraw")
+           << (std::get<2>(info.param) == BaseInstanceOption::UseBaseInstance ? "_UseBaseInstance"
                                                                               : "")
-           << (std::get<1>(info.param) == BaseVertexOption::UseBaseVertex ? "UseBaseVertex_" : "")
-           << std::get<0>(info.param);
+           << (std::get<1>(info.param) == BaseVertexOption::UseBaseVertex ? "_UseBaseVertex" : "");
         return ss.str();
     }
 };
@@ -151,6 +159,12 @@ class DrawBaseVertexBaseInstanceTest
         return std::get<2>(GetParam()) == BaseInstanceOption::UseBaseInstance;
     }
 
+    GLenum getBufferDataUsage() const
+    {
+        return std::get<3>(GetParam()) == BufferDataUsageOption::StaticDraw ? GL_STATIC_DRAW
+                                                                            : GL_DYNAMIC_DRAW;
+    }
+
     std::string vertexShaderSource300(bool isDrawArrays, bool isMultiDraw, bool divisorTest)
     {
         // Each color channel is to test the value of
@@ -161,7 +175,7 @@ class DrawBaseVertexBaseInstanceTest
         std::stringstream shader;
         shader << ("#version 300 es\n")
                << (isMultiDraw ? "#extension GL_ANGLE_multi_draw : require\n" : "")
-               << ("#extension GL_ANGLE_base_vertex_base_instance : require\n")
+               << ("#extension GL_ANGLE_base_vertex_base_instance_shader_builtin : require\n")
                << "#define kCountX " << kCountX << "\n"
                << "#define kCountY " << kCountY << "\n"
                << R"(
@@ -179,8 +193,8 @@ void main()
                << "float x_color = "
                << (divisorTest ? "xStep * (vInstanceColorID + 1.0f);" : " 1.0 - xStep * x_id;")
                << R"(
-    float y_id = floor(float(gl_VertexID) / )"
-               << (isDrawArrays ? "6.0" : "4.0") << R"( + 0.01);
+    float y_id = float(gl_VertexID / )"
+               << (isDrawArrays ? "6" : "4") << R"();
 
     color = vec4(
         x_color,
@@ -233,7 +247,7 @@ void main()
     {
         glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer.get());
         glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mNonIndexedVertices.size(),
-                     mNonIndexedVertices.data(), GL_STATIC_DRAW);
+                     mNonIndexedVertices.data(), getBufferDataUsage());
 
         ASSERT_GL_NO_ERROR();
     }
@@ -242,11 +256,11 @@ void main()
     {
         glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
         glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mVertices.size(), mVertices.data(),
-                     GL_STATIC_DRAW);
+                     getBufferDataUsage());
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * mIndices.size(), mIndices.data(),
-                     GL_STATIC_DRAW);
+                     getBufferDataUsage());
 
         ASSERT_GL_NO_ERROR();
     }
@@ -255,7 +269,7 @@ void main()
     {
         glBindBuffer(GL_ARRAY_BUFFER, instanceIDBuffer);
         glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mInstancedArrayId.size(),
-                     mInstancedArrayId.data(), GL_STATIC_DRAW);
+                     mInstancedArrayId.data(), getBufferDataUsage());
 
         ASSERT_GL_NO_ERROR();
     }
@@ -264,7 +278,7 @@ void main()
     {
         glBindBuffer(GL_ARRAY_BUFFER, instanceIDBuffer);
         glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * mInstancedArrayColorId.size(),
-                     mInstancedArrayColorId.data(), GL_STATIC_DRAW);
+                     mInstancedArrayColorId.data(), getBufferDataUsage());
 
         ASSERT_GL_NO_ERROR();
     }
@@ -273,7 +287,7 @@ void main()
     {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * mRegularIndices.size(),
-                     mRegularIndices.data(), GL_STATIC_DRAW);
+                     mRegularIndices.data(), getBufferDataUsage());
 
         ASSERT_GL_NO_ERROR();
     }
@@ -318,9 +332,9 @@ void main()
         {
             baseInstances[i] = i * 2;
         }
-        glMultiDrawArraysInstancedBaseInstanceANGLE(GL_TRIANGLES, drawCount, counts.data(),
-                                                    instanceCounts.data(), firsts.data(),
-                                                    baseInstances.data());
+        glMultiDrawArraysInstancedBaseInstanceANGLE(GL_TRIANGLES, firsts.data(), counts.data(),
+                                                    instanceCounts.data(), baseInstances.data(),
+                                                    drawCount);
     }
 
     void doDrawElementsInstancedBaseVertexBaseInstance()
@@ -345,14 +359,14 @@ void main()
     void doDrawArraysBaseInstanceReset()
     {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDrawArrays(GL_TRIANGLES, 0, 6 * kCountY);
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6 * kCountY, 1);
     }
 
     void doDrawElementsBaseVertexBaseInstanceReset()
     {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDrawElements(GL_TRIANGLES, 6 * kCountY, GL_UNSIGNED_SHORT,
-                       reinterpret_cast<GLvoid *>(static_cast<uintptr_t>(0)));
+        glDrawElementsInstanced(GL_TRIANGLES, 6 * kCountY, GL_UNSIGNED_SHORT,
+                                reinterpret_cast<GLvoid *>(static_cast<uintptr_t>(0)), 1);
     }
 
     void doMultiDrawElementsInstancedBaseVertexBaseInstance()
@@ -378,8 +392,8 @@ void main()
         }
 
         glMultiDrawElementsInstancedBaseVertexBaseInstanceANGLE(
-            GL_TRIANGLES, GL_UNSIGNED_SHORT, drawCount, counts.data(), instanceCounts.data(),
-            indices.data(), baseVertices.data(), baseInstances.data());
+            GL_TRIANGLES, counts.data(), GL_UNSIGNED_SHORT, indices.data(), instanceCounts.data(),
+            baseVertices.data(), baseInstances.data(), drawCount);
     }
 
     void checkDrawResult(bool hasBaseVertex, bool oneColumn = false)
@@ -416,6 +430,11 @@ void main()
         if (!IsGLExtensionEnabled("GL_ANGLE_base_vertex_base_instance"))
         {
             return false;
+        }
+
+        if (IsGLExtensionRequestable("GL_ANGLE_base_vertex_base_instance_shader_builtin"))
+        {
+            glRequestExtensionANGLE("GL_ANGLE_base_vertex_base_instance_shader_builtin");
         }
 
         return true;
@@ -541,7 +560,7 @@ TEST_P(DrawBaseVertexBaseInstanceTest, DrawArraysInstancedBaseInstance)
     if (IsAMD() && IsWindows() && IsDesktopOpenGL())
     {
         SystemInfo *systemInfo = GetTestSystemInfo();
-        if (!(systemInfo->activeGPUIndex < 0 || systemInfo->gpus.empty()))
+        if (!systemInfo->gpus.empty())
         {
             ANGLE_SKIP_TEST_IF(0x6613 == systemInfo->gpus[systemInfo->activeGPUIndex].deviceId);
         }
@@ -568,6 +587,7 @@ TEST_P(DrawBaseVertexBaseInstanceTest, DrawArraysInstancedBaseInstance)
     checkDrawResult(false);
 
     doDrawArraysBaseInstanceReset();
+    EXPECT_GL_NO_ERROR();
     checkDrawResult(false, true);
 }
 
@@ -604,6 +624,7 @@ TEST_P(DrawBaseVertexBaseInstanceTest, MultiDrawArraysInstancedBaseInstance)
     checkDrawResult(false);
 
     doDrawArraysBaseInstanceReset();
+    EXPECT_GL_NO_ERROR();
     checkDrawResult(false, true);
 }
 
@@ -674,13 +695,15 @@ const angle::PlatformParameters platforms[] = {
     ES3_VULKAN(),
 };
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(DrawBaseVertexBaseInstanceTest);
 INSTANTIATE_TEST_SUITE_P(
     ,
     DrawBaseVertexBaseInstanceTest,
     testing::Combine(
         testing::ValuesIn(::angle::FilterTestParams(platforms, ArraySize(platforms))),
         testing::Values(BaseVertexOption::NoBaseVertex, BaseVertexOption::UseBaseVertex),
-        testing::Values(BaseInstanceOption::NoBaseInstance, BaseInstanceOption::UseBaseInstance)),
+        testing::Values(BaseInstanceOption::NoBaseInstance, BaseInstanceOption::UseBaseInstance),
+        testing::Values(BufferDataUsageOption::StaticDraw, BufferDataUsageOption::DynamicDraw)),
     PrintToStringParamName());
 
 }  // namespace

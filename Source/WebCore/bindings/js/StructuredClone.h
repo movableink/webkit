@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,17 +24,17 @@
  *
  */
 
+#pragma once
+
 namespace JSC {
 class CallFrame;
 class JSGlobalObject;
 using EncodedJSValue = int64_t;
-using ExecState = CallFrame;
 }
 
 namespace WebCore {
 
-JSC::EncodedJSValue JSC_HOST_CALL cloneArrayBuffer(JSC::JSGlobalObject*, JSC::CallFrame*);
-JSC::EncodedJSValue JSC_HOST_CALL structuredCloneArrayBuffer(JSC::JSGlobalObject*, JSC::CallFrame*);
-JSC::EncodedJSValue JSC_HOST_CALL structuredCloneArrayBufferView(JSC::JSGlobalObject*, JSC::CallFrame*);
+JSC_DECLARE_HOST_FUNCTION(cloneArrayBuffer);
+JSC_DECLARE_HOST_FUNCTION(structuredCloneForStream);
 
 } // namespace WebCore

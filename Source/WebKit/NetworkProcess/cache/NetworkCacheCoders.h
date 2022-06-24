@@ -36,7 +36,7 @@ namespace Persistence {
 
 template<> struct Coder<WebCore::HTTPHeaderMap> {
     static void encode(Encoder&, const WebCore::HTTPHeaderMap&);
-    static bool decode(Decoder&, WebCore::HTTPHeaderMap&);
+    static std::optional<WebCore::HTTPHeaderMap> decode(Decoder&);
 };
 
 }

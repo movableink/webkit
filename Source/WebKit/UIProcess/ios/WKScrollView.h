@@ -33,11 +33,15 @@
 
 @property (nonatomic, assign) WKWebView <UIScrollViewDelegate> *internalDelegate;
 
+- (void)_setBackgroundColorInternal:(UIColor *)backgroundColor;
+- (void)_setIndicatorStyleInternal:(UIScrollViewIndicatorStyle)indicatorStyle;
 - (void)_setContentSizePreservingContentOffsetDuringRubberband:(CGSize)contentSize;
 - (void)_setScrollEnabledInternal:(BOOL)enabled;
 - (void)_setZoomEnabledInternal:(BOOL)enabled;
+- (BOOL)_setContentScrollInsetInternal:(UIEdgeInsets)insets;
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
+// FIXME: Likely we can remove this special case for watchOS and tvOS.
+#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
 @property (nonatomic, assign, readonly) BOOL _contentInsetAdjustmentBehaviorWasExternallyOverridden;
 - (void)_setContentInsetAdjustmentBehaviorInternal:(UIScrollViewContentInsetAdjustmentBehavior)insetAdjustmentBehavior;
 #endif

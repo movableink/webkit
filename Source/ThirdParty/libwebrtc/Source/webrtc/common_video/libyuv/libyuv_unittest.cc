@@ -8,6 +8,8 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "third_party/libyuv/include/libyuv.h"
+
 #include <math.h>
 #include <string.h>
 
@@ -19,8 +21,7 @@
 #include "test/frame_utils.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
-#include "test/testsupport/fileutils.h"
-#include "third_party/libyuv/include/libyuv.h"
+#include "test/testsupport/file_utils.h"
 
 namespace webrtc {
 
@@ -28,6 +29,38 @@ namespace {
 void Calc16ByteAlignedStride(int width, int* stride_y, int* stride_uv) {
   *stride_y = 16 * ((width + 15) / 16);
   *stride_uv = 16 * ((width + 31) / 32);
+}
+
+int PrintPlane(const uint8_t* buf,
+               int width,
+               int height,
+               int stride,
+               FILE* file) {
+  for (int i = 0; i < height; i++, buf += stride) {
+    if (fwrite(buf, 1, width, file) != static_cast<unsigned int>(width))
+      return -1;
+  }
+  return 0;
+}
+
+int PrintVideoFrame(const I420BufferInterface& frame, FILE* file) {
+  int width = frame.width();
+  int height = frame.height();
+  int chroma_width = frame.ChromaWidth();
+  int chroma_height = frame.ChromaHeight();
+
+  if (PrintPlane(frame.DataY(), width, height, frame.StrideY(), file) < 0) {
+    return -1;
+  }
+  if (PrintPlane(frame.DataU(), chroma_width, chroma_height, frame.StrideU(),
+                 file) < 0) {
+    return -1;
+  }
+  if (PrintPlane(frame.DataV(), chroma_width, chroma_height, frame.StrideV(),
+                 file) < 0) {
+    return -1;
+  }
+  return 0;
 }
 
 }  // Anonymous namespace
@@ -66,7 +99,12 @@ void TestLibYuv::SetUp() {
   rtc::scoped_refptr<I420BufferInterface> buffer(
       test::ReadI420Buffer(width_, height_, source_file_));
 
-  orig_frame_.reset(new VideoFrame(buffer, kVideoRotation_0, 0));
+  orig_frame_ =
+      std::make_unique<VideoFrame>(VideoFrame::Builder()
+                                       .set_video_frame_buffer(buffer)
+                                       .set_rotation(webrtc::kVideoRotation_0)
+                                       .set_timestamp_us(0)
+                                       .build());
 }
 
 void TestLibYuv::TearDown() {

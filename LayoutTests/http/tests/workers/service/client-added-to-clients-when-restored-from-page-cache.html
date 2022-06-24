@@ -1,4 +1,4 @@
-<!-- webkit-test-runner [ enableBackForwardCache=true ] -->
+<!-- webkit-test-runner [ UsesBackForwardCache=true ] -->
 <!DOCTYPE html>
 <html>
 <body>
@@ -6,9 +6,6 @@
 <script>
 log("* Tests that a client is re-added to the list of service worker clients when it is restored from the page cache");
 log("");
-
-if (window.testRunner)
-  testRunner.setCanOpenWindows();
 
 let tries = 0;
 
@@ -73,12 +70,12 @@ navigator.serviceWorker.addEventListener("message", function(event) {
 });
 
 navigator.serviceWorker.register("resources/getClientIds-worker.js", { }).then(function(registration) {
-    expectedClientIdentifiers.push(internals.serviceWorkerClientIdentifier(document));
+    expectedClientIdentifiers.push(internals.serviceWorkerClientInternalIdentifier(document));
 
     worker = registration.installing;
     otherWindow = open("other_resources/test.html");
     otherWindow.onload = function() {
-      expectedClientIdentifiers.push(internals.serviceWorkerClientIdentifier(otherWindow.document));
+      expectedClientIdentifiers.push(internals.serviceWorkerClientInternalIdentifier(otherWindow.document));
       step = "BothClientsInitiallyActive"
       worker.postMessage("getClientIds");
     };

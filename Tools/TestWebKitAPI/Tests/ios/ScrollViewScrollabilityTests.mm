@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(IOS_FAMILY)
 
@@ -94,7 +94,10 @@ TEST(ScrollViewScrollabilityTests, ScrollableWithOverflowHiddenAndInputView)
 
     auto webView = webViewWithAutofocusedInput(inputDelegate);
     [webView waitForNextPresentationUpdate];
-    EXPECT_EQ([[webView scrollView] isScrollEnabled], YES);
+    
+    BOOL isPhone = [[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone;
+    if (isPhone)
+        EXPECT_EQ([[webView scrollView] isScrollEnabled], YES);
 }
 
 TEST(ScrollViewScrollabilityTests, ScrollableWithOverflowHiddenAndVisibleUI)

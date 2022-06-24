@@ -30,85 +30,45 @@
 #import "APIDictionary.h"
 #import "APINumber.h"
 #import "APIString.h"
-#import "PluginInfoStore.h"
-#import "PluginInformation.h"
 #import "StringUtilities.h"
 #import "WKAPICast.h"
 #import "WKPluginInformation.h"
 #import "WKSharedAPICast.h"
 #import "WKStringCF.h"
 #import "WebProcessPool.h"
-#import <WebCore/PluginBlacklist.h>
-#import <WebCore/WebGLBlacklist.h>
+#import <WebCore/PluginBlocklist.h>
+#import <WebCore/WebGLBlocklist.h>
+#import <wtf/BlockPtr.h>
 #import <wtf/RetainPtr.h>
 
-bool WKContextIsPlugInUpdateAvailable(WKContextRef contextRef, WKStringRef plugInBundleIdentifierRef)
+bool WKContextIsPlugInUpdateAvailable(WKContextRef, WKStringRef)
 {
-#if PLATFORM(IOS_FAMILY)
     return false;
-#else
-    return WebCore::PluginBlacklist::isPluginUpdateAvailable((__bridge NSString *)adoptCF(WKStringCopyCFString(kCFAllocatorDefault, plugInBundleIdentifierRef)).get());
-#endif
 }
 
-void WKContextSetPluginLoadClientPolicy(WKContextRef contextRef, WKPluginLoadClientPolicy policy, WKStringRef host, WKStringRef bundleIdentifier, WKStringRef versionString)
+void WKContextSetPluginLoadClientPolicy(WKContextRef, WKPluginLoadClientPolicy, WKStringRef, WKStringRef, WKStringRef)
 {
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    WebKit::toImpl(contextRef)->setPluginLoadClientPolicy(WebKit::toPluginLoadClientPolicy(policy), WebKit::toWTFString(host), WebKit::toWTFString(bundleIdentifier), WebKit::toWTFString(versionString));
-#endif
 }
 
-void WKContextClearPluginClientPolicies(WKContextRef contextRef)
+void WKContextClearPluginClientPolicies(WKContextRef)
 {
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    WebKit::toImpl(contextRef)->clearPluginClientPolicies();
-#endif
 }
 
 WKDictionaryRef WKContextCopyPlugInInfoForBundleIdentifier(WKContextRef contextRef, WKStringRef plugInBundleIdentifierRef)
 {
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    WebKit::PluginModuleInfo plugin = WebKit::toImpl(contextRef)->pluginInfoStore().findPluginWithBundleIdentifier(WebKit::toWTFString(plugInBundleIdentifierRef));
-    if (plugin.path.isNull())
-        return 0;
-
-    auto dictionary = createPluginInformationDictionary(plugin);
-    return WebKit::toAPI(&dictionary.leakRef());
-#else
     return 0;
-#endif
 }
 
 void WKContextGetInfoForInstalledPlugIns(WKContextRef contextRef, WKContextGetInfoForInstalledPlugInsBlock block)
 {
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    Vector<WebKit::PluginModuleInfo> plugins = WebKit::toImpl(contextRef)->pluginInfoStore().plugins();
-
-    Vector<RefPtr<API::Object>> pluginInfoDictionaries;
-    pluginInfoDictionaries.reserveInitialCapacity(plugins.size());
-
-    for (const auto& plugin: plugins)
-        pluginInfoDictionaries.uncheckedAppend(createPluginInformationDictionary(plugin));
-
-    RefPtr<API::Array> array = API::Array::create(WTFMove(pluginInfoDictionaries));
-
-    WebKit::toImpl(contextRef)->ref();
-    dispatch_async(dispatch_get_main_queue(), ^() {
-        block(WebKit::toAPI(array.get()), 0);
-    
-        WebKit::toImpl(contextRef)->deref();
-    });
-#endif
 }
 
-void WKContextResetHSTSHosts(WKContextRef context)
+void WKContextResetHSTSHosts(WKContextRef)
 {
-    return WebKit::toImpl(context)->resetHSTSHosts();
 }
 
-void WKContextResetHSTSHostsAddedAfterDate(WKContextRef context, double startDateIntervalSince1970)
+void WKContextResetHSTSHostsAddedAfterDate(WKContextRef, double)
 {
-    return WebKit::toImpl(context)->resetHSTSHostsAddedAfterDate(startDateIntervalSince1970);
 }
 
 void WKContextRegisterSchemeForCustomProtocol(WKContextRef context, WKStringRef scheme)
@@ -156,7 +116,7 @@ WKStringRef WKPlugInInfoIsSandboxedKey()
 bool WKContextShouldBlockWebGL()
 {
 #if PLATFORM(MAC)
-    return WebCore::WebGLBlacklist::shouldBlockWebGL();
+    return WebCore::WebGLBlocklist::shouldBlockWebGL();
 #else
     return false;
 #endif
@@ -165,7 +125,7 @@ bool WKContextShouldBlockWebGL()
 bool WKContextShouldSuggestBlockWebGL()
 {
 #if PLATFORM(MAC)
-    return WebCore::WebGLBlacklist::shouldSuggestBlockingWebGL();
+    return WebCore::WebGLBlocklist::shouldSuggestBlockingWebGL();
 #else
     return false;
 #endif

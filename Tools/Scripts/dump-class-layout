@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (C) 2011-2015 Apple Inc. All rights reserved.
 #
@@ -29,7 +29,6 @@ import getopt
 import argparse
 import os
 import subprocess
-from sets import Set
 
 up = os.path.dirname
 tools_directory = up(up(os.path.abspath(__file__)))
@@ -45,7 +44,7 @@ arch = None
 
 def webkit_build_dir():
     scriptpath = os.path.dirname(os.path.realpath(__file__))
-    return subprocess.check_output([os.path.join(scriptpath, "webkit-build-directory"), "--top-level"]).strip()
+    return subprocess.check_output([os.path.join(scriptpath, "webkit-build-directory"), "--top-level"]).decode().strip()
 
 def main():
     parser = argparse.ArgumentParser(description='Dumps the in-memory layout of the given class or classes, showing padding holes.')

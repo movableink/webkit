@@ -50,14 +50,16 @@ class OutputHLSL : public TIntermTraverser
                sh::WorkGroupSize workGroupSize,
                TSymbolTable *symbolTable,
                PerformanceDiagnostics *perfDiagnostics,
+               const std::map<int, const TInterfaceBlock *> &uniformBlockOptimizedMap,
                const std::vector<InterfaceBlock> &shaderStorageBlocks);
 
-    ~OutputHLSL();
+    ~OutputHLSL() override;
 
     void output(TIntermNode *treeRoot, TInfoSinkBase &objSink);
 
     const std::map<std::string, unsigned int> &getShaderStorageBlockRegisterMap() const;
     const std::map<std::string, unsigned int> &getUniformBlockRegisterMap() const;
+    const std::map<std::string, bool> &getUniformBlockUseStructuredBufferMap() const;
     const std::map<std::string, unsigned int> &getUniformRegisterMap() const;
     unsigned int getReadonlyImage2DRegisterIndex() const;
     unsigned int getImage2DRegisterIndex() const;
@@ -100,7 +102,8 @@ class OutputHLSL : public TIntermTraverser
     bool visitFunctionDefinition(Visit visit, TIntermFunctionDefinition *node) override;
     bool visitAggregate(Visit visit, TIntermAggregate *) override;
     bool visitBlock(Visit visit, TIntermBlock *node) override;
-    bool visitInvariantDeclaration(Visit visit, TIntermInvariantDeclaration *node) override;
+    bool visitGlobalQualifierDeclaration(Visit visit,
+                                         TIntermGlobalQualifierDeclaration *node) override;
     bool visitDeclaration(Visit visit, TIntermDeclaration *node) override;
     bool visitLoop(Visit visit, TIntermLoop *) override;
     bool visitBranch(Visit visit, TIntermBranch *) override;
@@ -125,7 +128,7 @@ class OutputHLSL : public TIntermTraverser
     void outputEqual(Visit visit, const TType &type, TOperator op, TInfoSinkBase &out);
     void outputAssign(Visit visit, const TType &type, TInfoSinkBase &out);
 
-    void writeEmulatedFunctionTriplet(TInfoSinkBase &out, Visit visit, TOperator op);
+    void writeEmulatedFunctionTriplet(TInfoSinkBase &out, Visit visit, const TFunction *function);
 
     // Returns true if it found a 'same symbol' initializer (initializer that references the
     // variable it's initting)
@@ -177,6 +180,8 @@ class OutputHLSL : public TIntermTraverser
     // Indexed by block id, not instance id.
     ReferencedInterfaceBlocks mReferencedUniformBlocks;
 
+    std::map<int, const TInterfaceBlock *> mUniformBlockOptimizedMap;
+
     ReferencedVariables mReferencedAttributes;
     ReferencedVariables mReferencedVaryings;
     ReferencedVariables mReferencedOutputVariables;
@@ -194,6 +199,7 @@ class OutputHLSL : public TIntermTraverser
     bool mUsesFragCoord;
     bool mUsesPointCoord;
     bool mUsesFrontFacing;
+    bool mUsesHelperInvocation;
     bool mUsesPointSize;
     bool mUsesInstanceID;
     bool mHasMultiviewExtensionEnabled;

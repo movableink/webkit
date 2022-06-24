@@ -109,12 +109,17 @@
 #ifndef OPENSSL_HEADER_CRYPTO_INTERNAL_H
 #define OPENSSL_HEADER_CRYPTO_INTERNAL_H
 
+#include <openssl/crypto.h>
 #include <openssl/ex_data.h>
 #include <openssl/stack.h>
 #include <openssl/thread.h>
 
 #include <assert.h>
 #include <string.h>
+
+#if defined(BORINGSSL_CONSTANT_TIME_VALIDATION)
+#include <valgrind/memcheck.h>
+#endif
 
 #if !defined(__cplusplus)
 #if defined(_MSC_VER)
@@ -183,8 +188,25 @@ typedef __uint128_t uint128_t;
 #define OPENSSL_FALLTHROUGH [[gnu::fallthrough]]
 #elif defined(__GNUC__) && __GNUC__ >= 7 // gcc 7
 #define OPENSSL_FALLTHROUGH __attribute__ ((fallthrough))
+#elif defined(__clang__)
+#if __has_attribute(fallthrough) && __clang_major__ >= 5
+// Clang 3.5, at least, complains about "error: declaration does not declare
+// anything", possibily because we put a semicolon after this macro in
+// practice. Thus limit it to >= Clang 5, which does work.
+#define OPENSSL_FALLTHROUGH __attribute__ ((fallthrough))
+#else // clang versions that do not support fallthrough.
+#define OPENSSL_FALLTHROUGH
+#endif
 #else // C++11 on gcc 6, and all other cases
 #define OPENSSL_FALLTHROUGH
+#endif
+
+// For convenience in testing 64-bit generic code, we allow disabling SSE2
+// intrinsics via |OPENSSL_NO_SSE2_FOR_TESTING|. x86_64 always has SSE2
+// available, so we would otherwise need to test such code on a non-x86_64
+// platform.
+#if defined(__SSE2__) && !defined(OPENSSL_NO_SSE2_FOR_TESTING)
+#define OPENSSL_SSE2
 #endif
 
 // buffers_alias returns one if |a| and |b| alias and zero otherwise.
@@ -235,6 +257,36 @@ typedef uint32_t crypto_word_t;
 #define CONSTTIME_FALSE_W ((crypto_word_t)0)
 #define CONSTTIME_TRUE_8 ((uint8_t)0xff)
 #define CONSTTIME_FALSE_8 ((uint8_t)0)
+
+// value_barrier_w returns |a|, but prevents GCC and Clang from reasoning about
+// the returned value. This is used to mitigate compilers undoing constant-time
+// code, until we can express our requirements directly in the language.
+//
+// Note the compiler is aware that |value_barrier_w| has no side effects and
+// always has the same output for a given input. This allows it to eliminate
+// dead code, move computations across loops, and vectorize.
+static inline crypto_word_t value_barrier_w(crypto_word_t a) {
+#if !defined(OPENSSL_NO_ASM) && (defined(__GNUC__) || defined(__clang__))
+  __asm__("" : "+r"(a) : /* no inputs */);
+#endif
+  return a;
+}
+
+// value_barrier_u32 behaves like |value_barrier_w| but takes a |uint32_t|.
+static inline uint32_t value_barrier_u32(uint32_t a) {
+#if !defined(OPENSSL_NO_ASM) && (defined(__GNUC__) || defined(__clang__))
+  __asm__("" : "+r"(a) : /* no inputs */);
+#endif
+  return a;
+}
+
+// value_barrier_u64 behaves like |value_barrier_w| but takes a |uint64_t|.
+static inline uint64_t value_barrier_u64(uint64_t a) {
+#if !defined(OPENSSL_NO_ASM) && (defined(__GNUC__) || defined(__clang__))
+  __asm__("" : "+r"(a) : /* no inputs */);
+#endif
+  return a;
+}
 
 // constant_time_msb_w returns the given value with the MSB copied to all the
 // other bits.
@@ -348,7 +400,13 @@ static inline uint8_t constant_time_eq_int_8(int a, int b) {
 static inline crypto_word_t constant_time_select_w(crypto_word_t mask,
                                                    crypto_word_t a,
                                                    crypto_word_t b) {
-  return (mask & a) | (~mask & b);
+  // Clang recognizes this pattern as a select. While it usually transforms it
+  // to a cmov, it sometimes further transforms it into a branch, which we do
+  // not want.
+  //
+  // Adding barriers to both |mask| and |~mask| breaks the relationship between
+  // the two, which makes the compiler stick with bitmasks.
+  return (value_barrier_w(mask) & a) | (value_barrier_w(~mask) & b);
 }
 
 // constant_time_select_8 acts like |constant_time_select| but operates on
@@ -364,6 +422,26 @@ static inline int constant_time_select_int(crypto_word_t mask, int a, int b) {
   return (int)(constant_time_select_w(mask, (crypto_word_t)(a),
                                       (crypto_word_t)(b)));
 }
+
+#if defined(BORINGSSL_CONSTANT_TIME_VALIDATION)
+
+// CONSTTIME_SECRET takes a pointer and a number of bytes and marks that region
+// of memory as secret. Secret data is tracked as it flows to registers and
+// other parts of a memory. If secret data is used as a condition for a branch,
+// or as a memory index, it will trigger warnings in valgrind.
+#define CONSTTIME_SECRET(x, y) VALGRIND_MAKE_MEM_UNDEFINED(x, y)
+
+// CONSTTIME_DECLASSIFY takes a pointer and a number of bytes and marks that
+// region of memory as public. Public data is not subject to constant-time
+// rules.
+#define CONSTTIME_DECLASSIFY(x, y) VALGRIND_MAKE_MEM_DEFINED(x, y)
+
+#else
+
+#define CONSTTIME_SECRET(x, y)
+#define CONSTTIME_DECLASSIFY(x, y)
+
+#endif  // BORINGSSL_CONSTANT_TIME_VALIDATION
 
 
 // Thread-safe initialisation.
@@ -392,6 +470,12 @@ OPENSSL_EXPORT void CRYPTO_once(CRYPTO_once_t *once, void (*init)(void));
 
 
 // Reference counting.
+
+// Automatically enable C11 atomics if implemented.
+#if !defined(OPENSSL_C11_ATOMIC) && !defined(__STDC_NO_ATOMICS__) && \
+    defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define OPENSSL_C11_ATOMIC
+#endif
 
 // CRYPTO_REFCOUNT_MAX is the value at which the reference count saturates.
 #define CRYPTO_REFCOUNT_MAX 0xffffffff
@@ -529,6 +613,8 @@ BSSL_NAMESPACE_END
 // stored.
 typedef enum {
   OPENSSL_THREAD_LOCAL_ERR = 0,
+  OPENSSL_THREAD_LOCAL_RAND,
+  OPENSSL_THREAD_LOCAL_FIPS_COUNTERS,
   OPENSSL_THREAD_LOCAL_TEST,
   NUM_OPENSSL_THREAD_LOCALS,
 } thread_local_data_t;
@@ -611,6 +697,10 @@ OPENSSL_EXPORT void CRYPTO_free_ex_data(CRYPTO_EX_DATA_CLASS *ex_data_class,
 // Endianness conversions.
 
 #if defined(__GNUC__) && __GNUC__ >= 2
+static inline uint16_t CRYPTO_bswap2(uint16_t x) {
+  return __builtin_bswap16(x);
+}
+
 static inline uint32_t CRYPTO_bswap4(uint32_t x) {
   return __builtin_bswap32(x);
 }
@@ -620,9 +710,13 @@ static inline uint64_t CRYPTO_bswap8(uint64_t x) {
 }
 #elif defined(_MSC_VER)
 OPENSSL_MSVC_PRAGMA(warning(push, 3))
-#include <intrin.h>
+#include <stdlib.h>
 OPENSSL_MSVC_PRAGMA(warning(pop))
-#pragma intrinsic(_byteswap_uint64, _byteswap_ulong)
+#pragma intrinsic(_byteswap_uint64, _byteswap_ulong, _byteswap_ushort)
+static inline uint16_t CRYPTO_bswap2(uint16_t x) {
+  return _byteswap_ushort(x);
+}
+
 static inline uint32_t CRYPTO_bswap4(uint32_t x) {
   return _byteswap_ulong(x);
 }
@@ -631,6 +725,10 @@ static inline uint64_t CRYPTO_bswap8(uint64_t x) {
   return _byteswap_uint64(x);
 }
 #else
+static inline uint16_t CRYPTO_bswap2(uint16_t x) {
+  return (x >> 8) | (x << 8);
+}
+
 static inline uint32_t CRYPTO_bswap4(uint32_t x) {
   x = (x >> 16) | (x << 16);
   x = ((x & 0xff00ff00) >> 8) | ((x & 0x00ff00ff) << 8);
@@ -721,11 +819,77 @@ static inline void *OPENSSL_memset(void *dst, int c, size_t n) {
   return memset(dst, c, n);
 }
 
+
+// Loads and stores.
+//
+// The following functions load and store sized integers with the specified
+// endianness. They use |memcpy|, and so avoid alignment or strict aliasing
+// requirements on the input and output pointers.
+
+static inline uint32_t CRYPTO_load_u32_le(const void *in) {
+  uint32_t v;
+  OPENSSL_memcpy(&v, in, sizeof(v));
+  return v;
+}
+
+static inline void CRYPTO_store_u32_le(void *out, uint32_t v) {
+  OPENSSL_memcpy(out, &v, sizeof(v));
+}
+
+static inline uint32_t CRYPTO_load_u32_be(const void *in) {
+  uint32_t v;
+  OPENSSL_memcpy(&v, in, sizeof(v));
+  return CRYPTO_bswap4(v);
+}
+
+static inline void CRYPTO_store_u32_be(void *out, uint32_t v) {
+  v = CRYPTO_bswap4(v);
+  OPENSSL_memcpy(out, &v, sizeof(v));
+}
+
+static inline uint64_t CRYPTO_load_u64_be(const void *ptr) {
+  uint64_t ret;
+  OPENSSL_memcpy(&ret, ptr, sizeof(ret));
+  return CRYPTO_bswap8(ret);
+}
+
+static inline void CRYPTO_store_u64_be(void *out, uint64_t v) {
+  v = CRYPTO_bswap8(v);
+  OPENSSL_memcpy(out, &v, sizeof(v));
+}
+
+static inline crypto_word_t CRYPTO_load_word_le(const void *in) {
+  crypto_word_t v;
+  OPENSSL_memcpy(&v, in, sizeof(v));
+  return v;
+}
+
+static inline void CRYPTO_store_word_le(void *out, crypto_word_t v) {
+  OPENSSL_memcpy(out, &v, sizeof(v));
+}
+
+
+// FIPS functions.
+
 #if defined(BORINGSSL_FIPS)
 // BORINGSSL_FIPS_abort is called when a FIPS power-on or continuous test
 // fails. It prevents any further cryptographic operations by the current
 // process.
 void BORINGSSL_FIPS_abort(void) __attribute__((noreturn));
+#endif
+
+// boringssl_fips_self_test runs the FIPS KAT-based self tests. It returns one
+// on success and zero on error. The argument is the integrity hash of the FIPS
+// module and may be used to check and write flag files to suppress duplicate
+// self-tests. If |module_hash_len| is zero then no flag file will be checked
+// nor written and tests will always be run.
+int boringssl_fips_self_test(const uint8_t *module_hash,
+                             size_t module_hash_len);
+
+#if defined(BORINGSSL_FIPS_COUNTERS)
+void boringssl_fips_inc_counter(enum fips_counter_t counter);
+#else
+OPENSSL_INLINE void boringssl_fips_inc_counter(enum fips_counter_t counter) {}
 #endif
 
 #if defined(__cplusplus)

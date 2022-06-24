@@ -6,7 +6,7 @@
     (GraphicsLayer
       (bounds 800.00 600.00)
       (contentsOpaque 1)
-      (children 2
+      (children 3
         (GraphicsLayer
           (offsetFromRenderer width=-10 height=-10)
           (position 18.00 10.00)
@@ -36,7 +36,7 @@
                           (position 20.00 20.00)
                           (bounds 216.00 216.00)
                           (drawsContent 1)
-                          (children 1
+                          (children 2
                             (GraphicsLayer
                               (offsetFromRenderer width=3 height=3)
                               (position 3.00 3.00)
@@ -49,6 +49,18 @@
                                   (scrollOffset (0,150))
                                   (anchor 0.00 0.00)
                                   (bounds 195.00 554.00)
+                                  (drawsContent 1)
+                                )
+                              )
+                            )
+                            (GraphicsLayer
+                              (position 3.00 3.00)
+                              (bounds 210.00 210.00)
+                              (clips 1)
+                              (children 1
+                                (GraphicsLayer
+                                  (position 195.00 0.00)
+                                  (bounds 15.00 210.00)
                                   (drawsContent 1)
                                 )
                               )
@@ -76,6 +88,7 @@
               (children 1
                 (GraphicsLayer
                   (position 23.00 23.00)
+                  (bounds origin 0.00 150.00)
                   (bounds 195.00 210.00)
                   (clips 1)
                   (children 1
@@ -95,6 +108,18 @@
                   )
                 )
               )
+            )
+          )
+        )
+        (GraphicsLayer
+          (position 41.00 33.00)
+          (bounds 316.00 316.00)
+          (clips 1)
+          (children 1
+            (GraphicsLayer
+              (position 301.00 0.00)
+              (bounds 15.00 316.00)
+              (drawsContent 1)
             )
           )
         )

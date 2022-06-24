@@ -279,7 +279,7 @@ WI.JavaScriptLogViewController = class JavaScriptLogViewController extends WI.Ob
         if (messageView.message && messageView.message.source !== WI.ConsoleMessage.MessageSource.JS)
             this._lastCommitted = "";
 
-        if (WI.consoleContentView.visible)
+        if (WI.consoleContentView.isAttached)
             this.renderPendingMessagesSoon();
 
         if (!WI.isShowingConsoleTab() && messageView.message && messageView.message.shouldRevealConsole)
@@ -362,5 +362,5 @@ WI.JavaScriptLogViewController = class JavaScriptLogViewController extends WI.Ob
     }
 };
 
-WI.JavaScriptLogViewController.CachedPropertiesDuration = 30000;
+WI.JavaScriptLogViewController.CachedPropertiesDuration = 30_000;
 WI.JavaScriptLogViewController.IgnoredRepeatCount = Symbol("ignored-repeat-count");

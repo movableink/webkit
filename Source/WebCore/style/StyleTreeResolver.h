@@ -26,10 +26,11 @@
 #pragma once
 
 #include "SelectorChecker.h"
-#include "SelectorFilter.h"
+#include "SelectorMatchingState.h"
 #include "StyleChange.h"
 #include "StyleSharingResolver.h"
 #include "StyleUpdate.h"
+#include "Styleable.h"
 #include <wtf/Function.h>
 #include <wtf/Ref.h>
 
@@ -40,33 +41,44 @@ class Element;
 class Node;
 class RenderStyle;
 class ShadowRoot;
-class StyleResolver;
 
 namespace Style {
 
+class Resolver;
+struct ResolutionContext;
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TreeResolverScope);
 class TreeResolver {
 public:
-    TreeResolver(Document&);
+    TreeResolver(Document&, std::unique_ptr<Update> = { });
     ~TreeResolver();
 
     std::unique_ptr<Update> resolve();
 
+    bool hasUnresolvedQueryContainers() const { return !m_unresolvedQueryContainers.isEmpty(); }
+
 private:
-    std::unique_ptr<RenderStyle> styleForElement(Element&, const RenderStyle& inheritedStyle);
+    std::unique_ptr<RenderStyle> styleForStyleable(const Styleable&, const ResolutionContext&);
 
     void resolveComposedTree();
 
-    ElementUpdates resolveElement(Element&);
+    enum class QueryContainerAction : uint8_t { None, Continue, Layout };
+    QueryContainerAction updateQueryContainer(Element&, const RenderStyle&, ContainerType previousContainerType);
 
-    ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, Element&, Change);
-    ElementUpdate resolvePseudoStyle(Element&, const ElementUpdate&, PseudoId);
+    enum class DescendantsToResolve : uint8_t { None, ChildrenWithExplicitInherit, Children, All };
+    std::pair<ElementUpdate, DescendantsToResolve> resolveElement(Element&);
+
+    static ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, const Styleable&, Change, const ResolutionContext&);
+    std::optional<ElementUpdate> resolvePseudoElement(Element&, PseudoId, const ElementUpdate&);
+    std::unique_ptr<RenderStyle> resolveInheritedFirstLinePseudoElement(Element&, const ElementUpdate&);
 
     struct Scope : RefCounted<Scope> {
-        StyleResolver& styleResolver;
-        SelectorFilter selectorFilter;
+        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TreeResolverScope);
+        Ref<Resolver> resolver;
+        SelectorMatchingState selectorMatchingState;
         SharingResolver sharingResolver;
-        ShadowRoot* shadowRoot { nullptr };
-        Scope* enclosingScope { nullptr };
+        RefPtr<ShadowRoot> shadowRoot;
+        RefPtr<Scope> enclosingScope;
 
         Scope(Document&);
         Scope(ShadowRoot&, Scope& enclosingScope);
@@ -76,9 +88,10 @@ private:
     struct Parent {
         Element* element;
         const RenderStyle& style;
-        Change change { NoChange };
+        Change change { Change::None };
         DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
         bool didPushScope { false };
+        bool resolvedFirstBoxGeneratingChild { false };
 
         Parent(Document&);
         Parent(Element&, const RenderStyle&, Change, DescendantsToResolve);
@@ -95,7 +108,16 @@ private:
     void popParent();
     void popParentsToDepth(unsigned depth);
 
+    static DescendantsToResolve computeDescendantsToResolve(Change, Validity, DescendantsToResolve);
+    static bool shouldResolveElement(const Element&, DescendantsToResolve);
+    static void resetDescendantStyleRelations(Element&, DescendantsToResolve);
+
+    ResolutionContext makeResolutionContext();
+    ResolutionContext makeResolutionContextForPseudoElement(const ElementUpdate&);
+    std::optional<ResolutionContext> makeResolutionContextForInheritedFirstLine(const ElementUpdate&, const RenderStyle& inheritStyle);
+    const Parent* boxGeneratingParent() const;
     const RenderStyle* parentBoxStyle() const;
+    const RenderStyle* parentBoxStyleForPseudoElement(const ElementUpdate&) const;
 
     Document& m_document;
     std::unique_ptr<RenderStyle> m_documentElementStyle;
@@ -104,10 +126,13 @@ private:
     Vector<Parent, 32> m_parentStack;
     bool m_didSeePendingStylesheet { false };
 
+    HashSet<RefPtr<Element>> m_unresolvedQueryContainers;
+
     std::unique_ptr<Update> m_update;
 };
 
-void queuePostResolutionCallback(Function<void ()>&&);
+// Integrate with the HTML5 event loop instead, see EventLoop.cpp and consumers.
+void deprecatedQueuePostResolutionCallback(Function<void()>&&);
 bool postResolutionCallbacksAreSuspended();
 
 class PostResolutionCallbackDisabler {

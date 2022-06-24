@@ -23,8 +23,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
 #if ENABLE(DATA_DETECTION)
 
 typedef struct __DDResult *DDResultRef;
@@ -41,6 +39,8 @@ typedef struct __DDResult *DDResultRef;
 #endif // PLATFORM(IOS_FAMILY)
 
 #else // !USE(APPLE_INTERNAL_SDK)
+
+#import <Foundation/Foundation.h>
 
 typedef enum {
     DDScannerTypeStandard = 0,

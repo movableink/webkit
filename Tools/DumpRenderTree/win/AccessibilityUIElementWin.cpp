@@ -58,15 +58,6 @@ AccessibilityUIElement::AccessibilityUIElement(PlatformUIElement element)
 {
 }
 
-AccessibilityUIElement::AccessibilityUIElement(const AccessibilityUIElement& other)
-    : m_element(other.m_element)
-{
-}
-
-AccessibilityUIElement::~AccessibilityUIElement()
-{
-}
-
 bool AccessibilityUIElement::isEqual(AccessibilityUIElement* otherElement)
 {
     COMPtr<IAccessibleComparable> comparable = comparableObject(m_element.get());
@@ -758,6 +749,10 @@ void AccessibilityUIElement::press()
     m_element->accDoDefaultAction(self());
 }
 
+void AccessibilityUIElement::dismiss()
+{
+}
+
 AccessibilityUIElement AccessibilityUIElement::disclosedRowAtIndex(unsigned index)
 {
     return { nullptr };
@@ -912,6 +907,36 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::popupValue() const
     return createEmptyJSString();
 }
 
+bool AccessibilityUIElement::hasDocumentRoleAncestor() const
+{
+    // FIXME: Implement.
+    return false;
+}
+
+bool AccessibilityUIElement::hasWebApplicationAncestor() const
+{
+    // FIXME: Implement.
+    return false;
+}
+
+bool AccessibilityUIElement::isInDescriptionListDetail() const
+{
+    // FIXME: Implement.
+    return false;
+}
+
+bool AccessibilityUIElement::isInDescriptionListTerm() const
+{
+    // FIXME: Implement.
+    return false;
+}
+
+bool AccessibilityUIElement::isInCell() const
+{
+    // FIXME: Implement.
+    return false;
+}
+
 void AccessibilityUIElement::takeFocus()
 {
     if (!m_element)
@@ -960,6 +985,12 @@ void AccessibilityUIElement::scrollToGlobalPoint(int x, int y)
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::classList() const
+{
+    // FIXME: implement
+    return 0;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::domIdentifier() const
 {
     // FIXME: implement
     return 0;

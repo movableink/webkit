@@ -33,7 +33,8 @@ namespace WebCore {
 
 struct MediaCapabilitiesInfo;
 
-extern bool validateHEVCParameters(HEVCParameterSet&, MediaCapabilitiesInfo&, bool hasAlphaChannel);
+std::optional<MediaCapabilitiesInfo> validateHEVCParameters(const HEVCParameters&, bool hasAlphaChannel, bool hdrSupport);
+std::optional<MediaCapabilitiesInfo> validateDoViParameters(const DoViParameters&, bool hasAlphaChannel, bool hdrSupport);
 
 }
 

@@ -28,6 +28,8 @@
 
 #include "CacheStorageConnection.h"
 
+#include "ResourceRequest.h"
+
 namespace WebCore {
 
 class WorkerGlobalScope;
@@ -48,7 +50,7 @@ private:
     void remove(uint64_t cacheIdentifier, DOMCacheEngine::CacheIdentifierCallback&&) final;
     void retrieveCaches(const ClientOrigin&, uint64_t updateCounter, DOMCacheEngine::CacheInfosCallback&&) final;
 
-    void retrieveRecords(uint64_t cacheIdentifier, const URL&, DOMCacheEngine::RecordsCallback&&) final;
+    void retrieveRecords(uint64_t cacheIdentifier, RetrieveRecordsOptions&&, DOMCacheEngine::RecordsCallback&&) final;
     void batchDeleteOperation(uint64_t cacheIdentifier, const ResourceRequest&, CacheQueryOptions&&, DOMCacheEngine::RecordIdentifiersCallback&&) final;
     void batchPutOperation(uint64_t cacheIdentifier, Vector<DOMCacheEngine::Record>&&, DOMCacheEngine::RecordIdentifiersCallback&&) final;
 

@@ -36,7 +36,7 @@ void PlatformPopupMenuData::encode(IPC::Encoder& encoder) const
     encoder << fontInfo;
     encoder << shouldPopOver;
     encoder << hideArrows;
-    encoder.encodeEnum(menuSize);
+    encoder << menuSize;
 #elif PLATFORM(QT)
     encoder << multipleSelections;
 #elif PLATFORM(WIN)
@@ -68,7 +68,7 @@ bool PlatformPopupMenuData::decode(IPC::Decoder& decoder, PlatformPopupMenuData&
         return false;
     if (!decoder.decode(data.hideArrows))
         return false;
-    if (!decoder.decodeEnum(data.menuSize))
+    if (!decoder.decode(data.menuSize))
         return false;
 #elif PLATFORM(QT)
     if (!decoder.decode(data.multipleSelections))
@@ -104,11 +104,11 @@ bool PlatformPopupMenuData::decode(IPC::Decoder& decoder, PlatformPopupMenuData&
     return true;
 }
 
-Optional<PlatformPopupMenuData> PlatformPopupMenuData::decode(IPC::Decoder& decoder)
+std::optional<PlatformPopupMenuData> PlatformPopupMenuData::decode(IPC::Decoder& decoder)
 {
     PlatformPopupMenuData data;
     if (!decode(decoder, data))
-        return WTF::nullopt;
+        return std::nullopt;
     return data;
 }
 

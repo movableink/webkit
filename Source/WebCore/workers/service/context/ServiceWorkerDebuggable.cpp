@@ -38,7 +38,7 @@ using namespace Inspector;
 
 ServiceWorkerDebuggable::ServiceWorkerDebuggable(ServiceWorkerThreadProxy& serviceWorkerThreadProxy, const ServiceWorkerContextData& data)
     : m_serviceWorkerThreadProxy(serviceWorkerThreadProxy)
-    , m_scopeURL(data.registration.scopeURL)
+    , m_scopeURL(data.registration.scopeURL.string())
 {
 }
 
@@ -52,9 +52,9 @@ void ServiceWorkerDebuggable::disconnect(FrontendChannel& channel)
     m_serviceWorkerThreadProxy.inspectorProxy().disconnectFromWorker(channel);
 }
 
-void ServiceWorkerDebuggable::dispatchMessageFromRemote(const String& message)
+void ServiceWorkerDebuggable::dispatchMessageFromRemote(String&& message)
 {
-    m_serviceWorkerThreadProxy.inspectorProxy().sendMessageToWorker(message);
+    m_serviceWorkerThreadProxy.inspectorProxy().sendMessageToWorker(WTFMove(message));
 }
 
 } // namespace WebCore

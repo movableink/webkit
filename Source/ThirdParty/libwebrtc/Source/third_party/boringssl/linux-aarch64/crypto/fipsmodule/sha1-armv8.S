@@ -1,10 +1,11 @@
 // This file is generated from a similarly-named Perl script in the BoringSSL
 // source tree. Do not edit by hand.
 
-#if defined(__has_feature)
+#if !defined(__has_feature)
+#define __has_feature(x) 0
+#endif
 #if __has_feature(memory_sanitizer) && !defined(OPENSSL_NO_ASM)
 #define OPENSSL_NO_ASM
-#endif
 #endif
 
 #if !defined(OPENSSL_NO_ASM)
@@ -17,14 +18,20 @@
 .text
 
 
+.hidden	OPENSSL_armcap_P
 .globl	sha1_block_data_order
 .hidden	sha1_block_data_order
 .type	sha1_block_data_order,%function
 .align	6
 sha1_block_data_order:
+	// Armv8.3-A PAuth: even though x30 is pushed to stack it is not popped later.
+	AARCH64_VALID_CALL_TARGET
+#if __has_feature(hwaddress_sanitizer) && __clang_major__ >= 10
+	adrp	x16,:pg_hi21_nc:OPENSSL_armcap_P
+#else
 	adrp	x16,OPENSSL_armcap_P
-	add	x16,x16,:lo12:OPENSSL_armcap_P
-	ldr	w16,[x16]
+#endif
+	ldr	w16,[x16,:lo12:OPENSSL_armcap_P]
 	tst	w16,#ARMV8_SHA1
 	b.ne	.Lv8_entry
 
@@ -1086,6 +1093,8 @@ sha1_block_data_order:
 .type	sha1_block_armv8,%function
 .align	6
 sha1_block_armv8:
+	// Armv8.3-A PAuth: even though x30 is pushed to stack it is not popped later.
+	AARCH64_VALID_CALL_TARGET
 .Lv8_entry:
 	stp	x29,x30,[sp,#-16]!
 	add	x29,sp,#0
@@ -1224,7 +1233,6 @@ sha1_block_armv8:
 .byte	83,72,65,49,32,98,108,111,99,107,32,116,114,97,110,115,102,111,114,109,32,102,111,114,32,65,82,77,118,56,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
 .align	2
 .align	2
-.comm	OPENSSL_armcap_P,4,4
-.hidden	OPENSSL_armcap_P
 #endif
 #endif  // !OPENSSL_NO_ASM
+.section	.note.GNU-stack,"",%progbits

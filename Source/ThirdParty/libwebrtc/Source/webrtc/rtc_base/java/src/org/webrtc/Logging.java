@@ -10,12 +10,12 @@
 
 package org.webrtc;
 
+import androidx.annotation.Nullable;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.EnumSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.Nullable;
 import org.webrtc.Loggable;
 
 /**
@@ -88,7 +88,7 @@ public class Logging {
   }
 
   // Keep in sync with webrtc/rtc_base/logging.h:LoggingSeverity.
-  public enum Severity { LS_SENSITIVE, LS_VERBOSE, LS_INFO, LS_WARNING, LS_ERROR, LS_NONE }
+  public enum Severity { LS_VERBOSE, LS_INFO, LS_WARNING, LS_ERROR, LS_NONE }
 
   public static void enableLogThreads() {
     nativeEnableLogThreads();
@@ -102,7 +102,7 @@ public class Logging {
   @Deprecated
   public static void enableTracing(String path, EnumSet<TraceLevel> levels) {}
 
-  // Enable diagnostic logging for messages of |severity| to the platform debug
+  // Enable diagnostic logging for messages of `severity` to the platform debug
   // output. On Android, the output will be directed to Logcat.
   // Note: this function starts collecting the output of the RTC_LOG() macros.
   // TODO(bugs.webrtc.org/8491): Remove NoSynchronizedMethodCheck suppression.

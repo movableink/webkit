@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "CrossOriginEmbedderPolicy.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
@@ -37,6 +38,8 @@ namespace WebCore {
 class SecurityOrigin;
 class SecurityOriginPolicy;
 class ContentSecurityPolicy;
+struct CrossOriginOpenerPolicy;
+struct PolicyContainer;
 
 enum SandboxFlag {
     // See http://www.whatwg.org/specs/web-apps/current-work/#attr-iframe-sandbox for a list of the sandbox flags.
@@ -55,6 +58,7 @@ enum SandboxFlag {
     SandboxDocumentDomain       = 1 << 11,
     SandboxModals               = 1 << 12,
     SandboxStorageAccessByUserActivation = 1 << 13,
+    SandboxTopNavigationToCustomProtocols = 1 << 14,
     SandboxAll                  = -1 // Mask with all bits set to 1.
 };
 
@@ -62,12 +66,17 @@ typedef int SandboxFlags;
 
 class SecurityContext {
 public:
+    // https://html.spec.whatwg.org/multipage/origin.html#determining-the-creation-sandboxing-flags
+    SandboxFlags creationSandboxFlags() const { return m_creationSandboxFlags; }
+
     SandboxFlags sandboxFlags() const { return m_sandboxFlags; }
     ContentSecurityPolicy* contentSecurityPolicy() { return m_contentSecurityPolicy.get(); }
 
     bool isSecureTransitionTo(const URL&) const;
 
-    void enforceSandboxFlags(SandboxFlags mask);
+    enum class SandboxFlagsSource : bool { CSP, Other };
+    void enforceSandboxFlags(SandboxFlags, SandboxFlagsSource = SandboxFlagsSource::Other);
+
     bool isSandboxed(SandboxFlags mask) const { return m_sandboxFlags & mask; }
 
     SecurityOriginPolicy* securityOriginPolicy() const { return m_securityOriginPolicy.get(); }
@@ -82,6 +91,13 @@ public:
     //       context that already contains content.
     void setContentSecurityPolicy(std::unique_ptr<ContentSecurityPolicy>&&);
 
+    const CrossOriginEmbedderPolicy& crossOriginEmbedderPolicy() const { return m_crossOriginEmbedderPolicy; }
+    void setCrossOriginEmbedderPolicy(const CrossOriginEmbedderPolicy& crossOriginEmbedderPolicy) { m_crossOriginEmbedderPolicy = crossOriginEmbedderPolicy; }
+
+    virtual const CrossOriginOpenerPolicy& crossOriginOpenerPolicy() const;
+
+    PolicyContainer policyContainer() const;
+
     WEBCORE_EXPORT SecurityOrigin* securityOrigin() const;
 
     static SandboxFlags parseSandboxPolicy(const String& policy, String& invalidTokensErrorMessage);
@@ -92,6 +108,8 @@ public:
         Active = 1 << 1,
     };
 
+    bool usedLegacyTLS() const { return m_usedLegacyTLS; }
+    void setUsedLegacyTLS(bool used) { m_usedLegacyTLS = used; }
     const OptionSet<MixedContentType>& foundMixedContent() const { return m_mixedContentTypes; }
     void setFoundMixedContent(MixedContentType type) { m_mixedContentTypes.add(type); }
     bool geolocationAccessed() const { return m_geolocationAccessed; }
@@ -106,6 +124,8 @@ public:
     // the Secure Context spec: https://w3c.github.io/webappsec-secure-contexts/#settings-object (Editor's Draft, 17 November 2016)
     virtual bool isSecureContext() const = 0;
 
+    bool haveInitializedSecurityOrigin() const { return m_haveInitializedSecurityOrigin; }
+
 protected:
     SecurityContext();
     virtual ~SecurityContext();
@@ -115,17 +135,21 @@ protected:
     void disableSandboxFlags(SandboxFlags mask) { m_sandboxFlags &= ~mask; }
 
     void didFailToInitializeSecurityOrigin() { m_haveInitializedSecurityOrigin = false; }
-    bool haveInitializedSecurityOrigin() const { return m_haveInitializedSecurityOrigin; }
 
 private:
+    void addSandboxFlags(SandboxFlags);
+
     RefPtr<SecurityOriginPolicy> m_securityOriginPolicy;
     std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
+    CrossOriginEmbedderPolicy m_crossOriginEmbedderPolicy;
+    SandboxFlags m_creationSandboxFlags { SandboxNone };
     SandboxFlags m_sandboxFlags { SandboxNone };
     OptionSet<MixedContentType> m_mixedContentTypes;
     bool m_haveInitializedSecurityOrigin { false };
     bool m_geolocationAccessed { false };
     bool m_secureCookiesAccessed { false };
     bool m_isStrictMixedContentMode { false };
+    bool m_usedLegacyTLS { false };
 };
 
 } // namespace WebCore

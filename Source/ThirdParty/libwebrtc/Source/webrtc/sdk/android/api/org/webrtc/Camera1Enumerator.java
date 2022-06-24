@@ -11,9 +11,9 @@
 package org.webrtc;
 
 import android.os.SystemClock;
+import androidx.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import javax.annotation.Nullable;
 import org.webrtc.CameraEnumerationAndroid.CaptureFormat;
 
 @SuppressWarnings("deprecation")
@@ -158,7 +158,7 @@ public class Camera1Enumerator implements CameraEnumerator {
     return ranges;
   }
 
-  // Returns the camera index for camera with name |deviceName|, or throws IllegalArgumentException
+  // Returns the camera index for camera with name `deviceName`, or throws IllegalArgumentException
   // if no such camera can be found.
   static int getCameraIndex(String deviceName) {
     Logging.d(TAG, "getCameraIndex: " + deviceName);

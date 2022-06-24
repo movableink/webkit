@@ -364,3 +364,59 @@ assert.throws(() => WebAssembly.Table.prototype.grow(undefined), TypeError, `exp
     assert.eq(instance.exports.table0.length, 0);
     assert.truthy(instance.exports.table instanceof WebAssembly.Table);
 }
+
+{
+    const args = {minimum: 5, element: "funcref"}
+    let minimum = false
+    const proxy = new Proxy(args, {
+        get(target, prop, receiver) {
+            if (prop === "minimum") {
+                minimum = true;
+            }
+            return Reflect.get(...arguments);
+        }
+    })
+    const table = new WebAssembly.Table(proxy);
+    assert.eq(table.length, 5);
+    assert.truthy(minimum);
+
+    let threw = false;
+    try {
+        new WebAssembly.Table({minimum: 5, initial: 5, element: "funcref"});
+    } catch (e) {
+        assert.truthy(e instanceof TypeError);
+        assert.eq(e.message, "WebAssembly.Table 'initial' and 'minimum' options are specified at the same time")
+        threw = true;
+    }
+    assert.truthy(threw);
+}
+
+{
+    assert.throws(() => {
+        const t = new WebAssembly.Table({minimum: 5, element: "funcref"});
+        t.type.call({});
+    }, TypeError, "expected |this| value to be an instance of WebAssembly.Table");
+
+    const t0 = new WebAssembly.Table({minimum: 5, element: "funcref"}).type();
+    assert.eq(Object.keys(t0).length, 2);
+    assert.eq(t0.minimum, 5);
+    assert.eq(t0.element, "anyfunc");
+
+    const t1 = new WebAssembly.Table({minimum: 5, maximum: 10, element: "funcref"}).type();
+    assert.eq(Object.keys(t1).length, 3);
+    assert.eq(t1.minimum, 5);
+    assert.eq(t1.maximum, 10)
+    assert.eq(t1.element, "anyfunc");
+
+    const t2 = new WebAssembly.Table({minimum: 5, maximum: 10, element: "externref"}).type();
+    assert.eq(Object.keys(t2).length, 3);
+    assert.eq(t2.minimum, 5);
+    assert.eq(t2.maximum, 10)
+    assert.eq(t2.element, "externref");
+
+    const t3 = new WebAssembly.Table(t2).type();
+    assert.eq(Object.keys(t2).length, Object.keys(t3).length);
+    assert.eq(t2.minimum, t3.minimum);
+    assert.eq(t2.maximum, t3.maximum)
+    assert.eq(t2.element, t3.element);
+}

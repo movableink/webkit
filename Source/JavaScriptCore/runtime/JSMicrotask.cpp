@@ -28,9 +28,6 @@
 
 #include "CatchScope.h"
 #include "Debugger.h"
-#include "Error.h"
-#include "Exception.h"
-#include "JSCInlines.h"
 #include "JSGlobalObject.h"
 #include "JSObjectInlines.h"
 #include "Microtask.h"
@@ -40,45 +37,35 @@ namespace JSC {
 
 class JSMicrotask final : public Microtask {
 public:
-    static constexpr unsigned maxArguments = 3;
-    JSMicrotask(VM& vm, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2)
+    static constexpr unsigned maxArguments = 4;
+    JSMicrotask(VM& vm, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
     {
         m_job.set(vm, job);
         m_arguments[0].set(vm, argument0);
         m_arguments[1].set(vm, argument1);
         m_arguments[2].set(vm, argument2);
-    }
-
-    JSMicrotask(VM& vm, JSValue job)
-    {
-        m_job.set(vm, job);
+        m_arguments[3].set(vm, argument3);
     }
 
 private:
-    void run(ExecState*) override;
+    void run(JSGlobalObject*) final;
 
     Strong<Unknown> m_job;
     Strong<Unknown> m_arguments[maxArguments];
 };
 
-Ref<Microtask> createJSMicrotask(VM& vm, JSValue job)
+Ref<Microtask> createJSMicrotask(VM& vm, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
 {
-    return adoptRef(*new JSMicrotask(vm, job));
+    return adoptRef(*new JSMicrotask(vm, job, argument0, argument1, argument2, argument3));
 }
 
-Ref<Microtask> createJSMicrotask(VM& vm, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2)
+void JSMicrotask::run(JSGlobalObject* globalObject)
 {
-    return adoptRef(*new JSMicrotask(vm, job, argument0, argument1, argument2));
-}
-
-void JSMicrotask::run(ExecState* exec)
-{
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    CallData handlerCallData;
-    CallType handlerCallType = getCallData(vm, m_job.get(), handlerCallData);
-    ASSERT(handlerCallType != CallType::None);
+    auto handlerCallData = getCallData(vm, m_job.get());
+    ASSERT(handlerCallData.type != CallData::Type::None);
 
     MarkedArgumentBuffer handlerArguments;
     for (unsigned index = 0; index < maxArguments; ++index) {
@@ -90,11 +77,14 @@ void JSMicrotask::run(ExecState* exec)
     if (UNLIKELY(handlerArguments.hasOverflowed()))
         return;
 
-    if (UNLIKELY(exec->lexicalGlobalObject()->hasDebugger()))
-        exec->lexicalGlobalObject()->debugger()->willRunMicrotask();
+    if (UNLIKELY(globalObject->hasDebugger()))
+        globalObject->debugger()->willRunMicrotask();
 
-    profiledCall(exec, ProfilingReason::Microtask, m_job.get(), handlerCallType, handlerCallData, jsUndefined(), handlerArguments);
+    profiledCall(globalObject, ProfilingReason::Microtask, m_job.get(), handlerCallData, jsUndefined(), handlerArguments);
     scope.clearException();
+
+    if (UNLIKELY(globalObject->hasDebugger()))
+        globalObject->debugger()->didRunMicrotask();
 }
 
 } // namespace JSC

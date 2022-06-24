@@ -26,15 +26,15 @@
 #include "config.h"
 #include "WebCookieManager.h"
 
-#include "HTTPCookieAcceptPolicy.h"
 #include "NetworkProcess.h"
+#include <WebCore/HTTPCookieAcceptPolicy.h>
 #include <WebCore/NetworkStorageSession.h>
 
 namespace WebKit {
 
 using namespace WebCore;
 
-void WebCookieManager::platformSetHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicy policy)
+void WebCookieManager::platformSetHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicy policy, CompletionHandler<void()>&& completionHandler)
 {
     CookieAcceptPolicy curlPolicy = CookieAcceptPolicy::OnlyFromMainDocumentDomain;
     switch (policy) {
@@ -53,26 +53,9 @@ void WebCookieManager::platformSetHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicy 
     }
 
     m_process.forEachNetworkStorageSession([curlPolicy] (const auto& networkStorageSession) {
-        networkStorageSession.cookieStorage().setCookieAcceptPolicy(networkStorageSession, curlPolicy);
+        networkStorageSession.setCookieAcceptPolicy(curlPolicy);
     });
-}
-
-HTTPCookieAcceptPolicy WebCookieManager::platformGetHTTPCookieAcceptPolicy()
-{
-    const auto& networkStorageSession = m_process.defaultStorageSession();
-    switch (networkStorageSession.cookieStorage().cookieAcceptPolicy(networkStorageSession)) {
-    case CookieAcceptPolicy::Always:
-        return HTTPCookieAcceptPolicy::AlwaysAccept;
-    case CookieAcceptPolicy::Never:
-        return HTTPCookieAcceptPolicy::Never;
-    case CookieAcceptPolicy::OnlyFromMainDocumentDomain:
-        return HTTPCookieAcceptPolicy::OnlyFromMainDocumentDomain;
-    case CookieAcceptPolicy::ExclusivelyFromMainDocumentDomain:
-        return HTTPCookieAcceptPolicy::ExclusivelyFromMainDocumentDomain;
-    }
-
-    ASSERT_NOT_REACHED();
-    return HTTPCookieAcceptPolicy::OnlyFromMainDocumentDomain;
+    completionHandler();
 }
 
 } // namespace WebKit

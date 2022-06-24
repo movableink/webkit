@@ -23,18 +23,24 @@
 
 #include "BaseTarget.xcconfig"
 
-OTHER_LDFLAGS = $(inherited) $(PLATFORM_OTHER_LDFLAGS) $(ASAN_OTHER_LDFLAGS);
-PLATFORM_OTHER_LDFLAGS[sdk=iphone*] = -framework JavaScriptCore;
-PLATFORM_OTHER_LDFLAGS[sdk=macosx*] = -lWebCoreTestSupport -force_load $(BUILT_PRODUCTS_DIR)/libDumpRenderTree.a -framework Carbon -framework Cocoa -framework JavaScriptCore -framework OpenGL -framework QuartzCore -framework WebKit;
+OTHER_LDFLAGS = $(inherited) $(ASAN_OTHER_LDFLAGS) $(OTHER_LDFLAGS_$(WK_COCOA_TOUCH));
+OTHER_LDFLAGS_cocoatouch = -framework JavaScriptCore;
+OTHER_LDFLAGS_ = -lWebCoreTestSupport -force_load $(BUILT_PRODUCTS_DIR)/libDumpRenderTree.a -framework Carbon -framework Cocoa -framework JavaScriptCore -framework OpenGL -framework QuartzCore -framework WebKit;
+
 LD_RUNPATH_SEARCH_PATHS = "@loader_path/.";
 STRIP_STYLE = debugging;
 PRODUCT_NAME = DumpRenderTree;
 SKIP_INSTALL[sdk=macosx*] = NO;
-SKIP_INSTALL[sdk=iphone*] = YES;
-EXCLUDED_SOURCE_FILE_NAMES[sdk=iphone*] = *.ttf *.TTF *.otf;
+SKIP_INSTALL[sdk=embedded*] = YES;
+EXCLUDED_SOURCE_FILE_NAMES[sdk=embedded*] = *.ttf *.TTF *.otf;
 
 INSTALL_PATH = $(INSTALL_PATH_$(CONFIGURATION))
 INSTALL_PATH_Release = $(INSTALL_PATH);
 INSTALL_PATH_Debug = $(INSTALL_PATH);
 INSTALL_PATH_Production = $(SYSTEM_LIBRARY_DIR)/Frameworks/$(WEBKIT_FRAMEWORK_RESOURCES_PATH);
 INSTALL_PATH_engineering = $(INSTALL_PATH);
+
+CODE_SIGN_ENTITLEMENTS[sdk=macosx*] = mac/Configurations/DumpRenderTree.entitlements;
+
+CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+INFOPLIST_FILE = $(SRCROOT)/mac/Info.plist;

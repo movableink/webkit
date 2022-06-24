@@ -8,6 +8,8 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#if !defined(WEBRTC_WEBKIT_BUILD)
+
 #import <UIKit/UIKit.h>
 
 typedef NS_ENUM(NSInteger, RTCDeviceType) {
@@ -37,12 +39,16 @@ typedef NS_ENUM(NSInteger, RTCDeviceType) {
   RTCDeviceTypeIPhoneXS,
   RTCDeviceTypeIPhoneXSMax,
   RTCDeviceTypeIPhoneXR,
+  RTCDeviceTypeIPhone11,
+  RTCDeviceTypeIPhone11Pro,
+  RTCDeviceTypeIPhone11ProMax,
   RTCDeviceTypeIPodTouch1G,
   RTCDeviceTypeIPodTouch2G,
   RTCDeviceTypeIPodTouch3G,
   RTCDeviceTypeIPodTouch4G,
   RTCDeviceTypeIPodTouch5G,
   RTCDeviceTypeIPodTouch6G,
+  RTCDeviceTypeIPodTouch7G,
   RTCDeviceTypeIPad,
   RTCDeviceTypeIPad2Wifi,
   RTCDeviceTypeIPad2GSM,
@@ -72,6 +78,11 @@ typedef NS_ENUM(NSInteger, RTCDeviceType) {
   RTCDeviceTypeIPadPro12Inch,
   RTCDeviceTypeIPadPro12Inch2,
   RTCDeviceTypeIPadPro10Inch,
+  RTCDeviceTypeIPad7Gen10Inch,
+  RTCDeviceTypeIPadPro3Gen11Inch,
+  RTCDeviceTypeIPadPro3Gen12Inch,
+  RTCDeviceTypeIPadMini5Gen,
+  RTCDeviceTypeIPadAir3Gen,
   RTCDeviceTypeSimulatori386,
   RTCDeviceTypeSimulatorx86_64,
 };
@@ -82,3 +93,5 @@ typedef NS_ENUM(NSInteger, RTCDeviceType) {
 + (BOOL)isIOS11OrLater;
 
 @end
+
+#endif

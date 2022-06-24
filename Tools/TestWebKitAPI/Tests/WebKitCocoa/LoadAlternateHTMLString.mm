@@ -24,15 +24,17 @@
  */
 
 #import "config.h"
-#import <WebKit/WKFoundation.h>
 
+#import "DeprecatedGlobalValues.h"
+#import "HTTPServer.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
+#import "TestNavigationDelegate.h"
+#import <WebKit/WKFoundation.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/NSURLExtras.h>
 
-static bool isDone;
 static int provisionalLoadCount;
 
 @interface LoadAlternateHTMLStringFromProvisionalLoadErrorController : NSObject <WKNavigationDelegate>
@@ -51,7 +53,7 @@ static int provisionalLoadCount;
     isDone = true;
 }
 
-- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(null_unspecified WKNavigation *)navigation
+- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation
 {
     provisionalLoadCount++;
 }
@@ -151,4 +153,49 @@ TEST(WKWebView, LoadAlternateHTMLStringFromProvisionalLoadErrorReload)
 
     WKBackForwardList *list = [webView backForwardList];
     EXPECT_EQ((NSUInteger)0, list.backList.count);
+}
+
+TEST(WKWebView, LoadHTMLStringOrigin)
+{
+    using namespace TestWebKitAPI;
+    bool done = false;
+    HTTPServer server([&](Connection connection) {
+        connection.receiveHTTPRequest([&](Vector<char>&& request) {
+            EXPECT_TRUE(strnstr(request.data(), "Origin: custom-scheme://\r\n", request.size()));
+            done = true;
+        });
+    });
+    auto webView = adoptNS([WKWebView new]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *, void (^completionHandler)(WKNavigationActionPolicy)) {
+        completionHandler(WKNavigationActionPolicyAllow);
+    };
+    webView.get().navigationDelegate = delegate.get();
+    constexpr NSString *html = @"<script>var xhr = new XMLHttpRequest(); xhr.open('GET', 'http://127.0.0.1:%d/', true); xhr.send();</script>";
+    [webView loadHTMLString:[NSString stringWithFormat:html, server.port()] baseURL:[NSURL URLWithString:@"custom-scheme://"]];
+    Util::run(&done);
+}
+
+TEST(WebKit, LoadHTMLStringWithInvalidBaseURL)
+{
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSZeroRect]);
+
+    auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
+    [webView setNavigationDelegate:navigationDelegate.get()];
+
+    __block bool didCrash = false;
+    navigationDelegate.get().webContentProcessDidTerminate = ^(WKWebView *view) {
+        didCrash = true;
+    };
+
+    __block bool didFinishNavigation = false;
+    navigationDelegate.get().didFinishNavigation = ^(WKWebView *view, WKNavigation *navigation) {
+        didFinishNavigation = true;
+    };
+
+    [webView loadHTMLString:@"test" baseURL:[NSURL URLWithString:@"invalid"]];
+    TestWebKitAPI::Util::run(&didFinishNavigation);
+    EXPECT_WK_STREQ([webView URL].absoluteString, "invalid");
+
+    EXPECT_FALSE(didCrash);
 }

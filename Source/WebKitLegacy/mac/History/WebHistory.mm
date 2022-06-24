@@ -32,10 +32,8 @@
 #import "WebHistoryItemInternal.h"
 #import "WebKitLogging.h"
 #import "WebNSURLExtras.h"
-#import "WebTypesInternal.h"
 #import "WebVisitedLinkStore.h"
 #import <WebCore/HistoryItem.h>
-#import <WebCore/PageGroup.h>
 #import <pal/spi/cocoa/NSCalendarDateSPI.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -55,7 +53,11 @@ NSString *WebHistoryItemsDiscardedWhileLoadingNotification = @"WebHistoryItemsDi
 NSString *WebHistorySavedNotification = @"WebHistorySavedNotification";
 NSString *WebHistoryItemsKey = @"WebHistoryItems";
 
-static WebHistory *_sharedHistory = nil;
+static RetainPtr<WebHistory>& sharedHistory()
+{
+    static NeverDestroyed<RetainPtr<WebHistory>> _sharedHistory;
+    return _sharedHistory;
+}
 
 NSString *FileVersionKey = @"WebHistoryFileVersion";
 NSString *DatesArrayKey = @"WebHistoryDates";
@@ -79,9 +81,9 @@ private:
 
 @interface WebHistoryPrivate : NSObject {
 @private
-    NSMutableDictionary *_entriesByURL;
+    RetainPtr<NSMutableDictionary> _entriesByURL;
     std::unique_ptr<DateToEntriesMap> _entriesByDate;
-    NSMutableArray *_orderedLastVisitedDays;
+    RetainPtr<NSMutableArray> _orderedLastVisitedDays;
     BOOL itemLimitSet;
     int itemLimit;
     BOOL ageInDaysLimitSet;
@@ -119,11 +121,10 @@ private:
 
 + (void)initialize
 {
-    [[NSUserDefaults standardUserDefaults] registerDefaults:
-        [NSDictionary dictionaryWithObjectsAndKeys:
-            @"1000", @"WebKitHistoryItemLimit",
-            @"7", @"WebKitHistoryAgeInDaysLimit",
-            nil]];    
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{
+        @"WebKitHistoryItemLimit": @"1000",
+        @"WebKitHistoryAgeInDaysLimit": @"7",
+    }];
 }
 
 - (id)init
@@ -132,17 +133,10 @@ private:
     if (!self)
         return nil;
     
-    _entriesByURL = [[NSMutableDictionary alloc] init];
+    _entriesByURL = adoptNS([[NSMutableDictionary alloc] init]);
     _entriesByDate = makeUnique<DateToEntriesMap>();
 
     return self;
-}
-
-- (void)dealloc
-{
-    [_entriesByURL release];
-    [_orderedLastVisitedDays release];
-    [super dealloc];
 }
 
 // MARK: MODIFYING CONTENTS
@@ -239,7 +233,6 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
     if ([entriesForDate count] == 0) {
         _entriesByDate->remove(it);
         // Clear _orderedLastVisitedDays so it will be regenerated when next requested.
-        [_orderedLastVisitedDays release];
         _orderedLastVisitedDays = nil;
     }
     
@@ -254,7 +247,7 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
 
     [_entriesByURL removeObjectForKey:URLString];
     
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
     [self removeItemFromDateCaches:entry];
 #else
     BOOL itemWasInDateCaches = [self removeItemFromDateCaches:entry];
@@ -275,11 +268,9 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
         [self insertItem:entry forDateKey:dateKey];
     else {
         // no other entries exist for this date
-        NSMutableArray *entries = [[NSMutableArray alloc] initWithObjects:&entry count:1];
-        _entriesByDate->set(dateKey, entries);
-        [entries release];
+        auto entries = adoptNS([[NSMutableArray alloc] initWithObjects:&entry count:1]);
+        _entriesByDate->set(dateKey, entries.get());
         // Clear _orderedLastVisitedDays so it will be regenerated when next requested.
-        [_orderedLastVisitedDays release];
         _orderedLastVisitedDays = nil;
     }
 }
@@ -292,26 +283,25 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
     NSString *URLString = [url _web_originalDataAsString];
     if (!URLString)
         URLString = @"";
-    WebHistoryItem *entry = [_entriesByURL objectForKey:URLString];
+    auto entry = retainPtr([_entriesByURL objectForKey:URLString]);
 
     if (entry) {
-        LOG(History, "Updating global history entry %@", entry);
+        LOG(History, "Updating global history entry %@", entry.get());
         // Remove the item from date caches before changing its last visited date.  Otherwise we might get duplicate entries
         // as seen in <rdar://problem/6570573>.
-        BOOL itemWasInDateCaches = [self removeItemFromDateCaches:entry];
+        BOOL itemWasInDateCaches = [self removeItemFromDateCaches:entry.get()];
         ASSERT_UNUSED(itemWasInDateCaches, itemWasInDateCaches);
 
         [entry _visitedWithTitle:title];
     } else {
         LOG(History, "Adding new global history entry for %@", url);
-        entry = [[WebHistoryItem alloc] initWithURLString:URLString title:title lastVisitedTimeInterval:[NSDate timeIntervalSinceReferenceDate]];
-        [_entriesByURL setObject:entry forKey:URLString];
-        [entry release];
+        entry = adoptNS([[WebHistoryItem alloc] initWithURLString:URLString title:title lastVisitedTimeInterval:[NSDate timeIntervalSinceReferenceDate]]);
+        [_entriesByURL setObject:entry.get() forKey:URLString];
     }
     
-    [self addItemToDateCaches:entry];
+    [self addItemToDateCaches:entry.get()];
 
-    return entry;
+    return entry.autorelease();
 }
 
 - (BOOL)addItem:(WebHistoryItem *)entry discardDuplicate:(BOOL)discardDuplicate
@@ -322,33 +312,22 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
     NSString *URLString = [entry URLString];
 
 #if !PLATFORM(IOS_FAMILY)
-    WebHistoryItem *oldEntry = [_entriesByURL objectForKey:URLString];
-    if (oldEntry) {
+    if (auto oldEntry = retainPtr([_entriesByURL objectForKey:URLString])) {
         if (discardDuplicate)
             return NO;
 
-        // The last reference to oldEntry might be this dictionary, so we hold onto a reference
-        // until we're done with oldEntry.
-        [oldEntry retain];
         [self removeItemForURLString:URLString];
-        [oldEntry release];
     }
 
     [self addItemToDateCaches:entry];
     [_entriesByURL setObject:entry forKey:URLString];
 #else
-    WebHistoryItem *otherEntry = [_entriesByURL objectForKey:URLString];
-    if (otherEntry) {
+    if (auto otherEntry = retainPtr([_entriesByURL objectForKey:URLString])) {
         if (discardDuplicate)
             return NO;
 
         if ([otherEntry lastVisitedTimeInterval] < [entry lastVisitedTimeInterval]) {
-            // The last reference to oldEntry might be this dictionary, so we hold onto a reference
-            // until we're done with oldEntry.
-            [otherEntry retain];
             [self removeItemForURLString:URLString];
-            [otherEntry release];
-
             [self addItemToDateCaches:entry];
             [_entriesByURL setObject:entry forKey:URLString];
         } else
@@ -369,10 +348,8 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
     auto entryArrays = copyToVector(_entriesByDate->values());
     _entriesByDate->clear();
     
-    NSMutableDictionary *entriesByURL = _entriesByURL;
-    _entriesByURL = nil;
+    auto entriesByURL = std::exchange(_entriesByURL, nil);
     
-    [_orderedLastVisitedDays release];
     _orderedLastVisitedDays = nil;
     
     NSArray *allEntries = [entriesByURL allValues];
@@ -424,7 +401,6 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
     [_entriesByURL removeAllObjects];
 
     // Clear _orderedLastVisitedDays so it will be regenerated when next requested.
-    [_orderedLastVisitedDays release];
     _orderedLastVisitedDays = nil;
 
     WebVisitedLinkStore::removeAllVisitedLinks();
@@ -459,15 +435,14 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 
         std::sort(daysAsTimeIntervals.begin(), daysAsTimeIntervals.end());
         size_t count = daysAsTimeIntervals.size();
-        _orderedLastVisitedDays = [[NSMutableArray alloc] initWithCapacity:count];
+        _orderedLastVisitedDays = adoptNS([[NSMutableArray alloc] initWithCapacity:count]);
         for (int i = count - 1; i >= 0; i--) {
             NSTimeInterval interval = daysAsTimeIntervals[i];
-            NSCalendarDate *date = [[NSCalendarDate alloc] initWithTimeIntervalSinceReferenceDate:interval];
-            [_orderedLastVisitedDays addObject:date];
-            [date release];
+            auto date = adoptNS([[NSCalendarDate alloc] initWithTimeIntervalSinceReferenceDate:interval]);
+            [_orderedLastVisitedDays addObject:date.get()];
         }
     }
-    return _orderedLastVisitedDays;
+    return _orderedLastVisitedDays.get();
 }
 
 - (NSArray *)orderedItemsLastVisitedOnDay:(NSCalendarDate *)date
@@ -594,7 +569,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     for (NSDictionary *itemAsDictionary in array) {
         @autoreleasepool {
-            WebHistoryItem *item = [[WebHistoryItem alloc] initFromDictionaryRepresentation:itemAsDictionary];
+            auto item = adoptNS([[WebHistoryItem alloc] initFromDictionaryRepresentation:itemAsDictionary]);
 
             // item without URL is useless; data on disk must have been bad; ignore
             if ([item URLString]) {
@@ -604,16 +579,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
                     ageLimitPassed = YES;
 
                 if (ageLimitPassed || itemLimitPassed)
-                    [discardedItems addObject:item];
+                    [discardedItems addObject:item.get()];
                 else {
-                    if ([self addItem:item discardDuplicate:YES])
+                    if ([self addItem:item.get() discardDuplicate:YES])
                         ++(*numberOfItemsLoaded);
                     if (*numberOfItemsLoaded == itemCountLimit)
                         itemLimitPassed = YES;
                 }
             }
-
-            [item release];
         }
     }
 
@@ -649,7 +622,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     // that clients can learn of discarded items by listening to WebHistoryItemsDiscardedWhileLoadingNotification.
     WebHistoryWriter writer(_entriesByDate.get());
     writer.writePropertyList();
-    return [[(NSData *)writer.releaseData().get() retain] autorelease];
+    return retainPtr((NSData *)writer.releaseData().get()).autorelease();
 }
 
 - (BOOL)saveToURL:(NSURL *)URL error:(NSError **)error
@@ -670,7 +643,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)addVisitedLinksToVisitedLinkStore:(WebVisitedLinkStore&)visitedLinkStore
 {
-    for (NSString *urlString in _entriesByURL)
+    for (NSString *urlString in _entriesByURL.get())
         visitedLinkStore.addVisitedLink(urlString);
 }
 
@@ -680,17 +653,16 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 + (WebHistory *)optionalSharedHistory
 {
-    return _sharedHistory;
+    return sharedHistory().get();
 }
 
 + (void)setOptionalSharedHistory:(WebHistory *)history
 {
-    if (_sharedHistory == history)
+    if (sharedHistory() == history)
         return;
     // FIXME: Need to think about multiple instances of WebHistory per application
     // and correct synchronization of history file between applications.
-    [_sharedHistory release];
-    _sharedHistory = [history retain];
+    sharedHistory() = history;
 
     WebVisitedLinkStore::setShouldTrackVisitedLinks(history);
     WebVisitedLinkStore::removeAllVisitedLinks();
@@ -727,12 +699,11 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (void)_sendNotification:(NSString *)name entries:(NSArray *)entries
 {
-    NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:entries, WebHistoryItemsKey, nil];
+    NSDictionary *userInfo = @{ WebHistoryItemsKey: entries };
 #if PLATFORM(IOS_FAMILY)
     WebThreadPostNotification(name, self, userInfo);
 #else    
-    [[NSNotificationCenter defaultCenter]
-        postNotificationName:name object:self userInfo:userInfo];
+    [[NSNotificationCenter defaultCenter] postNotificationName:name object:self userInfo:userInfo];
 #endif
 }
 
@@ -790,11 +761,9 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 - (BOOL)loadFromURL:(NSURL *)URL error:(NSError **)error
 {
-    NSMutableArray *discardedItems = [[NSMutableArray alloc] init];    
-    if (![_historyPrivate loadFromURL:URL collectDiscardedItemsInto:discardedItems error:error]) {
-        [discardedItems release];
+    auto discardedItems = adoptNS([[NSMutableArray alloc] init]);
+    if (![_historyPrivate loadFromURL:URL collectDiscardedItemsInto:discardedItems.get() error:error])
         return NO;
-    }
 
 #if PLATFORM(IOS_FAMILY)
     WebThreadPostNotification(WebHistoryLoadedNotification, self, nil);
@@ -805,9 +774,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
 
     if ([discardedItems count])
-        [self _sendNotification:WebHistoryItemsDiscardedWhileLoadingNotification entries:discardedItems];
+        [self _sendNotification:WebHistoryItemsDiscardedWhileLoadingNotification entries:discardedItems.get()];
 
-    [discardedItems release];
     return YES;
 }
 
@@ -887,9 +855,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     entry->_private->_redirectURLs = nullptr;
 
-    NSArray *entries = [[NSArray alloc] initWithObjects:entry, nil];
-    [self _sendNotification:WebHistoryItemsAddedNotification entries:entries];
-    [entries release];
+    [self _sendNotification:WebHistoryItemsAddedNotification entries:@[entry]];
 }
 
 - (void)_addVisitedLinksToVisitedLinkStore:(WebVisitedLinkStore &)visitedLinkStore

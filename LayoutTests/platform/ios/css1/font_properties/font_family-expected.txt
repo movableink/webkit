@@ -9,14 +9,23 @@ layer at (0,0) size 800x1306
       RenderBlock {PRE} at (0,36) size 784x126
         RenderText {#text} at (0,0) size 305x126
           text run at (0,0) width 211: "DIV.a {font-family: serif;}"
+          text run at (210,0) width 1: " "
           text run at (0,14) width 242: "DIV.b {font-family: monospace;}"
+          text run at (241,14) width 1: " "
           text run at (0,28) width 203: ".one {font-family: serif;}"
+          text run at (202,28) width 1: " "
           text run at (0,42) width 242: ".two {font-family: sans-serif;}"
+          text run at (241,42) width 1: " "
           text run at (0,56) width 235: ".three {font-family: cursive;}"
+          text run at (234,56) width 1: " "
           text run at (0,70) width 227: ".four {font-family: fantasy;}"
+          text run at (226,70) width 1: " "
           text run at (0,84) width 242: ".five {font-family: monospace;}"
+          text run at (241,84) width 1: " "
           text run at (0,98) width 305: ".six {font-family: sans-serif,cursive;}"
+          text run at (304,98) width 1: " "
           text run at (0,112) width 297: ".seven {font-family: monospace,serif;}"
+          text run at (296,112) width 1: " "
       RenderBlock {HR} at (0,175) size 784x2 [border: (1px inset #000000)]
       RenderBlock {DIV} at (0,193) size 784x200
         RenderBlock {P} at (0,0) size 784x20
@@ -74,8 +83,8 @@ layer at (0,0) size 800x1306
                   text run at (4,4) width 161: "TABLE Testing Section"
           RenderTableRow {TR} at (0,28) size 782x531
             RenderTableCell {TD} at (0,279) size 12x29 [bgcolor=#C0C0C0] [border: (1px inset #808080)] [r=1 c=0 rs=1 cs=1]
-              RenderText {#text} at (4,4) size 4x20
-                text run at (4,5) width 4: " "
+              RenderText {#text} at (4,3) size 4x21
+                text run at (4,4) width 4: " "
             RenderTableCell {TD} at (12,28) size 770x531 [border: (1px inset #808080)] [r=1 c=1 rs=1 cs=1]
               RenderBlock {DIV} at (4,4) size 762x200
                 RenderBlock {P} at (0,0) size 762x20

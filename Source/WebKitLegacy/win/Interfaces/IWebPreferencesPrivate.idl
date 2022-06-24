@@ -181,18 +181,12 @@ interface IWebPreferencesPrivate3 : IWebPreferencesPrivate2
     HRESULT setShadowDOMEnabled([in] BOOL enabled);
     HRESULT customElementsEnabled([out, retval] BOOL* enabled);
     HRESULT setCustomElementsEnabled([in] BOOL enabled);
-    HRESULT modernMediaControlsEnabled([out, retval] BOOL* enabled);
-    HRESULT setModernMediaControlsEnabled([in] BOOL enabled);
-    HRESULT webAnimationsCSSIntegrationEnabled([out, retval] BOOL* enabled);
-    HRESULT setWebAnimationsCSSIntegrationEnabled([in] BOOL enabled);
 }
 
 [uuid(F9582D72-6348-45B1-AB09-39E33459B5B9)]
 interface IWebPreferencesPrivate4 : IWebPreferencesPrivate3
 {
     HRESULT setApplicationId([in] BSTR applicationId);
-    HRESULT webAnimationsEnabled([out, retval] BOOL*);
-    HRESULT setWebAnimationsEnabled([in] BOOL enabled);
     HRESULT userTimingEnabled([out, retval] BOOL*);
     HRESULT setUserTimingEnabled([in] BOOL enabled);
     HRESULT resourceTimingEnabled([out, retval] BOOL*);
@@ -223,6 +217,8 @@ interface IWebPreferencesPrivate6 : IWebPreferencesPrivate5
     HRESULT setVisualViewportAPIEnabled([in] BOOL enabled);
     HRESULT CSSOMViewScrollingAPIEnabled([out, retval] BOOL*);
     HRESULT setCSSOMViewScrollingAPIEnabled([in] BOOL enabled);
+    HRESULT CSSOMViewSmoothScrollingEnabled([out, retval] BOOL*);
+    HRESULT setCSSOMViewSmoothScrollingEnabled([in] BOOL enabled);
     HRESULT fetchAPIKeepAliveEnabled([out, retval] BOOL* enabled);
     HRESULT setFetchAPIKeepAliveEnabled([in] BOOL enabled);
     HRESULT spatialNavigationEnabled([out, retval] BOOL *enabled);
@@ -248,4 +244,41 @@ interface IWebPreferencesPrivate7 : IWebPreferencesPrivate6
     HRESULT setRequestIdleCallbackEnabled([in] BOOL enabled);
     HRESULT asyncClipboardAPIEnabled([out, retval] BOOL* enabled);
     HRESULT setAsyncClipboardAPIEnabled([in] BOOL enabled);
+    HRESULT webAnimationsCompositeOperationsEnabled([out, retval] BOOL*);
+    HRESULT setWebAnimationsCompositeOperationsEnabled([in] BOOL enabled);
+    HRESULT webAnimationsMutableTimelinesEnabled([out, retval] BOOL*);
+    HRESULT setWebAnimationsMutableTimelinesEnabled([in] BOOL enabled);
+    HRESULT CSSCustomPropertiesAndValuesEnabled([out, retval] BOOL*);
+    HRESULT setCSSCustomPropertiesAndValuesEnabled([in] BOOL enabled);
+    HRESULT aspectRatioOfImgFromWidthAndHeightEnabled([out, retval] BOOL*);
+    HRESULT setAspectRatioOfImgFromWidthAndHeightEnabled([in] BOOL enabled);
+    HRESULT setWebSQLEnabled([in] BOOL enabled);
+    HRESULT webSQLEnabled([out, retval] BOOL* enabled);
+    HRESULT CSSIndividualTransformPropertiesEnabled([out, retval] BOOL* enabled);
+    HRESULT setCSSIndividualTransformPropertiesEnabled([in] BOOL enabled);
 }
+
+[uuid(04D4AAE1-5D01-4CCD-B46E-C022F10A6826)]
+interface IWebPreferencesPrivate8 : IWebPreferencesPrivate7
+{
+    HRESULT allowTopNavigationToDataURLs([out, retval] BOOL* enabled);
+    HRESULT setAllowTopNavigationToDataURLs([in] BOOL enabled);
+    HRESULT modernUnprefixedWebAudioEnabled([out, retval] BOOL* enabled);
+    HRESULT setModernUnprefixedWebAudioEnabled([in] BOOL enabled);
+    HRESULT contactPickerAPIEnabled([out, retval] BOOL* enabled);
+    HRESULT setContactPickerAPIEnabled([in] BOOL enabled);
+    HRESULT setBoolPreferenceForTesting([in] BSTR key, [in] BOOL value);
+    HRESULT setUInt32PreferenceForTesting([in] BSTR key, [in] unsigned value);
+    HRESULT setDoublePreferenceForTesting([in] BSTR key, [in] double value);
+    HRESULT setStringPreferenceForTesting([in] BSTR key, [in] BSTR value);
+    HRESULT speechRecognitionEnabled([out, retval] BOOL* enabled);
+    HRESULT setSpeechRecognitionEnabled([in] BOOL enabled);
+    HRESULT overscrollBehaviorEnabled([ out, retval ] BOOL*);
+    HRESULT setOverscrollBehaviorEnabled([in] BOOL enabled);
+    HRESULT resetForTesting();
+    HRESULT startBatchingUpdates();
+    HRESULT stopBatchingUpdates();
+}
+
+// NOTE: Please do not add any more preferences that are only for testing purposes. Instead,
+// please use the generalized set<type>PreferenceForTesting() functions.

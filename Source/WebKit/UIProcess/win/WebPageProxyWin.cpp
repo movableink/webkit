@@ -27,18 +27,20 @@
 #include "config.h"
 #include "WebPageProxy.h"
 
+#include "NativeWebKeyboardEvent.h"
 #include "PageClientImpl.h"
 #include <WebCore/SearchPopupMenuDB.h>
 #include <WebCore/UserAgent.h>
-
-#if USE(DIRECT2D)
-#include <d3d11_1.h>
-#endif
 
 namespace WebKit {
 
 void WebPageProxy::platformInitialize()
 {
+}
+
+String WebPageProxy::userAgentForURL(const URL&)
+{
+    return userAgent();
 }
 
 String WebPageProxy::standardUserAgent(const String& applicationNameForUserAgent)
@@ -64,9 +66,8 @@ void WebPageProxy::loadRecentSearches(const String& name, CompletionHandler<void
     completionHandler(WTFMove(searchItems));
 }
 
-void WebPageProxy::updateEditorState(const EditorState& editorState)
+void WebPageProxy::didUpdateEditorState(const EditorState&, const EditorState&)
 {
-    m_editorState = editorState;
 }
 
 PlatformViewWidget WebPageProxy::viewWidget()
@@ -74,17 +75,11 @@ PlatformViewWidget WebPageProxy::viewWidget()
     return static_cast<PageClientImpl&>(pageClient()).viewWidget();
 }
 
-#if USE(DIRECT2D)
-ID3D11Device1* WebPageProxy::device() const
+void WebPageProxy::dispatchPendingCharEvents(const NativeWebKeyboardEvent& keydownEvent)
 {
-    return m_device.get();
+    auto& pendingCharEvents = keydownEvent.pendingCharEvents();
+    for (auto it = pendingCharEvents.rbegin(); it != pendingCharEvents.rend(); it++)
+        m_keyEventQueue.prepend(NativeWebKeyboardEvent(it->hwnd, it->message, it->wParam, it->lParam, { }));
 }
-
-void WebPageProxy::setDevice(ID3D11Device1* device)
-{
-    m_device = device;
-}
-#endif
-
 
 } // namespace WebKit

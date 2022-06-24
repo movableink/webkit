@@ -34,7 +34,7 @@ try:
 except ImportError:
     pass
 from webkitpy.benchmark_runner.utils import force_remove
-from browser_driver import BrowserDriver
+from webkitpy.benchmark_runner.browser_driver.browser_driver import BrowserDriver
 
 
 _log = logging.getLogger(__name__)
@@ -99,9 +99,12 @@ class LinuxBrowserDriver(BrowserDriver):
             self._browser_arguments = [url]
         exec_args = [self.process_name] + self._browser_arguments
         _log.info('Executing: {browser_cmdline}'.format(browser_cmdline=' '.join(exec_args)))
-        self._browser_process = subprocess.Popen(exec_args, env=self._test_environ,
-                                                 stdout=subprocess.PIPE,
-                                                 stderr=subprocess.STDOUT)
+        self._browser_process = subprocess.Popen(
+            exec_args, env=self._test_environ,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            **(dict(encoding='utf-8') if sys.version_info >= (3, 6) else dict())
+        )
 
     def launch_webdriver(self, url, driver):
         try:

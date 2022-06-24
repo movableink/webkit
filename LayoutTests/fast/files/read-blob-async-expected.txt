@@ -3,14 +3,14 @@ Test reading a blob containing non-existent file
 readyState: 0
 Received error event
 readyState: 2
-error code: 1
+error code: 8
 result: null
 Received loadend event
 Test reading a blob containing existent and non-existent file
 readyState: 0
 Received error event
 readyState: 2
-error code: 1
+error code: 8
 result: null
 Received loadend event
 Test reading a blob containing empty file
@@ -20,7 +20,7 @@ readyState: 1
 Received load event
 readyState: 2
 result size: 0
-result: 
+result:
 Received loadend event
 Test reading a blob containing empty text
 readyState: 0
@@ -29,7 +29,7 @@ readyState: 1
 Received load event
 readyState: 2
 result size: 0
-result: 
+result:
 Received loadend event
 Test reading a blob containing empty files and empty texts
 readyState: 0
@@ -38,7 +38,7 @@ readyState: 1
 Received load event
 readyState: 2
 result size: 0
-result: 
+result:
 Received loadend event
 Test reading a blob containing single file
 readyState: 0
@@ -64,8 +64,8 @@ Received loadstart event
 readyState: 1
 Received load event
 readyState: 2
-result size: 21
-result: data:;base64,Rmlyc3Q=
+result size: 45
+result: data:application/octet-stream;base64,Rmlyc3Q=
 Received loadend event
 Test reading a blob containing single text as data URL (optional content type provided)
 readyState: 0

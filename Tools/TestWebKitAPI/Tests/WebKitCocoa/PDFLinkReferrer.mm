@@ -27,7 +27,7 @@
 
 #if PLATFORM(MAC)
 
-#import "TCPServer.h"
+#import "HTTPServer.h"
 #import "Test.h"
 #import "TestNavigationDelegate.h"
 #import "TestWKWebView.h"
@@ -40,7 +40,7 @@ static size_t putPDFBytesCallback(void* info, void* buffer, size_t count)
     return count;
 }
 
-static void emptyReleaseInfoCallback(void* __nullable)
+static void emptyReleaseInfoCallback(void*)
 {
 }
 
@@ -73,23 +73,20 @@ static RetainPtr<NSData> createPDFWithLinkToURL(NSURL *url)
 TEST(WebKit, PDFLinkReferrer)
 {
     using namespace TestWebKitAPI;
-    TCPServer server([] (int socket) {
-        // This assumes all the data from the HTTP request is available to be read at once,
-        // which is probably an okay assumption.
-        auto requestBytes = TCPServer::read(socket);
-
-        // Look for a referer header.
-        const auto* currentLine = reinterpret_cast<const char*>(requestBytes.data());
-        while (currentLine) {
-            EXPECT_NE(strncasecmp(currentLine, "referer:", 8), 0);
-            const char* nextLine = strchr(currentLine, '\n');
-            currentLine = nextLine ? nextLine + 1 : 0;
-        }
-
-        const char* responseHeader =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Length: 0\r\n\r\n";
-        TCPServer::write(socket, responseHeader, strlen(responseHeader));
+    HTTPServer server([] (Connection connection) {
+        connection.receiveHTTPRequest([=](Vector<char>&& requestBytes) {
+            // Look for a referer header.
+            const auto* currentLine = reinterpret_cast<const char*>(requestBytes.data());
+            while (currentLine) {
+                EXPECT_NE(strncasecmp(currentLine, "referer:", 8), 0);
+                const char* nextLine = strchr(currentLine, '\n');
+                currentLine = nextLine ? nextLine + 1 : 0;
+            }
+            const char* responseHeader =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: 0\r\n\r\n";
+            connection.send(responseHeader);
+        });
     });
 
     RetainPtr<TestWKWebView> webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);

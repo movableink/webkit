@@ -1,5 +1,5 @@
 # Copyright (C) 2013 Adobe Systems Incorporated. All rights reserved.
-# Copyright (C) 2015 Apple Inc. All Rights Reserved.
+# Copyright (C) 2015, 2020 Apple Inc. All Rights Reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -26,11 +26,13 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
+import logging
 import os
 import unittest
 
-from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.w3c.test_parser import TestParser
+
+from webkitcorepy import OutputCapture
 
 
 options = {'all': False, 'no_overwrite': False}
@@ -51,6 +53,26 @@ class TestParserTest(unittest.TestCase):
         self.assertTrue('test' in test_info.keys(), 'did not find a test file')
         self.assertTrue('reference' in test_info.keys(), 'did not find a reference file')
         self.assertTrue(test_info['reference'].startswith(test_path), 'reference path is not correct')
+        self.assertTrue('type' in test_info.keys(), 'did not find a reference type')
+        self.assertEqual(test_info['type'], 'match', 'reference type is not correct')
+        self.assertFalse('refsupport' in test_info.keys(), 'there should be no refsupport files for this test')
+        self.assertFalse('jstest' in test_info.keys(), 'test should not have been analyzed as a jstest')
+
+    def test_analyze_test_reftest_one_mismatch(self):
+        test_html = """<head>
+<link rel="mismatch" href="green-box-ref.xht" />
+</head>
+"""
+        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+        parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
+        test_info = parser.analyze_test(test_contents=test_html)
+
+        self.assertNotEqual(test_info, None, 'did not find a test')
+        self.assertTrue('test' in test_info.keys(), 'did not find a test file')
+        self.assertTrue('reference' in test_info.keys(), 'did not find a reference file')
+        self.assertTrue(test_info['reference'].startswith(test_path), 'reference path is not correct')
+        self.assertTrue('type' in test_info.keys(), 'did not find a reference type')
+        self.assertEqual(test_info['type'], 'mismatch', 'reference type is not correct')
         self.assertFalse('refsupport' in test_info.keys(), 'there should be no refsupport files for this test')
         self.assertFalse('jstest' in test_info.keys(), 'test should not have been analyzed as a jstest')
 
@@ -61,14 +83,10 @@ class TestParserTest(unittest.TestCase):
 <link rel="match" href="orange-box-ref.xht" />
 </head>
 """
-        oc = OutputCapture()
-        oc.capture_output()
-        try:
+        with OutputCapture(level=logging.INFO) as captured:
             test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
             parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
             test_info = parser.analyze_test(test_contents=test_html)
-        finally:
-            _, _, logs = oc.restore_output()
 
         self.assertNotEqual(test_info, None, 'did not find a test')
         self.assertTrue('test' in test_info.keys(), 'did not find a test file')
@@ -77,7 +95,10 @@ class TestParserTest(unittest.TestCase):
         self.assertFalse('refsupport' in test_info.keys(), 'there should be no refsupport files for this test')
         self.assertFalse('jstest' in test_info.keys(), 'test should not have been analyzed as a jstest')
 
-        self.assertEqual(logs, 'Multiple references are not supported. Importing the first ref defined in somefile.html\n')
+        self.assertEqual(
+            captured.root.log.getvalue(),
+            'Multiple references are not supported. Importing the first ref defined in somefile.html\n',
+        )
 
     def test_analyze_test_reftest_match_and_mismatch(self):
         test_html = """<head>
@@ -86,15 +107,10 @@ class TestParserTest(unittest.TestCase):
 <link rel="mismatch" href="orange-box-notref.xht" />
 </head>
 """
-        oc = OutputCapture()
-        oc.capture_output()
-
-        try:
+        with OutputCapture(level=logging.INFO) as captured:
             test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
             parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
             test_info = parser.analyze_test(test_contents=test_html)
-        finally:
-            _, _, logs = oc.restore_output()
 
         self.assertNotEqual(test_info, None, 'did not find a test')
         self.assertTrue('test' in test_info.keys(), 'did not find a test file')
@@ -103,7 +119,10 @@ class TestParserTest(unittest.TestCase):
         self.assertFalse('refsupport' in test_info.keys(), 'there should be no refsupport files for this test')
         self.assertFalse('jstest' in test_info.keys(), 'test should not have been analyzed as a jstest')
 
-        self.assertEqual(logs, 'Multiple references are not supported. Importing the first ref defined in somefile.html\n')
+        self.assertEqual(
+            captured.root.log.getvalue(),
+            'Multiple references are not supported. Importing the first ref defined in somefile.html\n',
+        )
 
     def test_analyze_test_reftest_with_ref_support_Files(self):
         """ Tests analyze_test() using a reftest that has refers to a reference file outside of the tests directory and the reference file has paths to other support files """
@@ -117,6 +136,7 @@ class TestParserTest(unittest.TestCase):
 <link href="support/css/ref-stylesheet.css" rel="stylesheet" type="text/css">
 <style type="text/css">
     background-image: url("../../support/some-image.png")
+    background-image: url("../../support/some-other-image.png")
 </style>
 </head>
 <body>
@@ -133,7 +153,7 @@ class TestParserTest(unittest.TestCase):
         self.assertTrue('reference' in test_info.keys(), 'did not find a reference file')
         self.assertTrue(test_info['reference'].startswith(test_path), 'reference path is not correct')
         self.assertTrue('reference_support_info' in test_info.keys(), 'there should be reference_support_info for this test')
-        self.assertEquals(len(test_info['reference_support_info']['files']), 3, 'there should be 3 support files in this reference')
+        self.assertEqual(len(test_info['reference_support_info']['files']), 4, 'there should be 4 support files in this reference')
         self.assertFalse('jstest' in test_info.keys(), 'test should not have been analyzed as a jstest')
 
     def test_analyze_jstest(self):
@@ -165,8 +185,39 @@ class TestParserTest(unittest.TestCase):
         test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
         parser = TestParser(options, os.path.join(test_path, 'somefile-manual.html'))
         test_info = parser.analyze_test(test_contents=test_html)
+        self.assertTrue(test_info['manualtest'], 'test_info is manual')
 
-        self.assertTrue(test_info['manualtest'], 'test_info is None')
+        parser = TestParser(options, os.path.join(test_path, 'somefile-manual.https.html'))
+        test_info = parser.analyze_test(test_contents=test_html)
+        self.assertTrue(test_info['manualtest'], 'test_info is manual')
+
+        parser = TestParser(options, os.path.join(test_path, 'somefile-manual-https.html'))
+        test_info = parser.analyze_test(test_contents=test_html)
+        self.assertFalse('manualtest' in test_info.keys() and test_info['manualtest'], 'test_info is not manual')
+
+        parser = TestParser(options, os.path.join(test_path, 'somefile-ref-manual.html'))
+        test_info = parser.analyze_test(test_contents=test_html)
+        self.assertFalse('manualtest' in test_info.keys() and test_info['manualtest'], 'test_info is not manual')
+
+        ref_test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path', 'reference')
+        parser = TestParser(options, os.path.join(ref_test_path, 'somefile-manual.html'))
+        test_info = parser.analyze_test(test_contents=test_html)
+        self.assertFalse('manualtest' in test_info.keys() and test_info['manualtest'], 'test_info is not manual')
+
+    def test_analyze_manual_reference_wpt_test(self):
+        """ Tests analyze_test() using a manual reference test """
+
+        test_html = """<head>
+<link rel="match" href="reference/somefile-manual-ref.html">
+<link href="/resources/testharness.css" rel="stylesheet" type="text/css">
+<script src="/resources/testharness.js"></script>
+</head>
+"""
+        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+        parser = TestParser(options, os.path.join(test_path, 'somefile-manual.html'))
+        test_info = parser.analyze_test(test_contents=test_html)
+        self.assertTrue(test_info['manualtest'], 'test_info is manual')
+
 
     def test_analyze_css_manual_test(self):
         """ Tests analyze_test() using a css manual test """
@@ -210,17 +261,22 @@ CONTENT OF TEST
 </html>
 """
         # Set options to 'all' so this gets found
-        options['all'] = True
+        global options
+        orig_options = options.copy()
+        try:
+            options['all'] = True
 
-        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
-        parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
-        test_info = parser.analyze_test(test_contents=test_html)
+            test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+            parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
+            test_info = parser.analyze_test(test_contents=test_html)
 
-        self.assertNotEqual(test_info, None, 'test_info is None')
-        self.assertTrue('test' in test_info.keys(), 'did not find a test file')
-        self.assertFalse('reference' in test_info.keys(), 'shold not have found a reference file')
-        self.assertFalse('refsupport' in test_info.keys(), 'there should be no refsupport files for this test')
-        self.assertFalse('jstest' in test_info.keys(), 'test should not be a jstest')
+            self.assertNotEqual(test_info, None, 'test_info is None')
+            self.assertTrue('test' in test_info.keys(), 'did not find a test file')
+            self.assertFalse('reference' in test_info.keys(), 'shold not have found a reference file')
+            self.assertFalse('refsupport' in test_info.keys(), 'there should be no refsupport files for this test')
+            self.assertFalse('jstest' in test_info.keys(), 'test should not be a jstest')
+        finally:
+            options = orig_options
 
     def test_analyze_pixel_test_all_false(self):
         """ Tests analyze_test() using a test that is neither a reftest or jstest, with -all=False """
@@ -239,13 +295,18 @@ CONTENT OF TEST
 </html>
 """
         # Set all to false so this gets skipped
-        options['all'] = False
+        global options
+        orig_options = options.copy()
+        try:
+            options['all'] = False
 
-        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
-        parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
-        test_info = parser.analyze_test(test_contents=test_html)
+            test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+            parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
+            test_info = parser.analyze_test(test_contents=test_html)
 
-        self.assertEqual(test_info, None, 'test should have been skipped')
+            self.assertEqual(test_info, None, 'test should have been skipped')
+        finally:
+            options = orig_options
 
     def test_analyze_non_html_file(self):
         """ Tests analyze_test() with a file that has no html"""
@@ -276,3 +337,78 @@ CONTENT OF TEST
         test_info = parser.analyze_test(test_contents=test_html)
 
         self.assertTrue('referencefile' in test_info, 'test should be detected as reference file')
+
+    def _test_info_from_test_with_contents(self, test_contents):
+        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+        parser = TestParser({'all': True}, os.path.join(test_path, 'test-fuzzy.html'))
+        return parser.analyze_test(test_contents=test_contents)
+
+    def test_simple_fuzzy_data(self):
+        """ Tests basic form of fuzzy_metadata()"""
+
+        test_html = """<html><head>
+<meta name=fuzzy content="maxDifference = 15 ; totalPixels = 300">
+</head>
+<body>CONTENT OF TEST</body></html>
+"""
+        test_info = self._test_info_from_test_with_contents(test_html)
+
+        expected_fuzzy = {None: [[15, 15], [300, 300]]}
+        self.assertEqual(test_info['fuzzy'], expected_fuzzy, 'fuzzy data did not match expected')
+
+    def test_nameless_fuzzy_data(self):
+        """ Tests fuzzy_metadata() in short form"""
+
+        test_html = """<html><head>
+<meta name=fuzzy content=" 15 ; 300 ">
+</head>
+<body>CONTENT OF TEST</body></html>
+"""
+        test_info = self._test_info_from_test_with_contents(test_html)
+        expected_fuzzy = {None: [[15, 15], [300, 300]]}
+        self.assertEqual(test_info['fuzzy'], expected_fuzzy, 'fuzzy data did not match expected')
+
+    def test_range_fuzzy_data(self):
+        """ Tests fuzzy_metadata() in range form"""
+
+        test_html = """<html><head>
+<meta name=fuzzy content="maxDifference=5-15;totalPixels =  200 - 300 ">
+</head>
+<body>CONTENT OF TEST</body></html>
+"""
+        test_info = self._test_info_from_test_with_contents(test_html)
+
+        expected_fuzzy = {None: [[5, 15], [200, 300]]}
+        self.assertEqual(test_info['fuzzy'], expected_fuzzy, 'fuzzy data did not match expected')
+
+    def test_nameless_range_fuzzy_data(self):
+        """ Tests fuzzy_metadata() in short range form"""
+
+        test_html = """<html><head>
+<meta name=fuzzy content="5-15;  200 - 300 ">
+</head>
+<body>CONTENT OF TEST</body></html>
+"""
+        test_info = self._test_info_from_test_with_contents(test_html)
+
+        expected_fuzzy = {None: [[5, 15], [200, 300]]}
+        self.assertEqual(test_info['fuzzy'], expected_fuzzy, 'fuzzy data did not match expected')
+
+    def test_per_ref_fuzzy_data(self):
+        """ Tests fuzzy_metadata() with values for difference reference files"""
+
+        test_html = """<html><head>
+<meta name=fuzzy content="5-15;200-300 ">
+<meta name=fuzzy content="close-match-ref.html:5;20">
+<meta name=fuzzy content="worse-match-ref.html: 15;30">
+</head>
+<body>CONTENT OF TEST</body></html>
+"""
+        test_info = self._test_info_from_test_with_contents(test_html)
+
+        expected_fuzzy = {
+            None: [[5, 15], [200, 300]],
+            'close-match-ref.html': [[5, 5], [20, 20]],
+            'worse-match-ref.html': [[15, 15], [30, 30]]
+        }
+        self.assertEqual(test_info['fuzzy'], expected_fuzzy, 'fuzzy data did not match expected')

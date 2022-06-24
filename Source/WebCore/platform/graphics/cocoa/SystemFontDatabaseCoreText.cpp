@@ -28,10 +28,9 @@
 
 #include "FontCache.h"
 #include "FontCascadeDescription.h"
+#include "RenderThemeCocoa.h"
 
-#if PLATFORM(IOS_FAMILY)
-#include "RenderThemeIOS.h"
-#endif
+#include <wtf/cf/TypeCastsCF.h>
 
 namespace WebCore {
 
@@ -45,8 +44,6 @@ SystemFontDatabaseCoreText::SystemFontDatabaseCoreText()
 {
 }
 
-#if USE(PLATFORM_SYSTEM_FALLBACK_LIST)
-
 RetainPtr<CTFontRef> SystemFontDatabaseCoreText::createSystemUIFont(const CascadeListParameters& parameters, CFStringRef locale)
 {
     // Work around a quirk of the platform API.
@@ -57,64 +54,67 @@ RetainPtr<CTFontRef> SystemFontDatabaseCoreText::createSystemUIFont(const Cascad
         locale = nullptr;
     auto result = adoptCF(CTFontCreateUIFontForLanguage(kCTFontUIFontSystem, parameters.size, locale));
     ASSERT(result);
-    return createFontByApplyingWeightItalicsAndFallbackBehavior(result.get(), parameters.weight, parameters.italic, parameters.size, parameters.allowUserInstalledFonts);
+    return createFontByApplyingWeightWidthItalicsAndFallbackBehavior(result.get(), parameters.weight, parameters.width, parameters.italic, parameters.size, parameters.allowUserInstalledFonts);
 }
 
 #if HAVE(DESIGN_SYSTEM_UI_FONTS)
-RetainPtr<CTFontRef> SystemFontDatabaseCoreText::createDesignSystemUIFont(ClientUse clientUse, const CascadeListParameters& parameters)
+RetainPtr<CTFontRef> SystemFontDatabaseCoreText::createSystemDesignFont(SystemFontKind systemFontKind, const CascadeListParameters& parameters)
 {
     CFStringRef design = kCTFontUIFontDesignDefault;
-    switch (clientUse) {
-    case ClientUse::ForSystemUISerif:
+    switch (systemFontKind) {
+    case SystemFontKind::UISerif:
         design = kCTFontUIFontDesignSerif;
         break;
-    case ClientUse::ForSystemUIMonospaced:
+    case SystemFontKind::UIMonospace:
         design = kCTFontUIFontDesignMonospaced;
         break;
-    case ClientUse::ForSystemUIRounded:
+    case SystemFontKind::UIRounded:
         design = kCTFontUIFontDesignRounded;
         break;
     default:
         ASSERT_NOT_REACHED();
     }
-    return createFontByApplyingWeightItalicsAndFallbackBehavior(nullptr, parameters.weight, parameters.italic, parameters.size, parameters.allowUserInstalledFonts, design);
+    return createFontByApplyingWeightWidthItalicsAndFallbackBehavior(nullptr, parameters.weight, parameters.width, parameters.italic, parameters.size, parameters.allowUserInstalledFonts, design);
 }
 #endif
 
 RetainPtr<CTFontRef> SystemFontDatabaseCoreText::createTextStyleFont(const CascadeListParameters& parameters)
 {
-#if PLATFORM(IOS_FAMILY)
-    auto fontDescriptor = adoptCF(CTFontDescriptorCreateWithTextStyle(parameters.fontName.string().createCFString().get(), RenderThemeIOS::contentSizeCategory(), nullptr));
-    // FIXME: Use createFontByApplyingWeightItalicsAndFallbackBehavior() once <rdar://problem/33046041> is fixed.
-    CTFontSymbolicTraits traits = (parameters.weight >= kCTFontWeightSemibold ? kCTFontTraitBold : 0) | (parameters.italic ? kCTFontTraitItalic : 0);
-    if (traits)
-        fontDescriptor = adoptCF(CTFontDescriptorCreateCopyWithSymbolicTraits(fontDescriptor.get(), traits, traits));
-    return createFontForInstalledFonts(fontDescriptor.get(), parameters.size, parameters.allowUserInstalledFonts);
+    RetainPtr<CFStringRef> localeString = parameters.locale.isEmpty() ? nullptr : parameters.locale.string().createCFString();
+    auto descriptor = adoptCF(CTFontDescriptorCreateWithTextStyle(parameters.fontName.string().createCFString().get(), RenderThemeCocoa::singleton().contentSizeCategory(), localeString.get()));
+    // FIXME: Use createFontByApplyingWeightWidthItalicsAndFallbackBehavior().
+    CTFontSymbolicTraits traits = (parameters.weight >= kCTFontWeightSemibold ? kCTFontTraitBold : 0)
+#if HAVE(LEVEL_2_SYSTEM_FONT_WIDTH_VALUES) || HAVE(LEVEL_3_SYSTEM_FONT_WIDTH_VALUES)
+        | (parameters.width >= kCTFontWidthSemiExpanded ? kCTFontTraitExpanded : 0)
+        | (parameters.width <= kCTFontWidthSemiCondensed ? kCTFontTraitCondensed : 0)
 #else
-    UNUSED_PARAM(parameters);
-    ASSERT_NOT_REACHED();
-    return nullptr;
+        | (parameters.width >= kCTFontWidthExpanded ? kCTFontTraitExpanded : 0)
+        | (parameters.width <= kCTFontWidthCondensed ? kCTFontTraitCondensed : 0)
 #endif
+        | (parameters.italic ? kCTFontTraitItalic : 0);
+    if (traits)
+        descriptor = adoptCF(CTFontDescriptorCreateCopyWithSymbolicTraits(descriptor.get(), traits, traits));
+    return createFontForInstalledFonts(descriptor.get(), parameters.size, parameters.allowUserInstalledFonts);
 }
 
-Vector<RetainPtr<CTFontDescriptorRef>> SystemFontDatabaseCoreText::cascadeList(const CascadeListParameters& parameters, ClientUse clientUse)
+Vector<RetainPtr<CTFontDescriptorRef>> SystemFontDatabaseCoreText::cascadeList(const CascadeListParameters& parameters, SystemFontKind systemFontKind)
 {
     ASSERT(!parameters.fontName.isNull());
     return m_systemFontCache.ensure(parameters, [&] {
         auto localeString = parameters.locale.string().createCFString();
         RetainPtr<CTFontRef> systemFont;
-        switch (clientUse) {
-        case ClientUse::ForSystemUI:
+        switch (systemFontKind) {
+        case SystemFontKind::SystemUI:
             systemFont = createSystemUIFont(parameters, localeString.get());
             break;
-        case ClientUse::ForSystemUISerif:
-        case ClientUse::ForSystemUIMonospaced:
-        case ClientUse::ForSystemUIRounded:
+        case SystemFontKind::UISerif:
+        case SystemFontKind::UIMonospace:
+        case SystemFontKind::UIRounded:
 #if HAVE(DESIGN_SYSTEM_UI_FONTS)
-            systemFont = createDesignSystemUIFont(clientUse, parameters);
+            systemFont = createSystemDesignFont(systemFontKind, parameters);
 #endif
             break;
-        case ClientUse::ForTextStyle:
+        case SystemFontKind::TextStyle:
             systemFont = createTextStyleFont(parameters);
             break;
         }
@@ -135,14 +135,15 @@ void SystemFontDatabaseCoreText::clear()
     m_monospaceFamilies.clear();
 }
 
-RetainPtr<CTFontRef> SystemFontDatabaseCoreText::createFontByApplyingWeightItalicsAndFallbackBehavior(CTFontRef font, CGFloat weight, bool italic, float size, AllowUserInstalledFonts allowUserInstalledFonts, CFStringRef design)
+RetainPtr<CTFontRef> SystemFontDatabaseCoreText::createFontByApplyingWeightWidthItalicsAndFallbackBehavior(CTFontRef font, CGFloat weight, CGFloat width, bool italic, float size, AllowUserInstalledFonts allowUserInstalledFonts, CFStringRef design)
 {
     auto weightNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberCGFloatType, &weight));
+    auto widthNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberCGFloatType, &width));
     const float systemFontItalicSlope = 0.07;
     float italicsRawNumber = italic ? systemFontItalicSlope : 0;
     auto italicsNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberFloatType, &italicsRawNumber));
-    CFTypeRef traitsKeys[] = { kCTFontWeightTrait, kCTFontSlantTrait, kCTFontUIFontDesignTrait };
-    CFTypeRef traitsValues[] = { weightNumber.get(), italicsNumber.get(), design ? static_cast<CFTypeRef>(design) : static_cast<CFTypeRef>(kCTFontUIFontDesignDefault) };
+    CFTypeRef traitsKeys[] = { kCTFontWeightTrait, kCTFontWidthTrait, kCTFontSlantTrait, kCTFontUIFontDesignTrait };
+    CFTypeRef traitsValues[] = { weightNumber.get(), widthNumber.get(), italicsNumber.get(), design ? static_cast<CFTypeRef>(design) : static_cast<CFTypeRef>(kCTFontUIFontDesignDefault) };
     auto traitsDictionary = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, traitsKeys, traitsValues, WTF_ARRAY_LENGTH(traitsKeys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
     auto attributes = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
     CFDictionaryAddValue(attributes.get(), kCTFontTraitsAttribute, traitsDictionary.get());
@@ -179,59 +180,103 @@ Vector<RetainPtr<CTFontDescriptorRef>> SystemFontDatabaseCoreText::computeCascad
     return result;
 }
 
-SystemFontDatabaseCoreText::CascadeListParameters SystemFontDatabaseCoreText::systemFontParameters(const FontDescription& description, const AtomString& familyName, ClientUse clientUse, AllowUserInstalledFonts allowUserInstalledFonts)
+static CGFloat mapWeight(FontSelectionValue weight)
+{
+    if (weight < FontSelectionValue(150))
+        return kCTFontWeightUltraLight;
+    if (weight < FontSelectionValue(250))
+        return kCTFontWeightThin;
+    if (weight < FontSelectionValue(350))
+        return kCTFontWeightLight;
+    if (weight < FontSelectionValue(450))
+        return kCTFontWeightRegular;
+    if (weight < FontSelectionValue(550))
+        return kCTFontWeightMedium;
+    if (weight < FontSelectionValue(650))
+        return kCTFontWeightSemibold;
+    if (weight < FontSelectionValue(750))
+        return kCTFontWeightBold;
+    if (weight < FontSelectionValue(850))
+        return kCTFontWeightHeavy;
+    return kCTFontWeightBlack;
+}
+
+static CGFloat mapWidth(FontSelectionValue width)
+{
+    struct {
+        FontSelectionValue input;
+        CGFloat output;
+    } piecewisePoints[] = {
+#if HAVE(LEVEL_3_SYSTEM_FONT_WIDTH_VALUES)
+        {FontSelectionValue(37.5f), kCTFontWidthUltraCompressed},
+        {FontSelectionValue(50), kCTFontWidthExtraCompressed}, // ultra condensed
+        {FontSelectionValue(62.5f), kCTFontWidthExtraCondensed},
+        {FontSelectionValue(75), kCTFontWidthCondensed},
+        {FontSelectionValue(87.5f), kCTFontWidthSemiCondensed},
+        {FontSelectionValue(100), kCTFontWidthStandard},
+        {FontSelectionValue(112.5f), kCTFontWidthSemiExpanded},
+        {FontSelectionValue(125), kCTFontWidthExpanded},
+        {FontSelectionValue(150), kCTFontWidthExtraExpanded},
+#elif HAVE(LEVEL_2_SYSTEM_FONT_WIDTH_VALUES)
+        {FontSelectionValue(62.5f), kCTFontWidthExtraCondensed},
+        {FontSelectionValue(75), kCTFontWidthCondensed},
+        {FontSelectionValue(87.5f), kCTFontWidthSemiCondensed},
+        {FontSelectionValue(100), kCTFontWidthStandard},
+        {FontSelectionValue(112.5f), kCTFontWidthSemiExpanded},
+        {FontSelectionValue(125), kCTFontWidthExpanded}
+#else // level 1
+        {FontSelectionValue(75), kCTFontWidthCondensed},
+        {FontSelectionValue(100), kCTFontWidthStandard},
+        {FontSelectionValue(125), kCTFontWidthExpanded}
+#endif
+    };
+    for (size_t i = 0; i < std::size(piecewisePoints) - 1; ++i) {
+        auto& previous = piecewisePoints[i];
+        auto& next = piecewisePoints[i + 1];
+        auto middleInput = (previous.input + next.input) / 2;
+        if (width < middleInput)
+            return previous.output;
+    }
+    return piecewisePoints[std::size(piecewisePoints) - 1].output;
+}
+
+SystemFontDatabaseCoreText::CascadeListParameters SystemFontDatabaseCoreText::systemFontParameters(const FontDescription& description, const AtomString& familyName, SystemFontKind systemFontKind, AllowUserInstalledFonts allowUserInstalledFonts)
 {
     CascadeListParameters result;
-    result.locale = description.locale();
+    result.locale = description.computedLocale();
     result.size = description.computedSize();
     result.italic = isItalic(description.italic());
     result.allowUserInstalledFonts = allowUserInstalledFonts;
 
     auto weight = description.weight();
-    if (FontCache::singleton().shouldMockBoldSystemFontForAccessibility())
+    if (FontCache::forCurrentThread().shouldMockBoldSystemFontForAccessibility())
         weight = weight + FontSelectionValue(200);
 
-    if (weight < FontSelectionValue(150))
-        result.weight = kCTFontWeightUltraLight;
-    else if (weight < FontSelectionValue(250))
-        result.weight = kCTFontWeightThin;
-    else if (weight < FontSelectionValue(350))
-        result.weight = kCTFontWeightLight;
-    else if (weight < FontSelectionValue(450))
-        result.weight = kCTFontWeightRegular;
-    else if (weight < FontSelectionValue(550))
-        result.weight = kCTFontWeightMedium;
-    else if (weight < FontSelectionValue(650))
-        result.weight = kCTFontWeightSemibold;
-    else if (weight < FontSelectionValue(750))
-        result.weight = kCTFontWeightBold;
-    else if (weight < FontSelectionValue(850))
-        result.weight = kCTFontWeightHeavy;
-    else
-        result.weight = kCTFontWeightBlack;
+    result.weight = mapWeight(weight);
+    result.width = mapWidth(description.stretch());
 
-    switch (clientUse) {
-    case ClientUse::ForSystemUI: {
-        static NeverDestroyed<AtomString> systemUI = AtomString("system-ui", AtomString::ConstructFromLiteral);
+    switch (systemFontKind) {
+    case SystemFontKind::SystemUI: {
+        static MainThreadNeverDestroyed<const AtomString> systemUI = AtomString("system-ui", AtomString::ConstructFromLiteral);
         result.fontName = systemUI.get();
         break;
     }
-    case ClientUse::ForSystemUISerif: {
-        static NeverDestroyed<AtomString> systemUISerif = AtomString("system-ui-serif", AtomString::ConstructFromLiteral);
+    case SystemFontKind::UISerif: {
+        static MainThreadNeverDestroyed<const AtomString> systemUISerif = AtomString("ui-serif", AtomString::ConstructFromLiteral);
         result.fontName = systemUISerif.get();
         break;
     }
-    case ClientUse::ForSystemUIMonospaced: {
-        static NeverDestroyed<AtomString> systemUIMonospaced = AtomString("system-ui-monospaced", AtomString::ConstructFromLiteral);
-        result.fontName = systemUIMonospaced.get();
+    case SystemFontKind::UIMonospace: {
+        static MainThreadNeverDestroyed<const AtomString> systemUIMonospace = AtomString("ui-monospace", AtomString::ConstructFromLiteral);
+        result.fontName = systemUIMonospace.get();
         break;
     }
-    case ClientUse::ForSystemUIRounded: {
-        static NeverDestroyed<AtomString> systemUIRounded = AtomString("system-ui-rounded", AtomString::ConstructFromLiteral);
+    case SystemFontKind::UIRounded: {
+        static MainThreadNeverDestroyed<const AtomString> systemUIRounded = AtomString("ui-rounded", AtomString::ConstructFromLiteral);
         result.fontName = systemUIRounded.get();
         break;
     }
-    case ClientUse::ForTextStyle:
+    case SystemFontKind::TextStyle:
         result.fontName = familyName;
         break;
     }
@@ -239,18 +284,17 @@ SystemFontDatabaseCoreText::CascadeListParameters SystemFontDatabaseCoreText::sy
     return result;
 }
 
-Vector<RetainPtr<CTFontDescriptorRef>> SystemFontDatabaseCoreText::cascadeList(const FontDescription& description, const AtomString& cssFamily, ClientUse clientUse, AllowUserInstalledFonts allowUserInstalledFonts)
+Vector<RetainPtr<CTFontDescriptorRef>> SystemFontDatabaseCoreText::cascadeList(const FontDescription& description, const AtomString& cssFamily, SystemFontKind systemFontKind, AllowUserInstalledFonts allowUserInstalledFonts)
 {
-    return cascadeList(systemFontParameters(description, cssFamily, clientUse, allowUserInstalledFonts), clientUse);
+    return cascadeList(systemFontParameters(description, cssFamily, systemFontKind, allowUserInstalledFonts), systemFontKind);
 }
-
-#endif // USE(PLATFORM_SYSTEM_FALLBACK_LIST)
 
 static String genericFamily(const String& locale, HashMap<String, String>& map, CFStringRef ctKey)
 {
     return map.ensure(locale, [&] {
         auto descriptor = adoptCF(CTFontDescriptorCreateForCSSFamily(ctKey, locale.createCFString().get()));
-        return adoptCF(static_cast<CFStringRef>(CTFontDescriptorCopyAttribute(descriptor.get(), kCTFontFamilyNameAttribute))).get();
+        auto value = adoptCF(checked_cf_cast<CFStringRef>(CTFontDescriptorCopyAttribute(descriptor.get(), kCTFontFamilyNameAttribute)));
+        return String { value.get() };
     }).iterator->value;
 }
 

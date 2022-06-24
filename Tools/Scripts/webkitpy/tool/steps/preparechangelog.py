@@ -1,3 +1,4 @@
+# Copyright (C) 2020 Apple Inc. All rights reserved.
 # Copyright (C) 2010 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -55,6 +56,9 @@ class PrepareChangeLog(AbstractStep):
         changelogs = self.cached_lookup(state, "changelogs")
         for changelog_path in changelogs:
             changelog = ChangeLog(changelog_path, self._tool.filesystem)
+            if not changelog.latest_entry():
+                _log.error('Invalid ChangeLog at: {}'.format(changelog_path))
+                sys.exit(1)
             if not changelog.latest_entry().bug_id():
                 changelog.set_short_description_and_bug_url(
                     self.cached_lookup(state, "bug_title"),
@@ -65,7 +69,7 @@ class PrepareChangeLog(AbstractStep):
         # by prepare-ChangeLog, as an clean updated version of the one below it.
         with self._tool.filesystem.open_text_file_for_reading(changelog_path) as changelog_file:
             entries_gen = ChangeLog.parse_entries_from_file(changelog_file)
-            entries = zip(entries_gen, range(2))
+            entries = list(zip(entries_gen, range(2)))
 
         if not len(entries):
             raise Exception("Expected to find at least two ChangeLog entries in %s but found none." % changelog_path)
@@ -121,7 +125,7 @@ class PrepareChangeLog(AbstractStep):
 
         try:
             output = self._tool.executive.run_and_throw_if_fail(args, self._options.quiet, cwd=self._tool.scm().checkout_root)
-        except ScriptError as e:
+        except ScriptError:
             _log.error("Unable to prepare ChangeLogs.")
             sys.exit(1)
 

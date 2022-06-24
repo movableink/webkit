@@ -84,21 +84,21 @@ AudioManager::AudioManager()
 
 AudioManager::~AudioManager() {
   RTC_LOG(INFO) << "dtor";
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   Close();
 }
 
 void AudioManager::SetActiveAudioLayer(
     AudioDeviceModule::AudioLayer audio_layer) {
   RTC_LOG(INFO) << "SetActiveAudioLayer: " << audio_layer;
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   RTC_DCHECK(!initialized_);
   // Store the currently utilized audio layer.
   audio_layer_ = audio_layer;
   // The delay estimate can take one of two fixed values depending on if the
   // device supports low-latency output or not. However, it is also possible
   // that the user explicitly selects the high-latency audio path, hence we use
-  // the selected |audio_layer| here to set the delay estimate.
+  // the selected `audio_layer` here to set the delay estimate.
   delay_estimate_in_milliseconds_ =
       (audio_layer == AudioDeviceModule::kAndroidJavaAudio)
           ? kHighLatencyModeDelayEstimateInMilliseconds
@@ -109,7 +109,7 @@ void AudioManager::SetActiveAudioLayer(
 
 SLObjectItf AudioManager::GetOpenSLEngine() {
   RTC_LOG(INFO) << "GetOpenSLEngine";
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   // Only allow usage of OpenSL ES if such an audio layer has been specified.
   if (audio_layer_ != AudioDeviceModule::kAndroidOpenSLESAudio &&
       audio_layer_ !=
@@ -150,7 +150,7 @@ SLObjectItf AudioManager::GetOpenSLEngine() {
 
 bool AudioManager::Init() {
   RTC_LOG(INFO) << "Init";
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   RTC_DCHECK(!initialized_);
   RTC_DCHECK_NE(audio_layer_, AudioDeviceModule::kPlatformDefaultAudio);
   if (!j_audio_manager_->Init()) {
@@ -163,7 +163,7 @@ bool AudioManager::Init() {
 
 bool AudioManager::Close() {
   RTC_LOG(INFO) << "Close";
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   if (!initialized_)
     return true;
   j_audio_manager_->Close();
@@ -172,27 +172,27 @@ bool AudioManager::Close() {
 }
 
 bool AudioManager::IsCommunicationModeEnabled() const {
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   return j_audio_manager_->IsCommunicationModeEnabled();
 }
 
 bool AudioManager::IsAcousticEchoCancelerSupported() const {
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   return hardware_aec_;
 }
 
 bool AudioManager::IsAutomaticGainControlSupported() const {
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   return hardware_agc_;
 }
 
 bool AudioManager::IsNoiseSuppressorSupported() const {
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   return hardware_ns_;
 }
 
 bool AudioManager::IsLowLatencyPlayoutSupported() const {
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   // Some devices are blacklisted for usage of OpenSL ES even if they report
   // that low-latency playout is supported. See b/21485703 for details.
   return j_audio_manager_->IsDeviceBlacklistedForOpenSLESUsage()
@@ -201,12 +201,12 @@ bool AudioManager::IsLowLatencyPlayoutSupported() const {
 }
 
 bool AudioManager::IsLowLatencyRecordSupported() const {
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   return low_latency_record_;
 }
 
 bool AudioManager::IsProAudioSupported() const {
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   // TODO(henrika): return the state independently of if OpenSL ES is
   // blacklisted or not for now. We could use the same approach as in
   // IsLowLatencyPlayoutSupported() but I can't see the need for it yet.
@@ -215,7 +215,7 @@ bool AudioManager::IsProAudioSupported() const {
 
 // TODO(henrika): improve comments...
 bool AudioManager::IsAAudioSupported() const {
-#if defined(AUDIO_DEVICE_INCLUDE_ANDROID_AAUDIO)
+#if defined(WEBRTC_AUDIO_DEVICE_INCLUDE_ANDROID_AAUDIO)
   return a_audio_;
 #else
   return false;
@@ -223,12 +223,12 @@ bool AudioManager::IsAAudioSupported() const {
 }
 
 bool AudioManager::IsStereoPlayoutSupported() const {
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   return (playout_parameters_.channels() == 2);
 }
 
 bool AudioManager::IsStereoRecordSupported() const {
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   return (record_parameters_.channels() == 2);
 }
 
@@ -275,7 +275,8 @@ void AudioManager::OnCacheAudioParameters(JNIEnv* env,
                                           jint input_buffer_size) {
   RTC_LOG(INFO)
       << "OnCacheAudioParameters: "
-      << "hardware_aec: " << static_cast<bool>(hardware_aec)
+         "hardware_aec: "
+      << static_cast<bool>(hardware_aec)
       << ", hardware_agc: " << static_cast<bool>(hardware_agc)
       << ", hardware_ns: " << static_cast<bool>(hardware_ns)
       << ", low_latency_output: " << static_cast<bool>(low_latency_output)
@@ -287,7 +288,7 @@ void AudioManager::OnCacheAudioParameters(JNIEnv* env,
       << ", input_channels: " << static_cast<int>(input_channels)
       << ", output_buffer_size: " << static_cast<int>(output_buffer_size)
       << ", input_buffer_size: " << static_cast<int>(input_buffer_size);
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   hardware_aec_ = hardware_aec;
   hardware_agc_ = hardware_agc;
   hardware_ns_ = hardware_ns;
@@ -303,13 +304,13 @@ void AudioManager::OnCacheAudioParameters(JNIEnv* env,
 
 const AudioParameters& AudioManager::GetPlayoutAudioParameters() {
   RTC_CHECK(playout_parameters_.is_valid());
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   return playout_parameters_;
 }
 
 const AudioParameters& AudioManager::GetRecordAudioParameters() {
   RTC_CHECK(record_parameters_.is_valid());
-  RTC_DCHECK(thread_checker_.CalledOnValidThread());
+  RTC_DCHECK(thread_checker_.IsCurrent());
   return record_parameters_;
 }
 

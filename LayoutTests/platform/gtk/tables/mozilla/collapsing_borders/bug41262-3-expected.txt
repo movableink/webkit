@@ -16,11 +16,11 @@ layer at (0,0) size 785x663
         RenderTableSection {TBODY} at (2,3) size 160x26
           RenderTableRow {TR} at (0,0) size 160x26
             RenderTableCell {TD} at (0,0) size 53x26 [border: (3px solid #008000)] [r=0 c=0 rs=1 cs=1]
-              RenderText {#text} at (4,4) size 46x18
-                text run at (4,5) width 46: "Cell #1"
+              RenderText {#text} at (4,3) size 46x19
+                text run at (4,4) width 46: "Cell #1"
             RenderTableCell {TD} at (53,0) size 53x26 [border: (3px solid #008000)] [r=0 c=1 rs=1 cs=1]
-              RenderText {#text} at (3,4) size 46x18
-                text run at (3,5) width 46: "Cell #2"
+              RenderText {#text} at (3,3) size 46x19
+                text run at (3,4) width 46: "Cell #2"
             RenderTableCell {TD} at (106,0) size 54x26 [border: (3px solid #0000FF)] [r=0 c=2 rs=1 cs=1]
               RenderText {#text} at (4,4) size 46x17
                 text run at (4,4) width 46: "Cell #3"
@@ -96,9 +96,9 @@ layer at (0,0) size 785x663
           RenderText {#text} at (357,0) size 699x35
             text run at (357,0) width 342: "http://www.w3.org/TR/REC-CSS2/images/tbl-border-"
             text run at (0,18) width 68: "conflict.gif"
-        RenderText {#text} at (68,18) size 8x17
-          text run at (68,18) width 8: ": "
-        RenderBR {BR} at (0,0) size 0x0
+        RenderText {#text} at (68,18) size 4x17
+          text run at (68,18) width 4: ":"
+        RenderBR {BR} at (72,18) size 0x17
         RenderImage {IMG} at (0,36) size 217x21
         RenderText {#text} at (0,0) size 0x0
       RenderBlock {P} at (0,513) size 769x36

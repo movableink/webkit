@@ -6,12 +6,11 @@
 if (window.testRunner) {
     testRunner.dumpAsText();
     testRunner.waitUntilDone();
-    testRunner.setCanOpenWindows();
 }
 
 var a = window.open("about:blank","moonshine")
 function mountainGoat() {
-        a.window.eval('setTimeout("try { window.open(\'/\'); alert(\'FAIL\'); } catch(ex) { alert(\'PASS\'); }; if (window.testRunner) testRunner.notifyDone()", 0)')
+        a.window.eval('setTimeout("try { window.open(\'http://invalid:url\'); alert(\'FAIL\'); } catch(ex) { alert(\'PASS\'); }; if (window.testRunner) testRunner.notifyDone()", 0)')
 }
 setTimeout("mountainGoat()", 0)
 </script>

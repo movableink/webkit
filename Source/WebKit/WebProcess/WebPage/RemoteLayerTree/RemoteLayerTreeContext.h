@@ -37,6 +37,7 @@ namespace WebKit {
 
 class GraphicsLayerCARemote;
 class PlatformCALayerRemote;
+class RemoteRenderingBackendProxy;
 class WebPage;
 
 // FIXME: This class doesn't do much now. Roll into RemoteLayerTreeDrawingArea?
@@ -50,10 +51,6 @@ public:
 
     void graphicsLayerDidEnterContext(GraphicsLayerCARemote&);
     void graphicsLayerWillLeaveContext(GraphicsLayerCARemote&);
-
-    void backingStoreWasCreated(RemoteLayerBackingStore&);
-    void backingStoreWillBeDestroyed(RemoteLayerBackingStore&);
-    bool backingStoreWillBeDisplayed(RemoteLayerBackingStore&);
 
     WebCore::LayerPool& layerPool() { return m_layerPool; }
 
@@ -71,12 +68,17 @@ public:
 
     void willStartAnimationOnLayer(PlatformCALayerRemote&);
 
-    RemoteLayerBackingStoreCollection& backingStoreCollection() { return m_backingStoreCollection; }
+    RemoteLayerBackingStoreCollection& backingStoreCollection() { return *m_backingStoreCollection; }
     
-    void setNextFlushIsForImmediatePaint(bool nextFlushIsForImmediatePaint) { m_nextFlushIsForImmediatePaint = nextFlushIsForImmediatePaint; }
-    bool nextFlushIsForImmediatePaint() const { return m_nextFlushIsForImmediatePaint; }
+    void setNextRenderingUpdateRequiresSynchronousImageDecoding(bool requireSynchronousDecoding) { m_nextRenderingUpdateRequiresSynchronousImageDecoding = requireSynchronousDecoding; }
+    bool nextRenderingUpdateRequiresSynchronousImageDecoding() const { return m_nextRenderingUpdateRequiresSynchronousImageDecoding; }
 
     void adoptLayersFromContext(RemoteLayerTreeContext&);
+
+    RemoteRenderingBackendProxy& ensureRemoteRenderingBackendProxy();
+
+    bool useCGDisplayListsForDOMRendering() const { return m_useCGDisplayListsForDOMRendering; }
+    void setUseCGDisplayListsForDOMRendering(bool useCGDisplayLists) { m_useCGDisplayListsForDOMRendering = useCGDisplayLists; }
     
 #if PLATFORM(IOS_FAMILY)
     bool canShowWhileLocked() const;
@@ -96,13 +98,14 @@ private:
 
     HashSet<GraphicsLayerCARemote*> m_liveGraphicsLayers;
 
-    RemoteLayerBackingStoreCollection m_backingStoreCollection;
-    
-    RemoteLayerTreeTransaction* m_currentTransaction;
+    std::unique_ptr<RemoteLayerBackingStoreCollection> m_backingStoreCollection;
 
     WebCore::LayerPool m_layerPool;
-    
-    bool m_nextFlushIsForImmediatePaint { false };
+
+    RemoteLayerTreeTransaction* m_currentTransaction { nullptr };
+
+    bool m_nextRenderingUpdateRequiresSynchronousImageDecoding { false };
+    bool m_useCGDisplayListsForDOMRendering { false };
 };
 
 } // namespace WebKit

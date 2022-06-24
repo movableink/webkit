@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,11 @@
 
 #if ENABLE(DATA_DETECTION)
 
-#import <wtf/RefPtr.h>
+#import "DataDetectorType.h"
+#import "FloatRect.h"
+#import "SimpleRange.h"
+#import <wtf/OptionSet.h>
 #import <wtf/RetainPtr.h>
-#import <wtf/text/WTFString.h>
 
 OBJC_CLASS DDActionContext;
 OBJC_CLASS NSArray;
@@ -38,43 +40,42 @@ OBJC_CLASS NSDictionary;
 namespace WebCore {
 
 class Document;
-class Element;
-class FloatRect;
+class HTMLDivElement;
 class HitTestResult;
-class Range;
+class QualifiedName;
+struct TextRecognitionDataDetector;
 
-enum DataDetectorTypes {
-    DataDetectorTypeNone = 0,
-    DataDetectorTypePhoneNumber = 1 << 0,
-    DataDetectorTypeLink = 1 << 1,
-    DataDetectorTypeAddress = 1 << 2,
-    DataDetectorTypeCalendarEvent = 1 << 3,
-    DataDetectorTypeTrackingNumber = 1 << 4,
-    DataDetectorTypeFlightNumber = 1 << 5,
-    DataDetectorTypeLookupSuggestion = 1 << 6,
-    DataDetectorTypeAll = ULONG_MAX
+struct DetectedItem {
+    RetainPtr<DDActionContext> actionContext;
+    FloatRect boundingBox;
+    SimpleRange range;
 };
 
 class DataDetection {
 public:
 #if PLATFORM(MAC)
-    WEBCORE_EXPORT static RetainPtr<DDActionContext> detectItemAroundHitTestResult(const HitTestResult&, FloatRect& detectedDataBoundingBox, RefPtr<Range>& detectedDataRange);
+    WEBCORE_EXPORT static std::optional<DetectedItem> detectItemAroundHitTestResult(const HitTestResult&);
 #endif
-    WEBCORE_EXPORT static NSArray *detectContentInRange(RefPtr<Range>& contextRange, DataDetectorTypes, NSDictionary *context);
+    WEBCORE_EXPORT static NSArray *detectContentInRange(const SimpleRange&, OptionSet<DataDetectorType>, NSDictionary *context);
     WEBCORE_EXPORT static void removeDataDetectedLinksInDocument(Document&);
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT static bool canBePresentedByDataDetectors(const URL&);
     WEBCORE_EXPORT static bool isDataDetectorLink(Element&);
     WEBCORE_EXPORT static String dataDetectorIdentifier(Element&);
-    WEBCORE_EXPORT static bool shouldCancelDefaultAction(Element&);
+    WEBCORE_EXPORT static bool canPresentDataDetectorsUIForElement(Element&);
     WEBCORE_EXPORT static bool requiresExtendedContext(Element&);
+#endif
+
+#if ENABLE(IMAGE_ANALYSIS)
+    static Ref<HTMLDivElement> createElementForImageOverlay(Document&, const TextRecognitionDataDetector&);
 #endif
 
     static const String& dataDetectorURLProtocol();
     static bool isDataDetectorURL(const URL&);
+    static bool isDataDetectorAttribute(const QualifiedName&);
+    static bool isDataDetectorElement(const Element&);
 };
 
 } // namespace WebCore
 
 #endif
-

@@ -1,4 +1,5 @@
-//@ if ["arm", "mips"].include?($architecture) then skip else runDefault end
+//@ skip if $memoryLimited
+//@ runDefault
 
 const a = [0];
 a.__proto__ = {};
@@ -22,5 +23,5 @@ try {
     exception = e;
 }
 
-if (exception != "Error: Out of memory")
+if (exception && exception != "RangeError: Out of memory")
     throw "FAILED";

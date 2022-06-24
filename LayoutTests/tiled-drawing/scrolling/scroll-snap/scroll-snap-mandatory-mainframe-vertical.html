@@ -2,12 +2,14 @@
 <html>
     <head>
         <style>
+            html {
+                scroll-snap-type: y mandatory;
+            }
             .verticalGallery {
                 width: 100vw;
                 height: 600vh;
                 margin: 0;
                 padding: 0;
-                scroll-snap-type: y mandatory;
             }
             .colorBox {
                 height: 100vh;
@@ -23,93 +25,44 @@
             #item5 { background-color: fuchsia; }
         </style>
         <script src="../../../resources/js-test.js"></script>
+        <script src="../../../resources/ui-helper.js"></script>
+        <script src="resources/mainframe-scroll-snap-test.js"></script>
         <script>
         window.jsTestIsAsync = true;
 
-        var divTarget;
-        var divScrollPositionBeforeGlide;
-        var divScrollPositionBeforeSnap;
+        async function runTests()
+        {
+            try {
+                await UIHelper.delayFor(0);
+                await doScrollGlide(document.scrollingElement, VERTICAL);
+                expectTrue(document.scrollingElement.scrollTop == window.innerHeight, "div scrolled to next window.");
 
-        function checkForScrollSnap() {
-            // The div should have snapped back to the previous position
-            if (divTarget.scrollTop != divScrollPositionBeforeSnap)
-                testFailed(`div did not snap back to proper location. (${divTarget.scrollTop} vs. ${divScrollPositionBeforeSnap})`);
-            else
-                testPassed("div honored snap points.");
-
-            finishJSTest();
+                await UIHelper.delayFor(0);
+                await doScrollSnap(document.scrollingElement, VERTICAL);
+                expectTrue(document.scrollingElement.scrollTop == window.innerHeight, "div honored snap points.");
+            } catch (e) {
+                console.log(e);
+            } finally {
+                finishJSTest();
+            }
         }
 
-        function scrollSnapTest() {
-            // See where our div lives:
-            pageScrollPositionBefore = document.scrollingElement.scrollTop;
-
-            divTarget = document.getElementById('target');
- 
-            divScrollPositionBeforeSnap = divTarget.scrollTop;
-
-            var startPosX = divTarget.offsetLeft + 20;
-            var startPosY = divTarget.offsetTop + 20;
-            eventSender.mouseMoveTo(startPosX, startPosY); // Make sure we are just outside the iFrame
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, -1, 'began', 'none');
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, -1, 'changed', 'none');
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, -1, 'changed', 'none');
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, 0, 'ended', 'none');
-            eventSender.callAfterScrollingCompletes(checkForScrollSnap);
-        }
-
-        function checkForScrollGlide() {
-            // The div should have scrolled (glided) to the next snap point.
-            if (divTarget.scrollTop == window.innerHeight)
-                testPassed("div scrolled to next window.");
-            else
-                testFailed(`div did not honor snap points. (${divTarget.scrollTop} vs. ${window.innerHeight})`);
-
-            setTimeout(scrollSnapTest, 0);
-        }
-
-        function scrollGlideTest() {
-            divTarget = document.getElementById('target');
- 
-            divScrollPositionBeforeGlide = divTarget.scrollTop;
-
-            var startPosX = divTarget.offsetLeft + 20;
-            var startPosY = divTarget.offsetTop + 20;
-            eventSender.mouseMoveTo(startPosX, startPosY); // Make sure we are just outside the iFrame
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, -1, 'began', 'none');
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, -1, 'changed', 'none');
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, -1, 'changed', 'none');
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, -1, 'changed', 'none');
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, 0, 'ended', 'none');
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, -1, 'none', 'begin');
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, -4, 'none', 'continue');
-            eventSender.mouseScrollByWithWheelAndMomentumPhases(0, 0, 'none', 'end');
-            eventSender.callAfterScrollingCompletes(checkForScrollGlide);
-        }
-
-        function onLoad() {
-
+        function onLoad()
+        {
             if (window.eventSender) {
-                eventSender.monitorWheelEvents();
                 internals.setPlatformMomentumScrollingPredictionEnabled(false);
-                setTimeout(scrollGlideTest, 0);
+                runTests();
             } else {
                 var messageLocation = document.getElementById('item0');
                 var message = document.createElement('div');
-                message.innerHTML = "<p>This test is better run under DumpRenderTree. To manually test it, place the mouse pointer<br/>"
-                    + "inside the red region at the top of the page, and then use the mouse wheel or a two-finger swipe to make a<br/>"
-                    + "small swipe gesture with some momentum.<br/><br/>"
-                    + "The region should scroll to show a green region.<br/><br/>"
-                    + "Next, perform a small scroll gesture that does not involve momentum. You should begin to see one of the colors<br/>"
-                    + "to the left (or right) of the current green box. When you release the wheel, the region should scroll back so<br/>"
-                    + "that the region is a single color.<br/><br/>"
-                    + "You should also be able to repeat these test steps for the vertical region below.</p>";
+                message.innerHTML = "<p>To run this test manually, scroll the page vertically. The page should "
+                    + "snap between uniform colors which fill the view.<p>";
                 messageLocation.appendChild(message);
             }
         }
         </script>
     </head>
-    <body onload="onLoad();" class="verticalGallery" id="target">
+    <body onload="onLoad();" class="verticalGallery">
         <div id="item0" class="colorBox"><div id="console"></div></div>
         <div id="item1" class="colorBox"></div>
         <div id="item2" class="colorBox"></div>

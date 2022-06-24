@@ -72,17 +72,6 @@
 #define WEBKIT_FIRST_VERSION_WITH_CONTENT_SECURITY_POLICY_SOURCE_STAR_PROTOCOL_RESTRICTION 3555
 #endif // PLATFORM(IOS_FAMILY)
 
-enum class SDKVersion : uint32_t {
-#if PLATFORM(IOS_FAMILY)
-    FirstThatDefaultsToPassiveTouchListenersOnDocument = DYLD_IOS_VERSION_11_3,
-#else
-    FirstWithDropToNavigateDisallowedByDefault = DYLD_MACOSX_VERSION_10_13,
-    FirstWithWebIconDatabaseWarning = DYLD_MACOSX_VERSION_10_13,
-#endif
-};
-
-bool linkedOnOrAfter(SDKVersion);
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -78,20 +78,6 @@ WI.TextContentView = class TextContentView extends WI.ContentView
         this._textEditor.revealPosition(position, textRangeToSelect, forceUnformatted);
     }
 
-    shown()
-    {
-        super.shown();
-
-        this._textEditor.shown();
-    }
-
-    hidden()
-    {
-        super.hidden();
-
-        this._textEditor.hidden();
-    }
-
     get supportsSave()
     {
         return true;
@@ -99,8 +85,11 @@ WI.TextContentView = class TextContentView extends WI.ContentView
 
     get saveData()
     {
-        let url = WI.FileUtilities.inspectorURLForFilename(WI.UIString("Untitled") + ".txt");
-        return {url, content: this._textEditor.string, forceSaveAs: true};
+        return {
+            content: this._textEditor.string,
+            suggestedName: WI.UIString("Untitled") + ".txt",
+            forceSaveAs: true,
+        };
     }
 
     get supportsSearch()

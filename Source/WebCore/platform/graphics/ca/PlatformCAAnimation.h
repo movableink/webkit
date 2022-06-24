@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,13 +23,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#ifndef PlatformCAAnimation_h
-#define PlatformCAAnimation_h
+#pragma once
 
 #include "Color.h"
 #include "FilterOperation.h"
 #include "FloatPoint3D.h"
 #include "TransformationMatrix.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/Forward.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/RefCounted.h>
@@ -42,7 +42,7 @@ class TimingFunction;
 
 class PlatformCAAnimation : public RefCounted<PlatformCAAnimation> {
 public:
-    enum AnimationType { Basic, Keyframe, Spring };
+    enum AnimationType { Basic, Group, Keyframe, Spring };
     enum FillModeType { NoFillMode, Forwards, Backwards, Both };
     enum ValueFunctionType { NoValueFunction, RotateX, RotateY, RotateZ, ScaleX, ScaleY, ScaleZ, Scale, TranslateX, TranslateY, TranslateZ, Translate };
 
@@ -119,6 +119,10 @@ public:
     virtual void setTimingFunctions(const Vector<const TimingFunction*>&, bool reverse = false) = 0;
     virtual void copyTimingFunctionsFrom(const PlatformCAAnimation&) = 0;
 
+    // Animation group properties.
+    virtual void setAnimations(const Vector<RefPtr<PlatformCAAnimation>>&) = 0;
+    virtual void copyAnimationsFrom(const PlatformCAAnimation&) = 0;
+
     void setActualStartTimeIfNeeded(CFTimeInterval t)
     {
         if (beginTime() <= 0)
@@ -126,7 +130,7 @@ public:
     }
 
     bool isBasicAnimation() const;
-    
+
 protected:
     PlatformCAAnimation(AnimationType type = Basic)
         : m_type(type)
@@ -150,4 +154,44 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(ToValueTypeName) \
     static bool isType(const WebCore::PlatformCAAnimation& animation) { return animation.predicate; } \
 SPECIALIZE_TYPE_TRAITS_END()
 
-#endif // PlatformCAAnimation_h
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::PlatformCAAnimation::AnimationType> {
+    using values = EnumValues<
+        WebCore::PlatformCAAnimation::AnimationType,
+        WebCore::PlatformCAAnimation::AnimationType::Basic,
+        WebCore::PlatformCAAnimation::AnimationType::Group,
+        WebCore::PlatformCAAnimation::AnimationType::Keyframe,
+        WebCore::PlatformCAAnimation::AnimationType::Spring
+    >;
+};
+
+template<> struct EnumTraits<WebCore::PlatformCAAnimation::FillModeType> {
+    using values = EnumValues<
+        WebCore::PlatformCAAnimation::FillModeType,
+        WebCore::PlatformCAAnimation::FillModeType::NoFillMode,
+        WebCore::PlatformCAAnimation::FillModeType::Forwards,
+        WebCore::PlatformCAAnimation::FillModeType::Backwards,
+        WebCore::PlatformCAAnimation::FillModeType::Both
+    >;
+};
+
+template<> struct EnumTraits<WebCore::PlatformCAAnimation::ValueFunctionType> {
+    using values = EnumValues<
+        WebCore::PlatformCAAnimation::ValueFunctionType,
+        WebCore::PlatformCAAnimation::ValueFunctionType::NoValueFunction,
+        WebCore::PlatformCAAnimation::ValueFunctionType::RotateX,
+        WebCore::PlatformCAAnimation::ValueFunctionType::RotateY,
+        WebCore::PlatformCAAnimation::ValueFunctionType::RotateZ,
+        WebCore::PlatformCAAnimation::ValueFunctionType::ScaleX,
+        WebCore::PlatformCAAnimation::ValueFunctionType::ScaleY,
+        WebCore::PlatformCAAnimation::ValueFunctionType::ScaleZ,
+        WebCore::PlatformCAAnimation::ValueFunctionType::Scale,
+        WebCore::PlatformCAAnimation::ValueFunctionType::TranslateX,
+        WebCore::PlatformCAAnimation::ValueFunctionType::TranslateY,
+        WebCore::PlatformCAAnimation::ValueFunctionType::TranslateZ,
+        WebCore::PlatformCAAnimation::ValueFunctionType::Translate
+    >;
+};
+
+} // namespace WTF

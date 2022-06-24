@@ -9,12 +9,19 @@ layer at (0,0) size 785x1103
       RenderBlock {PRE} at (0,36) size 769x112
         RenderText {#text} at (0,0) size 344x112
           text run at (0,0) width 176: "P {margin-left: 20px;}"
+          text run at (176,0) width 0: " "
           text run at (0,16) width 312: ".one {border-left: purple double 10px;}"
+          text run at (312,16) width 0: " "
           text run at (0,32) width 304: ".two {border-left: purple thin solid;}"
+          text run at (304,32) width 0: " "
           text run at (0,48) width 336: ".threea {border-left: black medium solid;}"
+          text run at (336,48) width 0: " "
           text run at (0,64) width 344: ".threeb {border-left: purple medium solid;}"
+          text run at (344,64) width 0: " "
           text run at (0,80) width 328: ".threec {border-left: blue medium solid;}"
+          text run at (328,80) width 0: " "
           text run at (0,96) width 272: "TD {border-left: green 2px solid;}"
+          text run at (272,96) width 0: " "
       RenderBlock {HR} at (0,161) size 769x2 [border: (1px inset #000000)]
       RenderBlock {P} at (20,179) size 749x40
         RenderText {#text} at (0,0) size 749x39
@@ -88,8 +95,8 @@ layer at (0,0) size 785x1103
                   text run at (5,4) width 159: "TABLE Testing Section"
           RenderTableRow {TR} at (0,28) size 767x443
             RenderTableCell {TD} at (0,235) size 13x29 [bgcolor=#C0C0C0] [border: (1px inset #808080) (2px solid #008000)] [r=1 c=0 rs=1 cs=1]
-              RenderText {#text} at (5,4) size 4x20
-                text run at (5,5) width 4: " "
+              RenderText {#text} at (5,3) size 4x21
+                text run at (5,4) width 4: " "
             RenderTableCell {TD} at (13,28) size 754x443 [border: (1px inset #808080) (2px solid #008000)] [r=1 c=1 rs=1 cs=1]
               RenderBlock {P} at (25,4) size 725x40
                 RenderText {#text} at (0,0) size 720x39

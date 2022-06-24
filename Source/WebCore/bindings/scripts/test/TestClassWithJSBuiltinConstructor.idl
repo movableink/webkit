@@ -27,6 +27,7 @@
  */
 
 [
-    JSBuiltinConstructor
+    Exposed=TestGlobalObject
 ] interface TestClassWithJSBuiltinConstructor {
+    [JSBuiltin] constructor();
 };

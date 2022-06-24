@@ -1,3 +1,780 @@
+2022-03-11  Jon Davis  <jond@apple.com>
+
+        Allow table of contents on posts in special cases
+        https://bugs.webkit.org/show_bug.cgi?id=237744
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/plugins/table-of-contents.php:
+        * wp-content/themes/webkit/functions.php:
+        * wp-content/themes/webkit/single.php:
+
+2022-03-03  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [Style] Forbid spaces between type names and protocol names in Objective-C
+        https://bugs.webkit.org/show_bug.cgi?id=237406
+
+        Reviewed by Darin Adler.
+
+        According to https://lists.webkit.org/pipermail/webkit-dev/2022-February/032130.html.
+
+        * code-style.md:
+
+2022-02-15  Jon Davis  <jond@apple.com>
+
+        Fix WordPress wpautop to account for the Dialog element.
+        https://bugs.webkit.org/show_bug.cgi?id=236320
+
+        Reviewed by Darin Adler.
+
+        * wp-content/themes/webkit/functions.php:
+
+2022-02-07  Tim Nguyen  <ntim@apple.com>
+
+        Unreviewed, make <dialog> demos dark theme work in iframes
+
+        Add rules for <body>.
+
+        * demos/dialog-element/dark-theme.css:
+        (@media (prefers-color-scheme: dark) body):
+
+2022-02-04  Tim Nguyen  <ntim@apple.com>
+
+        Add <dialog> element demos for blog post
+        https://bugs.webkit.org/show_bug.cgi?id=236143
+
+        Reviewed by Simon Fraser.
+
+        * demos/dialog-element/confirmation-dialog-basic.html: Added.
+        * demos/dialog-element/confirmation-dialog-form.html: Added.
+        * demos/dialog-element/dark-theme.css: Added.
+        (body):
+        (@media (prefers-color-scheme: dark) dialog):
+        * demos/dialog-element/styled-dialog.html: Added.
+
+2022-02-02  Jon Davis  <jond@apple.com>
+
+        Improve color contrast of dark mode syntax highlighting
+        https://bugs.webkit.org/show_bug.cgi?id=236041
+
+        Reviewed by Simon Fraser.
+
+        * wp-content/themes/webkit/style.css:
+        (@media(prefers-color-scheme:dark) :root):
+
+2021-12-07  Cameron McCormack  <heycam@apple.com>
+
+        Puzzle feature detection followup
+        https://bugs.webkit.org/show_bug.cgi?id=233946
+
+        Unreviewed.
+
+        * blog-files/wide-gamut-canvas/puzzle.html:
+
+2021-12-07  Cameron McCormack  <heycam@apple.com>
+
+        Tweak puzzle to use feature detection
+        https://bugs.webkit.org/show_bug.cgi?id=233946
+
+        Unreviewed.
+
+        * blog-files/wide-gamut-canvas/puzzle.html:
+
+2021-11-30  Cameron McCormack  <heycam@apple.com>
+
+        Add resources for an upcoming blog post
+        https://bugs.webkit.org/show_bug.cgi?id=233681
+
+        Unreviewed.
+
+        * blog-files/wide-gamut-canvas/pinwheels.html: Added.
+        * blog-files/wide-gamut-canvas/puzzle.html: Added.
+        * blog-files/wide-gamut-canvas/puzzle.jpg: Added.
+        * blog-files/wide-gamut-canvas/squares.html: Added.
+        * blog-files/wide-gamut-canvas/stripes.html: Added.
+
+2021-11-10  Kimmo Kinnunen  <kkinnunen@apple.com>
+
+        Coding style for inner namespaces is should be simplified to not indented
+        https://bugs.webkit.org/show_bug.cgi?id=232073
+
+        Reviewed by Antti Koivisto.
+
+        * code-style.md:
+        Simplify coding style to match the existing code: contents of inner namespaces
+        should not be indented.
+
+2021-11-04  Ryan Haddad  <ryanhaddad@apple.com>
+
+        Add Monterey to WebKit Build Archives page
+        https://bugs.webkit.org/show_bug.cgi?id=232739
+
+        Reviewed by Alexey Proskuryakov.
+
+        * wp-content/themes/webkit/build-archives.php:
+
+2021-09-02  Jonathan Bedard  <jbedard@apple.com>
+
+        [contributors.json] Relocation (Part 3)
+        https://bugs.webkit.org/show_bug.cgi?id=229690
+        <rdar://problem/82552403>
+
+        Reviewed by Aakash Jain.
+
+        * commit-review.md: Link to metadata/contributors.json.
+        * wp-content/themes/webkit/team.php: Load from metadata/contributors.json,
+        load list instead of dictionary.
+
+2021-08-31  Jonathan Bedard  <jbedard@apple.com>
+
+        [contributors.json] Replace class=bot with status=bot
+        https://bugs.webkit.org/show_bug.cgi?id=229712
+        <rdar://problem/82579767>
+
+        Reviewed by Aakash Jain.
+
+        * wp-content/themes/webkit/team.php: "bot" is now a status, not a class.
+
+2021-02-17  Ling Ho  <lingho@apple.com>
+
+        WebKit nighly archives page not working for Big Sur
+        https://bugs.webkit.org/show_bug.cgi?id=222016
+        <rdar://problem/74037376>
+
+        Reviewed by Alexey Proskuryakov.
+
+        * wp-content/themes/webkit/build-archives.php:
+
+2021-02-11  Martin Robinson  <mrobinson@igalia.com>
+
+        scroll-snap demo should use new spec
+        https://bugs.webkit.org/show_bug.cgi?id=184046
+
+        Reviewed by Wenson Hsieh.
+
+        Update the scroll-snap demo to reflect the modern specification. This
+        demo isn't currently linked from the site, but if it's every linked again
+        it will now reflect the current specification.
+
+        This maintains the old CSS so that the demo continues to work with
+        old versions of Safari.
+
+        * demos/scroll-snap/index.html: Update the descriptions in the demo to reflect
+        the newest version of the specification.
+
+2021-01-29  Beth Dakin  <bdakin@apple.com>
+
+        Remove non-inclusive language from webkit.org/blog-files/css-jit-introduction/html5-single-page-microbenchmark.html
+        https://bugs.webkit.org/show_bug.cgi?id=221154
+
+        Reviewed by Geoffrey Garen.
+
+        * blog-files/css-jit-introduction/html5-single-page-microbenchmark.html:
+
+2021-01-05  Jon Davis  <jond@apple.com>
+
+        Limit failed login attempts on webkit.org blog
+        https://bugs.webkit.org/show_bug.cgi?id=220032
+
+        Reviewed by Timothy Hatcher.
+
+        * wp-content/plugins/limit-logins.php: Added.
+
+2021-01-05  Jon Davis  <jond@apple.com>
+
+        Disable public APIs on webkit.org blog
+        https://bugs.webkit.org/show_bug.cgi?id=220028
+
+        Reviewed by Timothy Hatcher.
+
+        * wp-content/plugins/disable-public-apis.php: Added.
+
+2021-01-05  Jon Davis  <jond@apple.com>
+
+        Enforce strong password changes on webkit.org blog
+        https://bugs.webkit.org/show_bug.cgi?id=220027
+
+        Reviewed by Timothy Hatcher.
+
+        * wp-content/plugins/strong-passwords.php: Added.
+
+2020-12-11  Ryan Haddad  <ryanhaddad@apple.com>
+
+        Add Big Sur to WebKit Build Archives page
+        https://bugs.webkit.org/show_bug.cgi?id=219789
+
+        Reviewed by Alexey Proskuryakov.
+
+        * wp-content/themes/webkit/build-archives.php:
+        Add Big Sur, remove High Sierra since we aren't producing new archives for it.
+
+2020-11-02  Jon Davis  <jond@apple.com>
+
+        Input sanitization improvements for Payment Request demo
+        https://bugs.webkit.org/show_bug.cgi?id=218470
+
+        Reviewed by Andy Estes.
+
+        * demos/payment-request/merchant-validation.php:
+
+2020-09-02  Jon Davis  <jond@apple.com>
+
+        Add an STP callout to Web Inspector documentation
+        https://bugs.webkit.org/show_bug.cgi?id=216105
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/single-web_inspector_page.php:
+        * wp-content/themes/webkit/style.css:
+        (article .meta .icon):
+
+2020-08-24  Jon Davis  <jond@apple.com>
+
+        Disable unused RPC services
+        https://bugs.webkit.org/show_bug.cgi?id=215779
+
+        Reviewed by Alexey Proskuryakov.
+
+        * .htaccess:
+
+2020-08-18  Darin Adler  <darin@apple.com>
+
+        * languages.md: Fixed "Movaje" typo.
+
+2020-08-18  Darin Adler  <darin@apple.com>
+
+        Document versions of C++ and Python
+        https://bugs.webkit.org/show_bug.cgi?id=215191
+
+        Reviewed by Jonathan Bedard.
+
+        * languages.md: Added.
+
+2020-08-12  Jon Davis  <jond@apple.com>
+
+        Remove unused selector performance test
+        https://bugs.webkit.org/show_bug.cgi?id=215414
+
+        Reviewed by Darin Adler.
+
+        * perf/slickspeed/config.ini: Removed.
+        * perf/slickspeed/footer.html: Removed.
+        * perf/slickspeed/frameworks/DomQuery.js: Removed.
+        * perf/slickspeed/frameworks/dummy.js: Removed.
+        * perf/slickspeed/frameworks/jquery-1.2.3.js: Removed.
+        * perf/slickspeed/frameworks/prototype.js: Removed.
+        * perf/slickspeed/header.html: Removed.
+        * perf/slickspeed/index.php: Removed.
+        * perf/slickspeed/instructions.txt: Removed.
+        * perf/slickspeed/logo.png: Removed.
+        * perf/slickspeed/selectors.list: Removed.
+        * perf/slickspeed/style.css: Removed.
+        * perf/slickspeed/system/index.php: Removed.
+        * perf/slickspeed/system/slickspeed.js: Removed.
+        * perf/slickspeed/system/template.php: Removed.
+        * perf/slickspeed/template.html: Removed.
+
+2020-08-06  Jon Davis  <jond@apple.com>
+
+        Fixed widget method argument compatibility with WordPress
+        https://bugs.webkit.org/show_bug.cgi?id=215103
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/widgets/icon.php:
+        * wp-content/themes/webkit/widgets/page.php:
+        * wp-content/themes/webkit/widgets/post.php:
+        * wp-content/themes/webkit/widgets/twitter.php:
+
+2020-08-06  Jon Davis  <jond@apple.com>
+
+        Removed XML declaration from SVGs and updated copyrights
+        https://bugs.webkit.org/show_bug.cgi?id=215102
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/images/chevron-dark.svg:
+        * wp-content/themes/webkit/images/chevron.svg:
+        * wp-content/themes/webkit/images/circular.svg:
+        * wp-content/themes/webkit/images/compass.svg:
+        * wp-content/themes/webkit/images/download-white.svg:
+        * wp-content/themes/webkit/images/download.svg:
+        * wp-content/themes/webkit/images/filter.svg:
+        * wp-content/themes/webkit/images/icons.svg:
+        * wp-content/themes/webkit/images/inspector.svg:
+        * wp-content/themes/webkit/images/invert-lightness.svg:
+        * wp-content/themes/webkit/images/menu-down.svg:
+        * wp-content/themes/webkit/images/search.svg:
+        * wp-content/themes/webkit/images/spinner.svg:
+        * wp-content/themes/webkit/images/squirrelfish-lives.svg:
+        * wp-content/themes/webkit/images/template.svg:
+        * wp-content/themes/webkit/images/twitter.svg:
+        * wp-content/themes/webkit/images/webkit.svg:
+
+2020-08-05  Jon Davis  <jond@apple.com>
+
+        Enhance feature status page origin for flexible test environments
+        https://bugs.webkit.org/show_bug.cgi?id=215178
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/css-status.php:
+        * wp-content/themes/webkit/status.php:
+
+2020-04-23  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/clobberize-dependence-graph.graffle:
+        * blog-files/speculation-in-jsc/clobberize-dependence-graph.svg:
+
+2020-04-21  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/clobberize-dependence-graph.graffle:
+        * blog-files/speculation-in-jsc/clobberize-dependence-graph.svg:
+
+2020-04-21  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/clobberize-dependence-graph.graffle: Added.
+        * blog-files/speculation-in-jsc/clobberize-dependence-graph.svg: Added.
+
+2020-04-21  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/abstract-heaps.graffle:
+        * blog-files/speculation-in-jsc/abstract-heaps.svg:
+
+2020-04-21  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/abstract-heaps.graffle:
+        * blog-files/speculation-in-jsc/abstract-heaps.svg:
+
+2020-04-21  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/abstract-heaps.graffle: Added.
+        * blog-files/speculation-in-jsc/abstract-heaps.svg: Added.
+
+2020-04-18  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/osr-exit-implicit-control-flow.graffle:
+        * blog-files/speculation-in-jsc/osr-exit-implicit-control-flow.svg:
+
+2020-04-18  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/osr-exit-implicit-control-flow.graffle: Added.
+        * blog-files/speculation-in-jsc/osr-exit-implicit-control-flow.svg: Added.
+
+2020-04-14  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/full-add-cfg.graffle:
+        * blog-files/speculation-in-jsc/full-add-cfg.svg:
+
+2020-04-14  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/full-add-cfg.graffle:
+        * blog-files/speculation-in-jsc/full-add-cfg.svg:
+
+2020-04-14  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/full-add-cfg.graffle: Added.
+        * blog-files/speculation-in-jsc/full-add-cfg.svg: Added.
+
+2020-04-14  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/dfg-pipeline-dark.graffle: Added.
+        * blog-files/speculation-in-jsc/dfg-pipeline-dark.svg: Added.
+        * blog-files/speculation-in-jsc/ftl-pipeline-dark.graffle
+        * blog-files/speculation-in-jsc/ftl-pipeline-dark.svg:
+
+2020-04-14  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some more files for a blog post.
+
+        * blog-files/speculation-in-jsc/ftl-pipeline-dark.graffle: Added.
+        * blog-files/speculation-in-jsc/ftl-pipeline-dark.svg: Added.
+
+2020-04-10  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, check in some files for a blog post.
+
+        * blog-files/speculation-in-jsc: Added.
+        * blog-files/speculation-in-jsc/ai-check-elimination-examples.graffle: Added.
+        * blog-files/speculation-in-jsc/ai-check-elimination-examples.svg: Added.
+        * blog-files/speculation-in-jsc/bigger-data-flow-graph.graffle: Added.
+        * blog-files/speculation-in-jsc/bigger-data-flow-graph.svg: Added.
+        * blog-files/speculation-in-jsc/bytecode-to-dfg-ir-lowering-with-osr-phases.graffle: Added.
+        * blog-files/speculation-in-jsc/bytecode-to-dfg-ir-lowering-with-osr-phases.svg: Added.
+        * blog-files/speculation-in-jsc/bytecode-to-ssa-conversion-with-osr.graffle: Added.
+        * blog-files/speculation-in-jsc/bytecode-to-ssa-conversion-with-osr.svg: Added.
+        * blog-files/speculation-in-jsc/dfg-and-ftl-architecture.graffle: Added.
+        * blog-files/speculation-in-jsc/dfg-and-ftl-architecture.svg: Added.
+        * blog-files/speculation-in-jsc/dfg-arithadd-explainer.graffle: Added.
+        * blog-files/speculation-in-jsc/dfg-arithadd-explainer.svg: Added.
+        * blog-files/speculation-in-jsc/dfg-pipeline.graffle: Added.
+        * blog-files/speculation-in-jsc/dfg-pipeline.svg: Added.
+        * blog-files/speculation-in-jsc/dfg-threaded-cps-example.graffle: Added.
+        * blog-files/speculation-in-jsc/dfg-threaded-cps-example.svg: Added.
+        * blog-files/speculation-in-jsc/double-monomorphic-inline-cache-speculation.graffle: Added.
+        * blog-files/speculation-in-jsc/double-monomorphic-inline-cache-speculation.svg: Added.
+        * blog-files/speculation-in-jsc/example-data-flow-graph.graffle: Added.
+        * blog-files/speculation-in-jsc/example-data-flow-graph.svg: Added.
+        * blog-files/speculation-in-jsc/five-parts-of-speculation.graffle: Added.
+        * blog-files/speculation-in-jsc/five-parts-of-speculation.svg: Added.
+        * blog-files/speculation-in-jsc/ftl-dfg-ir-to-bytecode-osr-exit.graffle: Added.
+        * blog-files/speculation-in-jsc/ftl-dfg-ir-to-bytecode-osr-exit.svg: Added.
+        * blog-files/speculation-in-jsc/ftl-pipeline.graffle: Added.
+        * blog-files/speculation-in-jsc/ftl-pipeline.svg: Added.
+        * blog-files/speculation-in-jsc/ftl-stackmaps.graffle: Added.
+        * blog-files/speculation-in-jsc/ftl-stackmaps.svg: Added.
+        * blog-files/speculation-in-jsc/ideal-jsc-optimization-workflow.graffle: Added.
+        * blog-files/speculation-in-jsc/ideal-jsc-optimization-workflow.svg: Added.
+        * blog-files/speculation-in-jsc/inline-caches-per-tier-dynamic.graffle: Added.
+        * blog-files/speculation-in-jsc/inline-caches-per-tier-dynamic.svg: Added.
+        * blog-files/speculation-in-jsc/int32-add-diamond-speculation.graffle: Added.
+        * blog-files/speculation-in-jsc/int32-add-diamond-speculation.svg: Added.
+        * blog-files/speculation-in-jsc/int32-add-osr-speculation.graffle: Added.
+        * blog-files/speculation-in-jsc/int32-add-osr-speculation.svg: Added.
+        * blog-files/speculation-in-jsc/jsc-tier-architecture.graffle: Added.
+        * blog-files/speculation-in-jsc/jsc-tier-architecture.svg: Added.
+        * blog-files/speculation-in-jsc/jsc-tiers.graffle: Added.
+        * blog-files/speculation-in-jsc/jsc-tiers.svg: Added.
+        * blog-files/speculation-in-jsc/object-model.graffle: Added.
+        * blog-files/speculation-in-jsc/object-model.svg: Added.
+        * blog-files/speculation-in-jsc/optimization-workflow-c-vs-js.graffle: Added.
+        * blog-files/speculation-in-jsc/optimization-workflow-c-vs-js.svg: Added.
+        * blog-files/speculation-in-jsc/optimization-workflow-js.graffle: Added.
+        * blog-files/speculation-in-jsc/optimization-workflow-js.svg: Added.
+        * blog-files/speculation-in-jsc/osr-exit-bytecode-example.graffle: Added.
+        * blog-files/speculation-in-jsc/osr-exit-bytecode-example.svg: Added.
+        * blog-files/speculation-in-jsc/osr-stack-register-shuffle.graffle: Added.
+        * blog-files/speculation-in-jsc/osr-stack-register-shuffle.svg: Added.
+        * blog-files/speculation-in-jsc/polyvariant-inline-cache-speculation.graffle: Added.
+        * blog-files/speculation-in-jsc/polyvariant-inline-cache-speculation.svg: Added.
+        * blog-files/speculation-in-jsc/prediction-propagation-and-value-profiling.graffle: Added.
+        * blog-files/speculation-in-jsc/prediction-propagation-and-value-profiling.svg: Added.
+        * blog-files/speculation-in-jsc/prediction-propagation-rules-add.graffle: Added.
+        * blog-files/speculation-in-jsc/prediction-propagation-rules-add.svg: Added.
+        * blog-files/speculation-in-jsc/prediction-propagation-rules-getbyval.graffle: Added.
+        * blog-files/speculation-in-jsc/prediction-propagation-rules-getbyval.svg: Added.
+        * blog-files/speculation-in-jsc/sample-property-lookup.graffle: Added.
+        * blog-files/speculation-in-jsc/sample-property-lookup.svg: Added.
+        * blog-files/speculation-in-jsc/single-monomorphic-inline-cache-speculation.graffle: Added.
+        * blog-files/speculation-in-jsc/single-monomorphic-inline-cache-speculation.svg: Added.
+        * blog-files/speculation-in-jsc/speculated-types.graffle: Added.
+        * blog-files/speculation-in-jsc/speculated-types.svg: Added.
+        * blog-files/speculation-in-jsc/xy-objects-as-maps.graffle: Added.
+        * blog-files/speculation-in-jsc/xy-objects-as-maps.svg: Added.
+        * blog-files/speculation-in-jsc/xy-objects-with-structures.graffle: Added.
+        * blog-files/speculation-in-jsc/xy-objects-with-structures.svg: Added.
+
+2020-04-01  Jon Davis  <jond@apple.com>
+
+        Removed the update nag from the old WebKit Nightly start page
+        https://bugs.webkit.org/show_bug.cgi?id=179214
+
+        Reviewed by Darin Adler.
+
+        * wp-content/themes/webkit/nightly-start.php:
+
+2020-03-30  Simon Fraser  <simon.fraser@apple.com>
+
+        http://webkit.org/css-status/ hangs
+        https://bugs.webkit.org/show_bug.cgi?id=209746
+
+        Reviewed by Antoine Quint.
+        
+        A change to CSSProperties.json (probably text-orientation unprefixing) revealed an infinite loop
+        in mergeProperties() which kept appending values to prefixedPropertyObj.values.
+        
+        Fix by cloning the array before enumerating it.
+
+        * wp-content/themes/webkit/css-status.php:
+
+2020-02-26  Jon Davis  <jond@apple.com>
+
+        Prevented text selection on logo and header navigation
+        https://bugs.webkit.org/show_bug.cgi?id=208157
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/style.css:
+        (.site-logo):
+        (header nav):
+
+2020-01-27  Jon Davis  <jond@apple.com>
+
+        Add support for table of contents to Web Inspector pages
+        https://bugs.webkit.org/show_bug.cgi?id=206845
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/plugins/table-of-contents.php:
+
+2020-01-27  Jon Davis  <jond@apple.com>
+
+        Fix submenu behavior for narrow viewports
+        https://bugs.webkit.org/show_bug.cgi?id=206835
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/header.php:
+        * wp-content/themes/webkit/style.css:
+        (@media only screen and (max-width: 920px) header .menu > .menu-item:hover > .sub-menu,):
+        (@media only screen and (max-width: 920px) header .menu > .menu-item > .menu-toggle:checked ~ .sub-menu): Deleted.
+
+2020-01-24  Jon Davis  <jond@apple.com>
+
+        Fix editing permissions for the Web Inspector Editor role
+        https://bugs.webkit.org/show_bug.cgi?id=206761
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/plugins/web-inspector-pages.php:
+
+2020-01-23  Jon Davis  <jond@apple.com>
+
+        Fix extra space between title and article body
+        https://bugs.webkit.org/show_bug.cgi?id=206689
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/style.css:
+        (article .meta):
+        (article .bodycopy,):
+
+2020-01-16  Jon Davis  <jond@apple.com>
+
+        Ensure full URLs for relative path images for social meta data
+        https://bugs.webkit.org/show_bug.cgi?id=206382
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/plugins/social-meta.php:
+
+2020-01-16  Jon Davis  <jond@apple.com>
+
+        Add support for categories and custom post types to the social meta plugin
+        https://bugs.webkit.org/show_bug.cgi?id=206327
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/plugins/social-meta.php:
+        * wp-content/plugins/web-inspector-pages.php:
+        * wp-content/themes/webkit/archive-web_inspector_page.php:
+
+2020-01-15  Jon Davis  <jond@apple.com>
+
+        Add Web Inspector Reference notice to Web Inspector blog posts
+        https://bugs.webkit.org/show_bug.cgi?id=206308
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/functions.php:
+
+2020-01-15  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector Reference: the meta info at the end of the article should always be on its own line
+        https://bugs.webkit.org/show_bug.cgi?id=206277
+
+        Reviewed by Timothy Hatcher.
+
+        * wp-content/themes/webkit/style.css:
+        (article .bodycopy, article .meta):
+
+2020-01-15  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector Reference: put the original author and last modified author on separate lines
+        https://bugs.webkit.org/show_bug.cgi?id=206274
+
+        Reviewed by Timothy Hatcher.
+
+        * wp-content/themes/webkit/single-web_inspector_page.php:
+        * wp-content/themes/webkit/style.css:
+        (article .meta .written): Added.
+        (article .meta .written, article .meta .updated): Added.
+        (article .meta .updated): Deleted.
+
+2020-01-15  Jon Davis  <jond@apple.com>
+
+        Ensure UAs update the stylesheet
+        https://bugs.webkit.org/show_bug.cgi?id=206292
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/header.php:
+
+2020-01-14  Jon Davis  <jond@apple.com>
+
+        Display authors of a Web Inspector reference article
+        https://bugs.webkit.org/show_bug.cgi?id=206176
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/single-web_inspector_page.php:
+
+2020-01-14  Jon Davis  <jond@apple.com>
+
+        Add Markdown support for Web Inspector Reference articles
+        https://bugs.webkit.org/show_bug.cgi?id=206256
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/plugins/web-inspector-pages.php:
+
+2020-01-14  Jon Davis  <jond@apple.com>
+
+        Fix blog post article title justification
+        https://bugs.webkit.org/show_bug.cgi?id=206245
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/style.css:
+        (main h1):
+
+2020-01-13  Jon Davis  <jond@apple.com>
+
+        Add support for Web Inspector pages and topic taxonomy
+        https://bugs.webkit.org/show_bug.cgi?id=206034
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/plugins/web-inspector-pages.php: Added.
+        * wp-content/themes/webkit/archive-web_inspector_page.php: Added.
+        * wp-content/themes/webkit/single-web_inspector_page.php: Added.
+
+2020-01-09  Jon Davis  <jond@apple.com>
+
+        Add styles to support Web Inspector reference articles
+        https://bugs.webkit.org/show_bug.cgi?id=206032
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/themes/webkit/style.css:
+        (main h1,):
+        (main h1):
+        (article .meta .updated):
+        (article .bodycopy,):
+        (.image):
+        (p .image,):
+        (.image.block):
+        (.image img):
+        (.widescreen .image):
+        (.image.slice-top > picture > img):
+        (.image.slice-right > picture > img):
+        (.image.slice-bottom > picture > img):
+        (.image.slice-left > picture > img):
+        (.flex):
+        (.flex.center):
+        (figure.widescreen):
+        (article picture):
+        (article picture > img):
+        (.single-web_inspector_page .landing-link):
+        (.single-web_inspector_page .landing-link:hover):
+        (@media(prefers-color-scheme:dark) article .invert-brightness,):
+        (@media(prefers-color-scheme:dark) .table-of-contents label:after):
+        (article h1,): Deleted.
+        (article .bodycopy): Deleted.
+
+2020-01-09  Jon Davis  <jond@apple.com>
+
+        Fix redundant anchor tags when generating table of contents
+        https://bugs.webkit.org/show_bug.cgi?id=206016
+
+        Reviewed by Devin Rousso.
+
+        * wp-content/plugins/table-of-contents.php:
+
+2019-11-13  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Update Babylon WebGPU demos to work on ToT
+        https://bugs.webkit.org/show_bug.cgi?id=204182
+
+        Reviewed by Dean Jackson.
+
+        3 things were wrong:
+
+        - There seemed to be a bug in the loader script. I fixed the bug and added a local copy
+          here so we don't have to keep hotlinking to the Babylon one.
+        - I had updated the helmet shaders in
+          https://github.com/litherum/Website/commit/f7768ed43012fb06345768211ea90815d81f41b4
+          but I didn't update the sphere shaders.
+        - r252423 turned off the sphere rendering after 2 seconds. This patch removes that.
+
+        * demos/webgpu/babylon/babylonjs.loaders.min.js: Added.
+        (return):
+        (return.n.d):
+        (return.get n.r):
+        (return.n.t):
+        (return.):
+        (return.n.n):
+        (return.n.o):
+        * demos/webgpu/babylon/oneHelmetWebGPU.html:
+        * demos/webgpu/babylon/oneSphereWebGPU.html:
+        * demos/webgpu/babylon/oneSphereWebGPUWSLShaders.js:
+        (sampler.reflectionSamplerSampler.register):
+        (float3.normal.attribute): Deleted.
+        * demos/webgpu/babylon/vertexShaderGLSL1.glsl: Removed. Unnecessary.
+
+2019-11-13  Dean Jackson  <dino@apple.com>
+
+        Fix some WebGPU demos
+        https://bugs.webkit.org/show_bug.cgi?id=204167
+
+        Reviewed by Myles C. Maxfield.
+
+        Use COPY_ rather than TRANSFER_.
+
+        * demos/webgpu/babylon/babylonWebGpu.max.js:
+        * demos/webgpu/babylon/oneSphereWebGPU.html:
+        * demos/webgpu/hello-cube.html:
+        * demos/webgpu/scripts/compute-boids-compile.js:
+        * demos/webgpu/scripts/compute-boids-utils.js:
+        (async.createTextureFromImage):
+        * demos/webgpu/textured-cube.html:
+
+2019-11-08  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Add punctuation rules for C++ lambdas
+        https://bugs.webkit.org/show_bug.cgi?id=204021
+
+        Reviewed by Zalan Bujtas.
+
+        Added rules for not putting spaces between [] and () and omitting () whenever possible for C++ lambdas.
+
+        * code-style.md:
+
+2019-10-26  Chris Lord  <clord@igalia.com>
+
+        Put OffscreenCanvas behind a build flag
+        https://bugs.webkit.org/show_bug.cgi?id=203146
+
+        Reviewed by Ryosuke Niwa.
+
+        Update to reflect split ImageBitmapOffscreenCanvas settings.
+
+        * experimental-features.html:
+
 2019-10-14  Ling Ho  <lingcherd_ho@apple.com>
 
         Update WebKit Build Archives page on webkit.org

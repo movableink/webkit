@@ -42,30 +42,26 @@
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "Pattern.h"
-#include "PlatformContextCairo.h"
-#include "PlatformPathCairo.h"
+#include "RefPtrCairo.h"
 #include "ShadowBlur.h"
 
 namespace WebCore {
 
-void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const GlyphBuffer& glyphBuffer,
-    unsigned from, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode)
+void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const GlyphBufferGlyph* glyphs,
+    const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point,
+    FontSmoothingMode fontSmoothingMode)
 {
     if (!font.platformData().size())
         return;
 
     auto xOffset = point.x();
-    Vector<cairo_glyph_t> glyphs(numGlyphs);
+    Vector<cairo_glyph_t> cairoGlyphs(numGlyphs);
     {
-        ASSERT(from + numGlyphs <= glyphBuffer.size());
-        auto* glyphsData = glyphBuffer.glyphs(from);
-        auto* advances = glyphBuffer.advances(from);
-
         auto yOffset = point.y();
         for (size_t i = 0; i < numGlyphs; ++i) {
-            glyphs[i] = { glyphsData[i], xOffset, yOffset };
+            cairoGlyphs[i] = { glyphs[i], xOffset, yOffset };
             xOffset += advances[i].width();
-            yOffset -= advances[i].height();
+            yOffset += advances[i].height();
         }
     }
 
@@ -75,25 +71,55 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     ASSERT(context.hasPlatformContext());
     auto& state = context.state();
     Cairo::drawGlyphs(*context.platformContext(), Cairo::FillSource(state), Cairo::StrokeSource(state),
-        Cairo::ShadowState(state), point, scaledFont, syntheticBoldOffset, glyphs, xOffset,
-        state.textDrawingMode, state.strokeThickness, state.shadowOffset, state.shadowColor);
+        Cairo::ShadowState(state), point, scaledFont, syntheticBoldOffset, cairoGlyphs, xOffset,
+        state.textDrawingMode, state.strokeThickness, state.shadowOffset, state.shadowColor,
+        fontSmoothingMode);
 }
 
 Path Font::platformPathForGlyph(Glyph glyph) const
 {
-    Path path;
-    path.ensurePlatformPath();
+    RefPtr<cairo_t> cr = adoptRef(cairo_create(adoptRef(cairo_image_surface_create(CAIRO_FORMAT_A8, 1, 1)).get()));
 
     cairo_glyph_t cairoGlyph = { glyph, 0, 0 };
-    cairo_set_scaled_font(path.platformPath()->context(), platformData().scaledFont());
-    cairo_glyph_path(path.platformPath()->context(), &cairoGlyph, 1);
+    cairo_set_scaled_font(cr.get(), platformData().scaledFont());
+    cairo_glyph_path(cr.get(), &cairoGlyph, 1);
 
     float syntheticBoldOffset = this->syntheticBoldOffset();
     if (syntheticBoldOffset) {
-        cairo_translate(path.platformPath()->context(), syntheticBoldOffset, 0);
-        cairo_glyph_path(path.platformPath()->context(), &cairoGlyph, 1);
+        cairo_translate(cr.get(), syntheticBoldOffset, 0);
+        cairo_glyph_path(cr.get(), &cairoGlyph, 1);
     }
-    return path;
+    return Path(WTFMove(cr));
+}
+
+FloatRect Font::platformBoundsForGlyph(Glyph glyph) const
+{
+    if (!m_platformData.size())
+        return FloatRect();
+
+    cairo_glyph_t cglyph = { glyph, 0, 0 };
+    cairo_text_extents_t extents;
+    cairo_scaled_font_glyph_extents(m_platformData.scaledFont(), &cglyph, 1, &extents);
+
+    if (cairo_scaled_font_status(m_platformData.scaledFont()) == CAIRO_STATUS_SUCCESS)
+        return FloatRect(extents.x_bearing, extents.y_bearing, extents.width, extents.height);
+
+    return FloatRect();
+}
+
+float Font::platformWidthForGlyph(Glyph glyph) const
+{
+    if (!m_platformData.size())
+        return 0;
+
+    if (cairo_scaled_font_status(m_platformData.scaledFont()) != CAIRO_STATUS_SUCCESS)
+        return m_spaceWidth;
+
+    cairo_glyph_t cairoGlyph = { glyph, 0, 0 };
+    cairo_text_extents_t extents;
+    cairo_scaled_font_glyph_extents(m_platformData.scaledFont(), &cairoGlyph, 1, &extents);
+    float width = platformData().orientation() == FontOrientation::Horizontal ? extents.x_advance : -extents.y_advance;
+    return width ? width : m_spaceWidth;
 }
 
 } // namespace WebCore

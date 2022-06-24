@@ -38,12 +38,12 @@
 #include "WebView.h"
 #include <WebCore/BString.h>
 #include <WebCore/ContextMenu.h>
+#include <WebCore/CookieConsentDecisionResult.h>
 #include <WebCore/Cursor.h>
 #include <WebCore/FileChooser.h>
 #include <WebCore/FileIconLoader.h>
 #include <WebCore/FloatRect.h>
 #include <WebCore/Frame.h>
-#include <WebCore/FrameLoadRequest.h>
 #include <WebCore/FrameView.h>
 #include <WebCore/FullScreenController.h>
 #include <WebCore/FullscreenManager.h>
@@ -53,6 +53,7 @@
 #include <WebCore/Icon.h>
 #include <WebCore/LocalWindowsContext.h>
 #include <WebCore/LocalizedStrings.h>
+#include <WebCore/ModalContainerTypes.h>
 #include <WebCore/NavigationAction.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
@@ -140,7 +141,7 @@ void WebChromeClient::unfocus()
 bool WebChromeClient::canTakeFocus(FocusDirection direction)
 {
     IWebUIDelegate* uiDelegate = 0;
-    BOOL bForward = (direction == FocusDirectionForward) ? TRUE : FALSE;
+    BOOL bForward = (direction == FocusDirection::Forward) ? TRUE : FALSE;
     BOOL result = FALSE;
     if (SUCCEEDED(m_webView->uiDelegate(&uiDelegate))) {
         uiDelegate->canTakeFocus(m_webView, bForward, &result);
@@ -153,7 +154,7 @@ bool WebChromeClient::canTakeFocus(FocusDirection direction)
 void WebChromeClient::takeFocus(FocusDirection direction)
 {
     IWebUIDelegate* uiDelegate = 0;
-    BOOL bForward = (direction == FocusDirectionForward) ? TRUE : FALSE;
+    BOOL bForward = (direction == FocusDirection::Forward) ? TRUE : FALSE;
     if (SUCCEEDED(m_webView->uiDelegate(&uiDelegate))) {
         uiDelegate->takeFocus(m_webView, bForward);
         uiDelegate->Release();
@@ -190,7 +191,7 @@ static COMPtr<IPropertyBag> createWindowFeaturesPropertyBag(const WindowFeatures
     return COMPtr<IPropertyBag>(AdoptCOM, COMPropertyBag<COMVariant>::adopt(map));
 }
 
-Page* WebChromeClient::createWindow(Frame& frame, const FrameLoadRequest&, const WindowFeatures& features, const NavigationAction& navigationAction)
+Page* WebChromeClient::createWindow(Frame& frame, const WindowFeatures& features, const NavigationAction& navigationAction)
 {
     COMPtr<IWebUIDelegate> delegate = uiDelegate();
     if (!delegate)
@@ -374,7 +375,7 @@ bool WebChromeClient::runBeforeUnloadConfirmPanel(const String& message, Frame& 
     return !!result;
 }
 
-void WebChromeClient::closeWindowSoon()
+void WebChromeClient::closeWindow()
 {
     // We need to remove the parent WebView from WebViewSets here, before it actually
     // closes, to make sure that JavaScript code that executes before it closes
@@ -391,7 +392,7 @@ void WebChromeClient::closeWindowSoon()
 
     m_webView->setGroupName(0);
     m_webView->stopLoading(0);
-    m_webView->closeWindowSoon();
+    m_webView->closeWindow();
 }
 
 void WebChromeClient::runJavaScriptAlert(Frame&, const String& message)
@@ -529,16 +530,16 @@ void WebChromeClient::intrinsicContentsSizeChanged(const IntSize&) const
     notImplemented();
 }
 
-void WebChromeClient::mouseDidMoveOverElement(const HitTestResult& result, unsigned modifierFlags)
+void WebChromeClient::mouseDidMoveOverElement(const HitTestResult& result, unsigned modifierFlags, const String& toolTip, TextDirection)
 {
     COMPtr<IWebUIDelegate> uiDelegate;
-    if (FAILED(m_webView->uiDelegate(&uiDelegate)))
-        return;
+    if (SUCCEEDED(m_webView->uiDelegate(&uiDelegate))) {
+        COMPtr<WebElementPropertyBag> element;
+        element.adoptRef(WebElementPropertyBag::createInstance(result));
 
-    COMPtr<WebElementPropertyBag> element;
-    element.adoptRef(WebElementPropertyBag::createInstance(result));
-
-    uiDelegate->mouseDidMoveOverElement(m_webView, element.get(), modifierFlags);
+        uiDelegate->mouseDidMoveOverElement(m_webView, element.get(), modifierFlags);
+    }
+    m_webView->setToolTip(toolTip);
 }
 
 bool WebChromeClient::shouldUnavailablePluginMessageBeButton(RenderEmbeddedObject::PluginUnavailabilityReason pluginUnavailabilityReason) const
@@ -572,12 +573,7 @@ void WebChromeClient::unavailablePluginButtonClicked(Element& element, RenderEmb
     uiDelegatePrivate3->didPressMissingPluginButton(e.get());
 }
 
-void WebChromeClient::setToolTip(const String& toolTip, TextDirection)
-{
-    m_webView->setToolTip(toolTip);
-}
-
-void WebChromeClient::print(Frame& frame)
+void WebChromeClient::print(Frame& frame, const StringWithDirection&)
 {
     COMPtr<IWebUIDelegate> uiDelegate;
     if (SUCCEEDED(m_webView->uiDelegate(&uiDelegate)))
@@ -751,7 +747,7 @@ void WebChromeClient::attachViewOverlayGraphicsLayer(GraphicsLayer*)
     // FIXME: If we want view-relative page overlays in Legacy WebKit on Windows, this would be the place to hook them up.
 }
 
-void WebChromeClient::scheduleCompositingLayerFlush()
+void WebChromeClient::triggerRenderingUpdate()
 {
     m_webView->flushPendingGraphicsLayerChangesSoon();
 }
@@ -782,9 +778,10 @@ void WebChromeClient::enterVideoFullscreenForVideoElement(HTMLVideoElement& vide
     m_webView->enterVideoFullscreenForVideoElement(videoElement);
 }
 
-void WebChromeClient::exitVideoFullscreenForVideoElement(HTMLVideoElement& videoElement)
+void WebChromeClient::exitVideoFullscreenForVideoElement(HTMLVideoElement& videoElement, CompletionHandler<void(bool)>&& completionHandler)
 {
     m_webView->exitVideoFullscreenForVideoElement(videoElement);
+    completionHandler(true);
 }
 
 #endif
@@ -879,4 +876,19 @@ bool WebChromeClient::shouldUseTiledBackingForFrameView(const FrameView& frameVi
 #else
     return false;
 #endif
+}
+
+void WebChromeClient::requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&& completion)
+{
+    completion(CookieConsentDecisionResult::NotSupported);
+}
+
+void WebChromeClient::classifyModalContainerControls(Vector<String>&&, CompletionHandler<void(Vector<ModalContainerControlType>&&)>&& completion)
+{
+    completion({ });
+}
+
+void WebChromeClient::decidePolicyForModalContainer(OptionSet<ModalContainerControlType>, CompletionHandler<void(ModalContainerDecision)>&& completion)
+{
+    completion(ModalContainerDecision::Show);
 }

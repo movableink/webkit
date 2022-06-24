@@ -13,35 +13,50 @@
 /* window title for a standalone image (uses multiplication symbol, not x) */
 "%@ %@×%@ pixels" = "%@ %@×%@ pixels";
 
-/* visible name of the plug-in host process. The first argument is the plug-in name and the second argument is the application name. */
-"%@ (%@ Internet plug-in)" = "%@ (%@ Internet plug-in)";
+/* Audio/Text track display name format that includes the label and language of the track, in the form of 'Language (Label)'. */
+"%@ (%@) (audio/text track)" = "%@ (%@)";
 
-/* Text track display name format that includes the language of the subtitle, in the form of 'Title (Language)' */
-"%@ (%@)" = "%@ (%@)";
+/* Closed captions text track display name format that includes the language and/or locale (e.g. 'English CC'). */
+"%@ CC (text track)" = "%@ CC";
 
-/* Text track display name format that includes the country and language of the subtitle, in the form of 'Title (Language-Country)' */
-"%@ (%@-%@)" = "%@ (%@-%@)";
+/* Captions text track display name format that includes the language and/or locale (e.g. 'English Captions'). */
+"%@ Captions (text track)" = "%@ Captions";
 
-/* Text track contains Audio Descriptions */
-"%@ AD" = "%@ AD";
+/* Chapters text track display name format that includes the language and/or locale (e.g. 'English Chapters'). */
+"%@ Chapters (text track)" = "%@ Chapters";
 
-/* Text track contains closed captions */
-"%@ CC" = "%@ CC";
+/* Commentary audio track display name format that includes the language and/or locale (e.g. 'English Commentary'). */
+"%@ Commentary (audio track)" = "%@ Commentary";
 
-/* Text track contains simplified (3rd grade level) subtitles */
-"%@ Easy Reader" = "%@ Easy Reader";
+/* Descriptions audio track display name format that includes the language and/or locale (e.g. 'English Descriptions'). */
+"%@ Descriptions (audio track)" = "%@ Descriptions";
 
-/* Text track contains forced subtitles */
-"%@ Forced" = "%@ Forced";
+/* Descriptions text track display name format that includes the language and/or locale (e.g. 'English Descriptions'). */
+"%@ Descriptions (text track)" = "%@ Descriptions";
+
+/* Easy Reader (i.e. 3rd-grade level) text track display name format that includes the language and/or locale (e.g. 'English Easy Reader'). */
+"%@ Easy Reader (text track)" = "%@ Easy Reader";
+
+/* Forced text track display name format that includes the language and/or locale (e.g. 'English Forced'). */
+"%@ Forced (text track)" = "%@ Forced";
+
+/* visible name of the GPU process. The argument is the application name. */
+"%@ Graphics and Media" = "%@ Graphics and Media";
+
+/* Metadata text track display name format that includes the language and/or locale (e.g. 'English Metadata'). */
+"%@ Metadata (text track)" = "%@ Metadata";
 
 /* visible name of the network process. The argument is the application name. */
 "%@ Networking" = "%@ Networking";
 
-/* Text track contains subtitles for the deaf and hard of hearing */
-"%@ SDH" = "%@ SDH";
+/* SDH (i.e. deaf and/or hard of hearing) text track display name format that includes the language and/or locale (e.g. 'English SDH'). */
+"%@ SDH (text track)" = "%@ SDH";
 
 /* Visible name of Service Worker process. The argument is the application name. */
 "%@ Service Worker (%@)" = "%@ Service Worker (%@)";
+
+/* visible name of the WebAuthn process. The argument is the application name. */
+"%@ Web Authentication" = "%@ Web Authentication";
 
 /* Visible name of the web process. The argument is the application name. */
 "%@ Web Content" = "%@ Web Content";
@@ -79,14 +94,32 @@
 /* Present the element <select multiple> when no <option> items are selected (iOS only) */
 "0 Items" = "0 Items";
 
+/* 0.5× media controls context menu playback speed label */
+"0.5× (Media Controls Menu Playback Speed)" = "0.5×";
+
 /* Present the element <select multiple> when a single <option> is selected (iOS only) */
 "1 Item" = "1 Item";
 
 /* Option in segmented control for choosing list type in text editing */
 "1. 2. 3." = "1. 2. 3.";
 
+/* 1.25× media controls context menu playback speed label */
+"1.25× (Media Controls Menu Playback Speed)" = "1.25×";
+
+/* 1.5× media controls context menu playback speed label */
+"1.5× (Media Controls Menu Playback Speed)" = "1.5×";
+
+/* 1× media controls context menu playback speed label */
+"1× (Media Controls Menu Playback Speed)" = "1×";
+
 /* Menu item title for KEYGEN pop-up menu */
 "2048 (High Grade)" = "2048 (High Grade)";
+
+/* 2× media controls context menu playback speed label */
+"2× (Media Controls Menu Playback Speed)" = "2×";
+
+/* Name of application's single WebCrypto master key in Keychain */
+"<application> WebCrypto Master Key" = "<application> WebCrypto Master Key";
 
 /* window title for a standalone image (uses multiplication symbol, not x) */
 "<filename> %d×%d pixels" = "<filename> %d×%d pixels";
@@ -94,8 +127,14 @@
 /* WKErrorJavaScriptExceptionOccurred description */
 "A JavaScript exception occurred" = "A JavaScript exception occurred";
 
+/* Label for the add money with Apple Pay button. */
+"Add money with Apple Pay" = "Add money with Apple Pay";
+
 /* Title for Add to Photos action button */
 "Add to Photos" = "Add to Photos";
+
+/* Add to Quick Note context menu item. */
+"Add to Quick Note" = "Add to Quick Note";
 
 /* Title for Add to Reading List action button */
 "Add to Reading List" = "Add to Reading List";
@@ -106,14 +145,59 @@
 /* Undo action name */
 "Align Right (Undo action name)" = "Align Right";
 
+/* Allow screen button title in window and screen sharing prompt */
+"Allow to Share Screen" = "Allow to Share Screen";
+
+/* Allow window button title in window and screen sharing prompt */
+"Allow to Share Window" = "Allow to Share Window";
+
 /* Button title in Storage Access API prompt */
 "Allow (cross-site cookie and website data access)" = "Allow";
 
 /* Button title in Device Orientation Permission API prompt */
 "Allow (device motion and orientation access)" = "Allow";
 
+/* Allow button title in geolocation prompt */
+"Allow (geolocation)" = "Allow";
+
+/* Allow button title in screen sharing prompt */
+"Allow (screensharing)" = "Allow";
+
+/* Allow button title in speech recognition prompt */
+"Allow (speechrecognition)" = "Allow";
+
+/* Allow button title in user media prompt */
+"Allow (usermedia)" = "Allow";
+
+/* Allow button title in window sharing prompt */
+"Allow (window sharing)" = "Allow";
+
+/* Message for requesting cross-site cookie and website data access. */
+"Allow “%@” and “%@” to use cookies and website data while browsing “%@”?" = "Allow “%@” and “%@” to use cookies and website data while browsing “%@”?";
+
+/* Message for spechrecognition prompt */
+"Allow “%@” to capture your audio and use it for speech recognition?" = "Allow “%@” to capture your audio and use it for speech recognition?";
+
+/* Message for window and screen sharing prompt */
+"Allow “%@” to observe one of your windows or screens?" = "Allow “%@” to observe one of your windows or screens?";
+
+/* Message for screen sharing prompt */
+"Allow “%@” to observe your screen?" = "Allow “%@” to observe your screen?";
+
 /* Message for requesting cross-site cookie and website data access. */
 "Allow “%@” to use cookies and website data while browsing “%@”?" = "Allow “%@” to use cookies and website data while browsing “%@”?";
+
+/* Message for user media prompt */
+"Allow “%@” to use your camera and microphone?" = "Allow “%@” to use your camera and microphone?";
+
+/* Message for user camera access prompt */
+"Allow “%@” to use your camera?" = "Allow “%@” to use your camera?";
+
+/* Message for geolocation prompt */
+"Allow “%@” to use your current location?" = "Allow “%@” to use your current location?";
+
+/* Message for user microphone access prompt */
+"Allow “%@” to use your microphone?" = "Allow “%@” to use your microphone?";
 
 /* WKErrorUnknown description */
 "An unknown error occurred" = "An unknown error occurred";
@@ -124,11 +208,14 @@
 /* Malware confirmation dialog title */
 "Are you sure you wish to go to this site?" = "Are you sure you wish to go to this site?";
 
+/* WKErrorNavigationAppBoundDomain description */
+"Attempted to navigate away from an app-bound domain or navigate after using restricted APIs" = "Attempted to navigate away from an app-bound domain or navigate after using restricted APIs";
+
 /* WKErrorAttributedStringContentFailedToLoad description */
 "Attributed string content failed to load" = "Attributed string content failed to load";
 
-/* Menu item label for automatic track selection behavior */
-"Auto (Recommended)" = "Auto (Recommended)";
+/* Menu item label for automatic track selection behavior. */
+"Auto (Recommended) (text track)" = "Auto (Recommended)";
 
 /* Back context menu item */
 "Back" = "Back";
@@ -154,6 +241,9 @@
 /* Label for the buy with Apple Pay button. */
 "Buy with Apple Pay" = "Buy with Apple Pay";
 
+/* Display name for closed captions text tracks. */
+"CC (text track)" = "CC";
+
 /* Cancel */
 "Cancel" = "Cancel";
 
@@ -166,11 +256,17 @@
 /* Capitalize context menu item */
 "Capitalize" = "Capitalize";
 
+/* Display name for text track kind 'captions'. */
+"Captions (text track)" = "Captions";
+
 /* Undo action name */
 "Center (Undo action name)" = "Center";
 
 /* Undo action name */
 "Change Attributes (Undo action name)" = "Change Attributes";
+
+/* Display name for text track kind 'chapters'. */
+"Chapters (text track)" = "Chapters";
 
 /* Check spelling context menu item */
 "Check Document Now" = "Check Document Now";
@@ -184,6 +280,9 @@
 /* Label for the check out with Apple Pay button. */
 "Check out with Apple Pay" = "Check out with Apple Pay";
 
+/* Message for window sharing prompt */
+"Choose a window to share" = "Choose a window to share";
+
 /* title for a single file chooser button used in HTML forms */
 "Choose File" = "Choose File";
 
@@ -196,9 +295,6 @@
 /* Title for file button used in HTML forms for media files */
 "Choose Media (Single)" = "Choose Media (Single)";
 
-/* Clear button in date input popover */
-"Clear Button Date Popover" = "Clear";
-
 /* menu item in Recent Searches menu that empties menu's contents */
 "Clear Recent Searches" = "Clear Recent Searches";
 
@@ -208,6 +304,9 @@
 /* Subtitle of the label to show on a snapshotted plug-in */
 "Click to restart" = "Click to restart";
 
+/* Display name for audio track kind 'commentary'. */
+"Commentary (audio track)" = "Commentary";
+
 /* WKErrorContentRuleListStoreCompileFailed description */
 "Compiling a WKContentRuleList failed" = "Compiling a WKContentRuleList failed";
 
@@ -216,6 +315,12 @@
 
 /* Continue */
 "Continue" = "Continue";
+
+/* Continue with Touch ID. */
+"Continue with Touch ID." = "Continue with Touch ID.";
+
+/* Label for the contribute with Apple Pay button. */
+"Contribute with Apple Pay" = "Contribute with Apple Pay";
 
 /* Media Controls context menu item */
 "Controls" = "Controls";
@@ -240,6 +345,9 @@
 
 /* Copy Link context menu item */
 "Copy Link" = "Copy Link";
+
+/* Title for Copy Link button */
+"Copy Link (ActionSheet)" = "Copy Link";
 
 /* Copy Video Address Location context menu item */
 "Copy Video Address" = "Copy Video Address";
@@ -268,11 +376,20 @@
 /* Undo action name */
 "Delete (Undo action name)" = "Delete";
 
+/* Display name for audio track kind 'descriptions'. */
+"Descriptions (audio track)" = "Descriptions";
+
+/* Display name for text track kind 'descriptions'. */
+"Descriptions (text track)" = "Descriptions";
+
 /* text to display in <details> tag when it has no <summary> child */
 "Details" = "Details";
 
 /* Undo action name */
 "Dictation (Undo action name)" = "Dictation";
+
+/* Message for requesting cross-site cookie and website data access. */
+"Do you want to allow “%@” and “%@” to use cookies and website data while browsing “%@”?" = "Do you want to allow “%@” and “%@” to use cookies and website data while browsing “%@”?";
 
 /* Message for requesting cross-site cookie and website data access. */
 "Do you want to allow “%@” to use cookies and website data while browsing “%@”?" = "Do you want to allow “%@” to use cookies and website data while browsing “%@”?";
@@ -283,8 +400,26 @@
 /* Label for the donate with Apple Pay button. */
 "Donate with Apple Pay" = "Donate with Apple Pay";
 
-/* Title of the Done button for zoomed form controls. */
+/* Title of the Done button for form controls. */
 "Done" = "Done";
+
+/* Disallow button title in geolocation prompt */
+"Don’t Allow (geolocation)" = "Don’t Allow";
+
+/* Disallow button title in screen sharing prompt */
+"Don’t Allow (screensharing)" = "Don’t Allow";
+
+/* Disallow button title in speech recognition prompt */
+"Don’t Allow (speechrecognition)" = "Don’t Allow";
+
+/* Disallow button title in user media prompt */
+"Don’t Allow (usermedia)" = "Don’t Allow";
+
+/* Disallow button title in window and screen sharing prompt */
+"Don’t Allow (window and screen sharing)" = "Don’t Allow";
+
+/* Disallow button title in window sharing prompt */
+"Don’t Allow (window sharing)" = "Don’t Allow";
 
 /* Download Audio To Disk context menu item */
 "Download Audio" = "Download Audio";
@@ -300,6 +435,9 @@
 
 /* Undo action name */
 "Drag (Undo action name)" = "Drag";
+
+/* Display name for easy reader (i.e. 3rd-grade level) text tracks. */
+"Easy Reader (text track)" = "Easy Reader";
 
 /* Video Enter Full Screen context menu item */
 "Enter Full Screen" = "Enter Full Screen";
@@ -343,8 +481,17 @@
 /* Default application name for Open With context menu */
 "Finder" = "Finder";
 
+/* Inspector element selection tooltip text for Flexbox containers. */
+"Flex (Inspector Element Selection)" = "Flex";
+
+/* Inspector element selection tooltip text for items inside a Flexbox Container. */
+"Flex Item (Inspector Element Selection)" = "Flex Item";
+
 /* Font context sub-menu item */
 "Font" = "Font";
+
+/* Display name for text track kind 'forced'. */
+"Forced (text track)" = "Forced";
 
 /* Undo action name */
 "Format Block (Undo action name)" = "Formatting";
@@ -364,6 +511,12 @@
 /* Google Safe Browsing */
 "Google Safe Browsing" = "Google Safe Browsing";
 
+/* Inspector element selection tooltip text for Grid containers. */
+"Grid (Inspector Element Selection)" = "Grid";
+
+/* Inspector element selection tooltip text for items inside a Grid Container. */
+"Grid Item (Inspector Element Selection)" = "Grid Item";
+
 /* accessibility role description for web area */
 "HTML content" = "HTML content";
 
@@ -372,9 +525,6 @@
 
 /* Hide Media Controls context menu item */
 "Hide Controls" = "Hide Controls";
-
-/* Title for Hide Link Previews action button */
-"Hide Link Previews" = "Hide Link Previews";
 
 /* menu item title */
 "Hide Spelling and Grammar" = "Hide Spelling and Grammar";
@@ -399,9 +549,6 @@
 
 /* Undo action name */
 "Indent (Undo action name)" = "Indent";
-
-/* Undo action name */
-"Insert Drawing (Undo action name)" = "Insert Drawing";
 
 /* Undo action name */
 "Insert List (Undo action name)" = "Insert List";
@@ -430,11 +577,20 @@
 /* WKErrorJavaScriptResultTypeIsUnsupported description */
 "JavaScript execution returned a result of an unsupported type" = "JavaScript execution returned a result of an unsupported type";
 
+/* WKErrorJavaScriptAppBoundDomain description */
+"JavaScript execution targeted a frame that is not in an app-bound domain" = "JavaScript execution targeted a frame that is not in an app-bound domain";
+
+/* WKErrorJavaScriptInvalidFrameTarget description */
+"JavaScript execution targeted an invalid frame" = "JavaScript execution targeted an invalid frame";
+
 /* Undo action name */
 "Justify (Undo action name)" = "Justify";
 
 /* Name of keychain key generated by the KEYGEN tag */
 "Key from %@" = "Key from %@";
+
+/* Languages media controls context menu title */
+"Languages (Media Controls Menu)" = "Languages";
 
 /* Learn Spelling context menu item */
 "Learn Spelling" = "Learn Spelling";
@@ -457,8 +613,14 @@
 /* 'Website' name displayed when local documents have stored local data */
 "Local documents on your computer" = "Local documents on your computer";
 
+/* Title for Look Up action button */
+"Look Up" = "Look Up";
+
 /* Look Up in Dictionary context menu item */
 "Look Up in Dictionary" = "Look Up in Dictionary";
+
+/* Title for Quick Look action button for images with visual search results */
+"Look Up in Quick Look" = "Look Up in Quick Look";
 
 /* Look Up context menu item with selected word */
 "Look Up “%@”" = "Look Up “%@”";
@@ -502,11 +664,17 @@
 /* Malware confirmation dialog */
 "Merely visiting a site is sufficient for malware to install itself and harm your computer." = "Merely visiting a site is sufficient for malware to install itself and harm your computer.";
 
+/* Display name for text track kind 'metadata'. */
+"Metadata (text track)" = "Metadata";
+
 /* Label text to be used when a plugin is missing */
 "Missing Plug-in" = "Missing Plug-in";
 
 /* Media Mute context menu item */
 "Mute" = "Mute";
+
+/* New Quick Note context menu item. */
+"New Quick Note" = "New Quick Note";
 
 /* No Guesses Found context menu item */
 "No Guesses Found" = "No Guesses Found";
@@ -532,8 +700,8 @@
 /* OK button label in document password failure alert */
 "OK (document password failure alert)" = "OK";
 
-/* Menu item label for the track that represents disabling closed captions */
-"Off" = "Off";
+/* Menu item label for the track that represents disabling closed captions. */
+"Off (text track)" = "Off";
 
 /* Title for Open Link action button */
 "Open" = "Open";
@@ -565,6 +733,9 @@
 /* context menu item for PDF */
 "Open with %@" = "Open with %@";
 
+/* Label for the order with Apple Pay button. */
+"Order with Apple Pay" = "Order with Apple Pay";
+
 /* Undo action name */
 "Outdent (Undo action name)" = "Outdent";
 
@@ -595,11 +766,17 @@
 /* File Upload alert sheet button string for choosing an existing media item from the Photo Library */
 "Photo Library (file upload action sheet)" = "Photo Library";
 
+/* Picture in Picture media controls context menu title */
+"Picture in Picture (Media Controls Menu)" = "Picture in Picture";
+
 /* Media Play context menu item */
 "Play" = "Play";
 
 /* accessibility help text for enter full screen button */
 "Play movie in full screen mode" = "Play movie in full screen mode";
+
+/* Playback Speed media controls context menu title */
+"Playback Speed (Media Controls Menu)" = "Playback Speed";
 
 /* Label text to be used when a plug-in was blocked from loading because it was too small */
 "Plug-In too small" = "Plug-In too small";
@@ -619,6 +796,12 @@
 /* Description of the PostScript type supported by the PDF pseudo plug-in. Visible in the Installed Plug-ins page in Safari. */
 "PostScript" = "PostScript";
 
+/* Title for file upload progress view */
+"Preparing (file upload)" = "Preparing…";
+
+/* Title for Quick Look action button */
+"Quick Look" = "Quick Look";
+
 /* Undo action name */
 "Raise Baseline (Undo action name)" = "Raise Baseline";
 
@@ -628,14 +811,26 @@
 /* Reload context menu item */
 "Reload" = "Reload";
 
+/* Label for the reload with Apple Pay button. */
+"Reload with Apple Pay" = "Reload with Apple Pay";
+
 /* WKErrorContentRuleListStoreRemoveFailed description */
 "Removing a WKContentRuleList failed" = "Removing a WKContentRuleList failed";
+
+/* Label for the rent with Apple Pay button. */
+"Rent with Apple Pay" = "Rent with Apple Pay";
 
 /* default label for Reset buttons in forms on web pages */
 "Reset" = "Reset";
 
+/* Reset button in date input context menu */
+"Reset Button Date/Time Context Menu" = "Reset";
+
 /* Right to Left context menu item */
 "Right to Left" = "Right to Left";
+
+/* Display name for SDH (i.e. deaf and/or hard of hearing) text tracks. */
+"SDH (text track)" = "SDH";
 
 /* Title of the Search button for zoomed form controls. */
 "Search" = "Search";
@@ -648,6 +843,9 @@
 
 /* Search with search provider context menu item with provider name inserted */
 "Search with %@" = "Search with %@";
+
+/* Title for Quick Look action button for images with text */
+"Select Text in Quick Look" = "Select Text in Quick Look";
 
 /* Validation message for required file inputs that have no value */
 "Select a file" = "Select a file";
@@ -685,6 +883,12 @@
 /* Label for the set up with Apple Pay button. */
 "Set up with Apple Pay" = "Set up with Apple Pay";
 
+/* Title for Share context menu item. */
+"Share" = "Share";
+
+/* Default name for the file created for a shared image with no explicit name. */
+"Shared Image" = "Shared Image";
+
 /* Title for Share action button */
 "Share…" = "Share…";
 
@@ -700,14 +904,14 @@
 /* Show fonts context menu item */
 "Show Fonts" = "Show Fonts";
 
-/* Title for Show Link Previews action button */
-"Show Link Previews" = "Show Link Previews";
-
 /* menu item title */
 "Show Spelling and Grammar" = "Show Spelling and Grammar";
 
 /* menu item title */
 "Show Substitutions" = "Show Substitutions";
+
+/* Title for Show Text action button */
+"Show Text" = "Show Text";
 
 /* Title of the context menu item to show when PDFPlugin was used instead of a blocked plugin */
 "Show in blocked plug-in" = "Show in blocked plug-in";
@@ -757,6 +961,9 @@
 /* Stop speaking context menu item */
 "Stop Speaking" = "Stop Speaking";
 
+/* Undo action name */
+"StrikeThrough (Undo action name)" = "StrikeThrough";
+
 /* Label for strong password. */
 "Strong Password" = "Strong Password";
 
@@ -778,8 +985,8 @@
 /* Substitutions context sub-menu item */
 "Substitutions" = "Substitutions";
 
-/* Menu section heading for subtitles */
-"Subtitles" = "Subtitles";
+/* Subtitles media controls context menu title */
+"Subtitles (Media Controls Menu)" = "Subtitles";
 
 /* Accessibility announcement for the data list suggestions dropdown going away. */
 "Suggestions list hidden." = "Suggestions list hidden.";
@@ -789,6 +996,9 @@
 
 /* Undo action name */
 "Superscript (Undo action name)" = "Superscript";
+
+/* Label for the support with Apple Pay button. */
+"Support with Apple Pay" = "Support with Apple Pay";
 
 /* File Upload alert sheet camera button string for taking only photos */
 "Take Photo (file upload action sheet)" = "Take Photo";
@@ -857,6 +1067,9 @@
 "This website may try to trick you into installing software that harms your browsing experience, like changing your settings without your permission or showing you unwanted ads. Once installed, it may be difficult to remove." = "This website may try to trick you into installing software that harms your browsing experience, like changing your settings without your permission or showing you unwanted ads. Once installed, it may be difficult to remove.";
 
 /* Informative text for requesting cross-site cookie and website data access. */
+"This will allow “%@” and “%@” to track your activity." = "This will allow “%@” and “%@” to track your activity.";
+
+/* Informative text for requesting cross-site cookie and website data access. */
 "This will allow “%@” to track your activity." = "This will allow “%@” to track your activity.";
 
 /* Undo action name */
@@ -864,6 +1077,9 @@
 
 /* WKErrorAttributedStringContentLoadTimedOut description */
 "Timed out while loading attributed string content" = "Timed out while loading attributed string content";
+
+/* Label for the tip with Apple Pay button. */
+"Tip with Apple Pay" = "Tip with Apple Pay";
 
 /* prompt string in authentication panel */
 "To view this page, you must log in to area “%@” on %@." = "To view this page, you must log in to area “%@” on %@.";
@@ -874,8 +1090,14 @@
 /* prompt string in authentication panel */
 "To view this page, you must log in to this area on %@:" = "To view this page, you must log in to this area on %@:";
 
+/* Label for the top up with Apple Pay button. */
+"Top up with Apple Pay" = "Top up with Apple Pay";
+
 /* Transformations context sub-menu item */
 "Transformations" = "Transformations";
+
+/* Translate context menu item with selected word */
+"Translate “%@”" = "Translate “%@”";
 
 /* Undo action name */
 "Turn Off Kerning (Undo action name)" = "Turn Off Kerning";
@@ -901,14 +1123,11 @@
 /* Undo action name */
 "Underline (Undo action name)" = "Underline";
 
-/* Menu item label for an audio track that has no other name */
-"Unknown (audio track)" = "Unknown";
+/* Menu item label for a audio/text track that has no other name. */
+"Unknown (audio/text track)" = "Unknown";
 
 /* Unknown filesize FTP directory listing item */
 "Unknown (filesize)" = "Unknown";
-
-/* Menu item label for a text track that has no other name */
-"Unknown (text track)" = "Unknown";
 
 /* Undo action name */
 "Unlink (Undo action name)" = "Unlink";
@@ -978,6 +1197,9 @@
 
 /* Unwanted software warning title */
 "Website With Harmful Software Warning" = "Website With Harmful Software Warning";
+
+/* Label for window sharing menu */
+"Window: " = "Window: ";
 
 /* Year label in date picker */
 "YEAR (Date picker for extra zoom mode)" = "YEAR";
@@ -1452,6 +1674,15 @@
 
 /* Message for requesting access to the device motion and orientation */
 "“%@” Would Like to Access Motion and Orientation" = "“%@” Would Like to Access Motion and Orientation";
+
+/* The domain and application using the camera and/or microphone. The first argument is domain, the second is the application name (iOS only). */
+"“%@” in “%%@”" = "“%@” in “%%@”";
+
+/* Allow the specified bundle to sign in to the specified website */
+"“%@” would like to sign in to “%@”." = "“%@” would like to sign in to “%@”.";
+
+/* Allow the specified bundle to use Touch ID to sign in to the specified website on this device */
+"“%@” would like to use Touch ID for “%@”." = "“%@” would like to use Touch ID for “%@”.";
 
 /* Option in segmented control for choosing list type in text editing */
 "•" = "•";

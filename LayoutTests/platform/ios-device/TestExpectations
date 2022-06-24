@@ -6,7 +6,6 @@
 compositing/canvas/accelerated-canvas-compositing-size-limit.html [ Failure ]
 compositing/canvas/accelerated-canvas-compositing.html [ Failure ]
 compositing/backgrounds/fixed-backgrounds.html [ ImageOnlyFailure ]
-compositing/contents-scale/non-decomposable-matrix.html [ ImageOnlyFailure ]
 compositing/hidpi-compositing-vs-non-compositing-check-on-testing-framework.html [ ImageOnlyFailure ]
 
 css3/filters/backdrop/backdrop-filter-with-reflection-add-backdrop.html [ ImageOnlyFailure ]
@@ -21,7 +20,6 @@ fast/canvas/canvas-drawImage-shadow.html [ Failure ]
 fast/canvas/canvas-fillRect-gradient-shadow.html [ Failure ]
 fast/canvas/canvas-getImageData.html [ Failure ]
 fast/canvas/canvas-render-layer.html [ Failure ]
-fast/canvas/canvas-scale-shadowBlur.html [ Failure ]
 fast/canvas/canvas-scale-strokePath-shadow.html [ Failure ]
 fast/canvas/rgba-parsing.html [ Failure ]
 fast/canvas/set-colors.html [ Failure ]
@@ -60,7 +58,6 @@ http/tests/preload/onerror_event.html [ Skip ]
 http/tests/preload/onload_event.html [ Skip ]
 http/tests/websocket/tests/hybi/multiple-connections.html [ Skip ]
 
-imported/w3c/web-platform-tests/IndexedDB/keypath-special-identifiers.htm [ Failure ]
 imported/w3c/web-platform-tests/cssom-view/Screen-pixelDepth-Screen-colorDepth001.html [ Failure ]
 imported/w3c/web-platform-tests/cssom-view/scrolling-quirks-vs-nonquirks.html [ Failure ]
 imported/w3c/web-platform-tests/dom/events/EventTarget-dispatchEvent.html [ Failure ]
@@ -69,7 +66,6 @@ imported/w3c/web-platform-tests/html/semantics/embedded-content/the-canvas-eleme
 imported/blink/compositing/child-transform-layer-with-foreground-layer.html [ ImageOnlyFailure ]
 imported/blink/fast/canvas/canvas-unbalanced-save.html [ ImageOnlyFailure ]
 
-imported/w3c/web-platform-tests/IndexedDB/idbcursor-update-exception-order.htm [ Skip ]
 imported/w3c/web-platform-tests/xhr/send-redirect-bogus-sync.htm [ Skip ]
 imported/w3c/web-platform-tests/xhr/send-send.htm [ Skip ]
 imported/w3c/web-platform-tests/cssom/ttwf-cssom-document-extension.html [ Skip ]
@@ -103,12 +99,6 @@ js/stringimpl-to-jsstring-on-large-strings-3.html [ Crash ]
 
 loader/go-back-to-different-window-size.html [ Crash ]
 
-media/audio-controls-rendering.html [ Failure ]
-media/audio-controls-timeline-in-media-document.html [ Failure ]
-media/audio-repaint.html [ Failure ]
-media/track/track-cue-overlap-snap-to-lines-not-set.html [ Failure ]
-media/video-canvas-createPattern.html [ Failure ]
-media/video-canvas-drawing-output.html [ Failure ]
 media/video-load-preload-metadata.html [ Failure ]
 media/video-played-collapse.html [ Failure ]
 media/video-played-reset.html [ Failure ]
@@ -124,10 +114,6 @@ quicklook/numbers.html [ ImageOnlyFailure ]
 
 scrollbars/overflow-scrollbar-combinations.html [ Timeout ]
 
-security/contentSecurityPolicy/video-with-data-url-allowed-by-media-src-star.html [ ImageOnlyFailure ]
-
-security/contentSecurityPolicy/video-with-data-url-allowed-by-media-src-star.html [ ImageOnlyFailure ]
-
 # <rdar://problem/32575766>, need to handle media sandbox correctly
 webrtc
 
@@ -138,8 +124,5 @@ webgl/webgl-box-shadow.html
 webgl/webgl-border.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=175736
-canvas/philip/tests/2d.path.stroke.scale2.html [ Failure ]
-fast/canvas/canvas-currentColor.html [ Failure ]
-fast/canvas/webgl/gl-teximage.html [ Failure ]
 fast/canvas/webgl/match-page-color-space.html [ ImageOnlyFailure ]
 fast/canvas/webgl/premultiplyalpha-test.html [ Failure ]

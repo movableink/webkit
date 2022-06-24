@@ -20,14 +20,14 @@ layer at (0,0) size 800x600
           text run at (355,72) width 427: "the areas on the left still work, although clicking on them sometimes"
           text run at (0,90) width 54: "crashes. "
           text run at (54,90) width 442: "It's as though NGLayout thinks the Imagemap areas are located a few "
-          text run at (496,90) width 164: "hundred pixels to the left. "
-        RenderBR {BR} at (660,104) size 0x0
+          text run at (496,90) width 160: "hundred pixels to the left."
+        RenderBR {BR} at (656,90) size 0x17
       RenderTable {TABLE} at (0,108) size 644x63
         RenderTableSection {TBODY} at (0,0) size 644x63
           RenderTableRow {TR} at (0,2) size 644x59
             RenderTableCell {TD} at (2,21) size 184x21 [r=0 c=0 rs=1 cs=1]
-              RenderText {#text} at (1,1) size 182x18
-                text run at (1,2) width 182: "Let's put some space in here!"
+              RenderText {#text} at (1,0) size 182x19
+                text run at (1,1) width 182: "Let's put some space in here!"
             RenderTableCell {TD} at (188,2) size 454x59 [r=0 c=1 rs=1 cs=1]
               RenderTable {TABLE} at (1,1) size 452x57
                 RenderTableSection {TBODY} at (0,0) size 452x57

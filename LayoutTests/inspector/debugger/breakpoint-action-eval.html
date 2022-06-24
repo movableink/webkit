@@ -19,6 +19,7 @@ function action(a, b)
 
 function test()
 {
+    let breakpointPromise = new WI.WrappedPromise;
     WI.debuggerManager.addEventListener(WI.DebuggerManager.Event.ScriptAdded, function(event) {
         var scriptObject = event.data.script;
 
@@ -27,16 +28,25 @@ function test()
 
         var location = scriptObject.createSourceCodeLocation(4, 0);
         // Create the breakpoint and its actions before sending anything to the backend.
-        var breakpoint = new WI.Breakpoint(location);
+        var breakpoint = new WI.JavaScriptBreakpoint(location);
         breakpoint.autoContinue = true;
-        breakpoint.createAction(WI.BreakpointAction.Type.Evaluate, null, "action(a, b)");
+        breakpoint.addAction(new WI.BreakpointAction(WI.BreakpointAction.Type.Evaluate, {data: "action(a, b)"}));
 
         WI.debuggerManager.addBreakpoint(breakpoint);
 
+        breakpointPromise.resolve()
+    });
+
+    let reloadPromise = InspectorTest.awaitEvent(FrontendTestHarness.Event.TestPageDidLoad);
+    InspectorTest.reloadPage();
+    Promise.all([
+        reloadPromise,
+        breakpointPromise.promise
+    ])
+    .then(() => {
         InspectorTest.evaluateInPage("runBreakpointActions()");
     });
 
-    InspectorTest.reloadPage();
 }
 </script>
 </head>

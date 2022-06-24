@@ -95,7 +95,7 @@ class DevicePort(DarwinPort):
             _log.debug('Skipping installation')
             return
 
-        for i in xrange(self.child_processes()):
+        for i in range(self.child_processes()):
             device = self.target_host(i)
             _log.debug(u'Installing to {}'.format(device))
             # Without passing DYLD_LIBRARY_PATH, libWebCoreTestSupport cannot be loaded and DRT/WKTR will crash pre-launch,
@@ -186,7 +186,7 @@ class DevicePort(DarwinPort):
 
         self._install()
 
-        for i in xrange(self.child_processes()):
+        for i in range(self.child_processes()):
             host = self.target_host(i)
             host.prepare_for_testing(
                 self.ports_to_forward(),
@@ -201,7 +201,7 @@ class DevicePort(DarwinPort):
         # Best effort to let every device teardown before throwing any exceptions here.
         # Failure to teardown devices can leave things in a bad state.
         exception_list = []
-        for i in xrange(self.child_processes()):
+        for i in range(self.child_processes()):
             device = self.target_host(i)
             if not device:
                 continue
@@ -250,7 +250,6 @@ class DevicePort(DarwinPort):
             model += u' {}'.format(device_type.hardware_type)
 
         version = self.device_version()
-        version_name = None
         for table in [INTERNAL_TABLE, PUBLIC_TABLE]:
             version_name = VersionNameMap.map(self.host.platform).to_name(version, platform=device_type.software_variant.lower(), table=table)
             if version_name:
@@ -271,5 +270,6 @@ class DevicePort(DarwinPort):
             architecture=configuration.architecture,
             style=style,
             model=model,
+            flavor=self.get_option('result_report_flavor'),
             sdk=host.build_version if host else None,
         )

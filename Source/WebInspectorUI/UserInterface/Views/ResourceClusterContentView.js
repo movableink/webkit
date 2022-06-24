@@ -77,9 +77,9 @@ WI.ResourceClusterContentView = class ResourceClusterContentView extends WI.Clus
         return components.concat(currentContentView.selectionPathComponents);
     }
 
-    shown()
+    attached()
     {
-        super.shown();
+        super.attached();
 
         if (this._shownInitialContent)
             return;
@@ -437,6 +437,9 @@ WI.ResourceClusterContentView = class ResourceClusterContentView extends WI.Clus
     _normalizeMIMETypeForDOM(mimeType)
     {
         mimeType = parseMIMEType(mimeType).type;
+
+        if (!mimeType)
+            return mimeType;
 
         if (mimeType.endsWith("/html") || mimeType.endsWith("+html"))
             return "text/html";

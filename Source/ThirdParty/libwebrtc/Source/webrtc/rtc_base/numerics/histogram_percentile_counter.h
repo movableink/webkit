@@ -11,18 +11,20 @@
 #ifndef RTC_BASE_NUMERICS_HISTOGRAM_PERCENTILE_COUNTER_H_
 #define RTC_BASE_NUMERICS_HISTOGRAM_PERCENTILE_COUNTER_H_
 
+#include <stddef.h>
 #include <stdint.h>
+
 #include <map>
 #include <vector>
 
 #include "absl/types/optional.h"
 
 namespace rtc {
-// Calculates percentiles on the stream of data. Use |Add| methods to add new
-// values. Use |GetPercentile| to get percentile of the currently added values.
+// Calculates percentiles on the stream of data. Use `Add` methods to add new
+// values. Use `GetPercentile` to get percentile of the currently added values.
 class HistogramPercentileCounter {
  public:
-  // Values below |long_tail_boundary| are stored as the histogram in an array.
+  // Values below `long_tail_boundary` are stored as the histogram in an array.
   // Values above - in a map.
   explicit HistogramPercentileCounter(uint32_t long_tail_boundary);
   ~HistogramPercentileCounter();

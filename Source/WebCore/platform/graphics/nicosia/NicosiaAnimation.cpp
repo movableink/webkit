@@ -109,7 +109,7 @@ static float applyOpacityAnimation(float fromOpacity, float toOpacity, double pr
     return fromOpacity + progress * (toOpacity - fromOpacity);
 }
 
-static TransformationMatrix applyTransformAnimation(const TransformOperations& from, const TransformOperations& to, double progress, const FloatSize& boxSize, bool listsMatch)
+static TransformationMatrix applyTransformAnimation(const TransformOperations& from, const TransformOperations& to, double progress, const FloatSize& boxSize)
 {
     TransformationMatrix matrix;
 
@@ -125,35 +125,7 @@ static TransformationMatrix applyTransformAnimation(const TransformOperations& f
         return matrix;
     }
 
-    // If we have incompatible operation lists, we blend the resulting matrices.
-    if (!listsMatch) {
-        TransformationMatrix fromMatrix;
-        to.apply(boxSize, matrix);
-        from.apply(boxSize, fromMatrix);
-        matrix.blend(fromMatrix, progress);
-        return matrix;
-    }
-
-    // Animation to "-webkit-transform: none".
-    if (!to.size()) {
-        TransformOperations blended(from);
-        for (auto& operation : blended.operations())
-            operation->blend(nullptr, progress, true)->apply(matrix, boxSize);
-        return matrix;
-    }
-
-    // Animation from "-webkit-transform: none".
-    if (!from.size()) {
-        TransformOperations blended(to);
-        for (auto& operation : blended.operations())
-            operation->blend(nullptr, 1 - progress, true)->apply(matrix, boxSize);
-        return matrix;
-    }
-
-    // Normal animation with a matching operation list.
-    TransformOperations blended(to);
-    for (size_t i = 0; i < blended.operations().size(); ++i)
-        blended.operations()[i]->blend(from.at(i), progress, !from.at(i))->apply(matrix, boxSize);
+    to.blend(from, progress, LayoutSize { boxSize }).apply(boxSize, matrix);
     return matrix;
 }
 
@@ -166,7 +138,7 @@ static const TimingFunction& timingFunctionForAnimationValue(const AnimationValu
     return CubicBezierTimingFunction::defaultTimingFunction();
 }
 
-Animation::Animation(const String& name, const KeyframeValueList& keyframes, const FloatSize& boxSize, const WebCore::Animation& animation, bool listsMatch, MonotonicTime startTime, Seconds pauseTime, AnimationState state)
+Animation::Animation(const String& name, const KeyframeValueList& keyframes, const FloatSize& boxSize, const WebCore::Animation& animation, MonotonicTime startTime, Seconds pauseTime, AnimationState state)
     : m_name(name.isSafeToSendToAnotherThread() ? name : name.isolatedCopy())
     , m_keyframes(keyframes)
     , m_boxSize(boxSize)
@@ -175,7 +147,6 @@ Animation::Animation(const String& name, const KeyframeValueList& keyframes, con
     , m_duration(animation.duration())
     , m_direction(animation.direction())
     , m_fillsForwards(animation.fillsForwards())
-    , m_listsMatch(listsMatch)
     , m_startTime(startTime)
     , m_pauseTime(pauseTime)
     , m_totalRunningTime(0_s)
@@ -193,7 +164,6 @@ Animation::Animation(const Animation& other)
     , m_duration(other.m_duration)
     , m_direction(other.m_direction)
     , m_fillsForwards(other.m_fillsForwards)
-    , m_listsMatch(other.m_listsMatch)
     , m_startTime(other.m_startTime)
     , m_pauseTime(other.m_pauseTime)
     , m_totalRunningTime(other.m_totalRunningTime)
@@ -212,7 +182,6 @@ Animation& Animation::operator=(const Animation& other)
     m_duration = other.m_duration;
     m_direction = other.m_direction;
     m_fillsForwards = other.m_fillsForwards;
-    m_listsMatch = other.m_listsMatch;
     m_startTime = other.m_startTime;
     m_pauseTime = other.m_pauseTime;
     m_totalRunningTime = other.m_totalRunningTime;
@@ -223,8 +192,8 @@ Animation& Animation::operator=(const Animation& other)
 
 void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
 {
-    if (!isActive())
-        return;
+    // Even when m_state == AnimationState::Stopped && !m_fillsForwards, we should calculate the last value to avoid a flash.
+    // CoordinatedGraphicsScene will soon remove the stopped animation and update the value instead of this function.
 
     Seconds totalRunningTime = computeTotalRunningTime(time);
     double normalizedValue = normalizedAnimationValue(totalRunningTime.seconds(), m_duration, m_direction, m_iterationCount);
@@ -232,8 +201,7 @@ void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
     if (m_iterationCount != WebCore::Animation::IterationCountInfinite && totalRunningTime.seconds() >= m_duration * m_iterationCount) {
         m_state = AnimationState::Stopped;
         m_pauseTime = 0_s;
-        if (m_fillsForwards)
-            normalizedValue = normalizedAnimationValueForFillsForwards(m_iterationCount, m_direction);
+        normalizedValue = normalizedAnimationValueForFillsForwards(m_iterationCount, m_direction);
     }
 
     applicationResults.hasRunningAnimations |= (m_state == AnimationState::Playing);
@@ -249,7 +217,7 @@ void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
     }
     if (m_keyframes.size() == 2) {
         auto& timingFunction = timingFunctionForAnimationValue(m_keyframes.at(0), *this);
-        normalizedValue = timingFunction.transformTime(normalizedValue, m_duration);
+        normalizedValue = timingFunction.transformProgress(normalizedValue, m_duration);
         applyInternal(applicationResults, m_keyframes.at(0), m_keyframes.at(1), normalizedValue);
         return;
     }
@@ -262,7 +230,7 @@ void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
 
         normalizedValue = (normalizedValue - from.keyTime()) / (to.keyTime() - from.keyTime());
         auto& timingFunction = timingFunctionForAnimationValue(from, *this);
-        normalizedValue = timingFunction.transformTime(normalizedValue, m_duration);
+        normalizedValue = timingFunction.transformProgress(normalizedValue, m_duration);
         applyInternal(applicationResults, from, to, normalizedValue);
         break;
     }
@@ -308,21 +276,19 @@ Seconds Animation::computeTotalRunningTime(MonotonicTime time)
     return m_totalRunningTime;
 }
 
-bool Animation::isActive() const
-{
-    return m_state != AnimationState::Stopped || m_fillsForwards;
-}
-
 void Animation::applyInternal(ApplicationResult& applicationResults, const AnimationValue& from, const AnimationValue& to, float progress)
 {
     switch (m_keyframes.property()) {
     case AnimatedPropertyTransform:
-        applicationResults.transform = applyTransformAnimation(static_cast<const TransformAnimationValue&>(from).value(), static_cast<const TransformAnimationValue&>(to).value(), progress, m_boxSize, m_listsMatch);
+        applicationResults.transform = applyTransformAnimation(static_cast<const TransformAnimationValue&>(from).value(), static_cast<const TransformAnimationValue&>(to).value(), progress, m_boxSize);
         return;
     case AnimatedPropertyOpacity:
         applicationResults.opacity = applyOpacityAnimation((static_cast<const FloatAnimationValue&>(from).value()), (static_cast<const FloatAnimationValue&>(to).value()), progress);
         return;
     case AnimatedPropertyFilter:
+#if ENABLE(FILTERS_LEVEL_2)
+    case AnimatedPropertyWebkitBackdropFilter:
+#endif
         applicationResults.filters = applyFilterAnimation(static_cast<const FilterAnimationValue&>(from).value(), static_cast<const FilterAnimationValue&>(to).value(), progress, m_boxSize);
         return;
     default:
@@ -390,7 +356,7 @@ bool Animations::hasActiveAnimationsOfType(AnimatedPropertyID type) const
 {
     return std::any_of(m_animations.begin(), m_animations.end(),
         [&type](const Animation& animation) {
-            return animation.isActive() && animation.keyframes().property() == type;
+            return animation.keyframes().property() == type;
         });
 }
 
@@ -400,16 +366,6 @@ bool Animations::hasRunningAnimations() const
         [](const Animation& animation) {
             return animation.state() == Animation::AnimationState::Playing;
         });
-}
-
-Animations Animations::getActiveAnimations() const
-{
-    Animations active;
-    for (auto& animation : m_animations) {
-        if (animation.isActive())
-            active.add(animation);
-    }
-    return active;
 }
 
 } // namespace Nicosia

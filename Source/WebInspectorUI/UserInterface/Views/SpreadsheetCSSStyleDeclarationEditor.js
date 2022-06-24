@@ -40,7 +40,8 @@ WI.SpreadsheetCSSStyleDeclarationEditor = class SpreadsheetCSSStyleDeclarationEd
 
         this._showsImplicitProperties = false;
         this._alwaysShowPropertyNames = new Set;
-        this._propertyVisibilityMode = WI.SpreadsheetCSSStyleDeclarationEditor.PropertyVisibilityMode.ShowAll;
+        this._propertyVisibilityMode = WI.SpreadsheetCSSStyleDeclarationEditor.PropertyVisibilityMode.HideUnusedInheritedVariables;
+        this._hiddenUnusedVariables = new Set;
         this._hideFilterNonMatchingProperties = false;
         this._sortPropertiesByName = false;
 
@@ -95,13 +96,33 @@ WI.SpreadsheetCSSStyleDeclarationEditor = class SpreadsheetCSSStyleDeclarationEd
         let propertyViewPendingStartEditing = null;
         for (let index = 0; index < properties.length; index++) {
             let property = properties[index];
-            let propertyView = new WI.SpreadsheetStyleProperty(this, property);
+            let propertyView = new WI.SpreadsheetStyleProperty(this, property, {selectable: true});
             propertyView.index = index;
             this.element.append(propertyView.element);
             this._propertyViews.push(propertyView);
 
             if (property === this._propertyPendingStartEditing)
                 propertyViewPendingStartEditing = propertyView;
+        }
+
+        if (this._hiddenUnusedVariables.size) {
+            let showHiddenVariablesButtonElement = this.element.appendChild(document.createElement("button"));
+            showHiddenVariablesButtonElement.classList.add("hidden-variables-button");
+            showHiddenVariablesButtonElement.title = WI.UIString("Option-click to show unused CSS variables from all rules", "Option-click to show unused CSS variables from all rules @ Styles Sidebar Panel Tooltip", "Tooltip with instructions on how to show all hidden CSS variables");
+
+            const labelSingular = WI.UIString("Show %d unused CSS variable", "Show %d unused CSS variable (singular) @ Styles Sidebar Panel", "Text label for button to reveal one unused CSS variable");
+            const labelPlural = WI.UIString("Show %d unused CSS variables", "Show %d unused CSS variables (plural) @ Styles Sidebar Panel", "Text label for button to reveal multiple unused CSS variables");
+            let label = this._hiddenUnusedVariables.size > 1 ? labelPlural : labelSingular;
+
+            showHiddenVariablesButtonElement.textContent = label.format(this._hiddenUnusedVariables.size);
+            showHiddenVariablesButtonElement.addEventListener("click", (event) => {
+                if (event.altKey) {
+                    this._setAllPropertyVisibilityMode(WI.SpreadsheetCSSStyleDeclarationEditor.PropertyVisibilityMode.ShowAll);
+                    return;
+                }
+
+                this.propertyVisibilityMode = WI.SpreadsheetCSSStyleDeclarationEditor.PropertyVisibilityMode.ShowAll;
+            });
         }
 
         if (propertyViewPendingStartEditing) {
@@ -117,6 +138,11 @@ WI.SpreadsheetCSSStyleDeclarationEditor = class SpreadsheetCSSStyleDeclarationEd
         else if (this.hasSelectedProperties())
             this.selectProperties(this._anchorIndex, this._focusIndex);
 
+        if (this._pendingPropertyToHighlight) {
+            this.highlightProperty(this._pendingPropertyToHighlight);
+            this._pendingPropertyToHighlight = null;
+        }
+
         this._updateDebugLockStatus();
     }
 
@@ -127,12 +153,8 @@ WI.SpreadsheetCSSStyleDeclarationEditor = class SpreadsheetCSSStyleDeclarationEd
 
         for (let propertyView of this._propertyViews)
             propertyView.detached();
-    }
 
-    hidden()
-    {
-        for (let propertyView of this._propertyViews)
-            propertyView.hidden();
+        super.detached();
     }
 
     get style()
@@ -230,15 +252,29 @@ WI.SpreadsheetCSSStyleDeclarationEditor = class SpreadsheetCSSStyleDeclarationEd
         else
             properties = this._style.properties;
 
+        if (this._style.inherited)
+            properties = properties.filter((property) => property.inherited);
+
         if (this._sortPropertiesByName)
             properties.sort((a, b) => a.name.extendedLocaleCompare(b.name));
 
+        let hideVariables = this._propertyVisibilityMode === SpreadsheetCSSStyleDeclarationEditor.PropertyVisibilityMode.HideVariables;
+        let hideNonVariables = this._propertyVisibilityMode === SpreadsheetCSSStyleDeclarationEditor.PropertyVisibilityMode.HideNonVariables;
+        let hideUnusedInheritedVariables = this._propertyVisibilityMode === SpreadsheetCSSStyleDeclarationEditor.PropertyVisibilityMode.HideUnusedInheritedVariables;
+
+        this._hiddenUnusedVariables = new Set;
+
         return properties.filter((property) => {
-            if (!property.variable && this._propertyVisibilityMode === WI.SpreadsheetCSSStyleDeclarationEditor.PropertyVisibilityMode.HideNonVariables)
+            if (!property.isVariable && hideNonVariables)
                 return false;
 
-            if (property.variable && this._propertyVisibilityMode === WI.SpreadsheetCSSStyleDeclarationEditor.PropertyVisibilityMode.HideVariables)
+            if (property.isVariable && hideVariables)
                 return false;
+
+            if (property.isVariable && hideUnusedInheritedVariables && this._style.inherited && !this._style.nodeStyles.usedCSSVariables.has(property.name)) {
+                this._hiddenUnusedVariables.add(property);
+                return false;
+            }
 
             return !property.implicit || this._showsImplicitProperties || this._alwaysShowPropertyNames.has(property.canonicalName);
         });
@@ -275,16 +311,22 @@ WI.SpreadsheetCSSStyleDeclarationEditor = class SpreadsheetCSSStyleDeclarationEd
 
     highlightProperty(property)
     {
-        let propertiesMatch = (cssProperty) => {
+        if (!property.overridden && this._hiddenUnusedVariables.find(propertiesMatch)) {
+            this._pendingPropertyToHighlight = property;
+            this.propertyVisibilityMode = WI.SpreadsheetCSSStyleDeclarationEditor.PropertyVisibilityMode.ShowAll;
+            return true;
+        }
+
+        function propertiesMatch(cssProperty) {
             if (cssProperty.attached && !cssProperty.overridden) {
                 if (cssProperty.canonicalName === property.canonicalName || hasMatchingLonghandProperty(cssProperty))
                     return true;
             }
 
             return false;
-        };
+        }
 
-        let hasMatchingLonghandProperty = (cssProperty) => {
+        function hasMatchingLonghandProperty(cssProperty) {
             let cssProperties = cssProperty.relatedLonghandProperties;
 
             if (!cssProperties.length)
@@ -296,7 +338,7 @@ WI.SpreadsheetCSSStyleDeclarationEditor = class SpreadsheetCSSStyleDeclarationEd
             }
 
             return false;
-        };
+        }
 
         for (let i = 0; i < this._propertyViews.length; ++i) {
             if (propertiesMatch(this._propertyViews[i].property)) {
@@ -676,10 +718,15 @@ WI.SpreadsheetCSSStyleDeclarationEditor = class SpreadsheetCSSStyleDeclarationEd
 
     _updateDebugLockStatus()
     {
-        if (!this._style || !WI.isDebugUIEnabled() || !WI.settings.debugEnableStyleEditingDebugMode.value)
+        if (!this._style || !WI.settings.debugEnableStyleEditingDebugMode.value)
             return;
 
         this.element.classList.toggle("debug-style-locked", this._style.locked);
+    }
+
+    _setAllPropertyVisibilityMode(propertyVisibilityMode)
+    {
+        this._delegate?.spreadsheetCSSStyleDeclarationEditorSetAllPropertyVisibilityMode?.(this, propertyVisibilityMode);
     }
 };
 
@@ -693,4 +740,5 @@ WI.SpreadsheetCSSStyleDeclarationEditor.PropertyVisibilityMode = {
     ShowAll: Symbol("variable-visibility-show-all"),
     HideVariables: Symbol("variable-visibility-hide-variables"),
     HideNonVariables: Symbol("variable-visibility-hide-non-variables"),
+    HideUnusedInheritedVariables: Symbol("variable-visibility-hide-unused-inherited-variables"),
 };

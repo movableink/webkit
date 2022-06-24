@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #import "PlatformUtilities.h"
 #import "TestURLSchemeHandler.h"
@@ -152,8 +152,8 @@ TEST(PasteMixedContent, ImageFileAndRTF)
 {
     auto webView = setUpWebView();
     auto text = adoptNS([[NSMutableAttributedString alloc] init]);
-    [text appendAttributedString:[[NSAttributedString alloc] initWithString:@"link to "]];
-    [text appendAttributedString:[[NSAttributedString alloc] initWithString:@"apple" attributes:@{ NSLinkAttributeName: [NSURL URLWithString:@"https://www.apple.com/"] }]];
+    [text appendAttributedString:adoptNS([[NSAttributedString alloc] initWithString:@"link to "]).get()];
+    [text appendAttributedString:adoptNS([[NSAttributedString alloc] initWithString:@"apple" attributes:@{ NSLinkAttributeName: [NSURL URLWithString:@"https://www.apple.com/"] }]).get()];
     NSData *rtfData = [text RTFFromRange:NSMakeRange(0, [text length]) documentAttributes:@{ }];
     writeTypesAndDataToPasteboard(NSFilenamesPboardType, @[ imagePath() ], NSPasteboardTypeRTF, rtfData, nil);
     [webView paste:nil];
@@ -313,7 +313,7 @@ TEST(PasteMixedContent, CopyAndPasteWithCustomPasteboardDataOnly)
     auto source = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 400) configuration:configuration.get()]);
     [source synchronouslyLoadHTMLString:markupForSource baseURL:[NSURL URLWithString:@"same://"]];
     [source selectAll:nil];
-    [source _executeEditCommand:@"copy" argument:nil completion:nil];
+    [source _synchronouslyExecuteEditCommand:@"copy" argument:nil];
 
     auto destination = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 400) configuration:configuration.get()]);
     [destination synchronouslyLoadHTMLString:markupForDestination baseURL:[NSURL URLWithString:@"same://"]];

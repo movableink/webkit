@@ -45,6 +45,7 @@ public:
     PlatformCALayer* superlayer() const override;
     void removeFromSuperlayer() override;
     void setSublayers(const PlatformCALayerList&) override;
+    PlatformCALayerList sublayersForLogging() const override { return { }; }
     void removeAllSublayers() override;
     void appendSublayer(PlatformCALayer&) override;
     void insertSublayer(PlatformCALayer&, size_t index) override;
@@ -156,10 +157,6 @@ public:
 
     GraphicsLayer::CustomAppearance customAppearance() const override { return m_customAppearance; }
     void updateCustomAppearance(GraphicsLayer::CustomAppearance customAppearance) override { m_customAppearance = customAppearance; }
-
-    void setEventRegion(const EventRegion&) override { }
-
-    GraphicsLayer::EmbeddedViewID embeddedViewID() const override;
 
     TiledBacking* tiledBacking() override;
     

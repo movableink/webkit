@@ -52,8 +52,20 @@ private:
     void speak(const String&) override;
     void stopSpeaking() override;
 
+#if ENABLE(IMAGE_ANALYSIS)
+    bool supportsLookUpInImages() final { return true; }
+#endif
+
+#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
+    bool supportsCopyCroppedImage() final { return true; }
+#endif
+
 #if PLATFORM(COCOA)
     void searchWithSpotlight() override;
+#endif
+
+#if HAVE(TRANSLATION_UI_SERVICES)
+    void handleTranslation(const WebCore::TranslationContextMenuInfo&) final;
 #endif
 
 #if PLATFORM(GTK)

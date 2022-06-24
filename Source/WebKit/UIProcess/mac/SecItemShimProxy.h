@@ -43,13 +43,14 @@ public:
 
 private:
     SecItemShimProxy();
+    ~SecItemShimProxy();
 
     // IPC::Connection::WorkQueueMessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
-    void didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, std::unique_ptr<IPC::Encoder>&) override;
+    bool didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) override;
 
-    void secItemRequest(const SecItemRequestData&, CompletionHandler<void(Optional<SecItemResponseData>&&)>&&);
-    void secItemRequestSync(const SecItemRequestData&, CompletionHandler<void(Optional<SecItemResponseData>&&)>&&);
+    void secItemRequest(const SecItemRequestData&, CompletionHandler<void(std::optional<SecItemResponseData>&&)>&&);
+    void secItemRequestSync(const SecItemRequestData&, CompletionHandler<void(std::optional<SecItemResponseData>&&)>&&);
 
     Ref<WorkQueue> m_queue;
 };

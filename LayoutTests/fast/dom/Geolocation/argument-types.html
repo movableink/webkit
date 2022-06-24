@@ -123,6 +123,8 @@ test('navigator.geolocation.getCurrentPosition(emptyFunction, undefined, {timeou
 test('navigator.geolocation.getCurrentPosition(emptyFunction, undefined, {timeout:-Infinity})', false);
 test('navigator.geolocation.getCurrentPosition(emptyFunction, undefined, {timeout:"string"})', false);
 
+test("navigator.geolocation.watchPosition(emptyFunction, null)", false);
+
 window.jsTestIsAsync = false;
 
 </script>

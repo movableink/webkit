@@ -25,33 +25,36 @@
 
 #pragma once
 
+#include "DataReference.h"
+#include <WebCore/ResourceRequest.h>
 #include <libsoup/soup.h>
+#include <wtf/RunLoop.h>
 #include <wtf/glib/GRefPtr.h>
-
-namespace IPC {
-class DataReference;
-}
 
 namespace WebKit {
 class NetworkSocketChannel;
+struct SessionSet;
 
 class WebSocketTask {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WebSocketTask(NetworkSocketChannel&, SoupSession*, SoupMessage*, const String& protocol);
+    WebSocketTask(NetworkSocketChannel&, const WebCore::ResourceRequest&, SoupSession*, SoupMessage*, const String& protocol);
     ~WebSocketTask();
 
-    void sendString(const String&, CompletionHandler<void()>&&);
+    void sendString(const IPC::DataReference&, CompletionHandler<void()>&&);
     void sendData(const IPC::DataReference&, CompletionHandler<void()>&&);
     void close(int32_t code, const String& reason);
 
     void cancel();
     void resume();
 
+    SessionSet* sessionSet() { return nullptr; }
+
 private:
     void didConnect(GRefPtr<SoupWebsocketConnection>&&);
-    void didFail(const String&);
+    void didFail(String&&);
     void didClose(unsigned short code, const String& reason);
+    void delayFailTimerFired();
 
     String acceptedExtensions() const;
 
@@ -60,10 +63,14 @@ private:
     static void didCloseCallback(WebSocketTask*);
 
     NetworkSocketChannel& m_channel;
+    WebCore::ResourceRequest m_request;
+    GRefPtr<SoupMessage> m_handshakeMessage;
     GRefPtr<SoupWebsocketConnection> m_connection;
     GRefPtr<GCancellable> m_cancellable;
     bool m_receivedDidFail { false };
     bool m_receivedDidClose { false };
+    String m_delayErrorMessage;
+    RunLoop::Timer<WebSocketTask> m_delayFailTimer;
 };
 
 } // namespace WebKit

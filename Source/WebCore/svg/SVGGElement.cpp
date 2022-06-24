@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGGElement.h"
 
+#include "LegacyRenderSVGTransformableContainer.h"
 #include "RenderSVGHiddenContainer.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGTransformableContainer.h"
@@ -35,7 +36,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGGElement);
 
 SVGGElement::SVGGElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
 {
     ASSERT(hasTagName(SVGNames::gTag));
 }
@@ -50,20 +50,14 @@ Ref<SVGGElement> SVGGElement::create(Document& document)
     return create(SVGNames::gTag, document);
 }
 
-void SVGGElement::parseAttribute(const QualifiedName& name, const AtomString& value)
-{
-    SVGGraphicsElement::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
-}
-
-void SVGGElement::svgAttributeChanged(const QualifiedName& attrName)
-{
-    SVGGraphicsElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
-}
-
 RenderPtr<RenderElement> SVGGElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // FIXME: [LBSE] Support hidden containers
+    if (document().settings().layerBasedSVGEngineEnabled())
+        return createRenderer<RenderSVGTransformableContainer>(*this, WTFMove(style));
+#endif
+
     // SVG 1.1 testsuite explicitly uses constructs like <g display="none"><linearGradient>
     // We still have to create renderers for the <g> & <linearGradient> element, though the
     // subtree may be hidden - we only want the resource renderers to exist so they can be
@@ -71,7 +65,7 @@ RenderPtr<RenderElement> SVGGElement::createElementRenderer(RenderStyle&& style,
     if (style.display() == DisplayType::None)
         return createRenderer<RenderSVGHiddenContainer>(*this, WTFMove(style));
 
-    return createRenderer<RenderSVGTransformableContainer>(*this, WTFMove(style));
+    return createRenderer<LegacyRenderSVGTransformableContainer>(*this, WTFMove(style));
 }
 
 bool SVGGElement::rendererIsNeeded(const RenderStyle&)

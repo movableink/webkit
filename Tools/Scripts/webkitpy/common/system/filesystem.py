@@ -39,7 +39,7 @@ import sys
 import tempfile
 import time
 
-from webkitpy.common.unicode_compatibility import decode_if_necessary
+from webkitcorepy import string_utils
 
 
 class FileSystem(object):
@@ -80,7 +80,10 @@ class FileSystem(object):
         return os.chdir(path)
 
     def copyfile(self, source, destination):
-        shutil.copyfile(source, destination)
+        return shutil.copyfile(source, destination)
+
+    def copymode(self, source, destination):
+        return shutil.copymode(source, destination)
 
     def dirname(self, path):
         return os.path.dirname(path)
@@ -227,7 +230,7 @@ class FileSystem(object):
 
     def write_binary_file(self, path, contents):
         with open(path, 'wb') as f:
-            f.write(contents)
+            f.write(string_utils.encode(contents, target_type=bytes))
 
     def open_text_file_for_reading(self, path, errors='strict'):
         # Note: There appears to be an issue with the returned file objects
@@ -257,7 +260,7 @@ class FileSystem(object):
 
         The file is written encoded as UTF-8 with no BOM."""
         with codecs.open(path, 'w', 'utf-8', errors=errors) as f:
-            f.write(decode_if_necessary(contents, errors=errors))
+            f.write(string_utils.decode(contents, errors=errors))
 
     def sha1(self, path):
         contents = self.read_binary_file(path)

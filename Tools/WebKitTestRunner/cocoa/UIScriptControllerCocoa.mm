@@ -32,12 +32,19 @@
 #import "TestRunnerWKWebView.h"
 #import "UIScriptContext.h"
 #import <JavaScriptCore/JavaScriptCore.h>
+#import <WebKit/WKURLCF.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
+#import <wtf/BlockPtr.h>
+
+@interface WKWebView (WKWebViewInternal)
+- (void)paste:(id)sender;
+@end
 
 namespace WTR {
 
 UIScriptControllerCocoa::UIScriptControllerCocoa(UIScriptContext& context)
-    : UIScriptController(context)
+    : UIScriptControllerCommon(context)
 {
 }
 
@@ -54,6 +61,11 @@ void UIScriptControllerCocoa::setViewScale(double scale)
 void UIScriptControllerCocoa::setMinimumEffectiveWidth(double effectiveWidth)
 {
     webView()._minimumEffectiveDeviceWidth = effectiveWidth;
+}
+
+void UIScriptControllerCocoa::setWebViewEditable(bool editable)
+{
+    webView()._editable = editable;
 }
 
 void UIScriptControllerCocoa::becomeFirstResponder()
@@ -77,9 +89,19 @@ void UIScriptControllerCocoa::doAsyncTask(JSValueRef callback)
     });
 }
 
-void UIScriptControllerCocoa::setShareSheetCompletesImmediatelyWithResolution(bool resolved)
+void UIScriptControllerCocoa::completeTaskAsynchronouslyAfterActivityStateUpdate(unsigned callbackID)
 {
-    [webView() _setShareSheetCompletesImmediatelyWithResolutionForTesting:resolved];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        auto* mainWebView = TestController::singleton().mainWebView();
+        ASSERT(mainWebView);
+
+        [mainWebView->platformView() _doAfterActivityStateUpdate: ^{
+            if (!m_context)
+                return;
+
+            m_context->asyncTaskComplete(callbackID);
+        }];
+    });
 }
 
 void UIScriptControllerCocoa::removeViewFromWindow(JSValueRef callback)
@@ -97,11 +119,7 @@ void UIScriptControllerCocoa::removeViewFromWindow(JSValueRef callback)
     mainWebView->removeFromWindow();
 
 #if PLATFORM(MAC)
-    [mainWebView->platformView() _doAfterNextPresentationUpdate:^{
-        if (!m_context)
-            return;
-        m_context->asyncTaskComplete(callbackID);
-    }];
+    completeTaskAsynchronouslyAfterActivityStateUpdate(callbackID);
 #endif // PLATFORM(MAC)
 }
 
@@ -117,38 +135,32 @@ void UIScriptControllerCocoa::addViewToWindow(JSValueRef callback)
     mainWebView->addToWindow();
 
 #if PLATFORM(MAC)
-    [mainWebView->platformView() _doAfterNextPresentationUpdate:^{
-        if (!m_context)
-            return;
-        m_context->asyncTaskComplete(callbackID);
-    }];
+    completeTaskAsynchronouslyAfterActivityStateUpdate(callbackID);
 #endif // PLATFORM(MAC)
 }
 
 void UIScriptControllerCocoa::overridePreference(JSStringRef preferenceRef, JSStringRef valueRef)
 {
-    WKPreferences *preferences = webView().configuration.preferences;
-
-    String preference = toWTFString(toWK(preferenceRef));
-    String value = toWTFString(toWK(valueRef));
-    if (preference == "WebKitMinimumFontSize")
-        preferences.minimumFontSize = value.toDouble();
+    if (toWTFString(preferenceRef) == "WebKitMinimumFontSize")
+        webView().configuration.preferences.minimumFontSize = toWTFString(valueRef).toDouble();
 }
 
 void UIScriptControllerCocoa::findString(JSStringRef string, unsigned long options, unsigned long maxCount)
 {
-    [webView() _findString:toWTFString(toWK(string)) options:options maxCount:maxCount];
+    [webView() _findString:toWTFString(string) options:options maxCount:maxCount];
 }
 
 JSObjectRef UIScriptControllerCocoa::contentsOfUserInterfaceItem(JSStringRef interfaceItem) const
 {
-    NSDictionary *contentDictionary = [webView() _contentsOfUserInterfaceItem:toWTFString(toWK(interfaceItem))];
+    NSDictionary *contentDictionary = [webView() _contentsOfUserInterfaceItem:toWTFString(interfaceItem)];
     return JSValueToObject(m_context->jsContext(), [JSValue valueWithObject:contentDictionary inContext:[JSContext contextWithJSGlobalContextRef:m_context->jsContext()]].JSValueRef, nullptr);
 }
 
-void UIScriptControllerCocoa::setDefaultCalendarType(JSStringRef calendarIdentifier)
+void UIScriptControllerCocoa::setDefaultCalendarType(JSStringRef calendarIdentifier, JSStringRef localeIdentifier)
 {
-    TestController::singleton().setDefaultCalendarType((__bridge NSString *)adoptCF(JSStringCopyCFString(kCFAllocatorDefault, calendarIdentifier)).get());
+    auto cfCalendarIdentifier = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, calendarIdentifier));
+    auto cfLocaleIdentifier = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, localeIdentifier));
+    TestController::singleton().setDefaultCalendarType((__bridge NSString *)cfCalendarIdentifier.get(), (__bridge NSString *)cfLocaleIdentifier.get());
 }
 
 JSRetainPtr<JSStringRef> UIScriptControllerCocoa::lastUndoLabel() const
@@ -164,6 +176,31 @@ JSRetainPtr<JSStringRef> UIScriptControllerCocoa::firstRedoLabel() const
 NSUndoManager *UIScriptControllerCocoa::platformUndoManager() const
 {
     return platformContentView().undoManager;
+}
+
+void UIScriptControllerCocoa::setDidShowContextMenuCallback(JSValueRef callback)
+{
+    UIScriptController::setDidShowContextMenuCallback(callback);
+    webView().didShowContextMenuCallback = makeBlockPtr([this, strongThis = Ref { *this }] {
+        if (!m_context)
+            return;
+        m_context->fireCallback(CallbackTypeDidShowContextMenu);
+    }).get();
+}
+
+void UIScriptControllerCocoa::setDidDismissContextMenuCallback(JSValueRef callback)
+{
+    UIScriptController::setDidDismissContextMenuCallback(callback);
+    webView().didDismissContextMenuCallback = makeBlockPtr([this, strongThis = Ref { *this }] {
+        if (!m_context)
+            return;
+        m_context->fireCallback(CallbackTypeDidDismissContextMenu);
+    }).get();
+}
+
+bool UIScriptControllerCocoa::isShowingContextMenu() const
+{
+    return webView().isShowingContextMenu;
 }
 
 void UIScriptControllerCocoa::setDidShowMenuCallback(JSValueRef callback)
@@ -194,6 +231,61 @@ void UIScriptControllerCocoa::dismissMenu()
 bool UIScriptControllerCocoa::isShowingMenu() const
 {
     return webView().showingMenu;
+}
+
+void UIScriptControllerCocoa::setContinuousSpellCheckingEnabled(bool enabled)
+{
+    [webView() _setContinuousSpellCheckingEnabledForTesting:enabled];
+}
+
+void UIScriptControllerCocoa::paste()
+{
+    [webView() paste:nil];
+}
+
+void UIScriptControllerCocoa::insertAttachmentForFilePath(JSStringRef filePath, JSStringRef contentType, JSValueRef callback)
+{
+    unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
+    auto testURL = adoptCF(WKURLCopyCFURL(kCFAllocatorDefault, TestController::singleton().currentTestURL()));
+    auto attachmentURL = [NSURL fileURLWithPath:toWTFString(filePath) relativeToURL:(__bridge NSURL *)testURL.get()];
+    auto fileWrapper = adoptNS([[NSFileWrapper alloc] initWithURL:attachmentURL options:0 error:nil]);
+    [webView() _insertAttachmentWithFileWrapper:fileWrapper.get() contentType:toWTFString(contentType) completion:^(BOOL success) {
+        if (!m_context)
+            return;
+        m_context->asyncTaskComplete(callbackID);
+    }];
+}
+
+void UIScriptControllerCocoa::setDidShowContactPickerCallback(JSValueRef callback)
+{
+    UIScriptController::setDidShowContactPickerCallback(callback);
+    webView().didShowContactPickerCallback = ^{
+        if (!m_context)
+            return;
+        m_context->fireCallback(CallbackTypeDidShowContactPicker);
+    };
+}
+
+void UIScriptControllerCocoa::setDidHideContactPickerCallback(JSValueRef callback)
+{
+    UIScriptController::setDidHideContactPickerCallback(callback);
+    webView().didHideContactPickerCallback = ^{
+        if (!m_context)
+            return;
+        m_context->fireCallback(CallbackTypeDidHideContactPicker);
+    };
+}
+
+bool UIScriptControllerCocoa::isShowingContactPicker() const
+{
+    return webView().showingContactPicker;
+}
+
+void UIScriptControllerCocoa::dismissContactPickerWithContacts(JSValueRef contacts)
+{
+    JSContext *context = [JSContext contextWithJSGlobalContextRef:m_context->jsContext()];
+    JSValue *value = [JSValue valueWithJSValueRef:contacts inContext:context];
+    [webView() _dismissContactPickerWithContacts:[value toArray]];
 }
 
 } // namespace WTR

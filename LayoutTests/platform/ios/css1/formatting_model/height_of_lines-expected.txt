@@ -9,22 +9,37 @@ layer at (0,0) size 800x2285
       RenderBlock {PRE} at (0,36) size 784x252
         RenderText {#text} at (0,0) size 523x252
           text run at (0,0) width 336: "P.one {font-size: 14px; line-height: 20px;}"
+          text run at (335,0) width 1: " "
           text run at (0,14) width 297: "IMG.onea {vertical-align: text-bottom;"
+          text run at (296,14) width 1: " "
           text run at (0,28) width 266: "     width: 200px; height: 200px;}"
+          text run at (265,28) width 1: " "
           text run at (0,42) width 508: "IMG.oneb {vertical-align: text-top; width: 200px; height: 200px;}"
+          text run at (507,42) width 1: " "
           text run at (0,56) width 0: " "
           text run at (0,70) width 336: "P.two {font-size: 14px; line-height: 20px;}"
+          text run at (335,70) width 1: " "
           text run at (0,84) width 523: "IMG.twoa {vertical-align: text-bottom; width: 100px; height: 100px;"
+          text run at (522,84) width 1: " "
           text run at (0,98) width 305: "     padding: 5px; border-style: solid;"
+          text run at (304,98) width 1: " "
           text run at (0,112) width 305: "     border-width: 10px; margin: 15px;}"
+          text run at (304,112) width 1: " "
           text run at (0,126) width 274: "IMG.twob {vertical-align: text-top;"
+          text run at (273,126) width 1: " "
           text run at (0,140) width 297: "          width: 100px; height: 100px;"
+          text run at (296,140) width 1: " "
           text run at (0,154) width 305: "     padding: 5px; border-style: solid;"
+          text run at (304,154) width 1: " "
           text run at (0,168) width 305: "     border-width: 10px; margin: 15px;}"
+          text run at (304,168) width 1: " "
           text run at (0,182) width 0: " "
           text run at (0,196) width 469: "IMG.twoc {vertical-align: middle; width: 50px; height: 50px;"
+          text run at (468,196) width 1: " "
           text run at (0,210) width 305: "     padding: 5px; border-style: solid;"
+          text run at (304,210) width 1: " "
           text run at (0,224) width 313: "     border-width: 10px; margin: -10px;}"
+          text run at (312,224) width 1: " "
           text run at (0,238) width 0: " "
       RenderBlock {HR} at (0,301) size 784x2 [border: (1px inset #000000)]
       RenderBlock {P} at (0,317) size 784x443
@@ -53,13 +68,13 @@ layer at (0,0) size 800x2285
         RenderText {#text} at (470,183) size 28x17
           text run at (470,183) width 28: " and "
         RenderImage {IMG} at (512,198) size 131x130 [border: (10px solid #000000)]
-        RenderText {#text} at (657,183) size 783x218
+        RenderText {#text} at (657,183) size 779x218
           text run at (657,183) width 8: ". "
           text run at (664,183) width 98: "This is additional"
           text run at (0,344) width 713: "text to make sure that there is enough room left below the image so that this line does not hit the image that is text-top aligned. "
           text run at (712,344) width 43: "It is the"
           text run at (0,364) width 765: "outer edge of the margin that should be text-bottom and text-top aligned in this paragraph, so for the first image the bottom border of the"
-          text run at (0,384) width 783: "image should begin 15px above the bottom of the text, and for the second image the top border should begin 15px below the top of the text "
+          text run at (0,384) width 779: "image should begin 15px above the bottom of the text, and for the second image the top border should begin 15px below the top of the text"
         RenderImage {IMG} at (-10,393) size 80x80 [border: (10px solid #000000)]
         RenderText {#text} at (60,423) size 753x58
           text run at (60,423) width 7: ". "

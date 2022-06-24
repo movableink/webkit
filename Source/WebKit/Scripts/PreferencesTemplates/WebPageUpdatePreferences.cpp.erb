@@ -28,6 +28,7 @@
 #include "config.h"
 #include "WebPage.h"
 
+#include "WebPreferencesDefinitions.h"
 #include "WebPreferencesKeys.h"
 #include "WebPreferencesStore.h"
 #include <WebCore/DeprecatedGlobalSettings.h>
@@ -37,25 +38,34 @@
 
 namespace WebKit {
 
-void WebPage::updatePreferencesGenerated(const WebPreferencesStore& store)
+void WebPage::updateSettingsGenerated(const WebPreferencesStore& store, WebCore::Settings& settings)
 {
-    WebCore::Settings& settings = m_page->settings();
-
 <%- for @pref in @preferencesBoundToSetting do -%>
 <%- if @pref.condition -%>
 #if <%= @pref.condition %>
 <%- end -%>
+<%- if @pref.exposed -%>
     settings.set<%= @pref.webcoreNameUpper %>(store.get<%= @pref.typeUpper %>ValueForKey(WebPreferencesKey::<%= @pref.nameLower %>Key()));
+<%- else -%>
+    settings.set<%= @pref.webcoreNameUpper %>(DEFAULT_VALUE_FOR_<%= @pref.name %>);
+<%- end -%>
 <%- if @pref.condition -%>
 #endif
 <%- end -%>
 <%- end -%>
+}
 
+void WebPage::updatePreferencesGenerated(const WebPreferencesStore& store)
+{
 <%- for @pref in @preferencesBoundToDeprecatedGlobalSettings do -%>
 <%- if @pref.condition -%>
 #if <%= @pref.condition %>
 <%- end -%>
+<%- if @pref.exposed -%>
     WebCore::DeprecatedGlobalSettings::set<%= @pref.webcoreNameUpper %>(store.get<%= @pref.typeUpper %>ValueForKey(WebPreferencesKey::<%= @pref.nameLower %>Key()));
+<%- else -%>
+    WebCore::DeprecatedGlobalSettings::set<%= @pref.webcoreNameUpper %>(DEFAULT_VALUE_FOR_<%= @pref.name %>);
+<%- end -%>
 <%- if @pref.condition -%>
 #endif
 <%- end -%>
@@ -65,7 +75,11 @@ void WebPage::updatePreferencesGenerated(const WebPreferencesStore& store)
 <%- if @pref.condition -%>
 #if <%= @pref.condition %>
 <%- end -%>
+<%- if @pref.exposed -%>
     WebCore::RuntimeEnabledFeatures::sharedFeatures().set<%= @pref.webcoreNameUpper %>(store.get<%= @pref.typeUpper %>ValueForKey(WebPreferencesKey::<%= @pref.nameLower %>Key()));
+<%- else -%>
+    WebCore::RuntimeEnabledFeatures::sharedFeatures().set<%= @pref.webcoreNameUpper %>(DEFAULT_VALUE_FOR_<%= @pref.name %>);
+<%- end -%>
 <%- if @pref.condition -%>
 #endif
 <%- end -%>

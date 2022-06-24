@@ -48,6 +48,7 @@ from webkitpy.tool.steps.discardlocalchanges import DiscardLocalChanges
 from webkitpy.tool.steps.editchangelog import EditChangeLog
 from webkitpy.tool.steps.ensurebugisopenandassigned import EnsureBugIsOpenAndAssigned
 from webkitpy.tool.steps.ensurelocalcommitifneeded import EnsureLocalCommitIfNeeded
+from webkitpy.tool.steps.formatcppfiles import FormatCppFiles
 from webkitpy.tool.steps.haslanded import HasLanded
 from webkitpy.tool.steps.obsoletepatches import ObsoletePatches
 from webkitpy.tool.steps.options import Options
@@ -57,9 +58,8 @@ from webkitpy.tool.steps.postdiffforrevert import PostDiffForRevert
 from webkitpy.tool.steps.preparechangelog import PrepareChangeLog
 from webkitpy.tool.steps.preparechangelogforrevert import PrepareChangeLogForRevert
 from webkitpy.tool.steps.promptforbugortitle import PromptForBugOrTitle
-from webkitpy.tool.steps.reopenbugafterrollout import ReopenBugAfterRollout
+from webkitpy.tool.steps.reopenbugafterrevert import ReopenBugAfterRevert
 from webkitpy.tool.steps.revertrevision import RevertRevision
-from webkitpy.tool.steps.runtests import RunTests
 from webkitpy.tool.steps.sortxcodeprojectfiles import SortXcodeProjectFiles
 from webkitpy.tool.steps.submittoews import SubmitToEWS
 from webkitpy.tool.steps.suggestreviewers import SuggestReviewers

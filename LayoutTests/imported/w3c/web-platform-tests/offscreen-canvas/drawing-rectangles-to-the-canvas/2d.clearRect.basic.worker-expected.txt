@@ -1,3 +1,0 @@
-
-FAIL clearRect clears to transparent black Can't find variable: OffscreenCanvas
-

@@ -1,4 +1,3 @@
-
 function assert(b) {
     if (!b)
         throw new Error("Bad assertion.");

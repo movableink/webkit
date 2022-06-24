@@ -21,11 +21,9 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import struct
-import sys
-import tempfile
 import wave
 
-from io import BytesIO
+from webkitcorepy import BytesIO, StringIO
 
 
 class WaveDiff(object):
@@ -35,19 +33,19 @@ class WaveDiff(object):
     _tolerance = 1
 
     def __init__(self, in1, in2):
-        if isinstance(in1, file):
-            waveFile1 = wave.open(in1, 'rb')
+        if isinstance(in1, str):
+            waveFile1 = wave.open(StringIO(in1), 'r')
         else:
             waveFile1 = wave.open(BytesIO(in1), 'rb')
-        if isinstance(in2, file):
-            waveFile1 = wave.open(in2, 'rb')
+        if isinstance(in2, str):
+            waveFile2 = wave.open(StringIO(in2), 'r')
         else:
             waveFile2 = wave.open(BytesIO(in2), 'rb')
 
         params1 = waveFile1.getparams()
         params2 = waveFile2.getparams()
 
-        self._diff = ''
+        self._diff = []
 
         self._filesAreIdentical = not sum(map(self._diffParam, params1, params2, self._paramNames))
         self._filesAreIdenticalWithinTolerance = self._filesAreIdentical
@@ -66,27 +64,27 @@ class WaveDiff(object):
 
         allData1 = self._readSamples(waveFile1, sampleWidth1, frameCount1 * channelCount1)
         allData2 = self._readSamples(waveFile2, sampleWidth2, frameCount2 * channelCount2)
-        results = map(self._diffSample, allData1, allData2, xrange(max(frameCount1 * channelCount1, frameCount2 * channelCount2)))
+        results = list(map(self._diffSample, allData1, allData2, range(max(frameCount1 * channelCount1, frameCount2 * channelCount2))))
 
         cumulativeSampleDiff = sum(results)
-        differingSampleCount = len(filter(bool, results))
+        differingSampleCount = len(list(filter(bool, results)))
         self._filesAreIdentical = not differingSampleCount
-        self._filesAreIdenticalWithinTolerance = not len(filter(lambda x: x > self._tolerance, results))
+        self._filesAreIdenticalWithinTolerance = not len(list(filter(lambda x: x > self._tolerance, results)))
 
         if differingSampleCount:
-            self._diff += '\n'
-            self._diff += 'Total differing samples: %d\n' % differingSampleCount
-            self._diff += 'Percentage of differing samples: %0.3f%%\n' % (100 * float(differingSampleCount) / max(frameCount1, frameCount2))
-            self._diff += 'Cumulative sample difference: %d\n' % cumulativeSampleDiff
-            self._diff += 'Average sample difference: %f\n' % (float(cumulativeSampleDiff) / differingSampleCount)
+            self._diff.append('')
+            self._diff.append('Total differing samples: %d' % differingSampleCount)
+            self._diff.append('Percentage of differing samples: %0.3f%%' % (100 * float(differingSampleCount) / max(frameCount1, frameCount2)))
+            self._diff.append('Cumulative sample difference: %d' % cumulativeSampleDiff)
+            self._diff.append('Average sample difference: %f' % (float(cumulativeSampleDiff) / differingSampleCount))
 
     def _diffParam(self, param1, param2, paramName):
         if param1 == param2:
             return False
-        self._diff += paramName + '\n'
-        self._diff += '< %s\n' % str(param1)
-        self._diff += '---\n'
-        self._diff += '> %s\n' % str(param2)
+        self._diff.append(paramName)
+        self._diff.append('< %s' % str(param1))
+        self._diff.append('---')
+        self._diff.append('> %s' % str(param2))
         return True
 
     @staticmethod
@@ -97,10 +95,10 @@ class WaveDiff(object):
 
     def _diffSample(self, data1, data2, i):
         if (data1 != data2):
-            self._diff += 'Sample #%d\n' % i
-            self._diff += '< %d\n' % data1
-            self._diff += '---\n'
-            self._diff += '> %d\n' % data2
+            self._diff.append('Sample #%d' % i)
+            self._diff.append('< %d' % data1)
+            self._diff.append('---')
+            self._diff.append('> %d' % data2)
         return abs(data1 - data2)
 
     def filesAreIdentical(self):
@@ -110,4 +108,4 @@ class WaveDiff(object):
         return self._filesAreIdenticalWithinTolerance
 
     def diffText(self):
-        return self._diff
+        return '\n'.join(self._diff)

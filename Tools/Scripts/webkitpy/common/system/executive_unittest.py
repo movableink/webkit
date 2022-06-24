@@ -28,7 +28,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-import errno
 import signal
 import subprocess
 import sys
@@ -39,14 +38,15 @@ import unittest
 # that Tools/Scripts is in sys.path for the next imports to work correctly.
 script_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 if script_dir not in sys.path:
-    sys.path.append(script_dir)
+    sys.path.insert(0, script_dir)
 third_party_py = os.path.join(script_dir, "webkitpy", "thirdparty", "autoinstalled")
 if third_party_py not in sys.path:
-    sys.path.append(third_party_py)
+    sys.path.insert(0, third_party_py)
 
 from webkitpy.common.system.executive import Executive, ScriptError
 from webkitpy.common.system.filesystem_mock import MockFileSystem
-from webkitpy.common import unicode_compatibility
+
+from webkitcorepy import string_utils
 
 
 class ScriptErrorTest(unittest.TestCase):
@@ -139,11 +139,11 @@ class ExecutiveTest(unittest.TestCase):
             encoding = 'mbcs'
         else:
             encoding = 'utf-8'
-        encoded_tor = unicode_compatibility.encode_if_necessary(unicode_tor_input, encoding)
+        encoded_tor = string_utils.encode(unicode_tor_input, encoding=encoding)
         # On Windows, we expect the unicode->mbcs->unicode roundtrip to be
         # lossy. On other platforms, we expect a lossless roundtrip.
         if sys.platform.startswith('win'):
-            unicode_tor_output = unicode_compatibility.decode_if_necessary(encoded_tor, encoding)
+            unicode_tor_output = string_utils.decode(encoded_tor, encoding=encoding)
         else:
             unicode_tor_output = unicode_tor_input
 
@@ -246,15 +246,25 @@ class ExecutiveTest(unittest.TestCase):
         import multiprocessing
 
         NUM_PROCESSES = 4
-        DELAY_SECS = 0.25
-        cmd_line = [sys.executable, '-c', 'import time; time.sleep(%f); print "hello"' % DELAY_SECS]
+        DELAY_SECS = 1.0  # make sure this is much greater than the VM spawn time
+        cmd_line = [sys.executable, '-c', 'import time; time.sleep(%f); print("hello")' % DELAY_SECS]
         cwd = os.getcwd()
         commands = [tuple([cmd_line, cwd])] * NUM_PROCESSES
-        start = time.time()
-        command_outputs = Executive().run_in_parallel(commands, processes=NUM_PROCESSES)
-        done = time.time()
+
+        try:
+            # we overwrite __main__ to be this to avoid any issues with
+            # multiprocessing's spawning caused by multiple versions of pytest on
+            # sys.path
+            old_main = sys.modules["__main__"]
+            sys.modules["__main__"] = sys.modules[__name__]
+            start = time.time()
+            command_outputs = Executive().run_in_parallel(commands, processes=NUM_PROCESSES)
+            done = time.time()
+        finally:
+            sys.modules["__main__"] = old_main
+
         self.assertTrue(done - start < NUM_PROCESSES * DELAY_SECS)
-        self.assertEqual([output[1] for output in command_outputs], ["hello\n"] * NUM_PROCESSES)
+        self.assertEqual([output[1] for output in command_outputs], [b'hello\n'] * NUM_PROCESSES)
         self.assertEqual([],  multiprocessing.active_children())
 
     def test_run_in_parallel_assert_nonempty(self):

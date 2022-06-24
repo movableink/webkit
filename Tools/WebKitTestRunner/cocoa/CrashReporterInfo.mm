@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,20 +27,20 @@
 #import "CrashReporterInfo.h"
 
 #import "StringFunctions.h"
-#import <WebKit/WKCrashReporter.h>
 #import <WebKit/WKURLCF.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cocoa/CrashReporter.h>
 
 namespace WTR {
 
 static String testPathFromURL(WKURLRef url)
 {
-    RetainPtr<CFURLRef> cfURL = adoptCF(WKURLCopyCFURL(kCFAllocatorDefault, url));
+    auto cfURL = adoptCF(WKURLCopyCFURL(kCFAllocatorDefault, url));
     if (!cfURL)
         return String();
 
-    RetainPtr<CFStringRef> schemeCFString = adoptCF(CFURLCopyScheme(cfURL.get()));
-    RetainPtr<CFStringRef> pathCFString = adoptCF(CFURLCopyPath(cfURL.get()));
+    auto schemeCFString = adoptCF(CFURLCopyScheme(cfURL.get()));
+    auto pathCFString = adoptCF(CFURLCopyPath(cfURL.get()));
 
     String schemeString(schemeCFString.get());
     String pathString(pathCFString.get());
@@ -57,7 +57,7 @@ static String testPathFromURL(WKURLRef url)
     if (!equalLettersIgnoringASCIICase(schemeString, "http") && !equalLettersIgnoringASCIICase(schemeString, "https"))
         return String();
 
-    RetainPtr<CFStringRef> hostCFString = adoptCF(CFURLCopyHostName(cfURL.get()));
+    auto hostCFString = adoptCF(CFURLCopyHostName(cfURL.get()));
     String hostString(hostCFString.get());
     if (hostString == "127.0.0.1")
         return pathString;
@@ -69,9 +69,8 @@ void setCrashReportApplicationSpecificInformationToURL(WKURLRef url)
 {
     String testPath = testPathFromURL(url);
     if (!testPath.isNull()) {
-        String message("CRASHING TEST: ");
-        message = message + testPath;
-        WebKit::setCrashReportApplicationSpecificInformation(message.createCFString().get());
+        auto message = makeString("CRASHING TEST: ", testPath);
+        WTF::setCrashLogMessage(message.utf8().data());
     }
 }
 

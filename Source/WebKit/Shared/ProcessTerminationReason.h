@@ -30,9 +30,18 @@ namespace WebKit {
 enum class ProcessTerminationReason {
     ExceededMemoryLimit,
     ExceededCPULimit,
+    ExceededProcessCountLimit,
     RequestedByClient,
     Crash,
     NavigationSwap,
+    RequestedByNetworkProcess,
+    RequestedByGPUProcess
+};
+
+enum class GPUProcessTerminationReason {
+    Crash,
+    IdleExit,
+    Unresponsive
 };
 
 }

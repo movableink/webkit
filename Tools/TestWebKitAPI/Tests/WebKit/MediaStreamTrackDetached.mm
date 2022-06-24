@@ -30,33 +30,24 @@
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestWKWebView.h"
+#import "UserMediaCaptureUIDelegate.h"
 #import <WebKit/WKPreferencesPrivate.h>
-#import <WebKit/WKUIDelegatePrivate.h>
 #import <WebKit/WKWebViewConfiguration.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
+#import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 
-static bool hasRecievedCorrectCaptureState = false;
+static bool hasReceivedCorrectCaptureState = false;
 
-@interface MediaStreamTrackDetachedUIDelegate : NSObject<WKUIDelegate>
-- (void)_webView:(WKWebView *)webView requestMediaCaptureAuthorization: (_WKCaptureDevices)devices decisionHandler:(void (^)(BOOL))decisionHandler;
-- (void)_webView:(WKWebView *)webView checkUserMediaPermissionForURL:(NSURL *)url mainFrameURL:(NSURL *)mainFrameURL frameIdentifier:(NSUInteger)frameIdentifier decisionHandler:(void (^)(NSString *salt, BOOL authorized))decisionHandler;
-- (void)_webView:(WKWebView *)webView mediaCaptureStateDidChange:(_WKMediaCaptureState)state;
+@interface MediaStreamTrackDetachedUIDelegate : UserMediaCaptureUIDelegate
+- (void)_webView:(WKWebView *)webView mediaCaptureStateDidChange:(_WKMediaCaptureStateDeprecated)state;
 @end
 
 @implementation MediaStreamTrackDetachedUIDelegate
-- (void)_webView:(WKWebView *)webView requestMediaCaptureAuthorization: (_WKCaptureDevices)devices decisionHandler:(void (^)(BOOL))decisionHandler
+- (void)_webView:(WKWebView *)webView mediaCaptureStateDidChange:(_WKMediaCaptureStateDeprecated)state
 {
-    decisionHandler(YES);
-}
-
-- (void)_webView:(WKWebView *)webView checkUserMediaPermissionForURL:(NSURL *)url mainFrameURL:(NSURL *)mainFrameURL frameIdentifier:(NSUInteger)frameIdentifier decisionHandler:(void (^)(NSString *salt, BOOL authorized))decisionHandler
-{
-    decisionHandler(@"0x987654321", YES);
-}
-- (void)_webView:(WKWebView *)webView mediaCaptureStateDidChange:(_WKMediaCaptureState)state
-{
-    if (state == _WKMediaCaptureStateActiveMicrophone)
-        hasRecievedCorrectCaptureState = true;
+    if (state == _WKMediaCaptureStateDeprecatedActiveMicrophone)
+        hasReceivedCorrectCaptureState = true;
 }
 @end
 
@@ -68,16 +59,17 @@ TEST(WebKit, MediaStreamTrackDetached)
     auto processPoolConfig = adoptNS([[_WKProcessPoolConfiguration alloc] init]);
     auto preferences = [configuration preferences];
     preferences._mediaCaptureRequiresSecureConnection = NO;
-    preferences._mediaDevicesEnabled = YES;
+    configuration.get()._mediaCaptureEnabled = YES;
     preferences._mockCaptureDevicesEnabled = YES;
+    preferences._getUserMediaRequiresFocus = NO;
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get() processPoolConfiguration:processPoolConfig.get()]);
     auto delegate = adoptNS([[MediaStreamTrackDetachedUIDelegate alloc] init]);
     webView.get().UIDelegate = delegate.get();
 
-    hasRecievedCorrectCaptureState = false;
+    hasReceivedCorrectCaptureState = false;
     [webView loadTestPageNamed:@"mediastreamtrack-detached"];
 
-    TestWebKitAPI::Util::run(&hasRecievedCorrectCaptureState);
+    TestWebKitAPI::Util::run(&hasReceivedCorrectCaptureState);
 }
 
 } // namespace TestWebKitAPI

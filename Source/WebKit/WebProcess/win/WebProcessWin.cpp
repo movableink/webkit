@@ -28,14 +28,18 @@
 
 #include <WebCore/SharedBuffer.h>
 
-WTF_EXPORT RefPtr<WebCore::SharedBuffer> loadResourceIntoBuffer(const char* name)
+RefPtr<WebCore::FragmentedSharedBuffer> loadResourceIntoBuffer(const char* name)
 {
-    return 0;
+    return nullptr;
 }
 
 namespace WebKit {
 
 void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters&)
+{
+}
+
+void WebProcess::platformInitializeProcess(const AuxiliaryProcessInitializationParameters&)
 {
 }
 
@@ -48,6 +52,18 @@ void WebProcess::platformTerminate()
 }
 
 void WebProcess::platformSetCacheModel(CacheModel)
+{
+}
+
+void WebProcess::grantAccessToAssetServices(WebKit::SandboxExtension::Handle&&)
+{
+}
+
+void WebProcess::revokeAccessToAssetServices()
+{
+}
+
+void WebProcess::switchFromStaticFontRegistryToUserFontRegistry(WebKit::SandboxExtension::Handle&&)
 {
 }
 

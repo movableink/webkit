@@ -27,6 +27,7 @@
 
 #include "PluginReplacement.h"
 #include <wtf/HashMap.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -43,19 +44,19 @@ public:
 private:
     YouTubePluginReplacement(HTMLPlugInElement&, const Vector<String>& paramNames, const Vector<String>& paramValues);
     static Ref<PluginReplacement> create(HTMLPlugInElement&, const Vector<String>& paramNames, const Vector<String>& paramValues);
-    static bool supportsMimeType(const String&);
+    static bool supportsMIMEType(const String&);
     static bool supportsFileExtension(const String&);
     static bool supportsURL(const URL&);
     static bool isEnabledBySettings(const Settings&);
 
-    bool installReplacement(ShadowRoot&) final;
+    InstallResult installReplacement(ShadowRoot&) final;
 
     String youTubeURL(const String& rawURL);
 
     bool willCreateRenderer() final { return m_embedShadowElement; }
     RenderPtr<RenderElement> createElementRenderer(HTMLPlugInElement&, RenderStyle&&, const RenderTreePosition&) final;
 
-    HTMLPlugInElement* m_parentElement;
+    WeakPtr<HTMLPlugInElement> m_parentElement;
     RefPtr<YouTubeEmbedShadowElement> m_embedShadowElement;
     KeyValueMap m_attributes;
 };

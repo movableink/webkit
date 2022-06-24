@@ -61,6 +61,9 @@ static UIActionIdentifier const WKElementActionTypeOpenInNewTabIdentifier = @"WK
 static UIActionIdentifier const WKElementActionTypeOpenInNewWindowIdentifier = @"WKElementActionTypeOpenInNewWindow";
 static UIActionIdentifier const WKElementActionTypeDownloadIdentifier = @"WKElementActionTypeDownload";
 UIActionIdentifier const WKElementActionTypeToggleShowLinkPreviewsIdentifier = @"WKElementActionTypeToggleShowLinkPreviews";
+static UIActionIdentifier const WKElementActionTypeImageExtractionIdentifier = @"WKElementActionTypeImageExtraction";
+static UIActionIdentifier const WKElementActionTypeRevealImageIdentifier = @"WKElementActionTypeRevealImage";
+static UIActionIdentifier const WKElementActionTypeCopyCroppedImageIdentifier = @"WKElementActionTypeCopyCroppedImage";
 
 static NSString * const webkitShowLinkPreviewsPreferenceKey = @"WebKitShowLinkPreviews";
 static NSString * const webkitShowLinkPreviewsPreferenceChangedNotification = @"WebKitShowLinkPreviewsPreferenceChanged";
@@ -94,8 +97,8 @@ static NSString * const webkitShowLinkPreviewsPreferenceChangedNotification = @"
 
 + (instancetype)elementActionWithTitle:(NSString *)title actionHandler:(WKElementActionHandler)handler
 {
-    return [[[self alloc] _initWithTitle:title actionHandler:^(WKActionSheetAssistant *, _WKActivatedElementInfo *actionInfo) { handler(actionInfo); }
-        type:_WKElementActionTypeCustom assistant:nil] autorelease];
+    return adoptNS([[self alloc] _initWithTitle:title actionHandler:^(WKActionSheetAssistant *, _WKActivatedElementInfo *actionInfo) { handler(actionInfo); }
+        type:_WKElementActionTypeCustom assistant:nil]).autorelease();
 }
 
 #if HAVE(SAFARI_SERVICES_FRAMEWORK)
@@ -116,7 +119,7 @@ static void addToReadingList(NSURL *targetURL, NSString *title)
 + (instancetype)_elementActionWithType:(_WKElementActionType)type title:(NSString *)title actionHandler:(WKElementActionHandler)actionHandler
 {
     WKElementActionHandlerInternal handler = ^(WKActionSheetAssistant *, _WKActivatedElementInfo *actionInfo) { actionHandler(actionInfo); };
-    return [[[self alloc] _initWithTitle:title actionHandler:handler type:type assistant:nil] autorelease];
+    return adoptNS([[self alloc] _initWithTitle:title actionHandler:handler type:type assistant:nil]).autorelease();
 }
 
 + (instancetype)_elementActionWithType:(_WKElementActionType)type customTitle:(NSString *)customTitle assistant:(WKActionSheetAssistant *)assistant
@@ -125,29 +128,21 @@ static void addToReadingList(NSURL *targetURL, NSString *title)
     WKElementActionHandlerInternal handler = nil;
     switch (type) {
     case _WKElementActionTypeCopy:
-        title = WEB_UI_STRING_KEY("Copy", "Copy (ActionSheet)", "Title for Copy Link or Image action button");
+        title = WEB_UI_STRING_KEY("Copy", "Copy (ActionSheet)", "Title for Copy Link and Image or Copy Image action button");
         handler = ^(WKActionSheetAssistant *assistant, _WKActivatedElementInfo *actionInfo) {
-            if ([assistant.delegate respondsToSelector:@selector(actionSheetAssistant:willStartInteractionWithElement:)])
-                [assistant.delegate actionSheetAssistant:assistant willStartInteractionWithElement:actionInfo];
-            [assistant.delegate actionSheetAssistant:assistant performAction:WebKit::SheetAction::Copy];
-            if ([assistant.delegate respondsToSelector:@selector(actionSheetAssistantDidStopInteraction:)])
-                [assistant.delegate actionSheetAssistantDidStopInteraction:assistant];
+            [assistant handleElementActionWithType:type element:actionInfo needsInteraction:YES];
         };
         break;
     case _WKElementActionTypeOpen:
         title = WEB_UI_STRING("Open", "Title for Open Link action button");
         handler = ^(WKActionSheetAssistant *assistant, _WKActivatedElementInfo *actionInfo) {
-            [assistant.delegate actionSheetAssistant:assistant openElementAtLocation:actionInfo._interactionLocation];
+            [assistant handleElementActionWithType:type element:actionInfo needsInteraction:YES];
         };
         break;
     case _WKElementActionTypeSaveImage:
         title = WEB_UI_STRING("Add to Photos", "Title for Add to Photos action button");
         handler = ^(WKActionSheetAssistant *assistant, _WKActivatedElementInfo *actionInfo) {
-            if ([assistant.delegate respondsToSelector:@selector(actionSheetAssistant:willStartInteractionWithElement:)])
-                [assistant.delegate actionSheetAssistant:assistant willStartInteractionWithElement:actionInfo];
-            [assistant.delegate actionSheetAssistant:assistant performAction:WebKit::SheetAction::SaveImage];
-            if ([assistant.delegate respondsToSelector:@selector(actionSheetAssistantDidStopInteraction:)])
-                [assistant.delegate actionSheetAssistantDidStopInteraction:assistant];
+            [assistant handleElementActionWithType:type element:actionInfo needsInteraction:YES];
         };
         break;
 #if HAVE(SAFARI_SERVICES_FRAMEWORK)
@@ -161,23 +156,50 @@ static void addToReadingList(NSURL *targetURL, NSString *title)
     case _WKElementActionTypeShare:
         title = WEB_UI_STRING("Share…", "Title for Share action button");
         handler = ^(WKActionSheetAssistant *assistant, _WKActivatedElementInfo *actionInfo) {
-            [assistant.delegate actionSheetAssistant:assistant shareElementWithURL:actionInfo.URL ?: actionInfo.imageURL rect:actionInfo.boundingRect];
+            [assistant handleElementActionWithType:type element:actionInfo needsInteraction:NO];
         };
         break;
     case _WKElementActionToggleShowLinkPreviews:
         // This action must still exist for compatibility, but doesn't do anything.
+        break;
+    case _WKElementActionTypeImageExtraction:
+#if ENABLE(IMAGE_ANALYSIS)
+        title = WEB_UI_STRING("Show Text", "Title for Show Text action button");
+        handler = ^(WKActionSheetAssistant *assistant, _WKActivatedElementInfo *actionInfo) {
+            [assistant handleElementActionWithType:type element:actionInfo needsInteraction:YES];
+        };
+#endif
+        break;
+    case _WKElementActionTypeRevealImage:
+#if ENABLE(IMAGE_ANALYSIS)
+        title = WebCore::contextMenuItemTagLookUpImage();
+        handler = ^(WKActionSheetAssistant *assistant, _WKActivatedElementInfo *actionInfo) {
+            [assistant handleElementActionWithType:type element:actionInfo needsInteraction:YES];
+        };
+#endif
+        break;
+    case _WKElementActionTypeCopyCroppedImage:
+#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
+        title = WebCore::contextMenuItemTagCopyCroppedImage();
+        handler = ^(WKActionSheetAssistant *assistant, _WKActivatedElementInfo *actionInfo) {
+            [assistant handleElementActionWithType:type element:actionInfo needsInteraction:YES];
+        };
+#endif
         break;
     default:
         [NSException raise:NSInvalidArgumentException format:@"There is no standard web element action of type %ld.", (long)type];
         return nil;
     }
 
-    return [[[self alloc] _initWithTitle:(customTitle ? customTitle : title) actionHandler:handler type:type assistant:assistant] autorelease];
+    return adoptNS([[self alloc] _initWithTitle:(customTitle ? customTitle : title) actionHandler:handler type:type assistant:assistant]).autorelease();
 }
 
-+ (instancetype)_elementActionWithType:(_WKElementActionType)type assistant:(WKActionSheetAssistant *)assistant
++ (instancetype)_elementActionWithType:(_WKElementActionType)type info:(_WKActivatedElementInfo *)info assistant:(WKActionSheetAssistant *)assistant
 {
-    return [self _elementActionWithType:type customTitle:nil assistant:assistant];
+    NSString *customTitle = nil;
+    if (type == _WKElementActionTypeCopy && info.type == _WKActivatedElementTypeLink && !info._isImage)
+        customTitle = WEB_UI_STRING_KEY("Copy Link", "Copy Link (ActionSheet)", "Title for Copy Link button");
+    return [self _elementActionWithType:type customTitle:customTitle assistant:assistant];
 }
 
 + (instancetype)elementActionWithType:(_WKElementActionType)type customTitle:(NSString *)customTitle
@@ -222,7 +244,7 @@ static void addToReadingList(NSURL *targetURL, NSString *title)
     case _WKElementActionTypeOpenInDefaultBrowser:
         return [UIImage systemImageNamed:@"safari"];
     case _WKElementActionTypeOpenInExternalApplication:
-        return [UIImage systemImageNamed:@"arrow.up.right.square"];
+        return [UIImage systemImageNamed:@"arrow.up.forward.app"];
     case _WKElementActionTypeShare:
         return [UIImage systemImageNamed:@"square.and.arrow.up"];
     case _WKElementActionTypeOpenInNewTab:
@@ -233,6 +255,20 @@ static void addToReadingList(NSURL *targetURL, NSString *title)
         return [UIImage systemImageNamed:@"arrow.down.circle"];
     case _WKElementActionToggleShowLinkPreviews:
         return nil; // Intentionally empty.
+    case _WKElementActionTypeImageExtraction:
+#if ENABLE(IMAGE_ANALYSIS)
+        return [UIImage systemImageNamed:@"text.viewfinder"];
+#else
+        return nil;
+#endif
+    case _WKElementActionTypeRevealImage:
+#if ENABLE(IMAGE_ANALYSIS)
+        return [UIImage systemImageNamed:@"info.circle"];
+#else
+        return nil;
+#endif
+    case _WKElementActionTypeCopyCroppedImage:
+        return [UIImage systemImageNamed:@"person.fill.viewfinder"];
     }
 }
 
@@ -263,6 +299,12 @@ static UIActionIdentifier elementActionTypeToUIActionIdentifier(_WKElementAction
         return WKElementActionTypeDownloadIdentifier;
     case _WKElementActionToggleShowLinkPreviews:
         return WKElementActionTypeToggleShowLinkPreviewsIdentifier;
+    case _WKElementActionTypeImageExtraction:
+        return WKElementActionTypeImageExtractionIdentifier;
+    case _WKElementActionTypeRevealImage:
+        return WKElementActionTypeRevealImageIdentifier;
+    case _WKElementActionTypeCopyCroppedImage:
+        return WKElementActionTypeCopyCroppedImageIdentifier;
     }
 }
 
@@ -292,7 +334,12 @@ static _WKElementActionType uiActionIdentifierToElementActionType(UIActionIdenti
         return _WKElementActionTypeDownload;
     if ([identifier isEqualToString:WKElementActionTypeToggleShowLinkPreviewsIdentifier])
         return _WKElementActionToggleShowLinkPreviews;
-
+    if ([identifier isEqualToString:WKElementActionTypeImageExtractionIdentifier])
+        return _WKElementActionTypeImageExtraction;
+    if ([identifier isEqualToString:WKElementActionTypeRevealImageIdentifier])
+        return _WKElementActionTypeRevealImage;
+    if ([identifier isEqualToString:WKElementActionTypeCopyCroppedImageIdentifier])
+        return _WKElementActionTypeCopyCroppedImage;
     return _WKElementActionTypeCustom;
 }
 

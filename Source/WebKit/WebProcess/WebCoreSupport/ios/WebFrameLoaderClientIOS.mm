@@ -58,14 +58,14 @@ bool WebFrameLoaderClient::forceLayoutOnRestoreFromBackForwardCache()
     return false;
 }
 
-RetainPtr<CFDictionaryRef> WebFrameLoaderClient::connectionProperties(DocumentLoader*, unsigned long identifier)
+RetainPtr<CFDictionaryRef> WebFrameLoaderClient::connectionProperties(DocumentLoader*, WebCore::ResourceLoaderIdentifier)
 {
     notImplemented();
     return nullptr;
 }
 
 #if USE(QUICK_LOOK)
-RefPtr<PreviewLoaderClient> WebFrameLoaderClient::createPreviewLoaderClient(const String& fileName, const String& uti)
+RefPtr<LegacyPreviewLoaderClient> WebFrameLoaderClient::createPreviewLoaderClient(const String& fileName, const String& uti)
 {
     if (!m_frame->isMainFrame())
         return nullptr;

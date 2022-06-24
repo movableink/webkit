@@ -61,10 +61,10 @@ describe('MeasurementSetAnalyzer', () => {
         {
             let runId = startRunId;
             let buildId = 3400;
-            let buildNumber = 1;
+            let buildTag = 1;
             let commit_id = 1;
             let revision = 1;
-            const makeRun = (value, commitTime) => [runId++, value, 1, value, value, false, [[commit_id++, MockModels.webkit.id(), revision++, 0, 0]], commitTime, commitTime + 10, buildId++, buildNumber++, MockModels.builder.id()];
+            const makeRun = (value, commitTime) => [runId++, value, 1, value, value, false, [[commit_id++, MockModels.webkit.id(), revision++, 0, 0]], commitTime, commitTime + 10, buildId++, buildTag++, MockModels.builder.id()];
             timeIncrement = Math.floor(timeIncrement);
             return values.map((value, index) => makeRun(value, startTime + index * timeIncrement));
         }
@@ -162,7 +162,7 @@ describe('MeasurementSetAnalyzer', () => {
             requests[0].resolve({
                 'clusterStart': 1000,
                 'clusterSize': 1000,
-                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildNumber', 'builder'],
+                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildTag', 'builder'],
                 'configurations': {current: makeSampleRuns(simpleSegmentableValues.slice(0, 39), 6400, 4000, 1000 / 50)},
                 'startTime': 4000,
                 'endTime': 5000,
@@ -191,7 +191,8 @@ describe('MeasurementSetAnalyzer', () => {
 
             Triggerable.ensureSingleton(4, {name: 'some-triggerable',
                 repositoryGroups: [MockModels.osRepositoryGroup, MockModels.svnRepositoryGroup, MockModels.gitRepositoryGroup, MockModels.svnRepositoryWithOwnedRepositoryGroup],
-                configurations: [{test: MockModels.someMetric.test(), platform: MockModels.somePlatform}]});
+                configurations: [{test: MockModels.someMetric.test(), platform: MockModels.somePlatform,
+                    supportedRepetitionTypes: MockModels.someTriggableConfiguration.supportedRepetitionTypes}]});
 
             const measurementSet = MeasurementSet.findSet(MockModels.somePlatform.id(), MockModels.someMetric.id(), 5000);
             const logger = mockLogger();
@@ -205,7 +206,7 @@ describe('MeasurementSetAnalyzer', () => {
             requests[0].resolve({
                 'clusterStart': 1000,
                 'clusterSize': 1000,
-                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildNumber', 'builder'],
+                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildTag', 'builder'],
                 'configurations': {current: makeSampleRuns(simpleSegmentableValues, 6400, 4000, 1000 / 50)},
                 'startTime': 4000,
                 'endTime': 5000,
@@ -227,14 +228,15 @@ describe('MeasurementSetAnalyzer', () => {
             assert.equal(requests.length, 3);
             assert.equal(requests[2].url, '/privileged-api/create-analysis-task');
             assert.deepEqual(requests[2].data, {
-                slaveName: 'test',
-                slavePassword: 'password',
+                workerName: 'test',
+                workerPassword: 'password',
                 name: 'Potential 2.38% regression on Some platform between WebKit: r35-r44',
                 startRun: 6434,
                 endRun: 6443,
                 repetitionCount: 4,
                 testGroupName: 'Confirm',
                 needsNotification: true,
+                repetitionType: 'alternating',
                 revisionSets: [{'11': {revision: 35, ownerRevision: null, patch: null}},
                     {'11': {revision: 44, ownerRevision: null, patch: null}}]
             });
@@ -250,7 +252,8 @@ describe('MeasurementSetAnalyzer', () => {
 
             Triggerable.ensureSingleton(4, {name: 'some-triggerable',
                 repositoryGroups: [MockModels.osRepositoryGroup, MockModels.svnRepositoryGroup, MockModels.gitRepositoryGroup, MockModels.svnRepositoryWithOwnedRepositoryGroup],
-                configurations: [{test: MockModels.someMetric.test(), platform: MockModels.somePlatform}]});
+                configurations: [{test: MockModels.someMetric.test(), platform: MockModels.somePlatform,
+                    supportedRepetitionTypes: MockModels.someTriggableConfiguration.supportedRepetitionTypes}]});
 
             const measurementSet = MeasurementSet.findSet(MockModels.somePlatform.id(), MockModels.someMetric.id(), 5000);
             const logger = mockLogger();
@@ -264,7 +267,7 @@ describe('MeasurementSetAnalyzer', () => {
             requests[0].resolve({
                 'clusterStart': 1000,
                 'clusterSize': 1000,
-                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildNumber', 'builder'],
+                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildTag', 'builder'],
                 'configurations': {current: makeSampleRuns(simpleSegmentableValues, 6400, 4000, 1000 / 50)},
                 'startTime': 4000,
                 'endTime': 5000,
@@ -286,14 +289,15 @@ describe('MeasurementSetAnalyzer', () => {
             assert.equal(requests.length, 3);
             assert.equal(requests[2].url, '/privileged-api/create-analysis-task');
             assert.deepEqual(requests[2].data, {
-                slaveName: 'test',
-                slavePassword: 'password',
+                workerName: 'test',
+                workerPassword: 'password',
                 name: 'Potential 2.38% regression on Some platform between WebKit: r35-r44',
                 startRun: 6434,
                 endRun: 6443,
                 repetitionCount: 4,
                 testGroupName: 'Confirm',
                 needsNotification: true,
+                repetitionType: 'alternating',
                 revisionSets: [{'11': {revision: 35, ownerRevision: null, patch: null}},
                     {'11': {revision: 44, ownerRevision: null, patch: null}}]
             });
@@ -351,7 +355,7 @@ describe('MeasurementSetAnalyzer', () => {
             requests[0].resolve({
                 'clusterStart': 1000,
                 'clusterSize': 1000,
-                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildNumber', 'builder'],
+                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildTag', 'builder'],
                 'configurations': {current: makeSampleRuns(simpleSegmentableValues, 6400, 4000, 1000 / 50)},
                 'startTime': 4000,
                 'endTime': 5000,
@@ -373,8 +377,8 @@ describe('MeasurementSetAnalyzer', () => {
             assert.equal(requests.length, 3);
             assert.equal(requests[2].url, '/privileged-api/create-analysis-task');
             assert.deepEqual(requests[2].data, {
-                slaveName: 'test',
-                slavePassword: 'password',
+                workerName: 'test',
+                workerPassword: 'password',
                 name: 'Potential 2.38% regression on Some platform between WebKit: r35-r44',
                 startRun: 6434,
                 endRun: 6443
@@ -432,7 +436,7 @@ describe('MeasurementSetAnalyzer', () => {
             requests[0].resolve({
                 'clusterStart': 1000,
                 'clusterSize': 1000,
-                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildNumber', 'builder'],
+                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildTag', 'builder'],
                 'configurations': {current: makeSampleRuns(simpleSegmentableValues, 6400, 4000, 1000 / 50)},
                 'startTime': 4000,
                 'endTime': 5000,
@@ -482,7 +486,8 @@ describe('MeasurementSetAnalyzer', () => {
 
             Triggerable.ensureSingleton(4, {name: 'some-triggerable',
                 repositoryGroups: [MockModels.osRepositoryGroup, MockModels.svnRepositoryGroup, MockModels.gitRepositoryGroup, MockModels.svnRepositoryWithOwnedRepositoryGroup],
-                configurations: [{test: MockModels.someMetric.test(), platform: MockModels.somePlatform}]});
+                configurations: [{test: MockModels.someMetric.test(), platform: MockModels.somePlatform,
+                    supportedRepetitionTypes: MockModels.someTriggableConfiguration.supportedRepetitionTypes}]});
 
             const measurementSet = MeasurementSet.findSet(MockModels.somePlatform.id(), MockModels.someMetric.id(), 5000);
             const logger = mockLogger();
@@ -496,7 +501,7 @@ describe('MeasurementSetAnalyzer', () => {
             requests[0].resolve({
                 'clusterStart': 1000,
                 'clusterSize': 1000,
-                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildNumber', 'builder'],
+                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildTag', 'builder'],
                 'configurations': {current: makeSampleRuns(dataBeforeSmallProgression.concat(simpleSegmentableValues), 6400, 4000, 1000 / 50)},
                 'startTime': 4000,
                 'endTime': 5000,
@@ -518,14 +523,15 @@ describe('MeasurementSetAnalyzer', () => {
             assert.equal(requests.length, 3);
             assert.equal(requests[2].url, '/privileged-api/create-analysis-task');
             assert.deepEqual(requests[2].data, {
-                slaveName: 'test',
-                slavePassword: 'password',
+                workerName: 'test',
+                workerPassword: 'password',
                 name: 'Potential 2.38% regression on Some platform between WebKit: r40-r49',
                 startRun: 6439,
                 endRun: 6448,
                 repetitionCount: 4,
                 testGroupName: 'Confirm',
                 needsNotification: true,
+                repetitionType: 'alternating',
                 revisionSets: [{'11': {revision: 40, ownerRevision: null, patch: null}},
                     {'11': {revision: 49, ownerRevision: null, patch: null}}]
             });
@@ -574,7 +580,8 @@ describe('MeasurementSetAnalyzer', () => {
 
             Triggerable.ensureSingleton(4, {name: 'some-triggerable',
                 repositoryGroups: [MockModels.osRepositoryGroup, MockModels.svnRepositoryGroup, MockModels.gitRepositoryGroup, MockModels.svnRepositoryWithOwnedRepositoryGroup],
-                configurations: [{test: MockModels.someMetric.test(), platform: MockModels.somePlatform}]});
+                configurations: [{test: MockModels.someMetric.test(), platform: MockModels.somePlatform,
+                    supportedRepetitionTypes: MockModels.someTriggableConfiguration.supportedRepetitionTypes}]});
 
             const measurementSet = MeasurementSet.findSet(MockModels.somePlatform.id(), MockModels.someMetric.id(), 5000);
             const logger = mockLogger();
@@ -588,7 +595,7 @@ describe('MeasurementSetAnalyzer', () => {
             requests[0].resolve({
                 'clusterStart': 1000,
                 'clusterSize': 1000,
-                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildNumber', 'builder'],
+                'formatMap': ['id', 'mean', 'iterationCount', 'sum', 'squareSum', 'markedOutlier', 'revisions', 'commitTime', 'build', 'buildTime', 'buildTag', 'builder'],
                 'configurations': {current: makeSampleRuns(dataBeforeHugeProgression.concat(simpleSegmentableValues), 6400, 4000, 1000 / 50)},
                 'startTime': 4000,
                 'endTime': 5000,
@@ -610,14 +617,15 @@ describe('MeasurementSetAnalyzer', () => {
             assert.equal(requests.length, 3);
             assert.equal(requests[2].url, '/privileged-api/create-analysis-task');
             assert.deepEqual(requests[2].data, {
-                slaveName: 'test',
-                slavePassword: 'password',
+                workerName: 'test',
+                workerPassword: 'password',
                 name: 'Potential 9.15% progression on Some platform between WebKit: r3-r8',
                 startRun: 6402,
                 endRun: 6407,
                 repetitionCount: 4,
                 testGroupName: 'Confirm',
                 needsNotification: true,
+                repetitionType: 'alternating',
                 revisionSets: [{'11': {revision: 3, ownerRevision: null, patch: null}},
                     {'11': {revision: 8, ownerRevision: null, patch: null}}]
             });

@@ -30,7 +30,6 @@
 #include "ApplicationCacheGroup.h"
 #include "ApplicationCacheResource.h"
 #include "ContentSecurityPolicy.h"
-#include "CustomHeaderFields.h"
 #include "DocumentLoader.h"
 #include "DOMApplicationCache.h"
 #include "EventNames.h"
@@ -78,6 +77,13 @@ void ApplicationCacheHost::selectCacheWithManifest(const URL& manifestURL)
 {
     ASSERT(m_documentLoader.frame());
     ApplicationCacheGroup::selectCache(*m_documentLoader.frame(), manifestURL);
+}
+
+bool ApplicationCacheHost::canLoadMainResource(const ResourceRequest& request)
+{
+    if (!isApplicationCacheEnabled() || isApplicationCacheBlockedForRequest(request))
+        return false;
+    return !!ApplicationCacheGroup::cacheForMainRequest(request, &m_documentLoader);
 }
 
 void ApplicationCacheHost::maybeLoadMainResource(const ResourceRequest& request, SubstituteData& substituteData)
@@ -143,7 +149,7 @@ bool ApplicationCacheHost::maybeLoadFallbackForMainError(const ResourceRequest& 
     return false;
 }
 
-void ApplicationCacheHost::mainResourceDataReceived(const char*, int, long long, bool)
+void ApplicationCacheHost::mainResourceDataReceived(const SharedBuffer&, long long, bool)
 {
 }
 
@@ -239,23 +245,18 @@ bool ApplicationCacheHost::maybeLoadFallbackForError(ResourceLoader* resourceLoa
 
 URL ApplicationCacheHost::createFileURL(const String& path)
 {
-    // FIXME: Can we just use fileURLWithFileSystemPath instead?
 #if USE(CF) && PLATFORM(WIN)
-    URL url(adoptCF(CFURLCreateWithFileSystemPath(0, path.createCFString().get(), kCFURLWindowsPathStyle, false)).get());
+    // FIXME: Is this correct? Seems improbable that the passed-in paths would be in the Windows path style.
+    return adoptCF(CFURLCreateWithFileSystemPath(0, path.createCFString().get(), kCFURLWindowsPathStyle, false)).get();
 #else
-    URL url;
-    url.setProtocol("file"_s);
-    url.setPath(path);
+    return URL::fileURLWithFileSystemPath(path);
 #endif
-    return url;
 }
 
 static inline RefPtr<SharedBuffer> bufferFromResource(ApplicationCacheResource& resource)
 {
-    // FIXME: Clients probably do not need a copy of the SharedBuffer.
-    // Remove the call to copy() once we ensure SharedBuffer will not be modified.
     if (resource.path().isEmpty())
-        return resource.data().copy();
+        return resource.data().makeContiguous();
     return SharedBuffer::createWithContentsOfFile(resource.path());
 }
 
@@ -287,9 +288,7 @@ void ApplicationCacheHost::maybeLoadFallbackSynchronously(const ResourceRequest&
         ApplicationCacheResource* resource;
         if (getApplicationCacheFallbackResource(request, resource)) {
             response = resource->response();
-            // FIXME: Clients proably do not need a copy of the SharedBuffer.
-            // Remove the call to copy() once we ensure SharedBuffer will not be modified.
-            data = resource->data().copy();
+            data = resource->data().makeContiguous();
         }
     }
 }
@@ -302,7 +301,7 @@ bool ApplicationCacheHost::canCacheInBackForwardCache()
 void ApplicationCacheHost::setDOMApplicationCache(DOMApplicationCache* domApplicationCache)
 {
     ASSERT(!m_domApplicationCache || !domApplicationCache);
-    m_domApplicationCache = makeWeakPtr(domApplicationCache);
+    m_domApplicationCache = domApplicationCache;
 }
 
 void ApplicationCacheHost::notifyDOMApplicationCache(const AtomString& eventType, int total, int done)
@@ -394,7 +393,7 @@ void ApplicationCacheHost::dispatchDOMEvent(const AtomString& eventType, int tot
 void ApplicationCacheHost::setCandidateApplicationCacheGroup(ApplicationCacheGroup* group)
 {
     ASSERT(!m_applicationCache);
-    m_candidateApplicationCacheGroup = makeWeakPtr(group);
+    m_candidateApplicationCacheGroup = group;
 }
     
 void ApplicationCacheHost::setApplicationCache(RefPtr<ApplicationCache>&& applicationCache)
@@ -425,11 +424,11 @@ bool ApplicationCacheHost::shouldLoadResourceFromApplicationCache(const Resource
 
     // If the resource's URL is an master entry, the manifest, an explicit entry, or a fallback entry
     // in the application cache, then get the resource from the cache (instead of fetching it).
-    resource = cache->resourceForURL(request.url());
+    resource = cache->resourceForURL(request.url().string());
 
-    // Resources that match fallback namespaces or online whitelist entries are fetched from the network,
+    // Resources that match fallback namespaces or online allowlist entries are fetched from the network,
     // unless they are also cached.
-    if (!resource && (cache->allowsAllNetworkRequests() || cache->urlMatchesFallbackNamespace(request.url()) || cache->isURLInOnlineWhitelist(request.url())))
+    if (!resource && (cache->allowsAllNetworkRequests() || cache->urlMatchesFallbackNamespace(request.url()) || cache->isURLInOnlineAllowlist(request.url())))
         return false;
 
     // Resources that are not present in the manifest will always fail to load (at least, after the
@@ -452,12 +451,12 @@ bool ApplicationCacheHost::getApplicationCacheFallbackResource(const ResourceReq
         return false;
 
     URL fallbackURL;
-    if (cache->isURLInOnlineWhitelist(request.url()))
+    if (cache->isURLInOnlineAllowlist(request.url()))
         return false;
     if (!cache->urlMatchesFallbackNamespace(request.url(), &fallbackURL))
         return false;
 
-    resource = cache->resourceForURL(fallbackURL);
+    resource = cache->resourceForURL(fallbackURL.string());
     ASSERT(resource);
     return true;
 }

@@ -1,5 +1,5 @@
 # Copyright (C) 2009 Google Inc. All rights reserved.
-# Copyright (C) 2018, 2019 Apple Inc. All rights reserved.
+# Copyright (C) 2018-2021 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -32,32 +32,10 @@ from webkitpy.tool.commands.commandtest import CommandsTest
 from webkitpy.tool.commands.upload import *
 from webkitpy.tool.mocktool import MockOptions, MockTool
 
+from webkitcorepy import mocks
+
 
 class UploadCommandsTest(CommandsTest):
-    def test_commit_message_for_current_diff(self):
-        tool = MockTool()
-        expected_stdout = "This is a fake commit message that is at least 50 characters.\n"
-        self.assert_execute_outputs(CommitMessageForCurrentDiff(), [], expected_stdout=expected_stdout, tool=tool)
-
-    def test_clean_pending_commit(self):
-        self.assert_execute_outputs(CleanPendingCommit(), [])
-
-    def test_assign_to_committer(self):
-        tool = MockTool()
-        expected_logs = """Warning, attachment 10001 on bug 50000 has invalid committer (non-committer@example.com)
-MOCK reassign_bug: bug_id=50000, assignee=ap@webkit.org
--- Begin comment --
-Attachment 10001 was posted by a committer and has review+, assigning to Alexey Proskuryakov for commit.
--- End comment --
-Bug 50003 is already assigned to foo@foo.com (None).
-Bug 50002 has no non-obsolete patches, ignoring.
-"""
-        self.assert_execute_outputs(AssignToCommitter(), [], expected_logs=expected_logs, tool=tool)
-
-    def test_obsolete_attachments(self):
-        expected_logs = "Obsoleting 2 old patches on bug 50000\n"
-        self.assert_execute_outputs(ObsoleteAttachments(), [50000], expected_logs=expected_logs)
-
     def test_post(self):
         options = MockOptions()
         options.cc = None
@@ -65,6 +43,7 @@ Bug 50002 has no non-obsolete patches, ignoring.
         options.check_style_filter = None
         options.comment = None
         options.description = "MOCK description"
+        options.fast_cq = False
         options.non_interactive = False
         options.request_commit = False
         options.review = True
@@ -78,30 +57,23 @@ MOCK: user.open_url: http://example.com/50000
 """
         self.assert_execute_outputs(Post(), [50000], options=options, expected_logs=expected_logs)
 
-    def test_attach_to_bug(self):
-        options = MockOptions()
-        options.comment = "extra comment"
-        options.description = "file description"
-        expected_logs = """MOCK add_attachment_to_bug: bug_id=50000, description=file description filename=None mimetype=None
--- Begin comment --
-extra comment
--- End comment --
-"""
-        self.assert_execute_outputs(AttachToBug(), [50000, "path/to/file.txt", "file description"], options=options, expected_logs=expected_logs)
-
-    def test_attach_to_bug_no_description_or_comment(self):
-        options = MockOptions()
-        options.comment = None
-        options.description = None
-        expected_logs = "MOCK add_attachment_to_bug: bug_id=50000, description=file.txt filename=None mimetype=None\n"
-        self.assert_execute_outputs(AttachToBug(), [50000, "path/to/file.txt"], options=options, expected_logs=expected_logs)
-
     def test_land_safely(self):
+        options = MockOptions()
+        options.fast_cq = False
         expected_logs = """Obsoleting 2 old patches on bug 50000
 MOCK reassign_bug: bug_id=50000, assignee=None
 MOCK add_patch_to_bug: bug_id=50000, description=Patch for landing, mark_for_review=False, mark_for_commit_queue=False, mark_for_landing=True
 """
-        self.assert_execute_outputs(LandSafely(), [50000], expected_logs=expected_logs)
+        self.assert_execute_outputs(LandSafely(), [50000], options=options, expected_logs=expected_logs)
+
+    def test_land_safely_with_fast_cq(self):
+        options = MockOptions()
+        options.fast_cq = True
+        expected_logs = """Obsoleting 2 old patches on bug 50000
+MOCK reassign_bug: bug_id=50000, assignee=None
+MOCK add_patch_to_bug: bug_id=50000, description=[fast-cq] Patch for landing, mark_for_review=False, mark_for_commit_queue=False, mark_for_landing=True
+"""
+        self.assert_execute_outputs(LandSafely(), [50000], options=options, expected_logs=expected_logs)
 
     def test_prepare_diff_with_arg(self):
         options = MockOptions()
@@ -147,6 +119,7 @@ MOCK add_patch_to_bug: bug_id=50000, description=Patch for landing, mark_for_rev
         options.check_style_filter = None
         options.comment = None
         options.description = "MOCK description"
+        options.fast_cq = False
         options.non_interactive = False
         options.request_commit = False
         options.review = True
@@ -162,6 +135,29 @@ MOCK: user.open_url: http://example.com/50000
 """
         self.assert_execute_outputs(Upload(), [50000], options=options, expected_logs=expected_logs)
 
+    def test_upload_fast_cq(self):
+        options = MockOptions()
+        options.cc = None
+        options.check_style = True
+        options.check_style_filter = None
+        options.comment = None
+        options.description = "MOCK description"
+        options.fast_cq = True
+        options.non_interactive = False
+        options.request_commit = False
+        options.review = True
+        options.submit_to_ews = False
+        options.sort_xcode_project = False
+        options.suggest_reviewers = False
+        expected_logs = """MOCK: user.open_url: file://...
+Was that diff correct?
+Obsoleting 2 old patches on bug 50000
+MOCK reassign_bug: bug_id=50000, assignee=None
+MOCK add_patch_to_bug: bug_id=50000, description=[fast-cq] MOCK description, mark_for_review=True, mark_for_commit_queue=False, mark_for_landing=False
+MOCK: user.open_url: http://example.com/50000
+"""
+        self.assert_execute_outputs(Upload(), [50000], options=options, expected_logs=expected_logs)
+
     def test_upload_with_no_review_and_ews(self):
         options = MockOptions()
         options.cc = None
@@ -169,6 +165,7 @@ MOCK: user.open_url: http://example.com/50000
         options.check_style_filter = None
         options.comment = None
         options.description = 'MOCK description'
+        options.fast_cq = False
         options.non_interactive = False
         options.request_commit = False
         options.review = False
@@ -181,34 +178,9 @@ Obsoleting 2 old patches on bug 50000
 MOCK reassign_bug: bug_id=50000, assignee=None
 MOCK add_patch_to_bug: bug_id=50000, description=MOCK description, mark_for_review=False, mark_for_commit_queue=False, mark_for_landing=False
 MOCK: user.open_url: http://example.com/50000
-MOCK: submit_to_old_ews: 10001
 MOCK: submit_to_ews: 10001
 """
         self.assert_execute_outputs(Upload(), [50000], options=options, expected_logs=expected_logs)
-
-    def test_upload_of_security_sensitive_patch_with_no_review_and_ews(self):
-        options = MockOptions()
-        options.cc = None
-        options.check_style = True
-        options.check_style_filter = None
-        options.comment = None
-        options.description = 'MOCK description'
-        options.non_interactive = False
-        options.request_commit = False
-        options.review = False
-        options.ews = True
-        options.sort_xcode_project = False
-        options.suggest_reviewers = False
-        expected_logs = """MOCK: user.open_url: file://...
-Was that diff correct?
-Obsoleting 1 old patch on bug 50007
-MOCK add_patch_to_bug: bug_id=50007, description=MOCK description, mark_for_review=False, mark_for_commit_queue=False, mark_for_landing=False
-MOCK: user.open_url: http://example.com/50007
-MOCK: upload_attachment: 10008
-MOCK: submit_to_old_ews: 10008
-MOCK: submit_to_ews: 10008
-"""
-        self.assert_execute_outputs(Upload(), [50007], options=options, expected_logs=expected_logs)
 
     def test_mark_bug_fixed(self):
         tool = MockTool()
@@ -225,11 +197,17 @@ MOCK bug comment: bug_id=50000, cc=None, see_also=None
 --- Begin comment ---
 MOCK comment
 
-Committed r9876: <https://trac.webkit.org/changeset/9876>
+Committed r9876 (5@main): <https://commits.webkit.org/5@main>
 --- End comment ---
 
 """
-        self.assert_execute_outputs(MarkBugFixed(), [], expected_logs=expected_logs, tool=tool, options=options)
+        with mocks.Requests('commits.webkit.org', **{
+            'r9876/json': mocks.Response.fromJson(dict(
+                identifier='5@main',
+                revision=9876,
+            )),
+        }):
+            self.assert_execute_outputs(MarkBugFixed(), [], expected_logs=expected_logs, tool=tool, options=options)
 
     def test_edit_changelog(self):
         self.assert_execute_outputs(EditChangeLogs(), [])

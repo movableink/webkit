@@ -25,22 +25,18 @@
 
 #import "config.h"
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestWKWebView.h"
-
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKUserContentControllerPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/WebKit.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <wtf/RetainPtr.h>
-
-static bool wasPrompted = false;
-
-static bool receivedScriptMessage = false;
-static RetainPtr<WKScriptMessage> lastScriptMessage;
 
 @interface SimulateFailedSandboxMessageHandler : NSObject <WKScriptMessageHandler>
 @end
@@ -59,18 +55,11 @@ static RetainPtr<WKScriptMessage> lastScriptMessage;
 
 @implementation SimulateFailedSandboxUIDelegate
 
-- (void)_webView:(WKWebView *)webView requestMediaCaptureAuthorization: (_WKCaptureDevices)devices decisionHandler:(void (^)(BOOL))decisionHandler
+- (void)webView:(WKWebView *)webView requestMediaCapturePermissionForOrigin:(WKSecurityOrigin *)origin initiatedByFrame:(WKFrameInfo *)frame type:(WKMediaCaptureType)type decisionHandler:(void (^)(WKPermissionDecision decision))decisionHandler
 {
     wasPrompted = true;
 
-    BOOL needsMicrophoneAuthorized = devices & _WKCaptureDeviceMicrophone;
-    BOOL needsCameraAuthorized = devices & _WKCaptureDeviceCamera;
-    if (!needsMicrophoneAuthorized && !needsCameraAuthorized) {
-        decisionHandler(NO);
-        return;
-    }
-
-    decisionHandler(YES);
+    decisionHandler(WKPermissionDecisionGrant);
 }
 
 - (void)_webView:(WKWebView *)webView includeSensitiveMediaDeviceDetails:(void (^)(BOOL includeSensitiveDetails))decisionHandler
@@ -84,6 +73,7 @@ public:
     virtual void SetUp()
     {
         m_configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+        m_configuration.get()._mediaCaptureEnabled = YES;
 
         RetainPtr<SimulateFailedSandboxMessageHandler> handler = adoptNS([[SimulateFailedSandboxMessageHandler alloc] init]);
         [[m_configuration userContentController] addScriptMessageHandler:handler.get() name:@"testHandler"];
@@ -91,9 +81,9 @@ public:
         m_webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:m_configuration.get()]);
 
         auto preferences = [m_webView configuration].preferences;
-        preferences._mediaDevicesEnabled = YES;
         preferences._mockCaptureDevicesEnabled = YES;
         preferences._mediaCaptureRequiresSecureConnection = NO;
+        preferences._getUserMediaRequiresFocus = NO;
 
         m_uiDelegate = adoptNS([[SimulateFailedSandboxUIDelegate alloc] init]);
         [m_webView setUIDelegate:m_uiDelegate.get()];

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,55 +28,47 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <dispatch/dispatch.h>
-#include <mach/mach.h>
 #include <wtf/AutodrainedPool.h>
+#include <wtf/SchedulePair.h>
 
 namespace WTF {
 
-void RunLoop::performWork(CFMachPortRef, void*, CFIndex, void* info)
+static RetainPtr<CFRunLoopTimerRef> createTimer(Seconds interval, bool repeat, void(*timerFired)(CFRunLoopTimerRef, void*), void* info)
+{
+    CFRunLoopTimerContext context = { 0, info, 0, 0, 0 };
+    Seconds repeatInterval = repeat ? interval : 0_s;
+    return adoptCF(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + interval.seconds(), repeatInterval.seconds(), 0, 0, timerFired, &context));
+}
+
+void RunLoop::performWork(void* context)
 {
     AutodrainedPool pool;
-    static_cast<RunLoop*>(info)->performWork();
+    static_cast<RunLoop*>(context)->performWork();
 }
 
 RunLoop::RunLoop()
     : m_runLoop(CFRunLoopGetCurrent())
 {
-    CFMachPortContext context = { 0, this, nullptr, nullptr, nullptr };
-    m_port = adoptCF(CFMachPortCreate(kCFAllocatorDefault, performWork, &context, nullptr));
-    m_runLoopSource = adoptCF(CFMachPortCreateRunLoopSource(kCFAllocatorDefault, m_port.get(), 0));
+    CFRunLoopSourceContext context = { 0, this, 0, 0, 0, 0, 0, 0, 0, performWork };
+    m_runLoopSource = adoptCF(CFRunLoopSourceCreate(kCFAllocatorDefault, 0, &context));
     CFRunLoopAddSource(m_runLoop.get(), m_runLoopSource.get(), kCFRunLoopCommonModes);
 }
 
 RunLoop::~RunLoop()
 {
-    CFMachPortInvalidate(m_port.get());
     CFRunLoopSourceInvalidate(m_runLoopSource.get());
-}
-
-void RunLoop::runForDuration(Seconds duration)
-{
-    CFRunLoopRunInMode(kCFRunLoopDefaultMode, duration.seconds(), true);
 }
 
 void RunLoop::wakeUp()
 {
-    mach_msg_header_t header;
-    header.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, 0);
-    header.msgh_size = sizeof(mach_msg_header_t);
-    header.msgh_remote_port = CFMachPortGetPort(m_port.get());
-    header.msgh_local_port = MACH_PORT_NULL;
-    header.msgh_id = 0;
-    mach_msg_return_t result = mach_msg(&header, MACH_SEND_MSG | MACH_SEND_TIMEOUT, header.msgh_size, 0, MACH_PORT_NULL, 0, MACH_PORT_NULL);
-    RELEASE_ASSERT(result == MACH_MSG_SUCCESS || result == MACH_SEND_TIMED_OUT);
-    if (result == MACH_SEND_TIMED_OUT)
-        mach_msg_destroy(&header);
+    CFRunLoopSourceSignal(m_runLoopSource.get());
+    CFRunLoopWakeUp(m_runLoop.get());
 }
 
-RunLoop::CycleResult RunLoop::cycle(const String& mode)
+RunLoop::CycleResult RunLoop::cycle(RunLoopMode mode)
 {
     CFTimeInterval timeInterval = 0.05;
-    CFRunLoopRunInMode(mode.isNull() ? kCFRunLoopDefaultMode : mode.createCFString().get(), timeInterval, true);
+    CFRunLoopRunInMode(mode, timeInterval, true);
     return CycleResult::Continue;
 }
 
@@ -92,15 +84,22 @@ void RunLoop::stop()
     CFRunLoopStop(m_runLoop.get());
 }
 
-// RunLoop::Timer
-
-void RunLoop::TimerBase::timerFired(CFRunLoopTimerRef, void* context)
+void RunLoop::dispatch(const SchedulePairHashSet& schedulePairs, Function<void()>&& function)
 {
-    TimerBase* timer = static_cast<TimerBase*>(context);
+    auto timer = createTimer(0_s, false, [] (CFRunLoopTimerRef timer, void* context) {
+        AutodrainedPool pool;
 
-    AutodrainedPool pool;
-    timer->fired();
+        CFRunLoopTimerInvalidate(timer);
+
+        auto function = adopt(static_cast<Function<void()>::Impl*>(context));
+        function();
+    }, function.leak());
+
+    for (auto& schedulePair : schedulePairs)
+        CFRunLoopAddTimer(schedulePair->runLoop(), timer.get(), schedulePair->mode());
 }
+
+// RunLoop::Timer
 
 RunLoop::TimerBase::TimerBase(RunLoop& runLoop)
     : m_runLoop(runLoop)
@@ -112,14 +111,20 @@ RunLoop::TimerBase::~TimerBase()
     stop();
 }
 
-void RunLoop::TimerBase::start(Seconds nextFireInterval, bool repeat)
+void RunLoop::TimerBase::start(Seconds interval, bool repeat)
 {
     if (m_timer)
         stop();
-    
-    CFRunLoopTimerContext context = { 0, this, 0, 0, 0 };
-    Seconds repeatInterval = repeat ? nextFireInterval : 0_s;
-    m_timer = adoptCF(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + nextFireInterval.seconds(), repeatInterval.seconds(), 0, 0, timerFired, &context));
+
+    m_timer = createTimer(interval, repeat, [] (CFRunLoopTimerRef cfTimer, void* context) {
+        AutodrainedPool pool;
+
+        auto timer = static_cast<TimerBase*>(context);
+        if (!CFRunLoopTimerDoesRepeat(cfTimer))
+            CFRunLoopTimerInvalidate(cfTimer);
+
+        timer->fired();
+    }, this);
     CFRunLoopAddTimer(m_runLoop->m_runLoop.get(), m_timer.get(), kCFRunLoopCommonModes);
 }
 

@@ -110,6 +110,49 @@ TEST_P(DXT1CompressedTextureTest, CompressedTexImage)
     EXPECT_GL_NO_ERROR();
 }
 
+// Verify that DXT1 RGB textures have 1.0 alpha when sampled
+TEST_P(DXT1CompressedTextureTest, DXT1Alpha)
+{
+    ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_EXT_texture_compression_dxt1"));
+
+    // On platforms without native support for DXT1 RGB or texture swizzling (such as D3D or some
+    // Metal configurations), this test is allowed to succeed with transparent black instead of
+    // opaque black.
+    const bool opaque = !IsD3D() && !(IsMetal() && !IsMetalTextureSwizzleAvailable());
+
+    GLTexture texture;
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // Image using pixels with the code for transparent black:
+    //          "BLACK,             if color0 <= color1 and code(x,y) == 3"
+    constexpr uint8_t CompressedImageDXT1[] = {0, 0, 0, 0, 255, 255, 255, 255};
+    glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGB_S3TC_DXT1_EXT, 4, 4, 0,
+                           sizeof(CompressedImageDXT1), CompressedImageDXT1);
+
+    EXPECT_GL_NO_ERROR();
+
+    glUseProgram(mTextureProgram);
+    glUniform1i(mTextureUniformLocation, 0);
+
+    constexpr GLint kDrawSize = 4;
+    // The image is one 4x4 block, make the viewport only 4x4.
+    glViewport(0, 0, kDrawSize, kDrawSize);
+
+    drawQuad(mTextureProgram, "position", 0.5f);
+
+    EXPECT_GL_NO_ERROR();
+
+    for (GLint y = 0; y < kDrawSize; y++)
+    {
+        for (GLint x = 0; x < kDrawSize; x++)
+        {
+            EXPECT_PIXEL_EQ(x, y, 0, 0, 0, opaque ? 255 : 0) << "at (" << x << ", " << y << ")";
+        }
+    }
+}
+
 TEST_P(DXT1CompressedTextureTest, CompressedTexStorage)
 {
     ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_EXT_texture_compression_dxt1"));
@@ -410,17 +453,56 @@ TEST_P(DXT1CompressedTextureTestES3, CopyTexSubImage3DDisallowed)
     ASSERT_GL_ERROR(GL_INVALID_OPERATION);
 }
 
-// Use this to select which configurations (e.g. which renderer, which GLES major version) these
-// tests should be run against.
-ANGLE_INSTANTIATE_TEST(DXT1CompressedTextureTest,
-                       ES2_D3D9(),
-                       ES2_D3D11(),
-                       ES2_OPENGL(),
-                       ES3_OPENGL(),
-                       ES2_OPENGLES(),
-                       ES3_OPENGLES(),
-                       ES2_VULKAN());
+class DXT1CompressedTextureTestWebGL2 : public DXT1CompressedTextureTest
+{
+  protected:
+    DXT1CompressedTextureTestWebGL2()
+    {
+        setWebGLCompatibilityEnabled(true);
+        setRobustResourceInit(true);
+    }
+};
 
-// Use this to select which configurations (e.g. which renderer, which GLES major version) these
-// tests should be run against.
-ANGLE_INSTANTIATE_TEST(DXT1CompressedTextureTestES3, ES3_D3D11(), ES3_OPENGL(), ES3_OPENGLES());
+// Regression test for https://crbug.com/1289428
+TEST_P(DXT1CompressedTextureTestWebGL2, InitializeTextureContents)
+{
+    ANGLE_SKIP_TEST_IF(!EnsureGLExtensionEnabled("GL_EXT_texture_compression_dxt1"));
+
+    glUseProgram(mTextureProgram);
+    glUniform1i(mTextureUniformLocation, 0);
+
+    glClearColor(0, 0, 1, 1);
+
+    const std::array<uint8_t, 8> kGreen = {0xE0, 0x07, 0xE0, 0x07, 0x00, 0x00, 0x00, 0x00};
+
+    GLTexture tex;
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_COMPRESSED_RGB_S3TC_DXT1_EXT, 4, 4);
+    EXPECT_GL_NO_ERROR();
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    drawQuad(mTextureProgram, "position", 0.5f, 1.0f, true);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, GLColor::black);
+
+    glCompressedTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 4, 4, GL_COMPRESSED_RGB_S3TC_DXT1_EXT, 8,
+                              kGreen.data());
+    EXPECT_GL_NO_ERROR();
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    drawQuad(mTextureProgram, "position", 0.5f, 1.0f, true);
+    EXPECT_GL_NO_ERROR();
+    EXPECT_PIXEL_COLOR_EQ(getWindowWidth() / 2, getWindowHeight() / 2, GLColor::green);
+}
+
+ANGLE_INSTANTIATE_TEST_ES2_AND_ES3(DXT1CompressedTextureTest);
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(DXT1CompressedTextureTestES3);
+ANGLE_INSTANTIATE_TEST_ES3(DXT1CompressedTextureTestES3);
+
+ANGLE_INSTANTIATE_TEST_ES3(DXT1CompressedTextureTestWebGL2);

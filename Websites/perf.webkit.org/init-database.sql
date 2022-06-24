@@ -8,10 +8,11 @@ DROP TABLE IF EXISTS committers CASCADE;
 DROP TABLE IF EXISTS commits CASCADE;
 DROP TABLE IF EXISTS build_commits CASCADE;
 DROP TABLE IF EXISTS commit_ownerships CASCADE;
-DROP TABLE IF EXISTS build_slaves CASCADE;
+DROP TABLE IF EXISTS build_workers CASCADE;
 DROP TABLE IF EXISTS builders CASCADE;
 DROP TABLE IF EXISTS repositories CASCADE;
 DROP TABLE IF EXISTS platforms CASCADE;
+DROP TABLE IF EXISTS platform_groups CASCADE;
 DROP TABLE IF EXISTS test_metrics CASCADE;
 DROP TABLE IF EXISTS tests CASCADE;
 DROP TABLE IF EXISTS reports CASCADE;
@@ -23,20 +24,28 @@ DROP TABLE IF EXISTS analysis_strategies CASCADE;
 DROP TYPE IF EXISTS analysis_task_result_type CASCADE;
 DROP TABLE IF EXISTS build_triggerables CASCADE;
 DROP TABLE IF EXISTS triggerable_configurations CASCADE;
+DROP TABLE IF EXISTS triggerable_configuration_repetition_types CASCADE;
 DROP TABLE IF EXISTS triggerable_repository_groups CASCADE;
 DROP TABLE IF EXISTS triggerable_repositories CASCADE;
 DROP TABLE IF EXISTS uploaded_files CASCADE;
 DROP TABLE IF EXISTS bugs CASCADE;
 DROP TABLE IF EXISTS analysis_test_groups CASCADE;
+DROP TYPE IF EXISTS analysis_test_group_repetition_type CASCADE;
 DROP TABLE IF EXISTS commit_sets CASCADE;
 DROP TABLE IF EXISTS commit_set_items CASCADE;
 DROP TABLE IF EXISTS build_requests CASCADE;
 DROP TYPE IF EXISTS build_request_status_type CASCADE;
 
 
+CREATE TABLE platform_groups (
+    platformgroup_id serial PRIMARY KEY,
+    platformgroup_name varchar(64) NOT NULL,
+    CONSTRAINT platform_group_name_must_be_unique UNIQUE (platformgroup_name));
+
 CREATE TABLE platforms (
     platform_id serial PRIMARY KEY,
     platform_name varchar(64) NOT NULL,
+    platform_group integer REFERENCES platform_groups DEFAULT NULL,
     platform_hidden boolean NOT NULL DEFAULT FALSE);
 
 CREATE TABLE repositories (
@@ -67,19 +76,19 @@ CREATE TABLE builders (
     builder_password_hash character(64),
     builder_build_url varchar(1024));
 
-CREATE TABLE build_slaves (
-    slave_id serial PRIMARY KEY,
-    slave_name varchar(64) NOT NULL UNIQUE,
-    slave_password_hash character(64));
+CREATE TABLE build_workers (
+    worker_id serial PRIMARY KEY,
+    worker_name varchar(64) NOT NULL UNIQUE,
+    worker_password_hash character(64));
 
 CREATE TABLE builds (
     build_id serial PRIMARY KEY,
     build_builder integer REFERENCES builders ON DELETE CASCADE,
-    build_slave integer REFERENCES build_slaves ON DELETE CASCADE,
-    build_number integer NOT NULL,
+    build_worker integer REFERENCES build_workers ON DELETE CASCADE,
+    build_tag varchar(64) NOT NULL,
     build_time timestamp NOT NULL,
     build_latest_revision timestamp,
-    CONSTRAINT builder_build_time_tuple_must_be_unique UNIQUE(build_builder, build_number, build_time));
+    CONSTRAINT builder_build_time_tuple_must_be_unique UNIQUE(build_builder, build_tag, build_time));
 CREATE INDEX build_builder_index ON builds(build_builder);
 
 CREATE TABLE committers (
@@ -95,14 +104,16 @@ CREATE TABLE commits (
     commit_id serial PRIMARY KEY,
     commit_repository integer NOT NULL REFERENCES repositories ON DELETE CASCADE,
     commit_revision varchar(64) NOT NULL,
+    commit_revision_identifier varchar(64) DEFAULT NULL,
     commit_previous_commit integer REFERENCES commits ON DELETE CASCADE,
     commit_time timestamp,
-    commit_order integer,
+    commit_order bigint,
     commit_committer integer REFERENCES committers ON DELETE CASCADE,
     commit_message text,
     commit_reported boolean NOT NULL DEFAULT FALSE,
     commit_testability varchar(128) DEFAULT NULL,
-    CONSTRAINT commit_in_repository_must_be_unique UNIQUE(commit_repository, commit_revision));
+    CONSTRAINT commit_in_repository_must_be_unique UNIQUE(commit_repository, commit_revision),
+    CONSTRAINT commit_string_identifier_in_repository_must_be_unique UNIQUE(commit_repository, commit_revision_identifier));
 CREATE INDEX commit_time_index ON commits(commit_time);
 CREATE INDEX commit_order_index ON commits(commit_order);
 
@@ -184,8 +195,8 @@ CREATE TRIGGER update_config_last_modified AFTER INSERT OR UPDATE OR DELETE ON t
 CREATE TABLE reports (
     report_id serial PRIMARY KEY,
     report_builder integer NOT NULL REFERENCES builders ON DELETE RESTRICT,
-    report_slave integer REFERENCES build_slaves ON DELETE RESTRICT,
-    report_build_number integer,
+    report_worker integer REFERENCES build_workers ON DELETE RESTRICT,
+    report_build_tag varchar(64),
     report_build integer REFERENCES builds,
     report_created_at timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
     report_committed_at timestamp,
@@ -255,10 +266,17 @@ CREATE TABLE triggerable_repositories (
     CONSTRAINT repository_must_be_unique_for_repository_group UNIQUE(trigrepo_repository, trigrepo_group));
 
 CREATE TABLE triggerable_configurations (
+    trigconfig_id serial PRIMARY KEY,
     trigconfig_test integer REFERENCES tests NOT NULL,
     trigconfig_platform integer REFERENCES platforms NOT NULL,
     trigconfig_triggerable integer REFERENCES build_triggerables NOT NULL,
     CONSTRAINT triggerable_must_be_unique_for_test_and_platform UNIQUE(trigconfig_test, trigconfig_platform));
+
+CREATE TYPE analysis_test_group_repetition_type as ENUM ('alternating', 'sequential', 'paired-parallel');
+CREATE TABLE triggerable_configuration_repetition_types (
+    configrepetition_config INTEGER NOT NULL REFERENCES triggerable_configurations ON DELETE CASCADE,
+    configrepetition_type analysis_test_group_repetition_type NOT NULL,
+    PRIMARY KEY (configrepetition_config, configrepetition_type));
 
 CREATE TABLE uploaded_files (
     file_id serial PRIMARY KEY,
@@ -283,6 +301,7 @@ CREATE TABLE analysis_test_groups (
     testgroup_needs_notification boolean NOT NULL DEFAULT FALSE,
     testgroup_notification_sent_at timestamp DEFAULT NULL,
     testgroup_initial_repetition_count integer NOT NULL,
+    testgroup_repetition_type analysis_test_group_repetition_type NOT NULL DEFAULT 'alternating',
     testgroup_may_need_more_requests boolean DEFAULT FALSE,
     CONSTRAINT testgroup_name_must_be_unique_for_each_task UNIQUE(testgroup_task, testgroup_name));
 CREATE INDEX testgroup_task_index ON analysis_test_groups(testgroup_task);

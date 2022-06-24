@@ -27,6 +27,7 @@
 #import <WebKitLegacy/WebNSDataExtrasPrivate.h>
 
 #import <wtf/Assertions.h>
+#import <wtf/RetainPtr.h>
 
 @interface NSString (WebNSDataExtrasInternal)
 - (NSString *)_web_capitalizeRFC822HeaderFieldName;
@@ -82,9 +83,9 @@
     }
     if (somethingChanged) {
         if (useUniCharPtr)
-            result = CFBridgingRelease(CFStringCreateWithCharactersNoCopy(kCFAllocatorDefault, uniCharPtr, len, nullptr));
+            result = adoptCF(CFStringCreateWithCharactersNoCopy(kCFAllocatorDefault, uniCharPtr, len, nullptr)).bridgingAutorelease();
         else
-            result = CFBridgingRelease(CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, charPtr, kCFStringEncodingISOLatin1, nullptr));
+            result = adoptCF(CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, charPtr, kCFStringEncodingISOLatin1, nullptr)).bridgingAutorelease();
     } else
         result = self;
 
@@ -285,7 +286,7 @@ static const UInt8 *_findEOL(const UInt8 *bytes, CFIndex len)
 
     const UInt8* bytes = static_cast<const UInt8*>([self bytes]);
     NSUInteger length = [self length];
-    NSString *lastKey = nil;
+    RetainPtr<NSString> lastKey;
     const UInt8 *eol;
 
     // Loop over lines until we're past the header, or we can't find any more end-of-lines
@@ -310,12 +311,11 @@ static const UInt8 *_findEOL(const UInt8 *bytes, CFIndex len)
                 continue;
             }
             // Merge the continuation of the previous header
-            NSString *currentValue = [headerFields objectForKey:lastKey];
-            NSString *newValue = [[NSString alloc] initWithBytes:line length:lineLength encoding:NSISOLatin1StringEncoding];
+            NSString *currentValue = [headerFields objectForKey:lastKey.get()];
+            auto newValue = adoptNS([[NSString alloc] initWithBytes:line length:lineLength encoding:NSISOLatin1StringEncoding]);
             ASSERT(currentValue);
             ASSERT(newValue);
-            [headerFields setObject:[currentValue stringByAppendingString:newValue] forKey:lastKey];
-            [newValue release];
+            [headerFields setObject:[currentValue stringByAppendingString:newValue.get()] forKey:lastKey.get()];
         } else {
             // Brand new header
             const UInt8* colon;
@@ -324,20 +324,16 @@ static const UInt8 *_findEOL(const UInt8 *bytes, CFIndex len)
                 // malformed header; ignore it and continue
                 continue;
             }
-            lastKey = [[NSString alloc] initWithBytes:line length:colon - line encoding:NSISOLatin1StringEncoding];
-            [lastKey autorelease];
+            lastKey = adoptNS([[NSString alloc] initWithBytes:line length:colon - line encoding:NSISOLatin1StringEncoding]);
             lastKey = [lastKey _web_capitalizeRFC822HeaderFieldName];
             for (colon++; colon != eol; colon++) {
                 if (*colon != ' ' && *colon != '\t')
                     break;
             }
-            NSString *value = [[NSString alloc] initWithBytes:colon length:eol - colon encoding:NSISOLatin1StringEncoding];
-            if (NSString *oldValue = [headerFields objectForKey:lastKey]) {
-                [value autorelease];
-                value = [[NSString alloc] initWithFormat:@"%@, %@", oldValue, value];
-            }
-            [headerFields setObject:value forKey:lastKey];
-            [value release];
+            auto value = adoptNS([[NSString alloc] initWithBytes:colon length:eol - colon encoding:NSISOLatin1StringEncoding]);
+            if (NSString *oldValue = [headerFields objectForKey:lastKey.get()])
+                value = adoptNS([[NSString alloc] initWithFormat:@"%@, %@", oldValue, value.get()]);
+            [headerFields setObject:value.get() forKey:lastKey.get()];
         }
     }
 

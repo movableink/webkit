@@ -102,7 +102,16 @@ class BlendMinMaxTest : public ANGLETest
                 {
                     EXPECT_NEAR(
                         getExpected(blendMin, color.values[componentIdx], prevColor[componentIdx]),
-                        pixel[componentIdx], errorRange);
+                        pixel[componentIdx], errorRange)
+                        << " blendMin=" << blendMin << " componentIdx=" << componentIdx << std::endl
+                        << " color.values[0]=" << color.values[0]
+                        << " prevColor[0]=" << prevColor[0] << std::endl
+                        << " color.values[1]=" << color.values[1]
+                        << " prevColor[1]=" << prevColor[1] << std::endl
+                        << " color.values[2]=" << color.values[2]
+                        << " prevColor[2]=" << prevColor[2] << std::endl
+                        << " color.values[3]=" << color.values[3]
+                        << " prevColor[3]=" << prevColor[3];
                 }
             }
 
@@ -171,9 +180,6 @@ TEST_P(BlendMinMaxTest, RGBA32F)
     ANGLE_SKIP_TEST_IF(getClientMajorVersion() < 3 || !IsGLExtensionEnabled("GL_EXT_float_blend") ||
                        !IsGLExtensionEnabled("GL_EXT_color_buffer_float"));
 
-    // Ignore SDK layers messages on D3D11 FL 9.3 (http://anglebug.com/1284)
-    ANGLE_SKIP_TEST_IF(IsD3D11_FL93());
-
     runTest(GL_RGBA32F, GL_FLOAT);
 }
 
@@ -181,18 +187,16 @@ TEST_P(BlendMinMaxTest, RGBA16F)
 {
     ANGLE_SKIP_TEST_IF(getClientMajorVersion() < 3 &&
                        !IsGLExtensionEnabled("GL_EXT_color_buffer_half_float"));
+    // http://anglebug.com/4092
+    ANGLE_SKIP_TEST_IF((IsAndroid() && IsVulkan()) || isSwiftshader());
+
+    // TODO(anglebug.com/5491) Context.cpp disallows GL_EXT_color_buffer_half_float on iOS because
+    // it doesn't support GL_EXT_color_buffer_float.
+    ANGLE_SKIP_TEST_IF(IsIOS() && IsOpenGLES());
 
     runTest(GL_RGBA16F, GL_FLOAT);
 }
 
 // Use this to select which configurations (e.g. which renderer, which GLES major version) these
 // tests should be run against.
-ANGLE_INSTANTIATE_TEST(BlendMinMaxTest,
-                       ES2_D3D9(),
-                       ES2_D3D11(),
-                       ES3_D3D11(),
-                       ES2_OPENGL(),
-                       ES3_OPENGL(),
-                       ES2_OPENGLES(),
-                       ES3_OPENGLES(),
-                       ES2_VULKAN());
+ANGLE_INSTANTIATE_TEST_ES2_AND_ES3(BlendMinMaxTest);

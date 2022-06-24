@@ -11,15 +11,16 @@
 #include "modules/desktop_capture/screen_drawer.h"
 
 #include <stdint.h>
-#include <atomic>
 
-#include "absl/memory/memory.h"
+#include <atomic>
+#include <memory>
+
+#include "api/function_view.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/function_view.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/platform_thread.h"
 #include "rtc_base/random.h"
-#include "rtc_base/timeutils.h"
+#include "rtc_base/time_utils.h"
 #include "system_wrappers/include/sleep.h"
 #include "test/gtest.h"
 
@@ -35,8 +36,6 @@ void TestScreenDrawerLock(
     rtc::FunctionView<std::unique_ptr<ScreenDrawerLock>()> ctor) {
   constexpr int kLockDurationMs = 100;
 
-  RTC_DCHECK(ctor);
-
   std::atomic<bool> created(false);
   std::atomic<bool> ready(false);
 
@@ -49,13 +48,12 @@ void TestScreenDrawerLock(
 
     ~Task() = default;
 
-    static void RunTask(void* me) {
-      Task* task = static_cast<Task*>(me);
-      std::unique_ptr<ScreenDrawerLock> lock = task->ctor_();
+    void RunTask() {
+      std::unique_ptr<ScreenDrawerLock> lock = ctor_();
       ASSERT_TRUE(!!lock);
-      task->created_->store(true);
+      created_->store(true);
       // Wait for the main thread to get the signal of created_.
-      while (!task->ready_.load()) {
+      while (!ready_.load()) {
         SleepMs(1);
       }
       // At this point, main thread should begin to create a second lock. Though
@@ -66,7 +64,7 @@ void TestScreenDrawerLock(
       // SleepMs() may return early. See
       // https://cs.chromium.org/chromium/src/third_party/webrtc/system_wrappers/include/sleep.h?rcl=4a604c80cecce18aff6fc5e16296d04675312d83&l=20
       // But we need to ensure at least 100 ms has been passed before unlocking
-      // |lock|.
+      // `lock`.
       while (rtc::TimeMillis() - current_ms < kLockDurationMs) {
         SleepMs(kLockDurationMs - (rtc::TimeMillis() - current_ms));
       }
@@ -78,8 +76,8 @@ void TestScreenDrawerLock(
     const rtc::FunctionView<std::unique_ptr<ScreenDrawerLock>()> ctor_;
   } task(&created, ready, ctor);
 
-  rtc::PlatformThread lock_thread(&Task::RunTask, &task, "lock_thread");
-  lock_thread.Start();
+  auto lock_thread = rtc::PlatformThread::SpawnJoinable(
+      [&task] { task.RunTask(); }, "lock_thread");
 
   // Wait for the first lock in Task::RunTask() to be created.
   // TODO(zijiehe): Find a better solution to wait for the creation of the first
@@ -96,7 +94,6 @@ void TestScreenDrawerLock(
   ASSERT_GT(kLockDurationMs, rtc::TimeMillis() - start_ms);
   ctor();
   ASSERT_LE(kLockDurationMs, rtc::TimeMillis() - start_ms);
-  lock_thread.Stop();
 }
 
 }  // namespace
@@ -153,7 +150,7 @@ TEST(ScreenDrawerTest, MAYBE_TwoScreenDrawerLocks) {
   ScreenDrawerLockPosix::Unlink(semaphore_name);
 
   TestScreenDrawerLock([semaphore_name]() {
-    return absl::make_unique<ScreenDrawerLockPosix>(semaphore_name);
+    return std::make_unique<ScreenDrawerLockPosix>(semaphore_name);
   });
 #elif defined(WEBRTC_WIN)
   TestScreenDrawerLock([]() { return ScreenDrawerLock::Create(); });

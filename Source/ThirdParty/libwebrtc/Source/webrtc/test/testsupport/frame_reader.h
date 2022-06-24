@@ -15,7 +15,8 @@
 
 #include <string>
 
-#include "rtc_base/scoped_ref_ptr.h"
+#include "absl/types/optional.h"
+#include "api/scoped_refptr.h"
 
 namespace webrtc {
 class I420Buffer;
@@ -47,11 +48,32 @@ class FrameReader {
 
 class YuvFrameReaderImpl : public FrameReader {
  public:
+  enum class RepeatMode { kSingle, kRepeat, kPingPong };
+  class DropperUtil {
+   public:
+    DropperUtil(int source_fps, int target_fps);
+
+    enum class DropDecision { kDropframe, kKeepFrame };
+    DropDecision UpdateLevel();
+
+   private:
+    const double frame_size_buckets_;
+    double bucket_level_;
+  };
+
   // Creates a file handler. The input file is assumed to exist and be readable.
   // Parameters:
   //   input_filename          The file to read from.
   //   width, height           Size of each frame to read.
   YuvFrameReaderImpl(std::string input_filename, int width, int height);
+  YuvFrameReaderImpl(std::string input_filename,
+                     int input_width,
+                     int input_height,
+                     int desired_width,
+                     int desired_height,
+                     RepeatMode repeat_mode,
+                     absl::optional<int> clip_fps,
+                     int target_fps);
   ~YuvFrameReaderImpl() override;
   bool Init() override;
   rtc::scoped_refptr<I420Buffer> ReadFrame() override;
@@ -59,13 +81,36 @@ class YuvFrameReaderImpl : public FrameReader {
   size_t FrameLength() override;
   int NumberOfFrames() override;
 
- private:
+ protected:
   const std::string input_filename_;
+  // It is not const, so subclasses will be able to add frame header size.
   size_t frame_length_in_bytes_;
-  const int width_;
-  const int height_;
+  const int input_width_;
+  const int input_height_;
+  const int desired_width_;
+  const int desired_height_;
+  const size_t frame_size_bytes_;
+  const RepeatMode repeat_mode_;
   int number_of_frames_;
+  int current_frame_index_;
+  std::unique_ptr<DropperUtil> dropper_;
   FILE* input_file_;
+};
+
+class Y4mFrameReaderImpl : public YuvFrameReaderImpl {
+ public:
+  // Creates a file handler. The input file is assumed to exist and be readable.
+  // Parameters:
+  //   input_filename          The file to read from.
+  //   width, height           Size of each frame to read.
+  Y4mFrameReaderImpl(std::string input_filename, int width, int height);
+  ~Y4mFrameReaderImpl() override;
+  bool Init() override;
+  rtc::scoped_refptr<I420Buffer> ReadFrame() override;
+
+ private:
+  // Buffer that is used to read file and frame headers.
+  uint8_t* buffer_;
 };
 
 }  // namespace test

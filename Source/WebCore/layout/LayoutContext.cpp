@@ -30,20 +30,21 @@
 
 #include "BlockFormattingContext.h"
 #include "BlockFormattingState.h"
-#include "BlockInvalidation.h"
-#include "DisplayBox.h"
-#include "DisplayPainter.h"
+#include "FlexFormattingContext.h"
+#include "FlexFormattingState.h"
 #include "InlineFormattingContext.h"
 #include "InlineFormattingState.h"
-#include "InlineInvalidation.h"
-#include "Invalidation.h"
 #include "LayoutBox.h"
-#include "LayoutContainer.h"
+#include "LayoutBoxGeometry.h"
+#include "LayoutContainerBox.h"
 #include "LayoutPhase.h"
 #include "LayoutTreeBuilder.h"
+#include "RenderStyleConstants.h"
 #include "RenderView.h"
+#include "RuntimeEnabledFeatures.h"
 #include "TableFormattingContext.h"
 #include "TableFormattingState.h"
+#include "TableWrapperBlockFormattingContext.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -56,127 +57,77 @@ LayoutContext::LayoutContext(LayoutState& layoutState)
 {
 }
 
-void LayoutContext::layout()
+void LayoutContext::layout(const LayoutSize& rootContentBoxSize)
 {
-    PhaseScope scope(Phase::Type::Layout);
+    // Set the geometry on the root.
+    // Note that we never layout the root box. It has to have an already computed geometry (in case of ICB, it's the view geometry).
+    // ICB establishes the initial BFC, but it does not live in a formatting context and while a non-ICB root(subtree layout) has to have a formatting context,
+    // we could not lay it out even if we wanted to since it's outside of this LayoutContext.
+    auto& boxGeometry = layoutState().geometryForRootBox();
+    boxGeometry.setHorizontalMargin({ });
+    boxGeometry.setVerticalMargin({ });
+    boxGeometry.setBorder({ });
+    boxGeometry.setPadding({ });
+    boxGeometry.setLogicalTopLeft({ });
+    boxGeometry.setContentBoxHeight(rootContentBoxSize.height());
+    boxGeometry.setContentBoxWidth(rootContentBoxSize.width());
 
-    ASSERT(!m_formattingContextRootListForLayout.computesEmpty());
-    for (auto& layoutRoot : m_formattingContextRootListForLayout)
-        layoutFormattingContextSubtree(layoutRoot);
-    m_formattingContextRootListForLayout.clear();
+    auto scope = PhaseScope { Phase::Type::Layout };
+    layoutFormattingContextSubtree(m_layoutState.root());
 }
 
-void LayoutContext::layoutFormattingContextSubtree(const Container& layoutRoot)
+
+void LayoutContext::layoutFormattingContextSubtree(const ContainerBox& formattingContextRoot)
 {
-    RELEASE_ASSERT(layoutRoot.establishesFormattingContext());
-    auto formattingContext = createFormattingContext(layoutRoot, layoutState());
-    formattingContext->layoutInFlowContent();
-    formattingContext->layoutOutOfFlowContent();
+    RELEASE_ASSERT(formattingContextRoot.establishesFormattingContext());
+    if (!formattingContextRoot.hasChild())
+        return;
+
+    auto formattingContext = createFormattingContext(formattingContextRoot, layoutState());
+    auto& boxGeometry = layoutState().geometryForBox(formattingContextRoot);
+
+    if (formattingContextRoot.hasInFlowOrFloatingChild()) {
+        auto constraintsForInFlowContent = ConstraintsForInFlowContent { { boxGeometry.contentBoxLeft(), boxGeometry.contentBoxWidth() }, boxGeometry.contentBoxTop() };
+        formattingContext->layoutInFlowContent(constraintsForInFlowContent);
+    }
+
+    // FIXME: layoutFormattingContextSubtree() does not perform layout on the root, rather it lays out the root's content.
+    // It constructs an FC for descendant boxes and runs layout on them. The formattingContextRoot is laid out in the FC in which it lives (parent formatting context).
+    // It also means that the formattingContextRoot has to have a valid/clean geometry at this point.
+    {
+        auto constraints = ConstraintsForOutOfFlowContent { { boxGeometry.paddingBoxLeft(), boxGeometry.paddingBoxWidth() },
+            { boxGeometry.paddingBoxTop(), boxGeometry.paddingBoxHeight() }, boxGeometry.contentBoxWidth() };
+        formattingContext->layoutOutOfFlowContent(constraints);
+    }
 }
 
-void LayoutContext::styleChanged(const Box& layoutBox, StyleDiff styleDiff)
-{
-    PhaseScope scope(Phase::Type::Invalidation);
-
-    auto& formattingState = layoutState().formattingStateForBox(layoutBox);
-    const Container* invalidationRoot = nullptr;
-    if (is<BlockFormattingState>(formattingState))
-        invalidationRoot = BlockInvalidation::invalidate(layoutBox, styleDiff, *this, downcast<BlockFormattingState>(formattingState)).root;
-    else if (is<InlineFormattingState>(formattingState))
-        invalidationRoot = InlineInvalidation::invalidate(layoutBox, styleDiff, *this, downcast<InlineFormattingState>(formattingState)).root;
-    else
-        ASSERT_NOT_IMPLEMENTED_YET();
-    ASSERT(invalidationRoot);
-    m_formattingContextRootListForLayout.add(invalidationRoot);
-}
-
-void LayoutContext::markNeedsUpdate(const Box& layoutBox, OptionSet<UpdateType>)
-{
-    // FIXME: This should trigger proper invalidation instead of just adding the formatting context root to the dirty list. 
-    m_formattingContextRootListForLayout.add(&(layoutBox.isInitialContainingBlock() ? downcast<Container>(layoutBox) : layoutBox.formattingContextRoot()));
-}
-
-std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const Container& formattingContextRoot, LayoutState& layoutState)
+std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const ContainerBox& formattingContextRoot, LayoutState& layoutState)
 {
     ASSERT(formattingContextRoot.establishesFormattingContext());
     if (formattingContextRoot.establishesInlineFormattingContext()) {
-        auto& inlineFormattingState = downcast<InlineFormattingState>(layoutState.createFormattingStateForFormattingRootIfNeeded(formattingContextRoot));
+        auto& inlineFormattingState = layoutState.ensureInlineFormattingState(formattingContextRoot);
         return makeUnique<InlineFormattingContext>(formattingContextRoot, inlineFormattingState);
     }
 
     if (formattingContextRoot.establishesBlockFormattingContext()) {
-        ASSERT(formattingContextRoot.establishesBlockFormattingContextOnly());
-        auto& blockFormattingState = downcast<BlockFormattingState>(layoutState.createFormattingStateForFormattingRootIfNeeded(formattingContextRoot));
+        ASSERT(!formattingContextRoot.establishesInlineFormattingContext());
+        auto& blockFormattingState = layoutState.ensureBlockFormattingState(formattingContextRoot);
+        if (formattingContextRoot.isTableWrapperBox())
+            return makeUnique<TableWrapperBlockFormattingContext>(formattingContextRoot, blockFormattingState);
         return makeUnique<BlockFormattingContext>(formattingContextRoot, blockFormattingState);
     }
 
+    if (formattingContextRoot.establishesFlexFormattingContext()) {
+        auto& flexFormattingState = layoutState.ensureFlexFormattingState(formattingContextRoot);
+        return makeUnique<FlexFormattingContext>(formattingContextRoot, flexFormattingState);
+    }
+
     if (formattingContextRoot.establishesTableFormattingContext()) {
-        auto& tableFormattingState = downcast<TableFormattingState>(layoutState.createFormattingStateForFormattingRootIfNeeded(formattingContextRoot));
+        auto& tableFormattingState = layoutState.ensureTableFormattingState(formattingContextRoot);
         return makeUnique<TableFormattingContext>(formattingContextRoot, tableFormattingState);
     }
 
     CRASH();
-}
-
-static void initializeLayoutState(LayoutState& layoutState, const RenderView& renderView)
-{
-    auto quirksMode = [&] {
-        auto& document = renderView.document();
-        if (document.inLimitedQuirksMode())
-            return LayoutState::QuirksMode::Limited;
-        if (document.inQuirksMode())
-            return LayoutState::QuirksMode::Yes;
-        return LayoutState::QuirksMode::No;
-    };
-
-    layoutState.setQuirksMode(quirksMode());
-
-    auto& layoutRoot = layoutState.root();
-    layoutState.createFormattingStateForFormattingRootIfNeeded(layoutRoot);
-    // Not efficient, but this is temporary anyway.
-    // Collect the out-of-flow descendants at the formatting root level (as opposed to at the containing block level, though they might be the same).
-    for (auto& descendant : descendantsOfType<Box>(layoutRoot)) {
-        if (!descendant.isOutOfFlowPositioned())
-            continue;
-        auto& formattingState = layoutState.createFormattingStateForFormattingRootIfNeeded(descendant.formattingContextRoot());
-        formattingState.addOutOfFlowBox(descendant);
-    }
-}
-
-void LayoutContext::runLayout(LayoutState& layoutState)
-{
-    auto& layoutRoot = layoutState.root();
-    auto& displayBox = layoutState.displayBoxForLayoutBox(layoutRoot);
-    displayBox.setHorizontalMargin({ });
-    displayBox.setHorizontalComputedMargin({ });
-    displayBox.setVerticalMargin({ });
-    displayBox.setBorder({ });
-    displayBox.setPadding({ });
-    displayBox.setTopLeft({ });
-    displayBox.setContentBoxHeight(LayoutUnit(layoutRoot.style().logicalHeight().value()));
-    displayBox.setContentBoxWidth(LayoutUnit(layoutRoot.style().logicalWidth().value()));
-
-    auto layoutContext = LayoutContext(layoutState);
-    layoutContext.markNeedsUpdate(layoutRoot);
-    layoutContext.layout();
-}
-
-void LayoutContext::runLayoutAndVerify(const RenderView& renderView)
-{
-    auto initialContainingBlock = TreeBuilder::createLayoutTree(renderView);
-    auto layoutState = LayoutState { *initialContainingBlock };
-    initializeLayoutState(layoutState, renderView);
-    runLayout(layoutState);
-    LayoutContext::verifyAndOutputMismatchingLayoutTree(layoutState, renderView);
-}
-
-void LayoutContext::runLayoutAndPaint(const RenderView& renderView, GraphicsContext& context)
-{
-    auto initialContainingBlock = TreeBuilder::createLayoutTree(renderView);
-    auto layoutState = LayoutState { *initialContainingBlock };
-    initializeLayoutState(layoutState, renderView);
-    runLayout(layoutState);
-    Display::Painter::paint(layoutState, context);
 }
 
 }

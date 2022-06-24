@@ -39,7 +39,7 @@ class WebPageProxy;
 class WebProcessPool;
 class GamepadData;
 
-class UIGamepadProvider : public WebCore::GamepadProviderClient {
+class UIGamepadProvider final : public WebCore::GamepadProviderClient {
 public:
     static UIGamepadProvider& singleton();
 
@@ -57,6 +57,8 @@ public:
 
     Vector<GamepadData> snapshotGamepads();
 
+    size_t numberOfConnectedGamepads() const { return m_gamepads.size(); }
+
 private:
     friend NeverDestroyed<UIGamepadProvider>;
     UIGamepadProvider();
@@ -70,10 +72,9 @@ private:
     void platformStopMonitoringInput();
     void platformStartMonitoringInput();
 
-    void setInitialConnectedGamepads(const Vector<WebCore::PlatformGamepad*>&) final;
-    void platformGamepadConnected(WebCore::PlatformGamepad&) final;
+    void platformGamepadConnected(WebCore::PlatformGamepad&, WebCore::EventMakesGamepadsVisible) final;
     void platformGamepadDisconnected(WebCore::PlatformGamepad&) final;
-    void platformGamepadInputActivity(bool shouldMakeGamepadsVisible) final;
+    void platformGamepadInputActivity(WebCore::EventMakesGamepadsVisible) final;
 
     void scheduleGamepadStateSync();
     void gamepadSyncTimerFired();
@@ -85,7 +86,6 @@ private:
     RunLoop::Timer<UIGamepadProvider> m_gamepadSyncTimer;
 
     bool m_isMonitoringGamepads { false };
-    bool m_hasInitialGamepads { false };
     bool m_shouldMakeGamepadsVisibleOnSync { false };
 };
 

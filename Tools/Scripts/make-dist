@@ -120,7 +120,7 @@ class Directory(object):
             def passes_all_rules(entry):
                 return Ruleset.global_rules().passes(entry) and self.rules.passes(entry)
 
-            to_keep = filter(passes_all_rules, dirs)
+            to_keep = list(filter(passes_all_rules, dirs))
             del dirs[:]
             dirs.extend(to_keep)
 
@@ -237,7 +237,7 @@ class Distcheck(object):
         def create_dir(directory, directory_type):
             try:
                 os.mkdir(directory)
-            except OSError, e:
+            except OSError as e:
                 if e.errno != errno.EEXIST or not os.path.isdir(directory):
                     raise Exception("Could not create %s dir at %s: %s" % (directory_type, directory, str(e)))
 
@@ -257,9 +257,9 @@ class Distcheck(object):
         subprocess.check_call(command, cwd=build_dir)
 
     def check_symbols(self, build_dir):
-        check_bss = os.path.join(self.source_root, 'Tools', 'Scripts', 'check-for-global-bss-symbols-in-webkigtk-libs')
-        libjsc = os.path.join(build_dir, 'lib', 'libjavascriptcoregtk-4.0.so')
-        libwk = os.path.join(build_dir, 'lib', 'libwebkit2gtk-4.0.so')
+        check_bss = os.path.join(self.source_root, 'Tools', 'Scripts', 'check-for-global-bss-symbols-in-webkitgtk-libs')
+        libjsc = os.path.join(build_dir, 'lib', 'libjavascriptcoregtk-4.1.so')
+        libwk = os.path.join(build_dir, 'lib', 'libwebkit2gtk-4.1.so')
         subprocess.check_call([check_bss, libjsc, libwk])
 
         check_version_script = os.path.join(self.source_root, 'Tools', 'Scripts', 'check-for-invalid-symbols-in-version-script')
@@ -295,7 +295,7 @@ if __name__ == "__main__":
         if arguments.version is not None:
             return
 
-        pkgconfig_file = os.path.join(arguments.build_dir, "Source/WebKit/webkit2gtk-4.0.pc")
+        pkgconfig_file = os.path.join(arguments.build_dir, "Source/WebKit/webkit2gtk-4.1.pc")
         if os.path.isfile(pkgconfig_file):
             p = subprocess.Popen(['pkg-config', '--modversion', pkgconfig_file], stdout=subprocess.PIPE)
             version = p.communicate()[0]

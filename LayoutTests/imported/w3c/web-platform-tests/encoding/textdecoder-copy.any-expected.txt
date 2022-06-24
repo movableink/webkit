@@ -1,3 +1,4 @@
 
-FAIL Modify buffer after passing it in assert_equals: expected "@" but got "﻿@"
+PASS Modify buffer after passing it in (ArrayBuffer)
+PASS Modify buffer after passing it in (SharedArrayBuffer)
 

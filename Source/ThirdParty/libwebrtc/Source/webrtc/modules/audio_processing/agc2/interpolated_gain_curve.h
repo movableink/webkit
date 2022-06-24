@@ -15,8 +15,7 @@
 #include <string>
 
 #include "modules/audio_processing/agc2/agc2_common.h"
-
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 #include "rtc_base/gtest_prod_util.h"
 #include "system_wrappers/include/metrics.h"
 
@@ -62,7 +61,7 @@ class InterpolatedGainCurve {
   };
 
   InterpolatedGainCurve(ApmDataDumper* apm_data_dumper,
-                        std::string histogram_name_prefix);
+                        const std::string& histogram_name_prefix);
   ~InterpolatedGainCurve();
 
   Stats get_stats() const { return stats_; }
@@ -76,7 +75,7 @@ class InterpolatedGainCurve {
  private:
   // For comparing 'approximation_params_*_' with ones computed by
   // ComputeInterpolatedGainCurve.
-  FRIEND_TEST_ALL_PREFIXES(AutomaticGainController2InterpolatedGainCurve,
+  FRIEND_TEST_ALL_PREFIXES(GainController2InterpolatedGainCurve,
                            CheckApproximationParams);
 
   struct RegionLogger {
@@ -85,10 +84,10 @@ class InterpolatedGainCurve {
     metrics::Histogram* limiter_histogram;
     metrics::Histogram* saturation_histogram;
 
-    RegionLogger(std::string identity_histogram_name,
-                 std::string knee_histogram_name,
-                 std::string limiter_histogram_name,
-                 std::string saturation_histogram_name);
+    RegionLogger(const std::string& identity_histogram_name,
+                 const std::string& knee_histogram_name,
+                 const std::string& limiter_histogram_name,
+                 const std::string& saturation_histogram_name);
 
     ~RegionLogger();
 

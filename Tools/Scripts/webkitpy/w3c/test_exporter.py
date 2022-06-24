@@ -27,9 +27,10 @@
 import argparse
 import logging
 import os
-import time
 import json
-from urllib2 import HTTPError
+import sys
+
+from webkitcorepy import string_utils
 
 from webkitpy.common.checkout.scm.git import Git
 from webkitpy.common.host import Host
@@ -39,6 +40,11 @@ from webkitpy.w3c.wpt_github import WPTGitHub
 from webkitpy.w3c.wpt_linter import WPTLinter
 from webkitpy.w3c.common import WPT_GH_ORG, WPT_GH_REPO_NAME, WPT_GH_URL, WPTPaths
 from webkitpy.common.memoized import memoized
+
+if sys.version_info > (3, 0):
+    from urllib.error import HTTPError
+else:
+    from urllib2 import HTTPError
 
 _log = logging.getLogger(__name__)
 
@@ -141,9 +147,9 @@ class WebPlatformTestExporter(object):
     @property
     @memoized
     def _wpt_patch(self):
-        patch_data = self._host.scm().create_patch(self._options.git_commit, [WEBKIT_WPT_DIR]) or ''
+        patch_data = self._host.scm().create_patch(self._options.git_commit, [WEBKIT_WPT_DIR]) or b''
         patch_data = self._strip_ignored_files_from_diff(patch_data)
-        if not 'diff' in patch_data:
+        if b'diff' not in patch_data:
             return ''
         return patch_data
 
@@ -151,20 +157,21 @@ class WebPlatformTestExporter(object):
         return bool(self._wpt_patch)
 
     def _find_filename(self, line):
-        return line.split(' ')[-1]
+        return line.split(b' ')[-1]
 
     def _is_ignored_file(self, filename):
+        filename = string_utils.decode(filename, target_type=str)
         for suffix in EXCLUDED_FILE_SUFFIXES:
             if filename.endswith(suffix):
                 return True
         return False
 
     def _strip_ignored_files_from_diff(self, diff):
-        lines = diff.split('\n')
+        lines = diff.split(b'\n')
         include_file = True
         new_lines = []
         for line in lines:
-            if line.startswith('diff'):
+            if line.startswith(b'diff'):
                 include_file = True
                 filename = self._find_filename(line)
                 if self._is_ignored_file(filename):
@@ -172,24 +179,24 @@ class WebPlatformTestExporter(object):
             if include_file:
                 new_lines.append(line)
 
-        return '\n'.join(new_lines)
+        return b'\n'.join(new_lines)
 
     def write_git_patch_file(self):
         _, patch_file = self._filesystem.open_binary_tempfile('wpt_export_patch')
         patch_data = self._wpt_patch
-        if not 'diff' in patch_data:
-            _log.info('No changes to upstream, patch data is: "%s"' % (patch_data))
-            return ''
+        if b'diff' not in patch_data:
+            _log.info('No changes to upstream, patch data is: "{}"'.format(string_utils.decode(patch_data, target_type=str)))
+            return b''
         # FIXME: We can probably try to use --relative git parameter to not do that replacement.
-        patch_data = patch_data.replace(WEBKIT_WPT_DIR + '/', '')
+        patch_data = patch_data.replace(string_utils.encode(WEBKIT_WPT_DIR) + b'/', b'')
 
         # FIXME: Support stripping of <!-- webkit-test-runner --> comments.
-        self.has_webkit_test_runner_specific_changes = 'webkit-test-runner' in patch_data
+        self.has_webkit_test_runner_specific_changes = b'webkit-test-runner' in patch_data
         if self.has_webkit_test_runner_specific_changes:
             _log.warning("Patch contains webkit-test-runner specific changes, please remove them before creating a PR")
-            return ''
+            return b''
 
-        self._filesystem.write_text_file(patch_file, patch_data)
+        self._filesystem.write_binary_file(patch_file, patch_data)
         return patch_file
 
     def _prompt_for_token(self, options):
@@ -228,10 +235,11 @@ class WebPlatformTestExporter(object):
             self._validate_and_save_token(self._username, self._token)
 
     def _validate_and_save_token(self, username, token):
-        url = 'https://api.github.com/user?access_token=%s' % (token,)
+        url = 'https://api.github.com/user'
+        headers = {'Accept': 'application/vnd.github.v3+json', 'Authorization': 'token {}'.format(token)}
         try:
-            response = self._host.web.request(method='GET', url=url, data=None)
-        except HTTPError as e:
+            response = self._host.web.request(method='GET', url=url, data=None, headers=headers)
+        except HTTPError:
             raise Exception("OAuth token is not valid")
         data = json.load(response)
         login = data.get('login', None)
@@ -246,7 +254,6 @@ class WebPlatformTestExporter(object):
                 self._git.set_local_config('github.username', username)
 
     def _ensure_wpt_repository(self, url, wpt_repository_directory, gitClass):
-        git = None
         if not self._filesystem.exists(wpt_repository_directory):
             _log.info('Cloning %s into %s...' % (url, wpt_repository_directory))
             gitClass.clone(url, wpt_repository_directory, self._host.executive)
@@ -376,12 +383,13 @@ class WebPlatformTestExporter(object):
         if git_patch_file:
             self._filesystem.remove(git_patch_file)
 
-        lint_errors = self._linter.lint()
-        if lint_errors:
-            _log.error("The wpt linter detected %s linting error(s). Please address the above errors before attempting to export changes to the web-platform-test repository." % (lint_errors,))
-            self.delete_local_branch()
-            self.clean()
-            return
+        if self._options.use_linter:
+            lint_errors = self._linter.lint()
+            if lint_errors:
+                _log.error("The wpt linter detected %s linting error(s). Please address the above errors before attempting to export changes to the web-platform-test repository." % (lint_errors,))
+                self.delete_local_branch()
+                self.clean()
+                return
 
         try:
             if self.push_to_wpt_fork():
@@ -425,6 +433,7 @@ def parse_args(args):
     parser.add_argument('-d', '--repository', dest='repository_directory', default=None, help='repository directory')
     parser.add_argument('-c', '--create-pr', dest='create_pull_request', action='store_true', default=False, help='create pull request to w3c web-platform-tests')
     parser.add_argument('--non-interactive', action='store_true', dest='non_interactive', default=False, help='Never prompt the user, fail as fast as possible.')
+    parser.add_argument('--no-linter', action='store_false', dest='use_linter', default=True, help='Disable linter.')
 
     options, args = parser.parse_known_args(args)
 

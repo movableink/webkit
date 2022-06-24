@@ -26,12 +26,14 @@
 #import <Foundation/Foundation.h>
 #import <WebKit/WKFoundation.h>
 
-WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
+WK_CLASS_AVAILABLE(macos(10.15), ios(13.0))
 @interface _WKContentRuleListAction : NSObject
 
 @property (nonatomic, readonly) BOOL blockedLoad;
 @property (nonatomic, readonly) BOOL blockedCookies;
 @property (nonatomic, readonly) BOOL madeHTTPS;
+@property (nonatomic, readonly) BOOL redirected WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
+@property (nonatomic, readonly) BOOL modifiedHeaders WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA));
 @property (nonatomic, readonly, copy) NSArray<NSString *> *notifications;
 
 @end

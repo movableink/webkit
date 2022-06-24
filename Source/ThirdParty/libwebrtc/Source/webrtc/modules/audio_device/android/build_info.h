@@ -12,6 +12,7 @@
 #define MODULES_AUDIO_DEVICE_ANDROID_BUILD_INFO_H_
 
 #include <jni.h>
+
 #include <memory>
 #include <string>
 
@@ -63,13 +64,13 @@ class BuildInfo {
   SdkCode GetSdkVersion();
 
  private:
-  // Helper method which calls a static getter method with |name| and returns
+  // Helper method which calls a static getter method with `name` and returns
   // a string from Java.
   std::string GetStringFromJava(const char* name);
 
   // Ensures that this class can access a valid JNI interface pointer even
   // if the creating thread was not attached to the JVM.
-  AttachCurrentThreadIfNeeded attach_thread_if_needed_;
+  JvmThreadConnector attach_thread_if_needed_;
 
   // Provides access to the JNIEnv interface pointer and the JavaToStdString()
   // method which is used to translate Java strings to std strings.

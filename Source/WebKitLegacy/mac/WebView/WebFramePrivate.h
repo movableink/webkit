@@ -26,20 +26,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// This header contains the WebFrame SPI.
-
 #import <WebKitLegacy/WebFrame.h>
 #import <JavaScriptCore/JSBase.h>
 
-#if !TARGET_OS_IPHONE
-#if !defined(ENABLE_NETSCAPE_PLUGIN_API)
-#define ENABLE_NETSCAPE_PLUGIN_API 1
-#endif
-#endif
-
 #if TARGET_OS_IPHONE
-#include <CoreText/CoreText.h>
-#include <WebKitLegacy/WAKAppKitStubs.h>
+#import <CoreText/CoreText.h>
+#import <WebKitLegacy/WAKAppKitStubs.h>
 #endif
 
 @class DOMDocumentFragment;
@@ -97,7 +89,6 @@ typedef enum {
 - (BOOL)needsLayout; // Needed for Mail <rdar://problem/6228038>
 - (void)_setLoadsSynchronously:(BOOL)flag;
 - (BOOL)_loadsSynchronously;
-- (unsigned)formElementsCharacterCount;
 - (void)setTimeoutsPaused:(BOOL)flag;
 
 /*!
@@ -142,7 +133,7 @@ typedef enum {
 - (void)setSelectionChangeCallbacksDisabled:(BOOL)flag;
 - (NSRect)caretRect;
 - (NSRect)rectForScrollToVisible; // return caretRect if selection is caret, selectionRect otherwise
-- (void)setCaretColor:(CGColorRef)color;
+@property (nonatomic, readwrite) CGColorRef caretColor;
 - (NSView *)documentView;
 - (int)layoutCount;
 - (BOOL)isTelephoneNumberParsingAllowed;
@@ -150,6 +141,7 @@ typedef enum {
 
 - (DOMRange *)selectedDOMRange;
 - (void)setSelectedDOMRange:(DOMRange *)range affinity:(NSSelectionAffinity)affinity closeTyping:(BOOL)closeTyping;
+- (void)setSelectedDOMRange:(DOMRange *)range affinity:(NSSelectionAffinity)affinity closeTyping:(BOOL)closeTyping userTriggered:(BOOL)userTriggered;
 - (NSSelectionAffinity)selectionAffinity;
 - (void)expandSelectionToElementContainingCaretSelection;
 - (DOMRange *)elementRangeContainingCaretSelection;
@@ -212,13 +204,6 @@ typedef enum {
 - (BOOL)_isDisplayingStandaloneImage;
 
 - (unsigned)_pendingFrameUnloadEventCount;
-
-#if !TARGET_OS_IPHONE
-#if ENABLE_NETSCAPE_PLUGIN_API
-- (void)_recursive_resumeNullEventsForAllNetscapePlugins;
-- (void)_recursive_pauseNullEventsForAllNetscapePlugins;
-#endif
-#endif
 
 - (NSString *)_stringByEvaluatingJavaScriptFromString:(NSString *)string withGlobalObject:(JSObjectRef)globalObject inScriptWorld:(WebScriptWorld *)world;
 - (JSGlobalContextRef)_globalContextForScriptWorld:(WebScriptWorld *)world;

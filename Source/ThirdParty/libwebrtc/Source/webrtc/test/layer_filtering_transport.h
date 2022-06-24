@@ -10,13 +10,18 @@
 #ifndef TEST_LAYER_FILTERING_TRANSPORT_H_
 #define TEST_LAYER_FILTERING_TRANSPORT_H_
 
-#include <map>
+#include <stddef.h>
+#include <stdint.h>
 
-#include "api/test/simulated_network.h"
+#include <map>
+#include <memory>
+
+#include "api/call/transport.h"
+#include "api/media_types.h"
 #include "call/call.h"
 #include "call/simulated_packet_receiver.h"
+#include "modules/rtp_rtcp/source/video_rtp_depacketizer.h"
 #include "test/direct_transport.h"
-#include "test/single_threaded_task_queue.h"
 
 namespace webrtc {
 
@@ -25,7 +30,7 @@ namespace test {
 class LayerFilteringTransport : public test::DirectTransport {
  public:
   LayerFilteringTransport(
-      SingleThreadedTaskQueueForTesting* task_queue,
+      TaskQueueBase* task_queue,
       std::unique_ptr<SimulatedPacketReceiverInterface> pipe,
       Call* send_call,
       uint8_t vp8_video_payload_type,
@@ -36,7 +41,7 @@ class LayerFilteringTransport : public test::DirectTransport {
       uint32_t ssrc_to_filter_min,
       uint32_t ssrc_to_filter_max);
   LayerFilteringTransport(
-      SingleThreadedTaskQueueForTesting* task_queue,
+      TaskQueueBase* task_queue,
       std::unique_ptr<SimulatedPacketReceiverInterface> pipe,
       Call* send_call,
       uint8_t vp8_video_payload_type,
@@ -53,6 +58,8 @@ class LayerFilteringTransport : public test::DirectTransport {
   // Used to distinguish between VP8 and VP9.
   const uint8_t vp8_video_payload_type_;
   const uint8_t vp9_video_payload_type_;
+  const std::unique_ptr<VideoRtpDepacketizer> vp8_depacketizer_;
+  const std::unique_ptr<VideoRtpDepacketizer> vp9_depacketizer_;
   // Discard or invalidate all temporal/spatial layers with id greater than the
   // selected one. -1 to disable filtering.
   const int selected_tl_;

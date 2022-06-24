@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- webkit-test-runner [ experimental:CSSPaintingAPIEnabled=true ] -->
+<!DOCTYPE html><!-- webkit-test-runner [ CSSPaintingAPIEnabled=true ] -->
 <meta name="author" title="Justin Michaud" href="mailto:justin_michaud@webkit.org">
 <meta name="assert" content="registerPaint accesses arguments in the correct order">
 <link rel="help" content="https://drafts.css-houdini.org/css-paint-api-1/">
@@ -25,6 +25,13 @@ test(function() {
     paint() { }
   });
 }, 'test that registerPaint runs');
+
+test(function() {
+  globalThis.registerPaint('basic1-globalThis', class {
+    static get inputProperties() { return ["--test"]; }
+    paint() { }
+  });
+}, 'test that registerPaint runs (called on globalThis)');
 
 test(function() {
   registerPaint('basic2', class {

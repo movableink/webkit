@@ -32,6 +32,10 @@
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 
+namespace WebCore {
+enum class EventMakesGamepadsVisible : bool;
+}
+
 namespace WebKit {
 
 class SharedMemory;
@@ -39,13 +43,13 @@ class WebGamepad;
 
 class GamepadData;
 
-class WebGamepadProvider : public WebCore::GamepadProvider {
+class WebGamepadProvider final : public WebCore::GamepadProvider {
 public:
     static WebGamepadProvider& singleton();
 
-    void gamepadConnected(const GamepadData&);
+    void gamepadConnected(const GamepadData&, WebCore::EventMakesGamepadsVisible);
     void gamepadDisconnected(unsigned index);
-    void gamepadActivity(const Vector<GamepadData>&, bool shouldMakeGamepadsVisible);
+    void gamepadActivity(const Vector<GamepadData>&, WebCore::EventMakesGamepadsVisible);
 
     void setInitialGamepads(const Vector<GamepadData>&);
 

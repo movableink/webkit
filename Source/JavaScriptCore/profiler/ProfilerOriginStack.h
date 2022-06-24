@@ -65,7 +65,7 @@ public:
     bool isHashTableDeletedValue() const;
     
     void dump(PrintStream&) const;
-    JSValue toJS(ExecState*) const;
+    JSValue toJS(JSGlobalObject*) const;
     
 private:
     Vector<Origin, 1> m_stack;
@@ -87,9 +87,7 @@ struct OriginStackHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::Profiler::OriginStack> {
-    typedef JSC::Profiler::OriginStackHash Hash;
-};
+template<> struct DefaultHash<JSC::Profiler::OriginStack> : JSC::Profiler::OriginStackHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::Profiler::OriginStack> : SimpleClassHashTraits<JSC::Profiler::OriginStack> { };

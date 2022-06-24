@@ -12,10 +12,12 @@
 #define MODULES_AUDIO_CODING_TEST_RTPFILE_H_
 
 #include <stdio.h>
+
 #include <queue>
 
-#include "modules/audio_coding/include/audio_coding_module.h"
-#include "rtc_base/synchronization/rw_lock_wrapper.h"
+#include "api/rtp_headers.h"
+#include "rtc_base/synchronization/mutex.h"
+#include "rtc_base/thread_annotations.h"
 
 namespace webrtc {
 
@@ -32,7 +34,7 @@ class RTPStream {
 
   // Returns the packet's payload size. Zero should be treated as an
   // end-of-stream (in the case that EndOfFile() is true) or an error.
-  virtual size_t Read(WebRtcRTPHeader* rtpInfo,
+  virtual size_t Read(RTPHeader* rtp_Header,
                       uint8_t* payloadData,
                       size_t payloadSize,
                       uint32_t* offset) = 0;
@@ -45,7 +47,7 @@ class RTPStream {
                      uint32_t timeStamp,
                      uint32_t ssrc);
 
-  void ParseRTPHeader(WebRtcRTPHeader* rtpInfo, const uint8_t* rtpHeader);
+  void ParseRTPHeader(RTPHeader* rtp_header, const uint8_t* rtpHeader);
 };
 
 class RTPPacket {
@@ -69,9 +71,9 @@ class RTPPacket {
 
 class RTPBuffer : public RTPStream {
  public:
-  RTPBuffer();
+  RTPBuffer() = default;
 
-  ~RTPBuffer();
+  ~RTPBuffer() = default;
 
   void Write(const uint8_t payloadType,
              const uint32_t timeStamp,
@@ -80,7 +82,7 @@ class RTPBuffer : public RTPStream {
              const size_t payloadSize,
              uint32_t frequency) override;
 
-  size_t Read(WebRtcRTPHeader* rtpInfo,
+  size_t Read(RTPHeader* rtp_header,
               uint8_t* payloadData,
               size_t payloadSize,
               uint32_t* offset) override;
@@ -88,8 +90,8 @@ class RTPBuffer : public RTPStream {
   bool EndOfFile() const override;
 
  private:
-  RWLockWrapper* _queueRWLock;
-  std::queue<RTPPacket*> _rtpQueue;
+  mutable Mutex mutex_;
+  std::queue<RTPPacket*> _rtpQueue RTC_GUARDED_BY(&mutex_);
 };
 
 class RTPFile : public RTPStream {
@@ -113,7 +115,7 @@ class RTPFile : public RTPStream {
              const size_t payloadSize,
              uint32_t frequency) override;
 
-  size_t Read(WebRtcRTPHeader* rtpInfo,
+  size_t Read(RTPHeader* rtp_header,
               uint8_t* payloadData,
               size_t payloadSize,
               uint32_t* offset) override;

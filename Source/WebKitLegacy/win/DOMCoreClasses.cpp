@@ -30,6 +30,7 @@
 #include "DOMEventsClasses.h"
 #include "DOMHTMLClasses.h"
 #include "WebKitGraphics.h"
+#include <WebCore/AddEventListenerOptions.h>
 #include <WebCore/Attr.h>
 #include <WebCore/BString.h>
 #include <WebCore/COMPtr.h>
@@ -54,6 +55,7 @@
 #include <WebCore/RenderElement.h>
 #include <WebCore/RenderTreeAsText.h>
 #include <WebCore/ScrollIntoViewOptions.h>
+#include <WebCore/SimpleRange.h>
 #include <WebCore/StyledElement.h>
 #include <initguid.h>
 #include <wtf/text/win/WCharStringExtras.h>
@@ -968,10 +970,12 @@ HRESULT DOMWindow::dispatchEvent(_In_opt_ IDOMEvent* evt, _Out_ BOOL* result)
 DOMWindow::DOMWindow(WebCore::DOMWindow* w)
     : m_window(w)
 {
+    m_window->ref();
 }
 
 DOMWindow::~DOMWindow()
 {
+    m_window->deref();
 }
 
 IDOMWindow* DOMWindow::createInstance(WebCore::DOMWindow* w)
@@ -1595,10 +1599,12 @@ HRESULT DOMRange::QueryInterface(_In_ REFIID riid, _COM_Outptr_ void** ppvObject
 DOMRange::DOMRange(WebCore::Range* e)
     : m_range(e)
 {
+    m_range->ref();
 }
 
 DOMRange::~DOMRange()
 {
+    m_range->deref();
 }
 
 IDOMRange* DOMRange::createInstance(WebCore::Range* range)
@@ -1613,6 +1619,11 @@ IDOMRange* DOMRange::createInstance(WebCore::Range* range)
         return nullptr;
 
     return newRange;
+}
+
+IDOMRange* DOMRange::createInstance(const std::optional<WebCore::SimpleRange>& range)
+{
+    return createInstance(createLiveRange(range).get());
 }
 
 HRESULT DOMRange::startContainer(_COM_Outptr_opt_ IDOMNode** node)
@@ -1816,10 +1827,12 @@ HRESULT DOMRange::detach()
 DOMNamedNodeMap::DOMNamedNodeMap(WebCore::NamedNodeMap* nodeMap)
     : m_nodeMap(nodeMap)
 {
+    m_nodeMap->ref();
 }
 
 DOMNamedNodeMap::~DOMNamedNodeMap()
 {
+    m_nodeMap->deref();
 }
 
 IDOMNamedNodeMap* DOMNamedNodeMap::createInstance(WebCore::NamedNodeMap* nodeMap)

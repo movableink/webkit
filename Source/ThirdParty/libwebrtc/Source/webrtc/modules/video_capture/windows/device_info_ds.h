@@ -11,10 +11,10 @@
 #ifndef MODULES_VIDEO_CAPTURE_MAIN_SOURCE_WINDOWS_DEVICE_INFO_DS_H_
 #define MODULES_VIDEO_CAPTURE_MAIN_SOURCE_WINDOWS_DEVICE_INFO_DS_H_
 
+#include <dshow.h>
+
 #include "modules/video_capture/device_info_impl.h"
 #include "modules/video_capture/video_capture_impl.h"
-
-#include <dshow.h>
 
 namespace webrtc {
 namespace videocapturemodule {
@@ -85,7 +85,8 @@ class DeviceInfoDS : public DeviceInfoImpl {
                         char* productUniqueIdUTF8,
                         uint32_t productUniqueIdUTF8Length);
 
-  int32_t CreateCapabilityMap(const char* deviceUniqueIdUTF8) override;
+  int32_t CreateCapabilityMap(const char* deviceUniqueIdUTF8) override
+      RTC_EXCLUSIVE_LOCKS_REQUIRED(_apiLock);
 
  private:
   ICreateDevEnum* _dsDevEnum;

@@ -54,4 +54,4 @@ void IOChannel::write(size_t offset, const Data& data, WorkQueue* queue, Functio
 
 } // namespace NetworkCache
 } // namespace WebKit
-    
+

@@ -12,6 +12,7 @@ function debugOutput(str) {
 
 function runTests() {
     if (window.testRunner) {
+        testRunner.waitUntilDone();
         testRunner.dumpAsText();
         testRunner.dumpTitleChanges();
     }
@@ -24,13 +25,8 @@ function runTests() {
     titleElem.text = newTitle;
 
     debugOutput('New title is: \'' + titleElem.text + '\'');
-}
 
-function test() {
-    t = document.getElementsByTagName('title').item(0);
-    alert(t.text);
-    t.text = 'new title';
-    alert(t.text);
+    internals.queueTask("DOMManipulation", () => testRunner.notifyDone());
 }
 </script>
 </head>

@@ -21,6 +21,8 @@
 
 #include "LoadTrackingTest.h"
 #include "WebKitTestServer.h"
+#include <WebCore/SoupVersioning.h>
+#include <libsoup/soup.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <wtf/HashMap.h>
@@ -76,84 +78,6 @@ static void testWebContextEphemeral(Test* test, gconstpointer)
     g_assert_true(webkit_web_context_is_ephemeral(context.get()));
 }
 
-#if ENABLE(NETSCAPE_PLUGIN_API)
-class PluginsTest: public Test {
-public:
-    MAKE_GLIB_TEST_FIXTURE(PluginsTest);
-
-    PluginsTest()
-        : m_mainLoop(g_main_loop_new(nullptr, TRUE))
-        , m_plugins(nullptr)
-    {
-        webkit_web_context_set_additional_plugins_directory(m_webContext.get(), WEBKIT_TEST_PLUGIN_DIR);
-    }
-
-    ~PluginsTest()
-    {
-        g_main_loop_unref(m_mainLoop);
-        g_list_free_full(m_plugins, g_object_unref);
-    }
-
-    static void getPluginsAsyncReadyCallback(GObject*, GAsyncResult* result, PluginsTest* test)
-    {
-        test->m_plugins = webkit_web_context_get_plugins_finish(test->m_webContext.get(), result, nullptr);
-        g_main_loop_quit(test->m_mainLoop);
-    }
-
-    GList* getPlugins()
-    {
-        g_list_free_full(m_plugins, g_object_unref);
-        webkit_web_context_get_plugins(m_webContext.get(), nullptr, reinterpret_cast<GAsyncReadyCallback>(getPluginsAsyncReadyCallback), this);
-        g_main_loop_run(m_mainLoop);
-        return m_plugins;
-    }
-
-    GMainLoop* m_mainLoop;
-    GList* m_plugins;
-};
-
-static void testWebContextGetPlugins(PluginsTest* test, gconstpointer)
-{
-    GList* plugins = test->getPlugins();
-    g_assert_nonnull(plugins);
-
-    GRefPtr<WebKitPlugin> testPlugin;
-    for (GList* item = plugins; item; item = g_list_next(item)) {
-        WebKitPlugin* plugin = WEBKIT_PLUGIN(item->data);
-        test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(plugin));
-        if (!g_strcmp0(webkit_plugin_get_name(plugin), "WebKit Test PlugIn")) {
-            testPlugin = plugin;
-            break;
-        }
-    }
-    g_assert_true(WEBKIT_IS_PLUGIN(testPlugin.get()));
-
-    char normalizedPath[PATH_MAX];
-    g_assert_nonnull(realpath(WEBKIT_TEST_PLUGIN_DIR, normalizedPath));
-    GUniquePtr<char> pluginPath(g_build_filename(normalizedPath, "libTestNetscapePlugIn.so", nullptr));
-    g_assert_cmpstr(webkit_plugin_get_path(testPlugin.get()), ==, pluginPath.get());
-    g_assert_cmpstr(webkit_plugin_get_description(testPlugin.get()), ==, "Simple Netscape® plug-in that handles test content for WebKit");
-    GList* mimeInfoList = webkit_plugin_get_mime_info_list(testPlugin.get());
-    g_assert_nonnull(mimeInfoList);
-    g_assert_cmpuint(g_list_length(mimeInfoList), ==, 2);
-
-    WebKitMimeInfo* mimeInfo = static_cast<WebKitMimeInfo*>(mimeInfoList->data);
-    g_assert_cmpstr(webkit_mime_info_get_mime_type(mimeInfo), ==, "image/png");
-    g_assert_cmpstr(webkit_mime_info_get_description(mimeInfo), ==, "png image");
-    const gchar* const* extensions = webkit_mime_info_get_extensions(mimeInfo);
-    g_assert_nonnull(extensions);
-    g_assert_cmpstr(extensions[0], ==, "png");
-
-    mimeInfoList = g_list_next(mimeInfoList);
-    mimeInfo = static_cast<WebKitMimeInfo*>(mimeInfoList->data);
-    g_assert_cmpstr(webkit_mime_info_get_mime_type(mimeInfo), ==, "application/x-webkit-test-netscape");
-    g_assert_cmpstr(webkit_mime_info_get_description(mimeInfo), ==, "test netscape content");
-    extensions = webkit_mime_info_get_extensions(mimeInfo);
-    g_assert_nonnull(extensions);
-    g_assert_cmpstr(extensions[0], ==, "testnetscape");
-}
-#endif // ENABLE(NETSCAPE_PLUGIN_API)
-
 static const char* kBarHTML = "<html><body>Bar</body></html>";
 static const char* kEchoHTMLFormat = "<html><body>%s</body></html>";
 static const char* errorDomain = "test";
@@ -172,16 +96,18 @@ public:
         {
         }
 
-        URISchemeHandler(const char* reply, int replyLength, const char* mimeType)
+        URISchemeHandler(const char* reply, int replyLength, const char* mimeType, int statusCode = 200)
             : reply(reply)
             , replyLength(replyLength)
             , mimeType(mimeType)
+            , statusCode(statusCode)
         {
         }
 
         CString reply;
         int replyLength;
         CString mimeType;
+        int statusCode;
     };
 
     static void uriSchemeRequestCallback(WebKitURISchemeRequest* request, gpointer userData)
@@ -190,11 +116,25 @@ public:
         test->m_uriSchemeRequest = request;
         test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(request));
 
-        g_assert_true(webkit_uri_scheme_request_get_web_view(request) == test->m_webView);
+        if (test->m_uriSchemeRequestCallbackUsesTestWebView)
+            g_assert_true(webkit_uri_scheme_request_get_web_view(request) == test->m_webView);
 
         const char* scheme = webkit_uri_scheme_request_get_scheme(request);
         g_assert_nonnull(scheme);
         g_assert_true(test->m_handlersMap.contains(String::fromUTF8(scheme)));
+
+        const char* method = webkit_uri_scheme_request_get_http_method(request);
+        g_assert_nonnull(method);
+        if (!g_strcmp0(scheme, "post"))
+            g_assert_cmpstr(method, ==, "POST");
+        else
+            g_assert_cmpstr(method, ==, "GET");
+
+        if (!g_strcmp0(scheme, "headers")) {
+            auto* headers = webkit_uri_scheme_request_get_http_headers(request);
+            g_assert_cmpstr(soup_message_headers_get_one(headers, "x-test"), ==, "A");
+            g_assert_cmpstr(soup_message_headers_get_list(headers, "x-test2"), ==, "1, 2, 3, 4");
+        }
 
         const URISchemeHandler& handler = test->m_handlersMap.get(String::fromUTF8(scheme));
 
@@ -230,17 +170,27 @@ public:
         else if (!handler.reply.isNull())
             g_memory_input_stream_add_data(G_MEMORY_INPUT_STREAM(inputStream.get()), handler.reply.data(), handler.reply.length(), 0);
 
-        webkit_uri_scheme_request_finish(request, inputStream.get(), handler.replyLength, handler.mimeType.data());
+        auto response = adoptGRef(webkit_uri_scheme_response_new(inputStream.get(), handler.replyLength));
+        webkit_uri_scheme_response_set_status(response.get(), handler.statusCode, nullptr);
+        webkit_uri_scheme_response_set_content_type(response.get(), handler.mimeType.data());
+        if (!g_strcmp0(scheme, "headersresp")) {
+            auto* headers = soup_message_headers_new(SOUP_MESSAGE_HEADERS_RESPONSE);
+            soup_message_headers_append(headers, "x-test", "test_value");
+            webkit_uri_scheme_response_set_http_headers(response.get(), headers);
+        }
+        webkit_uri_scheme_request_finish_with_response(request, response.get());
     }
 
-    void registerURISchemeHandler(const char* scheme, const char* reply, int replyLength, const char* mimeType)
+    void registerURISchemeHandler(const char* scheme, const char* reply, int replyLength, const char* mimeType, int statusCode = 200)
     {
-        m_handlersMap.set(String::fromUTF8(scheme), URISchemeHandler(reply, replyLength, mimeType));
+        m_handlersMap.set(String::fromUTF8(scheme), URISchemeHandler(reply, replyLength, mimeType, statusCode));
         webkit_web_context_register_uri_scheme(m_webContext.get(), scheme, uriSchemeRequestCallback, this, 0);
     }
 
     GRefPtr<WebKitURISchemeRequest> m_uriSchemeRequest;
     HashMap<String, URISchemeHandler> m_handlersMap;
+    bool m_uriSchemeRequestCallbackUsesTestWebView { true };
+    int m_loadCounter { 0 };
 };
 
 String generateHTMLContent(unsigned contentLength)
@@ -268,6 +218,21 @@ String generateHTMLContent(unsigned contentLength)
     builder.append("</body></html>");
 
     return builder.toString();
+}
+
+static GRefPtr<WebKitWebView> createTestWebViewWithWebContext(WebKitWebContext* context)
+{
+    WebKitWebView* view = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+#if PLATFORM(WPE)
+        "backend", Test::createWebViewBackend(),
+#endif
+        "web-context", context,
+        nullptr));
+
+#if PLATFORM(GTK)
+    g_object_ref_sink(view);
+#endif
+    return adoptGRef(view);
 }
 
 static void testWebContextURIScheme(URISchemeTest* test, gconstpointer)
@@ -355,6 +320,85 @@ static void testWebContextURIScheme(URISchemeTest* test, gconstpointer)
     g_assert_true(test->m_loadEvents.contains(LoadTrackingTest::ProvisionalLoadFailed));
     g_assert_true(test->m_loadFailed);
     g_assert_error(test->m_error.get(), G_IO_ERROR, G_IO_ERROR_CLOSED);
+
+    test->registerURISchemeHandler("notfound", kBarHTML, strlen(kBarHTML), "text/html", 404);
+    test->m_loadEvents.clear();
+    test->loadURI("notfound:blank");
+    test->waitUntilLoadFinished();
+    g_assert_false(test->m_loadEvents.contains(LoadTrackingTest::ProvisionalLoadFailed));
+
+    test->registerURISchemeHandler("nocontent", nullptr, 0, "application/json", 204);
+    test->m_loadEvents.clear();
+    test->loadURI("nocontent:blank");
+    test->waitUntilLoadFinished();
+    g_assert_false(test->m_loadEvents.contains(LoadTrackingTest::ProvisionalLoadFailed));
+    g_assert_false(test->m_loadEvents.contains(LoadTrackingTest::LoadFailed));
+
+    static const char* formHTML = "<html><body><form id=\"test-form\" method=\"POST\" action=\"post:data\"></form></body></html>";
+    test->registerURISchemeHandler("post", nullptr, 0, "application/json", 204);
+    test->m_loadEvents.clear();
+    test->loadHtml(formHTML, "post:form");
+    test->waitUntilLoadFinished();
+    GUniqueOutPtr<GError> postError;
+    test->runJavaScriptAndWaitUntilFinished("document.getElementById('test-form').submit()", &postError.outPtr());
+    g_assert_no_error(postError.get());
+    test->waitUntilLoadFinished();
+    g_assert_false(test->m_loadEvents.contains(LoadTrackingTest::ProvisionalLoadFailed));
+    g_assert_false(test->m_loadEvents.contains(LoadTrackingTest::LoadFailed));
+
+    static const char* headersHTML = "<html><body><script>let hdrs = new Headers({'X-Test': 'A', 'X-Test2': '1, 2, 3'});hdrs.append('X-Test2', '4');fetch('headers:data', {headers: hdrs})</script></body></html>";
+    test->registerURISchemeHandler("headers", nullptr, 0, "application/json", 204);
+    test->m_loadEvents.clear();
+    test->loadHtml(headersHTML, "headers:form");
+    test->waitUntilLoadFinished();
+    g_assert_false(test->m_loadEvents.contains(LoadTrackingTest::ProvisionalLoadFailed));
+    g_assert_false(test->m_loadEvents.contains(LoadTrackingTest::LoadFailed));
+
+    static const char* respHTML = "<html><head><script>fetch('headersresp:data').then((d)=>{if(d.headers.get('X-Test') !== 'test_value') window.hasError=1}).catch((e)=> window.hasError=1)</script></head></html>";
+    test->registerURISchemeHandler("headersresp", nullptr, 0, "application/json", 204);
+    test->m_loadEvents.clear();
+    test->loadHtml(respHTML, "headersresp:form");
+    test->waitUntilLoadFinished();
+    GUniqueOutPtr<GError> respError;
+    test->runJavaScriptAndWaitUntilFinished("if(window.hasError) throw 'Headers are missing or invalid'", &respError.outPtr());
+    g_assert_no_error(respError.get());
+    g_assert_false(test->m_loadEvents.contains(LoadTrackingTest::ProvisionalLoadFailed));
+    g_assert_false(test->m_loadEvents.contains(LoadTrackingTest::LoadFailed));
+
+    // Torture test time: make sure it still works if we issue a bunch of different requests all at
+    // once. Each request should finish and return exactly the same data.
+    int numIterations = 25;
+    GRefPtr<WebKitWebView> views[numIterations];
+    test->m_uriSchemeRequestCallbackUsesTestWebView = false;
+    for (int i = 0; i < numIterations; i++) {
+        views[i] = createTestWebViewWithWebContext(test->m_webContext.get());
+        test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(views[i].get()));
+        webkit_web_view_load_uri(views[i].get(), "foo:blank");
+        g_signal_connect(views[i].get(), "load-changed", G_CALLBACK(+[] (WebKitWebView* webView, WebKitLoadEvent loadEvent, gpointer userData) {
+            auto* test = static_cast<URISchemeTest*>(userData);
+            if (loadEvent != WEBKIT_LOAD_FINISHED)
+                return;
+            test->m_loadCounter--;
+            if (!test->m_loadCounter)
+                g_main_loop_quit(test->m_mainLoop);
+        }), test);
+    }
+    test->m_loadCounter = numIterations;
+    g_main_loop_run(test->m_mainLoop);
+
+    for (int i = 0; i < numIterations; i++) {
+        WebKitWebResource* resource = webkit_web_view_get_main_resource(views[i].get());
+        g_assert_nonnull(resource);
+        webkit_web_resource_get_data(resource, nullptr, +[] (GObject* object, GAsyncResult* result, gpointer userData) {
+            auto* test = static_cast<URISchemeTest*>(userData);
+            gsize dataSize;
+            unsigned char* data = webkit_web_resource_get_data_finish(WEBKIT_WEB_RESOURCE(object), result, &dataSize, nullptr);
+            g_assert_cmpint(strncmp(reinterpret_cast<char*>(data), kBarHTML, dataSize), ==, 0);
+            g_main_loop_quit(test->m_mainLoop);
+        }, test);
+        g_main_loop_run(test->m_mainLoop);
+    }
+    test->m_uriSchemeRequestCallbackUsesTestWebView = true;
 }
 
 #if PLATFORM(GTK)
@@ -456,38 +500,50 @@ static void testWebContextLanguages(WebViewTest* test, gconstpointer)
     locale.reset(WebViewTest::javascriptResultToCString(javascriptResult));
     g_assert_cmpstr(locale.get(), ==, expectedDefaultLanguage);
 
-    // An invalid locale should throw an exception.
+    // An invalid locale should not be used.
     const char* invalidLanguage[] = { "A", nullptr };
     webkit_web_context_set_preferred_languages(test->m_webContext.get(), invalidLanguage);
     javascriptResult = test->runJavaScriptAndWaitUntilFinished("Intl.DateTimeFormat().resolvedOptions().locale", &error.outPtr());
     g_assert_nonnull(javascriptResult);
-    g_assert_error(error.get(), WEBKIT_JAVASCRIPT_ERROR, WEBKIT_JAVASCRIPT_ERROR_SCRIPT_FAILED);
+    g_assert_no_error(error.get());
+    locale.reset(WebViewTest::javascriptResultToCString(javascriptResult));
+    g_assert_cmpstr(locale.get(), !=, "A");
 }
 
-static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
+#if USE(SOUP2)
+static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext* context, gpointer)
+#else
+static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
+#endif
 {
-    if (message->method != SOUP_METHOD_GET) {
-        soup_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED);
+    if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+        soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
         return;
     }
 
+    auto* responseBody = soup_server_message_get_response_body(message);
+
     if (g_str_equal(path, "/")) {
-        const char* acceptLanguage = soup_message_headers_get_one(message->request_headers, "Accept-Language");
-        soup_message_set_status(message, SOUP_STATUS_OK);
-        soup_message_body_append(message->response_body, SOUP_MEMORY_COPY, acceptLanguage, strlen(acceptLanguage));
-        soup_message_body_complete(message->response_body);
+        const char* acceptLanguage = soup_message_headers_get_one(soup_server_message_get_request_headers(message), "Accept-Language");
+        soup_server_message_set_status(message, SOUP_STATUS_OK, nullptr);
+        soup_message_body_append(responseBody, SOUP_MEMORY_COPY, acceptLanguage, strlen(acceptLanguage));
+        soup_message_body_complete(responseBody);
     } else if (g_str_equal(path, "/empty")) {
         const char* emptyHTML = "<html><body></body></html>";
-        soup_message_body_append(message->response_body, SOUP_MEMORY_STATIC, emptyHTML, strlen(emptyHTML));
-        soup_message_body_complete(message->response_body);
-        soup_message_set_status(message, SOUP_STATUS_OK);
+        soup_message_body_append(responseBody, SOUP_MEMORY_STATIC, emptyHTML, strlen(emptyHTML));
+        soup_message_body_complete(responseBody);
+        soup_server_message_set_status(message, SOUP_STATUS_OK, nullptr);
     } else if (g_str_equal(path, "/echoPort")) {
-        char* port = g_strdup_printf("%u", soup_server_get_port(server));
-        soup_message_body_append(message->response_body, SOUP_MEMORY_TAKE, port, strlen(port));
-        soup_message_body_complete(message->response_body);
-        soup_message_set_status(message, SOUP_STATUS_OK);
+#if USE(SOUP2)
+        char* port = g_strdup_printf("%u", g_inet_socket_address_get_port(G_INET_SOCKET_ADDRESS(soup_client_context_get_local_address(context))));
+#else
+        char* port = g_strdup_printf("%u", g_inet_socket_address_get_port(G_INET_SOCKET_ADDRESS(soup_server_message_get_local_address(message))));
+#endif
+        soup_message_body_append(responseBody, SOUP_MEMORY_TAKE, port, strlen(port));
+        soup_message_body_complete(responseBody);
+        soup_server_message_set_status(message, SOUP_STATUS_OK, nullptr);
     } else
-        soup_message_set_status(message, SOUP_STATUS_NOT_FOUND);
+        soup_server_message_set_status(message, SOUP_STATUS_NOT_FOUND, nullptr);
 }
 
 class SecurityPolicyTest: public Test {
@@ -657,7 +713,11 @@ public:
         Proxy
     };
 
+#if USE(SOUP2)
     static void webSocketProxyServerCallback(SoupServer*, SoupWebsocketConnection*, const char* path, SoupClientContext*, gpointer userData)
+#else
+    static void webSocketProxyServerCallback(SoupServer*, SoupServerMessage*, const char* path, SoupWebsocketConnection*, gpointer userData)
+#endif
     {
         static_cast<ProxyTest*>(userData)->webSocketConnected(ProxyTest::WebSocketServerType::Proxy);
     }
@@ -671,10 +731,10 @@ public:
         // actually a proxy server. We're testing whether the proxy settings
         // work, not whether we can write a soup proxy server.
         m_proxyServer.run(serverCallback);
-        g_assert_nonnull(m_proxyServer.baseURI());
+        g_assert_false(m_proxyServer.baseURL().isNull());
 #if SOUP_CHECK_VERSION(2, 61, 90)
         m_proxyServer.addWebSocketHandler(webSocketProxyServerCallback, this);
-        g_assert_nonnull(m_proxyServer.baseWebSocketURI());
+        g_assert_false(m_proxyServer.baseWebSocketURL().isNull());
 #endif
     }
 
@@ -689,7 +749,7 @@ public:
 
     GUniquePtr<char> proxyServerPortAsString()
     {
-        GUniquePtr<char> port(g_strdup_printf("%u", soup_uri_get_port(m_proxyServer.baseURI())));
+        GUniquePtr<char> port(g_strdup_printf("%u", m_proxyServer.port()));
         return port;
     }
 
@@ -718,7 +778,11 @@ public:
 };
 
 #if SOUP_CHECK_VERSION(2, 61, 90)
+#if USE(SOUP2)
 static void webSocketServerCallback(SoupServer*, SoupWebsocketConnection*, const char*, SoupClientContext*, gpointer userData)
+#else
+static void webSocketServerCallback(SoupServer*, SoupServerMessage*, const char*, SoupWebsocketConnection*, gpointer userData)
+#endif
 {
     static_cast<ProxyTest*>(userData)->webSocketConnected(ProxyTest::WebSocketServerType::NoProxy);
 }
@@ -735,7 +799,7 @@ static void ephemeralViewloadChanged(WebKitWebView* webView, WebKitLoadEvent loa
 static void testWebContextProxySettings(ProxyTest* test, gconstpointer)
 {
     // Proxy URI is unset by default. Requests to kServer should be received by kServer.
-    GUniquePtr<char> serverPortAsString(g_strdup_printf("%u", soup_uri_get_port(kServer->baseURI())));
+    GUniquePtr<char> serverPortAsString(g_strdup_printf("%u", kServer->port()));
     auto mainResourceData = test->loadURIAndGetMainResourceData(kServer->getURIForPath("/echoPort").data());
     ASSERT_CMP_CSTRING(mainResourceData, ==, serverPortAsString.get());
 
@@ -747,9 +811,9 @@ static void testWebContextProxySettings(ProxyTest* test, gconstpointer)
 #endif
 
     // Set default proxy URI to point to proxyServer. Requests to kServer should be received by proxyServer instead.
-    GUniquePtr<char> proxyURI(soup_uri_to_string(test->m_proxyServer.baseURI(), FALSE));
-    WebKitNetworkProxySettings* settings = webkit_network_proxy_settings_new(proxyURI.get(), nullptr);
-    webkit_web_context_set_network_proxy_settings(test->m_webContext.get(), WEBKIT_NETWORK_PROXY_MODE_CUSTOM, settings);
+    WebKitNetworkProxySettings* settings = webkit_network_proxy_settings_new(test->m_proxyServer.baseURL().string().utf8().data(), nullptr);
+    auto* dataManager = webkit_web_context_get_website_data_manager(test->m_webContext.get());
+    webkit_website_data_manager_set_network_proxy_settings(dataManager, WEBKIT_NETWORK_PROXY_MODE_CUSTOM, settings);
     GUniquePtr<char> proxyServerPortAsString = test->proxyServerPortAsString();
     mainResourceData = test->loadURIAndGetMainResourceData(kServer->getURIForPath("/echoPort").data());
     ASSERT_CMP_CSTRING(mainResourceData, ==, proxyServerPortAsString.get());
@@ -789,14 +853,14 @@ static void testWebContextProxySettings(ProxyTest* test, gconstpointer)
     g_main_loop_run(test->m_mainLoop);
 
     // Remove the proxy. Requests to kServer should be received by kServer again.
-    webkit_web_context_set_network_proxy_settings(test->m_webContext.get(), WEBKIT_NETWORK_PROXY_MODE_NO_PROXY, nullptr);
+    webkit_website_data_manager_set_network_proxy_settings(dataManager, WEBKIT_NETWORK_PROXY_MODE_NO_PROXY, nullptr);
     mainResourceData = test->loadURIAndGetMainResourceData(kServer->getURIForPath("/echoPort").data());
     ASSERT_CMP_CSTRING(mainResourceData, ==, serverPortAsString.get());
 
     // Use a default proxy uri, but ignoring requests to localhost.
     static const char* ignoreHosts[] = { "localhost", nullptr };
-    settings = webkit_network_proxy_settings_new(proxyURI.get(), ignoreHosts);
-    webkit_web_context_set_network_proxy_settings(test->m_webContext.get(), WEBKIT_NETWORK_PROXY_MODE_CUSTOM, settings);
+    settings = webkit_network_proxy_settings_new(test->m_proxyServer.baseURL().string().utf8().data(), ignoreHosts);
+    webkit_website_data_manager_set_network_proxy_settings(dataManager, WEBKIT_NETWORK_PROXY_MODE_CUSTOM, settings);
     mainResourceData = test->loadURIAndGetMainResourceData(kServer->getURIForPath("/echoPort").data());
     ASSERT_CMP_CSTRING(mainResourceData, ==, proxyServerPortAsString.get());
     GUniquePtr<char> localhostEchoPortURI(g_strdup_printf("http://localhost:%s/echoPort", serverPortAsString.get()));
@@ -805,26 +869,126 @@ static void testWebContextProxySettings(ProxyTest* test, gconstpointer)
     webkit_network_proxy_settings_free(settings);
 
     // Remove the proxy again to ensure next test is not using any previous values.
-    webkit_web_context_set_network_proxy_settings(test->m_webContext.get(), WEBKIT_NETWORK_PROXY_MODE_NO_PROXY, nullptr);
+    webkit_website_data_manager_set_network_proxy_settings(dataManager, WEBKIT_NETWORK_PROXY_MODE_NO_PROXY, nullptr);
     mainResourceData = test->loadURIAndGetMainResourceData(kServer->getURIForPath("/echoPort").data());
     ASSERT_CMP_CSTRING(mainResourceData, ==, serverPortAsString.get());
 
     // Use scheme specific proxy instead of the default.
     settings = webkit_network_proxy_settings_new(nullptr, nullptr);
-    webkit_network_proxy_settings_add_proxy_for_scheme(settings, "http", proxyURI.get());
-    webkit_web_context_set_network_proxy_settings(test->m_webContext.get(), WEBKIT_NETWORK_PROXY_MODE_CUSTOM, settings);
+    webkit_network_proxy_settings_add_proxy_for_scheme(settings, "http", test->m_proxyServer.baseURL().string().utf8().data());
+    webkit_website_data_manager_set_network_proxy_settings(dataManager, WEBKIT_NETWORK_PROXY_MODE_CUSTOM, settings);
     mainResourceData = test->loadURIAndGetMainResourceData(kServer->getURIForPath("/echoPort").data());
     ASSERT_CMP_CSTRING(mainResourceData, ==, proxyServerPortAsString.get());
     webkit_network_proxy_settings_free(settings);
 
     // Reset to use the default resolver.
-    webkit_web_context_set_network_proxy_settings(test->m_webContext.get(), WEBKIT_NETWORK_PROXY_MODE_DEFAULT, nullptr);
+    webkit_website_data_manager_set_network_proxy_settings(dataManager, WEBKIT_NETWORK_PROXY_MODE_DEFAULT, nullptr);
     mainResourceData = test->loadURIAndGetMainResourceData(kServer->getURIForPath("/echoPort").data());
     ASSERT_CMP_CSTRING(mainResourceData, ==, serverPortAsString.get());
 
 #if SOUP_CHECK_VERSION(2, 61, 90)
     kServer->removeWebSocketHandler();
 #endif
+}
+
+class MemoryPressureTest : public WebViewTest {
+public:
+    MAKE_GLIB_TEST_FIXTURE_WITH_SETUP_TEARDOWN(MemoryPressureTest, setup, teardown);
+
+    static void setup()
+    {
+        Test::s_memoryPressureSettings = webkit_memory_pressure_settings_new();
+        webkit_memory_pressure_settings_set_memory_limit(Test::s_memoryPressureSettings, 20);
+        webkit_memory_pressure_settings_set_poll_interval(Test::s_memoryPressureSettings, 0.5);
+        webkit_memory_pressure_settings_set_kill_threshold(Test::s_memoryPressureSettings, 1);
+        webkit_memory_pressure_settings_set_strict_threshold(Test::s_memoryPressureSettings, 0.75);
+        webkit_memory_pressure_settings_set_conservative_threshold(Test::s_memoryPressureSettings, 0.5);
+    }
+
+    static void teardown()
+    {
+        webkit_memory_pressure_settings_free(Test::s_memoryPressureSettings);
+        Test::s_memoryPressureSettings = nullptr;
+    }
+
+    static void webProcessTerminatedCallback(WebKitWebView* webView, WebKitWebProcessTerminationReason reason, MemoryPressureTest* test)
+    {
+        test->m_terminationReason = reason;
+        g_signal_handlers_disconnect_by_func(webView, reinterpret_cast<void*>(webProcessTerminatedCallback), test);
+        g_main_loop_quit(test->m_mainLoop);
+    }
+
+    void waitUntilWebProcessTerminated()
+    {
+        g_signal_connect_after(m_webView, "web-process-terminated", G_CALLBACK(MemoryPressureTest::webProcessTerminatedCallback), this);
+        g_main_loop_run(m_mainLoop);
+    }
+
+    WebKitWebProcessTerminationReason m_terminationReason { WEBKIT_WEB_PROCESS_CRASHED };
+};
+
+static void testMemoryPressureSettings(MemoryPressureTest* test, gconstpointer)
+{
+    // Before testing the settings that have been set to the context, use a new instance
+    // of WebKitMemoryPressureSettings to test the default values, getters and setters.
+    WebKitMemoryPressureSettings* settings = webkit_memory_pressure_settings_new();
+
+    // We can't exactly know the default value for the memory limit, as it depends on
+    // the hardware of the machine, so just ensure that it's something > 0 and <= 3GB.
+    guint limit = webkit_memory_pressure_settings_get_memory_limit(settings);
+    g_assert_cmpuint(limit, >, 0);
+    g_assert_cmpuint(limit * MB, <=, 3 * GB);
+    g_assert_cmpfloat(webkit_memory_pressure_settings_get_conservative_threshold(settings), ==, 0.33);
+    g_assert_cmpfloat(webkit_memory_pressure_settings_get_strict_threshold(settings), ==, 0.5);
+    g_assert_cmpfloat(webkit_memory_pressure_settings_get_kill_threshold(settings), ==, 0);
+    g_assert_cmpfloat(webkit_memory_pressure_settings_get_poll_interval(settings), ==, 30);
+
+    // Test setting and getting values.
+    webkit_memory_pressure_settings_set_memory_limit(settings, 20);
+    g_assert_cmpuint(webkit_memory_pressure_settings_get_memory_limit(settings), ==, 20);
+
+    webkit_memory_pressure_settings_set_conservative_threshold(settings, 0.4);
+    g_assert_cmpfloat(webkit_memory_pressure_settings_get_conservative_threshold(settings), ==, 0.4);
+
+    webkit_memory_pressure_settings_set_strict_threshold(settings, 0.6);
+    g_assert_cmpfloat(webkit_memory_pressure_settings_get_strict_threshold(settings), ==, 0.6);
+
+    webkit_memory_pressure_settings_set_kill_threshold(settings, 1.1);
+    g_assert_cmpfloat(webkit_memory_pressure_settings_get_kill_threshold(settings), ==, 1.1);
+
+    webkit_memory_pressure_settings_set_poll_interval(settings, 5);
+    g_assert_cmpfloat(webkit_memory_pressure_settings_get_poll_interval(settings), ==, 5);
+
+    webkit_memory_pressure_settings_free(settings);
+
+    // An empty view uses around 7MB of memory. We're setting a maximum of 20MB here, polling every 0.5 seconds,
+    // and the kill fraction is 1, so the web process will be killed when it exceeds 20MB.
+    // The test html will allocate a canvas of 3000x3000, which requires around 36MB of memory, so once it gets
+    // created, the MemoryPressureHandler will detect that the memory usage is too high and kill the web process.
+    // This triggers the web-process-terminated signal in the view with WEBKIT_WEB_PROCESS_EXCEEDED_MEMORY_LIMIT
+    // as the termination reason.
+
+    static const char* html =
+        "<html>"
+        "  <body>"
+        "    <script>"
+        "      setTimeout(function() {"
+        "        var canvas = document.getElementById('canvas');"
+        "        canvas.width = 3000;"
+        "        canvas.height = 3000;"
+        "        var context = canvas.getContext('2d');"
+        "        context.fillStyle = 'green';"
+        "        context.fillRect(0, 0, 3000, 3000);"
+        "      }, 0);"
+        "    </script>"
+        "    <canvas id='canvas'></canvas>"
+        "  </body>"
+        "</html>";
+
+    test->m_expectedWebProcessCrash = true;
+    test->loadHtml(html, nullptr);
+    test->waitUntilWebProcessTerminated();
+    g_assert_cmpuint(test->m_terminationReason, ==, WEBKIT_WEB_PROCESS_EXCEEDED_MEMORY_LIMIT);
 }
 
 void beforeAll()
@@ -834,9 +998,6 @@ void beforeAll()
 
     Test::add("WebKitWebContext", "default-context", testWebContextDefault);
     Test::add("WebKitWebContext", "ephemeral", testWebContextEphemeral);
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    PluginsTest::add("WebKitWebContext", "get-plugins", testWebContextGetPlugins);
-#endif
     URISchemeTest::add("WebKitWebContext", "uri-scheme", testWebContextURIScheme);
     // FIXME: implement spellchecker in WPE.
 #if PLATFORM(GTK)
@@ -846,6 +1007,7 @@ void beforeAll()
     SecurityPolicyTest::add("WebKitSecurityManager", "security-policy", testWebContextSecurityPolicy);
     WebViewTest::add("WebKitSecurityManager", "file-xhr", testWebContextSecurityFileXHR);
     ProxyTest::add("WebKitWebContext", "proxy", testWebContextProxySettings);
+    MemoryPressureTest::add("WebKitWebContext", "memory-pressure", testMemoryPressureSettings);
 }
 
 void afterAll()

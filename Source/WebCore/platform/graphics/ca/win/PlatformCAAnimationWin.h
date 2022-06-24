@@ -113,11 +113,14 @@ public:
     void setTimingFunctions(const Vector<const TimingFunction*>&, bool reverse = false) override;
     void copyTimingFunctionsFrom(const PlatformCAAnimation&) override;
 
-protected:
+    // Animation group properties.
+    void setAnimations(const Vector<RefPtr<PlatformCAAnimation>>&) final;
+    void copyAnimationsFrom(const PlatformCAAnimation&) final;
+
+private:
     PlatformCAAnimationWin(AnimationType, const String& keyPath);
     PlatformCAAnimationWin(PlatformAnimationRef);
 
-private:
     RetainPtr<CACFAnimationRef> m_animation;
 };
 

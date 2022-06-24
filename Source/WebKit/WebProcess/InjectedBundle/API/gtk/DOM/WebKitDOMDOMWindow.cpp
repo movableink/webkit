@@ -25,6 +25,8 @@
 #include <WebCore/DOMException.h>
 #include <WebCore/Document.h>
 #include "GObjectEventListener.h"
+#include <WebCore/JSDOMGlobalObject.h>
+#include <WebCore/JSDOMPromiseDeferred.h>
 #include <WebCore/JSExecState.h>
 #include <WebCore/SerializedScriptValue.h>
 #include <WebCore/UserMessageHandlersNamespace.h>
@@ -1058,6 +1060,7 @@ gboolean webkit_dom_dom_window_webkit_message_handlers_post_message(WebKitDOMDOM
     g_return_val_if_fail(handlerName, FALSE);
     g_return_val_if_fail(message, FALSE);
 
+#if ENABLE(USER_MESSAGE_HANDLERS)
     WebCore::DOMWindow* domWindow = WebKit::core(window);
     if (!domWindow->shouldHaveWebKitNamespaceForWorld(WebCore::mainThreadNormalWorld()))
         return FALSE;
@@ -1069,11 +1072,23 @@ gboolean webkit_dom_dom_window_webkit_message_handlers_post_message(WebKitDOMDOM
     auto handler = webkitNamespace->messageHandlers()->namedItem(WebCore::mainThreadNormalWorld(), String::fromUTF8(handlerName));
     if (!handler)
         return FALSE;
+    
+    auto* scriptExecutionContext = ((WebCore::ContextDestructionObserver*)domWindow)->scriptExecutionContext();
+    if (!scriptExecutionContext)
+        return FALSE;
+    
+    auto* globalObject = toJSDOMGlobalObject(*scriptExecutionContext, WebCore::mainThreadNormalWorld());
+    if (!globalObject)
+        return FALSE;
 
-    auto result = handler->postMessage(WebCore::SerializedScriptValue::create(String::fromUTF8(message)));
+    auto promise = WebCore::DeferredPromise::create(*globalObject);
+    auto result = handler->postMessage(WebCore::SerializedScriptValue::create(String::fromUTF8(message)), adoptRef(*(promise.leakRef())));
     if (result.hasException())
         return FALSE;
 
     return TRUE;
+#else
+    return FALSE;
+#endif // ENABLE(USER_MESSAGE_HANDLERS)
 }
 G_GNUC_END_IGNORE_DEPRECATIONS;

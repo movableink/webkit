@@ -1,3 +1,0 @@
-
-FAIL Resetting the canvas state resets 2D state variables Can't find variable: OffscreenCanvas
-

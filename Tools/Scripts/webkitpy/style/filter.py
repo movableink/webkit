@@ -22,6 +22,7 @@
 
 """Contains filter-related code."""
 
+import os.path
 
 def validate_filter_rules(filter_rules, all_categories):
     """Validate the given filter rules, and raise a ValueError if not valid.
@@ -197,7 +198,7 @@ class FilterConfiguration(object):
         if self._path_specific_lower is None:
             self._path_specific_lower = []
             for (sub_paths, path_rules) in self._path_specific:
-                sub_paths = map(str.lower, sub_paths)
+                sub_paths = list(map(str.lower, sub_paths))
                 self._path_specific_lower.append((sub_paths, path_rules))
         return self._path_specific_lower
 
@@ -209,6 +210,7 @@ class FilterConfiguration(object):
 
         """
         path = path.lower()
+        path = os.path.normcase(path)
         for (sub_paths, path_rules) in self._get_path_specific_lower():
             for sub_path in sub_paths:
                 if path.find(sub_path) > -1:
@@ -238,8 +240,7 @@ class FilterConfiguration(object):
         """Return the CategoryFilter associated to a path."""
         if path not in self._path_to_filter:
             path_rules = self._path_rules_from_path(path)
-            filter = self._filter_from_path_rules(path_rules)
-            self._path_to_filter[path] = filter
+            self._path_to_filter[path] = self._filter_from_path_rules(path_rules)
 
         return self._path_to_filter[path]
 

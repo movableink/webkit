@@ -10,38 +10,42 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <tuple>
 
 #include "third_party/googletest/src/include/gtest/gtest.h"
 
 #include "./vp8_rtcd.h"
 #include "./vpx_config.h"
 #include "test/acm_random.h"
+#include "test/bench.h"
 #include "test/clear_system_state.h"
 #include "test/register_state_check.h"
 #include "test/util.h"
 #include "vpx/vpx_integer.h"
 #include "vpx_mem/vpx_mem.h"
+#include "vpx_ports/msvc.h"
 
 namespace {
 
 using libvpx_test::ACMRandom;
-using std::tr1::make_tuple;
+using std::make_tuple;
 
 typedef void (*PredictFunc)(uint8_t *src_ptr, int src_pixels_per_line,
                             int xoffset, int yoffset, uint8_t *dst_ptr,
                             int dst_pitch);
 
-typedef std::tr1::tuple<int, int, PredictFunc> PredictParam;
+typedef std::tuple<int, int, PredictFunc> PredictParam;
 
-class PredictTestBase : public ::testing::TestWithParam<PredictParam> {
+class PredictTestBase : public AbstractBench,
+                        public ::testing::TestWithParam<PredictParam> {
  public:
   PredictTestBase()
       : width_(GET_PARAM(0)), height_(GET_PARAM(1)), predict_(GET_PARAM(2)),
-        src_(NULL), padded_dst_(NULL), dst_(NULL), dst_c_(NULL) {}
+        src_(nullptr), padded_dst_(nullptr), dst_(nullptr), dst_c_(nullptr) {}
 
   virtual void SetUp() {
     src_ = new uint8_t[kSrcSize];
-    ASSERT_TRUE(src_ != NULL);
+    ASSERT_NE(src_, nullptr);
 
     // padded_dst_ provides a buffer of kBorderSize around the destination
     // memory to facilitate detecting out of bounds writes.
@@ -49,11 +53,11 @@ class PredictTestBase : public ::testing::TestWithParam<PredictParam> {
     padded_dst_size_ = dst_stride_ * (kBorderSize + height_ + kBorderSize);
     padded_dst_ =
         reinterpret_cast<uint8_t *>(vpx_memalign(16, padded_dst_size_));
-    ASSERT_TRUE(padded_dst_ != NULL);
+    ASSERT_NE(padded_dst_, nullptr);
     dst_ = padded_dst_ + (kBorderSize * dst_stride_) + kBorderSize;
 
     dst_c_ = new uint8_t[16 * 16];
-    ASSERT_TRUE(dst_c_ != NULL);
+    ASSERT_NE(dst_c_, nullptr);
 
     memset(src_, 0, kSrcSize);
     memset(padded_dst_, 128, padded_dst_size_);
@@ -62,12 +66,12 @@ class PredictTestBase : public ::testing::TestWithParam<PredictParam> {
 
   virtual void TearDown() {
     delete[] src_;
-    src_ = NULL;
+    src_ = nullptr;
     vpx_free(padded_dst_);
-    padded_dst_ = NULL;
-    dst_ = NULL;
+    padded_dst_ = nullptr;
+    dst_ = nullptr;
     delete[] dst_c_;
-    dst_c_ = NULL;
+    dst_c_ = nullptr;
     libvpx_test::ClearSystemState();
   }
 
@@ -204,7 +208,20 @@ class PredictTestBase : public ::testing::TestWithParam<PredictParam> {
       }
     }
   }
-};
+
+  void Run() {
+    for (int xoffset = 0; xoffset < 8; ++xoffset) {
+      for (int yoffset = 0; yoffset < 8; ++yoffset) {
+        if (xoffset == 0 && yoffset == 0) {
+          continue;
+        }
+
+        predict_(&src_[kSrcStride * 2 + 2], kSrcStride, xoffset, yoffset, dst_,
+                 dst_stride_);
+      }
+    }
+  }
+};  // namespace
 
 class SixtapPredictTest : public PredictTestBase {};
 
@@ -281,14 +298,14 @@ TEST_P(SixtapPredictTest, TestWithPresetData) {
       CompareBuffers(kExpectedDst, kExpectedDstStride, dst_, dst_stride_));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     C, SixtapPredictTest,
     ::testing::Values(make_tuple(16, 16, &vp8_sixtap_predict16x16_c),
                       make_tuple(8, 8, &vp8_sixtap_predict8x8_c),
                       make_tuple(8, 4, &vp8_sixtap_predict8x4_c),
                       make_tuple(4, 4, &vp8_sixtap_predict4x4_c)));
 #if HAVE_NEON
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     NEON, SixtapPredictTest,
     ::testing::Values(make_tuple(16, 16, &vp8_sixtap_predict16x16_neon),
                       make_tuple(8, 8, &vp8_sixtap_predict8x8_neon),
@@ -296,19 +313,19 @@ INSTANTIATE_TEST_CASE_P(
                       make_tuple(4, 4, &vp8_sixtap_predict4x4_neon)));
 #endif
 #if HAVE_MMX
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MMX, SixtapPredictTest,
     ::testing::Values(make_tuple(4, 4, &vp8_sixtap_predict4x4_mmx)));
 #endif
 #if HAVE_SSE2
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SSE2, SixtapPredictTest,
     ::testing::Values(make_tuple(16, 16, &vp8_sixtap_predict16x16_sse2),
                       make_tuple(8, 8, &vp8_sixtap_predict8x8_sse2),
                       make_tuple(8, 4, &vp8_sixtap_predict8x4_sse2)));
 #endif
 #if HAVE_SSSE3
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SSSE3, SixtapPredictTest,
     ::testing::Values(make_tuple(16, 16, &vp8_sixtap_predict16x16_ssse3),
                       make_tuple(8, 8, &vp8_sixtap_predict8x8_ssse3),
@@ -316,7 +333,7 @@ INSTANTIATE_TEST_CASE_P(
                       make_tuple(4, 4, &vp8_sixtap_predict4x4_ssse3)));
 #endif
 #if HAVE_MSA
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MSA, SixtapPredictTest,
     ::testing::Values(make_tuple(16, 16, &vp8_sixtap_predict16x16_msa),
                       make_tuple(8, 8, &vp8_sixtap_predict8x8_msa),
@@ -325,7 +342,7 @@ INSTANTIATE_TEST_CASE_P(
 #endif
 
 #if HAVE_MMI
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MMI, SixtapPredictTest,
     ::testing::Values(make_tuple(16, 16, &vp8_sixtap_predict16x16_mmi),
                       make_tuple(8, 8, &vp8_sixtap_predict8x8_mmi),
@@ -341,41 +358,45 @@ TEST_P(BilinearPredictTest, TestWithRandomData) {
 TEST_P(BilinearPredictTest, TestWithUnalignedDst) {
   TestWithUnalignedDst(vp8_bilinear_predict16x16_c);
 }
+TEST_P(BilinearPredictTest, DISABLED_Speed) {
+  const int kCountSpeedTestBlock = 5000000 / (width_ * height_);
+  RunNTimes(kCountSpeedTestBlock);
 
-INSTANTIATE_TEST_CASE_P(
+  char title[16];
+  snprintf(title, sizeof(title), "%dx%d", width_, height_);
+  PrintMedian(title);
+}
+
+INSTANTIATE_TEST_SUITE_P(
     C, BilinearPredictTest,
     ::testing::Values(make_tuple(16, 16, &vp8_bilinear_predict16x16_c),
                       make_tuple(8, 8, &vp8_bilinear_predict8x8_c),
                       make_tuple(8, 4, &vp8_bilinear_predict8x4_c),
                       make_tuple(4, 4, &vp8_bilinear_predict4x4_c)));
 #if HAVE_NEON
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     NEON, BilinearPredictTest,
     ::testing::Values(make_tuple(16, 16, &vp8_bilinear_predict16x16_neon),
                       make_tuple(8, 8, &vp8_bilinear_predict8x8_neon),
                       make_tuple(8, 4, &vp8_bilinear_predict8x4_neon),
                       make_tuple(4, 4, &vp8_bilinear_predict4x4_neon)));
 #endif
-#if HAVE_MMX
-INSTANTIATE_TEST_CASE_P(
-    MMX, BilinearPredictTest,
-    ::testing::Values(make_tuple(8, 4, &vp8_bilinear_predict8x4_mmx),
-                      make_tuple(4, 4, &vp8_bilinear_predict4x4_mmx)));
-#endif
 #if HAVE_SSE2
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SSE2, BilinearPredictTest,
     ::testing::Values(make_tuple(16, 16, &vp8_bilinear_predict16x16_sse2),
-                      make_tuple(8, 8, &vp8_bilinear_predict8x8_sse2)));
+                      make_tuple(8, 8, &vp8_bilinear_predict8x8_sse2),
+                      make_tuple(8, 4, &vp8_bilinear_predict8x4_sse2),
+                      make_tuple(4, 4, &vp8_bilinear_predict4x4_sse2)));
 #endif
 #if HAVE_SSSE3
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SSSE3, BilinearPredictTest,
     ::testing::Values(make_tuple(16, 16, &vp8_bilinear_predict16x16_ssse3),
                       make_tuple(8, 8, &vp8_bilinear_predict8x8_ssse3)));
 #endif
 #if HAVE_MSA
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     MSA, BilinearPredictTest,
     ::testing::Values(make_tuple(16, 16, &vp8_bilinear_predict16x16_msa),
                       make_tuple(8, 8, &vp8_bilinear_predict8x8_msa),

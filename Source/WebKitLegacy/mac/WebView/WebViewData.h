@@ -27,7 +27,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "WebTypesInternal.h"
 #import "WebDelegateImplementationCaching.h"
 #import "WebUIDelegate.h"
 #if HAVE(TOUCH_BAR)
@@ -121,6 +120,8 @@ private:
     
     LayerFlushController* m_flushController;
     std::unique_ptr<WebCore::RunLoopObserver> m_runLoopObserver;
+    bool m_insideCallback { false };
+    bool m_rescheduledInsideCallback { false };
 };
 
 class LayerFlushController : public RefCounted<LayerFlushController> {
@@ -130,6 +131,7 @@ public:
         return adoptRef(*new LayerFlushController(webView));
     }
     
+    // FIXME: Rename to use 'updateRendering' terminology.
     bool flushLayers();
     
     void scheduleLayerFlush();
@@ -158,28 +160,28 @@ private:
     RefPtr<WebViewGroup> group;
 
     id UIDelegate;
-    id UIDelegateForwarder;
+    RetainPtr<id> UIDelegateForwarder;
     id resourceProgressDelegate;
     id downloadDelegate;
     id policyDelegate;
-    id policyDelegateForwarder;
+    RetainPtr<id> policyDelegateForwarder;
     id frameLoadDelegate;
-    id frameLoadDelegateForwarder;
+    RetainPtr<id> frameLoadDelegateForwarder;
     id <WebFormDelegate> formDelegate;
     id editingDelegate;
-    id editingDelegateForwarder;
+    RetainPtr<id> editingDelegateForwarder;
     id scriptDebugDelegate;
     id historyDelegate;
 #if PLATFORM(IOS_FAMILY)
-    id resourceProgressDelegateForwarder;
-    id formDelegateForwarder;
+    RetainPtr<id> resourceProgressDelegateForwarder;
+    RetainPtr<id> formDelegateForwarder;
 #endif
 
-    WebInspector *inspector;
-    WebNodeHighlight *currentNodeHighlight;
+    RetainPtr<WebInspector> inspector;
+    RetainPtr<WebNodeHighlight> currentNodeHighlight;
 
 #if PLATFORM(MAC)
-    WebImmediateActionController *immediateActionController;
+    RetainPtr<WebImmediateActionController> immediateActionController;
 
 #if HAVE(TOUCH_BAR)
     RetainPtr<NSTouchBar> _currentTouchBar;
@@ -215,21 +217,20 @@ private:
     BOOL shouldMaintainInactiveSelection;
 
     BOOL allowsUndo;
-        
+
     float zoomMultiplier;
     BOOL zoomsTextOnly;
 
-    NSString *applicationNameForUserAgent;
+    RetainPtr<NSString> applicationNameForUserAgent;
     WTF::String userAgent;
     BOOL userAgentOverridden;
     
-    WebPreferences *preferences;
-    BOOL useSiteSpecificSpoofing;
+    RetainPtr<WebPreferences> preferences;
 #if PLATFORM(IOS_FAMILY)
     NSURL *userStyleSheetLocation;
 #endif
 
-    NSWindow *hostWindow;
+    RetainPtr<NSWindow> hostWindow;
 
     int programmaticFocusCount;
     
@@ -254,12 +255,12 @@ private:
     BOOL usesPageCache;
 
 #if !PLATFORM(IOS_FAMILY)
-    NSColor *backgroundColor;
+    RetainPtr<NSColor> backgroundColor;
 #else
-    CGColorRef backgroundColor;
+    RetainPtr<CGColorRef> backgroundColor;
 #endif
 
-    NSString *mediaStyle;
+    RetainPtr<NSString> mediaStyle;
     
     BOOL hasSpellCheckerDocumentTag;
     NSInteger spellCheckerDocumentTag;
@@ -268,12 +269,12 @@ private:
     BOOL isStopping;
 
     id UIKitDelegate;
-    id UIKitDelegateForwarder;
+    RetainPtr<id> UIKitDelegateForwarder;
 
     id WebMailDelegate;
 
     BOOL allowsMessaging;
-    NSMutableSet *_caretChangeListeners;
+    RetainPtr<NSMutableSet> _caretChangeListeners;
     id <WebCaretChangeListener> _caretChangeListener;
 
     CGSize fixedLayoutSize;
@@ -283,7 +284,7 @@ private:
     CGRect pendingFixedPositionLayoutRect;
 #endif
     
-#if ENABLE(DATA_INTERACTION)
+#if PLATFORM(IOS_FAMILY) && ENABLE(DRAG_SUPPORT)
     RetainPtr<WebUITextIndicatorData> textIndicatorData;
     RetainPtr<WebUITextIndicatorData> dataOperationTextIndicator;
     CGRect dragPreviewFrameInRootViewCoordinates;
@@ -292,10 +293,9 @@ private:
     RetainPtr<NSString> draggedLinkTitle;
 #endif
 
-
 #if !PLATFORM(IOS_FAMILY)
     // WebKit has both a global plug-in database and a separate, per WebView plug-in database. Dashboard uses the per WebView database.
-    WebPluginDatabase *pluginDatabase;
+    RetainPtr<WebPluginDatabase> pluginDatabase;
 #endif
     
     HashMap<unsigned long, RetainPtr<id>> identifierMap;
@@ -315,11 +315,12 @@ private:
     NSPasteboard *insertionPasteboard;
     RetainPtr<NSImage> _mainFrameIcon;
 #endif
-            
+
     NSSize lastLayoutSize;
 
 #if ENABLE(VIDEO)
-    WebVideoFullscreenController *fullscreenController;
+    RetainPtr<WebVideoFullscreenController> fullscreenController;
+    Vector<RetainPtr<WebVideoFullscreenController>> fullscreenControllersExiting;
 #endif
 
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
@@ -328,12 +329,12 @@ private:
 #endif
     
 #if ENABLE(FULLSCREEN_API)
-    WebFullScreenController *newFullscreenController;
+    RetainPtr<WebFullScreenController> newFullscreenController;
 #endif
 
 #if ENABLE(REMOTE_INSPECTOR)
 #if PLATFORM(IOS_FAMILY)
-    WebIndicateLayer *indicateLayer;
+    RetainPtr<WebIndicateLayer> indicateLayer;
 #endif
 #endif
 
@@ -350,12 +351,10 @@ private:
 
     float customDeviceScaleFactor;
 #if PLATFORM(IOS_FAMILY)
-    WebFixedPositionContent* _fixedPositionContent;
+    RetainPtr<WebFixedPositionContent> _fixedPositionContent;
 #endif
 
-#if USE(DICTATION_ALTERNATIVES)
     std::unique_ptr<WebCore::AlternativeTextUIController> m_alternativeTextUIController;
-#endif
 
     RetainPtr<NSData> sourceApplicationAuditData;
 

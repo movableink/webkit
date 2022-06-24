@@ -56,11 +56,12 @@ CompositingCoordinator::CompositingCoordinator(WebPage& page, CompositingCoordin
     , m_paintingEngine(Nicosia::PaintingEngine::create())
 {
     m_nicosia.scene = Nicosia::Scene::create();
+    m_nicosia.sceneIntegration = Nicosia::SceneIntegration::create(*m_nicosia.scene, *this);
     m_state.nicosia.scene = m_nicosia.scene;
 
     m_rootLayer = GraphicsLayer::create(this, *this);
 #ifndef NDEBUG
-    m_rootLayer->setName("CompositingCoordinator root layer");
+    m_rootLayer->setName(MAKE_STATIC_STRING_IMPL("CompositingCoordinator root layer"));
 #endif
     m_rootLayer->setDrawsContent(false);
     m_rootLayer->setSize(m_page.size());
@@ -71,11 +72,13 @@ CompositingCoordinator::~CompositingCoordinator()
     ASSERT(!m_rootLayer);
 
     for (auto& registeredLayer : m_registeredLayers.values())
-        registeredLayer->setCoordinator(nullptr);
+        registeredLayer->invalidateCoordinator();
 }
 
 void CompositingCoordinator::invalidate()
 {
+    m_nicosia.sceneIntegration->invalidate();
+
     m_rootLayer = nullptr;
     purgeBackingStores();
 }
@@ -112,11 +115,14 @@ void CompositingCoordinator::sizeDidChange(const IntSize& newSize)
     notifyFlushRequired(m_rootLayer.get());
 }
 
-bool CompositingCoordinator::flushPendingLayerChanges()
+bool CompositingCoordinator::flushPendingLayerChanges(OptionSet<FinalizeRenderingUpdateFlags> flags)
 {
-    SetForScope<bool> protector(m_isFlushingLayerChanges, true);
+    SetForScope protector(m_isFlushingLayerChanges, true);
 
     initializeRootCompositingLayerIfNeeded();
+
+    m_page.updateRendering();
+    m_page.flushPendingEditorStateUpdate();
 
     m_rootLayer->flushCompositingStateForThisLayerOnly();
     m_client.didFlushRootLayer(m_visibleContentsRect);
@@ -124,15 +130,13 @@ bool CompositingCoordinator::flushPendingLayerChanges()
     if (m_overlayCompositingLayer)
         m_overlayCompositingLayer->flushCompositingState(FloatRect(FloatPoint(), m_rootLayer->size()));
 
-    bool didSync = m_page.corePage()->mainFrame().view()->flushCompositingStateIncludingSubframes();
+    m_page.finalizeRenderingUpdate(flags);
 
     auto& coordinatedLayer = downcast<CoordinatedGraphicsLayer>(*m_rootLayer);
     coordinatedLayer.updateContentBuffersIncludingSubLayers();
     coordinatedLayer.syncPendingStateChangesIncludingSubLayers();
 
     if (m_shouldSyncFrame) {
-        didSync = true;
-
         m_state.nicosia.scene->accessState(
             [this](Nicosia::Scene::State& state)
             {
@@ -169,7 +173,9 @@ bool CompositingCoordinator::flushPendingLayerChanges()
         m_shouldSyncFrame = false;
     }
 
-    return didSync;
+    m_page.didUpdateRendering();
+
+    return true;
 }
 
 double CompositingCoordinator::timestamp() const
@@ -177,7 +183,7 @@ double CompositingCoordinator::timestamp() const
     auto* document = m_page.corePage()->mainFrame().document();
     if (!document)
         return 0;
-    return document->domWindow() ? document->domWindow()->nowTimestamp() : document->monotonicTimestamp();
+    return document->domWindow() ? document->domWindow()->nowTimestamp().seconds() : document->monotonicTimestamp();
 }
 
 void CompositingCoordinator::syncDisplayState()
@@ -227,7 +233,7 @@ float CompositingCoordinator::pageScaleFactor() const
 Ref<GraphicsLayer> CompositingCoordinator::createGraphicsLayer(GraphicsLayer::Type layerType, GraphicsLayerClient& client)
 {
     auto layer = adoptRef(*new CoordinatedGraphicsLayer(layerType, client));
-    attachLayer(layer.ptr());
+    layer->setCoordinatorIncludingSubLayersIfNeeded(this);
     return layer;
 }
 
@@ -275,11 +281,10 @@ void CompositingCoordinator::detachLayer(CoordinatedGraphicsLayer* layer)
 
 void CompositingCoordinator::attachLayer(CoordinatedGraphicsLayer* layer)
 {
-    layer->setCoordinator(this);
     {
         auto& compositionLayer = layer->compositionLayer();
         m_nicosia.state.layers.add(compositionLayer);
-        compositionLayer->setSceneIntegration(m_client.sceneIntegration());
+        compositionLayer->setSceneIntegration(m_nicosia.sceneIntegration.copyRef());
     }
     m_registeredLayers.add(layer->id(), layer);
     layer->setNeedsVisibleRectAdjustment();
@@ -292,7 +297,7 @@ void CompositingCoordinator::renderNextFrame()
 
 void CompositingCoordinator::purgeBackingStores()
 {
-    SetForScope<bool> purgingToggle(m_isPurging, true);
+    SetForScope purgingToggle(m_isPurging, true);
 
     for (auto& registeredLayer : m_registeredLayers.values())
         registeredLayer->purgeBackingStores();
@@ -301,6 +306,11 @@ void CompositingCoordinator::purgeBackingStores()
 Nicosia::PaintingEngine& CompositingCoordinator::paintingEngine()
 {
     return *m_paintingEngine;
+}
+
+void CompositingCoordinator::requestUpdate()
+{
+    m_client.updateScene();
 }
 
 } // namespace WebKit

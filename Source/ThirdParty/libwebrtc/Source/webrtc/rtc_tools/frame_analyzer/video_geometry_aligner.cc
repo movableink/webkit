@@ -14,7 +14,7 @@
 
 #include "api/video/i420_buffer.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/refcountedobject.h"
+#include "rtc_base/ref_counted_object.h"
 #include "rtc_tools/frame_analyzer/video_quality_analysis.h"
 #include "third_party/libyuv/include/libyuv/scale.h"
 
@@ -61,7 +61,7 @@ rtc::scoped_refptr<I420BufferInterface> CropAndZoom(
                     adjusted_frame->MutableDataY(), adjusted_frame->StrideY(),
                     adjusted_frame->MutableDataU(), adjusted_frame->StrideU(),
                     adjusted_frame->MutableDataV(), adjusted_frame->StrideV(),
-                    frame->width(), frame->height(), libyuv::kFilterBilinear);
+                    frame->width(), frame->height(), libyuv::kFilterBox);
 
   return adjusted_frame;
 }

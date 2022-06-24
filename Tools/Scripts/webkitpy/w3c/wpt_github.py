@@ -30,11 +30,19 @@ import base64
 import json
 import logging
 import re
-import urllib2
+import sys
+
 from collections import namedtuple
+from webkitcorepy import string_utils
 
 from webkitpy.common.memoized import memoized
 from webkitpy.w3c.common import WPT_GH_ORG, WPT_GH_REPO_NAME, EXPORT_PR_LABEL
+
+if sys.version_info > (3, 0):
+    from urllib.error import HTTPError
+    from urllib.parse import quote
+else:
+    from urllib2 import HTTPError, quote
 
 _log = logging.getLogger(__name__)
 API_BASE = 'https://api.github.com'
@@ -61,7 +69,7 @@ class WPTGitHub(object):
 
     def auth_token(self):
         assert self.has_credentials()
-        return base64.b64encode('{}:{}'.format(self.user, self.token))
+        return string_utils.decode(base64.b64encode(string_utils.encode('{}:{}'.format(self.user, self.token))), target_type=str)
 
     def request(self, path, method, body=None):
         """Sends a request to GitHub API and deserializes the response.
@@ -192,7 +200,7 @@ class WPTGitHub(object):
             WPT_GH_ORG,
             WPT_GH_REPO_NAME,
             number,
-            urllib2.quote(label),
+            quote(label),
         )
         response = self.request(path, method='DELETE')
 
@@ -285,7 +293,7 @@ class WPTGitHub(object):
                 return True
             else:
                 raise GitHubError(204, response.status_code, 'check if PR %d is merged' % pr_number)
-        except urllib2.HTTPError as e:
+        except HTTPError as e:
             if e.code == 404:
                 return False
             else:
@@ -310,7 +318,7 @@ class WPTGitHub(object):
 
         try:
             response = self.request(path, method='PUT', body=body)
-        except urllib2.HTTPError as e:
+        except HTTPError as e:
             if e.code == 405:
                 raise MergeError(pr_number)
             else:
@@ -385,7 +393,7 @@ class JSONResponse(object):
         """Initializes a JSONResponse instance.
 
         Args:
-            raw_response: a response object returned by open methods in urllib2.
+            raw_response: a response object returned by open methods in urllib2/urllib.
         """
         self._raw_response = raw_response
         self.status_code = raw_response.getcode()

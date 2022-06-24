@@ -39,7 +39,7 @@ static String moduleDirectory()
     wchar_t filename[bufferLength];
     auto len = GetModuleFileName(nullptr, filename, bufferLength);
     ASSERT(len > 0);
-    return FileSystem::directoryName(String(filename, len));
+    return FileSystem::parentPath(String(filename, len));
 }
 
 WKStringRef createInjectedBundlePath()
@@ -62,8 +62,7 @@ WKURLRef URLForNonExistentResource()
 
 bool isKeyDown(WKNativeEventPtr event)
 {
-    // FIXME
-    return false;
+    return event->message == WM_KEYDOWN;
 }
 
 } // namespace Util

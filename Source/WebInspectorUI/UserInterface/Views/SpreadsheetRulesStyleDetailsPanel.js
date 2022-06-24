@@ -42,11 +42,17 @@ WI.SpreadsheetRulesStyleDetailsPanel = class SpreadsheetRulesStyleDetailsPanel e
         this._propertyToSelectAndHighlight = null;
         this._filterText = null;
         this._shouldRefreshSubviews = false;
+        this._suppressLayoutAfterSelectorChange = false;
 
         this._emptyFilterResultsElement = WI.createMessageTextView(WI.UIString("No Results Found"));
     }
 
     // Public
+
+    get supportsNewRule()
+    {
+        return this.nodeStyles && !this.nodeStyles.node.isInUserAgentShadowTree() && InspectorBackend.hasCommand("CSS.addRule");
+    }
 
     refresh(significantChange)
     {
@@ -60,17 +66,9 @@ WI.SpreadsheetRulesStyleDetailsPanel = class SpreadsheetRulesStyleDetailsPanel e
         super.refresh(significantChange);
     }
 
-    hidden()
-    {
-        for (let section of this._sections)
-            section.hidden();
-
-        super.hidden();
-    }
-
     scrollToSectionAndHighlightProperty(property)
     {
-        if (!this._visible) {
+        if (!this.isAttached || this.layoutPending) {
             this._propertyToSelectAndHighlight = property;
             return;
         }
@@ -93,17 +91,11 @@ WI.SpreadsheetRulesStyleDetailsPanel = class SpreadsheetRulesStyleDetailsPanel e
 
     newRuleButtonClicked()
     {
-        if (this.nodeStyles.node.isInUserAgentShadowTree())
-            return;
-
         this._addNewRule();
     }
 
     newRuleButtonContextMenu(event)
     {
-        if (this.nodeStyles.node.isInUserAgentShadowTree())
-            return;
-
         let styleSheets = WI.cssManager.styleSheets.filter(styleSheet => styleSheet.hasInfo() && !styleSheet.isInlineStyleTag() && !styleSheet.isInlineStyleAttributeStyleSheet());
         if (!styleSheets.length)
             return;
@@ -211,6 +203,12 @@ WI.SpreadsheetRulesStyleDetailsPanel = class SpreadsheetRulesStyleDetailsPanel e
         this.nodeStyles.addRule(this._newRuleSelector, text);
     }
 
+    spreadsheetCSSStyleDeclarationSectionSetAllPropertyVisibilityMode(section, propertyVisibilityMode)
+    {
+        for (let section of this._sections)
+            section.propertyVisibilityMode = propertyVisibilityMode;
+    }
+
     // Protected
 
     layout()
@@ -220,24 +218,12 @@ WI.SpreadsheetRulesStyleDetailsPanel = class SpreadsheetRulesStyleDetailsPanel e
 
         this._shouldRefreshSubviews = false;
 
-        let oldSections = this._sections.slice();
-        let preservedSections = oldSections.filter((section) => {
-            if (section[SpreadsheetRulesStyleDetailsPanel.SectionShowingForNodeSymbol] !== this.nodeStyles.node) {
-                section[SpreadsheetRulesStyleDetailsPanel.SectionShowingForNodeSymbol] = null;
-                section[SpreadsheetRulesStyleDetailsPanel.SectionIndexSymbol] = -1;
-            }
-            return section[SpreadsheetRulesStyleDetailsPanel.SectionShowingForNodeSymbol];
-        });
+        if (this._suppressLayoutAfterSelectorChange) {
+            this._suppressLayoutAfterSelectorChange = false;
+            return;
+        }
 
-        if (preservedSections.length) {
-            for (let section of oldSections) {
-                if (!preservedSections.includes(section))
-                    this.removeSubview(section);
-            }
-            for (let header of this._headerMap.values())
-                header.remove();
-        } else
-            this.removeAllSubviews();
+        this.removeAllSubviews();
 
         let previousStyle = null;
         let currentHeader = null;
@@ -264,13 +250,7 @@ WI.SpreadsheetRulesStyleDetailsPanel = class SpreadsheetRulesStyleDetailsPanel e
             if (section.style.inherited && (!previousStyle || previousStyle.node !== section.style.node))
                 addHeader(WI.UIString("Inherited From", "A section of CSS rules matching an ancestor DOM node"), section.style.node);
 
-            if (!section.isDescendantOf(this)) {
-                let referenceView = this.subviews[this._sections.length];
-                if (!referenceView || referenceView[SpreadsheetRulesStyleDetailsPanel.SectionIndexSymbol] === this._sections.length)
-                    this.addSubview(section);
-                else
-                    this.insertSubviewBefore(section, referenceView);
-            }
+            this.addSubview(section);
 
             this._sections.push(section);
             section.needsLayout();
@@ -294,10 +274,6 @@ WI.SpreadsheetRulesStyleDetailsPanel = class SpreadsheetRulesStyleDetailsPanel e
                 section.startEditingRuleSelector();
 
             addSection(section);
-
-            let preservedSection = preservedSections.find((sectionToPreserve) => sectionToPreserve[SpreadsheetRulesStyleDetailsPanel.SectionIndexSymbol] === this._sections.length - 1);
-            if (preservedSection)
-                addSection(preservedSection);
         };
 
         let addedPseudoStyles = false;
@@ -350,8 +326,6 @@ WI.SpreadsheetRulesStyleDetailsPanel = class SpreadsheetRulesStyleDetailsPanel e
 
     filterDidChange(filterBar)
     {
-        super.filterDidChange(filterBar);
-
         this.applyFilter(filterBar.filters.text);
     }
 
@@ -380,13 +354,8 @@ WI.SpreadsheetRulesStyleDetailsPanel = class SpreadsheetRulesStyleDetailsPanel e
 
     _handleSectionSelectorWillChange(event)
     {
-        let section = event.target;
-        section[SpreadsheetRulesStyleDetailsPanel.SectionShowingForNodeSymbol] = this.nodeStyles.node;
-        section[SpreadsheetRulesStyleDetailsPanel.SectionIndexSymbol] = this._sections.indexOf(section);
-        console.assert(section[SpreadsheetRulesStyleDetailsPanel.SectionIndexSymbol] >= 0);
+        this._suppressLayoutAfterSelectorChange = true;
     }
 };
 
 WI.SpreadsheetRulesStyleDetailsPanel.StyleSectionSymbol = Symbol("style-section");
-WI.SpreadsheetRulesStyleDetailsPanel.SectionShowingForNodeSymbol = Symbol("style-showing-for-node");
-WI.SpreadsheetRulesStyleDetailsPanel.SectionIndexSymbol = Symbol("style-index");

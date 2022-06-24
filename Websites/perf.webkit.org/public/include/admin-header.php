@@ -15,10 +15,11 @@ require_once('manifest-generator.php');
 <h1><a href="/">WebKit Perf Monitor</a></h1>
 <ul>
     <li><a href="/admin/platforms">Platforms</a></li>
+    <li><a href="/admin/platform-groups">Platform Groups</a></li>
     <li><a href="/admin/tests">Tests</a></li>
     <li><a href="/admin/aggregators">Aggregators</a></li>
     <li><a href="/admin/builders">Builders</a></li>
-    <li><a href="/admin/build-slaves">Slaves</a></li>
+    <li><a href="/admin/build-workers">Workers</a></li>
     <li><a href="/admin/triggerables">Triggerables</a></li>
     <li><a href="/admin/repositories">Repositories</a></li>
     <li><a href="/admin/bug-trackers">Bug Trackers</a></li>
@@ -81,6 +82,10 @@ function update_field($table, $prefix, $field_name, $new_value = NULL) {
         "Could not update $prefix $id");
 
     return TRUE;
+}
+
+function update_boolean_field($table, $prefix, $field_name) {
+    return update_field($table, $prefix, $field_name, Database::to_database_boolean(array_get($_POST, $field_name)));
 }
 
 function regenerate_manifest() {

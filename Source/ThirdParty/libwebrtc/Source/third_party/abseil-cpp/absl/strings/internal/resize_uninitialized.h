@@ -17,6 +17,7 @@
 #ifndef ABSL_STRINGS_INTERNAL_RESIZE_UNINITIALIZED_H_
 #define ABSL_STRINGS_INTERNAL_RESIZE_UNINITIALIZED_H_
 
+#include <algorithm>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -25,6 +26,7 @@
 #include "absl/meta/type_traits.h"  //  for void_t
 
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace strings_internal {
 
 // Is a subclass of true_type or false_type, depending on whether or not
@@ -35,8 +37,7 @@ struct ResizeUninitializedTraits {
   static void Resize(string_type* s, size_t new_size) { s->resize(new_size); }
 };
 
-// __resize_default_init is provided by libc++ >= 8.0 and by Google's internal
-// ::string implementation.
+// __resize_default_init is provided by libc++ >= 8.0
 template <typename string_type>
 struct ResizeUninitializedTraits<
     string_type, absl::void_t<decltype(std::declval<string_type&>()
@@ -66,7 +67,30 @@ inline void STLStringResizeUninitialized(string_type* s, size_t new_size) {
   ResizeUninitializedTraits<string_type>::Resize(s, new_size);
 }
 
+// Used to ensure exponential growth so that the amortized complexity of
+// increasing the string size by a small amount is O(1), in contrast to
+// O(str->size()) in the case of precise growth.
+template <typename string_type>
+void STLStringReserveAmortized(string_type* s, size_t new_size) {
+  const size_t cap = s->capacity();
+  if (new_size > cap) {
+    // Make sure to always grow by at least a factor of 2x.
+    s->reserve((std::max)(new_size, 2 * cap));
+  }
+}
+
+// Like STLStringResizeUninitialized(str, new_size), except guaranteed to use
+// exponential growth so that the amortized complexity of increasing the string
+// size by a small amount is O(1), in contrast to O(str->size()) in the case of
+// precise growth.
+template <typename string_type>
+void STLStringResizeUninitializedAmortized(string_type* s, size_t new_size) {
+  STLStringReserveAmortized(s, new_size);
+  STLStringResizeUninitialized(s, new_size);
+}
+
 }  // namespace strings_internal
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_STRINGS_INTERNAL_RESIZE_UNINITIALIZED_H_

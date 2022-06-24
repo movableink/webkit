@@ -28,6 +28,7 @@
 #include "config.h"
 #include "Options.h"
 
+#include "StringFunctions.h"
 #include <string.h>
 
 namespace WTR {
@@ -65,25 +66,25 @@ static bool handleOptionComplexText(Options& options, const char*, const char*)
 
 static bool handleOptionAcceleratedDrawing(Options& options, const char*, const char*)
 {
-    options.shouldUseAcceleratedDrawing = true;
+    options.features.boolWebPreferenceFeatures.insert_or_assign("AcceleratedDrawingEnabled", true);
     return true;
 }
 
 static bool handleOptionRemoteLayerTree(Options& options, const char*, const char*)
 {
-    options.shouldUseRemoteLayerTree = true;
+    options.features.boolTestRunnerFeatures.insert_or_assign("useRemoteLayerTree", true);
     return true;
 }
 
-static bool handleOptionShowWebView(Options& options, const char*, const char*)
+static bool handleOptionShowWindow(Options& options, const char*, const char*)
 {
-    options.shouldShowWebView = true;
+    options.features.boolTestRunnerFeatures.insert_or_assign("shouldShowWindow", true);
     return true;
 }
 
 static bool handleOptionShowTouches(Options& options, const char*, const char*)
 {
-    options.shouldShowTouches = true;
+    options.features.boolTestRunnerFeatures.insert_or_assign("shouldShowTouches", true);
     return true;
 }
 
@@ -99,9 +100,59 @@ static bool handleOptionAllowAnyHTTPSCertificateForAllowedHosts(Options& options
     return true;
 }
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+static bool handleOptionAccessibilityIsolatedTreeMode(Options& options, const char*, const char*)
+{
+    options.features.boolWebPreferenceFeatures.insert_or_assign("IsAccessibilityIsolatedTreeEnabled", true);
+    return true;
+}
+#endif
+
 static bool handleOptionAllowedHost(Options& options, const char*, const char* host)
 {
     options.allowedHosts.insert(host);
+    return true;
+}
+
+static bool parseFeature(std::string_view featureString, TestFeatures& features)
+{
+    auto strings = split(featureString, '=');
+    if (strings.empty() || strings.size() > 2)
+        return false;
+
+    auto featureName = strings[0];
+    bool enabled = strings.size() == 1 || strings[1] == "true";
+
+    // FIXME: Generalize this to work for any type of web preference using test header logic in TestFeatures.cpp
+    features.boolWebPreferenceFeatures.insert({ std::string { featureName }, enabled });
+    return true;
+}
+
+static bool handleOptionNoEnableAllExperimentalFeatures(Options& options, const char*, const char* feature)
+{
+    options.enableAllExperimentalFeatures = false;
+    return true;
+}
+
+static bool handleOptionExperimentalFeature(Options& options, const char*, const char* feature)
+{
+    return parseFeature(feature, options.features);
+}
+
+static bool handleOptionInternalFeature(Options& options, const char*, const char* feature)
+{
+    return parseFeature(feature, options.features);
+}
+
+static bool handleOptionWebCoreLogging(Options& options, const char*, const char* channels)
+{
+    options.webCoreLogChannels = channels;
+    return true;
+}
+
+static bool handleOptionWebKitLogging(Options& options, const char*, const char* channels)
+{
+    options.webKitLogChannels = channels;
     return true;
 }
 
@@ -126,10 +177,19 @@ OptionsHandler::OptionsHandler(Options& o)
     optionList.append(Option("--remote-layer-tree", "Use remote layer tree.", handleOptionRemoteLayerTree));
     optionList.append(Option("--allowed-host", "Allows access to the specified host from tests.", handleOptionAllowedHost, true));
     optionList.append(Option("--allow-any-certificate-for-allowed-hosts", "Allows any HTTPS certificate for an allowed host.", handleOptionAllowAnyHTTPSCertificateForAllowedHosts));
-    optionList.append(Option("--show-webview", "Show the WebView during test runs (for debugging)", handleOptionShowWebView));
+    optionList.append(Option("--show-webview", "DEPRECATED. Same as --show-window", handleOptionShowWindow));
+    optionList.append(Option("--show-window", "Make the test runner window visible during testing", handleOptionShowWindow));
     optionList.append(Option("--show-touches", "Show the touches during test runs (for debugging)", handleOptionShowTouches));
     optionList.append(Option("--world-leaks", "Check for leaks of world objects (currently, documents)", handleOptionCheckForWorldLeaks));
-
+    optionList.append(Option("--no-enable-all-experimental-features", "Do not enable all experimental features by default", handleOptionNoEnableAllExperimentalFeatures));
+    optionList.append(Option("--experimental-feature", "Enable experimental feature", handleOptionExperimentalFeature, true));
+    optionList.append(Option("--internal-feature", "Enable internal feature", handleOptionInternalFeature, true));
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    optionList.append(Option("--accessibility-isolated-tree", "Enable accessibility isolated tree mode for tests", handleOptionAccessibilityIsolatedTreeMode));
+#endif
+    optionList.append(Option("--webcore-logging", "Enable WebCore log channels", handleOptionWebCoreLogging, true));
+    optionList.append(Option("--webkit-logging", "Enable WebKit log channels", handleOptionWebKitLogging, true));
+    
     optionList.append(Option(0, 0, handleOptionUnmatched));
 }
 
@@ -137,7 +197,12 @@ const char * OptionsHandler::usage = "Usage: WebKitTestRunner [options] filename
 const char * OptionsHandler::help = "Displays this help.";
 
 Option::Option(const char* name, const char* description, std::function<bool(Options&, const char*, const char*)> parameterHandler, bool hasArgument)
-    : name(name), description(description), parameterHandler(parameterHandler), hasArgument(hasArgument) { };
+    : name(name)
+    , description(description)
+    , parameterHandler(parameterHandler)
+    , hasArgument(hasArgument)
+{
+}
 
 bool Option::matches(const char* option)
 {

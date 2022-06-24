@@ -12,9 +12,11 @@
 
 #import <UIKit/UIKit.h>
 
-#include "rtc_base/atomicops.h"
+#include <vector>
+
+#include "rtc_base/atomic_ops.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/criticalsection.h"
+#include "rtc_base/critical_section.h"
 
 #import "RTCAudioSessionConfiguration.h"
 #import "base/RTCLogging.h"
@@ -24,6 +26,10 @@ NSString * const kRTCAudioSessionErrorDomain = @"org.webrtc.RTCAudioSession";
 NSInteger const kRTCAudioSessionErrorLockRequired = -1;
 NSInteger const kRTCAudioSessionErrorConfiguration = -2;
 NSString * const kRTCAudioSessionOutputVolumeSelector = @"outputVolume";
+
+@interface RTCAudioSession ()
+@property(nonatomic, readonly) std::vector<__weak id<RTCAudioSessionDelegate> > delegates;
+@end
 
 // This class needs to be thread-safe because it is accessed from many threads.
 // TODO(tkchin): Consider more granular locking. We're not expecting a lot of
@@ -43,6 +49,8 @@ NSString * const kRTCAudioSessionOutputVolumeSelector = @"outputVolume";
 
 @synthesize session = _session;
 @synthesize delegates = _delegates;
+@synthesize ignoresPreferredAttributeConfigurationErrors =
+    _ignoresPreferredAttributeConfigurationErrors;
 
 + (instancetype)sharedInstance {
   static dispatch_once_t onceToken;
@@ -177,6 +185,23 @@ NSString * const kRTCAudioSessionOutputVolumeSelector = @"outputVolume";
 - (BOOL)isAudioEnabled {
   @synchronized(self) {
     return _isAudioEnabled;
+  }
+}
+
+- (void)setIgnoresPreferredAttributeConfigurationErrors:
+    (BOOL)ignoresPreferredAttributeConfigurationErrors {
+  @synchronized(self) {
+    if (_ignoresPreferredAttributeConfigurationErrors ==
+        ignoresPreferredAttributeConfigurationErrors) {
+      return;
+    }
+    _ignoresPreferredAttributeConfigurationErrors = ignoresPreferredAttributeConfigurationErrors;
+  }
+}
+
+- (BOOL)ignoresPreferredAttributeConfigurationErrors {
+  @synchronized(self) {
+    return _ignoresPreferredAttributeConfigurationErrors;
   }
 }
 
@@ -360,6 +385,10 @@ NSString * const kRTCAudioSessionOutputVolumeSelector = @"outputVolume";
   if (success) {
     if (shouldSetActive) {
       self.isActive = active;
+      if (active && self.isInterrupted) {
+        self.isInterrupted = NO;
+        [self notifyDidEndInterruptionWithShouldResumeSession:YES];
+      }
     }
     if (active) {
       [self incrementActivationCount];

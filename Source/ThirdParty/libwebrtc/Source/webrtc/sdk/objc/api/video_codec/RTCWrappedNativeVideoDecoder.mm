@@ -40,12 +40,6 @@
   return 0;
 }
 
-- (NSInteger)startDecodeWithSettings:(RTCVideoEncoderSettings *)settings
-                       numberOfCores:(int)numberOfCores {
-  RTC_NOTREACHED();
-  return 0;
-}
-
 - (NSInteger)releaseDecoder {
   RTC_NOTREACHED();
   return 0;
@@ -60,7 +54,9 @@
 }
 
 - (NSString *)implementationName {
+#if !defined(WEBRTC_WEBKIT_BUILD)
   RTC_NOTREACHED();
+#endif
   return nil;
 }
 

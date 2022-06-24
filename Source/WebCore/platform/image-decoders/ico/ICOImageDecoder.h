@@ -46,7 +46,7 @@ public:
 
     // ScalableImageDecoder
     String filenameExtension() const final { return "ico"_s; }
-    void setData(SharedBuffer&, bool allDataReceived) final;
+    void setData(const FragmentedSharedBuffer&, bool allDataReceived) final;
     IntSize size() const final;
     IntSize frameSizeAtIndex(size_t, SubsamplingLevel) const final;
     bool setSize(const IntSize&) final;
@@ -56,7 +56,7 @@ public:
     // avoid accessing deleted memory, especially when calling this from
     // inside BMPImageReader!
     bool setFailed() final;
-    Optional<IntPoint> hotSpot() const final;
+    std::optional<IntPoint> hotSpot() const final;
 
 private:
     enum ImageType {
@@ -86,12 +86,12 @@ private:
 
     inline uint16_t readUint16(int offset) const
     {
-        return BMPImageReader::readUint16(m_data.get(), m_decodedOffset + offset);
+        return BMPImageReader::readUint16(*m_data, m_decodedOffset + offset);
     }
 
     inline uint32_t readUint32(int offset) const
     {
-        return BMPImageReader::readUint32(m_data.get(), m_decodedOffset + offset);
+        return BMPImageReader::readUint32(*m_data, m_decodedOffset + offset);
     }
 
     // If the desired PNGImageDecoder exists, gives it the appropriate data.
@@ -119,8 +119,8 @@ private:
     // could be decoded.
     bool processDirectoryEntries();
 
-    // Returns the hot-spot for |index|, returns WTF::nullopt if there is none.
-    Optional<IntPoint> hotSpotAtIndex(size_t) const;
+    // Returns the hot-spot for |index|, returns std::nullopt if there is none.
+    std::optional<IntPoint> hotSpotAtIndex(size_t) const;
 
     // Reads and returns a directory entry from the current offset into
     // |data|.

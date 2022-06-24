@@ -27,6 +27,9 @@
 #import "FrameSelection.h"
 
 #import "AXObjectCache.h"
+#import "Chrome.h"
+#import "ChromeClient.h"
+#import "DocumentInlines.h"
 #import "Frame.h"
 #import "RenderView.h"
 
@@ -34,22 +37,20 @@ namespace WebCore {
 
 void FrameSelection::notifyAccessibilityForSelectionChange(const AXTextStateChangeIntent& intent)
 {
-    Document* document = m_frame->document();
-
     if (m_selection.start().isNotNull() && m_selection.end().isNotNull()) {
-        if (AXObjectCache* cache = document->existingAXObjectCache())
+        if (AXObjectCache* cache = m_document->existingAXObjectCache())
             cache->postTextStateChangeNotification(m_selection.start(), intent, m_selection);
     }
 
 #if !PLATFORM(IOS_FAMILY)
     // if zoom feature is enabled, insertion point changes should update the zoom
-    if (!UAZoomEnabled() || !m_selection.isCaret())
+    if (!m_selection.isCaret())
         return;
 
-    RenderView* renderView = document->renderView();
+    RenderView* renderView = m_document->renderView();
     if (!renderView)
         return;
-    FrameView* frameView = m_frame->view();
+    FrameView* frameView = m_document->view();
     if (!frameView)
         return;
 
@@ -58,14 +59,11 @@ void FrameSelection::notifyAccessibilityForSelectionChange(const AXTextStateChan
 
     selectionRect = frameView->contentsToScreen(selectionRect);
     viewRect = frameView->contentsToScreen(viewRect);
-    NSRect nsCaretRect = NSMakeRect(selectionRect.x(), selectionRect.y(), selectionRect.width(), selectionRect.height());
-    NSRect nsViewRect = NSMakeRect(viewRect.x(), viewRect.y(), viewRect.width(), viewRect.height());
-    nsCaretRect = toUserSpaceForPrimaryScreen(nsCaretRect);
-    nsViewRect = toUserSpaceForPrimaryScreen(nsViewRect);
-    CGRect cgCaretRect = NSRectToCGRect(nsCaretRect);
-    CGRect cgViewRect = NSRectToCGRect(nsViewRect);
 
-    UAZoomChangeFocus(&cgViewRect, &cgCaretRect, kUAZoomFocusTypeInsertionPoint);
+    if (!m_document->page())
+        return;
+    
+    m_document->page()->chrome().client().changeUniversalAccessZoomFocus(viewRect, selectionRect);
 #endif // !PLATFORM(IOS_FAMILY)
 }
 

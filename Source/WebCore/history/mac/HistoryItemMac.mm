@@ -23,10 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#include "config.h"
-#include "HistoryItem.h"
+#import "config.h"
+#import "HistoryItem.h"
 
-#include <wtf/text/StringHash.h>
+#import <wtf/text/StringHash.h>
 
 namespace WebCore {
 
@@ -37,9 +37,7 @@ id HistoryItem::viewState() const
 
 void HistoryItem::setViewState(id statePList)
 {
-    id newState = [statePList copy];
-    m_viewState = newState;
-    [newState release];
+    m_viewState = adoptNS([statePList copy]);
 }
 
 } // namespace WebCore

@@ -55,10 +55,8 @@ static void resolvedName(CFHostRef hostRef, CFHostInfoType typeInfo, const CFStr
 
     for (size_t index = 0; index < count; ++index) {
         CFDataRef data = (CFDataRef)CFArrayGetValueAtIndex(resolvedAddresses, index);
-        auto* address = reinterpret_cast<const struct sockaddr_in*>(CFDataGetBytePtr(data));
-        if (address->sin_family == AF_INET)
-            addresses.uncheckedAppend(WebCore::IPAddress(*address));
-        // FIXME: We should probably return AF_INET6 addresses as well.
+        if (auto address = WebCore::IPAddress::fromSockAddrIn6(*reinterpret_cast<const struct sockaddr_in6*>(CFDataGetBytePtr(data))))
+            addresses.uncheckedAppend(*address);
     }
     if (addresses.isEmpty()) {
         resolver->completed(makeUnexpected(WebCore::DNSError::CannotResolve));
@@ -67,12 +65,12 @@ static void resolvedName(CFHostRef hostRef, CFHostInfoType typeInfo, const CFStr
     resolver->completed(WTFMove(addresses));
 }
 
-std::unique_ptr<NetworkRTCResolver> NetworkRTCResolver::create(uint64_t identifier, WebCore::DNSCompletionHandler&& completionHandler)
+std::unique_ptr<NetworkRTCResolver> NetworkRTCResolver::create(LibWebRTCResolverIdentifier identifier, WebCore::DNSCompletionHandler&& completionHandler)
 {
     return std::unique_ptr<NetworkRTCResolver>(new NetworkRTCResolverCocoa(identifier, WTFMove(completionHandler)));
 }
 
-NetworkRTCResolverCocoa::NetworkRTCResolverCocoa(uint64_t identifier, WebCore::DNSCompletionHandler&& completionHandler)
+NetworkRTCResolverCocoa::NetworkRTCResolverCocoa(LibWebRTCResolverIdentifier identifier, WebCore::DNSCompletionHandler&& completionHandler)
     : NetworkRTCResolver(identifier, WTFMove(completionHandler))
 {
 }

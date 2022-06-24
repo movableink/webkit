@@ -29,10 +29,11 @@
 #include "APIClient.h"
 #include "APIData.h"
 #include "WKContext.h"
+#include <wtf/ProcessID.h>
 
 namespace API {
 template<> struct ClientTraits<WKContextClientBase> {
-    typedef std::tuple<WKContextClientV0, WKContextClientV1, WKContextClientV2> Versions;
+    typedef std::tuple<WKContextClientV0, WKContextClientV1, WKContextClientV2, WKContextClientV3> Versions;
 };
 }
 
@@ -45,6 +46,8 @@ class WebContextClient : public API::Client<WKContextClientBase> {
 public:
     void plugInAutoStartOriginHashesChanged(WebProcessPool*);
     void networkProcessDidCrash(WebProcessPool*);
+    void serviceWorkerProcessDidCrash(WebProcessPool*, ProcessID);
+    void gpuProcessDidCrash(WebProcessPool*, ProcessID);
 };
 
 } // namespace WebKit

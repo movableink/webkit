@@ -9,7 +9,9 @@
  */
 
 #include "common_video/include/bitrate_adjuster.h"
-#include "rtc_base/fakeclock.h"
+
+#include "api/units/time_delta.h"
+#include "rtc_base/fake_clock.h"
 #include "test/gtest.h"
 
 namespace webrtc {
@@ -32,7 +34,7 @@ class BitrateAdjusterTest : public ::testing::Test {
     const size_t frame_size_bytes =
         (bitrate_bps * frame_interval_ms) / (8 * 1000);
     for (size_t i = 0; i < update_frame_interval; ++i) {
-      clock_.AdvanceTime(webrtc::TimeDelta::ms(frame_interval_ms));
+      clock_.AdvanceTime(webrtc::TimeDelta::Millis(frame_interval_ms));
       adjuster_.Update(frame_size_bytes);
     }
   }

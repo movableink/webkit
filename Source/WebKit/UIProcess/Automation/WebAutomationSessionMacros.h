@@ -28,7 +28,7 @@
 #define errorNameAndDetailsSeparator ";"
 
 // Make sure the predefined error name is valid, otherwise use InternalError.
-#define VALIDATED_ERROR_MESSAGE(errorString) Inspector::Protocol::AutomationHelpers::parseEnumValueFromString<Inspector::Protocol::Automation::ErrorMessage>(errorString).valueOr(Inspector::Protocol::Automation::ErrorMessage::InternalError)
+#define VALIDATED_ERROR_MESSAGE(errorString) Inspector::Protocol::AutomationHelpers::parseEnumValueFromString<Inspector::Protocol::Automation::ErrorMessage>(errorString).value_or(Inspector::Protocol::Automation::ErrorMessage::InternalError)
 
 // If the error name is incorrect for these macros, it will be a compile-time error.
 #define STRING_FOR_PREDEFINED_ERROR_NAME(errorName) Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::errorName)
@@ -44,14 +44,12 @@
 // Convenience macros for filling in the error string of synchronous commands in bailout branches.
 #define SYNC_FAIL_WITH_PREDEFINED_ERROR(errorName) \
 do { \
-    errorString = STRING_FOR_PREDEFINED_ERROR_NAME(errorName); \
-    return; \
+    return makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME(errorName)); \
 } while (false)
 
 #define SYNC_FAIL_WITH_PREDEFINED_ERROR_AND_DETAILS(errorName, detailsString) \
 do { \
-    errorString = STRING_FOR_PREDEFINED_ERROR_NAME_AND_DETAILS(errorName, detailsString); \
-    return; \
+    return makeUnexpected(STRING_FOR_PREDEFINED_ERROR_NAME_AND_DETAILS(errorName, detailsString)); \
 } while (false)
 
 #define ASYNC_FAIL_WITH_PREDEFINED_ERROR(errorName) \

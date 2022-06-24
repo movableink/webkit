@@ -77,9 +77,8 @@ async function resetCookies(urls)
     function setUp() {
         return new Promise((resolve) => {
             if (window.testRunner) {
-                testRunner.setCanOpenWindows(true);
                 testRunner.setAlwaysAcceptCookies(true);
-                testRunner.setPopupBlockingEnabled(false);
+                internals.settings.setJavaScriptCanOpenWindowsAutomatically(true);
             }
             resolve();
         });
@@ -101,7 +100,7 @@ async function resetCookies(urls)
                 // FIXME: For some reason we get a SecurityError when passing childWindow to resolve() in Safari Version 11.0.3 (13604.5.6)
                 // and not in Chrome Canary 67.0.3390.0 (why?). As a workaround, store the child window reference in a global variable.
                 window.addEventListener("message", (messageEvent) => resolve(messageEvent), {capture: true, once: true});
-                g_childWindow = window.open(url + "/cookies/resources/cookie-utility.php?queryfunction=deleteCookiesAndPostMessage", "reset");
+                g_childWindow = window.open(url + "/cookies/resources/cookie-utility.py?queryfunction=deleteCookiesAndPostMessage", "reset");
                 if (!g_childWindow)
                     reject(null);
             });
@@ -116,7 +115,7 @@ async function resetCookiesForCurrentOrigin()
 
     let promise = new Promise((resolved, rejected) => {
         let xhr = new XMLHttpRequest;
-        xhr.open("GET", "/cookies/resources/cookie-utility.php?queryfunction=deleteCookies");
+        xhr.open("GET", "/cookies/resources/cookie-utility.py?queryfunction=deleteCookies");
         xhr.onload = (progressEvent) => {
             disableSetAlwaysAcceptCookies();
             resolved(progressEvent);
@@ -156,7 +155,7 @@ async function getCookies()
 
     let promise = new Promise((resolved, rejected) => {
         let xhr = new XMLHttpRequest;
-        xhr.open("GET", `${g_baseURLWhenFetchingCookies}/cookies/resources/echo-json.php`);
+        xhr.open("GET", `${g_baseURLWhenFetchingCookies}/cookies/resources/echo-json.py`);
         xhr.onload = () => resolved(xhr.responseText ? JSON.parse(xhr.responseText) : {});
         xhr.onerror = () => rejected({});
         xhr.send(null);

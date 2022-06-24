@@ -7,7 +7,6 @@ var iframeXHRCount = 0;
 if (window.testRunner) {
     testRunner.dumpAsText();
     testRunner.waitUntilDone();
-    testRunner.setCanOpenWindows(true);
 }
 
 function log(message)
@@ -23,9 +22,11 @@ iframeXHRFinished = function()
 
 iframeXHRStarted = function()
 {
-    log("Started loading iframe XHR request.");
     ++iframeXHRCount;
+    if (iframeXHRCount > 2)
+        return;
 
+    log("Started loading iframe XHR request.");
     if (iframeXHRCount < 2)
         return;
 

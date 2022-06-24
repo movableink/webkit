@@ -14,9 +14,10 @@
 #ifndef MODULES_VIDEO_CODING_CODECS_VP9_INCLUDE_VP9_GLOBALS_H_
 #define MODULES_VIDEO_CODING_CODECS_VP9_INCLUDE_VP9_GLOBALS_H_
 
-#include <assert.h>
+#include <stdint.h>
 
 #include "modules/video_coding/codecs/interface/common_constants.h"
+#include "rtc_base/checks.h"
 
 namespace webrtc {
 
@@ -29,8 +30,8 @@ const size_t kMaxVp9RefPics = 3;
 const size_t kMaxVp9FramesInGof = 0xFF;  // 8 bits
 const size_t kMaxVp9NumberOfSpatialLayers = 8;
 
-const size_t kMinVp9SpatialLayerWidth = 320;
-const size_t kMinVp9SpatialLayerHeight = 180;
+const size_t kMinVp9SpatialLayerWidth = 240;
+const size_t kMinVp9SpatialLayerHeight = 135;
 
 enum TemporalStructureMode {
   kTemporalStructureMode1,  // 1 temporal layer structure - i.e., IPPP...
@@ -107,30 +108,30 @@ struct GofInfoVP9 {
         pid_diff[3][1] = 2;
 
         temporal_idx[4] = 0;
-        temporal_up_switch[0] = false;
+        temporal_up_switch[4] = false;
         num_ref_pics[4] = 1;
         pid_diff[4][0] = 4;
 
         temporal_idx[5] = 2;
-        temporal_up_switch[1] = false;
+        temporal_up_switch[5] = false;
         num_ref_pics[5] = 2;
         pid_diff[5][0] = 1;
         pid_diff[5][1] = 2;
 
         temporal_idx[6] = 1;
-        temporal_up_switch[2] = false;
+        temporal_up_switch[6] = false;
         num_ref_pics[6] = 2;
         pid_diff[6][0] = 2;
         pid_diff[6][1] = 4;
 
         temporal_idx[7] = 2;
-        temporal_up_switch[3] = false;
+        temporal_up_switch[7] = false;
         num_ref_pics[7] = 2;
         pid_diff[7][0] = 1;
         pid_diff[7][1] = 2;
         break;
       default:
-        assert(false);
+        RTC_NOTREACHED();
     }
   }
 
@@ -172,6 +173,7 @@ struct RTPVideoHeaderVP9 {
     gof_idx = kNoGofIdx;
     num_ref_pics = 0;
     num_spatial_layers = 1;
+    first_active_layer = 0;
     end_of_picture = true;
   }
 
@@ -207,6 +209,7 @@ struct RTPVideoHeaderVP9 {
 
   // SS data.
   size_t num_spatial_layers;  // Always populated.
+  size_t first_active_layer;  // Not sent on wire, used to adjust ss data.
   bool spatial_layer_resolution_present;
   uint16_t width[kMaxVp9NumberOfSpatialLayers];
   uint16_t height[kMaxVp9NumberOfSpatialLayers];

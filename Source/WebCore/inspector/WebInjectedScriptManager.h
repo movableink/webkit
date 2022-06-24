@@ -46,12 +46,11 @@ public:
     void disconnect() override;
     void discardInjectedScripts() override;
 
-    void discardInjectedScriptsFor(DOMWindow*);
-
-protected:
-    void didCreateInjectedScript(const Inspector::InjectedScript&) override;
+    void discardInjectedScriptsFor(DOMWindow&);
 
 private:
+    void didCreateInjectedScript(const Inspector::InjectedScript&) override;
+
     RefPtr<CommandLineAPIHost> m_commandLineAPIHost;
 };
 

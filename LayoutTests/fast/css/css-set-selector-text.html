@@ -51,6 +51,11 @@ function expectedSerializedLangSelector(selector)
     return expected;
 }
 
+function testSelectorSerialization(selector, expectedSelector)
+{
+    shouldBe("setThenReadSelectorText('" + selector + "')", "'" + expectedSelector + "'");
+}
+
 function testSelectorRoundTrip(selector, expectFailure)
 {
     var expected = selector.indexOf(":lang") == 0 ? expectedSerializedLangSelector(selector) : selector;
@@ -145,8 +150,9 @@ testSelectorRoundTrip("::selection");
 debug('');
 
 testSelectorRoundTrip(":-webkit-any-link");
-testSelectorRoundTrip(":-webkit-autofill");
 testSelectorRoundTrip(":-webkit-drag");
+testSelectorRoundTrip(":autofill");
+testSelectorSerialization(":-webkit-autofill", ":autofill");
 
 testSelectorRoundTrip('a:any-link');
 testSelectorRoundTrip('a :any-link');
@@ -158,8 +164,8 @@ testSelectorRoundTrip(':not(:any-link)');
 
 debug('');
 
-testSelectorRoundTrip(":nth-child(odd)");
-testSelectorRoundTrip(":nth-child(even)");
+testSelectorSerialization(":nth-child(odd)", ":nth-child(2n+1)");
+testSelectorSerialization(":nth-child(even)", ":nth-child(2n)");
 testSelectorRoundTrip(":nth-child(n)");
 testSelectorRoundTrip(":nth-child(-n)");
 testSelectorRoundTrip(":nth-child(5)");
@@ -171,29 +177,104 @@ testSelectorRoundTrip(":nth-child(-5n-7)");
 
 debug('');
 
-testSelectorRoundTrip(":nth-child(odd of .foo, :nth-child(odd))");
-testSelectorRoundTrip(":nth-child(even of .foo, :nth-child(odd))");
-testSelectorRoundTrip(":nth-child(n of .foo, :nth-child(odd))");
-testSelectorRoundTrip(":nth-child(-n of .foo, :nth-child(odd))");
-testSelectorRoundTrip(":nth-child(5 of .foo, :nth-child(odd))");
-testSelectorRoundTrip(":nth-child(-5 of .foo, :nth-child(odd))");
-testSelectorRoundTrip(":nth-child(5n+7 of .foo, :nth-child(odd))");
-testSelectorRoundTrip(":nth-child(-5n+7 of .foo, :nth-child(odd))");
-testSelectorRoundTrip(":nth-child(5n-7 of .foo, :nth-child(odd))");
-testSelectorRoundTrip(":nth-child(-5n-7 of .foo, :nth-child(odd))");
+testSelectorSerialization(":nth-child(odd of .foo, :nth-child(odd))", ":nth-child(2n+1 of .foo, :nth-child(2n+1))");
+testSelectorSerialization(":nth-child(even of .foo, :nth-child(odd))", ":nth-child(2n of .foo, :nth-child(2n+1))");
+testSelectorSerialization(":nth-child(n of .foo, :nth-child(odd))", ":nth-child(n of .foo, :nth-child(2n+1))");
+testSelectorSerialization(":nth-child(-n of .foo, :nth-child(odd))", ":nth-child(-n of .foo, :nth-child(2n+1))");
+testSelectorSerialization(":nth-child(5 of .foo, :nth-child(odd))", ":nth-child(5 of .foo, :nth-child(2n+1))");
+testSelectorSerialization(":nth-child(-5 of .foo, :nth-child(odd))", ":nth-child(-5 of .foo, :nth-child(2n+1))");
+testSelectorSerialization(":nth-child(5n+7 of .foo, :nth-child(odd))", ":nth-child(5n+7 of .foo, :nth-child(2n+1))");
+testSelectorSerialization(":nth-child(-5n+7 of .foo, :nth-child(odd))", ":nth-child(-5n+7 of .foo, :nth-child(2n+1))");
+testSelectorSerialization(":nth-child(5n-7 of .foo, :nth-child(odd))", ":nth-child(5n-7 of .foo, :nth-child(2n+1))");
+testSelectorSerialization(":nth-child(-5n-7 of .foo, :nth-child(odd))", ":nth-child(-5n-7 of .foo, :nth-child(2n+1))");
 
 debug('');
 
-testSelectorRoundTrip(":nth-last-child(odd of .foo, :nth-last-child(odd))");
-testSelectorRoundTrip(":nth-last-child(even of .foo, :nth-last-child(odd))");
-testSelectorRoundTrip(":nth-last-child(n of .foo, :nth-last-child(odd))");
-testSelectorRoundTrip(":nth-last-child(-n of .foo, :nth-last-child(odd))");
-testSelectorRoundTrip(":nth-last-child(5 of .foo, :nth-last-child(odd))");
-testSelectorRoundTrip(":nth-last-child(-5 of .foo, :nth-last-child(odd))");
-testSelectorRoundTrip(":nth-last-child(5n+7 of .foo, :nth-last-child(odd))");
-testSelectorRoundTrip(":nth-last-child(-5n+7 of .foo, :nth-last-child(odd))");
-testSelectorRoundTrip(":nth-last-child(5n-7 of .foo, :nth-last-child(odd))");
-testSelectorRoundTrip(":nth-last-child(-5n-7 of .foo, :nth-last-child(odd))");
+testSelectorSerialization(":nth-last-child(odd of .foo, :nth-last-child(odd))", ":nth-last-child(2n+1 of .foo, :nth-last-child(2n+1))");
+testSelectorSerialization(":nth-last-child(even of .foo, :nth-last-child(odd))", ":nth-last-child(2n of .foo, :nth-last-child(2n+1))");
+testSelectorSerialization(":nth-last-child(n of .foo, :nth-last-child(odd))", ":nth-last-child(n of .foo, :nth-last-child(2n+1))");
+testSelectorSerialization(":nth-last-child(-n of .foo, :nth-last-child(odd))", ":nth-last-child(-n of .foo, :nth-last-child(2n+1))");
+testSelectorSerialization(":nth-last-child(5 of .foo, :nth-last-child(odd))", ":nth-last-child(5 of .foo, :nth-last-child(2n+1))");
+testSelectorSerialization(":nth-last-child(-5 of .foo, :nth-last-child(odd))", ":nth-last-child(-5 of .foo, :nth-last-child(2n+1))");
+testSelectorSerialization(":nth-last-child(5n+7 of .foo, :nth-last-child(odd))", ":nth-last-child(5n+7 of .foo, :nth-last-child(2n+1))");
+testSelectorSerialization(":nth-last-child(-5n+7 of .foo, :nth-last-child(odd))", ":nth-last-child(-5n+7 of .foo, :nth-last-child(2n+1))");
+testSelectorSerialization(":nth-last-child(5n-7 of .foo, :nth-last-child(odd))", ":nth-last-child(5n-7 of .foo, :nth-last-child(2n+1))");
+testSelectorSerialization(":nth-last-child(-5n-7 of .foo, :nth-last-child(odd))", ":nth-last-child(-5n-7 of .foo, :nth-last-child(2n+1))");
+
+debug('');
+
+testSelectorRoundTrip(':is(single)');
+testSelectorRoundTrip(':is(a, b, p)');
+testSelectorRoundTrip(':is(#alice, #bob, #chris)');
+testSelectorRoundTrip(':is(.selector, #tama, #hanayo, #midoriko)');
+testSelectorRoundTrip(':is(.name, #ok, :visited)');
+testSelectorRoundTrip(':is(.name, #ok, :visited, :link)');
+testSelectorRoundTrip(':is(.name, #ok, :is(:visited))');
+testSelectorRoundTrip(':is(.name, #ok, :not(:link))');
+testSelectorRoundTrip(':is(.name, #ok, :not(:link))');
+testSelectorRoundTrip(':is(.name, #ok, :-webkit-any(hello))');
+testSelectorRoundTrip(':is(.name, #ok, :-webkit-any(.selector, #tama, #hanayo, #midoriko))');
+testSelectorRoundTrip(':is([type="file"])');
+testSelectorRoundTrip(':is(:hover)');
+testSelectorRoundTrip('input:is([type="file"], :hover, :focus):enabled');
+testSelectorRoundTrip(':is(input[type="file"], a:hover, button:focus)');
+testSelectorRoundTrip(':is(.class1.class2.class3)');
+testSelectorRoundTrip(':is(.class1:hover)');
+testSelectorRoundTrip(':is(a.class1.class2.class3:hover)');
+testSelectorRoundTrip(':where(single)');
+testSelectorRoundTrip(':where(a, b, p)');
+testSelectorRoundTrip(':where(#alice, #bob, #chris)');
+testSelectorRoundTrip(':where(.selector, #tama, #hanayo, #midoriko)');
+testSelectorRoundTrip(':where(.name, #ok, :visited)');
+testSelectorRoundTrip(':where(.name, #ok, :visited, :link)');
+testSelectorRoundTrip(':where(.name, #ok, :where(:visited))');
+testSelectorRoundTrip(':where(.name, #ok, :not(:link))');
+testSelectorRoundTrip(':where(.name, #ok, :not(:link))');
+testSelectorRoundTrip(':where(.name, #ok, :where(hello))');
+testSelectorRoundTrip(':where(.name, #ok, :where(.selector, #tama, #hanayo, #midoriko))');
+testSelectorRoundTrip(':where([type="file"])');
+testSelectorRoundTrip(':where(:hover)');
+testSelectorRoundTrip('input:where([type="file"], :hover, :focus):enabled');
+testSelectorRoundTrip(':where(input[type="file"], a:hover, button:focus)');
+testSelectorRoundTrip(':where(.class1.class2.class3)');
+testSelectorRoundTrip(':where(.class1:hover)');
+testSelectorRoundTrip(':where(a.class1.class2.class3:hover)');
+testSelectorRoundTrip(':matches(:is(single))');
+testSelectorRoundTrip(':matches(:is(a, b, p))');
+testSelectorRoundTrip(':matches(:is(#alice, #bob, #chris))');
+testSelectorRoundTrip(':matches(:is(.selector, #tama, #hanayo, #midoriko))');
+testSelectorRoundTrip(':matches(:is(.name, #ok, :visited))');
+testSelectorRoundTrip(':matches(:is(.name, #ok, :visited, :link))');
+testSelectorRoundTrip(':matches(:is(.name, #ok, :is(:visited)))');
+testSelectorRoundTrip(':matches(:is(.name, #ok, :not(:link)))');
+testSelectorRoundTrip(':matches(:is(.name, #ok, :not(:link)))');
+testSelectorRoundTrip(':matches(:is(.name, #ok, :matches(hello)))');
+testSelectorRoundTrip(':matches(:is(.name, #ok, :matches(.selector, #tama, #hanayo, #midoriko)))');
+testSelectorRoundTrip(':matches(:is([type="file"]))');
+testSelectorRoundTrip(':matches(:is(:hover))');
+testSelectorRoundTrip(':matches(input:is([type="file"], :hover, :focus):enabled)');
+testSelectorRoundTrip(':matches(:is(input[type="file"], a:hover, button:focus))');
+testSelectorRoundTrip(':matches(:is(.class1.class2.class3))');
+testSelectorRoundTrip(':matches(:is(.class1:hover))');
+testSelectorRoundTrip(':matches(:is(a.class1.class2.class3:hover))');
+testSelectorRoundTrip(':-webkit-any(:is(single))');
+testSelectorRoundTrip(':-webkit-any(:is(a, b, p))');
+testSelectorRoundTrip(':-webkit-any(:is(#alice, #bob, #chris))');
+testSelectorRoundTrip(':-webkit-any(:is(.selector, #tama, #hanayo, #midoriko))');
+testSelectorRoundTrip(':-webkit-any(:is(.name, #ok, :visited))');
+testSelectorRoundTrip(':-webkit-any(:is(.name, #ok, :visited, :link))');
+testSelectorRoundTrip(':-webkit-any(:is(.name, #ok, :is(:visited)))');
+testSelectorRoundTrip(':-webkit-any(:is(.name, #ok, :not(:link)))');
+testSelectorRoundTrip(':-webkit-any(:is(.name, #ok, :not(:link)))');
+testSelectorRoundTrip(':-webkit-any(:is(.name, #ok, :-webkit-any(hello)))');
+testSelectorRoundTrip(':-webkit-any(:is(.name, #ok, :-webkit-any(.selector, #tama, #hanayo, #midoriko)))');
+testSelectorRoundTrip(':-webkit-any(:is([type="file"]))');
+testSelectorRoundTrip(':-webkit-any(:is(:hover))');
+testSelectorRoundTrip(':-webkit-any(input:is([type="file"], :hover, :focus):enabled)');
+testSelectorRoundTrip(':-webkit-any(:is(input[type="file"], a:hover, button:focus))');
+testSelectorRoundTrip(':-webkit-any(:is(.class1.class2.class3))');
+testSelectorRoundTrip(':-webkit-any(:is(.class1:hover))');
+testSelectorRoundTrip(':-webkit-any(:is(a.class1.class2.class3:hover))');
 
 debug('');
 
@@ -215,10 +296,24 @@ testSelectorRoundTrip(':matches(input[type="file"], a:hover, button:focus)');
 testSelectorRoundTrip(':matches(.class1.class2.class3)');
 testSelectorRoundTrip(':matches(.class1:hover)');
 testSelectorRoundTrip(':matches(a.class1.class2.class3:hover)');
-testSelectorRoundTrip(':matches(::first-letter, ::first-line)');
-testSelectorRoundTrip(':matches(a > ::first-letter, b ~ ::first-line, c ::after, d + ::before)');
-testSelectorRoundTrip(':matches(.ok a > ::first-letter, .ok b ~ ::first-line, .ok c ::after, .ok d + ::before)');
-testSelectorRoundTrip(':matches(.ok a > .ok ::first-letter, .ok b ~ .ok ::first-line, .ok c .ok ::after, .ok d + .ok ::before)');
+testSelectorRoundTrip(':is(:matches(single))');
+testSelectorRoundTrip(':is(:matches(a, b, p))');
+testSelectorRoundTrip(':is(:matches(#alice, #bob, #chris))');
+testSelectorRoundTrip(':is(:matches(.selector, #tama, #hanayo, #midoriko))');
+testSelectorRoundTrip(':is(:matches(.name, #ok, :visited))');
+testSelectorRoundTrip(':is(:matches(.name, #ok, :visited, :link))');
+testSelectorRoundTrip(':is(:matches(.name, #ok, :matches(:visited)))');
+testSelectorRoundTrip(':is(:matches(.name, #ok, :not(:link)))');
+testSelectorRoundTrip(':is(:matches(.name, #ok, :not(:link)))');
+testSelectorRoundTrip(':is(:matches(.name, #ok, :is(hello)))');
+testSelectorRoundTrip(':is(:matches(.name, #ok, :is(.selector, #tama, #hanayo, #midoriko)))');
+testSelectorRoundTrip(':is(:matches([type="file"]))');
+testSelectorRoundTrip(':is(:matches(:hover))');
+testSelectorRoundTrip(':is(input:matches([type="file"], :hover, :focus):enabled)');
+testSelectorRoundTrip(':is(:matches(input[type="file"], a:hover, button:focus))');
+testSelectorRoundTrip(':is(:matches(.class1.class2.class3))');
+testSelectorRoundTrip(':is(:matches(.class1:hover))');
+testSelectorRoundTrip(':is(:matches(a.class1.class2.class3:hover))');
 testSelectorRoundTrip(':-webkit-any(:matches(single))');
 testSelectorRoundTrip(':-webkit-any(:matches(a, b, p))');
 testSelectorRoundTrip(':-webkit-any(:matches(#alice, #bob, #chris))');
@@ -237,10 +332,6 @@ testSelectorRoundTrip(':-webkit-any(:matches(input[type="file"], a:hover, button
 testSelectorRoundTrip(':-webkit-any(:matches(.class1.class2.class3))');
 testSelectorRoundTrip(':-webkit-any(:matches(.class1:hover))');
 testSelectorRoundTrip(':-webkit-any(:matches(a.class1.class2.class3:hover))');
-testSelectorRoundTrip(':-webkit-any(:matches(::first-letter, ::first-line))');
-testSelectorRoundTrip(':-webkit-any(:matches(a > ::first-letter, b ~ ::first-line, c ::after, d + ::before))');
-testSelectorRoundTrip(':-webkit-any(:matches(.ok a > ::first-letter, .ok b ~ ::first-line, .ok c ::after, .ok d + ::before))');
-testSelectorRoundTrip(':-webkit-any(:matches(.ok a > .ok ::first-letter, .ok b ~ .ok ::first-line, .ok c .ok ::after, .ok d + .ok ::before))');
 
 debug('');
 
@@ -257,6 +348,11 @@ testSelectorRoundTrip(':not(div, .div, #div, [div], :empty)');
 testSelectorRoundTrip(':not(:not(div))');
 testSelectorRoundTrip(':not(:not(div)):not(:not(foo)):not(:not(bar))');
 testSelectorRoundTrip(':not(:not(div, :not(foo, bar))):not(:not(foo)):not(:not(bar, baz))');
+
+testSelectorRoundTrip(':not(:is(*))');
+testSelectorRoundTrip(':not(:is(foo, bar))');
+testSelectorRoundTrip(':not(:is(foo, bar), :is(.foo, .bar), :is(#foo, #bar), :is([foo], [bar]))');
+testSelectorRoundTrip(':not(:is(foo, bar:not(:empty)), :is(.foo, .bar:not(:not(.mosaic))), :is(#foo, #bar), :is([foo], [bar]))');
 
 testSelectorRoundTrip(':not(:matches(*))');
 testSelectorRoundTrip(':not(:matches(foo, bar))');
@@ -371,6 +467,27 @@ shouldBe("setThenReadSelectorText(':-webkit-any(    a.class1  ,  	#id,[attr]  )'
 
 debug('');
 
+shouldBe("setThenReadSelectorText(':is(single    )')", "':is(single)'");
+shouldBe("setThenReadSelectorText(':is(a,b    ,p)')", "':is(a, b, p)'");
+shouldBe("setThenReadSelectorText(':is(#alice,                   #bob,#chris)')", "':is(#alice, #bob, #chris)'");
+shouldBe("setThenReadSelectorText(':is(  .selector,#tama,                #hanayo,#midoriko)')", "':is(.selector, #tama, #hanayo, #midoriko)'");
+shouldBe("setThenReadSelectorText(':is(    .name,#ok,:visited   )')", "':is(.name, #ok, :visited)'");
+shouldBe("setThenReadSelectorText(':is(    .name,#ok,    :visited, :link)')", "':is(.name, #ok, :visited, :link)'");
+shouldBe("setThenReadSelectorText(':is(    .name,#ok,    :is(:visited    ))')", "':is(.name, #ok, :is(:visited))'");
+shouldBe("setThenReadSelectorText(':is(.name,  #ok,:not(:link))')", "':is(.name, #ok, :not(:link))'");
+shouldBe("setThenReadSelectorText(':is(.name,#ok,:not(:link))')", "':is(.name, #ok, :not(:link))'");
+shouldBe("setThenReadSelectorText(':is(    .name,#ok,:-webkit-any(   hello))')", "':is(.name, #ok, :-webkit-any(hello))'");
+shouldBe("setThenReadSelectorText(':is(    .name,#ok, :-webkit-any(.selector, #tama, #hanayo, #midoriko))')", "':is(.name, #ok, :-webkit-any(.selector, #tama, #hanayo, #midoriko))'");
+shouldBe("setThenReadSelectorText(':is(       [type=\"file\"])')", "':is([type=\"file\"])'");
+shouldBe("setThenReadSelectorText(':is(  :hover    )')", "':is(:hover)'");
+shouldBe("setThenReadSelectorText('input:is([type=\"file\"],:hover,:focus):enabled')", "'input:is([type=\"file\"], :hover, :focus):enabled'");
+shouldBe("setThenReadSelectorText(':is(input[type=\"file\"], a:hover, button:focus)')", "':is(input[type=\"file\"], a:hover, button:focus)'");
+shouldBe("setThenReadSelectorText(':is( .class1.class2.class3   )')", "':is(.class1.class2.class3)'");
+shouldBe("setThenReadSelectorText(':is(.class1:hover   )')", "':is(.class1:hover)'");
+shouldBe("setThenReadSelectorText(':is(a.class1.class2.class3:hover   )')", "':is(a.class1.class2.class3:hover)'");
+
+debug('');
+
 shouldBe("setThenReadSelectorText(':matches(single    )')", "':matches(single)'");
 shouldBe("setThenReadSelectorText(':matches(a,b    ,p)')", "':matches(a, b, p)'");
 shouldBe("setThenReadSelectorText(':matches(#alice,                   #bob,#chris)')", "':matches(#alice, #bob, #chris)'");
@@ -389,10 +506,6 @@ shouldBe("setThenReadSelectorText(':matches(input[type=\"file\"], a:hover, butto
 shouldBe("setThenReadSelectorText(':matches( .class1.class2.class3   )')", "':matches(.class1.class2.class3)'");
 shouldBe("setThenReadSelectorText(':matches(.class1:hover   )')", "':matches(.class1:hover)'");
 shouldBe("setThenReadSelectorText(':matches(a.class1.class2.class3:hover   )')", "':matches(a.class1.class2.class3:hover)'");
-shouldBe("setThenReadSelectorText(':matches(:first-letter,::first-line)')", "':matches(::first-letter, ::first-line)'");
-shouldBe("setThenReadSelectorText(':matches(a>:first-letter,b   ~ ::first-line, c :after, d+ :before)')", "':matches(a > ::first-letter, b ~ ::first-line, c ::after, d + ::before)'");
-shouldBe("setThenReadSelectorText(':matches(.ok a >    ::first-letter, .ok b~ ::first-line, .ok c :after, .ok d +:before)')", "':matches(.ok a > ::first-letter, .ok b ~ ::first-line, .ok c ::after, .ok d + ::before)'");
-shouldBe("setThenReadSelectorText(':matches(.ok a> .ok ::first-letter, .ok b   ~.ok :first-line, .ok c .ok    ::after, .ok d + .ok ::before)')", "':matches(.ok a > .ok ::first-letter, .ok b ~ .ok ::first-line, .ok c .ok ::after, .ok d + .ok ::before)'");
 
 debug('');
 
@@ -414,6 +527,7 @@ shouldBe("setThenReadSelectorText(':not(input[type=\"file\"], a:hover, button:fo
 shouldBe("setThenReadSelectorText(':not( .class1.class2.class3   )')", "':not(.class1.class2.class3)'");
 shouldBe("setThenReadSelectorText(':not(.class1:hover   )')", "':not(.class1:hover)'");
 shouldBe("setThenReadSelectorText(':not(a.class1.class2.class3:hover   )')", "':not(a.class1.class2.class3:hover)'");
+shouldBe("setThenReadSelectorText(':not(:is(single    ),:is(a,b    ,p),:is(#alice,                   #bob,#chris))')", "':not(:is(single), :is(a, b, p), :is(#alice, #bob, #chris))'");
 shouldBe("setThenReadSelectorText(':not(:matches(single    ),:matches(a,b    ,p),:matches(#alice,                   #bob,#chris))')", "':not(:matches(single), :matches(a, b, p), :matches(#alice, #bob, #chris))'");
 
 debug('');

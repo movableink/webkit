@@ -6,7 +6,7 @@ require_once('../include/commit-sets-helpers.php');
 function main()
 {
     $db = connect();
-    $data = ensure_privileged_api_data_and_token_or_slave($db);
+    $data = ensure_privileged_api_data_and_token_or_worker($db);
     $author = remote_user_name($data);
 
     $arguments = validate_arguments($data, array(
@@ -18,6 +18,7 @@ function main()
     $task_id = array_get($arguments, 'task');
     $task_name = array_get($data, 'taskName');
     $repetition_count = $arguments['repetitionCount'];
+    $repetition_type = array_get($data, 'repetitionType', 'alternating');
     $needs_notification = array_get($data, 'needsNotification', False);
     $platform_id = array_get($data, 'platform');
     $test_id = array_get($data, 'test');
@@ -42,6 +43,9 @@ function main()
     else if ($repetition_count < 1)
         exit_with_error('InvalidRepetitionCount', array('repetitionCount' => $repetition_count));
 
+    if (!in_array($repetition_type, array('alternating', 'sequential', 'paired-parallel')))
+        exit_with_error('InvalidRepetitionType', array('repetitionType' => $repetition_type));
+
     $triggerable_id = NULL;
     if ($task_id) {
         $task = $db->select_first_row('analysis_tasks', 'task', array('id' => $task_id));
@@ -55,6 +59,10 @@ function main()
         $triggerable = find_triggerable_for_task($db, $task_id);
         if ($triggerable) {
             $triggerable_id = $triggerable['id'];
+
+            if (!in_array($repetition_type, $triggerable['supportedRepetitionTypes']))
+                exit_with_error('UnsupportedRepetitionTypeForTriggerable', array('repetitionType' => $repetition_type, 'triggerableId' => $triggerable_id));
+
             if (!$platform_id && !$test_id) {
                 $platform_id = $triggerable['platform'];
                 $test_id = $triggerable['test'];
@@ -69,8 +77,14 @@ function main()
     if (!$triggerable_id && $platform_id && $test_id) {
         $triggerable_configuration = $db->select_first_row('triggerable_configurations', 'trigconfig',
             array('test' => $test_id, 'platform' => $platform_id));
-        if ($triggerable_configuration)
+        if ($triggerable_configuration) {
             $triggerable_id = $triggerable_configuration['trigconfig_triggerable'];
+
+            $is_repetition_type_supported = !!$db->select_first_row('triggerable_configuration_repetition_types',
+                'configrepetition', array('config' => $triggerable_configuration['trigconfig_id'], 'type' => $repetition_type));
+            if (!$is_repetition_type_supported)
+                exit_with_error('UnsupportedRepetitionTypeForTriggerable', array('repetitionType' => $repetition_type, 'triggerableId' => $triggerable_id));
+        }
     }
 
     if (!$triggerable_id)
@@ -86,7 +100,7 @@ function main()
     if ($task_name)
         $task_id = $db->insert_row('analysis_tasks', 'task', array('name' => $task_name, 'author' => $author));
 
-    $group_id = create_test_group_and_build_requests($db, $commit_sets, $task_id, $name, $author, $triggerable_id, $platform_id, $test_id, $repetition_count, $needs_notification);
+    $group_id = create_test_group_and_build_requests($db, $commit_sets, $task_id, $name, $author, $triggerable_id, $platform_id, $test_id, $repetition_count, $repetition_type, $needs_notification);
 
     $db->commit_transaction();
 

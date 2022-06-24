@@ -11,12 +11,15 @@
 #ifndef MODULES_VIDEO_CAPTURE_MAIN_SOURCE_LINUX_VIDEO_CAPTURE_LINUX_H_
 #define MODULES_VIDEO_CAPTURE_MAIN_SOURCE_LINUX_VIDEO_CAPTURE_LINUX_H_
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include <memory>
 
-#include "common_types.h"  // NOLINT(build/include)
+#include "modules/video_capture/video_capture_defines.h"
 #include "modules/video_capture/video_capture_impl.h"
-#include "rtc_base/criticalsection.h"
 #include "rtc_base/platform_thread.h"
+#include "rtc_base/synchronization/mutex.h"
 
 namespace webrtc {
 namespace videocapturemodule {
@@ -33,15 +36,14 @@ class VideoCaptureModuleV4L2 : public VideoCaptureImpl {
  private:
   enum { kNoOfV4L2Bufffers = 4 };
 
-  static bool CaptureThread(void*);
+  static void CaptureThread(void*);
   bool CaptureProcess();
   bool AllocateVideoBuffers();
   bool DeAllocateVideoBuffers();
 
-  // TODO(pbos): Stop using unique_ptr and resetting the thread.
-  std::unique_ptr<rtc::PlatformThread> _captureThread;
-  rtc::CriticalSection _captureCritSect;
-
+  rtc::PlatformThread _captureThread;
+  Mutex capture_lock_;
+  bool quit_ RTC_GUARDED_BY(capture_lock_);
   int32_t _deviceId;
   int32_t _deviceFd;
 

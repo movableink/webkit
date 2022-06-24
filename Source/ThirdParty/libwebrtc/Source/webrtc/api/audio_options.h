@@ -12,9 +12,11 @@
 #define API_AUDIO_OPTIONS_H_
 
 #include <stdint.h>
+
 #include <string>
 
 #include "absl/types/optional.h"
+#include "rtc_base/system/rtc_export.h"
 
 namespace cricket {
 
@@ -22,7 +24,7 @@ namespace cricket {
 // Used to be flags, but that makes it hard to selectively apply options.
 // We are moving all of the setting of options to structs like this,
 // but some things currently still use flags.
-struct AudioOptions {
+struct RTC_EXPORT AudioOptions {
   AudioOptions();
   ~AudioOptions();
   void SetAll(const AudioOptions& change);
@@ -56,11 +58,11 @@ struct AudioOptions {
   absl::optional<bool> audio_jitter_buffer_fast_accelerate;
   // Audio receiver jitter buffer (NetEq) minimum target delay in milliseconds.
   absl::optional<int> audio_jitter_buffer_min_delay_ms;
+  // Audio receiver jitter buffer (NetEq) should handle retransmitted packets.
+  absl::optional<bool> audio_jitter_buffer_enable_rtx_handling;
   // Audio processing to detect typing.
   absl::optional<bool> typing_detection;
   absl::optional<bool> experimental_agc;
-  absl::optional<bool> extended_filter_aec;
-  absl::optional<bool> delay_agnostic_aec;
   absl::optional<bool> experimental_ns;
   // Note that tx_agc_* only applies to non-experimental AGC.
   absl::optional<bool> residual_echo_detector;
@@ -73,6 +75,8 @@ struct AudioOptions {
   // and check if any other AudioOptions members are unused.
   absl::optional<bool> combined_audio_video_bwe;
   // Enable audio network adaptor.
+  // TODO(webrtc:11717): Remove this API in favor of adaptivePtime in
+  // RtpEncodingParameters.
   absl::optional<bool> audio_network_adaptor;
   // Config string for audio network adaptor.
   absl::optional<std::string> audio_network_adaptor_config;

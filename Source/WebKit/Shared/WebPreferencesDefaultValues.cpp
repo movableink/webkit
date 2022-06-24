@@ -25,43 +25,329 @@
 
 #include "config.h"
 #include "WebPreferencesDefaultValues.h"
+
 #include <WebCore/RuntimeApplicationChecks.h>
+#include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
-#include <wtf/spi/darwin/dyldSPI.h>
+#include <pal/spi/cocoa/FeatureFlagsSPI.h>
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
-#if PLATFORM(IOS_FAMILY)
-#include "VersionChecks.h"
+#if ENABLE(MEDIA_SESSION_COORDINATOR)
+#import "WebProcess.h"
+#import <wtf/cocoa/Entitlements.h>
 #endif
 
 namespace WebKit {
 
+#if !PLATFORM(COCOA) && !PLATFORM(WIN)
+bool isFeatureFlagEnabled(const char*, bool defaultValue)
+{
+    return defaultValue;
+}
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+
 bool defaultPassiveTouchListenersAsDefaultOnDocument()
 {
-#if PLATFORM(IOS_FAMILY)
-    return linkedOnOrAfter(WebKit::SDKVersion::FirstThatDefaultsToPassiveTouchListenersOnDocument);
-#else
-    return true;
-#endif
+    static bool result = linkedOnOrAfter(SDKVersion::FirstThatDefaultsToPassiveTouchListenersOnDocument);
+    return result;
 }
 
 bool defaultCSSOMViewScrollingAPIEnabled()
 {
-#if PLATFORM(IOS_FAMILY)
-    if (WebCore::IOSApplication::isIMDb() && applicationSDKVersion() < DYLD_IOS_VERSION_13_0)
+    static bool result = WebCore::IOSApplication::isIMDb() && !linkedOnOrAfter(SDKVersion::FirstWithoutIMDbCSSOMViewScrollingQuirk);
+    return !result;
+}
+
+#if !USE(APPLE_INTERNAL_SDK)
+bool defaultAlternateFormControlDesignEnabled()
+{
+    return false;
+}
+#endif
+
+#endif
+
+#if PLATFORM(MAC)
+
+bool defaultPassiveWheelListenersAsDefaultOnDocument()
+{
+    static bool result = linkedOnOrAfter(SDKVersion::FirstThatDefaultsToPassiveWheelListenersOnDocument);
+    return result;
+}
+
+bool defaultWheelEventGesturesBecomeNonBlocking()
+{
+    static bool result = linkedOnOrAfter(SDKVersion::FirstThatAllowsWheelEventGesturesToBecomeNonBlocking);
+    return result;
+}
+
+#endif
+
+#if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
+
+bool defaultDisallowSyncXHRDuringPageDismissalEnabled()
+{
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+    if (CFPreferencesGetAppBooleanValue(CFSTR("allowDeprecatedSynchronousXMLHttpRequestDuringUnload"), CFSTR("com.apple.WebKit"), nullptr)) {
+        WTFLogAlways("Allowing synchronous XHR during page unload due to managed preference");
         return false;
+    }
+#elif PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST) && !PLATFORM(WATCHOS)
+    if (allowsDeprecatedSynchronousXMLHttpRequestDuringUnload()) {
+        WTFLogAlways("Allowing synchronous XHR during page unload due to managed preference");
+        return false;
+    }
 #endif
     return true;
 }
 
-#if ENABLE(TEXT_AUTOSIZING) && !PLATFORM(IOS_FAMILY)
+#endif
 
-bool defaultTextAutosizingUsesIdempotentMode()
+#if PLATFORM(MAC)
+
+bool defaultAppleMailPaginationQuirkEnabled()
 {
+    return WebCore::MacApplication::isAppleMail();
+}
+
+#endif
+
+static bool defaultAsyncFrameAndOverflowScrollingEnabled()
+{
+#if PLATFORM(IOS_FAMILY)
+    return true;
+#endif
+
+#if PLATFORM(MAC)
+    bool defaultValue = true;
+#else
+    bool defaultValue = false;
+#endif
+
+    return isFeatureFlagEnabled("async_frame_and_overflow_scrolling", defaultValue);
+}
+
+bool defaultAsyncFrameScrollingEnabled()
+{
+#if USE(NICOSIA)
+    return true;
+#endif
+
+    return defaultAsyncFrameAndOverflowScrollingEnabled();
+}
+
+bool defaultAsyncOverflowScrollingEnabled()
+{
+    return defaultAsyncFrameAndOverflowScrollingEnabled();
+}
+
+bool defaultOfflineWebApplicationCacheEnabled()
+{
+#if PLATFORM(COCOA)
+    static bool newSDK = linkedOnOrAfter(SDKVersion::FirstWithApplicationCacheDisabledByDefault);
+    return !newSDK;
+#else
+    // FIXME: Other platforms should consider turning this off.
+    // ApplicationCache is on its way to being removed from WebKit.
+    return true;
+#endif
+}
+
+#if ENABLE(GPU_PROCESS)
+
+bool defaultUseGPUProcessForCanvasRenderingEnabled()
+{
+#if ENABLE(GPU_PROCESS_BY_DEFAULT) || PLATFORM(WIN)
+    bool defaultValue = true;
+#else
+    bool defaultValue = false;
+#endif
+
+    return isFeatureFlagEnabled("gpu_process_canvas_rendering", defaultValue);
+}
+
+bool defaultUseGPUProcessForDOMRenderingEnabled()
+{
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+    return false;
+#else
+    return isFeatureFlagEnabled("gpu_process_dom_rendering", false);
+#endif
+}
+
+bool defaultUseGPUProcessForMediaEnabled()
+{
+#if ENABLE(GPU_PROCESS_BY_DEFAULT)
+    bool defaultValue = true;
+#else
+    bool defaultValue = false;
+#endif
+
+    return isFeatureFlagEnabled("gpu_process_media", defaultValue);
+}
+
+bool defaultUseGPUProcessForWebGLEnabled()
+{
+#if HAVE(UIKIT_WEBKIT_INTERNALS)
+    return false;
+#else
+#if (ENABLE(GPU_PROCESS_BY_DEFAULT) && PLATFORM(IOS_FAMILY)) || PLATFORM(WIN)
+    bool defaultValue = true;
+#else
+    bool defaultValue = false;
+#endif
+    return isFeatureFlagEnabled("gpu_process_webgl", defaultValue);
+#endif
+}
+
+#endif // ENABLE(GPU_PROCESS)
+
+#if ENABLE(MEDIA_STREAM)
+
+bool defaultCaptureAudioInGPUProcessEnabled()
+{
+#if PLATFORM(MAC)
+    // FIXME: Enable GPU process audio capture when <rdar://problem/29448368> is fixed.
+    if (!WebCore::MacApplication::isSafari())
+        return false;
+#endif
+
+#if ENABLE(GPU_PROCESS_BY_DEFAULT)
+    bool defaultValue = true;
+#else
+    bool defaultValue = false;
+#endif
+
+#if PLATFORM(MAC)
+    return isFeatureFlagEnabled("gpu_process_webrtc", defaultValue);
+#elif PLATFORM(IOS_FAMILY)
+    return isFeatureFlagEnabled("gpu_process_media", defaultValue);
+#else
+    return defaultValue;
+#endif
+}
+
+bool defaultCaptureAudioInUIProcessEnabled()
+{
+#if PLATFORM(MAC)
+    return !defaultCaptureAudioInGPUProcessEnabled();
+#endif
+
     return false;
 }
 
-#endif // ENABLE(TEXT_AUTOSIZING) && !PLATFORM(IOS_FAMILY)
+bool defaultCaptureVideoInGPUProcessEnabled()
+{
+#if ENABLE(GPU_PROCESS_BY_DEFAULT)
+    bool defaultValue = true;
+#else
+    bool defaultValue = false;
+#endif
+
+    return isFeatureFlagEnabled("gpu_process_webrtc", defaultValue);
+}
+
+#endif // ENABLE(MEDIA_STREAM)
+
+#if ENABLE(WEB_RTC)
+
+bool defaultWebRTCCodecsInGPUProcess()
+{
+#if ENABLE(GPU_PROCESS_BY_DEFAULT)
+    bool defaultValue = true;
+#else
+    bool defaultValue = false;
+#endif
+
+    return isFeatureFlagEnabled("gpu_process_webrtc", defaultValue);
+}
+
+#endif // ENABLE(WEB_RTC)
+
+#if HAVE(INCREMENTAL_PDF_APIS)
+bool defaultIncrementalPDFEnabled()
+{
+#if PLATFORM(MAC)
+    bool defaultValue = true;
+#else
+    bool defaultValue = false;
+#endif
+
+    return isFeatureFlagEnabled("incremental_pdf", defaultValue);
+}
+#endif
+
+#if ENABLE(WEBM_FORMAT_READER)
+
+bool defaultWebMFormatReaderEnabled()
+{
+#if PLATFORM(MAC)
+    bool defaultValue = true;
+#else
+    bool defaultValue = false;
+#endif
+
+    return isFeatureFlagEnabled("webm_format_reader", defaultValue);
+}
+
+#endif // ENABLE(WEBM_FORMAT_READER)
+
+#if ENABLE(VP9)
+
+bool defaultVP8DecoderEnabled()
+{
+    return isFeatureFlagEnabled("vp8_decoder", true);
+}
+
+bool defaultVP9DecoderEnabled()
+{
+    return isFeatureFlagEnabled("vp9_decoder", true);
+}
+
+bool defaultVP9SWDecoderEnabledOnBattery()
+{
+    return isFeatureFlagEnabled("sw_vp9_decoder_on_battery", false);
+}
+#endif // ENABLE(VP9)
+
+#if ENABLE(MEDIA_SOURCE)
+
+bool defaultWebMParserEnabled()
+{
+    return isFeatureFlagEnabled("webm_parser", true);
+}
+
+#endif // ENABLE(MEDIA_SOURCE)
+
+#if ENABLE(MEDIA_SESSION_COORDINATOR)
+bool defaultMediaSessionCoordinatorEnabled()
+{
+    static dispatch_once_t onceToken;
+    static bool enabled { false };
+    dispatch_once(&onceToken, ^{
+        if (WebCore::isInWebProcess())
+            enabled = WebProcess::singleton().parentProcessHasEntitlement("com.apple.developer.group-session.urlactivity");
+        else
+            enabled = WTF::processHasEntitlement("com.apple.developer.group-session.urlactivity");
+    });
+    return enabled;
+}
+#endif
+
+#if HAVE(SCREEN_CAPTURE_KIT)
+bool defaultScreenCaptureKitEnabled()
+{
+#if ENABLE(SCREEN_CAPTURE_KIT)
+    return true;
+#else
+    return false;
+#endif
+}
+#endif // HAVE(SCREEN_CAPTURE_KIT)
+
 
 } // namespace WebKit

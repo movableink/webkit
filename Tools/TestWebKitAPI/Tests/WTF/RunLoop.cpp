@@ -36,7 +36,7 @@ static int count = 100;
 
 TEST(WTF_RunLoop, Deadlock)
 {
-    RunLoop::initializeMainRunLoop();
+    WTF::initializeMainThread();
 
     struct DispatchFromDestructorTester {
         ~DispatchFromDestructorTester() {
@@ -55,6 +55,68 @@ TEST(WTF_RunLoop, Deadlock)
     Util::run(&testFinished);
 }
 
+TEST(WTF_RunLoop, NestedInOrder)
+{
+    WTF::initializeMainThread();
+
+    bool done = false;
+    bool didExecuteOuter = false;
+
+    RunLoop::main().dispatch([&done, &didExecuteOuter] {
+        RunLoop::main().dispatch([&done, &didExecuteOuter] {
+            EXPECT_TRUE(didExecuteOuter);
+            done = true;
+        });
+
+        Util::run(&done);
+    });
+    RunLoop::main().dispatch([&didExecuteOuter] { 
+        didExecuteOuter = true;
+    });
+
+    Util::run(&done);
+}
+
+TEST(WTF_RunLoop, DispatchCrossThreadWhileNested)
+{
+    WTF::initializeMainThread();
+
+    bool done = false;
+
+    RunLoop::main().dispatch([&done] {
+        Thread::create("DispatchCrossThread", [&done] {
+            RunLoop::main().dispatch([&done] {
+                done = true;
+            });
+        });
+
+        Util::run(&done);
+    });
+    RunLoop::main().dispatch([] { });
+
+    Util::run(&done);
+}
+
+TEST(WTF_RunLoop, CallOnMainCrossThreadWhileNested)
+{
+    WTF::initializeMainThread();
+
+    bool done = false;
+
+    callOnMainThread([&done] {
+        Thread::create("CallOnMainCrossThread", [&done] {
+            callOnMainThread([&done] {
+                done = true;
+            });
+        });
+
+        Util::run(&done);
+    });
+    callOnMainThread([] { });
+
+    Util::run(&done);
+}
+
 class DerivedOneShotTimer : public RunLoop::Timer<DerivedOneShotTimer> {
 public:
     DerivedOneShotTimer(bool& testFinished)
@@ -65,6 +127,9 @@ public:
 
     void fired()
     {
+        EXPECT_FALSE(isActive());
+        EXPECT_EQ(secondsUntilFire(), Seconds(0));
+
         m_testFinished = true;
         stop();
     }
@@ -76,7 +141,7 @@ private:
 
 TEST(WTF_RunLoop, OneShotTimer)
 {
-    RunLoop::initializeMainRunLoop();
+    WTF::initializeMainThread();
 
     bool testFinished = false;
     DerivedOneShotTimer timer(testFinished);
@@ -94,9 +159,14 @@ public:
 
     void fired()
     {
+        EXPECT_TRUE(isActive());
+
         if (++m_count == 10) {
             m_testFinished = true;
             stop();
+
+            EXPECT_FALSE(isActive());
+            EXPECT_EQ(secondsUntilFire(), Seconds(0));
         }
     }
 
@@ -108,7 +178,7 @@ private:
 
 TEST(WTF_RunLoop, RepeatingTimer)
 {
-    RunLoop::initializeMainRunLoop();
+    WTF::initializeMainThread();
 
     bool testFinished = false;
     DerivedRepeatingTimer timer(testFinished);
@@ -143,6 +213,23 @@ TEST(WTF_RunLoop, ManyTimes)
         });
         RunLoop::run();
     })->waitForCompletion();
+}
+
+TEST(WTF_RunLoop, ThreadTerminationSelfReferenceCleanup)
+{
+    RefPtr<RunLoop> runLoop;
+
+    Thread::create("RunLoopThreadTerminationSelfReferenceCleanup", [&] {
+        runLoop = &RunLoop::current();
+
+        // This stores a RunLoop reference in the dispatch queue that will not be released
+        // via the usual dispatch, but should still be released upon thread termination.
+        // After that, the observing RefPtr should be the only one holding a reference
+        // to the RunLoop object.
+        runLoop->dispatch([ref = runLoop.copyRef()] { });
+    })->waitForCompletion();
+
+    EXPECT_TRUE(runLoop->hasOneRef());
 }
 
 } // namespace TestWebKitAPI

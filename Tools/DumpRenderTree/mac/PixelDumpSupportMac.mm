@@ -37,18 +37,14 @@
 #import <CoreGraphics/CGBitmapContext.h>
 #import <QuartzCore/QuartzCore.h>
 #import <pal/spi/cg/CoreGraphicsSPI.h>
+#import <pal/spi/cocoa/QuartzCoreSPI.h>
 #import <wtf/Assertions.h>
 #import <wtf/RefPtr.h>
 
 #import <WebKit/WebCoreStatistics.h>
 #import <WebKit/WebDocumentPrivate.h>
 #import <WebKit/WebHTMLViewPrivate.h>
-#import <WebKit/WebKit.h>
 #import <WebKit/WebViewPrivate.h>
-
-@interface CATransaction ()
-+ (void)synchronize;
-@end
 
 @interface WebView ()
 - (BOOL)_flushCompositingChanges;
@@ -83,10 +79,10 @@ static void paintRepaintRectOverlay(WebView* webView, CGContextRef context)
     CGContextRestoreGState(context);
 }
 
-static CGImageRef takeWindowSnapshot(CGSWindowID windowID, CGWindowImageOption imageOptions) CF_RETURNS_RETAINED
+static RetainPtr<CGImageRef> takeWindowSnapshot(CGSWindowID windowID, CGWindowImageOption imageOptions)
 {
     imageOptions |= kCGWindowImageBoundsIgnoreFraming | kCGWindowImageShouldBeOpaque;
-    return CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, windowID, imageOptions);
+    return adoptCF(CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, windowID, imageOptions));
 }
 
 RefPtr<BitmapContext> createBitmapContextFromWebView(bool onscreen, bool incrementalRepaint, bool sweepHorizontally, bool drawSelectionRect)
@@ -107,6 +103,9 @@ RefPtr<BitmapContext> createBitmapContextFromWebView(bool onscreen, bool increme
     auto bitmapContext = createBitmapContext(pixelsWide, pixelsHigh, rowBytes, buffer);
     if (!bitmapContext)
         return nullptr;
+
+    bitmapContext->setScaleFactor(deviceScaleFactor);
+
     CGContextRef context = bitmapContext->cgContext();
     // The final scaling gets doubled on the screen capture surface when we use the hidpi backingScaleFactor value for CTM.
     // This is a workaround to push the scaling back.
@@ -136,22 +135,19 @@ RefPtr<BitmapContext> createBitmapContextFromWebView(bool onscreen, bool increme
             // Ask the window server to provide us a composited version of the *real* window content including surfaces (i.e. OpenGL content)
             // Note that the returned image might differ very slightly from the window backing because of dithering artifacts in the window server compositor.
             NSWindow *window = [view window];
-            CGImageRef image = takeWindowSnapshot([window windowNumber], kCGWindowImageDefault);
+            auto image = takeWindowSnapshot([window windowNumber], kCGWindowImageDefault);
 
             if (image) {
                 // Work around <rdar://problem/17084993>; re-request the snapshot at kCGWindowImageNominalResolution if it was captured at the wrong scale.
                 CGFloat desiredSnapshotWidth = window.frame.size.width * deviceScaleFactor;
-                if (CGImageGetWidth(image) != desiredSnapshotWidth) {
-                    CGImageRelease(image);
+                if (CGImageGetWidth(image.get()) != desiredSnapshotWidth)
                     image = takeWindowSnapshot([window windowNumber], kCGWindowImageNominalResolution);
-                }
             }
 
             if (!image)
                 return nullptr;
 
-            CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(image), CGImageGetHeight(image)), image);
-            CGImageRelease(image);
+            CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(image.get()), CGImageGetHeight(image.get())), image.get());
 
             if ([view isTrackingRepaints])
                 paintRepaintRectOverlay(view, context);

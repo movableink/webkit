@@ -22,7 +22,11 @@
 #include <iterator>
 #include <vector>
 
+#include "absl/base/config.h"
+#include "absl/base/internal/endian.h"
+
 namespace absl {
+ABSL_NAMESPACE_BEGIN
 namespace random_internal {
 
 // This class conforms to the C++ Standard "Seed Sequence" concept
@@ -70,7 +74,7 @@ class ExplicitSeedSeq {
   template <typename OutIterator>
   void generate(OutIterator begin, OutIterator end) {
     for (size_t index = 0; begin != end; begin++) {
-      *begin = state_.empty() ? 0 : state_[index++];
+      *begin = state_.empty() ? 0 : little_endian::FromHost32(state_[index++]);
       if (index >= state_.size()) {
         index = 0;
       }
@@ -82,6 +86,7 @@ class ExplicitSeedSeq {
 };
 
 }  // namespace random_internal
+ABSL_NAMESPACE_END
 }  // namespace absl
 
 #endif  // ABSL_RANDOM_INTERNAL_EXPLICIT_SEED_SEQ_H_

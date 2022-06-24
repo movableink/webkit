@@ -13,52 +13,42 @@ EDITING DELEGATE: shouldChangeSelectedDOMRange:range from 5 of #text > DIV > DIV
 EDITING DELEGATE: webViewDidChangeSelection:WebViewDidChangeSelectionNotification
 EDITING DELEGATE: webViewDidChange:WebViewDidChangeNotification
 EDITING DELEGATE: webViewDidEndEditing:WebViewDidEndEditingNotification
-Tests: 
-Bug fix for <rdar://problem/4035648> REGRESSION (Mail): line feed in source HTML file causes bad copy/paste behavior 
+Tests:
+Bug fix for <rdar://problem/4035648> REGRESSION (Mail): line feed in source HTML file causes bad copy/paste behavior
 In particular, the line feed that appears between br and b elements should not reorder the content in createMarkup.
-Expected Results: 
-Should see the text self-documenting itself correctly: 
+Expected Results:
+Should see the text self-documenting itself correctly:
 bold
 plain
 
 
 Before cut:
-| "
-"
+| "\n"
 | <div>
 |   class="editing"
 |   id="test"
-|   "
-"
+|   "\n"
 |   <#selection-anchor>
 |   <br>
-|   "
-"
+|   "\n"
 |   <b>
 |     "bold"
 |     <br>
-|     "
-"
-|   "
-plain<#selection-focus>
-"
-| "
-"
+|     "\n"
+|   "\nplain<#selection-focus>\n"
+| "\n"
 
 After cut:
-| "
-"
+| "\n"
 | <div>
 |   class="editing"
 |   id="test"
 |   <#selection-caret>
 |   <br>
-| "
-"
+| "\n"
 
 After paste:
-| "
-"
+| "\n"
 | <div>
 |   class="editing"
 |   id="test"
@@ -68,5 +58,4 @@ After paste:
 |     <br>
 |   "plain<#selection-caret>"
 |   <br>
-| "
-"
+| "\n"

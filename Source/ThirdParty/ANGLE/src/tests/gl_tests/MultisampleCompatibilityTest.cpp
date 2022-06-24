@@ -172,6 +172,9 @@ TEST_P(EXTMultisampleCompatibilityTest, DrawAndResolve)
     if (!isApplicable())
         return;
 
+    // http://anglebug.com/5270
+    ANGLE_SKIP_TEST_IF(IsOSX() && IsIntelUHD630Mobile() && IsDesktopOpenGL());
+
     static const float kBlue[]  = {0.0f, 0.0f, 1.0f, 1.0f};
     static const float kGreen[] = {0.0f, 1.0f, 0.0f, 1.0f};
     static const float kRed[]   = {1.0f, 0.0f, 0.0f, 1.0f};
@@ -274,11 +277,7 @@ TEST_P(EXTMultisampleCompatibilityTest, DrawAlphaOneAndResolve)
     EXPECT_EQ(0, memcmp(results[0].get(), results[2].get(), kResultSize));
 }
 
-ANGLE_INSTANTIATE_TEST(EXTMultisampleCompatibilityTest,
-                       ES2_OPENGL(),
-                       ES2_OPENGLES(),
-                       ES3_OPENGL(),
-                       ES2_VULKAN());
+ANGLE_INSTANTIATE_TEST_ES2_AND_ES3(EXTMultisampleCompatibilityTest);
 
 class MultisampleCompatibilityTest : public ANGLETest
 {
@@ -374,9 +373,6 @@ TEST_P(MultisampleCompatibilityTest, DrawCoverageAndResolve)
     // TODO: Figure out why this fails on Android.
     ANGLE_SKIP_TEST_IF(IsAndroid() && IsOpenGLES());
 
-    // http://anglebug.com/3855
-    ANGLE_SKIP_TEST_IF(IsWindows() && IsVulkan() && IsIntel());
-
     ANGLE_GL_PROGRAM(drawRed, essl1_shaders::vs::Simple(), essl1_shaders::fs::Red());
 
     GLsizei maxSamples = 0;
@@ -401,12 +397,4 @@ TEST_P(MultisampleCompatibilityTest, DrawCoverageAndResolve)
     }
 }
 
-ANGLE_INSTANTIATE_TEST(MultisampleCompatibilityTest,
-                       ES2_D3D9(),
-                       ES2_OPENGL(),
-                       ES2_OPENGLES(),
-                       ES3_D3D11(),
-                       ES3_OPENGL(),
-                       ES3_OPENGLES(),
-                       ES2_VULKAN(),
-                       ES3_VULKAN());
+ANGLE_INSTANTIATE_TEST_ES2_AND_ES3(MultisampleCompatibilityTest);

@@ -10,119 +10,100 @@
 
 #include "rtc_base/platform_thread.h"
 
+#include "absl/types/optional.h"
+#include "rtc_base/event.h"
 #include "system_wrappers/include/sleep.h"
-#include "test/gtest.h"
+#include "test/gmock.h"
 
 namespace rtc {
-namespace {
-// Function that does nothing, and reports success.
-bool NullRunFunctionDeprecated(void* obj) {
-  webrtc::SleepMs(2);  // Hand over timeslice, prevents busy looping.
-  return true;
+
+TEST(PlatformThreadTest, DefaultConstructedIsEmpty) {
+  PlatformThread thread;
+  EXPECT_EQ(thread.GetHandle(), absl::nullopt);
+  EXPECT_TRUE(thread.empty());
 }
 
-bool TooBusyRunFunction(void* obj) {
-  // Indentionally busy looping.
-  return true;
+TEST(PlatformThreadTest, StartFinalize) {
+  PlatformThread thread = PlatformThread::SpawnJoinable([] {}, "1");
+  EXPECT_NE(thread.GetHandle(), absl::nullopt);
+  EXPECT_FALSE(thread.empty());
+  thread.Finalize();
+  EXPECT_TRUE(thread.empty());
+  rtc::Event done;
+  thread = PlatformThread::SpawnDetached([&] { done.Set(); }, "2");
+  EXPECT_FALSE(thread.empty());
+  thread.Finalize();
+  EXPECT_TRUE(thread.empty());
+  done.Wait(30000);
 }
 
-void NullRunFunction(void* obj) {}
-
-// Function that sets a boolean.
-bool SetFlagRunFunctionDeprecated(void* obj) {
-  bool* obj_as_bool = static_cast<bool*>(obj);
-  *obj_as_bool = true;
-  webrtc::SleepMs(0);  // Hand over timeslice, prevents busy looping.
-  return true;
+TEST(PlatformThreadTest, MovesEmpty) {
+  PlatformThread thread1;
+  PlatformThread thread2 = std::move(thread1);
+  EXPECT_TRUE(thread1.empty());
+  EXPECT_TRUE(thread2.empty());
 }
 
-void SetFlagRunFunction(void* obj) {
-  bool* obj_as_bool = static_cast<bool*>(obj);
-  *obj_as_bool = true;
+TEST(PlatformThreadTest, MovesHandles) {
+  PlatformThread thread1 = PlatformThread::SpawnJoinable([] {}, "1");
+  PlatformThread thread2 = std::move(thread1);
+  EXPECT_TRUE(thread1.empty());
+  EXPECT_FALSE(thread2.empty());
+  rtc::Event done;
+  thread1 = PlatformThread::SpawnDetached([&] { done.Set(); }, "2");
+  thread2 = std::move(thread1);
+  EXPECT_TRUE(thread1.empty());
+  EXPECT_FALSE(thread2.empty());
+  done.Wait(30000);
 }
 
-}  // namespace
-
-TEST(PlatformThreadTest, StartStopDeprecated) {
-  PlatformThread thread(&NullRunFunctionDeprecated, nullptr,
-                        "PlatformThreadTest");
-  EXPECT_TRUE(thread.name() == "PlatformThreadTest");
-  EXPECT_TRUE(thread.GetThreadRef() == 0);
-  thread.Start();
-  EXPECT_TRUE(thread.GetThreadRef() != 0);
-  thread.Stop();
-  EXPECT_TRUE(thread.GetThreadRef() == 0);
-}
-
-TEST(PlatformThreadTest, StartStop2Deprecated) {
-  PlatformThread thread1(&NullRunFunctionDeprecated, nullptr,
-                         "PlatformThreadTest1");
-  PlatformThread thread2(&NullRunFunctionDeprecated, nullptr,
-                         "PlatformThreadTest2");
-  EXPECT_TRUE(thread1.GetThreadRef() == thread2.GetThreadRef());
-  thread1.Start();
-  thread2.Start();
-  EXPECT_TRUE(thread1.GetThreadRef() != thread2.GetThreadRef());
-  thread2.Stop();
-  thread1.Stop();
-}
-
-TEST(PlatformThreadTest, RunFunctionIsCalledDeprecated) {
-  bool flag = false;
-  PlatformThread thread(&SetFlagRunFunctionDeprecated, &flag,
-                        "RunFunctionIsCalled");
-  thread.Start();
-
-  // At this point, the flag may be either true or false.
-  thread.Stop();
-
-  // We expect the thread to have run at least once.
-  EXPECT_TRUE(flag);
-}
-
-TEST(PlatformThreadTest, StartStop) {
-  PlatformThread thread(&NullRunFunction, nullptr, "PlatformThreadTest");
-  EXPECT_TRUE(thread.name() == "PlatformThreadTest");
-  EXPECT_TRUE(thread.GetThreadRef() == 0);
-  thread.Start();
-  EXPECT_TRUE(thread.GetThreadRef() != 0);
-  thread.Stop();
-  EXPECT_TRUE(thread.GetThreadRef() == 0);
-}
-
-TEST(PlatformThreadTest, StartStop2) {
-  PlatformThread thread1(&NullRunFunction, nullptr, "PlatformThreadTest1");
-  PlatformThread thread2(&NullRunFunction, nullptr, "PlatformThreadTest2");
-  EXPECT_TRUE(thread1.GetThreadRef() == thread2.GetThreadRef());
-  thread1.Start();
-  thread2.Start();
-  EXPECT_TRUE(thread1.GetThreadRef() != thread2.GetThreadRef());
-  thread2.Stop();
-  thread1.Stop();
+TEST(PlatformThreadTest,
+     TwoThreadHandlesAreDifferentWhenStartedAndEqualWhenJoined) {
+  PlatformThread thread1 = PlatformThread();
+  PlatformThread thread2 = PlatformThread();
+  EXPECT_EQ(thread1.GetHandle(), thread2.GetHandle());
+  thread1 = PlatformThread::SpawnJoinable([] {}, "1");
+  thread2 = PlatformThread::SpawnJoinable([] {}, "2");
+  EXPECT_NE(thread1.GetHandle(), thread2.GetHandle());
+  thread1.Finalize();
+  EXPECT_NE(thread1.GetHandle(), thread2.GetHandle());
+  thread2.Finalize();
+  EXPECT_EQ(thread1.GetHandle(), thread2.GetHandle());
 }
 
 TEST(PlatformThreadTest, RunFunctionIsCalled) {
   bool flag = false;
-  PlatformThread thread(&SetFlagRunFunction, &flag, "RunFunctionIsCalled");
-  thread.Start();
-
-  // At this point, the flag may be either true or false.
-  thread.Stop();
-
-  // We expect the thread to have run at least once.
+  PlatformThread::SpawnJoinable([&] { flag = true; }, "T");
   EXPECT_TRUE(flag);
 }
 
-// This test is disabled since it will cause a crash.
-// There might be a way to implement this as a death test, but it looks like
-// a death test requires an expression to be checked but does not allow a
-// flag to be raised that says "some thread will crash after this point".
-// TODO(tommi): Look into ways to enable the test by default.
-TEST(PlatformThreadTest, DISABLED_TooBusyDeprecated) {
-  PlatformThread thread(&TooBusyRunFunction, nullptr, "BusyThread");
-  thread.Start();
-  webrtc::SleepMs(1000);
-  thread.Stop();
+TEST(PlatformThreadTest, JoinsThread) {
+  // This test flakes if there are problems with the join implementation.
+  rtc::Event event;
+  PlatformThread::SpawnJoinable([&] { event.Set(); }, "T");
+  EXPECT_TRUE(event.Wait(/*give_up_after_ms=*/0));
+}
+
+TEST(PlatformThreadTest, StopsBeforeDetachedThreadExits) {
+  // This test flakes if there are problems with the detached thread
+  // implementation.
+  bool flag = false;
+  rtc::Event thread_started;
+  rtc::Event thread_continue;
+  rtc::Event thread_exiting;
+  PlatformThread::SpawnDetached(
+      [&] {
+        thread_started.Set();
+        thread_continue.Wait(Event::kForever);
+        flag = true;
+        thread_exiting.Set();
+      },
+      "T");
+  thread_started.Wait(Event::kForever);
+  EXPECT_FALSE(flag);
+  thread_continue.Set();
+  thread_exiting.Wait(Event::kForever);
+  EXPECT_TRUE(flag);
 }
 
 }  // namespace rtc

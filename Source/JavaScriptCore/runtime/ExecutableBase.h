@@ -57,7 +57,8 @@ inline bool isCall(CodeSpecializationKind kind)
 
 class ExecutableBase : public JSCell {
     friend class JIT;
-    friend MacroAssemblerCodeRef<JITThunkPtrTag> boundThisNoArgsFunctionCallGenerator(VM*);
+    friend class LLIntOffsetsExtractor;
+    friend MacroAssemblerCodeRef<JITThunkPtrTag> boundFunctionCallGenerator(VM*);
 
 protected:
     ExecutableBase(VM& vm, Structure* structure)

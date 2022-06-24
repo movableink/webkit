@@ -21,11 +21,6 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import logging
-import os
-import sys
-
-from webkitpy.common.system.filesystem import FileSystem
-from webkitpy.common.webkit_finder import WebKitFinder
 
 pytest_runner = None
 
@@ -45,8 +40,8 @@ class WebDriverSeleniumExecutor(object):
         self._env = env
         self._env.update(driver.browser_env())
 
-        self._args = ['--driver=%s' % self._driver_name, '--driver-binary=%s' % driver.binary_path().encode()]
-        browser_path = driver.browser_path().encode()
+        self._args = ['--driver=%s' % self._driver_name, '--driver-binary=%s' % driver.binary_path()]
+        browser_path = driver.browser_path()
         if browser_path:
             self._args.extend(['--browser-binary=%s' % browser_path])
         browser_args = driver.browser_args()

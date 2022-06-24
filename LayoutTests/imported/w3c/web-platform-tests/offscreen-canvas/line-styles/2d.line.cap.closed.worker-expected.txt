@@ -1,3 +1,0 @@
-
-FAIL Line caps are not drawn at the corners of an unclosed rectangle Can't find variable: OffscreenCanvas
-

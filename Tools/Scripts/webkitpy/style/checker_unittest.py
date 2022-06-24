@@ -37,33 +37,32 @@ import logging
 import os
 import unittest
 
-import checker as style
-from webkitpy.common.system.logtesting import LogTesting, TestLogStream
-from checker import _BASE_FILTER_RULES
-from checker import _MAX_REPORTS_PER_CATEGORY
-from checker import _PATH_RULES_SPECIFIER as PATH_RULES_SPECIFIER
-from checker import _all_categories
-from checker import check_webkit_style_configuration
-from checker import check_webkit_style_parser
-from checker import configure_logging
-from checker import CheckerDispatcher
-from checker import ProcessorBase
-from checker import StyleProcessor
-from checker import StyleProcessorConfiguration
-from checkers.changelog import ChangeLogChecker
-from checkers.cpp import CppChecker
-from checkers.js import JSChecker
-from checkers.jsonchecker import JSONChecker
-from checkers.python import PythonChecker
-from checkers.text import TextChecker
-from checkers.xml import XMLChecker
-from error_handlers import DefaultStyleErrorHandler
-from filter import validate_filter_rules
-from filter import FilterConfiguration
-from optparser import ArgumentParser
-from optparser import CommandOptionValues
-from webkitpy.common.system.logtesting import LoggingTestCase
+from webkitpy.common.system.logtesting import LogTesting, TestLogStream, LoggingTestCase
+from webkitpy.style import checker as style
+from webkitpy.style.checker import _BASE_FILTER_RULES
+from webkitpy.style.checker import _MAX_REPORTS_PER_CATEGORY
+from webkitpy.style.checker import _PATH_RULES_SPECIFIER as PATH_RULES_SPECIFIER
+from webkitpy.style.checker import _all_categories
+from webkitpy.style.checker import check_webkit_style_configuration
+from webkitpy.style.checker import check_webkit_style_parser
+from webkitpy.style.checker import configure_logging
+from webkitpy.style.checker import CheckerDispatcher
+from webkitpy.style.checker import ProcessorBase
+from webkitpy.style.checker import StyleProcessor
+from webkitpy.style.checker import StyleProcessorConfiguration
+from webkitpy.style.checkers.changelog import ChangeLogChecker
+from webkitpy.style.checkers.cpp import CppChecker
+from webkitpy.style.checkers.js import JSChecker
+from webkitpy.style.checkers.jsonchecker import JSONChecker
+from webkitpy.style.checkers.python import PythonChecker
+from webkitpy.style.checkers.text import TextChecker
+from webkitpy.style.checkers.xml import XMLChecker
+from webkitpy.style.error_handlers import DefaultStyleErrorHandler
+from webkitpy.style.optparser import CommandOptionValues
 from webkitpy.style.filereader import TextFileReader
+from webkitpy.style.filter import validate_filter_rules
+from webkitpy.style.filter import FilterConfiguration
+from webkitpy.style.optparser import ArgumentParser
 
 
 class ConfigureLoggingTestBase(unittest.TestCase):
@@ -291,7 +290,7 @@ class GlobalVariablesTest(unittest.TestCase):
     def test_max_reports_per_category(self):
         """Check that _MAX_REPORTS_PER_CATEGORY is valid."""
         all_categories = self._all_categories()
-        for category in _MAX_REPORTS_PER_CATEGORY.iterkeys():
+        for category in _MAX_REPORTS_PER_CATEGORY.keys():
             self.assertIn(category, all_categories,
                           'Key "%s" is not a category' % category)
 
@@ -349,7 +348,7 @@ class CheckerDispatcherSkipTest(unittest.TestCase):
                                             expected):
         # Check the file type before asserting the return value.
         checker = self._dispatcher.dispatch(file_path=path,
-                                            handle_style_error=None,
+                                            handle_style_error=DefaultStyleErrorHandler('', None, None, []),
                                             min_confidence=3,
                                             commit_queue=False)
         message = 'while checking: %s' % path
@@ -377,6 +376,9 @@ class CheckerDispatcherSkipTest(unittest.TestCase):
         """Test should_skip_without_warning() for False return values."""
         paths = ['foo.txt',
                  os.path.join('LayoutTests', 'ChangeLog'),
+                 os.path.join('LayoutTests', 'foo.py'),
+                 os.path.join('WebDriverTests', 'ChangeLog'),
+                 os.path.join('WebDriverTests', 'TestExpectations.json'),
         ]
 
         for path in paths:
@@ -531,7 +533,7 @@ class CheckerDispatcherDispatchTest(unittest.TestCase):
         """Test paths that should be checked as JSON."""
         paths = [
            os.path.join('Source', 'WebCore', 'inspector', 'Inspector.json'),
-           os.path.join('Tools', 'BuildSlaveSupport', 'build.webkit.org-config', 'config.json'),
+           os.path.join('Tools', 'CISupport', 'build-webkit-org', 'config.json'),
         ]
 
         for path in paths:
@@ -580,7 +582,6 @@ class CheckerDispatcherDispatchTest(unittest.TestCase):
            "foo.html",
            "foo.idl",
            "foo.in",
-           "foo.php",
            "foo.pl",
            "foo.pm",
            "foo.pri",
@@ -631,10 +632,11 @@ class CheckerDispatcherDispatchTest(unittest.TestCase):
     def test_none_paths(self):
         """Test paths that have no file type.."""
         paths = [
-           "Makefile",
-           "foo.asdf",  # Non-sensical file extension.
-           "foo.exe",
-            ]
+            "Makefile",
+            "foo.asdf",  # Non-sensical file extension.
+            "foo.exe",
+            "foo.php",
+        ]
 
         for path in paths:
             self.assert_checker_none(path)
@@ -757,6 +759,9 @@ class StyleProcessor_CodeCoverageTest(LoggingTestCase):
         def __init__(self):
             self.dispatched_checker = None
 
+        def is_valid_file(self, file_path):
+            return not file_path.endswith('invalid_file.txt')
+
         def should_skip_with_warning(self, file_path):
             return file_path.endswith('skip_with_warning.txt')
 
@@ -866,6 +871,15 @@ class StyleProcessor_CodeCoverageTest(LoggingTestCase):
         file_path = os.path.join('foo', 'skip_process.txt')
 
         self.assertTrue(self._processor.should_process(file_path))
+
+    def test_invalid_file(self):
+        """Test should_process() for an invalid file."""
+        file_path = os.path.join('foo', 'invalid_file.txt')
+
+        self.assertFalse(self._processor.should_process(file_path))
+
+        self.assertLog(['ERROR: foo/invalid_file.txt(-):  File type is unsupported by the WebKit '
+                        'project  [policy/language] [5]\n'.format(os.path.join('foo', 'skip_with_warning.txt'))])
 
     def test_process__checker_dispatched(self):
         """Test the process() method for a path with a dispatched checker."""

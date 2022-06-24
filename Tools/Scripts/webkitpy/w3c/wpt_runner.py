@@ -20,8 +20,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import argparse
-import json
 import logging
 import optparse
 import os
@@ -46,7 +44,7 @@ def main(script_name, argv):
     host = Host()
     try:
         port = host.port_factory.get(options.platform, options)
-    except NotImplementedError, e:
+    except NotImplementedError as e:
         _log.error(str(e))
         sys.exit(-1)
 
@@ -78,7 +76,6 @@ def main(script_name, argv):
             _log.warning('jhbuild environment not present. Run update-webkitgtk-libs before build-webkit to ensure proper testing.')
 
     # Create the Port-specific driver.
-    port._display_server = options.display_server
     display_driver = port.create_driver(worker_number=0, no_timeout=True)._make_driver(pixel_tests=False)
     if not display_driver.check_driver(port):
         raise RuntimeError("Failed to check driver %s" % display_driver.__class__.__name__)

@@ -16,7 +16,7 @@
 #include "modules/audio_coding/neteq/tools/audio_loop.h"
 #include "test/field_trial.h"
 #include "test/gtest.h"
-#include "test/testsupport/fileutils.h"
+#include "test/testsupport/file_utils.h"
 
 namespace webrtc {
 namespace {
@@ -101,12 +101,13 @@ float EncodedPowerRatio(AudioEncoder* encoder,
 
 }  // namespace
 
+// TODO(ivoc): Remove this test, WebRTC-AdjustOpusBandwidth is obsolete.
 TEST(BandwidthAdaptationTest, BandwidthAdaptationTest) {
   test::ScopedFieldTrials override_field_trials(
       "WebRTC-AdjustOpusBandwidth/Enabled/");
 
   constexpr float kMaxNarrowbandRatio = 0.0035f;
-  constexpr float kMinWidebandRatio = 0.03f;
+  constexpr float kMinWidebandRatio = 0.01f;
 
   // Create encoder.
   AudioEncoderOpusConfig enc_config;

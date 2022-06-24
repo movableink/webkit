@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,6 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+#if ENABLE(CONTENT_EXTENSIONS)
+
 #include <WebCore/CombinedURLFilters.h>
 #include <WebCore/NFA.h>
 #include <WebCore/NFAToDFA.h>
@@ -45,11 +49,10 @@ static unsigned countLiveNodes(const ContentExtensions::DFA& dfa)
 static Vector<ContentExtensions::NFA> createNFAs(ContentExtensions::CombinedURLFilters& combinedURLFilters)
 {
     Vector<ContentExtensions::NFA> nfas;
-
     combinedURLFilters.processNFAs(std::numeric_limits<size_t>::max(), [&](ContentExtensions::NFA&& nfa) {
         nfas.append(WTFMove(nfa));
+        return true;
     });
-
     return nfas;
 }
 
@@ -61,7 +64,10 @@ static ContentExtensions::DFA buildDFAFromPatterns(Vector<const char*> patterns)
     for (const char* pattern : patterns)
         parser.addPattern(pattern, false, 0);
     Vector<ContentExtensions::NFA> nfas = createNFAs(combinedURLFilters);
-    return ContentExtensions::NFAToDFA::convert(nfas[0]);
+    EXPECT_EQ(1ul, nfas.size());
+    return *ContentExtensions::NFAToDFA::convert(WTFMove(nfas.first()));
 }
 
 } // namespace TestWebKitAPI
+
+#endif // ENABLE(CONTENT_EXTENSIONS)

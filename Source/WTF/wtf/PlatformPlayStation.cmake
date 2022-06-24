@@ -1,26 +1,30 @@
 list(APPEND WTF_SOURCES
     generic/MainThreadGeneric.cpp
     generic/MemoryFootprintGeneric.cpp
-    generic/MemoryPressureHandlerGeneric.cpp
     generic/RunLoopGeneric.cpp
     generic/WorkQueueGeneric.cpp
 
+    playstation/FileSystemPlayStation.cpp
     playstation/LanguagePlayStation.cpp
     playstation/UniStdExtrasPlayStation.cpp
 
+    posix/CPUTimePOSIX.cpp
     posix/FileSystemPOSIX.cpp
     posix/OSAllocatorPOSIX.cpp
     posix/ThreadingPOSIX.cpp
 
     text/unix/TextBreakIteratorInternalICUUnix.cpp
 
-    unix/CPUTimeUnix.cpp
-    unix/LanguageUnix.cpp
+    unix/LoggingUnix.cpp
+    unix/MemoryPressureHandlerUnix.cpp
 )
 
 list(APPEND WTF_LIBRARIES
-    ${CMAKE_THREAD_LIBS_INIT}
-
-    ${C_STD_LIBRARY}
     ${KERNEL_LIBRARY}
+    Threads::Threads
+)
+
+PLAYSTATION_COPY_REQUIREMENTS(WTF_CopySharedLibs
+    FILES
+        ${ICU_LIBRARIES}
 )

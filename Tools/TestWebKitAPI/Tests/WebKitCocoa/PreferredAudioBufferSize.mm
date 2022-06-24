@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if WK_HAVE_C_SPI
 
@@ -91,7 +91,7 @@ TEST_F(PreferredAudioBufferSize, WebAudio)
 
 TEST_F(PreferredAudioBufferSize, VideoOnly)
 {
-    runPlayingTestWithPageNamed(@"video-without-audio", 512);
+    runPlayingTestWithPageNamed(@"video-without-audio", 4096);
 }
 
 TEST_F(PreferredAudioBufferSize, VideoWithAudio)

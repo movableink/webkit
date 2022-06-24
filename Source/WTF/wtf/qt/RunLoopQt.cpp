@@ -159,7 +159,7 @@ void RunLoop::wakeUp()
     m_performWorkTimer->wakeUp();
 }
 
-RunLoop::CycleResult RunLoop::cycle(const String&)
+RunLoop::CycleResult RunLoop::cycle(RunLoopMode)
 {
     QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
     return CycleResult::Continue;

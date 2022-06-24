@@ -23,16 +23,12 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-messages -> UserMediaCaptureManager {
-    CaptureFailed(uint64_t id)
-    SourceStopped(uint64_t id)
-    SourceMutedChanged(uint64_t id, bool muted)
-    SourceSettingsChanged(uint64_t id, WebCore::RealtimeMediaSourceSettings settings)
-    StorageChanged(uint64_t id, WebKit::SharedMemory::Handle storageHandle, WebCore::CAAudioStreamDescription description, uint64_t numberOfFrames)
-    AudioSamplesAvailable(uint64_t id, MediaTime time, uint64_t numberOfFrames, uint64_t startFrame, uint64_t endFrame)
-    ApplyConstraintsSucceeded(uint64_t id, WebCore::RealtimeMediaSourceSettings settings)
-    ApplyConstraintsFailed(uint64_t id, String failedConstraint, String message)
-    RemoteVideoSampleAvailable(uint64_t id, WebCore::RemoteVideoSample sample)
+messages -> UserMediaCaptureManager NotRefCounted {
+    SourceStopped(WebCore::RealtimeMediaSourceIdentifier id, bool didFail)
+    SourceMutedChanged(WebCore::RealtimeMediaSourceIdentifier id, bool muted, bool interrupted)
+    SourceSettingsChanged(WebCore::RealtimeMediaSourceIdentifier id, WebCore::RealtimeMediaSourceSettings settings)
+    ApplyConstraintsSucceeded(WebCore::RealtimeMediaSourceIdentifier id, WebCore::RealtimeMediaSourceSettings settings)
+    ApplyConstraintsFailed(WebCore::RealtimeMediaSourceIdentifier id, String failedConstraint, String message)
 }
 
 #endif

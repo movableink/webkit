@@ -4,8 +4,7 @@ abs
 (Frame scrolling node
   (scrollable area size 800 600)
   (contents size 800 600)
-  (parent relative scrollable rect at (0,0) size 800x600)
-  (scrollable area parameters 
+  (scrollable area parameters
     (horizontal scroll elasticity 1)
     (vertical scroll elasticity 1)
     (horizontal scrollbar mode 0)
@@ -18,14 +17,13 @@ abs
     (Overflow scrolling node
       (scrollable area size 300 300)
       (contents size 381 530)
-      (parent relative scrollable rect at (30,35) size 300x300)
-      (scrollable area parameters 
+      (scrollable area parameters
         (horizontal scroll elasticity 1)
         (vertical scroll elasticity 1)
         (horizontal scrollbar mode 0)
         (vertical scrollbar mode 0)
-        (has enabled horizontal scrollbar 1)
-        (has enabled vertical scrollbar 1))
+        (allows horizontal scrolling 1)
+        (allows vertical scrolling 1))
     )
     (Overflow scroll proxy node
       (related overflow scrolling node scroll position (0,0))

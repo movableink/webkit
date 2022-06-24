@@ -311,7 +311,7 @@ function shouldBeOneOfValues(_a, _values)
         testFailed(_a + " should be one of " + stringifiedValues + ". Threw exception " + _exception);
     else {
         var matchedValue = _values.find(function (value) { return isResultCorrect(_av, value); });
-        if (matchedValue) {
+        if (matchedValue !== undefined) {
             testPassed(_a + " is one of " + stringifiedValues);
         } else {
             testFailed(_a + " should be one of " + stringifiedValues + ". Was " + stringify(_av) + ".");
@@ -350,6 +350,10 @@ function shouldBecomeEqual(_a, _b, completionHandler)
     }
     return false;
   }
+
+  if (!completionHandler)
+    return new Promise(resolve => setTimeout(_waitForCondition, 0, condition, resolve));
+
   setTimeout(_waitForCondition, 0, condition, completionHandler);
 }
 
@@ -462,6 +466,10 @@ function shouldBecomeDifferent(_a, _b, completionHandler)
     }
     return false;
   }
+
+  if (!completionHandler)
+    return new Promise(resolve => setTimeout(_waitForCondition, 0, condition, resolve));
+
   setTimeout(_waitForCondition, 0, condition, completionHandler);
 }
 
@@ -620,6 +628,27 @@ function shouldBeGreaterThanOrEqual(_a, _b) {
         testPassed(_a + " is >= " + _b);
 }
 
+function shouldBeLessThanOrEqual(_a, _b) {
+    if (typeof _a != "string" || typeof _b != "string")
+        debug("WARN: shouldBeLessThanOrEqual expects string arguments");
+
+    var _exception;
+    var _av;
+    try {
+        _av = eval(_a);
+    } catch (e) {
+        _exception = e;
+    }
+    var _bv = eval(_b);
+
+    if (_exception)
+        testFailed(_a + " should be <= " + _b + ". Threw exception " + _exception);
+    else if (typeof _av == "undefined" || _av > _bv)
+        testFailed(_a + " should be <= " + _b + ". Was " + _av + " (of type " + typeof _av + ").");
+    else
+        testPassed(_a + " is <= " + _b);
+}
+
 function expectTrue(v, msg) {
   if (v) {
     testPassed(msg);
@@ -713,6 +742,11 @@ function expectError()
 
 function shouldReject(_a, _message)
 {
+    return shouldRejectWithErrorName(_a, undefined, _message);
+}
+
+function shouldRejectWithErrorName(_a, _name, _message)
+{
     var _exception;
     var _av;
     try {
@@ -725,7 +759,13 @@ function shouldReject(_a, _message)
     return _av.then(function(result) {
         testFailed((_message ? _message : _a) + " should reject promise. Resolved with " + result + ".");
     }, function(error) {
-        testPassed((_message ? _message : _a) + " rejected promise  with " + error + ".");
+        if (_name === undefined) {
+            testPassed((_message ? _message : _a) + " rejected promise.");
+        } else if (error['name'] === _name) {
+            // FIXME: Remove the extra space and '.' (DOMException descriptions already end with periods) then rebase tests.
+            testPassed((_message ? _message : _a) + " rejected promise  with " + error + ".");
+        } else
+            testFailed((_message ? _message : _a) + " should reject promise with " + _name + ". Rejected with " + error['name'] + " instead.");
     });
 }
 
@@ -898,7 +938,7 @@ if (isWorker()) {
 
 function downgradeReferrerCallback(policy, host) {
     let scriptElement = document.createElement("script");
-    scriptElement.src = "http://".concat(host, ":8000/referrer-policy/resources/script.php");
+    scriptElement.src = "http://".concat(host, ":8000/referrer-policy/resources/script.py");
     scriptElement.referrerPolicy = policy;
     document.body.appendChild(scriptElement);
 }

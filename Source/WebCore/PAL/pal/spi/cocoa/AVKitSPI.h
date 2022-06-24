@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,27 +27,52 @@
 #import <wtf/SoftLinking.h>
 
 #if PLATFORM(IOS_FAMILY)
+#import <AVFoundation/AVPlayer.h>
 #import <AVKit/AVKit.h>
 #import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
+#endif
+
+#if !PLATFORM(WATCHOS) && USE(APPLE_INTERNAL_SDK)
+#import <AVKit/AVValueTiming.h>
+#else
+NS_ASSUME_NONNULL_BEGIN
+
+@interface AVValueTiming : NSObject <NSCoding, NSCopying, NSMutableCopying>
+@end
+
+@interface AVValueTiming ()
++ (AVValueTiming *)valueTimingWithAnchorValue:(double)anchorValue anchorTimeStamp:(NSTimeInterval)timeStamp rate:(double)rate;
+@property (NS_NONATOMIC_IOSONLY, readonly) double currentValue;
+@property (NS_NONATOMIC_IOSONLY, readonly) double rate;
+@property (NS_NONATOMIC_IOSONLY, readonly) NSTimeInterval anchorTimeStamp;
+@property (NS_NONATOMIC_IOSONLY, readonly) double anchorValue;
+
++ (NSTimeInterval)currentTimeStamp;
+- (double)valueForTimeStamp:(NSTimeInterval)timeStamp;
+@end
+
+NS_ASSUME_NONNULL_END
+#endif
+
 
 #if USE(APPLE_INTERNAL_SDK)
 
-#if PLATFORM(IOS) || PLATFORM(MACCATALYST)
-#import <AVKit/AVBackgroundView.h>
-#endif
-
+#if PLATFORM(IOS_FAMILY)
 #import <AVKit/AVPlayerController.h>
 IGNORE_WARNINGS_BEGIN("objc-property-no-attribute")
 #import <AVKit/AVPlayerLayerView.h>
 IGNORE_WARNINGS_END
 #import <AVKit/AVPlayerViewController_Private.h>
 #import <AVKit/AVPlayerViewController_WebKitOnly.h>
+#endif
+
+#if PLATFORM(IOS) || PLATFORM(MACCATALYST)
+#import <AVKit/AVBackgroundView.h>
+#endif
 
 #if PLATFORM(WATCHOS)
-
 #import <AVFoundation/AVPlayerLayer.h>
-
 NS_ASSUME_NONNULL_BEGIN
 
 @interface AVPictureInPicturePlayerLayerView : UIView
@@ -89,8 +114,9 @@ typedef NS_ENUM(NSInteger, AVPlayerViewControllerExitFullScreenReason) {
 @end
 
 NS_ASSUME_NONNULL_END
+#endif // PLATFORM(WATCHOS)
 
-#elif PLATFORM(APPLETV)
+#if PLATFORM(APPLETV)
 NS_ASSUME_NONNULL_BEGIN
 @interface AVPlayerViewController (AVPlayerViewController_WebKitOnly_OverrideRouteSharingPolicy)
 - (void)setWebKitOverrideRouteSharingPolicy:(NSUInteger)routeSharingPolicy routingContextUID:(NSString *)routingContextUID;
@@ -98,25 +124,21 @@ NS_ASSUME_NONNULL_BEGIN
 NS_ASSUME_NONNULL_END
 #endif
 
+#if PLATFORM(MAC)
+#import <AVKit/AVPlayerView_Private.h>
+#endif
+
 #else
 
-NS_ASSUME_NONNULL_BEGIN
-
-@interface AVBackgroundView : UIView
-@property (nonatomic) BOOL automaticallyDrawsRoundedCorners;
-typedef NS_ENUM(NSInteger, AVBackgroundViewMaterialStyle) {
-    AVBackgroundViewMaterialStylePrimary,
-    AVBackgroundViewMaterialStyleSecondary
-};
-typedef NS_ENUM(NSInteger, AVBackgroundViewTintEffectStyle) {
-    AVBackgroundViewTintEffectStylePrimary,
-    AVBackgroundViewTintEffectStyleSecondary
-};
-- (void)addSubview:(UIView *)subview applyingMaterialStyle:(AVBackgroundViewMaterialStyle)materialStyle tintEffectStyle:(AVBackgroundViewTintEffectStyle)tintEffectStyle;
-@end
-
+#if PLATFORM(IOS_FAMILY)
+#import <UIKit/UIResponder.h>
 @interface AVPlayerController : UIResponder
 @end
+#else
+#import <AppKit/NSResponder.h>
+@interface AVPlayerController : NSResponder <NSUserInterfaceValidations>
+@end
+#endif
 
 @interface AVPlayerController ()
 typedef NS_ENUM(NSInteger, AVPlayerControllerStatus) {
@@ -131,6 +153,22 @@ typedef NS_ENUM(NSInteger, AVPlayerControllerExternalPlaybackType) {
 };
 
 @property (NS_NONATOMIC_IOSONLY, readonly) AVPlayerControllerStatus status;
+@end
+
+#if PLATFORM(IOS_FAMILY)
+NS_ASSUME_NONNULL_BEGIN
+
+@interface AVBackgroundView : UIView
+@property (nonatomic) BOOL automaticallyDrawsRoundedCorners;
+typedef NS_ENUM(NSInteger, AVBackgroundViewMaterialStyle) {
+    AVBackgroundViewMaterialStylePrimary,
+    AVBackgroundViewMaterialStyleSecondary
+};
+typedef NS_ENUM(NSInteger, AVBackgroundViewTintEffectStyle) {
+    AVBackgroundViewTintEffectStylePrimary,
+    AVBackgroundViewTintEffectStyleSecondary
+};
+- (void)addSubview:(UIView *)subview applyingMaterialStyle:(AVBackgroundViewMaterialStyle)materialStyle tintEffectStyle:(AVBackgroundViewTintEffectStyle)tintEffectStyle;
 @end
 
 @class AVPlayerLayer;
@@ -167,6 +205,8 @@ typedef NS_ENUM(NSInteger, AVPlayerViewControllerExitFullScreenReason) {
 - (void)startPictureInPicture;
 - (void)stopPictureInPicture;
 
+- (void)flashPlaybackControlsWithDuration:(NSTimeInterval)duration;
+
 @property (nonatomic, strong, nullable) AVPlayerController *playerController;
 @property (nonatomic, readonly, getter=isPictureInPictureActive) BOOL pictureInPictureActive;
 @property (nonatomic, readonly) BOOL pictureInPictureWasStartedWhenEnteringBackground;
@@ -174,18 +214,52 @@ typedef NS_ENUM(NSInteger, AVPlayerViewControllerExitFullScreenReason) {
 @end
 
 NS_ASSUME_NONNULL_END
-
-#endif // USE(APPLE_INTERNAL_SDK)
 #endif // PLATFORM(IOS_FAMILY)
 
-#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
+#if PLATFORM(MAC)
+#import <AVKit/AVPlayerView.h>
+NS_ASSUME_NONNULL_BEGIN
 
+@interface AVPlayerView (WebKitFullscreenSPI)
+@property AVPlayerController *playerController;
+@property (readonly) BOOL isFullScreen;
+- (void)enterFullScreen:(id)sender;
+- (void)exitFullScreen:(id)sender;
+@end
+
+NS_ASSUME_NONNULL_END
+#endif
+
+#endif // USE(APPLE_INTERNAL_SDK)
+
+#if PLATFORM(IOS_FAMILY)
+@interface AVPlayerController ()
+@property (NS_NONATOMIC_IOSONLY) double defaultPlaybackRate;
+@end
+#endif // PLATFORM(IOS_FAMILY)
+
+#if HAVE(AVOBSERVATIONCONTROLLER)
 #if USE(APPLE_INTERNAL_SDK)
-
-#import <AVKit/AVOutputDeviceMenuController.h>
-
+#import <AVKit/AVObservationController.h>
 #else
+@class AVKeyValueChange;
+NS_ASSUME_NONNULL_BEGIN
 
+@interface AVObservationController<Owner> : NSObject
+- (instancetype)initWithOwner:(Owner)owner NS_DESIGNATED_INITIALIZER;
+- (id)startObserving:(id)object keyPath:(NSString *)keyPath includeInitialValue:(BOOL)shouldIncludeInitialValue observationHandler:(void (^)(Owner owner, id observed, AVKeyValueChange *change))observationHandler;
+- (void)stopAllObservation;
+@end
+
+NS_ASSUME_NONNULL_END
+#endif // USE(APPLE_INTERNAL_SDK)
+#endif // HAVE(AVOBSERVATIONCONTROLLER)
+
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
+#if USE(APPLE_INTERNAL_SDK)
+#import <AVKit/AVOutputDeviceMenuController.h>
+#else
 NS_ASSUME_NONNULL_BEGIN
 
 @class AVOutputContext;
@@ -205,45 +279,23 @@ NS_CLASS_AVAILABLE_MAC(10_11)
 @end
 
 NS_ASSUME_NONNULL_END
-
 #endif // USE(APPLE_INTERNAL_SDK)
-
 #endif // ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
 
-NS_ASSUME_NONNULL_BEGIN
 
-@interface AVValueTiming : NSObject <NSCoding, NSCopying, NSMutableCopying> 
-@end
+#if ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER) && PLATFORM(MAC)
 
-@interface AVValueTiming ()
-+ (AVValueTiming *)valueTimingWithAnchorValue:(double)anchorValue anchorTimeStamp:(NSTimeInterval)timeStamp rate:(double)rate;
-@property (NS_NONATOMIC_IOSONLY, readonly) double currentValue;
-@property (NS_NONATOMIC_IOSONLY, readonly) double rate;
-@property (NS_NONATOMIC_IOSONLY, readonly) NSTimeInterval anchorTimeStamp;
-@property (NS_NONATOMIC_IOSONLY, readonly) double anchorValue;
-
-+ (NSTimeInterval)currentTimeStamp;
-- (double)valueForTimeStamp:(NSTimeInterval)timeStamp;
-@end
-
-NS_ASSUME_NONNULL_END
-
-#if PLATFORM(MAC) && ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
-
+OBJC_CLASS AVFunctionBarMediaSelectionOption;
 OBJC_CLASS AVFunctionBarPlaybackControlsProvider;
 OBJC_CLASS AVFunctionBarScrubber;
-OBJC_CLASS AVFunctionBarMediaSelectionOption;
+OBJC_CLASS AVTouchBarMediaSelectionOption;
 OBJC_CLASS AVTouchBarPlaybackControlsProvider;
 OBJC_CLASS AVTouchBarScrubber;
-OBJC_CLASS AVTouchBarMediaSelectionOption;
 
 #if USE(APPLE_INTERNAL_SDK)
-
 #import <AVKit/AVTouchBarPlaybackControlsProvider.h>
 #import <AVKit/AVTouchBarScrubber.h>
-
 #else
-
 NS_ASSUME_NONNULL_BEGIN
 
 __attribute__((availability(macosx, obsoleted = 10.13))) @protocol AVFunctionBarPlaybackControlsControlling <NSObject>;
@@ -279,6 +331,7 @@ __attribute__((availability(macosx, obsoleted = 10.13))) @interface AVFunctionBa
 @property (readonly, getter=isPictureInPictureActive) BOOL pictureInPictureActive;
 @property (readonly) BOOL canTogglePictureInPicture;
 - (void)togglePictureInPicture;
+@property (nonatomic, readonly) BOOL canSeek;
 
 typedef NS_ENUM(NSInteger, AVTouchBarMediaSelectionOptionType) {
     AVTouchBarMediaSelectionOptionTypeRegular,
@@ -302,10 +355,35 @@ typedef NS_ENUM(NSInteger, AVTouchBarMediaSelectionOptionType) {
 - (instancetype)initWithTitle:(nonnull NSString *)title type:(AVTouchBarMediaSelectionOptionType)type;
 @end
 
-@class AVThumbnail;
+NS_ASSUME_NONNULL_END
+#endif // USE(APPLE_INTERNAL_SDK)
+#endif // ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER) && PLATFORM(MAC)
+
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET) && HAVE(AVROUTEPICKERVIEW)
+#if USE(APPLE_INTERNAL_SDK)
+#import <AVKit/AVRoutePickerView_Private.h>
+#import <AVKit/AVRoutePickerView_WebKitOnly.h>
+#else
+NS_ASSUME_NONNULL_BEGIN
+
+@protocol AVRoutePickerViewDelegate;
+
+@interface AVRoutePickerView : NSView
+
+- (void)showRoutePickingControlsForOutputContext:(AVOutputContext *)outputContext relativeToRect:(NSRect)positioningRect ofView:(NSView *)positioningView;
+
+@property (nonatomic, nullable, weak) id<AVRoutePickerViewDelegate> delegate;
+@property (nonatomic) BOOL routeListAlwaysHasDarkAppearance;
+
+@end
+
+@protocol AVRoutePickerViewDelegate <NSObject>
+@optional
+- (void)routePickerViewWillBeginPresentingRoutes:(AVRoutePickerView *)routePickerView;
+- (void)routePickerViewDidEndPresentingRoutes:(AVRoutePickerView *)routePickerView;
+@end
 
 NS_ASSUME_NONNULL_END
-
-#endif
-
-#endif // PLATFORM(MAC) && ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
+#endif // USE(APPLE_INTERNAL_SDK)
+#endif // ENABLE(WIRELESS_PLAYBACK_TARGET) && HAVE(AVROUTEPICKERVIEW)

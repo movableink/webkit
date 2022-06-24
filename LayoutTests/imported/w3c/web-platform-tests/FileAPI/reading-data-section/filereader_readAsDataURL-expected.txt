@@ -1,3 +1,5 @@
 
-FAIL FileAPI Test: filereader_readAsDataURL assert_equals: expected 1 but got 2
+PASS FileReader readyState during readAsDataURL
+PASS readAsDataURL result for Blob with specified MIME type
+PASS readAsDataURL result for Blob with unspecified MIME type
 

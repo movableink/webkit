@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,12 @@ struct DollarVMAssertScope {
 class JSDollarVM final : public JSNonFinalObject {
 public:
     typedef JSNonFinalObject Base;
+
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace();
+    }
     
     DECLARE_EXPORT_INFO;
     
@@ -50,10 +56,12 @@ public:
     static JSDollarVM* create(VM& vm, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        JSDollarVM* instance = new (NotNull, allocateCell<JSDollarVM>(vm.heap)) JSDollarVM(vm, structure);
+        JSDollarVM* instance = new (NotNull, allocateCell<JSDollarVM>(vm)) JSDollarVM(vm, structure);
         instance->finishCreation(vm);
         return instance;
     }
+
+    Structure* objectDoingSideEffectPutWithoutCorrectSlotStatusStructure() { return m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructureID.get(); }
     
 private:
     JSDollarVM(VM& vm, Structure* structure)
@@ -62,10 +70,13 @@ private:
         DollarVMAssertScope assertScope;
     }
 
-
     void finishCreation(VM&);
     void addFunction(VM&, JSGlobalObject*, const char* name, NativeFunction, unsigned arguments);
     void addConstructibleFunction(VM&, JSGlobalObject*, const char* name, NativeFunction, unsigned arguments);
+
+    DECLARE_VISIT_CHILDREN;
+
+    WriteBarrierStructureID m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructureID;
 };
 
 } // namespace JSC

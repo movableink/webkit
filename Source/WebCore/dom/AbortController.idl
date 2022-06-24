@@ -24,13 +24,12 @@
  */
 
 [
-    Constructor,
-    ConstructorCallWith=ScriptExecutionContext,
-    Exposed=(Window,Worker),
-    ImplementationLacksVTable,
-    JSCustomMarkFunction
+    Exposed=*,
+    GenerateAddOpaqueRoot=signal
 ] interface AbortController {
+    [CallWith=CurrentScriptExecutionContext] constructor();
+
     [SameObject] readonly attribute AbortSignal signal;
 
-    void abort();
+    [CallWith=CurrentGlobalObject] undefined abort(optional any reason);
 };

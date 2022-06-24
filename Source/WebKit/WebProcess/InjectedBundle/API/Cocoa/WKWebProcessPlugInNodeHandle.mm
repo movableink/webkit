@@ -26,11 +26,13 @@
 #import "config.h"
 #import "WKWebProcessPlugInNodeHandleInternal.h"
 
+#import "CocoaImage.h"
 #import "WKSharedAPICast.h"
 #import "WKWebProcessPlugInFrameInternal.h"
+#import "WebImage.h"
 #import <WebCore/HTMLTextFormControlElement.h>
 #import <WebCore/IntRect.h>
-#import <WebKit/WebImage.h>
+#import <WebCore/WebCoreObjCExtras.h>
 
 @implementation WKWebProcessPlugInNodeHandle {
     API::ObjectStorage<WebKit::InjectedBundleNodeHandle> _nodeHandle;
@@ -38,6 +40,8 @@
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKWebProcessPlugInNodeHandle.class, self))
+        return;
     _nodeHandle->~InjectedBundleNodeHandle();
     [super dealloc];
 }
@@ -54,15 +58,14 @@
     return WebKit::wrapper(_nodeHandle->htmlIFrameElementContentFrame());
 }
 
-#if PLATFORM(IOS_FAMILY)
-- (UIImage *)renderedImageWithOptions:(WKSnapshotOptions)options
+- (CocoaImage *)renderedImageWithOptions:(WKSnapshotOptions)options
 {
     return [self renderedImageWithOptions:options width:nil];
 }
 
-- (UIImage *)renderedImageWithOptions:(WKSnapshotOptions)options width:(NSNumber *)width
+- (CocoaImage *)renderedImageWithOptions:(WKSnapshotOptions)options width:(NSNumber *)width
 {
-    Optional<float> optionalWidth;
+    std::optional<float> optionalWidth;
     if (width)
         optionalWidth = width.floatValue;
 
@@ -70,29 +73,12 @@
     if (!image)
         return nil;
 
-    return [[[UIImage alloc] initWithCGImage:image->bitmap().makeCGImage().get()] autorelease];
-}
+#if USE(APPKIT)
+    return adoptNS([[NSImage alloc] initWithCGImage:image->bitmap().makeCGImage().get() size:NSZeroSize]).autorelease();
+#else
+    return adoptNS([[UIImage alloc] initWithCGImage:image->bitmap().makeCGImage().get()]).autorelease();
 #endif
-
-#if PLATFORM(MAC)
-- (NSImage *)renderedImageWithOptions:(WKSnapshotOptions)options
-{
-    return [self renderedImageWithOptions:options width:nil];
 }
-
-- (NSImage *)renderedImageWithOptions:(WKSnapshotOptions)options width:(NSNumber *)width
-{
-    Optional<float> optionalWidth;
-    if (width)
-        optionalWidth = width.floatValue;
-
-    RefPtr<WebKit::WebImage> image = _nodeHandle->renderedImage(WebKit::toSnapshotOptions(options), options & kWKSnapshotOptionsExcludeOverflow, optionalWidth);
-    if (!image)
-        return nil;
-
-    return [[[NSImage alloc] initWithCGImage:image->bitmap().makeCGImage().get() size:NSZeroSize] autorelease];
-}
-#endif
 
 - (CGRect)elementBounds
 {
@@ -109,6 +95,11 @@
     return _nodeHandle->isHTMLInputElementAutoFilledAndViewable();
 }
 
+- (BOOL)HTMLInputElementIsAutoFilledAndObscured
+{
+    return _nodeHandle->isHTMLInputElementAutoFilledAndObscured();
+}
+
 - (void)setHTMLInputElementIsAutoFilled:(BOOL)isAutoFilled
 {
     _nodeHandle->setHTMLInputElementAutoFilled(isAutoFilled);
@@ -117,6 +108,11 @@
 - (void)setHTMLInputElementIsAutoFilledAndViewable:(BOOL)isAutoFilledAndViewable
 {
     _nodeHandle->setHTMLInputElementAutoFilledAndViewable(isAutoFilledAndViewable);
+}
+
+- (void)setHTMLInputElementIsAutoFilledAndObscured:(BOOL)isAutoFilledAndObscured
+{
+    _nodeHandle->setHTMLInputElementAutoFilledAndObscured(isAutoFilledAndObscured);
 }
 
 - (BOOL)isHTMLInputElementAutoFillButtonEnabled
@@ -189,6 +185,11 @@ static _WKAutoFillButtonType toWKAutoFillButtonType(WebCore::AutoFillButtonType 
 - (BOOL)isSelectElement
 {
     return _nodeHandle->isSelectElement();
+}
+
+- (BOOL)isSelectableTextNode
+{
+    return _nodeHandle->isSelectableTextNode();
 }
 
 - (BOOL)isTextField

@@ -23,8 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "TestWKWebView.h"
 #import <WebKit/WKWebViewPrivate.h>
@@ -36,7 +37,6 @@
 #import "UIKitSPI.h"
 #endif
 
-static bool isDone;
 static bool focusDidStartInputSession;
 static const NSUInteger maxCount = 100;
 

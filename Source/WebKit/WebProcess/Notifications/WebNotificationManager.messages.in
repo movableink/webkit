@@ -20,10 +20,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-messages -> WebNotificationManager {
-    DidShowNotification(uint64_t notificationID);
-    DidClickNotification(uint64_t notificationID);
-    DidCloseNotifications(Vector<uint64_t> notificationIDs);
+messages -> WebNotificationManager NotRefCounted {
+    DidShowNotification(UUID notificationID);
+    DidClickNotification(UUID notificationID);
+    DidCloseNotifications(Vector<UUID> notificationIDs);
     DidUpdateNotificationDecision(String originString, bool allowed);
     DidRemoveNotificationDecisions(Vector<String> originStrings);
 }

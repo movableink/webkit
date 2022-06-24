@@ -38,7 +38,7 @@ class TemplateObjectDescriptorTable;
 class TemplateObjectDescriptor : public RefCounted<TemplateObjectDescriptor> {
 public:
     typedef Vector<String, 4> StringVector;
-    typedef Vector<Optional<String>, 4> OptionalStringVector;
+    typedef Vector<std::optional<String>, 4> OptionalStringVector;
 
     enum DeletedValueTag { DeletedValue };
     TemplateObjectDescriptor(DeletedValueTag);
@@ -111,11 +111,9 @@ inline unsigned TemplateObjectDescriptor::calculateHash(const StringVector& rawS
 } // namespace JSC
 
 namespace WTF {
-template<typename T> struct DefaultHash;
+template<typename> struct DefaultHash;
 
-template<> struct DefaultHash<JSC::TemplateObjectDescriptor> {
-    typedef JSC::TemplateObjectDescriptor::Hasher Hash;
-};
+template<> struct DefaultHash<JSC::TemplateObjectDescriptor> : JSC::TemplateObjectDescriptor::Hasher { };
 
 template<> struct HashTraits<JSC::TemplateObjectDescriptor> : CustomHashTraits<JSC::TemplateObjectDescriptor> {
 };

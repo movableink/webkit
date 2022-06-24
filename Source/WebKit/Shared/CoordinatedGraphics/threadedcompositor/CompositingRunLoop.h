@@ -31,6 +31,7 @@
 #include <wtf/Condition.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Function.h>
+#include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RunLoop.h>
@@ -70,7 +71,7 @@ private:
     RunLoop* m_runLoop { nullptr };
     RunLoop::Timer<CompositingRunLoop> m_updateTimer;
     Function<void ()> m_updateFunction;
-    Lock m_dispatchSyncConditionMutex;
+    Lock m_dispatchSyncConditionLock;
     Condition m_dispatchSyncCondition;
 
     struct {

@@ -30,8 +30,7 @@
 
 import unittest
 
-import text as text_style
-from text import TextChecker
+from webkitpy.style.checkers.text import TextChecker
 
 
 class TextStyleTestCase(unittest.TestCase):

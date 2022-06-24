@@ -65,11 +65,12 @@ TestPage.log = window.log = function(text)
 
 TestPage.closeTest = window.closeTest = function()
 {
-    window.internals.closeDummyInspectorFrontend();
-
     // This code might be executed while the debugger is still running through a stack based EventLoop.
     // Use a setTimeout to defer to a clean stack before letting the testRunner load the next test.
-    setTimeout(() => { testRunner.notifyDone(); }, 0);
+    setTimeout(() => {
+        window.internals.closeDummyInspectorFrontend();
+        testRunner.notifyDone();
+    }, 0);
 };
 
 TestPage.runTest = window.runTest = function()
@@ -81,18 +82,19 @@ TestPage.runTest = window.runTest = function()
 
     testRunner.dumpAsText();
     testRunner.waitUntilDone();
-    testRunner.setCanOpenWindows(true);
 
     let testFunction = window.test;
     if (typeof testFunction !== "function") {
         alert("Failed to send test() because it is not a function.");
         testRunner.notifyDone();
+        return;
     }
 
     let url = testRunner.inspectorTestStubURL;
     if (!url) {
         alert("Failed to obtain inspector test stub URL.");
         testRunner.notifyDone();
+        return;
     }
 
     function runInitializationMethodsInFrontend(initializers)

@@ -5,6 +5,7 @@ const testES256PrivateKeyBase64 =
     "RQ==";
 const testRpId = "localhost";
 const testUserhandleBase64 = "AAECAwQFBgcICQ==";
+const testUserEntityBundleBase64 = "omJpZEoAAQIDBAUGBwgJZG5hbWVwQUFFQ0F3UUZCZ2NJQ1E9PQ==";
 const testAttestationCertificateBase64 =
     "MIIB6jCCAZCgAwIBAgIGAWHAxcjvMAoGCCqGSM49BAMCMFMxJzAlBgNVBAMMHkJh" +
     "c2ljIEF0dGVzdGF0aW9uIFVzZXIgU3ViIENBMTETMBEGA1UECgwKQXBwbGUgSW5j" +
@@ -66,6 +67,15 @@ const testAssertionMessageBase64 =
     "Z51VstuQkuHI2eXh0Ct1gPC0gSx3CWLh5I9a2AEAAABQA1hHMEUCIQCSFTuuBWgB" +
     "4/F0VB7DlUVM09IHPmxe1MzHUwRoCRZbCAIgGKov6xoAx2MEf6/6qNs8OutzhP2C" +
     "QoJ1L7Fe64G9uBc=";
+const testAssertionMessageLongBase64 =
+    "AKUBomJpZFhAKAitzuj+Tslzelf3/vZwIGtDQNgoKeFd5oEieYzhyzA65saf0tK2" +
+    "w/mooa7tQtGgDdwZIjOhjcuZ0pQ1ajoE4GR0eXBlanB1YmxpYy1rZXkCWCVGzH+5" +
+    "Z51VstuQkuHI2eXh0Ct1gPC0gSx3CWLh5I9a2AEAAABQA1hHMEUCIQCSFTuuBWgB" +
+    "4/F0VB7DlUVM09IHPmxe1MzHUwRoCRZbCAIgGKov6xoAx2MEf6/6qNs8OutzhP2C" +
+    "QoJ1L7Fe64G9uBcEpGJpZFggMIIBkzCCATigAwIBAjCCAZMwggE4oAMCAQIwggGT" +
+    "MIJkaWNvbngoaHR0cHM6Ly9waWNzLmFjbWUuY29tLzAwL3AvYUJqampwcVBiLnBu" +
+    "Z2RuYW1ldmpvaG5wc21pdGhAZXhhbXBsZS5jb21rZGlzcGxheU5hbWVtSm9obiBQ" +
+    "LiBTbWl0aAUC";
 const testU2fApduNoErrorOnlyResponseBase64 = "kAA=";
 const testU2fApduInsNotSupportedOnlyResponseBase64 = "bQA=";
 const testU2fApduWrongDataOnlyResponseBase64 = "aoA=";
@@ -96,6 +106,7 @@ const testU2fSignResponse =
     "f4V4LeEAhqeD0effTjY553H19q+jWq1Tc4WOkAA=";
 const testCtapErrCredentialExcludedOnlyResponseBase64 = "GQ==";
 const testCtapErrInvalidCredentialResponseBase64 = "Ig==";
+const testCtapErrNotAllowedResponseBase64 = "MA==";
 const testNfcU2fVersionBase64 = "VTJGX1YykAA=";
 const testNfcCtapVersionBase64 = "RklET18yXzCQAA==";
 const testGetInfoResponseApduBase64 =
@@ -293,22 +304,37 @@ function waitForLoad()
     });
 }
 
-function withCrossOriginIframe(resourceFile)
+function withCrossOriginIframe(resourceFile, allow = "")
 {
     return new Promise((resolve) => {
         waitForLoad().then((message) => {
             resolve(message);
         });
         const frame = document.createElement("iframe");
+        frame.allow = allow;
         frame.src = get_host_info().HTTPS_REMOTE_ORIGIN + RESOURCES_DIR + resourceFile;
         document.body.appendChild(frame);
+    });
+}
+
+function withSameSiteIframe(resourceFile, allow = "")
+{
+    return new Promise((resolve) => {
+        waitForLoad().then((message) => {
+            resolve(message);
+       });
+       const frame = document.createElement("iframe");
+       const host = get_host_info();
+       frame.allow = allow;
+       frame.src = "https://" + host.ORIGINAL_HOST + ":" + host.HTTPS_PORT2 + RESOURCES_DIR + resourceFile;
+       document.body.appendChild(frame);
     });
 }
 
 function promiseRejects(test, expected, promise, description)
 {
     return promise.then(test.unreached_func("Should have rejected: " + description)).catch(function(e) {
-        assert_throws(expected, function() { throw e }, description);
+        assert_throws_dom(expected, function() { throw e }, description);
         assert_equals(e.message, description);
     });
 }
@@ -394,14 +420,18 @@ function checkU2fMakeCredentialResult(credential, isNoneAttestation = true)
         assert_equals(attestationObject.attStmt.x5c.length, 1);
 }
 
-function checkCtapGetAssertionResult(credential)
+function checkCtapGetAssertionResult(credential, userHandleBase64 = null)
 {
     // Check respond
     assert_array_equals(Base64URL.parse(credential.id), Base64URL.parse(testHidCredentialIdBase64));
     assert_equals(credential.type, 'public-key');
+    assert_equals(credential.authenticatorAttachment, 'cross-platform')
     assert_array_equals(new Uint8Array(credential.rawId), Base64URL.parse(testHidCredentialIdBase64));
     assert_equals(bytesToASCIIString(credential.response.clientDataJSON), '{"type":"webauthn.get","challenge":"MTIzNDU2","origin":"https://localhost:9443"}');
-    assert_equals(credential.response.userHandle, null);
+    if (userHandleBase64 == null)
+        assert_equals(credential.response.userHandle, null);
+    else
+        assert_array_equals(new Uint8Array(credential.response.userHandle), Base64URL.parse(userHandleBase64));
     assert_not_own_property(credential.getClientExtensionResults(), "appid");
 
     // Check authData
@@ -436,7 +466,7 @@ function checkU2fGetAssertionResult(credential, isAppID = false, appIDHash = "c2
 
 function generateUserhandleBase64()
 {
-    let buffer = new Uint8Array(16);
+    let buffer = new Uint8Array(8);
     crypto.getRandomValues(buffer);
     return btoa(String.fromCharCode.apply(0, buffer));
 }
@@ -472,4 +502,10 @@ async function calculateCredentialID(privateKeyBase64) {
     const privateKey = Base64URL.parse(privateKeyBase64);
     const publicKey = privateKey.slice(0, 65);
     return new Uint8Array(await crypto.subtle.digest("sha-1", publicKey));
+}
+
+function base64encode(binary)
+{
+    const unit8Array = new Uint8Array(binary);
+    return btoa(String.fromCharCode.apply(0, unit8Array));
 }

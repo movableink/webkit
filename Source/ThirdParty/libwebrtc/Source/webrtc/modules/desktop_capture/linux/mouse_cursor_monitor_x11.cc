@@ -10,8 +10,11 @@
 
 #include "modules/desktop_capture/linux/mouse_cursor_monitor_x11.h"
 
-#include <X11/Xutil.h>
+#include <X11/Xlib.h>
 #include <X11/extensions/Xfixes.h>
+#include <X11/extensions/xfixeswire.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #include <algorithm>
 #include <memory>
@@ -19,9 +22,11 @@
 #include "modules/desktop_capture/desktop_capture_options.h"
 #include "modules/desktop_capture/desktop_capture_types.h"
 #include "modules/desktop_capture/desktop_frame.h"
+#include "modules/desktop_capture/desktop_geometry.h"
 #include "modules/desktop_capture/linux/x_error_trap.h"
 #include "modules/desktop_capture/mouse_cursor.h"
 #include "modules/desktop_capture/mouse_cursor_monitor.h"
+#include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 
 namespace {
@@ -31,7 +36,7 @@ namespace {
 // window managers may re-parent them to add decorations. However,
 // XQueryPointer() expects to be passed children of the root. This function
 // searches up the list of the windows to find the root child that corresponds
-// to |window|.
+// to `window`.
 Window GetTopLevelWindow(Display* display, Window window) {
   while (true) {
     // If the window is in WithdrawnState then look at all of its children.
@@ -41,7 +46,7 @@ Window GetTopLevelWindow(Display* display, Window window) {
     if (!XQueryTree(display, window, &root, &parent, &children,
                     &num_children)) {
       RTC_LOG(LS_ERROR) << "Failed to query for child windows although window"
-                        << "does not have a valid WM_STATE.";
+                           "does not have a valid WM_STATE.";
       return None;
     }
     if (children)
@@ -148,17 +153,17 @@ void MouseCursorMonitorX11::Capture() {
       state = OUTSIDE;
     } else {
       // In screen mode (window_ == root_window) the mouse is always inside.
-      // XQueryPointer() sets |child_window| to None if the cursor is outside
-      // |window_|.
+      // XQueryPointer() sets `child_window` to None if the cursor is outside
+      // `window_`.
       state =
           (window_ == root_window || child_window != None) ? INSIDE : OUTSIDE;
     }
 
     // As the comments to GetTopLevelWindow() above indicate, in window capture,
-    // the cursor position capture happens in |window_|, while the frame catpure
-    // happens in |child_window|. These two windows are not alwyas same, as
-    // window manager may add some decorations to the |window_|. So translate
-    // the coordinate in |window_| to the coordinate space of |child_window|.
+    // the cursor position capture happens in `window_`, while the frame catpure
+    // happens in `child_window`. These two windows are not alwyas same, as
+    // window manager may add some decorations to the `window_`. So translate
+    // the coordinate in `window_` to the coordinate space of `child_window`.
     if (window_ != root_window && state == INSIDE) {
       int translated_x, translated_y;
       Window unused;
@@ -202,11 +207,12 @@ void MouseCursorMonitorX11::CaptureCursor() {
   std::unique_ptr<DesktopFrame> image(
       new BasicDesktopFrame(DesktopSize(img->width, img->height)));
 
-  uint64_t* src = reinterpret_cast<uint64_t*>(img->pixels);
+  // Xlib stores 32-bit data in longs, even if longs are 64-bits long.
+  unsigned long* src = img->pixels;
   uint32_t* dst = reinterpret_cast<uint32_t*>(image->data());
   uint32_t* dst_end = dst + (img->width * img->height);
   while (dst < dst_end) {
-    *dst++ = *src++;
+    *dst++ = static_cast<uint32_t>(*src++);
   }
 
   DesktopVector hotspot(std::min(img->width, img->xhot),

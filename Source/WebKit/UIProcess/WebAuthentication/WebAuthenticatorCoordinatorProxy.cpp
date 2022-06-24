@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,20 +28,22 @@
 
 #if ENABLE(WEB_AUTHN)
 
+#include "APIUIClient.h"
 #include "AuthenticatorManager.h"
 #include "LocalService.h"
-#include "WebAuthenticationPanelFlags.h"
-#include "WebAuthenticatorCoordinatorMessages.h"
+#include "WebAuthenticationFlags.h"
 #include "WebAuthenticatorCoordinatorProxyMessages.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
 #include "WebsiteDataStore.h"
+#include <WebCore/AuthenticatorResponseData.h>
 #include <WebCore/ExceptionData.h>
-#include <WebCore/PublicKeyCredentialData.h>
+#include <WebCore/SecurityOriginData.h>
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
 
 namespace WebKit {
+using namespace WebCore;
 
 WebAuthenticatorCoordinatorProxy::WebAuthenticatorCoordinatorProxy(WebPageProxy& webPageProxy)
     : m_webPageProxy(webPageProxy)
@@ -51,44 +53,77 @@ WebAuthenticatorCoordinatorProxy::WebAuthenticatorCoordinatorProxy(WebPageProxy&
 
 WebAuthenticatorCoordinatorProxy::~WebAuthenticatorCoordinatorProxy()
 {
+#if HAVE(UNIFIED_ASC_AUTH_UI)
+    cancel();
+#endif // HAVE(UNIFIED_ASC_AUTH_UI)
     m_webPageProxy.process().removeMessageReceiver(Messages::WebAuthenticatorCoordinatorProxy::messageReceiverName(), m_webPageProxy.webPageID());
 }
 
-void WebAuthenticatorCoordinatorProxy::makeCredential(uint64_t messageId, const Vector<uint8_t>& hash, const WebCore::PublicKeyCredentialCreationOptions& options)
+void WebAuthenticatorCoordinatorProxy::makeCredential(FrameIdentifier frameId, FrameInfoData&& frameInfo, Vector<uint8_t>&& hash, PublicKeyCredentialCreationOptions&& options, bool processingUserGesture, RequestCompletionHandler&& handler)
 {
-    handleRequest(messageId, { hash, options, makeWeakPtr(m_webPageProxy), WebAuthenticationPanelResult::Unavailable, nullptr });
+    handleRequest({ WTFMove(hash), WTFMove(options), m_webPageProxy, WebAuthenticationPanelResult::Unavailable, nullptr, GlobalFrameIdentifier { m_webPageProxy.webPageID(), frameId }, WTFMove(frameInfo), processingUserGesture, String(), nullptr, std::nullopt, std::nullopt }, WTFMove(handler));
 }
 
-void WebAuthenticatorCoordinatorProxy::getAssertion(uint64_t messageId, const Vector<uint8_t>& hash, const WebCore::PublicKeyCredentialRequestOptions& options)
+void WebAuthenticatorCoordinatorProxy::getAssertion(FrameIdentifier frameId, FrameInfoData&& frameInfo, Vector<uint8_t>&& hash, PublicKeyCredentialRequestOptions&& options, MediationRequirement mediation, std::optional<WebCore::SecurityOriginData> parentOrigin, bool processingUserGesture, RequestCompletionHandler&& handler)
 {
-    handleRequest(messageId, { hash, options, makeWeakPtr(m_webPageProxy), WebAuthenticationPanelResult::Unavailable, nullptr });
+    handleRequest({ WTFMove(hash), WTFMove(options), m_webPageProxy, WebAuthenticationPanelResult::Unavailable, nullptr, GlobalFrameIdentifier { m_webPageProxy.webPageID(), frameId }, WTFMove(frameInfo), processingUserGesture, String(), nullptr, mediation, parentOrigin }, WTFMove(handler));
 }
 
-void WebAuthenticatorCoordinatorProxy::handleRequest(uint64_t messageId, WebAuthenticationRequestData&& data)
+void WebAuthenticatorCoordinatorProxy::handleRequest(WebAuthenticationRequestData&& data, RequestCompletionHandler&& handler)
 {
-    auto callback = [messageId, weakThis = makeWeakPtr(*this)] (Variant<WebCore::PublicKeyCredentialData, WebCore::ExceptionData>&& result) {
-        ASSERT(RunLoop::isMain());
-        if (!weakThis)
-            return;
+    auto origin = API::SecurityOrigin::create(data.frameInfo.securityOrigin.protocol, data.frameInfo.securityOrigin.host, data.frameInfo.securityOrigin.port);
 
-        WTF::switchOn(result, [&](const WebCore::PublicKeyCredentialData& data) {
-            weakThis->requestReply(messageId, data, { });
-        }, [&](const  WebCore::ExceptionData& exception) {
-            weakThis->requestReply(messageId, { }, exception);
-        });
+    CompletionHandler<void(bool)> afterConsent = [this, data = WTFMove(data), handler = WTFMove(handler)] (bool result) mutable {
+        auto& authenticatorManager = m_webPageProxy.websiteDataStore().authenticatorManager();
+        if (result) {
+#if HAVE(UNIFIED_ASC_AUTH_UI)
+            if (!authenticatorManager.isMock() && !authenticatorManager.isVirtual()) {
+                auto context = contextForRequest(WTFMove(data));
+                if (context.get() == nullptr) {
+                    handler({ }, (AuthenticatorAttachment)0, ExceptionData { NotAllowedError, "The origin of the document is not the same as its ancestors."_s });
+                    return;
+                }
+                // performRequest calls out to ASCAgent which will then call [_WKWebAuthenticationPanel makeCredential/getAssertionWithChallenge]
+                // which calls authenticatorManager.handleRequest(..)
+                performRequest(context, WTFMove(handler));
+                return;
+            }
+#else
+            if (data.parentOrigin && !authenticatorManager.isMock() && !authenticatorManager.isVirtual()) {
+                handler({ }, (AuthenticatorAttachment)0, ExceptionData { NotAllowedError, "The origin of the document is not the same as its ancestors."_s });
+                return;
+            }
+#endif // HAVE(UNIFIED_ASC_AUTH_UI)
+
+            authenticatorManager.handleRequest(WTFMove(data), [handler = WTFMove(handler)] (std::variant<Ref<AuthenticatorResponse>, ExceptionData>&& result) mutable {
+                ASSERT(RunLoop::isMain());
+                WTF::switchOn(result, [&](const Ref<AuthenticatorResponse>& response) {
+                    handler(response->data(), response->attachment(), { });
+                }, [&](const ExceptionData& exception) {
+                    handler({ }, (AuthenticatorAttachment)0, exception);
+                });
+            });
+        } else
+            handler({ }, (AuthenticatorAttachment)0, ExceptionData { NotAllowedError, "This request has been cancelled by the user." });
     };
-    m_webPageProxy.websiteDataStore().authenticatorManager().handleRequest(WTFMove(data), WTFMove(callback));
+    
+    if (!data.processingUserGesture)
+        m_webPageProxy.uiClient().requestWebAuthenticationNoGesture(origin, WTFMove(afterConsent));
+    else
+        afterConsent(true);
 }
 
-void WebAuthenticatorCoordinatorProxy::isUserVerifyingPlatformAuthenticatorAvailable(uint64_t messageId)
+#if !HAVE(UNIFIED_ASC_AUTH_UI)
+void WebAuthenticatorCoordinatorProxy::isUserVerifyingPlatformAuthenticatorAvailable(QueryCompletionHandler&& handler)
 {
-    m_webPageProxy.send(Messages::WebAuthenticatorCoordinator::IsUserVerifyingPlatformAuthenticatorAvailableReply(messageId, LocalService::isAvailable()));
+    handler(LocalService::isAvailable());
 }
 
-void WebAuthenticatorCoordinatorProxy::requestReply(uint64_t messageId, const WebCore::PublicKeyCredentialData& data, const WebCore::ExceptionData& exception)
+void WebAuthenticatorCoordinatorProxy::isConditionalMediationAvailable(QueryCompletionHandler&& handler)
 {
-    m_webPageProxy.send(Messages::WebAuthenticatorCoordinator::RequestReply(messageId, data, exception));
+    handler(false);
 }
+#endif // !HAVE(UNIFIED_ASC_AUTH_UI)
 
 } // namespace WebKit
 

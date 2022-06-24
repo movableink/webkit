@@ -40,16 +40,20 @@ intead.
 
 """
 
-import cPickle
 import logging
 import multiprocessing
 import os
-import Queue
 import signal
 import sys
 import time
 import traceback
 
+if sys.version_info > (3, 0):
+    import pickle
+    import queue
+else:
+    import cPickle as pickle
+    import Queue as queue
 
 from webkitpy.common.host import Host
 from webkitpy.common.system import stack_utils
@@ -76,8 +80,8 @@ class _MessagePool(object):
         self._running_inline = (self._num_workers == 1)
         self._timeout = timeout
         if self._running_inline:
-            self._messages_to_worker = Queue.Queue()
-            self._messages_to_manager = Queue.Queue()
+            self._messages_to_worker = queue.Queue()
+            self._messages_to_manager = queue.Queue()
         else:
             self._messages_to_worker = multiprocessing.Queue()
             self._messages_to_manager = multiprocessing.Queue()
@@ -94,7 +98,7 @@ class _MessagePool(object):
         for message in shards:
             self._messages_to_worker.put(_Message(self._name, message[0], message[1:], from_user=True, logs=()))
 
-        for _ in xrange(self._num_workers):
+        for _ in range(self._num_workers):
             self._messages_to_worker.put(_Message(self._name, 'stop', message_args=(), from_user=False, logs=()))
 
         self.wait()
@@ -106,7 +110,7 @@ class _MessagePool(object):
         if self._running_inline or self._can_pickle(self._host):
             host = self._host
 
-        for worker_number in xrange(self._num_workers):
+        for worker_number in range(self._num_workers):
             worker = _Worker(host, self._messages_to_manager, self._messages_to_worker, self._worker_factory, worker_number, self._running_inline, self if self._running_inline else None, self._worker_log_level())
             self._workers.append(worker)
             worker.start()
@@ -175,26 +179,28 @@ class _MessagePool(object):
 
     def _can_pickle(self, host):
         try:
-            cPickle.dumps(host)
+            pickle.dumps(host)
             return True
         except TypeError:
             return False
 
     def _loop(self, block):
-        try:
-            while True:
-                if len(self._workers_stopped) == len(self._workers):
-                    block = False
+        while True:
+            if len(self._workers_stopped) == len(self._workers):
+                block = False
+
+            try:
                 message = self._messages_to_manager.get(block)
-                self._log_messages(message.logs)
-                if message.from_user:
-                    self._caller.handle(message.name, message.src, *message.args)
-                    continue
-                method = getattr(self, '_handle_' + message.name)
-                assert method, 'bad message %s' % repr(message)
-                method(message.src, *message.args)
-        except Queue.Empty:
-            pass
+            except queue.Empty:
+                break
+
+            self._log_messages(message.logs)
+            if message.from_user:
+                self._caller.handle(message.name, message.src, *message.args)
+                continue
+            method = getattr(self, '_handle_' + message.name)
+            assert method, 'bad message %s' % repr(message)
+            method(message.src, *message.args)
 
 
 class WorkerException(BaseException):
@@ -211,7 +217,13 @@ class _Message(object):
         self.logs = logs
 
     def __repr__(self):
-        return '_Message(src=%s, name=%s, args=%s, from_user=%s, logs=%s)' % (self.src, self.name, self.args, self.from_user, self.logs)
+        return '_Message(src={src}, name={name}, args={args}, from_user={from_user}, logs={logs})'.format(
+            src=self.src,
+            name=self.name,
+            args=self.args,
+            from_user=self.from_user,
+            logs=self.logs,
+        )
 
 
 class _Worker(multiprocessing.Process):
@@ -219,7 +231,7 @@ class _Worker(multiprocessing.Process):
         super(_Worker, self).__init__()
         self.host = host
         self.worker_number = worker_number
-        self.name = 'worker/%d' % worker_number
+        self.name = 'worker/{}'.format(worker_number)
         self.log_messages = []
         self.log_level = log_level
         self._running_inline = running_inline
@@ -256,7 +268,6 @@ class _Worker(multiprocessing.Process):
             self._set_up_logging()
 
         worker = self._worker
-        exception_msg = ""
         _log.debug("%s starting" % self.name)
 
         try:
@@ -272,11 +283,11 @@ class _Worker(multiprocessing.Process):
                     break
 
             _log.debug("%s exiting" % self.name)
-        except Queue.Empty:
+        except queue.Empty:
             assert False, '%s: ran out of messages in worker queue.' % self.name
-        except KeyboardInterrupt as e:
+        except KeyboardInterrupt:
             self._raise(sys.exc_info())
-        except Exception as e:
+        except Exception:
             self._raise(sys.exc_info())
         finally:
             try:
@@ -302,7 +313,7 @@ class _Worker(multiprocessing.Process):
     def _raise(self, exc_info):
         exception_type, exception_value, exception_traceback = exc_info
         if self._running_inline:
-            raise exception_type, exception_value, exception_traceback
+            raise
 
         if exception_type == KeyboardInterrupt:
             _log.debug("%s: interrupted, exiting" % self.name)

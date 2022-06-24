@@ -11,18 +11,28 @@
 #ifndef VIDEO_SEND_DELAY_STATS_H_
 #define VIDEO_SEND_DELAY_STATS_H_
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include <map>
 #include <memory>
 #include <set>
 
 #include "call/video_send_stream.h"
-#include "rtc_base/criticalsection.h"
+#include "modules/include/module_common_types_public.h"
+#include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/thread_annotations.h"
 #include "system_wrappers/include/clock.h"
 #include "video/stats_counter.h"
 
 namespace webrtc {
 
+// Used to collect delay stats for video streams. The class gets callbacks
+// from more than one threads and internally uses a mutex for data access
+// synchronization.
+// TODO(bugs.webrtc.org/11993): OnSendPacket and OnSentPacket will eventually
+// be called consistently on the same thread. Once we're there, we should be
+// able to avoid locking (at least for the fast path).
 class SendDelayStats : public SendPacketObserver {
  public:
   explicit SendDelayStats(Clock* clock);
@@ -62,22 +72,22 @@ class SendDelayStats : public SendPacketObserver {
 
   void UpdateHistograms();
   void RemoveOld(int64_t now, PacketMap* packets)
-      RTC_EXCLUSIVE_LOCKS_REQUIRED(crit_);
+      RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
   AvgCounter* GetSendDelayCounter(uint32_t ssrc)
-      RTC_EXCLUSIVE_LOCKS_REQUIRED(crit_);
+      RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   Clock* const clock_;
-  rtc::CriticalSection crit_;
+  Mutex mutex_;
 
-  PacketMap packets_ RTC_GUARDED_BY(crit_);
-  size_t num_old_packets_ RTC_GUARDED_BY(crit_);
-  size_t num_skipped_packets_ RTC_GUARDED_BY(crit_);
+  PacketMap packets_ RTC_GUARDED_BY(mutex_);
+  size_t num_old_packets_ RTC_GUARDED_BY(mutex_);
+  size_t num_skipped_packets_ RTC_GUARDED_BY(mutex_);
 
-  std::set<uint32_t> ssrcs_ RTC_GUARDED_BY(crit_);
+  std::set<uint32_t> ssrcs_ RTC_GUARDED_BY(mutex_);
 
   // Mapped by SSRC.
   std::map<uint32_t, std::unique_ptr<AvgCounter>> send_delay_counters_
-      RTC_GUARDED_BY(crit_);
+      RTC_GUARDED_BY(mutex_);
 };
 
 }  // namespace webrtc

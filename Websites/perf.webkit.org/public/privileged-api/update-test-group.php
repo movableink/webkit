@@ -4,7 +4,7 @@ require_once('../include/json-header.php');
 
 function main() {
     $db = connect();
-    $data = ensure_privileged_api_data_and_token_or_slave($db);
+    $data = ensure_privileged_api_data_and_token_or_worker($db);
 
     $test_group_id = array_get($data, 'group');
     if (!$test_group_id)
@@ -19,6 +19,9 @@ function main() {
         $values['hidden'] = Database::to_database_boolean($data['hidden']);
         $values['may_need_more_requests'] = FALSE;
     }
+
+    if (array_key_exists('cancel', $data))
+        $values['may_need_more_requests'] = FALSE;
 
     if (array_key_exists('mayNeedMoreRequests', $data))
          $values['may_need_more_requests'] = $data['mayNeedMoreRequests'];
@@ -44,7 +47,7 @@ function main() {
         exit_with_error('FailedToUpdateTestGroup', array('id' => $test_group_id, 'values' => $values));
     }
 
-    if (array_get($data, 'hidden')) {
+    if (array_get($data, 'hidden') || array_get($data, 'cancel')) {
         $db->query_and_get_affected_rows('UPDATE build_requests SET request_status = $1
             WHERE request_group = $2 AND request_status = $3', array('canceled', $test_group_id, 'pending'));
     }

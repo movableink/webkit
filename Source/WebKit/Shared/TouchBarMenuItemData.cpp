@@ -22,12 +22,17 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #include "config.h"
+
+#if HAVE(TOUCH_BAR)
+
 #include "TouchBarMenuItemData.h"
 
 #include "Decoder.h"
 #include "Encoder.h"
 #include "WebCoreArgumentCoders.h"
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLMenuItemElement.h>
 #include <WebCore/HTMLNames.h>
 
@@ -47,25 +52,27 @@ TouchBarMenuItemData::TouchBarMenuItemData(const WebCore::HTMLMenuItemElement& e
 
 void TouchBarMenuItemData::encode(IPC::Encoder& encoder) const
 {
-    encoder.encodeEnum(type);
+    encoder << type;
     
     encoder << identifier;
     encoder << priority;
 }
 
-Optional<TouchBarMenuItemData> TouchBarMenuItemData::decode(IPC::Decoder& decoder)
+std::optional<TouchBarMenuItemData> TouchBarMenuItemData::decode(IPC::Decoder& decoder)
 {
     TouchBarMenuItemData result;
-    if (!decoder.decodeEnum(result.type))
-        return WTF::nullopt;
+    if (!decoder.decode(result.type))
+        return std::nullopt;
     
     if (!decoder.decode(result.identifier))
-        return WTF::nullopt;
+        return std::nullopt;
     
     if (!decoder.decode(result.priority))
-        return WTF::nullopt;
+        return std::nullopt;
     
-    return makeOptional(WTFMove(result));
+    return std::make_optional(WTFMove(result));
 }
 
 }
+
+#endif // HAVE(TOUCH_BAR)

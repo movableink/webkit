@@ -36,7 +36,6 @@
 #include "WebVisitedLinkStore.h"
 #include <WebCore/BString.h>
 #include <WebCore/HistoryItem.h>
-#include <WebCore/PageGroup.h>
 #include <WebCore/SharedBuffer.h>
 #include <functional>
 #include <wtf/DateMath.h>
@@ -61,7 +60,7 @@ static COMPtr<IPropertyBag> createUserInfoFromArray(BSTR notificationStr, IWebHi
     RetainPtr<CFMutableDictionaryRef> dictionary = adoptCF(
         CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
-    RetainPtr<CFStringRef> key = adoptCF(MarshallingHelpers::BSTRToCFStringRef(notificationStr));
+    auto key = MarshallingHelpers::BSTRToCFStringRef(notificationStr);
     CFDictionaryAddValue(dictionary.get(), key.get(), arrayItem.get());
 
     COMPtr<CFDictionaryPropertyBag> result = CFDictionaryPropertyBag::createInstance();

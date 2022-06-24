@@ -77,13 +77,6 @@ WebView* kit(WebCore::Page*);
 WebCore::Page* core(IWebView*);
 
 interface IDropTargetHelper;
-#if USE(DIRECT2D)
-interface ID2D1Bitmap;
-interface ID2D1BitmapRenderTarget;
-interface ID2D1GdiInteropRenderTarget;
-interface ID2D1HwndRenderTarget;
-interface ID2D1RenderTarget;
-#endif
 
 class WebView final
     : public IWebView
@@ -347,10 +340,10 @@ public:
     HRESULT STDMETHODCALLTYPE setJavaScriptURLsAreAllowed(BOOL) override;
     HRESULT STDMETHODCALLTYPE setCanStartPlugins(BOOL) override;
     HRESULT STDMETHODCALLTYPE addUserScriptToGroup(_In_ BSTR groupName, _In_opt_ IWebScriptWorld*, _In_ BSTR source, _In_ BSTR url,
-        unsigned whitelistCount, __inout_ecount_full(whitelistCount) BSTR* whitelist, unsigned blacklistCount,
-        __inout_ecount_full(blacklistCount) BSTR* blacklist, WebUserScriptInjectionTime) override;
+        unsigned allowListCount, __inout_ecount_full(allowListCount) BSTR* allowList, unsigned blockListCount,
+        __inout_ecount_full(blockListCount) BSTR* blockList, WebUserScriptInjectionTime) override;
     HRESULT STDMETHODCALLTYPE addUserStyleSheetToGroup(_In_ BSTR groupName, _In_opt_ IWebScriptWorld*, _In_ BSTR source, _In_ BSTR url,
-        unsigned whitelistCount, __inout_ecount_full(whitelistCount) BSTR* whitelist, unsigned blacklistCount, __inout_ecount_full(blacklistCount) BSTR* blacklist) override;
+        unsigned allowListCount, __inout_ecount_full(allowListCount) BSTR* allowList, unsigned blockListCount, __inout_ecount_full(blockListCount) BSTR* blockList) override;
     HRESULT STDMETHODCALLTYPE removeUserScriptFromGroup(_In_ BSTR groupName, _In_opt_ IWebScriptWorld*, _In_ BSTR url) override;
     HRESULT STDMETHODCALLTYPE removeUserStyleSheetFromGroup(_In_ BSTR groupName, _In_opt_ IWebScriptWorld*, _In_ BSTR url) override;
     HRESULT STDMETHODCALLTYPE removeUserScriptsFromGroup(_In_ BSTR groupName, _In_opt_ IWebScriptWorld*) override;
@@ -359,9 +352,9 @@ public:
     HRESULT STDMETHODCALLTYPE unused1() override;
     HRESULT STDMETHODCALLTYPE unused2() override;
     HRESULT STDMETHODCALLTYPE invalidateBackingStore(_In_opt_ const RECT*) override;
-    HRESULT STDMETHODCALLTYPE addOriginAccessWhitelistEntry(_In_ BSTR sourceOrigin, _In_ BSTR destinationProtocol, _In_ BSTR destinationHost, BOOL allowDestinationSubdomains) override;
-    HRESULT STDMETHODCALLTYPE removeOriginAccessWhitelistEntry(_In_ BSTR sourceOrigin, _In_ BSTR destinationProtocol, _In_ BSTR destinationHost, BOOL allowDestinationSubdomains) override;
-    HRESULT STDMETHODCALLTYPE resetOriginAccessWhitelists() override;
+    HRESULT STDMETHODCALLTYPE addOriginAccessAllowListEntry(_In_ BSTR sourceOrigin, _In_ BSTR destinationProtocol, _In_ BSTR destinationHost, BOOL allowDestinationSubdomains) override;
+    HRESULT STDMETHODCALLTYPE removeOriginAccessAllowListEntry(_In_ BSTR sourceOrigin, _In_ BSTR destinationProtocol, _In_ BSTR destinationHost, BOOL allowDestinationSubdomains) override;
+    HRESULT STDMETHODCALLTYPE resetOriginAccessAllowLists() override;
     HRESULT STDMETHODCALLTYPE setHistoryDelegate(_In_ IWebHistoryDelegate*) override;
     HRESULT STDMETHODCALLTYPE historyDelegate(_COM_Outptr_opt_ IWebHistoryDelegate**) override;
     HRESULT STDMETHODCALLTYPE addVisitedLinks(__inout_ecount_full(visitedURLCount) BSTR* visitedURLs, unsigned visitedURLCount) override;
@@ -391,9 +384,9 @@ public:
     HRESULT STDMETHODCALLTYPE setCustomBackingScaleFactor(double) override;
     HRESULT STDMETHODCALLTYPE backingScaleFactor(_Out_ double*) override;
     HRESULT STDMETHODCALLTYPE addUserScriptToGroup(_In_ BSTR groupName, _In_opt_ IWebScriptWorld*, _In_ BSTR source, _In_ BSTR url,
-        unsigned whitelistCount, __inout_ecount_full(whitelistCount) BSTR* whitelist, unsigned blacklistCount, __inout_ecount_full(blacklistCount) BSTR* blacklist, WebUserScriptInjectionTime, WebUserContentInjectedFrames) override;
+        unsigned allowListCount, __inout_ecount_full(allowListCount) BSTR* allowList, unsigned blockListCount, __inout_ecount_full(blockListCount) BSTR* blockList, WebUserScriptInjectionTime, WebUserContentInjectedFrames) override;
     HRESULT STDMETHODCALLTYPE addUserStyleSheetToGroup(_In_ BSTR groupName, _In_opt_ IWebScriptWorld*, _In_ BSTR source, _In_ BSTR url,
-        unsigned whitelistCount, __inout_ecount_full(whitelistCount) BSTR* whitelist, unsigned blacklistCount, __inout_ecount_full(blacklistCount) BSTR* blacklist, WebUserContentInjectedFrames) override;
+        unsigned allowListCount, __inout_ecount_full(allowListCount) BSTR* allowList, unsigned blockListCount, __inout_ecount_full(blockListCount) BSTR* blockList, WebUserContentInjectedFrames) override;
 
     // IWebViewPrivate3
     HRESULT STDMETHODCALLTYPE layerTreeAsString(_Deref_opt_out_ BSTR*) override;
@@ -427,7 +420,6 @@ public:
     bool keyDown(WPARAM, LPARAM, bool systemKeyDown = false);
     bool keyUp(WPARAM, LPARAM, bool systemKeyDown = false);
     bool keyPress(WPARAM, LPARAM, bool systemKeyDown = false);
-    void paintWithDirect2D();
     void paint(HDC, LPARAM);
     void paintIntoWindow(HDC bitmapDC, HDC windowDC, const WebCore::IntRect& dirtyRect);
     bool ensureBackingStore();
@@ -438,8 +430,6 @@ public:
     void repaint(const WebCore::IntRect&, bool contentChanged, bool immediate = false, bool repaintContentOnly = false);
     void frameRect(RECT* rect);
     void closeWindow();
-    void closeWindowSoon();
-    void closeWindowTimerFired();
     bool didClose() const { return m_didClose; }
 
     bool transparent() const { return m_transparent; }
@@ -482,6 +472,7 @@ public:
 
     HRESULT notifyDidAddIcon(IWebNotification*);
     HRESULT notifyPreferencesChanged(IWebNotification*);
+    HRESULT preferencesChangedGenerated(const WebPreferences&);
 
     static void setCacheModel(WebCacheModel);
     static WebCacheModel cacheModel();
@@ -549,13 +540,12 @@ private:
     void sizeChanged(const WebCore::IntSize&);
     bool dpiChanged(float, const WebCore::IntSize&);
 
-    enum WindowsToPaint { PaintWebViewOnly, PaintWebViewAndChildren };
-    void paintIntoBackingStore(WebCore::FrameView*, HDC bitmapDC, const WebCore::IntRect& dirtyRect, WindowsToPaint);
-    void updateBackingStore(WebCore::FrameView*, HDC = 0, bool backingStoreCompletelyDirty = false, WindowsToPaint = PaintWebViewOnly);
+    void paintIntoBackingStore(WebCore::FrameView*, HDC bitmapDC, const WebCore::IntRect& dirtyRect);
+    void updateBackingStore(WebCore::FrameView*, HDC = 0, bool backingStoreCompletelyDirty = false);
 
     void performLayeredWindowUpdate();
 
-    WebCore::DragOperation keyStateToDragOperation(DWORD grfKeyState) const;
+    OptionSet<WebCore::DragOperation> keyStateToDragOperation(DWORD grfKeyState) const;
 
     // FIXME: This variable is part of a workaround. The drop effect (pdwEffect) passed to Drop is incorrect. 
     // We set this variable in DragEnter and DragOver so that it can be used in Drop to set the correct drop effect. 
@@ -617,7 +607,7 @@ protected:
 #endif
 
     ULONG m_refCount { 0 };
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool m_deletionHasBegun { false };
 #endif
     HWND m_hostWindow { nullptr };
@@ -628,12 +618,6 @@ protected:
 
     HMENU m_currentContextMenu { nullptr };
     RefPtr<WebCore::SharedGDIObject<HBITMAP>> m_backingStoreBitmap;
-#if USE(DIRECT2D)
-    COMPtr<ID2D1HwndRenderTarget> m_renderTarget;
-    COMPtr<ID2D1Bitmap> m_backingStoreD2DBitmap;
-    COMPtr<ID2D1BitmapRenderTarget> m_backingStoreRenderTarget;
-    COMPtr<ID2D1GdiInteropRenderTarget> m_backingStoreGdiInterop;
-#endif
     SIZE m_backingStoreSize;
     RefPtr<WebCore::SharedGDIObject<HRGN>> m_backingStoreDirtyRegion;
 
@@ -680,7 +664,6 @@ protected:
 
     static bool s_allowSiteSpecificHacks;
 
-    WebCore::SuspendableTimerBase* m_closeWindowTimer { nullptr };
     std::unique_ptr<TRACKMOUSEEVENT> m_mouseOutTracker;
 
     HWND m_topLevelParent { nullptr };

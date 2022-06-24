@@ -24,13 +24,14 @@ initialState:
     font: "10px sans-serif"
     textAlign: "start"
     textBaseline: "alphabetic"
-    direction: "ltr"
+    direction: "inherit"
     strokeStyle: "#000000"
     fillStyle: "#000000"
     imageSmoothingEnabled: true
     imageSmoothingQuality: "low"
     setPath: [""]
   parameters:
+    0: {"colorSpace":"srgb","desynchronized":false}
   content: <filtered>
 frames:
   0: (duration) (incomplete)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #include "InlineCallFrame.h"
 #include "JITAllocator.h"
 #include "JITCode.h"
+#include "JSCellInlines.h"
 #include "MacroAssembler.h"
 #include "MarkedSpace.h"
 #include "RegisterAtOffsetList.h"
@@ -43,16 +44,17 @@
 #include "TagRegistersMode.h"
 #include "TypeofType.h"
 #include "VM.h"
+#include <variant>
 
 namespace JSC {
 
-typedef void (*V_DebugOperation_EPP)(ExecState*, void*, void*);
+typedef void (*V_DebugOperation_EPP)(CallFrame*, void*, void*);
 
 class AssemblyHelpers : public MacroAssembler {
 public:
     AssemblyHelpers(CodeBlock* codeBlock)
         : m_codeBlock(codeBlock)
-        , m_baselineCodeBlock(codeBlock ? codeBlock->baselineAlternative() : 0)
+        , m_baselineCodeBlock(codeBlock ? codeBlock->baselineAlternative() : nullptr)
     {
         if (m_codeBlock) {
             ASSERT(m_baselineCodeBlock);
@@ -64,6 +66,14 @@ public:
     CodeBlock* codeBlock() { return m_codeBlock; }
     VM& vm() { return m_codeBlock->vm(); }
     AssemblerType_T& assembler() { return m_assembler; }
+
+    void prepareCallOperation(VM& vm)
+    {
+        UNUSED_PARAM(vm);
+#if !USE(BUILTIN_FRAME_ADDRESS) || ASSERT_ENABLED
+        storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
+#endif
+    }
 
     void checkStackPointerAlignment()
     {
@@ -93,6 +103,15 @@ public:
             store32(src.gpr(), dst);
     }
 
+    void storeReg(Reg src, Address dst)
+    {
+#if USE(JSVALUE64)
+        store64FromReg(src, dst);
+#else
+        store32FromReg(src, dst);
+#endif
+    }
+
 #if USE(JSVALUE64)
     void load64ToReg(Address src, Reg dst)
     {
@@ -109,6 +128,15 @@ public:
             loadFloat(src, dst.fpr());
         else
             load32(src, dst.gpr());
+    }
+
+    void loadReg(Address src, Reg dst)
+    {
+#if USE(JSVALUE64)
+        load64ToReg(src, dst);
+#else
+        load32ToReg(src, dst);
+#endif
     }
 
     template<typename T>
@@ -136,8 +164,8 @@ public:
 #if USE(JSVALUE64)
         store64(regs.gpr(), address);
 #else
-        store32(regs.payloadGPR(), address.withOffset(PayloadOffset));
-        store32(regs.tagGPR(), address.withOffset(TagOffset));
+        static_assert(!PayloadOffset && TagOffset == 4, "Assumes little-endian system");
+        storePair32(regs.payloadGPR(), regs.tagGPR(), address);
 #endif
     }
     
@@ -146,8 +174,8 @@ public:
 #if USE(JSVALUE64)
         store64(regs.gpr(), address);
 #else
-        store32(regs.payloadGPR(), address.withOffset(PayloadOffset));
-        store32(regs.tagGPR(), address.withOffset(TagOffset));
+        static_assert(!PayloadOffset && TagOffset == 4, "Assumes little-endian system");
+        storePair32(regs.payloadGPR(), regs.tagGPR(), address);
 #endif
     }
     
@@ -156,23 +184,18 @@ public:
 #if USE(JSVALUE64)
         store64(regs.gpr(), address);
 #else
-        store32(regs.payloadGPR(), bitwise_cast<void*>(bitwise_cast<uintptr_t>(address) + PayloadOffset));
-        store32(regs.tagGPR(), bitwise_cast<void*>(bitwise_cast<uintptr_t>(address) + TagOffset));
+        static_assert(!PayloadOffset && TagOffset == 4, "Assumes little-endian system");
+        storePair32(regs.payloadGPR(), regs.tagGPR(), address);
 #endif
     }
-    
+
     void loadValue(Address address, JSValueRegs regs)
     {
 #if USE(JSVALUE64)
         load64(address, regs.gpr());
 #else
-        if (address.base == regs.payloadGPR()) {
-            load32(address.withOffset(TagOffset), regs.tagGPR());
-            load32(address.withOffset(PayloadOffset), regs.payloadGPR());
-        } else {
-            load32(address.withOffset(PayloadOffset), regs.payloadGPR());
-            load32(address.withOffset(TagOffset), regs.tagGPR());
-        }
+        static_assert(!PayloadOffset && TagOffset == 4, "Assumes little-endian system");
+        loadPair32(address, regs.payloadGPR(), regs.tagGPR());
 #endif
     }
     
@@ -181,18 +204,8 @@ public:
 #if USE(JSVALUE64)
         load64(address, regs.gpr());
 #else
-        if (address.base == regs.payloadGPR() || address.index == regs.payloadGPR()) {
-            // We actually could handle the case where the registers are aliased to both
-            // tag and payload, but we don't for now.
-            RELEASE_ASSERT(address.base != regs.tagGPR());
-            RELEASE_ASSERT(address.index != regs.tagGPR());
-            
-            load32(address.withOffset(TagOffset), regs.tagGPR());
-            load32(address.withOffset(PayloadOffset), regs.payloadGPR());
-        } else {
-            load32(address.withOffset(PayloadOffset), regs.payloadGPR());
-            load32(address.withOffset(TagOffset), regs.tagGPR());
-        }
+        static_assert(!PayloadOffset && TagOffset == 4, "Assumes little-endian system");
+        loadPair32(address, regs.payloadGPR(), regs.tagGPR());
 #endif
     }
 
@@ -201,13 +214,13 @@ public:
 #if USE(JSVALUE64)
         load64(address, regs.gpr());
 #else
-        move(TrustedImmPtr(address), regs.payloadGPR());
-        loadValue(Address(regs.payloadGPR()), regs);
+        loadPair32(AbsoluteAddress(address), regs.payloadGPR(), regs.tagGPR());
 #endif
     }
     
-    // Note that this clobbers offset.
+    // Note that these clobber offset.
     void loadProperty(GPRReg object, GPRReg offset, JSValueRegs result);
+    void storeProperty(JSValueRegs value, GPRReg object, GPRReg offset, GPRReg scratch);
 
     void moveValueRegs(JSValueRegs srcRegs, JSValueRegs destRegs)
     {
@@ -247,7 +260,28 @@ public:
         move(TrustedImm32(value.payload()), regs.payloadGPR());
 #endif
     }
-    
+
+    void storeValue(JSValue value, Address address, JSValueRegs tmpJSR)
+    {
+#if USE(JSVALUE64)
+        UNUSED_PARAM(tmpJSR);
+        store64(Imm64(JSValue::encode(value)), address);
+#elif USE(JSVALUE32_64)
+        // Can implement this without the tmpJSR, but using it yields denser code.
+        moveValue(value, tmpJSR);
+        storeValue(tmpJSR, address);
+#endif
+    }
+
+#if USE(JSVALUE32_64)
+    void storeValue(JSValue value, void* address, JSValueRegs tmpJSR)
+    {
+        // Can implement this without the tmpJSR, but using it yields denser code.
+        moveValue(value, tmpJSR);
+        storeValue(tmpJSR, address);
+    }
+#endif
+
     void storeTrustedValue(JSValue value, Address address)
     {
 #if USE(JSVALUE64)
@@ -267,109 +301,32 @@ public:
         store32(TrustedImm32(value.payload()), address.withOffset(PayloadOffset));
 #endif
     }
-    
+
+    template<typename Op> class Spooler;
+    class LoadRegSpooler;
+    class StoreRegSpooler;
+    class CopySpooler;
+
     Address addressFor(const RegisterAtOffset& entry)
     {
         return Address(GPRInfo::callFrameRegister, entry.offset());
     }
-    
-    void emitSave(const RegisterAtOffsetList& list)
-    {
-        for (const RegisterAtOffset& entry : list) {
-            if (entry.reg().isGPR())
-                storePtr(entry.reg().gpr(), addressFor(entry));
-            else
-                storeDouble(entry.reg().fpr(), addressFor(entry));
-        }
-    }
-    
-    void emitRestore(const RegisterAtOffsetList& list)
-    {
-        for (const RegisterAtOffset& entry : list) {
-            if (entry.reg().isGPR())
-                loadPtr(addressFor(entry), entry.reg().gpr());
-            else
-                loadDouble(addressFor(entry), entry.reg().fpr());
-        }
-    }
 
-    void emitSaveCalleeSavesFor(CodeBlock* codeBlock)
-    {
-        ASSERT(codeBlock);
+    void emitSave(const RegisterAtOffsetList&);
+    void emitRestore(const RegisterAtOffsetList&);
 
-        const RegisterAtOffsetList* calleeSaves = codeBlock->calleeSaveRegisters();
-        RegisterSet dontSaveRegisters = RegisterSet(RegisterSet::stackRegisters(), RegisterSet::allFPRs());
-        unsigned registerCount = calleeSaves->size();
-
-        for (unsigned i = 0; i < registerCount; i++) {
-            RegisterAtOffset entry = calleeSaves->at(i);
-            if (dontSaveRegisters.get(entry.reg()))
-                continue;
-            storePtr(entry.reg().gpr(), Address(framePointerRegister, entry.offset()));
-        }
-    }
+    void emitSaveCalleeSavesFor(const RegisterAtOffsetList* calleeSaves);
     
     enum RestoreTagRegisterMode { UseExistingTagRegisterContents, CopyBaselineCalleeSavedRegistersFromBaseFrame };
 
-    void emitSaveOrCopyCalleeSavesFor(CodeBlock* codeBlock, VirtualRegister offsetVirtualRegister, RestoreTagRegisterMode tagRegisterMode, GPRReg temp)
-    {
-        ASSERT(codeBlock);
-        
-        const RegisterAtOffsetList* calleeSaves = codeBlock->calleeSaveRegisters();
-        RegisterSet dontSaveRegisters = RegisterSet(RegisterSet::stackRegisters(), RegisterSet::allFPRs());
-        unsigned registerCount = calleeSaves->size();
+    void emitSaveOrCopyLLIntBaselineCalleeSavesFor(CodeBlock*, VirtualRegister offsetVirtualRegister, RestoreTagRegisterMode, GPRReg temp1, GPRReg temp2, GPRReg temp3);
 
-#if USE(JSVALUE64)
-        RegisterSet baselineCalleeSaves = RegisterSet::llintBaselineCalleeSaveRegisters();
-#endif
-        
-        for (unsigned i = 0; i < registerCount; i++) {
-            RegisterAtOffset entry = calleeSaves->at(i);
-            if (dontSaveRegisters.get(entry.reg()))
-                continue;
-            
-            GPRReg registerToWrite;
-            
-#if USE(JSVALUE32_64)
-            UNUSED_PARAM(tagRegisterMode);
-            UNUSED_PARAM(temp);
-#else
-            if (tagRegisterMode == CopyBaselineCalleeSavedRegistersFromBaseFrame && baselineCalleeSaves.get(entry.reg())) {
-                registerToWrite = temp;
-                loadPtr(AssemblyHelpers::Address(GPRInfo::callFrameRegister, entry.offset()), registerToWrite);
-            } else
-#endif
-                registerToWrite = entry.reg().gpr();
-
-            storePtr(registerToWrite, Address(framePointerRegister, offsetVirtualRegister.offsetInBytes() + entry.offset()));
-        }
-    }
-    
-    void emitRestoreCalleeSavesFor(CodeBlock* codeBlock)
-    {
-        ASSERT(codeBlock);
-
-        const RegisterAtOffsetList* calleeSaves = codeBlock->calleeSaveRegisters();
-        RegisterSet dontRestoreRegisters = RegisterSet(RegisterSet::stackRegisters(), RegisterSet::allFPRs());
-        unsigned registerCount = calleeSaves->size();
-        
-        for (unsigned i = 0; i < registerCount; i++) {
-            RegisterAtOffset entry = calleeSaves->at(i);
-            if (dontRestoreRegisters.get(entry.reg()))
-                continue;
-            loadPtr(Address(framePointerRegister, entry.offset()), entry.reg().gpr());
-        }
-    }
-
-    void emitSaveCalleeSaves()
-    {
-        emitSaveCalleeSavesFor(codeBlock());
-    }
+    void emitRestoreCalleeSavesFor(const RegisterAtOffsetList* calleeSaves);
 
     void emitSaveThenMaterializeTagRegisters()
     {
 #if USE(JSVALUE64)
-#if CPU(ARM64)
+#if CPU(ARM64) || CPU(RISCV64)
         pushPair(GPRInfo::numberTagRegister, GPRInfo::notCellMaskRegister);
 #else
         push(GPRInfo::numberTagRegister);
@@ -378,16 +335,11 @@ public:
         emitMaterializeTagCheckRegisters();
 #endif
     }
-    
-    void emitRestoreCalleeSaves()
-    {
-        emitRestoreCalleeSavesFor(codeBlock());
-    }
 
     void emitRestoreSavedTagRegisters()
     {
 #if USE(JSVALUE64)
-#if CPU(ARM64)
+#if CPU(ARM64) || CPU(RISCV64)
         popPair(GPRInfo::numberTagRegister, GPRInfo::notCellMaskRegister);
 #else
         pop(GPRInfo::notCellMaskRegister);
@@ -407,14 +359,25 @@ public:
 #endif
     }
 
+    void copyCalleeSavesToEntryFrameCalleeSavesBuffer(EntryFrame*& topEntryFrame, GPRReg scratch)
+    {
+#if NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
+        loadPtr(&topEntryFrame, scratch);
+        copyCalleeSavesToEntryFrameCalleeSavesBufferImpl(scratch);
+#else
+        UNUSED_PARAM(topEntryFrame);
+        UNUSED_PARAM(scratch);
+#endif
+    }
+
     void copyCalleeSavesToEntryFrameCalleeSavesBuffer(EntryFrame*& topEntryFrame)
     {
 #if NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
         const TempRegisterSet& usedRegisters = { RegisterSet::stubUnavailableRegisters() };
         GPRReg temp1 = usedRegisters.getFreeGPR(0);
-        loadPtr(&topEntryFrame, temp1);
-        copyCalleeSavesToEntryFrameCalleeSavesBufferImpl(temp1);
+        copyCalleeSavesToEntryFrameCalleeSavesBuffer(topEntryFrame, temp1);
 #else
+        UNUSED_PARAM(topEntryFrame);
         UNUSED_PARAM(topEntryFrame);
 #endif
     }
@@ -429,92 +392,17 @@ public:
     }
 
     void restoreCalleeSavesFromEntryFrameCalleeSavesBuffer(EntryFrame*&);
+    void restoreCalleeSavesFromVMEntryFrameCalleeSavesBuffer(GPRReg vmGPR, GPRReg scratchGPR);
+    void restoreCalleeSavesFromVMEntryFrameCalleeSavesBufferImpl(GPRReg entryFrame, const RegisterSet& skipList);
 
-    void copyCalleeSavesFromFrameOrRegisterToEntryFrameCalleeSavesBuffer(EntryFrame*& topEntryFrame, const TempRegisterSet& usedRegisters = { RegisterSet::stubUnavailableRegisters() })
-    {
-#if NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
-        GPRReg temp1 = usedRegisters.getFreeGPR(0);
-        GPRReg temp2 = usedRegisters.getFreeGPR(1);
-        FPRReg fpTemp = usedRegisters.getFreeFPR();
-        ASSERT(temp2 != InvalidGPRReg);
-
-        ASSERT(codeBlock());
-
-        // Copy saved calleeSaves on stack or unsaved calleeSaves in register to vm calleeSave buffer
-        loadPtr(&topEntryFrame, temp1);
-        addPtr(TrustedImm32(EntryFrame::calleeSaveRegistersBufferOffset()), temp1);
-
-        RegisterAtOffsetList* allCalleeSaves = RegisterSet::vmCalleeSaveRegisterOffsets();
-        const RegisterAtOffsetList* currentCalleeSaves = codeBlock()->calleeSaveRegisters();
-        RegisterSet dontCopyRegisters = RegisterSet::stackRegisters();
-        unsigned registerCount = allCalleeSaves->size();
-
-        for (unsigned i = 0; i < registerCount; i++) {
-            RegisterAtOffset entry = allCalleeSaves->at(i);
-            if (dontCopyRegisters.get(entry.reg()))
-                continue;
-            RegisterAtOffset* currentFrameEntry = currentCalleeSaves->find(entry.reg());
-
-            if (entry.reg().isGPR()) {
-                GPRReg regToStore;
-                if (currentFrameEntry) {
-                    // Load calleeSave from stack into temp register
-                    regToStore = temp2;
-                    loadPtr(Address(framePointerRegister, currentFrameEntry->offset()), regToStore);
-                } else
-                    // Just store callee save directly
-                    regToStore = entry.reg().gpr();
-
-                storePtr(regToStore, Address(temp1, entry.offset()));
-            } else {
-                FPRReg fpRegToStore;
-                if (currentFrameEntry) {
-                    // Load calleeSave from stack into temp register
-                    fpRegToStore = fpTemp;
-                    loadDouble(Address(framePointerRegister, currentFrameEntry->offset()), fpRegToStore);
-                } else
-                    // Just store callee save directly
-                    fpRegToStore = entry.reg().fpr();
-
-                storeDouble(fpRegToStore, Address(temp1, entry.offset()));
-            }
-        }
-#else
-        UNUSED_PARAM(topEntryFrame);
-        UNUSED_PARAM(usedRegisters);
-#endif
-    }
+    void copyLLIntBaselineCalleeSavesFromFrameOrRegisterToEntryFrameCalleeSavesBuffer(EntryFrame*&, const TempRegisterSet& usedRegisters = { RegisterSet::stubUnavailableRegisters() });
 
     void emitMaterializeTagCheckRegisters()
     {
 #if USE(JSVALUE64)
         move(MacroAssembler::TrustedImm64(JSValue::NumberTag), GPRInfo::numberTagRegister);
-        orPtr(MacroAssembler::TrustedImm32(JSValue::OtherTag), GPRInfo::numberTagRegister, GPRInfo::notCellMaskRegister);
+        or64(MacroAssembler::TrustedImm32(JSValue::OtherTag), GPRInfo::numberTagRegister, GPRInfo::notCellMaskRegister);
 #endif
-    }
-
-    void clearStackFrame(GPRReg currentTop, GPRReg newTop, GPRReg temp, unsigned frameSize)
-    {
-        ASSERT(frameSize % stackAlignmentBytes() == 0);
-        if (frameSize <= 128) {
-            for (unsigned offset = 0; offset < frameSize; offset += sizeof(CPURegister))
-                storePtr(TrustedImm32(0), Address(currentTop, -8 - offset));
-        } else {
-            constexpr unsigned storeBytesPerIteration = stackAlignmentBytes();
-            constexpr unsigned storesPerIteration = storeBytesPerIteration / sizeof(CPURegister);
-
-            move(currentTop, temp);
-            Label zeroLoop = label();
-            subPtr(TrustedImm32(storeBytesPerIteration), temp);
-#if CPU(ARM64)
-            static_assert(storesPerIteration == 2, "clearStackFrame() for ARM64 assumes stack is 16 byte aligned");
-            storePair64(ARM64Registers::zr, ARM64Registers::zr, temp);
-#else
-            for (unsigned i = storesPerIteration; i-- != 0;)
-                storePtr(TrustedImm32(0), Address(temp, sizeof(CPURegister) * i));
-#endif
-            branchPtr(NotEqual, temp, newTop).linkTo(zeroLoop, this);
-        }
     }
 
 #if CPU(X86_64)
@@ -555,6 +443,37 @@ public:
     {
         push(address);
     }
+
+    // dest = base + index << shift.
+    void shiftAndAdd(RegisterID base, RegisterID index, uint8_t shift, RegisterID dest, std::optional<RegisterID> optionalScratch = { })
+    {
+        ASSERT(shift < 32);
+        if (shift <= 3) {
+            x86Lea64(BaseIndex(base, index, static_cast<Scale>(shift)), dest);
+            return;
+        }
+
+        RegisterID scratch = dest;
+        bool needToPreserveIndexRegister = false;
+        if (base == dest) {
+            scratch = optionalScratch ? optionalScratch.value() : scratchRegister();
+            if (base == scratch) {
+                scratch = index;
+                needToPreserveIndexRegister = true;
+            } else if (index == scratch)
+                needToPreserveIndexRegister = true;
+            if (needToPreserveIndexRegister)
+                push(index);
+        }
+
+        move(index, scratch);
+        lshift64(TrustedImm32(shift), scratch);
+        m_assembler.leaq_mr(0, base, scratch, 0, dest);
+
+        if (needToPreserveIndexRegister)
+            pop(index);
+    }
+
 #endif // CPU(X86_64)
 
 #if CPU(ARM_THUMB2) || CPU(ARM64)
@@ -596,6 +515,16 @@ public:
     {
         loadPtr(address, linkRegister);
     }
+
+#if CPU(ARM64)
+    // dest = base + index << shift.
+    void shiftAndAdd(RegisterID base, RegisterID index, uint8_t shift, RegisterID dest, std::optional<RegisterID> = { })
+    {
+        ASSERT(shift < 32);
+        ASSERT(base != index);
+        getEffectiveAddress(BaseIndex(base, index, static_cast<Scale>(shift)), dest);
+    }
+#endif // CPU(ARM64)
 #endif
 
 #if CPU(MIPS)
@@ -638,71 +567,70 @@ public:
     }
 #endif
 
-    void emitGetFromCallFrameHeaderPtr(int entry, GPRReg to, GPRReg from = GPRInfo::callFrameRegister)
+#if CPU(RISCV64)
+    static constexpr size_t prologueStackPointerDelta()
     {
-        loadPtr(Address(from, entry * sizeof(Register)), to);
-    }
-    void emitGetFromCallFrameHeader32(int entry, GPRReg to, GPRReg from = GPRInfo::callFrameRegister)
-    {
-        load32(Address(from, entry * sizeof(Register)), to);
-    }
-#if USE(JSVALUE64)
-    void emitGetFromCallFrameHeader64(int entry, GPRReg to, GPRReg from = GPRInfo::callFrameRegister)
-    {
-        load64(Address(from, entry * sizeof(Register)), to);
-    }
-#endif // USE(JSVALUE64)
-    void emitPutToCallFrameHeader(GPRReg from, int entry)
-    {
-        storePtr(from, Address(GPRInfo::callFrameRegister, entry * sizeof(Register)));
+        // Prologue saves the framePointerRegister and returnAddressRegister
+        return 2 * sizeof(void*);
     }
 
-    void emitPutToCallFrameHeader(void* value, int entry)
+    void emitFunctionPrologue()
     {
-        storePtr(TrustedImmPtr(value), Address(GPRInfo::callFrameRegister, entry * sizeof(Register)));
+        pushPair(framePointerRegister, linkRegister);
+        move(stackPointerRegister, framePointerRegister);
     }
 
-    void emitGetCallerFrameFromCallFrameHeaderPtr(RegisterID to)
+    void emitFunctionEpilogueWithEmptyFrame()
     {
-        loadPtr(Address(GPRInfo::callFrameRegister, CallFrame::callerFrameOffset()), to);
-    }
-    void emitPutCallerFrameToCallFrameHeader(RegisterID from)
-    {
-        storePtr(from, Address(GPRInfo::callFrameRegister, CallFrame::callerFrameOffset()));
+        popPair(framePointerRegister, linkRegister);
     }
 
-    void emitPutReturnPCToCallFrameHeader(RegisterID from)
+    void emitFunctionEpilogue()
     {
-        storePtr(from, Address(GPRInfo::callFrameRegister, CallFrame::returnPCOffset()));
-    }
-    void emitPutReturnPCToCallFrameHeader(TrustedImmPtr from)
-    {
-        storePtr(from, Address(GPRInfo::callFrameRegister, CallFrame::returnPCOffset()));
+        move(framePointerRegister, stackPointerRegister);
+        emitFunctionEpilogueWithEmptyFrame();
     }
 
-    // emitPutToCallFrameHeaderBeforePrologue() and related are used to access callee frame header
-    // fields before the code from emitFunctionPrologue() has executed.
-    // First, the access is via the stack pointer. Second, the address calculation must also take
-    // into account that the stack pointer may not have been adjusted down for the return PC and/or
-    // caller's frame pointer. On some platforms, the callee is responsible for pushing the
-    // "link register" containing the return address in the function prologue.
-#if USE(JSVALUE64)
-    void emitPutToCallFrameHeaderBeforePrologue(GPRReg from, int entry)
+    ALWAYS_INLINE void preserveReturnAddressAfterCall(RegisterID reg)
     {
-        storePtr(from, Address(stackPointerRegister, entry * static_cast<ptrdiff_t>(sizeof(Register)) - prologueStackPointerDelta()));
-    }
-#else
-    void emitPutPayloadToCallFrameHeaderBeforePrologue(GPRReg from, int entry)
-    {
-        storePtr(from, Address(stackPointerRegister, entry * static_cast<ptrdiff_t>(sizeof(Register)) - prologueStackPointerDelta() + OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.payload)));
+        move(linkRegister, reg);
     }
 
-    void emitPutTagToCallFrameHeaderBeforePrologue(TrustedImm32 tag, int entry)
+    ALWAYS_INLINE void restoreReturnAddressBeforeReturn(RegisterID reg)
     {
-        storePtr(tag, Address(stackPointerRegister, entry * static_cast<ptrdiff_t>(sizeof(Register)) - prologueStackPointerDelta() + OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.tag)));
+        move(reg, linkRegister);
+    }
+
+    ALWAYS_INLINE void restoreReturnAddressBeforeReturn(Address address)
+    {
+        loadPtr(address, linkRegister);
     }
 #endif
-    
+
+    void emitGetFromCallFrameHeaderPtr(VirtualRegister entry, GPRReg to, GPRReg from = GPRInfo::callFrameRegister)
+    {
+        ASSERT(entry.isHeader());
+        loadPtr(Address(from, entry.offset() * sizeof(Register)), to);
+    }
+
+    void emitPutToCallFrameHeader(GPRReg from, VirtualRegister entry)
+    {
+        ASSERT(entry.isHeader());
+        storePtr(from, Address(GPRInfo::callFrameRegister, entry.offset() * sizeof(Register)));
+    }
+
+    void emitPutToCallFrameHeader(void* value, VirtualRegister entry)
+    {
+        ASSERT(entry.isHeader());
+        storePtr(TrustedImmPtr(value), Address(GPRInfo::callFrameRegister, entry.offset() * sizeof(Register)));
+    }
+
+    void emitZeroToCallFrameHeader(VirtualRegister entry)
+    {
+        ASSERT(entry.isHeader());
+        storePtr(TrustedImmPtr(nullptr), Address(GPRInfo::callFrameRegister, entry.offset() * sizeof(Register)));
+    }
+
     JumpList branchIfNotEqual(JSValueRegs regs, JSValue value)
     {
 #if USE(JSVALUE64)
@@ -902,8 +830,7 @@ public:
     {
 #if USE(JSVALUE64)
         ASSERT(tempGPR != InvalidGPRReg);
-        move(gpr, tempGPR);
-        xor64(TrustedImm32(JSValue::ValueFalse), tempGPR);
+        xor64(TrustedImm32(JSValue::ValueFalse), gpr, tempGPR);
         return branchTest64(Zero, tempGPR, TrustedImm32(static_cast<int32_t>(~1)));
 #else
         UNUSED_PARAM(tempGPR);
@@ -926,8 +853,7 @@ public:
     {
 #if USE(JSVALUE64)
         ASSERT(tempGPR != InvalidGPRReg);
-        move(gpr, tempGPR);
-        xor64(TrustedImm32(JSValue::ValueFalse), tempGPR);
+        xor64(TrustedImm32(JSValue::ValueFalse), gpr, tempGPR);
         return branchTest64(NonZero, tempGPR, TrustedImm32(static_cast<int32_t>(~1)));
 #else
         UNUSED_PARAM(tempGPR);
@@ -944,7 +870,45 @@ public:
         return branchIfNotBoolean(regs.tagGPR(), tempGPR);
 #endif
     }
-    
+
+#if USE(BIGINT32)
+    Jump branchIfBigInt32(GPRReg gpr, GPRReg tempGPR, TagRegistersMode mode = HaveTagRegisters)
+    {
+        ASSERT(tempGPR != InvalidGPRReg);
+        if (mode == HaveTagRegisters && gpr != tempGPR) {
+            static_assert(JSValue::BigInt32Mask == JSValue::NumberTag + JSValue::BigInt32Tag);
+            add64(TrustedImm32(JSValue::BigInt32Tag), GPRInfo::numberTagRegister, tempGPR);
+            and64(gpr, tempGPR);
+            return branch64(Equal, tempGPR, TrustedImm32(JSValue::BigInt32Tag));
+        }
+        move(gpr, tempGPR);
+        and64(TrustedImm64(JSValue::BigInt32Mask), tempGPR);
+        return branch64(Equal, tempGPR, TrustedImm32(JSValue::BigInt32Tag));
+    }
+    Jump branchIfNotBigInt32(GPRReg gpr, GPRReg tempGPR, TagRegistersMode mode = HaveTagRegisters)
+    {
+        ASSERT(tempGPR != InvalidGPRReg);
+        if (mode == HaveTagRegisters && gpr != tempGPR) {
+            static_assert(JSValue::BigInt32Mask == JSValue::NumberTag + JSValue::BigInt32Tag);
+            add64(TrustedImm32(JSValue::BigInt32Tag), GPRInfo::numberTagRegister, tempGPR);
+            and64(gpr, tempGPR);
+            return branch64(NotEqual, tempGPR, TrustedImm32(JSValue::BigInt32Tag));
+        }
+        move(gpr, tempGPR);
+        and64(TrustedImm64(JSValue::BigInt32Mask), tempGPR);
+        return branch64(NotEqual, tempGPR, TrustedImm32(JSValue::BigInt32Tag));
+    }
+    Jump branchIfBigInt32(JSValueRegs regs, GPRReg tempGPR, TagRegistersMode mode = HaveTagRegisters)
+    {
+        return branchIfBigInt32(regs.gpr(), tempGPR, mode);
+    }
+    Jump branchIfNotBigInt32(JSValueRegs regs, GPRReg tempGPR, TagRegistersMode mode = HaveTagRegisters)
+    {
+        return branchIfNotBigInt32(regs.gpr(), tempGPR, mode);
+    }
+#endif // USE(BIGINT32)
+
+    // FIXME: rename these to make it clear that they require their input to be a cell.
     Jump branchIfObject(GPRReg cellGPR)
     {
         return branch8(
@@ -956,26 +920,81 @@ public:
         return branch8(
             Below, Address(cellGPR, JSCell::typeInfoTypeOffset()), TrustedImm32(ObjectType));
     }
-    
+
+    // Note that first and last are inclusive.
+    Jump branchIfType(GPRReg cellGPR, JSTypeRange range)
+    {
+        if (range.last == range.first)
+            return branch8(Equal, Address(cellGPR, JSCell::typeInfoTypeOffset()), TrustedImm32(range.first));
+
+        ASSERT(range.last > range.first);
+        GPRReg scratch = scratchRegister();
+        load8(Address(cellGPR, JSCell::typeInfoTypeOffset()), scratch);
+        sub32(TrustedImm32(range.first), scratch);
+        return branch32(BelowOrEqual, scratch, TrustedImm32(range.last - range.first));
+    }
+
     Jump branchIfType(GPRReg cellGPR, JSType type)
     {
-        return branch8(Equal, Address(cellGPR, JSCell::typeInfoTypeOffset()), TrustedImm32(type));
+        return branchIfType(cellGPR, JSTypeRange { type, type });
     }
-    
+
+    Jump branchIfNotType(GPRReg cellGPR, JSTypeRange range)
+    {
+        if (range.last == range.first)
+            return branch8(NotEqual, Address(cellGPR, JSCell::typeInfoTypeOffset()), TrustedImm32(range.first));
+
+        ASSERT(range.last > range.first);
+        GPRReg scratch = scratchRegister();
+        load8(Address(cellGPR, JSCell::typeInfoTypeOffset()), scratch);
+        sub32(TrustedImm32(range.first), scratch);
+        return branch32(Above, scratch, TrustedImm32(range.last - range.first));
+    }
+
     Jump branchIfNotType(GPRReg cellGPR, JSType type)
     {
-        return branch8(NotEqual, Address(cellGPR, JSCell::typeInfoTypeOffset()), TrustedImm32(type));
+        return branchIfNotType(cellGPR, JSTypeRange { type, type });
     }
-    
+
+    // FIXME: rename these to make it clear that they require their input to be a cell.
     Jump branchIfString(GPRReg cellGPR) { return branchIfType(cellGPR, StringType); }
     Jump branchIfNotString(GPRReg cellGPR) { return branchIfNotType(cellGPR, StringType); }
     Jump branchIfSymbol(GPRReg cellGPR) { return branchIfType(cellGPR, SymbolType); }
     Jump branchIfNotSymbol(GPRReg cellGPR) { return branchIfNotType(cellGPR, SymbolType); }
-    Jump branchIfBigInt(GPRReg cellGPR) { return branchIfType(cellGPR, BigIntType); }
-    Jump branchIfNotBigInt(GPRReg cellGPR) { return branchIfNotType(cellGPR, BigIntType); }
+    Jump branchIfHeapBigInt(GPRReg cellGPR) { return branchIfType(cellGPR, HeapBigIntType); }
+    Jump branchIfNotHeapBigInt(GPRReg cellGPR) { return branchIfNotType(cellGPR, HeapBigIntType); }
     Jump branchIfFunction(GPRReg cellGPR) { return branchIfType(cellGPR, JSFunctionType); }
     Jump branchIfNotFunction(GPRReg cellGPR) { return branchIfNotType(cellGPR, JSFunctionType); }
+    Jump branchIfStructure(GPRReg cellGPR) { return branchIfType(cellGPR, StructureType); }
+    Jump branchIfNotStructure(GPRReg cellGPR) { return branchIfNotType(cellGPR, StructureType); }
     
+    void isEmpty(GPRReg gpr, GPRReg dst)
+    {
+#if USE(JSVALUE64)
+        test64(Zero, gpr, gpr, dst);
+#else
+        compare32(Equal, gpr, TrustedImm32(JSValue::EmptyValueTag), dst);
+#endif
+    }
+
+    void isNotEmpty(GPRReg gpr, GPRReg dst)
+    {
+#if USE(JSVALUE64)
+        test64(NonZero, gpr, gpr, dst);
+#else
+        compare32(NotEqual, gpr, TrustedImm32(JSValue::EmptyValueTag), dst);
+#endif
+    }
+
+    Jump branchIfEmpty(BaseIndex address)
+    {
+#if USE(JSVALUE64)
+        return branchTest64(Zero, address);
+#else
+        return branch32(Equal, address.withOffset(TagOffset), TrustedImm32(JSValue::EmptyValueTag));
+#endif
+    }
+
     Jump branchIfEmpty(GPRReg gpr)
     {
 #if USE(JSVALUE64)
@@ -994,6 +1013,15 @@ public:
 #endif
     }
 
+    Jump branchIfNotEmpty(BaseIndex address)
+    {
+#if USE(JSVALUE64)
+        return branchTest64(NonZero, address);
+#else
+        return branch32(NotEqual, address.withOffset(TagOffset), TrustedImm32(JSValue::EmptyValueTag));
+#endif
+    }
+
     Jump branchIfNotEmpty(GPRReg gpr)
     {
 #if USE(JSVALUE64)
@@ -1009,6 +1037,15 @@ public:
         return branchIfNotEmpty(regs.gpr());
 #else
         return branchIfNotEmpty(regs.tagGPR());
+#endif
+    }
+
+    void isUndefined(JSValueRegs regs, GPRReg dst)
+    {
+#if USE(JSVALUE64)
+        compare64(Equal, regs.payloadGPR(), TrustedImm32(JSValue::ValueUndefined), dst);
+#elif USE(JSVALUE32_64)
+        compare32(Equal, regs.tagGPR(), TrustedImm32(JSValue::UndefinedTag), dst);
 #endif
     }
 
@@ -1052,6 +1089,24 @@ public:
 #endif
     }
 
+    void isNull(JSValueRegs regs, GPRReg dst)
+    {
+#if USE(JSVALUE64)
+        compare64(Equal, regs.payloadGPR(), TrustedImm32(JSValue::ValueNull), dst);
+#elif USE(JSVALUE32_64)
+        compare32(Equal, regs.tagGPR(), TrustedImm32(JSValue::NullTag), dst);
+#endif
+    }
+
+    void isNotNull(JSValueRegs regs, GPRReg dst)
+    {
+#if USE(JSVALUE64)
+        compare64(NotEqual, regs.payloadGPR(), TrustedImm32(JSValue::ValueNull), dst);
+#elif USE(JSVALUE32_64)
+        compare32(NotEqual, regs.tagGPR(), TrustedImm32(JSValue::NullTag), dst);
+#endif
+    }
+
     Jump branchIfNull(GPRReg gpr)
     {
 #if USE(JSVALUE64)
@@ -1092,7 +1147,7 @@ public:
     Jump branchStructure(RelationalCondition condition, T leftHandSide, Structure* structure)
     {
 #if USE(JSVALUE64)
-        return branch32(condition, leftHandSide, TrustedImm32(structure->id()));
+        return branch32(condition, leftHandSide, TrustedImm32(structure->id().bits()));
 #else
         return branchPtr(condition, leftHandSide, TrustedImmPtr(structure));
 #endif
@@ -1108,7 +1163,7 @@ public:
 
     Jump branchIfNotNaN(FPRReg fpr)
     {
-        return branchDouble(DoubleEqual, fpr, fpr);
+        return branchDouble(DoubleEqualAndOrdered, fpr, fpr);
     }
 
     Jump branchIfRopeStringImpl(GPRReg stringImplGPR)
@@ -1119,6 +1174,17 @@ public:
     Jump branchIfNotRopeStringImpl(GPRReg stringImplGPR)
     {
         return branchTestPtr(Zero, stringImplGPR, TrustedImm32(JSString::isRopeInPointer));
+    }
+
+    void emitTurnUndefinedIntoNull(JSValueRegs regs)
+    {
+#if USE(JSVALUE64)
+        static_assert((JSValue::ValueUndefined & ~JSValue::UndefinedTag) == JSValue::ValueNull);
+        and64(TrustedImm32(~JSValue::UndefinedTag), regs.payloadGPR());
+#elif USE(JSVALUE32_64)
+        static_assert((JSValue::UndefinedTag | 1) == JSValue::NullTag);
+        or32(TrustedImm32(1), regs.tagGPR());
+#endif
     }
 
     static Address addressForByteOffset(ptrdiff_t byteOffset)
@@ -1139,9 +1205,10 @@ public:
         ASSERT(virtualRegister.isValid());
         return Address(GPRInfo::callFrameRegister, virtualRegister.offset() * sizeof(Register));
     }
-    static Address addressFor(int operand)
+    static Address addressFor(Operand operand)
     {
-        return addressFor(static_cast<VirtualRegister>(operand));
+        ASSERT(!operand.isTmp());
+        return addressFor(operand.virtualRegister());
     }
 
     static Address tagFor(VirtualRegister virtualRegister, GPRReg baseGPR)
@@ -1154,9 +1221,10 @@ public:
         ASSERT(virtualRegister.isValid());
         return Address(GPRInfo::callFrameRegister, virtualRegister.offset() * sizeof(Register) + TagOffset);
     }
-    static Address tagFor(int operand)
+    static Address tagFor(Operand operand)
     {
-        return tagFor(static_cast<VirtualRegister>(operand));
+        ASSERT(!operand.isTmp());
+        return tagFor(operand.virtualRegister());
     }
 
     static Address payloadFor(VirtualRegister virtualRegister, GPRReg baseGPR)
@@ -1169,30 +1237,31 @@ public:
         ASSERT(virtualRegister.isValid());
         return Address(GPRInfo::callFrameRegister, virtualRegister.offset() * sizeof(Register) + PayloadOffset);
     }
-    static Address payloadFor(int operand)
+    static Address payloadFor(Operand operand)
     {
-        return payloadFor(static_cast<VirtualRegister>(operand));
+        ASSERT(!operand.isTmp());
+        return payloadFor(operand.virtualRegister());
     }
 
     // Access to our fixed callee CallFrame.
-    static Address calleeFrameSlot(int slot)
+    static Address calleeFrameSlot(VirtualRegister slot)
     {
-        ASSERT(slot >= CallerFrameAndPC::sizeInRegisters);
-        return Address(stackPointerRegister, sizeof(Register) * (slot - CallerFrameAndPC::sizeInRegisters));
+        ASSERT(slot.offset() >= CallerFrameAndPC::sizeInRegisters);
+        return Address(stackPointerRegister, sizeof(Register) * (slot - CallerFrameAndPC::sizeInRegisters).offset());
     }
 
     // Access to our fixed callee CallFrame.
     static Address calleeArgumentSlot(int argument)
     {
-        return calleeFrameSlot(virtualRegisterForArgument(argument).offset());
+        return calleeFrameSlot(virtualRegisterForArgumentIncludingThis(argument));
     }
 
-    static Address calleeFrameTagSlot(int slot)
+    static Address calleeFrameTagSlot(VirtualRegister slot)
     {
         return calleeFrameSlot(slot).withOffset(TagOffset);
     }
 
-    static Address calleeFramePayloadSlot(int slot)
+    static Address calleeFramePayloadSlot(VirtualRegister slot)
     {
         return calleeFrameSlot(slot).withOffset(PayloadOffset);
     }
@@ -1209,7 +1278,7 @@ public:
 
     static Address calleeFrameCallerFrame()
     {
-        return calleeFrameSlot(0).withOffset(CallFrame::callerFrameOffset());
+        return calleeFrameSlot(VirtualRegister(0)).withOffset(CallFrame::callerFrameOffset());
     }
 
     static GPRReg selectScratchGPR(RegisterSet preserved)
@@ -1265,7 +1334,7 @@ public:
     void debugCall(VM&, V_DebugOperation_EPP function, void* argument);
 
     // These methods JIT generate dynamic, debug-only checks - akin to ASSERTs.
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     void jitAssertIsInt32(GPRReg);
     void jitAssertIsJSInt32(GPRReg);
     void jitAssertIsJSNumber(GPRReg);
@@ -1275,6 +1344,7 @@ public:
     void jitAssertIsNull(GPRReg);
     void jitAssertTagsInPlace();
     void jitAssertArgumentCountSane();
+    inline void jitAssertNoException(VM& vm) { jitReleaseAssertNoException(vm); }
 #else
     void jitAssertIsInt32(GPRReg) { }
     void jitAssertIsJSInt32(GPRReg) { }
@@ -1285,6 +1355,7 @@ public:
     void jitAssertIsNull(GPRReg) { }
     void jitAssertTagsInPlace() { }
     void jitAssertArgumentCountSane() { }
+    void jitAssertNoException(VM&) { }
 #endif
 
     void jitReleaseAssertNoException(VM&);
@@ -1324,7 +1395,7 @@ public:
         boxDouble(fpr, regs.gpr(), mode);
     }
 
-    void unboxDoubleNonDestructive(JSValueRegs regs, FPRReg destFPR, GPRReg resultGPR, FPRReg)
+    void unboxDoubleNonDestructive(JSValueRegs regs, FPRReg destFPR, GPRReg resultGPR)
     {
         unboxDouble(regs.payloadGPR(), resultGPR, destFPR);
     }
@@ -1345,10 +1416,28 @@ public:
         Jump done = jump();
         
         isInt32.link(this);
-        zeroExtend32ToPtr(source, target);
+        zeroExtend32ToWord(source, target);
         or64(GPRInfo::numberTagRegister, target);
         
         done.link(this);
+    }
+#endif // USE(JSVALUE64)
+
+#if USE(BIGINT32)
+    void unboxBigInt32(GPRReg src, GPRReg dest)
+    {
+#if CPU(ARM64)
+        urshift64(src, trustedImm32ForShift(Imm32(16)), dest);
+#else
+        move(src, dest);
+        urshift64(trustedImm32ForShift(Imm32(16)), dest);
+#endif
+    }
+
+    void boxBigInt32(GPRReg gpr)
+    {
+        lshift64(trustedImm32ForShift(Imm32(16)), gpr);
+        or64(TrustedImm32(JSValue::BigInt32Tag), gpr);
     }
 #endif
 
@@ -1357,23 +1446,23 @@ public:
     {
         moveDoubleToInts(fpr, payloadGPR, tagGPR);
     }
-    void unboxDouble(GPRReg tagGPR, GPRReg payloadGPR, FPRReg fpr, FPRReg scratchFPR)
+    void unboxDouble(GPRReg tagGPR, GPRReg payloadGPR, FPRReg fpr)
     {
-        moveIntsToDouble(payloadGPR, tagGPR, fpr, scratchFPR);
+        moveIntsToDouble(payloadGPR, tagGPR, fpr);
     }
     
     void boxDouble(FPRReg fpr, JSValueRegs regs)
     {
         boxDouble(fpr, regs.tagGPR(), regs.payloadGPR());
     }
-    void unboxDouble(JSValueRegs regs, FPRReg fpr, FPRReg scratchFPR)
+    void unboxDouble(JSValueRegs regs, FPRReg fpr)
     {
-        unboxDouble(regs.tagGPR(), regs.payloadGPR(), fpr, scratchFPR);
+        unboxDouble(regs.tagGPR(), regs.payloadGPR(), fpr);
     }
 
-    void unboxDoubleNonDestructive(const JSValueRegs regs, FPRReg destFPR, GPRReg, FPRReg scratchFPR)
+    void unboxDoubleNonDestructive(JSValueRegs regs, FPRReg destFPR, GPRReg)
     {
-        unboxDouble(regs, destFPR, scratchFPR);
+        unboxDouble(regs, destFPR);
     }
 #endif
     
@@ -1466,20 +1555,7 @@ public:
         return codeBlock()->globalObjectFor(codeOrigin);
     }
     
-    bool isStrictModeFor(CodeOrigin codeOrigin)
-    {
-        auto* inlineCallFrame = codeOrigin.inlineCallFrame();
-        if (!inlineCallFrame)
-            return codeBlock()->isStrictMode();
-        return inlineCallFrame->isStrictMode();
-    }
-    
-    ECMAMode ecmaModeFor(CodeOrigin codeOrigin)
-    {
-        return isStrictModeFor(codeOrigin) ? StrictMode : NotStrictMode;
-    }
-    
-    ExecutableBase* executableFor(const CodeOrigin& codeOrigin);
+    ExecutableBase* executableFor(CodeBlock*, const CodeOrigin&);
     
     CodeBlock* baselineCodeBlockFor(const CodeOrigin& codeOrigin)
     {
@@ -1502,9 +1578,9 @@ public:
     {
         if (!inlineCallFrame)
             return VirtualRegister(CallFrame::argumentOffset(0));
-        if (inlineCallFrame->argumentsWithFixup.size() <= 1)
+        if (inlineCallFrame->m_argumentsWithFixup.size() <= 1)
             return virtualRegisterForLocal(0);
-        ValueRecovery recovery = inlineCallFrame->argumentsWithFixup[1];
+        ValueRecovery recovery = inlineCallFrame->m_argumentsWithFixup[1];
         RELEASE_ASSERT(recovery.technique() == DisplacedInJSStack);
         return recovery.virtualRegister();
     }
@@ -1518,7 +1594,7 @@ public:
     {
         ASSERT(!inlineCallFrame || inlineCallFrame->isVarargs());
         if (!inlineCallFrame)
-            return VirtualRegister(CallFrameSlot::argumentCount);
+            return CallFrameSlot::argumentCountIncludingThis;
         return inlineCallFrame->argumentCountRegister;
     }
 
@@ -1527,7 +1603,9 @@ public:
         return argumentCount(codeOrigin.inlineCallFrame());
     }
     
-    void emitLoadStructure(VM&, RegisterID source, RegisterID dest, RegisterID scratch);
+    void emitNonNullDecodeStructureID(RegisterID source, RegisterID dest);
+    void emitLoadStructure(VM&, RegisterID source, RegisterID dest);
+    void emitLoadPrototype(VM&, GPRReg objectGPR, JSValueRegs resultRegs, JumpList& slowPath);
 
     void emitStoreStructureWithTypeInfo(TrustedImmPtr structure, RegisterID dest, RegisterID)
     {
@@ -1591,73 +1669,9 @@ public:
         ok.link(this);
     }
 
-    void cageWithoutUntagging(Gigacage::Kind kind, GPRReg storage)
-    {
-#if GIGACAGE_ENABLED
-        if (!Gigacage::isEnabled(kind))
-            return;
-
-#if CPU(ARM64E)
-        RegisterID tempReg = InvalidGPRReg;
-        if (kind == Gigacage::Primitive) {
-            tempReg = getCachedMemoryTempRegisterIDAndInvalidate();
-            move(storage, tempReg);
-            // Flip the registers since bitFieldInsert only inserts into the low bits.
-            std::swap(storage, tempReg);
-        }
-#endif
-        andPtr(TrustedImmPtr(Gigacage::mask(kind)), storage);
-        addPtr(TrustedImmPtr(Gigacage::basePtr(kind)), storage);
-#if CPU(ARM64E)
-        if (kind == Gigacage::Primitive)
-            bitFieldInsert64(storage, 0, 64 - numberOfPACBits, tempReg);
-#endif
-
-#else
-        UNUSED_PARAM(kind);
-        UNUSED_PARAM(storage);
-#endif
-    }
-
+    JS_EXPORT_PRIVATE void cageWithoutUntagging(Gigacage::Kind, GPRReg storage);
     // length may be the same register as scratch.
-    void cageConditionally(Gigacage::Kind kind, GPRReg storage, GPRReg length, GPRReg scratch)
-    {
-#if GIGACAGE_ENABLED
-        if (Gigacage::isEnabled(kind)) {
-            if (kind != Gigacage::Primitive || Gigacage::isDisablingPrimitiveGigacageForbidden())
-                cageWithoutUntagging(kind, storage);
-            else {
-#if CPU(ARM64E)
-                if (length == scratch)
-                    scratch = getCachedMemoryTempRegisterIDAndInvalidate();
-#endif
-                loadPtr(Gigacage::addressOfBasePtr(kind), scratch);
-                Jump done = branchTest64(Zero, scratch);
-#if CPU(ARM64E)
-                GPRReg tempReg = getCachedDataTempRegisterIDAndInvalidate();
-                move(storage, tempReg);
-                ASSERT(LogicalImmediate::create64(Gigacage::mask(kind)).isValid());
-                andPtr(TrustedImmPtr(Gigacage::mask(kind)), tempReg);
-                addPtr(scratch, tempReg);
-                bitFieldInsert64(tempReg, 0, 64 - numberOfPACBits, storage);
-#else
-                andPtr(TrustedImmPtr(Gigacage::mask(kind)), storage);
-                addPtr(scratch, storage);
-#endif // CPU(ARM64E)
-                done.link(this);
-            }
-        }
-#endif
-
-#if CPU(ARM64E)
-        if (kind == Gigacage::Primitive)
-            untagArrayPtr(length, storage);
-#endif
-        UNUSED_PARAM(kind);
-        UNUSED_PARAM(storage);
-        UNUSED_PARAM(length);
-        UNUSED_PARAM(scratch);
-    }
+    JS_EXPORT_PRIVATE void cageConditionallyAndUntag(Gigacage::Kind, GPRReg storage, GPRReg length, GPRReg scratch, bool validateAuth = true);
 
     void emitComputeButterflyIndexingMask(GPRReg vectorLengthGPR, GPRReg scratchGPR, GPRReg resultGPR)
     {
@@ -1676,13 +1690,13 @@ public:
     void nukeStructureAndStoreButterfly(VM& vm, GPRReg butterfly, GPRReg object)
     {
         if (isX86()) {
-            or32(TrustedImm32(bitwise_cast<int32_t>(nukedStructureIDBit())), Address(object, JSCell::structureIDOffset()));
+            or32(TrustedImm32(bitwise_cast<int32_t>(StructureID::nukedStructureIDBit)), Address(object, JSCell::structureIDOffset()));
             storePtr(butterfly, Address(object, JSObject::butterflyOffset()));
             return;
         }
 
         Jump ok = jumpIfMutatorFenceNotNeeded(vm);
-        or32(TrustedImm32(bitwise_cast<int32_t>(nukedStructureIDBit())), Address(object, JSCell::structureIDOffset()));
+        or32(TrustedImm32(bitwise_cast<int32_t>(StructureID::nukedStructureIDBit)), Address(object, JSCell::structureIDOffset()));
         storeFence();
         storePtr(butterfly, Address(object, JSObject::butterflyOffset()));
         storeFence();
@@ -1696,8 +1710,6 @@ public:
     {
         return branchTest8(Zero, AbsoluteAddress(vm.heap.addressOfMutatorShouldBeFenced()));
     }
-    
-    void sanitizeStackInline(VM&, GPRReg scratch);
     
     // Emits the branch structure for typeof. The code emitted by this doesn't fall through. The
     // functor is called at those points where we have pinpointed a type. One way to use this is to
@@ -1722,7 +1734,7 @@ public:
         //         }
         //     } else if (is string) {
         //         return string
-        //     } else if (is bigint) {
+        //     } else if (is heapbigint) {
         //         return bigint
         //     } else {
         //         return symbol
@@ -1733,6 +1745,8 @@ public:
         //     return object
         // } else if (is boolean) {
         //     return boolean
+        // } else if (is bigint32) {
+        //     return bigint
         // } else {
         //     return undefined
         // }
@@ -1764,10 +1778,10 @@ public:
 
         notString.link(this);
 
-        Jump notBigInt = branchIfNotBigInt(cellGPR);
+        Jump notHeapBigInt = branchIfNotHeapBigInt(cellGPR);
         functor(TypeofType::BigInt, false);
 
-        notBigInt.link(this);
+        notHeapBigInt.link(this);
         functor(TypeofType::Symbol, false);
         
         notCell.link(this);
@@ -1783,11 +1797,18 @@ public:
         Jump notBoolean = branchIfNotBoolean(regs, tempGPR);
         functor(TypeofType::Boolean, false);
         notBoolean.link(this);
+
+#if USE(BIGINT32)
+        Jump notBigInt32 = branchIfNotBigInt32(regs, tempGPR);
+        functor(TypeofType::BigInt, false);
+        notBigInt32.link(this);
+#endif
         
         functor(TypeofType::Undefined, true);
     }
     
-    void emitDumbVirtualCall(VM&, CallLinkInfo*);
+    void emitVirtualCall(VM&, JSGlobalObject*, CallLinkInfo*);
+    void emitVirtualCallWithoutMovingGlobalObject(VM&, GPRReg callLinkInfoGPR, CallMode);
     
     void makeSpaceOnStackForCCall();
     void reclaimSpaceOnStackForCCall();
@@ -1824,7 +1845,7 @@ public:
         VM& vm, GPRReg resultGPR, StructureType structure, StorageType storage, GPRReg scratchGPR1,
         GPRReg scratchGPR2, JumpList& slowPath, size_t size)
     {
-        Allocator allocator = allocatorForNonVirtualConcurrently<ClassType>(vm, size, AllocatorForMode::AllocatorIfExists);
+        Allocator allocator = allocatorForConcurrently<ClassType>(vm, size, AllocatorForMode::AllocatorIfExists);
         emitAllocateJSObject(resultGPR, JITAllocator::constant(allocator), scratchGPR1, structure, storage, scratchGPR2, slowPath);
     }
     
@@ -1854,24 +1875,16 @@ public:
         storePtr(TrustedImmPtr(nullptr), Address(resultGPR, JSObject::butterflyOffset()));
     }
 
-    JumpList branchIfValue(VM&, JSValueRegs, GPRReg scratch, GPRReg scratchIfShouldCheckMasqueradesAsUndefined, FPRReg, FPRReg, bool shouldCheckMasqueradesAsUndefined, JSGlobalObject*, bool negateResult);
-    JumpList branchIfTruthy(VM& vm, JSValueRegs value, GPRReg scratch, GPRReg scratchIfShouldCheckMasqueradesAsUndefined, FPRReg scratchFPR0, FPRReg scratchFPR1, bool shouldCheckMasqueradesAsUndefined, JSGlobalObject* globalObject)
+    JumpList branchIfValue(VM&, JSValueRegs, GPRReg scratch, GPRReg scratchIfShouldCheckMasqueradesAsUndefined, FPRReg, FPRReg, bool shouldCheckMasqueradesAsUndefined, std::variant<JSGlobalObject*, GPRReg>, bool negateResult);
+    JumpList branchIfTruthy(VM& vm, JSValueRegs value, GPRReg scratch, GPRReg scratchIfShouldCheckMasqueradesAsUndefined, FPRReg scratchFPR0, FPRReg scratchFPR1, bool shouldCheckMasqueradesAsUndefined, std::variant<JSGlobalObject*, GPRReg> globalObject)
     {
         return branchIfValue(vm, value, scratch, scratchIfShouldCheckMasqueradesAsUndefined, scratchFPR0, scratchFPR1, shouldCheckMasqueradesAsUndefined, globalObject, false);
     }
-    JumpList branchIfFalsey(VM& vm, JSValueRegs value, GPRReg scratch, GPRReg scratchIfShouldCheckMasqueradesAsUndefined, FPRReg scratchFPR0, FPRReg scratchFPR1, bool shouldCheckMasqueradesAsUndefined, JSGlobalObject* globalObject)
+    JumpList branchIfFalsey(VM& vm, JSValueRegs value, GPRReg scratch, GPRReg scratchIfShouldCheckMasqueradesAsUndefined, FPRReg scratchFPR0, FPRReg scratchFPR1, bool shouldCheckMasqueradesAsUndefined, std::variant<JSGlobalObject*, GPRReg> globalObject)
     {
         return branchIfValue(vm, value, scratch, scratchIfShouldCheckMasqueradesAsUndefined, scratchFPR0, scratchFPR1, shouldCheckMasqueradesAsUndefined, globalObject, true);
     }
     void emitConvertValueToBoolean(VM&, JSValueRegs, GPRReg result, GPRReg scratchIfShouldCheckMasqueradesAsUndefined, FPRReg, FPRReg, bool shouldCheckMasqueradesAsUndefined, JSGlobalObject*, bool negateResult = false);
-    
-    template<typename ClassType>
-    void emitAllocateDestructibleObject(VM& vm, GPRReg resultGPR, Structure* structure, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath)
-    {
-        auto butterfly = TrustedImmPtr(nullptr);
-        emitAllocateJSObject<ClassType>(vm, resultGPR, TrustedImmPtr(structure), butterfly, scratchGPR1, scratchGPR2, slowPath);
-        storePtr(TrustedImmPtr(structure->classInfo()), Address(resultGPR, JSDestructibleObject::classInfoOffset()));
-    }
     
     void emitInitializeInlineStorage(GPRReg baseGPR, unsigned inlineCapacity)
     {
@@ -1898,11 +1911,6 @@ public:
 #if USE(JSVALUE64)
     void wangsInt64Hash(GPRReg inputAndResult, GPRReg scratch);
 #endif
-    
-    // This assumes that index and length are 32-bit. This also assumes that they are already
-    // zero-extended. Also this does not clobber index, which is useful in the baseline JIT. This
-    // permits length and result to be in the same register.
-    void emitPreparePreciseIndexMask32(GPRReg index, GPRReg length, GPRReg result);
 
 #if ENABLE(WEBASSEMBLY)
     void loadWasmContextInstance(GPRReg dst);

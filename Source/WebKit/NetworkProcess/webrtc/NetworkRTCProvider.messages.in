@@ -23,13 +23,20 @@
 #if USE(LIBWEBRTC)
 
 messages -> NetworkRTCProvider {
-    CreateUDPSocket(WebCore::LibWebRTCSocketIdentifier identifier, WebKit::RTCNetwork::SocketAddress localAddress, uint16_t minPort, uint16_t maxPort)
+    CreateUDPSocket(WebCore::LibWebRTCSocketIdentifier identifier, WebKit::RTCNetwork::SocketAddress localAddress, uint16_t minPort, uint16_t maxPort, WebKit::WebPageProxyIdentifier pageIdentifier, bool isFirstParty, bool isRelayDisabled, WebCore::RegistrableDomain domain)
     CreateServerTCPSocket(WebCore::LibWebRTCSocketIdentifier identifier, WebKit::RTCNetwork::SocketAddress localAddress, uint16_t minPort, uint16_t maxPort, int options)
-    CreateClientTCPSocket(WebCore::LibWebRTCSocketIdentifier identifier, WebKit::RTCNetwork::SocketAddress localAddress, WebKit::RTCNetwork::SocketAddress remoteAddress, String userAgent, int options)
+    CreateClientTCPSocket(WebCore::LibWebRTCSocketIdentifier identifier, WebKit::RTCNetwork::SocketAddress localAddress, WebKit::RTCNetwork::SocketAddress remoteAddress, String userAgent, int options, WebKit::WebPageProxyIdentifier pageIdentifier, bool isFirstParty, bool isRelayDisabled, WebCore::RegistrableDomain domain)
     WrapNewTCPConnection(WebCore::LibWebRTCSocketIdentifier identifier, WebCore::LibWebRTCSocketIdentifier newConnectionSocketIdentifier)
 
-    CreateResolver(uint64_t identifier, String address)
-    StopResolver(uint64_t identifier)
+    void SetPlatformTCPSocketsEnabled(bool enabled)
+    void SetPlatformUDPSocketsEnabled(bool enabled)
+
+    CreateResolver(WebKit::LibWebRTCResolverIdentifier identifier, String address)
+    StopResolver(WebKit::LibWebRTCResolverIdentifier identifier)
+
+    void SendToSocket(WebCore::LibWebRTCSocketIdentifier identifier, IPC::DataReference data, WebKit::RTCNetwork::SocketAddress address, struct WebKit::RTCPacketOptions options)
+    void CloseSocket(WebCore::LibWebRTCSocketIdentifier identifier)
+    void SetSocketOption(WebCore::LibWebRTCSocketIdentifier identifier, int option, int value)
 }
 
 #endif // USE(LIBWEBRTC)

@@ -5,7 +5,7 @@
 <script>
 function createIFrame(option) {
     let iframe = document.createElement("iframe");
-    iframe.src = `resources/x-frame-options.php?option=${option}`;
+    iframe.src = `resources/x-frame-options.py?option=${option}`;
     document.body.appendChild(iframe);
 }
 
@@ -19,6 +19,7 @@ function test()
         async test() {
             const option = "DENY";
             InspectorTest.evaluateInPage(`createIFrame("${option}")`);
+            WI.reportInternalError = (e) => { };
 
             let event = await WI.Resource.awaitEvent(WI.Resource.Event.ResponseReceived);
 
@@ -33,6 +34,7 @@ function test()
         async test() {
             const option = "SAMEORIGIN";
             InspectorTest.evaluateInPage(`createIFrame("${option}")`);
+            WI.reportInternalError = (e) => { };
 
             let event = await WI.Resource.awaitEvent(WI.Resource.Event.ResponseReceived);
 

@@ -137,17 +137,17 @@ WI.ObjectTreeView = class ObjectTreeView extends WI.Object
             button.addEventListener("click", (event) => {
                 event.stop();
 
-                representation.singleFireEventListener(ObjectTreeView.Event.Updated, () => {
+                representation.singleFireEventListener(ObjectTreeView.Event.Updated, function(event) {
                     // The `treeElement` may have already been removed by some other means (e.g. `removeChildren`).
                     if (treeElement.parent === parentTreeElement)
                         parentTreeElement.removeChild(treeElement);
-                });
+                }, button);
 
                 for (let other of buttons)
                     other.disabled = true;
 
                 let spinner = new WI.IndeterminateProgressSpinner;
-                button.insertAdjacentElement("afterend", spinner.element);
+                buttons.lastValue.insertAdjacentElement("afterend", spinner.element);
 
                 handleClick();
             });
@@ -295,6 +295,9 @@ WI.ObjectTreeView = class ObjectTreeView extends WI.Object
 
     showOnlyJSON()
     {
+        console.assert(this._mode === WI.ObjectTreeView.Mode.Properties, this._mode);
+        console.assert(!this._hasLosslessPreview);
+
         this.showOnlyProperties();
 
         this._element.classList.add("json-only");
@@ -319,6 +322,11 @@ WI.ObjectTreeView = class ObjectTreeView extends WI.Object
     setPrototypeNameOverride(override)
     {
         this._prototypeNameOverride = override;
+    }
+
+    resetPropertyPath()
+    {
+        this._propertyPath.pathComponent = "this";
     }
 
     // Protected
@@ -419,10 +427,6 @@ WI.ObjectTreeView = class ObjectTreeView extends WI.Object
         var hadProto = false;
         for (var propertyDescriptor of properties) {
             if (propertyDescriptor.name === "__proto__") {
-                // COMPATIBILITY (iOS 8): Sometimes __proto__ is not a value, but a get/set property.
-                // In those cases it is actually not useful to show.
-                if (!propertyDescriptor.hasValue())
-                    continue;
                 if (!this._includeProtoProperty)
                     continue;
                 hadProto = true;

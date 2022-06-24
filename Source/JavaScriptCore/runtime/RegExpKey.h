@@ -2,7 +2,7 @@
  * Copyright (C) 2010 University of Szeged
  * Copyright (C) 2010 Renata Hodovan (hodovan@inf.u-szeged.hu)
  * All rights reserved.
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,13 +30,14 @@
 
 #include "YarrFlags.h"
 #include <wtf/OptionSet.h>
+#include <wtf/PackedRefPtr.h>
 #include <wtf/text/StringHash.h>
 
 namespace JSC {
 
 struct RegExpKey {
     OptionSet<Yarr::Flags> flagsValue;
-    RefPtr<StringImpl> pattern;
+    PackedRefPtr<StringImpl> pattern;
 
     RegExpKey()
     {
@@ -71,6 +72,7 @@ struct RegExpKey {
         static unsigned hash(const RegExpKey& key) { return key.pattern->hash(); }
         static bool equal(const RegExpKey& a, const RegExpKey& b) { return a == b; }
         static constexpr bool safeToCompareToEmptyOrDeleted = false;
+        static constexpr bool hasHashInValue = true;
     };
 };
 
@@ -88,11 +90,9 @@ inline bool operator==(const RegExpKey& a, const RegExpKey& b)
 } // namespace JSC
 
 namespace WTF {
-template<typename T> struct DefaultHash;
+template<typename> struct DefaultHash;
 
-template<> struct DefaultHash<JSC::RegExpKey> {
-    typedef JSC::RegExpKey::Hash Hash;
-};
+template<> struct DefaultHash<JSC::RegExpKey> : JSC::RegExpKey::Hash { };
 
 template<> struct HashTraits<JSC::RegExpKey> : GenericHashTraits<JSC::RegExpKey> {
     static constexpr bool emptyValueIsZero = true;

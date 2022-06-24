@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SubimageCacheWithTimer_h
-#define SubimageCacheWithTimer_h
+#pragma once
 
 #include "FloatRect.h"
 #include "Timer.h"
@@ -33,7 +32,9 @@
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
 #include <wtf/HashTraits.h>
+#include <wtf/Lock.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/RunLoop.h>
 
 #define CACHE_SUBIMAGES 1
 
@@ -47,11 +48,12 @@ class SubimageCacheWithTimer {
 public:
     struct SubimageCacheEntry {
         RetainPtr<CGImageRef> image;
-        FloatRect rect;
         RetainPtr<CGImageRef> subimage;
+        FloatRect rect;
+        MonotonicTime lastAccessTime;
     };
 
-    struct SubimageCacheEntryTraits : WTF::GenericHashTraits<SubimageCacheEntry> {
+    struct SubimageCacheEntryTraits : HashTraits<SubimageCacheEntry> {
         typedef HashTraits<RetainPtr<CGImageRef>> ImageTraits;
 
         static const bool emptyValueIsZero = true;
@@ -66,7 +68,7 @@ public:
     struct SubimageCacheHash {
         static unsigned hash(CGImageRef image, const FloatRect& rect)
         {
-            return WTF::pairIntHash(PtrHash<CGImageRef>::hash(image),
+            return pairIntHash(PtrHash<CGImageRef>::hash(image),
                 (static_cast<unsigned>(rect.x()) << 16) | static_cast<unsigned>(rect.y()));
         }
         static unsigned hash(const SubimageCacheEntry& key)
@@ -82,19 +84,23 @@ public:
 
     static RetainPtr<CGImageRef> getSubimage(CGImageRef, const FloatRect&);
     static void clearImage(CGImageRef);
+    static void clear();
 
 private:
     typedef HashSet<SubimageCacheEntry, SubimageCacheHash, SubimageCacheEntryTraits> SubimageCacheHashSet;
 
     SubimageCacheWithTimer();
-    void invalidateCacheTimerFired();
+    void pruneCacheTimerFired();
 
     RetainPtr<CGImageRef> subimage(CGImageRef, const FloatRect&);
     void clearImageAndSubimages(CGImageRef);
+    void prune() WTF_REQUIRES_LOCK(m_lock);
+    void clearAll();
 
-    HashCountedSet<CGImageRef> m_images;
-    SubimageCacheHashSet m_cache;
-    DeferrableOneShotTimer m_timer;
+    Lock m_lock;
+    HashCountedSet<CGImageRef> m_imageCounts WTF_GUARDED_BY_LOCK(m_lock);
+    SubimageCacheHashSet m_cache WTF_GUARDED_BY_LOCK(m_lock);
+    RunLoop::Timer<SubimageCacheWithTimer> m_timer WTF_GUARDED_BY_LOCK(m_lock);
 
     static SubimageCacheWithTimer& subimageCache();
     static bool subimageCacheExists();
@@ -104,5 +110,3 @@ private:
 #endif // CACHE_SUBIMAGES
 
 }
-
-#endif // SubimageCacheWithTimer_h

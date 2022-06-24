@@ -32,7 +32,11 @@ function checkProperty(object, name, value, attributes = { writable: true, enume
 
 {
     let result = Object.assign({}, RegExp);
-    shouldBe(JSON.stringify(Object.getOwnPropertyNames(result).sort()), `["$1","$2","$3","$4","$5","$6","$7","$8","$9","input","lastMatch","lastParen","leftContext","multiline","rightContext"]`);
+    shouldBe(JSON.stringify(Object.getOwnPropertyNames(result).sort()), `[]`);
+}
+{
+    let result = Object.assign({}, $vm.createCustomTestGetterSetter());
+    shouldBe(JSON.stringify(Object.getOwnPropertyNames(result).sort()), `["customAccessor","customAccessorGlobalObject","customAccessorReadOnly","customFunction","customValue","customValue2","customValueGlobalObject","customValueNoSetter"]`);
 }
 {
     function Hello() { }
@@ -40,7 +44,7 @@ function checkProperty(object, name, value, attributes = { writable: true, enume
         ok: 42
     });
 
-    shouldBe(JSON.stringify(Object.getOwnPropertyNames(result).sort()), `["arguments","caller","length","name","ok","prototype"]`);
+    shouldBe(JSON.stringify(Object.getOwnPropertyNames(result).sort()), `["length","name","ok","prototype"]`);
     checkProperty(result, "ok", 42);
 }
 {
@@ -162,4 +166,20 @@ function checkProperty(object, name, value, attributes = { writable: true, enume
     shouldBe(result.added, 42);
     shouldBe(result.hello, 0);
     shouldBe(setterCalledWithValue, "world");
+}
+{
+    let object = Object.freeze({ foo: 1 });
+    shouldBe(Object.assign(object, {}), object);
+}
+{
+    let object = Object.preventExtensions({ foo: 1 });
+    shouldBe(Object.assign(object, { foo: 2 }), object);
+    shouldBe(object.foo, 2);
+}
+{
+    let object = Object.preventExtensions({ foo: 1 });
+    shouldThrow(() => {
+        Object.assign(object, { bar: 2 });
+    }, `TypeError: Attempting to define property on object that is not extensible.`);
+    shouldBe(object.bar, undefined);
 }

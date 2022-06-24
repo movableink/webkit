@@ -1,7 +1,0 @@
-2d.path.moveTo.nonfinite
-
-moveTo() with Infinity/NaN is ignored
-
-
-FAIL moveTo() with Infinity/NaN is ignored null is not an object (evaluating 'ctx.moveTo')
-

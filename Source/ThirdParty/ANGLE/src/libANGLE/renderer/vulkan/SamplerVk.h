@@ -25,13 +25,15 @@ class SamplerVk : public SamplerImpl
 
     void onDestroy(const gl::Context *context) override;
     angle::Result syncState(const gl::Context *context, const bool dirty) override;
-    const vk::Sampler &getSampler() const;
-    Serial getSerial() const { return mSerial; }
+
+    const vk::SamplerHelper &getSampler() const
+    {
+        ASSERT(mSampler.valid());
+        return mSampler.get();
+    }
 
   private:
-    vk::Sampler mSampler;
-    // The serial is used for cache indexing.
-    Serial mSerial;
+    vk::SamplerBinding mSampler;
 };
 
 }  // namespace rx

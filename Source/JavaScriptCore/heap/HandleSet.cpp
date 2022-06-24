@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,9 +28,7 @@
 
 #include "HandleBlock.h"
 #include "HandleBlockInlines.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
-#include <wtf/DataLog.h>
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
@@ -58,16 +56,19 @@ void HandleSet::grow()
     }
 }
 
-void HandleSet::visitStrongHandles(SlotVisitor& visitor)
+template<typename Visitor>
+void HandleSet::visitStrongHandles(Visitor& visitor)
 {
-    Node* end = m_strongList.end();
-    for (Node* node = m_strongList.begin(); node != end; node = node->next()) {
+    for (Node& node : m_strongList) {
 #if ENABLE(GC_VALIDATION)
-        RELEASE_ASSERT(isLiveNode(node));
+        RELEASE_ASSERT(isLiveNode(&node));
 #endif
-        visitor.appendUnbarriered(*node->slot());
+        visitor.appendUnbarriered(*node.slot());
     }
 }
+
+template void HandleSet::visitStrongHandles(AbstractSlotVisitor&);
+template void HandleSet::visitStrongHandles(SlotVisitor&);
 
 void HandleSet::writeBarrier(HandleSlot slot, const JSValue& value)
 {
@@ -93,16 +94,15 @@ void HandleSet::writeBarrier(HandleSlot slot, const JSValue& value)
 unsigned HandleSet::protectedGlobalObjectCount()
 {
     unsigned count = 0;
-    Node* end = m_strongList.end();
-    for (Node* node = m_strongList.begin(); node != end; node = node->next()) {
-        JSValue value = *node->slot();
+    for (Node& node : m_strongList) {
+        JSValue value = *node.slot();
         if (value.isObject() && asObject(value.asCell())->isGlobalObject())
             count++;
     }
     return count;
 }
 
-#if ENABLE(GC_VALIDATION) || !ASSERT_DISABLED
+#if ENABLE(GC_VALIDATION) || ASSERT_ENABLED
 bool HandleSet::isLiveNode(Node* node)
 {
     if (node->prev()->next() != node)
@@ -112,6 +112,6 @@ bool HandleSet::isLiveNode(Node* node)
         
     return true;
 }
-#endif
+#endif // ENABLE(GC_VALIDATION) || ASSERT_ENABLED
 
 } // namespace JSC

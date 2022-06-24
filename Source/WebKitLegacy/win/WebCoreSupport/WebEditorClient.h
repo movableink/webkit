@@ -47,15 +47,15 @@ private:
     void toggleContinuousSpellChecking() final;
     int spellCheckerDocumentTag() final;
 
-    bool shouldBeginEditing(WebCore::Range*) final;
-    bool shouldEndEditing(WebCore::Range*) final;
-    bool shouldInsertText(const WTF::String&, WebCore::Range*, WebCore::EditorInsertAction) final;
+    bool shouldBeginEditing(const WebCore::SimpleRange&) final;
+    bool shouldEndEditing(const WebCore::SimpleRange&) final;
+    bool shouldInsertText(const WTF::String&, const std::optional<WebCore::SimpleRange>&, WebCore::EditorInsertAction) final;
 
     void didBeginEditing() final;
     void didEndEditing() final;
-    void willWriteSelectionToPasteboard(WebCore::Range*) final;
+    void willWriteSelectionToPasteboard(const std::optional<WebCore::SimpleRange>&) final;
     void didWriteSelectionToPasteboard() final;
-    void getClientPasteboardDataForRange(WebCore::Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer>>& pasteboardData) final;
+    void getClientPasteboardData(const std::optional<WebCore::SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer>>& pasteboardData) final;
 
     void didEndUserTriggeredSelectionChanges() final { }
     void respondToChangedContents() final;
@@ -65,12 +65,12 @@ private:
     void discardedComposition(WebCore::Frame*) final;
     void didUpdateComposition() final { }
 
-    bool shouldDeleteRange(WebCore::Range*) final;
+    bool shouldDeleteRange(const std::optional<WebCore::SimpleRange>&) final;
 
-    bool shouldInsertNode(WebCore::Node*, WebCore::Range* replacingRange, WebCore::EditorInsertAction) final;
-    bool shouldApplyStyle(WebCore::StyleProperties*, WebCore::Range*) final;
+    bool shouldInsertNode(WebCore::Node&, const std::optional<WebCore::SimpleRange>& replacingRange, WebCore::EditorInsertAction) final;
+    bool shouldApplyStyle(const WebCore::StyleProperties&, const std::optional<WebCore::SimpleRange>&) final;
     void didApplyStyle() final;
-    bool shouldMoveRangeAfterDelete(WebCore::Range*, WebCore::Range*) final;
+    bool shouldMoveRangeAfterDelete(const WebCore::SimpleRange&, const WebCore::SimpleRange&) final;
 
     bool smartInsertDeleteEnabled() final;
     bool isSelectTrailingWhitespaceEnabled() const final;
@@ -87,7 +87,7 @@ private:
     void undo() final;
     void redo() final;
     
-    bool shouldChangeSelectedRange(WebCore::Range* fromRange, WebCore::Range* toRange, WebCore::EAffinity, bool stillSelecting) final;
+    bool shouldChangeSelectedRange(const std::optional<WebCore::SimpleRange>& fromRange, const std::optional<WebCore::SimpleRange>& toRange, WebCore::Affinity, bool stillSelecting) final;
     void textFieldDidBeginEditing(WebCore::Element*) final;
     void textFieldDidEndEditing(WebCore::Element*) final;
     void textDidChangeInTextField(WebCore::Element*) final;
@@ -113,11 +113,11 @@ private:
     void getGuessesForWord(const WTF::String& word, const WTF::String& context, const WebCore::VisibleSelection& currentSelection, WTF::Vector<WTF::String>& guesses) final;
 
     void willSetInputMethodState() final;
-    void setInputMethodState(bool) final;
+    void setInputMethodState(WebCore::Element*) final;
     void requestCheckingOfString(WebCore::TextCheckingRequest&, const WebCore::VisibleSelection&) final { }
-    bool performTwoStepDrop(WebCore::DocumentFragment&, WebCore::Range&, bool) final { return false; }
+    bool performTwoStepDrop(WebCore::DocumentFragment&, const WebCore::SimpleRange&, bool) final { return false; }
 
-    WebCore::DOMPasteAccessResponse requestDOMPasteAccess(const String&) final { return WebCore::DOMPasteAccessResponse::DeniedForGesture; }
+    WebCore::DOMPasteAccessResponse requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, const String&) final { return WebCore::DOMPasteAccessResponse::DeniedForGesture; }
 
     WebCore::TextCheckerClient* textChecker() final { return this; }
 

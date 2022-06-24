@@ -23,8 +23,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
 #import <JavaScriptCore/JavaScriptCore.h>
 #import <wtf/RetainPtr.h>
 
@@ -45,7 +43,7 @@ using TextCheckingResultsDictionary = NSDictionary<NSString *, NSArray<LayoutTes
 + (instancetype)checker;
 + (void)uninstallAndReset;
 
-- (void)setResultsFromJSObject:(JSObjectRef)resultsObject inContext:(JSContextRef)context;
+- (void)setResultsFromJSValue:(JSValueRef)results inContext:(JSContextRef)context;
 @property (nonatomic, copy) TextCheckingResultsDictionary *results;
 @property (nonatomic) BOOL spellCheckerLoggingEnabled;
 @end

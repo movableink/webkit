@@ -101,8 +101,8 @@ inline std::pair<unsigned, unsigned> BloomFilter<keyBits>::keysFromHash(const st
     // We could use larger k value than 2 for long hashes.
     static_assert(hashSize >= 2 * sizeof(unsigned), "Hash array too short");
     return {
-        *reinterpret_cast<const unsigned*>(hash.data()),
-        *reinterpret_cast<const unsigned*>(hash.data() + sizeof(unsigned))
+        *reinterpret_cast_ptr<const unsigned*>(hash.data()),
+        *reinterpret_cast_ptr<const unsigned*>(hash.data() + sizeof(unsigned))
     };
 }
 
@@ -182,7 +182,7 @@ public:
     bool mayContain(const AtomString& string) const { return mayContain(string.impl()->existingHash()); }
     bool mayContain(const String& string) const { return mayContain(string.impl()->hash()); }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     // Slow.
     bool likelyEmpty() const;
     bool isClear() const;
@@ -236,7 +236,7 @@ inline void CountingBloomFilter<keyBits>::clear()
     m_buckets.fill(0);
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 template <unsigned keyBits>
 bool CountingBloomFilter<keyBits>::likelyEmpty() const
 {
@@ -256,9 +256,9 @@ bool CountingBloomFilter<keyBits>::isClear() const
     }
     return true;
 }
-#endif
+#endif // ASSERT_ENABLED
 
-}
+} // namespace WTF
 
 using WTF::BloomFilter;
 using WTF::CountingBloomFilter;

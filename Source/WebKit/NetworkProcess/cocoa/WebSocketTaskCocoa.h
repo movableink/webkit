@@ -27,26 +27,32 @@
 
 #if HAVE(NSURLSESSION_WEBSOCKET)
 
+#include "DataReference.h"
+#include "WebPageProxyIdentifier.h"
+#include <WebCore/SecurityOriginData.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/WeakPtr.h>
 
 OBJC_CLASS NSURLSessionWebSocketTask;
 
-namespace IPC {
-class DataReference;
+namespace WebCore {
+class ResourceRequest;
+struct ClientOrigin;
 }
 
 namespace WebKit {
 class NetworkSession;
+class NetworkSessionCocoa;
 class NetworkSocketChannel;
+struct SessionSet;
 
 class WebSocketTask : public CanMakeWeakPtr<WebSocketTask> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WebSocketTask(NetworkSocketChannel&, RetainPtr<NSURLSessionWebSocketTask>&&);
+    WebSocketTask(NetworkSocketChannel&, WebPageProxyIdentifier, WeakPtr<SessionSet>&&, const WebCore::ResourceRequest&, const WebCore::ClientOrigin&, RetainPtr<NSURLSessionWebSocketTask>&&);
     ~WebSocketTask();
 
-    void sendString(const String&, CompletionHandler<void()>&&);
+    void sendString(const IPC::DataReference&, CompletionHandler<void()>&&);
     void sendData(const IPC::DataReference&, CompletionHandler<void()>&&);
     void close(int32_t code, const String& reason);
 
@@ -59,12 +65,24 @@ public:
     typedef uint64_t TaskIdentifier;
     TaskIdentifier identifier() const;
 
+    NetworkSessionCocoa* networkSession();
+    SessionSet* sessionSet() { return m_sessionSet.get(); }
+
+    WebPageProxyIdentifier pageID() const { return m_pageID; }
+    String partition() const { return m_partition; }
+    const WebCore::SecurityOriginData& topOrigin() const { return m_topOrigin; }
+
 private:
     void readNextMessage();
 
     NetworkSocketChannel& m_channel;
     RetainPtr<NSURLSessionWebSocketTask> m_task;
     bool m_receivedDidClose { false };
+    bool m_receivedDidConnect { false };
+    WebPageProxyIdentifier m_pageID;
+    WeakPtr<SessionSet> m_sessionSet;
+    String m_partition;
+    WebCore::SecurityOriginData m_topOrigin;
 };
 
 } // namespace WebKit

@@ -209,29 +209,29 @@ Version: 1.0
         --table-rule-color: hsl(0, 0%, 87.8%);
         --figure-mattewhite-background-color: hsl(0, 0%, 0%);
 
-        --syntax-color-keyword: hsl(299.2, 58.7%, 51.6%);
-        --syntax-color-keyword-operator: hsl(6.8, 69.4%, 57.6%);
-        --syntax-color-builtin: hsl(279.2, 84.3%, 57.6%);
-        --syntax-color-keyword-type: hsl(28.1, 72.2%, 46.5%);
+        --syntax-color-keyword: hsl(299.17, 70.59%, 80%);
+        --syntax-color-keyword-operator: hsl(299.17, 70.59%, 80%);
+        --syntax-color-builtin: hsl(299.17, 70.59%, 80%);
+        --syntax-color-keyword-type: hsl(299.17, 70.59%, 80%);
         --syntax-color-preprocessor: hsl(43.9, 51.4%, 58.8%);
-        --syntax-color-comment: hsl(0, 0%, 51%);
-        --syntax-color-comment-doc: hsl(186.3, 8.3%, 55.1%);
-        --syntax-color-identifier: hsl(210.2, 70.7%, 46.9%);
-        --syntax-color-string: hsl(119.2, 34.3%, 57.6%);
+        --syntax-color-comment: hsl(118.95, 39.86%, 71.96%);
+        --syntax-color-comment-doc: hsl(118.95, 39.86%, 71.96%);
+        --syntax-color-identifier: hsl(240, 1.3%, 84.5%);
+        --syntax-color-string: hsl(28.3, 84.13%, 62.94%);
         --syntax-color-escaped: hsl(0, 0%, 44%);
-        --syntax-color-number: hsl(200, 100%, 40%);
-        --syntax-color-attribute: hsl(43.9, 51.4%, 58.8%);
+        --syntax-color-number: hsl(299.17, 70.59%, 80%);
+        --syntax-color-attribute: hsl(27.06, 100%, 80%);
         --syntax-color-attribute-value: hsl(28.1, 72.2%, 46.5%);
         --syntax-color-operator: hsl(180, 6.9%, 60.4%);
         --syntax-color-whitespace-background-color: hsl(0, 0%, 20%);
         --syntax-color-doctype: hsl(0, 0%, 42%);
         --syntax-color-error-border: hsl(0, 100%, 20%);
         --syntax-color-property: hsl(299.2, 58.7%, 51.6%);
-        --syntax-color-xml-comment: hsl(119.2, 34.3%, 57.6%);
+        --syntax-color-xml-comment: hsl(118.95, 39.86%, 71.96%);
         --syntax-color-xml-meta: hsl(180, 50%, 40%);
-        --syntax-color-css-property: hsl(309.6, 85.8%, 35.9%);
+        --syntax-color-css-property: hsl(299.17, 70.59%, 80%);
         --syntax-color-css-selector: hsl(240, 1.3%, 84.5%);
-        --syntax-color-css-number: hsl(200, 100%, 40%);
+        --syntax-color-css-number: hsl(275.53, 100%, 85.1%)
 
         --code-selection-background-color: hsl(214.2, 42.9%, 32.9%);
     }
@@ -1389,6 +1389,11 @@ article::after {
     display: table;
 }
 
+main h1 {
+    text-align: left;
+}
+
+main h1,
 article h1,
 article h1 a {
     margin: 0 auto 3rem;
@@ -1598,6 +1603,27 @@ article .foreword {
     font-style: italic;
 }
 
+article .meta {
+    clear: both;
+}
+
+article .meta .written {
+    margin-bottom: 1em;
+}
+
+article .meta .written,
+article .meta .updated {
+    text-align: right;
+    font-size: 1.2rem;
+    font-style: italic;
+    text-transform: uppercase;
+}
+
+article .meta .icon {
+    float: left; 
+    margin-right: 1em;
+}
+
 article .two-columns {
     columns: 2;
     column-gap: 6rem;
@@ -1626,7 +1652,8 @@ article .byline {
     box-sizing: border-box;
 }
 
-article .bodycopy {
+article .bodycopy,
+article .meta {
     width: 66%;
     margin: 0 auto;
     position: relative;
@@ -1721,6 +1748,58 @@ article .mattewhite {
     padding-bottom: 3rem;
 }
 
+.image {
+    padding: var(--image-padding) var(--image-padding) 0;
+    --image-padding: 0.5em;
+}
+
+p .image,
+li .image {
+    --image-padding: 0;
+}
+
+.image.block {
+    display: block;
+}
+
+.image img {
+    border-color: hsl(0, 0%, 90.6%);
+    border-color: var(--article-border-color);
+    border-style: solid;
+    border-width: 0px;
+}
+
+.widescreen .image {
+    display: inline-block;
+}
+
+.image.slice-top > picture > img {
+    border-top-width: 1px;
+}
+
+.image.slice-right > picture > img {
+    border-right-width: 1px;
+}
+
+.image.slice-bottom > picture > img {
+    border-bottom-width: 1px;
+}
+
+.image.slice-left > picture > img {
+    border-left-width: 1px;
+}
+
+.flex {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 1em;
+}
+
+.flex.center {
+    justify-content: center;
+}
+
 article .mattewhite:not(.widescreen) {
     border: 1px solid hsl(0, 0%, 90.6%);
     border-color: var(--article-border-color);
@@ -1752,6 +1831,7 @@ figure.widescreen {
     width: 100vw;
     left: 50%;
     transform: translate(-50%);
+    clear: both;
 }
 
 figure.widescreen img,
@@ -1782,6 +1862,16 @@ figure.table {
     padding: 3rem;
     margin-left: -3rem;
 }
+
+article picture {
+    max-width: 100%;
+}
+
+article picture > img {
+    max-width: 100%;
+    max-height: 100%;
+}
+
 
 article video.alignleft,
 article video.alignright {
@@ -1850,6 +1940,21 @@ article.page h1 {
 
 .page .bodycopy h1 {
     width: 100%;
+}
+
+/** Web Inspector Pages **/
+.single-web_inspector_page .landing-link {
+    display: block;
+    text-align: left;
+    font-size: 1.3rem;
+    text-transform: uppercase;
+    color: var(--link-color);
+    color: hsl(200, 100%, 40%);
+    margin-bottom: 0;
+}
+
+.single-web_inspector_page .landing-link:hover {
+    text-decoration: underline;
 }
 
 /** Load Effects **/
@@ -1976,6 +2081,8 @@ article .table-of-contents label {
     padding: 1rem 0 1rem 5.5rem;
     color: hsl(0, 0%, 100%);
     color: var(--inverse-text-color);
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .hero .logo {
@@ -2000,6 +2107,8 @@ article .table-of-contents label {
 
 header nav {
     text-align: right;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 /* Hide menu toggle checkboxes */
@@ -2321,6 +2430,7 @@ header .menu-item { /* add bottom dimension to main menu items */
         margin-left: -11px;
     }
 
+    header .menu > .menu-item:hover > .sub-menu,
     header .menu > .menu-item > .menu-toggle:checked ~ .sub-menu {
         position: relative;
         top: 1.5rem;
@@ -2511,7 +2621,6 @@ header .menu-item { /* add bottom dimension to main menu items */
 }
 
 @media only screen and (max-width: 415px) {
-
     .nextrouter-copy {
         font-size: 1.7rem;
         letter-spacing: -0.016rem;
@@ -2617,7 +2726,7 @@ header .menu-item { /* add bottom dimension to main menu items */
 
 @media(prefers-color-scheme:dark) {
     article .invert-brightness,
-    figure img {
+    figure > img {
         filter: url(#invertLightness);
     }
 
@@ -2636,6 +2745,10 @@ header .menu-item { /* add bottom dimension to main menu items */
     .nextrouter .link,
     a.readmore {
         background-image: url('images/chevron-dark.svg');
+    }
+
+    .table-of-contents label:after {
+        filter: invert(100%);
     }
 }
 

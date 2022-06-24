@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2012 The WebRTC project authors. All Rights Reserved.
+ *  Copyright (c) 2018 The WebRTC project authors. All Rights Reserved.
  *
  *  Use of this source code is governed by a BSD-style license
  *  that can be found in the LICENSE file in the root of the source
@@ -19,6 +19,8 @@ using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 using ::testing::IsEmpty;
 
+constexpr uint8_t kDeprecatedFlags = 0x30;
+
 // TODO(danilchap): Add fuzzer to test for various invalid inputs.
 
 TEST(RtpGenericFrameDescriptorExtensionTest,
@@ -27,12 +29,11 @@ TEST(RtpGenericFrameDescriptorExtensionTest,
   constexpr uint8_t kRaw[] = {0x80 | kTemporalLayer, 0x49, 0x12, 0x34};
   RtpGenericFrameDescriptor descriptor;
 
-  ASSERT_TRUE(RtpGenericFrameDescriptorExtension::Parse(kRaw, &descriptor));
+  ASSERT_TRUE(RtpGenericFrameDescriptorExtension00::Parse(kRaw, &descriptor));
 
   EXPECT_TRUE(descriptor.FirstPacketInSubFrame());
   EXPECT_FALSE(descriptor.LastPacketInSubFrame());
-  EXPECT_FALSE(descriptor.FirstSubFrameInFrame());
-  EXPECT_FALSE(descriptor.LastSubFrameInFrame());
+
   EXPECT_THAT(descriptor.FrameDependenciesDiffs(), IsEmpty());
   EXPECT_EQ(descriptor.TemporalLayer(), kTemporalLayer);
   EXPECT_EQ(descriptor.SpatialLayersBitmask(), 0x49);
@@ -42,7 +43,7 @@ TEST(RtpGenericFrameDescriptorExtensionTest,
 TEST(RtpGenericFrameDescriptorExtensionTest,
      WriteFirstPacketOfIndependenSubFrame) {
   const int kTemporalLayer = 5;
-  constexpr uint8_t kRaw[] = {0x80 | kTemporalLayer, 0x49, 0x12, 0x34};
+  uint8_t kRaw[] = {0x80 | kTemporalLayer | kDeprecatedFlags, 0x49, 0x12, 0x34};
   RtpGenericFrameDescriptor descriptor;
 
   descriptor.SetFirstPacketInSubFrame(true);
@@ -50,10 +51,11 @@ TEST(RtpGenericFrameDescriptorExtensionTest,
   descriptor.SetSpatialLayersBitmask(0x49);
   descriptor.SetFrameId(0x3412);
 
-  ASSERT_EQ(RtpGenericFrameDescriptorExtension::ValueSize(descriptor),
+  ASSERT_EQ(RtpGenericFrameDescriptorExtension00::ValueSize(descriptor),
             sizeof(kRaw));
   uint8_t buffer[sizeof(kRaw)];
-  EXPECT_TRUE(RtpGenericFrameDescriptorExtension::Write(buffer, descriptor));
+  EXPECT_TRUE(RtpGenericFrameDescriptorExtension00::Write(buffer, descriptor));
+
   EXPECT_THAT(buffer, ElementsAreArray(kRaw));
 }
 
@@ -61,70 +63,22 @@ TEST(RtpGenericFrameDescriptorExtensionTest, ParseLastPacketOfSubFrame) {
   constexpr uint8_t kRaw[] = {0x40};
   RtpGenericFrameDescriptor descriptor;
 
-  ASSERT_TRUE(RtpGenericFrameDescriptorExtension::Parse(kRaw, &descriptor));
+  ASSERT_TRUE(RtpGenericFrameDescriptorExtension00::Parse(kRaw, &descriptor));
 
   EXPECT_FALSE(descriptor.FirstPacketInSubFrame());
   EXPECT_TRUE(descriptor.LastPacketInSubFrame());
-  EXPECT_FALSE(descriptor.FirstSubFrameInFrame());
-  EXPECT_FALSE(descriptor.LastSubFrameInFrame());
 }
 
 TEST(RtpGenericFrameDescriptorExtensionTest, WriteLastPacketOfSubFrame) {
-  constexpr uint8_t kRaw[] = {0x40};
+  uint8_t kRaw[] = {0x40 | kDeprecatedFlags};
+
   RtpGenericFrameDescriptor descriptor;
   descriptor.SetLastPacketInSubFrame(true);
 
-  ASSERT_EQ(RtpGenericFrameDescriptorExtension::ValueSize(descriptor),
+  ASSERT_EQ(RtpGenericFrameDescriptorExtension00::ValueSize(descriptor),
             sizeof(kRaw));
   uint8_t buffer[sizeof(kRaw)];
-  EXPECT_TRUE(RtpGenericFrameDescriptorExtension::Write(buffer, descriptor));
-  EXPECT_THAT(buffer, ElementsAreArray(kRaw));
-}
-TEST(RtpGenericFrameDescriptorExtensionTest, ParseFirstSubFrameInFrame) {
-  constexpr uint8_t kRaw[] = {0x20};
-  RtpGenericFrameDescriptor descriptor;
-
-  ASSERT_TRUE(RtpGenericFrameDescriptorExtension::Parse(kRaw, &descriptor));
-
-  EXPECT_FALSE(descriptor.FirstPacketInSubFrame());
-  EXPECT_FALSE(descriptor.LastPacketInSubFrame());
-  EXPECT_TRUE(descriptor.FirstSubFrameInFrame());
-  EXPECT_FALSE(descriptor.LastSubFrameInFrame());
-}
-
-TEST(RtpGenericFrameDescriptorExtensionTest, WriteFirstSubFrameInFrame) {
-  constexpr uint8_t kRaw[] = {0x20};
-  RtpGenericFrameDescriptor descriptor;
-  descriptor.SetFirstSubFrameInFrame(true);
-
-  ASSERT_EQ(RtpGenericFrameDescriptorExtension::ValueSize(descriptor),
-            sizeof(kRaw));
-  uint8_t buffer[sizeof(kRaw)];
-  EXPECT_TRUE(RtpGenericFrameDescriptorExtension::Write(buffer, descriptor));
-  EXPECT_THAT(buffer, ElementsAreArray(kRaw));
-}
-
-TEST(RtpGenericFrameDescriptorExtensionTest, ParseLastSubFrameInFrame) {
-  constexpr uint8_t kRaw[] = {0x10};
-  RtpGenericFrameDescriptor descriptor;
-
-  ASSERT_TRUE(RtpGenericFrameDescriptorExtension::Parse(kRaw, &descriptor));
-
-  EXPECT_FALSE(descriptor.FirstPacketInSubFrame());
-  EXPECT_FALSE(descriptor.LastPacketInSubFrame());
-  EXPECT_FALSE(descriptor.FirstSubFrameInFrame());
-  EXPECT_TRUE(descriptor.LastSubFrameInFrame());
-}
-
-TEST(RtpGenericFrameDescriptorExtensionTest, WriteLastSubFrameInFrame) {
-  constexpr uint8_t kRaw[] = {0x10};
-  RtpGenericFrameDescriptor descriptor;
-  descriptor.SetLastSubFrameInFrame(true);
-
-  ASSERT_EQ(RtpGenericFrameDescriptorExtension::ValueSize(descriptor),
-            sizeof(kRaw));
-  uint8_t buffer[sizeof(kRaw)];
-  EXPECT_TRUE(RtpGenericFrameDescriptorExtension::Write(buffer, descriptor));
+  EXPECT_TRUE(RtpGenericFrameDescriptorExtension00::Write(buffer, descriptor));
   EXPECT_THAT(buffer, ElementsAreArray(kRaw));
 }
 
@@ -133,80 +87,80 @@ TEST(RtpGenericFrameDescriptorExtensionTest, ParseMinShortFrameDependencies) {
   constexpr uint8_t kRaw[] = {0x88, 0x01, 0x00, 0x00, 0x04};
   RtpGenericFrameDescriptor descriptor;
 
-  ASSERT_TRUE(RtpGenericFrameDescriptorExtension::Parse(kRaw, &descriptor));
+  ASSERT_TRUE(RtpGenericFrameDescriptorExtension00::Parse(kRaw, &descriptor));
   ASSERT_TRUE(descriptor.FirstPacketInSubFrame());
   EXPECT_THAT(descriptor.FrameDependenciesDiffs(), ElementsAre(kDiff));
 }
 
 TEST(RtpGenericFrameDescriptorExtensionTest, WriteMinShortFrameDependencies) {
   constexpr uint16_t kDiff = 1;
-  constexpr uint8_t kRaw[] = {0x88, 0x01, 0x00, 0x00, 0x04};
+  uint8_t kRaw[] = {0x88 | kDeprecatedFlags, 0x01, 0x00, 0x00, 0x04};
   RtpGenericFrameDescriptor descriptor;
   descriptor.SetFirstPacketInSubFrame(true);
   descriptor.AddFrameDependencyDiff(kDiff);
 
-  ASSERT_EQ(RtpGenericFrameDescriptorExtension::ValueSize(descriptor),
+  ASSERT_EQ(RtpGenericFrameDescriptorExtension00::ValueSize(descriptor),
             sizeof(kRaw));
   uint8_t buffer[sizeof(kRaw)];
-  EXPECT_TRUE(RtpGenericFrameDescriptorExtension::Write(buffer, descriptor));
+  EXPECT_TRUE(RtpGenericFrameDescriptorExtension00::Write(buffer, descriptor));
   EXPECT_THAT(buffer, ElementsAreArray(kRaw));
 }
 
 TEST(RtpGenericFrameDescriptorExtensionTest, ParseMaxShortFrameDependencies) {
   constexpr uint16_t kDiff = 0x3f;
-  constexpr uint8_t kRaw[] = {0x88, 0x01, 0x00, 0x00, 0xfc};
+  constexpr uint8_t kRaw[] = {0xb8, 0x01, 0x00, 0x00, 0xfc};
   RtpGenericFrameDescriptor descriptor;
 
-  ASSERT_TRUE(RtpGenericFrameDescriptorExtension::Parse(kRaw, &descriptor));
+  ASSERT_TRUE(RtpGenericFrameDescriptorExtension00::Parse(kRaw, &descriptor));
   ASSERT_TRUE(descriptor.FirstPacketInSubFrame());
   EXPECT_THAT(descriptor.FrameDependenciesDiffs(), ElementsAre(kDiff));
 }
 
 TEST(RtpGenericFrameDescriptorExtensionTest, WriteMaxShortFrameDependencies) {
   constexpr uint16_t kDiff = 0x3f;
-  constexpr uint8_t kRaw[] = {0x88, 0x01, 0x00, 0x00, 0xfc};
+  uint8_t kRaw[] = {0x88 | kDeprecatedFlags, 0x01, 0x00, 0x00, 0xfc};
   RtpGenericFrameDescriptor descriptor;
   descriptor.SetFirstPacketInSubFrame(true);
   descriptor.AddFrameDependencyDiff(kDiff);
 
-  ASSERT_EQ(RtpGenericFrameDescriptorExtension::ValueSize(descriptor),
+  ASSERT_EQ(RtpGenericFrameDescriptorExtension00::ValueSize(descriptor),
             sizeof(kRaw));
   uint8_t buffer[sizeof(kRaw)];
-  EXPECT_TRUE(RtpGenericFrameDescriptorExtension::Write(buffer, descriptor));
+  EXPECT_TRUE(RtpGenericFrameDescriptorExtension00::Write(buffer, descriptor));
   EXPECT_THAT(buffer, ElementsAreArray(kRaw));
 }
 
 TEST(RtpGenericFrameDescriptorExtensionTest, ParseMinLongFrameDependencies) {
   constexpr uint16_t kDiff = 0x40;
-  constexpr uint8_t kRaw[] = {0x88, 0x01, 0x00, 0x00, 0x02, 0x01};
+  constexpr uint8_t kRaw[] = {0xb8, 0x01, 0x00, 0x00, 0x02, 0x01};
   RtpGenericFrameDescriptor descriptor;
 
-  ASSERT_TRUE(RtpGenericFrameDescriptorExtension::Parse(kRaw, &descriptor));
+  ASSERT_TRUE(RtpGenericFrameDescriptorExtension00::Parse(kRaw, &descriptor));
   ASSERT_TRUE(descriptor.FirstPacketInSubFrame());
   EXPECT_THAT(descriptor.FrameDependenciesDiffs(), ElementsAre(kDiff));
 }
 
 TEST(RtpGenericFrameDescriptorExtensionTest, WriteMinLongFrameDependencies) {
   constexpr uint16_t kDiff = 0x40;
-  constexpr uint8_t kRaw[] = {0x88, 0x01, 0x00, 0x00, 0x02, 0x01};
+  uint8_t kRaw[] = {0x88 | kDeprecatedFlags, 0x01, 0x00, 0x00, 0x02, 0x01};
   RtpGenericFrameDescriptor descriptor;
   descriptor.SetFirstPacketInSubFrame(true);
   descriptor.AddFrameDependencyDiff(kDiff);
 
-  ASSERT_EQ(RtpGenericFrameDescriptorExtension::ValueSize(descriptor),
+  ASSERT_EQ(RtpGenericFrameDescriptorExtension00::ValueSize(descriptor),
             sizeof(kRaw));
   uint8_t buffer[sizeof(kRaw)];
-  EXPECT_TRUE(RtpGenericFrameDescriptorExtension::Write(buffer, descriptor));
+  EXPECT_TRUE(RtpGenericFrameDescriptorExtension00::Write(buffer, descriptor));
   EXPECT_THAT(buffer, ElementsAreArray(kRaw));
 }
 
 TEST(RtpGenericFrameDescriptorExtensionTest,
      ParseLongFrameDependenciesAsBigEndian) {
   constexpr uint16_t kDiff = 0x7654 >> 2;
-  constexpr uint8_t kRaw[] = {0x88, 0x01, 0x00, 0x00, 0x54 | 0x02, 0x76};
+  constexpr uint8_t kRaw[] = {0xb8, 0x01, 0x00, 0x00, 0x54 | 0x02, 0x76};
   RtpGenericFrameDescriptor descriptor;
 
-  ASSERT_TRUE(RtpGenericFrameDescriptorExtension::Parse(kRaw, &descriptor));
+  ASSERT_TRUE(RtpGenericFrameDescriptorExtension00::Parse(kRaw, &descriptor));
   ASSERT_TRUE(descriptor.FirstPacketInSubFrame());
   EXPECT_THAT(descriptor.FrameDependenciesDiffs(), ElementsAre(kDiff));
 }
@@ -214,39 +168,40 @@ TEST(RtpGenericFrameDescriptorExtensionTest,
 TEST(RtpGenericFrameDescriptorExtensionTest,
      WriteLongFrameDependenciesAsBigEndian) {
   constexpr uint16_t kDiff = 0x7654 >> 2;
-  constexpr uint8_t kRaw[] = {0x88, 0x01, 0x00, 0x00, 0x54 | 0x02, 0x76};
+  uint8_t kRaw[] = {
+      0x88 | kDeprecatedFlags, 0x01, 0x00, 0x00, 0x54 | 0x02, 0x76};
   RtpGenericFrameDescriptor descriptor;
   descriptor.SetFirstPacketInSubFrame(true);
   descriptor.AddFrameDependencyDiff(kDiff);
 
-  ASSERT_EQ(RtpGenericFrameDescriptorExtension::ValueSize(descriptor),
+  ASSERT_EQ(RtpGenericFrameDescriptorExtension00::ValueSize(descriptor),
             sizeof(kRaw));
   uint8_t buffer[sizeof(kRaw)];
-  EXPECT_TRUE(RtpGenericFrameDescriptorExtension::Write(buffer, descriptor));
+  EXPECT_TRUE(RtpGenericFrameDescriptorExtension00::Write(buffer, descriptor));
   EXPECT_THAT(buffer, ElementsAreArray(kRaw));
 }
 
 TEST(RtpGenericFrameDescriptorExtensionTest, ParseMaxLongFrameDependencies) {
   constexpr uint16_t kDiff = 0x3fff;
-  constexpr uint8_t kRaw[] = {0x88, 0x01, 0x00, 0x00, 0xfe, 0xff};
+  constexpr uint8_t kRaw[] = {0xb8, 0x01, 0x00, 0x00, 0xfe, 0xff};
   RtpGenericFrameDescriptor descriptor;
 
-  ASSERT_TRUE(RtpGenericFrameDescriptorExtension::Parse(kRaw, &descriptor));
+  ASSERT_TRUE(RtpGenericFrameDescriptorExtension00::Parse(kRaw, &descriptor));
   ASSERT_TRUE(descriptor.FirstPacketInSubFrame());
   EXPECT_THAT(descriptor.FrameDependenciesDiffs(), ElementsAre(kDiff));
 }
 
 TEST(RtpGenericFrameDescriptorExtensionTest, WriteMaxLongFrameDependencies) {
   constexpr uint16_t kDiff = 0x3fff;
-  constexpr uint8_t kRaw[] = {0x88, 0x01, 0x00, 0x00, 0xfe, 0xff};
+  uint8_t kRaw[] = {0x88 | kDeprecatedFlags, 0x01, 0x00, 0x00, 0xfe, 0xff};
   RtpGenericFrameDescriptor descriptor;
   descriptor.SetFirstPacketInSubFrame(true);
   descriptor.AddFrameDependencyDiff(kDiff);
 
-  ASSERT_EQ(RtpGenericFrameDescriptorExtension::ValueSize(descriptor),
+  ASSERT_EQ(RtpGenericFrameDescriptorExtension00::ValueSize(descriptor),
             sizeof(kRaw));
   uint8_t buffer[sizeof(kRaw)];
-  EXPECT_TRUE(RtpGenericFrameDescriptorExtension::Write(buffer, descriptor));
+  EXPECT_TRUE(RtpGenericFrameDescriptorExtension00::Write(buffer, descriptor));
   EXPECT_THAT(buffer, ElementsAreArray(kRaw));
 }
 
@@ -254,10 +209,10 @@ TEST(RtpGenericFrameDescriptorExtensionTest, ParseTwoFrameDependencies) {
   constexpr uint16_t kDiff1 = 9;
   constexpr uint16_t kDiff2 = 15;
   constexpr uint8_t kRaw[] = {
-      0x88, 0x01, 0x00, 0x00, (kDiff1 << 2) | 0x01, kDiff2 << 2};
+      0xb8, 0x01, 0x00, 0x00, (kDiff1 << 2) | 0x01, kDiff2 << 2};
   RtpGenericFrameDescriptor descriptor;
 
-  ASSERT_TRUE(RtpGenericFrameDescriptorExtension::Parse(kRaw, &descriptor));
+  ASSERT_TRUE(RtpGenericFrameDescriptorExtension00::Parse(kRaw, &descriptor));
   ASSERT_TRUE(descriptor.FirstPacketInSubFrame());
   EXPECT_THAT(descriptor.FrameDependenciesDiffs(), ElementsAre(kDiff1, kDiff2));
 }
@@ -265,17 +220,17 @@ TEST(RtpGenericFrameDescriptorExtensionTest, ParseTwoFrameDependencies) {
 TEST(RtpGenericFrameDescriptorExtensionTest, WriteTwoFrameDependencies) {
   constexpr uint16_t kDiff1 = 9;
   constexpr uint16_t kDiff2 = 15;
-  constexpr uint8_t kRaw[] = {
-      0x88, 0x01, 0x00, 0x00, (kDiff1 << 2) | 0x01, kDiff2 << 2};
+  uint8_t kRaw[] = {0x88 | kDeprecatedFlags, 0x01,       0x00, 0x00,
+                    (kDiff1 << 2) | 0x01,    kDiff2 << 2};
   RtpGenericFrameDescriptor descriptor;
   descriptor.SetFirstPacketInSubFrame(true);
   descriptor.AddFrameDependencyDiff(kDiff1);
   descriptor.AddFrameDependencyDiff(kDiff2);
 
-  ASSERT_EQ(RtpGenericFrameDescriptorExtension::ValueSize(descriptor),
+  ASSERT_EQ(RtpGenericFrameDescriptorExtension00::ValueSize(descriptor),
             sizeof(kRaw));
   uint8_t buffer[sizeof(kRaw)];
-  EXPECT_TRUE(RtpGenericFrameDescriptorExtension::Write(buffer, descriptor));
+  EXPECT_TRUE(RtpGenericFrameDescriptorExtension00::Write(buffer, descriptor));
   EXPECT_THAT(buffer, ElementsAreArray(kRaw));
 }
 
@@ -283,10 +238,10 @@ TEST(RtpGenericFrameDescriptorExtensionTest,
      ParseResolutionOnIndependentFrame) {
   constexpr int kWidth = 0x2468;
   constexpr int kHeight = 0x6543;
-  constexpr uint8_t kRaw[] = {0x80, 0x01, 0x00, 0x00, 0x24, 0x68, 0x65, 0x43};
+  constexpr uint8_t kRaw[] = {0xb0, 0x01, 0x00, 0x00, 0x24, 0x68, 0x65, 0x43};
   RtpGenericFrameDescriptor descriptor;
 
-  ASSERT_TRUE(RtpGenericFrameDescriptorExtension::Parse(kRaw, &descriptor));
+  ASSERT_TRUE(RtpGenericFrameDescriptorExtension00::Parse(kRaw, &descriptor));
   EXPECT_EQ(descriptor.Width(), kWidth);
   EXPECT_EQ(descriptor.Height(), kHeight);
 }
@@ -295,15 +250,16 @@ TEST(RtpGenericFrameDescriptorExtensionTest,
      WriteResolutionOnIndependentFrame) {
   constexpr int kWidth = 0x2468;
   constexpr int kHeight = 0x6543;
-  constexpr uint8_t kRaw[] = {0x80, 0x01, 0x00, 0x00, 0x24, 0x68, 0x65, 0x43};
+  uint8_t kRaw[] = {
+      0x80 | kDeprecatedFlags, 0x01, 0x00, 0x00, 0x24, 0x68, 0x65, 0x43};
   RtpGenericFrameDescriptor descriptor;
   descriptor.SetFirstPacketInSubFrame(true);
   descriptor.SetResolution(kWidth, kHeight);
 
-  ASSERT_EQ(RtpGenericFrameDescriptorExtension::ValueSize(descriptor),
+  ASSERT_EQ(RtpGenericFrameDescriptorExtension00::ValueSize(descriptor),
             sizeof(kRaw));
   uint8_t buffer[sizeof(kRaw)];
-  EXPECT_TRUE(RtpGenericFrameDescriptorExtension::Write(buffer, descriptor));
+  EXPECT_TRUE(RtpGenericFrameDescriptorExtension00::Write(buffer, descriptor));
   EXPECT_THAT(buffer, ElementsAreArray(kRaw));
 }
 }  // namespace

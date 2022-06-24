@@ -1,3 +1,0 @@
-
-FAIL strokeRect of Nx0 pixels draws a closed line with no caps Can't find variable: OffscreenCanvas
-

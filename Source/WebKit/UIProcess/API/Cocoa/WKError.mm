@@ -73,6 +73,24 @@ NSString *localizedDescriptionForErrorCode(WKErrorCode errorCode)
 
     case WKErrorAttributedStringContentLoadTimedOut:
         return WEB_UI_STRING("Timed out while loading attributed string content", "WKErrorAttributedStringContentLoadTimedOut description");
+
+    case WKErrorJavaScriptInvalidFrameTarget:
+        return WEB_UI_STRING("JavaScript execution targeted an invalid frame", "WKErrorJavaScriptInvalidFrameTarget description");
+
+    case WKErrorNavigationAppBoundDomain:
+        return WEB_UI_STRING("Attempted to navigate away from an app-bound domain or navigate after using restricted APIs", "WKErrorNavigationAppBoundDomain description");
+
+    case WKErrorJavaScriptAppBoundDomain:
+        return WEB_UI_STRING("JavaScript execution targeted a frame that is not in an app-bound domain", "WKErrorJavaScriptAppBoundDomain description");
+
+    case WKErrorDuplicateCredential:
+        return WEB_UI_STRING("This credential is already present", "WKErrorDuplicateCredential description");
+
+    case WKErrorMalformedCredential:
+        return WEB_UI_STRING("This credential is malformed", "WKErrorMalformedCredential description");
+            
+    case WKErrorCredentialNotFound:
+        return WEB_UI_STRING("Credential could not be found", "WKErrorCredentialNotFound description");
     }
 }
 

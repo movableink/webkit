@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGViewElement.h"
 
+#include "RenderElement.h"
 #include "RenderSVGResource.h"
 #include "SVGNames.h"
 #include "SVGSVGElement.h"
@@ -34,15 +35,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGViewElement);
 
 inline SVGViewElement::SVGViewElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
     , SVGFitToViewBox(this)
 {
     ASSERT(hasTagName(SVGNames::viewTag));
-    
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-        PropertyRegistry::registerProperty<SVGNames::viewTargetAttr, &SVGViewElement::m_viewTarget>();
-    });
 }
 
 Ref<SVGViewElement> SVGViewElement::create(const QualifiedName& tagName, Document& document)
@@ -52,13 +47,7 @@ Ref<SVGViewElement> SVGViewElement::create(const QualifiedName& tagName, Documen
 
 void SVGViewElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
-    if (name == SVGNames::viewTargetAttr) {
-        m_viewTarget->reset(value);
-        return;
-    }
-
     SVGElement::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
     SVGFitToViewBox::parseAttribute(name, value);
     SVGZoomAndPan::parseAttribute(name, value);
 }
@@ -80,7 +69,6 @@ void SVGViewElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
 }
 
 }

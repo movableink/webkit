@@ -158,7 +158,7 @@ bool eventIsOfGestureTypes(CGEventRef event, IOHIDEventType first, Types ... res
     int64_t value = CGEventGetIntegerValueField(rawEvent, field); \
     int64_t plainValue = CGEventGetIntegerValueField(rawPlainEvent, field); \
     if (value != plainValue) \
-        dict[@#field] = @(value); \
+        dict.get()[@#field] = @(value); \
 }();
 
 #define LOAD_DOUBLE_FIELD_FROM_EVENT(eventTypeFilter, field) \
@@ -169,7 +169,7 @@ bool eventIsOfGestureTypes(CGEventRef event, IOHIDEventType first, Types ... res
     if (!isnan(value)) { \
         double plainValue = CGEventGetDoubleValueField(rawPlainEvent, field); \
         if (fabs(value - plainValue) >= FLT_EPSILON) \
-            dict[@#field] = @(value); \
+            dict.get()[@#field] = @(value); \
     } \
 }();
 
@@ -195,38 +195,38 @@ bool eventIsOfGestureTypes(CGEventRef event, IOHIDEventType first, Types ... res
 
 + (NSDictionary *)dictionaryForEvent:(CGEventRef)rawEvent relativeToTime:(CGEventTimestamp)referenceTimestamp
 {
-    RetainPtr<CGEventRef> plainEvent = adoptCF(CGEventCreate(NULL));
+    auto plainEvent = adoptCF(CGEventCreate(NULL));
     CGEventRef rawPlainEvent = plainEvent.get();
 
-    NSMutableDictionary *dict = [[[NSMutableDictionary alloc] init] autorelease];
+    auto dict = adoptNS([[NSMutableDictionary alloc] init]);
 
     FOR_EACH_CGEVENT_INTEGER_FIELD(LOAD_INTEGER_FIELD_FROM_EVENT);
     FOR_EACH_CGEVENT_DOUBLE_FIELD(LOAD_DOUBLE_FIELD_FROM_EVENT);
 
     CGEventTimestamp timestamp = CGEventGetTimestamp(rawEvent);
-    dict[@"relativeTimeMS"] = @(std::max(static_cast<double>(timestamp - referenceTimestamp) / NSEC_PER_MSEC, 0.0));
+    dict.get()[@"relativeTimeMS"] = @(std::max(static_cast<double>(timestamp - referenceTimestamp) / NSEC_PER_MSEC, 0.0));
 
     CGSEventType eventType = (CGSEventType)CGEventGetIntegerValueField(rawEvent, kCGSEventTypeField);
     if (eventType == kCGSEventGesture || eventType == kCGSEventFluidTouchGesture || eventType == kCGSEventDockControl) {
         if (CGEventGetIntegerValueField(rawEvent, kCGEventGestureIsPreflight)) {
-            dict[@"kCGEventGestureIsPreflight"] = @YES;
-            dict[@"kCGEventGesturePreflightProgress"] = @(CGEventGetDoubleValueField(rawEvent, kCGEventGesturePreflightProgress));
+            dict.get()[@"kCGEventGestureIsPreflight"] = @YES;
+            dict.get()[@"kCGEventGesturePreflightProgress"] = @(CGEventGetDoubleValueField(rawEvent, kCGEventGesturePreflightProgress));
         }
     }
 
-    dict[@"windowLocation"] = NSStringFromPoint(NSPointFromCGPoint(CGEventGetWindowLocation(rawEvent)));
+    dict.get()[@"windowLocation"] = NSStringFromPoint(NSPointFromCGPoint(CGEventGetWindowLocation(rawEvent)));
 
     auto flags = static_cast<CGEventFlags>(CGEventGetFlags(rawEvent) & ~NX_NONCOALSESCEDMASK);
     auto plainFlags = static_cast<CGEventFlags>(CGEventGetFlags(rawPlainEvent) & ~NX_NONCOALSESCEDMASK);
     if (flags != plainFlags)
-        dict[@"flags"] = @(flags);
+        dict.get()[@"flags"] = @(flags);
 
-    return dict;
+    return dict.autorelease();
 }
 
 + (RetainPtr<CGEventRef>)createEventForDictionary:(NSDictionary *)dict inWindow:(NSWindow *)window relativeToTime:(CGEventTimestamp)referenceTimestamp
 {
-    RetainPtr<CGEventRef> event = adoptCF(CGEventCreate(NULL));
+    auto event = adoptCF(CGEventCreate(NULL));
     CGEventRef rawEvent = event.get();
 
     FOR_EACH_CGEVENT_INTEGER_FIELD(STORE_INTEGER_FIELD_TO_EVENT);
@@ -264,7 +264,7 @@ const float eventDispatchTimerRate = 1. / 120.;
 
 + (void)playStream:(NSArray<NSDictionary *> *)eventDicts window:(NSWindow *)window completionHandler:(void(^)())completionHandler
 {
-    RetainPtr<EventStreamPlayer> player = adoptNS([[EventStreamPlayer alloc] init]);
+    auto player = adoptNS([[EventStreamPlayer alloc] init]);
 
     player->_remainingEventDictionaries = adoptNS([eventDicts mutableCopy]);
     player->_window = window;
@@ -282,7 +282,7 @@ const float eventDispatchTimerRate = 1. / 120.;
     auto removeList = adoptNS([[NSMutableArray alloc] init]);
     NSEvent *nsEvent = nil;
     for (id eventDict in _remainingEventDictionaries.get()) {
-        RetainPtr<CGEventRef> event = [EventSerializer createEventForDictionary:eventDict inWindow:_window.get() relativeToTime:_startTime];
+        auto event = [EventSerializer createEventForDictionary:eventDict inWindow:_window.get() relativeToTime:_startTime];
         if (CGEventGetTimestamp(event.get()) < mach_absolute_time()) {
             nsEvent = [NSEvent eventWithCGEvent:event.get()];
             [NSApp postEvent:nsEvent atStart:NO];

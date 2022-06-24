@@ -23,9 +23,7 @@
 @synthesize encodeFinishMs = _encodeFinishMs;
 @synthesize frameType = _frameType;
 @synthesize rotation = _rotation;
-@synthesize completeFrame = _completeFrame;
 @synthesize qp = _qp;
 @synthesize contentType = _contentType;
-@synthesize spatialIndex = _spatialIndex;
 
 @end

@@ -34,6 +34,7 @@
 #include <limits>
 #include <string>
 #include <wtf/RefPtr.h>
+#include <wtf/RetainPtr.h>
 
 // Define strings from the HLSL effect that are referenced later
 #define HLSL_TECHNIQUE "InvertColor"
@@ -117,7 +118,7 @@ CAD3DRenderer::CAD3DRenderer()
 
 CComPtr<IDirect3DSwapChain9> CAD3DRenderer::swapChain(CWindow window, const CGSize& size)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
 
     bool useDefaultSwapChain = false;
 
@@ -142,7 +143,7 @@ CComPtr<IDirect3DSwapChain9> CAD3DRenderer::swapChain(CWindow window, const CGSi
     if (useDefaultSwapChain) {
         CComPtr<IDirect3DSwapChain9> defaultSwapChain;
         if (SUCCEEDED(m_d3dDevice->GetSwapChain(0, &defaultSwapChain))) {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
             // Since we just initialized or reset the device, its default swap chain should be
             // associated with and sized to match this window.
             D3DPRESENT_PARAMETERS parameters;
@@ -252,7 +253,7 @@ static bool hardwareCapabilitiesIndicateCoreAnimationSupport(const D3DCAPS9& cap
 
 bool CAD3DRenderer::initialize(CWindow window, const CGSize& size)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     if (!m_deviceThreadID)
         m_deviceThreadID = ::GetCurrentThreadId();
     // MSDN says that IDirect3D9::CreateDevice must "be called from the same thread that handles
@@ -370,14 +371,12 @@ static bool prepareDevice(IDirect3DDevice9* device, const CGRect& bounds, IDirec
 
 static CGRect updateBounds(CARenderUpdate* update)
 {
-    CGSRegionObj rgn = CARenderUpdateCopyRegion(update);
+    auto rgn = adoptCF(CARenderUpdateCopyRegion(update));
     if (!rgn)
         return CGRectZero;
 
     CGRect result;
-    CGError error = CGSGetRegionBounds(rgn, &result);
-    CGSReleaseRegion(rgn);
-
+    CGError error = CGSGetRegionBounds(rgn.get(), &result);
     return error == kCGErrorSuccess ? result : CGRectZero;
 }
 
@@ -386,7 +385,7 @@ CAD3DRenderer::RenderResult CAD3DRenderer::renderAndPresent(const CGRect& bounds
     ASSERT_ARG(swapChain, swapChain);
     ASSERT_ARG(context, context);
 
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
 
     CGRect unusedDirtyRect;
     RenderResult result = renderInternal(bounds, swapChain, postProcessingContext, context, unusedDirtyRect, nextRenderTime);
@@ -426,7 +425,7 @@ CAD3DRenderer::RenderResult CAD3DRenderer::renderToImage(const CGRect& bounds, I
     ASSERT_ARG(swapChain, swapChain);
     ASSERT_ARG(context, context);
 
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
 
     CGRect dirtyRect;
     RenderResult result = renderInternal(bounds, swapChain, postProcessingContext, context, dirtyRect, nextRenderTime);
@@ -593,7 +592,7 @@ bool CAD3DRenderer::resetD3DDevice(CWindow window, const CGSize& size)
     D3DPRESENT_PARAMETERS parameters = initialPresentationParameters(size);
     parameters.hDeviceWindow = window;
     if (m_usingDirect3D9Ex) {
-        CComQIPtr<IDirect3DDevice9Ex> d3d9Ex = m_d3dDevice;
+        CComQIPtr<IDirect3DDevice9Ex> d3d9Ex(m_d3dDevice);
         ASSERT(d3d9Ex);
         hr = d3d9Ex->ResetEx(&parameters, nullptr);
     } else

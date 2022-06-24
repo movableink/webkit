@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,56 +27,113 @@
 
 #if PLATFORM(COCOA)
 
-#include "GenericTaskQueue.h"
+#include "AudioHardwareListener.h"
+#include "AudioSession.h"
+#include "NowPlayingManager.h"
 #include "PlatformMediaSessionManager.h"
+#include "RemoteCommandListener.h"
+#include <wtf/RunLoop.h>
 
 namespace WebCore {
 
-class MediaSessionManagerCocoa : public PlatformMediaSessionManager {
+struct NowPlayingInfo;
+
+class MediaSessionManagerCocoa
+    : public PlatformMediaSessionManager
+    , private NowPlayingManager::Client
+    , private AudioHardwareListener::Client {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    virtual ~MediaSessionManagerCocoa() = default;
+    MediaSessionManagerCocoa();
     
-    void updateSessionState() override;
-    void beginInterruption(PlatformMediaSession::InterruptionType) override;
+    void updateSessionState() final;
+    void beginInterruption(PlatformMediaSession::InterruptionType) final;
 
     bool hasActiveNowPlayingSession() const final { return m_nowPlayingActive; }
     String lastUpdatedNowPlayingTitle() const final { return m_lastUpdatedNowPlayingTitle; }
     double lastUpdatedNowPlayingDuration() const final { return m_lastUpdatedNowPlayingDuration; }
     double lastUpdatedNowPlayingElapsedTime() const final { return m_lastUpdatedNowPlayingElapsedTime; }
-    uint64_t lastUpdatedNowPlayingInfoUniqueIdentifier() const final { return m_lastUpdatedNowPlayingInfoUniqueIdentifier; }
+    MediaUniqueIdentifier lastUpdatedNowPlayingInfoUniqueIdentifier() const final { return m_lastUpdatedNowPlayingInfoUniqueIdentifier; }
     bool registeredAsNowPlayingApplication() const final { return m_registeredAsNowPlayingApplication; }
+    bool haveEverRegisteredAsNowPlayingApplication() const final { return m_haveEverRegisteredAsNowPlayingApplication; }
+
     void prepareToSendUserMediaPermissionRequest() final;
 
+    static WEBCORE_EXPORT void clearNowPlayingInfo();
+    static WEBCORE_EXPORT void setNowPlayingInfo(bool setAsNowPlayingApplication, const NowPlayingInfo&);
+
+    static WEBCORE_EXPORT void updateMediaUsage(PlatformMediaSession&);
+
+    static void ensureCodecsRegistered();
+
+#if ENABLE(MEDIA_SOURCE) && HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
+    static WEBCORE_EXPORT void setMediaSourceInlinePaintingEnabled(bool);
+    static WEBCORE_EXPORT bool mediaSourceInlinePaintingEnabled();
+#endif
+
+#if HAVE(AVCONTENTKEYSPECIFIER)
+    static WEBCORE_EXPORT void setSampleBufferContentKeySessionSupportEnabled(bool);
+    static WEBCORE_EXPORT bool sampleBufferContentKeySessionSupportEnabled();
+#endif
+
 protected:
-    void scheduleUpdateNowPlayingInfo() override;
+    void scheduleSessionStatusUpdate() final;
     void updateNowPlayingInfo();
-    void removeSession(PlatformMediaSession&) override;
-    
+
+    void removeSession(PlatformMediaSession&) final;
+    void addSession(PlatformMediaSession&) final;
+    void setCurrentSession(PlatformMediaSession&) final;
+
     bool sessionWillBeginPlayback(PlatformMediaSession&) override;
-    void sessionWillEndPlayback(PlatformMediaSession&) override;
-    void sessionDidEndRemoteScrubbing(const PlatformMediaSession&) override;
-    void clientCharacteristicsChanged(PlatformMediaSession&) override;
-    void sessionCanProduceAudioChanged(PlatformMediaSession&) override;
+    void sessionWillEndPlayback(PlatformMediaSession&, DelayCallingUpdateNowPlaying) override;
+    void sessionDidEndRemoteScrubbing(PlatformMediaSession&) final;
+    void clientCharacteristicsChanged(PlatformMediaSession&) final;
+    void sessionCanProduceAudioChanged() final;
 
     virtual void providePresentingApplicationPIDIfNecessary() { }
 
     PlatformMediaSession* nowPlayingEligibleSession();
+
+    void addSupportedCommand(PlatformMediaSession::RemoteControlCommandType) final;
+    void removeSupportedCommand(PlatformMediaSession::RemoteControlCommandType) final;
+    RemoteCommandListener::RemoteCommandsSet supportedCommands() const final;
+
+    void resetHaveEverRegisteredAsNowPlayingApplicationForTesting() final { m_haveEverRegisteredAsNowPlayingApplication = false; };
 
 private:
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const override { return "MediaSessionManagerCocoa"; }
 #endif
 
+    // NowPlayingManager::Client
+    void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType type, const PlatformMediaSession::RemoteCommandArgument& argument) final { processDidReceiveRemoteControlCommand(type, argument); }
+
+    // AudioHardwareListenerClient
+    void audioHardwareDidBecomeActive() final { }
+    void audioHardwareDidBecomeInactive() final { }
+    void audioOutputDeviceChanged() final;
+
+    void possiblyChangeAudioCategory();
+
     bool m_nowPlayingActive { false };
     bool m_registeredAsNowPlayingApplication { false };
+    bool m_haveEverRegisteredAsNowPlayingApplication { false };
 
     // For testing purposes only.
     String m_lastUpdatedNowPlayingTitle;
     double m_lastUpdatedNowPlayingDuration { NAN };
     double m_lastUpdatedNowPlayingElapsedTime { NAN };
-    uint64_t m_lastUpdatedNowPlayingInfoUniqueIdentifier { 0 };
+    MediaUniqueIdentifier m_lastUpdatedNowPlayingInfoUniqueIdentifier;
 
-    GenericTaskQueue<Timer> m_nowPlayingUpdateTaskQueue;
+    const std::unique_ptr<NowPlayingManager> m_nowPlayingManager;
+    RefPtr<AudioHardwareListener> m_audioHardwareListener;
+
+    AudioHardwareListener::BufferSizeRange m_supportedAudioHardwareBufferSizes;
+    size_t m_defaultBufferSize;
+
+    RunLoop::Timer<MediaSessionManagerCocoa> m_delayCategoryChangeTimer;
+    AudioSession::CategoryType m_previousCategory { AudioSession::CategoryType::None };
+    bool m_previousHadAudibleAudioOrVideoMediaType { false };
 };
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,12 @@ class Printer : public ::testing::EmptyTestEventListener {
             return;
 
         std::stringstream stream;
-        stream << "\n" << test_part_result.file_name() << ":" << test_part_result.line_number() << "\n" << test_part_result.summary() << "\n\n";
+        stream << "\n";
+        if (test_part_result.file_name())
+            stream << test_part_result.file_name() << ":" << test_part_result.line_number();
+        else
+            stream << "File name unavailable";
+        stream << "\n" << test_part_result.summary() << "\n\n";
         failures += stream.str();
     }
 
@@ -69,7 +74,6 @@ TestsController::TestsController()
     // the ThreadRestrictionVerifier - https://bugs.webkit.org/show_bug.cgi?id=66112
     // We should make sure that all objects tested either initialize threading or inherit from
     // ThreadSafeRefCounted so that we don't have to initialize threading at all here.
-    WTF::initializeThreading();
     WTF::initializeMainThread();
     WTF::setProcessPrivileges(allPrivileges());
     AtomString::init();

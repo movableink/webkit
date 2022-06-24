@@ -37,19 +37,22 @@
 namespace WebKit {
 using namespace WebCore;
 
-Ref<StorageAreaImpl> StorageAreaImpl::create(Ref<StorageAreaMap>&& storageAreaMap)
+Ref<StorageAreaImpl> StorageAreaImpl::create(StorageAreaMap& storageAreaMap)
 {
-    return adoptRef(*new StorageAreaImpl(WTFMove(storageAreaMap)));
+    return adoptRef(*new StorageAreaImpl(storageAreaMap));
 }
 
-StorageAreaImpl::StorageAreaImpl(Ref<StorageAreaMap>&& storageAreaMap)
+StorageAreaImpl::StorageAreaImpl(StorageAreaMap& storageAreaMap)
     : m_identifier(Identifier::generate())
-    , m_storageAreaMap(makeWeakPtr(storageAreaMap.get()))
+    , m_storageAreaMap(storageAreaMap)
 {
+    storageAreaMap.incrementUseCount();
 }
 
 StorageAreaImpl::~StorageAreaImpl()
 {
+    if (m_storageAreaMap)
+        m_storageAreaMap->decrementUseCount();
 }
 
 unsigned StorageAreaImpl::length()
@@ -67,7 +70,7 @@ String StorageAreaImpl::item(const String& key)
     return m_storageAreaMap ? m_storageAreaMap->item(key) : nullString();
 }
 
-void StorageAreaImpl::setItem(Frame* sourceFrame, const String& key, const String& value, bool& quotaException)
+void StorageAreaImpl::setItem(Frame& sourceFrame, const String& key, const String& value, bool& quotaException)
 {
     ASSERT(!value.isNull());
 
@@ -75,13 +78,13 @@ void StorageAreaImpl::setItem(Frame* sourceFrame, const String& key, const Strin
         m_storageAreaMap->setItem(sourceFrame, this, key, value, quotaException);
 }
 
-void StorageAreaImpl::removeItem(Frame* sourceFrame, const String& key)
+void StorageAreaImpl::removeItem(Frame& sourceFrame, const String& key)
 {
     if (m_storageAreaMap)
         m_storageAreaMap->removeItem(sourceFrame, this, key);
 }
 
-void StorageAreaImpl::clear(Frame* sourceFrame)
+void StorageAreaImpl::clear(Frame& sourceFrame)
 {
     if (m_storageAreaMap)
         m_storageAreaMap->clear(sourceFrame, this);
@@ -98,7 +101,7 @@ bool StorageAreaImpl::contains(const String& key)
 StorageType StorageAreaImpl::storageType() const
 {
     if (m_storageAreaMap)
-        return m_storageAreaMap->storageType();
+        return m_storageAreaMap->type();
 
     // We probably need an Invalid type.
     return StorageType::Local;
@@ -109,20 +112,10 @@ size_t StorageAreaImpl::memoryBytesUsedByCache()
     return 0;
 }
 
-void StorageAreaImpl::incrementAccessCount()
+void StorageAreaImpl::prewarm()
 {
-    // Storage access is handled in the network process, so there's nothing to do here.
-}
-
-void StorageAreaImpl::decrementAccessCount()
-{
-    // Storage access is handled in the network process, so there's nothing to do here.
-}
-
-void StorageAreaImpl::closeDatabaseIfIdle()
-{
-    // FIXME: Implement this.
-    ASSERT_NOT_REACHED();
+    if (m_storageAreaMap)
+        m_storageAreaMap->connect();
 }
 
 } // namespace WebKit

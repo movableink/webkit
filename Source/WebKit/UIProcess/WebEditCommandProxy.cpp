@@ -39,7 +39,7 @@ using namespace WebCore;
 WebEditCommandProxy::WebEditCommandProxy(WebUndoStepID commandID, const String& label, WebPageProxy& page)
     : m_commandID(commandID)
     , m_label(label)
-    , m_page(makeWeakPtr(page))
+    , m_page(page)
 {
     m_page->addEditCommand(*this);
 }
@@ -55,7 +55,7 @@ void WebEditCommandProxy::unapply()
     if (!m_page || !m_page->hasRunningProcess())
         return;
 
-    m_page->process().send(Messages::WebPage::UnapplyEditCommand(m_commandID), m_page->webPageID(), IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
+    m_page->send(Messages::WebPage::UnapplyEditCommand(m_commandID), IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
     m_page->registerEditCommand(*this, UndoOrRedo::Redo);
 }
 
@@ -64,7 +64,7 @@ void WebEditCommandProxy::reapply()
     if (!m_page || !m_page->hasRunningProcess())
         return;
 
-    m_page->process().send(Messages::WebPage::ReapplyEditCommand(m_commandID), m_page->webPageID(), IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
+    m_page->send(Messages::WebPage::ReapplyEditCommand(m_commandID), IPC::SendOption::DispatchMessageEvenWhenWaitingForSyncReply);
     m_page->registerEditCommand(*this, UndoOrRedo::Undo);
 }
 

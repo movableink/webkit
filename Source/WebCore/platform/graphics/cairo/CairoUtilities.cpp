@@ -30,12 +30,12 @@
 #if USE(CAIRO)
 
 #include "AffineTransform.h"
+#include "CairoUniquePtr.h"
 #include "Color.h"
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "IntRect.h"
 #include "Path.h"
-#include "PlatformPathCairo.h"
 #include "RefPtrCairo.h"
 #include "Region.h"
 #include <wtf/Assertions.h>
@@ -43,20 +43,13 @@
 #include <wtf/UniqueArray.h>
 #include <wtf/Vector.h>
 
-#if ENABLE(ACCELERATED_2D_CANVAS)
-#if USE(EGL) && USE(LIBEPOXY)
-#include "EpoxyEGL.h"
-#endif
-#include <cairo-gl.h>
-#endif
-
 #if OS(WINDOWS)
 #include <cairo-win32.h>
 #endif
 
 namespace WebCore {
 
-#if USE(FREETYPE) && !PLATFORM(GTK)
+#if USE(CAIRO) && !PLATFORM(GTK)
 const cairo_font_options_t* getDefaultCairoFontOptions()
 {
     static NeverDestroyed<cairo_font_options_t*> options = cairo_font_options_create();
@@ -83,20 +76,14 @@ void copyContextProperties(cairo_t* srcCr, cairo_t* dstCr)
 
 void setSourceRGBAFromColor(cairo_t* context, const Color& color)
 {
-    if (color.isExtended())
-        cairo_set_source_rgba(context, color.asExtended().red(), color.asExtended().green(), color.asExtended().blue(), color.asExtended().alpha());
-    else {
-        float red, green, blue, alpha;
-        color.getRGBA(red, green, blue, alpha);
-        cairo_set_source_rgba(context, red, green, blue, alpha);
-    }
+    auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<float>>().resolved();
+    cairo_set_source_rgba(context, r, g, b, a);
 }
 
 void appendPathToCairoContext(cairo_t* to, cairo_t* from)
 {
-    auto cairoPath = cairo_copy_path(from);
-    cairo_append_path(to, cairoPath);
-    cairo_path_destroy(cairoPath);
+    CairoUniquePtr<cairo_path_t> cairoPath(cairo_copy_path(from));
+    cairo_append_path(to, cairoPath.get());
 }
 
 void setPathOnCairoContext(cairo_t* to, cairo_t* from)
@@ -109,7 +96,7 @@ void appendWebCorePathToCairoContext(cairo_t* context, const Path& path)
 {
     if (path.isEmpty())
         return;
-    appendPathToCairoContext(context, path.platformPath()->context());
+    appendPathToCairoContext(context, path.cairoPath());
 }
 
 void appendRegionToCairoContext(cairo_t* to, const cairo_region_t* region)
@@ -128,33 +115,33 @@ void appendRegionToCairoContext(cairo_t* to, const cairo_region_t* region)
 static cairo_operator_t toCairoCompositeOperator(CompositeOperator op)
 {
     switch (op) {
-    case CompositeClear:
+    case CompositeOperator::Clear:
         return CAIRO_OPERATOR_CLEAR;
-    case CompositeCopy:
+    case CompositeOperator::Copy:
         return CAIRO_OPERATOR_SOURCE;
-    case CompositeSourceOver:
+    case CompositeOperator::SourceOver:
         return CAIRO_OPERATOR_OVER;
-    case CompositeSourceIn:
+    case CompositeOperator::SourceIn:
         return CAIRO_OPERATOR_IN;
-    case CompositeSourceOut:
+    case CompositeOperator::SourceOut:
         return CAIRO_OPERATOR_OUT;
-    case CompositeSourceAtop:
+    case CompositeOperator::SourceAtop:
         return CAIRO_OPERATOR_ATOP;
-    case CompositeDestinationOver:
+    case CompositeOperator::DestinationOver:
         return CAIRO_OPERATOR_DEST_OVER;
-    case CompositeDestinationIn:
+    case CompositeOperator::DestinationIn:
         return CAIRO_OPERATOR_DEST_IN;
-    case CompositeDestinationOut:
+    case CompositeOperator::DestinationOut:
         return CAIRO_OPERATOR_DEST_OUT;
-    case CompositeDestinationAtop:
+    case CompositeOperator::DestinationAtop:
         return CAIRO_OPERATOR_DEST_ATOP;
-    case CompositeXOR:
+    case CompositeOperator::XOR:
         return CAIRO_OPERATOR_XOR;
-    case CompositePlusDarker:
+    case CompositeOperator::PlusDarker:
         return CAIRO_OPERATOR_DARKEN;
-    case CompositePlusLighter:
+    case CompositeOperator::PlusLighter:
         return CAIRO_OPERATOR_ADD;
-    case CompositeDifference:
+    case CompositeOperator::Difference:
         return CAIRO_OPERATOR_DIFFERENCE;
     default:
         return CAIRO_OPERATOR_SOURCE;
@@ -202,7 +189,7 @@ cairo_operator_t toCairoOperator(CompositeOperator op, BlendMode blendOp)
 }
 
 void drawPatternToCairoContext(cairo_t* cr, cairo_surface_t* image, const IntSize& imageSize, const FloatRect& tileRect,
-                               const AffineTransform& patternTransform, const FloatPoint& phase, cairo_operator_t op, const FloatRect& destRect)
+    const AffineTransform& patternTransform, const FloatPoint& phase, cairo_operator_t op, InterpolationQuality imageInterpolationQuality, const FloatRect& destRect)
 {
     // Avoid NaN
     if (!std::isfinite(phase.x()) || !std::isfinite(phase.y()))
@@ -210,7 +197,7 @@ void drawPatternToCairoContext(cairo_t* cr, cairo_surface_t* image, const IntSiz
 
     cairo_save(cr);
 
-    RefPtr<cairo_surface_t> clippedImageSurface = 0;
+    RefPtr<cairo_surface_t> clippedImageSurface;
     if (tileRect.size() != imageSize) {
         IntRect imageRect = enclosingIntRect(tileRect);
         clippedImageSurface = adoptRef(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, imageRect.width(), imageRect.height()));
@@ -221,6 +208,21 @@ void drawPatternToCairoContext(cairo_t* cr, cairo_surface_t* image, const IntSiz
     }
 
     cairo_pattern_t* pattern = cairo_pattern_create_for_surface(image);
+    switch (imageInterpolationQuality) {
+    case InterpolationQuality::DoNotInterpolate:
+    case InterpolationQuality::Low:
+        cairo_pattern_set_filter(pattern, CAIRO_FILTER_FAST);
+        break;
+    case InterpolationQuality::Default:
+        cairo_pattern_set_filter(pattern, CAIRO_FILTER_BILINEAR);
+        break;
+    case InterpolationQuality::Medium:
+        cairo_pattern_set_filter(pattern, CAIRO_FILTER_GOOD);
+        break;
+    case InterpolationQuality::High:
+        cairo_pattern_set_filter(pattern, CAIRO_FILTER_BEST);
+        break;
+    }
     cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
 
     // Due to a limitation in pixman, cairo cannot handle transformation matrices with values bigger than 32768. If the value is
@@ -299,11 +301,11 @@ void copyRectFromCairoSurfaceToContext(cairo_surface_t* from, cairo_t* to, const
     cairo_fill(to);
 }
 
-void copyRectFromOneSurfaceToAnother(cairo_surface_t* from, cairo_surface_t* to, const IntSize& sourceOffset, const IntRect& rect, const IntSize& destOffset, cairo_operator_t cairoOperator)
+void copyRectFromOneSurfaceToAnother(cairo_surface_t* from, cairo_surface_t* to, const IntSize& sourceOffset, const IntRect& rect, const IntSize& destOffset)
 {
     RefPtr<cairo_t> context = adoptRef(cairo_create(to));
     cairo_translate(context.get(), destOffset.width(), destOffset.height());
-    cairo_set_operator(context.get(), cairoOperator);
+    cairo_set_operator(context.get(), CAIRO_OPERATOR_SOURCE);
     copyRectFromCairoSurfaceToContext(from, context.get(), sourceOffset, rect);
 }
 
@@ -312,10 +314,6 @@ IntSize cairoSurfaceSize(cairo_surface_t* surface)
     switch (cairo_surface_get_type(surface)) {
     case CAIRO_SURFACE_TYPE_IMAGE:
         return IntSize(cairo_image_surface_get_width(surface), cairo_image_surface_get_height(surface));
-#if ENABLE(ACCELERATED_2D_CANVAS)
-    case CAIRO_SURFACE_TYPE_GL:
-        return IntSize(cairo_gl_surface_get_width(surface), cairo_gl_surface_get_height(surface));
-#endif
 #if OS(WINDOWS)
     case CAIRO_SURFACE_TYPE_WIN32:
         surface = cairo_win32_surface_get_image(surface);
@@ -350,29 +348,6 @@ void flipImageSurfaceVertically(cairo_surface_t* surface)
         memcpy(top, bottom, stride);
         memcpy(bottom, tmp.get(), stride);
     }
-}
-
-void cairoSurfaceSetDeviceScale(cairo_surface_t* surface, double xScale, double yScale)
-{
-    // This function was added pretty much simultaneous to when 1.13 was branched.
-#if HAVE(CAIRO_SURFACE_SET_DEVICE_SCALE)
-    cairo_surface_set_device_scale(surface, xScale, yScale);
-#else
-    UNUSED_PARAM(surface);
-    ASSERT_UNUSED(xScale, 1 == xScale);
-    ASSERT_UNUSED(yScale, 1 == yScale);
-#endif
-}
-
-void cairoSurfaceGetDeviceScale(cairo_surface_t* surface, double& xScale, double& yScale)
-{
-#if HAVE(CAIRO_SURFACE_SET_DEVICE_SCALE)
-    cairo_surface_get_device_scale(surface, &xScale, &yScale);
-#else
-    UNUSED_PARAM(surface);
-    xScale = 1;
-    yScale = 1;
-#endif
 }
 
 RefPtr<cairo_region_t> toCairoRegion(const Region& region)

@@ -11,8 +11,9 @@
 #ifndef MODULES_VIDEO_CAPTURE_MAIN_SOURCE_LINUX_DEVICE_INFO_LINUX_H_
 #define MODULES_VIDEO_CAPTURE_MAIN_SOURCE_LINUX_DEVICE_INFO_LINUX_H_
 
+#include <stdint.h>
+
 #include "modules/video_capture/device_info_impl.h"
-#include "modules/video_capture/video_capture_impl.h"
 
 namespace webrtc {
 namespace videocapturemodule {
@@ -32,13 +33,14 @@ class DeviceInfoLinux : public DeviceInfoImpl {
    * Fills the membervariable _captureCapabilities with capabilites for the
    * given device name.
    */
-  int32_t CreateCapabilityMap(const char* deviceUniqueIdUTF8) override;
+  int32_t CreateCapabilityMap(const char* deviceUniqueIdUTF8) override
+      RTC_EXCLUSIVE_LOCKS_REQUIRED(_apiLock);
   int32_t DisplayCaptureSettingsDialogBox(const char* /*deviceUniqueIdUTF8*/,
                                           const char* /*dialogTitleUTF8*/,
                                           void* /*parentWindow*/,
                                           uint32_t /*positionX*/,
                                           uint32_t /*positionY*/) override;
-  int32_t FillCapabilities(int fd);
+  int32_t FillCapabilities(int fd) RTC_EXCLUSIVE_LOCKS_REQUIRED(_apiLock);
   int32_t Init() override;
 
  private:

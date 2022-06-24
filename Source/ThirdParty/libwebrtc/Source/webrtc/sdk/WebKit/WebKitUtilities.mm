@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,72 +25,15 @@
 
 #include "WebKitUtilities.h"
 
-//#include "Common/RTCUIApplicationStatusObserver.h"
-#import "WebRTC/RTCVideoCodecH264.h"
-
 #include "api/video/video_frame.h"
 #include "native/src/objc_frame_buffer.h"
+#include "rtc_base/logging.h"
 #include "third_party/libyuv/include/libyuv/convert_from.h"
-#include "webrtc/rtc_base/checks.h"
-#include "Framework/Headers/WebRTC/RTCVideoCodecFactory.h"
-#include "Framework/Headers/WebRTC/RTCVideoFrame.h"
+#include "libyuv/cpu_id.h"
+#include "libyuv/row.h"
 #include "Framework/Headers/WebRTC/RTCVideoFrameBuffer.h"
-#include "Framework/Native/api/video_decoder_factory.h"
-#include "Framework/Native/api/video_encoder_factory.h"
-#include "VideoProcessingSoftLink.h"
+#include "third_party/libyuv/include/libyuv.h"
 
-#include <mutex>
-
-/*
-#if !defined(WEBRTC_IOS)
-__attribute__((objc_runtime_name("WK_RTCUIApplicationStatusObserver")))
-@interface RTCUIApplicationStatusObserver : NSObject
-
-+ (instancetype)sharedInstance;
-+ (void)prepareForUse;
-
-- (BOOL)isApplicationActive;
-
-@end
-#endif
-
-@implementation RTCUIApplicationStatusObserver {
-    BOOL _isActive;
-}
-
-+ (instancetype)sharedInstance {
-    static id sharedInstance;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        sharedInstance = [[self alloc] init];
-    });
-
-    return sharedInstance;
-}
-
-+ (void)prepareForUse {
-    __unused RTCUIApplicationStatusObserver *observer = [self sharedInstance];
-}
-
-- (id)init {
-    _isActive = YES;
-    return self;
-}
-
-- (void)setActive {
-    _isActive = YES;
-}
-
-- (void)setInactive {
-    _isActive = NO;
-}
-
-- (BOOL)isApplicationActive {
-    return _isActive;
-}
-
-@end
-*/
 namespace webrtc {
 
 void setApplicationStatus(bool isActive)
@@ -103,40 +46,27 @@ void setApplicationStatus(bool isActive)
  */
 }
 
-std::unique_ptr<webrtc::VideoEncoderFactory> createWebKitEncoderFactory(WebKitCodecSupport codecSupport)
-{
-#if ENABLE_VCP_ENCODER || ENABLE_VCP_VTB_ENCODER
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-        webrtc::VPModuleInitialize();
-    });
-#endif
-    return ObjCToNativeVideoEncoderFactory(codecSupport == WebKitCodecSupport::H264AndVP8 ? [[RTCDefaultVideoEncoderFactory alloc] init] : [[RTCVideoEncoderFactoryH264 alloc] init]);
-}
-
-std::unique_ptr<webrtc::VideoDecoderFactory> createWebKitDecoderFactory(WebKitCodecSupport codecSupport)
-{
-    return ObjCToNativeVideoDecoderFactory(codecSupport == WebKitCodecSupport::H264AndVP8 ? [[RTCDefaultVideoDecoderFactory alloc] init] : [[RTCVideoDecoderFactoryH264 alloc] init]);
-}
-
-static bool h264HardwareEncoderAllowed = true;
-void setH264HardwareEncoderAllowed(bool allowed)
-{
-    h264HardwareEncoderAllowed = allowed;
-}
-
-bool isH264HardwareEncoderAllowed()
-{
-    return h264HardwareEncoderAllowed;
-}
-
 rtc::scoped_refptr<webrtc::VideoFrameBuffer> pixelBufferToFrame(CVPixelBufferRef pixelBuffer)
 {
     RTCCVPixelBuffer *frameBuffer = [[RTCCVPixelBuffer alloc] initWithPixelBuffer:pixelBuffer];
     return new rtc::RefCountedObject<ObjCFrameBuffer>(frameBuffer);
 }
 
-static bool CopyVideoFrameToPixelBuffer(const rtc::scoped_refptr<webrtc::I420BufferInterface>& frame, CVPixelBufferRef pixel_buffer) {
+rtc::scoped_refptr<webrtc::VideoFrameBuffer> toWebRTCVideoFrameBuffer(void* pointer, GetBufferCallback getBufferCallback, ReleaseBufferCallback releaseBufferCallback, int width, int height)
+{
+    return new rtc::RefCountedObject<ObjCFrameBuffer>(ObjCFrameBuffer::BufferProvider { pointer, getBufferCallback, releaseBufferCallback }, width, height);
+}
+
+void* videoFrameBufferProvider(const VideoFrame& frame)
+{
+    auto buffer = frame.video_frame_buffer();
+    if (buffer->type() != VideoFrameBuffer::Type::kNative)
+        return nullptr;
+
+    return static_cast<ObjCFrameBuffer*>(buffer.get())->frame_buffer_provider();
+}
+
+static bool CopyVideoFrameToPixelBuffer(const webrtc::I420BufferInterface* frame, CVPixelBufferRef pixel_buffer) {
     RTC_DCHECK(pixel_buffer);
     RTC_DCHECK(CVPixelBufferGetPixelFormatType(pixel_buffer) == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange || CVPixelBufferGetPixelFormatType(pixel_buffer) == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange);
     RTC_DCHECK_EQ(CVPixelBufferGetHeightOfPlane(pixel_buffer, 0), static_cast<size_t>(frame->height()));
@@ -145,11 +75,26 @@ static bool CopyVideoFrameToPixelBuffer(const rtc::scoped_refptr<webrtc::I420Buf
     if (CVPixelBufferLockBaseAddress(pixel_buffer, 0) != kCVReturnSuccess)
         return false;
 
+    auto src_width_y = frame->width();
+    auto src_height_y = frame->height();
+    auto src_width_uv = frame->ChromaWidth();
+    auto src_height_uv = frame->ChromaHeight();
+
     uint8_t* dst_y = reinterpret_cast<uint8_t*>(CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0));
     int dst_stride_y = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 0);
+    auto dst_width_y = CVPixelBufferGetWidthOfPlane(pixel_buffer, 0);
+    auto dst_height_y = CVPixelBufferGetHeightOfPlane(pixel_buffer, 0);
 
     uint8_t* dst_uv = reinterpret_cast<uint8_t*>(CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 1));
     int dst_stride_uv = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 1);
+    auto dst_width_uv = CVPixelBufferGetWidthOfPlane(pixel_buffer, 1);
+    auto dst_height_uv = CVPixelBufferGetHeightOfPlane(pixel_buffer, 1);
+
+    if (src_width_y != dst_width_y
+        || src_height_y != dst_height_y
+        || src_width_uv != dst_width_uv
+        || src_height_uv != dst_height_uv)
+        return false;
 
     int result = libyuv::I420ToNV12(
         frame->DataY(), frame->StrideY(),
@@ -166,24 +111,133 @@ static bool CopyVideoFrameToPixelBuffer(const rtc::scoped_refptr<webrtc::I420Buf
     return true;
 }
 
-
-CVPixelBufferRef pixelBufferFromFrame(const VideoFrame& frame, const std::function<CVPixelBufferRef(size_t, size_t)>& makePixelBuffer)
+static bool CopyVideoFrameToPixelBuffer(const webrtc::I010BufferInterface* frame, CVPixelBufferRef pixel_buffer)
 {
-    if (frame.video_frame_buffer()->type() != VideoFrameBuffer::Type::kNative) {
-        rtc::scoped_refptr<const I420BufferInterface> buffer = frame.video_frame_buffer()->GetI420();
+    RTC_DCHECK(pixel_buffer);
+    RTC_DCHECK(CVPixelBufferGetPixelFormatType(pixel_buffer) == kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange || CVPixelBufferGetPixelFormatType(pixel_buffer) == kCVPixelFormatType_420YpCbCr10BiPlanarFullRange);
+    RTC_DCHECK_EQ(CVPixelBufferGetHeightOfPlane(pixel_buffer, 0), static_cast<size_t>(frame->height()));
+    RTC_DCHECK_EQ(CVPixelBufferGetWidthOfPlane(pixel_buffer, 0), static_cast<size_t>(frame->width()));
 
-        auto pixelBuffer = makePixelBuffer(buffer->width(), buffer->height());
-        if (pixelBuffer)
-            CopyVideoFrameToPixelBuffer(frame.video_frame_buffer()->GetI420(), pixelBuffer);
+    if (CVPixelBufferLockBaseAddress(pixel_buffer, 0) != kCVReturnSuccess)
+        return false;
+
+    auto src_y = const_cast<uint16_t*>(frame->DataY());
+    auto src_u = const_cast<uint16_t*>(frame->DataU());
+    auto src_v = const_cast<uint16_t*>(frame->DataV());
+    auto src_width_y = frame->width();
+    auto src_height_y = frame->height();
+    auto src_stride_y = frame->StrideY();
+    auto src_width_uv = frame->ChromaWidth();
+    auto src_height_uv = frame->ChromaHeight();
+    auto src_stride_u = frame->StrideU();
+    auto src_stride_v = frame->StrideV();
+
+    auto* dst_y = reinterpret_cast<uint16_t*>(CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 0));
+    auto dst_stride_y = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 0) / 2;
+    auto dst_width_y = CVPixelBufferGetWidthOfPlane(pixel_buffer, 0);
+    auto dst_height_y = CVPixelBufferGetHeightOfPlane(pixel_buffer, 0);
+
+    auto* dst_uv = reinterpret_cast<uint16_t*>(CVPixelBufferGetBaseAddressOfPlane(pixel_buffer, 1));
+    auto dst_stride_uv = CVPixelBufferGetBytesPerRowOfPlane(pixel_buffer, 1) / 2;
+    auto dst_width_uv = CVPixelBufferGetWidthOfPlane(pixel_buffer, 1);
+    auto dst_height_uv = CVPixelBufferGetHeightOfPlane(pixel_buffer, 1);
+
+    if (src_width_y != dst_width_y
+        || src_height_y != dst_height_y
+        || src_width_uv != dst_width_uv
+        || src_height_uv != dst_height_uv)
+        return false;
+
+    libyuv::I010ToP010(src_y, src_stride_y,
+                       src_u, src_stride_u,
+                       src_v, src_stride_v,
+                       dst_y, dst_stride_y, dst_uv, dst_stride_uv,
+                       src_width_y, src_height_y);
+
+    CVPixelBufferUnlockBaseAddress(pixel_buffer, 0);
+    return true;
+}
+
+CVPixelBufferRef createPixelBufferFromFrame(const VideoFrame& frame, const std::function<CVPixelBufferRef(size_t, size_t, BufferType)>& createPixelBuffer)
+{
+    return createPixelBufferFromFrameBuffer(*frame.video_frame_buffer(), createPixelBuffer);
+}
+
+CVPixelBufferRef createPixelBufferFromFrameBuffer(VideoFrameBuffer& buffer, const std::function<CVPixelBufferRef(size_t, size_t, BufferType)>& createPixelBuffer)
+{
+    if (buffer.type() != VideoFrameBuffer::Type::kNative) {
+        auto type = buffer.type();
+        if (type != VideoFrameBuffer::Type::kI420 && type != VideoFrameBuffer::Type::kI010) {
+            RTC_LOG(WARNING) << "Video frame buffer type is not expected.";
+            return nullptr;
+        }
+
+        auto pixelBuffer = createPixelBuffer(buffer.width(), buffer.height(), type == VideoFrameBuffer::Type::kI420 ? BufferType::I420 : BufferType::I010);
+        if (!pixelBuffer) {
+            RTC_LOG(WARNING) << "Pixel buffer creation failed.";
+            return nullptr;
+        }
+
+        if (type == VideoFrameBuffer::Type::kI420)
+            CopyVideoFrameToPixelBuffer(buffer.GetI420(), pixelBuffer);
+        else
+            CopyVideoFrameToPixelBuffer(buffer.GetI010(), pixelBuffer);
         return pixelBuffer;
     }
 
-    auto *frameBuffer = static_cast<ObjCFrameBuffer*>(frame.video_frame_buffer().get())->wrapped_frame_buffer();
+    auto *frameBuffer = static_cast<ObjCFrameBuffer*>(&buffer)->wrapped_frame_buffer();
     if (![frameBuffer isKindOfClass:[RTCCVPixelBuffer class]])
         return nullptr;
 
     auto *rtcPixelBuffer = (RTCCVPixelBuffer *)frameBuffer;
-    return rtcPixelBuffer.pixelBuffer;
+    return CVPixelBufferRetain(rtcPixelBuffer.pixelBuffer);
+}
+
+CVPixelBufferRef pixelBufferFromFrame(const VideoFrame& frame)
+{
+    auto buffer = frame.video_frame_buffer();
+    if (buffer->type() != VideoFrameBuffer::Type::kNative)
+        return nullptr;
+
+    auto *frameBuffer = static_cast<ObjCFrameBuffer*>(buffer.get())->wrapped_frame_buffer();
+    if (![frameBuffer isKindOfClass:[RTCCVPixelBuffer class]])
+        return nullptr;
+
+    auto *rtcPixelBuffer = (RTCCVPixelBuffer *)frameBuffer;
+    return CVPixelBufferRetain(rtcPixelBuffer.pixelBuffer);
+}
+
+bool copyVideoFrameBuffer(VideoFrameBuffer& buffer, uint8_t* data)
+{
+    if (buffer.type() == VideoFrameBuffer::Type::kNative)
+        return false;
+
+    auto type = buffer.type();
+    if (type == VideoFrameBuffer::Type::kI420) {
+        auto* i420Frame = buffer.GetI420();
+        auto* dataY = data;
+        auto strideY = i420Frame->width();
+        auto strideUV = i420Frame->width();
+        auto* dataUV = data + (i420Frame->width() * i420Frame->height());
+        return !libyuv::I420ToNV12(i420Frame->DataY(), i420Frame->StrideY(),
+                                   i420Frame->DataU(), i420Frame->StrideU(),
+                                   i420Frame->DataV(), i420Frame->StrideV(),
+                                   dataY, strideY, dataUV, strideUV,
+                                   i420Frame->width(), i420Frame->height());
+    }
+    if (type == VideoFrameBuffer::Type::kI010) {
+        auto* i010Frame = buffer.GetI010();
+        auto* dataY = reinterpret_cast<uint16_t*>(data);
+        auto strideY = i010Frame->width();
+        auto strideUV = i010Frame->width();
+        auto* dataUV = dataY + (i010Frame->width() * i010Frame->height());
+        return !libyuv::I010ToP010(i010Frame->DataY(), i010Frame->StrideY(),
+                                   i010Frame->DataU(), i010Frame->StrideU(),
+                                   i010Frame->DataV(), i010Frame->StrideV(),
+                                   dataY, strideY, dataUV, strideUV,
+                                   i010Frame->width(), i010Frame->height());
+    }
+    return false;
 }
 
 }

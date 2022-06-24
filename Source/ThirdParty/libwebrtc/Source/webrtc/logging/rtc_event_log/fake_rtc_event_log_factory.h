@@ -13,30 +13,23 @@
 
 #include <memory>
 
+#include "api/rtc_event_log/rtc_event_log_factory_interface.h"
 #include "logging/rtc_event_log/fake_rtc_event_log.h"
-#include "logging/rtc_event_log/rtc_event_log_factory_interface.h"
-#include "rtc_base/thread.h"
 
 namespace webrtc {
 
 class FakeRtcEventLogFactory : public RtcEventLogFactoryInterface {
  public:
-  explicit FakeRtcEventLogFactory(rtc::Thread* thread) : thread_(thread) {}
-  ~FakeRtcEventLogFactory() override {}
+  FakeRtcEventLogFactory() = default;
+  ~FakeRtcEventLogFactory() override = default;
 
   std::unique_ptr<RtcEventLog> CreateRtcEventLog(
       RtcEventLog::EncodingType encoding_type) override;
 
-  std::unique_ptr<RtcEventLog> CreateRtcEventLog(
-      RtcEventLog::EncodingType encoding_type,
-      std::unique_ptr<rtc::TaskQueue> task_queue) override;
-
-  webrtc::RtcEventLog* last_log_created() { return last_log_created_; }
-  rtc::Thread* thread() { return thread_; }
+  webrtc::FakeRtcEventLog* last_log_created() { return last_log_created_; }
 
  private:
-  webrtc::RtcEventLog* last_log_created_;
-  rtc::Thread* thread_;
+  webrtc::FakeRtcEventLog* last_log_created_;
 };
 
 }  // namespace webrtc

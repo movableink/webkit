@@ -29,7 +29,7 @@
 #import "WebNodeHighlightView.h"
 #import "WebNodeHighlight.h"
 
-#import <WebCore/GraphicsContext.h>
+#import <WebCore/GraphicsContextCG.h>
 #import <WebCore/InspectorController.h>
 #import <wtf/Assertions.h>
 
@@ -98,9 +98,7 @@ using namespace WebCore;
 
         ASSERT([[NSGraphicsContext currentContext] isFlipped]);
 
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        GraphicsContext context((PlatformGraphicsContext*)[[NSGraphicsContext currentContext] graphicsPort]);
-        ALLOW_DEPRECATED_DECLARATIONS_END
+        GraphicsContextCG context([[NSGraphicsContext currentContext] CGContext]);
         [_webNodeHighlight inspectorController]->drawHighlight(context);
         [NSGraphicsContext restoreGraphicsState];
     }
@@ -117,10 +115,9 @@ using namespace WebCore;
     // Remove and create new layers.
     [self _removeAllLayers];
     for (NSUInteger i = 0; i < numLayers; ++i) {
-        CAShapeLayer *layer = [[CAShapeLayer alloc] init];
-        [_layers addObject:layer];
-        [parent addSublayer:layer];
-        [layer release];
+        auto layer = adoptNS([[CAShapeLayer alloc] init]);
+        [_layers addObject:layer.get()];
+        [parent addSublayer:layer.get()];
     }
 }
 
@@ -239,31 +236,29 @@ static void layerPathWithHole(CAShapeLayer *layer, const FloatQuad& outerQuad, c
         innerHole = quadIntersection(outerQuad, holeQuad);
 
     // Clockwise inside rect (hole), Counter-Clockwise outside rect (fill).
-    CGMutablePathRef path = CGPathCreateMutable();
-    CGPathMoveToPoint(path, 0, innerHole.p1().x(), innerHole.p1().y());
-    CGPathAddLineToPoint(path, 0, innerHole.p2().x(), innerHole.p2().y());
-    CGPathAddLineToPoint(path, 0, innerHole.p3().x(), innerHole.p3().y());
-    CGPathAddLineToPoint(path, 0, innerHole.p4().x(), innerHole.p4().y());
-    CGPathMoveToPoint(path, 0, outerQuad.p1().x(), outerQuad.p1().y());
-    CGPathAddLineToPoint(path, 0, outerQuad.p4().x(), outerQuad.p4().y());
-    CGPathAddLineToPoint(path, 0, outerQuad.p3().x(), outerQuad.p3().y());
-    CGPathAddLineToPoint(path, 0, outerQuad.p2().x(), outerQuad.p2().y());
-    layer.path = path;
-    CGPathRelease(path);
+    auto path = adoptCF(CGPathCreateMutable());
+    CGPathMoveToPoint(path.get(), 0, innerHole.p1().x(), innerHole.p1().y());
+    CGPathAddLineToPoint(path.get(), 0, innerHole.p2().x(), innerHole.p2().y());
+    CGPathAddLineToPoint(path.get(), 0, innerHole.p3().x(), innerHole.p3().y());
+    CGPathAddLineToPoint(path.get(), 0, innerHole.p4().x(), innerHole.p4().y());
+    CGPathMoveToPoint(path.get(), 0, outerQuad.p1().x(), outerQuad.p1().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p4().x(), outerQuad.p4().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p3().x(), outerQuad.p3().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p2().x(), outerQuad.p2().y());
+    layer.path = path.get();
 }
 
 static void layerPath(CAShapeLayer *layer, const FloatQuad& outerQuad)
 {
-    CGMutablePathRef path = CGPathCreateMutable();
-    CGPathMoveToPoint(path, 0, outerQuad.p1().x(), outerQuad.p1().y());
-    CGPathAddLineToPoint(path, 0, outerQuad.p4().x(), outerQuad.p4().y());
-    CGPathAddLineToPoint(path, 0, outerQuad.p3().x(), outerQuad.p3().y());
-    CGPathAddLineToPoint(path, 0, outerQuad.p2().x(), outerQuad.p2().y());
-    layer.path = path;
-    CGPathRelease(path);
+    auto path = adoptCF(CGPathCreateMutable());
+    CGPathMoveToPoint(path.get(), 0, outerQuad.p1().x(), outerQuad.p1().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p4().x(), outerQuad.p4().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p3().x(), outerQuad.p3().y());
+    CGPathAddLineToPoint(path.get(), 0, outerQuad.p2().x(), outerQuad.p2().y());
+    layer.path = path.get();
 }
 
-- (void)_layoutForNodeHighlight:(Highlight*)highlight parent:(CALayer *)parentLayer
+- (void)_layoutForNodeHighlight:(InspectorOverlay::Highlight*)highlight parent:(CALayer *)parentLayer
 {
     if (!highlight->quads.size()) {
         [self _removeAllLayers];
@@ -282,10 +277,10 @@ static void layerPath(CAShapeLayer *layer, const FloatQuad& outerQuad)
     FloatQuad paddingQuad = highlight->quads[2];
     FloatQuad contentQuad = highlight->quads[3];
 
-    marginLayer.fillColor = cachedCGColor(highlight->marginColor);
-    borderLayer.fillColor = cachedCGColor(highlight->borderColor);
-    paddingLayer.fillColor = cachedCGColor(highlight->paddingColor);
-    contentLayer.fillColor = cachedCGColor(highlight->contentColor);
+    marginLayer.fillColor = cachedCGColor(highlight->marginColor).get();
+    borderLayer.fillColor = cachedCGColor(highlight->borderColor).get();
+    paddingLayer.fillColor = cachedCGColor(highlight->paddingColor).get();
+    contentLayer.fillColor = cachedCGColor(highlight->contentColor).get();
 
     layerPathWithHole(marginLayer, marginQuad, borderQuad);
     layerPathWithHole(borderLayer, borderQuad, paddingQuad);
@@ -293,7 +288,7 @@ static void layerPath(CAShapeLayer *layer, const FloatQuad& outerQuad)
     layerPath(contentLayer, contentQuad);
 }
 
-- (void)_layoutForRectsHighlight:(Highlight*)highlight parent:(CALayer *)parentLayer
+- (void)_layoutForRectsHighlight:(InspectorOverlay::Highlight*)highlight parent:(CALayer *)parentLayer
 {
     NSUInteger numLayers = highlight->quads.size();
     if (!numLayers) {
@@ -303,10 +298,10 @@ static void layerPath(CAShapeLayer *layer, const FloatQuad& outerQuad)
 
     [self _attach:parentLayer numLayers:numLayers];
 
-    CGColorRef contentColor = cachedCGColor(highlight->contentColor);
+    auto contentColor = cachedCGColor(highlight->contentColor);
     for (NSUInteger i = 0; i < numLayers; ++i) {
         CAShapeLayer *layer = [_layers objectAtIndex:i];
-        layer.fillColor = contentColor;
+        layer.fillColor = contentColor.get();
         layerPath(layer, highlight->quads[i]);
     }
 }
@@ -321,12 +316,12 @@ static void layerPath(CAShapeLayer *layer, const FloatQuad& outerQuad)
     if (![_webNodeHighlight inspectorController])
         return;
 
-    Highlight h;
+    InspectorOverlay::Highlight h;
     [_webNodeHighlight inspectorController]->getHighlight(h, InspectorOverlay::CoordinateSystem::View);
 
-    if (h.type == HighlightType::Node)
+    if (h.type == InspectorOverlay::Highlight::Type::Node)
         [self _layoutForNodeHighlight:&h parent:parentLayer];
-    else if (h.type == HighlightType::Rects)
+    else if (h.type == InspectorOverlay::Highlight::Type::Rects)
         [self _layoutForRectsHighlight:&h parent:parentLayer];
 }
 #endif

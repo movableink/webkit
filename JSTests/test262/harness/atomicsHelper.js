@@ -4,10 +4,13 @@
 description: >
     Collection of functions used to interact with Atomics.* operations across agent boundaries.
 defines:
+  - $262.agent.getReportAsync
   - $262.agent.getReport
+  - $262.agent.safeBroadcastAsync
   - $262.agent.safeBroadcast
+  - $262.agent.setTimeout
   - $262.agent.tryYield
-  - $262.trySleep
+  - $262.agent.trySleep
 ---*/
 
 /**
@@ -32,6 +35,40 @@ defines:
     }
     return r;
   };
+
+  if (this.setTimeout === undefined) {
+    (function(that) {
+      that.setTimeout = function(callback, delay) {
+        let p = Promise.resolve();
+        let start = Date.now();
+        let end = start + delay;
+        function check() {
+          if ((end - Date.now()) > 0) {
+            p.then(check);
+          }
+          else {
+            callback();
+          }
+        }
+        p.then(check);
+      }
+    })(this);
+  }
+
+  $262.agent.setTimeout = setTimeout;
+
+  $262.agent.getReportAsync = function() {
+    return new Promise(function(resolve) {
+      (function loop() {
+        let result = getReport();
+        if (!result) {
+          setTimeout(loop, 1000);
+        } else {
+          resolve(result);
+        }
+      })();
+    });
+  };
 }
 
 /**
@@ -48,12 +85,12 @@ defines:
  * meet its termination condition and the test will hang indefinitely.
  *
  * Because we've defined $262.agent.broadcast(SAB) in
- * https://github.com/tc39/test262/blob/master/INTERPRETING.md, there are host implementations
+ * https://github.com/tc39/test262/blob/HEAD/INTERPRETING.md, there are host implementations
  * that assume compatibility, which must be maintained.
  *
  *
  * $262.agent.safeBroadcast(TA) should not be included in
- * https://github.com/tc39/test262/blob/master/INTERPRETING.md
+ * https://github.com/tc39/test262/blob/HEAD/INTERPRETING.md
  *
  *
  * @param {(Int32Array|BigInt64Array)} typedArray An Int32Array or BigInt64Array with a SharedArrayBuffer
@@ -68,11 +105,19 @@ $262.agent.safeBroadcast = function(typedArray) {
     // want to ensure that this typedArray CAN be waited on and is shareable.
     Atomics.wait(temp, 0, Constructor === Int32Array ? 1 : BigInt(1));
   } catch (error) {
-    $ERROR(`${Constructor.name} cannot be used as a shared typed array. (${error})`);
+    throw new Test262Error(`${Constructor.name} cannot be used as a shared typed array. (${error})`);
   }
 
   $262.agent.broadcast(typedArray.buffer);
 };
+
+$262.agent.safeBroadcastAsync = async function(ta, index, expected) {
+  await $262.agent.broadcast(ta.buffer);
+  await $262.agent.waitUntil(ta, index, expected);
+  await $262.agent.tryYield();
+  return await Atomics.load(ta, index);
+};
+
 
 /**
  * With a given Int32Array or BigInt64Array, wait until the expected number of agents have

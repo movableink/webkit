@@ -26,12 +26,13 @@
 
 #pragma once
 
-#if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+#if ENABLE(VIDEO_PRESENTATION_MODE)
 
 #include "AudioSession.h"
 #include "FloatRect.h"
 #include "HTMLMediaElementEnums.h"
 #include "MediaPlayerEnums.h"
+#include "MediaPlayerIdentifier.h"
 #include "PlaybackSessionModel.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/WeakPtr.h>
@@ -69,24 +70,23 @@ public:
 
 #if PLATFORM(IOS_FAMILY)
     virtual UIViewController *presentingViewController() { return nullptr; }
-    virtual UIViewController *createVideoFullscreenViewController(AVPlayerViewController *) { return nullptr; }
+    virtual RetainPtr<UIViewController> createVideoFullscreenViewController(AVPlayerViewController *) { return nullptr; }
 #endif
 };
 
 class VideoFullscreenModelClient {
 public:
     virtual ~VideoFullscreenModelClient() = default;
-    virtual void hasVideoChanged(bool) { };
-    virtual void videoDimensionsChanged(const FloatSize&) { };
+    virtual void hasVideoChanged(bool) { }
+    virtual void videoDimensionsChanged(const FloatSize&) { }
     virtual void willEnterPictureInPicture() { }
     virtual void didEnterPictureInPicture() { }
     virtual void failedToEnterPictureInPicture() { }
     virtual void willExitPictureInPicture() { }
     virtual void didExitPictureInPicture() { }
     virtual void modelDestroyed() { }
+    virtual void setPlayerIdentifier(std::optional<MediaPlayerIdentifier>) { }
 };
-
-WEBCORE_EXPORT bool supportsPictureInPicture();
     
 }
 

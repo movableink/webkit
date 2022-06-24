@@ -22,9 +22,7 @@
 
 import logging
 import os
-import sys
 
-from webkitpy.common.system.filesystem import FileSystem
 from webkitpy.common.webkit_finder import WebKitFinder
 from webkitpy.webdriver_tests.webdriver_w3c_executor import WebDriverW3CExecutor
 from webkitpy.webdriver_tests.webdriver_test_result import WebDriverTestResult
@@ -107,6 +105,8 @@ class WebDriverTestRunnerW3C(object):
                         result.add_subtest_results(self._subtest_name(subtest), status, message, backtrace)
                         need_restart = need_restart or status in ('FAIL', 'ERROR', 'XFAIL', 'TIMEOUT')
                 else:
+                    _log.error("Test %s failed:" % test_name)
+                    _log.error(harness_result[1])
                     need_restart = True
                 self._results.append(result)
 

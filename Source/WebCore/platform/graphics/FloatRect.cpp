@@ -54,9 +54,15 @@ bool FloatRect::isExpressibleAsIntRect() const
         && isWithinIntRange(maxX()) && isWithinIntRange(maxY());
 }
 
+bool FloatRect::inclusivelyIntersects(const FloatRect& other) const
+{
+    return width() >= 0 && height() >= 0 && other.width() >= 0 && other.height() >= 0
+        && x() <= other.maxX() && other.x() <= maxX() && y() <= other.maxY() && other.y() <= maxY();
+}
+
 bool FloatRect::intersects(const FloatRect& other) const
 {
-    // Checking emptiness handles negative widths as well as zero.
+    // Checking emptiness handles negative widths and heights as well as zero.
     return !isEmpty() && !other.isEmpty()
         && x() < other.maxX() && other.x() < maxX()
         && y() < other.maxY() && other.y() < maxY();
@@ -225,6 +231,14 @@ void FloatRect::fitToPoints(const FloatPoint& p0, const FloatPoint& p1, const Fl
     setLocationAndSizeFromEdges(left, top, right, bottom);
 }
 
+FloatRect normalizeRect(const FloatRect& rect)
+{
+    return FloatRect(std::min(rect.x(), rect.maxX()),
+        std::min(rect.y(), rect.maxY()),
+        std::max(rect.width(), -rect.width()),
+        std::max(rect.height(), -rect.height()));
+}
+
 FloatRect encloseRectToDevicePixels(const FloatRect& rect, float deviceScaleFactor)
 {
     FloatPoint location = floorPointToDevicePixels(rect.minXMinYCorner(), deviceScaleFactor);
@@ -235,6 +249,18 @@ FloatRect encloseRectToDevicePixels(const FloatRect& rect, float deviceScaleFact
 IntRect enclosingIntRect(const FloatRect& rect)
 {
     FloatPoint location = flooredIntPoint(rect.minXMinYCorner());
+    FloatPoint maxPoint = ceiledIntPoint(rect.maxXMaxYCorner());
+    return IntRect(IntPoint(location), IntSize(maxPoint - location));
+}
+
+IntRect enclosingIntRectPreservingEmptyRects(const FloatRect& rect)
+{
+    // Empty rects with fractional x, y values turn into non-empty rects when converting to enclosing.
+    // We want to ensure that empty rects stay empty after the conversion, since some callers
+    // prefer this behavior.
+    FloatPoint location = flooredIntPoint(rect.minXMinYCorner());
+    if (rect.isEmpty())
+        return IntRect(IntPoint(location), { });
     FloatPoint maxPoint = ceiledIntPoint(rect.maxXMaxYCorner());
     return IntRect(IntPoint(location), IntSize(maxPoint - location));
 }

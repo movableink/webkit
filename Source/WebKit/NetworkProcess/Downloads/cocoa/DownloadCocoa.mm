@@ -31,6 +31,7 @@
 #import "WKDownloadProgress.h"
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <pal/spi/cocoa/NSProgressSPI.h>
+#import <wtf/BlockPtr.h>
 
 namespace WebKit {
 
@@ -48,52 +49,34 @@ void Download::resume(const IPC::DataReference& resumeData, const String& path, 
     auto& cocoaSession = static_cast<NetworkSessionCocoa&>(*networkSession);
     auto nsData = adoptNS([[NSData alloc] initWithBytes:resumeData.data() length:resumeData.size()]);
 
-    // FIXME: This is a temporary workaround for <rdar://problem/34745171>. Fixed in iOS 13 and macOS 10.15, but we still need to support macOS 10.14 for now.
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400 && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500
-    static NSSet<Class> *plistClasses = nil;
-    static dispatch_once_t onceToken;
-
-    dispatch_once(&onceToken, ^{
-        plistClasses = [[NSSet setWithObjects:[NSDictionary class], [NSArray class], [NSString class], [NSNumber class], [NSData class], [NSURL class], [NSURLRequest class], nil] retain];
-    });
-    auto unarchiver = adoptNS([[NSKeyedUnarchiver alloc] initForReadingFromData:nsData.get() error:nil]);
-    [unarchiver setDecodingFailurePolicy:NSDecodingFailurePolicyRaiseException];
-    auto dictionary = adoptNS(static_cast<NSMutableDictionary *>([[unarchiver decodeObjectOfClasses:plistClasses forKey:@"NSKeyedArchiveRootObjectKey"] mutableCopy]));
-    [unarchiver finishDecoding];
-    [dictionary setObject:static_cast<NSString*>(path) forKey:@"NSURLSessionResumeInfoLocalPath"];
-    auto encoder = adoptNS([[NSKeyedArchiver alloc] initRequiringSecureCoding:YES]);
-    [encoder encodeObject:dictionary.get() forKey:@"NSKeyedArchiveRootObjectKey"];
-    NSData *updatedData = [encoder encodedData];
-#else
     NSMutableDictionary *dictionary = [NSPropertyListSerialization propertyListWithData:nsData.get() options:NSPropertyListMutableContainersAndLeaves format:0 error:nullptr];
     [dictionary setObject:static_cast<NSString*>(path) forKey:@"NSURLSessionResumeInfoLocalPath"];
     NSData *updatedData = [NSPropertyListSerialization dataWithPropertyList:dictionary format:NSPropertyListXMLFormat_v1_0 options:0 error:nullptr];
-#endif
 
-    m_downloadTask = cocoaSession.downloadTaskWithResumeData(updatedData);
-    cocoaSession.addDownloadID(m_downloadTask.get().taskIdentifier, m_downloadID);
+    // FIXME: Use nsData instead of updatedData once we've migrated from _WKDownload to WKDownload
+    // because there's no reason to set the local path we got from the data back into the data.
+    m_downloadTask = [cocoaSession.sessionWrapperForDownloadResume().session downloadTaskWithResumeData:updatedData];
+    auto taskIdentifier = [m_downloadTask taskIdentifier];
+    ASSERT(!cocoaSession.sessionWrapperForDownloadResume().downloadMap.contains(taskIdentifier));
+    cocoaSession.sessionWrapperForDownloadResume().downloadMap.add(taskIdentifier, m_downloadID);
     m_downloadTask.get()._pathToDownloadTaskFile = path;
 
     [m_downloadTask resume];
 }
     
-void Download::platformCancelNetworkLoad()
+void Download::platformCancelNetworkLoad(CompletionHandler<void(const IPC::DataReference&)>&& completionHandler)
 {
     ASSERT(m_downloadTask);
-
-    // The download's resume data is accessed in the network session delegate
-    // method -URLSession:task:didCompleteWithError: instead of inside this block,
-    // to avoid race conditions between the two. Calling -cancel is not sufficient
-    // here because CFNetwork won't provide the resume data unless we ask for it.
-    [m_downloadTask cancelByProducingResumeData:^(NSData *resumeData) {
-        UNUSED_PARAM(resumeData);
-    }];
+    [m_downloadTask cancelByProducingResumeData:makeBlockPtr([completionHandler = WTFMove(completionHandler)] (NSData *resumeData) mutable {
+        auto resumeDataReference = resumeData ? IPC::DataReference { static_cast<const uint8_t*>(resumeData.bytes), resumeData.length } : IPC::DataReference { };
+        completionHandler(resumeDataReference);
+    }).get()];
 }
 
 void Download::platformDestroyDownload()
 {
     if (m_progress)
-#if USE(NSPROGRESS_PUBLISHING_SPI)
+#if HAVE(NSPROGRESS_PUBLISHING_SPI)
         [m_progress _unpublish];
 #else
         [m_progress unpublish];
@@ -112,7 +95,7 @@ void Download::publishProgress(const URL& url, SandboxExtension::Handle&& sandbo
         return;
 
     m_progress = adoptNS([[WKDownloadProgress alloc] initWithDownloadTask:m_downloadTask.get() download:*this URL:(NSURL *)url sandboxExtension:sandboxExtension]);
-#if USE(NSPROGRESS_PUBLISHING_SPI)
+#if HAVE(NSPROGRESS_PUBLISHING_SPI)
     [m_progress _publish];
 #else
     [m_progress publish];

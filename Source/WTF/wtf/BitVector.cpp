@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,14 @@
 #include <algorithm>
 #include <string.h>
 #include <wtf/Assertions.h>
-#include <wtf/FastMalloc.h>
-#include <wtf/StdLibExtras.h>
+#include <wtf/MathExtras.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WTF {
+
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BitVector);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BitVector);
 
 void BitVector::setSlow(const BitVector& other)
 {
@@ -76,29 +80,42 @@ BitVector::OutOfLineBits* BitVector::OutOfLineBits::create(size_t numBits)
 {
     numBits = (numBits + bitsInPointer() - 1) & ~(static_cast<size_t>(bitsInPointer()) - 1);
     size_t size = sizeof(OutOfLineBits) + sizeof(uintptr_t) * (numBits / bitsInPointer());
-    OutOfLineBits* result = new (NotNull, fastMalloc(size)) OutOfLineBits(numBits);
+    OutOfLineBits* result = new (NotNull, BitVectorMalloc::malloc(size)) OutOfLineBits(numBits);
     return result;
 }
 
 void BitVector::OutOfLineBits::destroy(OutOfLineBits* outOfLineBits)
 {
-    fastFree(outOfLineBits);
+    BitVectorMalloc::free(outOfLineBits);
 }
 
-void BitVector::resizeOutOfLine(size_t numBits)
+void BitVector::shiftRightByMultipleOf64(size_t shiftInBits)
+{
+    RELEASE_ASSERT(!(shiftInBits % 64));
+    static_assert(!(8 % sizeof(void*)), "BitVector::shiftRightByMultipleOf64 assumes that word size is a divisor of 64");
+    size_t shiftInWords = shiftInBits / (8 * sizeof(void*));
+    size_t numBits = size() + shiftInBits;
+    resizeOutOfLine(numBits, shiftInWords);
+}
+
+void BitVector::resizeOutOfLine(size_t numBits, size_t shiftInWords)
 {
     ASSERT(numBits > maxInlineBits());
     OutOfLineBits* newOutOfLineBits = OutOfLineBits::create(numBits);
     size_t newNumWords = newOutOfLineBits->numWords();
     if (isInline()) {
+        memset(newOutOfLineBits->bits(), 0, shiftInWords * sizeof(void*));
         // Make sure that all of the bits are zero in case we do a no-op resize.
-        *newOutOfLineBits->bits() = m_bitsOrPointer & ~(static_cast<uintptr_t>(1) << maxInlineBits());
-        memset(newOutOfLineBits->bits() + 1, 0, (newNumWords - 1) * sizeof(void*));
+        *(newOutOfLineBits->bits() + shiftInWords) = m_bitsOrPointer & ~(static_cast<uintptr_t>(1) << maxInlineBits());
+        RELEASE_ASSERT(shiftInWords + 1 <= newNumWords);
+        memset(newOutOfLineBits->bits() + shiftInWords + 1, 0, (newNumWords - 1 - shiftInWords) * sizeof(void*));
     } else {
         if (numBits > size()) {
             size_t oldNumWords = outOfLineBits()->numWords();
-            memcpy(newOutOfLineBits->bits(), outOfLineBits()->bits(), oldNumWords * sizeof(void*));
-            memset(newOutOfLineBits->bits() + oldNumWords, 0, (newNumWords - oldNumWords) * sizeof(void*));
+            memset(newOutOfLineBits->bits(), 0, shiftInWords * sizeof(void*));
+            memcpy(newOutOfLineBits->bits() + shiftInWords, outOfLineBits()->bits(), oldNumWords * sizeof(void*));
+            RELEASE_ASSERT(shiftInWords + oldNumWords <= newNumWords);
+            memset(newOutOfLineBits->bits() + shiftInWords + oldNumWords, 0, (newNumWords - oldNumWords - shiftInWords) * sizeof(void*));
         } else
             memcpy(newOutOfLineBits->bits(), outOfLineBits()->bits(), newOutOfLineBits->numWords() * sizeof(void*));
         OutOfLineBits::destroy(outOfLineBits());
@@ -258,12 +275,8 @@ uintptr_t BitVector::hashSlowCase() const
 
 void BitVector::dump(PrintStream& out) const
 {
-    for (size_t i = 0; i < size(); ++i) {
-        if (get(i))
-            out.printf("1");
-        else
-            out.printf("-");
-    }
+    for (size_t i = 0; i < size(); ++i)
+        out.print(get(i) ? "1" : "-");
 }
 
 } // namespace WTF

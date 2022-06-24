@@ -28,8 +28,8 @@
 #include "WebPage.h"
 
 #include "EditorState.h"
-#include "WebEvent.h"
 #include "WebFrame.h"
+#include "WebKeyboardEvent.h"
 #include "WebPageProxyMessages.h"
 #include "WebProcess.h"
 #include <WebCore/BackForwardController.h>
@@ -43,6 +43,7 @@
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
 #include <WebCore/PlatformKeyboardEvent.h>
+#include <WebCore/PointerCharacteristics.h>
 #include <WebCore/Settings.h>
 #include <WebCore/SharedBuffer.h>
 #include <WebCore/UserAgent.h>
@@ -51,7 +52,7 @@
 namespace WebKit {
 using namespace WebCore;
 
-void WebPage::platformInitialize()
+void WebPage::platformInitialize(const WebPageCreationParameters&)
 {
 }
 
@@ -63,7 +64,7 @@ void WebPage::platformDetach()
 {
 }
 
-void WebPage::platformEditorState(Frame& frame, EditorState& result, IncludePostLayoutDataHint shouldIncludePostLayoutData) const
+void WebPage::getPlatformEditorState(Frame&, EditorState&) const
 {
 }
 
@@ -73,32 +74,29 @@ bool WebPage::performDefaultBehaviorForKeyEvent(const WebKeyboardEvent& keyboard
         return false;
 
     switch (keyboardEvent.windowsVirtualKeyCode()) {
-    case VK_SPACE:
-        scroll(m_page.get(), keyboardEvent.shiftKey() ? ScrollUp : ScrollDown, ScrollByPage);
-        break;
     case VK_LEFT:
-        scroll(m_page.get(), ScrollLeft, ScrollByLine);
+        scroll(m_page.get(), ScrollLeft, ScrollGranularity::Line);
         break;
     case VK_RIGHT:
-        scroll(m_page.get(), ScrollRight, ScrollByLine);
+        scroll(m_page.get(), ScrollRight, ScrollGranularity::Line);
         break;
     case VK_UP:
-        scroll(m_page.get(), ScrollUp, ScrollByLine);
+        scroll(m_page.get(), ScrollUp, ScrollGranularity::Line);
         break;
     case VK_DOWN:
-        scroll(m_page.get(), ScrollDown, ScrollByLine);
+        scroll(m_page.get(), ScrollDown, ScrollGranularity::Line);
         break;
     case VK_HOME:
-        scroll(m_page.get(), ScrollUp, ScrollByDocument);
+        scroll(m_page.get(), ScrollUp, ScrollGranularity::Document);
         break;
     case VK_END:
-        scroll(m_page.get(), ScrollDown, ScrollByDocument);
+        scroll(m_page.get(), ScrollDown, ScrollGranularity::Document);
         break;
     case VK_PRIOR:
-        scroll(m_page.get(), ScrollUp, ScrollByPage);
+        scroll(m_page.get(), ScrollUp, ScrollGranularity::Page);
         break;
     case VK_NEXT:
-        scroll(m_page.get(), ScrollDown, ScrollByPage);
+        scroll(m_page.get(), ScrollDown, ScrollGranularity::Page);
         break;
     default:
         return false;
@@ -116,6 +114,26 @@ bool WebPage::platformCanHandleRequest(const ResourceRequest&)
 String WebPage::platformUserAgent(const URL&) const
 {
     return { };
+}
+
+bool WebPage::hoverSupportedByPrimaryPointingDevice() const
+{
+    return true;
+}
+
+bool WebPage::hoverSupportedByAnyAvailablePointingDevice() const
+{
+    return true;
+}
+
+std::optional<PointerCharacteristics> WebPage::pointerCharacteristicsOfPrimaryPointingDevice() const
+{
+    return PointerCharacteristics::Fine;
+}
+
+OptionSet<PointerCharacteristics> WebPage::pointerCharacteristicsOfAllAvailablePointingDevices() const
+{
+    return PointerCharacteristics::Fine;
 }
 
 static const unsigned CtrlKey = 1 << 0;
@@ -245,6 +263,9 @@ bool WebPage::handleEditingKeyboardEvent(WebCore::KeyboardEvent& event)
 
     auto* keyEvent = event.underlyingPlatformEvent();
     if (!keyEvent || keyEvent->isSystemKey()) // Do not treat this as text input if it's a system key event.
+        return false;
+
+    if (event.type() != eventNames().keydownEvent && event.type() != eventNames().keypressEvent)
         return false;
 
     auto command = frame->editor().command(interpretKeyEvent(&event));

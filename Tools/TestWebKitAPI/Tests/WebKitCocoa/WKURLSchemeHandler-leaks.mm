@@ -35,6 +35,7 @@
 #import <WebKit/WKURLSchemeTaskPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/WebKit.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/Vector.h>
@@ -67,9 +68,7 @@
 static void runUntilTasksInFlight(size_t count)
 {
     while (true) {
-        EXPECT_EQ(WKGetAPIURLSchemeTaskInstanceCount(), WKGetWebURLSchemeTaskInstanceCount());
-
-        if (WKGetAPIURLSchemeTaskInstanceCount() == count)
+        if (WKGetWebURLSchemeTaskInstanceCount() == count)
             return;
 
         TestWebKitAPI::Util::spinRunLoop(10);
@@ -78,12 +77,7 @@ static void runUntilTasksInFlight(size_t count)
 
 auto e = EPERM;
 
-#if PLATFORM(IOS_FAMILY)
-// This test is sometimes timing out on iOS (rdar://problem/33665676).
-TEST(URLSchemeHandler, DISABLED_Leaks1)
-#else
 TEST(URLSchemeHandler, Leaks1)
-#endif
 {
     RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     RetainPtr<LeakSchemeHandler> handler = adoptNS([[LeakSchemeHandler alloc] init]);
@@ -152,7 +146,7 @@ TEST(URLSchemeHandler, Leaks3)
 
     runUntilTasksInFlight(2);
 
-    [webView1.get().configuration.processPool _terminateNetworkProcess];
+    [webView1.get().configuration.websiteDataStore _terminateNetworkProcess];
 
     runUntilTasksInFlight(0);
 }

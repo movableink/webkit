@@ -23,22 +23,22 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "LegacyTileGridTile.h"
+#import "config.h"
+#import "LegacyTileGridTile.h"
 
 #if PLATFORM(IOS_FAMILY)
 
-#include "Color.h"
-#include "IOSurface.h"
-#include "LegacyTileCache.h"
-#include "LegacyTileGrid.h"
-#include "LegacyTileLayer.h"
-#include "LegacyTileLayerPool.h"
-#include "PlatformScreen.h"
-#include "WAKWindow.h"
-#include <algorithm>
-#include <functional>
-#include <pal/spi/cocoa/QuartzCoreSPI.h>
+#import "Color.h"
+#import "IOSurface.h"
+#import "LegacyTileCache.h"
+#import "LegacyTileGrid.h"
+#import "LegacyTileLayer.h"
+#import "LegacyTileLayerPool.h"
+#import "PlatformScreen.h"
+#import "WAKWindow.h"
+#import <algorithm>
+#import <functional>
+#import <pal/spi/cocoa/QuartzCoreSPI.h>
 
 namespace WebCore {
 
@@ -124,7 +124,7 @@ void LegacyTileGridTile::showBorder(bool flag)
 {
     LegacyTileLayer* layer = m_tileLayer.get();
     if (flag) {
-        [layer setBorderColor:cachedCGColor(m_tileGrid->tileCache().colorForGridTileBorder(m_tileGrid))];
+        [layer setBorderColor:cachedCGColor(m_tileGrid->tileCache().colorForGridTileBorder(m_tileGrid)).get()];
         [layer setBorderWidth:0.5f];
     } else {
         [layer setBorderColor:nil];

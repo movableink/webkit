@@ -29,21 +29,72 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "APIWebAuthenticationPanelClient.h"
+#include "AuthenticatorManager.h"
+#include "MockAuthenticatorManager.h"
+#include <WebCore/WebAuthenticationConstants.h>
 
 namespace API {
+using namespace WebCore;
+using namespace WebKit;
 
-Ref<WebAuthenticationPanel> WebAuthenticationPanel::create(const String& rpId)
+Ref<WebAuthenticationPanel> WebAuthenticationPanel::create(const AuthenticatorManager& manager, const WTF::String& rpId, const TransportSet& transports, ClientDataType type, const WTF::String& userName)
 {
-    return adoptRef(*new WebAuthenticationPanel(rpId));
+    return adoptRef(*new WebAuthenticationPanel(manager, rpId, transports, type, userName));
 }
 
-WebAuthenticationPanel::WebAuthenticationPanel(const String& rpId)
-    : m_rpId(rpId)
-    , m_client(WTF::makeUniqueRef<WebAuthenticationPanelClient>())
+WebAuthenticationPanel::WebAuthenticationPanel()
+    : m_manager(makeUnique<AuthenticatorManager>())
+    , m_client(makeUniqueRef<WebAuthenticationPanelClient>())
 {
+    m_manager->enableNativeSupport();
+}
+
+WebAuthenticationPanel::WebAuthenticationPanel(const AuthenticatorManager& manager, const WTF::String& rpId, const TransportSet& transports, ClientDataType type, const WTF::String& userName)
+    : m_client(makeUniqueRef<WebAuthenticationPanelClient>())
+    , m_weakManager(manager)
+    , m_rpId(rpId)
+    , m_clientDataType(type)
+    , m_userName(userName)
+{
+    m_transports.reserveInitialCapacity(AuthenticatorManager::maxTransportNumber);
+    if (transports.contains(AuthenticatorTransport::Usb))
+        m_transports.uncheckedAppend(AuthenticatorTransport::Usb);
+    if (transports.contains(AuthenticatorTransport::Nfc))
+        m_transports.uncheckedAppend(AuthenticatorTransport::Nfc);
+    if (transports.contains(AuthenticatorTransport::Internal))
+        m_transports.uncheckedAppend(AuthenticatorTransport::Internal);
 }
 
 WebAuthenticationPanel::~WebAuthenticationPanel() = default;
+
+void WebAuthenticationPanel::handleRequest(WebAuthenticationRequestData&& request, Callback&& callback)
+{
+    ASSERT(m_manager);
+    request.weakPanel = *this;
+    m_manager->handleRequest(WTFMove(request), WTFMove(callback));
+}
+
+void WebAuthenticationPanel::cancel() const
+{
+    if (m_weakManager) {
+        m_weakManager->cancelRequest(*this);
+        return;
+    }
+
+    m_manager->cancel();
+}
+
+void WebAuthenticationPanel::setMockConfiguration(WebCore::MockWebAuthenticationConfiguration&& configuration)
+{
+    ASSERT(m_manager);
+
+    if (!m_manager->isMock()) {
+        m_manager = makeUnique<MockAuthenticatorManager>(WTFMove(configuration));
+        m_manager->enableNativeSupport();
+        return;
+    }
+    static_cast<MockAuthenticatorManager*>(m_manager.get())->setTestConfiguration(WTFMove(configuration));
+}
 
 void WebAuthenticationPanel::setClient(UniqueRef<WebAuthenticationPanelClient>&& client)
 {

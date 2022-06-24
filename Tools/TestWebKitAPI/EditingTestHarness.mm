@@ -24,11 +24,11 @@
  */
 
 
-#include "config.h"
-#include "EditingTestHarness.h"
+#import "config.h"
+#import "EditingTestHarness.h"
 
 #import "PlatformUtilities.h"
-#import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebViewPrivateForTesting.h>
 
 @implementation EditingTestHarness
 
@@ -190,16 +190,22 @@
     }];
     TestWebKitAPI::Util::run(&done);
 
-    [_webView waitForNextPresentationUpdate];
-
     EXPECT_TRUE(result);
     if (!result)
         NSLog(@"Failed to execute editing command: ('%@', '%@')", command, argument ?: @"");
 
-    BOOL containsEntries = [self latestEditorStateContains:entries];
-    EXPECT_TRUE(containsEntries);
-    if (!containsEntries)
-        NSLog(@"Expected %@ to contain %@", self.latestEditorState, entries);
+    const NSTimeInterval loggingTimeout = 3;
+    auto startTime = retainPtr([NSDate date]);
+    BOOL hasLoggedWarning = NO;
+    BOOL containsEntries;
+    do {
+        [_webView waitForNextPresentationUpdate];
+        containsEntries = [self latestEditorStateContains:entries];
+        if (!hasLoggedWarning && [[NSDate date] timeIntervalSinceDate:startTime.get()] > loggingTimeout) {
+            NSLog(@"Expected %@ to contain %@", self.latestEditorState, entries);
+            hasLoggedWarning = YES;
+        }
+    } while (!containsEntries);
 }
 
 - (BOOL)latestEditorStateContains:(NSDictionary<NSString *, id> *)entries

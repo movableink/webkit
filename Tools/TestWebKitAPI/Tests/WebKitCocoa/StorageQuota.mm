@@ -26,6 +26,8 @@
 #import "config.h"
 #import <WebKit/WebKit.h>
 
+#import "DeprecatedGlobalValues.h"
+#import "HTTPServer.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestNavigationDelegate.h"
@@ -42,13 +44,11 @@
 #import <wtf/HashMap.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/Vector.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#import <wtf/text/StringConcatenateNumbers.h>
 #import <wtf/text/StringHash.h>
 #import <wtf/text/WTFString.h>
 
 using namespace TestWebKitAPI;
-
-static bool didFinishNavigation;
 
 @interface QuotaDelegate : NSObject <WKUIDelegate>
 -(bool)quotaDelegateCalled;
@@ -109,57 +109,36 @@ struct ResourceInfo {
     const char* data;
 };
 
-@interface StorageSchemes : NSObject <WKURLSchemeHandler> {
-@public
-    HashMap<String, ResourceInfo> resources;
-}
-@end
-
-@implementation StorageSchemes {
-}
-
-- (void)webView:(WKWebView *)webView startURLSchemeTask:(id <WKURLSchemeTask>)task
-{
-    auto entry = resources.find([task.request.URL absoluteString]);
-    if (entry == resources.end()) {
-        NSLog(@"Did not find resource entry for URL %@", task.request.URL);
-        return;
-    }
-    
-    RetainPtr<NSURLResponse> response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:entry->value.mimeType.get() expectedContentLength:1 textEncodingName:nil]);
-    [task didReceiveResponse:response.get()];
-    
-    [task didReceiveData:[NSData dataWithBytesNoCopy:(void*)entry->value.data length:strlen(entry->value.data) freeWhenDone:NO]];
-    [task didFinish];
-}
-
-- (void)webView:(WKWebView *)webView stopURLSchemeTask:(id <WKURLSchemeTask>)task
-{
-}
-
-@end
-
 static bool receivedMessage;
 
 @interface QuotaMessageHandler : NSObject <WKScriptMessageHandler>
--(void)setExpectedMessage:(NSString *)message;
+- (void)setExpectedMessage:(NSString *)message;
+- (String)receivedMessage;
 @end
 
 @implementation QuotaMessageHandler {
-    NSString *_expectedMessage;
+    String _expectedMessage;
+    String _message;
 }
 
 - (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message
 {
-    if (_expectedMessage) {
-        EXPECT_TRUE([[message body] isEqualToString:_expectedMessage]);
-        _expectedMessage = nil;
+    _message = [message body];
+    if (!_expectedMessage.isNull()) {
+        EXPECT_STREQ(_message.utf8().data(), _expectedMessage.utf8().data());
+        _expectedMessage = { };
     }
     receivedMessage = true;
 }
 
--(void)setExpectedMessage:(NSString *)message {
+- (void)setExpectedMessage:(NSString *)message
+{
     _expectedMessage = message;
+}
+
+- (String)receivedMessage
+{
+    return _message;
 }
 @end
 
@@ -168,16 +147,30 @@ static const char* TestBytes = R"SWRESOURCE(
 
 async function doTest()
 {
-    const cache = await window.caches.open("mycache");
-    const promise = cache.put("http://example.org/test", new Response(new ArrayBuffer(1024 * 500)));
-    window.webkit.messageHandlers.qt.postMessage("start");
-    promise.then(() => {
-        window.webkit.messageHandlers.qt.postMessage("pass");
-    }, () => {
-        window.webkit.messageHandlers.qt.postMessage("fail");
-    });
+    try {
+        const cache = await window.caches.open("mycache");
+        const promise = cache.put("http://example.org/test", new Response(new ArrayBuffer(1024 * 500)));
+        window.webkit.messageHandlers.qt.postMessage("start");
+        promise.then(() => {
+            window.webkit.messageHandlers.qt.postMessage("pass");
+        }, () => {
+            window.webkit.messageHandlers.qt.postMessage("fail");
+        });
+    } catch (e) {
+        window.webkit.messageHandlers.qt.postMessage("fail with exception " + e);
+    }
 }
-doTest();
+
+window.onload = () => {
+    if (document.visibilityState === 'visible')
+        doTest();
+    else {
+        document.addEventListener("visibilitychange", function() {
+            if (document.visibilityState === 'visible')
+                doTest();
+        });
+    }
+}
 
 function doTestAgain()
 {
@@ -195,13 +188,17 @@ async function test(num)
     index++;
     url = "http://example.org/test" + index;
 
-    const cache = await window.caches.open("mycache");
-    const promise = cache.put(url, new Response(new ArrayBuffer(num * 1024 * 1024)));
-    promise.then(() => {
-        window.webkit.messageHandlers.qt.postMessage("pass");
-    }, () => {
-        window.webkit.messageHandlers.qt.postMessage("fail");
-    });
+    try {
+        const cache = await window.caches.open("mycache");
+        const promise = cache.put(url, new Response(new ArrayBuffer(num * 1024 * 1024)));
+        promise.then(() => {
+            window.webkit.messageHandlers.qt.postMessage("pass");
+        }, () => {
+            window.webkit.messageHandlers.qt.postMessage("fail");
+        });
+    } catch (e) {
+        window.webkit.messageHandlers.qt.postMessage("fail with exception " + e);
+    }
 }
 
 function doTest(num)
@@ -211,7 +208,31 @@ function doTest(num)
 </script>
 )SWRESOURCE";
 
-static bool done;
+#if PLATFORM(MAC)
+static const char* TestHiddenBytes = R"SWRESOURCE(
+<script>
+
+async function test()
+{
+    url = "http://example.org/test";
+    try {
+        const cache = await window.caches.open("mycache");
+        const promise = cache.put(url, new Response(new ArrayBuffer(1024 * 1024)));
+        promise.then(() => {
+            window.webkit.messageHandlers.qt.postMessage("put succeeded");
+        }, () => {
+            window.webkit.messageHandlers.qt.postMessage("put failed");
+        });
+    } catch (e) {
+        window.webkit.messageHandlers.qt.postMessage("fail with exception " + e);
+    }
+    setTimeout(() => window.webkit.messageHandlers.qt.postMessage("timed out"), 10000);
+}
+
+test();
+</script>
+)SWRESOURCE";
+#endif
 
 static inline void setVisible(TestWKWebView *webView)
 {
@@ -222,40 +243,93 @@ static inline void setVisible(TestWKWebView *webView)
 #endif
 }
 
-TEST(WebKit, QuotaDelegate)
+#if PLATFORM(MAC)
+TEST(WebKit, QuotaDelegateHidden)
 {
     done = false;
-    _WKWebsiteDataStoreConfiguration *storeConfiguration = [[[_WKWebsiteDataStoreConfiguration alloc] init] autorelease];
-    storeConfiguration.perOriginStorageQuota = 1024 * 400;
-    [storeConfiguration registerURLSchemeServiceWorkersCanHandleForTesting:@"qt1"];
-    [storeConfiguration registerURLSchemeServiceWorkersCanHandleForTesting:@"qt2"];
-    WKWebsiteDataStore *dataStore = [[[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration] autorelease];
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
+    [storeConfiguration setPerOriginStorageQuota:1024 * 400];
+    auto dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]);
     [dataStore removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    [configuration setWebsiteDataStore:dataStore];
+    [configuration setWebsiteDataStore:dataStore.get()];
 
     auto messageHandler = adoptNS([[QuotaMessageHandler alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"qt"];
 
-    auto handler1 = adoptNS([[StorageSchemes alloc] init]);
-    handler1->resources.set("qt1://test1.html", ResourceInfo { @"text/html", TestBytes });
-    [configuration setURLSchemeHandler:handler1.get() forURLScheme:@"QT1"];
+    TestWebKitAPI::HTTPServer server({
+        { "/", { TestHiddenBytes } },
+    });
 
-    auto handler2 = adoptNS([[StorageSchemes alloc] init]);
-    handler2->resources.set("qt2://test2.html", ResourceInfo { @"text/html", TestBytes });
-    [configuration setURLSchemeHandler:handler2.get() forURLScheme:@"QT2"];
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get() addToWindow:YES]);
+    auto delegate = adoptNS([[QuotaDelegate alloc] init]);
+    [webView setUIDelegate:delegate.get()];
+    setVisible(webView.get());
+
+    auto *hostWindow = [webView hostWindow];
+    [hostWindow miniaturize:hostWindow];
+
+    NSLog(@"QuotaDelegateHidden 1");
+
+    receivedQuotaDelegateCalled = false;
+    receivedMessage = false;
+    [webView loadRequest:server.request()];
+    Util::run(&receivedMessage);
+    EXPECT_STREQ([messageHandler receivedMessage].utf8().data(), "put failed");
+
+    NSLog(@"QuotaDelegateHidden 2");
+
+    EXPECT_FALSE(receivedQuotaDelegateCalled);
+
+    [hostWindow deminiaturize:hostWindow];
+
+    receivedQuotaDelegateCalled = false;
+    receivedMessage = false;
+    [webView reload];
+    Util::run(&receivedQuotaDelegateCalled);
+
+    NSLog(@"QuotaDelegateHidden 3");
+
+    [delegate grantQuota];
+    Util::run(&receivedMessage);
+    EXPECT_STREQ([messageHandler receivedMessage].utf8().data(), "put succeeded");
+
+    NSLog(@"QuotaDelegateHidden 4");
+}
+#endif
+
+TEST(WebKit, QuotaDelegate)
+{
+    done = false;
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
+    [storeConfiguration setPerOriginStorageQuota:1024 * 400];
+    auto dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]);
+    [dataStore removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
+        done = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration setWebsiteDataStore:dataStore.get()];
+
+    auto messageHandler = adoptNS([[QuotaMessageHandler alloc] init]);
+    [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"qt"];
+
+    TestWebKitAPI::HTTPServer server({
+        { "/", { TestBytes } },
+    });
 
     auto webView1 = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get() addToWindow:YES]);
     auto delegate1 = adoptNS([[QuotaDelegate alloc] init]);
     [webView1 setUIDelegate:delegate1.get()];
     setVisible(webView1.get());
-    
+
     receivedQuotaDelegateCalled = false;
-    [webView1 loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"qt1://test1.html"]]];
+    [webView1 loadRequest:server.request()];
     Util::run(&receivedQuotaDelegateCalled);
 
     auto webView2 = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get() addToWindow:YES]);
@@ -264,7 +338,7 @@ TEST(WebKit, QuotaDelegate)
     setVisible(webView2.get());
 
     receivedMessage = false;
-    [webView2 loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"qt2://test2.html"]]];
+    [webView2 loadRequest:server.requestWithLocalhost()];
     [messageHandler setExpectedMessage: @"start"];
     Util::run(&receivedMessage);
 
@@ -283,29 +357,30 @@ TEST(WebKit, QuotaDelegate)
     [messageHandler setExpectedMessage: @"fail"];
     receivedMessage = false;
     Util::run(&receivedMessage);
+
+    NSLog(@"QuotaDelegate 6");
 }
 
 TEST(WebKit, QuotaDelegateReload)
 {
     done = false;
-    _WKWebsiteDataStoreConfiguration *storeConfiguration = [[[_WKWebsiteDataStoreConfiguration alloc] init] autorelease];
-    storeConfiguration.perOriginStorageQuota = 1024 * 400;
-    [storeConfiguration registerURLSchemeServiceWorkersCanHandleForTesting:@"qt"];
-    WKWebsiteDataStore *dataStore = [[[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration] autorelease];
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
+    [storeConfiguration setPerOriginStorageQuota:1024 * 400];
+    auto dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]);
     [dataStore removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
     
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    [configuration setWebsiteDataStore:dataStore];
+    [configuration setWebsiteDataStore:dataStore.get()];
     
     auto messageHandler = adoptNS([[QuotaMessageHandler alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"qt"];
     
-    auto handler = adoptNS([[StorageSchemes alloc] init]);
-    handler->resources.set("qt://test1.html", ResourceInfo { @"text/html", TestBytes });
-    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"QT"];
+    TestWebKitAPI::HTTPServer server({
+        { "/", { TestBytes } },
+    });
     
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get() addToWindow:YES]);
     auto delegate = adoptNS([[QuotaDelegate alloc] init]);
@@ -313,7 +388,7 @@ TEST(WebKit, QuotaDelegateReload)
     setVisible(webView.get());
 
     receivedQuotaDelegateCalled = false;
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"qt://test1.html"]]];
+    [webView loadRequest:server.request()];
     Util::run(&receivedQuotaDelegateCalled);
 
     [delegate denyQuota];
@@ -336,24 +411,23 @@ TEST(WebKit, QuotaDelegateReload)
 TEST(WebKit, QuotaDelegateNavigateFragment)
 {
     done = false;
-    _WKWebsiteDataStoreConfiguration *storeConfiguration = [[[_WKWebsiteDataStoreConfiguration alloc] init] autorelease];
-    [storeConfiguration registerURLSchemeServiceWorkersCanHandleForTesting:@"qt"];
-    storeConfiguration.perOriginStorageQuota = 1024 * 400;
-    WKWebsiteDataStore *dataStore = [[[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration] autorelease];
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
+    [storeConfiguration setPerOriginStorageQuota:1024 * 400];
+    auto dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]);
     [dataStore removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
         done = true;
     }];
     TestWebKitAPI::Util::run(&done);
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    [configuration setWebsiteDataStore:dataStore];
+    [configuration setWebsiteDataStore:dataStore.get()];
 
     auto messageHandler = adoptNS([[QuotaMessageHandler alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"qt"];
 
-    auto handler = adoptNS([[StorageSchemes alloc] init]);
-    handler->resources.set("qt://test1.html", ResourceInfo { @"text/html", TestBytes });
-    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"QT"];
+    TestWebKitAPI::HTTPServer server({
+        { "/main.html", { TestBytes } },
+    });
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get() addToWindow:YES]);
     auto delegate = adoptNS([[QuotaDelegate alloc] init]);
@@ -361,7 +435,7 @@ TEST(WebKit, QuotaDelegateNavigateFragment)
     setVisible(webView.get());
 
     receivedQuotaDelegateCalled = false;
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"qt://test1.html"]]];
+    [webView loadRequest:server.request("/main.html")];
     Util::run(&receivedQuotaDelegateCalled);
 
     [delegate denyQuota];
@@ -371,7 +445,7 @@ TEST(WebKit, QuotaDelegateNavigateFragment)
     Util::run(&receivedMessage);
 
     receivedQuotaDelegateCalled = false;
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"qt://test1.html#fragment"]]];
+    [webView loadRequest:server.request("/main.html#fragment")];
     [webView stringByEvaluatingJavaScript:@"doTestAgain()"];
 
     [messageHandler setExpectedMessage: @"start"];
@@ -388,9 +462,8 @@ TEST(WebKit, QuotaDelegateNavigateFragment)
 TEST(WebKit, DefaultQuota)
 {
     done = false;
-    _WKWebsiteDataStoreConfiguration *storeConfiguration = [[[_WKWebsiteDataStoreConfiguration alloc] init] autorelease];
-    [storeConfiguration registerURLSchemeServiceWorkersCanHandleForTesting:@"qt"];
-    WKWebsiteDataStore *dataStore = [[[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration] autorelease];
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
+    auto dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]);
 
     [dataStore removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
         done = true;
@@ -398,14 +471,14 @@ TEST(WebKit, DefaultQuota)
     TestWebKitAPI::Util::run(&done);
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-    [configuration setWebsiteDataStore:dataStore];
+    [configuration setWebsiteDataStore:dataStore.get()];
 
     auto messageHandler = adoptNS([[QuotaMessageHandler alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"qt"];
 
-    auto handler = adoptNS([[StorageSchemes alloc] init]);
-    handler->resources.set("qt://test1.html", ResourceInfo { @"text/html", TestUrlBytes });
-    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"QT"];
+    TestWebKitAPI::HTTPServer server({
+        { "/", { TestUrlBytes } },
+    });
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get() addToWindow:YES]);
     auto delegate = adoptNS([[QuotaDelegate alloc] init]);
@@ -414,13 +487,13 @@ TEST(WebKit, DefaultQuota)
 
     auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
     [navigationDelegate setDidFinishNavigation:^(WKWebView *, WKNavigation *) {
-        didFinishNavigation = true;
+        didFinishNavigationBoolean = true;
     }];
     [webView setNavigationDelegate:navigationDelegate.get()];
 
-    didFinishNavigation = false;
-    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"qt://test1.html"]]];
-    Util::run(&didFinishNavigation);
+    didFinishNavigationBoolean = false;
+    [webView loadRequest:server.request()];
+    Util::run(&didFinishNavigationBoolean);
 
     receivedQuotaDelegateCalled = false;
 

@@ -64,12 +64,15 @@ public:
     void removeUserStyleSheets(InjectedBundleScriptWorld&);
     void removeAllUserContent();
 
-    void addUserContentWorlds(const Vector<std::pair<uint64_t, String>>&);
+    InjectedBundleScriptWorld* worldForIdentifier(ContentWorldIdentifier);
+
+    void addContentWorlds(const Vector<std::pair<ContentWorldIdentifier, String>>&);
+    InjectedBundleScriptWorld* addContentWorld(const std::pair<ContentWorldIdentifier, String>&);
     void addUserScripts(Vector<WebUserScriptData>&&, InjectUserScriptImmediately);
     void addUserStyleSheets(const Vector<WebUserStyleSheetData>&);
     void addUserScriptMessageHandlers(const Vector<WebScriptMessageHandlerData>&);
 #if ENABLE(CONTENT_EXTENSIONS)
-    void addContentRuleLists(Vector<std::pair<String, WebCompiledContentRuleListData>>&&);
+    void addContentRuleLists(Vector<std::pair<WebCompiledContentRuleListData, URL>>&&);
 #endif
 
 private:
@@ -88,25 +91,26 @@ private:
     // IPC::MessageReceiver.
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
-    void removeUserContentWorlds(const Vector<uint64_t>&);
+    void removeContentWorlds(const Vector<ContentWorldIdentifier>&);
 
-    void removeUserScript(uint64_t worldIdentifier, uint64_t userScriptIdentifier);
-    void removeAllUserScripts(const Vector<uint64_t>&);
+    void removeUserScript(ContentWorldIdentifier, uint64_t userScriptIdentifier);
+    void removeAllUserScripts(const Vector<ContentWorldIdentifier>&);
 
-    void removeUserStyleSheet(uint64_t worldIdentifier, uint64_t userScriptIdentifier);
-    void removeAllUserStyleSheets(const Vector<uint64_t>&);
+    void removeUserStyleSheet(ContentWorldIdentifier, uint64_t userScriptIdentifier);
+    void removeAllUserStyleSheets(const Vector<ContentWorldIdentifier>&);
 
-    void removeUserScriptMessageHandler(uint64_t worldIdentifier, uint64_t userScriptIdentifier);
-    void removeAllUserScriptMessageHandlers(const Vector<uint64_t>&);
+    void removeUserScriptMessageHandler(ContentWorldIdentifier, uint64_t userScriptIdentifier);
+    void removeAllUserScriptMessageHandlersForWorlds(const Vector<ContentWorldIdentifier>&);
+    void removeAllUserScriptMessageHandlers();
 
 #if ENABLE(CONTENT_EXTENSIONS)
     void removeContentRuleList(const String& name);
     void removeAllContentRuleLists();
 #endif
 
-    void addUserScriptInternal(InjectedBundleScriptWorld&, const Optional<uint64_t>& userScriptIdentifier, WebCore::UserScript&&, InjectUserScriptImmediately);
+    void addUserScriptInternal(InjectedBundleScriptWorld&, const std::optional<uint64_t>& userScriptIdentifier, WebCore::UserScript&&, InjectUserScriptImmediately);
     void removeUserScriptInternal(InjectedBundleScriptWorld&, uint64_t userScriptIdentifier);
-    void addUserStyleSheetInternal(InjectedBundleScriptWorld&, const Optional<uint64_t>& userStyleSheetIdentifier, WebCore::UserStyleSheet&&);
+    void addUserStyleSheetInternal(InjectedBundleScriptWorld&, const std::optional<uint64_t>& userStyleSheetIdentifier, WebCore::UserStyleSheet&&);
     void removeUserStyleSheetInternal(InjectedBundleScriptWorld&, uint64_t userStyleSheetIdentifier);
 #if ENABLE(USER_MESSAGE_HANDLERS)
     void addUserScriptMessageHandlerInternal(InjectedBundleScriptWorld&, uint64_t userScriptMessageHandlerIdentifier, const String& name);
@@ -115,10 +119,10 @@ private:
 
     UserContentControllerIdentifier m_identifier;
 
-    typedef HashMap<RefPtr<InjectedBundleScriptWorld>, Vector<std::pair<Optional<uint64_t>, WebCore::UserScript>>> WorldToUserScriptMap;
+    typedef HashMap<RefPtr<InjectedBundleScriptWorld>, Vector<std::pair<std::optional<uint64_t>, WebCore::UserScript>>> WorldToUserScriptMap;
     WorldToUserScriptMap m_userScripts;
 
-    typedef HashMap<RefPtr<InjectedBundleScriptWorld>, Vector<std::pair<Optional<uint64_t>, WebCore::UserStyleSheet>>> WorldToUserStyleSheetMap;
+    typedef HashMap<RefPtr<InjectedBundleScriptWorld>, Vector<std::pair<std::optional<uint64_t>, WebCore::UserStyleSheet>>> WorldToUserStyleSheetMap;
     WorldToUserStyleSheetMap m_userStyleSheets;
 
 #if ENABLE(USER_MESSAGE_HANDLERS)

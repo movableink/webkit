@@ -26,49 +26,62 @@
 #include "config.h"
 #include "WebSocketChannel.h"
 
-#include "DataReference.h"
 #include "NetworkConnectionToWebProcessMessages.h"
 #include "NetworkProcessConnection.h"
 #include "NetworkSocketChannelMessages.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebProcess.h"
 #include <WebCore/Blob.h>
+#include <WebCore/ClientOrigin.h>
 #include <WebCore/Document.h>
+#include <WebCore/ExceptionCode.h>
+#include <WebCore/Page.h>
 #include <WebCore/WebSocketChannel.h>
 #include <WebCore/WebSocketChannelClient.h>
 #include <wtf/CheckedArithmetic.h>
 
+namespace WebKit {
 using namespace WebCore;
 
-namespace WebKit {
-
-Ref<WebSocketChannel> WebSocketChannel::create(Document& document, WebSocketChannelClient& client)
+Ref<WebSocketChannel> WebSocketChannel::create(WebPageProxyIdentifier webPageProxyID, Document& document, WebSocketChannelClient& client)
 {
-    return adoptRef(*new WebSocketChannel(document, client));
+    return adoptRef(*new WebSocketChannel(webPageProxyID, document, client));
+}
+
+void WebSocketChannel::notifySendFrame(WebSocketFrame::OpCode opCode, const uint8_t* data, size_t length)
+{
+    WebSocketFrame frame(opCode, true, false, true, data, length);
+    m_inspector.didSendWebSocketFrame(frame);
 }
 
 NetworkSendQueue WebSocketChannel::createMessageQueue(Document& document, WebSocketChannel& channel)
 {
-    return { document, [&channel](auto& string) {
-        auto byteLength = string.sizeInBytes();
-        channel.sendMessage(Messages::NetworkSocketChannel::SendString { string }, byteLength);
-    }, [&channel](const char* data, size_t byteLength) {
-        channel.sendMessage(Messages::NetworkSocketChannel::SendData { IPC::DataReference { reinterpret_cast<const uint8_t*>(data), byteLength } }, byteLength);
-    }, [&channel](auto errorCode) {
-        channel.fail(makeString("Failed to load Blob: error code = ", errorCode));
+    return { document, [&channel](auto& utf8String) {
+        channel.notifySendFrame(WebSocketFrame::OpCode::OpCodeText, utf8String.dataAsUInt8Ptr(), utf8String.length());
+        channel.sendMessage(Messages::NetworkSocketChannel::SendString { IPC::DataReference { utf8String.dataAsUInt8Ptr(), utf8String.length() } }, utf8String.length());
+    }, [&channel](auto& span) {
+        channel.notifySendFrame(WebSocketFrame::OpCode::OpCodeBinary, span.data(), span.size());
+        channel.sendMessage(Messages::NetworkSocketChannel::SendData { IPC::DataReference { span.data(), span.size() } }, span.size());
+    }, [&channel](ExceptionCode exceptionCode) {
+        auto code = static_cast<int>(exceptionCode);
+        channel.fail(makeString("Failed to load Blob: exception code = ", code));
         return NetworkSendQueue::Continue::No;
     } };
 }
 
-WebSocketChannel::WebSocketChannel(Document& document, WebSocketChannelClient& client)
-    : m_document(makeWeakPtr(document))
-    , m_client(makeWeakPtr(client))
+WebSocketChannel::WebSocketChannel(WebPageProxyIdentifier webPageProxyID, Document& document, WebSocketChannelClient& client)
+    : m_document(document)
+    , m_client(client)
     , m_messageQueue(createMessageQueue(document, *this))
+    , m_inspector(document)
+    , m_webPageProxyID(webPageProxyID)
 {
+    WebProcess::singleton().webSocketChannelManager().addChannel(*this);
 }
 
 WebSocketChannel::~WebSocketChannel()
 {
+    WebProcess::singleton().webSocketChannelManager().removeChannel(*this);
 }
 
 IPC::Connection* WebSocketChannel::messageSenderConnection() const
@@ -78,7 +91,7 @@ IPC::Connection* WebSocketChannel::messageSenderConnection() const
 
 uint64_t WebSocketChannel::messageSenderDestinationID() const
 {
-    return identifier();
+    return m_identifier.toUInt64();
 }
 
 String WebSocketChannel::subprotocol()
@@ -103,7 +116,9 @@ WebSocketChannel::ConnectStatus WebSocketChannel::connect(const URL& url, const 
     if (request->url() != url && m_client)
         m_client->didUpgradeURL();
 
-    MessageSender::send(Messages::NetworkConnectionToWebProcess::CreateSocketChannel { *request, protocol, identifier() });
+    m_inspector.didCreateWebSocket(url);
+    m_url = request->url();
+    MessageSender::send(Messages::NetworkConnectionToWebProcess::CreateSocketChannel { *request, protocol, m_identifier, m_webPageProxyID, m_document->clientOrigin(), WebProcess::singleton().hadMainFrameMainResourcePrivateRelayed() });
     return ConnectStatus::OK;
 }
 
@@ -112,14 +127,14 @@ bool WebSocketChannel::increaseBufferedAmount(size_t byteLength)
     if (!byteLength)
         return true;
 
-    Checked<size_t, RecordOverflow> checkedNewBufferedAmount = m_bufferedAmount;
+    CheckedSize checkedNewBufferedAmount = m_bufferedAmount;
     checkedNewBufferedAmount += byteLength;
     if (UNLIKELY(checkedNewBufferedAmount.hasOverflowed())) {
         fail("Failed to send WebSocket frame: buffer has no more space");
         return false;
     }
 
-    m_bufferedAmount = checkedNewBufferedAmount.unsafeGet();
+    m_bufferedAmount = checkedNewBufferedAmount;
     if (m_client)
         m_client->didUpdateBufferedAmount(m_bufferedAmount);
     return true;
@@ -138,19 +153,18 @@ void WebSocketChannel::decreaseBufferedAmount(size_t byteLength)
 
 template<typename T> void WebSocketChannel::sendMessage(T&& message, size_t byteLength)
 {
-    CompletionHandler<void()> completionHandler = [this, protectedThis = makeRef(*this), byteLength] {
+    CompletionHandler<void()> completionHandler = [this, protectedThis = Ref { *this }, byteLength] {
         decreaseBufferedAmount(byteLength);
     };
     sendWithAsyncReply(WTFMove(message), WTFMove(completionHandler));
 }
 
-WebSocketChannel::SendResult WebSocketChannel::send(const String& message)
+WebSocketChannel::SendResult WebSocketChannel::send(CString&& message)
 {
-    auto byteLength = message.sizeInBytes();
-    if (!increaseBufferedAmount(byteLength))
+    if (!increaseBufferedAmount(message.length()))
         return SendFail;
 
-    m_messageQueue.enqueue(message);
+    m_messageQueue.enqueue(WTFMove(message));
     return SendSuccess;
 }
 
@@ -183,32 +197,46 @@ unsigned WebSocketChannel::bufferedAmount() const
 
 void WebSocketChannel::close(int code, const String& reason)
 {
+    // An attempt to send closing handshake may fail, which will get the channel closed and dereferenced.
+    Ref protectedThis { *this };
+
     m_isClosing = true;
     if (m_client)
         m_client->didStartClosingHandshake();
 
     ASSERT(code >= 0 || code == WebCore::WebSocketChannel::CloseEventCodeNotSpecified);
 
+    WebSocketFrame closingFrame(WebSocketFrame::OpCodeClose, true, false, true);
+    m_inspector.didSendWebSocketFrame(closingFrame);
+
     MessageSender::send(Messages::NetworkSocketChannel::Close { code, reason });
 }
 
-void WebSocketChannel::fail(const String& reason)
+void WebSocketChannel::fail(String&& reason)
 {
-    if (m_client)
-        m_client->didReceiveMessageError();
+    // The client can close the channel, potentially removing the last reference.
+    Ref protectedThis { *this };
 
-    if (!m_isClosing)
-        MessageSender::send(Messages::NetworkSocketChannel::Close { 0, reason });
+    logErrorMessage(reason);
+    if (m_client)
+        m_client->didReceiveMessageError(String { reason });
+
+    if (m_isClosing)
+        return;
+
+    MessageSender::send(Messages::NetworkSocketChannel::Close { WebCore::WebSocketChannel::CloseEventCodeGoingAway, reason });
+    didClose(WebCore::WebSocketChannel::CloseEventCodeAbnormalClosure, { });
 }
 
 void WebSocketChannel::disconnect()
 {
     m_client = nullptr;
     m_document = nullptr;
-    m_pendingTasks.clear();
     m_messageQueue.clear();
 
-    MessageSender::send(Messages::NetworkSocketChannel::Close { 0, { } });
+    m_inspector.didCloseWebSocket();
+
+    MessageSender::send(Messages::NetworkSocketChannel::Close { WebCore::WebSocketChannel::CloseEventCodeGoingAway, { } });
 }
 
 void WebSocketChannel::didConnect(String&& subprotocol, String&& extensions)
@@ -218,13 +246,6 @@ void WebSocketChannel::didConnect(String&& subprotocol, String&& extensions)
 
     if (!m_client)
         return;
-
-    if (m_isSuspended) {
-        enqueueTask([this, subprotocol = WTFMove(subprotocol), extensions = WTFMove(extensions)] () mutable {
-            didConnect(WTFMove(subprotocol), WTFMove(extensions));
-        });
-        return;
-    }
 
     m_subprotocol = WTFMove(subprotocol);
     m_extensions = WTFMove(extensions);
@@ -239,14 +260,7 @@ void WebSocketChannel::didReceiveText(String&& message)
     if (!m_client)
         return;
 
-    if (m_isSuspended) {
-        enqueueTask([this, message = WTFMove(message)] () mutable {
-            didReceiveText(WTFMove(message));
-        });
-        return;
-    }
-
-    m_client->didReceiveMessage(message);
+    m_client->didReceiveMessage(WTFMove(message));
 }
 
 void WebSocketChannel::didReceiveBinaryData(IPC::DataReference&& data)
@@ -257,14 +271,7 @@ void WebSocketChannel::didReceiveBinaryData(IPC::DataReference&& data)
     if (!m_client)
         return;
 
-    if (m_isSuspended) {
-        enqueueTask([this, data = data.vector()] () mutable {
-            if (!m_isClosing && m_client)
-                m_client->didReceiveBinaryData(WTFMove(data));
-        });
-        return;
-    }
-    m_client->didReceiveBinaryData(data.vector());
+    m_client->didReceiveBinaryData({ data });
 }
 
 void WebSocketChannel::didClose(unsigned short code, String&& reason)
@@ -272,17 +279,27 @@ void WebSocketChannel::didClose(unsigned short code, String&& reason)
     if (!m_client)
         return;
 
-    if (m_isSuspended) {
-        enqueueTask([this, code, reason = WTFMove(reason)] () mutable {
-            didClose(code, WTFMove(reason));
-        });
-        return;
-    }
+    // An attempt to send closing handshake may fail, which will get the channel closed and dereferenced.
+    Ref protectedThis { *this };
 
-    if (code == WebCore::WebSocketChannel::CloseEventCodeNormalClosure)
+    bool receivedClosingHandshake = code != WebCore::WebSocketChannel::CloseEventCodeAbnormalClosure;
+    if (receivedClosingHandshake)
         m_client->didStartClosingHandshake();
 
-    m_client->didClose(m_bufferedAmount, (m_isClosing || code == WebCore::WebSocketChannel::CloseEventCodeNormalClosure) ? WebCore::WebSocketChannelClient::ClosingHandshakeComplete : WebCore::WebSocketChannelClient::ClosingHandshakeIncomplete, code, reason);
+    m_client->didClose(m_bufferedAmount, (m_isClosing || receivedClosingHandshake) ? WebCore::WebSocketChannelClient::ClosingHandshakeComplete : WebCore::WebSocketChannelClient::ClosingHandshakeIncomplete, code, reason);
+}
+
+void WebSocketChannel::logErrorMessage(const String& errorMessage)
+{
+    if (!m_document)
+        return;
+
+    String consoleMessage;
+    if (!m_url.isNull())
+        consoleMessage = makeString("WebSocket connection to '", m_url.string(), "' failed: ", errorMessage);
+    else
+        consoleMessage = makeString("WebSocket connection failed: ", errorMessage);
+    m_document->addConsoleMessage(MessageSource::Network, MessageLevel::Error, consoleMessage);
 }
 
 void WebSocketChannel::didReceiveMessageError(String&& errorMessage)
@@ -290,37 +307,33 @@ void WebSocketChannel::didReceiveMessageError(String&& errorMessage)
     if (!m_client)
         return;
 
-    if (m_isSuspended) {
-        enqueueTask([this, errorMessage = WTFMove(errorMessage)] () mutable {
-            didReceiveMessageError(WTFMove(errorMessage));
-        });
-        return;
-    }
-
-    // FIXME: do something with errorMessage.
-    m_client->didReceiveMessageError();
+    logErrorMessage(errorMessage);
+    m_client->didReceiveMessageError(WTFMove(errorMessage));
 }
 
 void WebSocketChannel::networkProcessCrashed()
 {
-    didReceiveMessageError({ });
+    didReceiveMessageError("WebSocket network error: Network process crashed."_s);
 }
 
 void WebSocketChannel::suspend()
 {
-    m_isSuspended = true;
 }
 
 void WebSocketChannel::resume()
 {
-    m_isSuspended = false;
-    while (!m_isSuspended && !m_pendingTasks.isEmpty())
-        m_pendingTasks.takeFirst()();
 }
 
-void WebSocketChannel::enqueueTask(Function<void()>&& task)
+void WebSocketChannel::didSendHandshakeRequest(ResourceRequest&& request)
 {
-    m_pendingTasks.append(WTFMove(task));
+    m_inspector.willSendWebSocketHandshakeRequest(request);
+    m_handshakeRequest = WTFMove(request);
+}
+
+void WebSocketChannel::didReceiveHandshakeResponse(ResourceResponse&& response)
+{
+    m_inspector.didReceiveWebSocketHandshakeResponse(response);
+    m_handshakeResponse = WTFMove(response);
 }
 
 } // namespace WebKit

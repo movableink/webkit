@@ -25,6 +25,7 @@
 
 #import "config.h"
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import <WebKit/WebKit.h>
@@ -32,13 +33,11 @@
 #import <WebKit/WKUserContentControllerPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <WebKit/_WKUserStyleSheet.h>
 #import <wtf/Deque.h>
 #import <wtf/RetainPtr.h>
-
-static bool receivedScriptMessage;
-static Deque<RetainPtr<WKScriptMessage>> scriptMessages;
 
 @interface IndexedDBMPMessageHandler : NSObject <WKScriptMessageHandler>
 @end
@@ -53,23 +52,13 @@ static Deque<RetainPtr<WKScriptMessage>> scriptMessages;
 
 @end
 
-static WKScriptMessage *getNextMessage()
-{
-    if (scriptMessages.isEmpty()) {
-        receivedScriptMessage = false;
-        TestWebKitAPI::Util::run(&receivedScriptMessage);
-    }
-
-    return [[scriptMessages.takeFirst() retain] autorelease];
-}
-
 TEST(IndexedDB, IndexedDBMultiProcess)
 {
     RetainPtr<IndexedDBMPMessageHandler> handler = adoptNS([[IndexedDBMPMessageHandler alloc] init]);
     RetainPtr<WKWebViewConfiguration> configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:handler.get() name:@"testHandler"];
 
-    [configuration.get().processPool _terminateNetworkProcess];
+    [configuration.get().websiteDataStore _terminateNetworkProcess];
 
     RetainPtr<WKWebView> webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
 

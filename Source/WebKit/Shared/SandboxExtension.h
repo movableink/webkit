@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/OptionSet.h>
 #include <wtf/ProcessID.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -44,14 +45,21 @@ class SandboxExtensionImpl;
 
 class SandboxExtension : public RefCounted<SandboxExtension> {
 public:
-    enum class Type {
+    enum class Type : uint8_t {
         ReadOnly,
         ReadWrite,
         Mach,
+        IOKit,
         Generic,
         ReadByProcess
     };
 
+    enum class Flags : uint8_t {
+        Default,
+        NoReport,
+        DoNotCanonicalize,
+    };
+    
     class Handle {
         WTF_MAKE_NONCOPYABLE(Handle);
     public:
@@ -66,7 +74,7 @@ public:
         ~Handle();
 
         void encode(IPC::Encoder&) const;
-        static Optional<Handle> decode(IPC::Decoder&);
+        static std::optional<Handle> decode(IPC::Decoder&);
 
     private:
         friend class SandboxExtension;
@@ -74,39 +82,21 @@ public:
         mutable std::unique_ptr<SandboxExtensionImpl> m_sandboxExtension;
 #endif
     };
-
-    class HandleArray {
-        WTF_MAKE_NONCOPYABLE(HandleArray);
-    public:
-        HandleArray();
-        HandleArray(HandleArray&&) = default;
-        HandleArray& operator=(HandleArray&&) = default;
-        ~HandleArray();
-        void allocate(size_t);
-        Handle& operator[](size_t i);
-        Handle& at(size_t i) { return operator[](i); }
-        const Handle& operator[](size_t i) const;
-        size_t size() const;
-        void encode(IPC::Encoder&) const;
-        static Optional<HandleArray> decode(IPC::Decoder&);
-
-    private:
-#if ENABLE(SANDBOX_EXTENSIONS)
-        Vector<Handle> m_data;
-#else
-        Handle m_emptyHandle;
-#endif
-    };
     
     static RefPtr<SandboxExtension> create(Handle&&);
-    static bool createHandle(const String& path, Type, Handle&);
-    static bool createHandleWithoutResolvingPath(const String& path, Type, Handle&);
-    static bool createHandleForReadWriteDirectory(const String& path, Handle&); // Will attempt to create the directory.
-    static String createHandleForTemporaryFile(const String& prefix, Type, Handle&);
-    static bool createHandleForGenericExtension(const String& extensionClass, Handle&);
+    static std::optional<Handle> createHandle(const String& path, Type);
+    static Vector<Handle> createReadOnlyHandlesForFiles(ASCIILiteral logLabel, const Vector<String>& paths);
+    static std::optional<Handle> createHandleWithoutResolvingPath(const String& path, Type);
+    static std::optional<Handle> createHandleForReadWriteDirectory(const String& path); // Will attempt to create the directory.
+    static std::optional<std::pair<Handle, String>> createHandleForTemporaryFile(const String& prefix, Type);
+    static std::optional<Handle> createHandleForGenericExtension(ASCIILiteral extensionClass);
 #if HAVE(AUDIT_TOKEN)
-    static bool createHandleForMachLookupByAuditToken(const String& service, audit_token_t, Handle&);
-    static bool createHandleForReadByAuditToken(const String& path, audit_token_t, Handle&);
+    static std::optional<Handle> createHandleForMachLookup(ASCIILiteral service, std::optional<audit_token_t>, OptionSet<Flags> = Flags::Default);
+    static Vector<Handle> createHandlesForMachLookup(Span<const ASCIILiteral> services, std::optional<audit_token_t>, OptionSet<Flags> = Flags::Default);
+    static Vector<Handle> createHandlesForMachLookup(std::initializer_list<const ASCIILiteral> services, std::optional<audit_token_t>, OptionSet<Flags> = Flags::Default);
+    static std::optional<Handle> createHandleForReadByAuditToken(const String& path, audit_token_t);
+    static std::optional<Handle> createHandleForIOKitClassExtension(ASCIILiteral iokitClass, std::optional<audit_token_t>, OptionSet<Flags> = Flags::Default);
+    static Vector<Handle> createHandlesForIOKitClassExtensions(Span<const ASCIILiteral> iokitClasses, std::optional<audit_token_t>, OptionSet<Flags> = Flags::Default);
 #endif
     ~SandboxExtension();
 
@@ -114,7 +104,10 @@ public:
     bool revoke();
 
     bool consumePermanently();
+
+    // FIXME: These should not be const.
     static bool consumePermanently(const Handle&);
+    static bool consumePermanently(const Vector<SandboxExtension::Handle>&);
 
 private:
     explicit SandboxExtension(const Handle&);
@@ -125,37 +118,33 @@ private:
 #endif
 };
 
+String stringByResolvingSymlinksInPath(const String& path);
+String resolvePathForSandboxExtension(const String& path);
+String resolveAndCreateReadWriteDirectoryForSandboxExtension(const String& path);
+
 #if !ENABLE(SANDBOX_EXTENSIONS)
+
 inline SandboxExtension::Handle::Handle() { }
 inline SandboxExtension::Handle::~Handle() { }
 inline void SandboxExtension::Handle::encode(IPC::Encoder&) const { }
-inline Optional<SandboxExtension::Handle> SandboxExtension::Handle::decode(IPC::Decoder&) { return SandboxExtension::Handle { }; }
-inline SandboxExtension::HandleArray::HandleArray() { }
-inline SandboxExtension::HandleArray::~HandleArray() { }
-inline void SandboxExtension::HandleArray::allocate(size_t) { }
-inline size_t SandboxExtension::HandleArray::size() const { return 0; }    
-inline const SandboxExtension::Handle& SandboxExtension::HandleArray::operator[](size_t) const { return m_emptyHandle; }
-inline SandboxExtension::Handle& SandboxExtension::HandleArray::operator[](size_t) { return m_emptyHandle; }
-inline void SandboxExtension::HandleArray::encode(IPC::Encoder&) const { }
-inline auto SandboxExtension::HandleArray::decode(IPC::Decoder&) -> Optional<HandleArray> { return {{ }}; }
+inline std::optional<SandboxExtension::Handle> SandboxExtension::Handle::decode(IPC::Decoder&) { return Handle { }; }
 inline RefPtr<SandboxExtension> SandboxExtension::create(Handle&&) { return nullptr; }
-inline bool SandboxExtension::createHandle(const String&, Type, Handle&) { return true; }
-inline bool SandboxExtension::createHandleWithoutResolvingPath(const String&, Type, Handle&) { return true; }
-inline bool SandboxExtension::createHandleForReadWriteDirectory(const String&, Handle&) { return true; }
-inline String SandboxExtension::createHandleForTemporaryFile(const String& /*prefix*/, Type, Handle&) {return String();}
-inline bool SandboxExtension::createHandleForGenericExtension(const String& /*extensionClass*/, Handle&) { return true; }
+inline auto SandboxExtension::createHandle(const String&, Type) -> std::optional<Handle> { return Handle { }; }
+inline auto SandboxExtension::createReadOnlyHandlesForFiles(ASCIILiteral, const Vector<String>&) -> Vector<Handle> { return { }; }
+inline auto SandboxExtension::createHandleWithoutResolvingPath(const String&, Type) -> std::optional<Handle> { return Handle { }; }
+inline auto SandboxExtension::createHandleForReadWriteDirectory(const String&) -> std::optional<Handle> { return Handle { }; }
+inline auto SandboxExtension::createHandleForTemporaryFile(const String&, Type) -> std::optional<std::pair<Handle, String>> { return std::pair<Handle, String> { }; }
+inline auto SandboxExtension::createHandleForGenericExtension(ASCIILiteral) -> std::optional<Handle> { return Handle { }; }
 inline SandboxExtension::~SandboxExtension() { }
 inline bool SandboxExtension::revoke() { return true; }
 inline bool SandboxExtension::consume() { return true; }
 inline bool SandboxExtension::consumePermanently() { return true; }
 inline bool SandboxExtension::consumePermanently(const Handle&) { return true; }
+inline bool SandboxExtension::consumePermanently(const Vector<Handle>&) { return true; }
 inline String stringByResolvingSymlinksInPath(const String& path) { return path; }
 inline String resolvePathForSandboxExtension(const String& path) { return path; }
 inline String resolveAndCreateReadWriteDirectoryForSandboxExtension(const String& path) { return path; }
-#else
-String stringByResolvingSymlinksInPath(const String& path);
-String resolvePathForSandboxExtension(const String& path);
-String resolveAndCreateReadWriteDirectoryForSandboxExtension(const String& path);
+
 #endif
 
 } // namespace WebKit

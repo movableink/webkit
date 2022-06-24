@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,16 +29,13 @@
 #import "WebDatabaseManagerPrivate.h"
 
 #import "WebDatabaseManagerClient.h"
+#import "WebDatabaseProvider.h"
 #import "WebPlatformStrategies.h"
 #import "WebSecurityOriginInternal.h"
-
 #import <WebCore/DatabaseManager.h>
 #import <WebCore/DatabaseTracker.h>
 #import <WebCore/SecurityOrigin.h>
-
-#if ENABLE(INDEXED_DATABASE)
-#import "WebDatabaseProvider.h"
-#endif
+#import <wtf/cocoa/VectorCocoa.h>
 
 #if PLATFORM(IOS_FAMILY)
 #import "WebDatabaseManagerInternal.h"
@@ -85,32 +82,23 @@ static NSString *databasesDirectoryPath();
     dbManager.initialize(databasesDirectoryPath());
 
     // Set the DatabaseManagerClient
-    dbManager.setClient(WebDatabaseManagerClient::sharedWebDatabaseManagerClient());
+    dbManager.setClient(&WebKit::WebDatabaseManagerClient::sharedWebDatabaseManagerClient());
 
     return self;
 }
 
 - (NSArray *)origins
 {
-    auto coreOrigins = DatabaseTracker::singleton().origins();
-    NSMutableArray *webOrigins = [[NSMutableArray alloc] initWithCapacity:coreOrigins.size()];
-    for (auto& coreOrigin : coreOrigins) {
-        WebSecurityOrigin *webOrigin = [[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:coreOrigin.securityOrigin().ptr()];
-        [webOrigins addObject:webOrigin];
-        [webOrigin release];
-    }
-    return [webOrigins autorelease];
+    return createNSArray(DatabaseTracker::singleton().origins(), [] (auto& origin) {
+        return adoptNS([[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:origin.securityOrigin().ptr()]);
+    }).autorelease();
 }
 
 - (NSArray *)databasesWithOrigin:(WebSecurityOrigin *)origin
 {
     if (!origin)
         return nil;
-    Vector<String> nameVector = DatabaseTracker::singleton().databaseNames([origin _core]->data());
-    NSMutableArray *names = [[NSMutableArray alloc] initWithCapacity:nameVector.size()];
-    for (auto& name : nameVector)
-        [names addObject:(NSString *)name];
-    return [names autorelease];
+    return createNSArray(DatabaseTracker::singleton().databaseNames([origin _core]->data())).autorelease();
 }
 
 - (NSDictionary *)detailsForDatabase:(NSString *)databaseIdentifier withOrigin:(WebSecurityOrigin *)origin
@@ -152,9 +140,7 @@ static NSString *databasesDirectoryPath();
 // For DumpRenderTree support only
 - (void)deleteAllIndexedDatabases
 {
-#if ENABLE(INDEXED_DATABASE)
     WebDatabaseProvider::singleton().deleteAllDatabases();
-#endif
 }
 
 #if PLATFORM(IOS_FAMILY)

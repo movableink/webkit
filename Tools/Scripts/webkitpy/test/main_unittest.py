@@ -1,4 +1,5 @@
 # Copyright (C) 2012 Google, Inc.
+# Copyright (C) 2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -20,21 +21,26 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import StringIO
 import logging
 import sys
 import unittest
 
+from webkitcorepy import StringIO
+
 from webkitpy.common.system.filesystem import FileSystem
 from webkitpy.common.system.executive import Executive
-from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.test.main import Tester, _Loader
+from webkitpy.test.markers import xfail
+
+from webkitcorepy import OutputCapture
 
 
 STUBS_CLASS = __name__ + ".TestStubs"
 
 
 class TestStubs(unittest.TestCase):
+    __pytest_no_rewrite__ = True
+
     def test_empty(self):
         pass
 
@@ -50,28 +56,26 @@ class TestStubs(unittest.TestCase):
 
 class TesterTest(unittest.TestCase):
 
-    def test_no_tests_found(self):
+    def serial_test_no_tests_found(self):
         tester = Tester()
-        errors = StringIO.StringIO()
+        errors = StringIO()
 
         # Here we need to remove any existing log handlers so that they
         # don't log the messages webkitpy.test while we're testing it.
         root_logger = logging.getLogger()
         root_handlers = root_logger.handlers
-        root_logger.handlers = []
-
-        tester.printer.stream = errors
-        tester.finder.find_names = lambda args, run_all: []
-        oc = OutputCapture()
         try:
-            oc.capture_output()
-            self.assertFalse(tester.run())
-        finally:
-            _, _, logs = oc.restore_output()
-            root_logger.handlers = root_handlers
+            root_logger.handlers = []
 
-        self.assertIn('No tests to run', errors.getvalue())
-        self.assertIn('No tests to run', logs)
+            tester.printer.stream = errors
+            tester.finder.find_names = lambda args, run_all: []
+            with OutputCapture(level=logging.INFO) as captured:
+                self.assertFalse(tester.run([]))
+
+            self.assertIn('No tests to run', errors.getvalue())
+            self.assertIn('No tests to run', captured.root.log.getvalue())
+        finally:
+            root_logger.handlers = root_handlers
 
     def _find_test_names(self, args):
         tester = Tester()
@@ -99,11 +103,12 @@ class TesterTest(unittest.TestCase):
             STUBS_CLASS + '.integration_test_empty',
             STUBS_CLASS + '.test_empty',
             ])
-        self.assertEqual(serial_tests, [
+        self.assertEqual(sorted(serial_tests), [
             STUBS_CLASS + '.serial_integration_test_empty',
             STUBS_CLASS + '.serial_test_empty',
             ])
 
+    @xfail
     def integration_test_coverage_works(self):
         filesystem = FileSystem()
         executive = Executive()

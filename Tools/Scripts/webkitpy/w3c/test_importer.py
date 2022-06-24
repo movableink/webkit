@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright (C) 2013 Adobe Systems Incorporated. All rights reserved.
 # Copyright (C) 2015 Canon Inc. All rights reserved.
 #
@@ -190,11 +188,14 @@ class TestImporter(object):
             if self._tests_options:
                 self.remove_slow_from_w3c_tests_options()
 
-        self.globalToSuffix = dict(
-            window='html',
-            worker='worker.html',
-            dedicatedworker='worker.html',
-            serviceworker='serviceworker.html')
+        self.globalToSuffixes = {
+            'window': ('html',),
+            'worker': ('worker.html', 'serviceworker.html', 'sharedworker.html'),
+            'dedicatedworker': ('worker.html',),
+            'serviceworker': ('serviceworker.html',),
+            'serviceworker-module': ('serviceworker-module.html',),
+            'sharedworker': ('sharedworker.html',)
+        }
 
     def do_import(self):
         if not self.source_directory:
@@ -349,6 +350,8 @@ class TestImporter(object):
                     # Using a naming convention creates duplicate copies of the
                     # reference files.
                     ref_file = self.filesystem.splitext(test_basename)[0] + '-expected'
+                    if 'type' in test_info and test_info['type'] == 'mismatch':
+                        ref_file += '-mismatch'
                     ref_file += self.filesystem.splitext(test_info['reference'])[1]
 
                     copy_list.append({'src': test_info['reference'], 'dest': ref_file, 'reference_support_info': test_info['reference_support_info']})
@@ -419,8 +422,14 @@ class TestImporter(object):
         for line in lines:
             if line.startswith('//') and 'META: global=' in line:
                 items = line.split('META: global=', 1)[1].split(',')
-                suffixes = [self.globalToSuffix.get(item.strip(), '') for item in items]
-                environments = filter(None, set(suffixes))
+                suffixes = set()
+                for item in items:
+                    suffixes_for_item = self.globalToSuffixes.get(item.strip(), ())
+                    if len(suffixes_for_item) == 0:
+                        suffixes.add('')
+                    else:
+                        suffixes.update(suffixes_for_item)
+                environments = list(filter(None, suffixes))
         return set(environments) if len(environments) else ['html', 'worker.html']
 
     def write_html_files_for_templated_js_tests(self, orig_filepath, new_filepath):
@@ -446,7 +455,7 @@ class TestImporter(object):
 
         # We currently need to rewrite css web-platform-tests because they use a separate "reference" folder for
         # their ref-tests' results.
-        folders_needing_file_rewriting = ['web-platform-tests/css', ]
+        folders_needing_file_rewriting = ['web-platform-tests/']
 
         for dir_to_copy in self.import_list:
             total_imported_tests += dir_to_copy['total_tests']
@@ -510,7 +519,7 @@ class TestImporter(object):
                 # FIXME: Eventually, so should js when support is added for this type of conversion
                 mimetype = mimetypes.guess_type(orig_filepath)
                 if should_rewrite_files and ('text/' in str(mimetype[0]) or 'application/' in str(mimetype[0])) \
-                                        and ('html' in str(mimetype[0]) or 'xml' in str(mimetype[0])  or 'css' in str(mimetype[0])):
+                                        and ('html' in str(mimetype[0]) or 'xml' in str(mimetype[0])  or 'css' in str(mimetype[0]) or 'javascript' in str(mimetype[0])):
                     _log.info("Rewriting: %s" % new_filepath)
                     try:
                         converted_file = convert_for_webkit(new_path, filename=orig_filepath, reference_support_info=reference_support_info, host=self.host, convert_test_harness_links=self.should_convert_test_harness_links(subpath), webkit_test_runner_options=self._webkit_test_runner_options(new_filepath))

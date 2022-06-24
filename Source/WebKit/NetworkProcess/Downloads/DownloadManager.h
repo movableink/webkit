@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include "DataReference.h"
 #include "DownloadID.h"
 #include "DownloadMap.h"
 #include "NetworkDataTask.h"
 #include "PendingDownload.h"
+#include "PolicyDecision.h"
 #include "SandboxExtension.h"
 #include <WebCore/NotImplemented.h>
 #include <wtf/Forward.h>
@@ -48,7 +50,6 @@ class ResourceResponse;
 
 namespace IPC {
 class Connection;
-class DataReference;
 }
 
 namespace WebKit {
@@ -58,6 +59,8 @@ class Download;
 class NetworkConnectionToWebProcess;
 class NetworkLoad;
 class PendingDownload;
+
+enum class CallDownloadDidStart : bool { No, Yes };
 
 class DownloadManager {
     WTF_MAKE_NONCOPYABLE(DownloadManager);
@@ -72,7 +75,6 @@ public:
         virtual IPC::Connection* downloadProxyConnection() = 0;
         virtual IPC::Connection* parentProcessConnectionForDownloads() = 0;
         virtual AuthenticationManager& downloadsAuthenticationManager() = 0;
-        virtual void pendingDownloadCanceled(DownloadID) = 0;
         virtual NetworkSession* networkSession(PAL::SessionID) const = 0;
         virtual void ref() const = 0;
         virtual void deref() const = 0;
@@ -80,16 +82,15 @@ public:
 
     explicit DownloadManager(Client&);
 
-    void startDownload(PAL::SessionID, DownloadID, const WebCore::ResourceRequest&, const String& suggestedName = { });
+    void startDownload(PAL::SessionID, DownloadID, const WebCore::ResourceRequest&, std::optional<NavigatingToAppBoundDomain>, const String& suggestedName = { });
     void dataTaskBecameDownloadTask(DownloadID, std::unique_ptr<Download>&&);
     void continueWillSendRequest(DownloadID, WebCore::ResourceRequest&&);
-    void willDecidePendingDownloadDestination(NetworkDataTask&, ResponseCompletionHandler&&);
     void convertNetworkLoadToDownload(DownloadID, std::unique_ptr<NetworkLoad>&&, ResponseCompletionHandler&&,  Vector<RefPtr<WebCore::BlobDataFileReference>>&&, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&);
-    void continueDecidePendingDownloadDestination(DownloadID, String destination, SandboxExtension::Handle&&, bool allowOverwrite);
+    void downloadDestinationDecided(DownloadID, Ref<NetworkDataTask>&&);
 
-    void resumeDownload(PAL::SessionID, DownloadID, const IPC::DataReference& resumeData, const String& path, SandboxExtension::Handle&&);
+    void resumeDownload(PAL::SessionID, DownloadID, const IPC::DataReference& resumeData, const String& path, SandboxExtension::Handle&&, CallDownloadDidStart);
 
-    void cancelDownload(DownloadID);
+    void cancelDownload(DownloadID, CompletionHandler<void(const IPC::DataReference&)>&&);
 #if PLATFORM(COCOA)
     void publishDownloadProgress(DownloadID, const URL&, SandboxExtension::Handle&&);
 #endif
@@ -117,7 +118,6 @@ public:
 private:
     Client& m_client;
     HashMap<DownloadID, std::unique_ptr<PendingDownload>> m_pendingDownloads;
-    HashMap<DownloadID, std::pair<RefPtr<NetworkDataTask>, ResponseCompletionHandler>> m_downloadsWaitingForDestination;
     HashMap<DownloadID, RefPtr<NetworkDataTask>> m_downloadsAfterDestinationDecided;
     DownloadMap m_downloads;
 };

@@ -1,4 +1,4 @@
-// META: global=jsshell
+// META: global=window,dedicatedworker,jsshell
 // META: script=/wasm/jsapi/assertions.js
 
 function test_operations(object, object_name, operations) {
@@ -9,7 +9,7 @@ function test_operations(object, object_name, operations) {
       assert_true(propdesc.writable, "writable");
       assert_true(propdesc.enumerable, "enumerable");
       assert_true(propdesc.configurable, "configurable");
-      assert_equals(propdesc.value, WebAssembly[name]);
+      assert_equals(propdesc.value, object[name]);
     }, `${object_name}.${name}`);
 
     test(() => {
@@ -63,11 +63,11 @@ test(() => {
 }, "WebAssembly: property descriptor");
 
 test(() => {
-  assert_throws(new TypeError(), () => WebAssembly());
+  assert_throws_js(TypeError, () => WebAssembly());
 }, "WebAssembly: calling");
 
 test(() => {
-  assert_throws(new TypeError(), () => new WebAssembly());
+  assert_throws_js(TypeError, () => new WebAssembly());
 }, "WebAssembly: constructing");
 
 const interfaces = [
@@ -143,7 +143,7 @@ test_attributes(WebAssembly.Memory.prototype, "WebAssembly.Memory", [
 test_operations(WebAssembly.Table.prototype, "WebAssembly.Table", [
   ["grow", 1],
   ["get", 1],
-  ["set", 2],
+  ["set", 1],
 ]);
 
 test_attributes(WebAssembly.Table.prototype, "WebAssembly.Table", [

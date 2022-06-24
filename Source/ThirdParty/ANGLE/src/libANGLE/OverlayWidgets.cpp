@@ -12,6 +12,8 @@
 #include "libANGLE/Overlay.h"
 #include "libANGLE/Overlay_font_autogen.h"
 
+#include <functional>
+
 namespace gl
 {
 namespace
@@ -41,16 +43,11 @@ constexpr angle::PackedEnumMap<WidgetType, WidgetInternalType> kWidgetTypeToInte
 constexpr size_t kMaxRenderableTextWidgets  = 32;
 constexpr size_t kMaxRenderableGraphWidgets = 32;
 constexpr size_t kMaxTextLength             = 256;
-constexpr size_t kMaxGraphDataSize          = 64;
+constexpr size_t kMaxGraphDataSize          = 256;
 
 constexpr angle::PackedEnumMap<WidgetInternalType, size_t> kWidgetInternalTypeMaxWidgets = {
     {WidgetInternalType::Text, kMaxRenderableTextWidgets},
     {WidgetInternalType::Graph, kMaxRenderableGraphWidgets},
-};
-
-constexpr angle::PackedEnumMap<WidgetInternalType, size_t> kWidgetInternalTypeWidgetOffsets = {
-    {WidgetInternalType::Text, 0},
-    {WidgetInternalType::Graph, kMaxRenderableTextWidgets},
 };
 
 ANGLE_ENABLE_STRUCT_PADDING_WARNINGS
@@ -117,9 +114,9 @@ void GetWidgetColor(const float srcColor[4], float dstColor[4])
 void GetTextFontSize(int srcFontSize, uint32_t dstFontSize[3])
 {
     // .xy contains the font glyph width/height
-    dstFontSize[0] = overlay::kFontGlyphWidths[srcFontSize];
-    dstFontSize[1] = overlay::kFontGlyphHeights[srcFontSize];
-    // .z contains the layer
+    dstFontSize[0] = overlay::kFontGlyphWidth >> srcFontSize;
+    dstFontSize[1] = overlay::kFontGlyphHeight >> srcFontSize;
+    // .z contains the mip
     dstFontSize[2] = srcFontSize;
 }
 
@@ -138,7 +135,7 @@ void GetTextString(const std::string &src, uint8_t textOut[kMaxTextLength])
 {
     for (size_t i = 0; i < src.length() && i < kMaxTextLength; ++i)
     {
-        // The font image has 96 ASCII characters starting from ' '.
+        // The font image has 95 ASCII characters starting from ' '.
         textOut[i] = src[i] - ' ';
     }
 }
@@ -169,7 +166,7 @@ std::vector<size_t> CreateHistogram(const std::vector<size_t> values)
     return histogram;
 }
 
-using OverlayWidgetCounts  = angle::PackedEnumMap<WidgetInternalType, size_t>;
+using OverlayWidgetCounts  = angle::PackedEnumMap<WidgetInternalType, uint32_t>;
 using AppendWidgetDataFunc = void (*)(const overlay::Widget *widget,
                                       const gl::Extents &imageExtent,
                                       TextWidgetData *textWidget,
@@ -179,37 +176,18 @@ using AppendWidgetDataFunc = void (*)(const overlay::Widget *widget,
 
 namespace overlay_impl
 {
+#define ANGLE_DECLARE_APPEND_WIDGET_PROC(WIDGET_ID)                                              \
+    static void Append##WIDGET_ID(const overlay::Widget *widget, const gl::Extents &imageExtent, \
+                                  TextWidgetData *textWidget, GraphWidgetData *graphWidget,      \
+                                  OverlayWidgetCounts *widgetCounts);
+
 // This class interprets the generic data collected in every element into a human-understandable
 // widget.  This often means generating text specific to this item and scaling graph data to
 // something sensible.
 class AppendWidgetDataHelper
 {
   public:
-    static void AppendFPS(const overlay::Widget *widget,
-                          const gl::Extents &imageExtent,
-                          TextWidgetData *textWidget,
-                          GraphWidgetData *graphWidget,
-                          OverlayWidgetCounts *widgetCounts);
-    static void AppendVulkanLastValidationMessage(const overlay::Widget *widget,
-                                                  const gl::Extents &imageExtent,
-                                                  TextWidgetData *textWidget,
-                                                  GraphWidgetData *graphWidget,
-                                                  OverlayWidgetCounts *widgetCounts);
-    static void AppendVulkanValidationMessageCount(const overlay::Widget *widget,
-                                                   const gl::Extents &imageExtent,
-                                                   TextWidgetData *textWidget,
-                                                   GraphWidgetData *graphWidget,
-                                                   OverlayWidgetCounts *widgetCounts);
-    static void AppendVulkanCommandGraphSize(const overlay::Widget *widget,
-                                             const gl::Extents &imageExtent,
-                                             TextWidgetData *textWidget,
-                                             GraphWidgetData *graphWidget,
-                                             OverlayWidgetCounts *widgetCounts);
-    static void AppendVulkanSecondaryCommandBufferPoolWaste(const overlay::Widget *widget,
-                                                            const gl::Extents &imageExtent,
-                                                            TextWidgetData *textWidget,
-                                                            GraphWidgetData *graphWidget,
-                                                            OverlayWidgetCounts *widgetCounts);
+    ANGLE_WIDGET_ID_X(ANGLE_DECLARE_APPEND_WIDGET_PROC)
 
   private:
     static std::ostream &OutputPerSecond(std::ostream &out, const overlay::PerSecond *perSecond);
@@ -223,6 +201,23 @@ class AppendWidgetDataHelper
                                  const std::string &text,
                                  TextWidgetData *textWidget,
                                  OverlayWidgetCounts *widgetCounts);
+
+    using FormatGraphTitleFunc = std::function<std::string(size_t maxValue)>;
+    static void AppendRunningGraphCommon(const overlay::Widget *widget,
+                                         const gl::Extents &imageExtent,
+                                         TextWidgetData *textWidget,
+                                         GraphWidgetData *graphWidget,
+                                         OverlayWidgetCounts *widgetCounts,
+                                         FormatGraphTitleFunc formatFunc);
+
+    using FormatHistogramTitleFunc =
+        std::function<std::string(size_t peakRange, size_t maxValueRange, size_t numRanges)>;
+    static void AppendRunningHistogramCommon(const overlay::Widget *widget,
+                                             const gl::Extents &imageExtent,
+                                             TextWidgetData *textWidget,
+                                             GraphWidgetData *graphWidget,
+                                             OverlayWidgetCounts *widgetCounts,
+                                             FormatHistogramTitleFunc formatFunc);
 
     static void AppendGraphCommon(const overlay::Widget *widget,
                                   const gl::Extents &imageExtent,
@@ -264,6 +259,71 @@ void AppendWidgetDataHelper::AppendGraphCommon(const overlay::Widget *widget,
     GetGraphValues(runningValues, startIndex, scale, graphWidget->values);
 
     ++(*widgetCounts)[WidgetInternalType::Graph];
+}
+
+void AppendWidgetDataHelper::AppendRunningGraphCommon(
+    const overlay::Widget *widget,
+    const gl::Extents &imageExtent,
+    TextWidgetData *textWidget,
+    GraphWidgetData *graphWidget,
+    OverlayWidgetCounts *widgetCounts,
+    AppendWidgetDataHelper::FormatGraphTitleFunc formatFunc)
+{
+    const overlay::RunningGraph *graph = static_cast<const overlay::RunningGraph *>(widget);
+
+    const size_t maxValue =
+        *std::max_element(graph->runningValues.begin(), graph->runningValues.end());
+    const int32_t graphHeight = std::abs(widget->coords[3] - widget->coords[1]);
+    const float graphScale    = static_cast<float>(graphHeight) / maxValue;
+
+    const size_t graphSize  = graph->runningValues.size();
+    const size_t currentIdx = graph->lastValueIndex - 1;
+
+    const size_t curValue = graph->runningValues[(graphSize + currentIdx) % graphSize];
+
+    AppendGraphCommon(widget, imageExtent, graph->runningValues, graph->lastValueIndex + 1,
+                      graphScale, graphWidget, widgetCounts);
+
+    if ((*widgetCounts)[WidgetInternalType::Text] <
+        kWidgetInternalTypeMaxWidgets[WidgetInternalType::Text])
+    {
+        // std::string text = formatFunc(maxValue);
+        std::string text = formatFunc(curValue);
+        AppendTextCommon(&graph->description, imageExtent, text, textWidget, widgetCounts);
+    }
+}
+
+// static
+void AppendWidgetDataHelper::AppendRunningHistogramCommon(const overlay::Widget *widget,
+                                                          const gl::Extents &imageExtent,
+                                                          TextWidgetData *textWidget,
+                                                          GraphWidgetData *graphWidget,
+                                                          OverlayWidgetCounts *widgetCounts,
+                                                          FormatHistogramTitleFunc formatFunc)
+{
+    const overlay::RunningHistogram *runningHistogram =
+        static_cast<const overlay::RunningHistogram *>(widget);
+
+    std::vector<size_t> histogram = CreateHistogram(runningHistogram->runningValues);
+    auto peakRangeIt              = std::max_element(histogram.rbegin(), histogram.rend());
+    const size_t peakRangeValue   = *peakRangeIt;
+    const int32_t graphHeight     = std::abs(widget->coords[3] - widget->coords[1]);
+    const float graphScale        = static_cast<float>(graphHeight) / peakRangeValue;
+    auto maxValueIter =
+        std::find_if(histogram.rbegin(), histogram.rend(), [](size_t value) { return value != 0; });
+
+    AppendGraphCommon(widget, imageExtent, histogram, 0, graphScale, graphWidget, widgetCounts);
+
+    if ((*widgetCounts)[WidgetInternalType::Text] <
+        kWidgetInternalTypeMaxWidgets[WidgetInternalType::Text])
+    {
+        size_t peakRange     = std::distance(peakRangeIt, histogram.rend() - 1);
+        size_t maxValueRange = std::distance(maxValueIter, histogram.rend() - 1);
+
+        std::string text = formatFunc(peakRange, maxValueRange, histogram.size());
+        AppendTextCommon(&runningHistogram->description, imageExtent, text, textWidget,
+                         widgetCounts);
+    }
 }
 
 void AppendWidgetDataHelper::AppendFPS(const overlay::Widget *widget,
@@ -308,31 +368,19 @@ void AppendWidgetDataHelper::AppendVulkanValidationMessageCount(const overlay::W
     AppendTextCommon(widget, imageExtent, text.str(), textWidget, widgetCounts);
 }
 
-void AppendWidgetDataHelper::AppendVulkanCommandGraphSize(const overlay::Widget *widget,
-                                                          const gl::Extents &imageExtent,
-                                                          TextWidgetData *textWidget,
-                                                          GraphWidgetData *graphWidget,
-                                                          OverlayWidgetCounts *widgetCounts)
+void AppendWidgetDataHelper::AppendVulkanRenderPassCount(const overlay::Widget *widget,
+                                                         const gl::Extents &imageExtent,
+                                                         TextWidgetData *textWidget,
+                                                         GraphWidgetData *graphWidget,
+                                                         OverlayWidgetCounts *widgetCounts)
 {
-    const overlay::RunningGraph *commandGraphSize =
-        static_cast<const overlay::RunningGraph *>(widget);
-
-    const size_t maxValue     = *std::max_element(commandGraphSize->runningValues.begin(),
-                                              commandGraphSize->runningValues.end());
-    const int32_t graphHeight = std::abs(widget->coords[3] - widget->coords[1]);
-    const float graphScale    = static_cast<float>(graphHeight) / maxValue;
-
-    AppendGraphCommon(widget, imageExtent, commandGraphSize->runningValues,
-                      commandGraphSize->lastValueIndex + 1, graphScale, graphWidget, widgetCounts);
-
-    if ((*widgetCounts)[WidgetInternalType::Text] <
-        kWidgetInternalTypeMaxWidgets[WidgetInternalType::Text])
-    {
+    auto format = [](size_t maxValue) {
         std::ostringstream text;
-        text << "Command Graph Size (Max: " << maxValue << ")";
-        AppendTextCommon(&commandGraphSize->description, imageExtent, text.str(), textWidget,
-                         widgetCounts);
-    }
+        text << "RenderPass Count: " << maxValue;
+        return text.str();
+    };
+
+    AppendRunningGraphCommon(widget, imageExtent, textWidget, graphWidget, widgetCounts, format);
 }
 
 void AppendWidgetDataHelper::AppendVulkanSecondaryCommandBufferPoolWaste(
@@ -342,28 +390,138 @@ void AppendWidgetDataHelper::AppendVulkanSecondaryCommandBufferPoolWaste(
     GraphWidgetData *graphWidget,
     OverlayWidgetCounts *widgetCounts)
 {
-    const overlay::RunningHistogram *secondaryCommandBufferPoolWaste =
-        static_cast<const overlay::RunningHistogram *>(widget);
-
-    std::vector<size_t> histogram = CreateHistogram(secondaryCommandBufferPoolWaste->runningValues);
-    auto maxValueIter             = std::max_element(histogram.rbegin(), histogram.rend());
-    const size_t maxValue         = *maxValueIter;
-    const int32_t graphHeight     = std::abs(widget->coords[3] - widget->coords[1]);
-    const float graphScale        = static_cast<float>(graphHeight) / maxValue;
-
-    AppendGraphCommon(widget, imageExtent, histogram, 0, graphScale, graphWidget, widgetCounts);
-
-    if ((*widgetCounts)[WidgetInternalType::Text] <
-        kWidgetInternalTypeMaxWidgets[WidgetInternalType::Text])
-    {
+    auto format = [](size_t peakRange, size_t maxValueRange, size_t numRanges) {
         std::ostringstream text;
-        size_t peak        = std::distance(maxValueIter, histogram.rend() - 1);
-        size_t peakPercent = (peak * 100 + 50) / histogram.size();
-
+        size_t peakPercent = (peakRange * 100 + 50) / numRanges;
         text << "CB Pool Waste (Peak: " << peakPercent << "%)";
-        AppendTextCommon(&secondaryCommandBufferPoolWaste->description, imageExtent, text.str(),
-                         textWidget, widgetCounts);
-    }
+        return text.str();
+    };
+
+    AppendRunningHistogramCommon(widget, imageExtent, textWidget, graphWidget, widgetCounts,
+                                 format);
+}
+
+void AppendWidgetDataHelper::AppendVulkanRenderPassBufferCount(const overlay::Widget *widget,
+                                                               const gl::Extents &imageExtent,
+                                                               TextWidgetData *textWidget,
+                                                               GraphWidgetData *graphWidget,
+                                                               OverlayWidgetCounts *widgetCounts)
+{
+    auto format = [](size_t peakRange, size_t maxValueRange, size_t numRanges) {
+        std::ostringstream text;
+        text << "RP VkBuffers (Peak: " << peakRange << ", Max: " << maxValueRange << ")";
+        return text.str();
+    };
+
+    AppendRunningHistogramCommon(widget, imageExtent, textWidget, graphWidget, widgetCounts,
+                                 format);
+}
+
+void AppendWidgetDataHelper::AppendVulkanWriteDescriptorSetCount(const overlay::Widget *widget,
+                                                                 const gl::Extents &imageExtent,
+                                                                 TextWidgetData *textWidget,
+                                                                 GraphWidgetData *graphWidget,
+                                                                 OverlayWidgetCounts *widgetCounts)
+{
+    auto format = [](size_t maxValue) {
+        std::ostringstream text;
+        text << "WriteDescriptorSet Count: " << maxValue;
+        return text.str();
+    };
+
+    AppendRunningGraphCommon(widget, imageExtent, textWidget, graphWidget, widgetCounts, format);
+}
+
+void AppendWidgetDataHelper::AppendVulkanDescriptorSetAllocations(const overlay::Widget *widget,
+                                                                  const gl::Extents &imageExtent,
+                                                                  TextWidgetData *textWidget,
+                                                                  GraphWidgetData *graphWidget,
+                                                                  OverlayWidgetCounts *widgetCounts)
+{
+    auto format = [](size_t maxValue) {
+        std::ostringstream text;
+        text << "Descriptor Set Allocations: " << maxValue;
+        return text.str();
+    };
+
+    AppendRunningGraphCommon(widget, imageExtent, textWidget, graphWidget, widgetCounts, format);
+}
+
+void AppendWidgetDataHelper::AppendVulkanShaderBufferDSHitRate(const overlay::Widget *widget,
+                                                               const gl::Extents &imageExtent,
+                                                               TextWidgetData *textWidget,
+                                                               GraphWidgetData *graphWidget,
+                                                               OverlayWidgetCounts *widgetCounts)
+{
+    auto format = [](size_t maxValue) {
+        std::ostringstream text;
+        text << "Shader Buffer DS Hit Rate (Max: " << maxValue << "%)";
+        return text.str();
+    };
+
+    AppendRunningGraphCommon(widget, imageExtent, textWidget, graphWidget, widgetCounts, format);
+}
+
+void AppendWidgetDataHelper::AppendVulkanDynamicBufferAllocations(const overlay::Widget *widget,
+                                                                  const gl::Extents &imageExtent,
+                                                                  TextWidgetData *textWidget,
+                                                                  GraphWidgetData *graphWidget,
+                                                                  OverlayWidgetCounts *widgetCounts)
+{
+    auto format = [](size_t maxValue) {
+        std::ostringstream text;
+        text << "DynamicBuffer Allocations (Max: " << maxValue << ")";
+        return text.str();
+    };
+
+    AppendRunningGraphCommon(widget, imageExtent, textWidget, graphWidget, widgetCounts, format);
+}
+
+void AppendWidgetDataHelper::AppendVulkanTextureDescriptorCacheSize(
+    const overlay::Widget *widget,
+    const gl::Extents &imageExtent,
+    TextWidgetData *textWidget,
+    GraphWidgetData *graphWidget,
+    OverlayWidgetCounts *widgetCounts)
+{
+    auto format = [](size_t curVal) {
+        std::ostringstream text;
+        text << "Total Texture Descriptor Cache Size: " << curVal;
+        return text.str();
+    };
+
+    AppendRunningGraphCommon(widget, imageExtent, textWidget, graphWidget, widgetCounts, format);
+}
+
+void AppendWidgetDataHelper::AppendVulkanUniformDescriptorCacheSize(
+    const overlay::Widget *widget,
+    const gl::Extents &imageExtent,
+    TextWidgetData *textWidget,
+    GraphWidgetData *graphWidget,
+    OverlayWidgetCounts *widgetCounts)
+{
+    auto format = [](size_t curVal) {
+        std::ostringstream text;
+        text << "Total Uniform Descriptor Cache Size: " << curVal;
+        return text.str();
+    };
+
+    AppendRunningGraphCommon(widget, imageExtent, textWidget, graphWidget, widgetCounts, format);
+}
+
+void AppendWidgetDataHelper::AppendVulkanDescriptorCacheSize(const overlay::Widget *widget,
+                                                             const gl::Extents &imageExtent,
+                                                             TextWidgetData *textWidget,
+                                                             GraphWidgetData *graphWidget,
+                                                             OverlayWidgetCounts *widgetCounts)
+{
+    auto format = [](size_t curVal) {
+        std::ostringstream text;
+        text << "Total Descriptor Cache Size: " << curVal;
+        return text.str();
+    };
+
+    AppendRunningGraphCommon(widget, imageExtent, textWidget, graphWidget, widgetCounts, format);
 }
 
 std::ostream &AppendWidgetDataHelper::OutputPerSecond(std::ostream &out,
@@ -385,18 +543,12 @@ std::ostream &AppendWidgetDataHelper::OutputCount(std::ostream &out, const overl
 
 namespace
 {
+#define ANGLE_APPEND_WIDGET_MAP_PROC(WIDGET_ID) \
+    {WidgetId::WIDGET_ID, overlay_impl::AppendWidgetDataHelper::Append##WIDGET_ID},
+
 constexpr angle::PackedEnumMap<WidgetId, AppendWidgetDataFunc> kWidgetIdToAppendDataFuncMap = {
-    {WidgetId::FPS, overlay_impl::AppendWidgetDataHelper::AppendFPS},
-    {WidgetId::VulkanLastValidationMessage,
-     overlay_impl::AppendWidgetDataHelper::AppendVulkanLastValidationMessage},
-    {WidgetId::VulkanValidationMessageCount,
-     overlay_impl::AppendWidgetDataHelper::AppendVulkanValidationMessageCount},
-    {WidgetId::VulkanCommandGraphSize,
-     overlay_impl::AppendWidgetDataHelper::AppendVulkanCommandGraphSize},
-    {WidgetId::VulkanSecondaryCommandBufferPoolWaste,
-     overlay_impl::AppendWidgetDataHelper::AppendVulkanSecondaryCommandBufferPoolWaste},
-};
-}
+    ANGLE_WIDGET_ID_X(ANGLE_APPEND_WIDGET_MAP_PROC)};
+}  // namespace
 
 namespace overlay
 {
@@ -419,56 +571,11 @@ size_t OverlayState::getGraphWidgetsBufferSize() const
     return sizeof(GraphWidgets);
 }
 
-void OverlayState::fillEnabledWidgetCoordinates(const gl::Extents &imageExtents,
-                                                uint8_t *enabledWidgetsPtr) const
-{
-    WidgetCoordinates *enabledWidgets = reinterpret_cast<WidgetCoordinates *>(enabledWidgetsPtr);
-    memset(enabledWidgets, 0, sizeof(*enabledWidgets));
-
-    OverlayWidgetCounts widgetCounts = {};
-
-    for (const std::unique_ptr<overlay::Widget> &widget : mOverlayWidgets)
-    {
-        if (!widget->enabled)
-        {
-            continue;
-        }
-
-        WidgetInternalType internalType = kWidgetTypeToInternalMap[widget->type];
-        ASSERT(internalType != WidgetInternalType::InvalidEnum);
-
-        if (widgetCounts[internalType] >= kWidgetInternalTypeMaxWidgets[internalType])
-        {
-            continue;
-        }
-
-        size_t writeIndex =
-            kWidgetInternalTypeWidgetOffsets[internalType] + widgetCounts[internalType]++;
-
-        GetWidgetCoordinates(widget->coords, imageExtents, enabledWidgets->coordinates[writeIndex]);
-
-        // Graph widgets have a text widget attached as well.
-        if (internalType == WidgetInternalType::Graph)
-        {
-            WidgetInternalType textType = WidgetInternalType::Text;
-            if (widgetCounts[textType] >= kWidgetInternalTypeMaxWidgets[textType])
-            {
-                continue;
-            }
-
-            const overlay::RunningGraph *widgetAsGraph =
-                static_cast<const overlay::RunningGraph *>(widget.get());
-            writeIndex = kWidgetInternalTypeWidgetOffsets[textType] + widgetCounts[textType]++;
-
-            GetWidgetCoordinates(widgetAsGraph->description.coords, imageExtents,
-                                 enabledWidgets->coordinates[writeIndex]);
-        }
-    }
-}
-
 void OverlayState::fillWidgetData(const gl::Extents &imageExtents,
                                   uint8_t *textData,
-                                  uint8_t *graphData) const
+                                  uint8_t *graphData,
+                                  uint32_t *activeTextWidgetCountOut,
+                                  uint32_t *activeGraphWidgetCountOut) const
 {
     TextWidgets *textWidgets   = reinterpret_cast<TextWidgets *>(textData);
     GraphWidgets *graphWidgets = reinterpret_cast<GraphWidgets *>(graphData);
@@ -495,10 +602,14 @@ void OverlayState::fillWidgetData(const gl::Extents &imageExtents,
         }
 
         AppendWidgetDataFunc appendFunc = kWidgetIdToAppendDataFuncMap[id];
+        ASSERT(appendFunc);
         appendFunc(widget.get(), imageExtents,
                    &textWidgets->widgets[widgetCounts[WidgetInternalType::Text]],
                    &graphWidgets->widgets[widgetCounts[WidgetInternalType::Graph]], &widgetCounts);
     }
+
+    *activeTextWidgetCountOut  = widgetCounts[WidgetInternalType::Text];
+    *activeGraphWidgetCountOut = widgetCounts[WidgetInternalType::Graph];
 }
 
 }  // namespace gl

@@ -29,28 +29,13 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 
+#if HAVE(CPP20_INCOMPATIBLE_INTERNAL_HEADERS)
+#define CGCOLORTAGGEDPOINTER_H_
+#endif
+
 #import <ApplicationServices/ApplicationServicesPriv.h>
 
 #else
-
-#if HAVE(AX_CLIENT_TYPE)
-
-typedef CF_ENUM(int32_t, AXClientType)
-{
-    kAXClientTypeNoActiveRequestFound  = 0,
-    kAXClientTypeUnknown,
-    kAXClientTypeRaft,
-    kAXClientTypeXCUITest,
-    kAXClientTypeXCTest,
-    kAXClientTypeScripter2,
-    kAXClientTypeSystemEvents,
-    kAXClientTypeVoiceOver,
-    kAXClientTypeAssistiveControl,
-    kAXClientTypeFullKeyboardAccess,
-    kAXClientTypeDictation,
-};
-
-#endif // HAVE(AX_CLIENT_TYPE)
 
 typedef enum {
     AXSuspendStatusRunning = 0,
@@ -58,9 +43,5 @@ typedef enum {
 } AXSuspendStatus;
 
 #endif
-
-#if HAVE(AX_CLIENT_TYPE)
-extern AXClientType _AXGetClientForCurrentRequestUntrusted(void);
-#endif // HAVE(AX_CLIENT_TYPE)
 
 #endif // PLATFORM(MAC) || (PLATFORM(QT) && USE(MACH_PORTS))

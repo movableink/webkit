@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(MAC)
 
@@ -32,6 +32,7 @@
 #import <AppKit/NSDragging.h>
 #import <WebKit/WebView.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/Compiler.h>
 #import <wtf/RetainPtr.h>
 
 @interface FrameLoadCompletionListener : NSObject<WebFrameLoadDelegate> {
@@ -44,7 +45,7 @@
 
 + (instancetype)listenerWithCompletionBlock:(dispatch_block_t)completionBlock
 {
-    return [[[FrameLoadCompletionListener alloc] initWithCompletionBlock:completionBlock] autorelease];
+    return adoptNS([[FrameLoadCompletionListener alloc] initWithCompletionBlock:completionBlock]).autorelease();
 }
 
 - (instancetype)initWithCompletionBlock:(dispatch_block_t)completionBlock
@@ -131,7 +132,9 @@
     return NSMakePoint(_lastMousePosition.x + _offset.width, _lastMousePosition.y + _offset.height);
 }
 
+ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
 - (NSImage *)draggedImage
+ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     return _image.get();
 }
@@ -209,7 +212,7 @@ namespace TestWebKitAPI {
 
 static NSImage *getTestImage()
 {
-    return [[[NSImage alloc] initWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"icon" withExtension:@"png" subdirectory:@"TestWebKitAPI.resources"]] autorelease];
+    return adoptNS([[NSImage alloc] initWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"icon" withExtension:@"png" subdirectory:@"TestWebKitAPI.resources"]]).autorelease();
 }
 
 static WebView *webViewAfterPerformingDragOperation(NSPasteboard *pasteboard)

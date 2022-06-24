@@ -36,6 +36,8 @@
 
 namespace WebCore {
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleFillData);
+
 StyleFillData::StyleFillData()
     : opacity(SVGRenderStyle::initialFillOpacity())
     , paintColor(SVGRenderStyle::initialFillPaintColor())
@@ -214,30 +216,6 @@ Ref<StyleShadowSVGData> StyleShadowSVGData::copy() const
 bool StyleShadowSVGData::operator==(const StyleShadowSVGData& other) const
 {
     return arePointingToEqualData(shadow, other.shadow);
-}
-
-StyleResourceData::StyleResourceData()
-    : clipper(SVGRenderStyle::initialClipperResource())
-    , masker(SVGRenderStyle::initialMaskerResource())
-{
-}
-
-inline StyleResourceData::StyleResourceData(const StyleResourceData& other)
-    : RefCounted<StyleResourceData>()
-    , clipper(other.clipper)
-    , masker(other.masker)
-{
-}
-
-Ref<StyleResourceData> StyleResourceData::copy() const
-{
-    return adoptRef(*new StyleResourceData(*this));
-}
-
-bool StyleResourceData::operator==(const StyleResourceData& other) const
-{
-    return clipper == other.clipper
-        && masker == other.masker;
 }
 
 StyleInheritedResourceData::StyleInheritedResourceData()
@@ -503,13 +481,6 @@ TextStream& operator<<(TextStream& ts, const StyleShadowSVGData& data)
 {
     if (data.shadow)
         ts.dumpProperty("shadow", *data.shadow);
-    return ts;
-}
-
-TextStream& operator<<(TextStream& ts, const StyleResourceData& data)
-{
-    ts.dumpProperty("clipper", data.clipper);
-    ts.dumpProperty("masker", data.masker);
     return ts;
 }
 

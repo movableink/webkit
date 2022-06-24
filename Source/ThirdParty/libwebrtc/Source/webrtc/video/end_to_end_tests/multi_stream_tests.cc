@@ -8,23 +8,27 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "logging/rtc_event_log/rtc_event_log.h"
-#include "modules/video_coding/codecs/vp8/include/vp8.h"
-#include "test/call_test.h"
-#include "test/encoder_settings.h"
-#include "test/field_trial.h"
+#include <stddef.h>
+#include <stdint.h>
+
+#include <memory>
+#include <vector>
+
+#include "api/video/video_frame.h"
+#include "api/video/video_sink_interface.h"
+#include "api/video_codecs/video_encoder_config.h"
+#include "call/rtp_config.h"
+#include "call/video_receive_stream.h"
+#include "call/video_send_stream.h"
+#include "rtc_base/event.h"
+#include "test/frame_generator_capturer.h"
 #include "test/gtest.h"
 #include "video/end_to_end_tests/multi_stream_tester.h"
 
 namespace webrtc {
-class MultiStreamEndToEndTest : public test::CallTest {
- public:
-  MultiStreamEndToEndTest() = default;
-};
-
 // Each renderer verifies that it receives the expected resolution, and as soon
 // as every renderer has received a frame, the test finishes.
-TEST_F(MultiStreamEndToEndTest, SendsAndReceivesMultipleStreams) {
+TEST(MultiStreamEndToEndTest, SendsAndReceivesMultipleStreams) {
   class VideoOutputObserver : public rtc::VideoSinkInterface<VideoFrame> {
    public:
     VideoOutputObserver(const MultiStreamTester::CodecSettings& settings,
@@ -41,7 +45,7 @@ TEST_F(MultiStreamEndToEndTest, SendsAndReceivesMultipleStreams) {
 
     uint32_t Ssrc() { return ssrc_; }
 
-    bool Wait() { return done_.Wait(kDefaultTimeoutMs); }
+    bool Wait() { return done_.Wait(30 * 1000); }
 
    private:
     const MultiStreamTester::CodecSettings& settings_;
@@ -52,9 +56,8 @@ TEST_F(MultiStreamEndToEndTest, SendsAndReceivesMultipleStreams) {
 
   class Tester : public MultiStreamTester {
    public:
-    explicit Tester(test::SingleThreadedTaskQueueForTesting* task_queue)
-        : MultiStreamTester(task_queue) {}
-    virtual ~Tester() {}
+    Tester() = default;
+    ~Tester() override = default;
 
    protected:
     void Wait() override {
@@ -69,9 +72,9 @@ TEST_F(MultiStreamEndToEndTest, SendsAndReceivesMultipleStreams) {
         VideoSendStream::Config* send_config,
         VideoEncoderConfig* encoder_config,
         test::FrameGeneratorCapturer** frame_generator) override {
-      observers_[stream_index].reset(new VideoOutputObserver(
+      observers_[stream_index] = std::make_unique<VideoOutputObserver>(
           codec_settings[stream_index], send_config->rtp.ssrcs.front(),
-          frame_generator));
+          frame_generator);
     }
 
     void UpdateReceiveConfig(
@@ -82,7 +85,7 @@ TEST_F(MultiStreamEndToEndTest, SendsAndReceivesMultipleStreams) {
 
    private:
     std::unique_ptr<VideoOutputObserver> observers_[kNumStreams];
-  } tester(&task_queue_);
+  } tester;
 
   tester.RunTest();
 }

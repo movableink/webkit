@@ -28,6 +28,7 @@
 #include "APIObject.h"
 #include "CacheModel.h"
 #include "WebsiteDataStore.h"
+#include <wtf/MemoryPressureHandler.h>
 #include <wtf/ProcessID.h>
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
@@ -56,7 +57,7 @@ public:
 
     bool isAutomaticProcessWarmingEnabled() const
     {
-        return m_isAutomaticProcessWarmingEnabledByClient.valueOr(m_clientWouldBenefitFromAutomaticProcessPrewarming);
+        return m_isAutomaticProcessWarmingEnabledByClient.value_or(m_clientWouldBenefitFromAutomaticProcessPrewarming);
     }
 
     bool wasAutomaticProcessWarmingSetByClient() const { return !!m_isAutomaticProcessWarmingEnabledByClient; }
@@ -94,6 +95,9 @@ public:
 
     bool attrStyleEnabled() const { return m_attrStyleEnabled; }
     void setAttrStyleEnabled(bool enabled) { m_attrStyleEnabled = enabled; }
+    
+    bool shouldThrowExceptionForGlobalConstantRedeclaration() const { return m_shouldThrowExceptionForGlobalConstantRedeclaration; }
+    void setShouldThrowExceptionForGlobalConstantRedeclaration(bool shouldThrow) { m_shouldThrowExceptionForGlobalConstantRedeclaration = shouldThrow; }
 
     const Vector<WTF::String>& overrideLanguages() const { return m_overrideLanguages; }
     void setOverrideLanguages(Vector<WTF::String>&& languages) { m_overrideLanguages = WTFMove(languages); }
@@ -104,12 +108,6 @@ public:
     bool shouldTakeUIBackgroundAssertion() const { return m_shouldTakeUIBackgroundAssertion; }
     void setShouldTakeUIBackgroundAssertion(bool shouldTakeUIBackgroundAssertion) { m_shouldTakeUIBackgroundAssertion = shouldTakeUIBackgroundAssertion; }
 
-    bool shouldCaptureAudioInUIProcess() const { return m_shouldCaptureAudioInUIProcess; }
-    void setShouldCaptureAudioInUIProcess(bool shouldCaptureAudioInUIProcess) { m_shouldCaptureAudioInUIProcess = shouldCaptureAudioInUIProcess; }
-
-    bool shouldCaptureVideoInUIProcess() const { return m_shouldCaptureVideoInUIProcess; }
-    void setShouldCaptureVideoInUIProcess(bool shouldCaptureVideoInUIProcess) { m_shouldCaptureVideoInUIProcess = shouldCaptureVideoInUIProcess; }
-
     bool shouldCaptureDisplayInUIProcess() const { return m_shouldCaptureDisplayInUIProcess; }
     void setShouldCaptureDisplayInUIProcess(bool shouldCaptureDisplayInUIProcess) { m_shouldCaptureDisplayInUIProcess = shouldCaptureDisplayInUIProcess; }
 
@@ -117,18 +115,18 @@ public:
     void setShouldConfigureJSCForTesting(bool value) { m_shouldConfigureJSCForTesting = value; }
     bool isJITEnabled() const { return m_isJITEnabled; }
     void setJITEnabled(bool enabled) { m_isJITEnabled = enabled; }
-    
-#if PLATFORM(IOS_FAMILY)
-    const WTF::String& ctDataConnectionServiceType() const { return m_ctDataConnectionServiceType; }
-    void setCTDataConnectionServiceType(const WTF::String& ctDataConnectionServiceType) { m_ctDataConnectionServiceType = ctDataConnectionServiceType; }
-#endif
 
     ProcessID presentingApplicationPID() const { return m_presentingApplicationPID; }
     void setPresentingApplicationPID(ProcessID pid) { m_presentingApplicationPID = pid; }
 
+#if HAVE(AUDIT_TOKEN)
+    const std::optional<audit_token_t> presentingApplicationProcessToken() const { return m_presentingApplicationProcessToken; }
+    void setPresentingApplicationProcessToken(std::optional<audit_token_t>&& token) { m_presentingApplicationProcessToken = WTFMove(token); }
+#endif
+
     bool processSwapsOnNavigation() const
     {
-        return m_processSwapsOnNavigationFromClient.valueOr(m_processSwapsOnNavigationFromExperimentalFeatures);
+        return m_processSwapsOnNavigationFromClient.value_or(m_processSwapsOnNavigationFromExperimentalFeatures);
     }
     void setProcessSwapsOnNavigation(bool swaps) { m_processSwapsOnNavigationFromClient = swaps; }
     void setProcessSwapsOnNavigationFromExperimentalFeatures(bool swaps) { m_processSwapsOnNavigationFromExperimentalFeatures = swaps; }
@@ -136,15 +134,34 @@ public:
     bool alwaysKeepAndReuseSwappedProcesses() const { return m_alwaysKeepAndReuseSwappedProcesses; }
     void setAlwaysKeepAndReuseSwappedProcesses(bool keepAndReuse) { m_alwaysKeepAndReuseSwappedProcesses = keepAndReuse; }
 
+    bool processSwapsOnNavigationWithinSameNonHTTPFamilyProtocol() const { return m_processSwapsOnNavigationWithinSameNonHTTPFamilyProtocol; }
+    void setProcessSwapsOnNavigationWithinSameNonHTTPFamilyProtocol(bool swaps) { m_processSwapsOnNavigationWithinSameNonHTTPFamilyProtocol = swaps; }
+
     bool processSwapsOnWindowOpenWithOpener() const { return m_processSwapsOnWindowOpenWithOpener; }
     void setProcessSwapsOnWindowOpenWithOpener(bool swaps) { m_processSwapsOnWindowOpenWithOpener = swaps; }
 
     const WTF::String& customWebContentServiceBundleIdentifier() const { return m_customWebContentServiceBundleIdentifier; }
     void setCustomWebContentServiceBundleIdentifier(const WTF::String& customWebContentServiceBundleIdentifier) { m_customWebContentServiceBundleIdentifier = customWebContentServiceBundleIdentifier; }
-    
-#if PLATFORM(COCOA)
-    bool suppressesConnectionTerminationOnSystemChange() const { return m_suppressesConnectionTerminationOnSystemChange; }
-    void setSuppressesConnectionTerminationOnSystemChange(bool suppressesConnectionTerminationOnSystemChange) { m_suppressesConnectionTerminationOnSystemChange = suppressesConnectionTerminationOnSystemChange; }
+
+#if PLATFORM(GTK) && !USE(GTK4)
+    bool useSystemAppearanceForScrollbars() const { return m_useSystemAppearanceForScrollbars; }
+    void setUseSystemAppearanceForScrollbars(bool useSystemAppearanceForScrollbars) { m_useSystemAppearanceForScrollbars = useSystemAppearanceForScrollbars; }
+#endif
+
+#if PLATFORM(PLAYSTATION)
+    const WTF::String& webProcessPath() const { return m_webProcessPath; }
+    void setWebProcessPath(const WTF::String& webProcessPath) { m_webProcessPath = webProcessPath; }
+
+    const WTF::String& networkProcessPath() const { return m_networkProcessPath; }
+    void setNetworkProcessPath(const WTF::String& networkProcessPath) { m_networkProcessPath = networkProcessPath; }
+
+    int32_t userId() const { return m_userId; }
+    void setUserId(const int32_t userId) { m_userId = userId; }
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    void setMemoryPressureHandlerConfiguration(const MemoryPressureHandler::Configuration& configuration) { m_memoryPressureHandlerConfiguration = configuration; }
+    const std::optional<MemoryPressureHandler::Configuration>& memoryPressureHandlerConfiguration() const { return m_memoryPressureHandlerConfiguration; }
 #endif
 
 private:
@@ -156,18 +173,18 @@ private:
     bool m_fullySynchronousModeIsAllowedForTesting { false };
     bool m_ignoreSynchronousMessagingTimeoutsForTesting { false };
     bool m_attrStyleEnabled { false };
+    bool m_shouldThrowExceptionForGlobalConstantRedeclaration { true };
     Vector<WTF::String> m_overrideLanguages;
     bool m_alwaysRunsAtBackgroundPriority { false };
     bool m_shouldTakeUIBackgroundAssertion { true };
-    bool m_shouldCaptureAudioInUIProcess { false };
-    bool m_shouldCaptureVideoInUIProcess { false };
     bool m_shouldCaptureDisplayInUIProcess { DEFAULT_CAPTURE_DISPLAY_IN_UI_PROCESS };
     ProcessID m_presentingApplicationPID { getCurrentProcessID() };
-    Optional<bool> m_processSwapsOnNavigationFromClient;
+    std::optional<bool> m_processSwapsOnNavigationFromClient;
     bool m_processSwapsOnNavigationFromExperimentalFeatures { false };
     bool m_alwaysKeepAndReuseSwappedProcesses { false };
     bool m_processSwapsOnWindowOpenWithOpener { false };
-    Optional<bool> m_isAutomaticProcessWarmingEnabledByClient;
+    bool m_processSwapsOnNavigationWithinSameNonHTTPFamilyProtocol { false };
+    std::optional<bool> m_isAutomaticProcessWarmingEnabledByClient;
     bool m_usesWebProcessCache { false };
     bool m_usesBackForwardCache { true };
     bool m_clientWouldBenefitFromAutomaticProcessPrewarming { false };
@@ -175,13 +192,19 @@ private:
     bool m_shouldConfigureJSCForTesting { false };
     bool m_isJITEnabled { true };
     bool m_usesSingleWebProcess { false };
-
-#if PLATFORM(IOS_FAMILY)
-    WTF::String m_ctDataConnectionServiceType;
+#if PLATFORM(GTK) && !USE(GTK4)
+    bool m_useSystemAppearanceForScrollbars { false };
 #endif
-
-#if PLATFORM(COCOA)
-    bool m_suppressesConnectionTerminationOnSystemChange { false };
+#if PLATFORM(PLAYSTATION)
+    WTF::String m_webProcessPath;
+    WTF::String m_networkProcessPath;
+    int32_t m_userId { -1 };
+#endif
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    std::optional<MemoryPressureHandler::Configuration> m_memoryPressureHandlerConfiguration;
+#endif
+#if HAVE(AUDIT_TOKEN)
+    std::optional<audit_token_t> m_presentingApplicationProcessToken;
 #endif
 };
 

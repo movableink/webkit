@@ -29,11 +29,15 @@
 #import "WKSecurityOriginInternal.h"
 #import "WKWebViewInternal.h"
 #import "_WKFrameHandleInternal.h"
+#import <WebCore/WebCoreObjCExtras.h>
 
 @implementation WKFrameInfo
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKFrameInfo.class, self))
+        return;
+
     _frameInfo->~FrameInfo();
 
     [super dealloc];
@@ -56,14 +60,15 @@
 
 - (WKSecurityOrigin *)securityOrigin
 {
-    return wrapper(_frameInfo->securityOrigin());
+    auto& data = _frameInfo->securityOrigin();
+    auto apiOrigin = API::SecurityOrigin::create(data.protocol, data.host, data.port);
+    return retainPtr(wrapper(apiOrigin.get())).autorelease();
 }
 
 - (WKWebView *)webView
 {
-    if (WebKit::WebPageProxy* page = _frameInfo->page())
-        return [[fromWebPageProxy(*page) retain] autorelease];
-    return nil;
+    auto page = _frameInfo->page();
+    return page ? page->cocoaView().autorelease() : nil;
 }
 
 - (id)copyWithZone:(NSZone *)zone
@@ -84,7 +89,12 @@
 
 - (_WKFrameHandle *)_handle
 {
-    return wrapper(_frameInfo->handle());
+    return retainPtr(wrapper(_frameInfo->handle())).autorelease();
+}
+
+- (_WKFrameHandle *)_parentFrameHandle
+{
+    return retainPtr(wrapper(_frameInfo->parentFrameHandle())).autorelease();
 }
 
 @end

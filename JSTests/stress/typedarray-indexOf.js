@@ -1,4 +1,4 @@
-load("./resources/typedarray-test-helper-functions.js");
+load("./resources/typedarray-test-helper-functions.js", "caller relative");
 description(
 "This test checks the behavior of the TypedArray.prototype.indexOf function"
 );
@@ -44,6 +44,9 @@ for (constructor of typedArrays) {
     shouldBe("a.indexOf(undefined)", "-1");
     shouldBe("a.indexOf({1: ''})", "-1");
     shouldBe("a.indexOf(\"\")", "-1");
+
+    shouldBe("a.indexOf(undefined, { valueOf() { transferArrayBuffer(a.buffer); return 0; } })", "-1");
+    shouldThrow("a.indexOf(undefined)");
 }
 
 

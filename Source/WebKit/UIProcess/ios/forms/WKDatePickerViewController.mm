@@ -23,21 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "WKDatePickerViewController.h"
+#import "config.h"
+#import "WKDatePickerViewController.h"
 
-#if PLATFORM(WATCHOS)
+#if HAVE(PEPPER_UI_CORE)
 
-#import <PepperUICore/PUICApplication_Private.h>
-#import <PepperUICore/PUICPickerView.h>
-#import <PepperUICore/PUICPickerView_Private.h>
-#import <PepperUICore/PUICQuickboardViewController_Private.h>
-#import <PepperUICore/PUICStatusBar_Private.h>
-#import <PepperUICore/UIDevice+PUICAdditions.h>
-#import <UIKit/UIGeometry_Private.h>
-#import <UIKit/UIInterface_Private.h>
-#import <UIKit/UIResponder_Private.h>
-#import <UIKit/UIView_Private.h>
 #import <WebCore/LocalizedStrings.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
@@ -316,8 +306,6 @@ struct EraAndYear {
     _statusBarAssertion = [[PUICApplication sharedPUICApplication] _takeStatusBarGlobalContextAssertionAnimated:NO];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_handleStatusBarNavigation) name:PUICStatusBarNavigationBackButtonPressedNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_handleStatusBarNavigation) name:PUICStatusBarTitleTappedNotification object:nil];
-
-    configureStatusBarForController(self, self.delegate);
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -522,13 +510,13 @@ struct EraAndYear {
 
 - (NSDateComponents *)_dateComponentForDay:(NSInteger)day month:(NSInteger)month year:(NSInteger)year era:(NSInteger)era
 {
-    NSDateComponents *dateComponents = [[[NSDateComponents alloc] init] autorelease];
-    dateComponents.day = day;
-    dateComponents.month = month;
-    dateComponents.year = year;
-    dateComponents.era = era;
-    dateComponents.calendar = _calendar.get();
-    return dateComponents;
+    auto dateComponents = adoptNS([[NSDateComponents alloc] init]);
+    [dateComponents setDay:day];
+    [dateComponents setMonth:month];
+    [dateComponents setYear:year];
+    [dateComponents setEra:era];
+    [dateComponents setCalendar:_calendar.get()];
+    return dateComponents.autorelease();
 }
 
 - (void)_adjustDateToValidDateIfNecessary
@@ -699,4 +687,4 @@ struct EraAndYear {
 @end
 
 
-#endif
+#endif // HAVE(PEPPER_UI_CORE)

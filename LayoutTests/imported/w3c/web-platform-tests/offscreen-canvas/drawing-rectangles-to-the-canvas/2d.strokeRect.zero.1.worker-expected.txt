@@ -1,3 +1,0 @@
-
-FAIL strokeRect of 0x0 pixels draws nothing Can't find variable: OffscreenCanvas
-

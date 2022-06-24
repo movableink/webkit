@@ -7,12 +7,12 @@
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
             </head>  
             <body>
-              CHARACTERS IN XSLT: ééééééééééé <br/> <xsl:apply-templates/>
+              CHARACTERS IN XSLT: ééééééééééé<br/> <xsl:apply-templates/>
             </body>
         </html>
   </xsl:template>
 
-<xsl:template >
+<xsl:template name="foobar">
 		<xsl:value-of select="." />
 </xsl:template>
 

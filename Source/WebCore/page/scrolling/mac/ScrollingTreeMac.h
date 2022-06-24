@@ -25,22 +25,56 @@
 
 #pragma once
 
-#if ENABLE(ASYNC_SCROLLING) && PLATFORM(MAC)
+#if ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)
 
 #include "ThreadedScrollingTree.h"
 
 namespace WebCore {
 
+class WheelEventTestMonitor;
+
 class ScrollingTreeMac final : public ThreadedScrollingTree {
 public:
     static Ref<ScrollingTreeMac> create(AsyncScrollingCoordinator&);
 
+    void didCompletePlatformRenderingUpdate();
+
 private:
     explicit ScrollingTreeMac(AsyncScrollingCoordinator&);
+    
+    bool isScrollingTreeMac() const final { return true; }
 
     Ref<ScrollingTreeNode> createScrollingTreeNode(ScrollingNodeType, ScrollingNodeID) final;
+
+    RefPtr<ScrollingTreeNode> scrollingNodeForPoint(FloatPoint) final;
+#if ENABLE(WHEEL_EVENT_REGIONS)
+    OptionSet<EventListenerRegionType> eventListenerRegionTypesForPoint(FloatPoint) const final;
+#endif
+
+    void setWheelEventTestMonitor(RefPtr<WheelEventTestMonitor>&&) final;
+    WheelEventTestMonitor* wheelEventTestMonitor() final { return m_wheelEventTestMonitor.get(); }
+
+    void receivedWheelEvent(const PlatformWheelEvent&) final;
+
+    void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) final;
+    void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) final;
+
+    void registerForPlatformRenderingUpdateCallback();
+    void applyLayerPositionsInternal() final WTF_REQUIRES_LOCK(m_treeLock);
+
+    void lockLayersForHitTesting() final WTF_ACQUIRES_LOCK(m_layerHitTestMutex);
+    void unlockLayersForHitTesting() final WTF_RELEASES_LOCK(m_layerHitTestMutex);
+
+    void didCompleteRenderingUpdate() final;
+
+    // This lock protects the CALayer/PlatformCALayer tree.
+    mutable Lock m_layerHitTestMutex;
+    
+    RefPtr<WheelEventTestMonitor> m_wheelEventTestMonitor;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(ASYNC_SCROLLING) && PLATFORM(MAC)
+SPECIALIZE_TYPE_TRAITS_SCROLLING_TREE(WebCore::ScrollingTreeMac, isScrollingTreeMac())
+
+#endif // ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)

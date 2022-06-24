@@ -38,6 +38,7 @@
 #import "WKStringCF.h"
 #import "WKURL.h"
 #import "WKURLCF.h"
+#import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/Vector.h>
 
 ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
@@ -48,6 +49,9 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKBrowsingContextGroup.class, self))
+        return;
+
     _pageGroup->~WebPageGroup();
 
     [super dealloc];
@@ -128,18 +132,18 @@ static WKRetainPtr<WKArrayRef> createWKArray(NSArray *array)
     return WebKit::toAPI(&API::Array::create(WTFMove(strings)).leakRef());
 }
 
--(void)addUserStyleSheet:(NSString *)source baseURL:(NSURL *)baseURL whitelistedURLPatterns:(NSArray *)whitelist blacklistedURLPatterns:(NSArray *)blacklist mainFrameOnly:(BOOL)mainFrameOnly
+- (void)addUserStyleSheet:(NSString *)source baseURL:(NSURL *)baseURL includeMatchPatternStrings:(NSArray<NSString *> *)includeMatchPatternStrings excludeMatchPatternStrings:(NSArray<NSString *> *)excludeMatchPatternStrings mainFrameOnly:(BOOL)mainFrameOnly
 {
     if (!source)
         CRASH();
 
     WKRetainPtr<WKStringRef> wkSource = adoptWK(WKStringCreateWithCFString((__bridge CFStringRef)source));
     WKRetainPtr<WKURLRef> wkBaseURL = adoptWK(WKURLCreateWithCFURL((__bridge CFURLRef)baseURL));
-    auto wkWhitelist = createWKArray(whitelist);
-    auto wkBlacklist = createWKArray(blacklist);
+    auto wkIncludeMatchPatternStrings = createWKArray(includeMatchPatternStrings);
+    auto wkExcludeMatchPatternStrings = createWKArray(excludeMatchPatternStrings);
     WKUserContentInjectedFrames injectedFrames = mainFrameOnly ? kWKInjectInTopFrameOnly : kWKInjectInAllFrames;
 
-    WKPageGroupAddUserStyleSheet(WebKit::toAPI(_pageGroup.get()), wkSource.get(), wkBaseURL.get(), wkWhitelist.get(), wkBlacklist.get(), injectedFrames);
+    WKPageGroupAddUserStyleSheet(WebKit::toAPI(_pageGroup.get()), wkSource.get(), wkBaseURL.get(), wkIncludeMatchPatternStrings.get(), wkExcludeMatchPatternStrings.get(), injectedFrames);
 }
 
 - (void)removeAllUserStyleSheets
@@ -147,18 +151,18 @@ static WKRetainPtr<WKArrayRef> createWKArray(NSArray *array)
     WKPageGroupRemoveAllUserStyleSheets(WebKit::toAPI(_pageGroup.get()));
 }
 
-- (void)addUserScript:(NSString *)source baseURL:(NSURL *)baseURL whitelistedURLPatterns:(NSArray *)whitelist blacklistedURLPatterns:(NSArray *)blacklist injectionTime:(_WKUserScriptInjectionTime)injectionTime mainFrameOnly:(BOOL)mainFrameOnly
+- (void)addUserScript:(NSString *)source baseURL:(NSURL *)baseURL includeMatchPatternStrings:(NSArray<NSString *> *)includeMatchPatternStrings excludeMatchPatternStrings:(NSArray<NSString *> *)excludeMatchPatternStrings injectionTime:(_WKUserScriptInjectionTime)injectionTime mainFrameOnly:(BOOL)mainFrameOnly
 {
     if (!source)
         CRASH();
 
     WKRetainPtr<WKStringRef> wkSource = adoptWK(WKStringCreateWithCFString((__bridge CFStringRef)source));
     WKRetainPtr<WKURLRef> wkBaseURL = adoptWK(WKURLCreateWithCFURL((__bridge CFURLRef)baseURL));
-    auto wkWhitelist = createWKArray(whitelist);
-    auto wkBlacklist = createWKArray(blacklist);
+    auto wkIncludeMatchPatternStrings = createWKArray(includeMatchPatternStrings);
+    auto wkExcludeMatchPatternStrings = createWKArray(excludeMatchPatternStrings);
     WKUserContentInjectedFrames injectedFrames = mainFrameOnly ? kWKInjectInTopFrameOnly : kWKInjectInAllFrames;
 
-    WKPageGroupAddUserScript(WebKit::toAPI(_pageGroup.get()), wkSource.get(), wkBaseURL.get(), wkWhitelist.get(), wkBlacklist.get(), injectedFrames, injectionTime);
+    WKPageGroupAddUserScript(WebKit::toAPI(_pageGroup.get()), wkSource.get(), wkBaseURL.get(), wkIncludeMatchPatternStrings.get(), wkExcludeMatchPatternStrings.get(), injectedFrames, injectionTime);
 }
 
 - (void)removeAllUserScripts

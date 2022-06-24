@@ -24,7 +24,7 @@
  */
 
 #import "config.h"
-#import "ColorIOS.h"
+#import "ColorCocoa.h"
 
 #if PLATFORM(IOS_FAMILY)
 
@@ -32,8 +32,13 @@
 
 namespace WebCore {
 
-Color colorFromUIColor(UIColor *color)
+Color colorFromCocoaColor(UIColor *color)
 {
+    if (!color)
+        return { };
+
+    // FIXME: ExtendedColor - needs to handle color spaces.
+
     // FIXME: Make this work for a UIColor that was created from a pattern or a DispayP3 color.
     CGFloat redComponent;
     CGFloat greenComponent;
@@ -42,8 +47,7 @@ Color colorFromUIColor(UIColor *color)
 
     [color getRed:&redComponent green:&greenComponent blue:&blueComponent alpha:&alpha];
 
-    static const double scaleFactor = nextafter(256.0, 0.0);
-    return makeRGBA(scaleFactor * redComponent, scaleFactor * greenComponent, scaleFactor * blueComponent, scaleFactor * alpha);
+    return convertColor<SRGBA<uint8_t>>(SRGBA<float> { static_cast<float>(redComponent), static_cast<float>(greenComponent), static_cast<float>(blueComponent), static_cast<float>(alpha) });
 }
 
 } // namespace WebCore

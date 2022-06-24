@@ -104,22 +104,21 @@ shouldBeFalse('re2.test("\uffff")');
 shouldBeTrue('re2.test("\u{12345}")');
 
 // Make sure we properly handle dangling surrogates and combined surrogates
-// FIXME: These tests are disabled until https://bugs.webkit.org/show_bug.cgi?id=154863 is fixed
-// shouldBe('/[\u{10c01}\uD803#\uDC01]/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
-// shouldBe('/[\uD803\u{10c01}\uDC01]/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
-// shouldBe('/[\uD803#\uDC01\u{10c01}]/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
-// shouldBe('/[\uD803\uD803\uDC01\uDC01]/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
-// shouldBeNull('/[\u{10c01}\uD803#\uDC01]{2}/u.exec("\u{10c01}")');
-// shouldBeNull('/[\uD803\u{10c01}\uDC01]{2}/u.exec("\u{10c01}")');
-// shouldBeNull('/[\uD803#\uDC01\u{10c01}]{2}/u.exec("\u{10c01}")');
-// shouldBeNull('/[\uD803\uD803\uDC01\uDC01]{2}/u.exec("\u{10c01}")');
-// shouldBe('/\uD803|\uDC01|\u{10c01}/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
-// shouldBe('/\uD803|\uD803\uDC01|\uDC01/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
-// shouldBe('/\uD803|\uDC01|\u{10c01}/u.exec("\u{D803}").toString()', '"\u{D803}"');
-// shouldBe('/\uD803|\uD803\uDC01|\uDC01/u.exec("\u{DC01}").toString()', '"\u{DC01}"');
-// shouldBeNull('/\uD803\u{10c01}/u.exec("\u{10c01}")');
-// shouldBeNull('/\uD803\u{10c01}/u.exec("\uD803")');
-// shouldBe('"\uD803\u{10c01}".match(/\uD803\u{10c01}/u)[0].length', '3');
+shouldBe('/[\u{10c01}\uD803#\uDC01]/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
+shouldBe('/[\uD803\u{10c01}\uDC01]/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
+shouldBe('/[\uD803#\uDC01\u{10c01}]/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
+shouldBe('/[\uD803\uD803\uDC01\uDC01]/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
+shouldBeNull('/[\u{10c01}\uD803#\uDC01]{2}/u.exec("\u{10c01}")');
+shouldBeNull('/[\uD803\u{10c01}\uDC01]{2}/u.exec("\u{10c01}")');
+shouldBeNull('/[\uD803#\uDC01\u{10c01}]{2}/u.exec("\u{10c01}")');
+shouldBeNull('/[\uD803\uD803\uDC01\uDC01]{2}/u.exec("\u{10c01}")');
+shouldBe('/\uD803|\uDC01|\u{10c01}/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
+shouldBe('/\uD803|\uD803\uDC01|\uDC01/u.exec("\u{10c01}").toString()', '"\u{10c01}"');
+shouldBe('/\uD803|\uDC01|\u{10c01}/u.exec("\u{D803}").toString()', '"\u{D803}"');
+shouldBe('/\uD803|\uD803\uDC01|\uDC01/u.exec("\u{DC01}").toString()', '"\u{DC01}"');
+shouldBeNull('/\uD803\u{10c01}/u.exec("\u{10c01}")');
+shouldBeNull('/\uD803\u{10c01}/u.exec("\uD803")');
+shouldBe('"\uD803\u{10c01}".match(/\uD803\u{10c01}/u)[0].length', '3');
 
 // Check quantified matches
 shouldBeTrue('/\u{1d306}{2}/u.test("\u{1d306}\u{1d306}")');
@@ -228,10 +227,17 @@ shouldBe('"this is b\ba test".match(/is b\\cha test/u)[0].length', '11');
 
 // Check that invalid unicode patterns throw exceptions
 shouldBe('new RegExp("\\\\/", "u").source', '"\\\\/"');
-shouldThrow('r = new RegExp("\\\\u{110000}", "u")', '"SyntaxError: Invalid regular expression: invalid unicode {} escape"');
+shouldThrow('r = new RegExp("\\\\u{110000}", "u")', '"SyntaxError: Invalid regular expression: invalid Unicode code point \\\\u{} escape"');
 shouldThrow('r = new RegExp("\u{10405}{2147483648}", "u")', '"SyntaxError: Invalid regular expression: pattern exceeds string length limits"');
+shouldThrow('/{/u', '"SyntaxError: Invalid regular expression: incomplete {} quantifier for Unicode pattern"');
+shouldThrow('/[a-\\d]/u', '"SyntaxError: Invalid regular expression: invalid range in character class for Unicode pattern"');
+shouldThrow('/]/u', '"SyntaxError: Invalid regular expression: unmatched ] or } bracket for Unicode pattern"');
+shouldThrow('/\\5/u', '"SyntaxError: Invalid regular expression: invalid backreference for Unicode pattern"');
+shouldThrow('/\\01/u', '"SyntaxError: Invalid regular expression: invalid octal escape for Unicode pattern"');
+shouldThrow('/[\\23]/u', '"SyntaxError: Invalid regular expression: invalid octal escape for Unicode pattern"');
+shouldThrow('/\\c9/u', '"SyntaxError: Invalid regular expression: invalid \\\\c escape for Unicode pattern"');
 
-var invalidEscapeException = "SyntaxError: Invalid regular expression: invalid escaped character for unicode pattern";
+var invalidEscapeException = "SyntaxError: Invalid regular expression: invalid escaped character for Unicode pattern";
 var newRegExp;
 
 function shouldThrowInvalidEscape(pattern, error='invalidEscapeException')
@@ -244,15 +250,14 @@ function shouldThrowInvalidEscape(pattern, error='invalidEscapeException')
 shouldThrowInvalidEscape("\\\\-");
 shouldThrowInvalidEscape("\\\\a");
 shouldThrowInvalidEscape("[\\\\a]");
-shouldThrowInvalidEscape("[\\\\b]");
 shouldThrowInvalidEscape("[\\\\B]");
 shouldThrowInvalidEscape("\\\\x");
 shouldThrowInvalidEscape("[\\\\x]");
-shouldThrowInvalidEscape("\\\\u");
-shouldThrowInvalidEscape("[\\\\u]");
+shouldThrowInvalidEscape("\\\\u", '"SyntaxError: Invalid regular expression: invalid Unicode \\\\u escape"');
+shouldThrowInvalidEscape("[\\\\u]", '"SyntaxError: Invalid regular expression: invalid Unicode \\\\u escape"');
 
-shouldThrowInvalidEscape("\\\\u{", '"SyntaxError: Invalid regular expression: invalid unicode {} escape"');
-shouldThrowInvalidEscape("\\\\u{\\udead", '"SyntaxError: Invalid regular expression: invalid unicode {} escape"');
+shouldThrowInvalidEscape("\\\\u{", '"SyntaxError: Invalid regular expression: invalid Unicode code point \\\\u{} escape"');
+shouldThrowInvalidEscape("\\\\u{\\udead", '"SyntaxError: Invalid regular expression: invalid Unicode code point \\\\u{} escape"');
 
 // Check that invalid backreferences in unicode patterns throw exceptions.
 shouldThrow(`/\\1/u`);

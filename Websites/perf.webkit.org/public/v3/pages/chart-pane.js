@@ -120,11 +120,14 @@ class ChartPane extends ChartPaneBase {
         const createWithTestGroupCheckbox = this.content('create-with-test-group');
         const repetitionCount = this.content('confirm-repetition');
         const notifyOnCompletion = this.content('notify-on-completion');
+        const repetitionTypeSelection = this.part('repetition-type-selector');
         createWithTestGroupCheckbox.onchange = () => {
+            // FIXME: should invoke "enqueueToRender" instead.
             const shouldDisable = !createWithTestGroupCheckbox.checked;
             repetitionCount.disabled = shouldDisable;
             notifyOnCompletion.disabled = shouldDisable;
-        }
+            repetitionTypeSelection.disabled = shouldDisable;
+        };
     }
 
     serializeState()
@@ -243,10 +246,11 @@ class ChartPane extends ChartPaneBase {
         const createWithTestGroup = this.content('create-with-test-group').checked;
         const repetitionCount = this.content('confirm-repetition').value;
         const notifyOnCompletion = this.content('notify-on-completion').checked;
+        const repetitionType = this.part('repetition-type-selector').selectedRepetitionType;
 
         try {
             const analysisTask = await (createWithTestGroup ?
-                AnalysisTask.create(name, startPoint, endPoint, 'Confirm', repetitionCount, notifyOnCompletion) : AnalysisTask.create(name, startPoint, endPoint));
+                AnalysisTask.create(name, startPoint, endPoint, 'Confirm', repetitionCount, repetitionType, notifyOnCompletion) : AnalysisTask.create(name, startPoint, endPoint));
             newWindow.location.href = router.url('analysis/task/' + analysisTask.id());
             this.fetchAnalysisTasks(true);
         } catch(error) {
@@ -315,6 +319,7 @@ class ChartPane extends ChartPaneBase {
         const selectedPoints = this._mainChart.selectedPoints('current');
         const hasSelectedPoints = selectedPoints && selectedPoints.length();
         if (hasSelectedPoints) {
+            this.part('repetition-type-selector').setTestAndPlatform(metric.test(), platform);
             actions.push(this._makePopoverActionItem(analyzePopover, 'Analyze', false));
             analyzePopover.onsubmit = this.createEventHandler(() => {
                 this._analyzeRange(selectedPoints.firstPoint(), selectedPoints.lastPoint());
@@ -589,7 +594,13 @@ class ChartPane extends ChartPaneBase {
                                     <option>10</option>
                                 </select>
                             <label>iterations</label>
-                            <label><input type="checkbox" id="notify-on-completion" checked> Notify on completion</label>
+                        </li>
+                        <li>
+                            <label>In</label>
+                            <repetition-type-selection id="repetition-type-selector"></repetition-type-selection>
+                        </li>
+                        <li>
+                            <label><input type="checkbox" id="notify-on-completion" checked>Notify on completion</label>
                         </li>
                     </form>
                     <ul class="chart-pane-filtering-options popover" style="display:none">

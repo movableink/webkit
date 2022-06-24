@@ -28,7 +28,7 @@ function strictCaller(x) { "use strict"; var result = x(); return result; }
 function strictTailCaller(x) { "use strict"; return x(); }
 shouldBe("nonStrictCaller(nonStrictCallee)", "nonStrictCaller");
 shouldThrow("nonStrictCaller(strictCallee)", '"TypeError: \'arguments\', \'callee\', and \'caller\' cannot be accessed in this context."');
-shouldThrow("strictCaller(nonStrictCallee)");
+shouldBe("strictCaller(nonStrictCallee)", "null");
 shouldThrow("strictCaller(strictCallee)", '"TypeError: \'arguments\', \'callee\', and \'caller\' cannot be accessed in this context."');
 shouldBe("strictTailCaller(nonStrictCallee)", "null");
 shouldThrow("strictTailCaller(strictCallee)");
@@ -38,10 +38,19 @@ var boundNonStrictCallee = nonStrictCallee.bind();
 var boundStrictCallee = strictCallee.bind();
 shouldBe("nonStrictCaller(boundNonStrictCallee)", "nonStrictCaller");
 shouldThrow("nonStrictCaller(boundStrictCallee)");
-shouldThrow("strictCaller(boundNonStrictCallee)", '"TypeError: Function.caller used to retrieve strict caller"');
+shouldBe("strictCaller(boundNonStrictCallee)", "null");
 shouldThrow("strictCaller(boundStrictCallee)");
 shouldBe("strictTailCaller(boundNonStrictCallee)", "null");
 shouldThrow("strictTailCaller(boundStrictCallee)");
+
+shouldBe("nonStrictCaller(new Proxy(nonStrictCallee, {}))", "nonStrictCaller");
+shouldBe("nonStrictCaller(new Proxy(nonStrictCallee, {}).bind())", "nonStrictCaller");
+shouldBe("nonStrictCaller(new Proxy(new Proxy(nonStrictCallee, {}), {}))", "nonStrictCaller");
+shouldBe("nonStrictCaller(new Proxy(boundNonStrictCallee, {}))", "nonStrictCaller");
+
+shouldBe("nonStrictCaller(new Proxy(nonStrictCallee, Reflect))", "nonStrictCaller"); // tail call
+shouldBe("nonStrictCaller(new Proxy(new Proxy(nonStrictCallee, Reflect), {}))", "nonStrictCaller"); // tail call
+shouldBe("nonStrictCaller(new Proxy(new Proxy(nonStrictCallee, {}), Reflect))", "null"); // no tail call in Proxy's [[Call]]
 
 // Check that .caller throws as expected, over an accessor call. (per https://tc39.github.io/ecma262/#sec-forbidden-extensions)
 function getFooGetter(x) { return Object.getOwnPropertyDescriptor(x, 'foo').get; }

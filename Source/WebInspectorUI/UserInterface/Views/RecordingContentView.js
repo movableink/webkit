@@ -58,7 +58,7 @@ WI.RecordingContentView = class RecordingContentView extends WI.ContentView
                 this._showPathButtonNavigationItem.activated = !!WI.settings.showCanvasPath.value;
             }
 
-            this._showGridButtonNavigationItem = new WI.ActivateButtonNavigationItem("show-grid", WI.UIString("Show transparency grid"), WI.UIString("Hide transparency grid"), "Images/NavigationItemCheckers.svg", 13, 13);
+            this._showGridButtonNavigationItem = new WI.ActivateButtonNavigationItem("show-grid", WI.repeatedUIString.showTransparencyGridTooltip(), WI.UIString("Hide transparency grid"), "Images/NavigationItemCheckers.svg", 13, 13);
             this._showGridButtonNavigationItem.visibilityPriority = WI.NavigationItem.VisibilityPriority.Low;
             this._showGridButtonNavigationItem.addEventListener(WI.ButtonNavigationItem.Event.Clicked, this._showGridButtonClicked, this);
             this._showGridButtonNavigationItem.activated = !!WI.settings.showImageGrid.value;
@@ -119,26 +119,26 @@ WI.RecordingContentView = class RecordingContentView extends WI.ContentView
         this.dispatchEventToListeners(WI.ContentView.Event.SupplementalRepresentedObjectsDidChange);
     }
 
-    shown()
+    attached()
     {
-        super.shown();
+        super.attached();
 
         let isCanvas2D = this.representedObject.type === WI.Recording.Type.Canvas2D;
         let isCanvasBitmapRenderer = this.representedObject.type === WI.Recording.Type.CanvasBitmapRenderer;
         let isCanvasWebGL = this.representedObject.type === WI.Recording.Type.CanvasWebGL;
         let isCanvasWebGL2 = this.representedObject.type === WI.Recording.Type.CanvasWebGL2;
         if (isCanvas2D || isCanvasBitmapRenderer || isCanvasWebGL || isCanvasWebGL2) {
-            if (isCanvas2D)
+            if (isCanvas2D && WI.ImageUtilities.supportsCanvasPathDebugging())
                 this._updateCanvasPath();
             this._updateImageGrid();
         }
     }
 
-    hidden()
+    detached()
     {
-        super.hidden();
-
         this._generateContentThrottler.cancel();
+
+        super.detached();
     }
 
     // Protected
@@ -192,8 +192,8 @@ WI.RecordingContentView = class RecordingContentView extends WI.ContentView
         let filename = this.representedObject.displayName;
 
         WI.FileUtilities.save({
-            url: WI.FileUtilities.inspectorURLForFilename(filename + ".json"),
             content: JSON.stringify(this.representedObject.toJSON()),
+            suggestedName: filename + ".json",
             forceSaveAs: true,
         });
     }
@@ -208,8 +208,8 @@ WI.RecordingContentView = class RecordingContentView extends WI.ContentView
         let filename = this.representedObject.displayName;
 
         WI.FileUtilities.save({
-            url: WI.FileUtilities.inspectorURLForFilename(filename + ".html"),
             content: this.representedObject.toHTML(),
+            suggestedName: filename + ".html",
             forceSaveAs: true,
         });
     }
@@ -531,7 +531,7 @@ WI.RecordingContentView = class RecordingContentView extends WI.ContentView
         this._updateSliderValue();
 
         if (this.representedObject.ready)
-            this.representedObject.removeEventListener(null, null, this);
+            this.representedObject.removeEventListener(WI.Recording.Event.ProcessedAction, this._handleRecordingProcessedAction, this);
     }
 };
 

@@ -39,23 +39,31 @@
 
 namespace WebCore {
 
-static bool storageAccessAPIEnabled;
-
-RetainPtr<CFURLStorageSessionRef> NetworkStorageSession::createCFStorageSessionForIdentifier(CFStringRef identifier)
+RetainPtr<CFURLStorageSessionRef> NetworkStorageSession::createCFStorageSessionForIdentifier(CFStringRef identifier, ShouldDisableCFURLCache shouldDisableCFURLCache)
 {
     auto storageSession = adoptCF(_CFURLStorageSessionCreate(kCFAllocatorDefault, identifier, nullptr));
 
     if (!storageSession)
         return nullptr;
 
-    auto cache = adoptCF(_CFURLStorageSessionCopyCache(kCFAllocatorDefault, storageSession.get()));
-    if (!cache)
-        return nullptr;
+    if (shouldDisableCFURLCache == ShouldDisableCFURLCache::Yes) {
+#if HAVE(CFNETWORK_DISABLE_CACHE_SPI)
+        _CFURLStorageSessionDisableCache(storageSession.get());
+#else
+        shouldDisableCFURLCache = ShouldDisableCFURLCache::No;
+#endif
+    }
 
-    CFURLCacheSetDiskCapacity(cache.get(), 0);
+    if (shouldDisableCFURLCache == ShouldDisableCFURLCache::No) {
+        auto cache = adoptCF(_CFURLStorageSessionCopyCache(kCFAllocatorDefault, storageSession.get()));
+        if (!cache)
+            return nullptr;
 
-    auto sharedCache = adoptCF(CFURLCacheCopySharedURLCache());
-    CFURLCacheSetMemoryCapacity(cache.get(), CFURLCacheMemoryCapacity(sharedCache.get()));
+        CFURLCacheSetDiskCapacity(cache.get(), 0);
+
+        auto sharedCache = adoptCF(CFURLCacheCopySharedURLCache());
+        CFURLCacheSetMemoryCapacity(cache.get(), CFURLCacheMemoryCapacity(sharedCache.get()));
+    }
 
     if (!NetworkStorageSession::processMayUseCookieAPI())
         return storageSession;
@@ -73,11 +81,12 @@ RetainPtr<CFURLStorageSessionRef> NetworkStorageSession::createCFStorageSessionF
     return storageSession;
 }
 
-NetworkStorageSession::NetworkStorageSession(PAL::SessionID sessionID, RetainPtr<CFURLStorageSessionRef>&& platformSession, RetainPtr<CFHTTPCookieStorageRef>&& platformCookieStorage)
+NetworkStorageSession::NetworkStorageSession(PAL::SessionID sessionID, RetainPtr<CFURLStorageSessionRef>&& platformSession, RetainPtr<CFHTTPCookieStorageRef>&& platformCookieStorage, IsInMemoryCookieStore isInMemoryCookieStore)
     : m_sessionID(sessionID)
     , m_platformSession(WTFMove(platformSession))
+    , m_isInMemoryCookieStore(isInMemoryCookieStore == IsInMemoryCookieStore::Yes)
 {
-    ASSERT(processMayUseCookieAPI() || !platformCookieStorage);
+    ASSERT(processMayUseCookieAPI() || !platformCookieStorage || m_isInMemoryCookieStore);
     m_platformCookieStorage = platformCookieStorage ? WTFMove(platformCookieStorage) : cookieStorage();
 }
 
@@ -88,10 +97,10 @@ NetworkStorageSession::NetworkStorageSession(PAL::SessionID sessionID)
 
 RetainPtr<CFHTTPCookieStorageRef> NetworkStorageSession::cookieStorage() const
 {
-    if (!processMayUseCookieAPI())
+    if (!processMayUseCookieAPI() && !m_isInMemoryCookieStore)
         return nullptr;
 
-    ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies));
+    ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies) || m_isInMemoryCookieStore);
 
     if (m_platformCookieStorage)
         return m_platformCookieStorage;
@@ -105,11 +114,6 @@ RetainPtr<CFHTTPCookieStorageRef> NetworkStorageSession::cookieStorage() const
     // When using NSURLConnection, we also use its shared cookie storage.
     return nullptr;
 #endif
-}
-
-void NetworkStorageSession::setStorageAccessAPIEnabled(bool enabled)
-{
-    storageAccessAPIEnabled = enabled;
 }
 
 } // namespace WebCore

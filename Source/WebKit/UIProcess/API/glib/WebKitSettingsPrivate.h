@@ -26,9 +26,13 @@
 #ifndef WebKitSettingsPrivate_h
 #define WebKitSettingsPrivate_h
 
+#include <WebKit/WKBase.h>
 #include "WebKitSettings.h"
 #include "WebPreferences.h"
 
 WebKit::WebPreferences* webkitSettingsGetPreferences(WebKitSettings*);
+
+WK_EXPORT void webkitSettingsSetMediaCaptureRequiresSecureConnection(WebKitSettings*, bool required);
+WK_EXPORT void webkitSettingsSetGetUserMediaRequiresFocus(WebKitSettings*, bool required);
 
 #endif // WebKitSettingsPrivate_h

@@ -8,6 +8,8 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 #include <climits>
+#include <tuple>
+
 #include "third_party/googletest/src/include/gtest/gtest.h"
 #include "test/codec_factory.h"
 #include "test/encode_test_driver.h"
@@ -18,20 +20,20 @@ namespace {
 
 const int kTestMode = 0;
 
-typedef std::tr1::tuple<libvpx_test::TestMode, int> SuperframeTestParam;
+typedef std::tuple<libvpx_test::TestMode, int> SuperframeTestParam;
 
 class SuperframeTest
     : public ::libvpx_test::EncoderTest,
       public ::libvpx_test::CodecTestWithParam<SuperframeTestParam> {
  protected:
   SuperframeTest()
-      : EncoderTest(GET_PARAM(0)), modified_buf_(NULL), last_sf_pts_(0) {}
+      : EncoderTest(GET_PARAM(0)), modified_buf_(nullptr), last_sf_pts_(0) {}
   virtual ~SuperframeTest() {}
 
   virtual void SetUp() {
     InitializeConfig();
     const SuperframeTestParam input = GET_PARAM(1);
-    const libvpx_test::TestMode mode = std::tr1::get<kTestMode>(input);
+    const libvpx_test::TestMode mode = std::get<kTestMode>(input);
     SetMode(mode);
     sf_count_ = 0;
     sf_count_max_ = INT_MAX;
@@ -41,7 +43,7 @@ class SuperframeTest
 
   virtual void PreEncodeFrameHook(libvpx_test::VideoSource *video,
                                   libvpx_test::Encoder *encoder) {
-    if (video->frame() == 1) {
+    if (video->frame() == 0) {
       encoder->Control(VP8E_SET_ENABLEAUTOALTREF, 1);
     }
   }
@@ -93,7 +95,7 @@ TEST_P(SuperframeTest, TestSuperframeIndexIsOptional) {
   EXPECT_EQ(sf_count_, 1);
 }
 
-VP9_INSTANTIATE_TEST_CASE(
+VP9_INSTANTIATE_TEST_SUITE(
     SuperframeTest,
     ::testing::Combine(::testing::Values(::libvpx_test::kTwoPassGood),
                        ::testing::Values(0)));

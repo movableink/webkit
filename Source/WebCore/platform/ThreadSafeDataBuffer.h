@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/Hasher.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 
@@ -94,7 +95,7 @@ public:
     }
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, ThreadSafeDataBuffer&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, ThreadSafeDataBuffer&);
 
 private:
     explicit ThreadSafeDataBuffer(Vector<uint8_t>&& data)
@@ -141,6 +142,17 @@ bool ThreadSafeDataBuffer::decode(Decoder& decoder, ThreadSafeDataBuffer& result
     }
 
     return true;
+}
+
+inline void add(Hasher& hasher, const ThreadSafeDataBuffer& buffer)
+{
+    auto* data = buffer.data();
+    if (!data) {
+        add(hasher, true);
+        return;
+    }
+    add(hasher, false);
+    add(hasher, *data);
 }
 
 } // namespace WebCore

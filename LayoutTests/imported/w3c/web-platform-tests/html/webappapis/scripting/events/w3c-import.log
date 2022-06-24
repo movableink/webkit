@@ -17,14 +17,17 @@ List of files:
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/body-onload.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/compile-event-handler-lexical-scopes.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/compile-event-handler-settings-objects.html
+/LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/compile-event-handler-symbol-unscopables.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/event-handler-all-global-events.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/event-handler-attributes-body-window.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/event-handler-attributes-frameset-window.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/event-handler-attributes-windowless-body.html
+/LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/event-handler-handleEvent-ignored.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/event-handler-javascript.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/event-handler-onresize.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/event-handler-processing-algorithm.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/event-handler-removal.window.js
+/LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/event-handler-sourcetext.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/event-handler-spec-example.window.js
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/eventhandler-cancellation.html
 /LayoutTests/imported/w3c/web-platform-tests/html/webappapis/scripting/events/inline-event-handler-ordering.html

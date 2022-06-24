@@ -18,7 +18,7 @@ class BuildRequest extends DataModelObject {
         this._platform = object.platform;
         console.assert(!object.test || object.test instanceof Test);
         this._test = object.test;
-        this._order = object.order;
+        this._order = +object.order;
         console.assert(object.commitSet instanceof CommitSet);
         this._commitSet = object.commitSet;
         this._status = object.status;
@@ -31,7 +31,7 @@ class BuildRequest extends DataModelObject {
 
     updateSingleton(object)
     {
-        console.assert(this._order == object.order);
+        console.assert(+this._order <= +object.order);
         console.assert(this._commitSet == object.commitSet);
 
         const testGroup = object.testGroup;
@@ -44,6 +44,7 @@ class BuildRequest extends DataModelObject {
         this._statusUrl = object.url;
         this._buildId = object.build;
         this._statusDescription = object.statusDescription;
+        this._order = +object.order;
     }
 
     triggerable() { return this._triggerable; }
@@ -87,8 +88,49 @@ class BuildRequest extends DataModelObject {
 
     buildId() { return this._buildId; }
     createdAt() { return this._createdAt; }
+    async findBuildRequestWithSameRoots()
+    {
+        if (!this.isBuild())
+            return null;
+        let scheduledBuildRequest = null;
+        let runningBuildRequest = null;
+        // Set ignoreCache = true as latest status of test groups is expected.
+        const allTestGroupsInTask = await TestGroup.fetchForTask(this.analysisTaskId(), true);
+        const rawManifest = await Manifest.fetchRawResponse();
+        const earliestRootCreatingTimeForReuse = rawManifest.maxRootReuseAgeInDays ?
+            Date.now() - rawManifest.maxRootReuseAgeInDays * 24 * 3600 * 1000 : 0;
 
-    static formatTimeInterval(intervalInMillionSeconds) {
+        for (const group of allTestGroupsInTask) {
+            if (group.id() == this.testGroupId())
+                continue;
+            if (group.isHidden())
+                continue;
+            for (const buildRequest of group.buildRequests()) {
+                if (!buildRequest.isBuild())
+                    continue;
+                if (!this.platform().isInSameGroupAs(buildRequest.platform()))
+                    continue;
+                if (!buildRequest.commitSet().equalsIgnoringRoot(this.commitSet()))
+                    continue;
+                if (!buildRequest.commitSet().areAllRootsAvailable(earliestRootCreatingTimeForReuse))
+                    continue;
+                if (buildRequest.hasCompleted())
+                    return buildRequest;
+                if (buildRequest.isScheduled()
+                    && (!scheduledBuildRequest || buildRequest.createdAt() < scheduledBuildRequest.createdAt())) {
+                    scheduledBuildRequest = buildRequest;
+                }
+                if (buildRequest.status() == 'running'
+                    && (!runningBuildRequest || buildRequest.createdAt() < runningBuildRequest.createdAt())) {
+                    runningBuildRequest = buildRequest;
+                }
+            }
+        }
+        return runningBuildRequest || scheduledBuildRequest;
+    }
+
+    static formatTimeInterval(intervalInMillionSeconds)
+    {
         let intervalInSeconds = intervalInMillionSeconds / 1000;
         const units = [
             {unit: 'week', length: 7 * 24 * 3600},

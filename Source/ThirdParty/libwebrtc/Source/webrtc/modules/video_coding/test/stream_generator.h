@@ -10,10 +10,12 @@
 #ifndef MODULES_VIDEO_CODING_TEST_STREAM_GENERATOR_H_
 #define MODULES_VIDEO_CODING_TEST_STREAM_GENERATOR_H_
 
+#include <stdint.h>
+
 #include <list>
 
 #include "modules/video_coding/packet.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 
@@ -29,10 +31,10 @@ class StreamGenerator {
   StreamGenerator(uint16_t start_seq_num, int64_t current_time);
   void Init(uint16_t start_seq_num, int64_t current_time);
 
-  // |time_ms| denotes the timestamp you want to put on the frame, and the unit
-  // is millisecond. GenerateFrame will translate |time_ms| into a 90kHz
+  // `time_ms` denotes the timestamp you want to put on the frame, and the unit
+  // is millisecond. GenerateFrame will translate `time_ms` into a 90kHz
   // timestamp and put it on the frame.
-  void GenerateFrame(FrameType type,
+  void GenerateFrame(VideoFrameType type,
                      int num_media_packets,
                      int num_empty_packets,
                      int64_t time_ms);
@@ -54,7 +56,7 @@ class StreamGenerator {
                            unsigned int size,
                            bool first_packet,
                            bool marker_bit,
-                           FrameType type);
+                           VideoFrameType type);
 
   std::list<VCMPacket>::iterator GetPacketIterator(int index);
 

@@ -1,3 +1,4 @@
+<!DOCTYPE html><!-- webkit-test-runner [ TabsToLinks=true SpatialNavigationEnabled=true ] -->
 <!DOCTYPE html>
   <head>
     <script src="../../resources/js-test-pre.js"></script>
@@ -55,8 +56,6 @@
 
     if (window.testRunner) {
       testRunner.dumpAsText();
-      testRunner.setSpatialNavigationEnabled(true);
-      testRunner.overridePreference("WebKitTabToLinksPreferenceKey", 1);
       testRunner.waitUntilDone();
     }
 
@@ -67,6 +66,9 @@
 
       // starting the test itself: get to a known place.
       document.getElementById("start").focus();
+      textarea.focus();
+      textarea.setSelectionRange(0, 0);
+
 
       initTest(resultMap, testCompleted);
     }

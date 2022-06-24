@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,19 +35,8 @@ bool shouldRun(const char* filter, const char* testName)
     // FIXME: These tests fail <https://bugs.webkit.org/show_bug.cgi?id=199330>.
     if (!filter && isARM64()) {
         for (auto& failingTest : {
-            "testReportUsedRegistersLateUseFollowedByEarlyDefDoesNotMarkUseAsDead",
             "testNegFloatWithUselessDoubleConversion",
             "testPinRegisters",
-        }) {
-            if (WTF::findIgnoringASCIICaseWithoutLength(testName, failingTest) != WTF::notFound) {
-                dataLogLn("*** Warning: Skipping known-bad test: ", testName);
-                return false;
-            }
-        }
-    }
-    if (!filter && isX86()) {
-        for (auto& failingTest : {
-            "testReportUsedRegistersLateUseFollowedByEarlyDefDoesNotMarkUseAsDead",
         }) {
             if (WTF::findIgnoringASCIICaseWithoutLength(testName, failingTest) != WTF::notFound) {
                 dataLogLn("*** Warning: Skipping known-bad test: ", testName);
@@ -320,7 +309,9 @@ void run(const char* filter)
     RUN_UNARY(testConvertFloatToDoubleArg, floatingPointOperands<float>());
     RUN_UNARY(testConvertFloatToDoubleImm, floatingPointOperands<float>());
     RUN_UNARY(testConvertFloatToDoubleMem, floatingPointOperands<float>());
+    RUN_UNARY(testConvertDoubleToFloatToDouble, floatingPointOperands<double>());
     RUN_UNARY(testConvertDoubleToFloatToDoubleToFloat, floatingPointOperands<double>());
+    RUN_UNARY(testConvertDoubleToFloatEqual, floatingPointOperands<double>());
     RUN_UNARY(testStoreFloat, floatingPointOperands<double>());
     RUN_UNARY(testStoreDoubleConstantAsFloat, floatingPointOperands<double>());
     RUN_UNARY(testLoadFloatConvertDoubleConvertFloatStoreFloat, floatingPointOperands<float>());
@@ -347,6 +338,7 @@ void run(const char* filter)
     RUN_UNARY(testCheckAddRemoveCheckWithSExt32, int32Operands());
     RUN_UNARY(testCheckAddRemoveCheckWithZExt32, int32Operands());
 
+    RUN(testStoreZeroReg());
     RUN(testStore32(44));
     RUN(testStoreConstant(49));
     RUN(testStoreConstantPtr(49));
@@ -507,6 +499,7 @@ void run(const char* filter)
     RUN(testCheckSubImm());
     RUN(testCheckSubBadImm());
     RUN(testCheckSub());
+    RUN(testCheckSubBitAnd());
     RUN(testCheckSub64());
     RUN(testCheckSubFold(100, 200));
     RUN(testCheckSubFoldFail(-2147483647, 100));
@@ -777,6 +770,11 @@ void run(const char* filter)
     RUN(testLoadBaseIndexShift2());
     RUN(testLoadBaseIndexShift32());
     RUN(testOptimizeMaterialization());
+
+    // FIXME: Re-enable B3 hoistLoopInvariantValues
+    // https://bugs.webkit.org/show_bug.cgi?id=212651
+    Options::useB3HoistLoopInvariantValues() = true;
+
     RUN(testLICMPure());
     RUN(testLICMPureSideExits());
     RUN(testLICMPureWritesPinned());
@@ -830,6 +828,9 @@ void run(const char* filter)
 
     RUN(testInfiniteLoopDoesntCauseBadHoisting());
 
+    RUN(testFloatMaxMin());
+    RUN(testDoubleMaxMin());
+
     if (isX86()) {
         RUN(testBranchBitAndImmFusion(Identity, Int64, 1, Air::BranchTest32, Air::Arg::Tmp));
         RUN(testBranchBitAndImmFusion(Identity, Int64, 0xff, Air::BranchTest32, Air::Arg::Tmp));
@@ -870,7 +871,7 @@ void run(const char* filter)
                     for (;;) {
                         RefPtr<SharedTask<void()>> task;
                         {
-                            LockHolder locker(lock);
+                            Locker locker { lock };
                             if (tasks.isEmpty())
                                 return;
                             task = tasks.takeFirst();
@@ -896,6 +897,11 @@ static void run(const char*)
 
 #endif // ENABLE(B3_JIT)
 
+#if ENABLE(JIT_OPERATION_VALIDATION)
+extern const JSC::JITOperationAnnotation startOfJITOperationsInTestB3 __asm("section$start$__DATA_CONST$__jsc_ops");
+extern const JSC::JITOperationAnnotation endOfJITOperationsInTestB3 __asm("section$end$__DATA_CONST$__jsc_ops");
+#endif
+
 int main(int argc, char** argv)
 {
     const char* filter = nullptr;
@@ -910,8 +916,14 @@ int main(int argc, char** argv)
         break;
     }
 
+    JSC::Config::configureForTesting();
+
     WTF::initializeMainThread();
-    JSC::initializeThreading();
+    JSC::initialize();
+
+#if ENABLE(JIT_OPERATION_VALIDATION)
+    JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInTestB3, &endOfJITOperationsInTestB3);
+#endif
     
     for (unsigned i = 0; i <= 2; ++i) {
         JSC::Options::defaultB3OptLevel() = i;

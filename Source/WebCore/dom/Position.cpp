@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006, 2009, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,22 +26,26 @@
 #include "config.h"
 #include "Position.h"
 
+#include "BoundaryPoint.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "Editing.h"
+#include "ElementInlines.h"
 #include "HTMLBRElement.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLTableElement.h"
-#include "InlineElementBox.h"
-#include "InlineIterator.h"
-#include "InlineTextBox.h"
-#include "LineLayoutTraversal.h"
+#include "InlineIteratorLineBox.h"
+#include "InlineIteratorLogicalOrderTraversal.h"
+#include "InlineIteratorTextBox.h"
+#include "InlineRunAndOffset.h"
+#include "LegacyInlineTextBox.h"
 #include "Logging.h"
 #include "NodeTraversal.h"
 #include "PositionIterator.h"
 #include "RenderBlock.h"
+#include "RenderBlockFlow.h"
 #include "RenderFlexibleBox.h"
 #include "RenderGrid.h"
 #include "RenderInline.h"
@@ -65,13 +69,13 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-static bool hasInlineBoxWrapper(RenderObject& renderer)
+static bool hasInlineRun(RenderObject& renderer)
 {
-    if (is<RenderBox>(renderer) && downcast<RenderBox>(renderer).inlineBoxWrapper())
+    if (is<RenderBox>(renderer) && InlineIterator::boxFor(downcast<RenderBox>(renderer)))
         return true;
-    if (is<RenderText>(renderer) && downcast<RenderText>(renderer).firstTextBox())
+    if (is<RenderText>(renderer) && InlineIterator::firstTextBoxFor(downcast<RenderText>(renderer)))
         return true;
-    if (is<RenderLineBreak>(renderer) && downcast<RenderLineBreak>(renderer).inlineBoxWrapper())
+    if (is<RenderLineBreak>(renderer) && InlineIterator::boxFor(downcast<RenderLineBreak>(renderer)))
         return true;
     return false;
 }
@@ -82,7 +86,7 @@ static Node* nextRenderedEditable(Node* node)
         RenderObject* renderer = node->renderer();
         if (!renderer || !node->hasEditableStyle())
             continue;
-        if (hasInlineBoxWrapper(*renderer))
+        if (hasInlineRun(*renderer))
             return node;
     }
     return nullptr;
@@ -94,7 +98,7 @@ static Node* previousRenderedEditable(Node* node)
         RenderObject* renderer = node->renderer();
         if (!renderer || !node->hasEditableStyle())
             continue;
-        if (hasInlineBoxWrapper(*renderer))
+        if (hasInlineRun(*renderer))
             return node;
     }
     return nullptr;
@@ -123,14 +127,12 @@ Position::Position(Node* anchorNode, AnchorType anchorType)
         && (is<Text>(*m_anchorNode) || editingIgnoresContent(*m_anchorNode))));
 }
 
-Position::Position(Node* anchorNode, int offset, AnchorType anchorType)
+Position::Position(Node* anchorNode, unsigned offset, AnchorType anchorType)
     : m_anchorNode(anchorNode)
     , m_offset(offset)
     , m_anchorType(anchorType)
     , m_isLegacyEditingPosition(false)
 {
-    ASSERT(!m_anchorNode || !editingIgnoresContent(*m_anchorNode));
-    ASSERT(!m_anchorNode || !m_anchorNode->isPseudoElement());
     ASSERT(anchorType == PositionIsOffsetInAnchor);
 }
 
@@ -143,7 +145,7 @@ Position::Position(Text* textNode, unsigned offset)
     ASSERT(m_anchorNode);
 }
 
-void Position::moveToPosition(Node* node, int offset)
+void Position::moveToPosition(Node* node, unsigned offset)
 {
     ASSERT(!editingIgnoresContent(*node));
     ASSERT(anchorType() == PositionIsOffsetInAnchor || m_isLegacyEditingPosition);
@@ -152,7 +154,8 @@ void Position::moveToPosition(Node* node, int offset)
     if (m_isLegacyEditingPosition)
         m_anchorType = anchorTypeForLegacyEditingPosition(m_anchorNode.get(), m_offset);
 }
-void Position::moveToOffset(int offset)
+
+void Position::moveToOffset(unsigned offset)
 {
     ASSERT(anchorType() == PositionIsOffsetInAnchor || m_isLegacyEditingPosition);
     m_offset = offset;
@@ -182,7 +185,7 @@ Text* Position::containerText() const
 {
     switch (anchorType()) {
     case PositionIsOffsetInAnchor:
-        return m_anchorNode && is<Text>(*m_anchorNode) ? downcast<Text>(m_anchorNode.get()) : nullptr;
+        return dynamicDowncast<Text>(m_anchorNode.get());
     case PositionIsBeforeAnchor:
     case PositionIsAfterAnchor:
         return nullptr;
@@ -195,6 +198,16 @@ Text* Position::containerText() const
     return nullptr;
 }
 
+Element* Position::containerOrParentElement() const
+{
+    auto* container = containerNode();
+    if (!container)
+        return nullptr;
+    if (is<Element>(container))
+        return downcast<Element>(container);
+    return container->parentElement();
+}
+
 int Position::computeOffsetInContainerNode() const
 {
     if (!m_anchorNode)
@@ -204,9 +217,9 @@ int Position::computeOffsetInContainerNode() const
     case PositionIsBeforeChildren:
         return 0;
     case PositionIsAfterChildren:
-        return lastOffsetInNode(m_anchorNode.get());
+        return m_anchorNode->length();
     case PositionIsOffsetInAnchor:
-        return minOffsetForNode(m_anchorNode.get(), m_offset);
+        return m_offset;
     case PositionIsBeforeAnchor:
         return m_anchorNode->computeNodeIndex();
     case PositionIsAfterAnchor:
@@ -245,12 +258,12 @@ Position Position::parentAnchoredEquivalent() const
         return positionInParentAfterNode(m_anchorNode.get());
     }
 
-    return { containerNode(), computeOffsetInContainerNode(), PositionIsOffsetInAnchor };
+    return { containerNode(), static_cast<unsigned>(computeOffsetInContainerNode()), PositionIsOffsetInAnchor };
 }
 
 RefPtr<Node> Position::firstNode() const
 {
-    auto container = makeRefPtr(containerNode());
+    RefPtr container { containerNode() };
     if (!container)
         return nullptr;
     if (is<CharacterData>(*container))
@@ -304,7 +317,7 @@ Node* Position::computeNodeAfterPosition() const
     return nullptr;
 }
 
-Position::AnchorType Position::anchorTypeForLegacyEditingPosition(Node* anchorNode, int offset)
+Position::AnchorType Position::anchorTypeForLegacyEditingPosition(Node* anchorNode, unsigned offset)
 {
     if (anchorNode && editingIgnoresContent(*anchorNode)) {
         if (offset == 0)
@@ -329,9 +342,10 @@ Position Position::previous(PositionMoveType moveType) const
     if (!node)
         return *this;
 
-    int offset = deprecatedEditingOffset();
     // FIXME: Negative offsets shouldn't be allowed. We should catch this earlier.
-    ASSERT(offset >= 0);
+    ASSERT(deprecatedEditingOffset() >= 0);
+
+    unsigned offset = deprecatedEditingOffset();
 
     if (anchorType() == PositionIsBeforeAnchor) {
         node = containerNode();
@@ -352,11 +366,11 @@ Position Position::previous(PositionMoveType moveType) const
         //      Going from 1 to 0 is correct.
         switch (moveType) {
         case CodePoint:
-            return createLegacyEditingPosition(node, offset - 1);
+            return makeDeprecatedLegacyPosition(node, offset - 1);
         case Character:
-            return createLegacyEditingPosition(node, uncheckedPreviousOffset(node, offset));
+            return makeDeprecatedLegacyPosition(node, uncheckedPreviousOffset(node, offset));
         case BackwardDeletion:
-            return createLegacyEditingPosition(node, uncheckedPreviousOffsetForBackwardDeletion(node, offset));
+            return makeDeprecatedLegacyPosition(node, uncheckedPreviousOffsetForBackwardDeletion(node, offset));
         }
     }
 
@@ -371,7 +385,7 @@ Position Position::previous(PositionMoveType moveType) const
     if (previousSibling && positionBeforeOrAfterNodeIsCandidate(*previousSibling))
         return positionAfterNode(previousSibling);
 
-    return createLegacyEditingPosition(parent, node->computeNodeIndex());
+    return makeContainerOffsetPosition(parent, node->computeNodeIndex());
 }
 
 Position Position::next(PositionMoveType moveType) const
@@ -382,9 +396,10 @@ Position Position::next(PositionMoveType moveType) const
     if (!node)
         return *this;
 
-    int offset = deprecatedEditingOffset();
     // FIXME: Negative offsets shouldn't be allowed. We should catch this earlier.
-    ASSERT(offset >= 0);
+    ASSERT(deprecatedEditingOffset() >= 0);
+
+    unsigned offset = deprecatedEditingOffset();
 
     if (anchorType() == PositionIsAfterAnchor) {
         node = containerNode();
@@ -395,7 +410,7 @@ Position Position::next(PositionMoveType moveType) const
     }
 
     Node* child = node->traverseToChildAt(offset);
-    if (child || (!node->hasChildNodes() && offset < lastOffsetForEditing(*node))) {
+    if (child || (!node->hasChildNodes() && offset < static_cast<unsigned>(lastOffsetForEditing(*node)))) {
         if (child)
             return firstPositionInOrBeforeNode(child);
 
@@ -404,7 +419,7 @@ Position Position::next(PositionMoveType moveType) const
         //      Going forward one character at a time is correct.
         //   2) The new offset is a bogus offset like (<br>, 1), and there is no child.
         //      Going from 0 to 1 is correct.
-        return createLegacyEditingPosition(node, (moveType == Character) ? uncheckedNextOffset(node, offset) : offset + 1);
+        return makeDeprecatedLegacyPosition(node, (moveType == Character) ? uncheckedNextOffset(node, offset) : offset + 1);
     }
 
     ContainerNode* parent = node->parentNode();
@@ -418,20 +433,20 @@ Position Position::next(PositionMoveType moveType) const
     if (nextSibling && positionBeforeOrAfterNodeIsCandidate(*nextSibling))
         return positionBeforeNode(nextSibling);
 
-    return createLegacyEditingPosition(parent, node->computeNodeIndex() + 1);
+    return makeContainerOffsetPosition(parent, node->computeNodeIndex() + 1);
 }
 
-int Position::uncheckedPreviousOffset(const Node* n, int current)
+int Position::uncheckedPreviousOffset(const Node* n, unsigned current)
 {
     return n->renderer() ? n->renderer()->previousOffset(current) : current - 1;
 }
 
-int Position::uncheckedPreviousOffsetForBackwardDeletion(const Node* n, int current)
+int Position::uncheckedPreviousOffsetForBackwardDeletion(const Node* n, unsigned current)
 {
     return n->renderer() ? n->renderer()->previousOffsetForBackwardDeletion(current) : current - 1;
 }
 
-int Position::uncheckedNextOffset(const Node* n, int current)
+int Position::uncheckedNextOffset(const Node* n, unsigned current)
 {
     return n->renderer() ? n->renderer()->nextOffset(current) : current + 1;
 }
@@ -460,9 +475,8 @@ bool Position::atLastEditingPositionForNode() const
 {
     if (isNull())
         return true;
-    // FIXME: Position after anchor shouldn't be considered as at the first editing position for node
-    // since that position resides outside of the node.
-    return m_anchorType == PositionIsAfterAnchor || m_anchorType == PositionIsAfterChildren || m_offset >= lastOffsetForEditing(*deprecatedNode());
+    // FIXME: Position after anchor shouldn't be considered as at the first editing position for node since that position resides outside of the node.
+    return m_anchorType == PositionIsAfterAnchor || m_anchorType == PositionIsAfterChildren || m_offset >= static_cast<unsigned>(lastOffsetForEditing(*deprecatedNode()));
 }
 
 // A position is considered at editing boundary if one of the following is true:
@@ -539,7 +553,7 @@ bool Position::atEndOfTree() const
 
     switch (m_anchorType) {
     case PositionIsOffsetInAnchor:
-        return m_offset >= lastOffsetForEditing(*m_anchorNode);
+        return m_offset >= static_cast<unsigned>(lastOffsetForEditing(*m_anchorNode));
     case PositionIsBeforeAnchor:
         return false;
     case PositionIsAfterAnchor:
@@ -554,7 +568,7 @@ bool Position::atEndOfTree() const
 }
 
 // return first preceding DOM position rendered at a different location, or "this"
-Position Position::previousCharacterPosition(EAffinity affinity) const
+Position Position::previousCharacterPosition(Affinity affinity) const
 {
     if (isNull())
         return { };
@@ -582,7 +596,7 @@ Position Position::previousCharacterPosition(EAffinity affinity) const
 }
 
 // return first following position rendered at a different location, or "this"
-Position Position::nextCharacterPosition(EAffinity affinity) const
+Position Position::nextCharacterPosition(Affinity affinity) const
 {
     if (isNull())
         return { };
@@ -625,7 +639,7 @@ static bool endsOfNodeAreVisuallyDistinctPositions(Node* node)
     if (is<HTMLTableElement>(*node))
         return false;
     
-    if (!node->renderer()->isReplaced() || !canHaveChildrenForEditing(*node) || !downcast<RenderBox>(*node->renderer()).height())
+    if (!node->renderer()->isReplacedOrInlineBlock() || !canHaveChildrenForEditing(*node) || !downcast<RenderBox>(*node->renderer()).height())
         return false;
 
     // There is a VisiblePosition inside an empty inline-block container.
@@ -671,7 +685,7 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
     // iterate backward from there, looking for a qualified position
     Node* boundary = enclosingVisualBoundary(startNode);
     // FIXME: PositionIterator should respect Before and After positions.
-    PositionIterator lastVisible = m_anchorType == PositionIsAfterAnchor ? createLegacyEditingPosition(m_anchorNode.get(), caretMaxOffset(*m_anchorNode)) : *this;
+    PositionIterator lastVisible = m_anchorType == PositionIsAfterAnchor ? makeDeprecatedLegacyPosition(m_anchorNode.get(), caretMaxOffset(*m_anchorNode)) : *this;
     PositionIterator currentPosition = lastVisible;
     bool startEditable = startNode->hasEditableStyle();
     Node* lastNode = startNode;
@@ -727,7 +741,7 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
         if (is<RenderText>(*renderer)) {
             auto& textRenderer = downcast<RenderText>(*renderer);
 
-            auto firstTextBox = LineLayoutTraversal::firstTextBoxInTextOrderFor(textRenderer);
+            auto [firstTextBox, orderCache] = InlineIterator::firstTextBoxInLogicalOrderFor(textRenderer);
             if (!firstTextBox)
                 continue;
 
@@ -737,19 +751,19 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
                 // render tree which can have a different length due to case transformation.
                 // Until we resolve that, disable this so we can run the layout tests!
                 //ASSERT(currentOffset >= renderer->caretMaxOffset());
-                return createLegacyEditingPosition(&currentNode, renderer->caretMaxOffset());
+                return makeDeprecatedLegacyPosition(&currentNode, renderer->caretMaxOffset());
             }
 
             unsigned textOffset = currentPosition.offsetInLeafNode();
-            for (auto box = firstTextBox; box; box.traverseNextInTextOrder()) {
-                if (textOffset <= box->localEndOffset()) {
-                    if (textOffset > box->localStartOffset())
-                        return currentPosition;
-                    continue;
-                }
-
-                if (textOffset == box->localEndOffset() + 1 && box->isLastOnLine() && !box->isLast())
+            for (auto box = firstTextBox; box;) {
+                if (textOffset > box->start() && textOffset <= box->end())
                     return currentPosition;
+
+                auto nextBox = InlineIterator::nextTextBoxInLogicalOrder(box, orderCache);
+                if (textOffset == box->end() + 1 && nextBox && box->lineBox() != nextBox->lineBox())
+                    return currentPosition;
+
+                box = nextBox;
             }
         }
     }
@@ -773,7 +787,7 @@ Position Position::downstream(EditingBoundaryCrossingRule rule) const
     // iterate forward from there, looking for a qualified position
     Node* boundary = enclosingVisualBoundary(startNode);
     // FIXME: PositionIterator should respect Before and After positions.
-    PositionIterator lastVisible = m_anchorType == PositionIsAfterAnchor ? createLegacyEditingPosition(m_anchorNode.get(), caretMaxOffset(*m_anchorNode)) : *this;
+    PositionIterator lastVisible = m_anchorType == PositionIsAfterAnchor ? makeDeprecatedLegacyPosition(m_anchorNode.get(), caretMaxOffset(*m_anchorNode)) : *this;
     PositionIterator currentPosition = lastVisible;
     bool startEditable = startNode->hasEditableStyle();
     Node* lastNode = startNode;
@@ -834,28 +848,28 @@ Position Position::downstream(EditingBoundaryCrossingRule rule) const
         if (is<RenderText>(*renderer)) {
             auto& textRenderer = downcast<RenderText>(*renderer);
 
-            auto firstTextBox = LineLayoutTraversal::firstTextBoxInTextOrderFor(textRenderer);
+            auto [firstTextBox, orderCache] = InlineIterator::firstTextBoxInLogicalOrderFor(textRenderer);
             if (!firstTextBox)
                 continue;
 
             if (&currentNode != startNode) {
                 ASSERT(currentPosition.atStartOfNode());
-                return createLegacyEditingPosition(&currentNode, textRenderer.caretMinOffset());
+                return makeContainerOffsetPosition(&currentNode, textRenderer.caretMinOffset());
             }
 
             unsigned textOffset = currentPosition.offsetInLeafNode();
-            for (auto box = firstTextBox; box; box.traverseNextInTextOrder()) {
-                if (!box->length() && textOffset == box->localStartOffset())
+            for (auto box = firstTextBox; box;) {
+                if (!box->length() && textOffset == box->start())
                     return currentPosition;
 
-                if (textOffset < box->localEndOffset()) {
-                    if (textOffset >= box->localStartOffset())
-                        return currentPosition;
-                    continue;
-                }
-
-                if (textOffset == box->localEndOffset() && box->isLastOnLine() && !box->isLast())
+                if (textOffset >= box->start() && textOffset < box->end())
                     return currentPosition;
+
+                auto nextBox = InlineIterator::nextTextBoxInLogicalOrder(box, orderCache);
+                if (textOffset == box->end() && nextBox && box->lineBox() != nextBox->lineBox())
+                    return currentPosition;
+
+                box = nextBox;
             }
         }
     }
@@ -925,13 +939,16 @@ bool Position::hasRenderedNonAnonymousDescendantsWithHeight(const RenderElement&
 
 bool Position::nodeIsUserSelectNone(Node* node)
 {
-    return node && node->renderer() && node->renderer()->style().userSelect() == UserSelect::None;
+    if (!node)
+        return false;
+    return node->renderer() && (node->renderer()->style().effectiveUserSelect() == UserSelect::None);
 }
 
-#if ENABLE(USERSELECT_ALL)
 bool Position::nodeIsUserSelectAll(const Node* node)
 {
-    return node && node->renderer() && node->renderer()->style().userSelect() == UserSelect::All;
+    if (!node)
+        return false;
+    return node->renderer() && (node->renderer()->style().effectiveUserSelect() == UserSelect::All);
 }
 
 Node* Position::rootUserSelectAllForNode(Node* node)
@@ -955,8 +972,8 @@ Node* Position::rootUserSelectAllForNode(Node* node)
     }
     return candidateRoot;
 }
-#endif
 
+// This function should be kept in sync with PositionIterator::isCandidate().
 bool Position::isCandidate() const
 {
     if (isNull())
@@ -987,7 +1004,7 @@ bool Position::isCandidate() const
         return false;
 
     if (is<RenderBlockFlow>(*renderer) || is<RenderGrid>(*renderer) || is<RenderFlexibleBox>(*renderer)) {
-        RenderBlock& block = downcast<RenderBlock>(*renderer);
+        auto& block = downcast<RenderBlock>(*renderer);
         if (block.logicalHeight() || is<HTMLBodyElement>(*m_anchorNode) || m_anchorNode->isRootEditableElement()) {
             if (!Position::hasRenderedNonAnonymousDescendantsWithHeight(block))
                 return atFirstEditingPositionForNode() && !Position::nodeIsUserSelectNone(deprecatedNode());
@@ -1036,13 +1053,11 @@ bool Position::rendersInDifferentPosition(const Position& position) const
         if (is<HTMLBRElement>(*deprecatedNode()))
             return false;
 
-        if (m_offset == position.deprecatedEditingOffset())
+        if (m_offset == static_cast<unsigned>(position.deprecatedEditingOffset()))
             return false;
 
-        if (!is<Text>(*deprecatedNode()) && !is<Text>(*position.deprecatedNode())) {
-            if (m_offset != position.deprecatedEditingOffset())
-                return true;
-        }
+        if (!is<Text>(*deprecatedNode()))
+            return true;
     }
 
     if (is<HTMLBRElement>(*deprecatedNode()) && position.isCandidate())
@@ -1060,41 +1075,36 @@ bool Position::rendersInDifferentPosition(const Position& position) const
     if (is<RenderText>(*positionRenderer) && !downcast<RenderText>(*positionRenderer).containsCaretOffset(position.m_offset))
         return false;
 
-    int thisRenderedOffset = is<RenderText>(*renderer) ? downcast<RenderText>(*renderer).countRenderedCharacterOffsetsUntil(m_offset) : m_offset;
-    int positionRenderedOffset = is<RenderText>(*positionRenderer) ? downcast<RenderText>(*positionRenderer).countRenderedCharacterOffsetsUntil(position.m_offset) : position.m_offset;
+    unsigned thisRenderedOffset = is<RenderText>(*renderer) ? downcast<RenderText>(*renderer).countRenderedCharacterOffsetsUntil(m_offset) : m_offset;
+    unsigned positionRenderedOffset = is<RenderText>(*positionRenderer) ? downcast<RenderText>(*positionRenderer).countRenderedCharacterOffsetsUntil(position.m_offset) : position.m_offset;
 
     if (renderer == positionRenderer && thisRenderedOffset == positionRenderedOffset)
         return false;
 
-    int ignoredCaretOffset;
-    InlineBox* b1;
-    getInlineBoxAndOffset(DOWNSTREAM, b1, ignoredCaretOffset);
-    InlineBox* b2;
-    position.getInlineBoxAndOffset(DOWNSTREAM, b2, ignoredCaretOffset);
+    auto box1 = inlineBoxAndOffset(Affinity::Downstream).box;
+    auto box2 = position.inlineBoxAndOffset(Affinity::Downstream).box;
 
-    LOG(Editing, "renderer:               %p [%p]\n", renderer, b1);
+    LOG(Editing, "renderer:               %p\n", renderer);
     LOG(Editing, "thisRenderedOffset:         %d\n", thisRenderedOffset);
-    LOG(Editing, "posRenderer:            %p [%p]\n", positionRenderer, b2);
+    LOG(Editing, "posRenderer:            %p\n", positionRenderer);
     LOG(Editing, "posRenderedOffset:      %d\n", positionRenderedOffset);
     LOG(Editing, "node min/max:           %d:%d\n", caretMinOffset(*deprecatedNode()), caretMaxOffset(*deprecatedNode()));
     LOG(Editing, "pos node min/max:       %d:%d\n", caretMinOffset(*position.deprecatedNode()), caretMaxOffset(*position.deprecatedNode()));
     LOG(Editing, "----------------------------------------------------------------------\n");
 
-    if (!b1 || !b2) {
+    if (!box1 || !box2)
         return false;
-    }
 
-    if (&b1->root() != &b2->root()) {
+    if (box1->lineBox() != box2->lineBox())
         return true;
-    }
 
     if (nextRenderedEditable(deprecatedNode()) == position.deprecatedNode()
-        && thisRenderedOffset == caretMaxOffset(*deprecatedNode()) && !positionRenderedOffset) {
+        && thisRenderedOffset == static_cast<unsigned>(caretMaxOffset(*deprecatedNode())) && !positionRenderedOffset) {
         return false;
     }
     
     if (previousRenderedEditable(deprecatedNode()) == position.deprecatedNode()
-        && !thisRenderedOffset && positionRenderedOffset == caretMaxOffset(*position.deprecatedNode())) {
+        && !thisRenderedOffset && positionRenderedOffset == static_cast<unsigned>(caretMaxOffset(*position.deprecatedNode()))) {
         return false;
     }
 
@@ -1102,7 +1112,7 @@ bool Position::rendersInDifferentPosition(const Position& position) const
 }
 
 // This assumes that it starts in editable content.
-Position Position::leadingWhitespacePosition(EAffinity affinity, bool considerNonCollapsibleWhitespace) const
+Position Position::leadingWhitespacePosition(Affinity affinity, bool considerNonCollapsibleWhitespace) const
 {
     ASSERT(isEditablePosition(*this));
     if (isNull())
@@ -1124,7 +1134,7 @@ Position Position::leadingWhitespacePosition(EAffinity affinity, bool considerNo
 }
 
 // This assumes that it starts in editable content.
-Position Position::trailingWhitespacePosition(EAffinity, bool considerNonCollapsibleWhitespace) const
+Position Position::trailingWhitespacePosition(Affinity, bool considerNonCollapsibleWhitespace) const
 {
     ASSERT(isEditablePosition(*this));
     if (isNull())
@@ -1140,9 +1150,9 @@ Position Position::trailingWhitespacePosition(EAffinity, bool considerNonCollaps
     return { };
 }
 
-void Position::getInlineBoxAndOffset(EAffinity affinity, InlineBox*& inlineBox, int& caretOffset) const
+InlineBoxAndOffset Position::inlineBoxAndOffset(Affinity affinity) const
 {
-    getInlineBoxAndOffset(affinity, primaryDirection(), inlineBox, caretOffset);
+    return inlineBoxAndOffset(affinity, primaryDirection());
 }
 
 static bool isNonTextLeafChild(RenderObject& object)
@@ -1152,32 +1162,23 @@ static bool isNonTextLeafChild(RenderObject& object)
     return !downcast<RenderElement>(object).firstChild();
 }
 
-static InlineTextBox* searchAheadForBetterMatch(RenderObject* renderer)
+static InlineIterator::TextBoxIterator searchAheadForBetterMatch(RenderText& renderer)
 {
-    RenderBlock* container = renderer->containingBlock();
-    RenderObject* next = renderer;
+    RenderBlock* container = renderer.containingBlock();
+    RenderObject* next = &renderer;
     while ((next = next->nextInPreOrder(container))) {
         if (is<RenderBlock>(*next))
-            return nullptr;
+            return { };
         if (next->isBR())
-            return nullptr;
+            return { };
         if (isNonTextLeafChild(*next))
-            return nullptr;
+            return { };
         if (is<RenderText>(*next)) {
-            InlineTextBox* match = nullptr;
-            int minOffset = INT_MAX;
-            for (InlineTextBox* box = downcast<RenderText>(*next).firstTextBox(); box; box = box->nextTextBox()) {
-                int caretMinOffset = box->caretMinOffset();
-                if (caretMinOffset < minOffset) {
-                    match = box;
-                    minOffset = caretMinOffset;
-                }
-            }
-            if (match)
-                return match;
+            if (auto [box, orderCache] = InlineIterator::firstTextBoxInLogicalOrderFor(downcast<RenderText>(*next)); box)
+                return box;
         }
     }
-    return nullptr;
+    return { };
 }
 
 static Position downstreamIgnoringEditingBoundaries(Position position)
@@ -1200,49 +1201,62 @@ static Position upstreamIgnoringEditingBoundaries(Position position)
     return position;
 }
 
-void Position::getInlineBoxAndOffset(EAffinity affinity, TextDirection primaryDirection, InlineBox*& inlineBox, int& caretOffset) const
+InlineBoxAndOffset Position::inlineBoxAndOffset(Affinity affinity, TextDirection primaryDirection) const
 {
-    caretOffset = deprecatedEditingOffset();
-    RenderObject* renderer = deprecatedNode()->renderer();
+    auto caretOffset = static_cast<unsigned>(deprecatedEditingOffset());
+
+    auto node = deprecatedNode();
+    if (!node)
+        return { { }, caretOffset };
+    auto renderer = node->renderer();
+    if (!renderer)
+        return { { }, caretOffset };
+
+    InlineIterator::LeafBoxIterator box;
 
     if (renderer->isBR()) {
         auto& lineBreakRenderer = downcast<RenderLineBreak>(*renderer);
-        lineBreakRenderer.ensureLineBoxes();
-        inlineBox = !caretOffset ? lineBreakRenderer.inlineBoxWrapper() : nullptr;
+        if (!caretOffset)
+            box = InlineIterator::boxFor(lineBreakRenderer);
     } else if (is<RenderText>(*renderer)) {
         auto& textRenderer = downcast<RenderText>(*renderer);
-        textRenderer.ensureLineBoxes();
 
-        InlineTextBox* box;
-        InlineTextBox* candidate = nullptr;
+        auto textBox = InlineIterator::firstTextBoxFor(textRenderer);
+        InlineIterator::TextBoxIterator candidate;
 
-        for (box = textRenderer.firstTextBox(); box; box = box->nextTextBox()) {
-            int caretMinOffset = box->caretMinOffset();
-            int caretMaxOffset = box->caretMaxOffset();
+        for (; textBox; ++textBox) {
+            unsigned caretMinOffset = textBox->minimumCaretOffset();
+            unsigned caretMaxOffset = textBox->maximumCaretOffset();
 
-            if (caretOffset < caretMinOffset || caretOffset > caretMaxOffset || (caretOffset == caretMaxOffset && box->isLineBreak()))
+            if (caretOffset < caretMinOffset || caretOffset > caretMaxOffset || (caretOffset == caretMaxOffset && textBox->isLineBreak()))
                 continue;
 
-            if (caretOffset > caretMinOffset && caretOffset < caretMaxOffset) {
-                inlineBox = box;
-                return;
-            }
+            if (caretOffset > caretMinOffset && caretOffset < caretMaxOffset)
+                return { textBox, caretOffset };
 
-            if (((caretOffset == caretMaxOffset) ^ (affinity == DOWNSTREAM))
-                || ((caretOffset == caretMinOffset) ^ (affinity == UPSTREAM))
-                || (caretOffset == caretMaxOffset && box->nextLeafOnLine() && box->nextLeafOnLine()->isLineBreak()))
+            if ((caretOffset == caretMaxOffset) ^ (affinity == Affinity::Downstream))
                 break;
 
-            candidate = box;
+            if ((caretOffset == caretMinOffset) ^ (affinity == Affinity::Upstream))
+                break;
+
+            if (caretOffset == caretMaxOffset) {
+                auto nextOnLine = textBox->nextOnLine();
+                if (nextOnLine && nextOnLine->isLineBreak())
+                    break;
+            }
+
+            candidate = textBox;
         }
-        if (candidate && candidate == textRenderer.lastTextBox() && affinity == DOWNSTREAM) {
-            box = searchAheadForBetterMatch(&textRenderer);
-            if (box)
-                caretOffset = box->caretMinOffset();
+
+        if (candidate && !candidate->nextTextBox() && affinity == Affinity::Downstream) {
+            textBox = searchAheadForBetterMatch(textRenderer);
+            if (textBox)
+                caretOffset = textBox->minimumCaretOffset();
         }
-        inlineBox = box ? box : candidate;
+
+        box = textBox ? textBox : candidate;
     } else {
-        inlineBox = nullptr;
         if (canHaveChildrenForEditing(*deprecatedNode()) && is<RenderBlockFlow>(*renderer) && hasRenderedNonAnonymousDescendantsWithHeight(downcast<RenderBlockFlow>(*renderer))) {
             // Try a visually equivalent position with possibly opposite editability. This helps in case |this| is in
             // an editable block but surrounded by non-editable positions. It acts to negate the logic at the beginning
@@ -1250,115 +1264,122 @@ void Position::getInlineBoxAndOffset(EAffinity affinity, TextDirection primaryDi
             Position equivalent = downstreamIgnoringEditingBoundaries(*this);
             if (equivalent == *this) {
                 equivalent = upstreamIgnoringEditingBoundaries(*this);
+                // FIXME: Can returning nullptr really be correct here?
                 if (equivalent == *this || downstreamIgnoringEditingBoundaries(equivalent) == *this)
-                    return;
+                    return { { }, caretOffset };
             }
 
-            equivalent.getInlineBoxAndOffset(UPSTREAM, primaryDirection, inlineBox, caretOffset);
-            return;
+            return equivalent.inlineBoxAndOffset(Affinity::Upstream, primaryDirection);
         }
         if (is<RenderBox>(*renderer)) {
-            inlineBox = downcast<RenderBox>(*renderer).inlineBoxWrapper();
-            if (!inlineBox || (caretOffset > inlineBox->caretMinOffset() && caretOffset < inlineBox->caretMaxOffset()))
-                return;
+            box = InlineIterator::boxFor(downcast<RenderBox>(*renderer));
+            if (box && caretOffset > box->minimumCaretOffset() && caretOffset < box->maximumCaretOffset())
+                return { box, caretOffset };
         }
     }
 
-    if (!inlineBox)
-        return;
+    if (!box)
+        return { { }, caretOffset };
 
-    unsigned char level = inlineBox->bidiLevel();
+    unsigned char level = box->bidiLevel();
 
-    if (inlineBox->direction() == primaryDirection) {
-        if (caretOffset == inlineBox->caretRightmostOffset()) {
-            InlineBox* nextBox = inlineBox->nextLeafOnLine();
+    if (box->direction() == primaryDirection) {
+        if (caretOffset == box->rightmostCaretOffset()) {
+            auto nextBox = box->nextOnLine();
             if (!nextBox || nextBox->bidiLevel() >= level)
-                return;
+                return { box, caretOffset };
 
             level = nextBox->bidiLevel();
-            InlineBox* prevBox = inlineBox;
-            do {
-                prevBox = prevBox->previousLeafOnLine();
-            } while (prevBox && prevBox->bidiLevel() > level);
 
-            if (prevBox && prevBox->bidiLevel() == level)   // For example, abc FED 123 ^ CBA
-                return;
+            auto previousRun = box->previousOnLine();
+            for (; previousRun; previousRun.traversePreviousOnLine()) {
+                if (previousRun->bidiLevel() <= level)
+                    break;
+            }
+
+            if (previousRun && previousRun->bidiLevel() == level) // For example, abc FED 123 ^ CBA
+                return { box, caretOffset };
 
             // For example, abc 123 ^ CBA
-            while (InlineBox* nextBox = inlineBox->nextLeafOnLine()) {
+            for (; nextBox; nextBox.traverseNextOnLine()) {
                 if (nextBox->bidiLevel() < level)
                     break;
-                inlineBox = nextBox;
+                box = nextBox;
             }
-            caretOffset = inlineBox->caretRightmostOffset();
+            caretOffset = box->rightmostCaretOffset();
         } else {
-            InlineBox* prevBox = inlineBox->previousLeafOnLine();
-            if (!prevBox || prevBox->bidiLevel() >= level)
-                return;
+            auto previousRun = box->previousOnLine();
+            if (!previousRun || previousRun->bidiLevel() >= level)
+                return { box, caretOffset };
 
-            level = prevBox->bidiLevel();
-            InlineBox* nextBox = inlineBox;
-            do {
-                nextBox = nextBox->nextLeafOnLine();
-            } while (nextBox && nextBox->bidiLevel() > level);
+            level = previousRun->bidiLevel();
+
+            auto nextBox = box->nextOnLine();
+            for (; nextBox; nextBox.traverseNextOnLine()) {
+                if (nextBox->bidiLevel() <= level)
+                    break;
+            }
 
             if (nextBox && nextBox->bidiLevel() == level)
-                return;
+                return { box, caretOffset };
 
-            while (InlineBox* prevBox = inlineBox->previousLeafOnLine()) {
-                if (prevBox->bidiLevel() < level)
+            for (; previousRun; previousRun.traversePreviousOnLine()) {
+                if (previousRun->bidiLevel() < level)
                     break;
-                inlineBox = prevBox;
+                box = previousRun;
             }
-            caretOffset = inlineBox->caretLeftmostOffset();
+
+            caretOffset = box->leftmostCaretOffset();
         }
-        return;
+        return { box, caretOffset };
     }
 
-    if (caretOffset == inlineBox->caretLeftmostOffset()) {
-        InlineBox* prevBox = inlineBox->previousLeafOnLineIgnoringLineBreak();
-        if (!prevBox || prevBox->bidiLevel() < level) {
-            // Left edge of a secondary run. Set to the right edge of the entire run.
-            while (InlineBox* nextBox = inlineBox->nextLeafOnLineIgnoringLineBreak()) {
+    if (caretOffset == box->leftmostCaretOffset()) {
+        auto previousRun = box->previousOnLineIgnoringLineBreak();
+        if (!previousRun || previousRun->bidiLevel() < level) {
+            // Left edge of a secondary box. Set to the right edge of the entire box.
+            for (auto nextBox = box->nextOnLineIgnoringLineBreak(); nextBox; nextBox.traverseNextOnLineIgnoringLineBreak()) {
                 if (nextBox->bidiLevel() < level)
                     break;
-                inlineBox = nextBox;
+                box = nextBox;
             }
-            caretOffset = inlineBox->caretRightmostOffset();
-        } else if (prevBox->bidiLevel() > level) {
-            // Right edge of a "tertiary" run. Set to the left edge of that run.
-            while (InlineBox* tertiaryBox = inlineBox->previousLeafOnLineIgnoringLineBreak()) {
-                if (tertiaryBox->bidiLevel() <= level)
+            caretOffset = box->rightmostCaretOffset();
+        } else if (previousRun->bidiLevel() > level) {
+            // Right edge of a "tertiary" box. Set to the left edge of that box.
+            for (auto tertiaryRun = box->previousOnLineIgnoringLineBreak(); tertiaryRun; tertiaryRun.traversePreviousOnLineIgnoringLineBreak()) {
+                if (tertiaryRun->bidiLevel() <= level)
                     break;
-                inlineBox = tertiaryBox;
+                box = tertiaryRun;
             }
-            caretOffset = inlineBox->caretLeftmostOffset();
+            caretOffset = box->leftmostCaretOffset();
         }
     } else {
-        InlineBox* nextBox = inlineBox->nextLeafOnLineIgnoringLineBreak();
+        auto nextBox = box->nextOnLineIgnoringLineBreak();
         if (!nextBox || nextBox->bidiLevel() < level) {
-            // Right edge of a secondary run. Set to the left edge of the entire run.
-            while (InlineBox* prevBox = inlineBox->previousLeafOnLineIgnoringLineBreak()) {
-                if (prevBox->bidiLevel() < level)
+            // Right edge of a secondary box. Set to the left edge of the entire box.
+            for (auto previousRun = box->previousOnLineIgnoringLineBreak(); previousRun; previousRun.traversePreviousOnLineIgnoringLineBreak()) {
+                if (previousRun->bidiLevel() < level)
                     break;
-                inlineBox = prevBox;
+                box = previousRun;
             }
-            caretOffset = inlineBox->caretLeftmostOffset();
+            caretOffset = box->leftmostCaretOffset();
         } else if (nextBox->bidiLevel() > level) {
-            // Left edge of a "tertiary" run. Set to the right edge of that run.
-            while (InlineBox* tertiaryBox = inlineBox->nextLeafOnLineIgnoringLineBreak()) {
-                if (tertiaryBox->bidiLevel() <= level)
+            // Left edge of a "tertiary" box. Set to the right edge of that box.
+            for (auto tertiaryRun = box->nextOnLineIgnoringLineBreak(); tertiaryRun; tertiaryRun.traverseNextOnLineIgnoringLineBreak()) {
+                if (tertiaryRun->bidiLevel() <= level)
                     break;
-                inlineBox = tertiaryBox;
+                box = tertiaryRun;
             }
-            caretOffset = inlineBox->caretRightmostOffset();
+            caretOffset = box->rightmostCaretOffset();
         }
     }
+
+    return { box, caretOffset };
 }
 
 TextDirection Position::primaryDirection() const
 {
-    if (!m_anchorNode->renderer())
+    if (!m_anchorNode || !m_anchorNode->renderer())
         return TextDirection::LTR;
     if (auto* blockFlow = lineageOfType<RenderBlockFlow>(*m_anchorNode->renderer()).first())
         return blockFlow->style().direction();
@@ -1375,22 +1396,11 @@ void Position::debugPosition(const char* msg) const
         fprintf(stderr, "Position [%s]: %s [%p] at %d\n", msg, deprecatedNode()->nodeName().utf8().data(), deprecatedNode(), m_offset);
 }
 
-void Position::formatForDebugger(char* buffer, unsigned length) const
+String Position::debugDescription() const
 {
-    StringBuilder result;
-
     if (isNull())
-        result.appendLiteral("<null>");
-    else {
-        char s[1024];
-        result.appendLiteral("offset ");
-        result.appendNumber(m_offset);
-        result.appendLiteral(" of ");
-        deprecatedNode()->formatForDebugger(s, sizeof(s));
-        result.append(s);
-    }
-
-    strncpy(buffer, result.toString().utf8().data(), length - 1);
+        return "<null>"_s;
+    return makeString("offset ", m_offset, " of ", deprecatedNode()->debugDescription());
 }
 
 void Position::showAnchorTypeAndOffset() const
@@ -1476,7 +1486,7 @@ bool Position::equals(const Position& other) const
             return m_anchorNode == other.m_anchorNode && !m_offset;
         case PositionIsAfterChildren:
             ASSERT(!is<Text>(*other.m_anchorNode));
-            return m_anchorNode == other.m_anchorNode && m_offset == static_cast<int>(other.m_anchorNode->countChildNodes());
+            return m_anchorNode == other.m_anchorNode && m_offset == other.m_anchorNode->countChildNodes();
         case PositionIsOffsetInAnchor:
             return m_anchorNode == other.m_anchorNode && m_offset == other.m_offset;
         case PositionIsBeforeAnchor:
@@ -1557,17 +1567,85 @@ TextStream& operator<<(TextStream& stream, const Position& position)
     return stream;
 }
 
-RefPtr<Node> commonShadowIncludingAncestor(const Position& a, const Position& b)
+Node* commonInclusiveAncestor(const Position& a, const Position& b)
 {
-    auto* commonScope = commonTreeScope(a.containerNode(), b.containerNode());
-    if (!commonScope)
+    auto nodeA = a.containerNode();
+    auto nodeB = b.containerNode();
+    if (!nodeA || !nodeB)
         return nullptr;
-    auto* nodeA = commonScope->ancestorNodeInThisScope(a.containerNode());
-    ASSERT(nodeA);
-    auto* nodeB = commonScope->ancestorNodeInThisScope(b.containerNode());
-    ASSERT(nodeB);
-    return Range::commonAncestorContainer(nodeA, nodeB);
+    return commonInclusiveAncestor<ComposedTree>(*nodeA, *nodeB);
 }
+
+Position positionInParentBeforeNode(Node* node)
+{
+    auto* ancestor = node->parentNode();
+    while (ancestor && editingIgnoresContent(*ancestor)) {
+        node = ancestor;
+        ancestor = ancestor->parentNode();
+    }
+    ASSERT(ancestor);
+    return Position(ancestor, node->computeNodeIndex(), Position::PositionIsOffsetInAnchor);
+}
+
+Position positionInParentAfterNode(Node* node)
+{
+    auto* ancestor = node->parentNode();
+    while (ancestor && editingIgnoresContent(*ancestor)) {
+        node = ancestor;
+        ancestor = ancestor->parentNode();
+    }
+    ASSERT(ancestor);
+    return Position(ancestor, node->computeNodeIndex() + 1, Position::PositionIsOffsetInAnchor);
+}
+
+Position makeContainerOffsetPosition(const BoundaryPoint& point)
+{
+    return makeContainerOffsetPosition(point.container.ptr(), point.offset);
+}
+
+Position makeDeprecatedLegacyPosition(const BoundaryPoint& point)
+{
+    return makeDeprecatedLegacyPosition(point.container.ptr(), point.offset);
+}
+
+std::optional<BoundaryPoint> makeBoundaryPoint(const Position& position)
+{
+    RefPtr container { position.containerNode() };
+    if (!container)
+        return std::nullopt;
+    return BoundaryPoint { container.releaseNonNull(), static_cast<unsigned>(position.computeOffsetInContainerNode()) };
+}
+
+template<TreeType treeType> PartialOrdering treeOrder(const Position& a, const Position& b)
+{
+    if (a.isNull() || b.isNull())
+        return a.isNull() && b.isNull() ? PartialOrdering::equivalent : PartialOrdering::unordered;
+
+    auto aContainer = a.containerNode();
+    auto bContainer = b.containerNode();
+
+    if (!aContainer || !bContainer) {
+        if (!commonInclusiveAncestor<treeType>(*a.anchorNode(), *b.anchorNode()))
+            return PartialOrdering::unordered;
+        if (!aContainer && !bContainer && a.anchorType() == b.anchorType())
+            return PartialOrdering::equivalent;
+        if (bContainer)
+            return a.anchorType() == Position::PositionIsBeforeAnchor ? PartialOrdering::less : PartialOrdering::greater;
+        return b.anchorType() == Position::PositionIsBeforeAnchor ? PartialOrdering::greater : PartialOrdering::less;
+    }
+
+    // FIXME: Avoid computing node offset for cases where we don't need to.
+
+    return treeOrder<treeType>(*makeBoundaryPoint(a), *makeBoundaryPoint(b));
+}
+
+PartialOrdering documentOrder(const Position& a, const Position& b)
+{
+    return treeOrder<ComposedTree>(a, b);
+}
+
+template PartialOrdering treeOrder<ComposedTree>(const Position&, const Position&);
+template PartialOrdering treeOrder<ShadowIncludingTree>(const Position&, const Position&);
 
 } // namespace WebCore
 

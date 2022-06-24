@@ -1,7 +1,0 @@
-2d.strokeRect.basic
-
-strokeRect works
-
-
-FAIL strokeRect works null is not an object (evaluating 'ctx.strokeStyle = '#0f0'')
-

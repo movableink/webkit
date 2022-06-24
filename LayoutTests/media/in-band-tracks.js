@@ -1,3 +1,5 @@
+inbandTrack1 = null;
+
 function testTrackListContainsTrack(listStr, trackStr)
 {
     var list = eval(listStr);
@@ -45,9 +47,16 @@ function testAttribute(uri, type, attribute, values)
     function canplaythrough()
     {
         consoleWrite("<br><i>** Check in-band kind attributes</i>");
-        testExpected("video." + type +"Tracks.length", values.length);
-        for (var i = 0; i < values.length; ++i)
-            testExpected("video." + type +"Tracks[" + i + "]." + attribute, values[i]);
+
+        if (values instanceof Array) {
+            testExpected(`video.${type}Tracks.length`, values.length);
+            for (let i = 0; i < values.length; ++i)
+                testExpected(`video.${type}Tracks[${i}].${attribute}`, values[i]);
+        } else {
+            testExpected(`video.${type}Tracks.length`, Object.keys(values).length);
+            for (let id in values)
+                testExpected(`video.${type}Tracks.getTrackById('${id}').${attribute}`, values[id]);
+        }
 
         consoleWrite("");
         endTest();
@@ -60,13 +69,27 @@ function testAttribute(uri, type, attribute, values)
 
 function testCuesAddedOnce(uri, kind)
 {
+
     var seekedCount = 0;
     var cuesStarts = [];
+    var intervalId = null;
+    inbandTrack1 = null;
 
     function pollProgress()
     {
         if (video.currentTime < 2)
             return;
+
+        if (!inbandTrack1) {
+            failTest("No text track of kind '" + kind + "'");
+            clearInterval(intervalId);
+            return;
+        }
+        if (!inbandTrack1.cues) {
+            failTest("No text track of kind '" + kind + "'");
+            clearInterval(intervalId);
+            return;
+        }
 
         testExpected("inbandTrack1.cues.length", 0, ">");
 
@@ -93,9 +116,11 @@ function testCuesAddedOnce(uri, kind)
                     success = false;
                 }
             }
+            clearInterval(intervalId);
             logResult(success, "Test all cues are equal");
             endTest();
         } catch (e) {
+            clearInterval(intervalId);
             failTest(e);
         }
     }
@@ -103,97 +128,24 @@ function testCuesAddedOnce(uri, kind)
     function canplaythrough()
     {
         waitForEvent('seeked', function() { ++seekedCount; });
-        setInterval(pollProgress, 100);
+        intervalId = setInterval(pollProgress, 100);
 
         consoleWrite("<br><i>** Setting track 1 to showing</i>");
+        inbandTrack1 = null;
         for (var i = 0; i < video.textTracks.length; ++i) {
             if (video.textTracks[i].kind == kind) {
                 inbandTrack1 = video.textTracks[i];
                 break;
             }
         }
+        if (!inbandTrack1)
+            failTest("No text track of kind '" + kind + "'");
         run("inbandTrack1.mode = 'showing'");
         run("video.play()");
     }
 
     findMediaElement();
     video.src = uri;
-    waitForEvent('canplaythrough', canplaythrough);
-}
-
-function testTextTrackMode(uri, kind)
-{
-    function seeked()
-    {
-        testExpected("textTrackDisplayElement(video, 'cue')", null);
-
-        consoleWrite("<br><i>** Showing a track should show active cues immediately<" + "/i>");
-        run("inbandTrack1.mode = 'showing'");
-
-        testExpected("textTrackDisplayElement(video, 'cue').textContent", null, '!=');
-        testExpected("inbandTrack1.activeCues.length", 1);
-
-        consoleWrite("");
-        endTest();
-    }
-
-    function canplaythrough()
-    {
-        for (var i = 0; i < video.textTracks.length; ++i) {
-            if (video.textTracks[i].kind == kind) {
-                inbandTrack1 = video.textTracks[i];
-                break;
-            }
-        }
-
-        consoleWrite("<br><i>** A hidden track should not have visible cues<" + "/i>");
-        run("inbandTrack1.mode = 'hidden'");
-        testExpected("inbandTrack1.activeCues.length", 0);
-
-        run("video.play()");
-        setTimeout(function() { video.pause(); video.currentTime = 0.5; }, 500);
-    }
-
-    findMediaElement();
-    video.src = uri;
-    waitForEvent('seeked', seeked);
-    waitForEvent('canplaythrough', canplaythrough);
-}
-
-function testCueStyle(uri)
-{
-    function seeked()
-    {
-        consoleWrite("<br><i>** Test current cue colors</i>");
-
-        run("cueDisplayElement = textTrackDisplayElement(video, 'display', 0)");
-        testExpected("getComputedStyle(cueDisplayElement).color", "rgb(255, 255, 255)");
-
-        run("cueNode = textTrackDisplayElement(video, 'cue')");
-        testExpected("getComputedStyle(cueNode).backgroundColor", "rgba(0, 0, 0, 0.8)");
-
-        endTest();
-    }
-
-    function canplaythrough()
-    {
-        consoleWrite("<br><i>** Setting track 1 to showing and starting video</i>");
-        for (var i = 0; i < video.textTracks.length; ++i) {
-            if (video.textTracks[i].kind == "subtitles" || video.textTracks[i].kind == "captions") {
-                inbandTrack1 = video.textTracks[i];
-                break;
-            }
-        }
-
-        inbandTrack1.mode = 'showing';
-        run("video.play()");
-        setTimeout(function() { video.pause(); video.currentTime = 0.3; }, 1500);
-    }
-
-    consoleWrite("Test that style is applied to all cues correctly.");
-    findMediaElement();
-    video.src = uri;
-    waitForEvent('seeked', seeked);
     waitForEvent('canplaythrough', canplaythrough);
 }
 

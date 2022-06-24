@@ -27,7 +27,6 @@
 
 #include "stdafx.h"
 #include "MainWindow.h"
-#include "WebKitLegacyBrowserWindow.h"
 
 enum class BrowserWindowType {
     WebKit,
@@ -66,10 +65,10 @@ void computeFullDesktopFrame();
 bool getAppDataFolder(_bstr_t& directory);
 CommandLineOptions parseCommandLine();
 void createCrashReport(EXCEPTION_POINTERS*);
-Optional<Credential> askCredential(HWND, const std::wstring& realm);
+std::optional<Credential> askCredential(HWND, const std::wstring& realm);
 bool askProxySettings(HWND, ProxySettings&);
 
-bool askServerTrustEvaluation(HWND, const std::wstring& pems);
+bool askServerTrustEvaluation(HWND, const std::wstring& text);
 std::wstring replaceString(std::wstring src, const std::wstring& oldValue, const std::wstring& newValue);
 
 extern HINSTANCE hInst;

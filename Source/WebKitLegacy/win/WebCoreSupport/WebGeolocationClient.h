@@ -41,10 +41,10 @@ public:
     WebGeolocationClient(WebView*);
 
     void geolocationDestroyed() final;
-    void startUpdating() final;
+    void startUpdating(const String& authorizationToken, bool enableHighAccuracy) final;
     void stopUpdating() final;
     void setEnableHighAccuracy(bool) final { }
-    Optional<WebCore::GeolocationPositionData> lastPosition() final;
+    std::optional<WebCore::GeolocationPositionData> lastPosition() final;
 
     void requestPermission(WebCore::Geolocation&) final;
     void cancelPermissionRequest(WebCore::Geolocation&) final { }

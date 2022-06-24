@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- webkit-test-runner [ enableModernMediaControls=false ] -->
+<!DOCTYPE html>
 <html>
 <head>
     <style>
@@ -42,7 +42,7 @@
     function canplaythrough()
     {    
         mediaStream.getVideoTracks()[0].enabled = false;
-        window.testRunner.notifyDone();
+        setTimeout(() => { window.testRunner.notifyDone(); }, 200);
     }
 
     function canplay()

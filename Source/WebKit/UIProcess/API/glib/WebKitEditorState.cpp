@@ -43,9 +43,11 @@ using namespace WebKit;
 
 enum {
     PROP_0,
-
-    PROP_TYPING_ATTRIBUTES
+    PROP_TYPING_ATTRIBUTES,
+    N_PROPERTIES,
 };
+
+static GParamSpec* sObjProperties[N_PROPERTIES] = { nullptr, };
 
 struct _WebKitEditorStatePrivate {
     WebPageProxy* page;
@@ -85,15 +87,15 @@ static void webkit_editor_state_class_init(WebKitEditorStateClass* editorStateCl
      *
      * Since: 2.10
      */
-    g_object_class_install_property(
-        objectClass,
-        PROP_TYPING_ATTRIBUTES,
+    sObjProperties[PROP_TYPING_ATTRIBUTES] =
         g_param_spec_uint(
             "typing-attributes",
             _("Typing Attributes"),
             _("Flags with the typing attributes"),
             0, G_MAXUINT, 0,
-            WEBKIT_PARAM_READABLE));
+            WEBKIT_PARAM_READABLE);
+
+    g_object_class_install_properties(objectClass, N_PROPERTIES, sObjProperties);
 }
 
 static void webkitEditorStateSetTypingAttributes(WebKitEditorState* editorState, unsigned typingAttributes)
@@ -102,13 +104,14 @@ static void webkitEditorStateSetTypingAttributes(WebKitEditorState* editorState,
         return;
 
     editorState->priv->typingAttributes = typingAttributes;
-    g_object_notify(G_OBJECT(editorState), "typing-attributes");
+    g_object_notify_by_pspec(G_OBJECT(editorState), sObjProperties[PROP_TYPING_ATTRIBUTES]);
 }
 
 WebKitEditorState* webkitEditorStateCreate(WebPageProxy& page)
 {
     WebKitEditorState* editorState = WEBKIT_EDITOR_STATE(g_object_new(WEBKIT_TYPE_EDITOR_STATE, nullptr));
     editorState->priv->page = &page;
+    editorState->priv->typingAttributes = WEBKIT_EDITOR_TYPING_ATTRIBUTE_NONE;
     webkitEditorStateChanged(editorState, page.editorState());
     return editorState;
 }

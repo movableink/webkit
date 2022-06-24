@@ -1,3 +1,0 @@
-
-FAIL putImageData() is not affected by clipping regions Can't find variable: OffscreenCanvas
-

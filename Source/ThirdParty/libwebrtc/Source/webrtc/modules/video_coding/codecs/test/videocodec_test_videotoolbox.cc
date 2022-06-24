@@ -8,14 +8,15 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include <memory>
 #include <vector>
 
 #include "api/test/create_videocodec_test_fixture.h"
-#include "media/base/mediaconstants.h"
+#include "media/base/media_constants.h"
 #include "modules/video_coding/codecs/test/objc_codec_factory_helper.h"
 #include "modules/video_coding/codecs/test/videocodec_test_fixture_impl.h"
 #include "test/gtest.h"
-#include "test/testsupport/fileutils.h"
+#include "test/testsupport/file_utils.h"
 
 namespace webrtc {
 namespace test {
@@ -52,14 +53,14 @@ std::unique_ptr<VideoCodecTestFixture> CreateTestFixtureWithConfig(
 // longer in use.
 MAYBE_TEST(VideoCodecTestVideoToolbox, ForemanCif500kbpsH264CBP) {
   const auto frame_checker =
-      absl::make_unique<VideoCodecTestFixtureImpl::H264KeyframeChecker>();
+      std::make_unique<VideoCodecTestFixtureImpl::H264KeyframeChecker>();
   auto config = CreateConfig();
   config.SetCodecSettings(cricket::kH264CodecName, 1, 1, 1, false, false, false,
                           352, 288);
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateTestFixtureWithConfig(config);
 
-  std::vector<RateProfile> rate_profiles = {{500, 30, kForemanNumFrames}};
+  std::vector<RateProfile> rate_profiles = {{500, 30, 0}};
 
   std::vector<QualityThresholds> quality_thresholds = {{33, 29, 0.9, 0.82}};
 
@@ -68,15 +69,15 @@ MAYBE_TEST(VideoCodecTestVideoToolbox, ForemanCif500kbpsH264CBP) {
 
 MAYBE_TEST(VideoCodecTestVideoToolbox, ForemanCif500kbpsH264CHP) {
   const auto frame_checker =
-      absl::make_unique<VideoCodecTestFixtureImpl::H264KeyframeChecker>();
+      std::make_unique<VideoCodecTestFixtureImpl::H264KeyframeChecker>();
   auto config = CreateConfig();
-  config.h264_codec_settings.profile = H264::kProfileConstrainedHigh;
+  config.h264_codec_settings.profile = H264Profile::kProfileConstrainedHigh;
   config.SetCodecSettings(cricket::kH264CodecName, 1, 1, 1, false, false, false,
                           352, 288);
   config.encoded_frame_checker = frame_checker.get();
   auto fixture = CreateTestFixtureWithConfig(config);
 
-  std::vector<RateProfile> rate_profiles = {{500, 30, kForemanNumFrames}};
+  std::vector<RateProfile> rate_profiles = {{500, 30, 0}};
 
   std::vector<QualityThresholds> quality_thresholds = {{33, 30, 0.91, 0.83}};
 

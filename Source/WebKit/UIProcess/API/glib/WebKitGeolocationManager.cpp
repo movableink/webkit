@@ -49,9 +49,11 @@ using namespace WebCore;
 
 enum {
     PROP_0,
-
-    PROP_ENABLE_HIGH_ACCURACY
+    PROP_ENABLE_HIGH_ACCURACY,
+    N_PROPERTIES,
 };
+
+static GParamSpec* sObjProperties[N_PROPERTIES] = { nullptr, };
 
 enum {
     START,
@@ -252,7 +254,7 @@ static void webkitGeolocationManagerStart(WebKitGeolocationManager* manager)
         manager->priv->geoclueProvider = makeUnique<GeoclueGeolocationProvider>();
         manager->priv->geoclueProvider->setEnableHighAccuracy(manager->priv->highAccuracyEnabled);
     }
-    manager->priv->geoclueProvider->start([manager](GeolocationPositionData&& corePosition, Optional<CString> error) {
+    manager->priv->geoclueProvider->start([manager](GeolocationPositionData&& corePosition, std::optional<CString> error) {
         if (error) {
             webkit_geolocation_manager_failed(manager, error->data());
             return;
@@ -277,7 +279,7 @@ static void webkitGeolocationManagerSetEnableHighAccuracy(WebKitGeolocationManag
         return;
 
     manager->priv->highAccuracyEnabled = enabled;
-    g_object_notify(G_OBJECT(manager), "enable-high-accuracy");
+    g_object_notify_by_pspec(G_OBJECT(manager), sObjProperties[PROP_ENABLE_HIGH_ACCURACY]);
     if (manager->priv->geoclueProvider)
         manager->priv->geoclueProvider->setEnableHighAccuracy(enabled);
 }
@@ -329,10 +331,18 @@ static void webkitGeolocationManagerGetProperty(GObject* object, guint propId, G
     }
 }
 
+static void webkitGeolocationManagerDispose(GObject *object)
+{
+    WebKitGeolocationManager* manager = WEBKIT_GEOLOCATION_MANAGER(object);
+    manager->priv->manager->setProvider(nullptr);
+    G_OBJECT_CLASS(webkit_geolocation_manager_parent_class)->dispose(object);
+}
+
 static void webkit_geolocation_manager_class_init(WebKitGeolocationManagerClass* geolocationManagerClass)
 {
     GObjectClass* gObjectClass = G_OBJECT_CLASS(geolocationManagerClass);
     gObjectClass->get_property = webkitGeolocationManagerGetProperty;
+    gObjectClass->dispose = webkitGeolocationManagerDispose;
 
     /**
      * WebKitGeolocationManager:enable-high-accuracy:
@@ -343,15 +353,15 @@ static void webkit_geolocation_manager_class_init(WebKitGeolocationManagerClass*
      *
      * Since: 2.26
      */
-    g_object_class_install_property(
-        gObjectClass,
-        PROP_ENABLE_HIGH_ACCURACY,
+    sObjProperties[PROP_ENABLE_HIGH_ACCURACY] =
         g_param_spec_boolean(
             "enable-high-accuracy",
             _("Enable high accuracy"),
             _("Whether high accuracy is enabled"),
             FALSE,
-            WEBKIT_PARAM_READABLE));
+            WEBKIT_PARAM_READABLE);
+
+    g_object_class_install_properties(gObjectClass, N_PROPERTIES, sObjProperties);
 
     /**
      * WebKitGeolocationManager::start:

@@ -25,9 +25,11 @@
 
 #include "DumpClassLayoutTesting.h"
 #include <stdio.h>
+#include <wtf/CompactPointerTuple.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
+#include <wtf/URL.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
@@ -85,6 +87,13 @@ static void testSummaryProviders()
     OptionSet<ExampleFlags> exampleFlagsEmpty;
     OptionSet<ExampleFlags> exampleFlagsSimple { ExampleFlags::A, ExampleFlags::D, ExampleFlags::C };
     OptionSet<ExampleFlags> exampleFlagsAliasedFlag { ExampleFlags::AAlias, ExampleFlags::D };
+
+    CompactPointerTuple<String*, uint8_t> exampleCompactPointerTupleEmpty;
+    CompactPointerTuple<String*, uint8_t> exampleCompactPointerTupleSimple { &an8BitString, 7 };
+    CompactPointerTuple<String*, uint8_t> exampleCompactPointerTupleMaxTypeValue { &an8BitString, 255 };
+    CompactPointerTuple<String*, bool> exampleCompactPointerTupleSimpleBool { &an8BitString, true };
+    
+    URL aURL({ }, "https://www.example.com");
 
     breakForTestingSummaryProviders();
 }

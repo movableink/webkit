@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2010-2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -20,14 +20,12 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-messages -> WebProcess LegacyReceiver {
+messages -> WebProcess LegacyReceiver NotRefCounted {
     InitializeWebProcess(struct WebKit::WebProcessCreationParameters processCreationParameters)
     SetWebsiteDataStoreParameters(struct WebKit::WebProcessDataStoreParameters parameters)
 
-    # Create a new page.
     CreateWebPage(WebCore::PageIdentifier newPageID, struct WebKit::WebPageCreationParameters pageCreationParameters)
 
-    PrewarmGlobally();
     PrewarmWithDomainInformation(struct WebCore::PrewarmInformation prewarmInformation)
 
     # Global preferences.
@@ -52,12 +50,14 @@ messages -> WebProcess LegacyReceiver {
     UserPreferredLanguagesChanged(Vector<String> languages)
     FullKeyboardAccessModeChanged(bool fullKeyboardAccessEnabled)
 
-    # Plug-ins.
-    DidAddPlugInAutoStartOriginHash(uint32_t hash, WallTime expirationTime)
-    ResetPlugInAutoStartOriginHashes(HashMap<uint32_t,WallTime> hashes)
-    SetPluginLoadClientPolicy(uint8_t policy, String host, String bundleIdentifier, String versionString)
-    ResetPluginLoadClientPolicies(HashMap<String, HashMap<String, HashMap<String, uint8_t>>> pluginLoadClientPolicies)
-    ClearPluginClientPolicies()
+#if HAVE(MOUSE_DEVICE_OBSERVATION)
+    SetHasMouseDevice(bool hasMouseDevice)
+#endif
+
+#if HAVE(STYLUS_DEVICE_OBSERVATION)
+    SetHasStylusDevice(bool hasStylusDevice)
+#endif
+
     RefreshPlugins()
 
     void StartMemorySampler(WebKit::SandboxExtension::Handle sampleLogFileHandle, String sampleLogFilePath, double interval);
@@ -67,7 +67,6 @@ messages -> WebProcess LegacyReceiver {
 
     SetEnhancedAccessibility(bool flag)
 
-    GetWebCoreStatistics(uint64_t callbackID)
     GarbageCollectJavaScriptObjects()
     SetJavaScriptGarbageCollectorTimerEnabled(bool enable)
 
@@ -75,14 +74,11 @@ messages -> WebProcess LegacyReceiver {
     SetInjectedBundleParameters(IPC::DataReference parameters);
     HandleInjectedBundleMessage(String messageName, WebKit::UserData messageBody);
 
-    FetchWebsiteData(OptionSet<WebKit::WebsiteDataType> websiteDataTypes) -> (struct WebKit::WebsiteData websiteData) Async
-    DeleteWebsiteData(OptionSet<WebKit::WebsiteDataType> websiteDataTypes, WallTime modifiedSince) -> () Async
-    DeleteWebsiteDataForOrigins(OptionSet<WebKit::WebsiteDataType> websiteDataTypes, Vector<WebCore::SecurityOriginData> origins) -> () Async
+    FetchWebsiteData(OptionSet<WebKit::WebsiteDataType> websiteDataTypes) -> (struct WebKit::WebsiteData websiteData)
+    DeleteWebsiteData(OptionSet<WebKit::WebsiteDataType> websiteDataTypes, WallTime modifiedSince) -> ()
+    DeleteWebsiteDataForOrigins(OptionSet<WebKit::WebsiteDataType> websiteDataTypes, Vector<WebCore::SecurityOriginData> origins) -> ()
 
     SetHiddenPageDOMTimerThrottlingIncreaseLimit(int milliseconds)
-#if PLATFORM(COCOA)
-    SetQOS(int latencyQOS, int throughputQOS)
-#endif
 
     SetMemoryCacheDisabled(bool disabled);
 
@@ -93,48 +89,51 @@ messages -> WebProcess LegacyReceiver {
     EnsureAutomationSessionProxy(String sessionIdentifier)
     DestroyAutomationSessionProxy()
 
-    ProcessWillSuspendImminently()
-    PrepareToSuspend()
-    CancelPrepareToSuspend()
+    PrepareToSuspend(bool isSuspensionImminent) -> ()
     ProcessDidResume()
 
-    MainThreadPing()
     BackgroundResponsivenessPing()
 
 #if ENABLE(GAMEPAD)
     SetInitialGamepads(Vector<WebKit::GamepadData> gamepadDatas)
-    GamepadConnected(WebKit::GamepadData gamepadData)
+    GamepadConnected(WebKit::GamepadData gamepadData, enum:bool WebCore::EventMakesGamepadsVisible eventVisibility)
     GamepadDisconnected(unsigned index)
 #endif
 
-#if ENABLE(SERVICE_WORKER)
-    EstablishWorkerContextConnectionToNetworkProcess(uint64_t pageGroupID, WebKit::WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier pageID, struct WebKit::WebPreferencesStore store, WebCore::RegistrableDomain domain)
-    RegisterServiceWorkerClients()
-#endif
+    EstablishRemoteWorkerContextConnectionToNetworkProcess(enum:bool WebKit::RemoteWorkerType workerType, WebKit::PageGroupIdentifier pageGroupID, WebKit::WebPageProxyIdentifier webPageProxyID, WebCore::PageIdentifier pageID, struct WebKit::WebPreferencesStore store, WebCore::RegistrableDomain domain, std::optional<WebCore::ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier, struct WebKit::RemoteWorkerInitializationData initializationData) -> ()
 
     SetHasSuspendedPageProxy(bool hasSuspendedPageProxy);
     SetIsInProcessCache(bool isInProcessCache)
     MarkIsNoLongerPrewarmed()
-    UpdateActivePages()
-    GetActivePagesOriginsForTesting() -> (Vector<String> activeOrigins) Async
+    GetActivePagesOriginsForTesting() -> (Vector<String> activeOrigins)
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     SetScreenProperties(struct WebCore::ScreenProperties screenProperties)
-#if ENABLE(WEBPROCESS_WINDOWSERVER_BLOCKING)
+#endif
+#if PLATFORM(MAC)
     ScrollerStylePreferenceChanged(bool useOvelayScrollbars)
     DisplayConfigurationChanged(CGDirectDisplayID displayID, CGDisplayChangeSummaryFlags flags)
-    DisplayWasRefreshed(uint32_t displayID)
-#endif
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
+    UserInterfaceIdiomDidChange(bool isPhoneOrWatch)
+#endif
+
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
     BacklightLevelDidChange(float backlightLevel)
 #endif
 
-    IsJITEnabled() -> (bool enabled) Async
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+    ColorPreferencesDidChange()
+#endif
+
+    IsJITEnabled() -> (bool enabled)
 
 #if PLATFORM(COCOA)
     SetMediaMIMETypes(Vector<String> types)
+#if ENABLE(REMOTE_INSPECTOR)
+    EnableRemoteWebInspector();
+#endif
 #endif
 
 #if ENABLE(MEDIA_STREAM)
@@ -152,13 +151,56 @@ messages -> WebProcess LegacyReceiver {
     ClearCurrentModifierStateForTesting()
 
     SetBackForwardCacheCapacity(unsigned capacity);
-    ClearCachedPage(struct WebCore::BackForwardItemIdentifier backForwardItemID) -> () Async
-
-#if PLATFORM(IOS_FAMILY)
-    UnblockAccessibilityServer(WebKit::SandboxExtension::Handle handle)
-#endif
+    ClearCachedPage(struct WebCore::BackForwardItemIdentifier backForwardItemID) -> ()
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
     SendMessageToWebExtension(struct WebKit::UserMessage userMessage)
+#endif
+
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+    SeedResourceLoadStatisticsForTesting(WebCore::RegistrableDomain firstPartyDomain, WebCore::RegistrableDomain thirdPartyDomain, bool shouldScheduleNotification) -> ()
+    SetThirdPartyCookieBlockingMode(enum:uint8_t WebCore::ThirdPartyCookieBlockingMode blockingMode) -> ()
+    SetDomainsWithUserInteraction(HashSet<WebCore::RegistrableDomain> domains)
+    SetDomainsWithCrossPageStorageAccess(HashMap<WebCore::RegistrableDomain, WebCore::RegistrableDomain> domains) -> ()
+    SendResourceLoadStatisticsDataImmediately() -> ()
+#endif
+
+    GrantAccessToAssetServices(WebKit::SandboxExtension::Handle mobileAssetV2Handle)
+    RevokeAccessToAssetServices()
+    SwitchFromStaticFontRegistryToUserFontRegistry(WebKit::SandboxExtension::Handle fontMachExtensionHandle)
+
+#if PLATFORM(COCOA)
+    UnblockServicesRequiredByAccessibility(Vector<WebKit::SandboxExtension::Handle> handleArray)
+#if ENABLE(CFPREFS_DIRECT_MODE)
+    NotifyPreferencesChanged(String domain, String key, std::optional<String> encodedValue)
+#endif
+    PowerSourceDidChange(bool hasAC)
+#endif
+
+#if PLATFORM(GTK) && !USE(GTK4)
+    SetUseSystemAppearanceForScrollbars(bool useSystemAppearanceForScrollbars)
+#endif
+
+#if PLATFORM(COCOA)
+    DidWriteToPasteboardAsynchronously(String pasteboardName);
+#endif
+
+#if HAVE(CVDISPLAYLINK)
+    DisplayWasRefreshed(uint32_t displayID, struct WebCore::DisplayUpdate update)
+#endif
+
+#if PLATFORM(MAC)
+    SystemWillPowerOn()
+    SystemWillSleep()
+    SystemDidWake()
+#endif
+
+#if PLATFORM(COCOA)
+    ConsumeAudioComponentRegistrations(IPC::SharedBufferCopy registrationData)
+    AccessibilityPreferencesDidChange(struct WebKit::AccessibilityPreferences accessibilityPreferences)
+#endif
+
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
+    SetMediaAccessibilityPreferences(WebCore::CaptionUserPreferences::CaptionDisplayMode displayMode, Vector<String> languages)
 #endif
 }

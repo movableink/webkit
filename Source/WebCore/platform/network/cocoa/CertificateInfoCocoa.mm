@@ -23,8 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "CertificateInfo.h"
+#import "config.h"
+#import "CertificateInfo.h"
 
 namespace WebCore {
 
@@ -37,8 +37,15 @@ void CertificateInfo::dump() const
 
         NSLog(@"CertificateInfo SecTrust\n");
         NSLog(@"  Entries: %ld\n", entries);
+#if HAVE(SEC_TRUST_COPY_CERTIFICATE_CHAIN)
+        auto chain = adoptCF(SecTrustCopyCertificateChain(trust()));
+#endif
         for (CFIndex i = 0; i < entries; ++i) {
+#if HAVE(SEC_TRUST_COPY_CERTIFICATE_CHAIN)
+            RetainPtr<CFStringRef> summary = adoptCF(SecCertificateCopySubjectSummary(checked_cf_cast<SecCertificateRef>(CFArrayGetValueAtIndex(chain.get(), i))));
+#else
             RetainPtr<CFStringRef> summary = adoptCF(SecCertificateCopySubjectSummary(SecTrustGetCertificateAtIndex(trust(), i)));
+#endif
             NSLog(@"  %@", (__bridge NSString *)summary.get());
         }
 

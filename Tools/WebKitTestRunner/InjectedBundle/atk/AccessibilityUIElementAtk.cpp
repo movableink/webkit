@@ -28,7 +28,7 @@
 #include "config.h"
 #include "AccessibilityUIElement.h"
 
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY) && USE(ATK)
 
 #include "InjectedBundle.h"
 #include "InjectedBundlePage.h"
@@ -43,6 +43,7 @@
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WTR {
@@ -220,17 +221,26 @@ String attributeSetToString(AtkAttributeSet* attributeSet, String separator=", "
     if (!attributeSet)
         return String();
 
-    StringBuilder builder;
+    Vector<String> attributeList;
     for (AtkAttributeSet* attributes = attributeSet; attributes; attributes = attributes->next) {
         AtkAttribute* attribute = static_cast<AtkAttribute*>(attributes->data);
-        builder.append(attribute->name);
-        builder.append(':');
-        builder.append(attribute->value);
-        if (attributes->next)
-            builder.append(separator);
+        if (!g_strcmp0(attribute->name, "html-id") || !g_strcmp0(attribute->name, "toolkit"))
+            continue;
+
+        attributeList.append(makeString(attribute->name, ':', attribute->value));
     }
     atk_attribute_set_free(attributeSet);
 
+    std::sort(attributeList.begin(), attributeList.end(), WTF::codePointCompareLessThan);
+
+    StringBuilder builder;
+    bool isFirst = true;
+    for (const auto& attribute : attributeList) {
+        if (!isFirst)
+            builder.append(separator);
+        builder.append(attribute);
+        isFirst = false;
+    }
     return builder.toString();
 }
 
@@ -428,6 +438,8 @@ const gchar* roleToString(AtkObject* object)
         return "AXMenuBar";
     case ATK_ROLE_MENU_ITEM:
         return "AXMenuItem";
+    case ATK_ROLE_NOTIFICATION:
+        return "AXNotification";
     case ATK_ROLE_PAGE_TAB:
         return "AXTab";
     case ATK_ROLE_PAGE_TAB_LIST:
@@ -560,39 +572,30 @@ String attributesOfElement(AccessibilityUIElement* element)
 {
     StringBuilder builder;
 
-    builder.append(element->role()->string());
-    builder.append('\n');
+    builder.append(element->role()->string(), '\n');
 
     // For the parent we print its role and its name, if available.
-    builder.appendLiteral("AXParent: ");
+    builder.append("AXParent: ");
     RefPtr<AccessibilityUIElement> parent = element->parentElement();
     AtkObject* atkParent = parent ? parent->platformUIElement().get() : nullptr;
     if (atkParent) {
         builder.append(roleToString(atkParent));
         const char* parentName = atk_object_get_name(atkParent);
-        if (parentName && parentName[0]) {
-            builder.appendLiteral(": ");
-            builder.append(parentName);
-        }
+        if (parentName && parentName[0])
+            builder.append(": ", parentName);
     } else
-        builder.appendLiteral("(null)");
+        builder.append("(null)");
     builder.append('\n');
 
-    builder.appendLiteral("AXChildren: ");
-    builder.appendNumber(element->childrenCount());
-    builder.append('\n');
+    builder.append("AXChildren: ", element->childrenCount(), '\n');
 
-    builder.appendLiteral("AXPosition:  { ");
-    builder.appendFixedPrecisionNumber(element->x(), 6, KeepTrailingZeros);
-    builder.appendLiteral(", ");
-    builder.appendFixedPrecisionNumber(element->y(), 6, KeepTrailingZeros);
-    builder.appendLiteral(" }\n");
+    builder.append("AXPosition:  { ", FormattedNumber::fixedPrecision(element->x(), 6, KeepTrailingZeros));
+    builder.append(", ", FormattedNumber::fixedPrecision(element->y(), 6, KeepTrailingZeros));
+    builder.append(" }\n");
 
-    builder.appendLiteral("AXSize: { ");
-    builder.appendFixedPrecisionNumber(element->width(), 6, KeepTrailingZeros);
-    builder.appendLiteral(", ");
-    builder.appendFixedPrecisionNumber(element->height(), 6, KeepTrailingZeros);
-    builder.appendLiteral(" }\n");
+    builder.append("AXSize: { ", FormattedNumber::fixedPrecision(element->width(), 6, KeepTrailingZeros));
+    builder.append(", ", FormattedNumber::fixedPrecision(element->height(), 6, KeepTrailingZeros));
+    builder.append(" }\n");
 
     String title = element->title()->string();
     if (!title.isEmpty()) {
@@ -601,62 +604,29 @@ String attributesOfElement(AccessibilityUIElement* element)
     }
 
     String description = element->description()->string();
-    if (!description.isEmpty()) {
-        builder.append(description.utf8().data());
-        builder.append('\n');
-    }
+    if (!description.isEmpty())
+        builder.append(description.utf8().data(), '\n');
 
     String value = element->stringValue()->string();
-    if (!value.isEmpty()) {
-        builder.append(value);
-        builder.append('\n');
-    }
+    if (!value.isEmpty())
+        builder.append(value, '\n');
 
-    builder.appendLiteral("AXFocusable: ");
-    builder.appendNumber(element->isFocusable());
-    builder.append('\n');
-
-    builder.appendLiteral("AXFocused: ");
-    builder.appendNumber(element->isFocused());
-    builder.append('\n');
-
-    builder.appendLiteral("AXSelectable: ");
-    builder.appendNumber(element->isSelectable());
-    builder.append('\n');
-
-    builder.appendLiteral("AXSelected: ");
-    builder.appendNumber(element->isSelected());
-    builder.append('\n');
-
-    builder.appendLiteral("AXMultiSelectable: ");
-    builder.appendNumber(element->isMultiSelectable());
-    builder.append('\n');
-
-    builder.appendLiteral("AXEnabled: ");
-    builder.appendNumber(element->isEnabled());
-    builder.append('\n');
-
-    builder.appendLiteral("AXExpanded: ");
-    builder.appendNumber(element->isExpanded());
-    builder.append('\n');
-
-    builder.appendLiteral("AXRequired: ");
-    builder.appendNumber(element->isRequired());
-    builder.append('\n');
-
-    builder.appendLiteral("AXChecked: ");
-    builder.appendNumber(element->isChecked());
-    builder.append('\n');
+    builder.append("AXFocusable: ", element->isFocusable(), '\n');
+    builder.append("AXFocused: ", element->isFocused(), '\n');
+    builder.append("AXSelectable: ", element->isSelectable(), '\n');
+    builder.append("AXSelected: ", element->isSelected(), '\n');
+    builder.append("AXMultiSelectable: ", element->isMultiSelectable(), '\n');
+    builder.append("AXEnabled: ", element->isEnabled(), '\n');
+    builder.append("AXExpanded: ", element->isExpanded(), '\n');
+    builder.append("AXRequired: ", element->isRequired(), '\n');
+    builder.append("AXChecked: ", element->isChecked(), '\n');
 
     String url = element->url()->string();
-    if (!url.isEmpty()) {
-        builder.append(url);
-        builder.append('\n');
-    }
+    if (!url.isEmpty())
+        builder.append(url, '\n');
 
     // We append the ATK specific attributes as a single line at the end.
-    builder.appendLiteral("AXPlatformAttributes: ");
-    builder.append(getAtkAttributeSetAsString(element->platformUIElement().get(), ObjectAttributeType));
+    builder.append("AXPlatformAttributes: ", getAtkAttributeSetAsString(element->platformUIElement().get(), ObjectAttributeType));
 
     return builder.toString();
 }
@@ -664,12 +634,8 @@ String attributesOfElement(AccessibilityUIElement* element)
 static JSRetainPtr<JSStringRef> createStringWithAttributes(const Vector<RefPtr<AccessibilityUIElement> >& elements)
 {
     StringBuilder builder;
-
-    for (Vector<RefPtr<AccessibilityUIElement> >::const_iterator it = elements.begin(); it != elements.end(); ++it) {
-        builder.append(attributesOfElement(const_cast<AccessibilityUIElement*>(it->get())));
-        builder.appendLiteral("\n------------\n");
-    }
-
+    for (auto& element : elements)
+        builder.append(attributesOfElement(const_cast<AccessibilityUIElement*>(element.get())), "\n------------\n");
     return JSStringCreateWithUTF8CString(builder.toString().utf8().data());
 }
 
@@ -788,6 +754,10 @@ void AccessibilityUIElement::getChildren(Vector<RefPtr<AccessibilityUIElement> >
     int count = childrenCount();
     for (int i = 0; i < count; i++) {
         GRefPtr<AtkObject> child = adoptGRef(atk_object_ref_accessible_child(ATK_OBJECT(m_element.get()), i));
+
+        if (!ATK_IS_OBJECT(child.get()))
+            continue;
+
         children.append(AccessibilityUIElement::create(child.get()));
     }
 }
@@ -799,6 +769,10 @@ void AccessibilityUIElement::getChildrenWithRange(Vector<RefPtr<AccessibilityUIE
     unsigned end = location + length;
     for (unsigned i = location; i < end; i++) {
         GRefPtr<AtkObject> child = adoptGRef(atk_object_ref_accessible_child(ATK_OBJECT(m_element.get()), i));
+
+        if (!ATK_IS_OBJECT(child.get()))
+            continue;
+
         children.append(AccessibilityUIElement::create(child.get()));
     }
 }
@@ -1137,10 +1111,15 @@ double AccessibilityUIElement::numberAttributeValue(JSStringRef attribute)
     if (atkAttributeName.startsWith("row") || atkAttributeName.startsWith("col")) {
         String attributeValue = getAttributeSetValueForId(ATK_OBJECT(m_element.get()), ObjectAttributeType, atkAttributeName);
         if (!attributeValue.isEmpty())
-            return attributeValue.toInt();
+            return parseIntegerAllowingTrailingJunk<int>(attributeValue).value_or(0);
     }
 
     return 0;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::currentStateValue() const
+{
+    return nullptr;
 }
 
 JSValueRef AccessibilityUIElement::uiElementArrayAttributeValue(JSStringRef attribute) const
@@ -1437,7 +1416,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const
         return JSStringCreateWithCharacters(0, 0);
 
     StringBuilder builder;
-    builder.appendLiteral("AXHelp: ");
+    builder.append("AXHelp: ");
 
     for (guint targetCount = 0; targetCount < targetList->len; targetCount++) {
         if (AtkObject* target = static_cast<AtkObject*>(g_ptr_array_index(targetList, targetCount))) {
@@ -1630,11 +1609,7 @@ bool AccessibilityUIElement::isIndeterminate() const
 
 int AccessibilityUIElement::hierarchicalLevel() const
 {
-    String level = getAttributeSetValueForId(ATK_OBJECT(m_element.get()), ObjectAttributeType, "level");
-    if (!level.isEmpty())
-        return level.toInt();
-
-    return 0;
+    return parseIntegerAllowingTrailingJunk<int>(getAttributeSetValueForId(ATK_OBJECT(m_element.get()), ObjectAttributeType, "level")).value_or(0);
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::speakAs()
@@ -1722,8 +1697,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForRange(unsign
     StringBuilder builder;
 
     // The default text attributes apply to the entire element.
-    builder.appendLiteral("\n\tDefault text attributes:\n\t\t");
-    builder.append(attributeSetToString(getAttributeSet(m_element.get(), TextAttributeType), "\n\t\t"));
+    builder.append("\n\tDefault text attributes:\n\t\t", attributeSetToString(getAttributeSet(m_element.get(), TextAttributeType), "\n\t\t"));
 
     // The attribute run provides attributes specific to the range of text at the specified offset.
     AtkText* text = ATK_TEXT(m_element.get());
@@ -1731,10 +1705,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::attributedStringForRange(unsign
     for (unsigned i = location; i < location + length; i = end) {
         AtkAttributeSet* attributeSet = atk_text_get_run_attributes(text, i, &start, &end);
         GUniquePtr<gchar> substring(replaceCharactersForResults(atk_text_get_text(text, start, end)));
-        builder.appendLiteral("\n\tRange attributes for '");
-        builder.append(substring.get());
-        builder.appendLiteral("':\n\t\t");
-        builder.append(attributeSetToString(attributeSet, "\n\t\t"));
+        builder.append("\n\tRange attributes for '", substring.get(), "':\n\t\t", attributeSetToString(attributeSet, "\n\t\t"));
     }
 
     return JSStringCreateWithUTF8CString(builder.toString().utf8().data());
@@ -2124,6 +2095,12 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::stringForTextMarkerRange(Access
     return JSStringCreateWithCharacters(0, 0);
 }
 
+JSRetainPtr<JSStringRef> AccessibilityUIElement::rectsForTextMarkerRange(AccessibilityTextMarkerRange* markerRange, JSStringRef searchText)
+{
+    // FIXME: implement
+    return JSStringCreateWithCharacters(0, 0);
+}
+
 RefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::textMarkerRangeForMarkers(AccessibilityTextMarker* startMarker, AccessibilityTextMarker* endMarker)
 {
     // FIXME: implement
@@ -2212,7 +2189,7 @@ RefPtr<AccessibilityTextMarker> AccessibilityUIElement::endTextMarker()
     return nullptr;
 }
 
-bool AccessibilityUIElement::setSelectedVisibleTextRange(AccessibilityTextMarkerRange*)
+bool AccessibilityUIElement::setSelectedTextMarkerRange(AccessibilityTextMarkerRange*)
 {
     return false;
 }
@@ -2299,11 +2276,8 @@ JSRetainPtr<JSStringRef> stringAtOffset(PlatformUIElement element, AtkTextBounda
     }
 
     builder.append(atk_text_get_string_at_offset(ATK_TEXT(element.get()), offset, granularity, &startOffset, &endOffset));
+    builder.append(", ", startOffset, ", ", endOffset);
 
-    builder.appendLiteral(", ");
-    builder.appendNumber(startOffset);
-    builder.appendLiteral(", ");
-    builder.appendNumber(endOffset);
     return JSStringCreateWithUTF8CString(builder.toString().utf8().data());
 }
 
@@ -2347,4 +2321,4 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::popupValue() const
 
 } // namespace WTR
 
-#endif // HAVE(ACCESSIBILITY)
+#endif // ENABLE(ACCESSIBILITY) && USE(ATK)

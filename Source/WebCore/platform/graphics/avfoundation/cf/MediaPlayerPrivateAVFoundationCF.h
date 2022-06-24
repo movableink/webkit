@@ -61,6 +61,7 @@ public:
     static void registerMediaEngine(MediaEngineRegistrar);
 
 private:
+    friend class MediaPlayerFactoryAVFoundationCF;
     static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types);
     static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
     static bool supportsKeySystem(const String& keySystem, const String& mimeType);
@@ -73,8 +74,9 @@ private:
     virtual void platformPause();
     MediaTime currentMediaTime() const override;
     virtual void setVolume(float);
-    virtual void setClosedCaptionsVisible(bool);
+    void setClosedCaptionsVisible(bool) override;
     virtual void paint(GraphicsContext&, const FloatRect&);
+    DestinationColorSpace colorSpace() override;
     virtual void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&);
     virtual PlatformLayer* platformLayer() const;
     virtual bool supportsAcceleratedRendering() const { return true; }
@@ -86,7 +88,6 @@ private:
     virtual MediaPlayerPrivateAVFoundation::ItemStatus playerItemStatus() const;
     virtual MediaPlayerPrivateAVFoundation::AssetStatus assetStatus() const;
 
-    virtual void checkPlayability();
     void setRate(float) override;
     double rate() const override;
     virtual void seekToTime(const MediaTime&, const MediaTime& negativeTolerance, const MediaTime& positiveTolerance);
@@ -116,7 +117,7 @@ private:
     virtual void contentsNeedsDisplay();
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
-    std::unique_ptr<LegacyCDMSession> createSession(const String&, LegacyCDMSessionClient*) override;
+    std::unique_ptr<LegacyCDMSession> createSession(const String&, LegacyCDMSessionClient&) override;
 #endif
 
     String languageOfPrimaryAudioTrack() const override;

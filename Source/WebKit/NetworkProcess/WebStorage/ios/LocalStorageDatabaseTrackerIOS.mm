@@ -23,12 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "LocalStorageDatabaseTracker.h"
+#import "config.h"
+#import "LocalStorageDatabaseTracker.h"
 
 #if PLATFORM(IOS_FAMILY)
 
-#include "VersionChecks.h"
+#import <wtf/RunLoop.h>
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 
 namespace WebKit {
 

@@ -1,4 +1,4 @@
-load("./resources/typedarray-constructor-helper-functions.js");
+load("./resources/typedarray-constructor-helper-functions.js", "caller relative");
 description(
 "This test checks the behavior of the TypedArray.of function"
 );
@@ -14,8 +14,8 @@ shouldBeTrue("testConstructorFunction('of', '()', [])");
 shouldBeTrue("testConstructorFunction('of', '(1)', [1])");
 shouldBeTrue("testConstructorFunction('of', '(1,2,3)', [1,2,3])");
 
-shouldThrow("testConstructorFunction('of', '.call(false)', false)", "'TypeError: TypedArray.of requires its this argument to subclass a TypedArray constructor'");
-shouldThrow("testConstructorFunction('of', '.call({})', false)", "'TypeError: TypedArray.of requires its this argument to subclass a TypedArray constructor'");
-shouldThrow("testConstructorFunction('of', '.call([])', false)", "'TypeError: TypedArray.of requires its this argument to subclass a TypedArray constructor'");
+shouldThrow("testConstructorFunction('of', '.call(false)', false)", "'TypeError: TypedArray.of requires |this| to be a constructor'");
+shouldThrow("testConstructorFunction('of', '.call({})', false)", "'TypeError: TypedArray.of requires |this| to be a constructor'");
+shouldThrow("testConstructorFunction('of', '.call([])', false)", "'TypeError: TypedArray.of requires |this| to be a constructor'");
 
 finishJSTest();

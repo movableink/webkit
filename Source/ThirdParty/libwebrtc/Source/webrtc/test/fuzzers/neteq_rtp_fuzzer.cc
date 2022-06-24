@@ -8,11 +8,14 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <memory>
 #include <vector>
 
 #include "api/array_view.h"
+#include "api/audio_codecs/builtin_audio_decoder_factory.h"
 #include "modules/audio_coding/codecs/pcm16b/audio_encoder_pcm16b.h"
 #include "modules/audio_coding/neteq/tools/audio_checksum.h"
 #include "modules/audio_coding/neteq/tools/encode_neteq_input.h"
@@ -63,6 +66,7 @@ class FuzzRtpInput : public NetEqInput {
                                       std::numeric_limits<int64_t>::max()));
     packet_ = input_->PopPacket();
     FuzzHeader();
+    MaybeFuzzPayload();
   }
 
   absl::optional<int64_t> NextPacketTime() const override {
@@ -78,6 +82,7 @@ class FuzzRtpInput : public NetEqInput {
     std::unique_ptr<PacketData> packet_to_return = std::move(packet_);
     packet_ = input_->PopPacket();
     FuzzHeader();
+    MaybeFuzzPayload();
     return packet_to_return;
   }
 
@@ -115,6 +120,30 @@ class FuzzRtpInput : public NetEqInput {
     RTC_CHECK_EQ(data_ix_ - start_ix, kNumBytesToFuzz);
   }
 
+  void MaybeFuzzPayload() {
+    // Read one byte of fuzz data to determine how many payload bytes to fuzz.
+    if (data_ix_ + 1 > data_.size()) {
+      ended_ = true;
+      return;
+    }
+    size_t bytes_to_fuzz = data_[data_ix_++];
+
+    // Restrict number of bytes to fuzz to 16; a reasonably low number enough to
+    // cover a few RED headers. Also don't write outside the payload length.
+    bytes_to_fuzz = std::min(bytes_to_fuzz % 16, packet_->payload.size());
+
+    if (bytes_to_fuzz == 0)
+      return;
+
+    if (data_ix_ + bytes_to_fuzz > data_.size()) {
+      ended_ = true;
+      return;
+    }
+
+    std::memcpy(packet_->payload.data(), &data_[data_ix_], bytes_to_fuzz);
+    data_ix_ += bytes_to_fuzz;
+  }
+
   bool ended_ = false;
   rtc::ArrayView<const uint8_t> data_;
   size_t data_ix_ = 0;
@@ -133,20 +162,20 @@ void FuzzOneInputTest(const uint8_t* data, size_t size) {
   // kPayloadType is the payload type that will be used for encoding. Verify
   // that it is included in the standard decoder map, and that it points to the
   // expected decoder type.
-  RTC_CHECK_EQ(codecs.count(kPayloadType), 1);
-  RTC_CHECK(codecs[kPayloadType].first == NetEqDecoder::kDecoderPCM16Bswb32kHz);
+  const auto it = codecs.find(kPayloadType);
+  RTC_CHECK(it != codecs.end());
+  RTC_CHECK(it->second == SdpAudioFormat("L16", 32000, 1));
 
-  NetEqTest::ExtDecoderMap ext_codecs;
-
-  NetEqTest test(config, codecs, ext_codecs, std::move(input),
-                 std::move(output), callbacks);
+  NetEqTest test(config, CreateBuiltinAudioDecoderFactory(), codecs,
+                 /*text_log=*/nullptr, /*neteq_factory=*/nullptr,
+                 std::move(input), std::move(output), callbacks);
   test.Run();
 }
 
 }  // namespace test
 
 void FuzzOneInput(const uint8_t* data, size_t size) {
-  if (size > 100000) {
+  if (size > 70000) {
     return;
   }
   test::FuzzOneInputTest(data, size);

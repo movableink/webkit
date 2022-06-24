@@ -7,6 +7,8 @@ function importFromV3(file, name)
     global[name] = require(modelsDirectory + file)[name];
 }
 
+require('./assert-override.js').makeConsoleAssertThrow();
+
 importFromV3('models/data-model.js', 'DataModelObject');
 importFromV3('models/data-model.js', 'LabeledObject');
 
@@ -24,6 +26,7 @@ importFromV3('models/measurement-cluster.js', 'MeasurementCluster');
 importFromV3('models/measurement-set.js', 'MeasurementSet');
 importFromV3('models/metric.js', 'Metric');
 importFromV3('models/platform.js', 'Platform');
+importFromV3('models/platform-group.js', 'PlatformGroup');
 importFromV3('models/repository.js', 'Repository');
 importFromV3('models/commit-set.js', 'MeasurementCommitSet');
 importFromV3('models/commit-set.js', 'CommitSet');
@@ -34,6 +37,7 @@ importFromV3('models/test-group.js', 'TestGroup');
 importFromV3('models/time-series.js', 'TimeSeries');
 importFromV3('models/triggerable.js', 'Triggerable');
 importFromV3('models/triggerable.js', 'TriggerableRepositoryGroup');
+importFromV3('models/triggerable.js', 'TriggerableConfiguration');
 importFromV3('models/uploaded-file.js', 'UploadedFile');
 
 importFromV3('instrumentation.js', 'Instrumentation');

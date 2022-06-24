@@ -1,3 +1,4 @@
+<!DOCTYPE html> <!-- webkit-test-runner [ AsyncOverflowScrollingEnabled=true ] -->
 <html>
 <style>
 .testdiv {
@@ -14,7 +15,14 @@
     width: 200px;
     background-color: green;
 }
-
+.scroller {
+    overflow: scroll;
+    height: 50px;
+    width: 50px;
+}
+.scrollcontent {
+    height: 100px;
+}
 </style>
 <script>
 window.onload = function () {
@@ -52,6 +60,7 @@ window.onload = function () {
         <div id="test3" class="inner"></div>
     </div>
 </div>
+<div class="scroller"><div class="scrollcontent"></div></div>
 
 <pre id="results"></pre>
 </body>

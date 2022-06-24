@@ -54,7 +54,7 @@ static const float cTargetPrunePercentage = .95f; // Percentage of capacity towa
 
 MemoryCache& MemoryCache::singleton()
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     static NeverDestroyed<MemoryCache> memoryCache;
     return memoryCache;
 }
@@ -114,7 +114,10 @@ bool MemoryCache::add(CachedResource& resource)
     if (disabled())
         return false;
 
-    ASSERT(WTF::isMainThread());
+    if (resource.resourceRequest().httpMethod() != "GET")
+        return false;
+
+    ASSERT(isMainThread());
 
     auto key = std::make_pair(resource.url(), resource.cachePartition());
 
@@ -122,7 +125,7 @@ bool MemoryCache::add(CachedResource& resource)
     resource.setInCache(true);
     
     resourceAccessed(resource);
-    
+
     LOG(ResourceLoading, "MemoryCache::add Added '%.255s', resource %p\n", resource.url().string().latin1().data(), &resource);
     return true;
 }
@@ -164,7 +167,7 @@ void MemoryCache::revalidationSucceeded(CachedResource& revalidatingResource, co
 
 void MemoryCache::revalidationFailed(CachedResource& revalidatingResource)
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     LOG(ResourceLoading, "Revalidation failed for %p", &revalidatingResource);
     ASSERT(revalidatingResource.resourceToRevalidate());
     revalidatingResource.clearResourceToRevalidate();
@@ -182,7 +185,7 @@ CachedResource* MemoryCache::resourceForRequest(const ResourceRequest& request, 
 
 CachedResource* MemoryCache::resourceForRequestImpl(const ResourceRequest& request, CachedResourceMap& resources)
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     URL url = removeFragmentIdentifierIfNeeded(request.url());
 
     auto key = std::make_pair(url, request.cachePartition());
@@ -215,7 +218,7 @@ void MemoryCache::pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveReso
     pruneLiveResourcesToSize(targetSize, shouldDestroyDecodedDataForAllLiveResources);
 }
 
-void MemoryCache::forEachResource(const WTF::Function<void(CachedResource&)>& function)
+void MemoryCache::forEachResource(const Function<void(CachedResource&)>& function)
 {
     for (auto& unprotectedLRUList : m_allResources) {
         for (auto& resource : copyToVector(*unprotectedLRUList))
@@ -223,7 +226,7 @@ void MemoryCache::forEachResource(const WTF::Function<void(CachedResource&)>& fu
     }
 }
 
-void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, const WTF::Function<void (CachedResource&)>& function)
+void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, const Function<void(CachedResource&)>& function)
 {
     auto it = m_sessionResources.find(sessionID);
     if (it == m_sessionResources.end())
@@ -251,7 +254,7 @@ void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize, bool shouldDestr
 
     LOG(ResourceLoading, "MemoryCache::pruneLiveResourcesToSize(%d, shouldDestroyDecodedDataForAllLiveResources = %d)", targetSize, shouldDestroyDecodedDataForAllLiveResources);
 
-    SetForScope<bool> reentrancyProtector(m_inPruneResources, true);
+    SetForScope reentrancyProtector(m_inPruneResources, true);
 
     MonotonicTime currentTime = FrameView::currentPaintTimeStamp();
     if (!currentTime) // In case prune is called directly, outside of a Frame paint.
@@ -317,7 +320,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
 
     LOG(ResourceLoading, "MemoryCache::pruneDeadResourcesToSize(%d)", targetSize);
 
-    SetForScope<bool> reentrancyProtector(m_inPruneResources, true);
+    SetForScope reentrancyProtector(m_inPruneResources, true);
  
     if (targetSize && m_deadSize <= targetSize)
         return;
@@ -388,7 +391,7 @@ void MemoryCache::setCapacities(unsigned minDeadBytes, unsigned maxDeadBytes, un
 
 void MemoryCache::remove(CachedResource& resource)
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     LOG(ResourceLoading, "Evicting resource %p for '%.255s' from cache", &resource, resource.url().string().latin1().data());
     // The resource may have already been removed by someone other than our caller,
     // who needed a fresh copy for a reload. See <http://bugs.webkit.org/show_bug.cgi?id=12479#c6>.
@@ -416,14 +419,15 @@ void MemoryCache::remove(CachedResource& resource)
         }
     }
 
-    resource.deleteIfPossible();
+    if (resource.canDelete())
+        resource.deleteThis();
 }
 
 auto MemoryCache::lruListFor(CachedResource& resource) -> LRUList&
 {
     unsigned accessCount = std::max(resource.accessCount(), 1U);
     unsigned queueIndex = WTF::fastLog2(resource.size() / accessCount);
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     resource.m_lruIndex = queueIndex;
 #endif
 
@@ -439,7 +443,7 @@ void MemoryCache::removeFromLRUList(CachedResource& resource)
     if (!resource.accessCount())
         return;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     unsigned oldListIndex = resource.m_lruIndex;
 #endif
 
@@ -643,9 +647,7 @@ MemoryCache::Statistics MemoryCache::getStatistics()
                 stats.xslStyleSheets.addResource(*resource);
                 break;
 #endif
-#if ENABLE(SVG_FONTS)
             case CachedResource::Type::SVGFontResource:
-#endif
             case CachedResource::Type::FontResource:
                 stats.fonts.addResource(*resource);
                 break;

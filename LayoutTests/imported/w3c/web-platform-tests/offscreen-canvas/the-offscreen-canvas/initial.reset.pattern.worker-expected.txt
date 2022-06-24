@@ -1,3 +1,0 @@
-
-FAIL Resetting the canvas state does not invalidate any existing patterns Can't find variable: OffscreenCanvas
-

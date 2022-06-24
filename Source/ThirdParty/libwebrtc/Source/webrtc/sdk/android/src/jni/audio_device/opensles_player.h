@@ -16,11 +16,13 @@
 #include <SLES/OpenSLES_AndroidConfiguration.h>
 
 #include <memory>
+
 #include "absl/types/optional.h"
+#include "api/scoped_refptr.h"
+#include "api/sequence_checker.h"
 #include "modules/audio_device/audio_device_buffer.h"
 #include "modules/audio_device/fine_audio_buffer.h"
 #include "modules/audio_device/include/audio_device_defines.h"
-#include "rtc_base/thread_checker.h"
 #include "sdk/android/src/jni/audio_device/audio_common.h"
 #include "sdk/android/src/jni/audio_device/audio_device_module.h"
 #include "sdk/android/src/jni/audio_device/opensles_common.h"
@@ -60,7 +62,7 @@ class OpenSLESPlayer : public AudioOutput {
   static const int kNumOfOpenSLESBuffers = 2;
 
   OpenSLESPlayer(const AudioParameters& audio_parameters,
-                 std::unique_ptr<OpenSLEngineManager> engine_manager);
+                 rtc::scoped_refptr<OpenSLEngineManager> engine_manager);
   ~OpenSLESPlayer() override;
 
   int Init() override;
@@ -81,6 +83,8 @@ class OpenSLESPlayer : public AudioOutput {
 
   void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) override;
 
+  int GetPlayoutUnderrunCount() override { return -1; }
+
  private:
   // These callback methods are called when data is required for playout.
   // They are both called from an internal "OpenSL ES thread" which is not
@@ -91,7 +95,7 @@ class OpenSLESPlayer : public AudioOutput {
   // Reads audio data in PCM format using the AudioDeviceBuffer.
   // Can be called both on the main thread (during Start()) and from the
   // internal audio thread while output streaming is active.
-  // If the |silence| flag is set, the audio is filled with zeros instead of
+  // If the `silence` flag is set, the audio is filled with zeros instead of
   // asking the WebRTC layer for real audio data. This procedure is also known
   // as audio priming.
   void EnqueuePlayoutData(bool silence);
@@ -102,7 +106,7 @@ class OpenSLESPlayer : public AudioOutput {
 
   // Obtaines the SL Engine Interface from the existing global Engine object.
   // The interface exposes creation methods of all the OpenSL ES object types.
-  // This method defines the |engine_| member variable.
+  // This method defines the `engine_` member variable.
   bool ObtainEngineInterface();
 
   // Creates/destroys the output mix object.
@@ -118,12 +122,12 @@ class OpenSLESPlayer : public AudioOutput {
 
   // Ensures that methods are called from the same thread as this object is
   // created on.
-  rtc::ThreadChecker thread_checker_;
+  SequenceChecker thread_checker_;
 
   // Stores thread ID in first call to SimpleBufferQueueCallback() from internal
   // non-application thread which is not attached to the Dalvik JVM.
   // Detached during construction of this object.
-  rtc::ThreadChecker thread_checker_opensles_;
+  SequenceChecker thread_checker_opensles_;
 
   const AudioParameters audio_parameters_;
 
@@ -159,7 +163,7 @@ class OpenSLESPlayer : public AudioOutput {
   // Example (kNumOfOpenSLESBuffers = 2): counts 0, 1, 0, 1, ...
   int buffer_index_;
 
-  std::unique_ptr<OpenSLEngineManager> engine_manager_;
+  const rtc::scoped_refptr<OpenSLEngineManager> engine_manager_;
   // This interface exposes creation methods for all the OpenSL ES object types.
   // It is the OpenSL ES API entry point.
   SLEngineItf engine_;

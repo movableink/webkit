@@ -10,23 +10,24 @@
 #ifndef TEST_SCENARIO_SCENARIO_CONFIG_H_
 #define TEST_SCENARIO_SCENARIO_CONFIG_H_
 
-#include <memory>
+#include <stddef.h>
+
 #include <string>
-#include <vector>
 
 #include "absl/types/optional.h"
-#include "api/rtpparameters.h"
+#include "api/fec_controller.h"
+#include "api/rtp_parameters.h"
+#include "api/test/frame_generator_interface.h"
+#include "api/transport/network_control.h"
 #include "api/units/data_rate.h"
+#include "api/units/data_size.h"
 #include "api/units/time_delta.h"
-#include "api/video_codecs/video_codec.h"
-#include "test/frame_generator.h"
+#include "api/video/video_codec_type.h"
+#include "test/scenario/performance_stats.h"
 
 namespace webrtc {
 namespace test {
 struct PacketOverhead {
-  static constexpr size_t kIpv4 = 20;
-  static constexpr size_t kIpv6 = 40;
-  static constexpr size_t kUdp = 8;
   static constexpr size_t kSrtp = 10;
   static constexpr size_t kStun = 4;
   // TURN messages can be sent either with or without an establieshed channel.
@@ -34,30 +35,24 @@ struct PacketOverhead {
   // significantly more overhead.
   static constexpr size_t kTurnChannelMessage = 4;
   static constexpr size_t kTurnIndicationMessage = 36;
-  static constexpr size_t kDefault = kIpv4 + kUdp + kSrtp;
+  static constexpr size_t kDefault = kSrtp;
 };
 struct TransportControllerConfig {
   struct Rates {
     Rates();
     Rates(const Rates&);
     ~Rates();
-    DataRate min_rate = DataRate::kbps(30);
-    DataRate max_rate = DataRate::kbps(3000);
-    DataRate start_rate = DataRate::kbps(300);
+    DataRate min_rate = DataRate::KilobitsPerSec(30);
+    DataRate max_rate = DataRate::KilobitsPerSec(3000);
+    DataRate start_rate = DataRate::KilobitsPerSec(300);
   } rates;
-  enum CongestionController { kBbr, kGoogCc, kGoogCcFeedback } cc = kGoogCc;
-  TimeDelta state_log_interval = TimeDelta::ms(100);
+  NetworkControllerFactoryInterface* cc_factory = nullptr;
+  TimeDelta state_log_interval = TimeDelta::Millis(100);
 };
 
 struct CallClientConfig {
   TransportControllerConfig transport;
-};
-
-struct SimulatedTimeClientConfig {
-  TransportControllerConfig transport;
-  struct Feedback {
-    TimeDelta interval = TimeDelta::ms(100);
-  } feedback;
+  const WebRtcKeyValueConfig* field_trials = nullptr;
 };
 
 struct PacketStreamConfig {
@@ -66,40 +61,66 @@ struct PacketStreamConfig {
   ~PacketStreamConfig();
   int frame_rate = 30;
   DataRate max_data_rate = DataRate::Infinity();
-  DataSize max_packet_size = DataSize::bytes(1400);
-  DataSize min_frame_size = DataSize::bytes(100);
+  DataSize max_packet_size = DataSize::Bytes(1400);
+  DataSize min_frame_size = DataSize::Bytes(100);
   double keyframe_multiplier = 1;
-  DataSize packet_overhead = DataSize::bytes(PacketOverhead::kDefault);
+  DataSize packet_overhead = DataSize::Bytes(PacketOverhead::kDefault);
 };
 
 struct VideoStreamConfig {
   bool autostart = true;
   struct Source {
-    enum class ContentType {
-      kVideo,
-      kScreen,
-    } content_type = ContentType::kVideo;
     enum Capture {
       kGenerator,
       kVideoFile,
-      // Support for still images and explicit frame triggers should be added
-      // here if needed.
+      kGenerateSlides,
+      kImageSlides,
+      // Support for explicit frame triggers should be added here if needed.
     } capture = Capture::kGenerator;
+    struct Slides {
+      TimeDelta change_interval = TimeDelta::Seconds(10);
+      struct Generator {
+        int width = 1600;
+        int height = 1200;
+      } generator;
+      struct Images {
+        struct Crop {
+          TimeDelta scroll_duration = TimeDelta::Seconds(0);
+          absl::optional<int> width;
+          absl::optional<int> height;
+        } crop;
+        int width = 1850;
+        int height = 1110;
+        std::vector<std::string> paths = {
+            "web_screenshot_1850_1110",
+            "presentation_1850_1110",
+            "photo_1850_1110",
+            "difficult_photo_1850_1110",
+        };
+      } images;
+    } slides;
     struct Generator {
-      using PixelFormat = FrameGenerator::OutputType;
-      PixelFormat pixel_format = PixelFormat::I420;
+      using PixelFormat = FrameGeneratorInterface::OutputType;
+      PixelFormat pixel_format = PixelFormat::kI420;
+      int width = 320;
+      int height = 180;
     } generator;
     struct VideoFile {
       std::string name;
+      // Must be set to width and height of the source video file.
+      int width = 0;
+      int height = 0;
     } video_file;
-    int width = 320;
-    int height = 180;
     int framerate = 30;
   } source;
   struct Encoder {
     Encoder();
     Encoder(const Encoder&);
     ~Encoder();
+    enum class ContentType {
+      kVideo,
+      kScreen,
+    } content_type = ContentType::kVideo;
     enum Implementation { kFake, kSoftware, kHardware } implementation = kFake;
     struct Fake {
       DataRate max_rate = DataRate::Infinity();
@@ -107,30 +128,50 @@ struct VideoStreamConfig {
 
     using Codec = VideoCodecType;
     Codec codec = Codec::kVideoCodecGeneric;
-    bool denoising = true;
-    absl::optional<int> key_frame_interval = 3000;
-
     absl::optional<DataRate> max_data_rate;
+    absl::optional<DataRate> min_data_rate;
     absl::optional<int> max_framerate;
-    size_t num_simulcast_streams = 1;
-    using DegradationPreference = DegradationPreference;
+    // Counted in frame count.
+    absl::optional<int> key_frame_interval = 3000;
+    bool frame_dropping = true;
+    struct SingleLayer {
+      bool denoising = true;
+      bool automatic_scaling = true;
+    } single;
+    struct Layers {
+      int temporal = 1;
+      int spatial = 1;
+      enum class Prediction {
+        kTemporalOnly,
+        kSpatialOnKey,
+        kFull,
+      } prediction = Prediction::kFull;
+    } layers;
+
     DegradationPreference degradation_preference =
         DegradationPreference::MAINTAIN_FRAMERATE;
+    bool suspend_below_min_bitrate = false;
   } encoder;
   struct Stream {
     Stream();
     Stream(const Stream&);
     ~Stream();
+    bool abs_send_time = false;
     bool packet_feedback = true;
     bool use_rtx = true;
     DataRate pad_to_rate = DataRate::Zero();
-    TimeDelta nack_history_time = TimeDelta::ms(1000);
+    TimeDelta nack_history_time = TimeDelta::Millis(1000);
     bool use_flexfec = false;
     bool use_ulpfec = false;
+    FecControllerFactoryInterface* fec_controller_factory = nullptr;
   } stream;
-  struct Renderer {
+  struct Rendering {
     enum Type { kFake } type = kFake;
-  };
+    std::string sync_group;
+  } render;
+  struct Hooks {
+    std::vector<std::function<void(const VideoFramePair&)>> frame_pair_handlers;
+  } hooks;
 };
 
 struct AudioStreamConfig {
@@ -151,68 +192,40 @@ struct AudioStreamConfig {
       DataRate min_rate_for_60_ms = DataRate::Zero();
       DataRate max_rate_for_120_ms = DataRate::Infinity();
     } frame;
+    std::string binary_proto;
   } adapt;
   struct Encoder {
     Encoder();
     Encoder(const Encoder&);
     ~Encoder();
     bool allocate_bitrate = false;
+    bool enable_dtx = false;
     absl::optional<DataRate> fixed_rate;
     absl::optional<DataRate> min_rate;
     absl::optional<DataRate> max_rate;
-    absl::optional<DataRate> priority_rate;
-    TimeDelta initial_frame_length = TimeDelta::ms(20);
+    TimeDelta initial_frame_length = TimeDelta::Millis(20);
   } encoder;
   struct Stream {
     Stream();
     Stream(const Stream&);
     ~Stream();
+    bool abs_send_time = false;
     bool in_bandwidth_estimation = false;
   } stream;
-  struct Render {
+  struct Rendering {
     std::string sync_group;
   } render;
 };
 
-struct NetworkNodeConfig {
-  NetworkNodeConfig();
-  NetworkNodeConfig(const NetworkNodeConfig&);
-  ~NetworkNodeConfig();
-  enum class TrafficMode {
-    kSimulation,
-    kCustom
-  } mode = TrafficMode::kSimulation;
-  struct Simulation {
-    Simulation();
-    Simulation(const Simulation&);
-    ~Simulation();
-    DataRate bandwidth = DataRate::Infinity();
-    TimeDelta delay = TimeDelta::Zero();
-    TimeDelta delay_std_dev = TimeDelta::Zero();
-    double loss_rate = 0;
-  } simulation;
+// TODO(srte): Merge this with BuiltInNetworkBehaviorConfig.
+struct NetworkSimulationConfig {
+  DataRate bandwidth = DataRate::Infinity();
+  TimeDelta delay = TimeDelta::Zero();
+  TimeDelta delay_std_dev = TimeDelta::Zero();
+  double loss_rate = 0;
+  bool codel_active_queue_management = false;
+  absl::optional<int> packet_queue_length_limit;
   DataSize packet_overhead = DataSize::Zero();
-  TimeDelta update_frequency = TimeDelta::ms(1);
-};
-
-struct CrossTrafficConfig {
-  CrossTrafficConfig();
-  CrossTrafficConfig(const CrossTrafficConfig&);
-  ~CrossTrafficConfig();
-  enum Mode { kRandomWalk, kPulsedPeaks } mode = kRandomWalk;
-  int random_seed = 1;
-  DataRate peak_rate = DataRate::kbps(100);
-  DataSize min_packet_size = DataSize::bytes(200);
-  TimeDelta min_packet_interval = TimeDelta::ms(1);
-  struct RandomWalk {
-    TimeDelta update_interval = TimeDelta::ms(200);
-    double variance = 0.6;
-    double bias = -0.1;
-  } random_walk;
-  struct PulsedPeaks {
-    TimeDelta send_duration = TimeDelta::ms(100);
-    TimeDelta hold_duration = TimeDelta::ms(2000);
-  } pulsed;
 };
 }  // namespace test
 }  // namespace webrtc

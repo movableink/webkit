@@ -30,7 +30,7 @@
 
 WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
 {
-    constructor({selectable, omitRootDOMNode, excludeRevealElementContextMenu, showLastSelected} = {})
+    constructor({selectable, omitRootDOMNode, excludeRevealElementContextMenu, showInspectedNode} = {})
     {
         super(selectable);
 
@@ -45,9 +45,7 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
 
         this.element.classList.add("dom", WI.SyntaxHighlightedStyleClassName);
         this.element.dir = "ltr";
-
-        if (showLastSelected)
-            this.element.classList.add("show-last-selected");
+        this.element.role = "tree";
 
         this._includeRootDOMNode = !omitRootDOMNode;
         this._excludeRevealElementContextMenu = excludeRevealElementContextMenu;
@@ -63,7 +61,8 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
         this._hideElementsKeyboardShortcut = new WI.KeyboardShortcut(null, "H", this._hideElements.bind(this), this.element);
         this._hideElementsKeyboardShortcut.implicitlyPreventsDefault = false;
 
-        WI.settings.showShadowDOM.addEventListener(WI.Setting.Event.Changed, this._showShadowDOMSettingChanged, this);
+        if (showInspectedNode)
+            WI.domManager.addEventListener(WI.DOMManager.Event.InspectedNodeChanged, this._handleInspectedNodeChanged, this);
     }
 
     // Public
@@ -75,8 +74,6 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
 
     close()
     {
-        WI.settings.showShadowDOM.removeEventListener(null, null, this);
-
         if (this._elementsTreeUpdater) {
             this._elementsTreeUpdater.close();
             this._elementsTreeUpdater = null;
@@ -151,7 +148,7 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
 
     get editable()
     {
-        return this._editable;
+        return this._editable && this.rootDOMNode && !this.rootDOMNode.destroyed;
     }
 
     set editable(x)
@@ -187,7 +184,7 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
                 this.appendChild(treeElement);
                 node = node.nextSibling;
 
-                if (treeElement.hasChildren && !treeElement.expanded)
+                if (treeElement.expandable && !treeElement.expanded)
                     treeElement.expand();
             }
         }
@@ -287,16 +284,21 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
             delete: new WI.ContextSubMenuItem(contextMenu, WI.UIString("Delete")),
         };
 
-        if (treeElement.selected && this.selectedTreeElements.length > 1)
-            subMenus.delete.appendItem(WI.UIString("Nodes"), () => { this.ondelete(); }, !this._editable);
+        if (this.editable && treeElement.selected && this.selectedTreeElements.length > 1) {
+            subMenus.delete.appendItem(WI.UIString("Nodes"), () => {
+                this.ondelete();
+            });
+        }
 
         if (treeElement.populateDOMNodeContextMenu)
             treeElement.populateDOMNodeContextMenu(contextMenu, subMenus, event, subMenus);
 
         let options = {
-            disallowEditing: !this._editable,
+            disallowEditing: !this.editable,
+            usingLocalDOMNode: this._usingLocalDOMNode,
             excludeRevealElement: this._excludeRevealElementContextMenu,
             copySubMenu: subMenus.copy,
+            popoverTargetElement: treeElement.statusImageElement,
         };
 
         if (treeElement.bindRevealDescendantBreakpointsMenuItemHandler)
@@ -313,7 +315,7 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
 
     ondelete()
     {
-        if (!this._editable)
+        if (!this.editable)
             return false;
 
         this._treeElementsToRemove = this.selectedTreeElements;
@@ -423,13 +425,6 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
         if (!node || this._suppressRevealAndSelect)
             return;
 
-        if (!WI.settings.showShadowDOM.value) {
-            while (node && node.isInShadowTree())
-                node = node.parentNode;
-            if (!node)
-                return;
-        }
-
         var treeElement = this.createTreeElementFor(node);
         if (!treeElement)
             return;
@@ -464,12 +459,16 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
             element.hovered = true;
             this._previousHoveredElement = element;
 
-            // Lazily compute tag-specific tooltips.
-            if (element.representedObject && !element.tooltip && element._createTooltipForNode)
-                element._createTooltipForNode();
-        }
+            if (element.representedObject) {
+                // Lazily compute tag-specific tooltips.
+                if (!element.tooltip && element._createTooltipForNode)
+                    element._createTooltipForNode();
 
-        WI.domManager.highlightDOMNode(element ? element.representedObject.id : 0);
+                element.representedObject.highlight();
+            } else
+                WI.domManager.hideDOMNodeHighlight();
+        } else
+            WI.domManager.hideDOMNodeHighlight();
     }
 
     _onmouseout(event)
@@ -491,7 +490,7 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
 
     _ondragstart(event)
     {
-        if (!this._editable)
+        if (!this.editable)
             return false;
 
         let treeElement = this.treeElementFromEvent(event);
@@ -517,7 +516,7 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
 
     _ondragover(event)
     {
-        if (!this._editable)
+        if (!this.editable)
             return false;
 
         if (event.dataTransfer.types.includes(WI.GeneralStyleDetailsSidebarPanel.ToggledClassesDragType)) {
@@ -551,7 +550,7 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
 
     _ondragleave(event)
     {
-        if (!this._editable)
+        if (!this.editable)
             return false;
 
         this._clearDragOverTreeElementMarker();
@@ -576,7 +575,7 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
 
     _ondrop(event)
     {
-        if (!this._editable)
+        if (!this.editable)
             return;
 
         event.preventDefault();
@@ -618,7 +617,7 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
 
     _ondragend(event)
     {
-        if (!this._editable)
+        if (!this.editable)
             return;
 
         event.preventDefault();
@@ -643,26 +642,24 @@ WI.DOMTreeOutline = class DOMTreeOutline extends WI.TreeOutline
             this._elementsTreeUpdater._updateModifiedNodes();
     }
 
-    _showShadowDOMSettingChanged(event)
+    _handleInspectedNodeChanged(event)
     {
-        var nodeToSelect = this.selectedTreeElement ? this.selectedTreeElement.representedObject : null;
-        while (nodeToSelect) {
-            if (!nodeToSelect.isInShadowTree())
-                break;
-            nodeToSelect = nodeToSelect.parentNode;
+        let {lastInspectedNode} = event.data;
+
+        if (lastInspectedNode) {
+            let lastInspectedNodeTreeElement = this.findTreeElement(lastInspectedNode);
+            if (lastInspectedNodeTreeElement)
+                lastInspectedNodeTreeElement.listItemElement.classList.remove("inspected-node");
         }
 
-        this.children.forEach(function(child) {
-            child.updateChildren(true);
-        });
-
-        if (nodeToSelect)
-            this.selectDOMNode(nodeToSelect);
+        let inspectedNodeTreeElement = this.findTreeElement(WI.domManager.inspectedNode);
+        if (inspectedNodeTreeElement)
+            inspectedNodeTreeElement.listItemElement.classList.add("inspected-node");
     }
 
     _hideElements(event, keyboardShortcut)
     {
-        if (!this._editable)
+        if (!this.editable)
             return;
 
         if (!this.selectedTreeElement || WI.isEditingAnyField())

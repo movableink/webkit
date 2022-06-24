@@ -22,6 +22,8 @@ function createCSSCanvas(contextType, canvasName) {
     window.contexts.push();
 }
 
+let destroyCanvasesInterval = null;
+
 function destroyCanvases() {
     for (let context of window.contexts) {
         if (!context)
@@ -35,25 +37,29 @@ function destroyCanvases() {
     window.contexts = [];
 
     // Force GC to make sure the canvas element is destroyed, otherwise the frontend
-    // does not receive WI.CanvasManager.Event.CanvasRemoved events.
-    setTimeout(() => { GCController.collect(); }, 0);
+    // does not receive Canvas.canvasRemoved events.
+    destroyCanvasesInterval = setInterval(() => { GCController.collect(); }, 0);
+}
+
+function stopDestroyingCanvases()
+{
+    clearInterval(destroyCanvasesInterval);
 }
 
 TestPage.registerInitializer(() => {
     let suite = null;
 
     function awaitCanvasAdded(contextType) {
-        return WI.canvasManager.awaitEvent(WI.CanvasManager.Event.CanvasAdded)
+        return WI.canvasManager.canvasCollection.awaitEvent(WI.Collection.Event.ItemAdded)
         .then((event) => {
-            let canvas = event.data.canvas;
+            let canvas = event.data.item;
             let contextDisplayName = WI.Canvas.displayNameForContextType(contextType);
             InspectorTest.expectEqual(canvas.contextType, contextType, `Canvas context should be ${contextDisplayName}.`);
 
+            let traceText = "";
             for (let i = 0; i < canvas.backtrace.length; ++i) {
                 let callFrame = canvas.backtrace[i];
-                let traceText = `  ${i}: `;
-                traceText += callFrame.functionName || "(anonymous function)";
-
+                traceText += `  ${i}: ` + (callFrame.functionName || "(anonymous function)");
                 if (callFrame.nativeCode)
                     traceText += " - [native code]";
                 else if (callFrame.programCode)
@@ -62,20 +68,18 @@ TestPage.registerInitializer(() => {
                     let location = callFrame.sourceCodeLocation;
                     traceText += " - " + sanitizeURL(location.sourceCode.url) + `:${location.lineNumber}:${location.columnNumber}`;
                 }
-
-                InspectorTest.log(traceText);
+                traceText += "\n";
             }
-
-            InspectorTest.log("");
+            InspectorTest.log(traceText);
 
             return canvas;
         });
     }
 
     function awaitCanvasRemoved(canvasIdentifier) {
-        return WI.canvasManager.awaitEvent(WI.CanvasManager.Event.CanvasRemoved)
+        return WI.canvasManager.canvasCollection.awaitEvent(WI.Collection.Event.ItemRemoved)
         .then((event) => {
-            let canvas = event.data.canvas;
+            let canvas = event.data.item;
             InspectorTest.expectEqual(canvas.identifier, canvasIdentifier, "Removed canvas has expected ID.");
         });
     }
@@ -89,7 +93,7 @@ TestPage.registerInitializer(() => {
             name: `${suite.name}.NoCanvases`,
             description: "Check that the CanvasManager has no canvases initially.",
             test(resolve, reject) {
-                InspectorTest.expectEqual(WI.canvasManager.canvases.length, 0, "CanvasManager should have no canvases.");
+                InspectorTest.expectEqual(WI.canvasManager.canvasCollection.size, 0, "CanvasManager should have no canvases.");
                 resolve();
             }
         });
@@ -110,7 +114,7 @@ TestPage.registerInitializer(() => {
                         return;
                     }
 
-                    let promise = awaitCanvasRemoved(canvas.identifier);
+                    let promise = awaitCanvasRemoved(canvas.identifier).then(() => { InspectorTest.evaluateInPage(`stopDestroyingCanvases()`); });
                     InspectorTest.evaluateInPage(`destroyCanvases()`);
                     return promise;
                 })

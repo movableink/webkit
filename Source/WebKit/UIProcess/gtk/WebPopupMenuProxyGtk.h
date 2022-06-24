@@ -25,13 +25,15 @@
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/text/WTFString.h>
 
-typedef struct _GMainLoop GMainLoop;
 typedef struct _GdkDevice GdkDevice;
-typedef struct _GdkEventButton GdkEventButton;
-typedef struct _GdkEventKey GdkEventKey;
 typedef struct _GtkTreePath GtkTreePath;
 typedef struct _GtkTreeView GtkTreeView;
 typedef struct _GtkTreeViewColumn GtkTreeViewColumn;
+#if USE(GTK4)
+typedef struct _GdkEvent GdkEvent;
+#else
+typedef union _GdkEvent GdkEvent;
+#endif
 
 namespace WebCore {
 class IntRect;
@@ -54,7 +56,10 @@ public:
     void cancelTracking() override;
 
     virtual void selectItem(unsigned itemIndex);
-    virtual void activateItem(Optional<unsigned> itemIndex);
+    virtual void activateItem(std::optional<unsigned> itemIndex);
+
+    bool handleKeyPress(unsigned keyval, uint32_t timestamp);
+    void activateSelectedItem();
 
 protected:
     WebPopupMenuProxyGtk(GtkWidget*, WebPopupMenuProxy::Client&);
@@ -65,20 +70,23 @@ private:
     void createPopupMenu(const Vector<WebPopupItem>&, int32_t selectedIndex);
     void show();
     bool activateItemAtPath(GtkTreePath*);
-    Optional<unsigned> typeAheadFindIndex(GdkEventKey*);
-    bool typeAheadFind(GdkEventKey*);
+    std::optional<unsigned> typeAheadFindIndex(unsigned keyval, uint32_t timestamp);
+    bool typeAheadFind(unsigned keyval, uint32_t timestamp);
 
+#if !USE(GTK4)
     static gboolean buttonPressEventCallback(GtkWidget*, GdkEventButton*, WebPopupMenuProxyGtk*);
-    static gboolean keyPressEventCallback(GtkWidget*, GdkEventKey*, WebPopupMenuProxyGtk*);
-    static void treeViewRowActivatedCallback(GtkTreeView*, GtkTreePath*, GtkTreeViewColumn*, WebPopupMenuProxyGtk*);
-    static gboolean treeViewButtonReleaseEventCallback(GtkWidget*, GdkEventButton*, WebPopupMenuProxyGtk*);
+    static gboolean keyPressEventCallback(GtkWidget*, GdkEvent*, WebPopupMenuProxyGtk*);
+    static gboolean treeViewButtonReleaseEventCallback(GtkWidget*, GdkEvent*, WebPopupMenuProxyGtk*);
+#endif
 
     GtkWidget* m_popup { nullptr };
     GtkWidget* m_treeView { nullptr };
+#if !USE(GTK4)
     GdkDevice* m_device { nullptr };
+#endif
 
     Vector<GUniquePtr<GtkTreePath>> m_paths;
-    Optional<unsigned> m_selectedItem;
+    std::optional<unsigned> m_selectedItem;
 
     // Typeahead find.
     gunichar m_repeatingCharacter { '\0' };

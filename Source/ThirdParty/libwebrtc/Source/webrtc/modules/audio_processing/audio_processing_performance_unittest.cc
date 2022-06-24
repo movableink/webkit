@@ -7,8 +7,6 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
-#include "modules/audio_processing/audio_processing_impl.h"
-
 #include <math.h>
 
 #include <algorithm>
@@ -16,8 +14,10 @@
 #include <vector>
 
 #include "api/array_view.h"
+#include "modules/audio_processing/audio_processing_impl.h"
+#include "modules/audio_processing/test/audio_processing_builder_for_testing.h"
 #include "modules/audio_processing/test/test_utils.h"
-#include "rtc_base/atomicops.h"
+#include "rtc_base/atomic_ops.h"
 #include "rtc_base/event.h"
 #include "rtc_base/numerics/safe_conversions.h"
 #include "rtc_base/platform_thread.h"
@@ -391,12 +391,7 @@ class TimedThreadApiProcessor {
 class CallSimulator : public ::testing::TestWithParam<SimulationConfig> {
  public:
   CallSimulator()
-      : render_thread_(
-            new rtc::PlatformThread(RenderProcessorThreadFunc, this, "render")),
-        capture_thread_(new rtc::PlatformThread(CaptureProcessorThreadFunc,
-                                                this,
-                                                "capture")),
-        rand_gen_(42U),
+      : rand_gen_(42U),
         simulation_config_(static_cast<SimulationConfig>(GetParam())) {}
 
   // Run the call simulation with a timeout.
@@ -431,109 +426,83 @@ class CallSimulator : public ::testing::TestWithParam<SimulationConfig> {
   static const int kMinNumFramesToProcess = 150;
   static const int32_t kTestTimeout = 3 * 10 * kMinNumFramesToProcess;
 
-  // ::testing::TestWithParam<> implementation.
-  void TearDown() override { StopThreads(); }
-
   // Stop all running threads.
   void StopThreads() {
-    render_thread_->Stop();
-    capture_thread_->Stop();
+    render_thread_.Finalize();
+    capture_thread_.Finalize();
   }
 
   // Simulator and APM setup.
   void SetUp() override {
     // Lambda function for setting the default APM runtime settings for desktop.
     auto set_default_desktop_apm_runtime_settings = [](AudioProcessing* apm) {
-      ASSERT_EQ(apm->kNoError, apm->level_estimator()->Enable(true));
-      ASSERT_EQ(apm->kNoError, apm->gain_control()->Enable(true));
-      ASSERT_EQ(apm->kNoError,
-                apm->gain_control()->set_mode(GainControl::kAdaptiveDigital));
-      ASSERT_EQ(apm->kNoError, apm->gain_control()->Enable(true));
-      ASSERT_EQ(apm->kNoError, apm->noise_suppression()->Enable(true));
-      ASSERT_EQ(apm->kNoError, apm->voice_detection()->Enable(true));
       AudioProcessing::Config apm_config = apm->GetConfig();
       apm_config.echo_canceller.enabled = true;
       apm_config.echo_canceller.mobile_mode = false;
+      apm_config.noise_suppression.enabled = true;
+      apm_config.gain_controller1.enabled = true;
+      apm_config.gain_controller1.mode =
+          AudioProcessing::Config::GainController1::kAdaptiveDigital;
+      apm_config.level_estimation.enabled = true;
+      apm_config.voice_detection.enabled = true;
       apm->ApplyConfig(apm_config);
     };
 
     // Lambda function for setting the default APM runtime settings for mobile.
     auto set_default_mobile_apm_runtime_settings = [](AudioProcessing* apm) {
-      ASSERT_EQ(apm->kNoError, apm->level_estimator()->Enable(true));
-      ASSERT_EQ(apm->kNoError, apm->gain_control()->Enable(true));
-      ASSERT_EQ(apm->kNoError,
-                apm->gain_control()->set_mode(GainControl::kAdaptiveDigital));
-      ASSERT_EQ(apm->kNoError, apm->gain_control()->Enable(true));
-      ASSERT_EQ(apm->kNoError, apm->noise_suppression()->Enable(true));
-      ASSERT_EQ(apm->kNoError, apm->voice_detection()->Enable(true));
       AudioProcessing::Config apm_config = apm->GetConfig();
       apm_config.echo_canceller.enabled = true;
       apm_config.echo_canceller.mobile_mode = true;
+      apm_config.noise_suppression.enabled = true;
+      apm_config.gain_controller1.mode =
+          AudioProcessing::Config::GainController1::kAdaptiveDigital;
+      apm_config.level_estimation.enabled = true;
+      apm_config.voice_detection.enabled = true;
       apm->ApplyConfig(apm_config);
     };
 
     // Lambda function for turning off all of the APM runtime settings
     // submodules.
     auto turn_off_default_apm_runtime_settings = [](AudioProcessing* apm) {
-      ASSERT_EQ(apm->kNoError, apm->level_estimator()->Enable(false));
-      ASSERT_EQ(apm->kNoError, apm->gain_control()->Enable(false));
-      ASSERT_EQ(apm->kNoError,
-                apm->gain_control()->set_mode(GainControl::kAdaptiveDigital));
-      ASSERT_EQ(apm->kNoError, apm->gain_control()->Enable(false));
-      ASSERT_EQ(apm->kNoError, apm->noise_suppression()->Enable(false));
-      ASSERT_EQ(apm->kNoError, apm->voice_detection()->Enable(false));
       AudioProcessing::Config apm_config = apm->GetConfig();
       apm_config.echo_canceller.enabled = false;
+      apm_config.gain_controller1.enabled = false;
+      apm_config.level_estimation.enabled = false;
+      apm_config.noise_suppression.enabled = false;
+      apm_config.voice_detection.enabled = false;
       apm->ApplyConfig(apm_config);
-    };
-
-    // Lambda function for adding default desktop APM settings to a config.
-    auto add_default_desktop_config = [](Config* config) {
-      config->Set<ExtendedFilter>(new ExtendedFilter(true));
-      config->Set<DelayAgnostic>(new DelayAgnostic(true));
     };
 
     int num_capture_channels = 1;
     switch (simulation_config_.simulation_settings) {
       case SettingsType::kDefaultApmMobile: {
-        apm_.reset(AudioProcessingBuilder().Create());
+        apm_ = AudioProcessingBuilderForTesting().Create();
         ASSERT_TRUE(!!apm_);
         set_default_mobile_apm_runtime_settings(apm_.get());
         break;
       }
       case SettingsType::kDefaultApmDesktop: {
-        Config config;
-        add_default_desktop_config(&config);
-        apm_.reset(AudioProcessingBuilder().Create(config));
+        apm_ = AudioProcessingBuilderForTesting().Create();
         ASSERT_TRUE(!!apm_);
         set_default_desktop_apm_runtime_settings(apm_.get());
-        apm_->SetExtraOptions(config);
         break;
       }
       case SettingsType::kAllSubmodulesTurnedOff: {
-        apm_.reset(AudioProcessingBuilder().Create());
+        apm_ = AudioProcessingBuilderForTesting().Create();
         ASSERT_TRUE(!!apm_);
         turn_off_default_apm_runtime_settings(apm_.get());
         break;
       }
       case SettingsType::kDefaultApmDesktopWithoutDelayAgnostic: {
-        Config config;
-        config.Set<ExtendedFilter>(new ExtendedFilter(true));
-        config.Set<DelayAgnostic>(new DelayAgnostic(false));
-        apm_.reset(AudioProcessingBuilder().Create(config));
+        apm_ = AudioProcessingBuilderForTesting().Create();
         ASSERT_TRUE(!!apm_);
         set_default_desktop_apm_runtime_settings(apm_.get());
-        apm_->SetExtraOptions(config);
         break;
       }
       case SettingsType::kDefaultApmDesktopWithoutExtendedFilter: {
-        Config config;
-        config.Set<ExtendedFilter>(new ExtendedFilter(false));
-        config.Set<DelayAgnostic>(new DelayAgnostic(true));
-        apm_.reset(AudioProcessingBuilder().Create(config));
+        apm_ = AudioProcessingBuilderForTesting().Create();
         ASSERT_TRUE(!!apm_);
         set_default_desktop_apm_runtime_settings(apm_.get());
-        apm_->SetExtraOptions(config);
         break;
       }
     }
@@ -548,40 +517,38 @@ class CallSimulator : public ::testing::TestWithParam<SimulationConfig> {
         kMinNumFramesToProcess, kCaptureInputFloatLevel, num_capture_channels));
   }
 
-  // Thread callback for the render thread.
-  static bool RenderProcessorThreadFunc(void* context) {
-    return reinterpret_cast<CallSimulator*>(context)
-        ->render_thread_state_->Process();
-  }
-
-  // Thread callback for the capture thread.
-  static bool CaptureProcessorThreadFunc(void* context) {
-    return reinterpret_cast<CallSimulator*>(context)
-        ->capture_thread_state_->Process();
-  }
-
   // Start the threads used in the test.
   void StartThreads() {
-    ASSERT_NO_FATAL_FAILURE(render_thread_->Start());
-    render_thread_->SetPriority(rtc::kRealtimePriority);
-    ASSERT_NO_FATAL_FAILURE(capture_thread_->Start());
-    capture_thread_->SetPriority(rtc::kRealtimePriority);
+    const auto attributes =
+        rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime);
+    render_thread_ = rtc::PlatformThread::SpawnJoinable(
+        [this] {
+          while (render_thread_state_->Process()) {
+          }
+        },
+        "render", attributes);
+    capture_thread_ = rtc::PlatformThread::SpawnJoinable(
+        [this] {
+          while (capture_thread_state_->Process()) {
+          }
+        },
+        "capture", attributes);
   }
 
   // Event handler for the test.
   rtc::Event test_complete_;
 
   // Thread related variables.
-  std::unique_ptr<rtc::PlatformThread> render_thread_;
-  std::unique_ptr<rtc::PlatformThread> capture_thread_;
   Random rand_gen_;
 
-  std::unique_ptr<AudioProcessing> apm_;
+  rtc::scoped_refptr<AudioProcessing> apm_;
   const SimulationConfig simulation_config_;
   FrameCounters frame_counters_;
   LockedFlag capture_call_checker_;
   std::unique_ptr<TimedThreadApiProcessor> render_thread_state_;
   std::unique_ptr<TimedThreadApiProcessor> capture_thread_state_;
+  rtc::PlatformThread render_thread_;
+  rtc::PlatformThread capture_thread_;
 };
 
 // Implements the callback functionality for the threads.
@@ -621,7 +588,7 @@ TEST_P(CallSimulator, DISABLED_ApiCallDurationTest) {
   EXPECT_TRUE(Run());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     AudioProcessingPerformanceTest,
     CallSimulator,
     ::testing::ValuesIn(SimulationConfig::GenerateSimulationConfigs()));

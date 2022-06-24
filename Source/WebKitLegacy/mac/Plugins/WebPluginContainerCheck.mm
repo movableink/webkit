@@ -72,7 +72,7 @@
 
 + (id)checkWithRequest:(NSURLRequest *)request target:(NSString *)target resultObject:(id)obj selector:(SEL)selector controller:(id <WebPluginContainerCheckController>)controller contextInfo:(id)contextInfo /*optional*/
 {
-    return [[[self alloc] initWithRequest:request target:target resultObject:obj selector:selector controller:controller contextInfo:contextInfo] autorelease];
+    return adoptNS([[self alloc] initWithRequest:request target:target resultObject:obj selector:selector controller:controller contextInfo:contextInfo]).autorelease();
 }
 
 - (void)dealloc
@@ -107,11 +107,11 @@
 
 - (NSDictionary *)_actionInformationWithURL:(NSURL *)URL
 {
-    return [NSDictionary dictionaryWithObjectsAndKeys:
-               [NSNumber numberWithInt:WebNavigationTypePlugInRequest], WebActionNavigationTypeKey,
-               [NSNumber numberWithInt:0], WebActionModifierFlagsKey,
-               URL, WebActionOriginalURLKey,
-               nil];
+    return @{
+        WebActionNavigationTypeKey: @(WebNavigationTypePlugInRequest),
+        WebActionModifierFlagsKey: @(0),
+        WebActionOriginalURLKey: URL,
+    };
 }
 
 - (void)_askPolicyDelegate

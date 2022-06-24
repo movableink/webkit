@@ -61,12 +61,12 @@ void ScrollingTreeFixedNode::commitStateBeforeChildren(const ScrollingStateNode&
 {
     auto& fixedStateNode = downcast<ScrollingStateFixedNode>(stateNode);
 
-    if (fixedStateNode.hasChangedProperty(ScrollingStateNode::Layer)) {
+    if (fixedStateNode.hasChangedProperty(ScrollingStateNode::Property::Layer)) {
         auto* layer = static_cast<Nicosia::PlatformLayer*>(fixedStateNode.layer());
         m_layer = downcast<Nicosia::CompositionLayer>(layer);
     }
 
-    if (fixedStateNode.hasChangedProperty(ScrollingStateFixedNode::ViewportConstraints))
+    if (fixedStateNode.hasChangedProperty(ScrollingStateNode::Property::ViewportConstraints))
         m_constraints = fixedStateNode.viewportConstraints();
 }
 
@@ -100,7 +100,7 @@ void ScrollingTreeFixedNode::applyLayerPositions()
     LOG_WITH_STREAM(Scrolling, stream << "ScrollingTreeFixedNode " << scrollingNodeID() << " relatedNodeScrollPositionDidChange: viewportRectAtLastLayout " << m_constraints.viewportRectAtLastLayout() << " last layer pos " << m_constraints.layerPositionAtLastLayout() << " layerPosition " << layerPosition);
 
     ASSERT(m_layer);
-    m_layer->accessStaging(
+    m_layer->updateState(
         [&layerPosition](Nicosia::CompositionLayer::LayerState& state)
         {
             state.position = layerPosition;
@@ -108,13 +108,13 @@ void ScrollingTreeFixedNode::applyLayerPositions()
         });
 }
 
-void ScrollingTreeFixedNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingTreeFixedNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ts << "fixed node";
     ScrollingTreeNode::dumpProperties(ts, behavior);
     ts.dumpProperty("fixed constraints", m_constraints);
 
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeLayerPositions) {
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeLayerPositions) {
         FloatPoint layerTopLeft;
         ASSERT(m_layer);
         m_layer->accessCommitted(

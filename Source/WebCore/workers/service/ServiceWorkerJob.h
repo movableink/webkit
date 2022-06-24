@@ -27,6 +27,7 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "ResourceLoaderIdentifier.h"
 #include "ResourceResponse.h"
 #include "ServiceWorkerJobClient.h"
 #include "ServiceWorkerJobData.h"
@@ -66,13 +67,15 @@ public:
 
     void fetchScriptWithContext(ScriptExecutionContext&, FetchOptions::Cache);
 
-    const DocumentOrWorkerIdentifier& contextIdentifier() { return m_contextIdentifier; }
+    const ServiceWorkerOrClientIdentifier& contextIdentifier() { return m_contextIdentifier; }
 
     bool cancelPendingLoad();
 
+    WEBCORE_EXPORT static ResourceError validateServiceWorkerResponse(const ServiceWorkerJobData&, const ResourceResponse&);
+
 private:
     // WorkerScriptLoaderClient
-    void didReceiveResponse(unsigned long identifier, const ResourceResponse&) final;
+    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) final;
     void notifyFinished() final;
 
     ServiceWorkerJobClient& m_client;
@@ -81,10 +84,10 @@ private:
 
     bool m_completed { false };
 
-    DocumentOrWorkerIdentifier m_contextIdentifier;
+    ServiceWorkerOrClientIdentifier m_contextIdentifier;
     RefPtr<WorkerScriptLoader> m_scriptLoader;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     Ref<Thread> m_creationThread { Thread::current() };
 #endif
 };

@@ -37,28 +37,17 @@ namespace WebKit {
 
 Ref<WebPageGroupProxy> WebPageGroupProxy::create(const WebPageGroupData& data)
 {
-    auto pageGroup = adoptRef(*new WebPageGroupProxy(data));
-
-    if (WebProcess::singleton().injectedBundle())
-        WebProcess::singleton().injectedBundle()->didInitializePageGroup(pageGroup.ptr());
-
-    return pageGroup;
+    return adoptRef(*new WebPageGroupProxy(data));
 }
 
 WebPageGroupProxy::WebPageGroupProxy(const WebPageGroupData& data)
     : m_data(data)
     , m_pageGroup(WebCore::PageGroup::pageGroup(m_data.identifier))
-    , m_userContentController(WebUserContentController::getOrCreate(m_data.userContentControllerIdentifier))
 {
 }
 
 WebPageGroupProxy::~WebPageGroupProxy()
 {
-}
-
-WebUserContentController& WebPageGroupProxy::userContentController()
-{
-    return m_userContentController;
 }
 
 } // namespace WebKit

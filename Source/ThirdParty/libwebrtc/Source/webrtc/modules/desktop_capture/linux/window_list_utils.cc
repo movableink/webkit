@@ -10,7 +10,6 @@
 
 #include "modules/desktop_capture/linux/window_list_utils.h"
 
-#include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <string.h>
@@ -18,8 +17,9 @@
 #include <algorithm>
 
 #include "modules/desktop_capture/linux/x_error_trap.h"
+#include "modules/desktop_capture/linux/x_window_property.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 #include "rtc_base/logging.h"
 
 namespace webrtc {
@@ -40,54 +40,7 @@ DeferXFree::~DeferXFree() {
     XFree(data_);
 }
 
-// Convenience wrapper for XGetWindowProperty() results.
-template <class PropertyType>
-class XWindowProperty {
- public:
-  XWindowProperty(Display* display, Window window, Atom property) {
-    const int kBitsPerByte = 8;
-    Atom actual_type;
-    int actual_format;
-    unsigned long bytes_after;  // NOLINT: type required by XGetWindowProperty
-    int status = XGetWindowProperty(
-        display, window, property, 0L, ~0L, False, AnyPropertyType,
-        &actual_type, &actual_format, &size_, &bytes_after, &data_);
-    if (status != Success) {
-      data_ = nullptr;
-      return;
-    }
-    if (sizeof(PropertyType) * kBitsPerByte != actual_format) {
-      size_ = 0;
-      return;
-    }
-
-    is_valid_ = true;
-  }
-
-  ~XWindowProperty() {
-    if (data_)
-      XFree(data_);
-  }
-
-  // True if we got properly value successfully.
-  bool is_valid() const { return is_valid_; }
-
-  // Size and value of the property.
-  size_t size() const { return size_; }
-  const PropertyType* data() const {
-    return reinterpret_cast<PropertyType*>(data_);
-  }
-  PropertyType* data() { return reinterpret_cast<PropertyType*>(data_); }
-
- private:
-  bool is_valid_ = false;
-  unsigned long size_ = 0;  // NOLINT: type required by XGetWindowProperty
-  unsigned char* data_ = nullptr;
-
-  RTC_DISALLOW_COPY_AND_ASSIGN(XWindowProperty);
-};
-
-// Iterates through |window| hierarchy to find first visible window, i.e. one
+// Iterates through `window` hierarchy to find first visible window, i.e. one
 // that has WM_STATE property set to NormalState.
 // See http://tronche.com/gui/x/icccm/sec-4.html#s-4.1.3.1 .
 ::Window GetApplicationWindow(XAtomCache* cache, ::Window window) {
@@ -108,7 +61,7 @@ class XWindowProperty {
   if (!XQueryTree(cache->display(), window, &root, &parent, &children,
                   &num_children)) {
     RTC_LOG(LS_ERROR) << "Failed to query for child windows although window"
-                      << "does not have a valid WM_STATE.";
+                         "does not have a valid WM_STATE.";
     return 0;
   }
   ::Window app_window = 0;
@@ -123,7 +76,7 @@ class XWindowProperty {
   return app_window;
 }
 
-// Returns true if the |window| is a desktop element.
+// Returns true if the `window` is a desktop element.
 bool IsDesktopElement(XAtomCache* cache, ::Window window) {
   RTC_DCHECK(cache);
   if (window == 0)

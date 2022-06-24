@@ -23,14 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "TestNavigationDelegate.h"
 #import <WebKit/WebKit.h>
 #import <wtf/RetainPtr.h>
-
-static bool done = false;
 
 TEST(CustomUserAgent, UpdateCachedNavigatorUserAgent)
 {

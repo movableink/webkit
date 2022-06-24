@@ -1,3 +1,0 @@
-
-FAIL getContext('2d') returns the same object Can't find variable: OffscreenCanvas
-

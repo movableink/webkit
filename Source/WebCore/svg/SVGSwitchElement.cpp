@@ -23,8 +23,8 @@
 #include "SVGSwitchElement.h"
 
 #include "ElementIterator.h"
-#include "RenderSVGTransformableContainer.h"
-#include "SVGNames.h"
+#include "LegacyRenderSVGTransformableContainer.h"
+#include "SVGElementTypeHelpers.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -33,7 +33,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGSwitchElement);
 
 inline SVGSwitchElement::SVGSwitchElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
 {
     ASSERT(hasTagName(SVGNames::switchTag));
 }
@@ -58,7 +57,7 @@ bool SVGSwitchElement::childShouldCreateRenderer(const Node& child) const
 
 RenderPtr<RenderElement> SVGSwitchElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGTransformableContainer>(*this, WTFMove(style));
+    return createRenderer<LegacyRenderSVGTransformableContainer>(*this, WTFMove(style));
 }
 
 }

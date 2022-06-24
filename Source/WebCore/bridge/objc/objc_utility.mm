@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2021 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #import "objc_instance.h"
 #import "runtime_array.h"
 #import "runtime_object.h"
-#import <JavaScriptCore/JSGlobalObject.h>
+#import <JavaScriptCore/JSGlobalObjectInlines.h>
 #import <JavaScriptCore/JSLock.h>
 #import <wtf/Assertions.h>
 
@@ -76,22 +76,32 @@ namespace Bindings {
     [], other       exception
 
 */
-ObjcValue convertValueToObjcValue(ExecState* exec, JSValue value, ObjcValueType type)
+
+static long long convertDoubleToLongLong(double d)
+{
+    // Ensure that non-x86_64 ports will match x86_64 semantics which allows for overflow.
+    long long potentiallyOverflowed = (unsigned long long)d;
+    if (potentiallyOverflowed < (long long)d)
+        return potentiallyOverflowed;
+    return (long long)d;
+}
+
+ObjcValue convertValueToObjcValue(JSGlobalObject* lexicalGlobalObject, JSValue value, ObjcValueType type)
 {
     ObjcValue result;
     double d = 0;
 
     if (value.isNumber() || value.isString() || value.isBoolean()) {
-        JSLockHolder lock(exec);
-        d = value.toNumber(exec);
+        JSLockHolder lock(lexicalGlobalObject);
+        d = value.toNumber(lexicalGlobalObject);
     }
 
     switch (type) {
         case ObjcObjectType: {
-            VM& vm = exec->vm();
+            VM& vm = lexicalGlobalObject->vm();
             JSLockHolder lock(vm);
             
-            JSGlobalObject *originGlobalObject = vm.vmEntryGlobalObject(exec);
+            JSGlobalObject *originGlobalObject = vm.deprecatedVMEntryGlobalObject(lexicalGlobalObject);
             RootObject* originRootObject = findRootObject(originGlobalObject);
 
             JSGlobalObject* globalObject = 0;
@@ -129,7 +139,7 @@ ObjcValue convertValueToObjcValue(ExecState* exec, JSValue value, ObjcValueType 
             break;
         case ObjcLongLongType:
         case ObjcUnsignedLongLongType:
-            result.longLongValue = (long long)d;
+            result.longLongValue = convertDoubleToLongLong(d);
             break;
         case ObjcFloatType:
             result.floatValue = (float)d;
@@ -150,9 +160,9 @@ ObjcValue convertValueToObjcValue(ExecState* exec, JSValue value, ObjcValueType 
     return result;
 }
 
-JSValue convertNSStringToString(ExecState* exec, NSString *nsstring)
+JSValue convertNSStringToString(JSGlobalObject* lexicalGlobalObject, NSString *nsstring)
 {
-    VM& vm = exec->vm();
+    VM& vm = lexicalGlobalObject->vm();
     JSLockHolder lock(vm);
     JSValue aValue = jsString(vm, String(nsstring));
     return aValue;
@@ -176,15 +186,15 @@ JSValue convertNSStringToString(ExecState* exec, NSString *nsstring)
     id              object wrapper
     other           should not happen
 */
-JSValue convertObjcValueToValue(ExecState* exec, void* buffer, ObjcValueType type, RootObject* rootObject)
+JSValue convertObjcValueToValue(JSGlobalObject* lexicalGlobalObject, void* buffer, ObjcValueType type, RootObject* rootObject)
 {
-    JSLockHolder lock(exec);
+    JSLockHolder lock(lexicalGlobalObject);
     
     switch (type) {
         case ObjcObjectType: {
             id obj = *(const id*)buffer;
             if ([obj isKindOfClass:[NSString class]])
-                return convertNSStringToString(exec, (NSString *)obj);
+                return convertNSStringToString(lexicalGlobalObject, (NSString *)obj);
             if ([obj isKindOfClass:webUndefinedClass()])
                 return jsUndefined();
             if ((__bridge CFBooleanRef)obj == kCFBooleanTrue)
@@ -194,7 +204,7 @@ JSValue convertObjcValueToValue(ExecState* exec, void* buffer, ObjcValueType typ
             if ([obj isKindOfClass:[NSNumber class]])
                 return jsNumber([obj doubleValue]);
             if ([obj isKindOfClass:[NSArray class]])
-                return RuntimeArray::create(exec, new ObjcArray(obj, rootObject));
+                return RuntimeArray::create(lexicalGlobalObject, new ObjcArray(obj, rootObject));
             if ([obj isKindOfClass:webScriptObjectClass()]) {
                 JSObject* imp = [obj _imp];
                 return imp ? imp : jsUndefined();
@@ -203,7 +213,7 @@ JSValue convertObjcValueToValue(ExecState* exec, void* buffer, ObjcValueType typ
                 return jsNull();
             if (obj == 0)
                 return jsUndefined();
-            return ObjcInstance::create(obj, rootObject)->createRuntimeObject(exec);
+            return ObjcInstance::create(obj, rootObject)->createRuntimeObject(lexicalGlobalObject);
         }
         case ObjcCharType:
             return jsNumber(*(char*)buffer);
@@ -314,10 +324,10 @@ ObjcValueType objcValueTypeForType(const char *type)
     return objcValueType;
 }
 
-Exception *throwError(ExecState *exec, ThrowScope& scope, NSString *message)
+Exception *throwError(JSGlobalObject* lexicalGlobalObject, ThrowScope& scope, NSString *message)
 {
     ASSERT(message);
-    return throwException(exec, scope, JSC::createError(exec, String(message)));
+    return throwException(lexicalGlobalObject, scope, JSC::createError(lexicalGlobalObject, String(message)));
 }
 
 }

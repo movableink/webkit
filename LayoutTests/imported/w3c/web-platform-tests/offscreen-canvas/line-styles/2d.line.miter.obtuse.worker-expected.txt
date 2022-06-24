@@ -1,3 +1,0 @@
-
-FAIL Miter joins are drawn correctly with obtuse angles Can't find variable: OffscreenCanvas
-

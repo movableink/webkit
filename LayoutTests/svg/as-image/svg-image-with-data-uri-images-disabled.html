@@ -10,8 +10,8 @@
   </style>
   <script>
     if (window.testRunner) {
-      window.internals.settings.setImagesEnabled(false);
-      testRunner.overridePreference('WebKitDisplayImagesKey', 0);
+      internals.settings.setImagesEnabled(false);
+      internals.settings.setLoadsImagesAutomatically(false);
       testRunner.queueReload();
     }
   </script>

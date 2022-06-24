@@ -25,41 +25,62 @@
 
 #pragma once
 
-#include "AccessibilityUIElement.h"
 #include "JSWrappable.h"
 #include <JavaScriptCore/JSObjectRef.h>
+#include <JavaScriptCore/JSRetainPtr.h>
+#include <wtf/Condition.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Platform.h>
+#if PLATFORM(COCOA)
+#include <wtf/RetainPtr.h>
+#endif
+#include <wtf/RunLoop.h>
+#include <wtf/Threading.h>
+
 #if USE(ATK)
 #include "AccessibilityNotificationHandlerAtk.h"
 #endif
 
 namespace WTR {
-    
+
+class AccessibilityUIElement;
+#if USE(ATSPI)
+class AccessibilityNotificationHandler;
+#endif
+
 class AccessibilityController : public JSWrappable {
 public:
     static Ref<AccessibilityController> create();
     ~AccessibilityController();
 
-    void makeWindowObject(JSContextRef, JSObjectRef windowObject, JSValueRef* exception);
+    void makeWindowObject(JSContextRef);
     virtual JSClassRef wrapperClass();
     
     // Enhanced accessibility.
     void enableEnhancedAccessibility(bool);
     bool enhancedAccessibilityEnabled();
-    
+
+    void setIsolatedTreeMode(bool);
+
     JSRetainPtr<JSStringRef> platformName();
 
     // Controller Methods - platform-independent implementations.
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY)
     Ref<AccessibilityUIElement> rootElement();
-    Ref<AccessibilityUIElement> focusedElement();
+    RefPtr<AccessibilityUIElement> focusedElement();
 #endif
     RefPtr<AccessibilityUIElement> elementAtPoint(int x, int y);
     RefPtr<AccessibilityUIElement> accessibleElementById(JSStringRef idAttribute);
 
+#if PLATFORM(COCOA)
+    void executeOnAXThreadAndWait(Function<void()>&&);
+    void executeOnAXThread(Function<void()>&&);
+    void executeOnMainThread(Function<void()>&&);
+#endif
+
     bool addNotificationListener(JSValueRef functionCallback);
     bool removeNotificationListener();
+    void injectAccessibilityPreference(JSStringRef domain, JSStringRef key, JSStringRef value);
 
     // Here for consistency with DRT. Not implemented because they don't do anything on the Mac.
     void logFocusEvents() { }
@@ -69,7 +90,7 @@ public:
 
     void resetToConsistentState();
 
-#if !HAVE(ACCESSIBILITY) && (PLATFORM(GTK) || PLATFORM(WPE))
+#if !ENABLE(ACCESSIBILITY) && (PLATFORM(GTK) || PLATFORM(WPE))
     RefPtr<AccessibilityUIElement> rootElement() { return nullptr; }
     RefPtr<AccessibilityUIElement> focusedElement() { return nullptr; }
 #endif
@@ -78,10 +99,76 @@ private:
     AccessibilityController();
 
 #if PLATFORM(COCOA)
-    RetainPtr<NotificationHandler> m_globalNotificationHandler;
+    RetainPtr<id> m_globalNotificationHandler;
 #elif USE(ATK)
     RefPtr<AccessibilityNotificationHandler> m_globalNotificationHandler;
+#elif USE(ATSPI)
+    std::unique_ptr<AccessibilityNotificationHandler> m_globalNotificationHandler;
+#endif
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    void updateIsolatedTreeMode();
+
+#if PLATFORM(COCOA)
+    void spinMainRunLoop() const;
+    // _AXUIElementUseSecondaryAXThread and _AXUIElementRequestServicedBySecondaryAXThread
+    // do not work for WebKitTestRunner since this is calling directly into
+    // WebCore/accessibility via JavaScript without going through HIServices.
+    // Thus to simulate the behavior of HIServices, AccessibilityController is spawning a secondary thread to service the JavaScript requests.
+    bool m_useMockAXThread { false };
+#endif
+    bool m_accessibilityIsolatedTreeMode { false };
 #endif
 };
+
+#if PLATFORM(COCOA)
+
+class AXThread {
+    WTF_MAKE_NONCOPYABLE(AXThread);
+
+public:
+    static bool isCurrentThread();
+    static void dispatch(Function<void()>&&);
+
+    // Will dispatch the given function on the main thread once all pending functions
+    // on the AX thread have finished executing. Used for synchronization purposes.
+    static void dispatchBarrier(Function<void()>&&);
+
+private:
+    friend NeverDestroyed<AXThread>;
+
+    AXThread();
+
+    static AXThread& singleton();
+
+    void createThreadIfNeeded();
+    void dispatchFunctionsFromAXThread();
+
+    void initializeRunLoop();
+    void wakeUpRunLoop();
+
+#if PLATFORM(COCOA)
+    static void threadRunLoopSourceCallback(void* AXThread);
+    void threadRunLoopSourceCallback();
+#endif
+
+    RefPtr<Thread> m_thread;
+
+    Condition m_initializeRunLoopConditionVariable;
+    Lock m_initializeRunLoopMutex;
+
+    Lock m_functionsMutex;
+    Vector<Function<void()>> m_functions;
+
+#if PLATFORM(COCOA)
+    // FIXME: We should use WebCore::RunLoop here.
+    RetainPtr<CFRunLoopRef> m_threadRunLoop;
+    RetainPtr<CFRunLoopSourceRef> m_threadRunLoopSource;
+#else
+    RunLoop* m_runLoop { nullptr };
+#endif
+};
+
+#endif // PLATFORM(COCOA)
 
 } // namespace WTR

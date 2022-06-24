@@ -8,14 +8,15 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "api/video/video_frame.h"
+
 #include <math.h>
 #include <string.h>
 
 #include "api/video/i010_buffer.h"
 #include "api/video/i420_buffer.h"
-#include "api/video/video_frame.h"
-#include "rtc_base/bind.h"
-#include "rtc_base/timeutils.h"
+#include "api/video/nv12_buffer.h"
+#include "rtc_base/time_utils.h"
 #include "test/fake_texture_frame.h"
 #include "test/frame_utils.h"
 #include "test/gtest.h"
@@ -156,6 +157,29 @@ rtc::scoped_refptr<PlanarYuvBuffer> CreateGradient(VideoFrameBuffer::Type type,
   return I010Buffer::Copy(*buffer);
 }
 
+rtc::scoped_refptr<NV12BufferInterface> CreateNV12Gradient(int width,
+                                                           int height) {
+  rtc::scoped_refptr<NV12Buffer> buffer(NV12Buffer::Create(width, height));
+  // Initialize with gradient, Y = 128(x/w + y/h), U = 256 x/w, V = 256 y/h
+  for (int x = 0; x < width; x++) {
+    for (int y = 0; y < height; y++) {
+      buffer->MutableDataY()[x + y * width] =
+          128 * (x * height + y * width) / (width * height);
+    }
+  }
+  int chroma_width = buffer->ChromaWidth();
+  int chroma_height = buffer->ChromaHeight();
+  for (int x = 0; x < chroma_width; x++) {
+    for (int y = 0; y < chroma_height; y++) {
+      buffer->MutableDataUV()[x * 2 + y * buffer->StrideUV()] =
+          255 * x / (chroma_width - 1);
+      buffer->MutableDataUV()[x * 2 + 1 + y * buffer->StrideUV()] =
+          255 * y / (chroma_height - 1);
+    }
+  }
+  return buffer;
+}
+
 // The offsets and sizes describe the rectangle extracted from the
 // original (gradient) frame, in relative coordinates where the
 // original frame correspond to the unit square, 0.0 <= x, y < 1.0.
@@ -226,12 +250,56 @@ void CheckRotate(int width,
   }
 }
 
+int GetU(rtc::scoped_refptr<PlanarYuvBuffer> buf, int col, int row) {
+  if (buf->type() == VideoFrameBuffer::Type::kI420) {
+    return buf->GetI420()
+        ->DataU()[row / 2 * buf->GetI420()->StrideU() + col / 2];
+  } else {
+    return buf->GetI010()
+        ->DataU()[row / 2 * buf->GetI010()->StrideU() + col / 2];
+  }
+}
+
+int GetV(rtc::scoped_refptr<PlanarYuvBuffer> buf, int col, int row) {
+  if (buf->type() == VideoFrameBuffer::Type::kI420) {
+    return buf->GetI420()
+        ->DataV()[row / 2 * buf->GetI420()->StrideV() + col / 2];
+  } else {
+    return buf->GetI010()
+        ->DataV()[row / 2 * buf->GetI010()->StrideV() + col / 2];
+  }
+}
+
+int GetY(rtc::scoped_refptr<PlanarYuvBuffer> buf, int col, int row) {
+  if (buf->type() == VideoFrameBuffer::Type::kI420) {
+    return buf->GetI420()->DataY()[row * buf->GetI420()->StrideY() + col];
+  } else {
+    return buf->GetI010()->DataY()[row * buf->GetI010()->StrideY() + col];
+  }
+}
+
+void PasteFromBuffer(PlanarYuvBuffer* canvas,
+                     const PlanarYuvBuffer& picture,
+                     int offset_col,
+                     int offset_row) {
+  if (canvas->type() == VideoFrameBuffer::Type::kI420) {
+    I420Buffer* buf = static_cast<I420Buffer*>(canvas);
+    buf->PasteFrom(*picture.GetI420(), offset_col, offset_row);
+  } else {
+    I010Buffer* buf = static_cast<I010Buffer*>(canvas);
+    buf->PasteFrom(*picture.GetI010(), offset_col, offset_row);
+  }
+}
+
 }  // namespace
 
 TEST(TestVideoFrame, WidthHeightValues) {
-  VideoFrame frame(I420Buffer::Create(10, 10, 10, 14, 90),
-                   webrtc::kVideoRotation_0,
-                   789 * rtc::kNumMicrosecsPerMillisec);
+  VideoFrame frame =
+      VideoFrame::Builder()
+          .set_video_frame_buffer(I420Buffer::Create(10, 10, 10, 14, 90))
+          .set_rotation(webrtc::kVideoRotation_0)
+          .set_timestamp_ms(789)
+          .build();
   const int valid_value = 10;
   EXPECT_EQ(valid_value, frame.width());
   EXPECT_EQ(valid_value, frame.height());
@@ -263,18 +331,22 @@ TEST(TestVideoFrame, ShallowCopy) {
   memset(buffer_u, 8, kSizeU);
   memset(buffer_v, 4, kSizeV);
 
-  VideoFrame frame1(I420Buffer::Copy(width, height, buffer_y, stride_y,
-                                     buffer_u, stride_u, buffer_v, stride_v),
-                    kRotation, 0);
+  VideoFrame frame1 = VideoFrame::Builder()
+                          .set_video_frame_buffer(I420Buffer::Copy(
+                              width, height, buffer_y, stride_y, buffer_u,
+                              stride_u, buffer_v, stride_v))
+                          .set_rotation(kRotation)
+                          .set_timestamp_us(0)
+                          .build();
   frame1.set_timestamp(timestamp);
   frame1.set_ntp_time_ms(ntp_time_ms);
   frame1.set_timestamp_us(timestamp_us);
   VideoFrame frame2(frame1);
 
   EXPECT_EQ(frame1.video_frame_buffer(), frame2.video_frame_buffer());
-  rtc::scoped_refptr<I420BufferInterface> yuv1 =
+  const webrtc::I420BufferInterface* yuv1 =
       frame1.video_frame_buffer()->GetI420();
-  rtc::scoped_refptr<I420BufferInterface> yuv2 =
+  const webrtc::I420BufferInterface* yuv2 =
       frame2.video_frame_buffer()->GetI420();
   EXPECT_EQ(yuv1->DataY(), yuv2->DataY());
   EXPECT_EQ(yuv1->DataU(), yuv2->DataU());
@@ -404,10 +476,76 @@ TEST_P(TestPlanarYuvBuffer, CropAndScale16x9) {
   CheckCrop(*scaled_buffer->ToI420(), 0.0, 0.125, 1.0, 0.75);
 }
 
-INSTANTIATE_TEST_CASE_P(,
-                        TestPlanarYuvBuffer,
-                        ::testing::Values(VideoFrameBuffer::Type::kI420,
-                                          VideoFrameBuffer::Type::kI010));
+TEST_P(TestPlanarYuvBuffer, PastesIntoBuffer) {
+  const int kOffsetx = 20;
+  const int kOffsety = 30;
+  const int kPicSize = 20;
+  const int kWidth = 160;
+  const int kHeight = 80;
+  rtc::scoped_refptr<PlanarYuvBuffer> buf =
+      CreateGradient(GetParam(), kWidth, kHeight);
+
+  rtc::scoped_refptr<PlanarYuvBuffer> original =
+      CreateGradient(GetParam(), kWidth, kHeight);
+
+  rtc::scoped_refptr<PlanarYuvBuffer> picture =
+      CreateGradient(GetParam(), kPicSize, kPicSize);
+
+  rtc::scoped_refptr<PlanarYuvBuffer> odd_picture =
+      CreateGradient(GetParam(), kPicSize + 1, kPicSize - 1);
+
+  PasteFromBuffer(buf.get(), *picture, kOffsetx, kOffsety);
+
+  for (int i = 0; i < kWidth; ++i) {
+    for (int j = 0; j < kHeight; ++j) {
+      bool is_inside = i >= kOffsetx && i < kOffsetx + kPicSize &&
+                       j >= kOffsety && j < kOffsety + kPicSize;
+      if (!is_inside) {
+        EXPECT_EQ(GetU(original, i, j), GetU(buf, i, j));
+        EXPECT_EQ(GetV(original, i, j), GetV(buf, i, j));
+        EXPECT_EQ(GetY(original, i, j), GetY(buf, i, j));
+      } else {
+        EXPECT_EQ(GetU(picture, i - kOffsetx, j - kOffsety), GetU(buf, i, j));
+        EXPECT_EQ(GetV(picture, i - kOffsetx, j - kOffsety), GetV(buf, i, j));
+        EXPECT_EQ(GetY(picture, i - kOffsetx, j - kOffsety), GetY(buf, i, j));
+      }
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(All,
+                         TestPlanarYuvBuffer,
+                         ::testing::Values(VideoFrameBuffer::Type::kI420,
+                                           VideoFrameBuffer::Type::kI010));
+
+TEST(TestNV12Buffer, CropAndScale) {
+  const int kSourceWidth = 640;
+  const int kSourceHeight = 480;
+  const int kScaledWidth = 320;
+  const int kScaledHeight = 240;
+  const int kCropLeft = 40;
+  const int kCropTop = 30;
+  const int kCropRight = 0;
+  const int kCropBottom = 30;
+
+  rtc::scoped_refptr<VideoFrameBuffer> buf =
+      CreateNV12Gradient(kSourceWidth, kSourceHeight);
+
+  rtc::scoped_refptr<VideoFrameBuffer> scaled_buffer = buf->CropAndScale(
+      kCropLeft, kCropTop, kSourceWidth - kCropLeft - kCropRight,
+      kSourceHeight - kCropTop - kCropBottom, kScaledWidth, kScaledHeight);
+
+  // Parameters to CheckCrop indicate what part of the source frame is in the
+  // scaled frame.
+  const float kOffsetX = (kCropLeft + 0.0) / kSourceWidth;
+  const float kOffsetY = (kCropTop + 0.0) / kSourceHeight;
+  const float kRelativeWidth =
+      (kSourceWidth - kCropLeft - kCropRight + 0.0) / kSourceWidth;
+  const float kRelativeHeight =
+      (kSourceHeight - kCropTop - kCropBottom + 0.0) / kSourceHeight;
+  CheckCrop(*scaled_buffer->ToI420(), kOffsetX, kOffsetY, kRelativeWidth,
+            kRelativeHeight);
+}
 
 class TestPlanarYuvBufferRotate
     : public ::testing::TestWithParam<
@@ -422,7 +560,7 @@ TEST_P(TestPlanarYuvBufferRotate, Rotates) {
   CheckRotate(640, 480, rotation, *rotated_buffer->ToI420());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Rotate,
     TestPlanarYuvBufferRotate,
     ::testing::Combine(::testing::Values(kVideoRotation_0,
@@ -431,5 +569,147 @@ INSTANTIATE_TEST_CASE_P(
                                          kVideoRotation_270),
                        ::testing::Values(VideoFrameBuffer::Type::kI420,
                                          VideoFrameBuffer::Type::kI010)));
+
+TEST(TestUpdateRect, CanCompare) {
+  VideoFrame::UpdateRect a = {0, 0, 100, 200};
+  VideoFrame::UpdateRect b = {0, 0, 100, 200};
+  VideoFrame::UpdateRect c = {1, 0, 100, 200};
+  VideoFrame::UpdateRect d = {0, 1, 100, 200};
+  EXPECT_TRUE(a == b);
+  EXPECT_FALSE(a == c);
+  EXPECT_FALSE(a == d);
+}
+
+TEST(TestUpdateRect, ComputesIsEmpty) {
+  VideoFrame::UpdateRect a = {0, 0, 0, 0};
+  VideoFrame::UpdateRect b = {0, 0, 100, 200};
+  VideoFrame::UpdateRect c = {1, 100, 0, 0};
+  VideoFrame::UpdateRect d = {1, 100, 100, 200};
+  EXPECT_TRUE(a.IsEmpty());
+  EXPECT_FALSE(b.IsEmpty());
+  EXPECT_TRUE(c.IsEmpty());
+  EXPECT_FALSE(d.IsEmpty());
+}
+
+TEST(TestUpdateRectUnion, NonIntersecting) {
+  VideoFrame::UpdateRect a = {0, 0, 10, 20};
+  VideoFrame::UpdateRect b = {100, 200, 10, 20};
+  a.Union(b);
+  EXPECT_EQ(a, VideoFrame::UpdateRect({0, 0, 110, 220}));
+}
+
+TEST(TestUpdateRectUnion, Intersecting) {
+  VideoFrame::UpdateRect a = {0, 0, 10, 10};
+  VideoFrame::UpdateRect b = {5, 5, 30, 20};
+  a.Union(b);
+  EXPECT_EQ(a, VideoFrame::UpdateRect({0, 0, 35, 25}));
+}
+
+TEST(TestUpdateRectUnion, OneInsideAnother) {
+  VideoFrame::UpdateRect a = {0, 0, 100, 100};
+  VideoFrame::UpdateRect b = {5, 5, 30, 20};
+  a.Union(b);
+  EXPECT_EQ(a, VideoFrame::UpdateRect({0, 0, 100, 100}));
+}
+
+TEST(TestUpdateRectIntersect, NonIntersecting) {
+  VideoFrame::UpdateRect a = {0, 0, 10, 20};
+  VideoFrame::UpdateRect b = {100, 200, 10, 20};
+  a.Intersect(b);
+  EXPECT_EQ(a, VideoFrame::UpdateRect({0, 0, 0, 0}));
+}
+
+TEST(TestUpdateRectIntersect, Intersecting) {
+  VideoFrame::UpdateRect a = {0, 0, 10, 10};
+  VideoFrame::UpdateRect b = {5, 5, 30, 20};
+  a.Intersect(b);
+  EXPECT_EQ(a, VideoFrame::UpdateRect({5, 5, 5, 5}));
+}
+
+TEST(TestUpdateRectIntersect, OneInsideAnother) {
+  VideoFrame::UpdateRect a = {0, 0, 100, 100};
+  VideoFrame::UpdateRect b = {5, 5, 30, 20};
+  a.Intersect(b);
+  EXPECT_EQ(a, VideoFrame::UpdateRect({5, 5, 30, 20}));
+}
+
+TEST(TestUpdateRectScale, NoScale) {
+  const int width = 640;
+  const int height = 480;
+  VideoFrame::UpdateRect a = {100, 50, 100, 200};
+  VideoFrame::UpdateRect scaled =
+      a.ScaleWithFrame(width, height, 0, 0, width, height, width, height);
+  EXPECT_EQ(scaled, VideoFrame::UpdateRect({100, 50, 100, 200}));
+}
+
+TEST(TestUpdateRectScale, CropOnly) {
+  const int width = 640;
+  const int height = 480;
+  VideoFrame::UpdateRect a = {100, 50, 100, 200};
+  VideoFrame::UpdateRect scaled = a.ScaleWithFrame(
+      width, height, 10, 10, width - 20, height - 20, width - 20, height - 20);
+  EXPECT_EQ(scaled, VideoFrame::UpdateRect({90, 40, 100, 200}));
+}
+
+TEST(TestUpdateRectScale, CropOnlyToOddOffset) {
+  const int width = 640;
+  const int height = 480;
+  VideoFrame::UpdateRect a = {100, 50, 100, 200};
+  VideoFrame::UpdateRect scaled = a.ScaleWithFrame(
+      width, height, 5, 5, width - 10, height - 10, width - 10, height - 10);
+  EXPECT_EQ(scaled, VideoFrame::UpdateRect({94, 44, 102, 202}));
+}
+
+TEST(TestUpdateRectScale, ScaleByHalf) {
+  const int width = 640;
+  const int height = 480;
+  VideoFrame::UpdateRect a = {100, 60, 100, 200};
+  VideoFrame::UpdateRect scaled = a.ScaleWithFrame(
+      width, height, 0, 0, width, height, width / 2, height / 2);
+  // Scaled by half and +2 pixels in all directions.
+  EXPECT_EQ(scaled, VideoFrame::UpdateRect({48, 28, 54, 104}));
+}
+
+TEST(TestUpdateRectScale, CropToUnchangedRegionBelowUpdateRect) {
+  const int width = 640;
+  const int height = 480;
+  VideoFrame::UpdateRect a = {100, 60, 100, 200};
+  VideoFrame::UpdateRect scaled = a.ScaleWithFrame(
+      width, height, (width - 10) / 2, (height - 10) / 2, 10, 10, 10, 10);
+  // Update is out of the cropped frame.
+  EXPECT_EQ(scaled, VideoFrame::UpdateRect({0, 0, 0, 0}));
+}
+
+TEST(TestUpdateRectScale, CropToUnchangedRegionAboveUpdateRect) {
+  const int width = 640;
+  const int height = 480;
+  VideoFrame::UpdateRect a = {600, 400, 10, 10};
+  VideoFrame::UpdateRect scaled = a.ScaleWithFrame(
+      width, height, (width - 10) / 2, (height - 10) / 2, 10, 10, 10, 10);
+  // Update is out of the cropped frame.
+  EXPECT_EQ(scaled, VideoFrame::UpdateRect({0, 0, 0, 0}));
+}
+
+TEST(TestUpdateRectScale, CropInsideUpdate) {
+  const int width = 640;
+  const int height = 480;
+  VideoFrame::UpdateRect a = {300, 200, 100, 100};
+  VideoFrame::UpdateRect scaled = a.ScaleWithFrame(
+      width, height, (width - 10) / 2, (height - 10) / 2, 10, 10, 10, 10);
+  // Cropped frame is inside the update rect.
+  EXPECT_EQ(scaled, VideoFrame::UpdateRect({0, 0, 10, 10}));
+}
+
+TEST(TestUpdateRectScale, CropAndScaleByHalf) {
+  const int width = 640;
+  const int height = 480;
+  VideoFrame::UpdateRect a = {100, 60, 100, 200};
+  VideoFrame::UpdateRect scaled =
+      a.ScaleWithFrame(width, height, 10, 10, width - 20, height - 20,
+                       (width - 20) / 2, (height - 20) / 2);
+  // Scaled by half and +3 pixels in all directions, because of odd offset after
+  // crop and scale.
+  EXPECT_EQ(scaled, VideoFrame::UpdateRect({42, 22, 56, 106}));
+}
 
 }  // namespace webrtc

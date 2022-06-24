@@ -1,5 +1,5 @@
 # Copyright (c) 2009 Google Inc. All rights reserved.
-# Copyright (c) 2009 Apple Inc. All rights reserved.
+# Copyright (c) 2009-2021 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -30,11 +30,16 @@
 # A tool for automating dealing with bugzilla, posting patches, committing
 # patches, etc.
 
+import requests
 from webkitpy.common.config import urls
 
 
 def bug_comment_from_svn_revision(svn_revision):
-    return "Committed r%s: <%s>" % (svn_revision, urls.view_revision_url(svn_revision))
+    repr = 'r{}'.format(svn_revision)
+    response = requests.get('https://commits.webkit.org/{}/json'.format(repr))
+    if response.status_code == 200:
+        repr = response.json().get('identifier', repr)
+    return 'Committed r{} ({}): <{}>'.format(svn_revision, repr if '@' in repr else '?', urls.view_identifier_url(repr))
 
 
 def bug_comment_from_commit_text(scm, commit_text):

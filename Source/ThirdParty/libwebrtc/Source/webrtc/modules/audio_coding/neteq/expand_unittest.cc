@@ -20,7 +20,7 @@
 #include "modules/audio_coding/neteq/tools/resample_input_audio_file.h"
 #include "rtc_base/numerics/safe_conversions.h"
 #include "test/gtest.h"
-#include "test/testsupport/fileutils.h"
+#include "test/testsupport/file_utils.h"
 
 namespace webrtc {
 
@@ -83,7 +83,6 @@ class ExpandTest : public ::testing::Test {
                 &statistics_,
                 test_sample_rate_hz_,
                 num_channels_) {
-    WebRtcSpl_Init();
     input_file_.set_output_rate_hz(test_sample_rate_hz_);
   }
 
@@ -125,7 +124,7 @@ TEST_F(ExpandTest, DelayedPacketOutage) {
     EXPECT_EQ(0, statistics_.last_outage_duration_samples());
   }
   expand_.SetParametersForNormalAfterExpand();
-  // Convert |sum_output_len_samples| to milliseconds.
+  // Convert `sum_output_len_samples` to milliseconds.
   EXPECT_EQ(rtc::checked_cast<int>(sum_output_len_samples),
             statistics_.last_outage_duration_samples());
 }
@@ -165,7 +164,7 @@ TEST_F(ExpandTest, CheckOutageStatsAfterReset) {
     EXPECT_EQ(0, statistics_.last_outage_duration_samples());
   }
   expand_.SetParametersForNormalAfterExpand();
-  // Convert |sum_output_len_samples| to milliseconds.
+  // Convert `sum_output_len_samples` to milliseconds.
   EXPECT_EQ(rtc::checked_cast<int>(sum_output_len_samples),
             statistics_.last_outage_duration_samples());
 }

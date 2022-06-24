@@ -25,7 +25,7 @@
 
 import unittest
 
-from jstest import map_functions_to_dict
+from webkitpy.style.checkers.jstest import map_functions_to_dict
 
 
 class JSTestCheckerTestCase(unittest.TestCase):
@@ -36,7 +36,7 @@ class JSTestCheckerTestCase(unittest.TestCase):
 
         This also implicitly tests strip_trailing_blank_lines_and_comments().
         """
-        file1 = """
+        file1 = b"""
 function shouldBe() {}
 
 // Same as !shouldBe(), but output makes more sense.
@@ -53,7 +53,7 @@ function shouldThrow() {
 """
         result1 = map_functions_to_dict(file1)
 
-        file2 = """function shouldBe() {}
+        file2 = b"""function shouldBe() {}
 function shouldNotBe() {}
 function shouldThrow() {
 }

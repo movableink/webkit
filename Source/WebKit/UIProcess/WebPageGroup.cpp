@@ -40,13 +40,7 @@
 
 namespace WebKit {
 
-static uint64_t generatePageGroupID()
-{
-    static uint64_t uniquePageGroupID = 1;
-    return uniquePageGroupID++;
-}
-
-typedef HashMap<uint64_t, WebPageGroup*> WebPageGroupMap;
+typedef HashMap<PageGroupIdentifier, WebPageGroup*> WebPageGroupMap;
 
 static WebPageGroupMap& webPageGroupMap()
 {
@@ -59,21 +53,36 @@ Ref<WebPageGroup> WebPageGroup::create(const String& identifier)
     return adoptRef(*new WebPageGroup(identifier));
 }
 
-WebPageGroup* WebPageGroup::get(uint64_t pageGroupID)
+WebPageGroup* WebPageGroup::get(PageGroupIdentifier pageGroupID)
 {
     return webPageGroupMap().get(pageGroupID);
+}
+
+void WebPageGroup::forEach(Function<void(WebPageGroup&)>&& function)
+{
+    auto allGroups = copyToVectorOf<RefPtr<WebPageGroup>>(webPageGroupMap().values());
+    for (auto& group : allGroups) {
+        if (group)
+            function(*group);
+    }
 }
 
 static WebPageGroupData pageGroupData(const String& identifier)
 {
     WebPageGroupData data;
 
-    data.pageGroupID = generatePageGroupID();
+    static NeverDestroyed<HashMap<String, PageGroupIdentifier>> map;
+    if (HashMap<String, PageGroupIdentifier>::isValidKey(identifier)) {
+        data.pageGroupID = map.get().ensure(identifier, [] {
+            return PageGroupIdentifier::generate();
+        }).iterator->value;
+    } else
+        data.pageGroupID = PageGroupIdentifier::generate();
 
     if (!identifier.isEmpty())
         data.identifier = identifier;
     else
-        data.identifier = makeString("__uniquePageGroupID-", data.pageGroupID);
+        data.identifier = makeString("__uniquePageGroupID-", data.pageGroupID.toUInt64());
 
     return data;
 }
@@ -85,8 +94,6 @@ WebPageGroup::WebPageGroup(const String& identifier)
     , m_preferences(WebPreferences::createWithLegacyDefaults(m_data.identifier, ".WebKit2", "WebKit2."))
     , m_userContentController(WebUserContentControllerProxy::create())
 {
-    m_data.userContentControllerIdentifier = m_userContentController->identifier();
-
     webPageGroupMap().set(m_data.pageGroupID, this);
 }
 
@@ -95,12 +102,12 @@ WebPageGroup::~WebPageGroup()
     webPageGroupMap().remove(pageGroupID());
 }
 
-void WebPageGroup::addPage(WebPageProxy* page)
+void WebPageGroup::addPage(WebPageProxy& page)
 {
     m_pages.add(page);
 }
 
-void WebPageGroup::removePage(WebPageProxy* page)
+void WebPageGroup::removePage(WebPageProxy& page)
 {
     m_pages.remove(page);
 }
@@ -113,7 +120,7 @@ void WebPageGroup::setPreferences(WebPreferences* preferences)
     m_preferences = preferences;
 
     for (auto& webPageProxy : m_pages)
-        webPageProxy->setPreferences(*m_preferences);
+        webPageProxy.setPreferences(*m_preferences);
 }
 
 WebPreferences& WebPageGroup::preferences() const

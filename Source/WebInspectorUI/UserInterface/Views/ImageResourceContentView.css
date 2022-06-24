@@ -33,7 +33,7 @@
     overflow-y: auto;
 }
 
-.content-view.resource.image > .drop-zone {
+.content-view.resource.image > :matches(.local-resource-override-label-view, .local-resource-override-warning-view):not([hidden]) ~ .drop-zone {
     top: calc(var(--navigation-bar-height) - 2px); /* borders */
 }
 
@@ -41,8 +41,11 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
     width: 100%;
     height: 100%;
+    min-width: 0;
+    min-height: 0;
     padding: 15px;
 }
 
@@ -51,6 +54,10 @@
     max-height: 100%;
     -webkit-user-select: text;
     -webkit-user-drag: auto;
+}
+
+.navigation-bar > .item.image-gesture-reset {
+    font-variant-numeric: tabular-nums;
 }
 
 @media (prefers-color-scheme: dark) {

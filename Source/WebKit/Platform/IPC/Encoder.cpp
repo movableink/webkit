@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,12 @@
 #include "config.h"
 #include "Encoder.h"
 
+#include "ArgumentCoders.h"
 #include "DataReference.h"
 #include "MessageFlags.h"
 #include <algorithm>
-#include <stdio.h>
+#include <wtf/OptionSet.h>
+#include <wtf/UniqueRef.h>
 
 #if OS(DARWIN)
 #include <sys/mman.h>
@@ -61,14 +63,9 @@ static inline void freeBuffer(void* addr, size_t size)
 #endif
 }
 
-Encoder::Encoder(StringReference messageReceiverName, StringReference messageName, uint64_t destinationID)
-    : m_messageReceiverName(messageReceiverName)
-    , m_messageName(messageName)
+Encoder::Encoder(MessageName messageName, uint64_t destinationID)
+    : m_messageName(messageName)
     , m_destinationID(destinationID)
-    , m_buffer(m_inlineBuffer)
-    , m_bufferPointer(m_inlineBuffer)
-    , m_bufferSize(0)
-    , m_bufferCapacity(sizeof(m_inlineBuffer))
 {
     encodeHeader();
 }
@@ -80,58 +77,51 @@ Encoder::~Encoder()
     // FIXME: We need to dispose of the attachments in cases of failure.
 }
 
-bool Encoder::isSyncMessage() const
-{
-    return *buffer() & SyncMessage;
-}
-
 ShouldDispatchWhenWaitingForSyncReply Encoder::shouldDispatchMessageWhenWaitingForSyncReply() const
 {
-    if (*buffer() & DispatchMessageWhenWaitingForSyncReply)
+    if (messageFlags().contains(MessageFlags::DispatchMessageWhenWaitingForSyncReply))
         return ShouldDispatchWhenWaitingForSyncReply::Yes;
-    if (*buffer() & DispatchMessageWhenWaitingForUnboundedSyncReply)
+    if (messageFlags().contains(MessageFlags::DispatchMessageWhenWaitingForUnboundedSyncReply))
         return ShouldDispatchWhenWaitingForSyncReply::YesDuringUnboundedIPC;
     return ShouldDispatchWhenWaitingForSyncReply::No;
-}
-
-void Encoder::setIsSyncMessage(bool isSyncMessage)
-{
-    if (isSyncMessage)
-        *buffer() |= SyncMessage;
-    else
-        *buffer() &= ~SyncMessage;
 }
 
 void Encoder::setShouldDispatchMessageWhenWaitingForSyncReply(ShouldDispatchWhenWaitingForSyncReply shouldDispatchWhenWaitingForSyncReply)
 {
     switch (shouldDispatchWhenWaitingForSyncReply) {
     case ShouldDispatchWhenWaitingForSyncReply::No:
-        *buffer() &= ~(DispatchMessageWhenWaitingForSyncReply | DispatchMessageWhenWaitingForUnboundedSyncReply);
+        messageFlags().remove(MessageFlags::DispatchMessageWhenWaitingForSyncReply);
+        messageFlags().remove(MessageFlags::DispatchMessageWhenWaitingForUnboundedSyncReply);
         break;
     case ShouldDispatchWhenWaitingForSyncReply::Yes:
-        *buffer() |= DispatchMessageWhenWaitingForSyncReply;
-        *buffer() &= ~DispatchMessageWhenWaitingForUnboundedSyncReply;
+        messageFlags().add(MessageFlags::DispatchMessageWhenWaitingForSyncReply);
+        messageFlags().remove(MessageFlags::DispatchMessageWhenWaitingForUnboundedSyncReply);
         break;
     case ShouldDispatchWhenWaitingForSyncReply::YesDuringUnboundedIPC:
-        *buffer() |= DispatchMessageWhenWaitingForUnboundedSyncReply;
-        *buffer() &= ~DispatchMessageWhenWaitingForSyncReply;
+        messageFlags().remove(MessageFlags::DispatchMessageWhenWaitingForSyncReply);
+        messageFlags().add(MessageFlags::DispatchMessageWhenWaitingForUnboundedSyncReply);
         break;
     }
 }
 
 void Encoder::setFullySynchronousModeForTesting()
 {
-    *buffer() |= UseFullySynchronousModeForTesting;
+    messageFlags().add(MessageFlags::UseFullySynchronousModeForTesting);
 }
 
-void Encoder::wrapForTesting(std::unique_ptr<Encoder> original)
+void Encoder::setShouldMaintainOrderingWithAsyncMessages()
+{
+    messageFlags().add(MessageFlags::MaintainOrderingWithAsyncMessages);
+}
+
+void Encoder::wrapForTesting(UniqueRef<Encoder>&& original)
 {
     ASSERT(isSyncMessage());
     ASSERT(!original->isSyncMessage());
 
     original->setShouldDispatchMessageWhenWaitingForSyncReply(ShouldDispatchWhenWaitingForSyncReply::Yes);
 
-    encodeVariableLengthByteArray(DataReference(original->buffer(), original->bufferSize()));
+    *this << DataReference(original->buffer(), original->bufferSize());
 
     Vector<Attachment> attachments = original->releaseAttachments();
     reserve(attachments.size());
@@ -139,7 +129,7 @@ void Encoder::wrapForTesting(std::unique_ptr<Encoder> original)
         addAttachment(WTFMove(attachment));
 }
 
-static inline size_t roundUpToAlignment(size_t value, unsigned alignment)
+static inline size_t roundUpToAlignment(size_t value, size_t alignment)
 {
     return ((value + alignment - 1) / alignment) * alignment;
 }
@@ -168,15 +158,24 @@ void Encoder::reserve(size_t size)
 
 void Encoder::encodeHeader()
 {
-    ASSERT(!m_messageReceiverName.isEmpty());
-
     *this << defaultMessageFlags;
-    *this << m_messageReceiverName;
     *this << m_messageName;
     *this << m_destinationID;
 }
 
-uint8_t* Encoder::grow(unsigned alignment, size_t size)
+OptionSet<MessageFlags>& Encoder::messageFlags()
+{
+    // FIXME: We should probably pass an OptionSet<MessageFlags> into the Encoder constructor instead of encoding defaultMessageFlags then using this to change it later.
+    static_assert(sizeof(OptionSet<MessageFlags>::StorageType) == 1, "Encoder uses the first byte of the buffer for message flags.");
+    return *reinterpret_cast<OptionSet<MessageFlags>*>(buffer());
+}
+
+const OptionSet<MessageFlags>& Encoder::messageFlags() const
+{
+    return *reinterpret_cast<OptionSet<MessageFlags>*>(buffer());
+}
+
+uint8_t* Encoder::grow(size_t alignment, size_t size)
 {
     size_t alignedSize = roundUpToAlignment(m_bufferSize, alignment);
     reserve(alignedSize + size);
@@ -185,88 +184,16 @@ uint8_t* Encoder::grow(unsigned alignment, size_t size)
 
     m_bufferSize = alignedSize + size;
     m_bufferPointer = m_buffer + alignedSize + size;
-    
+
     return m_buffer + alignedSize;
 }
 
-void Encoder::encodeFixedLengthData(const uint8_t* data, size_t size, unsigned alignment)
+void Encoder::encodeFixedLengthData(const uint8_t* data, size_t size, size_t alignment)
 {
     ASSERT(!(reinterpret_cast<uintptr_t>(data) % alignment));
 
     uint8_t* buffer = grow(alignment, size);
     memcpy(buffer, data, size);
-}
-
-void Encoder::encodeVariableLengthByteArray(const DataReference& dataReference)
-{
-    encode(static_cast<uint64_t>(dataReference.size()));
-    encodeFixedLengthData(dataReference.data(), dataReference.size(), 1);
-}
-
-template<typename Type>
-static void copyValueToBuffer(Type value, uint8_t* bufferPosition)
-{
-    memcpy(bufferPosition, &value, sizeof(Type));
-}
-
-void Encoder::encode(bool n)
-{
-    uint8_t* buffer = grow(sizeof(n), sizeof(n));
-    copyValueToBuffer(n, buffer);
-}
-
-void Encoder::encode(uint8_t n)
-{
-    uint8_t* buffer = grow(sizeof(n), sizeof(n));
-    copyValueToBuffer(n, buffer);
-}
-
-void Encoder::encode(uint16_t n)
-{
-    uint8_t* buffer = grow(sizeof(n), sizeof(n));
-    copyValueToBuffer(n, buffer);
-}
-
-void Encoder::encode(uint32_t n)
-{
-    uint8_t* buffer = grow(sizeof(n), sizeof(n));
-    copyValueToBuffer(n, buffer);
-}
-
-void Encoder::encode(uint64_t n)
-{
-    uint8_t* buffer = grow(sizeof(n), sizeof(n));
-    copyValueToBuffer(n, buffer);
-}
-
-void Encoder::encode(int16_t n)
-{
-    uint8_t* buffer = grow(sizeof(n), sizeof(n));
-    copyValueToBuffer(n, buffer);
-}
-
-void Encoder::encode(int32_t n)
-{
-    uint8_t* buffer = grow(sizeof(n), sizeof(n));
-    copyValueToBuffer(n, buffer);
-}
-
-void Encoder::encode(int64_t n)
-{
-    uint8_t* buffer = grow(sizeof(n), sizeof(n));
-    copyValueToBuffer(n, buffer);
-}
-
-void Encoder::encode(float n)
-{
-    uint8_t* buffer = grow(sizeof(n), sizeof(n));
-    copyValueToBuffer(n, buffer);
-}
-
-void Encoder::encode(double n)
-{
-    uint8_t* buffer = grow(sizeof(n), sizeof(n));
-    copyValueToBuffer(n, buffer);
 }
 
 void Encoder::addAttachment(Attachment&& attachment)
@@ -276,7 +203,12 @@ void Encoder::addAttachment(Attachment&& attachment)
 
 Vector<Attachment> Encoder::releaseAttachments()
 {
-    return WTFMove(m_attachments);
+    return std::exchange(m_attachments, { });
+}
+
+bool Encoder::hasAttachments() const
+{
+    return !m_attachments.isEmpty();
 }
 
 } // namespace IPC

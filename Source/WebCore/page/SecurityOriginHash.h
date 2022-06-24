@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <wtf/Hasher.h>
 #include <wtf/URL.h>
 #include "SecurityOrigin.h"
 #include <wtf/RefPtr.h>
@@ -37,12 +38,7 @@ namespace WebCore {
 struct SecurityOriginHash {
     static unsigned hash(SecurityOrigin* origin)
     {
-        unsigned hashCodes[3] = {
-            origin->protocol().impl() ? origin->protocol().impl()->hash() : 0,
-            origin->host().impl() ? origin->host().impl()->hash() : 0,
-            origin->port().valueOr(0)
-        };
-        return StringHasher::hashMemory<sizeof(hashCodes)>(hashCodes);
+        return computeHash(*origin);
     }
     static unsigned hash(const RefPtr<SecurityOrigin>& origin)
     {
@@ -74,10 +70,8 @@ struct SecurityOriginHash {
 } // namespace WebCore
 
 namespace WTF {
-    template<typename> struct DefaultHash;
 
-    template<> struct DefaultHash<RefPtr<WebCore::SecurityOrigin>> {
-        typedef WebCore::SecurityOriginHash Hash;
-    };
+template<typename> struct DefaultHash;
+template<> struct DefaultHash<RefPtr<WebCore::SecurityOrigin>> : WebCore::SecurityOriginHash { };
 
 } // namespace WTF

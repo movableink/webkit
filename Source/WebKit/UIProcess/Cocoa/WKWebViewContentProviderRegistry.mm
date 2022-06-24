@@ -29,15 +29,16 @@
 #if PLATFORM(IOS_FAMILY)
 
 #import "WKPDFView.h"
-#import "WKSystemPreviewView.h"
-#import "WKWebViewConfigurationPrivate.h"
+#import "WKUSDPreviewView.h"
 #import "WKWebViewInternal.h"
 #import "WebPageProxy.h"
 #import <WebCore/MIMETypeRegistry.h>
+#import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
+#import <wtf/FixedVector.h>
 #import <wtf/HashCountedSet.h>
 #import <wtf/HashMap.h>
 #import <wtf/text/StringHash.h>
-#import <wtf/text/WTFString.h>
 
 @implementation WKWebViewContentProviderRegistry {
     HashMap<String, Class <WKWebViewContentProvider>, ASCIICaseInsensitiveHash> _contentProviderForMIMEType;
@@ -50,14 +51,14 @@
         return nil;
 
 #if ENABLE(WKPDFVIEW)
-    for (auto& mimeType : WebCore::MIMETypeRegistry::pdfMIMETypes())
-        [self registerProvider:[WKPDFView class] forMIMEType:mimeType];
+    for (auto& type : WebCore::MIMETypeRegistry::pdfMIMETypes())
+        [self registerProvider:[WKPDFView class] forMIMEType:@(type)];
 #endif
 
-#if USE(SYSTEM_PREVIEW)
-    if (configuration._systemPreviewEnabled) {
-        for (auto& mimeType : WebCore::MIMETypeRegistry::systemPreviewMIMETypes())
-            [self registerProvider:[WKSystemPreviewView class] forMIMEType:mimeType];
+#if USE(SYSTEM_PREVIEW) && !HAVE(UIKIT_WEBKIT_INTERNALS)
+    if (configuration._systemPreviewEnabled && !configuration.preferences._modelDocumentEnabled) {
+        for (auto& type : WebCore::MIMETypeRegistry::usdMIMETypes())
+            [self registerProvider:[WKUSDPreviewView class] forMIMEType:@(type)];
     }
 #endif
 
@@ -86,6 +87,9 @@
 
 - (Class <WKWebViewContentProvider>)providerForMIMEType:(const String&)mimeType
 {
+    if (mimeType.isEmpty())
+        return nil;
+
     const auto& representation = _contentProviderForMIMEType.find(mimeType);
 
     if (representation == _contentProviderForMIMEType.end())

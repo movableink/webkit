@@ -60,9 +60,49 @@ BEGIN {
     $ENV{LOAD_ROUTES} = 1;
 }
 
-use YAML qw(Load LoadFile Dump DumpFile Bless);
+use YAML qw(Load Dump Bless);
 use Parallel::ForkManager;
 use Getopt::Long qw(GetOptions);
+
+# Tweaked versions of YAML::DumpFile and YAML::LoadFile.
+# The library versions unconditionally and erroneously assume that a UTF-8 encoding needs to be performed,
+# meaning that the output file ends up double-encoded.
+sub DumpFile {
+    my $OUT;
+    my $filename = shift;
+    if (Scalar::Util::openhandle $filename) {
+        $OUT = $filename;
+    }
+    else {
+        my $mode = '>';
+        if ($filename =~ /^\s*(>{1,2})\s*(.*)$/) {
+            ($mode, $filename) = ($1, $2);
+        }
+        open $OUT, $mode, $filename
+          or YAML::Mo::Object->die('YAML_DUMP_ERR_FILE_OUTPUT', $filename, "$!");
+    }
+    local $/ = "\n"; # reset special to "sane"
+    print $OUT Dump(@_);
+    unless (ref $filename eq 'GLOB') {
+        close $OUT
+          or do {
+              my $errsav = $!;
+              YAML::Mo::Object->die('YAML_DUMP_ERR_FILE_OUTPUT_CLOSE', $filename, $errsav);
+          }
+    }
+}
+sub LoadFile {
+    my $IN;
+    my $filename = shift;
+    if (Scalar::Util::openhandle $filename) {
+        $IN = $filename;
+    }
+    else {
+        open $IN, '<', $filename
+          or YAML::Mo::Object->die('YAML_LOAD_ERR_FILE_INPUT', $filename, "$!");
+    }
+    return Load(do { local $/; <$IN> });
+}
 
 my $webkitdirIsAvailable;
 if (eval {require webkitdirs; 1;}) {
@@ -287,15 +327,14 @@ sub main {
         "$harnessDir/sta.js",
         "$harnessDir/assert.js",
         "$harnessDir/doneprintHandle.js",
-        "$Bin/agent.js"
     );
 
     print $deffh getHarness(\@defaultHarnessFiles);
 
     if (!@cliTestDirs) {
         # If not commandline test path supplied, use the root directory of all tests.
-        push(@cliTestDirs, 'test') if not @cliTestDirs;
-        $runningAllTests = 1;
+        push(@cliTestDirs, 'test');
+        $runningAllTests = 1 if !$latestImport;
     }
 
     if ($latestImport) {
@@ -399,14 +438,6 @@ sub main {
 
     foreach (@parents) {
         $_->close();
-    }
-
-    my $count = 0;
-    for my $parent (@parents) {
-        my $child = $children[$count];
-        print $child "END\n";
-        $parent->close();
-        $count++;
     }
 
     $pm->wait_all_children;
@@ -553,6 +584,8 @@ sub loadImportFile {
 }
 
 sub getProcesses {
+    return $ENV{NUMBER_OF_PROCESSORS} if (defined($ENV{NUMBER_OF_PROCESSORS}));
+
     my $cores;
     my $uname = qx(which uname >> /dev/null && uname);
     chomp $uname;
@@ -573,12 +606,7 @@ sub getProcesses {
         $cores = 1;
     }
 
-    if ($cores <= 8) {
-        return $cores * 4;
-    }
-    else {
-        return $cores * 2;
-    }
+    return $cores;
 }
 
 sub parseError {
@@ -604,7 +632,7 @@ sub getBuildPath {
         my $jscDir = executableProductDir();
 
         $jsc = $jscDir . '/jsc';
-        $jsc = $jscDir . '/JavaScriptCore.framework/Resources/jsc' if (! -e $jsc);
+        $jsc = $jscDir . '/JavaScriptCore.framework/Helpers/jsc' if (! -e $jsc);
         $jsc = $jscDir . '/bin/jsc' if (! -e $jsc);
 
         # Sets the Env DYLD_FRAMEWORK_PATH, abs_path will remove any extra '/' character
@@ -652,15 +680,34 @@ sub processFile {
 
         ($includesfh, $includesfile) = compileTest($includes) if defined $includes;
 
-        foreach my $scenario (@scenarios) {
-            my ($result, $execTime) = runTest($includesfile, $filename, $scenario, $data);
+        my $args = getFeatureFlags($data);
 
-            $resultsdata = processResult($filename, $data, $scenario, $result, $execTime);
+        foreach my $scenario (@scenarios) {
+            my ($exitCode, $result, $execTime) = runTest($includesfile, $filename, $scenario, $data, $args);
+
+            $resultsdata = processResult($filename, $data, $scenario, $exitCode, $result, $execTime);
             DumpFile($resultsfh, $resultsdata);
         }
 
         close $includesfh if defined $includesfh;
     }
+}
+
+sub getFeatureFlags {
+    my ($data) = @_;
+    my $featureFlags = '';
+
+    if (exists $config->{flags} and $data->{features}) {
+        foreach my $feature (@{ $data->{features} }) {
+            $featureFlags .= ' --' . $config->{flags}->{$feature} . '=1' if $config->{flags}->{$feature};
+        }
+    }
+
+    if (grep $_ eq 'CanBlockIsFalse', @{$data->{flags}}) {
+        $featureFlags .= ' --can-block-is-false';
+    }
+
+    return $featureFlags;
 }
 
 sub shouldSkip {
@@ -739,10 +786,8 @@ sub compileTest {
 }
 
 sub runTest {
-    my ($includesfile, $filename, $scenario, $data) = @_;
+    my ($includesfile, $filename, $scenario, $data, $args) = @_;
     $includesfile ||= '';
-
-    my $args = '';
 
     if ($timeout) {
         $args .= " --watchdog=$timeout ";
@@ -754,8 +799,7 @@ sub runTest {
     }
 
     if (exists $data->{flags}) {
-        my @flags = $data->{flags};
-        if (grep $_ eq 'async', @flags) {
+        if (grep $_ eq 'async', @{ $data->{flags} }) {
             $args .= ' --test262-async ';
         }
     }
@@ -781,14 +825,14 @@ sub runTest {
     chomp $result;
 
     if ($?) {
-        return ($result, $execTime);
+        return ($?, $result, $execTime);
     } else {
-        return (0, $execTime);
+        return ($?, 0, $execTime);
     }
 }
 
 sub processResult {
-    my ($path, $data, $scenario, $result, $execTime) = @_;
+    my ($path, $data, $scenario, $exitCode, $result, $execTime) = @_;
 
     # Report a relative path
     my $file = abs2rel( $path, $test262Dir );
@@ -802,12 +846,15 @@ sub processResult {
         && $expect->{$file}
         && $expect->{$file}->{$scenario};
 
-    if ($scenario ne 'skip' && $currentfailure) {
+    my $exitSignalNumber = $exitCode & 0x7f if $scenario ne 'skip';
 
-        # We have a new failure if we haven't loaded an expectation file
-        # (all fails are new) OR we have loaded an expectation fail and
-        # (there is no expected failure OR the failure has changed).
-        my $isnewfailure = ! $expect
+    if ($scenario ne 'skip' && ($currentfailure || $exitSignalNumber)) {
+
+        # We have a new failure if the process crashed OR we haven't loaded
+        # an expectation file (all fails are new) OR we have loaded an
+        # expectation fail and (there is no expected failure OR the failure
+        # has changed).
+        my $isnewfailure = $exitSignalNumber || !$expect
             || !$expectedfailure || $expectedfailure ne $currentfailure;
 
         # Print the failure if we haven't loaded an expectation file
@@ -816,6 +863,7 @@ sub processResult {
 
         my $newFail = '';
         $newFail = '! NEW ' if $isnewfailure;
+        $newFail = "$newFail (Exit code: $exitCode) " if $exitSignalNumber;
         my $failMsg = '';
         $failMsg = "FAIL $file ($scenario)\n";
 
@@ -829,6 +877,7 @@ sub processResult {
 
         $resultdata{result} = 'FAIL';
         $resultdata{error} = $currentfailure;
+        $resultdata{error} = "Bad exit code: $exitCode" if $exitSignalNumber;
         $resultdata{output} = $result;
     } elsif ($scenario ne 'skip' && !$currentfailure) {
         if ($expectedfailure) {

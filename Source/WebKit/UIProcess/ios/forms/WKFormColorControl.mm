@@ -28,51 +28,83 @@
 
 #if ENABLE(INPUT_TYPE_COLOR) && PLATFORM(IOS_FAMILY)
 
+#import "FocusedElementInformation.h"
 #import "UIKitSPI.h"
-#import "WKContentView.h"
-#import "WKFormColorPicker.h"
-#import "WKFormPopover.h"
+#import "UserInterfaceIdiom.h"
+#import "WKContentViewInteraction.h"
+#import "WebPageProxy.h"
+#import <WebCore/ColorCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
-#pragma mark - WKColorPopover
+#pragma mark - WKColorPicker
 
-static const CGFloat colorPopoverWidth = 290;
-static const CGFloat colorPopoverCornerRadius = 9;
-
-@interface WKColorPopover : WKFormRotatingAccessoryPopover<WKFormControl> {
-    RetainPtr<NSObject<WKFormControl>> _innerControl;
-}
-
+@interface WKColorPicker : NSObject<WKFormControl, UIColorPickerViewControllerDelegate, UIPopoverPresentationControllerDelegate>
 - (instancetype)initWithView:(WKContentView *)view;
+- (void)selectColor:(UIColor *)color;
 @end
 
-@implementation WKColorPopover
+@implementation WKColorPicker {
+    __weak WKContentView *_view;
+
+    RetainPtr<UIColorPickerViewController> _colorPickerViewController;
+}
 
 - (instancetype)initWithView:(WKContentView *)view
 {
-    if (!(self = [super initWithView:view]))
+    if (!(self = [super init]))
         return nil;
 
-    _innerControl = adoptNS([[WKColorPicker alloc] initWithView:view]);
+    _view = view;
 
-    RetainPtr<UIViewController> popoverViewController = adoptNS([[UIViewController alloc] init]);
-    RetainPtr<UIView> controlContainerView = adoptNS([[UIView alloc] initWithFrame:CGRectMake(0, 0, colorPopoverWidth, colorPopoverWidth)]);
-
-    UIView *controlView = [_innerControl controlView];
-    [controlView setCenter:[controlContainerView center]];
-    [controlView.layer setCornerRadius:colorPopoverCornerRadius];
-    [controlView setClipsToBounds:YES];
-    [controlContainerView addSubview:controlView];
-
-    [popoverViewController setView:controlContainerView.get()];
-    [popoverViewController setPreferredContentSize:[controlContainerView size]];
-
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    RetainPtr<UIPopoverController> controller = adoptNS([[UIPopoverController alloc] initWithContentViewController:popoverViewController.get()]);
-    ALLOW_DEPRECATED_DECLARATIONS_END
-    [self setPopoverController:controller.get()];
+    _colorPickerViewController = adoptNS([[UIColorPickerViewController alloc] init]);
+    [_colorPickerViewController setDelegate:self];
+    [_colorPickerViewController setSupportsAlpha:NO];
 
     return self;
 }
+
+- (void)selectColor:(UIColor *)color
+{
+    [_colorPickerViewController setSelectedColor:color];
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+    [self colorPickerViewControllerDidSelectColor:_colorPickerViewController.get()];
+ALLOW_DEPRECATED_DECLARATIONS_END
+}
+
+#if ENABLE(DATALIST_ELEMENT)
+- (NSArray<UIColor *> *)focusedElementSuggestedColors
+{
+    auto& colors = _view.focusedElementInformation.suggestedColors;
+
+    if (colors.isEmpty())
+        return nil;
+
+    return createNSArray(colors, [] (auto& color) {
+        return cocoaColor(color);
+    }).autorelease();
+}
+#endif
+
+- (void)updateColorPickerState
+{
+    [_colorPickerViewController setSelectedColor:cocoaColor(_view.focusedElementInformation.colorValue).get()];
+#if ENABLE(DATALIST_ELEMENT)
+    if ([_colorPickerViewController respondsToSelector:@selector(_setSuggestedColors:)])
+        [_colorPickerViewController _setSuggestedColors:[self focusedElementSuggestedColors]];
+#endif
+}
+
+- (void)configurePresentation
+{
+    [_colorPickerViewController setModalPresentationStyle:UIModalPresentationPopover];
+
+    UIPopoverPresentationController *presentationController = [_colorPickerViewController popoverPresentationController];
+    presentationController.delegate = self;
+    presentationController.sourceView = _view;
+    presentationController.sourceRect = CGRectIntegral(_view.focusedElementInformation.interactionRect);
+}
+
+#pragma mark WKFormControl
 
 - (UIView *)controlView
 {
@@ -81,12 +113,40 @@ static const CGFloat colorPopoverCornerRadius = 9;
 
 - (void)controlBeginEditing
 {
-    [self presentPopoverAnimated:NO];
+    [_view startRelinquishingFirstResponderToFocusedElement];
+
+    [self updateColorPickerState];
+    [self configurePresentation];
+
+    UIViewController *presentingViewController = [UIViewController _viewControllerForFullScreenPresentationFromView:_view];
+    [presentingViewController presentViewController:_colorPickerViewController.get() animated:YES completion:nil];
 }
 
 - (void)controlEndEditing
 {
-    [self dismissPopoverAnimated:NO];
+    [_view stopRelinquishingFirstResponderToFocusedElement];
+    [_colorPickerViewController dismissViewControllerAnimated:NO completion:nil];
+}
+
+#pragma mark UIPopoverPresentationControllerDelegate
+
+- (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController
+{
+    [_view accessoryDone];
+}
+
+#pragma mark UIColorPickerViewControllerDelegate
+
+ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN
+- (void)colorPickerViewControllerDidSelectColor:(UIColorPickerViewController *)viewController
+{
+    [_view updateFocusedElementValueAsColor:viewController.selectedColor];
+}
+ALLOW_DEPRECATED_IMPLEMENTATIONS_END
+
+- (void)colorPickerViewControllerDidFinish:(UIColorPickerViewController *)viewController
+{
+    [_view accessoryDone];
 }
 
 @end
@@ -97,12 +157,18 @@ static const CGFloat colorPopoverCornerRadius = 9;
 
 - (instancetype)initWithView:(WKContentView *)view
 {
-    RetainPtr<NSObject <WKFormControl>> control;
-    if (currentUserInterfaceIdiomIsPad())
-        control = adoptNS([[WKColorPopover alloc] initWithView:view]);
-    else
-        control = adoptNS([[WKColorPicker alloc] initWithView:view]);
+    RetainPtr<NSObject <WKFormControl>> control = adoptNS([[WKColorPicker alloc] initWithView:view]);
     return [super initWithView:view control:WTFMove(control)];
+}
+
+@end
+
+@implementation WKFormColorControl (WKTesting)
+
+- (void)selectColor:(UIColor *)color
+{
+    if ([self.control isKindOfClass:WKColorPicker.class])
+        [(WKColorPicker *)self.control selectColor:color];
 }
 
 @end

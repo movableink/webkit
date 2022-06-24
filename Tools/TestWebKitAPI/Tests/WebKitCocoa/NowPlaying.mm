@@ -23,9 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
-#if USE(MEDIAREMOTE) && !PLATFORM(IOS_FAMILY_SIMULATOR) && (PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101304))
+#if !PLATFORM(IOS_FAMILY_SIMULATOR) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED < 101304)
 
 #import "PlatformUtilities.h"
 #import "TestWKWebView.h"
@@ -203,7 +203,7 @@ private:
     HashMap<CFNotificationName, NotificationCallback> _callbacks;
 };
 
-TEST_F(NowPlayingTest, AudioElement)
+TEST_F(NowPlayingTest, DISABLED_AudioElement)
 {
     executeAndWaitForWebViewToBecomeNowPlaying([&] {
         executeAndWaitForPlaying([&] {
@@ -214,7 +214,7 @@ TEST_F(NowPlayingTest, AudioElement)
     });
 }
 
-TEST_F(NowPlayingTest, VideoElementWithAudio)
+TEST_F(NowPlayingTest, DISABLED_VideoElementWithAudio)
 {
     executeAndWaitForWebViewToBecomeNowPlaying([&] {
         executeAndWaitForPlaying([&] {
@@ -246,7 +246,7 @@ TEST_F(NowPlayingTest, VideoElementWithMutedAudio)
     ASSERT_NE(webViewPid(), getNowPlayingClientPid());
 }
 
-TEST_F(NowPlayingTest, VideoElementWithMutedAudioUnmutedWithUserGesture)
+TEST_F(NowPlayingTest, DISABLED_VideoElementWithMutedAudioUnmutedWithUserGesture)
 {
     executeAndWaitForPlaying([&] {
         loadPage("now-playing");
@@ -276,4 +276,4 @@ TEST_F(NowPlayingTest, VideoElementWithoutAudioPlayWithUserGesture)
     ASSERT_NE(webViewPid(), getNowPlayingClientPid());
 }
 
-#endif // USE(MEDIAREMOTE) && (PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101304))
+#endif

@@ -35,6 +35,8 @@
 #include "DumpRenderTree.h"
 #include "EventSender.h"
 #include "GCController.h"
+#include "JSWrapper.h"
+#include "ReftestFunctions.h"
 #include "TestRunner.h"
 #include "TextInputController.h"
 #include "WebCoreTestSupport.h"
@@ -187,6 +189,28 @@ HRESULT FrameLoadDelegate::didChangeIcons(_In_opt_ IWebView*, _In_opt_ IWebFrame
     return S_OK;
 }
 
+static void CALLBACK dumpAfterWaitAttributeIsRemoved(HWND = nullptr, UINT = 0, UINT_PTR = 0, DWORD = 0)
+{
+    static UINT_PTR timerID;
+    if (frame && WTR::hasReftestWaitAttribute(frame->globalContext())) {
+        if (!timerID)
+            timerID = ::SetTimer(nullptr, 0, 0, dumpAfterWaitAttributeIsRemoved);
+    } else {
+        if (timerID) {
+            ::KillTimer(nullptr, timerID);
+            timerID = 0;
+        }
+        dump();
+    }
+}
+
+static void readyToDumpState()
+{
+    if (frame)
+        WTR::sendTestRenderedEvent(frame->globalContext());
+    dumpAfterWaitAttributeIsRemoved();
+}
+
 void FrameLoadDelegate::processWork()
 {
     // if another load started, then wait for it to complete.
@@ -195,7 +219,7 @@ void FrameLoadDelegate::processWork()
 
     // if we finish all the commands, we're ready to dump state
     if (DRT::WorkQueue::singleton().processWork() && !::gTestRunner->waitToDump())
-        dump();
+        readyToDumpState();
 }
 
 void FrameLoadDelegate::resetToConsistentState()
@@ -244,7 +268,7 @@ void FrameLoadDelegate::locationChangeDone(IWebError*, IWebFrame* frame)
         return;
     }
 
-    dump();
+    readyToDumpState();
 }
 
 HRESULT FrameLoadDelegate::didFinishLoadForFrame(_In_opt_ IWebView*, _In_opt_ IWebFrame* frame)
@@ -268,7 +292,7 @@ HRESULT FrameLoadDelegate::didFailLoadWithError(_In_opt_ IWebView*, _In_opt_ IWe
 HRESULT FrameLoadDelegate::willPerformClientRedirectToURL(_In_opt_ IWebView*, _In_ BSTR url, double /*delaySeconds*/, DATE /*fireDate*/, _In_opt_ IWebFrame* frame)
 {
     if (!done && gTestRunner->dumpFrameLoadCallbacks())
-        fprintf(testResult, "%s - willPerformClientRedirectToURL: %S \n", descriptionSuitableForTestResult(frame).c_str(),
+        fprintf(testResult, "%s - willPerformClientRedirectToURL: %S\n", descriptionSuitableForTestResult(frame).c_str(),
                 urlSuitableForTestResult(std::wstring(url, ::SysStringLen(url))).c_str());
 
     return S_OK;
@@ -337,7 +361,6 @@ void FrameLoadDelegate::didClearWindowObjectForFrameInIsolatedWorld(IWebFrame* f
         return;
 
     JSObjectSetProperty(ctx, globalObject, JSRetainPtr<JSStringRef>(Adopt, JSStringCreateWithUTF8CString("__worldID")).get(), JSValueMakeNumber(ctx, worldIDForWorld(world)), kJSPropertyAttributeReadOnly, 0);
-    return;
 }
 
 void FrameLoadDelegate::didClearWindowObjectForFrameInStandardWorld(IWebFrame* frame)
@@ -348,19 +371,10 @@ void FrameLoadDelegate::didClearWindowObjectForFrameInStandardWorld(IWebFrame* f
     IWebFrame* parentFrame = 0;
     frame->parentFrame(&parentFrame);
 
-    JSValueRef exception = 0;
-
-    ::gTestRunner->makeWindowObject(context, windowObject, &exception);
-    ASSERT(!exception);
-
-    m_gcController->makeWindowObject(context, windowObject, &exception);
-    ASSERT(!exception);
-
-    m_accessibilityController->makeWindowObject(context, windowObject, &exception);
-    ASSERT(!exception);
-
-    m_textInputController->makeWindowObject(context, windowObject, &exception);
-    ASSERT(!exception);
+    ::gTestRunner->makeWindowObject(context);
+    m_gcController->makeWindowObject(context);
+    m_accessibilityController->makeWindowObject(context);
+    m_textInputController->makeWindowObject(context);
 
     JSStringRef eventSenderStr = JSStringCreateWithUTF8CString("eventSender");
     JSValueRef eventSender = makeEventSender(context, !parentFrame);

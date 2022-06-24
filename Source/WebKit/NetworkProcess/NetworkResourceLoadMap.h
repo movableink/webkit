@@ -25,8 +25,9 @@
 
 #pragma once
 
+#include <WebCore/ResourceLoaderIdentifier.h>
+#include <wtf/Function.h>
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
 
 #if ENABLE(TAKE_UNBOUNDED_NETWORKING_ASSERTION)
 #include "ProcessAssertion.h"
@@ -37,24 +38,31 @@ namespace WebKit {
 class NetworkResourceLoader;
 class NetworkConnectionToWebProcess;
 
-typedef uint64_t ResourceLoadIdentifier;
-
 class NetworkResourceLoadMap {
 public:
-    typedef HashMap<ResourceLoadIdentifier, Ref<NetworkResourceLoader>> MapType;
+    using MapType = HashMap<WebCore::ResourceLoaderIdentifier, Ref<NetworkResourceLoader>>;
+    NetworkResourceLoadMap(Function<void(bool hasUpload)>&&);
+    ~NetworkResourceLoadMap();
 
     bool isEmpty() const { return m_loaders.isEmpty(); }
-    bool contains(ResourceLoadIdentifier identifier) const { return m_loaders.contains(identifier); }
+    bool contains(WebCore::ResourceLoaderIdentifier identifier) const { return m_loaders.contains(identifier); }
     MapType::iterator begin() { return m_loaders.begin(); }
     MapType::ValuesIteratorRange values() { return m_loaders.values(); }
+    void clear();
 
-    MapType::AddResult add(ResourceLoadIdentifier, Ref<NetworkResourceLoader>&&);
-    NetworkResourceLoader* get(ResourceLoadIdentifier) const;
-    bool remove(ResourceLoadIdentifier);
-    RefPtr<NetworkResourceLoader> take(ResourceLoadIdentifier);
+    MapType::AddResult add(WebCore::ResourceLoaderIdentifier, Ref<NetworkResourceLoader>&&);
+    NetworkResourceLoader* get(WebCore::ResourceLoaderIdentifier) const;
+    bool remove(WebCore::ResourceLoaderIdentifier);
+    RefPtr<NetworkResourceLoader> take(WebCore::ResourceLoaderIdentifier);
+
+    bool hasUpload() const { return m_hasUpload; }
 
 private:
+    void setHasUpload(bool);
+
     MapType m_loaders;
+    bool m_hasUpload { false };
+    Function<void(bool hasUpload)> m_hasUploadChangeListener;
 };
 
 } // namespace WebKit

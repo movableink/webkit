@@ -1,11 +1,14 @@
+<!DOCTYPE html>
 <html>
 <head>
     <title>Test element containing pip video going into fullscreen should exit pip</title>
     <script src="media-file.js"></script>
     <script src="video-test.js"></script>
     <script>
-        if (window.internals)
+        if (window.internals) {
             window.internals.settings.setAllowsPictureInPictureMediaPlayback(true);
+            internals.setMockVideoPresentationModeEnabled(true);
+        }
 
         var enteredFullscreen = false;
         var exitedPIP = false;
@@ -29,8 +32,11 @@
             runWithKeyDown(function(){ video.webkitSetPresentationMode('picture-in-picture'); });
         }
 
-        function onfirstpresentationmodechanged()
+        async function onfirstpresentationmodechanged()
         {
+            if (window.internals)
+                await testExpectedEventually("internals.isChangingPresentationMode(video)", false);
+
             testExpected("video.webkitPresentationMode", "picture-in-picture");
             video.removeEventListener('webkitpresentationmodechanged', onfirstpresentationmodechanged);
 
@@ -54,8 +60,11 @@
                 checkFinalState();
         }
 
-        function checkFinalState()
+        async function checkFinalState()
         {
+            if (window.internals)
+                await testExpectedEventually("internals.isChangingPresentationMode(video)", false);
+
             testExpected("document.webkitCurrentFullScreenElement", videoContainer);
             testExpected("video.webkitPresentationMode", "inline");
             endTest();

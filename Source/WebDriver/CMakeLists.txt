@@ -5,7 +5,7 @@ include(WebKitCommon)
 set(WebDriver_PRIVATE_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}"
     "${WEBDRIVER_DIR}"
-    "${DERIVED_SOURCES_WEBDRIVER_DIR}"
+    "${WebDriver_DERIVED_SOURCES_DIR}"
 )
 
 set(WebDriver_SOURCES
@@ -17,29 +17,54 @@ set(WebDriver_SOURCES
     WebDriverService.cpp
 )
 
-set(WebDriver_LIBRARIES
-    WebKit::WTF
+set(WebDriver_FRAMEWORKS
+    WTF
 )
+if (NOT USE_SYSTEM_MALLOC)
+    list(APPEND WebDriver_FRAMEWORKS bmalloc)
+endif ()
+
 
 set(WebDriver_SCRIPTS
-    ${WEBKIT_DIR}/UIProcess/Automation/atoms/ElementAttribute.js
-    ${WEBKIT_DIR}/UIProcess/Automation/atoms/ElementDisplayed.js
-    ${WEBKIT_DIR}/UIProcess/Automation/atoms/EnterFullscreen.js
-    ${WEBKIT_DIR}/UIProcess/Automation/atoms/FindNodes.js
-    ${WEBKIT_DIR}/UIProcess/Automation/atoms/FormElementClear.js
-    ${WEBKIT_DIR}/UIProcess/Automation/atoms/FormSubmit.js
+    ${WebDriver_DERIVED_SOURCES_DIR}/ElementAttribute.js
+    ${WebDriver_DERIVED_SOURCES_DIR}/ElementDisplayed.js
+    ${WebDriver_DERIVED_SOURCES_DIR}/ElementEnabled.js
+    ${WebDriver_DERIVED_SOURCES_DIR}/ElementText.js
+    ${WebDriver_DERIVED_SOURCES_DIR}/EnterFullscreen.js
+    ${WebDriver_DERIVED_SOURCES_DIR}/FindNodes.js
+    ${WebDriver_DERIVED_SOURCES_DIR}/FormElementClear.js
+    ${WebDriver_DERIVED_SOURCES_DIR}/FormSubmit.js
 )
 
+macro(GENERATE_ATOMS _inputs)
+    foreach (_file IN ITEMS ${_inputs})
+        get_filename_component(_name ${_file} NAME)
+        add_custom_command(
+            OUTPUT ${_file}
+            MAIN_DEPENDENCY ${WEBKIT_DIR}/Scripts/generate-automation-atom.py
+            DEPENDS
+                ${WEBKIT_DIR}/UIProcess/Automation/atoms/${_name}
+                ${WEBKIT_DIR}/UIProcess/Automation/atoms/utils.js
+            COMMAND ${PYTHON_EXECUTABLE} ${WEBKIT_DIR}/Scripts/generate-automation-atom.py ${WEBKIT_DIR}/UIProcess/Automation/atoms/${_name} ${_file}
+            VERBATIM
+        )
+    endforeach ()
+endmacro()
+
+GENERATE_ATOMS("${WebDriver_SCRIPTS}")
+
 MAKE_JS_FILE_ARRAYS(
-    ${DERIVED_SOURCES_WEBDRIVER_DIR}/WebDriverAtoms.cpp
-    ${DERIVED_SOURCES_WEBDRIVER_DIR}/WebDriverAtoms.h
+    ${WebDriver_DERIVED_SOURCES_DIR}/WebDriverAtoms.cpp
+    ${WebDriver_DERIVED_SOURCES_DIR}/WebDriverAtoms.h
     WebDriver
     WebDriver_SCRIPTS
     Session.cpp
 )
-list(APPEND WebDriver_SOURCES ${DERIVED_SOURCES_WEBDRIVER_DIR}/WebDriverAtoms.cpp)
+list(APPEND WebDriver_SOURCES ${WebDriver_DERIVED_SOURCES_DIR}/WebDriverAtoms.cpp)
 
 WEBKIT_EXECUTABLE_DECLARE(WebDriver)
+
+add_dependencies(WebDriver JavaScriptCoreSharedScripts)
 
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 

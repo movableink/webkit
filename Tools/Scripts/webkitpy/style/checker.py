@@ -35,35 +35,35 @@ import logging
 import os.path
 import re
 
-from checkers.common import categories as CommonCategories
-from checkers.common import CarriageReturnChecker
-from checkers.contributors import ContributorsChecker
-from checkers.changelog import ChangeLogChecker
-from checkers.cpp import CppChecker
-from checkers.cmake import CMakeChecker
-from checkers.featuredefines import FeatureDefinesChecker
-from checkers.js import JSChecker
-from checkers.jsonchecker import JSONChecker
-from checkers.jsonchecker import JSONContributorsChecker
-from checkers.jsonchecker import JSONFeaturesChecker
-from checkers.jsonchecker import JSONCSSPropertiesChecker
-from checkers.jstest import JSTestChecker
-from checkers.messagesin import MessagesInChecker
-from checkers.png import PNGChecker
-from checkers.python import PythonChecker, Python3Checker
-from checkers.sdkvariant import SDKVariantChecker
-from checkers.test_expectations import TestExpectationsChecker
-from checkers.text import TextChecker
-from checkers.watchlist import WatchListChecker
-from checkers.xcodeproj import XcodeProjectFileChecker
-from checkers.xml import XMLChecker
-from error_handlers import DefaultStyleErrorHandler
-from filter import FilterConfiguration
-from optparser import ArgumentParser
-from optparser import DefaultCommandOptionValues
 from webkitpy.common.host import Host
 from webkitpy.common.system.logutils import configure_logging as _configure_logging
 from webkitpy.port.config import apple_additions
+from webkitpy.style.checkers.common import categories as CommonCategories
+from webkitpy.style.checkers.common import CarriageReturnChecker
+from webkitpy.style.checkers.contributors import ContributorsChecker
+from webkitpy.style.checkers.changelog import ChangeLogChecker
+from webkitpy.style.checkers.cpp import CppChecker
+from webkitpy.style.checkers.cmake import CMakeChecker
+from webkitpy.style.checkers.featuredefines import FeatureDefinesChecker
+from webkitpy.style.checkers.js import JSChecker
+from webkitpy.style.checkers.jsonchecker import JSONChecker
+from webkitpy.style.checkers.jsonchecker import JSONContributorsChecker
+from webkitpy.style.checkers.jsonchecker import JSONFeaturesChecker
+from webkitpy.style.checkers.jsonchecker import JSONCSSPropertiesChecker
+from webkitpy.style.checkers.jstest import JSTestChecker
+from webkitpy.style.checkers.messagesin import MessagesInChecker
+from webkitpy.style.checkers.png import PNGChecker
+from webkitpy.style.checkers.python import PythonChecker, Python3Checker
+from webkitpy.style.checkers.sdkvariant import SDKVariantChecker
+from webkitpy.style.checkers.test_expectations import TestExpectationsChecker
+from webkitpy.style.checkers.text import TextChecker
+from webkitpy.style.checkers.watchlist import WatchListChecker
+from webkitpy.style.checkers.xcodeproj import XcodeProjectFileChecker
+from webkitpy.style.checkers.xml import XMLChecker
+from webkitpy.style.error_handlers import DefaultStyleErrorHandler
+from webkitpy.style.filter import FilterConfiguration
+from webkitpy.style.optparser import ArgumentParser
+from webkitpy.style.optparser import DefaultCommandOptionValues
 
 
 _log = logging.getLogger(__name__)
@@ -192,6 +192,12 @@ _PATH_RULES_SPECIFIER = [
     ["-readability/parameter_name"]),
 
     ([
+     # The WPE QT wrapper lib is not part of Webkit and therefore don't need to statically
+     # link the WTF framework. Instead it uses the standard alloc mechanism.
+     os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'wpe', 'qt')],
+     ["-runtime/wtf_make_unique"]),
+
+    ([
       # The GTK+ and WPE APIs use upper case, underscore separated, words in
       # certain types of enums (e.g. signals, properties).
       os.path.join('Source', 'JavaScriptCore', 'API', 'glib'),
@@ -205,9 +211,14 @@ _PATH_RULES_SPECIFIER = [
      ["-readability/enum_casing"]),
 
     ([
+     # Forward declarations of GLib/GIO functions use underscores.
+     os.path.join('Source', 'WTF', 'wtf', 'glib', 'GRefPtr.h')],
+     ["-readability/naming/underscores"]),
+
+    ([
       # To use GStreamer GL without conflicts of GL symbols,
       # we should include gst/gl/gl.h before including OpenGL[ES]Shims
-      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'MediaPlayerPrivateGStreamerBase.cpp')],
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'MediaPlayerPrivateGStreamer.cpp')],
      ["-build/include_order"]),
 
     ([
@@ -247,14 +258,31 @@ _PATH_RULES_SPECIFIER = [
     ([
       # These files define GObjects, which implies some definitions of
       # variables and functions containing underscores.
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GLVideoSinkGStreamer.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'GLVideoSinkGStreamer.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'DMABufVideoSinkGStreamer.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'DMABufVideoSinkGStreamer.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'TextCombinerGStreamer.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'TextCombinerGStreamer.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'TextCombinerPadGStreamer.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'TextCombinerPadGStreamer.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'TextSinkGStreamer.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'TextSinkGStreamer.h'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'VideoSinkGStreamer.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'WebKitWebSourceGStreamer.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'WebKitAudioSinkGStreamer.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'WebKitAudioSinkGStreamer.h'),
       os.path.join('Source', 'WebCore', 'platform', 'graphics', 'gstreamer', 'mse', 'WebKitMediaSourceGStreamer.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'audio', 'gstreamer', 'WebKitWebAudioSourceGStreamer.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMediaStreamSource.h'),
       os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerMediaStreamSource.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerVideoEncoder.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerVideoEncoder.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'ProxyResolverSoup.cpp'),
-      os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'ProxyResolverSoup.h')],
+      os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'ProxyResolverSoup.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'WebKitFormDataInputStream.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'WebKitFormDataInputStream.h'),
+      os.path.join('Source', 'WebKit', 'NetworkProcess', 'soup', 'WebKitDirectoryInputStream.h')],
      ["-readability/naming",
       "-readability/enum_casing"]),
 
@@ -265,6 +293,7 @@ _PATH_RULES_SPECIFIER = [
     #   No carriage-return line endings: since this is easy to correct.
     #
     ([os.path.join('webkitpy', 'thirdparty'),
+      os.path.join('Source', 'bmalloc', 'bmalloc', 'valgrind.h'),
       os.path.join('Source', 'ThirdParty', 'ANGLE'),
       os.path.join('Source', 'ThirdParty', 'libwebrtc'),
       os.path.join('Source', 'ThirdParty', 'openvr'),
@@ -275,30 +304,12 @@ _PATH_RULES_SPECIFIER = [
       "+pep8/W291",  # Trailing white space
       "+whitespace/carriage_return"]),
 
-    ([  # Source/JavaScriptCore/disassembler/udis86/ is generated code.
-      os.path.join('Source', 'JavaScriptCore', 'disassembler', 'udis86')],
+    ([
+      # Source/JavaScriptCore/disassembler/zydis/ is third-party code.
+      os.path.join('Source', 'JavaScriptCore', 'disassembler', 'zydis')],
      ["-readability/naming/underscores",
       "-whitespace/declaration",
       "-whitespace/indent"]),
-
-    ([  # Files following GStreamer coding style (for a simpler upstreaming process for example)
-      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'libwebrtc', 'GStreamerVideoEncoder.cpp'),
-      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'libwebrtc', 'GStreamerVideoEncoder.h'),
-     ],
-     ["-whitespace/indent",
-      "-whitespace/declaration",
-      "-whitespace/parens",
-      "-readability/null",
-      "-whitespace/braces",
-      "-readability/naming/underscores",
-      "-readability/enum_casing",
-     ]),
-
-    ([  # Files following using WebRTC optionnal type
-      os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'libwebrtc', 'GStreamerVideoDecoderFactory.cpp'),
-     ],
-     ["-runtime/wtf_optional",
-     ]),
 
     ([
       # There is no way to avoid the symbols __jit_debug_register_code
@@ -353,7 +364,6 @@ _TEXT_FILE_EXTENSIONS = [
     'html',
     'idl',
     'in',
-    'php',
     'pl',
     'pm',
     'pri',
@@ -391,6 +401,8 @@ _NEVER_SKIPPED_JS_FILES = [
 
 _NEVER_SKIPPED_FILES = _NEVER_SKIPPED_JS_FILES + [
     'TestExpectations',
+    'TestExpectations.json',
+    '.py'
 ]
 
 # Files to skip that are less obvious.
@@ -403,6 +415,8 @@ _SKIPPED_FILES_WITH_WARNING = [
 
     # WebKit*.h and JSC*.h files in, except those ending in Private.h are API headers, which do not follow WebKit coding style.
     re.compile(re.escape(os.path.join('Source', 'JavaScriptCore', 'API', 'glib') + os.path.sep) + r'JSC(?!.*Private\.h).*\.h$'),
+    re.compile(re.escape(os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'gtk3') + os.path.sep) + r'WebKit(?!.*Private\.h).*\.h$'),
+    re.compile(re.escape(os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'gtk4') + os.path.sep) + r'WebKit(?!.*Private\.h).*\.h$'),
     re.compile(re.escape(os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'gtk') + os.path.sep) + r'WebKit(?!.*Private\.h).*\.h$'),
     re.compile(re.escape(os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'wpe') + os.path.sep) + r'WebKit(?!.*Private\.h).*\.h$'),
     re.compile(re.escape(os.path.join('Source', 'WebKit', 'WebProcess', 'InjectedBundle', 'API', 'gtk') + os.path.sep) + r'WebKit(?!.*Private\.h).*\.h$'),
@@ -413,11 +427,14 @@ _SKIPPED_FILES_WITH_WARNING = [
     os.path.join('Source', 'WebKit', 'WebProcess', 'InjectedBundle', 'API', 'gtk', 'DOM'),
 
     os.path.join('Source', 'JavaScriptCore', 'API', 'glib', 'jsc.h'),
+    os.path.join('Source', 'WebCore', 'platform', 'gtk', 'GtkVersioning.h'),
     os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'gtk', 'webkit2.h'),
     os.path.join('Source', 'WebKit', 'UIProcess', 'API', 'wpe', 'webkit.h'),
     os.path.join('Source', 'WebKit', 'WebProcess', 'InjectedBundle', 'API', 'gtk', 'webkit-web-extension.h'),
     os.path.join('Source', 'WebKit', 'WebProcess', 'InjectedBundle', 'API', 'wpe', 'webkit-web-extension.h'),
-    os.path.join('Source', 'WebKit', 'WebProcess', 'InjectedBundle', 'API', 'wpe', 'DOM', 'webkitdom.h')]
+    os.path.join('Source', 'WebKit', 'WebProcess', 'InjectedBundle', 'API', 'wpe', 'DOM', 'webkitdom.h'),
+    os.path.join('Source', 'WebGPU', 'WebGPU', 'WebGPU.h'),
+    os.path.join('Source', 'WebGPU', 'WebGPU', 'WebGPUExt.h')]
 
 # Files to skip that are more common or obvious.
 #
@@ -444,6 +461,10 @@ _CARRIAGE_RETURN_ALLOWED_FILE_EXTENSIONS = [
     'vcproj',
     'vsprops',
     ]
+
+_INVALID_FILES = [
+    re.compile('LayoutTests/.*php'),
+]
 
 # The maximum number of errors to report per file, per category.
 # If a category is not a key, then it has no maximum.
@@ -629,7 +650,7 @@ class CheckerDispatcher(object):
         return os.path.splitext(file_path)[1].lstrip(".")
 
     def _should_skip_file_path(self, file_path, skip_array_entry):
-        match = re.search("\s*png$", file_path)
+        match = re.search(r"\s*png$", file_path)
         if match:
             return False
         if isinstance(skip_array_entry, str):
@@ -660,12 +681,19 @@ class CheckerDispatcher(object):
         basename = os.path.basename(file_path)
         if basename.startswith('ChangeLog'):
             return False
-        elif basename in _NEVER_SKIPPED_FILES:
-            return False
+        for suffix in _NEVER_SKIPPED_FILES:
+            if basename.endswith(suffix):
+                return False
         for skipped_file in _SKIPPED_FILES_WITHOUT_WARNING:
             if self._should_skip_file_path(file_path, skipped_file):
                 return True
         return False
+
+    def is_valid_file(self, file_path):
+        for regex in _INVALID_FILES:
+            if regex.match(file_path):
+                return False
+        return True
 
     def should_check_and_strip_carriage_returns(self, file_path):
         return self._file_extension(file_path) not in _CARRIAGE_RETURN_ALLOWED_FILE_EXTENSIONS
@@ -991,6 +1019,16 @@ class StyleProcessor(ProcessorBase):
 
     def should_process(self, file_path):
         """Return whether the file should be checked for style."""
+        if not self._dispatcher.is_valid_file(file_path):
+            self.error_count += 1
+            self._configuration.write_style_error(
+                category='policy/language',
+                confidence_in_error=5,
+                file_path=file_path,
+                line_number='-',
+                message='File type is unsupported by the WebKit project',
+            )
+            return False
         if self._dispatcher.should_skip_without_warning(file_path):
             return False
         if self._dispatcher.should_skip_with_warning(file_path):

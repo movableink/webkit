@@ -8,7 +8,7 @@
 <script src="/resources/testharnessreport.js"></script>
 <script src="/common/test-setting-immutable-prototype.js"></script>
 
-<iframe src="//{{domains[www]}}:{{ports[http][1]}}/common/domain-setter.sub.html"></iframe>
+<iframe src="//{{hosts[alt][]}}:{{ports[http][1]}}/common/domain-setter.sub.html"></iframe>
 
 <script>
 "use strict";
@@ -23,7 +23,7 @@ window.onload = () => {
     assert_not_equals(origProto, null);
   }, "Same-origin-domain prerequisite check: the original prototype is accessible");
 
-  testSettingImmutablePrototype("Same-origin-domain", targetLocation, origProto, { isSameOriginDomain: true });
+  testSettingImmutablePrototype("Same-origin-domain", targetLocation, origProto, { isSameOriginDomain: true }, frames[0]);
 
   done();
 };

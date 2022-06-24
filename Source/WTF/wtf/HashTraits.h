@@ -25,7 +25,6 @@
 #include <wtf/Forward.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/KeyValuePair.h>
-#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 
 #ifdef __OBJC__
@@ -179,6 +178,23 @@ template<typename T, typename Deleter> struct HashTraits<std::unique_ptr<T, Dele
     }
 };
 
+template<typename T> struct HashTraits<UniqueRef<T>> : SimpleClassHashTraits<UniqueRef<T>> {
+    typedef std::nullptr_t EmptyValueType;
+    static EmptyValueType emptyValue() { return nullptr; }
+
+    static void constructDeletedValue(UniqueRef<T>& slot) { new (NotNull, std::addressof(slot)) UniqueRef<T> { reinterpret_cast<T*>(-1) }; }
+    static bool isDeletedValue(const UniqueRef<T>& value) { return value.get() == reinterpret_cast<T*>(-1); }
+
+    typedef T* PeekType;
+    static const T* peek(const UniqueRef<T>& value) { return &value.get(); }
+    static T* peek(UniqueRef<T>& value) { return &value.get(); }
+    static T* peek(std::nullptr_t) { return nullptr; }
+
+    using TakeType = std::unique_ptr<T>;
+    static TakeType take(UniqueRef<T>&& value) { return value.moveToUniquePtr(); }
+    static TakeType take(std::nullptr_t) { return nullptr; }
+};
+
 template<typename P> struct HashTraits<RefPtr<P>> : SimpleClassHashTraits<RefPtr<P>> {
     static P* emptyValue() { return nullptr; }
 
@@ -208,17 +224,28 @@ template<typename P> struct RefHashTraits : SimpleClassHashTraits<Ref<P>> {
     static constexpr bool hasIsEmptyValueFunction = true;
     static bool isEmptyValue(const Ref<P>& value) { return value.isHashTableEmptyValue(); }
 
-    static void assignToEmpty(Ref<P>& emptyValue, Ref<P>&& newValue) { ASSERT(isEmptyValue(emptyValue)); emptyValue.assignToHashTableEmptyValue(WTFMove(newValue)); }
-
-    typedef P* PeekType;
+    using PeekType = P*;
     static PeekType peek(const Ref<P>& value) { return const_cast<PeekType>(value.ptrAllowingHashTableEmptyValue()); }
     static PeekType peek(P* value) { return value; }
 
-    typedef Optional<Ref<P>> TakeType;
-    static TakeType take(Ref<P>&& value) { return isEmptyValue(value) ? WTF::nullopt : Optional<Ref<P>>(WTFMove(value)); }
+    using TakeType = RefPtr<P>;
+    static TakeType take(Ref<P>&& value) { return isEmptyValue(value) ? nullptr : RefPtr<P>(WTFMove(value)); }
 };
 
 template<typename P> struct HashTraits<Ref<P>> : RefHashTraits<P> { };
+
+template<typename P> struct HashTraits<Packed<P*>> : SimpleClassHashTraits<Packed<P*>> {
+    static constexpr bool hasIsEmptyValueFunction = true;
+    using TargetType = Packed<P*>;
+    static_assert(TargetType::alignment < 4 * KB, "The first page is always unmapped since it includes nullptr.");
+
+    static Packed<P*> emptyValue() { return nullptr; }
+    static bool isEmptyValue(const TargetType& value) { return value.get() == nullptr; }
+
+    using PeekType = P*;
+    static PeekType peek(const TargetType& value) { return value.get(); }
+    static PeekType peek(P* value) { return value; }
+};
 
 template<> struct HashTraits<String> : SimpleClassHashTraits<String> {
     static constexpr bool hasIsEmptyValueFunction = true;
@@ -359,6 +386,14 @@ template<typename T>
 struct NullableHashTraits : public HashTraits<T> {
     static constexpr bool emptyValueIsZero = false;
     static T emptyValue() { return reinterpret_cast<T>(1); }
+};
+
+template<typename T, size_t inlineCapacity>
+struct HashTraits<Vector<T, inlineCapacity>> : GenericHashTraits<Vector<T, inlineCapacity>> {
+    static constexpr bool emptyValueIsZero = !inlineCapacity;
+
+    static void constructDeletedValue(Vector<T, inlineCapacity>& slot) { new (NotNull, std::addressof(slot)) Vector<T, inlineCapacity>(WTF::HashTableDeletedValue); }
+    static bool isDeletedValue(const Vector<T, inlineCapacity>& value) { return value.isHashTableDeletedValue(); }
 };
 
 // Useful for classes that want complete control over what is empty and what is deleted,

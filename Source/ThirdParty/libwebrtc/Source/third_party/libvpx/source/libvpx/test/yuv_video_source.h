@@ -7,8 +7,8 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
-#ifndef TEST_YUV_VIDEO_SOURCE_H_
-#define TEST_YUV_VIDEO_SOURCE_H_
+#ifndef VPX_TEST_YUV_VIDEO_SOURCE_H_
+#define VPX_TEST_YUV_VIDEO_SOURCE_H_
 
 #include <cstdio>
 #include <cstdlib>
@@ -84,6 +84,7 @@ class YUVVideoSource : public VideoSource {
       height_ = height;
       format_ = format;
       switch (format) {
+        case VPX_IMG_FMT_NV12:
         case VPX_IMG_FMT_I420: raw_size_ = width * height * 3 / 2; break;
         case VPX_IMG_FMT_I422: raw_size_ = width * height * 2; break;
         case VPX_IMG_FMT_I440: raw_size_ = width * height * 2; break;
@@ -122,4 +123,4 @@ class YUVVideoSource : public VideoSource {
 
 }  // namespace libvpx_test
 
-#endif  // TEST_YUV_VIDEO_SOURCE_H_
+#endif  // VPX_TEST_YUV_VIDEO_SOURCE_H_

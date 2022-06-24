@@ -27,13 +27,15 @@
 
 #if WK_HAVE_C_SPI && PLATFORM(MAC)
 
-#import "Test.h"
-
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
+#import "Test.h"
 #import "TestBrowsingContextLoadDelegate.h"
 #import "TestProtocol.h"
 #import <WebKit/WKContextPrivate.h>
 #import <WebKit/WKProcessGroupPrivate.h>
+#import <WebKit/WKViewPrivate.h>
+#import <WebKit/WKWebsiteDataStoreRef.h>
 #import <wtf/RetainPtr.h>
 
 static bool testFinished;
@@ -72,6 +74,8 @@ static WKProcessGroup *processGroup()
     return processGroup;
 }
 
+static RetainPtr<WKView> wkView;
+
 @interface CloseWhileStartingProtocol : TestProtocol
 @end
 
@@ -89,7 +93,7 @@ static WKProcessGroup *processGroup()
         };
         WKContextSetClient([processGroup() _contextRef], &client.base);
 
-        kill(WKContextGetNetworkProcessIdentifier([processGroup() _contextRef]), SIGKILL);
+        kill(WKWebsiteDataStoreGetNetworkProcessIdentifier(WKPageGetWebsiteDataStore([wkView pageRef])), SIGKILL);
         [self.client URLProtocol:self didFailWithError:[NSError errorWithDomain:NSCocoaErrorDomain code:0 userInfo:nil]];
     });
 }
@@ -107,7 +111,6 @@ static WKProcessGroup *processGroup()
 -(void)finishTheLoad;
 @end
 
-static bool isDone;
 static RetainPtr<ProcessPoolDestroyedDuringLoadingProtocol> processPoolProtocolInstance;
 
 @implementation ProcessPoolDestroyedDuringLoadingProtocol
@@ -142,7 +145,7 @@ namespace TestWebKitAPI {
 static void runTest()
 {
     RetainPtr<WKBrowsingContextGroup> browsingContextGroup = adoptNS([[WKBrowsingContextGroup alloc] initWithIdentifier:@"TestIdentifier"]);
-    RetainPtr<WKView> wkView = adoptNS([[WKView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) processGroup:processGroup() browsingContextGroup:browsingContextGroup.get()]);
+    wkView = adoptNS([[WKView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) processGroup:processGroup() browsingContextGroup:browsingContextGroup.get()]);
     RetainPtr<CustomProtocolsLoadDelegate> loadDelegate = adoptNS([[CustomProtocolsLoadDelegate alloc] init]);
     [wkView browsingContextController].loadDelegate = loadDelegate.get();
     [[wkView browsingContextController] loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@://redirect?test", [TestProtocol scheme]]]]];

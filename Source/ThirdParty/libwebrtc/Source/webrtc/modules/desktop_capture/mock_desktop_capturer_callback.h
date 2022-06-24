@@ -10,10 +10,9 @@
 #ifndef MODULES_DESKTOP_CAPTURE_MOCK_DESKTOP_CAPTURER_CALLBACK_H_
 #define MODULES_DESKTOP_CAPTURE_MOCK_DESKTOP_CAPTURER_CALLBACK_H_
 
-#include "modules/desktop_capture/desktop_capturer.h"
-
 #include <memory>
 
+#include "modules/desktop_capture/desktop_capturer.h"
 #include "test/gmock.h"
 
 namespace webrtc {
@@ -23,9 +22,10 @@ class MockDesktopCapturerCallback : public DesktopCapturer::Callback {
   MockDesktopCapturerCallback();
   ~MockDesktopCapturerCallback() override;
 
-  MOCK_METHOD2(OnCaptureResultPtr,
-               void(DesktopCapturer::Result result,
-                    std::unique_ptr<DesktopFrame>* frame));
+  MOCK_METHOD(void,
+              OnCaptureResultPtr,
+              (DesktopCapturer::Result result,
+               std::unique_ptr<DesktopFrame>* frame));
   void OnCaptureResult(DesktopCapturer::Result result,
                        std::unique_ptr<DesktopFrame> frame) final;
 

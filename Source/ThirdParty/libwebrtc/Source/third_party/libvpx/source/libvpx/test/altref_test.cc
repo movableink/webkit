@@ -35,7 +35,7 @@ class AltRefTest : public ::libvpx_test::EncoderTest,
 
   virtual void PreEncodeFrameHook(libvpx_test::VideoSource *video,
                                   libvpx_test::Encoder *encoder) {
-    if (video->frame() == 1) {
+    if (video->frame() == 0) {
       encoder->Control(VP8E_SET_ENABLEAUTOALTREF, 1);
       encoder->Control(VP8E_SET_CPUUSED, 3);
     }
@@ -63,8 +63,8 @@ TEST_P(AltRefTest, MonotonicTimestamps) {
   EXPECT_GE(altref_count(), 1);
 }
 
-VP8_INSTANTIATE_TEST_CASE(AltRefTest,
-                          ::testing::Range(kLookAheadMin, kLookAheadMax));
+VP8_INSTANTIATE_TEST_SUITE(AltRefTest,
+                           ::testing::Range(kLookAheadMin, kLookAheadMax));
 
 #endif  // CONFIG_VP8_ENCODER
 
@@ -142,11 +142,11 @@ TEST_P(AltRefForcedKeyTestLarge, ForcedFrameIsKey) {
   }
 }
 
-VP8_INSTANTIATE_TEST_CASE(AltRefForcedKeyTestLarge,
-                          ::testing::Values(::libvpx_test::kOnePassGood),
-                          ::testing::Range(0, 9));
+VP8_INSTANTIATE_TEST_SUITE(AltRefForcedKeyTestLarge,
+                           ::testing::Values(::libvpx_test::kOnePassGood),
+                           ::testing::Range(0, 9));
 
-VP9_INSTANTIATE_TEST_CASE(AltRefForcedKeyTestLarge,
-                          ::testing::Values(::libvpx_test::kOnePassGood),
-                          ::testing::Range(0, 9));
+VP9_INSTANTIATE_TEST_SUITE(AltRefForcedKeyTestLarge,
+                           ::testing::Values(::libvpx_test::kOnePassGood),
+                           ::testing::Range(0, 9));
 }  // namespace

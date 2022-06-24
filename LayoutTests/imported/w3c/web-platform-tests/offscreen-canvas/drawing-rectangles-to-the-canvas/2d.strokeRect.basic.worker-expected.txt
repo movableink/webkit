@@ -1,3 +1,0 @@
-
-FAIL strokeRect works Can't find variable: OffscreenCanvas
-

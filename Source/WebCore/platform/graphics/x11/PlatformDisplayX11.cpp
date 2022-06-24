@@ -27,17 +27,24 @@
 #include "PlatformDisplayX11.h"
 
 #include "GLContext.h"
+#include "XErrorTrapper.h"
 
 #if PLATFORM(X11)
+#include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/Xcomposite.h>
 #if PLATFORM(GTK)
+#include <X11/Xutil.h>
 #include <X11/extensions/Xdamage.h>
 #endif
 
 #if USE(EGL)
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#endif
+
+#if USE(GLX)
+#include <GL/glx.h>
 #endif
 
 namespace WebCore {
@@ -103,7 +110,7 @@ bool PlatformDisplayX11::supportsXComposite() const
     return m_supportsXComposite.value();
 }
 
-bool PlatformDisplayX11::supportsXDamage(Optional<int>& damageEventBase, Optional<int>& damageErrorBase) const
+bool PlatformDisplayX11::supportsXDamage(std::optional<int>& damageEventBase, std::optional<int>& damageErrorBase) const
 {
     if (!m_supportsXDamage) {
         m_supportsXDamage = false;
@@ -123,6 +130,111 @@ bool PlatformDisplayX11::supportsXDamage(Optional<int>& damageEventBase, Optiona
     damageErrorBase = m_damageErrorBase;
     return m_supportsXDamage.value();
 }
+
+bool PlatformDisplayX11::supportsGLX(std::optional<int>& glxErrorBase) const
+{
+#if USE(GLX)
+    if (!m_supportsGLX) {
+        m_supportsGLX = false;
+        if (m_display) {
+            int eventBase, errorBase;
+            m_supportsGLX = glXQueryExtension(m_display, &errorBase, &eventBase);
+            if (m_supportsGLX.value())
+                m_glxErrorBase = errorBase;
+        }
+    }
+
+    glxErrorBase = m_glxErrorBase;
+    return m_supportsGLX.value();
+#else
+    UNUSED_PARAM(glxErrorBase);
+    return false;
+#endif
+}
+
+void* PlatformDisplayX11::visual() const
+{
+    if (m_visual)
+        return m_visual;
+
+    XVisualInfo visualTemplate;
+    visualTemplate.screen = DefaultScreen(m_display);
+
+    int visualCount = 0;
+    XVisualInfo* visualInfo = XGetVisualInfo(m_display, VisualScreenMask, &visualTemplate, &visualCount);
+    for (int i = 0; i < visualCount; ++i) {
+        auto& info = visualInfo[i];
+        if (info.depth == 32 && info.red_mask == 0xff0000 && info.green_mask == 0x00ff00 && info.blue_mask == 0x0000ff) {
+            m_visual = info.visual;
+            break;
+        }
+    }
+    XFree(visualInfo);
+
+    if (!m_visual)
+        m_visual = DefaultVisual(m_display, DefaultScreen(m_display));
+
+    return m_visual;
+}
+
+#if USE(LCMS)
+cmsHPROFILE PlatformDisplayX11::colorProfile() const
+{
+    if (m_iccProfile)
+        return m_iccProfile.get();
+
+    Atom iccAtom = XInternAtom(m_display, "_ICC_PROFILE", False);
+    Atom type;
+    int format;
+    unsigned long itemCount, bytesAfter;
+    unsigned char* data = nullptr;
+    auto result = XGetWindowProperty(m_display, RootWindowOfScreen(DefaultScreenOfDisplay(m_display)), iccAtom, 0L, ~0L, False, XA_CARDINAL, &type, &format, &itemCount, &bytesAfter, &data);
+    if (result == Success && type == XA_CARDINAL && itemCount > 0) {
+        unsigned long dataSize;
+        switch (format) {
+        case 8:
+            dataSize = itemCount;
+            break;
+        case 16:
+            dataSize = sizeof(short) * itemCount;
+            break;
+        case 32:
+            dataSize = sizeof(long) * itemCount;
+            break;
+        default:
+            dataSize = 0;
+            break;
+        }
+
+        if (dataSize)
+            m_iccProfile = LCMSProfilePtr(cmsOpenProfileFromMem(data, dataSize));
+    }
+
+    if (data)
+        XFree(data);
+
+    return m_iccProfile ? m_iccProfile.get() : PlatformDisplay::colorProfile();
+}
+#endif
+
+#if USE(ATSPI) || USE(ATK)
+String PlatformDisplayX11::plartformAccessibilityBusAddress() const
+{
+    Atom atspiBusAtom = XInternAtom(m_display, "AT_SPI_BUS", False);
+    Atom type;
+    int format;
+    unsigned long itemCount, bytesAfter;
+    unsigned char* data = nullptr;
+    XErrorTrapper trapper(m_display, XErrorTrapper::Policy::Ignore);
+    XGetWindowProperty(m_display, RootWindowOfScreen(DefaultScreenOfDisplay(m_display)), atspiBusAtom, 0L, 8192, False, XA_STRING, &type, &format, &itemCount, &bytesAfter, &data);
+
+    String atspiBusAddress = String::fromUTF8(reinterpret_cast<char*>(data));
+    if (data)
+        XFree(data);
+
+    return atspiBusAddress;
+}
+#endif
 
 } // namespace WebCore
 

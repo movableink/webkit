@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+#if !USE(GTK4)
 
 #include "DisplayRefreshMonitor.h"
 
@@ -42,15 +42,20 @@ public:
 
     virtual ~DisplayRefreshMonitorGtk();
 
-    void displayLinkFired() override;
-    bool requestRefreshCallback() override;
+    void displayLinkCallbackFired();
 
 private:
     explicit DisplayRefreshMonitorGtk(PlatformDisplayID);
 
+    void stop() final;
+    bool startNotificationMechanism() final;
+    void stopNotificationMechanism() final;
+
     GtkWidget* m_window { nullptr };
+    DisplayUpdate m_currentUpdate;
+    bool m_clockIsActive { false };
 };
 
 } // namespace WebCore
 
-#endif // USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+#endif // !USE(GTK4)

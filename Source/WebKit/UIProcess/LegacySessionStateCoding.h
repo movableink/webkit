@@ -34,11 +34,10 @@ class Data;
 
 namespace WebKit {
 
-struct FrameState;
 struct SessionState;
 
 RefPtr<API::Data> encodeLegacySessionState(const SessionState&);
-bool decodeLegacySessionState(const uint8_t* data, size_t, SessionState&);
+WARN_UNUSED_RETURN bool decodeLegacySessionState(const uint8_t* data, size_t, SessionState&);
 
 } // namespace WebKit
 

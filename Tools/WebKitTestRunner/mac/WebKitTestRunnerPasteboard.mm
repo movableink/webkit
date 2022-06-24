@@ -30,39 +30,41 @@
 
 #import "NSPasteboardAdditions.h"
 #import <objc/runtime.h>
+#import <wtf/Lock.h>
 #import <wtf/RetainPtr.h>
 
 @interface LocalPasteboard : NSPasteboard
 {
-    NSMutableArray *typesArray;
-    NSMutableSet *typesSet;
-    NSMutableDictionary *dataByType;
-    NSInteger changeCount;
-    NSString *pasteboardName;
+    RetainPtr<NSMutableArray> _typesArray;
+    RetainPtr<NSMutableSet> _typesSet;
+    RetainPtr<NSMutableArray<NSPasteboardItem *>> _writtenPasteboardItems;
+    RetainPtr<NSMutableDictionary> _dataByType;
+    NSInteger _changeCount;
+    RetainPtr<NSString> _pasteboardName;
 }
 
 -(id)initWithName:(NSString *)name;
 @end
 
-static NSMutableDictionary *localPasteboards;
+static Lock localPasteboardsLock;
+static RetainPtr<NSMutableDictionary> localPasteboards WTF_GUARDED_BY_LOCK(localPasteboardsLock);
 
 @implementation WebKitTestRunnerPasteboard
 
 // Return a local pasteboard so we don't disturb the real pasteboards when running tests.
 + (NSPasteboard *)_pasteboardWithName:(NSString *)name
 {
-    static int number = 0;
+    Locker locker { localPasteboardsLock };
+    static uint64_t number WTF_GUARDED_BY_LOCK(localPasteboardsLock) = 0;
     if (!name)
-        name = [NSString stringWithFormat:@"LocalPasteboard%d", ++number];
+        name = [NSString stringWithFormat:@"LocalPasteboard%llu", ++number];
     if (!localPasteboards)
-        localPasteboards = [[NSMutableDictionary alloc] init];
-    LocalPasteboard *pasteboard = [localPasteboards objectForKey:name];
-    if (pasteboard)
+        localPasteboards = adoptNS([[NSMutableDictionary alloc] init]);
+    if (LocalPasteboard *pasteboard = [localPasteboards objectForKey:name])
         return pasteboard;
-    pasteboard = [[LocalPasteboard alloc] initWithName:name];
-    [localPasteboards setObject:pasteboard forKey:name];
-    [pasteboard release];
-    return pasteboard;
+    auto pasteboard = adoptNS([[LocalPasteboard alloc] initWithName:name]);
+    [localPasteboards setObject:pasteboard.get() forKey:name];
+    return pasteboard.autorelease();
 }
 
 // This method crashes when called on LocalPasteboard.
@@ -73,7 +75,7 @@ static NSMutableDictionary *localPasteboards;
 
 + (void)releaseLocalPasteboards
 {
-    [localPasteboards release];
+    Locker locker { localPasteboardsLock };
     localPasteboards = nil;
 }
 
@@ -81,7 +83,7 @@ static NSMutableDictionary *localPasteboards;
 // of the usual WebScriptObject that is passed around
 - (NSInteger)declareType:(NSString *)type owner:(id)newOwner
 {
-    return [self declareTypes:[NSArray arrayWithObject:type] owner:newOwner];
+    return [self declareTypes:@[type] owner:newOwner];
 }
 
 @end
@@ -99,25 +101,16 @@ static NSMutableDictionary *localPasteboards;
     self = [super init];
     if (!self)
         return nil;
-    typesArray = [[NSMutableArray alloc] init];
-    typesSet = [[NSMutableSet alloc] init];
-    dataByType = [[NSMutableDictionary alloc] init];
-    pasteboardName = [name copy];
+    _typesArray = adoptNS([[NSMutableArray alloc] init]);
+    _typesSet = adoptNS([[NSMutableSet alloc] init]);
+    _dataByType = adoptNS([[NSMutableDictionary alloc] init]);
+    _pasteboardName = adoptNS([name copy]);
     return self;
-}
-
-- (void)dealloc
-{
-    [typesArray release];
-    [typesSet release];
-    [dataByType release];
-    [pasteboardName release];
-    [super dealloc];
 }
 
 - (NSString *)name
 {
-    return pasteboardName;
+    return _pasteboardName.get();
 }
 
 - (void)releaseGlobally
@@ -126,56 +119,64 @@ static NSMutableDictionary *localPasteboards;
 
 - (void)_clearContentsWithoutUpdatingChangeCount
 {
-    [typesArray removeAllObjects];
-    [typesSet removeAllObjects];
-    [dataByType removeAllObjects];
+    _writtenPasteboardItems = nil;
+    [_typesArray removeAllObjects];
+    [_typesSet removeAllObjects];
+    [_dataByType removeAllObjects];
 }
 
 - (NSInteger)clearContents
 {
     [self _clearContentsWithoutUpdatingChangeCount];
-    return ++changeCount;
+    return ++_changeCount;
 }
 
 - (NSInteger)declareTypes:(NSArray *)newTypes owner:(id)newOwner
 {
     [self _clearContentsWithoutUpdatingChangeCount];
-    return [self addTypes:newTypes owner:newOwner];
+    [self _addTypesWithoutUpdatingChangeCount:newTypes owner:newOwner];
+    return ++_changeCount;
 }
 
-- (NSInteger)addTypes:(NSArray *)newTypes owner:(id)newOwner
+- (NSInteger)addTypes:(NSArray<NSPasteboardType> *)newTypes owner:(id)newOwner
+{
+    [self _addTypesWithoutUpdatingChangeCount:newTypes owner:newOwner];
+    // FIXME: Ideally, we would keep track of the current owner and only bump the change
+    // count if the new owner is different.
+    return ++_changeCount;
+}
+
+- (void)_addTypesWithoutUpdatingChangeCount:(NSArray *)newTypes owner:(id)newOwner
 {
     unsigned count = [newTypes count];
     unsigned i;
     for (i = 0; i < count; ++i) {
         NSString *type = [newTypes objectAtIndex:i];
-        NSString *setType = [typesSet member:type];
+        RetainPtr<NSString> setType = [_typesSet member:type];
         if (!setType) {
-            setType = [type copy];
-            [typesArray addObject:setType];
-            [typesSet addObject:setType];
-            [setType release];
+            setType = adoptNS([type copy]);
+            [_typesArray addObject:setType.get()];
+            [_typesSet addObject:setType.get()];
         }
         if (newOwner && [newOwner respondsToSelector:@selector(pasteboard:provideDataForType:)])
-            [newOwner pasteboard:self provideDataForType:setType];
+            [newOwner pasteboard:self provideDataForType:setType.get()];
     }
-    return ++changeCount;
 }
 
 - (NSInteger)changeCount
 {
-    return changeCount;
+    return _changeCount;
 }
 
 - (NSArray *)types
 {
-    return typesArray;
+    return _typesArray.get();
 }
 
 - (NSString *)availableTypeFromArray:(NSArray *)types
 {
     for (NSString *type in types) {
-        if (NSString *setType = [typesSet member:type])
+        if (NSString *setType = [_typesSet member:type])
             return setType;
     }
     return nil;
@@ -183,18 +184,18 @@ static NSMutableDictionary *localPasteboards;
 
 - (BOOL)setData:(NSData *)data forType:(NSString *)dataType
 {
-    if (![typesSet containsObject:dataType])
+    if (![_typesSet containsObject:dataType])
         return NO;
     if (!data)
         data = [NSData data];
-    [dataByType setObject:data forKey:dataType];
-    ++changeCount;
+    [_dataByType setObject:data forKey:dataType];
+    ++_changeCount;
     return YES;
 }
 
 - (NSData *)dataForType:(NSString *)dataType
 {
-    return [dataByType objectForKey:dataType];
+    return [_dataByType objectForKey:dataType];
 }
 
 - (BOOL)setPropertyList:(id)propertyList forType:(NSString *)dataType
@@ -212,10 +213,37 @@ static NSMutableDictionary *localPasteboards;
 
 - (NSArray<NSPasteboardItem *> *)pasteboardItems
 {
+    if (_writtenPasteboardItems)
+        return _writtenPasteboardItems.get();
+
     auto item = adoptNS([[NSPasteboardItem alloc] init]);
-    for (NSString *type in dataByType)
-        [item setData:dataByType[type] forType:[NSPasteboard _modernPasteboardType:type]];
+    for (NSString *type in _typesArray.get()) {
+        NSPasteboardType modernPasteboardType = [NSPasteboard _modernPasteboardType:type];
+        if (NSData *dataForType = [_dataByType objectForKey:type] ?: [_dataByType objectForKey:modernPasteboardType])
+            [item setData:dataForType forType:modernPasteboardType];
+    }
     return @[ item.get() ];
+}
+
+- (BOOL)writeObjects:(NSArray<id <NSPasteboardWriting>> *)objects
+{
+    _writtenPasteboardItems = adoptNS([[NSMutableArray<NSPasteboardItem *> alloc] initWithCapacity:objects.count]);
+    for (id <NSPasteboardWriting> object in objects) {
+        ASSERT([object isKindOfClass:NSPasteboardItem.class]);
+        [_writtenPasteboardItems addObject:(NSPasteboardItem *)object];
+        NSArray<NSPasteboardType> *writableTypes = [object writableTypesForPasteboard:self];
+        for (NSString *type in writableTypes) {
+            [self addTypes:@[type] owner:self];
+
+            id propertyList = [object pasteboardPropertyListForType:type];
+            if ([propertyList isKindOfClass:NSData.class])
+                [self setData:propertyList forType:type];
+            else
+                ASSERT_NOT_REACHED();
+        }
+    }
+
+    return YES;
 }
 
 @end

@@ -24,19 +24,27 @@
  */
 
 #import "config.h"
-#import "WKWebpagePreferences.h"
+#import <WebKit/WKWebpagePreferences.h>
 
 #import "APICustomHeaderFields.h"
+#import "CaptivePortalModeObserver.h"
+#import "WKUserContentControllerInternal.h"
 #import "WKWebpagePreferencesInternal.h"
 #import "WKWebsiteDataStoreInternal.h"
 #import "WebContentMode.h"
+#import "WebProcessPool.h"
 #import "_WKCustomHeaderFieldsInternal.h"
-#import "_WKWebsitePoliciesInternal.h"
+#import <WebCore/DocumentLoader.h>
+#import <WebCore/WebCoreObjCExtras.h>
 #import <wtf/RetainPtr.h>
 
 #if PLATFORM(IOS_FAMILY)
+#import <wtf/cocoa/Entitlements.h>
+#endif
 
 namespace WebKit {
+
+#if PLATFORM(IOS_FAMILY)
 
 WKContentMode contentMode(WebKit::WebContentMode contentMode)
 {
@@ -66,19 +74,108 @@ WebKit::WebContentMode webContentMode(WKContentMode contentMode)
     return WebKit::WebContentMode::Recommended;
 }
 
-} // namespace WebKit
-
 #endif // PLATFORM(IOS_FAMILY)
+
+static _WKWebsiteMouseEventPolicy mouseEventPolicy(WebCore::MouseEventPolicy policy)
+{
+    switch (policy) {
+    case WebCore::MouseEventPolicy::Default:
+        return _WKWebsiteMouseEventPolicyDefault;
+#if ENABLE(IOS_TOUCH_EVENTS)
+    case WebCore::MouseEventPolicy::SynthesizeTouchEvents:
+        return _WKWebsiteMouseEventPolicySynthesizeTouchEvents;
+#endif
+    }
+    ASSERT_NOT_REACHED();
+    return _WKWebsiteMouseEventPolicyDefault;
+}
+
+static WebCore::MouseEventPolicy coreMouseEventPolicy(_WKWebsiteMouseEventPolicy policy)
+{
+    switch (policy) {
+    case _WKWebsiteMouseEventPolicyDefault:
+        return WebCore::MouseEventPolicy::Default;
+#if ENABLE(IOS_TOUCH_EVENTS)
+    case _WKWebsiteMouseEventPolicySynthesizeTouchEvents:
+        return WebCore::MouseEventPolicy::SynthesizeTouchEvents;
+#endif
+    }
+    ASSERT_NOT_REACHED();
+    return WebCore::MouseEventPolicy::Default;
+}
+
+static _WKWebsiteModalContainerObservationPolicy modalContainerObservationPolicy(WebCore::ModalContainerObservationPolicy policy)
+{
+    switch (policy) {
+    case WebCore::ModalContainerObservationPolicy::Disabled:
+        return _WKWebsiteModalContainerObservationPolicyDisabled;
+    case WebCore::ModalContainerObservationPolicy::Prompt:
+        return _WKWebsiteModalContainerObservationPolicyPrompt;
+    }
+    ASSERT_NOT_REACHED();
+    return _WKWebsiteModalContainerObservationPolicyDisabled;
+}
+
+static WebCore::ModalContainerObservationPolicy coreModalContainerObservationPolicy(_WKWebsiteModalContainerObservationPolicy policy)
+{
+    switch (policy) {
+    case _WKWebsiteModalContainerObservationPolicyDisabled:
+        return WebCore::ModalContainerObservationPolicy::Disabled;
+    case _WKWebsiteModalContainerObservationPolicyPrompt:
+        return WebCore::ModalContainerObservationPolicy::Prompt;
+    }
+    ASSERT_NOT_REACHED();
+    return WebCore::ModalContainerObservationPolicy::Disabled;
+}
+
+class WebPagePreferencesCaptivePortalModeObserver final : public CaptivePortalModeObserver {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    WebPagePreferencesCaptivePortalModeObserver(id object)
+        : m_object(object)
+    {
+        addCaptivePortalModeObserver(*this);
+    }
+
+    ~WebPagePreferencesCaptivePortalModeObserver()
+    {
+        removeCaptivePortalModeObserver(*this);
+    }
+
+private:
+    void willChangeCaptivePortalMode() final
+    {
+        if (auto object = m_object.get()) {
+            [object willChangeValueForKey:@"_captivePortalModeEnabled"];
+            [object _willChangeCaptivePortalMode];
+        }
+    }
+
+    void didChangeCaptivePortalMode() final
+    {
+        if (auto object = m_object.get()) {
+            [object didChangeValueForKey:@"_captivePortalModeEnabled"];
+            [object _didChangeCaptivePortalMode];
+        }
+    }
+
+    WeakObjCPtr<id> m_object;
+};
+
+} // namespace WebKit
 
 @implementation WKWebpagePreferences
 
 + (instancetype)defaultPreferences
 {
-    return [[[self alloc] init] autorelease];
+    return adoptNS([[self alloc] init]).autorelease();
 }
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(WKWebpagePreferences.class, self))
+        return;
+
     _websitePolicies->API::WebsitePolicies::~WebsitePolicies();
 
     [super dealloc];
@@ -90,6 +187,7 @@ WebKit::WebContentMode webContentMode(WKContentMode contentMode)
         return nil;
 
     API::Object::constructInWrapper<API::WebsitePolicies>(self);
+    _captivePortalModeObserver = makeUnique<WebKit::WebPagePreferencesCaptivePortalModeObserver>(self);
 
     return self;
 }
@@ -102,6 +200,31 @@ WebKit::WebContentMode webContentMode(WKContentMode contentMode)
 - (BOOL)_contentBlockersEnabled
 {
     return _websitePolicies->contentBlockersEnabled();
+}
+
+- (void)_setActiveContentRuleListActionPatterns:(NSDictionary<NSString *, NSSet<NSString *> *> *)patterns
+{
+    __block HashMap<String, Vector<String>> map;
+    [patterns enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSSet<NSString *> *value, BOOL *) {
+        Vector<String> vector;
+        vector.reserveInitialCapacity(value.count);
+        for (NSString *pattern in value)
+            vector.uncheckedAppend(pattern);
+        map.add(key, WTFMove(vector));
+    }];
+    _websitePolicies->setActiveContentRuleListActionPatterns(WTFMove(map));
+}
+
+- (NSDictionary<NSString *, NSSet<NSString *> *> *)_activeContentRuleListActionPatterns
+{
+    NSMutableDictionary<NSString *, NSSet<NSString *> *> *dictionary = [NSMutableDictionary dictionary];
+    for (const auto& pair : _websitePolicies->activeContentRuleListActionPatterns()) {
+        NSMutableSet<NSString *> *set = [NSMutableSet set];
+        for (const auto& pattern : pair.value)
+            [set addObject:pattern];
+        [dictionary setObject:set forKey:pair.key];
+    }
+    return dictionary;
 }
 
 - (void)_setAllowedAutoplayQuirks:(_WKWebsiteAutoplayQuirk)allowedQuirks
@@ -250,11 +373,9 @@ static _WKWebsiteDeviceOrientationAndMotionAccessPolicy toWKWebsiteDeviceOrienta
 
 - (NSArray<_WKCustomHeaderFields *> *)_customHeaderFields
 {
-    const auto& fields = _websitePolicies->customHeaderFields();
-    NSMutableArray *array = [[[NSMutableArray alloc] initWithCapacity:fields.size()] autorelease];
-    for (const auto& field : fields)
-        [array addObject:wrapper(API::CustomHeaderFields::create(field))];
-    return array;
+    return createNSArray(_websitePolicies->customHeaderFields(), [] (auto& field) {
+        return wrapper(API::CustomHeaderFields::create(field));
+    }).autorelease();
 }
 
 - (void)_setCustomHeaderFields:(NSArray<_WKCustomHeaderFields *> *)fields
@@ -276,6 +397,16 @@ static _WKWebsiteDeviceOrientationAndMotionAccessPolicy toWKWebsiteDeviceOrienta
     _websitePolicies->setWebsiteDataStore(websiteDataStore->_websiteDataStore.get());
 }
 
+- (WKUserContentController *)_userContentController
+{
+    return wrapper(_websitePolicies->userContentController());
+}
+
+- (void)_setUserContentController:(WKUserContentController *)userContentController
+{
+    _websitePolicies->setUserContentController(userContentController->_userContentControllerProxy.get());
+}
+
 - (void)_setCustomUserAgent:(NSString *)customUserAgent
 {
     _websitePolicies->setCustomUserAgent(customUserAgent);
@@ -286,14 +417,14 @@ static _WKWebsiteDeviceOrientationAndMotionAccessPolicy toWKWebsiteDeviceOrienta
     return _websitePolicies->customUserAgent();
 }
 
-- (void)_setCustomJavaScriptUserAgentAsSiteSpecificQuirks:(NSString *)customUserAgent
+- (void)_setCustomUserAgentAsSiteSpecificQuirks:(NSString *)customUserAgent
 {
-    _websitePolicies->setCustomJavaScriptUserAgentAsSiteSpecificQuirks(customUserAgent);
+    _websitePolicies->setCustomUserAgentAsSiteSpecificQuirks(customUserAgent);
 }
 
-- (NSString *)_customJavaScriptUserAgentAsSiteSpecificQuirks
+- (NSString *)_customUserAgentAsSiteSpecificQuirks
 {
-    return _websitePolicies->customJavaScriptUserAgentAsSiteSpecificQuirks();
+    return _websitePolicies->customUserAgentAsSiteSpecificQuirks();
 }
 
 - (void)_setCustomNavigatorPlatform:(NSString *)customNavigatorPlatform
@@ -331,6 +462,64 @@ static _WKWebsiteDeviceOrientationAndMotionAccessPolicy toWKWebsiteDeviceOrienta
     return *_websitePolicies;
 }
 
+- (void)setAllowsContentJavaScript:(BOOL)allowsContentJavaScript
+{
+    _websitePolicies->setAllowsContentJavaScript(allowsContentJavaScript ? WebCore::AllowsContentJavaScript::Yes : WebCore::AllowsContentJavaScript::No);
+}
+
+- (BOOL)allowsContentJavaScript
+{
+    switch (_websitePolicies->allowsContentJavaScript()) {
+    case WebCore::AllowsContentJavaScript::Yes:
+        return YES;
+    case WebCore::AllowsContentJavaScript::No:
+        return NO;
+    }
+}
+
+- (void)_setCaptivePortalModeEnabled:(BOOL)captivePortalModeEnabled
+{
+#if PLATFORM(IOS_FAMILY)
+    // On iOS, the web browser entitlement is required to disable captive portal mode.
+    if (!captivePortalModeEnabled && !WTF::processHasEntitlement("com.apple.developer.web-browser"))
+        [NSException raise:NSInternalInconsistencyException format:@"The 'com.apple.developer.web-browser' restricted entitlement is required to disable captive portal mode"];
+#endif
+
+    _websitePolicies->setCaptivePortalModeEnabled(!!captivePortalModeEnabled);
+}
+
+- (BOOL)_captivePortalModeEnabled
+{
+    return _websitePolicies->captivePortalModeEnabled();
+}
+
+- (_WKWebsiteColorSchemePreference)_colorSchemePreference
+{
+    switch (_websitePolicies->colorSchemePreference()) {
+    case WebCore::ColorSchemePreference::NoPreference:
+        return _WKWebsiteColorSchemePreferenceNoPreference;
+    case WebCore::ColorSchemePreference::Light:
+        return _WKWebsiteColorSchemePreferenceLight;
+    case WebCore::ColorSchemePreference::Dark:
+        return _WKWebsiteColorSchemePreferenceDark;
+    }
+}
+
+- (void)_setColorSchemePreference:(_WKWebsiteColorSchemePreference)value
+{
+    switch (value) {
+    case _WKWebsiteColorSchemePreferenceNoPreference:
+        _websitePolicies->setColorSchemePreference(WebCore::ColorSchemePreference::NoPreference);
+        break;
+    case _WKWebsiteColorSchemePreferenceLight:
+        _websitePolicies->setColorSchemePreference(WebCore::ColorSchemePreference::Light);
+        break;
+    case _WKWebsiteColorSchemePreferenceDark:
+        _websitePolicies->setColorSchemePreference(WebCore::ColorSchemePreference::Dark);
+        break;
+    }
+}
+
 #if PLATFORM(IOS_FAMILY)
 
 - (void)setPreferredContentMode:(WKContentMode)contentMode
@@ -344,5 +533,36 @@ static _WKWebsiteDeviceOrientationAndMotionAccessPolicy toWKWebsiteDeviceOrienta
 }
 
 #endif // PLATFORM(IOS_FAMILY)
+
+- (void)_setMouseEventPolicy:(_WKWebsiteMouseEventPolicy)policy
+{
+    _websitePolicies->setMouseEventPolicy(WebKit::coreMouseEventPolicy(policy));
+}
+
+- (_WKWebsiteMouseEventPolicy)_mouseEventPolicy
+{
+    return WebKit::mouseEventPolicy(_websitePolicies->mouseEventPolicy());
+}
+
+- (void)_setModalContainerObservationPolicy:(_WKWebsiteModalContainerObservationPolicy)policy
+{
+    _websitePolicies->setModalContainerObservationPolicy(WebKit::coreModalContainerObservationPolicy(policy));
+}
+
+- (_WKWebsiteModalContainerObservationPolicy)_modalContainerObservationPolicy
+{
+    return WebKit::modalContainerObservationPolicy(_websitePolicies->modalContainerObservationPolicy());
+}
+
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/WKWebpagePreferencesAdditions.mm>
+#else
+- (void)_willChangeCaptivePortalMode
+{
+}
+- (void)_didChangeCaptivePortalMode
+{
+}
+#endif
 
 @end

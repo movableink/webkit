@@ -45,21 +45,25 @@ public:
 
     // Implementation of WorkerLoaderProxy.
     // This method is used in the main thread to post task back to the worker thread.
-    bool postTaskForModeToWorkerGlobalScope(ScriptExecutionContext::Task&&, const String& mode) final;
+    bool postTaskForModeToWorkerOrWorkletGlobalScope(ScriptExecutionContext::Task&&, const String& mode) final;
 
 private:
     // Implementations of WorkerGlobalScopeProxy.
     // (Only use these functions in the worker object thread.)
-    void startWorkerGlobalScope(const URL& scriptURL, const String& name, const String& userAgent, bool isOnline, const String& sourceCode, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, MonotonicTime timeOrigin, JSC::RuntimeFlags) final;
+    void startWorkerGlobalScope(const URL& scriptURL, const String& name, const String& userAgent, bool isOnline, const ScriptBuffer& sourceCode, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, const CrossOriginEmbedderPolicy&, MonotonicTime timeOrigin, ReferrerPolicy, WorkerType, FetchRequestCredentials, JSC::RuntimeFlags) final;
     void terminateWorkerGlobalScope() final;
     void postMessageToWorkerGlobalScope(MessageWithMessagePorts&&) final;
+    void postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>&&) final;
     bool hasPendingActivity() const final;
     void workerObjectDestroyed() final;
     void notifyNetworkStateChange(bool isOnline) final;
+    void suspendForBackForwardCache() final;
+    void resumeForBackForwardCache() final;
 
     // Implementation of WorkerObjectProxy.
     // (Only use these functions in the worker context thread.)
     void postMessageToWorkerObject(MessageWithMessagePorts&&) final;
+    void postTaskToWorkerObject(Function<void(Worker&)>&&) final;
     void postExceptionToWorkerObject(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL) final;
     void confirmMessageFromWorkerObject(bool hasPendingActivity) final;
     void reportPendingActivity(bool hasPendingActivity) final;
@@ -76,7 +80,9 @@ private:
     // requests and to send callbacks back to WorkerGlobalScope.
     bool isWorkerMessagingProxy() const final { return true; }
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;
-    Ref<CacheStorageConnection> createCacheStorageConnection() final;
+    RefPtr<CacheStorageConnection> createCacheStorageConnection() final;
+    StorageConnection* storageConnection() final;
+    RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
 
     void workerThreadCreated(DedicatedWorkerThread&);
 
@@ -88,7 +94,7 @@ private:
     Worker* workerObject() const { return m_workerObject; }
 
     RefPtr<ScriptExecutionContext> m_scriptExecutionContext;
-    std::unique_ptr<WorkerInspectorProxy> m_inspectorProxy;
+    RefPtr<WorkerInspectorProxy> m_inspectorProxy;
     Worker* m_workerObject;
     bool m_mayBeDestroyed { false };
     RefPtr<DedicatedWorkerThread> m_workerThread;
@@ -96,6 +102,7 @@ private:
     unsigned m_unconfirmedMessageCount { 0 }; // Unconfirmed messages from worker object to worker thread.
     bool m_workerThreadHadPendingActivity { false }; // The latest confirmation from worker thread reported that it was still active.
 
+    bool m_askedToSuspend { false };
     bool m_askedToTerminate { false };
 
     Vector<std::unique_ptr<ScriptExecutionContext::Task>> m_queuedEarlyTasks; // Tasks are queued here until there's a thread object created.

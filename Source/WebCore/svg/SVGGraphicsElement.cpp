@@ -28,6 +28,7 @@
 #include "SVGNames.h"
 #include "SVGPathData.h"
 #include "SVGRect.h"
+#include "SVGRenderSupport.h"
 #include "SVGSVGElement.h"
 #include "SVGStringList.h"
 #include <wtf/IsoMallocInlines.h>
@@ -73,30 +74,13 @@ AffineTransform SVGGraphicsElement::getScreenCTM(StyleUpdateStrategy styleUpdate
 AffineTransform SVGGraphicsElement::animatedLocalTransform() const
 {
     AffineTransform matrix;
-    auto* style = renderer() ? &renderer()->style() : nullptr;
 
-    // If CSS property was set, use that, otherwise fallback to attribute (if set).
-    if (style && style->hasTransform()) {
-        
-        FloatRect boundingBox;
-        switch (style->transformBox()) {
-        case TransformBox::BorderBox:
-            // For SVG elements without an associated CSS layout box, the used value for border-box is stroke-box.
-        case TransformBox::StrokeBox:
-            boundingBox = renderer()->strokeBoundingBox();
-            break;
-        case TransformBox::ContentBox:
-            // For SVG elements without an associated CSS layout box, the used value for content-box is fill-box.
-        case TransformBox::FillBox:
-            boundingBox = renderer()->objectBoundingBox();
-            break;
-        case TransformBox::ViewBox: {
-            FloatSize viewportSize;
-            SVGLengthContext(this).determineViewport(viewportSize);
-            boundingBox.setSize(viewportSize);
-            break;
-            }
-        }
+    auto* style = renderer() ? &renderer()->style() : nullptr;
+    bool hasSpecifiedTransform = style && style->hasTransform();
+
+    // Honor any of the transform-related CSS properties if set.
+    if (hasSpecifiedTransform || (style && (style->translate() || style->scale() || style->rotate()))) {
+        auto boundingBox = SVGRenderSupport::transformReferenceBox(*renderer(), *this, *style);
         
         // Note: objectBoundingBox is an emptyRect for elements like pattern or clipPath.
         // See the "Object bounding box units" section of http://dev.w3.org/csswg/css3-transforms/
@@ -112,9 +96,16 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
             matrix.setE(matrix.e() / zoom);
             matrix.setF(matrix.f() / zoom);
         }
+    }
 
-    } else
-        matrix = transform().concatenate();
+    // If we didn't have the CSS "transform" property set, we must account for the "transform" attribute.
+    if (!hasSpecifiedTransform && style) {
+        auto boundingBox = SVGRenderSupport::transformReferenceBox(*renderer(), *this, *style);
+        auto t = floatPointForLengthPoint(style->transformOriginXY(), boundingBox.size()) + boundingBox.location();
+        matrix.translate(t);
+        matrix *= transform().concatenate();
+        matrix.translate(-t.x(), -t.y());
+    }
 
     if (m_supplementalTransform)
         return *m_supplementalTransform * matrix;
@@ -141,7 +132,8 @@ void SVGGraphicsElement::parseAttribute(const QualifiedName& name, const AtomStr
 
 void SVGGraphicsElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::transformAttr) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        ASSERT(attrName == SVGNames::transformAttr);
         InstanceInvalidationGuard guard(*this);
 
         if (auto renderer = this->renderer()) {

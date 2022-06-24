@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #include <WebCore/DragClient.h>
 
 class WebView;
@@ -34,9 +36,8 @@ class WebDragClient : public WebCore::DragClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WebDragClient(WebView*);
-    virtual void dragControllerDestroyed();
 
-    virtual WebCore::DragSourceAction dragSourceActionMaskForPoint(const WebCore::IntPoint&);
+    virtual OptionSet<WebCore::DragSourceAction> dragSourceActionMaskForPoint(const WebCore::IntPoint&);
     virtual void willPerformDragDestinationAction(WebCore::DragDestinationAction, const WebCore::DragData&);
     virtual void willPerformDragSourceAction(WebCore::DragSourceAction, const WebCore::IntPoint&, WebCore::DataTransfer&);
     virtual void startDrag(WebCore::DragItem, WebCore::DataTransfer&, WebCore::Frame&);

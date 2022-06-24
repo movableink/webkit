@@ -56,7 +56,7 @@
 
 #include <openssl/stack.h>
 
-#include <string.h>
+#include <assert.h>
 
 #include <openssl/mem.h>
 
@@ -68,11 +68,9 @@
 static const size_t kMinSize = 4;
 
 _STACK *sk_new(stack_cmp_func comp) {
-  _STACK *ret;
-
-  ret = OPENSSL_malloc(sizeof(_STACK));
+  _STACK *ret = OPENSSL_malloc(sizeof(_STACK));
   if (ret == NULL) {
-    goto err;
+    return NULL;
   }
   OPENSSL_memset(ret, 0, sizeof(_STACK));
 
@@ -272,36 +270,39 @@ int sk_find(const _STACK *sk, size_t *out_index, const void *p,
     return 0;
   }
 
-  // sk->comp is a function that takes pointers to pointers to elements, but
-  // qsort and bsearch take a comparison function that just takes pointers to
-  // elements. However, since we're passing an array of pointers to
-  // qsort/bsearch, we can just cast the comparison function and everything
-  // works.
+  // The stack is sorted, so binary search to find the element.
   //
-  // TODO(davidben): This is undefined behavior, but the call is in libc so,
-  // e.g., CFI does not notice. Unfortunately, |bsearch| is missing a void*
-  // parameter in its callback and |bsearch_s| is a mess of incompatibility.
-  const void *const *r = bsearch(&p, sk->data, sk->num, sizeof(void *),
-                                 (int (*)(const void *, const void *))sk->comp);
-  if (r == NULL) {
-    return 0;
-  }
-  size_t idx = ((void **)r) - sk->data;
-  // This function always returns the first result. Note this logic is, in the
-  // worst case, O(N) rather than O(log(N)). If this ever becomes a problem,
-  // restore https://boringssl-review.googlesource.com/c/boringssl/+/32115/
-  // which integrates the preference into the binary search.
-  while (idx > 0) {
-    const void *elem = sk->data[idx - 1];
-    if (call_cmp_func(sk->comp, &p, &elem) != 0) {
-      break;
+  // |lo| and |hi| maintain a half-open interval of where the answer may be. All
+  // indices such that |lo <= idx < hi| are candidates.
+  size_t lo = 0, hi = sk->num;
+  while (lo < hi) {
+    // Bias |mid| towards |lo|. See the |r == 0| case below.
+    size_t mid = lo + (hi - lo - 1) / 2;
+    assert(lo <= mid && mid < hi);
+    const void *elem = sk->data[mid];
+    int r = call_cmp_func(sk->comp, &p, &elem);
+    if (r > 0) {
+      lo = mid + 1;  // |mid| is too low.
+    } else if (r < 0) {
+      hi = mid;  // |mid| is too high.
+    } else {
+      // |mid| matches. However, this function returns the earliest match, so we
+      // can only return if the range has size one.
+      if (hi - lo == 1) {
+        if (out_index != NULL) {
+          *out_index = mid;
+        }
+        return 1;
+      }
+      // The sample is biased towards |lo|. |mid| can only be |hi - 1| if
+      // |hi - lo| was one, so this makes forward progress.
+      assert(mid + 1 < hi);
+      hi = mid + 1;
     }
-    idx--;
   }
-  if (out_index) {
-    *out_index = idx;
-  }
-  return 1;
+
+  assert(lo == hi);
+  return 0;  // Not found.
 }
 
 void *sk_shift(_STACK *sk) {
@@ -327,23 +328,20 @@ void *sk_pop(_STACK *sk) {
 }
 
 _STACK *sk_dup(const _STACK *sk) {
-  _STACK *ret;
-  void **s;
-
   if (sk == NULL) {
     return NULL;
   }
 
-  ret = sk_new(sk->comp);
+  _STACK *ret = OPENSSL_malloc(sizeof(_STACK));
   if (ret == NULL) {
-    goto err;
+    return NULL;
   }
+  OPENSSL_memset(ret, 0, sizeof(_STACK));
 
-  s = (void **)OPENSSL_realloc(ret->data, sizeof(void *) * sk->num_alloc);
-  if (s == NULL) {
+  ret->data = OPENSSL_malloc(sizeof(void *) * sk->num_alloc);
+  if (ret->data == NULL) {
     goto err;
   }
-  ret->data = s;
 
   ret->num = sk->num;
   OPENSSL_memcpy(ret->data, sk->data, sizeof(void *) * sk->num);
@@ -358,20 +356,24 @@ err:
 }
 
 void sk_sort(_STACK *sk) {
-  int (*comp_func)(const void *,const void *);
-
   if (sk == NULL || sk->comp == NULL || sk->sorted) {
     return;
   }
 
-  // See the comment in sk_find about this cast.
+  // sk->comp is a function that takes pointers to pointers to elements, but
+  // qsort take a comparison function that just takes pointers to elements.
+  // However, since we're passing an array of pointers to qsort, we can just
+  // cast the comparison function and everything works.
   //
   // TODO(davidben): This is undefined behavior, but the call is in libc so,
   // e.g., CFI does not notice. Unfortunately, |qsort| is missing a void*
   // parameter in its callback and |qsort_s| / |qsort_r| are a mess of
   // incompatibility.
-  comp_func = (int (*)(const void *, const void *))(sk->comp);
-  qsort(sk->data, sk->num, sizeof(void *), comp_func);
+  if (sk->num >= 2) {
+    int (*comp_func)(const void *, const void *) =
+        (int (*)(const void *, const void *))(sk->comp);
+    qsort(sk->data, sk->num, sizeof(void *), comp_func);
+  }
   sk->sorted = 1;
 }
 

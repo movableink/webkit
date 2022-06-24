@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,44 +23,38 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MediaPlayerPrivateMediaStreamAVFObjC_h
-#define MediaPlayerPrivateMediaStreamAVFObjC_h
+#pragma once
 
 #if ENABLE(MEDIA_STREAM) && USE(AVFOUNDATION)
 
 #include "MediaPlayerPrivate.h"
 #include "MediaSample.h"
 #include "MediaStreamPrivate.h"
-#include <CoreGraphics/CGAffineTransform.h>
-#include <wtf/Function.h>
+#include "SampleBufferDisplayLayer.h"
+#include <wtf/Deque.h>
+#include <wtf/Forward.h>
+#include <wtf/Lock.h>
 #include <wtf/LoggerHelper.h>
-#include <wtf/MediaTime.h>
-#include <wtf/WeakPtr.h>
 
-OBJC_CLASS AVSampleBufferAudioRenderer;
 OBJC_CLASS AVSampleBufferDisplayLayer;
-OBJC_CLASS AVSampleBufferRenderSynchronizer;
-OBJC_CLASS AVStreamSession;
-OBJC_CLASS NSNumber;
-OBJC_CLASS WebAVSampleBufferStatusChangeListener;
-
-namespace PAL {
-class Clock;
-}
+OBJC_CLASS WebRootSampleBufferBoundsChangeListener;
 
 namespace WebCore {
 
-class AudioTrackPrivateMediaStreamCocoa;
+class AudioTrackPrivateMediaStream;
 class AVVideoCaptureSource;
 class MediaSourcePrivateClient;
 class PixelBufferConformerCV;
-class VideoFullscreenLayerManagerObjC;
+class VideoLayerManagerObjC;
 class VideoTrackPrivateMediaStream;
 
-class MediaPlayerPrivateMediaStreamAVFObjC final : public CanMakeWeakPtr<MediaPlayerPrivateMediaStreamAVFObjC>, public MediaPlayerPrivateInterface, private MediaStreamPrivate::Observer, private MediaStreamTrackPrivate::Observer
-#if !RELEASE_LOG_DISABLED
+class MediaPlayerPrivateMediaStreamAVFObjC final
+    : public MediaPlayerPrivateInterface
+    , private MediaStreamPrivate::Observer
+    , public MediaStreamTrackPrivate::Observer
+    , public RealtimeMediaSource::VideoSampleObserver
+    , public SampleBufferDisplayLayer::Client
     , private LoggerHelper
-#endif
 {
 public:
     explicit MediaPlayerPrivateMediaStreamAVFObjC(MediaPlayer*);
@@ -81,21 +75,18 @@ public:
     void ensureLayers();
     void destroyLayers();
 
-    void layerStatusDidChange(AVSampleBufferDisplayLayer*);
-    void layerErrorDidChange(AVSampleBufferDisplayLayer*);
-    void backgroundLayerBoundsChanged();
-
-    PlatformLayer* displayLayer();
-    PlatformLayer* backgroundLayer();
-
-#if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
     const char* logClassName() const override { return "MediaPlayerPrivateMediaStreamAVFObjC"; }
     const void* logIdentifier() const final { return reinterpret_cast<const void*>(m_logIdentifier); }
     WTFLogChannel& logChannel() const final;
-#endif
+
+    using MediaStreamTrackPrivate::Observer::weakPtrFactory;
+    using WeakValueType = MediaStreamTrackPrivate::Observer::WeakValueType;
 
 private:
+    PlatformLayer* rootLayer() const;
+    void rootLayerBoundsDidChange();
+
     // MediaPlayerPrivateInterface
 
     // FIXME(146853): Implement necessary conformations to standard in HTMLMediaElement for MediaStream
@@ -104,7 +95,7 @@ private:
 
     void load(const String&) override;
 #if ENABLE(MEDIA_SOURCE)
-    void load(const String&, MediaSourcePrivateClient*) override;
+    void load(const URL&, const ContentType&, MediaSourcePrivateClient*) override;
 #endif
     void load(MediaStreamPrivate&) override;
     void cancelLoad() override;
@@ -129,7 +120,9 @@ private:
     bool hasVideo() const override;
     bool hasAudio() const override;
 
-    void setVisible(bool) final;
+    void setPageIsVisible(bool) final;
+    void setVisibleForCanvas(bool) final;
+    void setVisibleInViewport(bool) final;
 
     MediaTime durationMediaTime() const override;
     MediaTime currentMediaTime() const override;
@@ -141,30 +134,25 @@ private:
 
     bool didLoadingProgress() const override { return m_playing; }
 
-    void setSize(const IntSize&) override { /* No-op */ }
-
     void flushRenderers();
 
-    using PendingSampleQueue = Deque<Ref<MediaSample>>;
-    void addSampleToPendingQueue(PendingSampleQueue&, MediaSample&);
-    void removeOldSamplesFromPendingQueue(PendingSampleQueue&);
-
-    MediaTime calculateTimelineOffset(const MediaSample&, double);
-    
-    void enqueueVideoSample(MediaStreamTrackPrivate&, MediaSample&);
-    void enqueueCorrectedVideoSample(MediaSample&);
+    void processNewVideoSample(MediaSample&, VideoFrameTimeMetadata, Seconds);
+    void enqueueVideoSample(MediaSample&);
+    void reenqueueCurrentVideoSampleIfNeeded();
     void requestNotificationWhenReadyForVideoData();
 
     void paint(GraphicsContext&, const FloatRect&) override;
     void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) override;
-    bool metaDataAvailable() const { return m_mediaStreamPrivate && m_readyState >= MediaPlayer::HaveMetadata; }
+    RefPtr<VideoFrame> videoFrameForCurrentTime() override;
+    DestinationColorSpace colorSpace() override;
+    bool metaDataAvailable() const { return m_mediaStreamPrivate && m_readyState >= MediaPlayer::ReadyState::HaveMetadata; }
 
-    void acceleratedRenderingStateChanged() override;
+    void acceleratedRenderingStateChanged() final { updateLayersAsNeeded(); }
     bool supportsAcceleratedRendering() const override { return true; }
 
     bool hasSingleSecurityOrigin() const override { return true; }
 
-    MediaPlayer::MovieLoadType movieLoadType() const override { return MediaPlayer::LiveStream; }
+    MediaPlayer::MovieLoadType movieLoadType() const override { return MediaPlayer::MovieLoadType::LiveStream; }
 
     String engineDescription() const override;
 
@@ -173,16 +161,23 @@ private:
     bool ended() const override { return m_ended; }
 
     void setBufferingPolicy(MediaPlayer::BufferingPolicy) override;
+    void audioOutputDeviceChanged() final;
+    std::optional<VideoFrameMetadata> videoFrameMetadata() final;
+    void setResourceOwner(const ProcessIdentity&) final { ASSERT_NOT_REACHED(); }
 
     MediaPlayer::ReadyState currentReadyState();
     void updateReadyState();
 
     void updateTracks();
     void updateRenderingMode();
+    void scheduleRenderingModeChanged();
     void checkSelectedVideoTrack();
     void updateDisplayLayer();
 
     void scheduleDeferredTask(Function<void ()>&&);
+
+    void layersAreInitialized(IntSize, bool);
+    void updateLayersAsNeeded();
 
     enum DisplayMode {
         None,
@@ -214,75 +209,88 @@ private:
     void trackMutedChanged(MediaStreamTrackPrivate&) override { };
     void trackSettingsChanged(MediaStreamTrackPrivate&) override { };
     void trackEnabledChanged(MediaStreamTrackPrivate&) override { };
-    void sampleBufferUpdated(MediaStreamTrackPrivate&, MediaSample&) override;
     void readyStateChanged(MediaStreamTrackPrivate&) override;
 
-    void setVideoFullscreenLayer(PlatformLayer*, WTF::Function<void()>&& completionHandler) override;
-    void setVideoFullscreenFrame(FloatRect) override;
+    // RealtimeMediaSouce::VideoSampleObserver
+    void videoSampleAvailable(MediaSample&, VideoFrameTimeMetadata) final;
 
-    MediaTime streamTime() const;
+    RetainPtr<PlatformLayer> createVideoFullscreenLayer() override;
+    void setVideoFullscreenLayer(PlatformLayer*, Function<void()>&& completionHandler) override;
+    void setVideoFullscreenFrame(FloatRect) override;
 
     AudioSourceProvider* audioSourceProvider() final;
 
-    CGAffineTransform videoTransformationMatrix(MediaSample&, bool forceUpdate = false);
-
     void applicationDidBecomeActive() final;
 
-    bool hideBackgroundLayer() const { return (!m_activeVideoTrack || m_waitingForFirstImage) && m_displayMode != PaintItBlack; }
+    bool hideRootLayer() const { return (!activeVideoTrack() || m_waitingForFirstImage) && m_displayMode != PaintItBlack; }
+
+    MediaStreamTrackPrivate* activeVideoTrack() const;
 
     MediaPlayer* m_player { nullptr };
     RefPtr<MediaStreamPrivate> m_mediaStreamPrivate;
-    RefPtr<MediaStreamTrackPrivate> m_activeVideoTrack;
-    RetainPtr<WebAVSampleBufferStatusChangeListener> m_statusChangeListener;
-    RetainPtr<AVSampleBufferDisplayLayer> m_sampleBufferDisplayLayer;
-    RetainPtr<PlatformLayer> m_backgroundLayer;
-    std::unique_ptr<PAL::Clock> m_clock;
+    RefPtr<VideoTrackPrivateMediaStream> m_activeVideoTrack;
 
+    MediaTime m_startTime;
     MediaTime m_pausedTime;
 
     struct CurrentFramePainter {
         CurrentFramePainter() = default;
         void reset();
 
-        RetainPtr<CGImageRef> cgImage;
+        RefPtr<NativeImage> cgImage;
         RefPtr<MediaSample> mediaSample;
         std::unique_ptr<PixelBufferConformerCV> pixelBufferConformer;
     };
     CurrentFramePainter m_imagePainter;
 
-    HashMap<String, RefPtr<AudioTrackPrivateMediaStreamCocoa>> m_audioTrackMap;
-    HashMap<String, RefPtr<VideoTrackPrivateMediaStream>> m_videoTrackMap;
-    PendingSampleQueue m_pendingVideoSampleQueue;
+    HashMap<String, Ref<AudioTrackPrivateMediaStream>> m_audioTrackMap;
+    HashMap<String, Ref<VideoTrackPrivateMediaStream>> m_videoTrackMap;
 
-    MediaPlayer::NetworkState m_networkState { MediaPlayer::Empty };
-    MediaPlayer::ReadyState m_readyState { MediaPlayer::HaveNothing };
+    MediaPlayer::NetworkState m_networkState { MediaPlayer::NetworkState::Empty };
+    MediaPlayer::ReadyState m_readyState { MediaPlayer::ReadyState::HaveNothing };
     FloatSize m_intrinsicSize;
     float m_volume { 1 };
     DisplayMode m_displayMode { None };
     PlaybackState m_playbackState { PlaybackState::None };
-    MediaSample::VideoRotation m_videoRotation { MediaSample::VideoRotation::None };
-    CGAffineTransform m_videoTransform;
-    std::unique_ptr<VideoFullscreenLayerManagerObjC> m_videoFullscreenLayerManager;
 
-#if !RELEASE_LOG_DISABLED
+    // Used on both main thread and sample thread.
+    std::unique_ptr<SampleBufferDisplayLayer> m_sampleBufferDisplayLayer;
+    Lock m_sampleBufferDisplayLayerLock;
+    bool m_shouldUpdateDisplayLayer { true };
+    // Written on main thread, read on sample thread.
+    bool m_canEnqueueDisplayLayer { false };
+    // Used on sample thread.
+    MediaSample::VideoRotation m_videoRotation { MediaSample::VideoRotation::None };
+    bool m_videoMirrored { false };
+
     Ref<const Logger> m_logger;
     const void* m_logIdentifier;
-#endif
+    std::unique_ptr<VideoLayerManagerObjC> m_videoLayerManager;
 
-    bool m_videoMirrored { false };
+    // SampleBufferDisplayLayer::Client
+    void sampleBufferDisplayLayerStatusDidFail() final;
+
+    RetainPtr<WebRootSampleBufferBoundsChangeListener> m_boundsChangeListener;
+
+    Lock m_currentVideoSampleLock;
+    RefPtr<MediaSample> m_currentVideoSample WTF_GUARDED_BY_LOCK(m_currentVideoSampleLock);
+
     bool m_playing { false };
     bool m_muted { false };
     bool m_ended { false };
     bool m_hasEverEnqueuedVideoFrame { false };
-    bool m_pendingSelectedTrackCheck { false };
-    bool m_transformIsValid { false };
-    bool m_visible { false };
+    bool m_isPageVisible { false };
+    bool m_isVisibleInViewPort { false };
     bool m_haveSeenMetadata { false };
     bool m_waitingForFirstImage { false };
+
+    uint64_t m_sampleCount { 0 };
+    uint64_t m_lastVideoFrameMetadataSampleCount { 0 };
+    Seconds m_presentationTime { 0 };
+    FloatSize m_videoFrameSize;
+    VideoFrameTimeMetadata m_sampleMetadata;
 };
     
 }
 
 #endif // ENABLE(MEDIA_STREAM) && USE(AVFOUNDATION)
-
-#endif // MediaPlayerPrivateMediaStreamAVFObjC_h

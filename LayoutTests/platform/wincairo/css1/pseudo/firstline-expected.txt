@@ -9,8 +9,11 @@ layer at (0,0) size 785x699
       RenderBlock {PRE} at (0,36) size 769x64
         RenderText {#text} at (0,0) size 360x64
           text run at (0,0) width 224: "P:first-line {color: green;}"
+          text run at (224,0) width 0: " "
           text run at (0,16) width 272: ".two:first-line {font-size: 200%;}"
+          text run at (272,16) width 0: " "
           text run at (0,32) width 360: ".three:first-line {font-variant: small-caps;}"
+          text run at (360,32) width 0: " "
           text run at (0,48) width 0: " "
       RenderBlock {HR} at (0,113) size 769x2 [border: (1px inset #000000)]
       RenderBlock {P} at (0,131) size 769x60
@@ -49,8 +52,8 @@ layer at (0,0) size 785x699
                   text run at (4,4) width 159: "TABLE Testing Section"
           RenderTableRow {TR} at (0,28) size 767x257
             RenderTableCell {TD} at (0,142) size 12x29 [bgcolor=#C0C0C0] [border: (1px inset #808080)] [r=1 c=0 rs=1 cs=1]
-              RenderText {#text} at (4,4) size 4x20
-                text run at (4,5) width 4: " "
+              RenderText {#text} at (4,3) size 4x21
+                text run at (4,4) width 4: " "
             RenderTableCell {TD} at (12,28) size 755x257 [border: (1px inset #808080)] [r=1 c=1 rs=1 cs=1]
               RenderBlock {P} at (4,4) size 747x60
                 RenderText {#text} at (0,0) size 735x59

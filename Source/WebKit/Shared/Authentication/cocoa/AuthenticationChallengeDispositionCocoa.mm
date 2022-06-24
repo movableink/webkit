@@ -23,8 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "AuthenticationChallengeDispositionCocoa.h"
+#import "config.h"
+#import "AuthenticationChallengeDispositionCocoa.h"
 
 namespace WebKit {
 
@@ -41,6 +41,21 @@ AuthenticationChallengeDisposition toAuthenticationChallengeDisposition(NSURLSes
         return AuthenticationChallengeDisposition::RejectProtectionSpaceAndContinue;
     }
     [NSException raise:NSInvalidArgumentException format:@"Invalid NSURLSessionAuthChallengeDisposition (%ld)", (long)disposition];
+}
+
+NSURLSessionAuthChallengeDisposition fromAuthenticationChallengeDisposition(AuthenticationChallengeDisposition disposition)
+{
+    switch (disposition) {
+    case AuthenticationChallengeDisposition::UseCredential:
+        return NSURLSessionAuthChallengeUseCredential;
+    case AuthenticationChallengeDisposition::PerformDefaultHandling:
+        return NSURLSessionAuthChallengePerformDefaultHandling;
+    case AuthenticationChallengeDisposition::Cancel:
+        return NSURLSessionAuthChallengeCancelAuthenticationChallenge;
+    case AuthenticationChallengeDisposition::RejectProtectionSpaceAndContinue:
+        return NSURLSessionAuthChallengeRejectProtectionSpace;
+    }
+    [NSException raise:NSInvalidArgumentException format:@"Invalid AuthenticationChallengeDisposition (%ld)", (long)disposition];
 }
 
 } // namespace WebKit

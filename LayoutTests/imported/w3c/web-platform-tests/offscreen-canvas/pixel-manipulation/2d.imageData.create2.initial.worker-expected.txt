@@ -1,3 +1,0 @@
-
-FAIL createImageData(sw, sh) returns transparent black data of the right size Can't find variable: OffscreenCanvas
-

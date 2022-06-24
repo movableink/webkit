@@ -32,6 +32,8 @@
 #include "Logging.h"
 #include "NetworkConnectionToWebProcess.h"
 #include "NetworkProcess.h"
+#include "NetworkProcessProxyMessages.h"
+#include "ServiceWorkerDownloadTaskMessages.h"
 #include "ServiceWorkerFetchTask.h"
 #include "ServiceWorkerFetchTaskMessages.h"
 #include "WebCoreArgumentCoders.h"
@@ -43,10 +45,10 @@
 namespace WebKit {
 using namespace WebCore;
 
-WebSWServerToContextConnection::WebSWServerToContextConnection(NetworkConnectionToWebProcess& connection, RegistrableDomain&& registrableDomain, SWServer& server)
-    : SWServerToContextConnection(WTFMove(registrableDomain))
+WebSWServerToContextConnection::WebSWServerToContextConnection(NetworkConnectionToWebProcess& connection, WebPageProxyIdentifier webPageProxyID, RegistrableDomain&& registrableDomain, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier, SWServer& server)
+    : SWServerToContextConnection(server, WTFMove(registrableDomain), serviceWorkerPageIdentifier)
     , m_connection(connection)
-    , m_server(makeWeakPtr(server))
+    , m_webPageProxyID(webPageProxyID)
 {
     server.addContextConnection(*this);
 }
@@ -55,10 +57,14 @@ WebSWServerToContextConnection::~WebSWServerToContextConnection()
 {
     auto fetches = WTFMove(m_ongoingFetches);
     for (auto& fetch : fetches.values())
-        fetch->fail(ResourceError { errorDomainWebKitInternal, 0, { }, "Service Worker context closed"_s });
+        fetch->contextClosed();
 
-    if (m_server && m_server->contextConnectionForRegistrableDomain(registrableDomain()) == this)
-        m_server->removeContextConnection(*this);
+    auto downloads = WTFMove(m_ongoingDownloads);
+    for (auto& download : downloads.values())
+        download->contextClosed();
+
+    if (auto* server = this->server(); server && server->contextConnectionForRegistrableDomain(registrableDomain()) == this)
+        server->removeContextConnection(*this);
 }
 
 IPC::Connection& WebSWServerToContextConnection::ipcConnection() const
@@ -76,18 +82,26 @@ uint64_t WebSWServerToContextConnection::messageSenderDestinationID() const
     return 0;
 }
 
-void WebSWServerToContextConnection::postMessageToServiceWorkerClient(const ServiceWorkerClientIdentifier& destinationIdentifier, const MessageWithMessagePorts& message, ServiceWorkerIdentifier sourceIdentifier, const String& sourceOrigin)
+void WebSWServerToContextConnection::postMessageToServiceWorkerClient(const ScriptExecutionContextIdentifier& destinationIdentifier, const MessageWithMessagePorts& message, ServiceWorkerIdentifier sourceIdentifier, const String& sourceOrigin)
 {
-    if (!m_server)
-        return;
-
-    if (auto* connection = m_server->connection(destinationIdentifier.serverConnectionIdentifier))
-        connection->postMessageToServiceWorkerClient(destinationIdentifier.contextIdentifier, message, sourceIdentifier, sourceOrigin);
+    auto* server = this->server();
+    if (auto* connection = server ? server->connection(destinationIdentifier.processIdentifier()) : nullptr)
+        connection->postMessageToServiceWorkerClient(destinationIdentifier, message, sourceIdentifier, sourceOrigin);
 }
 
-void WebSWServerToContextConnection::installServiceWorkerContext(const ServiceWorkerContextData& data, const String& userAgent)
+void WebSWServerToContextConnection::close()
 {
-    send(Messages::WebSWContextManagerConnection::InstallServiceWorker { data, userAgent });
+    send(Messages::WebSWContextManagerConnection::Close { });
+}
+
+void WebSWServerToContextConnection::installServiceWorkerContext(const ServiceWorkerContextData& contextData, const ServiceWorkerData& workerData, const String& userAgent, WorkerThreadMode workerThreadMode)
+{
+    send(Messages::WebSWContextManagerConnection::InstallServiceWorker { contextData, workerData, userAgent, workerThreadMode });
+}
+
+void WebSWServerToContextConnection::updateAppInitiatedValue(ServiceWorkerIdentifier serviceWorkerIdentifier, WebCore::LastNavigationWasAppInitiated lastNavigationWasAppInitiated)
+{
+    send(Messages::WebSWContextManagerConnection::UpdateAppInitiatedValue(serviceWorkerIdentifier, lastNavigationWasAppInitiated));
 }
 
 void WebSWServerToContextConnection::fireInstallEvent(ServiceWorkerIdentifier serviceWorkerIdentifier)
@@ -100,9 +114,19 @@ void WebSWServerToContextConnection::fireActivateEvent(ServiceWorkerIdentifier s
     send(Messages::WebSWContextManagerConnection::FireActivateEvent(serviceWorkerIdentifier));
 }
 
-void WebSWServerToContextConnection::softUpdate(ServiceWorkerIdentifier serviceWorkerIdentifier)
+void WebSWServerToContextConnection::firePushEvent(WebCore::ServiceWorkerIdentifier serviceWorkerIdentifier, const std::optional<Vector<uint8_t>>& data, CompletionHandler<void(bool)>&& callback)
 {
-    send(Messages::WebSWContextManagerConnection::SoftUpdate(serviceWorkerIdentifier));
+    if (!m_processingPushEventsCount++)
+        m_connection.networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::StartServiceWorkerBackgroundProcessing { webProcessIdentifier() }, 0);
+
+    std::optional<IPC::DataReference> ipcData;
+    if (data)
+        ipcData = IPC::DataReference { data->data(), data->size() };
+    sendWithAsyncReply(Messages::WebSWContextManagerConnection::FirePushEvent(serviceWorkerIdentifier, ipcData), [weakThis = WeakPtr { *this }, callback = WTFMove(callback)](bool wasProcessed) mutable {
+        if (weakThis && !--weakThis->m_processingPushEventsCount)
+            weakThis->m_connection.networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::EndServiceWorkerBackgroundProcessing { weakThis->webProcessIdentifier() }, 0);
+        callback(wasProcessed);
+    });
 }
 
 void WebSWServerToContextConnection::terminateWorker(ServiceWorkerIdentifier serviceWorkerIdentifier)
@@ -110,14 +134,27 @@ void WebSWServerToContextConnection::terminateWorker(ServiceWorkerIdentifier ser
     send(Messages::WebSWContextManagerConnection::TerminateWorker(serviceWorkerIdentifier));
 }
 
-void WebSWServerToContextConnection::syncTerminateWorker(ServiceWorkerIdentifier serviceWorkerIdentifier)
+void WebSWServerToContextConnection::didSaveScriptsToDisk(ServiceWorkerIdentifier serviceWorkerIdentifier, const ScriptBuffer& script, const HashMap<URL, ScriptBuffer>& importedScripts)
 {
-    sendSync(Messages::WebSWContextManagerConnection::SyncTerminateWorker(serviceWorkerIdentifier), Messages::WebSWContextManagerConnection::SyncTerminateWorker::Reply());
+#if ENABLE(SHAREABLE_RESOURCE) && PLATFORM(COCOA)
+    // Send file-mapped ScriptBuffers over to the ServiceWorker process so that it can replace its heap-allocated copies and save on dirty memory.
+    auto scriptToSend = script.containsSingleFileMappedSegment() ? script : ScriptBuffer();
+    HashMap<URL, ScriptBuffer> importedScriptsToSend;
+    for (auto& pair : importedScripts) {
+        if (pair.value.containsSingleFileMappedSegment())
+            importedScriptsToSend.add(pair.key, pair.value);
+    }
+    if (scriptToSend || !importedScriptsToSend.isEmpty())
+        send(Messages::WebSWContextManagerConnection::DidSaveScriptsToDisk { serviceWorkerIdentifier, scriptToSend, importedScriptsToSend });
+#else
+    UNUSED_PARAM(script);
+    UNUSED_PARAM(importedScripts);
+#endif
 }
 
-void WebSWServerToContextConnection::findClientByIdentifierCompleted(uint64_t requestIdentifier, const Optional<ServiceWorkerClientData>& data, bool hasSecurityError)
+void WebSWServerToContextConnection::terminateDueToUnresponsiveness()
 {
-    send(Messages::WebSWContextManagerConnection::FindClientByIdentifierCompleted { requestIdentifier, data, hasSecurityError });
+    m_connection.networkProcess().parentProcessConnection()->send(Messages::NetworkProcessProxy::TerminateUnresponsiveServiceWorkerProcesses { webProcessIdentifier() }, 0);
 }
 
 void WebSWServerToContextConnection::matchAllCompleted(uint64_t requestIdentifier, const Vector<ServiceWorkerClientData>& clientsData)
@@ -125,19 +162,9 @@ void WebSWServerToContextConnection::matchAllCompleted(uint64_t requestIdentifie
     send(Messages::WebSWContextManagerConnection::MatchAllCompleted { requestIdentifier, clientsData });
 }
 
-void WebSWServerToContextConnection::claimCompleted(uint64_t requestIdentifier)
-{
-    send(Messages::WebSWContextManagerConnection::ClaimCompleted { requestIdentifier });
-}
-
-void WebSWServerToContextConnection::didFinishSkipWaiting(uint64_t callbackID)
-{
-    send(Messages::WebSWContextManagerConnection::DidFinishSkipWaiting { callbackID });
-}
-
 void WebSWServerToContextConnection::connectionIsNoLongerNeeded()
 {
-    m_connection.serverToContextConnectionNoLongerNeeded();
+    m_connection.serviceWorkerServerToContextConnectionNoLongerNeeded();
 }
 
 void WebSWServerToContextConnection::setThrottleState(bool isThrottleable)
@@ -163,7 +190,7 @@ void WebSWServerToContextConnection::didReceiveFetchTaskMessage(IPC::Connection&
 void WebSWServerToContextConnection::registerFetch(ServiceWorkerFetchTask& task)
 {
     ASSERT(!m_ongoingFetches.contains(task.fetchIdentifier()));
-    m_ongoingFetches.add(task.fetchIdentifier(), makeWeakPtr(task));
+    m_ongoingFetches.add(task.fetchIdentifier(), task);
 }
 
 void WebSWServerToContextConnection::unregisterFetch(ServiceWorkerFetchTask& task)
@@ -172,30 +199,22 @@ void WebSWServerToContextConnection::unregisterFetch(ServiceWorkerFetchTask& tas
     m_ongoingFetches.remove(task.fetchIdentifier());
 }
 
-void WebSWServerToContextConnection::fetchTaskTimedOut(ServiceWorkerIdentifier serviceWorkerIdentifier)
+void WebSWServerToContextConnection::registerDownload(ServiceWorkerDownloadTask& task)
 {
-    // Gather all fetches in this service worker
-    Vector<ServiceWorkerFetchTask*> fetches;
-    for (auto& fetchTask : m_ongoingFetches.values()) {
-        if (fetchTask->serviceWorkerIdentifier() == serviceWorkerIdentifier)
-            fetches.append(fetchTask.get());
-    }
+    ASSERT(!m_ongoingDownloads.contains(task.fetchIdentifier()));
+    m_ongoingDownloads.add(task.fetchIdentifier(), task);
+    m_connection.connection().addThreadMessageReceiver(Messages::ServiceWorkerDownloadTask::messageReceiverName(), &task, task.fetchIdentifier().toUInt64());
+}
 
-    // Signal load failure for them
-    for (auto* fetchTask : fetches) {
-        if (fetchTask->wasHandled())
-            fetchTask->fail({ errorDomainWebKitInternal, 0, { }, "Service Worker context closed"_s });
-        else
-            fetchTask->didNotHandle();
-    }
+void WebSWServerToContextConnection::unregisterDownload(ServiceWorkerDownloadTask& task)
+{
+    m_ongoingDownloads.remove(task.fetchIdentifier());
+    m_connection.connection().removeThreadMessageReceiver(Messages::ServiceWorkerDownloadTask::messageReceiverName(), task.fetchIdentifier().toUInt64());
+}
 
-    if (m_server) {
-        if (auto* worker = m_server->workerByID(serviceWorkerIdentifier)) {
-            worker->setHasTimedOutAnyFetchTasks();
-            if (worker->isRunning())
-                m_server->syncTerminateWorker(*worker);
-        }
-    }
+WebCore::ProcessIdentifier WebSWServerToContextConnection::webProcessIdentifier() const
+{
+    return m_connection.webProcessIdentifier();
 }
 
 } // namespace WebKit

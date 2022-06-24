@@ -1,4 +1,5 @@
 # Copyright (C) 2010 Google Inc. All rights reserved.
+# Copyright (C) 2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -26,7 +27,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import os
 import sys
 import unittest
 
@@ -34,10 +34,11 @@ from webkitpy.common.system.executive import Executive, ScriptError
 from webkitpy.common.system.executive_mock import MockExecutive2
 from webkitpy.common.system.filesystem import FileSystem
 from webkitpy.common.system.filesystem_mock import MockFileSystem
-from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.common.webkit_finder import WebKitFinder
 
-import config
+from webkitcorepy import OutputCapture
+
+import webkitpy.port.config as config
 
 
 class ConfigTest(unittest.TestCase):
@@ -118,10 +119,8 @@ class ConfigTest(unittest.TestCase):
 
     def test_default_configuration__unknown(self):
         # Ignore the warning about an unknown configuration value.
-        oc = OutputCapture()
-        oc.capture_output()
-        self.assert_configuration('Unknown', 'Unknown')
-        oc.restore_output()
+        with OutputCapture():
+            self.assert_configuration('Unknown', 'Unknown')
 
     def test_default_configuration__standalone(self):
         # FIXME: This test runs a standalone python script to test

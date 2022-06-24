@@ -1,4 +1,4 @@
-load("./resources/typedarray-test-helper-functions.js");
+load("./resources/typedarray-test-helper-functions.js", "caller relative");
 description(
 "This test checks the behavior of the TypedArray.prototype.slice function"
 );
@@ -114,6 +114,10 @@ function setArray(array) {
 
 function testSpeciesWithSameBuffer(unused, constructor) {
     return typedArrays.every(function(speciesConstructor) {
+        // This test is not valid for all type pairs.
+        if (constructor.BYTES_PER_ELEMENT < speciesConstructor.BYTES_PER_ELEMENT)
+            return true;
+
         constructor[Symbol.species] = function() { return new speciesConstructor(buffer); };
         let array = new constructor(buffer);
         let otherArray = new speciesConstructor(buffer);

@@ -8,11 +8,11 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include <utility>
-
 #include "modules/audio_processing/aec_dump/aec_dump_impl.h"
 
-#include "absl/memory/memory.h"
+#include <memory>
+#include <utility>
+
 #include "modules/audio_processing/aec_dump/aec_dump_factory.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/event.h"
@@ -55,7 +55,7 @@ void CopyFromConfigToEvent(const webrtc::InternalAPMConfig& config,
 
 }  // namespace
 
-AecDumpImpl::AecDumpImpl(std::unique_ptr<FileWrapper> debug_file,
+AecDumpImpl::AecDumpImpl(FileWrapper debug_file,
                          int64_t max_log_size_bytes,
                          rtc::TaskQueue* worker_queue)
     : debug_file_(std::move(debug_file)),
@@ -96,7 +96,7 @@ void AecDumpImpl::WriteInitMessage(const ProcessingConfig& api_format,
       api_format.reverse_output_stream().num_channels());
   msg->set_timestamp_ms(time_now_ms);
 
-  worker_queue_->PostTask(std::unique_ptr<rtc::QueuedTask>(std::move(task)));
+  worker_queue_->PostTask(std::move(task));
 }
 
 void AecDumpImpl::AddCaptureStreamInput(
@@ -109,12 +109,16 @@ void AecDumpImpl::AddCaptureStreamOutput(
   capture_stream_info_.AddOutput(src);
 }
 
-void AecDumpImpl::AddCaptureStreamInput(const AudioFrame& frame) {
-  capture_stream_info_.AddInput(frame);
+void AecDumpImpl::AddCaptureStreamInput(const int16_t* const data,
+                                        int num_channels,
+                                        int samples_per_channel) {
+  capture_stream_info_.AddInput(data, num_channels, samples_per_channel);
 }
 
-void AecDumpImpl::AddCaptureStreamOutput(const AudioFrame& frame) {
-  capture_stream_info_.AddOutput(frame);
+void AecDumpImpl::AddCaptureStreamOutput(const int16_t* const data,
+                                         int num_channels,
+                                         int samples_per_channel) {
+  capture_stream_info_.AddOutput(data, num_channels, samples_per_channel);
 }
 
 void AecDumpImpl::AddAudioProcessingState(const AudioProcessingState& state) {
@@ -124,21 +128,22 @@ void AecDumpImpl::AddAudioProcessingState(const AudioProcessingState& state) {
 void AecDumpImpl::WriteCaptureStreamMessage() {
   auto task = capture_stream_info_.GetTask();
   RTC_DCHECK(task);
-  worker_queue_->PostTask(std::unique_ptr<rtc::QueuedTask>(std::move(task)));
+  worker_queue_->PostTask(std::move(task));
   capture_stream_info_.SetTask(CreateWriteToFileTask());
 }
 
-void AecDumpImpl::WriteRenderStreamMessage(const AudioFrame& frame) {
+void AecDumpImpl::WriteRenderStreamMessage(const int16_t* const data,
+                                           int num_channels,
+                                           int samples_per_channel) {
   auto task = CreateWriteToFileTask();
   auto* event = task->GetEvent();
 
   event->set_type(audioproc::Event::REVERSE_STREAM);
   audioproc::ReverseStream* msg = event->mutable_reverse_stream();
-  const size_t data_size =
-      sizeof(int16_t) * frame.samples_per_channel_ * frame.num_channels_;
-  msg->set_data(frame.data(), data_size);
+  const size_t data_size = sizeof(int16_t) * samples_per_channel * num_channels;
+  msg->set_data(data, data_size);
 
-  worker_queue_->PostTask(std::unique_ptr<rtc::QueuedTask>(std::move(task)));
+  worker_queue_->PostTask(std::move(task));
 }
 
 void AecDumpImpl::WriteRenderStreamMessage(
@@ -150,12 +155,12 @@ void AecDumpImpl::WriteRenderStreamMessage(
 
   audioproc::ReverseStream* msg = event->mutable_reverse_stream();
 
-  for (size_t i = 0; i < src.num_channels(); ++i) {
+  for (int i = 0; i < src.num_channels(); ++i) {
     const auto& channel_view = src.channel(i);
     msg->add_channel(channel_view.begin(), sizeof(float) * channel_view.size());
   }
 
-  worker_queue_->PostTask(std::unique_ptr<rtc::QueuedTask>(std::move(task)));
+  worker_queue_->PostTask(std::move(task));
 }
 
 void AecDumpImpl::WriteConfig(const InternalAPMConfig& config) {
@@ -164,7 +169,7 @@ void AecDumpImpl::WriteConfig(const InternalAPMConfig& config) {
   auto* event = task->GetEvent();
   event->set_type(audioproc::Event::CONFIG);
   CopyFromConfigToEvent(config, event->mutable_config());
-  worker_queue_->PostTask(std::unique_ptr<rtc::QueuedTask>(std::move(task)));
+  worker_queue_->PostTask(std::move(task));
 }
 
 void AecDumpImpl::WriteRuntimeSetting(
@@ -181,6 +186,12 @@ void AecDumpImpl::WriteRuntimeSetting(
       setting->set_capture_pre_gain(x);
       break;
     }
+    case AudioProcessing::RuntimeSetting::Type::kCapturePostGain: {
+      float x;
+      runtime_setting.GetFloat(&x);
+      setting->set_capture_post_gain(x);
+      break;
+    }
     case AudioProcessing::RuntimeSetting::Type::
         kCustomRenderProcessingRuntimeSetting: {
       float x;
@@ -188,56 +199,70 @@ void AecDumpImpl::WriteRuntimeSetting(
       setting->set_custom_render_processing_setting(x);
       break;
     }
+    case AudioProcessing::RuntimeSetting::Type::kCaptureCompressionGain:
+      // Runtime AGC1 compression gain is ignored.
+      // TODO(http://bugs.webrtc.org/10432): Store compression gain in aecdumps.
+      break;
+    case AudioProcessing::RuntimeSetting::Type::kCaptureFixedPostGain: {
+      float x;
+      runtime_setting.GetFloat(&x);
+      setting->set_capture_fixed_post_gain(x);
+      break;
+    }
+    case AudioProcessing::RuntimeSetting::Type::kCaptureOutputUsed: {
+      bool x;
+      runtime_setting.GetBool(&x);
+      setting->set_capture_output_used(x);
+      break;
+    }
+    case AudioProcessing::RuntimeSetting::Type::kPlayoutVolumeChange: {
+      int x;
+      runtime_setting.GetInt(&x);
+      setting->set_playout_volume_change(x);
+      break;
+    }
+    case AudioProcessing::RuntimeSetting::Type::kPlayoutAudioDeviceChange: {
+      AudioProcessing::RuntimeSetting::PlayoutAudioDeviceInfo src;
+      runtime_setting.GetPlayoutAudioDeviceInfo(&src);
+      auto* dst = setting->mutable_playout_audio_device_change();
+      dst->set_id(src.id);
+      dst->set_max_volume(src.max_volume);
+      break;
+    }
     case AudioProcessing::RuntimeSetting::Type::kNotSpecified:
       RTC_NOTREACHED();
       break;
   }
-  worker_queue_->PostTask(std::unique_ptr<rtc::QueuedTask>(std::move(task)));
+  worker_queue_->PostTask(std::move(task));
 }
 
 std::unique_ptr<WriteToFileTask> AecDumpImpl::CreateWriteToFileTask() {
-  return absl::make_unique<WriteToFileTask>(debug_file_.get(),
-                                            &num_bytes_left_for_log_);
+  return std::make_unique<WriteToFileTask>(&debug_file_,
+                                           &num_bytes_left_for_log_);
 }
 
-std::unique_ptr<AecDump> AecDumpFactory::Create(rtc::PlatformFile file,
+std::unique_ptr<AecDump> AecDumpFactory::Create(webrtc::FileWrapper file,
                                                 int64_t max_log_size_bytes,
                                                 rtc::TaskQueue* worker_queue) {
   RTC_DCHECK(worker_queue);
-  std::unique_ptr<FileWrapper> debug_file(FileWrapper::Create());
-  FILE* handle = rtc::FdopenPlatformFileForWriting(file);
-  if (!handle) {
+  if (!file.is_open())
     return nullptr;
-  }
-  if (!debug_file->OpenFromFileHandle(handle)) {
-    return nullptr;
-  }
-  return absl::make_unique<AecDumpImpl>(std::move(debug_file),
-                                        max_log_size_bytes, worker_queue);
+
+  return std::make_unique<AecDumpImpl>(std::move(file), max_log_size_bytes,
+                                       worker_queue);
 }
 
 std::unique_ptr<AecDump> AecDumpFactory::Create(std::string file_name,
                                                 int64_t max_log_size_bytes,
                                                 rtc::TaskQueue* worker_queue) {
-  RTC_DCHECK(worker_queue);
-  std::unique_ptr<FileWrapper> debug_file(FileWrapper::Create());
-  if (!debug_file->OpenFile(file_name.c_str(), false)) {
-    return nullptr;
-  }
-  return absl::make_unique<AecDumpImpl>(std::move(debug_file),
-                                        max_log_size_bytes, worker_queue);
+  return Create(FileWrapper::OpenWriteOnly(file_name.c_str()),
+                max_log_size_bytes, worker_queue);
 }
 
 std::unique_ptr<AecDump> AecDumpFactory::Create(FILE* handle,
                                                 int64_t max_log_size_bytes,
                                                 rtc::TaskQueue* worker_queue) {
-  RTC_DCHECK(worker_queue);
-  RTC_DCHECK(handle);
-  std::unique_ptr<FileWrapper> debug_file(FileWrapper::Create());
-  if (!debug_file->OpenFromFileHandle(handle)) {
-    return nullptr;
-  }
-  return absl::make_unique<AecDumpImpl>(std::move(debug_file),
-                                        max_log_size_bytes, worker_queue);
+  return Create(FileWrapper(handle), max_log_size_bytes, worker_queue);
 }
+
 }  // namespace webrtc

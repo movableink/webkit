@@ -14,10 +14,8 @@
 #include <stdint.h>
 
 #include "absl/types/optional.h"
+#include "api/network_state_predictor.h"
 #include "api/units/data_rate.h"
-
-#define BWE_MAX(a, b) ((a) > (b) ? (a) : (b))
-#define BWE_MIN(a, b) ((a) < (b) ? (a) : (b))
 
 namespace webrtc {
 
@@ -37,15 +35,6 @@ enum BweNames {
   kSendSideTransportSeqNum = 3,
   kBweNamesMax = 4
 };
-
-enum class BandwidthUsage {
-  kBwNormal = 0,
-  kBwUnderusing = 1,
-  kBwOverusing = 2,
-  kLast
-};
-
-enum RateControlState { kRcHold, kRcIncrease, kRcDecrease };
 
 struct RateControlInput {
   RateControlInput(BandwidthUsage bw_state,

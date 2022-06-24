@@ -30,7 +30,8 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
         // Don't treat strings as having child nodes, even if they have a Structure.
         let hasChildren = node.hasChildren && node.className !== "string";
 
-        super(node, hasChildren);
+        // FIXME: Make instance grid nodes copyable.
+        super(node, {hasChildren, copyable: false});
 
         console.assert(node instanceof WI.HeapSnapshotNodeProxy);
         console.assert(!edge || edge instanceof WI.HeapSnapshotEdgeProxy);
@@ -41,11 +42,8 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
         this._edge = edge || null;
         this._base = base || null;
 
-        // FIXME: Make instance grid nodes copyable.
-        this.copyable = false;
-
         if (hasChildren)
-            this.addEventListener("populate", this._populate, this);
+            this.addEventListener(WI.DataGridNode.Event.Populate, this._populate, this);
     }
 
     // Static
@@ -218,7 +216,7 @@ WI.HeapSnapshotInstanceDataGridNode = class HeapSnapshotInstanceDataGridNode ext
 
     _populate()
     {
-        this.removeEventListener("populate", this._populate, this);
+        this.removeEventListener(WI.DataGridNode.Event.Populate, this._populate, this);
 
         function propertyName(edge) {
             return edge ? WI.HeapSnapshotRootPath.pathComponentForIndividualEdge(edge) : "";

@@ -26,7 +26,9 @@
 #include "config.h"
 
 #include "Test.h"
+#include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
+#include <wtf/OptionSetHash.h>
 
 namespace TestWebKitAPI {
 
@@ -116,6 +118,31 @@ TEST(WTF_OptionSet, AddAndRemove)
     EXPECT_TRUE(set.contains(ExampleFlags::C));
 
     set.remove({ ExampleFlags::A, ExampleFlags::C });
+    EXPECT_FALSE(set.contains(ExampleFlags::A));
+    EXPECT_FALSE(set.contains(ExampleFlags::B));
+    EXPECT_FALSE(set.contains(ExampleFlags::C));
+}
+
+TEST(WTF_OptionSet, Set)
+{
+    OptionSet<ExampleFlags> set;
+
+    set.set(ExampleFlags::A, true);
+    EXPECT_TRUE(set.contains(ExampleFlags::A));
+    EXPECT_FALSE(set.contains(ExampleFlags::B));
+    EXPECT_FALSE(set.contains(ExampleFlags::C));
+
+    set.set({ ExampleFlags::B, ExampleFlags::C }, true);
+    EXPECT_TRUE(set.contains(ExampleFlags::A));
+    EXPECT_TRUE(set.contains(ExampleFlags::B));
+    EXPECT_TRUE(set.contains(ExampleFlags::C));
+
+    set.set(ExampleFlags::B, false);
+    EXPECT_TRUE(set.contains(ExampleFlags::A));
+    EXPECT_FALSE(set.contains(ExampleFlags::B));
+    EXPECT_TRUE(set.contains(ExampleFlags::C));
+
+    set.set({ ExampleFlags::A, ExampleFlags::C }, false);
     EXPECT_FALSE(set.contains(ExampleFlags::A));
     EXPECT_FALSE(set.contains(ExampleFlags::B));
     EXPECT_FALSE(set.contains(ExampleFlags::C));
@@ -434,6 +461,23 @@ TEST(WTF_OptionSet, ContainsAll)
     EXPECT_FALSE(set.containsAll({ ExampleFlags::B, ExampleFlags::C }));
     EXPECT_FALSE(set.containsAll({ ExampleFlags::A, ExampleFlags::C }));
     EXPECT_FALSE(set.containsAll({ ExampleFlags::A, ExampleFlags::B, ExampleFlags::C }));
+}
+
+TEST(WTF_OptionSet, HashSet)
+{
+    HashSet<OptionSet<ExampleFlags>> hashSet;
+    EXPECT_TRUE(hashSet.add(OptionSet<ExampleFlags>()).isNewEntry);
+    EXPECT_TRUE(hashSet.add({ ExampleFlags::A }).isNewEntry);
+    EXPECT_TRUE(hashSet.add({ ExampleFlags::A, ExampleFlags::B }).isNewEntry);
+    EXPECT_FALSE(hashSet.add(OptionSet<ExampleFlags>()).isNewEntry);
+    EXPECT_FALSE(hashSet.add({ ExampleFlags::A }).isNewEntry);
+    EXPECT_FALSE(hashSet.add({ ExampleFlags::A, ExampleFlags::B }).isNewEntry);
+    EXPECT_TRUE(hashSet.remove(OptionSet<ExampleFlags>()));
+    EXPECT_TRUE(hashSet.remove({ ExampleFlags::A }));
+    EXPECT_TRUE(hashSet.remove({ ExampleFlags::A, ExampleFlags::B }));
+    EXPECT_TRUE(hashSet.add(OptionSet<ExampleFlags>()).isNewEntry);
+    EXPECT_TRUE(hashSet.add({ ExampleFlags::A }).isNewEntry);
+    EXPECT_TRUE(hashSet.add({ ExampleFlags::A, ExampleFlags::B }).isNewEntry);
 }
 
 } // namespace TestWebKitAPI

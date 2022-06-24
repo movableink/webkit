@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include <WebCore/PlatformCAAnimation.h>
+#include <wtf/EnumTraits.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 
@@ -118,130 +119,18 @@ public:
     void setTimingFunctions(const Vector<const WebCore::TimingFunction*>&, bool reverse = false) override;
     void copyTimingFunctionsFrom(const WebCore::PlatformCAAnimation&) override;
 
+    // Animation group properties.
+    void setAnimations(const Vector<RefPtr<PlatformCAAnimation>>&) final;
+    void copyAnimationsFrom(const PlatformCAAnimation&) final;
+
     AnimationType animationType() const { return m_properties.animationType; }
     void setHasExplicitBeginTime(bool hasExplicitBeginTime) { m_properties.hasExplicitBeginTime = hasExplicitBeginTime; }
     bool hasExplicitBeginTime() const { return m_properties.hasExplicitBeginTime; }
 
     void didStart(CFTimeInterval beginTime) { m_properties.beginTime = beginTime; }
 
-    class KeyframeValue {
-    public:
-        enum KeyframeType {
-            NumberKeyType,
-            ColorKeyType,
-            PointKeyType,
-            TransformKeyType,
-            FilterKeyType,
-        };
 
-        ~KeyframeValue()
-        {
-        }
-
-        KeyframeValue(float value = 0)
-            : keyType(NumberKeyType)
-            , number(value)
-        {
-        }
-
-        KeyframeValue(WebCore::Color value)
-            : keyType(ColorKeyType)
-            , color(value)
-        {
-        }
-
-        KeyframeValue(const WebCore::FloatPoint3D& value)
-            : keyType(PointKeyType)
-            , point(value)
-        {
-        }
-
-        KeyframeValue(const WebCore::TransformationMatrix& value)
-            : keyType(TransformKeyType)
-            , transform(value)
-        {
-        }
-
-        KeyframeValue(RefPtr<WebCore::FilterOperation>&& value)
-            : keyType(FilterKeyType)
-            , filter(WTFMove(value))
-        {
-        }
-
-        KeyframeValue(const KeyframeValue& other)
-        {
-            *this = other;
-        }
-
-        KeyframeValue& operator=(const KeyframeValue& other)
-        {
-            keyType = other.keyType;
-            switch (keyType) {
-            case NumberKeyType:
-                number = other.number;
-                break;
-            case ColorKeyType:
-                color = other.color;
-                break;
-            case PointKeyType:
-                point = other.point;
-                break;
-            case TransformKeyType:
-                transform = other.transform;
-                break;
-            case FilterKeyType:
-                filter = other.filter;
-                break;
-            }
-
-            return *this;
-        }
-
-        KeyframeType keyframeType() const { return keyType; }
-
-        float numberValue() const
-        {
-            ASSERT(keyType == NumberKeyType);
-            return number;
-        }
-
-        WebCore::Color colorValue() const
-        {
-            ASSERT(keyType == ColorKeyType);
-            return color;
-        }
-
-        const WebCore::FloatPoint3D& pointValue() const
-        {
-            ASSERT(keyType == PointKeyType);
-            return point;
-        }
-
-        const WebCore::TransformationMatrix& transformValue() const
-        {
-            ASSERT(keyType == TransformKeyType);
-            return transform;
-        }
-
-        const WebCore::FilterOperation* filterValue() const
-        {
-            ASSERT(keyType == FilterKeyType);
-            return filter.get();
-        }
-
-        void encode(IPC::Encoder&) const;
-        static Optional<KeyframeValue> decode(IPC::Decoder&);
-
-    private:
-        KeyframeType keyType;
-        union {
-            float number;
-            WebCore::Color color;
-            WebCore::FloatPoint3D point;
-            WebCore::TransformationMatrix transform;
-        };
-        RefPtr<WebCore::FilterOperation> filter;
-    };
+    using KeyframeValue = std::variant<float, WebCore::Color, WebCore::FloatPoint3D, WebCore::TransformationMatrix, RefPtr<WebCore::FilterOperation>>;
 
     struct Properties {
         Properties()
@@ -262,7 +151,7 @@ public:
         }
 
         void encode(IPC::Encoder&) const;
-        static Optional<Properties> decode(IPC::Decoder&);
+        static std::optional<Properties> decode(IPC::Decoder&);
 
         String keyPath;
         PlatformCAAnimation::AnimationType animationType;
@@ -275,6 +164,7 @@ public:
 
         PlatformCAAnimation::FillModeType fillMode;
         PlatformCAAnimation::ValueFunctionType valueFunction;
+        RefPtr<WebCore::TimingFunction> timingFunction;
 
         bool autoReverses;
         bool removedOnCompletion;
@@ -287,6 +177,8 @@ public:
         Vector<KeyframeValue> keyValues;
         Vector<float> keyTimes;
         Vector<RefPtr<WebCore::TimingFunction>> timingFunctions;
+
+        Vector<Properties> animations;
     };
 
     const Properties& properties() const { return m_properties; }
@@ -300,7 +192,6 @@ private:
     Properties m_properties;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, const PlatformCAAnimationRemote::KeyframeValue&);
 WTF::TextStream& operator<<(WTF::TextStream&, const PlatformCAAnimationRemote::Properties&);
 
 } // namespace WebKit

@@ -41,16 +41,35 @@ SOFT_LINK_CLASS(WebContentAnalysis, WebFilterEvaluator);
 
 namespace WebCore {
 
+#if PLATFORM(IOS)
+ParentalControlsContentFilter::SandboxExtensionState ParentalControlsContentFilter::m_sandboxExtensionState = SandboxExtensionState::NotSet;
+#endif
+
 bool ParentalControlsContentFilter::enabled()
 {
+#if PLATFORM(IOS)
+    bool enabled = false;
+    switch (m_sandboxExtensionState) {
+    case SandboxExtensionState::Consumed:
+        enabled = true;
+        break;
+    case SandboxExtensionState::NotConsumed:
+        enabled = false;
+        break;
+    case SandboxExtensionState::NotSet:
+        enabled = [getWebFilterEvaluatorClass() isManagedSession];
+        break;
+    }
+#else
     bool enabled = [getWebFilterEvaluatorClass() isManagedSession];
+#endif
     LOG(ContentFiltering, "ParentalControlsContentFilter is %s.\n", enabled ? "enabled" : "not enabled");
     return enabled;
 }
 
-std::unique_ptr<ParentalControlsContentFilter> ParentalControlsContentFilter::create()
+UniqueRef<ParentalControlsContentFilter> ParentalControlsContentFilter::create()
 {
-    return makeUnique<ParentalControlsContentFilter>();
+    return makeUniqueRef<ParentalControlsContentFilter>();
 }
 
 static inline bool canHandleResponse(const ResourceResponse& response)
@@ -75,22 +94,22 @@ void ParentalControlsContentFilter::responseReceived(const ResourceResponse& res
     updateFilterState();
 }
 
-void ParentalControlsContentFilter::addData(const char* data, int length)
+void ParentalControlsContentFilter::addData(const SharedBuffer& data)
 {
-    ASSERT(![m_replacementData.get() length]);
-    m_replacementData = [m_webFilterEvaluator addData:[NSData dataWithBytesNoCopy:(void*)data length:length freeWhenDone:NO]];
+    ASSERT(![m_replacementData length]);
+    m_replacementData = [m_webFilterEvaluator addData:data.createNSData().get()];
     updateFilterState();
-    ASSERT(needsMoreData() || [m_replacementData.get() length]);
+    ASSERT(needsMoreData() || [m_replacementData length]);
 }
 
 void ParentalControlsContentFilter::finishedAddingData()
 {
-    ASSERT(![m_replacementData.get() length]);
+    ASSERT(![m_replacementData length]);
     m_replacementData = [m_webFilterEvaluator dataComplete];
     updateFilterState();
 }
 
-Ref<SharedBuffer> ParentalControlsContentFilter::replacementData() const
+Ref<FragmentedSharedBuffer> ParentalControlsContentFilter::replacementData() const
 {
     ASSERT(didBlockData());
     return SharedBuffer::create(m_replacementData.get());
@@ -127,6 +146,16 @@ void ParentalControlsContentFilter::updateFilterState()
         LOG(ContentFiltering, "ParentalControlsContentFilter stopped buffering with state %d and replacement data length %zu.\n", m_state, [m_replacementData length]);
 #endif
 }
+
+#if PLATFORM(IOS)
+void ParentalControlsContentFilter::setHasConsumedSandboxExtension(bool hasConsumedSandboxExtension)
+{
+    if (m_sandboxExtensionState == SandboxExtensionState::Consumed)
+        return;
+
+    m_sandboxExtensionState = (hasConsumedSandboxExtension ? SandboxExtensionState::Consumed : SandboxExtensionState::NotConsumed);
+}
+#endif
 
 } // namespace WebCore
 

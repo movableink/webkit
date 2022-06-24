@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Google Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -28,6 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #include <WebCore/COMPtr.h>
 #include <WebCore/Notification.h>
 #include <WebCore/NotificationClient.h>
@@ -50,9 +53,7 @@ public:
     virtual void cancel(WebCore::Notification* object);
     virtual void notificationObjectDestroyed(WebCore::Notification* object);
     virtual void notificationControllerDestroyed();
-    virtual void requestPermission(WebCore::SecurityOrigin*, RefPtr<WebCore::NotificationPermissionCallback>&&);
-    bool hasPendingPermissionRequests(WebCore::ScriptExecutionContext*) const override;
-    virtual void cancelRequestsForPermission(WebCore::ScriptExecutionContext*);
+    virtual void requestPermission(WebCore::SecurityOrigin&, PermissionHandler&&);
     virtual WebCore::NotificationClient::Permission checkPermission(const URL&);
 
 private:

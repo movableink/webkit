@@ -13,14 +13,16 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 #include <atomic>
 
+#include "api/sequence_checker.h"
+#include "api/task_queue/task_queue_factory.h"
 #include "modules/audio_device/include/audio_device_defines.h"
 #include "rtc_base/buffer.h"
-#include "rtc_base/criticalsection.h"
+#include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/task_queue.h"
 #include "rtc_base/thread_annotations.h"
-#include "rtc_base/thread_checker.h"
 
 namespace webrtc {
 
@@ -75,7 +77,7 @@ class AudioDeviceBuffer {
     int16_t max_play_level = 0;
   };
 
-  AudioDeviceBuffer();
+  explicit AudioDeviceBuffer(TaskQueueFactory* task_queue_factory);
   virtual ~AudioDeviceBuffer();
 
   int32_t RegisterAudioCallback(AudioTransport* audio_callback);
@@ -138,9 +140,9 @@ class AudioDeviceBuffer {
   // TODO(henrika): see if it is possible to refactor and annotate all members.
 
   // Main thread on which this object is created.
-  rtc::ThreadChecker main_thread_checker_;
+  SequenceChecker main_thread_checker_;
 
-  rtc::CriticalSection lock_;
+  Mutex lock_;
 
   // Task queue used to invoke LogStats() periodically. Tasks are executed on a
   // worker thread but it does not necessarily have to be the same thread for

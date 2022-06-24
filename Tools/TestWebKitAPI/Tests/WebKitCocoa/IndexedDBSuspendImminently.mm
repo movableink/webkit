@@ -25,21 +25,21 @@
 
 #import "config.h"
 
+#import "DeprecatedGlobalValues.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
-
+#import "TestURLSchemeHandler.h"
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKUserContentControllerPrivate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
+#import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/WebKit.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <wtf/RetainPtr.h>
 
 #if PLATFORM(IOS_FAMILY)
 
-static bool receivedScriptMessage;
 static bool idbAcitivitiesStarted;
-static RetainPtr<WKScriptMessage> lastScriptMessage;
 
 @interface IndexedDBSuspendImminentlyMessageHandler : NSObject <WKScriptMessageHandler>
 @end
@@ -73,6 +73,12 @@ static void keepNetworkProcessActive()
 
 TEST(IndexedDB, IndexedDBSuspendImminently)
 {
+    readyToContinue = false;
+    [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^() {
+        readyToContinue = true;
+    }];
+    TestWebKitAPI::Util::run(&readyToContinue);
+
     auto handler = adoptNS([[IndexedDBSuspendImminentlyMessageHandler alloc] init]);
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:handler.get() name:@"testHandler"];
@@ -87,11 +93,80 @@ TEST(IndexedDB, IndexedDBSuspendImminently)
 
     runTestAndCheckResult(@"Continue");
 
-    [configuration.get().processPool _sendNetworkProcessWillSuspendImminently];
-    [configuration.get().processPool _sendNetworkProcessDidResume];
+    [configuration.get().websiteDataStore _sendNetworkProcessWillSuspendImminently];
+    [configuration.get().websiteDataStore _sendNetworkProcessDidResume];
 
     runTestAndCheckResult(@"Expected Abort For Suspension");
     runTestAndCheckResult(@"Expected Success After Resume");
+}
+
+static NSString *mainFrameString = @"<script> \
+    function postResult(event) { \
+        window.webkit.messageHandlers.testHandler.postMessage(event.data); \
+    } \
+    addEventListener('message', postResult, false); \
+    </script> \
+    <iframe src='iframe://'>";
+
+static const char* iframeBytes = R"TESTRESOURCE(
+<script>
+function postResult(result) {
+    if (window.parent != window.top) {
+        parent.postMessage(result, '*');
+    } else {
+        window.webkit.messageHandlers.testHandler.postMessage(result);
+    }
+}
+
+try {
+    var request = window.indexedDB.open('IndexedDBSuspendImminentlyForThirdPartyDatabases');
+    request.onupgradeneeded = function(event) {
+        var db = event.target.result;
+        var os = db.createObjectStore('TestObjectStore');
+        var transaction = event.target.transaction;
+        transaction.onabort = function(event) {
+            postResult('transaction is aborted');
+        }
+        transaction.oncomplete = function(event) {
+            postResult('transaction is completed');
+        }
+
+        postResult('database is created');
+
+        for (let i = 0; i < 1000; i ++)
+            os.put('TestValue', 'TestKey');
+    }
+    request.onerror = function(event) {
+        postResult('database error: ' + event.target.error.name + ' - ' + event.target.error.message);
+    }
+} catch(err) {
+    postResult('database error: ' + err.name + ' - ' + err.message);
+}
+</script>
+)TESTRESOURCE";
+
+TEST(IndexedDB, SuspendImminentlyForThirdPartyDatabases)
+{
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto handler = adoptNS([[IndexedDBSuspendImminentlyMessageHandler alloc] init]);
+    [[configuration userContentController] addScriptMessageHandler:handler.get() name:@"testHandler"];
+    auto schemeHandler = adoptNS([[TestURLSchemeHandler alloc] init]);
+    [schemeHandler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
+        auto response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:@"text/html" expectedContentLength:0 textEncodingName:nil]);
+        [task didReceiveResponse:response.get()];
+        [task didReceiveData:[NSData dataWithBytes:iframeBytes length:strlen(iframeBytes)]];
+        [task didFinish];
+    }];
+    [configuration setURLSchemeHandler:schemeHandler.get() forURLScheme:@"iframe"];
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView loadHTMLString:mainFrameString baseURL:[NSURL URLWithString:@"http://webkit.org"]];
+    runTestAndCheckResult(@"database is created");
+
+    [configuration.get().websiteDataStore _sendNetworkProcessWillSuspendImminently];
+    [configuration.get().websiteDataStore _sendNetworkProcessDidResume];
+
+    runTestAndCheckResult(@"transaction is completed");
 }
 
 #endif // PLATFORM(IOS_FAMILY)

@@ -27,7 +27,12 @@ import argparse
 import json
 import os
 import sys
-import urllib2
+
+try:
+    from urllib.request import urlopen, Request
+    from urllib.error import URLError
+except ImportError:
+    from urllib2 import urlopen, Request, URLError
 
 PUBLIC_GITHUB_API_ENDPOINT = 'https://api.github.com/'
 
@@ -65,14 +70,14 @@ def find_release(endpoint, repo, filename, token, tag):
     release_name = 'tags/{}'.format(tag) if tag else 'latest'
     url = '{}/repos/{}/releases/{}'.format(endpoint.rstrip('/'), repo, release_name)
 
-    request = urllib2.Request(url)
+    request = Request(url)
     request.add_header('Accept', 'application/vnd.github.v3+json')
     if token:
         request.add_header('Authorization', 'token {}'.format(token))
 
     try:
-        response = urllib2.urlopen(request)
-    except urllib2.URLError as error:
+        response = urlopen(request)
+    except URLError as error:
         print(error)
         return None, None
 
@@ -85,13 +90,13 @@ def find_release(endpoint, repo, filename, token, tag):
 
 
 def download_release(source_url, target_path, token):
-    request = urllib2.Request(source_url)
+    request = Request(source_url)
     request.add_header('Accept', 'application/octet-stream')
     if token:
         request.add_header('Authorization', 'token {}'.format(token))
 
     with open(target_path, 'wb') as file:
-        file.write(urllib2.urlopen(request).read())
+        file.write(urlopen(request).read())
 
 
 def load_version_info(version_info_path):

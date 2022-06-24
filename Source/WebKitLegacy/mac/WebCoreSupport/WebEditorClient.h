@@ -32,6 +32,7 @@
 #import <WebCore/TextCheckerClient.h>
 #import <WebCore/VisibleSelection.h>
 #import <wtf/Forward.h>
+#import <wtf/Ref.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakPtr.h>
@@ -50,7 +51,7 @@ public:
     WebEditorClient(WebView *);
     virtual ~WebEditorClient();
 
-    void didCheckSucceed(int sequence, NSArray *results);
+    void didCheckSucceed(WebCore::TextCheckingRequestIdentifier, NSArray *results);
 
 private:
     bool isGrammarCheckingEnabled() final;
@@ -62,27 +63,27 @@ private:
     bool smartInsertDeleteEnabled() final;
     bool isSelectTrailingWhitespaceEnabled() const final;
 
-    bool shouldDeleteRange(WebCore::Range*) final;
+    bool shouldDeleteRange(const std::optional<WebCore::SimpleRange>&) final;
 
-    bool shouldBeginEditing(WebCore::Range*) final;
-    bool shouldEndEditing(WebCore::Range*) final;
-    bool shouldInsertNode(WebCore::Node*, WebCore::Range*, WebCore::EditorInsertAction) final;
-    bool shouldInsertText(const String&, WebCore::Range*, WebCore::EditorInsertAction) final;
-    bool shouldChangeSelectedRange(WebCore::Range* fromRange, WebCore::Range* toRange, WebCore::EAffinity, bool stillSelecting) final;
+    bool shouldBeginEditing(const WebCore::SimpleRange&) final;
+    bool shouldEndEditing(const WebCore::SimpleRange&) final;
+    bool shouldInsertNode(WebCore::Node&, const std::optional<WebCore::SimpleRange>&, WebCore::EditorInsertAction) final;
+    bool shouldInsertText(const String&, const std::optional<WebCore::SimpleRange>&, WebCore::EditorInsertAction) final;
+    bool shouldChangeSelectedRange(const std::optional<WebCore::SimpleRange>& fromRange, const std::optional<WebCore::SimpleRange>& toRange, WebCore::Affinity, bool stillSelecting) final;
 
-    bool shouldApplyStyle(WebCore::StyleProperties*, WebCore::Range*) final;
+    bool shouldApplyStyle(const WebCore::StyleProperties&, const std::optional<WebCore::SimpleRange>&) final;
     void didApplyStyle() final;
 
-    bool shouldMoveRangeAfterDelete(WebCore::Range*, WebCore::Range* rangeToBeReplaced) final;
+    bool shouldMoveRangeAfterDelete(const WebCore::SimpleRange&, const WebCore::SimpleRange& rangeToBeReplaced) final;
 
     void didBeginEditing() final;
     void didEndEditing() final;
-    void willWriteSelectionToPasteboard(WebCore::Range*) final;
+    void willWriteSelectionToPasteboard(const std::optional<WebCore::SimpleRange>&) final;
     void didWriteSelectionToPasteboard() final;
-    void getClientPasteboardDataForRange(WebCore::Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer>>& pasteboardData) final;
+    void getClientPasteboardData(const std::optional<WebCore::SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer>>& pasteboardData) final;
 
     void setInsertionPasteboard(const String&) final;
-    WebCore::DOMPasteAccessResponse requestDOMPasteAccess(const String&) final { return WebCore::DOMPasteAccessResponse::DeniedForGesture; }
+    WebCore::DOMPasteAccessResponse requestDOMPasteAccess(WebCore::DOMPasteAccessCategory, const String&) final { return WebCore::DOMPasteAccessResponse::DeniedForGesture; }
 
 #if USE(APPKIT)
     void uppercaseWord() final;
@@ -148,9 +149,11 @@ private:
     RefPtr<WebCore::DocumentFragment> documentFragmentFromDelegate(int index) final;
     bool performsTwoStepPaste(WebCore::DocumentFragment*) final;
     void updateStringForFind(const String&) final { }
+    bool shouldRevealCurrentSelectionAfterInsertion() const final;
+    bool shouldSuppressPasswordEcho() const final;
 #endif
 
-    bool performTwoStepDrop(WebCore::DocumentFragment&, WebCore::Range& destination, bool isMove) final;
+    bool performTwoStepDrop(WebCore::DocumentFragment&, const WebCore::SimpleRange& destination, bool isMove) final;
     
     bool shouldEraseMarkersAfterChangeSelection(WebCore::TextCheckingType) const final;
     void ignoreWordInSpellDocument(const String&) final;
@@ -166,7 +169,7 @@ private:
     void getGuessesForWord(const String& word, const String& context, const WebCore::VisibleSelection& currentSelection, Vector<String>& guesses) final;
 
     void willSetInputMethodState() final;
-    void setInputMethodState(bool enabled) final;
+    void setInputMethodState(WebCore::Element*) final;
     void requestCheckingOfString(WebCore::TextCheckingRequest&, const WebCore::VisibleSelection& currentSelection) final;
 
 #if PLATFORM(MAC)
@@ -193,7 +196,8 @@ private:
     WebView *m_webView;
     RetainPtr<WebEditorUndoTarget> m_undoTarget;
     bool m_haveUndoRedoOperations { false };
-    RefPtr<WebCore::TextCheckingRequest> m_textCheckingRequest;
+    
+    HashMap<WebCore::TextCheckingRequestIdentifier, Ref<WebCore::TextCheckingRequest>> m_requestsInFlight;
 
 #if PLATFORM(IOS_FAMILY)
     bool m_delayingContentChangeNotifications { false };
@@ -212,28 +216,28 @@ private:
     EditorStateIsContentEditable m_lastEditorStateWasContentEditable { EditorStateIsContentEditable::Unset };
 };
 
-inline NSSelectionAffinity kit(WebCore::EAffinity affinity)
+inline NSSelectionAffinity kit(WebCore::Affinity affinity)
 {
     switch (affinity) {
-        case WebCore::EAffinity::UPSTREAM:
-            return NSSelectionAffinityUpstream;
-        case WebCore::EAffinity::DOWNSTREAM:
-            return NSSelectionAffinityDownstream;
+    case WebCore::Affinity::Upstream:
+        return NSSelectionAffinityUpstream;
+    case WebCore::Affinity::Downstream:
+        return NSSelectionAffinityDownstream;
     }
     ASSERT_NOT_REACHED();
-    return NSSelectionAffinityUpstream;
+    return NSSelectionAffinityDownstream;
 }
 
-inline WebCore::EAffinity core(NSSelectionAffinity affinity)
+inline WebCore::Affinity core(NSSelectionAffinity affinity)
 {
     switch (affinity) {
     case NSSelectionAffinityUpstream:
-        return WebCore::EAffinity::UPSTREAM;
+        return WebCore::Affinity::Upstream;
     case NSSelectionAffinityDownstream:
-        return WebCore::EAffinity::DOWNSTREAM;
+        return WebCore::Affinity::Downstream;
     }
     ASSERT_NOT_REACHED();
-    return WebCore::EAffinity::UPSTREAM;
+    return WebCore::Affinity::Downstream;
 }
 
 #if PLATFORM(IOS_FAMILY)

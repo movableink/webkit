@@ -8,6 +8,7 @@
 <script src=../resources/testharnessreport.js></script>
 <script src=../resources/gc.js></script>
 <script>
+setup({ single_test: true });
 let count = 100;
 
 function checkEvent() {
@@ -16,7 +17,7 @@ function checkEvent() {
 }
 
 function init() {
-    let ctx = new webkitAudioContext();
+    let ctx = new AudioContext();
 
     let source = ctx.createOscillator();
     source.frequency.value = 300;

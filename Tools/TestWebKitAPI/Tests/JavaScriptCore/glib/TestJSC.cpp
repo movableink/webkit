@@ -19,17 +19,19 @@
 
 #include "config.h"
 
-// Include JSCContextPrivate.h to be able to run garbage collector for testing.
+// Include JSCContextInternal.h to be able to run garbage collector for testing.
 #define JSC_COMPILATION 1
-#include "jsc/JSCContextPrivate.h"
+#include "jsc/JSCContextInternal.h"
 #undef JSC_COMPILATION
 
+#include <JavaScriptCore/JSContextRef.h>
 #include <jsc/jsc.h>
 #include <wtf/HashSet.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/GUniquePtr.h>
+#include <wtf/text/CString.h>
 
 class LeakChecker {
 public:
@@ -99,13 +101,6 @@ private:
     handler.pop(); \
     g_assert_true(didThrow); \
     didThrow = false;
-
-extern "C" void JSSynchronousGarbageCollectForDebugging(JSContextRef);
-
-static void jscContextGarbageCollect(JSCContext* context)
-{
-    JSSynchronousGarbageCollectForDebugging(jscContextGetJSContext(context));
-}
 
 static void testJSCBasic()
 {
@@ -671,7 +666,7 @@ static void testJSCEvaluateInObject()
         g_assert_true(JSC_IS_VALUE(module.get()));
         g_assert_true(jsc_value_is_object(module.get()));
         GUniquePtr<char> valueString(jsc_value_to_string(module.get()));
-        g_assert_cmpstr(valueString.get(), ==, "[object GlobalObject]");
+        g_assert_cmpstr(valueString.get(), ==, "[object Object]");
         jsc_context_set_value(context.get(), "module", module.get());
 
         GRefPtr<JSCValue> bar = adoptGRef(jsc_value_object_get_property(module.get(), "bar"));
@@ -850,6 +845,11 @@ static char* joinFunction(const char* const* strv, const char* sep)
 static gboolean checkUserData(GFile* file)
 {
     return G_IS_FILE(file);
+}
+
+static char* valueToString(JSCValue* value)
+{
+    return jsc_value_to_string(value);
 }
 
 static void testJSCFunction()
@@ -1121,6 +1121,57 @@ static void testJSCFunction()
         g_assert_true(jsc_value_is_boolean(value.get()));
         g_assert_true(jsc_value_to_boolean(value.get()));
     }
+
+    {
+        LeakChecker checker;
+        GRefPtr<JSCContext> context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        GRefPtr<JSCValue> function = adoptGRef(jsc_value_new_function(context.get(), "valueToString", G_CALLBACK(valueToString), nullptr, nullptr, G_TYPE_STRING, 1, JSC_TYPE_VALUE));
+        checker.watch(function.get());
+        jsc_context_set_value(context.get(), "valueToString", function.get());
+
+        GRefPtr<JSCValue> value = adoptGRef(jsc_context_evaluate(context.get(), "valueToString(4)", -1));
+        checker.watch(value.get());
+        GUniquePtr<char> valueString(jsc_value_to_string(value.get()));
+        g_assert_cmpstr(valueString.get(), ==, "4");
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "valueToString('Hello World')", -1));
+        checker.watch(value.get());
+        valueString.reset(jsc_value_to_string(value.get()));
+        g_assert_cmpstr(valueString.get(), ==, "Hello World");
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "valueToString(undefined)", -1));
+        checker.watch(value.get());
+        valueString.reset(jsc_value_to_string(value.get()));
+        g_assert_cmpstr(valueString.get(), ==, "undefined");
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "valueToString(null)", -1));
+        checker.watch(value.get());
+        valueString.reset(jsc_value_to_string(value.get()));
+        g_assert_cmpstr(valueString.get(), ==, "null");
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "valueToString()", -1));
+        checker.watch(value.get());
+        valueString.reset(jsc_value_to_string(value.get()));
+        g_assert_cmpstr(valueString.get(), ==, "undefined");
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "valueToString(1,2,3)", -1));
+        checker.watch(value.get());
+        valueString.reset(jsc_value_to_string(value.get()));
+        g_assert_cmpstr(valueString.get(), ==, "1");
+    }
+}
+
+static int getIntProperty(int* property)
+{
+    return *property;
+}
+
+static void setIntProperty(int value, int* property)
+{
+    *property = value;
 }
 
 static void testJSCObject()
@@ -1377,6 +1428,148 @@ static void testJSCObject()
         checker.watch(context.get());
         ExceptionHandler exceptionHandler(context.get());
 
+        GRefPtr<JSCValue> object = adoptGRef(jsc_value_new_object(context.get(), nullptr, nullptr));
+        checker.watch(object.get());
+        g_assert_true(jsc_value_is_object(object.get()));
+        g_assert_true(jsc_value_object_is_instance_of(object.get(), "Object"));
+
+        GUniquePtr<char*> properties(jsc_value_object_enumerate_properties(object.get()));
+        g_assert_null(properties.get());
+
+        int property = 25;
+        g_assert_false(jsc_value_object_has_property(object.get(), "val"));
+        jsc_value_object_define_property_accessor(object.get(), "val", static_cast<JSCValuePropertyFlags>(0), G_TYPE_INT, G_CALLBACK(getIntProperty), nullptr, &property, nullptr);
+        g_assert_true(jsc_value_object_has_property(object.get(), "val"));
+        properties.reset(jsc_value_object_enumerate_properties(object.get()));
+        g_assert_null(properties.get());
+        jsc_context_set_value(context.get(), "f", object.get());
+
+        GRefPtr<JSCValue> value = adoptGRef(jsc_context_evaluate(context.get(), "f.val;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, 25);
+
+        bool didThrow = false;
+        g_assert_throw_begin(exceptionHandler, didThrow);
+        value = adoptGRef(jsc_context_evaluate(context.get(), "'use strict'; f.val = 32;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_undefined(value.get()));
+        g_assert_did_throw(exceptionHandler, didThrow);
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.propertyIsEnumerable('val');", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_boolean(value.get()));
+        g_assert_true(jsc_value_to_boolean(value.get()) == FALSE);
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "delete f.val;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_object_has_property(object.get(), "val"));
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.val;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, 25);
+
+        g_assert_false(jsc_value_object_delete_property(object.get(), "val"));
+        g_assert_true(jsc_value_object_has_property(object.get(), "val"));
+
+        g_assert_throw_begin(exceptionHandler, didThrow);
+        jsc_value_object_define_property_accessor(object.get(), "val", static_cast<JSCValuePropertyFlags>(0), G_TYPE_INT, G_CALLBACK(getIntProperty), nullptr, &property, nullptr);
+        g_assert_did_throw(exceptionHandler, didThrow);
+
+        property = 32;
+        g_assert_false(jsc_value_object_has_property(object.get(), "val2"));
+        jsc_value_object_define_property_accessor(object.get(), "val2", JSC_VALUE_PROPERTY_ENUMERABLE, G_TYPE_INT, G_CALLBACK(getIntProperty), G_CALLBACK(setIntProperty), &property, nullptr);
+        g_assert_true(jsc_value_object_has_property(object.get(), "val2"));
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.val2;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, 32);
+
+        properties.reset(jsc_value_object_enumerate_properties(object.get()));
+        g_assert_cmpuint(g_strv_length(properties.get()), ==, 1);
+        g_assert_cmpstr(properties.get()[0], ==, "val2");
+        g_assert_null(properties.get()[1]);
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "'use strict'; f.val2 = 45;", -1));
+        checker.watch(value.get());
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.val2;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, 45);
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.propertyIsEnumerable('val2');", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_boolean(value.get()));
+        g_assert_true(jsc_value_to_boolean(value.get()) == TRUE);
+
+        g_assert_false(jsc_value_object_delete_property(object.get(), "val2"));
+        g_assert_true(jsc_value_object_has_property(object.get(), "val2"));
+
+        property = 125;
+        g_assert_false(jsc_value_object_has_property(object.get(), "val3"));
+        jsc_value_object_define_property_accessor(object.get(), "val3", JSC_VALUE_PROPERTY_CONFIGURABLE, G_TYPE_INT, G_CALLBACK(getIntProperty), G_CALLBACK(setIntProperty), &property, nullptr);
+        g_assert_true(jsc_value_object_has_property(object.get(), "val3"));
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.val3;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, 125);
+
+        properties.reset(jsc_value_object_enumerate_properties(object.get()));
+        g_assert_cmpuint(g_strv_length(properties.get()), ==, 1);
+        g_assert_cmpstr(properties.get()[0], ==, "val2");
+        g_assert_null(properties.get()[1]);
+
+        property = 150;
+        jsc_value_object_define_property_accessor(object.get(), "val3", JSC_VALUE_PROPERTY_CONFIGURABLE, G_TYPE_INT, G_CALLBACK(getIntProperty), nullptr, &property, nullptr);
+        g_assert_true(jsc_value_object_has_property(object.get(), "val3"));
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.val3;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, 150);
+
+        properties.reset(jsc_value_object_enumerate_properties(object.get()));
+        g_assert_cmpuint(g_strv_length(properties.get()), ==, 1);
+        g_assert_cmpstr(properties.get()[0], ==, "val2");
+        g_assert_null(properties.get()[1]);
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "delete f.val3;", -1));
+        checker.watch(value.get());
+        g_assert_false(jsc_value_object_has_property(object.get(), "val3"));
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.val3;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_undefined(value.get()));
+
+        property = 250;
+        g_assert_false(jsc_value_object_has_property(object.get(), "val4"));
+        jsc_value_object_define_property_accessor(object.get(), "val4", static_cast<JSCValuePropertyFlags>(JSC_VALUE_PROPERTY_CONFIGURABLE | JSC_VALUE_PROPERTY_ENUMERABLE),
+            G_TYPE_INT, G_CALLBACK(getIntProperty), nullptr, &property, nullptr);
+        g_assert_true(jsc_value_object_has_property(object.get(), "val4"));
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.val4;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, 250);
+
+        properties.reset(jsc_value_object_enumerate_properties(object.get()));
+        g_assert_cmpuint(g_strv_length(properties.get()), ==, 2);
+        g_assert_cmpstr(properties.get()[0], ==, "val2");
+        g_assert_cmpstr(properties.get()[1], ==, "val4");
+        g_assert_null(properties.get()[2]);
+
+        g_assert_true(jsc_value_object_delete_property(object.get(), "val4"));
+        g_assert_false(jsc_value_object_has_property(object.get(), "val4"));
+
+        properties.reset(jsc_value_object_enumerate_properties(object.get()));
+        g_assert_cmpuint(g_strv_length(properties.get()), ==, 1);
+        g_assert_cmpstr(properties.get()[0], ==, "val2");
+        g_assert_null(properties.get()[1]);
+    }
+
+    {
+        LeakChecker checker;
+        GRefPtr<JSCContext> context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
         GRefPtr<JSCValue> value = adoptGRef(jsc_value_new_number(context.get(), 125));
         checker.watch(value.get());
         g_assert_true(jsc_value_is_number(value.get()));
@@ -1446,6 +1639,25 @@ static void setFoo(Foo* foo, int value)
 static int getFoo(Foo* foo)
 {
     return foo->foo;
+}
+
+static void setFooValue(Foo* foo, JSCValue* value)
+{
+    if (jsc_value_is_undefined(value))
+        foo->foo = std::numeric_limits<int>::min();
+    else if (jsc_value_is_null(value))
+        foo->foo = std::numeric_limits<int>::max();
+    else
+        foo->foo = jsc_value_to_int32(value);
+}
+
+static JSCValue* getFooValue(Foo* foo)
+{
+    if (foo->foo == std::numeric_limits<int>::min())
+        return jsc_value_new_undefined(jsc_context_get_current());
+    if (foo->foo == std::numeric_limits<int>::max())
+        return jsc_value_new_null(jsc_context_get_current());
+    return jsc_value_new_number(jsc_context_get_current(), foo->foo);
 }
 
 static void setSibling(Foo* foo, Foo* sibling)
@@ -1810,6 +2022,14 @@ static void testJSCClass()
         checker.watch(value.get());
         g_assert_true(jsc_value_is_number(value.get()));
         g_assert_cmpint(jsc_value_to_int32(value.get()), ==, 52);
+
+        foo2 = adoptGRef(jsc_context_evaluate(context.get(), "f2 = new Foo.CreateWithFoo();", -1));
+        checker.watch(foo2.get());
+        g_assert_true(jsc_value_is_object(foo2.get()));
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f2.foo", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, 0);
 
         GRefPtr<JSCValue> constructorV = adoptGRef(jsc_class_add_constructor_variadic(jscClass, "CreateWithFoo", G_CALLBACK(fooCreateWithFooV), nullptr, nullptr, G_TYPE_POINTER));
         checker.watch(constructorV.get());
@@ -2528,6 +2748,576 @@ static void testJSCClass()
         g_assert_true(jsc_value_is_boolean(result.get()));
         g_assert_true(jsc_value_to_boolean(result.get()));
     }
+
+    {
+        LeakChecker checker;
+        GRefPtr<JSCContext> context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        JSCClass* jscClass = jsc_context_register_class(context.get(), "Foo", nullptr, &fooVTable, reinterpret_cast<GDestroyNotify>(fooFree));
+        checker.watch(jscClass);
+        g_object_set_data(G_OBJECT(jscClass), "leak-checker", &checker);
+
+        GRefPtr<JSCValue> constructor = adoptGRef(jsc_class_add_constructor(jscClass, nullptr, G_CALLBACK(fooCreate), nullptr, nullptr, G_TYPE_POINTER, 0, G_TYPE_NONE));
+        checker.watch(constructor.get());
+        g_assert_true(jsc_value_is_constructor(constructor.get()));
+        jsc_context_set_value(context.get(), jsc_class_get_name(jscClass), constructor.get());
+        jsc_class_add_property(jscClass, "foo", JSC_TYPE_VALUE, G_CALLBACK(getFooValue), G_CALLBACK(setFooValue), nullptr, nullptr);
+
+        GRefPtr<JSCValue> foo = adoptGRef(jsc_context_evaluate(context.get(), "f = new Foo();", -1));
+        checker.watch(foo.get());
+        g_assert_true(jsc_value_is_object(foo.get()));
+        g_assert_true(jsc_value_object_has_property(foo.get(), "foo"));
+
+        GRefPtr<JSCValue> result = adoptGRef(jsc_context_evaluate(context.get(), "f.foo", -1));
+        checker.watch(result.get());
+        g_assert_true(jsc_value_is_number(result.get()));
+        g_assert_cmpuint(jsc_value_to_int32(result.get()), ==, 0);
+
+        GRefPtr<JSCValue> value = adoptGRef(jsc_value_object_get_property(foo.get(), "foo"));
+        checker.watch(value.get());
+        g_assert_true(value.get() == result.get());
+
+        result = adoptGRef(jsc_context_evaluate(context.get(), "f.foo = 52", -1));
+        checker.watch(result.get());
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.foo", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, 52);
+
+        value = adoptGRef(jsc_value_new_number(context.get(), 25));
+        checker.watch(value.get());
+        jsc_value_object_set_property(foo.get(), "foo", value.get());
+        result = adoptGRef(jsc_context_evaluate(context.get(), "f.foo", -1));
+        checker.watch(result.get());
+        g_assert_true(jsc_value_is_number(result.get()));
+        g_assert_cmpint(jsc_value_to_int32(result.get()), ==, 25);
+
+        result = adoptGRef(jsc_context_evaluate(context.get(), "f.foo = undefined", -1));
+        checker.watch(result.get());
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.foo", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_undefined(value.get()));
+
+        value = adoptGRef(jsc_value_new_undefined(context.get()));
+        checker.watch(value.get());
+        jsc_value_object_set_property(foo.get(), "foo", value.get());
+        result = adoptGRef(jsc_context_evaluate(context.get(), "f.foo", -1));
+        checker.watch(result.get());
+        g_assert_true(jsc_value_is_undefined(result.get()));
+
+        result = adoptGRef(jsc_context_evaluate(context.get(), "f.foo = null", -1));
+        checker.watch(result.get());
+        value = adoptGRef(jsc_context_evaluate(context.get(), "f.foo", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_null(value.get()));
+
+        value = adoptGRef(jsc_value_new_null(context.get()));
+        checker.watch(value.get());
+        jsc_value_object_set_property(foo.get(), "foo", value.get());
+        result = adoptGRef(jsc_context_evaluate(context.get(), "f.foo", -1));
+        checker.watch(result.get());
+        g_assert_true(jsc_value_is_null(result.get()));
+    }
+}
+
+static void testJSCArrayBuffer()
+{
+    {
+        LeakChecker checker;
+        GRefPtr<JSCContext> context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        GRefPtr<JSCValue> result = adoptGRef(jsc_context_evaluate(context.get(),
+            "const arr = new Uint8Array(5);"
+            "arr[0] = 0x73; arr[1] = 0x70; arr[2] = 0x61; arr[3] = 0x6D; arr[4] = 0x00;"
+            "arr.buffer;",
+            -1));
+        checker.watch(result.get());
+
+        g_assert_true(jsc_value_is_array_buffer(result.get()));
+
+        gsize byteCount = 0;
+        auto* data = static_cast<char*>(jsc_value_array_buffer_get_data(result.get(), &byteCount));
+        g_assert_cmpuint(jsc_value_array_buffer_get_size(result.get()), ==, 5);
+        g_assert_cmpuint(byteCount, ==, 5);
+        g_assert_cmpint(data[4], ==, '\0');
+        g_assert_cmpstr(data, ==, "spam");
+
+        snprintf(data, byteCount, "Yay!");
+
+        result = adoptGRef(jsc_context_evaluate(context.get(), "arr[0] == 0x59 && arr[1] == 0x61 && arr[2] == 0x79 && arr[3] == 0x21 && arr[4] == 0x00;", -1));
+        checker.watch(result.get());
+
+        g_assert_true(jsc_value_is_boolean(result.get()));
+        g_assert_true(jsc_value_to_boolean(result.get()));
+    }
+
+    {
+        LeakChecker checker;
+        GRefPtr<JSCContext> context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        char data[100];
+        snprintf(data, sizeof(data), "Hello, JS!");
+
+        GRefPtr<JSCValue> value = adoptGRef(jsc_value_new_array_buffer(context.get(), data, 100, nullptr, nullptr));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_array_buffer(value.get()));
+
+        g_assert_cmpuint(jsc_value_array_buffer_get_size(value.get()), ==, 100);
+
+        jsc_context_set_value(context.get(), "data", value.get());
+
+        GRefPtr<JSCValue> result = adoptGRef(jsc_context_evaluate(context.get(), "(new Uint8Array(data))[2]", -1));
+        checker.watch(result.get());
+
+        g_assert_true(jsc_value_is_number(result.get()));
+        g_assert_cmpint(jsc_value_to_int32(result.get()), ==, 'l');
+
+        result = adoptGRef(jsc_context_evaluate(context.get(), "(new Uint8Array(data))[0] = 65;", -1));
+        checker.watch(result.get());
+
+        g_assert_true(jsc_value_is_number(result.get()));
+        g_assert_cmpint(jsc_value_to_int32(result.get()), ==, 'A');
+        g_assert_cmpint(data[0], ==, 'A');
+        g_assert_cmpint(static_cast<const char*>(jsc_value_array_buffer_get_data(value.get(), nullptr))[0], ==, 'A');
+    }
+
+    {
+        LeakChecker checker;
+        GRefPtr<JSCContext> context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        char data[] = "spam and eggs";
+        bool destroyNotifyCalled = false;
+
+        GRefPtr<JSCValue> value = adoptGRef(jsc_value_new_array_buffer(context.get(), data, strlen(data), [](gpointer data) {
+            *static_cast<bool*>(data) = true;
+        }, &destroyNotifyCalled));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_array_buffer(value.get()));
+
+        jsc_context_set_value(context.get(), "data", value.get());
+        value = nullptr;
+
+        jscContextGarbageCollect(context.get());
+        g_assert_false(destroyNotifyCalled);
+
+        value = adoptGRef(jsc_context_get_value(context.get(), "data"));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_array_buffer(value.get()));
+
+        value = adoptGRef(jsc_value_new_undefined(context.get()));
+        checker.watch(value.get());
+        jsc_context_set_value(context.get(), "data", value.get());
+
+        jscContextGarbageCollect(context.get());
+        g_assert_true(destroyNotifyCalled);
+    }
+
+    {
+        LeakChecker checker;
+        GRefPtr<JSCContext> context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        struct HeapData {
+            char data { 0x42 };
+            GRefPtr<GFile> object { adoptGRef(g_file_new_for_path("/")) };
+        };
+
+        auto* data = new HeapData;
+        checker.watch(data->object.get());
+        GRefPtr<JSCValue> value = adoptGRef(jsc_value_new_array_buffer(context.get(), data, sizeof(HeapData), [](gpointer data) {
+            delete static_cast<HeapData*>(data);
+        }, data));
+        checker.watch(value.get());
+        jsc_context_set_value(context.get(), "data", value.get());
+
+        GRefPtr<JSCValue> result = adoptGRef(jsc_context_evaluate(context.get(), "(new Uint8Array(data))[0];", -1));
+        g_assert_true(jsc_value_is_number(result.get()));
+        g_assert_cmpint(jsc_value_to_int32(result.get()), ==, 0x42);
+
+        value = adoptGRef(jsc_value_new_undefined(context.get()));
+        checker.watch(value.get());
+
+        jsc_context_set_value(context.get(), "data", value.get());
+        jscContextGarbageCollect(context.get());
+    }
+
+    {
+        LeakChecker checker;
+        GRefPtr<JSCContext> context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        GRefPtr<JSCValue> value = adoptGRef(jsc_context_evaluate(context.get(), "(new Uint8Array(0)).buffer;", -1));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_array_buffer(value.get()));
+        g_assert_cmpuint(jsc_value_array_buffer_get_size(value.get()), ==, 0);
+
+        value = adoptGRef(jsc_value_new_array_buffer(context.get(), nullptr, 0, nullptr, nullptr));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_array_buffer(value.get()));
+        g_assert_cmpuint(jsc_value_array_buffer_get_size(value.get()), ==, 0);
+    }
+}
+
+static constexpr size_t elementSize(JSCTypedArrayType type)
+{
+    switch (type) {
+    case JSC_TYPED_ARRAY_INT8: return sizeof(int8_t);
+    case JSC_TYPED_ARRAY_INT16: return sizeof(int16_t);
+    case JSC_TYPED_ARRAY_INT32: return sizeof(int32_t);
+    case JSC_TYPED_ARRAY_INT64: return sizeof(int64_t);
+    case JSC_TYPED_ARRAY_UINT8: return sizeof(uint8_t);
+    case JSC_TYPED_ARRAY_UINT8_CLAMPED: return sizeof(uint8_t);
+    case JSC_TYPED_ARRAY_UINT16: return sizeof(uint16_t);
+    case JSC_TYPED_ARRAY_UINT32: return sizeof(uint32_t);
+    case JSC_TYPED_ARRAY_UINT64: return sizeof(uint64_t);
+    case JSC_TYPED_ARRAY_FLOAT32: return sizeof(float);
+    case JSC_TYPED_ARRAY_FLOAT64: return sizeof(double);
+    case JSC_TYPED_ARRAY_NONE: break;
+    }
+    RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+}
+
+void testJSCTypedArray()
+{
+    static const struct {
+        const char* name;
+        JSCTypedArrayType type;
+    } typeMap[] = {
+        { "Int8Array", JSC_TYPED_ARRAY_INT8 },
+        { "Int16Array", JSC_TYPED_ARRAY_INT16 },
+        { "Int32Array", JSC_TYPED_ARRAY_INT32 },
+        { "BigInt64Array", JSC_TYPED_ARRAY_INT64 },
+        { "Uint8Array", JSC_TYPED_ARRAY_UINT8 },
+        { "Uint8ClampedArray", JSC_TYPED_ARRAY_UINT8_CLAMPED },
+        { "Uint16Array", JSC_TYPED_ARRAY_UINT16 },
+        { "Uint32Array", JSC_TYPED_ARRAY_UINT32 },
+        { "BigUint64Array", JSC_TYPED_ARRAY_UINT64 },
+        { "Float32Array", JSC_TYPED_ARRAY_FLOAT32 },
+        { "Float64Array", JSC_TYPED_ARRAY_FLOAT64 },
+    };
+
+    for (const auto& entry : typeMap) {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        // Create in JS, check types using the API.
+        const bool isBigInt = g_str_has_prefix(entry.name, "Big");
+        GUniquePtr<char> script(g_strdup_printf("const arr = new %s(1); arr[0] = 42%s; arr;", entry.name, isBigInt ? "n" : ""));
+        auto value = adoptGRef(jsc_context_evaluate(context.get(), script.get(), -1));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_typed_array(value.get()));
+        g_assert_cmpuint(jsc_value_typed_array_get_length(value.get()), ==, 1);
+        g_assert_cmpuint(jsc_value_typed_array_get_offset(value.get()), ==, 0);
+        g_assert_cmpuint(jsc_value_typed_array_get_type(value.get()), ==, entry.type);
+        g_assert_cmpuint(jsc_value_typed_array_get_size(value.get()), ==, elementSize(entry.type));
+    }
+
+    for (const auto& entry : typeMap) {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        // Create using the API, check type in JS.
+        auto value = adoptGRef(jsc_value_new_typed_array(context.get(), entry.type, 1));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_typed_array(value.get()));
+        g_assert_cmpuint(jsc_value_typed_array_get_length(value.get()), ==, 1);
+        g_assert_cmpuint(jsc_value_typed_array_get_offset(value.get()), ==, 0);
+        g_assert_cmpuint(jsc_value_typed_array_get_type(value.get()), ==, entry.type);
+        g_assert_cmpuint(jsc_value_typed_array_get_size(value.get()), ==, elementSize(entry.type));
+
+        jsc_context_set_value(context.get(), "arr", value.get());
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "arr.constructor.name;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_string(value.get()));
+        GUniquePtr<char> typeName(jsc_value_to_string(value.get()));
+        g_assert_cmpstr(typeName.get(), ==, entry.name);
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "arr.length;", -1));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), == , 1);
+    }
+
+    {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        int data = 0x42;
+        auto value = adoptGRef(jsc_value_new_array_buffer(context.get(), &data, sizeof(data), nullptr, nullptr));
+        g_assert_false(jsc_value_is_typed_array(value.get()));
+        g_assert_cmpuint(jsc_value_typed_array_get_type(value.get()), ==, JSC_TYPED_ARRAY_NONE);
+    }
+
+    {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        auto value = adoptGRef(jsc_value_new_number(context.get(), 1.23));
+        g_assert_false(jsc_value_is_typed_array(value.get()));
+        g_assert_cmpuint(jsc_value_typed_array_get_type(value.get()), ==, JSC_TYPED_ARRAY_NONE);
+    }
+
+    {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        int16_t point3d[3] = { -1, 10, 42 };
+        auto value = adoptGRef(jsc_value_new_array_buffer(context.get(), point3d, sizeof(point3d), nullptr, nullptr));
+        checker.watch(value.get());
+
+        value = adoptGRef(jsc_value_new_typed_array_with_buffer(value.get(), JSC_TYPED_ARRAY_INT16, 0, -1));
+        checker.watch(value.get());
+
+        g_assert_cmpuint(jsc_value_typed_array_get_length(value.get()), ==, G_N_ELEMENTS(point3d));
+        g_assert_cmpuint(jsc_value_typed_array_get_size(value.get()), ==, sizeof(point3d));
+        g_assert_cmpuint(jsc_value_typed_array_get_offset(value.get()), ==, 0);
+
+        jsc_context_set_value(context.get(), "p", value.get());
+        value = adoptGRef(jsc_context_evaluate(context.get(), "p[0] + p[1] * p[2];", -1));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, point3d[0] + point3d[1] * point3d[2]);
+
+        point3d[0] = -20;
+        point3d[1] = -11;
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "p[0] + p[1] * p[2];", -1));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, point3d[0] + point3d[1] * point3d[2]);
+    }
+
+    {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        auto value = adoptGRef(jsc_context_evaluate(context.get(), "let data = Int32Array.of(-314, 150, 42); data;", -1));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_typed_array(value.get()));
+        g_assert_cmpuint(jsc_value_typed_array_get_type(value.get()), ==, JSC_TYPED_ARRAY_INT32);
+        g_assert_cmpuint(jsc_value_typed_array_get_offset(value.get()), ==, 0);
+
+        gsize length = 0;
+        auto* items = static_cast<int32_t*>(jsc_value_typed_array_get_data(value.get(), &length));
+        g_assert_cmpuint(length, ==, 3);
+        g_assert_cmpuint(jsc_value_typed_array_get_size(value.get()), ==, sizeof(int32_t) * 3);
+
+        int32_t sum = 0;
+        for (auto i = 0; i < length; i++) {
+            sum += items[i];
+            items[i] = length - i;
+        }
+        g_assert_cmpint(sum, ==, -122);
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "data[0] == 3 && data[1] == 2 && data[2] == 1;", -1));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_boolean(value.get()));
+        g_assert_true(jsc_value_to_boolean(value.get()));
+    }
+
+    {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        auto value = adoptGRef(jsc_context_evaluate(context.get(), "let data = new BigInt64Array(1); data;", -1));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_typed_array(value.get()));
+        g_assert_cmpuint(jsc_value_typed_array_get_type(value.get()), ==, JSC_TYPED_ARRAY_INT64);
+        g_assert_cmpuint(jsc_value_typed_array_get_size(value.get()), ==, sizeof(int64_t));
+
+        value = adoptGRef(jsc_value_typed_array_get_buffer(value.get()));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_array_buffer(value.get()));
+        gsize size = 0;
+        auto* data = static_cast<int64_t*>(jsc_value_array_buffer_get_data(value.get(), &size));
+        g_assert_cmpuint(size, ==, sizeof(int64_t));
+
+        const int64_t zero = 0;
+        g_assert_cmpmem(data, sizeof(int64_t), &zero, sizeof(zero));
+
+        *data = 0xC0FFEE;
+        value = adoptGRef(jsc_context_evaluate(context.get(), "data[0] == 0xC0FFEE;", -1));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_boolean(value.get()));
+        g_assert_true(jsc_value_to_boolean(value.get()));
+    }
+
+    {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        uint8_t data[10];
+        for (auto i = 0; i < sizeof(data); i++)
+            data[i] = 42 + i;
+
+        auto value = adoptGRef(jsc_value_new_array_buffer(context.get(), data, sizeof(data), nullptr, nullptr));
+        checker.watch(value.get());
+
+        jsc_context_set_value(context.get(), "data", value.get());
+        value = adoptGRef(jsc_context_evaluate(context.get(), "new Uint8Array(data, 4, 2);", -1));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_typed_array(value.get()));
+        g_assert_cmpuint(jsc_value_typed_array_get_type(value.get()), ==, JSC_TYPED_ARRAY_UINT8);
+        g_assert_cmpuint(jsc_value_typed_array_get_size(value.get()), ==, sizeof(uint8_t) * 2);
+        g_assert_cmpuint(jsc_value_typed_array_get_offset(value.get()), ==, sizeof(uint8_t) * 4);
+
+        gsize length = 0;
+        uint8_t* bytes = static_cast<uint8_t*>(jsc_value_typed_array_get_data(value.get(), &length));
+        g_assert_cmpuint(length, ==, 2);
+        g_assert_true(bytes == data + 4);
+    }
+
+    {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        uint8_t data[10];
+        for (auto i = 0; i < sizeof(data); i++)
+            data[i] = 42 + i;
+
+        auto value = adoptGRef(jsc_value_new_array_buffer(context.get(), data, sizeof(data), nullptr, nullptr));
+        checker.watch(value.get());
+
+        value = adoptGRef(jsc_value_new_typed_array_with_buffer(value.get(), JSC_TYPED_ARRAY_UINT8, 4, 2));
+        checker.watch(value.get());
+
+        g_assert_true(jsc_value_is_typed_array(value.get()));
+        g_assert_cmpuint(jsc_value_typed_array_get_type(value.get()), ==, JSC_TYPED_ARRAY_UINT8);
+        g_assert_cmpuint(jsc_value_typed_array_get_size(value.get()), ==, sizeof(uint8_t) * 2);
+        g_assert_cmpuint(jsc_value_typed_array_get_offset(value.get()), ==, sizeof(uint8_t) * 4);
+
+        gsize length = 0;
+        uint8_t* bytes = static_cast<uint8_t*>(jsc_value_typed_array_get_data(value.get(), &length));
+        g_assert_cmpuint(length, ==, 2);
+        g_assert_true(bytes == data + 4);
+    }
+
+    static const struct {
+        JSCTypedArrayType type;
+        size_t size;
+        size_t offset;
+        ssize_t length;
+        ssize_t expectedLength;
+    } validOffsetsAndSizes[] = {
+        { JSC_TYPED_ARRAY_UINT8,  10, 0, -1, 10 },
+        { JSC_TYPED_ARRAY_UINT16, 10, 0, -1,  5 },
+        { JSC_TYPED_ARRAY_UINT32, 10, 0, -1,  2 },
+        { JSC_TYPED_ARRAY_UINT64, 10, 0, -1,  1 },
+        { JSC_TYPED_ARRAY_UINT64, 10, 8, -1,  0 },
+        { JSC_TYPED_ARRAY_UINT8,  10, 1, -1,  9 },
+        { JSC_TYPED_ARRAY_UINT16, 10, 2, -1,  4 },
+        { JSC_TYPED_ARRAY_UINT32, 10, 4, -1,  1 },
+        { JSC_TYPED_ARRAY_UINT64, 10, 8, -1,  0 },
+        { JSC_TYPED_ARRAY_UINT16, 20, 8,  6,  6 },
+        { JSC_TYPED_ARRAY_UINT32, 20, 8,  0,  0 },
+        { JSC_TYPED_ARRAY_UINT32, 20, 0,  0,  0 },
+    };
+
+    for (const auto& item : validOffsetsAndSizes) {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        auto* data = g_malloc(item.size);
+        auto value = adoptGRef(jsc_value_new_array_buffer(context.get(), data, item.size, g_free, data));
+        checker.watch(value.get());
+
+        value = adoptGRef(jsc_value_new_typed_array_with_buffer(value.get(), item.type, item.offset, item.length));
+        checker.watch(value.get());
+
+        g_assert_cmpuint(jsc_value_typed_array_get_type(value.get()), ==, item.type);
+        g_assert_cmpuint(jsc_value_typed_array_get_offset(value.get()), ==, item.offset);
+        g_assert_cmpuint(jsc_value_typed_array_get_length(value.get()), ==, item.expectedLength);
+        g_assert_cmpuint(jsc_value_typed_array_get_size(value.get()), ==, elementSize(item.type) * item.expectedLength);
+    }
+
+    static const struct {
+        JSCTypedArrayType type;
+        size_t size;
+        size_t offset;
+        ssize_t length;
+    } invalidOffsetsAndSizes[] = {
+        { JSC_TYPED_ARRAY_UINT8,  1, 2, -1 },
+        { JSC_TYPED_ARRAY_UINT8,  1, 2,  1 },
+        { JSC_TYPED_ARRAY_UINT8,  1, 2,  0 },
+        { JSC_TYPED_ARRAY_UINT16, 4, 1, -1 },
+        { JSC_TYPED_ARRAY_UINT16, 4, 1,  1 },
+        { JSC_TYPED_ARRAY_UINT16, 4, 1,  0 },
+        { JSC_TYPED_ARRAY_UINT32, 0, 1, -1 },
+        { JSC_TYPED_ARRAY_UINT32, 5, 4,  1 },
+    };
+
+    for (const auto& item : invalidOffsetsAndSizes) {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        auto* data = g_malloc(item.size);
+        auto value = adoptGRef(jsc_value_new_array_buffer(context.get(), data, item.size, g_free, data));
+        checker.watch(value.get());
+
+        bool didThrow = false;
+        g_assert_throw_begin(exceptionHandler, didThrow);
+        value = adoptGRef(jsc_value_new_typed_array_with_buffer(value.get(), item.type, item.offset, item.length));
+        g_assert_did_throw(exceptionHandler, didThrow);
+    }
+
+    {
+        LeakChecker checker;
+        auto context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        // Allocation too big, cannot be indexed with a 32-bit integer.
+        bool didThrow = false;
+        g_assert_throw_begin(exceptionHandler, didThrow);
+        auto value = adoptGRef(jsc_value_new_typed_array(context.get(), JSC_TYPED_ARRAY_UINT64, SIZE_MAX));
+        g_assert_did_throw(exceptionHandler, didThrow);
+    }
 }
 
 typedef struct {
@@ -2805,11 +3595,11 @@ static void testJSCExceptions()
         g_assert_cmpuint(jsc_exception_get_line_number(exception), ==, 1);
         g_assert_cmpuint(jsc_exception_get_column_number(exception), ==, 4);
         g_assert_null(jsc_exception_get_source_uri(exception));
-        g_assert_cmpstr(jsc_exception_get_backtrace_string(exception), ==, "global code");
+        g_assert_cmpstr(jsc_exception_get_backtrace_string(exception), ==, "global code@");
         GUniquePtr<char> errorString(jsc_exception_to_string(exception));
         g_assert_cmpstr(errorString.get(), ==, "ReferenceError: Can't find variable: foo");
         GUniquePtr<char> reportString(jsc_exception_report(exception));
-        g_assert_cmpstr(reportString.get(), ==, ":1:4 ReferenceError: Can't find variable: foo\n  global code\n");
+        g_assert_cmpstr(reportString.get(), ==, ":1:4 ReferenceError: Can't find variable: foo\n  global code@\n");
 
         jsc_context_clear_exception(context.get());
         g_assert_null(jsc_context_get_exception(context.get()));
@@ -2902,11 +3692,11 @@ static void testJSCExceptions()
         g_assert_cmpuint(jsc_exception_get_line_number(exception), ==, 1);
         g_assert_cmpuint(jsc_exception_get_column_number(exception), ==, 24);
         g_assert_null(jsc_exception_get_source_uri(exception));
-        g_assert_cmpstr(jsc_exception_get_backtrace_string(exception), ==, "createError@[native code]\nglobal code");
+        g_assert_cmpstr(jsc_exception_get_backtrace_string(exception), ==, "createError@[native code]\nglobal code@");
         GUniquePtr<char> errorString(jsc_exception_to_string(exception));
         g_assert_cmpstr(errorString.get(), ==, "Error: API exception");
         GUniquePtr<char> reportString(jsc_exception_report(exception));
-        g_assert_cmpstr(reportString.get(), ==, ":1:24 Error: API exception\n  createError@[native code]\n  global code\n");
+        g_assert_cmpstr(reportString.get(), ==, ":1:24 Error: API exception\n  createError@[native code]\n  global code@\n");
 
         jsc_context_clear_exception(context.get());
         g_assert_null(jsc_context_get_exception(context.get()));
@@ -2933,11 +3723,11 @@ static void testJSCExceptions()
         g_assert_cmpuint(jsc_exception_get_line_number(exception), ==, 1);
         g_assert_cmpuint(jsc_exception_get_column_number(exception), ==, 30);
         g_assert_null(jsc_exception_get_source_uri(exception));
-        g_assert_cmpstr(jsc_exception_get_backtrace_string(exception), ==, "createCustomError@[native code]\nglobal code");
+        g_assert_cmpstr(jsc_exception_get_backtrace_string(exception), ==, "createCustomError@[native code]\nglobal code@");
         GUniquePtr<char> errorString(jsc_exception_to_string(exception));
         g_assert_cmpstr(errorString.get(), ==, "CustomAPIError: API custom exception");
         GUniquePtr<char> reportString(jsc_exception_report(exception));
-        g_assert_cmpstr(reportString.get(), ==, ":1:30 CustomAPIError: API custom exception\n  createCustomError@[native code]\n  global code\n");
+        g_assert_cmpstr(reportString.get(), ==, ":1:30 CustomAPIError: API custom exception\n  createCustomError@[native code]\n  global code@\n");
 
         jsc_context_clear_exception(context.get());
         g_assert_null(jsc_context_get_exception(context.get()));
@@ -2964,11 +3754,11 @@ static void testJSCExceptions()
         g_assert_cmpuint(jsc_exception_get_line_number(exception), ==, 1);
         g_assert_cmpuint(jsc_exception_get_column_number(exception), ==, 33);
         g_assert_null(jsc_exception_get_source_uri(exception));
-        g_assert_cmpstr(jsc_exception_get_backtrace_string(exception), ==, "createFormattedError@[native code]\nglobal code");
+        g_assert_cmpstr(jsc_exception_get_backtrace_string(exception), ==, "createFormattedError@[native code]\nglobal code@");
         GUniquePtr<char> errorString(jsc_exception_to_string(exception));
         g_assert_cmpstr(errorString.get(), ==, "Error: API exception: error details");
         GUniquePtr<char> reportString(jsc_exception_report(exception));
-        g_assert_cmpstr(reportString.get(), ==, ":1:33 Error: API exception: error details\n  createFormattedError@[native code]\n  global code\n");
+        g_assert_cmpstr(reportString.get(), ==, ":1:33 Error: API exception: error details\n  createFormattedError@[native code]\n  global code@\n");
 
         jsc_context_clear_exception(context.get());
         g_assert_null(jsc_context_get_exception(context.get()));
@@ -2995,11 +3785,11 @@ static void testJSCExceptions()
         g_assert_cmpuint(jsc_exception_get_line_number(exception), ==, 1);
         g_assert_cmpuint(jsc_exception_get_column_number(exception), ==, 39);
         g_assert_null(jsc_exception_get_source_uri(exception));
-        g_assert_cmpstr(jsc_exception_get_backtrace_string(exception), ==, "createCustomFormattedError@[native code]\nglobal code");
+        g_assert_cmpstr(jsc_exception_get_backtrace_string(exception), ==, "createCustomFormattedError@[native code]\nglobal code@");
         GUniquePtr<char> errorString(jsc_exception_to_string(exception));
         g_assert_cmpstr(errorString.get(), ==, "CustomFormattedAPIError: API custom exception: error details");
         GUniquePtr<char> reportString(jsc_exception_report(exception));
-        g_assert_cmpstr(reportString.get(), ==, ":1:39 CustomFormattedAPIError: API custom exception: error details\n  createCustomFormattedError@[native code]\n  global code\n");
+        g_assert_cmpstr(reportString.get(), ==, ":1:39 CustomFormattedAPIError: API custom exception: error details\n  createCustomFormattedError@[native code]\n  global code@\n");
 
         jsc_context_clear_exception(context.get());
         g_assert_null(jsc_context_get_exception(context.get()));
@@ -3307,7 +4097,7 @@ static void testJSCWeakValue()
         g_assert_true(jsc_value_is_object(weakFoo.get()));
         weakFoo = nullptr;
 
-        jscContextGarbageCollect(context.get());
+        jscContextGarbageCollect(context.get(), true);
         g_assert_true(weakValueCleared);
         g_assert_null(jsc_weak_value_get_value(weak.get()));
     }
@@ -3527,11 +4317,11 @@ static void testsJSCOptions()
 
     guint maxPerThreadStackUsage;
     g_assert_true(jsc_options_get_uint("maxPerThreadStackUsage", &maxPerThreadStackUsage));
-    g_assert_cmpuint(maxPerThreadStackUsage, ==, 4194304);
+    g_assert_cmpuint(maxPerThreadStackUsage, ==, 5242880);
     g_assert_true(jsc_options_set_uint("maxPerThreadStackUsage", 4096));
     g_assert_true(jsc_options_get_uint("maxPerThreadStackUsage", &maxPerThreadStackUsage));
     g_assert_cmpuint(maxPerThreadStackUsage, ==, 4096);
-    g_assert_true(jsc_options_set_uint("maxPerThreadStackUsage", 4194304));
+    g_assert_true(jsc_options_set_uint("maxPerThreadStackUsage", 5242880));
 
     gsize webAssemblyPartialCompileLimit;
     g_assert_true(jsc_options_get_size("webAssemblyPartialCompileLimit", &webAssemblyPartialCompileLimit));
@@ -3541,13 +4331,13 @@ static void testsJSCOptions()
     g_assert_cmpuint(webAssemblyPartialCompileLimit, ==, 6000);
     g_assert_true(jsc_options_set_size("webAssemblyPartialCompileLimit", 5000));
 
-    gdouble smallHeapRAMFraction;
-    g_assert_true(jsc_options_get_double("smallHeapRAMFraction", &smallHeapRAMFraction));
-    g_assert_cmpfloat(smallHeapRAMFraction, ==, 0.25);
-    g_assert_true(jsc_options_set_double("smallHeapRAMFraction", 0.50));
-    g_assert_true(jsc_options_get_double("smallHeapRAMFraction", &smallHeapRAMFraction));
-    g_assert_cmpfloat(smallHeapRAMFraction, ==, 0.50);
-    g_assert_true(jsc_options_set_double("smallHeapRAMFraction", 0.25));
+    gdouble criticalGCMemoryThreshold;
+    g_assert_true(jsc_options_get_double("criticalGCMemoryThreshold", &criticalGCMemoryThreshold));
+    g_assert_cmpfloat(criticalGCMemoryThreshold, ==, 0.80);
+    g_assert_true(jsc_options_set_double("criticalGCMemoryThreshold", 0.90));
+    g_assert_true(jsc_options_get_double("criticalGCMemoryThreshold", &criticalGCMemoryThreshold));
+    g_assert_cmpfloat(criticalGCMemoryThreshold, ==, 0.90);
+    g_assert_true(jsc_options_set_double("criticalGCMemoryThreshold", 0.80));
 
     GUniqueOutPtr<char> configFile;
     g_assert_true(jsc_options_get_string("configFile", &configFile.outPtr()));
@@ -3652,7 +4442,7 @@ static void testsJSCOptions()
         "--jsc-thresholdForJITAfterWarmUp=2000",
         "--jsc-maxPerThreadStackUsage=1024",
         "--jsc-webAssemblyPartialCompileLimit=4000",
-        "--jsc-smallHeapRAMFraction=0.75",
+        "--jsc-criticalGCMemoryThreshold=0.95",
         "--jsc-configFile=/tmp/bar",
         "--jsc-bytecodeRangeToJITCompile=100:300",
         "--jsc-logGC=1",
@@ -3672,8 +4462,8 @@ static void testsJSCOptions()
     g_assert_cmpuint(maxPerThreadStackUsage, ==, 1024);
     g_assert_true(jsc_options_get_size("webAssemblyPartialCompileLimit", &webAssemblyPartialCompileLimit));
     g_assert_cmpuint(webAssemblyPartialCompileLimit, ==, 4000);
-    g_assert_true(jsc_options_get_double("smallHeapRAMFraction", &smallHeapRAMFraction));
-    g_assert_cmpfloat(smallHeapRAMFraction, ==, 0.75);
+    g_assert_true(jsc_options_get_double("criticalGCMemoryThreshold", &criticalGCMemoryThreshold));
+    g_assert_cmpfloat(criticalGCMemoryThreshold, ==, 0.95);
     g_assert_true(jsc_options_get_string("configFile", &configFile.outPtr()));
     g_assert_cmpstr(configFile.get(), ==, "/tmp/bar");
     g_assert_true(jsc_options_get_range_string("bytecodeRangeToJITCompile", &bytecodeRangeToJITCompile.outPtr()));
@@ -3684,7 +4474,7 @@ static void testsJSCOptions()
     // Restore options their default values.
     g_assert_true(jsc_options_set_boolean(JSC_OPTIONS_USE_JIT, TRUE));
     g_assert_true(jsc_options_set_int("thresholdForJITAfterWarmUp", 500));
-    g_assert_true(jsc_options_set_uint("maxPerThreadStackUsage", 4194304));
+    g_assert_true(jsc_options_set_uint("maxPerThreadStackUsage", 5242880));
     g_assert_true(jsc_options_set_size("webAssemblyPartialCompileLimit", 5000));
     g_assert_true(jsc_options_set_double("smallHeapRAMFraction", 0.25));
     g_assert_true(jsc_options_set_string("configFile", nullptr));
@@ -3737,6 +4527,144 @@ static void testsJSCAutocleanups()
 }
 #endif
 
+static void testJSCJSON()
+{
+    {
+        LeakChecker checker;
+        GRefPtr<JSCContext> context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        GRefPtr<JSCValue> value = adoptGRef(jsc_value_new_from_json(context.get(), nullptr));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_null(value.get()));
+
+        value = adoptGRef(jsc_value_new_from_json(context.get(), "25"));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpint(jsc_value_to_int32(value.get()), ==, 25);
+
+        value = adoptGRef(jsc_value_new_from_json(context.get(), "2.5"));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_number(value.get()));
+        g_assert_cmpfloat(jsc_value_to_double(value.get()), ==, 2.5);
+
+        value = adoptGRef(jsc_value_new_from_json(context.get(), "true"));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_boolean(value.get()));
+        g_assert_true(jsc_value_to_boolean(value.get()));
+
+        value = adoptGRef(jsc_value_new_from_json(context.get(), "false"));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_boolean(value.get()));
+        g_assert_false(jsc_value_to_boolean(value.get()));
+
+        value = adoptGRef(jsc_value_new_from_json(context.get(), "\"\""));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_string(value.get()));
+        GUniquePtr<char> valueString(jsc_value_to_string(value.get()));
+        g_assert_cmpstr(valueString.get(), ==, "");
+
+        value = adoptGRef(jsc_value_new_from_json(context.get(), "\"Foo\""));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_string(value.get()));
+        valueString.reset(jsc_value_to_string(value.get()));
+        g_assert_cmpstr(valueString.get(), ==, "Foo");
+
+        value = adoptGRef(jsc_value_new_from_json(context.get(), "[1,2]"));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_array(value.get()));
+        GRefPtr<JSCValue> arrayLength = adoptGRef(jsc_value_object_get_property(value.get(), "length"));
+        checker.watch(arrayLength.get());
+        g_assert_true(jsc_value_is_number(arrayLength.get()));
+        g_assert_cmpint(jsc_value_to_int32(arrayLength.get()), ==, 2);
+        valueString.reset(jsc_value_to_string(value.get()));
+        g_assert_cmpstr(valueString.get(), ==, "1,2");
+
+        value = adoptGRef(jsc_value_new_from_json(context.get(), "{\"foo\":42}"));
+        checker.watch(value.get());
+        g_assert_true(jsc_value_is_object(value.get()));
+        GRefPtr<JSCValue> property = adoptGRef(jsc_value_object_get_property(value.get(), "foo"));
+        checker.watch(property.get());
+        g_assert_true(jsc_value_is_number(property.get()));
+        g_assert_cmpint(jsc_value_to_int32(property.get()), ==, 42);
+
+        bool didThrow = false;
+        g_assert_throw_begin(exceptionHandler, didThrow);
+        value = adoptGRef(jsc_value_new_from_json(context.get(), "[1,"));
+        g_assert_null(value.get());
+        g_assert_did_throw(exceptionHandler, didThrow);
+    }
+
+    {
+        LeakChecker checker;
+        GRefPtr<JSCContext> context = adoptGRef(jsc_context_new());
+        checker.watch(context.get());
+        ExceptionHandler exceptionHandler(context.get());
+
+        GRefPtr<JSCValue> value = adoptGRef(jsc_value_new_null(context.get()));
+        checker.watch(value.get());
+        GUniquePtr<char> jsonString(jsc_value_to_json(value.get(), 0));
+        g_assert_cmpstr(jsonString.get(), ==, "null");
+
+        value = adoptGRef(jsc_value_new_undefined(context.get()));
+        checker.watch(value.get());
+        g_assert_null(jsc_value_to_json(value.get(), 0));
+
+        value = adoptGRef(jsc_value_new_number(context.get(), 25));
+        checker.watch(value.get());
+        jsonString.reset(jsc_value_to_json(value.get(), 0));
+        g_assert_cmpstr(jsonString.get(), ==, "25");
+
+        value = adoptGRef(jsc_value_new_number(context.get(), 2.5));
+        checker.watch(value.get());
+        jsonString.reset(jsc_value_to_json(value.get(), 0));
+        g_assert_cmpstr(jsonString.get(), ==, "2.5");
+
+        value = adoptGRef(jsc_value_new_boolean(context.get(), TRUE));
+        checker.watch(value.get());
+        jsonString.reset(jsc_value_to_json(value.get(), 0));
+        g_assert_cmpstr(jsonString.get(), ==, "true");
+
+        value = adoptGRef(jsc_value_new_boolean(context.get(), FALSE));
+        checker.watch(value.get());
+        jsonString.reset(jsc_value_to_json(value.get(), 0));
+        g_assert_cmpstr(jsonString.get(), ==, "false");
+
+        value = adoptGRef(jsc_value_new_string(context.get(), nullptr));
+        checker.watch(value.get());
+        jsonString.reset(jsc_value_to_json(value.get(), 0));
+        g_assert_cmpstr(jsonString.get(), ==, "\"\"");
+
+        value = adoptGRef(jsc_value_new_string(context.get(), "Foo"));
+        checker.watch(value.get());
+        jsonString.reset(jsc_value_to_json(value.get(), 0));
+        g_assert_cmpstr(jsonString.get(), ==, "\"Foo\"");
+
+        value = adoptGRef(jsc_value_new_array(context.get(), G_TYPE_INT, 1, G_TYPE_INT, 2, G_TYPE_NONE));
+        checker.watch(value.get());
+        jsonString.reset(jsc_value_to_json(value.get(), 0));
+        g_assert_cmpstr(jsonString.get(), ==, "[1,2]");
+
+        value = adoptGRef(jsc_value_new_object(context.get(), nullptr, nullptr));
+        checker.watch(value.get());
+        GRefPtr<JSCValue> property = adoptGRef(jsc_value_new_number(context.get(), 42));
+        jsc_value_object_set_property(value.get(), "foo", property.get());
+        jsonString.reset(jsc_value_to_json(value.get(), 0));
+        g_assert_cmpstr(jsonString.get(), ==, "{\"foo\":42}");
+
+        jsonString.reset(jsc_value_to_json(value.get(), 4));
+        g_assert_cmpstr(jsonString.get(), ==, "{\n    \"foo\": 42\n}");
+
+        value = adoptGRef(jsc_context_evaluate(context.get(), "({get a(){ throw '';}})", -1));
+        checker.watch(value.get());
+        bool didThrow = false;
+        g_assert_throw_begin(exceptionHandler, didThrow);
+        g_assert_null(jsc_value_to_json(value.get(), 0));
+        g_assert_did_throw(exceptionHandler, didThrow);
+    }
+}
+
 int main(int argc, char** argv)
 {
     g_test_init(&argc, &argv, nullptr);
@@ -3752,6 +4680,8 @@ int main(int argc, char** argv)
     g_test_add_func("/jsc/function", testJSCFunction);
     g_test_add_func("/jsc/object", testJSCObject);
     g_test_add_func("/jsc/class", testJSCClass);
+    g_test_add_func("/jsc/array-buffer", testJSCArrayBuffer);
+    g_test_add_func("/jsc/typed-array", testJSCTypedArray);
     g_test_add_func("/jsc/prototypes", testJSCPrototypes);
     g_test_add_func("/jsc/exceptions", testJSCExceptions);
     g_test_add_func("/jsc/promises", testJSCPromises);
@@ -3761,6 +4691,7 @@ int main(int argc, char** argv)
 #ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
     g_test_add_func("/jsc/autocleanups", testsJSCAutocleanups);
 #endif
+    g_test_add_func("/jsc/json", testJSCJSON);
 
     return g_test_run();
 }

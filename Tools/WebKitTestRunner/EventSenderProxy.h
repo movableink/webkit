@@ -32,17 +32,12 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
 
-#if PLATFORM(GTK)
-#include <WebCore/GUniquePtrGtk.h>
-#include <gdk/gdk.h>
-#endif
-
 #if PLATFORM(QT)
 #include <QEvent>
 #include <QTouchEvent>
 #endif
 
-#if PLATFORM(WPE)
+#if USE(LIBWPE)
 #include <wpe/wpe.h>
 #endif
 
@@ -54,10 +49,6 @@ namespace WTR {
 
 class TestController;
 
-#if PLATFORM(GTK)
-struct WTREventQueueItem;
-#endif
-
 class EventSenderProxy {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -66,21 +57,43 @@ public:
 
     WKPoint position() const { return m_position; }
 
-    void mouseDown(unsigned button, WKEventModifiers);
-    void mouseUp(unsigned button, WKEventModifiers);
+    void mouseDown(unsigned button, WKEventModifiers, WKStringRef pointerType = nullptr);
+    void mouseUp(unsigned button, WKEventModifiers, WKStringRef pointerType = nullptr);
     void mouseForceDown();
     void mouseForceUp();
     void mouseForceChanged(float);
     void mouseForceClick();
     void startAndCancelMouseForceClick();
-    void mouseMoveTo(double x, double y);
+    void mouseMoveTo(double x, double y, WKStringRef pointerType = nullptr);
+    
+    // Legacy wheel events.
     void mouseScrollBy(int x, int y);
     void mouseScrollByWithWheelAndMomentumPhases(int x, int y, int phase, int momentum);
+#if PLATFORM(GTK)
+    void setWheelHasPreciseDeltas(bool);
+#endif
     void continuousMouseScrollBy(int x, int y, bool paged);
+
+#if PLATFORM(MAC)
+    enum class WheelEventPhase : uint8_t {
+        None,
+        Began,
+        Changed,
+        Ended,
+        Cancelled,
+        MayBegin,
+    };
+    
+    using EventTimestamp = uint64_t; // mach_absolute_time units.
+
+    void sendWheelEvent(EventTimestamp, double globalX, double globalY, double deltaX, double deltaY, WheelEventPhase, WheelEventPhase momentumPhase);
+#endif
 
     void leapForward(int milliseconds);
 
     void keyDown(WKStringRef key, WKEventModifiers, unsigned location);
+    void rawKeyDown(WKStringRef key, WKEventModifiers, unsigned location);
+    void rawKeyUp(WKStringRef key, WKEventModifiers, unsigned location);
 
 #if PLATFORM(COCOA)
     unsigned mouseButtonsCurrentlyDown() const { return m_mouseButtonsCurrentlyDown; }
@@ -101,16 +114,23 @@ public:
     void cancelTouchPoint(int index);
 #endif
 
+#if ENABLE(MAC_GESTURE_EVENTS)
+    // Gesture events.
+    void scaleGestureStart(double scale);
+    void scaleGestureChange(double scale);
+    void scaleGestureEnd(double scale);
+#endif
+
 private:
     TestController* m_testController;
 
     double currentEventTime() { return m_time; }
     void updateClickCountForButton(int button);
 
-#if PLATFORM(QT) || PLATFORM(GTK)
+#if PLATFORM(QT)
     void replaySavedEvents();
 #endif
-
+    
     void sendMouseDownToStartPressureEvents();
 #if PLATFORM(COCOA)
     enum class PressureChangeDirection { Increasing, Decreasing };
@@ -119,20 +139,14 @@ private:
     RetainPtr<NSEvent> pressureChangeEvent(int stage, float pressure, PressureChangeDirection);
 #endif
 
-#if PLATFORM(GTK)
-    void sendOrQueueEvent(GdkEvent*);
-    void dispatchEvent(GdkEvent*);
-    GdkEvent* createMouseButtonEvent(GdkEventType, unsigned button, WKEventModifiers);
-    GUniquePtr<GdkEvent> createTouchEvent(GdkEventType, int id);
-    void sendUpdatedTouchEvents();
-#elif PLATFORM(QT)
+#if PLATFORM(QT)
 #if ENABLE(TOUCH_EVENTS)
-    void sendTouchEvent(QEvent::Type);
+        void sendTouchEvent(QEvent::Type);
 #endif
-    void sendOrQueueEvent(QEvent*);
+        void sendOrQueueEvent(QEvent*);
 #endif
-
-#if PLATFORM(WPE)
+    
+#if ENABLE(TOUCH_EVENTS) && USE(LIBWPE)
     Vector<struct wpe_input_touch_event_raw> getUpdatedTouchEvents();
     void removeUpdatedTouchEvents();
     void prepareAndDispatchTouchEvent(enum wpe_input_touch_event_type);
@@ -143,35 +157,36 @@ private:
     POINT positionInPoint() const { return { static_cast<LONG>(m_position.x), static_cast<LONG>(m_position.y) }; }
 #endif
 
-    double m_time;
-    WKPoint m_position;
-    bool m_leftMouseButtonDown;
-    int m_clickCount;
-    double m_clickTime;
-    WKPoint m_clickPosition;
-    WKEventMouseButton m_clickButton;
+    double m_time { 0 };
+    WKPoint m_position { };
+    bool m_leftMouseButtonDown { false };
+    int m_clickCount { 0 };
+    double m_clickTime { 0 };
+    WKPoint m_clickPosition { };
+    WKEventMouseButton m_clickButton { kWKEventMouseButtonNoButton };
+    unsigned m_mouseButtonsCurrentlyDown { 0 };
 #if PLATFORM(COCOA)
-    int eventNumber;
-    unsigned m_mouseButtonsCurrentlyDown { 0 };
-#elif PLATFORM(GTK)
-    Deque<WTREventQueueItem> m_eventQueue;
-    unsigned m_mouseButtonsCurrentlyDown { 0 };
-    Vector<GUniquePtr<GdkEvent>> m_touchEvents;
-    HashSet<int> m_updatedTouchEvents;
-#elif PLATFORM(QT)
+    int m_eventNumber { 0 };
+#endif
+#if PLATFORM(GTK)
+    bool m_hasPreciseDeltas { false };
+#endif
+#if PLATFORM(QT)
     Qt::MouseButtons m_mouseButtons;
-
+    
 #if ENABLE(TOUCH_EVENTS)
     QList<QTouchEvent::TouchPoint> m_touchPoints;
     Qt::KeyboardModifiers m_touchModifiers;
     QPoint m_touchPointRadius;
     bool m_touchActive;
 #endif
-#elif PLATFORM(WPE)
-    uint32_t m_buttonState;
-    uint32_t m_mouseButtonsCurrentlyDown { 0 };
+#endif
+#if USE(LIBWPE)
+    uint32_t m_buttonState { 0 };
+#if ENABLE(TOUCH_EVENTS)
     Vector<struct wpe_input_touch_event_raw> m_touchEvents;
-    HashSet<unsigned, DefaultHash<unsigned>::Hash, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_updatedTouchEvents;
+    HashSet<unsigned, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_updatedTouchEvents;
+#endif
 #endif
 };
 

@@ -34,7 +34,8 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/SoftLinking.h>
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED < 110000 || PLATFORM(WATCHOS) || PLATFORM(APPLETV)
+#if PLATFORM(WATCHOS) || PLATFORM(APPLETV)
+#import "UserInterfaceIdiom.h"
 #import "WKContentView.h"
 #import "WKContentViewInteraction.h"
 #import "WebPageProxy.h"
@@ -46,13 +47,11 @@ SOFT_LINK_CLASS(MediaPlayer, MPAVRoutingController)
 SOFT_LINK_CLASS(MediaPlayer, MPAudioVideoRoutingPopoverController)
 SOFT_LINK_CLASS(MediaPlayer, MPAVRoutingSheet)
 
-using namespace WebKit;
-
 @implementation WKAirPlayRoutePicker {
     RetainPtr<MPAVRoutingController> _routingController;
     RetainPtr<MPAudioVideoRoutingPopoverController> _popoverController;  // iPad
     RetainPtr<MPAVRoutingSheet> _actionSheet; // iPhone
-    WKContentView* _view; // Weak reference.
+    WKContentView *_view;
 }
 
 - (instancetype)initWithView:(WKContentView *)view
@@ -153,10 +152,10 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     [_routingController setDiscoveryMode:MPRouteDiscoveryModeDetailed];
 
     MPAVItemType itemType = hasVideo ? MPAVItemTypeVideo : MPAVItemTypeAudio;
-    if (currentUserInterfaceIdiomIsPad())
-        [self showAirPlayPickerIPad:itemType fromRect:elementRect];
-    else
+    if (WebKit::currentUserInterfaceIdiomIsSmallScreen())
         [self showAirPlayPickerIPhone:itemType];
+    else
+        [self showAirPlayPickerIPad:itemType fromRect:elementRect];
 }
 
 @end

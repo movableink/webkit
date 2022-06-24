@@ -27,16 +27,21 @@
 
 #include "APIObject.h"
 #include "Connection.h"
+#include "DataReference.h"
 #include "DownloadID.h"
-#include "DownloadProxyMessages.h"
+#include "IdentifierTypes.h"
 #include "SandboxExtension.h"
 #include <WebCore/ResourceRequest.h>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/WeakPtr.h>
 
+OBJC_CLASS NSProgress;
+
 namespace API {
 class Data;
+class DownloadClient;
+class FrameInfo;
 }
 
 namespace WebCore {
@@ -49,31 +54,36 @@ class ResourceResponse;
 
 namespace WebKit {
 
-class DownloadID;
 class DownloadProxyMap;
 class WebPageProxy;
-class WebProcessPool;
 class WebsiteDataStore;
+
+enum class AllowOverwrite : bool;
+
+struct FrameInfoData;
 
 class DownloadProxy : public API::ObjectImpl<API::Object::Type::Download>, public IPC::MessageReceiver {
 public:
-    static Ref<DownloadProxy> create(DownloadProxyMap&, WebsiteDataStore&, WebProcessPool&, const WebCore::ResourceRequest&);
+
+    template<typename... Args> static Ref<DownloadProxy> create(Args&&... args)
+    {
+        return adoptRef(*new DownloadProxy(std::forward<Args>(args)...));
+    }
     ~DownloadProxy();
 
     DownloadID downloadID() const { return m_downloadID; }
     const WebCore::ResourceRequest& request() const { return m_request; }
-    API::Data* resumeData() const { return m_resumeData.get(); }
+    API::Data* legacyResumeData() const { return m_legacyResumeData.get(); }
 
-    void cancel();
+    void cancel(CompletionHandler<void(API::Data*)>&&);
 
     void invalidate();
     void processDidClose();
 
     void didReceiveDownloadProxyMessage(IPC::Connection&, IPC::Decoder&);
-    void didReceiveSyncDownloadProxyMessage(IPC::Connection&, IPC::Decoder&, std::unique_ptr<IPC::Encoder>&);
+    bool didReceiveSyncDownloadProxyMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&);
 
     WebPageProxy* originatingPage() const;
-    void setOriginatingPage(WebPageProxy*);
 
     void setRedirectChain(Vector<URL>&& redirectChain) { m_redirectChain = WTFMove(redirectChain); }
     const Vector<URL>& redirectChain() const { return m_redirectChain; }
@@ -81,14 +91,8 @@ public:
     void setWasUserInitiated(bool value) { m_wasUserInitiated = value; }
     bool wasUserInitiated() const { return m_wasUserInitiated; }
 
-    String destinationFilename() const { return m_destinationFilename; }
+    const String& destinationFilename() const { return m_destinationFilename; }
     void setDestinationFilename(const String& d) { m_destinationFilename = d; }
-
-    uint64_t expectedContentLength() const { return m_expectedContentLength; }
-    void setExpectedContentLength(uint64_t expectedContentLength) { m_expectedContentLength = expectedContentLength; }
-
-    uint64_t bytesLoaded() const { return m_bytesLoaded; }
-    void setBytesLoaded(uint64_t bytesLoaded) { m_bytesLoaded = bytesLoaded; }
 
 #if USE(SYSTEM_PREVIEW)
     bool isSystemPreviewDownload() const { return request().isSystemPreview(); }
@@ -100,42 +104,52 @@ public:
 #endif
 #if PLATFORM(COCOA)
     void publishProgress(const URL&);
+    void setProgress(NSProgress *progress) { m_progress = progress; }
+    NSProgress *progress() const { return m_progress.get(); }
 #endif
 
-private:
-    explicit DownloadProxy(DownloadProxyMap&, WebsiteDataStore&, WebProcessPool&, const WebCore::ResourceRequest&);
+    API::FrameInfo& frameInfo() { return m_frameInfo.get(); }
 
-    // IPC::MessageReceiver
-    void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
+    API::DownloadClient& client() { return m_client.get(); }
+    void setClient(Ref<API::DownloadClient>&&);
+    void setDidStartCallback(CompletionHandler<void(DownloadProxy*)>&& callback) { m_didStartCallback = WTFMove(callback); }
+    void setSuggestedFilename(const String& suggestedFilename) { m_suggestedFilename = suggestedFilename; }
 
     // Message handlers.
     void didStart(const WebCore::ResourceRequest&, const String& suggestedFilename);
-    void didReceiveAuthenticationChallenge(WebCore::AuthenticationChallenge&&, uint64_t challengeID);
-    void didReceiveResponse(const WebCore::ResourceResponse&);
-    void didReceiveData(uint64_t length);
+    void didReceiveAuthenticationChallenge(WebCore::AuthenticationChallenge&&, AuthenticationChallengeIdentifier);
+    void didReceiveData(uint64_t bytesWritten, uint64_t totalBytesWritten, uint64_t totalBytesExpectedToWrite);
     void shouldDecodeSourceDataOfMIMEType(const String& mimeType, bool& result);
     void didCreateDestination(const String& path);
     void didFinish();
     void didFail(const WebCore::ResourceError&, const IPC::DataReference& resumeData);
-    void didCancel(const IPC::DataReference& resumeData);
     void willSendRequest(WebCore::ResourceRequest&& redirectRequest, const WebCore::ResourceResponse& redirectResponse);
-    void decideDestinationWithSuggestedFilenameAsync(DownloadID, const String& suggestedFilename);
+    void decideDestinationWithSuggestedFilename(const WebCore::ResourceResponse&, String&& suggestedFilename, CompletionHandler<void(String, SandboxExtension::Handle, AllowOverwrite)>&&);
+
+private:
+    explicit DownloadProxy(DownloadProxyMap&, WebsiteDataStore&, API::DownloadClient&, const WebCore::ResourceRequest&, const FrameInfoData&, WebPageProxy*);
+
+    // IPC::MessageReceiver
+    void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
     DownloadProxyMap& m_downloadProxyMap;
     RefPtr<WebsiteDataStore> m_dataStore;
-    RefPtr<WebProcessPool> m_processPool;
+    Ref<API::DownloadClient> m_client;
     DownloadID m_downloadID;
 
-    RefPtr<API::Data> m_resumeData;
+    RefPtr<API::Data> m_legacyResumeData;
     WebCore::ResourceRequest m_request;
     String m_suggestedFilename;
     String m_destinationFilename;
-    uint64_t m_expectedContentLength { 0 };
-    uint64_t m_bytesLoaded { 0 };
 
     WeakPtr<WebPageProxy> m_originatingPage;
     Vector<URL> m_redirectChain;
     bool m_wasUserInitiated { true };
+    Ref<API::FrameInfo> m_frameInfo;
+    CompletionHandler<void(DownloadProxy*)> m_didStartCallback;
+#if PLATFORM(COCOA)
+    RetainPtr<NSProgress> m_progress;
+#endif
 };
 
 } // namespace WebKit

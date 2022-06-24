@@ -33,7 +33,6 @@
 #include "APIFrameHandle.h"
 #include "APIGeometry.h"
 #include "APINumber.h"
-#include "APIPageGroupHandle.h"
 #include "APIPageHandle.h"
 #include "APISerializedScriptValue.h"
 #include "APIString.h"
@@ -45,9 +44,9 @@
 #include "Encoder.h"
 #include "ShareableBitmap.h"
 #include "WebCertificateInfo.h"
+#include "WebCoreArgumentCoders.h"
 #include "WebImage.h"
-#include "WebRenderLayer.h"
-#include "WebRenderObject.h"
+#include <wtf/CheckedArithmetic.h>
 
 #if PLATFORM(COCOA)
 #include "ObjCObjectGraph.h"
@@ -102,15 +101,11 @@ static RefPtr<API::Object> transformGraph(API::Object& object, const UserData::T
     if (object.type() == API::Object::Type::Array) {
         auto& array = static_cast<API::Array&>(object);
 
-        Vector<RefPtr<API::Object>> elements;
-        elements.reserveInitialCapacity(array.elements().size());
-        for (const auto& element : array.elements()) {
+        auto elements = array.elements().map([&](auto& element) -> RefPtr<API::Object> {
             if (!element)
-                elements.uncheckedAppend(nullptr);
-            else
-                elements.uncheckedAppend(transformGraph(*element, transformer));
-        }
-
+                return nullptr;
+            return transformGraph(*element, transformer);
+        });
         return API::Array::create(WTFMove(elements));
     }
 
@@ -154,7 +149,7 @@ bool UserData::decode(IPC::Decoder& decoder, UserData& userData)
 void UserData::encode(IPC::Encoder& encoder, const API::Object* object)
 {
     if (!object) {
-        encoder.encodeEnum(API::Object::Type::Null);
+        encoder << API::Object::Type::Null;
         return;
     }
 
@@ -164,7 +159,7 @@ void UserData::encode(IPC::Encoder& encoder, const API::Object* object)
 void UserData::encode(IPC::Encoder& encoder, const API::Object& object)
 {
     API::Object::Type type = object.type();
-    encoder.encodeEnum(type);
+    encoder << type;
 
     switch (object.type()) {
     case API::Object::Type::Array: {
@@ -230,10 +225,6 @@ void UserData::encode(IPC::Encoder& encoder, const API::Object& object)
         break;
     }
 
-    case API::Object::Type::PageGroupHandle:
-        static_cast<const API::PageGroupHandle&>(object).encode(encoder);
-        break;
-
     case API::Object::Type::PageHandle:
         static_cast<const API::PageHandle&>(object).encode(encoder);
         break;
@@ -245,38 +236,6 @@ void UserData::encode(IPC::Encoder& encoder, const API::Object& object)
     case API::Object::Type::Rect:
         static_cast<const API::Rect&>(object).encode(encoder);
         break;
-
-    case API::Object::Type::RenderLayer: {
-        auto& renderLayer = static_cast<const WebRenderLayer&>(object);
-
-        encode(encoder, renderLayer.renderer());
-        encoder << renderLayer.isReflection();
-        encoder << renderLayer.isClipping();
-        encoder << renderLayer.isClipped();
-        encoder << static_cast<uint32_t>(renderLayer.compositingLayerType());
-        encoder << renderLayer.absoluteBoundingBox();
-        encoder << renderLayer.backingStoreMemoryEstimate();
-        encode(encoder, renderLayer.negativeZOrderList());
-        encode(encoder, renderLayer.normalFlowList());
-        encode(encoder, renderLayer.positiveZOrderList());
-        encode(encoder, renderLayer.frameContentsLayer());
-        break;
-    }
-
-    case API::Object::Type::RenderObject: {
-        auto& renderObject = static_cast<const WebRenderObject&>(object);
-
-        encoder << renderObject.name();
-        encoder << renderObject.elementTagName();
-        encoder << renderObject.elementID();
-        encode(encoder, renderObject.elementClassNames());
-        encoder << renderObject.absolutePosition();
-        encoder << renderObject.frameRect();
-        encoder << renderObject.textSnippet();
-        encoder << renderObject.textLength();
-        encode(encoder, renderObject.children());
-        break;
-    }
 
     case API::Object::Type::SerializedScriptValue: {
         auto& serializedScriptValue = static_cast<const API::SerializedScriptValue&>(object);
@@ -334,14 +293,19 @@ void UserData::encode(IPC::Encoder& encoder, const API::Object& object)
 bool UserData::decode(IPC::Decoder& decoder, RefPtr<API::Object>& result)
 {
     API::Object::Type type;
-    if (!decoder.decodeEnum(type))
+    if (!decoder.decode(type))
         return false;
 
     switch (type) {
     case API::Object::Type::Array: {
-        uint64_t size;
-        if (!decoder.decode(size))
+        uint64_t decodedSize;
+        if (!decoder.decode(decodedSize))
             return false;
+
+        if (!isInBounds<size_t>(decodedSize))
+            return false;
+
+        auto size = static_cast<size_t>(decodedSize);
 
         Vector<RefPtr<API::Object>> elements;
         for (size_t i = 0; i < size; ++i) {
@@ -362,10 +326,11 @@ bool UserData::decode(IPC::Decoder& decoder, RefPtr<API::Object>& result)
         break;
 
     case API::Object::Type::CertificateInfo: {
-        WebCore::CertificateInfo certificateInfo;
-        if (!decoder.decode(certificateInfo))
+        std::optional<WebCore::CertificateInfo> certificateInfo;
+        decoder >> certificateInfo;
+        if (!certificateInfo)
             return false;
-        result = WebCertificateInfo::create(certificateInfo);
+        result = WebCertificateInfo::create(*certificateInfo);
         break;
     }
 
@@ -375,9 +340,14 @@ bool UserData::decode(IPC::Decoder& decoder, RefPtr<API::Object>& result)
         break;
 
     case API::Object::Type::Dictionary: {
-        uint64_t size;
-        if (!decoder.decode(size))
+        uint64_t decodedSize;
+        if (!decoder.decode(decodedSize))
             return false;
+
+        if (!isInBounds<size_t>(decodedSize))
+            return false;
+
+        auto size = static_cast<size_t>(decodedSize);
 
         API::Dictionary::MapType map;
         for (size_t i = 0; i < size; ++i) {
@@ -436,11 +406,6 @@ bool UserData::decode(IPC::Decoder& decoder, RefPtr<API::Object>& result)
         result = nullptr;
         break;
 
-    case API::Object::Type::PageGroupHandle:
-        if (!API::PageGroupHandle::decode(decoder, result))
-            return false;
-        break;
-
     case API::Object::Type::PageHandle:
         if (!API::PageHandle::decode(decoder, result))
             return false;
@@ -456,89 +421,12 @@ bool UserData::decode(IPC::Decoder& decoder, RefPtr<API::Object>& result)
             return false;
         break;
 
-    case API::Object::Type::RenderLayer: {
-        RefPtr<API::Object> renderer;
-        bool isReflection;
-        bool isClipping;
-        bool isClipped;
-        uint32_t compositingLayerTypeAsUInt32;
-        WebCore::IntRect absoluteBoundingBox;
-        double backingStoreMemoryEstimate;
-        RefPtr<API::Object> negativeZOrderList;
-        RefPtr<API::Object> normalFlowList;
-        RefPtr<API::Object> positiveZOrderList;
-        RefPtr<API::Object> frameContentsLayer;
-
-        if (!decode(decoder, renderer))
-            return false;
-        if (renderer->type() != API::Object::Type::RenderObject)
-            return false;
-        if (!decoder.decode(isReflection))
-            return false;
-        if (!decoder.decode(isClipping))
-            return false;
-        if (!decoder.decode(isClipped))
-            return false;
-        if (!decoder.decode(compositingLayerTypeAsUInt32))
-            return false;
-        if (!decoder.decode(absoluteBoundingBox))
-            return false;
-        if (!decoder.decode(backingStoreMemoryEstimate))
-            return false;
-        if (!decode(decoder, negativeZOrderList))
-            return false;
-        if (!decode(decoder, normalFlowList))
-            return false;
-        if (!decode(decoder, positiveZOrderList))
-            return false;
-        if (!decode(decoder, frameContentsLayer))
-            return false;
-
-        result = WebRenderLayer::create(static_pointer_cast<WebRenderObject>(renderer), isReflection, isClipping, isClipped, static_cast<WebRenderLayer::CompositingLayerType>(compositingLayerTypeAsUInt32), absoluteBoundingBox, backingStoreMemoryEstimate, static_pointer_cast<API::Array>(negativeZOrderList), static_pointer_cast<API::Array>(normalFlowList), static_pointer_cast<API::Array>(positiveZOrderList), static_pointer_cast<WebRenderLayer>(frameContentsLayer));
-        break;
-    }
-
-    case API::Object::Type::RenderObject: {
-        String name;
-        String textSnippet;
-        String elementTagName;
-        String elementID;
-        unsigned textLength;
-        RefPtr<API::Object> elementClassNames;
-        WebCore::IntPoint absolutePosition;
-        WebCore::IntRect frameRect;
-        RefPtr<API::Object> children;
-
-        if (!decoder.decode(name))
-            return false;
-        if (!decoder.decode(elementTagName))
-            return false;
-        if (!decoder.decode(elementID))
-            return false;
-        if (!decode(decoder, elementClassNames))
-            return false;
-        if (!decoder.decode(absolutePosition))
-            return false;
-        if (!decoder.decode(frameRect))
-            return false;
-        if (!decoder.decode(textSnippet))
-            return false;
-        if (!decoder.decode(textLength))
-            return false;
-        if (!decode(decoder, children))
-            return false;
-        if (children && children->type() != API::Object::Type::Array)
-            return false;
-        result = WebRenderObject::create(name, elementTagName, elementID, static_pointer_cast<API::Array>(elementClassNames), absolutePosition, frameRect, textSnippet, textLength, static_pointer_cast<API::Array>(children));
-        break;
-    }
-
     case API::Object::Type::SerializedScriptValue: {
         IPC::DataReference dataReference;
         if (!decoder.decode(dataReference))
             return false;
 
-        result = API::SerializedScriptValue::adopt(dataReference.vector());
+        result = API::SerializedScriptValue::createFromWireBytes({ dataReference });
         break;
     }
 

@@ -26,12 +26,11 @@
 #include "config.h"
 #include "WebPageProxy.h"
 
+#include "EditorState.h"
+#include "InputMethodState.h"
 #include "PageClientImpl.h"
-#include "WebsiteDataStore.h"
-#include <WebCore/NotImplemented.h>
-#include <WebCore/UserAgent.h>
 
-#if USE(ATK)
+#if ENABLE(ACCESSIBILITY)
 #include <atk/atk.h>
 #endif
 
@@ -39,7 +38,6 @@ namespace WebKit {
 
 void WebPageProxy::platformInitialize()
 {
-    notImplemented();
 }
 
 struct wpe_view_backend* WebPageProxy::viewBackend()
@@ -47,39 +45,19 @@ struct wpe_view_backend* WebPageProxy::viewBackend()
     return static_cast<PageClientImpl&>(pageClient()).viewBackend();
 }
 
-String WebPageProxy::standardUserAgent(const String& applicationNameForUserAgent)
-{
-    return WebCore::standardUserAgent(applicationNameForUserAgent);
-}
-
-#if USE(ATK)
 void WebPageProxy::bindAccessibilityTree(const String& plugID)
 {
+#if ENABLE(ACCESSIBILITY)
     auto* accessible = static_cast<PageClientImpl&>(pageClient()).accessible();
     atk_socket_embed(ATK_SOCKET(accessible), const_cast<char*>(plugID.utf8().data()));
     atk_object_notify_state_change(accessible, ATK_STATE_TRANSIENT, FALSE);
-}
 #endif
-
-void WebPageProxy::saveRecentSearches(const String&, const Vector<WebCore::RecentSearch>&)
-{
-    notImplemented();
 }
 
-void WebPageProxy::loadRecentSearches(const String&, CompletionHandler<void(Vector<WebCore::RecentSearch>&&)>&& completionHandler)
+void WebPageProxy::didUpdateEditorState(const EditorState&, const EditorState& newEditorState)
 {
-    notImplemented();
-    completionHandler({ });
-}
-
-void WebsiteDataStore::platformRemoveRecentSearches(WallTime)
-{
-    notImplemented();
-}
-
-void WebPageProxy::updateEditorState(const EditorState&)
-{
-    notImplemented();
+    if (!newEditorState.shouldIgnoreSelectionChanges)
+        pageClient().selectionDidChange();
 }
 
 void WebPageProxy::sendMessageToWebViewWithReply(UserMessage&& message, CompletionHandler<void(UserMessage&&)>&& completionHandler)
@@ -90,6 +68,11 @@ void WebPageProxy::sendMessageToWebViewWithReply(UserMessage&& message, Completi
 void WebPageProxy::sendMessageToWebView(UserMessage&& message)
 {
     sendMessageToWebViewWithReply(WTFMove(message), [](UserMessage&&) { });
+}
+
+void WebPageProxy::setInputMethodState(std::optional<InputMethodState>&& state)
+{
+    static_cast<PageClientImpl&>(pageClient()).setInputMethodState(WTFMove(state));
 }
 
 } // namespace WebKit

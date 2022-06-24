@@ -35,11 +35,6 @@ void Context::compressedTexSubImage1D(GLenum target,
     UNIMPLEMENTED();
 }
 
-void Context::getCompressedTexImage(GLenum target, GLint level, void *img)
-{
-    UNIMPLEMENTED();
-}
-
 void Context::loadTransposeMatrixd(const GLdouble *m)
 {
     UNIMPLEMENTED();
@@ -370,21 +365,6 @@ void Context::clampColor(GLenum target, GLenum clamp)
     UNIMPLEMENTED();
 }
 
-void Context::colorMaski(GLuint index, GLboolean r, GLboolean g, GLboolean b, GLboolean a)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::disablei(GLenum target, GLuint index)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::enablei(GLenum target, GLuint index)
-{
-    UNIMPLEMENTED();
-}
-
 void Context::endConditionalRender()
 {
     UNIMPLEMENTED();
@@ -397,12 +377,6 @@ void Context::framebufferTexture1D(GLenum target,
                                    GLint level)
 {
     UNIMPLEMENTED();
-}
-
-GLboolean Context::isEnabledi(GLenum target, GLuint index)
-{
-    UNIMPLEMENTED();
-    return false;
 }
 
 void Context::vertexAttribI1i(GLuint index, GLint x)
@@ -495,11 +469,6 @@ void Context::getActiveUniformName(ShaderProgramID program,
 }
 
 void Context::primitiveRestartIndex(GLuint index)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::texBuffer(GLenum target, GLenum internalformat, BufferID buffer)
 {
     UNIMPLEMENTED();
 }
@@ -1115,11 +1084,6 @@ void Context::getTexGendv(GLenum coord, GLenum pname, GLdouble *params)
     UNIMPLEMENTED();
 }
 
-void Context::getTexImage(GLenum target, GLint level, GLenum format, GLenum type, void *pixels)
-{
-    UNIMPLEMENTED();
-}
-
 void Context::indexMask(GLuint mask)
 {
     UNIMPLEMENTED();
@@ -1170,7 +1134,7 @@ void Context::initNames()
     UNIMPLEMENTED();
 }
 
-GLboolean Context::isList(GLuint list)
+GLboolean Context::isList(GLuint list) const
 {
     UNIMPLEMENTED();
     return false;
@@ -2000,39 +1964,9 @@ void Context::texSubImage1D(GLenum target,
     UNIMPLEMENTED();
 }
 
-void Context::drawElementsBaseVertex(GLenum mode,
-                                     GLsizei count,
-                                     GLenum type,
-                                     const void *indices,
-                                     GLint basevertex)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::drawElementsInstancedBaseVertex(GLenum mode,
-                                              GLsizei count,
-                                              GLenum type,
-                                              const void *indices,
-                                              GLsizei instancecount,
-                                              GLint basevertex)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::drawRangeElementsBaseVertex(GLenum mode,
-                                          GLuint start,
-                                          GLuint end,
-                                          GLsizei count,
-                                          GLenum type,
-                                          const void *indices,
-                                          GLint basevertex)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::multiDrawElementsBaseVertex(GLenum mode,
+void Context::multiDrawElementsBaseVertex(PrimitiveMode mode,
                                           const GLsizei *count,
-                                          GLenum type,
+                                          DrawElementsType type,
                                           const void *const *indices,
                                           GLsizei drawcount,
                                           const GLint *basevertex)
@@ -2268,30 +2202,6 @@ void Context::beginQueryIndexed(GLenum target, GLuint index, QueryID id)
     UNIMPLEMENTED();
 }
 
-void Context::blendEquationSeparatei(GLuint buf, GLenum modeRGB, GLenum modeAlpha)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::blendEquationi(GLuint buf, GLenum mode)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::blendFuncSeparatei(GLuint buf,
-                                 GLenum srcRGB,
-                                 GLenum dstRGB,
-                                 GLenum srcAlpha,
-                                 GLenum dstAlpha)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::blendFunci(GLuint buf, GLenum src, GLenum dst)
-{
-    UNIMPLEMENTED();
-}
-
 void Context::drawTransformFeedback(GLenum mode, TransformFeedbackID id)
 {
     UNIMPLEMENTED();
@@ -2368,12 +2278,7 @@ void Context::getUniformSubroutineuiv(GLenum shadertype, GLint location, GLuint 
     UNIMPLEMENTED();
 }
 
-void Context::getUniformdv(ShaderProgramID program, GLint location, GLdouble *params)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::minSampleShading(GLfloat value)
+void Context::getUniformdv(ShaderProgramID program, UniformLocation location, GLdouble *params)
 {
     UNIMPLEMENTED();
 }
@@ -2383,52 +2288,47 @@ void Context::patchParameterfv(GLenum pname, const GLfloat *values)
     UNIMPLEMENTED();
 }
 
-void Context::patchParameteri(GLenum pname, GLint value)
+void Context::uniform1d(UniformLocation location, GLdouble x)
 {
     UNIMPLEMENTED();
 }
 
-void Context::uniform1d(GLint location, GLdouble x)
+void Context::uniform1dv(UniformLocation location, GLsizei count, const GLdouble *value)
 {
     UNIMPLEMENTED();
 }
 
-void Context::uniform1dv(GLint location, GLsizei count, const GLdouble *value)
+void Context::uniform2d(UniformLocation location, GLdouble x, GLdouble y)
 {
     UNIMPLEMENTED();
 }
 
-void Context::uniform2d(GLint location, GLdouble x, GLdouble y)
+void Context::uniform2dv(UniformLocation location, GLsizei count, const GLdouble *value)
 {
     UNIMPLEMENTED();
 }
 
-void Context::uniform2dv(GLint location, GLsizei count, const GLdouble *value)
+void Context::uniform3d(UniformLocation location, GLdouble x, GLdouble y, GLdouble z)
 {
     UNIMPLEMENTED();
 }
 
-void Context::uniform3d(GLint location, GLdouble x, GLdouble y, GLdouble z)
+void Context::uniform3dv(UniformLocation location, GLsizei count, const GLdouble *value)
 {
     UNIMPLEMENTED();
 }
 
-void Context::uniform3dv(GLint location, GLsizei count, const GLdouble *value)
+void Context::uniform4d(UniformLocation location, GLdouble x, GLdouble y, GLdouble z, GLdouble w)
 {
     UNIMPLEMENTED();
 }
 
-void Context::uniform4d(GLint location, GLdouble x, GLdouble y, GLdouble z, GLdouble w)
+void Context::uniform4dv(UniformLocation location, GLsizei count, const GLdouble *value)
 {
     UNIMPLEMENTED();
 }
 
-void Context::uniform4dv(GLint location, GLsizei count, const GLdouble *value)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::uniformMatrix2dv(GLint location,
+void Context::uniformMatrix2dv(UniformLocation location,
                                GLsizei count,
                                GLboolean transpose,
                                const GLdouble *value)
@@ -2436,7 +2336,7 @@ void Context::uniformMatrix2dv(GLint location,
     UNIMPLEMENTED();
 }
 
-void Context::uniformMatrix2x3dv(GLint location,
+void Context::uniformMatrix2x3dv(UniformLocation location,
                                  GLsizei count,
                                  GLboolean transpose,
                                  const GLdouble *value)
@@ -2444,7 +2344,7 @@ void Context::uniformMatrix2x3dv(GLint location,
     UNIMPLEMENTED();
 }
 
-void Context::uniformMatrix2x4dv(GLint location,
+void Context::uniformMatrix2x4dv(UniformLocation location,
                                  GLsizei count,
                                  GLboolean transpose,
                                  const GLdouble *value)
@@ -2452,7 +2352,7 @@ void Context::uniformMatrix2x4dv(GLint location,
     UNIMPLEMENTED();
 }
 
-void Context::uniformMatrix3dv(GLint location,
+void Context::uniformMatrix3dv(UniformLocation location,
                                GLsizei count,
                                GLboolean transpose,
                                const GLdouble *value)
@@ -2460,7 +2360,7 @@ void Context::uniformMatrix3dv(GLint location,
     UNIMPLEMENTED();
 }
 
-void Context::uniformMatrix3x2dv(GLint location,
+void Context::uniformMatrix3x2dv(UniformLocation location,
                                  GLsizei count,
                                  GLboolean transpose,
                                  const GLdouble *value)
@@ -2468,7 +2368,7 @@ void Context::uniformMatrix3x2dv(GLint location,
     UNIMPLEMENTED();
 }
 
-void Context::uniformMatrix3x4dv(GLint location,
+void Context::uniformMatrix3x4dv(UniformLocation location,
                                  GLsizei count,
                                  GLboolean transpose,
                                  const GLdouble *value)
@@ -2476,7 +2376,7 @@ void Context::uniformMatrix3x4dv(GLint location,
     UNIMPLEMENTED();
 }
 
-void Context::uniformMatrix4dv(GLint location,
+void Context::uniformMatrix4dv(UniformLocation location,
                                GLsizei count,
                                GLboolean transpose,
                                const GLdouble *value)
@@ -2484,7 +2384,7 @@ void Context::uniformMatrix4dv(GLint location,
     UNIMPLEMENTED();
 }
 
-void Context::uniformMatrix4x2dv(GLint location,
+void Context::uniformMatrix4x2dv(UniformLocation location,
                                  GLsizei count,
                                  GLboolean transpose,
                                  const GLdouble *value)
@@ -2492,7 +2392,7 @@ void Context::uniformMatrix4x2dv(GLint location,
     UNIMPLEMENTED();
 }
 
-void Context::uniformMatrix4x3dv(GLint location,
+void Context::uniformMatrix4x3dv(UniformLocation location,
                                  GLsizei count,
                                  GLboolean transpose,
                                  const GLdouble *value)
@@ -2530,26 +2430,29 @@ void Context::getVertexAttribLdv(GLuint index, GLenum pname, GLdouble *params)
     UNIMPLEMENTED();
 }
 
-void Context::programUniform1d(ShaderProgramID program, GLint location, GLdouble v0)
+void Context::programUniform1d(ShaderProgramID program, UniformLocation location, GLdouble v0)
 {
     UNIMPLEMENTED();
 }
 
 void Context::programUniform1dv(ShaderProgramID program,
-                                GLint location,
+                                UniformLocation location,
                                 GLsizei count,
                                 const GLdouble *value)
 {
     UNIMPLEMENTED();
 }
 
-void Context::programUniform2d(ShaderProgramID program, GLint location, GLdouble v0, GLdouble v1)
+void Context::programUniform2d(ShaderProgramID program,
+                               UniformLocation location,
+                               GLdouble v0,
+                               GLdouble v1)
 {
     UNIMPLEMENTED();
 }
 
 void Context::programUniform2dv(ShaderProgramID program,
-                                GLint location,
+                                UniformLocation location,
                                 GLsizei count,
                                 const GLdouble *value)
 {
@@ -2557,7 +2460,7 @@ void Context::programUniform2dv(ShaderProgramID program,
 }
 
 void Context::programUniform3d(ShaderProgramID program,
-                               GLint location,
+                               UniformLocation location,
                                GLdouble v0,
                                GLdouble v1,
                                GLdouble v2)
@@ -2566,7 +2469,7 @@ void Context::programUniform3d(ShaderProgramID program,
 }
 
 void Context::programUniform3dv(ShaderProgramID program,
-                                GLint location,
+                                UniformLocation location,
                                 GLsizei count,
                                 const GLdouble *value)
 {
@@ -2574,7 +2477,7 @@ void Context::programUniform3dv(ShaderProgramID program,
 }
 
 void Context::programUniform4d(ShaderProgramID program,
-                               GLint location,
+                               UniformLocation location,
                                GLdouble v0,
                                GLdouble v1,
                                GLdouble v2,
@@ -2584,7 +2487,7 @@ void Context::programUniform4d(ShaderProgramID program,
 }
 
 void Context::programUniform4dv(ShaderProgramID program,
-                                GLint location,
+                                UniformLocation location,
                                 GLsizei count,
                                 const GLdouble *value)
 {
@@ -2592,7 +2495,7 @@ void Context::programUniform4dv(ShaderProgramID program,
 }
 
 void Context::programUniformMatrix2dv(ShaderProgramID program,
-                                      GLint location,
+                                      UniformLocation location,
                                       GLsizei count,
                                       GLboolean transpose,
                                       const GLdouble *value)
@@ -2601,7 +2504,7 @@ void Context::programUniformMatrix2dv(ShaderProgramID program,
 }
 
 void Context::programUniformMatrix2x3dv(ShaderProgramID program,
-                                        GLint location,
+                                        UniformLocation location,
                                         GLsizei count,
                                         GLboolean transpose,
                                         const GLdouble *value)
@@ -2610,7 +2513,7 @@ void Context::programUniformMatrix2x3dv(ShaderProgramID program,
 }
 
 void Context::programUniformMatrix2x4dv(ShaderProgramID program,
-                                        GLint location,
+                                        UniformLocation location,
                                         GLsizei count,
                                         GLboolean transpose,
                                         const GLdouble *value)
@@ -2619,7 +2522,7 @@ void Context::programUniformMatrix2x4dv(ShaderProgramID program,
 }
 
 void Context::programUniformMatrix3dv(ShaderProgramID program,
-                                      GLint location,
+                                      UniformLocation location,
                                       GLsizei count,
                                       GLboolean transpose,
                                       const GLdouble *value)
@@ -2628,7 +2531,7 @@ void Context::programUniformMatrix3dv(ShaderProgramID program,
 }
 
 void Context::programUniformMatrix3x2dv(ShaderProgramID program,
-                                        GLint location,
+                                        UniformLocation location,
                                         GLsizei count,
                                         GLboolean transpose,
                                         const GLdouble *value)
@@ -2637,7 +2540,7 @@ void Context::programUniformMatrix3x2dv(ShaderProgramID program,
 }
 
 void Context::programUniformMatrix3x4dv(ShaderProgramID program,
-                                        GLint location,
+                                        UniformLocation location,
                                         GLsizei count,
                                         GLboolean transpose,
                                         const GLdouble *value)
@@ -2646,7 +2549,7 @@ void Context::programUniformMatrix3x4dv(ShaderProgramID program,
 }
 
 void Context::programUniformMatrix4dv(ShaderProgramID program,
-                                      GLint location,
+                                      UniformLocation location,
                                       GLsizei count,
                                       GLboolean transpose,
                                       const GLdouble *value)
@@ -2655,7 +2558,7 @@ void Context::programUniformMatrix4dv(ShaderProgramID program,
 }
 
 void Context::programUniformMatrix4x2dv(ShaderProgramID program,
-                                        GLint location,
+                                        UniformLocation location,
                                         GLsizei count,
                                         GLboolean transpose,
                                         const GLdouble *value)
@@ -2664,7 +2567,7 @@ void Context::programUniformMatrix4x2dv(ShaderProgramID program,
 }
 
 void Context::programUniformMatrix4x3dv(ShaderProgramID program,
-                                        GLint location,
+                                        UniformLocation location,
                                         GLsizei count,
                                         GLboolean transpose,
                                         const GLdouble *value)
@@ -2804,25 +2707,6 @@ void Context::clearBufferSubData(GLenum target,
     UNIMPLEMENTED();
 }
 
-void Context::copyImageSubData(GLuint srcName,
-                               GLenum srcTarget,
-                               GLint srcLevel,
-                               GLint srcX,
-                               GLint srcY,
-                               GLint srcZ,
-                               GLuint dstName,
-                               GLenum dstTarget,
-                               GLint dstLevel,
-                               GLint dstX,
-                               GLint dstY,
-                               GLint dstZ,
-                               GLsizei srcWidth,
-                               GLsizei srcHeight,
-                               GLsizei srcDepth)
-{
-    UNIMPLEMENTED();
-}
-
 void Context::getInternalformati64v(GLenum target,
                                     GLenum internalformat,
                                     GLenum pname,
@@ -2859,35 +2743,9 @@ void Context::invalidateTexSubImage(TextureID texture,
     UNIMPLEMENTED();
 }
 
-void Context::multiDrawArraysIndirect(GLenum mode,
-                                      const void *indirect,
-                                      GLsizei drawcount,
-                                      GLsizei stride)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::multiDrawElementsIndirect(GLenum mode,
-                                        GLenum type,
-                                        const void *indirect,
-                                        GLsizei drawcount,
-                                        GLsizei stride)
-{
-    UNIMPLEMENTED();
-}
-
 void Context::shaderStorageBlockBinding(ShaderProgramID program,
                                         GLuint storageBlockIndex,
                                         GLuint storageBlockBinding)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::texBufferRange(GLenum target,
-                             GLenum internalformat,
-                             BufferID buffer,
-                             GLintptr offset,
-                             GLsizeiptr size)
 {
     UNIMPLEMENTED();
 }
@@ -2947,11 +2805,6 @@ void Context::bindVertexBuffers(GLuint first,
                                 const BufferID *buffers,
                                 const GLintptr *offsets,
                                 const GLsizei *strides)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::bufferStorage(GLenum target, GLsizeiptr size, const void *data, GLbitfield flags)
 {
     UNIMPLEMENTED();
 }
@@ -3056,11 +2909,6 @@ void Context::clearNamedFramebufferuiv(FramebufferID framebuffer,
                                        GLenum buffer,
                                        GLint drawbuffer,
                                        const GLuint *value)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::clipControl(GLenum origin, GLenum depth)
 {
     UNIMPLEMENTED();
 }
@@ -3491,17 +3339,9 @@ void Context::getnTexImage(GLenum target,
 }
 
 void Context::getnUniformdv(ShaderProgramID program,
-                            GLint location,
+                            UniformLocation location,
                             GLsizei bufSize,
                             GLdouble *params)
-{
-    UNIMPLEMENTED();
-}
-
-void Context::getnUniformuiv(ShaderProgramID program,
-                             GLint location,
-                             GLsizei bufSize,
-                             GLuint *params)
 {
     UNIMPLEMENTED();
 }

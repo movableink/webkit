@@ -33,9 +33,9 @@
 namespace WebCore {
 using namespace JSC;
 
-JSTestCallbackFunctionRethrow::JSTestCallbackFunctionRethrow(JSObject* callback, JSDOMGlobalObject* globalObject)
-    : TestCallbackFunctionRethrow(globalObject->scriptExecutionContext())
-    , m_data(new JSCallbackDataStrong(callback, globalObject, this))
+JSTestCallbackFunctionRethrow::JSTestCallbackFunctionRethrow(VM& vm, JSObject* callback)
+    : TestCallbackFunctionRethrow(jsCast<JSDOMGlobalObject*>(callback->globalObject(vm))->scriptExecutionContext())
+    , m_data(new JSCallbackDataStrong(vm, callback, this))
 {
 }
 
@@ -60,28 +60,28 @@ CallbackResult<typename IDLDOMString::ImplementationType> JSTestCallbackFunction
 
     Ref<JSTestCallbackFunctionRethrow> protectedThis(*this);
 
-    auto& globalObject = *m_data->globalObject();
+    auto& globalObject = *jsCast<JSDOMGlobalObject*>(scriptExecutionContext()->globalObject());
     auto& vm = globalObject.vm();
 
     JSLockHolder lock(vm);
-    auto& state = *globalObject.globalExec();
+    auto& lexicalGlobalObject = globalObject;
     JSValue thisValue = jsUndefined();
     MarkedArgumentBuffer args;
-    args.append(toJS<IDLSequence<IDLLong>>(state, globalObject, argument));
+    args.append(toJS<IDLSequence<IDLLong>>(lexicalGlobalObject, globalObject, argument));
     ASSERT(!args.hasOverflowed());
 
     NakedPtr<JSC::Exception> returnedException;
-    auto jsResult = m_data->invokeCallback(thisValue, args, JSCallbackData::CallbackType::Function, Identifier(), returnedException);
+    auto jsResult = m_data->invokeCallback(vm, thisValue, args, JSCallbackData::CallbackType::Function, Identifier(), returnedException);
     if (returnedException) {
         auto throwScope = DECLARE_THROW_SCOPE(vm);
-        throwException(&state, throwScope, returnedException);
+        throwException(&lexicalGlobalObject, throwScope, returnedException);
         return CallbackResultType::ExceptionThrown;
      }
 
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    auto returnValue = convert<IDLDOMString>(state, jsResult);
+    auto returnValue = convert<IDLDOMString>(lexicalGlobalObject, jsResult);
     RETURN_IF_EXCEPTION(throwScope, CallbackResultType::ExceptionThrown);
-    return returnValue;
+    return { WTFMove(returnValue) };
 }
 
 JSC::JSValue toJS(TestCallbackFunctionRethrow& impl)

@@ -28,22 +28,24 @@
 #ifdef __APPLE__
 #include <Availability.h>
 #include <AvailabilityMacros.h>
+#include <VideoToolbox/VideoToolbox.h>
 #include <TargetConditionals.h>
-
-// Macro taken from WTF/wtf/Platform.h
-#if defined __has_include && __has_include(<CoreFoundation/CFPriv.h>)
 
 #if (defined(TARGET_IPHONE_SIMULATOR) && TARGET_IPHONE_SIMULATOR)
 #define ENABLE_VCP_ENCODER 0
 #define ENABLE_VCP_VTB_ENCODER 0
+#define ENABLE_VCP_FOR_H264_BASELINE 0
 #elif (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
-#define ENABLE_VCP_ENCODER 1
-#define ENABLE_VCP_VTB_ENCODER __MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
+#define ENABLE_VCP_ENCODER __IPHONE_OS_VERSION_MIN_REQUIRED < 140000
+#define ENABLE_VCP_VTB_ENCODER __IPHONE_OS_VERSION_MIN_REQUIRED >= 130000 && __IPHONE_OS_VERSION_MIN_REQUIRED < 140000
+#define HAVE_VTB_REQUIREDLOWLATENCY __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000
+#define ENABLE_VCP_FOR_H264_BASELINE __IPHONE_OS_VERSION_MIN_REQUIRED >= 150000
 #elif (defined(TARGET_OS_MAC) && TARGET_OS_MAC)
-#define ENABLE_VCP_ENCODER 1
-#define ENABLE_VCP_VTB_ENCODER __MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
-#endif
-
+#define ENABLE_VCP_ENCODER __MAC_OS_X_VERSION_MIN_REQUIRED < 110000
+#define ENABLE_VCP_VTB_ENCODER __MAC_OS_X_VERSION_MIN_REQUIRED < 110000
+#define HAVE_VTB_REQUIREDLOWLATENCY __MAC_OS_X_VERSION_MIN_REQUIRED >= 110000
+#define ENABLE_VCP_FOR_H264_BASELINE __MAC_OS_X_VERSION_MIN_REQUIRED >= 120000
+#define ENABLE_H264_HIGHPROFILE_AUTOLEVEL __MAC_OS_X_VERSION_MIN_REQUIRED >= 120000
 #endif
 
 #if !defined(ENABLE_VCP_ENCODER)
@@ -51,6 +53,20 @@
 #endif
 #if !defined(ENABLE_VCP_VTB_ENCODER)
 #define ENABLE_VCP_VTB_ENCODER 0
+#endif
+#if !defined(HAVE_VTB_REQUIREDLOWLATENCY)
+#define HAVE_VTB_REQUIREDLOWLATENCY 0
+#endif
+#if !defined(ENABLE_VCP_FOR_H264_BASELINE)
+#define ENABLE_VCP_FOR_H264_BASELINE 0
+#endif
+
+#if !defined(ENABLE_H264_HIGHPROFILE_AUTOLEVEL)
+#if defined(WEBRTC_ARCH_ARM64)
+#define ENABLE_H264_HIGHPROFILE_AUTOLEVEL 1
+#else
+#define ENABLE_H264_HIGHPROFILE_AUTOLEVEL 0
+#endif
 #endif
 
 #if !defined(ALWAYS_INLINE)
@@ -119,14 +135,14 @@
 
 #if ENABLE_VCP_ENCODER || ENABLE_VCP_VTB_ENCODER
 
-#include <VideoProcessing/VideoProcessing.h>
-
 SOFT_LINK_FRAMEWORK_FOR_HEADER(webrtc, VideoProcessing)
 
 SOFT_LINK_FUNCTION_FOR_HEADER(webrtc, VideoProcessing, VPModuleInitialize, void, (), ())
 #define VPModuleInitialize softLink_VideoProcessing_VPModuleInitialize
 
 #endif
+
+using VCPCompressionSessionRef = void*;
 
 #if ENABLE_VCP_ENCODER
 
@@ -145,8 +161,6 @@ SOFT_LINK_FUNCTION_FOR_HEADER(webrtc, VideoProcessing, VCPCompressionSessionCrea
 SOFT_LINK_FUNCTION_FOR_HEADER(webrtc, VideoProcessing, VCPCompressionSessionInvalidate, void, (VCPCompressionSessionRef session), (session))
 #define VCPCompressionSessionInvalidate softLink_VideoProcessing_VCPCompressionSessionInvalidate
 
-#else
-using VCPCompressionSessionRef = void*;
 #endif // ENABLE_VCP_ENCODER
 
 #endif // __APPLE__

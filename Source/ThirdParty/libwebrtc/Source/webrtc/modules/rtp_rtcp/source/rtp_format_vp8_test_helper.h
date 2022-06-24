@@ -10,10 +10,9 @@
 
 // This file contains the class RtpFormatVp8TestHelper. The class is
 // responsible for setting up a fake VP8 bitstream according to the
-// RTPVideoHeaderVP8 header, and partition information. After initialization,
-// an RTPFragmentationHeader is provided so that the tester can create a
-// packetizer. The packetizer can then be provided to this helper class, which
-// will then extract all packets and compare to the expected outcome.
+// RTPVideoHeaderVP8 header. The packetizer can then be provided to this helper
+// class, which will then extract all packets and compare to the expected
+// outcome.
 
 #ifndef MODULES_RTP_RTCP_SOURCE_RTP_FORMAT_VP8_TEST_HELPER_H_
 #define MODULES_RTP_RTCP_SOURCE_RTP_FORMAT_VP8_TEST_HELPER_H_
@@ -22,7 +21,7 @@
 #include "modules/rtp_rtcp/source/rtp_format_vp8.h"
 #include "modules/video_coding/codecs/vp8/include/vp8_globals.h"
 #include "rtc_base/buffer.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 

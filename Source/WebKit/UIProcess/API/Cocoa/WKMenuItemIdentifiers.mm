@@ -23,8 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "WKMenuItemIdentifiersPrivate.h"
+#import "config.h"
+#import "WKMenuItemIdentifiersPrivate.h"
 
 NSString * const _WKMenuItemIdentifierCopy = @"WKMenuItemIdentifierCopy";
 NSString * const _WKMenuItemIdentifierCopyImage = @"WKMenuItemIdentifierCopyImage";
@@ -37,6 +37,9 @@ NSString * const _WKMenuItemIdentifierGoBack = @"WKMenuItemIdentifierGoBack";
 NSString * const _WKMenuItemIdentifierGoForward = @"WKMenuItemIdentifierGoForward";
 NSString * const _WKMenuItemIdentifierInspectElement = @"WKMenuItemIdentifierInspectElement";
 NSString * const _WKMenuItemIdentifierLookUp = @"WKMenuItemIdentifierLookUp";
+NSString * const _WKMenuItemIdentifierAddHighlightToCurrentQuickNote = @"WKMenuItemIdentifierAddHighlightToCurrentQuickNote";
+NSString * const _WKMenuItemIdentifierAddHighlightToNewQuickNote = @"WKMenuItemIdentifierAddHighlightToNewQuickNote";
+
 NSString * const _WKMenuItemIdentifierOpenFrameInNewWindow = @"WKMenuItemIdentifierOpenFrameInNewWindow";
 NSString * const _WKMenuItemIdentifierOpenImageInNewWindow = @"WKMenuItemIdentifierOpenImageInNewWindow";
 NSString * const _WKMenuItemIdentifierOpenLink = @"WKMenuItemIdentifierOpenLink";
@@ -44,6 +47,7 @@ NSString * const _WKMenuItemIdentifierOpenLinkInNewWindow = @"WKMenuItemIdentifi
 NSString * const _WKMenuItemIdentifierOpenMediaInNewWindow = @"WKMenuItemIdentifierOpenMediaInNewWindow";
 NSString * const _WKMenuItemIdentifierPaste = @"WKMenuItemIdentifierPaste";
 NSString * const _WKMenuItemIdentifierReload = @"WKMenuItemIdentifierReload";
+NSString * const _WKMenuItemIdentifierRevealImage = @"WKMenuItemIdentifierRevealImage";
 NSString * const _WKMenuItemIdentifierSearchWeb = @"WKMenuItemIdentifierSearchWeb";
 NSString * const _WKMenuItemIdentifierShowHideMediaControls = @"WKMenuItemIdentifierShowHideMediaControls";
 NSString * const _WKMenuItemIdentifierToggleEnhancedFullScreen = @"WKMenuItemIdentifierToggleEnhancedFullScreen";
@@ -51,3 +55,12 @@ NSString * const _WKMenuItemIdentifierToggleFullScreen = @"WKMenuItemIdentifierT
 
 NSString * const _WKMenuItemIdentifierShareMenu = @"WKMenuItemIdentifierShareMenu";
 NSString * const _WKMenuItemIdentifierSpeechMenu = @"WKMenuItemIdentifierSpeechMenu";
+
+NSString * const _WKMenuItemIdentifierTranslate = @"WKMenuItemIdentifierTranslate";
+NSString * const _WKMenuItemIdentifierCopyCroppedImage = @"WKMenuItemIdentifierCopyCroppedImage";
+
+NSString * const _WKMenuItemIdentifierSpellingMenu = @"WKMenuItemIdentifierSpellingMenu";
+NSString * const _WKMenuItemIdentifierShowSpellingPanel = @"WKMenuItemIdentifierShowSpellingPanel";
+NSString * const _WKMenuItemIdentifierCheckSpelling = @"WKMenuItemIdentifierCheckSpelling";
+NSString * const _WKMenuItemIdentifierCheckSpellingWhileTyping = @"WKMenuItemIdentifierCheckSpellingWhileTyping";
+NSString * const _WKMenuItemIdentifierCheckGrammarWithSpelling = @"WKMenuItemIdentifierCheckGrammarWithSpelling";

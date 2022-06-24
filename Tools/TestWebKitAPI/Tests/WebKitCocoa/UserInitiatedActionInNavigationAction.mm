@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #if PLATFORM(MAC)
 
@@ -37,7 +37,7 @@
 static bool finishedNavigation;
 
 @interface UserInitiatedActionInNavigationActionDelegate : NSObject <WKNavigationDelegate>
-@property (nonatomic, copy, nullable) void (^policyForNavigationAction)(WKNavigationAction *, void (^)(WKNavigationActionPolicy));
+@property (nonatomic, copy) void (^policyForNavigationAction)(WKNavigationAction *, void (^)(WKNavigationActionPolicy));
 @end
 
 @implementation UserInitiatedActionInNavigationActionDelegate
@@ -81,9 +81,9 @@ public:
 
     NSURL *URLWithFragment(NSString *fragment)
     {
-        NSURLComponents *URLComponents = [[NSURLComponents alloc] initWithURL:URL.get() resolvingAgainstBaseURL:NO];
-        URLComponents.fragment = fragment;
-        return URLComponents.URL;
+        auto urlComponents = adoptNS([[NSURLComponents alloc] initWithURL:URL.get() resolvingAgainstBaseURL:NO]);
+        [urlComponents setFragment:fragment];
+        return [urlComponents URL];
     }
 
     void loadTest(NSString *test)

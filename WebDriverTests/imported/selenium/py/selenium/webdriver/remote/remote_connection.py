@@ -15,118 +15,26 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import base64
 import logging
+import platform
 import socket
 import string
-import base64
+
+import certifi
+import urllib3
+import os
 
 try:
-    import http.client as httplib
-    from urllib import request as url_request
     from urllib import parse
 except ImportError:  # above is available in py3+, below is py2.7
-    import httplib as httplib
-    import urllib2 as url_request
     import urlparse as parse
-
-from selenium.webdriver.common import utils as common_utils
+from selenium import __version__
 from .command import Command
 from .errorhandler import ErrorCode
 from . import utils
 
 LOGGER = logging.getLogger(__name__)
-
-
-class Request(url_request.Request):
-    """
-    Extends the url_request.Request to support all HTTP request types.
-    """
-
-    def __init__(self, url, data=None, method=None):
-        """
-        Initialise a new HTTP request.
-
-        :Args:
-            - url - String for the URL to send the request to.
-            - data - Data to send with the request.
-        """
-        if method is None:
-            method = data is not None and 'POST' or 'GET'
-        elif method != 'POST' and method != 'PUT':
-            data = None
-        self._method = method
-        url_request.Request.__init__(self, url, data=data)
-
-    def get_method(self):
-        """
-        Returns the HTTP method used by this request.
-        """
-        return self._method
-
-
-class Response(object):
-    """
-    Represents an HTTP response.
-    """
-
-    def __init__(self, fp, code, headers, url):
-        """
-        Initialise a new Response.
-
-        :Args:
-            - fp - The response body file object.
-            - code - The HTTP status code returned by the server.
-            - headers - A dictionary of headers returned by the server.
-            - url - URL of the retrieved resource represented by this Response.
-        """
-        self.fp = fp
-        self.read = fp.read
-        self.code = code
-        self.headers = headers
-        self.url = url
-
-    def close(self):
-        """
-        Close the response body file object.
-        """
-        self.read = None
-        self.fp = None
-
-    def info(self):
-        """
-        Returns the response headers.
-        """
-        return self.headers
-
-    def geturl(self):
-        """
-        Returns the URL for the resource returned in this response.
-        """
-        return self.url
-
-
-class HttpErrorHandler(url_request.HTTPDefaultErrorHandler):
-    """
-    A custom HTTP error handler.
-
-    Used to return Response objects instead of raising an HTTPError exception.
-    """
-
-    def http_error_default(self, req, fp, code, msg, headers):
-        """
-        Default HTTP error handler.
-
-        :Args:
-            - req - The original Request object.
-            - fp - The response body file object.
-            - code - The HTTP status code returned by the server.
-            - msg - The HTTP status message returned by the server.
-            - headers - The response headers.
-
-        :Returns:
-            A new Response object.
-        """
-        return Response(fp, code, headers, req.get_full_url())
 
 
 class RemoteConnection(object):
@@ -135,7 +43,9 @@ class RemoteConnection(object):
     Communicates with the server using the WebDriver wire protocol:
     https://github.com/SeleniumHQ/selenium/wiki/JsonWireProtocol"""
 
+    browser_name = None
     _timeout = socket._GLOBAL_DEFAULT_TIMEOUT
+    _ca_certs = certifi.where()
 
     @classmethod
     def get_timeout(cls):
@@ -163,6 +73,25 @@ class RemoteConnection(object):
         cls._timeout = socket._GLOBAL_DEFAULT_TIMEOUT
 
     @classmethod
+    def get_certificate_bundle_path(cls):
+        """
+        :Returns:
+            Paths of the .pem encoded certificate to verify connection to comand executor
+        """
+        return cls._ca_certs
+
+    @classmethod
+    def set_certificate_bundle_path(cls, path):
+        """
+        Set the path to the certificate bundle to verify connection to command executor.
+        Can also be set to None to disable certificate validation.
+
+        :Args:
+            - path - path of a .pem encoded certificate chain.
+        """
+        cls._ca_certs = path
+
+    @classmethod
     def get_remote_connection_headers(cls, parsed_url, keep_alive=False):
         """
         Get headers for remote request.
@@ -172,10 +101,14 @@ class RemoteConnection(object):
          - keep_alive (Boolean) - Is this a keep-alive connection (default: False)
         """
 
+        system = platform.system().lower()
+        if system == "darwin":
+            system = "mac"
+
         headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/json;charset=UTF-8',
-            'User-Agent': 'Python http auth'
+            'User-Agent': 'selenium/{} (python {})'.format(__version__, system)
         }
 
         if parsed_url.username:
@@ -191,44 +124,34 @@ class RemoteConnection(object):
 
         return headers
 
-    def __init__(self, remote_server_addr, keep_alive=False, resolve_ip=True):
-        # Attempt to resolve the hostname and get an IP address.
-        self.keep_alive = keep_alive
-        parsed_url = parse.urlparse(remote_server_addr)
-        addr = parsed_url.hostname
-        if parsed_url.hostname and resolve_ip:
-            port = parsed_url.port or None
-            if parsed_url.scheme == "https":
-                ip = parsed_url.hostname
-            elif port and not common_utils.is_connectable(port, parsed_url.hostname):
-                ip = None
-                LOGGER.info('Could not connect to port {} on host '
-                            '{}'.format(port, parsed_url.hostname))
-            else:
-                ip = common_utils.find_connectable_ip(parsed_url.hostname,
-                                                      port=port)
-            if ip:
-                netloc = ip
-                addr = netloc
-                if parsed_url.port:
-                    netloc = common_utils.join_host_port(netloc,
-                                                         parsed_url.port)
-                if parsed_url.username:
-                    auth = parsed_url.username
-                    if parsed_url.password:
-                        auth += ':%s' % parsed_url.password
-                    netloc = '%s@%s' % (auth, netloc)
-                remote_server_addr = parse.urlunparse(
-                    (parsed_url.scheme, netloc, parsed_url.path,
-                     parsed_url.params, parsed_url.query, parsed_url.fragment))
-            else:
-                LOGGER.info('Could not get IP address for host: %s' %
-                            parsed_url.hostname)
+    def _get_proxy_url(self):
+        if self._url.startswith('https://'):
+            return os.environ.get('https_proxy', os.environ.get('HTTPS_PROXY'))
+        elif self._url.startswith('http://'):
+            return os.environ.get('http_proxy', os.environ.get('HTTP_PROXY'))
 
+    def _get_connection_manager(self):
+        pool_manager_init_args = {
+            'timeout': self._timeout
+        }
+        if self._ca_certs:
+            pool_manager_init_args['cert_reqs'] = 'CERT_REQUIRED'
+            pool_manager_init_args['ca_certs'] = self._ca_certs
+
+        return urllib3.PoolManager(**pool_manager_init_args) if self._proxy_url is None else \
+            urllib3.ProxyManager(self._proxy_url, **pool_manager_init_args)
+
+    def __init__(self, remote_server_addr, keep_alive=False, resolve_ip=None, ignore_proxy=False):
+        if resolve_ip is not None:
+            import warnings
+            warnings.warn(
+                "'resolve_ip' option removed; ip addresses are now always resolved by urllib3.",
+                DeprecationWarning)
+        self.keep_alive = keep_alive
         self._url = remote_server_addr
+        self._proxy_url = self._get_proxy_url() if not ignore_proxy else None
         if keep_alive:
-            self._conn = httplib.HTTPConnection(
-                str(addr), str(parsed_url.port), timeout=self._timeout)
+            self._conn = self._get_connection_manager()
 
         self._commands = {
             Command.STATUS: ('GET', '/status'),
@@ -274,7 +197,7 @@ class RemoteConnection(object):
                 ('POST', '/session/$sessionId/element/$id/value'),
             Command.SEND_KEYS_TO_ACTIVE_ELEMENT:
                 ('POST', '/session/$sessionId/keys'),
-            Command.UPLOAD_FILE: ('POST', "/session/$sessionId/file"),
+            Command.UPLOAD_FILE: ('POST', "/session/$sessionId/se/file"),
             Command.GET_ELEMENT_VALUE:
                 ('GET', '/session/$sessionId/element/$id/value'),
             Command.GET_ELEMENT_TAG_NAME:
@@ -299,10 +222,9 @@ class RemoteConnection(object):
                 ('GET', '/session/$sessionId/element/$id/attribute/$name'),
             Command.GET_ELEMENT_PROPERTY:
                 ('GET', '/session/$sessionId/element/$id/property/$name'),
-            Command.ELEMENT_EQUALS:
-                ('GET', '/session/$sessionId/element/$id/equals/$other'),
             Command.GET_ALL_COOKIES: ('GET', '/session/$sessionId/cookie'),
             Command.ADD_COOKIE: ('POST', '/session/$sessionId/cookie'),
+            Command.GET_COOKIE: ('GET', '/session/$sessionId/cookie/$name'),
             Command.DELETE_ALL_COOKIES:
                 ('DELETE', '/session/$sessionId/cookie'),
             Command.DELETE_COOKIE:
@@ -310,6 +232,7 @@ class RemoteConnection(object):
             Command.SWITCH_TO_FRAME: ('POST', '/session/$sessionId/frame'),
             Command.SWITCH_TO_PARENT_FRAME: ('POST', '/session/$sessionId/frame/parent'),
             Command.SWITCH_TO_WINDOW: ('POST', '/session/$sessionId/window'),
+            Command.NEW_WINDOW: ('POST', '/session/$sessionId/window/new'),
             Command.CLOSE: ('DELETE', '/session/$sessionId/window'),
             Command.GET_ELEMENT_VALUE_OF_CSS_PROPERTY:
                 ('GET', '/session/$sessionId/element/$id/css/$propertyName'),
@@ -320,6 +243,8 @@ class RemoteConnection(object):
                 ('POST', '/session/$sessionId/timeouts/async_script'),
             Command.SET_TIMEOUTS:
                 ('POST', '/session/$sessionId/timeouts'),
+            Command.GET_TIMEOUTS:
+                ('GET', '/session/$sessionId/timeouts'),
             Command.DISMISS_ALERT:
                 ('POST', '/session/$sessionId/dismiss_alert'),
             Command.W3C_DISMISS_ALERT:
@@ -429,9 +354,9 @@ class RemoteConnection(object):
             Command.GET_SESSION_STORAGE_SIZE:
                 ('GET', '/session/$sessionId/session_storage/size'),
             Command.GET_LOG:
-                ('POST', '/session/$sessionId/log'),
+                ('POST', '/session/$sessionId/se/log'),
             Command.GET_AVAILABLE_LOG_TYPES:
-                ('GET', '/session/$sessionId/log/types'),
+                ('GET', '/session/$sessionId/se/log/types'),
             Command.CURRENT_CONTEXT_HANDLE:
                 ('GET', '/session/$sessionId/context'),
             Command.CONTEXT_HANDLES:
@@ -448,7 +373,7 @@ class RemoteConnection(object):
         """
         Send a command to the remote server.
 
-        Any path subtitutions required for the URL mapped to the command should be
+        Any path substitutions required for the URL mapped to the command should be
         included in the command parameters.
 
         :Args:
@@ -481,88 +406,61 @@ class RemoteConnection(object):
 
         parsed_url = parse.urlparse(url)
         headers = self.get_remote_connection_headers(parsed_url, self.keep_alive)
+        resp = None
+        if body and method != 'POST' and method != 'PUT':
+            body = None
 
         if self.keep_alive:
-            if body and method != 'POST' and method != 'PUT':
-                body = None
-            try:
-                self._conn.request(method, parsed_url.path, body, headers)
-                resp = self._conn.getresponse()
-            except (httplib.HTTPException, socket.error):
-                self._conn.close()
-                raise
+            resp = self._conn.request(method, url, body=body, headers=headers)
 
             statuscode = resp.status
         else:
-            password_manager = None
-            if parsed_url.username:
-                netloc = parsed_url.hostname
-                if parsed_url.port:
-                    netloc += ":%s" % parsed_url.port
-                cleaned_url = parse.urlunparse((
-                    parsed_url.scheme,
-                    netloc,
-                    parsed_url.path,
-                    parsed_url.params,
-                    parsed_url.query,
-                    parsed_url.fragment))
-                password_manager = url_request.HTTPPasswordMgrWithDefaultRealm()
-                password_manager.add_password(None,
-                                              "%s://%s" % (parsed_url.scheme, netloc),
-                                              parsed_url.username,
-                                              parsed_url.password)
-                request = Request(cleaned_url, data=body.encode('utf-8'), method=method)
-            else:
-                request = Request(url, data=body.encode('utf-8'), method=method)
+            conn = self._get_connection_manager()
+            with conn as http:
+                resp = http.request(method, url, body=body, headers=headers)
 
-            for key, val in headers.items():
-                request.add_header(key, val)
-
-            if password_manager:
-                opener = url_request.build_opener(url_request.HTTPRedirectHandler(),
-                                                  HttpErrorHandler(),
-                                                  url_request.HTTPBasicAuthHandler(password_manager))
-            else:
-                opener = url_request.build_opener(url_request.HTTPRedirectHandler(),
-                                                  HttpErrorHandler())
-            resp = opener.open(request, timeout=self._timeout)
-            statuscode = resp.code
+            statuscode = resp.status
             if not hasattr(resp, 'getheader'):
                 if hasattr(resp.headers, 'getheader'):
                     resp.getheader = lambda x: resp.headers.getheader(x)
                 elif hasattr(resp.headers, 'get'):
                     resp.getheader = lambda x: resp.headers.get(x)
 
-        data = resp.read()
+        data = resp.data.decode('UTF-8')
         try:
             if 300 <= statuscode < 304:
                 return self._request('GET', resp.getheader('location'))
-            body = data.decode('utf-8').replace('\x00', '').strip()
             if 399 < statuscode <= 500:
-                return {'status': statuscode, 'value': body}
+                return {'status': statuscode, 'value': data}
             content_type = []
             if resp.getheader('Content-Type') is not None:
                 content_type = resp.getheader('Content-Type').split(';')
             if not any([x.startswith('image/png') for x in content_type]):
+
                 try:
-                    data = utils.load_json(body.strip())
+                    data = utils.load_json(data.strip())
                 except ValueError:
                     if 199 < statuscode < 300:
                         status = ErrorCode.SUCCESS
                     else:
                         status = ErrorCode.UNKNOWN_ERROR
-                    return {'status': status, 'value': body.strip()}
+                    return {'status': status, 'value': data.strip()}
 
-                assert type(data) is dict, (
-                    'Invalid server response body: %s' % body)
                 # Some of the drivers incorrectly return a response
                 # with no 'value' field when they should return null.
                 if 'value' not in data:
                     data['value'] = None
                 return data
             else:
-                data = {'status': 0, 'value': body.strip()}
+                data = {'status': 0, 'value': data}
                 return data
         finally:
             LOGGER.debug("Finished Request")
             resp.close()
+
+    def close(self):
+        """
+        Clean up resources when finished with the remote_connection
+        """
+        if hasattr(self, '_conn'):
+            self._conn.clear()

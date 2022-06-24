@@ -29,6 +29,7 @@
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "Element.h"
+#include "StyleScopeOrdinal.h"
 #if ENABLE(PICTURE_IN_PICTURE_API)
 #include "HTMLVideoElement.h"
 #endif
@@ -40,6 +41,7 @@ namespace WebCore {
 class HTMLSlotElement;
 class SlotAssignment;
 class StyleSheetList;
+class WebAnimation;
 
 class ShadowRoot final : public DocumentFragment, public TreeScope {
     WTF_MAKE_ISO_ALLOCATED(ShadowRoot);
@@ -59,9 +61,10 @@ public:
 
     virtual ~ShadowRoot();
 
+    using TreeScope::getElementById;
     using TreeScope::rootNode;
 
-    Style::Scope& styleScope();
+    WEBCORE_EXPORT Style::Scope& styleScope();
     StyleSheetList& styleSheets();
 
     bool resetStyleInheritance() const { return m_resetStyleInheritance; }
@@ -71,8 +74,8 @@ public:
     bool containsFocusedElement() const { return m_containsFocusedElement; }
     void setContainsFocusedElement(bool flag) { m_containsFocusedElement = flag; }
 
-    Element* host() const { return m_host; }
-    void setHost(Element* host) { m_host = host; }
+    Element* host() const { return m_host.get(); }
+    void setHost(WeakPtr<Element>&& host) { m_host = WTFMove(host); }
 
     String innerHTML() const;
     ExceptionOr<void> setInnerHTML(const String&);
@@ -92,13 +95,14 @@ public:
     void slotFallbackDidChange(HTMLSlotElement&);
     void resolveSlotsBeforeNodeInsertionOrRemoval();
     void willRemoveAllChildren(ContainerNode&);
+    void willRemoveAssignedNode(const Node&);
 
     void didRemoveAllChildrenOfShadowHost();
     void didChangeDefaultSlot();
     void hostChildElementDidChange(const Element&);
     void hostChildElementDidChangeSlotAttribute(Element&, const AtomString& oldValue, const AtomString& newValue);
 
-    const Vector<Node*>* assignedNodesForSlot(const HTMLSlotElement&);
+    const Vector<WeakPtr<Node>>* assignedNodesForSlot(const HTMLSlotElement&);
 
     void moveShadowRootToNewParentScope(TreeScope&, Document&);
     void moveShadowRootToNewDocument(Document&);
@@ -110,6 +114,8 @@ public:
 #if ENABLE(PICTURE_IN_PICTURE_API)
     HTMLVideoElement* pictureInPictureElement() const;
 #endif
+
+    Vector<RefPtr<WebAnimation>> getAnimations();
 
 private:
     ShadowRoot(Document&, ShadowRootMode, DelegatesFocus);
@@ -130,12 +136,12 @@ private:
     bool m_containsFocusedElement { false };
     ShadowRootMode m_type { ShadowRootMode::UserAgent };
 
-    Element* m_host { nullptr };
+    WeakPtr<Element> m_host;
     RefPtr<StyleSheetList> m_styleSheetList;
 
     std::unique_ptr<Style::Scope> m_styleScope;
     std::unique_ptr<SlotAssignment> m_slotAssignment;
-    mutable Optional<PartMappings> m_partMappings;
+    mutable std::optional<PartMappings> m_partMappings;
 };
 
 inline Element* ShadowRoot::activeElement() const
@@ -148,6 +154,11 @@ inline ShadowRoot* Node::shadowRoot() const
     if (!is<Element>(*this))
         return nullptr;
     return downcast<Element>(*this).shadowRoot();
+}
+
+inline bool Node::isUserAgentShadowRoot() const
+{
+    return isShadowRoot() && downcast<ShadowRoot>(*this).mode() == ShadowRootMode::UserAgent;
 }
 
 inline ContainerNode* Node::parentOrShadowHostNode() const

@@ -52,6 +52,9 @@ public:
     void waitUntilLoadFinished();
     void waitUntilTitleChangedTo(const char* expectedTitle);
     void waitUntilTitleChanged();
+    void waitUntilIsWebProcessResponsiveChanged();
+    void assertFileIsCreated(const char*);
+    void assertJavaScriptBecomesTrue(const char*);
     void resizeView(int width, int height);
     void hideView();
     void selectAll();
@@ -64,19 +67,16 @@ public:
     void clickMouseButton(int x, int y, unsigned button = 1, unsigned mouseModifiers = 0);
     void keyStroke(unsigned keyVal, unsigned keyModifiers = 0);
 
-#if PLATFORM(GTK)
-    void showInWindow(GtkWindowType = GTK_WINDOW_POPUP);
-    void showInWindowAndWaitUntilMapped(GtkWindowType = GTK_WINDOW_POPUP, int width = 0, int height = 0);
-    void emitPopupMenuSignal();
-#endif
+    void showInWindow(int width = 0, int height = 0);
 
-#if PLATFORM(WPE)
-    void showInWindow();
+#if PLATFORM(GTK)
+    void emitPopupMenuSignal();
 #endif
 
     WebKitJavascriptResult* runJavaScriptAndWaitUntilFinished(const char* javascript, GError**);
     WebKitJavascriptResult* runJavaScriptFromGResourceAndWaitUntilFinished(const char* resource, GError**);
     WebKitJavascriptResult* runJavaScriptInWorldAndWaitUntilFinished(const char* javascript, const char* world, GError**);
+    WebKitJavascriptResult* runJavaScriptWithoutForcedUserGesturesAndWaitUntilFinished(const char* javascript, GError**);
 
     // Javascript result helpers.
     static char* javascriptResultToCString(WebKitJavascriptResult*);
@@ -113,10 +113,5 @@ public:
 
 #if PLATFORM(GTK)
     GtkWidget* m_parentWindow { nullptr };
-#endif
-
-private:
-#if PLATFORM(GTK)
-    void doMouseButtonEvent(GdkEventType, int, int, unsigned, unsigned);
 #endif
 };

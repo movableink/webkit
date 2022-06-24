@@ -23,23 +23,26 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import print_function
-import BaseHTTPServer
-import SocketServer
+
 import logging
-import json
 import os
 import sys
 import urllib
 
-from webkitpy.common.memoized import memoized
+if sys.version_info > (3, 0):
+    from http.server import HTTPServer
+    from socketserver import ThreadingMixIn
+else:
+    from BaseHTTPServer import HTTPServer
+    from SocketServer import ThreadingMixIn
+
 from webkitpy.tool.servers.reflectionhandler import ReflectionHandler
-from webkitpy.port import builders
 
 
 _log = logging.getLogger(__name__)
 
 
-class GardeningHTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
+class GardeningHTTPServer(ThreadingMixIn, HTTPServer):
     def __init__(self, httpd_port, config):
         server_name = ''
         self.tool = config['tool']
@@ -63,8 +66,8 @@ class GardeningHTTPRequestHandler(ReflectionHandler):
         '..',
         '..',
         '..',
-        'BuildSlaveSupport',
-        'build.webkit.org-config',
+        'CISupport',
+        'build-webkit-org',
         'public_html',
         'TestFailures')
 

@@ -13,7 +13,7 @@
 
 #include <stddef.h>
 
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 
@@ -45,11 +45,11 @@ class ComfortNoise {
   // Resets the state. Should be called before each new comfort noise period.
   void Reset();
 
-  // Update the comfort noise generator with the parameters in |packet|.
+  // Update the comfort noise generator with the parameters in `packet`.
   int UpdateParameters(const Packet& packet);
 
-  // Generates |requested_length| samples of comfort noise and writes to
-  // |output|. If this is the first in call after Reset (or first after creating
+  // Generates `requested_length` samples of comfort noise and writes to
+  // `output`. If this is the first in call after Reset (or first after creating
   // the object), it will also mix in comfort noise at the end of the
   // SyncBuffer object provided in the constructor.
   int Generate(size_t requested_length, AudioMultiVector* output);

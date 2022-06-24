@@ -28,6 +28,8 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "HTTPParsers.h"
+#include "Logging.h"
 #include "SWServer.h"
 #include "SWServerToContextConnection.h"
 #include "SWServerWorker.h"
@@ -41,14 +43,17 @@ static ServiceWorkerRegistrationIdentifier generateServiceWorkerRegistrationIden
     return ServiceWorkerRegistrationIdentifier::generate();
 }
 
-SWServerRegistration::SWServerRegistration(SWServer& server, const ServiceWorkerRegistrationKey& key, ServiceWorkerUpdateViaCache updateViaCache, const URL& scopeURL, const URL& scriptURL)
+SWServerRegistration::SWServerRegistration(SWServer& server, const ServiceWorkerRegistrationKey& key, ServiceWorkerUpdateViaCache updateViaCache, const URL& scopeURL, const URL& scriptURL, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier, NavigationPreloadState&& navigationPreloadState)
     : m_identifier(generateServiceWorkerRegistrationIdentifier())
     , m_registrationKey(key)
     , m_updateViaCache(updateViaCache)
     , m_scopeURL(scopeURL)
     , m_scriptURL(scriptURL)
+    , m_serviceWorkerPageIdentifier(serviceWorkerPageIdentifier)
     , m_server(server)
     , m_creationTime(MonotonicTime::now())
+    , m_softUpdateTimer { *this, &SWServerRegistration::softUpdate }
+    , m_preloadState(WTFMove(navigationPreloadState))
 {
     m_scopeURL.removeFragmentIdentifier();
 }
@@ -95,7 +100,7 @@ void SWServerRegistration::updateRegistrationState(ServiceWorkerRegistrationStat
         break;
     };
 
-    Optional<ServiceWorkerData> serviceWorkerData;
+    std::optional<ServiceWorkerData> serviceWorkerData;
     if (worker)
         serviceWorkerData = worker->data();
 
@@ -134,7 +139,7 @@ void SWServerRegistration::fireUpdateFoundEvent()
     });
 }
 
-void SWServerRegistration::forEachConnection(const WTF::Function<void(SWServer::Connection&)>& apply)
+void SWServerRegistration::forEachConnection(const Function<void(SWServer::Connection&)>& apply)
 {
     for (auto connectionIdentifierWithClients : m_connectionsWithClientRegistrations.values()) {
         if (auto* connection = m_server.connection(connectionIdentifierWithClients))
@@ -144,15 +149,15 @@ void SWServerRegistration::forEachConnection(const WTF::Function<void(SWServer::
 
 ServiceWorkerRegistrationData SWServerRegistration::data() const
 {
-    Optional<ServiceWorkerData> installingWorkerData;
+    std::optional<ServiceWorkerData> installingWorkerData;
     if (m_installingWorker)
         installingWorkerData = m_installingWorker->data();
 
-    Optional<ServiceWorkerData> waitingWorkerData;
+    std::optional<ServiceWorkerData> waitingWorkerData;
     if (m_waitingWorker)
         waitingWorkerData = m_waitingWorker->data();
 
-    Optional<ServiceWorkerData> activeWorkerData;
+    std::optional<ServiceWorkerData> activeWorkerData;
     if (m_activeWorker)
         activeWorkerData = m_activeWorker->data();
 
@@ -169,22 +174,20 @@ void SWServerRegistration::removeClientServiceWorkerRegistration(SWServerConnect
     m_connectionsWithClientRegistrations.remove(connectionIdentifier);
 }
 
-void SWServerRegistration::addClientUsingRegistration(const ServiceWorkerClientIdentifier& clientIdentifier)
+void SWServerRegistration::addClientUsingRegistration(const ScriptExecutionContextIdentifier& clientIdentifier)
 {
-    auto addResult = m_clientsUsingRegistration.ensure(clientIdentifier.serverConnectionIdentifier, [] {
-        return HashSet<DocumentIdentifier> { };
-    }).iterator->value.add(clientIdentifier.contextIdentifier);
+    auto addResult = m_clientsUsingRegistration.add(clientIdentifier.processIdentifier(), HashSet<ScriptExecutionContextIdentifier> { }).iterator->value.add(clientIdentifier);
     ASSERT_UNUSED(addResult, addResult.isNewEntry);
 }
 
-void SWServerRegistration::removeClientUsingRegistration(const ServiceWorkerClientIdentifier& clientIdentifier)
+void SWServerRegistration::removeClientUsingRegistration(const ScriptExecutionContextIdentifier& clientIdentifier)
 {
-    auto iterator = m_clientsUsingRegistration.find(clientIdentifier.serverConnectionIdentifier);
+    auto iterator = m_clientsUsingRegistration.find(clientIdentifier.processIdentifier());
     ASSERT(iterator != m_clientsUsingRegistration.end());
     if (iterator == m_clientsUsingRegistration.end())
         return;
 
-    bool wasRemoved = iterator->value.remove(clientIdentifier.contextIdentifier);
+    bool wasRemoved = iterator->value.remove(clientIdentifier);
     ASSERT_UNUSED(wasRemoved, wasRemoved);
 
     if (iterator->value.isEmpty())
@@ -231,7 +234,7 @@ bool SWServerRegistration::tryClear()
 void SWServerRegistration::clear()
 {
     if (m_preInstallationWorker) {
-        ASSERT(m_preInstallationWorker->state() == ServiceWorkerState::Redundant);
+        ASSERT(m_preInstallationWorker->state() == ServiceWorkerState::Parsed);
         m_preInstallationWorker->terminate();
         m_preInstallationWorker = nullptr;
     }
@@ -344,15 +347,15 @@ bool SWServerRegistration::isUnregistered() const
     return m_server.getRegistration(key()) != this;
 }
 
-void SWServerRegistration::controlClient(ServiceWorkerClientIdentifier identifier)
+void SWServerRegistration::controlClient(ScriptExecutionContextIdentifier identifier)
 {
     ASSERT(activeWorker());
 
     addClientUsingRegistration(identifier);
 
-    HashSet<DocumentIdentifier> identifiers;
-    identifiers.add(identifier.contextIdentifier);
-    m_server.connection(identifier.serverConnectionIdentifier)->notifyClientsOfControllerChange(identifiers, activeWorker()->data());
+    HashSet<ScriptExecutionContextIdentifier> identifiers;
+    identifiers.add(identifier);
+    m_server.connection(identifier.processIdentifier())->notifyClientsOfControllerChange(identifiers, activeWorker()->data());
 }
 
 bool SWServerRegistration::shouldSoftUpdate(const FetchOptions& options) const
@@ -363,18 +366,57 @@ bool SWServerRegistration::shouldSoftUpdate(const FetchOptions& options) const
     return WebCore::isNonSubresourceRequest(options.destination) && isStale();
 }
 
-// https://w3c.github.io/ServiceWorker/#soft-update
 void SWServerRegistration::softUpdate()
 {
-    auto* worker = getNewestWorker();
-    if (!worker)
+    m_server.softUpdate(*this);
+}
+
+void SWServerRegistration::scheduleSoftUpdate(IsAppInitiated isAppInitiated)
+{
+    // To avoid scheduling many updates during a single page load, we do soft updates on a 1 second delay and keep delaying
+    // as long as soft update requests keep coming. This seems to match Chrome's behavior.
+    if (m_softUpdateTimer.isActive())
         return;
 
-    // FIXME: We should schedule an update job.
-    m_server.runServiceWorkerIfNecessary(worker->identifier(), [serviceWorkerIdentifier = worker->identifier()](auto* contextConnection) {
-        if (contextConnection)
-            contextConnection->softUpdate(serviceWorkerIdentifier);
-    });
+    m_isAppInitiated = isAppInitiated == IsAppInitiated::Yes;
+
+    RELEASE_LOG(ServiceWorker, "SWServerRegistration::softUpdateIfNeeded");
+    m_softUpdateTimer.startOneShot(softUpdateDelay);
+}
+
+// https://w3c.github.io/ServiceWorker/#dom-navigationpreloadmanager-enable, steps run in parallel.
+std::optional<ExceptionData> SWServerRegistration::enableNavigationPreload()
+{
+    if (!m_activeWorker)
+        return ExceptionData { InvalidStateError, "No active worker"_s };
+
+    m_preloadState.enabled = true;
+    m_server.storeRegistrationForWorker(*m_activeWorker);
+    return { };
+}
+
+// https://w3c.github.io/ServiceWorker/#dom-navigationpreloadmanager-disable, steps run in parallel.
+std::optional<ExceptionData> SWServerRegistration::disableNavigationPreload()
+{
+    if (!m_activeWorker)
+        return ExceptionData { InvalidStateError, "No active worker"_s };
+
+    m_preloadState.enabled = false;
+    m_server.storeRegistrationForWorker(*m_activeWorker);
+    return { };
+}
+
+// https://w3c.github.io/ServiceWorker/#dom-navigationpreloadmanager-setheadervalue, steps run in parallel.
+std::optional<ExceptionData> SWServerRegistration::setNavigationPreloadHeaderValue(String&& headerValue)
+{
+    if (!isValidHTTPHeaderValue(headerValue))
+        return ExceptionData { TypeError, "Invalid header value"_s };
+    if (!m_activeWorker)
+        return ExceptionData { InvalidStateError, "No active worker"_s };
+
+    m_preloadState.headerValue = WTFMove(headerValue);
+    m_server.storeRegistrationForWorker(*m_activeWorker);
+    return { };
 }
 
 } // namespace WebCore

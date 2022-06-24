@@ -41,6 +41,7 @@ public:
 
     PasteboardCustomData takeCustomData();
 
+    bool hasNonDefaultData() const;
     bool isStatic() const final { return true; }
 
     bool hasData() final;
@@ -56,20 +57,19 @@ public:
     void clear() final;
     void clear(const String& type) final;
 
-    void read(PasteboardPlainText&) final { }
-    void read(PasteboardWebContentReader&, WebContentReadingPolicy) final { }
+    void read(PasteboardPlainText&, PlainTextURLReadingPolicy = PlainTextURLReadingPolicy::AllowURL, std::optional<size_t> = std::nullopt) final { }
+    void read(PasteboardWebContentReader&, WebContentReadingPolicy, std::optional<size_t> = std::nullopt) final { }
 
-    void write(const PasteboardURL&) final { }
-    void write(const PasteboardImage&) final { }
-    void write(const PasteboardWebContent&) final { }
+    void write(const PasteboardURL&) final;
+    void write(const PasteboardImage&) final;
+    void write(const PasteboardWebContent&) final;
+    void writeMarkup(const String&) final;
+    void writePlainText(const String&, SmartReplaceOption) final;
 
     void writeCustomData(const Vector<PasteboardCustomData>&) final { }
 
-    Pasteboard::FileContentState fileContentState() final { return FileContentState::NoFileOrImageData; }
+    Pasteboard::FileContentState fileContentState() final { return m_fileContentState; }
     bool canSmartReplace() final { return false; }
-
-    void writeMarkup(const String&) final { }
-    void writePlainText(const String&, SmartReplaceOption) final { }
 
 #if ENABLE(DRAG_SUPPORT)
     void setDragImage(DragImage, const IntPoint&) final { }
@@ -77,6 +77,8 @@ public:
 
 private:
     PasteboardCustomData m_customData;
+    HashSet<String> m_nonDefaultDataTypes;
+    Pasteboard::FileContentState m_fileContentState { Pasteboard::FileContentState::NoFileOrImageData };
 };
 
 }

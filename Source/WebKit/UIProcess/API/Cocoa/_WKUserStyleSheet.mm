@@ -27,10 +27,15 @@
 #import "_WKUserStyleSheetInternal.h"
 
 #import "APIArray.h"
+#import "WKContentWorldInternal.h"
 #import "WKNSArray.h"
 #import "WKNSURLExtras.h"
+#import "WKWebViewInternal.h"
 #import "WebKit2Initialize.h"
+#import "WebPageProxy.h"
 #import "_WKUserContentWorldInternal.h"
+#import <WebCore/WebCoreObjCExtras.h>
+#import <wtf/cocoa/VectorCocoa.h>
 
 @implementation _WKUserStyleSheet
 
@@ -42,39 +47,26 @@
     // FIXME: In the API test, we can use generateUniqueURL below before the API::Object constructor has done this... where should this really be?
     WebKit::InitializeWebKit2();
 
-    API::Object::constructInWrapper<API::UserStyleSheet>(self, WebCore::UserStyleSheet { WTF::String(source), API::UserStyleSheet::generateUniqueURL(), { }, { }, forMainFrameOnly ? WebCore::InjectInTopFrameOnly : WebCore::InjectInAllFrames, WebCore::UserStyleUserLevel }, API::UserContentWorld::normalWorld());
+    API::Object::constructInWrapper<API::UserStyleSheet>(self, WebCore::UserStyleSheet { source, API::UserStyleSheet::generateUniqueURL(), { }, { }, forMainFrameOnly ? WebCore::UserContentInjectedFrames::InjectInTopFrameOnly : WebCore::UserContentInjectedFrames::InjectInAllFrames, WebCore::UserStyleUserLevel }, API::ContentWorld::pageContentWorld());
 
     return self;
 }
 
-- (instancetype)initWithSource:(NSString *)source forMainFrameOnly:(BOOL)forMainFrameOnly legacyWhitelist:(NSArray<NSString *> *)legacyWhitelist legacyBlacklist:(NSArray<NSString *> *)legacyBlacklist userContentWorld:(_WKUserContentWorld *)userContentWorld
+- (instancetype)initWithSource:(NSString *)source forWKWebView:(WKWebView *)webView forMainFrameOnly:(BOOL)forMainFrameOnly includeMatchPatternStrings:(NSArray<NSString *> *)includeMatchPatternStrings excludeMatchPatternStrings:(NSArray<NSString *> *)excludeMatchPatternStrings baseURL:(NSURL *)baseURL level:(_WKUserStyleLevel)level contentWorld:(WKContentWorld *)contentWorld
 {
-    if (!(self = [super init]))
-        return nil;
 
-    // FIXME: In the API test, we can use generateUniqueURL below before the API::Object constructor has done this... where should this really be?
     WebKit::InitializeWebKit2();
 
-    API::Object::constructInWrapper<API::UserStyleSheet>(self, WebCore::UserStyleSheet { WTF::String(source), API::UserStyleSheet::generateUniqueURL(), API::toStringVector(legacyWhitelist), API::toStringVector(legacyBlacklist), forMainFrameOnly ? WebCore::InjectInTopFrameOnly : WebCore::InjectInAllFrames, WebCore::UserStyleUserLevel }, *userContentWorld->_userContentWorld);
-
-    return self;
-}
-
-- (instancetype)initWithSource:(NSString *)source forMainFrameOnly:(BOOL)forMainFrameOnly legacyWhitelist:(NSArray<NSString *> *)legacyWhitelist legacyBlacklist:(NSArray<NSString *> *)legacyBlacklist baseURL:(NSURL *)baseURL userContentWorld:(_WKUserContentWorld *)userContentWorld
-{
-    if (!(self = [super init]))
-        return nil;
-
-    // FIXME: In the API test, we can use generateUniqueURL below before the API::Object constructor has done this... where should this really be?
-    WebKit::InitializeWebKit2();
-
-    API::Object::constructInWrapper<API::UserStyleSheet>(self, WebCore::UserStyleSheet { WTF::String(source), {  URL(), WTF::String([baseURL _web_originalDataAsWTFString]) }, API::toStringVector(legacyWhitelist), API::toStringVector(legacyBlacklist), forMainFrameOnly ? WebCore::InjectInTopFrameOnly : WebCore::InjectInAllFrames, WebCore::UserStyleUserLevel }, *userContentWorld->_userContentWorld);
+    API::Object::constructInWrapper<API::UserStyleSheet>(self, WebCore::UserStyleSheet { source, baseURL, makeVector<String>(includeMatchPatternStrings), makeVector<String>(excludeMatchPatternStrings), forMainFrameOnly ? WebCore::UserContentInjectedFrames::InjectInTopFrameOnly : WebCore::UserContentInjectedFrames::InjectInAllFrames, API::toWebCoreUserStyleLevel(level), webView ? std::optional<WebCore::PageIdentifier>([webView _page]->webPageID()) : std::nullopt }, contentWorld ? *contentWorld->_contentWorld : API::ContentWorld::pageContentWorld());
 
     return self;
 }
 
 - (void)dealloc
 {
+    if (WebCoreObjCScheduleDeallocateOnMainRunLoop(_WKUserStyleSheet.class, self))
+        return;
+
     _userStyleSheet->~UserStyleSheet();
 
     [super dealloc];
@@ -92,7 +84,7 @@
 
 - (BOOL)isForMainFrameOnly
 {
-    return _userStyleSheet->userStyleSheet().injectedFrames() == WebCore::InjectInTopFrameOnly;
+    return _userStyleSheet->userStyleSheet().injectedFrames() == WebCore::UserContentInjectedFrames::InjectInTopFrameOnly;
 }
 
 - (id)copyWithZone:(NSZone *)zone

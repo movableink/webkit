@@ -28,7 +28,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 
-#import "UIKitSPI.h"
+#import "UserInterfaceIdiom.h"
 #import "WKContentView.h"
 #import "WKContentViewInteraction.h"
 #import "WKFormPopover.h"
@@ -74,7 +74,18 @@ CGFloat adjustedFontSize(CGFloat textWidth, UIFont *font, CGFloat initialFontSiz
     }
 
     RetainPtr<NSObject <WKFormControl>> control;
-    if (currentUserInterfaceIdiomIsPad())
+
+#if ENABLE(IOS_FORM_CONTROL_REFRESH)
+    if (view._shouldUseContextMenusForFormControls) {
+        if (view.focusedElementInformation.isMultiSelect)
+            control = adoptNS([[WKSelectMultiplePicker alloc] initWithView:view]);
+        else
+            control = adoptNS([[WKSelectPicker alloc] initWithView:view]);
+        return [super initWithView:view control:WTFMove(control)];
+    }
+#endif
+
+    if (!currentUserInterfaceIdiomIsSmallScreen())
         control = adoptNS([[WKSelectPopover alloc] initWithView:view hasGroups:hasGroups]);
     else if (view.focusedElementInformation.isMultiSelect || hasGroups)
         control = adoptNS([[WKMultipleSelectPicker alloc] initWithView:view]);
@@ -99,6 +110,12 @@ CGFloat adjustedFontSize(CGFloat textWidth, UIFont *font, CGFloat initialFontSiz
     if (![self.control isKindOfClass:[WKSelectPopover class]])
         return nil;
     return [(WKSelectPopover *)self.control tableViewController].title;
+}
+
+- (BOOL)selectFormAccessoryHasCheckedItemAtRow:(long)rowIndex
+{
+    return [self.control respondsToSelector:@selector(selectFormAccessoryHasCheckedItemAtRow:)]
+        && [id<WKSelectTesting>(self.control) selectFormAccessoryHasCheckedItemAtRow:rowIndex];
 }
 
 @end

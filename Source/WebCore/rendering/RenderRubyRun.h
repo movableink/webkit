@@ -57,8 +57,6 @@ public:
 
     bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
 
-    RenderBlock* firstLineBlock() const override;
-
     void getOverhang(bool firstLine, RenderObject* startRenderer, RenderObject* endRenderer, float& startOverhang, float& endOverhang) const;
 
     static RenderPtr<RenderRubyRun> staticCreateRubyRun(const RenderObject* parentRuby);
@@ -77,6 +75,7 @@ private:
     bool isRubyRun() const override { return true; }
     const char* renderName() const override { return "RenderRubyRun (anonymous)"; }
     bool createsAnonymousWrapper() const override { return true; }
+    bool canDropAnonymousBlockChild() const override { return false; }
 
 private:
     UChar m_lastCharacter;

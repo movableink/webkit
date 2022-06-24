@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007-2020 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,16 +47,16 @@ const float DragController::DragImageAlpha = 0.75f;
 
 bool DragController::isCopyKeyDown(const DragData& dragData)
 {
-    return dragData.flags() & DragApplicationIsCopyKeyDown;
+    return dragData.flags().contains(DragApplicationFlags::IsCopyKeyDown);
 }
 
-DragOperation DragController::dragOperation(const DragData& dragData)
+std::optional<DragOperation> DragController::dragOperation(const DragData& dragData)
 {
     // FIXME: This logic is incomplete
     if (dragData.containsURL())
-        return DragOperationCopy;
+        return DragOperation::Copy;
 
-    return DragOperationNone;
+    return std::nullopt;
 }
 
 const IntSize& DragController::maxDragImageSize()

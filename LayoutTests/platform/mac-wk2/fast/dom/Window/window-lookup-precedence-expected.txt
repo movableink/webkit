@@ -4,7 +4,7 @@ On success, you will see a series of "PASS" messages, followed by "TEST COMPLETE
 
 
 
- 
+
 
 PASS 'function alert() {    [native code]}' is 'function alert() {    [native code]}'
 PASS 'function alert() {    [native code]}' is 'function alert() {    [native code]}'
@@ -116,8 +116,6 @@ PASS 'function Event() {    [native code]}' is 'function Event() {    [native co
 PASS 'function Event() {    [native code]}' is 'function Event() {    [native code]}'
 PASS 'function HTMLAnchorElement() {    [native code]}' is 'function HTMLAnchorElement() {    [native code]}'
 PASS 'function HTMLAnchorElement() {    [native code]}' is 'function HTMLAnchorElement() {    [native code]}'
-PASS 'function HTMLAppletElement() {    [native code]}' is 'function HTMLAppletElement() {    [native code]}'
-PASS 'function HTMLAppletElement() {    [native code]}' is 'function HTMLAppletElement() {    [native code]}'
 PASS 'function HTMLAreaElement() {    [native code]}' is 'function HTMLAreaElement() {    [native code]}'
 PASS 'function HTMLAreaElement() {    [native code]}' is 'function HTMLAreaElement() {    [native code]}'
 PASS 'function HTMLBRElement() {    [native code]}' is 'function HTMLBRElement() {    [native code]}'
@@ -324,7 +322,7 @@ PASS win['statusbar'] == '[object BarProp]' is true
 PASS win['statusbar'] == '[object BarProp]' is true
 PASS win['toolbar'] == '[object BarProp]' is true
 PASS win['toolbar'] == '[object BarProp]' is true
-PASS win['console'] == '[object Console]' is true
+PASS win['console'] == '[object console]' is true
 PASS win['history'] == '[object History]' is true
 PASS win['navigator'] == '[object Navigator]' is true
 PASS win['navigator'] == '[object Navigator]' is true

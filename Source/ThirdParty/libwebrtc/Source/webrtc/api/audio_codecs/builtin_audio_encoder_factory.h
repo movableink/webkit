@@ -12,11 +12,15 @@
 #define API_AUDIO_CODECS_BUILTIN_AUDIO_ENCODER_FACTORY_H_
 
 #include "api/audio_codecs/audio_encoder_factory.h"
-#include "rtc_base/scoped_ref_ptr.h"
+#include "api/scoped_refptr.h"
 
 namespace webrtc {
 
 // Creates a new factory that can create the built-in types of audio encoders.
+// Note: This will link with all the code implementing those codecs, so if you
+// only need a subset of the codecs, consider using
+// CreateAudioEncoderFactory<...codecs listed here...>() or
+// CreateOpusAudioEncoderFactory() instead.
 rtc::scoped_refptr<AudioEncoderFactory> CreateBuiltinAudioEncoderFactory();
 
 }  // namespace webrtc

@@ -24,6 +24,8 @@
  */
 
 #import "WKFoundation.h"
+#import <WebCore/ColorCocoa.h>
+#import <variant>
 #import <wtf/CompletionHandler.h>
 #import <wtf/RefPtr.h>
 #import <wtf/RetainPtr.h>
@@ -45,30 +47,28 @@ OBJC_CLASS WKSafeBrowsingTextView;
 #if PLATFORM(MAC)
 using ViewType = NSView;
 using RectType = NSRect;
-using ColorType = NSColor;
 #else
 using ViewType = UIView;
 using RectType = CGRect;
-using ColorType = UIColor;
 #endif
 
 @interface WKSafeBrowsingBox : ViewType {
 @package
 #if PLATFORM(MAC)
-    RetainPtr<ColorType> _backgroundColor;
+    RetainPtr<WebCore::CocoaColor> _backgroundColor;
 #endif
 }
-- (void)setSafeBrowsingBackgroundColor:(ColorType *)color;
+- (void)setSafeBrowsingBackgroundColor:(WebCore::CocoaColor *)color;
 @end
 
 #if PLATFORM(MAC)
-@interface WKSafeBrowsingWarning : WKSafeBrowsingBox<NSTextViewDelegate>
+@interface WKSafeBrowsingWarning : WKSafeBrowsingBox<NSTextViewDelegate, NSAccessibilityGroup>
 #else
 @interface WKSafeBrowsingWarning : UIScrollView<UITextViewDelegate>
 #endif
 {
 @package
-    CompletionHandler<void(Variant<WebKit::ContinueUnsafeLoad, URL>&&)> _completionHandler;
+    CompletionHandler<void(std::variant<WebKit::ContinueUnsafeLoad, URL>&&)> _completionHandler;
     RefPtr<const WebKit::SafeBrowsingWarning> _warning;
     WeakObjCPtr<WKSafeBrowsingTextView> _details;
     WeakObjCPtr<WKSafeBrowsingBox> _box;
@@ -77,7 +77,7 @@ using ColorType = UIColor;
 #endif
 }
 
-- (instancetype)initWithFrame:(RectType)frame safeBrowsingWarning:(const WebKit::SafeBrowsingWarning&)warning completionHandler:(CompletionHandler<void(Variant<WebKit::ContinueUnsafeLoad, URL>&&)>&&)completionHandler;
+- (instancetype)initWithFrame:(RectType)frame safeBrowsingWarning:(const WebKit::SafeBrowsingWarning&)warning completionHandler:(CompletionHandler<void(std::variant<WebKit::ContinueUnsafeLoad, URL>&&)>&&)completionHandler;
 
 - (BOOL)forMainFrameNavigation;
 

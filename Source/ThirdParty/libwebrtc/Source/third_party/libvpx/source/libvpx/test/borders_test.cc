@@ -31,7 +31,7 @@ class BordersTest
 
   virtual void PreEncodeFrameHook(::libvpx_test::VideoSource *video,
                                   ::libvpx_test::Encoder *encoder) {
-    if (video->frame() == 1) {
+    if (video->frame() == 0) {
       encoder->Control(VP8E_SET_CPUUSED, 1);
       encoder->Control(VP8E_SET_ENABLEAUTOALTREF, 1);
       encoder->Control(VP8E_SET_ARNR_MAXFRAMES, 7);
@@ -79,6 +79,6 @@ TEST_P(BordersTest, TestLowBitrate) {
   ASSERT_NO_FATAL_FAILURE(RunLoop(&video));
 }
 
-VP9_INSTANTIATE_TEST_CASE(BordersTest,
-                          ::testing::Values(::libvpx_test::kTwoPassGood));
+VP9_INSTANTIATE_TEST_SUITE(BordersTest,
+                           ::testing::Values(::libvpx_test::kTwoPassGood));
 }  // namespace

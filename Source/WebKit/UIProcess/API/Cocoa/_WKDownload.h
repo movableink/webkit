@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,17 +23,19 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import <Foundation/Foundation.h>
 #import <WebKit/WKFoundation.h>
 
-#import <Foundation/Foundation.h>
-
+@class WKFrameInfo;
 @class WKWebView;
+@class WKDownload;
 
-WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
+WK_CLASS_DEPRECATED_WITH_REPLACEMENT("WKDownload", macos(10.10, 12.0), ios(8.0, 15.0))
 @interface _WKDownload : NSObject <NSCopying>
 
-- (void)cancel;
++ (instancetype)downloadWithDownload:(WKDownload *)download WK_API_AVAILABLE(macos(12.0), ios(15.0));
 
+- (void)cancel;
 - (void)publishProgressAtURL:(NSURL *)URL WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
 
 @property (nonatomic, readonly) NSURLRequest *request;
@@ -41,5 +43,6 @@ WK_CLASS_AVAILABLE(macos(10.10), ios(8.0))
 @property (nonatomic, readonly, copy) NSArray<NSURL *> *redirectChain WK_API_AVAILABLE(macos(10.13.4), ios(11.3));
 @property (nonatomic, readonly) BOOL wasUserInitiated WK_API_AVAILABLE(macos(10.13.4), ios(11.3));
 @property (nonatomic, readonly) NSData *resumeData WK_API_AVAILABLE(macos(10.14.4), ios(12.2));
+@property (nonatomic, readonly) WKFrameInfo *originatingFrame WK_API_AVAILABLE(macos(10.15.4), ios(13.4));
 
 @end

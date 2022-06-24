@@ -1,3 +1,0 @@
-
-FAIL Miter joins are not drawn when the miter limit is exceeded, on exact right angles Can't find variable: OffscreenCanvas
-

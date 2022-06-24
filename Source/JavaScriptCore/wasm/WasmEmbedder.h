@@ -36,8 +36,8 @@
 
 namespace JSC {
 
+class CCallHelpers;
 class CallFrame;
-using ExecState = CallFrame;
 
 namespace Wasm {
 
@@ -49,10 +49,10 @@ class Signature;
 struct UnlinkedWasmToWasmCall;
 
 // Create wrapper code to call from embedder -> WebAssembly.
-using CreateEmbedderWrapper = WTF::Function<std::unique_ptr<InternalFunction>(CompilationContext&, const Signature&, Vector<UnlinkedWasmToWasmCall>*, const ModuleInformation&, MemoryMode, uint32_t)>;
+using CreateEmbedderWrapper = WTF::Function<std::unique_ptr<InternalFunction>(CCallHelpers&, const Signature&, Vector<UnlinkedWasmToWasmCall>*, const ModuleInformation&, MemoryMode, uint32_t)>;
 
 // Called as soon as an exception is detected. The return value is the PC to continue at.
-using ThrowWasmException = void* (*)(ExecState*, Wasm::ExceptionType, Instance*);
+using ThrowWasmException = void* (*)(CallFrame*, Wasm::ExceptionType, Instance*);
 
 } } // namespace JSC::Wasm
 

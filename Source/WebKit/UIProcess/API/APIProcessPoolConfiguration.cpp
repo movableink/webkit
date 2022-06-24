@@ -52,30 +52,38 @@ Ref<ProcessPoolConfiguration> ProcessPoolConfiguration::copy()
     copy->m_fullySynchronousModeIsAllowedForTesting = this->m_fullySynchronousModeIsAllowedForTesting;
     copy->m_ignoreSynchronousMessagingTimeoutsForTesting = this->m_ignoreSynchronousMessagingTimeoutsForTesting;
     copy->m_attrStyleEnabled = this->m_attrStyleEnabled;
+    copy->m_shouldThrowExceptionForGlobalConstantRedeclaration = this->m_shouldThrowExceptionForGlobalConstantRedeclaration;
     copy->m_overrideLanguages = this->m_overrideLanguages;
     copy->m_alwaysRunsAtBackgroundPriority = this->m_alwaysRunsAtBackgroundPriority;
     copy->m_shouldTakeUIBackgroundAssertion = this->m_shouldTakeUIBackgroundAssertion;
-    copy->m_shouldCaptureAudioInUIProcess = this->m_shouldCaptureAudioInUIProcess;
     copy->m_shouldCaptureDisplayInUIProcess = this->m_shouldCaptureDisplayInUIProcess;
     copy->m_shouldConfigureJSCForTesting = this->m_shouldConfigureJSCForTesting;
     copy->m_isJITEnabled = this->m_isJITEnabled;
-#if PLATFORM(IOS_FAMILY)
-    copy->m_ctDataConnectionServiceType = this->m_ctDataConnectionServiceType;
-#endif
     copy->m_presentingApplicationPID = this->m_presentingApplicationPID;
     copy->m_processSwapsOnNavigationFromClient = this->m_processSwapsOnNavigationFromClient;
     copy->m_processSwapsOnNavigationFromExperimentalFeatures = this->m_processSwapsOnNavigationFromExperimentalFeatures;
     copy->m_alwaysKeepAndReuseSwappedProcesses = this->m_alwaysKeepAndReuseSwappedProcesses;
     copy->m_processSwapsOnWindowOpenWithOpener = this->m_processSwapsOnWindowOpenWithOpener;
+    copy->m_processSwapsOnNavigationWithinSameNonHTTPFamilyProtocol = this->m_processSwapsOnNavigationWithinSameNonHTTPFamilyProtocol;
     copy->m_isAutomaticProcessWarmingEnabledByClient = this->m_isAutomaticProcessWarmingEnabledByClient;
     copy->m_usesWebProcessCache = this->m_usesWebProcessCache;
     copy->m_usesBackForwardCache = this->m_usesBackForwardCache;
-#if PLATFORM(COCOA)
-    copy->m_suppressesConnectionTerminationOnSystemChange = this->m_suppressesConnectionTerminationOnSystemChange;
-#endif
     copy->m_customWebContentServiceBundleIdentifier = this->m_customWebContentServiceBundleIdentifier;
     copy->m_usesSingleWebProcess = m_usesSingleWebProcess;
-
+#if PLATFORM(GTK) && !USE(GTK4)
+    copy->m_useSystemAppearanceForScrollbars = m_useSystemAppearanceForScrollbars;
+#endif
+#if PLATFORM(PLAYSTATION)
+    copy->m_webProcessPath = this->m_webProcessPath;
+    copy->m_networkProcessPath = this->m_networkProcessPath;
+    copy->m_userId = this->m_userId;
+#endif
+#if PLATFORM(GTK) || PLATFORM(WPE)
+    copy->m_memoryPressureHandlerConfiguration = this->m_memoryPressureHandlerConfiguration;
+#endif
+#if HAVE(AUDIT_TOKEN)
+    copy->m_presentingApplicationProcessToken = this->m_presentingApplicationProcessToken;
+#endif
     return copy;
 }
 

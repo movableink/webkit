@@ -1,6 +1,5 @@
-// FIXME: unskip when this is solved
-// https://bugs.webkit.org/show_bug.cgi?id=191163
-//@ skip if ["arm", "mips", "x86"].include?($architecture)
+//@ skip if $model == "Apple Watch Series 3" # Takes very long time to reproduce failure.
+
 function assert(b) {
     if (!b)
         throw new Error("Bad assertion");

@@ -23,45 +23,43 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "LegacyTileCache.h"
+#import "config.h"
+#import "LegacyTileCache.h"
 
 #if PLATFORM(IOS_FAMILY)
 
-#include "FontAntialiasingStateSaver.h"
-#include "LegacyTileGrid.h"
-#include "LegacyTileGridTile.h"
-#include "LegacyTileLayer.h"
-#include "LegacyTileLayerPool.h"
-#include "Logging.h"
-#include "SystemMemory.h"
-#include "WAKWindow.h"
-#include "WKGraphics.h"
-#include "WebCoreThreadRun.h"
-#include <CoreText/CoreText.h>
-#include <pal/spi/cocoa/QuartzCoreSPI.h>
-#include <wtf/MemoryPressureHandler.h>
-#include <wtf/RAMSize.h>
+#import "Color.h"
+#import "FontAntialiasingStateSaver.h"
+#import "LegacyTileGrid.h"
+#import "LegacyTileGridTile.h"
+#import "LegacyTileLayer.h"
+#import "LegacyTileLayerPool.h"
+#import "Logging.h"
+#import "SystemMemory.h"
+#import "WAKWindow.h"
+#import "WKGraphics.h"
+#import "WebCoreThreadRun.h"
+#import <CoreText/CoreText.h>
+#import <pal/spi/cocoa/QuartzCoreSPI.h>
+#import <wtf/MemoryPressureHandler.h>
+#import <wtf/RAMSize.h>
 
+// FIXME: This should go into a WAKViewInternals.h header.
 @interface WAKView (WebViewExtras)
-- (void)_dispatchTileDidDraw:(CALayer*)tile;
+- (void)_dispatchTileDidDraw:(CALayer *)tile;
 - (void)_willStartScrollingOrZooming;
 - (void)_didFinishScrollingOrZooming;
-- (void)_dispatchTileDidDraw;
-- (void)_scheduleLayerFlushForPendingTileCacheRepaint;
+- (void)_scheduleRenderingUpdateForPendingTileCacheRepaint;
 @end
 
 @interface LegacyTileCacheTombstone : NSObject {
     BOOL dead;
 }
 @property(getter=isDead) BOOL dead;
-
 @end
 
 @implementation LegacyTileCacheTombstone
-
 @synthesize dead;
-
 @end
 
 namespace WebCore {
@@ -78,7 +76,7 @@ LegacyTileCache::LegacyTileCache(WAKWindow* window)
 
 LegacyTileCache::~LegacyTileCache()
 {
-    [m_tombstone.get() setDead:true];
+    [m_tombstone setDead:true];
 }
 
 CGFloat LegacyTileCache::screenScale() const
@@ -134,7 +132,7 @@ void LegacyTileCache::setTilesOpaque(bool opaque)
     if (m_tilesOpaque == opaque)
         return;
 
-    LockHolder locker(m_tileMutex);
+    Locker locker { m_tileMutex };
 
     m_tilesOpaque = opaque;
     m_zoomedOutTileGrid->updateTileOpacity();
@@ -147,7 +145,7 @@ void LegacyTileCache::doLayoutTiles()
     if (isTileCreationSuspended())
         return;
 
-    LockHolder locker(m_tileMutex);
+    Locker locker { m_tileMutex };
     LegacyTileGrid* activeGrid = activeTileGrid();
     // Even though we aren't actually creating tiles in the inactive grid, we
     // still need to drop invalid tiles in response to a layout.
@@ -187,7 +185,7 @@ void LegacyTileCache::setCurrentScale(float scale)
     if (!keepsZoomedOutTiles() && !isTileInvalidationSuspended()) {
         // Tile invalidation is normally suspended during zooming by UIKit but some applications
         // using custom scrollviews may zoom without triggering the callbacks. Invalidate the tiles explicitly.
-        LockHolder locker(m_tileMutex);
+        Locker locker { m_tileMutex };
         activeTileGrid()->dropAllTiles();
         activeTileGrid()->createTiles(CoverVisibleOnly);
     }
@@ -212,7 +210,7 @@ void LegacyTileCache::commitScaleChange()
     ASSERT(m_pendingZoomedOutScale || m_pendingScale);
     ASSERT(m_tilingMode != Disabled);
     
-    LockHolder locker(m_tileMutex);
+    Locker locker { m_tileMutex };
 
     if (m_pendingZoomedOutScale) {
         m_zoomedOutTileGrid->setScale(m_pendingZoomedOutScale);
@@ -301,7 +299,7 @@ void LegacyTileCache::layoutTilesNow()
     if (m_tilingMode == Zooming)
         m_tilingMode = Minimal;
 
-    LockHolder locker(m_tileMutex);
+    Locker locker { m_tileMutex };
     LegacyTileGrid* activeGrid = activeTileGrid();
     if (activeGrid->checkDoSingleTileLayout()) {
         m_tilingMode = savedTilingMode;
@@ -314,14 +312,14 @@ void LegacyTileCache::layoutTilesNow()
 void LegacyTileCache::layoutTilesNowForRect(const IntRect& rect)
 {
     ASSERT(WebThreadIsLockedOrDisabled());
-    LockHolder locker(m_tileMutex);
+    Locker locker { m_tileMutex };
 
     activeTileGrid()->addTilesCoveringRect(rect);
 }
 
 void LegacyTileCache::removeAllNonVisibleTiles()
 {
-    LockHolder locker(m_tileMutex);
+    Locker locker { m_tileMutex };
     removeAllNonVisibleTilesInternal();
 }
 
@@ -343,7 +341,7 @@ void LegacyTileCache::removeAllNonVisibleTilesInternal()
 
 void LegacyTileCache::removeAllTiles()
 {
-    LockHolder locker(m_tileMutex);
+    Locker locker { m_tileMutex };
     m_zoomedOutTileGrid->dropAllTiles();
     if (m_zoomedInTileGrid)
         m_zoomedInTileGrid->dropAllTiles();
@@ -351,7 +349,7 @@ void LegacyTileCache::removeAllTiles()
 
 void LegacyTileCache::removeForegroundTiles()
 {
-    LockHolder locker(m_tileMutex);
+    Locker locker { m_tileMutex };
     if (!keepsZoomedOutTiles())
         m_zoomedOutTileGrid->dropAllTiles();
     if (m_zoomedInTileGrid)
@@ -360,13 +358,13 @@ void LegacyTileCache::removeForegroundTiles()
 
 void LegacyTileCache::setContentReplacementImage(RetainPtr<CGImageRef> contentReplacementImage)
 {
-    LockHolder locker(m_contentReplacementImageMutex);
+    Locker locker { m_contentReplacementImageMutex };
     m_contentReplacementImage = contentReplacementImage;
 }
 
 RetainPtr<CGImageRef> LegacyTileCache::contentReplacementImage() const
 {
-    LockHolder locker(m_contentReplacementImageMutex);
+    Locker locker { m_contentReplacementImageMutex };
     return m_contentReplacementImage;
 }
 
@@ -413,7 +411,7 @@ void LegacyTileCache::tileCreationTimerFired()
 {
     if (isTileCreationSuspended())
         return;
-    LockHolder locker(m_tileMutex);
+    Locker locker { m_tileMutex };
     createTilesInActiveGrid(CoverSpeculative);
 }
 
@@ -462,9 +460,8 @@ unsigned LegacyTileCache::tileCapacityForGrid(LegacyTileGrid* grid)
 Color LegacyTileCache::colorForGridTileBorder(LegacyTileGrid* grid) const
 {
     if (grid == m_zoomedOutTileGrid.get())
-        return Color(.3f, .0f, 0.4f, 0.5f);
-
-    return Color(.0f, .0f, 0.4f, 0.5f);
+        return SRGBA<uint8_t> { 51, 255, 0, 128 };
+    return SRGBA<uint8_t> { 51, 230, 0, 128 };
 }
 
 static bool shouldRepaintInPieces(const CGRect& dirtyRect, CGSRegionObj dirtyRegion, CGFloat contentsScale)
@@ -538,8 +535,6 @@ void LegacyTileCache::drawWindowContent(LegacyTileLayer* layer, CGContextRef con
         CGRect dirtyRectInSuper = [hostLayer() convertRect:dirtyRect fromLayer:layer];
         [m_window displayRect:dirtyRectInSuper];
     }
-
-    fontAntialiasingState.restore();
     
     if (drawingFlags == DrawingFlags::Snapshotting)
         [m_window setIsInSnapshottingPaint:NO];
@@ -574,7 +569,7 @@ void LegacyTileCache::drawLayer(LegacyTileLayer* layer, CGContextRef context, Dr
         CGContextSaveGState(context);
 
         CGContextTranslateCTM(context, frame.origin.x, frame.origin.y);
-        CGContextSetFillColorWithColor(context, cachedCGColor(colorForGridTileBorder([layer tileGrid])));
+        CGContextSetFillColorWithColor(context, cachedCGColor(colorForGridTileBorder([layer tileGrid])).get());
         
         CGRect labelBounds = [layer bounds];
         labelBounds.size.width = 10 + 12 * strlen(text);
@@ -609,21 +604,21 @@ void LegacyTileCache::setNeedsDisplay()
     setNeedsDisplayInRect(IntRect(0, 0, std::numeric_limits<int>::max(), std::numeric_limits<int>::max()));
 }
 
-void LegacyTileCache::scheduleLayerFlushForPendingRepaint()
+void LegacyTileCache::scheduleRenderingUpdateForPendingRepaint()
 {
     WAKView* view = [m_window contentView];
-    [view _scheduleLayerFlushForPendingTileCacheRepaint];
+    [view _scheduleRenderingUpdateForPendingTileCacheRepaint];
 }
 
 void LegacyTileCache::setNeedsDisplayInRect(const IntRect& dirtyRect)
 {
-    LockHolder locker(m_savedDisplayRectMutex);
+    Locker locker { m_savedDisplayRectMutex };
     bool addedFirstRect = m_savedDisplayRects.isEmpty();
     m_savedDisplayRects.append(dirtyRect);
     if (!addedFirstRect)
         return;
     // Compositing layer flush will call back to doPendingRepaints(). The flush may be throttled and not happen immediately.
-    scheduleLayerFlushForPendingRepaint();
+    scheduleRenderingUpdateForPendingRepaint();
 }
 
 void LegacyTileCache::invalidateTiles(const IntRect& dirtyRect)
@@ -689,11 +684,11 @@ void LegacyTileCache::updateTilingMode()
         if (m_tilingMode == Disabled)
             return;
 
-        LockHolder locker(m_tileMutex);
+        Locker locker { m_tileMutex };
         createTilesInActiveGrid(CoverVisibleOnly);
 
         if (!m_savedDisplayRects.isEmpty())
-            scheduleLayerFlushForPendingRepaint();
+            scheduleRenderingUpdateForPendingRepaint();
     }
 }
 
@@ -707,7 +702,7 @@ void LegacyTileCache::setTilingMode(TilingMode tilingMode)
     if ((m_pendingZoomedOutScale || m_pendingScale) && m_tilingMode != Disabled)
         commitScaleChange();
     else if (wasZooming) {
-        LockHolder locker(m_tileMutex);
+        Locker locker { m_tileMutex };
         bringActiveTileGridToFront();
     }
 
@@ -750,7 +745,7 @@ void LegacyTileCache::doPendingRepaints()
         return;
     if (isTileInvalidationSuspended())
         return;
-    LockHolder locker(m_tileMutex);
+    Locker locker { m_tileMutex };
     flushSavedDisplayRects();
 }
 
@@ -761,7 +756,7 @@ void LegacyTileCache::flushSavedDisplayRects()
 
     Vector<IntRect> rects;
     {
-        LockHolder locker(m_savedDisplayRectMutex);
+        Locker locker { m_savedDisplayRectMutex };
         m_savedDisplayRects.swap(rects);
     }
     size_t size = rects.size();
@@ -778,18 +773,13 @@ void LegacyTileCache::setSpeculativeTileCreationEnabled(bool enabled)
         m_tileCreationTimer.startOneShot(0_s);
 }
 
-bool LegacyTileCache::hasPendingDraw() const
-{
-    return !m_savedDisplayRects.isEmpty();
-}
-
 void LegacyTileCache::prepareToDraw()
 {
     // This will trigger document relayout if needed.
     [[m_window contentView] viewWillDraw];
 
     if (!m_savedDisplayRects.isEmpty()) {
-        LockHolder locker(m_tileMutex);
+        Locker locker { m_tileMutex };
         flushSavedDisplayRects();
     }
 }

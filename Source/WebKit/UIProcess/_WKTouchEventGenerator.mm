@@ -33,6 +33,7 @@
 #import <pal/spi/cocoa/IOKitSPI.h>
 #import <wtf/Assertions.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/RunLoop.h>
 #import <wtf/SoftLinking.h>
 
 SOFT_LINK_PRIVATE_FRAMEWORK(BackBoardServices)
@@ -97,7 +98,7 @@ static void delayBetweenMove(int eventIndex, double elapsed)
 @end
 
 @implementation _WKTouchEventGenerator {
-    IOHIDEventSystemClientRef _ioSystemClient;
+    RetainPtr<IOHIDEventSystemClientRef> _ioSystemClient;
     SyntheticEventDigitizerInfo _activePoints[HIDMaxTouchCount];
     NSUInteger _activePointCount;
 }
@@ -130,9 +131,6 @@ static void delayBetweenMove(int eventIndex, double elapsed)
 
 - (void)dealloc
 {
-  if (_ioSystemClient)
-        CFRelease(_ioSystemClient);
-
     [_eventCallbacks release];
     [super dealloc];
 }
@@ -209,11 +207,10 @@ static void delayBetweenMove(int eventIndex, double elapsed)
 - (BOOL)_sendHIDEvent:(IOHIDEventRef)eventRef
 {
     if (!_ioSystemClient)
-        _ioSystemClient = IOHIDEventSystemClientCreate(kCFAllocatorDefault);
+        _ioSystemClient = adoptCF(IOHIDEventSystemClientCreate(kCFAllocatorDefault));
 
     if (eventRef) {
-        RetainPtr<IOHIDEventRef> strongEvent = eventRef;
-        dispatch_async(dispatch_get_main_queue(), ^{
+        RunLoop::main().dispatch([strongEvent = retainPtr(eventRef)] {
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             uint32_t contextID = [UIApplication sharedApplication].keyWindow._contextId;
 ALLOW_DEPRECATED_DECLARATIONS_END
@@ -240,7 +237,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
         kIOHIDEventOptionNone));
     
     if (markerEvent) {
-        dispatch_async(dispatch_get_main_queue(), [markerEvent = WTFMove(markerEvent)] {
+        RunLoop::main().dispatch([markerEvent = WTFMove(markerEvent)] {
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             auto contextID = [UIApplication sharedApplication].keyWindow._contextId;
 ALLOW_DEPRECATED_DECLARATIONS_END
@@ -294,12 +291,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 {
     touchCount = std::min(touchCount, HIDMaxTouchCount);
 
-    CGPoint locations[touchCount];
+    Vector<CGPoint> locations(touchCount);
 
     for (NSUInteger index = 0; index < touchCount; ++index)
         locations[index] = location;
     
-    [self touchDownAtPoints:locations touchCount:touchCount];
+    [self touchDownAtPoints:locations.data() touchCount:touchCount];
 }
 
 - (void)touchDown:(CGPoint)location
@@ -327,12 +324,12 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 {
     touchCount = std::min(touchCount, HIDMaxTouchCount);
 
-    CGPoint locations[touchCount];
+    Vector<CGPoint> locations(touchCount);
 
     for (NSUInteger index = 0; index < touchCount; ++index)
         locations[index] = location;
     
-    [self liftUpAtPoints:locations touchCount:touchCount];
+    [self liftUpAtPoints:locations.data() touchCount:touchCount];
 }
 
 - (void)liftUp:(CGPoint)location
@@ -344,8 +341,8 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 {
     touchCount = std::min(touchCount, HIDMaxTouchCount);
 
-    CGPoint startLocations[touchCount];
-    CGPoint nextLocations[touchCount];
+    Vector<CGPoint> startLocations(touchCount);
+    Vector<CGPoint> nextLocations(touchCount);
 
     CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
     CFTimeInterval elapsed = 0;
@@ -361,7 +358,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
             nextLocations[i] = calculateNextCurveLocation(startLocations[i], newLocations[i], interval);
         }
-        [self _updateTouchPoints:nextLocations count:touchCount];
+        [self _updateTouchPoints:nextLocations.data() count:touchCount];
 
         delayBetweenMove(eventIndex++, elapsed);
     }

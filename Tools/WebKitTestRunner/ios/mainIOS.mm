@@ -28,6 +28,7 @@
 #import "HIDEventGenerator.h"
 #import "TestController.h"
 #import "UIKitSPI.h"
+#import <WebKit/WKProcessPoolPrivate.h>
 
 static int _argc;
 static const char **_argv;
@@ -56,6 +57,8 @@ static const char **_argv;
 
 - (void)_handleHIDEvent:(IOHIDEventRef)event
 {
+    [super _handleHIDEvent:event];
+
     [[HIDEventGenerator sharedHIDEventGenerator] markerEventReceived:event];
 }
 
@@ -66,7 +69,7 @@ int main(int argc, const char* argv[])
     _argc = argc;
     _argv = argv;
 
-    [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"WebKitLinkedOnOrAfterEverything"];
+    [WKProcessPool _setLinkedOnOrAfterEverythingForTesting];
 
     UIApplicationMain(argc, (char**)argv, @"WebKitTestRunnerApp", @"WebKitTestRunnerApp");
     return 0;

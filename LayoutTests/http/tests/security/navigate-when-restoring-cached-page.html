@@ -1,4 +1,4 @@
-<!-- webkit-test-runner [ enableBackForwardCache=true ] -->
+<!-- webkit-test-runner [ UsesBackForwardCache=true ] -->
 <!DOCTYPE html>
 <html>
 <body>
@@ -7,7 +7,6 @@
 if (window.testRunner) {
   testRunner.dumpAsText();
   testRunner.waitUntilDone();
-  testRunner.setCanOpenWindows();
 }
 
 function createURL(data, type = 'text/html') {
@@ -61,9 +60,8 @@ function runTest()
           
           clearInterval(interval_id);
 
-          // Prevent entering PageCache.
           if (w.internals)
-            w.internals.preventDocumentForEnteringBackForwardCache();
+            w.internals.preventDocumentFromEnteringBackForwardCache();
 
           child_frame = w.document.body.appendChild(document.createElement('iframe'));
           child_frame.contentWindow.onunload = () => {

@@ -31,20 +31,23 @@
 #include "Logging.h"
 #include "NetworkLoadParameters.h"
 #include "NetworkProcess.h"
+#include "NetworkResourceLoader.h"
+#include "WebErrors.h"
 #include <WebCore/CrossOriginAccessControl.h>
 #include <WebCore/SecurityOrigin.h>
 
-#define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(m_parameters.sessionID.isAlwaysOnLoggingAllowed(), Network, "%p - NetworkCORSPreflightChecker::" fmt, this, ##__VA_ARGS__)
+#define CORS_CHECKER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - NetworkCORSPreflightChecker::" fmt, this, ##__VA_ARGS__)
 
 namespace WebKit {
 
 using namespace WebCore;
 
-NetworkCORSPreflightChecker::NetworkCORSPreflightChecker(NetworkProcess& networkProcess, Parameters&& parameters, bool shouldCaptureExtraNetworkLoadMetrics, CompletionCallback&& completionCallback)
+NetworkCORSPreflightChecker::NetworkCORSPreflightChecker(NetworkProcess& networkProcess, NetworkResourceLoader* networkResourceLoader, Parameters&& parameters, bool shouldCaptureExtraNetworkLoadMetrics, CompletionCallback&& completionCallback)
     : m_parameters(WTFMove(parameters))
     , m_networkProcess(networkProcess)
     , m_completionCallback(WTFMove(completionCallback))
     , m_shouldCaptureExtraNetworkLoadMetrics(shouldCaptureExtraNetworkLoadMetrics)
+    , m_networkResourceLoader(networkResourceLoader)
 {
 }
 
@@ -61,7 +64,7 @@ NetworkCORSPreflightChecker::~NetworkCORSPreflightChecker()
 
 void NetworkCORSPreflightChecker::startPreflight()
 {
-    RELEASE_LOG_IF_ALLOWED("startPreflight");
+    CORS_CHECKER_RELEASE_LOG("startPreflight");
 
     NetworkLoadParameters loadParameters;
     loadParameters.request = createAccessControlPreflightRequest(m_parameters.originalRequest, m_parameters.sourceOrigin, m_parameters.referrer);
@@ -70,6 +73,8 @@ void NetworkCORSPreflightChecker::startPreflight()
 
     if (m_shouldCaptureExtraNetworkLoadMetrics)
         m_loadInformation = NetworkTransactionInformation { NetworkTransactionInformation::Type::Preflight, loadParameters.request, { }, { } };
+
+    loadParameters.webPageProxyID = m_parameters.webPageProxyID;
 
     if (auto* networkSession = m_networkProcess->networkSession(m_parameters.sessionID)) {
         m_task = NetworkDataTask::create(*networkSession, *this, WTFMove(loadParameters));
@@ -83,30 +88,30 @@ void NetworkCORSPreflightChecker::willPerformHTTPRedirection(WebCore::ResourceRe
     if (m_shouldCaptureExtraNetworkLoadMetrics)
         m_loadInformation.response = WTFMove(response);
 
-    RELEASE_LOG_IF_ALLOWED("willPerformHTTPRedirection");
+    CORS_CHECKER_RELEASE_LOG("willPerformHTTPRedirection");
     completionHandler({ });
-    m_completionCallback(ResourceError { errorDomainWebKitInternal, 0, m_parameters.originalRequest.url(), "Preflight response is not successful"_s, ResourceError::Type::AccessControl });
+    m_completionCallback(ResourceError { errorDomainWebKitInternal, 0, m_parameters.originalRequest.url(), makeString("Preflight response is not successful. Status code: ", response.httpStatusCode()), ResourceError::Type::AccessControl });
 }
 
-void NetworkCORSPreflightChecker::didReceiveChallenge(WebCore::AuthenticationChallenge&& challenge, ChallengeCompletionHandler&& completionHandler)
+void NetworkCORSPreflightChecker::didReceiveChallenge(WebCore::AuthenticationChallenge&& challenge, NegotiatedLegacyTLS negotiatedLegacyTLS, ChallengeCompletionHandler&& completionHandler)
 {
-    RELEASE_LOG_IF_ALLOWED("didReceiveChallenge, authentication scheme: %u", challenge.protectionSpace().authenticationScheme());
+    CORS_CHECKER_RELEASE_LOG("didReceiveChallenge, authentication scheme: %u", static_cast<unsigned>(challenge.protectionSpace().authenticationScheme()));
 
     auto scheme = challenge.protectionSpace().authenticationScheme();
-    bool isTLSHandshake = scheme == ProtectionSpaceAuthenticationSchemeServerTrustEvaluationRequested
-        || scheme == ProtectionSpaceAuthenticationSchemeClientCertificateRequested;
+    bool isTLSHandshake = scheme == ProtectionSpace::AuthenticationScheme::ServerTrustEvaluationRequested
+        || scheme == ProtectionSpace::AuthenticationScheme::ClientCertificateRequested;
 
     if (!isTLSHandshake) {
         completionHandler(AuthenticationChallengeDisposition::UseCredential, { });
         return;
     }
 
-    m_networkProcess->authenticationManager().didReceiveAuthenticationChallenge(m_parameters.sessionID, m_parameters.webPageProxyID, m_parameters.topOrigin ? &m_parameters.topOrigin->data() : nullptr, challenge, WTFMove(completionHandler));
+    m_networkProcess->authenticationManager().didReceiveAuthenticationChallenge(m_parameters.sessionID, m_parameters.webPageProxyID, m_parameters.topOrigin ? &m_parameters.topOrigin->data() : nullptr, challenge, negotiatedLegacyTLS, WTFMove(completionHandler));
 }
 
-void NetworkCORSPreflightChecker::didReceiveResponse(WebCore::ResourceResponse&& response, ResponseCompletionHandler&& completionHandler)
+void NetworkCORSPreflightChecker::didReceiveResponse(WebCore::ResourceResponse&& response, NegotiatedLegacyTLS, PrivateRelayed, ResponseCompletionHandler&& completionHandler)
 {
-    RELEASE_LOG_IF_ALLOWED("didReceiveResponse");
+    CORS_CHECKER_RELEASE_LOG("didReceiveResponse");
 
     if (m_shouldCaptureExtraNetworkLoadMetrics)
         m_loadInformation.response = response;
@@ -115,9 +120,9 @@ void NetworkCORSPreflightChecker::didReceiveResponse(WebCore::ResourceResponse&&
     completionHandler(PolicyAction::Use);
 }
 
-void NetworkCORSPreflightChecker::didReceiveData(Ref<WebCore::SharedBuffer>&&)
+void NetworkCORSPreflightChecker::didReceiveData(const WebCore::SharedBuffer&)
 {
-    RELEASE_LOG_IF_ALLOWED("didReceiveData");
+    CORS_CHECKER_RELEASE_LOG("didReceiveData");
 }
 
 void NetworkCORSPreflightChecker::didCompleteWithError(const WebCore::ResourceError& preflightError, const WebCore::NetworkLoadMetrics& metrics)
@@ -126,7 +131,7 @@ void NetworkCORSPreflightChecker::didCompleteWithError(const WebCore::ResourceEr
         m_loadInformation.metrics = metrics;
 
     if (!preflightError.isNull()) {
-        RELEASE_LOG_IF_ALLOWED("didCompleteWithError");
+        CORS_CHECKER_RELEASE_LOG("didCompleteWithError");
         auto error = preflightError;
         if (error.isNull() || error.isGeneral())
             error.setType(ResourceError::Type::AccessControl);
@@ -135,12 +140,12 @@ void NetworkCORSPreflightChecker::didCompleteWithError(const WebCore::ResourceEr
         return;
     }
 
-    RELEASE_LOG_IF_ALLOWED("didComplete http_status_code: %d", m_response.httpStatusCode());
+    CORS_CHECKER_RELEASE_LOG("didComplete http_status_code=%d", m_response.httpStatusCode());
 
-    String errorDescription;
-    if (!validatePreflightResponse(m_parameters.originalRequest, m_response, m_parameters.storedCredentialsPolicy, m_parameters.sourceOrigin, errorDescription)) {
-        RELEASE_LOG_IF_ALLOWED("didComplete, AccessControl error: %s", errorDescription.utf8().data());
-        m_completionCallback(ResourceError { errorDomainWebKitInternal, 0, m_parameters.originalRequest.url(), errorDescription, ResourceError::Type::AccessControl });
+    auto result = validatePreflightResponse(m_parameters.sessionID, m_parameters.originalRequest, m_response, m_parameters.storedCredentialsPolicy, m_parameters.sourceOrigin, m_networkResourceLoader.get());
+    if (!result) {
+        CORS_CHECKER_RELEASE_LOG("didComplete, AccessControl error: %s", result.error().utf8().data());
+        m_completionCallback(ResourceError { errorDomainWebKitInternal, 0, m_parameters.originalRequest.url(), result.error(), ResourceError::Type::AccessControl });
         return;
     }
     m_completionCallback(ResourceError { });
@@ -152,20 +157,25 @@ void NetworkCORSPreflightChecker::didSendData(uint64_t totalBytesSent, uint64_t 
 
 void NetworkCORSPreflightChecker::wasBlocked()
 {
-    RELEASE_LOG_IF_ALLOWED("wasBlocked");
+    CORS_CHECKER_RELEASE_LOG("wasBlocked");
     m_completionCallback(ResourceError { errorDomainWebKitInternal, 0, m_parameters.originalRequest.url(), "CORS-preflight request was blocked"_s, ResourceError::Type::AccessControl });
 }
 
 void NetworkCORSPreflightChecker::cannotShowURL()
 {
-    RELEASE_LOG_IF_ALLOWED("cannotShowURL");
+    CORS_CHECKER_RELEASE_LOG("cannotShowURL");
     m_completionCallback(ResourceError { errorDomainWebKitInternal, 0, m_parameters.originalRequest.url(), "Preflight response was blocked"_s, ResourceError::Type::AccessControl });
 }
 
 void NetworkCORSPreflightChecker::wasBlockedByRestrictions()
 {
-    RELEASE_LOG_IF_ALLOWED("wasBlockedByRestrictions");
+    CORS_CHECKER_RELEASE_LOG("wasBlockedByRestrictions");
     m_completionCallback(ResourceError { errorDomainWebKitInternal, 0, m_parameters.originalRequest.url(), "Preflight response was blocked"_s, ResourceError::Type::AccessControl });
+}
+
+void NetworkCORSPreflightChecker::wasBlockedByDisabledFTP()
+{
+    m_completionCallback(ftpDisabledError(m_parameters.originalRequest));
 }
 
 NetworkTransactionInformation NetworkCORSPreflightChecker::takeInformation()
@@ -176,4 +186,4 @@ NetworkTransactionInformation NetworkCORSPreflightChecker::takeInformation()
 
 } // Namespace WebKit
 
-#undef RELEASE_LOG_IF_ALLOWED
+#undef CORS_CHECKER_RELEASE_LOG

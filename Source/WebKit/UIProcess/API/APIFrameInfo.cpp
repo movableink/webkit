@@ -33,40 +33,27 @@
 
 namespace API {
 
-Ref<FrameInfo> FrameInfo::create(const WebKit::FrameInfoData& frameInfoData, WebKit::WebPageProxy* page)
+Ref<FrameInfo> FrameInfo::create(WebKit::FrameInfoData&& frameInfoData, WebKit::WebPageProxy* page)
 {
-    return adoptRef(*new FrameInfo(frameInfoData, page));
+    return adoptRef(*new FrameInfo(WTFMove(frameInfoData), page));
 }
 
-Ref<FrameInfo> FrameInfo::create(const WebKit::WebFrameProxy& frame, const WebCore::SecurityOrigin& securityOrigin)
+FrameInfo::FrameInfo(WebKit::FrameInfoData&& data, WebKit::WebPageProxy* page)
+    : m_data(WTFMove(data))
+    , m_page(page) { }
+
+FrameInfo::~FrameInfo() = default;
+
+Ref<FrameHandle> FrameInfo::handle() const
 {
-    WebKit::FrameInfoData frameInfoData;
-
-    frameInfoData.isMainFrame = frame.isMainFrame();
-    // FIXME: This should use the full request of the frame, not just the URL.
-    frameInfoData.request = WebCore::ResourceRequest(frame.url());
-    frameInfoData.securityOrigin = securityOrigin.data();
-    frameInfoData.frameID = frame.frameID();
-
-    return create(frameInfoData, frame.page());
+    return FrameHandle::create(m_data.frameID ? *m_data.frameID : WebCore::FrameIdentifier { });
 }
 
-FrameInfo::FrameInfo(const WebKit::FrameInfoData& frameInfoData, WebKit::WebPageProxy* page)
-    : m_isMainFrame { frameInfoData.isMainFrame }
-    , m_request { frameInfoData.request }
-    , m_securityOrigin { SecurityOrigin::create(frameInfoData.securityOrigin.securityOrigin()) }
-    , m_handle { API::FrameHandle::create(frameInfoData.frameID ? *frameInfoData.frameID : WebCore::FrameIdentifier{ }) }
-    , m_page { makeRefPtr(page) }
+RefPtr<FrameHandle> FrameInfo::parentFrameHandle() const
 {
-}
-
-FrameInfo::~FrameInfo()
-{
-}
-
-void FrameInfo::clearPage()
-{
-    m_page = nullptr;
+    if (!m_data.parentFrameID)
+        return nullptr;
+    return FrameHandle::create(*m_data.parentFrameID);
 }
 
 } // namespace API

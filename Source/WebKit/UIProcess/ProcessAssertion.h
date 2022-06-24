@@ -25,8 +25,10 @@
 
 #pragma once
 
+#include <wtf/CompletionHandler.h>
 #include <wtf/Function.h>
 #include <wtf/ProcessID.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -36,82 +38,102 @@
 
 #if PLATFORM(IOS_FAMILY)
 #include <wtf/RetainPtr.h>
-OBJC_CLASS BKSProcessAssertion;
-#endif
+
+OBJC_CLASS RBSAssertion;
+OBJC_CLASS WKRBSAssertionDelegate;
+#endif // PLATFORM(IOS_FAMILY)
 
 namespace WebKit {
-    
-enum class AssertionState {
+
+enum class ProcessAssertionType {
     Suspended,
     Background,
     UnboundedNetworking,
     Foreground,
-};
-
-enum class AssertionReason {
-    Extension,
-    FinishTask,
-    FinishTaskUnbounded,
     MediaPlayback,
+    FinishTaskInterruptable,
 };
 
-class ProcessAssertion : public CanMakeWeakPtr<ProcessAssertion> {
+class ProcessAssertion : public ThreadSafeRefCounted<ProcessAssertion>, public CanMakeWeakPtr<ProcessAssertion, WeakPtrFactoryInitialization::Eager> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    class Client {
-    public:
-        virtual ~Client() { }
-        virtual void uiAssertionWillExpireImminently() = 0;
-    };
-
-    ProcessAssertion(ProcessID, const String& reason, AssertionState);
-    ProcessAssertion(ProcessID, const String& reason, AssertionState, AssertionReason);
+    enum class Mode : bool { Sync, Async };
+    static Ref<ProcessAssertion> create(ProcessID pid, const String& reason, ProcessAssertionType type, Mode mode = Mode::Async, CompletionHandler<void()>&& acquisisionHandler = nullptr)
+    {
+        auto assertion = adoptRef(*new ProcessAssertion(pid, reason, type));
+        if (mode == Mode::Async)
+            assertion->acquireAsync(WTFMove(acquisisionHandler));
+        else {
+            assertion->acquireSync();
+            if (acquisisionHandler)
+                acquisisionHandler();
+        }
+        return assertion;
+    }
     virtual ~ProcessAssertion();
 
-    void setClient(Client& client) { m_client = &client; }
-    Client* client() { return m_client; }
+    void setPrepareForInvalidationHandler(Function<void()>&& handler) { m_prepareForInvalidationHandler = WTFMove(handler); }
+    void setInvalidationHandler(Function<void()>&& handler) { m_invalidationHandler = WTFMove(handler); }
 
-    AssertionState state() const { return m_assertionState; }
-    virtual void setState(AssertionState);
+    ProcessAssertionType type() const { return m_assertionType; }
+    ProcessID pid() const { return m_pid; }
+
+    bool isValid() const;
+
+protected:
+    ProcessAssertion(ProcessID, const String& reason, ProcessAssertionType);
+
+    void acquireAsync(CompletionHandler<void()>&&);
+    void acquireSync();
 
 #if PLATFORM(IOS_FAMILY)
-protected:
-    enum class Validity { No, Yes, Unset };
-    Validity validity() const { return m_validity; }
-
+    void processAssertionWillBeInvalidated();
     virtual void processAssertionWasInvalidated();
 #endif
 
 private:
+    const ProcessAssertionType m_assertionType;
+    const ProcessID m_pid;
+    const String m_reason;
 #if PLATFORM(IOS_FAMILY)
-    RetainPtr<BKSProcessAssertion> m_assertion;
-    Validity m_validity { Validity::Unset };
+    RetainPtr<RBSAssertion> m_rbsAssertion;
+    RetainPtr<WKRBSAssertionDelegate> m_delegate;
+    bool m_wasInvalidated { false };
 #endif
-    AssertionState m_assertionState;
-    Client* m_client { nullptr };
+    Function<void()> m_prepareForInvalidationHandler;
+    Function<void()> m_invalidationHandler;
 };
-
-#if PLATFORM(IOS_FAMILY)
 
 class ProcessAndUIAssertion final : public ProcessAssertion {
 public:
-    ProcessAndUIAssertion(ProcessID, const String& reason, AssertionState);
+    static Ref<ProcessAndUIAssertion> create(ProcessID pid, const String& reason, ProcessAssertionType type, Mode mode = Mode::Async, CompletionHandler<void()>&& acquisisionHandler = nullptr)
+    {
+        auto assertion = adoptRef(*new ProcessAndUIAssertion(pid, reason, type));
+        if (mode == Mode::Async)
+            assertion->acquireAsync(WTFMove(acquisisionHandler));
+        else {
+            assertion->acquireSync();
+            if (acquisisionHandler)
+                acquisisionHandler();
+        }
+        return assertion;
+    }
     ~ProcessAndUIAssertion();
 
-    void setState(AssertionState) final;
     void uiAssertionWillExpireImminently();
 
+    void setUIAssertionExpirationHandler(Function<void()>&& handler) { m_uiAssertionExpirationHandler = WTFMove(handler); }
+
 private:
+    ProcessAndUIAssertion(ProcessID, const String& reason, ProcessAssertionType);
+
+#if PLATFORM(IOS_FAMILY)
     void processAssertionWasInvalidated() final;
+#endif
     void updateRunInBackgroundCount();
 
+    Function<void()> m_uiAssertionExpirationHandler;
     bool m_isHoldingBackgroundTask { false };
 };
-
-#else
-
-using ProcessAndUIAssertion = ProcessAssertion;
-
-#endif // PLATFORM(IOS_FAMILY)
     
 } // namespace WebKit

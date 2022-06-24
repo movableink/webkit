@@ -13,21 +13,22 @@
 #include <memory>
 
 #include "modules/remote_bitrate_estimator/tools/bwe_rtp.h"
-#include "modules/rtp_rtcp/include/rtp_header_parser.h"
+#include "modules/rtp_rtcp/include/rtp_header_extension_map.h"
+#include "modules/rtp_rtcp/source/rtp_header_extensions.h"
+#include "modules/rtp_rtcp/source/rtp_packet.h"
 #include "rtc_base/format_macros.h"
 #include "rtc_base/strings/string_builder.h"
 #include "test/rtp_file_reader.h"
 
 int main(int argc, char* argv[]) {
-  webrtc::test::RtpFileReader* reader;
-  webrtc::RtpHeaderParser* parser;
-  if (!ParseArgsAndSetupEstimator(argc, argv, NULL, NULL, &reader, &parser,
-                                  NULL, NULL)) {
+  std::unique_ptr<webrtc::test::RtpFileReader> reader;
+  webrtc::RtpHeaderExtensionMap rtp_header_extensions;
+  if (!ParseArgsAndSetupRtpReader(argc, argv, reader, rtp_header_extensions)) {
     return -1;
   }
+
   bool arrival_time_only = (argc >= 5 && strncmp(argv[4], "-t", 2) == 0);
-  std::unique_ptr<webrtc::test::RtpFileReader> rtp_reader(reader);
-  std::unique_ptr<webrtc::RtpHeaderParser> rtp_parser(parser);
+
   fprintf(stdout,
           "seqnum timestamp ts_offset abs_sendtime recvtime "
           "markerbit ssrc size original_size\n");
@@ -35,24 +36,26 @@ int main(int argc, char* argv[]) {
   int non_zero_abs_send_time = 0;
   int non_zero_ts_offsets = 0;
   webrtc::test::RtpPacket packet;
-  while (rtp_reader->NextPacket(&packet)) {
-    webrtc::RTPHeader header;
-    parser->Parse(packet.data, packet.length, &header);
-    if (header.extension.absoluteSendTime != 0)
+  while (reader->NextPacket(&packet)) {
+    webrtc::RtpPacket header(&rtp_header_extensions);
+    header.Parse(packet.data, packet.length);
+    uint32_t abs_send_time = 0;
+    if (header.GetExtension<webrtc::AbsoluteSendTime>(&abs_send_time) &&
+        abs_send_time != 0)
       ++non_zero_abs_send_time;
-    if (header.extension.transmissionTimeOffset != 0)
+    int32_t toffset = 0;
+    if (header.GetExtension<webrtc::TransmissionOffset>(&toffset) &&
+        toffset != 0)
       ++non_zero_ts_offsets;
     if (arrival_time_only) {
       rtc::StringBuilder ss;
       ss << static_cast<int64_t>(packet.time_ms) * 1000000;
       fprintf(stdout, "%s\n", ss.str().c_str());
     } else {
-      fprintf(stdout, "%u %u %d %u %u %d %u %" PRIuS " %" PRIuS "\n",
-              header.sequenceNumber, header.timestamp,
-              header.extension.transmissionTimeOffset,
-              header.extension.absoluteSendTime, packet.time_ms,
-              header.markerBit, header.ssrc, packet.length,
-              packet.original_length);
+      fprintf(stdout, "%u %u %d %u %u %d %u %" RTC_PRIuS " %" RTC_PRIuS "\n",
+              header.SequenceNumber(), header.Timestamp(), toffset,
+              abs_send_time, packet.time_ms, header.Marker(), header.Ssrc(),
+              packet.length, packet.original_length);
     }
     ++packet_counter;
   }

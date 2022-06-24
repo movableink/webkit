@@ -15,7 +15,7 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/platform_thread.h"
-#include "rtc_base/timeutils.h"
+#include "rtc_base/time_utils.h"
 #include "system_wrappers/include/sleep.h"
 
 namespace webrtc {
@@ -43,15 +43,10 @@ FileAudioDevice::FileAudioDevice(const char* inputFilename,
       _recording(false),
       _lastCallPlayoutMillis(0),
       _lastCallRecordMillis(0),
-      _outputFile(*FileWrapper::Create()),
-      _inputFile(*FileWrapper::Create()),
       _outputFilename(outputFilename),
       _inputFilename(inputFilename) {}
 
-FileAudioDevice::~FileAudioDevice() {
-  delete &_outputFile;
-  delete &_inputFile;
-}
+FileAudioDevice::~FileAudioDevice() {}
 
 int32_t FileAudioDevice::ActiveAudioLayer(
     AudioDeviceModule::AudioLayer& audioLayer) const {
@@ -144,7 +139,7 @@ int32_t FileAudioDevice::PlayoutIsAvailable(bool& available) {
 }
 
 int32_t FileAudioDevice::InitPlayout() {
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
 
   if (_playing) {
     return -1;
@@ -174,7 +169,7 @@ int32_t FileAudioDevice::RecordingIsAvailable(bool& available) {
 }
 
 int32_t FileAudioDevice::InitRecording() {
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
 
   if (_recording) {
     return -1;
@@ -210,19 +205,24 @@ int32_t FileAudioDevice::StartPlayout() {
   }
 
   // PLAYOUT
-  if (!_outputFilename.empty() &&
-      !_outputFile.OpenFile(_outputFilename.c_str(), false)) {
-    RTC_LOG(LS_ERROR) << "Failed to open playout file: " << _outputFilename;
-    _playing = false;
-    delete[] _playoutBuffer;
-    _playoutBuffer = NULL;
-    return -1;
+  if (!_outputFilename.empty()) {
+    _outputFile = FileWrapper::OpenWriteOnly(_outputFilename.c_str());
+    if (!_outputFile.is_open()) {
+      RTC_LOG(LS_ERROR) << "Failed to open playout file: " << _outputFilename;
+      _playing = false;
+      delete[] _playoutBuffer;
+      _playoutBuffer = NULL;
+      return -1;
+    }
   }
 
-  _ptrThreadPlay.reset(new rtc::PlatformThread(
-      PlayThreadFunc, this, "webrtc_audio_module_play_thread"));
-  _ptrThreadPlay->Start();
-  _ptrThreadPlay->SetPriority(rtc::kRealtimePriority);
+  _ptrThreadPlay = rtc::PlatformThread::SpawnJoinable(
+      [this] {
+        while (PlayThreadProcess()) {
+        }
+      },
+      "webrtc_audio_module_play_thread",
+      rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime));
 
   RTC_LOG(LS_INFO) << "Started playout capture to output file: "
                    << _outputFilename;
@@ -231,22 +231,20 @@ int32_t FileAudioDevice::StartPlayout() {
 
 int32_t FileAudioDevice::StopPlayout() {
   {
-    rtc::CritScope lock(&_critSect);
+    MutexLock lock(&mutex_);
     _playing = false;
   }
 
   // stop playout thread first
-  if (_ptrThreadPlay) {
-    _ptrThreadPlay->Stop();
-    _ptrThreadPlay.reset();
-  }
+  if (!_ptrThreadPlay.empty())
+    _ptrThreadPlay.Finalize();
 
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
 
   _playoutFramesLeft = 0;
   delete[] _playoutBuffer;
   _playoutBuffer = NULL;
-  _outputFile.CloseFile();
+  _outputFile.Close();
 
   RTC_LOG(LS_INFO) << "Stopped playout capture to output file: "
                    << _outputFilename;
@@ -267,20 +265,25 @@ int32_t FileAudioDevice::StartRecording() {
     _recordingBuffer = new int8_t[_recordingBufferSizeIn10MS];
   }
 
-  if (!_inputFilename.empty() &&
-      !_inputFile.OpenFile(_inputFilename.c_str(), true)) {
-    RTC_LOG(LS_ERROR) << "Failed to open audio input file: " << _inputFilename;
-    _recording = false;
-    delete[] _recordingBuffer;
-    _recordingBuffer = NULL;
-    return -1;
+  if (!_inputFilename.empty()) {
+    _inputFile = FileWrapper::OpenReadOnly(_inputFilename.c_str());
+    if (!_inputFile.is_open()) {
+      RTC_LOG(LS_ERROR) << "Failed to open audio input file: "
+                        << _inputFilename;
+      _recording = false;
+      delete[] _recordingBuffer;
+      _recordingBuffer = NULL;
+      return -1;
+    }
   }
 
-  _ptrThreadRec.reset(new rtc::PlatformThread(
-      RecThreadFunc, this, "webrtc_audio_module_capture_thread"));
-
-  _ptrThreadRec->Start();
-  _ptrThreadRec->SetPriority(rtc::kRealtimePriority);
+  _ptrThreadRec = rtc::PlatformThread::SpawnJoinable(
+      [this] {
+        while (RecThreadProcess()) {
+        }
+      },
+      "webrtc_audio_module_capture_thread",
+      rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime));
 
   RTC_LOG(LS_INFO) << "Started recording from input file: " << _inputFilename;
 
@@ -289,22 +292,20 @@ int32_t FileAudioDevice::StartRecording() {
 
 int32_t FileAudioDevice::StopRecording() {
   {
-    rtc::CritScope lock(&_critSect);
+    MutexLock lock(&mutex_);
     _recording = false;
   }
 
-  if (_ptrThreadRec) {
-    _ptrThreadRec->Stop();
-    _ptrThreadRec.reset();
-  }
+  if (!_ptrThreadRec.empty())
+    _ptrThreadRec.Finalize();
 
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
   _recordingFramesLeft = 0;
   if (_recordingBuffer) {
     delete[] _recordingBuffer;
     _recordingBuffer = NULL;
   }
-  _inputFile.CloseFile();
+  _inputFile.Close();
 
   RTC_LOG(LS_INFO) << "Stopped recording from input file: " << _inputFilename;
   return 0;
@@ -426,7 +427,7 @@ int32_t FileAudioDevice::PlayoutDelay(uint16_t& delayMS) const {
 }
 
 void FileAudioDevice::AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) {
-  rtc::CritScope lock(&_critSect);
+  MutexLock lock(&mutex_);
 
   _ptrAudioBuffer = audioBuffer;
 
@@ -439,26 +440,18 @@ void FileAudioDevice::AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) {
   _ptrAudioBuffer->SetPlayoutChannels(0);
 }
 
-bool FileAudioDevice::PlayThreadFunc(void* pThis) {
-  return (static_cast<FileAudioDevice*>(pThis)->PlayThreadProcess());
-}
-
-bool FileAudioDevice::RecThreadFunc(void* pThis) {
-  return (static_cast<FileAudioDevice*>(pThis)->RecThreadProcess());
-}
-
 bool FileAudioDevice::PlayThreadProcess() {
   if (!_playing) {
     return false;
   }
   int64_t currentTime = rtc::TimeMillis();
-  _critSect.Enter();
+  mutex_.Lock();
 
   if (_lastCallPlayoutMillis == 0 ||
       currentTime - _lastCallPlayoutMillis >= 10) {
-    _critSect.Leave();
+    mutex_.Unlock();
     _ptrAudioBuffer->RequestPlayoutData(_playoutFramesIn10MS);
-    _critSect.Enter();
+    mutex_.Lock();
 
     _playoutFramesLeft = _ptrAudioBuffer->GetPlayoutData(_playoutBuffer);
     RTC_DCHECK_EQ(_playoutFramesIn10MS, _playoutFramesLeft);
@@ -468,7 +461,7 @@ bool FileAudioDevice::PlayThreadProcess() {
     _lastCallPlayoutMillis = currentTime;
   }
   _playoutFramesLeft = 0;
-  _critSect.Leave();
+  mutex_.Unlock();
 
   int64_t deltaTimeMillis = rtc::TimeMillis() - currentTime;
   if (deltaTimeMillis < 10) {
@@ -484,7 +477,7 @@ bool FileAudioDevice::RecThreadProcess() {
   }
 
   int64_t currentTime = rtc::TimeMillis();
-  _critSect.Enter();
+  mutex_.Lock();
 
   if (_lastCallRecordMillis == 0 || currentTime - _lastCallRecordMillis >= 10) {
     if (_inputFile.is_open()) {
@@ -495,13 +488,13 @@ bool FileAudioDevice::RecThreadProcess() {
         _inputFile.Rewind();
       }
       _lastCallRecordMillis = currentTime;
-      _critSect.Leave();
+      mutex_.Unlock();
       _ptrAudioBuffer->DeliverRecordedData();
-      _critSect.Enter();
+      mutex_.Lock();
     }
   }
 
-  _critSect.Leave();
+  mutex_.Unlock();
 
   int64_t deltaTimeMillis = rtc::TimeMillis() - currentTime;
   if (deltaTimeMillis < 10) {

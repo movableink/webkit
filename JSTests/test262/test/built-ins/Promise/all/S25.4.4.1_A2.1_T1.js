@@ -9,6 +9,4 @@ description: Promise.all returns a Promise
 ---*/
 
 var p = Promise.all([]);
-if (!(p instanceof Promise)) {
-  $ERROR('Expected p to be a Promise');
-}
+assert(!!(p instanceof Promise), 'The value of !!(p instanceof Promise) is expected to be true');

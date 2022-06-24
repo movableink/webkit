@@ -1,3 +1,0 @@
-
-FAIL Shadows are drawn if shadowBlur is set Can't find variable: OffscreenCanvas
-

@@ -10,8 +10,8 @@
 
 #include "media/engine/simulcast.h"
 
-#include "media/base/mediaconstants.h"
-#include "media/engine/constants.h"
+#include "api/transport/field_trial_based_config.h"
+#include "media/base/media_constants.h"
 #include "test/field_trial.h"
 #include "test/gtest.h"
 
@@ -19,8 +19,6 @@ namespace webrtc {
 namespace {
 constexpr int kQpMax = 55;
 constexpr double kBitratePriority = 2.0;
-constexpr int kMaxFps = 33;
-constexpr int kMaxBitrateBps = 0;
 constexpr bool kScreenshare = true;
 constexpr int kDefaultTemporalLayers = 3;  // Value from simulcast.cc.
 
@@ -42,13 +40,13 @@ const std::vector<VideoStream> GetSimulcastBitrates720p() {
 
 TEST(SimulcastTest, TotalMaxBitrateIsZeroForNoStreams) {
   std::vector<VideoStream> streams;
-  EXPECT_EQ(0, cricket::GetTotalMaxBitrateBps(streams));
+  EXPECT_EQ(0, cricket::GetTotalMaxBitrate(streams).bps());
 }
 
 TEST(SimulcastTest, GetTotalMaxBitrateForSingleStream) {
   std::vector<VideoStream> streams(1);
   streams[0].max_bitrate_bps = 100000;
-  EXPECT_EQ(100000, cricket::GetTotalMaxBitrateBps(streams));
+  EXPECT_EQ(100000, cricket::GetTotalMaxBitrate(streams).bps());
 }
 
 TEST(SimulcastTest, GetTotalMaxBitrateForMultipleStreams) {
@@ -56,7 +54,7 @@ TEST(SimulcastTest, GetTotalMaxBitrateForMultipleStreams) {
   streams[0].target_bitrate_bps = 100000;
   streams[1].target_bitrate_bps = 200000;
   streams[2].max_bitrate_bps = 400000;
-  EXPECT_EQ(700000, cricket::GetTotalMaxBitrateBps(streams));
+  EXPECT_EQ(700000, cricket::GetTotalMaxBitrate(streams).bps());
 }
 
 TEST(SimulcastTest, BandwidthAboveTotalMaxBitrateGivenToHighestStream) {
@@ -65,25 +63,30 @@ TEST(SimulcastTest, BandwidthAboveTotalMaxBitrateGivenToHighestStream) {
   streams[1].target_bitrate_bps = 200000;
   streams[2].max_bitrate_bps = 400000;
 
+  const webrtc::DataRate one_bps = webrtc::DataRate::BitsPerSec(1);
+
   // No bitrate above the total max to give to the highest stream.
-  const int kMaxTotalBps = cricket::GetTotalMaxBitrateBps(streams);
-  cricket::BoostMaxSimulcastLayer(kMaxTotalBps, &streams);
+  const webrtc::DataRate max_total_bitrate =
+      cricket::GetTotalMaxBitrate(streams);
+  cricket::BoostMaxSimulcastLayer(max_total_bitrate, &streams);
   EXPECT_EQ(400000, streams[2].max_bitrate_bps);
-  EXPECT_EQ(kMaxTotalBps, cricket::GetTotalMaxBitrateBps(streams));
+  EXPECT_EQ(max_total_bitrate, cricket::GetTotalMaxBitrate(streams));
 
   // The bitrate above the total max should be given to the highest stream.
-  cricket::BoostMaxSimulcastLayer(kMaxTotalBps + 1, &streams);
+  cricket::BoostMaxSimulcastLayer(max_total_bitrate + one_bps, &streams);
   EXPECT_EQ(400000 + 1, streams[2].max_bitrate_bps);
-  EXPECT_EQ(kMaxTotalBps + 1, cricket::GetTotalMaxBitrateBps(streams));
+  EXPECT_EQ(max_total_bitrate + one_bps, cricket::GetTotalMaxBitrate(streams));
 }
 
 TEST(SimulcastTest, GetConfig) {
   const std::vector<VideoStream> kExpected = GetSimulcastBitrates720p();
+  const FieldTrialBasedConfig trials;
 
+  const size_t kMinLayers = 1;
   const size_t kMaxLayers = 3;
   std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 1280, 720, kMaxBitrateBps, kBitratePriority, kQpMax, kMaxFps,
-      !kScreenshare);
+      kMinLayers, kMaxLayers, 1280, 720, kBitratePriority, kQpMax,
+      !kScreenshare, true, trials);
 
   EXPECT_EQ(kMaxLayers, streams.size());
   EXPECT_EQ(320u, streams[0].width);
@@ -111,13 +114,15 @@ TEST(SimulcastTest, GetConfig) {
 TEST(SimulcastTest, GetConfigWithBaseHeavyVP8TL3RateAllocation) {
   test::ScopedFieldTrials field_trials(
       "WebRTC-UseBaseHeavyVP8TL3RateAllocation/Enabled/");
+  FieldTrialBasedConfig trials;
 
   const std::vector<VideoStream> kExpected = GetSimulcastBitrates720p();
 
+  const size_t kMinLayers = 1;
   const size_t kMaxLayers = 3;
   std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 1280, 720, kMaxBitrateBps, kBitratePriority, kQpMax, kMaxFps,
-      !kScreenshare);
+      kMinLayers, kMaxLayers, 1280, 720, kBitratePriority, kQpMax,
+      !kScreenshare, true, trials);
 
   EXPECT_EQ(kExpected[0].min_bitrate_bps, streams[0].min_bitrate_bps);
   EXPECT_EQ(static_cast<int>(0.4 * kExpected[0].target_bitrate_bps / 0.6),
@@ -132,23 +137,29 @@ TEST(SimulcastTest, GetConfigWithBaseHeavyVP8TL3RateAllocation) {
 }
 
 TEST(SimulcastTest, GetConfigWithLimitedMaxLayers) {
+  const size_t kMinLayers = 1;
   const size_t kMaxLayers = 2;
+  FieldTrialBasedConfig trials;
   std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 1280, 720, kMaxBitrateBps, kBitratePriority, kQpMax, kMaxFps,
-      !kScreenshare);
+      kMinLayers, kMaxLayers, 1280, 720, kBitratePriority, kQpMax,
+      !kScreenshare, true, trials);
 
   EXPECT_EQ(kMaxLayers, streams.size());
-  EXPECT_EQ(320u, streams[0].width);
-  EXPECT_EQ(180u, streams[0].height);
-  EXPECT_EQ(640u, streams[1].width);
-  EXPECT_EQ(360u, streams[1].height);
+  EXPECT_EQ(640u, streams[0].width);
+  EXPECT_EQ(360u, streams[0].height);
+  EXPECT_EQ(1280u, streams[1].width);
+  EXPECT_EQ(720u, streams[1].height);
 }
 
 TEST(SimulcastTest, GetConfigWithLimitedMaxLayersForResolution) {
+  test::ScopedFieldTrials field_trials(
+      "WebRTC-LegacySimulcastLayerLimit/Enabled/");
+  FieldTrialBasedConfig trials;
+  const size_t kMinLayers = 1;
   const size_t kMaxLayers = 3;
   std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 800, 600, kMaxBitrateBps, kBitratePriority, kQpMax, kMaxFps,
-      !kScreenshare);
+      kMinLayers, kMaxLayers, 800, 600, kBitratePriority, kQpMax, !kScreenshare,
+      true, trials);
 
   EXPECT_EQ(2u, streams.size());
   EXPECT_EQ(400u, streams[0].width);
@@ -157,12 +168,30 @@ TEST(SimulcastTest, GetConfigWithLimitedMaxLayersForResolution) {
   EXPECT_EQ(600u, streams[1].height);
 }
 
-TEST(SimulcastTest, GetConfigWithNotLimitedMaxLayersForResolution) {
-  test::ScopedFieldTrials field_trials("WebRTC-SimulcastMaxLayers/Enabled/");
+TEST(SimulcastTest, GetConfigWithLowResolutionScreenshare) {
+  test::ScopedFieldTrials field_trials(
+      "WebRTC-LegacySimulcastLayerLimit/Enabled/");
+  FieldTrialBasedConfig trials;
+  const size_t kMinLayers = 1;
   const size_t kMaxLayers = 3;
   std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 800, 600, kMaxBitrateBps, kBitratePriority, kQpMax, kMaxFps,
-      !kScreenshare);
+      kMinLayers, kMaxLayers, 100, 100, kBitratePriority, kQpMax, kScreenshare,
+      true, trials);
+
+  // Simulcast streams number is never decreased for screenshare,
+  // even for very low resolution.
+  EXPECT_GT(streams.size(), 1u);
+}
+
+TEST(SimulcastTest, GetConfigWithNotLimitedMaxLayersForResolution) {
+  test::ScopedFieldTrials field_trials(
+      "WebRTC-LegacySimulcastLayerLimit/Disabled/");
+  FieldTrialBasedConfig trials;
+  const size_t kMinLayers = 1;
+  const size_t kMaxLayers = 3;
+  std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
+      kMinLayers, kMaxLayers, 800, 600, kBitratePriority, kQpMax, !kScreenshare,
+      true, trials);
 
   EXPECT_EQ(kMaxLayers, streams.size());
   EXPECT_EQ(200u, streams[0].width);
@@ -174,10 +203,12 @@ TEST(SimulcastTest, GetConfigWithNotLimitedMaxLayersForResolution) {
 }
 
 TEST(SimulcastTest, GetConfigWithNormalizedResolution) {
+  FieldTrialBasedConfig trials;
+  const size_t kMinLayers = 1;
   const size_t kMaxLayers = 2;
   std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 640 + 1, 360 + 1, kMaxBitrateBps, kBitratePriority, kQpMax,
-      kMaxFps, !kScreenshare);
+      kMinLayers, kMaxLayers, 640 + 1, 360 + 1, kBitratePriority, kQpMax,
+      !kScreenshare, true, trials);
 
   // Must be divisible by |2 ^ (num_layers - 1)|.
   EXPECT_EQ(kMaxLayers, streams.size());
@@ -190,11 +221,13 @@ TEST(SimulcastTest, GetConfigWithNormalizedResolution) {
 TEST(SimulcastTest, GetConfigWithNormalizedResolutionDivisibleBy4) {
   test::ScopedFieldTrials field_trials(
       "WebRTC-NormalizeSimulcastResolution/Enabled-2/");
+  FieldTrialBasedConfig trials;
 
+  const size_t kMinLayers = 1;
   const size_t kMaxLayers = 2;
   std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 709, 501, kMaxBitrateBps, kBitratePriority, kQpMax, kMaxFps,
-      !kScreenshare);
+      kMinLayers, kMaxLayers, 709, 501, kBitratePriority, kQpMax, !kScreenshare,
+      true, trials);
 
   // Must be divisible by |2 ^ 2|.
   EXPECT_EQ(kMaxLayers, streams.size());
@@ -207,11 +240,13 @@ TEST(SimulcastTest, GetConfigWithNormalizedResolutionDivisibleBy4) {
 TEST(SimulcastTest, GetConfigWithNormalizedResolutionDivisibleBy8) {
   test::ScopedFieldTrials field_trials(
       "WebRTC-NormalizeSimulcastResolution/Enabled-3/");
+  FieldTrialBasedConfig trials;
 
+  const size_t kMinLayers = 1;
   const size_t kMaxLayers = 2;
   std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 709, 501, kMaxBitrateBps, kBitratePriority, kQpMax, kMaxFps,
-      !kScreenshare);
+      kMinLayers, kMaxLayers, 709, 501, kBitratePriority, kQpMax, !kScreenshare,
+      true, trials);
 
   // Must be divisible by |2 ^ 3|.
   EXPECT_EQ(kMaxLayers, streams.size());
@@ -221,32 +256,59 @@ TEST(SimulcastTest, GetConfigWithNormalizedResolutionDivisibleBy8) {
   EXPECT_EQ(496u, streams[1].height);
 }
 
-TEST(SimulcastTest, GetConfigForScreenshare) {
-  const size_t kMaxLayers = 3;
-  std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 1400, 800, kMaxBitrateBps, kBitratePriority, kQpMax, kMaxFps,
-      kScreenshare);
+TEST(SimulcastTest, GetConfigForLegacyLayerLimit) {
+  test::ScopedFieldTrials field_trials(
+      "WebRTC-LegacySimulcastLayerLimit/Enabled/");
+  FieldTrialBasedConfig trials;
 
-  EXPECT_EQ(1u, streams.size()) << "No simulcast.";
-  EXPECT_EQ(1400u, streams[0].width);
-  EXPECT_EQ(800u, streams[0].height);
-  EXPECT_EQ(kQpMax, streams[0].max_qp);
-  EXPECT_EQ(kBitratePriority, streams[0].bitrate_priority);
-  EXPECT_TRUE(streams[0].active);
-  EXPECT_GT(streams[0].num_temporal_layers, size_t{1});
-  EXPECT_GT(streams[0].max_framerate, 0);
-  EXPECT_EQ(cricket::kMinVideoBitrateBps, streams[0].min_bitrate_bps);
-  EXPECT_GT(streams[0].target_bitrate_bps, streams[0].min_bitrate_bps);
-  EXPECT_GT(streams[0].max_bitrate_bps, streams[0].target_bitrate_bps);
+  const size_t kMinLayers = 1;
+  const int kMaxLayers = 3;
+  std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
+      kMinLayers, kMaxLayers, 320, 180, kBitratePriority, kQpMax, !kScreenshare,
+      true, trials);
+  EXPECT_EQ(1u, streams.size());
+
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 640, 360,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(2u, streams.size());
+
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 1920, 1080,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(3u, streams.size());
+}
+
+TEST(SimulcastTest, GetConfigForLegacyLayerLimitWithRequiredHD) {
+  test::ScopedFieldTrials field_trials(
+      "WebRTC-LegacySimulcastLayerLimit/Enabled/");
+  FieldTrialBasedConfig trials;
+
+  const size_t kMinLayers = 3;  // "HD" layer must be present!
+  const int kMaxLayers = 3;
+  std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
+      kMinLayers, kMaxLayers, 320, 180, kBitratePriority, kQpMax, !kScreenshare,
+      true, trials);
+  EXPECT_EQ(3u, streams.size());
+
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 640, 360,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(3u, streams.size());
+
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 1920, 1080,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(3u, streams.size());
 }
 
 TEST(SimulcastTest, GetConfigForScreenshareSimulcast) {
-  test::ScopedFieldTrials field_trials("WebRTC-SimulcastScreenshare/Enabled/");
-
+  FieldTrialBasedConfig trials;
+  const size_t kMinLayers = 1;
   const size_t kMaxLayers = 3;
   std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 1400, 800, kMaxBitrateBps, kBitratePriority, kQpMax, kMaxFps,
-      kScreenshare);
+      kMinLayers, kMaxLayers, 1400, 800, kBitratePriority, kQpMax, kScreenshare,
+      true, trials);
 
   EXPECT_GT(streams.size(), 1u);
   for (size_t i = 0; i < streams.size(); ++i) {
@@ -263,51 +325,201 @@ TEST(SimulcastTest, GetConfigForScreenshareSimulcast) {
 }
 
 TEST(SimulcastTest, GetConfigForScreenshareSimulcastWithLimitedMaxLayers) {
-  test::ScopedFieldTrials field_trials("WebRTC-SimulcastScreenshare/Enabled/");
-
+  FieldTrialBasedConfig trials;
+  const size_t kMinLayers = 1;
   const size_t kMaxLayers = 1;
   std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 1400, 800, kMaxBitrateBps, kBitratePriority, kQpMax, kMaxFps,
-      kScreenshare);
+      kMinLayers, kMaxLayers, 1400, 800, kBitratePriority, kQpMax, kScreenshare,
+      true, trials);
 
   EXPECT_EQ(kMaxLayers, streams.size());
 }
 
-TEST(SimulcastTest, SimulcastScreenshareMaxBitrateAdjustedForResolution) {
-  test::ScopedFieldTrials field_trials("WebRTC-SimulcastScreenshare/Enabled/");
-
-  constexpr int kScreenshareHighStreamMinBitrateBps = 600000;
-  constexpr int kScreenshareHighStreamMaxBitrateBps = 1250000;
-  constexpr int kMaxBitrate960_540 = 900000;
-
-  // Normal case, max bitrate not limited by resolution.
-  const size_t kMaxLayers = 2;
+TEST(SimulcastTest, AveragesBitratesForNonStandardResolution) {
+  FieldTrialBasedConfig trials;
+  const size_t kMinLayers = 1;
+  const size_t kMaxLayers = 3;
   std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
-      kMaxLayers, 1920, 1080, kMaxBitrateBps, kBitratePriority, kQpMax, kMaxFps,
-      kScreenshare);
-  EXPECT_EQ(kMaxLayers, streams.size());
-  EXPECT_EQ(streams[1].max_bitrate_bps, kScreenshareHighStreamMaxBitrateBps);
-  EXPECT_EQ(streams[1].min_bitrate_bps, kScreenshareHighStreamMinBitrateBps);
-  EXPECT_GE(streams[1].max_bitrate_bps, streams[1].min_bitrate_bps);
+      kMinLayers, kMaxLayers, 900, 800, kBitratePriority, kQpMax, !kScreenshare,
+      true, trials);
 
-  // At 960x540, the max bitrate is limited to 900kbps.
-  streams = cricket::GetSimulcastConfig(kMaxLayers, 960, 540, kMaxBitrateBps,
-                                        kBitratePriority, kQpMax, kMaxFps,
-                                        kScreenshare);
   EXPECT_EQ(kMaxLayers, streams.size());
-  EXPECT_EQ(streams[1].max_bitrate_bps, kMaxBitrate960_540);
-  EXPECT_EQ(streams[1].min_bitrate_bps, kScreenshareHighStreamMinBitrateBps);
-  EXPECT_GE(streams[1].max_bitrate_bps, streams[1].min_bitrate_bps);
+  EXPECT_EQ(900u, streams[2].width);
+  EXPECT_EQ(800u, streams[2].height);
+  EXPECT_EQ(1850000, streams[2].max_bitrate_bps);
+  EXPECT_EQ(1850000, streams[2].target_bitrate_bps);
+  EXPECT_EQ(475000, streams[2].min_bitrate_bps);
+}
 
-  // At 480x270, the max bitrate is limited to 450kbps. This is lower than
-  // the min bitrate, so use that as a lower bound.
-  streams = cricket::GetSimulcastConfig(kMaxLayers, 480, 270, kMaxBitrateBps,
-                                        kBitratePriority, kQpMax, kMaxFps,
-                                        kScreenshare);
+TEST(SimulcastTest, BitratesForCloseToStandardResolution) {
+  const size_t kMinLayers = 1;
+  const size_t kMaxLayers = 3;
+  // Resolution very close to 720p in number of pixels
+  const size_t kWidth = 1280;
+  const size_t kHeight = 716;
+  const std::vector<VideoStream> kExpectedNear = GetSimulcastBitrates720p();
+  FieldTrialBasedConfig trials;
+
+  std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
+      kMinLayers, kMaxLayers, kWidth, kHeight, kBitratePriority, kQpMax,
+      !kScreenshare, true, trials);
+
   EXPECT_EQ(kMaxLayers, streams.size());
-  EXPECT_EQ(streams[1].max_bitrate_bps, kScreenshareHighStreamMinBitrateBps);
-  EXPECT_EQ(streams[1].min_bitrate_bps, kScreenshareHighStreamMinBitrateBps);
-  EXPECT_GE(streams[1].max_bitrate_bps, streams[1].min_bitrate_bps);
+  EXPECT_EQ(kWidth, streams[2].width);
+  EXPECT_EQ(kHeight, streams[2].height);
+  for (size_t i = 0; i < streams.size(); ++i) {
+    EXPECT_NEAR(kExpectedNear[i].max_bitrate_bps, streams[i].max_bitrate_bps,
+                20000);
+    EXPECT_NEAR(kExpectedNear[i].target_bitrate_bps,
+                streams[i].target_bitrate_bps, 20000);
+    EXPECT_NEAR(kExpectedNear[i].min_bitrate_bps, streams[i].min_bitrate_bps,
+                20000);
+  }
+}
+
+TEST(SimulcastTest, MaxLayersWithRoundUpDisabled) {
+  test::ScopedFieldTrials field_trials(
+      "WebRTC-SimulcastLayerLimitRoundUp/max_ratio:0.0/");
+  FieldTrialBasedConfig trials;
+  const size_t kMinLayers = 1;
+  const int kMaxLayers = 3;
+
+  std::vector<VideoStream> streams;
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 960, 540,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(3u, streams.size());
+  // <960x540: 2 layers
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 960, 539,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(2u, streams.size());
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 480, 270,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(2u, streams.size());
+  // <480x270: 1 layer
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 480, 269,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(1u, streams.size());
+}
+
+TEST(SimulcastTest, MaxLayersWithDefaultRoundUpRatio) {
+  // Default: "WebRTC-SimulcastLayerLimitRoundUp/max_ratio:0.1/"
+  FieldTrialBasedConfig trials;
+  const size_t kMinLayers = 1;
+  const int kMaxLayers = 3;
+
+  std::vector<VideoStream> streams;
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 960, 540,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(3u, streams.size());
+  // Lowest cropped height where max layers from higher resolution is used.
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 960, 512,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(3u, streams.size());
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 960, 508,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(2u, streams.size());
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 480, 270,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(2u, streams.size());
+  // Lowest cropped height where max layers from higher resolution is used.
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 480, 256,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(2u, streams.size());
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 480, 254,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(1u, streams.size());
+}
+
+TEST(SimulcastTest, MaxLayersWithRoundUpRatio) {
+  test::ScopedFieldTrials field_trials(
+      "WebRTC-SimulcastLayerLimitRoundUp/max_ratio:0.13/");
+  FieldTrialBasedConfig trials;
+  const size_t kMinLayers = 1;
+  const int kMaxLayers = 3;
+
+  std::vector<VideoStream> streams;
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 480, 270,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(2u, streams.size());
+  // Lowest cropped height where max layers from higher resolution is used.
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 480, 252,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(2u, streams.size());
+  streams = cricket::GetSimulcastConfig(kMinLayers, kMaxLayers, 480, 250,
+                                        kBitratePriority, kQpMax, !kScreenshare,
+                                        true, trials);
+  EXPECT_EQ(1u, streams.size());
+}
+
+TEST(SimulcastTest, BitratesInterpolatedForResBelow180p) {
+  // TODO(webrtc:12415): Remove when feature launches.
+  test::ScopedFieldTrials field_trials(
+      "WebRTC-LowresSimulcastBitrateInterpolation/Enabled/");
+
+  const size_t kMaxLayers = 3;
+  FieldTrialBasedConfig trials;
+
+  std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
+      /* min_layers = */ 1, kMaxLayers, /* width = */ 960, /* height = */ 540,
+      kBitratePriority, kQpMax, !kScreenshare, true, trials);
+
+  ASSERT_EQ(streams.size(), kMaxLayers);
+  EXPECT_EQ(240u, streams[0].width);
+  EXPECT_EQ(135u, streams[0].height);
+  EXPECT_EQ(streams[0].max_bitrate_bps, 112500);
+  EXPECT_EQ(streams[0].target_bitrate_bps, 84375);
+  EXPECT_EQ(streams[0].min_bitrate_bps, 30000);
+}
+
+TEST(SimulcastTest, BitratesConsistentForVerySmallRes) {
+  // TODO(webrtc:12415): Remove when feature launches.
+  test::ScopedFieldTrials field_trials(
+      "WebRTC-LowresSimulcastBitrateInterpolation/Enabled/");
+
+  FieldTrialBasedConfig trials;
+
+  std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
+      /* min_layers = */ 1, /* max_layers = */ 3, /* width = */ 1,
+      /* height = */ 1, kBitratePriority, kQpMax, !kScreenshare, true, trials);
+
+  ASSERT_TRUE(!streams.empty());
+  EXPECT_EQ(1u, streams[0].width);
+  EXPECT_EQ(1u, streams[0].height);
+  EXPECT_EQ(streams[0].max_bitrate_bps, 30000);
+  EXPECT_EQ(streams[0].target_bitrate_bps, 30000);
+  EXPECT_EQ(streams[0].min_bitrate_bps, 30000);
+}
+
+TEST(SimulcastTest,
+     BitratesNotInterpolatedForResBelow180pWhenDisabledTrialSet) {
+  test::ScopedFieldTrials field_trials(
+      "WebRTC-LowresSimulcastBitrateInterpolation/Disabled/");
+
+  const size_t kMaxLayers = 3;
+  FieldTrialBasedConfig trials;
+
+  std::vector<VideoStream> streams = cricket::GetSimulcastConfig(
+      /* min_layers = */ 1, kMaxLayers, /* width = */ 960, /* height = */ 540,
+      kBitratePriority, kQpMax, !kScreenshare, true, trials);
+
+  ASSERT_EQ(streams.size(), kMaxLayers);
+  EXPECT_EQ(240u, streams[0].width);
+  EXPECT_EQ(135u, streams[0].height);
+  EXPECT_EQ(streams[0].max_bitrate_bps, 200000);
+  EXPECT_EQ(streams[0].target_bitrate_bps, 150000);
+  EXPECT_EQ(streams[0].min_bitrate_bps, 30000);
 }
 
 }  // namespace webrtc

@@ -30,7 +30,7 @@
 #if USE(CA)
 
 #include "FontCascade.h"
-#include "GraphicsContext.h"
+#include "GraphicsContextCG.h"
 #include "PlatformCALayer.h"
 #include "TileController.h"
 #include "TiledBacking.h"
@@ -94,7 +94,7 @@ void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContext
 
     PlatformCALayer::flipContext(context, layerBounds.size.height);
 
-    GraphicsContext graphicsContext(context);
+    GraphicsContextCG graphicsContext(context);
 
     // It's important to get the clip from the context, because it may be significantly
     // smaller than the layer bounds (e.g. tiled layers)
@@ -120,16 +120,17 @@ void PlatformCALayerWinInternal::drawRepaintCounters(CACFLayerRef caLayer, CGCon
     if (!owner() || owner()->usesTiledBackingLayer())
         return;
 
-    CGColorRef backgroundColor = nullptr;
+    RetainPtr<CGColorRef> backgroundColor;
     // Make the background of the counter the same as the border color,
     // unless there is no border, then make it red
     float borderWidth = CACFLayerGetBorderWidth(caLayer);
     if (borderWidth > 0)
         backgroundColor = CACFLayerGetBorderColor(caLayer);
     else
-        backgroundColor = cachedCGColor(Color(255, 0, 0));
+        backgroundColor = cachedCGColor(Color::red);
 
-    PlatformCALayer::drawRepaintIndicator(context, owner(), drawCount, backgroundColor);
+    GraphicsContextCG graphicsContext(context);
+    PlatformCALayer::drawRepaintIndicator(graphicsContext, owner(), drawCount, roundAndClampToSRGBALossy(backgroundColor.get()));
 }
 
 void PlatformCALayerWinInternal::internalSetNeedsDisplay(const FloatRect* dirtyRect)
@@ -206,7 +207,7 @@ void PlatformCALayerWinInternal::getSublayers(PlatformCALayerList& list) const
 
     list.resize(count);
     for (size_t arrayIndex = 0; arrayIndex < count; ++arrayIndex)
-        list[arrayIndex] = PlatformCALayer::platformCALayer(const_cast<void*>(CFArrayGetValueAtIndex(sublayers, arrayIndex)));
+        list[arrayIndex] = PlatformCALayer::platformCALayerForLayer(const_cast<void*>(CFArrayGetValueAtIndex(sublayers, arrayIndex)));
 }
 
 void PlatformCALayerWinInternal::removeAllSublayers()
@@ -256,7 +257,7 @@ PlatformCALayer* PlatformCALayerWinInternal::sublayerAtIndex(int index) const
     if (!sublayers || index < 0 || CFArrayGetCount(sublayers) <= index)
         return nullptr;
     
-    return PlatformCALayer::platformCALayer(static_cast<CACFLayerRef>(const_cast<void*>(CFArrayGetValueAtIndex(sublayers, index))));
+    return PlatformCALayer::platformCALayerForLayer(static_cast<CACFLayerRef>(const_cast<void*>(CFArrayGetValueAtIndex(sublayers, index)))).get();
 }
 
 void PlatformCALayerWinInternal::setBounds(const FloatRect& rect)
@@ -311,15 +312,7 @@ void PlatformCALayerWinInternal::setBorderWidth(float value)
 
 void PlatformCALayerWinInternal::setBorderColor(const Color& value)
 {
-    CGFloat components[4] = { 0, 0, 0, 0 };
-    RetainPtr<CGColorSpaceRef> colorSpace = adoptCF(CGColorSpaceCreateDeviceRGB());
-
-    if (value.isValid())
-        value.getRGBA(components[0], components[1], components[2], components[3]);
-
-    RetainPtr<CGColorRef> color = adoptCF(CGColorCreate(colorSpace.get(), components));
-
-    CACFLayerSetBorderColor(owner()->platformLayer(), color.get());
+    CACFLayerSetBorderColor(owner()->platformLayer(), cachedCGColor(value).get());
 }
 
 #endif

@@ -25,7 +25,7 @@
 
 WI.CallFrameView = class CallFrameView extends WI.Object
 {
-    constructor(callFrame, showFunctionName)
+    constructor(callFrame, {showFunctionName, indicateIfBlackboxed} = {})
     {
         console.assert(callFrame instanceof WI.CallFrame);
 
@@ -37,6 +37,9 @@ WI.CallFrameView = class CallFrameView extends WI.Object
 
         var sourceCodeLocation = callFrame.sourceCodeLocation;
         if (sourceCodeLocation) {
+            if (indicateIfBlackboxed)
+                callFrameElement.classList.toggle("blackboxed", callFrame.blackboxed);
+
             WI.linkifyElement(callFrameElement, sourceCodeLocation, {
                 ignoreNetworkTab: true,
                 ignoreSearchTab: true,
@@ -66,7 +69,7 @@ WI.CallFrameView = class CallFrameView extends WI.Object
             var imgElement = document.createElement("img");
             imgElement.classList.add("icon");
 
-            titleElement.append(imgElement, callFrame.functionName || WI.UIString("(anonymous function)"));
+            titleElement.append(imgElement, callFrame.displayName);
         }
 
         callFrameElement.append(titleElement, subtitleElement);

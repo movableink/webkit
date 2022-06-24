@@ -24,9 +24,11 @@
  */
 
 #pragma once
-#include "ArgumentCoders.h"
+
+#if HAVE(TOUCH_BAR)
+
 #include "TouchBarMenuItemData.h"
-#include <wtf/text/WTFString.h>
+#include <wtf/Vector.h>
 
 namespace IPC {
 class Decoder;
@@ -41,9 +43,8 @@ namespace WebKit {
 
 class TouchBarMenuData {
 public:
-    explicit TouchBarMenuData() = default;
+    TouchBarMenuData() = default;
     explicit TouchBarMenuData(const WebCore::HTMLMenuElement&);
-    explicit TouchBarMenuData(const TouchBarMenuData&) = default;
 
     void addMenuItem(const TouchBarMenuItemData&);
     void removeMenuItem(const TouchBarMenuItemData&);
@@ -51,7 +52,7 @@ public:
     const Vector<TouchBarMenuItemData>& items() const { return m_items; }
     
     void encode(IPC::Encoder&) const;
-    static bool decode(IPC::Decoder&, TouchBarMenuData&);
+    static WARN_UNUSED_RETURN bool decode(IPC::Decoder&, TouchBarMenuData&);
     
     void setID(const String& identifier) { m_id = identifier; }
     bool isPageCustomized() const { return m_isPageCustomized; }
@@ -63,5 +64,7 @@ private:
     
     bool m_isPageCustomized { false };
 };
-    
+
 }
+
+#endif // HAVE(TOUCH_BAR)

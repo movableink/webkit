@@ -1,3 +1,0 @@
-
-FAIL strokeRect is not affected by globalCompositeOperation Can't find variable: OffscreenCanvas
-

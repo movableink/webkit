@@ -21,6 +21,7 @@
 
 #include "WebKitTestServer.h"
 #include "WebViewTest.h"
+#include <WebCore/SoupVersioning.h>
 #include <glib/gstdio.h>
 #include <libsoup/soup.h>
 #include <string.h>
@@ -379,14 +380,23 @@ static void testDownloadLocalFileError(DownloadErrorTest* test, gconstpointer)
 
 static WebKitTestServer* kServer;
 static const char* kServerSuggestedFilename = "webkit-downloaded-file";
+static HashMap<CString, CString> s_userAgentMap;
 
+#if USE(SOUP2)
 static void addContentDispositionHTTPHeaderToResponse(SoupMessage* message)
+#else
+static void addContentDispositionHTTPHeaderToResponse(SoupServerMessage* message)
+#endif
 {
     GUniquePtr<char> contentDisposition(g_strdup_printf("attachment; filename=%s", kServerSuggestedFilename));
-    soup_message_headers_append(message->response_headers, "Content-Disposition", contentDisposition.get());
+    soup_message_headers_append(soup_server_message_get_response_headers(message), "Content-Disposition", contentDisposition.get());
 }
 
+#if USE(SOUP2)
 static void writeNextChunk(SoupMessage* message)
+#else
+static void writeNextChunk(SoupServerMessage* message)
+#endif
 {
     /* We need a big enough chunk for the sniffer to not block the load */
     static const char* chunk = "Testing!Testing!Testing!Testing!Testing!Testing!Testing!"
@@ -396,43 +406,59 @@ static void writeNextChunk(SoupMessage* message)
         "Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!"
         "Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!"
         "Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!Testing!";
-    soup_message_body_append(message->response_body, SOUP_MEMORY_STATIC, chunk, strlen(chunk));
+    soup_message_body_append(soup_server_message_get_response_body(message), SOUP_MEMORY_STATIC, chunk, strlen(chunk));
 }
 
+#if USE(SOUP2)
 static void serverCallback(SoupServer* server, SoupMessage* message, const char* path, GHashTable*, SoupClientContext*, gpointer)
+#else
+static void serverCallback(SoupServer* server, SoupServerMessage* message, const char* path, GHashTable*, gpointer)
+#endif
 {
-    if (message->method != SOUP_METHOD_GET) {
-        soup_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED);
+    if (soup_server_message_get_method(message) != SOUP_METHOD_GET) {
+        soup_server_message_set_status(message, SOUP_STATUS_NOT_IMPLEMENTED, nullptr);
         return;
     }
 
-    soup_message_set_status(message, SOUP_STATUS_OK);
+    auto* responseHeaders = soup_server_message_get_response_headers(message);
+    auto* responseBody = soup_server_message_get_response_body(message);
+    soup_server_message_set_status(message, SOUP_STATUS_OK, nullptr);
+
+    if (g_str_has_prefix(path, "/ua-"))
+        s_userAgentMap.add(path, soup_message_headers_get_one(soup_server_message_get_request_headers(message), "User-Agent"));
 
     if (g_str_equal(path, "/cancel-after-destination")) {
         // Use an infinite message to make sure it's cancelled before it finishes.
-        soup_message_headers_set_encoding(message->response_headers, SOUP_ENCODING_CHUNKED);
+        soup_message_headers_set_encoding(responseHeaders, SOUP_ENCODING_CHUNKED);
         addContentDispositionHTTPHeaderToResponse(message);
         g_signal_connect(message, "wrote_headers", G_CALLBACK(writeNextChunk), nullptr);
         g_signal_connect(message, "wrote_chunk", G_CALLBACK(writeNextChunk), nullptr);
         return;
     }
 
-    if (g_str_equal(path, "/unknown"))
+    if (g_str_equal(path, "/ua-test-redirect")) {
+        soup_server_message_set_status(message, SOUP_STATUS_MOVED_PERMANENTLY, nullptr);
+        soup_message_headers_append(responseHeaders, "Location", "/ua-test");
+        return;
+    }
+
+    if (g_str_equal(path, "/unknown") || g_str_equal(path, "/ua-test"))
         path = "/test.pdf";
+    else if (g_str_equal(path, "/text"))
+        path = "/text";
 
     GUniquePtr<char> filePath(g_build_filename(Test::getResourcesDir().data(), path, nullptr));
     char* contents;
     gsize contentsLength;
     if (!g_file_get_contents(filePath.get(), &contents, &contentsLength, 0)) {
-        soup_message_set_status(message, SOUP_STATUS_NOT_FOUND);
-        soup_message_body_complete(message->response_body);
+        soup_server_message_set_status(message, SOUP_STATUS_NOT_FOUND, nullptr);
+        soup_message_body_complete(responseBody);
         return;
     }
 
     addContentDispositionHTTPHeaderToResponse(message);
-    soup_message_body_append(message->response_body, SOUP_MEMORY_TAKE, contents, contentsLength);
-
-    soup_message_body_complete(message->response_body);
+    soup_message_body_append(responseBody, SOUP_MEMORY_TAKE, contents, contentsLength);
+    soup_message_body_complete(responseBody);
 }
 
 static void testDownloadRemoteFile(DownloadTest* test, gconstpointer)
@@ -559,8 +585,41 @@ public:
         g_main_loop_run(m_mainLoop);
     }
 
+#if PLATFORM(GTK)
+    static gboolean contextMenuCallback(WebKitWebView* webView, WebKitContextMenu* contextMenu, GdkEvent*, WebKitHitTestResult* hitTestResult, WebViewDownloadTest* test)
+    {
+        g_assert_true(WEBKIT_IS_HIT_TEST_RESULT(hitTestResult));
+        GList* items = webkit_context_menu_get_items(contextMenu);
+        for (GList* l = items; l; l = g_list_next(l)) {
+            g_assert_true(WEBKIT_IS_CONTEXT_MENU_ITEM(l->data));
+            auto* item = WEBKIT_CONTEXT_MENU_ITEM(l->data);
+            if (webkit_context_menu_item_get_stock_action(item) == WEBKIT_CONTEXT_MENU_ACTION_DOWNLOAD_LINK_TO_DISK) {
+                test->m_contextMenuDownloadItem = item;
+                break;
+            }
+        }
+        test->quitMainLoop();
+        return FALSE;
+    }
+
+    WebKitContextMenuItem* showContextMenuAndGetDownloadItem(int x, int y)
+    {
+        m_contextMenuDownloadItem = nullptr;
+        auto id = g_signal_connect(m_webView, "context-menu", G_CALLBACK(contextMenuCallback), this);
+        RunLoop::main().dispatch([this, x, y] {
+            clickMouseButton(x, y, 3);
+        });
+        g_main_loop_run(m_mainLoop);
+        g_signal_handler_disconnect(m_webView, id);
+        return m_contextMenuDownloadItem.get();
+    }
+#endif
+
     GRefPtr<WebKitDownload> m_download;
     bool m_shouldDelayDecideDestination { false };
+#if PLATFORM(GTK)
+    GRefPtr<WebKitContextMenuItem> m_contextMenuDownloadItem;
+#endif
 };
 
 static void testWebViewDownloadURI(WebViewDownloadTest* test, gconstpointer)
@@ -672,14 +731,14 @@ static void testDownloadMIMEType(DownloadTest* test, gconstpointer)
     events.clear();
 
     WebKitURIRequest* request = webkit_download_get_request(download.get());
-    WEBKIT_IS_URI_REQUEST(request);
+    g_assert_true(WEBKIT_IS_URI_REQUEST(request));
     ASSERT_CMP_CSTRING(webkit_uri_request_get_uri(request), ==, kServer->getURIForPath("/unknown"));
 
     auto headers = webkit_uri_request_get_http_headers(request);
     g_assert_nonnull(soup_message_headers_get_one(headers, "User-Agent"));
 
     WebKitURIResponse* response = webkit_download_get_response(download.get());
-    WEBKIT_IS_URI_RESPONSE(response);
+    g_assert_true(WEBKIT_IS_URI_RESPONSE(response));
     g_assert_cmpstr(webkit_uri_response_get_mime_type(response), ==, "application/pdf");
 
     g_assert_nonnull(webkit_download_get_destination(download.get()));
@@ -688,58 +747,105 @@ static void testDownloadMIMEType(DownloadTest* test, gconstpointer)
     test->checkDestinationAndDeleteFile(download.get(), expectedFilename.get());
 }
 
-#if PLATFORM(GTK)
-static gboolean contextMenuCallback(WebKitWebView* webView, WebKitContextMenu* contextMenu, GdkEvent*, WebKitHitTestResult* hitTestResult, WebViewDownloadTest* test)
+static void testDownloadTextPlainMIMEType(DownloadTest* test, gconstpointer)
 {
-    g_assert_true(WEBKIT_IS_HIT_TEST_RESULT(hitTestResult));
-    g_assert_true(webkit_hit_test_result_context_is_link(hitTestResult));
-    GList* items = webkit_context_menu_get_items(contextMenu);
-    GRefPtr<WebKitContextMenuItem> contextMenuItem;
-    for (GList* l = items; l; l = g_list_next(l)) {
-        g_assert_true(WEBKIT_IS_CONTEXT_MENU_ITEM(l->data));
-        auto* item = WEBKIT_CONTEXT_MENU_ITEM(l->data);
-        if (webkit_context_menu_item_get_stock_action(item) == WEBKIT_CONTEXT_MENU_ACTION_DOWNLOAD_LINK_TO_DISK) {
-            contextMenuItem = item;
-            break;
-        }
-    }
-    g_assert_nonnull(contextMenuItem.get());
-    webkit_context_menu_remove_all(contextMenu);
-    webkit_context_menu_append(contextMenu, contextMenuItem.get());
-    test->quitMainLoop();
-    return FALSE;
+    GRefPtr<WebKitDownload> download = test->downloadURIAndWaitUntilFinishes(kServer->getURIForPath("/text"));
+    g_assert_null(webkit_download_get_web_view(download.get()));
+
+    WebKitURIRequest* request = webkit_download_get_request(download.get());
+    g_assert_true(WEBKIT_IS_URI_REQUEST(request));
+    ASSERT_CMP_CSTRING(webkit_uri_request_get_uri(request), ==, kServer->getURIForPath("/text"));
+
+    WebKitURIResponse* response = webkit_download_get_response(download.get());
+    g_assert_true(WEBKIT_IS_URI_RESPONSE(response));
+    g_assert_cmpstr(webkit_uri_response_get_mime_type(response), ==, "text/plain");
+    g_assert_nonnull(webkit_download_get_destination(download.get()));
+    g_assert_cmpfloat(webkit_download_get_estimated_progress(download.get()), ==, 1);
+    test->checkDestinationAndDeleteFile(download.get(), kServerSuggestedFilename);
 }
 
+static void testDownloadUserAgent(DownloadTest* test, gconstpointer)
+{
+    s_userAgentMap.clear();
+    GRefPtr<WebKitDownload> download = test->downloadURIAndWaitUntilFinishes(kServer->getURIForPath("/ua-test"));
+    g_assert_null(webkit_download_get_web_view(download.get()));
+    WebKitURIRequest* request = webkit_download_get_request(download.get());
+    g_assert_true(WEBKIT_IS_URI_REQUEST(request));
+    ASSERT_CMP_CSTRING(webkit_uri_request_get_uri(request), ==, kServer->getURIForPath("/ua-test"));
+
+    const char* userAgent = soup_message_headers_get_one(webkit_uri_request_get_http_headers(request), "User-Agent");
+    g_assert_nonnull(userAgent);
+    g_assert_cmpuint(s_userAgentMap.size(), ==, 1);
+    g_assert_true(s_userAgentMap.contains("/ua-test"));
+    ASSERT_CMP_CSTRING(userAgent, ==, s_userAgentMap.get("/ua-test"));
+    s_userAgentMap.clear();
+
+    GUniquePtr<char> expectedFilename(g_strdup_printf("%s.pdf", kServerSuggestedFilename));
+    test->checkDestinationAndDeleteFile(download.get(), expectedFilename.get());
+
+    download = test->downloadURIAndWaitUntilFinishes(kServer->getURIForPath("/ua-test-redirect"));
+    g_assert_null(webkit_download_get_web_view(download.get()));
+    request = webkit_download_get_request(download.get());
+    g_assert_true(WEBKIT_IS_URI_REQUEST(request));
+    ASSERT_CMP_CSTRING(webkit_uri_request_get_uri(request), ==, kServer->getURIForPath("/ua-test-redirect"));
+
+    userAgent = soup_message_headers_get_one(webkit_uri_request_get_http_headers(request), "User-Agent");
+    g_assert_nonnull(userAgent);
+    g_assert_cmpuint(s_userAgentMap.size(), ==, 2);
+    g_assert_true(s_userAgentMap.contains("/ua-test-redirect"));
+    ASSERT_CMP_CSTRING(userAgent, ==, s_userAgentMap.get("/ua-test-redirect"));
+    g_assert_true(s_userAgentMap.contains("/ua-test"));
+    ASSERT_CMP_CSTRING(userAgent, ==, s_userAgentMap.get("/ua-test"));
+    s_userAgentMap.clear();
+
+    test->checkDestinationAndDeleteFile(download.get(), expectedFilename.get());
+}
+
+static void testDownloadEphemeralContext(Test* test, gconstpointer)
+{
+    GRefPtr<WebKitWebsiteDataManager> manager = adoptGRef(webkit_website_data_manager_new_ephemeral());
+    test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(manager.get()));
+    GRefPtr<WebKitWebContext> context = adoptGRef(webkit_web_context_new_with_website_data_manager(manager.get()));
+    test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(context.get()));
+    g_assert_true(webkit_web_context_is_ephemeral(context.get()));
+
+    GRefPtr<GMainLoop> mainLoop = adoptGRef(g_main_loop_new(nullptr, TRUE));
+    GRefPtr<WebKitDownload> download = adoptGRef(webkit_web_context_download_uri(context.get(), kServer->getURIForPath("/test.pdf").data()));
+    test->assertObjectIsDeletedWhenTestFinishes(G_OBJECT(download.get()));
+    g_signal_connect(download.get(), "decide-destination", G_CALLBACK(+[](WebKitDownload* download, const gchar* suggestedFilename, gpointer) {
+        GUniquePtr<char> destination(g_build_filename(Test::dataDirectory(), suggestedFilename, nullptr));
+        GUniquePtr<char> destinationURI(g_filename_to_uri(destination.get(), nullptr, nullptr));
+        webkit_download_set_destination(download, destinationURI.get());
+    }), nullptr);
+    g_signal_connect(download.get(), "finished", G_CALLBACK(+[](WebKitDownload*, GMainLoop* loop) {
+        g_main_loop_quit(loop);
+    }), mainLoop.get());
+
+    g_main_loop_run(mainLoop.get());
+
+    GRefPtr<GFile> destFile = adoptGRef(g_file_new_for_uri(webkit_download_get_destination(download.get())));
+    g_file_delete(destFile.get(), nullptr, nullptr);
+}
+
+#if PLATFORM(GTK)
 static void testContextMenuDownloadActions(WebViewDownloadTest* test, gconstpointer)
 {
-    test->showInWindowAndWaitUntilMapped();
+    test->showInWindow();
 
     static const char* linkHTMLFormat = "<html><body><a style='position:absolute; left:1; top:1' href='%s'>Download Me</a></body></html>";
     GUniquePtr<char> linkHTML(g_strdup_printf(linkHTMLFormat, kServer->getURIForPath("/test.pdf").data()));
     test->loadHtml(linkHTML.get(), kServer->getURIForPath("/").data());
     test->waitUntilLoadFinished();
 
-    g_signal_connect(test->m_webView, "context-menu", G_CALLBACK(contextMenuCallback), test);
-    g_idle_add([](gpointer userData) -> gboolean {
-        auto* test = static_cast<WebViewDownloadTest*>(userData);
-        test->clickMouseButton(1, 1, 3);
-        return FALSE;
-    }, test);
-    g_main_loop_run(test->m_mainLoop);
-
-    g_idle_add([](gpointer userData) -> gboolean {
-        auto* test = static_cast<WebViewDownloadTest*>(userData);
-        // Select and activate the context menu action.
-        test->keyStroke(GDK_KEY_Down);
-        test->keyStroke(GDK_KEY_Return);
-        return FALSE;
-    }, test);
+    auto* item = test->showContextMenuAndGetDownloadItem(1, 1);
+    g_assert(WEBKIT_IS_CONTEXT_MENU_ITEM(item));
+    g_action_activate(webkit_context_menu_item_get_gaction(item), nullptr);
     test->waitUntilDownloadStarted();
 
     g_assert_true(test->m_webView == webkit_download_get_web_view(test->m_download.get()));
 
     WebKitURIRequest* request = webkit_download_get_request(test->m_download.get());
-    WEBKIT_IS_URI_REQUEST(request);
+    g_assert_true(WEBKIT_IS_URI_REQUEST(request));
     ASSERT_CMP_CSTRING(webkit_uri_request_get_uri(request), ==, kServer->getURIForPath("/test.pdf"));
 
     auto headers = webkit_uri_request_get_http_headers(request);
@@ -755,7 +861,7 @@ static void testContextMenuDownloadActions(WebViewDownloadTest* test, gconstpoin
 
 static void testBlobDownload(WebViewDownloadTest* test, gconstpointer)
 {
-    test->showInWindowAndWaitUntilMapped();
+    test->showInWindow();
 
     static const char* linkBlobHTML =
         "<html><body>"
@@ -805,9 +911,15 @@ void beforeAll()
     PolicyResponseDownloadTest::add("Downloads", "policy-decision-download", testPolicyResponseDownload);
     PolicyResponseDownloadTest::add("Downloads", "policy-decision-download-cancel", testPolicyResponseDownloadCancel);
     DownloadTest::add("Downloads", "mime-type", testDownloadMIMEType);
+    DownloadTest::add("Downloads", "text-plain-mime-type", testDownloadTextPlainMIMEType);
+    DownloadTest::add("Downloads", "user-agent", testDownloadUserAgent);
+    Test::add("Downloads", "ephemeral-context", testDownloadEphemeralContext);
     // FIXME: Implement keyStroke in WPE.
 #if PLATFORM(GTK)
+#if !USE(GTK4)
+    // FIXME: Rework context menu API in GTK4 to not expose GdkEvent.
     WebViewDownloadTest::add("Downloads", "contex-menu-download-actions", testContextMenuDownloadActions);
+#endif
     // FIXME: Implement mouse click in WPE.
     WebViewDownloadTest::add("Downloads", "blob-download", testBlobDownload);
 #endif

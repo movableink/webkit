@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "Timer.h"
 #include <wtf/HashMap.h>
@@ -54,6 +54,7 @@ public:
     int index() const;
 
     AVMediaSelectionOption *avMediaSelectionOption() const { return m_mediaSelectionOption.get(); }
+    AVAssetTrack *assetTrack() const;
 
 private:
     friend class MediaSelectionGroupAVFObjC;
@@ -95,4 +96,4 @@ private:
 
 }
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

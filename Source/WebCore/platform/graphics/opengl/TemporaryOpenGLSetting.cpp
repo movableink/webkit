@@ -26,7 +26,7 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_3D)
+#if USE(OPENGL) || USE(OPENGL_ES)
 #include "TemporaryOpenGLSetting.h"
 
 #if PLATFORM(QT)
@@ -40,7 +40,7 @@
 
 #if USE(OPENGL_ES)
 #include <OpenGLES/ES2/gl.h>
-#else
+#elif USE(OPENGL)
 #include <OpenGL/gl.h>
 #endif
 
@@ -88,4 +88,4 @@ TemporaryOpenGLSetting::~TemporaryOpenGLSetting()
 
 }
 
-#endif
+#endif // USE(OPENGL) || USE(OPENGL_ES)

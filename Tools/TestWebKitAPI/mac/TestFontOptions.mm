@@ -59,19 +59,19 @@ static TestFontOptions *sharedFontOptionsForTesting()
     BOOL _hasMultipleFonts;
 }
 
-@synthesize hasShadow=_hasShadow;
-@synthesize shadowBlurRadius=_shadowBlurRadius;
-@synthesize hasMultipleFonts=_hasMultipleFonts;
+@synthesize hasShadow = _hasShadow;
+@synthesize shadowBlurRadius = _shadowBlurRadius;
+@synthesize hasMultipleFonts = _hasMultipleFonts;
 
 + (instancetype)sharedInstance
 {
-    static TestFontOptions *sharedInstance;
+    static RetainPtr<TestFontOptions> sharedInstance;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         NSFontOptions *sharedFontOptions = [NSClassFromString(@"NSFontOptions") sharedFontOptions];
-        sharedInstance = [[TestFontOptions alloc] initWithFontOptions:sharedFontOptions];
+        sharedInstance = adoptNS([[TestFontOptions alloc] initWithFontOptions:sharedFontOptions]);
     });
-    return sharedInstance;
+    return sharedInstance.get();
 }
 
 - (instancetype)initWithFontOptions:(NSFontOptions *)fontOptions
@@ -111,7 +111,7 @@ static TestFontOptions *sharedFontOptionsForTesting()
     if (_shadowOffset.width == shadowWidth)
         return;
 
-    SetForScope<BOOL> hasPendingFontShadowChanges(_hasPendingShadowChanges, YES);
+    SetForScope hasPendingFontShadowChanges(_hasPendingShadowChanges, YES);
     _shadowOffset.width = shadowWidth;
     [self _dispatchFontAttributeChanges];
 }
@@ -126,7 +126,7 @@ static TestFontOptions *sharedFontOptionsForTesting()
     if (_shadowOffset.height == shadowHeight)
         return;
 
-    SetForScope<BOOL> hasPendingFontShadowChanges(_hasPendingShadowChanges, YES);
+    SetForScope hasPendingFontShadowChanges(_hasPendingShadowChanges, YES);
     _shadowOffset.height = shadowHeight;
     [self _dispatchFontAttributeChanges];
 }
@@ -136,7 +136,7 @@ static TestFontOptions *sharedFontOptionsForTesting()
     if (_shadowBlurRadius == shadowBlurRadius)
         return;
 
-    SetForScope<BOOL> hasPendingFontShadowChanges(_hasPendingShadowChanges, YES);
+    SetForScope hasPendingFontShadowChanges(_hasPendingShadowChanges, YES);
     _shadowBlurRadius = shadowBlurRadius;
     [self _dispatchFontAttributeChanges];
 }
@@ -146,7 +146,7 @@ static TestFontOptions *sharedFontOptionsForTesting()
     if (_hasShadow == hasShadow)
         return;
 
-    SetForScope<BOOL> hasPendingFontShadowChanges(_hasPendingShadowChanges, YES);
+    SetForScope hasPendingFontShadowChanges(_hasPendingShadowChanges, YES);
     _hasShadow = hasShadow;
     [self _dispatchFontAttributeChanges];
 }
@@ -158,7 +158,7 @@ static TestFontOptions *sharedFontOptionsForTesting()
 
 - (void)setForegroundColor:(NSColor *)color
 {
-    SetForScope<BOOL> hasPendingColorChanges(_hasPendingColorChanges, YES);
+    SetForScope hasPendingColorChanges(_hasPendingColorChanges, YES);
     _foregroundColor = adoptNS([color copy]);
     [self _dispatchFontAttributeChanges];
 }
@@ -170,7 +170,7 @@ static TestFontOptions *sharedFontOptionsForTesting()
 
 - (void)setBackgroundColor:(NSColor *)color
 {
-    SetForScope<BOOL> hasPendingColorChanges(_hasPendingColorChanges, YES);
+    SetForScope hasPendingColorChanges(_hasPendingColorChanges, YES);
     _backgroundColor = adoptNS([color copy]);
     [self _dispatchFontAttributeChanges];
 }

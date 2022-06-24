@@ -39,118 +39,58 @@
 namespace WebKit {
 namespace NetworkCache {
 
-#if !OS(WINDOWS)
 Data Data::mapToFile(const String& path) const
 {
-    int fd = open(FileSystem::fileSystemRepresentation(path).data(), O_CREAT | O_EXCL | O_RDWR , S_IRUSR | S_IWUSR);
-    if (fd < 0)
+    FileSystem::PlatformFileHandle handle;
+    auto applyData = [&](const Function<bool(Span<const uint8_t>)>& applier) {
+        apply(applier);
+    };
+    auto mappedFile = FileSystem::mapToFile(path, size(), WTFMove(applyData), &handle);
+    if (!mappedFile)
         return { };
-
-    if (ftruncate(fd, m_size) < 0) {
-        close(fd);
-        return { };
-    }
-    
-    FileSystem::makeSafeToUseMemoryMapForPath(path);
-
-    void* map = mmap(nullptr, m_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (map == MAP_FAILED) {
-        close(fd);
-        return { };
-    }
-
-    uint8_t* mapData = static_cast<uint8_t*>(map);
-    apply([&mapData](const uint8_t* bytes, size_t bytesSize) {
-        memcpy(mapData, bytes, bytesSize);
-        mapData += bytesSize;
-        return true;
-    });
-
-    // Drop the write permission.
-    mprotect(map, m_size, PROT_READ);
-
-    // Flush (asynchronously) to file, turning this into clean memory.
-    msync(map, m_size, MS_ASYNC);
-
-    return Data::adoptMap(map, m_size, fd);
+    return Data::adoptMap(WTFMove(mappedFile), handle);
 }
-#else
-Data Data::mapToFile(const String& path) const
-{
-    auto file = FileSystem::openFile(path, FileSystem::FileOpenMode::Write);
-    if (!FileSystem::isHandleValid(file))
-        return { };
-    if (FileSystem::writeToFile(file, reinterpret_cast<const char*>(data()), size()) < 0)
-        return { };
-    return Data(Vector<uint8_t>(m_buffer));
-}
-#endif
 
-#if !OS(WINDOWS)
 Data mapFile(const char* path)
 {
-    int fd = open(path, O_RDONLY, 0);
-    if (fd < 0)
-        return { };
-    struct stat stat;
-    if (fstat(fd, &stat) < 0) {
-        close(fd);
-        return { };
-    }
-    size_t size = stat.st_size;
-    if (!size) {
-        close(fd);
-        return Data::empty();
-    }
-
-    return adoptAndMapFile(fd, 0, size);
-}
-#endif
-
-Data mapFile(const String& path)
-{
-#if !OS(WINDOWS)
-    return mapFile(FileSystem::fileSystemRepresentation(path).data());
-#else
     auto file = FileSystem::openFile(path, FileSystem::FileOpenMode::Read);
     if (!FileSystem::isHandleValid(file))
         return { };
-    long long size;
-    if (!FileSystem::getFileSize(file, size))
+    auto size = FileSystem::fileSize(file);
+    if (!size) {
+        FileSystem::closeFile(file);
         return { };
-    return adoptAndMapFile(file, 0, size);
-#endif
+    }
+    return adoptAndMapFile(file, 0, *size);
 }
 
-#if !OS(WINDOWS)
-Data adoptAndMapFile(int fd, size_t offset, size_t size)
+Data mapFile(const String& path)
+{
+    return mapFile(FileSystem::fileSystemRepresentation(path).data());
+}
+
+Data adoptAndMapFile(FileSystem::PlatformFileHandle handle, size_t offset, size_t size)
 {
     if (!size) {
-        close(fd);
+        FileSystem::closeFile(handle);
         return Data::empty();
     }
-
-    void* map = mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, offset);
-    if (map == MAP_FAILED) {
-        close(fd);
+    bool success;
+    FileSystem::MappedFileData mappedFile(handle, FileSystem::FileOpenMode::Read, FileSystem::MappedFileMode::Private, success);
+    if (!success) {
+        FileSystem::closeFile(handle);
         return { };
     }
 
-    return Data::adoptMap(map, size, fd);
+    return Data::adoptMap(WTFMove(mappedFile), handle);
 }
-#else
-Data adoptAndMapFile(FileSystem::PlatformFileHandle file, size_t offset, size_t size)
-{
-    return Data(file, offset, size);
-}
-#endif
 
 SHA1::Digest computeSHA1(const Data& data, const Salt& salt)
 {
     SHA1 sha1;
     sha1.addBytes(salt.data(), salt.size());
-    data.apply([&sha1](const uint8_t* data, size_t size) {
-        sha1.addBytes(data, size);
+    data.apply([&sha1](Span<const uint8_t> span) {
+        sha1.addBytes(span.data(), span.size());
         return true;
     });
 
@@ -166,53 +106,6 @@ bool bytesEqual(const Data& a, const Data& b)
     if (a.size() != b.size())
         return false;
     return !memcmp(a.data(), b.data(), a.size());
-}
-
-static Salt makeSalt()
-{
-    Salt salt;
-    static_assert(salt.size() == 8, "Salt size");
-    *reinterpret_cast<uint32_t*>(&salt[0]) = cryptographicallyRandomNumber();
-    *reinterpret_cast<uint32_t*>(&salt[4]) = cryptographicallyRandomNumber();
-    return salt;
-}
-
-Optional<Salt> readOrMakeSalt(const String& path)
-{
-#if !OS(WINDOWS)
-    auto cpath = FileSystem::fileSystemRepresentation(path);
-    auto fd = open(cpath.data(), O_RDONLY, 0);
-    Salt salt;
-    auto bytesRead = read(fd, salt.data(), salt.size());
-    close(fd);
-    if (bytesRead != static_cast<ssize_t>(salt.size())) {
-        salt = makeSalt();
-
-        unlink(cpath.data());
-        fd = open(cpath.data(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-        bool success = write(fd, salt.data(), salt.size()) == static_cast<ssize_t>(salt.size());
-        close(fd);
-        if (!success)
-            return { };
-    }
-    return salt;
-#else
-    auto file = FileSystem::openFile(path, FileSystem::FileOpenMode::Read);
-    Salt salt;
-    auto bytesRead = FileSystem::readFromFile(file, reinterpret_cast<char*>(salt.data()), salt.size());
-    FileSystem::closeFile(file);
-    if (bytesRead != salt.size()) {
-        salt = makeSalt();
-
-        FileSystem::deleteFile(path);
-        file = FileSystem::openFile(path, FileSystem::FileOpenMode::Write);
-        bool success = FileSystem::writeToFile(file, reinterpret_cast<char*>(salt.data()), salt.size()) == salt.size();
-        FileSystem::closeFile(file);
-        if (!success)
-            return { };
-    }
-    return salt;
-#endif
 }
 
 } // namespace NetworkCache

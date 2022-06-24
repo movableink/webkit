@@ -124,7 +124,7 @@ bool WKFrameIsDisplayingMarkupDocument(WKFrameRef frameRef)
 
 bool WKFrameIsFrameSet(WKFrameRef frameRef)
 {
-    return toImpl(frameRef)->isFrameSet();
+    return false;
 }
 
 WKFrameHandleRef WKFrameCreateFrameHandle(WKFrameRef frameRef)
@@ -134,20 +134,26 @@ WKFrameHandleRef WKFrameCreateFrameHandle(WKFrameRef frameRef)
 
 WKFrameInfoRef WKFrameCreateFrameInfo(WKFrameRef frameRef)
 {
-    return toAPI(&API::FrameInfo::create(*toImpl(frameRef), WebCore::SecurityOrigin::createFromString(toImpl(frameRef)->url())).leakRef());
+    return nullptr;
 }
 
 void WKFrameGetMainResourceData(WKFrameRef frameRef, WKFrameGetResourceDataFunction callback, void* context)
 {
-    toImpl(frameRef)->getMainResourceData(toGenericCallbackFunction(context, callback));
+    toImpl(frameRef)->getMainResourceData([context, callback] (API::Data* data) {
+        callback(toAPI(data), nullptr, context);
+    });
 }
 
 void WKFrameGetResourceData(WKFrameRef frameRef, WKURLRef resourceURL, WKFrameGetResourceDataFunction callback, void* context)
 {
-    toImpl(frameRef)->getResourceData(toImpl(resourceURL), toGenericCallbackFunction(context, callback));
+    toImpl(frameRef)->getResourceData(toImpl(resourceURL), [context, callback] (API::Data* data) {
+        callback(toAPI(data), nullptr, context);
+    });
 }
 
 void WKFrameGetWebArchive(WKFrameRef frameRef, WKFrameGetWebArchiveFunction callback, void* context)
 {
-    toImpl(frameRef)->getWebArchive(toGenericCallbackFunction(context, callback));
+    toImpl(frameRef)->getWebArchive([context, callback] (API::Data* data) {
+        callback(toAPI(data), nullptr, context);
+    });
 }

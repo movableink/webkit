@@ -11,11 +11,10 @@
 description('Test the parsing of :not(selectorList) for querySelector and style. This test focus on pseudo elements nested inside other functional pseudo class.');
 
 function testInvalidSelector(selectorString) {
-    shouldThrowErrorName('document.querySelector(":not(' + selectorString + ')")', 'SyntaxError');
-
     var styleContainer = document.getElementById('style-container');
     styleContainer.innerHTML = ':not(' + selectorString + ') { }';
-    shouldBe("document.getElementById('style-container').sheet.cssRules.length", "0");
+    const parsed = document.getElementById('style-container').sheet.cssRules.length == 1;
+    debug(`selector '${styleContainer.innerHTML}' parsed: ${parsed ? "YES" : "NO"}`);
     styleContainer.innerHTML = '';
 }
 
@@ -36,16 +35,24 @@ var validSelectorsPart2 = [
     // Functional pseudo classes.
     ":-webkit-any(.selector,#tama,#hanayo,#midoriko)",
     ":nth-child(even of a, b, c)",
+    ":not(:is(cocoa, cappuccino))",
     ":not(:matches(cocoa, cappuccino))",
 ];
 
 var invalidSelectors = [
+    ":is(a, b, c::after)",
     ":matches(a, b, c::after)",
+    ":is(a, b, c:after)",
     ":matches(a, b, c:after)",
+    ":nth-child(2n+1 of d, e, :is(f, g, ::before))",
     ":nth-child(2n+1 of d, e, :matches(f, g, ::before))",
+    ":nth-child(2n+1 of d, e, :is(f, g, :before))",
     ":nth-child(2n+1 of d, e, :matches(f, g, :before))",
+    ":not(:is(a, b, c::after))",
     ":not(:matches(a, b, c::after))",
+    ":not(:is(a, b, c:after))",
     ":not(:matches(a, b, c:after))",
+    ":is(a, b, :is(c, d, :is(e, f, :is(g, h, i::after))))",
     ":matches(a, b, :matches(c, d, :matches(e, f, :matches(g, h, i::after))))",
 ];
 

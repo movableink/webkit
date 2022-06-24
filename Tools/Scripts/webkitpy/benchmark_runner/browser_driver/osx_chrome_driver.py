@@ -1,80 +1,88 @@
-#!/usr/bin/env python
-
 import logging
 import os
 
-from osx_browser_driver import OSXBrowserDriver
+from webkitpy.benchmark_runner.browser_driver.osx_browser_driver import OSXBrowserDriver
 
 
 _log = logging.getLogger(__name__)
 
 
-class OSXChromeDriver(OSXBrowserDriver):
+class OSXChromeDriverBase(OSXBrowserDriver):
+    app_name = None
+
+    def launch_url(self, url, options, browser_build_path, browser_path):
+        # FIXME: handle self._browser_path.
+        args_with_url = ['--args', '--homepage', url, self._window_size_arg(), '--no-first-run',
+                         '--no-default-browser-check', '--disable-extensions']
+        self._launch_process(build_dir=browser_build_path, app_name=self.app_name, url=url, args=args_with_url)
+
+    def launch_driver(self, url, options, browser_build_path):
+        from selenium import webdriver
+        chrome_options = self._create_chrome_options(browser_build_path)
+        driver_executable = self.webdriver_binary_path
+        driver = webdriver.Chrome(chrome_options=chrome_options, executable_path=driver_executable)
+        self._launch_webdriver(url=url, driver=driver)
+        return driver
+
+    def _create_chrome_options(self, browser_build_path):
+        from selenium.webdriver.chrome.options import Options
+        chrome_options = Options()
+        chrome_options.add_argument("--disable-web-security")
+        chrome_options.add_argument("--user-data-dir")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument(self._window_size_arg())
+        self._set_chrome_binary_location(chrome_options, browser_build_path)
+        return chrome_options
+
+    def _window_size_arg(self):
+        screen_size = self._screen_size()
+        return '--window-size={width},{height}'.format(width=int(screen_size.width), height=int(screen_size.height))
+
+    def _set_chrome_binary_location(self, options, browser_build_path):
+        pass
+
+def set_binary_location_impl(options, browser_build_path, app_name, process_name):
+    if not browser_build_path:
+        return
+    app_path = os.path.join(browser_build_path, app_name)
+    binary_path = os.path.join(app_path, "Contents/MacOS", process_name)
+    options.binary_location = binary_path
+
+
+class OSXChromeDriver(OSXChromeDriverBase):
     process_name = 'Google Chrome'
     browser_name = 'chrome'
     app_name = 'Google Chrome.app'
     bundle_id = 'com.google.Chrome'
 
-    def launch_url(self, url, options, browser_build_path, browser_path):
-        # FIXME: handle self._browser_path.
-        args_with_url = self._insert_url(create_args(), 2, url)
-        self._launch_process(build_dir=browser_build_path, app_name=self.app_name, url=url, args=args_with_url)
-
-    def launch_driver(self, url, options, browser_build_path):
-        import webkitpy.thirdparty.autoinstalled.selenium
-        from selenium import webdriver
-        chrome_options = create_chrome_options()
-        if browser_build_path:
-            app_path = os.path.join(browser_build_path, self.app_name)
-            binary_path = os.path.join(app_path, "Contents/MacOS", self.process_name)
-            chrome_options.binary_location = binary_path
-        driver_executable = self.webdriver_binary_path
-        driver = webdriver.Chrome(chrome_options=chrome_options, executable_path=driver_executable)
-        self._launch_webdriver(url=url, driver=driver)
-        return driver
+    def _set_chrome_binary_location(self, options, browser_build_path):
+        set_binary_location_impl(options, browser_build_path, self.app_name, self.process_name)
 
 
-class OSXChromeCanaryDriver(OSXBrowserDriver):
+class OSXChromeCanaryDriver(OSXChromeDriverBase):
     process_name = 'Google Chrome Canary'
     browser_name = 'chrome-canary'
     app_name = 'Google Chrome Canary.app'
     bundle_id = 'com.google.Chrome.canary'
 
-    def launch_url(self, url, options, browser_build_path, browser_path):
-        # FIXME: handle self._browser_path.
-        args_with_url = self._insert_url(create_args(), 2, url)
-        self._launch_process(build_dir=browser_build_path, app_name=self.app_name, url=url, args=args_with_url)
-
-    def launch_driver(self, url, options, browser_build_path):
-        import webkitpy.thirdparty.autoinstalled.selenium
-        from selenium import webdriver
-        chrome_options = create_chrome_options()
-        if not browser_build_path:
-            browser_build_path = '/Applications/'
-        app_path = os.path.join(browser_build_path, self.app_name)
-        binary_path = os.path.join(app_path, "Contents/MacOS", self.process_name)
-        chrome_options.binary_location = binary_path
-        driver_executable = self.webdriver_binary_path
-        driver = webdriver.Chrome(chrome_options=chrome_options, executable_path=driver_executable)
-        self._launch_webdriver(url=url, driver=driver)
-        return driver
+    def _set_chrome_binary_location(self, options, browser_build_path):
+        set_binary_location_impl(options, browser_build_path, self.app_name, self.process_name)
 
 
-def create_args():
-    args = ['--args', '--homepage', create_window_size_arg()]
-    return args
+class OSXChromeBetaDriver(OSXChromeDriverBase):
+    process_name = 'Google Chrome Beta'
+    browser_name = 'chrome-beta'
+    app_name = 'Google Chrome Beta.app'
+    bundle_id = 'com.google.Chrome.beta'
 
+    def _set_chrome_binary_location(self, options, browser_build_path):
+        set_binary_location_impl(options, browser_build_path, self.app_name, self.process_name)
 
-def create_chrome_options():
-    from selenium.webdriver.chrome.options import Options
-    chrome_options = Options()
-    chrome_options.add_argument("--disable-web-security")
-    chrome_options.add_argument("--user-data-dir")
-    chrome_options.add_argument("--disable-extensions")
-    chrome_options.add_argument(create_window_size_arg())
-    return chrome_options
+class OSXChromeDevDriver(OSXChromeDriverBase):
+    process_name = 'Google Chrome Dev'
+    browser_name = 'chrome-dev'
+    app_name = 'Google Chrome Dev.app'
+    bundle_id = 'com.google.Chrome.dev'
 
-
-def create_window_size_arg():
-    window_size_arg = '--window-size={width},{height}'.format(width=int(OSXBrowserDriver._screen_size().width), height=int(OSXBrowserDriver._screen_size().height))
-    return window_size_arg
+    def _set_chrome_binary_location(self, options, browser_build_path):
+        set_binary_location_impl(options, browser_build_path, self.app_name, self.process_name)

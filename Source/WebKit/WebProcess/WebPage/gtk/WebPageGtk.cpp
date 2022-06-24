@@ -28,10 +28,8 @@
 #include "config.h"
 #include "WebPage.h"
 
-#include "EditorState.h"
-#include "WebEvent.h"
 #include "WebFrame.h"
-#include "WebKitWebPageAccessibilityObject.h"
+#include "WebKeyboardEvent.h"
 #include "WebPageProxyMessages.h"
 #include "WebProcess.h"
 #include <WebCore/BackForwardController.h>
@@ -43,11 +41,13 @@
 #include <WebCore/KeyboardEvent.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
-#include <WebCore/PasteboardHelper.h>
 #include <WebCore/PlatformKeyboardEvent.h>
+#include <WebCore/PlatformScreen.h>
+#include <WebCore/PointerCharacteristics.h>
+#include <WebCore/RenderTheme.h>
+#include <WebCore/RenderThemeAdwaita.h>
 #include <WebCore/Settings.h>
 #include <WebCore/SharedBuffer.h>
-#include <WebCore/UserAgent.h>
 #include <WebCore/WindowsKeyboardCodes.h>
 #include <gtk/gtk.h>
 #include <wtf/glib/GUniquePtr.h>
@@ -55,61 +55,8 @@
 namespace WebKit {
 using namespace WebCore;
 
-void WebPage::platformInitialize()
-{
-#if ENABLE(ACCESSIBILITY)
-    // Create the accessible object (the plug) that will serve as the
-    // entry point to the Web process, and send a message to the UI
-    // process to connect the two worlds through the accessibility
-    // object there specifically placed for that purpose (the socket).
-    m_accessibilityObject = adoptGRef(webkitWebPageAccessibilityObjectNew(this));
-    GUniquePtr<gchar> plugID(atk_plug_get_id(ATK_PLUG(m_accessibilityObject.get())));
-    send(Messages::WebPageProxy::BindAccessibilityTree(String(plugID.get())));
-#endif
-}
-
 void WebPage::platformReinitialize()
 {
-}
-
-void WebPage::platformDetach()
-{
-}
-
-void WebPage::platformEditorState(Frame& frame, EditorState& result, IncludePostLayoutDataHint shouldIncludePostLayoutData) const
-{
-    if (shouldIncludePostLayoutData == IncludePostLayoutDataHint::No || !frame.view() || frame.view()->needsLayout()) {
-        result.isMissingPostLayoutData = true;
-        return;
-    }
-
-    auto& postLayoutData = result.postLayoutData();
-    postLayoutData.caretRectAtStart = frame.selection().absoluteCaretBounds();
-
-    const VisibleSelection& selection = frame.selection().selection();
-    if (selection.isNone())
-        return;
-
-    const Editor& editor = frame.editor();
-    if (selection.isRange()) {
-        if (editor.selectionHasStyle(CSSPropertyFontWeight, "bold") == TrueTriState)
-            postLayoutData.typingAttributes |= AttributeBold;
-        if (editor.selectionHasStyle(CSSPropertyFontStyle, "italic") == TrueTriState)
-            postLayoutData.typingAttributes |= AttributeItalics;
-        if (editor.selectionHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "underline") == TrueTriState)
-            postLayoutData.typingAttributes |= AttributeUnderline;
-        if (editor.selectionHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "line-through") == TrueTriState)
-            postLayoutData.typingAttributes |= AttributeStrikeThrough;
-    } else if (selection.isCaret()) {
-        if (editor.selectionStartHasStyle(CSSPropertyFontWeight, "bold"))
-            postLayoutData.typingAttributes |= AttributeBold;
-        if (editor.selectionStartHasStyle(CSSPropertyFontStyle, "italic"))
-            postLayoutData.typingAttributes |= AttributeItalics;
-        if (editor.selectionStartHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "underline"))
-            postLayoutData.typingAttributes |= AttributeUnderline;
-        if (editor.selectionStartHasStyle(CSSPropertyWebkitTextDecorationsInEffect, "line-through"))
-            postLayoutData.typingAttributes |= AttributeStrikeThrough;
-    }
 }
 
 bool WebPage::performDefaultBehaviorForKeyEvent(const WebKeyboardEvent& keyboardEvent)
@@ -119,31 +66,31 @@ bool WebPage::performDefaultBehaviorForKeyEvent(const WebKeyboardEvent& keyboard
 
     switch (keyboardEvent.windowsVirtualKeyCode()) {
     case VK_SPACE:
-        scroll(m_page.get(), keyboardEvent.shiftKey() ? ScrollUp : ScrollDown, ScrollByPage);
+        scroll(m_page.get(), keyboardEvent.shiftKey() ? ScrollUp : ScrollDown, ScrollGranularity::Page);
         break;
     case VK_LEFT:
-        scroll(m_page.get(), ScrollLeft, ScrollByLine);
+        scroll(m_page.get(), ScrollLeft, ScrollGranularity::Line);
         break;
     case VK_RIGHT:
-        scroll(m_page.get(), ScrollRight, ScrollByLine);
+        scroll(m_page.get(), ScrollRight, ScrollGranularity::Line);
         break;
     case VK_UP:
-        scroll(m_page.get(), ScrollUp, ScrollByLine);
+        scroll(m_page.get(), ScrollUp, ScrollGranularity::Line);
         break;
     case VK_DOWN:
-        scroll(m_page.get(), ScrollDown, ScrollByLine);
+        scroll(m_page.get(), ScrollDown, ScrollGranularity::Line);
         break;
     case VK_HOME:
-        scroll(m_page.get(), ScrollUp, ScrollByDocument);
+        scroll(m_page.get(), ScrollUp, ScrollGranularity::Document);
         break;
     case VK_END:
-        scroll(m_page.get(), ScrollDown, ScrollByDocument);
+        scroll(m_page.get(), ScrollDown, ScrollGranularity::Document);
         break;
     case VK_PRIOR:
-        scroll(m_page.get(), ScrollUp, ScrollByPage);
+        scroll(m_page.get(), ScrollUp, ScrollGranularity::Page);
         break;
     case VK_NEXT:
-        scroll(m_page.get(), ScrollDown, ScrollByPage);
+        scroll(m_page.get(), ScrollDown, ScrollGranularity::Page);
         break;
     default:
         return false;
@@ -158,29 +105,40 @@ bool WebPage::platformCanHandleRequest(const ResourceRequest&)
     return false;
 }
 
-String WebPage::platformUserAgent(const URL& url) const
+bool WebPage::hoverSupportedByPrimaryPointingDevice() const
 {
-    if (url.isNull() || !m_page->settings().needsSiteSpecificQuirks())
-        return String();
-
-    return WebCore::standardUserAgentForURL(url);
+#if ENABLE(TOUCH_EVENTS)
+    return !screenIsTouchPrimaryInputDevice();
+#else
+    return true;
+#endif
 }
 
-void WebPage::getCenterForZoomGesture(const IntPoint& centerInViewCoordinates, CompletionHandler<void(WebCore::IntPoint&&)>&& completionHandler)
+bool WebPage::hoverSupportedByAnyAvailablePointingDevice() const
 {
-    IntPoint result = mainFrameView()->rootViewToContents(centerInViewCoordinates);
-    double scale = m_page->pageScaleFactor();
-    result.scale(1 / scale, 1 / scale);
-    completionHandler(WTFMove(result));
+#if ENABLE(TOUCH_EVENTS)
+    return !screenHasTouchDevice();
+#else
+    return true;
+#endif
 }
 
-void WebPage::setInputMethodState(bool enabled)
+std::optional<PointerCharacteristics> WebPage::pointerCharacteristicsOfPrimaryPointingDevice() const
 {
-    if (m_inputMethodEnabled == enabled)
-        return;
+#if ENABLE(TOUCH_EVENTS)
+    if (screenIsTouchPrimaryInputDevice())
+        return PointerCharacteristics::Coarse;
+#endif
+    return PointerCharacteristics::Fine;
+}
 
-    m_inputMethodEnabled = enabled;
-    send(Messages::WebPageProxy::SetInputMethodState(enabled));
+OptionSet<PointerCharacteristics> WebPage::pointerCharacteristicsOfAllAvailablePointingDevices() const
+{
+#if ENABLE(TOUCH_EVENTS)
+    if (screenHasTouchDevice())
+        return PointerCharacteristics::Coarse;
+#endif
+    return PointerCharacteristics::Fine;
 }
 
 void WebPage::collapseSelectionInFrame(FrameIdentifier frameID)
@@ -196,18 +154,16 @@ void WebPage::collapseSelectionInFrame(FrameIdentifier frameID)
 
 void WebPage::showEmojiPicker(Frame& frame)
 {
-    CompletionHandler<void(String)> completionHandler = [frame = makeRef(frame)](String result) {
+    CompletionHandler<void(String)> completionHandler = [frame = Ref { frame }](String result) {
         if (!result.isEmpty())
             frame->editor().insertText(result, nullptr);
     };
     sendWithAsyncReply(Messages::WebPageProxy::ShowEmojiPicker(frame.view()->contentsToRootView(frame.selection().absoluteCaretBounds())), WTFMove(completionHandler));
 }
 
-void WebPage::effectiveAppearanceDidChange(bool useDarkAppearance, bool useInactiveAppearance)
+void WebPage::setAccentColor(WebCore::Color color)
 {
-    if (auto* settings = gtk_settings_get_default())
-        g_object_set(settings, "gtk-application-prefer-dark-theme", useDarkAppearance, nullptr);
-    corePage()->effectiveAppearanceDidChange(useDarkAppearance, useInactiveAppearance);
+    static_cast<RenderThemeAdwaita&>(RenderTheme::singleton()).setAccentColor(color);
 }
 
 } // namespace WebKit

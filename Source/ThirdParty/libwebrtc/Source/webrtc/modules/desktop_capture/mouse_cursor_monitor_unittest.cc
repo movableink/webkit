@@ -8,18 +8,22 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "modules/desktop_capture/mouse_cursor_monitor.h"
+
+#include <stddef.h>
+
 #include <memory>
 
 #include "modules/desktop_capture/desktop_capture_options.h"
 #include "modules/desktop_capture/desktop_capturer.h"
 #include "modules/desktop_capture/desktop_frame.h"
 #include "modules/desktop_capture/mouse_cursor.h"
-#include "modules/desktop_capture/mouse_cursor_monitor.h"
+#include "rtc_base/checks.h"
 #include "test/gtest.h"
 
 namespace webrtc {
 
-class MouseCursorMonitorTest : public testing::Test,
+class MouseCursorMonitorTest : public ::testing::Test,
                                public MouseCursorMonitor::Callback {
  public:
   MouseCursorMonitorTest() : position_received_(false) {}
@@ -27,11 +31,6 @@ class MouseCursorMonitorTest : public testing::Test,
   // MouseCursorMonitor::Callback interface
   void OnMouseCursor(MouseCursor* cursor_image) override {
     cursor_image_.reset(cursor_image);
-  }
-
-  void OnMouseCursorPosition(MouseCursorMonitor::CursorState state,
-                             const DesktopVector& position) override {
-    RTC_NOTREACHED();
   }
 
   void OnMouseCursorPosition(const DesktopVector& position) override {
@@ -65,7 +64,7 @@ TEST_F(MouseCursorMonitorTest, MAYBE(FromScreen)) {
       MouseCursorMonitor::CreateForScreen(
           DesktopCaptureOptions::CreateDefault(),
           webrtc::kFullDesktopScreenId));
-  assert(capturer.get());
+  RTC_DCHECK(capturer.get());
   capturer->Init(this, MouseCursorMonitor::SHAPE_AND_POSITION);
   capturer->Capture();
 
@@ -102,7 +101,7 @@ TEST_F(MouseCursorMonitorTest, MAYBE(FromWindow)) {
     std::unique_ptr<MouseCursorMonitor> capturer(
         MouseCursorMonitor::CreateForWindow(
             DesktopCaptureOptions::CreateDefault(), sources[i].id));
-    assert(capturer.get());
+    RTC_DCHECK(capturer.get());
 
     capturer->Init(this, MouseCursorMonitor::SHAPE_AND_POSITION);
     capturer->Capture();
@@ -118,7 +117,7 @@ TEST_F(MouseCursorMonitorTest, MAYBE(ShapeOnly)) {
       MouseCursorMonitor::CreateForScreen(
           DesktopCaptureOptions::CreateDefault(),
           webrtc::kFullDesktopScreenId));
-  assert(capturer.get());
+  RTC_DCHECK(capturer.get());
   capturer->Init(this, MouseCursorMonitor::SHAPE_ONLY);
   capturer->Capture();
 

@@ -45,6 +45,9 @@ public:
     BrowserWindow* browserWindow() const { return m_browserWindow.get(); }
 
     void loadURL(std::wstring);
+    void goHome();
+
+    static bool isInstance(HWND);
     
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -55,9 +58,14 @@ private:
     static size_t s_numInstances;
 
     MainWindow();
+    void setDefaultURLToCurrentURL();
     bool toggleMenuItem(UINT menuID);
     void onURLBarEnter();
     void updateDeviceScaleFactor();
+
+    void createToolbar(HINSTANCE);
+    void resizeToolbar(int);
+    void rescaleToolbar();
 
     // BrowserWindowClient
     void progressChanged(double) final;
@@ -65,12 +73,11 @@ private:
     void activeURLChanged(std::wstring) final;
 
     HWND m_hMainWnd { nullptr };
+    HWND m_hToolbarWnd { nullptr };
     HWND m_hURLBarWnd { nullptr };
-    HWND m_hBackButtonWnd { nullptr };
-    HWND m_hForwardButtonWnd { nullptr };
-    HWND m_hReloadButtonWnd { nullptr };
     HWND m_hProgressIndicator { nullptr };
     HWND m_hCacheWnd { nullptr };
     HGDIOBJ m_hURLBarFont { nullptr };
     RefPtr<BrowserWindow> m_browserWindow;
+    int m_toolbarItemsWidth { };
 };

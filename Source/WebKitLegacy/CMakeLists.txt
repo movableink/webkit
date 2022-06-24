@@ -1,8 +1,15 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
+
 include(WebKitCommon)
+include(target/TargetWTF)
+include(target/TargetJavaScriptCore)
+include(target/PAL)
+include(target/WebCore)
+
 set_property(DIRECTORY . PROPERTY FOLDER "WebKitLegacy")
 
 set(WebKitLegacy_SOURCES
+    Storage/InprocessIDBServer.cpp
     Storage/StorageAreaImpl.cpp
     Storage/StorageAreaSync.cpp
     Storage/StorageNamespaceImpl.cpp
@@ -13,6 +20,7 @@ set(WebKitLegacy_SOURCES
     Storage/WebStorageNamespaceProvider.cpp
 
     WebCoreSupport/NetworkStorageSessionMap.cpp
+    WebCoreSupport/WebBroadcastChannelRegistry.cpp
     WebCoreSupport/WebResourceLoadScheduler.cpp
     WebCoreSupport/WebViewGroup.cpp
 )
@@ -21,14 +29,13 @@ set(WebKitLegacy_PRIVATE_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}"
     "${WEBKITLEGACY_DIR}/Storage"
     "${WEBKITLEGACY_DIR}/WebCoreSupport"
-    "${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}"
     "${WebKitLegacy_DERIVED_SOURCES_DIR}"
 )
 
-set(WebKitLegacy_LIBRARIES
-    PRIVATE WebKit::JavaScriptCore
-    PRIVATE WebCore${DEBUG_SUFFIX}
-    PRIVATE PAL${DEBUG_SUFFIX}
+set(WebKitLegacy_PRIVATE_LIBRARIES
+    WebKit::JavaScriptCore
+    WebKit::PAL
+    WebKit::WebCore
 )
 
 WEBKIT_FRAMEWORK_DECLARE(WebKitLegacy)
@@ -59,8 +66,8 @@ if (${PORT} STREQUAL "Qt")
     endif ()
 
     if (SEPARATE_DEBUG_INFO)
-        QTWEBKIT_SEPARATE_DEBUG_INFO(WebKit WebKit_DEBUG_INFO)
-        install(FILES ${WebKit_DEBUG_INFO} DESTINATION "${LIB_INSTALL_DIR}" OPTIONAL)
+        QTWEBKIT_SEPARATE_DEBUG_INFO(WebKitLegacy WebKitLegacy_DEBUG_INFO)
+        install(FILES ${WebKitLegacy_DEBUG_INFO} DESTINATION "${LIB_INSTALL_DIR}" OPTIONAL)
     endif ()
 
     if (NOT MSVC)
@@ -89,9 +96,6 @@ if (${PORT} STREQUAL "Qt")
     endif ()
 endif ()
 
-if (NOT INTERNAL_BUILD)
-    add_dependencies(WebKitLegacy WebCore WebCorePrivateFrameworkHeaders)
-endif ()
 if (TARGET WebKitLegacyGUID)
     add_dependencies(WebKitLegacy WebKitLegacyGUID)
 endif ()
@@ -107,7 +111,7 @@ if (MSVC AND NOT ${PORT} STREQUAL "Qt")
         COMMAND ${PERL_EXECUTABLE} ${WEBKIT_LIBRARIES_DIR}/tools/scripts/version-stamp.pl ${WebKitLegacy_DERIVED_SOURCES_DIR} $<TARGET_FILE:WebKitLegacy>
         VERBATIM)
 
-    if (APPLE AND NOT ${PORT} STREQUAL "Qt")
-         add_subdirectory(win/WebKitQuartzCoreAdditions)
-     endif ()
+    if (USE_CA AND NOT ${PORT} STREQUAL "Qt")
+        add_subdirectory(win/WebKitQuartzCoreAdditions)
+    endif ()
 endif ()

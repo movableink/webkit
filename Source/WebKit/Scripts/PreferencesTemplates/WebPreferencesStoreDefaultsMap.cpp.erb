@@ -28,10 +28,10 @@
 #include "config.h"
 #include "WebPreferencesStore.h"
 
-#include "WebPreferencesDefaultValues.h"
+#include "WebPreferencesDefinitions.h"
 #include "WebPreferencesKeys.h"
+#include <variant>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Variant.h>
 
 // FIXME: These should added via options in WebPreferences.yaml, rather than hardcoded.
 #include <WebCore/DeprecatedGlobalSettings.h>
@@ -39,7 +39,7 @@
 #include <WebCore/RealtimeMediaSourceCenter.h>
 #include <WebCore/SecurityOrigin.h>
 #include <WebCore/Settings.h>
-#include <WebCore/TextEncodingRegistry.h>
+#include <pal/text/TextEncodingRegistry.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -48,11 +48,11 @@ WebPreferencesStore::ValueMap& WebPreferencesStore::defaults()
 {
     static NeverDestroyed<ValueMap> defaults;
     if (defaults.get().isEmpty()) {
-<%- for @pref in @preferences do -%>
+<%- for @pref in @exposedPreferences do -%>
 <%- if @pref.condition -%>
 #if <%= @pref.condition %>
 <%- end -%>
-        defaults.get().set(WebPreferencesKey::<%= @pref.nameLower %>Key(), Value(<%= @pref.type %>(<%= @pref.defaultValue %>)));
+        defaults.get().set(WebPreferencesKey::<%= @pref.nameLower %>Key(), Value(<%= @pref.type %>(DEFAULT_VALUE_FOR_<%= @pref.name %>)));
 <%- if @pref.condition -%>
 #endif
 <%- end -%>

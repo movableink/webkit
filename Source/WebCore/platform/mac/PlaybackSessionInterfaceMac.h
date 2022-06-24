@@ -28,7 +28,6 @@
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
 
 #include "HTMLMediaElementEnums.h"
-#include "PlaybackSessionInterface.h"
 #include "PlaybackSessionModel.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RetainPtr.h>
@@ -43,8 +42,7 @@ class IntRect;
 class PlaybackSessionModel;
 
 class WEBCORE_EXPORT PlaybackSessionInterfaceMac final
-    : public PlaybackSessionInterface
-    , public PlaybackSessionModelClient
+    : public PlaybackSessionModelClient
     , public RefCounted<PlaybackSessionInterfaceMac> {
 public:
     static Ref<PlaybackSessionInterfaceMac> create(PlaybackSessionModel&);
@@ -54,7 +52,7 @@ public:
     // PlaybackSessionModelClient
     void durationChanged(double) final;
     void currentTimeChanged(double /*currentTime*/, double /*anchorTime*/) final;
-    void rateChanged(bool /*isPlaying*/, float /*playbackRate*/) final;
+    void rateChanged(OptionSet<PlaybackSessionModel::PlaybackState>, double /* playbackRate */, double /* defaultPlaybackRate */) final;
     void seekableRangesChanged(const TimeRanges&, double /*lastModifiedTime*/, double /*liveUpdateInterval*/) final;
     void audioMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& /*options*/, uint64_t /*selectedIndex*/) final;
     void legibleMediaSelectionOptionsChanged(const Vector<MediaSelectionOption>& /*options*/, uint64_t /*selectedIndex*/) final;
@@ -62,17 +60,19 @@ public:
     void legibleMediaSelectionIndexChanged(uint64_t) final;
     void externalPlaybackChanged(bool /* enabled */, PlaybackSessionModel::ExternalPlaybackTargetType, const String& /* localizedDeviceName */) final;
     void isPictureInPictureSupportedChanged(bool) final;
+    void ensureControlsManager() final;
 
-    void invalidate();
-    void ensureControlsManager();
 #if ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
     void setPlayBackControlsManager(WebPlaybackControlsManager *);
     WebPlaybackControlsManager *playBackControlsManager();
 
     void updatePlaybackControlsManagerCanTogglePictureInPicture();
 #endif
+    void willBeginScrubbing();
     void beginScrubbing();
     void endScrubbing();
+
+    void invalidate();
 
 private:
     PlaybackSessionInterfaceMac(PlaybackSessionModel&);
@@ -82,7 +82,6 @@ private:
 
     void updatePlaybackControlsManagerTiming(double currentTime, double anchorTime, double playbackRate, bool isPlaying);
 #endif
-
 };
 
 }

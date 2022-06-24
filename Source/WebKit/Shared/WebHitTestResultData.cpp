@@ -20,13 +20,14 @@
 #include "config.h"
 #include "WebHitTestResultData.h"
 
+#include "ShareableBitmapUtilities.h"
 #include "WebCoreArgumentCoders.h"
 #include <WebCore/Document.h>
 #include <WebCore/Frame.h>
 #include <WebCore/FrameView.h>
 #include <WebCore/HitTestResult.h>
 #include <WebCore/Node.h>
-#include <WebCore/RenderObject.h>
+#include <WebCore/RenderImage.h>
 #include <WebCore/SharedBuffer.h>
 #include <wtf/URL.h>
 #include <wtf/text/WTFString.h>
@@ -38,7 +39,7 @@ WebHitTestResultData::WebHitTestResultData()
 {
 }
 
-WebHitTestResultData::WebHitTestResultData(const WebCore::HitTestResult& hitTestResult)
+WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, const String& toolTipText)
     : absoluteImageURL(hitTestResult.absoluteImageURL().string())
     , absolutePDFURL(hitTestResult.absolutePDFURL().string())
     , absoluteLinkURL(hitTestResult.absoluteLinkURL().string())
@@ -48,16 +49,19 @@ WebHitTestResultData::WebHitTestResultData(const WebCore::HitTestResult& hitTest
     , linkSuggestedFilename(hitTestResult.linkSuggestedFilename())
     , isContentEditable(hitTestResult.isContentEditable())
     , elementBoundingBox(elementBoundingBoxInWindowCoordinates(hitTestResult))
-    , isScrollbar(hitTestResult.scrollbar())
+    , isScrollbar(IsScrollbar::No)
     , isSelected(hitTestResult.isSelected())
     , isTextNode(hitTestResult.innerNode() && hitTestResult.innerNode()->isTextNode())
     , isOverTextInsideFormControlElement(hitTestResult.isOverTextInsideFormControlElement())
     , isDownloadableMedia(hitTestResult.isDownloadableMedia())
+    , toolTipText(toolTipText)
     , imageSize(0)
 {
+    if (auto* scrollbar = hitTestResult.scrollbar())
+        isScrollbar = scrollbar->orientation() == ScrollbarOrientation::Horizontal ? IsScrollbar::Horizontal : IsScrollbar::Vertical;
 }
 
-WebHitTestResultData::WebHitTestResultData(const WebCore::HitTestResult& hitTestResult, bool includeImage)
+WebHitTestResultData::WebHitTestResultData(const HitTestResult& hitTestResult, bool includeImage)
     : absoluteImageURL(hitTestResult.absoluteImageURL().string())
     , absolutePDFURL(hitTestResult.absolutePDFURL().string())
     , absoluteLinkURL(hitTestResult.absoluteLinkURL().string())
@@ -67,22 +71,34 @@ WebHitTestResultData::WebHitTestResultData(const WebCore::HitTestResult& hitTest
     , linkSuggestedFilename(hitTestResult.linkSuggestedFilename())
     , isContentEditable(hitTestResult.isContentEditable())
     , elementBoundingBox(elementBoundingBoxInWindowCoordinates(hitTestResult))
-    , isScrollbar(hitTestResult.scrollbar())
+    , isScrollbar(IsScrollbar::No)
     , isSelected(hitTestResult.isSelected())
     , isTextNode(hitTestResult.innerNode() && hitTestResult.innerNode()->isTextNode())
     , isOverTextInsideFormControlElement(hitTestResult.isOverTextInsideFormControlElement())
     , isDownloadableMedia(hitTestResult.isDownloadableMedia())
     , imageSize(0)
 {
+    if (auto* scrollbar = hitTestResult.scrollbar())
+        isScrollbar = scrollbar->orientation() == ScrollbarOrientation::Horizontal ? IsScrollbar::Horizontal : IsScrollbar::Vertical;
+
     if (!includeImage)
         return;
 
     if (Image* image = hitTestResult.image()) {
-        RefPtr<SharedBuffer> buffer = image->data();
+        RefPtr<FragmentedSharedBuffer> buffer = image->data();
         if (buffer) {
-            imageSharedMemory = WebKit::SharedMemory::allocate(buffer->size());
-            memcpy(imageSharedMemory->data(), buffer->data(), buffer->size());
+            imageSharedMemory = WebKit::SharedMemory::copyBuffer(*buffer);
             imageSize = buffer->size();
+        }
+    }
+
+    if (auto target = RefPtr { hitTestResult.innerNonSharedNode() }) {
+        if (auto renderer = dynamicDowncast<RenderImage>(target->renderer())) {
+            imageBitmap = createShareableBitmap(*downcast<RenderImage>(target->renderer()));
+            if (auto* cachedImage = renderer->cachedImage()) {
+                if (auto* image = cachedImage->image())
+                    sourceImageMIMEType = image->mimeType();
+            }
         }
     }
 }
@@ -108,13 +124,20 @@ void WebHitTestResultData::encode(IPC::Encoder& encoder) const
     encoder << isOverTextInsideFormControlElement;
     encoder << isDownloadableMedia;
     encoder << lookupText;
+    encoder << toolTipText;
     encoder << dictionaryPopupInfo;
 
     WebKit::SharedMemory::Handle imageHandle;
     if (imageSharedMemory && imageSharedMemory->data())
         imageSharedMemory->createHandle(imageHandle, WebKit::SharedMemory::Protection::ReadOnly);
-    encoder << imageHandle;
-    encoder << imageSize;
+
+    encoder << WebKit::SharedMemory::IPCHandle { WTFMove(imageHandle), imageSize };
+
+    ShareableBitmap::Handle imageBitmapHandle;
+    if (imageBitmap)
+        imageBitmap->createHandle(imageBitmapHandle, SharedMemory::Protection::ReadOnly);
+    encoder << imageBitmapHandle;
+    encoder << sourceImageMIMEType;
 
     bool hasLinkTextIndicator = linkTextIndicator;
     encoder << hasLinkTextIndicator;
@@ -141,17 +164,34 @@ bool WebHitTestResultData::decode(IPC::Decoder& decoder, WebHitTestResultData& h
         || !decoder.decode(hitTestResultData.isOverTextInsideFormControlElement)
         || !decoder.decode(hitTestResultData.isDownloadableMedia)
         || !decoder.decode(hitTestResultData.lookupText)
+        || !decoder.decode(hitTestResultData.toolTipText)
         || !decoder.decode(hitTestResultData.dictionaryPopupInfo))
         return false;
 
-    WebKit::SharedMemory::Handle imageHandle;
+    WebKit::SharedMemory::IPCHandle imageHandle;
     if (!decoder.decode(imageHandle))
         return false;
 
-    if (!imageHandle.isNull())
-        hitTestResultData.imageSharedMemory = WebKit::SharedMemory::map(imageHandle, WebKit::SharedMemory::Protection::ReadOnly);
+    hitTestResultData.imageSize = imageHandle.dataSize;
+    if (imageHandle.handle.isNull()) {
+        if (hitTestResultData.imageSize)
+            return false;
+    } else {
+        hitTestResultData.imageSharedMemory = WebKit::SharedMemory::map(imageHandle.handle, WebKit::SharedMemory::Protection::ReadOnly);
+        if (!hitTestResultData.imageSharedMemory)
+            return false;
+        if (!hitTestResultData.imageSize)
+            return false;
+    }
 
-    if (!decoder.decode(hitTestResultData.imageSize))
+    ShareableBitmap::Handle imageBitmapHandle;
+    if (!decoder.decode(imageBitmapHandle))
+        return false;
+
+    if (!imageBitmapHandle.isNull())
+        hitTestResultData.imageBitmap = ShareableBitmap::create(imageBitmapHandle, SharedMemory::Protection::ReadOnly);
+
+    if (!decoder.decode(hitTestResultData.sourceImageMIMEType))
         return false;
 
     bool hasLinkTextIndicator;
@@ -159,7 +199,7 @@ bool WebHitTestResultData::decode(IPC::Decoder& decoder, WebHitTestResultData& h
         return false;
 
     if (hasLinkTextIndicator) {
-        Optional<WebCore::TextIndicatorData> indicatorData;
+        std::optional<WebCore::TextIndicatorData> indicatorData;
         decoder >> indicatorData;
         if (!indicatorData)
             return false;

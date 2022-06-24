@@ -2,7 +2,7 @@
 #
 # Copyright (C) 2011 Google Inc. All rights reserved.
 # Copyright (C) 2009 Torch Mobile Inc.
-# Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+# Copyright (C) 2009-2020 Apple Inc. All rights reserved.
 # Copyright (C) 2010 Chris Jerdonek (cjerdonek@webkit.org)
 #
 # Redistribution and use in source and binary forms, with or without
@@ -37,13 +37,23 @@
 
 import codecs
 import os
+import os.path
 import random
 import re
 import unittest
-import cpp as cpp_style
-from cpp import CppChecker
-from ..filter import FilterConfiguration
 
+from webkitcorepy import string_utils
+
+from webkitpy.style.checkers import cpp as cpp_style
+from webkitpy.style.checkers.cpp import CppChecker, _split_identifier_into_words
+from webkitpy.style.filter import FilterConfiguration
+
+# Enable this if you need to see the full diff when debugging failures.
+# https://stackoverflow.com/questions/43842675/how-to-prevent-truncating-of-string-in-unit-test-python
+if False:
+    if 'unittest.util' in __import__('sys').modules:
+        # Show full diff in self.assertEqual.
+        __import__('sys').modules['unittest.util']._MAX_LENGTH = 999999999
 
 # This class works as an error collector and replaces cpp_style.Error
 # function for the unit tests.  We also verify each category we see
@@ -283,7 +293,8 @@ class CppStyleTestBase(unittest.TestCase):
                              '+build/include',
                              '+build/include_order',
                              '+build/namespaces',
-                             '+runtime/rtti')
+                             '+runtime/rtti',
+                             '+security/javascriptcore_wtf_blockptr')
         return self.perform_lint(code, filename, basic_error_rules, lines_to_check=lines_to_check)
 
     # Only keep function length errors.
@@ -308,9 +319,40 @@ class CppStyleTestBase(unittest.TestCase):
         return self.perform_lint(code, filename, basic_error_rules, unit_test_config)
 
     # Only include header guard errors.
-    def perform_header_guard_check(self, code, filename='foo.h'):
+    def perform_header_guard_check(self, code, filename):
         basic_error_rules = ('-', '+build/header_guard')
         return self.perform_lint(code, filename, basic_error_rules)
+
+    def perform_function_definition_check(self, file_name, lines, expected_warning):
+        file_extension = file_name.split('.')[1]
+        clean_lines = cpp_style.CleansedLines([lines])
+        function_state = cpp_style._FunctionState(5)
+        error_collector = ErrorCollector(self.assertTrue)
+
+        cpp_style.detect_functions(clean_lines, 0, function_state, error_collector)
+        self.assertEqual(function_state.in_a_function, True)
+        self.assertEqual(error_collector.results(), '')
+
+        class_state = cpp_style._ClassState()
+        cpp_style.check_function_definition(file_name, file_extension, clean_lines, 0, class_state, function_state,
+                                            error_collector)
+        self.assertEqual(error_collector.results(), expected_warning)
+
+    def perform_function_body_check(self, file_name, lines, expected_warning):
+        file_extension = file_name.split('.')[1]
+        clean_lines = cpp_style.CleansedLines(lines.splitlines())
+        function_state = cpp_style._FunctionState(5)
+        error_collector = ErrorCollector(self.assertTrue)
+
+        for i in range(clean_lines.num_lines()):
+            cpp_style.detect_functions(clean_lines, i, function_state, error_collector)
+        self.assertEqual(function_state.in_a_function, True)
+        self.assertEqual(error_collector.results(), '')
+
+        class_state = cpp_style._ClassState()
+        cpp_style.check_function_body(file_name, file_extension, clean_lines, clean_lines.num_lines() - 1, class_state,
+                                      function_state, error_collector)
+        self.assertEqual(error_collector.results(), expected_warning)
 
     # Perform lint and compare the error message with "expected_message".
     def assert_lint(self, code, expected_message, file_name='foo.cpp'):
@@ -342,9 +384,9 @@ class CppStyleTestBase(unittest.TestCase):
         self.assertEqual(expected_message,
                           self.perform_include_what_you_use(code))
 
-    def assert_header_guard(self, code, expected_message):
+    def assert_header_guard(self, code, expected_message, filename='foo.h'):
         self.assertEqual(expected_message,
-                          self.perform_header_guard_check(code))
+                         self.perform_header_guard_check(code, filename))
 
     def assert_blank_lines_check(self, lines, start_errors, end_errors):
         error_collector = ErrorCollector(self.assertTrue)
@@ -1598,6 +1640,220 @@ class CppStyleTest(CppStyleTestBase):
                          ' for improved thread safety.'
                          '  [runtime/threadsafe_fn] [2]')
 
+    def test_debug_not_reached_assertion(self):
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f()\n'
+            '{\n'
+            '    if (auto createdHandle = SandboxExtension::createHandle(URL.fileSystemPath(), SandboxExtension::Type::ReadWrite))\n'
+            '        handle = WTFMove(*createdHandle);\n'
+            '    else\n'
+            '        ASSERT_NOT_REACHED();\n\n'
+            '    m_dataStore->networkProcess().send(Messages::NetworkProcess::PublishDownloadProgress(m_downloadID, URL, handle), 0);]\n'
+            '}',
+            'ASSERT_NOT_REACHED() statement fallthrough may result in unexpected code execution.'
+            '  [security/assertion_fallthrough] [4]')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f()\n'
+            '{\n'
+            '    if (auto createdHandle = SandboxExtension::createHandle(URL.fileSystemPath(), SandboxExtension::Type::ReadWrite))\n'
+            '        handle = WTFMove(*createdHandle);\n'
+            '    else\n'
+            '        RELEASE_ASSERT_NOT_REACHED();\n\n'
+            '    m_dataStore->networkProcess().send(Messages::NetworkProcess::PublishDownloadProgress(m_downloadID, URL, handle), 0);]\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f()\n'
+            '{\n'
+            '    for (int i = 0; i < 10; ++i) {'
+            '        if (i % 2 == 0) {'
+            '            ASSERT_NOT_REACHED();\n'
+            '            continue;\n'
+            '        }\n'
+            '    }\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f(int i)\n'
+            '{\n'
+            '    if (i % 2 == 0) {'
+            '        ASSERT_NOT_REACHED();\n'
+            '        return;\n'
+            '    }\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f(int i)\n'
+            '{\n'
+            '    if (i % 2 == 0) {'
+            '        ASSERT_NOT_REACHED();\n'
+            '        completionHandler(nullptr);\n'
+            '        return;\n'
+            '    }\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f(int i)\n'
+            '{\n'
+            '    if (i % 2 == 0) {'
+            '        ASSERT_NOT_REACHED();\n'
+            '        failureBlock(nullptr);\n'
+            '        return;\n'
+            '    }\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f()\n'
+            '{\n'
+            '    ASSERT_NOT_REACHED();\n'
+            '    completionHandler(nullString());\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f(int i)\n'
+            '{\n'
+            '    if (i % 2 == 0) {\n'
+            '        ASSERT_NOT_REACHED();\n'
+            '        completionHandler(nullString());\n'
+            '    }\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f(int i)\n'
+            '{\n'
+            '    switch (i) {'
+            '    case 0:'
+            '        ASSERT_NOT_REACHED();\n'
+            '    }\n'
+            '    g();\n'
+            '}',
+            'ASSERT_NOT_REACHED() statement fallthrough may result in unexpected code execution.'
+            '  [security/assertion_fallthrough] [4]')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f(int i)\n'
+            '{\n'
+            '    switch (i) {'
+            '    default:'
+            '        ASSERT_NOT_REACHED();\n'
+            '    }\n'
+            '    g();\n'
+            '}',
+            'ASSERT_NOT_REACHED() statement fallthrough may result in unexpected code execution.'
+            '  [security/assertion_fallthrough] [4]')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f(int i)\n'
+            '{\n'
+            '    if (!i) {'
+            '        g();'
+            '    } else {'
+            '        ASSERT_NOT_REACHED();\n'
+            '    }\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f(int i)\n'
+            '{\n'
+            '    switch (i) {'
+            '    case 0:'
+            '        ASSERT_NOT_REACHED();\n'
+            '        break;\n'
+            '    }\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f(int i)\n'
+            '{\n'
+            '    switch (i) {'
+            '    default:'
+            '        ASSERT_NOT_REACHED();\n'
+            '        break;\n'
+            '    }\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f(int i)\n'
+            '{\n'
+            '    switch (i) {'
+            '    case 0:'
+            '        ASSERT_NOT_REACHED();\n'
+            '        m_completionHandler();\n'
+            '        break;\n'
+            '    }\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f(int i)\n'
+            '{\n'
+            '    switch (i) {'
+            '    default:'
+            '        ASSERT_NOT_REACHED();\n'
+            '        m_completionHandler();\n'
+            '        break;\n'
+            '    }\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'void f()\n'
+            '{\n'
+            '#if PLATFORM(COCOA)\n'
+            '    pageClient().clearTextIndicator(WebCore::TextIndicatorDismissalAnimation::FadeOut);\n'
+            '#else\n'
+            '    ASSERT_NOT_REACHED();\n'
+            '#endif\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.cpp',
+            'int f()\n'
+            '{\n'
+            '    ASSERT_NOT_REACHED();\n'
+            '    *errorCode = U_UNSUPPORTED_ERROR;\n'
+            '    return 0;\n'
+            '}',
+            '')
+
+        self.perform_function_body_check(
+            'foo.h',
+            'void f() { ASSERT_NOT_REACHED(); }',
+            '')
+        self.perform_function_body_check(
+            'foo.h',
+            'void* f() { ASSERT_NOT_REACHED(); return nullptr; }',
+            '')
+
+
     def test_debug_security_assertion(self):
         self.assert_lint(
             'ASSERT_WITH_SECURITY_IMPLICATION(value)',
@@ -1818,7 +2074,7 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint(
             '''\
             const int foo[] =
-                {1, 2, 3 };''',
+                { 1, 2, 3 };''',
             '')
         # For single line, unmatched '}' with a ';' is ignored (not enough context)
         self.assert_multi_line_lint(
@@ -2024,7 +2280,7 @@ class CppStyleTest(CppStyleTestBase):
             '}\n',
             '')
         self.assert_multi_line_lint(
-            'auto Foo:bar() -> Baz\n'
+            'auto Foo::bar() -> Baz\n'
             '{\n'
             '}\n',
             '')
@@ -2091,6 +2347,9 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint('foo (foo)', 'Extra space before ( in function call'
                          '  [whitespace/parens] [4]')
         self.assert_lint('@property (readonly) NSUInteger count;', '')
+        self.assert_lint('@synthesize a = b;', '')
+        self.assert_lint('@synthesize a=b;', 'Should have spaces around = in property synthesis.  [whitespace/property] [4]')
+        self.assert_lint('@synthesize a;', '')
         self.assert_lint('#elif (foo(bar))', '')
         self.assert_lint('#elif (foo(bar) && foo(baz))', '')
         self.assert_lint('typedef foo (*foo)(foo)', '')
@@ -2126,9 +2385,28 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint('    { }', '')
         self.assert_lint('    {}', 'Missing space inside { }.  [whitespace/braces] [5]')
         self.assert_lint('    {   }', 'Too many spaces inside { }.  [whitespace/braces] [5]')
+        self.assert_lint('    }', '')  # closing brace by itself is fine
+        self.assert_lint('    int64_t {0xffffffff }', 'Missing space after {.  [whitespace/braces] [5]')
+        self.assert_lint('    int64_t { 0xffffffff}', 'Missing space before }.  [whitespace/braces] [5]')
+        self.assert_lint('    int64_t { 0xffffffff }', '')
+        self.assert_lint('    IntTuple {1, 2 }', 'Missing space after {.  [whitespace/braces] [5]')
+        self.assert_lint('    IntTuple { 1, 2}', 'Missing space before }.  [whitespace/braces] [5]')
+        self.assert_lint('    IntTuple { 1, 2 }', '')
+        self.assert_lint('    int a[2][2] = {{ 1, 2 }, { 3, 4 } };', 'Missing space after {.  [whitespace/braces] [5]')
+        self.assert_lint('    int a[2][2] = { {1, 2 }, { 3, 4 } };', 'Missing space after {.  [whitespace/braces] [5]')
+        self.assert_lint('    int a[2][2] = { { 1, 2 }, {3, 4 } };', 'Missing space after {.  [whitespace/braces] [5]')
+        self.assert_lint('    int a[2][2] = { { 1, 2}, { 3, 4 } };', 'Missing space before }.  [whitespace/braces] [5]')
+        self.assert_lint('    int a[2][2] = { { 1, 2 }, { 3, 4} };', 'Missing space before }.  [whitespace/braces] [5]')
+        self.assert_lint('    int a[2][2] = { { 1, 2 }, { 3, 4 }};', 'Missing space before }.  [whitespace/braces] [5]')
+        self.assert_lint('    int a[2][2] = { { 1, 2 }, { 3, 4 } };', '')
+        self.assert_lint('    StrPair {"strings", "inside" }', 'Missing space after {.  [whitespace/braces] [5]')
+        self.assert_lint('    StrPair { "strings", "inside"}', 'Missing space before }.  [whitespace/braces] [5]')
+        self.assert_lint('    StrPair { "strings", "inside" }', '')
+        self.assert_lint('    foo("{braces in a string}");', '')
 
     def test_spacing_before_brackets(self):
         self.assert_lint('delete [] base;', '')
+        self.assert_lint('auto [foo, bar] = getFooAndBar();', '')
         # See SOFT_LINK_CLASS_FOR_HEADER() macro in SoftLinking.h.
         self.assert_lint('        return [get_##framework##_##className##Class() alloc]; \\', '')
         self.assert_lint('        m_taskFunction = [callee, method, arguments...] {', '')
@@ -2452,7 +2730,7 @@ class CppStyleTest(CppStyleTestBase):
         def do_test(self, raw_bytes, has_invalid_utf8):
             error_collector = ErrorCollector(self.assertTrue)
             self.process_file_data('foo.cpp', 'cpp',
-                                   unicode(raw_bytes, 'utf8', 'replace').split('\n'),
+                                   string_utils.decode(raw_bytes, encoding='utf8', errors='replace').split('\n'),
                                    error_collector)
             # The warning appears only once.
             self.assertEqual(
@@ -2462,12 +2740,12 @@ class CppStyleTest(CppStyleTestBase):
                     ' (or Unicode replacement character).'
                     '  [readability/utf8] [5]'))
 
-        do_test(self, 'Hello world\n', False)
-        do_test(self, '\xe9\x8e\xbd\n', False)
-        do_test(self, '\xe9x\x8e\xbd\n', True)
+        do_test(self, b'Hello world\n', False)
+        do_test(self, b'\xe9\x8e\xbd\n', False)
+        do_test(self, b'\xe9x\x8e\xbd\n', True)
         # This is the encoding of the replacement character itself (which
         # you can see by evaluating codecs.getencoder('utf8')(u'\ufffd')).
-        do_test(self, '\xef\xbf\xbd\n', True)
+        do_test(self, b'\xef\xbf\xbd\n', True)
 
     def test_is_blank_line(self):
         self.assertTrue(cpp_style.is_blank_line(''))
@@ -2679,16 +2957,82 @@ class CppStyleTest(CppStyleTestBase):
     def test_build_header_guard(self):
         rules = ('-', '+build/header_guard')
 
-        # Old header guard.
-        self.assert_header_guard('#ifndef Foo_h',
+        # No warning for config.h and *Prefix.h headers.
+        self.assert_header_guard('', '', 'config.h')
+        self.assert_header_guard('', '', 'FooPrefix.h')
+
+        # No warning for valid header guard.
+        self.assert_header_guard('#pragma once', '')
+
+        # Warning for old header guard.
+        self.assert_header_guard(
+            '#ifndef Foo_h\n'
+            '#define Foo_h\n'
+            '#endif /* Foo_h */\n',
             'Use #pragma once instead of #ifndef for header guard.'
             '  [build/header_guard] [5]')
 
-        # No header guard. Okay, since this could be an ObjC header.
-        self.assert_header_guard('', '')
+        # Warning for missing header guard.
+        self.assert_header_guard(
+            '',
+            'Missing #pragma once for header guard.'
+            '  [build/header_guard_missing] [5]')
 
-        # Valid header guard.
-        self.assert_header_guard('#pragma once', '')
+        # No warning for Obj-C header with #import statement.
+        self.assert_header_guard(
+            '#import <Foundation/Foundation.h>',
+            '')
+
+        # No warning for Obj-C header with @class keyword.
+        self.assert_header_guard(
+            '@class NSString;',
+            '')
+
+        # No warning for Obj-C header with @interface keyword.
+        self.assert_header_guard(
+            '@interface NSString (MyCategory)\n'
+            '@end\n',
+            '')
+
+        # No warning for Obj-C header with @protocol keyword.
+        self.assert_header_guard(
+            '@protocol MyProtocol : NSObject\n'
+            '@end\n',
+            '')
+
+        # Warning for Obj-C header with #import statement and __OBJC__ check.
+        self.assert_header_guard(
+            '#ifdef __OBJC__\n'
+            '#import <Foundation/Foundation.h>\n'
+            '#endif /* __OBJC__ */\n',
+            'Missing #pragma once for header guard.'
+            '  [build/header_guard_missing] [5]')
+
+        # Warning for Obj-C header with @class keyword and __OBJC__ check.
+        self.assert_header_guard(
+            '#ifdef __OBJC__\n'
+            '@class NSString;\n'
+            '#endif /* __OBJC__ */\n',
+            'Missing #pragma once for header guard.'
+            '  [build/header_guard_missing] [5]')
+
+        # Warning for Obj-C header with @interface keyword and __OBJC__ check.
+        self.assert_header_guard(
+            '#ifdef __OBJC__\n'
+            '@interface NSString (MyCategory)\n'
+            '@end\n'
+            '#endif /* __OBJC__ */\n',
+            'Missing #pragma once for header guard.'
+            '  [build/header_guard_missing] [5]')
+
+        # Warning for Obj-C header with @protocol keyword and __OBJC__ check.
+        self.assert_header_guard(
+            '#ifdef __OBJC__\n'
+            '@protocol MyProtocol : NSObject\n'
+            '@end\n'
+            '#endif /* __OBJC__ */\n',
+            'Missing #pragma once for header guard.'
+            '  [build/header_guard_missing] [5]')
 
     def test_build_printf_format(self):
         self.assert_lint(
@@ -2791,7 +3135,7 @@ class CppStyleTest(CppStyleTestBase):
             other_decl_specs = [random.choice(qualifiers), random.choice(signs),
                                 random.choice(types)]
             # remove None
-            other_decl_specs = filter(lambda x: x is not None, other_decl_specs)
+            other_decl_specs = list(filter(lambda x: x is not None, other_decl_specs))
 
             # shuffle
             random.shuffle(other_decl_specs)
@@ -2879,6 +3223,111 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint('int a = 1 ? 0 : 30;', '')
         self.assert_lint('bool a : 1;', '')
 
+    def test_decode_functions_missing_warn_unused_return(self):
+        warning_expected = 'decode() function returning a value is missing WARN_UNUSED_RETURN attribute' \
+                           '  [security/missing_warn_unused_return] [5]'
+        warning_none = ''
+
+        self.perform_function_definition_check(
+            'foo.cpp',
+            'static bool decode() { return false; }',
+            warning_expected)
+        self.perform_function_definition_check(
+            'foo.cpp',
+            'static WARN_UNUSED_RETURN bool decode() { return false; }',
+            warning_none)
+
+        self.perform_function_definition_check(
+            'foo.cpp',
+            'static inline bool decodeStringText(Decoder& decoder, uint32_t length, String& result)\n'
+            '{',
+            warning_expected)
+        self.perform_function_definition_check(
+            'foo.cpp',
+            'static inline WARN_UNUSED_RETURN bool decodeStringText(Decoder& decoder, uint32_t length, String& result)\n'
+            '{',
+            warning_none)
+
+        self.perform_function_definition_check(
+            'foo.h',
+            'static bool decode(Decoder& decoder, std::pair<T, U>& pair)\n'
+            '{',
+            warning_expected)
+        self.perform_function_definition_check(
+            'foo.cpp',
+            'static WARN_UNUSED_RETURN bool decode(Decoder& decoder, std::pair<T, U>& pair)\n'
+            '{',
+            warning_none)
+
+        self.perform_function_definition_check(
+            'Source/WTF/wtf/foo.h',
+            'WTF_EXPORT_PRIVATE static bool decode(Decoder&, AtomString&);',
+            warning_expected)
+        self.perform_function_definition_check(
+            'Source/WTF/wtf/foo.h',
+            'WTF_EXPORT_PRIVATE static WARN_UNUSED_RETURN bool decode(Decoder&, AtomString&);',
+            warning_none)
+
+        self.perform_function_definition_check(
+            'Source/WTF/wtf/foo.h',
+            '    template<typename E>\n'
+            '    auto decode(E& e) -> std::enable_if_t<std::is_enum<E>::value, bool>\n'
+            '    {',
+            warning_expected)
+        self.perform_function_definition_check(
+            'Source/WTF/wtf/foo.h',
+            '    template<typename E> WARN_UNUSED_RETURN\n'
+            '    auto decode(E& e) -> std::enable_if_t<std::is_enum<E>::value, bool>\n'
+            '    {',
+            warning_none)
+
+        self.perform_function_definition_check(
+            'Source/WTF/wtf/foo.h',
+            '    template<typename E>\n'
+            '    bool decode(E& e) -> std::enable_if_t<std::is_enum<E>::value, bool>\n'
+            '    {',
+            warning_expected)
+        self.perform_function_definition_check(
+            'Source/WTF/wtf/foo.h',
+            '    template<typename E> WARN_UNUSED_RETURN\n'
+            '    bool decode(E& e) -> std::enable_if_t<std::is_enum<E>::value, bool>\n'
+            '    {',
+            warning_none)
+
+        self.perform_function_definition_check(
+            'Source/WTF/wtf/foo.h',
+            '    static std::optional<std::tuple<>> decode(Decoder&)\n'
+            '    {',
+            warning_none)
+
+        self.perform_function_definition_check(
+            'foo.h',
+            '    static bool platformDecode(IPC::Decoder&, WebHitTestResultData&);',
+            warning_expected)
+
+        self.perform_function_definition_check(
+            'foo.h',
+            '    static WARN_UNUSED_RETURN bool platformDecode(IPC::Decoder&, WebHitTestResultData&);',
+            warning_none)
+
+    def test_function_readability_for_attributes(self):
+        self.perform_function_definition_check(
+            'Source/WTF/wtf/foo.h',
+            'WTF_EXPORT_PRIVATE static bool decode(Decoder&, AtomString&) WARN_UNUSED_RETURN;',
+            'Function attribute (WARN_UNUSED_RETURN) should appear before the function definition'
+            '  [readability/function] [5]')
+
+        self.perform_function_definition_check(
+            'foo.h',
+            'static __attribute__((__warn_unused_result__)) bool check(Decoder&, AtomString&);',
+            '')
+
+        self.perform_function_definition_check(
+            'foo.h',
+            'static bool check(Decoder&, AtomString&) __attribute__((__warn_unused_result__));',
+            'Function attribute (__attribute__((__warn_unused_result__))) should appear before the function definition'
+            '  [readability/function] [5]')
+
 
 class CleansedLinesTest(unittest.TestCase):
     def test_init(self):
@@ -2927,7 +3376,7 @@ class CleansedLinesTest(unittest.TestCase):
         self.assertEqual('', collapse('\\012'))            # '\012' (char)
         self.assertEqual('', collapse('\\xfF0'))           # '\xfF0' (char)
         self.assertEqual('', collapse('\\n'))              # '\n' (char)
-        self.assertEqual('\#', collapse('\\#'))            # '\#' (bad)
+        self.assertEqual(r'\#', collapse('\\#'))            # '\#' (bad)
 
         self.assertEqual('StringReplace(body, "", "");',
                           collapse('StringReplace(body, "\\\\", "\\\\\\\\");'))
@@ -2950,11 +3399,11 @@ class OrderOfIncludesTest(CppStyleTestBase):
 
     def test_check_next_include_order__no_config(self):
         self.assertEqual('Header file should not contain WebCore config.h.',
-                         self.include_state.check_next_include_order(cpp_style._CONFIG_HEADER, 'Foo.h', True, True))
+                         self.include_state.check_next_include_order(cpp_style._CONFIG_HEADER, 'Foo.h', True, True, True))
 
     def test_check_next_include_order__no_self(self):
         self.assertEqual('Header file should not contain itself.',
-                         self.include_state.check_next_include_order(cpp_style._PRIMARY_HEADER, 'Foo.h', True, True))
+                         self.include_state.check_next_include_order(cpp_style._PRIMARY_HEADER, 'Foo.h', True, True, True))
         # Test actual code to make sure that header types are correctly assigned.
         self.assert_language_rules_check('Foo.h',
                                          '#include "Foo.h"\n',
@@ -2966,22 +3415,26 @@ class OrderOfIncludesTest(CppStyleTestBase):
 
     def test_check_next_include_order__likely_then_config(self):
         self.assertEqual('Found header this file implements before WebCore config.h.',
-                         self.include_state.check_next_include_order(cpp_style._PRIMARY_HEADER, 'Foo.cpp', False, True))
+                         self.include_state.check_next_include_order(cpp_style._PRIMARY_HEADER, 'Foo.cpp', False, True, True))
         self.assertEqual('Found WebCore config.h after a header this file implements.',
-                         self.include_state.check_next_include_order(cpp_style._CONFIG_HEADER, 'Foo.cpp', False, True))
+                         self.include_state.check_next_include_order(cpp_style._CONFIG_HEADER, 'Foo.cpp', False, True, True))
+
+    def test_check_next_include_order__no_config_module(self):
+        self.assertEqual('',
+                         self.include_state.check_next_include_order(cpp_style._PRIMARY_HEADER, 'Foo.cpp', False, True, False))
 
     def test_check_next_include_order__other_then_config(self):
         self.assertEqual('Found other header before WebCore config.h.',
-                         self.include_state.check_next_include_order(cpp_style._OTHER_HEADER, 'Foo.cpp', False, True))
+                         self.include_state.check_next_include_order(cpp_style._OTHER_HEADER, 'Foo.cpp', False, True, True))
         self.assertEqual('Found WebCore config.h after other header.',
-                         self.include_state.check_next_include_order(cpp_style._CONFIG_HEADER, 'Foo.cpp', False, True))
+                         self.include_state.check_next_include_order(cpp_style._CONFIG_HEADER, 'Foo.cpp', False, True, True))
 
     def test_check_next_include_order__config_then_other_then_likely(self):
-        self.assertEqual('', self.include_state.check_next_include_order(cpp_style._CONFIG_HEADER, 'Foo.cpp', False, True))
+        self.assertEqual('', self.include_state.check_next_include_order(cpp_style._CONFIG_HEADER, 'Foo.cpp', False, True, True))
         self.assertEqual('Found other header before a header this file implements.',
-                         self.include_state.check_next_include_order(cpp_style._OTHER_HEADER, 'Foo.cpp', False, True))
+                         self.include_state.check_next_include_order(cpp_style._OTHER_HEADER, 'Foo.cpp', False, True, True))
         self.assertEqual('Found header this file implements after other header.',
-                         self.include_state.check_next_include_order(cpp_style._PRIMARY_HEADER, 'Foo.cpp', False, True))
+                         self.include_state.check_next_include_order(cpp_style._PRIMARY_HEADER, 'Foo.cpp', False, True, True))
 
     def test_check_alphabetical_include_order(self):
         self.assert_language_rules_check('foo.h',
@@ -3039,6 +3492,59 @@ class OrderOfIncludesTest(CppStyleTestBase):
                                          '#include "c.h"\n'
                                          '#include "b.h"\n',
                                          'Alphabetical sorting problem.  [build/include_order] [4]')
+
+    def test_check_wtf_blockptr_usage_in_javascriptcore(self):
+        # FIXME: Remove once JavaScriptCore builds with ARC enabled (Bug 221117).
+        self.assert_language_rules_check(
+            'Source/JavaScriptCore/foo.h',
+            '#include <wtf/BlockPtr.h>\n',
+            'Replace WTF::BlockPtr with WTF::Function.'
+            ' WTF::BlockPtr is not safe to use until JavaScriptCore builds with ARC enabled.'
+            '  [security/javascriptcore_wtf_blockptr] [5]')
+
+        self.assert_language_rules_check(
+            'Source/JavaScriptCore/foo.mm',
+            '#include <wtf/BlockPtr.h>\n',
+            'Replace WTF::BlockPtr with WTF::Function.'
+            ' WTF::BlockPtr is not safe to use until JavaScriptCore builds with ARC enabled.'
+            '  [security/javascriptcore_wtf_blockptr] [5]')
+
+        self.assert_language_rules_check('Source/JavaScriptCore/foo.h',
+                                         '#include <wtf/Function.h>\n',
+                                         '')
+
+        self.assert_language_rules_check('Source/WebCore/foo.h',
+                                         '#include <wtf/BlockPtr.h>\n',
+                                         '')
+
+        self.assert_lint(
+            'typedef Vector<BlockPtr<void ()>> RemoteTargetQueue;\n',
+            'Replace WTF::BlockPtr with WTF::Function.'
+            ' WTF::BlockPtr is not safe to use until JavaScriptCore builds with ARC enabled.'
+            '  [security/javascriptcore_wtf_blockptr] [5]',
+            file_name='Source/JavaScriptCore/foo.h')
+
+        self.assert_lint(
+            'BlockPtr<void(WebItemProviderFileCallback)> _callback;\n',
+            'Replace WTF::BlockPtr with WTF::Function.'
+            ' WTF::BlockPtr is not safe to use until JavaScriptCore builds with ARC enabled.'
+            '  [security/javascriptcore_wtf_blockptr] [5]',
+            file_name='Source/JavaScriptCore/foo.mm')
+
+        self.assert_lint(
+            'typedef Vector<Function<void ()>> RemoteTargetQueue;\n',
+            '',
+            file_name='Source/JavaScriptCore/foo.h')
+
+        self.assert_lint(
+            'typedef Vector<BlockPtr<void ()>> RemoteTargetQueue;\n',
+            '',
+            file_name='Source/WebCore/foo.h')
+
+        self.assert_lint(
+            'BlockPtr<void(WebItemProviderFileCallback)> _callback;\n',
+            '',
+            file_name='Source/WebCore/foo.mm')
 
     def test_check_line_break_after_own_header(self):
         self.assert_language_rules_check('foo.cpp',
@@ -3147,6 +3653,13 @@ class OrderOfIncludesTest(CppStyleTestBase):
                                          'Should be: config.h, primary header, blank line, and then '
                                          'alphabetically sorted.  [build/include_order] [4]')
 
+        # Directories in _NO_CONFIG_H_PATH_PATTERNS start with a primary header (no config.h).
+        self.assert_language_rules_check('Source/WebKitLegacy/mac/WebCoreSupport/WebAlternativeTextClient.mm',
+                                         '#import "WebAlternativeTextClient.h"\n'
+                                         '\n'
+                                         '#import "WebViewInternal.h">\n',
+                                         '')
+
         # *SoftLink.cpp files should not include their headers -> no error.
         self.assert_language_rules_check('FooSoftLink.cpp',
                                          '#include "config.h"\n'
@@ -3226,6 +3739,16 @@ class OrderOfIncludesTest(CppStyleTestBase):
                                          '#include "FrameworkSoftLink.h"\n'
                                          '#include <Framework/Bar.h>\n',
                                          '*SoftLink.h header should be included after all other headers.  [build/include_order] [4]')
+
+        # Allow WebKitAdditions headers to appear after *SoftLink.h headers.
+        self.assert_language_rules_check('Foo.cpp',
+                                         '#include "config.h"\n'
+                                         '#include "Foo.h"\n'
+                                         '\n'
+                                         '#include "ALocalHeader.h"\n'
+                                         '#include "FrameworkSoftLink.h"\n'
+                                         '#include <WebKitAdditions/FooAdditions.h>\n',
+                                         '')
 
         self.assert_language_rules_check('Foo.cpp',
                                          '#include "config.h"\n'
@@ -3375,6 +3898,15 @@ class OrderOfIncludesTest(CppStyleTestBase):
                                          '\n'
                                          '#include "ResourceHandleWin.h"\n',
                                          '')
+        # Internal.h and Private.h headers are primary headers.
+        self.assertEqual(cpp_style._PRIMARY_HEADER,
+                         classify_include('WKWebProcessPlugInNodeHandle.mm',
+                                          'WKWebProcessPlugInNodeHandleInternal.h',
+                                          False, include_state))
+        self.assertEqual(cpp_style._PRIMARY_HEADER,
+                         classify_include('WKWebProcessPlugInNodeHandle.mm',
+                                          'WKWebProcessPlugInNodeHandlePrivate.h',
+                                          False, include_state))
 
     def test_try_drop_common_suffixes(self):
         self.assertEqual('foo/foo', cpp_style._drop_common_suffixes('foo/foo-inl.h'))
@@ -3792,7 +4324,7 @@ class NoNonVirtualDestructorsTest(CppStyleTestBase):
                     FOO_TWO
                 };
                 enum { FOO_ONE };
-                enum {FooOne, fooTwo};
+                enum { FooOne, fooTwo };
                 enum {
                     FOO_ONE
                 };''',
@@ -3844,7 +4376,7 @@ class NoNonVirtualDestructorsTest(CppStyleTestBase):
                     FOO_TWO
                 };
                 enum class Foo { FOO_ONE };
-                enum class Foo {FooOne, fooTwo};
+                enum class Foo { FooOne, fooTwo };
                 enum class Foo {
                     FOO_ONE
                 };''',
@@ -4220,7 +4752,7 @@ class WebKitStyleTest(CppStyleTestBase):
             'namespace WebCore {\n'
             '#define abc(x) x; \\\n'
             '    x\n'
-            '    void* x;'
+            '    void* x;\n'
             '}',
             'Code inside a namespace should not be indented.  [whitespace/indent] [4]',
             'foo.cpp')
@@ -4376,6 +4908,12 @@ class WebKitStyleTest(CppStyleTestBase):
             '    for (const WTF::Vector& vector : vectors)\n'
             '        process(vector);\n',
             '')
+
+        self.assert_multi_line_lint(
+            '    for (foo *bar in [foo bar:baz])\n'
+            '        process(bar);\n',
+            '',
+            'foo.mm')
 
         self.assert_multi_line_lint(
             '    for (const Vector& vector: vectors)\n'
@@ -5247,6 +5785,31 @@ class WebKitStyleTest(CppStyleTestBase):
             '  [runtime/max_min_macros] [4]',
             'foo.h')
 
+    def test_wtf_checked_size(self):
+        self.assert_lint(
+            'CheckedSize totalSize = barSize;\n'
+            'totalSize += bazSize;',
+            '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'auto totalSize = CheckedSize(barSize) + bazSize;',
+            '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'Checked<size_t, RecordOverflow> totalSize = barSize;\n'
+            'totalSize += bazSize;',
+            "Use 'CheckedSize' instead of 'Checked<size_t, RecordOverflow>'."
+            "  [runtime/wtf_checked_size] [5]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'auto totalSize = Checked<size_t, RecordOverflow>(barSize) + bazSize;',
+            "Use 'CheckedSize' instead of 'Checked<size_t, RecordOverflow>'."
+            "  [runtime/wtf_checked_size] [5]",
+            'foo.cpp')
+
     def test_wtf_make_unique(self):
         self.assert_lint(
              'std::unique_ptr<Foo> foo = WTF::makeUnique<Foo>();',
@@ -5301,28 +5864,161 @@ class WebKitStyleTest(CppStyleTestBase):
             "  [runtime/wtf_move] [4]",
             'foo.mm')
 
-    def test_wtf_optional(self):
+    def test_wtf_never_destroyed(self):
         self.assert_lint(
-             'Optional<int> a;',
+             'static NeverDestroyed<Foo> foo;',
              '',
              'foo.cpp')
 
         self.assert_lint(
-             'WTF::Optional<int> a;',
+             'static LazyNeverDestroyed<Foo> foo;',
              '',
              'foo.cpp')
 
         self.assert_lint(
-            'std::optional<int> a;',
-            "Use 'WTF::Optional<>' instead of 'std::optional<>'."
-            "  [runtime/wtf_optional] [4]",
+            'static NeverDestroyed<Lock> lock;',
+            "Use 'static Lock/Condition' instead of 'NeverDestroyed<Lock/Condition>'."
+            "  [runtime/wtf_never_destroyed] [4]",
             'foo.cpp')
 
         self.assert_lint(
-            'optional<int> a;',
-            "Use 'WTF::Optional<>' instead of 'std::optional<>'."
-            "  [runtime/wtf_optional] [4]",
+            'static NeverDestroyed<Condition> condition;',
+            "Use 'static Lock/Condition' instead of 'NeverDestroyed<Lock/Condition>'."
+            "  [runtime/wtf_never_destroyed] [4]",
             'foo.cpp')
+
+        self.assert_lint(
+            'static LazyNeverDestroyed<Lock> lock;',
+            "Use 'static Lock/Condition' instead of 'NeverDestroyed<Lock/Condition>'."
+            "  [runtime/wtf_never_destroyed] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'static LazyNeverDestroyed<Condition> condition;',
+            "Use 'static Lock/Condition' instead of 'NeverDestroyed<Lock/Condition>'."
+            "  [runtime/wtf_never_destroyed] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+             'static NeverDestroyed<Foo> foo;',
+             '',
+             'foo.mm')
+
+        self.assert_lint(
+             'static LazyNeverDestroyed<Foo> foo;',
+             '',
+             'foo.mm')
+
+        self.assert_lint(
+            'static NeverDestroyed<Lock> lock;',
+            "Use 'static Lock/Condition' instead of 'NeverDestroyed<Lock/Condition>'."
+            "  [runtime/wtf_never_destroyed] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'static NeverDestroyed<Condition> condition;',
+            "Use 'static Lock/Condition' instead of 'NeverDestroyed<Lock/Condition>'."
+            "  [runtime/wtf_never_destroyed] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'static LazyNeverDestroyed<Lock> lock;',
+            "Use 'static Lock/Condition' instead of 'NeverDestroyed<Lock/Condition>'."
+            "  [runtime/wtf_never_destroyed] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'static LazyNeverDestroyed<Condition> condition;',
+            "Use 'static Lock/Condition' instead of 'NeverDestroyed<Lock/Condition>'."
+            "  [runtime/wtf_never_destroyed] [4]",
+            'foo.mm')
+
+    def test_lock_guard(self):
+        self.assert_lint(
+            'Locker locker(lock);',
+            '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'std::lock_guard<Lock> locker(mutex);',
+            "Use 'Locker locker { lock }' instead of 'std::lock_guard<>'."
+            "  [runtime/lock_guard] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'std::lock_guard<Lock> locker(mutex);',
+            "Use 'Locker locker { lock }' instead of 'std::lock_guard<>'."
+            "  [runtime/lock_guard] [4]",
+            'foo.mm')
+
+    def test_once_flag(self):
+        self.assert_lint(
+            'static std::once_flag onceKey;',
+            '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'std::once_flag onceKey;',
+            "std::once_flag / dispatch_once_t should be in `static` storage."
+            "  [runtime/once_flag] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            '    std::once_flag onceKey;',
+            "std::once_flag / dispatch_once_t should be in `static` storage."
+            "  [runtime/once_flag] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'static std::once_flag onceKey;',
+            '',
+            'foo.mm')
+
+        self.assert_lint(
+            'std::once_flag onceKey;',
+            "std::once_flag / dispatch_once_t should be in `static` storage."
+            "  [runtime/once_flag] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            '    std::once_flag onceKey;',
+            "std::once_flag / dispatch_once_t should be in `static` storage."
+            "  [runtime/once_flag] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            'static dispatch_once_t onceKey;',
+            '',
+            'foo.cpp')
+
+        self.assert_lint(
+            'dispatch_once_t onceKey;',
+            "std::once_flag / dispatch_once_t should be in `static` storage."
+            "  [runtime/once_flag] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            '    dispatch_once_t onceKey;',
+            "std::once_flag / dispatch_once_t should be in `static` storage."
+            "  [runtime/once_flag] [4]",
+            'foo.cpp')
+
+        self.assert_lint(
+            'static dispatch_once_t onceKey;',
+            '',
+            'foo.mm')
+
+        self.assert_lint(
+            'dispatch_once_t onceKey;',
+            "std::once_flag / dispatch_once_t should be in `static` storage."
+            "  [runtime/once_flag] [4]",
+            'foo.mm')
+
+        self.assert_lint(
+            '    dispatch_once_t onceKey;',
+            "std::once_flag / dispatch_once_t should be in `static` storage."
+            "  [runtime/once_flag] [4]",
+            'foo.mm')
 
     def test_ctype_fucntion(self):
         self.assert_lint(
@@ -5494,6 +6190,15 @@ class WebKitStyleTest(CppStyleTestBase):
             'otherkit_web_view_load is incorrectly named. Don\'t use underscores in your identifier names.'
             '  [readability/naming/underscores] [4]', 'Source/Webkit/webkit/foo.cpp')
 
+        # There is an exception for GLib JavaScriptCore API.
+        self.assert_lint('JSCValue* jsc_value_new_null(JSCContext* context)', '', 'Source/JavaScriptCore/API/glib/JSCValue.cpp')
+        self.assert_lint('void my_function(int variable_1)',
+                         ['my_function' + name_underscore_error_message,
+                          'variable_1' + name_underscore_error_message],
+                         'Source/JavaScriptCore/API/glib/JSCValue.cpp')
+        self.assert_lint('gboolean jsc_value_is_undefined(JSCValue* value)',
+                         'jsc_value_is_undefined' + name_underscore_error_message)
+
         # There is an exception for some unit tests that begin with "tst_".
         self.assert_lint('void tst_QWebFrame::arrayObjectEnumerable(int var1, int var2)', '')
 
@@ -5594,6 +6299,8 @@ class WebKitStyleTest(CppStyleTestBase):
         # Lines that look like a protector variable declaration but aren't.
         self.assert_lint('static RefPtr<Widget> doSomethingWith(widget);', '')
         self.assert_lint('RefPtr<Widget> create();', '')
+        self.assert_lint('Ref<GeolocationPermissionRequestProxy> createRequest(GeolocationIdentifier);', '')
+        self.assert_lint('Ref<TypeName> createSomething(OtherTypeName);', '')
 
     def test_parameter_names(self):
         # Leave meaningless variable names out of function declarations.
@@ -5645,6 +6352,148 @@ class WebKitStyleTest(CppStyleTestBase):
                                             '{\n'
                                             '}\n', 'test.cpp', parameter_error_rules))
 
+    def test_split_identifier_into_words(self):
+        self.assertEqual([], _split_identifier_into_words(''))
+        self.assertEqual(['a'], _split_identifier_into_words('a'))
+        self.assertEqual(['A'], _split_identifier_into_words('A'))
+        self.assertEqual(['a', 'B'], _split_identifier_into_words('aB'))
+        self.assertEqual(['Ab'], _split_identifier_into_words('Ab'))
+
+        self.assertEqual(['url'], _split_identifier_into_words('url'))
+        self.assertEqual(['Url'], _split_identifier_into_words('Url'))
+        self.assertEqual(['URL'], _split_identifier_into_words('URL'))
+        self.assertEqual(['url', 'String'], _split_identifier_into_words('urlString'))
+        self.assertEqual(['URL', 'String'], _split_identifier_into_words('URLString'))
+        self.assertEqual(['test', 'Path', 'Or', 'Url'], _split_identifier_into_words('testPathOrUrl'))
+
+        self.assertEqual(['URL', '::', 'invalidate'], _split_identifier_into_words('URL::invalidate'))
+        self.assertEqual(['URL', '::', 'invalidate'], _split_identifier_into_words('URL_::invalidate'))
+        self.assertEqual(['URL', '::', 'invalidate'], _split_identifier_into_words('URL_::_invalidate'))
+        self.assertEqual(['URL', '::', 'invalidate'], _split_identifier_into_words('URL_::invalidate'))
+        self.assertEqual(['URL', '8', '::', 'invalidate'], _split_identifier_into_words('URL8::invalidate'))
+        self.assertEqual(['URL', '8', '::', 'invalidate'], _split_identifier_into_words('URL8_::_invalidate_'))
+        self.assertEqual(['URL', '8', '::', 'invalidate'], _split_identifier_into_words('URL8_::_invalidate'))
+        self.assertEqual(['URL', '8', '::', 'invalidate'], _split_identifier_into_words('URL8_::_invalidate_'))
+        self.assertEqual(['URL', '8', '::', 'invalidate'], _split_identifier_into_words('URL8_::invalidate'))
+        self.assertEqual(['URL', '8', '::', 'invalidate'], _split_identifier_into_words('URL8_::_invalidate'))
+
+        self.assertEqual(['loadurl'], _split_identifier_into_words('loadurl'))
+        self.assertEqual(['load', 'Url'], _split_identifier_into_words('loadUrl'))
+        self.assertEqual(['load', 'URL'], _split_identifier_into_words('loadURL'))
+
+        self.assertEqual(['url'], _split_identifier_into_words('_url'))
+        self.assertEqual(['url'], _split_identifier_into_words('g_url'))
+        self.assertEqual(['url'], _split_identifier_into_words('m_url'))
+        self.assertEqual(['url'], _split_identifier_into_words('s_url'))
+        self.assertEqual(['DC'], _split_identifier_into_words('m_DC'))
+
+        self.assertEqual(['i', '1'], _split_identifier_into_words('i1'))
+        self.assertEqual(['url', '8'], _split_identifier_into_words('url8'))
+        self.assertEqual(['Url', '8'], _split_identifier_into_words('Url8'))
+        self.assertEqual(['URL', '8'], _split_identifier_into_words('URL8'))
+        self.assertEqual(['non', 'UTF', '8', 'Query', 'Encoding'], _split_identifier_into_words('nonUTF8QueryEncoding'))
+
+        self.assertEqual(['is', 'Soft'], _split_identifier_into_words('isSoft:1'))
+
+    def test_identifier_names_with_acronyms(self):
+        identifier_error_rules = ('-',
+                                  '+readability/naming/acronym')
+
+        # Test that an identifier starts with an acronym.
+        error_start = 'The identifier name "%s" starts with an acronym that is not all lowercase.'\
+                      '  [readability/naming/acronym] [5]'
+
+        self.assertEqual('',
+                         self.perform_lint('void load(URL url);', 'test.cpp', identifier_error_rules))
+        self.assertEqual(error_start % 'Url',
+                         self.perform_lint('void load(URL Url);', 'test.cpp', identifier_error_rules))
+        self.assertEqual(error_start % 'URL',
+                         self.perform_lint('void load(URL URL);', 'test.cpp', identifier_error_rules))
+        self.assertEqual('',
+                         self.perform_lint('void load(URL urlToLoad);', 'test.cpp', identifier_error_rules))
+        self.assertEqual(error_start % 'UrlToLoad',
+                         self.perform_lint('void load(URL UrlToLoad);', 'test.cpp', identifier_error_rules))
+        self.assertEqual(error_start % 'URLToLoad',
+                         self.perform_lint('void load(URL URLToLoad);', 'test.cpp', identifier_error_rules))
+
+        self.assertEqual('',
+                         self.perform_lint('friend class URL;', 'test.cpp', identifier_error_rules))
+        self.assertEqual('',
+                         self.perform_lint('enum class URLPart;', 'test.cpp', identifier_error_rules))
+        self.assertEqual('',
+                         self.perform_lint('using namespace URLHelpers;', 'test.cpp', identifier_error_rules))
+
+        self.assertEqual('',
+                         self.perform_lint('explicit URL(HashTableDeletedValueType);', 'test.cpp', identifier_error_rules))
+        self.assertEqual('',
+                         self.perform_lint('WTF_EXPORT_PRIVATE URL(CFURLRef);', 'test.cpp', identifier_error_rules))
+        self.assertEqual('',
+                         self.perform_lint('void URL::invalidate()', 'test.cpp', identifier_error_rules))
+        self.assertEqual('',
+                         self.perform_lint('void URL::URL(const URL& base, const String& relative, const URLTextEncoding* encoding)', 'test.cpp', identifier_error_rules))
+        self.assertEqual('',
+                         self.perform_lint('URL URL::isolatedCopy() const', 'test.cpp', identifier_error_rules))
+        self.assertEqual('',
+                         self.perform_lint('URLParser::URLParser(const String& input, const URL& base, const URLTextEncoding* nonUTF8QueryEncoding)', 'test.cpp', identifier_error_rules))
+        self.assertEqual('',
+                         self.perform_lint('bool URLParser::internalValuesConsistent(const URL& url)', 'test.cpp', identifier_error_rules))
+        self.assertEqual(error_start % 'URL::URLNotConstructor',
+                         self.perform_lint('bool URL::URLNotConstructor()', 'test.cpp', identifier_error_rules))
+
+        self.assertEqual('',
+                         self.perform_lint('String m_url;', 'test.cpp', identifier_error_rules))
+        self.assertEqual('',
+                         self.perform_lint('JSRetainPtr<JSStringRef> AccessibilityUIElement::url()', 'test.cpp', identifier_error_rules))
+
+        self.assertEqual(error_start % 'Url::Url',
+                         self.perform_lint('void Url::Url()', 'test.cpp', identifier_error_rules))
+        self.assertEqual(error_start % 'UrlParse::UrlParse',
+                         self.perform_lint('void UrlParse::UrlParse()', 'test.cpp', identifier_error_rules))
+
+        # Test that identifier contains an acronym.
+        error_contain = 'The identifier name "%s" contains an acronym that is not all uppercase.'\
+                        '  [readability/naming/acronym] [5]'
+
+        self.assertEqual(error_contain % 'loadUrl',
+                         self.perform_lint('void load(URL loadUrl);', 'test.cpp', identifier_error_rules))
+        self.assertEqual('',
+                         self.perform_lint('void load(URL loadURL);', 'test.cpp', identifier_error_rules))
+
+        self.assertEqual('',
+                         self.perform_lint('void InspectorFrontendHost::inspectedURLChanged(const String& newURL)', 'test.cpp', identifier_error_rules))
+        self.assertEqual(error_contain % 'testPathOrUrl',
+                         self.perform_lint('static void changeWindowScaleIfNeeded(const char* testPathOrUrl)', 'test.cpp', identifier_error_rules))
+        self.assertEqual(error_contain % 'localPathOrUrl',
+                         self.perform_lint('auto localPathOrUrl = String(testPathOrURL);', 'test.cpp', identifier_error_rules))
+
+        # Test that an identifier _might_ contain an acronym.
+        error_may_contain = 'The identifier name "%s" _may_ contain an acronym that is not all uppercase.'\
+                            '  [readability/naming/acronym] [3]'
+        self.assertEqual(error_may_contain % 'loadurl',
+                         self.perform_lint('void load(URL loadurl);', 'test.cpp', identifier_error_rules))
+        self.assertEqual(error_may_contain % 'canLoadurl',
+                         self.perform_lint('void load(URL url, bool canLoadurl);', 'test.cpp', identifier_error_rules))
+
+        # Test special exceptions.
+        self.assertEqual('', self.perform_lint(
+            'void curlDidSendData(WebCore::CurlRequest&, unsigned long long, unsigned long long) override;',
+            'NetworkDataTaskCurl.h', identifier_error_rules))
+        self.assertEqual('', self.perform_lint(
+            'void NetworkDataTaskCurl::cancel()',
+            'NetworkDataTaskCurl.cpp', identifier_error_rules))
+        self.assertEqual('', self.perform_lint(
+            'String m_nsurlCacheDirectory;',
+            'PluginProcess.h', identifier_error_rules))
+
+        # Sometimes check_identifier_name_in_declaration() gets confused
+        # and thinks ':' is an identifier.
+        self.assertEqual('', self.perform_lint(
+            'NSFilePosixPermissions : [NSNumber numberWithInteger:(WEB_UREAD | WEB_UWRITE)],',
+            'QuickLook.mm', identifier_error_rules))
+        self.assertEqual('', self.perform_lint(
+            'for (CALayer *currLayer : [layer sublayers]) {',
+            'RemoteLayerTreeScrollingPerformanceData.mm', identifier_error_rules))
+
     def test_comments(self):
         # A comment at the beginning of a line is ok.
         self.assert_lint('// comment', '')
@@ -5654,17 +6503,18 @@ class WebKitStyleTest(CppStyleTestBase):
                          'One space before end of line comments'
                          '  [whitespace/comments] [5]')
 
-    def test_webkit_export_check(self):
-        webkit_export_error_rules = ('-', '+readability/webkit_export')
-        self.assertEqual('',
-            self.perform_lint(
-                '{}\n'
-                'WEBKIT_EXPORT\n'
-                'virtual\n'
-                'int\n'
-                'foo() = 0;\n',
-                'test.h',
-                webkit_export_error_rules))
+    def test_export_macro_check(self):
+        export_error_rules = ('-', '+build/export_macro')
+        self.assertEqual(
+            '', self.perform_lint(
+                'WEBCORE_EXPORT int x();',
+                os.path.join('Source', 'WebCore', 'x.h'),
+                export_error_rules))
+        self.assertNotEqual(
+            '', self.perform_lint(
+                'WEBCORE_TESTSUPPORT_EXPORT int x();',
+                os.path.join('Source', 'WebCore', 'x.h'),
+                export_error_rules))
 
     def test_member_initialization_list(self):
         self.assert_lint('explicit MyClass(Document* doc) : MySuperClass() { }',
@@ -5802,30 +6652,35 @@ class WebKitStyleTest(CppStyleTestBase):
 
         self.assert_lint('MYMACRO(a ? b() : c);', '')
 
-    def test_min_versions_of_wk_api_available(self):
-        self.assert_lint('WK_API_AVAILABLE(macosx(1.2.3))', 'macosx() is deprecated; use macos() instead  [build/wk_api_available] [5]')
+    def test_arguments_for_wk_api_available(self):
+        self.assert_lint('WK_API_AVAILABLE(macosx(10.2.3))', 'macosx() is deprecated; use macos() instead  [build/wk_api_available] [5]')
         self.assert_lint('WK_API_AVAILABLE(macosx(WK_MAC_TBA))', 'macosx() is deprecated; use macos() instead  [build/wk_api_available] [5]')
-        self.assert_lint('WK_API_AVAILABLE(macos(1.2.3), ios(3.4.5))', '')  # version numbers are OK.
-        self.assert_lint('WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))', '')  # WK_MAC_TBA and WK_IOS_TBA are OK.
-        self.assert_lint('WK_API_AVAILABLE(macos(WK_IOS_TBA), ios(3.4.5))', 'macos(WK_IOS_TBA) is invalid; expected WK_MAC_TBA or a number  [build/wk_api_available] [5]')
-        self.assert_lint('WK_API_AVAILABLE(macos(1.2.3), ios(WK_MAC_TBA))', 'ios(WK_MAC_TBA) is invalid; expected WK_IOS_TBA or a number  [build/wk_api_available] [5]')
-        self.assert_lint('WK_API_AVAILABLE(macos(1.2.3))', '')  # version numbers are OK.
-        self.assert_lint('WK_API_AVAILABLE(macos(WK_MAC_TBA))', '')  # WK_MAC_TBA is OK.
-        self.assert_lint('WK_API_AVAILABLE(ios(3.4.5))', '')  # version numbers are OK.
+
+        self.assert_lint('WK_API_AVAILABLE(macos(11.0))', '')  # version numbers are OK.
+        self.assert_lint('WK_API_AVAILABLE(ios(11.0))', '')  # version numbers are OK.
+        self.assert_lint('WK_API_AVAILABLE(macos(10.2.3))', '')  # Extended version numbers are OK.
+        self.assert_lint('WK_API_AVAILABLE(ios(10.1.1))', ''),  # Extended version numbers are OK.
+
+        self.assert_lint('WK_API_AVAILABLE(macos(11))', 'macos(11) is invalid; version number should have one decimal  [build/wk_api_available] [5]')
+        self.assert_lint('WK_API_AVAILABLE(macos(11.))', 'macos(11.) is invalid; expected WK_MAC_TBA or a major.minor version  [build/wk_api_available] [5]')
+        self.assert_lint('WK_API_AVAILABLE(ios(10.))', 'ios(10.) is invalid; expected WK_IOS_TBA or a major.minor version  [build/wk_api_available] [5]')
+
         self.assert_lint('WK_API_AVAILABLE(ios(WK_IOS_TBA))', '')  # WK_IOS_TBA is OK.
-        self.assert_lint('WK_API_AVAILABLE(macos(WK_IOS_TBA))', 'macos(WK_IOS_TBA) is invalid; expected WK_MAC_TBA or a number  [build/wk_api_available] [5]')
-        self.assert_lint('WK_API_AVAILABLE(macos(WK_IOS_TBA))', 'macos(WK_IOS_TBA) is invalid; expected WK_MAC_TBA or a number  [build/wk_api_available] [5]')
-        self.assert_lint('WK_API_AVAILABLE(ios(WK_MAC_TBA))', 'ios(WK_MAC_TBA) is invalid; expected WK_IOS_TBA or a number  [build/wk_api_available] [5]')
+        self.assert_lint('WK_API_AVAILABLE(macos(WK_MAC_TBA))', '')  # WK_MAC_TBA is OK.
+        self.assert_lint('WK_API_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))', '')  # WK_MAC_TBA and WK_IOS_TBA are OK.
+        self.assert_lint('WK_API_AVAILABLE(ios(WK_IOS_TBA), macos(WK_MAC_TBA))', '')  # WK_MAC_TBA and WK_IOS_TBA are OK, backwards.
+        self.assert_lint('WK_API_AVAILABLE(macos(WK_IOS_TBA))', 'macos(WK_IOS_TBA) is invalid; expected WK_MAC_TBA or a major.minor version  [build/wk_api_available] [5]')
+        self.assert_lint('WK_API_AVAILABLE(ios(WK_MAC_TBA))', 'ios(WK_MAC_TBA) is invalid; expected WK_IOS_TBA or a major.minor version  [build/wk_api_available] [5]')
 
     def test_os_version_checks(self):
-        self.assert_lint('#if PLATFORM(IOS_FAMILY) && __IPHONE_OS_VERSION_MIN_REQUIRED < 110000', 'Misplaced OS version check. Please use a named macro in wtf/Platform.h, wtf/FeatureDefines.h, or an appropriate internal file.  [build/version_check] [5]')
-        self.assert_lint('#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101300', 'Misplaced OS version check. Please use a named macro in wtf/Platform.h, wtf/FeatureDefines.h, or an appropriate internal file.  [build/version_check] [5]')
-        self.assert_lint('#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101300', '', 'Source/WTF/wtf/Platform.h')
-        self.assert_lint('#if PLATFORM(MAC) && __IPHONE_OS_VERSION_MIN_REQUIRED > 120000', '', 'Source/WTF/wtf/Platform.h')
-        self.assert_lint('#if PLATFORM(MAC) && __IPHONE_OS_VERSION_MIN_REQUIRED > 120400', 'Incorrect OS version check. VERSION_MIN_REQUIRED values never include a minor version. You may be looking for a combination of VERSION_MIN_REQUIRED for target OS version check and VERSION_MAX_ALLOWED for SDK check.  [build/version_check] [5]', 'Source/WTF/wtf/Platform.h')
-        self.assert_lint('#if !TARGET_OS_SIMULATOR && __WATCH_OS_VERSION_MIN_REQUIRED < 50000', 'Misplaced OS version check. Please use a named macro in wtf/Platform.h, wtf/FeatureDefines.h, or an appropriate internal file.  [build/version_check] [5]')
-        self.assert_lint('#if (PLATFORM(IOS_FAMILY) && __IPHONE_OS_VERSION_MIN_REQUIRED < 110000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101304)', ['Incorrect OS version check. VERSION_MIN_REQUIRED values never include a minor version. You may be looking for a combination of VERSION_MIN_REQUIRED for target OS version check and VERSION_MAX_ALLOWED for SDK check.  [build/version_check] [5]', 'Misplaced OS version check. Please use a named macro in wtf/Platform.h, wtf/FeatureDefines.h, or an appropriate internal file.  [build/version_check] [5]'])
-        self.assert_lint('#define FOO ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101302 && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300))', 'Misplaced OS version check. Please use a named macro in wtf/Platform.h, wtf/FeatureDefines.h, or an appropriate internal file.  [build/version_check] [5]')
+        self.assert_lint('#if PLATFORM(IOS_FAMILY) && __IPHONE_OS_VERSION_MIN_REQUIRED < 110000', 'Misplaced OS version check. Please use a named macro in one of headers in the wtf/Platform.h suite of files or an appropriate internal file.  [build/version_check] [5]')
+        self.assert_lint('#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101300', 'Misplaced OS version check. Please use a named macro in one of headers in the wtf/Platform.h suite of files or an appropriate internal file.  [build/version_check] [5]')
+        self.assert_lint('#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101300', '', 'Source/WTF/wtf/PlatformEnableCocoa.h')
+        self.assert_lint('#if PLATFORM(MAC) && __IPHONE_OS_VERSION_MIN_REQUIRED > 120000', '', 'Source/WTF/wtf/PlatformHave.h')
+        self.assert_lint('#if PLATFORM(MAC) && __IPHONE_OS_VERSION_MIN_REQUIRED > 120400', 'Incorrect OS version check. VERSION_MIN_REQUIRED values never include a minor version. You may be looking for a combination of VERSION_MIN_REQUIRED for target OS version check and VERSION_MAX_ALLOWED for SDK check.  [build/version_check] [5]', 'Source/WTF/wtf/PlatformEnableCocoa.h')
+        self.assert_lint('#if !TARGET_OS_SIMULATOR && __WATCH_OS_VERSION_MIN_REQUIRED < 50000', 'Misplaced OS version check. Please use a named macro in one of headers in the wtf/Platform.h suite of files or an appropriate internal file.  [build/version_check] [5]')
+        self.assert_lint('#if (PLATFORM(IOS_FAMILY) && __IPHONE_OS_VERSION_MIN_REQUIRED < 110000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101304)', ['Incorrect OS version check. VERSION_MIN_REQUIRED values never include a minor version. You may be looking for a combination of VERSION_MIN_REQUIRED for target OS version check and VERSION_MAX_ALLOWED for SDK check.  [build/version_check] [5]', 'Misplaced OS version check. Please use a named macro in one of headers in the wtf/Platform.h suite of files or an appropriate internal file.  [build/version_check] [5]'])
+        self.assert_lint('#define FOO ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101302 && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300))', 'Misplaced OS version check. Please use a named macro in one of headers in the wtf/Platform.h suite of files or an appropriate internal file.  [build/version_check] [5]')
 
     def test_other(self):
         # FIXME: Implement this.

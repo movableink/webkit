@@ -57,7 +57,6 @@ public:
     MediaTime decodeTime() const final { return m_decodeTime; }
     MediaTime duration() const final { return m_duration; }
     AtomString trackID() const final { return m_trackID; }
-    void setTrackID(const String& trackID) final { m_trackID = trackID; }
     size_t sizeInBytes() const final { return m_sizeInBytes; }
     FloatSize presentationSize() const final { return m_presentationSize; }
     void offsetTimestampsBy(const MediaTime& offset) final { m_presentationTime += offset; m_decodeTime += offset; }
@@ -65,13 +64,13 @@ public:
         m_presentationTime = presentationTime;
         m_decodeTime = decodeTime;
     };
-    bool isDivisable() const final { return false; }
-    std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime& presentationTime) final { return { }; }
     Ref<MediaSample> createNonDisplayingCopy() const final {
         return create(m_presentationTime, m_decodeTime, m_duration, static_cast<SampleFlags>(m_flags | IsNonDisplaying));
     }
     SampleFlags flags() const final { return m_flags; }
-    PlatformSample platformSample() final { return { PlatformSample::None, {nullptr}}; }
+    PlatformSample platformSample() const final { return { PlatformSample::None, { nullptr } }; }
+    PlatformSample::Type platformSampleType() const final { return PlatformSample::None; }
+
     void dump(PrintStream&) const final { }
 
 private:

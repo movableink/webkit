@@ -110,10 +110,10 @@ private:
 
 static bool isWrappedObject(JSC::JSObject* jsObject)
 {
-    JSC::ExecState* exec = jsObject->globalObject()->globalExec();
+    JSC::JSGlobalObject* globalObject = jsObject->globalObject();
     if (jsObject->isGlobalObject())
-        return jsObject->inherits<JSC::JSCallbackObject<JSC::JSAPIWrapperGlobalObject>>(exec->vm());
-    return jsObject->inherits<JSC::JSCallbackObject<JSC::JSAPIWrapperObject>>(exec->vm());
+        return jsObject->inherits<JSC::JSCallbackObject<JSC::JSAPIWrapperGlobalObject>>(globalObject->vm());
+    return jsObject->inherits<JSC::JSCallbackObject<JSC::JSAPIWrapperObject>>(globalObject->vm());
 }
 
 static JSClassRef wrappedObjectClass(JSC::JSObject* jsObject)
@@ -128,13 +128,11 @@ static GRefPtr<JSCContext> jscContextForObject(JSC::JSObject* jsObject)
 {
     ASSERT(isWrappedObject(jsObject));
     JSC::JSGlobalObject* globalObject = jsObject->globalObject();
-    JSC::ExecState* exec = globalObject->globalExec();
     if (jsObject->isGlobalObject()) {
-        JSC::VM& vm = globalObject->vm();
-        if (auto* globalScopeExtension = vm.vmEntryGlobalObject(exec)->globalScopeExtension())
-            exec = JSC::JSScope::objectAtScope(globalScopeExtension)->globalObject()->globalExec();
+        if (auto* globalScopeExtension = globalObject->globalScopeExtension())
+            globalObject = JSC::JSScope::objectAtScope(globalScopeExtension)->globalObject();
     }
-    return jscContextGetOrCreate(toGlobalRef(exec));
+    return jscContextGetOrCreate(toGlobalRef(globalObject));
 }
 
 static JSValueRef getProperty(JSContextRef callerContext, JSObjectRef object, JSStringRef propertyName, JSValueRef* exception)
@@ -548,7 +546,7 @@ JSCClass* jsc_class_get_parent(JSCClass* jscClass)
     return jscClass->priv->parentClass;
 }
 
-static GRefPtr<JSCValue> jscClassCreateConstructor(JSCClass* jscClass, const char* name, GCallback callback, gpointer userData, GDestroyNotify destroyNotify, GType returnType, Optional<Vector<GType>>&& parameters)
+static GRefPtr<JSCValue> jscClassCreateConstructor(JSCClass* jscClass, const char* name, GCallback callback, gpointer userData, GDestroyNotify destroyNotify, GType returnType, std::optional<Vector<GType>>&& parameters)
 {
     // If the constructor doesn't have arguments, we need to swap the fake instance and user data to ensure
     // user data is the first parameter and fake instance ignored.
@@ -558,10 +556,10 @@ static GRefPtr<JSCValue> jscClassCreateConstructor(JSCClass* jscClass, const cha
     else
         closure = adoptGRef(g_cclosure_new(callback, userData, reinterpret_cast<GClosureNotify>(reinterpret_cast<GCallback>(destroyNotify))));
     JSCClassPrivate* priv = jscClass->priv;
-    JSC::ExecState* exec = toJS(priv->context);
-    JSC::VM& vm = exec->vm();
+    JSC::JSGlobalObject* globalObject = toJS(priv->context);
+    JSC::VM& vm = globalObject->vm();
     JSC::JSLockHolder locker(vm);
-    auto* functionObject = JSC::JSCCallbackFunction::create(vm, exec->lexicalGlobalObject(), String::fromUTF8(name),
+    auto* functionObject = JSC::JSCCallbackFunction::create(vm, globalObject, String::fromUTF8(name),
         JSC::JSCCallbackFunction::Type::Constructor, jscClass, WTFMove(closure), returnType, WTFMove(parameters));
     auto context = jscContextGetOrCreate(priv->context);
     auto constructor = jscContextGetOrCreateValue(context.get(), toRef(functionObject));
@@ -700,17 +698,17 @@ JSCValue* jsc_class_add_constructor_variadic(JSCClass* jscClass, const char* nam
     if (!name)
         name = priv->name.data();
 
-    return jscClassCreateConstructor(jscClass, name ? name : priv->name.data(), callback, userData, destroyNotify, returnType, WTF::nullopt).leakRef();
+    return jscClassCreateConstructor(jscClass, name ? name : priv->name.data(), callback, userData, destroyNotify, returnType, std::nullopt).leakRef();
 }
 
-static void jscClassAddMethod(JSCClass* jscClass, const char* name, GCallback callback, gpointer userData, GDestroyNotify destroyNotify, GType returnType, Optional<Vector<GType>>&& parameters)
+static void jscClassAddMethod(JSCClass* jscClass, const char* name, GCallback callback, gpointer userData, GDestroyNotify destroyNotify, GType returnType, std::optional<Vector<GType>>&& parameters)
 {
     JSCClassPrivate* priv = jscClass->priv;
     GRefPtr<GClosure> closure = adoptGRef(g_cclosure_new(callback, userData, reinterpret_cast<GClosureNotify>(reinterpret_cast<GCallback>(destroyNotify))));
-    JSC::ExecState* exec = toJS(priv->context);
-    JSC::VM& vm = exec->vm();
+    JSC::JSGlobalObject* globalObject = toJS(priv->context);
+    JSC::VM& vm = globalObject->vm();
     JSC::JSLockHolder locker(vm);
-    auto* functionObject = toRef(JSC::JSCCallbackFunction::create(vm, exec->lexicalGlobalObject(), String::fromUTF8(name),
+    auto* functionObject = toRef(JSC::JSCCallbackFunction::create(vm, globalObject, String::fromUTF8(name),
         JSC::JSCCallbackFunction::Type::Method, jscClass, WTFMove(closure), returnType, WTFMove(parameters)));
     auto context = jscContextGetOrCreate(priv->context);
     auto method = jscContextGetOrCreateValue(context.get(), functionObject);
@@ -825,7 +823,7 @@ void jsc_class_add_method_variadic(JSCClass* jscClass, const char* name, GCallba
     g_return_if_fail(callback);
     g_return_if_fail(jscClass->priv->context);
 
-    jscClassAddMethod(jscClass, name, callback, userData, destroyNotify, returnType, WTF::nullopt);
+    jscClassAddMethod(jscClass, name, callback, userData, destroyNotify, returnType, std::nullopt);
 }
 
 /**
@@ -861,5 +859,5 @@ void jsc_class_add_property(JSCClass* jscClass, const char* name, GType property
 
     auto context = jscContextGetOrCreate(priv->context);
     GRefPtr<JSCValue> prototype = jscContextGetOrCreateValue(context.get(), toRef(priv->prototype.get()));
-    jsc_value_object_define_property_accessor(prototype.get(), name, JSC_VALUE_PROPERTY_CONFIGURABLE, propertyType, getter, setter, userData, destroyNotify);
+    jscValueAddPropertyAccessor(prototype.get(), name, propertyType, getter, setter, userData, destroyNotify);
 }

@@ -27,6 +27,7 @@ void RemixAndResample(const AudioFrame& src_frame,
   dst_frame->timestamp_ = src_frame.timestamp_;
   dst_frame->elapsed_time_ms_ = src_frame.elapsed_time_ms_;
   dst_frame->ntp_time_ms_ = src_frame.ntp_time_ms_;
+  dst_frame->packet_infos_ = src_frame.packet_infos_;
 }
 
 void RemixAndResample(const int16_t* src_data,
@@ -55,9 +56,10 @@ void RemixAndResample(const int16_t* src_data,
 
   if (resampler->InitializeIfNeeded(sample_rate_hz, dst_frame->sample_rate_hz_,
                                     audio_ptr_num_channels) == -1) {
-    RTC_FATAL() << "InitializeIfNeeded failed: sample_rate_hz = " << sample_rate_hz
-            << ", dst_frame->sample_rate_hz_ = " << dst_frame->sample_rate_hz_
-            << ", audio_ptr_num_channels = " << audio_ptr_num_channels;
+    RTC_FATAL() << "InitializeIfNeeded failed: sample_rate_hz = "
+                << sample_rate_hz << ", dst_frame->sample_rate_hz_ = "
+                << dst_frame->sample_rate_hz_
+                << ", audio_ptr_num_channels = " << audio_ptr_num_channels;
   }
 
   // TODO(yujo): for muted input frames, don't resample. Either 1) allow
@@ -70,8 +72,9 @@ void RemixAndResample(const int16_t* src_data,
                           AudioFrame::kMaxDataSizeSamples);
   if (out_length == -1) {
     RTC_FATAL() << "Resample failed: audio_ptr = " << audio_ptr
-            << ", src_length = " << src_length
-            << ", dst_frame->mutable_data() = " << dst_frame->mutable_data();
+                << ", src_length = " << src_length
+                << ", dst_frame->mutable_data() = "
+                << dst_frame->mutable_data();
   }
   dst_frame->samples_per_channel_ = out_length / audio_ptr_num_channels;
 
@@ -80,7 +83,7 @@ void RemixAndResample(const int16_t* src_data,
     // The audio in dst_frame really is mono at this point; MonoToStereo will
     // set this back to stereo.
     dst_frame->num_channels_ = 1;
-    AudioFrameOperations::MonoToStereo(dst_frame);
+    AudioFrameOperations::UpmixChannels(2, dst_frame);
   }
 }
 

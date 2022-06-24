@@ -35,28 +35,51 @@ void FrameInfoData::encode(IPC::Encoder& encoder) const
     encoder << isMainFrame;
     encoder << request;
     encoder << securityOrigin;
+    encoder << frameName;
     encoder << frameID;
+    encoder << parentFrameID;
 }
 
-bool FrameInfoData::decode(IPC::Decoder& decoder, FrameInfoData& result)
+std::optional<FrameInfoData> FrameInfoData::decode(IPC::Decoder& decoder)
 {
-    if (!decoder.decode(result.isMainFrame))
-        return false;
-    if (!decoder.decode(result.request))
-        return false;
-    Optional<WebCore::SecurityOriginData> securityOrigin;
+    std::optional<bool> isMainFrame;
+    decoder >> isMainFrame;
+    if (!isMainFrame)
+        return std::nullopt;
+
+    std::optional<WebCore::ResourceRequest> request;
+    decoder >> request;
+    if (!request)
+        return std::nullopt;
+
+    std::optional<WebCore::SecurityOriginData> securityOrigin;
     decoder >> securityOrigin;
     if (!securityOrigin)
-        return false;
-    result.securityOrigin = WTFMove(*securityOrigin);
-    
-    Optional<Optional<WebCore::FrameIdentifier>> frameID;
+        return std::nullopt;
+
+    std::optional<String> frameName;
+    decoder >> frameName;
+    if (!frameName)
+        return std::nullopt;
+
+    std::optional<std::optional<WebCore::FrameIdentifier>> frameID;
     decoder >> frameID;
     if (!frameID)
-        return false;
-    result.frameID = WTFMove(*frameID);
+        return std::nullopt;
 
-    return true;
+    std::optional<std::optional<WebCore::FrameIdentifier>> parentFrameID;
+    decoder >> parentFrameID;
+    if (!parentFrameID)
+        return std::nullopt;
+
+    return {{
+        WTFMove(*isMainFrame),
+        WTFMove(*request),
+        WTFMove(*securityOrigin),
+        WTFMove(*frameName),
+        WTFMove(*frameID),
+        WTFMove(*parentFrameID)
+    }};
 }
 
 }

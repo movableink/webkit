@@ -1,3 +1,4 @@
 
-FAIL Branding undefined is not an object (evaluating 'WebAssembly.Global.prototype')
+PASS Branding
+PASS Stray argument
 

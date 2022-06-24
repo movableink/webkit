@@ -148,6 +148,23 @@ WI.Recording = class Recording extends WI.Object
         return new WI.Recording(payload.version, type, payload.initialState, frames, payload.data);
     }
 
+    static displayNameForRecordingType(recordingType)
+    {
+        switch (recordingType) {
+        case Recording.Type.Canvas2D:
+            return WI.UIString("2D");
+        case Recording.Type.CanvasBitmapRenderer:
+            return WI.UIString("Bitmap Renderer", "Recording Type Canvas Bitmap Renderer", "A type of canvas recording in the Graphics Tab");
+        case Recording.Type.CanvasWebGL:
+            return WI.unlocalizedString("WebGL");
+        case Recording.Type.CanvasWebGL2:
+            return WI.unlocalizedString("WebGL2");
+        }
+
+        console.assert(false, "Unknown recording type", recordingType);
+        return null;
+    }
+
     static displayNameForSwizzleType(swizzleType)
     {
         switch (swizzleType) {
@@ -201,6 +218,8 @@ WI.Recording = class Recording extends WI.Object
             return WI.unlocalizedString("WebGLTransformFeedback");
         case WI.Recording.Swizzle.WebGLVertexArrayObject:
             return WI.unlocalizedString("WebGLVertexArrayObject");
+        case WI.Recording.Swizzle.DOMPointInit:
+            return WI.unlocalizedString("DOMPointInit");
         default:
             console.error("Unknown swizzle type", swizzleType);
             return null;
@@ -391,7 +410,12 @@ WI.Recording = class Recording extends WI.Object
                     points = await Promise.all(points.map((item) => this.swizzle(item, WI.Recording.Swizzle.Number)));
 
                     WI.ImageUtilities.scratchCanvasContext2D((context) => {
-                        this._swizzle[index][type] = gradientType === "radial-gradient" ? context.createRadialGradient(...points) : context.createLinearGradient(...points);
+                        if (gradientType == "radial-gradient")
+                            this._swizzle[index][type] = context.createRadialGradient(...points);
+                        else if (gradientType == "linear-gradient")
+                            this._swizzle[index][type] = context.createLinearGradient(...points);
+                        else
+                            this._swizzle[index][type] = context.createConicGradient(...points);
                     });
 
                     let stops = [];
@@ -646,8 +670,10 @@ WI.Recording = class Recording extends WI.Object
                 lines.push(`    let gradient = null;`);
                 lines.push(`    if (data.type === "radial-gradient")`);
                 lines.push(`        gradient = context.createRadialGradient(data.points[0], data.points[1], data.points[2], data.points[3], data.points[4], data.points[5]);`);
-                lines.push(`    else`);
+                lines.push(`    else if (data.type === "linear-gradient")`);
                 lines.push(`        gradient = context.createLinearGradient(data.points[0], data.points[1], data.points[2], data.points[3]);`);
+                lines.push(`    else`);
+                lines.push(`        gradient = context.createConicGradient(data.points[0], data.points[1], data.points[2]);`);
                 lines.push(`    for (let stop of data.stops)`);
                 lines.push(`        gradient.addColorStop(stop.offset, stop.color);`);
                 lines.push(`    objects[key] = gradient;`);
@@ -881,7 +907,7 @@ WI.Recording.Type = {
     CanvasWebGL2: "canvas-webgl2",
 };
 
-// Keep this in sync with WebCore::RecordingSwizzleTypes.
+// Keep this in sync with WebCore::RecordingSwizzleType.
 WI.Recording.Swizzle = {
     None: 0,
     Number: 1,

@@ -2,8 +2,7 @@
 (Frame scrolling node
   (scrollable area size 800 600)
   (contents size 800 1016)
-  (parent relative scrollable rect at (0,0) size 800x600)
-  (scrollable area parameters 
+  (scrollable area parameters
     (horizontal scroll elasticity 1)
     (vertical scroll elasticity 1)
     (horizontal scrollbar mode 0)
@@ -14,13 +13,11 @@
   (behavior for fixed 0)
   (children 1
     (Frame hosting node
-      (parent relative scrollable rect at (37,39) size 500x300)
       (children 1
         (Frame scrolling node
           (scrollable area size 500 300)
           (contents size 500 420)
-          (parent relative scrollable rect at (0,0) size 500x300)
-          (scrollable area parameters 
+          (scrollable area parameters
             (horizontal scroll elasticity 1)
             (vertical scroll elasticity 1)
             (horizontal scrollbar mode 0)
@@ -33,19 +30,18 @@
             (Overflow scrolling node
               (scrollable area size 400 300)
               (contents size 400 1760)
-              (parent relative scrollable rect at (10,10) size 400x300)
-              (scrollable area parameters 
+              (scrollable area parameters
                 (horizontal scroll elasticity 1)
                 (vertical scroll elasticity 1)
                 (horizontal scrollbar mode 0)
                 (vertical scrollbar mode 0)
-                (has enabled vertical scrollbar 1))
+                (allows vertical scrolling 1))
               (children 1
                 (Sticky node
                   (anchor edges: AnchorEdgeTop AnchorEdgeBottom)
                   (top offset 10.00)
                   (bottom offset 10.00)
-                  (containing block rect at (2,2) size 400x1760)
+                  (containing block rect at (0,0) size 400x1760)
                   (sticky box rect at (0,830) size 100x100)
                   (constraining rect at (0,0) size 400x300)
                   (sticky offset at last layout width=0 height=-640)

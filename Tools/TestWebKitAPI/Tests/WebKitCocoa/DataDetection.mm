@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #import "DataDetectorsCoreSPI.h"
 #import "PlatformUtilities.h"
@@ -142,15 +142,13 @@ TEST(WebKit, AddAndRemoveDataDetectors)
         EXPECT_TRUE([results[0].value containsString:@"2 Apple Park Way, Cupertino 95014"]);
         EXPECT_WK_STREQ("SignatureBlock", results[0].type);
         EXPECT_WK_STREQ("Date", results[1].type);
-        EXPECT_WK_STREQ("December 21, 2021", results[1].value);
+        EXPECT_WK_STREQ("December 21, 2099", results[1].value);
         EXPECT_WK_STREQ("FlightInformation", results[2].type);
         EXPECT_WK_STREQ("AC780", results[2].value);
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 130000
         EXPECT_EQ(DDResultCategoryUnknown, results[0].category);
         EXPECT_EQ(DDResultCategoryCalendarEvent, results[1].category);
         EXPECT_EQ(DDResultCategoryMisc, results[2].category);
-#endif
     };
 
     [webView synchronouslyDetectDataWithTypes:WKDataDetectorTypeAll];
@@ -164,6 +162,15 @@ TEST(WebKit, AddAndRemoveDataDetectors)
     [webView synchronouslyDetectDataWithTypes:WKDataDetectorTypeAddress | WKDataDetectorTypePhoneNumber];
     [webView expectElementCount:2 querySelector:@"a[x-apple-data-detectors=true]"];
     checkDataDetectionResults([webView _dataDetectionResults]);
+}
+
+TEST(WebKit, DoNotCrashWhenDetectingDataAfterWebProcessTerminates)
+{
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500)]);
+    [webView synchronouslyLoadTestPageNamed:@"data-detectors"];
+    [webView _killWebContentProcessAndResetState];
+    [webView synchronouslyDetectDataWithTypes:WKDataDetectorTypeAll];
+    [webView synchronouslyRemoveDataDetectedLinks];
 }
 
 #endif // PLATFORM(IOS)

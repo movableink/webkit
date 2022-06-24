@@ -24,12 +24,16 @@
  */
 
 #include "config.h"
+
+#if HAVE(TOUCH_BAR)
+
 #include "TouchBarMenuData.h"
 
 #include "Decoder.h"
 #include "Encoder.h"
 #include "TouchBarMenuItemData.h"
 #include "WebCoreArgumentCoders.h"
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLMenuElement.h>
 #include <WebCore/HTMLNames.h>
 
@@ -68,3 +72,5 @@ bool TouchBarMenuData::decode(IPC::Decoder& decoder, TouchBarMenuData& data)
 }
     
 }
+
+#endif // HAVE(TOUCH_BAR)

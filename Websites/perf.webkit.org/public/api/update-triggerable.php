@@ -11,7 +11,7 @@ function main($post_data)
         exit_with_error('DatabaseConnectionFailure');
 
     $report = json_decode($post_data, true);
-    verify_slave($db, $report);
+    verify_worker($db, $report);
 
     $triggerable_name = array_get($report, 'triggerable');
     $triggerable = $db->select_first_row('build_triggerables', 'triggerable', array('name' => $triggerable_name));
@@ -37,9 +37,18 @@ function main($post_data)
 
     foreach ($configurations as &$entry) {
         $config_info = array('test' => $entry['test'], 'platform' => $entry['platform'], 'triggerable' => $triggerable_id);
-        if (!$db->insert_row('triggerable_configurations', 'trigconfig', $config_info, null)) {
+        $new_triggerable_id = $db->insert_row('triggerable_configurations', 'trigconfig', $config_info);
+        if (!$new_triggerable_id) {
             $db->rollback_transaction();
             exit_with_error('FailedToInsertConfiguration', array('entry' => $entry));
+        }
+        $repetition_types = array_get($entry, 'supportedRepetitionTypes', array());
+        foreach ($repetition_types as $repetition_type) {
+            if (!$db->insert_row('triggerable_configuration_repetition_types', NULL,
+                array('configrepetition_config' => $new_triggerable_id, 'configrepetition_type' => $repetition_type), NULL)) {
+                $db->rollback_transaction();
+                exit_with_error('FailedToInsertRepetitionTypeForTriggerableConfig');
+            }
         }
     }
 

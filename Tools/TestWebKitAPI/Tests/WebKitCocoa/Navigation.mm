@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,18 +23,26 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
+#import "DeprecatedGlobalValues.h"
+#import "HTTPServer.h"
+#import "PlatformUtilities.h"
+#import "Test.h"
+#import "TestNavigationDelegate.h"
+#import "TestUIDelegate.h"
+#import "TestURLSchemeHandler.h"
 #import <WebKit/WKBackForwardListPrivate.h>
 #import <WebKit/WKNavigationActionPrivate.h>
 #import <WebKit/WKNavigationDelegatePrivate.h>
 #import <WebKit/WKNavigationPrivate.h>
 #import <WebKit/WKWebView.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
+#import <WebKit/WKWebsiteDataStorePrivate.h>
+#import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <wtf/RetainPtr.h>
-#import "PlatformUtilities.h"
-#import "Test.h"
+#import <wtf/Vector.h>
 
-static bool isDone;
 static RetainPtr<WKNavigation> currentNavigation;
 static RetainPtr<NSURL> redirectURL;
 static NSTimeInterval redirectDelay;
@@ -69,14 +77,14 @@ TEST(WKNavigation, NavigationDelegate)
 {
     RetainPtr<WKWebView> webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
 
-    NavigationDelegate *delegate = [[NavigationDelegate alloc] init];
-    [webView setNavigationDelegate:delegate];
+    auto delegate = adoptNS([[NavigationDelegate alloc] init]);
+    [webView setNavigationDelegate:delegate.get()];
 
     @autoreleasepool {
         EXPECT_EQ(delegate, [webView navigationDelegate]);
     }
 
-    [delegate release];
+    delegate = nil;
     EXPECT_NULL([webView navigationDelegate]);
 }
 
@@ -95,6 +103,226 @@ TEST(WKNavigation, LoadRequest)
 
     isDone = false;
     TestWebKitAPI::Util::run(&isDone);
+}
+
+TEST(WKNavigation, HTTPBody)
+{
+    __block bool done = false;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    NSData *testData = [@"testhttpbody" dataUsingEncoding:NSUTF8StringEncoding];
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^decisionHandler)(WKNavigationActionPolicy)) {
+        EXPECT_TRUE([action.request.HTTPBody isEqualToData:testData]);
+        decisionHandler(WKNavigationActionPolicyCancel);
+        done = true;
+    };
+    auto webView = adoptNS([WKWebView new]);
+    [webView setNavigationDelegate:delegate.get()];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"test:///willNotActuallyLoad"]];
+    [request setHTTPBody:testData];
+    [webView loadRequest:request];
+    TestWebKitAPI::Util::run(&done);
+}
+
+TEST(WKNavigation, UserAgentAndAccept)
+{
+    using namespace TestWebKitAPI;
+    HTTPServer server([](Connection) { });
+    __block bool done = false;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^decisionHandler)(WKNavigationActionPolicy)) {
+        EXPECT_WK_STREQ(action.request.allHTTPHeaderFields[@"User-Agent"], "testUserAgent");
+        EXPECT_WK_STREQ(action.request.allHTTPHeaderFields[@"Accept"], "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        decisionHandler(WKNavigationActionPolicyCancel);
+        done = true;
+    };
+    auto webView = adoptNS([WKWebView new]);
+    webView.get().customUserAgent = @"testUserAgent";
+    [webView setNavigationDelegate:delegate.get()];
+    [webView loadRequest:server.request()];
+    TestWebKitAPI::Util::run(&done);
+}
+
+@interface FrameNavigationDelegate : NSObject <WKNavigationDelegate>
+- (void)waitForNavigations:(size_t)count;
+@property (nonatomic, readonly) NSArray<NSURLRequest *> *requests;
+@property (nonatomic, readonly) NSArray<WKFrameInfo *> *frames;
+@property (nonatomic, readonly) NSArray<NSString *> *callbacks;
+@end
+
+@implementation FrameNavigationDelegate {
+    RetainPtr<NSMutableArray<NSURLRequest *>> _requests;
+    RetainPtr<NSMutableArray<WKFrameInfo *>> _frames;
+    RetainPtr<NSMutableArray<NSString *>> _callbacks;
+    size_t _navigationCount;
+}
+
+- (void)waitForNavigations:(size_t)expectedNavigationCount
+{
+    while (_navigationCount < expectedNavigationCount)
+        TestWebKitAPI::Util::spinRunLoop();
+}
+
+- (NSArray<NSURLRequest *> *)requests
+{
+    return _requests.get();
+}
+
+- (NSArray<WKFrameInfo *> *)frames
+{
+    return _frames.get();
+}
+
+- (NSArray<NSString *> *)callbacks
+{
+    return _callbacks.get();
+}
+
+- (void)_webView:(WKWebView *)webView didStartProvisionalLoadWithRequest:(NSURLRequest *)request inFrame:(WKFrameInfo *)frame
+{
+    if (!_requests)
+        _requests = [NSMutableArray array];
+    [_requests addObject:request];
+
+    if (!_frames)
+        _frames = [NSMutableArray array];
+    [_frames addObject:frame];
+
+    if (!_callbacks)
+        _callbacks = [NSMutableArray array];
+    [_callbacks addObject:@"start provisional"];
+}
+
+- (void)_webView:(WKWebView *)webView didFailProvisionalLoadWithRequest:(NSURLRequest *)request inFrame:(WKFrameInfo *)frame withError:(NSError *)error
+{
+    [_requests addObject:request];
+    [_frames addObject:frame];
+    [_callbacks addObject:@"fail provisional"];
+    _navigationCount++;
+}
+
+- (void)_webView:(WKWebView *)webView didCommitLoadWithRequest:(NSURLRequest *)request inFrame:(WKFrameInfo *)frame
+{
+    [_requests addObject:request];
+    [_frames addObject:frame];
+    [_callbacks addObject:@"commit"];
+}
+
+- (void)_webView:(WKWebView *)webView didFailLoadWithRequest:(NSURLRequest *)request inFrame:(WKFrameInfo *)frame withError:(NSError *)error
+{
+    [_requests addObject:request];
+    [_frames addObject:frame];
+    [_callbacks addObject:@"fail"];
+    _navigationCount++;
+}
+
+- (void)_webView:(WKWebView *)webView didFinishLoadWithRequest:(NSURLRequest *)request inFrame:(WKFrameInfo *)frame
+{
+    [_requests addObject:request];
+    [_frames addObject:frame];
+    [_callbacks addObject:@"finish"];
+    _navigationCount++;
+}
+
+@end
+
+TEST(WKNavigation, Frames)
+{
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto handler = adoptNS([TestURLSchemeHandler new]);
+    [handler setStartURLSchemeTaskHandler:^(WKWebView *, id<WKURLSchemeTask> task) {
+        NSString *responseString = nil;
+        if ([task.request.URL.absoluteString isEqualToString:@"frame://host1/"])
+            responseString = @"<iframe src='frame://host2/'></iframe>";
+        else if ([task.request.URL.absoluteString isEqualToString:@"frame://host2/"])
+            responseString = @"<script>function navigate() { window.location='frame://host3/' }</script><body onload='navigate()'></body>";
+        else if ([task.request.URL.absoluteString isEqualToString:@"frame://host3/"]) {
+            [task didFailWithError:[NSError errorWithDomain:@"testErrorDomain" code:42 userInfo:nil]];
+            return;
+        }
+
+        ASSERT(responseString);
+        auto response = adoptNS([[NSURLResponse alloc] initWithURL:task.request.URL MIMEType:@"text/html" expectedContentLength:responseString.length textEncodingName:nil]);
+        [task didReceiveResponse:response.get()];
+        [task didReceiveData:[responseString dataUsingEncoding:NSUTF8StringEncoding]];
+        [task didFinish];
+    }];
+    [configuration setURLSchemeHandler:handler.get() forURLScheme:@"frame"];
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    auto delegate = adoptNS([FrameNavigationDelegate new]);
+        webView.get().navigationDelegate = delegate.get();
+    [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"frame://host1/"]]];
+    [delegate waitForNavigations:3];
+    
+    struct ExpectedStrings {
+        const char* callback;
+        const char* frameRequest;
+        const char* frameSecurityOriginHost;
+        const char* request;
+    };
+    
+    auto checkCallbacks = [delegate] (Vector<ExpectedStrings> expectedVector) {
+        NSArray<NSURLRequest *> *requests = delegate.get().requests;
+        NSArray<WKFrameInfo *> *frames = delegate.get().frames;
+        NSArray<NSString *> *callbacks = delegate.get().callbacks;
+        EXPECT_EQ(requests.count, expectedVector.size());
+        EXPECT_EQ(frames.count, expectedVector.size());
+        EXPECT_EQ(callbacks.count, expectedVector.size());
+        
+        auto checkCallback = [] (NSString *callback, WKFrameInfo *frame, NSURLRequest *request, const ExpectedStrings& expected) {
+            EXPECT_WK_STREQ(callback, expected.callback);
+            EXPECT_WK_STREQ(frame.request.URL.absoluteString, expected.frameRequest);
+            EXPECT_WK_STREQ(frame.securityOrigin.host, expected.frameSecurityOriginHost);
+            EXPECT_WK_STREQ(request.URL.absoluteString, expected.request);
+        };
+        
+        for (size_t i = 0; i < expectedVector.size(); ++i)
+            checkCallback(callbacks[i], frames[i], requests[i], expectedVector[i]);
+    };
+    
+    checkCallbacks({
+        {
+            "start provisional",
+            "",
+            "",
+            "frame://host1/"
+        }, {
+            "commit",
+            "frame://host1/",
+            "host1",
+            "frame://host1/"
+        }, {
+            "start provisional",
+            "",
+            "host1",
+            "frame://host2/"
+        }, {
+            "commit",
+            "frame://host2/",
+            "host2",
+            "frame://host2/"
+        }, {
+            "finish",
+            "frame://host2/",
+            "host2",
+            "frame://host2/"
+        }, {
+            "finish",
+            "frame://host1/",
+            "host1",
+            "frame://host1/"
+        }, {
+            "start provisional",
+            "frame://host2/",
+            "host2",
+            "frame://host3/"
+        }, {
+            "fail provisional",
+            "frame://host2/",
+            "host2",
+            "frame://host3/"
+        }
+    });
 }
 
 @interface DidFailProvisionalNavigationDelegate : NSObject <WKNavigationDelegate>
@@ -273,7 +501,9 @@ TEST(WKNavigation, NavigationActionHasNavigation)
 
 TEST(WKNavigation, WebViewWillPerformClientRedirect)
 {
-    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    configuration.get()._allowTopNavigationToDataURLs = YES;
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
 
     auto delegate = adoptNS([[ClientRedirectNavigationDelegate alloc] init]);
     [webView setNavigationDelegate:delegate.get()];
@@ -302,7 +532,9 @@ TEST(WKNavigation, WebViewWillPerformClientRedirect)
 
 TEST(WKNavigation, WebViewDidCancelClientRedirect)
 {
-    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    configuration.get()._allowTopNavigationToDataURLs = YES;
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
 
     auto delegate = adoptNS([[ClientRedirectNavigationDelegate alloc] init]);
     [webView setNavigationDelegate:delegate.get()];
@@ -390,8 +622,6 @@ TEST(WKNavigation, NavigationActionSPI)
     EXPECT_TRUE([delegate spiCalled]);
 }
 
-#if PLATFORM(MAC)
-
 static bool navigationComplete;
 
 @interface BackForwardDelegate : NSObject<WKNavigationDelegatePrivate>
@@ -425,6 +655,8 @@ TEST(WKNavigation, WillGoToBackForwardListItem)
     [webView goBack];
     TestWebKitAPI::Util::run(&isDone);
 }
+
+#if PLATFORM(MAC)
 
 RetainPtr<WKBackForwardListItem> firstItem;
 RetainPtr<WKBackForwardListItem> secondItem;
@@ -481,4 +713,388 @@ TEST(WKNavigation, ListItemAddedRemoved)
     [[webView backForwardList] _removeAllItems];
     TestWebKitAPI::Util::run(&isDone);
 }
+
 #endif // PLATFORM(MAC)
+
+@interface LoadingObserver : NSObject
+@property (nonatomic, readonly) size_t changesObserved;
+@end
+
+@implementation LoadingObserver {
+    size_t _changesObserved;
+}
+
+- (size_t)changesObserved
+{
+    return _changesObserved;
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
+{
+    EXPECT_WK_STREQ(keyPath, "loading");
+    _changesObserved++;
+}
+
+@end
+
+TEST(WKNavigation, FrameBackLoading)
+{
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/", { "<iframe src='frame1.html'></iframe>" } },
+        { "/frame1.html", { "<a href='frame2.html'>link</a>" } },
+        { "/frame2.html", { "<script>alert('frame2 loaded')</script>" } },
+    });
+    auto webView = adoptNS([WKWebView new]);
+    auto delegate = adoptNS([TestUIDelegate new]);
+    auto observer = adoptNS([LoadingObserver new]);
+    [webView setUIDelegate:delegate.get()];
+    [webView addObserver:observer.get() forKeyPath:@"loading" options:NSKeyValueObservingOptionNew context:nil];
+    EXPECT_FALSE([webView isLoading]);
+    EXPECT_EQ([observer changesObserved], 0u);
+    [webView loadRequest:server.request()];
+    EXPECT_TRUE([webView isLoading]);
+    EXPECT_EQ([observer changesObserved], 1u);
+    while ([observer changesObserved] < 2u)
+        Util::spinRunLoop();
+    EXPECT_FALSE([webView isLoading]);
+    EXPECT_EQ([observer changesObserved], 2u);
+    EXPECT_FALSE([webView canGoBack]);
+    [webView evaluateJavaScript:@"document.querySelector('iframe').contentWindow.document.querySelector('a').click()" completionHandler:nil];
+    EXPECT_WK_STREQ([delegate waitForAlert], "frame2 loaded");
+    EXPECT_EQ([observer changesObserved], 2u);
+    EXPECT_TRUE([webView canGoBack]);
+    [webView goBack];
+    while ([observer changesObserved] < 3)
+        Util::spinRunLoop();
+    EXPECT_TRUE([webView isLoading]);
+    while ([observer changesObserved] < 4)
+        Util::spinRunLoop();
+    EXPECT_FALSE([webView isLoading]);
+    [webView removeObserver:observer.get() forKeyPath:@"loading"];
+
+}
+
+TEST(WKNavigation, SimultaneousNavigationWithFontsFinishes)
+{
+    const char* mainHTML =
+    "<!DOCTYPE html>"
+    "<html>"
+    "<head>"
+    "<style>"
+    "@font-face {"
+    "    font-family: 'WebFont';"
+    "    src: url('Ahem.svg') format('svg');"
+    "}"
+    "</style>"
+    "<script src='scriptsrc.js'></script>"
+    "</head>"
+    "<body>"
+    "<span style=\"font: 100px 'WebFont';\">text</span>"
+    "<iframe src='iframesrc.html'></iframe>"
+    "<script>window.location='refresh-nav:///'</script>"
+    "</body>"
+    "</html>";
+
+    NSString *svg = [NSString stringWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"AllAhem" withExtension:@"svg" subdirectory:@"TestWebKitAPI.resources"] encoding:NSUTF8StringEncoding error:nil];
+
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/", { mainHTML } },
+        { "/Ahem.svg", { svg } },
+        { "/scriptsrc.js", { "/* js content */" } },
+        { "/iframesrc.html", { "frame content" } },
+    });
+
+    auto webView = adoptNS([WKWebView new]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^completionHandler)(WKNavigationActionPolicy)) {
+        if ([action.request.URL.scheme isEqualToString:@"refresh-nav"])
+            completionHandler(WKNavigationActionPolicyCancel);
+        else
+            completionHandler(WKNavigationActionPolicyAllow);
+    };
+
+    __block bool finishedNavigation = false;
+    delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *) {
+        finishedNavigation = true;
+    };
+
+    [webView loadRequest:server.request()];
+    Util::run(&finishedNavigation);
+}
+
+TEST(WKNavigation, LoadRadarURLFromSandboxedFrameAllowPopups)
+{
+    const char* mainHTML = "<iframe src='frame.html' sandbox='allow-scripts allow-popups'></iframe>";
+    const char* frameHTML = "<a id='testLink' href='rdar://84498192'>Link</a><script>setTimeout(() => { document.getElementById('testLink').click() }, 0);</script>";
+
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/", { mainHTML } },
+        { "/frame.html", { frameHTML } },
+    });
+
+    auto webView = adoptNS([WKWebView new]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    __block bool didTryToLoadRadarURL = false;
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^completionHandler)(WKNavigationActionPolicy)) {
+        if ([action.request.URL.scheme isEqualToString:@"rdar"]) {
+            didTryToLoadRadarURL = true;
+            completionHandler(WKNavigationActionPolicyCancel);
+        } else
+            completionHandler(WKNavigationActionPolicyAllow);
+    };
+
+    __block bool finishedNavigation = false;
+    delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *) {
+        finishedNavigation = true;
+    };
+
+    [webView loadRequest:server.request()];
+    Util::run(&finishedNavigation);
+
+    Util::run(&didTryToLoadRadarURL);
+}
+
+TEST(WKNavigation, LoadRadarURLFromSandboxedFrameAllowTopNavigation)
+{
+    const char* mainHTML = "<iframe src='frame.html' sandbox='allow-scripts allow-top-navigation'></iframe>";
+    const char* frameHTML = "<a id='testLink' href='rdar://84498192'>Link</a><script>setTimeout(() => { document.getElementById('testLink').click() }, 0);</script>";
+
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/", { mainHTML } },
+        { "/frame.html", { frameHTML } },
+    });
+
+    auto webView = adoptNS([WKWebView new]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    __block bool didTryToLoadRadarURL = false;
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^completionHandler)(WKNavigationActionPolicy)) {
+        if ([action.request.URL.scheme isEqualToString:@"rdar"]) {
+            didTryToLoadRadarURL = true;
+            completionHandler(WKNavigationActionPolicyCancel);
+        } else
+            completionHandler(WKNavigationActionPolicyAllow);
+    };
+
+    __block bool finishedNavigation = false;
+    delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *) {
+        finishedNavigation = true;
+    };
+
+    [webView loadRequest:server.request()];
+    Util::run(&finishedNavigation);
+
+    Util::run(&didTryToLoadRadarURL);
+}
+
+TEST(WKNavigation, LoadRadarURLFromSandboxedFrameAllowCustomProtocolsNavigation)
+{
+    const char* mainHTML = "<iframe src='frame.html' sandbox='allow-scripts allow-top-navigation-to-custom-protocols'></iframe>";
+    const char* frameHTML = "<a id='testLink' href='rdar://84498192'>Link</a><script>setTimeout(() => { document.getElementById('testLink').click() }, 0);</script>";
+
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/", { mainHTML } },
+        { "/frame.html", { frameHTML } },
+    });
+
+    auto webView = adoptNS([WKWebView new]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    __block bool didTryToLoadRadarURL = false;
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^completionHandler)(WKNavigationActionPolicy)) {
+        if ([action.request.URL.scheme isEqualToString:@"rdar"]) {
+            didTryToLoadRadarURL = true;
+            completionHandler(WKNavigationActionPolicyCancel);
+        } else
+            completionHandler(WKNavigationActionPolicyAllow);
+    };
+
+    __block bool finishedNavigation = false;
+    delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *) {
+        finishedNavigation = true;
+    };
+
+    [webView loadRequest:server.request()];
+    Util::run(&finishedNavigation);
+
+    Util::run(&didTryToLoadRadarURL);
+}
+
+TEST(WKNavigation, LoadRadarURLFromSandboxedFrameWithUserGesture)
+{
+    const char* mainHTML = "<iframe src='frame.html' sandbox='allow-scripts allow-top-navigation-by-user-activation'></iframe>";
+    const char* frameHTML = "<a id='testLink' href='rdar://84498192'>Link</a></script>";
+
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/", { mainHTML } },
+        { "/frame.html", { frameHTML } },
+    });
+
+    auto webView = adoptNS([WKWebView new]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    __block RetainPtr<WKFrameInfo> iframe;
+    __block bool didTryToLoadRadarURL = false;
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^completionHandler)(WKNavigationActionPolicy)) {
+        if (!action.targetFrame.isMainFrame)
+            iframe = action.targetFrame;
+        if ([action.request.URL.scheme isEqualToString:@"rdar"]) {
+            didTryToLoadRadarURL = true;
+            completionHandler(WKNavigationActionPolicyCancel);
+        } else
+            completionHandler(WKNavigationActionPolicyAllow);
+    };
+
+    __block bool finishedNavigation = false;
+    delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *) {
+        finishedNavigation = true;
+    };
+
+    [webView loadRequest:server.request()];
+    Util::run(&finishedNavigation);
+
+    ASSERT_TRUE(!!iframe);
+
+    // Running Javascript simulates a user gesture so the navigation should be permitted due to 'allow-top-navigation-by-user-activation'.
+    [webView evaluateJavaScript:@"document.getElementById('testLink').click()" inFrame:iframe.get() inContentWorld:WKContentWorld.pageWorld completionHandler:nil];
+
+    Util::run(&didTryToLoadRadarURL);
+}
+
+TEST(WKNavigation, LoadRadarURLFromSandboxedFrame)
+{
+    const char* mainHTML = "<iframe src='frame.html' sandbox='allow-scripts'></iframe>";
+    const char* frameHTML = "<a id='testLink' href='rdar://84498192'>Link</a><script>setTimeout(() => { document.getElementById('testLink').click() }, 0);</script>";
+
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/", { mainHTML } },
+        { "/frame.html", { frameHTML } },
+    });
+
+    auto webView = adoptNS([WKWebView new]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    __block bool didTryToLoadRadarURL = false;
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^completionHandler)(WKNavigationActionPolicy)) {
+        if ([action.request.URL.scheme isEqualToString:@"rdar"]) {
+            didTryToLoadRadarURL = true;
+            completionHandler(WKNavigationActionPolicyCancel);
+        } else
+            completionHandler(WKNavigationActionPolicyAllow);
+    };
+
+    __block bool finishedNavigation = false;
+    delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *) {
+        finishedNavigation = true;
+    };
+
+    [webView loadRequest:server.request()];
+    Util::run(&finishedNavigation);
+
+    Util::sleep(0.5);
+
+    EXPECT_FALSE(didTryToLoadRadarURL);
+}
+
+TEST(WKNavigation, LoadRadarURLFromSandboxedFrameMissingUserGesture)
+{
+    const char* mainHTML = "<iframe src='frame.html' sandbox='allow-scripts allow-top-navigation-by-user-activation'></iframe>";
+    const char* frameHTML = "<a id='testLink' href='rdar://84498192'>Link</a><script>setTimeout(() => { document.getElementById('testLink').click() }, 0);</script>";
+
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/", { mainHTML } },
+        { "/frame.html", { frameHTML } },
+    });
+
+    auto webView = adoptNS([WKWebView new]);
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    __block bool didTryToLoadRadarURL = false;
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *action, void (^completionHandler)(WKNavigationActionPolicy)) {
+        if ([action.request.URL.scheme isEqualToString:@"rdar"]) {
+            didTryToLoadRadarURL = true;
+            completionHandler(WKNavigationActionPolicyCancel);
+        } else
+            completionHandler(WKNavigationActionPolicyAllow);
+    };
+
+    __block bool finishedNavigation = false;
+    delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *) {
+        finishedNavigation = true;
+    };
+
+    [webView loadRequest:server.request()];
+    Util::run(&finishedNavigation);
+
+    Util::sleep(0.5);
+
+    EXPECT_FALSE(didTryToLoadRadarURL);
+}
+
+TEST(WKNavigation, CrossOriginCOOPCancelResponseFailProvisionalNavigationCallback)
+{
+    using namespace TestWebKitAPI;
+    HTTPServer server({
+        { "/path1", { "hi" } },
+        { "/path2", { "hi" } },
+        { "/path3", { { { "Cross-Origin-Opener-Policy", "same-origin" } }, "hi" } }
+    }, HTTPServer::Protocol::HttpsProxy);
+
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initNonPersistentConfiguration]);
+    [storeConfiguration setProxyConfiguration:@{
+        (NSString *)kCFStreamPropertyHTTPSProxyHost: @"127.0.0.1",
+        (NSString *)kCFStreamPropertyHTTPSProxyPort: @(server.port())
+    }];
+    auto dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]);
+    auto configuration = adoptNS([WKWebViewConfiguration new]);
+    [configuration setWebsiteDataStore:dataStore.get()];
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
+
+    __block Vector<bool> finishedSuccessfullyCallbacks;
+    auto loadWithResponsePolicy = ^(WKWebView *webView, NSString *url, WKNavigationResponsePolicy responsePolicy) {
+        auto callbacksSizeBefore = finishedSuccessfullyCallbacks.size();
+
+        auto delegate = adoptNS([TestNavigationDelegate new]);
+        delegate.get().decidePolicyForNavigationResponse = ^(WKNavigationResponse *response, void (^decisionHandler)(WKNavigationResponsePolicy)) {
+            decisionHandler(responsePolicy);
+        };
+
+        delegate.get().didReceiveAuthenticationChallenge = ^(WKWebView *, NSURLAuthenticationChallenge *challenge, void (^completionHandler)(NSURLSessionAuthChallengeDisposition, NSURLCredential *)) {
+            completionHandler(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust]);
+        };
+        delegate.get().didFailProvisionalNavigation = ^(WKWebView *, WKNavigation *, NSError *) {
+            finishedSuccessfullyCallbacks.append(false);
+        };
+        delegate.get().didFinishNavigation = ^(WKWebView *, WKNavigation *) {
+            finishedSuccessfullyCallbacks.append(true);
+        };
+        [webView setNavigationDelegate:delegate.get()];
+        [webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:url]]];
+        while (finishedSuccessfullyCallbacks.size() == callbacksSizeBefore)
+            TestWebKitAPI::Util::spinRunLoop(10);
+    };
+
+    loadWithResponsePolicy(webView.get(), @"https://webkit.org/path1", WKNavigationResponsePolicyAllow);
+    loadWithResponsePolicy(webView.get(), @"https://webkit.org/path2", WKNavigationResponsePolicyCancel);
+    loadWithResponsePolicy(webView.get(), @"https://example.com/path3", WKNavigationResponsePolicyCancel);
+
+    Vector<bool> expectedCallbacks { true, false, false };
+    EXPECT_EQ(finishedSuccessfullyCallbacks, expectedCallbacks);
+}

@@ -1,10 +1,11 @@
 // This file is generated from a similarly-named Perl script in the BoringSSL
 // source tree. Do not edit by hand.
 
-#if defined(__has_feature)
+#if !defined(__has_feature)
+#define __has_feature(x) 0
+#endif
 #if __has_feature(memory_sanitizer) && !defined(OPENSSL_NO_ASM)
 #define OPENSSL_NO_ASM
-#endif
 #endif
 
 #if !defined(OPENSSL_NO_ASM)
@@ -15,6 +16,7 @@
 #include <openssl/arm_arch.h>
 
 
+.hidden	OPENSSL_armcap_P
 
 .section	.rodata
 
@@ -23,12 +25,6 @@
 .quad	0x3320646e61707865,0x6b20657479622d32		// endian-neutral
 .Lone:
 .long	1,0,0,0
-.LOPENSSL_armcap_P:
-#ifdef	__ILP32__
-.long	OPENSSL_armcap_P-.
-#else
-.quad	OPENSSL_armcap_P-.
-#endif
 .byte	67,104,97,67,104,97,50,48,32,102,111,114,32,65,82,77,118,56,44,32,67,82,89,80,84,79,71,65,77,83,32,98,121,32,60,97,112,112,114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
 .align	2
 
@@ -39,16 +35,21 @@
 .type	ChaCha20_ctr32,%function
 .align	5
 ChaCha20_ctr32:
+	AARCH64_VALID_CALL_TARGET
 	cbz	x2,.Labort
+#if __has_feature(hwaddress_sanitizer) && __clang_major__ >= 10
+	adrp	x5,:pg_hi21_nc:OPENSSL_armcap_P
+#else
 	adrp	x5,OPENSSL_armcap_P
+#endif
 	cmp	x2,#192
 	b.lo	.Lshort
-	add	x5,x5,:lo12:OPENSSL_armcap_P
-	ldr	w17,[x5]
+	ldr	w17,[x5,:lo12:OPENSSL_armcap_P]
 	tst	w17,#ARMV7_NEON
 	b.ne	ChaCha20_neon
 
 .Lshort:
+	AARCH64_SIGN_LINK_REGISTER
 	stp	x29,x30,[sp,#-96]!
 	add	x29,sp,#0
 
@@ -261,6 +262,7 @@ ChaCha20_ctr32:
 	ldp	x25,x26,[x29,#64]
 	ldp	x27,x28,[x29,#80]
 	ldp	x29,x30,[sp],#96
+	AARCH64_VALIDATE_LINK_REGISTER
 .Labort:
 	ret
 
@@ -317,12 +319,14 @@ ChaCha20_ctr32:
 	ldp	x25,x26,[x29,#64]
 	ldp	x27,x28,[x29,#80]
 	ldp	x29,x30,[sp],#96
+	AARCH64_VALIDATE_LINK_REGISTER
 	ret
 .size	ChaCha20_ctr32,.-ChaCha20_ctr32
 
 .type	ChaCha20_neon,%function
 .align	5
 ChaCha20_neon:
+	AARCH64_SIGN_LINK_REGISTER
 	stp	x29,x30,[sp,#-96]!
 	add	x29,sp,#0
 
@@ -703,6 +707,7 @@ ChaCha20_neon:
 	ldp	x25,x26,[x29,#64]
 	ldp	x27,x28,[x29,#80]
 	ldp	x29,x30,[sp],#96
+	AARCH64_VALIDATE_LINK_REGISTER
 	ret
 
 .Ltail_neon:
@@ -812,11 +817,13 @@ ChaCha20_neon:
 	ldp	x25,x26,[x29,#64]
 	ldp	x27,x28,[x29,#80]
 	ldp	x29,x30,[sp],#96
+	AARCH64_VALIDATE_LINK_REGISTER
 	ret
 .size	ChaCha20_neon,.-ChaCha20_neon
 .type	ChaCha20_512_neon,%function
 .align	5
 ChaCha20_512_neon:
+	AARCH64_SIGN_LINK_REGISTER
 	stp	x29,x30,[sp,#-96]!
 	add	x29,sp,#0
 
@@ -1980,7 +1987,9 @@ ChaCha20_512_neon:
 	ldp	x25,x26,[x29,#64]
 	ldp	x27,x28,[x29,#80]
 	ldp	x29,x30,[sp],#96
+	AARCH64_VALIDATE_LINK_REGISTER
 	ret
 .size	ChaCha20_512_neon,.-ChaCha20_512_neon
 #endif
 #endif  // !OPENSSL_NO_ASM
+.section	.note.GNU-stack,"",%progbits

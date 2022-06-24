@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBConnectionToClientDelegate.h"
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
@@ -38,6 +36,8 @@ namespace WebCore {
 class IDBError;
 class IDBResourceIdentifier;
 class IDBResultData;
+
+struct IDBDatabaseNameAndVersion;
 
 namespace IDBServer {
 
@@ -74,21 +74,21 @@ public:
 
     void notifyOpenDBRequestBlocked(const IDBResourceIdentifier& requestIdentifier, uint64_t oldVersion, uint64_t newVersion);
 
-    void didGetAllDatabaseNames(uint64_t callbackID, const Vector<String>& databaseNames);
+    WEBCORE_EXPORT void didGetAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, Vector<IDBDatabaseNameAndVersion>&&);
 
     void registerDatabaseConnection(UniqueIDBDatabaseConnection&);
     void unregisterDatabaseConnection(UniqueIDBDatabaseConnection&);
-    void connectionToClientClosed();
+    WEBCORE_EXPORT void connectionToClientClosed();
     bool isClosed() { return m_isClosed; }
+    void clearDelegate() { m_delegate = nullptr; }
+
 private:
     IDBConnectionToClient(IDBConnectionToClientDelegate&);
     
-    WeakPtr<IDBConnectionToClientDelegate> m_delegate;
+    IDBConnectionToClientDelegate* m_delegate;
     HashSet<UniqueIDBDatabaseConnection*> m_databaseConnections;
     bool m_isClosed { false };
 };
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

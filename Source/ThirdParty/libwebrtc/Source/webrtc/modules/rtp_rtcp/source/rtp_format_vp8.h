@@ -26,6 +26,7 @@
 #define MODULES_RTP_RTCP_SOURCE_RTP_FORMAT_VP8_H_
 
 #include <stddef.h>
+
 #include <cstdint>
 #include <vector>
 
@@ -34,7 +35,7 @@
 #include "modules/rtp_rtcp/source/rtp_format.h"
 #include "modules/rtp_rtcp/source/rtp_packet_to_send.h"
 #include "modules/video_coding/codecs/vp8/include/vp8_globals.h"
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
 
@@ -52,7 +53,7 @@ class RtpPacketizerVp8 : public RtpPacketizer {
   size_t NumPackets() const override;
 
   // Get the next payload with VP8 payload header.
-  // Write payload and set marker bit of the |packet|.
+  // Write payload and set marker bit of the `packet`.
   // Returns true on success, false otherwise.
   bool NextPacket(RtpPacketToSend* packet) override;
 
@@ -69,14 +70,5 @@ class RtpPacketizerVp8 : public RtpPacketizer {
   RTC_DISALLOW_COPY_AND_ASSIGN(RtpPacketizerVp8);
 };
 
-// Depacketizer for VP8.
-class RtpDepacketizerVp8 : public RtpDepacketizer {
- public:
-  ~RtpDepacketizerVp8() override = default;
-
-  bool Parse(ParsedPayload* parsed_payload,
-             const uint8_t* payload_data,
-             size_t payload_data_length) override;
-};
 }  // namespace webrtc
 #endif  // MODULES_RTP_RTCP_SOURCE_RTP_FORMAT_VP8_H_

@@ -13,8 +13,8 @@
 
 #include <memory>
 
-#include "modules/include/module_common_types.h"
 #include "modules/rtp_rtcp/source/forward_error_correction.h"
+#include "modules/rtp_rtcp/source/rtp_packet_received.h"
 #include "rtc_base/random.h"
 
 namespace webrtc {
@@ -22,7 +22,7 @@ namespace test {
 namespace fec {
 
 struct AugmentedPacket : public ForwardErrorCorrection::Packet {
-  WebRtcRTPHeader header;
+  RTPHeader header;
 };
 
 // TODO(brandtr): Consider merging MediaPacketGenerator and
@@ -38,7 +38,7 @@ class MediaPacketGenerator {
                        Random* random);
   ~MediaPacketGenerator();
 
-  // Construct the media packets, up to |num_media_packets| packets.
+  // Construct the media packets, up to `num_media_packets` packets.
   ForwardErrorCorrection::PacketList ConstructMediaPackets(
       int num_media_packets,
       uint16_t start_seq_num);
@@ -72,7 +72,7 @@ class AugmentedPacketGenerator {
   std::unique_ptr<AugmentedPacket> NextPacket(size_t offset, size_t length);
 
  protected:
-  // Given |header|, writes the appropriate RTP header fields in |data|.
+  // Given `header`, writes the appropriate RTP header fields in `data`.
   static void WriteRtpHeader(const RTPHeader& header, uint8_t* data);
 
   // Number of packets left to generate, in the current frame.
@@ -106,21 +106,16 @@ class UlpfecPacketGenerator : public AugmentedPacketGenerator {
  public:
   explicit UlpfecPacketGenerator(uint32_t ssrc);
 
-  // Creates a new AugmentedPacket with the RED header added to the packet.
-  static std::unique_ptr<AugmentedPacket> BuildMediaRedPacket(
-      const AugmentedPacket& packet);
+  // Creates a new RtpPacket with the RED header added to the packet.
+  static RtpPacketReceived BuildMediaRedPacket(const AugmentedPacket& packet,
+                                               bool is_recovered);
 
-  // Creates a new AugmentedPacket with FEC payload and RED header. Does this by
+  // Creates a new RtpPacket with FEC payload and RED header. Does this by
   // creating a new fake media AugmentedPacket, clears the marker bit and adds a
   // RED header. Finally replaces the payload with the content of
-  // |packet->data|.
-  std::unique_ptr<AugmentedPacket> BuildUlpfecRedPacket(
+  // `packet->data`.
+  RtpPacketReceived BuildUlpfecRedPacket(
       const ForwardErrorCorrection::Packet& packet);
-
- private:
-  static void SetRedHeader(uint8_t payload_type,
-                           size_t header_length,
-                           AugmentedPacket* red_packet);
 };
 
 }  // namespace fec

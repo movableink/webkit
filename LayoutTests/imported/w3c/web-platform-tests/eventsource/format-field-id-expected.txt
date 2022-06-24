@@ -1,3 +1,0 @@
-
-FAIL EventSource: Last-Event-ID assert_equals: expected "hello" but got "…"
-

@@ -26,10 +26,19 @@
 #pragma once
 
 #include "ClipboardItemDataSource.h"
+#include "ExceptionCode.h"
+#include "FileReaderLoaderClient.h"
+#include <variant>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+class Blob;
+class SharedBuffer;
 class DOMPromise;
+class FileReaderLoader;
+class PasteboardCustomData;
+class ScriptExecutionContext;
 
 class ClipboardItemBindingsDataSource : public ClipboardItemDataSource {
     WTF_MAKE_FAST_ALLOCATED;
@@ -40,6 +49,49 @@ public:
 private:
     Vector<String> types() const final;
     void getType(const String&, Ref<DeferredPromise>&&) final;
+    void collectDataForWriting(Clipboard& destination, CompletionHandler<void(std::optional<PasteboardCustomData>)>&&) final;
+
+    void invokeCompletionHandler();
+
+    using BufferOrString = std::variant<String, Ref<SharedBuffer>>;
+    class ClipboardItemTypeLoader : public FileReaderLoaderClient, public RefCounted<ClipboardItemTypeLoader> {
+    public:
+        static Ref<ClipboardItemTypeLoader> create(const String& type, CompletionHandler<void()>&& completionHandler)
+        {
+            return adoptRef(*new ClipboardItemTypeLoader(type, WTFMove(completionHandler)));
+        }
+
+        ~ClipboardItemTypeLoader();
+
+        void didResolveToString(const String&);
+        void didFailToResolve();
+        void didResolveToBlob(ScriptExecutionContext&, Ref<Blob>&&);
+
+        const String& type() { return m_type; }
+        const BufferOrString& data() { return m_data; }
+
+    private:
+        ClipboardItemTypeLoader(const String& type, CompletionHandler<void()>&&);
+
+        void sanitizeDataIfNeeded();
+        void invokeCompletionHandler();
+
+        // FileReaderLoaderClient methods.
+        void didStartLoading() final { }
+        void didReceiveData() final { }
+        void didFinishLoading() final;
+        void didFail(ExceptionCode) final;
+
+        String m_type;
+        BufferOrString m_data;
+        std::unique_ptr<FileReaderLoader> m_blobLoader;
+        CompletionHandler<void()> m_completionHandler;
+    };
+
+    unsigned m_numberOfPendingClipboardTypes { 0 };
+    CompletionHandler<void(std::optional<PasteboardCustomData>)> m_completionHandler;
+    Vector<Ref<ClipboardItemTypeLoader>> m_itemTypeLoaders;
+    WeakPtr<Clipboard> m_writingDestination;
 
     Vector<KeyValuePair<String, RefPtr<DOMPromise>>> m_itemPromises;
 };

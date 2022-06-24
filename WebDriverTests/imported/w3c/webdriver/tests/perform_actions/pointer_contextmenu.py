@@ -1,7 +1,8 @@
 import pytest
 
 from tests.perform_actions.support.keys import Keys
-from tests.perform_actions.support.refine import filter_dict, get_events
+from tests.perform_actions.support.refine import get_events
+from tests.support.helpers import filter_dict
 
 
 @pytest.mark.parametrize("modifier, prop", [
@@ -18,7 +19,7 @@ def test_control_click(session, test_actions_page, key_chain, mouse_chain, modif
     outer = session.find.css("#outer", all=False)
     mouse_chain.click(element=outer)
     session.actions.perform([key_chain.dict, mouse_chain.dict])
-    if os == "windows":
+    if os != "mac":
         expected = [
             {"type": "mousemove"},
             {"type": "mousedown"},

@@ -11,6 +11,7 @@
 #include "modules/audio_processing/aec3/reverb_frequency_response.h"
 
 #include <stddef.h>
+
 #include <algorithm>
 #include <array>
 #include <numeric>
@@ -18,16 +19,10 @@
 #include "api/array_view.h"
 #include "modules/audio_processing/aec3/aec3_common.h"
 #include "rtc_base/checks.h"
-#include "system_wrappers/include/field_trial.h"
 
 namespace webrtc {
 
 namespace {
-
-bool EnableSmoothUpdatesTailFreqResp() {
-  return !field_trial::IsEnabled(
-      "WebRTC-Aec3SmoothUpdatesTailFreqRespKillSwitch");
-}
 
 // Computes the ratio of the energies between the direct path and the tail. The
 // energy is computed in the power spectrum domain discarding the DC
@@ -54,10 +49,13 @@ float AverageDecayWithinFilter(
 
 }  // namespace
 
-ReverbFrequencyResponse::ReverbFrequencyResponse()
-    : enable_smooth_tail_response_updates_(EnableSmoothUpdatesTailFreqResp()) {
-  tail_response_.fill(0.f);
+ReverbFrequencyResponse::ReverbFrequencyResponse(
+    bool use_conservative_tail_frequency_response)
+    : use_conservative_tail_frequency_response_(
+          use_conservative_tail_frequency_response) {
+  tail_response_.fill(0.0f);
 }
+
 ReverbFrequencyResponse::~ReverbFrequencyResponse() = default;
 
 void ReverbFrequencyResponse::Update(
@@ -66,11 +64,6 @@ void ReverbFrequencyResponse::Update(
     int filter_delay_blocks,
     const absl::optional<float>& linear_filter_quality,
     bool stationary_block) {
-  if (!enable_smooth_tail_response_updates_) {
-    Update(frequency_response, filter_delay_blocks, 0.5f);
-    return;
-  }
-
   if (stationary_block || !linear_filter_quality) {
     return;
   }
@@ -97,6 +90,12 @@ void ReverbFrequencyResponse::Update(
 
   for (size_t k = 0; k < kFftLengthBy2Plus1; ++k) {
     tail_response_[k] = freq_resp_direct_path[k] * average_decay_;
+  }
+
+  if (use_conservative_tail_frequency_response_) {
+    for (size_t k = 0; k < kFftLengthBy2Plus1; ++k) {
+      tail_response_[k] = std::max(freq_resp_tail[k], tail_response_[k]);
+    }
   }
 
   for (size_t k = 1; k < kFftLengthBy2; ++k) {

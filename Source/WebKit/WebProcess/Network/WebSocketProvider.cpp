@@ -38,15 +38,15 @@
 namespace WebKit {
 using namespace WebCore;
 
-Ref<SocketStreamHandle> WebSocketProvider::createSocketStreamHandle(const URL& url, SocketStreamHandleClient& client, PAL::SessionID sessionID, const String& credentialPartition, const StorageSessionProvider*)
+Ref<SocketStreamHandle> WebSocketProvider::createSocketStreamHandle(const URL& url, SocketStreamHandleClient& client, WebSocketIdentifier identifier, PAL::SessionID sessionID, const String& credentialPartition, const StorageSessionProvider*)
 {
     ASSERT_UNUSED(sessionID, sessionID == WebProcess::singleton().sessionID());
-    return WebSocketStream::create(url, client, credentialPartition);
+    return WebSocketStream::create(url, client, identifier, credentialPartition);
 }
 
 RefPtr<ThreadableWebSocketChannel> WebSocketProvider::createWebSocketChannel(Document& document, WebSocketChannelClient& client)
 {
-    return WebProcess::singleton().webSocketChannelManager().createWebSocketChannel(document, client);
+    return WebSocketChannel::create(m_webPageProxyID, document, client);
 }
 
 } // namespace WebKit

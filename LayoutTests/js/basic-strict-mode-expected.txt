@@ -134,25 +134,25 @@ PASS 'use strict'; function f() { arguments-- } threw exception SyntaxError: 'ar
 PASS (function(){'use strict'; function f() { arguments-- }}) threw exception SyntaxError: 'arguments' cannot be modified in strict mode..
 PASS global.eval('"use strict"; if (0) ++arguments; true;') threw exception SyntaxError: Cannot modify 'arguments' in strict mode..
 PASS 'use strict'; ++(1, eval) threw exception SyntaxError: Prefix ++ operator applied to value that is not a reference..
-PASS (function(){'use strict'; ++(1, eval)}) threw exception SyntaxError: Cannot modify 'eval' in strict mode..
+PASS (function(){'use strict'; ++(1, eval)}) threw exception SyntaxError: Prefix ++ operator applied to value that is not a reference..
 PASS 'use strict'; ++(1, 2, 3, eval) threw exception SyntaxError: Prefix ++ operator applied to value that is not a reference..
-PASS (function(){'use strict'; ++(1, 2, 3, eval)}) threw exception SyntaxError: Cannot modify 'eval' in strict mode..
+PASS (function(){'use strict'; ++(1, 2, 3, eval)}) threw exception SyntaxError: Prefix ++ operator applied to value that is not a reference..
 PASS 'use strict'; (1, eval)++ threw exception SyntaxError: Postfix ++ operator applied to value that is not a reference..
-PASS (function(){'use strict'; (1, eval)++}) threw exception SyntaxError: Cannot modify 'eval' in strict mode..
+PASS (function(){'use strict'; (1, eval)++}) threw exception SyntaxError: Postfix ++ operator applied to value that is not a reference..
 PASS 'use strict'; --(1, eval) threw exception SyntaxError: Prefix -- operator applied to value that is not a reference..
-PASS (function(){'use strict'; --(1, eval)}) threw exception SyntaxError: Cannot modify 'eval' in strict mode..
+PASS (function(){'use strict'; --(1, eval)}) threw exception SyntaxError: Prefix -- operator applied to value that is not a reference..
 PASS 'use strict'; (1, eval)-- threw exception SyntaxError: Postfix -- operator applied to value that is not a reference..
-PASS (function(){'use strict'; (1, eval)--}) threw exception SyntaxError: 'eval' cannot be modified in strict mode..
+PASS (function(){'use strict'; (1, eval)--}) threw exception SyntaxError: Postfix -- operator applied to value that is not a reference..
 PASS 'use strict'; (1, 2, 3, eval)-- threw exception SyntaxError: Postfix -- operator applied to value that is not a reference..
-PASS (function(){'use strict'; (1, 2, 3, eval)--}) threw exception SyntaxError: 'eval' cannot be modified in strict mode..
-PASS 'use strict'; function f() { ++(1, arguments) } threw exception SyntaxError: Cannot modify 'arguments' in strict mode..
-PASS (function(){'use strict'; function f() { ++(1, arguments) }}) threw exception SyntaxError: Cannot modify 'arguments' in strict mode..
-PASS 'use strict'; function f() { (1, arguments)++ } threw exception SyntaxError: Cannot modify 'arguments' in strict mode..
-PASS (function(){'use strict'; function f() { (1, arguments)++ }}) threw exception SyntaxError: Cannot modify 'arguments' in strict mode..
-PASS 'use strict'; function f() { --(1, arguments) } threw exception SyntaxError: Cannot modify 'arguments' in strict mode..
-PASS (function(){'use strict'; function f() { --(1, arguments) }}) threw exception SyntaxError: Cannot modify 'arguments' in strict mode..
-PASS 'use strict'; function f() { (1, arguments)-- } threw exception SyntaxError: 'arguments' cannot be modified in strict mode..
-PASS (function(){'use strict'; function f() { (1, arguments)-- }}) threw exception SyntaxError: 'arguments' cannot be modified in strict mode..
+PASS (function(){'use strict'; (1, 2, 3, eval)--}) threw exception SyntaxError: Postfix -- operator applied to value that is not a reference..
+PASS 'use strict'; function f() { ++(1, arguments) } threw exception SyntaxError: Prefix ++ operator applied to value that is not a reference..
+PASS (function(){'use strict'; function f() { ++(1, arguments) }}) threw exception SyntaxError: Prefix ++ operator applied to value that is not a reference..
+PASS 'use strict'; function f() { (1, arguments)++ } threw exception SyntaxError: Postfix ++ operator applied to value that is not a reference..
+PASS (function(){'use strict'; function f() { (1, arguments)++ }}) threw exception SyntaxError: Postfix ++ operator applied to value that is not a reference..
+PASS 'use strict'; function f() { --(1, arguments) } threw exception SyntaxError: Prefix -- operator applied to value that is not a reference..
+PASS (function(){'use strict'; function f() { --(1, arguments) }}) threw exception SyntaxError: Prefix -- operator applied to value that is not a reference..
+PASS 'use strict'; function f() { (1, arguments)-- } threw exception SyntaxError: Postfix -- operator applied to value that is not a reference..
+PASS (function(){'use strict'; function f() { (1, arguments)-- }}) threw exception SyntaxError: Postfix -- operator applied to value that is not a reference..
 PASS 'use strict'; if (0) delete +a.b did not throw exception.
 PASS (function(){'use strict'; if (0) delete +a.b}) did not throw exception.
 PASS 'use strict'; if (0) delete ++a.b did not throw exception.
@@ -186,8 +186,8 @@ PASS (function f(arg){'use strict'; return Object.getOwnPropertyDescriptor(f.__p
 PASS (function f(arg){'use strict'; return Object.getOwnPropertyDescriptor(arguments, 'callee').value; })() is undefined.
 PASS (function f(arg){'use strict'; return Object.getOwnPropertyDescriptor(arguments, 'caller'); })() is undefined.
 PASS (function f(arg){'use strict'; var descriptor = Object.getOwnPropertyDescriptor(arguments, 'callee'); return descriptor.get === descriptor.set; })() is true
-PASS (function f(arg){'use strict'; var descriptor = Object.getOwnPropertyDescriptor(f.__proto__, 'caller'); return descriptor.get === descriptor.set; })() is true
-PASS (function f(arg){'use strict'; var descriptor = Object.getOwnPropertyDescriptor(f.__proto__, 'arguments'); return descriptor.get === descriptor.set; })() is true
+PASS (function f(arg){'use strict'; var descriptor = Object.getOwnPropertyDescriptor(f.__proto__, 'caller'); return descriptor.get === descriptor.set; })() is false
+PASS (function f(arg){'use strict'; var descriptor = Object.getOwnPropertyDescriptor(f.__proto__, 'arguments'); return descriptor.get === descriptor.set; })() is false
 PASS 'use strict'; (function f() { for(var i in this); })(); true; is true
 PASS 'use strict'̻ threw exception SyntaxError: Invalid character '\u033b'.
 PASS (function(){'use strict'̻}) threw exception SyntaxError: Invalid character '\u033b'.
@@ -213,7 +213,7 @@ PASS (function () {'use strict';  try { throw 1; } catch (e) { aGlobal = true; }
 PASS try { throw 1; } catch (e) { aGlobal = true; } is true
 PASS (function () { try { throw 1; } catch (e) { aGlobal = true; }})(); aGlobal; is true
 PASS (function () {try { throw 1; } catch (e) { aGlobal = true; }})(); aGlobal; is true
-PASS String(Object.getOwnPropertyDescriptor((function() { "use strict"; }).__proto__, "caller").get) is 'function () {\n    [native code]\n}'
+PASS String(Object.getOwnPropertyDescriptor((function() { "use strict"; }).__proto__, "caller").get) is 'function caller() {\n    [native code]\n}'
 PASS successfullyParsed is true
 
 TEST COMPLETE

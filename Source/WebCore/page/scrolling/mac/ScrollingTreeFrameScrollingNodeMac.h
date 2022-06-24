@@ -42,6 +42,8 @@ public:
     static Ref<ScrollingTreeFrameScrollingNode> create(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
     virtual ~ScrollingTreeFrameScrollingNodeMac();
 
+    RetainPtr<CALayer> rootContentsLayer() const { return m_rootContentsLayer; }
+
 protected:
     ScrollingTreeFrameScrollingNodeMac(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
 
@@ -49,7 +51,7 @@ protected:
     void commitStateBeforeChildren(const ScrollingStateNode&) override;
     void commitStateAfterChildren(const ScrollingStateNode&) override;
 
-    ScrollingEventResult handleWheelEvent(const PlatformWheelEvent&) override;
+    WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, EventTargeting) override;
 
     WEBCORE_EXPORT void repositionRelatedLayers() override;
 
@@ -61,10 +63,17 @@ protected:
     unsigned exposedUnfilledArea() const;
 
 private:
-    FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollPositionClamp) const override;
+    void willBeDestroyed() final;
+    void willDoProgrammaticScroll(const FloatPoint&) final;
 
-    void currentScrollPositionChanged() override;
-    void repositionScrollingLayers() override;
+    bool startAnimatedScrollToPosition(FloatPoint) final;
+    void stopAnimatedScroll() final;
+    void serviceScrollAnimation(MonotonicTime) final;
+
+    FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping) const final;
+
+    void currentScrollPositionChanged(ScrollType, ScrollingLayerPositionAction) final;
+    void repositionScrollingLayers() final;
 
     ScrollingTreeScrollingNodeDelegateMac m_delegate;
 

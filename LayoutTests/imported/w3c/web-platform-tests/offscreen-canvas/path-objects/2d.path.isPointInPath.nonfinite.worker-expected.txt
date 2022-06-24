@@ -1,3 +1,0 @@
-
-FAIL isPointInPath() returns false for non-finite arguments Can't find variable: OffscreenCanvas
-

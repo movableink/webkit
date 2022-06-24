@@ -1,4 +1,4 @@
-<!-- webkit-test-runner [ enableBackForwardCache=true ] -->
+<!-- webkit-test-runner [ UsesBackForwardCache=true ] -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -20,7 +20,7 @@ document.location = '#fragment';
 
 window.addEventListener('pageshow', () => {
     xhr = new XMLHttpRequest();
-    xhr.open('GET', 'resources/referrer.php', false);
+    xhr.open('GET', 'resources/referrer.py', false);
     xhr.send(null);
     shouldBeEqualToString('xhr.responseText', locationWithoutHash);
 });

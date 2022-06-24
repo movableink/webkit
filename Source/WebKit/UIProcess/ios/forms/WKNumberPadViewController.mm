@@ -23,16 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "WKNumberPadViewController.h"
+#import "config.h"
+#import "WKNumberPadViewController.h"
 
-#if PLATFORM(WATCHOS)
+#if HAVE(PEPPER_UI_CORE)
 
 #import "UIKitSPI.h"
 #import "WKNumberPadView.h"
-#import <PepperUICore/PUICQuickboardViewController_Private.h>
-#import <PepperUICore/PUICResources.h>
-#import <PepperUICore/UIDevice+PUICAdditions.h>
 #import <WebCore/LocalizedStrings.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
@@ -164,7 +161,7 @@ static CGFloat inputLabelFontSize()
         [_inputText appendString:@"+"];
         break;
     case WKNumberPadKeyAccept:
-        [self.delegate quickboard:self textEntered:[[[NSAttributedString alloc] initWithString:_inputText.get()] autorelease]];
+        [self.delegate quickboard:self textEntered:adoptNS([[NSAttributedString alloc] initWithString:_inputText.get()]).get()];
         return;
     case WKNumberPadKey0:
         [_inputText appendString:@"0"];
@@ -259,10 +256,12 @@ static CGFloat inputLabelFontSize()
     fadeOutAnimation.toValue = @0;
     fadeOutAnimation.duration = numberPadViewDismissAnimationDuration;
     fadeOutAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+#if USE(APPLE_INTERNAL_SDK)
     [self.contentView addAnimation:fadeOutAnimation forKey:@"WebKitNumberPadFadeOutAnimationKey"];
+#endif
     self.contentView.alpha = 0;
 }
 
 @end
 
-#endif // PLATFORM(WATCHOS)
+#endif // HAVE(PEPPER_UI_CORE)

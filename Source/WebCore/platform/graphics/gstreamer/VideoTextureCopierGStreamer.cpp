@@ -26,7 +26,6 @@
 #include "FloatRect.h"
 #include "GLContext.h"
 #include "ImageOrientation.h"
-#include "TextureMapperShaderProgram.h"
 
 namespace WebCore {
 
@@ -136,7 +135,7 @@ void VideoTextureCopierGStreamer::updateTransformationMatrix()
         -1, 1, -(farValue + nearValue) / (farValue - nearValue), 1);
 }
 
-bool VideoTextureCopierGStreamer::copyVideoTextureToPlatformTexture(TextureMapperPlatformLayerBuffer& inputTexture, IntSize& frameSize, GLuint outputTexture, GLenum outputTarget, GLint level, GLenum internalFormat, GLenum format, GLenum type, bool flipY, ImageOrientation sourceOrientation)
+bool VideoTextureCopierGStreamer::copyVideoTextureToPlatformTexture(TextureMapperPlatformLayerBuffer& inputTexture, IntSize& frameSize, GLuint outputTexture, GLenum outputTarget, GLint level, GLenum internalFormat, GLenum format, GLenum type, bool flipY, ImageOrientation sourceOrientation, bool premultiplyAlpha)
 {
     if (!m_framebuffer || !m_vbo || frameSize.isEmpty())
         return false;
@@ -161,7 +160,11 @@ bool VideoTextureCopierGStreamer::copyVideoTextureToPlatformTexture(TextureMappe
     using Buffer = TextureMapperPlatformLayerBuffer;
     TextureMapperShaderProgram::Options options;
     WTF::switchOn(inputTexture.textureVariant(),
-        [&](const Buffer::RGBTexture&) { options = TextureMapperShaderProgram::TextureRGB; },
+        [&](const Buffer::RGBTexture&) {
+            options = TextureMapperShaderProgram::TextureRGB;
+            if (premultiplyAlpha)
+                options.add(TextureMapperShaderProgram::Premultiply);
+        },
         [&](const Buffer::YUVTexture& texture) {
             switch (texture.numberOfPlanes) {
             case 1:
@@ -177,8 +180,16 @@ bool VideoTextureCopierGStreamer::copyVideoTextureToPlatformTexture(TextureMappe
                 ASSERT(!texture.yuvPlaneOffset[0] && !texture.yuvPlaneOffset[1] && !texture.yuvPlaneOffset[2]);
                 options = TextureMapperShaderProgram::TextureYUV;
                 break;
+            case 4:
+                ASSERT(!texture.yuvPlaneOffset[0] && !texture.yuvPlaneOffset[1] && !texture.yuvPlaneOffset[2]);
+                options = TextureMapperShaderProgram::TextureYUVA;
+                break;
             }
-        });
+        },
+        [&](const Buffer::ExternalOESTexture&) {
+            options = TextureMapperShaderProgram::TextureExternalOES;
+        }
+    );
 
     if (options != m_shaderOptions) {
         m_shaderProgram = TextureMapperShaderProgram::create(options);
@@ -242,6 +253,12 @@ bool VideoTextureCopierGStreamer::copyVideoTextureToPlatformTexture(TextureMappe
                 glUniform1i(m_shaderProgram->samplerULocation(), texture.yuvPlane[1]);
                 glUniform1i(m_shaderProgram->samplerVLocation(), texture.yuvPlane[2]);
                 break;
+            case 4:
+                glUniform1i(m_shaderProgram->samplerYLocation(), texture.yuvPlane[0]);
+                glUniform1i(m_shaderProgram->samplerULocation(), texture.yuvPlane[1]);
+                glUniform1i(m_shaderProgram->samplerVLocation(), texture.yuvPlane[2]);
+                glUniform1i(m_shaderProgram->samplerALocation(), texture.yuvPlane[3]);
+                break;
             }
             glUniformMatrix3fv(m_shaderProgram->yuvToRgbLocation(), 1, GL_FALSE, static_cast<const GLfloat *>(&texture.yuvToRgbMatrix[0]));
 
@@ -252,6 +269,15 @@ bool VideoTextureCopierGStreamer::copyVideoTextureToPlatformTexture(TextureMappe
                 glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                 glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             }
+        },
+        [&](const Buffer::ExternalOESTexture& texture) {
+            glUniform1i(m_shaderProgram->externalOESTextureLocation(), 0);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_EXTERNAL_OES, texture.id);
+            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         });
 
     m_shaderProgram->setMatrix(m_shaderProgram->modelViewMatrixLocation(), m_modelViewMatrix);

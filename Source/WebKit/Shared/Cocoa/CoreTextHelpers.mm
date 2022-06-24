@@ -26,28 +26,17 @@
 #import "config.h"
 #import "CoreTextHelpers.h"
 
-#import <pal/spi/cocoa/CoreTextSPI.h>
+#import <pal/spi/cf/CoreTextSPI.h>
 #import <wtf/BlockObjCExceptions.h>
 
 namespace WebKit {
 
-PlatformFontDescriptor *fontDescriptorWithFontAttributes(NSDictionary *attributes)
+WebCore::CocoaFont *fontWithAttributes(NSDictionary *attributes, CGFloat size)
 {
-    BEGIN_BLOCK_OBJC_EXCEPTIONS;
+    BEGIN_BLOCK_OBJC_EXCEPTIONS
 
-#if HAVE(NSFONT_WITH_OPTICAL_SIZING_BUG)
-    auto mutableDictionary = adoptNS([attributes mutableCopy]);
-    if (id opticalSizeAttribute = [mutableDictionary objectForKey:(__bridge NSString *)kCTFontOpticalSizeAttribute]) {
-        if ([opticalSizeAttribute isKindOfClass:[NSString class]]) {
-            [mutableDictionary removeObjectForKey:(__bridge NSString *)kCTFontOpticalSizeAttribute];
-            if (NSNumber *size = [mutableDictionary objectForKey:(__bridge NSString *)kCTFontSizeAttribute])
-                [mutableDictionary setObject:size forKey:(__bridge NSString *)kCTFontOpticalSizeAttribute];
-        }
-    }
-    return [PlatformFontDescriptor fontDescriptorWithFontAttributes:mutableDictionary.get()];
-#else
-    return [PlatformFontDescriptor fontDescriptorWithFontAttributes:attributes];
-#endif
+    auto descriptor = [WebCore::CocoaFontDescriptor fontDescriptorWithFontAttributes:attributes];
+    return [WebCore::CocoaFont fontWithDescriptor:descriptor size:size];
 
     END_BLOCK_OBJC_EXCEPTIONS
 

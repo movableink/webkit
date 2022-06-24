@@ -31,7 +31,7 @@
 
 namespace WebCore {
 class Frame;
-class Range;
+struct SimpleRange;
 }
 
 namespace WebKit {
@@ -41,6 +41,7 @@ enum class EditingRangeIsRelativeTo : uint8_t {
     Paragraph,
 };
 
+// FIXME: Replace this with std::optional<CharacterRange>.
 struct EditingRange {
     EditingRange()
         : location(notFound)
@@ -57,8 +58,8 @@ struct EditingRange {
     // (notFound, 0) is notably valid.
     bool isValid() const { return location + length >= location; }
 
-    static RefPtr<WebCore::Range> toRange(WebCore::Frame&, const EditingRange&, EditingRangeIsRelativeTo = EditingRangeIsRelativeTo::EditableRoot);
-    static EditingRange fromRange(WebCore::Frame&, const WebCore::Range*, EditingRangeIsRelativeTo = EditingRangeIsRelativeTo::EditableRoot);
+    static std::optional<WebCore::SimpleRange> toRange(WebCore::Frame&, const EditingRange&, EditingRangeIsRelativeTo = EditingRangeIsRelativeTo::EditableRoot);
+    static EditingRange fromRange(WebCore::Frame&, const std::optional<WebCore::SimpleRange>&, EditingRangeIsRelativeTo = EditingRangeIsRelativeTo::EditableRoot);
 
 #if defined(__OBJC__)
     EditingRange(NSRange range)
@@ -89,7 +90,7 @@ struct EditingRange {
 namespace IPC {
 template<> struct ArgumentCoder<WebKit::EditingRange> {
     static void encode(Encoder&, const WebKit::EditingRange&);
-    static Optional<WebKit::EditingRange> decode(Decoder&);
+    static std::optional<WebKit::EditingRange> decode(Decoder&);
 };
 }
 

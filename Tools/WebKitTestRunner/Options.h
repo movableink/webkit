@@ -27,12 +27,16 @@
 
 #pragma once
 
+#include "TestFeatures.h"
 #include <functional>
 #include <set>
 #include <stdio.h>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <wtf/Vector.h>
+#include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 namespace WTR {
 
@@ -43,14 +47,14 @@ struct Options {
     bool gcBetweenTests { false };
     bool shouldDumpPixelsForAllTests { false };
     bool forceComplexText { false };
-    bool shouldUseAcceleratedDrawing { false };
-    bool shouldUseRemoteLayerTree { false };
-    bool shouldShowWebView { false };
-    bool shouldShowTouches { false };
     bool checkForWorldLeaks { false };
     bool allowAnyHTTPSCertificateForAllowedHosts { false };
+    bool enableAllExperimentalFeatures { true };
     std::vector<std::string> paths;
     std::set<std::string> allowedHosts;
+    std::string webCoreLogChannels;
+    std::string webKitLogChannels;
+    TestFeatures features;
 };
 
 class Option {

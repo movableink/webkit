@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGLineElement.h"
 
+#include "LegacyRenderSVGShape.h"
 #include "RenderSVGResource.h"
 #include "SVGLengthValue.h"
 #include <wtf/IsoMallocInlines.h>
@@ -32,7 +33,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGLineElement);
 
 inline SVGLineElement::SVGLineElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
 {
     ASSERT(hasTagName(SVGNames::lineTag));
 
@@ -66,7 +66,6 @@ void SVGLineElement::parseAttribute(const QualifiedName& name, const AtomString&
     reportAttributeParsingError(parseError, name, value);
 
     SVGGeometryElement::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
 }
 
 void SVGLineElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -75,7 +74,7 @@ void SVGLineElement::svgAttributeChanged(const QualifiedName& attrName)
         InstanceInvalidationGuard guard(*this);
         updateRelativeLengthsInformation();
 
-        if (auto* renderer = downcast<RenderSVGShape>(this->renderer())) {
+        if (auto* renderer = downcast<LegacyRenderSVGShape>(this->renderer())) {
             renderer->setNeedsShapeUpdate();
             RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         }
@@ -83,7 +82,6 @@ void SVGLineElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGGeometryElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
 }
 
 bool SVGLineElement::selfHasRelativeLengths() const

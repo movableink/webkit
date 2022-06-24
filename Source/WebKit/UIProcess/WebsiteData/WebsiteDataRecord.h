@@ -26,17 +26,16 @@
 #pragma once
 
 #include "WebsiteDataType.h"
+#include <WebCore/RegistrableDomain.h>
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/SecurityOriginHash.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
-#include <wtf/Optional.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-class RegistrableDomain;
 class SecurityOrigin;
 }
 
@@ -50,10 +49,17 @@ struct WebsiteDataRecord {
 
     void add(WebsiteDataType, const WebCore::SecurityOriginData&);
     void addCookieHostName(const String& hostName);
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    void addPluginDataHostName(const String& hostName);
-#endif
     void addHSTSCacheHostname(const String& hostName);
+    void addAlternativeServicesHostname(const String& hostName);
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+    void addResourceLoadStatisticsRegistrableDomain(const WebCore::RegistrableDomain&);
+#endif
+
+    bool matches(const WebCore::RegistrableDomain&) const;
+    String topPrivatelyControlledDomain();
+
+    WebsiteDataRecord isolatedCopy() const &;
+    WebsiteDataRecord isolatedCopy() &&;
 
     String displayName;
     OptionSet<WebsiteDataType> types;
@@ -62,17 +68,15 @@ struct WebsiteDataRecord {
         uint64_t totalSize;
         HashMap<unsigned, uint64_t> typeSizes;
     };
-    Optional<Size> size;
+    std::optional<Size> size;
 
     HashSet<WebCore::SecurityOriginData> origins;
     HashSet<String> cookieHostNames;
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    HashSet<String> pluginDataHostNames;
-#endif
     HashSet<String> HSTSCacheHostNames;
-
-    bool matches(const WebCore::RegistrableDomain&) const;
-    String topPrivatelyControlledDomain();
+    HashSet<String> alternativeServicesHostNames;
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+    HashSet<WebCore::RegistrableDomain> resourceLoadStatisticsRegistrableDomains;
+#endif
 };
 
 }

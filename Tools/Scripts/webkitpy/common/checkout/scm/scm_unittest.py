@@ -1,5 +1,5 @@
 # Copyright (C) 2009 Google Inc. All rights reserved.
-# Copyright (C) 2009, 2016 Apple Inc. All rights reserved.
+# Copyright (C) 2009, 2016, 2020 Apple Inc. All rights reserved.
 # Copyright (C) 2011 Daniel Bates (dbates@intudata.com). All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,7 @@ import atexit
 import base64
 import codecs
 import getpass
+import logging
 import os
 import os.path
 import re
@@ -45,18 +46,27 @@ import shutil
 import unittest
 
 from datetime import date
+from webkitcorepy import Version
+
 from webkitpy.common.checkout.checkout import Checkout
 from webkitpy.common.config.committers import Committer  # FIXME: This should not be needed
 from webkitpy.common.net.bugzilla import Attachment  # FIXME: This should not be needed
 from webkitpy.common.system.executive import Executive, ScriptError
 from webkitpy.common.system.filesystem_mock import MockFileSystem
-from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.common.system.executive_mock import MockExecutive
-from webkitpy.common.version import Version
-from .git import Git, AmbiguousCommitError
-from .detection import detect_scm_system
-from .scm import SCM, CheckoutNeedsUpdate, commit_error_handler, AuthenticationError
-from .svn import SVN
+from webkitpy.common.checkout.scm.git import Git, AmbiguousCommitError
+from webkitpy.common.checkout.scm.detection import detect_scm_system
+from webkitpy.common.checkout.scm.scm import CheckoutNeedsUpdate, commit_error_handler, AuthenticationError
+from webkitpy.common.checkout.scm.svn import SVN
+
+from webkitpy.test.markers import slow, xfail
+
+from webkitcorepy import OutputCapture
+
+try:
+    import pathlib
+except ImportError:
+    import pathlib2 as pathlib
 
 
 # We cache the mock SVN repo so that we don't create it again for each call to an SVNTest or GitTest test_ method.
@@ -103,13 +113,16 @@ def run_silent(args, cwd=None):
 def write_into_file_at_path(file_path, contents, encoding="utf-8"):
     if encoding:
         with codecs.open(file_path, "w", encoding) as file:
-            file.write(contents)
-    else:
-        with open(file_path, "w") as file:
-            file.write(contents)
+            return file.write(contents)
+    with open(file_path, "wb") as file:
+        return file.write(contents)
 
 
 def read_from_path(file_path, encoding="utf-8"):
+    if not encoding:
+        with codecs.open(file_path, "rb") as file:
+            return file.read()
+
     with codecs.open(file_path, "r", encoding) as file:
         return file.read()
 
@@ -191,7 +204,7 @@ class SVNTestRepository(object):
 
         test_object.temp_directory = os.path.realpath(tempfile.mkdtemp(suffix="svn_test"))
         test_object.svn_repo_path = os.path.join(test_object.temp_directory, "repo")
-        test_object.svn_repo_url = "file://%s" % test_object.svn_repo_path
+        test_object.svn_repo_url = pathlib.Path(test_object.svn_repo_path).as_uri()
         test_object.svn_checkout_path = os.path.join(test_object.temp_directory, "checkout")
         shutil.copytree(cached_svn_repo_path, test_object.svn_repo_path)
         run_command(['svn', 'checkout', '--quiet', test_object.svn_repo_url + "/trunk", test_object.svn_checkout_path])
@@ -200,7 +213,7 @@ class SVNTestRepository(object):
     def _setup_mock_repo(cls):
         # Create an test SVN repository
         svn_repo_path = tempfile.mkdtemp(suffix="svn_test_repo")
-        svn_repo_url = "file://%s" % svn_repo_path  # Not sure this will work on windows
+        svn_repo_url = pathlib.Path(svn_repo_path).as_uri()
         # git svn complains if we don't pass --pre-1.5-compatible, not sure why:
         # Expected FS format '2'; found format '3' at /usr/local/libexec/git-core//git-svn line 1477
         run_command(['svnadmin', 'create', '--pre-1.5-compatible', svn_repo_path])
@@ -282,6 +295,10 @@ svn: resource out of date; try updating
 
 # GitTest and SVNTest inherit from this so any test_ methods here will be run once for this class and then once for each subclass.
 class SCMTest(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(SCMTest, self).__init__(*args, **kwargs)
+        self.scm = None
+
     def _create_patch(self, patch_contents):
         # FIXME: This code is brittle if the Attachment API changes.
         attachment = Attachment({"bug_id": 12345}, None)
@@ -304,33 +321,33 @@ class SCMTest(unittest.TestCase):
 
     def _shared_test_changed_files(self):
         write_into_file_at_path("test_file", "changed content")
-        self.assertItemsEqual(self.scm.changed_files(), ["test_file"])
+        self.assertEqual(self.scm.changed_files(), ["test_file"])
         write_into_file_at_path("test_dir/test_file3", "new stuff")
-        self.assertItemsEqual(self.scm.changed_files(), ["test_dir/test_file3", "test_file"])
+        self.assertEqual(sorted(self.scm.changed_files()), sorted(["test_dir/test_file3", "test_file"]))
         old_cwd = os.getcwd()
         os.chdir("test_dir")
         # Validate that changed_files does not change with our cwd, see bug 37015.
-        self.assertItemsEqual(self.scm.changed_files(), ["test_dir/test_file3", "test_file"])
+        self.assertEqual(sorted(self.scm.changed_files()), sorted(["test_dir/test_file3", "test_file"]))
         os.chdir(old_cwd)
 
     def _shared_test_untracked_files(self, scm):
         write_into_file_at_path("test_file_new", "new content")
-        self.assertItemsEqual(scm.untracked_files(), ["test_file_new"])
+        self.assertEqual(scm.untracked_files(), ["test_file_new"])
 
         os.mkdir("test_dir_new")
         write_into_file_at_path(os.path.join("test_dir_new", "test_file_new"), "new stuff")
-        self.assertItemsEqual(scm.untracked_files(), ["test_dir_new", "test_file_new"])
+        self.assertEqual(sorted(scm.untracked_files()), sorted(["test_dir_new", "test_file_new"]))
 
         old_cwd = os.getcwd()
         os.chdir("test_dir_new")
         # Validate that untracked_files do not change with our cwd.
-        self.assertItemsEqual(scm.untracked_files(), ["test_dir_new", "test_file_new"])
+        self.assertEqual(scm.untracked_files(), ["test_dir_new", "test_file_new"])
 
         os.chdir(old_cwd)
 
         write_into_file_at_path("test_file_new.pyc", "new ignored file")
-        self.assertItemsEqual(scm.untracked_files(), ["test_dir_new", "test_file_new"])
-        self.assertItemsEqual(scm.untracked_files(include_ignored_files=True), ["test_file_new.pyc", "test_dir_new", "test_file_new"])
+        self.assertEqual(sorted(scm.untracked_files()), sorted(["test_dir_new", "test_file_new"]))
+        self.assertEqual(sorted(scm.untracked_files(include_ignored_files=True)), sorted(["test_file_new.pyc", "test_dir_new", "test_file_new"]))
 
         shutil.rmtree("test_dir_new")
         os.remove("test_file_new")
@@ -340,16 +357,23 @@ class SCMTest(unittest.TestCase):
         write_into_file_at_path("test_file_new", "new content")
         os.mkdir("test_dir_new")
         write_into_file_at_path("test_dir_new/test_file_new", "new stuff")
-        self.assertItemsEqual(scm.untracked_files(), ["test_dir_new", "test_file_new"])
+        self.assertEqual(sorted(scm.untracked_files()), sorted(["test_dir_new", "test_file_new"]))
         scm.discard_untracked_files()
-        self.assertItemsEqual(scm.untracked_files(), [])
+        self.assertEqual(scm.untracked_files(), [])
 
         write_into_file_at_path("test_file_new.pyc", "new content")
-        self.assertItemsEqual(scm.untracked_files(True), ["test_file_new.pyc"])
+        self.assertEqual(scm.untracked_files(True), ["test_file_new.pyc"])
         scm.discard_untracked_files(discard_ignored_files=False)
-        self.assertItemsEqual(scm.untracked_files(True), ["test_file_new.pyc"])
+        self.assertEqual(scm.untracked_files(True), ["test_file_new.pyc"])
         scm.discard_untracked_files(discard_ignored_files=True)
-        self.assertItemsEqual(scm.untracked_files(True), [])
+        self.assertEqual(scm.untracked_files(True), [])
+
+        os.mkdir("WebKitBuild")
+        self.assertEqual(scm.untracked_files(True), ["WebKitBuild"])
+        scm.discard_untracked_files(discard_ignored_files=True, keep_webkitbuild_directory=True)
+        self.assertEqual(scm.untracked_files(True), ["WebKitBuild"])
+        scm.discard_untracked_files(discard_ignored_files=True, keep_webkitbuild_directory=False)
+        self.assertEqual(scm.untracked_files(True), [])
 
         if os.path.isdir("test_dir_new"):
             shutil.rmtree("test_dir_new")
@@ -360,7 +384,7 @@ class SCMTest(unittest.TestCase):
 
     def _shared_test_added_files(self):
         write_into_file_at_path("test_file", "changed content")
-        self.assertItemsEqual(self.scm.added_files(), [])
+        self.assertEqual(self.scm.added_files(), [])
 
         write_into_file_at_path("added_file", "new stuff")
         self.scm.add("added_file")
@@ -377,11 +401,11 @@ class SCMTest(unittest.TestCase):
         added_files = self.scm.added_files()
         if "added_dir" in added_files:
             added_files.remove("added_dir")
-        self.assertItemsEqual(added_files, ["added_dir/added_file2", "added_file", "added_file3", "added_file4"])
+        self.assertEqual(sorted(added_files), sorted(["added_dir/added_file2", "added_file", "added_file3", "added_file4"]))
 
         # Test also to make sure discard_working_directory_changes removes added files
         self.scm.discard_working_directory_changes()
-        self.assertItemsEqual(self.scm.added_files(), [])
+        self.assertEqual(self.scm.added_files(), [])
         self.assertFalse(os.path.exists("added_file"))
         self.assertFalse(os.path.exists("added_file3"))
         self.assertFalse(os.path.exists("added_file4"))
@@ -392,28 +416,28 @@ class SCMTest(unittest.TestCase):
         changed_files = self.scm.changed_files_for_revision(3)
         if "test_dir" in changed_files:
             changed_files.remove("test_dir")
-        self.assertItemsEqual(changed_files, ["test_dir/test_file3", "test_file"])
-        self.assertItemsEqual(self.scm.changed_files_for_revision(4), ["test_file", "test_file2"])  # Git and SVN return different orders.
-        self.assertItemsEqual(self.scm.changed_files_for_revision(2), ["test_file"])
+        self.assertEqual(sorted(changed_files), sorted(["test_dir/test_file3", "test_file"]))
+        self.assertEqual(sorted(self.scm.changed_files_for_revision(4)), sorted(["test_file", "test_file2"]))  # Git and SVN return different orders.
+        self.assertEqual(self.scm.changed_files_for_revision(2), ["test_file"])
 
     def _shared_test_contents_at_revision(self):
-        self.assertEqual(self.scm.contents_at_revision("test_file", 3), "test1test2")
-        self.assertEqual(self.scm.contents_at_revision("test_file", 4), "test1test2test3\n")
+        self.assertEqual(self.scm.contents_at_revision("test_file", 3), b"test1test2")
+        self.assertEqual(self.scm.contents_at_revision("test_file", 4), b"test1test2test3\n")
 
         # Verify that contents_at_revision returns a byte array, aka str():
         self.assertEqual(self.scm.contents_at_revision("test_file", 5), u"latin1 test: \u00A0\n".encode("latin1"))
         self.assertEqual(self.scm.contents_at_revision("test_file2", 5), u"utf-8 test: \u00A0\n".encode("utf-8"))
 
-        self.assertEqual(self.scm.contents_at_revision("test_file2", 4), "second file")
+        self.assertEqual(self.scm.contents_at_revision("test_file2", 4), b"second file")
         # Files which don't exist:
         # Currently we raise instead of returning None because detecting the difference between
         # "file not found" and any other error seems impossible with svn (git seems to expose such through the return code).
-        self.assertRaises(ScriptError, self.scm.contents_at_revision, "test_file2", 2)
-        self.assertRaises(ScriptError, self.scm.contents_at_revision, "does_not_exist", 2)
+        self.assertRaises(ScriptError, self.scm.contents_at_revision, b"test_file2", 2)
+        self.assertRaises(ScriptError, self.scm.contents_at_revision, b"does_not_exist", 2)
 
     def _shared_test_revisions_changing_file(self):
-        self.assertItemsEqual(self.scm.revisions_changing_file("test_file"), [5, 4, 3, 2])
-        self.assertItemsEqual(self.scm.revisions_changing_file("non_existent_file"), [])
+        self.assertEqual(sorted(self.scm.revisions_changing_file("test_file")), sorted([5, 4, 3, 2]))
+        self.assertEqual(self.scm.revisions_changing_file("non_existent_file"), [])
 
     def _shared_test_committer_email_for_revision(self):
         self.assertEqual(self.scm.committer_email_for_revision(3), getpass.getuser())  # Committer "email" will be the current user
@@ -427,10 +451,10 @@ class SCMTest(unittest.TestCase):
     def _shared_test_diff_for_revision(self):
         # Patch formats are slightly different between svn and git, so just regexp for things we know should be there.
         r3_patch = self.scm.diff_for_revision(4)
-        self.assertRegexpMatches(r3_patch, 'test3')
-        self.assertNotRegexpMatches(r3_patch, 'test4')
-        self.assertRegexpMatches(r3_patch, 'test2')
-        self.assertRegexpMatches(self.scm.diff_for_revision(3), 'test2')
+        self.assertRegexpMatches(r3_patch, b'test3')
+        self.assertNotRegexpMatches(r3_patch, b'test4')
+        self.assertRegexpMatches(r3_patch, b'test2')
+        self.assertRegexpMatches(self.scm.diff_for_revision(3), b'test2')
 
     def _shared_test_svn_apply_git_patch(self):
         self._setup_webkittools_scripts_symlink(self.scm)
@@ -458,7 +482,7 @@ HcmV?d00001
         self.checkout.apply_patch(self._create_patch(git_binary_addition))
         added = read_from_path('fizzbuzz7.gif', encoding=None)
         self.assertEqual(512, len(added))
-        self.assertTrue(added.startswith('GIF89a'))
+        self.assertTrue(added.startswith(b'GIF89a'))
         self.assertIn('fizzbuzz7.gif', self.scm.changed_files())
 
         # The file already exists.
@@ -485,7 +509,7 @@ ptUl-ZG<%a~#LwkIWv&q!KSCH7tQ8cJDiw+|GV?MN)RjY50RTb-xvT&H
 """
         self.checkout.apply_patch(self._create_patch(git_binary_modification))
         modified = read_from_path('fizzbuzz7.gif', encoding=None)
-        self.assertEqual('foobar\n', modified)
+        self.assertEqual(b'foobar\n', modified)
         self.assertIn('fizzbuzz7.gif', self.scm.changed_files())
 
         # Applying the same modification should fail.
@@ -549,6 +573,11 @@ OcmYex&reD$;sO8*F9L)B
     def _shared_test_head_svn_revision(self):
         self.assertEqual(self.scm.head_svn_revision(), '5')
 
+    def _shared_test_svn_revision(self, scm):
+        self.assertEqual(scm.svn_revision(scm.checkout_root), '5')
+
+    def _shared_test_svn_branch(self, scm):
+        self.assertEqual(scm.svn_branch(scm.checkout_root), 'trunk')
 
 # Context manager that overrides the current timezone.
 class TimezoneOverride(object):
@@ -580,6 +609,7 @@ class SVNTest(SCMTest):
         with TimezoneOverride('PST8PDT'):
             return changelog_entry.replace('DATE_HERE', date.today().isoformat())
 
+    @slow
     def test_svn_apply(self):
         first_entry = """2009-10-26  Eric Seidel  <eric@webkit.org>
 
@@ -683,12 +713,14 @@ class SVNTest(SCMTest):
     def tearDown(self):
         SVNTestRepository.tear_down(self)
 
+    @slow
     def test_detect_scm_system_relative_url(self):
         scm = detect_scm_system(".")
         # I wanted to assert that we got the right path, but there was some
         # crazy magic with temp folder names that I couldn't figure out.
         self.assertTrue(scm.checkout_root)
 
+    @slow
     def test_create_patch_is_full_patch(self):
         test_dir_path = os.path.join(self.svn_checkout_path, "test_dir2")
         os.mkdir(test_dir_path)
@@ -708,7 +740,7 @@ class SVNTest(SCMTest):
         scm = detect_scm_system(test_dir_path)
         self.assertEqual(scm.checkout_root, self.svn_checkout_path)  # Sanity check that detection worked right.
         actual_patch_contents = scm.create_patch()
-        expected_patch_contents = """Index: test_dir2/test_file2
+        expected_patch_contents = b"""Index: test_dir2/test_file2
 ===================================================================
 --- test_dir2/test_file2\t(nonexistent)
 +++ test_dir2/test_file2\t(working copy)
@@ -717,10 +749,12 @@ class SVNTest(SCMTest):
 """
         self.assertEqual(expected_patch_contents, actual_patch_contents)
 
+    @slow
     def test_detection(self):
         self.assertEqual(self.scm.display_name(), "svn")
         self.assertEqual(self.scm.supports_local_commits(), False)
 
+    @slow
     def test_apply_small_binary_patch(self):
         patch_contents = """Index: test_file.swf
 ===================================================================
@@ -742,11 +776,13 @@ Q1dTBx0AAAB42itg4GlgYJjGwMDDyODMxMDw34GBgQEAJPQDJA==
         actual_contents = read_from_path("test_file.swf", encoding=None)
         self.assertEqual(actual_contents, expected_contents)
 
+    @slow
     def test_apply_svn_patch(self):
         patch = self._create_patch(_svn_diff("-r5:4"))
         self._setup_webkittools_scripts_symlink(self.scm)
         Checkout(self.scm).apply_patch(patch)
 
+    @slow
     def test_commit_logs(self):
         # Commits have dates and usernames in them, so we can't just direct compare.
         self.assertRegexpMatches(self.scm.last_svn_commit_log(), 'fourth commit')
@@ -757,6 +793,7 @@ Q1dTBx0AAAB42itg4GlgYJjGwMDDyODMxMDw34GBgQEAJPQDJA==
         commit_text = self.scm.commit_with_message("another test commit", username)
         self.assertEqual(self.scm.svn_revision_from_commit_text(commit_text), '6')
 
+    @slow
     def test_commit_in_subdir(self, username=None):
         write_into_file_at_path('test_dir/test_file3', 'more test content')
         os.chdir("test_dir")
@@ -764,12 +801,15 @@ Q1dTBx0AAAB42itg4GlgYJjGwMDDyODMxMDw34GBgQEAJPQDJA==
         os.chdir("..")
         self.assertEqual(self.scm.svn_revision_from_commit_text(commit_text), '6')
 
+    @slow
     def test_commit_text_parsing(self):
         self._shared_test_commit_with_message()
 
+    @slow
     def test_commit_with_username(self):
         self._shared_test_commit_with_message("dbates@webkit.org")
 
+    @slow
     def test_commit_without_authorization(self):
         # FIXME: https://bugs.webkit.org/show_bug.cgi?id=111669
         # This test ends up looking in the actal $HOME/.subversion for authorization,
@@ -779,6 +819,7 @@ Q1dTBx0AAAB42itg4GlgYJjGwMDDyODMxMDw34GBgQEAJPQDJA==
         self.scm.svn_server_realm = '<http://svn.example.com:80> Example'
         self.assertRaises(AuthenticationError, self._shared_test_commit_with_message)
 
+    @slow
     def test_has_authorization_for_realm_using_credentials_with_passtype(self):
         credentials = """
 K 8
@@ -788,7 +829,7 @@ keychain
 K 15
 svn:realmstring
 V 39
-<http://svn.webkit.org:80> Mac OS Forge
+<https://svn.webkit.org:443> Mac OS Forge
 K 8
 username
 V 17
@@ -797,12 +838,13 @@ END
 """
         self.assertTrue(self._test_has_authorization_for_realm_using_credentials(SVN.svn_server_realm, credentials))
 
+    @slow
     def test_has_authorization_for_realm_using_credentials_with_password(self):
         credentials = """
 K 15
 svn:realmstring
 V 39
-<http://svn.webkit.org:80> Mac OS Forge
+<https://svn.webkit.org:443> Mac OS Forge
 K 8
 username
 V 17
@@ -827,12 +869,13 @@ END
         os.rmdir(fake_home_dir)
         return result
 
+    @slow
     def test_not_have_authorization_for_realm_with_credentials_missing_password_and_passtype(self):
         credentials = """
 K 15
 svn:realmstring
 V 39
-<http://svn.webkit.org:80> Mac OS Forge
+<https://svn.webkit.org:443> Mac OS Forge
 K 8
 username
 V 17
@@ -841,6 +884,7 @@ END
 """
         self.assertFalse(self._test_has_authorization_for_realm_using_credentials(SVN.svn_server_realm, credentials))
 
+    @slow
     def test_not_have_authorization_for_realm_when_missing_credentials_file(self):
         fake_home_dir = tempfile.mkdtemp(suffix="fake_home_dir")
         svn_config_dir_path = os.path.join(fake_home_dir, ".subversion")
@@ -849,82 +893,111 @@ END
         os.rmdir(svn_config_dir_path)
         os.rmdir(fake_home_dir)
 
+    @slow
     def test_reverse_diff(self):
         self._shared_test_reverse_diff()
 
+    @slow
     def test_diff_for_revision(self):
         self._shared_test_diff_for_revision()
 
+    @slow
     def test_svn_apply_git_patch(self):
         self._shared_test_svn_apply_git_patch()
 
+    @slow
     def test_changed_files(self):
         self._shared_test_changed_files()
 
+    @slow
     def test_untracked_files(self):
         self._shared_test_untracked_files(self.scm)
 
+    @slow
     def test_discard_untracked_files(self):
         self._shared_test_discard_untracked_files(self.scm)
 
+    @slow
     def test_changed_files_for_revision(self):
         self._shared_test_changed_files_for_revision()
 
+    @slow
     def test_added_files(self):
         self._shared_test_added_files()
 
+    @slow
     def test_contents_at_revision(self):
         self._shared_test_contents_at_revision()
 
+    @slow
     def test_revisions_changing_file(self):
         self._shared_test_revisions_changing_file()
 
+    @slow
     def test_committer_email_for_revision(self):
         self._shared_test_committer_email_for_revision()
 
+    @slow
     def test_add_recursively(self):
         self._shared_test_add_recursively()
 
+    @slow
     def test_delete(self):
         os.chdir(self.svn_checkout_path)
         self.scm.delete("test_file")
         self.assertIn("test_file", self.scm.deleted_files())
 
+    @slow
     def test_delete_list(self):
         os.chdir(self.svn_checkout_path)
         self.scm.delete_list(["test_file", "test_file2"])
         self.assertIn("test_file", self.scm.deleted_files())
         self.assertIn("test_file2", self.scm.deleted_files())
 
+    @slow
     def test_delete_recursively(self):
         self._shared_test_delete_recursively()
 
+    @slow
     def test_delete_recursively_or_not(self):
         self._shared_test_delete_recursively_or_not()
 
+    @slow
     def test_head_svn_revision(self):
         self._shared_test_head_svn_revision()
 
+    @slow
+    def test_svn_revision(self):
+        self._shared_test_svn_revision(self.scm)
+
+    @slow
+    def test_svn_branch(self):
+        self._shared_test_svn_branch(self.scm)
+
+    @slow
     def test_native_revision(self):
         self.assertEqual(self.scm.head_svn_revision(), self.scm.native_revision('.'))
         self.assertEqual(self.scm.native_revision('.'), '5')
 
+    @slow
     def test_native_branch(self):
         self.assertEqual(self.scm.native_branch('.'), 'trunk')
 
+    @slow
     def test_propset_propget(self):
         filepath = os.path.join(self.svn_checkout_path, "test_file")
-        expected_mime_type = "x-application/foo-bar"
-        self.scm.propset("svn:mime-type", expected_mime_type, filepath)
-        self.assertEqual(expected_mime_type, self.scm.propget("svn:mime-type", filepath))
+        self.scm.propset("svn:mime-type", "x-application/foo-bar", filepath)
+        self.assertEqual(b"x-application/foo-bar", self.scm.propget("svn:mime-type", filepath))
 
+    @slow
     def test_show_head(self):
         write_into_file_at_path("test_file", u"Hello!", "utf-8")
         SVNTestRepository._svn_commit("fourth commit")
-        self.assertEqual("Hello!", self.scm.show_head('test_file'))
+        self.assertEqual(b"Hello!", self.scm.show_head('test_file'))
 
+    @slow
     def test_show_head_binary(self):
-        data = "\244"
+        data = b"\244"
         write_into_file_at_path("binary_file", data, encoding=None)
         self.scm.add("binary_file")
         self.scm.commit_with_message("a test commit")
@@ -941,23 +1014,7 @@ END
         self.assertIn("-some content", diff)
         self.assertIn("+changed content", diff)
 
-    def clean_bogus_dir(self):
-        self.bogus_dir = self.scm._bogus_dir_name()
-        if os.path.exists(self.bogus_dir):
-            shutil.rmtree(self.bogus_dir)
-
-    def test_diff_for_file_with_existing_bogus_dir(self):
-        self.clean_bogus_dir()
-        os.mkdir(self.bogus_dir)
-        self.do_test_diff_for_file()
-        self.assertTrue(os.path.exists(self.bogus_dir))
-        shutil.rmtree(self.bogus_dir)
-
-    def test_diff_for_file_with_missing_bogus_dir(self):
-        self.clean_bogus_dir()
-        self.do_test_diff_for_file()
-        self.assertFalse(os.path.exists(self.bogus_dir))
-
+    @slow
     def test_svn_lock(self):
         if self.scm.svn_version() >= Version(1, 7):
             # the following technique with .svn/lock then svn update doesn't work with subversion client 1.7 or later
@@ -971,6 +1028,7 @@ END
             self.assertFalse(os.path.exists(svn_root_lock_path))
             run_command(['svn', 'update'])  # Should succeed and not raise.
 
+    @slow
     def test_exists(self):
         self._shared_test_exists(self.scm, self.scm.commit_with_message)
 
@@ -988,6 +1046,8 @@ class GitTest(SCMTest):
         run_command(['git', 'init', self.untracking_checkout_path])
 
         os.chdir(self.untracking_checkout_path)
+        run_command(['git', 'config', 'user.name', 'scm_unittest'])
+        run_command(['git', 'config', 'user.email', 'scm_unittest@example.com'])
         write_into_file_at_path('foo_file', 'foo')
         run_command(['git', 'add', 'foo_file'])
         write_into_file_at_path('.gitignore', '*.pyc')
@@ -998,6 +1058,8 @@ class GitTest(SCMTest):
         self.tracking_git_checkout_path = tempfile.mkdtemp(suffix="git_test_checkout")
         run_command(['git', 'clone', '--quiet', self.untracking_checkout_path, self.tracking_git_checkout_path])
         os.chdir(self.tracking_git_checkout_path)
+        run_command(['git', 'config', 'user.name', 'scm_unittest'])
+        run_command(['git', 'config', 'user.email', 'scm_unittest@example.com'])
         self.tracking_scm = detect_scm_system(self.tracking_git_checkout_path)
 
     def tearDown(self):
@@ -1007,7 +1069,7 @@ class GitTest(SCMTest):
         run_command(['rm', '-rf', self.untracking_checkout_path])
 
     def test_remote_branch_ref(self):
-        self.assertEqual(self.tracking_scm.remote_branch_ref(), 'refs/remotes/origin/master')
+        self.assertIn(self.tracking_scm.remote_branch_ref(), ('refs/remotes/origin/master', 'refs/remotes/origin/main'))
 
         os.chdir(self.untracking_checkout_path)
         self.assertRaises(ScriptError, self.untracking_scm.remote_branch_ref)
@@ -1024,7 +1086,7 @@ class GitTest(SCMTest):
         scm.commit_locally_with_message('message')
 
         patch = scm.create_patch()
-        self.assertNotRegexpMatches(patch, r'Subversion Revision:')
+        self.assertNotRegexpMatches(patch, b'Subversion Revision:')
 
     def test_create_patch_with_git_index(self):
         # First change. Committed.
@@ -1041,10 +1103,10 @@ class GitTest(SCMTest):
         write_into_file_at_path('test_file_commit1', 'third unicorn')
 
         patch = scm.create_patch(None, None, True)
-        self.assertRegexpMatches(patch, r'-first cat')
-        self.assertRegexpMatches(patch, r'\+second dog')
-        self.assertNotRegexpMatches(patch, r'third')
-        self.assertNotRegexpMatches(patch, r'unicorn')
+        self.assertRegexpMatches(patch, b'-first cat')
+        self.assertRegexpMatches(patch, b'\\+second dog')
+        self.assertNotRegexpMatches(patch, b'third')
+        self.assertNotRegexpMatches(patch, b'unicorn')
 
     def test_orderfile(self):
         os.mkdir("Tools")
@@ -1083,22 +1145,22 @@ class GitTest(SCMTest):
         scm.commit_locally_with_message('message')
 
         patch = scm.create_patch()
-        self.assertTrue(re.search(r'Tools/ChangeLog', patch).start() < re.search(r'Tools/ChangeFile', patch).start())
-        self.assertTrue(re.search(r'Websites/ChangeLog', patch).start() < re.search(r'Websites/ChangeFile', patch).start())
-        self.assertTrue(re.search(r'Source/ChangeLog', patch).start() < re.search(r'Source/ChangeFile', patch).start())
-        self.assertTrue(re.search(r'LayoutTests/ChangeLog', patch).start() < re.search(r'LayoutTests/ChangeFile', patch).start())
+        self.assertTrue(re.search(b'Tools/ChangeLog', patch).start() < re.search(b'Tools/ChangeFile', patch).start())
+        self.assertTrue(re.search(b'Websites/ChangeLog', patch).start() < re.search(b'Websites/ChangeFile', patch).start())
+        self.assertTrue(re.search(b'Source/ChangeLog', patch).start() < re.search(b'Source/ChangeFile', patch).start())
+        self.assertTrue(re.search(b'LayoutTests/ChangeLog', patch).start() < re.search(b'LayoutTests/ChangeFile', patch).start())
 
-        self.assertTrue(re.search(r'Source/ChangeLog', patch).start() < re.search(r'LayoutTests/ChangeLog', patch).start())
-        self.assertTrue(re.search(r'Tools/ChangeLog', patch).start() < re.search(r'LayoutTests/ChangeLog', patch).start())
-        self.assertTrue(re.search(r'Websites/ChangeLog', patch).start() < re.search(r'LayoutTests/ChangeLog', patch).start())
+        self.assertTrue(re.search(b'Source/ChangeLog', patch).start() < re.search(b'LayoutTests/ChangeLog', patch).start())
+        self.assertTrue(re.search(b'Tools/ChangeLog', patch).start() < re.search(b'LayoutTests/ChangeLog', patch).start())
+        self.assertTrue(re.search(b'Websites/ChangeLog', patch).start() < re.search(b'LayoutTests/ChangeLog', patch).start())
 
-        self.assertTrue(re.search(r'Source/ChangeFile', patch).start() < re.search(r'LayoutTests/ChangeLog', patch).start())
-        self.assertTrue(re.search(r'Tools/ChangeFile', patch).start() < re.search(r'LayoutTests/ChangeLog', patch).start())
-        self.assertTrue(re.search(r'Websites/ChangeFile', patch).start() < re.search(r'LayoutTests/ChangeLog', patch).start())
+        self.assertTrue(re.search(b'Source/ChangeFile', patch).start() < re.search(b'LayoutTests/ChangeLog', patch).start())
+        self.assertTrue(re.search(b'Tools/ChangeFile', patch).start() < re.search(b'LayoutTests/ChangeLog', patch).start())
+        self.assertTrue(re.search(b'Websites/ChangeFile', patch).start() < re.search(b'LayoutTests/ChangeLog', patch).start())
 
-        self.assertTrue(re.search(r'Source/ChangeFile', patch).start() < re.search(r'LayoutTests/ChangeFile', patch).start())
-        self.assertTrue(re.search(r'Tools/ChangeFile', patch).start() < re.search(r'LayoutTests/ChangeFile', patch).start())
-        self.assertTrue(re.search(r'Websites/ChangeFile', patch).start() < re.search(r'LayoutTests/ChangeFile', patch).start())
+        self.assertTrue(re.search(b'Source/ChangeFile', patch).start() < re.search(b'LayoutTests/ChangeFile', patch).start())
+        self.assertTrue(re.search(b'Tools/ChangeFile', patch).start() < re.search(b'LayoutTests/ChangeFile', patch).start())
+        self.assertTrue(re.search(b'Websites/ChangeFile', patch).start() < re.search(b'LayoutTests/ChangeFile', patch).start())
 
     def test_exists(self):
         scm = self.untracking_scm
@@ -1117,7 +1179,7 @@ class GitTest(SCMTest):
 
     def test_native_branch(self):
         scm = self.tracking_scm
-        self.assertEqual('master', scm.native_branch(scm.checkout_root))
+        self.assertIn(scm.native_branch(scm.checkout_root), ('master', 'main'))
 
     def test_rename_files(self):
         scm = self.tracking_scm
@@ -1126,8 +1188,8 @@ class GitTest(SCMTest):
         scm.commit_locally_with_message('message')
 
         patch = scm.create_patch()
-        self.assertNotRegexpMatches(patch, r'rename from ')
-        self.assertNotRegexpMatches(patch, r'rename to ')
+        self.assertNotRegexpMatches(patch, b'rename from ')
+        self.assertNotRegexpMatches(patch, b'rename to ')
 
     def test_untracked_files(self):
         self._shared_test_untracked_files(self.tracking_scm)
@@ -1140,6 +1202,8 @@ class GitSVNTest(SCMTest):
         # --quiet doesn't make git svn silent, so we use run_silent to redirect output
         run_silent(['git', 'svn', 'clone', '-T', 'trunk', '--prefix', '', self.svn_repo_url, self.git_checkout_path])
         os.chdir(self.git_checkout_path)
+        run_command(['git', 'config', 'user.name', 'scm_unittest'])
+        run_command(['git', 'config', 'user.email', 'scm_unittest@example.com'])
         run_silent(['git', 'branch', '-m', 'trunk'])
 
     def _tear_down_git_checkout(self):
@@ -1161,16 +1225,19 @@ class GitSVNTest(SCMTest):
         SVNTestRepository.tear_down(self)
         self._tear_down_git_checkout()
 
+    @slow
     def test_detection(self):
         self.assertEqual(self.scm.display_name(), "git")
         self.assertEqual(self.scm.supports_local_commits(), True)
 
+    @slow
     def test_read_git_config(self):
         key = 'test.git-config'
         value = 'git-config value'
         run_command(['git', 'config', key, value])
         self.assertEqual(self.scm.read_git_config(key), value)
 
+    @slow
     def test_local_commits(self):
         test_file = os.path.join(self.git_checkout_path, 'test_file')
         write_into_file_at_path(test_file, 'foo')
@@ -1178,6 +1245,7 @@ class GitSVNTest(SCMTest):
 
         self.assertEqual(len(self.scm.local_commits()), 1)
 
+    @slow
     def test_discard_local_commits(self):
         test_file = os.path.join(self.git_checkout_path, 'test_file')
         write_into_file_at_path(test_file, 'foo')
@@ -1187,6 +1255,7 @@ class GitSVNTest(SCMTest):
         self.scm.discard_local_commits()
         self.assertEqual(len(self.scm.local_commits()), 0)
 
+    @slow
     def test_delete_branch(self):
         new_branch = 'foo'
 
@@ -1198,6 +1267,7 @@ class GitSVNTest(SCMTest):
 
         self.assertNotRegexpMatches(run_command(['git', 'branch']), r'foo')
 
+    @slow
     def test_remote_merge_base(self):
         # Diff to merge-base should include working-copy changes,
         # which the diff to svn_branch.. doesn't.
@@ -1207,9 +1277,11 @@ class GitSVNTest(SCMTest):
         diff_to_common_base = _git_diff(self.scm.remote_branch_ref() + '..')
         diff_to_merge_base = _git_diff(self.scm.remote_merge_base())
 
-        self.assertNotRegexpMatches(diff_to_common_base, r'foo')
-        self.assertRegexpMatches(diff_to_merge_base, r'foo')
+        self.assertNotRegexpMatches(diff_to_common_base, b'foo')
+        self.assertRegexpMatches(diff_to_merge_base, b'foo')
 
+    @xfail
+    @slow
     def test_rebase_in_progress(self):
         svn_test_file = os.path.join(self.svn_checkout_path, 'test_file')
         write_into_file_at_path(svn_test_file, "svn_checkout")
@@ -1231,6 +1303,7 @@ class GitSVNTest(SCMTest):
         # Make sure cleanup doesn't throw when no rebase is in progress.
         self.scm.discard_working_directory_changes()
 
+    @slow
     def test_commitish_parsing(self):
         # Multiple revisions are cherry-picked.
         self.assertEqual(len(self.scm.commit_ids_from_commitish_arguments(['HEAD~2'])), 1)
@@ -1239,6 +1312,7 @@ class GitSVNTest(SCMTest):
         # ... is an invalid range specifier
         self.assertRaises(ScriptError, self.scm.commit_ids_from_commitish_arguments, ['trunk...HEAD'])
 
+    @slow
     def test_commitish_order(self):
         commit_range = 'HEAD~3..HEAD'
 
@@ -1248,6 +1322,7 @@ class GitSVNTest(SCMTest):
 
         self.assertEqual(actual_commits, expected_commits)
 
+    @slow
     def test_apply_git_patch(self):
         # We carefullly pick a diff which does not have a directory addition
         # as currently svn-apply will error out when trying to remove directories
@@ -1256,11 +1331,13 @@ class GitSVNTest(SCMTest):
         self._setup_webkittools_scripts_symlink(self.scm)
         Checkout(self.scm).apply_patch(patch)
 
+    @slow
     def test_commit_text_parsing(self):
         write_into_file_at_path('test_file', 'more test content')
         commit_text = self.scm.commit_with_message("another test commit")
         self.assertEqual(self.scm.svn_revision_from_commit_text(commit_text), '6')
 
+    @slow
     def test_commit_with_message_working_copy_only(self):
         write_into_file_at_path('test_file_commit1', 'more test content')
         run_command(['git', 'add', 'test_file_commit1'])
@@ -1294,10 +1371,12 @@ class GitSVNTest(SCMTest):
         self._local_commit('test_file_commit0', 'more test content', 'another test commit')
         self._two_local_commits()
 
+    @slow
     def test_revisions_changing_files_with_local_commit(self):
         self._one_local_commit()
-        self.assertItemsEqual(self.scm.revisions_changing_file('test_file_commit1'), [])
+        self.assertEqual(self.scm.revisions_changing_file('test_file_commit1'), [])
 
+    @slow
     def test_commit_with_message(self):
         self._one_local_commit_plus_working_copy_changes()
         self.assertRaises(AmbiguousCommitError, self.scm.commit_with_message, "yet another test commit")
@@ -1308,6 +1387,7 @@ class GitSVNTest(SCMTest):
         self.assertRegexpMatches(svn_log, r'test_file_commit2')
         self.assertRegexpMatches(svn_log, r'test_file_commit1')
 
+    @slow
     def test_commit_with_message_git_commit(self):
         self._two_local_commits()
 
@@ -1318,6 +1398,7 @@ class GitSVNTest(SCMTest):
         self.assertRegexpMatches(svn_log, r'test_file_commit1')
         self.assertNotRegexpMatches(svn_log, r'test_file_commit2')
 
+    @slow
     def test_commit_with_message_git_commit_range(self):
         self._three_local_commits()
 
@@ -1329,12 +1410,14 @@ class GitSVNTest(SCMTest):
         self.assertRegexpMatches(svn_log, r'test_file_commit1')
         self.assertRegexpMatches(svn_log, r'test_file_commit2')
 
+    @slow
     def test_commit_with_message_only_local_commit(self):
         self._one_local_commit()
         commit_text = self.scm.commit_with_message("another test commit")
         svn_log = run_command(['git', 'svn', 'log', '--limit=1', '--verbose'])
         self.assertRegexpMatches(svn_log, r'test_file_commit1')
 
+    @slow
     def test_commit_with_message_multiple_local_commits_and_working_copy(self):
         self._two_local_commits()
         write_into_file_at_path('test_file_commit1', 'working copy change')
@@ -1347,11 +1430,13 @@ class GitSVNTest(SCMTest):
         self.assertRegexpMatches(svn_log, r'test_file_commit2')
         self.assertRegexpMatches(svn_log, r'test_file_commit1')
 
+    @slow
     def test_commit_with_message_git_commit_and_working_copy(self):
         self._two_local_commits()
         write_into_file_at_path('test_file_commit1', 'working copy change')
         self.assertRaises(ScriptError, self.scm.commit_with_message, "another test commit", git_commit="HEAD^")
 
+    @slow
     def test_commit_with_message_multiple_local_commits_always_squash(self):
         run_command(['git', 'config', 'webkit-patch.commit-should-always-squash', 'true'])
         self._two_local_commits()
@@ -1362,6 +1447,7 @@ class GitSVNTest(SCMTest):
         self.assertRegexpMatches(svn_log, r'test_file_commit2')
         self.assertRegexpMatches(svn_log, r'test_file_commit1')
 
+    @slow
     def test_commit_with_message_multiple_local_commits(self):
         self._two_local_commits()
         self.assertRaises(AmbiguousCommitError, self.scm.commit_with_message, "yet another test commit")
@@ -1373,6 +1459,7 @@ class GitSVNTest(SCMTest):
         self.assertRegexpMatches(svn_log, r'test_file_commit2')
         self.assertRegexpMatches(svn_log, r'test_file_commit1')
 
+    @slow
     def test_commit_with_message_not_synced(self):
         run_command(['git', 'checkout', '-b', 'my-branch', 'trunk~3'])
         self._two_local_commits()
@@ -1386,6 +1473,7 @@ class GitSVNTest(SCMTest):
         self.assertRegexpMatches(svn_log, r'test_file_commit2')
         self.assertRegexpMatches(svn_log, r'test_file_commit1')
 
+    @slow
     def test_commit_with_message_not_synced_with_conflict(self):
         run_command(['git', 'checkout', '-b', 'my-branch', 'trunk~3'])
         self._local_commit('test_file2', 'asdf', 'asdf commit')
@@ -1393,50 +1481,60 @@ class GitSVNTest(SCMTest):
         # There's a conflict between trunk and the test_file2 modification.
         self.assertRaises(ScriptError, self.scm.commit_with_message, "another test commit", force_squash=True)
 
+    @slow
     def test_upstream_branch(self):
         run_command(['git', 'checkout', '-t', '-b', 'my-branch'])
         run_command(['git', 'checkout', '-t', '-b', 'my-second-branch'])
         self.assertEqual(self.scm._upstream_branch(), 'my-branch')
 
+    @slow
     def test_remote_branch_ref(self):
         self.assertEqual(self.scm.remote_branch_ref(), 'refs/remotes/trunk')
 
+    @slow
     def test_reverse_diff(self):
         self._shared_test_reverse_diff()
 
+    @slow
     def test_diff_for_revision(self):
         self._shared_test_diff_for_revision()
 
+    @slow
     def test_svn_apply_git_patch(self):
         self._shared_test_svn_apply_git_patch()
 
+    @slow
     def test_create_patch_local_plus_working_copy(self):
         self._one_local_commit_plus_working_copy_changes()
         patch = self.scm.create_patch()
-        self.assertRegexpMatches(patch, r'test_file_commit1')
-        self.assertRegexpMatches(patch, r'test_file_commit2')
+        self.assertRegexpMatches(patch, b'test_file_commit1')
+        self.assertRegexpMatches(patch, b'test_file_commit2')
 
+    @slow
     def test_create_patch(self):
         self._one_local_commit_plus_working_copy_changes()
         patch = self.scm.create_patch()
-        self.assertRegexpMatches(patch, r'test_file_commit2')
-        self.assertRegexpMatches(patch, r'test_file_commit1')
-        self.assertRegexpMatches(patch, r'Subversion Revision: 5')
+        self.assertRegexpMatches(patch, b'test_file_commit2')
+        self.assertRegexpMatches(patch, b'test_file_commit1')
+        self.assertRegexpMatches(patch, b'Subversion Revision: 5')
 
+    @slow
     def test_create_patch_after_merge(self):
         run_command(['git', 'checkout', '-b', 'dummy-branch', 'trunk~3'])
         self._one_local_commit()
         run_command(['git', 'merge', 'trunk'])
 
         patch = self.scm.create_patch()
-        self.assertRegexpMatches(patch, r'test_file_commit1')
-        self.assertRegexpMatches(patch, r'Subversion Revision: 5')
+        self.assertRegexpMatches(patch, b'test_file_commit1')
+        self.assertRegexpMatches(patch, b'Subversion Revision: 5')
 
+    @slow
     def test_create_patch_with_changed_files(self):
         self._one_local_commit_plus_working_copy_changes()
         patch = self.scm.create_patch(changed_files=['test_file_commit2'])
-        self.assertRegexpMatches(patch, r'test_file_commit2')
+        self.assertRegexpMatches(patch, b'test_file_commit2')
 
+    @slow
     def test_create_patch_with_rm_and_changed_files(self):
         self._one_local_commit_plus_working_copy_changes()
         os.remove('test_file_commit1')
@@ -1444,49 +1542,60 @@ class GitSVNTest(SCMTest):
         patch_with_changed_files = self.scm.create_patch(changed_files=['test_file_commit1', 'test_file_commit2'])
         self.assertEqual(patch, patch_with_changed_files)
 
+    @slow
     def test_create_patch_git_commit(self):
         self._two_local_commits()
         patch = self.scm.create_patch(git_commit="HEAD^")
-        self.assertRegexpMatches(patch, r'test_file_commit1')
-        self.assertNotRegexpMatches(patch, r'test_file_commit2')
+        self.assertRegexpMatches(patch, b'test_file_commit1')
+        self.assertNotRegexpMatches(patch, b'test_file_commit2')
 
+    @slow
     def test_create_patch_git_commit_range(self):
         self._three_local_commits()
         patch = self.scm.create_patch(git_commit="HEAD~2..HEAD")
-        self.assertNotRegexpMatches(patch, r'test_file_commit0')
-        self.assertRegexpMatches(patch, r'test_file_commit2')
-        self.assertRegexpMatches(patch, r'test_file_commit1')
+        self.assertNotRegexpMatches(patch, b'test_file_commit0')
+        self.assertRegexpMatches(patch, b'test_file_commit2')
+        self.assertRegexpMatches(patch, b'test_file_commit1')
 
+    @slow
     def test_create_patch_working_copy_only(self):
         self._one_local_commit_plus_working_copy_changes()
         patch = self.scm.create_patch(git_commit="HEAD....")
-        self.assertNotRegexpMatches(patch, r'test_file_commit1')
-        self.assertRegexpMatches(patch, r'test_file_commit2')
+        self.assertNotRegexpMatches(patch, b'test_file_commit1')
+        self.assertRegexpMatches(patch, b'test_file_commit2')
 
+    @slow
     def test_create_patch_multiple_local_commits(self):
         self._two_local_commits()
         patch = self.scm.create_patch()
-        self.assertRegexpMatches(patch, r'test_file_commit2')
-        self.assertRegexpMatches(patch, r'test_file_commit1')
+        self.assertRegexpMatches(patch, b'test_file_commit2')
+        self.assertRegexpMatches(patch, b'test_file_commit1')
 
+    @slow
     def test_create_patch_not_synced(self):
         run_command(['git', 'checkout', '-b', 'my-branch', 'trunk~3'])
         self._two_local_commits()
         patch = self.scm.create_patch()
-        self.assertNotRegexpMatches(patch, r'test_file2')
-        self.assertRegexpMatches(patch, r'test_file_commit2')
-        self.assertRegexpMatches(patch, r'test_file_commit1')
+        self.assertNotRegexpMatches(patch, b'test_file2')
+        self.assertRegexpMatches(patch, b'test_file_commit2')
+        self.assertRegexpMatches(patch, b'test_file_commit1')
 
+    @slow
     def test_create_binary_patch(self):
         # Create a git binary patch and check the contents.
         test_file_name = 'binary_file'
         test_file_path = os.path.join(self.git_checkout_path, test_file_name)
-        file_contents = ''.join(map(chr, range(256)))
+
+        if sys.version_info < (3, 0):
+            file_contents = ''.join(map(chr, range(256)))
+        else:
+            file_contents = bytes(list(range(256)))
+
         write_into_file_at_path(test_file_path, file_contents, encoding=None)
         run_command(['git', 'add', test_file_name])
         patch = self.scm.create_patch()
-        self.assertRegexpMatches(patch, r'\nliteral 0\n')
-        self.assertRegexpMatches(patch, r'\nliteral 256\n')
+        self.assertRegexpMatches(patch, b'\nliteral 0\n')
+        self.assertRegexpMatches(patch, b'\nliteral 256\n')
 
         # Check if we can apply the created patch.
         run_command(['git', 'rm', '-f', test_file_name])
@@ -1500,9 +1609,10 @@ class GitSVNTest(SCMTest):
         run_command(['git', 'commit', '-m', 'binary diff'])
 
         patch_from_local_commit = self.scm.create_patch('HEAD')
-        self.assertRegexpMatches(patch_from_local_commit, r'\nliteral 0\n')
-        self.assertRegexpMatches(patch_from_local_commit, r'\nliteral 256\n')
+        self.assertRegexpMatches(patch_from_local_commit, b'\nliteral 0\n')
+        self.assertRegexpMatches(patch_from_local_commit, b'\nliteral 256\n')
 
+    @slow
     def test_changed_files_local_plus_working_copy(self):
         self._one_local_commit_plus_working_copy_changes()
         files = self.scm.changed_files()
@@ -1528,12 +1638,14 @@ class GitSVNTest(SCMTest):
         self.assertIn('test_file_commit1', files)
         self.assertIn('test_file_commit2', files)
 
+    @slow
     def test_changed_files_git_commit(self):
         self._two_local_commits()
         files = self.scm.changed_files(git_commit="HEAD^")
         self.assertIn('test_file_commit1', files)
         self.assertNotIn('test_file_commit2', files)
 
+    @slow
     def test_changed_files_git_commit_range(self):
         self._three_local_commits()
         files = self.scm.changed_files(git_commit="HEAD~2..HEAD")
@@ -1541,18 +1653,21 @@ class GitSVNTest(SCMTest):
         self.assertIn('test_file_commit1', files)
         self.assertIn('test_file_commit2', files)
 
+    @slow
     def test_changed_files_working_copy_only(self):
         self._one_local_commit_plus_working_copy_changes()
         files = self.scm.changed_files(git_commit="HEAD....")
         self.assertNotIn('test_file_commit1', files)
         self.assertIn('test_file_commit2', files)
 
+    @slow
     def test_changed_files_multiple_local_commits(self):
         self._two_local_commits()
         files = self.scm.changed_files()
         self.assertIn('test_file_commit2', files)
         self.assertIn('test_file_commit1', files)
 
+    @slow
     def test_changed_files_not_synced(self):
         run_command(['git', 'checkout', '-b', 'my-branch', 'trunk~3'])
         self._two_local_commits()
@@ -1561,6 +1676,7 @@ class GitSVNTest(SCMTest):
         self.assertIn('test_file_commit2', files)
         self.assertIn('test_file_commit1', files)
 
+    @slow
     def test_changed_files_not_synced(self):
         run_command(['git', 'checkout', '-b', 'my-branch', 'trunk~3'])
         self._two_local_commits()
@@ -1569,12 +1685,15 @@ class GitSVNTest(SCMTest):
         self.assertIn('test_file_commit2', files)
         self.assertIn('test_file_commit1', files)
 
+    @slow
     def test_changed_files(self):
         self._shared_test_changed_files()
 
+    @slow
     def test_changed_files_for_revision(self):
         self._shared_test_changed_files_for_revision()
 
+    @slow
     def test_changed_files_upstream(self):
         run_command(['git', 'checkout', '-t', '-b', 'my-branch'])
         self._one_local_commit()
@@ -1595,68 +1714,84 @@ class GitSVNTest(SCMTest):
         self.assertIn('test_file_commit2', files)
         self.assertIn('test_file_commit0', files)
 
+    @slow
     def test_contents_at_revision(self):
         self._shared_test_contents_at_revision()
 
+    @slow
     def test_revisions_changing_file(self):
         self._shared_test_revisions_changing_file()
 
+    @slow
     def test_added_files(self):
         self._shared_test_added_files()
 
+    @slow
     def test_committer_email_for_revision(self):
         self._shared_test_committer_email_for_revision()
 
+    @slow
     def test_add_recursively(self):
         self._shared_test_add_recursively()
 
+    @slow
     def test_delete(self):
         self._two_local_commits()
         self.scm.delete('test_file_commit1')
         self.assertIn("test_file_commit1", self.scm.deleted_files())
 
+    @slow
     def test_delete_list(self):
         self._two_local_commits()
         self.scm.delete_list(["test_file_commit1", "test_file_commit2"])
         self.assertIn("test_file_commit1", self.scm.deleted_files())
         self.assertIn("test_file_commit2", self.scm.deleted_files())
 
+    @slow
     def test_delete_recursively(self):
         self._shared_test_delete_recursively()
 
+    @slow
     def test_delete_recursively_or_not(self):
         self._shared_test_delete_recursively_or_not()
 
+    @slow
     def test_head_svn_revision(self):
         self._shared_test_head_svn_revision()
 
+    @slow
     def test_native_revision(self):
         command = ['git', '-C', self.git_checkout_path, 'rev-parse', 'HEAD']
         self.assertEqual(self.scm.native_revision(self.git_checkout_path), run_command(command).strip())
 
+    @slow
     def test_native_branch(self):
         self.assertEqual('trunk', self.scm.native_branch(self.git_checkout_path))
 
+    @slow
     def test_to_object_name(self):
         relpath = 'test_file_commit1'
         fullpath = os.path.realpath(os.path.join(self.git_checkout_path, relpath))
         self.assertEqual(relpath, self.scm.to_object_name(fullpath))
 
+    @slow
     def test_show_head(self):
         self._two_local_commits()
-        self.assertEqual("more test content", self.scm.show_head('test_file_commit1'))
+        self.assertEqual(b"more test content", self.scm.show_head('test_file_commit1'))
 
+    @slow
     def test_show_head_binary(self):
         self._two_local_commits()
-        data = "\244"
+        data = b"\244"
         write_into_file_at_path("binary_file", data, encoding=None)
         self.scm.add("binary_file")
         self.scm.commit_locally_with_message("a test commit")
         self.assertEqual(data, self.scm.show_head('binary_file'))
 
+    @slow
     def test_diff_for_file(self):
         self._two_local_commits()
-        write_into_file_at_path('test_file_commit1', "Updated", encoding=None)
+        write_into_file_at_path('test_file_commit1', b"Updated", encoding=None)
 
         diff = self.scm.diff_for_file('test_file_commit1')
         cached_diff = self.scm.diff_for_file('test_file_commit1')
@@ -1669,6 +1804,7 @@ class GitSVNTest(SCMTest):
         self.assertIn("+Updated", cached_diff)
         self.assertIn("-more test content", cached_diff)
 
+    @slow
     def test_exists(self):
         self._shared_test_exists(self.scm, self.scm.commit_locally_with_message)
 
@@ -1685,15 +1821,19 @@ class GitTestWithMock(unittest.TestCase):
         scm._executive._should_log = logging_executive
         return scm
 
+    @xfail
     def test_create_patch(self):
         scm = self.make_scm(logging_executive=True)
-        expected_stderr = """\
-MOCK run_command: ['git', 'merge-base', 'MOCKVALUE', 'HEAD'], cwd=%(checkout)s
+        with OutputCapture(level=logging.INFO) as captured:
+            scm.create_patch()
+        self.assertEqual(
+            captured.stderr.getvalue(),
+            '''MOCK run_command: ['git', 'merge-base', 'MOCKVALUE', 'HEAD'], cwd={checkout}s
 MOCK run_command: ['git', 'diff', '--binary', '--no-color', '--no-ext-diff', '--full-index', '--no-renames', '', 'MOCK output of child process', '--'], cwd=%(checkout)s
-MOCK run_command: ['git', 'rev-parse', '--show-toplevel'], cwd=%(checkout)s
+MOCK run_command: ['git', 'rev-parse', '--show-toplevel'], cwd={checkout}s
 MOCK run_command: ['git', 'log', '-1', '--grep=git-svn-id:', '--date=iso', './MOCK output of child process/MOCK output of child process'], cwd=%(checkout)s
-""" % {'checkout': scm.checkout_root}
-        OutputCapture().assert_outputs(self, scm.create_patch, expected_logs=expected_stderr)
+'''.format(checkout=scm.checkout_root),
+        )
 
     def test_push_local_commits_to_server_with_username_and_password(self):
         self.assertEqual(self.make_scm().push_local_commits_to_server(username='dbates@webkit.org', password='blah'), "MOCK output of child process")
@@ -1730,3 +1870,21 @@ MOCK run_command: ['git', 'log', '-1', '--grep=git-svn-id:', '--date=iso', './MO
 
         scm._run_git = lambda args: '1360317321'
         self.assertEqual(scm.timestamp_of_native_revision('some-path', '1a1c3b08814bc2a8c15b0f6db63cdce68f2aaa7a'), '2013-02-08T09:55:21Z')
+
+    def test_svn_data_from_git_svn_id(self):
+        scm = self.make_scm()
+        scm.find_checkout_root = lambda path: ''
+        scm._most_recent_log_matching = lambda grep_str, path: 'git-svn-id: http://svn.webkit.org/repository/webkit/trunk@258024 268f45cc-cd09-0410-ab3c-d52691b4dbfc'
+        self.assertEqual(scm.svn_revision(scm.checkout_root), '258024')
+        self.assertEqual(scm.svn_branch(scm.checkout_root), 'trunk')
+        self.assertEqual(scm.svn_url(scm.checkout_root), 'http://svn.webkit.org/repository/webkit/trunk')
+
+        scm._most_recent_log_matching = lambda grep_str, path: 'git-svn-id: https://svn.webkit.org/repository/webkit/trunk@258024 268f45cc-cd09-0410-ab3c-d52691b4dbfc'
+        self.assertEqual(scm.svn_revision(scm.checkout_root), '258024')
+        self.assertEqual(scm.svn_branch(scm.checkout_root), 'trunk')
+        self.assertEqual(scm.svn_url(scm.checkout_root), 'https://svn.webkit.org/repository/webkit/trunk')
+
+        scm._most_recent_log_matching = lambda grep_str, path: 'git-svn-id: https://svn.webkit.org/repository/webkit/branch/specialSubmission@258000 268f45cc-cd09-0410-ab3c-d52691b4dbfc'
+        self.assertEqual(scm.svn_revision(scm.checkout_root), '258000')
+        self.assertEqual(scm.svn_branch(scm.checkout_root), 'specialSubmission')
+        self.assertEqual(scm.svn_url(scm.checkout_root), 'https://svn.webkit.org/repository/webkit/branch/specialSubmission')

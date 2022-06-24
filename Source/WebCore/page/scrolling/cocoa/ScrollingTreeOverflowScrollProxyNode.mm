@@ -51,10 +51,10 @@ void ScrollingTreeOverflowScrollProxyNode::commitStateBeforeChildren(const Scrol
 {
     const ScrollingStateOverflowScrollProxyNode& overflowProxyStateNode = downcast<ScrollingStateOverflowScrollProxyNode>(stateNode);
 
-    if (stateNode.hasChangedProperty(ScrollingStateNode::Layer))
+    if (stateNode.hasChangedProperty(ScrollingStateNode::Property::Layer))
         m_layer = static_cast<CALayer*>(stateNode.layer());
 
-    if (overflowProxyStateNode.hasChangedProperty(ScrollingStateOverflowScrollProxyNode::OverflowScrollingNode))
+    if (overflowProxyStateNode.hasChangedProperty(ScrollingStateNode::Property::OverflowScrollingNode))
         m_overflowScrollingNodeID = overflowProxyStateNode.overflowScrollingNode();
 
     if (m_overflowScrollingNodeID) {
@@ -87,11 +87,11 @@ void ScrollingTreeOverflowScrollProxyNode::applyLayerPositions()
         }
     }
 
-    LOG_WITH_STREAM(Scrolling, stream << "ScrollingTreeOverflowScrollProxyNode " << scrollingNodeID() << " applyLayerPositions: setting bounds origin to " << scrollOffset);
+    LOG_WITH_STREAM(ScrollingTree, stream << "ScrollingTreeOverflowScrollProxyNode " << scrollingNodeID() << " applyLayerPositions: setting bounds origin to " << scrollOffset);
     [m_layer _web_setLayerBoundsOrigin:scrollOffset];
 }
 
-void ScrollingTreeOverflowScrollProxyNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingTreeOverflowScrollProxyNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ts << "overflow scroll proxy node";
     ScrollingTreeNode::dumpProperties(ts, behavior);
@@ -101,7 +101,7 @@ void ScrollingTreeOverflowScrollProxyNode::dumpProperties(TextStream& ts, Scroll
         ts.dumpProperty("related overflow scrolling node scroll position", scrollPosition);
     }
 
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeNodeIDs)
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
         ts.dumpProperty("overflow scrolling node", m_overflowScrollingNodeID);
 }
 

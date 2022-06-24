@@ -29,15 +29,15 @@
 
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "TextCodec.h"
-#include "TextEncodingRegistry.h"
+#include <pal/text/TextCodec.h>
+#include <pal/text/TextEncodingRegistry.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
 HTMLMetaCharsetParser::HTMLMetaCharsetParser()
-    : m_codec(newTextCodec(Latin1Encoding()))
+    : m_codec(newTextCodec(PAL::Latin1Encoding()))
 {
 }
 
@@ -85,18 +85,17 @@ static StringView extractCharset(const String& value)
 
 bool HTMLMetaCharsetParser::processMeta(HTMLToken& token)
 {
-    AttributeList attributes;
-    for (auto& attribute : token.attributes()) {
+    auto attributes = token.attributes().map([](auto& attribute) {
         String attributeName = StringImpl::create8BitIfPossible(attribute.name);
         String attributeValue = StringImpl::create8BitIfPossible(attribute.value);
-        attributes.append(std::make_pair(attributeName, attributeValue));
-    }
+        return std::pair { WTFMove(attributeName), WTFMove(attributeValue) };
+    });
 
     m_encoding = encodingFromMetaAttributes(attributes);
     return m_encoding.isValid();
 }
 
-TextEncoding HTMLMetaCharsetParser::encodingFromMetaAttributes(const AttributeList& attributes)
+PAL::TextEncoding HTMLMetaCharsetParser::encodingFromMetaAttributes(const AttributeList& attributes)
 {
     bool gotPragma = false;
     enum { None, Charset, Pragma } mode = None;
@@ -109,22 +108,22 @@ TextEncoding HTMLMetaCharsetParser::encodingFromMetaAttributes(const AttributeLi
         if (attributeName == http_equivAttr) {
             if (equalLettersIgnoringASCIICase(attributeValue, "content-type"))
                 gotPragma = true;
-        } else if (charset.isEmpty()) {
-            if (attributeName == charsetAttr) {
-                charset = attributeValue;
-                mode = Charset;
-            } else if (attributeName == contentAttr) {
-                charset = extractCharset(attributeValue);
-                if (charset.length())
-                    mode = Pragma;
-            }
+        } else if (attributeName == charsetAttr) {
+            charset = attributeValue;
+            mode = Charset;
+            // Charset attribute takes precedence
+            break;
+        } else if (attributeName == contentAttr) {
+            charset = extractCharset(attributeValue);
+            if (charset.length())
+                mode = Pragma;
         }
     }
 
     if (mode == Charset || (mode == Pragma && gotPragma))
-        return TextEncoding(stripLeadingAndTrailingHTMLSpaces(charset.toStringWithoutCopying()));
+        return PAL::TextEncoding(stripLeadingAndTrailingHTMLSpaces(charset.toStringWithoutCopying()));
 
-    return TextEncoding();
+    return PAL::TextEncoding();
 }
 
 bool HTMLMetaCharsetParser::checkForMetaCharset(const char* data, size_t length)

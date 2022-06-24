@@ -32,7 +32,7 @@ void WebCookieManager::platformSetHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicy)
 {
     // FIXME: Not implemented.
 }
-
+ 
 HTTPCookieAcceptPolicy WebCookieManager::platformGetHTTPCookieAcceptPolicy()
 {
     // FIXME: Not implemented.

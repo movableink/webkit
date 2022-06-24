@@ -30,10 +30,6 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/Function.h>
 
-namespace IPC {
-class DataReference;
-}
-
 namespace API {
 
 class IconLoadingClient {
@@ -41,7 +37,7 @@ class IconLoadingClient {
 public:
     virtual ~IconLoadingClient() { }
 
-    virtual void getLoadDecisionForIcon(const WebCore::LinkIcon&, WTF::CompletionHandler<void(WTF::Function<void(API::Data*, WebKit::CallbackBase::Error)>&&)>&& completionHandler)
+    virtual void getLoadDecisionForIcon(const WebCore::LinkIcon&, CompletionHandler<void(CompletionHandler<void(API::Data*)>&&)>&& completionHandler)
     {
         completionHandler(nullptr);
     }

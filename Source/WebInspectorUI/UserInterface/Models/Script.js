@@ -27,15 +27,14 @@ WI.Script = class Script extends WI.SourceCode
 {
     constructor(target, id, range, url, sourceType, injected, sourceURL, sourceMapURL)
     {
-        super();
+        super(url);
 
-        console.assert(target instanceof WI.Target);
+        console.assert(target instanceof WI.Target || this instanceof WI.LocalScript);
         console.assert(range instanceof WI.TextRange);
 
         this._target = target;
         this._id = id || null;
         this._range = range || null;
-        this._url = url || null;
         this._sourceType = sourceType || WI.Script.SourceType.Program;
         this._sourceURL = sourceURL || null;
         this._sourceMappingURL = sourceMapURL || null;
@@ -60,7 +59,7 @@ WI.Script = class Script extends WI.SourceCode
 
         if (isWebInspectorConsoleEvaluationScript(this._sourceURL)) {
             // Assign a unique number to the script object so it will stay the same.
-            this._uniqueDisplayNameNumber = this.constructor._nextUniqueConsoleDisplayNameNumber++;
+            this._uniqueDisplayNameNumber = this._nextUniqueConsoleDisplayNameNumber();
         }
 
         if (this._sourceMappingURL)
@@ -69,10 +68,10 @@ WI.Script = class Script extends WI.SourceCode
 
     // Static
 
-    static resetUniqueDisplayNameNumbers()
+    static resetUniqueDisplayNameNumbers(target)
     {
-        WI.Script._nextUniqueDisplayNameNumber = 1;
-        WI.Script._nextUniqueConsoleDisplayNameNumber = 1;
+        if (WI.Script._uniqueDisplayNameNumbersForRootTargetMap)
+            WI.Script._uniqueDisplayNameNumbersForRootTargetMap.delete(target);
     }
 
     // Public
@@ -80,7 +79,6 @@ WI.Script = class Script extends WI.SourceCode
     get target() { return this._target; }
     get id() { return this._id; }
     get range() { return this._range; }
-    get url() { return this._url; }
     get sourceType() { return this._sourceType; }
     get sourceURL() { return this._sourceURL; }
     get sourceMappingURL() { return this._sourceMappingURL; }
@@ -108,13 +106,6 @@ WI.Script = class Script extends WI.SourceCode
         return this._sourceURL;
     }
 
-    get urlComponents()
-    {
-        if (!this._urlComponents)
-            this._urlComponents = parseURL(this._url);
-        return this._urlComponents;
-    }
-
     get mimeType()
     {
         return this._resource ? this._resource.mimeType : "text/javascript";
@@ -127,6 +118,11 @@ WI.Script = class Script extends WI.SourceCode
 
     get displayName()
     {
+        if (isWebInspectorBootstrapScript(this._sourceURL || this._url)) {
+            console.assert(WI.NetworkManager.supportsBootstrapScript());
+            return WI.UIString("Inspector Bootstrap Script");
+        }
+
         if (this._url && !this._dynamicallyAddedScriptElement)
             return WI.displayNameForURL(this._url, this.urlComponents);
 
@@ -146,16 +142,20 @@ WI.Script = class Script extends WI.SourceCode
 
         // Assign a unique number to the script object so it will stay the same.
         if (!this._uniqueDisplayNameNumber)
-            this._uniqueDisplayNameNumber = this.constructor._nextUniqueDisplayNameNumber++;
+            this._uniqueDisplayNameNumber = this._nextUniqueDisplayNameNumber();
 
         return WI.UIString("Anonymous Script %d").format(this._uniqueDisplayNameNumber);
     }
 
     get displayURL()
     {
+        if (isWebInspectorBootstrapScript(this._sourceURL || this._url)) {
+            console.assert(WI.NetworkManager.supportsBootstrapScript());
+            return WI.UIString("Inspector Bootstrap Script");
+        }
+
         const isMultiLine = true;
         const dataURIMaxSize = 64;
-
         if (this._url)
             return WI.truncateURL(this._url, isMultiLine, dataURIMaxSize);
         if (this._sourceURL)
@@ -185,7 +185,7 @@ WI.Script = class Script extends WI.SourceCode
 
     isMainResource()
     {
-        return this._target.mainResource === this;
+        return this._target && this._target.mainResource === this;
     }
 
     requestContentFromBackend()
@@ -238,6 +238,36 @@ WI.Script = class Script extends WI.SourceCode
 
     // Private
 
+    _nextUniqueDisplayNameNumber()
+    {
+        let numbers = this._uniqueDisplayNameNumbersForRootTarget();
+        return ++numbers.lastUniqueDisplayNameNumber;
+    }
+
+    _nextUniqueConsoleDisplayNameNumber()
+    {
+        let numbers = this._uniqueDisplayNameNumbersForRootTarget();
+        return ++numbers.lastUniqueConsoleDisplayNameNumber;
+    }
+
+    _uniqueDisplayNameNumbersForRootTarget()
+    {
+        if (!WI.Script._uniqueDisplayNameNumbersForRootTargetMap)
+            WI.Script._uniqueDisplayNameNumbersForRootTargetMap = new WeakMap();
+
+        console.assert(this._target);
+        let key = this._target.rootTarget;
+        let numbers = WI.Script._uniqueDisplayNameNumbersForRootTargetMap.get(key);
+        if (!numbers) {
+            numbers = {
+                lastUniqueDisplayNameNumber: 0,
+                lastUniqueConsoleDisplayNameNumber: 0
+            };
+            WI.Script._uniqueDisplayNameNumbersForRootTargetMap.set(key, numbers);
+        }
+        return numbers;
+    }
+
     _resolveResource()
     {
         // FIXME: We should be able to associate a Script with a Resource through identifiers,
@@ -250,19 +280,23 @@ WI.Script = class Script extends WI.SourceCode
             return null;
 
         let resolver = WI.networkManager;
-        if (this._target !== WI.mainTarget)
+        if (this._target && this._target !== WI.mainTarget)
             resolver = this._target.resourceCollection;
+
+        function isScriptResource(item) {
+            return item.type === WI.Resource.Type.Document || item.type === WI.Resource.Type.Script;
+        }
 
         try {
             // Try with the Script's full URL.
-            let resource = resolver.resourceForURL(this._url);
+            let resource = resolver.resourcesForURL(this._url).find(isScriptResource);
             if (resource)
                 return resource;
 
             // Try with the Script's full decoded URL.
             let decodedURL = decodeURI(this._url);
             if (decodedURL !== this._url) {
-                resource = resolver.resourceForURL(decodedURL);
+                resource = resolver.resourcesForURL(decodedURL).find(isScriptResource);
                 if (resource)
                     return resource;
             }
@@ -270,7 +304,7 @@ WI.Script = class Script extends WI.SourceCode
             // Next try removing any fragment in the original URL.
             let urlWithoutFragment = removeURLFragment(this._url);
             if (urlWithoutFragment !== this._url) {
-                resource = resolver.resourceForURL(urlWithoutFragment);
+                resource = resolver.resourcesForURL(urlWithoutFragment).find(isScriptResource);
                 if (resource)
                     return resource;
             }
@@ -278,7 +312,7 @@ WI.Script = class Script extends WI.SourceCode
             // Finally try removing any fragment in the decoded URL.
             let decodedURLWithoutFragment = removeURLFragment(decodedURL);
             if (decodedURLWithoutFragment !== decodedURL) {
-                resource = resolver.resourceForURL(decodedURLWithoutFragment);
+                resource = resolver.resourcesForURL(decodedURLWithoutFragment).find(isScriptResource);
                 if (resource)
                     return resource;
             }
@@ -311,6 +345,3 @@ WI.Script.SourceType = {
 WI.Script.TypeIdentifier = "script";
 WI.Script.URLCookieKey = "script-url";
 WI.Script.DisplayNameCookieKey = "script-display-name";
-
-WI.Script._nextUniqueDisplayNameNumber = 1;
-WI.Script._nextUniqueConsoleDisplayNameNumber = 1;

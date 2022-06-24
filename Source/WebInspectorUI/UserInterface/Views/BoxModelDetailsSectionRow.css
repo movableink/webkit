@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +24,7 @@
  */
 
 .details-section .row.box-model {
-    padding: 6px;
+    padding-bottom: 6px;
     text-align: center;
     white-space: nowrap;
 }
@@ -32,7 +32,7 @@
 .details-section .row.box-model .box {
     display: inline-block;
     position: relative;
-    margin: 3px;
+    margin: 3px; /* Keep this in sync with `WI.BoxModelDetailsSectionRow.prototype.get minimumWidth`. */
     padding: 3px;
     text-align: center;
     vertical-align: middle;
@@ -71,7 +71,7 @@
 }
 
 .details-section .row.box-model .box.border > .label {
-    -webkit-margin-start: 20px;
+    margin-inline-start: 20px;
 }
 
 .details-section .row.box-model .box.border.has-top-left-radius,

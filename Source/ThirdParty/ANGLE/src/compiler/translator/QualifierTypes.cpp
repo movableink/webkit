@@ -20,6 +20,8 @@ namespace
 constexpr const ImmutableString kSpecifiedMultipleTimes(" specified multiple times");
 constexpr const ImmutableString kInvariantMultipleTimes(
     "The invariant qualifier specified multiple times.");
+constexpr const ImmutableString kPreciseMultipleTimes(
+    "The precise qualifier specified multiple times.");
 constexpr const ImmutableString kPrecisionMultipleTimes(
     "The precision qualifier specified multiple times.");
 constexpr const ImmutableString kLayoutMultipleTimes(
@@ -69,7 +71,7 @@ bool IsScopeQualifierWrapper(const TQualifierWrapperBase *qualifier)
     return IsScopeQualifier(q);
 }
 
-// Returns true if the invariant for the qualifier sequence holds
+// Returns true if the invariant/precise for the qualifier sequence holds
 bool IsInvariantCorrect(const TTypeQualifierBuilder::QualifierSequence &qualifiers)
 {
     // We should have at least one qualifier.
@@ -91,6 +93,7 @@ bool HasRepeatingQualifiers(const TTypeQualifierBuilder::QualifierSequence &qual
                             ImmutableString *errorMessage)
 {
     bool invariantFound     = false;
+    bool preciseFound       = false;
     bool precisionFound     = false;
     bool layoutFound        = false;
     bool interpolationFound = false;
@@ -112,6 +115,16 @@ bool HasRepeatingQualifiers(const TTypeQualifierBuilder::QualifierSequence &qual
                     return true;
                 }
                 invariantFound = true;
+                break;
+            }
+            case QtPrecise:
+            {
+                if (preciseFound)
+                {
+                    *errorMessage = kPreciseMultipleTimes;
+                    return true;
+                }
+                preciseFound = true;
                 break;
             }
             case QtPrecision:
@@ -164,7 +177,8 @@ bool HasRepeatingQualifiers(const TTypeQualifierBuilder::QualifierSequence &qual
                 // repetitions.
                 TQualifier currentQualifier =
                     static_cast<const TStorageQualifierWrapper *>(qualifiers[i])->getQualifier();
-                if (currentQualifier == EvqVertexOut || currentQualifier == EvqFragmentOut)
+                if (currentQualifier == EvqVertexOut || currentQualifier == EvqFragmentOut ||
+                    currentQualifier == EvqFragmentInOut)
                 {
                     isOut = true;
                 }
@@ -231,9 +245,19 @@ bool HasRepeatingQualifiers(const TTypeQualifierBuilder::QualifierSequence &qual
 // The correct order of qualifiers is:
 // invariant-qualifier interpolation-qualifier storage-qualifier precision-qualifier
 // layout-qualifier has to be before storage-qualifier.
+//
+// GLSL ES 3.1 relaxes the order of qualification:
+// When multiple qualifiers are present in a declaration, they may appear in any order, but they
+// must all appear before the type.
 bool AreQualifiersInOrder(const TTypeQualifierBuilder::QualifierSequence &qualifiers,
+                          int shaderVersion,
                           ImmutableString *errorMessage)
 {
+    if (shaderVersion >= 310)
+    {
+        return true;
+    }
+
     bool foundInterpolation = false;
     bool foundStorage       = false;
     bool foundPrecision     = false;
@@ -291,6 +315,12 @@ bool AreQualifiersInOrder(const TTypeQualifierBuilder::QualifierSequence &qualif
             case QtPrecision:
                 foundPrecision = true;
                 break;
+            case QtPrecise:
+                // This keyword is available in ES3.1 (with extension) or in ES3.2, but the function
+                // should early-out in such a case as the spec doesn't require a particular order to
+                // the qualifiers.
+                UNREACHABLE();
+                break;
             default:
                 UNREACHABLE();
         }
@@ -343,10 +373,14 @@ bool JoinVariableStorageQualifier(TQualifier *joinedQualifier, TQualifier storag
                     break;
                 case EvqVertexOut:
                 case EvqGeometryOut:
+                case EvqTessControlOut:
+                case EvqTessEvaluationOut:
                     *joinedQualifier = EvqSmoothOut;
                     break;
                 case EvqFragmentIn:
                 case EvqGeometryIn:
+                case EvqTessControlIn:
+                case EvqTessEvaluationIn:
                     *joinedQualifier = EvqSmoothIn;
                     break;
                 default:
@@ -363,11 +397,39 @@ bool JoinVariableStorageQualifier(TQualifier *joinedQualifier, TQualifier storag
                     break;
                 case EvqVertexOut:
                 case EvqGeometryOut:
+                case EvqTessControlOut:
+                case EvqTessEvaluationOut:
                     *joinedQualifier = EvqFlatOut;
                     break;
                 case EvqFragmentIn:
                 case EvqGeometryIn:
+                case EvqTessControlIn:
+                case EvqTessEvaluationIn:
                     *joinedQualifier = EvqFlatIn;
+                    break;
+                default:
+                    return false;
+            }
+            break;
+        }
+        case EvqNoPerspective:
+        {
+            switch (storageQualifier)
+            {
+                case EvqCentroid:
+                    *joinedQualifier = EvqNoPerspective;
+                    break;
+                case EvqVertexOut:
+                case EvqGeometryOut:
+                case EvqTessControlOut:
+                case EvqTessEvaluationOut:
+                    *joinedQualifier = EvqNoPerspectiveOut;
+                    break;
+                case EvqFragmentIn:
+                case EvqGeometryIn:
+                case EvqTessControlIn:
+                case EvqTessEvaluationIn:
+                    *joinedQualifier = EvqNoPerspectiveIn;
                     break;
                 default:
                     return false;
@@ -380,11 +442,51 @@ bool JoinVariableStorageQualifier(TQualifier *joinedQualifier, TQualifier storag
             {
                 case EvqVertexOut:
                 case EvqGeometryOut:
+                case EvqTessControlOut:
+                case EvqTessEvaluationOut:
                     *joinedQualifier = EvqCentroidOut;
                     break;
                 case EvqFragmentIn:
                 case EvqGeometryIn:
+                case EvqTessControlIn:
+                case EvqTessEvaluationIn:
                     *joinedQualifier = EvqCentroidIn;
+                    break;
+                default:
+                    return false;
+            }
+            break;
+        }
+        case EvqSample:
+        {
+            switch (storageQualifier)
+            {
+                case EvqVertexOut:
+                case EvqGeometryOut:
+                case EvqTessControlOut:
+                case EvqTessEvaluationOut:
+                    *joinedQualifier = EvqSampleOut;
+                    break;
+                case EvqFragmentIn:
+                case EvqGeometryIn:
+                case EvqTessControlIn:
+                case EvqTessEvaluationIn:
+                    *joinedQualifier = EvqSampleIn;
+                    break;
+                default:
+                    return false;
+            }
+            break;
+        }
+        case EvqPatch:
+        {
+            switch (storageQualifier)
+            {
+                case EvqTessControlOut:
+                    *joinedQualifier = EvqPatchOut;
+                    break;
+                case EvqTessEvaluationIn:
+                    *joinedQualifier = EvqPatchIn;
                     break;
                 default:
                     return false;
@@ -409,8 +511,8 @@ bool JoinParameterStorageQualifier(TQualifier *joinedQualifier, TQualifier stora
         {
             switch (storageQualifier)
             {
-                case EvqIn:
-                    *joinedQualifier = EvqConstReadOnly;
+                case EvqParamIn:
+                    *joinedQualifier = EvqParamConst;
                     break;
                 default:
                     return false;
@@ -467,6 +569,10 @@ TTypeQualifier GetVariableTypeQualifierFromSortedSequence(
             case QtInvariant:
                 isQualifierValid        = true;
                 typeQualifier.invariant = true;
+                break;
+            case QtPrecise:
+                isQualifierValid      = true;
+                typeQualifier.precise = true;
                 break;
             case QtInterpolation:
             {
@@ -554,6 +660,10 @@ TTypeQualifier GetParameterTypeQualifierFromSortedSequence(
                     static_cast<const TPrecisionQualifierWrapper *>(qualifier)->getQualifier();
                 ASSERT(typeQualifier.precision != EbpUndefined);
                 break;
+            case QtPrecise:
+                isQualifierValid      = true;
+                typeQualifier.precise = true;
+                break;
             default:
                 UNREACHABLE();
         }
@@ -568,17 +678,17 @@ TTypeQualifier GetParameterTypeQualifierFromSortedSequence(
 
     switch (typeQualifier.qualifier)
     {
-        case EvqIn:
-        case EvqConstReadOnly:  // const in
-        case EvqOut:
-        case EvqInOut:
+        case EvqParamIn:
+        case EvqParamConst:  // const in
+        case EvqParamOut:
+        case EvqParamInOut:
             break;
         case EvqConst:
-            typeQualifier.qualifier = EvqConstReadOnly;
+            typeQualifier.qualifier = EvqParamConst;
             break;
         case EvqTemporary:
-            // no qualifier has been specified, set it to EvqIn which is the default
-            typeQualifier.qualifier = EvqIn;
+            // no qualifier has been specified, set it to EvqParamIn which is the default
+            typeQualifier.qualifier = EvqParamIn;
             break;
         default:
             diagnostics->error(sortedSequence[0]->getLine(), "Invalid parameter qualifier ",
@@ -604,6 +714,10 @@ TLayoutQualifier JoinLayoutQualifiers(TLayoutQualifier leftQualifier,
     {
         joinedQualifier.yuv = rightQualifier.yuv;
     }
+    if (rightQualifier.earlyFragmentTests != false)
+    {
+        joinedQualifier.earlyFragmentTests = rightQualifier.earlyFragmentTests;
+    }
     if (rightQualifier.binding != -1)
     {
         joinedQualifier.binding = rightQualifier.binding;
@@ -619,6 +733,10 @@ TLayoutQualifier JoinLayoutQualifiers(TLayoutQualifier leftQualifier,
     if (rightQualifier.blockStorage != EbsUnspecified)
     {
         joinedQualifier.blockStorage = rightQualifier.blockStorage;
+    }
+    if (rightQualifier.noncoherent != false)
+    {
+        joinedQualifier.noncoherent = rightQualifier.noncoherent;
     }
 
     for (size_t i = 0u; i < rightQualifier.localSize.size(); ++i)
@@ -682,6 +800,48 @@ TLayoutQualifier JoinLayoutQualifiers(TLayoutQualifier leftQualifier,
         joinedQualifier.maxVertices = rightQualifier.maxVertices;
     }
 
+    if (rightQualifier.tesPrimitiveType != EtetUndefined)
+    {
+        if (joinedQualifier.tesPrimitiveType == EtetUndefined)
+        {
+            joinedQualifier.tesPrimitiveType = rightQualifier.tesPrimitiveType;
+        }
+    }
+
+    if (rightQualifier.tesVertexSpacingType != EtetUndefined)
+    {
+        if (joinedQualifier.tesVertexSpacingType == EtetUndefined)
+        {
+            joinedQualifier.tesVertexSpacingType = rightQualifier.tesVertexSpacingType;
+        }
+    }
+
+    if (rightQualifier.tesOrderingType != EtetUndefined)
+    {
+        if (joinedQualifier.tesOrderingType == EtetUndefined)
+        {
+            joinedQualifier.tesOrderingType = rightQualifier.tesOrderingType;
+        }
+    }
+
+    if (rightQualifier.tesPointType != EtetUndefined)
+    {
+        if (joinedQualifier.tesPointType == EtetUndefined)
+        {
+            joinedQualifier.tesPointType = rightQualifier.tesPointType;
+        }
+    }
+
+    if (rightQualifier.vertices != 0)
+    {
+        if (joinedQualifier.vertices != 0 && joinedQualifier.vertices != rightQualifier.vertices)
+        {
+            diagnostics->error(rightQualifierLocation,
+                               "Cannot have multiple different vertices specifiers", "vertices");
+        }
+        joinedQualifier.vertices = rightQualifier.vertices;
+    }
+
     if (rightQualifier.index != -1)
     {
         if (joinedQualifier.index != -1)
@@ -701,14 +861,19 @@ unsigned int TInvariantQualifierWrapper::getRank() const
     return 0u;
 }
 
-unsigned int TInterpolationQualifierWrapper::getRank() const
+unsigned int TPreciseQualifierWrapper::getRank() const
 {
     return 1u;
 }
 
-unsigned int TLayoutQualifierWrapper::getRank() const
+unsigned int TInterpolationQualifierWrapper::getRank() const
 {
     return 2u;
+}
+
+unsigned int TLayoutQualifierWrapper::getRank() const
+{
+    return 3u;
 }
 
 unsigned int TStorageQualifierWrapper::getRank() const
@@ -717,22 +882,22 @@ unsigned int TStorageQualifierWrapper::getRank() const
     // qualifiers.
     if (mStorageQualifier == EvqCentroid)
     {
-        return 3u;
+        return 4u;
     }
     else
     {
-        return 4u;
+        return 5u;
     }
 }
 
 unsigned int TMemoryQualifierWrapper::getRank() const
 {
-    return 4u;
+    return 5u;
 }
 
 unsigned int TPrecisionQualifierWrapper::getRank() const
 {
-    return 5u;
+    return 6u;
 }
 
 TTypeQualifier::TTypeQualifier(TQualifier scope, const TSourceLoc &loc)
@@ -741,6 +906,7 @@ TTypeQualifier::TTypeQualifier(TQualifier scope, const TSourceLoc &loc)
       precision(EbpUndefined),
       qualifier(scope),
       invariant(false),
+      precise(false),
       line(loc)
 {
     ASSERT(IsScopeQualifier(qualifier));
@@ -769,7 +935,8 @@ bool TTypeQualifierBuilder::checkSequenceIsValid(TDiagnostics *diagnostics) cons
         return false;
     }
 
-    if (!areQualifierChecksRelaxed && !AreQualifiersInOrder(mQualifiers, &errorMessage))
+    if (!areQualifierChecksRelaxed &&
+        !AreQualifiersInOrder(mQualifiers, mShaderVersion, &errorMessage))
     {
         diagnostics->error(mQualifiers[0]->getLine(), errorMessage.data(), "qualifier sequence");
         return false;

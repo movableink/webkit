@@ -28,10 +28,12 @@
 
 #if USE(LIBWEBRTC)
 
+#include "CVUtilities.h"
 #include "ImageRotationSessionVT.h"
 #include "Logging.h"
 #include "RealtimeIncomingVideoSourceCocoa.h"
 #include "RealtimeVideoUtilities.h"
+#include "VideoFrameLibWebRTC.h"
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
@@ -45,7 +47,6 @@ ALLOW_UNUSED_PARAMETERS_END
 #include "CoreVideoSoftLink.h"
 
 namespace WebCore {
-using namespace PAL;
 
 Ref<RealtimeOutgoingVideoSource> RealtimeOutgoingVideoSource::create(Ref<MediaStreamTrackPrivate>&& videoSource)
 {
@@ -62,11 +63,8 @@ RealtimeOutgoingVideoSourceCocoa::RealtimeOutgoingVideoSourceCocoa(Ref<MediaStre
 {
 }
 
-void RealtimeOutgoingVideoSourceCocoa::sampleBufferUpdated(MediaStreamTrackPrivate&, MediaSample& sample)
+void RealtimeOutgoingVideoSourceCocoa::videoSampleAvailable(MediaSample& sample, VideoFrameTimeMetadata)
 {
-    if (isSilenced())
-        return;
-
 #if !RELEASE_LOG_DISABLED
     if (!(++m_numberOfFrames % 60))
         ALWAYS_LOG(LOGIDENTIFIER, "frame ", m_numberOfFrames);
@@ -87,15 +85,31 @@ void RealtimeOutgoingVideoSourceCocoa::sampleBufferUpdated(MediaStreamTrackPriva
         break;
     }
 
-    ASSERT(sample.platformSample().type == PlatformSample::CMSampleBufferType);
-    auto pixelBuffer = static_cast<CVPixelBufferRef>(CMSampleBufferGetImageBuffer(sample.platformSample().sample.cmSampleBuffer));
+    bool shouldApplyRotation = m_shouldApplyRotation && m_currentRotation != webrtc::kVideoRotation_0;
+    if (!shouldApplyRotation && is<VideoFrame>(sample)) {
+        if (downcast<VideoFrame>(sample).isRemoteProxy()) {
+            Ref videoFrame { downcast<VideoFrame>(sample) };
+            auto size = sample.presentationSize();
+            sendFrame(webrtc::toWebRTCVideoFrameBuffer(&videoFrame.leakRef(),
+                [](auto* pointer) { return static_cast<VideoFrame*>(pointer)->pixelBuffer(); },
+                [](auto* pointer) { static_cast<VideoFrame*>(pointer)->deref(); },
+                static_cast<int>(size.width()), static_cast<int>(size.height())));
+            return;
+        }
+        if (downcast<VideoFrame>(sample).isLibWebRTC()) {
+            sendFrame(downcast<VideoFrameLibWebRTC>(sample).buffer());
+            return;
+        }
+    }
+
+    auto pixelBuffer = sample.pixelBuffer();
     auto pixelFormatType = CVPixelBufferGetPixelFormatType(pixelBuffer);
 
     RetainPtr<CVPixelBufferRef> convertedBuffer = pixelBuffer;
     if (pixelFormatType != preferedPixelBufferFormat())
         convertedBuffer = convertToYUV(pixelBuffer);
 
-    if (m_shouldApplyRotation && m_currentRotation != webrtc::kVideoRotation_0)
+    if (shouldApplyRotation)
         convertedBuffer = rotatePixelBuffer(convertedBuffer.get(), m_currentRotation);
 
     sendFrame(webrtc::pixelBufferToFrame(convertedBuffer.get()));

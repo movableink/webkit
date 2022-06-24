@@ -78,6 +78,7 @@ PASS navigator.geolocation.getCurrentPosition(emptyFunction, undefined, {timeout
 PASS navigator.geolocation.getCurrentPosition(emptyFunction, undefined, {timeout:Infinity}) did not throw exception.
 PASS navigator.geolocation.getCurrentPosition(emptyFunction, undefined, {timeout:-Infinity}) did not throw exception.
 PASS navigator.geolocation.getCurrentPosition(emptyFunction, undefined, {timeout:"string"}) did not throw exception.
+PASS navigator.geolocation.watchPosition(emptyFunction, null) did not throw exception.
 PASS successfullyParsed is true
 
 TEST COMPLETE

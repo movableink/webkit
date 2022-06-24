@@ -1,3 +1,0 @@
-
-FAIL createImageData(sw, sh) throws INDEX_SIZE_ERR if size is zero Can't find variable: OffscreenCanvas
-

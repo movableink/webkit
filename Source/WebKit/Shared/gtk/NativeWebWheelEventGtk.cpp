@@ -27,7 +27,7 @@
 #include "NativeWebWheelEvent.h"
 
 #include "WebEventFactory.h"
-#include <gdk/gdk.h>
+#include <WebCore/GtkVersioning.h>
 
 namespace WebKit {
 
@@ -43,9 +43,21 @@ NativeWebWheelEvent::NativeWebWheelEvent(GdkEvent* event, WebWheelEvent::Phase p
 {
 }
 
+NativeWebWheelEvent::NativeWebWheelEvent(GdkEvent* event, const WebCore::IntPoint& position, const WebCore::FloatSize& wheelTicks)
+    : WebWheelEvent(WebEventFactory::createWebWheelEvent(event, position, position, wheelTicks))
+    , m_nativeEvent(gdk_event_copy(event))
+{
+}
+
+NativeWebWheelEvent::NativeWebWheelEvent(GdkEvent *event, const WebCore::IntPoint& position, const WebCore::IntPoint& globalPosition, const WebCore::FloatSize& delta, const WebCore::FloatSize& wheelTicks, WebWheelEvent::Phase phase, WebWheelEvent::Phase momentumPhase, bool hasPreciseDeltas)
+    : WebWheelEvent(WebEvent::Wheel, position, globalPosition, delta, wheelTicks, phase, momentumPhase, WebWheelEvent::ScrollByPixelWheelEvent, hasPreciseDeltas, { }, WallTime::now())
+    , m_nativeEvent(event ? gdk_event_copy(event) : nullptr)
+{
+}
+
 NativeWebWheelEvent::NativeWebWheelEvent(const NativeWebWheelEvent& event)
-    : WebWheelEvent(WebEventFactory::createWebWheelEvent(event.nativeEvent(), event.phase(), event.momentumPhase()))
-    , m_nativeEvent(gdk_event_copy(event.nativeEvent()))
+    : WebWheelEvent(event.type(), event.position(), event.globalPosition(), event.delta(), event.wheelTicks(), event.phase(), event.momentumPhase(), event.granularity(), event.hasPreciseScrollingDeltas(), event.modifiers(), event.timestamp())
+    , m_nativeEvent(event.nativeEvent() ? gdk_event_copy(event.nativeEvent()) : nullptr)
 {
 }
 

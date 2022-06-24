@@ -30,12 +30,17 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
+#include "CDMInstance.h"
 #include "ExceptionOr.h"
-#include "GenericTaskQueue.h"
 #include "MediaKeySessionType.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
+
+namespace WTF {
+class Logger;
+}
 
 namespace WebCore {
 
@@ -44,21 +49,23 @@ class CDMClient;
 class CDMInstance;
 class BufferSource;
 class DeferredPromise;
+class Document;
 class MediaKeySession;
-class ScriptExecutionContext;
 
-class MediaKeys : public RefCounted<MediaKeys>, public CanMakeWeakPtr<MediaKeys> {
+class MediaKeys final
+    : public RefCounted<MediaKeys>
+    , public CDMInstanceClient {
 public:
     using KeySessionType = MediaKeySessionType;
 
-    static Ref<MediaKeys> create(bool useDistinctiveIdentifier, bool persistentStateAllowed, const Vector<MediaKeySessionType>& supportedSessionTypes, Ref<CDM>&& implementation, Ref<CDMInstance>&& instance)
+    static Ref<MediaKeys> create(Document& document, bool useDistinctiveIdentifier, bool persistentStateAllowed, const Vector<MediaKeySessionType>& supportedSessionTypes, Ref<CDM>&& implementation, Ref<CDMInstance>&& instance)
     {
-        return adoptRef(*new MediaKeys(useDistinctiveIdentifier, persistentStateAllowed, supportedSessionTypes, WTFMove(implementation), WTFMove(instance)));
+        return adoptRef(*new MediaKeys(document, useDistinctiveIdentifier, persistentStateAllowed, supportedSessionTypes, WTFMove(implementation), WTFMove(instance)));
     }
 
     ~MediaKeys();
 
-    ExceptionOr<Ref<MediaKeySession>> createSession(ScriptExecutionContext&, MediaKeySessionType);
+    ExceptionOr<Ref<MediaKeySession>> createSession(Document&, MediaKeySessionType);
     void setServerCertificate(const BufferSource&, Ref<DeferredPromise>&&);
 
     void attachCDMClient(CDMClient&);
@@ -69,8 +76,22 @@ public:
     CDMInstance& cdmInstance() { return m_instance; }
     const CDMInstance& cdmInstance() const { return m_instance; }
 
+#if !RELEASE_LOG_DISABLED
+    const void* nextChildIdentifier() const;
+#endif
+
+    unsigned internalInstanceObjectRefCount() const { return m_instance->refCount(); }
+
 protected:
-    MediaKeys(bool useDistinctiveIdentifier, bool persistentStateAllowed, const Vector<MediaKeySessionType>&, Ref<CDM>&&, Ref<CDMInstance>&&);
+    MediaKeys(Document&, bool useDistinctiveIdentifier, bool persistentStateAllowed, const Vector<MediaKeySessionType>&, Ref<CDM>&&, Ref<CDMInstance>&&);
+
+    // CDMInstanceClient
+    void unrequestedInitializationDataReceived(const String&, Ref<FragmentedSharedBuffer>&&) final;
+
+#if !RELEASE_LOG_DISABLED
+    const Logger& logger() const final { return m_logger; }
+    const void* logIdentifier() const final { return m_logIdentifier; }
+#endif
 
     bool m_useDistinctiveIdentifier;
     bool m_persistentStateAllowed;
@@ -79,8 +100,13 @@ protected:
     Ref<CDMInstance> m_instance;
 
     Vector<Ref<MediaKeySession>> m_sessions;
-    Vector<CDMClient*> m_cdmClients;
-    GenericTaskQueue<Timer> m_taskQueue;
+    WeakHashSet<CDMClient> m_cdmClients;
+
+#if !RELEASE_LOG_DISABLED
+    Ref<Logger> m_logger;
+    const void* m_logIdentifier;
+    mutable uint64_t m_childIdentifierSeed { 0 };
+#endif
 };
 
 } // namespace WebCore

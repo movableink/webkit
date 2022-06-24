@@ -23,14 +23,16 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
 #import <WebKit/WKNavigationDelegatePrivate.h>
 #import <WebKit/WebKit.h>
+
+@class _WKContentRuleListAction;
 
 @interface TestNavigationDelegate : NSObject <WKNavigationDelegate>
 
 @property (nonatomic, copy) void (^decidePolicyForNavigationAction)(WKNavigationAction *, void (^)(WKNavigationActionPolicy));
+@property (nonatomic, copy) void (^decidePolicyForNavigationActionWithPreferences)(WKNavigationAction *, WKWebpagePreferences *, void (^)(WKNavigationActionPolicy, WKWebpagePreferences *));
+@property (nonatomic, copy) void (^decidePolicyForNavigationResponse)(WKNavigationResponse *, void (^)(WKNavigationResponsePolicy));
 @property (nonatomic, copy) void (^didFailProvisionalNavigation)(WKWebView *, WKNavigation *, NSError *);
 @property (nonatomic, copy) void (^didStartProvisionalNavigation)(WKWebView *, WKNavigation *);
 @property (nonatomic, copy) void (^didCommitNavigation)(WKWebView *, WKNavigation *);
@@ -38,14 +40,20 @@
 @property (nonatomic, copy) void (^renderingProgressDidChange)(WKWebView *, _WKRenderingProgressEvents);
 @property (nonatomic, copy) void (^webContentProcessDidTerminate)(WKWebView *);
 @property (nonatomic, copy) void (^didReceiveAuthenticationChallenge)(WKWebView *, NSURLAuthenticationChallenge *, void (^)(NSURLSessionAuthChallengeDisposition, NSURLCredential *));
+@property (nonatomic, copy) void (^contentRuleListPerformedAction)(WKWebView *, NSString *, _WKContentRuleListAction *, NSURL *);
 
 - (void)waitForDidStartProvisionalNavigation;
 - (void)waitForDidFinishNavigation;
-- (void)waitForDidFailProvisionalNavigation;
+- (void)waitForDidFinishNavigationWithPreferences:(WKWebpagePreferences *)preferences;
+- (NSError *)waitForDidFailProvisionalNavigation;
 
 @end
 
 @interface WKWebView (TestWebKitAPIExtras)
 - (void)_test_waitForDidStartProvisionalNavigation;
 - (void)_test_waitForDidFinishNavigation;
+- (void)_test_waitForDidFinishNavigationWithPreferences:(WKWebpagePreferences *)preferences;
+- (void)_test_waitForDidFinishNavigationWithoutPresentationUpdate;
+- (void)_test_waitForDidFailProvisionalNavigation;
+- (void)_test_waitForWebContentProcessDidTerminate;
 @end

@@ -30,9 +30,10 @@
 from optparse import make_option
 import re
 
+from webkitcorepy import string_utils
+
 from webkitpy.common.checkout.changelog import ChangeLogEntry
 from webkitpy.common.config.committers import CommitterList
-from webkitpy.tool import grammar
 from webkitpy.tool.multicommandtool import Command
 
 
@@ -52,14 +53,14 @@ class AbstractCommitLogCommand(Command):
     _patch_by_regexp = re.compile(r'^Patch by (?P<name>.+?)\s+<(?P<email>[^<>]+)> on (?P<date>\d{4}-\d{2}-\d{2})$', re.MULTILINE)
     _committer_regexp = re.compile(r'^Author: (?P<email>\S+)\s+<[^>]+>$', re.MULTILINE)
     _date_regexp = re.compile(r'^Date:   (?P<date>\d{4}-\d{2}-\d{2}) (?P<time>\d{2}:\d{2}:\d{2}) [\+\-]\d{4}$', re.MULTILINE)
-    _revision_regexp = re.compile(r'^git-svn-id: http://svn.webkit.org/repository/webkit/trunk@(?P<svnid>\d+) (?P<gitid>[0-9a-f\-]{36})$', re.MULTILINE)
+    _revision_regexp = re.compile(r'^git-svn-id: https?://svn.webkit.org/repository/webkit/trunk@(?P<svnid>\d+) (?P<gitid>[0-9a-f\-]{36})$', re.MULTILINE)
 
     def __init__(self, options=None):
         options = options or []
         options += [
             make_option("--max-commit-age", action="store", dest="max_commit_age", type="int", default=9, help="Specify maximum commit age to consider (in months)."),
         ]
-        options = sorted(options, cmp=lambda a, b: cmp(a._long_opts, b._long_opts))
+        options = sorted(options, key=lambda option: option.dest)
         super(AbstractCommitLogCommand, self).__init__(options=options)
         # FIXME: This should probably be on the tool somewhere.
         self._committer_list = CommitterList()
@@ -213,7 +214,7 @@ class SuggestNominations(AbstractCommitLogCommand):
         for commit_message in self._recent_commit_messages():
             try:
                 self._count_commit(self._parse_commit_message(commit_message), analysis)
-            except CommitLogError as exception:
+            except CommitLogError:
                 continue
         return analysis['counters_by_email']
 
@@ -243,18 +244,13 @@ class SuggestNominations(AbstractCommitLogCommand):
         return nominations
 
     def _print_nominations(self, nominations, counters_by_email):
-        def nomination_cmp(a_nomination, b_nomination):
-            roles_result = cmp(a_nomination['roles'], b_nomination['roles'])
-            if roles_result:
-                return -roles_result
-            count_result = cmp(a_nomination['patch_count'], b_nomination['patch_count'])
-            if count_result:
-                return -count_result
-            return cmp(a_nomination['author_name'], b_nomination['author_name'])
+        nominations = sorted(nominations, key=lambda a: a['roles'])
+        nominations = sorted(nominations, key=lambda a: a['patch_count'])
+        nominations = sorted(nominations, key=lambda a: a['author_name'])
 
-        for nomination in sorted(nominations, nomination_cmp):
+        for nomination in nominations:
             # This is a little bit of a hack, but its convienent to just pass the nomination dictionary to the formating operator.
-            nomination['roles_string'] = grammar.join_with_separators(nomination['roles']).upper()
+            nomination['roles_string'] = string_utils.join(nomination['roles']).upper()
             print("%(roles_string)s: %(author_name)s (%(author_email)s) has %(patch_count)s reviewed patches" % nomination)
             counter = counters_by_email[nomination['author_email']]
 
@@ -262,21 +258,12 @@ class SuggestNominations(AbstractCommitLogCommand):
                 print(counter['commits'])
 
     def _print_counts(self, counters_by_email):
-        def counter_cmp(a_tuple, b_tuple):
-            # split the tuples
-            # the second element is the "counter" structure
-            _, a_counter = a_tuple
-            _, b_counter = b_tuple
+        counters = sorted(counters_by_email.items(), key=lambda counter: counter[1]['count'])
+        counters = sorted(counters, key=lambda counter: counter[1]['latest_name'])
 
-            count_result = cmp(a_counter['count'], b_counter['count'])
-            if count_result:
-                return -count_result
-            return cmp(a_counter['latest_name'].lower(), b_counter['latest_name'].lower())
-
-        for author_email, counter in sorted(counters_by_email.items(), counter_cmp):
+        for author_email, counter in counters:
             if author_email != counter['latest_email']:
                 continue
-            contributor = self._committer_list.contributor_by_email(author_email)
             author_name = counter['latest_name']
             patch_count = counter['count']
             counter['names'] = counter['names'] - set([author_name])
@@ -288,9 +275,9 @@ class SuggestNominations(AbstractCommitLogCommand):
             for alias in counter['emails']:
                 alias_list.append(alias)
             if alias_list:
-                print("CONTRIBUTOR: %s (%s) has %s %s" % (author_name, author_email, grammar.pluralize(patch_count, "reviewed patch"), "(aliases: " + ", ".join(alias_list) + ")"))
+                print("CONTRIBUTOR: %s (%s) has %s %s" % (author_name, author_email, string_utils.pluralize(patch_count, 'reviewed patch', plural='reviewed patches'), "(aliases: " + ", ".join(alias_list) + ")"))
             else:
-                print("CONTRIBUTOR: %s (%s) has %s" % (author_name, author_email, grammar.pluralize(patch_count, "reviewed patch")))
+                print("CONTRIBUTOR: %s (%s) has %s" % (author_name, author_email, string_utils.pluralize(patch_count, 'reviewed patch', plural='reviewed patches')))
         return
 
     def execute(self, options, args, tool):

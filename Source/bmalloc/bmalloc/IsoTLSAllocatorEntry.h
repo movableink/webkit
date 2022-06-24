@@ -28,6 +28,8 @@
 #include "IsoAllocator.h"
 #include "IsoTLSEntry.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 template<typename Config> class IsoHeapImpl;
@@ -42,9 +44,12 @@ private:
     IsoTLSAllocatorEntry(IsoHeapImpl<Config>&);
 
     void construct(void* dst) override;
+
+    void scavenge(void* entry) override;
     
     IsoHeapImpl<Config>& m_heap;
 };
 
 } // namespace bmalloc
 
+#endif

@@ -1,3 +1,0 @@
-
-FAIL save()/restore() works for fillStyle Can't find variable: OffscreenCanvas
-

@@ -11,6 +11,9 @@
 #ifndef MODULES_VIDEO_CODING_DECODING_STATE_H_
 #define MODULES_VIDEO_CODING_DECODING_STATE_H_
 
+#if defined(WEBRTC_WEBKIT_BUILD)
+#include <cstdint>
+#endif
 #include <map>
 #include <set>
 #include <vector>

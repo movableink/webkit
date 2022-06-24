@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,6 @@
 #endif
 
 namespace API {
-using namespace WebCore;
 using namespace WebKit;
 
 Ref<PageConfiguration> PageConfiguration::create()
@@ -52,9 +51,7 @@ PageConfiguration::PageConfiguration()
 {
 }
 
-PageConfiguration::~PageConfiguration()
-{
-}
+PageConfiguration::~PageConfiguration() = default;
 
 Ref<PageConfiguration> PageConfiguration::copy() const
 {
@@ -64,13 +61,11 @@ Ref<PageConfiguration> PageConfiguration::copy() const
     copy->m_userContentController = this->m_userContentController;
     copy->m_pageGroup = this->m_pageGroup;
     copy->m_preferences = this->m_preferences;
-    copy->m_preferenceValues = this->m_preferenceValues;
     copy->m_relatedPage = this->m_relatedPage;
     copy->m_visitedLinkStore = this->m_visitedLinkStore;
     copy->m_websiteDataStore = this->m_websiteDataStore;
-    copy->m_treatsSHA1SignedCertificatesAsInsecure = this->m_treatsSHA1SignedCertificatesAsInsecure;
 #if PLATFORM(IOS_FAMILY)
-    copy->m_alwaysRunsAtForegroundPriority = this->m_alwaysRunsAtForegroundPriority;
+    copy->m_clientNavigationsRunAtForegroundPriority = this->m_clientNavigationsRunAtForegroundPriority;
     copy->m_canShowWhileLocked = this->m_canShowWhileLocked;
     copy->m_clickInteractionDriverForTesting = this->m_clickInteractionDriverForTesting;
 #endif
@@ -83,8 +78,30 @@ Ref<PageConfiguration> PageConfiguration::copy() const
 #if ENABLE(APPLICATION_MANIFEST)
     copy->m_applicationManifest = this->m_applicationManifest;
 #endif
+    copy->m_shouldRelaxThirdPartyCookieBlocking = this->m_shouldRelaxThirdPartyCookieBlocking;
+    copy->m_attributedBundleIdentifier = this->m_attributedBundleIdentifier;
     for (auto& pair : this->m_urlSchemeHandlers)
         copy->m_urlSchemeHandlers.set(pair.key, pair.value.copyRef());
+    copy->m_corsDisablingPatterns = this->m_corsDisablingPatterns;
+    copy->m_crossOriginAccessControlCheckEnabled = this->m_crossOriginAccessControlCheckEnabled;
+    copy->m_userScriptsShouldWaitUntilNotification = this->m_userScriptsShouldWaitUntilNotification;
+
+    copy->m_processDisplayName = this->m_processDisplayName;
+    copy->m_loadsSubresources = this->m_loadsSubresources;
+    copy->m_allowedNetworkHosts = this->m_allowedNetworkHosts;
+#if ENABLE(APP_BOUND_DOMAINS)
+    copy->m_ignoresAppBoundDomains = this->m_ignoresAppBoundDomains;
+    copy->m_limitsNavigationsToAppBoundDomains = this->m_limitsNavigationsToAppBoundDomains;
+#endif
+
+    copy->m_mediaCaptureEnabled = this->m_mediaCaptureEnabled;
+    copy->m_httpsUpgradeEnabled = this->m_httpsUpgradeEnabled;
+#if PLATFORM(IOS_FAMILY)
+    copy->m_appInitiatedOverrideValueForTesting = this->m_appInitiatedOverrideValueForTesting;
+#endif
+#if HAVE(TOUCH_BAR)
+    copy->m_requiresUserActionForEditingControlsManager = this->m_requiresUserActionForEditingControlsManager;
+#endif
 
     return copy;
 }
@@ -140,13 +157,12 @@ void PageConfiguration::setRelatedPage(WebPageProxy* relatedPage)
     m_relatedPage = relatedPage;
 }
 
-
-VisitedLinkStore* PageConfiguration::visitedLinkStore()
+WebKit::VisitedLinkStore* PageConfiguration::visitedLinkStore()
 {
     return m_visitedLinkStore.get();
 }
 
-void PageConfiguration::setVisitedLinkStore(VisitedLinkStore* visitedLinkStore)
+void PageConfiguration::setVisitedLinkStore(WebKit::VisitedLinkStore* visitedLinkStore)
 {
     m_visitedLinkStore = visitedLinkStore;
 }
@@ -179,6 +195,18 @@ RefPtr<WebKit::WebURLSchemeHandler> PageConfiguration::urlSchemeHandlerForURLSch
 void PageConfiguration::setURLSchemeHandlerForURLScheme(Ref<WebKit::WebURLSchemeHandler>&& handler, const WTF::String& scheme)
 {
     m_urlSchemeHandlers.set(scheme, WTFMove(handler));
+}
+
+bool PageConfiguration::captivePortalModeEnabled() const
+{
+    if (m_defaultWebsitePolicies)
+        return m_defaultWebsitePolicies->captivePortalModeEnabled();
+    return captivePortalModeEnabledBySystem();
+}
+
+bool PageConfiguration::isCaptivePortalModeExplicitlySet() const
+{
+    return m_defaultWebsitePolicies && m_defaultWebsitePolicies->isCaptivePortalModeExplicitlySet();
 }
 
 #if ENABLE(APPLICATION_MANIFEST)

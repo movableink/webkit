@@ -36,7 +36,6 @@
 #import "ImageBuffer.h"
 #import "ImageTransferSessionVT.h"
 #import "MediaConstraints.h"
-#import "MediaSampleAVFObjC.h"
 #import "MockRealtimeMediaSourceCenter.h"
 #import "NotImplemented.h"
 #import "PlatformLayer.h"
@@ -51,27 +50,33 @@
 #import <pal/cf/CoreMediaSoftLink.h>
 
 namespace WebCore {
-using namespace PAL;
 
-CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, String&& name, String&& hashSalt, const MediaConstraints* constraints)
+CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, String&& name, String&& hashSalt, const MediaConstraints* constraints, PageIdentifier pageIdentifier)
 {
 #ifndef NDEBUG
     auto device = MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(deviceID);
     ASSERT(device);
     if (!device)
-        return { };
+        return { "No mock camera device"_s };
 #endif
 
-    auto source = adoptRef(*new MockRealtimeVideoSourceMac(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalt)));
-    // FIXME: We should report error messages
-    if (constraints && source->applyConstraints(*constraints))
-        return { };
+    auto source = adoptRef(*new MockRealtimeVideoSourceMac(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalt), pageIdentifier));
+    if (constraints) {
+        if (auto error = source->applyConstraints(*constraints))
+            return WTFMove(error->message);
+    }
 
     return CaptureSourceOrError(RealtimeVideoSource::create(WTFMove(source)));
 }
 
-MockRealtimeVideoSourceMac::MockRealtimeVideoSourceMac(String&& deviceID, String&& name, String&& hashSalt)
-    : MockRealtimeVideoSource(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalt))
+Ref<MockRealtimeVideoSource> MockRealtimeVideoSourceMac::createForMockDisplayCapturer(String&& deviceID, String&& name, String&& hashSalt, PageIdentifier pageIdentifier)
+{
+    return adoptRef(*new MockRealtimeVideoSourceMac(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalt), pageIdentifier));
+}
+
+MockRealtimeVideoSourceMac::MockRealtimeVideoSourceMac(String&& deviceID, String&& name, String&& hashSalt, PageIdentifier pageIdentifier)
+    : MockRealtimeVideoSource(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalt), pageIdentifier)
+    , m_workQueue(WorkQueue::create("MockRealtimeVideoSource Render Queue", WorkQueue::QOS::UserInteractive))
 {
 }
 
@@ -84,12 +89,21 @@ void MockRealtimeVideoSourceMac::updateSampleBuffer()
     if (!m_imageTransferSession)
         m_imageTransferSession = ImageTransferSessionVT::create(preferedPixelBufferFormat());
 
+    PlatformImagePtr platformImage;
+    if (auto nativeImage = imageBuffer->copyImage()->nativeImage())
+        platformImage = nativeImage->platformImage();
+
     auto sampleTime = MediaTime::createWithDouble((elapsedTime() + 100_ms).seconds());
-    auto sampleBuffer = m_imageTransferSession->createMediaSample(imageBuffer->copyImage()->nativeImage().get(), sampleTime, size(), sampleRotation());
+    auto sampleBuffer = m_imageTransferSession->createMediaSample(platformImage.get(), sampleTime, size(), sampleRotation());
     if (!sampleBuffer)
         return;
 
-    dispatchMediaSampleToObservers(*sampleBuffer);
+    auto captureTime = MonotonicTime::now().secondsSinceEpoch();
+    m_workQueue->dispatch([this, protectedThis = Ref { *this }, sampleBuffer = WTFMove(sampleBuffer), captureTime]() mutable {
+        VideoFrameTimeMetadata metadata;
+        metadata.captureTime = captureTime;
+        dispatchMediaSampleToObservers(*sampleBuffer, metadata);
+    });
 }
 
 } // namespace WebCore

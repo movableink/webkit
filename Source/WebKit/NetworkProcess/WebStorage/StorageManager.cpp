@@ -37,8 +37,11 @@
 #include <WebCore/SecurityOriginData.h>
 #include <WebCore/SecurityOriginHash.h>
 #include <WebCore/StorageMap.h>
-#include <WebCore/TextEncoding.h>
 #include <memory>
+#include <pal/text/TextEncoding.h>
+#include <wtf/CrossThreadCopier.h>
+#include <wtf/FileSystem.h>
+#include <wtf/SuspendableWorkQueue.h>
 #include <wtf/WorkQueue.h>
 
 namespace WebKit {
@@ -97,8 +100,8 @@ HashSet<SecurityOriginData> StorageManager::getSessionStorageOriginsCrossThreadC
 
     HashSet<SecurityOriginData> origins;
     for (const auto& sessionStorageNamespace : m_sessionStorageNamespaces.values()) {
-        for (auto& origin : sessionStorageNamespace->origins())
-            origins.add(crossThreadCopy(origin));
+        for (auto&& origin : sessionStorageNamespace->origins())
+            origins.add(crossThreadCopy(WTFMove(origin)));
     }
 
     return origins;
@@ -128,18 +131,18 @@ HashSet<SecurityOriginData> StorageManager::getLocalStorageOriginsCrossThreadCop
 
     HashSet<SecurityOriginData> origins;
     if (m_localStorageDatabaseTracker) {
-    for (auto& origin : m_localStorageDatabaseTracker->origins())
-        origins.add(origin.isolatedCopy());
+    for (auto&& origin : m_localStorageDatabaseTracker->origins())
+        origins.add(WTFMove(origin).isolatedCopy());
     } else {
         for (const auto& localStorageNameSpace : m_localStorageNamespaces.values()) {
-            for (auto& origin : localStorageNameSpace->ephemeralOrigins())
-                origins.add(origin.isolatedCopy());
+            for (auto&& origin : localStorageNameSpace->ephemeralOrigins())
+                origins.add(WTFMove(origin).isolatedCopy());
         }
     }
 
     for (auto& transientLocalStorageNamespace : m_transientLocalStorageNamespaces.values()) {
-        for (auto& origin : transientLocalStorageNamespace->origins())
-            origins.add(origin.isolatedCopy());
+        for (auto&& origin : transientLocalStorageNamespace->origins())
+            origins.add(WTFMove(origin).isolatedCopy());
     }
 
     return origins;
@@ -152,6 +155,24 @@ Vector<LocalStorageDatabaseTracker::OriginDetails> StorageManager::getLocalStora
     if (m_localStorageDatabaseTracker)
         return m_localStorageDatabaseTracker->originDetailsCrossThreadCopy();
     return { };
+}
+
+void StorageManager::renameOrigin(const URL& oldURL, const URL& newURL)
+{
+    ASSERT(!RunLoop::isMain());
+    auto oldOrigin = WebCore::SecurityOriginData::fromURL(oldURL);
+    auto newOrigin = WebCore::SecurityOriginData::fromURL(newURL);
+    for (auto& localStorageNamespace : m_localStorageNamespaces.values())
+        localStorageNamespace->flushAndClose(oldOrigin);
+
+    if (auto* tracker = m_localStorageDatabaseTracker.get()) {
+        static const std::array<const char *, 3> suffixes { "", "-shm", "-wal" };
+        for (const auto* suffix : suffixes)
+            FileSystem::moveFile(makeString(tracker->databasePath(oldOrigin), suffix), makeString(tracker->databasePath(newOrigin), suffix));
+    }
+
+    for (auto& localStorageNamespace : m_localStorageNamespaces.values())
+        localStorageNamespace->clearStorageAreasMatchingOrigin(oldOrigin);
 }
 
 void StorageManager::deleteLocalStorageOriginsModifiedSince(WallTime time)
@@ -191,7 +212,7 @@ void StorageManager::deleteLocalStorageEntriesForOrigins(const Vector<SecurityOr
     }
 }
 
-StorageArea* StorageManager::createLocalStorageArea(StorageNamespaceIdentifier storageNamespaceID, SecurityOriginData&& origin, Ref<WorkQueue>&& workQueue)
+StorageArea* StorageManager::createLocalStorageArea(StorageNamespaceIdentifier storageNamespaceID, SecurityOriginData&& origin, Ref<SuspendableWorkQueue>&& workQueue)
 {
     ASSERT(!RunLoop::isMain());
 
@@ -201,7 +222,7 @@ StorageArea* StorageManager::createLocalStorageArea(StorageNamespaceIdentifier s
     return nullptr;
 }
 
-StorageArea* StorageManager::createTransientLocalStorageArea(StorageNamespaceIdentifier storageNamespaceID, SecurityOriginData&& topLevelOrigin, SecurityOriginData&& origin, Ref<WorkQueue>&& workQueue)
+StorageArea* StorageManager::createTransientLocalStorageArea(StorageNamespaceIdentifier storageNamespaceID, SecurityOriginData&& topLevelOrigin, SecurityOriginData&& origin, Ref<SuspendableWorkQueue>&& workQueue)
 {
     ASSERT(!RunLoop::isMain());
     ASSERT((HashMap<StorageNamespaceIdentifier, RefPtr<TransientLocalStorageNamespace>>::isValidKey(storageNamespaceID)));
@@ -212,7 +233,7 @@ StorageArea* StorageManager::createTransientLocalStorageArea(StorageNamespaceIde
     return nullptr;
 }
 
-StorageArea* StorageManager::createSessionStorageArea(StorageNamespaceIdentifier storageNamespaceID, SecurityOriginData&& origin, Ref<WorkQueue>&& workQueue)
+StorageArea* StorageManager::createSessionStorageArea(StorageNamespaceIdentifier storageNamespaceID, SecurityOriginData&& origin, Ref<SuspendableWorkQueue>&& workQueue)
 {
     ASSERT(!RunLoop::isMain());
     ASSERT((HashMap<StorageNamespaceIdentifier, RefPtr<SessionStorageNamespace>>::isValidKey(storageNamespaceID)));
@@ -274,20 +295,14 @@ Vector<StorageAreaIdentifier> StorageManager::allStorageAreaIdentifiers() const
     ASSERT(!RunLoop::isMain());
 
     Vector<StorageAreaIdentifier> identifiers;
-    for (const auto& localStorageNamespace : m_localStorageNamespaces.values()) {
-        for (auto key : localStorageNamespace->storageAreaIdentifiers())
-            identifiers.append(key);
-    }
+    for (auto& localStorageNamespace : m_localStorageNamespaces.values())
+        identifiers.appendVector(localStorageNamespace->storageAreaIdentifiers());
 
-    for (const auto& trasientLocalStorageNamespace : m_transientLocalStorageNamespaces.values()) {
-        for (auto key : trasientLocalStorageNamespace->storageAreaIdentifiers())
-            identifiers.append(key);
-    }
+    for (auto& trasientLocalStorageNamespace : m_transientLocalStorageNamespaces.values())
+        identifiers.appendVector(trasientLocalStorageNamespace->storageAreaIdentifiers());
 
-    for (const auto& sessionStorageNamespace : m_sessionStorageNamespaces.values()) {
-        for (auto key : sessionStorageNamespace->storageAreaIdentifiers())
-            identifiers.append(key);
-    }
+    for (auto& sessionStorageNamespace : m_sessionStorageNamespaces.values())
+        identifiers.appendVector(sessionStorageNamespace->storageAreaIdentifiers());
 
     return identifiers;
 }

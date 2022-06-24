@@ -23,28 +23,42 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "NetworkCacheIOChannel.h"
+#import "config.h"
+#import "NetworkCacheIOChannel.h"
 
-#include "NetworkCacheFileSystem.h"
-#include <dispatch/dispatch.h>
-#include <mach/vm_param.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <wtf/BlockPtr.h>
-#include <wtf/text/CString.h>
+#import "NetworkCacheFileSystem.h"
+#import <dispatch/dispatch.h>
+#import <mach/vm_param.h>
+#import <sys/mman.h>
+#import <sys/stat.h>
+#import <wtf/BlockPtr.h>
+#import <wtf/text/CString.h>
 
 namespace WebKit {
 namespace NetworkCache {
 
-IOChannel::IOChannel(const String& filePath, Type type)
-    : m_path(filePath)
+static long dispatchQueueIdentifier(WorkQueue::QOS qos)
+{
+    switch (qos) {
+    case WorkQueue::QOS::UserInteractive:
+    case WorkQueue::QOS::UserInitiated:
+    case WorkQueue::QOS::Default:
+        return DISPATCH_QUEUE_PRIORITY_DEFAULT;
+    case WorkQueue::QOS::Utility:
+        return DISPATCH_QUEUE_PRIORITY_LOW;
+    case WorkQueue::QOS::Background:
+        return DISPATCH_QUEUE_PRIORITY_BACKGROUND;
+    }
+}
+
+IOChannel::IOChannel(String&& filePath, Type type, std::optional<WorkQueue::QOS> qos)
+    : m_path(WTFMove(filePath))
     , m_type(type)
 {
-    auto path = FileSystem::fileSystemRepresentation(filePath);
+    auto path = FileSystem::fileSystemRepresentation(m_path);
     int oflag;
     mode_t mode;
-    bool useLowIOPriority = false;
+    WorkQueue::QOS dispatchQOS;
 
     switch (m_type) {
     case Type::Create:
@@ -52,22 +66,23 @@ IOChannel::IOChannel(const String& filePath, Type type)
         unlink(path.data());
         oflag = O_RDWR | O_CREAT | O_NONBLOCK;
         mode = S_IRUSR | S_IWUSR;
-        useLowIOPriority = true;
+        dispatchQOS = qos.value_or(WorkQueue::QOS::Background);
         break;
     case Type::Write:
         oflag = O_WRONLY | O_NONBLOCK;
         mode = S_IRUSR | S_IWUSR;
-        useLowIOPriority = true;
+        dispatchQOS = qos.value_or(WorkQueue::QOS::Background);
         break;
     case Type::Read:
         oflag = O_RDONLY | O_NONBLOCK;
         mode = 0;
+        dispatchQOS = qos.value_or(WorkQueue::QOS::Default);
     }
 
     int fd = ::open(path.data(), oflag, mode);
     m_fileDescriptor = fd;
 
-    m_dispatchIO = adoptOSObject(dispatch_io_create(DISPATCH_IO_RANDOM, fd, dispatch_get_global_queue(useLowIOPriority ? DISPATCH_QUEUE_PRIORITY_BACKGROUND : DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), [fd](int) {
+    m_dispatchIO = adoptOSObject(dispatch_io_create(DISPATCH_IO_RANDOM, fd, dispatch_get_global_queue(dispatchQueueIdentifier(dispatchQOS), 0), [fd](int) {
         close(fd);
     }));
     ASSERT(m_dispatchIO.get());
@@ -81,17 +96,11 @@ IOChannel::~IOChannel()
     RELEASE_ASSERT(!m_wasDeleted.exchange(true));
 }
 
-Ref<IOChannel> IOChannel::open(const String& filePath, IOChannel::Type type)
-{
-    return adoptRef(*new IOChannel(filePath, type));
-}
-
-void IOChannel::read(size_t offset, size_t size, WorkQueue* queue, Function<void (Data&, int error)>&& completionHandler)
+void IOChannel::read(size_t offset, size_t size, WTF::WorkQueueBase& queue, Function<void(Data&, int error)>&& completionHandler)
 {
     RefPtr<IOChannel> channel(this);
     bool didCallCompletionHandler = false;
-    auto dispatchQueue = queue ? queue->dispatchQueue() : dispatch_get_main_queue();
-    dispatch_io_read(m_dispatchIO.get(), offset, size, dispatchQueue, makeBlockPtr([channel, completionHandler = WTFMove(completionHandler), didCallCompletionHandler](bool done, dispatch_data_t fileData, int error) mutable {
+    dispatch_io_read(m_dispatchIO.get(), offset, size, queue.dispatchQueue(), makeBlockPtr([channel, completionHandler = WTFMove(completionHandler), didCallCompletionHandler](bool done, dispatch_data_t fileData, int error) mutable {
         ASSERT_UNUSED(done, done || !didCallCompletionHandler);
         if (didCallCompletionHandler)
             return;
@@ -102,12 +111,11 @@ void IOChannel::read(size_t offset, size_t size, WorkQueue* queue, Function<void
     }).get());
 }
 
-void IOChannel::write(size_t offset, const Data& data, WorkQueue* queue, Function<void (int error)>&& completionHandler)
+void IOChannel::write(size_t offset, const Data& data, WTF::WorkQueueBase& queue, Function<void(int error)>&& completionHandler)
 {
     RefPtr<IOChannel> channel(this);
     auto dispatchData = data.dispatchData();
-    auto dispatchQueue = queue ? queue->dispatchQueue() : dispatch_get_main_queue();
-    dispatch_io_write(m_dispatchIO.get(), offset, dispatchData, dispatchQueue, makeBlockPtr([channel, completionHandler = WTFMove(completionHandler)](bool done, dispatch_data_t fileData, int error) mutable {
+    dispatch_io_write(m_dispatchIO.get(), offset, dispatchData, queue.dispatchQueue(), makeBlockPtr([channel, completionHandler = WTFMove(completionHandler)](bool done, dispatch_data_t fileData, int error) mutable {
         ASSERT_UNUSED(done, done);
         auto callback = WTFMove(completionHandler);
         callback(error);

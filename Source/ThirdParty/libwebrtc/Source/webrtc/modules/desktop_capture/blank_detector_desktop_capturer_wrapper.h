@@ -13,8 +13,11 @@
 
 #include <memory>
 
+#include "modules/desktop_capture/desktop_capture_types.h"
 #include "modules/desktop_capture/desktop_capturer.h"
+#include "modules/desktop_capture/desktop_frame.h"
 #include "modules/desktop_capture/rgba_color.h"
+#include "modules/desktop_capture/shared_memory.h"
 
 namespace webrtc {
 
@@ -28,8 +31,8 @@ class BlankDetectorDesktopCapturerWrapper final
       public DesktopCapturer::Callback {
  public:
   // Creates BlankDetectorDesktopCapturerWrapper. BlankDesktopCapturerWrapper
-  // takes ownership of |capturer|. The |blank_pixel| is the unmodified color
-  // returned by the |capturer|.
+  // takes ownership of `capturer`. The `blank_pixel` is the unmodified color
+  // returned by the `capturer`.
   BlankDetectorDesktopCapturerWrapper(std::unique_ptr<DesktopCapturer> capturer,
                                       RgbaColor blank_pixel);
   ~BlankDetectorDesktopCapturerWrapper() override;
@@ -43,6 +46,7 @@ class BlankDetectorDesktopCapturerWrapper final
   bool GetSourceList(SourceList* sources) override;
   bool SelectSource(SourceId id) override;
   bool FocusOnSelectedSource() override;
+  bool IsOccluded(const DesktopVector& pos) override;
 
  private:
   // DesktopCapturer::Callback interface.
@@ -51,7 +55,7 @@ class BlankDetectorDesktopCapturerWrapper final
 
   bool IsBlankFrame(const DesktopFrame& frame) const;
 
-  // Detects whether pixel at (x, y) equals to |blank_pixel_|.
+  // Detects whether pixel at (x, y) equals to `blank_pixel_`.
   bool IsBlankPixel(const DesktopFrame& frame, int x, int y) const;
 
   const std::unique_ptr<DesktopCapturer> capturer_;

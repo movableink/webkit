@@ -25,9 +25,8 @@
 
 #pragma once
 
+#include "ArgumentCoder.h"
 #include "Attachment.h"
-#include "Decoder.h"
-#include "Encoder.h"
 
 namespace IPC {
 
@@ -50,7 +49,7 @@ public:
         encoder << Attachment(m_port, m_disposition);
     }
 
-    static bool decode(Decoder& decoder, MachPort& p)
+    static WARN_UNUSED_RETURN bool decode(Decoder& decoder, MachPort& p)
     {
         Attachment attachment;
         if (!decoder.decode(attachment))

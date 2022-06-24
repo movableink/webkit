@@ -1,7 +1,0 @@
-2d.state.saverestore.strokeStyle
-
-save()/restore() works for strokeStyle
-
-
-FAIL save()/restore() works for strokeStyle null is not an object (evaluating 'ctx.strokeStyle')
-

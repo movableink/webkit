@@ -1,6 +1,6 @@
 function shouldBe(actual, expected) {
     if (actual !== expected)
-        throw new Error('bad value: ' + actual);
+        throw new Error('bad value: ' + describe(actual) + ', expected: ' + describe(expected));
 }
 
 function shouldThrow(func, message) {
@@ -11,9 +11,9 @@ function shouldThrow(func, message) {
         error = e;
     }
     if (!error)
-        throw new Error('not thrown.');
+        throw new Error('not thrown. Expected: ' + message);
     if (String(error) !== message)
-        throw new Error('bad error: ' + String(error));
+        throw new Error('bad error: ' + String(error) + ', expected: ' + message);
 }
 
 function unreachable()
@@ -691,6 +691,11 @@ var symbol = Symbol();
         shouldBe(Reflect.set(object, 0, 42, receiver), true);
         shouldBe(Reflect.get(object, 0), 42);
         shouldBe(receiver.hasOwnProperty(0), false);
+
+        var object = new TypedArray(1);
+        transferArrayBuffer(object.buffer);
+        shouldBe(Reflect.set(object, 0, 42), true);
+        shouldBe(Reflect.get(object, 0), undefined);
     };
 })());
 
@@ -1112,10 +1117,7 @@ var symbol = Symbol();
     receiverTestIndexed(/hello/, {});
 }());
 
-(function customValue() {
-    // In this case, RegExp.multiline behaves like a setter because it coerce boolean type.
-    // Anyway, it's OK, because RegExp.multiline is not specified in the spec.
-
+(function regExpMultiline() {
     function test1() {
         shouldBe(Reflect.set(RegExp, 'multiline', 'Cappuccino'), true);
         shouldBe(Reflect.get(RegExp, 'multiline'), true);
@@ -1123,8 +1125,8 @@ var symbol = Symbol();
         shouldBe(Reflect.get(RegExp, 'multiline'), false);
 
         var receiver = {};
-        shouldBe(Reflect.set(RegExp, 'multiline', 'Cappuccino', receiver), true);
-        shouldBe(Reflect.get(receiver, 'multiline'), 'Cappuccino');
+        shouldThrow(() => Reflect.set(RegExp, 'multiline', 'Cappuccino', receiver), `TypeError: RegExp.multiline setters require RegExp constructor as |this|`);
+        shouldBe(Reflect.get(receiver, 'multiline'), undefined);
         shouldBe(Reflect.get(RegExp, 'multiline'), false);
     }
 
@@ -1136,8 +1138,8 @@ var symbol = Symbol();
         shouldBe(Reflect.get(RegExp, 'multiline'), false);
 
         var receiver = {};
-        shouldBe(Reflect.set(RegExp, 'multiline', 'Cappuccino', receiver), true);
-        shouldBe(Reflect.get(receiver, 'multiline'), 'Cappuccino');
+        shouldThrow(() => Reflect.set(RegExp, 'multiline', 'Cappuccino', receiver), `TypeError: RegExp.multiline setters require RegExp constructor as |this|`);
+        shouldBe(Reflect.get(receiver, 'multiline'), undefined);
         shouldBe(Reflect.get(RegExp, 'multiline'), false);
     }
 
@@ -1146,11 +1148,11 @@ var symbol = Symbol();
         shouldBe(Reflect.defineProperty(RegExp, 'multiline', {
             writable: false
         }), true);
-        shouldBe(Reflect.get(RegExp, 'multiline'), false);
+        shouldBe(Reflect.get(RegExp, 'multiline'), undefined);
         shouldBe(Reflect.set(RegExp, 'multiline', 'Cappuccino'), false);
-        shouldBe(Reflect.get(RegExp, 'multiline'), false);
+        shouldBe(Reflect.get(RegExp, 'multiline'), undefined);
         shouldBe(Reflect.set(RegExp, 'multiline', 0), false);
-        shouldBe(Reflect.get(RegExp, 'multiline'), false);
+        shouldBe(Reflect.get(RegExp, 'multiline'), undefined);
 
         var receiver = {};
         shouldBe(Reflect.set(RegExp, 'multiline', 'Cappuccino', receiver), false);
@@ -1196,14 +1198,63 @@ var symbol = Symbol();
     }, `TypeError: Attempted to assign to readonly property.`);
 }());
 
+(function customValue() {
+    const Value = $vm.createCustomTestGetterSetter();
+    function test1() {
+        shouldBe(Reflect.set(Value, 'customValue2', 'Cappuccino'), true);
+        shouldBe(Reflect.get(Value, 'customValue2'), 'Cappuccino');
+        shouldBe(Reflect.set(Value, 'customValue2', 0), true);
+        shouldBe(Reflect.get(Value, 'customValue2'), 0);
+
+        var receiver = {};
+        shouldBe(Reflect.set(Value, 'customValue2', 'Cappuccino', receiver), true);
+        shouldBe(Reflect.get(receiver, 'customValue2'), 'Cappuccino');
+        shouldBe(Reflect.get(Value, 'customValue2'), 0);
+    }
+
+    function test2() {
+        'use strict';
+        shouldBe(Reflect.set(Value, 'customValue2', 'Cappuccino'), true);
+        shouldBe(Reflect.get(Value, 'customValue2'), 'Cappuccino');
+        shouldBe(Reflect.set(Value, 'customValue2', 0), true);
+        shouldBe(Reflect.get(Value, 'customValue2'), 0);
+
+        var receiver = {};
+        shouldBe(Reflect.set(Value, 'customValue2', 'Cappuccino', receiver), true);
+        shouldBe(Reflect.get(receiver, 'customValue2'), 'Cappuccino');
+        shouldBe(Reflect.get(Value, 'customValue2'), 0);
+    }
+
+    function test3() {
+        'use strict';
+        shouldBe(Reflect.defineProperty(Value, 'customValue2', {
+            writable: false,
+            value: undefined,
+        }), true);
+        shouldBe(Reflect.get(Value, 'customValue2'), undefined);
+        shouldBe(Reflect.set(Value, 'customValue2', 'Cappuccino'), false);
+        shouldBe(Reflect.get(Value, 'customValue2'), undefined);
+        shouldBe(Reflect.set(Value, 'customValue2', 0), false);
+        shouldBe(Reflect.get(Value, 'customValue2'), undefined);
+
+        var receiver = {};
+        shouldBe(Reflect.set(Value, 'customValue2', 'Cappuccino', receiver), false);
+        shouldBe(Reflect.get(receiver, 'customValue2'), undefined);
+    }
+
+    test1();
+    test2();
+    test3();
+}());
+
 (function functionCase() {
     var func = function () { };
     shouldBe(Reflect.get(func, 'arguments'), null);
-    shouldBe(Reflect.set(func, 'arguments', 42), false);
+    shouldBe(Reflect.set(func, 'arguments', 42), true);
     shouldBe(Reflect.get(func, 'arguments'), null);
 
     shouldBe(Reflect.get(func, 'caller'), null);
-    shouldBe(Reflect.set(func, 'caller', 42), false);
+    shouldBe(Reflect.set(func, 'caller', 42), true);
     shouldBe(Reflect.get(func, 'caller'), null);
 
     receiverTest(function () {}, function () {});
@@ -1214,11 +1265,16 @@ var symbol = Symbol();
     receiverTestIndexed(function () {}, {});
 
     var receiver = {};
-    shouldBe(Reflect.set(func, 'arguments', 'V', receiver), false);
+    shouldThrow(() => {
+        Reflect.set(func, 'arguments', 'V', receiver);
+    }, `TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context.`);
     shouldBe(Reflect.get(receiver, 'arguments'), undefined);
     shouldBe(receiver.hasOwnProperty('arguments'), false);
     shouldBe(Reflect.get(func, 'arguments'), null);
-    shouldBe(Reflect.set(func, 'caller', 'V', receiver), false);
+
+    shouldThrow(() => {
+        Reflect.set(func, 'caller', 'V', receiver);
+    }, `TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context.`);
     shouldBe(Reflect.get(receiver, 'caller'), undefined);
     shouldBe(receiver.hasOwnProperty('caller'), false);
     shouldBe(Reflect.get(func, 'caller'), null);

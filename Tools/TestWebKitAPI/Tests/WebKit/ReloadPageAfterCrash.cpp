@@ -34,6 +34,10 @@
 #include <WebKit/WKRetainPtr.h>
 #include <signal.h>
 
+#if PLATFORM(PLAYSTATION)
+#include <process-launcher.h>
+#endif
+
 namespace TestWebKitAPI {
 
 static bool loadBeforeCrash = false;
@@ -104,7 +108,9 @@ static void didCrashCheckFrames(WKPageRef page, const void*)
 
     EXPECT_TRUE(!WKPageGetMainFrame(page));
     EXPECT_TRUE(!WKPageGetFocusedFrame(page));
+    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     EXPECT_TRUE(!WKPageGetFrameSetLargestFrame(page));
+    ALLOW_DEPRECATED_DECLARATIONS_END
 
     calledCrashHandler = true;
 }
@@ -135,37 +141,11 @@ TEST(WebKit, FocusedFrameAfterCrash)
     while (!WKPageGetFocusedFrame(webView.page()))
         Util::spinRunLoop(10);
 
+#if PLATFORM(PLAYSTATION)
+    PlayStation::terminateProcess(WKPageGetProcessIdentifier(webView.page()));
+#else
     kill(WKPageGetProcessIdentifier(webView.page()), 9);
-
-    Util::run(&calledCrashHandler);
-}
-
-TEST(WebKit, FrameSetLargestFrameAfterCrash)
-{
-    WKRetainPtr<WKContextRef> context = adoptWK(WKContextCreateWithConfiguration(nullptr));
-    PlatformWebView webView(context.get());
-
-    WKPageNavigationClientV0 loaderClient;
-    memset(&loaderClient, 0, sizeof(loaderClient));
-
-    loaderClient.base.version = 0;
-    loaderClient.didFinishNavigation = didFinishLoad;
-    loaderClient.webProcessDidCrash = didCrashCheckFrames;
-
-    WKPageSetPageNavigationClient(webView.page(), &loaderClient.base);
-
-    WKRetainPtr<WKURLRef> baseURL = adoptWK(WKURLCreateWithUTF8CString("about:blank"));
-    WKRetainPtr<WKStringRef> htmlString = Util::toWK("<frameset cols='25%,*,25%'><frame src='about:blank'><frame src='about:blank'><frame src='about:blank'></frameset>");
-
-    WKPageLoadHTMLString(webView.page(), htmlString.get(), baseURL.get());
-    Util::run(&loadBeforeCrash);
-
-    EXPECT_FALSE(!WKPageGetMainFrame(webView.page()));
-
-    while (!WKPageGetFrameSetLargestFrame(webView.page()))
-        Util::spinRunLoop(10);
-
-    kill(WKPageGetProcessIdentifier(webView.page()), 9);
+#endif
 
     Util::run(&calledCrashHandler);
 }

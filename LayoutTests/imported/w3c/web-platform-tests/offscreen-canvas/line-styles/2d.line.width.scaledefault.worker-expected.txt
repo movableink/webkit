@@ -1,3 +1,0 @@
-
-FAIL Default lineWidth strokes are affected by scale transformations Can't find variable: OffscreenCanvas
-

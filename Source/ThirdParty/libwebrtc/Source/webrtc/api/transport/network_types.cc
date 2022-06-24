@@ -10,8 +10,9 @@
 
 #include "api/transport/network_types.h"
 
-namespace webrtc {
+#include <algorithm>
 
+namespace webrtc {
 StreamsConfig::StreamsConfig() = default;
 StreamsConfig::StreamsConfig(const StreamsConfig&) = default;
 StreamsConfig::~StreamsConfig() = default;
@@ -29,6 +30,15 @@ PacketResult::PacketResult() = default;
 PacketResult::PacketResult(const PacketResult& other) = default;
 PacketResult::~PacketResult() = default;
 
+bool PacketResult::ReceiveTimeOrder::operator()(const PacketResult& lhs,
+                                                const PacketResult& rhs) {
+  if (lhs.receive_time != rhs.receive_time)
+    return lhs.receive_time < rhs.receive_time;
+  if (lhs.sent_packet.send_time != rhs.sent_packet.send_time)
+    return lhs.sent_packet.send_time < rhs.sent_packet.send_time;
+  return lhs.sent_packet.sequence_number < rhs.sent_packet.sequence_number;
+}
+
 TransportPacketsFeedback::TransportPacketsFeedback() = default;
 TransportPacketsFeedback::TransportPacketsFeedback(
     const TransportPacketsFeedback& other) = default;
@@ -38,7 +48,7 @@ std::vector<PacketResult> TransportPacketsFeedback::ReceivedWithSendInfo()
     const {
   std::vector<PacketResult> res;
   for (const PacketResult& fb : packet_feedbacks) {
-    if (fb.receive_time.IsFinite()) {
+    if (fb.IsReceived()) {
       res.push_back(fb);
     }
   }
@@ -48,7 +58,7 @@ std::vector<PacketResult> TransportPacketsFeedback::ReceivedWithSendInfo()
 std::vector<PacketResult> TransportPacketsFeedback::LostWithSendInfo() const {
   std::vector<PacketResult> res;
   for (const PacketResult& fb : packet_feedbacks) {
-    if (fb.receive_time.IsPlusInfinity()) {
+    if (!fb.IsReceived()) {
       res.push_back(fb);
     }
   }
@@ -58,6 +68,18 @@ std::vector<PacketResult> TransportPacketsFeedback::LostWithSendInfo() const {
 std::vector<PacketResult> TransportPacketsFeedback::PacketsWithFeedback()
     const {
   return packet_feedbacks;
+}
+
+std::vector<PacketResult> TransportPacketsFeedback::SortedByReceiveTime()
+    const {
+  std::vector<PacketResult> res;
+  for (const PacketResult& fb : packet_feedbacks) {
+    if (fb.IsReceived()) {
+      res.push_back(fb);
+    }
+  }
+  std::sort(res.begin(), res.end(), PacketResult::ReceiveTimeOrder());
+  return res;
 }
 
 NetworkControlUpdate::NetworkControlUpdate() = default;
@@ -80,5 +102,9 @@ bool PacedPacketInfo::operator==(const PacedPacketInfo& rhs) const {
          probe_cluster_min_probes == rhs.probe_cluster_min_probes &&
          probe_cluster_min_bytes == rhs.probe_cluster_min_bytes;
 }
+
+ProcessInterval::ProcessInterval() = default;
+ProcessInterval::ProcessInterval(const ProcessInterval&) = default;
+ProcessInterval::~ProcessInterval() = default;
 
 }  // namespace webrtc

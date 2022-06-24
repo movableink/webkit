@@ -10,7 +10,7 @@
 
 #include "modules/audio_processing/test/debug_dump_replayer.h"
 
-#include "modules/audio_processing/echo_cancellation_impl.h"
+#include "modules/audio_processing/test/audio_processing_builder_for_testing.h"
 #include "modules/audio_processing/test/protobuf_utils.h"
 #include "modules/audio_processing/test/runtime_setting_util.h"
 #include "rtc_base/checks.h"
@@ -80,8 +80,7 @@ bool DebugDumpReplayer::RunNextEvent() {
       break;
     case audioproc::Event::UNKNOWN_EVENT:
       // We do not expect to receive UNKNOWN event.
-      RTC_CHECK(false);
-      return false;
+      RTC_CHECK_NOTREACHED();
   }
   LoadNextMessage();
   return true;
@@ -119,8 +118,7 @@ void DebugDumpReplayer::OnStreamEvent(const audioproc::Stream& msg) {
   // APM should have been created.
   RTC_CHECK(apm_.get());
 
-  RTC_CHECK_EQ(AudioProcessing::kNoError,
-               apm_->gain_control()->set_stream_analog_level(msg.level()));
+  apm_->set_stream_analog_level(msg.level());
   RTC_CHECK_EQ(AudioProcessing::kNoError,
                apm_->set_stream_delay_ms(msg.delay()));
 
@@ -180,27 +178,13 @@ void DebugDumpReplayer::OnRuntimeSettingEvent(
 
 void DebugDumpReplayer::MaybeRecreateApm(const audioproc::Config& msg) {
   // These configurations cannot be changed on the fly.
-  Config config;
   RTC_CHECK(msg.has_aec_delay_agnostic_enabled());
-  config.Set<DelayAgnostic>(
-      new DelayAgnostic(msg.aec_delay_agnostic_enabled()));
-
-  RTC_CHECK(msg.has_noise_robust_agc_enabled());
-  config.Set<ExperimentalAgc>(
-      new ExperimentalAgc(msg.noise_robust_agc_enabled()));
-
-  RTC_CHECK(msg.has_transient_suppression_enabled());
-  config.Set<ExperimentalNs>(
-      new ExperimentalNs(msg.transient_suppression_enabled()));
-
   RTC_CHECK(msg.has_aec_extended_filter_enabled());
-  config.Set<ExtendedFilter>(
-      new ExtendedFilter(msg.aec_extended_filter_enabled()));
 
   // We only create APM once, since changes on these fields should not
   // happen in current implementation.
   if (!apm_.get()) {
-    apm_.reset(AudioProcessingBuilder().Create(config));
+    apm_ = AudioProcessingBuilderForTesting().Create();
   }
 }
 
@@ -213,44 +197,41 @@ void DebugDumpReplayer::ConfigureApm(const audioproc::Config& msg) {
   apm_config.echo_canceller.enabled = msg.aec_enabled() || msg.aecm_enabled();
   apm_config.echo_canceller.mobile_mode = msg.aecm_enabled();
 
-  RTC_CHECK(msg.has_aec_suppression_level());
-  apm_config.echo_canceller.legacy_moderate_suppression_level =
-      static_cast<EchoCancellationImpl::SuppressionLevel>(
-          msg.aec_suppression_level()) ==
-      EchoCancellationImpl::SuppressionLevel::kModerateSuppression;
-
-  // AGC configs.
-  RTC_CHECK(msg.has_agc_enabled());
-  RTC_CHECK_EQ(AudioProcessing::kNoError,
-               apm_->gain_control()->Enable(msg.agc_enabled()));
-
-  RTC_CHECK(msg.has_agc_mode());
-  RTC_CHECK_EQ(AudioProcessing::kNoError,
-               apm_->gain_control()->set_mode(
-                   static_cast<GainControl::Mode>(msg.agc_mode())));
-
-  RTC_CHECK(msg.has_agc_limiter_enabled());
-  RTC_CHECK_EQ(AudioProcessing::kNoError,
-               apm_->gain_control()->enable_limiter(msg.agc_limiter_enabled()));
-
   // HPF configs.
   RTC_CHECK(msg.has_hpf_enabled());
   apm_config.high_pass_filter.enabled = msg.hpf_enabled();
 
-  // NS configs.
-  RTC_CHECK(msg.has_ns_enabled());
-  RTC_CHECK_EQ(AudioProcessing::kNoError,
-               apm_->noise_suppression()->Enable(msg.ns_enabled()));
-
-  RTC_CHECK(msg.has_ns_level());
-  RTC_CHECK_EQ(AudioProcessing::kNoError,
-               apm_->noise_suppression()->set_level(
-                   static_cast<NoiseSuppression::Level>(msg.ns_level())));
-
+  // Preamp configs.
   RTC_CHECK(msg.has_pre_amplifier_enabled());
   apm_config.pre_amplifier.enabled = msg.pre_amplifier_enabled();
   apm_config.pre_amplifier.fixed_gain_factor =
       msg.pre_amplifier_fixed_gain_factor();
+
+  // NS configs.
+  RTC_CHECK(msg.has_ns_enabled());
+  RTC_CHECK(msg.has_ns_level());
+  apm_config.noise_suppression.enabled = msg.ns_enabled();
+  apm_config.noise_suppression.level =
+      static_cast<AudioProcessing::Config::NoiseSuppression::Level>(
+          msg.ns_level());
+
+  // TS configs.
+  RTC_CHECK(msg.has_transient_suppression_enabled());
+  apm_config.transient_suppression.enabled =
+      msg.transient_suppression_enabled();
+
+  // AGC configs.
+  RTC_CHECK(msg.has_agc_enabled());
+  RTC_CHECK(msg.has_agc_mode());
+  RTC_CHECK(msg.has_agc_limiter_enabled());
+  apm_config.gain_controller1.enabled = msg.agc_enabled();
+  apm_config.gain_controller1.mode =
+      static_cast<AudioProcessing::Config::GainController1::Mode>(
+          msg.agc_mode());
+  apm_config.gain_controller1.enable_limiter = msg.agc_limiter_enabled();
+  RTC_CHECK(msg.has_noise_robust_agc_enabled());
+  apm_config.gain_controller1.analog_gain_controller.enabled =
+      msg.noise_robust_agc_enabled();
 
   apm_->ApplyConfig(apm_config);
 }

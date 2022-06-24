@@ -45,7 +45,9 @@ class FunctionsEGL
                             EGLConfig *configs,
                             EGLint config_size,
                             EGLint *num_config) const;
+    EGLBoolean getConfigs(EGLConfig *configs, EGLint config_size, EGLint *num_config) const;
     EGLBoolean getConfigAttrib(EGLConfig config, EGLint attribute, EGLint *value) const;
+    EGLSurface getCurrentSurface(EGLint readdraw) const;
     EGLContext createContext(EGLConfig config,
                              EGLContext share_context,
                              EGLint const *attrib_list) const;
@@ -65,6 +67,8 @@ class FunctionsEGL
     EGLBoolean surfaceAttrib(EGLSurface surface, EGLint attribute, EGLint value) const;
     EGLBoolean swapInterval(EGLint interval) const;
 
+    EGLContext getCurrentContext() const;
+
     EGLImageKHR createImageKHR(EGLContext context,
                                EGLenum target,
                                EGLClientBuffer buffer,
@@ -78,7 +82,9 @@ class FunctionsEGL
 
     EGLint waitSyncKHR(EGLSyncKHR sync, EGLint flags) const;
 
-    EGLBoolean swapBuffersWithDamageKHR(EGLSurface surface, EGLint *rects, EGLint n_rects) const;
+    EGLBoolean swapBuffersWithDamageKHR(EGLSurface surface,
+                                        const EGLint *rects,
+                                        EGLint n_rects) const;
 
     EGLBoolean presentationTimeANDROID(EGLSurface surface, EGLnsecsANDROID time) const;
 
@@ -104,6 +110,9 @@ class FunctionsEGL
     // use angle::NonCopyable so we replicated it here instead.
     FunctionsEGL(const FunctionsEGL &) = delete;
     void operator=(const FunctionsEGL &) = delete;
+
+    // Fallback mechanism for creating a display from a native device object.
+    EGLDisplay getNativeDisplay(int *major, int *minor);
 
     struct EGLDispatchTable;
     EGLDispatchTable *mFnPtrs;

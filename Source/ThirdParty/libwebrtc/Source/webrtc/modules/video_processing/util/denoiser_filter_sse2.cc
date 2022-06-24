@@ -9,7 +9,10 @@
  */
 
 #include "modules/video_processing/util/denoiser_filter_sse2.h"
+
 #include <emmintrin.h>
+#include <stdlib.h>
+#include <string.h>
 
 namespace webrtc {
 
@@ -95,18 +98,6 @@ static uint32_t AbsSumDiff16x1(__m128i acc_diff) {
   unsigned int sum_diff = abs(_mm_cvtsi128_si32(hgfedcba));
 
   return sum_diff;
-}
-
-// TODO(jackychen): Optimize this function using SSE2.
-void DenoiserFilterSSE2::CopyMem16x16(const uint8_t* src,
-                                      int src_stride,
-                                      uint8_t* dst,
-                                      int dst_stride) {
-  for (int i = 0; i < 16; i++) {
-    memcpy(dst, src, 16);
-    src += src_stride;
-    dst += dst_stride;
-  }
 }
 
 uint32_t DenoiserFilterSSE2::Variance16x8(const uint8_t* src,

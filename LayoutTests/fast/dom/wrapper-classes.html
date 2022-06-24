@@ -1,4 +1,4 @@
-<html><!-- webkit-test-runner [ enableKeygenElement=true ] -->
+<html>
 <head>
 <script src="../../resources/js-test-pre.js"></script>
 <style id="style" media="screen">
@@ -38,25 +38,17 @@ function tagJSWrapperConstructorClass(tagName)
     return jsWrapperClass(document.createElement(tagName).constructor);
 }
 
-function testTag(tagName, className, prototypeName, constructorName)
+function testTag(tagName, className)
 {
-    if (!prototypeName)
-        prototypeName = className + "Prototype";
-    if (!constructorName)
-        constructorName = className + "Constructor";
     shouldBe("tagJSWrapperClass('" + tagName + "')", "'" + className + "'");
-    shouldBe("tagJSWrapperPrototypeClass('" + tagName + "')", "'" + prototypeName + "'");
+    shouldBe("tagJSWrapperPrototypeClass('" + tagName + "')", "'" + className + "'");
     shouldBe("tagJSWrapperConstructorClass('" + tagName + "')", "'Function'");
 }
 
-function test(expression, className, prototypeName, constructorName)
+function test(expression, className)
 {
-    if (!prototypeName)
-        prototypeName = className + "Prototype";
-    if (!constructorName)
-        constructorName = className + "Constructor";
     shouldBe("jsWrapperClass(" + expression + ")", "'" + className + "'");
-    shouldBe("jsWrapperClass(" + expression + ".__proto__)", "'" + prototypeName + "'");
+    shouldBe("jsWrapperClass(" + expression + ".__proto__)", "'" + className + "'");
     shouldBe("jsWrapperClass(" + expression + ".constructor)", "'Function'");
 }
 
@@ -150,7 +142,6 @@ function runTest()
     testTag("abbr", "HTMLElement");
     testTag("acronym", "HTMLElement");
     testTag("address", "HTMLElement");
-    testTag("applet", "HTMLAppletElement");
     testTag("area", "HTMLAreaElement");
     testTag("article", "HTMLElement");
     testTag("aside", "HTMLElement");
@@ -203,7 +194,7 @@ function runTest()
     testTag("input", "HTMLInputElement");
     testTag("ins", "HTMLModElement");
     testTag("kbd", "HTMLElement");
-    testTag("keygen", "HTMLKeygenElement");
+    testTag("keygen", "HTMLUnknownElement");
     testTag("label", "HTMLLabelElement");
     testTag("layer", "HTMLElement");
     testTag("legend", "HTMLLegendElement");

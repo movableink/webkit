@@ -1332,7 +1332,7 @@ void QWebPageAdapter::setGeolocationEnabledForFrame(QWebFrameAdapter* frame, boo
 
 QString QWebPageAdapter::defaultUserAgentString()
 {
-    return UserAgentQt::standardUserAgent();
+    return UserAgentQt::standardUserAgent("");
 }
 
 bool QWebPageAdapter::treatSchemeAsLocal(const QString& scheme)

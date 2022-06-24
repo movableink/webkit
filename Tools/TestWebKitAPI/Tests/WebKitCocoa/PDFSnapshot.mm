@@ -32,9 +32,8 @@
 #import "TestPDFDocument.h"
 #import "TestWKWebView.h"
 #import <WebCore/Color.h>
+#import <WebKit/WKPDFConfiguration.h>
 #import <WebKit/WKWebViewPrivate.h>
-
-using WebCore::Color;
 
 namespace TestWebKitAPI {
 
@@ -46,7 +45,7 @@ TEST(PDFSnapshot, FullContent)
 
     [webView synchronouslyLoadHTMLString:@"<meta name='viewport' content='width=device-width'><body bgcolor=#00ff00>Hello</body>"];
 
-    [webView _takePDFSnapshotWithConfiguration:nil completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
+    [webView createPDFWithConfiguration:nil completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
         EXPECT_NULL(error);
         auto document = TestPDFDocument::createFromData(pdfSnapshotData);
         EXPECT_EQ(document->pageCount(), 1u);
@@ -59,7 +58,7 @@ TEST(PDFSnapshot, FullContent)
         EXPECT_EQ(page->text()[4], 'o');
 
         // The entire page should be green. Pick a point in the middle to check.
-        EXPECT_TRUE(page->colorAtPoint(400, 300) == Color::createUnchecked(0, 255, 0));
+        EXPECT_TRUE(page->colorAtPoint(400, 300) == WebCore::Color::green);
 
         didTakeSnapshot = true;
     }];
@@ -76,11 +75,10 @@ TEST(PDFSnapshot, Subregions)
     [webView synchronouslyLoadHTMLString:@"<meta name='viewport' content='width=device-width'><body bgcolor=#00ff00>Hello</body>"];
 
     // Snapshot a subregion contained entirely within the view
-    auto snapshotConfiguration = adoptNS([[WKSnapshotConfiguration alloc] init]);
-    [snapshotConfiguration setRect:NSMakeRect(200, 150, 400, 300)];
-    [snapshotConfiguration setSnapshotWidth:@400];
+    auto configuration = adoptNS([[WKPDFConfiguration alloc] init]);
+    [configuration setRect:NSMakeRect(200, 150, 400, 300)];
 
-    [webView _takePDFSnapshotWithConfiguration:snapshotConfiguration.get() completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
+    [webView createPDFWithConfiguration:configuration.get() completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
         EXPECT_NULL(error);
         auto document = TestPDFDocument::createFromData(pdfSnapshotData);
         EXPECT_EQ(document->pageCount(), 1u);
@@ -91,7 +89,7 @@ TEST(PDFSnapshot, Subregions)
         EXPECT_EQ(page->characterCount(), 0u);
 
         // The entire page should be green. Pick a point in the middle to check.
-        EXPECT_TRUE(page->colorAtPoint(200, 150) == Color::createUnchecked(0, 255, 0));
+        EXPECT_TRUE(page->colorAtPoint(200, 150) == WebCore::Color::green);
 
         didTakeSnapshot = true;
     }];
@@ -100,10 +98,9 @@ TEST(PDFSnapshot, Subregions)
     didTakeSnapshot = false;
 
     // Snapshot a region larger than the view
-    [snapshotConfiguration setRect:NSMakeRect(0, 0, 1200, 1200)];
-    [snapshotConfiguration setSnapshotWidth:@1200];
+    [configuration setRect:NSMakeRect(0, 0, 1200, 1200)];
 
-    [webView _takePDFSnapshotWithConfiguration:snapshotConfiguration.get() completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
+    [webView createPDFWithConfiguration:configuration.get() completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
         EXPECT_NULL(error);
         auto document = TestPDFDocument::createFromData(pdfSnapshotData);
         EXPECT_EQ(document->pageCount(), 1u);
@@ -112,10 +109,10 @@ TEST(PDFSnapshot, Subregions)
         EXPECT_TRUE(CGRectEqualToRect(page->bounds(), CGRectMake(0, 0, 1200, 1200)));
 
         // A pixel that was in the view should be green. Pick a point in the middle to check.
-        EXPECT_TRUE(page->colorAtPoint(200, 150) == Color::createUnchecked(0, 255, 0));
+        EXPECT_TRUE(page->colorAtPoint(200, 150) == WebCore::Color::green);
 
         // A pixel that was outside the view should also be green (we extend background color out). Pick a point in the middle to check.
-        EXPECT_TRUE(page->colorAtPoint(900, 700) == Color::createUnchecked(0, 255, 0));
+        EXPECT_TRUE(page->colorAtPoint(900, 700) == WebCore::Color::green);
 
         didTakeSnapshot = true;
     }];
@@ -133,7 +130,7 @@ TEST(PDFSnapshot, Over200Inches)
 
     [webView synchronouslyLoadHTMLString:@"<meta name='viewport' content='width=device-width'><body bgcolor=#00ff00>Hello</body>"];
 
-    [webView _takePDFSnapshotWithConfiguration:nil completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
+    [webView createPDFWithConfiguration:nil completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
         EXPECT_NULL(error);
         auto document = TestPDFDocument::createFromData(pdfSnapshotData);
         EXPECT_EQ(document->pageCount(), 3u);
@@ -141,20 +138,20 @@ TEST(PDFSnapshot, Over200Inches)
         auto page = document->page(0);
         EXPECT_NE(page, nullptr);
         EXPECT_TRUE(CGRectEqualToRect(page->bounds(), CGRectMake(0, 0, 800, 14400)));
-        EXPECT_TRUE(page->colorAtPoint(400, 300) == Color::createUnchecked(0, 255, 0));
+        EXPECT_TRUE(page->colorAtPoint(400, 300) == WebCore::Color::green);
         EXPECT_EQ(page->characterCount(), 5u);
 
         page = document->page(1);
         EXPECT_NE(page, nullptr);
         EXPECT_TRUE(CGRectEqualToRect(page->bounds(), CGRectMake(0, 0, 800, 14400)));
-        EXPECT_TRUE(page->colorAtPoint(400, 300) == Color::createUnchecked(0, 255, 0));
+        EXPECT_TRUE(page->colorAtPoint(400, 300) == WebCore::Color::green);
 
         EXPECT_EQ(page->characterCount(), 0u);
 
         page = document->page(2);
         EXPECT_NE(page, nullptr);
         EXPECT_TRUE(CGRectEqualToRect(page->bounds(), CGRectMake(0, 0, 800, 600)));
-        EXPECT_TRUE(page->colorAtPoint(400, 300) == Color::createUnchecked(0, 255, 0));
+        EXPECT_TRUE(page->colorAtPoint(400, 300) == WebCore::Color::green);
         EXPECT_EQ(page->characterCount(), 0u);
 
         didTakeSnapshot = true;
@@ -170,7 +167,7 @@ TEST(PDFSnapshot, Links)
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 15000)]);
     [webView synchronouslyLoadHTMLString:@"<meta name='viewport' content='width=device-width'><div style=\"-webkit-line-box-contain: glyphs\"><a href=\"https://webkit.org/\">Click me</a></div>"];
 
-    [webView _takePDFSnapshotWithConfiguration:nil completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
+    [webView createPDFWithConfiguration:nil completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
         EXPECT_NULL(error);
         auto document = TestPDFDocument::createFromData(pdfSnapshotData);
         EXPECT_EQ(document->pageCount(), 2u);
@@ -179,7 +176,7 @@ TEST(PDFSnapshot, Links)
         EXPECT_NE(page, nullptr);
 
         EXPECT_TRUE(CGRectEqualToRect(page->bounds(), CGRectMake(0, 0, 800, 14400)));
-        EXPECT_TRUE(page->colorAtPoint(400, 300) == Color::createUnchecked(255, 255, 255));
+        EXPECT_TRUE(page->colorAtPoint(400, 300) == WebCore::Color::white);
 
         EXPECT_EQ(page->characterCount(), 8u);
         EXPECT_EQ(page->text()[0], 'C');
@@ -211,7 +208,7 @@ TEST(PDFSnapshot, InlineLinks)
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
     [webView synchronouslyLoadHTMLString:@"<meta name='viewport' content='width=device-width'><a href=\"https://webkit.org/\">Click me</a>"];
 
-    [webView _takePDFSnapshotWithConfiguration:nil completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
+    [webView createPDFWithConfiguration:nil completionHandler:^(NSData *pdfSnapshotData, NSError *error) {
         EXPECT_NULL(error);
         auto document = TestPDFDocument::createFromData(pdfSnapshotData);
         EXPECT_EQ(document->pageCount(), 1u);

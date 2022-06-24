@@ -11,6 +11,12 @@
 #ifndef MODULES_AUDIO_PROCESSING_AEC3_CLOCKDRIFT_DETECTOR_H_
 #define MODULES_AUDIO_PROCESSING_AEC3_CLOCKDRIFT_DETECTOR_H_
 
+#if defined(WEBRTC_WEBKIT_BUILD)
+#include <cstdlib>
+#endif
+
+#include <stddef.h>
+
 #include <array>
 
 namespace webrtc {

@@ -27,14 +27,24 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "Authenticator.h"
+#include "FidoAuthenticator.h"
 #include <WebCore/AuthenticatorGetInfoResponse.h>
+
+namespace fido {
+namespace pin {
+class TokenRequest;
+}
+}
+
+namespace WebCore {
+class CryptoKeyEC;
+}
 
 namespace WebKit {
 
 class CtapDriver;
 
-class CtapAuthenticator final : public Authenticator {
+class CtapAuthenticator final : public FidoAuthenticator {
 public:
     static Ref<CtapAuthenticator> create(std::unique_ptr<CtapDriver>&& driver, fido::AuthenticatorGetInfoResponse&& info)
     {
@@ -45,16 +55,26 @@ private:
     explicit CtapAuthenticator(std::unique_ptr<CtapDriver>&&, fido::AuthenticatorGetInfoResponse&&);
 
     void makeCredential() final;
-    void continueMakeCredentialAfterResponseReceived(Vector<uint8_t>&&) const;
+    void continueMakeCredentialAfterResponseReceived(Vector<uint8_t>&&);
     void getAssertion() final;
     void continueGetAssertionAfterResponseReceived(Vector<uint8_t>&&);
+    void continueGetNextAssertionAfterResponseReceived(Vector<uint8_t>&&);
+
+    void getRetries();
+    void continueGetKeyAgreementAfterGetRetries(Vector<uint8_t>&&);
+    void continueRequestPinAfterGetKeyAgreement(Vector<uint8_t>&&, uint64_t retries);
+    void continueGetPinTokenAfterRequestPin(const String& pin, const WebCore::CryptoKeyEC&);
+    void continueRequestAfterGetPinToken(Vector<uint8_t>&&, const fido::pin::TokenRequest&);
+    bool tryRestartPin(const fido::CtapDeviceResponseCode&);
 
     bool tryDowngrade();
     bool processGoogleLegacyAppIdSupportExtension();
 
-    std::unique_ptr<CtapDriver> m_driver;
     fido::AuthenticatorGetInfoResponse m_info;
     bool m_isDowngraded { false };
+    size_t m_remainingAssertionResponses { 0 };
+    Vector<Ref<WebCore::AuthenticatorAssertionResponse>> m_assertionResponses;
+    Vector<uint8_t> m_pinAuth;
 };
 
 } // namespace WebKit

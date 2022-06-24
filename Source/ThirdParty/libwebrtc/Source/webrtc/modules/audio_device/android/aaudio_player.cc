@@ -10,7 +10,8 @@
 
 #include "modules/audio_device/android/aaudio_player.h"
 
-#include "absl/memory/memory.h"
+#include <memory>
+
 #include "api/array_view.h"
 #include "modules/audio_device/android/audio_manager.h"
 #include "modules/audio_device/fine_audio_buffer.h"
@@ -27,7 +28,7 @@ AAudioPlayer::AAudioPlayer(AudioManager* audio_manager)
     : main_thread_(rtc::Thread::Current()),
       aaudio_(audio_manager, AAUDIO_DIRECTION_OUTPUT, this) {
   RTC_LOG(INFO) << "ctor";
-  thread_checker_aaudio_.DetachFromThread();
+  thread_checker_aaudio_.Detach();
 }
 
 AAudioPlayer::~AAudioPlayer() {
@@ -101,7 +102,7 @@ int AAudioPlayer::StopPlayout() {
     RTC_LOG(LS_ERROR) << "StopPlayout failed";
     return -1;
   }
-  thread_checker_aaudio_.DetachFromThread();
+  thread_checker_aaudio_.Detach();
   initialized_ = false;
   playing_ = false;
   return 0;
@@ -123,7 +124,7 @@ void AAudioPlayer::AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) {
   // Create a modified audio buffer class which allows us to ask for any number
   // of samples (and not only multiple of 10ms) to match the optimal buffer
   // size per callback used by AAudio.
-  fine_audio_buffer_ = absl::make_unique<FineAudioBuffer>(audio_device_buffer_);
+  fine_audio_buffer_ = std::make_unique<FineAudioBuffer>(audio_device_buffer_);
 }
 
 int AAudioPlayer::SpeakerVolumeIsAvailable(bool& available) {
@@ -157,7 +158,8 @@ aaudio_data_callback_result_t AAudioPlayer::OnDataCallback(void* audio_data,
   // utilized.
   if (first_data_callback_) {
     RTC_LOG(INFO) << "--- First output data callback: "
-                  << "device id=" << aaudio_.device_id();
+                     "device id="
+                  << aaudio_.device_id();
     first_data_callback_ = false;
   }
 
@@ -182,7 +184,7 @@ aaudio_data_callback_result_t AAudioPlayer::OnDataCallback(void* audio_data,
   }
 
   // Read audio data from the WebRTC source using the FineAudioBuffer object
-  // and write that data into |audio_data| to be played out by AAudio.
+  // and write that data into `audio_data` to be played out by AAudio.
   // Prime output with zeros during a short initial phase to avoid distortion.
   // TODO(henrika): do more work to figure out of if the initial forced silence
   // period is really needed.

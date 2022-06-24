@@ -14,7 +14,9 @@ var MockModels = {
             TestGroup.clearStaticMap();
             BuildRequest.clearStaticMap();
             Triggerable.clearStaticMap();
-            MeasurementSet._set = null;
+            TriggerableConfiguration.clearStaticMap();
+            UploadedFile.clearStaticMap();
+            MeasurementSet._setMap = null;
 
             MockModels.osx = Repository.ensureSingleton(9, {name: 'OS X'});
             MockModels.ios = Repository.ensureSingleton(22, {name: 'iOS'});
@@ -24,7 +26,7 @@ var MockModels = {
             MockModels.ownerRepository = Repository.ensureSingleton(111, {name: 'Owner Repository'});
             MockModels.ownedRepository = Repository.ensureSingleton(112, {name: 'Owned Repository', owner: 111});
             MockModels.webkitGit = Repository.ensureSingleton(17, {name: 'WebKit-Git'});
-            MockModels.builder = new Builder(176, {name: 'WebKit Perf Builder', buildUrl: 'http://build.webkit.org/builders/$builderName/$buildNumber'});
+            MockModels.builder = new Builder(176, {name: 'WebKit Perf Builder', buildUrl: 'http://build.webkit.org/builders/$builderName/$buildTag'});
 
             MockModels.someTest = Test.ensureSingleton(1, {name: 'Some test'});
             MockModels.someMetric = Metric.ensureSingleton(2884, {name: 'Some metric', test: MockModels.someTest});
@@ -71,8 +73,9 @@ var MockModels = {
             });
             MockModels.triggerable = new Triggerable(3, {name: 'build-webkit',
                 repositoryGroups: [MockModels.osRepositoryGroup, MockModels.svnRepositoryGroup, MockModels.gitRepositoryGroup, MockModels.svnRepositoryWithOwnedRepositoryGroup, MockModels.ownerRepositoryGroup],
-                configurations: [{test: MockModels.iPhonePLT, platform: MockModels.iphone}]});
+                configurations: [{test: MockModels.iPhonePLT, platform: MockModels.iphone, supportedRepetitionTypes: ['alternating', 'sequential']}]});
 
+            MockModels.someTriggableConfiguration = TriggerableConfiguration.findByTestAndPlatform(MockModels.iPhonePLT, MockModels.iphone);
         });
     }
 }

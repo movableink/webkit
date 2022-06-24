@@ -9,13 +9,7 @@ description: >
     throw a TypeError exception
 ---*/
 
-//CHECK#1
-
-try {
+assert.throws(TypeError, () => {
   new isNaN();
-  $ERROR('#1.1: new isNaN() throw TypeError. Actual: ' + (new isNaN()));
-} catch (e) {
-  if ((e instanceof TypeError) !== true) {
-    $ERROR('#1.2: new isNaN() throw TypeError. Actual: ' + (e));
-  }
-}
+  throw new Test262Error();
+});

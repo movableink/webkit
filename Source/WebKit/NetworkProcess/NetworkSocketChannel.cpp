@@ -26,19 +26,19 @@
 #include "config.h"
 #include "NetworkSocketChannel.h"
 
-#include "DataReference.h"
 #include "NetworkConnectionToWebProcess.h"
 #include "NetworkProcess.h"
 #include "NetworkSession.h"
+#include "WebCoreArgumentCoders.h"
 #include "WebSocketChannelMessages.h"
 #include "WebSocketTask.h"
 
 namespace WebKit {
 using namespace WebCore;
 
-std::unique_ptr<NetworkSocketChannel> NetworkSocketChannel::create(NetworkConnectionToWebProcess& connection, PAL::SessionID sessionID, const ResourceRequest& request, const String& protocol, uint64_t identifier)
+std::unique_ptr<NetworkSocketChannel> NetworkSocketChannel::create(NetworkConnectionToWebProcess& connection, PAL::SessionID sessionID, const ResourceRequest& request, const String& protocol, WebSocketIdentifier identifier, WebPageProxyIdentifier webPageProxyID, const WebCore::ClientOrigin& clientOrigin, bool hadMainFrameMainResourcePrivateRelayed)
 {
-    auto result = makeUnique<NetworkSocketChannel>(connection, connection.networkProcess().networkSession(sessionID), request, protocol, identifier);
+    auto result = makeUnique<NetworkSocketChannel>(connection, connection.networkProcess().networkSession(sessionID), request, protocol, identifier, webPageProxyID, clientOrigin, hadMainFrameMainResourcePrivateRelayed);
     if (!result->m_socket) {
         result->didClose(0, "Cannot create a web socket task"_s);
         return nullptr;
@@ -46,31 +46,33 @@ std::unique_ptr<NetworkSocketChannel> NetworkSocketChannel::create(NetworkConnec
     return result;
 }
 
-NetworkSocketChannel::NetworkSocketChannel(NetworkConnectionToWebProcess& connection, NetworkSession* session, const ResourceRequest& request, const String& protocol, uint64_t identifier)
+NetworkSocketChannel::NetworkSocketChannel(NetworkConnectionToWebProcess& connection, NetworkSession* session, const ResourceRequest& request, const String& protocol, WebSocketIdentifier identifier, WebPageProxyIdentifier webPageProxyID, const WebCore::ClientOrigin& clientOrigin, bool hadMainFrameMainResourcePrivateRelayed)
     : m_connectionToWebProcess(connection)
     , m_identifier(identifier)
-    , m_session(makeWeakPtr(session))
+    , m_session(session)
+    , m_errorTimer(*this, &NetworkSocketChannel::sendDelayedError)
+    , m_webPageProxyID(webPageProxyID)
 {
     if (!m_session)
         return;
 
-    m_socket = m_session->createWebSocketTask(*this, request, protocol);
+    m_socket = m_session->createWebSocketTask(webPageProxyID, *this, request, protocol, clientOrigin, hadMainFrameMainResourcePrivateRelayed);
     if (m_socket) {
-        m_session->addWebSocketTask(*m_socket);
+        m_session->addWebSocketTask(webPageProxyID, *m_socket);
         m_socket->resume();
     }
 }
 
 NetworkSocketChannel::~NetworkSocketChannel()
 {
-    if (m_session)
-        m_session->removeWebSocketTask(*m_socket);
-
-    if (m_socket)
+    if (m_socket) {
+        if (m_session && m_socket->sessionSet())
+            m_session->removeWebSocketTask(*m_socket->sessionSet(), *m_socket);
         m_socket->cancel();
+    }
 }
 
-void NetworkSocketChannel::sendString(const String& message, CompletionHandler<void()>&& callback)
+void NetworkSocketChannel::sendString(const IPC::DataReference& message, CompletionHandler<void()>&& callback)
 {
     m_socket->sendString(message, WTFMove(callback));
 }
@@ -114,18 +116,48 @@ void NetworkSocketChannel::didReceiveBinaryData(const uint8_t* data, size_t leng
 
 void NetworkSocketChannel::didClose(unsigned short code, const String& reason)
 {
+    if (m_errorTimer.isActive()) {
+        m_closeInfo = std::make_pair(code, reason);
+        return;
+    }
     send(Messages::WebSocketChannel::DidClose { code, reason });
     finishClosingIfPossible();
 }
 
-void NetworkSocketChannel::didReceiveMessageError(const String& errorMessage)
+void NetworkSocketChannel::didReceiveMessageError(String&& errorMessage)
 {
-    send(Messages::WebSocketChannel::DidReceiveMessageError { errorMessage });
+    m_errorMessage = WTFMove(errorMessage);
+    m_errorTimer.startOneShot(NetworkProcess::randomClosedPortDelay());
+}
+
+void NetworkSocketChannel::sendDelayedError()
+{
+    send(Messages::WebSocketChannel::DidReceiveMessageError { m_errorMessage });
+    if (m_closeInfo) {
+        send(Messages::WebSocketChannel::DidClose { m_closeInfo->first, m_closeInfo->second });
+        finishClosingIfPossible();
+    }
+}
+
+void NetworkSocketChannel::didSendHandshakeRequest(ResourceRequest&& request)
+{
+    send(Messages::WebSocketChannel::DidSendHandshakeRequest { request });
+}
+
+void NetworkSocketChannel::didReceiveHandshakeResponse(ResourceResponse&& response)
+{
+    response.sanitizeHTTPHeaderFields(ResourceResponse::SanitizationType::CrossOriginSafe);
+    send(Messages::WebSocketChannel::DidReceiveHandshakeResponse { response });
 }
 
 IPC::Connection* NetworkSocketChannel::messageSenderConnection() const
 {
     return &m_connectionToWebProcess.connection();
+}
+
+NetworkSession* NetworkSocketChannel::session()
+{
+    return m_session.get();
 }
 
 } // namespace WebKit

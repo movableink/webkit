@@ -1,0 +1,2970 @@
+2022-03-18  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Add #pragma marks to strategic places
+        https://bugs.webkit.org/show_bug.cgi?id=238065
+
+        Reviewed by Alexey Proskuryakov.
+
+        They help a little bit with Xcode navigation.
+
+        * WebGPU/Adapter.h:
+        * WebGPU/Adapter.mm:
+        * WebGPU/BindGroup.h:
+        * WebGPU/BindGroup.mm:
+        * WebGPU/BindGroupLayout.h:
+        * WebGPU/BindGroupLayout.mm:
+        * WebGPU/Buffer.h:
+        * WebGPU/Buffer.mm:
+        * WebGPU/CommandBuffer.h:
+        * WebGPU/CommandBuffer.mm:
+        * WebGPU/CommandEncoder.h:
+        * WebGPU/CommandEncoder.mm:
+        * WebGPU/ComputePassEncoder.h:
+        * WebGPU/ComputePassEncoder.mm:
+        * WebGPU/ComputePipeline.h:
+        * WebGPU/ComputePipeline.mm:
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        * WebGPU/Instance.h:
+        * WebGPU/Instance.mm:
+        * WebGPU/PipelineLayout.h:
+        * WebGPU/PipelineLayout.mm:
+        * WebGPU/QuerySet.h:
+        * WebGPU/QuerySet.mm:
+        * WebGPU/Queue.h:
+        * WebGPU/Queue.mm:
+        * WebGPU/RenderBundle.h:
+        * WebGPU/RenderBundle.mm:
+        * WebGPU/RenderBundleEncoder.h:
+        * WebGPU/RenderBundleEncoder.mm:
+        * WebGPU/RenderPassEncoder.h:
+        * WebGPU/RenderPassEncoder.mm:
+        * WebGPU/RenderPipeline.h:
+        * WebGPU/RenderPipeline.mm:
+        * WebGPU/Sampler.h:
+        * WebGPU/Sampler.mm:
+        * WebGPU/ShaderModule.h:
+        * WebGPU/ShaderModule.mm:
+        * WebGPU/Surface.h:
+        * WebGPU/Surface.mm:
+        * WebGPU/SwapChain.h:
+        * WebGPU/SwapChain.mm:
+        * WebGPU/Texture.h:
+        * WebGPU/Texture.mm:
+        * WebGPU/TextureView.h:
+        * WebGPU/TextureView.mm:
+
+2022-03-17  Michael Saboff  <msaboff@apple.com>
+
+        libANGLE-shared.dylib, libwebrtc.dylib & WebGPU install names are prefixed with the system content path
+        https://bugs.webkit.org/show_bug.cgi?id=238058
+
+        Reviewed by Mark Lam.
+
+        We need to set  DYLIB_INSTALL_NAME_BASE for WK_USE_ALTERNATE_FRAMEWORKS_DIR installs without the
+        system content path prefix.
+        We want to allow executables to use the framework via the symlink from the old location.
+
+        * Configurations/WebGPU.xcconfig:
+
+2022-03-17  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Fix the 32-bit build
+        https://bugs.webkit.org/show_bug.cgi?id=238053
+
+        Unreviewed.
+
+        * WebGPU/Buffer.mm:
+        (WebGPU::Buffer::getMappedRange):
+        (WebGPU::Buffer::mapAsync):
+
+2022-03-17  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Fix 32-bit build
+        https://bugs.webkit.org/show_bug.cgi?id=238046
+
+        Unreviewed.
+
+        * WebGPU/Buffer.h:
+        (WebGPU::Buffer::size const):
+        * WebGPU/Buffer.mm:
+        (WebGPU::Buffer::getMappedRange):
+        (WebGPU::Buffer::validateMapAsync const):
+        (WebGPU::Buffer::mapAsync):
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::CommandEncoder::clearBuffer):
+
+2022-03-17  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Fix the 32-bit build
+        https://bugs.webkit.org/show_bug.cgi?id=238031
+
+        Unreviewed.
+
+        * WebGPU/Buffer.mm:
+        (WebGPU::validateCreateBuffer):
+        (WebGPU::Device::createBuffer):
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::CommandEncoder::copyBufferToBuffer):
+
+2022-03-17  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Delete unnecessary C files from CommandLinePlayground
+        https://bugs.webkit.org/show_bug.cgi?id=238005
+
+        Reviewed by Kimmo Kinnunen.
+
+        The reason the C files existed was because Swift wouldn't import a block within
+        a struct if the block didn't have the __unsafe_unretained attribute. This patch
+        adds the attribute and moves the C code to be in the same file as the rest of the
+        playground.
+
+        * CommandLinePlayground/CommandLinePlayground-Bridging-Header.h: Removed.
+        * CommandLinePlayground/Utilities.c: Removed.
+        * CommandLinePlayground/Utilities.h: Removed.
+        * CommandLinePlayground/config.h: Removed.
+        * CommandLinePlayground/main.swift:
+        (dispatchWork(_:)):
+        * WebGPU.xcodeproj/project.pbxproj:
+        * WebGPU/Buffer.mm:
+        * WebGPU/CommandEncoder.mm:
+        * WebGPU/WebGPUExt.h:
+
+2022-03-17  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Mark unchanging class members as const
+        https://bugs.webkit.org/show_bug.cgi?id=237998
+
+        Reviewed by Kimmo Kinnunen.
+
+        Let's use the C++ type system to our advantage.
+
+        * WebGPU/Adapter.h:
+        * WebGPU/BindGroup.h:
+        * WebGPU/BindGroupLayout.h:
+        * WebGPU/CommandBuffer.h:
+        * WebGPU/ComputePassEncoder.h:
+        * WebGPU/ComputePipeline.h:
+        * WebGPU/Device.h:
+        (WebGPU::Device::instance const):
+        (WebGPU::Device::instance): Deleted.
+        * WebGPU/Instance.h:
+        * WebGPU/QuerySet.h:
+        * WebGPU/Queue.h:
+        * WebGPU/RenderBundle.h:
+        * WebGPU/RenderBundleEncoder.h:
+        * WebGPU/RenderPassEncoder.h:
+        * WebGPU/RenderPipeline.h:
+        * WebGPU/Sampler.h:
+        * WebGPU/ShaderModule.h:
+        * WebGPU/Texture.h:
+        * WebGPU/TextureView.h:
+
+2022-03-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Implement sampler creation according to the spec
+        https://bugs.webkit.org/show_bug.cgi?id=237882
+
+        Reviewed by Kimmo Kinnunen.
+
+        Implement Device::createSampler() according to the algorithm in the spec. There
+        are a few things which the spec lists which we can't do yet (like making objects
+        invalid), so those things are left with FIXMEs. Every step is listed with links
+        to the spec where appropriate, and with quotes to the spec describing what is
+        being implemented.
+
+        * WebGPU/Buffer.mm:
+        (WebGPU::Buffer::mapAsync):
+        * WebGPU/ComputePipeline.mm:
+        (WebGPU::createConstantValues):
+        * WebGPU/Sampler.h:
+        (WebGPU::Sampler::create):
+        (WebGPU::Sampler::descriptor const):
+        (WebGPU::Sampler::isComparison const):
+        (WebGPU::Sampler::isFiltering const):
+        * WebGPU/Sampler.mm:
+        (WebGPU::validateCreateSampler):
+        (WebGPU::Device::createSampler):
+        (WebGPU::Sampler::Sampler):
+
+2022-03-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Implement first draft of debug commands according to the spec
+        https://bugs.webkit.org/show_bug.cgi?id=237879
+
+        Reviewed by Kimmo Kinnunen.
+
+        Implement insertDebugMarker(), pushDebugGroup(), and popDebugGroup() according to
+        the algorithms in the spec. There are a few things which the spec lists which we
+        can't do yet (like making objects invalid), so those things are left with FIXMEs.
+        Every step is listed with links to the spec where appropriate, and with quotes to
+        the spec describing what is being implemented. Also, because each class handles
+        these debug commands slightly differently (CommandEncoders support debug groups
+        but not debug markers; RenderBundles don't support any of them, and
+        ComputeEncoders support all of them) I opted to not try to do any code sharing.
+
+        * WebGPU/CommandEncoder.h:
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::CommandEncoder::insertDebugMarker):
+        (WebGPU::CommandEncoder::validatePopDebugGroup const):
+        (WebGPU::CommandEncoder::popDebugGroup):
+        (WebGPU::CommandEncoder::pushDebugGroup):
+        * WebGPU/ComputePassEncoder.h:
+        * WebGPU/ComputePassEncoder.mm:
+        (WebGPU::ComputePassEncoder::insertDebugMarker):
+        (WebGPU::ComputePassEncoder::validatePopDebugGroup const):
+        (WebGPU::ComputePassEncoder::popDebugGroup):
+        (WebGPU::ComputePassEncoder::pushDebugGroup):
+        * WebGPU/RenderBundleEncoder.h:
+        * WebGPU/RenderBundleEncoder.mm:
+        (WebGPU::RenderBundleEncoder::insertDebugMarker):
+        (WebGPU::RenderBundleEncoder::validatePopDebugGroup const):
+        (WebGPU::RenderBundleEncoder::popDebugGroup):
+        (WebGPU::RenderBundleEncoder::pushDebugGroup):
+        * WebGPU/RenderPassEncoder.h:
+        * WebGPU/RenderPassEncoder.mm:
+        (WebGPU::RenderPassEncoder::insertDebugMarker):
+        (WebGPU::RenderPassEncoder::validatePopDebugGroup const):
+        (WebGPU::RenderPassEncoder::popDebugGroup):
+        (WebGPU::RenderPassEncoder::pushDebugGroup):
+
+2022-03-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Implement first draft of CommandEncoder::clearBuffer() according to the spec
+        https://bugs.webkit.org/show_bug.cgi?id=237877
+
+        Reviewed by Kimmo Kinnunen.
+
+        Implement CommandEncoder::clearBuffer() according to the algorithms in the spec.
+        There are a few things which the spec lists which we can't do yet (like reporting
+        validation errors), so those things are left with FIXMEs. Every step is listed
+        with links to the spec where appropriate, and with quotes to the spec describing
+        what is being implemented.
+
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::validateClearBuffer):
+        (WebGPU::CommandEncoder::clearBuffer):
+
+2022-03-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Use block-based WebGPU API instead of function pointer & userdata API
+        https://bugs.webkit.org/show_bug.cgi?id=237932
+
+        Reviewed by Kimmo Kinnunen.
+
+        Move callbacks instead of copying them. Also, update according to the style guide.
+
+        * WebGPU/Adapter.mm:
+        (wgpuAdapterRequestDevice):
+        (wgpuAdapterRequestDeviceWithBlock):
+        * WebGPU/Buffer.mm:
+        (wgpuBufferMapAsync):
+        (wgpuBufferMapAsyncWithBlock):
+        * WebGPU/Device.mm:
+        (wgpuDeviceCreateComputePipelineAsync):
+        (wgpuDeviceCreateComputePipelineAsyncWithBlock):
+        (wgpuDeviceCreateRenderPipelineAsync):
+        (wgpuDeviceCreateRenderPipelineAsyncWithBlock):
+        (wgpuDevicePopErrorScope):
+        (wgpuDevicePopErrorScopeWithBlock):
+        (wgpuDeviceSetDeviceLostCallback):
+        (wgpuDeviceSetDeviceLostCallbackWithBlock):
+        (wgpuDeviceSetUncapturedErrorCallback):
+        (wgpuDeviceSetUncapturedErrorCallbackWithBlock):
+        * WebGPU/Instance.mm:
+        (wgpuInstanceRequestAdapter):
+        (wgpuInstanceRequestAdapterWithBlock):
+        * WebGPU/Queue.mm:
+        (wgpuQueueOnSubmittedWorkDone):
+        (wgpuQueueOnSubmittedWorkDoneWithBlock):
+        * WebGPU/ShaderModule.mm:
+        (wgpuShaderModuleGetCompilationInfo):
+        (wgpuShaderModuleGetCompilationInfoWithBlock):
+
+2022-03-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Implement queue submission methods according to the spec
+        https://bugs.webkit.org/show_bug.cgi?id=237869
+
+        Reviewed by Kimmo Kinnunen.
+
+        Addressing post-review comments.
+
+        * WebGPU/Queue.mm:
+        (WebGPU::Queue::submit):
+
+2022-03-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Put nontrivial code in WebGPU's command line playground
+        https://bugs.webkit.org/show_bug.cgi?id=237876
+
+        Reviewed by Kimmo Kinnunen.
+
+        This is a simple mempcy() example. It uses asynchronous mapping and a queue submit.
+
+        * CommandLinePlayground/main.swift:
+        (device):
+
+2022-03-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Use the fromAPI() pattern
+        https://bugs.webkit.org/show_bug.cgi?id=237942
+
+        Reviewed by Kimmo Kinnunen.
+
+        Inside API functions, use an overloaded fromAPI() function to convert
+        API types to their backing types.
+
+        * WebGPU.xcodeproj/project.pbxproj:
+        * WebGPU/APIConversions.h: Added.
+        (WebGPU::fromAPI):
+        * WebGPU/Adapter.h:
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::requestDevice):
+        (wgpuAdapterEnumerateFeatures):
+        (wgpuAdapterGetLimits):
+        (wgpuAdapterGetProperties):
+        (wgpuAdapterHasFeature):
+        (wgpuAdapterRequestDevice):
+        (wgpuAdapterRequestDeviceWithBlock):
+        * WebGPU/BindGroup.h:
+        * WebGPU/BindGroup.mm:
+        (WebGPU::Device::createBindGroup):
+        (WebGPU::BindGroup::setLabel):
+        (wgpuBindGroupSetLabel):
+        * WebGPU/BindGroupLayout.h:
+        * WebGPU/BindGroupLayout.mm:
+        (WebGPU::BindGroupLayout::setLabel):
+        (wgpuBindGroupLayoutSetLabel):
+        * WebGPU/Buffer.h:
+        * WebGPU/Buffer.mm:
+        (WebGPU::Buffer::setLabel):
+        (wgpuBufferDestroy):
+        (wgpuBufferGetConstMappedRange):
+        (wgpuBufferGetMappedRange):
+        (wgpuBufferMapAsync):
+        (wgpuBufferMapAsyncWithBlock):
+        (wgpuBufferUnmap):
+        (wgpuBufferSetLabel):
+        * WebGPU/CommandBuffer.h:
+        * WebGPU/CommandBuffer.mm:
+        (WebGPU::CommandBuffer::setLabel):
+        (wgpuCommandBufferSetLabel):
+        * WebGPU/CommandEncoder.h:
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::CommandEncoder::insertDebugMarker):
+        (WebGPU::CommandEncoder::pushDebugGroup):
+        (WebGPU::CommandEncoder::setLabel):
+        (wgpuCommandEncoderBeginComputePass):
+        (wgpuCommandEncoderBeginRenderPass):
+        (wgpuCommandEncoderCopyBufferToBuffer):
+        (wgpuCommandEncoderCopyBufferToTexture):
+        (wgpuCommandEncoderCopyTextureToBuffer):
+        (wgpuCommandEncoderCopyTextureToTexture):
+        (wgpuCommandEncoderClearBuffer):
+        (wgpuCommandEncoderFinish):
+        (wgpuCommandEncoderInsertDebugMarker):
+        (wgpuCommandEncoderPopDebugGroup):
+        (wgpuCommandEncoderPushDebugGroup):
+        (wgpuCommandEncoderResolveQuerySet):
+        (wgpuCommandEncoderWriteTimestamp):
+        (wgpuCommandEncoderSetLabel):
+        * WebGPU/ComputePassEncoder.h:
+        * WebGPU/ComputePassEncoder.mm:
+        (WebGPU::ComputePassEncoder::insertDebugMarker):
+        (WebGPU::ComputePassEncoder::pushDebugGroup):
+        (WebGPU::ComputePassEncoder::setLabel):
+        (wgpuComputePassEncoderBeginPipelineStatisticsQuery):
+        (wgpuComputePassEncoderDispatch):
+        (wgpuComputePassEncoderDispatchIndirect):
+        (wgpuComputePassEncoderEndPass):
+        (wgpuComputePassEncoderEndPipelineStatisticsQuery):
+        (wgpuComputePassEncoderInsertDebugMarker):
+        (wgpuComputePassEncoderPopDebugGroup):
+        (wgpuComputePassEncoderPushDebugGroup):
+        (wgpuComputePassEncoderSetBindGroup):
+        (wgpuComputePassEncoderSetPipeline):
+        (wgpuComputePassEncoderSetLabel):
+        * WebGPU/ComputePipeline.h:
+        * WebGPU/ComputePipeline.mm:
+        (WebGPU::Device::createComputePipeline):
+        (WebGPU::Device::createComputePipelineAsync):
+        (WebGPU::ComputePipeline::setLabel):
+        (wgpuComputePipelineGetBindGroupLayout):
+        (wgpuComputePipelineSetLabel):
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        (WebGPU::Device::create):
+        (WebGPU::Device::popErrorScope):
+        (WebGPU::Device::setDeviceLostCallback):
+        (WebGPU::Device::setUncapturedErrorCallback):
+        (WebGPU::Device::setLabel):
+        (wgpuDeviceCreateBindGroup):
+        (wgpuDeviceCreateBindGroupLayout):
+        (wgpuDeviceCreateBuffer):
+        (wgpuDeviceCreateCommandEncoder):
+        (wgpuDeviceCreateComputePipeline):
+        (wgpuDeviceCreateComputePipelineAsync):
+        (wgpuDeviceCreateComputePipelineAsyncWithBlock):
+        (wgpuDeviceCreatePipelineLayout):
+        (wgpuDeviceCreateQuerySet):
+        (wgpuDeviceCreateRenderBundleEncoder):
+        (wgpuDeviceCreateRenderPipeline):
+        (wgpuDeviceCreateRenderPipelineAsync):
+        (wgpuDeviceCreateRenderPipelineAsyncWithBlock):
+        (wgpuDeviceCreateSampler):
+        (wgpuDeviceCreateShaderModule):
+        (wgpuDeviceCreateSwapChain):
+        (wgpuDeviceCreateTexture):
+        (wgpuDeviceDestroy):
+        (wgpuDeviceEnumerateFeatures):
+        (wgpuDeviceGetLimits):
+        (wgpuDeviceHasFeature):
+        (wgpuDevicePopErrorScope):
+        (wgpuDevicePopErrorScopeWithBlock):
+        (wgpuDevicePushErrorScope):
+        (wgpuDeviceSetDeviceLostCallback):
+        (wgpuDeviceSetDeviceLostCallbackWithBlock):
+        (wgpuDeviceSetUncapturedErrorCallback):
+        (wgpuDeviceSetUncapturedErrorCallbackWithBlock):
+        (wgpuDeviceSetLabel):
+        * WebGPU/Instance.h:
+        * WebGPU/Instance.mm:
+        (WebGPU::Instance::requestAdapter):
+        (wgpuInstanceCreateSurface):
+        (wgpuInstanceProcessEvents):
+        (wgpuInstanceRequestAdapter):
+        (wgpuInstanceRequestAdapterWithBlock):
+        * WebGPU/PipelineLayout.h:
+        * WebGPU/PipelineLayout.mm:
+        (WebGPU::Device::createPipelineLayout):
+        (WebGPU::PipelineLayout::setLabel):
+        (wgpuPipelineLayoutSetLabel):
+        * WebGPU/QuerySet.h:
+        * WebGPU/QuerySet.mm:
+        (WebGPU::QuerySet::setLabel):
+        (wgpuQuerySetDestroy):
+        (wgpuQuerySetSetLabel):
+        * WebGPU/Queue.h:
+        * WebGPU/Queue.mm:
+        (WebGPU::Queue::setLabel):
+        (wgpuQueueOnSubmittedWorkDone):
+        (wgpuQueueOnSubmittedWorkDoneWithBlock):
+        (wgpuQueueSubmit):
+        (wgpuQueueWriteBuffer):
+        (wgpuQueueWriteTexture):
+        (wgpuQueueSetLabel):
+        * WebGPU/RenderBundle.h:
+        * WebGPU/RenderBundle.mm:
+        (WebGPU::RenderBundle::setLabel):
+        (wgpuRenderBundleSetLabel):
+        * WebGPU/RenderBundleEncoder.h:
+        * WebGPU/RenderBundleEncoder.mm:
+        (WebGPU::RenderBundleEncoder::insertDebugMarker):
+        (WebGPU::RenderBundleEncoder::pushDebugGroup):
+        (WebGPU::RenderBundleEncoder::setLabel):
+        (wgpuRenderBundleEncoderDraw):
+        (wgpuRenderBundleEncoderDrawIndexed):
+        (wgpuRenderBundleEncoderDrawIndexedIndirect):
+        (wgpuRenderBundleEncoderDrawIndirect):
+        (wgpuRenderBundleEncoderFinish):
+        (wgpuRenderBundleEncoderInsertDebugMarker):
+        (wgpuRenderBundleEncoderPopDebugGroup):
+        (wgpuRenderBundleEncoderPushDebugGroup):
+        (wgpuRenderBundleEncoderSetBindGroup):
+        (wgpuRenderBundleEncoderSetIndexBuffer):
+        (wgpuRenderBundleEncoderSetPipeline):
+        (wgpuRenderBundleEncoderSetVertexBuffer):
+        (wgpuRenderBundleEncoderSetLabel):
+        * WebGPU/RenderPassEncoder.h:
+        * WebGPU/RenderPassEncoder.mm:
+        (WebGPU::RenderPassEncoder::insertDebugMarker):
+        (WebGPU::RenderPassEncoder::pushDebugGroup):
+        (WebGPU::RenderPassEncoder::setLabel):
+        (wgpuRenderPassEncoderBeginOcclusionQuery):
+        (wgpuRenderPassEncoderBeginPipelineStatisticsQuery):
+        (wgpuRenderPassEncoderDraw):
+        (wgpuRenderPassEncoderDrawIndexed):
+        (wgpuRenderPassEncoderDrawIndexedIndirect):
+        (wgpuRenderPassEncoderDrawIndirect):
+        (wgpuRenderPassEncoderEndOcclusionQuery):
+        (wgpuRenderPassEncoderEndPass):
+        (wgpuRenderPassEncoderEndPipelineStatisticsQuery):
+        (wgpuRenderPassEncoderExecuteBundles):
+        (wgpuRenderPassEncoderInsertDebugMarker):
+        (wgpuRenderPassEncoderPopDebugGroup):
+        (wgpuRenderPassEncoderPushDebugGroup):
+        (wgpuRenderPassEncoderSetBindGroup):
+        (wgpuRenderPassEncoderSetBlendConstant):
+        (wgpuRenderPassEncoderSetIndexBuffer):
+        (wgpuRenderPassEncoderSetPipeline):
+        (wgpuRenderPassEncoderSetScissorRect):
+        (wgpuRenderPassEncoderSetStencilReference):
+        (wgpuRenderPassEncoderSetVertexBuffer):
+        (wgpuRenderPassEncoderSetViewport):
+        (wgpuRenderPassEncoderSetLabel):
+        * WebGPU/RenderPipeline.h:
+        * WebGPU/RenderPipeline.mm:
+        (WebGPU::Device::createRenderPipelineAsync):
+        (WebGPU::RenderPipeline::setLabel):
+        (wgpuRenderPipelineGetBindGroupLayout):
+        (wgpuRenderPipelineSetLabel):
+        * WebGPU/Sampler.h:
+        * WebGPU/Sampler.mm:
+        (WebGPU::Sampler::setLabel):
+        (wgpuSamplerSetLabel):
+        * WebGPU/ShaderModule.h:
+        * WebGPU/ShaderModule.mm:
+        (WebGPU::ShaderModule::setLabel):
+        (wgpuShaderModuleGetCompilationInfo):
+        (wgpuShaderModuleGetCompilationInfoWithBlock):
+        (wgpuShaderModuleSetLabel):
+        * WebGPU/Surface.mm:
+        (wgpuSurfaceGetPreferredFormat):
+        * WebGPU/SwapChain.mm:
+        (wgpuSwapChainGetCurrentTextureView):
+        (wgpuSwapChainPresent):
+        * WebGPU/Texture.h:
+        * WebGPU/Texture.mm:
+        (WebGPU::Texture::setLabel):
+        (wgpuTextureCreateView):
+        (wgpuTextureDestroy):
+        (wgpuTextureSetLabel):
+        * WebGPU/TextureView.h:
+        * WebGPU/TextureView.mm:
+        (WebGPU::TextureView::setLabel):
+        (wgpuTextureViewSetLabel):
+
+2022-03-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Implement first draft of buffer copying according to the spec
+        https://bugs.webkit.org/show_bug.cgi?id=237871
+
+        Reviewed by Kimmo Kinnunen.
+
+        Implement CommandEncoder::copyBufferToBuffer() and CommandEncoder::finish(),
+        according to the algorithms in the spec. There are a few things which the spec
+        lists which we can't do yet (like reporting validation errors), so those things
+        are left with FIXMEs. Every step is listed with links to the spec where
+        appropriate, and with quotes to the spec describing what is being implemented.
+
+        * WebGPU.xcodeproj/project.pbxproj:
+        * WebGPU/CommandEncoder.h:
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::Device::createCommandEncoder):
+        (WebGPU::CommandEncoder::ensureBlitCommandEncoder):
+        (WebGPU::CommandEncoder::finalizeBlitCommandEncoder):
+        (WebGPU::validateCopyBufferToBuffer):
+        (WebGPU::CommandEncoder::copyBufferToBuffer):
+        (WebGPU::CommandEncoder::validateFinish const):
+        (WebGPU::CommandEncoder::finish):
+        * WebGPU/CommandsMixin.h: Added.
+        * WebGPU/CommandsMixin.mm: Added.
+        (WebGPU::CommandsMixin::prepareTheEncoderState const):
+
+2022-03-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Implement first draft of buffer mapping according to the spec
+        https://bugs.webkit.org/show_bug.cgi?id=237870
+
+        Reviewed by Kimmo Kinnunen.
+
+        Implement the various GPUBuffer methods, according to the algorithms in the spec.
+        There are a few things which the spec lists which we can't do yet (like reporting
+        validation errors), so those things are left with FIXMEs. Every step is listed with
+        links to the spec where appropriate, and with quotes to the spec describing what
+        is being implemented.
+
+        * WebGPU.xcodeproj/project.pbxproj:
+        * WebGPU/Buffer.h:
+        (WebGPU::Buffer::create):
+        (WebGPU::Buffer::size const):
+        (WebGPU::Buffer::usage const):
+        * WebGPU/Buffer.mm:
+        (WebGPU::validateDescriptor):
+        (WebGPU::validateCreateBuffer):
+        (WebGPU::storageMode):
+        (WebGPU::Device::createBuffer):
+        (WebGPU::Buffer::Buffer):
+        (WebGPU::Buffer::destroy):
+        (WebGPU::Buffer::getConstMappedRange):
+        (WebGPU::Buffer::validateGetMappedRange const):
+        (WebGPU::Buffer::getMappedRange):
+        (WebGPU::Buffer::validateMapAsync const):
+        (WebGPU::Buffer::mapAsync):
+        (WebGPU::Buffer::validateUnmap const):
+        (WebGPU::Buffer::unmap):
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        (WebGPU::Device::Device):
+
+2022-03-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Implement queue submission methods according to the spec
+        https://bugs.webkit.org/show_bug.cgi?id=237869
+
+        Reviewed by Kimmo Kinnunen.
+
+        Now that we can enqueue tasks to the main thread (https://bugs.webkit.org/show_bug.cgi?id=237852)
+        we can now implement Queue::onSubmittedWorkDone() and Queue::submit(). The way it works is pretty
+        simple - there's a count of the number of submitted command buffers (m_submittedCommandBufferCount)
+        and the number of completed command buffers (m_completedCommandBufferCount). When the two values
+        are equal, the queue is idle, and the onSubmittedWorkDone() work should happen the next time the
+        runloop turns. Otherwise, we stick the work in a HashMap, keyed by the value that
+        m_completedCommandBufferCount will have to become at the point this callback should run.
+
+        * WebGPU/Queue.h:
+        (WebGPU::Queue::commandQueue const):
+        * WebGPU/Queue.mm:
+        (WebGPU::Queue::onSubmittedWorkDone):
+        (WebGPU::Queue::validateSubmit const):
+        (WebGPU::Queue::submit):
+        * WebGPU/TextureView.mm:
+
+2022-03-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Create a path of Ref<>s between Instance and Queue
+        https://bugs.webkit.org/show_bug.cgi?id=237864
+
+        Reviewed by Kimmo Kinnunen.
+
+        The ownership model of WebGPU is that there is a tree of objects, and Javascript has references
+        to the leaves of the tree. The leaves are therefore allowed to reference their parents, all the
+        way up the tree. Therefore, Buffer can have a Ref to Device, which can have a Ref to Instance.
+        Device has to be in the chain eventually, because of the "valid to use with" check:
+        https://gpuweb.github.io/gpuweb/#abstract-opdef-valid-to-use-with, so we might as well add it in
+        to the chain now.
+
+        The one exception from this ownership model is Queue, which needs to be owned by Device, so
+        Device::getQueue() can return the same object when called multiple times (see
+        https://bugs.webkit.org/show_bug.cgi?id=237861). So, Queue has a raw C++ reference to its owning
+        Device.
+
+        Queue needs to be able to run asynchronous work, becuase Queue will need to add completedHandlers
+        to all command buffers committed, in order to perform its own internal bookkeeping. So, Queue
+        uses its C++ reference to its owning Device, which uses its Ref to its Instance, in order to use
+        Instance's facilities for running asynchronous work. This patch adds the necessesary Ref<>s to
+        make that happen.
+
+        * WebGPU/Adapter.h:
+        (WebGPU::Adapter::create):
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::Adapter):
+        (WebGPU::Adapter::requestDevice):
+        (WebGPU::Adapter::scheduleWork):
+        * WebGPU/Device.h:
+        (WebGPU::Device::create):
+        * WebGPU/Device.mm:
+        (WebGPU::createDefaultQueue):
+        (WebGPU::Device::Device):
+        (WebGPU::Device::scheduleWork):
+        (WebGPU::Device::create): Deleted.
+        * WebGPU/Instance.mm:
+        (WebGPU::Instance::requestAdapter):
+        * WebGPU/Queue.h:
+        (WebGPU::Queue::create):
+        * WebGPU/Queue.mm:
+        (WebGPU::Queue::Queue):
+        (WebGPU::Queue::scheduleWork):
+
+2022-03-15  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Migrate from WTF::Function to WTF::CompletionHandler
+        https://bugs.webkit.org/show_bug.cgi?id=237925
+
+        Reviewed by Geoffrey Garen.
+
+        * WebGPU/Adapter.h:
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::requestDevice):
+        * WebGPU/Buffer.h:
+        * WebGPU/Buffer.mm:
+        (WebGPU::Buffer::mapAsync):
+        * WebGPU/ComputePipeline.mm:
+        (WebGPU::Device::createComputePipelineAsync):
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        (WebGPU::Device::popErrorScope):
+        (WebGPU::Device::setDeviceLostCallback):
+        (WebGPU::Device::setUncapturedErrorCallback):
+        * WebGPU/Instance.h:
+        * WebGPU/Instance.mm:
+        (WebGPU::Instance::requestAdapter):
+        * WebGPU/Queue.h:
+        * WebGPU/Queue.mm:
+        (WebGPU::Queue::onSubmittedWorkDone):
+        * WebGPU/RenderPassEncoder.h:
+        * WebGPU/RenderPipeline.mm:
+        (WebGPU::Device::createRenderPipelineAsync):
+        * WebGPU/ShaderModule.h:
+        * WebGPU/ShaderModule.mm:
+        (WebGPU::ShaderModule::getCompilationInfo):
+
+2022-03-15  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Update WebGPU CommandLinePlayground to execute asynchronous tasks
+        https://bugs.webkit.org/show_bug.cgi?id=237852
+
+        Reviewed by Kimmo Kinnunen.
+
+        This patch hooks up dispatch_async(dispatch_get_main_queue()) to WebGPU's CommandLinePlayground,
+        so asynchronous tasks get run.
+
+        * CommandLinePlayground/CommandLinePlayground-Bridging-Header.h: Copied from Source/WebGPU/CommandLinePlayground/main.swift.
+        * CommandLinePlayground/Utilities.c: Copied from Source/WebGPU/CommandLinePlayground/main.swift.
+        (createDefaultInstance):
+        * CommandLinePlayground/Utilities.h: Copied from Source/WebGPU/CommandLinePlayground/main.swift.
+        * CommandLinePlayground/config.h: Copied from Source/WebGPU/CommandLinePlayground/main.swift.
+        * CommandLinePlayground/main.swift:
+        (adapter):
+        * Configurations/CommandLinePlayground.xcconfig:
+        * WebGPU.xcodeproj/project.pbxproj:
+        * WebGPU/TextureView.mm:
+
+2022-03-15  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Repeated calls to wgpuDeviceGetQueue() are supposed to return the same pointer
+        https://bugs.webkit.org/show_bug.cgi?id=237861
+
+        Reviewed by Kimmo Kinnunen.
+
+        Previously, wgpuDeviceGetQueue() had "new WGPUQueueImpl { ... }" but this is wrong because
+        the default queue doesn't change from one call to the next.
+
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::requestDevice):
+        (wgpuAdapterRequestDevice):
+        (wgpuAdapterRequestDeviceWithBlock):
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        (WebGPU::Device::create):
+        (WebGPU::Device::getQueue):
+        (wgpuDeviceGetQueue):
+
+2022-03-15  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Allow for scheduling asynchronous work
+        https://bugs.webkit.org/show_bug.cgi?id=237755
+
+        Reviewed by Kimmo Kinnunen.
+
+        * WebGPU/Instance.h:
+        (WebGPU::Instance::runLoop const): Deleted.
+        * WebGPU/Instance.mm:
+        (WebGPU::Instance::create):
+        (WebGPU::Instance::Instance):
+        (WebGPU::Instance::scheduleWork):
+        (WebGPU::Instance::defaultScheduleWork):
+        (WebGPU::Instance::processEvents):
+        * WebGPU/WebGPUExt.h:
+
+2022-03-12  Tim Horton  <timothy_horton@apple.com>
+
+        Adopt FALLBACK_PLATFORM_NAME in place of FALLBACK_PLATFORM
+        https://bugs.webkit.org/show_bug.cgi?id=237809
+
+        Reviewed by Per Arne Vollan.
+
+        * Configurations/SDKVariant.xcconfig:
+
+2022-03-11  Michael Saboff  <msaboff@apple.com>
+
+        WebGPU Catalyst builds fail when using the system content path
+        https://bugs.webkit.org/show_bug.cgi?id=237790
+
+        Reviewed by Saam Barati.
+
+        The value of ALTERNATE_ROOT_PATH should be set to the framework directory instead of
+        DYLIB_INSTALL_NAME_BASE since it will include the system content path as a prefix for
+        Catalyst builds.
+         This is similar to the construction of ALTERNATE_ROOT_PATH for the other frameworks.
+
+        * Configurations/WebGPU.xcconfig:
+
+2022-03-10  Michael Saboff  <msaboff@apple.com>
+
+        Catalyst JavaScriptCore, WebCore, WebKitLegacy, and WebKit shouldn't be copied to the Secondary Path
+        https://bugs.webkit.org/show_bug.cgi?id=237748
+
+        Reviewed by Mark Lam.
+
+        Updated the configuration to exclude copying Catalyst build products to the secondary path.
+
+        * Configurations/WebGPU.xcconfig:
+
+2022-03-09  Robin Morisset  <rmorisset@apple.com>
+
+        [WGSL] Implement enough of the Parser for the simplest shaders
+        https://bugs.webkit.org/show_bug.cgi?id=237629
+
+        Reviewed by Myles Maxfield.
+
+        The specific "hello-world"-like shaders that I want this to be able to parse are included in WGSLParserTests.mm.
+
+        The general approach to the parser, such as its templating by the Lexer, is directly copied from JSC's parser.
+        Things are a bit simpler for us as WGSL is such a simple language to parse, being strictly LR(1).
+
+        In this patch I also deleted BlockAttribute, since this attribute was recently removed from the language.
+
+        * WGSL/AST/Attribute.h:
+        (WGSL::AST::Attribute::isBlock const): Deleted.
+        * WGSL/AST/Expressions/TypeConversion.h:
+        * WGSL/AST/FunctionDecl.h:
+        * WGSL/AST/ShaderModule.h:
+        * WGSL/AST/Statements/AssignmentStatement.h:
+        * WGSL/AST/StructureDecl.h:
+        * WGSL/AST/TypeDecl.h:
+        (WGSL::AST::ParameterizedType::stringViewToKind):
+        * WGSL/CompilationMessage.h:
+        * WGSL/Parser.cpp: Added.
+        (WGSL::Parser::Parser):
+        (WGSL::Parser::current):
+        (WGSL::parse):
+        (WGSL::parseLChar):
+        (WGSL::parseUChar):
+        (WGSL::Parser<Lexer>::consumeType):
+        (WGSL::Parser<Lexer>::consume):
+        (WGSL::Parser<Lexer>::parseShader):
+        (WGSL::Parser<Lexer>::parseGlobalDecl):
+        (WGSL::Parser<Lexer>::parseAttributes):
+        (WGSL::Parser<Lexer>::parseAttribute):
+        (WGSL::Parser<Lexer>::parseStructDecl):
+        (WGSL::Parser<Lexer>::parseStructMember):
+        (WGSL::Parser<Lexer>::parseTypeDecl):
+        (WGSL::Parser<Lexer>::parseTypeDeclAfterIdentifier):
+        (WGSL::Parser<Lexer>::parseGlobalVariableDecl):
+        (WGSL::Parser<Lexer>::parseVariableQualifier):
+        (WGSL::Parser<Lexer>::parseStorageClass):
+        (WGSL::Parser<Lexer>::parseAccessMode):
+        (WGSL::Parser<Lexer>::parseFunctionDecl):
+        (WGSL::Parser<Lexer>::parseParameter):
+        (WGSL::Parser<Lexer>::parseStatement):
+        (WGSL::Parser<Lexer>::parseCompoundStatement):
+        (WGSL::Parser<Lexer>::parseReturnStatement):
+        (WGSL::Parser<Lexer>::parseShortCircuitOrExpression):
+        (WGSL::Parser<Lexer>::parseRelationalExpression):
+        (WGSL::Parser<Lexer>::parseShiftExpression):
+        (WGSL::Parser<Lexer>::parseAdditiveExpression):
+        (WGSL::Parser<Lexer>::parseMultiplicativeExpression):
+        (WGSL::Parser<Lexer>::parseUnaryExpression):
+        (WGSL::Parser<Lexer>::parseSingularExpression):
+        (WGSL::Parser<Lexer>::parsePostfixExpression):
+        (WGSL::Parser<Lexer>::parsePrimaryExpression):
+        (WGSL::Parser<Lexer>::parseExpression):
+        (WGSL::Parser<Lexer>::parseLHSExpression):
+        (WGSL::Parser<Lexer>::parseCoreLHSExpression):
+        (WGSL::Parser<Lexer>::parseArgumentExpressionList):
+        * WGSL/Parser.h: Copied from Source/WebGPU/WGSL/CompilationMessage.h.
+        * WGSL/WGSL.cpp:
+        (WGSL::staticCheck):
+        (WGSL::SuccessfulCheck::SuccessfulCheck):
+        * WGSL/WGSL.h:
+        * WebGPU.xcodeproj/project.pbxproj:
+
+2022-03-08  Robin Morisset  <rmorisset@apple.com>
+
+        [WGSL] Add enough of the AST for the simplest shaders
+        https://bugs.webkit.org/show_bug.cgi?id=236655
+
+        Reviewed by Myles Maxfield.
+
+        These AST nodes are just those required for the most trivial graphics and compute shaders.
+        I used the machinery from wtf/TypeCasts as suggested by Myles in https://bugs.webkit.org/show_bug.cgi?id=233276.
+        Currently all of the code for these nodes is included in WGSL.cpp to verify that they build. This will be removed in the parser patch.
+
+        Attributes are added in setAttributes methods instead of being part of the constructors, because it can fail, and returning an error from a constructor is tricky.
+
+        * WGSL/AST/Attribute.h: Added.
+        (WGSL::AST::Attribute::Attribute):
+        (WGSL::AST::Attribute::kind const):
+        (WGSL::AST::Attribute::isBlock const):
+        (WGSL::AST::Attribute::isGroup const):
+        (WGSL::AST::Attribute::isBinding const):
+        (WGSL::AST::Attribute::isStage const):
+        (WGSL::AST::Attribute::isLocation const):
+        (WGSL::AST::Attribute::isBuiltin const):
+        (WGSL::AST::BlockAttribute::BlockAttribute):
+        (WGSL::AST::GroupAttribute::GroupAttribute):
+        (WGSL::AST::GroupAttribute::group const):
+        (WGSL::AST::BindingAttribute::BindingAttribute):
+        (WGSL::AST::BindingAttribute::binding const):
+        (WGSL::AST::StageAttribute::StageAttribute):
+        (WGSL::AST::StageAttribute::stage const):
+        (WGSL::AST::BuiltinAttribute::BuiltinAttribute):
+        (WGSL::AST::BuiltinAttribute::name const):
+        (WGSL::AST::LocationAttribute::LocationAttribute):
+        (WGSL::AST::LocationAttribute::location const):
+        * WGSL/AST/Expression.h: Added.
+        (WGSL::AST::Expression::Expression):
+        (WGSL::AST::Expression::kind const):
+        (WGSL::AST::Expression::isBoolLiteral const):
+        (WGSL::AST::Expression::isInt32Literal const):
+        (WGSL::AST::Expression::isUInt32Literal const):
+        (WGSL::AST::Expression::isFloat32Literal const):
+        (WGSL::AST::Expression::isIdentifier const):
+        (WGSL::AST::Expression::isStructureAccess const):
+        (WGSL::AST::Expression::isTypeConversion const):
+        * WGSL/AST/Expressions/IdentifierExpression.h: Added.
+        (WGSL::AST::IdentifierExpression::IdentifierExpression):
+        (WGSL::AST::IdentifierExpression::identifier const):
+        * WGSL/AST/Expressions/LiteralExpressions.h: Added.
+        (WGSL::AST::BoolLiteral::BoolLiteral):
+        (WGSL::AST::BoolLiteral::value const):
+        (WGSL::AST::Int32Literal::Int32Literal):
+        (WGSL::AST::Int32Literal::value const):
+        (WGSL::AST::Uint32Literal::Uint32Literal):
+        (WGSL::AST::Uint32Literal::value const):
+        (WGSL::AST::Float32Literal::Float32Literal):
+        (WGSL::AST::Float32Literal::value const):
+        * WGSL/AST/Expressions/StructureAccess.h: Added.
+        (WGSL::AST::StructureAccess::StructureAccess):
+        (WGSL::AST::StructureAccess::base):
+        (WGSL::AST::StructureAccess::fieldName const):
+        * WGSL/AST/Expressions/TypeConversion.h: Added.
+        (WGSL::AST::TypeConversion::TypeConversion):
+        (WGSL::AST::TypeConversion::typeDecl):
+        (WGSL::AST::TypeConversion::arguments):
+        * WGSL/AST/FunctionDecl.h: Added.
+        (WGSL::AST::Parameter::Parameter):
+        (WGSL::AST::Parameter::setAttributes):
+        (WGSL::AST::Parameter::builtin const):
+        (WGSL::AST::Parameter::location const):
+        (WGSL::AST::Parameter::name const):
+        (WGSL::AST::Parameter::type):
+        (WGSL::AST::FunctionDecl::FunctionDecl):
+        (WGSL::AST::FunctionDecl::setAttributes):
+        (WGSL::AST::FunctionDecl::setReturnAttributes):
+        (WGSL::AST::FunctionDecl::entryPointStage const):
+        (WGSL::AST::FunctionDecl::name const):
+        (WGSL::AST::FunctionDecl::parameters):
+        (WGSL::AST::FunctionDecl::returnBuiltin const):
+        (WGSL::AST::FunctionDecl::returnLocation const):
+        (WGSL::AST::FunctionDecl::maybeReturnType):
+        (WGSL::AST::FunctionDecl::body):
+        * WGSL/AST/GlobalDecl.h: Added.
+        (WGSL::AST::GlobalDecl::GlobalDecl):
+        (WGSL::AST::GlobalDecl::kind const):
+        (WGSL::AST::GlobalDecl::isGlobalVariable const):
+        (WGSL::AST::GlobalDecl::isStruct const):
+        (WGSL::AST::GlobalDecl::isFunction const):
+        * WGSL/AST/GlobalDirective.h: Added.
+        (WGSL::AST::GlobalDirective::name const):
+        * WGSL/AST/GlobalVariableDecl.h: Added.
+        (WGSL::AST::GlobalVariableDecl::GlobalVariableDecl):
+        (WGSL::AST::GlobalVariableDecl::setAttributes):
+        (WGSL::AST::GlobalVariableDecl::group const):
+        (WGSL::AST::GlobalVariableDecl::binding const):
+        (WGSL::AST::GlobalVariableDecl::name const):
+        (WGSL::AST::GlobalVariableDecl::maybeQualifier):
+        (WGSL::AST::GlobalVariableDecl::maybeTypeDecl):
+        (WGSL::AST::GlobalVariableDecl::maybeInitializer):
+        * WGSL/AST/Shader.h: Renamed from Source/WebGPU/WGSL/AST.h.
+        * WGSL/AST/Statement.h: Added.
+        (WGSL::AST::Statement::Statement):
+        (WGSL::AST::Statement::kind const):
+        (WGSL::AST::Statement::isCompound const):
+        (WGSL::AST::Statement::isReturn const):
+        (WGSL::AST::Statement::isAssignment const):
+        * WGSL/AST/Statements/AssignmentStatement.h: Added.
+        (WGSL::AST::AssignmentStatement::AssignmentStatement):
+        (WGSL::AST::AssignmentStatement::maybeLhs):
+        (WGSL::AST::AssignmentStatement::rhs):
+        * WGSL/AST/Statements/ReturnStatement.h: Added.
+        (WGSL::AST::ReturnStatement::ReturnStatement):
+        (WGSL::AST::ReturnStatement::maybeExpression):
+        * WGSL/AST/StructureDecl.h: Added.
+        (WGSL::AST::StructMember::StructMember):
+        (WGSL::AST::StructMember::setAttributes):
+        (WGSL::AST::StructMember::builtin const):
+        (WGSL::AST::StructMember::location const):
+        (WGSL::AST::StructMember::name const):
+        (WGSL::AST::StructMember::type):
+        (WGSL::AST::StructDecl::StructDecl):
+        (WGSL::AST::StructDecl::setAttributes):
+        (WGSL::AST::StructDecl::isBlock const):
+        (WGSL::AST::StructDecl::name const):
+        (WGSL::AST::StructDecl::members):
+        * WGSL/AST/TypeDecl.h: Added.
+        (WGSL::AST::TypeDecl::TypeDecl):
+        (WGSL::AST::TypeDecl::kind const):
+        (WGSL::AST::TypeDecl::isNamed const):
+        (WGSL::AST::TypeDecl::isParameterized const):
+        * WGSL/AST/VariableQualifier.h: Added.
+        (WGSL::AST::VariableQualifier::VariableQualifier):
+        (WGSL::AST::VariableQualifier::storageClass const):
+        (WGSL::AST::VariableQualifier::accessMode const):
+        * WGSL/ASTNode.h: Added.
+        (WGSL::AST::ASTNode::ASTNode):
+        (WGSL::AST::ASTNode::span const):
+        * WGSL/CompilationMessage.cpp: Added.
+        (WGSL::CompilationMessage::dump const):
+        * WGSL/CompilationMessage.h: Added.
+        (WGSL::CompilationMessage::CompilationMessage):
+        * WGSL/WGSL.cpp:
+        * WGSL/WGSL.h:
+        * WebGPU.xcodeproj/project.pbxproj:
+
+2022-03-08  Robin Morisset  <rmorisset@apple.com>
+
+        [WGSL] The lexer should use the functions from wtf/ASCIICType.h
+        https://bugs.webkit.org/show_bug.cgi?id=236783
+
+        Reviewed by Darin Adler.
+
+        I was not aware of these functions when I wrote the lexer, and I ended up reimplementing them.
+        Reusing them is both simpler, and slightly more efficient as some of them (especially isASCIISpace) have been optimized.
+
+        * WGSL/Lexer.cpp:
+        (WGSL::Lexer<T>::lex):
+        (WGSL::Lexer<T>::skipWhitespace):
+        (WGSL::Lexer<T>::parseDecimalInteger):
+        (WGSL::Lexer<T>::parseDecimalFloatExponent):
+        (WGSL::Lexer<T>::isWhiteSpace): Deleted.
+        (WGSL::Lexer<T>::isIdentifierStart): Deleted.
+        (WGSL::Lexer<T>::isValidIdentifierCharacter): Deleted.
+        (WGSL::Lexer<T>::isDecimal): Deleted.
+        (WGSL::Lexer<T>::isHexadecimal): Deleted.
+        (WGSL::Lexer<T>::readDecimal): Deleted.
+        (WGSL::Lexer<T>::readHexadecimal): Deleted.
+        * WGSL/Lexer.h:
+
+2022-03-07  Michael Saboff  <msaboff@apple.com>
+
+        Catalyst build failure in WebGPU when building with SYSTEM_CONTENT_PATH
+        https://bugs.webkit.org/show_bug.cgi?id=237542
+
+        Reviewed by Saam Barati.
+
+        Updated create-symlink-to-altroot.sh to create the directory containing the output if is doesn't
+        exist in lieu of specifying an output file in the build step.
+        This is the way that other projects are configured.
+
+        * Scripts/create-symlink-to-altroot.sh:
+        * WebGPU.xcodeproj/project.pbxproj:
+
+2022-03-06  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Use C++ references instead of pointers where applicable
+        https://bugs.webkit.org/show_bug.cgi?id=237508
+
+        Reviewed by Tim Horton.
+
+        The header we're implementing uses pointers because it's a C header.
+        Our internal implementation can use references instead.
+
+        * WebGPU/Adapter.h:
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::getLimits):
+        (WebGPU::Adapter::getProperties):
+        (WebGPU::Adapter::requestDevice):
+        (wgpuAdapterGetLimits):
+        (wgpuAdapterGetProperties):
+        (wgpuAdapterRequestDevice):
+        (wgpuAdapterRequestDeviceWithBlock):
+        * WebGPU/BindGroup.mm:
+        (WebGPU::Device::createBindGroup):
+        * WebGPU/BindGroupLayout.mm:
+        (WebGPU::Device::createBindGroupLayout):
+        * WebGPU/Buffer.mm:
+        (WebGPU::Device::createBuffer):
+        * WebGPU/CommandEncoder.h:
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::Device::createCommandEncoder):
+        (WebGPU::CommandEncoder::beginComputePass):
+        (WebGPU::CommandEncoder::beginRenderPass):
+        (WebGPU::CommandEncoder::copyBufferToTexture):
+        (WebGPU::CommandEncoder::copyTextureToBuffer):
+        (WebGPU::CommandEncoder::copyTextureToTexture):
+        (WebGPU::CommandEncoder::finish):
+        (wgpuCommandEncoderBeginComputePass):
+        (wgpuCommandEncoderBeginRenderPass):
+        (wgpuCommandEncoderCopyBufferToTexture):
+        (wgpuCommandEncoderCopyTextureToBuffer):
+        (wgpuCommandEncoderCopyTextureToTexture):
+        (wgpuCommandEncoderFinish):
+        * WebGPU/ComputePipeline.mm:
+        (WebGPU::Device::createComputePipeline):
+        (WebGPU::Device::createComputePipelineAsync):
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        (WebGPU::Device::getLimits):
+        (wgpuDeviceCreateBindGroup):
+        (wgpuDeviceCreateBindGroupLayout):
+        (wgpuDeviceCreateBuffer):
+        (wgpuDeviceCreateCommandEncoder):
+        (wgpuDeviceCreateComputePipeline):
+        (wgpuDeviceCreateComputePipelineAsync):
+        (wgpuDeviceCreateComputePipelineAsyncWithBlock):
+        (wgpuDeviceCreatePipelineLayout):
+        (wgpuDeviceCreateQuerySet):
+        (wgpuDeviceCreateRenderBundleEncoder):
+        (wgpuDeviceCreateRenderPipeline):
+        (wgpuDeviceCreateRenderPipelineAsync):
+        (wgpuDeviceCreateRenderPipelineAsyncWithBlock):
+        (wgpuDeviceCreateSampler):
+        (wgpuDeviceCreateShaderModule):
+        (wgpuDeviceCreateSwapChain):
+        (wgpuDeviceCreateTexture):
+        (wgpuDeviceGetLimits):
+        * WebGPU/Instance.h:
+        * WebGPU/Instance.mm:
+        (WebGPU::Instance::create):
+        (WebGPU::Instance::createSurface):
+        (WebGPU::Instance::requestAdapter):
+        (wgpuCreateInstance):
+        (wgpuInstanceCreateSurface):
+        (wgpuInstanceRequestAdapter):
+        (wgpuInstanceRequestAdapterWithBlock):
+        * WebGPU/PipelineLayout.mm:
+        (WebGPU::Device::createPipelineLayout):
+        * WebGPU/QuerySet.mm:
+        (WebGPU::Device::createQuerySet):
+        * WebGPU/Queue.h:
+        * WebGPU/Queue.mm:
+        (WebGPU::Queue::writeTexture):
+        (wgpuQueueWriteTexture):
+        * WebGPU/RenderBundleEncoder.h:
+        * WebGPU/RenderBundleEncoder.mm:
+        (WebGPU::Device::createRenderBundleEncoder):
+        (WebGPU::RenderBundleEncoder::finish):
+        (wgpuRenderBundleEncoderFinish):
+        * WebGPU/RenderPassEncoder.h:
+        * WebGPU/RenderPassEncoder.mm:
+        (WebGPU::RenderPassEncoder::setBlendConstant):
+        (wgpuRenderPassEncoderSetBlendConstant):
+        * WebGPU/RenderPipeline.mm:
+        (WebGPU::Device::createRenderPipeline):
+        (WebGPU::Device::createRenderPipelineAsync):
+        * WebGPU/Sampler.mm:
+        (WebGPU::Device::createSampler):
+        * WebGPU/ShaderModule.h:
+        * WebGPU/ShaderModule.mm:
+        (WebGPU::findShaderModuleParameters):
+        (WebGPU::Device::createShaderModule):
+        (WebGPU::ShaderModule::getCompilationInfo):
+        (wgpuShaderModuleGetCompilationInfo):
+        (wgpuShaderModuleGetCompilationInfoWithBlock):
+        * WebGPU/SwapChain.mm:
+        (WebGPU::Device::createSwapChain):
+        * WebGPU/Texture.h:
+        * WebGPU/Texture.mm:
+        (WebGPU::Device::createTexture):
+        (WebGPU::Texture::createView):
+        (wgpuTextureCreateView):
+
+2022-03-03  Michael Saboff  <msaboff@apple.com>
+
+        Copy WebKit frameworks and XPC processes to Secondary Path
+        https://bugs.webkit.org/show_bug.cgi?id=237394
+
+        Reviewed by Saam Barati.
+
+        Added build configuration variables and scripts to copy the built Framework to the SYSTEM_SECONDARY_CONTENT_PATH
+        when it is set.
+
+        * Configurations/WebGPU.xcconfig:
+        * Scripts/copy-frameworks-to-secondary-path.sh: Added.
+        * WebGPU.xcodeproj/project.pbxproj:
+
+2022-03-03  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Abide by the WebKit Style Guide
+        https://bugs.webkit.org/show_bug.cgi?id=237437
+
+        Reviewed by Darin Adler.
+
+        The style guide says "Do not place a space between the type name and the protocol name."
+
+        * WebGPU/Adapter.h:
+        (WebGPU::Adapter::create):
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::Adapter):
+        (WebGPU::deviceMeetsRequiredLimits):
+        * WebGPU/BindGroup.h:
+        (WebGPU::BindGroup::create):
+        (WebGPU::BindGroup::vertexArgumentBuffer const):
+        (WebGPU::BindGroup::fragmentArgumentBuffer const):
+        (WebGPU::BindGroup::computeArgumentBuffer const):
+        * WebGPU/BindGroup.mm:
+        (WebGPU::Device::createBindGroup):
+        (WebGPU::BindGroup::BindGroup):
+        * WebGPU/BindGroupLayout.h:
+        (WebGPU::BindGroupLayout::create):
+        (WebGPU::BindGroupLayout::vertexArgumentEncoder const):
+        (WebGPU::BindGroupLayout::fragmentArgumentEncoder const):
+        (WebGPU::BindGroupLayout::computeArgumentEncoder const):
+        * WebGPU/BindGroupLayout.mm:
+        (WebGPU::Device::createBindGroupLayout):
+        (WebGPU::BindGroupLayout::BindGroupLayout):
+        * WebGPU/Buffer.h:
+        (WebGPU::Buffer::create):
+        (WebGPU::Buffer::buffer const):
+        * WebGPU/Buffer.mm:
+        (WebGPU::Buffer::Buffer):
+        * WebGPU/CommandBuffer.h:
+        (WebGPU::CommandBuffer::create):
+        (WebGPU::CommandBuffer::commandBuffer const):
+        * WebGPU/CommandBuffer.mm:
+        (WebGPU::CommandBuffer::CommandBuffer):
+        * WebGPU/CommandEncoder.h:
+        (WebGPU::CommandEncoder::create):
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::CommandEncoder::CommandEncoder):
+        * WebGPU/ComputePassEncoder.h:
+        (WebGPU::ComputePassEncoder::create):
+        * WebGPU/ComputePassEncoder.mm:
+        (WebGPU::ComputePassEncoder::ComputePassEncoder):
+        * WebGPU/ComputePipeline.h:
+        (WebGPU::ComputePipeline::create):
+        (WebGPU::ComputePipeline::computePipelineState const):
+        * WebGPU/ComputePipeline.mm:
+        (WebGPU::createLibrary):
+        (WebGPU::createFunction):
+        (WebGPU::createComputePipelineState):
+        (WebGPU::ComputePipeline::ComputePipeline):
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        (WebGPU::Device::create):
+        (WebGPU::Device::Device):
+        * WebGPU/Instance.mm:
+        (WebGPU::sortedDevices):
+        (WebGPU::Instance::requestAdapter):
+        * WebGPU/QuerySet.h:
+        (WebGPU::QuerySet::create):
+        (WebGPU::QuerySet::counterSampleBuffer const):
+        * WebGPU/QuerySet.mm:
+        (WebGPU::QuerySet::QuerySet):
+        * WebGPU/Queue.h:
+        (WebGPU::Queue::create):
+        * WebGPU/Queue.mm:
+        (WebGPU::Queue::Queue):
+        * WebGPU/RenderBundle.h:
+        (WebGPU::RenderBundle::create):
+        (WebGPU::RenderBundle::indirectCommandBuffer const):
+        * WebGPU/RenderBundle.mm:
+        (WebGPU::RenderBundle::RenderBundle):
+        * WebGPU/RenderBundleEncoder.h:
+        (WebGPU::RenderBundleEncoder::create):
+        * WebGPU/RenderBundleEncoder.mm:
+        (WebGPU::RenderBundleEncoder::RenderBundleEncoder):
+        * WebGPU/RenderPassEncoder.h:
+        (WebGPU::RenderPassEncoder::create):
+        * WebGPU/RenderPassEncoder.mm:
+        (WebGPU::RenderPassEncoder::RenderPassEncoder):
+        * WebGPU/RenderPipeline.h:
+        (WebGPU::RenderPipeline::create):
+        (WebGPU::RenderPipeline::renderPipelineState const):
+        * WebGPU/RenderPipeline.mm:
+        (WebGPU::RenderPipeline::RenderPipeline):
+        * WebGPU/Sampler.h:
+        (WebGPU::Sampler::create):
+        (WebGPU::Sampler::samplerState const):
+        * WebGPU/Sampler.mm:
+        (WebGPU::Sampler::Sampler):
+        * WebGPU/ShaderModule.h:
+        (WebGPU::ShaderModule::create):
+        (WebGPU::ShaderModule::library const):
+        * WebGPU/ShaderModule.mm:
+        (WebGPU::ShaderModule::createLibrary):
+        (WebGPU::earlyCompileShaderModule):
+        (WebGPU::ShaderModule::ShaderModule):
+        * WebGPU/Texture.h:
+        (WebGPU::Texture::create):
+        (WebGPU::Texture::texture const):
+        * WebGPU/Texture.mm:
+        (WebGPU::Texture::Texture):
+        * WebGPU/TextureView.h:
+        (WebGPU::TextureView::create):
+        (WebGPU::TextureView::texture const):
+        * WebGPU/TextureView.mm:
+        (WebGPU::TextureView::TextureView):
+
+2022-02-22  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Fix watchOS build
+        https://bugs.webkit.org/show_bug.cgi?id=237064
+
+        Unreviewed.
+
+        32-bit devices require some casts.
+
+        * WebGPU/BindGroup.mm:
+        (WebGPU::Device::createBindGroup):
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Fix release build
+        https://bugs.webkit.org/show_bug.cgi?id=237004
+
+        Unreviewed.
+
+        If you include WTF, you must have set NDEBUG in release builds.
+
+        * Configurations/Base.xcconfig:
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Fix iOS build
+        https://bugs.webkit.org/show_bug.cgi?id=237000
+
+        The lowPower selector doesn't exist on iOS.
+
+        Unreviewed.
+
+        * WebGPU/Instance.mm:
+        (WebGPU::sortedDevices):
+        (WebGPU::Instance::requestAdapter):
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Tracer bullet part 12: Migrate from C function callbacks to blocks
+        https://bugs.webkit.org/show_bug.cgi?id=236934
+
+        Reviewed by Dean Jackson.
+
+        For all the C function pointer / userdata pairs, simply create a parallel entry point which accepts a block instead.
+
+        * WebGPU/Adapter.mm:
+        (wgpuAdapterRequestDeviceWithBlock):
+        * WebGPU/Buffer.mm:
+        (wgpuBufferMapAsyncWithBlock):
+        * WebGPU/CommandEncoder.mm:
+        (wgpuCommandEncoderSetLabel):
+        * WebGPU/ComputePipeline.mm:
+        (wgpuComputePipelineSetLabel):
+        * WebGPU/Device.mm:
+        (wgpuDeviceCreateComputePipelineAsyncWithBlock):
+        (wgpuDeviceCreateRenderPipelineAsyncWithBlock):
+        (wgpuDevicePopErrorScopeWithBlock):
+        (wgpuDeviceSetDeviceLostCallbackWithBlock):
+        (wgpuDeviceSetUncapturedErrorCallbackWithBlock):
+        * WebGPU/Instance.mm:
+        (wgpuInstanceRequestAdapterWithBlock):
+        * WebGPU/Queue.mm:
+        (wgpuQueueOnSubmittedWorkDoneWithBlock):
+        (wgpuQueueSetLabel):
+        * WebGPU/RenderPipeline.mm:
+        (wgpuRenderPipelineSetLabel):
+        * WebGPU/ShaderModule.mm:
+        (wgpuShaderModuleGetCompilationInfoWithBlock):
+        (wgpuShaderModuleSetLabel):
+        * WebGPU/Surface.mm:
+        (wgpuSurfaceGetPreferredFormat):
+        * WebGPU/SwapChain.mm:
+        (wgpuSwapChainPresent):
+        * WebGPU/WebGPUExt.h:
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Tracer bullet part 11: Implement shader creation methods
+        https://bugs.webkit.org/show_bug.cgi?id=236933
+
+        Reviewed by Dean Jackson.
+
+        This implements Device::createShaderModule() and Device::createComputePipeline(). The async versions (neither
+        the WebGPU nor the Metal flavor) aren't implemented yet; this is just the first basic implementation.
+
+        * WebGPU/ComputePipeline.mm:
+        (WebGPU::createLibrary):
+        (WebGPU::createConstantValues):
+        (WebGPU::createFunction):
+        (WebGPU::createComputePipelineState):
+        (WebGPU::Device::createComputePipeline):
+        (WebGPU::Device::createComputePipelineAsync):
+        * WebGPU/PipelineLayout.h:
+        * WebGPU/PipelineLayout.mm:
+        (WebGPU::PipelineLayout::operator== const):
+        (WebGPU::PipelineLayout::operator!= const):
+        * WebGPU/ShaderModule.h:
+        (WebGPU::ShaderModule::create):
+        * WebGPU/ShaderModule.mm:
+        (WebGPU::findShaderModuleParameters):
+        (WebGPU::ShaderModule::createLibrary):
+        (WebGPU::earlyCompileShaderModule):
+        (WebGPU::Device::createShaderModule):
+        (WebGPU::ShaderModule::ShaderModule):
+        (WebGPU::CompilationMessageData::CompilationMessageData):
+        (WebGPU::convertMessages):
+        (WebGPU::ShaderModule::getCompilationInfo):
+        (WebGPU::ShaderModule::setLabel):
+        (WebGPU::ShaderModule::convertPipelineLayout):
+        (WebGPU::ShaderModule::ast const):
+        (WebGPU::ShaderModule::pipelineLayoutHint const):
+        (WebGPU::ShaderModule::entryPointInformation const):
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Tracer bullet part 10: Implement setLabel() and Metal accessors
+        https://bugs.webkit.org/show_bug.cgi?id=236910
+
+        Reviewed by Dean Jackson.
+
+        By adding a few various trivial functions in classes that need them, this patch completely finishes the
+        implementation of CommandBuffer, QuerySet, RenderBundle, Sampler, and TextureView classes (other than
+        their creation functions).
+
+        * WebGPU/Buffer.mm:
+        (WebGPU::Buffer::setLabel):
+        * WebGPU/CommandBuffer.h:
+        (WebGPU::CommandBuffer::commandBuffer const):
+        * WebGPU/CommandBuffer.mm:
+        (WebGPU::CommandBuffer::CommandBuffer):
+        (WebGPU::CommandBuffer::setLabel):
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::CommandEncoder::CommandEncoder):
+        (WebGPU::CommandEncoder::setLabel):
+        * WebGPU/ComputePassEncoder.mm:
+        (WebGPU::ComputePassEncoder::ComputePassEncoder):
+        (WebGPU::ComputePassEncoder::setLabel):
+        * WebGPU/ComputePipeline.h:
+        (WebGPU::ComputePipeline::computePipelineState const):
+        * WebGPU/ComputePipeline.mm:
+        (WebGPU::ComputePipeline::ComputePipeline):
+        (WebGPU::ComputePipeline::setLabel):
+        * WebGPU/QuerySet.h:
+        (WebGPU::QuerySet::counterSampleBuffer const):
+        * WebGPU/QuerySet.mm:
+        (WebGPU::QuerySet::QuerySet):
+        (WebGPU::QuerySet::setLabel):
+        * WebGPU/Queue.mm:
+        (WebGPU::Queue::Queue):
+        (WebGPU::Queue::setLabel):
+        * WebGPU/RenderBundle.h:
+        (WebGPU::RenderBundle::indirectCommandBuffer const):
+        * WebGPU/RenderBundle.mm:
+        (WebGPU::RenderBundle::RenderBundle):
+        (WebGPU::RenderBundle::setLabel):
+        * WebGPU/RenderBundleEncoder.mm:
+        (WebGPU::RenderBundleEncoder::RenderBundleEncoder):
+        (WebGPU::RenderBundleEncoder::setLabel):
+        * WebGPU/RenderPassEncoder.mm:
+        (WebGPU::RenderPassEncoder::RenderPassEncoder):
+        (WebGPU::RenderPassEncoder::setLabel):
+        * WebGPU/RenderPipeline.h:
+        (WebGPU::RenderPipeline::renderPipelineState const):
+        * WebGPU/RenderPipeline.mm:
+        (WebGPU::RenderPipeline::RenderPipeline):
+        (WebGPU::RenderPipeline::setLabel):
+        * WebGPU/Sampler.mm:
+        (WebGPU::Sampler::setLabel):
+        * WebGPU/ShaderModule.h:
+        (WebGPU::ShaderModule::library const):
+        * WebGPU/ShaderModule.mm:
+        (WebGPU::ShaderModule::ShaderModule):
+        (WebGPU::ShaderModule::setLabel):
+        * WebGPU/Texture.h:
+        (WebGPU::Texture::texture const):
+        * WebGPU/Texture.mm:
+        (WebGPU::Texture::Texture):
+        (WebGPU::Texture::setLabel):
+        * WebGPU/TextureView.mm:
+        (WebGPU::TextureView::setLabel):
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Tracer bullet part 9: Basic implementation of bindings
+        https://bugs.webkit.org/show_bug.cgi?id=236903
+
+        Reviewed by Dean Jackson.
+
+        This is a basic implementation of the BindGroup, BindGroupLayout, and PipelineLayout methods.
+        Eventually we'll want to suballocate multiple BindGroups so they coexist within the same Buffer,
+        but this is an initial simple implementation that doesn't do that.
+
+        * WebGPU/BindGroup.h:
+        (WebGPU::BindGroup::vertexArgumentBuffer const):
+        (WebGPU::BindGroup::fragmentArgumentBuffer const):
+        (WebGPU::BindGroup::computeArgumentBuffer const):
+        * WebGPU/BindGroup.mm:
+        (WebGPU::bufferIsPresent):
+        (WebGPU::samplerIsPresent):
+        (WebGPU::textureViewIsPresent):
+        (WebGPU::Device::createBindGroup):
+        (WebGPU::BindGroup::BindGroup):
+        (WebGPU::BindGroup::setLabel):
+        * WebGPU/BindGroupLayout.h:
+        (WebGPU::BindGroupLayout::vertexArgumentEncoder const):
+        (WebGPU::BindGroupLayout::fragmentArgumentEncoder const):
+        (WebGPU::BindGroupLayout::computeArgumentEncoder const):
+        * WebGPU/BindGroupLayout.mm:
+        (WebGPU::isPresent):
+        (WebGPU::createArgumentDescriptor):
+        (WebGPU::Device::createBindGroupLayout):
+        (WebGPU::BindGroupLayout::BindGroupLayout):
+        (WebGPU::BindGroupLayout::setLabel):
+        (WebGPU::BindGroupLayout::encodedLength const):
+        * WebGPU/Buffer.h:
+        (WebGPU::Buffer::buffer const):
+        * WebGPU/Buffer.mm:
+        (WebGPU::Buffer::Buffer):
+        * WebGPU/PipelineLayout.h:
+        (WebGPU::PipelineLayout::create):
+        (WebGPU::PipelineLayout::numberOfBindGroupLayouts const):
+        (WebGPU::PipelineLayout::bindGroupLayout const):
+        * WebGPU/PipelineLayout.mm:
+        (WebGPU::Device::createPipelineLayout):
+        (WebGPU::PipelineLayout::PipelineLayout):
+        (WebGPU::PipelineLayout::setLabel):
+        * WebGPU/Sampler.h:
+        (WebGPU::Sampler::samplerState const):
+        * WebGPU/Sampler.mm:
+        (WebGPU::Sampler::Sampler):
+        * WebGPU/TextureView.h:
+        (WebGPU::TextureView::texture const):
+        * WebGPU/TextureView.mm:
+        (WebGPU::TextureView::TextureView):
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Tracer bullet part 8: Basic implementation of device creation routines
+        https://bugs.webkit.org/show_bug.cgi?id=236902
+
+        Reviewed by Dean Jackson.
+
+        This is a basic implementation of the Instance, Adapter, and Device methods. Device limits are not
+        implemented yet, so for now we claim every limits is 0.
+
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::Adapter):
+        (WebGPU::Adapter::enumerateFeatures):
+        (WebGPU::Adapter::getLimits):
+        (WebGPU::Adapter::getProperties):
+        (WebGPU::Adapter::hasFeature):
+        (WebGPU::deviceMeetsRequiredLimits):
+        (WebGPU::Adapter::requestDevice):
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        (WebGPU::Device::create):
+        (WebGPU::Device::Device):
+        (WebGPU::Device::destroy):
+        (WebGPU::Device::enumerateFeatures):
+        (WebGPU::Device::getLimits):
+        (WebGPU::Device::getQueue):
+        (WebGPU::Device::hasFeature):
+        (WebGPU::Device::popErrorScope):
+        (WebGPU::Device::pushErrorScope):
+        (WebGPU::Device::setDeviceLostCallback):
+        (WebGPU::Device::setUncapturedErrorCallback):
+        (WebGPU::Device::setLabel):
+        * WebGPU/Instance.mm:
+        (WebGPU::sortedDevices):
+        (WebGPU::Instance::requestAdapter):
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Tracer bullet part 7: Clean up includes a bit
+        https://bugs.webkit.org/show_bug.cgi?id=236900
+
+        Reviewed by Dean Jackson.
+
+        We can put includes that literally every file uses into a single place.
+
+        * WebGPU/Adapter.h:
+        * WebGPU/Adapter.mm:
+        * WebGPU/BindGroup.h:
+        * WebGPU/BindGroup.mm:
+        * WebGPU/BindGroupLayout.h:
+        * WebGPU/BindGroupLayout.mm:
+        * WebGPU/Buffer.h:
+        * WebGPU/Buffer.mm:
+        * WebGPU/CommandBuffer.h:
+        * WebGPU/CommandBuffer.mm:
+        * WebGPU/CommandEncoder.h:
+        * WebGPU/CommandEncoder.mm:
+        * WebGPU/ComputePassEncoder.h:
+        * WebGPU/ComputePassEncoder.mm:
+        * WebGPU/ComputePipeline.h:
+        * WebGPU/ComputePipeline.mm:
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        * WebGPU/Instance.h:
+        * WebGPU/Instance.mm:
+        * WebGPU/PipelineLayout.h:
+        * WebGPU/PipelineLayout.mm:
+        * WebGPU/QuerySet.h:
+        * WebGPU/QuerySet.mm:
+        * WebGPU/Queue.h:
+        * WebGPU/Queue.mm:
+        * WebGPU/RenderBundle.h:
+        * WebGPU/RenderBundle.mm:
+        * WebGPU/RenderBundleEncoder.h:
+        * WebGPU/RenderBundleEncoder.mm:
+        * WebGPU/RenderPassEncoder.h:
+        * WebGPU/RenderPassEncoder.mm:
+        * WebGPU/RenderPipeline.h:
+        * WebGPU/RenderPipeline.mm:
+        * WebGPU/Sampler.h:
+        * WebGPU/Sampler.mm:
+        * WebGPU/ShaderModule.h:
+        * WebGPU/ShaderModule.mm:
+        * WebGPU/Surface.h:
+        * WebGPU/Surface.mm:
+        * WebGPU/SwapChain.h:
+        * WebGPU/SwapChain.mm:
+        * WebGPU/Texture.h:
+        * WebGPU/Texture.mm:
+        * WebGPU/TextureView.h:
+        * WebGPU/TextureView.mm:
+        * WebGPU/config.h:
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Tracer bullet part 6: Give a RunLoop to Instance
+        https://bugs.webkit.org/show_bug.cgi?id=236899
+
+        Reviewed by Dean Jackson.
+
+        The shared header has a function, wgpuInstanceProcessEvents(), which is supposed
+        to synchronously call all outstanding callbacks. A natural way to do this is to
+        hook this up to [NSRunLoop runMode:beforeDate:].
+
+        * WebGPU/Instance.h:
+        (WebGPU::Instance::runLoop const):
+        (WebGPU::Instance::create): Deleted.
+        * WebGPU/Instance.mm:
+        (WebGPU::Instance::create):
+        (WebGPU::Instance::Instance):
+        (WebGPU::Instance::createSurface):
+        (WebGPU::Instance::processEvents):
+        (wgpuCreateInstance):
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Tracer bullet part 5: Give Metal objects to WebGPU objects
+        https://bugs.webkit.org/show_bug.cgi?id=236898
+
+        Reviewed by Dean Jackson.
+
+        Each WebGPU object gets its own backing Metal object.
+
+        * WebGPU/Adapter.h:
+        (WebGPU::Adapter::create):
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::Adapter):
+        * WebGPU/BindGroup.h:
+        (WebGPU::BindGroup::create):
+        * WebGPU/BindGroup.mm:
+        (WebGPU::Device::createBindGroup):
+        (WebGPU::BindGroup::BindGroup):
+        * WebGPU/BindGroupLayout.h:
+        (WebGPU::BindGroupLayout::create):
+        * WebGPU/BindGroupLayout.mm:
+        (WebGPU::Device::createBindGroupLayout):
+        (WebGPU::BindGroupLayout::BindGroupLayout):
+        * WebGPU/Buffer.h:
+        (WebGPU::Buffer::create):
+        * WebGPU/Buffer.mm:
+        (WebGPU::Device::createBuffer):
+        (WebGPU::Buffer::Buffer):
+        * WebGPU/CommandBuffer.h:
+        (WebGPU::CommandBuffer::create):
+        * WebGPU/CommandBuffer.mm:
+        (WebGPU::CommandBuffer::CommandBuffer):
+        * WebGPU/CommandEncoder.h:
+        (WebGPU::CommandEncoder::create):
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::Device::createCommandEncoder):
+        (WebGPU::CommandEncoder::CommandEncoder):
+        (WebGPU::CommandEncoder::beginComputePass):
+        (WebGPU::CommandEncoder::beginRenderPass):
+        (WebGPU::CommandEncoder::finish):
+        * WebGPU/ComputePassEncoder.h:
+        (WebGPU::ComputePassEncoder::create):
+        * WebGPU/ComputePassEncoder.mm:
+        (WebGPU::ComputePassEncoder::ComputePassEncoder):
+        * WebGPU/ComputePipeline.h:
+        (WebGPU::ComputePipeline::create):
+        * WebGPU/ComputePipeline.mm:
+        (WebGPU::Device::createComputePipeline):
+        (WebGPU::ComputePipeline::ComputePipeline):
+        (WebGPU::ComputePipeline::getBindGroupLayout):
+        * WebGPU/Device.h:
+        (WebGPU::Device::create): Deleted.
+        * WebGPU/Device.mm:
+        (WebGPU::Device::create):
+        (WebGPU::Device::Device):
+        (WebGPU::Device::getQueue):
+        * WebGPU/Instance.h:
+        * WebGPU/Instance.mm:
+        (WebGPU::Instance::requestAdapter):
+        (wgpuInstanceRequestAdapter):
+        * WebGPU/QuerySet.h:
+        (WebGPU::QuerySet::create):
+        * WebGPU/QuerySet.mm:
+        (WebGPU::Device::createQuerySet):
+        (WebGPU::QuerySet::QuerySet):
+        * WebGPU/Queue.h:
+        (WebGPU::Queue::create):
+        * WebGPU/Queue.mm:
+        (WebGPU::Queue::Queue):
+        * WebGPU/RenderBundle.h:
+        (WebGPU::RenderBundle::create):
+        * WebGPU/RenderBundle.mm:
+        (WebGPU::RenderBundle::RenderBundle):
+        * WebGPU/RenderBundleEncoder.h:
+        (WebGPU::RenderBundleEncoder::create):
+        * WebGPU/RenderBundleEncoder.mm:
+        (WebGPU::Device::createRenderBundleEncoder):
+        (WebGPU::RenderBundleEncoder::RenderBundleEncoder):
+        (WebGPU::RenderBundleEncoder::finish):
+        * WebGPU/RenderPassEncoder.h:
+        (WebGPU::RenderPassEncoder::create):
+        * WebGPU/RenderPassEncoder.mm:
+        (WebGPU::RenderPassEncoder::RenderPassEncoder):
+        * WebGPU/RenderPipeline.h:
+        (WebGPU::RenderPipeline::create):
+        * WebGPU/RenderPipeline.mm:
+        (WebGPU::Device::createRenderPipeline):
+        (WebGPU::RenderPipeline::RenderPipeline):
+        (WebGPU::RenderPipeline::getBindGroupLayout):
+        * WebGPU/Sampler.h:
+        (WebGPU::Sampler::create):
+        * WebGPU/Sampler.mm:
+        (WebGPU::Device::createSampler):
+        (WebGPU::Sampler::Sampler):
+        * WebGPU/ShaderModule.h:
+        (WebGPU::ShaderModule::create):
+        * WebGPU/ShaderModule.mm:
+        (WebGPU::Device::createShaderModule):
+        (WebGPU::ShaderModule::ShaderModule):
+        * WebGPU/SwapChain.mm:
+        (WebGPU::SwapChain::getCurrentTextureView):
+        * WebGPU/Texture.h:
+        (WebGPU::Texture::create):
+        * WebGPU/Texture.mm:
+        (WebGPU::Device::createTexture):
+        (WebGPU::Texture::Texture):
+        (WebGPU::Texture::createView):
+        * WebGPU/TextureView.h:
+        (WebGPU::TextureView::create):
+        * WebGPU/TextureView.mm:
+        (WebGPU::TextureView::TextureView):
+        * WebGPU/config.h:
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Tracer bullet part 4: Move Device's construction methods to the files of the things they create
+        https://bugs.webkit.org/show_bug.cgi?id=236891
+
+        Reviewed by Dean Jackson.
+
+        Device is kind of a factory object, and has lots of methods which create
+        other objects in the API. To avoid Device.cpp becoming a catch-all place
+        for tons of unrelated creation routines, this patch moves the routine that
+        creates an X into X.mm.
+
+        * WebGPU/BindGroup.mm:
+        (WebGPU::Device::createBindGroup):
+        * WebGPU/BindGroupLayout.mm:
+        (WebGPU::Device::createBindGroupLayout):
+        * WebGPU/Buffer.mm:
+        (WebGPU::Device::createBuffer):
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::Device::createCommandEncoder):
+        * WebGPU/ComputePipeline.mm:
+        (WebGPU::Device::createComputePipeline):
+        (WebGPU::Device::createComputePipelineAsync):
+        * WebGPU/Device.mm:
+        (WebGPU::Device::createBindGroup): Deleted.
+        (WebGPU::Device::createBindGroupLayout): Deleted.
+        (WebGPU::Device::createBuffer): Deleted.
+        (WebGPU::Device::createCommandEncoder): Deleted.
+        (WebGPU::Device::createComputePipeline): Deleted.
+        (WebGPU::Device::createComputePipelineAsync): Deleted.
+        (WebGPU::Device::createPipelineLayout): Deleted.
+        (WebGPU::Device::createQuerySet): Deleted.
+        (WebGPU::Device::createRenderBundleEncoder): Deleted.
+        (WebGPU::Device::createRenderPipeline): Deleted.
+        (WebGPU::Device::createRenderPipelineAsync): Deleted.
+        (WebGPU::Device::createSampler): Deleted.
+        (WebGPU::Device::createShaderModule): Deleted.
+        (WebGPU::Device::createSwapChain): Deleted.
+        (WebGPU::Device::createTexture): Deleted.
+        * WebGPU/PipelineLayout.mm:
+        (WebGPU::Device::createPipelineLayout):
+        * WebGPU/QuerySet.mm:
+        (WebGPU::Device::createQuerySet):
+        * WebGPU/RenderBundleEncoder.mm:
+        (WebGPU::Device::createRenderBundleEncoder):
+        * WebGPU/RenderPipeline.mm:
+        (WebGPU::Device::createRenderPipeline):
+        (WebGPU::Device::createRenderPipelineAsync):
+        * WebGPU/Sampler.mm:
+        (WebGPU::Device::createSampler):
+        * WebGPU/ShaderModule.mm:
+        (WebGPU::Device::createShaderModule):
+        * WebGPU/SwapChain.mm:
+        (WebGPU::Device::createSwapChain):
+        * WebGPU/Texture.mm:
+        (WebGPU::Device::createTexture):
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Tracer bullet part 3: Tweak WGSL API
+        https://bugs.webkit.org/show_bug.cgi?id=236889
+
+        Reviewed by Dean Jackson.
+
+        - Give SuccessfulCheck a move constructor
+        - Use UniqueRef instead of std::unique_ptr
+        - Allow specialization constants to be looked up by name
+        - Model missing pipeline layouts as absent from the HashMap, rather than using an optional type
+
+        * WGSL/WGSL.cpp:
+        (WGSL::prepare):
+        (WGSL::SuccessfulCheck::~SuccessfulCheck): Deleted.
+        * WGSL/WGSL.h:
+
+2022-02-21  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] WebGPU.xcodeproj cannot be opened on Big Sur's Xcode
+        https://bugs.webkit.org/show_bug.cgi?id=236982
+
+        Unreviewed.
+
+        Just change the project version number from 55 to 51, like the rest of the projects in WebKit.
+
+        * WebGPU.xcodeproj/project.pbxproj:
+
+2022-02-18  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Any object-creation function that takes a descriptor can fail
+        https://bugs.webkit.org/show_bug.cgi?id=236855
+
+        Reviewed by Dean Jackson.
+
+        Generally, we view allocation failure as catastrophic, and crash. Because of that, I originally
+        made these methods return Refs, because I expected the failure case to cause intentional crashes
+        rather than return nullptr.
+
+        However, descriptors the shared header have a nextInChain pointer, which allows callers to pass
+        in extra extension-specific structs, as a linked list. If the WebGPU implementation sees one of
+        these extra structs that it doesn't know what to do with, it has to fail. That means that it's
+        possible to fail in a way other than an allocation failure, which means these functions have to
+        return RefPtrs instead of Refs.
+
+        * WebGPU/Adapter.h:
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::requestDevice):
+        (wgpuAdapterRequestDevice):
+        * WebGPU/CommandEncoder.h:
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::CommandEncoder::beginComputePass):
+        (WebGPU::CommandEncoder::beginRenderPass):
+        (WebGPU::CommandEncoder::finish):
+        (wgpuCommandEncoderBeginComputePass):
+        (wgpuCommandEncoderBeginRenderPass):
+        (wgpuCommandEncoderFinish):
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        (WebGPU::Device::createBindGroup):
+        (WebGPU::Device::createBindGroupLayout):
+        (WebGPU::Device::createBuffer):
+        (WebGPU::Device::createCommandEncoder):
+        (WebGPU::Device::createComputePipeline):
+        (WebGPU::Device::createComputePipelineAsync):
+        (WebGPU::Device::createPipelineLayout):
+        (WebGPU::Device::createQuerySet):
+        (WebGPU::Device::createRenderBundleEncoder):
+        (WebGPU::Device::createRenderPipeline):
+        (WebGPU::Device::createRenderPipelineAsync):
+        (WebGPU::Device::createSampler):
+        (WebGPU::Device::createShaderModule):
+        (WebGPU::Device::createSwapChain):
+        (WebGPU::Device::createTexture):
+        (WebGPU::Device::getQueue):
+        (wgpuDeviceCreateBindGroup):
+        (wgpuDeviceCreateBindGroupLayout):
+        (wgpuDeviceCreateBuffer):
+        (wgpuDeviceCreateCommandEncoder):
+        (wgpuDeviceCreateComputePipeline):
+        (wgpuDeviceCreateComputePipelineAsync):
+        (wgpuDeviceCreatePipelineLayout):
+        (wgpuDeviceCreateQuerySet):
+        (wgpuDeviceCreateRenderBundleEncoder):
+        (wgpuDeviceCreateRenderPipeline):
+        (wgpuDeviceCreateRenderPipelineAsync):
+        (wgpuDeviceCreateSampler):
+        (wgpuDeviceCreateShaderModule):
+        (wgpuDeviceCreateSwapChain):
+        (wgpuDeviceCreateTexture):
+        (wgpuDeviceGetQueue):
+        * WebGPU/Instance.h:
+        * WebGPU/Instance.mm:
+        (WebGPU::Instance::createSurface):
+        (wgpuInstanceCreateSurface):
+        * WebGPU/RenderBundleEncoder.h:
+        * WebGPU/RenderBundleEncoder.mm:
+        (WebGPU::RenderBundleEncoder::finish):
+        (wgpuRenderBundleEncoderFinish):
+        * WebGPU/Texture.h:
+        * WebGPU/Texture.mm:
+        (WebGPU::Texture::createView):
+        (wgpuTextureCreateView):
+
+2022-02-18  Robert Jenner  <Jenner@apple.com>
+
+        Unreviewed, reverting r290149.
+
+        Broke Debug Builds.
+
+        Reverted changeset:
+
+        "Generate compile_commands.json on macOS Builds"
+        https://bugs.webkit.org/show_bug.cgi?id=235686
+        https://commits.webkit.org/r290149
+
+2022-02-18  Elliott Williams  <emw@apple.com>
+
+        [XCBuild] "All Modules" workspace builds building out of order
+        https://bugs.webkit.org/show_bug.cgi?id=236813
+
+        Reviewed by Alexey Proskuryakov.
+
+        Add product dependency on WTF. WGSL uses its headers without linking against it.
+        
+        * Configurations/WGSL.xcconfig:
+        * WebGPU.xcodeproj/project.pbxproj:
+
+2022-02-18  Brandon Stewart  <brandonstewart@apple.com>
+
+        Generate compile_commands.json on macOS Builds
+        https://bugs.webkit.org/show_bug.cgi?id=235686
+
+        Reviewed by Saam Barati.
+
+        Add support for generating compile_commands.json file to WebKit.
+        
+        compile_commands.json can be used by tools like clangd to provide code complete,
+        refactoring, formatting, and cross references.
+
+        Steps to generate the compile commands file:
+        make r EXPORT_COMPILE_COMMANDS=YES
+        generate-compile-commands WebKitBuild/Release
+
+        * Configurations/DebugRelease.xcconfig:
+
+2022-02-18  Saam Barati  <sbarati@apple.com>
+
+        Add LC_SOURCE_VERSION to compile targets
+        https://bugs.webkit.org/show_bug.cgi?id=236720
+        <rdar://84984140>
+
+        Reviewed by Michael Saboff.
+
+        * Configurations/Version.xcconfig:
+        * Configurations/WGSL.xcconfig:
+        * Configurations/WGSLUnitTests.xcconfig:
+        * Configurations/WebGPU.xcconfig:
+
+2022-02-17  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Add a playground example target
+        https://bugs.webkit.org/show_bug.cgi?id=236742
+
+        Reviewed by Dean Jackson.
+
+        It's just a little playground where you can call WebGPU functions.
+        It's not built by any script or included in any other targets - it's
+        just for the WebGPU developers to play around with WebGPU functions.
+
+        * CommandLinePlayground/main.swift: Added.
+        * Configurations/CommandLinePlayground.xcconfig: Added.
+        * WebGPU.xcodeproj/project.pbxproj:
+        * WebGPU/WebGPU.modulemap:
+
+2022-02-15  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Update IDLs and stubs to latest version of the spec
+        https://bugs.webkit.org/show_bug.cgi?id=236639
+
+        Reviewed by Dean Jackson.
+
+        * WebGPU/Adapter.h:
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::enumerateFeatures):
+        (wgpuAdapterEnumerateFeatures):
+        (WebGPU::Adapter::getFeatureAtIndex): Deleted.
+        (wgpuAdapterGetFeatureAtIndex): Deleted.
+        * WebGPU/CommandEncoder.h:
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::CommandEncoder::clearBuffer):
+        (wgpuCommandEncoderClearBuffer):
+        (WebGPU::CommandEncoder::fillBuffer): Deleted.
+        (wgpuCommandEncoderFillBuffer): Deleted.
+        * WebGPU/ComputePassEncoder.h:
+        * WebGPU/ComputePassEncoder.mm:
+        (WebGPU::ComputePassEncoder::writeTimestamp): Deleted.
+        (wgpuComputePassEncoderWriteTimestamp): Deleted.
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        (WebGPU::Device::enumerateFeatures):
+        (WebGPU::Device::hasFeature):
+        (wgpuDeviceEnumerateFeatures):
+        (wgpuDeviceHasFeature):
+        * WebGPU/Instance.mm:
+        (wgpuGetProcAddress):
+        * WebGPU/RenderPassEncoder.h:
+        * WebGPU/RenderPassEncoder.mm:
+        (WebGPU::RenderPassEncoder::writeTimestamp): Deleted.
+        (wgpuRenderPassEncoderWriteTimestamp): Deleted.
+        * WebGPU/ShaderModule.h:
+        * WebGPU/ShaderModule.mm:
+        (WebGPU::ShaderModule::getCompilationInfo):
+        (wgpuShaderModuleGetCompilationInfo):
+        * WebGPU/WebGPU.h:
+        * WebGPU/WebGPUExt.h:
+
+2022-02-15  Robin Morisset  <rmorisset@apple.com>
+
+        [WGSL] Implement enough of the lexer for the simplest shaders
+        https://bugs.webkit.org/show_bug.cgi?id=233276
+        <rdar://problem/85732675>
+
+        Reviewed by Myles Maxfield.
+
+        There is just enough of the lexer in this patch to pass the unit tests (also added by the patch).
+        The lexer is templated by the character size, following the code from JSC's lexer.
+        I did not use a lexer generator like lex for a few reasons:
+        - It would have made the build system(s) even more of a nightmare
+        - It would have made it harder to give accurate and customized error messages
+        - If we ever decide to do anything exotic to the grammar of the language, it could have made it much harder
+
+        The lexing of floating point literals is a bit hacky, and probably has some precision issues in corner cases, but it passed all simple unit tests,
+        so for now I just left it as is with a FIXME, to be fixed once we can run the full CTS.
+
+        The TokenType includes an `Invalid` value. I could instead have used std::optional<Token> everywhere.
+        I made this choice for two reasons:
+        - space efficiency: we don't use an extra word of memory for the variant's tag
+        -  (although this part could be solved by using https://github.com/akrzemi1/markable)
+        - ease of use and time efficiency: everywhere that we check for a given TokenType, we would have to first check that the Token is not nullopt, and then check the TokenType.
+
+        * Configurations/WGSLUnitTests.xcconfig:
+        * WGSL/Lexer.cpp: Added.
+        (WGSL::Lexer<T>::lex):
+        (WGSL::Lexer<T>::shift):
+        (WGSL::Lexer<T>::peek):
+        (WGSL::Lexer<T>::skipWhitespace):
+        (WGSL::Lexer<T>::isAtEndOfFile const):
+        (WGSL::Lexer<T>::parseDecimalInteger):
+        (WGSL::Lexer<T>::parseDecimalFloatExponent):
+        (WGSL::Lexer<T>::parseIntegerLiteralSuffix):
+        (WGSL::Lexer<LChar>::isWhiteSpace):
+        (WGSL::Lexer<LChar>::isIdentifierStart):
+        (WGSL::Lexer<LChar>::isValidIdentifierCharacter):
+        (WGSL::Lexer<LChar>::isDecimal):
+        (WGSL::Lexer<LChar>::isHexadecimal):
+        (WGSL::Lexer<LChar>::readDecimal):
+        (WGSL::Lexer<LChar>::readHexadecimal):
+        (WGSL::Lexer<UChar>::isWhiteSpace):
+        (WGSL::Lexer<UChar>::isIdentifierStart):
+        (WGSL::Lexer<UChar>::isValidIdentifierCharacter):
+        (WGSL::Lexer<UChar>::isDecimal):
+        (WGSL::Lexer<UChar>::isHexadecimal):
+        (WGSL::Lexer<UChar>::readDecimal):
+        (WGSL::Lexer<UChar>::readHexadecimal):
+        * WGSL/Lexer.h: Added.
+        (WGSL::Lexer::Lexer):
+        (WGSL::Lexer::currentPosition const):
+        (WGSL::Lexer::currentOffset const):
+        (WGSL::Lexer::currentTokenLength const):
+        (WGSL::Lexer::makeToken):
+        (WGSL::Lexer::makeLiteralToken):
+        (WGSL::Lexer::makeIdentifierToken):
+        * WGSL/SourceSpan.h: Added.
+        (WGSL::SourceSpan::SourceSpan):
+        * WGSL/Token.cpp: Added.
+        (WGSL::toString):
+        * WGSL/Token.h: Added.
+        (WGSL::Token::Token):
+        (WGSL::Token::operator=):
+        (WGSL::Token::~Token):
+        * WGSL/WGSL.cpp:
+        (WGSL::staticCheck):
+        * WGSLUnitTests/WGSLLexerTests.mm: Added.
+        (-[WGSLLexerTests testLexerOnSingleTokens]):
+        (-[WGSLLexerTests testLexerOnComputeShader]):
+        (-[WGSLLexerTests testLexerOnGraphicsShader]):
+        * WGSLUnitTests/WGSLUnitTests.mm: Removed.
+        (-[WGSLUnitTests testExample]): Deleted.
+        * WebGPU.xcodeproj/project.pbxproj:
+
+2022-01-26  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Make sure WGSLUnitTests can call into WGSL
+        https://bugs.webkit.org/show_bug.cgi?id=235630
+
+        Reviewed by Dean Jackson.
+
+        * WGSL/WGSL.cpp:
+        (WGSL::staticCheck): Apparently /usr/local/include/AssertMacros.h #defines "check"
+        (WGSL::check): Deleted.
+        * WGSL/WGSL.h:
+        * WGSLUnitTests/WGSLUnitTests.mm:
+        (-[WGSLUnitTests testExample]):
+
+2022-01-25  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Fix WGSLUnitTests build
+        https://bugs.webkit.org/show_bug.cgi?id=235628
+
+        Unreviewed.
+
+        * Configurations/WGSLUnitTests.xcconfig:
+
+2022-01-25  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, reverting r288606.
+        https://bugs.webkit.org/show_bug.cgi?id=235629
+
+        Should never have been committed
+
+        Reverted changeset:
+
+        "[WebGPU] Fix WGSLUnitTests build"
+        https://bugs.webkit.org/show_bug.cgi?id=235628
+        https://commits.webkit.org/r288606
+
+2022-01-25  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Fix WGSLUnitTests build
+        https://bugs.webkit.org/show_bug.cgi?id=235628
+
+        Unreviewed.
+
+        * Configurations/WGSLUnitTests.xcconfig:
+
+2022-01-18  Alex Christensen  <achristensen@webkit.org>
+
+        Use c++2a instead of gnu++2a for Cocoa builds
+        https://bugs.webkit.org/show_bug.cgi?id=234936
+
+        Reviewed by Sam Weinig.
+
+        * Configurations/Base.xcconfig:
+
+2022-01-12  Elliott Williams  <emw@apple.com>
+
+        [Xcode] Configure each project for the legacy build system
+        https://bugs.webkit.org/show_bug.cgi?id=235091
+
+        Reviewed by Darin Adler.
+
+        * WebGPU.xcodeproj/project.pbxproj:
+
+2022-01-10  Alex Christensen  <achristensen@webkit.org>
+
+        Start using C++20
+        https://bugs.webkit.org/show_bug.cgi?id=233963
+
+        Reviewed by Yusuke Suzuki.
+
+        * Configurations/Base.xcconfig:
+
+2022-01-07  Alex Christensen  <achristensen@webkit.org>
+
+        Unreviewed, reverting r287698.
+
+        Broke an internal build
+
+        Reverted changeset:
+
+        "Start using C++20"
+        https://bugs.webkit.org/show_bug.cgi?id=233963
+        https://commits.webkit.org/r287698
+
+2022-01-06  Alex Christensen  <achristensen@webkit.org>
+
+        Start using C++20
+        https://bugs.webkit.org/show_bug.cgi?id=233963
+
+        Reviewed by Yusuke Suzuki.
+
+        * Configurations/Base.xcconfig:
+
+2022-01-01  Jeff Miller  <jeffm@apple.com>
+
+        Update user-visible copyright strings to include 2022
+        https://bugs.webkit.org/show_bug.cgi?id=234263
+
+        Reviewed by Anders Carlsson.
+
+        * Info.plist:
+
+2021-12-21  Michael Saboff  <msaboff@apple.com>
+
+        Fix symlinks for alternate root framework locations
+        https://bugs.webkit.org/show_bug.cgi?id=234567
+
+        Reviewed by Filip Pizlo.
+
+        Moved OUTPUT_ALTERNATE_ROOT_PATH in create symlink script from outputFileListPaths to outputPaths.
+
+        * WebGPU.xcodeproj/project.pbxproj:
+
+2021-12-16  Michael Saboff  <msaboff@apple.com>
+
+        https://bugs.webkit.org/show_bug.cgi?id=234173
+        Update Install Paths for build system changes
+
+        Reviewed by Filip Pizlo.
+
+        Added build variables and build step to create symlinks pointing to the alternate
+        build locations from the current framework install location.
+
+        * Configurations/WebGPU.xcconfig:
+        * Scripts: Added.
+        * Scripts/create-symlink-to-altroot.sh: Added.
+        * WebGPU.xcodeproj/project.pbxproj:
+
+2021-12-13  Elliott Williams  <emw@apple.com>
+
+        Deployment target for macOS 11+ does not follow minor version bumps
+        https://bugs.webkit.org/show_bug.cgi?id=233906
+
+        Reviewed by Alexey Proskuryakov.
+
+        * Configurations/DebugRelease.xcconfig:
+
+2021-12-10  Michael Saboff  <msaboff@apple.com>
+
+        https://bugs.webkit.org/show_bug.cgi?id=234173
+        Update Install Paths for build system changes
+
+        Reviewed by Yusuke Suzuki.
+
+        Updated install paths for changes in the build system that use a system path prefix.
+
+        * Configurations/WebGPU.xcconfig:
+
+2021-12-07  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Fix MacCatalyst build
+        https://bugs.webkit.org/show_bug.cgi?id=233920
+
+        Unreviewed.
+
+        Taken from JavaScriptCore.xcodeproj.
+
+        * Configurations/WebGPU.xcconfig:
+
+2021-12-02  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Hook up navigator.gpu.requestAdapter()
+        https://bugs.webkit.org/show_bug.cgi?id=233619
+
+        Just hook up enough for Instance::requestAdapter() to not fail.
+
+        Reviewed by Dean Jackson.
+
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::getLimits):
+        * WebGPU/Instance.mm:
+        (WebGPU::Instance::requestAdapter):
+        (wgpuCreateInstance):
+        (wgpuInstanceRequestAdapter):
+
+2021-11-29  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Make WebGPU.framework's classes reference counted
+        https://bugs.webkit.org/show_bug.cgi?id=233547
+
+        Reviewed by Dean Jackson.
+
+        This is a fairly mechanical change of replacing constructors with calls to create(), and
+        changing instances to Ref<...>, and using -> instead of .
+
+        There's one somewhat interesting design choice here. The header has things like:
+
+        typedef struct WGPUAdapterImpl* WGPUAdapter;
+
+        But we're using C++ so we want to have something like
+
+        namespace WebGPU {
+        class Adapter : public RefCounted<Adapter> {
+            ...
+        };
+        }
+
+        So we need to have some way of connecting these two things. This patch opts to do this like so:
+
+        struct WGPUAdapterImpl {
+            Ref<Adapter> adapter;
+        };
+
+        This isn't perfect, because it means that all method calls require a double dereference: one to
+        dereference the WGPUAdapter to get the WGPUAdapterImpl, and one to dereference the Ref<Adapter>
+        to get the Adapter. This is the most elegant solution for now, because it doesn't require any
+        reinterpret_cast<>()'ing. This patch chooses this elegant solution, because premature optimization
+        is the root of all evil.
+
+        * WebGPU/Adapter.h:
+        (WebGPU::Adapter::create):
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::requestDevice):
+        (wgpuAdapterGetLimits):
+        (wgpuAdapterGetProperties):
+        (wgpuAdapterHasFeature):
+        (wgpuAdapterGetFeatureAtIndex):
+        (wgpuAdapterRequestDevice):
+        * WebGPU/BindGroup.h:
+        (WebGPU::BindGroup::create):
+        * WebGPU/BindGroup.mm:
+        (wgpuBindGroupSetLabel):
+        * WebGPU/BindGroupLayout.h:
+        (WebGPU::BindGroupLayout::create):
+        * WebGPU/BindGroupLayout.mm:
+        (wgpuBindGroupLayoutSetLabel):
+        * WebGPU/Buffer.h:
+        (WebGPU::Buffer::create):
+        * WebGPU/Buffer.mm:
+        (WebGPU::Buffer::mapAsync):
+        (wgpuBufferDestroy):
+        (wgpuBufferGetConstMappedRange):
+        (wgpuBufferGetMappedRange):
+        (wgpuBufferMapAsync):
+        (wgpuBufferUnmap):
+        (wgpuBufferSetLabel):
+        * WebGPU/CommandBuffer.h:
+        (WebGPU::CommandBuffer::create):
+        * WebGPU/CommandBuffer.mm:
+        (wgpuCommandBufferSetLabel):
+        * WebGPU/CommandEncoder.h:
+        (WebGPU::CommandEncoder::create):
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::CommandEncoder::beginComputePass):
+        (WebGPU::CommandEncoder::beginRenderPass):
+        (WebGPU::CommandEncoder::finish):
+        (wgpuCommandEncoderBeginComputePass):
+        (wgpuCommandEncoderBeginRenderPass):
+        (wgpuCommandEncoderCopyBufferToBuffer):
+        (wgpuCommandEncoderCopyBufferToTexture):
+        (wgpuCommandEncoderCopyTextureToBuffer):
+        (wgpuCommandEncoderCopyTextureToTexture):
+        (wgpuCommandEncoderFillBuffer):
+        (wgpuCommandEncoderFinish):
+        (wgpuCommandEncoderInsertDebugMarker):
+        (wgpuCommandEncoderPopDebugGroup):
+        (wgpuCommandEncoderPushDebugGroup):
+        (wgpuCommandEncoderResolveQuerySet):
+        (wgpuCommandEncoderWriteTimestamp):
+        (wgpuCommandEncoderSetLabel):
+        * WebGPU/ComputePassEncoder.h:
+        (WebGPU::ComputePassEncoder::create):
+        * WebGPU/ComputePassEncoder.mm:
+        (wgpuComputePassEncoderBeginPipelineStatisticsQuery):
+        (wgpuComputePassEncoderDispatch):
+        (wgpuComputePassEncoderDispatchIndirect):
+        (wgpuComputePassEncoderEndPass):
+        (wgpuComputePassEncoderEndPipelineStatisticsQuery):
+        (wgpuComputePassEncoderInsertDebugMarker):
+        (wgpuComputePassEncoderPopDebugGroup):
+        (wgpuComputePassEncoderPushDebugGroup):
+        (wgpuComputePassEncoderSetBindGroup):
+        (wgpuComputePassEncoderSetPipeline):
+        (wgpuComputePassEncoderWriteTimestamp):
+        (wgpuComputePassEncoderSetLabel):
+        * WebGPU/ComputePipeline.h:
+        (WebGPU::ComputePipeline::create):
+        * WebGPU/ComputePipeline.mm:
+        (WebGPU::ComputePipeline::getBindGroupLayout):
+        (wgpuComputePipelineGetBindGroupLayout):
+        (wgpuComputePipelineSetLabel):
+        * WebGPU/Device.h:
+        (WebGPU::Device::create):
+        * WebGPU/Device.mm:
+        (WebGPU::Device::createBindGroup):
+        (WebGPU::Device::createBindGroupLayout):
+        (WebGPU::Device::createBuffer):
+        (WebGPU::Device::createCommandEncoder):
+        (WebGPU::Device::createComputePipeline):
+        (WebGPU::Device::createComputePipelineAsync):
+        (WebGPU::Device::createPipelineLayout):
+        (WebGPU::Device::createQuerySet):
+        (WebGPU::Device::createRenderBundleEncoder):
+        (WebGPU::Device::createRenderPipeline):
+        (WebGPU::Device::createRenderPipelineAsync):
+        (WebGPU::Device::createSampler):
+        (WebGPU::Device::createShaderModule):
+        (WebGPU::Device::createSwapChain):
+        (WebGPU::Device::createTexture):
+        (WebGPU::Device::getQueue):
+        (WebGPU::Device::popErrorScope):
+        (WebGPU::Device::setDeviceLostCallback):
+        (WebGPU::Device::setUncapturedErrorCallback):
+        (wgpuDeviceCreateBindGroup):
+        (wgpuDeviceCreateBindGroupLayout):
+        (wgpuDeviceCreateBuffer):
+        (wgpuDeviceCreateCommandEncoder):
+        (wgpuDeviceCreateComputePipeline):
+        (wgpuDeviceCreateComputePipelineAsync):
+        (wgpuDeviceCreatePipelineLayout):
+        (wgpuDeviceCreateQuerySet):
+        (wgpuDeviceCreateRenderBundleEncoder):
+        (wgpuDeviceCreateRenderPipeline):
+        (wgpuDeviceCreateRenderPipelineAsync):
+        (wgpuDeviceCreateSampler):
+        (wgpuDeviceCreateShaderModule):
+        (wgpuDeviceCreateSwapChain):
+        (wgpuDeviceCreateTexture):
+        (wgpuDeviceDestroy):
+        (wgpuDeviceGetLimits):
+        (wgpuDeviceGetQueue):
+        (wgpuDevicePopErrorScope):
+        (wgpuDevicePushErrorScope):
+        (wgpuDeviceSetDeviceLostCallback):
+        (wgpuDeviceSetUncapturedErrorCallback):
+        (wgpuDeviceSetLabel):
+        * WebGPU/Instance.h:
+        (WebGPU::Instance::create):
+        * WebGPU/Instance.mm:
+        (WebGPU::Instance::createSurface):
+        (WebGPU::Instance::requestAdapter):
+        (wgpuInstanceCreateSurface):
+        (wgpuInstanceProcessEvents):
+        (wgpuInstanceRequestAdapter):
+        * WebGPU/PipelineLayout.h:
+        (WebGPU::PipelineLayout::create):
+        * WebGPU/PipelineLayout.mm:
+        (wgpuPipelineLayoutSetLabel):
+        * WebGPU/QuerySet.h:
+        (WebGPU::QuerySet::create):
+        * WebGPU/QuerySet.mm:
+        (wgpuQuerySetDestroy):
+        (wgpuQuerySetSetLabel):
+        * WebGPU/Queue.h:
+        (WebGPU::Queue::create):
+        * WebGPU/Queue.mm:
+        (WebGPU::Queue::onSubmittedWorkDone):
+        (wgpuQueueOnSubmittedWorkDone):
+        (wgpuQueueSubmit):
+        (wgpuQueueWriteBuffer):
+        (wgpuQueueWriteTexture):
+        (wgpuQueueSetLabel):
+        * WebGPU/RenderBundle.h:
+        (WebGPU::RenderBundle::create):
+        * WebGPU/RenderBundle.mm:
+        (wgpuRenderBundleSetLabel):
+        * WebGPU/RenderBundleEncoder.h:
+        (WebGPU::RenderBundleEncoder::create):
+        * WebGPU/RenderBundleEncoder.mm:
+        (WebGPU::RenderBundleEncoder::finish):
+        (wgpuRenderBundleEncoderDraw):
+        (wgpuRenderBundleEncoderDrawIndexed):
+        (wgpuRenderBundleEncoderDrawIndexedIndirect):
+        (wgpuRenderBundleEncoderDrawIndirect):
+        (wgpuRenderBundleEncoderFinish):
+        (wgpuRenderBundleEncoderInsertDebugMarker):
+        (wgpuRenderBundleEncoderPopDebugGroup):
+        (wgpuRenderBundleEncoderPushDebugGroup):
+        (wgpuRenderBundleEncoderSetBindGroup):
+        (wgpuRenderBundleEncoderSetIndexBuffer):
+        (wgpuRenderBundleEncoderSetPipeline):
+        (wgpuRenderBundleEncoderSetVertexBuffer):
+        (wgpuRenderBundleEncoderSetLabel):
+        * WebGPU/RenderPassEncoder.h:
+        (WebGPU::RenderPassEncoder::create):
+        * WebGPU/RenderPassEncoder.mm:
+        (wgpuRenderPassEncoderBeginOcclusionQuery):
+        (wgpuRenderPassEncoderBeginPipelineStatisticsQuery):
+        (wgpuRenderPassEncoderDraw):
+        (wgpuRenderPassEncoderDrawIndexed):
+        (wgpuRenderPassEncoderDrawIndexedIndirect):
+        (wgpuRenderPassEncoderDrawIndirect):
+        (wgpuRenderPassEncoderEndOcclusionQuery):
+        (wgpuRenderPassEncoderEndPass):
+        (wgpuRenderPassEncoderEndPipelineStatisticsQuery):
+        (wgpuRenderPassEncoderExecuteBundles):
+        (wgpuRenderPassEncoderInsertDebugMarker):
+        (wgpuRenderPassEncoderPopDebugGroup):
+        (wgpuRenderPassEncoderPushDebugGroup):
+        (wgpuRenderPassEncoderSetBindGroup):
+        (wgpuRenderPassEncoderSetBlendConstant):
+        (wgpuRenderPassEncoderSetIndexBuffer):
+        (wgpuRenderPassEncoderSetPipeline):
+        (wgpuRenderPassEncoderSetScissorRect):
+        (wgpuRenderPassEncoderSetStencilReference):
+        (wgpuRenderPassEncoderSetVertexBuffer):
+        (wgpuRenderPassEncoderSetViewport):
+        (wgpuRenderPassEncoderWriteTimestamp):
+        (wgpuRenderPassEncoderSetLabel):
+        * WebGPU/RenderPipeline.h:
+        (WebGPU::RenderPipeline::create):
+        * WebGPU/RenderPipeline.mm:
+        (WebGPU::RenderPipeline::getBindGroupLayout):
+        (wgpuRenderPipelineGetBindGroupLayout):
+        (wgpuRenderPipelineSetLabel):
+        * WebGPU/Sampler.h:
+        (WebGPU::Sampler::create):
+        * WebGPU/Sampler.mm:
+        (wgpuSamplerSetLabel):
+        * WebGPU/ShaderModule.h:
+        (WebGPU::ShaderModule::create):
+        * WebGPU/ShaderModule.mm:
+        (wgpuShaderModuleSetLabel):
+        * WebGPU/Surface.h:
+        (WebGPU::Surface::create):
+        * WebGPU/Surface.mm:
+        (wgpuSurfaceGetPreferredFormat):
+        * WebGPU/SwapChain.h:
+        (WebGPU::SwapChain::create):
+        * WebGPU/SwapChain.mm:
+        (WebGPU::SwapChain::getCurrentTextureView):
+        (wgpuSwapChainGetCurrentTextureView):
+        (wgpuSwapChainPresent):
+        * WebGPU/Texture.h:
+        (WebGPU::Texture::create):
+        * WebGPU/Texture.mm:
+        (WebGPU::Texture::createView):
+        (wgpuTextureCreateView):
+        (wgpuTextureDestroy):
+        (wgpuTextureSetLabel):
+        * WebGPU/TextureView.h:
+        (WebGPU::TextureView::create):
+        * WebGPU/TextureView.mm:
+        (wgpuTextureViewSetLabel):
+
+2021-11-16  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Add WGSLUnitTests XCTest target for WebGPU
+        https://bugs.webkit.org/show_bug.cgi?id=233227
+
+        Reviewed by Robin Morisset.
+
+        For now, this new target isn't hooked up to any automated testing - it's just a local target which developers can run.
+
+        * Configurations/WGSLUnitTests.xcconfig: Added.
+        * WGSLUnitTests/WGSLUnitTests.mm: Added.
+        (-[WGSLUnitTests testExample]):
+        * WebGPU.xcodeproj/project.pbxproj:
+        * WebGPU.xcodeproj/xcshareddata/xcschemes/WGSL.xcscheme:
+        * WebGPU.xcodeproj/xcshareddata/xcschemes/WGSLUnitTests.xcscheme: Copied from Source/WebGPU/WebGPU.xcodeproj/xcshareddata/xcschemes/WGSL.xcscheme.
+
+2021-11-14  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Add necessary additions to WebGPU.framework
+        https://bugs.webkit.org/show_bug.cgi?id=233091
+
+        Reviewed by Dean Jackson.
+
+        WebGPU.framework's header file is lagging a bit behind the official WebGPU API.
+        This updates a companion header, WebGPUExt.h, with the necessary additions.
+        I don't want to modify the primary header, WebGPU.h, because it's shared among
+        multiple projects, so coordination is necessary to modify it.
+
+        * WebGPU/Adapter.h:
+        * WebGPU/Adapter.mm:
+        (WebGPU::Adapter::getFeatureAtIndex):
+        (wgpuAdapterGetFeatureAtIndex):
+        * WebGPU/BindGroup.h:
+        * WebGPU/BindGroup.mm:
+        (WebGPU::BindGroup::setLabel):
+        (wgpuBindGroupSetLabel):
+        * WebGPU/BindGroupLayout.h:
+        * WebGPU/BindGroupLayout.mm:
+        (WebGPU::BindGroupLayout::setLabel):
+        (wgpuBindGroupLayoutSetLabel):
+        * WebGPU/Buffer.h:
+        * WebGPU/Buffer.mm:
+        (WebGPU::Buffer::setLabel):
+        (wgpuBufferSetLabel):
+        * WebGPU/CommandBuffer.h:
+        * WebGPU/CommandBuffer.mm:
+        (WebGPU::CommandBuffer::setLabel):
+        (wgpuCommandBufferSetLabel):
+        * WebGPU/CommandEncoder.h:
+        * WebGPU/CommandEncoder.mm:
+        (WebGPU::CommandEncoder::fillBuffer):
+        (WebGPU::CommandEncoder::setLabel):
+        (wgpuCommandEncoderFillBuffer):
+        (wgpuCommandEncoderSetLabel):
+        * WebGPU/ComputePassEncoder.h:
+        * WebGPU/ComputePassEncoder.mm:
+        (WebGPU::ComputePassEncoder::setLabel):
+        (wgpuComputePassEncoderSetLabel):
+        * WebGPU/Device.h:
+        * WebGPU/Device.mm:
+        (WebGPU::Device::setLabel):
+        (wgpuDeviceSetLabel):
+        * WebGPU/Instance.mm:
+        (wgpuGetProcAddress):
+        * WebGPU/PipelineLayout.h:
+        * WebGPU/PipelineLayout.mm:
+        (WebGPU::PipelineLayout::setLabel):
+        (wgpuPipelineLayoutSetLabel):
+        * WebGPU/QuerySet.h:
+        * WebGPU/QuerySet.mm:
+        (WebGPU::QuerySet::setLabel):
+        (wgpuQuerySetSetLabel):
+        * WebGPU/Queue.h:
+        * WebGPU/Queue.mm:
+        (WebGPU::Queue::setLabel):
+        (wgpuQueueSetLabel):
+        * WebGPU/RenderBundle.h:
+        * WebGPU/RenderBundle.mm:
+        (WebGPU::RenderBundle::setLabel):
+        (wgpuRenderBundleSetLabel):
+        * WebGPU/RenderBundleEncoder.h:
+        * WebGPU/RenderBundleEncoder.mm:
+        (WebGPU::RenderBundleEncoder::setLabel):
+        (wgpuRenderBundleEncoderSetLabel):
+        * WebGPU/RenderPassEncoder.h:
+        * WebGPU/RenderPassEncoder.mm:
+        (WebGPU::RenderPassEncoder::setLabel):
+        (wgpuRenderPassEncoderSetLabel):
+        * WebGPU/Sampler.h:
+        * WebGPU/Sampler.mm:
+        (WebGPU::Sampler::setLabel):
+        (wgpuSamplerSetLabel):
+        * WebGPU/Texture.h:
+        * WebGPU/Texture.mm:
+        (WebGPU::Texture::setLabel):
+        (wgpuTextureSetLabel):
+        * WebGPU/TextureView.h:
+        * WebGPU/TextureView.mm:
+        (WebGPU::TextureView::setLabel):
+        (wgpuTextureViewSetLabel):
+        * WebGPU/WebGPUExt.h:
+
+2021-11-09  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        [WebGPU] Stub out methods in WebGPU.framework
+        https://bugs.webkit.org/show_bug.cgi?id=232872
+
+        Reviewed by Dean Jackson.
+
+        This creates empty implementations for all the methods in WebGPU.framework.
+        This means that there are now implementations for every API call, so PAL
+        can successfully call into WebGPU.framework and link with it.
+
+        * Configurations/Version.xcconfig: Added.
+        * Configurations/WebGPU.xcconfig:
+        * WebGPU.xcodeproj/project.pbxproj:
+        * WebGPU/Adapter.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/Adapter.mm: Added.
+        (WebGPU::Adapter::getLimits):
+        (WebGPU::Adapter::getProperties):
+        (WebGPU::Adapter::hasFeature):
+        (WebGPU::Adapter::requestDevice):
+        (wgpuAdapterRelease):
+        (wgpuAdapterGetLimits):
+        (wgpuAdapterGetProperties):
+        (wgpuAdapterHasFeature):
+        (wgpuAdapterRequestDevice):
+        * WebGPU/BindGroup.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/BindGroup.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (wgpuBindGroupRelease):
+        * WebGPU/BindGroupLayout.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/BindGroupLayout.mm: Renamed from Source/WebGPU/WebGPU/WebGPU.cpp.
+        (wgpuBindGroupLayoutRelease):
+        * WebGPU/Buffer.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/Buffer.mm: Added.
+        (WebGPU::Buffer::destroy):
+        (WebGPU::Buffer::getConstMappedRange):
+        (WebGPU::Buffer::getMappedRange):
+        (WebGPU::Buffer::mapAsync):
+        (WebGPU::Buffer::unmap):
+        (wgpuBufferRelease):
+        (wgpuBufferDestroy):
+        (wgpuBufferGetConstMappedRange):
+        (wgpuBufferGetMappedRange):
+        (wgpuBufferMapAsync):
+        (wgpuBufferUnmap):
+        * WebGPU/CommandBuffer.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/CommandBuffer.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (wgpuCommandBufferRelease):
+        * WebGPU/CommandEncoder.h: Added.
+        * WebGPU/CommandEncoder.mm: Added.
+        (WebGPU::CommandEncoder::beginComputePass):
+        (WebGPU::CommandEncoder::beginRenderPass):
+        (WebGPU::CommandEncoder::copyBufferToBuffer):
+        (WebGPU::CommandEncoder::copyBufferToTexture):
+        (WebGPU::CommandEncoder::copyTextureToBuffer):
+        (WebGPU::CommandEncoder::copyTextureToTexture):
+        (WebGPU::CommandEncoder::finish):
+        (WebGPU::CommandEncoder::insertDebugMarker):
+        (WebGPU::CommandEncoder::popDebugGroup):
+        (WebGPU::CommandEncoder::pushDebugGroup):
+        (WebGPU::CommandEncoder::resolveQuerySet):
+        (WebGPU::CommandEncoder::writeTimestamp):
+        (wgpuCommandEncoderRelease):
+        (wgpuCommandEncoderBeginComputePass):
+        (wgpuCommandEncoderBeginRenderPass):
+        (wgpuCommandEncoderCopyBufferToBuffer):
+        (wgpuCommandEncoderCopyBufferToTexture):
+        (wgpuCommandEncoderCopyTextureToBuffer):
+        (wgpuCommandEncoderCopyTextureToTexture):
+        (wgpuCommandEncoderFinish):
+        (wgpuCommandEncoderInsertDebugMarker):
+        (wgpuCommandEncoderPopDebugGroup):
+        (wgpuCommandEncoderPushDebugGroup):
+        (wgpuCommandEncoderResolveQuerySet):
+        (wgpuCommandEncoderWriteTimestamp):
+        * WebGPU/ComputePassEncoder.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/ComputePassEncoder.mm: Added.
+        (WebGPU::ComputePassEncoder::beginPipelineStatisticsQuery):
+        (WebGPU::ComputePassEncoder::dispatch):
+        (WebGPU::ComputePassEncoder::dispatchIndirect):
+        (WebGPU::ComputePassEncoder::endPass):
+        (WebGPU::ComputePassEncoder::endPipelineStatisticsQuery):
+        (WebGPU::ComputePassEncoder::insertDebugMarker):
+        (WebGPU::ComputePassEncoder::popDebugGroup):
+        (WebGPU::ComputePassEncoder::pushDebugGroup):
+        (WebGPU::ComputePassEncoder::setBindGroup):
+        (WebGPU::ComputePassEncoder::setPipeline):
+        (WebGPU::ComputePassEncoder::writeTimestamp):
+        (wgpuComputePassEncoderRelease):
+        (wgpuComputePassEncoderBeginPipelineStatisticsQuery):
+        (wgpuComputePassEncoderDispatch):
+        (wgpuComputePassEncoderDispatchIndirect):
+        (wgpuComputePassEncoderEndPass):
+        (wgpuComputePassEncoderEndPipelineStatisticsQuery):
+        (wgpuComputePassEncoderInsertDebugMarker):
+        (wgpuComputePassEncoderPopDebugGroup):
+        (wgpuComputePassEncoderPushDebugGroup):
+        (wgpuComputePassEncoderSetBindGroup):
+        (wgpuComputePassEncoderSetPipeline):
+        (wgpuComputePassEncoderWriteTimestamp):
+        * WebGPU/ComputePipeline.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/ComputePipeline.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (WebGPU::ComputePipeline::getBindGroupLayout):
+        (WebGPU::ComputePipeline::setLabel):
+        (wgpuComputePipelineRelease):
+        (wgpuComputePipelineGetBindGroupLayout):
+        (wgpuComputePipelineSetLabel):
+        * WebGPU/Device.h: Added.
+        * WebGPU/Device.mm: Added.
+        (WebGPU::Device::createBindGroup):
+        (WebGPU::Device::createBindGroupLayout):
+        (WebGPU::Device::createBuffer):
+        (WebGPU::Device::createCommandEncoder):
+        (WebGPU::Device::createComputePipeline):
+        (WebGPU::Device::createComputePipelineAsync):
+        (WebGPU::Device::createPipelineLayout):
+        (WebGPU::Device::createQuerySet):
+        (WebGPU::Device::createRenderBundleEncoder):
+        (WebGPU::Device::createRenderPipeline):
+        (WebGPU::Device::createRenderPipelineAsync):
+        (WebGPU::Device::createSampler):
+        (WebGPU::Device::createShaderModule):
+        (WebGPU::Device::createSwapChain):
+        (WebGPU::Device::createTexture):
+        (WebGPU::Device::destroy):
+        (WebGPU::Device::getLimits):
+        (WebGPU::Device::getQueue):
+        (WebGPU::Device::popErrorScope):
+        (WebGPU::Device::pushErrorScope):
+        (WebGPU::Device::setDeviceLostCallback):
+        (WebGPU::Device::setUncapturedErrorCallback):
+        (wgpuDeviceRelease):
+        (wgpuDeviceCreateBindGroup):
+        (wgpuDeviceCreateBindGroupLayout):
+        (wgpuDeviceCreateBuffer):
+        (wgpuDeviceCreateCommandEncoder):
+        (wgpuDeviceCreateComputePipeline):
+        (wgpuDeviceCreateComputePipelineAsync):
+        (wgpuDeviceCreatePipelineLayout):
+        (wgpuDeviceCreateQuerySet):
+        (wgpuDeviceCreateRenderBundleEncoder):
+        (wgpuDeviceCreateRenderPipeline):
+        (wgpuDeviceCreateRenderPipelineAsync):
+        (wgpuDeviceCreateSampler):
+        (wgpuDeviceCreateShaderModule):
+        (wgpuDeviceCreateSwapChain):
+        (wgpuDeviceCreateTexture):
+        (wgpuDeviceDestroy):
+        (wgpuDeviceGetLimits):
+        (wgpuDeviceGetQueue):
+        (wgpuDevicePopErrorScope):
+        (wgpuDevicePushErrorScope):
+        (wgpuDeviceSetDeviceLostCallback):
+        (wgpuDeviceSetUncapturedErrorCallback):
+        * WebGPU/ExportMacros.h:
+        * WebGPU/Instance.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/Instance.mm: Added.
+        (WebGPU::Instance::createSurface):
+        (WebGPU::Instance::processEvents):
+        (WebGPU::Instance::requestAdapter):
+        (wgpuInstanceRelease):
+        (wgpuCreateInstance):
+        (wgpuGetProcAddress):
+        (wgpuInstanceCreateSurface):
+        (wgpuInstanceProcessEvents):
+        (wgpuInstanceRequestAdapter):
+        * WebGPU/PipelineLayout.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/PipelineLayout.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (wgpuPipelineLayoutRelease):
+        * WebGPU/QuerySet.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/QuerySet.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (WebGPU::QuerySet::destroy):
+        (wgpuQuerySetRelease):
+        (wgpuQuerySetDestroy):
+        * WebGPU/Queue.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/Queue.mm: Added.
+        (WebGPU::Queue::onSubmittedWorkDone):
+        (WebGPU::Queue::submit):
+        (WebGPU::Queue::writeBuffer):
+        (WebGPU::Queue::writeTexture):
+        (wgpuQueueRelease):
+        (wgpuQueueOnSubmittedWorkDone):
+        (wgpuQueueSubmit):
+        (wgpuQueueWriteBuffer):
+        (wgpuQueueWriteTexture):
+        * WebGPU/RenderBundle.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/RenderBundle.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (wgpuRenderBundleRelease):
+        * WebGPU/RenderBundleEncoder.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/RenderBundleEncoder.mm: Added.
+        (WebGPU::RenderBundleEncoder::draw):
+        (WebGPU::RenderBundleEncoder::drawIndexed):
+        (WebGPU::RenderBundleEncoder::drawIndexedIndirect):
+        (WebGPU::RenderBundleEncoder::drawIndirect):
+        (WebGPU::RenderBundleEncoder::finish):
+        (WebGPU::RenderBundleEncoder::insertDebugMarker):
+        (WebGPU::RenderBundleEncoder::popDebugGroup):
+        (WebGPU::RenderBundleEncoder::pushDebugGroup):
+        (WebGPU::RenderBundleEncoder::setBindGroup):
+        (WebGPU::RenderBundleEncoder::setIndexBuffer):
+        (WebGPU::RenderBundleEncoder::setPipeline):
+        (WebGPU::RenderBundleEncoder::setVertexBuffer):
+        (wgpuRenderBundleEncoderRelease):
+        (wgpuRenderBundleEncoderDraw):
+        (wgpuRenderBundleEncoderDrawIndexed):
+        (wgpuRenderBundleEncoderDrawIndexedIndirect):
+        (wgpuRenderBundleEncoderDrawIndirect):
+        (wgpuRenderBundleEncoderFinish):
+        (wgpuRenderBundleEncoderInsertDebugMarker):
+        (wgpuRenderBundleEncoderPopDebugGroup):
+        (wgpuRenderBundleEncoderPushDebugGroup):
+        (wgpuRenderBundleEncoderSetBindGroup):
+        (wgpuRenderBundleEncoderSetIndexBuffer):
+        (wgpuRenderBundleEncoderSetPipeline):
+        (wgpuRenderBundleEncoderSetVertexBuffer):
+        * WebGPU/RenderPassEncoder.h: Added.
+        * WebGPU/RenderPassEncoder.mm: Added.
+        (WebGPU::RenderPassEncoder::beginOcclusionQuery):
+        (WebGPU::RenderPassEncoder::beginPipelineStatisticsQuery):
+        (WebGPU::RenderPassEncoder::draw):
+        (WebGPU::RenderPassEncoder::drawIndexed):
+        (WebGPU::RenderPassEncoder::drawIndexedIndirect):
+        (WebGPU::RenderPassEncoder::drawIndirect):
+        (WebGPU::RenderPassEncoder::endOcclusionQuery):
+        (WebGPU::RenderPassEncoder::endPass):
+        (WebGPU::RenderPassEncoder::endPipelineStatisticsQuery):
+        (WebGPU::RenderPassEncoder::executeBundles):
+        (WebGPU::RenderPassEncoder::insertDebugMarker):
+        (WebGPU::RenderPassEncoder::popDebugGroup):
+        (WebGPU::RenderPassEncoder::pushDebugGroup):
+        (WebGPU::RenderPassEncoder::setBindGroup):
+        (WebGPU::RenderPassEncoder::setBlendConstant):
+        (WebGPU::RenderPassEncoder::setIndexBuffer):
+        (WebGPU::RenderPassEncoder::setPipeline):
+        (WebGPU::RenderPassEncoder::setScissorRect):
+        (WebGPU::RenderPassEncoder::setStencilReference):
+        (WebGPU::RenderPassEncoder::setVertexBuffer):
+        (WebGPU::RenderPassEncoder::setViewport):
+        (WebGPU::RenderPassEncoder::writeTimestamp):
+        (wgpuRenderPassEncoderRelease):
+        (wgpuRenderPassEncoderBeginOcclusionQuery):
+        (wgpuRenderPassEncoderBeginPipelineStatisticsQuery):
+        (wgpuRenderPassEncoderDraw):
+        (wgpuRenderPassEncoderDrawIndexed):
+        (wgpuRenderPassEncoderDrawIndexedIndirect):
+        (wgpuRenderPassEncoderDrawIndirect):
+        (wgpuRenderPassEncoderEndOcclusionQuery):
+        (wgpuRenderPassEncoderEndPass):
+        (wgpuRenderPassEncoderEndPipelineStatisticsQuery):
+        (wgpuRenderPassEncoderExecuteBundles):
+        (wgpuRenderPassEncoderInsertDebugMarker):
+        (wgpuRenderPassEncoderPopDebugGroup):
+        (wgpuRenderPassEncoderPushDebugGroup):
+        (wgpuRenderPassEncoderSetBindGroup):
+        (wgpuRenderPassEncoderSetBlendConstant):
+        (wgpuRenderPassEncoderSetIndexBuffer):
+        (wgpuRenderPassEncoderSetPipeline):
+        (wgpuRenderPassEncoderSetScissorRect):
+        (wgpuRenderPassEncoderSetStencilReference):
+        (wgpuRenderPassEncoderSetVertexBuffer):
+        (wgpuRenderPassEncoderSetViewport):
+        (wgpuRenderPassEncoderWriteTimestamp):
+        * WebGPU/RenderPipeline.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/RenderPipeline.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (WebGPU::RenderPipeline::getBindGroupLayout):
+        (WebGPU::RenderPipeline::setLabel):
+        (wgpuRenderPipelineRelease):
+        (wgpuRenderPipelineGetBindGroupLayout):
+        (wgpuRenderPipelineSetLabel):
+        * WebGPU/Sampler.h: Renamed from Source/WebGPU/WebGPU/WebGPUObjC.h.
+        * WebGPU/Sampler.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (wgpuSamplerRelease):
+        * WebGPU/ShaderModule.h:
+        * WebGPU/ShaderModule.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (WebGPU::ShaderModule::setLabel):
+        (wgpuShaderModuleRelease):
+        (wgpuShaderModuleSetLabel):
+        * WebGPU/Surface.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/Surface.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (WebGPU::Surface::getPreferredFormat):
+        (wgpuSurfaceRelease):
+        (wgpuSurfaceGetPreferredFormat):
+        * WebGPU/SwapChain.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/SwapChain.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (WebGPU::SwapChain::getCurrentTextureView):
+        (WebGPU::SwapChain::present):
+        (wgpuSwapChainRelease):
+        (wgpuSwapChainGetCurrentTextureView):
+        (wgpuSwapChainPresent):
+        * WebGPU/Texture.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/Texture.mm: Copied from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (WebGPU::Texture::createView):
+        (WebGPU::Texture::destroy):
+        (wgpuTextureRelease):
+        (wgpuTextureCreateView):
+        (wgpuTextureDestroy):
+        * WebGPU/TextureView.h: Copied from Source/WebGPU/WebGPU/ShaderModule.h.
+        * WebGPU/TextureView.mm: Renamed from Source/WebGPU/WebGPU/WebGPUObjC.mm.
+        (wgpuTextureViewRelease):
+        * WebGPU/WebGPU.modulemap: Added.
+        * WebGPU/WebGPUExt.h: Added.
+
+2021-10-19  Myles C. Maxfield  <mmaxfield@apple.com>
+
+        Make WebGPU.xcodeproj and WebGPU.framework
+        https://bugs.webkit.org/show_bug.cgi?id=231661
+
+        Reviewed by Dean Jackson and Robin Morisset.
+
+        We've gotten some requests to be able to use WebGPU from native code,
+        without requiring all of WebKit. This patch creates a new Xcode project
+        that creates a new framework for WebGPU, so these internal users can
+        build it / include it in their own projects.
+
+        This project has two targets: One for WGSL and one for WebGPU. WGSL
+        creates a static library, and WebGPU links with it, and produces a
+        framework. This patch implements one dummy function from each of them.
+
+        * Configurations/Base.xcconfig: Added.
+        * Configurations/DebugRelease.xcconfig: Added.
+        * Configurations/SDKVariant.xcconfig: Added.
+        * Configurations/WGSL.xcconfig: Added.
+        * Configurations/WebGPU.xcconfig: Added.
+        * Info.plist: Added.
+        * Makefile: Added.
+        * WGSL/AST.h: Added.
+        * WGSL/WGSL.cpp: Added.
+        (WGSL::check):
+        (WGSL::SuccessfulCheck::~SuccessfulCheck):
+        * WGSL/WGSL.h: Added.
+        * WGSL/config.h: Added.
+        * WebGPU.xcodeproj/project.pbxproj: Added.
+        * WebGPU.xcodeproj/xcshareddata/xcschemes/WGSL.xcscheme: Added.
+        * WebGPU.xcodeproj/xcshareddata/xcschemes/WebGPU.xcscheme: Added.
+        * WebGPU/ExportMacros.h: Added.
+        * WebGPU/ShaderModule.h: Added.
+        * WebGPU/WebGPU.cpp: Added.
+        (wgpuDeviceCreateShaderModule):
+        * WebGPU/WebGPU.h: Added.
+        * WebGPU/WebGPUObjC.h: Added.
+        * WebGPU/WebGPUObjC.mm: Added.
+        (objcFunction):
+        * WebGPU/config.h: Added.

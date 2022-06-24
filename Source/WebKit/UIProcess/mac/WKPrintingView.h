@@ -32,6 +32,7 @@
 #import <wtf/Lock.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/Vector.h>
+#import <wtf/WeakObjCPtr.h>
 
 @class WKPrintingViewData;
 @class PDFDestination;
@@ -44,7 +45,7 @@ class WebFrameProxy;
 
 @interface WKPrintingView : NSView {
 @public
-    NSPrintOperation *_printOperation; // WKPrintingView is owned by the operation.
+    WeakObjCPtr<NSPrintOperation> _printOperation;
     RetainPtr<NSView> _wkView;
 
     RefPtr<WebKit::WebFrameProxy> _webFrame;

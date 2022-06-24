@@ -23,15 +23,14 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "WKFocusedFormControlView.h"
+#import "config.h"
+#import "WKFocusedFormControlView.h"
 
-#if PLATFORM(WATCHOS)
+#if HAVE(PEPPER_UI_CORE)
 
 asm(".linker_option \"-framework\", \"PepperUICore\"");
 
-#import <PepperUICore/PUICCrownInputSequencer.h>
-#import <PepperUICore/PUICCrownInputSequencer_Private.h>
+#import "PepperUICoreSPI.h"
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/WebCoreCALayerExtras.h>
 #import <wtf/NeverDestroyed.h>
@@ -79,7 +78,7 @@ static UIBezierPath *pathWithRoundedRectInFrame(CGRect rect, CGFloat borderRadiu
     WeakObjCPtr<id <WKFocusedFormControlViewDelegate>> _delegate;
     RetainPtr<NSString> _submitActionName;
     RetainPtr<PUICCrownInputSequencer> _crownInputSequencer;
-    Optional<CGPoint> _initialScrollViewContentOffset;
+    std::optional<CGPoint> _initialScrollViewContentOffset;
     BOOL _hasPendingFocusRequest;
 }
 
@@ -127,7 +126,7 @@ static UIBezierPath *pathWithRoundedRectInFrame(CGRect rect, CGFloat borderRadiu
     [self addSubview:_submitButtonBackgroundView.get()];
 
     _hasPendingFocusRequest = NO;
-    _initialScrollViewContentOffset = WTF::nullopt;
+    _initialScrollViewContentOffset = std::nullopt;
 
     return self;
 }
@@ -396,7 +395,7 @@ static NSDictionary *submitActionNameFontAttributes()
     }
 
     if (targetHighlightedFrameDeltaX || targetHighlightedFrameDeltaY) {
-        CGFloat distanceToTarget = std::sqrt(targetHighlightedFrameDeltaX * targetHighlightedFrameDeltaX + targetHighlightedFrameDeltaY * targetHighlightedFrameDeltaY);
+        CGFloat distanceToTarget = std::hypot(targetHighlightedFrameDeltaX, targetHighlightedFrameDeltaY);
         unitVectorToTarget = CGVector { targetHighlightedFrameDeltaX / distanceToTarget, targetHighlightedFrameDeltaY / distanceToTarget };
     }
 
@@ -462,10 +461,21 @@ static NSDictionary *submitActionNameFontAttributes()
 
 - (void)setSuggestions:(NSArray<UITextSuggestion *> *)suggestions
 {
-    if (_textSuggestions == suggestions || [_textSuggestions isEqualToArray:suggestions])
+    RetainPtr<NSMutableArray> displayableTextSuggestions;
+    if (suggestions) {
+        displayableTextSuggestions = adoptNS([[NSMutableArray alloc] initWithCapacity:suggestions.count]);
+        for (UITextSuggestion *suggestion in suggestions) {
+            if (!suggestion.displayText.length)
+                continue;
+
+            [displayableTextSuggestions addObject:suggestion];
+        }
+    }
+
+    if (_textSuggestions == displayableTextSuggestions.get() || [_textSuggestions isEqualToArray:displayableTextSuggestions.get()])
         return;
 
-    _textSuggestions = adoptNS(suggestions.copy);
+    _textSuggestions = WTFMove(displayableTextSuggestions);
     [_delegate focusedFormControllerDidUpdateSuggestions:self];
 }
 
@@ -491,4 +501,4 @@ static NSDictionary *submitActionNameFontAttributes()
 
 @end
 
-#endif // PLATFORM(WATCHOS)
+#endif // HAVE(PEPPER_UI_CORE)

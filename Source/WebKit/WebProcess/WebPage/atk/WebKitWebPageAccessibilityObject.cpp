@@ -34,6 +34,7 @@
 #include <WebCore/Document.h>
 #include <WebCore/Frame.h>
 #include <WebCore/Page.h>
+#include <WebCore/ScrollView.h>
 #include <wtf/glib/WTFGType.h>
 
 using namespace WebKit;
@@ -53,12 +54,12 @@ static void coreRootObjectWrapperDetachedCallback(AtkObject* wrapper, const char
     g_signal_emit_by_name(atkObject, "children-changed::remove", 0, wrapper);
 }
 
-static AccessibilityObjectWrapper* rootWebAreaWrapper(AccessibilityObject& rootObject)
+static AccessibilityObjectWrapper* rootWebAreaWrapper(AXCoreObject& rootObject)
 {
-    if (!rootObject.isAccessibilityScrollView())
+    if (!rootObject.isScrollView())
         return nullptr;
 
-    if (auto* webAreaObject = downcast<AccessibilityScrollView>(rootObject).webAreaObject())
+    if (auto* webAreaObject = rootObject.webAreaObject())
         return webAreaObject->wrapper();
 
     return nullptr;
@@ -85,7 +86,7 @@ static AtkObject* accessibilityRootObjectWrapper(AtkObject* atkObject)
     if (!cache)
         return nullptr;
 
-    AccessibilityObject* coreRootObject = cache->rootObject();
+    AXCoreObject* coreRootObject = cache->rootObject();
     if (!coreRootObject)
         return nullptr;
 
@@ -138,6 +139,14 @@ static AtkObject* webkitWebPageAccessibilityObjectRefChild(AtkObject* atkObject,
     return nullptr;
 }
 
+static AtkStateSet* webkitWebPageAccessibilityObjectRefStateSet(AtkObject* atkObject)
+{
+    if (auto* rootObjectWrapper = accessibilityRootObjectWrapper(atkObject))
+        return atk_object_ref_state_set(rootObjectWrapper);
+
+    return atk_state_set_new();
+}
+
 static void webkit_web_page_accessibility_object_class_init(WebKitWebPageAccessibilityObjectClass* klass)
 {
     AtkObjectClass* atkObjectClass = ATK_OBJECT_CLASS(klass);
@@ -148,6 +157,7 @@ static void webkit_web_page_accessibility_object_class_init(WebKitWebPageAccessi
     atkObjectClass->get_index_in_parent = webkitWebPageAccessibilityObjectGetIndexInParent;
     atkObjectClass->get_n_children = webkitWebPageAccessibilityObjectGetNChildren;
     atkObjectClass->ref_child = webkitWebPageAccessibilityObjectRefChild;
+    atkObjectClass->ref_state_set = webkitWebPageAccessibilityObjectRefStateSet;
 }
 
 AtkObject* webkitWebPageAccessibilityObjectNew(WebPage* page)

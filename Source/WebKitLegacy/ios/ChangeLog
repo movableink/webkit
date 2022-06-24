@@ -1,3 +1,817 @@
+2022-03-16  Youenn Fablet  <youenn@apple.com>
+
+        Make MIMETypeRegistry::mimeTypeForPath take a StringView
+        https://bugs.webkit.org/show_bug.cgi?id=236441
+        <rdar://problem/89084526>
+
+        Reviewed by Chris Dumez.
+
+        * WebCoreSupport/WebMIMETypeRegistry.mm:
+        (+[WebMIMETypeRegistry mimeTypeForExtension:]):
+
+2022-03-01  Wenson Hsieh  <wenson_hsieh@apple.com>
+
+        focus({preventScroll: true}) does not prevent scrolling on iOS
+        https://bugs.webkit.org/show_bug.cgi?id=236584
+        rdar://88911184
+
+        Reviewed by Simon Fraser.
+
+        Adjust the method signature of elementDidFocus. See WebCore ChangeLog for more information.
+
+        * WebCoreSupport/WebChromeClientIOS.h:
+        * WebCoreSupport/WebChromeClientIOS.mm:
+        (WebChromeClientIOS::elementDidFocus):
+
+2021-10-22  Ian Anderson  <iana@apple.com>
+
+        Add a module map file for PrivateFrameworks/WebKitLegacy
+        https://bugs.webkit.org/show_bug.cgi?id=230735
+
+        Reviewed by David Kilzer.
+
+        WebGeolocationCoreLocationProvider.h is an Objective-C++ header, but the
+        WebKitLegacy module should be usable by plain Objective-C clients. Add
+        C++ guards so that it can be included in the module.
+        Add a missing include to WebFixedPositionContent.h.
+
+        * Misc/WebGeolocationCoreLocationProvider.h:
+        * WebCoreSupport/WebFixedPositionContent.h:
+
+2021-10-22  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, reverting r284713.
+        https://bugs.webkit.org/show_bug.cgi?id=232187
+
+        Broke some Apple internal builds
+
+        Reverted changeset:
+
+        "Add a module map file for PrivateFrameworks/WebKitLegacy"
+        https://bugs.webkit.org/show_bug.cgi?id=230735
+        https://commits.webkit.org/r284713
+
+2021-10-22  Ian Anderson  <iana@apple.com>
+
+        Add a module map file for PrivateFrameworks/WebKitLegacy
+        https://bugs.webkit.org/show_bug.cgi?id=230735
+
+        Reviewed by David Kilzer.
+
+        WebGeolocationCoreLocationProvider.h is an Objective-C++ header, but the
+        WebKitLegacy module should be usable by plain Objective-C clients. Add
+        C++ guards so that it can be included in the module.
+        Add a missing include to WebFixedPositionContent.h.
+
+        * Misc/WebGeolocationCoreLocationProvider.h:
+        * WebCoreSupport/WebFixedPositionContent.h:
+
+2021-10-20  David Kilzer  <ddkilzer@apple.com>
+
+        WebPDFViewPlaceholder should use a weak delegate
+        <https://webkit.org/b/231927>
+
+        Reviewed by Tim Horton.
+
+        * WebView/WebPDFViewPlaceholder.h:
+        (WebPDFViewPlaceholder.delegate):
+        - Mark property as `weak` instead of `assign`.
+        * WebView/WebPDFViewPlaceholder.mm:
+        (WebPDFViewPlaceholder._dataSource):
+        (WebPDFViewPlaceholder._delegate):
+        - Mark instance variables as as `_weak` to match `delegate`
+          property and based on comment for `_dataSource`.
+
+2021-10-13  Alex Christensen  <achristensen@webkit.org>
+
+        Remove WTF::Variant and WTF::get
+        https://bugs.webkit.org/show_bug.cgi?id=231675
+
+        Reviewed by Chris Dumez.
+
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (-[WebVisiblePosition enclosingRangeWithDictationPhraseAlternatives:]):
+
+2021-08-19  Megan Gardner  <megan_gardner@apple.com>
+
+        Remove old unused code and out of date comments.
+        https://bugs.webkit.org/show_bug.cgi?id=229210
+
+        Reviewed by Anders Carlsson.
+
+        * WebKit.iOS.exp:
+
+2021-05-30  Darin Adler  <darin@apple.com>
+
+        Remove WTF::Optional synonym for std::optional, using that class template directly instead
+        https://bugs.webkit.org/show_bug.cgi?id=226433
+
+        Reviewed by Chris Dumez.
+
+        * WebCoreSupport/WebChromeClientIOS.h: Let the do-webcore-rename script rename
+        Optional<> to std::optional<>.
+
+2021-05-21  Chris Dumez  <cdumez@apple.com>
+
+        Stop using holdLock() in WebKit/WebKitLegacy/Tools as it is not compatible with Clang thread safety analysis
+        https://bugs.webkit.org/show_bug.cgi?id=226127
+
+        Reviewed by Alex Christensen.
+
+        * WebCoreSupport/WebFixedPositionContent.mm:
+        (-[WebFixedPositionContent scrollOrZoomChanged:]):
+        (-[WebFixedPositionContent overflowScrollPositionForLayer:changedTo:]):
+        (-[WebFixedPositionContent setViewportConstrainedLayers:stickyContainerMap:]):
+        (-[WebFixedPositionContent hasFixedOrStickyPositionLayers]):
+
+2021-05-10  Wenson Hsieh  <wenson_hsieh@apple.com>
+
+        Make WebCore::HitTestRequest::RequestType an enum class
+        https://bugs.webkit.org/show_bug.cgi?id=225597
+
+        Reviewed by Sam Weinig.
+
+        See WebCore/ChangeLog for more details.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame elementRectAtPoint:]):
+
+2021-04-20  Wenson Hsieh  <wenson_hsieh@apple.com>
+
+        Rename WebCore::SelectionRect to WebCore::SelectionGeometry
+        https://bugs.webkit.org/show_bug.cgi?id=224820
+
+        Reviewed by Megan Gardner.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame selectionRectsForCoreRange:]):
+
+2021-03-10  Chris Dumez  <cdumez@apple.com>
+
+        Use RetainPtr<> / OSObjectPtr<> more in WebKit
+        https://bugs.webkit.org/show_bug.cgi?id=223030
+
+        Reviewed by Darin Adler.
+
+        * WebView/WebPDFViewIOS.mm:
+        (createCGColorWithDeviceWhite):
+        (+[WebPDFView shadowColor]):
+        (+[WebPDFView backgroundColor]):
+
+2021-03-05  Chris Dumez  <cdumez@apple.com>
+
+        Reduce use of CFRetain() / CFRelease() / CFAutoRelease() in WebKit
+        https://bugs.webkit.org/show_bug.cgi?id=222760
+
+        Reviewed by Darin Adler.
+
+        Reduce use of CFRetain() / CFRelease() / CFAutoRelease() in WebKit by using RetainPtr<>.
+
+        * Misc/WebUIKitSupport.mm:
+        (LoadWebLocalizedStrings):
+        * WebView/WebPDFViewIOS.mm:
+        (-[WebPDFView finishedLoadingWithDataSource:]):
+        * WebView/WebPDFViewPlaceholder.mm:
+        (-[WebPDFViewPlaceholder finishedLoadingWithDataSource:]):
+
+2021-02-22  Chris Dumez  <cdumez@apple.com>
+
+        Use adoptNS() as soon as we [[ObjcClass alloc] init] to avoid leaks
+        https://bugs.webkit.org/show_bug.cgi?id=222237
+
+        Reviewed by Darin Adler.
+
+        * Misc/WebGeolocationProviderIOS.mm:
+        (+[WebGeolocationProviderIOS sharedGeolocationProvider]):
+
+2021-02-17  Chris Dumez  <cdumez@apple.com>
+
+        Reduce explicit usage of [objC autorelease] in WebKit even further
+        https://bugs.webkit.org/show_bug.cgi?id=222060
+
+        Reviewed by Darin Adler.
+
+        Reduce explicit usage of [objC autorelease] in WebKit further by using RetainPtr.
+
+        * WebCoreSupport/WebSelectionRect.m:
+        (+[WebSelectionRect selectionRect]):
+        * WebCoreSupport/WebVisiblePosition.mm:
+        * WebView/WebPDFViewIOS.mm:
+        (-[WebPDFView _checkPDFTitle]):
+
+2021-02-12  Chris Dumez  <cdumez@apple.com>
+
+        Reduce explicit usage of [objC release] in WebKit
+        https://bugs.webkit.org/show_bug.cgi?id=221780
+        <rdar://problem/74282389>
+
+        Reviewed by Darin Adler.
+
+        Apply review feedback from Darin Adler and Sam Weinig after r272789.
+
+        * WebView/WebPDFViewPlaceholder.mm:
+        (-[WebPDFViewPlaceholder _updateTitleForDocumentIfAvailable]):
+
+2021-02-12  Chris Dumez  <cdumez@apple.com>
+
+        Reduce explicit usage of [objC release] in WebKit
+        https://bugs.webkit.org/show_bug.cgi?id=221780
+
+        Reviewed by Alex Christensen.
+
+        Reduce explicit usage of [objC release] in WebKit by using smart pointers.
+
+        * WebCoreSupport/WebChromeClientIOS.mm:
+        (WebChromeClientIOS::runOpenPanel):
+        * WebView/WebPDFViewIOS.mm:
+        (-[WebPDFView dealloc]):
+        (-[WebPDFView setDataSource:]):
+        (-[WebPDFView _checkPDFTitle]):
+        (-[WebPDFView title]):
+        * WebView/WebPDFViewPlaceholder.mm:
+        (-[WebPDFViewPlaceholder _updateTitleForDocumentIfAvailable]):
+
+2021-01-19  Keith Rollin  <krollin@apple.com>
+
+        Modularize WebKitLegacy.framework
+        https://bugs.webkit.org/show_bug.cgi?id=220026
+        <rdar://57173237>
+
+        Reviewed by Darin Adler.
+
+        Add .modulemap files to WebKitLegacy to help speed up client builds.
+
+        For WebUIKitDelegate.h, ensure that ENABLE_ORIENTATION_EVENTS is
+        defined before checking its value, thereby avoiding a compiler
+        warning-turned-error that an uninitialized symbol is being used.
+
+        * WebView/WebUIKitDelegate.h:
+
+2021-01-14  Geoffrey Garen  <ggaren@apple.com>
+
+        Removed most uses of dispatch_async(dispatch_get_main_queue(), ...)
+        https://bugs.webkit.org/show_bug.cgi?id=220066
+
+        Reviewed by Antti Koivisto.
+
+        dispatch_async has two downsides:
+
+        (1) Its order is undefined (and in practice highly variable) relative to
+        other WebKit operations. This sometimes causes flakiness.
+
+        (2) It doesn't honor the RunLoop first paint optimization.
+
+        We can use RunLoop::dispatch() instead.
+
+        * Misc/WebGeolocationProviderIOS.mm:
+        (-[WebGeolocationProviderIOS registerWebView:]):
+        (-[WebGeolocationProviderIOS unregisterWebView:]):
+        (-[WebGeolocationProviderIOS setEnableHighAccuracy:]):
+        (-[WebGeolocationProviderIOS initializeGeolocationForWebView:listener:]):
+        * WebCoreSupport/WebChromeClientIOS.mm:
+        (WebChromeClientIOS::runOpenPanel):
+        * WebCoreSupport/WebInspectorClientIOS.mm:
+        (WebInspectorClient::didSetSearchingForNode):
+
+2020-11-06  Sam Weinig  <weinig@apple.com>
+
+        Further progress towards merging Settings.yaml into WebPreferences.yaml
+        https://bugs.webkit.org/show_bug.cgi?id=218663
+
+        Reviewed by Tim Horton.
+
+        * Misc/WebUIKitSupport.mm:
+        (WebKitGetMinimumZoomFontSize):
+        Use generated default value macro as the one in WebCore has now been removed.
+
+2020-10-06  Devin Rousso  <drousso@apple.com>
+
+        Move platform logic for CSS `hover` and `pointer` media queries outside of WebCore
+        https://bugs.webkit.org/show_bug.cgi?id=217413
+
+        Reviewed by Tim Horton.
+
+        * WebCoreSupport/WebChromeClientIOS.h:
+        (WebChromeClientIOS::hoverSupportedByPrimaryPointingDevice const): Added.
+        (WebChromeClientIOS::pointerCharacteristicsOfPrimaryPointingDevice const): Added.
+        Mouse devices are not supported.
+
+2020-10-06  Devin Rousso  <drousso@apple.com>
+
+        CSS hover and "pointer: fine" media queries do not evaluate to true with iOS 13.4 mouse support
+        https://bugs.webkit.org/show_bug.cgi?id=209292
+        <rdar://problem/60663124>
+
+        Reviewed by Tim Horton.
+
+        * WebCoreSupport/WebChromeClientIOS.h:
+        (WebChromeClientIOS::hoverSupportedByAnyAvailablePointingDevice const): Added.
+        (WebChromeClientIOS::pointerCharacteristicsOfAllAvailablePointingDevices const): Added.
+        Mouse devices are not supported.
+
+2020-09-20  Darin Adler  <darin@apple.com>
+
+        Next step towards eliminating deprecated legacy positions
+        https://bugs.webkit.org/show_bug.cgi?id=216751
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (-[DOMNode startPosition]):
+        (-[DOMNode endPosition]):
+        Replaced calls to createLegacyEditingPosition with calls to
+        makeDeprecatedLegacyPosition or makeContainerOffsetPosition.
+
+2020-09-02  Darin Adler  <darin@apple.com>
+
+        Remove EAffinity, UPSTREAM, DOWNSTREAM, SEL_DEFAULT_AFFINITY, and VisibleSelection::selectionType
+        https://bugs.webkit.org/show_bug.cgi?id=216102
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame closestCaretRectInMarkedTextRangeForPoint:]): Use Affinity.
+        (-[WebFrame smartExtendRangedSelection:]): Use visibleStart/End/Extent so we don't
+        need to write explicit code to handle affinity.
+
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (-[WebVisiblePosition setAffinity:]): Use Affinity.
+
+2020-09-02  Darin Adler  <darin@apple.com>
+
+        Change Affinity into an enum class
+        https://bugs.webkit.org/show_bug.cgi?id=216096
+
+        Reviewed by Wenson Hsieh.
+
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (-[WebVisiblePosition positionByMovingInDirection:amount:withAffinityDownstream:]):
+        Use prefix.
+
+2020-09-01  Darin Adler  <darin@apple.com>
+
+        Remove comparePositions and make VisiblePosition improvements
+        https://bugs.webkit.org/show_bug.cgi?id=215982
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (-[WebVisiblePosition positionByMovingInDirection:amount:withAffinityDownstream:]):
+        Use Upstream instead of VP_UPSTREAM_IF_POSSIBLE. Since we were calling
+        setAffinity here, VP_UPSTREAM_IF_POSSIBLE was misleading since that function
+        does not check the validity of the affinity.
+        (-[DOMNode startPosition]): Removed unnecessary explicit VP_DEFAULT_AFFINITY.
+        (-[DOMNode endPosition]): Ditto.
+
+2020-08-17  Darin Adler  <darin@apple.com>
+
+        Create documentOrder function, start refactoring to use it instead of Range::compare functions
+        https://bugs.webkit.org/show_bug.cgi?id=215551
+
+        Reviewed by Chris Dumez.
+
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (-[DOMRange startPosition]): Rewrote to not use Range::startPosition.
+        (-[DOMRange endPosition]): Rewrote to not use Range::endPosition.
+
+2020-08-13  Tim Horton  <timothy_horton@apple.com>
+
+        macCatalyst: Granting location permission doesn't allow geolocation access
+        https://bugs.webkit.org/show_bug.cgi?id=215464
+        <rdar://problem/64719458>
+
+        Reviewed by Wenson Hsieh.
+
+        * Misc/WebGeolocationCoreLocationProvider.mm:
+        (-[WebGeolocationCoreLocationProvider requestGeolocationAuthorization]):
+        Un-ifdef this code that was ifdeffed in r229963 during macCatalyst
+        bring-up and doesn't need to be anymore.
+
+2020-08-10  Tim Horton  <timothy_horton@apple.com>
+
+        REGRESSION (r265176): Cannot make or extend selections in iOS WebKitLegacy 
+        https://bugs.webkit.org/show_bug.cgi?id=215319
+        <rdar://problem/66688560>
+
+        Reviewed by Devin Rousso.
+
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (+[DOMRange rangeForFirstPosition:second:]):
+        We want to ensure that firstPosition is *before* secondPosition, so
+        the change in r265176 got the condition backwards. Swap it.
+
+2020-08-04  Darin Adler  <darin@apple.com>
+
+        Try to fix Catalyst build
+        https://bugs.webkit.org/show_bug.cgi?id=215133
+        rdar://66534119
+
+        * WebCoreSupport/WebVisiblePosition.mm: Add include of SimpleRange.h.
+
+2020-08-02  Darin Adler  <darin@apple.com>
+
+        Remove some member functions of Range and many calls to createLiveRange
+        https://bugs.webkit.org/show_bug.cgi?id=215070
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame selectionRectsForCoreRange:]): Remove createLiveRange.
+        (-[WebFrame selectionRectsForRange:]): Use makeSimpleRange.
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (-[WebVisiblePosition enclosingRangeWithDictationPhraseAlternatives:]): Ditto.
+        (-[WebVisiblePosition enclosingRangeWithCorrectionIndicator]): Ditto.
+        (+[DOMRange rangeForFirstPosition:second:]): Rename firstVP/secondVP
+        to firstPosition/secondPosition.
+
+2020-08-01  Darin Adler  <darin@apple.com>
+
+        Remove Range::create and many more uses of live ranges
+        https://bugs.webkit.org/show_bug.cgi?id=215004
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame wordAtPoint:]): Use makeSimpleRange.
+
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (-[WebVisiblePosition enclosingRangeWithDictationPhraseAlternatives:]): Use document
+        marker range function.
+        (-[WebVisiblePosition enclosingRangeWithCorrectionIndicator]): Ditto.
+        (+[DOMRange rangeForFirstPosition:second:]): Use makeSimpleRange.
+
+2020-07-30  Darin Adler  <darin@apple.com>
+
+        Further reduction in the use of live ranges, particularly in headers
+        https://bugs.webkit.org/show_bug.cgi?id=214793
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (-[WebVisiblePosition enclosingTextUnitOfGranularity:inDirectionIfAtBoundary:]):
+        Use SimpleRange.
+
+2020-07-19  Darin Adler  <darin@apple.com>
+
+        Remove live ranges from Editor.h and EditorClient.h
+        https://bugs.webkit.org/show_bug.cgi?id=214261
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame closestCaretRectInMarkedTextRangeForPoint:]):
+        Updated since compositionRange is no longer a live range.
+
+2020-07-03  Said Abou-Hallawa  <sabouhallawa@apple.com>
+
+        Change the names of MIMETypeRegistry methods to comply with webkit naming style
+        https://bugs.webkit.org/show_bug.cgi?id=213912
+
+        Reviewed by Youenn Fablet.
+
+        * WebCoreSupport/WebMIMETypeRegistry.mm:
+        (+[WebMIMETypeRegistry mimeTypeForExtension:]):
+        (+[WebMIMETypeRegistry preferredExtensionForMIMEType:]):
+
+2020-05-15  Alex Christensen  <achristensen@webkit.org>
+
+        Use enum serialization instead of casting to/from uint32_t
+        https://bugs.webkit.org/show_bug.cgi?id=211885
+
+        Reviewed by Geoffrey Garen.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame aggressivelyExpandSelectionToWordContainingCaretSelection]):
+        (-[WebFrame setSelectionGranularity:]):
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (toTextGranularity):
+        (toSelectionDirection):
+
+2020-05-14  Daniel Bates  <dabates@apple.com>
+
+        [iOS] Remove dead dictation code
+        https://bugs.webkit.org/show_bug.cgi?id=211871
+
+        Reviewed by Wenson Hsieh.
+
+        * DefaultDelegates/WebDefaultUIKitDelegate.m:
+        (-[WebDefaultUIKitDelegate isUnperturbedDictationResultMarker:]): Deleted.
+        * WebCoreSupport/WebFrameIOS.h:
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame previousUnperturbedDictationResultBoundaryFromPosition:]): Deleted.
+        (-[WebFrame nextUnperturbedDictationResultBoundaryFromPosition:]): Deleted.
+        * WebView/WebUIKitDelegate.h:
+
+2020-05-10  Tim Horton  <timothy_horton@apple.com>
+
+        Clicking a tel:// link on iPad with a trackpad presents different UI than tapping on it
+        https://bugs.webkit.org/show_bug.cgi?id=211686
+        <rdar://problem/57941589>
+
+        Reviewed by Wenson Hsieh.
+
+        * WebCoreSupport/WebChromeClientIOS.h:
+
+2020-04-11  Darin Adler  <darin@apple.com>
+
+        Stop using live ranges in functions that return range of the selection
+        https://bugs.webkit.org/show_bug.cgi?id=210396
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame selectionRectsForCoreRange:]): Changed argument type to
+        not require a live range. Internally, use createLiveRange and also
+        use a range-for loop.
+        (-[WebFrame selectionRectsForRange:]): Remove use of live range.
+        (-[WebFrame selectionRects]): Ditto.
+
+2020-04-19  Darin Adler  <darin@apple.com>
+
+        [Cocoa] Use createNSArray in many more places that build NSArray objects from C++ collections
+        https://bugs.webkit.org/show_bug.cgi?id=210702
+
+        Reviewed by Alex Christensen.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame selectionRectsForCoreRange:]): Use createNSArray.
+
+2020-04-20  Darin Adler  <darin@apple.com>
+
+        Use #import instead of #include in Objective-C and don't use #pragma once
+        https://bugs.webkit.org/show_bug.cgi?id=210724
+
+        Reviewed by David Kilzer.
+
+        * Misc/MemoryMeasure.h: Removed.
+        * Misc/MemoryMeasure.mm: Removed.
+        * WebKit.iOS.exp: Removed MemoryMeasure symbols.
+
+2020-04-18  Rob Buis  <rbuis@igalia.com>
+
+        Reduce parameter list of the FrameLoadRequest constructor
+        https://bugs.webkit.org/show_bug.cgi?id=210668
+
+        Reviewed by Darin Adler.
+
+        Adapt to API change.
+
+        * WebView/WebPDFViewPlaceholder.mm:
+        (-[WebPDFViewPlaceholder simulateClickOnLinkToURL:]):
+
+2020-04-12  Darin Adler  <darin@apple.com>
+
+        Fix some strange uses of start/endOfDocument
+        https://bugs.webkit.org/show_bug.cgi?id=210408
+
+        Reviewed by Wenson Hsieh.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame moveSelectionToStart]): Call startOfDocument on the document;
+        there is no need to pass a particular VisiblePosition, since all it gets
+        from the VisiblePosition is the document.
+        (-[WebFrame moveSelectionToEnd]): Ditto, for endOfDocument.
+        (-[WebFrame startPosition]): Call startOfDocument on the document rather
+        than using code to find the document element, since the function works
+        on any node.
+        (-[WebFrame endPosition]): Ditto.
+
+2020-04-10  Darin Adler  <darin@apple.com>
+
+        Move more from live range to SimpleRange: callers of absoluteTextRects
+        https://bugs.webkit.org/show_bug.cgi?id=210369
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame closestCaretRectInMarkedTextRangeForPoint:]): Use
+        RenderObject::absoluteTextRects instead of Range::absoluteTextRects.
+        Also added some missing null checks and reorganized the function a
+        bit to make it more direct and slightly cleaerer.
+
+2020-04-08  Darin Adler  <darin@apple.com>
+
+        [Cocoa] Simplify NSArray, NSDictionary, and NSNumber idioms throughout WebKit
+        https://bugs.webkit.org/show_bug.cgi?id=210138
+
+        Reviewed by Alex Christensen.
+
+        * WebCoreSupport/WebChromeClientIOS.mm:
+        (WebChromeClientIOS::runOpenPanel): Use createNSArray.
+
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (-[WebVisiblePosition enclosingRangeWithDictationPhraseAlternatives:]):
+        Use createNSArray.
+
+        * WebCoreSupport/WebVisiblePositionInternal.h:
+        Added #if so that this correctly doesn't compile anything on Mac.
+
+        * WebView/WebPDFViewIOS.mm:
+        (+[WebPDFView supportedMIMETypes]): Use @[].
+
+2020-04-04  Darin Adler  <darin@apple.com>
+
+        Stop using live ranges in DocumentMarkerController
+        https://bugs.webkit.org/show_bug.cgi?id=209985
+
+        Reviewed by Antti Koivisto.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame previousUnperturbedDictationResultBoundaryFromPosition:]):
+        Update since DocumentMarker::metadata no longer exists.
+        (-[WebFrame nextUnperturbedDictationResultBoundaryFromPosition:]):
+        Ditto.
+
+        * WebCoreSupport/WebVisiblePosition.mm:
+        (-[WebVisiblePosition enclosingRangeWithDictationPhraseAlternatives:]):
+        Update since DocumentMarker::alternatives no longer exists.
+        (-[WebVisiblePosition enclosingRangeWithCorrectionIndicator]):
+        Ditto.
+
+2020-03-12  Alexey Proskuryakov  <ap@apple.com>
+
+        rdar://problem/60359230 Mark locationManager:didChangeAuthorizationStatus: as deprecated.
+
+        * Misc/WebGeolocationCoreLocationProvider.mm:
+        (-[WebGeolocationCoreLocationProvider locationManager:didChangeAuthorizationStatus:]):
+
+2020-03-07  Darin Adler  <darin@apple.com>
+
+        Begin moving off of live ranges for WebKit internals
+        https://bugs.webkit.org/show_bug.cgi?id=208432
+
+        Reviewed by Daniel Bates.
+
+        * WebCoreSupport/WebFrameIOS.mm: Added include.
+
+2020-03-03  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: re-add `InspectorFrontendHost` support for moving the inspected window
+        https://bugs.webkit.org/show_bug.cgi?id=208555
+
+        Reviewed by Timothy Hatcher.
+
+        Partially revert r257759, as the design changed enough such that this code is still useful.
+
+        Allow the Web Inspector frontend to ask the containing app (via `InspectorFrontendClient`)
+        whether it supports the given docking configuration.
+
+        * WebCoreSupport/WebInspectorClientIOS.mm:
+        (WebInspectorFrontendClient::supportsDockSide): Added.
+        (WebInspectorFrontendClient::startWindowDrag): Added.
+
+2020-03-03  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: setting the frontend appearance doesn't update the window when undocked
+        https://bugs.webkit.org/show_bug.cgi?id=208503
+
+        Reviewed by Timothy Hatcher.
+
+        Notify the UIProcess when setting the forced appearance so platforms that support dark mode
+        are able to run native code to adjust the appearance of the undocked window.
+
+        * WebCoreSupport/WebInspectorClientIOS.mm:
+        (WebInspectorFrontendClient::setForcedAppearance): Added.
+
+2020-03-02  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: Items in the toolbar take up to much vertical space
+        https://bugs.webkit.org/show_bug.cgi?id=204627
+        <rdar://problem/59091905>
+
+        Reviewed by Timothy Hatcher.
+
+        Now that there is no toolbar area, there is nothing obstructing the ability for the window
+        to be moved around when dragging via the title bar area. As such, we can remove the unused
+        `InspectorFrontendHost` APIs.
+
+        * WebCoreSupport/WebInspectorClientIOS.mm:
+        (WebInspectorFrontendClient::startWindowDrag): Deleted.
+
+2020-03-02  Rob Buis  <rbuis@igalia.com>
+
+        Add referrerpolicy attribute support for anchors
+        https://bugs.webkit.org/show_bug.cgi?id=208424
+
+        Reviewed by Darin Adler.
+
+        Adjust to FrameLoadRequest API change.
+
+        * WebView/WebPDFViewPlaceholder.mm:
+        (-[WebPDFViewPlaceholder simulateClickOnLinkToURL:]):
+
+2020-02-27  Daniel Bates  <dabates@apple.com>
+
+        Change HitTestRequestType to an OptionSet
+        https://bugs.webkit.org/show_bug.cgi?id=208334
+
+        Reviewed by Wenson Hsieh.
+
+        * WebCoreSupport/WebFrameIOS.mm:
+        (-[WebFrame elementRectAtPoint:]):
+
+2020-02-19  Daniel Bates  <dabates@apple.com>
+
+        [iOS][LegacyWebKit] Override EditorClient::shouldRevealCurrentSelectionAfterInsertion()
+        https://bugs.webkit.org/show_bug.cgi?id=207955
+        <rdar://problem/59602916>
+
+        Reviewed by Wenson Hsieh.
+
+        Adds a stub function for -shouldRevealCurrentSelectionAfterInsertion that returns YES,
+        to keep our current behavior.
+
+        * DefaultDelegates/WebDefaultUIKitDelegate.m:
+        (-[WebDefaultUIKitDelegate shouldRevealCurrentSelectionAfterInsertion]): Added.
+        * WebView/WebUIKitDelegate.h:
+
+2020-02-07  Jon Lee  <jonlee@apple.com>
+
+        Web Inspector: Revert slim toolbar
+        https://bugs.webkit.org/show_bug.cgi?id=207422
+
+        Reviewed by Timothy Hatcher.
+
+        The slim toolbar needs a little more work before landing.
+
+        This patch reverts r255547, r255557, r255890, r255892, r255893, r255901, r255980.
+
+        * WebCoreSupport/WebInspectorClientIOS.mm:
+
+2020-02-01  Devin Rousso  <drousso@apple.com>
+
+        Web Inspector: move the items in the toolbar into the tab bar to save vertical space
+        https://bugs.webkit.org/show_bug.cgi?id=204627
+
+        Reviewed by Timothy Hatcher.
+
+        Now that there is no toolbar area, there is nothing obstructing the ability for the window
+        to be moved around when dragging via the title bar area. As such, we can remove the unused
+        `InspectorFrontendHost` APIs.
+
+        * WebCoreSupport/WebInspectorClientIOS.mm:
+        (WebInspectorFrontendClient::startWindowDrag): Deleted.
+
+2020-01-15  Tim Horton  <timothy_horton@apple.com>
+
+        WebKit should not expose a unprefixed CGRectValue category method on NSValue
+        https://bugs.webkit.org/show_bug.cgi?id=206297
+        <rdar://problem/58592554>
+
+        Reviewed by Wenson Hsieh.
+
+        * WebView/WebPDFViewPlaceholder.mm:
+        (-[NSValue CGRectValue]): Deleted.
+
+2020-01-03  Chris Dumez  <cdumez@apple.com>
+
+        Add support for DragEvent
+        https://bugs.webkit.org/show_bug.cgi?id=205758
+
+        Reviewed by Darin Adler.
+
+        * WebView/WebPDFViewPlaceholder.mm:
+        (-[WebPDFViewPlaceholder simulateClickOnLinkToURL:]):
+
+2019-12-20  Brian Burg  <bburg@apple.com>
+
+        Web Inspector: convert some InspectorFrontendHost methods to getters
+        https://bugs.webkit.org/show_bug.cgi?id=205475
+
+        Reviewed by Devin Rousso.
+
+        * WebCoreSupport/WebInspectorClientIOS.mm:
+        (WebInspectorFrontendClient::localizedStringsURL const):
+        (WebInspectorFrontendClient::localizedStringsURL): Deleted.
+
+2019-12-17  Tim Horton  <timothy_horton@apple.com>
+
+        macCatalyst: Cursor should update on mouse movement and style change
+        https://bugs.webkit.org/show_bug.cgi?id=205317
+        <rdar://problem/46793696>
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebChromeClientIOS.h:
+        Provide a stub implementation of cursor-related ChromeClient methods.
+
+2019-12-14  David Kilzer  <ddkilzer@apple.com>
+
+        Add release assert for selectedIndex in WebKit::WebPopupMenu::show()
+        <https://webkit.org/b/205223>
+        <rdar://problem/57929078>
+
+        Reviewed by Wenson Hsieh.
+
+        * WebCoreSupport/PopupMenuIOS.h:
+        (PopupMenuIOS::show):
+        - Rename `index` parameter to `selectedIndex`.
+        * WebCoreSupport/PopupMenuIOS.mm:
+        (PopupMenuIOS::show):
+        - Rename `index` parameter to `selectedIndex`.
+        (PopupMenuIOS::disconnectClient):
+        - Drive-by fix to change 0 to nullptr.
+
 2019-10-16  Chris Dumez  <cdumez@apple.com>
 
         Rename PageCache to BackForwardCache

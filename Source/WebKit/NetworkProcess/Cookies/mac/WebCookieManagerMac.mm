@@ -26,11 +26,12 @@
 #import "config.h"
 #import "WebCookieManager.h"
 
-#import "HTTPCookieAcceptPolicy.h"
 #import "NetworkProcess.h"
 #import "NetworkSession.h"
+#import <WebCore/HTTPCookieAcceptPolicy.h>
 #import <WebCore/NetworkStorageSession.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
+#import <wtf/CallbackAggregator.h>
 #import <wtf/ProcessPrivilege.h>
 
 namespace WebKit {
@@ -53,35 +54,20 @@ static CFHTTPCookieStorageAcceptPolicy toCFHTTPCookieStorageAcceptPolicy(HTTPCoo
     return CFHTTPCookieStorageAcceptPolicyAlways;
 }
 
-void WebCookieManager::platformSetHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicy policy)
+void WebCookieManager::platformSetHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicy policy, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies));
 
+    auto callbackAggregator = CallbackAggregator::create(WTFMove(completionHandler));
     [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookieAcceptPolicy:static_cast<NSHTTPCookieAcceptPolicy>(policy)];
+    saveCookies([NSHTTPCookieStorage sharedHTTPCookieStorage], [callbackAggregator] { });
 
     m_process.forEachNetworkStorageSession([&] (const auto& networkStorageSession) {
         if (auto cookieStorage = networkStorageSession.cookieStorage())
             CFHTTPCookieStorageSetCookieAcceptPolicy(cookieStorage.get(), toCFHTTPCookieStorageAcceptPolicy(policy));
+        if (auto *storage = networkStorageSession.nsCookieStorage())
+            saveCookies(storage, [callbackAggregator] { });
     });
-}
-
-HTTPCookieAcceptPolicy WebCookieManager::platformGetHTTPCookieAcceptPolicy()
-{
-    ASSERT(hasProcessPrivilege(ProcessPrivilege::CanAccessRawCookies));
-
-    switch ([[NSHTTPCookieStorage sharedHTTPCookieStorage] cookieAcceptPolicy]) {
-    case NSHTTPCookieAcceptPolicyAlways:
-        return HTTPCookieAcceptPolicy::AlwaysAccept;
-    case NSHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain:
-        return HTTPCookieAcceptPolicy::OnlyFromMainDocumentDomain;
-    case NSHTTPCookieAcceptPolicyExclusivelyFromMainDocumentDomain:
-        return HTTPCookieAcceptPolicy::ExclusivelyFromMainDocumentDomain;
-    case NSHTTPCookieAcceptPolicyNever:
-        return HTTPCookieAcceptPolicy::Never;
-    }
-
-    ASSERT_NOT_REACHED();
-    return HTTPCookieAcceptPolicy::AlwaysAccept;
 }
 
 } // namespace WebKit

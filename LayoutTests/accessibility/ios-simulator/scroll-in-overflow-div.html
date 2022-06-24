@@ -1,4 +1,4 @@
-<!DOCTYPE html> <!-- webkit-test-runner [ internal:AsyncOverflowScrollingEnabled=true ] -->
+<!DOCTYPE html> <!-- webkit-test-runner [ AsyncOverflowScrollingEnabled=true ] -->
 <html>
 <head>
 <style>
@@ -74,7 +74,7 @@ var successfullyParsed = false;
     window.jsTestIsAsync = true;
     function focusCallback(element, notification, info) {
 
-        if (notification == "AXScrollByPage") {
+        if (notification == "AXPageScrolled") {
             debug(notification + " received: data: " + info.status);
         }
 

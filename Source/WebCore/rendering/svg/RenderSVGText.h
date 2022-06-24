@@ -68,7 +68,6 @@ private:
     bool isSVGText() const override { return true; }
 
     void paint(PaintInfo&, const LayoutPoint&) override;
-    bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
     bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) override;
     VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
 
@@ -77,18 +76,10 @@ private:
 
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
-    LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
-    Optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
-    Optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
-
-    void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
     void willBeDestroyed() override;
 
     const AffineTransform& localToParentTransform() const override { return m_localTransform; }
     AffineTransform localTransform() const override { return m_localTransform; }
-
-    RenderBlock* firstLineBlock() const override;
 
     bool shouldHandleSubtreeMutations() const;
 

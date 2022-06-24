@@ -9,15 +9,16 @@
  */
 
 #include "modules/audio_coding/neteq/timestamp_scaler.h"
+
 #include "api/audio_codecs/builtin_audio_decoder_factory.h"
 #include "modules/audio_coding/neteq/mock/mock_decoder_database.h"
 #include "modules/audio_coding/neteq/packet.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
 
+using ::testing::_;
 using ::testing::Return;
 using ::testing::ReturnNull;
-using ::testing::_;
 
 namespace webrtc {
 
@@ -25,7 +26,7 @@ TEST(TimestampScaler, TestNoScaling) {
   MockDecoderDatabase db;
   auto factory = CreateBuiltinAudioDecoderFactory();
   // Use PCMu, because it doesn't use scaled timestamps.
-  const DecoderDatabase::DecoderInfo info(NetEqDecoder::kDecoderPCMu,
+  const DecoderDatabase::DecoderInfo info(SdpAudioFormat("pcmu", 8000, 1),
                                           absl::nullopt, factory);
   static const uint8_t kRtpPayloadType = 0;
   EXPECT_CALL(db, GetDecoderInfo(kRtpPayloadType))
@@ -47,7 +48,7 @@ TEST(TimestampScaler, TestNoScalingLargeStep) {
   MockDecoderDatabase db;
   auto factory = CreateBuiltinAudioDecoderFactory();
   // Use PCMu, because it doesn't use scaled timestamps.
-  const DecoderDatabase::DecoderInfo info(NetEqDecoder::kDecoderPCMu,
+  const DecoderDatabase::DecoderInfo info(SdpAudioFormat("pcmu", 8000, 1),
                                           absl::nullopt, factory);
   static const uint8_t kRtpPayloadType = 0;
   EXPECT_CALL(db, GetDecoderInfo(kRtpPayloadType))
@@ -57,7 +58,7 @@ TEST(TimestampScaler, TestNoScalingLargeStep) {
   // Test both sides of the timestamp wrap-around.
   static const uint32_t kStep = 160;
   uint32_t start_timestamp = 0;
-  // |external_timestamp| will be a large positive value.
+  // `external_timestamp` will be a large positive value.
   start_timestamp = start_timestamp - 5 * kStep;
   for (uint32_t timestamp = start_timestamp; timestamp != 5 * kStep;
        timestamp += kStep) {
@@ -74,7 +75,7 @@ TEST(TimestampScaler, TestG722) {
   MockDecoderDatabase db;
   auto factory = CreateBuiltinAudioDecoderFactory();
   // Use G722, which has a factor 2 scaling.
-  const DecoderDatabase::DecoderInfo info(NetEqDecoder::kDecoderG722,
+  const DecoderDatabase::DecoderInfo info(SdpAudioFormat("g722", 8000, 1),
                                           absl::nullopt, factory);
   static const uint8_t kRtpPayloadType = 17;
   EXPECT_CALL(db, GetDecoderInfo(kRtpPayloadType))
@@ -100,7 +101,7 @@ TEST(TimestampScaler, TestG722LargeStep) {
   MockDecoderDatabase db;
   auto factory = CreateBuiltinAudioDecoderFactory();
   // Use G722, which has a factor 2 scaling.
-  const DecoderDatabase::DecoderInfo info(NetEqDecoder::kDecoderG722,
+  const DecoderDatabase::DecoderInfo info(SdpAudioFormat("g722", 8000, 1),
                                           absl::nullopt, factory);
   static const uint8_t kRtpPayloadType = 17;
   EXPECT_CALL(db, GetDecoderInfo(kRtpPayloadType))
@@ -110,7 +111,7 @@ TEST(TimestampScaler, TestG722LargeStep) {
   // Test both sides of the timestamp wrap-around.
   static const uint32_t kStep = 320;
   uint32_t external_timestamp = 0;
-  // |external_timestamp| will be a large positive value.
+  // `external_timestamp` will be a large positive value.
   external_timestamp = external_timestamp - 5 * kStep;
   uint32_t internal_timestamp = external_timestamp;
   for (; external_timestamp != 5 * kStep; external_timestamp += kStep) {
@@ -130,9 +131,9 @@ TEST(TimestampScaler, TestG722WithCng) {
   MockDecoderDatabase db;
   auto factory = CreateBuiltinAudioDecoderFactory();
   // Use G722, which has a factor 2 scaling.
-  const DecoderDatabase::DecoderInfo info_g722(NetEqDecoder::kDecoderG722,
+  const DecoderDatabase::DecoderInfo info_g722(SdpAudioFormat("g722", 8000, 1),
                                                absl::nullopt, factory);
-  const DecoderDatabase::DecoderInfo info_cng(NetEqDecoder::kDecoderCNGwb,
+  const DecoderDatabase::DecoderInfo info_cng(SdpAudioFormat("cn", 16000, 1),
                                               absl::nullopt, factory);
   static const uint8_t kRtpPayloadTypeG722 = 17;
   static const uint8_t kRtpPayloadTypeCng = 13;
@@ -174,7 +175,7 @@ TEST(TimestampScaler, TestG722Packet) {
   MockDecoderDatabase db;
   auto factory = CreateBuiltinAudioDecoderFactory();
   // Use G722, which has a factor 2 scaling.
-  const DecoderDatabase::DecoderInfo info(NetEqDecoder::kDecoderG722,
+  const DecoderDatabase::DecoderInfo info(SdpAudioFormat("g722", 8000, 1),
                                           absl::nullopt, factory);
   static const uint8_t kRtpPayloadType = 17;
   EXPECT_CALL(db, GetDecoderInfo(kRtpPayloadType))
@@ -204,7 +205,7 @@ TEST(TimestampScaler, TestG722PacketList) {
   MockDecoderDatabase db;
   auto factory = CreateBuiltinAudioDecoderFactory();
   // Use G722, which has a factor 2 scaling.
-  const DecoderDatabase::DecoderInfo info(NetEqDecoder::kDecoderG722,
+  const DecoderDatabase::DecoderInfo info(SdpAudioFormat("g722", 8000, 1),
                                           absl::nullopt, factory);
   static const uint8_t kRtpPayloadType = 17;
   EXPECT_CALL(db, GetDecoderInfo(kRtpPayloadType))
@@ -238,7 +239,7 @@ TEST(TimestampScaler, TestG722Reset) {
   MockDecoderDatabase db;
   auto factory = CreateBuiltinAudioDecoderFactory();
   // Use G722, which has a factor 2 scaling.
-  const DecoderDatabase::DecoderInfo info(NetEqDecoder::kDecoderG722,
+  const DecoderDatabase::DecoderInfo info(SdpAudioFormat("g722", 8000, 1),
                                           absl::nullopt, factory);
   static const uint8_t kRtpPayloadType = 17;
   EXPECT_CALL(db, GetDecoderInfo(kRtpPayloadType))
@@ -279,7 +280,7 @@ TEST(TimestampScaler, TestG722Reset) {
 TEST(TimestampScaler, TestOpusLargeStep) {
   MockDecoderDatabase db;
   auto factory = CreateBuiltinAudioDecoderFactory();
-  const DecoderDatabase::DecoderInfo info(NetEqDecoder::kDecoderOpus,
+  const DecoderDatabase::DecoderInfo info(SdpAudioFormat("opus", 48000, 2),
                                           absl::nullopt, factory);
   static const uint8_t kRtpPayloadType = 17;
   EXPECT_CALL(db, GetDecoderInfo(kRtpPayloadType))
@@ -289,7 +290,7 @@ TEST(TimestampScaler, TestOpusLargeStep) {
   // Test both sides of the timestamp wrap-around.
   static const uint32_t kStep = 960;
   uint32_t external_timestamp = 0;
-  // |external_timestamp| will be a large positive value.
+  // `external_timestamp` will be a large positive value.
   external_timestamp = external_timestamp - 5 * kStep;
   uint32_t internal_timestamp = external_timestamp;
   for (; external_timestamp != 5 * kStep; external_timestamp += kStep) {

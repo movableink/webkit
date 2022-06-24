@@ -12,67 +12,88 @@
 #define MODULES_CONGESTION_CONTROLLER_RTP_TRANSPORT_FEEDBACK_ADAPTER_H_
 
 #include <deque>
+#include <map>
+#include <utility>
 #include <vector>
 
+#include "api/sequence_checker.h"
 #include "api/transport/network_types.h"
-#include "modules/congestion_controller/rtp/send_time_history.h"
-#include "rtc_base/criticalsection.h"
+#include "modules/include/module_common_types_public.h"
+#include "modules/rtp_rtcp/include/rtp_rtcp_defines.h"
 #include "rtc_base/network/sent_packet.h"
+#include "rtc_base/network_route.h"
 #include "rtc_base/thread_annotations.h"
-#include "rtc_base/thread_checker.h"
-#include "system_wrappers/include/clock.h"
 
 namespace webrtc {
 
-class PacketFeedbackObserver;
+struct PacketFeedback {
+  PacketFeedback() = default;
+  // Time corresponding to when this object was created.
+  Timestamp creation_time = Timestamp::MinusInfinity();
+  SentPacket sent;
+  // Time corresponding to when the packet was received. Timestamped with the
+  // receiver's clock. For unreceived packet, Timestamp::PlusInfinity() is
+  // used.
+  Timestamp receive_time = Timestamp::PlusInfinity();
 
-namespace rtcp {
-class TransportFeedback;
-}  // namespace rtcp
+  // The network route that this packet is associated with.
+  rtc::NetworkRoute network_route;
+};
+
+class InFlightBytesTracker {
+ public:
+  void AddInFlightPacketBytes(const PacketFeedback& packet);
+  void RemoveInFlightPacketBytes(const PacketFeedback& packet);
+  DataSize GetOutstandingData(const rtc::NetworkRoute& network_route) const;
+
+ private:
+  struct NetworkRouteComparator {
+    bool operator()(const rtc::NetworkRoute& a,
+                    const rtc::NetworkRoute& b) const;
+  };
+  std::map<rtc::NetworkRoute, DataSize, NetworkRouteComparator> in_flight_data_;
+};
 
 class TransportFeedbackAdapter {
  public:
-  explicit TransportFeedbackAdapter(const Clock* clock);
-  virtual ~TransportFeedbackAdapter();
+  TransportFeedbackAdapter();
 
-  void RegisterPacketFeedbackObserver(PacketFeedbackObserver* observer);
-  void DeRegisterPacketFeedbackObserver(PacketFeedbackObserver* observer);
-
-  void AddPacket(uint32_t ssrc,
-                 uint16_t sequence_number,
-                 size_t length,
-                 const PacedPacketInfo& pacing_info);
-
+  void AddPacket(const RtpPacketSendInfo& packet_info,
+                 size_t overhead_bytes,
+                 Timestamp creation_time);
   absl::optional<SentPacket> ProcessSentPacket(
       const rtc::SentPacket& sent_packet);
 
   absl::optional<TransportPacketsFeedback> ProcessTransportFeedback(
-      const rtcp::TransportFeedback& feedback);
+      const rtcp::TransportFeedback& feedback,
+      Timestamp feedback_receive_time);
 
-  std::vector<PacketFeedback> GetTransportFeedbackVector() const;
-
-  void SetNetworkIds(uint16_t local_id, uint16_t remote_id);
+  void SetNetworkRoute(const rtc::NetworkRoute& network_route);
 
   DataSize GetOutstandingData() const;
 
  private:
-  void OnTransportFeedback(const rtcp::TransportFeedback& feedback);
+  enum class SendTimeHistoryStatus { kNotAdded, kOk, kDuplicate };
 
-  std::vector<PacketFeedback> GetPacketFeedbackVector(
-      const rtcp::TransportFeedback& feedback);
+  std::vector<PacketResult> ProcessTransportFeedbackInner(
+      const rtcp::TransportFeedback& feedback,
+      Timestamp feedback_receive_time);
 
-  rtc::CriticalSection lock_;
-  SendTimeHistory send_time_history_ RTC_GUARDED_BY(&lock_);
-  const Clock* const clock_;
-  int64_t current_offset_ms_;
-  int64_t last_timestamp_us_;
-  std::vector<PacketFeedback> last_packet_feedback_vector_;
-  uint16_t local_net_id_ RTC_GUARDED_BY(&lock_);
-  uint16_t remote_net_id_ RTC_GUARDED_BY(&lock_);
+  DataSize pending_untracked_size_ = DataSize::Zero();
+  Timestamp last_send_time_ = Timestamp::MinusInfinity();
+  Timestamp last_untracked_send_time_ = Timestamp::MinusInfinity();
+  SequenceNumberUnwrapper seq_num_unwrapper_;
+  std::map<int64_t, PacketFeedback> history_;
 
-  rtc::CriticalSection observers_lock_;
-  std::vector<PacketFeedbackObserver*> observers_
-      RTC_GUARDED_BY(&observers_lock_);
+  // Sequence numbers are never negative, using -1 as it always < a real
+  // sequence number.
+  int64_t last_ack_seq_num_ = -1;
+  InFlightBytesTracker in_flight_;
+
+  Timestamp current_offset_ = Timestamp::MinusInfinity();
+  TimeDelta last_timestamp_ = TimeDelta::MinusInfinity();
+
+  rtc::NetworkRoute network_route_;
 };
 
 }  // namespace webrtc

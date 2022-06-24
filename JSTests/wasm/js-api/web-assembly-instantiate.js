@@ -76,7 +76,7 @@ assert.eq(WebAssembly.instantiate.length, 1);
             let {module, instance} = await WebAssembly.instantiate(bin);
         } catch(e) {
             assert.truthy(e instanceof WebAssembly.CompileError);
-            assert.eq(e.message, "WebAssembly.Module doesn't validate: control flow returns with unexpected type. F32 is not a subtype of I32, in function at index 0");
+            assert.eq(e.message, "WebAssembly.Module doesn't validate: control flow returns with unexpected type. F32 is not a I32, in function at index 0");
         }
     }
 
@@ -186,6 +186,33 @@ assert.eq(WebAssembly.instantiate.length, 1);
             // FIXME: Better error message here.
             assert.eq(e.message, "first argument must be an ArrayBufferView or an ArrayBuffer (evaluating 'WebAssembly.instantiate(25)')");
         }
+    }
+
+    assert.asyncTest(test());
+}
+
+{
+    const builder = (new Builder())
+          .Type().End()
+          .Import().Memory("imp", "memory", {initial:100}).End()
+          .Function().End()
+          .Export()
+              .Function("foo")
+          .End()
+          .Code()
+              .Function("foo", { params: [], ret: "i32" })
+                  .I32Const(1)
+              .End()
+          .End();
+
+    const bin = builder.WebAssembly().get();
+
+    async function test() {
+        let module = new WebAssembly.Module(bin);
+        let instance1 = await WebAssembly.instantiate(module, { imp: { memory: new WebAssembly.Memory({ initial: 100 }) } });
+        assert.truthy(instance1 instanceof WebAssembly.Instance);
+        let instance2 = await WebAssembly.instantiate(module, { imp: { memory: new WebAssembly.Memory({ initial: 100 }) } });
+        assert.truthy(instance2 instanceof WebAssembly.Instance);
     }
 
     assert.asyncTest(test());

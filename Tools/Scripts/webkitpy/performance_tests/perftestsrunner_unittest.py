@@ -1,4 +1,5 @@
 # Copyright (C) 2012 Google Inc. All rights reserved.
+# Copyright (C) 2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -28,16 +29,17 @@
 
 """Unit tests for run_perf_tests."""
 
-import StringIO
 import json
-import re
+import logging
 import unittest
 
+from webkitcorepy import BytesIO
+
 from webkitpy.common.host_mock import MockHost
-from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.port.test import TestPort
-from webkitpy.performance_tests.perftest import DEFAULT_TEST_RUNNER_COUNT
 from webkitpy.performance_tests.perftestsrunner import PerfTestsRunner
+
+from webkitcorepy import OutputCapture
 
 
 class MainTest(unittest.TestCase):
@@ -78,7 +80,7 @@ class MainTest(unittest.TestCase):
         add_file('test2.html')
         add_file('test3.html')
         port.host.filesystem.chdir(runner._port.perf_tests_dir()[:runner._port.perf_tests_dir().rfind(runner._host.filesystem.sep)])
-        self.assertItemsEqual(self._collect_tests_and_sort_test_name(runner), ['test1.html', 'test2.html'])
+        self.assertEqual(self._collect_tests_and_sort_test_name(runner), ['test1.html', 'test2.html'])
 
     def test_collect_tests_with_index_html_and_resources(self):
         runner, port = self.create_runner()
@@ -97,7 +99,7 @@ class MainTest(unittest.TestCase):
         self._add_file(runner, 'inspector/resources', 'resource_file.html')
         self._add_file(runner, 'unsupported', 'unsupported_test2.html')
         port.skipped_perf_tests = lambda: ['inspector/unsupported_test1.html', 'unsupported']
-        self.assertItemsEqual(self._collect_tests_and_sort_test_name(runner), ['inspector/test1.html', 'inspector/test2.html'])
+        self.assertEqual(self._collect_tests_and_sort_test_name(runner), ['inspector/test1.html', 'inspector/test2.html'])
 
     def test_collect_tests_with_skipped_list_and_files(self):
         runner, port = self.create_runner(args=['Suite/Test1.html', 'Suite/SkippedTest1.html', 'SkippedSuite/Test1.html'])
@@ -109,7 +111,7 @@ class MainTest(unittest.TestCase):
         self._add_file(runner, 'Suite', 'SkippedTest1.html')
         self._add_file(runner, 'Suite', 'SkippedTest2.html')
         port.skipped_perf_tests = lambda: ['Suite/SkippedTest1.html', 'Suite/SkippedTest1.html', 'SkippedSuite']
-        self.assertItemsEqual(self._collect_tests_and_sort_test_name(runner),
+        self.assertEqual(self._collect_tests_and_sort_test_name(runner),
             ['SkippedSuite/Test1.html', 'Suite/SkippedTest1.html', 'Suite/Test1.html'])
 
     def test_collect_tests_with_ignored_skipped_list(self):
@@ -121,7 +123,7 @@ class MainTest(unittest.TestCase):
         self._add_file(runner, 'inspector/resources', 'resource_file.html')
         self._add_file(runner, 'unsupported', 'unsupported_test2.html')
         port.skipped_perf_tests = lambda: ['inspector/unsupported_test1.html', 'unsupported']
-        self.assertItemsEqual(self._collect_tests_and_sort_test_name(runner), ['inspector/test1.html', 'inspector/test2.html', 'inspector/unsupported_test1.html', 'unsupported/unsupported_test2.html'])
+        self.assertEqual(self._collect_tests_and_sort_test_name(runner), ['inspector/test1.html', 'inspector/test2.html', 'inspector/unsupported_test1.html', 'unsupported/unsupported_test2.html'])
 
     def test_default_args(self):
         runner, port = self.create_runner()
@@ -147,7 +149,7 @@ class MainTest(unittest.TestCase):
                 '--no-show-results',
                 '--reset-results',
                 '--output-json-path=a/output.json',
-                '--slave-config-json-path=a/source.json',
+                '--worker-config-json-path=a/source.json',
                 '--test-results-server=somehost',
                 '--additional-drt-flag=--enable-threaded-parser',
                 '--additional-drt-flag=--awesomesauce',
@@ -165,7 +167,7 @@ class MainTest(unittest.TestCase):
         self.assertFalse(options.show_results)
         self.assertTrue(options.reset_results)
         self.assertEqual(options.output_json_path, 'a/output.json')
-        self.assertEqual(options.slave_config_json_path, 'a/source.json')
+        self.assertEqual(options.worker_config_json_path, 'a/source.json')
         self.assertEqual(options.test_results_server, 'somehost')
         self.assertEqual(options.additional_drt_flag, ['--enable-threaded-parser', '--awesomesauce'])
         self.assertEqual(options.repeat, 5)
@@ -201,21 +203,22 @@ class MainTest(unittest.TestCase):
                     raise Exception
                 return mock.upload_single_text_file_return_value
 
-        MockFileUploader.upload_single_text_file_return_value = StringIO.StringIO('OK')
+        MockFileUploader.upload_single_text_file_return_value = BytesIO(b'OK')
         self.assertTrue(runner._upload_json('https://some.host', 'some.json', '/some/path', MockFileUploader))
         self.assertEqual(MockFileUploader.called, ['FileUploader', 'upload_single_text_file'])
 
         MockFileUploader.reset()
-        MockFileUploader.upload_single_text_file_return_value = StringIO.StringIO('OK')
+        MockFileUploader.upload_single_text_file_return_value = BytesIO(b'OK')
         self.assertTrue(runner._upload_json('some.host', 'some.json', '/some/path', MockFileUploader))
 
         MockFileUploader.reset()
-        MockFileUploader.upload_single_text_file_return_value = StringIO.StringIO('Some error')
-        output = OutputCapture()
-        output.capture_output()
-        self.assertFalse(runner._upload_json('https://some.host', 'some.json', '/some/path', MockFileUploader))
-        _, _, logs = output.restore_output()
-        self.assertEqual(logs, 'Uploaded JSON to https://some.host/some/path but got a bad response:\nSome error\n')
+        MockFileUploader.upload_single_text_file_return_value = BytesIO(b'Some error')
+        with OutputCapture(level=logging.INFO) as captured:
+            self.assertFalse(runner._upload_json('https://some.host', 'some.json', '/some/path', MockFileUploader))
+        self.assertEqual(
+            captured.root.log.getvalue(),
+            'Uploaded JSON to https://some.host/some/path but got a bad response:\nSome error\n',
+        )
 
         # Throwing an exception upload_single_text_file shouldn't blow up _upload_json
         MockFileUploader.reset()
@@ -224,15 +227,16 @@ class MainTest(unittest.TestCase):
         self.assertEqual(MockFileUploader.called, ['FileUploader', 'upload_single_text_file'])
 
         MockFileUploader.reset()
-        MockFileUploader.upload_single_text_file_return_value = StringIO.StringIO('{"status": "OK"}')
+        MockFileUploader.upload_single_text_file_return_value = BytesIO(b'{"status": "OK"}')
         self.assertTrue(runner._upload_json('https://some.host', 'some.json', '/some/path', MockFileUploader))
         self.assertEqual(MockFileUploader.called, ['FileUploader', 'upload_single_text_file'])
 
         MockFileUploader.reset()
-        MockFileUploader.upload_single_text_file_return_value = StringIO.StringIO('{"status": "SomethingHasFailed", "failureStored": false}')
-        output = OutputCapture()
-        output.capture_output()
-        self.assertFalse(runner._upload_json('https://some.host', 'some.json', '/some/path', MockFileUploader))
-        _, _, logs = output.restore_output()
+        MockFileUploader.upload_single_text_file_return_value = BytesIO(b'{"status": "SomethingHasFailed", "failureStored": false}')
+        with OutputCapture(level=logging.INFO) as captured:
+            self.assertFalse(runner._upload_json('https://some.host', 'some.json', '/some/path', MockFileUploader))
         serialized_json = json.dumps({'status': 'SomethingHasFailed', 'failureStored': False}, indent=4)
-        self.assertEqual(logs, 'Uploaded JSON to https://some.host/some/path but got an error:\n%s\n' % serialized_json)
+        self.assertEqual(
+            captured.root.log.getvalue(),
+            'Uploaded JSON to https://some.host/some/path but got an error:\n{}\n'.format(serialized_json),
+        )

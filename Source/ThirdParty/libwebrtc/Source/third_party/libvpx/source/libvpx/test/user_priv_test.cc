@@ -57,28 +57,28 @@ string DecodeFile(const string &filename) {
     void *user_priv = reinterpret_cast<void *>(&frame_num);
     const vpx_codec_err_t res =
         decoder.DecodeFrame(video.cxdata(), video.frame_size(),
-                            (frame_num == 0) ? NULL : user_priv);
+                            (frame_num == 0) ? nullptr : user_priv);
     if (res != VPX_CODEC_OK) {
       EXPECT_EQ(VPX_CODEC_OK, res) << decoder.DecodeError();
       break;
     }
     libvpx_test::DxDataIterator dec_iter = decoder.GetDxData();
-    const vpx_image_t *img = NULL;
+    const vpx_image_t *img = nullptr;
 
     // Get decompressed data.
     while ((img = dec_iter.Next())) {
       if (frame_num == 0) {
-        CheckUserPrivateData(img->user_priv, NULL);
+        CheckUserPrivateData(img->user_priv, nullptr);
       } else {
         CheckUserPrivateData(img->user_priv, &frame_num);
 
         // Also test ctrl_get_reference api.
-        struct vp9_ref_frame ref;
+        struct vp9_ref_frame ref = vp9_ref_frame();
         // Randomly fetch a reference frame.
         ref.idx = rnd.Rand8() % 3;
         decoder.Control(VP9_GET_REFERENCE, &ref);
 
-        CheckUserPrivateData(ref.img.user_priv, NULL);
+        CheckUserPrivateData(ref.img.user_priv, nullptr);
       }
       md5.Add(img);
     }

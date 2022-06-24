@@ -23,17 +23,6 @@
 namespace angle
 {
 
-// The GLES driver type determines what shared object we use to load the GLES entry points.
-// AngleEGL loads from ANGLE's version of libEGL, libGLESv2, and libGLESv1_CM.
-// SystemEGL uses the system copies of libEGL, libGLESv2, and libGLESv1_CM.
-// SystemWGL loads Windows GL with the GLES compatiblity extensions. See util/WGLWindow.h.
-enum class GLESDriverType
-{
-    AngleEGL,
-    SystemEGL,
-    SystemWGL,
-};
-
 struct PlatformParameters
 {
     PlatformParameters();
@@ -43,6 +32,11 @@ struct PlatformParameters
     PlatformParameters(EGLint majorVersion, EGLint minorVersion, GLESDriverType driver);
 
     EGLint getRenderer() const;
+    EGLint getDeviceType() const;
+    bool isSwiftshader() const;
+    bool isVulkan() const;
+    bool isANGLE() const;
+    EGLint getAllocateNonZeroMemoryFeature() const;
 
     void initDefaultParameters();
 
@@ -57,6 +51,8 @@ struct PlatformParameters
     EGLint majorVersion;
     EGLint minorVersion;
 };
+
+const char *GetRendererName(EGLint renderer);
 
 bool operator<(const PlatformParameters &a, const PlatformParameters &b);
 bool operator==(const PlatformParameters &a, const PlatformParameters &b);
@@ -79,7 +75,6 @@ EGLPlatformParameters D3D11_FL11_1();
 EGLPlatformParameters D3D11_FL11_0();
 EGLPlatformParameters D3D11_FL10_1();
 EGLPlatformParameters D3D11_FL10_0();
-EGLPlatformParameters D3D11_FL9_3();
 
 EGLPlatformParameters D3D11_NULL();
 
@@ -88,14 +83,12 @@ EGLPlatformParameters D3D11_FL11_1_WARP();
 EGLPlatformParameters D3D11_FL11_0_WARP();
 EGLPlatformParameters D3D11_FL10_1_WARP();
 EGLPlatformParameters D3D11_FL10_0_WARP();
-EGLPlatformParameters D3D11_FL9_3_WARP();
 
 EGLPlatformParameters D3D11_REFERENCE();
 EGLPlatformParameters D3D11_FL11_1_REFERENCE();
 EGLPlatformParameters D3D11_FL11_0_REFERENCE();
 EGLPlatformParameters D3D11_FL10_1_REFERENCE();
 EGLPlatformParameters D3D11_FL10_0_REFERENCE();
-EGLPlatformParameters D3D11_FL9_3_REFERENCE();
 
 EGLPlatformParameters OPENGL();
 EGLPlatformParameters OPENGL(EGLint major, EGLint minor);
@@ -106,6 +99,7 @@ EGLPlatformParameters OPENGLES(EGLint major, EGLint minor);
 EGLPlatformParameters OPENGLES_NULL();
 
 EGLPlatformParameters OPENGL_OR_GLES();
+EGLPlatformParameters OPENGL_OR_GLES(EGLint major, EGLint minor);
 EGLPlatformParameters OPENGL_OR_GLES_NULL();
 
 EGLPlatformParameters VULKAN();
@@ -124,19 +118,16 @@ PlatformParameters ES2_D3D11_PRESENT_PATH_FAST();
 PlatformParameters ES2_D3D11_FL11_0();
 PlatformParameters ES2_D3D11_FL10_1();
 PlatformParameters ES2_D3D11_FL10_0();
-PlatformParameters ES2_D3D11_FL9_3();
 
 PlatformParameters ES2_D3D11_WARP();
 PlatformParameters ES2_D3D11_FL11_0_WARP();
 PlatformParameters ES2_D3D11_FL10_1_WARP();
 PlatformParameters ES2_D3D11_FL10_0_WARP();
-PlatformParameters ES2_D3D11_FL9_3_WARP();
 
 PlatformParameters ES2_D3D11_REFERENCE();
 PlatformParameters ES2_D3D11_FL11_0_REFERENCE();
 PlatformParameters ES2_D3D11_FL10_1_REFERENCE();
 PlatformParameters ES2_D3D11_FL10_0_REFERENCE();
-PlatformParameters ES2_D3D11_FL9_3_REFERENCE();
 
 PlatformParameters ES3_D3D11();
 PlatformParameters ES3_D3D11_FL11_1();
@@ -174,29 +165,189 @@ PlatformParameters ES31_NULL();
 
 PlatformParameters ES1_VULKAN();
 PlatformParameters ES1_VULKAN_NULL();
+PlatformParameters ES1_VULKAN_SWIFTSHADER();
 PlatformParameters ES2_VULKAN();
 PlatformParameters ES2_VULKAN_NULL();
 PlatformParameters ES2_VULKAN_SWIFTSHADER();
 PlatformParameters ES3_VULKAN();
 PlatformParameters ES3_VULKAN_NULL();
+PlatformParameters ES3_VULKAN_SWIFTSHADER();
 PlatformParameters ES31_VULKAN();
 PlatformParameters ES31_VULKAN_NULL();
+PlatformParameters ES31_VULKAN_SWIFTSHADER();
+PlatformParameters ES32_VULKAN();
+PlatformParameters ES32_VULKAN_NULL();
+PlatformParameters ES32_VULKAN_SWIFTSHADER();
+
+PlatformParameters ES1_METAL();
+PlatformParameters ES2_METAL();
+PlatformParameters ES3_METAL();
 
 PlatformParameters ES2_WGL();
 PlatformParameters ES3_WGL();
 
-inline PlatformParameters WithNoVirtualContexts(const PlatformParameters &params)
-{
-    PlatformParameters withNoVirtualContexts                  = params;
-    withNoVirtualContexts.eglParameters.contextVirtualization = EGL_FALSE;
-    return withNoVirtualContexts;
-}
+PlatformParameters ES2_EGL();
+PlatformParameters ES3_EGL();
+
+const char *GetNativeEGLLibraryNameWithExtension();
 
 inline PlatformParameters WithNoFixture(const PlatformParameters &params)
 {
     PlatformParameters withNoFixture = params;
     withNoFixture.noFixture          = true;
     return withNoFixture;
+}
+
+inline PlatformParameters WithNoTransformFeedback(const PlatformParameters &params)
+{
+    PlatformParameters withNoTransformFeedback                     = params;
+    withNoTransformFeedback.eglParameters.transformFeedbackFeature = EGL_FALSE;
+    return withNoTransformFeedback;
+}
+
+inline PlatformParameters WithAllocateNonZeroMemory(const PlatformParameters &params)
+{
+    PlatformParameters allocateNonZero                         = params;
+    allocateNonZero.eglParameters.allocateNonZeroMemoryFeature = EGL_TRUE;
+    return allocateNonZero;
+}
+
+inline PlatformParameters WithEmulateCopyTexImage2DFromRenderbuffers(
+    const PlatformParameters &params)
+{
+    PlatformParameters p                                   = params;
+    p.eglParameters.emulateCopyTexImage2DFromRenderbuffers = EGL_TRUE;
+    return p;
+}
+
+inline PlatformParameters WithNoShaderStencilOutput(const PlatformParameters &params)
+{
+    PlatformParameters re                       = params;
+    re.eglParameters.shaderStencilOutputFeature = EGL_FALSE;
+    return re;
+}
+
+inline PlatformParameters WithNoGenMultipleMipsPerPass(const PlatformParameters &params)
+{
+    PlatformParameters re                          = params;
+    re.eglParameters.genMultipleMipsPerPassFeature = EGL_FALSE;
+    return re;
+}
+
+inline PlatformParameters WithMetalMemoryBarrierAndCheapRenderPass(const PlatformParameters &params,
+                                                                   bool hasBarrier,
+                                                                   bool cheapRenderPass)
+{
+    PlatformParameters re                            = params;
+    re.eglParameters.hasExplicitMemBarrierFeatureMtl = hasBarrier ? EGL_TRUE : EGL_FALSE;
+    re.eglParameters.hasCheapRenderPassFeatureMtl    = cheapRenderPass ? EGL_TRUE : EGL_FALSE;
+    return re;
+}
+
+inline PlatformParameters WithMetalForcedBufferGPUStorage(const PlatformParameters &params)
+{
+    PlatformParameters re                            = params;
+    re.eglParameters.forceBufferGPUStorageFeatureMtl = EGL_TRUE;
+    return re;
+}
+
+inline PlatformParameters WithRobustness(const PlatformParameters &params)
+{
+    PlatformParameters withRobustness       = params;
+    withRobustness.eglParameters.robustness = EGL_TRUE;
+    return withRobustness;
+}
+
+inline PlatformParameters WithEmulatedPrerotation(const PlatformParameters &params, EGLint rotation)
+{
+    PlatformParameters prerotation                = params;
+    prerotation.eglParameters.emulatedPrerotation = rotation;
+    return prerotation;
+}
+
+inline PlatformParameters WithAsyncCommandQueueFeatureVulkan(const PlatformParameters &params)
+{
+    PlatformParameters withAsyncCommandQueue                           = params;
+    withAsyncCommandQueue.eglParameters.asyncCommandQueueFeatureVulkan = EGL_TRUE;
+    return withAsyncCommandQueue;
+}
+
+inline PlatformParameters WithNoVulkanViewportFlip(const PlatformParameters &params)
+{
+    PlatformParameters withoutVulkanViewportFlip                       = params;
+    withoutVulkanViewportFlip.eglParameters.supportsVulkanViewportFlip = EGL_FALSE;
+    return withoutVulkanViewportFlip;
+}
+
+inline PlatformParameters WithNoVulkanMultiDrawIndirect(const PlatformParameters &params)
+{
+    PlatformParameters withoutVulkanMultiDrawIndirectSupport                            = params;
+    withoutVulkanMultiDrawIndirectSupport.eglParameters.supportsVulkanMultiDrawIndirect = EGL_FALSE;
+    return withoutVulkanMultiDrawIndirectSupport;
+}
+
+inline PlatformParameters WithEmulatedVAOs(const PlatformParameters &params)
+{
+    PlatformParameters emualtedVAOParams         = params;
+    emualtedVAOParams.eglParameters.emulatedVAOs = EGL_TRUE;
+    return emualtedVAOParams;
+}
+
+inline PlatformParameters WithGlslang(const PlatformParameters &params)
+{
+    PlatformParameters generateSPIRVThroughGlslang                        = params;
+    generateSPIRVThroughGlslang.eglParameters.generateSPIRVThroughGlslang = EGL_TRUE;
+    return generateSPIRVThroughGlslang;
+}
+
+inline PlatformParameters WithDirectMetalGeneration(const PlatformParameters &params)
+{
+    PlatformParameters directMetalGeneration                  = params;
+    directMetalGeneration.eglParameters.directMetalGeneration = EGL_TRUE;
+    return directMetalGeneration;
+}
+
+inline PlatformParameters WithInitShaderVariables(const PlatformParameters &params)
+{
+    PlatformParameters initShaderVariables                     = params;
+    initShaderVariables.eglParameters.forceInitShaderVariables = EGL_TRUE;
+    return initShaderVariables;
+}
+
+inline PlatformParameters WithForceVulkanFallbackFormat(const PlatformParameters &paramsIn)
+{
+    PlatformParameters paramsOut                      = paramsIn;
+    paramsOut.eglParameters.forceVulkanFallbackFormat = EGL_TRUE;
+    return paramsOut;
+}
+
+inline PlatformParameters WithLowPowerGPU(const PlatformParameters &paramsIn)
+{
+    PlatformParameters paramsOut                   = paramsIn;
+    paramsOut.eglParameters.displayPowerPreference = EGL_LOW_POWER_ANGLE;
+    return paramsOut;
+}
+
+inline PlatformParameters WithHighPowerGPU(const PlatformParameters &paramsIn)
+{
+    PlatformParameters paramsOut                   = paramsIn;
+    paramsOut.eglParameters.displayPowerPreference = EGL_HIGH_POWER_ANGLE;
+    return paramsOut;
+}
+
+inline PlatformParameters WithVulkanPreferCPUForBufferSubData(const PlatformParameters &paramsIn)
+{
+    PlatformParameters paramsOut                                = paramsIn;
+    paramsOut.eglParameters.WithVulkanPreferCPUForBufferSubData = EGL_TRUE;
+    return paramsOut;
+}
+
+inline PlatformParameters WithForceSubmitImmutableTextureUpdates(const PlatformParameters &params)
+{
+    PlatformParameters withForceSubmitImmutableTextureUpdates = params;
+    withForceSubmitImmutableTextureUpdates.eglParameters.forceSubmitImmutableTextureUpdates =
+        EGL_TRUE;
+    return withForceSubmitImmutableTextureUpdates;
 }
 }  // namespace angle
 

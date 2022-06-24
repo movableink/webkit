@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,26 @@
 
 #pragma once
 
+#if USE(CG)
+
+#include <optional>
+#include <wtf/Forward.h>
+
 namespace WebCore {
+
+class PixelBuffer;
 
 WEBCORE_EXPORT uint8_t verifyImageBufferIsBigEnough(const void* buffer, size_t bufferSize);
 
-}
+CFStringRef jpegUTI();
+WEBCORE_EXPORT RetainPtr<CFStringRef> utiFromImageBufferMIMEType(const String&);
+
+Vector<uint8_t> data(CGImageRef, CFStringRef destinationUTI, std::optional<double> quality);
+Vector<uint8_t> data(const PixelBuffer&, const String& mimeType, std::optional<double> quality);
+
+WEBCORE_EXPORT String dataURL(CGImageRef, CFStringRef destinationUTI, const String& mimeType, std::optional<double> quality);
+String dataURL(const PixelBuffer&, const String& mimeType, std::optional<double> quality);
+
+} // namespace WebCore
+
+#endif // USE(CG)

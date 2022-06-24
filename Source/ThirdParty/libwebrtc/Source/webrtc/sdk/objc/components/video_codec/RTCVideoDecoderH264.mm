@@ -19,10 +19,14 @@
 #import "helpers.h"
 #import "helpers/scoped_cftyperef.h"
 
+#if defined(WEBRTC_IOS)
+#import "helpers/UIDevice+RTCDevice.h"
+#endif
+
 #include "modules/video_coding/include/video_error_codes.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
-#include "rtc_base/timeutils.h"
+#include "rtc_base/time_utils.h"
 #include "sdk/objc/components/video_codec/nalu_rewriter.h"
 
 // Struct that we pass to the decoder per frame to decode. We receive it again
@@ -37,6 +41,14 @@ struct RTCFrameDecodeParams {
 - (void)setError:(OSStatus)error;
 @end
 
+static void overrideColorSpaceAttachments(CVImageBufferRef imageBuffer) {
+  CVBufferRemoveAttachment(imageBuffer, kCVImageBufferCGColorSpaceKey);
+  CVBufferSetAttachment(imageBuffer, kCVImageBufferColorPrimariesKey, kCVImageBufferColorPrimaries_ITU_R_709_2, kCVAttachmentMode_ShouldPropagate);
+  CVBufferSetAttachment(imageBuffer, kCVImageBufferTransferFunctionKey, kCVImageBufferTransferFunction_sRGB, kCVAttachmentMode_ShouldPropagate);
+  CVBufferSetAttachment(imageBuffer, kCVImageBufferYCbCrMatrixKey, kCVImageBufferYCbCrMatrix_ITU_R_709_2, kCVAttachmentMode_ShouldPropagate);
+  CVBufferSetAttachment(imageBuffer, (CFStringRef)@"ColorInfoGuessedBy", (CFStringRef)@"RTCVideoDecoderH264", kCVAttachmentMode_ShouldPropagate);
+}
+
 // This is the callback function that VideoToolbox calls when decode is
 // complete.
 void decompressionOutputCallback(void *decoderRef,
@@ -46,14 +58,16 @@ void decompressionOutputCallback(void *decoderRef,
                                  CVImageBufferRef imageBuffer,
                                  CMTime timestamp,
                                  CMTime duration) {
-  std::unique_ptr<RTCFrameDecodeParams> decodeParams(
-      reinterpret_cast<RTCFrameDecodeParams *>(params));
-  if (status != noErr) {
+  if (status != noErr || !imageBuffer) {
     RTCVideoDecoderH264 *decoder = (__bridge RTCVideoDecoderH264 *)decoderRef;
-    [decoder setError:status];
+    [decoder setError:status != noErr ? status : 1];
     RTC_LOG(LS_ERROR) << "Failed to decode frame. Status: " << status;
     return;
   }
+
+  overrideColorSpaceAttachments(imageBuffer);
+
+  std::unique_ptr<RTCFrameDecodeParams> decodeParams(reinterpret_cast<RTCFrameDecodeParams *>(params));
   // TODO(tkchin): Handle CVO properly.
   RTCCVPixelBuffer *frameBuffer = [[RTCCVPixelBuffer alloc] initWithPixelBuffer:imageBuffer];
   RTCVideoFrame *decodedFrame =
@@ -92,16 +106,18 @@ void decompressionOutputCallback(void *decoderRef,
   return WEBRTC_VIDEO_CODEC_OK;
 }
 
-- (NSInteger)startDecodeWithSettings:(RTCVideoEncoderSettings *)settings
-                       numberOfCores:(int)numberOfCores {
-  return WEBRTC_VIDEO_CODEC_OK;
-}
-
 - (NSInteger)decode:(RTCEncodedImage *)inputImage
         missingFrames:(BOOL)missingFrames
     codecSpecificInfo:(nullable id<RTCCodecSpecificInfo>)info
          renderTimeMs:(int64_t)renderTimeMs {
   RTC_DCHECK(inputImage.buffer);
+
+  return [self decodeData: (uint8_t *)inputImage.buffer.bytes size: inputImage.buffer.length timeStamp: inputImage.timeStamp];
+}
+
+- (NSInteger)decodeData:(const uint8_t *)data
+        size:(size_t)size
+        timeStamp:(uint32_t)timeStamp {
 
   if (_error != noErr) {
     RTC_LOG(LS_WARNING) << "Last frame decode failed.";
@@ -110,8 +126,7 @@ void decompressionOutputCallback(void *decoderRef,
   }
 
   rtc::ScopedCFTypeRef<CMVideoFormatDescriptionRef> inputFormat =
-      rtc::ScopedCF(webrtc::CreateVideoFormatDescription((uint8_t *)inputImage.buffer.bytes,
-                                                         inputImage.buffer.length));
+      rtc::ScopedCF(webrtc::CreateVideoFormatDescription(data, size));
   if (inputFormat) {
     // Check if the video format has changed, and reinitialize decoder if
     // needed.
@@ -133,8 +148,8 @@ void decompressionOutputCallback(void *decoderRef,
     return WEBRTC_VIDEO_CODEC_ERROR;
   }
   CMSampleBufferRef sampleBuffer = nullptr;
-  if (!webrtc::H264AnnexBBufferToCMSampleBuffer((uint8_t *)inputImage.buffer.bytes,
-                                                inputImage.buffer.length,
+  if (!webrtc::H264AnnexBBufferToCMSampleBuffer(data,
+                                                size,
                                                 _videoFormat,
                                                 &sampleBuffer,
                                                 _memoryPool)) {
@@ -143,14 +158,17 @@ void decompressionOutputCallback(void *decoderRef,
   RTC_DCHECK(sampleBuffer);
   VTDecodeFrameFlags decodeFlags = kVTDecodeFrame_EnableAsynchronousDecompression;
   std::unique_ptr<RTCFrameDecodeParams> frameDecodeParams;
-  frameDecodeParams.reset(new RTCFrameDecodeParams(_callback, inputImage.timeStamp));
+  frameDecodeParams.reset(new RTCFrameDecodeParams(_callback, timeStamp));
   OSStatus status = VTDecompressionSessionDecodeFrame(
       _decompressionSession, sampleBuffer, decodeFlags, frameDecodeParams.release(), nullptr);
 #if defined(WEBRTC_IOS)
   // Re-initialize the decoder if we have an invalid session while the app is
-  // active and retry the decode request.
-  if (status == kVTInvalidSessionErr && [self resetDecompressionSession] == WEBRTC_VIDEO_CODEC_OK) {
-    frameDecodeParams.reset(new RTCFrameDecodeParams(_callback, inputImage.timeStamp));
+  // active or decoder malfunctions and retry the decode request.
+  if ((status == kVTInvalidSessionErr || status == kVTVideoDecoderMalfunctionErr) &&
+      [self resetDecompressionSession] == WEBRTC_VIDEO_CODEC_OK) {
+    RTC_LOG(LS_INFO) << "Failed to decode frame with code: " << status
+                     << " retrying decode after decompression session reset";
+    frameDecodeParams.reset(new RTCFrameDecodeParams(_callback, timeStamp));
     status = VTDecompressionSessionDecodeFrame(
         _decompressionSession, sampleBuffer, decodeFlags, frameDecodeParams.release(), nullptr);
   }
@@ -200,10 +218,10 @@ void decompressionOutputCallback(void *decoderRef,
   // we can pass CVPixelBuffers as native handles in decoder output.
   static size_t const attributesSize = 3;
   CFTypeRef keys[attributesSize] = {
-#if defined(WEBRTC_IOS)
-    kCVPixelBufferOpenGLESCompatibilityKey,
-#elif defined(WEBRTC_MAC)
+#if defined(WEBRTC_MAC) || defined(WEBRTC_MAC_CATALYST)
     kCVPixelBufferOpenGLCompatibilityKey,
+#elif defined(WEBRTC_IOS)
+    kCVPixelBufferOpenGLESCompatibilityKey,
 #endif
     kCVPixelBufferIOSurfacePropertiesKey,
     kCVPixelBufferPixelFormatTypeKey
@@ -246,8 +264,14 @@ void decompressionOutputCallback(void *decoderRef,
 
 - (void)destroyDecompressionSession {
   if (_decompressionSession) {
-#if defined(WEBRTC_IOS)
+#if defined(WEBRTC_WEBKIT_BUILD)
     VTDecompressionSessionWaitForAsynchronousFrames(_decompressionSession);
+#else
+#if defined(WEBRTC_IOS)
+    if ([UIDevice isIOS11OrLater]) {
+      VTDecompressionSessionWaitForAsynchronousFrames(_decompressionSession);
+    }
+#endif
 #endif
     VTDecompressionSessionInvalidate(_decompressionSession);
     CFRelease(_decompressionSession);

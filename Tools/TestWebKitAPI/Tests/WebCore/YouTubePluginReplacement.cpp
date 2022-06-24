@@ -34,7 +34,8 @@ namespace TestWebKitAPI {
 
 class YouTubePluginReplacementTest : public testing::Test {
 public:
-    void SetUp() final {
+    void SetUp() final
+    {
         WTF::initializeMainThread();
     }
 };

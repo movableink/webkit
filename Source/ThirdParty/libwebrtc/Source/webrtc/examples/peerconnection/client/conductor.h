@@ -17,10 +17,11 @@
 #include <string>
 #include <vector>
 
-#include "api/mediastreaminterface.h"
-#include "api/peerconnectioninterface.h"
+#include "api/media_stream_interface.h"
+#include "api/peer_connection_interface.h"
 #include "examples/peerconnection/client/main_wnd.h"
 #include "examples/peerconnection/client/peer_connection_client.h"
+#include "rtc_base/thread.h"
 
 namespace webrtc {
 class VideoCaptureModule;
@@ -57,14 +58,13 @@ class Conductor : public webrtc::PeerConnectionObserver,
   void DeletePeerConnection();
   void EnsureStreamingUI();
   void AddTracks();
-  std::unique_ptr<cricket::VideoCapturer> OpenVideoCaptureDevice();
 
   //
   // PeerConnectionObserver implementation.
   //
 
   void OnSignalingChange(
-      webrtc::PeerConnectionInterface::SignalingState new_state) override{};
+      webrtc::PeerConnectionInterface::SignalingState new_state) override {}
   void OnAddTrack(
       rtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver,
       const std::vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>>&
@@ -75,9 +75,9 @@ class Conductor : public webrtc::PeerConnectionObserver,
       rtc::scoped_refptr<webrtc::DataChannelInterface> channel) override {}
   void OnRenegotiationNeeded() override {}
   void OnIceConnectionChange(
-      webrtc::PeerConnectionInterface::IceConnectionState new_state) override{};
+      webrtc::PeerConnectionInterface::IceConnectionState new_state) override {}
   void OnIceGatheringChange(
-      webrtc::PeerConnectionInterface::IceGatheringState new_state) override{};
+      webrtc::PeerConnectionInterface::IceGatheringState new_state) override {}
   void OnIceCandidate(const webrtc::IceCandidateInterface* candidate) override;
   void OnIceConnectionReceivingChange(bool receiving) override {}
 
@@ -123,6 +123,7 @@ class Conductor : public webrtc::PeerConnectionObserver,
 
   int peer_id_;
   bool loopback_;
+  std::unique_ptr<rtc::Thread> signaling_thread_;
   rtc::scoped_refptr<webrtc::PeerConnectionInterface> peer_connection_;
   rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface>
       peer_connection_factory_;

@@ -1,3 +1,0 @@
-
-FAIL strokeText does not start a new path or subpath Can't find variable: OffscreenCanvas
-

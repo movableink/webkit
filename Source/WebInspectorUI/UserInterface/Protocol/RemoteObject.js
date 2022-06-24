@@ -101,31 +101,11 @@ WI.RemoteObject = class RemoteObject
     {
         console.assert(typeof payload === "object", "Remote object payload should only be an object");
 
-        if (payload.subtype === "array") {
-            // COMPATIBILITY (iOS 8): Runtime.RemoteObject did not have size property,
-            // instead it was tacked onto the end of the description, like "Array[#]".
-            var match = payload.description.match(/\[(\d+)\]$/);
-            if (match) {
-                payload.size = parseInt(match[1]);
-                payload.description = payload.description.replace(/\[\d+\]$/, "");
-            }
-        }
-
         if (payload.classPrototype)
             payload.classPrototype = WI.RemoteObject.fromPayload(payload.classPrototype, target);
 
-        if (payload.preview) {
-            // COMPATIBILITY (iOS 8): Did not have type/subtype/description on
-            // Runtime.ObjectPreview. Copy them over from the RemoteObject.
-            if (!payload.preview.type) {
-                payload.preview.type = payload.type;
-                payload.preview.subtype = payload.subtype;
-                payload.preview.description = payload.description;
-                payload.preview.size = payload.size;
-            }
-
+        if (payload.preview)
             payload.preview = WI.ObjectPreview.fromPayload(payload.preview);
-        }
 
         return new WI.RemoteObject(target, payload.objectId, payload.type, payload.subtype, payload.value, payload.description, payload.size, payload.classPrototype, payload.className, payload.preview);
     }
@@ -143,6 +123,11 @@ WI.RemoteObject = class RemoteObject
 
     static resolveNode(node, objectGroup)
     {
+        console.assert(node instanceof WI.DOMNode, node);
+
+        if (node.destroyed)
+            return Promise.reject("ERROR: node is destroyed");
+
         let target = WI.assumingMainTarget();
         return target.DOMAgent.resolveNode(node.id, objectGroup)
             .then(({object}) => WI.RemoteObject.fromPayload(object, WI.mainTarget));
@@ -181,6 +166,25 @@ WI.RemoteObject = class RemoteObject
         }
 
         target.CanvasAgent.resolveContext(canvas.identifier, objectGroup, wrapCallback);
+    }
+
+    static resolveAnimation(animation, objectGroup, callback)
+    {
+        console.assert(typeof callback === "function");
+
+        function wrapCallback(error, object) {
+            if (error || !object)
+                callback(null);
+            else
+                callback(WI.RemoteObject.fromPayload(object, WI.mainTarget));
+        }
+
+        let target = WI.assumingMainTarget();
+
+        // COMPATIBILITY (iOS 13.1): Animation.resolveAnimation did not exist yet.
+        console.assert(target.hasCommand("Animation.resolveAnimation"));
+
+        target.AnimationAgent.resolveAnimation(animation.animationId, objectGroup, wrapCallback);
     }
 
     // Public
@@ -308,31 +312,6 @@ WI.RemoteObject = class RemoteObject
             return;
         }
 
-        // COMPATIBILITY (iOS 8): Runtime.getDisplayableProperties did not exist.
-        // Here we do our best to reimplement it by getting all properties and reducing them down.
-        if (!this._target.hasCommand("Runtime.getDisplayableProperties")) {
-            this._getProperties(options, (error, allProperties) => {
-                var ownOrGetterPropertiesList = [];
-                if (allProperties) {
-                    for (var property of allProperties) {
-                        if (property.isOwn || property.name === "__proto__") {
-                            // Own property or getter property in prototype chain.
-                            ownOrGetterPropertiesList.push(property);
-                        } else if (property.value && property.name !== property.name.toUpperCase()) {
-                            var type = property.value.type;
-                            if (type && type !== "function" && property.name !== "constructor") {
-                                // Possible native binding getter property converted to a value. Also, no CONSTANT name style and not "constructor".
-                                // There is no way of knowing if this is native or not, so just go with it.
-                                ownOrGetterPropertiesList.push(property);
-                            }
-                        }
-                    }
-                }
-                this._getPropertyDescriptorsResolver(callback, error, ownOrGetterPropertiesList);
-            });
-            return;
-        }
-
         this._getDisplayableProperties(this._getPropertyDescriptorsResolver.bind(this, callback), options);
     }
 
@@ -433,7 +412,7 @@ WI.RemoteObject = class RemoteObject
 
     pushNodeToFrontend(callback)
     {
-        if (this._objectId)
+        if (this._objectId && InspectorBackend.hasCommand("DOM.requestNode"))
             WI.domManager.pushNodeToFrontend(this._objectId, callback);
         else
             callback(0);
@@ -594,7 +573,7 @@ WI.RemoteObject = class RemoteObject
             var location = response.location;
             var sourceCode = WI.debuggerManager.scriptForIdentifier(location.scriptId, this._target);
 
-            if (!sourceCode || ((!WI.isEngineeringBuild || !WI.settings.engineeringShowInternalScripts.value) && isWebKitInternalScript(sourceCode.sourceURL))) {
+            if (!sourceCode || (!WI.settings.engineeringShowInternalScripts.value && isWebKitInternalScript(sourceCode.sourceURL))) {
                 result.resolve(WI.RemoteObject.SourceCodeLocationPromise.NoSourceFound);
                 return;
             }

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Igalia S.L.
- * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,15 +35,15 @@ typedef struct _JSCClass JSCClass;
 
 namespace JSC {
 
-class JSCCallbackFunction : public InternalFunction {
+class JSCCallbackFunction final : public InternalFunction {
     friend struct APICallbackFunction;
 public:
     typedef InternalFunction Base;
 
-    template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    template<typename CellType, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        return subspaceForImpl(vm);
+        return vm.jscCallbackFunctionSpace<mode>();
     }
 
     enum class Type {
@@ -52,7 +52,8 @@ public:
         Constructor
     };
 
-    static JSCCallbackFunction* create(VM&, JSGlobalObject*, const String& name, Type, JSCClass*, GRefPtr<GClosure>&&, GType, Optional<Vector<GType>>&&);
+    static JSCCallbackFunction* create(VM&, JSGlobalObject*, const String& name, Type, JSCClass*, GRefPtr<GClosure>&&, GType, std::optional<Vector<GType>>&&);
+    static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -67,9 +68,7 @@ public:
     JSObjectRef construct(JSContextRef, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception);
 
 private:
-    static IsoSubspace* subspaceForImpl(VM&);
-    
-    JSCCallbackFunction(VM&, Structure*, Type, JSCClass*, GRefPtr<GClosure>&&, GType, Optional<Vector<GType>>&&);
+    JSCCallbackFunction(VM&, Structure*, Type, JSCClass*, GRefPtr<GClosure>&&, GType, std::optional<Vector<GType>>&&);
 
     JSObjectCallAsFunctionCallback functionCallback() { return m_functionCallback; }
     JSObjectCallAsConstructorCallback constructCallback() { return m_constructCallback; }
@@ -80,7 +79,7 @@ private:
     GRefPtr<JSCClass> m_class;
     GRefPtr<GClosure> m_closure;
     GType m_returnType;
-    Optional<Vector<GType>> m_parameters;
+    std::optional<Vector<GType>> m_parameters;
 };
 
 } // namespace JSC

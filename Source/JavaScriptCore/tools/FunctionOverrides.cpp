@@ -31,6 +31,7 @@
 #include <string.h>
 #include <wtf/DataLog.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/SafeStrerror.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
@@ -110,17 +111,18 @@ FunctionOverrides& FunctionOverrides::overrides()
 FunctionOverrides::FunctionOverrides(const char* overridesFileName)
 {
     FunctionOverridesAssertScope assertScope;
-    parseOverridesInFile(holdLock(m_lock), overridesFileName);
+    Locker locker { m_lock };
+    parseOverridesInFile(overridesFileName);
 }
 
 void FunctionOverrides::reinstallOverrides()
 {
     FunctionOverridesAssertScope assertScope;
     FunctionOverrides& overrides = FunctionOverrides::overrides();
-    auto locker = holdLock(overrides.m_lock);
+    Locker locker { overrides.m_lock };
     const char* overridesFileName = Options::functionOverrides();
-    overrides.clear(locker);
-    overrides.parseOverridesInFile(locker, overridesFileName);
+    overrides.clear();
+    overrides.parseOverridesInFile(overridesFileName);
 }
 
 static void initializeOverrideInfo(const SourceCode& origCode, const String& newBody, FunctionOverrides::OverrideInfo& info)
@@ -137,7 +139,9 @@ static void initializeOverrideInfo(const SourceCode& origCode, const String& new
     newProviderStr.append(origHeader);
     newProviderStr.append(newBody);
 
-    Ref<SourceProvider> newProvider = StringSourceProvider::create(newProviderStr, SourceOrigin { "<overridden>" }, URL({ }, "<overridden>"));
+    auto overridden = "<overridden>"_s;
+    URL url({ }, overridden);
+    Ref<SourceProvider> newProvider = StringSourceProvider::create(newProviderStr, SourceOrigin { url }, overridden);
 
     info.firstLine = 1;
     info.lineCount = 1; // Faking it. This doesn't really matter for now.
@@ -165,8 +169,8 @@ bool FunctionOverrides::initializeOverrideFor(const SourceCode& origCode, Functi
 
     String newBody;
     {
-        auto locker = holdLock(overrides.m_lock);
-        auto it = overrides.m_entries.find(sourceBodyString.isolatedCopy());
+        Locker locker { overrides.m_lock };
+        auto it = overrides.m_entries.find(WTFMove(sourceBodyString).isolatedCopy());
         if (it == overrides.m_entries.end())
             return false;
         newBody = it->value.isolatedCopy();
@@ -246,7 +250,7 @@ static String parseClause(const char* keyword, size_t keywordLength, FILE* file,
     FAIL_WITH_ERROR(SYNTAX_ERROR, ("'", keyword, "' clause end delimiter '", delimiter, "' not found:\n", builder.toString(), "\n", "Are you missing a '}' before the delimiter?\n"));
 }
 
-void FunctionOverrides::parseOverridesInFile(const AbstractLocker&, const char* fileName)
+void FunctionOverrides::parseOverridesInFile(const char* fileName)
 {
     FunctionOverridesAssertScope assertScope;
     if (!fileName)
@@ -280,7 +284,7 @@ void FunctionOverrides::parseOverridesInFile(const AbstractLocker&, const char* 
     
     int result = fclose(file);
     if (result)
-        dataLogF("Failed to close file %s: %s\n", fileName, strerror(errno));
+        dataLogF("Failed to close file %s: %s\n", fileName, safeStrerror(errno).data());
 }
     
 } // namespace JSC

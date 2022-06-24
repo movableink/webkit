@@ -34,6 +34,7 @@ struct InsertTextOptions {
     bool registerUndoGroup { false };
     bool suppressSelectionUpdate { false };
     bool processingUserGesture { false };
+    bool shouldSimulateKeyboardInput { false };
     EditingRangeIsRelativeTo editingRangeIsRelativeTo { EditingRangeIsRelativeTo::EditableRoot };
 };
 
@@ -42,6 +43,6 @@ struct InsertTextOptions {
 namespace IPC {
 template<> struct ArgumentCoder<WebKit::InsertTextOptions> {
     static void encode(Encoder&, const WebKit::InsertTextOptions&);
-    static Optional<WebKit::InsertTextOptions> decode(Decoder&);
+    static std::optional<WebKit::InsertTextOptions> decode(Decoder&);
 };
 }

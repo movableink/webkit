@@ -23,15 +23,17 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
+
+#import <wtf/RetainPtr.h>
 
 namespace TestWebKitAPI {
 
 TEST(WebKitLegacy, TypingStyleCrash)
 {
-    WebView *webView = [[WebView alloc] init];
+    auto webView = adoptNS([[WebView alloc] init]);
     (void)[webView typingStyle];
-    [webView release];
+    webView = nil;
 }
 
 } // namespace TestWebKitAPI

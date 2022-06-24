@@ -11,10 +11,9 @@
 #ifndef MODULES_VIDEO_PROCESSING_UTIL_DENOISER_FILTER_H_
 #define MODULES_VIDEO_PROCESSING_UTIL_DENOISER_FILTER_H_
 
-#include <climits>
-#include <memory>
+#include <stdint.h>
 
-#include "modules/include/module_common_types.h"
+#include <memory>
 
 namespace webrtc {
 
@@ -31,11 +30,6 @@ class DenoiserFilter {
                                                 CpuType* cpu_type);
 
   virtual ~DenoiserFilter() {}
-
-  virtual void CopyMem16x16(const uint8_t* src,
-                            int src_stride,
-                            uint8_t* dst,
-                            int dst_stride) = 0;
   virtual uint32_t Variance16x8(const uint8_t* a,
                                 int a_stride,
                                 const uint8_t* b,

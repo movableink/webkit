@@ -26,7 +26,7 @@
 #include "config.h"
 #include "ThreadedDisplayRefreshMonitor.h"
 
-#if USE(COORDINATED_GRAPHICS) && USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+#if USE(COORDINATED_GRAPHICS)
 
 #include "CompositingRunLoop.h"
 #include "ThreadedCompositor.h"
@@ -37,10 +37,14 @@
 
 namespace WebKit {
 
+// FIXME: Use the correct frame rate.
+constexpr WebCore::FramesPerSecond DefaultFramesPerSecond = 60;
+
 ThreadedDisplayRefreshMonitor::ThreadedDisplayRefreshMonitor(WebCore::PlatformDisplayID displayID, Client& client)
     : WebCore::DisplayRefreshMonitor(displayID)
     , m_displayRefreshTimer(RunLoop::main(), this, &ThreadedDisplayRefreshMonitor::displayRefreshCallback)
     , m_client(&client)
+    , m_currentUpdate({ 0, DefaultFramesPerSecond })
 {
 #if USE(GLIB_EVENT_LOOP)
     m_displayRefreshTimer.setPriority(RunLoopSourcePriority::DisplayRefreshMonitorTimer);
@@ -55,7 +59,7 @@ bool ThreadedDisplayRefreshMonitor::requestRefreshCallback()
 
     bool previousFrameDone { false };
     {
-        LockHolder locker(mutex());
+        Locker locker { lock() };
         setIsScheduled(true);
         previousFrameDone = isPreviousFrameDone();
     }
@@ -71,7 +75,7 @@ bool ThreadedDisplayRefreshMonitor::requestRefreshCallback()
 
 bool ThreadedDisplayRefreshMonitor::requiresDisplayRefreshCallback()
 {
-    LockHolder locker(mutex());
+    Locker locker { lock() };
     return isScheduled() && isPreviousFrameDone();
 }
 
@@ -87,31 +91,38 @@ void ThreadedDisplayRefreshMonitor::invalidate()
     m_displayRefreshTimer.stop();
     bool wasScheduled = false;
     {
-        LockHolder locker(mutex());
+        Locker locker { lock() };
         wasScheduled = isScheduled();
     }
-    if (wasScheduled)
-        DisplayRefreshMonitor::handleDisplayRefreshedNotificationOnMainThread(this);
+    if (wasScheduled) {
+        displayDidRefresh(m_currentUpdate);
+        m_currentUpdate = m_currentUpdate.nextUpdate();
+    }
     m_client = nullptr;
 }
 
+// FIXME: Refactor to share more code with DisplayRefreshMonitor::displayLinkFired().
 void ThreadedDisplayRefreshMonitor::displayRefreshCallback()
 {
     bool shouldHandleDisplayRefreshNotification { false };
     {
-        LockHolder locker(mutex());
+        Locker locker { lock() };
         shouldHandleDisplayRefreshNotification = isScheduled() && isPreviousFrameDone();
-        if (shouldHandleDisplayRefreshNotification)
+        if (shouldHandleDisplayRefreshNotification) {
+            setIsScheduled(false);
             setIsPreviousFrameDone(false);
+        }
     }
 
-    if (shouldHandleDisplayRefreshNotification)
-        DisplayRefreshMonitor::handleDisplayRefreshedNotificationOnMainThread(this);
+    if (shouldHandleDisplayRefreshNotification) {
+        displayDidRefresh(m_currentUpdate);
+        m_currentUpdate = m_currentUpdate.nextUpdate();
+    }
 
     // Retrieve the scheduled status for this DisplayRefreshMonitor.
     bool hasBeenRescheduled { false };
     {
-        LockHolder locker(mutex());
+        Locker locker { lock() };
         hasBeenRescheduled = isScheduled();
     }
 
@@ -124,4 +135,4 @@ void ThreadedDisplayRefreshMonitor::displayRefreshCallback()
 
 } // namespace WebKit
 
-#endif // USE(COORDINATED_GRAPHICS) && USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+#endif // USE(COORDINATED_GRAPHICS)

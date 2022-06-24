@@ -12,9 +12,10 @@
 #define RTC_BASE_WIN_WINDOWS_VERSION_H_
 
 #include <stddef.h>
+
 #include <string>
 
-#include "rtc_base/constructormagic.h"
+#include "rtc_base/constructor_magic.h"
 
 typedef void* HANDLE;
 
@@ -42,6 +43,10 @@ enum Version {
   VERSION_WIN10_RS2 = 10,   // Redstone 2: Version 1703, Build 15063.
   VERSION_WIN10_RS3 = 11,   // Redstone 3: Version 1709, Build 16299.
   VERSION_WIN10_RS4 = 12,   // Redstone 4: Version 1803, Build 17134.
+  VERSION_WIN10_RS5 = 13,   // Redstone 5: Version 1809, Build 17763.
+  VERSION_WIN10_19H1 = 14,  // 19H1: Version 1903, Build 18362.
+  VERSION_WIN10_19H2 = 15,  // 19H2: Version 1909, Build 18363.
+  VERSION_WIN10_20H1 = 16,  // 20H1 (Vibranium): Version 2004, Build 19041.
   // On edit, update tools\metrics\histograms\enums.xml "WindowsVersion" and
   // "GpuBlacklistFeatureTestResultsWindows2".
   VERSION_WIN_LAST,  // Indicates error condition.

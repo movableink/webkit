@@ -34,10 +34,10 @@ namespace TestWebKitAPI {
 
 TEST(WebKitLegacy, WebViewCanPasteURL)
 {
-    WebView *webView = [[WebView alloc] initWithFrame:NSZeroRect frameName:nil groupName:nil];
+    auto webView = adoptNS([[WebView alloc] initWithFrame:NSZeroRect frameName:nil groupName:nil]);
     [webView setEditable:YES];
 
-    [[NSPasteboard generalPasteboard] declareTypes:[NSArray arrayWithObject:NSURLPboardType] owner:nil];
+    [[NSPasteboard generalPasteboard] declareTypes:@[NSURLPboardType] owner:nil];
     [[NSURL URLWithString:@"http://www.webkit.org/"] writeToPasteboard:[NSPasteboard generalPasteboard]];
     [webView paste:nil];
 
@@ -47,8 +47,6 @@ TEST(WebKitLegacy, WebViewCanPasteURL)
     NSString *text = [anchor href];
     
     EXPECT_EQ(String("http://www.webkit.org/"), String(text));
-    
-    [webView release];
 }
 
 } // namespace TestWebKitAPI

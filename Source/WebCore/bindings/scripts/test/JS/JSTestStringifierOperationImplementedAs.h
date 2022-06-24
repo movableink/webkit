@@ -31,7 +31,7 @@ public:
     using Base = JSDOMWrapper<TestStringifierOperationImplementedAs>;
     static JSTestStringifierOperationImplementedAs* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, Ref<TestStringifierOperationImplementedAs>&& impl)
     {
-        JSTestStringifierOperationImplementedAs* ptr = new (NotNull, JSC::allocateCell<JSTestStringifierOperationImplementedAs>(globalObject->vm().heap)) JSTestStringifierOperationImplementedAs(structure, *globalObject, WTFMove(impl));
+        JSTestStringifierOperationImplementedAs* ptr = new (NotNull, JSC::allocateCell<JSTestStringifierOperationImplementedAs>(globalObject->vm())) JSTestStringifierOperationImplementedAs(structure, *globalObject, WTFMove(impl));
         ptr->finishCreation(globalObject->vm());
         return ptr;
     }
@@ -45,10 +45,17 @@ public:
 
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
     {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
+        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info(), JSC::NonArray);
     }
 
     static JSC::JSValue getConstructor(JSC::VM&, const JSC::JSGlobalObject*);
+    template<typename, JSC::SubspaceAccess mode> static JSC::GCClient::IsoSubspace* subspaceFor(JSC::VM& vm)
+    {
+        if constexpr (mode == JSC::SubspaceAccess::Concurrently)
+            return nullptr;
+        return subspaceForImpl(vm);
+    }
+    static JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM& vm);
     static void analyzeHeap(JSCell*, JSC::HeapAnalyzer&);
 protected:
     JSTestStringifierOperationImplementedAs(JSC::Structure*, JSDOMGlobalObject&, Ref<TestStringifierOperationImplementedAs>&&);
@@ -56,10 +63,10 @@ protected:
     void finishCreation(JSC::VM&);
 };
 
-class JSTestStringifierOperationImplementedAsOwner : public JSC::WeakHandleOwner {
+class JSTestStringifierOperationImplementedAsOwner final : public JSC::WeakHandleOwner {
 public:
-    virtual bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::SlotVisitor&, const char**);
-    virtual void finalize(JSC::Handle<JSC::Unknown>, void* context);
+    bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::AbstractSlotVisitor&, const char**) final;
+    void finalize(JSC::Handle<JSC::Unknown>, void* context) final;
 };
 
 inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, TestStringifierOperationImplementedAs*)
@@ -73,10 +80,10 @@ inline void* wrapperKey(TestStringifierOperationImplementedAs* wrappableObject)
     return wrappableObject;
 }
 
-JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TestStringifierOperationImplementedAs&);
-inline JSC::JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, TestStringifierOperationImplementedAs* impl) { return impl ? toJS(state, globalObject, *impl) : JSC::jsNull(); }
-JSC::JSValue toJSNewlyCreated(JSC::ExecState*, JSDOMGlobalObject*, Ref<TestStringifierOperationImplementedAs>&&);
-inline JSC::JSValue toJSNewlyCreated(JSC::ExecState* state, JSDOMGlobalObject* globalObject, RefPtr<TestStringifierOperationImplementedAs>&& impl) { return impl ? toJSNewlyCreated(state, globalObject, impl.releaseNonNull()) : JSC::jsNull(); }
+JSC::JSValue toJS(JSC::JSGlobalObject*, JSDOMGlobalObject*, TestStringifierOperationImplementedAs&);
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, TestStringifierOperationImplementedAs* impl) { return impl ? toJS(lexicalGlobalObject, globalObject, *impl) : JSC::jsNull(); }
+JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject*, Ref<TestStringifierOperationImplementedAs>&&);
+inline JSC::JSValue toJSNewlyCreated(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, RefPtr<TestStringifierOperationImplementedAs>&& impl) { return impl ? toJSNewlyCreated(lexicalGlobalObject, globalObject, impl.releaseNonNull()) : JSC::jsNull(); }
 
 template<> struct JSDOMWrapperConverterTraits<TestStringifierOperationImplementedAs> {
     using WrapperClass = JSTestStringifierOperationImplementedAs;

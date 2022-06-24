@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#import "config.h"
 
 #import "APICast.h"
 #import "Completion.h"
@@ -41,13 +41,13 @@
 #import "JavaScriptCore.h"
 #import "ObjcRuntimeExtras.h"
 #import "StrongInlines.h"
-
+#import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>
 
 #if JSC_OBJC_API_ENABLED
 
 @implementation JSContext {
-    JSVirtualMachine *m_virtualMachine;
+    RetainPtr<JSVirtualMachine> m_virtualMachine;
     JSGlobalContextRef m_context;
     JSC::Strong<JSC::JSObject> m_exception;
     WeakObjCPtr<id <JSModuleLoaderDelegate>> m_moduleLoaderDelegate;
@@ -60,7 +60,7 @@
 
 - (void)ensureWrapperMap
 {
-    if (!toJS([self JSGlobalContextRef])->lexicalGlobalObject()->wrapperMap()) {
+    if (!toJS([self JSGlobalContextRef])->wrapperMap()) {
         // The map will be retained by the GlobalObject in initialization.
         [[[JSWrapperMap alloc] initWithGlobalContextRef:[self JSGlobalContextRef]] release];
     }
@@ -68,7 +68,7 @@
 
 - (instancetype)init
 {
-    return [self initWithVirtualMachine:[[[JSVirtualMachine alloc] init] autorelease]];
+    return [self initWithVirtualMachine:adoptNS([[JSVirtualMachine alloc] init]).get()];
 }
 
 - (instancetype)initWithVirtualMachine:(JSVirtualMachine *)virtualMachine
@@ -77,7 +77,7 @@
     if (!self)
         return nil;
 
-    m_virtualMachine = [virtualMachine retain];
+    m_virtualMachine = virtualMachine;
     m_context = JSGlobalContextCreateInGroup(getGroupFromVirtualMachine(virtualMachine), 0);
 
     self.exceptionHandler = ^(JSContext *context, JSValue *exceptionValue) {
@@ -94,7 +94,6 @@
 {
     m_exception.clear();
     JSGlobalContextRelease(m_context);
-    [m_virtualMachine release];
     [_exceptionHandler release];
     [super dealloc];
 }
@@ -118,29 +117,31 @@
 
 - (JSValue *)evaluateJSScript:(JSScript *)script
 {
-    JSC::ExecState* exec = toJS(m_context);
-    JSC::VM& vm = exec->vm();
+    JSC::JSGlobalObject* globalObject = toJS(m_context);
+    JSC::VM& vm = globalObject->vm();
     JSC::JSLockHolder locker(vm);
 
     if (script.type == kJSScriptTypeProgram) {
         JSValueRef exceptionValue = nullptr;
         JSC::SourceCode sourceCode = [script sourceCode];
-        JSValueRef result = JSEvaluateScriptInternal(locker, exec, m_context, nullptr, sourceCode, &exceptionValue);
+        JSValueRef result = JSEvaluateScriptInternal(locker, m_context, nullptr, sourceCode, &exceptionValue);
 
         if (exceptionValue)
             return [self valueFromNotifyException:exceptionValue];
         return [JSValue valueWithJSValueRef:result inContext:self];
     }
 
-    auto* globalObject = JSC::jsDynamicCast<JSC::JSAPIGlobalObject*>(vm, exec->lexicalGlobalObject());
-    if (!globalObject)
+    auto* apiGlobalObject = JSC::jsDynamicCast<JSC::JSAPIGlobalObject*>(vm, globalObject);
+    if (!apiGlobalObject)
         return [JSValue valueWithNewPromiseRejectedWithReason:[JSValue valueWithNewErrorFromMessage:@"Context does not support module loading" inContext:self] inContext:self];
 
     auto scope = DECLARE_CATCH_SCOPE(vm);
-    JSC::JSValue result = globalObject->loadAndEvaluateJSScriptModule(locker, script);
+    JSC::JSValue result = apiGlobalObject->loadAndEvaluateJSScriptModule(locker, script);
     if (scope.exception()) {
-        JSValueRef exceptionValue = toRef(exec, scope.exception()->value());
+        JSValueRef exceptionValue = toRef(apiGlobalObject, scope.exception()->value());
         scope.clearException();
+        // FIXME: We should not clearException if it is the TerminationException.
+        // https://bugs.webkit.org/show_bug.cgi?id=220821
         return [JSValue valueWithNewPromiseRejectedWithReason:[JSValue valueWithJSValueRef:exceptionValue inContext:self] inContext:self];
     }
     return [JSValue valueWithJSValueRef:toRef(vm, result) inContext:self];
@@ -148,8 +149,8 @@
 
 - (JSValue *)dependencyIdentifiersForModuleJSScript:(JSScript *)script
 {
-    JSC::ExecState* exec = toJS(m_context);
-    JSC::VM& vm = exec->vm();
+    JSC::JSGlobalObject* globalObject = toJS(m_context);
+    JSC::VM& vm = globalObject->vm();
     JSC::JSLockHolder locker(vm);
 
     if (script.type != kJSScriptTypeModule) {
@@ -158,9 +159,9 @@
     }
 
     auto scope = DECLARE_CATCH_SCOPE(vm);
-    JSC::JSArray* result = exec->lexicalGlobalObject()->moduleLoader()->dependencyKeysIfEvaluated(exec, JSC::jsString(vm, [[script sourceURL] absoluteString]));
+    JSC::JSArray* result = globalObject->moduleLoader()->dependencyKeysIfEvaluated(globalObject, JSC::jsString(vm, [[script sourceURL] absoluteString]));
     if (scope.exception()) {
-        JSValueRef exceptionValue = toRef(exec, scope.exception()->value());
+        JSValueRef exceptionValue = toRef(globalObject, scope.exception()->value());
         scope.clearException();
         return [self valueFromNotifyException:exceptionValue];
     }
@@ -172,10 +173,19 @@
     return [JSValue valueWithJSValueRef:toRef(vm, result) inContext:self];
 }
 
+- (void)_setITMLDebuggableType
+{
+    JSC::JSGlobalObject* globalObject = toJS(m_context);
+    JSC::VM& vm = globalObject->vm();
+    JSC::JSLockHolder locker(vm);
+
+    globalObject->setIsITML();
+}
+
 - (void)setException:(JSValue *)value
 {
-    JSC::ExecState* exec = toJS(m_context);
-    JSC::VM& vm = exec->vm();
+    JSC::JSGlobalObject* globalObject = toJS(m_context);
+    JSC::VM& vm = globalObject->vm();
     JSC::JSLockHolder locker(vm);
     if (value)
         m_exception.set(vm, toJS(JSValueToObject(m_context, valueInternalValue(value), 0)));
@@ -232,18 +242,18 @@
     if (!entry->currentArguments) {
         JSContext *context = [JSContext currentContext];
         size_t count = entry->argumentCount;
-        JSValue * argumentArray[count];
-        for (size_t i =0; i < count; ++i)
-            argumentArray[i] = [JSValue valueWithJSValueRef:entry->arguments[i] inContext:context];
-        entry->currentArguments = [[NSArray alloc] initWithObjects:argumentArray count:count];
+        auto arguments = adoptNS([[NSMutableArray alloc] initWithCapacity:count]);
+        for (size_t i = 0; i < count; ++i)
+            [arguments setObject:[JSValue valueWithJSValueRef:entry->arguments[i] inContext:context] atIndexedSubscript:i];
+        entry->currentArguments = WTFMove(arguments);
     }
 
-    return entry->currentArguments;
+    return entry->currentArguments.get();
 }
 
 - (JSVirtualMachine *)virtualMachine
 {
-    return m_virtualMachine;
+    return m_virtualMachine.get();
 }
 
 - (NSString *)name
@@ -252,7 +262,7 @@
     if (!name)
         return nil;
 
-    return CFBridgingRelease(JSStringCopyCFString(kCFAllocatorDefault, name));
+    return adoptCF(JSStringCopyCFString(kCFAllocatorDefault, name)).bridgingAutorelease();
 }
 
 - (void)setName:(NSString *)name
@@ -324,8 +334,8 @@
     if (!self)
         return nil;
 
-    JSC::JSGlobalObject* globalObject = toJS(context)->lexicalGlobalObject();
-    m_virtualMachine = [[JSVirtualMachine virtualMachineWithContextGroupRef:toRef(&globalObject->vm())] retain];
+    JSC::JSGlobalObject* globalObject = toJS(context);
+    m_virtualMachine = [JSVirtualMachine virtualMachineWithContextGroupRef:toRef(&globalObject->vm())];
     ASSERT(m_virtualMachine);
     m_context = JSGlobalContextRetain(context);
     [self ensureWrapperMap];
@@ -361,7 +371,7 @@
     Thread& thread = Thread::current();
     [self retain];
     CallbackData *prevStack = (CallbackData *)thread.m_apiData;
-    *callbackData = (CallbackData){ prevStack, self, [self.exception retain], calleeValue, thisValue, argumentCount, arguments, nil };
+    *callbackData = CallbackData { prevStack, self, self.exception, calleeValue, thisValue, argumentCount, arguments, nil };
     thread.m_apiData = callbackData;
     self.exception = nil;
 }
@@ -369,9 +379,7 @@
 - (void)endCallbackWithData:(CallbackData *)callbackData
 {
     Thread& thread = Thread::current();
-    self.exception = callbackData->preservedException;
-    [callbackData->preservedException release];
-    [callbackData->currentArguments release];
+    self.exception = callbackData->preservedException.get();
     thread.m_apiData = callbackData->next;
     [self release];
 }
@@ -384,7 +392,7 @@
 
 - (JSWrapperMap *)wrapperMap
 {
-    return toJS(m_context)->lexicalGlobalObject()->wrapperMap();
+    return toJS(m_context)->wrapperMap();
 }
 
 - (JSValue *)wrapperForJSObject:(JSValueRef)value
@@ -396,10 +404,10 @@
 + (JSContext *)contextWithJSGlobalContextRef:(JSGlobalContextRef)globalContext
 {
     JSVirtualMachine *virtualMachine = [JSVirtualMachine virtualMachineWithContextGroupRef:toRef(&toJS(globalContext)->vm())];
-    JSContext *context = [virtualMachine contextForGlobalContextRef:globalContext];
+    auto context = retainPtr([virtualMachine contextForGlobalContextRef:globalContext]);
     if (!context)
-        context = [[[JSContext alloc] initWithGlobalContextRef:globalContext] autorelease];
-    return context;
+        context = adoptNS([[JSContext alloc] initWithGlobalContextRef:globalContext]);
+    return context.autorelease();
 }
 
 @end
