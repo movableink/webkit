@@ -139,7 +139,7 @@ private:
     mutable unsigned m_cachedHash { 0 };
 
 #if PLATFORM(QT)
-    QGradient* m_gradient;
+    QGradient* m_gradient = nullptr;
 #endif
 
 #if USE(CG)
