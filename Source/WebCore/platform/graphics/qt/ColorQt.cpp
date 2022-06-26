@@ -39,7 +39,7 @@ Color::Color(const QColor& color)
 
 Color::operator QColor() const
 {
-    auto [r, g, b, a] = toColorTypeLossy<SRGBA<float>>().resolved();
+    auto [r, g, b, a] = toColorTypeLossy<SRGBA<uint8_t>>().resolved();
     return QColor(r, g, b, a);
 }
 
