@@ -36,6 +36,7 @@
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/TypedArrayInlines.h>
 #include <wtf/text/WTFString.h>
+#include <wtf/StdLibExtras.h>
 
 #include <QBuffer>
 #include <QImage>
@@ -57,7 +58,7 @@ ImageBuffer::ImageBuffer(const IntSize& size, ColorSpace, QOpenGLContext* compat
     if (!success)
         return;
 
-    m_data.m_context = std::make_unique<GraphicsContext>(m_data.m_painter);
+    m_data.m_context = makeUnique<GraphicsContext>(m_data.m_painter);
 }
 #endif
 
@@ -72,7 +73,7 @@ ImageBuffer::ImageBuffer(const FloatSize& size, float resolutionScale, ColorSpac
     if (!success)
         return;
 
-    m_data.m_context = std::make_unique<GraphicsContext>(m_data.m_painter);
+    m_data.m_context = makeUnique<GraphicsContext>(m_data.m_painter);
 }
 
 ImageBuffer::~ImageBuffer()

@@ -230,7 +230,7 @@ QTWEBKIT_GENERATE_MOC_FILE_H(WebCore platform/network/qt/SocketStreamHandlePriva
 
 if (COMPILER_IS_GCC_OR_CLANG)
     set_source_files_properties(
-        platform/graphics/qt/ImageBufferDataQt.cpp
+        platform/graphics/qt/ImageBufferQt.cpp
     PROPERTIES
         COMPILE_FLAGS "-frtti -UQT_NO_DYNAMIC_CAST"
     )

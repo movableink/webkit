@@ -30,6 +30,7 @@
 #include "PlatformImage.h"
 #include "PixelBuffer.h"
 #include <wtf/IsoMalloc.h>
+#include <QPainter>
 
 namespace WebCore {
 
@@ -37,7 +38,8 @@ class WEBCORE_EXPORT ImageBufferQtBackend : public ImageBufferBackend {
     WTF_MAKE_ISO_ALLOCATED(ImageBufferQtBackend);
     WTF_MAKE_NONCOPYABLE(ImageBufferQtBackend);
 public:
-    ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContext>&& context, QImage nativeImage, Ref<Image> image);
+    ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContext>&& context, std::unique_ptr<QImage>&& nativeImage, Ref<Image> image);
+    ~ImageBufferQtBackend() { context().platformContext()->painter()->end(); }
 
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const HostWindow *);
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const GraphicsContext &);
@@ -69,8 +71,8 @@ protected:
     void platformTransformColorSpace(const std::array<uint8_t, 256>& lookUpTable);
     unsigned bytesPerRow() const override;
 
-    QImage m_nativeImage;
     RefPtr<Image> m_image;
+    std::unique_ptr<QImage> m_nativeImage;
     std::unique_ptr<GraphicsContext> m_context;
 };
 

@@ -38,6 +38,7 @@
 #include "IntRect.h"
 #include "MIMETypeRegistry.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/StdLibExtras.h>
 
 #include <QImage>
 #include <QPainter>
@@ -47,11 +48,11 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(ImageBufferQtBackend);
 
-ImageBufferQtBackend::ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContext>&& context, QImage nativeImage, Ref<Image> image)
+ImageBufferQtBackend::ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContext>&& context, std::unique_ptr<QImage>&& nativeImage, Ref<Image> image)
     : ImageBufferBackend(parameters)
-    , m_nativeImage(nativeImage)
-    , m_image(WTFMove(image))
     , m_context(WTFMove(context))
+    , m_nativeImage(WTFMove(nativeImage))
+    , m_image(WTFMove(image))
 {}
 
 std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const HostWindow *hostWindow)
@@ -60,21 +61,21 @@ std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Paramet
     if (backendSize.isEmpty())
         return nullptr;
 
-    auto painter = new QPainter;
+    QPainter* painter = new QPainter;
 
-    auto nativeImage = QImage(IntSize(parameters.logicalSize * parameters.resolutionScale), NativeImageQt::defaultFormatForAlphaEnabledImages());
-    nativeImage.fill(QColor(Qt::transparent));
-    nativeImage.setDevicePixelRatio(parameters.resolutionScale);
+    auto nativeImage = makeUniqueWithoutFastMallocCheck<QImage>(IntSize(parameters.logicalSize * parameters.resolutionScale), NativeImageQt::defaultFormatForAlphaEnabledImages());
+    nativeImage->fill(QColor(Qt::transparent));
+    nativeImage->setDevicePixelRatio(parameters.resolutionScale);
 
-    if (!painter->begin(&nativeImage))
+    if (!painter->begin(nativeImage.get()))
         return nullptr;
 
     ImageBufferQtBackend::initPainter(painter);
 
-    auto image = StillImage::create(nativeImage);
-    auto context = std::make_unique<GraphicsContextQt>(painter);
+    auto image = StillImage::createForRendering(nativeImage.get());
+    auto context = makeUnique<GraphicsContextQt>(painter);
 
-    return std::make_unique<ImageBufferQtBackend>(parameters, WTFMove(context), nativeImage, WTFMove(image));
+    return std::unique_ptr<ImageBufferQtBackend>(new ImageBufferQtBackend(parameters, WTFMove(context), WTFMove(nativeImage), WTFMove(image)));
 }
 
 std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const GraphicsContext& context)
@@ -125,17 +126,17 @@ void ImageBufferQtBackend::initPainter(QPainter *painter)
 RefPtr<Image> ImageBufferQtBackend::copyImage(BackingStoreCopy copyBehavior, PreserveResolution) const
 {
     if (copyBehavior == CopyBackingStore)
-        return StillImage::create(m_nativeImage);
+        return StillImage::create(*m_nativeImage.get());
 
-    return StillImage::createForRendering(&m_nativeImage);
+    return StillImage::createForRendering(m_nativeImage.get());
 }
 
 RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior) const
 {
     if (copyBehavior == CopyBackingStore)
-        return NativeImage::create(m_nativeImage.copy());
+        return NativeImage::create(m_nativeImage->copy());
 
-    return NativeImage::create(QImage(m_nativeImage));
+    return NativeImage::create(QImage(*m_nativeImage.get()));
 }
 
 void ImageBufferQtBackend::draw(GraphicsContext &destContext, const FloatRect &destRect, const FloatRect &srcRect, const ImagePaintingOptions &options) {
@@ -245,7 +246,7 @@ void ImageBufferQtBackend::platformTransformColorSpace(const std::array<uint8_t,
 {
     QPainter* painter = context().platformContext()->painter();
 
-    QImage image = m_nativeImage.convertToFormat(QImage::Format_ARGB32);
+    QImage image = m_nativeImage->convertToFormat(QImage::Format_ARGB32);
     ASSERT(!image.isNull());
 
     uchar* bits = image.bits();
@@ -273,17 +274,17 @@ void ImageBufferQtBackend::platformTransformColorSpace(const std::array<uint8_t,
 
 std::optional<PixelBuffer> ImageBufferQtBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const
 {
-    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage.bits())));
+    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage->bits())));
 }
 
 void ImageBufferQtBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
-    ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage.bits())));
+    ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage->bits())));
 }
 
 unsigned ImageBufferQtBackend::bytesPerRow() const
 {
-    return m_nativeImage.bytesPerLine();
+    return m_nativeImage->bytesPerLine();
 }
 
 } // namespace WebCore
