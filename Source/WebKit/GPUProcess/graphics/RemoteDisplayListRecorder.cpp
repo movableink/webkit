@@ -28,9 +28,14 @@
 
 #if ENABLE(GPU_PROCESS)
 
+#include "ImageBufferShareableAllocator.h"
 #include "RemoteDisplayListRecorderMessages.h"
 #include <WebCore/BitmapImage.h>
 #include <WebCore/FilterResults.h>
+
+#if USE(SYSTEM_PREVIEW)
+#include <WebCore/ARKitBadgeSystemImage.h>
+#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -62,6 +67,11 @@ void RemoteDisplayListRecorder::stopListeningForIPC()
 {
     if (auto renderingBackend = std::exchange(m_renderingBackend, { }))
         renderingBackend->streamConnection().stopReceivingMessages(Messages::RemoteDisplayListRecorder::messageReceiverName(), m_imageBufferIdentifier.object().toUInt64());
+}
+
+void RemoteDisplayListRecorder::clearImageBufferReference()
+{
+    m_imageBuffer.clear();
 }
 
 void RemoteDisplayListRecorder::save()
@@ -128,10 +138,10 @@ void RemoteDisplayListRecorder::setState(DisplayList::SetState&& item)
         return true;
     };
 
-    if (!fixPatternTileImage(item.stateChange().m_state.strokePattern.get()))
+    if (!fixPatternTileImage(item.state().fillBrush().pattern()))
         return;
 
-    if (!fixPatternTileImage(item.stateChange().m_state.fillPattern.get()))
+    if (!fixPatternTileImage(item.state().strokeBrush().pattern()))
         return;
 
     handleItem(WTFMove(item));
@@ -226,7 +236,7 @@ void RemoteDisplayListRecorder::drawFilteredImageBuffer(std::optional<RenderingR
         feImage.setImageSource(WTFMove(*sourceImage));
     }
 
-    FilterResults results;
+    FilterResults results(makeUnique<ImageBufferShareableAllocator>(m_renderingBackend->resourceOwner()));
     handleItem(DisplayList::DrawFilteredImageBuffer(sourceImageIdentifier, sourceImageRect, WTFMove(filter)), sourceImage.get(), results);
 }
 
@@ -245,6 +255,30 @@ void RemoteDisplayListRecorder::drawGlyphsWithQualifiedIdentifier(DisplayList::D
     }
 
     handleItem(WTFMove(item), *font);
+}
+
+void RemoteDisplayListRecorder::drawDecomposedGlyphs(RenderingResourceIdentifier fontIdentifier, RenderingResourceIdentifier decomposedGlyphsIdentifier, const FloatRect& bounds)
+{
+    // Immediately turn the RenderingResourceIdentifier (which is error-prone) to a QualifiedRenderingResourceIdentifier,
+    // and use a helper function to make sure that don't accidentally use the RenderingResourceIdentifier (because the helper function can't see it).
+    drawDecomposedGlyphsWithQualifiedIdentifiers({ fontIdentifier, m_webProcessIdentifier }, { decomposedGlyphsIdentifier, m_webProcessIdentifier }, bounds);
+}
+
+void RemoteDisplayListRecorder::drawDecomposedGlyphsWithQualifiedIdentifiers(QualifiedRenderingResourceIdentifier fontIdentifier, QualifiedRenderingResourceIdentifier decomposedGlyphsIdentifier, const FloatRect& bounds)
+{
+    RefPtr font = resourceCache().cachedFont(fontIdentifier);
+    if (!font) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    RefPtr decomposedGlyphs = resourceCache().cachedDecomposedGlyphs(decomposedGlyphsIdentifier);
+    if (!decomposedGlyphsIdentifier) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    handleItem(DisplayList::DrawDecomposedGlyphs(fontIdentifier.object(), decomposedGlyphsIdentifier.object(), bounds), *font, *decomposedGlyphs);
 }
 
 void RemoteDisplayListRecorder::drawImageBuffer(RenderingResourceIdentifier imageBufferIdentifier, const FloatRect& destinationRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
@@ -285,6 +319,17 @@ void RemoteDisplayListRecorder::drawNativeImageWithQualifiedIdentifier(Qualified
 
 void RemoteDisplayListRecorder::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
 {
+#if USE(SYSTEM_PREVIEW)
+    if (is<ARKitBadgeSystemImage>(systemImage)) {
+        ARKitBadgeSystemImage& badge = downcast<ARKitBadgeSystemImage>(systemImage);
+        RefPtr nativeImage = resourceCache().cachedNativeImage({ badge.imageIdentifier(), m_webProcessIdentifier });
+        if (!nativeImage) {
+            ASSERT_NOT_REACHED();
+            return;
+        }
+        badge.setImage(BitmapImage::create(nativeImage.releaseNonNull()));
+    }
+#endif
     handleItem(DisplayList::DrawSystemImage(systemImage, destinationRect));
 }
 

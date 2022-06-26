@@ -40,8 +40,7 @@ static ::testing::AssertionResult imageBufferPixelIs(Color expected, ImageBuffer
 {
     PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, DestinationColorSpace::SRGB() };
     auto frontPixelBuffer = imageBuffer.getPixelBuffer(format, { x, y, 1, 1 });
-    auto& data = frontPixelBuffer->data();
-    auto got = Color { SRGBA<uint8_t> { data.item(0), data.item(1), data.item(2), data.item(3) } };
+    auto got = Color { SRGBA<uint8_t> { frontPixelBuffer->item(0), frontPixelBuffer->item(1), frontPixelBuffer->item(2), frontPixelBuffer->item(3) } };
     if (got != expected)
         return ::testing::AssertionFailure() << "color is not expected. Got: " << got << ", expected: " << expected << ".";
     return ::testing::AssertionSuccess();
@@ -55,10 +54,10 @@ TEST(ImageBufferTests, ImageBufferSubTypeCreateCreatesSubtypes)
     auto pixelFormat = PixelFormat::BGRA8;
     FloatSize size { 1.f, 1.f };
     float scale = 1.f;
-    RefPtr<ImageBuffer> unaccelerated = ImageBuffer::create(size, RenderingMode::Unaccelerated, scale, colorSpace, pixelFormat, nullptr);
-    RefPtr<ImageBuffer> accelerated = ImageBuffer::create(size, RenderingMode::Accelerated, scale, colorSpace, pixelFormat, nullptr);
-    RefPtr<ImageBuffer> displayListAccelerated = ImageBuffer::create(size, RenderingMode::Unaccelerated, ShouldUseDisplayList::Yes, RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat, nullptr);
-    RefPtr<ImageBuffer> displayListUnaccelerated = ImageBuffer::create(size, RenderingMode::Accelerated, ShouldUseDisplayList::Yes, RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat, nullptr);
+    RefPtr<ImageBuffer> unaccelerated = ImageBuffer::create(size, RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat);
+    RefPtr<ImageBuffer> accelerated = ImageBuffer::create(size, RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat, { ImageBufferOptions::Accelerated });
+    RefPtr<ImageBuffer> displayListAccelerated = ImageBuffer::create(size, RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat, { ImageBufferOptions::UseDisplayList });
+    RefPtr<ImageBuffer> displayListUnaccelerated = ImageBuffer::create(size, RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat, { ImageBufferOptions::Accelerated, ImageBufferOptions::UseDisplayList });
 
     EXPECT_NE(nullptr, accelerated);
     EXPECT_NE(nullptr, unaccelerated);
@@ -72,8 +71,8 @@ TEST(ImageBufferTests, ImageBufferSubPixelDrawing)
     auto pixelFormat = PixelFormat::BGRA8;
     FloatSize logicalSize { 392, 44 };
     float scale = 1.91326535;
-    auto frontImageBuffer = ImageBuffer::create(logicalSize, RenderingMode::Accelerated, scale, colorSpace, pixelFormat, nullptr);
-    auto backImageBuffer = ImageBuffer::create(logicalSize, RenderingMode::Accelerated, scale, colorSpace, pixelFormat, nullptr);
+    auto frontImageBuffer = ImageBuffer::create(logicalSize, RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat, { ImageBufferOptions::Accelerated });
+    auto backImageBuffer = ImageBuffer::create(logicalSize, RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat, { ImageBufferOptions::Accelerated });
     
     auto strokeRect = FloatRect { { }, logicalSize };
     strokeRect.inflate(-0.5);
@@ -131,7 +130,7 @@ TEST(ImageBufferTests, DISABLED_DrawImageBufferDoesNotReferenceExtraMemory)
 
     {
         // Make potential accelerated drawing backend instantiate roughly the global structures needed for this test.
-        auto accelerated = ImageBuffer::create(logicalSize, RenderingMode::Accelerated, scale, colorSpace, pixelFormat, nullptr);
+        auto accelerated = ImageBuffer::create(logicalSize, RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat, { ImageBufferOptions::Accelerated });
         auto fillRect = FloatRect { { }, logicalSize };
         accelerated->context().fillRect(fillRect, Color::green);
         EXPECT_TRUE(imageBufferPixelIs(Color::green, *accelerated, fillRect.maxX() - 1, fillRect.maxY() - 1));
@@ -141,13 +140,13 @@ TEST(ImageBufferTests, DISABLED_DrawImageBufferDoesNotReferenceExtraMemory)
     auto lastFootprint = initialFootprint;
     EXPECT_GT(lastFootprint, 0u);
 
-    auto accelerated = ImageBuffer::create(logicalSize, RenderingMode::Accelerated, scale, colorSpace, pixelFormat, nullptr);
+    auto accelerated = ImageBuffer::create(logicalSize, RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat, { ImageBufferOptions::Accelerated });
     auto fillRect = FloatRect { { }, logicalSize };
     accelerated->context().fillRect(fillRect, Color::green);
     accelerated->flushContext();
     EXPECT_TRUE(memoryFootprintChangedBy(lastFootprint, logicalSizeBytes, footprintError));
 
-    auto unaccelerated = ImageBuffer::create(logicalSize, RenderingMode::Unaccelerated, scale, colorSpace, pixelFormat, nullptr);
+    auto unaccelerated = ImageBuffer::create(logicalSize, RenderingPurpose::Unspecified, scale, colorSpace, pixelFormat);
     unaccelerated->context().fillRect(fillRect, Color::yellow);
     EXPECT_TRUE(imageBufferPixelIs(Color::yellow, *unaccelerated, fillRect.maxX() - 1, fillRect.maxY() - 1));
     EXPECT_TRUE(memoryFootprintChangedBy(lastFootprint, logicalSizeBytes, footprintError));

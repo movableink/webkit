@@ -57,7 +57,7 @@
 #endif
 
 #if HAVE(SAFARI_SERVICES_FRAMEWORK)
-#import <SafariServices/SSReadingList.h>
+#import "SafariServicesSPI.h"
 SOFT_LINK_FRAMEWORK(SafariServices)
 SOFT_LINK_CLASS(SafariServices, SSReadingList)
 #endif
@@ -69,7 +69,7 @@ OBJC_CLASS DDAction;
 #if HAVE(APP_LINKS)
 static bool applicationHasAppLinkEntitlements()
 {
-    static bool hasEntitlement = WTF::processHasEntitlement("com.apple.private.canGetAppLinkInfo") && WTF::processHasEntitlement("com.apple.private.canModifyAppLinkPermissions");
+    static bool hasEntitlement = WTF::processHasEntitlement("com.apple.private.canGetAppLinkInfo"_s) && WTF::processHasEntitlement("com.apple.private.canModifyAppLinkPermissions"_s);
     return hasEntitlement;
 }
 
@@ -551,7 +551,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     if (elementInfo.type == _WKActivatedElementTypeImage || elementInfo._isImage) {
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-        if ([_delegate respondsToSelector:@selector(actionSheetAssistantShouldIncludeCopyCroppedImageAction:)] && [_delegate actionSheetAssistantShouldIncludeCopyCroppedImageAction:self]) {
+        if ([_delegate respondsToSelector:@selector(actionSheetAssistantShouldIncludeCopySubjectAction:)] && [_delegate actionSheetAssistantShouldIncludeCopySubjectAction:self]) {
             // FIXME (rdar://88834304): This should be additionally gated on the relevant VisionKit SPI.
             [defaultActions addObject:[_WKElementAction _elementActionWithType:_WKElementActionTypeCopyCroppedImage info:elementInfo assistant:self]];
         }
@@ -587,7 +587,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
     [defaultActions addObject:[_WKElementAction _elementActionWithType:_WKElementActionTypeCopy info:elementInfo assistant:self]];
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-    if ([_delegate respondsToSelector:@selector(actionSheetAssistantShouldIncludeCopyCroppedImageAction:)] && [_delegate actionSheetAssistantShouldIncludeCopyCroppedImageAction:self]) {
+    if ([_delegate respondsToSelector:@selector(actionSheetAssistantShouldIncludeCopySubjectAction:)] && [_delegate actionSheetAssistantShouldIncludeCopySubjectAction:self]) {
         // FIXME (rdar://88834304): This should be additionally gated on the relevant VisionKit SPI.
         [defaultActions addObject:[_WKElementAction _elementActionWithType:_WKElementActionTypeCopyCroppedImage info:elementInfo assistant:self]];
     }
@@ -808,7 +808,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
 
-- (NSArray<UIMenuElement *> *)_uiMenuElementsForMediaControlContextMenuItems:(Vector<WebCore::MediaControlsContextMenuItem>&&) items
+- (NSArray<UIMenuElement *> *)_uiMenuElementsForMediaControlContextMenuItems:(Vector<WebCore::MediaControlsContextMenuItem>&&)items
 {
     return createNSArray(items, [&] (WebCore::MediaControlsContextMenuItem& item) -> UIMenuElement * {
         UIImage *image = !item.icon.isEmpty() ? [UIImage systemImageNamed:WTFMove(item.icon)] : nil;
@@ -837,17 +837,19 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     ASSERT(!_mediaControlsContextMenuCallback);
 
     String menuTitle;
+    Vector<WebCore::MediaControlsContextMenuItem> itemsToPresent;
     if (items.size() == 1) {
         menuTitle = WTFMove(items[0].title);
-        items = WTFMove(items[0].children);
-    }
+        itemsToPresent = WTFMove(items[0].children);
+    } else
+        itemsToPresent = WTFMove(items);
 
-    if (![_view window] || items.isEmpty()) {
+    if (![_view window] || itemsToPresent.isEmpty()) {
         completionHandler(WebCore::MediaControlsContextMenuItem::invalidID);
         return;
     }
 
-    _mediaControlsContextMenu = [UIMenu menuWithTitle:WTFMove(menuTitle) children:[self _uiMenuElementsForMediaControlContextMenuItems:WTFMove(items)]];
+    _mediaControlsContextMenu = [UIMenu menuWithTitle:WTFMove(menuTitle) children:[self _uiMenuElementsForMediaControlContextMenuItems:WTFMove(itemsToPresent)]];
     _mediaControlsContextMenuTargetFrame = WTFMove(targetFrame);
     _mediaControlsContextMenuCallback = WTFMove(completionHandler);
 
@@ -922,7 +924,11 @@ static NSArray<UIMenuElement *> *menuElementsFromDefaultActions(RetainPtr<NSArra
     return nil;
 }
 
+#if HAVE(UI_CONTEXT_MENU_PREVIEW_ITEM_IDENTIFIER)
+- (UITargetedPreview *)contextMenuInteraction:(UIContextMenuInteraction *)interaction configuration:(UIContextMenuConfiguration *)configuration highlightPreviewForItemWithIdentifier:(id<NSCopying>)identifier
+#else
 - (UITargetedPreview *)contextMenuInteraction:(UIContextMenuInteraction *)interaction previewForHighlightingMenuWithConfiguration:(UIContextMenuConfiguration *)configuration
+#endif
 {
 #if ENABLE(DATA_DETECTION)
     if (interaction == _dataDetectorContextMenuInteraction) {
@@ -1045,7 +1051,7 @@ static NSArray<UIMenuElement *> *menuElementsFromDefaultActions(RetainPtr<NSArra
         break;
     case _WKElementActionTypeCopyCroppedImage:
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-        [delegate actionSheetAssistant:self copyCroppedImage:element.image sourceMIMEType:element.imageMIMEType];
+        [delegate actionSheetAssistant:self copySubject:element.image sourceMIMEType:element.imageMIMEType];
 #endif
         break;
     default:

@@ -27,18 +27,23 @@
 #include "RemoteVideoFrameObjectHeap.h"
 
 #if ENABLE(GPU_PROCESS) && ENABLE(VIDEO)
+#include "Logging.h"
 #include "RemoteVideoFrameObjectHeapMessages.h"
 #include "RemoteVideoFrameObjectHeapProxyProcessorMessages.h"
 #include "RemoteVideoFrameProxy.h"
+#include <wtf/Scope.h>
 #include <wtf/WorkQueue.h>
 
 #if PLATFORM(COCOA)
-#include <WebCore/MediaSampleAVFObjC.h>
+#include <WebCore/ColorSpaceCG.h>
+#include <WebCore/PixelBufferConformerCV.h>
 #include <WebCore/VideoFrameCV.h>
 #include <pal/cf/CoreMediaSoftLink.h>
 #endif
 
 namespace WebKit {
+
+using namespace WebCore;
 
 static WorkQueue& remoteVideoFrameObjectHeapQueue()
 {
@@ -84,7 +89,7 @@ void RemoteVideoFrameObjectHeap::close()
     // TODO: add can happen after stopping.
 }
 
-RemoteVideoFrameProxy::Properties RemoteVideoFrameObjectHeap::add(Ref<WebCore::MediaSample>&& frame)
+RemoteVideoFrameProxy::Properties RemoteVideoFrameObjectHeap::add(Ref<WebCore::VideoFrame>&& frame)
 {
     auto write = RemoteVideoFrameWriteReference::generateForAdd();
     auto newFrameReference = write.retiredReference();
@@ -134,6 +139,52 @@ void RemoteVideoFrameObjectHeap::pixelBuffer(RemoteVideoFrameReadReference&& rea
     ASSERT(pixelBuffer);
     completionHandler(WTFMove(pixelBuffer));
 }
+
+void RemoteVideoFrameObjectHeap::convertFrameBuffer(SharedVideoFrame&& sharedVideoFrame, CompletionHandler<void(WebCore::DestinationColorSpace)>&& callback)
+{
+    DestinationColorSpace destinationColorSpace { DestinationColorSpace::SRGB().platformColorSpace() };
+    auto scope = makeScopeExit([&callback, &destinationColorSpace] { callback(destinationColorSpace); });
+
+    RefPtr<VideoFrame> frame;
+    if (std::holds_alternative<RemoteVideoFrameReadReference>(sharedVideoFrame.buffer))
+        frame = get(WTFMove(std::get<RemoteVideoFrameReadReference>(sharedVideoFrame.buffer)));
+    else
+        frame = m_sharedVideoFrameReader.read(WTFMove(sharedVideoFrame));
+
+    if (!frame) {
+        m_connection->send(Messages::RemoteVideoFrameObjectHeapProxyProcessor::NewConvertedVideoFrameBuffer { { } }, 0);
+        return;
+    }
+
+    RetainPtr<CVPixelBufferRef> buffer = frame->pixelBuffer();
+    destinationColorSpace = DestinationColorSpace(createCGColorSpaceForCVPixelBuffer(buffer.get()));
+
+    createPixelConformerIfNeeded();
+    auto convertedBuffer = m_pixelBufferConformer->convert(buffer.get());
+    if (!convertedBuffer) {
+        RELEASE_LOG_ERROR(WebRTC, "RemoteVideoFrameObjectHeap::convertFrameBuffer conformer failed");
+        m_connection->send(Messages::RemoteVideoFrameObjectHeapProxyProcessor::NewConvertedVideoFrameBuffer { { } }, 0);
+        return;
+    }
+
+    bool canSendIOSurface = false;
+    auto result = m_sharedVideoFrameWriter.writeBuffer(convertedBuffer.get(),
+        [&](auto& semaphore) { m_connection->send(Messages::RemoteVideoFrameObjectHeapProxyProcessor::SetSharedVideoFrameSemaphore { semaphore }, 0); },
+        [&](auto& handle) { m_connection->send(Messages::RemoteVideoFrameObjectHeapProxyProcessor::SetSharedVideoFrameMemory { handle }, 0); },
+        canSendIOSurface);
+    m_connection->send(Messages::RemoteVideoFrameObjectHeapProxyProcessor::NewConvertedVideoFrameBuffer { result }, 0);
+}
+
+void RemoteVideoFrameObjectHeap::setSharedVideoFrameSemaphore(IPC::Semaphore&& semaphore)
+{
+    m_sharedVideoFrameReader.setSemaphore(WTFMove(semaphore));
+}
+
+void RemoteVideoFrameObjectHeap::setSharedVideoFrameMemory(const SharedMemory::IPCHandle& ipcHandle)
+{
+    m_sharedVideoFrameReader.setSharedMemory(ipcHandle);
+}
+
 #endif
 
 }

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@
 #include "WasmFunctionCodeBlockGenerator.h"
 #include "WasmGeneratorTraits.h"
 #include "WasmModuleInformation.h"
-#include "WasmSignatureInlines.h"
+#include "WasmTypeDefinitionInlines.h"
 
 namespace JSC {
 
@@ -349,9 +349,9 @@ void BytecodeDumper::dumpBlock(FunctionCodeBlockGenerator* block, const ModuleIn
     out.print(makeString(IndexOrName(functionIndexSpace, moduleInformation.nameSection->get(functionIndexSpace))));
 
     const auto& function = moduleInformation.functions[block->functionIndex()];
-    SignatureIndex signatureIndex = moduleInformation.internalFunctionSignatureIndices[block->functionIndex()];
-    const Signature& signature = SignatureInformation::get(signatureIndex);
-    out.print(" : ", signature, "\n");
+    TypeIndex typeIndex = moduleInformation.internalFunctionTypeIndices[block->functionIndex()];
+    const auto& typeDefinition = TypeInformation::get(typeIndex);
+    out.print(" : ", typeDefinition, "\n");
     out.print("wasm size: ", function.data.size(), " bytes\n");
 
     out.printf(
@@ -371,6 +371,7 @@ void BytecodeDumper::dumpBlock(FunctionCodeBlockGenerator* block, const ModuleIn
     }
 
     dumper.dumpConstants();
+    dumper.dumpExceptionHandlers();
 
     out.printf("\n");
 }
@@ -386,6 +387,19 @@ void BytecodeDumper::dumpConstants()
             this->m_out.print("   const", i, " : ", type.kind, " = ", formatConstant(type, constant), "\n");
             ++i;
         }
+    }
+}
+
+void BytecodeDumper::dumpExceptionHandlers()
+{
+    if (unsigned count = this->block()->numberOfExceptionHandlers()) {
+        this->m_out.printf("\nException Handlers:\n");
+        unsigned i = 0;
+        do {
+            const auto& handler = this->block()->exceptionHandler(i);
+            this->m_out.printf("\t %d: { start: [%4d] end: [%4d] target: [%4d] tryDepth: [%4d] exceptionIndexOrDelegateTarget: [%4d] } %s\n", i + 1, handler.m_start, handler.m_end, handler.m_target, handler.m_tryDepth, handler.m_exceptionIndexOrDelegateTarget, handler.typeName().characters8());
+            ++i;
+        } while (i < count);
     }
 }
 
@@ -413,7 +427,7 @@ CString BytecodeDumper::formatConstant(Type type, uint64_t constant) const
         if (isFuncref(type) || isExternref(type)) {
             if (JSValue::decode(constant) == jsNull())
                 return "null";
-            return toCString(RawPointer(bitwise_cast<void*>(constant)));
+            return toCString(RawHex(constant));
         }
 
         RELEASE_ASSERT_NOT_REACHED();

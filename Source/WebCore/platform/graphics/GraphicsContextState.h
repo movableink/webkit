@@ -25,116 +25,269 @@
 
 #pragma once
 
-#include "AffineTransform.h"
-#include "Color.h"
-#include "FloatSize.h"
 #include "GraphicsTypes.h"
+#include "SourceBrush.h"
 #include "WindRule.h"
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
 
-class GraphicsContext;
-class Gradient;
-class Pattern;
+class GraphicsContextState {
+    friend class GraphicsContextCairo;
+public:
+    enum class Change : uint32_t {
+        FillBrush                   = 1 << 0,
+        FillRule                    = 1 << 1,
 
-struct GraphicsContextState {
-    WEBCORE_EXPORT GraphicsContextState();
-    WEBCORE_EXPORT ~GraphicsContextState();
+        StrokeBrush                 = 1 << 2,
+        StrokeThickness             = 1 << 3,
+        StrokeStyle                 = 1 << 4,
 
-    GraphicsContextState(const GraphicsContextState&);
-    WEBCORE_EXPORT GraphicsContextState(GraphicsContextState&&);
+        CompositeMode               = 1 << 5,
+        DropShadow                  = 1 << 6,
 
-    GraphicsContextState& operator=(const GraphicsContextState&);
-    WEBCORE_EXPORT GraphicsContextState& operator=(GraphicsContextState&&);
+        Alpha                       = 1 << 7,
+        TextDrawingMode             = 1 << 8,
+        ImageInterpolationQuality   = 1 << 9,
 
-    enum Change : uint32_t {
-        StrokeGradientChange                    = 1 << 0,
-        StrokePatternChange                     = 1 << 1,
-        FillGradientChange                      = 1 << 2,
-        FillPatternChange                       = 1 << 3,
-        StrokeThicknessChange                   = 1 << 4,
-        StrokeColorChange                       = 1 << 5,
-        StrokeStyleChange                       = 1 << 6,
-        FillColorChange                         = 1 << 7,
-        FillRuleChange                          = 1 << 8,
-        ShadowChange                            = 1 << 9,
-        ShadowsIgnoreTransformsChange           = 1 << 10,
-        AlphaChange                             = 1 << 11,
-        CompositeOperationChange                = 1 << 12,
-        BlendModeChange                         = 1 << 13,
-        TextDrawingModeChange                   = 1 << 14,
-        ShouldAntialiasChange                   = 1 << 15,
-        ShouldSmoothFontsChange                 = 1 << 16,
-        ShouldSubpixelQuantizeFontsChange       = 1 << 17,
-        DrawLuminanceMaskChange                 = 1 << 18,
-        ImageInterpolationQualityChange         = 1 << 19,
+        ShouldAntialias             = 1 << 10,
+        ShouldSmoothFonts           = 1 << 11,
+        ShouldSubpixelQuantizeFonts = 1 << 12,
+        ShadowsIgnoreTransforms     = 1 << 13,
+        DrawLuminanceMask           = 1 << 14,
 #if HAVE(OS_DARK_MODE_SUPPORT)
-        UseDarkAppearanceChange                 = 1 << 20,
+        UseDarkAppearance           = 1 << 15,
 #endif
     };
-    using StateChangeFlags = OptionSet<Change>;
+    using ChangeFlags = OptionSet<Change>;
 
-    void mergeChanges(const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
+    static constexpr ChangeFlags basicChangeFlags { Change::StrokeThickness, Change::StrokeBrush, Change::FillBrush };
 
-    RefPtr<Gradient> strokeGradient;
-    RefPtr<Pattern> strokePattern;
-    
-    RefPtr<Gradient> fillGradient;
-    RefPtr<Pattern> fillPattern;
+    WEBCORE_EXPORT GraphicsContextState(const ChangeFlags& = { }, InterpolationQuality = InterpolationQuality::Default);
 
-    FloatSize shadowOffset;
+    ChangeFlags changes() const { return m_changeFlags; }
+    void didApplyChanges() { m_changeFlags = { }; }
 
-    Color strokeColor { Color::black };
-    Color fillColor { Color::black };
-    Color shadowColor;
+    GraphicsContextState cloneForRecording() const;
 
-    AffineTransform strokeGradientSpaceTransform;
-    AffineTransform fillGradientSpaceTransform;
+    const SourceBrush& fillBrush() const { return m_fillBrush; }
+    void setFillBrush(const SourceBrush& brush) { setProperty(Change::FillBrush, &GraphicsContextState::m_fillBrush, brush); }
+    void setFillColor(const Color& color) { setProperty(Change::FillBrush, &GraphicsContextState::m_fillBrush, { color }); }
+    void setFillGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform) { m_fillBrush.setGradient(WTFMove(gradient), spaceTransform); m_changeFlags.add(Change::FillBrush); }
+    void setFillPattern(Ref<Pattern>&& pattern) { m_fillBrush.setPattern(WTFMove(pattern)); m_changeFlags.add(Change::FillBrush); }
 
-    float strokeThickness { 0 };
-    float shadowBlur { 0 };
-    float alpha { 1 };
+    WindRule fillRule() const { return m_fillRule; }
+    void setFillRule(WindRule fillRule) { setProperty(Change::FillRule, &GraphicsContextState::m_fillRule, fillRule); }
 
-    StrokeStyle strokeStyle { SolidStroke };
-    WindRule fillRule { WindRule::NonZero };
+    const SourceBrush& strokeBrush() const { return m_strokeBrush; }
+    void setStrokeBrush(const SourceBrush& brush) { setProperty(Change::StrokeBrush, &GraphicsContextState::m_strokeBrush, brush); }
+    void setStrokeColor(const Color& color) { setProperty(Change::StrokeBrush, &GraphicsContextState::m_strokeBrush, { color }); }
+    void setStrokeGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform) { m_strokeBrush.setGradient(WTFMove(gradient), spaceTransform); m_changeFlags.add(Change::StrokeBrush); }
+    void setStrokePattern(Ref<Pattern>&& pattern) { m_strokeBrush.setPattern(WTFMove(pattern)); m_changeFlags.add(Change::StrokeBrush); }
 
-    TextDrawingModeFlags textDrawingMode { TextDrawingMode::Fill };
-    CompositeOperator compositeOperator { CompositeOperator::SourceOver };
-    BlendMode blendMode { BlendMode::Normal };
-    InterpolationQuality imageInterpolationQuality { InterpolationQuality::Default };
-    ShadowRadiusMode shadowRadiusMode { ShadowRadiusMode::Default };
+    float strokeThickness() const { return m_strokeThickness; }
+    void setStrokeThickness(float strokeThickness) { setProperty(Change::StrokeThickness, &GraphicsContextState::m_strokeThickness, strokeThickness); }
 
-    bool shouldAntialias : 1;
-    bool shouldSmoothFonts : 1;
-    bool shouldSubpixelQuantizeFonts : 1;
-    bool shadowsIgnoreTransforms : 1;
-    bool drawLuminanceMask : 1;
+    StrokeStyle strokeStyle() const { return m_strokeStyle; }
+    void setStrokeStyle(StrokeStyle strokeStyle) { setProperty(Change::StrokeStyle, &GraphicsContextState::m_strokeStyle, strokeStyle); }
+
+    const CompositeMode& compositeMode() const { return m_compositeMode; }
+    void setCompositeMode(CompositeMode compositeMode) { setProperty(Change::CompositeMode, &GraphicsContextState::m_compositeMode, compositeMode); }
+
+    const DropShadow& dropShadow() const { return m_dropShadow; }
+    void setDropShadow(const DropShadow& dropShadow) { setProperty(Change::DropShadow, &GraphicsContextState::m_dropShadow, dropShadow); }
+
+    float alpha() const { return m_alpha; }
+    void setAlpha(float alpha) { setProperty(Change::Alpha, &GraphicsContextState::m_alpha, alpha); }
+
+    InterpolationQuality imageInterpolationQuality() const { return m_imageInterpolationQuality; }
+    void setImageInterpolationQuality(InterpolationQuality imageInterpolationQuality) { setProperty(Change::ImageInterpolationQuality, &GraphicsContextState::m_imageInterpolationQuality, imageInterpolationQuality); }
+
+    TextDrawingModeFlags textDrawingMode() const { return m_textDrawingMode; }
+    void setTextDrawingMode(TextDrawingModeFlags textDrawingMode) { setProperty(Change::TextDrawingMode, &GraphicsContextState::m_textDrawingMode, textDrawingMode); }
+
+    bool shouldAntialias() const { return m_shouldAntialias; }
+    void setShouldAntialias(bool shouldAntialias) { setProperty(Change::ShouldAntialias, &GraphicsContextState::m_shouldAntialias, shouldAntialias); }
+
+    bool shouldSmoothFonts() const { return m_shouldSmoothFonts; }
+    void setShouldSmoothFonts(bool shouldSmoothFonts) { setProperty(Change::ShouldSmoothFonts, &GraphicsContextState::m_shouldSmoothFonts, shouldSmoothFonts); }
+
+    bool shouldSubpixelQuantizeFonts() const { return m_shouldSubpixelQuantizeFonts; }
+    void setShouldSubpixelQuantizeFonts(bool shouldSubpixelQuantizeFonts) { setProperty(Change::ShouldSubpixelQuantizeFonts, &GraphicsContextState::m_shouldSubpixelQuantizeFonts, shouldSubpixelQuantizeFonts); }
+
+    bool shadowsIgnoreTransforms() const { return m_shadowsIgnoreTransforms; }
+    void setShadowsIgnoreTransforms(bool shadowsIgnoreTransforms) { setProperty(Change::ShadowsIgnoreTransforms, &GraphicsContextState::m_shadowsIgnoreTransforms, shadowsIgnoreTransforms); }
+
+    bool drawLuminanceMask() const { return m_drawLuminanceMask; }
+    void setDrawLuminanceMask(bool drawLuminanceMask) { setProperty(Change::DrawLuminanceMask, &GraphicsContextState::m_drawLuminanceMask, drawLuminanceMask); }
+
 #if HAVE(OS_DARK_MODE_SUPPORT)
-    bool useDarkAppearance : 1;
+    bool useDarkAppearance() const { return m_useDarkAppearance; }
+    void setUseDarkAppearance(bool useDarkAppearance) { setProperty(Change::UseDarkAppearance, &GraphicsContextState::m_useDarkAppearance, useDarkAppearance); }
+#endif
+    
+    bool containsOnlyInlineChanges() const;
+    void mergeChanges(const GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
+
+    void didBeginTransparencyLayer();
+    void didEndTransparencyLayer(float originalOpacity);
+
+    WTF::TextStream& dump(WTF::TextStream&) const;
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<GraphicsContextState> decode(Decoder&);
+
+private:
+    template<typename T>
+    void setProperty(Change change, T GraphicsContextState::*property, const T& value)
+    {
+#if !USE(CAIRO)
+        if (this->*property == value)
+            return;
+#endif
+        this->*property = value;
+        m_changeFlags.add(change);
+    }
+
+    template<typename T>
+    void setProperty(Change change, T GraphicsContextState::*property, T&& value)
+    {
+#if !USE(CAIRO)
+        if (this->*property == value)
+            return;
+#endif
+        this->*property = WTFMove(value);
+        m_changeFlags.add(change);
+    }
+
+    ChangeFlags m_changeFlags;
+
+    SourceBrush m_fillBrush { Color::black };
+    WindRule m_fillRule { WindRule::NonZero };
+    
+    SourceBrush m_strokeBrush { Color::black };
+    float m_strokeThickness { 0 };
+    StrokeStyle m_strokeStyle { SolidStroke };
+    
+    CompositeMode m_compositeMode { CompositeOperator::SourceOver, BlendMode::Normal };
+    DropShadow m_dropShadow;
+    
+    float m_alpha { 1 };
+    InterpolationQuality m_imageInterpolationQuality { InterpolationQuality::Default };
+    TextDrawingModeFlags m_textDrawingMode { TextDrawingMode::Fill };
+
+    bool m_shouldAntialias { true };
+    bool m_shouldSmoothFonts { true };
+    bool m_shouldSubpixelQuantizeFonts { true };
+    bool m_shadowsIgnoreTransforms { false };
+    bool m_drawLuminanceMask { false };
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    bool m_useDarkAppearance { false };
 #endif
 };
 
-struct GraphicsContextStateChange {
-    GraphicsContextStateChange() = default;
-    GraphicsContextStateChange(const GraphicsContextState& state, GraphicsContextState::StateChangeFlags flags)
-        : m_state(state)
-        , m_changeFlags(flags)
-    {
-    }
+template<class Encoder>
+void GraphicsContextState::encode(Encoder& encoder) const
+{
+    auto encode = [&](Change change, auto GraphicsContextState::*property) {
+        if (m_changeFlags.contains(change))
+            encoder << this->*property;
+    };
 
-    GraphicsContextState::StateChangeFlags changesFromState(const GraphicsContextState&) const;
+    encoder << m_changeFlags;
 
-    void accumulate(const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
-    void apply(GraphicsContext&) const;
-    
-    void dump(WTF::TextStream&) const;
+    encode(Change::FillBrush,                       &GraphicsContextState::m_fillBrush);
+    encode(Change::FillRule,                        &GraphicsContextState::m_fillRule);
 
-    GraphicsContextState m_state;
-    GraphicsContextState::StateChangeFlags m_changeFlags;
-};
+    encode(Change::StrokeBrush,                     &GraphicsContextState::m_strokeBrush);
+    encode(Change::StrokeThickness,                 &GraphicsContextState::m_strokeThickness);
+    encode(Change::StrokeStyle,                     &GraphicsContextState::m_strokeStyle);
 
-WTF::TextStream& operator<<(WTF::TextStream&, const GraphicsContextStateChange&);
+    encode(Change::CompositeMode,                   &GraphicsContextState::m_compositeMode);
+    encode(Change::DropShadow,                      &GraphicsContextState::m_dropShadow);
+
+    encode(Change::Alpha,                           &GraphicsContextState::m_alpha);
+    encode(Change::ImageInterpolationQuality,       &GraphicsContextState::m_imageInterpolationQuality);
+    encode(Change::TextDrawingMode,                 &GraphicsContextState::m_textDrawingMode);
+
+    encode(Change::ShouldAntialias,                 &GraphicsContextState::m_shouldAntialias);
+    encode(Change::ShouldSmoothFonts,               &GraphicsContextState::m_shouldSmoothFonts);
+    encode(Change::ShouldSubpixelQuantizeFonts,     &GraphicsContextState::m_shouldSubpixelQuantizeFonts);
+    encode(Change::ShadowsIgnoreTransforms,         &GraphicsContextState::m_shadowsIgnoreTransforms);
+    encode(Change::DrawLuminanceMask,               &GraphicsContextState::m_drawLuminanceMask);
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    encode(Change::UseDarkAppearance,               &GraphicsContextState::m_useDarkAppearance);
+#endif
+}
+
+template<class Decoder>
+std::optional<GraphicsContextState> GraphicsContextState::decode(Decoder& decoder)
+{
+    auto decode = [&](GraphicsContextState& state, Change change, auto GraphicsContextState::*property) {
+        if (!state.changes().contains(change))
+            return true;
+
+        using PropertyType = typename std::remove_reference<decltype(std::declval<GraphicsContextState>().*property)>::type;
+        std::optional<PropertyType> value;
+        decoder >> value;
+        if (!value)
+            return false;
+
+        state.*property = *value;
+        return true;
+    };
+
+    std::optional<ChangeFlags> changeFlags;
+    decoder >> changeFlags;
+    if (!changeFlags)
+        return std::nullopt;
+
+    GraphicsContextState state(*changeFlags);
+
+    if (!decode(state, Change::FillBrush,                   &GraphicsContextState::m_fillBrush))
+        return std::nullopt;
+    if (!decode(state, Change::FillRule,                    &GraphicsContextState::m_fillRule))
+        return std::nullopt;
+
+    if (!decode(state, Change::StrokeBrush,                 &GraphicsContextState::m_strokeBrush))
+        return std::nullopt;
+    if (!decode(state, Change::StrokeThickness,             &GraphicsContextState::m_strokeThickness))
+        return std::nullopt;
+    if (!decode(state, Change::StrokeStyle,                 &GraphicsContextState::m_strokeStyle))
+        return std::nullopt;
+
+    if (!decode(state, Change::CompositeMode,               &GraphicsContextState::m_compositeMode))
+        return std::nullopt;
+    if (!decode(state, Change::DropShadow,                  &GraphicsContextState::m_dropShadow))
+        return std::nullopt;
+
+    if (!decode(state, Change::Alpha,                       &GraphicsContextState::m_alpha))
+        return std::nullopt;
+    if (!decode(state, Change::ImageInterpolationQuality,   &GraphicsContextState::m_imageInterpolationQuality))
+        return std::nullopt;
+    if (!decode(state, Change::TextDrawingMode,             &GraphicsContextState::m_textDrawingMode))
+        return std::nullopt;
+
+    if (!decode(state, Change::ShouldAntialias,             &GraphicsContextState::m_shouldAntialias))
+        return std::nullopt;
+    if (!decode(state, Change::ShouldSmoothFonts,           &GraphicsContextState::m_shouldSmoothFonts))
+        return std::nullopt;
+    if (!decode(state, Change::ShouldSubpixelQuantizeFonts, &GraphicsContextState::m_shouldSubpixelQuantizeFonts))
+        return std::nullopt;
+    if (!decode(state, Change::ShadowsIgnoreTransforms,     &GraphicsContextState::m_shadowsIgnoreTransforms))
+        return std::nullopt;
+    if (!decode(state, Change::DrawLuminanceMask,           &GraphicsContextState::m_drawLuminanceMask))
+        return std::nullopt;
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    if (!decode(state, Change::UseDarkAppearance,           &GraphicsContextState::m_useDarkAppearance))
+        return std::nullopt;
+#endif
+
+    return state;
+}
+
+TextStream& operator<<(TextStream&, GraphicsContextState::Change);
+TextStream& operator<<(TextStream&, const GraphicsContextState&);
 
 } // namespace WebCore
 
@@ -143,28 +296,27 @@ namespace WTF {
 template<> struct EnumTraits<WebCore::GraphicsContextState::Change> {
     using values = EnumValues<
         WebCore::GraphicsContextState::Change,
-        WebCore::GraphicsContextState::Change::StrokeGradientChange,
-        WebCore::GraphicsContextState::Change::StrokePatternChange,
-        WebCore::GraphicsContextState::Change::FillGradientChange,
-        WebCore::GraphicsContextState::Change::FillPatternChange,
-        WebCore::GraphicsContextState::Change::StrokeThicknessChange,
-        WebCore::GraphicsContextState::Change::StrokeColorChange,
-        WebCore::GraphicsContextState::Change::StrokeStyleChange,
-        WebCore::GraphicsContextState::Change::FillColorChange,
-        WebCore::GraphicsContextState::Change::FillRuleChange,
-        WebCore::GraphicsContextState::Change::ShadowChange,
-        WebCore::GraphicsContextState::Change::ShadowsIgnoreTransformsChange,
-        WebCore::GraphicsContextState::Change::AlphaChange,
-        WebCore::GraphicsContextState::Change::CompositeOperationChange,
-        WebCore::GraphicsContextState::Change::BlendModeChange,
-        WebCore::GraphicsContextState::Change::TextDrawingModeChange,
-        WebCore::GraphicsContextState::Change::ShouldAntialiasChange,
-        WebCore::GraphicsContextState::Change::ShouldSmoothFontsChange,
-        WebCore::GraphicsContextState::Change::ShouldSubpixelQuantizeFontsChange,
-        WebCore::GraphicsContextState::Change::DrawLuminanceMaskChange,
-        WebCore::GraphicsContextState::Change::ImageInterpolationQualityChange
+        WebCore::GraphicsContextState::Change::FillBrush,
+        WebCore::GraphicsContextState::Change::FillRule,
+
+        WebCore::GraphicsContextState::Change::StrokeBrush,
+        WebCore::GraphicsContextState::Change::StrokeThickness,
+        WebCore::GraphicsContextState::Change::StrokeStyle,
+
+        WebCore::GraphicsContextState::Change::CompositeMode,
+        WebCore::GraphicsContextState::Change::DropShadow,
+
+        WebCore::GraphicsContextState::Change::Alpha,
+        WebCore::GraphicsContextState::Change::TextDrawingMode,
+        WebCore::GraphicsContextState::Change::ImageInterpolationQuality,
+
+        WebCore::GraphicsContextState::Change::ShouldAntialias,
+        WebCore::GraphicsContextState::Change::ShouldSmoothFonts,
+        WebCore::GraphicsContextState::Change::ShouldSubpixelQuantizeFonts,
+        WebCore::GraphicsContextState::Change::ShadowsIgnoreTransforms,
+        WebCore::GraphicsContextState::Change::DrawLuminanceMask
 #if HAVE(OS_DARK_MODE_SUPPORT)
-        , WebCore::GraphicsContextState::Change::UseDarkAppearanceChange
+        , WebCore::GraphicsContextState::Change::UseDarkAppearance
 #endif
     >;
 };

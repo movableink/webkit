@@ -35,14 +35,20 @@
 
 namespace WebGPU {
 
-RefPtr<RenderBundleEncoder> Device::createRenderBundleEncoder(const WGPURenderBundleEncoderDescriptor& descriptor)
+Ref<RenderBundleEncoder> Device::createRenderBundleEncoder(const WGPURenderBundleEncoderDescriptor& descriptor)
 {
     UNUSED_PARAM(descriptor);
-    return RenderBundleEncoder::create(nil);
+    return RenderBundleEncoder::createInvalid(*this);
 }
 
-RenderBundleEncoder::RenderBundleEncoder(id<MTLIndirectCommandBuffer> indirectCommandBuffer)
+RenderBundleEncoder::RenderBundleEncoder(id<MTLIndirectCommandBuffer> indirectCommandBuffer, Device& device)
     : m_indirectCommandBuffer(indirectCommandBuffer)
+    , m_device(device)
+{
+}
+
+RenderBundleEncoder::RenderBundleEncoder(Device& device)
+    : m_device(device)
 {
 }
 
@@ -77,17 +83,16 @@ void RenderBundleEncoder::drawIndirect(const Buffer& indirectBuffer, uint64_t in
     UNUSED_PARAM(indirectOffset);
 }
 
-RefPtr<RenderBundle> RenderBundleEncoder::finish(const WGPURenderBundleDescriptor& descriptor)
+Ref<RenderBundle> RenderBundleEncoder::finish(const WGPURenderBundleDescriptor& descriptor)
 {
     UNUSED_PARAM(descriptor);
-    return RenderBundle::create(nil);
+    return RenderBundle::createInvalid(m_device);
 }
 
 void RenderBundleEncoder::insertDebugMarker(String&&)
 {
     // https://gpuweb.github.io/gpuweb/#dom-gpudebugcommandsmixin-insertdebugmarker
 
-    // "Prepare the encoder state of this. If it returns false, stop."
     if (!prepareTheEncoderState())
         return;
 
@@ -96,7 +101,6 @@ void RenderBundleEncoder::insertDebugMarker(String&&)
 
 bool RenderBundleEncoder::validatePopDebugGroup() const
 {
-    // "this.[[debug_group_stack]] must not be empty."
     if (!m_debugGroupStackSize)
         return false;
 
@@ -107,17 +111,14 @@ void RenderBundleEncoder::popDebugGroup()
 {
     // https://gpuweb.github.io/gpuweb/#dom-gpudebugcommandsmixin-popdebuggroup
 
-    // "Prepare the encoder state of this. If it returns false, stop."
     if (!prepareTheEncoderState())
         return;
 
-    // "If any of the following requirements are unmet"
     if (!validatePopDebugGroup()) {
-        // FIXME: "make this invalid, and stop."
+        makeInvalid();
         return;
     }
 
-    // "Pop an entry off of this.[[debug_group_stack]]."
     --m_debugGroupStackSize;
     // MTLIndirectCommandBuffers don't support debug commands.
 }
@@ -126,11 +127,9 @@ void RenderBundleEncoder::pushDebugGroup(String&&)
 {
     // https://gpuweb.github.io/gpuweb/#dom-gpudebugcommandsmixin-pushdebuggroup
 
-    // "Prepare the encoder state of this. If it returns false, stop."
     if (!prepareTheEncoderState())
         return;
 
-    // "Push groupLabel onto this.[[debug_group_stack]]."
     ++m_debugGroupStackSize;
     // MTLIndirectCommandBuffers don't support debug commands.
 }
@@ -175,7 +174,7 @@ void RenderBundleEncoder::setLabel(String&& label)
 
 void wgpuRenderBundleEncoderRelease(WGPURenderBundleEncoder renderBundleEncoder)
 {
-    delete renderBundleEncoder;
+    WebGPU::fromAPI(renderBundleEncoder).deref();
 }
 
 void wgpuRenderBundleEncoderDraw(WGPURenderBundleEncoder renderBundleEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -200,8 +199,7 @@ void wgpuRenderBundleEncoderDrawIndirect(WGPURenderBundleEncoder renderBundleEnc
 
 WGPURenderBundle wgpuRenderBundleEncoderFinish(WGPURenderBundleEncoder renderBundleEncoder, const WGPURenderBundleDescriptor* descriptor)
 {
-    auto result = WebGPU::fromAPI(renderBundleEncoder).finish(*descriptor);
-    return result ? new WGPURenderBundleImpl { result.releaseNonNull() } : nullptr;
+    return WebGPU::releaseToAPI(WebGPU::fromAPI(renderBundleEncoder).finish(*descriptor));
 }
 
 void wgpuRenderBundleEncoderInsertDebugMarker(WGPURenderBundleEncoder renderBundleEncoder, const char* markerLabel)

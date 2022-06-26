@@ -33,17 +33,17 @@
 
 namespace JSC {
 
-JSValue call(JSGlobalObject* globalObject, JSValue functionObject, const ArgList& args, const char* errorMessage)
+JSValue call(JSGlobalObject* globalObject, JSValue functionObject, const ArgList& args, ASCIILiteral errorMessage)
 {
     return call(globalObject, functionObject, functionObject, args, errorMessage);
 }
 
-JSValue call(JSGlobalObject* globalObject, JSValue functionObject, JSValue thisValue, const ArgList& args, const char* errorMessage)
+JSValue call(JSGlobalObject* globalObject, JSValue functionObject, JSValue thisValue, const ArgList& args, ASCIILiteral errorMessage)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto callData = getCallData(vm, functionObject);
+    auto callData = JSC::getCallData(functionObject);
     if (callData.type == CallData::Type::None)
         return throwTypeError(globalObject, scope, errorMessage);
 

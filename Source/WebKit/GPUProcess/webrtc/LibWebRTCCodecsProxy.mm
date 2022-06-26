@@ -39,6 +39,7 @@
 #import "WebCoreArgumentCoders.h"
 #import <WebCore/CVUtilities.h>
 #import <WebCore/LibWebRTCProvider.h>
+#import <WebCore/PixelBufferConformerCV.h>
 #import <WebCore/VideoFrameCV.h>
 #import <webrtc/sdk/WebKit/WebKitDecoder.h>
 #import <webrtc/sdk/WebKit/WebKitEncoder.h>
@@ -46,8 +47,10 @@
 #import <wtf/MediaTime.h>
 
 #import <pal/cf/CoreMediaSoftLink.h>
+#import <WebCore/CoreVideoSoftLink.h>
 
 namespace WebKit {
+using namespace WebCore;
 
 Ref<LibWebRTCCodecsProxy> LibWebRTCCodecsProxy::create(GPUConnectionToWebProcess& webProcessConnection)
 {
@@ -68,9 +71,9 @@ LibWebRTCCodecsProxy::~LibWebRTCCodecsProxy() = default;
 
 void LibWebRTCCodecsProxy::stopListeningForIPC(Ref<LibWebRTCCodecsProxy>&& refFromConnection)
 {
-    m_connection->removeThreadMessageReceiver(Messages::LibWebRTCCodecsProxy::messageReceiverName());
+    m_connection->removeWorkQueueMessageReceiver(Messages::LibWebRTCCodecsProxy::messageReceiverName());
 
-    dispatchToThread([this, protectedThis = WTFMove(refFromConnection)] {
+    m_queue->dispatch([this, protectedThis = WTFMove(refFromConnection)] {
         assertIsCurrent(workQueue());
         auto decoders = WTFMove(m_decoders);
         for (auto decoder : decoders.values())
@@ -83,12 +86,7 @@ void LibWebRTCCodecsProxy::stopListeningForIPC(Ref<LibWebRTCCodecsProxy>&& refFr
 
 void LibWebRTCCodecsProxy::initialize()
 {
-    m_connection->addThreadMessageReceiver(Messages::LibWebRTCCodecsProxy::messageReceiverName(), this);
-}
-
-void LibWebRTCCodecsProxy::dispatchToThread(Function<void()>&& function)
-{
-    m_queue->dispatch(WTFMove(function));
+    m_connection->addWorkQueueMessageReceiver(Messages::LibWebRTCCodecsProxy::messageReceiverName(), m_queue, *this);
 }
 
 auto LibWebRTCCodecsProxy::createDecoderCallback(RTCDecoderIdentifier identifier, bool useRemoteFrames)
@@ -97,7 +95,7 @@ auto LibWebRTCCodecsProxy::createDecoderCallback(RTCDecoderIdentifier identifier
     if (useRemoteFrames)
         videoFrameObjectHeap = m_videoFrameObjectHeap.ptr();
     return [identifier, connection = m_connection, resourceOwner = m_resourceOwner, videoFrameObjectHeap = WTFMove(videoFrameObjectHeap)] (CVPixelBufferRef pixelBuffer, uint32_t timeStampNs, uint32_t timeStamp) mutable {
-        auto videoFrame = WebCore::VideoFrameCV::create(MediaTime(timeStampNs, 1), false, WebCore::MediaSample::VideoRotation::None, pixelBuffer);
+        auto videoFrame = WebCore::VideoFrameCV::create(MediaTime(timeStampNs, 1), false, WebCore::VideoFrame::Rotation::None, pixelBuffer);
         if (resourceOwner)
             videoFrame->setOwnershipIdentity(resourceOwner);
         if (videoFrameObjectHeap) {
@@ -215,16 +213,16 @@ LibWebRTCCodecsProxy::Encoder* LibWebRTCCodecsProxy::findEncoder(RTCEncoderIdent
     return &iterator->value;
 }
 
-static inline webrtc::VideoRotation toWebRTCVideoRotation(WebCore::MediaSample::VideoRotation rotation)
+static inline webrtc::VideoRotation toWebRTCVideoRotation(WebCore::VideoFrame::Rotation rotation)
 {
     switch (rotation) {
-    case WebCore::MediaSample::VideoRotation::None:
+    case WebCore::VideoFrame::Rotation::None:
         return webrtc::kVideoRotation_0;
-    case WebCore::MediaSample::VideoRotation::UpsideDown:
+    case WebCore::VideoFrame::Rotation::UpsideDown:
         return webrtc::kVideoRotation_180;
-    case WebCore::MediaSample::VideoRotation::Right:
+    case WebCore::VideoFrame::Rotation::Right:
         return webrtc::kVideoRotation_90;
-    case WebCore::MediaSample::VideoRotation::Left:
+    case WebCore::VideoFrame::Rotation::Left:
         return webrtc::kVideoRotation_270;
     }
     ASSERT_NOT_REACHED();
@@ -246,6 +244,15 @@ void LibWebRTCCodecsProxy::encodeFrame(RTCEncoderIdentifier identifier, SharedVi
     auto pixelBuffer = encoder->frameReader->readBuffer(WTFMove(sharedVideoFrame.buffer));
     if (!pixelBuffer)
         return;
+
+    if (CVPixelBufferGetPixelFormatType(pixelBuffer.get()) == kCVPixelFormatType_32BGRA) {
+        if (!m_pixelBufferConformer) {
+            m_pixelBufferConformer = makeUnique<WebCore::PixelBufferConformerCV>((__bridge CFDictionaryRef)@{ (__bridge NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange) });
+        }
+        pixelBuffer = m_pixelBufferConformer->convert(pixelBuffer.get());
+        if (!pixelBuffer)
+            return;
+    }
 
 #if !PLATFORM(MACCATALYST)
     webrtc::encodeLocalEncoderFrame(encoder->webrtcEncoder, pixelBuffer.get(), sharedVideoFrame.time.toTimeScale(1000000).timeValue(), timeStamp, toWebRTCVideoRotation(sharedVideoFrame.rotation), shouldEncodeAsKeyFrame);

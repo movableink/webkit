@@ -39,24 +39,21 @@ class RemoteRenderingBackendProxy;
 
 class RemoteDisplayListRecorderProxy : public WebCore::DisplayList::Recorder {
 public:
-    RemoteDisplayListRecorderProxy(WebCore::ImageBuffer&, RemoteRenderingBackendProxy&, const WebCore::FloatRect& initialClip, const WebCore::AffineTransform&, WebCore::DrawGlyphsRecorder::DeconstructDrawGlyphs = WebCore::DrawGlyphsRecorder::DeconstructDrawGlyphs::Yes);
+    RemoteDisplayListRecorderProxy(WebCore::ImageBuffer&, RemoteRenderingBackendProxy&, const WebCore::FloatRect& initialClip, const WebCore::AffineTransform&);
     ~RemoteDisplayListRecorderProxy() = default;
-
-    void resetNeedsFlush() { m_needsFlush = false; }
-    bool needsFlush() const { return m_needsFlush; }
 
     void convertToLuminanceMask() final;
     void transformToColorSpace(const WebCore::DestinationColorSpace&) final;
-    void flushContext(WebCore::GraphicsContextFlushIdentifier) final;
+    void flushContext(WebCore::GraphicsContextFlushIdentifier);
 
 private:
     template<typename T>
     void send(T&& message)
     {
-        if (UNLIKELY(!m_renderingBackend))
+        if (UNLIKELY(!(m_renderingBackend && m_imageBuffer)))
             return;
 
-        m_needsFlush = true;
+        m_imageBuffer->backingStoreWillChange();
         m_renderingBackend->sendToStream(WTFMove(message), m_destinationBufferIdentifier);
     }
 
@@ -74,7 +71,7 @@ private:
     void recordSetInlineFillColor(WebCore::SRGBA<uint8_t>) final;
     void recordSetInlineStrokeColor(WebCore::SRGBA<uint8_t>) final;
     void recordSetStrokeThickness(float) final;
-    void recordSetState(const WebCore::GraphicsContextState&, WebCore::GraphicsContextState::StateChangeFlags) final;
+    void recordSetState(const WebCore::GraphicsContextState&) final;
     void recordSetLineCap(WebCore::LineCap) final;
     void recordSetLineDash(const WebCore::DashArray&, float dashOffset) final;
     void recordSetLineJoin(WebCore::LineJoin) final;
@@ -87,6 +84,7 @@ private:
     void recordClipPath(const WebCore::Path&, WebCore::WindRule) final;
     void recordDrawFilteredImageBuffer(WebCore::ImageBuffer*, const WebCore::FloatRect& sourceImageRect, WebCore::Filter&) final;
     void recordDrawGlyphs(const WebCore::Font&, const WebCore::GlyphBufferGlyph*, const WebCore::GlyphBufferAdvance*, unsigned count, const WebCore::FloatPoint& localAnchor, WebCore::FontSmoothingMode) final;
+    void recordDrawDecomposedGlyphs(const WebCore::Font&, const WebCore::DecomposedGlyphs&) final;
     void recordDrawImageBuffer(WebCore::ImageBuffer&, const WebCore::FloatRect& destRect, const WebCore::FloatRect& srcRect, const WebCore::ImagePaintingOptions&) final;
     void recordDrawNativeImage(WebCore::RenderingResourceIdentifier imageIdentifier, const WebCore::FloatSize& imageSize, const WebCore::FloatRect& destRect, const WebCore::FloatRect& srcRect, const WebCore::ImagePaintingOptions&) final;
     void recordDrawSystemImage(WebCore::SystemImage&, const WebCore::FloatRect&);
@@ -95,7 +93,7 @@ private:
     void recordEndTransparencyLayer() final;
     void recordDrawRect(const WebCore::FloatRect&, float) final;
     void recordDrawLine(const WebCore::FloatPoint& point1, const WebCore::FloatPoint& point2) final;
-    void recordDrawLinesForText(const WebCore::FloatPoint& blockLocation, const WebCore::FloatSize& localAnchor, float thickness, const WebCore::DashArray& widths, bool printing, bool doubleLines) final;
+    void recordDrawLinesForText(const WebCore::FloatPoint& blockLocation, const WebCore::FloatSize& localAnchor, float thickness, const WebCore::DashArray& widths, bool printing, bool doubleLines, WebCore::StrokeStyle) final;
     void recordDrawDotsForDocumentMarker(const WebCore::FloatRect&, const WebCore::DocumentMarkerLineStyle&) final;
     void recordDrawEllipse(const WebCore::FloatRect&) final;
     void recordDrawPath(const WebCore::Path&) final;
@@ -136,6 +134,7 @@ private:
     bool recordResourceUse(WebCore::ImageBuffer&) final;
     bool recordResourceUse(const WebCore::SourceImage&) final;
     bool recordResourceUse(WebCore::Font&) final;
+    bool recordResourceUse(WebCore::DecomposedGlyphs&) final;
 
     RefPtr<WebCore::ImageBuffer> createImageBuffer(const WebCore::FloatSize&, float resolutionScale, const WebCore::DestinationColorSpace&, std::optional<WebCore::RenderingMode>, std::optional<WebCore::RenderingMethod>) const final;
     RefPtr<WebCore::ImageBuffer> createAlignedImageBuffer(const WebCore::FloatSize&, const WebCore::DestinationColorSpace&, std::optional<WebCore::RenderingMethod>) const final;
@@ -144,7 +143,6 @@ private:
     WebCore::RenderingResourceIdentifier m_destinationBufferIdentifier;
     WeakPtr<WebCore::ImageBuffer> m_imageBuffer;
     WeakPtr<RemoteRenderingBackendProxy> m_renderingBackend;
-    bool m_needsFlush { false };
 };
 
 } // namespace WebKit

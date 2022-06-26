@@ -67,7 +67,7 @@ public:
     bool isHashTableDeletedValue() const { return m_string.isHashTableDeletedValue(); }
 
     // Resolves the relative URL with the given base URL. If provided, the
-    // URLTextEncoding is used to encode non-ASCII characers. The base URL can be
+    // URLTextEncoding is used to encode non-ASCII characters. The base URL can be
     // null or empty, in which case the relative URL will be interpreted as absolute.
     WTF_EXPORT_PRIVATE URL(const URL& base, const String& relative, const URLTextEncoding* = nullptr);
 
@@ -123,8 +123,9 @@ public:
 
     WTF_EXPORT_PRIVATE StringView queryWithLeadingQuestionMark() const;
     WTF_EXPORT_PRIVATE StringView fragmentIdentifierWithLeadingNumberSign() const;
-    WTF_EXPORT_PRIVATE StringView stringWithoutQueryOrFragmentIdentifier() const;
-    WTF_EXPORT_PRIVATE StringView stringWithoutFragmentIdentifier() const;
+    WTF_EXPORT_PRIVATE StringView viewWithoutQueryOrFragmentIdentifier() const;
+    WTF_EXPORT_PRIVATE StringView viewWithoutFragmentIdentifier() const;
+    WTF_EXPORT_PRIVATE String stringWithoutFragmentIdentifier() const;
 
     WTF_EXPORT_PRIVATE String protocolHostAndPort() const;
     WTF_EXPORT_PRIVATE String hostAndPort() const;
@@ -142,10 +143,9 @@ public:
 
     // Returns true if the current URL's protocol is the same as the null-
     // terminated ASCII argument. The argument must be lower-case.
-    WTF_EXPORT_PRIVATE bool protocolIs(const char*) const;
     WTF_EXPORT_PRIVATE bool protocolIs(StringView) const;
-    bool protocolIsBlob() const { return protocolIs("blob"); }
-    bool protocolIsData() const { return protocolIs("data"); }
+    bool protocolIsBlob() const { return protocolIs("blob"_s); }
+    bool protocolIsData() const { return protocolIs("data"_s); }
     WTF_EXPORT_PRIVATE bool protocolIsAbout() const;
     WTF_EXPORT_PRIVATE bool protocolIsJavaScript() const;
     WTF_EXPORT_PRIVATE bool protocolIsInFTPFamily() const;
@@ -281,7 +281,7 @@ WTF_EXPORT_PRIVATE const URL& aboutSrcDocURL();
 // These are also different from the WTF::URL functions in that they don't require the string to be a valid and parsable URL.
 // This is especially important because valid javascript URLs are not necessarily considered valid by WTF::URL.
 
-WTF_EXPORT_PRIVATE bool protocolIs(StringView url, const char* protocol);
+WTF_EXPORT_PRIVATE bool protocolIs(StringView url, ASCIILiteral protocol);
 WTF_EXPORT_PRIVATE bool protocolIsJavaScript(StringView url);
 WTF_EXPORT_PRIVATE bool protocolIsInFTPFamily(StringView url);
 WTF_EXPORT_PRIVATE bool protocolIsInHTTPFamily(StringView url);

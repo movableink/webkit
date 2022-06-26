@@ -38,10 +38,8 @@
 #import "WKObject.h"
 #import "WKWebViewInternal.h"
 #import "WKWebsiteDataStoreInternal.h"
-#import "WebAuthnProcessProxy.h"
 #import "WebBackForwardCache.h"
 #import "WebCertificateInfo.h"
-#import "WebCookieManagerProxy.h"
 #import "WebNotificationManagerProxy.h"
 #import "WebProcessCache.h"
 #import "WebProcessMessages.h"
@@ -196,15 +194,6 @@ static RetainPtr<WKProcessPool>& sharedProcessPool()
         url = [url URLByAppendingPathComponent:bundleIdentifier isDirectory:YES];
 
     return [url URLByAppendingPathComponent:@"WebsiteData" isDirectory:YES];
-}
-
-+ (pid_t)_webAuthnProcessIdentifier
-{
-#if ENABLE(WEB_AUTHN)
-    return WebKit::WebAuthnProcessProxy::singleton().processIdentifier();
-#else
-    return 0;
-#endif
 }
 
 - (void)_setAllowsSpecificHTTPSCertificate:(NSArray *)certificateChain forHost:(NSString *)host
@@ -498,8 +487,7 @@ static RetainPtr<WKProcessPool>& sharedProcessPool()
 
 + (void)_setLinkedOnOrBeforeEverythingForTesting
 {
-    setApplicationSDKVersion(0);
-    setLinkedOnOrAfterOverride(LinkedOnOrAfterOverride::BeforeEverything);
+    disableAllSDKAlignedBehaviors();
 }
 
 + (void)_setLinkedOnOrAfterEverythingForTesting
@@ -509,8 +497,7 @@ static RetainPtr<WKProcessPool>& sharedProcessPool()
 
 + (void)_setLinkedOnOrAfterEverything
 {
-    setApplicationSDKVersion(std::numeric_limits<uint32_t>::max());
-    setLinkedOnOrAfterOverride(LinkedOnOrAfterOverride::AfterEverything);
+    enableAllSDKAlignedBehaviors();
 }
 
 + (void)_setCaptivePortalModeEnabledGloballyForTesting:(BOOL)isEnabled

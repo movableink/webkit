@@ -49,14 +49,14 @@ using JSTestNamespaceConstDOMConstructor = JSDOMConstructorNotCallable<JSTestNam
 
 static const HashTableValue JSTestNamespaceConstConstructorTableValues[] =
 {
-    { "TEST_FLAG", JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::ConstantInteger, NoIntrinsic, { (long long)(false) } },
-    { "TEST_BIT_MASK", JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::ConstantInteger, NoIntrinsic, { (long long)(0x0000fc00) } },
+    { "TEST_FLAG"_s, JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::ConstantInteger, NoIntrinsic, { (long long)(false) } },
+    { "TEST_BIT_MASK"_s, JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::ConstantInteger, NoIntrinsic, { (long long)(0x0000fc00) } },
 };
 
 static_assert(TestNamespaceConst::TEST_FLAG == false, "TEST_FLAG in TestNamespaceConst does not match value from IDL");
 static_assert(TestNamespaceConst::TEST_BIT_MASK == 0x0000fc00, "TEST_BIT_MASK in TestNamespaceConst does not match value from IDL");
 
-template<> const ClassInfo JSTestNamespaceConstDOMConstructor::s_info = { "TestNamespaceConst", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamespaceConstDOMConstructor) };
+template<> const ClassInfo JSTestNamespaceConstDOMConstructor::s_info = { "TestNamespaceConst"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamespaceConstDOMConstructor) };
 
 template<> JSValue JSTestNamespaceConstDOMConstructor::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
 {
@@ -71,7 +71,7 @@ template<> void JSTestNamespaceConstDOMConstructor::initializeProperties(VM& vm,
     UNUSED_PARAM(globalObject);
 }
 
-const ClassInfo JSTestNamespaceConst::s_info = { "TestNamespaceConst", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamespaceConst) };
+const ClassInfo JSTestNamespaceConst::s_info = { "TestNamespaceConst"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamespaceConst) };
 
 JSTestNamespaceConst::JSTestNamespaceConst(Structure* structure, JSDOMGlobalObject& globalObject)
     : JSDOMObject(structure, globalObject) { }
@@ -79,7 +79,7 @@ JSTestNamespaceConst::JSTestNamespaceConst(Structure* structure, JSDOMGlobalObje
 void JSTestNamespaceConst::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     static_assert(!std::is_base_of<ActiveDOMObject, TestNamespaceConst>::value, "Interface is not marked as [ActiveDOMObject] even though implementation class subclasses ActiveDOMObject.");
 

@@ -53,6 +53,10 @@
 #include <QRawFont>
 #endif
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class FontCache;
@@ -400,6 +404,10 @@ ALWAYS_INLINE float Font::widthForGlyph(Glyph glyph, SyntheticBoldInclusion Synt
     m_glyphToWidthMap.setMetricsForGlyph(glyph, width);
     return width + (SyntheticBoldInclusion == SyntheticBoldInclusion::Incorporate ? syntheticBoldOffset() : 0);
 }
+
+#if !LOG_DISABLED
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Font&);
+#endif
 
 } // namespace WebCore
 

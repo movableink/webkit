@@ -98,6 +98,9 @@ static WKNotificationManagerRef notificationManagerForPage(WKPageRef page)
 
 void WebNotificationProvider::showWebNotification(WKPageRef page, WKNotificationRef notification)
 {
+    if (WKNotificationGetIsPersistent(notification))
+        m_knownPersistentNotifications.add(notification);
+
     auto notificationManager = notificationManagerForPage(page);
     ASSERT(m_knownManagers.contains(notificationManager));
 
@@ -112,6 +115,9 @@ void WebNotificationProvider::showWebNotification(WKPageRef page, WKNotification
 
 void WebNotificationProvider::closeWebNotification(WKNotificationRef notification)
 {
+    if (WKNotificationGetIsPersistent(notification))
+        m_knownPersistentNotifications.remove(notification);
+
     auto identifier = adoptWK(WKNotificationCopyCoreIDForTesting(notification));
 
     auto notificationManager = m_owningManager.take(dataToUUID(identifier.get()));
@@ -171,6 +177,7 @@ void WebNotificationProvider::simulateWebNotificationClick(WKPageRef, WKDataRef 
     WKNotificationManagerProviderDidClickNotification_b(m_owningManager.get(identifier), notificationID);
 }
 
+#if !PLATFORM(COCOA)
 void WebNotificationProvider::simulateWebNotificationClickForServiceWorkerNotifications()
 {
     auto sharedManager = WKNotificationManagerGetSharedServiceWorkerNotificationManager();
@@ -179,6 +186,18 @@ void WebNotificationProvider::simulateWebNotificationClickForServiceWorkerNotifi
             continue;
         WKNotificationManagerProviderDidClickNotification_b(sharedManager, uuidToData(iterator.key).get());
     }
+}
+#endif
+
+WKRetainPtr<WKArrayRef> securityOriginsFromStrings(WKArrayRef originStrings)
+{
+    auto origins = adoptWK(WKMutableArrayCreate());
+    for (size_t i = 0; i < WKArrayGetSize(originStrings); i++) {
+        auto originString = static_cast<WKStringRef>(WKArrayGetItemAtIndex(originStrings, i));
+        auto origin = adoptWK(WKSecurityOriginCreateFromString(originString));
+        WKArrayAppendItem(origins.get(), static_cast<WKTypeRef>(origin.get()));
+    }
+    return origins;
 }
 
 void WebNotificationProvider::reset()
@@ -189,7 +208,14 @@ void WebNotificationProvider::reset()
         WKNotificationManagerProviderDidCloseNotifications(iterator.value, array.get());
     }
 
+    m_knownPersistentNotifications.clear();
     m_owningManager.clear();
+
+    auto originStrings = adoptWK(WKDictionaryCopyKeys(static_cast<WKDictionaryRef>(m_permissions.get())));
+    auto origins = securityOriginsFromStrings(originStrings.get());
+    for (auto manager : m_knownManagers)
+        WKNotificationManagerProviderDidRemoveNotificationPolicies(manager.get(), origins.get());
+
     m_permissions = adoptWK(WKMutableDictionaryCreate());
 }
 

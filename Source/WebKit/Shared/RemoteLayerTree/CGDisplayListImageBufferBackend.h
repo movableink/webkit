@@ -28,6 +28,7 @@
 #if ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
 
 #include "ImageBufferBackendHandleSharing.h"
+#include <WebCore/ImageBuffer.h>
 #include <WebCore/ImageBufferCGBackend.h>
 #include <wtf/IsoMalloc.h>
 
@@ -40,15 +41,15 @@ public:
     static size_t calculateMemoryCost(const Parameters&);
 
     static std::unique_ptr<CGDisplayListImageBufferBackend> create(const Parameters&);
-    static std::unique_ptr<CGDisplayListImageBufferBackend> create(const Parameters&, const WebCore::HostWindow*);
+    static std::unique_ptr<CGDisplayListImageBufferBackend> create(const Parameters&, const WebCore::ImageBuffer::CreationContext&);
 
     WebCore::GraphicsContext& context() const final;
     WebCore::IntSize backendSize() const final;
-    ImageBufferBackendHandle createBackendHandle() const final;
+    ImageBufferBackendHandle createBackendHandle(SharedMemory::Protection = SharedMemory::Protection::ReadWrite) const final;
 
     // NOTE: These all ASSERT_NOT_REACHED().
     RefPtr<WebCore::NativeImage> copyNativeImage(WebCore::BackingStoreCopy = WebCore::CopyBackingStore) const final;
-    std::optional<WebCore::PixelBuffer> getPixelBuffer(const WebCore::PixelBufferFormat& outputFormat, const WebCore::IntRect&) const final;
+    RefPtr<WebCore::PixelBuffer> getPixelBuffer(const WebCore::PixelBufferFormat& outputFormat, const WebCore::IntRect&, const WebCore::ImageBufferAllocator& = WebCore::ImageBufferAllocator()) const final;
     void putPixelBuffer(const WebCore::PixelBuffer&, const WebCore::IntRect& srcRect, const WebCore::IntPoint& destPoint, WebCore::AlphaPremultiplication destFormat) final;
 
 protected:

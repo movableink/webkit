@@ -38,10 +38,10 @@
 #include "CaptureDevice.h"
 #include "Image.h"
 #include "MediaConstraints.h"
-#include "MediaSample.h"
 #include "PlatformLayer.h"
 #include "RealtimeMediaSourceCapabilities.h"
 #include "RealtimeMediaSourceFactory.h"
+#include "VideoFrame.h"
 #include "VideoFrameTimeMetadata.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Lock.h>
@@ -98,27 +98,27 @@ public:
         // May be called on a background thread.
         virtual void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t /*numberOfFrames*/) = 0;
     };
-    class VideoSampleObserver {
+    class VideoFrameObserver {
     public:
-        virtual ~VideoSampleObserver() = default;
+        virtual ~VideoFrameObserver() = default;
 
         // May be called on a background thread.
-        virtual void videoSampleAvailable(MediaSample&, VideoFrameTimeMetadata) = 0;
+        virtual void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) = 0;
     };
 
     virtual ~RealtimeMediaSource() = default;
 
     virtual Ref<RealtimeMediaSource> clone() { return *this; }
 
-    const String& hashedId() const;
+    const AtomString& hashedId() const;
     String deviceIDHashSalt() const;
 
     const String& persistentID() const { return m_persistentID; }
 
-    enum class Type { None, Audio, Video, Screen, Window, SystemAudio };
+    enum class Type : bool { Audio, Video };
     Type type() const { return m_type; }
-    bool hasVideo() const { return m_type == Type::Video || m_type == Type::Window || m_type == Type::Screen; }
-    bool hasAudio() const { return m_type == Type::Audio || m_type == Type::SystemAudio; }
+    bool isVideo() const { return m_type == Type::Video; }
+    bool isAudio() const { return m_type == Type::Audio; }
 
     virtual void whenReady(CompletionHandler<void(String)>&&);
 
@@ -136,8 +136,8 @@ public:
 
     virtual bool interrupted() const { return false; }
 
-    const String& name() const { return m_name; }
-    void setName(String&& name) { m_name = WTFMove(name); }
+    const AtomString& name() const { return m_name; }
+    void setName(const AtomString& name) { m_name = name; }
 
     unsigned fitnessScore() const { return m_fitnessScore; }
 
@@ -147,8 +147,8 @@ public:
     WEBCORE_EXPORT void addAudioSampleObserver(AudioSampleObserver&);
     WEBCORE_EXPORT void removeAudioSampleObserver(AudioSampleObserver&);
 
-    WEBCORE_EXPORT void addVideoSampleObserver(VideoSampleObserver&);
-    WEBCORE_EXPORT void removeVideoSampleObserver(VideoSampleObserver&);
+    WEBCORE_EXPORT void addVideoFrameObserver(VideoFrameObserver&);
+    WEBCORE_EXPORT void removeVideoFrameObserver(VideoFrameObserver&);
 
     const IntSize size() const;
     void setSize(const IntSize&);
@@ -226,7 +226,7 @@ public:
     PageIdentifier pageIdentifier() const { return m_pageIdentifier; }
 
 protected:
-    RealtimeMediaSource(Type, String&& name, String&& deviceID = { }, String&& hashSalt = { }, PageIdentifier = { });
+    RealtimeMediaSource(Type, AtomString&& name, String&& deviceID = { }, String&& hashSalt = { }, PageIdentifier = { });
 
     void scheduleDeferredTask(Function<void()>&&);
 
@@ -250,7 +250,7 @@ protected:
     void initializeSampleRate(int sampleRate) { m_sampleRate = sampleRate; }
     void initializeEchoCancellation(bool echoCancellation) { m_echoCancellation = echoCancellation; }
 
-    void videoSampleAvailable(MediaSample&, VideoFrameTimeMetadata);
+    void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata);
     void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t);
 
     void forEachObserver(const Function<void(Observer&)>&);
@@ -267,7 +267,7 @@ private:
 
     virtual void stopBeingObserved() { stop(); }
 
-    virtual void hasEnded() { }
+    virtual void didEnd() { }
 
     void updateHasStartedProducingData();
 
@@ -280,17 +280,17 @@ private:
 
     PageIdentifier m_pageIdentifier;
     String m_idHashSalt;
-    String m_hashedID;
+    AtomString m_hashedID;
     String m_persistentID;
     Type m_type;
-    String m_name;
+    AtomString m_name;
     WeakHashSet<Observer> m_observers;
 
     mutable Lock m_audioSampleObserversLock;
     HashSet<AudioSampleObserver*> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
 
-    mutable Lock m_videoSampleObserversLock;
-    HashSet<VideoSampleObserver*> m_videoSampleObservers WTF_GUARDED_BY_LOCK(m_videoSampleObserversLock);
+    mutable Lock m_VideoFrameObserversLock;
+    HashSet<VideoFrameObserver*> m_VideoFrameObservers WTF_GUARDED_BY_LOCK(m_VideoFrameObserversLock);
 
     // Set on the main thread from constraints.
     IntSize m_size;

@@ -302,33 +302,18 @@ String contextMenuItemTagLookUpImage()
     return WEB_UI_STRING("Look Up", "Title for Look Up action button");
 }
 
-String contextMenuItemTagQuickLookImage()
-{
-    return WEB_UI_STRING("Quick Look", "Title for Quick Look action button");
-}
-
-String contextMenuItemTagQuickLookImageForTextSelection()
-{
-    return WEB_UI_STRING("Select Text in Quick Look", "Title for Quick Look action button for images with text");
-}
-
-String contextMenuItemTagQuickLookImageForVisualSearch()
-{
-    return WEB_UI_STRING("Look Up in Quick Look", "Title for Quick Look action button for images with visual search results");
-}
-
-#endif // ENABLE(IMAGE_ANALYSIS)
+#endif
 
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
 
-String contextMenuItemTagCopyCroppedImage()
+String contextMenuItemTagCopySubject()
 {
-    return WEB_UI_STRING("Copy Cropped Image", "Title for Copy Cropped Image");
+    return WEB_UI_STRING("Copy Subject", "Title for Copy Subject");
 }
 
-String contextMenuItemTitleMarkupImage()
+String contextMenuItemTitleRemoveBackground()
 {
-    return WEB_UI_STRING("Markup Image", "Image analysis markup menu item");
+    return WEB_UI_STRING("Remove Background", "Remove Background menu item");
 }
 
 #endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)

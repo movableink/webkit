@@ -28,13 +28,14 @@
 #if ENABLE(MEDIA_STREAM) && USE(AVFOUNDATION)
 
 #include "MediaPlayerPrivate.h"
-#include "MediaSample.h"
 #include "MediaStreamPrivate.h"
 #include "SampleBufferDisplayLayer.h"
+#include "VideoFrame.h"
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
 #include <wtf/LoggerHelper.h>
+#include <wtf/RobinHoodHashMap.h>
 
 OBJC_CLASS AVSampleBufferDisplayLayer;
 OBJC_CLASS WebRootSampleBufferBoundsChangeListener;
@@ -52,7 +53,7 @@ class MediaPlayerPrivateMediaStreamAVFObjC final
     : public MediaPlayerPrivateInterface
     , private MediaStreamPrivate::Observer
     , public MediaStreamTrackPrivate::Observer
-    , public RealtimeMediaSource::VideoSampleObserver
+    , public RealtimeMediaSource::VideoFrameObserver
     , public SampleBufferDisplayLayer::Client
     , private LoggerHelper
 {
@@ -61,6 +62,9 @@ public:
     virtual ~MediaPlayerPrivateMediaStreamAVFObjC();
 
     static void registerMediaEngine(MediaEngineRegistrar);
+
+    using NativeImageCreator = RefPtr<NativeImage> (*)(const VideoFrame&);
+    WEBCORE_EXPORT static void setNativeImageCreator(NativeImageCreator&&);
 
     // MediaPlayer Factory Methods
     static bool isAvailable();
@@ -95,7 +99,7 @@ private:
 
     void load(const String&) override;
 #if ENABLE(MEDIA_SOURCE)
-    void load(const URL&, const ContentType&, MediaSourcePrivateClient*) override;
+    void load(const URL&, const ContentType&, MediaSourcePrivateClient&) override;
 #endif
     void load(MediaStreamPrivate&) override;
     void cancelLoad() override;
@@ -136,9 +140,9 @@ private:
 
     void flushRenderers();
 
-    void processNewVideoSample(MediaSample&, VideoFrameTimeMetadata, Seconds);
-    void enqueueVideoSample(MediaSample&);
-    void reenqueueCurrentVideoSampleIfNeeded();
+    void processNewVideoFrame(VideoFrame&, VideoFrameTimeMetadata, Seconds);
+    void enqueueVideoFrame(VideoFrame&);
+    void reenqueueCurrentVideoFrameIfNeeded();
     void requestNotificationWhenReadyForVideoData();
 
     void paint(GraphicsContext&, const FloatRect&) override;
@@ -211,8 +215,8 @@ private:
     void trackEnabledChanged(MediaStreamTrackPrivate&) override { };
     void readyStateChanged(MediaStreamTrackPrivate&) override;
 
-    // RealtimeMediaSouce::VideoSampleObserver
-    void videoSampleAvailable(MediaSample&, VideoFrameTimeMetadata) final;
+    // RealtimeMediaSouce::VideoFrameObserver
+    void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) final;
 
     RetainPtr<PlatformLayer> createVideoFullscreenLayer() override;
     void setVideoFullscreenLayer(PlatformLayer*, Function<void()>&& completionHandler) override;
@@ -238,13 +242,13 @@ private:
         void reset();
 
         RefPtr<NativeImage> cgImage;
-        RefPtr<MediaSample> mediaSample;
+        RefPtr<VideoFrame> videoFrame;
         std::unique_ptr<PixelBufferConformerCV> pixelBufferConformer;
     };
     CurrentFramePainter m_imagePainter;
 
-    HashMap<String, Ref<AudioTrackPrivateMediaStream>> m_audioTrackMap;
-    HashMap<String, Ref<VideoTrackPrivateMediaStream>> m_videoTrackMap;
+    MemoryCompactRobinHoodHashMap<String, Ref<AudioTrackPrivateMediaStream>> m_audioTrackMap;
+    MemoryCompactRobinHoodHashMap<String, Ref<VideoTrackPrivateMediaStream>> m_videoTrackMap;
 
     MediaPlayer::NetworkState m_networkState { MediaPlayer::NetworkState::Empty };
     MediaPlayer::ReadyState m_readyState { MediaPlayer::ReadyState::HaveNothing };
@@ -260,7 +264,7 @@ private:
     // Written on main thread, read on sample thread.
     bool m_canEnqueueDisplayLayer { false };
     // Used on sample thread.
-    MediaSample::VideoRotation m_videoRotation { MediaSample::VideoRotation::None };
+    VideoFrame::Rotation m_videoRotation { VideoFrame::Rotation::None };
     bool m_videoMirrored { false };
 
     Ref<const Logger> m_logger;
@@ -272,8 +276,8 @@ private:
 
     RetainPtr<WebRootSampleBufferBoundsChangeListener> m_boundsChangeListener;
 
-    Lock m_currentVideoSampleLock;
-    RefPtr<MediaSample> m_currentVideoSample WTF_GUARDED_BY_LOCK(m_currentVideoSampleLock);
+    Lock m_currentVideoFrameLock;
+    RefPtr<VideoFrame> m_currentVideoFrame WTF_GUARDED_BY_LOCK(m_currentVideoFrameLock);
 
     bool m_playing { false };
     bool m_muted { false };
@@ -289,8 +293,10 @@ private:
     Seconds m_presentationTime { 0 };
     FloatSize m_videoFrameSize;
     VideoFrameTimeMetadata m_sampleMetadata;
+
+    static NativeImageCreator m_nativeImageCreator;
 };
-    
+
 }
 
 #endif // ENABLE(MEDIA_STREAM) && USE(AVFOUNDATION)

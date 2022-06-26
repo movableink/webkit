@@ -298,6 +298,24 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::orientation() const
     return nullptr;
 }
 
+bool AccessibilityUIElement::isAtomicLiveRegion() const
+{
+    notImplemented();
+    return false;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::liveRegionRelevant() const
+{
+    notImplemented();
+    return nullptr;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::liveRegionStatus() const
+{
+    notImplemented();
+    return nullptr;
+}
+
 JSRetainPtr<JSStringRef> AccessibilityUIElement::stringValue()
 {
     notImplemented();
@@ -395,6 +413,12 @@ bool AccessibilityUIElement::isIncrementActionSupported()
 }
 
 bool AccessibilityUIElement::isDecrementActionSupported()
+{
+    notImplemented();
+    return false;
+}
+
+bool AccessibilityUIElement::isBusy() const
 {
     notImplemented();
     return false;
@@ -1007,6 +1031,12 @@ bool AccessibilityUIElement::insertText(JSStringRef)
 {
     notImplemented();
     return false;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::domIdentifier() const
+{
+    notImplemented();
+    return nullptr;
 }
 
 } // namespace  WTF

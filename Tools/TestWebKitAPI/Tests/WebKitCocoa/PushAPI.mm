@@ -25,17 +25,21 @@
 
 #import "config.h"
 
+#if ENABLE(NOTIFICATIONS) && ENABLE(NOTIFICATION_EVENT)
+
 #import "DeprecatedGlobalValues.h"
 #import "HTTPServer.h"
 #import "PlatformUtilities.h"
 #import "Test.h"
 #import "TestNotificationProvider.h"
 #import "TestWKWebView.h"
+#import <WebCore/RegistrationDatabase.h>
 #import <WebKit/WKNotificationProvider.h>
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
+#import <wtf/HexNumber.h>
 
 static NSDictionary *messageDictionary(NSData *data, NSURL *registration)
 {
@@ -59,7 +63,7 @@ static String expectedMessage;
 @end
 
 // FIXME: Update the test to do subscription before pushing message.
-static const char* mainBytes = R"SWRESOURCE(
+static constexpr auto mainBytes = R"SWRESOURCE(
 <script>
 function log(msg)
 {
@@ -83,9 +87,9 @@ navigator.serviceWorker.register('/sw.js').then((registration) => {
     log("Registration failed with: " + error);
 });
 </script>
-)SWRESOURCE";
+)SWRESOURCE"_s;
 
-static const char* scriptBytes = R"SWRESOURCE(
+static constexpr auto scriptBytes = R"SWRESOURCE(
 let port;
 self.addEventListener("message", (event) => {
     port = event.data.port;
@@ -106,7 +110,7 @@ self.addEventListener("push", (event) => {
         port.postMessage("Got exception " + e);
     }
 });
-)SWRESOURCE";
+)SWRESOURCE"_s;
 
 static void clearWebsiteDataStore(WKWebsiteDataStore *store)
 {
@@ -134,8 +138,8 @@ static bool waitUntilEvaluatesToTrue(const Function<bool()>& f)
 TEST(PushAPI, firePushEvent)
 {
     TestWebKitAPI::HTTPServer server({
-        { "/", { mainBytes } },
-        { "/sw.js", { {{ "Content-Type", "application/javascript" }}, scriptBytes } }
+        { "/"_s, { mainBytes } },
+        { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, scriptBytes } }
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
@@ -150,7 +154,7 @@ TEST(PushAPI, firePushEvent)
 
     clearWebsiteDataStore([configuration websiteDataStore]);
 
-    expectedMessage = "Ready";
+    expectedMessage = "Ready"_s;
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     [webView loadRequest:server.request()];
 
@@ -160,7 +164,7 @@ TEST(PushAPI, firePushEvent)
     pushMessageProcessed = false;
     pushMessageSuccessful = false;
     NSString *message = @"Sweet Potatoes";
-    expectedMessage = "Received: Sweet Potatoes";
+    expectedMessage = "Received: Sweet Potatoes"_s;
 
     [[configuration websiteDataStore] _processPushMessage:messageDictionary([message dataUsingEncoding:NSUTF8StringEncoding], [server.request() URL]) completionHandler:^(bool result) {
         pushMessageSuccessful = result;
@@ -175,7 +179,7 @@ TEST(PushAPI, firePushEvent)
     pushMessageProcessed = false;
     pushMessageSuccessful = false;
     message = @"Rotten Potatoes";
-    expectedMessage = "Received: Rotten Potatoes";
+    expectedMessage = "Received: Rotten Potatoes"_s;
     [[configuration websiteDataStore] _processPushMessage:messageDictionary([message dataUsingEncoding:NSUTF8StringEncoding], [server.request() URL]) completionHandler:^(bool result) {
         pushMessageSuccessful = result;
         pushMessageProcessed = true;
@@ -188,7 +192,7 @@ TEST(PushAPI, firePushEvent)
     clearWebsiteDataStore([configuration websiteDataStore]);
 }
 
-static const char* waitOneSecondScriptBytes = R"SWRESOURCE(
+static constexpr auto waitOneSecondScriptBytes = R"SWRESOURCE(
 let port;
 self.addEventListener("message", (event) => {
     port = event.data.port;
@@ -206,13 +210,14 @@ self.addEventListener("push", (event) => {
     else if (value === 'Timeless Potatoes')
         event.waitUntil(new Promise(resolve => { }));
 });
-)SWRESOURCE";
+)SWRESOURCE"_s;
 
 static void terminateNetworkProcessWhileRegistrationIsStored(WKWebViewConfiguration *configuration)
 {
     auto path = configuration.websiteDataStore._configuration._serviceWorkerRegistrationDirectory.path;
     NSURL* directory = [NSURL fileURLWithPath:path isDirectory:YES];
-    NSURL *swDBPath = [directory URLByAppendingPathComponent:@"ServiceWorkerRegistrations-7.sqlite3"];
+    auto filename = makeString("ServiceWorkerRegistrations-"_s, WebCore::RegistrationDatabase::schemaVersion, ".sqlite3");
+    NSURL *swDBPath = [directory URLByAppendingPathComponent:filename];
     unsigned timeout = 0;
     while (![[NSFileManager defaultManager] fileExistsAtPath:swDBPath.path] && ++timeout < 100)
         TestWebKitAPI::Util::sleep(0.1);
@@ -224,8 +229,8 @@ static void terminateNetworkProcessWhileRegistrationIsStored(WKWebViewConfigurat
 TEST(PushAPI, firePushEventWithNoPagesSuccessful)
 {
     TestWebKitAPI::HTTPServer server({
-        { "/", { mainBytes } },
-        { "/sw.js", { {{ "Content-Type", "application/javascript" }}, waitOneSecondScriptBytes } }
+        { "/"_s, { mainBytes } },
+        { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, waitOneSecondScriptBytes } }
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
@@ -239,7 +244,7 @@ TEST(PushAPI, firePushEventWithNoPagesSuccessful)
     auto messageHandler = adoptNS([[PushAPIMessageHandlerWithExpectedMessage alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"sw"];
 
-    expectedMessage = "Ready";
+    expectedMessage = "Ready"_s;
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     [webView loadRequest:server.request()];
 
@@ -272,8 +277,8 @@ TEST(PushAPI, firePushEventWithNoPagesSuccessful)
 TEST(PushAPI, firePushEventWithNoPagesFail)
 {
     TestWebKitAPI::HTTPServer server({
-        { "/", { mainBytes } },
-        { "/sw.js", { {{ "Content-Type", "application/javascript" }}, waitOneSecondScriptBytes } }
+        { "/"_s, { mainBytes } },
+        { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, waitOneSecondScriptBytes } }
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
@@ -287,7 +292,7 @@ TEST(PushAPI, firePushEventWithNoPagesFail)
     auto messageHandler = adoptNS([[PushAPIMessageHandlerWithExpectedMessage alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"sw"];
 
-    expectedMessage = "Ready";
+    expectedMessage = "Ready"_s;
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     [webView loadRequest:server.request()];
 
@@ -319,34 +324,34 @@ TEST(PushAPI, firePushEventWithNoPagesFail)
 TEST(PushAPI, firePushEventWithNoPagesTimeout)
 {
     TestWebKitAPI::HTTPServer server({
-        { "/", { mainBytes } },
-        { "/sw.js", { {{ "Content-Type", "application/javascript" }}, waitOneSecondScriptBytes } }
+        { "/"_s, { mainBytes } },
+        { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, waitOneSecondScriptBytes } }
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
 
     // Disable service worker delay for the purpose of testing, push event should timeout after 1 second.
     auto dataStoreConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
+    [dataStoreConfiguration setServiceWorkerProcessTerminationDelayEnabled:NO];
     auto dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:dataStoreConfiguration.get()]);
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     configuration.get().websiteDataStore = dataStore.get();
     clearWebsiteDataStore([configuration websiteDataStore]);
 
+    auto provider = TestWebKitAPI::TestNotificationProvider({ [[configuration processPool] _notificationManagerForTesting], WKNotificationManagerGetSharedServiceWorkerNotificationManager() });
+    provider.setPermission(server.origin(), true);
+
     auto messageHandler = adoptNS([[PushAPIMessageHandlerWithExpectedMessage alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"sw"];
 
-    expectedMessage = "Ready";
+    expectedMessage = "Ready"_s;
 
     @autoreleasepool {
         auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
         [webView loadRequest:server.request()];
         TestWebKitAPI::Util::run(&done);
     }
-
-    [dataStoreConfiguration setServiceWorkerProcessTerminationDelayEnabled:NO];
-    dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:dataStoreConfiguration.get()]);
-    configuration.get().websiteDataStore = dataStore.get();
 
     terminateNetworkProcessWhileRegistrationIsStored(configuration.get());
 
@@ -370,7 +375,7 @@ TEST(PushAPI, firePushEventWithNoPagesTimeout)
 
 #if WK_HAVE_C_SPI
 
-static const char* pushEventsAndInspectedServiceWorkerScriptBytes = R"SWRESOURCE(
+static constexpr auto pushEventsAndInspectedServiceWorkerScriptBytes = R"SWRESOURCE(
 let port;
 self.addEventListener("message", (event) => {
     port = event.data.port;
@@ -390,6 +395,11 @@ self.addEventListener("push", (event) => {
         return;
     }
     if (event.data.text() === 'third') {
+        if (self.previousMessageData !== 'second')
+            event.waitUntil(Promise.reject('expected second'));
+        return;
+    }
+    if (event.data.text() === 'fourth') {
         if (self.previousMessageData !== undefined)
             event.waitUntil(Promise.reject('expected undefined'));
         return;
@@ -397,13 +407,13 @@ self.addEventListener("push", (event) => {
     self.previousMessageData = event.data.text();
     event.waitUntil(Promise.reject('expected a known message'));
 });
-)SWRESOURCE";
+)SWRESOURCE"_s;
 
 TEST(PushAPI, pushEventsAndInspectedServiceWorker)
 {
     TestWebKitAPI::HTTPServer server({
-        { "/", { mainBytes } },
-        { "/sw.js", { {{ "Content-Type", "application/javascript" }}, pushEventsAndInspectedServiceWorkerScriptBytes } }
+        { "/"_s, { mainBytes } },
+        { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, pushEventsAndInspectedServiceWorkerScriptBytes } }
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
@@ -420,7 +430,7 @@ TEST(PushAPI, pushEventsAndInspectedServiceWorker)
     auto messageHandler = adoptNS([[PushAPIMessageHandlerWithExpectedMessage alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"sw"];
 
-    expectedMessage = "Ready";
+    expectedMessage = "Ready"_s;
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     [webView loadRequest:server.request()];
 
@@ -460,10 +470,23 @@ TEST(PushAPI, pushEventsAndInspectedServiceWorker)
         pushMessageProcessed = true;
     }];
     TestWebKitAPI::Util::run(&pushMessageProcessed);
+    EXPECT_FALSE(pushMessageSuccessful);
+
+    // We delay so that the timer to terminate service worker kicks in.
+    sleep(3);
+
+    pushMessageProcessed = false;
+    pushMessageSuccessful = false;
+    message = @"fourth";
+    [[configuration websiteDataStore] _processPushMessage:messageDictionary([message dataUsingEncoding:NSUTF8StringEncoding], [server.request() URL]) completionHandler:^(bool result) {
+        pushMessageSuccessful = result;
+        pushMessageProcessed = true;
+    }];
+    TestWebKitAPI::Util::run(&pushMessageProcessed);
     EXPECT_TRUE(pushMessageSuccessful);
 }
 
-static const char* inspectedServiceWorkerWithoutPageScriptBytes = R"SWRESOURCE(
+static constexpr auto inspectedServiceWorkerWithoutPageScriptBytes = R"SWRESOURCE(
 let port;
 self.addEventListener("message", (event) => {
     port = event.data.port;
@@ -499,13 +522,13 @@ self.addEventListener("push", async (event) => {
             event.waitUntil(Promise.reject('unexpected state with last message'));
     }
 });
-)SWRESOURCE";
+)SWRESOURCE"_s;
 
 static void testInspectedServiceWorkerWithoutPage(bool enableServiceWorkerInspection)
 {
     TestWebKitAPI::HTTPServer server({
-        { "/", { mainBytes } },
-        { "/sw.js", { {{ "Content-Type", "application/javascript" }}, inspectedServiceWorkerWithoutPageScriptBytes } }
+        { "/"_s, { mainBytes } },
+        { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, inspectedServiceWorkerWithoutPageScriptBytes } }
     }, TestWebKitAPI::HTTPServer::Protocol::Http);
 
     [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
@@ -527,7 +550,7 @@ static void testInspectedServiceWorkerWithoutPage(bool enableServiceWorkerInspec
     auto messageHandler = adoptNS([[PushAPIMessageHandlerWithExpectedMessage alloc] init]);
     [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"sw"];
 
-    expectedMessage = "Ready";
+    expectedMessage = "Ready"_s;
     auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
     [webView loadRequest:server.request()];
 
@@ -595,4 +618,115 @@ TEST(PushAPI, uninspectedServiceWorkerWithoutPage)
     testInspectedServiceWorkerWithoutPage(enableServiceWorkerInspection);
 }
 
+static constexpr auto fireNotificationClickEventMainBytes = R"SWRESOURCE(
+<script>
+function log(msg)
+{
+    window.webkit.messageHandlers.sw.postMessage(msg);
+}
+
+const channel = new MessageChannel();
+channel.port1.onmessage = (event) => log(event.data);
+navigator.serviceWorker.onmessage = (event) => log(event.data);
+
+navigator.serviceWorker.register('/sw.js').then((registration) => {
+    if (registration.active) {
+        registration.active.postMessage({port: channel.port2}, [channel.port2]);
+        return;
+    }
+    worker = registration.installing;
+    worker.addEventListener('statechange', function() {
+        if (worker.state == 'activated')
+            worker.postMessage({port: channel.port2}, [channel.port2]);
+    });
+}).catch(function(error) {
+    log("Registration failed with: " + error);
+});
+</script>
+)SWRESOURCE"_s;
+
+static constexpr auto fireNotificationClickEventScriptBytes = R"SWRESOURCE(
+let port;
+self.addEventListener("message", (event) => {
+    port = event.data.port;
+    port.postMessage("Ready");
+});
+self.addEventListener("push", (event) => {
+    self.registration.showNotification("notification");
+    try {
+        if (!event.data) {
+            port.postMessage("Received: null data");
+            return;
+        }
+        const value = event.data.text();
+        port.postMessage("Received: " + value);
+        if (value != 'Sweet Potatoes')
+            event.waitUntil(Promise.reject('I want sweet potatoes'));
+    } catch (e) {
+        port.postMessage("Got exception " + e);
+    }
+});
+self.addEventListener("notificationclick", async (event) => {
+    for (let client of await self.clients.matchAll({includeUncontrolled:true}))
+        client.postMessage("Received notificationclick");
+});
+)SWRESOURCE"_s;
+
+TEST(PushAPI, fireNotificationClickEvent)
+{
+    TestWebKitAPI::HTTPServer server({
+        { "/"_s, { fireNotificationClickEventMainBytes } },
+        { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, fireNotificationClickEventScriptBytes } }
+    }, TestWebKitAPI::HTTPServer::Protocol::Http);
+
+    [WKWebsiteDataStore _allowWebsiteDataRecordsForAllOrigins];
+
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+
+    auto provider = TestWebKitAPI::TestNotificationProvider({ [[configuration processPool] _notificationManagerForTesting], WKNotificationManagerGetSharedServiceWorkerNotificationManager() });
+    provider.setPermission(server.origin(), true);
+
+    auto messageHandler = adoptNS([[PushAPIMessageHandlerWithExpectedMessage alloc] init]);
+    [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"sw"];
+
+    clearWebsiteDataStore([configuration websiteDataStore]);
+
+    expectedMessage = "Ready"_s;
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration.get()]);
+    [webView loadRequest:server.request()];
+
+    TestWebKitAPI::Util::run(&done);
+
+    provider.resetHasReceivedNotification();
+    auto& providerRef = provider;
+
+    done = false;
+    pushMessageProcessed = false;
+    pushMessageSuccessful = false;
+    NSString *message = @"Sweet Potatoes";
+    expectedMessage = "Received: Sweet Potatoes"_s;
+
+    [[configuration websiteDataStore] _processPushMessage:messageDictionary([message dataUsingEncoding:NSUTF8StringEncoding], [server.request() URL]) completionHandler:^(bool result) {
+        EXPECT_TRUE(providerRef.hasReceivedNotification());
+        pushMessageSuccessful = result;
+        pushMessageProcessed = true;
+    }];
+    TestWebKitAPI::Util::run(&done);
+
+    TestWebKitAPI::Util::run(&pushMessageProcessed);
+    EXPECT_TRUE(pushMessageSuccessful);
+
+    terminateNetworkProcessWhileRegistrationIsStored(configuration.get());
+
+    provider.simulateNotificationClick();
+
+    done = false;
+    expectedMessage = "Received notificationclick"_s;
+    TestWebKitAPI::Util::run(&done);
+
+    clearWebsiteDataStore([configuration websiteDataStore]);
+}
+
 #endif // WK_HAVE_C_SPI
+
+#endif // ENABLE(NOTIFICATIONS) && ENABLE(NOTIFICATION_EVENT)

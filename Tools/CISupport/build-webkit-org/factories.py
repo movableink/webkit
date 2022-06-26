@@ -1,4 +1,4 @@
-# Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+# Copyright (C) 2017-2022 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@ class Factory(factory.BuildFactory):
         self.addStep(ConfigureBuild(platform=platform, configuration=configuration, architecture=" ".join(architectures), buildOnly=buildOnly, additionalArguments=additionalArguments, device_model=device_model))
         self.addStep(PrintConfiguration())
         self.addStep(CheckOutSource())
+        self.addStep(CheckOutSpecificRevision())
         self.addStep(ShowIdentifier())
         if not (platform == "jsc-only"):
             self.addStep(KillOldProcesses())
@@ -108,7 +109,8 @@ class TestFactory(Factory):
         if platform.startswith('win') or platform.startswith('mac') or platform.startswith('ios-simulator'):
             self.addStep(RunAPITests())
 
-        if platform.startswith('mac') and (platform != 'mac-catalina'):
+        # FIXME: Re-enable these tests for Monterey once webkit.org/b/239463 is resolved.
+        if platform.startswith('mac') and (platform != 'mac-monterey'):
             self.addStep(RunLLDBWebKitTests())
 
         self.addStep(RunWebKitPyTests())

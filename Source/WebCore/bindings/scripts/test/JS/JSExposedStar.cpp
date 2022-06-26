@@ -31,7 +31,9 @@
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMGlobalObjectInlines.h"
 #include "JSDOMOperation.h"
+#include "JSDOMWindowBase.h"
 #include "JSDOMWrapperCache.h"
+#include "JSWorkerGlobalScopeBase.h"
 #include "ScriptExecutionContext.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/HeapAnalyzer.h>
@@ -91,7 +93,7 @@ STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSExposedStarPrototype, JSExposedStarPrototy
 
 using JSExposedStarDOMConstructor = JSDOMConstructorNotConstructable<JSExposedStar>;
 
-template<> const ClassInfo JSExposedStarDOMConstructor::s_info = { "ExposedStar", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSExposedStarDOMConstructor) };
+template<> const ClassInfo JSExposedStarDOMConstructor::s_info = { "ExposedStar"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSExposedStarDOMConstructor) };
 
 template<> JSValue JSExposedStarDOMConstructor::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
 {
@@ -111,29 +113,29 @@ template<> void JSExposedStarDOMConstructor::initializeProperties(VM& vm, JSDOMG
 
 static const HashTableValue JSExposedStarPrototypeTableValues[] =
 {
-    { "constructor", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsExposedStarConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
-    { "operationForAllContexts", static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsExposedStarPrototypeFunction_operationForAllContexts), (intptr_t) (0) } },
-    { "operationJustForWindowContexts", static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsExposedStarPrototypeFunction_operationJustForWindowContexts), (intptr_t) (0) } },
-    { "operationJustForWorkerContexts", static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsExposedStarPrototypeFunction_operationJustForWorkerContexts), (intptr_t) (0) } },
+    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsExposedStarConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "operationForAllContexts"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsExposedStarPrototypeFunction_operationForAllContexts), (intptr_t) (0) } },
+    { "operationJustForWindowContexts"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsExposedStarPrototypeFunction_operationJustForWindowContexts), (intptr_t) (0) } },
+    { "operationJustForWorkerContexts"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsExposedStarPrototypeFunction_operationJustForWorkerContexts), (intptr_t) (0) } },
 };
 
-const ClassInfo JSExposedStarPrototype::s_info = { "ExposedStar", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSExposedStarPrototype) };
+const ClassInfo JSExposedStarPrototype::s_info = { "ExposedStar"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSExposedStarPrototype) };
 
 void JSExposedStarPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     reifyStaticProperties(vm, JSExposedStar::info(), JSExposedStarPrototypeTableValues, *this);
     bool hasDisabledRuntimeProperties = false;
-    if (!jsCast<JSDOMGlobalObject*>(globalObject())->scriptExecutionContext()->isDocument()) {
+    if (!(globalObject())->inherits<JSDOMWindowBase>()) {
         hasDisabledRuntimeProperties = true;
-        auto propertyName = Identifier::fromString(vm, reinterpret_cast<const LChar*>("operationJustForWindowContexts"), strlen("operationJustForWindowContexts"));
+        auto propertyName = Identifier::fromString(vm, "operationJustForWindowContexts"_s);
         VM::DeletePropertyModeScope scope(vm, VM::DeletePropertyMode::IgnoreConfigurable);
         DeletePropertySlot slot;
         JSObject::deleteProperty(this, globalObject(), propertyName, slot);
     }
-    if (!jsCast<JSDOMGlobalObject*>(globalObject())->scriptExecutionContext()->isWorkerGlobalScope()) {
+    if (!(globalObject())->inherits<JSWorkerGlobalScopeBase>()) {
         hasDisabledRuntimeProperties = true;
-        auto propertyName = Identifier::fromString(vm, reinterpret_cast<const LChar*>("operationJustForWorkerContexts"), strlen("operationJustForWorkerContexts"));
+        auto propertyName = Identifier::fromString(vm, "operationJustForWorkerContexts"_s);
         VM::DeletePropertyModeScope scope(vm, VM::DeletePropertyMode::IgnoreConfigurable);
         DeletePropertySlot slot;
         JSObject::deleteProperty(this, globalObject(), propertyName, slot);
@@ -143,7 +145,7 @@ void JSExposedStarPrototype::finishCreation(VM& vm)
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-const ClassInfo JSExposedStar::s_info = { "ExposedStar", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSExposedStar) };
+const ClassInfo JSExposedStar::s_info = { "ExposedStar"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSExposedStar) };
 
 JSExposedStar::JSExposedStar(Structure* structure, JSDOMGlobalObject& globalObject, Ref<ExposedStar>&& impl)
     : JSEventTarget(structure, globalObject, WTFMove(impl))
@@ -153,7 +155,7 @@ JSExposedStar::JSExposedStar(Structure* structure, JSDOMGlobalObject& globalObje
 void JSExposedStar::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     static_assert(!std::is_base_of<ActiveDOMObject, ExposedStar>::value, "Interface is not marked as [ActiveDOMObject] even though implementation class subclasses ActiveDOMObject.");
 
@@ -178,7 +180,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsExposedStarConstructor, (JSGlobalObject* lexicalGloba
 {
     VM& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    auto* prototype = jsDynamicCast<JSExposedStarPrototype*>(vm, JSValue::decode(thisValue));
+    auto* prototype = jsDynamicCast<JSExposedStarPrototype*>(JSValue::decode(thisValue));
     if (UNLIKELY(!prototype))
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSExposedStar::getConstructor(JSC::getVM(lexicalGlobalObject), prototype->globalObject()));
@@ -284,9 +286,9 @@ JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* g
     return wrap(lexicalGlobalObject, globalObject, impl);
 }
 
-ExposedStar* JSExposedStar::toWrapped(JSC::VM& vm, JSC::JSValue value)
+ExposedStar* JSExposedStar::toWrapped(JSC::VM&, JSC::JSValue value)
 {
-    if (auto* wrapper = jsDynamicCast<JSExposedStar*>(vm, value))
+    if (auto* wrapper = jsDynamicCast<JSExposedStar*>(value))
         return &wrapper->wrapped();
     return nullptr;
 }

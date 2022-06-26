@@ -30,8 +30,14 @@
 
 namespace WebGPU {
 
-CommandBuffer::CommandBuffer(id<MTLCommandBuffer> commandBuffer)
+CommandBuffer::CommandBuffer(id<MTLCommandBuffer> commandBuffer, Device& device)
     : m_commandBuffer(commandBuffer)
+    , m_device(device)
+{
+}
+
+CommandBuffer::CommandBuffer(Device& device)
+    : m_device(device)
 {
 }
 
@@ -48,7 +54,7 @@ void CommandBuffer::setLabel(String&& label)
 
 void wgpuCommandBufferRelease(WGPUCommandBuffer commandBuffer)
 {
-    delete commandBuffer;
+    WebGPU::fromAPI(commandBuffer).deref();
 }
 
 void wgpuCommandBufferSetLabel(WGPUCommandBuffer commandBuffer, const char* label)

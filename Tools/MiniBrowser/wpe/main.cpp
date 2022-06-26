@@ -31,6 +31,10 @@
 #include <memory>
 #include <wpe/webkit.h>
 
+#if !USE_GSTREAMER_FULL && (ENABLE_WEB_AUDIO || ENABLE_VIDEO)
+#include <gst/gst.h>
+#endif
+
 #if defined(ENABLE_ACCESSIBILITY) && ENABLE_ACCESSIBILITY
 #include <atk/atk.h>
 #endif
@@ -46,6 +50,7 @@ static const char* cookiesFile;
 static const char* cookiesPolicy;
 static const char* proxy;
 const char* bgColor;
+static char* timeZone;
 static gboolean enableITP;
 static gboolean printVersion;
 static GHashTable* openViews;
@@ -63,6 +68,7 @@ static const GOptionEntry commandLineOptions[] =
     { "content-filter", 0, 0, G_OPTION_ARG_FILENAME, &contentFilter, "JSON with content filtering rules", "FILE" },
     { "bg-color", 0, 0, G_OPTION_ARG_STRING, &bgColor, "Window background color. Default: white", "COLOR" },
     { "enable-itp", 0, 0, G_OPTION_ARG_NONE, &enableITP, "Enable Intelligent Tracking Prevention (ITP)", nullptr },
+    { "time-zone", 't', 0, G_OPTION_ARG_STRING, &timeZone, "Set time zone", "TIMEZONE" },
     { "version", 'v', 0, G_OPTION_ARG_NONE, &printVersion, "Print the WPE version", nullptr },
     { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &uriArguments, nullptr, "[URL]" },
     { nullptr, 0, 0, G_OPTION_ARG_NONE, nullptr, nullptr, nullptr }
@@ -186,6 +192,10 @@ int main(int argc, char *argv[])
     GOptionContext* context = g_option_context_new(nullptr);
     g_option_context_add_main_entries(context, commandLineOptions, nullptr);
 
+#if !USE_GSTREAMER_FULL && (ENABLE_WEB_AUDIO || ENABLE_VIDEO)
+    g_option_context_add_group(context, gst_init_get_option_group());
+#endif
+
     GError* error = nullptr;
     if (!g_option_context_parse(context, &argc, &argv, &error)) {
         g_printerr("Cannot parse arguments: %s\n", error->message);
@@ -229,7 +239,7 @@ int main(int argc, char *argv[])
     if (ignoreTLSErrors)
         webkit_website_data_manager_set_tls_errors_policy(manager, WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 
-    auto* webContext = webkit_web_context_new_with_website_data_manager(manager);
+    auto* webContext = WEBKIT_WEB_CONTEXT(g_object_new(WEBKIT_TYPE_WEB_CONTEXT, "website-data-manager", manager, "time-zone-override", timeZone, nullptr));
     g_object_unref(manager);
 
     if (cookiesPolicy) {

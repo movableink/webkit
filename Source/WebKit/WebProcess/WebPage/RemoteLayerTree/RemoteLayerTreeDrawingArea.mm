@@ -210,14 +210,7 @@ void RemoteLayerTreeDrawingArea::forceRepaint()
     if (m_isRenderingSuspended)
         return;
 
-    for (Frame* frame = &m_webPage.corePage()->mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        FrameView* frameView = frame->view();
-        if (!frameView || !frameView->tiledBacking())
-            continue;
-
-        frameView->tiledBacking()->forceRepaint();
-    }
-
+    m_webPage.corePage()->forceRepaintAllFrames();
     updateRendering();
 }
 
@@ -379,7 +372,7 @@ void RemoteLayerTreeDrawingArea::updateRendering()
 
     Messages::RemoteLayerTreeDrawingAreaProxy::CommitLayerTree message(layerTransaction, scrollingTransaction);
     auto commitEncoder = makeUniqueRef<IPC::Encoder>(Messages::RemoteLayerTreeDrawingAreaProxy::CommitLayerTree::name(), m_identifier.toUInt64());
-    commitEncoder.get() << message.arguments();
+    commitEncoder.get() << WTFMove(message).arguments();
 
     auto flushers = backingStoreCollection.didFlushLayers(layerTransaction);
     RefPtr<BackingStoreFlusher> backingStoreFlusher = BackingStoreFlusher::create(WebProcess::singleton().parentProcessConnection(), WTFMove(commitEncoder), WTFMove(flushers));

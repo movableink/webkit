@@ -59,7 +59,7 @@ class Overlay : angle::NonCopyable
     Overlay(rx::GLImplFactory *implFactory);
     ~Overlay();
 
-    angle::Result init(const Context *context);
+    void init();
     void destroy(const gl::Context *context);
 
     void onSwap() const;
@@ -87,7 +87,10 @@ class Overlay : angle::NonCopyable
 
     rx::OverlayImpl *getImplementation() const { return mImplementation.get(); }
 
-    bool isEnabled() const { return mImplementation != nullptr; }
+    bool isEnabled() const
+    {
+        return mImplementation != nullptr && mState.getEnabledWidgetCount() > 0;
+    }
 
   private:
     template <typename Widget, WidgetType Type>
@@ -113,7 +116,7 @@ class MockOverlay
     MockOverlay(rx::GLImplFactory *implFactory);
     ~MockOverlay();
 
-    angle::Result init(const Context *context) { return angle::Result::Continue; }
+    void init() {}
     void destroy(const Context *context) {}
 
     void onSwap() const {}

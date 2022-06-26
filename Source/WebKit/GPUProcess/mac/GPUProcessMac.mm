@@ -97,7 +97,20 @@ void GPUProcess::setScreenProperties(const ScreenProperties& screenProperties)
     setShouldOverrideScreenSupportsHighDynamicRange(true, allScreensAreHDR);
 #endif
 }
+
+void GPUProcess::openDirectoryCacheInvalidated(SandboxExtension::Handle&& handle)
+{
+    AuxiliaryProcess::openDirectoryCacheInvalidated(WTFMove(handle));
+}
+
 #endif
+
+#if HAVE(POWERLOG_TASK_MODE_QUERY)
+void GPUProcess::enablePowerLogging(SandboxExtension::Handle&& handle)
+{
+    SandboxExtension::consumePermanently(WTFMove(handle));
+}
+#endif // HAVE(POWERLOG_TASK_MODE_QUERY)
 
 } // namespace WebKit
 

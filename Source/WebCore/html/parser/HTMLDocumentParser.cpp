@@ -32,6 +32,7 @@
 #include "DocumentLoader.h"
 #include "EventLoop.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLDocument.h"
 #include "HTMLParserScheduler.h"
 #include "HTMLPreloadScanner.h"
@@ -345,7 +346,7 @@ void HTMLDocumentParser::constructTreeFromHTMLToken(HTMLTokenizer::TokenPtr& raw
     // FIXME: Stop clearing the rawToken once we start running the parser off
     // the main thread or once we stop allowing synchronous JavaScript
     // execution from parseAttribute.
-    if (rawToken->type() != HTMLToken::Character) {
+    if (rawToken->type() != HTMLToken::Type::Character) {
         // Clearing the TokenPtr makes sure we don't clear the HTMLToken a second time
         // later when the TokenPtr is destroyed.
         rawToken.clear();

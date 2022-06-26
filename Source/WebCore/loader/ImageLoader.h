@@ -42,7 +42,7 @@ using ImageEventSender = EventSender<ImageLoader>;
 
 enum class RelevantMutation : bool { No, Yes };
 
-class ImageLoader : public CachedImageClient, public CanMakeWeakPtr<ImageLoader> {
+class ImageLoader : public CachedImageClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~ImageLoader();
@@ -92,7 +92,6 @@ public:
 protected:
     explicit ImageLoader(Element&);
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
-    void didStartLoading() override;
 
 private:
     void resetLazyImageLoading(Document&);
@@ -119,7 +118,7 @@ private:
 
     bool hasPendingDecodePromises() const { return !m_decodingPromises.isEmpty(); }
     void resolveDecodePromises();
-    void rejectDecodePromises(const char* message);
+    void rejectDecodePromises(ASCIILiteral message);
     void decode();
     
     void timerFired();
@@ -138,7 +137,6 @@ private:
     bool m_imageComplete : 1;
     bool m_loadManually : 1;
     bool m_elementIsProtected : 1;
-    bool m_inUpdateFromElement : 1;
     LazyImageLoadState m_lazyImageLoadState { LazyImageLoadState::None };
 };
 

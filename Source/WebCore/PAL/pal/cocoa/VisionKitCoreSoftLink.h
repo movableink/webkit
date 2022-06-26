@@ -36,9 +36,13 @@ SOFT_LINK_CLASS_FOR_HEADER(PAL, VKImageAnalyzerRequest)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, VKCImageAnalyzer)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, VKCImageAnalyzerRequest)
 SOFT_LINK_CLASS_FOR_HEADER(PAL, VKCImageAnalysis)
-
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/VisionKitCoreSoftLinkAdditions.h>
+#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
+SOFT_LINK_CLASS_FOR_HEADER(PAL, VKCImageAnalysisInteraction)
+SOFT_LINK_CLASS_FOR_HEADER(PAL, VKCImageAnalysisOverlayView)
+SOFT_LINK_FUNCTION_MAY_FAIL_FOR_HEADER(PAL, VisionKitCore, vk_cgImageRemoveBackground, void, (CGImageRef image, BOOL crop, VKCGImageRemoveBackgroundCompletion completion), (image, crop, completion))
+SOFT_LINK_CLASS_FOR_HEADER(PAL, VKCRemoveBackgroundRequestHandler)
+SOFT_LINK_CLASS_FOR_HEADER(PAL, VKCRemoveBackgroundRequest)
+SOFT_LINK_CLASS_FOR_HEADER(PAL, VKCRemoveBackgroundResult)
 #endif
 
 #endif // HAVE(VK_IMAGE_ANALYSIS)

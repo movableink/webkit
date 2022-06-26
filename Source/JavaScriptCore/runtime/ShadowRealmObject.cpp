@@ -39,7 +39,7 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ShadowRealmObject);
 
 namespace JSC {
 
-const ClassInfo ShadowRealmObject::s_info = { "ShadowRealm", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ShadowRealmObject) };
+const ClassInfo ShadowRealmObject::s_info = { "ShadowRealm"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ShadowRealmObject) };
 
 ShadowRealmObject::ShadowRealmObject(VM& vm, Structure* structure)
     : Base(vm, structure)
@@ -69,7 +69,7 @@ ShadowRealmObject* ShadowRealmObject::create(VM& vm, Structure* structure, JSGlo
 void ShadowRealmObject::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 

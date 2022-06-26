@@ -32,7 +32,6 @@
 
 namespace WebCore {
 
-class GraphicsLayer;
 class Region;
 class TextureMapperPaintOptions;
 class TextureMapperPlatformLayer;
@@ -49,9 +48,6 @@ public:
 
     const Vector<TextureMapperLayer*>& children() const { return m_children; }
 
-#if !USE(COORDINATED_GRAPHICS) || PLATFORM(QT)
-    void setChildren(const Vector<GraphicsLayer*>&);
-#endif
     void setChildren(const Vector<TextureMapperLayer*>&);
     void setMaskLayer(TextureMapperLayer*);
     void setReplicaLayer(TextureMapperLayer*);
@@ -136,9 +132,12 @@ private:
     void computeOverlapRegions(ComputeOverlapRegionData&, const TransformationMatrix&, bool includesReplica = true);
 
     void paintRecursive(TextureMapperPaintOptions&);
+    void paintSelfChildrenReplicaFilterAndMask(TextureMapperPaintOptions&);
     void paintUsingOverlapRegions(TextureMapperPaintOptions&);
     void paintIntoSurface(TextureMapperPaintOptions&);
     void paintWithIntermediateSurface(TextureMapperPaintOptions&, const IntRect&);
+    void paintSelfAndChildrenWithIntermediateSurface(TextureMapperPaintOptions&, const IntRect&);
+    void paintSelfChildrenFilterAndMask(TextureMapperPaintOptions&);
     void paintSelf(TextureMapperPaintOptions&);
     void paintSelfAndChildren(TextureMapperPaintOptions&);
     void paintSelfAndChildrenWithReplica(TextureMapperPaintOptions&);

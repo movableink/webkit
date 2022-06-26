@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,7 @@
 #import "WebProcess.h"
 
 #import "AccessibilitySupportSPI.h"
-#import "GPUProcessConnectionParameters.h"
-#import "LaunchServicesDatabaseManager.h"
+#import "DefaultWebBrowserChecks.h"
 #import "LegacyCustomProtocolManager.h"
 #import "LogInitialization.h"
 #import "Logging.h"
@@ -38,7 +37,7 @@
 #import "ProcessAssertion.h"
 #import "SandboxExtension.h"
 #import "SandboxInitializationParameters.h"
-#import "SharedBufferCopy.h"
+#import "SharedBufferReference.h"
 #import "WKAPICast.h"
 #import "WKBrowsingContextHandleInternal.h"
 #import "WKFullKeyboardAccessWatcher.h"
@@ -62,6 +61,7 @@
 #import <WebCore/CPUMonitor.h>
 #import <WebCore/DisplayRefreshMonitorManager.h>
 #import <WebCore/FontCache.h>
+#import <WebCore/FontCacheCoreText.h>
 #import <WebCore/FontCascade.h>
 #import <WebCore/FrameView.h>
 #import <WebCore/HistoryController.h>
@@ -95,6 +95,7 @@
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 #import <pal/spi/cocoa/AVFoundationSPI.h>
 #import <pal/spi/cocoa/CoreServicesSPI.h>
+#import <pal/spi/cocoa/DataDetectorsCoreSPI.h>
 #import <pal/spi/cocoa/LaunchServicesSPI.h>
 #import <pal/spi/cocoa/NSAccessibilitySPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
@@ -127,7 +128,6 @@
 #import <MobileCoreServices/MobileCoreServices.h>
 #import <UIKit/UIAccessibility.h>
 #import <pal/spi/ios/GraphicsServicesSPI.h>
-#import <pal/spi/ios/MobileGestaltSPI.h>
 #endif
 
 #if PLATFORM(IOS_FAMILY) && USE(APPLE_INTERNAL_SDK)
@@ -155,10 +155,14 @@
 #import <WebCore/CaptionUserPreferencesMediaAF.h>
 #endif
 
+#if ENABLE(DATA_DETECTION) && PLATFORM(IOS_FAMILY)
+#import <pal/spi/ios/DataDetectorsUISPI.h>
+#endif
+
 #import <WebCore/MediaAccessibilitySoftLink.h>
-#import <pal/cf/AudioToolboxSoftLink.h>
 #import <pal/cf/VideoToolboxSoftLink.h>
 #import <pal/cocoa/AVFoundationSoftLink.h>
+#import <pal/cocoa/DataDetectorsCoreSoftLink.h>
 #import <pal/cocoa/MediaToolboxSoftLink.h>
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -224,6 +228,16 @@ static Boolean isAXAuthenticatedCallback(audit_token_t auditToken)
 }
 #endif
 
+static void softlinkDataDetectorsFrameworks()
+{
+#if ENABLE(DATA_DETECTION)
+    PAL::isDataDetectorsCoreFrameworkAvailable();
+#if PLATFORM(IOS_FAMILY)
+    DataDetectorsUILibrary();
+#endif // PLATFORM(IOS_FAMILY)
+#endif // ENABLE(DATA_DETECTION)
+}
+
 void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& parameters)
 {
     applyProcessCreationParameters(parameters.auxiliaryProcessParameters);
@@ -237,39 +251,7 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     }
 #endif
 
-    if (parameters.mobileGestaltExtensionHandle) {
-        if (auto extension = SandboxExtension::create(WTFMove(*parameters.mobileGestaltExtensionHandle))) {
-            bool ok = extension->consume();
-            ASSERT_UNUSED(ok, ok);
-            // If we have an extension handle for MobileGestalt, it means the MobileGestalt cache is invalid.
-            // In this case, we perform a set of MobileGestalt queries while having access to the daemon,
-            // which will populate the MobileGestalt in-memory cache with correct values.
-            // The set of queries below was determined by finding all possible queries that have cachable
-            // values, and would reach out to the daemon for the answer. That way, the in-memory cache
-            // should be identical to a valid MobileGestalt cache after having queried all of these values.
-#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
-            MGGetFloat32Answer(kMGQMainScreenScale, 0);
-            MGGetSInt32Answer(kMGQMainScreenPitch, 0);
-            MGGetSInt32Answer(kMGQMainScreenClass, MGScreenClassPad2);
-            MGGetBoolAnswer(kMGQAppleInternalInstallCapability);
-            MGGetBoolAnswer(kMGQiPadCapability);
-            auto deviceName = adoptCF(MGCopyAnswer(kMGQDeviceName, nullptr));
-            MGGetSInt32Answer(kMGQDeviceClassNumber, MGDeviceClassInvalid);
-            MGGetBoolAnswer(kMGQHasExtendedColorDisplay);
-            MGGetFloat32Answer(kMGQDeviceCornerRadius, 0);
-            MGGetBoolAnswer(kMGQSupportsForceTouch);
-
-            auto answer = adoptCF(MGCopyAnswer(kMGQBluetoothCapability, nullptr));
-            answer = MGCopyAnswer(kMGQDeviceProximityCapability, nullptr);
-            answer = MGCopyAnswer(kMGQDeviceSupportsARKit, nullptr);
-            answer = MGCopyAnswer(kMGQTimeSyncCapability, nullptr);
-            answer = MGCopyAnswer(kMGQWAPICapability, nullptr);
-            answer = MGCopyAnswer(kMGQMainDisplayRotation, nullptr);
-#endif
-            ok = extension->revoke();
-            ASSERT_UNUSED(ok, ok);
-        }
-    }
+    populateMobileGestaltCache(WTFMove(parameters.mobileGestaltExtensionHandle));
 
     m_uiProcessBundleIdentifier = parameters.uiProcessBundleIdentifier;
 
@@ -277,11 +259,6 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     SandboxExtension::consumePermanently(parameters.uiProcessBundleResourcePathExtensionHandle);
 #if ENABLE(MEDIA_STREAM)
     SandboxExtension::consumePermanently(parameters.audioCaptureExtensionHandle);
-#endif
-#if PLATFORM(IOS_FAMILY)
-    SandboxExtension::consumePermanently(parameters.cookieStorageDirectoryExtensionHandle);
-    SandboxExtension::consumePermanently(parameters.containerCachesDirectoryExtensionHandle);
-    SandboxExtension::consumePermanently(parameters.containerTemporaryDirectoryExtensionHandle);
 #endif
 #if PLATFORM(COCOA) && ENABLE(REMOTE_INSPECTOR)
     Inspector::RemoteInspector::setNeedMachSandboxExtension(!SandboxExtension::consumePermanently(parameters.enableRemoteWebInspectorExtensionHandle));
@@ -293,9 +270,21 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     SandboxExtension::consumePermanently(parameters.trustdExtensionHandle);
 #endif // PLATFORM(MAC)
 #if USE(APPLE_INTERNAL_SDK)
-    if (parameters.restrictImageAndVideoDecoders) {
-        ImageDecoderCG::enableRestrictedDecoding();
-        restrictImageAndVideoDecoders();
+    OptionSet<VideoDecoderBehavior> videoDecoderBehavior;
+    
+    if (parameters.enableDecodingHEIC) {
+        ImageDecoderCG::enableDecodingHEIC();
+        videoDecoderBehavior.add(VideoDecoderBehavior::EnableHEIC);
+    }
+
+    if (parameters.enableDecodingAVIF) {
+        ImageDecoderCG::enableDecodingAVIF();
+        videoDecoderBehavior.add(VideoDecoderBehavior::EnableAVIF);
+    }
+
+    if (videoDecoderBehavior) {
+        videoDecoderBehavior.add({ VideoDecoderBehavior::AvoidIOSurface, VideoDecoderBehavior::AvoidHardware });
+        setVideoDecoderBehaviors(videoDecoderBehavior);
     }
 #endif
 #endif // HAVE(VIDEO_RESTRICTED_DECODING)
@@ -318,7 +307,7 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 #if PLATFORM(IOS_FAMILY)
     setCurrentUserInterfaceIdiomIsSmallScreen(parameters.currentUserInterfaceIdiomIsSmallScreen);
     setLocalizedDeviceModel(parameters.localizedDeviceModel);
-    RenderThemeIOS::setContentSizeCategory(parameters.contentSizeCategory);
+    setContentSizeCategory(parameters.contentSizeCategory);
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     setSupportsPictureInPicture(parameters.supportsPictureInPicture);
 #endif
@@ -336,12 +325,6 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     method_setImplementation(methodToPatch, (IMP)NSApplicationAccessibilityFocusedUIElement);
 #endif
 
-#if HAVE(LSDATABASECONTEXT)
-    // On Mac, this needs to be called before NSApplication is being initialized.
-    // The NSApplication initialization is being done in [NSApplication _accessibilityInitialize]
-    LaunchServicesDatabaseManager::singleton().waitForDatabaseUpdate();
-#endif
-
 #if PLATFORM(MAC) && ENABLE(WEBPROCESS_NSRUNLOOP)
     RefPtr<SandboxExtension> launchServicesExtension;
     if (parameters.launchServicesExtensionHandle) {
@@ -351,12 +334,9 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
         }
     }
 
-    // Need to initialize accessibility for VoiceOver to work when the WebContent process is using NSRunLoop.
-    // Currently, it is also needed to allocate and initialize an NSApplication object.
-    // This method call will also call RegisterApplication, so there is no need for us to call this or
-    // check in with Launch Services
-    [NSApplication _accessibilityInitialize];
-
+    // Register the application. This will also check in with Launch Services.
+    _RegisterApplication(nullptr, nullptr);
+    
     // Update process name while holding the Launch Services sandbox extension
     updateProcessName(IsInProcessInitialization::Yes);
 
@@ -461,6 +441,12 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     WebCore::IOSurface::setBytesPerRowAlignment(parameters.bytesPerRowIOSurfaceAlignment);
 
     accessibilityPreferencesDidChange(parameters.accessibilityPreferences);
+
+    disableURLSchemeCheckInDataDetectors();
+
+    // Soft link frameworks related to Data Detection before we disconnect from launchd because these frameworks connect to
+    // launchd temporarily at link time to register XPC services. See rdar://93598951 (my feature request to stop doing that)
+    softlinkDataDetectorsFrameworks();
 }
 
 void WebProcess::platformSetWebsiteDataStoreParameters(WebProcessDataStoreParameters&& parameters)
@@ -473,6 +459,15 @@ void WebProcess::platformSetWebsiteDataStoreParameters(WebProcessDataStoreParame
 #if ENABLE(ARKIT_INLINE_PREVIEW)
     SandboxExtension::consumePermanently(parameters.modelElementCacheDirectoryExtensionHandle);
 #endif
+#endif
+#if PLATFORM(IOS_FAMILY)
+    // FIXME: Does the web process still need access to the cookie storage directory? Probably not.
+    if (auto& handle = parameters.cookieStorageDirectoryExtensionHandle)
+        SandboxExtension::consumePermanently(*handle);
+    if (auto& handle = parameters.containerCachesDirectoryExtensionHandle)
+        SandboxExtension::consumePermanently(*handle);
+    if (auto& handle = parameters.containerTemporaryDirectoryExtensionHandle)
+        SandboxExtension::consumePermanently(*handle);
 #endif
 
     if (!parameters.javaScriptConfigurationDirectory.isEmpty()) {
@@ -633,17 +628,17 @@ void WebProcess::platformInitializeProcess(const AuxiliaryProcessInitializationP
     MainThreadSharedTimer::shouldSetupPowerObserver() = false;
 #endif // PLATFORM(MAC)
 
-    if (parameters.extraInitializationData.get("inspector-process"_s) == "1")
+    if (parameters.extraInitializationData.get<HashTranslatorASCIILiteral>("inspector-process"_s) == "1"_s)
         m_processType = ProcessType::Inspector;
 #if ENABLE(SERVICE_WORKER)
-    else if (parameters.extraInitializationData.get("service-worker-process"_s) == "1") {
+    else if (parameters.extraInitializationData.get<HashTranslatorASCIILiteral>("service-worker-process"_s) == "1"_s) {
         m_processType = ProcessType::ServiceWorker;
 #if PLATFORM(MAC)
-        m_registrableDomain = RegistrableDomain::uncheckedCreateFromRegistrableDomainString(parameters.extraInitializationData.get("registrable-domain"_s));
+        m_registrableDomain = RegistrableDomain::uncheckedCreateFromRegistrableDomainString(parameters.extraInitializationData.get<HashTranslatorASCIILiteral>("registrable-domain"_s));
 #endif
     }
 #endif
-    else if (parameters.extraInitializationData.get("is-prewarmed"_s) == "1")
+    else if (parameters.extraInitializationData.get<HashTranslatorASCIILiteral>("is-prewarmed"_s) == "1"_s)
         m_processType = ProcessType::PrewarmedWebContent;
     else
         m_processType = ProcessType::WebContent;
@@ -873,7 +868,7 @@ RefPtr<ObjCObjectGraph> WebProcess::transformHandlesToObjects(ObjCObjectGraph& o
         RetainPtr<id> transformObject(id object) const override
         {
             if (auto* handle = dynamic_objc_cast<WKBrowsingContextHandle>(object)) {
-                if (auto* webPage = m_webProcess.webPage(handle._webPageID))
+                if (auto* webPage = m_webProcess.webPage(makeObjectIdentifier<WebCore::PageIdentifierType>(handle._webPageID)))
                     return wrapper(*webPage);
 
                 return [NSNull null];
@@ -1035,6 +1030,7 @@ void WebProcess::accessibilityPreferencesDidChange(const AccessibilityPreference
     auto invertColorsEnabled = preferences.invertColorsEnabled;
     if (_AXSInvertColorsEnabledApp(appID) != invertColorsEnabled)
         _AXSInvertColorsSetEnabledApp(invertColorsEnabled, appID);
+    FontCache::invalidateAllFontCaches();
 #endif
 }
 
@@ -1126,7 +1122,7 @@ void WebProcess::dispatchSimulatedNotificationsForPreferenceChange(const String&
 
 void WebProcess::handlePreferenceChange(const String& domain, const String& key, id value)
 {
-    if (key == "AppleLanguages") {
+    if (key == "AppleLanguages"_s) {
         // We need to set AppleLanguages for the volatile domain, similarly to what we do in XPCServiceMain.mm.
         NSDictionary *existingArguments = [[NSUserDefaults standardUserDefaults] volatileDomainForName:NSArgumentDomain];
         RetainPtr<NSMutableDictionary> newArguments = adoptNS([existingArguments mutableCopy]);
@@ -1168,6 +1164,14 @@ void WebProcess::revokeAccessToAssetServices()
         return;
     m_assetServiceV2Extension->revoke();
     m_assetServiceV2Extension = nullptr;
+}
+
+void WebProcess::disableURLSchemeCheckInDataDetectors() const
+{
+#if HAVE(DDRESULT_DISABLE_URL_SCHEME_CHECKING)
+    if (PAL::canLoad_DataDetectorsCore_DDResultDisableURLSchemeChecking())
+        PAL::softLinkDataDetectorsCoreDDResultDisableURLSchemeChecking();
+#endif
 }
 
 void WebProcess::switchFromStaticFontRegistryToUserFontRegistry(WebKit::SandboxExtension::Handle&& fontMachExtensionHandle)
@@ -1241,15 +1245,6 @@ void WebProcess::waitForPendingPasteboardWritesToFinish(const String& pasteboard
     }
 }
 
-#if ENABLE(GPU_PROCESS)
-void WebProcess::platformInitializeGPUProcessConnectionParameters(GPUProcessConnectionParameters& parameters)
-{
-    parameters.webProcessIdentity = ProcessIdentity { ProcessIdentity::CurrentProcess };
-
-    parameters.overrideLanguages = userPreferredLanguagesOverride();
-}
-#endif
-
 #if PLATFORM(MAC)
 void WebProcess::systemWillPowerOn()
 {
@@ -1269,21 +1264,12 @@ void WebProcess::systemDidWake()
 }
 #endif
 
-void WebProcess::consumeAudioComponentRegistrations(const IPC::SharedBufferCopy& data)
+#if PLATFORM(MAC)
+void WebProcess::openDirectoryCacheInvalidated(SandboxExtension::Handle&& handle)
 {
-    using namespace PAL;
-
-    if (!PAL::isAudioToolboxCoreFrameworkAvailable() || !PAL::canLoad_AudioToolboxCore_AudioComponentApplyServerRegistrations())
-        return;
-
-    if (!data.buffer())
-        return;
-    auto registrations = data.buffer()->createCFData();
-
-    auto err = AudioComponentApplyServerRegistrations(registrations.get());
-    if (noErr != err)
-        WEBPROCESS_RELEASE_LOG_ERROR(Process, "Could not apply AudioComponent registrations, err(%ld)", static_cast<long>(err));
+    AuxiliaryProcess::openDirectoryCacheInvalidated(WTFMove(handle));
 }
+#endif
 
 } // namespace WebKit
 

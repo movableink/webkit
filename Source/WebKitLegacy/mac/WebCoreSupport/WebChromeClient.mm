@@ -96,7 +96,7 @@
 #import <wtf/text/WTFString.h>
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
-#import <pal/graphics/WebGPU/Impl/WebGPUImpl.h>
+#import <pal/graphics/WebGPU/Impl/WebGPUCreateImpl.h>
 #endif
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(GEOLOCATION)
@@ -944,6 +944,15 @@ void WebChromeClient::triggerRenderingUpdate()
 
 #if ENABLE(VIDEO)
 
+bool WebChromeClient::canEnterVideoFullscreen() const
+{
+#if !PLATFORM(IOS_FAMILY) || HAVE(AVKIT)
+    return true;
+#else
+    return false;
+#endif
+}
+
 bool WebChromeClient::supportsVideoFullscreen(HTMLMediaElementEnums::VideoFullscreenMode)
 {
 #if !PLATFORM(IOS_FAMILY) || HAVE(AVKIT)
@@ -1164,7 +1173,7 @@ void WebChromeClient::changeUniversalAccessZoomFocus(const WebCore::IntRect& vie
 RefPtr<PAL::WebGPU::GPU> WebChromeClient::createGPUForWebGPU() const
 {
 #if HAVE(WEBGPU_IMPLEMENTATION)
-    return PAL::WebGPU::GPUImpl::create([](PAL::WebGPU::GPUImpl::WorkItem&& workItem) {
+    return PAL::WebGPU::create([](PAL::WebGPU::WorkItem&& workItem) {
         callOnMainRunLoop(WTFMove(workItem));
     });
 #else

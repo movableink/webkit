@@ -65,7 +65,7 @@ public:
     bool hasBrokenEncryptedMediaAPISupportQuirk() const;
     bool shouldStripQuotationMarkInFontFaceSetFamily() const;
 #if ENABLE(TOUCH_EVENTS)
-    bool shouldDispatchSimulatedMouseEvents(EventTarget*) const;
+    bool shouldDispatchSimulatedMouseEvents(const EventTarget*) const;
     bool shouldDispatchedSimulatedMouseEventsAssumeDefaultPrevented(EventTarget*) const;
     std::optional<Event::IsCancelable> simulatedMouseEventTypeForTarget(EventTarget*) const;
     bool shouldMakeTouchEventNonCancelableForTarget(EventTarget*) const;
@@ -81,6 +81,7 @@ public:
     bool shouldDisableContentChangeObserverTouchEventAdjustment() const;
     bool shouldTooltipPreventFromProceedingWithClick(const Element&) const;
     bool shouldHideSearchFieldResultsButton() const;
+    bool shouldDisableResolutionMediaQuery() const;
 
     bool needsMillisecondResolutionForHighResTimeStamp() const;
 
@@ -132,6 +133,7 @@ public:
     bool needsHDRPixelDepthQuirk() const;
     
     bool needsAkamaiMediaPlayerQuirk(const HTMLVideoElement&) const;
+    bool needsFlightAwareSerializationQuirk() const;
 
     bool needsBlackFullscreenBackgroundQuirk() const;
 
@@ -156,7 +158,11 @@ public:
 #endif
 
     bool shouldDisableWebSharePolicy() const;
-
+    
+#if PLATFORM(IOS)
+    WEBCORE_EXPORT bool allowLayeredFullscreenVideos() const;
+#endif
+    
 private:
     bool needsQuirks() const;
 
@@ -193,6 +199,7 @@ private:
     mutable std::optional<bool> m_shouldBypassAsyncScriptDeferring;
     mutable std::optional<bool> m_needsVP9FullRangeFlagQuirk;
     mutable std::optional<bool> m_needsHDRPixelDepthQuirk;
+    mutable std::optional<bool> m_needsFlightAwareSerializationQuirk;
     mutable std::optional<bool> m_needsBlackFullscreenBackgroundQuirk;
     mutable std::optional<bool> m_requiresUserGestureToPauseInPictureInPicture;
     mutable std::optional<bool> m_requiresUserGestureToLoadInPictureInPicture;
@@ -202,6 +209,9 @@ private:
     mutable std::optional<bool> m_blocksReturnToFullscreenFromPictureInPictureQuirk;
     mutable std::optional<bool> m_shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk;
     mutable std::optional<bool> m_shouldDisableWebSharePolicy;
+#if PLATFORM(IOS)
+    mutable std::optional<bool> m_allowLayeredFullscreenVideos;
+#endif
 };
 
 } // namespace WebCore

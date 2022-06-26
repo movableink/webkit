@@ -84,7 +84,7 @@ PARALLEL_REMOTE_WRAPPER_MARK_BEGIN = "5d65329bd1a3"
 PARALLEL_REMOTE_WRAPPER_MARK_END = "a9aea5c3b843"
 PARALLEL_REMOTE_STATE_LOST_MARKER = "709fb7a77c45231918eb118a"
 ITERATION_LIMITS = OpenStruct.new(:infraIterationsFloor => 3,
-                                  :iterationsCeiling => 10)
+                                  :iterationsCeiling => 50)
 
 REMOTE_TIMEOUT = 120
 SSH_OPTIONS_DEFAULT = [
@@ -585,6 +585,8 @@ end
 $hostOS = determineOS unless $hostOS
 $architecture = determineArchitecture unless $architecture
 $isFTLPlatform = !($architecture == "x86" || $architecture == "arm" || $architecture == "mips" || $architecture == "riscv64" || $hostOS == "windows" || $hostOS == "playstation")
+# Special case armv7, we want to run the wasm tests temporarily without B3/Air support
+$isWasmPlatform = $isFTLPlatform || $architecture == "arm"
 
 if $architecture == "x86"
     # The JIT is temporarily disabled on this platform since
@@ -623,7 +625,7 @@ BASE_OPTIONS = ["--useFTLJIT=false", "--useFunctionDotArguments=true", "--valida
 EAGER_OPTIONS = ["--thresholdForJITAfterWarmUp=10", "--thresholdForJITSoon=10", "--thresholdForOptimizeAfterWarmUp=20", "--thresholdForOptimizeAfterLongWarmUp=20", "--thresholdForOptimizeSoon=20", "--thresholdForFTLOptimizeAfterWarmUp=20", "--thresholdForFTLOptimizeSoon=20", "--thresholdForOMGOptimizeAfterWarmUp=20", "--thresholdForOMGOptimizeSoon=20", "--maximumEvalCacheableSourceLength=150000", "--useEagerCodeBlockJettisonTiming=true", "--repatchBufferingCountdown=0"]
 # NOTE: Tests rely on this using scribbleFreeCells.
 NO_CJIT_OPTIONS = ["--useConcurrentJIT=false", "--thresholdForJITAfterWarmUp=100", "--scribbleFreeCells=true"]
-B3O1_OPTIONS = ["--defaultB3OptLevel=1", "--useDataICInOptimizingJIT=1"]
+B3O1_OPTIONS = ["--defaultB3OptLevel=1", "--useDataICInFTL=1", "--forceUnlinkedDFG=1"]
 B3O0_OPTIONS = ["--maxDFGNodesInBasicBlockForPreciseAnalysis=100", "--defaultB3OptLevel=0"]
 FTL_OPTIONS = ["--useFTLJIT=true"]
 FORCE_LLINT_EXIT_OPTIONS = ["--forceOSRExitToLLInt=true"]
@@ -1004,8 +1006,7 @@ end
 def bytecodeCacheTemplate
     if ($hostOS == "darwin")
         return "bytecode-cache"
-    elsif ($hostOS == "linux" && $architecture != "mips")
-        # FIXME: need to fix https://bugs.webkit.org/show_bug.cgi?id=218703 to enable this on Linux/MIPS.
+    elsif ($hostOS == "linux")
         return "bytecode-cacheXXXXXX"
     end
     nil
@@ -1091,7 +1092,7 @@ BASE_MODES = [
         "FTLNoCJIT",
         "misc-ftl-no-cjit",
         [
-            "--useDataIC=true",
+            "--useDataICInFTL=true",
         ] +
         FTL_OPTIONS +
         NO_CJIT_OPTIONS
@@ -1117,7 +1118,8 @@ BASE_MODES = [
             "--validateBCE=true",
             "--useSamplingProfiler=true",
             "--airForceIRCAllocator=true",
-            "--useDataIC=true",
+            "--useDataICInFTL=true",
+            "--forceUnlinkedDFG=true",
         ] +
         FTL_OPTIONS +
         NO_CJIT_OPTIONS
@@ -1178,7 +1180,7 @@ BASE_MODES = [
             "--airForceBriggsAllocator=true",
             "--useRandomizingExecutableIslandAllocation=true",
             "--forcePolyProto=true",
-            "--useDataIC=true",
+            "--useDataICInFTL=true",
         ] +
         FTL_OPTIONS +
         EAGER_OPTIONS +
@@ -1318,6 +1320,7 @@ BASE_MODES = [
             "--validateGraphAtEachPhase=true",
             "--useSourceProviderCache=false",
             "--useRandomizingExecutableIslandAllocation=true",
+            "--useLLIntICs=false",
         ] +
         NO_CJIT_OPTIONS
     ],
@@ -1728,7 +1731,7 @@ end
 
 def runWebAssembly
     return if !$jitTests
-    return if !$isFTLPlatform
+    return if !$isWasmPlatform
     run("default-wasm", "-m", *FTL_OPTIONS)
     if $mode != "quick"
         run("wasm-no-cjit-yes-tls-context", "-m", "--useFastTLSForWasmContext=true", *(FTL_OPTIONS + NO_CJIT_OPTIONS))
@@ -1736,15 +1739,17 @@ def runWebAssembly
         run("wasm-eager-jettison", "-m", "--forceCodeBlockToJettisonDueToOldAge=true", "--useRandomizingExecutableIslandAllocation=true", "--verifyGC=true", *FTL_OPTIONS)
         run("wasm-no-tls-context", "-m", "--useFastTLSForWasmContext=false", *FTL_OPTIONS)
         run("wasm-slow-memory", "-m", "--useWebAssemblyFastMemory=false", *FTL_OPTIONS)
-        run("wasm-b3", "-m", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
-        run("wasm-air", "-m", "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *FTL_OPTIONS)
         run("wasm-collect-continuously", "-m", "--collectContinuously=true", "--verifyGC=true", *FTL_OPTIONS) if shouldCollectContinuously?
+        if $isFTLPlatform
+            run("wasm-b3", "-m", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
+            run("wasm-air", "-m", "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *FTL_OPTIONS)
+        end
     end
 end
 
 def runWebAssemblyJetStream2
     return if !$jitTests
-    return if !$isFTLPlatform
+    return if !$isWasmPlatform
 
     if $memoryLimited
         skip
@@ -1763,15 +1768,17 @@ def runWebAssemblyJetStream2
         run("wasm-eager-jettison", "--forceCodeBlockToJettisonDueToOldAge=true", "--verifyGC=true", *FTL_OPTIONS)
         run("wasm-no-tls-context", "--useFastTLSForWasmContext=false", *FTL_OPTIONS)
         run("wasm-slow-memory", "--useWebAssemblyFastMemory=false", *FTL_OPTIONS)
-        run("wasm-b3", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
-        run("wasm-air", "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *FTL_OPTIONS)
         run("wasm-collect-continuously", "--collectContinuously=true", "--verifyGC=true", *FTL_OPTIONS) if shouldCollectContinuously?
+        if $isFTLPlatform
+            run("wasm-b3", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
+            run("wasm-air", "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *FTL_OPTIONS)
+        end
     end
 end
 
 def runWebAssemblySuite(*optionalTestSpecificOptions)
     return if !$jitTests
-    return if !$isFTLPlatform
+    return if !$isWasmPlatform
     modules = Dir[WASMTESTS_PATH + "*.js"].map { |f| File.basename(f) }
     prepareExtraAbsoluteFiles(WASMTESTS_PATH, ["wasm.json"])
     prepareExtraRelativeFiles(modules.map { |f| "../" + f }, $collection)
@@ -1787,9 +1794,11 @@ def runWebAssemblySuite(*optionalTestSpecificOptions)
         run("wasm-eager-jettison", "--forceCodeBlockToJettisonDueToOldAge=true", "--useRandomizingExecutableIslandAllocation=true", "--verifyGC=true", *(FTL_OPTIONS + optionalTestSpecificOptions))
         run("wasm-no-tls-context", "--useFastTLSForWasmContext=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
         run("wasm-slow-memory", "--useWebAssemblyFastMemory=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
-        run("wasm-b3", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
-        run("wasm-air", "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *(FTL_OPTIONS + optionalTestSpecificOptions))
         run("wasm-collect-continuously", "--collectContinuously=true", "--verifyGC=true", *(FTL_OPTIONS + optionalTestSpecificOptions)) if shouldCollectContinuously?
+        if $isFTLPlatform
+            run("wasm-b3", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
+            run("wasm-air", "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *(FTL_OPTIONS + optionalTestSpecificOptions))
+        end
     end
 end
 
@@ -1805,7 +1814,9 @@ end
 def runWebAssemblyWithHarness(*optionalTestSpecificOptions)
     raise unless $benchmark.to_s =~ /harness\.m?js/
     return if !$jitTests
-    return if !$isFTLPlatform
+    return if !$isWasmPlatform
+    # Skip this completely on armv7 for now, since most of the tests are related to OSR and it's a bit hairy to skip them manually
+    return if $architecture == "arm"
 
     wasmFiles = allWasmFiles($collection)
     prepareExtraRelativeFiles(wasmFiles.map { |f| f.basename }, $collection)
@@ -1817,9 +1828,11 @@ def runWebAssemblyWithHarness(*optionalTestSpecificOptions)
         runHarnessTest("wasm-eager-jettison", "--forceCodeBlockToJettisonDueToOldAge=true", "--useRandomizingExecutableIslandAllocation=true", "--verifyGC=true", *(FTL_OPTIONS + optionalTestSpecificOptions))
         runHarnessTest("wasm-no-tls-context", "--useFastTLSForWasmContext=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
         runHarnessTest("wasm-slow-memory", "--useWebAssemblyFastMemory=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
-        runHarnessTest("wasm-b3", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
-        runHarnessTest("wasm-no-air", "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *(FTL_OPTIONS + optionalTestSpecificOptions))
         runHarnessTest("wasm-collect-continuously", "--collectContinuously=true", "--verifyGC=true", *(FTL_OPTIONS + optionalTestSpecificOptions)) if shouldCollectContinuously?
+        if $isFTLPlatform
+            runHarnessTest("wasm-b3", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
+            runHarnessTest("wasm-no-air", "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *(FTL_OPTIONS + optionalTestSpecificOptions))
+        end
     end
 end
 
@@ -1829,7 +1842,7 @@ def runWebAssemblyEmscripten(mode)
         return
     end
     return if !$jitTests
-    return if !$isFTLPlatform
+    return if !$isWasmPlatform
     wasm = $benchmark.to_s.sub! '.js', '.wasm'
     prepareExtraRelativeFiles([Pathname('..') + wasm], $collection)
     run("default-wasm", *FTL_OPTIONS)
@@ -1837,9 +1850,11 @@ def runWebAssemblyEmscripten(mode)
         run("wasm-no-cjit-yes-tls-context", "--useFastTLSForWasmContext=true", *(FTL_OPTIONS + NO_CJIT_OPTIONS))
         run("wasm-eager-jettison", "--forceCodeBlockToJettisonDueToOldAge=true", "--useRandomizingExecutableIslandAllocation=true", "--verifyGC=true", *FTL_OPTIONS)
         run("wasm-no-tls-context", "--useFastTLSForWasmContext=false", *FTL_OPTIONS)
-        run("wasm-b3", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
-        run("wasm-air", "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *FTL_OPTIONS)
         run("wasm-collect-continuously", "--collectContinuously=true", "--verifyGC=true", *FTL_OPTIONS) if shouldCollectContinuously?
+        if $isFTLPlatform
+            run("wasm-b3", "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *FTL_OPTIONS)
+            run("wasm-air", "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *FTL_OPTIONS)
+        end
     end
 end
 
@@ -1849,7 +1864,7 @@ def runWebAssemblySpecTestBase(mode, specHarnessPath, *optionalTestSpecificOptio
         return
     end
     return if !$jitTests
-    return if !$isFTLPlatform
+    return if !$isWasmPlatform
     prepareExtraAbsoluteFiles(WASMTESTS_PATH, ["wasm.json"])
 
     modules = Dir[WASMTESTS_PATH + "*.js"].map { |f| File.basename(f) }
@@ -1864,9 +1879,11 @@ def runWebAssemblySpecTestBase(mode, specHarnessPath, *optionalTestSpecificOptio
       runWithOutputHandler("wasm-no-cjit-yes-tls-context", noisyOutputHandler, specHarnessJsPath,  "--useFastTLSForWasmContext=true", *(FTL_OPTIONS + NO_CJIT_OPTIONS + optionalTestSpecificOptions))
       runWithOutputHandler("wasm-eager-jettison", noisyOutputHandler, specHarnessJsPath, "--forceCodeBlockToJettisonDueToOldAge=true", "--useRandomizingExecutableIslandAllocation=true", "--verifyGC=true", *(FTL_OPTIONS + optionalTestSpecificOptions))
       runWithOutputHandler("wasm-no-tls-context", noisyOutputHandler, specHarnessJsPath, "--useFastTLSForWasmContext=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
-      runWithOutputHandler("wasm-b3", noisyOutputHandler, specHarnessJsPath, "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
-      runWithOutputHandler("wasm-air", noisyOutputHandler, specHarnessJsPath, "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *(FTL_OPTIONS + optionalTestSpecificOptions))
       runWithOutputHandler("wasm-collect-continuously", noisyOutputHandler, specHarnessJsPath, "--collectContinuously=true", "--verifyGC=true", *(FTL_OPTIONS + optionalTestSpecificOptions)) if shouldCollectContinuously?
+      if $isFTLPlatform
+          runWithOutputHandler("wasm-b3", noisyOutputHandler, specHarnessJsPath, "--useWasmLLInt=false", "--wasmBBQUsesAir=false", *(FTL_OPTIONS + optionalTestSpecificOptions))
+          runWithOutputHandler("wasm-air", noisyOutputHandler, specHarnessJsPath, "--useWasmLLInt=false", "--useRandomizingExecutableIslandAllocation=true", *(FTL_OPTIONS + optionalTestSpecificOptions))
+      end
     end
 end
 
@@ -1884,7 +1901,7 @@ end
 
 def runWebAssemblyLowExecutableMemory(*optionalTestSpecificOptions)
     return if !$jitTests
-    return if !$isFTLPlatform
+    return if !$isWasmPlatform
     modules = Dir[WASMTESTS_PATH + "*.js"].map { |f| File.basename(f) }
     prepareExtraAbsoluteFiles(WASMTESTS_PATH, ["wasm.json"])
     prepareExtraRelativeFiles(modules.map { |f| "../" + f }, $collection)
@@ -2461,6 +2478,11 @@ def prepareBundle
         handleCollection(collection)
     }
 
+    if $runlist.size == 0
+        $stderr.puts("No tests selected for execution (overzealous --filter?)")
+        exit(2)
+    end
+
     puts
 end
 
@@ -2749,8 +2771,11 @@ STATUS_RE = /^[.]\/#{STATUS_FILE_PREFIX}(?<index>\d+)\s(?<runId>\h+)\s(?<exitCod
 def processStatusLine(map, line)
     md = STATUS_RE.match(line)
     if md.nil?
-        $stderr.puts("Could not parse line `#{line}`")
-        exit(1)
+        # Malfromed lines can legitimately occur when the remote fails at an
+        # inopportune moment. Ignore those lines but print them out, so that we
+        # can easily diagnose actual issues with the remote output.
+        $stderr.puts("Ignoring malformed status line `#{line}`")
+        return
     end
     index = md[:index].to_i
     runId = md[:runId]
@@ -2812,7 +2837,8 @@ def detectFailures(statusMap={})
     end
 
     evaluator = TestResultEvaluatorFinal.new($runlist, statusMap)
-    evaluator.visit!
+    evaluator.visit!({:treatIncompleteAsFailed => true})
+    evaluator.validate
 
     if evaluator.noresult > 0
         $stderr.puts("Could not get the exit status for #{evaluator.noresult} tests")
@@ -3050,8 +3076,22 @@ if test "x$1" != "x--"; then
 fi
 shift
 EOF
+        extraOptions = [
+            # Many of our jobs are short, ensure GNU parallel won't need to set
+            # up an ssh connection from scratch.
+            "ControlPath=./%C",
+            "ControlMaster=auto",
+            "ControlPersist=10m",
+            # Treat remote boards as volatile. Don't check the host keys, don't
+            # save them locally.
+            "StrictHostKeyChecking=no",
+            "UserKnownHostsFile=/dev/null"
+        ].collect { |opt|
+            ["-o", opt]
+        }.flatten
+        sshOptions = (SSH_OPTIONS_DEFAULT + extraOptions).join(" ")
         wrapper.puts(head +
-                     "echo \"$@\" | ssh -o ControlPath=./%C -o ControlMaster=auto -o ControlPersist=10m -o NoHostAuthenticationForLocalhost=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p \"$remoteport\" -l \"$remoteuser\" -o RemoteCommand=\"if test -d '$remotedir'; then cd '$remotedir'; else echo '#{PARALLEL_REMOTE_WRAPPER_MARK_BEGIN}${remotehost}#{PARALLEL_REMOTE_WRAPPER_MARK_END}'; false; fi && sh -s\" \"$remotehost\""
+                     "echo \"$@\" | ssh #{sshOptions} -p \"$remoteport\" -l \"$remoteuser\" -o RemoteCommand=\"if test -d '$remotedir'; then cd '$remotedir'; else echo '#{PARALLEL_REMOTE_WRAPPER_MARK_BEGIN}${remotehost}#{PARALLEL_REMOTE_WRAPPER_MARK_END}'; false; fi && sh -s\" \"$remotehost\""
         )
         FileUtils.chmod("ugo=rx", wrapper.path)
         wrapper.close # Avoid ETXTBUSY

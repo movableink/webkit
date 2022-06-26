@@ -100,6 +100,14 @@ static Vector<String> parseModifierArray(JSContextRef context, JSValueRef arrayV
     return modifiers;
 }
 
+static Class internalClassNamed(NSString *className)
+{
+    auto result = NSClassFromString(className);
+    if (!result)
+        NSLog(@"Warning: an internal class named '%@' does not exist.", className);
+    return result;
+}
+
 Ref<UIScriptController> UIScriptController::create(UIScriptContext& context)
 {
     return adoptRef(*new UIScriptControllerIOS(context));
@@ -1066,7 +1074,6 @@ JSObjectRef UIScriptControllerIOS::rectForMenuAction(JSStringRef jsAction) const
 WebCore::FloatRect UIScriptControllerIOS::rectForMenuAction(CFStringRef action) const
 {
     UIView *viewForAction = nil;
-    UIWindow *window = webView().window;
 
     if (UIView *calloutBar = UICalloutBar.activeCalloutBar; calloutBar.window) {
         for (UIButton *button in findAllViewsInHierarchyOfType(calloutBar, UIButton.class)) {
@@ -1082,15 +1089,16 @@ WebCore::FloatRect UIScriptControllerIOS::rectForMenuAction(CFStringRef action) 
         }
     }
 
-    if (!viewForAction) {
+    auto searchForLabel = [&](UIWindow *window) -> UILabel * {
         for (UILabel *label in findAllViewsInHierarchyOfType(window, UILabel.class)) {
-            if (![label.text isEqualToString:(__bridge NSString *)action])
-                continue;
-
-            viewForAction = label;
-            break;
+            if ([label.text isEqualToString:(__bridge NSString *)action])
+                return label;
         }
-    }
+        return nil;
+    };
+
+    if (!viewForAction)
+        viewForAction = searchForLabel(webView().window) ?: searchForLabel(webView().textEffectsWindow);
 
     if (!viewForAction)
         return { };
@@ -1101,12 +1109,27 @@ WebCore::FloatRect UIScriptControllerIOS::rectForMenuAction(CFStringRef action) 
 
 JSObjectRef UIScriptControllerIOS::menuRect() const
 {
-    UIView *calloutBar = UICalloutBar.activeCalloutBar;
-    if (!calloutBar.window)
+    UIView *containerView = nil;
+    if (auto *calloutBar = UICalloutBar.activeCalloutBar; calloutBar.window)
+        containerView = calloutBar;
+    else
+        containerView = findAllViewsInHierarchyOfType(webView().textEffectsWindow, internalClassNamed(@"_UIEditMenuListView")).firstObject;
+    return containerView ? toObject([containerView convertRect:containerView.bounds toView:platformContentView()]) : nullptr;
+}
+
+JSObjectRef UIScriptControllerIOS::contextMenuRect() const
+{
+    auto *window = webView().window;
+    auto *contextMenuView = findAllViewsInHierarchyOfType(window, internalClassNamed(@"_UIContextMenuView")).firstObject;
+    if (!contextMenuView)
         return nullptr;
 
-    CGRect rectInRootViewCoordinates = [calloutBar convertRect:calloutBar.bounds toView:platformContentView()];
-    return m_context->objectFromRect(WebCore::FloatRect(rectInRootViewCoordinates.origin.x, rectInRootViewCoordinates.origin.y, rectInRootViewCoordinates.size.width, rectInRootViewCoordinates.size.height));
+    return toObject([contextMenuView convertRect:contextMenuView.bounds toView:nil]);
+}
+
+JSObjectRef UIScriptControllerIOS::toObject(CGRect rect) const
+{
+    return m_context->objectFromRect(WebCore::FloatRect(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height));
 }
 
 bool UIScriptControllerIOS::isDismissingMenu() const

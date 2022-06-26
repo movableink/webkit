@@ -121,9 +121,16 @@
     return nil;
 }
 
-- (void)_simulateMouseMove:(NSEvent *)event
+- (void)_retrieveAccessibilityTreeData:(void (^)(NSData *, NSError *))completionHandler
 {
-    return _impl->mouseMoved(event);
+    _page->getAccessibilityTreeData([completionHandler = makeBlockPtr(completionHandler)] (API::Data* data) {
+        completionHandler(wrapper(data), nil);
+    });
+}
+
+- (BOOL)_secureEventInputEnabledForTesting
+{
+    return _impl->inSecureInputState();
 }
 
 @end

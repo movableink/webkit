@@ -46,8 +46,6 @@ VPATH = \
     $(WebKit2)/Shared/Authentication \
     $(WebKit2)/Shared/mac \
     $(WebKit2)/Shared/Notifications \
-    $(WebKit2)/WebAuthnProcess \
-    $(WebKit2)/WebAuthnProcess/mac \
     $(WebKit2)/WebProcess/ApplePay \
     $(WebKit2)/WebProcess/ApplicationCache \
     $(WebKit2)/WebProcess/Automation \
@@ -125,7 +123,6 @@ MESSAGE_RECEIVERS = \
 	NetworkProcess/NetworkBroadcastChannelRegistry \
 	NetworkProcess/NetworkConnectionToWebProcess \
 	NetworkProcess/NetworkContentRuleListManager \
-	NetworkProcess/WebStorage/StorageManagerSet \
 	NetworkProcess/cache/CacheStorageEngineConnection \
 	NetworkProcess/CustomProtocols/LegacyCustomProtocolManager \
 	NetworkProcess/NetworkSocketChannel \
@@ -150,6 +147,7 @@ MESSAGE_RECEIVERS = \
 	Shared/Authentication/AuthenticationManager \
 	Shared/Notifications/NotificationManagerMessageHandler \
 	Shared/WebConnection \
+	Shared/IPCConnectionTester \
 	Shared/IPCStreamTester \
 	Shared/IPCStreamTesterProxy \
 	Shared/IPCTester \
@@ -175,7 +173,6 @@ MESSAGE_RECEIVERS = \
 	UIProcess/Cocoa/PlaybackSessionManagerProxy \
 	UIProcess/Cocoa/UserMediaCaptureManagerProxy \
 	UIProcess/Cocoa/VideoFullscreenManagerProxy \
-	UIProcess/WebCookieManagerProxy \
 	UIProcess/ViewGestureController \
 	UIProcess/WebProcessProxy \
 	UIProcess/Automation/WebAutomationSession \
@@ -251,7 +248,6 @@ MESSAGE_RECEIVERS = \
 	WebProcess/WebPage/VisitedLinkTableController \
 	WebProcess/WebPage/Cocoa/TextCheckingControllerProxy \
 	WebProcess/WebPage/ViewUpdateDispatcher \
-	WebProcess/WebAuthentication/WebAuthnProcessConnection \
 	WebProcess/XR/PlatformXRSystemProxy \
 	GPUProcess/GPUConnectionToWebProcess \
 	GPUProcess/graphics/RemoteDisplayListRecorder \
@@ -305,8 +301,6 @@ MESSAGE_RECEIVERS = \
 	GPUProcess/media/RemoteMediaSourceProxy \
 	GPUProcess/media/RemoteRemoteCommandListenerProxy \
 	GPUProcess/media/RemoteSourceBufferProxy \
-	WebAuthnProcess/WebAuthnConnectionToWebProcess \
-	WebAuthnProcess/WebAuthnProcess \
 #
 
 GENERATE_MESSAGE_RECEIVER_SCRIPT = $(WebKit2)/Scripts/generate-message-receiver.py
@@ -349,15 +343,21 @@ ifeq ($(USE_LLVM_TARGET_TRIPLES_FOR_CLANG),YES)
 	TARGET_TRIPLE_FLAGS=-target $(WK_CURRENT_ARCH)-$(LLVM_TARGET_TRIPLE_VENDOR)-$(LLVM_TARGET_TRIPLE_OS_VERSION)$(LLVM_TARGET_TRIPLE_SUFFIX)
 endif
 
+ifeq ($(USE_SYSTEM_CONTENT_PATH),YES)
+	SANDBOX_DEFINES = -DUSE_SYSTEM_CONTENT_PATH=1 -DSYSTEM_CONTENT_PATH=$(SYSTEM_CONTENT_PATH)
+endif
+
 SANDBOX_PROFILES = \
 	com.apple.WebProcess.sb \
 	com.apple.WebKit.NetworkProcess.sb \
 	com.apple.WebKit.GPUProcess.sb \
-	com.apple.WebKit.WebAuthnProcess.sb \
 	com.apple.WebKit.webpushd.sb
 	
 SANDBOX_PROFILES_IOS = \
-	com.apple.WebKit.WebContent.sb \
+	com.apple.WebKit.adattributiond.sb \
+	com.apple.WebKit.GPU.sb \
+	com.apple.WebKit.Networking.sb \
+	com.apple.WebKit.WebContent.sb
 
 sandbox-profiles-ios : $(SANDBOX_PROFILES_IOS)
 
@@ -365,7 +365,7 @@ all : $(SANDBOX_PROFILES) $(SANDBOX_PROFILES_IOS)
 
 %.sb : %.sb.in
 	@echo Pre-processing $* sandbox profile...
-	grep -o '^[^;]*' $< | $(CC) $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(TEXT_PREPROCESSOR_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" - > $@
+	grep -o '^[^;]*' $< | $(CC) $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(SANDBOX_DEFINES) $(TEXT_PREPROCESSOR_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" - > $@
 
 AUTOMATION_PROTOCOL_GENERATOR_SCRIPTS = \
 	$(JavaScriptCore_SCRIPTS_DIR)/cpp_generator_templates.py \

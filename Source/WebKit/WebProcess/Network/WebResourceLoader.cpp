@@ -31,7 +31,7 @@
 #include "NetworkProcessConnection.h"
 #include "NetworkResourceLoaderMessages.h"
 #include "PrivateRelayed.h"
-#include "SharedBufferCopy.h"
+#include "SharedBufferReference.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebErrors.h"
 #include "WebFrame.h"
@@ -156,8 +156,10 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
 
     Ref<WebResourceLoader> protectedThis(*this);
 
-    if (metrics)
+    if (metrics) {
+        metrics->workerStart = m_workerStart;
         response.setDeprecatedNetworkLoadMetrics(Box<NetworkLoadMetrics>::create(WTFMove(*metrics)));
+    }
 
     if (privateRelayed == PrivateRelayed::Yes && mainFrameMainResource() == MainFrameMainResource::Yes)
         WebProcess::singleton().setHadMainFrameMainResourcePrivateRelayed();
@@ -221,15 +223,15 @@ void WebResourceLoader::didReceiveResponse(ResourceResponse&& response, PrivateR
     m_coreLoader->didReceiveResponse(response, WTFMove(policyDecisionCompletionHandler));
 }
 
-void WebResourceLoader::didReceiveData(const IPC::SharedBufferCopy& data, int64_t encodedDataLength)
+void WebResourceLoader::didReceiveData(IPC::SharedBufferReference&& data, int64_t encodedDataLength)
 {
     LOG(Network, "(WebProcess) WebResourceLoader::didReceiveData of size %lu for '%s'", data.size(), m_coreLoader->url().string().latin1().data());
     ASSERT_WITH_MESSAGE(!m_isProcessingNetworkResponse, "Network process should not send data until we've validated the response");
 
     if (UNLIKELY(m_interceptController.isIntercepting(m_coreLoader->identifier()))) {
-        m_interceptController.defer(m_coreLoader->identifier(), [this, protectedThis = Ref { *this }, buffer = data.buffer(), encodedDataLength]() mutable {
+        m_interceptController.defer(m_coreLoader->identifier(), [this, protectedThis = Ref { *this }, buffer = WTFMove(data), encodedDataLength]() mutable {
             if (m_coreLoader)
-                didReceiveData(IPC::SharedBufferCopy(WTFMove(buffer)), encodedDataLength);
+                didReceiveData(WTFMove(buffer), encodedDataLength);
         });
         return;
     }
@@ -238,21 +240,23 @@ void WebResourceLoader::didReceiveData(const IPC::SharedBufferCopy& data, int64_
         WEBRESOURCELOADER_RELEASE_LOG("didReceiveData: Started receiving data");
     m_numBytesReceived += data.size();
 
-    m_coreLoader->didReceiveData(data.safeBuffer(), encodedDataLength, DataPayloadBytes);
+    m_coreLoader->didReceiveData(data.isNull() ? SharedBuffer::create() : data.unsafeBuffer().releaseNonNull(), encodedDataLength, DataPayloadBytes);
 }
 
-void WebResourceLoader::didFinishResourceLoad(const NetworkLoadMetrics& networkLoadMetrics)
+void WebResourceLoader::didFinishResourceLoad(NetworkLoadMetrics&& networkLoadMetrics)
 {
     LOG(Network, "(WebProcess) WebResourceLoader::didFinishResourceLoad for '%s'", m_coreLoader->url().string().latin1().data());
     WEBRESOURCELOADER_RELEASE_LOG("didFinishResourceLoad: (length=%zd)", m_numBytesReceived);
 
     if (UNLIKELY(m_interceptController.isIntercepting(m_coreLoader->identifier()))) {
-        m_interceptController.defer(m_coreLoader->identifier(), [this, protectedThis = Ref { *this }, networkLoadMetrics]() mutable {
+        m_interceptController.defer(m_coreLoader->identifier(), [this, protectedThis = Ref { *this }, networkLoadMetrics = WTFMove(networkLoadMetrics)]() mutable {
             if (m_coreLoader)
-                didFinishResourceLoad(networkLoadMetrics);
+                didFinishResourceLoad(WTFMove(networkLoadMetrics));
         });
         return;
     }
+
+    networkLoadMetrics.workerStart = m_workerStart;
 
     ASSERT_WITH_MESSAGE(!m_isProcessingNetworkResponse, "Load should not be able to finish before we've validated the response");
     m_coreLoader->didFinishLoading(networkLoadMetrics);
@@ -358,17 +362,11 @@ void WebResourceLoader::contentFilterDidBlockLoad(const WebCore::ContentFilterUn
 {
     if (!m_coreLoader || !m_coreLoader->documentLoader())
         return;
-    m_coreLoader->documentLoader()->setBlockedPageURL(blockedPageURL);
-    m_coreLoader->documentLoader()->setSubstituteDataFromContentFilter(WTFMove(substituteData));
-    m_coreLoader->documentLoader()->handleContentFilterDidBlock(unblockHandler, WTFMove(unblockRequestDeniedScript));
-    m_coreLoader->documentLoader()->cancelMainResourceLoad(error);
-}
-
-void WebResourceLoader::cancelMainResourceLoadForContentFilter(const WebCore::ResourceError& error)
-{
-    if (!m_coreLoader || !m_coreLoader->documentLoader())
-        return;
-    m_coreLoader->documentLoader()->cancelMainResourceLoad(error);
+    auto documentLoader = m_coreLoader->documentLoader();
+    documentLoader->setBlockedPageURL(blockedPageURL);
+    documentLoader->setSubstituteDataFromContentFilter(WTFMove(substituteData));
+    documentLoader->handleContentFilterDidBlock(unblockHandler, WTFMove(unblockRequestDeniedScript));
+    documentLoader->cancelMainResourceLoad(error);
 }
 #endif // ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
 

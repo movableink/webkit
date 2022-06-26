@@ -44,6 +44,9 @@
 #include <EGL/eglext.h>
 #endif
 
+// This has to be included after the EGL headers.
+#include "DMABufEGLUtilities.h"
+
 namespace WebCore {
 
 static PFNEGLCREATEIMAGEKHRPROC createImageKHR()
@@ -192,13 +195,55 @@ void TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::paintToTextureMapper(Te
     if (!m_imageData)
         return;
 
-    // TODO: this is the BT.601 colorspace conversion matrix. The exact desired colorspace should be included
-    // in the DMABufObject, and the relevant matrix decided based on it. BT.601 should remain the default.
-    static constexpr std::array<GLfloat, 9> s_yuvToRGB {
-        1.164f,  0.0f,    1.596f,
-        1.164f, -0.391f, -0.813f,
-        1.164f,  2.018f,  0.0f
+    static constexpr std::array<GLfloat, 16> s_bt601ConversionMatrix {
+        1.164383561643836,  0.0,                1.596026785714286, -0.874202217873451,
+        1.164383561643836, -0.391762290094914, -0.812967647237771,  0.531667823499146,
+        1.164383561643836,  2.017232142857143,  0.0,               -1.085630789302022,
+        0.0,                0.0,                0.0,                1.0,
     };
+
+    static constexpr std::array<GLfloat, 16> s_bt709ConversionMatrix {
+        1.164383561643836,  0.0,                1.792741071428571, -0.972945075016308,
+        1.164383561643836, -0.213248614273730, -0.532909328559444,  0.301482665475862,
+        1.164383561643836,  2.112401785714286,  0.0,               -1.133402217873451,
+        0.0,                0.0,                0.0,                1.0,
+    };
+
+    static constexpr std::array<GLfloat, 16> s_bt2020ConversionMatrix {
+        1.164383561643836,  0.0,                1.678674107142857, -0.915687932159165,
+        1.164383561643836, -0.187326104219343, -0.650424318505057,  0.347458498519301,
+        1.164383561643836,  2.141772321428571,  0.0,               -1.148145075016308,
+        0.0,                0.0,                0.0,                1.0,
+    };
+
+    static constexpr std::array<GLfloat, 16> s_smpte240MConversionMatrix {
+        1.164383561643836,  0.0,                1.793651785714286, -0.973402217873451,
+        1.164383561643836, -0.256532845251675, -0.542724809537390,  0.328136638536074,
+        1.164383561643836,  2.07984375,         0.0,               -1.117059360730593,
+        0.0,                0.0,                0.0,                1.0,
+    };
+
+    // Based on the specified colorspace, a YUV-to-RGB matrix is chosen. The default is the BT.601 matrix.
+    // Invalid or SRGB colorspace defaults to that as well, but in case of RGBA-like formats, the matrix
+    // of course goes unused. This is complemented with the below assert that for those formats the specified
+    // colorspace is either invalid or SRGB.
+    const std::array<GLfloat, 16>& yuvToRGB =
+        [&] {
+            switch (m_object.colorSpace) {
+            case DMABufColorSpace::Invalid:
+            case DMABufColorSpace::SRGB:
+                break;
+            case DMABufColorSpace::BT601:
+                return s_bt601ConversionMatrix;
+            case DMABufColorSpace::BT709:
+                return s_bt709ConversionMatrix;
+            case DMABufColorSpace::BT2020:
+                return s_bt2020ConversionMatrix;
+            case DMABufColorSpace::SMPTE240M:
+                return s_smpte240MConversionMatrix;
+            }
+            return s_bt601ConversionMatrix;
+        }();
 
     TextureMapperGL& texmapGL = static_cast<TextureMapperGL&>(textureMapper);
     auto& data = *m_imageData;
@@ -208,6 +253,8 @@ void TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::paintToTextureMapper(Te
     case DMABufFormat::FourCC::XBGR8888:
     case DMABufFormat::FourCC::ARGB8888:
     case DMABufFormat::FourCC::ABGR8888:
+        // Either no colorspace or the SRGB colorspace was defined for this object. Other options are not meaningful.
+        ASSERT(m_object.colorSpace == DMABufColorSpace::Invalid || m_object.colorSpace == DMABufColorSpace::SRGB);
         texmapGL.drawTexture(data.texture[0], m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity);
         break;
     case DMABufFormat::FourCC::I420:
@@ -215,28 +262,30 @@ void TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::paintToTextureMapper(Te
     case DMABufFormat::FourCC::Y41B:
     case DMABufFormat::FourCC::Y42B:
         texmapGL.drawTexturePlanarYUV(std::array<GLuint, 3> { data.texture[0], data.texture[1], data.texture[2] },
-            s_yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity, std::nullopt);
+            yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity, std::nullopt);
         break;
     case DMABufFormat::FourCC::YV12:
         texmapGL.drawTexturePlanarYUV(std::array<GLuint, 3> { data.texture[0], data.texture[2], data.texture[1] },
-            s_yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity, std::nullopt);
+            yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity, std::nullopt);
         break;
     case DMABufFormat::FourCC::A420:
         texmapGL.drawTexturePlanarYUV(std::array<GLuint, 3> { data.texture[0], data.texture[1], data.texture[2] },
-            s_yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity, data.texture[3]);
+            yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity, data.texture[3]);
         break;
     case DMABufFormat::FourCC::NV12:
     case DMABufFormat::FourCC::NV21:
         texmapGL.drawTextureSemiPlanarYUV(std::array<GLuint, 2> { data.texture[0], data.texture[1] },
             (m_object.format.fourcc == DMABufFormat::FourCC::NV21),
-            s_yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity);
+            yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity);
         break;
     case DMABufFormat::FourCC::YUY2:
-    case DMABufFormat::FourCC::UYVY:
-    case DMABufFormat::FourCC::VUYA:
     case DMABufFormat::FourCC::YVYU:
+    case DMABufFormat::FourCC::UYVY:
+    case DMABufFormat::FourCC::VYUY:
+    case DMABufFormat::FourCC::VUYA:
+    case DMABufFormat::FourCC::AYUV:
         texmapGL.drawTexturePackedYUV(data.texture[0],
-            s_yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity);
+            yuvToRGB, m_flags, IntSize(data.width, data.height), targetRect, modelViewMatrix, opacity);
         break;
     default:
         break;
@@ -247,20 +296,14 @@ std::unique_ptr<TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::EGLImageData
 {
     using EGLImageData = TextureMapperPlatformLayerProxyDMABuf::DMABufLayer::EGLImageData;
 
-    EGLDisplay eglDisplay = PlatformDisplay::sharedDisplayForCompositing().eglDisplay();
+    auto& platformDisplay = PlatformDisplay::sharedDisplayForCompositing();
+    EGLDisplay eglDisplay = platformDisplay.eglDisplay();
 
     EGLImageKHR image[DMABufFormat::c_maxPlanes];
     for (unsigned i = 0; i < object.format.numPlanes; ++i) {
-        std::initializer_list<EGLint> attributes {
-            EGL_WIDTH, EGLint(object.format.planeWidth(i, object.width)),
-            EGL_HEIGHT, EGLint(object.format.planeHeight(i, object.height)),
-            EGL_LINUX_DRM_FOURCC_EXT, EGLint(object.format.planes[i].fourcc),
-            EGL_DMA_BUF_PLANE0_FD_EXT, object.fd[i],
-            EGL_DMA_BUF_PLANE0_OFFSET_EXT, EGLint(object.offset[i]),
-            EGL_DMA_BUF_PLANE0_PITCH_EXT, EGLint(object.stride[i]),
-            EGL_NONE,
-        };
-        image[i] = createImageKHR()(eglDisplay, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, std::data(attributes));
+        auto attributes = DMABufEGLUtilities::constructEGLCreateImageAttributes(object, i,
+            DMABufEGLUtilities::PlaneModifiersUsage { platformDisplay.eglExtensions().EXT_image_dma_buf_import_modifiers });
+        image[i] = createImageKHR()(eglDisplay, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, attributes.data());
     }
 
     auto imageData = makeUnique<EGLImageData>();

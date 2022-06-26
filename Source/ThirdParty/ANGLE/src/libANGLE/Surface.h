@@ -11,6 +11,8 @@
 #ifndef LIBANGLE_SURFACE_H_
 #define LIBANGLE_SURFACE_H_
 
+#include <memory>
+
 #include <EGL/egl.h>
 
 #include "common/PackedEnums.h"
@@ -105,9 +107,6 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
     void setFixedWidth(EGLint width);
     void setFixedHeight(EGLint height);
 
-    std::unique_ptr<gl::Framebuffer> createDefaultFramebuffer(const gl::Context *context,
-                                                              egl::Surface *readSurface);
-
     const Config *getConfig() const;
 
     // width and height can change with client window resizing
@@ -175,8 +174,10 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
 
     bool directComposition() const { return mState.directComposition; }
 
-    gl::InitState initState(const gl::ImageIndex &imageIndex) const override;
-    void setInitState(const gl::ImageIndex &imageIndex, gl::InitState initState) override;
+    gl::InitState initState(GLenum binding, const gl::ImageIndex &imageIndex) const override;
+    void setInitState(GLenum binding,
+                      const gl::ImageIndex &imageIndex,
+                      gl::InitState initState) override;
 
     bool isRobustResourceInitEnabled() const { return mRobustResourceInitialization; }
 
@@ -203,9 +204,20 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
     // otherwise.
     const gl::Offset &getTextureOffset() const { return mTextureOffset; }
 
-    Error getBufferAge(const gl::Context *context, EGLint *age) const;
+    Error getBufferAge(const gl::Context *context, EGLint *age);
 
     Error setRenderBuffer(EGLint renderBuffer);
+
+    bool bufferAgeQueriedSinceLastSwap() const { return mBufferAgeQueriedSinceLastSwap; }
+    void setDamageRegion(const EGLint *rects, EGLint n_rects);
+    bool isDamageRegionSet() const { return mIsDamageRegionSet; }
+
+    void addRef() { mRefCount++; }
+    void release()
+    {
+        ASSERT(mRefCount > 0);
+        mRefCount--;
+    }
 
   protected:
     Surface(EGLint surfaceType,
@@ -267,7 +279,12 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
     uint8_t *mLockBufferPtr;      // Memory owned by backend.
     EGLint mLockBufferPitch;
 
+    bool mBufferAgeQueriedSinceLastSwap;
+    bool mIsDamageRegionSet;
+
   private:
+    Error getBufferAgeImpl(const gl::Context *context, EGLint *age) const;
+
     Error destroyImpl(const Display *display);
 
     void postSwap(const gl::Context *context);
@@ -276,7 +293,8 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
     // ObserverInterface implementation.
     void onSubjectStateChange(angle::SubjectIndex index, angle::SubjectMessage message) override;
 
-    gl::InitState mInitState;
+    gl::InitState mColorInitState;
+    gl::InitState mDepthStencilInitState;
     angle::ObserverBinding mImplObserverBinding;
 };
 
@@ -322,6 +340,28 @@ class PixmapSurface final : public Surface
     ~PixmapSurface() override;
 };
 
+class ANGLE_NO_DISCARD ScopedSurfaceRef
+{
+  public:
+    ScopedSurfaceRef(Surface *surface) : mSurface(surface)
+    {
+        if (mSurface)
+        {
+            mSurface->addRef();
+        }
+    }
+    ~ScopedSurfaceRef()
+    {
+        if (mSurface)
+        {
+            mSurface->release();
+        }
+    }
+
+  private:
+    Surface *const mSurface;
+};
+
 class SurfaceDeleter final
 {
   public:
@@ -333,7 +373,7 @@ class SurfaceDeleter final
     const Display *mDisplay;
 };
 
-using SurfacePointer = angle::UniqueObjectPointerBase<Surface, SurfaceDeleter>;
+using SurfacePointer = std::unique_ptr<Surface, SurfaceDeleter>;
 
 }  // namespace egl
 

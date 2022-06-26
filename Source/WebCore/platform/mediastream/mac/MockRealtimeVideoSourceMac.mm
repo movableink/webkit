@@ -51,7 +51,7 @@
 
 namespace WebCore {
 
-CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, String&& name, String&& hashSalt, const MediaConstraints* constraints, PageIdentifier pageIdentifier)
+CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, AtomString&& name, String&& hashSalt, const MediaConstraints* constraints, PageIdentifier pageIdentifier)
 {
 #ifndef NDEBUG
     auto device = MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(deviceID);
@@ -69,12 +69,12 @@ CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, String&&
     return CaptureSourceOrError(RealtimeVideoSource::create(WTFMove(source)));
 }
 
-Ref<MockRealtimeVideoSource> MockRealtimeVideoSourceMac::createForMockDisplayCapturer(String&& deviceID, String&& name, String&& hashSalt, PageIdentifier pageIdentifier)
+Ref<MockRealtimeVideoSource> MockRealtimeVideoSourceMac::createForMockDisplayCapturer(String&& deviceID, AtomString&& name, String&& hashSalt, PageIdentifier pageIdentifier)
 {
     return adoptRef(*new MockRealtimeVideoSourceMac(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalt), pageIdentifier));
 }
 
-MockRealtimeVideoSourceMac::MockRealtimeVideoSourceMac(String&& deviceID, String&& name, String&& hashSalt, PageIdentifier pageIdentifier)
+MockRealtimeVideoSourceMac::MockRealtimeVideoSourceMac(String&& deviceID, AtomString&& name, String&& hashSalt, PageIdentifier pageIdentifier)
     : MockRealtimeVideoSource(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalt), pageIdentifier)
     , m_workQueue(WorkQueue::create("MockRealtimeVideoSource Render Queue", WorkQueue::QOS::UserInteractive))
 {
@@ -93,16 +93,16 @@ void MockRealtimeVideoSourceMac::updateSampleBuffer()
     if (auto nativeImage = imageBuffer->copyImage()->nativeImage())
         platformImage = nativeImage->platformImage();
 
-    auto sampleTime = MediaTime::createWithDouble((elapsedTime() + 100_ms).seconds());
-    auto sampleBuffer = m_imageTransferSession->createMediaSample(platformImage.get(), sampleTime, size(), sampleRotation());
-    if (!sampleBuffer)
+    auto presentationTime = MediaTime::createWithDouble((elapsedTime() + 100_ms).seconds());
+    auto videoFrame = m_imageTransferSession->createVideoFrame(platformImage.get(), presentationTime, size(), videoFrameRotation());
+    if (!videoFrame)
         return;
 
     auto captureTime = MonotonicTime::now().secondsSinceEpoch();
-    m_workQueue->dispatch([this, protectedThis = Ref { *this }, sampleBuffer = WTFMove(sampleBuffer), captureTime]() mutable {
+    m_workQueue->dispatch([this, protectedThis = Ref { *this }, videoFrame = WTFMove(videoFrame), captureTime]() mutable {
         VideoFrameTimeMetadata metadata;
         metadata.captureTime = captureTime;
-        dispatchMediaSampleToObservers(*sampleBuffer, metadata);
+        dispatchVideoFrameToObservers(*videoFrame, metadata);
     });
 }
 

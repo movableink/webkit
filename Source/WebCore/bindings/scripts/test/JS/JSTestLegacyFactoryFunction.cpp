@@ -88,7 +88,7 @@ STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSTestLegacyFactoryFunctionPrototype, JSTest
 using JSTestLegacyFactoryFunctionDOMConstructor = JSDOMConstructorNotConstructable<JSTestLegacyFactoryFunction>;
 using JSTestLegacyFactoryFunctionLegacyFactoryFunction = JSDOMLegacyFactoryFunction<JSTestLegacyFactoryFunction>;
 
-template<> const ClassInfo JSTestLegacyFactoryFunctionDOMConstructor::s_info = { "TestLegacyFactoryFunction", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyFactoryFunctionDOMConstructor) };
+template<> const ClassInfo JSTestLegacyFactoryFunctionDOMConstructor::s_info = { "TestLegacyFactoryFunction"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyFactoryFunctionDOMConstructor) };
 
 template<> JSValue JSTestLegacyFactoryFunctionDOMConstructor::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
 {
@@ -140,7 +140,7 @@ template<> EncodedJSValue JSC_HOST_CALL_ATTRIBUTES JSTestLegacyFactoryFunctionLe
 }
 JSC_ANNOTATE_HOST_FUNCTION(JSTestLegacyFactoryFunctionLegacyFactoryFunctionConstruct, JSTestLegacyFactoryFunctionLegacyFactoryFunction::construct);
 
-template<> const ClassInfo JSTestLegacyFactoryFunctionLegacyFactoryFunction::s_info = { "Audio", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyFactoryFunctionLegacyFactoryFunction) };
+template<> const ClassInfo JSTestLegacyFactoryFunctionLegacyFactoryFunction::s_info = { "Audio"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyFactoryFunctionLegacyFactoryFunction) };
 
 template<> JSValue JSTestLegacyFactoryFunctionLegacyFactoryFunction::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
 {
@@ -161,10 +161,10 @@ template<> void JSTestLegacyFactoryFunctionLegacyFactoryFunction::initializeProp
 
 static const HashTableValue JSTestLegacyFactoryFunctionPrototypeTableValues[] =
 {
-    { "constructor", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestLegacyFactoryFunctionConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestLegacyFactoryFunctionConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
 };
 
-const ClassInfo JSTestLegacyFactoryFunctionPrototype::s_info = { "TestLegacyFactoryFunction", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyFactoryFunctionPrototype) };
+const ClassInfo JSTestLegacyFactoryFunctionPrototype::s_info = { "TestLegacyFactoryFunction"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyFactoryFunctionPrototype) };
 
 void JSTestLegacyFactoryFunctionPrototype::finishCreation(VM& vm)
 {
@@ -173,7 +173,7 @@ void JSTestLegacyFactoryFunctionPrototype::finishCreation(VM& vm)
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-const ClassInfo JSTestLegacyFactoryFunction::s_info = { "TestLegacyFactoryFunction", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyFactoryFunction) };
+const ClassInfo JSTestLegacyFactoryFunction::s_info = { "TestLegacyFactoryFunction"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyFactoryFunction) };
 
 JSTestLegacyFactoryFunction::JSTestLegacyFactoryFunction(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestLegacyFactoryFunction>&& impl)
     : JSDOMWrapper<TestLegacyFactoryFunction>(structure, globalObject, WTFMove(impl))
@@ -183,7 +183,7 @@ JSTestLegacyFactoryFunction::JSTestLegacyFactoryFunction(Structure* structure, J
 void JSTestLegacyFactoryFunction::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     static_assert(std::is_base_of<ActiveDOMObject, TestLegacyFactoryFunction>::value, "Interface is marked as [ActiveDOMObject] but implementation class does not subclass ActiveDOMObject.");
 
@@ -219,7 +219,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestLegacyFactoryFunctionConstructor, (JSGlobalObject
 {
     VM& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    auto* prototype = jsDynamicCast<JSTestLegacyFactoryFunctionPrototype*>(vm, JSValue::decode(thisValue));
+    auto* prototype = jsDynamicCast<JSTestLegacyFactoryFunctionPrototype*>(JSValue::decode(thisValue));
     if (UNLIKELY(!prototype))
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestLegacyFactoryFunction::getConstructor(JSC::getVM(lexicalGlobalObject), prototype->globalObject()));
@@ -301,9 +301,9 @@ JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* g
     return wrap(lexicalGlobalObject, globalObject, impl);
 }
 
-TestLegacyFactoryFunction* JSTestLegacyFactoryFunction::toWrapped(JSC::VM& vm, JSC::JSValue value)
+TestLegacyFactoryFunction* JSTestLegacyFactoryFunction::toWrapped(JSC::VM&, JSC::JSValue value)
 {
-    if (auto* wrapper = jsDynamicCast<JSTestLegacyFactoryFunction*>(vm, value))
+    if (auto* wrapper = jsDynamicCast<JSTestLegacyFactoryFunction*>(value))
         return &wrapper->wrapped();
     return nullptr;
 }

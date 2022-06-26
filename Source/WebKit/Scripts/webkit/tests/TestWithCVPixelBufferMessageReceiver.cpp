@@ -26,16 +26,16 @@
 #include "TestWithCVPixelBuffer.h"
 
 #if USE(AVFOUNDATION)
-#include "ArgumentCodersCF.h"
+#include "ArgumentCodersCF.h" // NOLINT
 #endif
-#include "Decoder.h"
-#include "HandleMessage.h"
-#include "TestWithCVPixelBufferMessages.h"
+#include "Decoder.h" // NOLINT
+#include "HandleMessage.h" // NOLINT
+#include "TestWithCVPixelBufferMessages.h" // NOLINT
 #if USE(AVFOUNDATION)
-#include <WebCore/CVUtilities.h>
+#include <WebCore/CVUtilities.h> // NOLINT
 #endif
 #if USE(AVFOUNDATION)
-#include <wtf/RetainPtr.h>
+#include <wtf/RetainPtr.h> // NOLINT
 #endif
 
 #if ENABLE(IPC_TESTING_API)
@@ -63,12 +63,6 @@ void ReceiveCVPixelBuffer::callReply(IPC::Decoder& decoder, CompletionHandler<vo
 void ReceiveCVPixelBuffer::cancelReply(CompletionHandler<void(RetainPtr<CVPixelBufferRef>&&)>&& completionHandler)
 {
     completionHandler(IPC::AsyncReplyError<RetainPtr<CVPixelBufferRef>>::create());
-}
-
-void ReceiveCVPixelBuffer::send(UniqueRef<IPC::Encoder>&& encoder, IPC::Connection& connection, const RetainPtr<CVPixelBufferRef>& r0)
-{
-    encoder.get() << r0;
-    connection.sendSyncReply(WTFMove(encoder));
 }
 
 #endif

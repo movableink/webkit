@@ -83,7 +83,7 @@ STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSTestReportExtraMemoryCostPrototype, JSTest
 
 using JSTestReportExtraMemoryCostDOMConstructor = JSDOMConstructorNotConstructable<JSTestReportExtraMemoryCost>;
 
-template<> const ClassInfo JSTestReportExtraMemoryCostDOMConstructor::s_info = { "TestReportExtraMemoryCost", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReportExtraMemoryCostDOMConstructor) };
+template<> const ClassInfo JSTestReportExtraMemoryCostDOMConstructor::s_info = { "TestReportExtraMemoryCost"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReportExtraMemoryCostDOMConstructor) };
 
 template<> JSValue JSTestReportExtraMemoryCostDOMConstructor::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
 {
@@ -104,10 +104,10 @@ template<> void JSTestReportExtraMemoryCostDOMConstructor::initializeProperties(
 
 static const HashTableValue JSTestReportExtraMemoryCostPrototypeTableValues[] =
 {
-    { "constructor", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestReportExtraMemoryCostConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestReportExtraMemoryCostConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
 };
 
-const ClassInfo JSTestReportExtraMemoryCostPrototype::s_info = { "TestReportExtraMemoryCost", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReportExtraMemoryCostPrototype) };
+const ClassInfo JSTestReportExtraMemoryCostPrototype::s_info = { "TestReportExtraMemoryCost"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReportExtraMemoryCostPrototype) };
 
 void JSTestReportExtraMemoryCostPrototype::finishCreation(VM& vm)
 {
@@ -116,7 +116,7 @@ void JSTestReportExtraMemoryCostPrototype::finishCreation(VM& vm)
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-const ClassInfo JSTestReportExtraMemoryCost::s_info = { "TestReportExtraMemoryCost", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReportExtraMemoryCost) };
+const ClassInfo JSTestReportExtraMemoryCost::s_info = { "TestReportExtraMemoryCost"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReportExtraMemoryCost) };
 
 JSTestReportExtraMemoryCost::JSTestReportExtraMemoryCost(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestReportExtraMemoryCost>&& impl)
     : JSDOMWrapper<TestReportExtraMemoryCost>(structure, globalObject, WTFMove(impl))
@@ -126,7 +126,7 @@ JSTestReportExtraMemoryCost::JSTestReportExtraMemoryCost(Structure* structure, J
 void JSTestReportExtraMemoryCost::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     static_assert(!std::is_base_of<ActiveDOMObject, TestReportExtraMemoryCost>::value, "Interface is not marked as [ActiveDOMObject] even though implementation class subclasses ActiveDOMObject.");
 
@@ -158,7 +158,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestReportExtraMemoryCostConstructor, (JSGlobalObject
 {
     VM& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    auto* prototype = jsDynamicCast<JSTestReportExtraMemoryCostPrototype*>(vm, JSValue::decode(thisValue));
+    auto* prototype = jsDynamicCast<JSTestReportExtraMemoryCostPrototype*>(JSValue::decode(thisValue));
     if (UNLIKELY(!prototype))
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestReportExtraMemoryCost::getConstructor(JSC::getVM(lexicalGlobalObject), prototype->globalObject()));
@@ -251,9 +251,9 @@ JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* g
     return wrap(lexicalGlobalObject, globalObject, impl);
 }
 
-TestReportExtraMemoryCost* JSTestReportExtraMemoryCost::toWrapped(JSC::VM& vm, JSC::JSValue value)
+TestReportExtraMemoryCost* JSTestReportExtraMemoryCost::toWrapped(JSC::VM&, JSC::JSValue value)
 {
-    if (auto* wrapper = jsDynamicCast<JSTestReportExtraMemoryCost*>(vm, value))
+    if (auto* wrapper = jsDynamicCast<JSTestReportExtraMemoryCost*>(value))
         return &wrapper->wrapped();
     return nullptr;
 }

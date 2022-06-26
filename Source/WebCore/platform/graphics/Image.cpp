@@ -70,7 +70,7 @@ RefPtr<Image> Image::create(ImageObserver& observer)
     ASSERT(isMainThread());
 
     auto mimeType = observer.mimeType();
-    if (mimeType == "image/svg+xml")
+    if (mimeType == "image/svg+xml"_s)
         return SVGImage::create(observer);
 
     auto url = observer.sourceUrl();
@@ -95,14 +95,14 @@ bool Image::supportsType(const String& type)
 bool Image::isPDFResource(const String& mimeType, const URL& url)
 {
     if (mimeType.isEmpty())
-        return url.path().endsWithIgnoringASCIICase(".pdf");
+        return url.path().endsWithIgnoringASCIICase(".pdf"_s);
     return MIMETypeRegistry::isPDFMIMEType(mimeType);
 }
 
 bool Image::isPostScriptResource(const String& mimeType, const URL& url)
 {
     if (mimeType.isEmpty())
-        return url.path().endsWithIgnoringASCIICase(".ps");
+        return url.path().endsWithIgnoringASCIICase(".ps"_s);
     return MIMETypeRegistry::isPostScriptMIMEType(mimeType);
 }
 

@@ -547,11 +547,11 @@ inline WKContextMenuItemTag toAPI(WebCore::ContextMenuAction action)
 #endif
     case WebCore::ContextMenuItemTagShareMenu:
         return kWKContextMenuItemTagShareMenu;
-    case WebCore::ContextMenuItemTagQuickLookImage:
+    case WebCore::ContextMenuItemTagLookUpImage:
         return kWKContextMenuItemTagRevealImage;
     case WebCore::ContextMenuItemTagTranslate:
         return kWKContextMenuItemTagTranslate;
-    case WebCore::ContextMenuItemTagCopyCroppedImage:
+    case WebCore::ContextMenuItemTagCopySubject:
         return kWKContextMenuItemTagCopyCroppedImage;
     default:
         if (action < WebCore::ContextMenuItemBaseApplicationTag && !(action >= WebCore::ContextMenuItemBaseCustomTag && action <= WebCore::ContextMenuItemLastCustomTag))
@@ -756,11 +756,11 @@ inline WebCore::ContextMenuAction toImpl(WKContextMenuItemTag tag)
             return WebCore::ContextMenuItemTagOpenLinkInThisWindow;
 #endif
     case kWKContextMenuItemTagRevealImage:
-        return WebCore::ContextMenuItemTagQuickLookImage;
+        return WebCore::ContextMenuItemTagLookUpImage;
     case kWKContextMenuItemTagTranslate:
         return WebCore::ContextMenuItemTagTranslate;
     case kWKContextMenuItemTagCopyCroppedImage:
-        return WebCore::ContextMenuItemTagCopyCroppedImage;
+        return WebCore::ContextMenuItemTagCopySubject;
     case kWKContextMenuItemTagOpenLinkInThisWindow:
     default:
         if (tag < kWKContextMenuItemBaseApplicationTag && !(tag >= WebCore::ContextMenuItemBaseCustomTag && tag <= WebCore::ContextMenuItemLastCustomTag))

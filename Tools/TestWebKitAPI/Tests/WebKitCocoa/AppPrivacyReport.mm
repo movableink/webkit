@@ -44,10 +44,12 @@
 #if ENABLE(APP_PRIVACY_REPORT)
 TEST(AppPrivacyReport, DefaultRequestIsAppInitiated)
 {
+    TestWebKitAPI::HTTPServer server(TestWebKitAPI::HTTPServer::respondWithChallengeThenOK);
+
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
-    NSString *url = @"https://webkit.org";
+    NSString *url = [NSString stringWithFormat:@"http://127.0.0.1:%d/", server.port()];
 
     __block bool isDone = false;
     // Don't set the attribution API on NSURLRequest to make sure the default is app initiated.
@@ -73,10 +75,11 @@ TEST(AppPrivacyReport, DefaultRequestIsAppInitiated)
 
 TEST(AppPrivacyReport, AppInitiatedRequest)
 {
+    TestWebKitAPI::HTTPServer server(TestWebKitAPI::HTTPServer::respondWithChallengeThenOK);
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
-    NSString *url = @"https://webkit.org";
+    NSString *url = [NSString stringWithFormat:@"http://127.0.0.1:%d/", server.port()];
 
     __block bool isDone = false;
     NSMutableURLRequest *appInitiatedRequest = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url]];
@@ -104,10 +107,12 @@ TEST(AppPrivacyReport, AppInitiatedRequest)
 
 TEST(AppPrivacyReport, NonAppInitiatedRequest)
 {
+    TestWebKitAPI::HTTPServer server(TestWebKitAPI::HTTPServer::respondWithChallengeThenOK);
+
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
-    NSString *url = @"https://webkit.org";
+    NSString *url = [NSString stringWithFormat:@"http://127.0.0.1:%d/", server.port()];
 
     __block bool isDone = false;
     NSMutableURLRequest *nonAppInitiatedRequest = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url]];
@@ -135,11 +140,13 @@ TEST(AppPrivacyReport, NonAppInitiatedRequest)
 
 TEST(AppPrivacyReport, AppInitiatedRequestWithNavigation)
 {
+    TestWebKitAPI::HTTPServer server(TestWebKitAPI::HTTPServer::respondWithChallengeThenOK);
+
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectZero configuration:configuration.get()]);
-    NSString *appInitiatedURL = @"https://www.webkit.org";
-    NSString *nonAppInitiatedURL = @"https://www.apple.com";
+    NSString *appInitiatedURL = [NSString stringWithFormat:@"http://127.0.0.1:%d/", server.port()];
+    NSString *nonAppInitiatedURL = [NSString stringWithFormat:@"http://localhost:%d/", server.port()];
 
     NSMutableURLRequest *appInitiatedRequest = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:appInitiatedURL]];
     appInitiatedRequest.attribution = NSURLRequestAttributionDeveloper;
@@ -244,7 +251,7 @@ TEST(AppPrivacyReport, NonAppInitiatedRequestWithSubFrame)
     TestWebKitAPI::Util::run(&isDone);
 }
 
-static const char* mainSWBytes = R"SWRESOURCE(
+static constexpr auto mainSWBytes = R"SWRESOURCE(
 <script>
 try {
     navigator.serviceWorker.register('/sw.js').then(function(reg) {
@@ -264,7 +271,7 @@ try {
     alert('Exception: ' + e);
 }
 </script>
-)SWRESOURCE";
+)SWRESOURCE"_s;
 
 enum class ResponseType { Synthetic, Fetched };
 enum class IsAppInitiated : bool { No, Yes };
@@ -276,24 +283,24 @@ static void runTest(ResponseType responseType, IsAppInitiated isAppInitiated)
     }];
     TestWebKitAPI::Util::run(&isDone);
 
-    const char* js = nullptr;
+    ASCIILiteral js;
     const char* expectedAlert = nullptr;
 
     switch (responseType) {
     case ResponseType::Synthetic:
-        js = "self.addEventListener('fetch', (event) => { event.respondWith(new Response(new Blob(['<script>alert(\"synthetic response\")</script>'], {type: 'text/html'}))); })";
+        js = "self.addEventListener('fetch', (event) => { event.respondWith(new Response(new Blob(['<script>alert(\"synthetic response\")</script>'], {type: 'text/html'}))); })"_s;
         expectedAlert = "synthetic response";
         break;
     case ResponseType::Fetched:
-        js = "self.addEventListener('fetch', (event) => { event.respondWith(fetch('/fetched.html')) });";
+        js = "self.addEventListener('fetch', (event) => { event.respondWith(fetch('/fetched.html')) });"_s;
         expectedAlert = "fetched from server";
         break;
     }
 
     TestWebKitAPI::HTTPServer server({
-        { "/", { mainSWBytes } },
-        { "/sw.js", { {{ "Content-Type", "application/javascript" }}, js } },
-        { "/fetched.html", { "<script>alert('fetched from server')</script>" } },
+        { "/"_s, { mainSWBytes } },
+        { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, js } },
+        { "/fetched.html"_s, { "<script>alert('fetched from server')</script>"_s } },
     }, TestWebKitAPI::HTTPServer::Protocol::Https);
 
     auto webView = adoptNS([WKWebView new]);
@@ -369,13 +376,13 @@ TEST(AppPrivacyReport, MultipleWebViewsWithSharedServiceWorker)
     }];
     TestWebKitAPI::Util::run(&isDone);
 
-    const char* js = "self.addEventListener('fetch', (event) => { event.respondWith(fetch('/fetched.html')) })";
+    constexpr auto js = "self.addEventListener('fetch', (event) => { event.respondWith(fetch('/fetched.html')) })"_s;
     const char* expectedAlert = "fetched from server";
 
     TestWebKitAPI::HTTPServer server({
-        { "/", { mainSWBytes } },
-        { "/sw.js", { {{ "Content-Type", "application/javascript" }}, js } },
-        { "/fetched.html", { "<script>alert('fetched from server')</script>" } },
+        { "/"_s, { mainSWBytes } },
+        { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, js } },
+        { "/fetched.html"_s, { "<script>alert('fetched from server')</script>"_s } },
     }, TestWebKitAPI::HTTPServer::Protocol::Https);
 
     auto webView1 = adoptNS([WKWebView new]);
@@ -452,12 +459,12 @@ static void softUpdateTest(IsAppInitiated isAppInitiated)
     webView2.get().navigationDelegate = delegate.get();
 
     uint16_t serverPort;
-    static const char* js = "self.addEventListener('fetch', (event) => { event.respondWith(new Response(new Blob(['<script>alert(\"synthetic response\")</script>'], {type: 'text/html'}))); })";
+    static constexpr auto js = "self.addEventListener('fetch', (event) => { event.respondWith(new Response(new Blob(['<script>alert(\"synthetic response\")</script>'], {type: 'text/html'}))); })"_s;
 
     {
         TestWebKitAPI::HTTPServer server1({
-            { "/", { mainSWBytes } },
-            { "/sw.js", { {{ "Content-Type", "application/javascript" }}, js } },
+            { "/"_s, { mainSWBytes } },
+            { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, js } },
         }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, testIdentity());
         serverPort = server1.port();
 
@@ -476,8 +483,8 @@ static void softUpdateTest(IsAppInitiated isAppInitiated)
 
     {
         TestWebKitAPI::HTTPServer server2({
-            { "/", { mainSWBytes } },
-            { "/sw.js", { {{ "Content-Type", "application/javascript" }}, js } }
+            { "/"_s, { mainSWBytes } },
+            { "/sw.js"_s, { {{ "Content-Type"_s, "application/javascript"_s }}, js } }
         }, TestWebKitAPI::HTTPServer::Protocol::Https, nullptr, testIdentity2(), serverPort);
 
         NSMutableURLRequest *request2 = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithFormat:@"https://127.0.0.1:%d/", server2.port()]]];
@@ -522,10 +529,12 @@ TEST(AppPrivacyReport, NonAppInitiatedRequestWithServiceWorkerSoftUpdate)
 
 static void runWebProcessPlugInTest(IsAppInitiated isAppInitiated)
 {
+    TestWebKitAPI::HTTPServer server(TestWebKitAPI::HTTPServer::respondWithChallengeThenOK);
+
     WKWebViewConfiguration *configuration = [WKWebViewConfiguration _test_configurationWithTestPlugInClassName:@"AppPrivacyReportPlugIn"];
     auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration]);
 
-    NSString *url = @"https://webkit.org";
+    NSString *url = [NSString stringWithFormat:@"http://127.0.0.1:%d/", server.port()];
 
     __block bool isDone = false;
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url]];
@@ -558,7 +567,7 @@ TEST(AppPrivacyReport, WebProcessPluginTestNonAppInitiated)
 
 #if WK_HAVE_C_SPI
 
-static const char* mainSWBytesDefaultValue = R"SWRESOURCE(
+static constexpr auto mainSWBytesDefaultValue = R"SWRESOURCE(
 <script>
 
 function log(msg)
@@ -589,9 +598,9 @@ try {
     log('Exception: ' + e);
 }
 </script>
-)SWRESOURCE";
+)SWRESOURCE"_s;
 
-static const char* scriptBytesDefaultValue = R"SWRESOURCE(
+static constexpr auto scriptBytesDefaultValue = R"SWRESOURCE(
 self.addEventListener('message', async (event) => {
     if (!self.internals) {
         event.source.postMessage('No internals');
@@ -620,7 +629,7 @@ async function queryAppPrivacyReportValue(event, haveSentInitialMessage)
     event.source.postMessage('non app initiated');
 }
 
-)SWRESOURCE";
+)SWRESOURCE"_s;
 
 
 static String expectedMessage;
@@ -666,8 +675,8 @@ TEST(AppPrivacyReport, RegisterServiceWorkerClientUpdatesAppInitiatedValue)
     webView2.get().navigationDelegate = delegate.get();
 
     TestWebKitAPI::HTTPServer server({
-        { "/main.html", { mainSWBytesDefaultValue } },
-        { "/sw.js", { { { "Content-Type", "application/javascript" } }, scriptBytesDefaultValue } },
+        { "/main.html"_s, { mainSWBytesDefaultValue } },
+        { "/sw.js"_s, { { { "Content-Type"_s, "application/javascript"_s } }, scriptBytesDefaultValue } },
     });
 
     // Load WebView with an app initiated request. We expect the ServiceWorkerThreadProxy to be app initiated.

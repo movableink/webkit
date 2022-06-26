@@ -44,6 +44,7 @@ void NetworkLoadMetrics::updateFromFinalMetrics(const NetworkLoadMetrics& other)
     MonotonicTime originalRequestStart = requestStart;
     MonotonicTime originalResponseStart = responseStart;
     MonotonicTime originalResponseEnd = responseEnd;
+    MonotonicTime originalWorkerStart = workerStart;
 
     *this = other;
 
@@ -67,6 +68,8 @@ void NetworkLoadMetrics::updateFromFinalMetrics(const NetworkLoadMetrics& other)
         responseStart = originalResponseStart;
     if (!responseEnd)
         responseEnd = originalResponseEnd;
+    if (!workerStart)
+        workerStart = originalWorkerStart;
 
     if (!responseEnd)
         responseEnd = MonotonicTime::now();
@@ -91,6 +94,7 @@ Ref<AdditionalNetworkLoadMetricsForWebInspector> AdditionalNetworkLoadMetricsFor
     copy->requestHeaderBytesSent = requestHeaderBytesSent;
     copy->responseHeaderBytesReceived = responseHeaderBytesReceived;
     copy->requestBodyBytesSent = requestBodyBytesSent;
+    copy->isProxyConnection = isProxyConnection;
     return copy;
 }
 
@@ -108,6 +112,7 @@ NetworkLoadMetrics NetworkLoadMetrics::isolatedCopy() const
     copy.requestStart = requestStart.isolatedCopy();
     copy.responseStart = responseStart.isolatedCopy();
     copy.responseEnd = responseEnd.isolatedCopy();
+    copy.workerStart = workerStart.isolatedCopy();
 
     copy.protocol = protocol.isolatedCopy();
 

@@ -40,7 +40,7 @@
 #import <wtf/text/WTFString.h>
 
 #if HAVE(SAFARI_SERVICES_FRAMEWORK)
-#import <SafariServices/SSReadingList.h>
+#import "SafariServicesSPI.h"
 SOFT_LINK_FRAMEWORK(SafariServices);
 SOFT_LINK_CLASS(SafariServices, SSReadingList);
 #endif
@@ -63,7 +63,7 @@ static UIActionIdentifier const WKElementActionTypeDownloadIdentifier = @"WKElem
 UIActionIdentifier const WKElementActionTypeToggleShowLinkPreviewsIdentifier = @"WKElementActionTypeToggleShowLinkPreviews";
 static UIActionIdentifier const WKElementActionTypeImageExtractionIdentifier = @"WKElementActionTypeImageExtraction";
 static UIActionIdentifier const WKElementActionTypeRevealImageIdentifier = @"WKElementActionTypeRevealImage";
-static UIActionIdentifier const WKElementActionTypeCopyCroppedImageIdentifier = @"WKElementActionTypeCopyCroppedImage";
+static UIActionIdentifier const WKElementActionTypeCopySubjectIdentifier = @"WKElementActionTypeCopySubject";
 
 static NSString * const webkitShowLinkPreviewsPreferenceKey = @"WebKitShowLinkPreviews";
 static NSString * const webkitShowLinkPreviewsPreferenceChangedNotification = @"WebKitShowLinkPreviewsPreferenceChanged";
@@ -140,7 +140,7 @@ static void addToReadingList(NSURL *targetURL, NSString *title)
         };
         break;
     case _WKElementActionTypeSaveImage:
-        title = WEB_UI_STRING("Add to Photos", "Title for Add to Photos action button");
+        title = WEB_UI_STRING("Save to Photos", "Title for Save to Photos action button");
         handler = ^(WKActionSheetAssistant *assistant, _WKActivatedElementInfo *actionInfo) {
             [assistant handleElementActionWithType:type element:actionInfo needsInteraction:YES];
         };
@@ -180,7 +180,7 @@ static void addToReadingList(NSURL *targetURL, NSString *title)
         break;
     case _WKElementActionTypeCopyCroppedImage:
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-        title = WebCore::contextMenuItemTagCopyCroppedImage();
+        title = WebCore::contextMenuItemTagCopySubject();
         handler = ^(WKActionSheetAssistant *assistant, _WKActivatedElementInfo *actionInfo) {
             [assistant handleElementActionWithType:type element:actionInfo needsInteraction:YES];
         };
@@ -263,12 +263,12 @@ static void addToReadingList(NSURL *targetURL, NSString *title)
 #endif
     case _WKElementActionTypeRevealImage:
 #if ENABLE(IMAGE_ANALYSIS)
-        return [UIImage systemImageNamed:@"info.circle"];
+        return [UIImage _systemImageNamed:@"info.circle.and.sparkles"];
 #else
         return nil;
 #endif
     case _WKElementActionTypeCopyCroppedImage:
-        return [UIImage systemImageNamed:@"person.fill.viewfinder"];
+        return [UIImage _systemImageNamed:@"circle.dashed.rectangle"];
     }
 }
 
@@ -304,7 +304,7 @@ static UIActionIdentifier elementActionTypeToUIActionIdentifier(_WKElementAction
     case _WKElementActionTypeRevealImage:
         return WKElementActionTypeRevealImageIdentifier;
     case _WKElementActionTypeCopyCroppedImage:
-        return WKElementActionTypeCopyCroppedImageIdentifier;
+        return WKElementActionTypeCopySubjectIdentifier;
     }
 }
 
@@ -338,7 +338,7 @@ static _WKElementActionType uiActionIdentifierToElementActionType(UIActionIdenti
         return _WKElementActionTypeImageExtraction;
     if ([identifier isEqualToString:WKElementActionTypeRevealImageIdentifier])
         return _WKElementActionTypeRevealImage;
-    if ([identifier isEqualToString:WKElementActionTypeCopyCroppedImageIdentifier])
+    if ([identifier isEqualToString:WKElementActionTypeCopySubjectIdentifier])
         return _WKElementActionTypeCopyCroppedImage;
     return _WKElementActionTypeCustom;
 }

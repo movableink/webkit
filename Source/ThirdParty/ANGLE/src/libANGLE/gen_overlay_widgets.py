@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 
 # Copyright 2019 The ANGLE Project Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -10,6 +10,7 @@
 #  NOTE: don't run this script directly. Run scripts/run_code_generation.py.
 
 import json
+import os
 import sys
 
 OUT_SOURCE_FILE_NAME = 'Overlay_autogen.cpp'
@@ -92,16 +93,17 @@ const int32_t offsetY = {offset_y};
 const int32_t width = {width};
 const int32_t height = {height};
 
-widget->{subwidget}type      = WidgetType::{type};
-widget->{subwidget}fontSize  = fontSize;
-widget->{subwidget}coords[0] = {coord0};
-widget->{subwidget}coords[1] = {coord1};
-widget->{subwidget}coords[2] = {coord2};
-widget->{subwidget}coords[3] = {coord3};
-widget->{subwidget}color[0]  = {color_r}f;
-widget->{subwidget}color[1]  = {color_g}f;
-widget->{subwidget}color[2]  = {color_b}f;
-widget->{subwidget}color[3]  = {color_a}f;
+widget->{subwidget}type          = WidgetType::{type};
+widget->{subwidget}fontSize      = fontSize;
+widget->{subwidget}coords[0]     = {coord0};
+widget->{subwidget}coords[1]     = {coord1};
+widget->{subwidget}coords[2]     = {coord2};
+widget->{subwidget}coords[3]     = {coord3};
+widget->{subwidget}color[0]      = {color_r}f;
+widget->{subwidget}color[1]      = {color_g}f;
+widget->{subwidget}color[2]      = {color_b}f;
+widget->{subwidget}color[3]      = {color_a}f;
+widget->{subwidget}matchToWidget = {match_to};
 }}
 """
 
@@ -148,6 +150,7 @@ class OverlayWidget:
     def extract_common(self, properties):
         self.color = properties['color']
         self.coords = properties['coords']
+        self.match_to = properties.get('match_to', None)
         if is_graph_type(self.type):
             self.bar_width = properties['bar_width']
             self.height = properties['height']
@@ -160,7 +163,7 @@ class OverlayWidget:
 
 def is_negative_coord(coords, axis, widgets_so_far):
 
-    if isinstance(coords[axis], unicode):
+    if isinstance(coords[axis], str):
         coord_split = coords[axis].split('.')
         # The coordinate is in the form other_widget.edge.mode
         # We simply need to know if other_widget's coordinate is negative or not.
@@ -196,7 +199,7 @@ def get_offset_helper(widget, axis, smaller_coord_side):
     # The case for the Y axis is similar, with the edge values being top or bottom.
 
     coord = widget.coords[axis]
-    if not isinstance(coord, unicode):
+    if not isinstance(coord, str):
         is_left = coord >= 0
         return coord, is_left
 
@@ -279,6 +282,9 @@ def generate_widget_init_helper(widget, is_graph_description=False):
     coord0, coord2 = get_bounding_box_coords('offsetX', 'width', offset_x_is_left, is_left_aligned)
     coord1, coord3 = get_bounding_box_coords('offsetY', 'height', offset_y_is_top, is_top_aligned)
 
+    match_to = 'nullptr' if widget.match_to is None else \
+               'mState.mOverlayWidgets[WidgetId::' + widget.match_to + '].get()'
+
     return WIDGET_INIT_TEMPLATE.format(
         subwidget='description.' if is_graph_description else '',
         offset_x=offset_x,
@@ -294,7 +300,8 @@ def generate_widget_init_helper(widget, is_graph_description=False):
         color_r=color[0],
         color_g=color[1],
         color_b=color[2],
-        color_a=color[3])
+        color_a=color[3],
+        match_to=match_to)
 
 
 def generate_widget_init(widget):
@@ -345,7 +352,7 @@ def main():
     with open(OUT_SOURCE_FILE_NAME, 'w') as outfile:
         outfile.write(
             OUT_SOURCE_FILE_TEMPLATE.format(
-                script_name=__file__,
+                script_name=os.path.basename(__file__),
                 input_file_name=IN_JSON_FILE_NAME,
                 out_file_name=OUT_SOURCE_FILE_NAME,
                 init_widgets='\n'.join(init_widgets)))
@@ -357,7 +364,7 @@ def main():
 
         outfile.write(
             OUT_HEADER_FILE_TEMPLATE.format(
-                script_name=__file__,
+                script_name=os.path.basename(__file__),
                 input_file_name=IN_JSON_FILE_NAME,
                 out_file_name=OUT_SOURCE_FILE_NAME,
                 widget_ids=''.join(widget_ids),

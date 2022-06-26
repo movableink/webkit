@@ -47,8 +47,10 @@ public:
     bool hasDataInMemory() const;
     void clearData();
     void connectionClosed(IPC::Connection::UniqueID);
+    void removeNamespace(StorageNamespaceIdentifier);
 
     StorageAreaIdentifier connectToSessionStorageArea(IPC::Connection::UniqueID, StorageAreaMapIdentifier, const WebCore::ClientOrigin&, StorageNamespaceIdentifier);
+    void cancelConnectToSessionStorageArea(IPC::Connection::UniqueID, StorageNamespaceIdentifier);
     void disconnectFromStorageArea(IPC::Connection::UniqueID, StorageAreaIdentifier);
     void cloneStorageArea(IPC::Connection::UniqueID, StorageNamespaceIdentifier, StorageNamespaceIdentifier);
 

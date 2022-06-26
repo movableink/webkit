@@ -25,10 +25,10 @@
 #include "config.h"
 #include "TestWithSemaphore.h"
 
-#include "Decoder.h"
-#include "HandleMessage.h"
-#include "IPCSemaphore.h"
-#include "TestWithSemaphoreMessages.h"
+#include "Decoder.h" // NOLINT
+#include "HandleMessage.h" // NOLINT
+#include "IPCSemaphore.h" // NOLINT
+#include "TestWithSemaphoreMessages.h" // NOLINT
 
 #if ENABLE(IPC_TESTING_API)
 #include "JSIPCBinding.h"
@@ -53,12 +53,6 @@ void ReceiveSemaphore::callReply(IPC::Decoder& decoder, CompletionHandler<void(I
 void ReceiveSemaphore::cancelReply(CompletionHandler<void(IPC::Semaphore&&)>&& completionHandler)
 {
     completionHandler(IPC::AsyncReplyError<IPC::Semaphore>::create());
-}
-
-void ReceiveSemaphore::send(UniqueRef<IPC::Encoder>&& encoder, IPC::Connection& connection, const IPC::Semaphore& r0)
-{
-    encoder.get() << r0;
-    connection.sendSyncReply(WTFMove(encoder));
 }
 
 } // namespace TestWithSemaphore

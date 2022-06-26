@@ -92,6 +92,9 @@ namespace JSC {
     macro(values) \
     macro(get) \
     macro(set) \
+    macro(clear) \
+    macro(delete) \
+    macro(size) \
     macro(shift) \
     macro(Int8Array) \
     macro(Int16Array) \
@@ -191,6 +194,18 @@ namespace JSC {
     macro(sentinelString) \
     macro(createRemoteFunction) \
     macro(isRemoteFunction) \
+    macro(arraySort) \
+    macro(jsonParse) \
+    macro(jsonStringify) \
+    macro(String) \
+    macro(substr) \
+    macro(endsWith) \
+    macro(getOwnPropertyDescriptor) \
+    macro(getOwnPropertyNames) \
+    macro(getOwnPropertySymbols) \
+    macro(hasOwn) \
+    macro(indexOf) \
+    macro(pop) \
 
 
 namespace Symbols {

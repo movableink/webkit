@@ -25,9 +25,9 @@
  */
 
 #include "config.h"
-#include "GraphicsContextGLTextureMapper.h"
+#include "GraphicsContextGLTextureMapperANGLE.h"
 
-#if ENABLE(WEBGL) && USE(ANGLE) && USE(TEXTURE_MAPPER)
+#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(NICOSIA) && USE(ANGLE)
 
 #include "ANGLEHeaders.h"
 #include "ANGLEUtilities.h"
@@ -35,16 +35,12 @@
 #include "PixelBuffer.h"
 #include "PlatformLayerDisplayDelegate.h"
 
-#if USE(NICOSIA)
-#include "GBMDevice.h"
-#include "NicosiaGCGLANGLELayer.h"
-
-#include <fcntl.h>
-#include <gbm.h>
-#else
 #include "GLContext.h"
 #include "PlatformDisplay.h"
 #include "TextureMapperGCGLPlatformLayer.h"
+
+#if USE(GSTREAMER) && ENABLE(MEDIA_STREAM)
+#include "VideoFrameGStreamer.h"
 #endif
 
 namespace WebCore {
@@ -54,11 +50,116 @@ GraphicsContextGLANGLE::GraphicsContextGLANGLE(GraphicsContextGLAttributes attri
 {
 }
 
-bool GraphicsContextGLTextureMapper::platformInitializeContext()
+GraphicsContextGLANGLE::~GraphicsContextGLANGLE()
 {
-    GraphicsContextGLAttributes attributes = contextAttributes();
+    bool success = makeContextCurrent();
+    ASSERT_UNUSED(success, success);
+    if (m_texture)
+        GL_DeleteTextures(1, &m_texture);
+
+    auto attributes = contextAttributes();
+
+    if (attributes.antialias) {
+        GL_DeleteRenderbuffers(1, &m_multisampleColorBuffer);
+        if (attributes.stencil || attributes.depth)
+            GL_DeleteRenderbuffers(1, &m_multisampleDepthStencilBuffer);
+        GL_DeleteFramebuffers(1, &m_multisampleFBO);
+    } else if (attributes.stencil || attributes.depth) {
+        if (m_depthStencilBuffer)
+            GL_DeleteRenderbuffers(1, &m_depthStencilBuffer);
+    }
+    GL_DeleteFramebuffers(1, &m_fbo);
+}
+
+GCGLDisplay GraphicsContextGLANGLE::platformDisplay() const
+{
+    return m_displayObj;
+}
+
+GCGLConfig GraphicsContextGLANGLE::platformConfig() const
+{
+    return m_configObj;
+}
+
+bool GraphicsContextGLANGLE::makeContextCurrent()
+{
+    if (EGL_GetCurrentContext() == m_contextObj)
+        return true;
+    return !!EGL_MakeCurrent(m_displayObj, EGL_NO_SURFACE, EGL_NO_SURFACE, m_contextObj);
+}
+
+void GraphicsContextGLANGLE::checkGPUStatus()
+{
+}
+
+void GraphicsContextGLANGLE::platformReleaseThreadResources()
+{
+}
+
+RefPtr<PixelBuffer> GraphicsContextGLANGLE::readCompositedResults()
+{
+    return readRenderingResults();
+}
+
+RefPtr<GraphicsContextGL> createWebProcessGraphicsContextGL(const GraphicsContextGLAttributes& attributes)
+{
+    return GraphicsContextGLTextureMapperANGLE::create(GraphicsContextGLAttributes { attributes });
+}
+
+RefPtr<GraphicsContextGLTextureMapperANGLE> GraphicsContextGLTextureMapperANGLE::create(GraphicsContextGLAttributes&& attributes)
+{
+    auto context = adoptRef(*new GraphicsContextGLTextureMapperANGLE(WTFMove(attributes)));
+    if (!context->initialize())
+        return nullptr;
+    return context;
+}
+
+GraphicsContextGLTextureMapperANGLE::GraphicsContextGLTextureMapperANGLE(GraphicsContextGLAttributes&& attributes)
+    : GraphicsContextGLANGLE(WTFMove(attributes))
+{
+}
+
+GraphicsContextGLTextureMapperANGLE::~GraphicsContextGLTextureMapperANGLE()
+{
+    bool success = makeContextCurrent();
+    ASSERT_UNUSED(success, success);
+
+    if (m_compositorTexture)
+        GL_DeleteTextures(1, &m_compositorTexture);
+#if USE(COORDINATED_GRAPHICS)
+    if (m_intermediateTexture)
+        GL_DeleteTextures(1, &m_intermediateTexture);
+#endif
+}
+
+RefPtr<GraphicsLayerContentsDisplayDelegate> GraphicsContextGLTextureMapperANGLE::layerContentsDisplayDelegate()
+{
+    return m_layerContentsDisplayDelegate;
+}
+
+#if ENABLE(VIDEO)
+bool GraphicsContextGLTextureMapperANGLE::copyTextureFromMedia(MediaPlayer&, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool)
+{
+    // FIXME: Implement copy-free (or at least, software copy-free) texture transfer via dmabuf.
+    return false;
+}
+#endif
+
+#if ENABLE(MEDIA_STREAM)
+RefPtr<VideoFrame> GraphicsContextGLTextureMapperANGLE::paintCompositedResultsToVideoFrame()
+{
+#if USE(GSTREAMER)
+    if (auto pixelBuffer = readCompositedResults())
+        return VideoFrameGStreamer::createFromPixelBuffer(pixelBuffer.releaseNonNull());
+#endif
+    return nullptr;
+}
+#endif
+
+bool GraphicsContextGLTextureMapperANGLE::platformInitializeContext()
+{
 #if ENABLE(WEBGL2)
-    m_isForWebGL2 = attributes.webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
+    m_isForWebGL2 = contextAttributes().webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
 #endif
 
     Vector<EGLint> displayAttributes {
@@ -139,11 +240,7 @@ bool GraphicsContextGLTextureMapper::platformInitializeContext()
     }
     eglContextAttributes.append(EGL_NONE);
 
-#if USE(NICOSIA)
-    auto sharingContext = EGL_NO_CONTEXT;
-#else
     auto sharingContext = PlatformDisplay::sharedDisplayForCompositing().sharingGLContext()->platformContext();
-#endif
     m_contextObj = EGL_CreateContext(m_displayObj, m_configObj, sharingContext, eglContextAttributes.data());
     if (m_contextObj == EGL_NO_CONTEXT) {
         LOG(WebGL, "EGLContext Initialization failed.");
@@ -157,27 +254,16 @@ bool GraphicsContextGLTextureMapper::platformInitializeContext()
     return true;
 }
 
-bool GraphicsContextGLTextureMapper::platformInitialize()
+bool GraphicsContextGLTextureMapperANGLE::platformInitialize()
 {
-#if USE(NICOSIA)
-    m_nicosiaLayer = makeUnique<Nicosia::GCGLANGLELayer>(*this);
-    m_layerContentsDisplayDelegate = PlatformLayerDisplayDelegate::create(&m_nicosiaLayer->contentLayer());
-
-    const auto& gbmDevice = GBMDevice::singleton();
-    if (gbmDevice.device()) {
-        m_textureBacking = makeUnique<EGLImageBacking>(platformDisplay());
-        m_compositorTextureBacking = makeUnique<EGLImageBacking>(platformDisplay());
-        m_intermediateTextureBacking = makeUnique<EGLImageBacking>(platformDisplay());
-    }
-#else
     m_texmapLayer = makeUnique<TextureMapperGCGLPlatformLayer>(*this);
     m_layerContentsDisplayDelegate = PlatformLayerDisplayDelegate::create(m_texmapLayer.get());
-#endif
+
     bool success = makeContextCurrent();
     ASSERT_UNUSED(success, success);
 
     // We require this extension to render into the dmabuf-backed EGLImage.
-    RELEASE_ASSERT(supportsExtension("GL_OES_EGL_image"));
+    RELEASE_ASSERT(supportsExtension("GL_OES_EGL_image"_s));
     GL_RequestExtensionANGLE("GL_OES_EGL_image");
 
     validateAttributes();
@@ -236,141 +322,31 @@ bool GraphicsContextGLTextureMapper::platformInitialize()
     return GraphicsContextGLANGLE::platformInitialize();
 }
 
-#if USE(NICOSIA)
-GraphicsContextGLANGLE::EGLImageBacking::EGLImageBacking(GCGLDisplay display)
-    : m_display(display)
-    , m_image(EGL_NO_IMAGE)
+void GraphicsContextGLTextureMapperANGLE::prepareTexture()
 {
-}
+    ASSERT(!m_layerComposited);
 
-GraphicsContextGLANGLE::EGLImageBacking::~EGLImageBacking()
-{
-    releaseResources();
-}
+    if (contextAttributes().antialias)
+        resolveMultisamplingIfNecessary();
 
-uint32_t GraphicsContextGLANGLE::EGLImageBacking::format() const
-{
-    if (m_BO)
-        return gbm_bo_get_format(m_BO);
-    return 0;
-}
-
-uint32_t GraphicsContextGLANGLE::EGLImageBacking::stride() const
-{
-    if (m_BO)
-        return gbm_bo_get_stride(m_BO);
-    return 0;
-}
-
-void GraphicsContextGLANGLE::EGLImageBacking::releaseResources()
-{
-    if (m_BO) {
-        gbm_bo_destroy(m_BO);
-        m_BO = nullptr;
-    }
-    if (m_image) {
-        EGL_DestroyImageKHR(m_display, m_image);
-        m_image = EGL_NO_IMAGE;
-    }
-    if (m_FD >= 0) {
-        close(m_FD);
-        m_FD = -1;
-    }
-}
-
-bool GraphicsContextGLANGLE::EGLImageBacking::isReleased()
-{
-    return !m_BO;
-}
-
-bool GraphicsContextGLANGLE::EGLImageBacking::reset(int width, int height, bool hasAlpha)
-{
-    releaseResources();
-
-    if (!width || !height)
-        return false;
-
-    const auto& gbmDevice = GBMDevice::singleton();
-    m_BO = gbm_bo_create(gbmDevice.device(), width, height, hasAlpha ? GBM_BO_FORMAT_ARGB8888 : GBM_BO_FORMAT_XRGB8888, GBM_BO_USE_RENDERING);
-    if (m_BO) {
-        m_FD = gbm_bo_get_fd(m_BO);
-        if (m_FD >= 0) {
-            EGLint imageAttributes[] = {
-                EGL_WIDTH, width,
-                EGL_HEIGHT, height,
-                EGL_LINUX_DRM_FOURCC_EXT, static_cast<EGLint>(gbm_bo_get_format(m_BO)),
-                EGL_DMA_BUF_PLANE0_FD_EXT, m_FD,
-                EGL_DMA_BUF_PLANE0_PITCH_EXT, static_cast<EGLint>(gbm_bo_get_stride(m_BO)),
-                EGL_DMA_BUF_PLANE0_OFFSET_EXT, 0,
-                EGL_NONE
-            };
-            m_image = EGL_CreateImageKHR(m_display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, (EGLClientBuffer)nullptr, imageAttributes);
-            if (m_image)
-                return true;
-        }
-    }
-
-    releaseResources();
-    return false;
-}
-#endif
-
-GraphicsContextGLANGLE::~GraphicsContextGLANGLE()
-{
-    bool success = makeContextCurrent();
-    ASSERT_UNUSED(success, success);
-    if (m_texture)
-        GL_DeleteTextures(1, &m_texture);
-    if (m_compositorTexture)
-        GL_DeleteTextures(1, &m_compositorTexture);
-
-    auto attributes = contextAttributes();
-
-    if (attributes.antialias) {
-        GL_DeleteRenderbuffers(1, &m_multisampleColorBuffer);
-        if (attributes.stencil || attributes.depth)
-            GL_DeleteRenderbuffers(1, &m_multisampleDepthStencilBuffer);
-        GL_DeleteFramebuffers(1, &m_multisampleFBO);
-    } else if (attributes.stencil || attributes.depth) {
-        if (m_depthStencilBuffer)
-            GL_DeleteRenderbuffers(1, &m_depthStencilBuffer);
-    }
-    GL_DeleteFramebuffers(1, &m_fbo);
+    std::swap(m_texture, m_compositorTexture);
 #if USE(COORDINATED_GRAPHICS)
-    GL_DeleteTextures(1, &m_intermediateTexture);
+    std::swap(m_texture, m_intermediateTexture);
 #endif
+
+    GL_BindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+    GL_FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, drawingBufferTextureTarget(), m_texture, 0);
+    GL_Flush();
+
+    if (m_state.boundDrawFBO != m_fbo)
+        GL_BindFramebuffer(GraphicsContextGL::FRAMEBUFFER, m_state.boundDrawFBO);
 }
 
-GCGLDisplay GraphicsContextGLANGLE::platformDisplay() const
-{
-    return m_displayObj;
-}
-
-GCGLConfig GraphicsContextGLANGLE::platformConfig() const
-{
-    return m_configObj;
-}
-
-bool GraphicsContextGLANGLE::makeContextCurrent()
-{
-    if (EGL_GetCurrentContext() == m_contextObj)
-        return true;
-    return EGL_MakeCurrent(m_displayObj, EGL_NO_SURFACE, EGL_NO_SURFACE, m_contextObj);
-}
-
-void GraphicsContextGLANGLE::checkGPUStatus()
+void GraphicsContextGLTextureMapperANGLE::setContextVisibility(bool)
 {
 }
 
-void GraphicsContextGLTextureMapper::setContextVisibility(bool)
-{
-}
-
-void GraphicsContextGLTextureMapper::prepareForDisplay()
-{
-}
-
-bool GraphicsContextGLTextureMapper::reshapeDisplayBufferBacking()
+bool GraphicsContextGLTextureMapperANGLE::reshapeDisplayBufferBacking()
 {
     auto attrs = contextAttributes();
     const auto size = getInternalFramebufferSize();
@@ -379,55 +355,30 @@ bool GraphicsContextGLTextureMapper::reshapeDisplayBufferBacking()
     GLuint colorFormat = attrs.alpha ? GL_RGBA : GL_RGB;
     GLenum textureTarget = drawingBufferTextureTarget();
     GLuint internalColorFormat = textureTarget == GL_TEXTURE_2D ? colorFormat : m_internalColorFormat;
-
-#if USE(COORDINATED_GRAPHICS)
-    if (m_textureBacking)
-        m_textureBacking->reset(width, height, attrs.alpha);
-    if (m_compositorTextureBacking)
-        m_compositorTextureBacking->reset(width, height, attrs.alpha);
-    if (m_intermediateTextureBacking)
-        m_intermediateTextureBacking->reset(width, height, attrs.alpha);
-#endif
-
     ScopedRestoreTextureBinding restoreBinding(drawingBufferTextureTargetQueryForDrawingTarget(textureTarget), textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
-#if USE(COORDINATED_GRAPHICS)
-    if (m_compositorTexture) {
-        GL_BindTexture(textureTarget, m_compositorTexture);
-        if (m_compositorTextureBacking && m_compositorTextureBacking->image())
-            GL_EGLImageTargetTexture2DOES(textureTarget, m_compositorTextureBacking->image());
-        else
-            GL_TexImage2D(textureTarget, 0, internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
-        GL_BindTexture(textureTarget, m_intermediateTexture);
-        if (m_intermediateTextureBacking && m_intermediateTextureBacking->image())
-            GL_EGLImageTargetTexture2DOES(textureTarget, m_intermediateTextureBacking->image());
-        else
-            GL_TexImage2D(textureTarget, 0, internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
-    }
-    GL_BindTexture(textureTarget, m_texture);
-    if (m_textureBacking && m_textureBacking->image())
-        GL_EGLImageTargetTexture2DOES(textureTarget, m_textureBacking->image());
-    else
-        GL_TexImage2D(textureTarget, 0, internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
-#else
+
     GL_BindTexture(textureTarget, m_compositorTexture);
     GL_TexImage2D(textureTarget, 0, internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
-    GL_BindTexture(textureTarget, m_texture);
+#if USE(COORDINATED_GRAPHICS)
+    GL_BindTexture(textureTarget, m_intermediateTexture);
     GL_TexImage2D(textureTarget, 0, internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
 #endif
+    GL_BindTexture(textureTarget, m_texture);
+    GL_TexImage2D(textureTarget, 0, internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
     GL_FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, textureTarget, m_texture, 0);
 
     return true;
 }
 
-void GraphicsContextGLANGLE::platformReleaseThreadResources()
+void GraphicsContextGLTextureMapperANGLE::prepareForDisplay()
 {
+    if (m_layerComposited || !makeContextCurrent())
+        return;
+
+    prepareTexture();
+    markLayerComposited();
 }
 
-std::optional<PixelBuffer> GraphicsContextGLANGLE::readCompositedResults()
-{
-    return readRenderingResults();
-}
+} // namespace WebCore
 
-}
-
-#endif
+#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(NICOSIA) && USE(ANGLE)

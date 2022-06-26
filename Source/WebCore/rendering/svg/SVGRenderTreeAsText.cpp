@@ -40,7 +40,6 @@
 #include "RenderSVGGradientStopInlines.h"
 #include "RenderSVGImage.h"
 #include "RenderSVGInlineText.h"
-#include "RenderSVGPath.h"
 #include "RenderSVGResourceClipperInlines.h"
 #include "RenderSVGResourceFilterInlines.h"
 #include "RenderSVGResourceLinearGradientInlines.h"
@@ -75,7 +74,7 @@ namespace WebCore {
  */
 class TextStreamSeparator {
 public:
-    TextStreamSeparator(const String& s)
+    TextStreamSeparator(UChar s)
         : m_separator(s)
         , m_needToSeparate(false)
     {
@@ -84,7 +83,7 @@ public:
 private:
     friend TextStream& operator<<(TextStream&, TextStreamSeparator&);
 
-    String m_separator;
+    UChar m_separator;
     bool m_needToSeparate;
 };
 
@@ -175,7 +174,7 @@ static void writeSVGPaintingResource(TextStream& ts, const RenderSVGResource& re
 
 static void writeSVGFillPaintingResource(TextStream& ts, const RenderElement& renderer, const RenderSVGResource& fillPaintingResource)
 {
-    TextStreamSeparator s(" ");
+    TextStreamSeparator s(' ');
     ts << " [fill={" << s;
     writeSVGPaintingResource(ts, fillPaintingResource);
 
@@ -187,7 +186,7 @@ static void writeSVGFillPaintingResource(TextStream& ts, const RenderElement& re
 
 static void writeSVGStrokePaintingResource(TextStream& ts, const RenderElement& renderer, const RenderSVGResource& strokePaintingResource, const SVGGraphicsElement& shape)
 {
-    TextStreamSeparator s(" ");
+    TextStreamSeparator s(' ');
     ts << " [stroke={" << s;
     writeSVGPaintingResource(ts, strokePaintingResource);
 
@@ -422,7 +421,7 @@ static void writeStandardPrefix(TextStream& ts, const RenderObject& object, Opti
     if (writeIndent == WriteIndentOrNot::Yes)
         ts << indent;
 
-    ts << object.renderName();
+    ts << object.renderName().characters();
 
     if (behavior.contains(RenderAsTextFlag::ShowAddresses))
         ts << " " << &object;
@@ -477,8 +476,7 @@ void writeSVGResourceContainer(TextStream& ts, const RenderSVGResourceContainer&
         // Creating a placeholder filter which is passed to the builder.
         FloatRect dummyRect;
         FloatSize dummyScale(1, 1);
-        SVGFilterBuilder builder;
-        auto dummyFilter = SVGFilter::create(filter.filterElement(), builder, RenderingMode::Unaccelerated, dummyScale, Filter::ClipOperation::Intersect, dummyRect, dummyRect);
+        auto dummyFilter = SVGFilter::create(filter.filterElement(), RenderingMode::Unaccelerated, dummyScale, Filter::ClipOperation::Intersect, dummyRect, dummyRect, NullGraphicsContext());
         if (dummyFilter) {
             TextStream::IndentScope indentScope(ts);
             dummyFilter->externalRepresentation(ts, FilterRepresentation::TestOutput);

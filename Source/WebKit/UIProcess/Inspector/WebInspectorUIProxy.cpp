@@ -505,10 +505,12 @@ void WebInspectorUIProxy::open()
     m_isVisible = true;
     m_inspectorPage->send(Messages::WebInspectorUI::SetIsVisible(m_isVisible));
 
-    if (m_isAttached)
+    if (m_isAttached && platformCanAttach(m_canAttach))
         platformAttach();
-    else
+    else {
+        m_isAttached = false;
         platformCreateFrontendWindow();
+    }
 
     platformBringToFront();
 }
@@ -609,11 +611,6 @@ void WebInspectorUIProxy::bringToFront()
         open();
 }
 
-void WebInspectorUIProxy::bringInspectedPageToFront()
-{
-    platformBringInspectedPageToFront();
-}
-
 void WebInspectorUIProxy::attachAvailabilityChanged(bool available)
 {
     bool previousCanAttach = m_canAttach;
@@ -638,6 +635,11 @@ void WebInspectorUIProxy::openURLExternally(const String& url)
 {
     if (m_inspectorClient)
         m_inspectorClient->openURLExternally(*this, url);
+}
+
+void WebInspectorUIProxy::revealFileExternally(const String& path)
+{
+    platformRevealFileExternally(path);
 }
 
 void WebInspectorUIProxy::inspectedURLChanged(const String& urlString)
@@ -705,28 +707,42 @@ void WebInspectorUIProxy::setDiagnosticLoggingAvailable(bool available)
 #endif
 }
 
-void WebInspectorUIProxy::save(const String& filename, const String& content, bool base64Encoded, bool forceSaveAs)
+void WebInspectorUIProxy::save(Vector<InspectorFrontendClient::SaveData>&& saveDatas, bool forceSaveAs)
 {
     if (!m_inspectedPage->preferences().developerExtrasEnabled())
         return;
 
-    ASSERT(!filename.isEmpty());
-    if (filename.isEmpty())
+    ASSERT(!saveDatas.isEmpty());
+    if (saveDatas.isEmpty())
         return;
 
-    platformSave(filename, content, base64Encoded, forceSaveAs);
+    ASSERT(!saveDatas[0].url.isEmpty());
+    if (saveDatas[0].url.isEmpty())
+        return;
+
+    platformSave(WTFMove(saveDatas), forceSaveAs);
 }
 
-void WebInspectorUIProxy::append(const String& filename, const String& content)
+void WebInspectorUIProxy::load(const String& path, CompletionHandler<void(const String&)>&& completionHandler)
 {
     if (!m_inspectedPage->preferences().developerExtrasEnabled())
         return;
 
-    ASSERT(!filename.isEmpty());
-    if (filename.isEmpty())
+    ASSERT(!path.isEmpty());
+    if (path.isEmpty())
         return;
 
-    platformAppend(filename, content);
+    platformLoad(path, WTFMove(completionHandler));
+}
+
+void WebInspectorUIProxy::pickColorFromScreen(CompletionHandler<void(const std::optional<WebCore::Color> &)>&& completionHandler)
+{
+    if (!m_inspectedPage->preferences().developerExtrasEnabled()) {
+        completionHandler({ });
+        return;
+    }
+
+    platformPickColorFromScreen(WTFMove(completionHandler));
 }
 
 bool WebInspectorUIProxy::shouldOpenAttached()
@@ -803,6 +819,11 @@ void WebInspectorUIProxy::platformSetForcedAppearance(InspectorFrontendClient::A
     notImplemented();
 }
 
+void WebInspectorUIProxy::platformRevealFileExternally(const String&)
+{
+    notImplemented();
+}
+
 void WebInspectorUIProxy::platformInspectedURLChanged(const String&)
 {
     notImplemented();
@@ -813,26 +834,21 @@ void WebInspectorUIProxy::platformShowCertificate(const CertificateInfo&)
     notImplemented();
 }
 
-void WebInspectorUIProxy::platformSave(const String& suggestedURL, const String& content, bool base64Encoded, bool forceSaveDialog)
+void WebInspectorUIProxy::platformSave(Vector<WebCore::InspectorFrontendClient::SaveData>&&, bool /* forceSaveAs */)
 {
     notImplemented();
 }
 
-void WebInspectorUIProxy::platformAppend(const String& suggestedURL, const String& content)
+void WebInspectorUIProxy::platformLoad(const String& path, CompletionHandler<void(const String&)>&& completionHandler)
 {
     notImplemented();
+    completionHandler(nullString());
 }
 
-unsigned WebInspectorUIProxy::platformInspectedWindowHeight()
+void WebInspectorUIProxy::platformPickColorFromScreen(CompletionHandler<void(const std::optional<WebCore::Color>&)>&& completionHandler)
 {
     notImplemented();
-    return 0;
-}
-
-unsigned WebInspectorUIProxy::platformInspectedWindowWidth()
-{
-    notImplemented();
-    return 0;
+    completionHandler({ });
 }
 
 void WebInspectorUIProxy::platformAttach()

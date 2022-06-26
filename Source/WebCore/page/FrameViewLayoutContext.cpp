@@ -169,6 +169,21 @@ void FrameViewLayoutContext::layout()
 {
     LOG_WITH_STREAM(Layout, stream << "FrameView " << &view() << " FrameViewLayoutContext::layout() with size " << view().layoutSize());
 
+    performLayout();
+
+    Style::Scope::QueryContainerUpdateContext queryContainerUpdateContext;
+    while (document()->styleScope().updateQueryContainerState(queryContainerUpdateContext)) {
+        document()->updateStyleIfNeeded();
+
+        if (!needsLayout())
+            break;
+
+        performLayout();
+    }
+}
+
+void FrameViewLayoutContext::performLayout()
+{
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!frame().document()->inRenderTreeUpdate());
     ASSERT(LayoutDisallowedScope::isLayoutAllowed());
     ASSERT(!view().isPainting());
@@ -204,7 +219,7 @@ void FrameViewLayoutContext::layout()
     {
         SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InPreLayout);
 
-        if (!frame().document()->isResolvingContainerQueries()) {
+        if (!frame().document()->isResolvingContainerQueriesForSelfOrAncestor()) {
             // If this is a new top-level layout and there are any remaining tasks from the previous layout, finish them now.
             if (!isLayoutNested() && m_asynchronousTasksTimer.isActive() && !view().isInChildFrameWithFrameFlattening())
                 runAsynchronousTasks();

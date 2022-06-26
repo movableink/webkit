@@ -31,6 +31,7 @@
 #include "Element.h"
 #include "NodeRenderStyle.h"
 #include "RenderElement.h"
+#include "SVGElement.h"
 #include "Text.h"
 
 namespace WebCore {
@@ -87,8 +88,8 @@ RenderStyle* Update::elementStyle(const Element& element)
 
 void Update::addElement(Element& element, Element* parent, ElementUpdate&& elementUpdate)
 {
-    ASSERT(!m_elements.contains(&element));
     ASSERT(composedTreeAncestors(element).first() == parent);
+    ASSERT(!m_elements.contains(&element));
 
     m_roots.remove(&element);
     addPossibleRoot(parent);
@@ -122,13 +123,21 @@ void Update::addText(Text& text, TextUpdate&& textUpdate)
     addText(text, composedTreeAncestors(text).first(), WTFMove(textUpdate));
 }
 
+void Update::addSVGRendererUpdate(SVGElement& element)
+{
+    auto parent = composedTreeAncestors(element).first();
+    m_roots.remove(&element);
+    addPossibleRoot(parent);
+    element.setNeedsSVGRendererUpdate(true);
+}
+
 void Update::addPossibleRoot(Element* element)
 {
     if (!element) {
         m_roots.add(m_document.ptr());
         return;
     }
-    if (m_elements.contains(element))
+    if (element->needsSVGRendererUpdate() || m_elements.contains(element))
         return;
     m_roots.add(element);
 }

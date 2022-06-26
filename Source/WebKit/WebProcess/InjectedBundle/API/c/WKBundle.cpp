@@ -146,15 +146,10 @@ void WKBundleReportException(JSContextRef context, JSValueRef exception)
     WebKit::InjectedBundle::reportException(context, exception);
 }
 
-void WKBundleClearAllDatabases(WKBundleRef)
-{
-    WebCore::DatabaseTracker::singleton().deleteAllDatabasesImmediately();
-}
-
 void WKBundleSetDatabaseQuota(WKBundleRef bundleRef, uint64_t quota)
 {
     // Historically, we've used the following (somewhat nonsensical) string for the databaseIdentifier of local files.
-    WebCore::DatabaseTracker::singleton().setQuota(*WebCore::SecurityOriginData::fromDatabaseIdentifier("file__0"), quota);
+    WebCore::DatabaseTracker::singleton().setQuota(*WebCore::SecurityOriginData::fromDatabaseIdentifier("file__0"_s), quota);
 }
 
 void WKBundleReleaseMemory(WKBundleRef)

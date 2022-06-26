@@ -40,6 +40,7 @@
 #include <utility>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
+#include <wtf/MachSendRight.h>
 #include <wtf/OptionSet.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
@@ -47,7 +48,6 @@
 
 namespace IPC {
 class DummyType;
-class MachPort;
 }
 
 namespace WebKit {
@@ -288,7 +288,6 @@ public:
     static IPC::MessageName asyncMessageReplyName() { return IPC::MessageName::TestWithLegacyReceiver_CreatePluginReply; }
     using AsyncReply = CreatePluginAsyncReply;
     static constexpr auto callbackThread = WTF::CompletionHandlerCallThread::ConstructionThread;
-    static void send(UniqueRef<IPC::Encoder>&&, IPC::Connection&, bool result);
     using Reply = std::tuple<bool&>;
     using ReplyArguments = std::tuple<bool>;
     CreatePlugin(uint64_t pluginInstanceID, const WebKit::Plugin::Parameters& parameters)
@@ -317,7 +316,6 @@ public:
     static IPC::MessageName asyncMessageReplyName() { return IPC::MessageName::TestWithLegacyReceiver_RunJavaScriptAlertReply; }
     using AsyncReply = RunJavaScriptAlertAsyncReply;
     static constexpr auto callbackThread = WTF::CompletionHandlerCallThread::ConstructionThread;
-    static void send(UniqueRef<IPC::Encoder>&&, IPC::Connection&);
     using Reply = std::tuple<>;
     using ReplyArguments = std::tuple<>;
     RunJavaScriptAlert(uint64_t frameID, const String& message)
@@ -346,7 +344,6 @@ public:
     static IPC::MessageName asyncMessageReplyName() { return IPC::MessageName::TestWithLegacyReceiver_GetPluginsReply; }
     using AsyncReply = GetPluginsAsyncReply;
     static constexpr auto callbackThread = WTF::CompletionHandlerCallThread::ConstructionThread;
-    static void send(UniqueRef<IPC::Encoder>&&, IPC::Connection&, const Vector<WebCore::PluginInfo>& plugins);
     using Reply = std::tuple<Vector<WebCore::PluginInfo>&>;
     using ReplyArguments = std::tuple<Vector<WebCore::PluginInfo>>;
     explicit GetPlugins(bool refresh)
@@ -372,7 +369,6 @@ public:
 
     using DelayedReply = GetPluginProcessConnectionDelayedReply;
     static constexpr auto callbackThread = WTF::CompletionHandlerCallThread::ConstructionThread;
-    static void send(UniqueRef<IPC::Encoder>&&, IPC::Connection&, const IPC::Connection::Handle& connectionHandle);
     using Reply = std::tuple<IPC::Connection::Handle&>;
     using ReplyArguments = std::tuple<IPC::Connection::Handle>;
     explicit GetPluginProcessConnection(const String& pluginPath)
@@ -398,7 +394,6 @@ public:
 
     using DelayedReply = TestMultipleAttributesDelayedReply;
     static constexpr auto callbackThread = WTF::CompletionHandlerCallThread::ConstructionThread;
-    static void send(UniqueRef<IPC::Encoder>&&, IPC::Connection&);
     using Reply = std::tuple<>;
     using ReplyArguments = std::tuple<>;
     const Arguments& arguments() const
@@ -476,12 +471,12 @@ private:
 #if PLATFORM(MAC)
 class DidCreateWebProcessConnection {
 public:
-    using Arguments = std::tuple<const IPC::MachPort&, const OptionSet<WebKit::SelectionFlags>&>;
+    using Arguments = std::tuple<const MachSendRight&, const OptionSet<WebKit::SelectionFlags>&>;
 
     static IPC::MessageName name() { return IPC::MessageName::TestWithLegacyReceiver_DidCreateWebProcessConnection; }
     static constexpr bool isSync = false;
 
-    DidCreateWebProcessConnection(const IPC::MachPort& connectionIdentifier, const OptionSet<WebKit::SelectionFlags>& flags)
+    DidCreateWebProcessConnection(const MachSendRight& connectionIdentifier, const OptionSet<WebKit::SelectionFlags>& flags)
         : m_arguments(connectionIdentifier, flags)
     {
     }
@@ -509,7 +504,6 @@ public:
     static IPC::MessageName asyncMessageReplyName() { return IPC::MessageName::TestWithLegacyReceiver_InterpretKeyEventReply; }
     using AsyncReply = InterpretKeyEventAsyncReply;
     static constexpr auto callbackThread = WTF::CompletionHandlerCallThread::ConstructionThread;
-    static void send(UniqueRef<IPC::Encoder>&&, IPC::Connection&, const Vector<WebCore::KeypressCommand>& commandName);
     using Reply = std::tuple<Vector<WebCore::KeypressCommand>&>;
     using ReplyArguments = std::tuple<Vector<WebCore::KeypressCommand>>;
     explicit InterpretKeyEvent(uint32_t type)

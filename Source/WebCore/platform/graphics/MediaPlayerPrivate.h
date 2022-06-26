@@ -52,7 +52,7 @@ public:
     virtual void load(const URL& url, const ContentType&, const String&) { load(url.string()); }
 
 #if ENABLE(MEDIA_SOURCE)
-    virtual void load(const URL&, const ContentType&, MediaSourcePrivateClient*) = 0;
+    virtual void load(const URL&, const ContentType&, MediaSourcePrivateClient&) = 0;
 #endif
 #if ENABLE(MEDIA_STREAM)
     virtual void load(MediaStreamPrivate&) = 0;
@@ -182,9 +182,14 @@ public:
 #if !USE(AVFOUNDATION)
     virtual bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool) { return false; }
 #endif
+#if PLATFORM(COCOA) && !HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
+    virtual void willBeAskedToPaintGL() { }
+#endif
+
     virtual RefPtr<VideoFrame> videoFrameForCurrentTime() { return nullptr; }
     virtual RefPtr<NativeImage> nativeImageForCurrentTime() { return nullptr; }
     virtual DestinationColorSpace colorSpace() = 0;
+    virtual bool shouldGetNativeImageForCanvasDrawing() const { return true; }
 
     virtual void setPreload(MediaPlayer::Preload) { }
 

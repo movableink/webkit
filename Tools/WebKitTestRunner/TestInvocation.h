@@ -46,7 +46,7 @@ public:
     ~TestInvocation();
 
     WKURLRef url() const;
-    bool urlContains(const char*) const;
+    bool urlContains(StringView) const;
     
     const TestOptions& options() const { return m_options; }
 
@@ -102,7 +102,6 @@ public:
     bool canOpenWindows() const { return m_canOpenWindows; }
 
     void dumpPrivateClickMeasurement();
-    void performCustomMenuAction();
 
     void willCreateNewPage();
 

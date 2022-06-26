@@ -32,6 +32,7 @@
 #include "IDBStorageManager.h"
 #include "IDBStorageRegistry.h"
 #include "LocalStorageManager.h"
+#include "Logging.h"
 #include "MemoryStorageArea.h"
 #include "SessionStorageManager.h"
 #include "StorageAreaRegistry.h"
@@ -53,6 +54,7 @@ public:
         SessionStorage,
         IndexedDB,
     };
+    std::optional<StorageType> toStorageType(WebsiteDataType) const;
     String toStorageIdentifier(StorageType) const;
     StorageBucket(const String& rootPath, const String& identifier, const String& localStoragePath, const String& idbStoragePath, bool shouldUseCustomPaths);
     StorageBucketMode mode() const { return m_mode; }
@@ -73,6 +75,7 @@ public:
     void moveData(OptionSet<WebsiteDataType>, const String& localStoragePath, const String& idbStoragePath);
     String resolvedLocalStoragePath();
     String resolvedIDBStoragePath();
+    String resolvedPath(WebsiteDataType);
 
 private:
     OptionSet<WebsiteDataType> fetchDataTypesInListFromMemory(OptionSet<WebsiteDataType>);
@@ -115,6 +118,25 @@ void OriginStorageManager::StorageBucket::connectionClosed(IPC::Connection::Uniq
 
     if (m_sessionStorageManager)
         m_sessionStorageManager->connectionClosed(connection);
+}
+
+std::optional<OriginStorageManager::StorageBucket::StorageType> OriginStorageManager::StorageBucket::toStorageType(WebsiteDataType websiteDataType) const
+{
+    switch (websiteDataType) {
+    case WebsiteDataType::FileSystem:
+        return StorageType::FileSystem;
+    case WebsiteDataType::LocalStorage:
+        return StorageType::LocalStorage;
+    case WebsiteDataType::SessionStorage:
+        return StorageType::SessionStorage;
+    case WebsiteDataType::IndexedDBDatabases:
+        return StorageType::IndexedDB;
+    default:
+        break;
+    }
+
+    ASSERT_NOT_REACHED();
+    return std::nullopt;
 }
 
 String OriginStorageManager::StorageBucket::toStorageIdentifier(StorageType type) const
@@ -194,7 +216,7 @@ bool OriginStorageManager::StorageBucket::isEmpty()
     auto hasValidFile = WTF::anyOf(files, [&](auto file) {
         bool isInvalidFile = (file == originFileName);
 #if PLATFORM(COCOA)
-        isInvalidFile |= (file == ".DS_Store");
+        isInvalidFile |= (file == ".DS_Store"_s);
 #endif
         return !isInvalidFile;
     });
@@ -351,10 +373,14 @@ String OriginStorageManager::StorageBucket::resolvedLocalStoragePath()
         m_resolvedLocalStoragePath = m_customLocalStoragePath;
     } else if (!m_rootPath.isEmpty()) {
         auto localStorageDirectory = typeStoragePath(StorageType::LocalStorage);
-        FileSystem::makeAllDirectories(localStorageDirectory);
         auto localStoragePath = LocalStorageManager::localStorageFilePath(localStorageDirectory);
-        if (!m_customLocalStoragePath.isEmpty() && !FileSystem::fileExists(localStoragePath) && FileSystem::fileExists(m_customLocalStoragePath))
-            WebCore::SQLiteFileSystem::moveDatabaseFile(m_customLocalStoragePath, localStoragePath);
+        if (!m_customLocalStoragePath.isEmpty() && !FileSystem::fileExists(localStoragePath) && FileSystem::fileExists(m_customLocalStoragePath)) {
+            RELEASE_LOG(Storage, "%p - StorageBucket::resolvedLocalStoragePath New path '%{public}s'", this, localStoragePath.utf8().data());
+            FileSystem::makeAllDirectories(localStorageDirectory);
+            auto moved = WebCore::SQLiteFileSystem::moveDatabaseFile(m_customLocalStoragePath, localStoragePath);
+            if (!moved && !FileSystem::fileExists(localStoragePath))
+                RELEASE_LOG_ERROR(Storage, "%p - StorageBucket::resolvedLocalStoragePath Fails to migrate file to new path", this);
+        }
 
         m_resolvedLocalStoragePath = localStoragePath;
     } else
@@ -381,12 +407,35 @@ String OriginStorageManager::StorageBucket::resolvedIDBStoragePath()
         m_resolvedIDBStoragePath = m_customIDBStoragePath;
     } else {
         auto idbStoragePath = typeStoragePath(StorageType::IndexedDB);
-        IDBStorageManager::migrateOriginData(m_customIDBStoragePath, idbStoragePath);
+        RELEASE_LOG(Storage, "%p - StorageBucket::resolvedIDBStoragePath New path '%{public}s'", this, idbStoragePath.utf8().data());
+        auto moved = IDBStorageManager::migrateOriginData(m_customIDBStoragePath, idbStoragePath);
+        if (!moved && FileSystem::fileExists(idbStoragePath)) {
+            auto fileNames = FileSystem::listDirectory(m_customIDBStoragePath);
+            auto newFileNames = FileSystem::listDirectory(idbStoragePath);
+            RELEASE_LOG_ERROR(Storage, "%p - StorageBucket::resolvedLocalStoragePath Fails to migrate all databases to new path: %zu migrated, %zu left", this, newFileNames.size(), fileNames.size());
+        }
         m_resolvedIDBStoragePath = idbStoragePath;
     }
-    
     ASSERT(!m_resolvedIDBStoragePath.isNull());
     return m_resolvedIDBStoragePath;
+}
+
+String OriginStorageManager::StorageBucket::resolvedPath(WebsiteDataType webisteDataType)
+{
+    auto type = toStorageType(webisteDataType);
+    if (!type)
+        return { };
+
+    switch (*type) {
+    case StorageType::LocalStorage:
+        return resolvedLocalStoragePath();
+    case StorageType::IndexedDB:
+        return resolvedIDBStoragePath();
+    case StorageType::SessionStorage:
+    case StorageType::FileSystem:
+        return typeStoragePath(*type);
+    }
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 String OriginStorageManager::originFileIdentifier()
@@ -482,14 +531,9 @@ IDBStorageManager* OriginStorageManager::existingIDBStorageManager()
     return defaultBucket().existingIDBStorageManager();
 }
 
-String OriginStorageManager::resolvedLocalStoragePath()
+String OriginStorageManager::resolvedPath(WebsiteDataType type)
 {
-    return defaultBucket().resolvedLocalStoragePath();
-}
-
-String OriginStorageManager::resolvedIDBStoragePath()
-{
-    return defaultBucket().resolvedIDBStoragePath();
+    return defaultBucket().resolvedPath(type);
 }
 
 bool OriginStorageManager::isActive()

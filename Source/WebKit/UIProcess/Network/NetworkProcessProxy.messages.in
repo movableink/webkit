@@ -76,10 +76,6 @@ messages -> NetworkProcessProxy LegacyReceiver {
     ResourceLoadDidReceiveResponse(WebKit::WebPageProxyIdentifier pageIdentifier, struct WebKit::ResourceLoadInfo resourceLoadInfo, WebCore::ResourceResponse response)
     ResourceLoadDidCompleteWithError(WebKit::WebPageProxyIdentifier pageIdentifier, struct WebKit::ResourceLoadInfo resourceLoadInfo, WebCore::ResourceResponse response, WebCore::ResourceError error)
     
-#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
-    ReloadAfterUnblockedContentFilter(WebKit::WebPageProxyIdentifier pageIdentifier)
-#endif
-
     TriggerBrowsingContextGroupSwitchForNavigation(WebKit::WebPageProxyIdentifier pageIdentifier, uint64_t navigationID, enum:uint8_t WebCore::BrowsingContextGroupSwitchDecision browsingContextGroupSwitchDecision, WebCore::RegistrableDomain responseDomain, WebKit::NetworkResourceLoadIdentifier existingNetworkResourceLoadIdentifierToResume) -> (bool success)
 
 #if USE(SOUP)
@@ -95,6 +91,11 @@ messages -> NetworkProcessProxy LegacyReceiver {
     DataTaskDidReceiveResponse(WebKit::DataTaskIdentifier identifier, WebCore::ResourceResponse response) -> (bool allowed)
     DataTaskDidReceiveData(WebKit::DataTaskIdentifier identifier, IPC::DataReference data)
     DataTaskDidCompleteWithError(WebKit::DataTaskIdentifier identifier, WebCore::ResourceError error)
+
+    OpenWindowFromServiceWorker(PAL::SessionID sessionID, String urlString, struct WebCore::SecurityOriginData serviceWorkerOrigin) -> (std::optional<WebCore::PageIdentifier> newPage)
+    NavigateServiceWorkerClient(WebCore::FrameIdentifier frameIdentifier, WebCore::ScriptExecutionContextIdentifier documentIdentifier, URL url) -> (std::optional<WebCore::PageIdentifier> page)
+
+    CookiesDidChange(PAL::SessionID sessionID)
 }
 
 }

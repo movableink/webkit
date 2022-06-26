@@ -52,7 +52,7 @@ struct ExpectedSVGInlineTextBoxSize : public LegacyInlineTextBox {
     Vector<SVGTextFragment> vector;
 };
 
-COMPILE_ASSERT(sizeof(SVGInlineTextBox) == sizeof(ExpectedSVGInlineTextBoxSize), SVGInlineTextBox_is_not_of_expected_size);
+static_assert(sizeof(SVGInlineTextBox) == sizeof(ExpectedSVGInlineTextBoxSize), "SVGInlineTextBox is not of expected size");
 
 SVGInlineTextBox::SVGInlineTextBox(RenderSVGInlineText& renderer)
     : LegacyInlineTextBox(renderer)
@@ -382,12 +382,12 @@ void SVGInlineTextBox::restoreGraphicsContextAfterTextPainting(GraphicsContext*&
 
 TextRun SVGInlineTextBox::constructTextRun(const RenderStyle& style, const SVGTextFragment& fragment) const
 {
-    TextRun run(StringView(renderer().text()).substring(fragment.characterOffset, fragment.length)
-                , 0 /* xPos, only relevant with allowTabs=true */
-                , 0 /* padding, only relevant for justified text, not relevant for SVG */
-                , AllowRightExpansion
-                , direction()
-                , style.rtlOrdering() == Order::Visual /* directionalOverride */);
+    TextRun run(StringView(renderer().text()).substring(fragment.characterOffset, fragment.length),
+        0, /* xPos, only relevant with allowTabs=true */
+        0, /* padding, only relevant for justified text, not relevant for SVG */
+        ExpansionBehavior::allowRightOnly(),
+        direction(),
+        style.rtlOrdering() == Order::Visual /* directionalOverride */);
 
     // We handle letter & word spacing ourselves.
     run.disableSpacing();

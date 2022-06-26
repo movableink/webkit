@@ -75,25 +75,25 @@ namespace WebCore {
 
 const AtomString& MediaControlsHost::automaticKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> automatic("automatic", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> automatic("automatic"_s);
     return automatic;
 }
 
 const AtomString& MediaControlsHost::forcedOnlyKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> forcedOnly("forced-only", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> forcedOnly("forced-only"_s);
     return forcedOnly;
 }
 
 static const AtomString& alwaysOnKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> alwaysOn("always-on", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> alwaysOn("always-on"_s);
     return alwaysOn;
 }
 
 static const AtomString& manualKeyword()
 {
-    static MainThreadNeverDestroyed<const AtomString> alwaysOn("manual", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> alwaysOn("manual"_s);
     return alwaysOn;
 }
 
@@ -118,14 +118,16 @@ MediaControlsHost::~MediaControlsHost()
 String MediaControlsHost::layoutTraitsClassName() const
 {
 #if defined(MEDIA_CONTROLS_HOST_LAYOUT_TRAITS_CLASS_NAME_OVERRIDE)
-    return MEDIA_CONTROLS_HOST_LAYOUT_TRAITS_CLASS_NAME_OVERRIDE;
+    return MEDIA_CONTROLS_HOST_LAYOUT_TRAITS_CLASS_NAME_OVERRIDE""_s;
 #else
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
-    return "MacOSLayoutTraits";
+    return "MacOSLayoutTraits"_s;
 #elif PLATFORM(IOS)
-    return "IOSLayoutTraits";
+    return "IOSLayoutTraits"_s;
 #elif PLATFORM(WATCHOS)
-    return "WatchOSLayoutTraits";
+    return "WatchOSLayoutTraits"_s;
+#elif PLATFORM(GTK) || PLATFORM(WPE)
+    return "AdwaitaLayoutTraits"_s;
 #else
     ASSERT_NOT_REACHED();
     return nullString();
@@ -135,7 +137,7 @@ String MediaControlsHost::layoutTraitsClassName() const
 
 const AtomString& MediaControlsHost::mediaControlsContainerClassName() const
 {
-    static MainThreadNeverDestroyed<const AtomString> className("media-controls-container", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> className("media-controls-container"_s);
     return className;
 }
 

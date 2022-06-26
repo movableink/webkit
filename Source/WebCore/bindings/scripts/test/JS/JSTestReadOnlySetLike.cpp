@@ -98,7 +98,7 @@ STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSTestReadOnlySetLikePrototype, JSTestReadOn
 
 using JSTestReadOnlySetLikeDOMConstructor = JSDOMConstructorNotConstructable<JSTestReadOnlySetLike>;
 
-template<> const ClassInfo JSTestReadOnlySetLikeDOMConstructor::s_info = { "TestReadOnlySetLike", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReadOnlySetLikeDOMConstructor) };
+template<> const ClassInfo JSTestReadOnlySetLikeDOMConstructor::s_info = { "TestReadOnlySetLike"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReadOnlySetLikeDOMConstructor) };
 
 template<> JSValue JSTestReadOnlySetLikeDOMConstructor::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
 {
@@ -119,16 +119,16 @@ template<> void JSTestReadOnlySetLikeDOMConstructor::initializeProperties(VM& vm
 
 static const HashTableValue JSTestReadOnlySetLikePrototypeTableValues[] =
 {
-    { "constructor", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestReadOnlySetLikeConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
-    { "size", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::CustomAccessor), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestReadOnlySetLike_size), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
-    { "has", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestReadOnlySetLikePrototypeFunction_has), (intptr_t) (1) } },
-    { "entries", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestReadOnlySetLikePrototypeFunction_entries), (intptr_t) (0) } },
-    { "keys", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestReadOnlySetLikePrototypeFunction_keys), (intptr_t) (0) } },
-    { "values", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestReadOnlySetLikePrototypeFunction_values), (intptr_t) (0) } },
-    { "forEach", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestReadOnlySetLikePrototypeFunction_forEach), (intptr_t) (1) } },
+    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestReadOnlySetLikeConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "size"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::CustomAccessor), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestReadOnlySetLike_size), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "has"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestReadOnlySetLikePrototypeFunction_has), (intptr_t) (1) } },
+    { "entries"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestReadOnlySetLikePrototypeFunction_entries), (intptr_t) (0) } },
+    { "keys"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestReadOnlySetLikePrototypeFunction_keys), (intptr_t) (0) } },
+    { "values"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestReadOnlySetLikePrototypeFunction_values), (intptr_t) (0) } },
+    { "forEach"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum | JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestReadOnlySetLikePrototypeFunction_forEach), (intptr_t) (1) } },
 };
 
-const ClassInfo JSTestReadOnlySetLikePrototype::s_info = { "TestReadOnlySetLike", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReadOnlySetLikePrototype) };
+const ClassInfo JSTestReadOnlySetLikePrototype::s_info = { "TestReadOnlySetLike"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReadOnlySetLikePrototype) };
 
 void JSTestReadOnlySetLikePrototype::finishCreation(VM& vm)
 {
@@ -138,7 +138,7 @@ void JSTestReadOnlySetLikePrototype::finishCreation(VM& vm)
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-const ClassInfo JSTestReadOnlySetLike::s_info = { "TestReadOnlySetLike", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReadOnlySetLike) };
+const ClassInfo JSTestReadOnlySetLike::s_info = { "TestReadOnlySetLike"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReadOnlySetLike) };
 
 JSTestReadOnlySetLike::JSTestReadOnlySetLike(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestReadOnlySetLike>&& impl)
     : JSDOMWrapper<TestReadOnlySetLike>(structure, globalObject, WTFMove(impl))
@@ -148,7 +148,7 @@ JSTestReadOnlySetLike::JSTestReadOnlySetLike(Structure* structure, JSDOMGlobalOb
 void JSTestReadOnlySetLike::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     static_assert(!std::is_base_of<ActiveDOMObject, TestReadOnlySetLike>::value, "Interface is not marked as [ActiveDOMObject] even though implementation class subclasses ActiveDOMObject.");
 
@@ -179,7 +179,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestReadOnlySetLikeConstructor, (JSGlobalObject* lexi
 {
     VM& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    auto* prototype = jsDynamicCast<JSTestReadOnlySetLikePrototype*>(vm, JSValue::decode(thisValue));
+    auto* prototype = jsDynamicCast<JSTestReadOnlySetLikePrototype*>(JSValue::decode(thisValue));
     if (UNLIKELY(!prototype))
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestReadOnlySetLike::getConstructor(JSC::getVM(lexicalGlobalObject), prototype->globalObject()));
@@ -347,9 +347,9 @@ JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* g
     return wrap(lexicalGlobalObject, globalObject, impl);
 }
 
-TestReadOnlySetLike* JSTestReadOnlySetLike::toWrapped(JSC::VM& vm, JSC::JSValue value)
+TestReadOnlySetLike* JSTestReadOnlySetLike::toWrapped(JSC::VM&, JSC::JSValue value)
 {
-    if (auto* wrapper = jsDynamicCast<JSTestReadOnlySetLike*>(vm, value))
+    if (auto* wrapper = jsDynamicCast<JSTestReadOnlySetLike*>(value))
         return &wrapper->wrapped();
     return nullptr;
 }

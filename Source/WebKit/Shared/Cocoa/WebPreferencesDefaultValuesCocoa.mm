@@ -37,34 +37,6 @@
 
 namespace WebKit {
 
-// Because of <rdar://problem/60608008>, WebKit has to parse the feature flags plist file
-bool isFeatureFlagEnabled(const char* featureName, bool defaultValue)
-{
-#if HAVE(SYSTEM_FEATURE_FLAGS)
-
-#if PLATFORM(MAC)
-    static bool isSystemWebKit = [] {
-        NSBundle *bundle = [NSBundle bundleForClass:NSClassFromString(@"WKWebView")];
-        return [bundle.bundlePath hasPrefix:@"/System/"];
-    }();
-
-    if (isSystemWebKit)
-        return _os_feature_enabled_impl("WebKit", featureName);
-
-    return defaultValue;
-#else
-    UNUSED_PARAM(defaultValue);
-    return _os_feature_enabled_impl("WebKit", featureName);
-#endif // PLATFORM(MAC)
-
-#else
-
-    UNUSED_PARAM(featureName);
-    return defaultValue;
-
-#endif // HAVE(SYSTEM_FEATURE_FLAGS)
-}
-
 #if PLATFORM(MAC)
 bool defaultScrollAnimatorEnabled()
 {
@@ -74,22 +46,40 @@ bool defaultScrollAnimatorEnabled()
 
 #if ENABLE(IMAGE_ANALYSIS)
 
-bool defaultTextRecognitionEnhancementsEnabled()
+bool defaultTextRecognitionInVideosEnabled()
 {
-    return textRecognitionEnhancementsSystemFeatureEnabled();
+    static bool enabled = false;
+#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
+    static std::once_flag flag;
+    std::call_once(flag, [] {
+        enabled = os_feature_enabled(VisualIntelligence, LiveText);
+    });
+#endif
+    return enabled;
 }
 
-bool defaultImageAnalysisQueueEnabled()
+bool defaultVisualTranslationEnabled()
 {
-    return imageAnalysisQueueSystemFeatureEnabled();
+    static bool enabled = false;
+#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
+    static std::once_flag flag;
+    std::call_once(flag, [] {
+        enabled = os_feature_enabled(Translate, EnableVisualIntelligenceUI);
+    });
+#endif
+    return enabled;
 }
 
-bool defaultImageAnalysisMarkupEnabled()
+bool defaultRemoveBackgroundEnabled()
 {
-    // FIXME: The is- prefix on this helper method is inconsistent with the adjacent system
-    // feature flag checks. This will be fixed upon upstreaming the code from WebKitAdditions,
-    // when these helper methods will be removed entirely.
-    return isImageAnalysisMarkupSystemFeatureEnabled();
+    static bool enabled = false;
+#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
+    static std::once_flag flag;
+    std::call_once(flag, [] {
+        enabled = os_feature_enabled(VisualIntelligence, RemoveBackground);
+    });
+#endif
+    return enabled;
 }
 
 #endif // ENABLE(IMAGE_ANALYSIS)

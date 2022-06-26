@@ -87,6 +87,7 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/css/calc"
     "${WEBCORE_DIR}/css/parser"
     "${WEBCORE_DIR}/css/typedom"
+    "${WEBCORE_DIR}/css/typedom/color"
     "${WEBCORE_DIR}/css/typedom/numeric"
     "${WEBCORE_DIR}/css/typedom/transform"
     "${WEBCORE_DIR}/cssjit"
@@ -120,6 +121,8 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/layout/formattingContexts/inline/invalidation"
     "${WEBCORE_DIR}/layout/formattingContexts/inline/text"
     "${WEBCORE_DIR}/layout/integration"
+    "${WEBCORE_DIR}/layout/integration/flex"
+    "${WEBCORE_DIR}/layout/integration/inline"
     "${WEBCORE_DIR}/layout/layouttree"
     "${WEBCORE_DIR}/layout/formattingContexts/table"
     "${WEBCORE_DIR}/loader"
@@ -230,6 +233,7 @@ set(WebCore_IDL_INCLUDES
 
     css/typedom
 
+    css/typedom/color
     css/typedom/numeric
     css/typedom/transform
 
@@ -535,17 +539,20 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/remoteplayback/RemotePlayback.idl
     Modules/remoteplayback/RemotePlaybackAvailabilityCallback.idl
 
+    Modules/speech/DOMWindow+SpeechSynthesis.idl
+    Modules/speech/SpeechRecognitionErrorEvent.idl
     Modules/speech/SpeechRecognition.idl
     Modules/speech/SpeechRecognitionAlternative.idl
     Modules/speech/SpeechRecognitionErrorCode.idl
-    Modules/speech/SpeechRecognitionErrorEvent.idl
     Modules/speech/SpeechRecognitionEvent.idl
     Modules/speech/SpeechRecognitionResult.idl
     Modules/speech/SpeechRecognitionResultList.idl
-
-    Modules/speech/DOMWindow+SpeechSynthesis.idl
+    Modules/speech/SpeechSynthesisErrorEventInit.idl
     Modules/speech/SpeechSynthesis.idl
+    Modules/speech/SpeechSynthesisErrorCode.idl
+    Modules/speech/SpeechSynthesisErrorEvent.idl
     Modules/speech/SpeechSynthesisEvent.idl
+    Modules/speech/SpeechSynthesisEventInit.idl
     Modules/speech/SpeechSynthesisUtterance.idl
     Modules/speech/SpeechSynthesisVoice.idl
 
@@ -758,6 +765,7 @@ set(WebCore_NON_SVG_IDL_FILES
     crypto/parameters/RsaPssParams.idl
 
     css/CSSConditionRule.idl
+    css/CSSContainerRule.idl
     css/CSSCounterStyleRule.idl
     css/CSSFontFaceRule.idl
     css/CSSFontPaletteValuesRule.idl
@@ -816,6 +824,16 @@ set(WebCore_NON_SVG_IDL_FILES
     css/typedom/CSSUnparsedValue.idl
     css/typedom/StylePropertyMap.idl
     css/typedom/StylePropertyMapReadOnly.idl
+
+    css/typedom/color/CSSColor.idl
+    css/typedom/color/CSSColorValue.idl
+    css/typedom/color/CSSHSL.idl
+    css/typedom/color/CSSHWB.idl
+    css/typedom/color/CSSLCH.idl
+    css/typedom/color/CSSLab.idl
+    css/typedom/color/CSSOKLCH.idl
+    css/typedom/color/CSSOKLab.idl
+    css/typedom/color/CSSRGB.idl
 
     css/typedom/numeric/CSSMathInvert.idl
     css/typedom/numeric/CSSMathMax.idl
@@ -895,6 +913,7 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/DocumentType.idl
     dom/DragEvent.idl
     dom/Element+CSSOMView.idl
+    dom/Element+ComputedStyleMap.idl
     dom/Element+DOMParsing.idl
     dom/Element+Fullscreen.idl
     dom/Element+PointerEvents.idl
@@ -1789,10 +1808,13 @@ if (ENABLE_WEBGL)
         html/canvas/EXTFloatBlend.cpp
         html/canvas/EXTFragDepth.cpp
         html/canvas/EXTShaderTextureLOD.cpp
+        html/canvas/EXTTextureCompressionBPTC.cpp
         html/canvas/EXTTextureCompressionRGTC.cpp
         html/canvas/EXTTextureFilterAnisotropic.cpp
+        html/canvas/EXTTextureNorm16.cpp
         html/canvas/EXTsRGB.cpp
         html/canvas/KHRParallelShaderCompile.cpp
+        html/canvas/OESDrawBuffersIndexed.cpp
         html/canvas/OESElementIndexUint.cpp
         html/canvas/OESFBORenderMipmap.cpp
         html/canvas/OESStandardDerivatives.cpp
@@ -1850,10 +1872,13 @@ list(APPEND WebCore_IDL_FILES
     html/canvas/EXTFloatBlend.idl
     html/canvas/EXTFragDepth.idl
     html/canvas/EXTShaderTextureLOD.idl
+    html/canvas/EXTTextureCompressionBPTC.idl
     html/canvas/EXTTextureCompressionRGTC.idl
     html/canvas/EXTTextureFilterAnisotropic.idl
+    html/canvas/EXTTextureNorm16.idl
     html/canvas/EXTsRGB.idl
     html/canvas/KHRParallelShaderCompile.idl
+    html/canvas/OESDrawBuffersIndexed.idl
     html/canvas/OESElementIndexUint.idl
     html/canvas/OESFBORenderMipmap.idl
     html/canvas/OESStandardDerivatives.idl
@@ -2068,6 +2093,122 @@ if (ENABLE_WEBXR)
     )
 endif ()
 
+set(MODERN_MEDIA_CONTROLS_STYLE_SHEETS
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/activity-indicator.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/airplay-button.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/background-tint.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/button.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/buttons-container.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/controls-bar.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/inline-media-controls.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/ios-inline-media-controls.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/macos-fullscreen-media-controls.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/macos-inline-media-controls.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/adwaita-inline-media-controls.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/adwaita-fullscreen-media-controls.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/media-controls.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/media-document.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/placard.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/slider.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/status-label.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/text-tracks.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/time-label.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/watchos-activity-indicator.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/watchos-media-controls.css"
+)
+
+add_custom_command(
+    OUTPUT ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.css
+    DEPENDS ${MODERN_MEDIA_CONTROLS_STYLE_SHEETS}
+    COMMAND cat ${MODERN_MEDIA_CONTROLS_STYLE_SHEETS} > ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.css
+    VERBATIM)
+
+set(MODERN_MEDIA_CONTROLS_SCRIPTS
+    "${WEBCORE_DIR}/Modules/modern-media-controls/main.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/gesture-recognizers/gesture-recognizer.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/gesture-recognizers/tap.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/gesture-recognizers/pinch.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/scheduler.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/layout-traits.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/layout-node.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/layout-item.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/icon-service.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/background-tint.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/time-control.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/time-label.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/slider.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/play-pause-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/skip-back-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/skip-forward-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/mute-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/airplay-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/pip-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/tracks-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/fullscreen-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/seek-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/rewind-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/forward-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/overflow-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/range-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/brightness-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/volume-button.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/buttons-container.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/status-label.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/controls-bar.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/auto-hide-controller.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/media-controls.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/background-click-delegate-notifier.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/inline-media-controls.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/ios-inline-media-controls.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/ios-layout-traits.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/macos-inline-media-controls.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/macos-fullscreen-media-controls.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/macos-layout-traits.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/placard.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/airplay-placard.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/invalid-placard.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/pip-placard.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/watchos-activity-indicator.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/watchos-media-controls.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/watchos-layout-traits.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/adwaita-inline-media-controls.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/adwaita-fullscreen-media-controls.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/adwaita-layout-traits.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/media-controller-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/airplay-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/audio-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/brightness-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/close-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/controls-visibility-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/fullscreen-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/mute-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/overflow-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/pip-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/placard-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/playback-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/scrubbing-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/seek-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/seek-backward-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/seek-forward-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/skip-back-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/skip-forward-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/start-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/status-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/time-control-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/tracks-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/volume-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/media-document-controller.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/watchos-media-controls-support.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/media/media-controller.js"
+)
+
+add_custom_command(
+    OUTPUT ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.js
+    DEPENDS ${MODERN_MEDIA_CONTROLS_SCRIPTS}
+    COMMAND cat ${MODERN_MEDIA_CONTROLS_SCRIPTS} > ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.js
+    VERBATIM)
+
 # Modules that the bindings generator scripts may use
 set(SCRIPTS_RESOLVE_SUPPLEMENTAL
     ${WEBCORE_DIR}/bindings/scripts/IDLParser.pm
@@ -2109,18 +2250,6 @@ set(WebCoreTestSupport_INTERFACE_INCLUDE_DIRECTORIES
 WEBKIT_FRAMEWORK_DECLARE(WebCore)
 WEBKIT_FRAMEWORK_DECLARE(WebCoreTestSupport)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
-
-# Generate CommandLineAPIModuleSource.h
-add_custom_command(
-    OUTPUT ${WebCore_DERIVED_SOURCES_DIR}/CommandLineAPIModuleSource.h ${WebCore_DERIVED_SOURCES_DIR}/CommandLineAPIModuleSource.min.js
-    MAIN_DEPENDENCY inspector/CommandLineAPIModuleSource.js
-    DEPENDS ${JavaScriptCore_SCRIPTS_DIR}/xxd.pl ${JavaScriptCore_SCRIPTS_DIR}/jsmin.py
-    COMMAND ${CMAKE_COMMAND} -E echo "//# sourceURL=__InjectedScript_CommandLineAPIModuleSource.js" > ${WebCore_DERIVED_SOURCES_DIR}/CommandLineAPIModuleSource.min.js
-    COMMAND ${PYTHON_EXECUTABLE} ${JavaScriptCore_SCRIPTS_DIR}/jsmin.py < ${WEBCORE_DIR}/inspector/CommandLineAPIModuleSource.js >> ${WebCore_DERIVED_SOURCES_DIR}/CommandLineAPIModuleSource.min.js
-    COMMAND ${PERL_EXECUTABLE} ${JavaScriptCore_SCRIPTS_DIR}/xxd.pl CommandLineAPIModuleSource_js ${WebCore_DERIVED_SOURCES_DIR}/CommandLineAPIModuleSource.min.js ${WebCore_DERIVED_SOURCES_DIR}/CommandLineAPIModuleSource.h
-    VERBATIM)
-list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/CommandLineAPIModuleSource.h)
-
 
 MAKE_HASH_TOOLS(${WEBCORE_DIR}/platform/ColorData)
 list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/ColorData.cpp)
@@ -2333,6 +2462,7 @@ set(WebCore_BUILTINS_SOURCES
     ${WEBCORE_DIR}/dom/TextDecoderStream.js
     ${WEBCORE_DIR}/dom/TextEncoderStream.js
     ${WEBCORE_DIR}/bindings/js/JSDOMBindingInternals.js
+    ${WEBCORE_DIR}/inspector/CommandLineAPIModuleSource.js
 )
 
 set(BUILTINS_GENERATOR_SCRIPTS
@@ -2369,15 +2499,12 @@ add_custom_command(
            ${WebCore_DERIVED_SOURCES_DIR}/WebCoreJSBuiltinInternals.cpp
            ${WebCore_DERIVED_SOURCES_DIR}/WebCoreJSBuiltins.h
            ${WebCore_DERIVED_SOURCES_DIR}/WebCoreJSBuiltinInternals.h
-    MAIN_DEPENDENCY ${WebCore_BUILTINS_SOURCES}
-    DEPENDS ${BUILTINS_GENERATOR_SCRIPTS} ${WebCore_DERIVED_BUILTIN_HEADERS}
+    DEPENDS ${BUILTINS_GENERATOR_SCRIPTS} ${WebCore_DERIVED_BUILTIN_HEADERS} ${WebCore_BUILTINS_SOURCES}
     COMMAND ${PYTHON_EXECUTABLE} ${JavaScriptCore_SCRIPTS_DIR}/generate-js-builtins.py --wrappers-only --framework WebCore --output-directory ${WebCore_DERIVED_SOURCES_DIR} ${WebCore_BUILTINS_SOURCES}
     VERBATIM)
 list(APPEND WebCore_SOURCES
     ${WebCore_DERIVED_SOURCES_DIR}/WebCoreJSBuiltins.cpp
-    ${WebCore_DERIVED_SOURCES_DIR}/WebCoreJSBuiltinInternals.cpp
-    ${WebCore_DERIVED_SOURCES_DIR}/WebCoreJSBuiltins.h
-    ${WebCore_DERIVED_SOURCES_DIR}/WebCoreJSBuiltinInternals.h)
+    ${WebCore_DERIVED_SOURCES_DIR}/WebCoreJSBuiltinInternals.cpp)
 
 ADD_SOURCE_WEBCORE_DERIVED_DEPENDENCIES(${WEBCORE_DIR}/html/HTMLTreeBuilder.cpp MathMLNames.cpp)
 

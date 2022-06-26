@@ -191,6 +191,10 @@ static constexpr double computeMinimumValue(IntegerRange range)
     case IntegerRange::OneAndGreater:
         return 1.0;
     }
+
+    RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+
+    return 0.0;
 }
 // MARK: Integer (Raw)
 
@@ -1644,7 +1648,7 @@ RefPtr<CSSPrimitiveValue> consumeCustomIdent(CSSParserTokenRange& range, bool sh
 RefPtr<CSSPrimitiveValue> consumeDashedIdent(CSSParserTokenRange& range, bool shouldLowercase)
 {
     auto result = consumeCustomIdent(range, shouldLowercase);
-    if (result && result->stringValue().startsWith("--"))
+    if (result && result->stringValue().startsWith("--"_s))
         return result;
     return nullptr;
 }
@@ -4348,7 +4352,7 @@ std::optional<FontStyleRaw> consumeFontStyleRaw(CSSParserTokenRange& range, CSSP
     return { { CSSValueOblique, std::nullopt } };
 }
 
-String concatenateFamilyName(CSSParserTokenRange& range)
+AtomString concatenateFamilyName(CSSParserTokenRange& range)
 {
     StringBuilder builder;
     bool addedSpace = false;
@@ -4361,16 +4365,16 @@ String concatenateFamilyName(CSSParserTokenRange& range)
         builder.append(range.consumeIncludingWhitespace().value());
     }
     if (!addedSpace && !isValidCustomIdentifier(firstToken.id()))
-        return String();
-    return builder.toString();
+        return nullAtom();
+    return builder.toAtomString();
 }
 
-String consumeFamilyNameRaw(CSSParserTokenRange& range)
+AtomString consumeFamilyNameRaw(CSSParserTokenRange& range)
 {
     if (range.peek().type() == StringToken)
-        return range.consumeIncludingWhitespace().value().toString();
+        return range.consumeIncludingWhitespace().value().toAtomString();
     if (range.peek().type() != IdentToken)
-        return String();
+        return nullAtom();
     return concatenateFamilyName(range);
 }
 

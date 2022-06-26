@@ -50,7 +50,7 @@ public:
     RemoteRealtimeMediaSourceProxy(RemoteRealtimeMediaSourceProxy&&) = default;
     RemoteRealtimeMediaSourceProxy& operator=(RemoteRealtimeMediaSourceProxy&&) = default;
 
-    IPC::Connection* connection();
+    IPC::Connection& connection() { return m_connection.get(); }
     WebCore::RealtimeMediaSourceIdentifier identifier() const { return m_identifier; }
     WebCore::CaptureDevice::DeviceType deviceType() const { return m_device.type(); }
     const WebCore::CaptureDevice& device() const { return m_device; }
@@ -60,7 +60,7 @@ public:
     void createRemoteMediaSource(const String&, WebCore::PageIdentifier, CreateCallback&&, bool shouldUseRemoteFrame = false);
 
     RemoteRealtimeMediaSourceProxy clone();
-    void createRemoteCloneSource(WebCore::RealtimeMediaSourceIdentifier);
+    void createRemoteCloneSource(WebCore::RealtimeMediaSourceIdentifier, WebCore::PageIdentifier);
 
     void applyConstraintsSucceeded();
     void applyConstraintsFailed(String&& failedConstraint, String&& errorMessage);
@@ -83,11 +83,13 @@ public:
     bool interrupted() const { return m_interrupted; }
     void setInterrupted(bool interrupted) { m_interrupted = interrupted; }
 
+    void updateConnection();
+
 private:
     WebCore::RealtimeMediaSourceIdentifier m_identifier;
+    Ref<IPC::Connection> m_connection;
     WebCore::CaptureDevice m_device;
     bool m_shouldCaptureInGPUProcess { false };
-    WebCore::PageIdentifier m_pageIdentifier;
 
     WebCore::MediaConstraints m_constraints;
     Deque<WebCore::RealtimeMediaSource::ApplyConstraintsHandler> m_pendingApplyConstraintsCallbacks;
@@ -97,15 +99,6 @@ private:
     bool m_interrupted { false };
     bool m_isEnded { false };
 };
-
-inline RemoteRealtimeMediaSourceProxy::RemoteRealtimeMediaSourceProxy(WebCore::RealtimeMediaSourceIdentifier identifier, const WebCore::CaptureDevice& device, bool shouldCaptureInGPUProcess, const WebCore::MediaConstraints* constraints)
-    : m_identifier(identifier)
-    , m_device(device)
-    , m_shouldCaptureInGPUProcess(shouldCaptureInGPUProcess)
-{
-    if (constraints)
-        m_constraints = *constraints;
-}
 
 } // namespace WebKit
 

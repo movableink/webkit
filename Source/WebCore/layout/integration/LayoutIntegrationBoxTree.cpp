@@ -33,9 +33,11 @@
 #include "LayoutInlineTextBox.h"
 #include "LayoutLineBreakBox.h"
 #include "LayoutReplacedBox.h"
+#include "RenderBlock.h"
 #include "RenderBlockFlow.h"
 #include "RenderChildIterator.h"
 #include "RenderDetailsMarker.h"
+#include "RenderFlexibleBox.h"
 #include "RenderImage.h"
 #include "RenderLineBreak.h"
 #include "RenderListItem.h"
@@ -55,39 +57,46 @@ static constexpr size_t smallTreeThreshold = 8;
 // FIXME: see webkit.org/b/230964
 #define CAN_USE_FIRST_LINE_STYLE_RESOLVE 1
 
-static RenderStyle rootBoxStyle(const RenderStyle& style)
+static RenderStyle rootBoxStyle(const RenderBlock& rootRenderer)
 {
-    auto clonedStyle = RenderStyle::clone(style);
-    clonedStyle.setEffectiveDisplay(DisplayType::Block);
+    auto clonedStyle = RenderStyle::clone(rootRenderer.style());
+    if (is<RenderBlockFlow>(rootRenderer))
+        clonedStyle.setEffectiveDisplay(DisplayType::Block);
     return clonedStyle;
 }
 
-static std::unique_ptr<RenderStyle> rootBoxFirstLineStyle(const RenderBlockFlow& root)
+static std::unique_ptr<RenderStyle> rootBoxFirstLineStyle(const RenderBlock& rootRenderer)
 {
 #if CAN_USE_FIRST_LINE_STYLE_RESOLVE
-    auto& firstLineStyle = root.firstLineStyle();
-    if (root.style() == firstLineStyle)
+    auto& firstLineStyle = rootRenderer.firstLineStyle();
+    if (rootRenderer.style() == firstLineStyle)
         return { };
     auto clonedStyle = RenderStyle::clonePtr(firstLineStyle);
-    clonedStyle->setEffectiveDisplay(DisplayType::Block);
+    if (is<RenderBlockFlow>(rootRenderer))
+        clonedStyle->setEffectiveDisplay(DisplayType::Block);
     return clonedStyle;
 #else
-    UNUSED_PARAM(root);
+    UNUSED_PARAM(rootRenderer);
     return { };
 #endif
 }
 
-BoxTree::BoxTree(RenderBlockFlow& flow)
-    : m_flow(flow)
-    , m_root(Layout::Box::ElementAttributes { Layout::Box::ElementType::IntegrationBlockContainer }, rootBoxStyle(flow.style()), rootBoxFirstLineStyle(flow))
+BoxTree::BoxTree(RenderBlock& rootRenderer)
+    : m_rootRenderer(rootRenderer)
+    , m_root(Layout::Box::ElementAttributes { Layout::Box::ElementType::IntegrationBlockContainer }, rootBoxStyle(rootRenderer), rootBoxFirstLineStyle(rootRenderer))
 {
-    if (flow.isAnonymous())
+    if (rootRenderer.isAnonymous())
         m_root.setIsAnonymous();
 
-    buildTree();
+    if (is<RenderBlockFlow>(rootRenderer))
+        buildTreeForInlineContent();
+    else if (is<RenderFlexibleBox>(rootRenderer))
+        buildTreeForFlexContent();
+    else
+        ASSERT_NOT_IMPLEMENTED_YET();
 }
 
-void BoxTree::buildTree()
+void BoxTree::buildTreeForInlineContent()
 {
     auto createChildBox = [&](RenderObject& childRenderer) -> std::unique_ptr<Layout::Box> {
         std::unique_ptr<RenderStyle> firstLineStyle;
@@ -99,8 +108,7 @@ void BoxTree::buildTree()
             auto& textRenderer = downcast<RenderText>(childRenderer);
             auto style = RenderStyle::createAnonymousStyleWithDisplay(textRenderer.style(), DisplayType::Inline);
             auto text = style.textSecurity() == TextSecurity::None ? textRenderer.text() : RenderBlock::updateSecurityDiscCharacters(style, textRenderer.text());
-            auto useSimplifiedTextMeasuring = textRenderer.canUseSimplifiedTextMeasuring() && (!firstLineStyle || firstLineStyle->fontCascade() == style.fontCascade());
-            return makeUnique<Layout::InlineTextBox>(text, useSimplifiedTextMeasuring, textRenderer.canUseSimpleFontCodePath(), WTFMove(style), WTFMove(firstLineStyle));
+            return makeUnique<Layout::InlineTextBox>(text, textRenderer.canUseSimplifiedTextMeasuring(), textRenderer.canUseSimpleFontCodePath(), WTFMove(style), WTFMove(firstLineStyle));
         }
 
         auto style = RenderStyle::clone(childRenderer.style());
@@ -109,6 +117,12 @@ void BoxTree::buildTree()
                 styleToAdjust.setDisplay(DisplayType::Inline);
                 styleToAdjust.setFloating(Float::None);
                 styleToAdjust.setPosition(PositionType::Static);
+
+                // Clear property should only apply on block elements, however,
+                // it appears that browsers seem to ignore it on <br> inline elements.
+                // https://drafts.csswg.org/css2/#propdef-clear
+                if (downcast<RenderLineBreak>(childRenderer).isWBR())
+                    styleToAdjust.setClear(Clear::None);
             };
             adjustStyle(style);
             if (firstLineStyle)
@@ -157,10 +171,19 @@ void BoxTree::buildTree()
         return nullptr;
     };
 
-    for (auto walker = InlineWalker(m_flow); !walker.atEnd(); walker.advance()) {
+    for (auto walker = InlineWalker(downcast<RenderBlockFlow>(m_rootRenderer)); !walker.atEnd(); walker.advance()) {
         auto& childRenderer = *walker.current();
         auto childBox = createChildBox(childRenderer);
         appendChild(makeUniqueRefFromNonNullUniquePtr(WTFMove(childBox)), childRenderer);
+    }
+}
+
+void BoxTree::buildTreeForFlexContent()
+{
+    for (auto& flexItemRenderer : childrenOfType<RenderObject>(m_rootRenderer)) {
+        auto style = RenderStyle::clone(flexItemRenderer.style());
+        auto flexItem = makeUnique<Layout::ContainerBox>(Layout::Box::ElementAttributes { Layout::Box::ElementType::IntegrationBlockContainer }, WTFMove(style));
+        appendChild(makeUniqueRefFromNonNullUniquePtr(WTFMove(flexItem)), flexItemRenderer);
     }
 }
 
@@ -196,7 +219,7 @@ void BoxTree::updateStyle(const RenderBoxModelObject& renderer)
     };
 
     if (&layoutBox == &rootLayoutBox())
-        layoutBox.updateStyle(rootBoxStyle(style), rootBoxFirstLineStyle(downcast<RenderBlockFlow>(renderer)));
+        layoutBox.updateStyle(rootBoxStyle(downcast<RenderBlock>(renderer)), rootBoxFirstLineStyle(downcast<RenderBlock>(renderer)));
     else
         layoutBox.updateStyle(style, firstLineStyle());
 
@@ -210,7 +233,7 @@ void BoxTree::updateStyle(const RenderBoxModelObject& renderer)
 
 Layout::Box& BoxTree::layoutBoxForRenderer(const RenderObject& renderer)
 {
-    if (&renderer == &m_flow)
+    if (&renderer == &m_rootRenderer)
         return m_root;
 
     if (m_boxes.size() <= smallTreeThreshold) {
@@ -232,7 +255,7 @@ const Layout::Box& BoxTree::layoutBoxForRenderer(const RenderObject& renderer) c
 RenderObject& BoxTree::rendererForLayoutBox(const Layout::Box& box)
 {
     if (&box == &m_root)
-        return m_flow;
+        return m_rootRenderer;
 
     if (m_boxes.size() <= smallTreeThreshold) {
         auto index = m_boxes.findIf([&](auto& entry) {

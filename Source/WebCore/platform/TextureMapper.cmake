@@ -24,6 +24,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/texmap/BitmapTexture.h
     platform/graphics/texmap/ClipStack.h
     platform/graphics/texmap/GraphicsContextGLTextureMapper.h
+    platform/graphics/texmap/GraphicsContextGLTextureMapperANGLE.h
     platform/graphics/texmap/GraphicsLayerTextureMapper.h
     platform/graphics/texmap/TextureMapper.h
     platform/graphics/texmap/TextureMapperBackingStore.h
@@ -147,5 +148,19 @@ if (USE_GRAPHICS_LAYER_WC)
     )
     list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
         platform/graphics/texmap/TextureMapperSparseBackingStore.h
+    )
+endif ()
+
+if (USE_LIBGBM)
+    list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+        platform/graphics/gbm/DMABufColorSpace.h
+        platform/graphics/gbm/DMABufEGLUtilities.h
+        platform/graphics/gbm/DMABufFormat.h
+        platform/graphics/gbm/DMABufObject.h
+        platform/graphics/gbm/DMABufReleaseFlag.h
+        platform/graphics/gbm/GBMBufferSwapchain.h
+        platform/graphics/gbm/GBMDevice.h
+        platform/graphics/gbm/GraphicsContextGLGBM.h
+        platform/graphics/gbm/GraphicsContextGLGBMTextureMapper.h
     )
 endif ()

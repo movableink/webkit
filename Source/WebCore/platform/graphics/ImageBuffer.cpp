@@ -28,6 +28,7 @@
 #include "config.h"
 #include "ImageBuffer.h"
 
+#include "BitmapImage.h"
 #include "GraphicsContext.h"
 #include "HostWindow.h"
 #include "PlatformImageBuffer.h"
@@ -37,37 +38,32 @@ namespace WebCore {
 static const float MaxClampedLength = 4096;
 static const float MaxClampedArea = MaxClampedLength * MaxClampedLength;
 
-RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingMode renderingMode, ShouldUseDisplayList shouldUseDisplayList, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, const HostWindow* hostWindow)
+RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, OptionSet<ImageBufferOptions> options, const CreationContext& creationContext)
 {
     RefPtr<ImageBuffer> imageBuffer;
     
-    // Give ShouldUseDisplayList a higher precedence since it is a debug option.
-    if (shouldUseDisplayList == ShouldUseDisplayList::Yes) {
-        if (renderingMode == RenderingMode::Accelerated)
-            imageBuffer = DisplayListAcceleratedImageBuffer::create(size, resolutionScale, colorSpace, pixelFormat, hostWindow);
+    // Give UseDisplayList a higher precedence since it is a debug option.
+    if (options.contains(ImageBufferOptions::UseDisplayList)) {
+        if (options.contains(ImageBufferOptions::Accelerated))
+            imageBuffer = DisplayListAcceleratedImageBuffer::create(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext);
         
         if (!imageBuffer)
-            imageBuffer = DisplayListUnacceleratedImageBuffer::create(size, resolutionScale, colorSpace, pixelFormat, hostWindow);
+            imageBuffer = DisplayListUnacceleratedImageBuffer::create(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext);
     }
     
-    if (hostWindow && !imageBuffer)
-        imageBuffer = hostWindow->createImageBuffer(size, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat);
+    if (creationContext.hostWindow && !imageBuffer) {
+        auto renderingMode = options.contains(ImageBufferOptions::Accelerated) ? RenderingMode::Accelerated : RenderingMode::Unaccelerated;
+        imageBuffer = creationContext.hostWindow->createImageBuffer(size, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat);
+    }
 
-    if (!imageBuffer)
-        imageBuffer = ImageBuffer::create(size, renderingMode, resolutionScale, colorSpace, pixelFormat, hostWindow);
+    if (imageBuffer)
+        return imageBuffer;
 
-    return imageBuffer;
-}
-
-RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingMode renderingMode, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, const HostWindow* hostWindow)
-{
-    RefPtr<ImageBuffer> imageBuffer;
-    
-    if (renderingMode == RenderingMode::Accelerated)
-        imageBuffer = AcceleratedImageBuffer::create(size, resolutionScale, colorSpace, pixelFormat, hostWindow);
+    if (options.contains(ImageBufferOptions::Accelerated))
+        imageBuffer = AcceleratedImageBuffer::create(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext);
     
     if (!imageBuffer)
-        imageBuffer = UnacceleratedImageBuffer::create(size, resolutionScale, colorSpace, pixelFormat, hostWindow);
+        imageBuffer = UnacceleratedImageBuffer::create(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext);
 
     return imageBuffer;
 }
@@ -126,14 +122,48 @@ FloatRect ImageBuffer::clampedRect(const FloatRect& rect)
     return FloatRect(rect.location(), clampedSize(rect.size()));
 }
 
-RefPtr<NativeImage> ImageBuffer::sinkIntoNativeImage(RefPtr<ImageBuffer> imageBuffer)
+RefPtr<NativeImage> ImageBuffer::sinkIntoNativeImage(RefPtr<ImageBuffer> source)
 {
-    return imageBuffer->sinkIntoNativeImage();
+    if (!source)
+        return nullptr;
+    return source->sinkIntoNativeImage();
 }
 
-RefPtr<Image> ImageBuffer::sinkIntoImage(RefPtr<ImageBuffer> imageBuffer, PreserveResolution preserveResolution)
+RefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior, PreserveResolution preserveResolution) const
 {
-    return imageBuffer->sinkIntoImage(preserveResolution);
+    RefPtr<NativeImage> image;
+    if (resolutionScale() == 1 || preserveResolution == PreserveResolution::Yes)
+        image = copyNativeImage(copyBehavior);
+    else {
+        auto copyBuffer = context().createImageBuffer(logicalSize(), 1.f, colorSpace());
+        if (!copyBuffer)
+            return nullptr;
+        copyBuffer->context().drawImageBuffer(const_cast<ImageBuffer&>(*this), FloatPoint { }, CompositeOperator::Copy);
+        image = ImageBuffer::sinkIntoNativeImage(WTFMove(copyBuffer));
+    }
+    if (!image)
+        return nullptr;
+    return BitmapImage::create(image.releaseNonNull());
+}
+
+RefPtr<Image> ImageBuffer::sinkIntoImage(RefPtr<ImageBuffer> source, PreserveResolution preserveResolution)
+{
+    if (!source)
+        return nullptr;
+    RefPtr<NativeImage> image;
+    if (source->resolutionScale() == 1 || preserveResolution == PreserveResolution::Yes)
+        image = sinkIntoNativeImage(WTFMove(source));
+    else {
+        auto copySize = source->logicalSize();
+        auto copyBuffer = source->context().createImageBuffer(copySize, 1.f, source->colorSpace());
+        if (!copyBuffer)
+            return nullptr;
+        drawConsuming(WTFMove(source), copyBuffer->context(), FloatRect { { }, copySize }, FloatRect { 0, 0, -1, -1 }, CompositeOperator::Copy);
+        image = ImageBuffer::sinkIntoNativeImage(WTFMove(copyBuffer));
+    }
+    if (!image)
+        return nullptr;
+    return BitmapImage::create(image.releaseNonNull());
 }
 
 void ImageBuffer::drawConsuming(RefPtr<ImageBuffer> imageBuffer, GraphicsContext& context, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)

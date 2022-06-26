@@ -59,7 +59,7 @@ static ExceptionOr<Vector<ListedChild>> listDirectoryWithMetadata(const String& 
 {
     ASSERT(!isMainThread());
     if (FileSystem::fileType(fullPath) != FileSystem::FileType::Directory)
-        return Exception { NotFoundError, "Path no longer exists or is no longer a directory" };
+        return Exception { NotFoundError, "Path no longer exists or is no longer a directory"_s };
 
     auto childNames = FileSystem::listDirectory(fullPath);
     Vector<ListedChild> listedChildren;
@@ -107,7 +107,7 @@ static bool isValidPathNameCharacter(UChar c)
 // https://wicg.github.io/entries-api/#path-segment
 static bool isValidPathSegment(StringView segment)
 {
-    if (segment.isEmpty() || segment == "." || segment == "..")
+    if (segment.isEmpty() || segment == "."_s || segment == ".."_s)
         return true;
 
     for (unsigned i = 0; i < segment.length(); ++i) {
@@ -183,7 +183,7 @@ static ExceptionOr<String> validatePathIsExpectedType(const String& fullPath, St
         return Exception { NotFoundError, "Path does not exist"_s };
 
     if (*fileType != expectedType)
-        return Exception { TypeMismatchError, "Entry at path does not have expected type" };
+        return Exception { TypeMismatchError, "Entry at path does not have expected type"_s };
 
     return WTFMove(virtualPath);
 }
@@ -193,7 +193,7 @@ static String resolveRelativeVirtualPath(StringView baseVirtualPath, StringView 
 {
     ASSERT(baseVirtualPath[0] == '/');
     if (!relativeVirtualPath.isEmpty() && relativeVirtualPath[0] == '/')
-        return relativeVirtualPath.length() == 1 ? relativeVirtualPath.toString() : resolveRelativeVirtualPath("/", relativeVirtualPath.substring(1));
+        return relativeVirtualPath.length() == 1 ? relativeVirtualPath.toString() : resolveRelativeVirtualPath("/"_s, relativeVirtualPath.substring(1));
 
     Vector<StringView> virtualPathSegments;
     for (auto segment : baseVirtualPath.split('/'))
@@ -201,9 +201,9 @@ static String resolveRelativeVirtualPath(StringView baseVirtualPath, StringView 
 
     for (auto segment : relativeVirtualPath.split('/')) {
         ASSERT(!segment.isEmpty());
-        if (segment == ".")
+        if (segment == "."_s)
             continue;
-        if (segment == "..") {
+        if (segment == ".."_s) {
             if (!virtualPathSegments.isEmpty())
                 virtualPathSegments.removeLast();
             continue;
@@ -229,9 +229,9 @@ String DOMFileSystem::evaluatePath(StringView virtualPath)
 
     Vector<StringView> resolvedComponents;
     for (auto component : virtualPath.split('/')) {
-        if (component == ".")
+        if (component == "."_s)
             continue;
-        if (component == "..") {
+        if (component == ".."_s) {
             if (!resolvedComponents.isEmpty())
                 resolvedComponents.removeLast();
             continue;
@@ -267,7 +267,7 @@ void DOMFileSystem::getParent(ScriptExecutionContext& context, FileSystemEntry& 
 {
     ASSERT(&entry.filesystem() == this);
 
-    auto virtualPath = resolveRelativeVirtualPath(entry.virtualPath(), "..");
+    auto virtualPath = resolveRelativeVirtualPath(entry.virtualPath(), ".."_s);
     ASSERT(virtualPath[0] == '/');
     auto fullPath = evaluatePath(virtualPath);
     m_workQueue->dispatch([protectedThis = Ref { *this }, context = Ref { context }, fullPath = crossThreadCopy(WTFMove(fullPath)), virtualPath = crossThreadCopy(WTFMove(virtualPath)), completionCallback = WTFMove(completionCallback)]() mutable {

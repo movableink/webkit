@@ -37,9 +37,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(ANGLEInstancedArrays);
 ANGLEInstancedArrays::ANGLEInstancedArrays(WebGLRenderingContextBase& context)
     : WebGLExtension(context)
 {
-#if USE(ANGLE)
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_ANGLE_instanced_arrays");
-#endif
+    context.graphicsContextGL()->ensureExtensionEnabled("GL_ANGLE_instanced_arrays"_s);
 }
 
 ANGLEInstancedArrays::~ANGLEInstancedArrays() = default;
@@ -52,7 +50,7 @@ WebGLExtension::ExtensionName ANGLEInstancedArrays::getName() const
 bool ANGLEInstancedArrays::supported(GraphicsContextGL& context)
 {
 #if USE(ANGLE) || PLATFORM(GTK) || PLATFORM(WPE)
-    return context.supportsExtension("GL_ANGLE_instanced_arrays");
+    return context.supportsExtension("GL_ANGLE_instanced_arrays"_s);
 #else
     UNUSED_PARAM(context);
     return false;

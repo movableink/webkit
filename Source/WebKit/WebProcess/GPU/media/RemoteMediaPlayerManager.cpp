@@ -34,6 +34,7 @@
 #include "RemoteMediaPlayerManagerProxyMessages.h"
 #include "RemoteMediaPlayerProxyConfiguration.h"
 #include "SampleBufferDisplayLayerManager.h"
+#include "WebCoreArgumentCoders.h"
 #include "WebProcess.h"
 #include "WebProcessCreationParameters.h"
 #include <WebCore/ContentTypeUtilities.h>
@@ -41,6 +42,10 @@
 #include <wtf/HashFunctions.h>
 #include <wtf/HashMap.h>
 #include <wtf/StdLibExtras.h>
+
+#if PLATFORM(COCOA)
+#include <WebCore/MediaPlayerPrivateMediaStreamAVFObjC.h>
+#endif
 
 namespace WebKit {
 
@@ -261,6 +266,9 @@ void RemoteMediaPlayerManager::setUseGPUProcess(bool useGPUProcess)
     if (useGPUProcess) {
         WebCore::SampleBufferDisplayLayer::setCreator([](auto& client) {
             return WebProcess::singleton().ensureGPUProcessConnection().sampleBufferDisplayLayerManager().createLayer(client);
+        });
+        WebCore::MediaPlayerPrivateMediaStreamAVFObjC::setNativeImageCreator([](auto& videoFrame) {
+            return WebProcess::singleton().ensureGPUProcessConnection().videoFrameObjectHeapProxy().getNativeImage(videoFrame);
         });
     }
 #endif

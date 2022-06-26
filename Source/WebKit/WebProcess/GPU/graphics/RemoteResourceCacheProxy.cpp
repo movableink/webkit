@@ -42,6 +42,8 @@ RemoteResourceCacheProxy::RemoteResourceCacheProxy(RemoteRenderingBackendProxy& 
 RemoteResourceCacheProxy::~RemoteResourceCacheProxy()
 {
     clearNativeImageMap();
+    clearImageBufferBackends();
+    clearDecomposedGlyphsMap();
 }
 
 void RemoteResourceCacheProxy::cacheImageBuffer(WebCore::ImageBuffer& imageBuffer)
@@ -70,7 +72,7 @@ inline static RefPtr<ShareableBitmap> createShareableBitmapFromNativeImage(Nativ
 {
     auto imageSize = image.size();
 
-    auto bitmap = ShareableBitmap::createShareable(image.size(), { image.colorSpace() });
+    auto bitmap = ShareableBitmap::create(image.size(), { image.colorSpace() });
     if (!bitmap)
         return nullptr;
 
@@ -131,6 +133,14 @@ void RemoteResourceCacheProxy::recordFontUse(Font& font)
     }
 }
 
+void RemoteResourceCacheProxy::recordDecomposedGlyphsUse(DecomposedGlyphs& decomposedGlyphs)
+{
+    if (m_decomposedGlyphs.add(decomposedGlyphs.renderingResourceIdentifier(), decomposedGlyphs).isNewEntry) {
+        decomposedGlyphs.addObserver(*this);
+        m_remoteRenderingBackendProxy.cacheDecomposedGlyphs(decomposedGlyphs);
+    }
+}
+
 void RemoteResourceCacheProxy::releaseNativeImage(RenderingResourceIdentifier renderingResourceIdentifier)
 {
     auto iterator = m_nativeImages.find(renderingResourceIdentifier);
@@ -154,6 +164,13 @@ void RemoteResourceCacheProxy::prepareForNextRenderingUpdate()
     m_numberOfFontsUsedInCurrentRenderingUpdate = 0;
 }
 
+void RemoteResourceCacheProxy::releaseDecomposedGlyphs(RenderingResourceIdentifier renderingResourceIdentifier)
+{
+    bool removed = m_decomposedGlyphs.remove(renderingResourceIdentifier);
+    RELEASE_ASSERT(removed);
+    m_remoteRenderingBackendProxy.releaseRemoteResource(renderingResourceIdentifier);
+}
+
 void RemoteResourceCacheProxy::releaseAllRemoteFonts()
 {
     for (auto& fontState : m_fonts)
@@ -164,6 +181,22 @@ void RemoteResourceCacheProxy::clearFontMap()
 {
     m_fonts.clear();
     m_numberOfFontsUsedInCurrentRenderingUpdate = 0;
+}
+
+void RemoteResourceCacheProxy::clearImageBufferBackends()
+{
+    // Get a copy of m_imageBuffers.values() because clearBackend()
+    // may release some of the cached ImageBuffers.
+    for (auto& imageBuffer : copyToVector(m_imageBuffers.values())) {
+        if (!imageBuffer)
+            continue;
+        imageBuffer->clearBackend();
+    }
+}
+
+void RemoteResourceCacheProxy::clearDecomposedGlyphsMap()
+{
+    m_decomposedGlyphs.clear();
 }
 
 void RemoteResourceCacheProxy::finalizeRenderingUpdateForFonts()
@@ -199,14 +232,8 @@ void RemoteResourceCacheProxy::remoteResourceCacheWasDestroyed()
 {
     clearNativeImageMap();
     clearFontMap();
-
-    // Get a copy of m_imageBuffers.values() because clearBackend()
-    // may release some of the cached ImageBuffers.
-    for (auto& imageBuffer : copyToVector(m_imageBuffers.values())) {
-        if (!imageBuffer)
-            continue;
-        imageBuffer->clearBackend();
-    }
+    clearImageBufferBackends();
+    clearDecomposedGlyphsMap();
 
     for (auto& imageBuffer : m_imageBuffers.values()) {
         if (!imageBuffer)

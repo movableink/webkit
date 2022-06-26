@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2008, 2013-2014 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -378,11 +378,11 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
         // Sorted by most to least glyphs according to http://en.wikipedia.org/wiki/Unicode_typefaces
         // Start with Times New Roman also since it is the default if the user doesn't change prefs.
         static NeverDestroyed<const String> fallbackFonts[] = {
-            String("Times New Roman", String::ConstructFromLiteral),
-            String("Microsoft Sans Serif", String::ConstructFromLiteral),
-            String("Tahoma", String::ConstructFromLiteral),
-            String("Lucida Sans Unicode", String::ConstructFromLiteral),
-            String("Arial", String::ConstructFromLiteral)
+            "Times New Roman"_str,
+            "Microsoft Sans Serif"_str,
+            "Tahoma"_str,
+            "Lucida Sans Unicode"_str,
+            "Arial"_str
         };
         for (size_t i = 0; i < WTF_ARRAY_LENGTH(fallbackFonts); ++i) {
             if (fontForFamily(fontDescription, fallbackFonts[i])) {
@@ -455,7 +455,7 @@ static inline bool isGDIFontWeightBold(LONG gdiFontWeight)
 
 static LONG adjustedGDIFontWeight(LONG gdiFontWeight, const String& family)
 {
-    if (equalLettersIgnoringASCIICase(family, "lucida grande")) {
+    if (equalLettersIgnoringASCIICase(family, "lucida grande"_s)) {
         if (gdiFontWeight == FW_NORMAL)
             return FW_MEDIUM;
         if (gdiFontWeight == FW_BOLD)
@@ -517,7 +517,7 @@ static GDIObject<HFONT> createGDIFont(const AtomString& family, LONG desiredWeig
 
     LOGFONT logFont;
     logFont.lfCharSet = DEFAULT_CHARSET;
-    StringView truncatedFamily = StringView(family).substring(0, static_cast<unsigned>(LF_FACESIZE - 1));
+    StringView truncatedFamily = StringView(family).left(static_cast<unsigned>(LF_FACESIZE - 1));
     truncatedFamily.getCharactersWithUpconvert(ucharFrom(logFont.lfFaceName));
     logFont.lfFaceName[truncatedFamily.length()] = 0;
     logFont.lfPitchAndFamily = 0;
@@ -631,7 +631,7 @@ Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamil
 
     LOGFONT logFont;
     logFont.lfCharSet = DEFAULT_CHARSET;
-    StringView truncatedFamily = StringView(familyName).substring(0, static_cast<unsigned>(LF_FACESIZE - 1));
+    StringView truncatedFamily = StringView(familyName).left(static_cast<unsigned>(LF_FACESIZE - 1));
     truncatedFamily.getCharactersWithUpconvert(ucharFrom(logFont.lfFaceName));
     logFont.lfFaceName[truncatedFamily.length()] = 0;
     logFont.lfPitchAndFamily = 0;
@@ -647,7 +647,7 @@ Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamil
 
 std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext&)
 {
-    bool isLucidaGrande = equalLettersIgnoringASCIICase(family, "lucida grande");
+    bool isLucidaGrande = equalLettersIgnoringASCIICase(family, "lucida grande"_s);
 
     bool useGDI = fontDescription.renderingMode() == FontRenderingMode::Alternate && !isLucidaGrande;
 
@@ -698,7 +698,7 @@ std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&
     // FIXME: Seems unlikely this is still needed. If it was really needed, I think we
     // would need it on other platforms too.
     case 8:
-        if (equalLettersIgnoringASCIICase(familyName, "ms serif"))
+        if (equalLettersIgnoringASCIICase(familyName, "ms serif"_s))
             return "Times New Roman"_s;
         break;
     // On Windows, we don't support bitmap fonts, but legacy content expects support.
@@ -707,11 +707,15 @@ std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&
     // FIXME: Seems unlikely this is still needed. If it was really needed, I think we
     // would need it on other platforms too.
     case 13:
-        if (equalLettersIgnoringASCIICase(familyName, "ms sans serif"))
+        if (equalLettersIgnoringASCIICase(familyName, "ms sans serif"_s))
             return "Microsoft Sans Serif"_s;
         break;
     }
     return std::nullopt;
+}
+
+void FontCache::platformInvalidate()
+{
 }
 
 }

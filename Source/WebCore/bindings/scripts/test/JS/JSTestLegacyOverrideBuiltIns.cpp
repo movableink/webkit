@@ -93,7 +93,7 @@ STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSTestLegacyOverrideBuiltInsPrototype, JSTes
 
 using JSTestLegacyOverrideBuiltInsDOMConstructor = JSDOMConstructorNotConstructable<JSTestLegacyOverrideBuiltIns>;
 
-template<> const ClassInfo JSTestLegacyOverrideBuiltInsDOMConstructor::s_info = { "TestLegacyOverrideBuiltIns", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyOverrideBuiltInsDOMConstructor) };
+template<> const ClassInfo JSTestLegacyOverrideBuiltInsDOMConstructor::s_info = { "TestLegacyOverrideBuiltIns"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyOverrideBuiltInsDOMConstructor) };
 
 template<> JSValue JSTestLegacyOverrideBuiltInsDOMConstructor::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
 {
@@ -114,11 +114,11 @@ template<> void JSTestLegacyOverrideBuiltInsDOMConstructor::initializeProperties
 
 static const HashTableValue JSTestLegacyOverrideBuiltInsPrototypeTableValues[] =
 {
-    { "constructor", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestLegacyOverrideBuiltInsConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
-    { "namedItem", static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestLegacyOverrideBuiltInsPrototypeFunction_namedItem), (intptr_t) (1) } },
+    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestLegacyOverrideBuiltInsConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "namedItem"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(jsTestLegacyOverrideBuiltInsPrototypeFunction_namedItem), (intptr_t) (1) } },
 };
 
-const ClassInfo JSTestLegacyOverrideBuiltInsPrototype::s_info = { "TestLegacyOverrideBuiltIns", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyOverrideBuiltInsPrototype) };
+const ClassInfo JSTestLegacyOverrideBuiltInsPrototype::s_info = { "TestLegacyOverrideBuiltIns"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyOverrideBuiltInsPrototype) };
 
 void JSTestLegacyOverrideBuiltInsPrototype::finishCreation(VM& vm)
 {
@@ -127,7 +127,7 @@ void JSTestLegacyOverrideBuiltInsPrototype::finishCreation(VM& vm)
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-const ClassInfo JSTestLegacyOverrideBuiltIns::s_info = { "TestLegacyOverrideBuiltIns", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyOverrideBuiltIns) };
+const ClassInfo JSTestLegacyOverrideBuiltIns::s_info = { "TestLegacyOverrideBuiltIns"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestLegacyOverrideBuiltIns) };
 
 JSTestLegacyOverrideBuiltIns::JSTestLegacyOverrideBuiltIns(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestLegacyOverrideBuiltIns>&& impl)
     : JSDOMWrapper<TestLegacyOverrideBuiltIns>(structure, globalObject, WTFMove(impl))
@@ -137,7 +137,7 @@ JSTestLegacyOverrideBuiltIns::JSTestLegacyOverrideBuiltIns(Structure* structure,
 void JSTestLegacyOverrideBuiltIns::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     static_assert(!std::is_base_of<ActiveDOMObject, TestLegacyOverrideBuiltIns>::value, "Interface is not marked as [ActiveDOMObject] even though implementation class subclasses ActiveDOMObject.");
 
@@ -216,7 +216,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestLegacyOverrideBuiltInsConstructor, (JSGlobalObjec
 {
     VM& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    auto* prototype = jsDynamicCast<JSTestLegacyOverrideBuiltInsPrototype*>(vm, JSValue::decode(thisValue));
+    auto* prototype = jsDynamicCast<JSTestLegacyOverrideBuiltInsPrototype*>(JSValue::decode(thisValue));
     if (UNLIKELY(!prototype))
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestLegacyOverrideBuiltIns::getConstructor(JSC::getVM(lexicalGlobalObject), prototype->globalObject()));
@@ -312,9 +312,9 @@ JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* g
     return wrap(lexicalGlobalObject, globalObject, impl);
 }
 
-TestLegacyOverrideBuiltIns* JSTestLegacyOverrideBuiltIns::toWrapped(JSC::VM& vm, JSC::JSValue value)
+TestLegacyOverrideBuiltIns* JSTestLegacyOverrideBuiltIns::toWrapped(JSC::VM&, JSC::JSValue value)
 {
-    if (auto* wrapper = jsDynamicCast<JSTestLegacyOverrideBuiltIns*>(vm, value))
+    if (auto* wrapper = jsDynamicCast<JSTestLegacyOverrideBuiltIns*>(value))
         return &wrapper->wrapped();
     return nullptr;
 }

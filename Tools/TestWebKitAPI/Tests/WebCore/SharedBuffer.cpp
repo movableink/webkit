@@ -43,7 +43,7 @@ namespace TestWebKitAPI {
 
 TEST_F(FragmentedSharedBufferTest, createWithContentsOfMissingFile)
 {
-    auto buffer = SharedBuffer::createWithContentsOfFile(String("not_existing_file"));
+    auto buffer = SharedBuffer::createWithContentsOfFile(String("not_existing_file"_s));
     ASSERT_NULL(buffer);
 }
 
@@ -52,7 +52,7 @@ TEST_F(FragmentedSharedBufferTest, createWithContentsOfExistingFile)
     auto buffer = SharedBuffer::createWithContentsOfFile(tempFilePath());
     ASSERT_NOT_NULL(buffer);
     EXPECT_TRUE(buffer->size() == strlen(FragmentedSharedBufferTest::testData()));
-    EXPECT_TRUE(String(FragmentedSharedBufferTest::testData()) == String(buffer->makeContiguous()->data(), buffer->size()));
+    EXPECT_TRUE(String::fromLatin1(FragmentedSharedBufferTest::testData()) == String(buffer->makeContiguous()->data(), buffer->size()));
 }
 
 TEST_F(FragmentedSharedBufferTest, createWithContentsOfExistingEmptyFile)
@@ -302,10 +302,10 @@ TEST_F(FragmentedSharedBufferTest, toHexString)
     builder.append(WTFMove(t1));
     auto buffer = builder.take();
     String result = buffer->toHexString();
-    EXPECT_EQ(result, "110512");
+    EXPECT_EQ(result, "110512"_s);
     builder.reset();
     buffer = builder.take();
-    EXPECT_EQ(buffer->toHexString(), "");
+    EXPECT_EQ(buffer->toHexString(), ""_s);
 }
 
 TEST_F(FragmentedSharedBufferTest, read)
@@ -315,12 +315,12 @@ TEST_F(FragmentedSharedBufferTest, read)
     auto check = [](FragmentedSharedBuffer& sharedBuffer) {
         Vector<uint8_t> data = sharedBuffer.read(4, 3);
         EXPECT_EQ(data.size(), 3u);
-        EXPECT_EQ(String(data.data(), 3), " is");
+        EXPECT_EQ(StringView(data.data(), 3), " is"_s);
 
         data = sharedBuffer.read(4, 1000);
         EXPECT_EQ(data.size(), 18u);
 
-        EXPECT_EQ(String(data.data(), 18), " is a simple test.");
+        EXPECT_EQ(StringView(data.data(), 18), " is a simple test."_s);
     };
     auto sharedBuffer = SharedBuffer::create(simpleText, strlen(simpleText));
     check(sharedBuffer);
@@ -364,7 +364,7 @@ TEST_F(FragmentedSharedBufferTest, copyIsContiguous)
 template< typename T, size_t N >
 constexpr size_t arraysize( const T (&)[N] ) { return N; }
 
-static void readAllChunks(std::vector<String>* chunks, FragmentedSharedBuffer& buffer, const String& separator = "\r\n", bool includeSeparator = false)
+static void readAllChunks(std::vector<String>* chunks, FragmentedSharedBuffer& buffer, const String& separator = "\r\n"_s, bool includeSeparator = false)
 {
     SharedBufferChunkReader chunkReader(&buffer, separator.utf8().data());
     String chunk = chunkReader.nextChunkAsUTF8StringWithLatin1Fallback(includeSeparator);
@@ -382,7 +382,7 @@ static bool checkChunks(const std::vector<String>& chunks, const char* const exp
     }
 
     for (size_t i = 0; i < chunks.size(); ++i) {
-        if (chunks[i] != expectedChunks[i])
+        if (chunks[i] != StringView::fromLatin1(expectedChunks[i]))
             return false;
     }
     return true;
@@ -432,25 +432,25 @@ TEST_F(SharedBufferChunkReaderTest, peekData)
         SharedBufferChunkReader chunkReader(&sharedBuffer, "is");
 
         String chunk = chunkReader.nextChunkAsUTF8StringWithLatin1Fallback();
-        EXPECT_EQ(chunk, "Th");
+        EXPECT_EQ(chunk, "Th"_s);
 
         Vector<uint8_t> data;
         size_t read = chunkReader.peek(data, 3);
         EXPECT_EQ(read, 3u);
 
-        EXPECT_EQ(String(data.data(), 3), " is");
+        EXPECT_EQ(String(data.data(), 3), " is"_s);
 
         read = chunkReader.peek(data, 1000);
         EXPECT_EQ(read, 18u);
 
-        EXPECT_EQ(String(data.data(), 18), " is a simple test.");
+        EXPECT_EQ(String(data.data(), 18), " is a simple test."_s);
 
         // Ensure the cursor has not changed.
         chunk = chunkReader.nextChunkAsUTF8StringWithLatin1Fallback();
-        EXPECT_EQ(chunk, " ");
+        EXPECT_EQ(chunk, " "_s);
 
         chunk = chunkReader.nextChunkAsUTF8StringWithLatin1Fallback();
-        EXPECT_EQ(chunk, " a simple test.");
+        EXPECT_EQ(chunk, " a simple test."_s);
 
         chunk = chunkReader.nextChunkAsUTF8StringWithLatin1Fallback();
         EXPECT_TRUE(chunk.isNull());
@@ -477,32 +477,32 @@ TEST_F(SharedBufferChunkReaderTest, readAllChunksInMultiSegment)
     auto check = [](FragmentedSharedBuffer& sharedBuffer) {
         std::vector<String> chunks;
         const char* const expectedChunks1WithoutSeparator[] = { "Th", "s ", "s the most r", "d", "culous h", "story there ", "s." };
-        readAllChunks(&chunks, sharedBuffer, "i");
+        readAllChunks(&chunks, sharedBuffer, "i"_s);
         EXPECT_TRUE(checkChunks(chunks, expectedChunks1WithoutSeparator, arraysize(expectedChunks1WithoutSeparator)));
 
         chunks.clear();
         const char* const expectedChunks1WithSeparator[] = { "Thi", "s i", "s the most ri", "di", "culous hi", "story there i", "s." };
-        readAllChunks(&chunks, sharedBuffer, "i", true);
+        readAllChunks(&chunks, sharedBuffer, "i"_s, true);
         EXPECT_TRUE(checkChunks(chunks, expectedChunks1WithSeparator, arraysize(expectedChunks1WithSeparator)));
 
         chunks.clear();
         const char* const expectedChunks2WithoutSeparator[] = { "Th", " ", " the most ridiculous h", "tory there ", "." };
-        readAllChunks(&chunks, sharedBuffer, "is");
+        readAllChunks(&chunks, sharedBuffer, "is"_s);
         EXPECT_TRUE(checkChunks(chunks, expectedChunks2WithoutSeparator, arraysize(expectedChunks2WithoutSeparator)));
 
         chunks.clear();
         const char* const expectedChunks2WithSeparator[] = { "This", " is", " the most ridiculous his", "tory there is", "." };
-        readAllChunks(&chunks, sharedBuffer, "is", true);
+        readAllChunks(&chunks, sharedBuffer, "is"_s, true);
         EXPECT_TRUE(checkChunks(chunks, expectedChunks2WithSeparator, arraysize(expectedChunks2WithSeparator)));
 
         chunks.clear();
         const char* const expectedChunks3WithoutSeparator[] = { "This is the most ridiculous h", "ory there is." };
-        readAllChunks(&chunks, sharedBuffer, "ist");
+        readAllChunks(&chunks, sharedBuffer, "ist"_s);
         EXPECT_TRUE(checkChunks(chunks, expectedChunks3WithoutSeparator, arraysize(expectedChunks3WithoutSeparator)));
 
         chunks.clear();
         const char* const expectedChunks3WithSeparator[] = { "This is the most ridiculous hist", "ory there is." };
-        readAllChunks(&chunks, sharedBuffer, "ist", true);
+        readAllChunks(&chunks, sharedBuffer, "ist"_s, true);
         EXPECT_TRUE(checkChunks(chunks, expectedChunks3WithSeparator, arraysize(expectedChunks3WithSeparator)));
     };
     auto sharedBuffer = SharedBuffer::create(simpleText, strlen(simpleText));
@@ -529,22 +529,22 @@ TEST_F(SharedBufferChunkReaderTest, changingIterator)
         auto sharedBuffer = SharedBuffer::create(simpleText, strlen(simpleText));
         SharedBufferChunkReader chunkReader(sharedBuffer.ptr(), "is");
         String chunk = chunkReader.nextChunkAsUTF8StringWithLatin1Fallback();
-        EXPECT_EQ(chunk, "Th");
+        EXPECT_EQ(chunk, "Th"_s);
 
         chunk = chunkReader.nextChunkAsUTF8StringWithLatin1Fallback();
-        EXPECT_EQ(chunk, " ");
+        EXPECT_EQ(chunk, " "_s);
 
         chunkReader.setSeparator("he");
         chunk = chunkReader.nextChunkAsUTF8StringWithLatin1Fallback();
-        EXPECT_EQ(chunk, " t");
+        EXPECT_EQ(chunk, " t"_s);
 
         chunk = chunkReader.nextChunkAsUTF8StringWithLatin1Fallback();
-        EXPECT_EQ(chunk, " most ridiculous history t");
+        EXPECT_EQ(chunk, " most ridiculous history t"_s);
 
         // Set a non existing separator.
         chunkReader.setSeparator("tchinta");
         chunk = chunkReader.nextChunkAsUTF8StringWithLatin1Fallback();
-        EXPECT_EQ(chunk, "re is.");
+        EXPECT_EQ(chunk, "re is."_s);
 
         // We should be at the end of the string, so any subsequent call to nextChunk should return null.
         chunkReader.setSeparator(".");
@@ -557,12 +557,12 @@ TEST_F(SharedBufferChunkReaderTest, changingIterator)
         auto sharedBuffer = SharedBuffer::create(simpleText, strlen(simpleText));
         const char* const expectedChunksWithoutSeparator[] = { "" };
         std::vector<String> chunks;
-        readAllChunks(&chunks, sharedBuffer, "dog");
+        readAllChunks(&chunks, sharedBuffer, "dog"_s);
         EXPECT_TRUE(checkChunks(chunks, expectedChunksWithoutSeparator, arraysize(expectedChunksWithoutSeparator)));
 
         chunks.clear();
         const char* const expectedChunksWithSeparator[] = { "dog" };
-        readAllChunks(&chunks, sharedBuffer, "dog", true);
+        readAllChunks(&chunks, sharedBuffer, "dog"_s, true);
         EXPECT_TRUE(checkChunks(chunks, expectedChunksWithSeparator, arraysize(expectedChunksWithSeparator)));
     }
 
@@ -572,12 +572,12 @@ TEST_F(SharedBufferChunkReaderTest, changingIterator)
         auto sharedBuffer = SharedBuffer::create(simpleText, strlen(simpleText));
         const char* const expectedChunksWithoutSeparator[] = { "Beaucoup de chats ", "", "", "", "" };
         std::vector<String> chunks;
-        readAllChunks(&chunks, sharedBuffer, "cat");
+        readAllChunks(&chunks, sharedBuffer, "cat"_s);
         EXPECT_TRUE(checkChunks(chunks, expectedChunksWithoutSeparator, arraysize(expectedChunksWithoutSeparator)));
 
         chunks.clear();
         const char* const expectedChunksWithSeparator[] = { "Beaucoup de chats cat", "cat", "cat", "cat", "cat" };
-        readAllChunks(&chunks, sharedBuffer, "cat", true);
+        readAllChunks(&chunks, sharedBuffer, "cat"_s, true);
         EXPECT_TRUE(checkChunks(chunks, expectedChunksWithSeparator, arraysize(expectedChunksWithSeparator)));
     }
     {

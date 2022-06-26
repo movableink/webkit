@@ -49,7 +49,7 @@ class ImageTransferSessionVT;
 namespace WebKit {
 class RemoteVideoFrameObjectHeapProxy;
 
-class RemoteCaptureSampleManager : public IPC::Connection::ThreadMessageReceiverRefCounted {
+class RemoteCaptureSampleManager : public IPC::Connection::WorkQueueMessageReceiver {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     RemoteCaptureSampleManager();
@@ -60,21 +60,19 @@ public:
     void addSource(Ref<RemoteRealtimeVideoSource>&&);
     void removeSource(WebCore::RealtimeMediaSourceIdentifier);
 
-    void didUpdateSourceConnection(IPC::Connection*);
+    void didUpdateSourceConnection(IPC::Connection&);
     void setVideoFrameObjectHeapProxy(RemoteVideoFrameObjectHeapProxy*);
 
+    // IPC::Connection::WorkQueueMessageReceiver overrides.
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&);
 
 private:
-    // IPC::Connection::ThreadMessageReceiver
-    void dispatchToThread(Function<void()>&&) final;
-
     // Messages
     void audioStorageChanged(WebCore::RealtimeMediaSourceIdentifier, const SharedMemory::IPCHandle&, const WebCore::CAAudioStreamDescription&, uint64_t numberOfFrames, IPC::Semaphore&&, const MediaTime&, size_t frameSampleSize);
     void audioSamplesAvailable(WebCore::RealtimeMediaSourceIdentifier, MediaTime, uint64_t numberOfFrames);
     void videoFrameAvailable(WebCore::RealtimeMediaSourceIdentifier, RemoteVideoFrameProxy::Properties&&, WebCore::VideoFrameTimeMetadata);
     // FIXME: Will be removed once RemoteVideoFrameProxy providers are the only ones sending data.
-    void videoFrameAvailableCV(WebCore::RealtimeMediaSourceIdentifier, RetainPtr<CVPixelBufferRef>&&, WebCore::MediaSample::VideoRotation, bool mirrored, MediaTime, WebCore::VideoFrameTimeMetadata);
+    void videoFrameAvailableCV(WebCore::RealtimeMediaSourceIdentifier, RetainPtr<CVPixelBufferRef>&&, WebCore::VideoFrame::Rotation, bool mirrored, MediaTime, WebCore::VideoFrameTimeMetadata);
 
     void setConnection(IPC::Connection*);
 

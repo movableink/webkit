@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -129,6 +129,7 @@ public:
 
     FloatSize drawText(const FontCascade&, const TextRun&, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) final;
     void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode) final;
+    void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final;
     void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) final;
     void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::DoNotPaintIfFontNotReady) final;
 
@@ -143,7 +144,7 @@ public:
 
     bool supportsInternalLinks() const final;
 
-    void didUpdateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) final;
+    void didUpdateState(GraphicsContextState&) final;
 
 #if OS(WINDOWS) && !USE(CAIRO)
     GraphicsContextPlatformPrivate* deprecatedPrivateContext() const final;

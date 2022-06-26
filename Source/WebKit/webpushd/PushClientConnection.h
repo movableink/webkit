@@ -72,8 +72,8 @@ public:
 
     void connectionClosed();
 
-    void broadcastDebugMessage(const String&);
-    void sendDebugMessage(const String&);
+    void broadcastDebugMessage(StringView);
+    void sendDebugMessage(StringView);
 
 private:
     ClientConnection(xpc_connection_t);
@@ -81,7 +81,7 @@ private:
     void maybeStartNextAppBundleRequest();
     void setHostAppAuditTokenData(const Vector<uint8_t>&);
 
-    bool hostHasEntitlement(const char*);
+    bool hostHasEntitlement(ASCIILiteral);
 
     template<DaemonMessageType messageType, typename... Args>
     void sendDaemonMessage(Args&&...) const;

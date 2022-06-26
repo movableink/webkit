@@ -1455,7 +1455,7 @@ void CoordinatedGraphicsLayer::resumeAnimations()
 
 void CoordinatedGraphicsLayer::animationStartedTimerFired()
 {
-    client().notifyAnimationStarted(this, "", m_lastAnimationStartTime);
+    client().notifyAnimationStarted(this, emptyString(), m_lastAnimationStartTime);
 }
 
 void CoordinatedGraphicsLayer::requestPendingTileCreationTimerFired()
@@ -1492,7 +1492,7 @@ static void dumpInnerLayer(TextStream& textStream, const String& label, Coordina
 void CoordinatedGraphicsLayer::dumpAdditionalProperties(TextStream& textStream, OptionSet<LayerTreeAsTextOptions> options) const
 {
     if (options & LayerTreeAsTextOptions::IncludeContentLayers)
-        dumpInnerLayer(textStream, "backdrop layer", m_backdropLayer.get(), options);
+        dumpInnerLayer(textStream, "backdrop layer"_s, m_backdropLayer.get(), options);
 }
 
 } // namespace WebCore

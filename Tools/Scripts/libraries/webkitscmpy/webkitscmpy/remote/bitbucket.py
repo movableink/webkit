@@ -284,6 +284,9 @@ class BitBucket(Scm):
 
         self.pull_requests = self.PRGenerator(self)
 
+    def credentials(self):
+        return None, None
+
     @property
     def is_git(self):
         return True
@@ -366,7 +369,6 @@ class BitBucket(Scm):
             return [self.default_branch]
         return sorted([details.get('displayId') for details in response if details.get('displayId')])
 
-    @property
     def tags(self):
         response = self.request('tags')
         if not response:

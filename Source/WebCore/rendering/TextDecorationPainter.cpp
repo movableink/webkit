@@ -28,6 +28,7 @@
 #include "GraphicsContext.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLFontElement.h"
+#include "InlineIteratorLineBox.h"
 #include "InlineTextBoxStyle.h"
 #include "RenderBlock.h"
 #include "RenderStyle.h"
@@ -279,7 +280,13 @@ void TextDecorationPainter::paintBackgroundDecorations(const TextRun& textRun, c
         if (m_decorations.contains(TextDecorationLine::Underline)) {
             float textDecorationBaseFontSize = 16;
             auto defaultGap = m_lineStyle.computedFontSize() / textDecorationBaseFontSize;
-            float offset = computeUnderlineOffset(m_lineStyle.textUnderlinePosition(), m_lineStyle.textUnderlineOffset(), m_lineStyle.metricsOfPrimaryFont(), m_textBox, defaultGap);
+            float offset = computeUnderlineOffset({ m_lineStyle
+                , defaultGap
+                , UnderlineOffsetArguments::TextUnderlinePositionUnder { m_textBox->lineBox()->baselineType(),
+                    m_textBox->logicalBottom() - m_textBox->logicalTop(),
+                    textRunLogicalOffsetFromLineBottom(m_textBox)
+                }
+            });
             float wavyOffset = m_styles.underlineStyle == TextDecorationStyle::Wavy ? m_wavyOffset : 0;
             FloatRect rect(localOrigin, FloatSize(m_width, textDecorationThickness));
             rect.move(0, offset + wavyOffset);
@@ -336,6 +343,9 @@ void TextDecorationPainter::paintLineThrough(const Color& color, float thickness
 static void collectStylesForRenderer(TextDecorationPainter::Styles& result, const RenderObject& renderer, OptionSet<TextDecorationLine> remainingDecorations, bool firstLineStyle, PseudoId pseudoId)
 {
     auto extractDecorations = [&] (const RenderStyle& style, OptionSet<TextDecorationLine> decorations) {
+        if (decorations.isEmpty())
+            return;
+
         auto color = TextDecorationPainter::decorationColor(style);
         auto decorationStyle = style.textDecorationStyle();
 
@@ -354,7 +364,6 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
             result.linethroughColor = color;
             result.linethroughStyle = decorationStyle;
         }
-
     };
 
     auto styleForRenderer = [&] (const RenderObject& renderer) -> const RenderStyle& {
@@ -407,6 +416,9 @@ OptionSet<TextDecorationLine> TextDecorationPainter::textDecorationsInEffectForS
 
 auto TextDecorationPainter::stylesForRenderer(const RenderObject& renderer, OptionSet<TextDecorationLine> requestedDecorations, bool firstLineStyle, PseudoId pseudoId) -> Styles
 {
+    if (requestedDecorations.isEmpty())
+        return { };
+
     Styles result;
     collectStylesForRenderer(result, renderer, requestedDecorations, false, pseudoId);
     if (firstLineStyle)

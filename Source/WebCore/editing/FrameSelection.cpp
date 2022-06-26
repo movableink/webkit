@@ -454,6 +454,11 @@ void FrameSelection::setSelection(const VisibleSelection& selection, OptionSet<S
     if (frameView && frameView->layoutContext().isLayoutPending())
         return;
 
+    if (!(options & IsUserTriggered)) {
+        scheduleAppearanceUpdateAfterStyleChange();
+        return;
+    }
+
     updateAndRevealSelection(intent, options.contains(SmoothScroll) ? ScrollBehavior::Smooth : ScrollBehavior::Instant, options.contains(RevealSelectionBounds) ? RevealExtentOption::DoNotRevealExtent : RevealExtentOption::RevealExtent);
 
     if (options & IsUserTriggered) {
@@ -462,13 +467,19 @@ void FrameSelection::setSelection(const VisibleSelection& selection, OptionSet<S
     }
 }
 
-static void updateSelectionByUpdatingLayoutOrStyle(Document& document)
+void FrameSelection::updateSelectionAppearanceNow()
 {
+    if (!m_document || !m_document->hasLivingRenderTree())
+        return;
+
+    Ref document = *m_document;
 #if ENABLE(TEXT_CARET)
-    document.updateLayoutIgnorePendingStylesheets();
+    document->updateLayoutIgnorePendingStylesheets();
 #else
-    document.updateStyleIfNeeded();
+    document->updateStyleIfNeeded();
 #endif
+    if (m_pendingSelectionUpdate)
+        updateAppearance();
 }
 
 void FrameSelection::setNeedsSelectionUpdate(RevealSelectionAfterUpdate revealMode)
@@ -553,19 +564,34 @@ void FrameSelection::nodeWillBeRemoved(Node& node)
 {
     // There can't be a selection inside a fragment, so if a fragment's node is being removed,
     // the selection in the document that created the fragment needs no adjustment.
-    if (isNone() || !node.isConnected())
+    if ((isNone() && !m_document->settings().liveRangeSelectionEnabled()) || !node.isConnected())
         return;
 
-    respondToNodeModification(node, removingNodeRemovesPosition(node, m_selection.base()), removingNodeRemovesPosition(node, m_selection.extent()),
+    respondToNodeModification(node, removingNodeRemovesPosition(node, m_selection.anchor()), removingNodeRemovesPosition(node, m_selection.focus()),
+        removingNodeRemovesPosition(node, m_selection.base()), removingNodeRemovesPosition(node, m_selection.extent()),
         removingNodeRemovesPosition(node, m_selection.start()), removingNodeRemovesPosition(node, m_selection.end()));
 }
 
-void FrameSelection::respondToNodeModification(Node& node, bool baseRemoved, bool extentRemoved, bool startRemoved, bool endRemoved)
+void FrameSelection::respondToNodeModification(Node& node, bool anchorRemoved, bool focusRemoved, bool baseRemoved, bool extentRemoved, bool startRemoved, bool endRemoved)
 {
     bool clearRenderTreeSelection = false;
     bool clearDOMTreeSelection = false;
 
-    if (startRemoved || endRemoved) {
+    if (m_document->settings().liveRangeSelectionEnabled() && (anchorRemoved || focusRemoved)) {
+        Position anchor = m_selection.anchor();
+        Position focus = m_selection.focus();
+        if (anchorRemoved)
+            updatePositionForNodeRemoval(anchor, node);
+        if (focusRemoved)
+            updatePositionForNodeRemoval(focus, node);
+
+        if (anchor.isNotNull() && focus.isNotNull())
+            m_selection.setWithoutValidation(anchor, focus);
+        else
+            clearDOMTreeSelection = true;
+
+        clearRenderTreeSelection = true;
+    } if (startRemoved || endRemoved) {
         Position start = m_selection.start();
         Position end = m_selection.end();
         if (startRemoved)
@@ -616,9 +642,9 @@ void FrameSelection::respondToNodeModification(Node& node, bool baseRemoved, boo
         setSelection(VisibleSelection(), DoNotSetFocus);
 }
 
-static void updatePositionAfterAdoptingTextReplacement(Position& position, CharacterData* node, unsigned offset, unsigned oldLength, unsigned newLength)
+static void updatePositionAfterAdoptingTextReplacement(Position& position, CharacterData& node, unsigned offset, unsigned oldLength, unsigned newLength)
 {
-    if (!position.anchorNode() || position.anchorNode() != node || position.anchorType() != Position::PositionIsOffsetInAnchor)
+    if (position.anchorNode() != &node || position.anchorType() != Position::PositionIsOffsetInAnchor)
         return;
 
     // See: http://www.w3.org/TR/DOM-Level-2-Traversal-Range/ranges.html#Level-2-Range-Mutation
@@ -633,13 +659,12 @@ static void updatePositionAfterAdoptingTextReplacement(Position& position, Chara
     if (positionOffset > offset + oldLength)
         position.moveToOffset(positionOffset - oldLength + newLength);
 
-    ASSERT(static_cast<unsigned>(position.offsetInContainerNode()) <= node->length());
+    ASSERT(static_cast<unsigned>(position.offsetInContainerNode()) <= node.length());
 }
 
-void FrameSelection::textWasReplaced(CharacterData* node, unsigned offset, unsigned oldLength, unsigned newLength)
+void FrameSelection::textWasReplaced(CharacterData& node, unsigned offset, unsigned oldLength, unsigned newLength)
 {
-    // The fragment check is a performance optimization. See http://trac.webkit.org/changeset/30062.
-    if (isNone() || !node || !node->isConnected())
+    if (isNone() || !node.isConnected())
         return;
 
     Position base = m_selection.base();
@@ -1686,7 +1711,7 @@ IntRect FrameSelection::absoluteCaretBounds(bool* insideFixed)
 {
     if (!m_document)
         return IntRect();
-    updateSelectionByUpdatingLayoutOrStyle(*m_document);
+    updateSelectionAppearanceNow();
     recomputeCaretRect();
     if (insideFixed)
         *insideFixed = m_caretInsidePositionFixed;
@@ -1889,20 +1914,20 @@ void FrameSelection::debugRenderer(RenderObject* renderer, bool selected) const
                 caret = pos;
             } else if (pos - mid < 0) {
                 // too few characters to left
-                show = text.left(max - 3) + "...";
+                show = makeString(StringView(text).left(max - 3), "...");
                 caret = pos;
             } else if (pos - mid >= 0 && pos + mid <= textLength) {
                 // enough characters on each side
-                show = "..." + text.substring(pos - mid + 3, max - 6) + "...";
+                show = makeString("...", StringView(text).substring(pos - mid + 3, max - 6), "...");
                 caret = mid;
             } else {
                 // too few characters on right
-                show = "..." + text.right(max - 3);
+                show = makeString("...", StringView(text).right(max - 3));
                 caret = pos - (textLength - show.length());
             }
             
-            show.replace('\n', ' ');
-            show.replace('\r', ' ');
+            show = makeStringByReplacingAll(show, '\n', ' ');
+            show = makeStringByReplacingAll(show, '\r', ' ');
             fprintf(stderr, "==> #text : \"%s\" at offset %d\n", show.utf8().data(), pos);
             fprintf(stderr, "           ");
             for (int i = 0; i < caret; i++)
@@ -2244,7 +2269,7 @@ void FrameSelection::setCaretVisibility(CaretVisibility visibility, ShouldUpdate
 
     // FIXME: We shouldn't trigger a synchronous layout here.
     if (doAppearanceUpdate == ShouldUpdateAppearance::Yes && m_document)
-        updateSelectionByUpdatingLayoutOrStyle(*m_document);
+        updateSelectionAppearanceNow();
 
 #if ENABLE(TEXT_CARET)
     if (m_caretPaint) {
@@ -2347,12 +2372,12 @@ bool FrameSelection::shouldDeleteSelection(const VisibleSelection& selection) co
     return m_document->editor().client()->shouldDeleteRange(selection.toNormalizedRange());
 }
 
-FloatRect FrameSelection::selectionBounds(ClipToVisibleContent clipToVisibleContent) const
+FloatRect FrameSelection::selectionBounds(ClipToVisibleContent clipToVisibleContent)
 {
     if (!m_document)
         return LayoutRect();
 
-    updateSelectionByUpdatingLayoutOrStyle(*m_document);
+    updateSelectionAppearanceNow();
     auto* renderView = m_document->renderView();
     if (!renderView)
         return LayoutRect();
@@ -2447,6 +2472,8 @@ void FrameSelection::revealSelection(SelectionRevealMode revealMode, const Scrol
 
     if (isNone())
         return;
+
+    updateSelectionAppearanceNow();
 
     LayoutRect rect;
     bool insideFixed = false;

@@ -269,7 +269,7 @@ ElementStyle Resolver::styleForElement(const Element& element, const ResolutionC
     Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, &element);
     adjuster.adjust(*state.style(), state.userAgentAppearanceStyle());
 
-    if (state.style()->hasViewportUnits())
+    if (state.style()->usesViewportUnits())
         document().setHasStyleWithViewportUnits();
 
     return { state.takeStyle(), WTFMove(elementStyleRelations) };
@@ -286,10 +286,15 @@ std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(const Element& element, 
         // The animation-composition and animation-timing-function within keyframes are special
         // because they are not animated; they just describe the composite operation and timing
         // function between this keyframe and the next.
-        if (property != CSSPropertyAnimationTimingFunction && property != CSSPropertyAnimationComposition)
+        bool isAnimatableValue = property != CSSPropertyAnimationTimingFunction && property != CSSPropertyAnimationComposition;
+        if (isAnimatableValue)
             keyframeValue.addProperty(property);
-        if (auto* value = propertyReference.value(); value && value->isRevertValue())
-            hasRevert = true;
+        if (auto* value = propertyReference.value()) {
+            if (isAnimatableValue && value->isCustomPropertyValue())
+                keyframeValue.addCustomProperty(downcast<CSSCustomPropertyValue>(*value).name());
+            if (value->isRevertValue())
+                hasRevert = true;
+        }
     }
 
     auto state = State(element, nullptr, context.documentElementStyle);
@@ -465,7 +470,7 @@ std::unique_ptr<RenderStyle> Resolver::pseudoStyleForElement(const Element& elem
     Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, nullptr);
     adjuster.adjust(*state.style(), state.userAgentAppearanceStyle());
 
-    if (state.style()->hasViewportUnits())
+    if (state.style()->usesViewportUnits())
         document().setHasStyleWithViewportUnits();
 
     return state.takeStyle();
@@ -571,9 +576,9 @@ void Resolver::clearCachedDeclarationsAffectedByViewportUnits()
     m_matchedDeclarationsCache.clearEntriesAffectedByViewportUnits();
 }
 
-void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResult, UseMatchedDeclarationsCache useMatchedDeclarationsCache)
+void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResult)
 {
-    unsigned cacheHash = useMatchedDeclarationsCache == UseMatchedDeclarationsCache::Yes ? MatchedDeclarationsCache::computeHash(matchResult) : 0;
+    unsigned cacheHash = MatchedDeclarationsCache::computeHash(matchResult);
     auto includedProperties = PropertyCascade::IncludedProperties::All;
 
     auto& style = *state.style();
@@ -595,9 +600,13 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
 
             // Unfortunately the link status is treated like an inherited property. We need to explicitly restore it.
             style.setInsideLink(linkStatus);
+
+            if (cacheEntry->userAgentAppearanceStyle && elementTypeHasAppearanceFromUAStyle(element))
+                state.setUserAgentAppearanceStyle(RenderStyle::clonePtr(*cacheEntry->userAgentAppearanceStyle));
+
             return;
         }
-        
+
         includedProperties = PropertyCascade::IncludedProperties::InheritedOnly;
     }
 
@@ -618,12 +627,13 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
     builder.applyHighPriorityProperties();
 
     if (cacheEntry && !cacheEntry->isUsableAfterHighPriorityProperties(style)) {
-        // We need to resolve all properties without caching.
-        applyMatchedProperties(state, matchResult, UseMatchedDeclarationsCache::No);
+        // High-priority properties may affect resolution of other properties. Kick out the existing cache entry and try again.
+        m_matchedDeclarationsCache.remove(cacheHash);
+        applyMatchedProperties(state, matchResult);
         return;
     }
 
-    builder.applyLowPriorityProperties();
+    builder.applyNonHighPriorityProperties();
 
     for (auto& contentAttribute : builder.state().registeredContentAttributes())
         ruleSets().mutableFeatures().registerContentAttribute(contentAttribute);
@@ -632,7 +642,7 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
         return;
 
     if (MatchedDeclarationsCache::isCacheable(element, style, parentStyle))
-        m_matchedDeclarationsCache.add(style, parentStyle, cacheHash, matchResult);
+        m_matchedDeclarationsCache.add(style, parentStyle, state.userAgentAppearanceStyle(), cacheHash, matchResult);
 }
 
 bool Resolver::hasViewportDependentMediaQueries() const

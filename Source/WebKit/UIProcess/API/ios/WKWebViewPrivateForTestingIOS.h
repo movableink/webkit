@@ -90,6 +90,9 @@
 
 - (NSString *)_serializedSelectionCaretBackgroundColorForTesting;
 
+- (BOOL)_hasResizeAssertion;
+- (void)_simulateSelectionStart;
+
 @end
 
 #endif // TARGET_OS_IPHONE

@@ -324,14 +324,14 @@ ExceptionOr<void> MediaSource::clearLiveSeekableRange()
 
 const MediaTime& MediaSource::currentTimeFudgeFactor()
 {
-    // Allow hasCurrentTime() to be off by as much as the length of two 24fps video frames
-    static NeverDestroyed<MediaTime> fudgeFactor(2002, 24000);
+    // Allow hasCurrentTime() to be off by as much as 100ms.
+    static NeverDestroyed<MediaTime> fudgeFactor(1, 10);
     return fudgeFactor;
 }
 
 bool MediaSource::contentTypeShouldGenerateTimestamps(const ContentType& contentType)
 {
-    return contentType.containerType() == "audio/aac" || contentType.containerType() == "audio/mpeg";
+    return contentType.containerType() == "audio/aac"_s || contentType.containerType() == "audio/mpeg"_s;
 }
 
 bool MediaSource::hasBufferedTime(const MediaTime& time)
@@ -641,7 +641,7 @@ static ContentType addVP9FullRangeVideoFlagToContentType(const ContentType& type
     };
 
     for (auto codec : type.codecs()) {
-        if (!codec.startsWith("vp09") || countPeriods(codec) != 7)
+        if (!codec.startsWith("vp09"_s) || countPeriods(codec) != 7)
             continue;
 
         auto rawType = type.raw();
@@ -650,8 +650,7 @@ static ContentType addVP9FullRangeVideoFlagToContentType(const ContentType& type
         if (position == notFound)
             continue;
 
-        rawType.insert(".00", position + codec.length());
-        return ContentType(rawType);
+        return ContentType(makeStringByInserting(rawType, ".00"_s, position + codec.length()));
     }
     return type;
 }
@@ -895,7 +894,7 @@ bool MediaSource::isTypeSupported(ScriptExecutionContext& context, const String&
     if (context.isDocument() && downcast<Document>(context).quirks().needsVP9FullRangeFlagQuirk())
         contentType = addVP9FullRangeVideoFlagToContentType(contentType);
 
-    String codecs = contentType.parameter("codecs");
+    String codecs = contentType.parameter("codecs"_s);
 
     // 2. If type does not contain a valid MIME type string, then return false.
     if (contentType.containerType().isEmpty())

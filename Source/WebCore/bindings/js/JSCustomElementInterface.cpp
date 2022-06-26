@@ -29,6 +29,7 @@
 #include "JSCustomElementInterface.h"
 
 #include "DOMWrapperWorld.h"
+#include "ElementRareData.h"
 #include "HTMLUnknownElement.h"
 #include "JSDOMBinding.h"
 #include "JSDOMConvertNullable.h"
@@ -121,7 +122,7 @@ RefPtr<Element> JSCustomElementInterface::tryToConstructCustomElement(Document& 
 static RefPtr<Element> constructCustomElementSynchronously(Document& document, VM& vm, JSGlobalObject& lexicalGlobalObject, JSObject* constructor, const AtomString& localName)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
-    auto constructData = getConstructData(vm, constructor);
+    auto constructData = JSC::getConstructData(constructor);
     if (constructData.type == CallData::Type::None) {
         ASSERT_NOT_REACHED();
         return nullptr;
@@ -194,7 +195,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
         return;
     JSGlobalObject* lexicalGlobalObject = globalObject;
 
-    auto constructData = getConstructData(vm, m_constructor.get());
+    auto constructData = JSC::getConstructData(m_constructor.get());
     if (constructData.type == CallData::Type::None) {
         ASSERT_NOT_REACHED();
         return;
@@ -210,7 +211,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
 
     if (m_isShadowDisabled && element.shadowRoot()) {
         element.clearReactionQueueFromFailedCustomElement();
-        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, NotSupportedError, "Failed to upgrade an element with shadow root: the custom element definition disallows shadow roots."));
+        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, NotSupportedError, "Failed to upgrade an element with shadow root: the custom element definition disallows shadow roots."_s));
         return;
     }
 
@@ -231,7 +232,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
     Element* wrappedElement = JSElement::toWrapped(vm, returnedElement);
     if (!wrappedElement || wrappedElement != &element) {
         element.clearReactionQueueFromFailedCustomElement();
-        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, TypeError, "Custom element constructor returned a wrong element"));
+        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, TypeError, "Custom element constructor returned a wrong element"_s));
         return;
     }
     element.setIsDefinedCustomElement(*this);
@@ -257,7 +258,7 @@ void JSCustomElementInterface::invokeCallback(Element& element, JSObject* callba
 
     JSObject* jsElement = asObject(toJS(lexicalGlobalObject, globalObject, element));
 
-    auto callData = getCallData(vm, callback);
+    auto callData = JSC::getCallData(callback);
     ASSERT(callData.type != CallData::Type::None);
 
     MarkedArgumentBuffer args;
@@ -308,12 +309,12 @@ void JSCustomElementInterface::invokeAdoptedCallback(Element& element, Document&
     });
 }
 
-void JSCustomElementInterface::setAttributeChangedCallback(JSC::JSObject* callback, const Vector<String>& observedAttributes)
+void JSCustomElementInterface::setAttributeChangedCallback(JSC::JSObject* callback, Vector<AtomString>&& observedAttributes)
 {
     m_attributeChangedCallback = callback;
     m_observedAttributes.clear();
-    for (auto& name : observedAttributes)
-        m_observedAttributes.add(name);
+    for (auto&& name : WTFMove(observedAttributes))
+        m_observedAttributes.add(WTFMove(name));
 }
 
 void JSCustomElementInterface::invokeAttributeChangedCallback(Element& element, const QualifiedName& attributeName, const AtomString& oldValue, const AtomString& newValue)

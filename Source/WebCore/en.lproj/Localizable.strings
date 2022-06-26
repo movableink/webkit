@@ -130,8 +130,8 @@
 /* Label for the add money with Apple Pay button. */
 "Add money with Apple Pay" = "Add money with Apple Pay";
 
-/* Title for Add to Photos action button */
-"Add to Photos" = "Add to Photos";
+/* Title for Save to Photos action button */
+"Save to Photos" = "Save to Photos";
 
 /* Add to Quick Note context menu item. */
 "Add to Quick Note" = "Add to Quick Note";
@@ -340,6 +340,9 @@
 /* Copy Audio Address Location context menu item */
 "Copy Audio Address" = "Copy Audio Address";
 
+/* Copy Subject context menu item */
+"Copy Subject" = "Copy Subject";
+
 /* Copy Image context menu item */
 "Copy Image" = "Copy Image";
 
@@ -493,6 +496,9 @@
 /* Display name for text track kind 'forced'. */
 "Forced (text track)" = "Forced";
 
+/* Label for the save data format selector when saving data in Web Inspector */
+"Format:" = "Format:";
+
 /* Undo action name */
 "Format Block (Undo action name)" = "Formatting";
 
@@ -618,9 +624,6 @@
 
 /* Look Up in Dictionary context menu item */
 "Look Up in Dictionary" = "Look Up in Dictionary";
-
-/* Title for Quick Look action button for images with visual search results */
-"Look Up in Quick Look" = "Look Up in Quick Look";
 
 /* Look Up context menu item with selected word */
 "Look Up “%@”" = "Look Up “%@”";
@@ -799,9 +802,6 @@
 /* Title for file upload progress view */
 "Preparing (file upload)" = "Preparing…";
 
-/* Title for Quick Look action button */
-"Quick Look" = "Quick Look";
-
 /* Undo action name */
 "Raise Baseline (Undo action name)" = "Raise Baseline";
 
@@ -816,6 +816,12 @@
 
 /* WKErrorContentRuleListStoreRemoveFailed description */
 "Removing a WKContentRuleList failed" = "Removing a WKContentRuleList failed";
+
+/* Remove Background menu item */
+"Remove Background" = "Remove Background";
+
+/* Undo action name */
+"Remove Background (Undo action name)" = "Remove Background";
 
 /* Label for the rent with Apple Pay button. */
 "Rent with Apple Pay" = "Rent with Apple Pay";
@@ -843,9 +849,6 @@
 
 /* Search with search provider context menu item with provider name inserted */
 "Search with %@" = "Search with %@";
-
-/* Title for Quick Look action button for images with text */
-"Select Text in Quick Look" = "Select Text in Quick Look";
 
 /* Validation message for required file inputs that have no value */
 "Select a file" = "Select a file";
@@ -1676,7 +1679,7 @@
 "“%@” Would Like to Access Motion and Orientation" = "“%@” Would Like to Access Motion and Orientation";
 
 /* The domain and application using the camera and/or microphone. The first argument is domain, the second is the application name (iOS only). */
-"“%@” in “%%@”" = "“%@” in “%%@”";
+"%@ in %%@" = "%@ in %%@";
 
 /* Allow the specified bundle to sign in to the specified website */
 "“%@” would like to sign in to “%@”." = "“%@” would like to sign in to “%@”.";

@@ -41,7 +41,7 @@ public:
     enum IncludedProperties { All, InheritedOnly };
 
     PropertyCascade(const MatchResult&, CascadeLevel, IncludedProperties);
-    PropertyCascade(const PropertyCascade&, CascadeLevel, std::optional<CascadeLayerPriority> maximumCascadeLayerPriorityForRollback = { });
+    PropertyCascade(const PropertyCascade&, CascadeLevel, std::optional<ScopeOrdinal> rollbackScope = { }, std::optional<CascadeLayerPriority> maximumCascadeLayerPriorityForRollback = { });
 
     ~PropertyCascade();
 
@@ -51,20 +51,20 @@ public:
         ScopeOrdinal styleScopeOrdinal;
         CascadeLayerPriority cascadeLayerPriority;
         FromStyleAttribute fromStyleAttribute;
-        CSSValue* cssValue[3]; // Values for link match states MatchDefault, MatchLink and MatchVisited
+        std::array<CSSValue*, 3> cssValue; // Values for link match states MatchDefault, MatchLink and MatchVisited
     };
 
-    bool hasProperty(CSSPropertyID) const;
-    const Property& property(CSSPropertyID) const;
+    bool hasNormalProperty(CSSPropertyID) const;
+    const Property& normalProperty(CSSPropertyID) const;
 
     bool hasDeferredProperty(CSSPropertyID) const;
-    bool areDeferredInOrder(CSSPropertyID, CSSPropertyID) const;
     const Property& deferredProperty(CSSPropertyID) const;
+    const Property* lastDeferredPropertyResolvingRelated(CSSPropertyID, TextDirection, WritingMode) const;
 
-    bool hasCustomProperty(const String&) const;
-    Property customProperty(const String&) const;
+    bool hasCustomProperty(const AtomString&) const;
+    Property customProperty(const AtomString&) const;
 
-    const Vector<Property, 8>& deferredProperties() const { return m_deferredProperties; }
+    Span<const CSSPropertyID> deferredPropertyIDs() const;
     const HashMap<AtomString, Property>& customProperties() const { return m_customProperties; }
 
 private:
@@ -77,57 +77,88 @@ private:
     void setDeferred(CSSPropertyID, CSSValue&, const MatchedProperties&, CascadeLevel);
     static void setPropertyInternal(Property&, CSSPropertyID, CSSValue&, const MatchedProperties&, CascadeLevel);
 
+
+    unsigned deferredPropertyIndex(CSSPropertyID) const;
+    void setDeferredPropertyIndex(CSSPropertyID, unsigned);
+    void sortDeferredPropertyIDs();
+
     const MatchResult& m_matchResult;
     const IncludedProperties m_includedProperties;
     const CascadeLevel m_maximumCascadeLevel;
+    const std::optional<ScopeOrdinal> m_rollbackScope;
     const std::optional<CascadeLayerPriority> m_maximumCascadeLayerPriorityForRollback;
 
-    Property m_properties[numCSSProperties + 2];
-    std::bitset<numCSSProperties + 2> m_propertyIsPresent;
+    // The CSSPropertyID enum is sorted like this:
+    // 1. CSSPropertyInvalid and CSSPropertyCustom.
+    // 2. Normal longhand properties (high priority ones followed by low priority ones).
+    // 3. Deferred longhand properties.
+    // 4. Shorthand properties.
+    //
+    // 'm_properties' is used for both normal and deferred longhands, so it has size 'lastDeferredProperty + 1'.
+    // It could actually be 2 units smaller, but then we would have to subtract 'firstCSSProperty', which may not be worth it.
+    // 'm_propertyIsPresent' is not used for deferred properties, so we only need to cover up to the last low priority one.
+    std::array<Property, lastDeferredProperty + 1> m_properties;
+    std::bitset<lastLowPriorityProperty + 1> m_propertyIsPresent;
 
-    Vector<Property, 8> m_deferredProperties;
-    HashMap<CSSPropertyID, unsigned> m_deferredPropertiesIndices;
+    static constexpr unsigned deferredPropertyCount = lastDeferredProperty - firstDeferredProperty + 1;
+    std::array<unsigned, deferredPropertyCount> m_deferredPropertyIndices { };
+    unsigned m_lastIndexForDeferred { 0 };
+    std::array<CSSPropertyID, deferredPropertyCount> m_deferredPropertyIDs { };
+    unsigned m_seenDeferredPropertyCount { 0 };
+    CSSPropertyID m_lowestSeenDeferredProperty { lastDeferredProperty };
+    CSSPropertyID m_highestSeenDeferredProperty { firstDeferredProperty };
 
     HashMap<AtomString, Property> m_customProperties;
 };
 
-inline bool PropertyCascade::hasProperty(CSSPropertyID id) const
+inline bool PropertyCascade::hasNormalProperty(CSSPropertyID id) const
 {
-    ASSERT(id < m_propertyIsPresent.size());
+    ASSERT(id < firstDeferredProperty);
     return m_propertyIsPresent[id];
 }
 
-inline const PropertyCascade::Property& PropertyCascade::property(CSSPropertyID id) const
+inline const PropertyCascade::Property& PropertyCascade::normalProperty(CSSPropertyID id) const
 {
+    ASSERT(hasNormalProperty(id));
     return m_properties[id];
+}
+
+inline unsigned PropertyCascade::deferredPropertyIndex(CSSPropertyID id) const
+{
+    ASSERT(id >= firstDeferredProperty);
+    ASSERT(id <= lastDeferredProperty);
+    return m_deferredPropertyIndices[id - firstDeferredProperty];
+}
+
+inline void PropertyCascade::setDeferredPropertyIndex(CSSPropertyID id, unsigned index)
+{
+    ASSERT(id >= firstDeferredProperty);
+    ASSERT(id <= lastDeferredProperty);
+    m_deferredPropertyIndices[id - firstDeferredProperty] = index;
 }
 
 inline bool PropertyCascade::hasDeferredProperty(CSSPropertyID id) const
 {
-    return m_deferredPropertiesIndices.contains(id);
-}
-
-inline bool PropertyCascade::areDeferredInOrder(CSSPropertyID id1, CSSPropertyID id2) const
-{
-    ASSERT(hasDeferredProperty(id1));
-    ASSERT(hasDeferredProperty(id2));
-    return m_deferredPropertiesIndices.get(id1) < m_deferredPropertiesIndices.get(id2);
+    return deferredPropertyIndex(id);
 }
 
 inline const PropertyCascade::Property& PropertyCascade::deferredProperty(CSSPropertyID id) const
 {
     ASSERT(hasDeferredProperty(id));
-    unsigned index = m_deferredPropertiesIndices.get(id);
-    ASSERT(index < m_deferredProperties.size());
-    return m_deferredProperties[index];
+    return m_properties[id];
 }
 
-inline bool PropertyCascade::hasCustomProperty(const String& name) const
+inline Span<const CSSPropertyID> PropertyCascade::deferredPropertyIDs() const
+{
+    return { m_deferredPropertyIDs.data(), m_seenDeferredPropertyCount };
+}
+
+inline bool PropertyCascade::hasCustomProperty(const AtomString& name) const
 {
     return m_customProperties.contains(name);
 }
 
-inline PropertyCascade::Property PropertyCascade::customProperty(const String& name) const
+inline PropertyCascade::Property PropertyCascade::customProperty(const AtomString& name) const
 {
     return m_customProperties.get(name);
 }

@@ -172,7 +172,7 @@ class SCM:
     def timestamp_of_native_revision(self, path, revision):
         self._subclass_must_implement()
 
-    def create_patch(self, git_commit=None, changed_files=None):
+    def create_patch(self, git_commit=None, changed_files=None, commit_message=False):
         self._subclass_must_implement()
 
     def committer_email_for_revision(self, revision):
@@ -242,6 +242,9 @@ class SCM:
         return len(self.local_commits()) > 0
 
     def discard_local_commits(self):
+        return
+
+    def cleanup_and_optimize_local_repository(self):
         return
 
     def remote_merge_base(self):

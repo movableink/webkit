@@ -381,6 +381,17 @@ WKPageRef TestController::createOtherPage(WKPageRef, WKPageConfigurationRef conf
 
 WKPageRef TestController::createOtherPage(PlatformWebView* parentView, WKPageConfigurationRef configuration, WKNavigationActionRef navigationAction, WKWindowFeaturesRef windowFeatures)
 {
+    auto* platformWebView = createOtherPlatformWebView(parentView, configuration, navigationAction, windowFeatures);
+    if (!platformWebView)
+        return nullptr;
+
+    auto* page = platformWebView->page();
+    WKRetain(page);
+    return page;
+}
+
+PlatformWebView* TestController::createOtherPlatformWebView(PlatformWebView* parentView, WKPageConfigurationRef configuration, WKNavigationActionRef, WKWindowFeaturesRef)
+{
     m_currentInvocation->willCreateNewPage();
 
     // The test called testRunner.preventPopupWindows() to prevent opening new windows.
@@ -389,7 +400,8 @@ WKPageRef TestController::createOtherPage(PlatformWebView* parentView, WKPageCon
 
     m_createdOtherPage = true;
 
-    auto view = platformCreateOtherPage(parentView, configuration, parentView->options());
+    auto options = parentView ? parentView->options() : m_mainWebView->options();
+    auto view = platformCreateOtherPage(parentView, configuration, options);
     WKPageRef newPage = view->page();
 
     view->resizeTo(800, 600);
@@ -509,9 +521,9 @@ WKPageRef TestController::createOtherPage(PlatformWebView* parentView, WKPageCon
 
     TestController::singleton().updateWindowScaleForTest(view.ptr(), *TestController::singleton().m_currentInvocation);
 
+    PlatformWebView* viewToReturn = view.ptr();
     m_auxiliaryWebViews.append(WTFMove(view));
-    WKRetain(newPage);
-    return newPage;
+    return viewToReturn;
 }
 
 const char* TestController::libraryPathForTesting()
@@ -673,14 +685,17 @@ WKRetainPtr<WKPageConfigurationRef> TestController::generatePageConfiguration(co
     };
     WKContextSetInjectedBundleClient(m_context.get(), &injectedBundleClient.base);
 
-    WKContextClientV3 contextClient = {
-        { 3, this },
+    WKContextClientV4 contextClient = {
+        { 4, this },
         0, // plugInAutoStartOriginHashesChanged
-        networkProcessDidCrash,
+        0, // networkProcessDidCrash,
         0, // plugInInformationBecameAvailable
         0, // copyWebCryptoMasterKey
-        serviceWorkerProcessDidCrash,
-        gpuProcessDidCrash
+        0, // serviceWorkerProcessDidCrash,
+        0, // gpuProcessDidCrash
+        networkProcessDidCrashWithDetails,
+        serviceWorkerProcessDidCrashWithDetails,
+        gpuProcessDidCrashWithDetails,
     };
     WKContextSetClient(m_context.get(), &contextClient.base);
 
@@ -719,6 +734,23 @@ WKRetainPtr<WKPageConfigurationRef> TestController::generatePageConfiguration(co
     return pageConfiguration;
 }
 
+static String originUserVisibleName(WKSecurityOriginRef origin)
+{
+    if (!origin)
+        return emptyString();
+
+    auto host = toWTFString(adoptWK(WKSecurityOriginCopyHost(origin)));
+    auto protocol = toWTFString(adoptWK(WKSecurityOriginCopyProtocol(origin)));
+
+    if (host.isEmpty() || protocol.isEmpty())
+        return emptyString();
+
+    if (int port = WKSecurityOriginGetPort(origin))
+        return makeString(protocol, "://", host, ':', port);
+
+    return makeString(protocol, "://", host);
+}
+
 bool TestController::grantNotificationPermission(WKStringRef originString)
 {
     m_webNotificationProvider.setPermission(toWTFString(originString), true);
@@ -734,6 +766,14 @@ bool TestController::denyNotificationPermission(WKStringRef originString)
 
     auto origin = adoptWK(WKSecurityOriginCreateFromString(originString));
     WKNotificationManagerProviderDidUpdateNotificationPolicy(WKNotificationManagerGetSharedServiceWorkerNotificationManager(), origin.get(), false);
+    return true;
+}
+
+bool TestController::denyNotificationPermissionOnPrompt(WKStringRef originString)
+{
+    auto origin = adoptWK(WKSecurityOriginCreateFromString(originString));
+    auto originName = originUserVisibleName(origin.get());
+    m_notificationOriginsToDenyOnPrompt.add(originName);
     return true;
 }
 
@@ -940,6 +980,7 @@ void TestController::resetPreferencesToConsistentValues(const TestOptions& optio
 
         WKPreferencesSetProcessSwapOnNavigationEnabled(preferences, options.shouldEnableProcessSwapOnNavigation());
         WKPreferencesSetStorageBlockingPolicy(preferences, kWKAllowAllStorage); // FIXME: We should be testing the default.
+        WKPreferencesSetMinimumFontSize(preferences, 0);
     
         for (const auto& [key, value] : options.boolWebPreferenceFeatures())
             WKPreferencesSetBoolValueForKeyForTesting(preferences, value, toWK(key).get());
@@ -979,15 +1020,12 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
         WKArrayAppendItem(allowedHostsValue.get(), toWK(host.c_str()).get());
     setValue(resetMessageBody, "AllowedHosts", allowedHostsValue);
 
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    setValue(resetMessageBody, "AccessibilityIsolatedTree", options.accessibilityIsolatedTreeMode());
-#endif
-
     auto jscOptions = options.jscOptions();
     if (!jscOptions.empty())
         setValue(resetMessageBody, "JSCOptions", jscOptions.c_str());
 
-    WKPagePostMessageToInjectedBundle(TestController::singleton().mainWebView()->page(), toWK("Reset").get(), resetMessageBody.get());
+    if (resetStage == ResetStage::AfterTest)
+        WKPagePostMessageToInjectedBundle(TestController::singleton().mainWebView()->page(), toWK("Reset").get(), resetMessageBody.get());
 
     WKContextSetShouldUseFontSmoothing(TestController::singleton().context(), false);
     WKContextSetCacheModel(TestController::singleton().context(), kWKCacheModelDocumentBrowser);
@@ -1046,6 +1084,7 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
 
     // Reset notification permissions
     m_webNotificationProvider.reset();
+    m_notificationOriginsToDenyOnPrompt.clear();
 
     // Reset Geolocation permissions.
     m_geolocationPermissionRequests.clear();
@@ -1077,6 +1116,7 @@ bool TestController::resetStateToConsistentValues(const TestOptions& options, Re
     setBlockAllPlugins(false);
     setPluginSupportedMode({ });
 
+    m_shouldLogDownloadSize = false;
     m_shouldLogDownloadCallbacks = false;
     m_shouldLogHistoryClientCallbacks = false;
     m_shouldLogCanAuthenticateAgainstProtectionSpace = false;
@@ -1210,7 +1250,7 @@ void TestController::findAndDumpWorldLeaks()
         for (const auto& it : m_abandonedDocumentInfo) {
             auto documentURL = it.value.abandonedDocumentURL;
             if (documentURL.isEmpty())
-                documentURL = "(no url)";
+                documentURL = "(no url)"_s;
             builder.append("TEST: ");
             builder.append(it.value.testURL);
             builder.append('\n');
@@ -1423,7 +1463,7 @@ void TestController::configureContentExtensionForTest(const TestInvocation& test
     if (!contentExtensionsPath)
         contentExtensionsPath = "/tmp/wktr-contentextensions";
 
-    if (!test.urlContains("contentextensions/")) {
+    if (!test.urlContains("contentextensions/"_s)) {
         WKPageSetUserContentExtensionsEnabled(m_mainWebView->page(), false);
         return;
     }
@@ -1631,19 +1671,19 @@ void TestController::didReceiveSynchronousPageMessageFromInjectedBundleWithListe
     static_cast<TestController*>(const_cast<void*>(clientInfo))->didReceiveSynchronousMessageFromInjectedBundle(messageName, messageBody, listener);
 }
 
-void TestController::networkProcessDidCrash(WKContextRef context, const void *clientInfo)
+void TestController::networkProcessDidCrashWithDetails(WKContextRef context, WKProcessID processID, WKProcessTerminationReason reason, const void *clientInfo)
 {
-    static_cast<TestController*>(const_cast<void*>(clientInfo))->networkProcessDidCrash();
+    static_cast<TestController*>(const_cast<void*>(clientInfo))->networkProcessDidCrash(processID, reason);
 }
 
-void TestController::serviceWorkerProcessDidCrash(WKContextRef context, WKProcessID processID, const void *clientInfo)
+void TestController::serviceWorkerProcessDidCrashWithDetails(WKContextRef context, WKProcessID processID, WKProcessTerminationReason reason, const void *clientInfo)
 {
-    static_cast<TestController*>(const_cast<void*>(clientInfo))->serviceWorkerProcessDidCrash(processID);
+    static_cast<TestController*>(const_cast<void*>(clientInfo))->serviceWorkerProcessDidCrash(processID, reason);
 }
 
-void TestController::gpuProcessDidCrash(WKContextRef context, WKProcessID processID, const void *clientInfo)
+void TestController::gpuProcessDidCrashWithDetails(WKContextRef context, WKProcessID processID, WKProcessTerminationReason reason, const void *clientInfo)
 {
-    static_cast<TestController*>(const_cast<void*>(clientInfo))->gpuProcessDidCrash(processID);
+    static_cast<TestController*>(const_cast<void*>(clientInfo))->gpuProcessDidCrash(processID, reason);
 }
 
 void TestController::didReceiveKeyDownMessageFromInjectedBundle(WKDictionaryRef dictionary, bool synchronous)
@@ -1682,7 +1722,7 @@ void TestController::didReceiveLiveDocumentsList(WKArrayRef liveDocumentList)
     });
     
     // Add newly abandoned documents.
-    String currentTestURL = m_currentInvocation ? toWTFString(adoptWK(WKURLCopyString(m_currentInvocation->url()))) : "no test";
+    String currentTestURL = m_currentInvocation ? toWTFString(adoptWK(WKURLCopyString(m_currentInvocation->url()))) : "no test"_s;
     for (const auto& it : documentInfo)
         m_abandonedDocumentInfo.add(it.key, AbandonedDocumentInfo(currentTestURL, it.value));
 }
@@ -1962,24 +2002,46 @@ WKRetainPtr<WKTypeRef> TestController::getInjectedBundleInitializationUserData()
 
 // WKContextClient
 
-void TestController::networkProcessDidCrash()
+static const char* terminationReasonToString(WKProcessTerminationReason reason)
 {
-    pid_t pid = WKWebsiteDataStoreGetNetworkProcessIdentifier(websiteDataStore());
-    fprintf(stderr, "#CRASHED - %s (pid %ld)\n", networkProcessName(), static_cast<long>(pid));
-    exit(1);
+    switch (reason) {
+    case kWKProcessTerminationReasonExceededMemoryLimit:
+        return "exceeded memory limit";
+    case kWKProcessTerminationReasonExceededCPULimit:
+        return "exceeded cpu limit";
+        break;
+    case kWKProcessTerminationReasonRequestedByClient:
+        return "requested by client";
+    case kWKProcessTerminationReasonCrash:
+        return "crash";
+    default:
+        break;
+    }
+    ASSERT_NOT_REACHED();
+    return "unknown reason";
 }
 
-void TestController::serviceWorkerProcessDidCrash(WKProcessID processID)
+void TestController::networkProcessDidCrash(WKProcessID processID, WKProcessTerminationReason reason)
 {
-    fprintf(stderr, "#CRASHED - ServiceWorkerProcess (pid %ld)\n", static_cast<long>(processID));
-    if (m_shouldExitWhenWebProcessCrashes)
+    fprintf(stderr, "%s terminated (pid %ld) for reason: %s\n", networkProcessName(), static_cast<long>(processID), terminationReasonToString(reason));
+    fprintf(stderr, "#CRASHED - %s (pid %ld)\n", networkProcessName(), static_cast<long>(processID));
+    if (m_shouldExitWhenAuxiliaryProcessCrashes)
         exit(1);
 }
 
-void TestController::gpuProcessDidCrash(WKProcessID processID)
+void TestController::serviceWorkerProcessDidCrash(WKProcessID processID, WKProcessTerminationReason reason)
 {
-    fprintf(stderr, "#CRASHED - GPUProcess (pid %ld)\n", static_cast<long>(processID));
-    if (m_shouldExitWhenWebProcessCrashes)
+    fprintf(stderr, "%s terminated (pid %ld) for reason: %s\n", "ServiceWorkerProcess", static_cast<long>(processID), terminationReasonToString(reason));
+    fprintf(stderr, "#CRASHED - ServiceWorkerProcess (pid %ld)\n", static_cast<long>(processID));
+    if (m_shouldExitWhenAuxiliaryProcessCrashes)
+        exit(1);
+}
+
+void TestController::gpuProcessDidCrash(WKProcessID processID, WKProcessTerminationReason reason)
+{
+    fprintf(stderr, "%s terminated (pid %ld) for reason: %s\n", gpuProcessName(), static_cast<long>(processID), terminationReasonToString(reason));
+    fprintf(stderr, "#CRASHED - %s (pid %ld)\n", gpuProcessName(), static_cast<long>(processID));
+    if (m_shouldExitWhenAuxiliaryProcessCrashes)
         exit(1);
 }
 
@@ -2094,13 +2156,13 @@ void TestController::setPluginSupportedMode(const String& mode)
     WKArrayAppendItem(mimeTypesNetscape.get(), toWK("application/x-webkit-test-netscape").get());
     auto namePdf = toWK("WebKit built-in PDF");
 
-    if (m_unsupportedPluginMode == "allOrigins") {
+    if (m_unsupportedPluginMode == "allOrigins"_s) {
         WKContextAddSupportedPlugin(m_context.get(), toWK("").get(), nameNetscape.get(), mimeTypesNetscape.get(), emptyArray.get());
         WKContextAddSupportedPlugin(m_context.get(), toWK("").get(), namePdf.get(), emptyArray.get(), emptyArray.get());
         return;
     }
 
-    if (m_unsupportedPluginMode == "specificOrigin") {
+    if (m_unsupportedPluginMode == "specificOrigin"_s) {
         WKContextAddSupportedPlugin(m_context.get(), toWK("localhost").get(), nameNetscape.get(), mimeTypesNetscape.get(), emptyArray.get());
         WKContextAddSupportedPlugin(m_context.get(), toWK("localhost").get(), namePdf.get(), emptyArray.get(), emptyArray.get());
         return;
@@ -2147,7 +2209,7 @@ static const char* toString(WKProtectionSpaceAuthenticationScheme scheme)
 bool TestController::canAuthenticateAgainstProtectionSpace(WKPageRef page, WKProtectionSpaceRef protectionSpace)
 {
     if (m_shouldLogCanAuthenticateAgainstProtectionSpace)
-        m_currentInvocation->outputText("canAuthenticateAgainstProtectionSpace\n");
+        m_currentInvocation->outputText("canAuthenticateAgainstProtectionSpace\n"_s);
     auto scheme = WKProtectionSpaceGetAuthenticationScheme(protectionSpace);
     if (scheme == kWKProtectionSpaceAuthenticationSchemeServerTrustEvaluationRequested) {
         auto host = toSTD(adoptWK(WKProtectionSpaceCopyHost(protectionSpace)));
@@ -2190,19 +2252,20 @@ void TestController::didReceiveAuthenticationChallenge(WKPageRef page, WKAuthent
     }
 
     if (m_rejectsProtectionSpaceAndContinueForAuthenticationChallenges) {
-        m_currentInvocation->outputText("Simulating reject protection space and continue for authentication challenge\n");
+        m_currentInvocation->outputText("Simulating reject protection space and continue for authentication challenge\n"_s);
         WKAuthenticationDecisionListenerRejectProtectionSpaceAndContinue(decisionListener);
         return;
     }
 
     auto host = toWTFString(adoptWK(WKProtectionSpaceCopyHost(protectionSpace)).get());
     int port = WKProtectionSpaceGetPort(protectionSpace);
-    String message = makeString(host, ':', port, " - didReceiveAuthenticationChallenge - ", toString(authenticationScheme), " - ");
+    StringBuilder message;
+    message.append(host, ':', port, " - didReceiveAuthenticationChallenge - ", toString(authenticationScheme), " - ");
     if (!m_handlesAuthenticationChallenges)
-        message.append("Simulating cancelled authentication sheet\n");
+        message.append("Simulating cancelled authentication sheet\n"_s);
     else
         message.append("Responding with " + m_authenticationUsername + ":" + m_authenticationPassword + "\n");
-    m_currentInvocation->outputText(message);
+    m_currentInvocation->outputText(message.toString());
 
     if (!m_handlesAuthenticationChallenges) {
         WKAuthenticationDecisionListenerUseCredential(decisionListener, 0);
@@ -2238,7 +2301,7 @@ bool TestController::downloadDidReceiveServerRedirectToURL(WKDownloadRef downloa
 void TestController::downloadDidStart(WKDownloadRef download)
 {
     if (m_shouldLogDownloadCallbacks)
-        m_currentInvocation->outputText("Download started.\n");
+        m_currentInvocation->outputText("Download started.\n"_s);
 }
 
 WKStringRef TestController::decideDestinationWithSuggestedFilename(WKDownloadRef download, WKStringRef filename)
@@ -2259,7 +2322,7 @@ WKStringRef TestController::decideDestinationWithSuggestedFilename(WKDownloadRef
 
     String temporaryFolder = String::fromUTF8(dumpRenderTreeTemp);
     if (suggestedFilename.isEmpty())
-        suggestedFilename = "Unknown";
+        suggestedFilename = "Unknown"_s;
     
     String destination = temporaryFolder + pathSeparator + suggestedFilename;
     if (FileSystem::fileExists(destination))
@@ -2273,7 +2336,7 @@ void TestController::downloadDidFinish(WKDownloadRef)
     if (m_shouldLogDownloadSize)
         m_currentInvocation->outputText(makeString("Download size: ", m_downloadTotalBytesWritten.value_or(0), ".\n"));
     if (m_shouldLogDownloadCallbacks)
-        m_currentInvocation->outputText("Download completed.\n");
+        m_currentInvocation->outputText("Download completed.\n"_s);
     m_currentInvocation->notifyDownloadDone();
 }
 
@@ -2322,24 +2385,7 @@ void TestController::webProcessDidTerminate(WKProcessTerminationReason reason)
     // ensure we only print the crashed message once.
     if (!m_didPrintWebProcessCrashedMessage) {
         pid_t pid = WKPageGetProcessIdentifier(m_mainWebView->page());
-        fprintf(stderr, "%s terminated (pid %ld) ", webProcessName(), static_cast<long>(pid));
-        switch (reason) {
-        case kWKProcessTerminationReasonExceededMemoryLimit:
-            fprintf(stderr, "because the memory limit was exceeded\n");
-            break;
-        case kWKProcessTerminationReasonExceededCPULimit:
-            fprintf(stderr, "because the cpu limit was exceeded\n");
-            break;
-        case kWKProcessTerminationReasonRequestedByClient:
-            fprintf(stderr, "because the client requested\n");
-            break;
-        case kWKProcessTerminationReasonCrash:
-            fprintf(stderr, "because the process crashed\n");
-            break;
-        default:
-            fprintf(stderr, "for an unknown reason\n");
-        }
-
+        fprintf(stderr, "%s terminated (pid %ld) for reason: %s\n", webProcessName(), static_cast<long>(pid), terminationReasonToString(reason));
         if (reason == kWKProcessTerminationReasonRequestedByClient) {
             fflush(stderr);
             return;
@@ -2350,7 +2396,7 @@ void TestController::webProcessDidTerminate(WKProcessTerminationReason reason)
         m_didPrintWebProcessCrashedMessage = true;
     }
 
-    if (m_shouldExitWhenWebProcessCrashes)
+    if (m_shouldExitWhenAuxiliaryProcessCrashes)
         exit(1);
 }
 
@@ -2410,23 +2456,6 @@ void TestController::handleGeolocationPermissionRequest(WKGeolocationPermissionR
 bool TestController::isGeolocationProviderActive() const
 {
     return m_geolocationProvider->isActive();
-}
-
-static String originUserVisibleName(WKSecurityOriginRef origin)
-{
-    if (!origin)
-        return emptyString();
-
-    auto host = toWTFString(adoptWK(WKSecurityOriginCopyHost(origin)));
-    auto protocol = toWTFString(adoptWK(WKSecurityOriginCopyProtocol(origin)));
-
-    if (host.isEmpty() || protocol.isEmpty())
-        return emptyString();
-
-    if (int port = WKSecurityOriginGetPort(origin))
-        return makeString(protocol, "://", host, ':', port);
-
-    return makeString(protocol, "://", host);
 }
 
 static String userMediaOriginHash(WKSecurityOriginRef userMediaDocumentOrigin, WKSecurityOriginRef topLevelDocumentOrigin)
@@ -2651,8 +2680,14 @@ void TestController::decidePolicyForNotificationPermissionRequest(WKPageRef page
     TestController::singleton().decidePolicyForNotificationPermissionRequest(page, origin, request);
 }
 
-void TestController::decidePolicyForNotificationPermissionRequest(WKPageRef, WKSecurityOriginRef, WKNotificationPermissionRequestRef request)
+void TestController::decidePolicyForNotificationPermissionRequest(WKPageRef, WKSecurityOriginRef origin, WKNotificationPermissionRequestRef request)
 {
+    auto originName = originUserVisibleName(origin);
+    if (m_notificationOriginsToDenyOnPrompt.contains(originName)) {
+        WKNotificationPermissionRequestDeny(request);
+        return;
+    }
+
     WKNotificationPermissionRequestAllow(request);
 }
 
@@ -3023,6 +3058,14 @@ void TestController::clearDOMCaches()
     ClearDOMCacheCallbackContext context(*this);
 
     WKWebsiteDataStoreRemoveAllFetchCaches(websiteDataStore(), &context, clearDOMCacheCallback);
+    runUntil(context.done, noTimeout);
+}
+
+void TestController::clearMemoryCache()
+{
+    ClearDOMCacheCallbackContext context(*this);
+
+    WKWebsiteDataStoreRemoveMemoryCaches(websiteDataStore(), &context, clearDOMCacheCallback);
     runUntil(context.done, noTimeout);
 }
 
@@ -3706,10 +3749,6 @@ void TestController::cleanUpKeychain(const String&, const String&)
 bool TestController::keyExistsInKeychain(const String&, const String&)
 {
     return false;
-}
-
-void TestController::installCustomMenuAction(const String&, bool)
-{
 }
 
 void TestController::setAllowedMenuActions(const Vector<String>&)

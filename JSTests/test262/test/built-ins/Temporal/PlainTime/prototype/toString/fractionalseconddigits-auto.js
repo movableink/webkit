@@ -8,12 +8,13 @@ features: [Temporal]
 ---*/
 
 const tests = [
-  ["15:23", "15:23:00"],
-  ["15:23:30", "15:23:30"],
-  ["15:23:30.1234", "15:23:30.1234"],
+  [new Temporal.PlainTime(5, 3, 1), "05:03:01"],
+  [new Temporal.PlainTime(15, 23), "15:23:00"],
+  [new Temporal.PlainTime(15, 23, 30), "15:23:30"],
+  [new Temporal.PlainTime(15, 23, 30, 123, 400), "15:23:30.1234"],
 ];
 
-for (const [input, expected] of tests) {
-  const plainTime = Temporal.PlainTime.from(input);
-  assert.sameValue(plainTime.toString({ fractionalSecondDigits: "auto" }), expected);
+for (const [time, expected] of tests) {
+  assert.sameValue(time.toString(), expected, "default is to emit seconds and drop trailing zeroes");
+  assert.sameValue(time.toString({ fractionalSecondDigits: "auto" }), expected, "auto is the default");
 }

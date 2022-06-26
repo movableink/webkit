@@ -42,10 +42,15 @@ typedef NS_ENUM(NSUInteger, _WKAttributionOverrideTesting) {
 @protocol _UIClickInteractionDriving;
 #endif
 
+typedef NS_ENUM(NSUInteger, _WKContentSecurityPolicyModeForExtension) {
+    _WKContentSecurityPolicyModeForExtensionNone = 0,
+    _WKContentSecurityPolicyModeForExtensionManifestV2,
+    _WKContentSecurityPolicyModeForExtensionManifestV3
+} WK_API_AVAILABLE(macos(13.0), ios(16.0));
+
 @class WKWebView;
 @class _WKApplicationManifest;
 @class _WKVisitedLinkStore;
-@class _WKWebsiteDataStore;
 
 @interface WKWebViewConfiguration (WKPrivate)
 
@@ -105,13 +110,12 @@ typedef NS_ENUM(NSUInteger, _WKAttributionOverrideTesting) {
 #else
 @property (nonatomic, setter=_setShowsURLsInToolTips:) BOOL _showsURLsInToolTips WK_API_AVAILABLE(macos(10.12));
 @property (nonatomic, setter=_setServiceControlsEnabled:) BOOL _serviceControlsEnabled WK_API_AVAILABLE(macos(10.12));
-@property (nonatomic, setter=_setImageControlsEnabled:) BOOL _imageControlsEnabled WK_API_AVAILABLE(macos(WK_MAC_TBA));
+@property (nonatomic, setter=_setImageControlsEnabled:) BOOL _imageControlsEnabled WK_API_AVAILABLE(macos(13.0));
 @property (nonatomic, readwrite, setter=_setRequiresUserActionForEditingControlsManager:) BOOL _requiresUserActionForEditingControlsManager WK_API_AVAILABLE(macos(10.12));
 @property (nonatomic, readwrite, setter=_setCPULimit:) double _cpuLimit WK_API_AVAILABLE(macos(10.13.4));
 @property (nonatomic, readwrite, setter=_setPageGroup:) WKPageGroupRef _pageGroup WK_API_AVAILABLE(macos(10.13.4));
 #endif
 
-@property (nonatomic, strong, setter=_setWebsiteDataStore:) _WKWebsiteDataStore *_websiteDataStore WK_API_DEPRECATED_WITH_REPLACEMENT("websiteDataStore", macos(10.10, 10.11), ios(8.0, 9.0));
 @property (nonatomic, setter=_setRequiresUserActionForAudioPlayback:) BOOL _requiresUserActionForAudioPlayback WK_API_DEPRECATED_WITH_REPLACEMENT("mediaTypesRequiringUserActionForPlayback", macos(10.12, 10.12), ios(10.0, 10.0));
 @property (nonatomic, setter=_setRequiresUserActionForVideoPlayback:) BOOL _requiresUserActionForVideoPlayback WK_API_DEPRECATED_WITH_REPLACEMENT("mediaTypesRequiringUserActionForPlayback", macos(10.12, 10.12), ios(10.0, 10.0));
 
@@ -142,6 +146,7 @@ typedef NS_ENUM(NSUInteger, _WKAttributionOverrideTesting) {
 // Attributes network activity from this WKWebView to the app with this bundle.
 @property (nonatomic, setter=_setAttributedBundleIdentifier:) NSString *_attributedBundleIdentifier;
 
+@property (nonatomic, setter=_setContentSecurityPolicyModeForExtension:) _WKContentSecurityPolicyModeForExtension _contentSecurityPolicyModeForExtension WK_API_AVAILABLE(macos(13.0), ios(16.0));
 @end
 
 #if TARGET_OS_IPHONE

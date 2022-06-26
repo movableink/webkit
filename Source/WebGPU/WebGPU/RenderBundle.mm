@@ -30,8 +30,14 @@
 
 namespace WebGPU {
 
-RenderBundle::RenderBundle(id<MTLIndirectCommandBuffer> indirectCommandBuffer)
+RenderBundle::RenderBundle(id<MTLIndirectCommandBuffer> indirectCommandBuffer, Device& device)
     : m_indirectCommandBuffer(indirectCommandBuffer)
+    , m_device(device)
+{
+}
+
+RenderBundle::RenderBundle(Device& device)
+    : m_device(device)
 {
 }
 
@@ -48,7 +54,7 @@ void RenderBundle::setLabel(String&& label)
 
 void wgpuRenderBundleRelease(WGPURenderBundle renderBundle)
 {
-    delete renderBundle;
+    WebGPU::fromAPI(renderBundle).deref();
 }
 
 void wgpuRenderBundleSetLabel(WGPURenderBundle renderBundle, const char* label)

@@ -32,7 +32,10 @@ messages -> RemoteGraphicsContextGL NotRefCounted Stream {
 #if USE(GRAPHICS_LAYER_WC)
     void PrepareForDisplay() -> (std::optional<WebKit::WCContentBufferIdentifier> contentBuffer) Synchronous
 #endif
-#if !PLATFORM(COCOA) && !USE(GRAPHICS_LAYER_WC)
+#if USE(LIBGBM)
+    void PrepareForDisplay() -> (WebCore::DMABufObject dmabufObject) Synchronous NotStreamEncodableReply
+#endif
+#if !PLATFORM(COCOA) && !USE(GRAPHICS_LAYER_WC) && !USE(LIBGBM)
     void PrepareForDisplay() -> () Synchronous
 #endif
     void EnsureExtensionEnabled(String extension)
@@ -50,6 +53,11 @@ messages -> RemoteGraphicsContextGL NotRefCounted Stream {
     void SimulateEventForTesting(WebCore::GraphicsContextGL::SimulatedEventForTesting event)
     void ReadnPixels0(int32_t x, int32_t y, int32_t width, int32_t height, uint32_t format, uint32_t type, IPC::ArrayReference<uint8_t> data) -> (IPC::ArrayReference<uint8_t> data) Synchronous
     void ReadnPixels1(int32_t x, int32_t y, int32_t width, int32_t height, uint32_t format, uint32_t type, uint64_t offset)
+    void MultiDrawArraysANGLE(uint32_t mode, IPC::ArrayReferenceTuple<int32_t, int32_t> firstsAndCounts)
+    void MultiDrawArraysInstancedANGLE(uint32_t mode, IPC::ArrayReferenceTuple<int32_t, int32_t, int32_t> firstsCountsAandInstanceCounts)
+    void MultiDrawElementsANGLE(uint32_t mode, IPC::ArrayReferenceTuple<int32_t, int32_t> countsAndOffsets, uint32_t type)
+    void MultiDrawElementsInstancedANGLE(uint32_t mode, IPC::ArrayReferenceTuple<int32_t, int32_t, int32_t> countsOffsetsAndInstanceCounts, uint32_t type)
+    void PaintRenderingResultsToPixelBuffer() -> (std::optional<IPC::PixelBufferReference> returnValue) Synchronous
 
     void MoveErrorsToSyntheticErrorList() -> (bool returnValue) Synchronous
     void ActiveTexture(uint32_t texture)
@@ -109,6 +117,7 @@ messages -> RemoteGraphicsContextGL NotRefCounted Stream {
     void GetString(uint32_t name) -> (String returnValue) Synchronous
     void GetFloatv(uint32_t pname, uint64_t valueSize) -> (IPC::ArrayReference<float> value) Synchronous
     void GetIntegerv(uint32_t pname, uint64_t valueSize) -> (IPC::ArrayReference<int32_t> value) Synchronous
+    void GetIntegeri_v(uint32_t pname, uint32_t index) -> (IPC::ArrayReference<int32_t, 4> value) Synchronous
     void GetInteger64(uint32_t pname) -> (int64_t returnValue) Synchronous
     void GetInteger64i(uint32_t pname, uint32_t index) -> (int64_t returnValue) Synchronous
     void GetProgrami(uint32_t program, uint32_t pname) -> (int32_t returnValue) Synchronous
@@ -286,12 +295,14 @@ messages -> RemoteGraphicsContextGL NotRefCounted Stream {
     void GetActiveUniformBlockiv(uint32_t program, uint32_t uniformBlockIndex, uint32_t pname, uint64_t paramsSize) -> (IPC::ArrayReference<int32_t> params) Synchronous
     void GetTranslatedShaderSourceANGLE(uint32_t arg0) -> (String returnValue) Synchronous
     void DrawBuffersEXT(IPC::ArrayReference<uint32_t> bufs)
+    void EnableiOES(uint32_t target, uint32_t index)
+    void DisableiOES(uint32_t target, uint32_t index)
+    void BlendEquationiOES(uint32_t buf, uint32_t mode)
+    void BlendEquationSeparateiOES(uint32_t buf, uint32_t modeRGB, uint32_t modeAlpha)
+    void BlendFunciOES(uint32_t buf, uint32_t src, uint32_t dst)
+    void BlendFuncSeparateiOES(uint32_t buf, uint32_t srcRGB, uint32_t dstRGB, uint32_t srcAlpha, uint32_t dstAlpha)
+    void ColorMaskiOES(uint32_t buf, bool red, bool green, bool blue, bool alpha)
     void GetInternalformativ(uint32_t target, uint32_t internalformat, uint32_t pname, uint64_t paramsSize) -> (IPC::ArrayReference<int32_t> params) Synchronous
-    void MultiDrawArraysANGLE(uint32_t mode, IPC::ArrayReference<int32_t> firsts, IPC::ArrayReference<int32_t> counts, int32_t drawcount)
-    void MultiDrawArraysInstancedANGLE(uint32_t mode, IPC::ArrayReference<int32_t> firsts, IPC::ArrayReference<int32_t> counts, IPC::ArrayReference<int32_t> instanceCounts, int32_t drawcount)
-    void MultiDrawElementsANGLE(uint32_t mode, IPC::ArrayReference<int32_t> counts, uint32_t type, IPC::ArrayReference<int32_t> offsets, int32_t drawcount)
-    void MultiDrawElementsInstancedANGLE(uint32_t mode, IPC::ArrayReference<int32_t> counts, uint32_t type, IPC::ArrayReference<int32_t> offsets, IPC::ArrayReference<int32_t> instanceCounts, int32_t drawcount)
-    void PaintRenderingResultsToPixelBuffer() -> (std::optional<WebCore::PixelBuffer> returnValue) Synchronous
 }
 
 #endif

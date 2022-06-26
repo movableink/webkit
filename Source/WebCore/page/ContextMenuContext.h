@@ -33,6 +33,8 @@
 
 namespace WebCore {
 
+class Event;
+
 class ContextMenuContext {
 public:
     enum class Type : uint8_t {
@@ -46,12 +48,17 @@ public:
     };
 
     ContextMenuContext();
-    ContextMenuContext(Type, const HitTestResult&);
+    ContextMenuContext(Type, const HitTestResult&, Event*);
+
+    ~ContextMenuContext();
+
+    ContextMenuContext& operator=(const ContextMenuContext&);
 
     Type type() const { return m_type; }
 
     void setHitTestResult(const HitTestResult& result) { m_hitTestResult = result; }
     const HitTestResult& hitTestResult() const { return m_hitTestResult; }
+    Event* event() const { return m_event.get(); }
 
     void setSelectedText(const String& selectedText) { m_selectedText = selectedText; }
     const String& selectedText() const { return m_selectedText; }
@@ -64,6 +71,7 @@ public:
 private:
     Type m_type { Type::ContextMenu };
     HitTestResult m_hitTestResult;
+    RefPtr<Event> m_event;
     String m_selectedText;
 
 #if ENABLE(SERVICE_CONTROLS)

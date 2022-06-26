@@ -206,19 +206,19 @@ static JSValueRef evaluateJavaScriptCallback(JSContextRef context, JSObjectRef f
         JSValueRef nameValue = JSObjectGetProperty(context, error, OpaqueJSString::tryCreate("name"_s).get(), exception);
         String exceptionName = adoptRef(JSValueToStringCopy(context, nameValue, nullptr))->string();
         String errorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::JavaScriptError);
-        if (exceptionName == "JavaScriptTimeout")
+        if (exceptionName == "JavaScriptTimeout"_s)
             errorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::JavaScriptTimeout);
-        else if (exceptionName == "NodeNotFound")
+        else if (exceptionName == "NodeNotFound"_s)
             errorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::NodeNotFound);
-        else if (exceptionName == "InvalidNodeIdentifier")
+        else if (exceptionName == "InvalidNodeIdentifier"_s)
             errorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::InvalidNodeIdentifier);
-        else if (exceptionName == "InvalidElementState")
+        else if (exceptionName == "InvalidElementState"_s)
             errorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::InvalidElementState);
-        else if (exceptionName == "InvalidParameter")
+        else if (exceptionName == "InvalidParameter"_s)
             errorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::InvalidParameter);
-        else if (exceptionName == "InvalidSelector")
+        else if (exceptionName == "InvalidSelector"_s)
             errorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::InvalidSelector);
-        else if (exceptionName == "ElementNotInteractable")
+        else if (exceptionName == "ElementNotInteractable"_s)
             errorType = Inspector::Protocol::AutomationHelpers::getEnumConstantValue(Inspector::Protocol::Automation::ErrorMessage::ElementNotInteractable);
 
         JSValueRef messageValue = JSObjectGetProperty(context, error, OpaqueJSString::tryCreate("message"_s).get(), exception);
@@ -251,7 +251,7 @@ void WebAutomationSessionProxy::setScriptObject(JSGlobalContextRef context, JSOb
     JSC::JSLockHolder locker(vm);
     auto scriptObjectID = JSC::Identifier::fromUid(m_scriptObjectIdentifier);
     JSC::PutPropertySlot slot(globalObject);
-    globalObject->methodTable(vm)->put(globalObject, globalObject, scriptObjectID, toJS(globalObject, object), slot);
+    globalObject->methodTable()->put(globalObject, globalObject, scriptObjectID, toJS(globalObject, object), slot);
 }
 
 JSObjectRef WebAutomationSessionProxy::scriptObjectForFrame(WebFrame& frame)
@@ -296,7 +296,7 @@ WebCore::Element* WebAutomationSessionProxy::elementForNodeHandle(WebFrame& fram
     if (!element)
         return nullptr;
 
-    auto elementWrapper = JSC::jsDynamicCast<WebCore::JSElement*>(toJS(context)->vm(), toJS(element));
+    auto elementWrapper = JSC::jsDynamicCast<WebCore::JSElement*>(toJS(element));
     if (!elementWrapper)
         return nullptr;
 
@@ -523,7 +523,7 @@ void WebAutomationSessionProxy::resolveChildFrameWithName(WebCore::PageIdentifie
         return;
     }
 
-    WebCore::Frame* coreChildFrame = coreFrame->tree().scopedChild(name);
+    WebCore::Frame* coreChildFrame = coreFrame->tree().scopedChild(AtomString { name });
     if (!coreChildFrame) {
         completionHandler(frameNotFoundErrorType, std::nullopt);
         return;
@@ -861,7 +861,7 @@ void WebAutomationSessionProxy::takeScreenshot(WebCore::PageIdentifier pageID, s
             return;
         }
 
-        image->bitmap().createHandle(handle, SharedMemory::Protection::ReadOnly);
+        handle = image->createHandle(SharedMemory::Protection::ReadOnly);
         WebProcess::singleton().parentProcessConnection()->send(Messages::WebAutomationSession::DidTakeScreenshot(callbackID, handle, { }), 0);
     });
 }
@@ -953,9 +953,9 @@ void WebAutomationSessionProxy::deleteCookie(WebCore::PageIdentifier pageID, std
     }
 
     auto& document = *frame->coreFrame()->document();
-    page->corePage()->cookieJar().deleteCookie(document, document.cookieURL(), cookieName);
-
-    completionHandler(std::nullopt);
+    page->corePage()->cookieJar().deleteCookie(document, document.cookieURL(), cookieName, [completionHandler = WTFMove(completionHandler)] () mutable {
+        completionHandler(std::nullopt);
+    });
 }
 
 } // namespace WebKit

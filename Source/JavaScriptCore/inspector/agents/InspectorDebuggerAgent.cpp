@@ -49,7 +49,7 @@
 
 namespace Inspector {
 
-const char* const InspectorDebuggerAgent::backtraceObjectGroup = "backtrace";
+const ASCIILiteral InspectorDebuggerAgent::backtraceObjectGroup = "backtrace"_s;
 
 // Objects created and retained by evaluating breakpoint actions are put into object groups
 // according to the breakpoint action identifier assigned by the frontend. A breakpoint may
@@ -62,7 +62,7 @@ static String objectGroupForBreakpointAction(JSC::BreakpointActionID id)
 
 static bool isWebKitInjectedScript(const String& sourceURL)
 {
-    return sourceURL.startsWith("__InjectedScript_") && sourceURL.endsWith(".js");
+    return sourceURL.startsWith("__InjectedScript_"_s) && sourceURL.endsWith(".js"_s);
 }
 
 static std::optional<JSC::Breakpoint::Action::Type> breakpointActionTypeForString(Protocol::ErrorString& errorString, const String& typeString)
@@ -741,7 +741,7 @@ Protocol::ErrorStringOr<String> InspectorDebuggerAgent::getScriptSource(const Pr
 {
     auto it = m_scripts.find(parseIntegerAllowingTrailingJunk<JSC::SourceID>(scriptId).value_or(0));
     if (it == m_scripts.end())
-        return makeUnexpected("Missing script for given scriptId");
+        return makeUnexpected("Missing script for given scriptId"_s);
 
     return it->value.source;
 }
@@ -939,15 +939,15 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setPauseOnExceptions(const
     RefPtr<JSC::Breakpoint> allExceptionsBreakpoint;
     RefPtr<JSC::Breakpoint> uncaughtExceptionsBreakpoint;
 
-    if (stateString == "all") {
+    if (stateString == "all"_s) {
         allExceptionsBreakpoint = debuggerBreakpointFromPayload(errorString, WTFMove(options));
         if (!allExceptionsBreakpoint)
             return makeUnexpected(errorString);
-    } else if (stateString == "uncaught") {
+    } else if (stateString == "uncaught"_s) {
         uncaughtExceptionsBreakpoint = debuggerBreakpointFromPayload(errorString, WTFMove(options));
         if (!uncaughtExceptionsBreakpoint)
             return makeUnexpected(errorString);
-    } else if (stateString != "none")
+    } else if (stateString != "none"_s)
         return makeUnexpected(makeString("Unknown state: "_s, stateString));
 
     m_debugger.setPauseOnAllExceptionsBreakpoint(WTFMove(allExceptionsBreakpoint));
@@ -1127,7 +1127,7 @@ JSC::JSObject* InspectorDebuggerAgent::debuggerScopeExtensionObject(JSC::Debugge
     if (injectedScript.hasNoValue())
         return JSC::Debugger::Client::debuggerScopeExtensionObject(debugger, globalObject, debuggerCallFrame);
 
-    auto* debuggerGlobalObject = debuggerCallFrame.scope()->globalObject();
+    auto* debuggerGlobalObject = debuggerCallFrame.scope(globalObject->vm())->globalObject();
     auto callFrame = toJS(debuggerGlobalObject, debuggerGlobalObject, JavaScriptCallFrame::create(debuggerCallFrame).ptr());
     return injectedScript.createCommandLineAPIObject(callFrame);
 }
@@ -1203,7 +1203,7 @@ void InspectorDebuggerAgent::didPause(JSC::JSGlobalObject* globalObject, JSC::De
     ASSERT(!m_pausedGlobalObject);
     m_pausedGlobalObject = globalObject;
 
-    auto* debuggerGlobalObject = debuggerCallFrame.scope()->globalObject();
+    auto* debuggerGlobalObject = debuggerCallFrame.scope(globalObject->vm())->globalObject();
     m_currentCallStack = { m_pausedGlobalObject->vm(), toJS(debuggerGlobalObject, debuggerGlobalObject, JavaScriptCallFrame::create(debuggerCallFrame).ptr()) };
 
     InjectedScript injectedScript = m_injectedScriptManager.injectedScriptFor(m_pausedGlobalObject);

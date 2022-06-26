@@ -85,7 +85,7 @@ STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSTestNamedGetterNoIdentifierPrototype, JSTe
 
 using JSTestNamedGetterNoIdentifierDOMConstructor = JSDOMConstructorNotConstructable<JSTestNamedGetterNoIdentifier>;
 
-template<> const ClassInfo JSTestNamedGetterNoIdentifierDOMConstructor::s_info = { "TestNamedGetterNoIdentifier", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedGetterNoIdentifierDOMConstructor) };
+template<> const ClassInfo JSTestNamedGetterNoIdentifierDOMConstructor::s_info = { "TestNamedGetterNoIdentifier"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedGetterNoIdentifierDOMConstructor) };
 
 template<> JSValue JSTestNamedGetterNoIdentifierDOMConstructor::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
 {
@@ -106,10 +106,10 @@ template<> void JSTestNamedGetterNoIdentifierDOMConstructor::initializePropertie
 
 static const HashTableValue JSTestNamedGetterNoIdentifierPrototypeTableValues[] =
 {
-    { "constructor", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestNamedGetterNoIdentifierConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestNamedGetterNoIdentifierConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
 };
 
-const ClassInfo JSTestNamedGetterNoIdentifierPrototype::s_info = { "TestNamedGetterNoIdentifier", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedGetterNoIdentifierPrototype) };
+const ClassInfo JSTestNamedGetterNoIdentifierPrototype::s_info = { "TestNamedGetterNoIdentifier"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedGetterNoIdentifierPrototype) };
 
 void JSTestNamedGetterNoIdentifierPrototype::finishCreation(VM& vm)
 {
@@ -118,7 +118,7 @@ void JSTestNamedGetterNoIdentifierPrototype::finishCreation(VM& vm)
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-const ClassInfo JSTestNamedGetterNoIdentifier::s_info = { "TestNamedGetterNoIdentifier", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedGetterNoIdentifier) };
+const ClassInfo JSTestNamedGetterNoIdentifier::s_info = { "TestNamedGetterNoIdentifier"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedGetterNoIdentifier) };
 
 JSTestNamedGetterNoIdentifier::JSTestNamedGetterNoIdentifier(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestNamedGetterNoIdentifier>&& impl)
     : JSDOMWrapper<TestNamedGetterNoIdentifier>(structure, globalObject, WTFMove(impl))
@@ -128,7 +128,7 @@ JSTestNamedGetterNoIdentifier::JSTestNamedGetterNoIdentifier(Structure* structur
 void JSTestNamedGetterNoIdentifier::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     static_assert(!std::is_base_of<ActiveDOMObject, TestNamedGetterNoIdentifier>::value, "Interface is not marked as [ActiveDOMObject] even though implementation class subclasses ActiveDOMObject.");
 
@@ -207,7 +207,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestNamedGetterNoIdentifierConstructor, (JSGlobalObje
 {
     VM& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    auto* prototype = jsDynamicCast<JSTestNamedGetterNoIdentifierPrototype*>(vm, JSValue::decode(thisValue));
+    auto* prototype = jsDynamicCast<JSTestNamedGetterNoIdentifierPrototype*>(JSValue::decode(thisValue));
     if (UNLIKELY(!prototype))
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestNamedGetterNoIdentifier::getConstructor(JSC::getVM(lexicalGlobalObject), prototype->globalObject()));
@@ -283,9 +283,9 @@ JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* g
     return wrap(lexicalGlobalObject, globalObject, impl);
 }
 
-TestNamedGetterNoIdentifier* JSTestNamedGetterNoIdentifier::toWrapped(JSC::VM& vm, JSC::JSValue value)
+TestNamedGetterNoIdentifier* JSTestNamedGetterNoIdentifier::toWrapped(JSC::VM&, JSC::JSValue value)
 {
-    if (auto* wrapper = jsDynamicCast<JSTestNamedGetterNoIdentifier*>(vm, value))
+    if (auto* wrapper = jsDynamicCast<JSTestNamedGetterNoIdentifier*>(value))
         return &wrapper->wrapped();
     return nullptr;
 }

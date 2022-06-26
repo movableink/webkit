@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -259,11 +259,6 @@ RenderTheme& RenderTheme::singleton()
 bool RenderThemeMac::canPaint(const PaintInfo& paintInfo, const Settings&) const
 {
     return paintInfo.context().hasPlatformContext();
-}
-
-CFStringRef RenderThemeMac::contentSizeCategory() const
-{
-    return kCTFontContentSizeCategoryL;
 }
 
 RenderThemeMac::RenderThemeMac()
@@ -949,7 +944,7 @@ void RenderThemeMac::setFontFromControlSize(RenderStyle& style, NSControlSize co
     fontDescription.setIsAbsoluteSize(true);
 
     NSFont* font = [NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:controlSize]];
-    fontDescription.setOneFamily(AtomString("-apple-system", AtomString::ConstructFromLiteral));
+    fontDescription.setOneFamily("-apple-system"_s);
     fontDescription.setComputedSize([font pointSize] * style.effectiveZoom());
     fontDescription.setSpecifiedSize([font pointSize] * style.effectiveZoom());
 
@@ -1266,33 +1261,7 @@ bool RenderThemeMac::paintMeter(const RenderObject& renderObject, const PaintInf
 
 bool RenderThemeMac::supportsMeter(ControlPart part, const HTMLMeterElement&) const
 {
-    switch (part) {
-    case RelevancyLevelIndicatorPart:
-    case DiscreteCapacityLevelIndicatorPart:
-    case RatingLevelIndicatorPart:
-    case MeterPart:
-    case ContinuousCapacityLevelIndicatorPart:
-        return true;
-    default:
-        return false;
-    }
-}
-
-NSLevelIndicatorStyle RenderThemeMac::levelIndicatorStyleFor(ControlPart part) const
-{
-    switch (part) {
-    case RelevancyLevelIndicatorPart:
-        return NSLevelIndicatorStyleRelevancy;
-    case DiscreteCapacityLevelIndicatorPart:
-        return NSLevelIndicatorStyleDiscreteCapacity;
-    case RatingLevelIndicatorPart:
-        return NSLevelIndicatorStyleRating;
-    case MeterPart:
-    case ContinuousCapacityLevelIndicatorPart:
-    default:
-        return NSLevelIndicatorStyleContinuousCapacity;
-    }
-
+    return part == MeterPart;
 }
 
 NSLevelIndicatorCell* RenderThemeMac::levelIndicatorFor(const RenderMeter& renderMeter) const
@@ -1327,7 +1296,7 @@ NSLevelIndicatorCell* RenderThemeMac::levelIndicatorFor(const RenderMeter& rende
         break;
     }
 
-    [cell setLevelIndicatorStyle:levelIndicatorStyleFor(style.effectiveAppearance())];
+    [cell setLevelIndicatorStyle:NSLevelIndicatorStyleContinuousCapacity];
     [cell setUserInterfaceLayoutDirection:style.isLeftToRightDirection() ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
     [cell setMinValue:element->min()];
     [cell setMaxValue:element->max()];
@@ -1644,6 +1613,7 @@ static const IntSize* menuListButtonSizes()
 
 void RenderThemeMac::adjustMenuListStyle(RenderStyle& style, const Element* e) const
 {
+    RenderTheme::adjustMenuListStyle(style, e);
     NSControlSize controlSize = controlSizeForFont(style);
 
     style.resetBorder();
@@ -1781,7 +1751,7 @@ bool RenderThemeMac::paintSliderTrack(const RenderObject& o, const PaintInfo& pa
     float zoomLevel = o.style().effectiveZoom();
     float zoomedTrackWidth = trackWidth * zoomLevel;
 
-    if (o.style().effectiveAppearance() ==  SliderHorizontalPart || o.style().effectiveAppearance() ==  MediaSliderPart) {
+    if (o.style().effectiveAppearance() ==  SliderHorizontalPart) {
         bounds.setHeight(zoomedTrackWidth);
         bounds.setY(r.y() + r.height() / 2 - zoomedTrackWidth / 2);
     } else if (o.style().effectiveAppearance() == SliderVerticalPart) {
@@ -2590,7 +2560,7 @@ int RenderThemeMac::attachmentBaseline(const RenderAttachment& attachment) const
 static RefPtr<Icon> iconForAttachment(const String& fileName, const String& attachmentType, const String& title)
 {
     if (!attachmentType.isEmpty()) {
-        if (equalIgnoringASCIICase(attachmentType, "multipart/x-folder") || equalIgnoringASCIICase(attachmentType, "application/vnd.apple.folder")) {
+        if (equalLettersIgnoringASCIICase(attachmentType, "multipart/x-folder"_s) || equalLettersIgnoringASCIICase(attachmentType, "application/vnd.apple.folder"_s)) {
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
             auto type = kUTTypeFolder;
 ALLOW_DEPRECATED_DECLARATIONS_END
@@ -2619,11 +2589,14 @@ ALLOW_DEPRECATED_DECLARATIONS_END
             return icon;
     }
 
-    return Icon::createIconForUTI("public.data");
+    return Icon::createIconForUTI("public.data"_s);
 }
 
 RetainPtr<NSImage> RenderThemeMac::iconForAttachment(const String& fileName, const String& attachmentType, const String& title)
 {
+    if (fileName.isNull() && attachmentType.isNull() && title.isNull())
+        return nil;
+
     if (auto icon = WebCore::iconForAttachment(fileName, attachmentType, title))
         return icon->nsImage();
     return nil;
@@ -2660,6 +2633,18 @@ static void paintAttachmentIconBackground(const RenderAttachment& attachment, Gr
     }
 }
 
+static bool shouldDrawIcon(const String& title)
+{
+    // The thumbnail will be painted by the client.
+    NSString *cocoaTitle = title;
+    if (auto fileExtension = cocoaTitle.pathExtension; fileExtension.length) {
+        return ![fileExtension isEqualToString:@"key"]
+            && ![fileExtension isEqualToString:@"pages"]
+            && ![fileExtension isEqualToString:@"numbers"];
+    }
+    return true;
+}
+
 static void paintAttachmentIcon(const RenderAttachment& attachment, GraphicsContext& context, AttachmentLayout& layout)
 {
     if (auto thumbnailIcon = attachment.attachmentElement().thumbnail()) {
@@ -2680,6 +2665,9 @@ static void paintAttachmentIcon(const RenderAttachment& attachment, GraphicsCont
     if (!image)
         return;
     
+    if (!shouldDrawIcon(attachment.attachmentElement().attachmentTitleForDisplay()))
+        return;
+
     LocalCurrentGraphicsContext localCurrentGC(context);
 
     [image drawInRect:layout.iconRect fromRect:NSMakeRect(0, 0, [image size].width, [image size].height) operation:NSCompositingOperationSourceOver fraction:1.0f];

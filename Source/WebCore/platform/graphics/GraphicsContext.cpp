@@ -27,6 +27,7 @@
 #include "GraphicsContext.h"
 
 #include "BidiResolver.h"
+#include "DecomposedGlyphs.h"
 #include "Filter.h"
 #include "FilterImage.h"
 #include "FloatRoundedRect.h"
@@ -42,6 +43,16 @@
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+GraphicsContext::GraphicsContext(const GraphicsContextState::ChangeFlags& changeFlags, InterpolationQuality imageInterpolationQuality)
+    : m_state(changeFlags, imageInterpolationQuality)
+{
+}
+
+GraphicsContext::GraphicsContext(const GraphicsContextState& state)
+    : m_state(state)
+{
+}
 
 GraphicsContext::~GraphicsContext()
 {
@@ -70,10 +81,10 @@ void GraphicsContext::restore()
         m_stack.clear();
 }
 
-void GraphicsContext::updateState(const GraphicsContextState& state, GraphicsContextState::StateChangeFlags flags)
+void GraphicsContext::updateState(GraphicsContextState& state, const std::optional<GraphicsContextState>& lastDrawingState)
 {
-    m_state.mergeChanges(state, flags);
-    didUpdateState(state, flags);
+    m_state.mergeChanges(state, lastDrawingState);
+    didUpdateState(m_state);
 }
 
 void GraphicsContext::drawRaisedEllipse(const FloatRect& rect, const Color& ellipseColor, const Color& shadowColor)
@@ -93,101 +104,32 @@ void GraphicsContext::drawRaisedEllipse(const FloatRect& rect, const Color& elli
     restore();
 }
 
-void GraphicsContext::setStrokeColor(const Color& color)
-{
-    m_state.strokeColor = color;
-    m_state.strokeGradient = nullptr;
-    m_state.strokePattern = nullptr;
-    didUpdateState(m_state, GraphicsContextState::StrokeColorChange);
-}
-
-void GraphicsContext::setShadow(const FloatSize& offset, float blur, const Color& color, ShadowRadiusMode radiusMode)
-{
-    m_state.shadowOffset = offset;
-    m_state.shadowBlur = blur;
-    m_state.shadowColor = color;
-    m_state.shadowRadiusMode = radiusMode;
-    didUpdateState(m_state, GraphicsContextState::ShadowChange);
-}
-
-void GraphicsContext::clearShadow()
-{
-    m_state.shadowOffset = FloatSize();
-    m_state.shadowBlur = 0;
-    m_state.shadowColor = Color();
-    m_state.shadowRadiusMode = ShadowRadiusMode::Default;
-    didUpdateState(m_state, GraphicsContextState::ShadowChange);
-}
-
 bool GraphicsContext::getShadow(FloatSize& offset, float& blur, Color& color) const
 {
-    offset = m_state.shadowOffset;
-    blur = m_state.shadowBlur;
-    color = m_state.shadowColor;
+    offset = dropShadow().offset;
+    blur = dropShadow().blurRadius;
+    color = dropShadow().color;
 
     return hasShadow();
 }
-
+    
 #if PLATFORM(QT)
-bool GraphicsContext::mustUseShadowBlur() const
-{
-    // We can't avoid ShadowBlur if the shadow has blur.
-    if (hasBlurredShadow())
+    bool GraphicsContext::mustUseShadowBlur() const
+    {
+        // We can't avoid ShadowBlur if the shadow has blur.
+        if (hasBlurredShadow())
+            return true;
+        // We can avoid ShadowBlur and optimize, since we're not drawing on a
+        // canvas and box shadows are affected by the transformation matrix.
+        if (!m_state.shadowsIgnoreTransforms)
+            return false;
+        // We can avoid ShadowBlur, since there are no transformations to apply to the canvas.
+        if (getCTM().isIdentity())
+            return false;
+        // Otherwise, no chance avoiding ShadowBlur.
         return true;
-    // We can avoid ShadowBlur and optimize, since we're not drawing on a
-    // canvas and box shadows are affected by the transformation matrix.
-    if (!m_state.shadowsIgnoreTransforms)
-        return false;
-    // We can avoid ShadowBlur, since there are no transformations to apply to the canvas.
-    if (getCTM().isIdentity())
-        return false;
-    // Otherwise, no chance avoiding ShadowBlur.
-    return true;
-}
+    }
 #endif
-
-void GraphicsContext::setFillColor(const Color& color)
-{
-    m_state.fillColor = color;
-    m_state.fillGradient = nullptr;
-    m_state.fillPattern = nullptr;
-    didUpdateState(m_state, GraphicsContextState::FillColorChange);
-}
-
-void GraphicsContext::setStrokePattern(Ref<Pattern>&& pattern)
-{
-    m_state.strokeColor = { };
-    m_state.strokeGradient = nullptr;
-    m_state.strokePattern = WTFMove(pattern);
-    didUpdateState(m_state, GraphicsContextState::StrokePatternChange);
-}
-
-void GraphicsContext::setFillPattern(Ref<Pattern>&& pattern)
-{
-    m_state.fillColor = { };
-    m_state.fillGradient = nullptr;
-    m_state.fillPattern = WTFMove(pattern);
-    didUpdateState(m_state, GraphicsContextState::FillPatternChange);
-}
-
-void GraphicsContext::setStrokeGradient(Ref<Gradient>&& gradient, const AffineTransform& strokeGradientSpaceTransform)
-{
-    m_state.strokeColor = { };
-    m_state.strokeGradient = WTFMove(gradient);
-    m_state.strokeGradientSpaceTransform = strokeGradientSpaceTransform;
-    m_state.strokePattern = nullptr;
-    didUpdateState(m_state, GraphicsContextState::StrokeGradientChange);
-}
-
-void GraphicsContext::setFillGradient(Ref<Gradient>&& gradient, const AffineTransform& fillGradientSpaceTransform)
-{
-    m_state.fillColor = { };
-    m_state.fillGradient = WTFMove(gradient);
-    m_state.fillGradientSpaceTransform = fillGradientSpaceTransform;
-    m_state.fillPattern = nullptr;
-    didUpdateState(m_state, GraphicsContextState::FillGradientChange);
-    // FIXME: also fill pattern?
-}
 
 void GraphicsContext::beginTransparencyLayer(float)
 {
@@ -209,6 +151,12 @@ FloatSize GraphicsContext::drawText(const FontCascade& font, const TextRun& run,
 void GraphicsContext::drawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
 {
     FontCascade::drawGlyphs(*this, font, glyphs, advances, numGlyphs, point, fontSmoothingMode);
+}
+
+void GraphicsContext::drawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
+{
+    auto positionedGlyphs = decomposedGlyphs.positionedGlyphs();
+    FontCascade::drawGlyphs(*this, font, positionedGlyphs.glyphs.data(), positionedGlyphs.advances.data(), positionedGlyphs.glyphs.size(), positionedGlyphs.localAnchor, positionedGlyphs.smoothingMode);
 }
 
 void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& run, const AtomString& mark, const FloatPoint& point, unsigned from, std::optional<unsigned> to)
@@ -275,10 +223,13 @@ IntSize GraphicsContext::compatibleImageBufferSize(const FloatSize& size) const
 
 RefPtr<ImageBuffer> GraphicsContext::createImageBuffer(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod> renderingMethod) const
 {
-    if (!renderingMethod || *renderingMethod == RenderingMethod::Local)
-        return ImageBuffer::create(size, renderingMode.value_or(this->renderingMode()), resolutionScale, colorSpace, PixelFormat::BGRA8);
+    auto bufferOptions = bufferOptionsForRendingMode(renderingMode.value_or(this->renderingMode()));
 
-    return ImageBuffer::create(size, renderingMode.value_or(this->renderingMode()), ShouldUseDisplayList::Yes, RenderingPurpose::Unspecified, resolutionScale, colorSpace, PixelFormat::BGRA8);
+    if (!renderingMethod || *renderingMethod == RenderingMethod::Local)
+        return ImageBuffer::create(size, RenderingPurpose::Unspecified, resolutionScale, colorSpace, PixelFormat::BGRA8, bufferOptions);
+
+    bufferOptions.add(ImageBufferOptions::UseDisplayList);
+    return ImageBuffer::create(size, RenderingPurpose::Unspecified, resolutionScale, colorSpace, PixelFormat::BGRA8, bufferOptions);
 }
 
 RefPtr<ImageBuffer> GraphicsContext::createScaledImageBuffer(const FloatSize& size, const FloatSize& scale, const DestinationColorSpace& colorSpace, std::optional<RenderingMode> renderingMode, std::optional<RenderingMethod> renderingMethod) const
@@ -507,13 +458,6 @@ void GraphicsContext::fillRectWithRoundedHole(const FloatRect& rect, const Float
     
     setFillRule(oldFillRule);
     setFillColor(oldFillColor);
-}
-
-void GraphicsContext::setCompositeOperation(CompositeOperator compositeOperation, BlendMode blendMode)
-{
-    m_state.compositeOperator = compositeOperation;
-    m_state.blendMode = blendMode;
-    didUpdateState(m_state, GraphicsContextState::CompositeOperationChange);
 }
 
 void GraphicsContext::adjustLineToPixelBoundaries(FloatPoint& p1, FloatPoint& p2, float strokeWidth, StrokeStyle penStyle)

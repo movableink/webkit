@@ -30,6 +30,8 @@
 #include <pal/spi/cocoa/DataDetectorsCoreSPI.h>
 #include <wtf/SoftLinking.h>
 
+SOFT_LINK_FRAMEWORK_FOR_HEADER(PAL, DataDetectorsCore);
+
 SOFT_LINK_CLASS_FOR_HEADER(PAL, DDScannerResult)
 
 #if PLATFORM(MAC)
@@ -68,5 +70,5 @@ SOFT_LINK_FUNCTION_FOR_HEADER(PAL, DataDetectorsCore, DDScannerScanQuery, Boolea
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, DataDetectorsCore, DDScanQueryCreate, DDScanQueryRef, (CFAllocatorRef allocator), (allocator))
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, DataDetectorsCore, DDScanQueryCreateFromString, DDScanQueryRef, (CFAllocatorRef allocator, CFStringRef string, CFRange range), (allocator, string, range))
 SOFT_LINK_FUNCTION_FOR_HEADER(PAL, DataDetectorsCore, DDScannerCopyResultsWithOptions, CFArrayRef, (DDScannerRef scanner, DDScannerCopyResultsOptions options), (scanner, options))
-
+SOFT_LINK_FUNCTION_MAY_FAIL_FOR_HEADER(PAL, DataDetectorsCore, DDResultDisableURLSchemeChecking, void, (), ())
 #endif // ENABLE(DATA_DETECTION)

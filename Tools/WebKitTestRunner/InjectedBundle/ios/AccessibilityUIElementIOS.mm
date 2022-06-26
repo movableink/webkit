@@ -82,6 +82,10 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (NSUInteger)accessibilityARIAColumnCount;
 - (NSUInteger)accessibilityARIARowIndex;
 - (NSUInteger)accessibilityARIAColumnIndex;
+- (BOOL)accessibilityARIAIsBusy;
+- (BOOL)accessibilityARIALiveRegionIsAtomic;
+- (NSString *)accessibilityARIALiveRegionStatus;
+- (NSString *)accessibilityARIARelevantStatus;
 - (NSString *)accessibilityInvalidStatus;
 - (UIAccessibilityTraits)_axContainedByFieldsetTrait;
 - (id)_accessibilityFieldsetAncestor;
@@ -104,6 +108,8 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (BOOL)accessibilityIsInDescriptionListDefinition;
 - (BOOL)accessibilityIsInDescriptionListTerm;
 - (BOOL)_accessibilityIsInTableCell;
+- (BOOL)accessibilityIsAttributeSettable:(NSString *)attributeName;
+- (BOOL)accessibilityIsRequired;
 - (id)_accessibilityTableAncestor;
 - (id)_accessibilityLandmarkAncestor;
 - (id)_accessibilityListAncestor;
@@ -486,7 +492,7 @@ bool AccessibilityUIElement::boolAttributeValue(JSStringRef attribute)
 
 bool AccessibilityUIElement::isAttributeSettable(JSStringRef attribute)
 {
-    return false;
+    return [m_element accessibilityIsAttributeSettable:[NSString stringWithJSStringRef:attribute]];
 }
 
 bool AccessibilityUIElement::isAttributeSupported(JSStringRef attribute)
@@ -527,6 +533,16 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::title()
 JSRetainPtr<JSStringRef> AccessibilityUIElement::description()
 {
     return concatenateAttributeAndValue(@"AXLabel", [m_element accessibilityLabel]);
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::liveRegionRelevant() const
+{
+    return [[m_element accessibilityARIARelevantStatus] createJSStringRef];
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::liveRegionStatus() const
+{
+    return [[m_element accessibilityARIALiveRegionStatus] createJSStringRef];
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::orientation() const
@@ -590,7 +606,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::lineRectsAndText() const
 
 double AccessibilityUIElement::intValue() const
 {
-    return 0;
+    return [[m_element accessibilityValue] integerValue];
 }
 
 double AccessibilityUIElement::minValue()
@@ -629,6 +645,16 @@ bool AccessibilityUIElement::isDecrementActionSupported()
     return false;
 }
 
+bool AccessibilityUIElement::isAtomicLiveRegion() const
+{
+    return [m_element accessibilityARIALiveRegionIsAtomic];
+}
+
+bool AccessibilityUIElement::isBusy() const
+{
+    return [m_element accessibilityARIAIsBusy];
+}
+
 bool AccessibilityUIElement::isEnabled()
 {
     return false;
@@ -636,7 +662,7 @@ bool AccessibilityUIElement::isEnabled()
 
 bool AccessibilityUIElement::isRequired() const
 {
-    return false;
+    return [m_element accessibilityIsRequired];
 }
 
 RefPtr<AccessibilityUIElement> AccessibilityUIElement::focusedElement() const

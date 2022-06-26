@@ -28,6 +28,7 @@
 
 #include "CSSMarkup.h"
 #include "CSSSelectorList.h"
+#include "CommonAtomStrings.h"
 #include "HTMLNames.h"
 #include "RuntimeEnabledFeatures.h"
 #include "SelectorPseudoTypeMap.h"
@@ -280,7 +281,7 @@ CSSSelector::PseudoElementType CSSSelector::parsePseudoElementType(StringView na
 
     auto type = parsePseudoElementString(name);
     if (type == PseudoElementUnknown) {
-        if (name.startsWith("-webkit-"))
+        if (name.startsWith("-webkit-"_s))
             type = PseudoElementWebKitCustom;
     }
 
@@ -590,8 +591,8 @@ String CSSSelector::selectorText(const String& rightSide) const
             case CSSSelector::PseudoClassLink:
                 builder.append(":link");
                 break;
-            case CSSSelector::PseudoClassModalDialog:
-                builder.append(":-internal-modal-dialog");
+            case CSSSelector::PseudoClassModal:
+                builder.append(":modal");
                 break;
             case CSSSelector::PseudoClassNoButton:
                 builder.append(":no-button");
@@ -744,10 +745,10 @@ String CSSSelector::selectorText(const String& rightSide) const
                 break;
             }
             case CSSSelector::PseudoElementWebKitCustomLegacyPrefixed:
-                if (cs->value() == "placeholder")
-                    builder.append("::-webkit-input-placeholder");
-                if (cs->value() == "file-selector-button")
-                    builder.append("::-webkit-file-upload-button");
+                if (cs->value() == "placeholder"_s)
+                    builder.append("::-webkit-input-placeholder"_s);
+                if (cs->value() == "file-selector-button"_s)
+                    builder.append("::-webkit-file-upload-button"_s);
                 break;
 #if ENABLE(VIDEO)
             case CSSSelector::PseudoElementCue: {

@@ -26,38 +26,38 @@
 #if (ENABLE(WEBKIT2) && (NESTED_MASTER_CONDITION || MASTER_OR && MASTER_AND))
 #include "TestWithoutAttributes.h"
 
-#include "ArgumentCoders.h"
-#include "Connection.h"
-#include "Decoder.h"
+#include "ArgumentCoders.h" // NOLINT
+#include "Connection.h" // NOLINT
+#include "Decoder.h" // NOLINT
 #if ENABLE(DEPRECATED_FEATURE) || ENABLE(FEATURE_FOR_TESTING)
-#include "DummyType.h"
+#include "DummyType.h" // NOLINT
 #endif
 #if PLATFORM(MAC)
-#include "GestureTypes.h"
+#include "GestureTypes.h" // NOLINT
 #endif
-#include "HandleMessage.h"
-#if PLATFORM(MAC)
-#include "MachPort.h"
-#endif
-#include "Plugin.h"
-#include "TestWithoutAttributesMessages.h"
-#include "WebCoreArgumentCoders.h"
-#include "WebPreferencesStore.h"
+#include "HandleMessage.h" // NOLINT
+#include "Plugin.h" // NOLINT
+#include "TestWithoutAttributesMessages.h" // NOLINT
+#include "WebCoreArgumentCoders.h" // NOLINT
+#include "WebPreferencesStore.h" // NOLINT
 #if (ENABLE(TOUCH_EVENTS) && (NESTED_MESSAGE_CONDITION && SOME_OTHER_MESSAGE_CONDITION)) || (ENABLE(TOUCH_EVENTS) && (NESTED_MESSAGE_CONDITION || SOME_OTHER_MESSAGE_CONDITION))
-#include "WebTouchEvent.h"
+#include "WebTouchEvent.h" // NOLINT
 #endif
-#include <WebCore/GraphicsLayer.h>
+#include <WebCore/GraphicsLayer.h> // NOLINT
 #if PLATFORM(MAC)
-#include <WebCore/KeyboardEvent.h>
+#include <WebCore/KeyboardEvent.h> // NOLINT
 #endif
-#include <WebCore/PluginData.h>
-#include <utility>
-#include <wtf/HashMap.h>
+#include <WebCore/PluginData.h> // NOLINT
+#include <utility> // NOLINT
+#include <wtf/HashMap.h> // NOLINT
 #if PLATFORM(MAC)
-#include <wtf/OptionSet.h>
+#include <wtf/MachSendRight.h> // NOLINT
 #endif
-#include <wtf/Vector.h>
-#include <wtf/text/WTFString.h>
+#if PLATFORM(MAC)
+#include <wtf/OptionSet.h> // NOLINT
+#endif
+#include <wtf/Vector.h> // NOLINT
+#include <wtf/text/WTFString.h> // NOLINT
 
 #if ENABLE(IPC_TESTING_API)
 #include "JSIPCBinding.h"
@@ -84,12 +84,6 @@ void CreatePlugin::cancelReply(CompletionHandler<void(bool&&)>&& completionHandl
     completionHandler(IPC::AsyncReplyError<bool>::create());
 }
 
-void CreatePlugin::send(UniqueRef<IPC::Encoder>&& encoder, IPC::Connection& connection, bool result)
-{
-    encoder.get() << result;
-    connection.sendSyncReply(WTFMove(encoder));
-}
-
 void RunJavaScriptAlert::callReply(IPC::Decoder& decoder, CompletionHandler<void()>&& completionHandler)
 {
     completionHandler();
@@ -98,11 +92,6 @@ void RunJavaScriptAlert::callReply(IPC::Decoder& decoder, CompletionHandler<void
 void RunJavaScriptAlert::cancelReply(CompletionHandler<void()>&& completionHandler)
 {
     completionHandler();
-}
-
-void RunJavaScriptAlert::send(UniqueRef<IPC::Encoder>&& encoder, IPC::Connection& connection)
-{
-    connection.sendSyncReply(WTFMove(encoder));
 }
 
 void GetPlugins::callReply(IPC::Decoder& decoder, CompletionHandler<void(Vector<WebCore::PluginInfo>&&)>&& completionHandler)
@@ -122,23 +111,6 @@ void GetPlugins::cancelReply(CompletionHandler<void(Vector<WebCore::PluginInfo>&
     completionHandler(IPC::AsyncReplyError<Vector<WebCore::PluginInfo>>::create());
 }
 
-void GetPlugins::send(UniqueRef<IPC::Encoder>&& encoder, IPC::Connection& connection, const Vector<WebCore::PluginInfo>& plugins)
-{
-    encoder.get() << plugins;
-    connection.sendSyncReply(WTFMove(encoder));
-}
-
-void GetPluginProcessConnection::send(UniqueRef<IPC::Encoder>&& encoder, IPC::Connection& connection, const IPC::Connection::Handle& connectionHandle)
-{
-    encoder.get() << connectionHandle;
-    connection.sendSyncReply(WTFMove(encoder));
-}
-
-void TestMultipleAttributes::send(UniqueRef<IPC::Encoder>&& encoder, IPC::Connection& connection)
-{
-    connection.sendSyncReply(WTFMove(encoder));
-}
-
 #if PLATFORM(MAC)
 
 void InterpretKeyEvent::callReply(IPC::Decoder& decoder, CompletionHandler<void(Vector<WebCore::KeypressCommand>&&)>&& completionHandler)
@@ -156,12 +128,6 @@ void InterpretKeyEvent::callReply(IPC::Decoder& decoder, CompletionHandler<void(
 void InterpretKeyEvent::cancelReply(CompletionHandler<void(Vector<WebCore::KeypressCommand>&&)>&& completionHandler)
 {
     completionHandler(IPC::AsyncReplyError<Vector<WebCore::KeypressCommand>>::create());
-}
-
-void InterpretKeyEvent::send(UniqueRef<IPC::Encoder>&& encoder, IPC::Connection& connection, const Vector<WebCore::KeypressCommand>& commandName)
-{
-    encoder.get() << commandName;
-    connection.sendSyncReply(WTFMove(encoder));
 }
 
 #endif

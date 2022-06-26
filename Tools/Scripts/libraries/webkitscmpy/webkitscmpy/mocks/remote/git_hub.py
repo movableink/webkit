@@ -35,6 +35,7 @@ class GitHub(bmocks.GitHub):
     def __init__(
         self, remote='github.example.com/WebKit/WebKit', datafile=None,
         default_branch='main', git_svn=False, environment=None,
+        releases=None, issues=None, projects=None, labels=None,
     ):
         if not scmremote.GitHub.is_webserver('https://{}'.format(remote)):
             raise ValueError('"{}" is not a valid GitHub remote'.format(remote))
@@ -43,12 +44,22 @@ class GitHub(bmocks.GitHub):
         self.remote = remote
         self.forks = []
 
-        super(GitHub, self).__init__(remote, environment=environment)
+        super(GitHub, self).__init__(remote, environment=environment, issues=issues, projects=projects, labels=labels)
 
         with open(datafile or os.path.join(os.path.dirname(os.path.dirname(__file__)), 'git-repo.json')) as file:
             self.commits = jsonlib.load(file)
         for key, commits in self.commits.items():
-            self.commits[key] = [Commit(**kwargs) for kwargs in commits]
+            commit_objs = []
+            for kwargs in commits:
+                changeFiles = None
+                if 'changeFiles' in kwargs:
+                    changeFiles = kwargs['changeFiles']
+                    del kwargs['changeFiles']
+                commit = Commit(**kwargs)
+                if changeFiles:
+                    setattr(commit, '__mock__changeFiles', changeFiles)
+                commit_objs.append(commit)
+            self.commits[key] = commit_objs
             if not git_svn:
                 for commit in self.commits[key]:
                     commit.revision = None
@@ -56,6 +67,23 @@ class GitHub(bmocks.GitHub):
         self.head = self.commits[self.default_branch][-1]
         self.tags = {}
         self.pull_requests = []
+        self.releases = releases or dict()
+
+    def resolve_all_commits(self, branch):
+        all_commits = self.commits[branch][:]
+        last_commit = all_commits[0]
+        while last_commit.branch != branch:
+            head_index = None
+            commits_part = self.commits[last_commit.branch]
+            for i in range(len(commits_part)):
+                if commits_part[i].hash == last_commit.hash:
+                    head_index = i
+                    break
+            all_commits = commits_part[:head_index] + all_commits
+            last_commit = all_commits[0]
+            if last_commit.branch == self.default_branch and last_commit.identifier == 1:
+                break
+        return all_commits
 
     def commit(self, ref):
         if ref in self.commits:
@@ -76,11 +104,15 @@ class GitHub(bmocks.GitHub):
             return None
         delta = int(delta)
 
-        if delta < commit.identifier:
-            return self.commits[commit.branch][commit.identifier - delta - 1]
-        delta -= commit.identifier
-        if commit.branch_point and delta < commit.branch_point:
-            return self.commits[self.default_branch][commit.branch_point - delta - 1]
+        all_commits = self.resolve_all_commits(commit.branch)
+        commit_index = 0
+        for i in range(len(all_commits)):
+            if all_commits[i].hash == commit.hash:
+                commit_index = i
+                break
+
+        if commit_index - delta >= 0:
+            return all_commits[commit_index - delta]
         return None
 
     def _api_response(self, url):
@@ -411,5 +443,10 @@ class GitHub(bmocks.GitHub):
                 description=self.pull_requests[existing]['body'],
             ))
             return mocks.Response.fromJson(self.pull_requests[existing], url=url)
+
+        # Releases
+        download_base = '{}/releases/download/'.format(self.remote)
+        if method == 'GET' and stripped_url.startswith(download_base):
+            return self.releases.get(stripped_url[len(download_base):], mocks.Response.create404(url))
 
         return super(GitHub, self).request(method, url, data=data, params=params, auth=auth, json=json, **kwargs)

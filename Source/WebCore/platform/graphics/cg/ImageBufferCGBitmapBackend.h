@@ -27,6 +27,7 @@
 
 #if USE(CG)
 
+#include "ImageBuffer.h"
 #include "ImageBufferCGBackend.h"
 #include <wtf/IsoMalloc.h>
 
@@ -41,7 +42,7 @@ public:
     static IntSize calculateSafeBackendSize(const Parameters&);
     static size_t calculateMemoryCost(const Parameters&);
 
-    static std::unique_ptr<ImageBufferCGBitmapBackend> create(const Parameters&, const HostWindow*);
+    static std::unique_ptr<ImageBufferCGBitmapBackend> create(const Parameters&, const ImageBuffer::CreationContext&);
 
     // FIXME: Rename to createUsingColorSpaceOfGraphicsContext() (or something like that).
     static std::unique_ptr<ImageBufferCGBitmapBackend> create(const Parameters&, const GraphicsContext&);
@@ -56,7 +57,7 @@ private:
 
     RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) const final;
 
-    std::optional<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect&) const final;
+    RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect&, const ImageBufferAllocator&) const final;
     void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) final;
 
     void* m_data;

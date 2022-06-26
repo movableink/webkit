@@ -82,7 +82,6 @@
 #include "ThreadableWebSocketChannel.h"
 #include "UserContentProvider.h"
 #include "VisitedLinkStore.h"
-#include "WebLockRegistry.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <pal/SessionID.h>
 #include <wtf/NeverDestroyed.h>
@@ -146,7 +145,7 @@ class EmptyContextMenuClient final : public ContextMenuClient {
 #endif
 
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
-    bool supportsCopyCroppedImage() final { return false; }
+    bool supportsCopySubject() final { return false; }
 #endif
 };
 
@@ -306,12 +305,12 @@ private:
     void handleKeyboardEvent(KeyboardEvent&) final { }
     void handleInputMethodKeydown(KeyboardEvent&) final { }
 
-    void textFieldDidBeginEditing(Element*) final { }
-    void textFieldDidEndEditing(Element*) final { }
-    void textDidChangeInTextField(Element*) final { }
-    bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) final { return false; }
-    void textWillBeDeletedInTextField(Element*) final { }
-    void textDidChangeInTextArea(Element*) final { }
+    void textFieldDidBeginEditing(Element&) final { }
+    void textFieldDidEndEditing(Element&) final { }
+    void textDidChangeInTextField(Element&) final { }
+    bool doTextFieldCommandFromEvent(Element&, KeyboardEvent*) final { return false; }
+    void textWillBeDeletedInTextField(Element&) final { }
+    void textDidChangeInTextArea(Element&) final { }
     void overflowScrollPositionChanged() final { }
     void subFrameScrollPositionChanged() final { }
 
@@ -374,7 +373,6 @@ private:
         void ignoreWordInSpellDocument(const String&) final { }
         void learnWord(const String&) final { }
         void checkSpellingOfString(StringView, int*, int*) final { }
-        String getAutoCorrectSuggestionForMisspelledWord(const String&) final { return { }; }
         void checkGrammarOfString(StringView, Vector<GrammarDetail>&, int*, int*) final { }
 
 #if USE(UNIFIED_TEXT_CHECKING)
@@ -634,12 +632,12 @@ Ref<DocumentLoader> EmptyFrameLoaderClient::createDocumentLoader(const ResourceR
     return DocumentLoader::create(request, substituteData);
 }
 
-RefPtr<Frame> EmptyFrameLoaderClient::createFrame(const String&, HTMLFrameOwnerElement&)
+RefPtr<Frame> EmptyFrameLoaderClient::createFrame(const AtomString&, HTMLFrameOwnerElement&)
 {
     return nullptr;
 }
 
-RefPtr<Widget> EmptyFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool)
+RefPtr<Widget> EmptyFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool)
 {
     return nullptr;
 }
@@ -958,12 +956,12 @@ bool EmptyFrameLoaderClient::canShowMIMETypeAsHTML(const String&) const
     return false;
 }
 
-bool EmptyFrameLoaderClient::representationExistsForURLScheme(const String&) const
+bool EmptyFrameLoaderClient::representationExistsForURLScheme(StringView) const
 {
     return false;
 }
 
-String EmptyFrameLoaderClient::generatedMIMETypeForURLScheme(const String&) const
+String EmptyFrameLoaderClient::generatedMIMETypeForURLScheme(StringView) const
 {
     return emptyString();
 }
@@ -1194,23 +1192,9 @@ public:
 private:
     EmptyBroadcastChannelRegistry() = default;
 
-    void registerChannel(const ClientOrigin&, const String&, BroadcastChannelIdentifier) final { }
-    void unregisterChannel(const ClientOrigin&, const String&, BroadcastChannelIdentifier) final { }
-    void postMessage(const ClientOrigin&, const String&, BroadcastChannelIdentifier, Ref<SerializedScriptValue>&&, CompletionHandler<void()>&&) final { }
-};
-
-class EmptyWebLockRegistry final : public WebLockRegistry {
-public:
-    static Ref<EmptyWebLockRegistry> create()
-    {
-        return adoptRef(*new EmptyWebLockRegistry);
-    }
-private:
-    void requestLock(const ClientOrigin&, WebLockIdentifier, ScriptExecutionContextIdentifier, const String&, WebLockMode, bool, bool, Function<void(bool)>&&, Function<void()>&&) { }
-    void releaseLock(const ClientOrigin&, WebLockIdentifier, ScriptExecutionContextIdentifier, const String&) final { }
-    void abortLockRequest(const ClientOrigin&, WebLockIdentifier, ScriptExecutionContextIdentifier, const String&, CompletionHandler<void(bool)>&&) final { }
-    void snapshot(const ClientOrigin&, CompletionHandler<void(WebLockManagerSnapshot&&)>&&) { }
-    void clientIsGoingAway(const ClientOrigin&, ScriptExecutionContextIdentifier) { }
+    void registerChannel(const PartitionedSecurityOrigin&, const String&, BroadcastChannelIdentifier) final { }
+    void unregisterChannel(const PartitionedSecurityOrigin&, const String&, BroadcastChannelIdentifier) final { }
+    void postMessage(const PartitionedSecurityOrigin&, const String&, BroadcastChannelIdentifier, Ref<SerializedScriptValue>&&, CompletionHandler<void()>&&) final { }
 };
 
 PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
@@ -1229,7 +1213,6 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
         makeUniqueRef<DummySpeechRecognitionProvider>(),
         makeUniqueRef<EmptyMediaRecorderProvider>(),
         EmptyBroadcastChannelRegistry::create(),
-        EmptyWebLockRegistry::create(),
         DummyPermissionController::create(),
         makeUniqueRef<DummyStorageProvider>(),
         makeUniqueRef<DummyModelPlayerProvider>()

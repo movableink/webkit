@@ -31,6 +31,7 @@
 #import "TextCheckerState.h"
 #import "UIKitSPI.h"
 #import <WebCore/NotImplemented.h>
+#import <pal/spi/cocoa/FoundationSPI.h>
 #import <wtf/HashMap.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/RetainPtr.h>
@@ -45,7 +46,7 @@ static TextCheckerState& mutableState()
     static NeverDestroyed state = [] {
         TextCheckerState initialState;
         initialState.isContinuousSpellCheckingEnabled = TextChecker::isContinuousSpellCheckingAllowed();
-#if ENABLE(MAC_CATALYST_GRAMMAR_CHECKING)
+#if ENABLE(POST_EDITING_GRAMMAR_CHECKING)
         initialState.isGrammarCheckingEnabled = [UITextChecker respondsToSelector:@selector(grammarCheckingEnabled)] && [UITextChecker grammarCheckingEnabled];
 #else
         initialState.isGrammarCheckingEnabled = false;
@@ -80,7 +81,7 @@ bool TextChecker::setContinuousSpellCheckingEnabled(bool enabled)
 
 void TextChecker::setGrammarCheckingEnabled(bool isGrammarCheckingEnabled)
 {
-#if ENABLE(MAC_CATALYST_GRAMMAR_CHECKING)
+#if ENABLE(POST_EDITING_GRAMMAR_CHECKING)
     if (state().isGrammarCheckingEnabled == isGrammarCheckingEnabled)
         return;
 
@@ -221,13 +222,15 @@ Vector<TextCheckingResult> TextChecker::checkTextOfParagraph(SpellDocumentTag sp
     auto stringToCheck = text.createNSStringWithoutCopying();
     auto range = NSMakeRange(0, [stringToCheck length]);
 
-#if ENABLE(MAC_CATALYST_GRAMMAR_CHECKING)
+#if ENABLE(POST_EDITING_GRAMMAR_CHECKING)
     if ([textChecker respondsToSelector:@selector(checkString:range:types:languages:options:)]) {
         NSTextCheckingTypes types = 0;
         if (checkingTypes.contains(TextCheckingType::Spelling))
             types |= NSTextCheckingTypeSpelling;
         if (checkingTypes.contains(TextCheckingType::Grammar))
             types |= NSTextCheckingTypeGrammar;
+        if (checkingTypes.contains(TextCheckingType::Correction))
+            types |= NSTextCheckingTypeCorrection;
         NSDictionary *options = @{
             @"InsertionPoint" : @(insertionPoint)
         };
@@ -263,6 +266,31 @@ Vector<TextCheckingResult> TextChecker::checkTextOfParagraph(SpellDocumentTag sp
                     detail.userDescription = [incomingDetail objectForKey:@"NSGrammarUserDescription"];
                     detail.guesses = makeVector<String>([incomingDetail objectForKey:@"NSGrammarCorrections"]);
                     result.details.uncheckedAppend(WTFMove(detail));
+                }
+                results.append(WTFMove(result));
+            } else if (resultType == NSTextCheckingTypeCorrection && checkingTypes.contains(TextCheckingType::Correction)) {
+                TextCheckingResult result;
+                result.type = TextCheckingType::Correction;
+                result.range = resultRange;
+                result.replacement = [incomingResult replacementString];
+                if ([incomingResult respondsToSelector:@selector(detail)]) {
+                    NSDictionary *incomingDetail = [incomingResult detail];
+                    if (incomingDetail) {
+                        result.details.reserveInitialCapacity(1);
+                        GrammarDetail detail;
+
+                        NSValue *detailRangeAsNSValue = [incomingDetail objectForKey:@"NSGrammarRange"];
+                        ASSERT(detailRangeAsNSValue);
+
+                        NSRange detailNSRange = [detailRangeAsNSValue rangeValue];
+                        ASSERT(detailNSRange.location != NSNotFound);
+                        ASSERT(detailNSRange.length > 0);
+
+                        detail.range = detailNSRange;
+                        detail.userDescription = [incomingDetail objectForKey:@"NSGrammarUserDescription"];
+                        detail.guesses = makeVector<String>([incomingDetail objectForKey:@"NSGrammarCorrections"]);
+                        result.details.uncheckedAppend(WTFMove(detail));
+                    }
                 }
                 results.append(WTFMove(result));
             }

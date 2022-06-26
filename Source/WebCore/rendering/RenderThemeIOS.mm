@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 
+#import "ARKitBadgeSystemImage.h"
 #import "BitmapImage.h"
 #import "CSSPrimitiveValue.h"
 #import "CSSToLengthConversionData.h"
@@ -42,6 +43,7 @@
 #import "File.h"
 #import "FloatRoundedRect.h"
 #import "FontCache.h"
+#import "FontCacheCoreText.h"
 #import "FontCascade.h"
 #import "Frame.h"
 #import "FrameSelection.h"
@@ -279,41 +281,12 @@ static IOSGradientRef gradientWithName(IOSGradientType gradientType)
     return nullptr;
 }
 
-static void contentSizeCategoryDidChange(CFNotificationCenterRef, void*, CFStringRef name, const void*, CFDictionaryRef)
-{
-    ASSERT_UNUSED(name, CFEqual(name, PAL::get_UIKit_UIContentSizeCategoryDidChangeNotification()));
-    WebThreadRun(^{
-        Page::updateStyleForAllPagesAfterGlobalChangeInEnvironment();
-    });
-}
-
-RenderThemeIOS::RenderThemeIOS()
-{
-    CFNotificationCenterAddObserver(CFNotificationCenterGetLocalCenter(), this, contentSizeCategoryDidChange, (__bridge CFStringRef)PAL::get_UIKit_UIContentSizeCategoryDidChangeNotification(), 0, CFNotificationSuspensionBehaviorDeliverImmediately);
-}
+RenderThemeIOS::RenderThemeIOS() = default;
 
 RenderTheme& RenderTheme::singleton()
 {
     static NeverDestroyed<RenderThemeIOS> theme;
     return theme;
-}
-
-static String& _contentSizeCategory()
-{
-    static NeverDestroyed<String> _contentSizeCategory;
-    return _contentSizeCategory.get();
-}
-
-CFStringRef RenderThemeIOS::contentSizeCategory() const
-{
-    if (!_contentSizeCategory().isNull())
-        return (__bridge CFStringRef)static_cast<NSString*>(_contentSizeCategory());
-    return (CFStringRef)[[PAL::getUIApplicationClass() sharedApplication] preferredContentSizeCategory];
-}
-
-void RenderThemeIOS::setContentSizeCategory(const String& contentSizeCategory)
-{
-    _contentSizeCategory() = contentSizeCategory;
 }
 
 FloatRect RenderThemeIOS::addRoundedBorderClip(const RenderObject& box, GraphicsContext& context, const IntRect& rect)
@@ -1503,19 +1476,19 @@ static const Vector<CSSValueSystemColorInformation>& cssValueSystemColorInformat
 
 static inline std::optional<Color> systemColorFromCSSValueSystemColorInformation(CSSValueSystemColorInformation systemColorInformation, bool useDarkAppearance)
 {
-    if (auto color = wtfObjCMsgSend<UIColor *>(PAL::getUIColorClass(), systemColorInformation.selector)) {
-        Color systemColor(roundAndClampToSRGBALossy(color.CGColor), Color::Flags::Semantic);
+    UIColor *color = wtfObjCMsgSend<UIColor *>(PAL::getUIColorClass(), systemColorInformation.selector);
+    if (!color)
+        return std::nullopt;
 
-        if (systemColorInformation.opacity < 1.0f)
-            systemColor = systemColor.colorWithAlphaMultipliedBy(systemColorInformation.opacity);
+    Color systemColor(roundAndClampToSRGBALossy(color.CGColor), Color::Flags::Semantic);
 
-        if (systemColorInformation.makeOpaque)
-            return blendSourceOver(useDarkAppearance ? Color::black : Color::white, systemColor);
+    if (systemColorInformation.opacity < 1.0f)
+        systemColor = systemColor.colorWithAlphaMultipliedBy(systemColorInformation.opacity);
 
-        return systemColor;
-    }
+    if (systemColorInformation.makeOpaque)
+        return blendSourceOver(useDarkAppearance ? Color::black : Color::white, systemColor);
 
-    return std::nullopt;
+    return systemColor;
 }
 
 static std::optional<Color> systemColorFromCSSValueID(CSSValueID cssValueID, bool useDarkAppearance, bool useElevatedUserInterfaceLevel)
@@ -1625,7 +1598,7 @@ const CFIndex attachmentWrappingTextMaximumLineCount = 2;
 static RetainPtr<CTFontRef> attachmentActionFont()
 {
     auto style = kCTUIFontTextStyleFootnote;
-    auto size = RenderThemeIOS::singleton().contentSizeCategory();
+    auto size = contentSizeCategory();
     auto attributes = static_cast<CFDictionaryRef>(@{ (id)kCTFontTraitsAttribute: @{ (id)kCTFontSymbolicTrait: @(kCTFontTraitTightLeading | kCTFontTraitEmphasized) } });
 #if HAVE(CTFONTDESCRIPTOR_CREATE_WITH_TEXT_STYLE_AND_ATTRIBUTES)
     auto emphasizedFontDescriptor = adoptCF(CTFontDescriptorCreateWithTextStyleAndAttributes(style, size, attributes));
@@ -1644,7 +1617,7 @@ static RetainPtr<UIColor> attachmentActionColor(const RenderAttachment& attachme
 
 static RetainPtr<CTFontRef> attachmentTitleFont()
 {
-    auto fontDescriptor = adoptCF(CTFontDescriptorCreateWithTextStyle(kCTUIFontTextStyleShortCaption1, RenderThemeIOS::singleton().contentSizeCategory(), 0));
+    auto fontDescriptor = adoptCF(CTFontDescriptorCreateWithTextStyle(kCTUIFontTextStyleShortCaption1, contentSizeCategory(), 0));
     return adoptCF(CTFontCreateWithFontDescriptor(fontDescriptor.get(), 0, nullptr));
 }
 
@@ -1658,16 +1631,20 @@ static CGFloat shortCaptionPointSizeWithContentSizeCategory(CFStringRef contentS
 static CGFloat attachmentDynamicTypeScaleFactor()
 {
     CGFloat fixedPointSize = shortCaptionPointSizeWithContentSizeCategory(kCTFontContentSizeCategoryL);
-    CGFloat dynamicPointSize = shortCaptionPointSizeWithContentSizeCategory(RenderThemeIOS::singleton().contentSizeCategory());
+    CGFloat dynamicPointSize = shortCaptionPointSizeWithContentSizeCategory(contentSizeCategory());
     if (!dynamicPointSize || !fixedPointSize)
         return 1;
     return std::max<CGFloat>(1, dynamicPointSize / fixedPointSize);
 }
 
-static UIColor *attachmentTitleColor() { return [PAL::getUIColorClass() systemGrayColor]; }
+static UIColor *attachmentTitleColor(const RenderAttachment& renderer)
+{
+    return cocoaColor(RenderTheme::singleton().systemColor(CSSValueAppleSystemGray, renderer.styleColorOptions())).autorelease();
+}
 
 static RetainPtr<CTFontRef> attachmentSubtitleFont() { return attachmentTitleFont(); }
-static UIColor *attachmentSubtitleColor() { return [PAL::getUIColorClass() systemGrayColor]; }
+
+static UIColor *attachmentSubtitleColor(const RenderAttachment& renderer) { return attachmentTitleColor(renderer); }
 
 struct RenderAttachmentInfo {
     explicit RenderAttachmentInfo(const RenderAttachment&);
@@ -1875,8 +1852,8 @@ RenderAttachmentInfo::RenderAttachmentInfo(const RenderAttachment& attachment)
         buildWrappedLines(action, attachmentActionFont().get(), attachmentActionColor(attachment).get(), attachmentWrappingTextMaximumLineCount);
 
     bool forceSingleLineTitle = !action.isEmpty() || !subtitle.isEmpty() || hasProgress;
-    buildWrappedLines(title, attachmentTitleFont().get(), attachmentTitleColor(), forceSingleLineTitle ? 1 : attachmentWrappingTextMaximumLineCount);
-    buildSingleLine(subtitle, attachmentSubtitleFont().get(), attachmentSubtitleColor());
+    buildWrappedLines(title, attachmentTitleFont().get(), attachmentTitleColor(attachment), forceSingleLineTitle ? 1 : attachmentWrappingTextMaximumLineCount);
+    buildSingleLine(subtitle, attachmentSubtitleFont().get(), attachmentSubtitleColor(attachment));
 
     if (!lines.isEmpty()) {
         for (auto& line : lines) {
@@ -1914,7 +1891,7 @@ static void paintAttachmentIcon(GraphicsContext& context, RenderAttachmentInfo& 
 
 static void paintAttachmentText(GraphicsContext& context, RenderAttachmentInfo& info)
 {
-    DrawGlyphsRecorder recorder(context, DrawGlyphsRecorder::DeconstructDrawGlyphs::Yes, DrawGlyphsRecorder::DeriveFontFromContext::Yes);
+    DrawGlyphsRecorder recorder(context, 1, DrawGlyphsRecorder::DeriveFontFromContext::Yes);
 
     for (const auto& line : info.lines)
         recorder.drawNativeText(line.font.get(), CTFontGetSize(line.font.get()), line.line.get(), line.rect);
@@ -1988,6 +1965,12 @@ bool RenderThemeIOS::paintAttachment(const RenderObject& renderer, const PaintIn
     return true;
 }
 
+String RenderThemeIOS::attachmentStyleSheet() const
+{
+    ASSERT(RuntimeEnabledFeatures::sharedFeatures().attachmentElementEnabled());
+    return "attachment { appearance: auto; color: -apple-system-blue; }"_s;
+}
+
 #endif // ENABLE(ATTACHMENT_ELEMENT)
 
 #if PLATFORM(WATCHOS)
@@ -2000,186 +1983,9 @@ String RenderThemeIOS::extraDefaultStyleSheet()
 #endif
 
 #if USE(SYSTEM_PREVIEW)
-static NSBundle *arKitBundle()
-{
-    static NSBundle *arKitBundle = []() {
-#if PLATFORM(IOS_FAMILY_SIMULATOR)
-        dlopen("/System/Library/PrivateFrameworks/AssetViewer.framework/AssetViewer", RTLD_NOW);
-        return [NSBundle bundleForClass:NSClassFromString(@"ASVThumbnailView")];
-#else
-        return [NSBundle bundleWithURL:[NSURL fileURLWithPath:@"/System/Library/PrivateFrameworks/AssetViewer.framework"]];
-#endif
-    }();
-
-    return arKitBundle;
-}
-
-static RetainPtr<CGPDFPageRef> loadARKitPDFPage(NSString *imageName)
-{
-    NSURL *url = [arKitBundle() URLForResource:imageName withExtension:@"pdf"];
-
-    if (!url)
-        return nullptr;
-
-    auto document = adoptCF(CGPDFDocumentCreateWithURL((CFURLRef)url));
-    if (!document)
-        return nullptr;
-
-    if (!CGPDFDocumentGetNumberOfPages(document.get()))
-        return nullptr;
-
-    return CGPDFDocumentGetPage(document.get(), 1);
-}
-
-static CGPDFPageRef systemPreviewLogo()
-{
-    static CGPDFPageRef logoPage = loadARKitPDFPage(@"ARKitBadge").leakRef();
-    return logoPage;
-}
-
 void RenderThemeIOS::paintSystemPreviewBadge(Image& image, const PaintInfo& paintInfo, const FloatRect& rect)
 {
-    static const int largeBadgeDimension = 70;
-    static const int largeBadgeOffset = 20;
-
-    static const int smallBadgeDimension = 35;
-    static const int smallBadgeOffset = 8;
-
-    static const int minimumSizeForLargeBadge = 240;
-
-    bool useSmallBadge = rect.width() < minimumSizeForLargeBadge || rect.height() < minimumSizeForLargeBadge;
-    int badgeOffset = useSmallBadge ? smallBadgeOffset : largeBadgeOffset;
-    int badgeDimension = useSmallBadge ? smallBadgeDimension : largeBadgeDimension;
-
-    int minimumDimension = badgeDimension + 2 * badgeOffset;
-    if (rect.width() < minimumDimension || rect.height() < minimumDimension)
-        return;
-
-    CGRect absoluteBadgeRect = CGRectMake(rect.x() + rect.width() - badgeDimension - badgeOffset, rect.y() + badgeOffset, badgeDimension, badgeDimension);
-    CGRect insetBadgeRect = CGRectMake(rect.width() - badgeDimension - badgeOffset, badgeOffset, badgeDimension, badgeDimension);
-    CGRect badgeRect = CGRectMake(0, 0, badgeDimension, badgeDimension);
-
-    CIImage *inputImage = [CIImage imageWithCGImage:image.nativeImage()->platformImage().get()];
-
-    // Create a circle to be used for the clipping path in the badge, as well as the drop shadow.
-    RetainPtr<CGPathRef> circle = adoptCF(CGPathCreateWithRoundedRect(absoluteBadgeRect, badgeDimension / 2, badgeDimension / 2, nullptr));
-
-    auto& graphicsContext = paintInfo.context();
-    if (graphicsContext.paintingDisabled())
-        return;
-
-    GraphicsContextStateSaver stateSaver(graphicsContext);
-
-    CGContextRef ctx = graphicsContext.platformContext();
-    if (!ctx)
-        return;
-
-    CGContextSaveGState(ctx);
-
-    // Draw a drop shadow around the circle.
-    // Use the GraphicsContext function, because it calculates the blur radius in context space,
-    // rather than screen space.
-    constexpr auto shadowColor = Color::black.colorWithAlphaByte(26);
-    graphicsContext.setShadow(FloatSize { }, 16, shadowColor);
-
-    // The circle must have an alpha channel value of 1 for the shadow color to appear.
-    CGFloat circleColorComponents[4] = { 0, 0, 0, 1 };
-    RetainPtr<CGColorRef> circleColor = adoptCF(CGColorCreate(sRGBColorSpaceRef(), circleColorComponents));
-    CGContextSetFillColorWithColor(ctx, circleColor.get());
-
-    // Clip out the circle to only show the shadow.
-    CGContextBeginPath(ctx);
-    CGContextAddRect(ctx, rect);
-    CGContextAddPath(ctx, circle.get());
-    CGContextClosePath(ctx);
-    CGContextEOClip(ctx);
-
-    // Draw a slightly smaller circle with a shadow, otherwise we'll see a fringe of the solid
-    // black circle around the edges of the clipped path below.
-    CGContextBeginPath(ctx);
-    CGRect slightlySmallerAbsoluteBadgeRect = CGRectMake(absoluteBadgeRect.origin.x + 0.5, absoluteBadgeRect.origin.y + 0.5, badgeDimension - 1, badgeDimension - 1);
-    RetainPtr<CGPathRef> slightlySmallerCircle = adoptCF(CGPathCreateWithRoundedRect(slightlySmallerAbsoluteBadgeRect, slightlySmallerAbsoluteBadgeRect.size.width / 2, slightlySmallerAbsoluteBadgeRect.size.height / 2, nullptr));
-    CGContextAddPath(ctx, slightlySmallerCircle.get());
-    CGContextClosePath(ctx);
-    CGContextFillPath(ctx);
-
-    CGContextRestoreGState(ctx);
-
-    // Draw the blurred backdrop. Scale from intrinsic size to render size.
-    CGAffineTransform transform = CGAffineTransformIdentity;
-    transform = CGAffineTransformScale(transform, rect.width() / image.width(), rect.height() / image.height());
-    CIImage *scaledImage = [inputImage imageByApplyingTransform:transform];
-
-    // CoreImage coordinates are y-up, so we need to flip the badge rectangle within the image frame.
-    CGRect flippedInsetBadgeRect = CGRectMake(insetBadgeRect.origin.x, rect.height() - insetBadgeRect.origin.y - insetBadgeRect.size.height, badgeDimension, badgeDimension);
-
-    // Create a cropped region with pixel values extending outwards.
-    CIImage *clampedImage = [scaledImage imageByClampingToRect:flippedInsetBadgeRect];
-
-    // Blur.
-    CIImage *blurredImage = [clampedImage imageByApplyingGaussianBlurWithSigma:10];
-
-    // Saturate.
-    CIFilter *saturationFilter = [CIFilter filterWithName:@"CIColorControls"];
-    [saturationFilter setValue:blurredImage forKey:kCIInputImageKey];
-    [saturationFilter setValue:@1.8 forKey:kCIInputSaturationKey];
-
-    // Tint.
-    CIFilter *tintFilter1 = [CIFilter filterWithName:@"CIConstantColorGenerator"];
-    CIColor *tintColor1 = [CIColor colorWithRed:1 green:1 blue:1 alpha:0.18];
-    [tintFilter1 setValue:tintColor1 forKey:kCIInputColorKey];
-
-    // Blend the tint with the saturated output.
-    CIFilter *sourceOverFilter = [CIFilter filterWithName:@"CISourceOverCompositing"];
-    [sourceOverFilter setValue:tintFilter1.outputImage forKey:kCIInputImageKey];
-    [sourceOverFilter setValue:saturationFilter.outputImage forKey:kCIInputBackgroundImageKey];
-
-    if (!m_ciContext)
-        m_ciContext = [CIContext context];
-
-    RetainPtr<CGImageRef> cgImage;
-#if HAVE(IOSURFACE_COREIMAGE_SUPPORT)
-    // Crop the result to the badge location.
-    CIImage *croppedImage = [sourceOverFilter.outputImage imageByCroppingToRect:flippedInsetBadgeRect];
-    CIImage *translatedImage = [croppedImage imageByApplyingTransform:CGAffineTransformMakeTranslation(-flippedInsetBadgeRect.origin.x, -flippedInsetBadgeRect.origin.y)];
-    IOSurfaceRef surface;
-    if (useSmallBadge) {
-        if (!m_smallBadgeSurface)
-            m_smallBadgeSurface = IOSurface::create({ smallBadgeDimension, smallBadgeDimension }, DestinationColorSpace::SRGB());
-        surface = m_smallBadgeSurface->surface();
-    } else {
-        if (!m_largeBadgeSurface)
-            m_largeBadgeSurface = IOSurface::create({ largeBadgeDimension, largeBadgeDimension }, DestinationColorSpace::SRGB());
-        surface = m_largeBadgeSurface->surface();
-    }
-    [m_ciContext render:translatedImage toIOSurface:surface bounds:badgeRect colorSpace:sRGBColorSpaceRef()];
-    cgImage = useSmallBadge ? m_smallBadgeSurface->createImage() : m_largeBadgeSurface->createImage();
-#else
-    cgImage = adoptCF([m_ciContext createCGImage:sourceOverFilter.outputImage fromRect:flippedInsetBadgeRect]);
-#endif
-
-    // Before we render the result, we should clip to a circle around the badge rectangle.
-    CGContextSaveGState(ctx);
-    CGContextBeginPath(ctx);
-    CGContextAddPath(ctx, circle.get());
-    CGContextClosePath(ctx);
-    CGContextClip(ctx);
-
-    CGContextTranslateCTM(ctx, absoluteBadgeRect.origin.x, absoluteBadgeRect.origin.y);
-    CGContextTranslateCTM(ctx, 0, badgeDimension);
-    CGContextScaleCTM(ctx, 1, -1);
-    CGContextDrawImage(ctx, badgeRect, cgImage.get());
-
-    if (auto logo = systemPreviewLogo()) {
-        CGSize pdfSize = CGPDFPageGetBoxRect(logo, kCGPDFMediaBox).size;
-        CGFloat scaleX = badgeDimension / pdfSize.width;
-        CGFloat scaleY = badgeDimension / pdfSize.height;
-        CGContextScaleCTM(ctx, scaleX, scaleY);
-        CGContextDrawPDFPage(ctx, logo);
-    }
-
-    CGContextFlush(ctx);
-    CGContextRestoreGState(ctx);
+    paintInfo.context().drawSystemImage(ARKitBadgeSystemImage::create(image), rect);
 }
 #endif
 
@@ -2346,7 +2152,14 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
     }
 
     Path path;
-    if (checked) {
+    if (indeterminate) {
+        const FloatSize indeterminateBarRoundingRadii(1.25f, 1.25f);
+        constexpr float indeterminateBarPadding = 2.5f;
+        float height = 0.12f * rect.height();
+
+        FloatRect indeterminateBarRect(rect.x() + indeterminateBarPadding, rect.center().y() - height / 2.0f, rect.width() - indeterminateBarPadding * 2, height);
+        path.addRoundedRect(indeterminateBarRect, indeterminateBarRoundingRadii);
+    } else {
         path.moveTo({ 28.174f, 68.652f });
         path.addBezierCurveTo({ 31.006f, 68.652f }, { 33.154f, 67.578f }, { 34.668f, 65.332f });
         path.addLineTo({ 70.02f, 11.28f });
@@ -2368,13 +2181,6 @@ bool RenderThemeIOS::paintCheckbox(const RenderObject& box, const PaintInfo& pai
         transform.translate(rect.center() - (checkmarkSize * scale * 0.5f));
         transform.scale(scale);
         path.transform(transform);
-    } else {
-        const FloatSize indeterminateBarRoundingRadii(1.25f, 1.25f);
-        constexpr float indeterminateBarPadding = 2.5f;
-        float height = 0.12f * rect.height();
-
-        FloatRect indeterminateBarRect(rect.x() + indeterminateBarPadding, rect.center().y() - height / 2.0f, rect.width() - indeterminateBarPadding * 2, height);
-        path.addRoundedRect(indeterminateBarRect, indeterminateBarRoundingRadii);
     }
 
     context.setFillColor(checkboxRadioIndicatorColor(controlStates, styleColorOptions));
@@ -2768,7 +2574,7 @@ String RenderThemeIOS::colorInputStyleSheet(const Settings& settings) const
     if (!settings.iOSFormControlRefreshEnabled())
         return RenderTheme::colorInputStyleSheet(settings);
 
-    return "input[type=\"color\"] { -webkit-appearance: color-well; width: 28px; height: 28px; outline: none; border: initial; border-radius: 50%; } "_s;
+    return "input[type=\"color\"] { appearance: auto; width: 28px; height: 28px; box-sizing: border-box; outline: none; border: initial; border-radius: 50%; } "_s;
 }
 
 void RenderThemeIOS::adjustColorWellStyle(RenderStyle& style, const Element* element) const

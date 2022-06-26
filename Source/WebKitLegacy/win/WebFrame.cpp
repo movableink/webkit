@@ -243,7 +243,7 @@ WebFrame::WebFrame()
 {
     WebFrameCount++;
     gClassCount++;
-    gClassNameCount().add("WebFrame");
+    gClassNameCount().add("WebFrame"_s);
 }
 
 WebFrame::~WebFrame()
@@ -251,7 +251,7 @@ WebFrame::~WebFrame()
     delete d;
     WebFrameCount--;
     gClassCount--;
-    gClassNameCount().remove("WebFrame");
+    gClassNameCount().remove("WebFrame"_s);
 }
 
 WebFrame* WebFrame::createInstance()
@@ -563,7 +563,7 @@ void WebFrame::loadData(Ref<WebCore::FragmentedSharedBuffer>&& data, BSTR mimeTy
 {
     String mimeTypeString(mimeType, SysStringLen(mimeType));
     if (!mimeType)
-        mimeTypeString = "text/html";
+        mimeTypeString = "text/html"_s;
 
     String encodingString(textEncodingName, SysStringLen(textEncodingName));
 
@@ -1017,11 +1017,11 @@ HRESULT WebFrame::setTextDirection(_In_ BSTR direction)
         return E_UNEXPECTED;
 
     String directionString(direction, SysStringLen(direction));
-    if (directionString == "auto")
+    if (directionString == "auto"_s)
         coreFrame->editor().setBaseWritingDirection(WritingDirection::Natural);
-    else if (directionString == "ltr")
+    else if (directionString == "ltr"_s)
         coreFrame->editor().setBaseWritingDirection(WritingDirection::LeftToRight);
-    else if (directionString == "rtl")
+    else if (directionString == "rtl"_s)
         coreFrame->editor().setBaseWritingDirection(WritingDirection::RightToLeft);
     return S_OK;
 }
@@ -1056,7 +1056,7 @@ HRESULT WebFrame::selectAll()
     if (!coreFrame)
         return E_UNEXPECTED;
 
-    if (!coreFrame->editor().command("SelectAll").execute())
+    if (!coreFrame->editor().command("SelectAll"_s).execute())
         return E_FAIL;
 
     return S_OK;
@@ -1351,7 +1351,7 @@ HRESULT WebFrame::canProvideDocumentSource(bool* result)
         BString mimeTypeBStr;
         if (SUCCEEDED(urlResponse->MIMEType(&mimeTypeBStr))) {
             String mimeType(mimeTypeBStr, SysStringLen(mimeTypeBStr));
-            *result = mimeType == "text/html" || WebCore::MIMETypeRegistry::isXMLMIMEType(mimeType);
+            *result = mimeType == "text/html"_s || WebCore::MIMETypeRegistry::isXMLMIMEType(mimeType);
         }
     }
     return hr;
@@ -1970,8 +1970,8 @@ HRESULT WebFrame::stringByEvaluatingJavaScriptInScriptWorld(IWebScriptWorld* iWo
     // The global object is probably a proxy object? - if so, we know how to use this!
     JSC::JSObject* globalObjectObj = toJS(globalObjectRef);
     auto& vm = globalObjectObj->vm();
-    if (globalObjectObj->inherits<JSWindowProxy>(vm))
-        anyWorldGlobalObject = JSC::jsDynamicCast<JSDOMWindow*>(vm, static_cast<JSWindowProxy*>(globalObjectObj)->window());
+    if (globalObjectObj->inherits<JSWindowProxy>())
+        anyWorldGlobalObject = JSC::jsDynamicCast<JSDOMWindow*>(static_cast<JSWindowProxy*>(globalObjectObj)->window());
 
     if (!anyWorldGlobalObject)
         return E_INVALIDARG;

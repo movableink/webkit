@@ -47,6 +47,23 @@
                                                                                                    \
     /* GLES2+ Extensions */                                                                        \
                                                                                                    \
+    /* GL_AMD_performance_monitor */                                                               \
+    void beginPerfMonitor(GLuint monitor);                                                         \
+    void deletePerfMonitors(GLsizei n, GLuint *monitors);                                          \
+    void endPerfMonitor(GLuint monitor);                                                           \
+    void genPerfMonitors(GLsizei n, GLuint *monitors);                                             \
+    void getPerfMonitorCounterData(GLuint monitor, GLenum pname, GLsizei dataSize, GLuint *data,   \
+                                   GLint *bytesWritten);                                           \
+    void getPerfMonitorCounterInfo(GLuint group, GLuint counter, GLenum pname, void *data);        \
+    void getPerfMonitorCounterString(GLuint group, GLuint counter, GLsizei bufSize,                \
+                                     GLsizei *length, GLchar *counterString);                      \
+    void getPerfMonitorCounters(GLuint group, GLint *numCounters, GLint *maxActiveCounters,        \
+                                GLsizei counterSize, GLuint *counters);                            \
+    void getPerfMonitorGroupString(GLuint group, GLsizei bufSize, GLsizei *length,                 \
+                                   GLchar *groupString);                                           \
+    void getPerfMonitorGroups(GLint *numGroups, GLsizei groupsSize, GLuint *groups);               \
+    void selectPerfMonitorCounters(GLuint monitor, GLboolean enable, GLuint group,                 \
+                                   GLint numCounters, GLuint *counterList);                        \
     /* GL_ANDROID_extension_pack_es31a */                                                          \
     /* GL_ANGLE_depth_texture */                                                                   \
     /* GL_ANGLE_framebuffer_blit */                                                                \
@@ -301,6 +318,8 @@
     void framebufferTextureMultiview(GLenum target, GLenum attachment, TextureID texturePacked,    \
                                      GLint level, GLint baseViewIndex, GLsizei numViews);          \
     /* GL_OVR_multiview2 */                                                                        \
+    /* GL_QCOM_shading_rate */                                                                     \
+    void shadingRateQCOM(GLenum rate);                                                             \
     /* GL_WEBGL_video_texture */                                                                   \
                                                                                                    \
     /* ANGLE Extensions */                                                                         \
@@ -310,7 +329,7 @@
                                          GLsizei instanceCount, GLuint baseInstance);              \
     void drawElementsInstancedBaseVertexBaseInstance(                                              \
         PrimitiveMode modePacked, GLsizei count, DrawElementsType typePacked,                      \
-        const GLvoid *indices, GLsizei instanceCounts, GLint baseVertex, GLuint baseInstance);     \
+        const GLvoid *indices, GLsizei instanceCount, GLint baseVertex, GLuint baseInstance);      \
     void multiDrawArraysInstancedBaseInstance(                                                     \
         PrimitiveMode modePacked, const GLint *firsts, const GLsizei *counts,                      \
         const GLsizei *instanceCounts, const GLuint *baseInstances, GLsizei drawcount);            \
@@ -380,6 +399,7 @@
     /* GL_ANGLE_program_cache_control */                                                           \
     /* GL_ANGLE_provoking_vertex */                                                                \
     void provokingVertex(ProvokingVertexConvention modePacked);                                    \
+    /* GL_ANGLE_read_only_depth_stencil_feedback_loops */                                          \
     /* GL_ANGLE_relaxed_vertex_attribute_type */                                                   \
     /* GL_ANGLE_request_extension */                                                               \
     void requestExtension(const GLchar *name);                                                     \

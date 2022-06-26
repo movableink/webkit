@@ -35,50 +35,91 @@
 
 #include "Notification.h"
 
+#include "DOMWindow.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
+#include "MessagePort.h"
 #include "NotificationClient.h"
 #include "NotificationData.h"
 #include "NotificationEvent.h"
 #include "NotificationPermissionCallback.h"
 #include "ServiceWorkerGlobalScope.h"
-#include "UserGestureIndicator.h"
 #include "WindowEventLoop.h"
 #include "WindowFocusAllowedIndicator.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/Scope.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Notification);
 
-Ref<Notification> Notification::create(ScriptExecutionContext& context, String&& title, Options&& options)
+static ExceptionOr<Ref<SerializedScriptValue>> createSerializedScriptValue(ScriptExecutionContext& context, JSC::JSValue value)
 {
-    auto notification = adoptRef(*new Notification(context, WTFMove(title), WTFMove(options)));
+    auto globalObject = context.globalObject();
+    if (!globalObject)
+        return Exception { TypeError, "Notification cannot be created without a global object"_s };
+
+    Vector<RefPtr<MessagePort>> dummyPorts;
+    return SerializedScriptValue::create(*globalObject, value, { }, dummyPorts);
+}
+
+ExceptionOr<Ref<Notification>> Notification::create(ScriptExecutionContext& context, String&& title, Options&& options)
+{
+    if (context.isServiceWorkerGlobalScope())
+        return Exception { TypeError, "Notification cannot be directly created in a ServiceWorkerGlobalScope"_s };
+
+    auto dataResult = createSerializedScriptValue(context, options.data);
+    if (dataResult.hasException())
+        return dataResult.releaseException();
+
+    auto notification = adoptRef(*new Notification(context, UUID::createVersion4(), WTFMove(title), WTFMove(options), dataResult.releaseReturnValue()));
     notification->suspendIfNeeded();
     notification->showSoon();
     return notification;
 }
 
-Notification::Notification(ScriptExecutionContext& context, String&& title, Options&& options)
+ExceptionOr<Ref<Notification>> Notification::createForServiceWorker(ScriptExecutionContext& context, String&& title, Options&& options, const URL& serviceWorkerRegistrationURL)
+{
+    auto dataResult = createSerializedScriptValue(context, options.data);
+    if (dataResult.hasException())
+        return dataResult.releaseException();
+
+    auto notification = adoptRef(*new Notification(context, UUID::createVersion4(), WTFMove(title), WTFMove(options), dataResult.releaseReturnValue()));
+    notification->m_serviceWorkerRegistrationURL = serviceWorkerRegistrationURL;
+    notification->suspendIfNeeded();
+    return notification;
+}
+
+Ref<Notification> Notification::create(ScriptExecutionContext& context, NotificationData&& data)
+{
+    Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull() };
+
+    auto notification = adoptRef(*new Notification(context, data.notificationID, WTFMove(data.title), WTFMove(options), SerializedScriptValue::createFromWireBytes(WTFMove(data.data))));
+    notification->suspendIfNeeded();
+    notification->m_serviceWorkerRegistrationURL = WTFMove(data.serviceWorkerRegistrationURL);
+    return notification;
+}
+
+Notification::Notification(ScriptExecutionContext& context, UUID identifier, String&& title, Options&& options, Ref<SerializedScriptValue>&& dataForBindings)
     : ActiveDOMObject(&context)
+    , m_identifier(identifier)
     , m_title(WTFMove(title).isolatedCopy())
     , m_direction(options.dir)
     , m_lang(WTFMove(options.lang).isolatedCopy())
     , m_body(WTFMove(options.body).isolatedCopy())
     , m_tag(WTFMove(options.tag).isolatedCopy())
+    , m_dataForBindings(WTFMove(dataForBindings))
     , m_state(Idle)
     , m_contextIdentifier(context.identifier())
 {
     if (context.isDocument())
         m_notificationSource = NotificationSource::Document;
-    else if (context.isServiceWorkerGlobalScope()) {
+    else if (context.isServiceWorkerGlobalScope())
         m_notificationSource = NotificationSource::ServiceWorker;
-#if ENABLE(SERVICE_WORKER)
-        downcast<ServiceWorkerGlobalScope>(context).registration().addNotificationToList(*this);
-#endif
-    } else
+    else
         RELEASE_ASSERT_NOT_REACHED();
 
     if (!options.icon.isEmpty()) {
@@ -88,47 +129,9 @@ Notification::Notification(ScriptExecutionContext& context, String&& title, Opti
     }
 }
 
-Notification::Notification(const Notification& other)
-    : ActiveDOMObject(other.scriptExecutionContext())
-    , m_title(other.m_title.isolatedCopy())
-    , m_direction(other.m_direction)
-    , m_lang(other.m_lang.isolatedCopy())
-    , m_body(other.m_body.isolatedCopy())
-    , m_tag(other.m_tag.isolatedCopy())
-    , m_icon(other.m_icon.isolatedCopy())
-    , m_state(other.m_state)
-    , m_notificationSource(other.m_notificationSource)
-    , m_contextIdentifier(other.m_contextIdentifier)
-{
-    suspendIfNeeded();
-}
-
 Notification::~Notification()
 {
-    if (auto* context = scriptExecutionContext()) {
-#if ENABLE(SERVICE_WORKER)
-        if (context->isServiceWorkerGlobalScope())
-            downcast<ServiceWorkerGlobalScope>(context)->registration().removeNotificationFromList(*this);
-#endif
-    }
 }
-
-Ref<Notification> Notification::copyForGetNotifications() const
-{
-    return adoptRef(*new Notification(*this));
-}
-
-void Notification::contextDestroyed()
-{
-    auto* context = scriptExecutionContext();
-    RELEASE_ASSERT(context);
-#if ENABLE(SERVICE_WORKER)
-    if (context->isServiceWorkerGlobalScope())
-        downcast<ServiceWorkerGlobalScope>(context)->registration().removeNotificationFromList(*this);
-#endif
-    ActiveDOMObject::contextDestroyed();
-}
-
 
 void Notification::showSoon()
 {
@@ -137,17 +140,28 @@ void Notification::showSoon()
     });
 }
 
-void Notification::show()
+void Notification::markAsShown()
 {
+    m_state = Showing;
+}
+
+void Notification::show(CompletionHandler<void()>&& callback)
+{
+    CompletionHandlerCallingScope scope { WTFMove(callback) };
+
     // prevent double-showing
     if (m_state != Idle)
         return;
 
-    auto* client = clientFromContext();
+    auto* context = scriptExecutionContext();
+    if (!context)
+        return;
+
+    auto* client = context->notificationClient();
     if (!client)
         return;
 
-    if (client->checkPermission(scriptExecutionContext()) != Permission::Granted) {
+    if (client->checkPermission(context) != Permission::Granted) {
         switch (m_notificationSource) {
         case NotificationSource::Document:
             dispatchErrorEvent();
@@ -157,11 +171,10 @@ void Notification::show()
             // If permission has since been revoked, then silently failing here is expected behavior.
             break;
         }
-
         return;
     }
 
-    if (client->show(*this))
+    if (client->show(*this, scope.release()))
         m_state = Showing;
 }
 
@@ -170,17 +183,10 @@ void Notification::close()
     switch (m_state) {
     case Idle:
         break;
-    case Showing: {
+    case Showing:
         if (auto* client = clientFromContext())
             client->cancel(*this);
-        if (auto* context = scriptExecutionContext()) {
-#if ENABLE(SERVICE_WORKER)
-            if (context->isServiceWorkerGlobalScope())
-                downcast<ServiceWorkerGlobalScope>(context)->registration().removeNotificationFromList(*this);
-#endif
-        }
         break;
-    }
     case Closed:
         break;
     }
@@ -202,6 +208,9 @@ void Notification::stop()
 {
     ActiveDOMObject::stop();
 
+    if (!m_serviceWorkerRegistrationURL.isNull())
+        return;
+
     if (auto* client = clientFromContext())
         client->notificationObjectDestroyed(*this);
 }
@@ -221,6 +230,7 @@ void Notification::finalize()
 void Notification::dispatchShowEvent()
 {
     ASSERT(isMainThread());
+    ASSERT(!isPersistent());
 
     if (m_notificationSource != NotificationSource::Document)
         return;
@@ -231,41 +241,22 @@ void Notification::dispatchShowEvent()
 void Notification::dispatchClickEvent()
 {
     ASSERT(isMainThread());
+    ASSERT(m_notificationSource == NotificationSource::Document);
+    ASSERT(!isPersistent());
 
-    switch (m_notificationSource) {
-    case NotificationSource::Document:
-        queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
-            WindowFocusAllowedIndicator windowFocusAllowed;
-            dispatchEvent(Event::create(eventNames().clickEvent, Event::CanBubble::No, Event::IsCancelable::No));
-        });
-        break;
-    case NotificationSource::ServiceWorker:
-#if ENABLE(SERVICE_WORKER)
-        ServiceWorkerGlobalScope::ensureOnContextThread(m_contextIdentifier, [this, protectedThis = Ref { *this }](auto& context) {
-            downcast<ServiceWorkerGlobalScope>(context).postTaskToFireNotificationEvent(NotificationEventType::Click, *this, { });
-        });
-#endif
-        break;
-    }
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
+        WindowFocusAllowedIndicator windowFocusAllowed;
+        dispatchEvent(Event::create(eventNames().clickEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    });
 }
 
 void Notification::dispatchCloseEvent()
 {
     ASSERT(isMainThread());
+    ASSERT(m_notificationSource == NotificationSource::Document);
+    ASSERT(!isPersistent());
 
-    switch (m_notificationSource) {
-    case NotificationSource::Document:
-        queueTaskToDispatchEvent(*this, TaskSource::UserInteraction, Event::create(eventNames().closeEvent, Event::CanBubble::No, Event::IsCancelable::No));
-        break;
-    case NotificationSource::ServiceWorker:
-#if ENABLE(SERVICE_WORKER)
-        ServiceWorkerGlobalScope::ensureOnContextThread(m_contextIdentifier, [this, protectedThis = Ref { *this }](auto& context) {
-            downcast<ServiceWorkerGlobalScope>(context).postTaskToFireNotificationEvent(NotificationEventType::Close, *this, { });
-        });
-#endif
-        break;
-    }
-
+    queueTaskToDispatchEvent(*this, TaskSource::UserInteraction, Event::create(eventNames().closeEvent, Event::CanBubble::No, Event::IsCancelable::No));
     finalize();
 }
 
@@ -273,8 +264,14 @@ void Notification::dispatchErrorEvent()
 {
     ASSERT(isMainThread());
     ASSERT(m_notificationSource == NotificationSource::Document);
+    ASSERT(!isPersistent());
 
     queueTaskToDispatchEvent(*this, TaskSource::UserInteraction, Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+}
+
+JSC::JSValue Notification::dataForBindings(JSC::JSGlobalObject& globalObject)
+{
+    return m_dataForBindings->deserialize(globalObject, &globalObject, SerializationErrorMode::NonThrowing);
 }
 
 auto Notification::permission(ScriptExecutionContext& context) -> Permission
@@ -308,7 +305,8 @@ void Notification::requestPermission(Document& document, RefPtr<NotificationPerm
         return resolvePromiseAndCallback(Permission::Denied);
     }
 
-    if (!UserGestureIndicator::processingUserGesture()) {
+    auto* window = document.frame() ? document.frame()->window() : nullptr;
+    if (!window || !window->consumeTransientActivation()) {
         document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Notification prompting can only be done from a user gesture."_s);
         return resolvePromiseAndCallback(Permission::Denied);
     }
@@ -334,7 +332,8 @@ bool Notification::virtualHasPendingActivity() const
 
 NotificationData Notification::data() const
 {
-    auto sessionID = scriptExecutionContext()->sessionID();
+    auto& context = *scriptExecutionContext();
+    auto sessionID = context.sessionID();
     RELEASE_ASSERT(sessionID);
 
     return {
@@ -345,8 +344,11 @@ NotificationData Notification::data() const
         m_lang,
         m_direction,
         scriptExecutionContext()->securityOrigin()->toString().isolatedCopy(),
+        m_serviceWorkerRegistrationURL.isolatedCopy(),
         identifier(),
         *sessionID,
+        MonotonicTime::now(),
+        m_dataForBindings->wireBytes()
     };
 }
 

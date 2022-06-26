@@ -85,7 +85,7 @@ STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSTestNamedDeleterNoIdentifierPrototype, JST
 
 using JSTestNamedDeleterNoIdentifierDOMConstructor = JSDOMConstructorNotConstructable<JSTestNamedDeleterNoIdentifier>;
 
-template<> const ClassInfo JSTestNamedDeleterNoIdentifierDOMConstructor::s_info = { "TestNamedDeleterNoIdentifier", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedDeleterNoIdentifierDOMConstructor) };
+template<> const ClassInfo JSTestNamedDeleterNoIdentifierDOMConstructor::s_info = { "TestNamedDeleterNoIdentifier"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedDeleterNoIdentifierDOMConstructor) };
 
 template<> JSValue JSTestNamedDeleterNoIdentifierDOMConstructor::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
 {
@@ -106,10 +106,10 @@ template<> void JSTestNamedDeleterNoIdentifierDOMConstructor::initializeProperti
 
 static const HashTableValue JSTestNamedDeleterNoIdentifierPrototypeTableValues[] =
 {
-    { "constructor", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestNamedDeleterNoIdentifierConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestNamedDeleterNoIdentifierConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
 };
 
-const ClassInfo JSTestNamedDeleterNoIdentifierPrototype::s_info = { "TestNamedDeleterNoIdentifier", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedDeleterNoIdentifierPrototype) };
+const ClassInfo JSTestNamedDeleterNoIdentifierPrototype::s_info = { "TestNamedDeleterNoIdentifier"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedDeleterNoIdentifierPrototype) };
 
 void JSTestNamedDeleterNoIdentifierPrototype::finishCreation(VM& vm)
 {
@@ -118,7 +118,7 @@ void JSTestNamedDeleterNoIdentifierPrototype::finishCreation(VM& vm)
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-const ClassInfo JSTestNamedDeleterNoIdentifier::s_info = { "TestNamedDeleterNoIdentifier", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedDeleterNoIdentifier) };
+const ClassInfo JSTestNamedDeleterNoIdentifier::s_info = { "TestNamedDeleterNoIdentifier"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedDeleterNoIdentifier) };
 
 JSTestNamedDeleterNoIdentifier::JSTestNamedDeleterNoIdentifier(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestNamedDeleterNoIdentifier>&& impl)
     : JSDOMWrapper<TestNamedDeleterNoIdentifier>(structure, globalObject, WTFMove(impl))
@@ -128,7 +128,7 @@ JSTestNamedDeleterNoIdentifier::JSTestNamedDeleterNoIdentifier(Structure* struct
 void JSTestNamedDeleterNoIdentifier::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     static_assert(!std::is_base_of<ActiveDOMObject, TestNamedDeleterNoIdentifier>::value, "Interface is not marked as [ActiveDOMObject] even though implementation class subclasses ActiveDOMObject.");
 
@@ -209,7 +209,7 @@ bool JSTestNamedDeleterNoIdentifier::deleteProperty(JSCell* cell, JSGlobalObject
     auto& impl = thisObject.wrapped();
     if (isVisibleNamedProperty<LegacyOverrideBuiltIns::No>(*lexicalGlobalObject, thisObject, propertyName)) {
         using ReturnType = decltype(impl.deleteNamedProperty(propertyNameToString(propertyName)));
-        static_assert(std::is_same_v<ReturnType, ExceptionOr<bool>> || std::is_same_v<ReturnType, bool>, "The implementation of named deleters without an identifer must return either bool or ExceptionOr<bool>.");
+        static_assert(std::is_same_v<ReturnType, ExceptionOr<bool>> || std::is_same_v<ReturnType, bool>, "The implementation of named deleters without an identifier must return either bool or ExceptionOr<bool>.");
         return performLegacyPlatformObjectDeleteOperation(*lexicalGlobalObject, [&] { return impl.deleteNamedProperty(propertyNameToString(propertyName)); });
     }
     return JSObject::deleteProperty(cell, lexicalGlobalObject, propertyName, slot);
@@ -223,7 +223,7 @@ bool JSTestNamedDeleterNoIdentifier::deletePropertyByIndex(JSCell* cell, JSGloba
     auto propertyName = Identifier::from(vm, index);
     if (isVisibleNamedProperty<LegacyOverrideBuiltIns::No>(*lexicalGlobalObject, thisObject, propertyName)) {
         using ReturnType = decltype(impl.deleteNamedProperty(propertyNameToString(propertyName)));
-        static_assert(std::is_same_v<ReturnType, ExceptionOr<bool>> || std::is_same_v<ReturnType, bool>, "The implementation of named deleters without an identifer must return either bool or ExceptionOr<bool>.");
+        static_assert(std::is_same_v<ReturnType, ExceptionOr<bool>> || std::is_same_v<ReturnType, bool>, "The implementation of named deleters without an identifier must return either bool or ExceptionOr<bool>.");
         return performLegacyPlatformObjectDeleteOperation(*lexicalGlobalObject, [&] { return impl.deleteNamedProperty(propertyNameToString(propertyName)); });
     }
     return JSObject::deletePropertyByIndex(cell, lexicalGlobalObject, index);
@@ -233,7 +233,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsTestNamedDeleterNoIdentifierConstructor, (JSGlobalObj
 {
     VM& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    auto* prototype = jsDynamicCast<JSTestNamedDeleterNoIdentifierPrototype*>(vm, JSValue::decode(thisValue));
+    auto* prototype = jsDynamicCast<JSTestNamedDeleterNoIdentifierPrototype*>(JSValue::decode(thisValue));
     if (UNLIKELY(!prototype))
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSTestNamedDeleterNoIdentifier::getConstructor(JSC::getVM(lexicalGlobalObject), prototype->globalObject()));
@@ -309,9 +309,9 @@ JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* g
     return wrap(lexicalGlobalObject, globalObject, impl);
 }
 
-TestNamedDeleterNoIdentifier* JSTestNamedDeleterNoIdentifier::toWrapped(JSC::VM& vm, JSC::JSValue value)
+TestNamedDeleterNoIdentifier* JSTestNamedDeleterNoIdentifier::toWrapped(JSC::VM&, JSC::JSValue value)
 {
-    if (auto* wrapper = jsDynamicCast<JSTestNamedDeleterNoIdentifier*>(vm, value))
+    if (auto* wrapper = jsDynamicCast<JSTestNamedDeleterNoIdentifier*>(value))
         return &wrapper->wrapped();
     return nullptr;
 }

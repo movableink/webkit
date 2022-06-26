@@ -100,9 +100,8 @@ WI.NodeOverlayListSection = class NodeOverlayListSection extends WI.View
             itemContainerElement.classList.add("node-overlay-list-item-container");
 
             let labelElement = itemContainerElement.appendChild(document.createElement("label"));
-            let nodeDisplayName = labelElement.appendChild(document.createElement("span"));
+            let nodeDisplayName = labelElement.appendChild(WI.linkifyNodeReference(domNode, {ignoreClick: true}));
             nodeDisplayName.classList.add("node-display-name");
-            nodeDisplayName.textContent = domNode.displayName;
 
             let checkboxElement = labelElement.appendChild(document.createElement("input"));
             labelElement.insertBefore(checkboxElement, nodeDisplayName);
@@ -122,16 +121,10 @@ WI.NodeOverlayListSection = class NodeOverlayListSection extends WI.View
                     domNode.hideLayoutOverlay();
             });
 
-            let swatch = new WI.InlineSwatch(WI.InlineSwatch.Type.Color, domNode.layoutOverlayColor);
-            swatch.shiftClickColorEnabled = false;
+            let swatch = new WI.InlineSwatch(WI.InlineSwatch.Type.Color, domNode.layoutOverlayColor, {preventChangingColorFormats: true});
             itemContainerElement.append(swatch.element);
 
             swatch.addEventListener(WI.InlineSwatch.Event.ValueChanged, (event) => {
-                if (checkboxElement?.checked)
-                    domNode.showLayoutOverlay({color: event.data.value});
-            }, swatch);
-
-            swatch.addEventListener(WI.InlineSwatch.Event.Deactivated, (event) => {
                 domNode.layoutOverlayColor = event.target.value;
             }, swatch);
 
@@ -161,9 +154,9 @@ WI.NodeOverlayListSection = class NodeOverlayListSection extends WI.View
         this._suppressUpdateToggleAllCheckbox = true;
 
         for (let domNode of this._nodeSet) {
-            if (isChecked)
+            if (isChecked && !domNode.layoutOverlayShowing)
                 domNode.showLayoutOverlay();
-            else
+            else if (!isChecked && domNode.layoutOverlayShowing)
                 domNode.hideLayoutOverlay();
         }
 

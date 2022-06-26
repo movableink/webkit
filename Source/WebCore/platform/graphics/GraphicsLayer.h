@@ -66,7 +66,7 @@ class TimingFunction;
 class TransformationMatrix;
 
 namespace DisplayList {
-typedef unsigned AsTextFlags;
+enum class AsTextFlag : uint8_t;
 }
 
 // Base class for animation values (also used for transitions). Here to
@@ -567,9 +567,7 @@ public:
     enum class CustomAppearance : uint8_t {
         None,
         ScrollingOverhang,
-        ScrollingShadow,
-        LightBackdrop,
-        DarkBackdrop
+        ScrollingShadow
     };
     virtual void setCustomAppearance(CustomAppearance customAppearance) { m_customAppearance = customAppearance; }
     CustomAppearance customAppearance() const { return m_customAppearance; }
@@ -583,8 +581,11 @@ public:
     virtual void setAppliesPageScale(bool appliesScale = true) { m_appliesPageScale = appliesScale; }
     virtual bool appliesPageScale() const { return m_appliesPageScale; }
 
+    void setAppliesDeviceScale(bool appliesScale = true) { m_appliesDeviceScale = appliesScale; }
+    bool appliesDeviceScale() const { return m_appliesDeviceScale; }
+
     float pageScaleFactor() const { return client().pageScaleFactor(); }
-    float deviceScaleFactor() const { return client().deviceScaleFactor(); }
+    float deviceScaleFactor() const { return appliesDeviceScale() ? client().deviceScaleFactor() : 1.f; }
     
     // Whether this layer can throw away backing store to save memory. False for layers that can be revealed by async scrolling.
     virtual void setAllowsBackingStoreDetaching(bool) { }
@@ -615,13 +616,13 @@ public:
     WEBCORE_EXPORT String layerTreeAsText(OptionSet<LayerTreeAsTextOptions> = { }) const;
 
     // For testing.
-    virtual String displayListAsText(DisplayList::AsTextFlags) const { return String(); }
+    virtual String displayListAsText(OptionSet<DisplayList::AsTextFlag>) const { return String(); }
 
     virtual String platformLayerTreeAsText(OptionSet<PlatformLayerTreeAsTextFlags>) const { return String(); }
 
     virtual void setIsTrackingDisplayListReplay(bool isTracking) { m_isTrackingDisplayListReplay = isTracking; }
     virtual bool isTrackingDisplayListReplay() const { return m_isTrackingDisplayListReplay; }
-    virtual String replayDisplayListAsText(DisplayList::AsTextFlags) const { return String(); }
+    virtual String replayDisplayListAsText(OptionSet<DisplayList::AsTextFlag>) const { return String(); }
 
     // Return an estimate of the backing store memory cost (in bytes). May be incorrect for tiled layers.
     WEBCORE_EXPORT virtual double backingStoreMemoryEstimate() const;
@@ -744,6 +745,7 @@ protected:
     bool m_usesDisplayListDrawing : 1;
     bool m_allowsTiling : 1;
     bool m_appliesPageScale : 1; // Set for the layer which has the page scale applied to it.
+    bool m_appliesDeviceScale : 1;
     bool m_showDebugBorder : 1;
     bool m_showRepaintCounter : 1;
     bool m_isMaskLayer : 1;
@@ -810,9 +812,7 @@ template<> struct EnumTraits<WebCore::GraphicsLayer::CustomAppearance> {
         WebCore::GraphicsLayer::CustomAppearance,
         WebCore::GraphicsLayer::CustomAppearance::None,
         WebCore::GraphicsLayer::CustomAppearance::ScrollingOverhang,
-        WebCore::GraphicsLayer::CustomAppearance::ScrollingShadow,
-        WebCore::GraphicsLayer::CustomAppearance::LightBackdrop,
-        WebCore::GraphicsLayer::CustomAppearance::DarkBackdrop
+        WebCore::GraphicsLayer::CustomAppearance::ScrollingShadow
     >;
 };
 

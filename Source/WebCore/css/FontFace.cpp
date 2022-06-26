@@ -375,7 +375,7 @@ String FontFace::unicodeRange() const
     m_backing->updateStyleIfNeeded();
     const auto& rangesWrapped = m_backing->ranges();
     if (!rangesWrapped)
-        return "U+0-10FFFF";
+        return "U+0-10FFFF"_s;
     auto ranges = rangesWrapped.value();
     if (!ranges.size())
         return "U+0-10FFFF"_s;
@@ -405,7 +405,7 @@ String FontFace::display(ScriptExecutionContext& context) const
     m_backing->updateStyleIfNeeded();
     const auto& loadingBehaviorWrapped = m_backing->loadingBehavior();
     if (!loadingBehaviorWrapped)
-        return "auto"_s;
+        return autoAtom();
     return context.cssValuePool().createValue(loadingBehaviorWrapped.value())->cssText();
 }
 

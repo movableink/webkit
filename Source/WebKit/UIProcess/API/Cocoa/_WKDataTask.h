@@ -25,11 +25,13 @@
 
 #import <WebKit/WKFoundation.h>
 
+#import <WebKit/WKWebView.h>
+
 @protocol _WKDataTaskDelegate;
 
 NS_ASSUME_NONNULL_BEGIN
 
-WK_CLASS_AVAILABLE(macos(WK_MAC_TBA), ios(WK_IOS_TBA))
+WK_CLASS_AVAILABLE(macos(13.0), ios(16.0))
 @interface _WKDataTask : NSObject
 
 - (instancetype)init NS_UNAVAILABLE;

@@ -59,7 +59,7 @@ class Svn(Scm):
 
         @property
         def path(self):
-            return os.path.join(self.repo.root_path, '.svn', 'webkitscmpy-cache.json')
+            return os.path.join(self.repo.common_directory, 'webkitscmpy-cache.json')
 
         def populate(self, branch=None):
             branch = branch or self.repo.default_branch
@@ -256,6 +256,10 @@ class Svn(Scm):
         return self._root_path
 
     @property
+    def common_directory(self):
+        return os.path.join(self.root_path, '.svn')
+
+    @property
     def default_branch(self):
         return 'trunk'
 
@@ -277,7 +281,6 @@ class Svn(Scm):
     def branches(self):
         return ['trunk'] + self.list('branches')
 
-    @property
     def tags(self):
         return self.list('tags')
 

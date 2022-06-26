@@ -102,20 +102,20 @@ static int32_t initializeVideoEncoder(webrtc::WebKitVideoEncoder encoder, const 
     return WebProcess::singleton().libWebRTCCodecs().initializeEncoder(*static_cast<LibWebRTCCodecs::Encoder*>(encoder), codec.width, codec.height, codec.startBitrate, codec.maxBitrate, codec.minBitrate, codec.maxFramerate);
 }
 
-static inline MediaSample::VideoRotation toMediaSampleVideoRotation(webrtc::VideoRotation rotation)
+static inline VideoFrame::Rotation toVideoRotation(webrtc::VideoRotation rotation)
 {
     switch (rotation) {
     case webrtc::kVideoRotation_0:
-        return MediaSample::VideoRotation::None;
+        return VideoFrame::Rotation::None;
     case webrtc::kVideoRotation_180:
-        return MediaSample::VideoRotation::UpsideDown;
+        return VideoFrame::Rotation::UpsideDown;
     case webrtc::kVideoRotation_90:
-        return MediaSample::VideoRotation::Right;
+        return VideoFrame::Rotation::Right;
     case webrtc::kVideoRotation_270:
-        return MediaSample::VideoRotation::Left;
+        return VideoFrame::Rotation::Left;
     }
     ASSERT_NOT_REACHED();
-    return MediaSample::VideoRotation::None;
+    return VideoFrame::Rotation::None;
 }
 
 static inline String formatNameFromWebRTCCodecType(webrtc::VideoCodecType type)
@@ -129,7 +129,7 @@ static inline String formatNameFromWebRTCCodecType(webrtc::VideoCodecType type)
         return "VP9"_s;
     default:
         ASSERT_NOT_REACHED();
-        return "H264";
+        return "H264"_s;
     }
 }
 
@@ -186,7 +186,7 @@ void LibWebRTCCodecs::ensureGPUProcessConnectionOnMainThreadWithLock()
     gpuConnection.addClient(*this);
     m_connection = &gpuConnection.connection();
     m_videoFrameObjectHeapProxy = &gpuConnection.videoFrameObjectHeapProxy();
-    m_connection->addThreadMessageReceiver(Messages::LibWebRTCCodecs::messageReceiverName(), this);
+    m_connection->addWorkQueueMessageReceiver(Messages::LibWebRTCCodecs::messageReceiverName(), m_queue, *this);
 
     if (m_loggingLevel)
         m_connection->send(Messages::LibWebRTCCodecsProxy::SetRTCLoggingLevel { *m_loggingLevel }, 0);
@@ -201,7 +201,7 @@ void LibWebRTCCodecs::ensureGPUProcessConnectionAndDispatchToThread(Function<voi
 
     // Fast path when we already have a connection.
     if (m_connection) {
-        dispatchToThread(WTFMove(task));
+        m_queue->dispatch(WTFMove(task));
         return;
     }
 
@@ -214,7 +214,7 @@ void LibWebRTCCodecs::ensureGPUProcessConnectionAndDispatchToThread(Function<voi
         Locker locker { m_connectionLock };
         ensureGPUProcessConnectionOnMainThreadWithLock();
         for (auto& task : std::exchange(m_tasksToDispatchAfterEstablishingConnection, { }))
-            dispatchToThread(WTFMove(task));
+            m_queue->dispatch(WTFMove(task));
     });
 }
 
@@ -494,7 +494,7 @@ int32_t LibWebRTCCodecs::encodeFrame(Encoder& encoder, const webrtc::VideoFrame&
     if (!buffer)
         return WEBRTC_VIDEO_CODEC_ERROR;
 
-    SharedVideoFrame sharedVideoFrame { MediaTime(frame.timestamp_us() * 1000, 1000000), false, toMediaSampleVideoRotation(frame.rotation()), WTFMove(*buffer) };
+    SharedVideoFrame sharedVideoFrame { MediaTime(frame.timestamp_us() * 1000, 1000000), false, toVideoRotation(frame.rotation()), WTFMove(*buffer) };
     encoder.connection->send(Messages::LibWebRTCCodecsProxy::EncodeFrame { encoder.identifier, sharedVideoFrame, frame.timestamp(), shouldEncodeAsKeyFrame }, 0);
     return WEBRTC_VIDEO_CODEC_OK;
 }
@@ -568,22 +568,17 @@ CVPixelBufferPoolRef LibWebRTCCodecs::pixelBufferPool(size_t width, size_t heigh
     return m_pixelBufferPool.get();
 }
 
-void LibWebRTCCodecs::dispatchToThread(Function<void()>&& callback)
-{
-    m_queue->dispatch(WTFMove(callback));
-}
-
 void LibWebRTCCodecs::gpuProcessConnectionDidClose(GPUProcessConnection&)
 {
     ASSERT(isMainRunLoop());
 
     Locker locker { m_connectionLock };
-    std::exchange(m_connection, nullptr)->removeThreadMessageReceiver(Messages::LibWebRTCCodecs::messageReceiverName());
+    std::exchange(m_connection, nullptr)->removeWorkQueueMessageReceiver(Messages::LibWebRTCCodecs::messageReceiverName());
     if (!m_needsGPUProcessConnection)
         return;
 
     ensureGPUProcessConnectionOnMainThreadWithLock();
-    dispatchToThread([this, connection = m_connection]() {
+    m_queue->dispatch([this, connection = m_connection]() {
         assertIsCurrent(workQueue());
         {
             Locker locker { m_connectionLock };

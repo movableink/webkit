@@ -35,6 +35,7 @@
 #include "AuthenticatorResponseData.h"
 #include "Document.h"
 #include "FeaturePolicy.h"
+#include "FrameDestructionObserverInlines.h"
 #include "JSBasicCredential.h"
 #include "JSCredentialRequestOptions.h"
 #include "JSDOMPromiseDeferred.h"
@@ -58,7 +59,7 @@ static bool needsAppIdQuirks(const String& host, const String& appId)
     // existing device registrations that authenticate 'google.com' against 'gstatic.com'. Firefox and other browsers
     // have agreed to grant an exception to the AppId rules for a limited time period (5 years from January, 2018) to
     // allow existing Google users to seamlessly transition to proper WebAuthN behavior.
-    if (equalLettersIgnoringASCIICase(host, "google.com") || host.endsWithIgnoringASCIICase(".google.com"))
+    if (equalLettersIgnoringASCIICase(host, "google.com"_s) || host.endsWithIgnoringASCIICase(".google.com"_s))
         return (appId == "https://www.gstatic.com/securitykey/origins.json"_s) || (appId == "https://www.gstatic.com/securitykey/a/google.com/origins.json"_s);
     return false;
 }
@@ -154,7 +155,7 @@ void AuthenticatorCoordinator::create(const Document& document, const PublicKeyC
 
     // Step 11-12.
     // Only Google Legacy AppID Support Extension is supported.
-    options.extensions = AuthenticationExtensionsClientInputs { String(), processGoogleLegacyAppIdSupportExtension(options.extensions, options.rp.id) };
+    options.extensions = AuthenticationExtensionsClientInputs { String(), processGoogleLegacyAppIdSupportExtension(options.extensions, options.rp.id), options.extensions && options.extensions->credProps };
 
     // Step 13-15.
     auto clientDataJson = buildClientDataJson(ClientDataType::Create, options.challenge, callerOrigin, scope);

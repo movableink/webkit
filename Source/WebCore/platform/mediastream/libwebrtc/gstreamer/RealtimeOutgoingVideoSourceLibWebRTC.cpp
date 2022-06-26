@@ -50,25 +50,24 @@ RealtimeOutgoingVideoSourceLibWebRTC::RealtimeOutgoingVideoSourceLibWebRTC(Ref<M
 {
 }
 
-void RealtimeOutgoingVideoSourceLibWebRTC::videoSampleAvailable(MediaSample& sample, VideoFrameTimeMetadata)
+void RealtimeOutgoingVideoSourceLibWebRTC::videoFrameAvailable(VideoFrame& videoFrame, VideoFrameTimeMetadata)
 {
-    switch (sample.videoRotation()) {
-    case MediaSample::VideoRotation::None:
+    switch (videoFrame.rotation()) {
+    case VideoFrame::Rotation::None:
         m_currentRotation = webrtc::kVideoRotation_0;
         break;
-    case MediaSample::VideoRotation::UpsideDown:
+    case VideoFrame::Rotation::UpsideDown:
         m_currentRotation = webrtc::kVideoRotation_180;
         break;
-    case MediaSample::VideoRotation::Right:
+    case VideoFrame::Rotation::Right:
         m_currentRotation = webrtc::kVideoRotation_90;
         break;
-    case MediaSample::VideoRotation::Left:
+    case VideoFrame::Rotation::Left:
         m_currentRotation = webrtc::kVideoRotation_270;
         break;
     }
 
-    auto& videoFrame = static_cast<VideoFrameGStreamer&>(sample);
-    auto frameBuffer = GStreamerVideoFrameLibWebRTC::create(videoFrame.sample());
+    auto frameBuffer = GStreamerVideoFrameLibWebRTC::create(static_cast<VideoFrameGStreamer&>(videoFrame).sample());
 
     sendFrame(WTFMove(frameBuffer));
 }

@@ -31,6 +31,7 @@
 #include "CtapDriver.h"
 #include "CtapHidDriver.h"
 #include "U2fAuthenticator.h"
+#include <WebCore/AuthenticationExtensionsClientOutputs.h>
 #include <WebCore/AuthenticatorAttachment.h>
 #include <WebCore/CryptoKeyAES.h>
 #include <WebCore/CryptoKeyEC.h>
@@ -114,9 +115,14 @@ void CtapAuthenticator::makeCredential()
 
 void CtapAuthenticator::continueMakeCredentialAfterResponseReceived(Vector<uint8_t>&& data)
 {
-    auto response = readCTAPMakeCredentialResponse(data, AuthenticatorAttachment::CrossPlatform, std::get<PublicKeyCredentialCreationOptions>(requestData().options).attestation);
+    auto response = readCTAPMakeCredentialResponse(data, AuthenticatorAttachment::CrossPlatform, transports(), std::get<PublicKeyCredentialCreationOptions>(requestData().options).attestation);
     if (!response) {
         auto error = getResponseCode(data);
+
+        if (error == CtapDeviceResponseCode::kCtap2ErrActionTimeout) {
+            makeCredential();
+            return;
+        }
 
         if (error == CtapDeviceResponseCode::kCtap2ErrCredentialExcluded) {
             receiveRespond(ExceptionData { InvalidStateError, "At least one credential matches an entry of the excludeCredentials list in the authenticator."_s });
@@ -132,6 +138,15 @@ void CtapAuthenticator::continueMakeCredentialAfterResponseReceived(Vector<uint8
 
         receiveRespond(ExceptionData { UnknownError, makeString("Unknown internal error. Error code: ", static_cast<uint8_t>(error)) });
         return;
+    }
+    auto& options = std::get<PublicKeyCredentialCreationOptions>(requestData().options);
+    if (options.extensions && options.extensions->credProps) {
+        auto extensionOutputs = response->extensions();
+        
+        auto rkSupported = m_info.options().residentKeyAvailability() == AuthenticatorSupportedOptions::ResidentKeyAvailability::kSupported;
+        auto rkRequested = options.authenticatorSelection && ((options.authenticatorSelection->residentKey && options.authenticatorSelection->residentKey != ResidentKeyRequirement::Discouraged) || options.authenticatorSelection->requireResidentKey);
+        extensionOutputs.credProps = AuthenticationExtensionsClientOutputs::CredentialPropertiesOutput { rkSupported && rkRequested };
+        response->setExtensions(WTFMove(extensionOutputs));
     }
     receiveRespond(response.releaseNonNull());
 }
@@ -162,6 +177,11 @@ void CtapAuthenticator::continueGetAssertionAfterResponseReceived(Vector<uint8_t
     auto response = readCTAPGetAssertionResponse(data, AuthenticatorAttachment::CrossPlatform);
     if (!response) {
         auto error = getResponseCode(data);
+
+        if (error == CtapDeviceResponseCode::kCtap2ErrActionTimeout) {
+            getAssertion();
+            return;
+        }
 
         if (!isPinError(error) && tryDowngrade())
             return;
@@ -210,7 +230,7 @@ void CtapAuthenticator::continueGetNextAssertionAfterResponseReceived(Vector<uin
     if (!m_remainingAssertionResponses) {
         if (auto* observer = this->observer()) {
             observer->selectAssertionResponse(Vector { m_assertionResponses }, WebAuthenticationSource::External, [this, weakThis = WeakPtr { *this }] (AuthenticatorAssertionResponse* response) {
-                ASSERT(RunLoop::isMain());
+                RELEASE_ASSERT(RunLoop::isMain());
                 if (!weakThis)
                     return;
                 auto result = m_assertionResponses.findIf([expectedResponse = response] (auto& response) {
@@ -272,7 +292,7 @@ void CtapAuthenticator::continueRequestPinAfterGetKeyAgreement(Vector<uint8_t>&&
 
     if (auto* observer = this->observer()) {
         observer->requestPin(retries, [weakThis = WeakPtr { *this }, keyAgreement = WTFMove(*keyAgreement)] (const String& pin) {
-            ASSERT(RunLoop::isMain());
+            RELEASE_ASSERT(RunLoop::isMain());
             if (!weakThis)
                 return;
             weakThis->continueGetPinTokenAfterRequestPin(pin, keyAgreement.peerKey);
@@ -382,6 +402,14 @@ bool CtapAuthenticator::processGoogleLegacyAppIdSupportExtension()
     if (extensions->googleLegacyAppidSupport)
         tryDowngrade();
     return extensions->googleLegacyAppidSupport;
+}
+
+Vector<AuthenticatorTransport> CtapAuthenticator::transports() const
+{
+    
+    if (auto& infoTransports = m_info.transports())
+        return *infoTransports;
+    return Vector { driver().transport() };
 }
 
 } // namespace WebKit

@@ -67,7 +67,7 @@ static inline Vector<uint64_t> queryCache(const Vector<RecordInformation>* recor
     if (!records)
         return { };
 
-    if (!options.ignoreMethod && request.httpMethod() != "GET")
+    if (!options.ignoreMethod && request.httpMethod() != "GET"_s)
         return { };
 
     Vector<uint64_t> results;
@@ -88,10 +88,9 @@ static inline void updateVaryInformation(RecordInformation& recordInformation, c
     }
 
     varyValue.split(',', [&](StringView view) {
-        if (!recordInformation.hasVaryStar && stripLeadingAndTrailingHTTPSpaces(view) == "*")
+        if (!recordInformation.hasVaryStar && stripLeadingAndTrailingHTTPSpaces(view) == "*"_s)
             recordInformation.hasVaryStar = true;
-        String headerName = view.toString();
-        recordInformation.varyHeaders.add(headerName, request.httpHeaderField(headerName));
+        recordInformation.varyHeaders.add(view.toString(), request.httpHeaderField(view));
     });
 
     if (recordInformation.hasVaryStar)
@@ -310,7 +309,7 @@ void Cache::retrieveRecords(const RetrieveRecordsOptions& options, RecordsCallba
         return;
     }
 
-    if (!options.ignoreMethod && options.request.httpMethod() != "GET")
+    if (!options.ignoreMethod && options.request.httpMethod() != "GET"_s)
         return;
 
     auto* records = recordsFromURL(options.request.url());

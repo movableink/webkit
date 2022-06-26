@@ -494,25 +494,25 @@ TEST(WebKit, InterruptionBetweenSameProcessPages)
     TestWebKitAPI::Util::run(&done);
 }
 
-static const char* mainFrameText = R"DOCDOCDOC(
+static constexpr auto mainFrameText = R"DOCDOCDOC(
 <html><body>
 <iframe src='http://127.0.0.1:9091/frame' allow='camera:http://127.0.0.1:9091'></iframe>
 </body></html>
-)DOCDOCDOC";
-static const char* frameText = R"DOCDOCDOC(
+)DOCDOCDOC"_s;
+static constexpr auto frameText = R"DOCDOCDOC(
 <html><body><script>
 navigator.mediaDevices.getUserMedia({video:true});
 </script></body></html>
-)DOCDOCDOC";
+)DOCDOCDOC"_s;
 
 TEST(WebKit, PermissionDelegateParameters)
 {
     TestWebKitAPI::HTTPServer server1({
-        { "/", { mainFrameText } }
+        { "/"_s, { mainFrameText } }
     }, TestWebKitAPI::HTTPServer::Protocol::Http, nullptr, nullptr, 9090);
 
     TestWebKitAPI::HTTPServer server2({
-        { "/frame", { frameText } },
+        { "/frame"_s, { frameText } },
     }, TestWebKitAPI::HTTPServer::Protocol::Http, nullptr, nullptr, 9091);
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
@@ -560,6 +560,7 @@ TEST(WebKit, WebAudioAndGetUserMedia)
 #endif
 
 #if ENABLE(GPU_PROCESS)
+// FIXME: https://bugs.webkit.org/show_bug.cgi?id=239315
 TEST(WebKit2, CrashGPUProcessWhileCapturing)
 {
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
@@ -707,6 +708,7 @@ TEST(WebKit2, CrashGPUProcessAfterApplyingConstraints)
     EXPECT_EQ(webViewPID, [webView _webProcessIdentifier]);
 }
 
+// FIXME: https://bugs.webkit.org/show_bug.cgi?id=239309
 TEST(WebKit2, CrashGPUProcessWhileCapturingAndCalling)
 {
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
@@ -746,6 +748,10 @@ TEST(WebKit2, CrashGPUProcessWhileCapturingAndCalling)
     [webView stringByEvaluatingJavaScript:@"createConnection()"];
     TestWebKitAPI::Util::run(&done);
 
+    done = false;
+    [webView stringByEvaluatingJavaScript:@"checkDecodingVideo('first')"];
+    TestWebKitAPI::Util::run(&done);
+
     auto webViewPID = [webView _webProcessIdentifier];
 
     // The GPU process should get launched.
@@ -774,7 +780,15 @@ TEST(WebKit2, CrashGPUProcessWhileCapturingAndCalling)
     EXPECT_EQ(webViewPID, [webView _webProcessIdentifier]);
 
     done = false;
-    [webView stringByEvaluatingJavaScript:@"checkDecodingVideo()"];
+    [webView stringByEvaluatingJavaScript:@"checkVideoStatus()"];
+    TestWebKitAPI::Util::run(&done);
+
+    done = false;
+    [webView stringByEvaluatingJavaScript:@"checkAudioStatus()"];
+    TestWebKitAPI::Util::run(&done);
+
+    done = false;
+    [webView stringByEvaluatingJavaScript:@"checkDecodingVideo('second')"];
     TestWebKitAPI::Util::run(&done);
 
     EXPECT_EQ(gpuProcessPID, [processPool _gpuProcessIdentifier]);
@@ -783,7 +797,7 @@ TEST(WebKit2, CrashGPUProcessWhileCapturingAndCalling)
 #endif // ENABLE(GPU_PROCESS)
 
 #if PLATFORM(MAC)
-static const char* visibilityTestText = R"DOCDOCDOC(
+static constexpr auto visibilityTestText = R"DOCDOCDOC(
 <html><body>
 <div id='log'></div>
 <video id='localVideo' autoplay muted playsInline width=160></video>
@@ -828,12 +842,12 @@ function doTest()
 
 </script>
 </body></html>
-)DOCDOCDOC";
+)DOCDOCDOC"_s;
 
 TEST(WebKit, AutoplayOnVisibilityChange)
 {
     TestWebKitAPI::HTTPServer server({
-        { "/", { visibilityTestText } }
+        { "/"_s, { visibilityTestText } }
     }, TestWebKitAPI::HTTPServer::Protocol::Http, nullptr, nullptr, 9090);
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
@@ -873,7 +887,7 @@ TEST(WebKit, AutoplayOnVisibilityChange)
     TestWebKitAPI::Util::run(&done);
 }
 
-static const char* getUserMediaFocusText = R"DOCDOCDOC(
+static constexpr auto getUserMediaFocusText = R"DOCDOCDOC(
 <html><body>
 <script>
 onload = () => {
@@ -889,12 +903,12 @@ function capture()
 }
 </script>
 </body></html>
-)DOCDOCDOC";
+)DOCDOCDOC"_s;
 
 TEST(WebKit, GetUserMediaFocus)
 {
     TestWebKitAPI::HTTPServer server({
-        { "/", { getUserMediaFocusText } }
+        { "/"_s, { getUserMediaFocusText } }
     }, TestWebKitAPI::HTTPServer::Protocol::Http, nullptr, nullptr, 9090);
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
@@ -1110,6 +1124,63 @@ TEST(WebKit2, CapturePermissionWithSystemBlocking)
 
     // We cannot start camera on iOS simulator as there might not be any camera available.
 }
+#endif
+
+#if PLATFORM(MAC)
+TEST(WebKit2, ConnectedToHardwareConsole)
+{
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto processPoolConfig = adoptNS([[_WKProcessPoolConfiguration alloc] init]);
+    initializeMediaCaptureConfiguration(configuration.get());
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get() processPoolConfiguration:processPoolConfig.get()]);
+    auto delegate = adoptNS([[UserMediaCaptureUIDelegate alloc] init]);
+    [webView setUIDelegate:delegate.get()];
+    [webView _setMediaCaptureReportingDelayForTesting:0];
+
+    auto observer = adoptNS([[MediaCaptureObserver alloc] init]);
+    [webView addObserver:observer.get() forKeyPath:@"microphoneCaptureState" options:NSKeyValueObservingOptionNew context:nil];
+    [webView addObserver:observer.get() forKeyPath:@"cameraCaptureState" options:NSKeyValueObservingOptionNew context:nil];
+
+    cameraCaptureStateChange = false;
+    [webView loadTestPageNamed:@"getUserMedia"];
+    EXPECT_TRUE(waitUntilCameraState(webView.get(), WKMediaCaptureStateActive));
+
+    cameraCaptureStateChange = false;
+    [webView _setConnectedToHardwareConsoleForTesting:NO];
+    EXPECT_TRUE(waitUntilCameraState(webView.get(), WKMediaCaptureStateMuted));
+
+    // It should not be possible to unmute while detached.
+    cameraCaptureStateChange = false;
+    [webView setCameraCaptureState:WKMediaCaptureStateActive completionHandler:nil];
+    int retryCount = 1000;
+    while (--retryCount && cameraCaptureState == WKMediaCaptureStateMuted)
+        TestWebKitAPI::Util::spinRunLoop(10);
+    EXPECT_TRUE(!!retryCount);
+    EXPECT_TRUE(cameraCaptureState == WKMediaCaptureStateMuted);
+
+    // Capture should be unmuted if it was active when the disconnect happened.
+    cameraCaptureStateChange = false;
+    [webView _setConnectedToHardwareConsoleForTesting:YES];
+    EXPECT_TRUE(waitUntilCameraState(webView.get(), WKMediaCaptureStateActive));
+
+    cameraCaptureStateChange = false;
+    [webView setCameraCaptureState:WKMediaCaptureStateMuted completionHandler:nil];
+    EXPECT_TRUE(waitUntilCameraState(webView.get(), WKMediaCaptureStateMuted));
+
+    // Reconnecting should not unmute if capture if it was already muted when the disconnect happened.
+    [webView _setConnectedToHardwareConsoleForTesting:NO];
+    retryCount = 1000;
+    while (--retryCount)
+        TestWebKitAPI::Util::spinRunLoop(10);
+    EXPECT_TRUE(cameraCaptureState == WKMediaCaptureStateMuted);
+
+    [webView _setConnectedToHardwareConsoleForTesting:YES];
+    retryCount = 1000;
+    while (--retryCount)
+        TestWebKitAPI::Util::spinRunLoop(10);
+    EXPECT_TRUE(cameraCaptureState == WKMediaCaptureStateMuted);
+}
+
 #endif
 
 } // namespace TestWebKitAPI

@@ -25,28 +25,18 @@
 
 #pragma once
 
-#if ENABLE(WEBGL)
+#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(ANGLE)
 
-#if USE(ANGLE)
-#include "GraphicsContextGLANGLE.h"
-#else
 #include "GraphicsContextGLOpenGL.h"
-#endif
 
 namespace WebCore {
 
-#if USE(ANGLE)
-using GraphicsContextGLTextureMapperBase = GraphicsContextGLANGLE;
-#else
-using GraphicsContextGLTextureMapperBase = GraphicsContextGLOpenGL;
-#endif
-
-class WEBCORE_EXPORT GraphicsContextGLTextureMapper : public GraphicsContextGLTextureMapperBase {
+class WEBCORE_EXPORT GraphicsContextGLTextureMapper : public GraphicsContextGLOpenGL {
 public:
     static RefPtr<GraphicsContextGLTextureMapper> create(WebCore::GraphicsContextGLAttributes&&);
     ~GraphicsContextGLTextureMapper();
 
-    // GraphicsContextGLTextureMapperBase overrides.
+    // GraphicsContextGLOpenGL overrides.
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() final;
 #if ENABLE(VIDEO)
     bool copyTextureFromMedia(MediaPlayer&, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY) final;
@@ -54,21 +44,15 @@ public:
 #if ENABLE(MEDIA_STREAM)
     RefPtr<VideoFrame> paintCompositedResultsToVideoFrame() final;
 #endif
-#if USE(ANGLE)
-    void setContextVisibility(bool) final;
-    bool reshapeDisplayBufferBacking() final;
-    void prepareForDisplay() final;
-#endif
 
 private:
-#if USE(ANGLE)
-    bool platformInitializeContext() final;
-#endif
-    bool platformInitialize() final;
     GraphicsContextGLTextureMapper(WebCore::GraphicsContextGLAttributes&&);
+
+    bool platformInitialize() final;
+
     RefPtr<GraphicsLayerContentsDisplayDelegate> m_layerContentsDisplayDelegate;
 };
 
-}
+} // namespace WebCore
 
-#endif
+#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(ANGLE)

@@ -127,63 +127,62 @@ bool ExtensionsGLOpenGL::platformSupportsExtension(const String& name)
     // extensions. In particular GL_EXT_framebuffer_blit and GL_EXT_framebuffer_multisample/GL_APPLE_framebuffer_multisample.
 #if PLATFORM(QT)
     m_context->makeContextCurrent();
-
+    
     if (name == "GL_ANGLE_framebuffer_blit" || name == "GL_EXT_framebuffer_blit")
         return m_context->m_functions->hasOpenGLExtension(QOpenGLExtensions::FramebufferBlit);
     if (name == "GL_ANGLE_framebuffer_multisample" || name == "GL_EXT_framebuffer_multisample")
         return m_context->m_functions->hasOpenGLExtension(QOpenGLExtensions::FramebufferMultisample);
-
+    
     if (name == "GL_OES_texture_npot" || name == "GL_ARB_texture_non_power_of_two")
         return m_context->m_functions->hasOpenGLFeature(QOpenGLFunctions::NPOTTextures);
     if (name == "GL_OES_packed_depth_stencil" || name == "GL_EXT_packed_depth_stencil")
         return m_context->m_functions->hasOpenGLExtension(QOpenGLExtensions::PackedDepthStencil);
-
+    
     // FIXME: We don't have the robustness methods from Extensions3DOpenGLES.
     if (name == "GL_EXT_robustness")
         return false;
 #else
-    if (name == "GL_ANGLE_framebuffer_blit")
-        return m_availableExtensions.contains("GL_EXT_framebuffer_blit");
-    if (name == "GL_ANGLE_framebuffer_multisample")
-        return m_availableExtensions.contains("GL_EXT_framebuffer_multisample");
-#endif // !PLATFORM(QT)
-
-    if (name == "GL_ANGLE_instanced_arrays") {
-        return (m_availableExtensions.contains("GL_ARB_instanced_arrays") || m_availableExtensions.contains("GL_EXT_instanced_arrays"))
-            && (m_availableExtensions.contains("GL_ARB_draw_instanced") || m_availableExtensions.contains("GL_EXT_draw_instanced"));
+    if (name == "GL_ANGLE_framebuffer_blit"_s)
+        return m_availableExtensions.contains("GL_EXT_framebuffer_blit"_s);
+    if (name == "GL_ANGLE_framebuffer_multisample"_s)
+        return m_availableExtensions.contains("GL_EXT_framebuffer_multisample"_s);
+#endif
+    if (name == "GL_ANGLE_instanced_arrays"_s) {
+        return (m_availableExtensions.contains("GL_ARB_instanced_arrays"_s) || m_availableExtensions.contains("GL_EXT_instanced_arrays"_s))
+            && (m_availableExtensions.contains("GL_ARB_draw_instanced"_s) || m_availableExtensions.contains("GL_EXT_draw_instanced"_s));
     }
 
-    if (name == "GL_EXT_sRGB")
-        return m_availableExtensions.contains("GL_EXT_texture_sRGB") && (m_availableExtensions.contains("GL_EXT_framebuffer_sRGB") || m_availableExtensions.contains("GL_ARB_framebuffer_sRGB"));
+    if (name == "GL_EXT_sRGB"_s)
+        return m_availableExtensions.contains("GL_EXT_texture_sRGB"_s) && (m_availableExtensions.contains("GL_EXT_framebuffer_sRGB"_s) || m_availableExtensions.contains("GL_ARB_framebuffer_sRGB"_s));
 
-    if (name == "GL_EXT_frag_depth")
-        return m_availableExtensions.contains("GL_EXT_frag_depth");
+    if (name == "GL_EXT_frag_depth"_s)
+        return m_availableExtensions.contains("GL_EXT_frag_depth"_s);
 
 #if PLATFORM(QT)
     if (!m_context->isGLES2Compliant()) {
 #endif
 
     // Desktop GL always supports GL_OES_rgb8_rgba8.
-    if (name == "GL_OES_rgb8_rgba8")
+    if (name == "GL_OES_rgb8_rgba8"_s)
         return true;
 
     // If GL_ARB_texture_float or GL_OES_texture_float is available then we report
     // GL_OES_texture_half_float, GL_OES_texture_float_linear and GL_OES_texture_half_float_linear as available.
-    if (name == "GL_OES_texture_float" || name == "GL_OES_texture_half_float" || name == "GL_OES_texture_float_linear" || name == "GL_OES_texture_half_float_linear")
-        return m_availableExtensions.contains("GL_ARB_texture_float") || m_availableExtensions.contains("GL_OES_texture_float");
+    if (name == "GL_OES_texture_float"_s || name == "GL_OES_texture_half_float"_s || name == "GL_OES_texture_float_linear"_s || name == "GL_OES_texture_half_float_linear"_s)
+        return m_availableExtensions.contains("GL_ARB_texture_float"_s) || m_availableExtensions.contains("GL_OES_texture_float"_s);
 
 #if PLATFORM(QT)
     }
 #endif
 
     // GL_OES_vertex_array_object
-    if (name == "GL_OES_vertex_array_object") {
+    if (name == "GL_OES_vertex_array_object"_s) {
 #if (PLATFORM(GTK))
-        return m_availableExtensions.contains("GL_ARB_vertex_array_object");
+        return m_availableExtensions.contains("GL_ARB_vertex_array_object"_s);
 #elif PLATFORM(QT)
         return isVertexArrayObjectSupported();
 #else
-        return m_availableExtensions.contains("GL_APPLE_vertex_array_object");
+        return m_availableExtensions.contains("GL_APPLE_vertex_array_object"_s);
 #endif
     }
 
@@ -192,26 +191,26 @@ bool ExtensionsGLOpenGL::platformSupportsExtension(const String& name)
 #endif
 
     // Desktop GL always supports the standard derivative functions
-    if (name == "GL_OES_standard_derivatives")
+    if (name == "GL_OES_standard_derivatives"_s)
         return true;
 
     // Desktop GL always supports UNSIGNED_INT indices
-    if (name == "GL_OES_element_index_uint")
+    if (name == "GL_OES_element_index_uint"_s)
         return true;
 
 #if PLATFORM(QT)
     }
 #endif
     
-    if (name == "GL_EXT_shader_texture_lod")
-        return m_availableExtensions.contains("GL_EXT_shader_texture_lod");
+    if (name == "GL_EXT_shader_texture_lod"_s)
+        return m_availableExtensions.contains("GL_EXT_shader_texture_lod"_s);
     
-    if (name == "GL_EXT_texture_filter_anisotropic")
-        return m_availableExtensions.contains("GL_EXT_texture_filter_anisotropic");
+    if (name == "GL_EXT_texture_filter_anisotropic"_s)
+        return m_availableExtensions.contains("GL_EXT_texture_filter_anisotropic"_s);
 
-    if (name == "GL_EXT_draw_buffers") {
+    if (name == "GL_EXT_draw_buffers"_s) {
 #if PLATFORM(GTK) || (PLATFORM(QT) && QT_VERSION >= QT_VERSION_CHECK(5, 6, 0))
-        return m_availableExtensions.contains("GL_ARB_draw_buffers");
+        return m_availableExtensions.contains("GL_ARB_draw_buffers"_s);
 #else
         // FIXME: implement support for other platforms.
         return false;
@@ -282,13 +281,13 @@ void ExtensionsGLOpenGL::vertexAttribDivisorANGLE(GCGLuint index, GCGLuint divis
 String ExtensionsGLOpenGL::getExtensions()
 {
     ASSERT(!m_useIndexedGetString);
-    return String(reinterpret_cast<const char*>(::glGetString(GL_EXTENSIONS)));
+    return String::fromLatin1(reinterpret_cast<const char*>(::glGetString(GL_EXTENSIONS)));
 }
 
 #if PLATFORM(GTK) || PLATFORM(WIN)
 bool ExtensionsGLOpenGL::isVertexArrayObjectSupported()
 {
-    static const bool supportsVertexArrayObject = supports("GL_OES_vertex_array_object");
+    static const bool supportsVertexArrayObject = supports("GL_OES_vertex_array_object"_s);
     return supportsVertexArrayObject;
 }
 #elif PLATFORM(QT)

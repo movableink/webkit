@@ -165,7 +165,7 @@ static inline bool hasResponseVaryStarHeaderValue(const FetchResponse& response)
     auto varyValue = response.headers().internalHeaders().get(WebCore::HTTPHeaderName::Vary);
     bool hasStar = false;
     varyValue.split(',', [&](StringView view) {
-        if (!hasStar && stripLeadingAndTrailingHTTPSpaces(view) == "*")
+        if (!hasStar && stripLeadingAndTrailingHTTPSpaces(view) == "*"_s)
             hasStar = true;
     });
     return hasStar;
@@ -223,7 +223,7 @@ ExceptionOr<Ref<FetchRequest>> DOMCache::requestFromInfo(RequestInfo&& info, boo
     RefPtr<FetchRequest> request;
     if (std::holds_alternative<RefPtr<FetchRequest>>(info)) {
         request = std::get<RefPtr<FetchRequest>>(info).releaseNonNull();
-        if (request->method() != "GET" && !ignoreMethod)
+        if (request->method() != "GET"_s && !ignoreMethod)
             return Exception { TypeError, "Request method is not GET"_s };
     } else
         request = FetchRequest::create(*scriptExecutionContext(), WTFMove(info), { }).releaseReturnValue();

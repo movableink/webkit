@@ -12,12 +12,12 @@ const skipBackButton = new SkipBackButton({ layoutTraits: new MacOSLayoutTraits(
 
 shouldBeEqualToString("skipBackButton.element.localName", "button");
 shouldBeTrue('skipBackButton.element.classList.contains("skip-back")');
-shouldBe("skipBackButton.iconName", "Icons.SkipBack");
+shouldBe("skipBackButton.iconName", "Icons.SkipBack15");
 
 const iOSSkipBackButton = new SkipBackButton({ layoutTraits: new IOSLayoutTraits(LayoutTraits.Mode.Inline) });
 
 shouldBecomeEqual('skipBackButton.image.element.style.webkitMaskImage.includes("macOS/SkipBack15.svg")', "true", () => {
-    shouldBecomeEqual('iOSSkipBackButton.image.element.style.webkitMaskImage.includes("iOS/SkipBack15.svg")', "true", finishJSTest);
+    shouldBecomeEqual('iOSSkipBackButton.image.element.style.webkitMaskImage.includes("iOS/SkipBack10.svg")', "true", finishJSTest);
 });
 
 </script>

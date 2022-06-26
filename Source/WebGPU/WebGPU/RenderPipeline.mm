@@ -32,29 +32,38 @@
 
 namespace WebGPU {
 
-RefPtr<RenderPipeline> Device::createRenderPipeline(const WGPURenderPipelineDescriptor& descriptor)
+Ref<RenderPipeline> Device::createRenderPipeline(const WGPURenderPipelineDescriptor& descriptor)
 {
     UNUSED_PARAM(descriptor);
-    return RenderPipeline::create(nil);
+    return RenderPipeline::createInvalid(*this);
 }
 
-void Device::createRenderPipelineAsync(const WGPURenderPipelineDescriptor& descriptor, CompletionHandler<void(WGPUCreatePipelineAsyncStatus, RefPtr<RenderPipeline>&&, String&& message)>&& callback)
+void Device::createRenderPipelineAsync(const WGPURenderPipelineDescriptor& descriptor, CompletionHandler<void(WGPUCreatePipelineAsyncStatus, Ref<RenderPipeline>&&, String&& message)>&& callback)
 {
+    // FIXME: Implement this.
     UNUSED_PARAM(descriptor);
-    UNUSED_PARAM(callback);
+    instance().scheduleWork([strongThis = Ref { *this }, callback = WTFMove(callback)]() mutable {
+        callback(WGPUCreatePipelineAsyncStatus_Error, RenderPipeline::createInvalid(strongThis), { });
+    });
 }
 
-RenderPipeline::RenderPipeline(id<MTLRenderPipelineState> renderPipelineState)
+RenderPipeline::RenderPipeline(id<MTLRenderPipelineState> renderPipelineState, Device& device)
     : m_renderPipelineState(renderPipelineState)
+    , m_device(device)
+{
+}
+
+RenderPipeline::RenderPipeline(Device& device)
+    : m_device(device)
 {
 }
 
 RenderPipeline::~RenderPipeline() = default;
 
-Ref<BindGroupLayout> RenderPipeline::getBindGroupLayout(uint32_t groupIndex)
+BindGroupLayout* RenderPipeline::getBindGroupLayout(uint32_t groupIndex)
 {
     UNUSED_PARAM(groupIndex);
-    return BindGroupLayout::create(nil, nil, nil);
+    return nullptr;
 }
 
 void RenderPipeline::setLabel(String&&)
@@ -68,12 +77,12 @@ void RenderPipeline::setLabel(String&&)
 
 void wgpuRenderPipelineRelease(WGPURenderPipeline renderPipeline)
 {
-    delete renderPipeline;
+    WebGPU::fromAPI(renderPipeline).deref();
 }
 
 WGPUBindGroupLayout wgpuRenderPipelineGetBindGroupLayout(WGPURenderPipeline renderPipeline, uint32_t groupIndex)
 {
-    return new WGPUBindGroupLayoutImpl { WebGPU::fromAPI(renderPipeline).getBindGroupLayout(groupIndex) };
+    return WebGPU::fromAPI(renderPipeline).getBindGroupLayout(groupIndex);
 }
 
 void wgpuRenderPipelineSetLabel(WGPURenderPipeline renderPipeline, const char* label)

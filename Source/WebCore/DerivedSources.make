@@ -50,7 +50,7 @@ platform_h_compiler_command = $(CC) -std=c++2a -x c++ $(1) $(SDK_FLAGS) $(TARGET
 
 FEATURE_AND_PLATFORM_DEFINES := $(shell $(call platform_h_compiler_command,-E -P -dM) | $(PERL) -ne "print if s/\#define ((HAVE_|USE_|ENABLE_|WTF_PLATFORM_)\w+) 1/\1/")
 
-PLATFORM_HEADER_DIR := $(realpath $(BUILT_PRODUCTS_DIR)/usr/local/include)
+PLATFORM_HEADER_DIR := $(realpath $(BUILT_PRODUCTS_DIR)$(WK_LIBRARY_HEADERS_FOLDER_PATH))
 PLATFORM_HEADER_DEPENDENCIES := $(filter $(PLATFORM_HEADER_DIR)/%,$(realpath $(shell $(call platform_h_compiler_command,-M) | $(PERL) -e "local \$$/; my (\$$target, \$$deps) = split(/:/, <>); print split(/\\\\/, \$$deps);")))
 FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES = $(WebCore)/DerivedSources.make $(PLATFORM_HEADER_DEPENDENCIES)
 
@@ -195,6 +195,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/WebGPU/GPUVertexStepMode.idl \
     $(WebCore)/Modules/WebGPU/NavigatorGPU.idl \
     $(WebCore)/Modules/airplay/WebKitPlaybackTargetAvailabilityEvent.idl \
+    $(WebCore)/Modules/applepay/ApplePayAutomaticReloadPaymentRequest.idl \
     $(WebCore)/Modules/applepay/ApplePayCancelEvent.idl \
     $(WebCore)/Modules/applepay/ApplePayContactField.idl \
     $(WebCore)/Modules/applepay/ApplePayCouponCodeChangedEvent.idl \
@@ -203,7 +204,6 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/applepay/ApplePayDateComponents.idl \
     $(WebCore)/Modules/applepay/ApplePayDateComponentsRange.idl \
     $(WebCore)/Modules/applepay/ApplePayDetailsUpdateBase.idl \
-    $(WebCore)/Modules/applepay/ApplePayDetailsUpdateData.idl \
     $(WebCore)/Modules/applepay/ApplePayError.idl \
     $(WebCore)/Modules/applepay/ApplePayErrorCode.idl \
     $(WebCore)/Modules/applepay/ApplePayErrorContactField.idl \
@@ -221,10 +221,13 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/applepay/ApplePayPaymentMethodSelectedEvent.idl \
     $(WebCore)/Modules/applepay/ApplePayPaymentMethodType.idl \
     $(WebCore)/Modules/applepay/ApplePayPaymentMethodUpdate.idl \
+    $(WebCore)/Modules/applepay/ApplePayPaymentOrderDetails.idl \
     $(WebCore)/Modules/applepay/ApplePayPaymentPass.idl \
     $(WebCore)/Modules/applepay/ApplePayPaymentRequest.idl \
     $(WebCore)/Modules/applepay/ApplePayPaymentTiming.idl \
+    $(WebCore)/Modules/applepay/ApplePayPaymentTokenContext.idl \
     $(WebCore)/Modules/applepay/ApplePayRecurringPaymentDateUnit.idl \
+    $(WebCore)/Modules/applepay/ApplePayRecurringPaymentRequest.idl \
     $(WebCore)/Modules/applepay/ApplePayRequestBase.idl \
     $(WebCore)/Modules/applepay/ApplePaySession.idl \
     $(WebCore)/Modules/applepay/ApplePaySessionError.idl \
@@ -771,6 +774,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/crypto/parameters/RsaOaepParams.idl \
     $(WebCore)/crypto/parameters/RsaPssParams.idl \
     $(WebCore)/css/CSSConditionRule.idl \
+    $(WebCore)/css/CSSContainerRule.idl \
     $(WebCore)/css/CSSCounterStyleRule.idl \
     $(WebCore)/css/CSSFontFaceRule.idl \
     $(WebCore)/css/CSSFontPaletteValuesRule.idl \
@@ -828,6 +832,15 @@ JS_BINDING_IDLS := \
     $(WebCore)/css/typedom/CSSUnitValue.idl \
     $(WebCore)/css/typedom/CSSUnparsedValue.idl \
     $(WebCore)/css/typedom/CSSOMVariableReferenceValue.idl \
+    $(WebCore)/css/typedom/color/CSSColor.idl \
+    $(WebCore)/css/typedom/color/CSSColorValue.idl \
+    $(WebCore)/css/typedom/color/CSSHSL.idl \
+    $(WebCore)/css/typedom/color/CSSHWB.idl \
+    $(WebCore)/css/typedom/color/CSSLCH.idl \
+    $(WebCore)/css/typedom/color/CSSLab.idl \
+    $(WebCore)/css/typedom/color/CSSOKLCH.idl \
+    $(WebCore)/css/typedom/color/CSSOKLab.idl \
+    $(WebCore)/css/typedom/color/CSSRGB.idl \
     $(WebCore)/css/typedom/numeric/CSSMathInvert.idl \
     $(WebCore)/css/typedom/numeric/CSSMathMax.idl \
     $(WebCore)/css/typedom/numeric/CSSMathMin.idl \
@@ -903,6 +916,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/dom/DocumentType.idl \
     $(WebCore)/dom/DragEvent.idl \
     $(WebCore)/dom/Element+CSSOMView.idl \
+    $(WebCore)/dom/Element+ComputedStyleMap.idl \
     $(WebCore)/dom/Element+DOMParsing.idl \
     $(WebCore)/dom/Element+Fullscreen.idl \
     $(WebCore)/dom/Element+PointerEvents.idl \
@@ -1127,13 +1141,16 @@ JS_BINDING_IDLS := \
     $(WebCore)/html/canvas/EXTFloatBlend.idl \
     $(WebCore)/html/canvas/EXTFragDepth.idl \
     $(WebCore)/html/canvas/EXTShaderTextureLOD.idl \
+    $(WebCore)/html/canvas/EXTTextureCompressionBPTC.idl \
     $(WebCore)/html/canvas/EXTTextureCompressionRGTC.idl \
     $(WebCore)/html/canvas/EXTTextureFilterAnisotropic.idl \
+    $(WebCore)/html/canvas/EXTTextureNorm16.idl \
     $(WebCore)/html/canvas/EXTsRGB.idl \
     $(WebCore)/html/canvas/ImageBitmapRenderingContext.idl \
     $(WebCore)/html/canvas/ImageBitmapRenderingContextSettings.idl \
     $(WebCore)/html/canvas/ImageSmoothingQuality.idl \
     $(WebCore)/html/canvas/KHRParallelShaderCompile.idl \
+    $(WebCore)/html/canvas/OESDrawBuffersIndexed.idl \
     $(WebCore)/html/canvas/OESElementIndexUint.idl \
     $(WebCore)/html/canvas/OESFBORenderMipmap.idl \
     $(WebCore)/html/canvas/OESStandardDerivatives.idl \
@@ -1451,6 +1468,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/testing/FakeXRBoundsPoint.idl \
     $(WebCore)/testing/FakeXRButtonStateInit.idl \
     $(WebCore)/testing/FakeXRInputSourceInit.idl \
+    $(WebCore)/testing/FakeXRJointStateInit.idl \
     $(WebCore)/testing/FakeXRRigidTransformInit.idl \
     $(WebCore)/testing/FakeXRViewInit.idl \
     $(WebCore)/testing/WebFakeXRDevice.idl \
@@ -1536,8 +1554,8 @@ ADDITIONAL_EVENT_TARGET_FACTORY =
 IDL_PATHS := $(sort $(foreach IDL_FILE, $(JS_BINDING_IDLS), $(realpath $(dir $(IDL_FILE)))))
 
 ADDITIONS_PATHS = \
-    $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions \
-    $(SDKROOT)/usr/local/include/WebKitAdditions
+    $(BUILT_PRODUCTS_DIR)$(WK_LIBRARY_HEADERS_FOLDER_PATH)/WebKitAdditions \
+    $(SDKROOT)$(WK_LIBRARY_HEADERS_FOLDER_PATH)/WebKitAdditions
 
 ADDITIONAL_BINDING_IDLS_PATHS = \
     $(ADDITIONS_PATHS) \
@@ -1744,6 +1762,7 @@ MODERN_MEDIA_CONTROLS_STYLE_SHEETS = \
     $(WebCore)/Modules/modern-media-controls/controls/buttons-container.css \
     $(WebCore)/Modules/modern-media-controls/controls/controls-bar.css \
     $(WebCore)/Modules/modern-media-controls/controls/inline-media-controls.css \
+    $(WebCore)/Modules/modern-media-controls/controls/ios-inline-media-controls.css \
     $(WebCore)/Modules/modern-media-controls/controls/macos-fullscreen-media-controls.css \
     $(WebCore)/Modules/modern-media-controls/controls/macos-inline-media-controls.css \
     $(WebCore)/Modules/modern-media-controls/controls/media-controls.css \
@@ -2207,16 +2226,6 @@ ifneq ($(NO_SUPPLEMENTAL_FILES),1)
 -include $(JS_DOM_HEADERS:.h=.dep)
 endif
 
-# Inspector interfaces
-
-all : CommandLineAPIModuleSource.h
-
-CommandLineAPIModuleSource.h : $(WebCore)/inspector/CommandLineAPIModuleSource.js
-	echo "//# sourceURL=__InjectedScript_CommandLineAPIModuleSource.js" > CommandLineAPIModuleSource.min.js
-	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/jsmin.py < $(WebCore)/inspector/CommandLineAPIModuleSource.js >> CommandLineAPIModuleSource.min.js
-	$(PERL) $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl CommandLineAPIModuleSource_js CommandLineAPIModuleSource.min.js CommandLineAPIModuleSource.h
-	$(DELETE) CommandLineAPIModuleSource.min.js
-
 # WebCore JS Builtins
 
 WebCore_BUILTINS_SOURCES = \
@@ -2240,6 +2249,7 @@ WebCore_BUILTINS_SOURCES = \
     $(WebCore)/dom/TextDecoderStream.js \
     $(WebCore)/dom/TextEncoderStream.js \
     $(WebCore)/bindings/js/JSDOMBindingInternals.js \
+    $(WebCore)/inspector/CommandLineAPIModuleSource.js \
 #
 
 BUILTINS_GENERATOR_SCRIPTS = \

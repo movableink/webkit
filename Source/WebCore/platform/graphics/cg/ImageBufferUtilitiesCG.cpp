@@ -83,11 +83,11 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
         kUTTypeGIF = CFSTR("com.compuserve.gif");
     });
 
-    if (equalLettersIgnoringASCIICase(mimeType, "image/png"))
+    if (equalLettersIgnoringASCIICase(mimeType, "image/png"_s))
         return kUTTypePNG;
-    if (equalLettersIgnoringASCIICase(mimeType, "image/jpeg"))
+    if (equalLettersIgnoringASCIICase(mimeType, "image/jpeg"_s))
         return jpegUTI();
-    if (equalLettersIgnoringASCIICase(mimeType, "image/gif"))
+    if (equalLettersIgnoringASCIICase(mimeType, "image/gif"_s))
         return kUTTypeGIF;
 
     ASSERT_NOT_REACHED();
@@ -139,8 +139,8 @@ static bool encode(const PixelBuffer& source, const String& mimeType, std::optio
 
     CGImageAlphaInfo dataAlphaInfo = kCGImageAlphaLast;
     
-    auto data = source.data().data();
-    auto dataSize = source.data().byteLength();
+    auto data = source.bytes();
+    auto dataSize = source.sizeInBytes();
 
     Vector<uint8_t> premultipliedData;
 

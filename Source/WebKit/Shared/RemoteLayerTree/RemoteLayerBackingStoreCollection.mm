@@ -33,6 +33,7 @@
 #import "RemoteLayerTreeContext.h"
 #import "SwapBuffersDisplayRequirement.h"
 #import <WebCore/ConcreteImageBuffer.h>
+#import <WebCore/IOSurfacePool.h>
 #import <wtf/text/TextStream.h>
 
 const Seconds volatilityTimerInterval = 200_ms;
@@ -47,16 +48,43 @@ RemoteLayerBackingStoreCollection::RemoteLayerBackingStoreCollection(RemoteLayer
 
 RemoteLayerBackingStoreCollection::~RemoteLayerBackingStoreCollection() = default;
 
+bool RemoteLayerBackingStoreCollection::backingStoreNeedsDisplay(const RemoteLayerBackingStore& backingStore)
+{
+    if (backingStore.size().isEmpty())
+        return false;
+
+    auto frontBuffer = backingStore.bufferForType(RemoteLayerBackingStore::BufferType::Front);
+    if (!frontBuffer)
+        return true;
+
+    if (frontBuffer->volatilityState() == WebCore::VolatilityState::Volatile)
+        return true;
+
+    return !backingStore.hasEmptyDirtyRegion();
+}
+
+void RemoteLayerBackingStoreCollection::prepareBackingStoresForDisplay(RemoteLayerTreeTransaction& transaction)
+{
+    for (auto* backingStore : m_backingStoresNeedingDisplay) {
+        backingStore->prepareToDisplay();
+        backingStore->layer()->properties().notePropertiesChanged(RemoteLayerTreeTransaction::BackingStoreChanged);
+        transaction.layerPropertiesChanged(*backingStore->layer());
+    }
+}
+
 void RemoteLayerBackingStoreCollection::paintReachableBackingStoreContents()
 {
-    for (auto* backingStore : m_reachableBackingStoreInLatestFlush)
+    for (auto* backingStore : m_backingStoresNeedingDisplay)
         backingStore->paintContents();
 }
 
 void RemoteLayerBackingStoreCollection::willFlushLayers()
 {
+    LOG_WITH_STREAM(RemoteRenderingBufferVolatility, stream << "\nRemoteLayerBackingStoreCollection::willFlushLayers()");
+
     m_inLayerFlush = true;
     m_reachableBackingStoreInLatestFlush.clear();
+    m_backingStoresNeedingDisplay.clear();
 }
 
 void RemoteLayerBackingStoreCollection::willCommitLayerTree(RemoteLayerTreeTransaction& transaction)
@@ -127,6 +155,9 @@ bool RemoteLayerBackingStoreCollection::backingStoreWillBeDisplayed(RemoteLayerB
     ASSERT(m_inLayerFlush);
     m_reachableBackingStoreInLatestFlush.add(&backingStore);
 
+    if (backingStore.needsDisplay())
+        m_backingStoresNeedingDisplay.add(&backingStore);
+
     auto backingStoreIter = m_unparentedBackingStore.find(&backingStore);
     if (backingStoreIter == m_unparentedBackingStore.end())
         return false;
@@ -134,11 +165,6 @@ bool RemoteLayerBackingStoreCollection::backingStoreWillBeDisplayed(RemoteLayerB
     m_liveBackingStore.add(&backingStore);
     m_unparentedBackingStore.remove(backingStoreIter);
     return true;
-}
-
-SwapBuffersDisplayRequirement RemoteLayerBackingStoreCollection::prepareBackingStoreBuffers(RemoteLayerBackingStore& backingStore)
-{
-    return backingStore.prepareBuffers(backingStore.hasEmptyDirtyRegion());
 }
 
 bool RemoteLayerBackingStoreCollection::markBackingStoreVolatile(RemoteLayerBackingStore& backingStore, OptionSet<VolatilityMarkingBehavior> markingBehavior, MonotonicTime now)
@@ -238,9 +264,9 @@ RefPtr<WebCore::ImageBuffer> RemoteLayerBackingStoreCollection::allocateBufferFo
 {
     switch (backingStore.type()) {
     case RemoteLayerBackingStore::Type::IOSurface:
-        return WebCore::ConcreteImageBuffer<AcceleratedImageBufferShareableMappedBackend>::create(backingStore.size(), backingStore.scale(), WebCore::DestinationColorSpace::SRGB(), backingStore.pixelFormat(), nullptr);
+        return WebCore::ConcreteImageBuffer<AcceleratedImageBufferShareableMappedBackend>::create(backingStore.size(), backingStore.scale(), WebCore::DestinationColorSpace::SRGB(), backingStore.pixelFormat(), WebCore::RenderingPurpose::LayerBacking, { nullptr, &WebCore::IOSurfacePool::sharedPool() });
     case RemoteLayerBackingStore::Type::Bitmap:
-        return WebCore::ConcreteImageBuffer<UnacceleratedImageBufferShareableBackend>::create(backingStore.size(), backingStore.scale(), WebCore::DestinationColorSpace::SRGB(), backingStore.pixelFormat(), nullptr);
+        return WebCore::ConcreteImageBuffer<UnacceleratedImageBufferShareableBackend>::create(backingStore.size(), backingStore.scale(), WebCore::DestinationColorSpace::SRGB(), backingStore.pixelFormat(), WebCore::RenderingPurpose::LayerBacking, { });
     }
     return nullptr;
 }

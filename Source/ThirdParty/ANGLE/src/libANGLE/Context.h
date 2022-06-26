@@ -275,6 +275,7 @@ class StateCache final : angle::NonCopyable
     void onColorMaskChange(Context *context);
     void onBufferBindingChange(Context *context);
     void onBlendFuncIndexedChange(Context *context);
+    void onBlendEquationChange(Context *context);
 
   private:
     // Cache update functions.
@@ -649,6 +650,8 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     // Needed by capture serialization logic that works with a "const" Context pointer.
     void finishImmutable() const;
 
+    const angle::PerfMonitorCounterGroups &getPerfMonitorCounterGroups() const;
+
   private:
     void initializeDefaultResources();
 
@@ -829,7 +832,7 @@ class Context final : public egl::LabeledObject, angle::NonCopyable, public angl
     bool mIsDestroyed;
 };
 
-class ScopedContextRef
+class ANGLE_NO_DISCARD ScopedContextRef
 {
   public:
     ScopedContextRef(Context *context) : mContext(context)

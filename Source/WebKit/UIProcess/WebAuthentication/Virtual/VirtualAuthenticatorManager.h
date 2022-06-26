@@ -44,7 +44,8 @@ public:
 
     bool isVirtual() const final { return true; }
 
-    void addCredential(const String&, const VirtualCredential&);
+    void addCredential(const String&, VirtualCredential&);
+    Vector<VirtualCredential> credentialsMatchingList(const String& authenticatorId, const String& rpId, const Vector<Vector<uint8_t>>& credentialIds);
 
 protected:
     void decidePolicyForLocalAuthenticator(CompletionHandler<void(LocalAuthenticatorPolicy)>&&) override;
@@ -54,6 +55,7 @@ protected:
 private:
     UniqueRef<AuthenticatorTransportService> createService(WebCore::AuthenticatorTransport, AuthenticatorTransportService::Observer&) const final;
     void runPanel() override;
+    void filterTransports(TransportSet&) const override { };
 
     HashMap<String, UniqueRef<VirtualAuthenticatorConfiguration>> m_virtualAuthenticators;
     HashMap<String, Vector<VirtualCredential>> m_credentialsByAuthenticator;

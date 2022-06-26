@@ -606,11 +606,11 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'clean-and-update-working-directory',
             'fetch-branch-references',
             'show-identifier',
-            'verify-github-integrity',
             'update-working-directory',
-            'apply-patch',
-            'validate-changelog-and-reviewer',
-            'find-modified-changelogs',
+            'commit-patch',
+            'validate-squashed',
+            'add-reviewer-to-commit-message',
+            'validate-commit-message',
             'kill-old-processes',
             'compile-webkit',
             'kill-old-processes',
@@ -618,17 +618,54 @@ class TestExpectedBuildSteps(unittest.TestCase):
             'check-status-on-other-ewses',
             'layout-tests',
             'validate-change',
-            'clean-and-update-working-directory',
-            'show-identifier',
-            'update-working-directory',
-            'apply-patch',
-            'create-local-git-commit',
+            'canonicalize-commit',
             'push-commit-to-webkit-repo',
             'set-build-summary'
         ],
         'Merge-Queue': [
             'configure-build',
             'validate-change',
+            'validate-commiter-and-reviewer',
+            'configuration',
+            'clean-up-git-repo',
+            'clean-and-update-working-directory',
+            'fetch-branch-references',
+            'show-identifier',
+            'update-working-directory',
+            'checkout-pull-request',
+            'validate-squashed',
+            'add-reviewer-to-commit-message',
+            'validate-commit-message',
+            'kill-old-processes',
+            'compile-webkit',
+            'kill-old-processes',
+            'validate-change',
+            'canonicalize-commit',
+            'push-pull-request-branch',
+            'update-pull-request',
+            'push-commit-to-webkit-repo',
+            'set-build-summary'
+        ],
+        'Unsafe-Merge-Queue': [
+            'configure-build',
+            'validate-change',
+            'validate-commiter-and-reviewer',
+            'configuration',
+            'clean-up-git-repo',
+            'clean-and-update-working-directory',
+            'fetch-branch-references',
+            'show-identifier',
+            'update-working-directory',
+            'checkout-pull-request',
+            'validate-squashed',
+            'add-reviewer-to-commit-message',
+            'validate-commit-message',
+            'validate-change',
+            'canonicalize-commit',
+            'push-pull-request-branch',
+            'update-pull-request',
+            'push-commit-to-webkit-repo',
+            'set-build-summary'
         ],
     }
 
@@ -638,6 +675,7 @@ class TestExpectedBuildSteps(unittest.TestCase):
         loadConfig.loadBuilderConfig(self.config, is_test_mode_enabled=True, master_prefix_path=cwd)
 
     def test_all_expected_steps(self):
+        self.maxDiff = None
         for builder in self.config['builders']:
             buildSteps = []
             for step in builder['factory'].steps:

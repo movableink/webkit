@@ -32,7 +32,7 @@
 
 namespace WebGPU {
 
-RefPtr<SwapChain> Device::createSwapChain(const Surface& surface, const WGPUSwapChainDescriptor& descriptor)
+Ref<SwapChain> Device::createSwapChain(const Surface& surface, const WGPUSwapChainDescriptor& descriptor)
 {
     UNUSED_PARAM(surface);
     UNUSED_PARAM(descriptor);
@@ -43,9 +43,9 @@ SwapChain::SwapChain() = default;
 
 SwapChain::~SwapChain() = default;
 
-Ref<TextureView> SwapChain::getCurrentTextureView()
+TextureView* SwapChain::getCurrentTextureView()
 {
-    return TextureView::create(nil);
+    return nullptr;
 }
 
 void SwapChain::present()
@@ -58,12 +58,12 @@ void SwapChain::present()
 
 void wgpuSwapChainRelease(WGPUSwapChain swapChain)
 {
-    delete swapChain;
+    WebGPU::fromAPI(swapChain).deref();
 }
 
 WGPUTextureView wgpuSwapChainGetCurrentTextureView(WGPUSwapChain swapChain)
 {
-    return new WGPUTextureViewImpl { WebGPU::fromAPI(swapChain).getCurrentTextureView() };
+    return WebGPU::fromAPI(swapChain).getCurrentTextureView();
 }
 
 void wgpuSwapChainPresent(WGPUSwapChain swapChain)

@@ -22,9 +22,10 @@
 
 messages -> WebResourceLoader LegacyReceiver {
     WillSendRequest(WebCore::ResourceRequest request, IPC::FormDataReference requestBody, WebCore::ResourceResponse redirectResponse)
+    SetWorkerStart(MonotonicTime value)
     DidSendData(uint64_t bytesSent, uint64_t totalBytesToBeSent)
     DidReceiveResponse(WebCore::ResourceResponse response, enum:bool WebKit::PrivateRelayed privateRelayed, bool needsContinueDidReceiveResponseMessage, std::optional<WebCore::NetworkLoadMetrics> optionalNetworkLoadMetrics)
-    DidReceiveData(IPC::SharedBufferCopy data, int64_t encodedDataLength)
+    DidReceiveData(IPC::SharedBufferReference data, int64_t encodedDataLength)
     DidFinishResourceLoad(WebCore::NetworkLoadMetrics networkLoadMetrics)
     DidFailResourceLoad(WebCore::ResourceError error)
     DidFailServiceWorkerLoad(WebCore::ResourceError error)
@@ -40,7 +41,6 @@ messages -> WebResourceLoader LegacyReceiver {
 
 #if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     ContentFilterDidBlockLoad(WebCore::ContentFilterUnblockHandler unblockHandler, String unblockRequestDeniedScript, WebCore::ResourceError error, URL blockedPageURL, WebCore::SubstituteData substituteData)
-    CancelMainResourceLoadForContentFilter(WebCore::ResourceError error)
 #endif
 
 }

@@ -59,30 +59,6 @@
 
 namespace WebCore {
 
-static RealtimeMediaSource::Type sourceTypeForDevice(CaptureDevice::DeviceType type)
-{
-    switch (type) {
-    case CaptureDevice::DeviceType::Screen:
-        return RealtimeMediaSource::Type::Screen;
-    case CaptureDevice::DeviceType::Window:
-        return RealtimeMediaSource::Type::Window;
-    case CaptureDevice::DeviceType::SystemAudio:
-        return RealtimeMediaSource::Type::SystemAudio;
-    case CaptureDevice::DeviceType::Microphone:
-        return RealtimeMediaSource::Type::Audio;
-    case CaptureDevice::DeviceType::Camera:
-        return RealtimeMediaSource::Type::Video;
-    case CaptureDevice::DeviceType::Speaker:
-    case CaptureDevice::DeviceType::Unknown:
-        ASSERT_NOT_REACHED();
-        return RealtimeMediaSource::Type::None;
-        break;
-    }
-
-    ASSERT_NOT_REACHED();
-    return RealtimeMediaSource::Type::None;
-}
-
 CaptureSourceOrError DisplayCaptureSourceCocoa::create(const CaptureDevice& device, String&& hashSalt, const MediaConstraints* constraints, PageIdentifier pageIdentifier)
 {
     switch (device.type()) {
@@ -119,7 +95,7 @@ CaptureSourceOrError DisplayCaptureSourceCocoa::create(Expected<UniqueRef<Captur
     if (!capturer.has_value())
         return CaptureSourceOrError { WTFMove(capturer.error()) };
 
-    auto source = adoptRef(*new DisplayCaptureSourceCocoa(WTFMove(capturer.value()), String { device.label() }, String { device.persistentId() }, WTFMove(hashSalt), pageIdentifier));
+    auto source = adoptRef(*new DisplayCaptureSourceCocoa(WTFMove(capturer.value()), AtomString { device.label() }, String { device.persistentId() }, WTFMove(hashSalt), pageIdentifier));
     if (constraints) {
         auto result = source->applyConstraints(*constraints);
         if (result)
@@ -129,8 +105,8 @@ CaptureSourceOrError DisplayCaptureSourceCocoa::create(Expected<UniqueRef<Captur
     return CaptureSourceOrError(WTFMove(source));
 }
 
-DisplayCaptureSourceCocoa::DisplayCaptureSourceCocoa(UniqueRef<Capturer>&& capturer, String&& name, String&& deviceID, String&& hashSalt, PageIdentifier pageIdentifier)
-    : RealtimeMediaSource(sourceTypeForDevice(capturer->deviceType()), WTFMove(name), WTFMove(deviceID), WTFMove(hashSalt), pageIdentifier)
+DisplayCaptureSourceCocoa::DisplayCaptureSourceCocoa(UniqueRef<Capturer>&& capturer, AtomString&& name, String&& deviceID, String&& hashSalt, PageIdentifier pageIdentifier)
+    : RealtimeMediaSource(RealtimeMediaSource::Type::Video, WTFMove(name), WTFMove(deviceID), WTFMove(hashSalt), pageIdentifier)
     , m_capturer(WTFMove(capturer))
     , m_timer(RunLoop::current(), this, &DisplayCaptureSourceCocoa::emitFrame)
 {
@@ -293,35 +269,35 @@ void DisplayCaptureSourceCocoa::emitFrame()
         updateFrameSize();
     }
 
-    auto sample = WTF::switchOn(frame,
-        [this, sampleTime](RetainPtr<IOSurfaceRef>& surface) -> RefPtr<MediaSample> {
+    auto videoFrame = WTF::switchOn(frame,
+        [this, sampleTime](RetainPtr<IOSurfaceRef>& surface) -> RefPtr<VideoFrame> {
             if (!surface)
                 return nullptr;
 
-            return m_imageTransferSession->createMediaSample(surface.get(), sampleTime, size());
+            return m_imageTransferSession->createVideoFrame(surface.get(), sampleTime, size());
         },
-        [this, sampleTime](RefPtr<NativeImage>& image) -> RefPtr<MediaSample> {
+        [this, sampleTime](RefPtr<NativeImage>& image) -> RefPtr<VideoFrame> {
             if (!image)
                 return nullptr;
 
-            return m_imageTransferSession->createMediaSample(image->platformImage().get(), sampleTime, size());
+            return m_imageTransferSession->createVideoFrame(image->platformImage().get(), sampleTime, size());
         },
-        [this, sampleTime](RetainPtr<CMSampleBufferRef>& sample) -> RefPtr<MediaSample> {
+        [this, sampleTime](RetainPtr<CMSampleBufferRef>& sample) -> RefPtr<VideoFrame> {
             if (!sample)
                 return nullptr;
 
-            return m_imageTransferSession->createMediaSample(sample.get(), sampleTime, size());
+            return m_imageTransferSession->createVideoFrame(sample.get(), sampleTime, size());
         }
     );
 
-    if (!sample) {
+    if (!videoFrame) {
         ASSERT_NOT_REACHED();
         return;
     }
 
     VideoFrameTimeMetadata metadata;
     metadata.captureTime = MonotonicTime::now().secondsSinceEpoch();
-    videoSampleAvailable(*sample.get(), metadata);
+    videoFrameAvailable(*videoFrame.get(), metadata);
 }
 
 void DisplayCaptureSourceCocoa::capturerConfigurationChanged()

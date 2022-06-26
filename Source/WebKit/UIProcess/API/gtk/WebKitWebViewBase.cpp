@@ -273,7 +273,9 @@ struct _WebKitWebViewBasePrivate {
     CString tooltipText;
     IntRect tooltipArea;
     WebHitTestResultData::IsScrollbar mouseIsOverScrollbar;
+#if !USE(GTK4)
     GRefPtr<AtkObject> accessible;
+#endif
     GtkWidget* dialog { nullptr };
     GtkWidget* inspectorView { nullptr };
     AttachmentSide inspectorAttachmentSide { AttachmentSide::Bottom };
@@ -335,6 +337,12 @@ struct _WebKitWebViewBasePrivate {
 
     std::unique_ptr<PointerLockManager> pointerLockManager;
 };
+
+/**
+ * WebKitWebViewBase:
+ *
+ * Internal base class.
+ */
 
 #if USE(GTK4)
 WEBKIT_DEFINE_TYPE(WebKitWebViewBase, webkit_web_view_base, GTK_TYPE_WIDGET)
@@ -692,9 +700,11 @@ static void webkitWebViewBaseDispose(GObject* gobject)
 #else
     g_clear_pointer(&webView->priv->dialog, gtk_widget_destroy);
     webkitWebViewBaseSetToplevelOnScreenWindow(webView, nullptr);
-#endif
+#if ENABLE(ACCESSIBILITY)
     if (webView->priv->accessible)
         webkitWebViewAccessibleSetWebView(WEBKIT_WEB_VIEW_ACCESSIBLE(webView->priv->accessible.get()), nullptr);
+#endif // ENABLE(ACCESSIBILITY)
+#endif
 #if GTK_CHECK_VERSION(3, 24, 0)
     webkitWebViewBaseCompleteEmojiChooserRequest(webView, emptyString());
 #endif
@@ -1685,7 +1695,7 @@ static gboolean webkitWebViewBaseQueryTooltip(GtkWidget* widget, gint /* x */, g
     return TRUE;
 }
 
-#if !USE(GTK4)
+#if !USE(GTK4) && ENABLE(ACCESSIBILITY)
 static AtkObject* webkitWebViewBaseGetAccessible(GtkWidget* widget)
 {
     WebKitWebViewBasePrivate* priv = WEBKIT_WEB_VIEW_BASE(widget)->priv;
@@ -2219,7 +2229,7 @@ static void webkit_web_view_base_class_init(WebKitWebViewBaseClass* webkitWebVie
     widgetClass->touch_event = webkitWebViewBaseTouchEvent;
 #endif
     widgetClass->query_tooltip = webkitWebViewBaseQueryTooltip;
-#if !USE(GTK4)
+#if !USE(GTK4) && ENABLE(ACCESSIBILITY)
     widgetClass->get_accessible = webkitWebViewBaseGetAccessible;
 #endif
 #if USE(GTK4)
@@ -2353,7 +2363,7 @@ void webkitWebViewBaseEnterFullScreen(WebKitWebViewBase* webkitWebViewBase)
         gtk_window_fullscreen(GTK_WINDOW(topLevelWindow));
     fullScreenManagerProxy->didEnterFullScreen();
     priv->fullScreenModeActive = true;
-    priv->sleepDisabler = PAL::SleepDisabler::create(_("Website running in fullscreen mode"), PAL::SleepDisabler::Type::Display);
+    priv->sleepDisabler = PAL::SleepDisabler::create(String::fromUTF8(_("Website running in fullscreen mode")), PAL::SleepDisabler::Type::Display);
 #endif
 }
 

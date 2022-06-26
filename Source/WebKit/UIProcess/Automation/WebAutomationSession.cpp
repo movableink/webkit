@@ -29,6 +29,7 @@
 
 #include "APIArray.h"
 #include "APIAutomationSessionClient.h"
+#include "APIHTTPCookieStore.h"
 #include "APINavigation.h"
 #include "APIOpenPanelParameters.h"
 #include "AutomationProtocolObjects.h"
@@ -36,7 +37,6 @@
 #include "WebAutomationSessionMacros.h"
 #include "WebAutomationSessionMessages.h"
 #include "WebAutomationSessionProxyMessages.h"
-#include "WebCookieManagerProxy.h"
 #include "WebFullScreenManagerProxy.h"
 #include "WebInspectorUIProxy.h"
 #include "WebOpenPanelResultListenerProxy.h"
@@ -190,7 +190,7 @@ String WebAutomationSession::handleForWebPageProxy(const WebPageProxy& webPagePr
     if (iter != m_webPageHandleMap.end())
         return iter->value;
 
-    String handle = "page-" + createVersion4UUIDString().convertToASCIIUppercase();
+    String handle = makeString("page-"_s, asASCIIUppercase(createVersion4UUIDString()));
 
     auto firstAddResult = m_webPageHandleMap.add(webPageProxy.identifier(), handle);
     RELEASE_ASSERT(firstAddResult.isNewEntry);
@@ -239,7 +239,7 @@ String WebAutomationSession::handleForWebFrameID(std::optional<FrameIdentifier> 
     if (iter != m_webFrameHandleMap.end())
         return iter->value;
 
-    String handle = "frame-" + createVersion4UUIDString().convertToASCIIUppercase();
+    String handle = makeString("frame-"_s, asASCIIUppercase(createVersion4UUIDString()));
 
     auto firstAddResult = m_webFrameHandleMap.add(*frameID, handle);
     RELEASE_ASSERT(firstAddResult.isNewEntry);
@@ -1471,8 +1471,8 @@ void WebAutomationSession::addSingleCookie(const Inspector::Protocol::Automation
 
     cookie.sameSite = toWebCoreSameSitePolicy(*parsedSameSite);
 
-    WebCookieManagerProxy& cookieManager = page->websiteDataStore().networkProcess().cookieManager();
-    cookieManager.setCookies(page->websiteDataStore().sessionID(), { cookie }, [callback]() {
+    auto& cookieStore = page->websiteDataStore().cookieStore();
+    cookieStore.setCookies({ cookie }, [callback]() {
         callback->sendSuccess();
     });
 }
@@ -1488,8 +1488,8 @@ Inspector::Protocol::ErrorStringOr<void> WebAutomationSession::deleteAllCookies(
 
     String host = activeURL.host().toString();
 
-    WebCookieManagerProxy& cookieManager = page->websiteDataStore().networkProcess().cookieManager();
-    cookieManager.deleteCookiesForHostnames(page->websiteDataStore().sessionID(), { host, domainByAddingDotPrefixIfNeeded(host) });
+    auto& cookieStore = page->websiteDataStore().cookieStore();
+    cookieStore.deleteCookiesForHostnames({ host, domainByAddingDotPrefixIfNeeded(host) }, [] { });
 
     return { };
 }

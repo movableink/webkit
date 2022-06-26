@@ -35,7 +35,6 @@
 #include "CrossOriginOpenerPolicy.h"
 #include "DisabledAdaptations.h"
 #include "DocumentEventTiming.h"
-#include "ElementIdentifier.h"
 #include "FocusOptions.h"
 #include "FontSelectorClient.h"
 #include "FrameDestructionObserver.h"
@@ -205,6 +204,7 @@ class RenderView;
 class RequestAnimationFrameCallback;
 class ResizeObserver;
 class SVGDocumentExtensions;
+class SVGElement;
 class SVGSVGElement;
 class SVGUseElement;
 class SWClientConnection;
@@ -264,7 +264,7 @@ enum class MediaProducerMediaCaptureKind : uint8_t;
 enum class MediaProducerMutedState : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
 enum class ShouldOpenExternalURLsPolicy : uint8_t;
-enum class RenderingUpdateStep : uint16_t;
+enum class RenderingUpdateStep : uint32_t;
 enum class StyleColorOptions : uint8_t;
 enum class MutationObserverOptionType : uint8_t;
 
@@ -391,10 +391,6 @@ public:
     WEBCORE_EXPORT static DocumentsMap::ValuesIteratorRange allDocuments();
     WEBCORE_EXPORT static DocumentsMap& allDocumentsMap();
 
-    WEBCORE_EXPORT ElementIdentifier identifierForElement(Element&);
-    WEBCORE_EXPORT Element* searchForElementByIdentifier(const ElementIdentifier&);
-    void identifiedElementWasRemovedFromDocument(Element&);
-
     MediaQueryMatcher& mediaQueryMatcher();
 
     using ContainerNode::ref;
@@ -435,14 +431,14 @@ public:
     
     WEBCORE_EXPORT ExceptionOr<Ref<Element>> createElementForBindings(const AtomString& tagName);
     WEBCORE_EXPORT Ref<DocumentFragment> createDocumentFragment();
-    WEBCORE_EXPORT Ref<Text> createTextNode(const String& data);
-    WEBCORE_EXPORT Ref<Comment> createComment(const String& data);
-    WEBCORE_EXPORT ExceptionOr<Ref<CDATASection>> createCDATASection(const String& data);
-    WEBCORE_EXPORT ExceptionOr<Ref<ProcessingInstruction>> createProcessingInstruction(const String& target, const String& data);
-    WEBCORE_EXPORT ExceptionOr<Ref<Attr>> createAttribute(const String& name);
-    WEBCORE_EXPORT ExceptionOr<Ref<Attr>> createAttributeNS(const AtomString& namespaceURI, const String& qualifiedName, bool shouldIgnoreNamespaceChecks = false);
+    WEBCORE_EXPORT Ref<Text> createTextNode(String&& data);
+    WEBCORE_EXPORT Ref<Comment> createComment(String&& data);
+    WEBCORE_EXPORT ExceptionOr<Ref<CDATASection>> createCDATASection(String&& data);
+    WEBCORE_EXPORT ExceptionOr<Ref<ProcessingInstruction>> createProcessingInstruction(String&& target, String&& data);
+    WEBCORE_EXPORT ExceptionOr<Ref<Attr>> createAttribute(const AtomString& name);
+    WEBCORE_EXPORT ExceptionOr<Ref<Attr>> createAttributeNS(const AtomString& namespaceURI, const AtomString& qualifiedName, bool shouldIgnoreNamespaceChecks = false);
     WEBCORE_EXPORT ExceptionOr<Ref<Node>> importNode(Node& nodeToImport, bool deep);
-    WEBCORE_EXPORT ExceptionOr<Ref<Element>> createElementNS(const AtomString& namespaceURI, const String& qualifiedName);
+    WEBCORE_EXPORT ExceptionOr<Ref<Element>> createElementNS(const AtomString& namespaceURI, const AtomString& qualifiedName);
     WEBCORE_EXPORT Ref<Element> createElement(const QualifiedName&, bool createdByParser);
 
     static CustomElementNameValidationStatus validateCustomElementName(const AtomString&);
@@ -473,8 +469,8 @@ public:
     void overrideMIMEType(const String&);
     WEBCORE_EXPORT String contentType() const;
 
-    String contentLanguage() const { return m_contentLanguage; }
-    void setContentLanguage(const String&);
+    const AtomString& contentLanguage() const { return m_contentLanguage; }
+    void setContentLanguage(const AtomString&);
 
     String xmlEncoding() const { return m_xmlEncoding; }
     String xmlVersion() const { return m_xmlVersion; }
@@ -583,8 +579,8 @@ public:
     void evaluateMediaQueriesAndReportChanges();
 
     FormController& formController();
-    Vector<String> formElementsState() const;
-    void setStateForNewFormElements(const Vector<String>&);
+    Vector<AtomString> formElementsState() const;
+    void setStateForNewFormElements(const Vector<AtomString>&);
 
     WEBCORE_EXPORT FrameView* view() const; // Can be null.
     WEBCORE_EXPORT Page* page() const; // Can be null.
@@ -612,7 +608,7 @@ public:
 
     // Special support for editing
     WEBCORE_EXPORT Ref<CSSStyleDeclaration> createCSSStyleDeclaration();
-    Ref<Text> createEditingTextNode(const String&);
+    Ref<Text> createEditingTextNode(String&&);
 
     enum class ResolveStyleType { Normal, Rebuild };
     void resolveStyle(ResolveStyleType = ResolveStyleType::Normal);
@@ -708,13 +704,15 @@ public:
     void setURL(const URL&);
     const URL& urlForBindings() const { return m_url.isEmpty() ? aboutBlankURL() : m_url; }
 
+    const URL& creationURL() const { return m_creationURL; }
+
     // To understand how these concepts relate to one another, please see the
     // comments surrounding their declaration.
     const URL& baseURL() const { return m_baseURL; }
     void setBaseURLOverride(const URL&);
     const URL& baseURLOverride() const { return m_baseURLOverride; }
     const URL& baseElementURL() const { return m_baseElementURL; }
-    const String& baseTarget() const { return m_baseTarget; }
+    const AtomString& baseTarget() const { return m_baseTarget; }
     void processBaseElement();
 
     WEBCORE_EXPORT URL completeURL(const String&, ForceUTF8 = ForceUTF8::No) const final;
@@ -795,6 +793,7 @@ public:
     WEBCORE_EXPORT bool setFocusedElement(Element*, const FocusOptions& = { });
     Element* focusedElement() const { return m_focusedElement.get(); }
     bool wasLastFocusByClick() const { return m_latestFocusTrigger == FocusTrigger::Click; }
+    void setLatestFocusTrigger(FocusTrigger trigger) { m_latestFocusTrigger = trigger; }
     UserActionElementSet& userActionElements()  { return m_userActionElements; }
     const UserActionElementSet& userActionElements() const { return m_userActionElements; }
 
@@ -824,7 +823,6 @@ public:
     // Updates for :target (CSS3 selector).
     void setCSSTarget(Element*);
     Element* cssTarget() const { return m_cssTarget; }
-    static ptrdiff_t cssTargetMemoryOffset() { return OBJECT_OFFSETOF(Document, m_cssTarget); }
 
     WEBCORE_EXPORT void scheduleFullStyleRebuild();
     void scheduleStyleRecalc();
@@ -835,7 +833,7 @@ public:
     void registerNodeListForInvalidation(LiveNodeList&);
     void unregisterNodeListForInvalidation(LiveNodeList&);
     WEBCORE_EXPORT void registerCollection(HTMLCollection&);
-    void unregisterCollection(HTMLCollection&);
+    WEBCORE_EXPORT void unregisterCollection(HTMLCollection&);
     void collectionCachedIdNameMap(const HTMLCollection&);
     void collectionWillClearIdNameMap(const HTMLCollection&);
     bool shouldInvalidateNodeListAndCollectionCaches() const;
@@ -877,7 +875,7 @@ public:
     // In DOM Level 2, the Document's DOMWindow is called the defaultView.
     WEBCORE_EXPORT WindowProxy* windowProxy() const;
 
-    bool hasBrowsingContext() const { return !!frame(); }
+    inline bool hasBrowsingContext() const; // Defined in DocumentInlines.h.
 
     Document& contextDocument() const;
     void setContextDocument(Document& document) { m_contextDocument = document; }
@@ -924,7 +922,7 @@ public:
     // when a meta tag is encountered during document parsing, and also when a script dynamically changes or adds a meta
     // tag. This enables scripts to use meta tags to perform refreshes and set expiry dates in addition to them being
     // specified in an HTML file.
-    void processMetaHttpEquiv(const String& equiv, const String& content, bool isInDocumentHead);
+    void processMetaHttpEquiv(const String& equiv, const AtomString& content, bool isInDocumentHead);
 
 #if PLATFORM(IOS_FAMILY)
     void processFormatDetection(const String&);
@@ -961,7 +959,7 @@ public:
 
     // Used by DOM bindings; no direction known.
     const String& title() const { return m_title.string; }
-    WEBCORE_EXPORT void setTitle(const String&);
+    WEBCORE_EXPORT void setTitle(String&&);
     const StringWithDirection& titleWithDirection() const { return m_title; }
 
     WEBCORE_EXPORT const AtomString& dir() const;
@@ -1017,7 +1015,8 @@ public:
     // URL. For the top-level document, it is set to the document's URL.
     const URL& siteForCookies() const { return m_siteForCookies; }
     void setSiteForCookies(const URL& url) { m_siteForCookies = url; }
-    
+    bool isSameSiteForCookies(const URL&) const;
+
     // The following implements the rule from HTML 4 for what valid names are.
     // To get this right for all the XML cases, we probably have to improve this or move it
     // and make it sensitive to the type of document.
@@ -1025,8 +1024,8 @@ public:
 
     // The following breaks a qualified name into a prefix and a local name.
     // It also does a validity check, and returns an error if the qualified name is invalid.
-    static ExceptionOr<std::pair<AtomString, AtomString>> parseQualifiedName(const String& qualifiedName);
-    static ExceptionOr<QualifiedName> parseQualifiedName(const AtomString& namespaceURI, const String& qualifiedName);
+    static ExceptionOr<std::pair<AtomString, AtomString>> parseQualifiedName(const AtomString& qualifiedName);
+    static ExceptionOr<QualifiedName> parseQualifiedName(const AtomString& namespaceURI, const AtomString& qualifiedName);
 
     // Checks to make sure prefix and namespace do not conflict (per DOM Core 3)
     static bool hasValidNamespaceForElements(const QualifiedName&);
@@ -1348,10 +1347,12 @@ public:
     bool inStyleRecalc() const { return m_inStyleRecalc; }
     bool inRenderTreeUpdate() const { return m_inRenderTreeUpdate; }
     bool isResolvingContainerQueries() const { return m_isResolvingContainerQueries; }
+    bool isResolvingContainerQueriesForSelfOrAncestor() const;
     bool isResolvingTreeStyle() const { return m_isResolvingTreeStyle; }
     void setIsResolvingTreeStyle(bool);
 
     void updateTextRenderer(Text&, unsigned offsetOfReplacedText, unsigned lengthOfReplacedText);
+    void updateSVGRenderer(SVGElement&);
 
     // Return a Locale for the default locale if the argument is null or empty.
     Locale& getCachedLocale(const AtomString& locale = nullAtom());
@@ -1507,15 +1508,15 @@ public:
     OrientationNotifier& orientationNotifier() { return m_orientationNotifier; }
 
     WEBCORE_EXPORT const AtomString& bgColor() const;
-    WEBCORE_EXPORT void setBgColor(const String&);
+    WEBCORE_EXPORT void setBgColor(const AtomString&);
     WEBCORE_EXPORT const AtomString& fgColor() const;
-    WEBCORE_EXPORT void setFgColor(const String&);
+    WEBCORE_EXPORT void setFgColor(const AtomString&);
     WEBCORE_EXPORT const AtomString& alinkColor() const;
-    WEBCORE_EXPORT void setAlinkColor(const String&);
+    WEBCORE_EXPORT void setAlinkColor(const AtomString&);
     WEBCORE_EXPORT const AtomString& linkColorForBindings() const;
-    WEBCORE_EXPORT void setLinkColorForBindings(const String&);
+    WEBCORE_EXPORT void setLinkColorForBindings(const AtomString&);
     WEBCORE_EXPORT const AtomString& vlinkColor() const;
-    WEBCORE_EXPORT void setVlinkColor(const String&);
+    WEBCORE_EXPORT void setVlinkColor(const AtomString&);
 
     // Per https://html.spec.whatwg.org/multipage/obsolete.html#dom-document-clear, this method does nothing.
     void clear() { }
@@ -1555,7 +1556,7 @@ public:
     WhitespaceCache& whitespaceCache() { return m_whitespaceCache; }
 
 #if ENABLE(ATTACHMENT_ELEMENT)
-    void registerAttachmentIdentifier(const String&);
+    void registerAttachmentIdentifier(const String&, const HTMLImageElement&);
     void didInsertAttachmentElement(HTMLAttachmentElement&);
     void didRemoveAttachmentElement(HTMLAttachmentElement&);
     WEBCORE_EXPORT RefPtr<HTMLAttachmentElement> attachmentForIdentifier(const String&) const;
@@ -1564,6 +1565,8 @@ public:
 
 #if ENABLE(SERVICE_WORKER)
     void setServiceWorkerConnection(SWClientConnection*);
+    void updateServiceWorkerClientData() final;
+    WEBCORE_EXPORT void navigateFromServiceWorker(const URL&, CompletionHandler<void(bool)>&&);
 #endif
 
 #if ENABLE(VIDEO)
@@ -1622,6 +1625,7 @@ public:
     WEBCORE_EXPORT TextManipulationController& textManipulationController();
     TextManipulationController* textManipulationControllerIfExists() { return m_textManipulationController.get(); }
 
+    bool hasHighlight() const;
     HighlightRegister* highlightRegisterIfExists() { return m_highlightRegister.get(); }
     HighlightRegister& highlightRegister();
     void updateHighlightPositions();
@@ -1676,6 +1680,8 @@ public:
     WEBCORE_EXPORT bool hasElementWithPendingUserAgentShadowTreeUpdate(Element&) const;
     void addElementWithPendingUserAgentShadowTreeUpdate(Element&);
     WEBCORE_EXPORT void removeElementWithPendingUserAgentShadowTreeUpdate(Element&);
+
+    std::optional<PAL::SessionID> sessionID() const final;
 
 protected:
     enum ConstructionFlags { Synthesized = 1, NonRenderedPlaceholder = 1 << 1 };
@@ -1798,8 +1804,9 @@ private:
     void addToDocumentsMap();
     void removeFromDocumentsMap();
 
+    Style::Update& ensurePendingRenderTreeUpdate();
+
     NotificationClient* notificationClient() final;
-    std::optional<PAL::SessionID> sessionID() const final;
 
     const Ref<const Settings> m_settings;
 
@@ -1815,6 +1822,7 @@ private:
 
     // Document URLs.
     URL m_url; // Document.URL: The URL from which this document was retrieved.
+    URL m_creationURL; // https://html.spec.whatwg.org/multipage/webappapis.html#concept-environment-creation-url.
     URL m_baseURL; // Node.baseURI: The URL to use when resolving relative URLs.
     URL m_baseURLOverride; // An alternative base URL that takes precedence over m_baseURL (but not m_baseElementURL).
     URL m_baseElementURL; // The URL set by the <base> element.
@@ -1831,7 +1839,7 @@ private:
     // This property is read-only from JavaScript, but writable from Objective C.
     String m_documentURI;
 
-    String m_baseTarget;
+    AtomString m_baseTarget;
 
     // MIME type of the document in case it was cloned or created by XHR.
     String m_overriddenMIMEType;
@@ -1880,7 +1888,7 @@ private:
     
     Timer m_styleRecalcTimer;
 
-    std::unique_ptr<Style::Update> m_pendingRenderTreeTextUpdate;
+    std::unique_ptr<Style::Update> m_pendingRenderTreeUpdate;
 
     Element* m_cssTarget { nullptr };
 
@@ -1909,7 +1917,7 @@ private:
     StandaloneStatus m_xmlStandalone { StandaloneStatus::Unspecified };
     bool m_hasXMLDeclaration { false };
 
-    String m_contentLanguage;
+    AtomString m_contentLanguage;
 
     RefPtr<TextResourceDecoder> m_decoder;
 
@@ -2249,8 +2257,6 @@ private:
 #endif
 
     std::unique_ptr<TextManipulationController> m_textManipulationController;
-
-    HashMap<Element*, ElementIdentifier> m_identifiedElementsMap;
 
     UniqueRef<Editor> m_editor;
     UniqueRef<FrameSelection> m_selection;

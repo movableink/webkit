@@ -51,17 +51,18 @@ namespace WebCore {
 SharedVideoFrameInfo SharedVideoFrameInfo::fromCVPixelBuffer(CVPixelBufferRef pixelBuffer)
 {
     auto type = CVPixelBufferGetPixelFormatType(pixelBuffer);
-    if (type == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange || type == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange)
-        return { type, static_cast<uint32_t>(CVPixelBufferGetWidthOfPlane(pixelBuffer, 0)), static_cast<uint32_t>(CVPixelBufferGetHeightOfPlane(pixelBuffer, 0)), static_cast<uint32_t>(CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0)), static_cast<uint32_t>(CVPixelBufferGetWidthOfPlane(pixelBuffer, 1)), static_cast<uint32_t>(CVPixelBufferGetHeightOfPlane(pixelBuffer, 1)), static_cast<uint32_t>(CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)) };
-    return { type, static_cast<uint32_t>(CVPixelBufferGetWidth(pixelBuffer)), static_cast<uint32_t>(CVPixelBufferGetHeight(pixelBuffer)), static_cast<uint32_t>(CVPixelBufferGetBytesPerRow(pixelBuffer)) };
+    if (type == kCVPixelFormatType_32BGRA)
+        return { type, static_cast<uint32_t>(CVPixelBufferGetWidth(pixelBuffer)), static_cast<uint32_t>(CVPixelBufferGetHeight(pixelBuffer)), static_cast<uint32_t>(CVPixelBufferGetBytesPerRow(pixelBuffer)) };
+    return { type, static_cast<uint32_t>(CVPixelBufferGetWidthOfPlane(pixelBuffer, 0)), static_cast<uint32_t>(CVPixelBufferGetHeightOfPlane(pixelBuffer, 0)), static_cast<uint32_t>(CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0)), static_cast<uint32_t>(CVPixelBufferGetWidthOfPlane(pixelBuffer, 1)), static_cast<uint32_t>(CVPixelBufferGetHeightOfPlane(pixelBuffer, 1)), static_cast<uint32_t>(CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)) };
 }
 
 bool SharedVideoFrameInfo::isReadWriteSupported() const
 {
-    return m_bufferType == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
-        || m_bufferType == kCVPixelFormatType_32BGRA
+    return m_bufferType == kCVPixelFormatType_32BGRA
         || m_bufferType == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
-        || m_bufferType == kCVPixelFormatType_420YpCbCr10BiPlanarFullRange;
+        || m_bufferType == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+        || m_bufferType == kCVPixelFormatType_420YpCbCr10BiPlanarFullRange
+        || m_bufferType == kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange;
 }
 
 size_t SharedVideoFrameInfo::storageSize() const
@@ -178,8 +179,10 @@ RetainPtr<CVPixelBufferRef> SharedVideoFrameInfo::createPixelBufferFromMemory(co
 bool SharedVideoFrameInfo::writePixelBuffer(CVPixelBufferRef pixelBuffer, uint8_t* data)
 {
     auto result = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-    if (result != kCVReturnSuccess)
+    if (result != kCVReturnSuccess) {
+        RELEASE_LOG_ERROR(WebRTC, "SharedVideoFrameInfo::writePixelBuffer lock failed");
         return false;
+    }
 
     auto scope = makeScopeExit([&pixelBuffer] {
         CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
@@ -189,11 +192,21 @@ bool SharedVideoFrameInfo::writePixelBuffer(CVPixelBufferRef pixelBuffer, uint8_
     data += sizeof(SharedVideoFrameInfo);
 
     auto* planeA = static_cast<const uint8_t*>(CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0));
+    if (!planeA) {
+        RELEASE_LOG_ERROR(WebRTC, "SharedVideoFrameInfo::writePixelBuffer plane A is null");
+        return false;
+    }
+
     size_t planeASize = m_height * m_bytesPerRow;
     std::memcpy(data, planeA, planeASize);
 
     if (CVPixelBufferGetPlaneCount(pixelBuffer) == 2) {
         auto* planeB = static_cast<const uint8_t*>(CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1));
+        if (!planeB) {
+            RELEASE_LOG_ERROR(WebRTC, "SharedVideoFrameInfo::writePixelBuffer plane B is null");
+            return false;
+        }
+
         size_t planeBSize = m_heightPlaneB * m_bytesPerRowPlaneB;
         std::memcpy(data + planeASize, planeB, planeBSize);
     }

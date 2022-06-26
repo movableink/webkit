@@ -44,50 +44,72 @@ RemoteRenderingBackendProxy& RemoteLayerWithRemoteRenderingBackingStoreCollectio
     return layerTreeContext().ensureRemoteRenderingBackendProxy();
 }
 
-SwapBuffersDisplayRequirement RemoteLayerWithRemoteRenderingBackingStoreCollection::prepareBackingStoreBuffers(RemoteLayerBackingStore& backingStore)
+bool RemoteLayerWithRemoteRenderingBackingStoreCollection::backingStoreNeedsDisplay(const RemoteLayerBackingStore& backingStore)
 {
-    auto frontBuffer = backingStore.bufferForType(RemoteLayerBackingStore::BufferType::Front);
-
-    auto needToFetchFrontBuffer = [](ImageBuffer* frontBuffer) {
-        if (!frontBuffer)
-            return true;
-
-        if (frontBuffer->volatilityState() == WebCore::VolatilityState::Volatile)
-            return true;
-
-        if (auto* backend = frontBuffer->ensureBackendCreated()) {
-            auto* sharing = backend->toBackendSharing();
-            if (is<ImageBufferBackendHandleSharing>(sharing)) {
-                if (!downcast<ImageBufferBackendHandleSharing>(*sharing).hasBackendHandle())
-                    return true;
-            }
-        }
-
+    if (backingStore.size().isEmpty())
         return false;
-    };
 
-    // Avoid IPC if not necessary.
-    if (!needToFetchFrontBuffer(frontBuffer.get()) && backingStore.hasEmptyDirtyRegion())
-        return SwapBuffersDisplayRequirement::NeedsNoDisplay;
+    auto frontBuffer = backingStore.bufferForType(RemoteLayerBackingStore::BufferType::Front);
+    if (!frontBuffer)
+        return true;
+
+    if (frontBuffer->volatilityState() == WebCore::VolatilityState::Volatile)
+        return true;
+
+    if (auto* backend = frontBuffer->ensureBackendCreated()) {
+        auto* sharing = backend->toBackendSharing();
+        if (is<ImageBufferBackendHandleSharing>(sharing)) {
+            if (!downcast<ImageBufferBackendHandleSharing>(*sharing).hasBackendHandle())
+                return true;
+        }
+    }
+
+    return !backingStore.hasEmptyDirtyRegion();
+}
+
+void RemoteLayerWithRemoteRenderingBackingStoreCollection::prepareBackingStoresForDisplay(RemoteLayerTreeTransaction& transaction)
+{
+    Vector<RemoteRenderingBackendProxy::LayerPrepareBuffersData> prepareBuffersData;
+    prepareBuffersData.reserveInitialCapacity(m_backingStoresNeedingDisplay.size());
+
+    Vector<RemoteLayerBackingStore*> backingStoreList;
+    backingStoreList.reserveInitialCapacity(m_backingStoresNeedingDisplay.size());
+
+    for (auto* backingStore : m_backingStoresNeedingDisplay) {
+        backingStore->layer()->properties().notePropertiesChanged(RemoteLayerTreeTransaction::BackingStoreChanged);
+        transaction.layerPropertiesChanged(*backingStore->layer());
+
+        if (backingStore->performDelegatedLayerDisplay())
+            continue;
+
+        prepareBuffersData.uncheckedAppend({
+            {
+                backingStore->bufferForType(RemoteLayerBackingStore::BufferType::Front),
+                backingStore->bufferForType(RemoteLayerBackingStore::BufferType::Back),
+                backingStore->bufferForType(RemoteLayerBackingStore::BufferType::SecondaryBack)
+            },
+            backingStore->supportsPartialRepaint(),
+            backingStore->hasEmptyDirtyRegion(),
+        });
+        
+        backingStoreList.uncheckedAppend(backingStore);
+    }
 
     auto& remoteRenderingBackend = layerTreeContext().ensureRemoteRenderingBackendProxy();
+    auto swapResult = remoteRenderingBackend.prepareBuffersForDisplay(WTFMove(prepareBuffersData));
 
-    auto identifiers = RemoteRenderingBackendProxy::BufferSet {
-        frontBuffer,
-        backingStore.bufferForType(RemoteLayerBackingStore::BufferType::Back),
-        backingStore.bufferForType(RemoteLayerBackingStore::BufferType::SecondaryBack)
-    };
-
-    auto swapResult = remoteRenderingBackend.prepareBuffersForDisplay(WTFMove(identifiers), backingStore.supportsPartialRepaint(), backingStore.hasEmptyDirtyRegion());
-
-    backingStore.applySwappedBuffers(WTFMove(swapResult.buffers.front), WTFMove(swapResult.buffers.back), WTFMove(swapResult.buffers.secondaryBack));
-    return swapResult.displayRequirement;
+    RELEASE_ASSERT(swapResult.size() == backingStoreList.size());
+    for (unsigned i = 0; i < swapResult.size(); ++i) {
+        auto& backingStoreSwapResult = swapResult[i];
+        auto* backingStore = backingStoreList[i];
+        backingStore->applySwappedBuffers(WTFMove(backingStoreSwapResult.buffers.front), WTFMove(backingStoreSwapResult.buffers.back), WTFMove(backingStoreSwapResult.buffers.secondaryBack), backingStoreSwapResult.displayRequirement);
+    }
 }
 
 RefPtr<WebCore::ImageBuffer> RemoteLayerWithRemoteRenderingBackingStoreCollection::allocateBufferForBackingStore(const RemoteLayerBackingStore& backingStore)
 {
     auto renderingMode = backingStore.type() == RemoteLayerBackingStore::Type::IOSurface ? WebCore::RenderingMode::Accelerated : WebCore::RenderingMode::Unaccelerated;
-    return remoteRenderingBackendProxy().createImageBuffer(backingStore.size(), renderingMode, backingStore.scale(), WebCore::DestinationColorSpace::SRGB(), backingStore.pixelFormat());
+    return remoteRenderingBackendProxy().createImageBuffer(backingStore.size(), renderingMode, RenderingPurpose::LayerBacking, backingStore.scale(), WebCore::DestinationColorSpace::SRGB(), backingStore.pixelFormat());
 }
 
 bool RemoteLayerWithRemoteRenderingBackingStoreCollection::collectBackingStoreBufferIdentifiersToMarkVolatile(RemoteLayerBackingStore& backingStore, OptionSet<VolatilityMarkingBehavior> markingBehavior, MonotonicTime now, Vector<WebCore::RenderingResourceIdentifier>& identifiers)

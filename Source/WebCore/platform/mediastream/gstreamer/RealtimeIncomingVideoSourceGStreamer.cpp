@@ -22,13 +22,14 @@
 #if USE(GSTREAMER_WEBRTC)
 #include "RealtimeIncomingVideoSourceGStreamer.h"
 
+#include "GStreamerCommon.h"
 #include "VideoFrameGStreamer.h"
 #include "VideoFrameMetadataGStreamer.h"
 #include <gst/rtp/rtp.h>
 
 namespace WebCore {
 
-RealtimeIncomingVideoSourceGStreamer::RealtimeIncomingVideoSourceGStreamer(String&& videoTrackId)
+RealtimeIncomingVideoSourceGStreamer::RealtimeIncomingVideoSourceGStreamer(AtomString&& videoTrackId)
     : RealtimeMediaSource(RealtimeMediaSource::Type::Video, WTFMove(videoTrackId))
     , RealtimeIncomingSourceGStreamer()
 {
@@ -100,7 +101,7 @@ void RealtimeIncomingVideoSourceGStreamer::settingsDidChange(OptionSet<RealtimeM
 void RealtimeIncomingVideoSourceGStreamer::dispatchSample(GRefPtr<GstSample>&& gstSample)
 {
     auto* buffer = gst_sample_get_buffer(gstSample.get());
-    videoSampleAvailable(VideoFrameGStreamer::createWrappedSample(gstSample, fromGstClockTime(GST_BUFFER_PTS(buffer))), { });
+    videoFrameAvailable(VideoFrameGStreamer::createWrappedSample(gstSample, fromGstClockTime(GST_BUFFER_PTS(buffer))), { });
 }
 
 } // namespace WebCore

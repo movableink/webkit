@@ -32,6 +32,7 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "PublicKeyCredentialType.h"
+#include <wtf/text/ASCIILiteral.h>
 
 namespace fido {
 
@@ -97,6 +98,7 @@ enum class CtapDeviceResponseCode : uint8_t {
     kCtap2ErrPinPolicyViolation = 0x37,
     kCtap2ErrPinTokenExpired = 0x38,
     kCtap2ErrRequestTooLarge = 0x39,
+    kCtap2ErrActionTimeout = 0x3A,
     kCtap2ErrOther = 0x7F,
     kCtap2ErrSpecLast = 0xDF,
     kCtap2ErrExtensionFirst = 0xE0,
@@ -147,7 +149,7 @@ const char kClientPinMapKey[] = "clientPin";
 const char kPlatformDeviceMapKey[] = "plat";
 const char kEntityIdMapKey[] = "id";
 const char kEntityNameMapKey[] = "name";
-const char kDisplayNameMapKey[] = "displayName";
+constexpr auto kDisplayNameMapKey = "displayName"_s;
 const char kIconUrlMapKey[] = "icon";
 const char kCredentialTypeMapKey[] = "type";
 const char kCredentialAlgorithmMapKey[] = "alg";
@@ -217,8 +219,8 @@ const char kPublicKey[] = "public-key";
 const char* publicKeyCredentialTypeToString(WebCore::PublicKeyCredentialType);
 
 // FIXME: Add url to the official spec once it's standardized.
-const char kCtap2Version[] = "FIDO_2_0";
-const char kU2fVersion[] = "U2F_V2";
+constexpr auto kCtap2Version = "FIDO_2_0"_s;
+constexpr auto kU2fVersion = "U2F_V2"_s;
 
 // CTAPHID Usage Page and Usage
 // https://fidoalliance.org/specs/fido-v2.0-ps-20170927/fido-client-to-authenticator-protocol-v2.0-ps-20170927.html#hid-report-descriptor-and-device-discovery
@@ -266,7 +268,14 @@ const int64_t kCtapMakeCredentialPubKeyCredParamsKey = 4;
 const int64_t kCtapMakeCredentialExcludeListKey = 5;
 const int64_t kCtapMakeCredentialExtensionsKey = 6;
 const int64_t kCtapMakeCredentialRequestOptionsKey = 7;
+
+const int64_t kCtapGetAssertionRpIdKey = 1;
+const int64_t kCtapGetAssertionClientDataHashKey = 2;
+const int64_t kCtapGetAssertionAllowListKey = 3;
+const int64_t kCtapGetAssertionExtensionsKey = 4;
 const int64_t kCtapGetAssertionRequestOptionsKey = 5;
+const int64_t kCtapGetAssertionPinUvAuthParamKey = 6;
+const int64_t kCtapGetAssertionPinUvAuthProtocolKey = 7;
 
 } // namespace fido
 

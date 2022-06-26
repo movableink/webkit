@@ -267,6 +267,7 @@ class Parser
         # FIXME: CMake does not currently set BUILT_PRODUCTS_DIR.
         # https://bugs.webkit.org/show_bug.cgi?id=229340
         @buildProductsDirectory = ENV['BUILT_PRODUCTS_DIR'];
+        @headersFolderPath = ENV['WK_LIBRARY_HEADERS_FOLDER_PATH'];
         @options = options
         @sources = sources
     end
@@ -836,7 +837,7 @@ class Parser
                 if @options[:webkit_additions_path]
                     additionsDirectoryName = @options[:webkit_additions_path]
                 else
-                    additionsDirectoryName = "#{@buildProductsDirectory}/usr/local/include/WebKitAdditions/"
+                    additionsDirectoryName = "#{@buildProductsDirectory}#{@headersFolderPath}/WebKitAdditions/"
                 end
                 fileName = IncludeFile.new(moduleName, additionsDirectoryName).fileName
                 if not File.exists?(fileName)
@@ -852,7 +853,7 @@ class Parser
         Sequence.new(firstCodeOrigin, list)
     end
 
-    def parseIncludes(final, comment)
+    def parseIncludes(final, comment, options)
         firstCodeOrigin = @tokens[@idx].codeOrigin
         fileList = []
         fileList << @tokens[@idx].codeOrigin.fileName
@@ -872,7 +873,7 @@ class Parser
                 if @options[:webkit_additions_path]
                     additionsDirectoryName = @options[:webkit_additions_path]
                 else
-                    additionsDirectoryName = "#{@buildProductsDirectory}/usr/local/include/WebKitAdditions/"
+                    additionsDirectoryName = "#{@buildProductsDirectory}#{@headersFolderPath}/WebKitAdditions/"
                 end
                 fileName = IncludeFile.new(moduleName, additionsDirectoryName).fileName
                 if not File.exists?(fileName)
@@ -880,7 +881,10 @@ class Parser
                 end
                 fileExists = File.exists?(fileName)
                 raise "File not found: #{fileName}" if not fileExists and not isOptional
-                fileList << fileName if fileExists
+                if fileExists
+                    parser = Parser.new(readTextFile(fileName), SourceFile.new(fileName), options)
+                    fileList << parser.parseIncludes(nil, "", options)
+                end
             else
                 @idx += 1
             end
@@ -913,7 +917,8 @@ end
 
 def parseHash(fileName, options)
     parser = Parser.new(readTextFile(fileName), SourceFile.new(fileName), options)
-    fileList = parser.parseIncludes(nil, "")
+    fileList = parser.parseIncludes(nil, "", options)
+    fileList.flatten!
     fileListHash(fileList)
 end
 

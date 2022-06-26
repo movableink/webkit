@@ -54,6 +54,10 @@ class VM;
 
 static constexpr double minECMAScriptTime = -8.64E15;
 
+#if PLATFORM(COCOA)
+extern JS_EXPORT_PRIVATE std::atomic<uint64_t> lastTimeZoneID;
+#endif
+
 // We do not expose icu::TimeZone in this header file. And we cannot use icu::TimeZone forward declaration
 // because icu namespace can be an alias to icu$verNum namespace.
 struct OpaqueICUTimeZoneDeleter {
@@ -77,10 +81,20 @@ public:
     DateCache();
     ~DateCache();
 
-    JS_EXPORT_PRIVATE void resetIfNecessary();
+    void resetIfNecessary()
+    {
+#if PLATFORM(COCOA)
+        if (LIKELY(m_cachedTimezoneID == lastTimeZoneID))
+            return;
+        m_cachedTimezoneID = lastTimeZoneID;
+#endif
+        resetIfNecessarySlow();
+    }
+
+    JS_EXPORT_PRIVATE void resetIfNecessarySlow();
 
     String defaultTimeZone();
-
+    String timeZoneDisplayName(bool isDST);
     Ref<DateInstanceData> cachedDateInstanceData(double millisecondsFromEpoch);
 
     void msToGregorianDateTime(double millisecondsFromEpoch, WTF::TimeType outputTimeType, GregorianDateTime&);
@@ -108,6 +122,8 @@ private:
     double m_cachedDateStringValue;
     DateInstanceCache m_dateInstanceCache;
     uint64_t m_cachedTimezoneID { 0 };
+    String m_timeZoneStandardDisplayNameCache;
+    String m_timeZoneDSTDisplayNameCache;
 };
 
 ALWAYS_INLINE bool isUTCEquivalent(StringView timeZone)

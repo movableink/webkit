@@ -58,8 +58,6 @@ messages -> WebProcess LegacyReceiver NotRefCounted {
     SetHasStylusDevice(bool hasStylusDevice)
 #endif
 
-    RefreshPlugins()
-
     void StartMemorySampler(WebKit::SandboxExtension::Handle sampleLogFileHandle, String sampleLogFilePath, double interval);
     void StopMemorySampler();
 
@@ -89,7 +87,7 @@ messages -> WebProcess LegacyReceiver NotRefCounted {
     EnsureAutomationSessionProxy(String sessionIdentifier)
     DestroyAutomationSessionProxy()
 
-    PrepareToSuspend(bool isSuspensionImminent) -> ()
+    PrepareToSuspend(bool isSuspensionImminent, MonotonicTime estimatedSuspendTime) -> ()
     ProcessDidResume()
 
     BackgroundResponsivenessPing()
@@ -170,6 +168,7 @@ messages -> WebProcess LegacyReceiver NotRefCounted {
     SwitchFromStaticFontRegistryToUserFontRegistry(WebKit::SandboxExtension::Handle fontMachExtensionHandle)
 
 #if PLATFORM(COCOA)
+    DisableURLSchemeCheckInDataDetectors()
     UnblockServicesRequiredByAccessibility(Vector<WebKit::SandboxExtension::Handle> handleArray)
 #if ENABLE(CFPREFS_DIRECT_MODE)
     NotifyPreferencesChanged(String domain, String key, std::optional<String> encodedValue)
@@ -195,12 +194,19 @@ messages -> WebProcess LegacyReceiver NotRefCounted {
     SystemDidWake()
 #endif
 
+#if HAVE(AUDIO_COMPONENT_SERVER_REGISTRATIONS)
+    ConsumeAudioComponentRegistrations(IPC::SharedBufferReference registrationData)
+#endif
+
 #if PLATFORM(COCOA)
-    ConsumeAudioComponentRegistrations(IPC::SharedBufferCopy registrationData)
     AccessibilityPreferencesDidChange(struct WebKit::AccessibilityPreferences accessibilityPreferences)
 #endif
 
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     SetMediaAccessibilityPreferences(WebCore::CaptionUserPreferences::CaptionDisplayMode displayMode, Vector<String> languages)
+#endif
+
+#if PLATFORM(MAC)
+    OpenDirectoryCacheInvalidated(WebKit::SandboxExtension::Handle handle)
 #endif
 }

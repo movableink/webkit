@@ -35,14 +35,13 @@ class RecorderImpl : public Recorder {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(RecorderImpl);
 public:
-    WEBCORE_EXPORT RecorderImpl(DisplayList&, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, DrawGlyphsRecorder::DeconstructDrawGlyphs = DrawGlyphsRecorder::DeconstructDrawGlyphs::Yes);
+    WEBCORE_EXPORT RecorderImpl(DisplayList&, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, DrawGlyphsMode = DrawGlyphsMode::Normal);
     WEBCORE_EXPORT virtual ~RecorderImpl();
 
     bool isEmpty() const { return m_displayList.isEmpty(); }
 
     void convertToLuminanceMask() final { }
     void transformToColorSpace(const DestinationColorSpace&) final { }
-    void flushContext(GraphicsContextFlushIdentifier identifier) final { append<FlushContext>(identifier); }
 
 private:
     void recordSave() final;
@@ -55,7 +54,7 @@ private:
     void recordSetInlineFillColor(SRGBA<uint8_t>) final;
     void recordSetInlineStrokeColor(SRGBA<uint8_t>) final;
     void recordSetStrokeThickness(float) final;
-    void recordSetState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) final;
+    void recordSetState(const GraphicsContextState&) final;
     void recordSetLineCap(LineCap) final;
     void recordSetLineDash(const DashArray&, float dashOffset) final;
     void recordSetLineJoin(LineJoin) final;
@@ -68,6 +67,7 @@ private:
     void recordClipPath(const Path&, WindRule) final;
     void recordDrawFilteredImageBuffer(ImageBuffer*, const FloatRect& sourceImageRect, Filter&) final;
     void recordDrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode) final;
+    void recordDrawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final;
     void recordDrawImageBuffer(ImageBuffer&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) final;
     void recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) final;
     void recordDrawSystemImage(SystemImage&, const FloatRect&) final;
@@ -76,7 +76,7 @@ private:
     void recordEndTransparencyLayer() final;
     void recordDrawRect(const FloatRect&, float) final;
     void recordDrawLine(const FloatPoint& point1, const FloatPoint& point2) final;
-    void recordDrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines) final;
+    void recordDrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle) final;
     void recordDrawDotsForDocumentMarker(const FloatRect&, const DocumentMarkerLineStyle&) final;
     void recordDrawEllipse(const FloatRect&) final;
     void recordDrawPath(const Path&) final;
@@ -119,6 +119,7 @@ private:
     bool recordResourceUse(ImageBuffer&) final;
     bool recordResourceUse(const SourceImage&) final;
     bool recordResourceUse(Font&) final;
+    bool recordResourceUse(DecomposedGlyphs&) final;
 
     template<typename T, class... Args>
     void append(Args&&... args)

@@ -24,6 +24,8 @@
  */
 
 #include "Parser.h"
+#include "ParserPrivate.h"
+
 #include "config.h"
 
 #include "AST/Attribute.h"
@@ -108,58 +110,6 @@ namespace WGSL {
     } while (false)
 
 template<typename Lexer>
-class Parser {
-public:
-    Parser(Lexer& lexer)
-        : m_lexer(lexer)
-        , m_current(lexer.lex())
-    {
-    }
-
-    Expected<AST::ShaderModule, Error> parseShader();
-
-private:
-    // UniqueRef whenever it can return multiple types.
-    Expected<UniqueRef<AST::GlobalDecl>, Error> parseGlobalDecl();
-    Expected<AST::Attributes, Error> parseAttributes();
-    Expected<UniqueRef<AST::Attribute>, Error> parseAttribute();
-    Expected<AST::StructDecl, Error> parseStructDecl(AST::Attributes&&);
-    Expected<AST::StructMember, Error> parseStructMember();
-    Expected<UniqueRef<AST::TypeDecl>, Error> parseTypeDecl();
-    Expected<UniqueRef<AST::TypeDecl>, Error> parseTypeDeclAfterIdentifier(StringView&&, SourcePosition start);
-    Expected<AST::GlobalVariableDecl, Error> parseGlobalVariableDecl(AST::Attributes&&);
-    Expected<AST::VariableQualifier, Error> parseVariableQualifier();
-    Expected<AST::StorageClass, Error> parseStorageClass();
-    Expected<AST::AccessMode, Error> parseAccessMode();
-    Expected<AST::FunctionDecl, Error> parseFunctionDecl(AST::Attributes&&);
-    Expected<AST::Parameter, Error> parseParameter();
-    Expected<UniqueRef<AST::Statement>, Error> parseStatement();
-    Expected<AST::CompoundStatement, Error> parseCompoundStatement();
-    Expected<AST::ReturnStatement, Error> parseReturnStatement();
-    Expected<UniqueRef<AST::Expression>, Error> parseShortCircuitOrExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseRelationalExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseShiftExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseAdditiveExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseMultiplicativeExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseUnaryExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseSingularExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parsePostfixExpression(UniqueRef<AST::Expression>&& base, SourcePosition startPosition);
-    Expected<UniqueRef<AST::Expression>, Error> parsePrimaryExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseLHSExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseCoreLHSExpression();
-    Expected<Vector<UniqueRef<AST::Expression>>, Error> parseArgumentExpressionList();
-
-    Expected<Token, TokenType> consumeType(TokenType);
-    void consume();
-
-    Token& current() { return m_current; }
-
-    Lexer& m_lexer;
-    Token m_current;
-};
-
-template<typename Lexer>
 Expected<AST::ShaderModule, Error> parse(const String& wgsl)
 {
     Lexer lexer(wgsl);
@@ -234,7 +184,7 @@ Expected<UniqueRef<AST::GlobalDecl>, Error> Parser<Lexer>::parseGlobalDecl()
         return { makeUniqueRef<AST::FunctionDecl>(WTFMove(fn)) };
     }
     default:
-        FAIL("Trying to parse a GlobalDecl, expected 'var', 'fn', or 'struct'.");
+        FAIL("Trying to parse a GlobalDecl, expected 'var', 'fn', or 'struct'."_s);
     }
 }
 
@@ -258,46 +208,46 @@ Expected<UniqueRef<AST::Attribute>, Error> Parser<Lexer>::parseAttribute()
 
     CONSUME_TYPE(Attribute);
     CONSUME_TYPE_NAMED(ident, Identifier);
-    if (ident.m_ident == "group") {
+    if (ident.m_ident == "group"_s) {
         CONSUME_TYPE(ParenLeft);
         // FIXME: should more kinds of literals be accepted here?
         CONSUME_TYPE_NAMED(id, IntegerLiteral);
         CONSUME_TYPE(ParenRight);
         RETURN_NODE_REF(GroupAttribute, id.m_literalValue);
     }
-    if (ident.m_ident == "binding") {
+    if (ident.m_ident == "binding"_s) {
         CONSUME_TYPE(ParenLeft);
         // FIXME: should more kinds of literals be accepted here?
         CONSUME_TYPE_NAMED(id, IntegerLiteral);
         CONSUME_TYPE(ParenRight);
         RETURN_NODE_REF(BindingAttribute, id.m_literalValue);
     }
-    if (ident.m_ident == "stage") {
+    if (ident.m_ident == "stage"_s) {
         CONSUME_TYPE(ParenLeft);
         CONSUME_TYPE_NAMED(stage, Identifier);
         CONSUME_TYPE(ParenRight);
-        if (stage.m_ident == "compute")
+        if (stage.m_ident == "compute"_s)
             RETURN_NODE_REF(StageAttribute, AST::StageAttribute::Stage::Compute);
-        if (stage.m_ident == "vertex")
+        if (stage.m_ident == "vertex"_s)
             RETURN_NODE_REF(StageAttribute, AST::StageAttribute::Stage::Vertex);
-        if (stage.m_ident == "fragment")
+        if (stage.m_ident == "fragment"_s)
             RETURN_NODE_REF(StageAttribute, AST::StageAttribute::Stage::Fragment);
-        FAIL("Invalid stage attribute, the only options are 'compute', 'vertex', 'fragment'.");
+        FAIL("Invalid stage attribute, the only options are 'compute', 'vertex', 'fragment'."_s);
     }
-    if (ident.m_ident == "location") {
+    if (ident.m_ident == "location"_s) {
         CONSUME_TYPE(ParenLeft);
         // FIXME: should more kinds of literals be accepted here?
         CONSUME_TYPE_NAMED(id, IntegerLiteral);
         CONSUME_TYPE(ParenRight);
         RETURN_NODE_REF(LocationAttribute, id.m_literalValue);
     }
-    if (ident.m_ident == "builtin") {
+    if (ident.m_ident == "builtin"_s) {
         CONSUME_TYPE(ParenLeft);
         CONSUME_TYPE_NAMED(name, Identifier);
         CONSUME_TYPE(ParenRight);
         RETURN_NODE_REF(BuiltinAttribute, name.m_ident);
     }
-    FAIL("Unknown attribute, the only supported attributes are 'group', 'binding', 'stage'.");
+    FAIL("Unknown attribute, the only supported attributes are 'group', 'binding', 'stage'."_s);
 }
 
 template<typename Lexer>
@@ -341,26 +291,26 @@ Expected<UniqueRef<AST::TypeDecl>, Error> Parser<Lexer>::parseTypeDecl()
 
     if (current().m_type == TokenType::KeywordI32) {
         consume();
-        RETURN_NODE_REF(NamedType, StringView { "i32" });
+        RETURN_NODE_REF(NamedType, StringView { "i32"_s });
     }
     if (current().m_type == TokenType::KeywordF32) {
         consume();
-        RETURN_NODE_REF(NamedType, StringView { "f32" });
+        RETURN_NODE_REF(NamedType, StringView { "f32"_s });
     }
     if (current().m_type == TokenType::KeywordU32) {
         consume();
-        RETURN_NODE_REF(NamedType, StringView { "u32" });
+        RETURN_NODE_REF(NamedType, StringView { "u32"_s });
     }
     if (current().m_type == TokenType::KeywordBool) {
         consume();
-        RETURN_NODE_REF(NamedType, StringView { "bool" });
+        RETURN_NODE_REF(NamedType, StringView { "bool"_s });
     }
     if (current().m_type == TokenType::Identifier) {
         CONSUME_TYPE_NAMED(name, Identifier);
         return parseTypeDeclAfterIdentifier(WTFMove(name.m_ident), _startOfElementPosition);
     }
 
-    FAIL("Tried parsing a type and it did not start with an identifier");
+    FAIL("Tried parsing a type and it did not start with an identifier"_s);
 }
 
 template<typename Lexer>
@@ -450,7 +400,7 @@ Expected<AST::StorageClass, Error> Parser<Lexer>::parseStorageClass()
         return { AST::StorageClass::Storage };
     }
 
-    FAIL("Expected one of 'function'/'private'/'storage'/'uniform'/'workgroup'");
+    FAIL("Expected one of 'function'/'private'/'storage'/'uniform'/'workgroup'"_s);
 }
 
 template<typename Lexer>
@@ -471,7 +421,7 @@ Expected<AST::AccessMode, Error> Parser<Lexer>::parseAccessMode()
         return { AST::AccessMode::ReadWrite };
     }
 
-    FAIL("Expected one of 'read'/'write'/'read_write'");
+    FAIL("Expected one of 'read'/'write'/'read_write'"_s);
 }
 
 template<typename Lexer>
@@ -547,7 +497,7 @@ Expected<UniqueRef<AST::Statement>, Error> Parser<Lexer>::parseStatement()
         RETURN_NODE_REF(AssignmentStatement, lhs.moveToUniquePtr(), WTFMove(rhs));
     }
     default:
-        FAIL("Not a valid statement");
+        FAIL("Not a valid statement"_s);
     }
 }
 
@@ -665,10 +615,10 @@ Expected<UniqueRef<AST::Expression>, Error> Parser<Lexer>::parsePrimaryExpressio
     }
     case TokenType::Identifier: {
         CONSUME_TYPE_NAMED(ident, Identifier);
-        if (ident.m_ident == "true") {
+        if (ident.m_ident == "true"_s) {
             RETURN_NODE_REF(BoolLiteral, true);
         }
-        if (ident.m_ident == "false") {
+        if (ident.m_ident == "false"_s) {
             RETURN_NODE_REF(BoolLiteral, false);
         }
         if (current().m_type == TokenType::LT || current().m_type == TokenType::ParenLeft) {
@@ -694,7 +644,7 @@ Expected<UniqueRef<AST::Expression>, Error> Parser<Lexer>::parsePrimaryExpressio
     default:
         break;
     }
-    FAIL("Expected one of '(', a literal, or an identifier");
+    FAIL("Expected one of '(', a literal, or an identifier"_s);
 }
 
 template<typename Lexer>
@@ -734,7 +684,7 @@ Expected<UniqueRef<AST::Expression>, Error> Parser<Lexer>::parseCoreLHSExpressio
         break;
     }
 
-    FAIL("Tried to parse the left-hand side of an assignment and failed");
+    FAIL("Tried to parse the left-hand side of an assignment and failed"_s);
 }
 
 template<typename Lexer>

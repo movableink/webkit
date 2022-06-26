@@ -302,17 +302,27 @@ void UpdateVertexArrayID(GLuint id, GLsizei readBufferOffset)
 
 void SetResourceID(GLuint *map, GLuint id)
 {
-    if (map[id] != 0)
-    {
-        fprintf(stderr, "%s: resource ID %d is already reserved\n", __func__, id);
-        exit(1);
-    }
     map[id] = id;
 }
 
 void SetFramebufferID(GLuint id)
 {
     SetResourceID(gFramebufferMap, id);
+}
+
+void SetBufferID(GLuint id)
+{
+    SetResourceID(gBufferMap, id);
+}
+
+void SetRenderbufferID(GLuint id)
+{
+    SetResourceID(gRenderbufferMap, id);
+}
+
+void SetTextureID(GLuint id)
+{
+    SetResourceID(gTextureMap, id);
 }
 
 void ValidateSerializedState(const char *serializedState, const char *fileName, uint32_t line)

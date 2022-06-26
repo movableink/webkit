@@ -86,7 +86,7 @@ Builder::~Builder() = default;
 void Builder::applyAllProperties()
 {
     applyHighPriorityProperties();
-    applyLowPriorityProperties();
+    applyNonHighPriorityProperties();
 }
 
 // High priority properties may affect resolution of other properties (they are mostly font related).
@@ -100,17 +100,17 @@ void Builder::applyHighPriorityProperties()
     applyProperties(CSSPropertyColorScheme, CSSPropertyColorScheme);
 #endif
 
-    applyProperties(firstCSSProperty, lastHighPriorityProperty);
+    applyProperties(firstHighPriorityProperty, lastHighPriorityProperty);
 
     m_state.updateFont();
 }
 
-void Builder::applyLowPriorityProperties()
+void Builder::applyNonHighPriorityProperties()
 {
     ASSERT(!m_state.fontDirty());
 
     applyCustomProperties();
-    applyProperties(firstLowPriorityProperty, lastCSSProperty);
+    applyProperties(firstLowPriorityProperty, lastLowPriorityProperty);
     applyDeferredProperties();
 
     ASSERT(!m_state.fontDirty());
@@ -118,8 +118,8 @@ void Builder::applyLowPriorityProperties()
 
 void Builder::applyDeferredProperties()
 {
-    for (auto& property : m_cascade.deferredProperties())
-        applyCascadeProperty(property);
+    for (auto id : m_cascade.deferredPropertyIDs())
+        applyCascadeProperty(m_cascade.deferredProperty(id));
 }
 
 void Builder::applyProperties(int firstProperty, int lastProperty)
@@ -135,10 +135,10 @@ inline void Builder::applyPropertiesImpl(int firstProperty, int lastProperty)
 {
     for (int id = firstProperty; id <= lastProperty; ++id) {
         CSSPropertyID propertyID = static_cast<CSSPropertyID>(id);
-        if (!m_cascade.hasProperty(propertyID))
+        if (!m_cascade.hasNormalProperty(propertyID))
             continue;
         ASSERT(propertyID != CSSPropertyCustom);
-        auto& property = m_cascade.property(propertyID);
+        auto& property = m_cascade.normalProperty(propertyID);
 
         if (trackCycles == CustomPropertyCycleTracking::Enabled) {
             if (UNLIKELY(m_state.m_inProgressProperties.get(propertyID))) {
@@ -167,7 +167,7 @@ void Builder::applyCustomProperties()
         applyCustomProperty(name);
 }
 
-void Builder::applyCustomProperty(const String& name)
+void Builder::applyCustomProperty(const AtomString& name)
 {
     if (m_state.m_appliedCustomProperties.contains(name) || !m_cascade.customProperties().contains(name))
         return;
@@ -266,9 +266,9 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
     ASSERT_WITH_MESSAGE(!isShorthandCSSProperty(id), "Shorthand property id = %d wasn't expanded at parsing time", id);
 
     auto valueToApply = resolveValue(id, value);
+    auto& style = m_state.style();
 
     if (CSSProperty::isDirectionAwareProperty(id)) {
-        auto& style = m_state.style();
         CSSPropertyID newId = CSSProperty::resolveDirectionAwareProperty(id, style.direction(), style.writingMode());
         ASSERT(newId != id);
         return applyProperty(newId, valueToApply.get(), linkMatchMask);
@@ -311,26 +311,14 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
                     applyRollbackCascadeProperty(property, linkMatchMask);
                     return;
                 }
-            } else if (rollbackCascade->hasProperty(id)) {
-                auto& property = rollbackCascade->property(id);
-                applyRollbackCascadeProperty(property, linkMatchMask);
-                return;
-            } else if (CSSProperty::isInLogicalPropertyGroup(id)) {
-                ASSERT(!CSSProperty::isDirectionAwareProperty(id));
-                auto& style = m_state.style();
-                auto logicalId = CSSProperty::unresolvePhysicalProperty(id, style.direction(), style.writingMode());
-                bool hasPhysical = rollbackCascade->hasDeferredProperty(id);
-                bool hasLogical = rollbackCascade->hasDeferredProperty(logicalId);
-                if (hasPhysical || hasLogical) {
-                    if (hasLogical && (!hasPhysical || rollbackCascade->areDeferredInOrder(id, logicalId)))
-                        id = logicalId;
-                    auto& property = rollbackCascade->deferredProperty(id);
+            } else if (id < firstDeferredProperty) {
+                if (rollbackCascade->hasNormalProperty(id)) {
+                    auto& property = rollbackCascade->normalProperty(id);
                     applyRollbackCascadeProperty(property, linkMatchMask);
                     return;
                 }
-            } else if (rollbackCascade->hasDeferredProperty(id)) {
-                auto& property = rollbackCascade->deferredProperty(id);
-                applyRollbackCascadeProperty(property, linkMatchMask);
+            } else if (auto* property = rollbackCascade->lastDeferredPropertyResolvingRelated(id, style.direction(), style.writingMode())) {
+                applyRollbackCascadeProperty(*property, linkMatchMask);
                 return;
             }
         }
@@ -353,7 +341,7 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
     }
 
     if (isInherit && !CSSProperty::isInheritedProperty(id))
-        m_state.style().setHasExplicitlyInheritedProperties();
+        style.setHasExplicitlyInheritedProperties();
 
 #if ENABLE(CSS_PAINTING_API)
     if (is<CSSPaintImageValue>(valueToApply)) {
@@ -362,7 +350,7 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
             Locker locker { paintWorklet->paintDefinitionLock() };
             if (auto* registration = paintWorklet->paintDefinitionMap().get(name)) {
                 for (auto& property : registration->inputProperties)
-                    m_state.style().addCustomPaintWatchProperty(property);
+                    style.addCustomPaintWatchProperty(property);
             }
         }
     }
@@ -400,7 +388,7 @@ const PropertyCascade* Builder::ensureRollbackCascadeForRevert()
 
     --rollbackCascadeLevel;
 
-    auto key = makeRollbackCascadeKey(rollbackCascadeLevel, 0);
+    auto key = makeRollbackCascadeKey(rollbackCascadeLevel);
     return m_rollbackCascades.ensure(key, [&] {
         return makeUnique<const PropertyCascade>(m_cascade, rollbackCascadeLevel);
     }).iterator->value.get();
@@ -419,15 +407,15 @@ const PropertyCascade* Builder::ensureRollbackCascadeForRevertLayer()
     if (property.fromStyleAttribute == FromStyleAttribute::No)
         --rollbackLayerPriority;
 
-    auto key = makeRollbackCascadeKey(property.cascadeLevel, rollbackLayerPriority);
+    auto key = makeRollbackCascadeKey(property.cascadeLevel, property.styleScopeOrdinal, rollbackLayerPriority);
     return m_rollbackCascades.ensure(key, [&] {
-        return makeUnique<const PropertyCascade>(m_cascade, property.cascadeLevel, rollbackLayerPriority);
+        return makeUnique<const PropertyCascade>(m_cascade, property.cascadeLevel, property.styleScopeOrdinal, rollbackLayerPriority);
     }).iterator->value.get();
 }
 
-auto Builder::makeRollbackCascadeKey(CascadeLevel cascadeLevel, CascadeLayerPriority cascadeLayerPriority) -> RollbackCascadeKey
+auto Builder::makeRollbackCascadeKey(CascadeLevel cascadeLevel, ScopeOrdinal scopeOrdinal, CascadeLayerPriority cascadeLayerPriority) -> RollbackCascadeKey
 {
-    return { static_cast<unsigned>(cascadeLevel), static_cast<unsigned>(cascadeLayerPriority) };
+    return { static_cast<unsigned>(cascadeLevel), static_cast<unsigned>(scopeOrdinal), static_cast<unsigned>(cascadeLayerPriority) };
 }
 
 }

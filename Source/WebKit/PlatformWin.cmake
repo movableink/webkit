@@ -23,8 +23,6 @@ list(APPEND WebKit_SOURCES
 
     NetworkProcess/Classifier/WebResourceLoadStatisticsStore.cpp
 
-    NetworkProcess/WebStorage/StorageManager.cpp
-
     Platform/IPC/win/AttachmentWin.cpp
     Platform/IPC/win/ConnectionWin.cpp
     Platform/IPC/win/IPCSemaphoreWin.cpp
@@ -44,7 +42,6 @@ list(APPEND WebKit_SOURCES
     Shared/win/NativeWebWheelEventWin.cpp
     Shared/win/WebCoreArgumentCodersWin.cpp
     Shared/win/WebEventFactory.cpp
-    Shared/win/WebPreferencesDefaultValuesWin.cpp
 
     UIProcess/BackingStore.cpp
     UIProcess/DefaultUndoController.cpp
@@ -81,6 +78,7 @@ list(APPEND WebKit_SOURCES
 
     WebProcess/InjectedBundle/win/InjectedBundleWin.cpp
 
+    WebProcess/Inspector/win/RemoteWebInspectorUIWin.cpp
     WebProcess/Inspector/win/WebInspectorUIWin.cpp
 
     WebProcess/MediaCache/WebMediaKeyStorageManager.cpp
@@ -165,6 +163,7 @@ if (${WTF_PLATFORM_WIN_CAIRO})
         NetworkProcess/curl/NetworkProcessCurl.cpp
         NetworkProcess/curl/NetworkProcessMainCurl.cpp
         NetworkProcess/curl/NetworkSessionCurl.cpp
+        NetworkProcess/curl/WebSocketTaskCurl.cpp
 
         Shared/API/c/cairo/WKImageCairo.cpp
 

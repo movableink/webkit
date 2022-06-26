@@ -41,12 +41,8 @@ public:
     static constexpr bool isOriginAtBottomLeftCorner = true;
 
 protected:
-    RefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, PreserveResolution = PreserveResolution::No) const override;
-    RefPtr<Image> sinkIntoImage(PreserveResolution) override;
+    using ImageBufferBackend::ImageBufferBackend;
 
-    void draw(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) override;
-    void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions&) override;
-    
     void clipToMask(GraphicsContext&, const FloatRect& destRect) override;
 
     String toDataURL(const String& mimeType, std::optional<double> quality, PreserveResolution) const override;
@@ -56,11 +52,7 @@ protected:
 
     bool originAtBottomLeftCorner() const override;
 
-    using ImageBufferBackend::ImageBufferBackend;
-
     static RetainPtr<CGColorSpaceRef> contextColorSpace(const GraphicsContext&);
-
-    virtual void prepareToDrawIntoContext(GraphicsContext&);
 
     virtual RetainPtr<CGImageRef> copyCGImageForEncoding(CFStringRef destinationUTI, PreserveResolution) const;
 };

@@ -454,6 +454,17 @@ ANGLE_UTIL_EXPORT PFNGLGETSAMPLERPARAMETERIUIVPROC l_glGetSamplerParameterIuiv;
 ANGLE_UTIL_EXPORT PFNGLTEXBUFFERPROC l_glTexBuffer;
 ANGLE_UTIL_EXPORT PFNGLTEXBUFFERRANGEPROC l_glTexBufferRange;
 ANGLE_UTIL_EXPORT PFNGLTEXSTORAGE3DMULTISAMPLEPROC l_glTexStorage3DMultisample;
+ANGLE_UTIL_EXPORT PFNGLBEGINPERFMONITORAMDPROC l_glBeginPerfMonitorAMD;
+ANGLE_UTIL_EXPORT PFNGLDELETEPERFMONITORSAMDPROC l_glDeletePerfMonitorsAMD;
+ANGLE_UTIL_EXPORT PFNGLENDPERFMONITORAMDPROC l_glEndPerfMonitorAMD;
+ANGLE_UTIL_EXPORT PFNGLGENPERFMONITORSAMDPROC l_glGenPerfMonitorsAMD;
+ANGLE_UTIL_EXPORT PFNGLGETPERFMONITORCOUNTERDATAAMDPROC l_glGetPerfMonitorCounterDataAMD;
+ANGLE_UTIL_EXPORT PFNGLGETPERFMONITORCOUNTERINFOAMDPROC l_glGetPerfMonitorCounterInfoAMD;
+ANGLE_UTIL_EXPORT PFNGLGETPERFMONITORCOUNTERSTRINGAMDPROC l_glGetPerfMonitorCounterStringAMD;
+ANGLE_UTIL_EXPORT PFNGLGETPERFMONITORCOUNTERSAMDPROC l_glGetPerfMonitorCountersAMD;
+ANGLE_UTIL_EXPORT PFNGLGETPERFMONITORGROUPSTRINGAMDPROC l_glGetPerfMonitorGroupStringAMD;
+ANGLE_UTIL_EXPORT PFNGLGETPERFMONITORGROUPSAMDPROC l_glGetPerfMonitorGroupsAMD;
+ANGLE_UTIL_EXPORT PFNGLSELECTPERFMONITORCOUNTERSAMDPROC l_glSelectPerfMonitorCountersAMD;
 ANGLE_UTIL_EXPORT PFNGLDRAWARRAYSINSTANCEDBASEINSTANCEANGLEPROC
     l_glDrawArraysInstancedBaseInstanceANGLE;
 ANGLE_UTIL_EXPORT PFNGLDRAWELEMENTSINSTANCEDBASEVERTEXBASEINSTANCEANGLEPROC
@@ -785,6 +796,7 @@ ANGLE_UTIL_EXPORT PFNGLDELETEVERTEXARRAYSOESPROC l_glDeleteVertexArraysOES;
 ANGLE_UTIL_EXPORT PFNGLGENVERTEXARRAYSOESPROC l_glGenVertexArraysOES;
 ANGLE_UTIL_EXPORT PFNGLISVERTEXARRAYOESPROC l_glIsVertexArrayOES;
 ANGLE_UTIL_EXPORT PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC l_glFramebufferTextureMultiviewOVR;
+ANGLE_UTIL_EXPORT PFNGLSHADINGRATEQCOMPROC l_glShadingRateQCOM;
 ANGLE_UTIL_EXPORT PFNGLDRAWTEXFOESPROC l_glDrawTexfOES;
 ANGLE_UTIL_EXPORT PFNGLDRAWTEXFVOESPROC l_glDrawTexfvOES;
 ANGLE_UTIL_EXPORT PFNGLDRAWTEXIOESPROC l_glDrawTexiOES;
@@ -1461,6 +1473,28 @@ void LoadGLES(LoadProc loadProc)
     l_glTexBufferRange = reinterpret_cast<PFNGLTEXBUFFERRANGEPROC>(loadProc("glTexBufferRange"));
     l_glTexStorage3DMultisample =
         reinterpret_cast<PFNGLTEXSTORAGE3DMULTISAMPLEPROC>(loadProc("glTexStorage3DMultisample"));
+    l_glBeginPerfMonitorAMD =
+        reinterpret_cast<PFNGLBEGINPERFMONITORAMDPROC>(loadProc("glBeginPerfMonitorAMD"));
+    l_glDeletePerfMonitorsAMD =
+        reinterpret_cast<PFNGLDELETEPERFMONITORSAMDPROC>(loadProc("glDeletePerfMonitorsAMD"));
+    l_glEndPerfMonitorAMD =
+        reinterpret_cast<PFNGLENDPERFMONITORAMDPROC>(loadProc("glEndPerfMonitorAMD"));
+    l_glGenPerfMonitorsAMD =
+        reinterpret_cast<PFNGLGENPERFMONITORSAMDPROC>(loadProc("glGenPerfMonitorsAMD"));
+    l_glGetPerfMonitorCounterDataAMD = reinterpret_cast<PFNGLGETPERFMONITORCOUNTERDATAAMDPROC>(
+        loadProc("glGetPerfMonitorCounterDataAMD"));
+    l_glGetPerfMonitorCounterInfoAMD = reinterpret_cast<PFNGLGETPERFMONITORCOUNTERINFOAMDPROC>(
+        loadProc("glGetPerfMonitorCounterInfoAMD"));
+    l_glGetPerfMonitorCounterStringAMD = reinterpret_cast<PFNGLGETPERFMONITORCOUNTERSTRINGAMDPROC>(
+        loadProc("glGetPerfMonitorCounterStringAMD"));
+    l_glGetPerfMonitorCountersAMD = reinterpret_cast<PFNGLGETPERFMONITORCOUNTERSAMDPROC>(
+        loadProc("glGetPerfMonitorCountersAMD"));
+    l_glGetPerfMonitorGroupStringAMD = reinterpret_cast<PFNGLGETPERFMONITORGROUPSTRINGAMDPROC>(
+        loadProc("glGetPerfMonitorGroupStringAMD"));
+    l_glGetPerfMonitorGroupsAMD =
+        reinterpret_cast<PFNGLGETPERFMONITORGROUPSAMDPROC>(loadProc("glGetPerfMonitorGroupsAMD"));
+    l_glSelectPerfMonitorCountersAMD = reinterpret_cast<PFNGLSELECTPERFMONITORCOUNTERSAMDPROC>(
+        loadProc("glSelectPerfMonitorCountersAMD"));
     l_glDrawArraysInstancedBaseInstanceANGLE =
         reinterpret_cast<PFNGLDRAWARRAYSINSTANCEDBASEINSTANCEANGLEPROC>(
             loadProc("glDrawArraysInstancedBaseInstanceANGLE"));
@@ -2080,14 +2114,15 @@ void LoadGLES(LoadProc loadProc)
         reinterpret_cast<PFNGLISVERTEXARRAYOESPROC>(loadProc("glIsVertexArrayOES"));
     l_glFramebufferTextureMultiviewOVR = reinterpret_cast<PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC>(
         loadProc("glFramebufferTextureMultiviewOVR"));
-    l_glDrawTexfOES  = reinterpret_cast<PFNGLDRAWTEXFOESPROC>(loadProc("glDrawTexfOES"));
-    l_glDrawTexfvOES = reinterpret_cast<PFNGLDRAWTEXFVOESPROC>(loadProc("glDrawTexfvOES"));
-    l_glDrawTexiOES  = reinterpret_cast<PFNGLDRAWTEXIOESPROC>(loadProc("glDrawTexiOES"));
-    l_glDrawTexivOES = reinterpret_cast<PFNGLDRAWTEXIVOESPROC>(loadProc("glDrawTexivOES"));
-    l_glDrawTexsOES  = reinterpret_cast<PFNGLDRAWTEXSOESPROC>(loadProc("glDrawTexsOES"));
-    l_glDrawTexsvOES = reinterpret_cast<PFNGLDRAWTEXSVOESPROC>(loadProc("glDrawTexsvOES"));
-    l_glDrawTexxOES  = reinterpret_cast<PFNGLDRAWTEXXOESPROC>(loadProc("glDrawTexxOES"));
-    l_glDrawTexxvOES = reinterpret_cast<PFNGLDRAWTEXXVOESPROC>(loadProc("glDrawTexxvOES"));
+    l_glShadingRateQCOM = reinterpret_cast<PFNGLSHADINGRATEQCOMPROC>(loadProc("glShadingRateQCOM"));
+    l_glDrawTexfOES     = reinterpret_cast<PFNGLDRAWTEXFOESPROC>(loadProc("glDrawTexfOES"));
+    l_glDrawTexfvOES    = reinterpret_cast<PFNGLDRAWTEXFVOESPROC>(loadProc("glDrawTexfvOES"));
+    l_glDrawTexiOES     = reinterpret_cast<PFNGLDRAWTEXIOESPROC>(loadProc("glDrawTexiOES"));
+    l_glDrawTexivOES    = reinterpret_cast<PFNGLDRAWTEXIVOESPROC>(loadProc("glDrawTexivOES"));
+    l_glDrawTexsOES     = reinterpret_cast<PFNGLDRAWTEXSOESPROC>(loadProc("glDrawTexsOES"));
+    l_glDrawTexsvOES    = reinterpret_cast<PFNGLDRAWTEXSVOESPROC>(loadProc("glDrawTexsvOES"));
+    l_glDrawTexxOES     = reinterpret_cast<PFNGLDRAWTEXXOESPROC>(loadProc("glDrawTexxOES"));
+    l_glDrawTexxvOES    = reinterpret_cast<PFNGLDRAWTEXXVOESPROC>(loadProc("glDrawTexxvOES"));
     l_glBindFramebufferOES =
         reinterpret_cast<PFNGLBINDFRAMEBUFFEROESPROC>(loadProc("glBindFramebufferOES"));
     l_glBindRenderbufferOES =

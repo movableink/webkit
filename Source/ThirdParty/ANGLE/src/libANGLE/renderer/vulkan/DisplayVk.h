@@ -19,8 +19,9 @@
 
 namespace rx
 {
-class RendererVk;
+constexpr VkDeviceSize kMaxTotalEmptyBufferBytes = 16 * 1024 * 1024;
 
+class RendererVk;
 using ContextVkSet = std::set<ContextVk *>;
 
 class ShareGroupVk : public ShareGroupImpl
@@ -34,12 +35,13 @@ class ShareGroupVk : public ShareGroupImpl
     // synchronous update to the caches.
     PipelineLayoutCache &getPipelineLayoutCache() { return mPipelineLayoutCache; }
     DescriptorSetLayoutCache &getDescriptorSetLayoutCache() { return mDescriptorSetLayoutCache; }
-    ContextVkSet *getContexts() { return &mContexts; }
-
-    std::vector<vk::ResourceUseList> &&releaseResourceUseLists()
+    const ContextVkSet &getContexts() const { return mContexts; }
+    vk::MetaDescriptorPool &getMetaDescriptorPool(DescriptorSetIndex descriptorSetIndex)
     {
-        return std::move(mResourceUseLists);
+        return mMetaDescriptorPools[descriptorSetIndex];
     }
+
+    void releaseResourceUseLists(const Serial &submitSerial);
     void acquireResourceUseList(vk::ResourceUseList &&resourceUseList)
     {
         mResourceUseLists.emplace_back(std::move(resourceUseList));
@@ -49,7 +51,13 @@ class ShareGroupVk : public ShareGroupImpl
                                          VkDeviceSize size,
                                          uint32_t memoryTypeIndex);
     void pruneDefaultBufferPools(RendererVk *renderer);
-    bool isDueForBufferPoolPrune();
+    bool isDueForBufferPoolPrune(RendererVk *renderer);
+
+    void calculateTotalBufferCount(size_t *bufferCount, VkDeviceSize *totalSize) const;
+    void logBufferPools() const;
+
+    void addContext(ContextVk *contextVk);
+    void removeContext(ContextVk *contextVk);
 
   private:
     // ANGLE uses a PipelineLayout cache to store compatible pipeline layouts.
@@ -57,6 +65,9 @@ class ShareGroupVk : public ShareGroupImpl
 
     // DescriptorSetLayouts are also managed in a cache.
     DescriptorSetLayoutCache mDescriptorSetLayoutCache;
+
+    // Descriptor set caches
+    vk::DescriptorSetArray<vk::MetaDescriptorPool> mMetaDescriptorPools;
 
     // The list of contexts within the share group
     ContextVkSet mContexts;
@@ -74,6 +85,10 @@ class ShareGroupVk : public ShareGroupImpl
 
     // The system time when last pruneEmptyBuffer gets called.
     double mLastPruneTime;
+
+    // If true, it is expected that a BufferBlock may still in used by textures that outlived
+    // ShareGroup. The non-empty BufferBlock will be put into RendererVk's orphan list instead.
+    bool mOrphanNonEmptyBufferBlock;
 };
 
 class DisplayVk : public DisplayImpl, public vk::Context

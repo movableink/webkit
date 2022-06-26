@@ -145,6 +145,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_usesDisplayListDrawing(false)
     , m_allowsTiling(true)
     , m_appliesPageScale(false)
+    , m_appliesDeviceScale(true)
     , m_showDebugBorder(false)
     , m_showRepaintCounter(false)
     , m_isMaskLayer(false)
@@ -533,11 +534,13 @@ void GraphicsLayer::setPaintingPhase(OptionSet<GraphicsLayerPaintingPhase> phase
 
 void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, GraphicsLayerPaintBehavior layerPaintBehavior)
 {
-    FloatSize offset = offsetFromRenderer() - toFloatSize(scrollOffset());
-    context.translate(-offset);
+    auto offset = offsetFromRenderer() - toFloatSize(scrollOffset());
+    auto clipRect = clip;
 
-    FloatRect clipRect(clip);
-    clipRect.move(offset);
+    if (!offset.isZero()) {
+        context.translate(-offset);
+        clipRect.move(offset);
+    }
 
     client().paintContents(this, context, clipRect, layerPaintBehavior);
 }
@@ -981,8 +984,6 @@ TextStream& operator<<(TextStream& ts, const GraphicsLayer::CustomAppearance& cu
     case GraphicsLayer::CustomAppearance::None: ts << "none"; break;
     case GraphicsLayer::CustomAppearance::ScrollingOverhang: ts << "scrolling-overhang"; break;
     case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"; break;
-    case GraphicsLayer::CustomAppearance::LightBackdrop: ts << "light-backdrop"; break;
-    case GraphicsLayer::CustomAppearance::DarkBackdrop: ts << "dark-backdrop"; break;
     }
     return ts;
 }

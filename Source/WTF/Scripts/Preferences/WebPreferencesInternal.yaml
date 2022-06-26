@@ -1,4 +1,4 @@
-# Copyright (c) 2020 Apple Inc. All rights reserved.
+# Copyright (c) 2020-2022 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -54,6 +54,19 @@ AllowViewportShrinkToFitContent:
     WebCore:
       default: true
 
+AlternateWebMPlayerEnabled:
+  type: bool
+  humanReadableName: "Alternate WebM Player"
+  humanReadableDescription: "Enable Alternate WebM Player"
+  condition: ENABLE(ALTERNATE_WEBM_PLAYER)
+  defaultValue:
+    WebKitLegacy:
+     default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 AlwaysZoomOnDoubleTap:
   type: bool
   humanReadableName: "DTTZ always"
@@ -64,31 +77,6 @@ AlwaysZoomOnDoubleTap:
   defaultValue:
     WebKit:
       default: false
-
-# FIXME: This is not relevent for WebKitLegacy, so should be excluded from WebKitLegacy entirely.
-ApplePayRemoteUIEnabled:
-  type: bool
-  humanReadableDescription: "Enable Apple Pay Remote UI"
-  humanReadableName: "Apple Pay Remote UI"
-  condition: ENABLE(APPLE_PAY_REMOTE_UI)
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: true
-    WebCore:
-      default: true
-
-AriaReflectionEnabled:
-  type: bool
-  humanReadableName: "ARIA Reflection"
-  humanReadableDescription: "ARIA Reflection support"
-  webcoreBinding: RuntimeEnabledFeatures
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
 
 AsyncFrameScrollingEnabled:
   type: bool
@@ -101,8 +89,8 @@ AsyncFrameScrollingEnabled:
       default: false
     WebKit:
       "USE(NICOSIA)": true
-      "PLATFORM(IOS_FAMILY)": true
-      default: WebKit::defaultAsyncFrameScrollingEnabled()
+      "PLATFORM(COCOA)": true
+      default: false
     WebCore:
       default: false
 
@@ -117,21 +105,20 @@ AsyncOverflowScrollingEnabled:
       default: false
     WebKit:
       "USE(NICOSIA)": true
-      "PLATFORM(IOS_FAMILY)": true
-      default: WebKit::defaultAsyncFrameScrollingEnabled()
+      "PLATFORM(COCOA)": true
+      default: false
     WebCore:
       default: false
 
-CSSDisplayContentsAXSupportEnabled:
+BlockIOKitInWebContentSandbox:
   type: bool
-  humanReadableName: "Accessibility support for display: contents elements"
-  humanReadableDescription: "Enable work-in-progress accessibility support for display: contents elements"
-  webcoreBinding: RuntimeEnabledFeatures
+  humanReadableName: "IOKit blocking in the WebContent sandbox"
+  humanReadableDescription: "Block IOKit access in the WebContent sandbox"
+  webcoreBinding: none
+  exposed: [ WebKit ]
   defaultValue:
-    WebKitLegacy:
-      default: false
     WebKit:
-      default: false
+      default: true
 
 CSSLogicalEnabled:
   type: bool
@@ -188,7 +175,8 @@ CaptureVideoInGPUProcessEnabled:
   exposed: [ WebKit ]
   defaultValue:
     WebKit:
-      default: WebKit::defaultCaptureVideoInGPUProcessEnabled()
+      "ENABLE(GPU_PROCESS_BY_DEFAULT)": true
+      default: false
 
 CaptureVideoInUIProcessEnabled:
   type: bool
@@ -292,6 +280,19 @@ FasterClicksEnabled:
     WebKit:
       default: true
 
+FlexFormattingContextIntegrationEnabled:
+  type: bool
+  humanReadableName: "Next-generation flex layout integration (FFC)"
+  humanReadableDescription: "Enable next-generation flex layout integration (FFC)"
+  condition: ENABLE(LAYOUT_FORMATTING_CONTEXT)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 # FIXME: This should be reconciled with 'FrameFlattening' in WebPreferences.yaml .
 FrameFlatteningEnabled:
   type: bool
@@ -369,33 +370,17 @@ IPCTestingAPIEnabled:
     WebKit:
       default: false
 
-ImageAnalysisMarkupEnabled:
+InlineFormattingContextIntegrationEnabled:
   type: bool
-  humanReadableName: "Image analysis markup"
-  humanReadableDescription: "Enable image analysis markup"
-  condition: ENABLE(IMAGE_ANALYSIS)
-  exposed: [ WebKit ]
+  humanReadableName: "Next-generation inline layout integration (IFC)"
+  humanReadableDescription: "Enable next-generation inline layout integration (IFC)"
+  webcoreBinding: RuntimeEnabledFeatures
+  condition: ENABLE(LAYOUT_FORMATTING_CONTEXT)
   defaultValue:
-    WebCore:
-      default: false
     WebKitLegacy:
-      default: false
+      default: true
     WebKit:
-      default: defaultImageAnalysisMarkupEnabled()
-
-ImageAnalysisQueueEnabled:
-  type: bool
-  humanReadableName: "Image analysis queue"
-  humanReadableDescription: "Enable image analysis queue"
-  condition: ENABLE(IMAGE_ANALYSIS)
-  exposed: [ WebKit ]
-  defaultValue:
-    WebCore:
-      default: false
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: defaultImageAnalysisQueueEnabled()
+      default: true
 
 InputTypeColorEnabled:
   type: bool
@@ -485,6 +470,19 @@ InputTypeWeekEnabled:
     WebCore:
       default: false
 
+InteractionRegionsEnabled:
+  type: bool
+  humanReadableName: "Interaction Regions"
+  humanReadableDescription: "Generate and visualize interaction regions"
+  condition: ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+  defaultValue:
+    WebKit:
+      default: true
+    WebKitLegacy:
+      default: false
+    WebCore:
+      default: false
+
 # FIXME: This is not relevent for WebKitLegacy, so should be excluded from WebKitLegacy entirely.
 IsFirstPartyWebsiteDataRemovalLiveOnTestingEnabled:
   type: bool
@@ -536,18 +534,6 @@ LayoutFormattingContextEnabled:
       default: false
     WebKit:
       default: false
-
-LayoutFormattingContextIntegrationEnabled:
-  type: bool
-  humanReadableName: "Next-generation line layout integration (LFC)"
-  humanReadableDescription: "Enable next-generation line layout integration (LFC)"
-  webcoreBinding: RuntimeEnabledFeatures
-  condition: ENABLE(LAYOUT_FORMATTING_CONTEXT)
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
 
 LegacyOverflowScrollingTouchEnabled:
   type: bool
@@ -654,16 +640,6 @@ MuteCameraOnMicrophoneInterruptionEnabled:
     WebCore:
       default: false
 
-NPAPIPlugInsEnabledForTestingInWebKitLegacy:
-  type: bool
-  humanReadableName: "NPAPI Plug-Ins Enabled In WebKitLegacy"
-  humanReadableDescription: "Enable NPAPI Plug-Ins for testing"
-  webcoreBinding: none
-  exposed: [ WebKitLegacy ]
-  defaultValue:
-    WebKitLegacy:
-      default: false
-
 NotificationEventEnabled:
   type: bool
   humanReadableName: "NotificationEvent support"
@@ -688,7 +664,7 @@ OffscreenCanvasEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      "ENABLE(EXPERIMENTAL_FEATURES) && (PLATFORM(GTK) || PLATFORM(WPE))": true
+      "ENABLE(EXPERIMENTAL_FEATURES)": true
       default: false
 
 OffscreenCanvasInWorkersEnabled:
@@ -701,7 +677,7 @@ OffscreenCanvasInWorkersEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      "ENABLE(EXPERIMENTAL_FEATURES) && (PLATFORM(GTK) || PLATFORM(WPE))": true
+      "ENABLE(EXPERIMENTAL_FEATURES)": true
       default: false
 
 PdfJSViewerEnabled:
@@ -730,22 +706,6 @@ PreferFasterClickOverDoubleTap:
       "PLATFORM(IOS_FAMILY) && !PLATFORM(WATCHOS)": true
       default: false
 
-PreferInlineTextSelectionInImages:
-  type: bool
-  humanReadableName: "Inline Text Selection in Images"
-  humanReadableDescription: "Prefer inline text selection in images over using the context menu"
-  condition: ENABLE(IMAGE_ANALYSIS)
-  defaultValue:
-    WebCore:
-      "HAVE(UIKIT_WEBKIT_INTERNALS)": false
-      default: true
-    WebKitLegacy:
-      "HAVE(UIKIT_WEBKIT_INTERNALS)": false
-      default: true
-    WebKit:
-      "HAVE(UIKIT_WEBKIT_INTERNALS)": false
-      default: true
-
 PreferSandboxedMediaParsing:
   type: bool
   humanReadableName: "Prefer Sandboxed Parsing of Media"
@@ -758,6 +718,20 @@ PreferSandboxedMediaParsing:
       default: true
     WebKit:
       default: true
+
+RemoveBackgroundEnabled:
+  type: bool
+  humanReadableName: "Remove Background"
+  humanReadableDescription: "Enable Remove Background"
+  condition: ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
+  exposed: [ WebKit ]
+  defaultValue:
+    WebCore:
+      default: false
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: defaultRemoveBackgroundEnabled()
 
 ReplayCGDisplayListsIntoBackingStore:
   type: bool
@@ -838,19 +812,18 @@ ServiceWorkersEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      "ENABLE(EXPERIMENTAL_FEATURES) || PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)": true
-      default: false
+      default: true
     WebCore:
       default: false
 
-SimpleLineLayoutEnabled:
+ServiceWorkersUserGestureEnabled:
   type: bool
-  webcoreOnChange: setNeedsRecalcStyleInAllFrames
-  humanReadableName: "Simple line layout"
-  humanReadableDescription: "Enable simple line layout path (SLL)"
+  humanReadableName: "Validate UserGesture requirements in Service Workers"
+  humanReadableDescription: "Validate UserGesture requirements in Service Workers"
+  condition: ENABLE(SERVICE_WORKER)
   defaultValue:
     WebKitLegacy:
-      default: true
+      default: false
     WebKit:
       default: true
     WebCore:
@@ -886,10 +859,10 @@ TextAutosizingUsesIdempotentMode:
     WebCore:
       default: false
 
-TextRecognitionEnhancementsEnabled:
+TextRecognitionInVideosEnabled:
   type: bool
-  humanReadableName: "Text Recognition Enhancements"
-  humanReadableDescription: "Enable Text Recognition Enhancements"
+  humanReadableName: "Text Recognition in Videos"
+  humanReadableDescription: "Enable Text Recognition in Videos"
   condition: ENABLE(IMAGE_ANALYSIS)
   exposed: [ WebKit ]
   defaultValue:
@@ -898,7 +871,7 @@ TextRecognitionEnhancementsEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      default: defaultTextRecognitionEnhancementsEnabled()
+      default: defaultTextRecognitionInVideosEnabled()
 
 # FIXME: Is this implemented for WebKitLegacy? If not, this should be excluded from WebKitLegacy entirely.
 UndoManagerAPIEnabled:
@@ -954,7 +927,9 @@ UseGPUProcessForCanvasRenderingEnabled:
   exposed: [ WebKit ]
   defaultValue:
     WebKit:
-      default: defaultUseGPUProcessForCanvasRenderingEnabled()
+      "ENABLE(GPU_PROCESS_BY_DEFAULT)": true
+      "PLATFORM(WIN)": true
+      default: false
 
 UseGPUProcessForMediaEnabled:
   type: bool
@@ -965,7 +940,18 @@ UseGPUProcessForMediaEnabled:
   exposed: [ WebKit ]
   defaultValue:
     WebKit:
-      default: WebKit::defaultUseGPUProcessForMediaEnabled()
+      "ENABLE(GPU_PROCESS_BY_DEFAULT)": true
+      default: false
+
+UseGeneralDirectoryForStorage:
+  type: bool
+  humanReadableName: "Use General Directory For Storage"
+  humanReadableDescription: "Use general storage directory for IndexedDB and LocalStorage"
+  webcoreBinding: none
+  exposed: [ WebKit ]
+  defaultValue:
+    WebKit:
+      default: true
 
 UseSceneKitForModel:
   type: bool
@@ -978,16 +964,19 @@ UseSceneKitForModel:
     WebKit:
       default: false
 
-# FIXME: Remove once <rdar://73830961> has been fixed
-UseiTunesAVOutputContext:
+VisualTranslationEnabled:
   type: bool
-  humanReadableName: "Use iTunes AVOutputContext"
-  humanReadableDescription: "Use iTunes AVOutputContext"
-  webcoreBinding: none
-  condition: ENABLE(WIRELESS_PLAYBACK_TARGET)
+  humanReadableName: "Visual Translation"
+  humanReadableDescription: "Enable Visual Translation"
+  condition: ENABLE(IMAGE_ANALYSIS)
+  exposed: [ WebKit ]
   defaultValue:
+    WebCore:
+      default: false
+    WebKitLegacy:
+      default: false
     WebKit:
-      default: true
+      default: defaultVisualTranslationEnabled()
 
 WebAPIStatisticsEnabled:
   type: bool
@@ -999,6 +988,17 @@ WebAPIStatisticsEnabled:
       default: false
     WebKit:
       default: false
+
+WebRTCAudioLatencyAdaptationEnabled:
+  type: bool
+  humanReadableName: "WebRTC Audio Latency Adaptation"
+  humanReadableDescription: "Enable WebRTC Audio Latency Adaptation"
+  webcoreBinding: RuntimeEnabledFeatures
+  defaultValue:
+    WebKitLegacy:
+      default: true
+    WebKit:
+      default: true
 
 # FIXME: Is this implemented for WebKitLegacy? If not, this should be excluded from WebKitLegacy entirely.
 WebRTCDTMFEnabled:
@@ -1062,7 +1062,8 @@ WebRTCPlatformCodecsInGPUProcessEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      default: WebKit::defaultWebRTCCodecsInGPUProcess()
+      "ENABLE(GPU_PROCESS_BY_DEFAULT)": true
+      default: false
     WebCore:
       default: false
 

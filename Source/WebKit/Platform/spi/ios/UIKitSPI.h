@@ -75,6 +75,7 @@
 #import <UIKit/UITextInput_Private.h>
 #import <UIKit/UITextInteractionAssistant_Private.h>
 #import <UIKit/UITextInteraction_Private.h>
+#import <UIKit/UITouch_Private.h>
 #import <UIKit/UIViewControllerTransitioning_Private.h>
 #import <UIKit/UIViewController_Private.h>
 #import <UIKit/UIViewController_ViewService.h>
@@ -88,6 +89,7 @@
 #import <UIKit/UIWebScrollView.h>
 #import <UIKit/UIWebTiledView.h>
 #import <UIKit/UIWebTouchEventsGestureRecognizer.h>
+#import <UIKit/UIWindowScene_Private.h>
 #import <UIKit/UIWindow_Private.h>
 #import <UIKit/_UIApplicationRotationFollowing.h>
 #import <UIKit/_UIBackdropViewSettings.h>
@@ -144,6 +146,15 @@
 #import <UIKit/UIPointerStyle_Private.h>
 #endif
 
+#if HAVE(UIKIT_HOVER_EVENT_PROTOCOL)
+#import <UIKit/UIHoverEvent_RequiresApproval.h>
+#endif
+
+#if HAVE(UIKIT_RESIZABLE_WINDOWS)
+#import <UIKit/UIWindowScene_RequiresApproval.h>
+#import <UIKit/_UIInvalidatable.h>
+#endif
+
 // FIXME: STAGING for rdar://75546704 Remove later.
 #define UIWKSelectionFlipped 2
 
@@ -161,6 +172,13 @@ typedef NS_ENUM(NSInteger, UIPreviewItemType) {
     UIPreviewItemTypeImage,
     UIPreviewItemTypeText,
     UIPreviewItemTypeAttachment,
+};
+
+typedef NS_ENUM(NSInteger, _UIDataOwner) {
+    _UIDataOwnerUndefined,
+    _UIDataOwnerUser,
+    _UIDataOwnerEnterprise,
+    _UIDataOwnerShared,
 };
 
 @class UIPreviewItemController;
@@ -354,6 +372,17 @@ typedef enum {
     UIAllCorners = 0xFF,
 } UIRectCorners;
 
+#if HAVE(UIKIT_HOVER_EVENT_PROTOCOL)
+
+@protocol _UIHoverEventRespondable <NSObject>
+- (void)_hoverEntered:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event;
+- (void)_hoverMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event;
+- (void)_hoverExited:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event;
+- (void)_hoverCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event;
+@end
+
+#endif // HAVE(UIKIT_HOVER_EVENT_PROTOCOL)
+
 @interface UIImagePickerController ()
 @property (nonatomic, setter=_setAllowsMultipleSelection:) BOOL _allowsMultipleSelection;
 @property (nonatomic, setter=_setRequiresPickingConfirmation:) BOOL _requiresPickingConfirmation;
@@ -363,6 +392,7 @@ typedef enum {
 @interface UIImage ()
 - (id)initWithCGImage:(CGImageRef)CGImage imageOrientation:(UIImageOrientation)imageOrientation;
 - (UIImage *)_flatImageWithColor:(UIColor *)color;
++ (UIImage *)_systemImageNamed:(NSString *)name;
 @end
 
 @interface UIKeyCommand ()
@@ -473,7 +503,10 @@ typedef enum {
 - (void)_wheelChangedWithEvent:(UIEvent *)event;
 - (void)_beginPinningInputViews;
 - (void)_endPinningInputViews;
-
+#if HAVE(PASTEBOARD_DATA_OWNER)
+@property (nonatomic, setter=_setDataOwnerForCopy:) _UIDataOwner _dataOwnerForCopy;
+@property (nonatomic, setter=_setDataOwnerForPaste:) _UIDataOwner _dataOwnerForPaste;
+#endif
 @end
 
 @class FBSDisplayConfiguration;
@@ -768,8 +801,12 @@ typedef NS_ENUM(NSInteger, UIWKGestureType) {
 @interface UITextSelectionView : UIView
 @end
 
+@class UIContextMenuInteraction;
+@protocol UIContextMenuInteractionDelegate;
 @interface UITextInteractionAssistant (SPI)
 @property (nonatomic, readonly) UITextSelectionView *selectionView;
+@property (nonatomic, strong, readonly) UIContextMenuInteraction *contextMenuInteraction;
+@property (nonatomic, weak, readwrite) id<UIContextMenuInteractionDelegate> externalContextMenuInteractionDelegate;
 @end
 
 @interface UIWKTextInteractionAssistant : UITextInteractionAssistant <UIResponderStandardEditActions>
@@ -952,7 +989,6 @@ struct _UIWebTouchEvent {
 
 typedef NS_ENUM(NSInteger, _UIBackdropViewStylePrivate) {
     _UIBackdropViewStyle_Light = 2020,
-    _UIBackdropViewStyle_Dark = 2030
 };
 
 @interface _UIBackdropViewSettings : NSObject
@@ -969,7 +1005,6 @@ typedef NS_ENUM(NSInteger, _UIBackdropViewStylePrivate) {
 @interface _UIBackdropView ()
 - (instancetype)initWithPrivateStyle:(_UIBackdropViewStylePrivate)style;
 - (instancetype)initWithSettings:(_UIBackdropViewSettings *)settings;
-- (instancetype)initWithFrame:(CGRect)frame privateStyle:(_UIBackdropViewStylePrivate)style;
 @property (nonatomic, strong, readonly) UIView *contentView;
 @end
 
@@ -1185,9 +1220,11 @@ WTF_EXTERN_C_END
 @property (nonatomic, readonly) UIKeyboardPreferencesController<TIPreferencesControllerActions> *preferencesActions;
 @end
 
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
 @interface UIMenuItem (UIMenuController_SPI)
 @property (nonatomic) BOOL dontDismiss;
 @end
+ALLOW_DEPRECATED_DECLARATIONS_END
 
 @interface UICalloutBar : UIView
 + (UICalloutBar *)activeCalloutBar;
@@ -1347,16 +1384,26 @@ typedef NS_ENUM(NSUInteger, _UIContextMenuLayout) {
 @property (nonatomic, readonly) NSString *_sceneIdentifier;
 @end
 
-#endif // USE(APPLE_INTERNAL_SDK)
+#if HAVE(UIKIT_WITH_MOUSE_SUPPORT)
+@interface UITouch ()
+@property (nonatomic, readonly) BOOL _isPointerTouch;
+@end
+#endif
 
-#if HAVE(PASTEBOARD_DATA_OWNER)
+#if HAVE(UIKIT_RESIZABLE_WINDOWS)
 
-@interface UIResponder (Staging_73852335)
-@property (nonatomic, setter=_setDataOwnerForCopy:) _UIDataOwner _dataOwnerForCopy;
-@property (nonatomic, setter=_setDataOwnerForPaste:) _UIDataOwner _dataOwnerForPaste;
+@protocol _UIInvalidatable <NSObject>
+- (void)_invalidate;
 @end
 
-#endif
+@interface UIWindowScene ()
+- (id<_UIInvalidatable>)_holdLiveResizeSnapshotForReason:(NSString *)reason;
+@property (nonatomic, readonly) BOOL _enhancedWindowingEnabled;
+@end
+
+#endif // HAVE(UIKIT_RESIZABLE_WINDOWS)
+
+#endif // USE(APPLE_INTERNAL_SDK)
 
 @interface UITextInteractionAssistant (IPI)
 @property (nonatomic, readonly) BOOL inGesture;
@@ -1502,7 +1549,7 @@ typedef NS_ENUM(NSUInteger, _UIContextMenuLayout) {
 @end
 #endif
 
-#if ENABLE(MAC_CATALYST_GRAMMAR_CHECKING)
+#if ENABLE(POST_EDITING_GRAMMAR_CHECKING)
 @interface UITextChecker ()
 + (BOOL)grammarCheckingEnabled;
 - (NSArray<NSTextCheckingResult *> *)checkString:(NSString *)stringToCheck range:(NSRange)range types:(NSTextCheckingTypes)checkingTypes languages:(NSArray<NSString *> *)languagesArray options:(NSDictionary<NSString *, id> *)options;
@@ -1542,22 +1589,6 @@ typedef NS_ENUM(NSUInteger, _UIContextMenuLayout) {
 @end
 
 #endif
-
-#if HAVE(MAC_CATALYST_LIVE_RESIZE)
-
-#if __has_include(<UIKit/_UIInvalidatable.h>)
-#include <UIKit/_UIInvalidatable.h>
-#else
-@protocol _UIInvalidatable <NSObject>
-- (void)_invalidate;
-@end
-#endif
-
-@interface UIWindowScene (Staging_86494115)
-- (id<_UIInvalidatable>)_holdLiveResizeSnapshotForReason:(NSString *)reason;
-@end
-
-#endif // HAVE(MAC_CATALYST_LIVE_RESIZE)
 
 WTF_EXTERN_C_BEGIN
 

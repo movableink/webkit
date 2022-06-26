@@ -48,7 +48,8 @@ platform_h_compiler_command = $(CC) -std=c++2a -x c++ $(1) $(SDK_FLAGS) $(TARGET
 
 FEATURE_AND_PLATFORM_DEFINES := $(shell $(call platform_h_compiler_command,-E -P -dM) | $(PERL) -ne "print if s/\#define ((HAVE_|USE_|ENABLE_|WTF_PLATFORM_)\w+) 1/\1/")
 
-PLATFORM_HEADER_DIR := $(realpath $(BUILT_PRODUCTS_DIR)/usr/local/include)
+PLATFORM_HEADER_DIR := $(realpath $(BUILT_PRODUCTS_DIR)$(WK_LIBRARY_HEADERS_FOLDER_PATH))
+
 PLATFORM_HEADER_DEPENDENCIES := $(filter $(PLATFORM_HEADER_DIR)/%,$(realpath $(shell $(call platform_h_compiler_command,-M) | $(PERL) -e "local \$$/; my (\$$target, \$$deps) = split(/:/, <>); print split(/\\\\/, \$$deps);")))
 FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES = DerivedSources.make $(PLATFORM_HEADER_DEPENDENCIES)
 
@@ -68,7 +69,6 @@ JavaScriptCore_SCRIPTS_DIR = $(JavaScriptCore)/Scripts
 
 .PHONY : all
 all : \
-    InjectedScriptSource.h \
     Lexer.lut.h \
     KeywordLookup.h \
     RegExpJitTables.h \
@@ -138,6 +138,7 @@ JavaScriptCore_BUILTINS_SOURCES = \
     $(JavaScriptCore)/builtins/TypedArrayConstructor.js \
     $(JavaScriptCore)/builtins/TypedArrayPrototype.js \
     $(JavaScriptCore)/builtins/WebAssembly.js \
+    $(JavaScriptCore)/inspector/InjectedScriptSource.js \
 #
 
 # The combined output file depends on the contents of builtins and generator scripts, so
@@ -192,13 +193,11 @@ OBJECT_LUT_HEADERS = \
     JSPromiseConstructor.lut.h \
     JSPromisePrototype.lut.h \
     JSWebAssembly.lut.h \
-    MapPrototype.lut.h \
     NumberConstructor.lut.h \
     NumberPrototype.lut.h \
     ObjectConstructor.lut.h \
     ReflectObject.lut.h \
     RegExpConstructor.lut.h \
-    SetPrototype.lut.h \
     ShadowRealmPrototype.lut.h \
     StringConstructor.lut.h \
     StringPrototype.lut.h \
@@ -367,12 +366,6 @@ inspector/InspectorBackendCommands.js : CombinedDomains.json $(INSPECTOR_GENERAT
 	@echo Pre-processing InspectorBackendCommands...
 	$(PERL) $(JavaScriptCore)/inspector/scripts/codegen/preprocess.pl --input inspector/InspectorBackendCommands.js.in --defines "$(FEATURE_AND_PLATFORM_DEFINES)" --output inspector/InspectorBackendCommands.js
 	$(DELETE) inspector/InspectorBackendCommands.js.in
-
-InjectedScriptSource.h : inspector/InjectedScriptSource.js $(JavaScriptCore_SCRIPTS_DIR)/jsmin.py $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl
-	echo "//# sourceURL=__InjectedScript_InjectedScriptSource.js" > ./InjectedScriptSource.min.js
-	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/jsmin.py < $(JavaScriptCore)/inspector/InjectedScriptSource.js >> ./InjectedScriptSource.min.js
-	$(PERL) $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl InjectedScriptSource_js ./InjectedScriptSource.min.js InjectedScriptSource.h
-	$(DELETE) InjectedScriptSource.min.js
 
 AIR_OPCODE_FILES = \
     AirOpcode.h \

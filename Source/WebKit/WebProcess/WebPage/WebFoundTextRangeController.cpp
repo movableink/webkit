@@ -42,6 +42,7 @@
 #include <WebCore/PlatformMouseEvent.h>
 #include <WebCore/SimpleRange.h>
 #include <WebCore/TextIterator.h>
+#include <wtf/Scope.h>
 
 namespace WebKit {
 
@@ -58,7 +59,7 @@ void WebFoundTextRangeController::findTextRangesForStringMatches(const String& s
     if (!findMatches.isEmpty())
         m_cachedFoundRanges.clear();
 
-    String frameName;
+    AtomString frameName;
     uint64_t order = 0;
     Vector<WebFoundTextRange> foundTextRanges;
     for (auto& simpleRange : findMatches) {
@@ -68,7 +69,7 @@ void WebFoundTextRangeController::findTextRangesForStringMatches(const String& s
         if (!element)
             continue;
 
-        String currentFrameName = document.frame()->tree().uniqueName();
+        auto currentFrameName = document.frame()->tree().uniqueName();
         if (frameName != currentFrameName) {
             frameName = currentFrameName;
             order++;
@@ -76,7 +77,7 @@ void WebFoundTextRangeController::findTextRangesForStringMatches(const String& s
 
         // FIXME: We should get the character ranges at the same time as the SimpleRanges to avoid additional traversals.
         auto range = characterRange(makeBoundaryPointBeforeNodeContents(*element), simpleRange, WebCore::findIteratorOptions());
-        auto foundTextRange = WebFoundTextRange { range.location, range.length, frameName.length() ? frameName : emptyString(), order };
+        auto foundTextRange = WebFoundTextRange { range.location, range.length, frameName.length() ? frameName : emptyAtom(), order };
 
         m_cachedFoundRanges.add(foundTextRange, simpleRange);
         foundTextRanges.append(foundTextRange);
@@ -129,14 +130,7 @@ void WebFoundTextRangeController::decorateTextRangeWithStyle(const WebFoundTextR
         simpleRange->start.document().markers().addMarker(*simpleRange, WebCore::DocumentMarker::TextMatch);
     else if (style == FindDecorationStyle::Highlighted) {
         m_highlightedRange = range;
-
-        constexpr int indicatorMargin = 1;
-
-        OptionSet options { WebCore::TextIndicatorOption::IncludeMarginIfRangeMatchesSelection, WebCore::TextIndicatorOption::DoNotClipToVisibleRect };
-        if (WebCore::ImageOverlay::isInsideOverlay(*simpleRange))
-            options.add({ WebCore::TextIndicatorOption::PaintAllContent, WebCore::TextIndicatorOption::PaintBackgrounds });
-
-        m_textIndicator = WebCore::TextIndicator::createWithRange(*simpleRange, options, WebCore::TextIndicatorPresentationTransition::None, WebCore::FloatSize(indicatorMargin, indicatorMargin));
+        setTextIndicatorWithRange(*simpleRange);
     }
 
     if (m_findPageOverlay)
@@ -154,7 +148,7 @@ void WebFoundTextRangeController::scrollTextRangeToVisible(const WebFoundTextRan
         return;
 
     WebCore::VisibleSelection visibleSelection(*simpleRange);
-    OptionSet temporarySelectionOptions { WebCore::TemporarySelectionOption::DelegateMainFrameScroll, WebCore::TemporarySelectionOption::RevealSelectionBounds };
+    OptionSet temporarySelectionOptions { WebCore::TemporarySelectionOption::DelegateMainFrameScroll, WebCore::TemporarySelectionOption::RevealSelectionBounds, WebCore::TemporarySelectionOption::DoNotSetFocus, WebCore::TemporarySelectionOption::UserTriggered };
 
     if (document->isTopDocument())
         temporarySelectionOptions.add(WebCore::TemporarySelectionOption::SmoothScroll);
@@ -177,7 +171,9 @@ void WebFoundTextRangeController::clearAllDecoratedFoundText()
 
 void WebFoundTextRangeController::didBeginTextSearchOperation()
 {
-    if (!m_findPageOverlay) {
+    if (m_findPageOverlay)
+        m_findPageOverlay->stopFadeOutAnimation();
+    else {
         m_findPageOverlay = WebCore::PageOverlay::create(*this, WebCore::PageOverlay::OverlayType::Document);
         m_webPage->corePage()->pageOverlayController().installPageOverlay(*m_findPageOverlay, WebCore::PageOverlay::FadeMode::Fade);
     }
@@ -189,8 +185,6 @@ void WebFoundTextRangeController::didEndTextSearchOperation()
 {
     if (m_findPageOverlay)
         m_webPage->corePage()->pageOverlayController().uninstallPageOverlay(*m_findPageOverlay, WebCore::PageOverlay::FadeMode::Fade);
-
-    m_findPageOverlay = nullptr;
 }
 
 void WebFoundTextRangeController::requestRectForFoundTextRange(const WebFoundTextRange& range, CompletionHandler<void(WebCore::FloatRect)>&& completionHandler)
@@ -203,6 +197,25 @@ void WebFoundTextRangeController::requestRectForFoundTextRange(const WebFoundTex
 
     auto* frameView = simpleRange->startContainer().document().frame()->view();
     completionHandler(frameView->contentsToRootView(unionRect(WebCore::RenderObject::absoluteTextRects(*simpleRange))));
+}
+
+void WebFoundTextRangeController::redraw()
+{
+    if (!m_findPageOverlay)
+        return;
+
+    auto setNeedsDisplay = makeScopeExit([findPageOverlay = RefPtr { m_findPageOverlay }] {
+        findPageOverlay->setNeedsDisplay();
+    });
+
+    if (!m_highlightedRange.length)
+        return;
+
+    auto simpleRange = simpleRangeFromFoundTextRange(m_highlightedRange);
+    if (!simpleRange)
+        return;
+
+    setTextIndicatorWithRange(*simpleRange);
 }
 
 void WebFoundTextRangeController::willMoveToPage(WebCore::PageOverlay&, WebCore::Page* page)
@@ -284,6 +297,17 @@ void WebFoundTextRangeController::drawRect(WebCore::PageOverlay&, WebCore::Graph
     }
 }
 
+void WebFoundTextRangeController::setTextIndicatorWithRange(const WebCore::SimpleRange& range)
+{
+    constexpr int indicatorMargin = 1;
+
+    OptionSet options { WebCore::TextIndicatorOption::IncludeMarginIfRangeMatchesSelection, WebCore::TextIndicatorOption::DoNotClipToVisibleRect };
+    if (WebCore::ImageOverlay::isInsideOverlay(range))
+        options.add({ WebCore::TextIndicatorOption::PaintAllContent, WebCore::TextIndicatorOption::PaintBackgrounds });
+
+    m_textIndicator = WebCore::TextIndicator::createWithRange(range, options, WebCore::TextIndicatorPresentationTransition::None, WebCore::FloatSize(indicatorMargin, indicatorMargin));
+}
+
 Vector<WebCore::FloatRect> WebFoundTextRangeController::rectsForTextMatchesInRect(WebCore::IntRect clipRect)
 {
     Vector<WebCore::FloatRect> rects;
@@ -315,7 +339,7 @@ WebCore::Document* WebFoundTextRangeController::documentForFoundTextRange(const 
     if (range.frameIdentifier.isEmpty())
         return mainFrame.document();
 
-    if (auto* frame = mainFrame.tree().find(range.frameIdentifier, mainFrame))
+    if (auto* frame = mainFrame.tree().find(AtomString { range.frameIdentifier }, mainFrame))
         return frame->document();
 
     return nullptr;

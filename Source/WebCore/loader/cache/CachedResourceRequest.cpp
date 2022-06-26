@@ -86,7 +86,7 @@ const AtomString& CachedResourceRequest::initiatorName() const
     if (!m_initiatorName.isEmpty())
         return m_initiatorName;
 
-    static MainThreadNeverDestroyed<const AtomString> defaultName("other", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> defaultName("other"_s);
     return defaultName;
 }
 
@@ -126,17 +126,37 @@ void CachedResourceRequest::setDomainForCachePartition(const String& domain)
     m_resourceRequest.setDomainForCachePartition(domain);
 }
 
-static inline constexpr ASCIILiteral acceptHeaderValueForImageResource(bool supportsVideoImage)
+static constexpr ASCIILiteral acceptHeaderValueForWebPImageResource()
 {
 #if HAVE(WEBP) || USE(WEBP)
-    #define WEBP_HEADER_PART "image/webp,"
+    return "image/webp,"_s;
 #else
-    #define WEBP_HEADER_PART ""
+    return ""_s;
 #endif
+}
+
+static constexpr ASCIILiteral acceptHeaderValueForAVIFImageResource()
+{
+#if HAVE(AVIF) || USE(AVIF)
+    return "image/avif,"_s;
+#else
+    return ""_s;
+#endif
+}
+
+static constexpr ASCIILiteral acceptHeaderValueForVideoImageResource(bool supportsVideoImage)
+{
     if (supportsVideoImage)
-        return WEBP_HEADER_PART "image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5"_s;
-    return WEBP_HEADER_PART "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"_s;
-    #undef WEBP_HEADER_PART
+        return "video/*;q=0.8,"_s;
+    return ""_s;
+}
+
+static String acceptHeaderValueForImageResource()
+{
+    return String(acceptHeaderValueForWebPImageResource())
+        + acceptHeaderValueForAVIFImageResource()
+        + acceptHeaderValueForVideoImageResource(ImageDecoder::supportsMediaType(ImageDecoder::MediaType::Video))
+        + "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"_s;
 }
 
 String CachedResourceRequest::acceptHeaderValueFromType(CachedResource::Type type)
@@ -145,7 +165,7 @@ String CachedResourceRequest::acceptHeaderValueFromType(CachedResource::Type typ
     case CachedResource::Type::MainResource:
         return "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"_s;
     case CachedResource::Type::ImageResource:
-        return acceptHeaderValueForImageResource(ImageDecoder::supportsMediaType(ImageDecoder::MediaType::Video));
+        return acceptHeaderValueForImageResource();
     case CachedResource::Type::CSSStyleSheet:
         return "text/css,*/*;q=0.1"_s;
     case CachedResource::Type::SVGDocumentResource:

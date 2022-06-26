@@ -88,7 +88,8 @@ public:
     MonotonicTime requestStart;
     MonotonicTime responseStart;
     MonotonicTime responseEnd;
-    
+    MonotonicTime workerStart;
+
     // ALPN Protocol ID: https://w3c.github.io/resource-timing/#bib-RFC7301
     String protocol;
 
@@ -133,6 +134,8 @@ struct AdditionalNetworkLoadMetricsForWebInspector : public RefCounted<Additiona
     uint64_t requestHeaderBytesSent { std::numeric_limits<uint64_t>::max() };
     uint64_t responseHeaderBytesReceived { std::numeric_limits<uint64_t>::max() };
     uint64_t requestBodyBytesSent { std::numeric_limits<uint64_t>::max() };
+
+    bool isProxyConnection { false };
 private:
     AdditionalNetworkLoadMetricsForWebInspector() { }
 };
@@ -157,6 +160,7 @@ void NetworkLoadMetrics::encode(Encoder& encoder) const
     encoder << requestStart;
     encoder << responseStart;
     encoder << responseEnd;
+    encoder << workerStart;
 
     encoder << protocol;
 
@@ -199,6 +203,7 @@ std::optional<NetworkLoadMetrics> NetworkLoadMetrics::decode(Decoder& decoder)
         && decoder.decode(metrics.requestStart)
         && decoder.decode(metrics.responseStart)
         && decoder.decode(metrics.responseEnd)
+        && decoder.decode(metrics.workerStart)
         && decoder.decode(metrics.protocol)
         && decoder.decode(metrics.redirectCount)))
         return std::nullopt;
@@ -283,6 +288,8 @@ void AdditionalNetworkLoadMetricsForWebInspector::encode(Encoder& encoder) const
     encoder << requestHeaderBytesSent;
     encoder << responseHeaderBytesReceived;
     encoder << requestBodyBytesSent;
+
+    encoder << isProxyConnection;
 }
 
 template<class Decoder>
@@ -333,6 +340,11 @@ RefPtr<AdditionalNetworkLoadMetricsForWebInspector> AdditionalNetworkLoadMetrics
     if (!requestBodyBytesSent)
         return nullptr;
 
+    std::optional<bool> isProxyConnection;
+    decoder >> isProxyConnection;
+    if (!isProxyConnection)
+        return nullptr;
+
     auto decoded = AdditionalNetworkLoadMetricsForWebInspector::create();
     decoded->priority = WTFMove(*priority);
     decoded->remoteAddress = WTFMove(*remoteAddress);
@@ -343,6 +355,7 @@ RefPtr<AdditionalNetworkLoadMetricsForWebInspector> AdditionalNetworkLoadMetrics
     decoded->requestHeaderBytesSent = WTFMove(*requestHeaderBytesSent);
     decoded->responseHeaderBytesReceived = WTFMove(*responseHeaderBytesReceived);
     decoded->requestBodyBytesSent = WTFMove(*requestBodyBytesSent);
+    decoded->isProxyConnection = WTFMove(*isProxyConnection);
     return decoded;
 }
 

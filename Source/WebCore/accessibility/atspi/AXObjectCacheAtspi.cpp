@@ -102,7 +102,7 @@ void AXObjectCache::postPlatformNotification(AXCoreObject* coreObject, AXNotific
             wrapper->valueChanged(coreObject->valueForRange());
         break;
     case AXInvalidStatusChanged:
-        wrapper->stateChanged("invalid-entry", coreObject->invalidStatus() != "false");
+        wrapper->stateChanged("invalid-entry", coreObject->invalidStatus() != "false"_s);
         break;
     case AXElementBusyChanged:
         wrapper->stateChanged("busy", coreObject->isBusy());
@@ -194,6 +194,34 @@ void AXObjectCache::postPlatformNotification(AXCoreObject* coreObject, AXNotific
     case AXDraggingDropped:
         break;
     case AXDraggingExitedDropZone:
+        break;
+    case AXGrabbedStateChanged:
+        break;
+    case AXPositionInSetChanged:
+        break;
+    case AXDescribedByChanged:
+        break;
+    case AXHasPopupChanged:
+        break;
+    case AXSetSizeChanged:
+        break;
+    case AXLevelChanged:
+        break;
+    case AXMaximumValueChanged:
+        break;
+    case AXMinimumValueChanged:
+        break;
+    case AXMultiSelectableStateChanged:
+        break;
+    case AXIsAtomicChanged:
+        break;
+    case AXLiveRegionRelevantChanged:
+        break;
+    case AXLiveRegionStatusChanged:
+        break;
+    case AXOrientationChanged:
+        break;
+    case AXPlaceholderChanged:
         break;
     }
 }

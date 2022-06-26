@@ -119,13 +119,17 @@ struct ANGLEPlatformDisplay
           deviceIdLow(deviceIdLow)
     {}
 
-    auto tie() const { return std::tie(nativeDisplayType, powerPreference, platformANGLEType, deviceIdHigh, deviceIdLow); }
+    auto tie() const
+    {
+        return std::tie(nativeDisplayType, powerPreference, platformANGLEType, deviceIdHigh,
+                        deviceIdLow);
+    }
 
-    EGLNativeDisplayType nativeDisplayType { EGL_DEFAULT_DISPLAY };
-    EGLAttrib powerPreference { EGL_LOW_POWER_ANGLE };
-    EGLAttrib platformANGLEType { EGL_PLATFORM_ANGLE_TYPE_DEFAULT_ANGLE };
-    EGLAttrib deviceIdHigh { 0 };
-    EGLAttrib deviceIdLow { 0 };
+    EGLNativeDisplayType nativeDisplayType{EGL_DEFAULT_DISPLAY};
+    EGLAttrib powerPreference{EGL_LOW_POWER_ANGLE};
+    EGLAttrib platformANGLEType{EGL_PLATFORM_ANGLE_TYPE_DEFAULT_ANGLE};
+    EGLAttrib deviceIdHigh{0};
+    EGLAttrib deviceIdLow{0};
 };
 
 inline bool operator<(const ANGLEPlatformDisplay &a, const ANGLEPlatformDisplay &b)
@@ -276,6 +280,8 @@ EGLAttrib GetPlatformTypeFromEnvironment()
     return 0;
 #elif defined(ANGLE_USE_X11)
     return EGL_PLATFORM_X11_EXT;
+#elif defined(ANGLE_USE_WAYLAND)
+    return EGL_PLATFORM_WAYLAND_EXT;
 #elif defined(ANGLE_USE_VULKAN_DISPLAY) && defined(ANGLE_VULKAN_DISPLAY_MODE_SIMPLE)
     return EGL_PLATFORM_VULKAN_DISPLAY_MODE_SIMPLE_ANGLE;
 #elif defined(ANGLE_USE_VULKAN_DISPLAY) && defined(ANGLE_VULKAN_DISPLAY_MODE_HEADLESS)
@@ -297,9 +303,7 @@ rx::DisplayImpl *CreateDisplayFromAttribs(EGLAttrib displayType,
     {
         case EGL_PLATFORM_ANGLE_TYPE_DEFAULT_ANGLE:
             UNREACHABLE();
-#if !UNREACHABLE_IS_NORETURN
             break;
-#endif
 
         case EGL_PLATFORM_ANGLE_TYPE_D3D9_ANGLE:
         case EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE:
@@ -309,9 +313,7 @@ rx::DisplayImpl *CreateDisplayFromAttribs(EGLAttrib displayType,
 #else
             // A D3D display was requested on a platform that doesn't support it
             UNREACHABLE();
-#    if !UNREACHABLE_IS_NORETURN
             break;
-#    endif
 #endif
 
         case EGL_PLATFORM_ANGLE_TYPE_OPENGL_ANGLE:
@@ -359,9 +361,7 @@ rx::DisplayImpl *CreateDisplayFromAttribs(EGLAttrib displayType,
 #else
             // No display available
             UNREACHABLE();
-#    if !UNREACHABLE_IS_NORETURN
             break;
-#    endif
 
 #endif  // defined(ANGLE_ENABLE_OPENGL)
 
@@ -421,10 +421,24 @@ rx::DisplayImpl *CreateDisplayFromAttribs(EGLAttrib displayType,
             }
             break;
 #    elif defined(ANGLE_PLATFORM_LINUX)
+#        if defined(ANGLE_USE_GBM)
+            if (platformType == EGL_PLATFORM_GBM_KHR && rx::IsVulkanGbmDisplayAvailable())
+            {
+                impl = rx::CreateVulkanGbmDisplay(state);
+                break;
+            }
+#        endif
 #        if defined(ANGLE_USE_X11)
             if (platformType == EGL_PLATFORM_X11_EXT && rx::IsVulkanXcbDisplayAvailable())
             {
                 impl = rx::CreateVulkanXcbDisplay(state);
+                break;
+            }
+#        endif
+#        if defined(ANGLE_USE_WAYLAND)
+            if (platformType == EGL_PLATFORM_WAYLAND_EXT && rx::IsVulkanWaylandDisplayAvailable())
+            {
+                impl = rx::CreateVulkanWaylandDisplay(state);
                 break;
             }
 #        endif
@@ -476,9 +490,7 @@ rx::DisplayImpl *CreateDisplayFromAttribs(EGLAttrib displayType,
 #else
             // No display available
             UNREACHABLE();
-#    if !UNREACHABLE_IS_NORETURN
             break;
-#    endif
 #endif  // defined(ANGLE_ENABLE_VULKAN)
 
         case EGL_PLATFORM_ANGLE_TYPE_METAL_ANGLE:
@@ -491,9 +503,7 @@ rx::DisplayImpl *CreateDisplayFromAttribs(EGLAttrib displayType,
 #endif
             // No display available
             UNREACHABLE();
-#if !UNREACHABLE_IS_NORETURN
             break;
-#endif
 
         case EGL_PLATFORM_ANGLE_TYPE_NULL_ANGLE:
 #if defined(ANGLE_ENABLE_NULL)
@@ -502,16 +512,12 @@ rx::DisplayImpl *CreateDisplayFromAttribs(EGLAttrib displayType,
 #else
             // No display available
             UNREACHABLE();
-#    if !UNREACHABLE_IS_NORETURN
             break;
-#    endif
 #endif  // defined(ANGLE_ENABLE_NULL)
 
         default:
             UNREACHABLE();
-#if !UNREACHABLE_IS_NORETURN
             break;
-#endif
     }
 
     return impl;
@@ -678,7 +684,8 @@ DisplayState::~DisplayState() {}
 // https://docs.google.com/document/d/1XjHiDZQISq1AMrg_l1TX1_kIKvDpU76hidn9i4cAjl8/edit?disco=AAAAJl9V_YY
 //
 // static
-Display *Display::GetDisplayFromNativeDisplay(EGLNativeDisplayType nativeDisplay,
+Display *Display::GetDisplayFromNativeDisplay(EGLenum platform,
+                                              EGLNativeDisplayType nativeDisplay,
                                               const AttributeMap &attribMap)
 {
     Display *display = nullptr;
@@ -693,7 +700,8 @@ Display *Display::GetDisplayFromNativeDisplay(EGLNativeDisplayType nativeDisplay
     EGLAttrib deviceIdHigh = updatedAttribMap.get(EGL_PLATFORM_ANGLE_DEVICE_ID_HIGH_ANGLE, 0);
     EGLAttrib deviceIdLow  = updatedAttribMap.get(EGL_PLATFORM_ANGLE_DEVICE_ID_LOW_ANGLE, 0);
     ANGLEPlatformDisplayMap *displays = GetANGLEPlatformDisplayMap();
-    ANGLEPlatformDisplay displayKey(nativeDisplay, powerPreference, platformANGLEType, deviceIdHigh, deviceIdLow);
+    ANGLEPlatformDisplay displayKey(nativeDisplay, powerPreference, platformANGLEType, deviceIdHigh,
+                                    deviceIdLow);
     const auto &iter = displays->find(displayKey);
     if (iter != displays->end())
     {
@@ -708,7 +716,7 @@ Display *Display::GetDisplayFromNativeDisplay(EGLNativeDisplayType nativeDisplay
             return nullptr;
         }
 
-        display = new Display(EGL_PLATFORM_ANGLE_ANGLE, nativeDisplay, nullptr);
+        display = new Display(platform, nativeDisplay, nullptr);
         displays->insert(std::make_pair(displayKey, display));
     }
     // Apply new attributes if the display is not initialized yet.
@@ -716,10 +724,14 @@ Display *Display::GetDisplayFromNativeDisplay(EGLNativeDisplayType nativeDisplay
     {
         display->setAttributes(updatedAttribMap);
 
-        EGLAttrib displayType = display->mAttributeMap.get(EGL_PLATFORM_ANGLE_TYPE_ANGLE);
-        EGLAttrib deviceType  = display->mAttributeMap.get(EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE);
-        EGLAttrib platformType =
-            display->mAttributeMap.get(EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE);
+        EGLAttrib displayType  = display->mAttributeMap.get(EGL_PLATFORM_ANGLE_TYPE_ANGLE);
+        EGLAttrib deviceType   = display->mAttributeMap.get(EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE);
+        EGLAttrib platformType = platform;
+        if (platform == EGL_PLATFORM_ANGLE_ANGLE)
+        {
+            platformType =
+                display->mAttributeMap.get(EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE);
+        }
         rx::DisplayImpl *impl =
             CreateDisplayFromAttribs(displayType, deviceType, platformType, display->getState());
         if (impl == nullptr)
@@ -855,32 +867,39 @@ Display::Display(EGLenum platform, EGLNativeDisplayType displayId, Device *eglDe
 
 Display::~Display()
 {
-    if (mPlatform == EGL_PLATFORM_ANGLE_ANGLE)
+    switch (mPlatform)
     {
-        ANGLEPlatformDisplayMap *displays      = GetANGLEPlatformDisplayMap();
-        ANGLEPlatformDisplayMap::iterator iter = displays->find(ANGLEPlatformDisplay(
-            mState.displayId, mAttributeMap.get(EGL_POWER_PREFERENCE_ANGLE, EGL_LOW_POWER_ANGLE),
-            mAttributeMap.get(EGL_PLATFORM_ANGLE_TYPE_ANGLE,
-                              EGL_PLATFORM_ANGLE_TYPE_DEFAULT_ANGLE),
-            mAttributeMap.get(EGL_PLATFORM_ANGLE_DEVICE_ID_HIGH_ANGLE, 0),
-            mAttributeMap.get(EGL_PLATFORM_ANGLE_DEVICE_ID_LOW_ANGLE, 0)));
-        if (iter != displays->end())
+        case EGL_PLATFORM_ANGLE_ANGLE:
+        case EGL_PLATFORM_GBM_KHR:
         {
-            displays->erase(iter);
+            ANGLEPlatformDisplayMap *displays      = GetANGLEPlatformDisplayMap();
+            ANGLEPlatformDisplayMap::iterator iter = displays->find(ANGLEPlatformDisplay(
+                mState.displayId,
+                mAttributeMap.get(EGL_POWER_PREFERENCE_ANGLE, EGL_LOW_POWER_ANGLE),
+                mAttributeMap.get(EGL_PLATFORM_ANGLE_TYPE_ANGLE,
+                                  EGL_PLATFORM_ANGLE_TYPE_DEFAULT_ANGLE),
+                mAttributeMap.get(EGL_PLATFORM_ANGLE_DEVICE_ID_HIGH_ANGLE, 0),
+                mAttributeMap.get(EGL_PLATFORM_ANGLE_DEVICE_ID_LOW_ANGLE, 0)));
+            if (iter != displays->end())
+            {
+                displays->erase(iter);
+            }
+            break;
         }
-    }
-    else if (mPlatform == EGL_PLATFORM_DEVICE_EXT)
-    {
-        DevicePlatformDisplayMap *displays      = GetDevicePlatformDisplayMap();
-        DevicePlatformDisplayMap::iterator iter = displays->find(mDevice);
-        if (iter != displays->end())
+        case EGL_PLATFORM_DEVICE_EXT:
         {
-            displays->erase(iter);
+            DevicePlatformDisplayMap *displays      = GetDevicePlatformDisplayMap();
+            DevicePlatformDisplayMap::iterator iter = displays->find(mDevice);
+            if (iter != displays->end())
+            {
+                displays->erase(iter);
+            }
+            break;
         }
-    }
-    else
-    {
-        UNREACHABLE();
+        default:
+        {
+            UNREACHABLE();
+        }
     }
 
     SafeDelete(mDevice);
@@ -1688,6 +1707,12 @@ Error Display::destroyContext(Thread *thread, gl::Context *context)
         // Keep |currentContext| alive, while releasing |context|.
         gl::ScopedContextRef scopedContextRef(currentContext);
 
+        // keep |currentDrawSurface| and |currentReadSurface| alive as well
+        // while releasing |context|.
+        ScopedSurfaceRef drawSurfaceRef(currentDrawSurface);
+        ScopedSurfaceRef readSurfaceRef(
+            currentReadSurface == currentDrawSurface ? nullptr : currentReadSurface);
+
         // Make the context current, so we can release resources belong to the context, and then
         // when context is released from the current, it will be destroyed.
         // TODO(http://www.anglebug.com/6322): Don't require a Context to be current in order to
@@ -1882,6 +1907,10 @@ static ClientExtensions GenerateClientExtensions()
     extensions.platformDevice   = true;
 #endif
 
+#if defined(ANGLE_USE_GBM)
+    extensions.platformGbmKHR = true;
+#endif
+
 #if defined(ANGLE_ENABLE_D3D11)
 #    if defined(ANGLE_ENABLE_WINDOWS_UWP)
     extensions.platformANGLED3D11ON12 = true;
@@ -2004,10 +2033,6 @@ void Display::initDisplayExtensions()
 
     // All backends support specific context versions
     mDisplayExtensions.createContextBackwardsCompatible = true;
-
-    // Note: we don't notify the back-end of a change to the renderbuffer right now. This extension
-    // is implemented only in the front-end. A full implementation involves notifying the back-end.
-    mDisplayExtensions.mutableRenderBufferKHR = true;
 
     mDisplayExtensionString = GenerateExtensionsString(mDisplayExtensions);
 }
@@ -2365,6 +2390,35 @@ Error Display::handleGPUSwitch()
 {
     ANGLE_TRY(mImplementation->handleGPUSwitch());
     initVendorString();
+    return NoError();
+}
+
+Error Display::forceGPUSwitch(EGLint gpuIDHigh, EGLint gpuIDLow)
+{
+    ANGLE_TRY(mImplementation->forceGPUSwitch(gpuIDHigh, gpuIDLow));
+    initVendorString();
+    return NoError();
+}
+
+bool Display::supportsDmaBufFormat(EGLint format) const
+{
+    return mImplementation->supportsDmaBufFormat(format);
+}
+
+Error Display::queryDmaBufFormats(EGLint max_formats, EGLint *formats, EGLint *num_formats)
+{
+    ANGLE_TRY(mImplementation->queryDmaBufFormats(max_formats, formats, num_formats));
+    return NoError();
+}
+
+Error Display::queryDmaBufModifiers(EGLint format,
+                                    EGLint max_modifiers,
+                                    EGLuint64KHR *modifiers,
+                                    EGLBoolean *external_only,
+                                    EGLint *num_modifiers)
+{
+    ANGLE_TRY(mImplementation->queryDmaBufModifiers(format, max_modifiers, modifiers, external_only,
+                                                    num_modifiers));
     return NoError();
 }
 

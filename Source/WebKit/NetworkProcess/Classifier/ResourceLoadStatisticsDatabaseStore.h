@@ -82,7 +82,7 @@ public:
     void setGrandfathered(const RegistrableDomain&, bool value) override;
     bool isGrandfathered(const RegistrableDomain&) const override;
 
-    void setIsScheduledForAllButCookieDataRemoval(const RegistrableDomain&, bool value);
+    void setIsScheduledForAllScriptWrittenStorageRemoval(const RegistrableDomain&, bool value);
     void setSubframeUnderTopFrameDomain(const SubFrameDomain&, const TopFrameDomain&) override;
     void setSubresourceUnderTopFrameDomain(const SubResourceDomain&, const TopFrameDomain&) override;
     void setSubresourceUniqueRedirectTo(const SubResourceDomain&, const RedirectDomain&) override;
@@ -138,8 +138,8 @@ private:
     Vector<WebResourceLoadStatisticsStore::ThirdPartyDataForSpecificFirstParty> getThirdPartyDataForSpecificFirstPartyDomains(unsigned, const RegistrableDomain&) const;
     void openAndUpdateSchemaIfNecessary();
     String getDomainStringFromDomainID(unsigned) const final;
-    ASCIILiteral getSubStatisticStatement(const String&) const;
-    void appendSubStatisticList(StringBuilder&, const String& tableName, const String& domain) const;
+    ASCIILiteral getSubStatisticStatement(ASCIILiteral) const;
+    void appendSubStatisticList(StringBuilder&, ASCIILiteral tableName, const String& domain) const;
     void mergeStatistic(const ResourceLoadStatistics&);
     void merge(WebCore::SQLiteStatement*, const ResourceLoadStatistics&);
     void clearDatabaseContents();

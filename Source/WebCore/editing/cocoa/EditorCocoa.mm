@@ -208,18 +208,14 @@ String Editor::stringSelectionForPasteboard()
 {
     if (!canCopy())
         return emptyString();
-    String text = selectedText();
-    text.replace(noBreakSpace, ' ');
-    return text;
+    return makeStringByReplacingAll(selectedText(), noBreakSpace, ' ');
 }
 
 String Editor::stringSelectionForPasteboardWithImageAltText()
 {
     if (!canCopy())
         return emptyString();
-    String text = selectedTextForDataTransfer();
-    text.replace(noBreakSpace, ' ');
-    return text;
+    return makeStringByReplacingAll(selectedTextForDataTransfer(), noBreakSpace, ' ');
 }
 
 void Editor::replaceSelectionWithAttributedString(NSAttributedString *attributedString, MailBlockquoteHandling mailBlockquoteHandling)
@@ -292,10 +288,8 @@ void Editor::takeFindStringFromSelection()
     Vector<String> types;
     types.append(String(legacyStringPasteboardType()));
     auto context = PagePasteboardContext::create(m_document.pageID());
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    platformStrategies()->pasteboardStrategy()->setTypes(types, NSFindPboard, context.get());
-    platformStrategies()->pasteboardStrategy()->setStringForType(WTFMove(stringFromSelection), legacyStringPasteboardType(), NSFindPboard, context.get());
-    ALLOW_DEPRECATED_DECLARATIONS_END
+    platformStrategies()->pasteboardStrategy()->setTypes(types, NSPasteboardNameFind, context.get());
+    platformStrategies()->pasteboardStrategy()->setStringForType(WTFMove(stringFromSelection), legacyStringPasteboardType(), NSPasteboardNameFind, context.get());
 #else
     if (auto* client = this->client()) {
         // Since the find pasteboard doesn't exist on iOS, WebKit maintains its own notion of the latest find string,
@@ -346,7 +340,7 @@ static void maybeCopyNodeAttributesToFragment(const Node& node, DocumentFragment
     }
 }
 
-void Editor::replaceNodeFromPasteboard(Node& node, const String& pasteboardName)
+void Editor::replaceNodeFromPasteboard(Node& node, const String& pasteboardName, EditAction action)
 {
     if (node.document() != m_document)
         return;
@@ -365,19 +359,17 @@ void Editor::replaceNodeFromPasteboard(Node& node, const String& pasteboardName)
     }
 
 #if PLATFORM(MAC)
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     // FIXME: How can this hard-coded pasteboard name be right, given that the passed-in pasteboard has a name?
     // FIXME: We can also remove `setInsertionPasteboard` altogether once Mail compose on macOS no longer uses WebKitLegacy,
     // since it's only implemented for WebKitLegacy on macOS, and the only known client is Mail compose.
-    client()->setInsertionPasteboard(NSGeneralPboard);
-    ALLOW_DEPRECATED_DECLARATIONS_END
+    client()->setInsertionPasteboard(NSPasteboardNameGeneral);
 #endif
 
     bool chosePlainText;
     if (auto fragment = webContentFromPasteboard(pasteboard, *range, true, chosePlainText)) {
         maybeCopyNodeAttributesToFragment(node, *fragment);
         if (shouldInsertFragment(*fragment, *range, EditorInsertAction::Pasted))
-            pasteAsFragment(fragment.releaseNonNull(), false, false, MailBlockquoteHandling::IgnoreBlockquote);
+            pasteAsFragment(fragment.releaseNonNull(), false, false, MailBlockquoteHandling::IgnoreBlockquote, action);
     }
 
 #if PLATFORM(MAC)

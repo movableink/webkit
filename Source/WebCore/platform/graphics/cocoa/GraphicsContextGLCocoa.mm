@@ -33,6 +33,7 @@
 #import "ANGLEUtilitiesCocoa.h"
 #import "CVUtilities.h"
 #import "GraphicsContextGLIOSurfaceSwapChain.h"
+#import "IOSurfacePool.h"
 #import "Logging.h"
 #import "PixelBuffer.h"
 #import "ProcessIdentity.h"
@@ -41,6 +42,7 @@
 #import <Metal/Metal.h>
 #import <pal/spi/cocoa/MetalSPI.h>
 #import <wtf/BlockObjCExceptions.h>
+#import <wtf/darwin/WeakLinking.h>
 #import <wtf/text/CString.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -56,6 +58,9 @@
 #if ENABLE(MEDIA_STREAM)
 #import "ImageRotationSessionVT.h"
 #endif
+
+// FIXME: Checking for EGL_Initialize does not seem to be robust in recovery OS.
+WTF_WEAK_LINK_FORCE_IMPORT(EGL_GetPlatformDisplayEXT);
 
 namespace WebCore {
 
@@ -94,18 +99,15 @@ static bool checkVolatileContextSupportIfDeviceExists(EGLDisplay display, const 
 }
 #endif
 
-static bool platformSupportsMetal(bool isWebGL2)
+static bool platformSupportsMetal()
 {
     auto device = adoptNS(MTLCreateSystemDefaultDevice());
 
     if (device) {
 #if PLATFORM(IOS_FAMILY) && !PLATFORM(IOS_FAMILY_SIMULATOR)
-        // A8 devices (iPad Mini 4, iPad Air 2) cannot use WebGL2 via Metal.
+        // A8 devices (iPad Mini 4, iPad Air 2) cannot use WebGL via Metal.
         // This check can be removed once they are no longer supported.
-        if (isWebGL2)
-            return [device supportsFamily:MTLGPUFamilyApple3];
-#else
-        UNUSED_PARAM(isWebGL2);
+        return [device supportsFamily:MTLGPUFamilyApple3];
 #endif
         return true;
     }
@@ -119,6 +121,12 @@ static EGLDisplay initializeEGLDisplay(const GraphicsContextGLAttributes& attrs)
         WTFLogAlways("Failed to load ANGLE shared library.");
         return EGL_NO_DISPLAY;
     }
+    // FIXME(http://webkit.org/b/238448): Why is checking EGL_Initialize not robust in recovery OS?
+    if (EGL_GetPlatformDisplayEXT == NULL) { // NOLINT
+        WTFLogAlways("Inconsistent weak linking for ANGLE shared library.");
+        return EGL_NO_DISPLAY;
+    }
+
 #if ASSERT_ENABLED
     const char* clientExtensions = EGL_QueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
     ASSERT(clientExtensions);
@@ -236,7 +244,7 @@ bool GraphicsContextGLCocoa::platformInitializeContext()
 {
     GraphicsContextGLAttributes attributes = contextAttributes();
     m_isForWebGL2 = attributes.webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
-    if (attributes.useMetal && !platformSupportsMetal(m_isForWebGL2)) {
+    if (attributes.useMetal && !platformSupportsMetal()) {
         attributes.useMetal = false;
         setContextAttributes(attributes);
     }
@@ -563,7 +571,7 @@ bool GraphicsContextGLCocoa::reshapeDisplayBufferBacking()
 bool GraphicsContextGLCocoa::allocateAndBindDisplayBufferBacking()
 {
     ASSERT(!getInternalFramebufferSize().isEmpty());
-    auto backing = IOSurface::create(getInternalFramebufferSize(), DestinationColorSpace::SRGB());
+    auto backing = IOSurface::create(nullptr, getInternalFramebufferSize(), DestinationColorSpace::SRGB());
     if (!backing)
         return false;
     if (m_resourceOwner)
@@ -687,7 +695,7 @@ void GraphicsContextGLCocoa::prepareForDisplay()
         return;
     if (!makeContextCurrent())
         return;
-    prepareTextureImpl();
+    prepareTexture();
 
     // The IOSurface will be used from other graphics subsystem, so flush GL commands.
     GL_Flush();
@@ -729,13 +737,13 @@ GraphicsContextGLCV* GraphicsContextGLCocoa::asCV()
 }
 #endif
 
-std::optional<PixelBuffer> GraphicsContextGLANGLE::readCompositedResults()
+RefPtr<PixelBuffer> GraphicsContextGLANGLE::readCompositedResults()
 {
     auto& displayBuffer = m_swapChain.displayBuffer();
     if (!displayBuffer.surface || !displayBuffer.handle)
-        return std::nullopt;
+        return nullptr;
     if (displayBuffer.surface->size() != getInternalFramebufferSize())
-        return std::nullopt;
+        return nullptr;
     // Note: We are using GL to read the IOSurface. At the time of writing, there are no convinient
     // functions to convert the IOSurface pixel data to ImageData. The image data ends up being
     // drawn to a ImageBuffer, but at the time there's no functions to construct a NativeImage
@@ -746,7 +754,7 @@ std::optional<PixelBuffer> GraphicsContextGLANGLE::readCompositedResults()
     ScopedRestoreTextureBinding restoreBinding(drawingBufferTextureTargetQueryForDrawingTarget(drawingBufferTextureTarget()), textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
     GL_BindTexture(textureTarget, texture);
     if (!EGL_BindTexImage(m_displayObj, displayBuffer.handle, EGL_BACK_BUFFER))
-        return std::nullopt;
+        return nullptr;
     GL_TexParameteri(textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     ScopedFramebuffer fbo;
     ScopedRestoreReadFramebufferBinding fboBinding(m_isForWebGL2, m_state.boundReadFBO, fbo);
@@ -781,7 +789,7 @@ RefPtr<VideoFrame> GraphicsContextGLCocoa::paintCompositedResultsToVideoFrame()
         return nullptr;
     if (m_resourceOwner)
         setOwnershipIdentityForCVPixelBuffer(mediaSamplePixelBuffer.get(), m_resourceOwner);
-    return VideoFrameCV::create({ }, false, VideoFrame::VideoRotation::None, WTFMove(mediaSamplePixelBuffer));
+    return VideoFrameCV::create({ }, false, VideoFrame::Rotation::None, WTFMove(mediaSamplePixelBuffer));
 }
 #endif
 

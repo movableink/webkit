@@ -5,6 +5,7 @@ include(platform/GStreamer.cmake)
 include(platform/ImageDecoders.cmake)
 include(platform/Soup.cmake)
 include(platform/TextureMapper.cmake)
+include(PlatformGLib.cmake)
 
 if (USE_EXTERNAL_HOLEPUNCH)
     include(platform/HolePunch.cmake)
@@ -17,7 +18,6 @@ list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
 )
 
 list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
-    "${WEBCORE_DIR}/accessibility/atk"
     "${WEBCORE_DIR}/accessibility/atspi"
     "${WEBCORE_DIR}/platform/adwaita"
     "${WEBCORE_DIR}/platform/audio/glib"
@@ -55,18 +55,17 @@ set(CSS_VALUE_PLATFORM_DEFINES "HAVE_OS_DARK_MODE_SUPPORT=1")
 
 list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
     ${WEBCORE_DIR}/css/themeAdwaita.css
-    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsAdwaita.css
+    ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.css
 )
 
 set(WebCore_USER_AGENT_SCRIPTS
-    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsAdwaita.js
+    ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.js
 )
 
 set(WebCore_USER_AGENT_SCRIPTS_DEPENDENCIES ${WEBCORE_DIR}/platform/wpe/RenderThemeWPE.cpp)
 
 list(APPEND WebCore_LIBRARIES
     WPE::libwpe
-    ${ATK_LIBRARIES}
     ${GLIB_GIO_LIBRARIES}
     ${GLIB_GMODULE_LIBRARIES}
     ${GLIB_GOBJECT_LIBRARIES}
@@ -76,7 +75,6 @@ list(APPEND WebCore_LIBRARIES
 )
 
 list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-    ${ATK_INCLUDE_DIRS}
     ${GIO_UNIX_INCLUDE_DIRS}
     ${GLIB_INCLUDE_DIRS}
     ${LIBTASN1_INCLUDE_DIRS}

@@ -66,7 +66,7 @@ struct DebuggerParseData;
 #define TreePropertyList typename TreeBuilder::PropertyList
 #define TreeDestructuringPattern typename TreeBuilder::DestructuringPattern
 
-COMPILE_ASSERT(LastUntaggedToken < 64, LessThan64UntaggedTokens);
+static_assert(LastUntaggedToken < 64, "Less than 64 untagged tokens");
 
 enum SourceElementsMode { CheckForStrictMode, DontCheckForStrictMode };
 enum FunctionBodyType { ArrowFunctionBodyExpression, ArrowFunctionBodyBlock, StandardFunctionBodyBlock };
@@ -663,10 +663,12 @@ public:
         m_closedVariableCandidates.add(impl);
     }
 
-    void markLastUsedVariablesSetAsCaptured()
+    void markLastUsedVariablesSetAsCaptured(unsigned from)
     {
-        for (UniquedStringImpl* impl : m_usedVariables.last())
-            m_closedVariableCandidates.add(impl);
+        for (unsigned index = from; index < m_usedVariables.size(); ++index) {
+            for (UniquedStringImpl* impl : m_usedVariables[index])
+                m_closedVariableCandidates.add(impl);
+        }
     }
     
     void collectFreeVariables(Scope* nestedScope, bool shouldTrackClosedVariables)
@@ -1628,7 +1630,7 @@ private:
     NEVER_INLINE void updateErrorMessage(const char* msg)
     {
         ASSERT(msg);
-        m_errorMessage = String(msg);
+        m_errorMessage = String::fromLatin1(msg);
         ASSERT(!m_errorMessage.isNull());
     }
 
@@ -2219,7 +2221,7 @@ std::unique_ptr<ParsedNode> parse(
             if (!result) {
                 ASSERT(error.isValid());
                 if (error.type() != ParserError::StackOverflow)
-                    dataLogLn("Unexpected error compiling builtin: ", error.message());
+                    dataLogLn("Unexpected error compiling builtin: ", error.message(), " on line ", error.line(), ".");
             }
         }
     } else {

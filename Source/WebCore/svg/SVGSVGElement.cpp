@@ -137,8 +137,7 @@ void SVGSVGElement::setCurrentTranslate(const FloatPoint& translation)
 
 void SVGSVGElement::updateCurrentTranslate()
 {
-    if (RenderObject* object = renderer())
-        object->setNeedsLayout();
+    updateSVGRendererForElementChange();
     if (parentNode() == &document() && document().renderView())
         document().renderView()->repaint();
 }
@@ -211,16 +210,28 @@ void SVGSVGElement::svgAttributeChanged(const QualifiedName& attrName)
         InstanceInvalidationGuard guard(*this);
         setPresentationalHintStyleIsDirty();
 
-        if (auto* renderer = this->renderer())
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+        if (attrName == SVGNames::widthAttr || attrName == SVGNames::heightAttr) {
+            // FIXME: try to get rid of this custom handling of embedded SVG invalidation, maybe through abstraction.
+            if (auto* renderer = this->renderer()) {
+                bool embeddedThroughFrame = false;
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+                if (is<RenderSVGRoot>(renderer) && downcast<RenderSVGRoot>(renderer)->isEmbeddedThroughFrameContainingSVGDocument())
+                    embeddedThroughFrame = true;
+#endif
+                if (!embeddedThroughFrame && is<LegacyRenderSVGRoot>(renderer) && downcast<LegacyRenderSVGRoot>(renderer)->isEmbeddedThroughFrameContainingSVGDocument())
+                    embeddedThroughFrame = true;
+                if (embeddedThroughFrame)
+                    renderer->view().setNeedsLayout(MarkOnlyThis);
+            }
+        }
+        updateSVGRendererForElementChange();
         return;
     }
 
     if (SVGFitToViewBox::isKnownAttribute(attrName)) {
-        if (auto* renderer = this->renderer()) {
+        if (auto* renderer = this->renderer())
             renderer->setNeedsTransformUpdate();
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-        }
+        updateSVGRendererForElementChange();
         return;
     }
 
@@ -591,14 +602,14 @@ bool SVGSVGElement::scrollToFragment(StringView fragmentIdentifier)
     bool hadUseCurrentView = m_useCurrentView;
     m_useCurrentView = false;
 
-    if (fragmentIdentifier.startsWith("xpointer(")) {
+    if (fragmentIdentifier.startsWith("xpointer("_s)) {
         // FIXME: XPointer references are ignored (https://bugs.webkit.org/show_bug.cgi?id=17491)
         if (renderer && hadUseCurrentView)
             RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         return false;
     }
 
-    if (fragmentIdentifier.startsWith("svgView(")) {
+    if (fragmentIdentifier.startsWith("svgView("_s)) {
         if (!view)
             view = &currentView(); // Create the SVGViewSpec.
         if (view->parseViewSpec(fragmentIdentifier))

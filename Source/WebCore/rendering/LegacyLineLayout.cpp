@@ -360,19 +360,8 @@ TextAlignMode LegacyLineLayout::textAlignmentForLine(bool endsWithSoftBreak) con
         return *overrideAlignment;
 
     TextAlignMode alignment = style().textAlign();
-#if ENABLE(CSS3_TEXT)
-    TextJustify textJustify = style().textJustify();
-    if (alignment == TextAlignMode::Justify && textJustify == TextJustify::None)
-        return style().direction() == TextDirection::LTR ? TextAlignMode::Left : TextAlignMode::Right;
-#endif
 
     if (endsWithSoftBreak)
-        return alignment;
-
-#if !ENABLE(CSS3_TEXT)
-    return (alignment == TextAlignMode::Justify) ? TextAlignMode::Start : alignment;
-#else
-    if (alignment != TextAlignMode::Justify)
         return alignment;
 
     TextAlignLast alignmentLast = style().textAlignLast();
@@ -390,12 +379,13 @@ TextAlignMode LegacyLineLayout::textAlignmentForLine(bool endsWithSoftBreak) con
     case TextAlignLast::Justify:
         return TextAlignMode::Justify;
     case TextAlignLast::Auto:
-        if (textJustify == TextJustify::Distribute)
-            return TextAlignMode::Justify;
-        return TextAlignMode::Start;
+        if (alignment == TextAlignMode::Justify)
+            return TextAlignMode::Start;
+        return alignment;
     }
-    return alignment;
-#endif
+
+    ASSERT_NOT_REACHED();
+    return TextAlignMode::Start;
 }
 
 static void updateLogicalWidthForLeftAlignedBlock(bool isLeftToRightDirection, BidiRun* trailingSpaceRun, float& logicalLeft, float& totalLogicalWidth, float availableLogicalWidth)
@@ -728,9 +718,9 @@ static inline ExpansionBehavior expansionBehaviorForInlineTextBox(RenderBlockFlo
 {
     // Tatechuyoko is modeled as the Object Replacement Character (U+FFFC), which can never have expansion opportunities inside nor intrinsically adjacent to it.
     if (textBox.renderer().style().textCombine() == TextCombine::All)
-        return ForbidLeftExpansion | ForbidRightExpansion;
+        return ExpansionBehavior::forbidAll();
 
-    ExpansionBehavior result = 0;
+    auto result = ExpansionBehavior::forbidAll();
     bool setLeftExpansion = false;
     bool setRightExpansion = false;
     if (textAlign == TextAlignMode::Justify) {
@@ -743,7 +733,7 @@ static inline ExpansionBehavior expansionBehaviorForInlineTextBox(RenderBlockFlo
                         // FIXME: This leftExpansionOpportunity doesn't actually work because it doesn't perform the UBA
                         if (FontCascade::leftExpansionOpportunity(downcast<RenderText>(leafChild->renderer()).stringView(), leafChild->direction())) {
                             setRightExpansion = true;
-                            result |= ForceRightExpansion;
+                            result.right = ExpansionBehavior::Behavior::Force;
                         }
                     }
                 }
@@ -758,7 +748,7 @@ static inline ExpansionBehavior expansionBehaviorForInlineTextBox(RenderBlockFlo
                         // FIXME: This leftExpansionOpportunity doesn't actually work because it doesn't perform the UBA
                         if (FontCascade::rightExpansionOpportunity(downcast<RenderText>(leafChild->renderer()).stringView(), leafChild->direction())) {
                             setLeftExpansion = true;
-                            result |= ForceLeftExpansion;
+                            result.left = ExpansionBehavior::Behavior::Force;
                         }
                     }
                 }
@@ -769,44 +759,45 @@ static inline ExpansionBehavior expansionBehaviorForInlineTextBox(RenderBlockFlo
             RenderRubyBase& rubyBase = downcast<RenderRubyBase>(block);
             if (&textBox == rubyBase.firstRootBox()->firstLeafDescendant()) {
                 setLeftExpansion = true;
-                result |= ForbidLeftExpansion;
+                result.left = ExpansionBehavior::Behavior::Forbid;
             } if (&textBox == rubyBase.firstRootBox()->lastLeafDescendant()) {
                 setRightExpansion = true;
-                result |= ForbidRightExpansion;
+                result.right = ExpansionBehavior::Behavior::Forbid;
             }
         }
     }
     if (!setLeftExpansion)
-        result |= isAfterExpansion ? ForbidLeftExpansion : AllowLeftExpansion;
+        result.left = isAfterExpansion ? ExpansionBehavior::Behavior::Forbid : ExpansionBehavior::Behavior::Allow;
     if (!setRightExpansion)
-        result |= AllowRightExpansion;
+        result.right = ExpansionBehavior::Behavior::Allow;
     return result;
 }
 
 static inline void applyExpansionBehavior(LegacyInlineTextBox& textBox, ExpansionBehavior expansionBehavior)
 {
-    switch (expansionBehavior & LeftExpansionMask) {
-    case ForceLeftExpansion:
+    switch (expansionBehavior.left) {
+    case ExpansionBehavior::Behavior::Force:
         textBox.setForceLeftExpansion();
         break;
-    case ForbidLeftExpansion:
+    case ExpansionBehavior::Behavior::Forbid:
         textBox.setCanHaveLeftExpansion(false);
         break;
-    case AllowLeftExpansion:
+    case ExpansionBehavior::Behavior::Allow:
         textBox.setCanHaveLeftExpansion(true);
         break;
     default:
         ASSERT_NOT_REACHED();
         break;
-    }
-    switch (expansionBehavior & RightExpansionMask) {
-    case ForceRightExpansion:
+    };
+
+    switch (expansionBehavior.right) {
+    case ExpansionBehavior::Behavior::Force:
         textBox.setForceRightExpansion();
         break;
-    case ForbidRightExpansion:
+    case ExpansionBehavior::Behavior::Forbid:
         textBox.setCanHaveRightExpansion(false);
         break;
-    case AllowRightExpansion:
+    case ExpansionBehavior::Behavior::Allow:
         textBox.setCanHaveRightExpansion(true);
         break;
     default:
@@ -1347,7 +1338,7 @@ void LegacyLineLayout::layoutRunsAndFloats(LineLayoutState& layoutState, bool ha
             // that the block really needed a full layout, we missed our chance to repaint the layer
             // before layout started. Luckily the layer has cached the repaint rect for its original
             // position and size, and so we can use that to make a repaint happen now.
-            m_flow.repaintUsingContainer(m_flow.containerForRepaint(), m_flow.layerRepaintRects()->clippedOverflowRect);
+            m_flow.repaintUsingContainer(m_flow.containerForRepaint().renderer, m_flow.layerRepaintRects()->clippedOverflowRect);
         }
     }
 
@@ -1755,6 +1746,7 @@ void LegacyLineLayout::layoutLineBoxes(bool relayoutChildren, LayoutUnit& repain
         // deleted and only dirtied. In that case, we can layout the replaced
         // elements at the same time.
         bool hasInlineChild = false;
+        auto hasDirtyRenderCounterWithInlineBoxParent = false;
         Vector<RenderBox*> replacedChildren;
         for (InlineWalker walker(m_flow); !walker.atEnd(); walker.advance()) {
             RenderObject& o = *walker.current();
@@ -1791,14 +1783,27 @@ void LegacyLineLayout::layoutLineBoxes(bool relayoutChildren, LayoutUnit& repain
                         box.layoutIfNeeded();
                 }
             } else if (o.isTextOrLineBreak() || is<RenderInline>(o)) {
-                if (layoutState.isFullLayout() || o.selfNeedsLayout())
+                if (layoutState.isFullLayout() || o.selfNeedsLayout()) {
                     dirtyLineBoxesForRenderer(o, layoutState.isFullLayout());
+                    hasDirtyRenderCounterWithInlineBoxParent = hasDirtyRenderCounterWithInlineBoxParent || (is<RenderCounter>(o) && is<RenderInline>(o.parent()));
+                }
                 o.clearNeedsLayout();
             }
         }
 
         for (size_t i = 0; i < replacedChildren.size(); i++)
             replacedChildren[i]->layoutIfNeeded();
+
+        auto clearNeedsLayoutIfNeeded = [&] {
+            if (!hasDirtyRenderCounterWithInlineBoxParent)
+                return;
+            for (InlineWalker walker(m_flow); !walker.atEnd(); walker.advance()) {
+                auto& renderer = *walker.current();
+                if (is<RenderCounter>(renderer) || is<RenderInline>(renderer))
+                    renderer.clearNeedsLayout();
+            }
+        };
+        clearNeedsLayoutIfNeeded();
 
         layoutRunsAndFloats(layoutState, hasInlineChild);
     }

@@ -50,12 +50,12 @@
 
 namespace WebCore {
 
-const char* const WebArchivePboardType = "Apple Web Archive pasteboard type";
-const char* const WebURLNamePboardType = "public.url-name";
-const char* const WebURLsWithTitlesPboardType = "WebURLsWithTitlesPboardType";
+const ASCIILiteral WebArchivePboardType = "Apple Web Archive pasteboard type"_s;
+const ASCIILiteral WebURLNamePboardType = "public.url-name"_s;
+const ASCIILiteral WebURLsWithTitlesPboardType = "WebURLsWithTitlesPboardType"_s;
 
-const char WebSmartPastePboardType[] = "NeXT smart paste pasteboard type";
-const char WebURLPboardType[] = "public.url";
+const ASCIILiteral WebSmartPastePboardType = "NeXT smart paste pasteboard type"_s;
+const ASCIILiteral WebURLPboardType = "public.url"_s;
 
 static const Vector<String> writableTypesForURL()
 {
@@ -101,9 +101,7 @@ Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&& context, const Strin
 
 std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste(std::unique_ptr<PasteboardContext>&& context)
 {
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    return makeUnique<Pasteboard>(WTFMove(context), NSGeneralPboard);
-    ALLOW_DEPRECATED_DECLARATIONS_END
+    return makeUnique<Pasteboard>(WTFMove(context), NSPasteboardNameGeneral);
 }
 
 #if ENABLE(DRAG_SUPPORT)
@@ -114,9 +112,7 @@ String Pasteboard::nameOfDragPasteboard()
 
 std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(std::unique_ptr<PasteboardContext>&& context)
 {
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    return makeUnique<Pasteboard>(WTFMove(context), NSDragPboard);
-    ALLOW_DEPRECATED_DECLARATIONS_END
+    return makeUnique<Pasteboard>(WTFMove(context), NSPasteboardNameDrag);
 }
 
 std::unique_ptr<Pasteboard> Pasteboard::create(const DragData& dragData)
@@ -611,7 +607,7 @@ static String cocoaTypeFromHTMLClipboardType(const String& type)
     }
 
     // Reject types that might contain subframe information.
-    if (type == "text/rtf" || type == "public.rtf" || type == "com.apple.traditional-mac-plain-text")
+    if (type == "text/rtf"_s || type == "public.rtf"_s || type == "com.apple.traditional-mac-plain-text"_s)
         return String();
 
     auto utiType = UTIFromMIMEType(type);
@@ -669,7 +665,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 
 void Pasteboard::addHTMLClipboardTypesForCocoaType(ListHashSet<String>& resultTypes, const String& cocoaType)
 {
-    if (cocoaType == "NeXT plain ascii pasteboard type")
+    if (cocoaType == "NeXT plain ascii pasteboard type"_s)
         return; // Skip this ancient type that gets auto-supplied by some system conversion.
 
     // UTI may not do these right, so make sure we get the right, predictable result

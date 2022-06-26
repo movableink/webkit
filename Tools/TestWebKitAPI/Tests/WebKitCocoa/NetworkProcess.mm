@@ -27,6 +27,7 @@
 
 #import "HTTPServer.h"
 #import "PlatformUtilities.h"
+#import "Test.h"
 #import "TestWKWebView.h"
 #import "Utilities.h"
 #import <WebKit/WKProcessPoolPrivate.h>
@@ -93,7 +94,7 @@ TEST(NetworkProcess, LaunchOnlyWhenNecessary)
 
     @autoreleasepool {
         auto webView = adoptNS([WKWebView new]);
-        websiteDataStore = adoptNS([webView configuration].websiteDataStore);
+        websiteDataStore = [webView configuration].websiteDataStore;
         [websiteDataStore _setResourceLoadStatisticsEnabled:YES];
         [[webView configuration].processPool _registerURLSchemeAsSecure:@"test"];
         [[webView configuration].processPool _registerURLSchemeAsBypassingContentSecurityPolicy:@"test"];
@@ -136,26 +137,55 @@ TEST(NetworkProcess, CrashWhenNotAssociatedWithDataStore)
 TEST(NetworkProcess, TerminateWhenUnused)
 {
     RetainPtr<WKProcessPool> retainedPool;
+    pid_t networkProcessIdentifier = 0;
+
     @autoreleasepool {
         auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
-        configuration.get().websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
+        auto nonPersistentStore = [WKWebsiteDataStore nonPersistentDataStore];
+        configuration.get().websiteDataStore = nonPersistentStore;
         retainedPool = configuration.get().processPool;
         auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0) configuration:configuration.get()]);
         [webView synchronouslyLoadTestPageNamed:@"simple"];
         EXPECT_TRUE([WKWebsiteDataStore _defaultNetworkProcessExists]);
+
+        networkProcessIdentifier = [nonPersistentStore _networkProcessIdentifier];
+        EXPECT_NE(networkProcessIdentifier, 0);
     }
-    while ([WKWebsiteDataStore _defaultNetworkProcessExists])
+
+    while (!kill(networkProcessIdentifier, 0))
         TestWebKitAPI::Util::spinRunLoop();
-    
+    EXPECT_TRUE(errno == ESRCH);
+    EXPECT_FALSE([WKWebsiteDataStore _defaultNetworkProcessExists]);
+
     retainedPool = nil;
-    
     @autoreleasepool {
         auto webView = adoptNS([WKWebView new]);
         [webView synchronouslyLoadTestPageNamed:@"simple"];
         EXPECT_TRUE([WKWebsiteDataStore _defaultNetworkProcessExists]);
+
+        networkProcessIdentifier = [webView.get().configuration.websiteDataStore _networkProcessIdentifier];
+        EXPECT_NE(networkProcessIdentifier, 0);
     }
-    while ([WKWebsiteDataStore _defaultNetworkProcessExists])
+
+    while (!kill(networkProcessIdentifier, 0))
         TestWebKitAPI::Util::spinRunLoop();
+    EXPECT_TRUE(errno == ESRCH);
+    EXPECT_FALSE([WKWebsiteDataStore _defaultNetworkProcessExists]);
+}
+
+TEST(NetworkProcess, DoNotLaunchOnDataStoreDestruction)
+{
+    auto storeConfiguration1 = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initNonPersistentConfiguration]);
+    auto websiteDataStore1 = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration: storeConfiguration1.get()]);
+
+    EXPECT_FALSE([WKWebsiteDataStore _defaultNetworkProcessExists]);
+    @autoreleasepool {
+        auto storeConfiguration2 = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initNonPersistentConfiguration]);
+        auto websiteDataStore2 = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration: storeConfiguration2.get()]);
+    }
+
+    TestWebKitAPI::Util::spinRunLoop(10);
+    EXPECT_FALSE([WKWebsiteDataStore _defaultNetworkProcessExists]);
 }
 
 TEST(NetworkProcess, CORSPreflightCachePartitioned)
@@ -169,20 +199,20 @@ TEST(NetworkProcess, CORSPreflightCachePartitioned)
             EXPECT_TRUE(strnstr(request.data(), "Origin: http://example.com\r\n", request.size()));
             EXPECT_TRUE(strnstr(request.data(), "Access-Control-Request-Method: DELETE\r\n", request.size()));
             
-            const char* response =
+            constexpr auto response =
             "HTTP/1.1 204 No Content\r\n"
             "Access-Control-Allow-Origin: http://example.com\r\n"
             "Access-Control-Allow-Methods: OPTIONS, GET, POST, DELETE\r\n"
-            "Cache-Control: max-age=604800\r\n\r\n";
+            "Cache-Control: max-age=604800\r\n\r\n"_s;
             connection.send(response, [&, connection] {
                 connection.receiveHTTPRequest([&, connection] (Vector<char>&& request) {
                     const char* expectedRequestBegin = "DELETE / HTTP/1.1\r\n";
                     EXPECT_TRUE(!memcmp(request.data(), expectedRequestBegin, strlen(expectedRequestBegin)));
                     EXPECT_TRUE(strnstr(request.data(), "Origin: http://example.com\r\n", request.size()));
-                    const char* response =
+                    constexpr auto response =
                     "HTTP/1.1 200 OK\r\n"
                     "Content-Length: 2\r\n\r\n"
-                    "hi";
+                    "hi"_s;
                     connection.send(response, [&, connection] {
                         preflightRequestsReceived++;
                     });
@@ -409,24 +439,30 @@ TEST(NetworkProcess, BroadcastChannelCrashRecovery)
 TEST(_WKDataTask, Basic)
 {
     using namespace TestWebKitAPI;
-    auto html = "<script>document.cookie='testkey=value'</script>";
-    auto secondResponse = "second response";
+    constexpr auto html = "<script>document.cookie='testkey=value'</script>"_s;
+    constexpr auto secondResponse = "second response"_s;
     Vector<char> secondRequest;
-    auto server = HTTPServer([&](const Connection& connection) {
-        connection.receiveHTTPRequest([&, connection](Vector<char>&& request) {
-            connection.send(HTTPResponse(html).serialize(), [&, connection] {
-                connection.receiveHTTPRequest([&, connection](Vector<char>&& request) {
-                    secondRequest = WTFMove(request);
-                    connection.send(HTTPResponse(secondResponse).serialize());
-                });
-            });
-        });
+    auto server = HTTPServer(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+        while (1) {
+            auto request = co_await connection.awaitableReceiveHTTPRequest();
+            auto path = HTTPServer::parsePath(request);
+            if (path == "/initial_request"_s) {
+                co_await connection.awaitableSend(HTTPResponse(html).serialize());
+                continue;
+            }
+            if (path == "/second_request"_s) {
+                secondRequest = WTFMove(request);
+                co_await connection.awaitableSend(HTTPResponse(secondResponse).serialize());
+                continue;
+            }
+            EXPECT_FALSE(true);
+        }
     });
     auto webView = adoptNS([TestWKWebView new]);
-    [webView synchronouslyLoadRequest:server.request()];
+    [webView synchronouslyLoadRequest:server.request("/initial_request"_s)];
 
     __block bool done = false;
-    RetainPtr<NSMutableURLRequest> postRequest = adoptNS([server.request() mutableCopy]);
+    RetainPtr<NSMutableURLRequest> postRequest = adoptNS([server.request("/second_request"_s) mutableCopy]);
     [postRequest setMainDocumentURL:postRequest.get().URL];
     [postRequest setHTTPMethod:@"POST"];
     auto requestBody = "request body";
@@ -546,7 +582,7 @@ TEST(_WKDataTask, Cancel)
     bool sentWithError { false };
     HTTPServer server([&] (Connection connection) {
         connection.receiveHTTPRequest([&, connection] (Vector<char>&&) {
-            auto* header = "HTTP/1.1 200 OK\r\n\r\n";
+            constexpr auto header = "HTTP/1.1 200 OK\r\n\r\n"_s;
             connection.send(header, [&, connection] {
                 sendLoop(connection, sentWithError);
             });
@@ -588,8 +624,8 @@ TEST(_WKDataTask, Redirect)
 {
     using namespace TestWebKitAPI;
     HTTPServer server { {
-        { "/", { 301, { { "Location", "/redirectTarget" }, { "Custom-Name", "Custom-Value" } } } },
-        { "/redirectTarget", { "hi" } },
+        { "/"_s, { 301, { { "Location"_s, "/redirectTarget"_s }, { "Custom-Name"_s, "Custom-Value"_s } } } },
+        { "/redirectTarget"_s, { "hi"_s } },
     } };
     auto webView = adoptNS([WKWebView new]);
     RetainPtr<NSURLRequest> serverRequest = server.request();

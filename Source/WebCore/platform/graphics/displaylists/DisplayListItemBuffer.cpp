@@ -101,7 +101,7 @@ void ItemHandle::apply(GraphicsContext& context)
         get<ClipOut>().apply(context);
         return;
     case ItemType::ClipToImageBuffer:
-        get<ClipToImageBuffer>().apply(context);
+        ASSERT_NOT_REACHED();
         return;
     case ItemType::ClipOutToPath:
         get<ClipOutToPath>().apply(context);
@@ -110,22 +110,25 @@ void ItemHandle::apply(GraphicsContext& context)
         get<ClipPath>().apply(context);
         return;
     case ItemType::DrawFilteredImageBuffer:
-        get<DrawFilteredImageBuffer>().apply(context);
+        ASSERT_NOT_REACHED();
         return;
     case ItemType::DrawGlyphs:
         ASSERT_NOT_REACHED();
         return;
+    case ItemType::DrawDecomposedGlyphs:
+        ASSERT_NOT_REACHED();
+        return;
     case ItemType::DrawImageBuffer:
-        get<DrawImageBuffer>().apply(context);
+        ASSERT_NOT_REACHED();
         return;
     case ItemType::DrawNativeImage:
-        get<DrawNativeImage>().apply(context);
+        ASSERT_NOT_REACHED();
         return;
     case ItemType::DrawSystemImage:
         get<DrawSystemImage>().apply(context);
         return;
     case ItemType::DrawPattern:
-        get<DrawPattern>().apply(context);
+        ASSERT_NOT_REACHED();
         return;
     case ItemType::DrawRect:
         get<DrawRect>().apply(context);
@@ -189,12 +192,9 @@ void ItemHandle::apply(GraphicsContext& context)
     case ItemType::FillEllipse:
         get<FillEllipse>().apply(context);
         return;
-    case ItemType::FlushContext:
-        get<FlushContext>().apply(context);
-        return;
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
-        get<PaintFrameForMedia>().apply(context);
+        ASSERT_NOT_REACHED();
         return;
 #endif
     case ItemType::StrokeRect:
@@ -264,6 +264,9 @@ void ItemHandle::destroy()
     case ItemType::DrawGlyphs:
         get<DrawGlyphs>().~DrawGlyphs();
         return;
+    case ItemType::DrawDecomposedGlyphs:
+        get<DrawDecomposedGlyphs>().~DrawDecomposedGlyphs();
+        break;
     case ItemType::DrawLinesForText:
         get<DrawLinesForText>().~DrawLinesForText();
         return;
@@ -376,9 +379,6 @@ void ItemHandle::destroy()
     case ItemType::FillRect:
         static_assert(std::is_trivially_destructible<FillRect>::value);
         return;
-    case ItemType::FlushContext:
-        static_assert(std::is_trivially_destructible<FlushContext>::value);
-        return;
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
         static_assert(std::is_trivially_destructible<PaintFrameForMedia>::value);
@@ -489,6 +489,8 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
         return copyInto<DrawFocusRingRects>(itemOffset, *this);
     case ItemType::DrawGlyphs:
         return copyInto<DrawGlyphs>(itemOffset, *this);
+    case ItemType::DrawDecomposedGlyphs:
+        return copyInto<DrawDecomposedGlyphs>(itemOffset, *this);
     case ItemType::DrawImageBuffer:
         return copyInto<DrawImageBuffer>(itemOffset, *this);
     case ItemType::DrawLinesForText:
@@ -565,8 +567,6 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
 #endif
     case ItemType::FillRect:
         return copyInto<FillRect>(itemOffset, *this);
-    case ItemType::FlushContext:
-        return copyInto<FlushContext>(itemOffset, *this);
 #if ENABLE(VIDEO)
     case ItemType::PaintFrameForMedia:
         return copyInto<PaintFrameForMedia>(itemOffset, *this);

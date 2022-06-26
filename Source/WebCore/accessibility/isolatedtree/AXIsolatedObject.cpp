@@ -38,23 +38,28 @@
 
 namespace WebCore {
 
-AXIsolatedObject::AXIsolatedObject(AXCoreObject& object, AXIsolatedTree* tree, AXID parentID)
+AXIsolatedObject::AXIsolatedObject(Ref<AXCoreObject> axObject, AXIsolatedTree* tree)
     : m_cachedTree(tree)
-    , m_parentID(parentID)
-    , m_id(object.objectID())
+    , m_id(axObject->objectID())
 {
     ASSERT(isMainThread());
-    if (m_id.isValid())
-        initializeAttributeData(object, !parentID.isValid());
-    else {
+    ASSERT(is<AccessibilityObject>(axObject));
+
+    auto* axParent = axObject->parentObjectUnignored();
+    m_parentID = axParent ? axParent->objectID() : AXID();
+
+    if (m_id.isValid()) {
+        auto isRoot = !axParent && axObject->isScrollView() ? IsRoot::Yes : IsRoot::No;
+        initializeProperties(axObject, isRoot);
+    } else {
         // Should never happen under normal circumstances.
         ASSERT_NOT_REACHED();
     }
 }
 
-Ref<AXIsolatedObject> AXIsolatedObject::create(AXCoreObject& object, AXIsolatedTree* tree, AXID parentID)
+Ref<AXIsolatedObject> AXIsolatedObject::create(Ref<AXCoreObject> object, AXIsolatedTree* tree)
 {
-    return adoptRef(*new AXIsolatedObject(object, tree, parentID));
+    return adoptRef(*new AXIsolatedObject(object, tree));
 }
 
 AXIsolatedObject::~AXIsolatedObject()
@@ -67,10 +72,10 @@ void AXIsolatedObject::init()
     ASSERT_NOT_REACHED();
 }
 
-void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool isRoot)
+void AXIsolatedObject::initializeProperties(Ref<AXCoreObject> coreObject, IsRoot isRoot)
 {
     ASSERT(is<AccessibilityObject>(coreObject));
-    auto& object = downcast<AccessibilityObject>(coreObject);
+    auto& object = downcast<AccessibilityObject>(coreObject.get());
 
     setProperty(AXPropertyName::ARIALandmarkRoleDescription, object.ariaLandmarkRoleDescription().isolatedCopy());
     setProperty(AXPropertyName::AccessibilityDescription, object.accessibilityDescription().isolatedCopy());
@@ -81,7 +86,6 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool is
         setProperty(AXPropertyName::AncestorFlags, object.computeAncestorFlagsWithTraversal());
 
     setProperty(AXPropertyName::HasARIAValueNow, object.hasARIAValueNow());
-    setProperty(AXPropertyName::IsAccessibilityIgnored, object.accessibilityIsIgnored());
     setProperty(AXPropertyName::IsActiveDescendantOfFocusedContainer, object.isActiveDescendantOfFocusedContainer());
     setProperty(AXPropertyName::IsAttachment, object.isAttachment());
     setProperty(AXPropertyName::IsBusy, object.isBusy());
@@ -195,7 +199,6 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool is
     setProperty(AXPropertyName::PlaceholderValue, object.placeholderValue().isolatedCopy());
     setProperty(AXPropertyName::ExpandedTextValue, object.expandedTextValue().isolatedCopy());
     setProperty(AXPropertyName::SupportsExpandedTextValue, object.supportsExpandedTextValue());
-    setProperty(AXPropertyName::SupportsPressAction, object.supportsPressAction());
     setProperty(AXPropertyName::ClickPoint, object.clickPoint());
     setProperty(AXPropertyName::ComputedRoleString, object.computedRoleString().isolatedCopy());
     setProperty(AXPropertyName::ValueAutofillButtonType, static_cast<int>(object.valueAutofillButtonType()));
@@ -214,7 +217,7 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool is
     setProperty(AXPropertyName::HierarchicalLevel, object.hierarchicalLevel());
     setProperty(AXPropertyName::Language, object.language().isolatedCopy());
     setProperty(AXPropertyName::CanHaveSelectedChildren, object.canHaveSelectedChildren());
-    setProperty(AXPropertyName::TagName, object.tagName().isolatedCopy());
+    setProperty(AXPropertyName::TagName, object.tagName().string().isolatedCopy());
     setProperty(AXPropertyName::SupportsLiveRegion, object.supportsLiveRegion());
     setProperty(AXPropertyName::IsInsideLiveRegion, object.isInsideLiveRegion());
     setProperty(AXPropertyName::LiveRegionStatus, object.liveRegionStatus().isolatedCopy());
@@ -227,8 +230,6 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool is
     setProperty(AXPropertyName::HasPlainText, object.hasPlainText());
     setProperty(AXPropertyName::HasUnderline, object.hasUnderline());
     setProperty(AXPropertyName::IsKeyboardFocusable, object.isKeyboardFocusable());
-    setObjectProperty(AXPropertyName::NextSibling, object.nextSibling());
-    setObjectProperty(AXPropertyName::PreviousSibling, object.previousSibling());
     setProperty(AXPropertyName::BrailleRoleDescription, object.brailleRoleDescription().isolatedCopy());
     setProperty(AXPropertyName::BrailleLabel, object.brailleLabel().isolatedCopy());
 
@@ -261,8 +262,6 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool is
         setProperty(AXPropertyName::IsTableCell, true);
         setProperty(AXPropertyName::ColumnIndexRange, object.columnIndexRange());
         setProperty(AXPropertyName::RowIndexRange, object.rowIndexRange());
-        setObjectVectorProperty(AXPropertyName::ColumnHeaders, object.columnHeaders());
-        setObjectVectorProperty(AXPropertyName::RowHeaders, object.rowHeaders());
         setProperty(AXPropertyName::IsColumnHeaderCell, object.isColumnHeaderCell());
         setProperty(AXPropertyName::IsRowHeaderCell, object.isRowHeaderCell());
         setProperty(AXPropertyName::AXColumnIndex, object.axColumnIndex());
@@ -286,11 +285,7 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool is
 
     if (object.isTreeItem()) {
         setProperty(AXPropertyName::IsTreeItem, true);
-
-        AccessibilityChildrenVector ariaTreeItemContent;
-        object.ariaTreeItemContent(ariaTreeItemContent);
-        setObjectVectorProperty(AXPropertyName::ARIATreeItemContent, ariaTreeItemContent);
-
+        setObjectVectorProperty(AXPropertyName::ARIATreeItemContent, object.ariaTreeItemContent());
         setObjectVectorProperty(AXPropertyName::DisclosedRows, object.disclosedRows());
     }
 
@@ -306,7 +301,7 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool is
         setProperty(AXPropertyName::TextLength, object.textLength());
 
     if (object.isRadioButton()) {
-        if (auto nameAttribute = object.attributeValue("name"))
+        if (auto nameAttribute = object.attributeValue("name"_s))
             setProperty(AXPropertyName::NameAttribute, nameAttribute->isolatedCopy());
     }
 
@@ -329,29 +324,7 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool is
     object.tabChildren(tabChildren);
     setObjectVectorProperty(AXPropertyName::TabChildren, tabChildren);
 
-    AccessibilityChildrenVector linkedUIElements;
-    object.linkedUIElements(linkedUIElements);
-    setObjectVectorProperty(AXPropertyName::LinkedUIElements, linkedUIElements);
-
-    AccessibilityChildrenVector ariaControlsElements;
-    object.ariaControlsElements(ariaControlsElements);
-    setObjectVectorProperty(AXPropertyName::ARIAControlsElements, ariaControlsElements);
-
-    AccessibilityChildrenVector ariaDetailsElements;
-    object.ariaDetailsElements(ariaDetailsElements);
-    setObjectVectorProperty(AXPropertyName::ARIADetailsElements, ariaDetailsElements);
-
-    AccessibilityChildrenVector ariaErrorMessageElements;
-    object.ariaErrorMessageElements(ariaErrorMessageElements);
-    setObjectVectorProperty(AXPropertyName::ARIAErrorMessageElements, ariaErrorMessageElements);
-
-    AccessibilityChildrenVector ariaFlowToElements;
-    object.ariaFlowToElements(ariaFlowToElements);
-    setObjectVectorProperty(AXPropertyName::ARIAFlowToElements, ariaFlowToElements);
-
-    AccessibilityChildrenVector ariaOwnsElements;
-    object.ariaOwnsElements(ariaOwnsElements);
-    setObjectVectorProperty(AXPropertyName::ARIAOwnsElements, ariaOwnsElements);
+    setObjectVectorProperty(AXPropertyName::LinkedObjects, object.linkedObjects());
 
     // Spin button support.
     setObjectProperty(AXPropertyName::DecrementButton, object.decrementButton());
@@ -360,12 +333,12 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool is
 
     Vector<String> classList;
     object.classList(classList);
-    String combinedClassList;
+    StringBuilder combinedClassList;
     for (auto it = classList.begin(), end = classList.end(); it != end; ++it) {
         combinedClassList.append(*it);
-        combinedClassList.append(" ");
+        combinedClassList.append(' ');
     }
-    setProperty(AXPropertyName::ClassList, combinedClassList);
+    setProperty(AXPropertyName::ClassList, combinedClassList.toString());
 
     setProperty(AXPropertyName::ColorValue, object.colorValue());
 
@@ -413,7 +386,7 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool is
         setMathscripts(AXPropertyName::MathPostscripts, object);
     }
 
-    if (isRoot) {
+    if (isRoot == IsRoot::Yes) {
         setObjectProperty(AXPropertyName::WebArea, object.webAreaObject());
         setProperty(AXPropertyName::SessionID, object.sessionID().isolatedCopy());
         setProperty(AXPropertyName::DocumentURI, object.documentURI().isolatedCopy());
@@ -427,7 +400,7 @@ void AXIsolatedObject::initializeAttributeData(AXCoreObject& coreObject, bool is
     if (object.isWidget())
         setProperty(AXPropertyName::IsWidget, true);
 
-    initializePlatformProperties(object, isRoot);
+    initializePlatformProperties(coreObject, isRoot);
 }
 
 AXCoreObject* AXIsolatedObject::associatedAXObject() const
@@ -438,7 +411,7 @@ AXCoreObject* AXIsolatedObject::associatedAXObject() const
         return nullptr;
 
     auto* axObjectCache = this->axObjectCache();
-    return axObjectCache ? axObjectCache->objectFromAXID(m_id) : nullptr;
+    return axObjectCache ? axObjectCache->objectForID(m_id) : nullptr;
 }
 
 void AXIsolatedObject::setMathscripts(AXPropertyName propertyName, AXCoreObject& object)
@@ -467,15 +440,11 @@ void AXIsolatedObject::setObjectProperty(AXPropertyName propertyName, AXCoreObje
         setProperty(propertyName, nullptr, true);
 }
 
-void AXIsolatedObject::setObjectVectorProperty(AXPropertyName propertyName, const AccessibilityChildrenVector& children)
+void AXIsolatedObject::setObjectVectorProperty(AXPropertyName propertyName, const AccessibilityChildrenVector& objects)
 {
-    if (children.isEmpty())
+    if (objects.isEmpty())
         return;
-
-    auto childIDs = children.map([](auto& child) {
-        return child->objectID();
-    });
-    setProperty(propertyName, WTFMove(childIDs));
+    setProperty(propertyName, axIDs(objects));
 }
 
 void AXIsolatedObject::setProperty(AXPropertyName propertyName, AXPropertyValueVariant&& value, bool shouldRemove)
@@ -484,12 +453,6 @@ void AXIsolatedObject::setProperty(AXPropertyName propertyName, AXPropertyValueV
         m_propertyMap.remove(propertyName);
     else
         m_propertyMap.set(propertyName, value);
-}
-
-void AXIsolatedObject::setParent(AXID parent)
-{
-    ASSERT(isMainThread());
-    m_parentID = parent;
 }
 
 void AXIsolatedObject::detachRemoteParts(AccessibilityDetachmentType)
@@ -556,8 +519,7 @@ void AXIsolatedObject::setSelectedChildren(const AccessibilityChildrenVector& se
         if (!axObjectCache)
             return;
 
-        auto axIDs = tree()->idsForObjects(selectedChildren);
-        auto axSelectedChildren = axObjectCache->objectsForIDs(axIDs);
+        auto axSelectedChildren = axObjectCache->objectsForIDs(axIDs(selectedChildren));
         object->setSelectedChildren(axSelectedChildren);
     });
 }
@@ -601,7 +563,7 @@ void AXIsolatedObject::accessibilityText(Vector<AccessibilityText>& texts) const
 void AXIsolatedObject::classList(Vector<String>& list) const
 {
     String classList = stringAttributeValue(AXPropertyName::ClassList);
-    list.appendVector(classList.split(" "));
+    list.appendVector(classList.split(' '));
 }
 
 PAL::SessionID AXIsolatedObject::sessionID() const
@@ -983,6 +945,9 @@ T AXIsolatedObject::getOrRetrievePropertyValue(AXPropertyName propertyName)
         case AXPropertyName::Description:
             value = axObject->descriptionAttributeValue().isolatedCopy();
             break;
+        case AXPropertyName::HelpText:
+            value = axObject->helpTextAttributeValue().isolatedCopy();
+            break;
         case AXPropertyName::TitleAttributeValue:
             value = axObject->titleAttributeValue().isolatedCopy();
             break;
@@ -995,11 +960,20 @@ T AXIsolatedObject::getOrRetrievePropertyValue(AXPropertyName propertyName)
             });
             break;
         }
+        case AXPropertyName::ColumnHeaders:
+            value = axIDs(axObject->columnHeaders());
+            break;
         case AXPropertyName::InnerHTML:
             value = axObject->innerHTML().isolatedCopy();
             break;
         case AXPropertyName::OuterHTML:
             value = axObject->outerHTML().isolatedCopy();
+            break;
+        case AXPropertyName::RowHeaders:
+            value = axIDs(axObject->rowHeaders());
+            break;
+        case AXPropertyName::SupportsPressAction:
+            value = axObject->supportsPressAction();
             break;
         default:
             break;
@@ -1303,12 +1277,6 @@ void AXIsolatedObject::decrement()
 }
 
 bool AXIsolatedObject::performDefaultAction()
-{
-    ASSERT_NOT_REACHED();
-    return false;
-}
-
-bool AXIsolatedObject::isAccessibilityObject() const
 {
     ASSERT_NOT_REACHED();
     return false;
@@ -1888,56 +1856,6 @@ AXCoreObject* AXIsolatedObject::selectedListItem()
     return nullptr;
 }
 
-void AXIsolatedObject::ariaActiveDescendantReferencingElements(AccessibilityChildrenVector&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void AXIsolatedObject::ariaControlsReferencingElements(AccessibilityChildrenVector&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void AXIsolatedObject::ariaDescribedByElements(AccessibilityChildrenVector&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void AXIsolatedObject::ariaDescribedByReferencingElements(AccessibilityChildrenVector&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void AXIsolatedObject::ariaDetailsReferencingElements(AccessibilityChildrenVector&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void AXIsolatedObject::ariaErrorMessageReferencingElements(AccessibilityChildrenVector&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void AXIsolatedObject::ariaFlowToReferencingElements(AccessibilityChildrenVector&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void AXIsolatedObject::ariaLabelledByElements(AccessibilityChildrenVector&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void AXIsolatedObject::ariaLabelledByReferencingElements(AccessibilityChildrenVector&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
-void AXIsolatedObject::ariaOwnsReferencingElements(AccessibilityChildrenVector&) const
-{
-    ASSERT_NOT_REACHED();
-}
-
 bool AXIsolatedObject::hasDatalist() const
 {
     ASSERT_NOT_REACHED();
@@ -1980,40 +1898,10 @@ AXCoreObject* AXIsolatedObject::elementAccessibilityHitTest(const IntPoint&) con
     return nullptr;
 }
 
-AXCoreObject* AXIsolatedObject::firstChild() const
-{
-    ASSERT_NOT_REACHED();
-    return nullptr;
-}
-
-AXCoreObject* AXIsolatedObject::lastChild() const
-{
-    ASSERT_NOT_REACHED();
-    return nullptr;
-}
-
-AXCoreObject* AXIsolatedObject::nextSiblingUnignored(int) const
-{
-    ASSERT_NOT_REACHED();
-    return nullptr;
-}
-
-AXCoreObject* AXIsolatedObject::previousSiblingUnignored(int) const
-{
-    ASSERT_NOT_REACHED();
-    return nullptr;
-}
-
 AXCoreObject* AXIsolatedObject::parentObjectIfExists() const
 {
     ASSERT_NOT_REACHED();
     return nullptr;
-}
-
-bool AXIsolatedObject::isDescendantOfBarrenParent() const
-{
-    ASSERT_NOT_REACHED();
-    return false;
 }
 
 bool AXIsolatedObject::isDescendantOfRole(AccessibilityRole) const
@@ -2103,11 +1991,6 @@ bool AXIsolatedObject::accessibleNameDerivesFromContent() const
 {
     ASSERT_NOT_REACHED();
     return false;
-}
-
-void AXIsolatedObject::elementsFromAttribute(Vector<Element*>&, const QualifiedName&) const
-{
-    ASSERT_NOT_REACHED();
 }
 
 AXObjectCache* AXIsolatedObject::axObjectCache() const
@@ -2225,15 +2108,17 @@ bool AXIsolatedObject::shouldFocusActiveDescendant() const
     return false;
 }
 
+AXCoreObject::AccessibilityChildrenVector AXIsolatedObject::relatedObjects(AXRelationType relationType) const
+{
+    if (auto relatedObjectIDs = tree()->relatedObjectIDsFor(*this, relationType))
+        return tree()->objectsForIDs(*relatedObjectIDs);
+    return { };
+}
+
 AXCoreObject* AXIsolatedObject::activeDescendant() const
 {
     ASSERT_NOT_REACHED();
     return nullptr;
-}
-
-void AXIsolatedObject::handleActiveDescendantChanged()
-{
-    ASSERT_NOT_REACHED();
 }
 
 OptionSet<AXAncestorFlag> AXIsolatedObject::ancestorFlags() const
@@ -2253,7 +2138,7 @@ AXCoreObject* AXIsolatedObject::firstAnonymousBlockChild() const
 
 std::optional<String> AXIsolatedObject::attributeValue(const String& attributeName) const
 {
-    if (attributeName == "name") {
+    if (attributeName == "name"_s) {
         if (m_propertyMap.contains(AXPropertyName::NameAttribute))
             return stringAttributeValue(AXPropertyName::NameAttribute);
     }
@@ -2429,6 +2314,11 @@ void AXIsolatedObject::setIsIgnoredFromParentDataForChild(AXCoreObject*)
     ASSERT_NOT_REACHED();
 }
 
+AXCoreObject::AccessibilityChildrenVector AXIsolatedObject::columnHeaders()
+{
+    return const_cast<AXIsolatedObject*>(this)->getOrRetrievePropertyValue<AXCoreObject::AccessibilityChildrenVector>(AXPropertyName::ColumnHeaders);
+}
+
 String AXIsolatedObject::innerHTML() const
 {
     return const_cast<AXIsolatedObject*>(this)->getOrRetrievePropertyValue<String>(AXPropertyName::InnerHTML);
@@ -2437,6 +2327,17 @@ String AXIsolatedObject::innerHTML() const
 String AXIsolatedObject::outerHTML() const
 {
     return const_cast<AXIsolatedObject*>(this)->getOrRetrievePropertyValue<String>(AXPropertyName::OuterHTML);
+}
+
+AXCoreObject::AccessibilityChildrenVector AXIsolatedObject::rowHeaders()
+{
+    return const_cast<AXIsolatedObject*>(this)->getOrRetrievePropertyValue<AXCoreObject::AccessibilityChildrenVector>(AXPropertyName::RowHeaders);
+}
+
+// FIXME: Rather than lazily retrieving this property, we should make it performant enough to retrieve up-front in AXIsolatedObject::initializeProperties.
+bool AXIsolatedObject::supportsPressAction() const
+{
+    return const_cast<AXIsolatedObject*>(this)->getOrRetrievePropertyValue<bool>(AXPropertyName::SupportsPressAction);
 }
 
 } // namespace WebCore

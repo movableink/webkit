@@ -141,6 +141,19 @@ window.UIHelper = class UIHelper {
 
     static async waitForScrollCompletion()
     {
+        if (this.isIOSFamily()) {
+            await new Promise(resolve => {
+                testRunner.runUIScript(`
+                    (function() {
+                        uiController.didEndScrollingCallback = function() {
+                            uiController.uiScriptComplete();
+                        }
+                    })()`, resolve);
+            });
+            // Wait for the new scroll position to get back to the web process.
+            return UIHelper.renderingUpdate();
+        }
+
         return new Promise(resolve => {
             eventSender.callAfterScrollingCompletes(() => {
                 requestAnimationFrame(resolve);
@@ -765,6 +778,16 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static dismissMenu()
+    {
+        if (!this.isWebKit2())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript("uiController.dismissMenu()", resolve);
+        });
+    }
+
     static waitForKeyboardToHide()
     {
         if (!this.isWebKit2() || !this.isIOSFamily())
@@ -1339,6 +1362,13 @@ window.UIHelper = class UIHelper {
     {
         return new Promise(resolve => {
             testRunner.runUIScript("JSON.stringify(uiController.menuRect)", result => resolve(JSON.parse(result)));
+        });
+    }
+
+    static contextMenuRect()
+    {
+        return new Promise(resolve => {
+            testRunner.runUIScript("JSON.stringify(uiController.contextMenuRect)", result => resolve(JSON.parse(result)));
         });
     }
 

@@ -21,6 +21,7 @@
 
 #include "LoadTrackingTest.h"
 #include "WebKitTestServer.h"
+#include "WebKitWebViewInternal.h"
 #include <WebCore/SoupVersioning.h>
 #include <libsoup/soup.h>
 #include <limits.h>
@@ -195,7 +196,7 @@ public:
 
 String generateHTMLContent(unsigned contentLength)
 {
-    String baseString("abcdefghijklmnopqrstuvwxyz0123457890");
+    String baseString("abcdefghijklmnopqrstuvwxyz0123457890"_s);
     unsigned baseLength = baseString.length();
 
     StringBuilder builder;
@@ -991,6 +992,84 @@ static void testMemoryPressureSettings(MemoryPressureTest* test, gconstpointer)
     g_assert_cmpuint(test->m_terminationReason, ==, WEBKIT_WEB_PROCESS_EXCEEDED_MEMORY_LIMIT);
 }
 
+static void testWebContextTimeZoneOverride(WebViewTest* test, gconstpointer)
+{
+    GUniqueOutPtr<GError> error;
+    WebKitJavascriptResult* javascriptResult = test->runJavaScriptAndWaitUntilFinished("const date = new Date(1651511226050); date.getTimezoneOffset()", &error.outPtr());
+    g_assert_nonnull(javascriptResult);
+    g_assert_no_error(error.get());
+    // By default the test harness uses the Pacific/Los_Angeles timezone which is 7 hours (420 minutes) compared to GMT.
+    g_assert_cmpint(WebViewTest::javascriptResultToNumber(javascriptResult), ==, 420);
+
+    // Create a new context configured with time zone overide set to Berlin which is 120 minutes ahead of the GMT offset.
+    auto webContext = adoptGRef(WEBKIT_WEB_CONTEXT(g_object_new(WEBKIT_TYPE_WEB_CONTEXT,
+        "time-zone-override", "Europe/Berlin", nullptr)));
+    g_assert_cmpstr(webkit_web_context_get_time_zone_override(webContext.get()), ==, "Europe/Berlin");
+    auto webView = Test::adoptView(Test::createWebView(webContext.get()));
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("const date = new Date(1651511226050); date.getTimezoneOffset()", &error.outPtr(), webView.get());
+    g_assert_nonnull(javascriptResult);
+    g_assert_no_error(error.get());
+    g_assert_cmpint(WebViewTest::javascriptResultToNumber(javascriptResult), ==, -120);
+}
+
+static void testWebContextTimeZoneOverrideInWorker(WebViewTest* test, gconstpointer)
+{
+    GUniqueOutPtr<GError> error;
+    WebKitJavascriptResult* javascriptResult = test->runJavaScriptAndWaitUntilFinished("Intl.DateTimeFormat().resolvedOptions().timeZone", &error.outPtr());
+    g_assert_nonnull(javascriptResult);
+    g_assert_no_error(error.get());
+    // By default the test harness uses the Pacific/Los_Angeles.
+    g_assert_cmpstr(WebViewTest::javascriptResultToCString(javascriptResult), ==, "America/Los_Angeles");
+    // Create a new context configured with time zone overide set to Berlin which is 120 minutes ahead of the GMT offset.
+    auto webContext = adoptGRef(WEBKIT_WEB_CONTEXT(g_object_new(WEBKIT_TYPE_WEB_CONTEXT,
+        "time-zone-override", "Europe/Berlin", nullptr)));
+    g_assert_cmpstr(webkit_web_context_get_time_zone_override(webContext.get()), ==, "Europe/Berlin");
+    auto webView = Test::adoptView(Test::createWebView(webContext.get()));
+
+    test->runJavaScriptAndWaitUntilFinished(
+        "window.results = [Intl.DateTimeFormat().resolvedOptions().timeZone];"
+        "for (let i = 0; i < 3; i++) {"
+        "  const worker = new Worker('data:text/javascript,self.postMessage(Intl.DateTimeFormat().resolvedOptions().timeZone)');"
+        "  worker.onmessage = message => results.push(message.data);"
+        "}", &error.outPtr(), webView.get());
+    do {
+        javascriptResult = test->runJavaScriptAndWaitUntilFinished("results.length", &error.outPtr(), webView.get());
+        g_assert_nonnull(javascriptResult);
+        g_assert_no_error(error.get());
+    } while (WebViewTest::javascriptResultToNumber(javascriptResult) < 4);
+
+    javascriptResult = test->runJavaScriptAndWaitUntilFinished("results.join(', ')", &error.outPtr(), webView.get());
+    g_assert_nonnull(javascriptResult);
+    g_assert_no_error(error.get());
+    g_assert_cmpstr(WebViewTest::javascriptResultToCString(javascriptResult), ==, "Europe/Berlin, Europe/Berlin, Europe/Berlin, Europe/Berlin");
+}
+
+static void testNoWebProcessLeakAfterWebKitWebContextDestroy(WebViewTest* test, gconstpointer)
+{
+    webkitSetCachedProcessSuspensionDelayForTesting(0);
+    GRefPtr<WebKitWebContext> webContext = adoptGRef(WEBKIT_WEB_CONTEXT(g_object_new(WEBKIT_TYPE_WEB_CONTEXT, nullptr)));
+    GRefPtr<WebKitWebView> webView = Test::adoptView(Test::createWebView(webContext.get()));
+    webkit_web_view_load_uri(webView.get(), kServer->getURIForPath("/").data());
+    test->waitUntilLoadFinished(webView.get());
+    bool didRunForceRepaintCallback = false;
+    webkitWebViewForceRepaintForTesting(webView.get(), [] (gpointer data) {
+        *static_cast<bool*>(data) = true;
+    }, &didRunForceRepaintCallback);
+    webView.clear();
+    // Wait for shutdownPreventingScope created in WebPageProxy::close to be destroyed.
+    while (g_main_context_pending(nullptr))
+        g_main_context_iteration(nullptr, TRUE);
+    webContext.clear();
+    while (!didRunForceRepaintCallback)
+        test->wait(0.1);
+    // At this point page web process should have exited and the callback is expected to have
+    // been invoked during the IPC connection destruction.
+    //
+    // Ideally we'd check that underlying WebProcesPool, and WebProcessProxy have been destroyed too
+    // but there is no public API for that.
+    g_assert_true(didRunForceRepaintCallback);
+}
+
 void beforeAll()
 {
     kServer = new WebKitTestServer();
@@ -1008,6 +1087,9 @@ void beforeAll()
     WebViewTest::add("WebKitSecurityManager", "file-xhr", testWebContextSecurityFileXHR);
     ProxyTest::add("WebKitWebContext", "proxy", testWebContextProxySettings);
     MemoryPressureTest::add("WebKitWebContext", "memory-pressure", testMemoryPressureSettings);
+    WebViewTest::add("WebKitWebContext", "timezone", testWebContextTimeZoneOverride);
+    WebViewTest::add("WebKitWebContext", "timezone-worker", testWebContextTimeZoneOverrideInWorker);
+    WebViewTest::add("WebKitWebContext", "no-web-process-leak", testNoWebProcessLeakAfterWebKitWebContextDestroy);
 }
 
 void afterAll()

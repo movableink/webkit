@@ -32,12 +32,12 @@
 
 #if ENABLE(WEBGL) && (USE(OPENGL) || PLATFORM(QT))
 
+#include "ByteArrayPixelBuffer.h"
 #include "ExtensionsGLOpenGL.h"
 #include "IntRect.h"
 #include "IntSize.h"
 #include "Logging.h"
 #include "NotImplemented.h"
-#include "PixelBuffer.h"
 #include "TemporaryOpenGLSetting.h"
 #include <algorithm>
 #include <cstring>
@@ -109,12 +109,12 @@
 
 namespace WebCore {
 
-std::optional<PixelBuffer> GraphicsContextGLOpenGL::readPixelsForPaintResults()
+RefPtr<PixelBuffer> GraphicsContextGLOpenGL::readPixelsForPaintResults()
 {
     PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, DestinationColorSpace::SRGB() };
-    auto pixelBuffer = PixelBuffer::tryCreate(format, getInternalFramebufferSize());
+    auto pixelBuffer = ByteArrayPixelBuffer::tryCreate(format, getInternalFramebufferSize());
     if (!pixelBuffer)
-        return std::nullopt;
+        return nullptr;
 
     GLint packAlignment = 4;
     bool mustRestorePackAlignment = false;
@@ -124,7 +124,7 @@ std::optional<PixelBuffer> GraphicsContextGLOpenGL::readPixelsForPaintResults()
         mustRestorePackAlignment = true;
     }
 
-    ::glReadPixels(0, 0, pixelBuffer->size().width(), pixelBuffer->size().height(), GL_RGBA, GL_UNSIGNED_BYTE, pixelBuffer->data().data());
+    ::glReadPixels(0, 0, pixelBuffer->size().width(), pixelBuffer->size().height(), GL_RGBA, GL_UNSIGNED_BYTE, pixelBuffer->bytes());
 
     if (mustRestorePackAlignment)
         ::glPixelStorei(GL_PACK_ALIGNMENT, packAlignment);
@@ -139,13 +139,13 @@ void GraphicsContextGLOpenGL::validateAttributes()
         validateDepthStencil("GL_OES_packed_depth_stencil");
     else
         validateDepthStencil("GL_EXT_packed_depth_stencil");
-
+    
     if (m_attrs.antialias && isGLES2Compliant()) {
         if (!m_functions->hasOpenGLExtension(QOpenGLExtensions::FramebufferMultisample) || !m_functions->hasOpenGLExtension(QOpenGLExtensions::FramebufferBlit))
             m_attrs.antialias = false;
     }
 #else
-    validateDepthStencil("GL_EXT_packed_depth_stencil");
+    validateDepthStencil("GL_EXT_packed_depth_stencil"_s);
 #endif
 }
 
@@ -170,7 +170,7 @@ bool GraphicsContextGLOpenGL::reshapeFBOs(const IntSize& size)
 
         ExtensionsGLOpenGLCommon& extensions = getExtensions();
         // Use a 24 bit depth buffer where we know we have it.
-        if (extensions.supports("GL_EXT_packed_depth_stencil"))
+        if (extensions.supports("GL_EXT_packed_depth_stencil"_s))
             internalDepthStencilFormat = GL_DEPTH24_STENCIL8_EXT;
         else
             internalDepthStencilFormat = GL_DEPTH_COMPONENT;

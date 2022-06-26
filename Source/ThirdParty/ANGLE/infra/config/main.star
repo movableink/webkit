@@ -165,6 +165,7 @@ build_recipe = _recipe_for_package(
 
 build_recipe(
     name = "recipe:angle",
+    use_python3 = True,
 )
 
 build_recipe(
@@ -281,6 +282,10 @@ def angle_builder(name, cpu):
         test_presentation = resultdb.test_presentation(
             column_keys = ["v.gpu"],
             grouping_keys = ["status", "v.test_suite"],
+        ),
+        triggering_policy = scheduler.policy(
+            kind = scheduler.LOGARITHMIC_BATCHING_KIND,
+            log_base = 2,
         ),
     )
 

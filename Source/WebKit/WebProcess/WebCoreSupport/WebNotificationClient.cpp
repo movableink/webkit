@@ -48,11 +48,19 @@ WebNotificationClient::~WebNotificationClient()
     ASSERT(isMainRunLoop());
 }
 
-bool WebNotificationClient::show(Notification& notification)
+bool WebNotificationClient::show(Notification& notification, CompletionHandler<void()>&& callback)
 {
+    auto* context = notification.scriptExecutionContext();
+    ASSERT(context);
+
     bool result;
-    callOnMainRunLoopAndWait([&result, protectedNotification = Ref { notification }, page = m_page]() {
-        result = WebProcess::singleton().supplement<WebNotificationManager>()->show(protectedNotification.get(), page);
+    callOnMainRunLoopAndWait([&result, protectedNotification = Ref { notification }, page = m_page, contextIdentifier = context->identifier(), callbackIdentifier = context->addNotificationCallback(WTFMove(callback))]() {
+        result = WebProcess::singleton().supplement<WebNotificationManager>()->show(protectedNotification.get(), page, [contextIdentifier, callbackIdentifier] {
+            ScriptExecutionContext::postTaskTo(contextIdentifier, [callbackIdentifier](auto& context) {
+                if (auto callback = context.takeNotificationCallback(callbackIdentifier))
+                    callback();
+            });
+        });
     });
     return result;
 }
@@ -87,6 +95,9 @@ void WebNotificationClient::requestPermission(ScriptExecutionContext& context, P
     ASSERT(isMainRunLoop());
     ASSERT(m_page);
 
+    if (!context.isDocument() || WebProcess::singleton().sessionID().isEphemeral())
+        return permissionHandler(NotificationClient::Permission::Denied);
+
     auto* securityOrigin = context.securityOrigin();
     if (!securityOrigin)
         return permissionHandler(NotificationClient::Permission::Denied);
@@ -95,9 +106,9 @@ void WebNotificationClient::requestPermission(ScriptExecutionContext& context, P
 
 NotificationClient::Permission WebNotificationClient::checkPermission(ScriptExecutionContext* context)
 {
-    if (!context)
-        return NotificationClient::Permission::Denied;
-    if (!context->isDocument() && !context->isServiceWorkerGlobalScope())
+    if (!context
+        || (!context->isDocument() && !context->isServiceWorkerGlobalScope())
+        || WebProcess::singleton().sessionID().isEphemeral())
         return NotificationClient::Permission::Denied;
 
     auto* origin = context->securityOrigin();

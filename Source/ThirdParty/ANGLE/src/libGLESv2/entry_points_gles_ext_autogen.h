@@ -20,6 +20,43 @@
 
 extern "C" {
 
+// GL_AMD_performance_monitor
+ANGLE_EXPORT void GL_APIENTRY GL_BeginPerfMonitorAMD(GLuint monitor);
+ANGLE_EXPORT void GL_APIENTRY GL_DeletePerfMonitorsAMD(GLsizei n, GLuint *monitors);
+ANGLE_EXPORT void GL_APIENTRY GL_EndPerfMonitorAMD(GLuint monitor);
+ANGLE_EXPORT void GL_APIENTRY GL_GenPerfMonitorsAMD(GLsizei n, GLuint *monitors);
+ANGLE_EXPORT void GL_APIENTRY GL_GetPerfMonitorCounterDataAMD(GLuint monitor,
+                                                              GLenum pname,
+                                                              GLsizei dataSize,
+                                                              GLuint *data,
+                                                              GLint *bytesWritten);
+ANGLE_EXPORT void GL_APIENTRY GL_GetPerfMonitorCounterInfoAMD(GLuint group,
+                                                              GLuint counter,
+                                                              GLenum pname,
+                                                              void *data);
+ANGLE_EXPORT void GL_APIENTRY GL_GetPerfMonitorCounterStringAMD(GLuint group,
+                                                                GLuint counter,
+                                                                GLsizei bufSize,
+                                                                GLsizei *length,
+                                                                GLchar *counterString);
+ANGLE_EXPORT void GL_APIENTRY GL_GetPerfMonitorCountersAMD(GLuint group,
+                                                           GLint *numCounters,
+                                                           GLint *maxActiveCounters,
+                                                           GLsizei counterSize,
+                                                           GLuint *counters);
+ANGLE_EXPORT void GL_APIENTRY GL_GetPerfMonitorGroupStringAMD(GLuint group,
+                                                              GLsizei bufSize,
+                                                              GLsizei *length,
+                                                              GLchar *groupString);
+ANGLE_EXPORT void GL_APIENTRY GL_GetPerfMonitorGroupsAMD(GLint *numGroups,
+                                                         GLsizei groupsSize,
+                                                         GLuint *groups);
+ANGLE_EXPORT void GL_APIENTRY GL_SelectPerfMonitorCountersAMD(GLuint monitor,
+                                                              GLboolean enable,
+                                                              GLuint group,
+                                                              GLint numCounters,
+                                                              GLuint *counterList);
+
 // GL_ANDROID_extension_pack_es31a
 
 // GL_ANGLE_base_vertex_base_instance
@@ -33,7 +70,7 @@ GL_DrawElementsInstancedBaseVertexBaseInstanceANGLE(GLenum mode,
                                                     GLsizei count,
                                                     GLenum type,
                                                     const GLvoid *indices,
-                                                    GLsizei instanceCounts,
+                                                    GLsizei instanceCount,
                                                     GLint baseVertex,
                                                     GLuint baseInstance);
 ANGLE_EXPORT void GL_APIENTRY
@@ -593,6 +630,8 @@ ANGLE_EXPORT void GL_APIENTRY GL_GetQueryObjectui64vRobustANGLE(GLuint id,
                                                                 GLsizei bufSize,
                                                                 GLsizei *length,
                                                                 GLuint64 *params);
+
+// GL_ANGLE_robust_resource_initialization
 
 // GL_ANGLE_semaphore_fuchsia
 ANGLE_EXPORT void GL_APIENTRY GL_ImportSemaphoreZirconHandleANGLE(GLuint semaphore,
@@ -1698,6 +1737,9 @@ ANGLE_EXPORT void GL_APIENTRY GL_FramebufferTextureMultiviewOVR(GLenum target,
                                                                 GLsizei numViews);
 
 // GL_OVR_multiview2
+
+// GL_QCOM_shading_rate
+ANGLE_EXPORT void GL_APIENTRY GL_ShadingRateQCOM(GLenum rate);
 }  // extern "C"
 
 #endif  // LIBGLESV2_ENTRY_POINTS_GLES_EXT_AUTOGEN_H_

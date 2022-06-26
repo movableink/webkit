@@ -38,12 +38,11 @@
 #import "NetworkProcessMessages.h"
 #import "NetworkProcessProxy.h"
 #import "PreferenceObserver.h"
+#import "ProcessThrottler.h"
 #import "SandboxUtilities.h"
 #import "TextChecker.h"
 #import "UserInterfaceIdiom.h"
 #import "WKBrowsingContextControllerInternal.h"
-#import "WebAuthnProcessMessages.h"
-#import "WebAuthnProcessProxy.h"
 #import "WebBackForwardCache.h"
 #import "WebMemoryPressureHandler.h"
 #import "WebPageGroup.h"
@@ -55,6 +54,7 @@
 #import "_WKSystemPreferencesInternal.h"
 #import <WebCore/AGXCompilerService.h>
 #import <WebCore/Color.h>
+#import <WebCore/FontCacheCoreText.h>
 #import <WebCore/LocalizedDeviceModel.h>
 #import <WebCore/NetworkStorageSession.h>
 #import <WebCore/NotImplemented.h>
@@ -88,9 +88,15 @@
 #if PLATFORM(MAC)
 #import "WebInspectorPreferenceObserver.h"
 #import <QuartzCore/CARemoteLayerServer.h>
+#import <notify.h>
+#import <notify_keys.h>
 #import <pal/spi/mac/NSApplicationSPI.h>
 #else
 #import "UIKitSPI.h"
+#endif
+
+#if HAVE(POWERLOG_TASK_MODE_QUERY)
+#import <pal/spi/mac/PowerLogSPI.h>
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -262,33 +268,9 @@ void WebProcessPool::platformInitialize()
 #endif
 }
 
-#if PLATFORM(IOS_FAMILY)
-String WebProcessPool::cacheDirectoryInContainerOrHomeDirectory(const String& subpath)
-{
-    String path = pathForProcessContainer();
-    if (path.isEmpty())
-        path = NSHomeDirectory();
-
-    path = path + subpath;
-    path = stringByResolvingSymlinksInPath(path);
-    return path;
-}
-
-String WebProcessPool::cookieStorageDirectory()
-{
-    return cacheDirectoryInContainerOrHomeDirectory("/Library/Cookies"_s);
-}
-#endif
-
 void WebProcessPool::platformResolvePathsForSandboxExtensions()
 {
-    m_resolvedPaths.uiProcessBundleResourcePath = resolvePathForSandboxExtension([[NSBundle mainBundle] resourcePath]);
-
-#if PLATFORM(IOS_FAMILY)
-    m_resolvedPaths.cookieStorageDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(WebProcessPool::cookieStorageDirectory());
-    m_resolvedPaths.containerCachesDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(WebProcessPool::webContentCachesDirectory());
-    m_resolvedPaths.containerTemporaryDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(WebProcessPool::containerTemporaryDirectory());
-#endif
+    m_resolvedPaths.uiProcessBundleResourcePath = resolvePathForSandboxExtension(String { [[NSBundle mainBundle] resourcePath] });
 }
 
 void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process, WebProcessCreationParameters& parameters)
@@ -324,23 +306,7 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
 
     parameters.latencyQOS = webProcessLatencyQOS();
     parameters.throughputQOS = webProcessThroughputQOS();
-    
-#if PLATFORM(IOS_FAMILY)
-    if (!m_resolvedPaths.cookieStorageDirectory.isEmpty()) {
-        if (auto handle = SandboxExtension::createHandleWithoutResolvingPath(m_resolvedPaths.cookieStorageDirectory, SandboxExtension::Type::ReadWrite))
-            parameters.cookieStorageDirectoryExtensionHandle = WTFMove(*handle);
-    }
 
-    if (!m_resolvedPaths.containerCachesDirectory.isEmpty()) {
-        if (auto handle = SandboxExtension::createHandleWithoutResolvingPath(m_resolvedPaths.containerCachesDirectory, SandboxExtension::Type::ReadWrite))
-            parameters.containerCachesDirectoryExtensionHandle = WTFMove(*handle);
-    }
-
-    if (!m_resolvedPaths.containerTemporaryDirectory.isEmpty()) {
-        if (auto handle = SandboxExtension::createHandleWithoutResolvingPath(m_resolvedPaths.containerTemporaryDirectory, SandboxExtension::Type::ReadWrite))
-            parameters.containerTemporaryDirectoryExtensionHandle = WTFMove(*handle);
-    }
-#endif
 #if PLATFORM(COCOA) && ENABLE(REMOTE_INSPECTOR)
     if (WebProcessProxy::shouldEnableRemoteInspector()) {
         if (auto handle = SandboxExtension::createHandleForMachLookup("com.apple.webinspector"_s, std::nullopt))
@@ -420,15 +386,10 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
     parameters.cssValueToSystemColorMap = RenderThemeIOS::cssValueToSystemColorMap();
     parameters.focusRingColor = RenderThemeIOS::systemFocusRingColor();
     parameters.localizedDeviceModel = localizedDeviceModel();
-    parameters.contentSizeCategory = RenderThemeCocoa::singleton().contentSizeCategory();
+    parameters.contentSizeCategory = contentSizeCategory();
 #endif
 
-#if PLATFORM(IOS_FAMILY) && !PLATFORM(MACCATALYST)
-    if (!_MGCacheValid()) {
-        if (auto handle = SandboxExtension::createHandleForMachLookup("com.apple.mobilegestalt.xpc"_s, std::nullopt))
-            parameters.mobileGestaltExtensionHandle = WTFMove(*handle);
-    }
-#endif
+    parameters.mobileGestaltExtensionHandle = process.createMobileGestaltSandboxExtensionIfNeeded();
 
 #if PLATFORM(MAC)
     if (auto launchServicesExtensionHandle = SandboxExtension::createHandleForMachLookup("com.apple.coreservices.launchservicesd"_s, std::nullopt))
@@ -437,13 +398,15 @@ void WebProcessPool::platformInitializeWebProcess(const WebProcessProxy& process
 
 #if HAVE(VIDEO_RESTRICTED_DECODING)
 #if PLATFORM(MAC)
-    if (MacApplication::isAppleMail()) {
+    if (!isFullWebBrowser()) {
         if (auto trustdExtensionHandle = SandboxExtension::createHandleForMachLookup("com.apple.trustd.agent"_s, std::nullopt))
             parameters.trustdExtensionHandle = WTFMove(*trustdExtensionHandle);
-        parameters.restrictImageAndVideoDecoders = true;
+        parameters.enableDecodingHEIC = true;
+        parameters.enableDecodingAVIF = true;
     }
 #else
-    parameters.restrictImageAndVideoDecoders = IOSApplication::isMobileMail() || IOSApplication::isMailCompositionService();
+    parameters.enableDecodingHEIC = true;
+    parameters.enableDecodingAVIF = true;
 #endif // PLATFORM(MAC)
 #endif // HAVE(VIDEO_RESTRICTED_DECODING)
 
@@ -501,47 +464,6 @@ void WebProcessPool::platformInvalidateContext()
 {
     unregisterNotificationObservers();
 }
-
-#if PLATFORM(IOS_FAMILY)
-String WebProcessPool::parentBundleDirectory()
-{
-    return [[[NSBundle mainBundle] bundlePath] stringByStandardizingPath];
-}
-
-String WebProcessPool::networkingCachesDirectory()
-{
-    String path = cacheDirectoryInContainerOrHomeDirectory("/Library/Caches/com.apple.WebKit.Networking/"_s);
-
-    NSError *error = nil;
-    NSString* nsPath = path;
-    if (![[NSFileManager defaultManager] createDirectoryAtPath:nsPath withIntermediateDirectories:YES attributes:nil error:&error]) {
-        NSLog(@"could not create networking caches directory \"%@\", error %@", nsPath, error);
-        return String();
-    }
-
-    return path;
-}
-
-String WebProcessPool::webContentCachesDirectory()
-{
-    String path = cacheDirectoryInContainerOrHomeDirectory("/Library/Caches/com.apple.WebKit.WebContent/"_s);
-
-    NSError *error = nil;
-    NSString* nsPath = path;
-    if (![[NSFileManager defaultManager] createDirectoryAtPath:nsPath withIntermediateDirectories:YES attributes:nil error:&error]) {
-        NSLog(@"could not create web content caches directory \"%@\", error %@", nsPath, error);
-        return String();
-    }
-
-    return path;
-}
-
-String WebProcessPool::containerTemporaryDirectory()
-{
-    String path = NSTemporaryDirectory();
-    return stringByResolvingSymlinksInPath(path);
-}
-#endif
 
 #if PLATFORM(IOS_FAMILY)
 void WebProcessPool::setJavaScriptConfigurationFileEnabledFromDefaults()
@@ -613,6 +535,14 @@ void WebProcessPool::colorPreferencesDidChangeCallback(CFNotificationCenterRef, 
     if (!pool)
         return;
     pool->sendToAllProcesses(Messages::WebProcess::ColorPreferencesDidChange());
+}
+#endif
+
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+void WebProcessPool::hardwareConsoleStateChanged()
+{
+    for (auto& process : m_processes)
+        process->hardwareConsoleStateChanged();
 }
 #endif
 
@@ -715,6 +645,31 @@ void WebProcessPool::registerNotificationObservers()
     }];
     
     addCFNotificationObserver(colorPreferencesDidChangeCallback, AppleColorPreferencesChangedNotification, CFNotificationCenterGetDistributedCenter());
+
+    const char* messages[] = { kNotifyDSCacheInvalidation, kNotifyDSCacheInvalidationGroup, kNotifyDSCacheInvalidationHost, kNotifyDSCacheInvalidationService, kNotifyDSCacheInvalidationUser };
+    m_openDirectoryNotifyTokens.reserveInitialCapacity(std::size(messages));
+    for (auto* message : messages) {
+        int notifyToken;
+        notify_register_dispatch(message, &notifyToken, dispatch_get_main_queue(), ^(int token) {
+            RELEASE_LOG(Notifications, "OpenDirectory invalidated cache");
+#if ENABLE(GPU_PROCESS)
+            auto handle = SandboxExtension::createHandleForMachLookup("com.apple.system.opendirectoryd.libinfo"_s, std::nullopt);
+            if (!handle)
+                return;
+            if (auto* gpuProcess = GPUProcessProxy::singletonIfCreated())
+                gpuProcess->send(Messages::GPUProcess::OpenDirectoryCacheInvalidated(*handle), 0);
+#endif
+            for (auto& process : m_processes) {
+                if (!process->canSendMessage())
+                    continue;
+                auto handle = SandboxExtension::createHandleForMachLookup("com.apple.system.opendirectoryd.libinfo"_s, process->auditToken(), SandboxExtension::MachBootstrapOptions::EnableMachBootstrap);
+                if (!handle)
+                    continue;
+                process->send(Messages::WebProcess::OpenDirectoryCacheInvalidated(*handle), 0);
+            }
+        });
+        m_openDirectoryNotifyTokens.append(notifyToken);
+    }
 #elif !PLATFORM(MACCATALYST)
     addCFNotificationObserver(backlightLevelDidChangeCallback, (__bridge CFStringRef)UIBacklightLevelChangedNotification);
 #if PLATFORM(IOS)
@@ -762,6 +717,14 @@ void WebProcessPool::registerNotificationObservers()
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     addCFNotificationObserver(mediaAccessibilityPreferencesChangedCallback, kMAXCaptionAppearanceSettingsChangedNotification);
 #endif
+#if HAVE(POWERLOG_TASK_MODE_QUERY) && ENABLE(GPU_PROCESS)
+    if (kPLTaskingStartNotification) {
+        m_powerLogObserver = [[NSNotificationCenter defaultCenter] addObserverForName:kPLTaskingStartNotification object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *notification) {
+            if (auto* gpuProcess = GPUProcessProxy::singletonIfCreated())
+                gpuProcess->enablePowerLogging();
+        }];
+    }
+#endif // HAVE(POWERLOG_TASK_MODE_QUERY) && ENABLE(GPU_PROCESS)
 }
 
 void WebProcessPool::unregisterNotificationObservers()
@@ -778,6 +741,8 @@ void WebProcessPool::unregisterNotificationObservers()
     [[NSNotificationCenter defaultCenter] removeObserver:m_scrollerStyleNotificationObserver.get()];
     [[NSNotificationCenter defaultCenter] removeObserver:m_deactivationObserver.get()];
     removeCFNotificationObserver(AppleColorPreferencesChangedNotification, CFNotificationCenterGetDistributedCenter());
+    for (auto token : m_openDirectoryNotifyTokens)
+        notify_cancel(token);
 #elif !PLATFORM(MACCATALYST)
     removeCFNotificationObserver((__bridge CFStringRef)UIBacklightLevelChangedNotification);
 #if PLATFORM(IOS)
@@ -810,7 +775,10 @@ void WebProcessPool::unregisterNotificationObservers()
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     removeCFNotificationObserver(kMAXCaptionAppearanceSettingsChangedNotification);
 #endif
-
+#if HAVE(POWERLOG_TASK_MODE_QUERY) && ENABLE(GPU_PROCESS)
+    if (m_powerLogObserver)
+        [[NSNotificationCenter defaultCenter] removeObserver:m_powerLogObserver.get()];
+#endif
     m_weakObserver = nil;
 }
 
@@ -1044,6 +1012,19 @@ void WebProcessPool::notifyProcessPoolsApplicationIsAboutToSuspend()
     for (auto& processPool : allProcessPools())
         processPool->applicationIsAboutToSuspend();
 }
+
+void WebProcessPool::setProcessesShouldSuspend(bool shouldSuspend)
+{
+    WEBPROCESSPOOL_RELEASE_LOG(ProcessSuspension, "setProcessesShouldSuspend: Processes should suspend %d", shouldSuspend);
+
+    if (m_processesShouldSuspend == shouldSuspend)
+        return;
+
+    m_processesShouldSuspend = shouldSuspend;
+    for (auto& process : m_processes)
+        process->throttler().setAllowsActivities(!m_processesShouldSuspend);
+}
+
 #endif
 
 void WebProcessPool::initializeClassesForParameterCoding()
@@ -1091,13 +1072,8 @@ void WebProcessPool::notifyPreferencesChanged(const String& domain, const String
         if (auto* networkProcess = dataStore.networkProcessIfExists())
             networkProcess->send(Messages::NetworkProcess::NotifyPreferencesChanged(domain, key, encodedValue), 0);
     });
-    
-#if ENABLE(WEB_AUTHN)
-    if (auto webAuthnProcess = WebAuthnProcessProxy::singletonIfCreated())
-        webAuthnProcess->send(Messages::WebAuthnProcess::NotifyPreferencesChanged(domain, key, encodedValue), 0);
-#endif
 
-    if (key == WKCaptivePortalModeEnabledKey || key == WebKitCaptivePortalModeChangedNotification_Legacy)
+    if (key == WKCaptivePortalModeEnabledKey)
         captivePortalModeStateChanged();
 }
 #endif // ENABLE(CFPREFS_DIRECT_MODE)

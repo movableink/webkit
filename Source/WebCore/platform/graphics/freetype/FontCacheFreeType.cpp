@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008 Alp Toker <alp@atoker.com>
  * Copyright (C) 2010 Igalia S.L.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -338,26 +339,26 @@ static String getFamilyNameStringFromFamily(const String& family)
 {
     // If we're creating a fallback font (e.g. "-webkit-monospace"), convert the name into
     // the fallback name (like "monospace") that fontconfig understands.
-    if (family.length() && !family.startsWith("-webkit-"))
+    if (family.length() && !family.startsWith("-webkit-"_s))
         return family;
 
     if (family == familyNamesData->at(FamilyNamesIndex::StandardFamily) || family == familyNamesData->at(FamilyNamesIndex::SerifFamily))
-        return "serif";
+        return "serif"_s;
     if (family == familyNamesData->at(FamilyNamesIndex::SansSerifFamily))
-        return "sans-serif";
+        return "sans-serif"_s;
     if (family == familyNamesData->at(FamilyNamesIndex::MonospaceFamily))
-        return "monospace";
+        return "monospace"_s;
     if (family == familyNamesData->at(FamilyNamesIndex::CursiveFamily))
-        return "cursive";
+        return "cursive"_s;
     if (family == familyNamesData->at(FamilyNamesIndex::FantasyFamily))
-        return "fantasy";
+        return "fantasy"_s;
 
 #if PLATFORM(GTK)
-    if (family == familyNamesData->at(FamilyNamesIndex::SystemUiFamily) || family == "-webkit-system-font")
+    if (family == familyNamesData->at(FamilyNamesIndex::SystemUiFamily) || family == "-webkit-system-font"_s)
         return defaultGtkSystemFont();
 #endif
 
-    return "";
+    return emptyString();
 }
 
 #if FC_VERSION < 21395
@@ -491,16 +492,16 @@ static bool areStronglyAliased(const String& familyA, const String& familyB)
 
 static inline bool isCommonlyUsedGenericFamily(const String& familyNameString)
 {
-    return equalLettersIgnoringASCIICase(familyNameString, "sans")
-        || equalLettersIgnoringASCIICase(familyNameString, "sans-serif")
-        || equalLettersIgnoringASCIICase(familyNameString, "serif")
-        || equalLettersIgnoringASCIICase(familyNameString, "monospace")
-        || equalLettersIgnoringASCIICase(familyNameString, "fantasy")
+    return equalLettersIgnoringASCIICase(familyNameString, "sans"_s)
+        || equalLettersIgnoringASCIICase(familyNameString, "sans-serif"_s)
+        || equalLettersIgnoringASCIICase(familyNameString, "serif"_s)
+        || equalLettersIgnoringASCIICase(familyNameString, "monospace"_s)
+        || equalLettersIgnoringASCIICase(familyNameString, "fantasy"_s)
 #if PLATFORM(GTK)
-        || equalLettersIgnoringASCIICase(familyNameString, "-webkit-system-font")
-        || equalLettersIgnoringASCIICase(familyNameString, "-webkit-system-ui")
+        || equalLettersIgnoringASCIICase(familyNameString, "-webkit-system-font"_s)
+        || equalLettersIgnoringASCIICase(familyNameString, "-webkit-system-ui"_s)
 #endif
-        || equalLettersIgnoringASCIICase(familyNameString, "cursive");
+        || equalLettersIgnoringASCIICase(familyNameString, "cursive"_s);
 }
 
 std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext& fontCreationContext)
@@ -680,5 +681,9 @@ String buildVariationSettings(FT_Face face, const FontDescription& fontDescripti
     return builder.toString();
 }
 #endif // ENABLE(VARIATION_FONTS)
+
+void FontCache::platformInvalidate()
+{
+}
 
 }

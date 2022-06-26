@@ -30,16 +30,13 @@
 
 #import "TextCheckerState.h"
 #import <WebCore/NotImplemented.h>
+#import <pal/spi/cocoa/FoundationSPI.h>
 #import <pal/spi/mac/NSSpellCheckerSPI.h>
 #import <wtf/CheckedArithmetic.h>
 #import <wtf/NeverDestroyed.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/StringView.h>
-
-@interface NSSpellChecker (WebNSSpellCheckerDetails)
-- (NSString *)languageForWordRange:(NSRange)range inString:(NSString *)string orthography:(NSOrthography *)orthography;
-@end
 
 static NSString* const WebAutomaticSpellingCorrectionEnabled = @"WebAutomaticSpellingCorrectionEnabled";
 static NSString* const WebContinuousSpellCheckingEnabled = @"WebContinuousSpellCheckingEnabled";
@@ -395,6 +392,26 @@ Vector<TextCheckingResult> TextChecker::checkTextOfParagraph(SpellDocumentTag sp
             result.type = TextCheckingType::Correction;
             result.range = resultRange;
             result.replacement = [incomingResult replacementString];
+            if ([incomingResult respondsToSelector:@selector(detail)]) {
+                NSDictionary *incomingDetail = [incomingResult detail];
+                if (incomingDetail) {
+                    result.details.reserveInitialCapacity(1);
+                    GrammarDetail detail;
+
+                    NSValue *detailRangeAsNSValue = [incomingDetail objectForKey:NSGrammarRange];
+                    ASSERT(detailRangeAsNSValue);
+
+                    NSRange detailNSRange = [detailRangeAsNSValue rangeValue];
+                    ASSERT(detailNSRange.location != NSNotFound);
+                    ASSERT(detailNSRange.length > 0);
+
+                    detail.range = detailNSRange;
+                    detail.userDescription = [incomingDetail objectForKey:NSGrammarUserDescription];
+                    NSArray *guesses = [incomingDetail objectForKey:NSGrammarCorrections];
+                    detail.guesses = makeVector<String>(guesses);
+                    result.details.uncheckedAppend(WTFMove(detail));
+                }
+            }
             results.append(WTFMove(result));
         }
     }

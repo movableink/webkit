@@ -808,7 +808,7 @@ static bool willUseWebMFormatReaderForType(const String& type)
     if (!SourceBufferParserWebM::isWebMFormatReaderAvailable())
         return false;
 
-    return equalIgnoringASCIICase(type, "video/webm") || equalIgnoringASCIICase(type, "audio/webm");
+    return equalLettersIgnoringASCIICase(type, "video/webm"_s) || equalLettersIgnoringASCIICase(type, "audio/webm"_s);
 #else
     UNUSED_PARAM(type);
     return false;
@@ -1008,14 +1008,8 @@ void MediaPlayerPrivateAVFoundationObjC::createAVAssetForURL(const URL& url, Ret
     AVAssetResourceLoader *resourceLoader = m_avAsset.get().resourceLoader;
     [resourceLoader setDelegate:m_loaderDelegate.get() queue:globalLoaderDelegateQueue()];
 
-    if (DeprecatedGlobalSettings::isAVFoundationNSURLSessionEnabled()
-        && [resourceLoader respondsToSelector:@selector(setURLSession:)]
-        && [resourceLoader respondsToSelector:@selector(URLSessionDataDelegate)]
-        && [resourceLoader respondsToSelector:@selector(URLSessionDataDelegateQueue)]) {
-        RefPtr<PlatformMediaResourceLoader> mediaResourceLoader = player()->createResourceLoader();
-        if (mediaResourceLoader)
-            resourceLoader.URLSession = (NSURLSession *)adoptNS([[WebCoreNSURLSession alloc] initWithResourceLoader:*mediaResourceLoader delegate:resourceLoader.URLSessionDataDelegate delegateQueue:resourceLoader.URLSessionDataDelegateQueue]).get();
-    }
+    if (auto mediaResourceLoader = player()->createResourceLoader())
+        resourceLoader.URLSession = (NSURLSession *)adoptNS([[WebCoreNSURLSession alloc] initWithResourceLoader:*mediaResourceLoader delegate:resourceLoader.URLSessionDataDelegate delegateQueue:resourceLoader.URLSessionDataDelegateQueue]).get();
 
     [[NSNotificationCenter defaultCenter] addObserver:m_objcObserver.get() selector:@selector(chapterMetadataDidChange:) name:AVAssetChapterMetadataGroupsDidChangeNotification object:m_avAsset.get()];
 
@@ -1317,6 +1311,7 @@ void MediaPlayerPrivateAVFoundationObjC::setVideoFullscreenLayer(PlatformLayer* 
     if (videoFullscreenLayer)
         updateLastImage(UpdateType::UpdateSynchronously);
     m_videoLayerManager->setVideoFullscreenLayer(videoFullscreenLayer, WTFMove(completionHandler), m_lastImage ? m_lastImage->platformImage() : nullptr);
+    updateVideoLayerGravity(ShouldAnimate::Yes);
     updateDisableExternalPlayback();
 }
 
@@ -1329,25 +1324,7 @@ void MediaPlayerPrivateAVFoundationObjC::setVideoFullscreenFrame(FloatRect frame
 void MediaPlayerPrivateAVFoundationObjC::setVideoFullscreenGravity(MediaPlayer::VideoGravity gravity)
 {
     m_videoFullscreenGravity = gravity;
-
-    if (!m_videoLayer)
-        return;
-
-    NSString *videoGravity = AVLayerVideoGravityResizeAspect;
-    if (gravity == MediaPlayer::VideoGravity::Resize)
-        videoGravity = AVLayerVideoGravityResize;
-    else if (gravity == MediaPlayer::VideoGravity::ResizeAspect)
-        videoGravity = AVLayerVideoGravityResizeAspect;
-    else if (gravity == MediaPlayer::VideoGravity::ResizeAspectFill)
-        videoGravity = AVLayerVideoGravityResizeAspectFill;
-    else
-        ASSERT_NOT_REACHED();
-    
-    if ([m_videoLayer videoGravity] == videoGravity)
-        return;
-
-    [m_videoLayer setVideoGravity:videoGravity];
-    syncTextTrackBounds();
+    updateVideoLayerGravity(ShouldAnimate::Yes);
 }
 
 void MediaPlayerPrivateAVFoundationObjC::setVideoFullscreenMode(MediaPlayer::VideoFullscreenMode mode)
@@ -1613,7 +1590,7 @@ void MediaPlayerPrivateAVFoundationObjC::seekToTime(const MediaTime& time, const
 
 void MediaPlayerPrivateAVFoundationObjC::setVolume(float volume)
 {
-#if PLATFORM(IOS_FAMILY)
+#if !HAVE(MEDIA_VOLUME_PER_ELEMENT)
     UNUSED_PARAM(volume);
     return;
 #else
@@ -2035,9 +2012,9 @@ void MediaPlayerPrivateAVFoundationObjC::getSupportedTypes(HashSet<String, ASCII
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
 static bool keySystemIsSupported(const String& keySystem)
 {
-    if (equalIgnoringASCIICase(keySystem, "com.apple.fps") || equalIgnoringASCIICase(keySystem, "com.apple.fps.1_0") || equalIgnoringASCIICase(keySystem, "org.w3c.clearkey"))
-        return true;
-    return false;
+    return equalLettersIgnoringASCIICase(keySystem, "com.apple.fps"_s)
+        || equalIgnoringASCIICase(keySystem, "com.apple.fps.1_0"_s)
+        || equalLettersIgnoringASCIICase(keySystem, "org.w3c.clearkey"_s);
 }
 #endif
 
@@ -2070,7 +2047,7 @@ bool MediaPlayerPrivateAVFoundationObjC::supportsKeySystem(const String& keySyst
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     if (!keySystem.isEmpty()) {
         // "Clear Key" is only supported with HLS:
-        if (equalIgnoringASCIICase(keySystem, "org.w3c.clearkey") && !mimeType.isEmpty() && !equalIgnoringASCIICase(mimeType, "application/x-mpegurl"))
+        if (equalLettersIgnoringASCIICase(keySystem, "org.w3c.clearkey"_s) && !mimeType.isEmpty() && !equalLettersIgnoringASCIICase(mimeType, "application/x-mpegurl"_s))
             return false;
 
         if (!keySystemIsSupported(keySystem))
@@ -2122,7 +2099,7 @@ bool MediaPlayerPrivateAVFoundationObjC::shouldWaitForLoadingOfResource(AVAssetR
     String keyURI = [[[avRequest request] URL] absoluteString];
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(ENCRYPTED_MEDIA)
-    if (scheme == "skd") {
+    if (scheme == "skd"_s) {
         INFO_LOG(LOGIDENTIFIER, "received skd:// URI");
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
         // Create an initData with the following layout:
@@ -2162,7 +2139,7 @@ bool MediaPlayerPrivateAVFoundationObjC::shouldWaitForLoadingOfResource(AVAssetR
     }
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
-    if (scheme == "clearkey") {
+    if (scheme == "clearkey"_s) {
         String keyID = [[[avRequest request] URL] resourceSpecifier];
         auto encodedKeyId = PAL::UTF8Encoding().encode(keyID, PAL::UnencodableHandling::URLEncodedEntities);
         auto initData = SharedBuffer::create(WTFMove(encodedKeyId));
@@ -2219,23 +2196,40 @@ MediaTime MediaPlayerPrivateAVFoundationObjC::mediaTimeForTimeValue(const MediaT
     return timeValue;
 }
 
-void MediaPlayerPrivateAVFoundationObjC::updateVideoLayerGravity()
+void MediaPlayerPrivateAVFoundationObjC::updateVideoLayerGravity(ShouldAnimate shouldAnimate)
 {
     if (!m_videoLayer)
         return;
 
+    NSString* videoGravity = shouldMaintainAspectRatio() ? AVLayerVideoGravityResizeAspect : AVLayerVideoGravityResize;
 #if ENABLE(VIDEO_PRESENTATION_MODE)
-    // Do not attempt to change the video gravity while in full screen mode.
-    // See setVideoFullscreenGravity().
-    if (m_videoLayerManager->videoFullscreenLayer())
-        return;
+    if (m_videoLayerManager->videoFullscreenLayer()) {
+        switch (m_videoFullscreenGravity) {
+        case MediaPlayer::VideoGravity::Resize:
+            videoGravity = AVLayerVideoGravityResize;
+            break;
+        case MediaPlayer::VideoGravity::ResizeAspect:
+            videoGravity = AVLayerVideoGravityResizeAspect;
+            break;
+        case MediaPlayer::VideoGravity::ResizeAspectFill:
+            videoGravity = AVLayerVideoGravityResizeAspectFill;
+            break;
+        }
+    }
 #endif
 
+    if ([m_videoLayer videoGravity] == videoGravity)
+        return;
+
+    bool shouldDisableActions = shouldAnimate == ShouldAnimate::No;
+    ALWAYS_LOG(LOGIDENTIFIER, "Setting gravity to \"", String { videoGravity }, "\", animated: ", !shouldDisableActions);
+
     [CATransaction begin];
-    [CATransaction setDisableActions:YES];    
-    NSString* gravity = shouldMaintainAspectRatio() ? AVLayerVideoGravityResizeAspect : AVLayerVideoGravityResize;
-    [m_videoLayer setVideoGravity:gravity];
+    [CATransaction setDisableActions:shouldDisableActions];
+    [m_videoLayer setVideoGravity:videoGravity];
     [CATransaction commit];
+
+    syncTextTrackBounds();
 }
 
 void MediaPlayerPrivateAVFoundationObjC::metadataLoaded()
@@ -2582,10 +2576,6 @@ void MediaPlayerPrivateAVFoundationObjC::resolvedURLChanged()
 bool MediaPlayerPrivateAVFoundationObjC::didPassCORSAccessCheck() const
 {
     AVAssetResourceLoader *resourceLoader = m_avAsset.get().resourceLoader;
-    if (!DeprecatedGlobalSettings::isAVFoundationNSURLSessionEnabled()
-        || ![resourceLoader respondsToSelector:@selector(URLSession)])
-        return false;
-
     WebCoreNSURLSession *session = (WebCoreNSURLSession *)resourceLoader.URLSession;
     if ([session isKindOfClass:[WebCoreNSURLSession class]])
         return session.didPassCORSAccessChecks;
@@ -2596,10 +2586,6 @@ bool MediaPlayerPrivateAVFoundationObjC::didPassCORSAccessCheck() const
 std::optional<bool> MediaPlayerPrivateAVFoundationObjC::wouldTaintOrigin(const SecurityOrigin& origin) const
 {
     AVAssetResourceLoader *resourceLoader = m_avAsset.get().resourceLoader;
-    if (!DeprecatedGlobalSettings::isAVFoundationNSURLSessionEnabled()
-        || ![resourceLoader respondsToSelector:@selector(URLSession)])
-        return false;
-
     WebCoreNSURLSession *session = (WebCoreNSURLSession *)resourceLoader.URLSession;
     if ([session isKindOfClass:[WebCoreNSURLSession class]])
         return [session wouldTaintOrigin:origin];
@@ -2754,7 +2740,7 @@ RefPtr<VideoFrame> MediaPlayerPrivateAVFoundationObjC::videoFrameForCurrentTime(
     updateLastPixelBuffer();
     if (!m_lastPixelBuffer)
         return nullptr;
-    return VideoFrameCV::create(currentMediaTime(), false, VideoFrameCV::VideoRotation::None, RetainPtr { m_lastPixelBuffer });
+    return VideoFrameCV::create(currentMediaTime(), false, VideoFrame::Rotation::None, RetainPtr { m_lastPixelBuffer });
 }
 
 RefPtr<NativeImage> MediaPlayerPrivateAVFoundationObjC::nativeImageForCurrentTime()
@@ -2906,7 +2892,7 @@ void MediaPlayerPrivateAVFoundationObjC::attemptToDecryptWithInstance(CDMInstanc
     if (!m_keyID || !m_cdmInstance)
         return;
 
-    auto instanceSession = m_cdmInstance->sessionForKeyIDs(Vector<Ref<FragmentedSharedBuffer>>::from(*m_keyID));
+    auto instanceSession = m_cdmInstance->sessionForKeyIDs(Vector<Ref<SharedBuffer>>::from(*m_keyID));
     if (!instanceSession)
         return;
 
@@ -3009,7 +2995,7 @@ void MediaPlayerPrivateAVFoundationObjC::processMediaSelectionOptions()
 {
     AVMediaSelectionGroup *legibleGroup = safeMediaSelectionGroupForLegibleMedia();
     if (!legibleGroup) {
-        INFO_LOG(LOGIDENTIFIER, "no mediaSelectionGroup");
+        ALWAYS_LOG(LOGIDENTIFIER, "no mediaSelectionGroup");
         return;
     }
 
@@ -3067,7 +3053,7 @@ void MediaPlayerPrivateAVFoundationObjC::processMetadataTrack()
         return;
 
     m_metadataTrack = InbandMetadataTextTrackPrivateAVF::create(InbandTextTrackPrivate::Kind::Metadata, InbandTextTrackPrivate::CueFormat::Data);
-    m_metadataTrack->setInBandMetadataTrackDispatchType("com.apple.streaming");
+    m_metadataTrack->setInBandMetadataTrackDispatchType("com.apple.streaming"_s);
     player()->addTextTrack(*m_metadataTrack);
 }
 
@@ -3075,8 +3061,10 @@ void MediaPlayerPrivateAVFoundationObjC::processCue(NSArray *attributedStrings, 
 {
     ASSERT(time >= MediaTime::zeroTime());
 
-    if (!m_currentTextTrack)
+    if (!m_currentTextTrack) {
+        ALWAYS_LOG(LOGIDENTIFIER, "no current text track");
         return;
+    }
 
     m_currentTextTrack->processCue((__bridge CFArrayRef)attributedStrings, (__bridge CFArrayRef)nativeSamples, time);
 }
@@ -3096,7 +3084,7 @@ void MediaPlayerPrivateAVFoundationObjC::setCurrentTextTrack(InbandTextTrackPriv
     if (m_currentTextTrack == track)
         return;
 
-    INFO_LOG(LOGIDENTIFIER, "selecting track with language ", track ? track->language() : "");
+    ALWAYS_LOG(LOGIDENTIFIER, "selecting track with language ", track ? track->language() : emptyAtom());
 
     m_currentTextTrack = track;
 
@@ -3520,12 +3508,12 @@ void MediaPlayerPrivateAVFoundationObjC::setBufferingPolicy(MediaPlayer::Bufferi
 #if ENABLE(DATACUE_VALUE)
 static const AtomString& metadataType(NSString *avMetadataKeySpace)
 {
-    static MainThreadNeverDestroyed<const AtomString> quickTimeUserData("com.apple.quicktime.udta", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> isoUserData("org.mp4ra", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> quickTimeMetadata("com.apple.quicktime.mdta", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> iTunesMetadata("com.apple.itunes", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> id3Metadata("org.id3", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> hlsDateRangeMetadata("com.apple.quicktime.HLS", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> quickTimeUserData("com.apple.quicktime.udta"_s);
+    static MainThreadNeverDestroyed<const AtomString> isoUserData("org.mp4ra"_s);
+    static MainThreadNeverDestroyed<const AtomString> quickTimeMetadata("com.apple.quicktime.mdta"_s);
+    static MainThreadNeverDestroyed<const AtomString> iTunesMetadata("com.apple.itunes"_s);
+    static MainThreadNeverDestroyed<const AtomString> id3Metadata("org.id3"_s);
+    static MainThreadNeverDestroyed<const AtomString> hlsDateRangeMetadata("com.apple.quicktime.HLS"_s);
 
     if ([avMetadataKeySpace isEqualToString:AVMetadataKeySpaceQuickTimeUserData])
         return quickTimeUserData;

@@ -116,8 +116,8 @@ TEST(WTF_Vector, ConstructWithFrom)
 
 TEST(WTF_Vector, ConstructWithFromString)
 {
-    String s1 = "s1";
-    String s2 = "s2";
+    String s1 = "s1"_s;
+    String s2 = "s2"_s;
     String s3 = s1;
     auto vector = Vector<String>::from(s1, s2, WTFMove(s3));
     EXPECT_EQ(3U, vector.size());
@@ -131,8 +131,8 @@ TEST(WTF_Vector, ConstructWithFromString)
 
 TEST(WTF_Vector, IsolatedCopy)
 {
-    String s1 = "s1";
-    String s2 = "s2";
+    String s1 = "s1"_s;
+    String s2 = "s2"_s;
 
     auto vector1 = Vector<String>::from(WTFMove(s1), s2);
     EXPECT_EQ(2U, vector1.size());
@@ -143,8 +143,8 @@ TEST(WTF_Vector, IsolatedCopy)
 
     auto vector2 = crossThreadCopy(vector1);
 
-    EXPECT_TRUE("s1" == vector2[0]);
-    EXPECT_TRUE("s2" == vector2[1]);
+    EXPECT_TRUE("s1"_s == vector2[0]);
+    EXPECT_TRUE("s2"_s == vector2[1]);
 
     EXPECT_FALSE(data1 == vector2[0].impl());
     EXPECT_FALSE(data2 == vector2[1].impl());
@@ -152,8 +152,8 @@ TEST(WTF_Vector, IsolatedCopy)
     auto vector3 = crossThreadCopy(WTFMove(vector1));
     EXPECT_EQ(0U, vector1.size());
 
-    EXPECT_TRUE("s1" == vector3[0]);
-    EXPECT_TRUE("s2" == vector3[1]);
+    EXPECT_TRUE("s1"_s == vector3[0]);
+    EXPECT_TRUE("s2"_s == vector3[1]);
 
     EXPECT_TRUE(data1 == vector3[0].impl());
     EXPECT_FALSE(data2 == vector3[1].impl());
@@ -895,9 +895,9 @@ TEST(WTF_Vector, MapLambdaMove)
 TEST(WTF_Vector, MapFromHashMap)
 {
     HashMap<String, String> map;
-    map.set(String { "k1" }, String { "v1" });
-    map.set(String { "k2" }, String { "v2" });
-    map.set(String { "k3" }, String { "v3" });
+    map.set("k1"_s, "v1"_s);
+    map.set("k2"_s, "v2"_s);
+    map.set("k3"_s, "v3"_s);
 
     auto mapped = WTF::map(map, [&] (KeyValuePair<String, String>& pair) -> String {
         return pair.value;
@@ -905,9 +905,9 @@ TEST(WTF_Vector, MapFromHashMap)
     std::sort(mapped.begin(), mapped.end(), WTF::codePointCompareLessThan);
 
     EXPECT_EQ(3U, mapped.size());
-    EXPECT_TRUE(mapped[0] == "v1");
-    EXPECT_TRUE(mapped[1] == "v2");
-    EXPECT_TRUE(mapped[2] == "v3");
+    EXPECT_TRUE(mapped[0] == "v1"_s);
+    EXPECT_TRUE(mapped[1] == "v2"_s);
+    EXPECT_TRUE(mapped[2] == "v3"_s);
 
     mapped = WTF::map(map, [&] (const auto& pair) -> String {
         return pair.key;
@@ -915,9 +915,9 @@ TEST(WTF_Vector, MapFromHashMap)
     std::sort(mapped.begin(), mapped.end(), WTF::codePointCompareLessThan);
 
     EXPECT_EQ(3U, mapped.size());
-    EXPECT_TRUE(mapped[0] == "k1");
-    EXPECT_TRUE(mapped[1] == "k2");
-    EXPECT_TRUE(mapped[2] == "k3");
+    EXPECT_TRUE(mapped[0] == "k1"_s);
+    EXPECT_TRUE(mapped[1] == "k2"_s);
+    EXPECT_TRUE(mapped[2] == "k3"_s);
 
     mapped = WTF::map(WTFMove(map), [&] (KeyValuePair<String, String>&& pair) -> String {
         return WTFMove(pair.value);
@@ -925,17 +925,17 @@ TEST(WTF_Vector, MapFromHashMap)
     std::sort(mapped.begin(), mapped.end(), WTF::codePointCompareLessThan);
 
     EXPECT_EQ(3U, mapped.size());
-    EXPECT_TRUE(mapped[0] == "v1");
-    EXPECT_TRUE(mapped[1] == "v2");
-    EXPECT_TRUE(mapped[2] == "v3");
+    EXPECT_TRUE(mapped[0] == "v1"_s);
+    EXPECT_TRUE(mapped[1] == "v2"_s);
+    EXPECT_TRUE(mapped[2] == "v3"_s);
 
-    EXPECT_TRUE(map.contains("k1"));
-    EXPECT_TRUE(map.contains("k2"));
-    EXPECT_TRUE(map.contains("k3"));
+    EXPECT_TRUE(map.contains("k1"_s));
+    EXPECT_TRUE(map.contains("k2"_s));
+    EXPECT_TRUE(map.contains("k3"_s));
 
-    EXPECT_TRUE(map.get("k1").isNull());
-    EXPECT_TRUE(map.get("k2").isNull());
-    EXPECT_TRUE(map.get("k3").isNull());
+    EXPECT_TRUE(map.get("k1"_s).isNull());
+    EXPECT_TRUE(map.get("k2"_s).isNull());
+    EXPECT_TRUE(map.get("k3"_s).isNull());
 
 }
 
@@ -1052,7 +1052,7 @@ TEST(WTF_Vector, CompactMapStaticFunctionReturnOptionalRefPtr)
 
 TEST(WTF_Vector, CompactMapLambdaReturnOptional)
 {
-    Vector<String> vector { "a", "b", "hello", "ciao", "world", "webkit" };
+    Vector<String> vector { "a"_s, "b"_s, "hello"_s, "ciao"_s, "world"_s, "webkit"_s };
 
     auto function = [](const String& value) -> std::optional<String> {
         if (value.length() < 5)
@@ -1285,8 +1285,8 @@ TEST(WTF_Vector, CopyToVectorSizeRangeIterator)
 
 TEST(WTF_Vector, StringComparison)
 {
-    Vector<String> a = {{ "a" }};
-    Vector<String> b = {{ "a" }};
+    Vector<String> a = {{ "a"_s }};
+    Vector<String> b = {{ "a"_s }};
     EXPECT_TRUE(a == b);
 }
 
@@ -1405,8 +1405,8 @@ TEST(WTF_Vector, HashKeyInlineCapacity)
 
 TEST(WTF_Vector, HashKeyString)
 {
-    Vector<String> a = { "a" };
-    Vector<String> b = { "a", "b" };
+    Vector<String> a = { "a"_s };
+    Vector<String> b = { "a"_s, "b"_s };
 
     HashSet<Vector<String>> hash;
 
@@ -1438,46 +1438,46 @@ TEST(WTF_Vector, HashKeyString)
     EXPECT_FALSE(hash.contains(a));
     EXPECT_FALSE(hash.contains(b));
 
-    for (auto i : { "a", "b", "c", "d", "e" }) {
-        for (auto j : { "a", "b", "c", "d", "e" }) {
+    for (auto i : { "a"_s, "b"_s, "c"_s, "d"_s, "e"_s }) {
+        for (auto j : { "a"_s, "b"_s, "c"_s, "d"_s, "e"_s }) {
             hash.add({ i, j });
             hash.add({ i, j, i, j });
         }
     }
 
-    for (auto i : { "a", "b", "c", "d", "e" }) {
-        for (auto j : { "a", "b", "c", "d", "e" }) {
+    for (auto i : { "a"_s, "b"_s, "c"_s, "d"_s, "e"_s }) {
+        for (auto j : { "a"_s, "b"_s, "c"_s, "d"_s, "e"_s }) {
             EXPECT_TRUE(hash.contains({ i, j }));
             EXPECT_TRUE(hash.contains({ i, j, i, j }));
             EXPECT_FALSE(hash.contains({ i, j, i }));
-            EXPECT_FALSE(hash.contains({ "x", j }));
-            EXPECT_FALSE(hash.contains({ i, j, "x", j }));
+            EXPECT_FALSE(hash.contains({ "x"_s, j }));
+            EXPECT_FALSE(hash.contains({ i, j, "x"_s, j }));
         }
     }
 
-    for (auto i : { "d", "e" }) {
-        for (auto j : { "a", "b", "c", "d", "e" }) {
+    for (auto i : { "d"_s, "e"_s }) {
+        for (auto j : { "a"_s, "b"_s, "c"_s, "d"_s, "e"_s }) {
             hash.remove({ i, j });
             hash.remove({ i, j, i, j });
         }
     }
 
-    for (auto i : { "d", "e" }) {
-        for (auto j : { "a", "b", "c", "d", "e" }) {
+    for (auto i : { "d"_s, "e"_s }) {
+        for (auto j : { "a"_s, "b"_s, "c"_s, "d"_s, "e"_s }) {
             EXPECT_FALSE(hash.contains({ i, j }));
             EXPECT_FALSE(hash.contains({ i, j, i, j }));
         }
     }
 
-    for (auto i : { "a", "b", "c" }) {
-        for (auto j : { "a", "b", "c", "d", "e" }) {
+    for (auto i : { "a"_s, "b"_s, "c"_s }) {
+        for (auto j : { "a"_s, "b"_s, "c"_s, "d"_s, "e"_s }) {
             EXPECT_TRUE(hash.contains({ i, j }));
             EXPECT_TRUE(hash.contains({ i, j, i, j }));
         }
     }
 
-    for (auto i : { "a", "b", "c" }) {
-        for (auto j : { "a", "b", "c", "d", "e" }) {
+    for (auto i : { "a"_s, "b"_s, "c"_s }) {
+        for (auto j : { "a"_s, "b"_s, "c"_s, "d"_s, "e"_s }) {
             hash.remove({ i, j });
             hash.remove({ i, j, i, j });
         }

@@ -88,7 +88,7 @@ struct SameSizeAsRenderText : public RenderObject {
     String text;
 };
 
-COMPILE_ASSERT(sizeof(RenderText) == sizeof(SameSizeAsRenderText), RenderText_should_stay_small);
+static_assert(sizeof(RenderText) == sizeof(SameSizeAsRenderText), "RenderText should stay small");
 
 class SecureTextTimer final : private TimerBase {
     WTF_MAKE_FAST_ALLOCATED;
@@ -221,9 +221,9 @@ RenderText::~RenderText()
     ASSERT(!originalTextMap().contains(this));
 }
 
-const char* RenderText::renderName() const
+ASCIILiteral RenderText::renderName() const
 {
-    return "RenderText";
+    return "RenderText"_s;
 }
 
 Text* RenderText::textNode() const
@@ -704,19 +704,24 @@ VisiblePosition RenderText::positionForPoint(const LayoutPoint& point, const Ren
     return createVisiblePosition(0, Affinity::Downstream);
 }
 
-ALWAYS_INLINE float RenderText::widthFromCache(const FontCascade& f, unsigned start, unsigned len, float xPos, HashSet<const Font*>* fallbackFonts, GlyphOverflow* glyphOverflow, const RenderStyle& style) const
+static inline std::optional<float> combineTextWidth(const RenderText& renderer, const FontCascade& fontCascade, const RenderStyle& style)
 {
-    if (style.hasTextCombine() && is<RenderCombineText>(*this)) {
-        const RenderCombineText& combineText = downcast<RenderCombineText>(*this);
-        if (combineText.isCombined())
-            return combineText.combinedTextWidth(f);
-    }
+    if (!style.hasTextCombine() || !is<RenderCombineText>(renderer))
+        return { };
+    auto& combineTextRenderer = downcast<RenderCombineText>(renderer);
+    return combineTextRenderer.isCombined() ? std::make_optional(combineTextRenderer.combinedTextWidth(fontCascade)) : std::nullopt;
+}
 
-    TextRun run = RenderBlock::constructTextRun(*this, start, len, style);
+ALWAYS_INLINE float RenderText::widthFromCache(const FontCascade& fontCascade, unsigned start, unsigned length, float xPos, HashSet<const Font*>* fallbackFonts, GlyphOverflow* glyphOverflow, const RenderStyle& style) const
+{
+    if (auto width = combineTextWidth(*this, fontCascade, style))
+        return *width;
+
+    TextRun run = RenderBlock::constructTextRun(*this, start, length, style);
     run.setCharacterScanForCodePath(!canUseSimpleFontCodePath());
     run.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
     run.setXPos(xPos);
-    return f.width(run, fallbackFonts, glyphOverflow);
+    return fontCascade.width(run, fallbackFonts, glyphOverflow);
 }
 
 ALWAYS_INLINE float RenderText::widthFromCacheConsideringPossibleTrailingSpace(const RenderStyle& style, const FontCascade& font, unsigned startIndex, unsigned wordLen, float xPos, bool currentCharacterIsSpace, WordTrailingSpace& wordTrailingSpace, HashSet<const Font*>& fallbackFonts, GlyphOverflow& glyphOverflow) const
@@ -937,7 +942,7 @@ float RenderText::maxWordFragmentWidth(const RenderStyle& style, const FontCasca
 {
     unsigned suffixStart = 0;
     if (word.length() <= minimumSuffixLength)
-        return 0;
+        return entireWordWidth;
 
     Vector<int, 8> hyphenLocations;
     ASSERT(word.length() >= minimumSuffixLength);
@@ -946,7 +951,7 @@ float RenderText::maxWordFragmentWidth(const RenderStyle& style, const FontCasca
         hyphenLocations.append(hyphenLocation);
 
     if (hyphenLocations.isEmpty())
-        return 0;
+        return entireWordWidth;
 
     hyphenLocations.reverse();
 
@@ -1346,7 +1351,7 @@ void RenderText::setRenderedText(const String& newText)
     m_text = newText;
 
     if (m_useBackslashAsYenSymbol)
-        m_text.replace('\\', yenSign);
+        m_text = makeStringByReplacingAll(m_text, '\\', yenSign);
     
     const auto& style = this->style();
     if (style.textTransform() != TextTransform::None)
@@ -1439,6 +1444,9 @@ bool RenderText::computeCanUseSimplifiedTextMeasuring() const
     TextRun run(m_text);
     run.setCharacterScanForCodePath(false);
     if (fontCascade.codePath(run) != FontCascade::CodePath::Simple)
+        return false;
+
+    if (&style != &firstLineStyle() && fontCascade != firstLineStyle().fontCascade())
         return false;
 
     auto& primaryFont = fontCascade.primaryFont();
@@ -1542,16 +1550,22 @@ float RenderText::width(unsigned from, unsigned len, float xPos, bool firstLine,
     return width(from, len, lineStyle.fontCascade(), xPos, fallbackFonts, glyphOverflow);
 }
 
-float RenderText::width(unsigned from, unsigned len, const FontCascade& f, float xPos, HashSet<const Font*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
+float RenderText::width(unsigned from, unsigned length, const FontCascade& fontCascade, float xPos, HashSet<const Font*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
 {
-    ASSERT(from + len <= text().length());
-    if (!text().length())
-        return 0;
+    ASSERT(from + length <= text().length());
+    if (!text().length() || !length)
+        return 0.f;
 
-    const RenderStyle& style = this->style();
-    float w;
-    if (&f == &style.fontCascade()) {
-        if (!style.preserveNewline() && !from && len == text().length() && (!glyphOverflow || !glyphOverflow->computeBounds)) {
+    auto& style = this->style();
+    if (auto width = combineTextWidth(*this, fontCascade, style))
+        return *width;
+
+    if (length == 1 && (characterAt(from) == space))
+        return canUseSimplifiedTextMeasuring() ? fontCascade.primaryFont().spaceWidth() : fontCascade.widthOfSpaceString();
+
+    float width = 0.f;
+    if (&fontCascade == &style.fontCascade()) {
+        if (!style.preserveNewline() && !from && length == text().length() && (!glyphOverflow || !glyphOverflow->computeBounds)) {
             if (fallbackFonts) {
                 ASSERT(glyphOverflow);
                 if (preferredLogicalWidthsDirty() || !m_knownToHaveNoOverflowAndNoFallbackFonts) {
@@ -1559,21 +1573,21 @@ float RenderText::width(unsigned from, unsigned len, const FontCascade& f, float
                     if (fallbackFonts->isEmpty() && !glyphOverflow->left && !glyphOverflow->right && !glyphOverflow->top && !glyphOverflow->bottom)
                         m_knownToHaveNoOverflowAndNoFallbackFonts = true;
                 }
-                w = m_maxWidth;
+                width = m_maxWidth;
             } else
-                w = maxLogicalWidth();
+                width = maxLogicalWidth();
         } else
-            w = widthFromCache(f, from, len, xPos, fallbackFonts, glyphOverflow, style);
+            width = widthFromCache(fontCascade, from, length, xPos, fallbackFonts, glyphOverflow, style);
     } else {
-        TextRun run = RenderBlock::constructTextRun(*this, from, len, style);
+        TextRun run = RenderBlock::constructTextRun(*this, from, length, style);
         run.setCharacterScanForCodePath(!canUseSimpleFontCodePath());
         run.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
         run.setXPos(xPos);
 
-        w = f.width(run, fallbackFonts, glyphOverflow);
+        width = fontCascade.width(run, fallbackFonts, glyphOverflow);
     }
 
-    return clampTo(w, 0.f);
+    return clampTo(width, 0.f);
 }
 
 IntRect RenderText::linesBoundingBox() const

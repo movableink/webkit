@@ -34,6 +34,10 @@
 #include <string.h>
 #include <webkit2/webkit2.h>
 
+#if !USE_GSTREAMER_FULL && (ENABLE_WEB_AUDIO || ENABLE_VIDEO)
+#include <gst/gst.h>
+#endif
+
 #define MINI_BROWSER_ERROR (miniBrowserErrorQuark())
 
 static const gchar **uriArguments = NULL;
@@ -52,6 +56,7 @@ static const char *cookiesFile;
 static const char *cookiesPolicy;
 static const char *proxy;
 static gboolean darkMode;
+static char* timeZone;
 static gboolean enableITP;
 static gboolean enableSandbox;
 static gboolean exitAfterLoad;
@@ -149,6 +154,7 @@ static const GOptionEntry commandLineOptions[] =
     { "enable-itp", 0, 0, G_OPTION_ARG_NONE, &enableITP, "Enable Intelligent Tracking Prevention (ITP)", NULL },
     { "enable-sandbox", 0, 0, G_OPTION_ARG_NONE, &enableSandbox, "Enable web process sandbox support", NULL },
     { "exit-after-load", 0, 0, G_OPTION_ARG_NONE, &exitAfterLoad, "Quit the browser after the load finishes", NULL },
+    { "time-zone", 't', 0, G_OPTION_ARG_STRING, &timeZone, "Set time zone", "TIMEZONE" },
     { "version", 'v', 0, G_OPTION_ARG_NONE, &printVersion, "Print the WebKitGTK version", NULL },
     { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &uriArguments, 0, "[URL…]" },
     { 0, 0, 0, 0, 0, 0, 0 }
@@ -674,6 +680,7 @@ static void activate(GApplication *application, WebKitSettings *webkitSettings)
 #if !GTK_CHECK_VERSION(3, 98, 0)
         "use-system-appearance-for-scrollbars", FALSE,
 #endif
+        "time-zone-override", timeZone,
         NULL);
     g_object_unref(manager);
 
@@ -800,6 +807,9 @@ int main(int argc, char *argv[])
     g_option_context_add_main_entries(context, commandLineOptions, 0);
 #if !GTK_CHECK_VERSION(3, 98, 0)
     g_option_context_add_group(context, gtk_get_option_group(TRUE));
+#endif
+#if !USE_GSTREAMER_FULL && (ENABLE_WEB_AUDIO || ENABLE_VIDEO)
+    g_option_context_add_group(context, gst_init_get_option_group());
 #endif
 
     WebKitSettings *webkitSettings = webkit_settings_new();

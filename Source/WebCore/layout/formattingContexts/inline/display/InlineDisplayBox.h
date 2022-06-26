@@ -137,7 +137,7 @@ struct Box {
     {
         auto offset = physicalTop - top();
         m_unflippedVisualRect.setY(physicalTop);
-        m_inkOverflow.shiftMaxYEdgeTo(m_inkOverflow.y() + offset);
+        m_inkOverflow.setY(m_inkOverflow.y() + offset);
     }
     void setBottom(float physicalBottom)
     {
@@ -156,7 +156,7 @@ struct Box {
     const std::optional<Text>& text() const { return m_text; }
 
     struct Expansion {
-        ExpansionBehavior behavior { DefaultExpansion };
+        ExpansionBehavior behavior = ExpansionBehavior::defaultBehavior();
         float horizontalExpansion { 0 };
     };
     Expansion expansion() const { return m_expansion; }

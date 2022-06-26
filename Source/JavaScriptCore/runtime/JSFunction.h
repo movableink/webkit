@@ -92,7 +92,7 @@ public:
     JS_EXPORT_PRIVATE const String calculatedDisplayName(VM&);
     JS_EXPORT_PRIVATE JSString* toString(JSGlobalObject*);
 
-    JSString* asStringConcurrently(VM&) const;
+    JSString* asStringConcurrently() const;
 
     ExecutableBase* executable() const
     {
@@ -150,7 +150,7 @@ public:
     bool isBuiltinFunction() const;
     JS_EXPORT_PRIVATE bool isHostFunctionNonInline() const;
     bool isClassConstructorFunction() const;
-    bool isRemoteFunction(VM&) const;
+    bool isRemoteFunction() const;
 
     void setFunctionName(JSGlobalObject*, JSValue name);
 
@@ -168,6 +168,7 @@ public:
     PropertyStatus reifyLazyPropertyIfNeeded(VM&, JSGlobalObject*, PropertyName);
 
     bool canAssumeNameAndLengthAreOriginal(VM&);
+    bool mayHaveNonReifiedPrototype();
 
 protected:
     JS_EXPORT_PRIVATE JSFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*);
@@ -190,7 +191,7 @@ private:
     static JSFunction* createImpl(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
     {
         JSFunction* function = new (NotNull, allocateCell<JSFunction>(vm)) JSFunction(vm, executable, scope, structure);
-        ASSERT(function->structure(vm)->globalObject());
+        ASSERT(function->structure()->globalObject());
         function->finishCreation(vm);
         return function;
     }
@@ -209,6 +210,7 @@ private:
     static bool isReified(PropertyStatus property) { return property == PropertyStatus::Reified; }
 
     PropertyStatus reifyLazyPropertyForHostOrBuiltinIfNeeded(VM&, JSGlobalObject*, PropertyName);
+    PropertyStatus reifyLazyPrototypeIfNeeded(VM&, JSGlobalObject*, PropertyName);
     PropertyStatus reifyLazyLengthIfNeeded(VM&, JSGlobalObject*, PropertyName);
     PropertyStatus reifyLazyNameIfNeeded(VM&, JSGlobalObject*, PropertyName);
     PropertyStatus reifyLazyBoundNameIfNeeded(VM&, JSGlobalObject*, PropertyName);

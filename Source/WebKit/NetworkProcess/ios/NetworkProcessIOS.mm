@@ -33,6 +33,7 @@
 #import "ProcessAssertion.h"
 #import "SandboxInitializationParameters.h"
 #import "SecItemShim.h"
+#import <UIKit/UIKit.h>
 #import <WebCore/CertificateInfo.h>
 #import <WebCore/NotImplemented.h>
 #import <WebCore/WebCoreThreadSystemInterface.h>
@@ -78,7 +79,7 @@ bool NetworkProcess::parentProcessHasServiceWorkerEntitlement() const
     if (disableServiceWorkerEntitlementTestingOverride)
         return false;
 
-    static bool hasEntitlement = WTF::hasEntitlement(parentProcessConnection()->xpcConnection(), "com.apple.developer.WebKit.ServiceWorkers") || WTF::hasEntitlement(parentProcessConnection()->xpcConnection(), "com.apple.developer.web-browser");
+    static bool hasEntitlement = WTF::hasEntitlement(parentProcessConnection()->xpcConnection(), "com.apple.developer.WebKit.ServiceWorkers"_s) || WTF::hasEntitlement(parentProcessConnection()->xpcConnection(), "com.apple.developer.web-browser"_s);
     return hasEntitlement;
 }
 

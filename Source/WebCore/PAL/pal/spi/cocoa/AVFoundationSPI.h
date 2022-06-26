@@ -366,6 +366,12 @@ NS_ASSUME_NONNULL_BEGIN
 NS_ASSUME_NONNULL_END
 #endif // __has_include(<AVFoundation/AVSampleBufferDisplayLayer.h>)
 
+#if HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
+@interface AVSampleBufferDisplayLayer (Staging_94324932)
+- (nullable CVPixelBufferRef)copyDisplayedPixelBuffer;
+@end
+#endif
+
 #if __has_include(<AVFoundation/AVSampleBufferAudioRenderer.h>)
 #import <AVFoundation/AVSampleBufferAudioRenderer.h>
 NS_ASSUME_NONNULL_BEGIN
@@ -471,6 +477,10 @@ NS_ASSUME_NONNULL_BEGIN
 // FIXME: Move this inside the #if USE(APPLE_INTERNAL_SDK) once rdar://81297776 has been in the build for awhile.
 @interface AVCaptureSession (AVCaptureSessionPrivate)
 - (instancetype)initWithAssumedIdentity:(tcc_identity_t)tccIdentity SPI_AVAILABLE(ios(15.0)) API_UNAVAILABLE(macos, macCatalyst, watchos, tvos);
+@end
+
+@interface AVCaptureDevice (AVCaptureServerConnection)
++ (void)ensureServerConnection;
 @end
 
 NS_ASSUME_NONNULL_END

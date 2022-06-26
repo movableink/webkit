@@ -42,8 +42,8 @@
 namespace WebCore {
 namespace DisplayList {
 
-RecorderImpl::RecorderImpl(DisplayList& displayList, const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, DrawGlyphsRecorder::DeconstructDrawGlyphs deconstructDrawGlyphs)
-    : Recorder(state, initialClip, initialCTM, deconstructDrawGlyphs)
+RecorderImpl::RecorderImpl(DisplayList& displayList, const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, DrawGlyphsMode drawGlyphsMode)
+    : Recorder(state, initialClip, initialCTM, drawGlyphsMode)
     , m_displayList(displayList)
 {
     LOG_WITH_STREAM(DisplayLists, stream << "\nRecording with clip " << initialClip);
@@ -104,9 +104,9 @@ void RecorderImpl::recordSetStrokeThickness(float thickness)
     append<SetStrokeThickness>(thickness);
 }
 
-void RecorderImpl::recordSetState(const GraphicsContextState& state, GraphicsContextState::StateChangeFlags changeFlags)
+void RecorderImpl::recordSetState(const GraphicsContextState& state)
 {
-    append<SetState>(state, changeFlags);
+    append<SetState>(state);
 }
 
 void RecorderImpl::recordSetLineCap(LineCap lineCap)
@@ -172,6 +172,11 @@ void RecorderImpl::recordDrawGlyphs(const Font& font, const GlyphBufferGlyph* gl
     append<DrawGlyphs>(font, glyphs, advances, count, localAnchor, mode);
 }
 
+void RecorderImpl::recordDrawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
+{
+    append<DrawDecomposedGlyphs>(font.renderingResourceIdentifier(), decomposedGlyphs.renderingResourceIdentifier(), decomposedGlyphs.bounds());
+}
+
 void RecorderImpl::recordDrawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
     append<DrawImageBuffer>(imageBuffer.renderingResourceIdentifier(), destRect, srcRect, options);
@@ -212,9 +217,9 @@ void RecorderImpl::recordDrawLine(const FloatPoint& point1, const FloatPoint& po
     append<DrawLine>(point1, point2);
 }
 
-void RecorderImpl::recordDrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines)
+void RecorderImpl::recordDrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle style)
 {
-    append<DrawLinesForText>(blockLocation, localAnchor, thickness, widths, printing, doubleLines);
+    append<DrawLinesForText>(blockLocation, localAnchor, thickness, widths, printing, doubleLines, style);
 }
 
 void RecorderImpl::recordDrawDotsForDocumentMarker(const FloatRect& rect, const DocumentMarkerLineStyle& style)
@@ -402,6 +407,12 @@ bool RecorderImpl::recordResourceUse(const SourceImage& image)
 bool RecorderImpl::recordResourceUse(Font& font)
 {
     m_displayList.cacheFont(font);
+    return true;
+}
+
+bool RecorderImpl::recordResourceUse(DecomposedGlyphs& decomposedGlyphs)
+{
+    m_displayList.cacheDecomposedGlyphs(decomposedGlyphs);
     return true;
 }
 

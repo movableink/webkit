@@ -34,12 +34,13 @@
 #include <WebCore/FrameIdentifier.h>
 #include <WebCore/PageIdentifier.h>
 #include <WebCore/ResourceLoaderIdentifier.h>
+#include <wtf/MonotonicTime.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
 namespace IPC {
 class FormDataReference;
-class SharedBufferCopy;
+class SharedBufferReference;
 }
 
 namespace WebCore {
@@ -86,12 +87,13 @@ private:
     void willSendRequest(WebCore::ResourceRequest&&, IPC::FormDataReference&& requestBody, WebCore::ResourceResponse&&);
     void didSendData(uint64_t bytesSent, uint64_t totalBytesToBeSent);
     void didReceiveResponse(WebCore::ResourceResponse&&, PrivateRelayed, bool needsContinueDidReceiveResponseMessage, std::optional<WebCore::NetworkLoadMetrics>&&);
-    void didReceiveData(const IPC::SharedBufferCopy& data, int64_t encodedDataLength);
-    void didFinishResourceLoad(const WebCore::NetworkLoadMetrics&);
+    void didReceiveData(IPC::SharedBufferReference&& data, int64_t encodedDataLength);
+    void didFinishResourceLoad(WebCore::NetworkLoadMetrics&&);
     void didFailResourceLoad(const WebCore::ResourceError&);
     void didFailServiceWorkerLoad(const WebCore::ResourceError&);
     void serviceWorkerDidNotHandle();
     void didBlockAuthenticationChallenge();
+    void setWorkerStart(MonotonicTime value) { m_workerStart = value; }
 
     void stopLoadingAfterXFrameOptionsOrContentSecurityPolicyDenied(const WebCore::ResourceResponse&);
 
@@ -103,7 +105,6 @@ private:
 
 #if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
     void contentFilterDidBlockLoad(const WebCore::ContentFilterUnblockHandler&, String&& unblockRequestDeniedScript, const WebCore::ResourceError&, const URL& blockedPageURL, WebCore::SubstituteData&&);
-    void cancelMainResourceLoadForContentFilter(const WebCore::ResourceError&);
 #endif
     
     RefPtr<WebCore::ResourceLoader> m_coreLoader;
@@ -114,6 +115,8 @@ private:
 #if ASSERT_ENABLED
     bool m_isProcessingNetworkResponse { false };
 #endif
+
+    MonotonicTime m_workerStart;
 };
 
 } // namespace WebKit

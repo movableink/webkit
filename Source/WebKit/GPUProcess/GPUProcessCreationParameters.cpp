@@ -60,8 +60,8 @@ void GPUProcessCreationParameters::encode(IPC::Encoder& encoder) const
 #if PLATFORM(IOS_FAMILY)
     encoder << compilerServiceExtensionHandles;
     encoder << dynamicIOKitExtensionHandles;
-    encoder << dynamicMachExtensionHandles;
 #endif
+    encoder << mobileGestaltExtensionHandle;
 
     encoder << applicationVisibleName;
 }
@@ -111,13 +111,13 @@ bool GPUProcessCreationParameters::decode(IPC::Decoder& decoder, GPUProcessCreat
     if (!dynamicIOKitExtensionHandles)
         return false;
     result.dynamicIOKitExtensionHandles = WTFMove(*dynamicIOKitExtensionHandles);
-
-    std::optional<Vector<SandboxExtension::Handle>> dynamicMachExtensionHandles;
-    decoder >> dynamicMachExtensionHandles;
-    if (!dynamicMachExtensionHandles)
-        return false;
-    result.dynamicMachExtensionHandles = WTFMove(*dynamicMachExtensionHandles);
 #endif
+
+    std::optional<std::optional<SandboxExtension::Handle>> mobileGestaltExtensionHandle;
+    decoder >> mobileGestaltExtensionHandle;
+    if (!mobileGestaltExtensionHandle)
+        return false;
+    result.mobileGestaltExtensionHandle = WTFMove(*mobileGestaltExtensionHandle);
 
     if (!decoder.decode(result.applicationVisibleName))
         return false;

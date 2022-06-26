@@ -64,11 +64,11 @@ static const struct CompactHashIndex JSWorkletGlobalScopeTableIndex[2] = {
 
 static const HashTableValue JSWorkletGlobalScopeTableValues[] =
 {
-    { "WorkletGlobalScope", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsWorkletGlobalScope_WorkletGlobalScopeConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "WorkletGlobalScope"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsWorkletGlobalScope_WorkletGlobalScopeConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
 };
 
 static const HashTable JSWorkletGlobalScopeTable = { 1, 1, true, JSWorkletGlobalScope::info(), JSWorkletGlobalScopeTableValues, JSWorkletGlobalScopeTableIndex };
-template<> const ClassInfo JSWorkletGlobalScopeDOMConstructor::s_info = { "WorkletGlobalScope", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWorkletGlobalScopeDOMConstructor) };
+template<> const ClassInfo JSWorkletGlobalScopeDOMConstructor::s_info = { "WorkletGlobalScope"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWorkletGlobalScopeDOMConstructor) };
 
 template<> JSValue JSWorkletGlobalScopeDOMConstructor::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
 {
@@ -94,11 +94,11 @@ static const struct CompactHashIndex JSWorkletGlobalScopePrototypeTableIndex[2] 
 
 static const HashTableValue JSWorkletGlobalScopePrototypeTableValues[] =
 {
-    { "constructor", static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsWorkletGlobalScopeConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsWorkletGlobalScopeConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
 };
 
 static const HashTable JSWorkletGlobalScopePrototypeTable = { 1, 1, true, JSWorkletGlobalScope::info(), JSWorkletGlobalScopePrototypeTableValues, JSWorkletGlobalScopePrototypeTableIndex };
-const ClassInfo JSWorkletGlobalScopePrototype::s_info = { "WorkletGlobalScope", &Base::s_info, &JSWorkletGlobalScopePrototypeTable, nullptr, CREATE_METHOD_TABLE(JSWorkletGlobalScopePrototype) };
+const ClassInfo JSWorkletGlobalScopePrototype::s_info = { "WorkletGlobalScope"_s, &Base::s_info, &JSWorkletGlobalScopePrototypeTable, nullptr, CREATE_METHOD_TABLE(JSWorkletGlobalScopePrototype) };
 
 void JSWorkletGlobalScopePrototype::finishCreation(VM& vm)
 {
@@ -107,7 +107,7 @@ void JSWorkletGlobalScopePrototype::finishCreation(VM& vm)
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-const ClassInfo JSWorkletGlobalScope::s_info = { "WorkletGlobalScope", &Base::s_info, &JSWorkletGlobalScopeTable, nullptr, CREATE_METHOD_TABLE(JSWorkletGlobalScope) };
+const ClassInfo JSWorkletGlobalScope::s_info = { "WorkletGlobalScope"_s, &Base::s_info, &JSWorkletGlobalScopeTable, nullptr, CREATE_METHOD_TABLE(JSWorkletGlobalScope) };
 
 JSWorkletGlobalScope::JSWorkletGlobalScope(VM& vm, Structure* structure, Ref<WorkletGlobalScope>&& impl)
     : JSEventTarget(vm, structure, WTFMove(impl))
@@ -141,7 +141,7 @@ JSC_DEFINE_CUSTOM_GETTER(jsWorkletGlobalScopeConstructor, (JSGlobalObject* lexic
 {
     VM& vm = JSC::getVM(lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    auto* prototype = jsDynamicCast<JSWorkletGlobalScopePrototype*>(vm, JSValue::decode(thisValue));
+    auto* prototype = jsDynamicCast<JSWorkletGlobalScopePrototype*>(JSValue::decode(thisValue));
     if (UNLIKELY(!prototype))
         return throwVMTypeError(lexicalGlobalObject, throwScope);
     return JSValue::encode(JSWorkletGlobalScope::getConstructor(JSC::getVM(lexicalGlobalObject), prototype->globalObject()));
@@ -178,9 +178,9 @@ void JSWorkletGlobalScope::analyzeHeap(JSCell* cell, HeapAnalyzer& analyzer)
     Base::analyzeHeap(cell, analyzer);
 }
 
-WorkletGlobalScope* JSWorkletGlobalScope::toWrapped(JSC::VM& vm, JSC::JSValue value)
+WorkletGlobalScope* JSWorkletGlobalScope::toWrapped(JSC::VM&, JSC::JSValue value)
 {
-    if (auto* wrapper = jsDynamicCast<JSWorkletGlobalScope*>(vm, value))
+    if (auto* wrapper = jsDynamicCast<JSWorkletGlobalScope*>(value))
         return &wrapper->wrapped();
     return nullptr;
 }

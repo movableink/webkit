@@ -28,6 +28,7 @@
 #include "Connection.h"
 #include "MessageReceiverMap.h"
 #include "MessageSender.h"
+#include "SandboxExtension.h"
 #include <WebCore/ProcessIdentifier.h>
 #include <WebCore/RuntimeApplicationChecks.h>
 #include <WebCore/UserActivity.h>
@@ -43,6 +44,10 @@
 
 OBJC_CLASS NSDictionary;
 
+namespace IPC {
+class SharedBufferReference;
+}
+
 namespace WebKit {
 
 class SandboxInitializationParameters;
@@ -56,7 +61,7 @@ public:
     void initialize(const AuxiliaryProcessInitializationParameters&);
 
     // disable and enable termination of the process. when disableTermination is called, the
-    // process won't terminate unless a corresponding disableTermination call is made.
+    // process won't terminate unless a corresponding enableTermination call is made.
     void disableTermination();
     void enableTermination();
 
@@ -98,7 +103,7 @@ public:
 #endif
     
 #if PLATFORM(COCOA)
-    bool parentProcessHasEntitlement(const char* entitlement);
+    bool parentProcessHasEntitlement(ASCIILiteral entitlement);
 #endif
 
 protected:
@@ -134,8 +139,6 @@ protected:
     void didReceiveMemoryPressureEvent(bool isCritical);
 #endif
 
-    static std::optional<std::pair<IPC::Connection::Identifier, IPC::Attachment>> createIPCConnectionPair();
-
 protected:
 #if ENABLE(CFPREFS_DIRECT_MODE)
     static id decodePreferenceValue(const std::optional<String>& encodedValue);
@@ -147,6 +150,16 @@ protected:
 #endif
     void applyProcessCreationParameters(const AuxiliaryProcessCreationParameters&);
 
+#if PLATFORM(MAC)
+    void openDirectoryCacheInvalidated(SandboxExtension::Handle&&);
+#endif
+
+    void populateMobileGestaltCache(std::optional<SandboxExtension::Handle>&& mobileGestaltExtensionHandle);
+
+#if HAVE(AUDIO_COMPONENT_SERVER_REGISTRATIONS)
+    void consumeAudioComponentRegistrations(const IPC::SharedBufferReference&);
+#endif
+    
 private:
     virtual bool shouldOverrideQuarantine() { return true; }
 
@@ -182,14 +195,13 @@ struct AuxiliaryProcessInitializationParameters {
     String uiProcessName;
     String clientIdentifier;
     String clientBundleIdentifier;
-    uint32_t clientSDKVersion;
     std::optional<WebCore::ProcessIdentifier> processIdentifier;
     IPC::Connection::Identifier connectionIdentifier;
     HashMap<String, String> extraInitializationData;
     WebCore::AuxiliaryProcessType processType;
 #if PLATFORM(COCOA)
     OSObjectPtr<xpc_object_t> priorityBoostMessage;
-    std::optional<LinkedOnOrAfterOverride> clientLinkedOnOrAfterOverride;
+    SDKAlignedBehaviors clientSDKAlignedBehaviors;
 #endif
 };
 

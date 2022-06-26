@@ -33,18 +33,27 @@
 #import <wtf/ThreadSafeRefCounted.h>
 #import <wtf/Vector.h>
 
+struct WGPUQueueImpl {
+};
+
 namespace WebGPU {
 
 class Buffer;
 class CommandBuffer;
 class Device;
 
-class Queue : public ThreadSafeRefCounted<Queue> {
+// https://gpuweb.github.io/gpuweb/#gpuqueue
+// A device owns its default queue, not the other way around.
+class Queue : public WGPUQueueImpl, public ThreadSafeRefCounted<Queue> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<Queue> create(id<MTLCommandQueue> commandQueue, Device& device)
     {
         return adoptRef(*new Queue(commandQueue, device));
+    }
+    static Ref<Queue> createInvalid(Device& device)
+    {
+        return adoptRef(*new Queue(device));
     }
 
     ~Queue();
@@ -55,18 +64,33 @@ public:
     void writeTexture(const WGPUImageCopyTexture& destination, const void* data, size_t dataSize, const WGPUTextureDataLayout&, const WGPUExtent3D& writeSize);
     void setLabel(String&&);
 
+    bool isValid() const { return m_commandQueue; }
+    void makeInvalid() { m_commandQueue = nil; }
+
     id<MTLCommandQueue> commandQueue() const { return m_commandQueue; }
+
+    const Device& device() const { return m_device; }
 
 private:
     Queue(id<MTLCommandQueue>, Device&);
+    Queue(Device&);
 
-    bool validateSubmit() const;
+    bool validateSubmit(const Vector<std::reference_wrapper<const CommandBuffer>>&) const;
+    bool validateWriteBuffer(const Buffer&, uint64_t bufferOffset, size_t) const;
+
+    void ensureBlitCommandEncoder();
+    void finalizeBlitCommandEncoder();
+
+    void commitMTLCommandBuffer(id<MTLCommandBuffer>);
+    bool isIdle() const { return m_submittedCommandBufferCount == m_completedCommandBufferCount; }
 
     // This can be called on a background thread.
     void scheduleWork(Instance::WorkItem&&);
 
-    const id<MTLCommandQueue> m_commandQueue { nil };
-    const Device& m_device; // The only kind of queues that exist right now are default queues, which are owned by Devices.
+    id<MTLCommandQueue> m_commandQueue { nil };
+    id<MTLCommandBuffer> m_commandBuffer { nil };
+    id<MTLBlitCommandEncoder> m_blitCommandEncoder { nil };
+    Device& m_device; // The only kind of queues that exist right now are default queues, which are owned by Devices.
 
     uint64_t m_submittedCommandBufferCount { 0 };
     uint64_t m_completedCommandBufferCount { 0 };
@@ -75,9 +99,3 @@ private:
 };
 
 } // namespace WebGPU
-
-#pragma mark WGPU Wrapper
-
-struct WGPUQueueImpl {
-    Ref<WebGPU::Queue> queue;
-};

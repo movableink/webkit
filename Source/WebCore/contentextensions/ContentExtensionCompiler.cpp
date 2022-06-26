@@ -40,6 +40,7 @@
 #include "NFA.h"
 #include "NFAToDFA.h"
 #include "URLFilterParser.h"
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/DataLog.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
@@ -316,7 +317,7 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
             status = URLFilterParser::Ok;
         }
         if (status != URLFilterParser::Ok) {
-            dataLogF("Error while parsing %s: %s\n", trigger.urlFilter.utf8().data(), URLFilterParser::statusString(status).utf8().data());
+            dataLogF("Error while parsing %s: %s\n", trigger.urlFilter.utf8().data(), URLFilterParser::statusString(status).characters());
             return ContentExtensionError::JSONInvalidRegex;
         }
 
@@ -333,7 +334,7 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
                     status = URLFilterParser::Ok;
                 }
                 if (status != URLFilterParser::Ok) {
-                    dataLogF("Error while parsing %s: %s\n", condition.utf8().data(), URLFilterParser::statusString(status).utf8().data());
+                    dataLogF("Error while parsing %s: %s\n", condition.utf8().data(), URLFilterParser::statusString(status).characters());
                     return ContentExtensionError::JSONInvalidRegex;
                 }
                 break;
@@ -344,7 +345,7 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
                     status = URLFilterParser::Ok;
                 }
                 if (status != URLFilterParser::Ok) {
-                    dataLogF("Error while parsing %s: %s\n", condition.utf8().data(), URLFilterParser::statusString(status).utf8().data());
+                    dataLogF("Error while parsing %s: %s\n", condition.utf8().data(), URLFilterParser::statusString(status).characters());
                     return ContentExtensionError::JSONInvalidRegex;
                 }
                 break;

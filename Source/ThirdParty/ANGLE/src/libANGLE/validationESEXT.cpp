@@ -622,8 +622,14 @@ bool ValidateDrawRangeElementsBaseVertexOES(const Context *context,
 // GL_KHR_blend_equation_advanced
 bool ValidateBlendBarrierKHR(const Context *context, angle::EntryPoint entryPoint)
 {
-    context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
-    return false;
+    const Extensions &extensions = context->getExtensions();
+
+    if (!extensions.blendEquationAdvancedKHR)
+    {
+        context->validationError(entryPoint, GL_INVALID_ENUM, kAdvancedBlendExtensionNotEnabled);
+    }
+
+    return true;
 }
 
 bool ValidateBlendEquationSeparateiEXT(const Context *context,
@@ -2602,8 +2608,101 @@ bool ValidateEGLImageTargetTexStorageEXT(const Context *context,
                                          GLeglImageOES image,
                                          const GLint *attrib_list)
 {
-    UNREACHABLE();
-    return false;
+    if (!context->getExtensions().EGLImageStorageEXT)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    gl::TextureType targetType = FromGLenum<TextureType>(target);
+    switch (targetType)
+    {
+        case TextureType::External:
+            if (!context->getExtensions().EGLImageExternalOES)
+            {
+                context->validationError(entryPoint, GL_INVALID_ENUM, kEnumNotSupported);
+            }
+            break;
+        case TextureType::CubeMapArray:
+            if (!context->getExtensions().textureCubeMapArrayAny())
+            {
+                context->validationError(entryPoint, GL_INVALID_ENUM, kEnumNotSupported);
+            }
+            break;
+        case TextureType::_2D:
+        case TextureType::_2DArray:
+        case TextureType::_3D:
+        case TextureType::CubeMap:
+            break;
+        default:
+            context->validationError(entryPoint, GL_INVALID_ENUM, kInvalidTextureTarget);
+            return false;
+    }
+
+    // Validate egl source image is valid
+    egl::Image *imageObject = static_cast<egl::Image *>(image);
+    if (!ValidateEGLImageObject(context, entryPoint, targetType, image))
+    {
+        return false;
+    }
+
+    // attrib list validation
+    if (attrib_list != nullptr && attrib_list[0] != GL_NONE)
+    {
+        context->validationError(entryPoint, GL_INVALID_VALUE, kAttributeListNotNull);
+        return false;
+    }
+
+    GLsizei levelCount    = imageObject->getLevelCount();
+    Extents size          = imageObject->getExtents();
+    GLsizei width         = static_cast<GLsizei>(size.width);
+    GLsizei height        = static_cast<GLsizei>(size.height);
+    GLsizei depth         = static_cast<GLsizei>(size.depth);
+    GLenum internalformat = imageObject->getFormat().info->sizedInternalFormat;
+
+    if (width < 1 || height < 1 || depth < 1 || levelCount < 1)
+    {
+        context->validationError(entryPoint, GL_INVALID_VALUE, kTextureSizeTooSmall);
+        return false;
+    }
+
+    if (!ValidateES3TexStorageParametersLevel(context, entryPoint, targetType, levelCount, width,
+                                              height, depth))
+    {
+        // Error already generated.
+        return false;
+    }
+
+    if (targetType == TextureType::External)
+    {
+        const Caps &caps = context->getCaps();
+        if (width > caps.max2DTextureSize || height > caps.max2DTextureSize)
+        {
+            context->validationError(entryPoint, GL_INVALID_VALUE, kResourceMaxTextureSize);
+            return false;
+        }
+    }
+    else if (!ValidateES3TexStorageParametersExtent(context, entryPoint, targetType, levelCount,
+                                                    width, height, depth))
+    {
+        // Error already generated.
+        return false;
+    }
+
+    if (!ValidateES3TexStorageParametersTexObject(context, entryPoint, targetType))
+    {
+        // Error already generated.
+        return false;
+    }
+
+    if (!ValidateES3TexStorageParametersFormat(context, entryPoint, targetType, levelCount,
+                                               internalformat, width, height, depth))
+    {
+        // Error already generated.
+        return false;
+    }
+
+    return true;
 }
 
 bool ValidateAcquireTexturesANGLE(const Context *context,
@@ -2686,4 +2785,267 @@ bool ValidateGetFramebufferParameterivMESA(const Context *context,
     return ValidateGetFramebufferParameterivBase(context, entryPoint, target, pname, params);
 }
 
+// GL_AMD_performance_monitor
+bool ValidateBeginPerfMonitorAMD(const Context *context,
+                                 angle::EntryPoint entryPoint,
+                                 GLuint monitor)
+{
+    if (!context->getExtensions().performanceMonitorAMD)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    UNIMPLEMENTED();
+    return false;
+}
+
+bool ValidateDeletePerfMonitorsAMD(const Context *context,
+                                   angle::EntryPoint entryPoint,
+                                   GLsizei n,
+                                   const GLuint *monitors)
+{
+    if (!context->getExtensions().performanceMonitorAMD)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    UNIMPLEMENTED();
+    return false;
+}
+
+bool ValidateEndPerfMonitorAMD(const Context *context, angle::EntryPoint entryPoint, GLuint monitor)
+{
+    if (!context->getExtensions().performanceMonitorAMD)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    UNIMPLEMENTED();
+    return false;
+}
+
+bool ValidateGenPerfMonitorsAMD(const Context *context,
+                                angle::EntryPoint entryPoint,
+                                GLsizei n,
+                                const GLuint *monitors)
+{
+    if (!context->getExtensions().performanceMonitorAMD)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    UNIMPLEMENTED();
+    return false;
+}
+
+bool ValidateGetPerfMonitorCounterDataAMD(const Context *context,
+                                          angle::EntryPoint entryPoint,
+                                          GLuint monitor,
+                                          GLenum pname,
+                                          GLsizei dataSize,
+                                          const GLuint *data,
+                                          const GLint *bytesWritten)
+{
+    if (!context->getExtensions().performanceMonitorAMD)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    if (monitor != 0)
+    {
+        context->validationError(entryPoint, GL_INVALID_VALUE, kInvalidPerfMonitor);
+        return false;
+    }
+
+    switch (pname)
+    {
+        case GL_PERFMON_RESULT_AVAILABLE_AMD:
+        case GL_PERFMON_RESULT_SIZE_AMD:
+        case GL_PERFMON_RESULT_AMD:
+            break;
+
+        default:
+            context->validationError(entryPoint, GL_INVALID_ENUM, kInvalidPname);
+            return false;
+    }
+
+    return true;
+}
+
+bool ValidateGetPerfMonitorCounterInfoAMD(const Context *context,
+                                          angle::EntryPoint entryPoint,
+                                          GLuint group,
+                                          GLuint counter,
+                                          GLenum pname,
+                                          const void *data)
+{
+    if (!context->getExtensions().performanceMonitorAMD)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    const angle::PerfMonitorCounterGroups &groups = context->getPerfMonitorCounterGroups();
+
+    if (group >= groups.size())
+    {
+        context->validationError(entryPoint, GL_INVALID_VALUE, kInvalidPerfMonitorGroup);
+        return false;
+    }
+
+    if (counter >= groups[group].counters.size())
+    {
+        context->validationError(entryPoint, GL_INVALID_VALUE, kInvalidPerfMonitorCounter);
+        return false;
+    }
+
+    switch (pname)
+    {
+        case GL_COUNTER_TYPE_AMD:
+        case GL_COUNTER_RANGE_AMD:
+            break;
+
+        default:
+            context->validationError(entryPoint, GL_INVALID_ENUM, kInvalidPname);
+            return false;
+    }
+
+    return true;
+}
+
+bool ValidateGetPerfMonitorCounterStringAMD(const Context *context,
+                                            angle::EntryPoint entryPoint,
+                                            GLuint group,
+                                            GLuint counter,
+                                            GLsizei bufSize,
+                                            const GLsizei *length,
+                                            const GLchar *counterString)
+{
+    if (!context->getExtensions().performanceMonitorAMD)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    const angle::PerfMonitorCounterGroups &groups = context->getPerfMonitorCounterGroups();
+
+    if (group >= groups.size())
+    {
+        context->validationError(entryPoint, GL_INVALID_VALUE, kInvalidPerfMonitorGroup);
+        return false;
+    }
+
+    if (counter >= groups[group].counters.size())
+    {
+        context->validationError(entryPoint, GL_INVALID_VALUE, kInvalidPerfMonitorCounter);
+        return false;
+    }
+
+    return true;
+}
+
+bool ValidateGetPerfMonitorCountersAMD(const Context *context,
+                                       angle::EntryPoint entryPoint,
+                                       GLuint group,
+                                       const GLint *numCounters,
+                                       const GLint *maxActiveCounters,
+                                       GLsizei counterSize,
+                                       const GLuint *counters)
+{
+    if (!context->getExtensions().performanceMonitorAMD)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    const angle::PerfMonitorCounterGroups &groups = context->getPerfMonitorCounterGroups();
+
+    if (group >= groups.size())
+    {
+        context->validationError(entryPoint, GL_INVALID_VALUE, kInvalidPerfMonitorGroup);
+        return false;
+    }
+
+    return true;
+}
+
+bool ValidateGetPerfMonitorGroupStringAMD(const Context *context,
+                                          angle::EntryPoint entryPoint,
+                                          GLuint group,
+                                          GLsizei bufSize,
+                                          const GLsizei *length,
+                                          const GLchar *groupString)
+{
+    if (!context->getExtensions().performanceMonitorAMD)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    const angle::PerfMonitorCounterGroups &groups = context->getPerfMonitorCounterGroups();
+
+    if (group >= groups.size())
+    {
+        context->validationError(entryPoint, GL_INVALID_VALUE, kInvalidPerfMonitorGroup);
+        return false;
+    }
+
+    return true;
+}
+
+bool ValidateGetPerfMonitorGroupsAMD(const Context *context,
+                                     angle::EntryPoint entryPoint,
+                                     const GLint *numGroups,
+                                     GLsizei groupsSize,
+                                     const GLuint *groups)
+{
+    if (!context->getExtensions().performanceMonitorAMD)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    return true;
+}
+
+bool ValidateSelectPerfMonitorCountersAMD(const Context *context,
+                                          angle::EntryPoint entryPoint,
+                                          GLuint monitor,
+                                          GLboolean enable,
+                                          GLuint group,
+                                          GLint numCounters,
+                                          const GLuint *counterList)
+{
+    if (!context->getExtensions().performanceMonitorAMD)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    UNIMPLEMENTED();
+    return false;
+}
+
+bool ValidateShadingRateQCOM(const Context *context, angle::EntryPoint entryPoint, GLenum rate)
+{
+    if (!context->getExtensions().shadingRateQCOM)
+    {
+        context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
+        return false;
+    }
+
+    gl::ShadingRate shadingRate = gl::FromGLenum<gl::ShadingRate>(rate);
+    if (shadingRate == gl::ShadingRate::Undefined || shadingRate == gl::ShadingRate::InvalidEnum)
+    {
+        context->validationError(entryPoint, GL_INVALID_ENUM, kInvalidShadingRate);
+        return false;
+    }
+
+    return true;
+}
 }  // namespace gl

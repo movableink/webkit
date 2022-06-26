@@ -31,20 +31,29 @@
 #import <wtf/RefCounted.h>
 #import <wtf/Vector.h>
 
+struct WGPURenderPassEncoderImpl {
+};
+
 namespace WebGPU {
 
 class BindGroup;
 class Buffer;
+class Device;
 class QuerySet;
 class RenderBundle;
 class RenderPipeline;
 
-class RenderPassEncoder : public RefCounted<RenderPassEncoder>, public CommandsMixin {
+// https://gpuweb.github.io/gpuweb/#gpurenderpassencoder
+class RenderPassEncoder : public WGPURenderPassEncoderImpl, public RefCounted<RenderPassEncoder>, public CommandsMixin {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<RenderPassEncoder> create(id<MTLRenderCommandEncoder> renderCommandEncoder)
+    static Ref<RenderPassEncoder> create(id<MTLRenderCommandEncoder> renderCommandEncoder, Device& device)
     {
-        return adoptRef(*new RenderPassEncoder(renderCommandEncoder));
+        return adoptRef(*new RenderPassEncoder(renderCommandEncoder, device));
+    }
+    static Ref<RenderPassEncoder> createInvalid(Device& device)
+    {
+        return adoptRef(*new RenderPassEncoder(device));
     }
 
     ~RenderPassEncoder();
@@ -72,20 +81,23 @@ public:
     void setViewport(float x, float y, float width, float height, float minDepth, float maxDepth);
     void setLabel(String&&);
 
+    Device& device() const { return m_device; }
+
+    bool isValid() const { return m_renderCommandEncoder; }
+
 private:
-    RenderPassEncoder(id<MTLRenderCommandEncoder>);
+    RenderPassEncoder(id<MTLRenderCommandEncoder>, Device&);
+    RenderPassEncoder(Device&);
 
     bool validatePopDebugGroup() const;
 
-    const id<MTLRenderCommandEncoder> m_renderCommandEncoder { nil };
+    void makeInvalid() { m_renderCommandEncoder = nil; }
+
+    id<MTLRenderCommandEncoder> m_renderCommandEncoder { nil };
 
     uint64_t m_debugGroupStackSize { 0 };
+
+    const Ref<Device> m_device;
 };
 
 } // namespace WebGPU
-
-#pragma mark WGPU Wrapper
-
-struct WGPURenderPassEncoderImpl {
-    Ref<WebGPU::RenderPassEncoder> renderPassEncoder;
-};

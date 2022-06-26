@@ -210,13 +210,13 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
                 return;
 
             callOnMainThread([parent = _parent, layer = WTFMove(layer), error = WTFMove(error)] {
-                if (parent)
-                    parent->layerDidReceiveError(layer.get(), error.get());
+                if (auto strongParent = RefPtr { parent.get() })
+                    strongParent->layerDidReceiveError(layer.get(), error.get());
             });
         } else if ([keyPath isEqualToString:@"outputObscuredDueToInsufficientExternalProtection"]) {
             callOnMainThread([parent = _parent, obscured = [[change valueForKey:NSKeyValueChangeNewKey] boolValue]] {
-                if (parent)
-                    parent->outputObscuredDueToInsufficientExternalProtectionChanged(obscured);
+                if (auto strongParent = RefPtr { parent.get() })
+                    strongParent->outputObscuredDueToInsufficientExternalProtectionChanged(obscured);
             });
         } else
             ASSERT_NOT_REACHED();
@@ -233,8 +233,8 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
         ASSERT([keyPath isEqualToString:@"error"]);
 
         callOnMainThread([parent = _parent, renderer = WTFMove(renderer), error = WTFMove(error)] {
-            if (parent)
-                parent->rendererDidReceiveError(renderer.get(), error.get());
+            if (auto strongParent = RefPtr { parent.get() })
+                strongParent->rendererDidReceiveError(renderer.get(), error.get());
         });
     } else
         ASSERT_NOT_REACHED();
@@ -247,8 +247,8 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
         return;
 
     callOnMainThread([parent = _parent, layer = WTFMove(layer), error = retainPtr([[note userInfo] valueForKey:AVSampleBufferDisplayLayerFailedToDecodeNotificationErrorKey])] {
-        if (parent)
-            parent->layerDidReceiveError(layer.get(), error.get());
+        if (auto strongParent = RefPtr { parent.get() })
+            strongParent->layerDidReceiveError(layer.get(), error.get());
     });
 }
 
@@ -259,8 +259,8 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
         return;
 
     callOnMainThread([parent = _parent, renderer = WTFMove(renderer), flushTime = [[[note userInfo] valueForKey:AVSampleBufferAudioRendererFlushTimeKey] CMTimeValue]] {
-        if (parent)
-            parent->rendererWasAutomaticallyFlushed(renderer.get(), flushTime);
+        if (auto strongParent = RefPtr { parent.get() })
+            strongParent->rendererWasAutomaticallyFlushed(renderer.get(), flushTime);
     });
 }
 @end
@@ -297,7 +297,7 @@ static bool sampleBufferRenderersSupportKeySession()
     return supports;
 }
 
-static Vector<Ref<FragmentedSharedBuffer>> copyKeyIDs(const Vector<Ref<FragmentedSharedBuffer>> keyIDs)
+static Vector<Ref<SharedBuffer>> copyKeyIDs(const Vector<Ref<SharedBuffer>> keyIDs)
 {
     return keyIDs.map([] (auto& keyID) {
         return keyID.copyRef();
@@ -361,7 +361,6 @@ SourceBufferPrivateAVFObjC::~SourceBufferPrivateAVFObjC()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    ASSERT(!m_client);
     sourceBufferMap().remove(m_mapID);
     destroyStreamDataParser();
     destroyRenderers();
@@ -600,7 +599,7 @@ void SourceBufferPrivateAVFObjC::didProvideContentKeyRequestInitializationDataFo
     }
 
     m_keyIDs = WTFMove(keyIDs.value());
-    player->initializationDataEncountered("sinf", m_initData->tryCreateArrayBuffer());
+    player->initializationDataEncountered("sinf"_s, m_initData->tryCreateArrayBuffer());
 
     m_waitingForKey = true;
     player->waitingForKeyChanged();
@@ -1099,7 +1098,7 @@ void SourceBufferPrivateAVFObjC::rendererWasAutomaticallyFlushed(AVSampleBufferA
     AtomString trackId;
     for (auto& pair : m_audioRenderers) {
         if (pair.value.get() == renderer) {
-            trackId = String::number(pair.key);
+            trackId = AtomString::number(pair.key);
             break;
         }
     }
@@ -1417,9 +1416,19 @@ bool SourceBufferPrivateAVFObjC::isActive() const
 void SourceBufferPrivateAVFObjC::willSeek()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
+    // Set seeking to true so that no samples will be re-enqueued between
+    // now and when seekToTime() is called. Without this, the AVSBDL may
+    // request new samples mid seek, causing incorrect samples to be displayed
+    // during a seek operation.
+    m_seeking = true;
     flush();
 }
 
+void SourceBufferPrivateAVFObjC::seekToTime(const MediaTime& time)
+{
+    m_seeking = false;
+    SourceBufferPrivate::seekToTime(time);
+}
 FloatSize SourceBufferPrivateAVFObjC::naturalSize()
 {
     return valueOrDefault(m_cachedSize);
@@ -1501,7 +1510,7 @@ bool SourceBufferPrivateAVFObjC::canSwitchToType(const ContentType& contentType)
 
 bool SourceBufferPrivateAVFObjC::isSeeking() const
 {
-    return m_mediaSource && m_mediaSource->isSeeking();
+    return m_seeking;
 }
 
 MediaTime SourceBufferPrivateAVFObjC::currentMediaTime() const

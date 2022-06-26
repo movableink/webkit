@@ -215,8 +215,9 @@ WI.contentLoaded = function()
     document.addEventListener("dragover", WI._handleDragOver);
     document.addEventListener("focus", WI._focusChanged, true);
 
-    window.addEventListener("focus", WI._windowFocused);
-    window.addEventListener("blur", WI._windowBlurred);
+    window.addEventListener("focus", WI._updateWindowInactiveState);
+    window.addEventListener("blur", WI._updateWindowInactiveState);
+    window.addEventListener("visibilitychange", WI._updateWindowInactiveState);
     window.addEventListener("resize", WI._windowResized);
     window.addEventListener("keydown", WI._windowKeyDown);
     window.addEventListener("keyup", WI._windowKeyUp);
@@ -1060,7 +1061,7 @@ WI.updateFindString = function(findString)
     return true;
 };
 
-WI.handlePossibleLinkClick = function(event, frame, options = {})
+WI.handlePossibleLinkClick = function(event, options = {})
 {
     let anchorElement = event.target.closest("a");
     if (!anchorElement || !anchorElement.href)
@@ -1075,7 +1076,7 @@ WI.handlePossibleLinkClick = function(event, frame, options = {})
     event.preventDefault();
     event.stopPropagation();
 
-    WI.openURL(anchorElement.href, frame, {
+    WI.openURL(anchorElement.href, {
         ...options,
         lineNumber: anchorElement.lineNumber,
         ignoreSearchTab: !WI.isShowingSearchTab(),
@@ -1084,19 +1085,17 @@ WI.handlePossibleLinkClick = function(event, frame, options = {})
     return true;
 };
 
-WI.openURL = function(url, frame, options = {})
+WI.openURL = function(url, {alwaysOpenExternally, frame, ...options} = {})
 {
     console.assert(url);
     if (!url)
         return;
 
-    console.assert(typeof options.lineNumber === "undefined" || typeof options.lineNumber === "number", "lineNumber should be a number.");
-
     // If alwaysOpenExternally is not defined, base it off the command/meta key for the current event.
-    if (options.alwaysOpenExternally === undefined || options.alwaysOpenExternally === null)
-        options.alwaysOpenExternally = window.event ? window.event.metaKey : false;
+    if (alwaysOpenExternally === undefined || alwaysOpenExternally === null)
+        alwaysOpenExternally = window.event?.metaKey ?? false;
 
-    if (options.alwaysOpenExternally) {
+    if (alwaysOpenExternally) {
         InspectorFrontendHost.openURLExternally(url);
         return;
     }
@@ -1119,6 +1118,8 @@ WI.openURL = function(url, frame, options = {})
         // Context menu selections may go through this code path; don't clobber the previously-set hint.
         if (!options.initiatorHint)
             options.initiatorHint = WI.TabBrowser.TabNavigationInitiator.LinkClick;
+
+        console.assert(typeof options.lineNumber === "undefined" || typeof options.lineNumber === "number");
         let positionToReveal = new WI.SourceCodePosition(options.lineNumber, 0);
         WI.showSourceCode(resource, {...options, positionToReveal});
         return;
@@ -1458,7 +1459,37 @@ WI.showRepresentedObject = function(representedObject, cookie, options = {})
 WI.showLocalResourceOverride = function(localResourceOverride, options = {})
 {
     console.assert(localResourceOverride instanceof WI.LocalResourceOverride);
-    const cookie = null;
+
+    let cookie = {};
+
+    switch (localResourceOverride.type) {
+    case WI.LocalResourceOverride.InterceptType.Response:
+    case WI.LocalResourceOverride.InterceptType.ResponseSkippingNetwork:
+        if (options.overriddenResource) {
+            const onlyExisting = true;
+            let contentView = WI.ContentView.contentViewForRepresentedObject(options.overriddenResource, onlyExisting);
+
+            let textEditor = null;
+            if (contentView instanceof WI.ResourceClusterContentView)
+                contentView = contentView.responseContentView;
+            if (contentView instanceof WI.TextResourceContentView)
+                textEditor = contentView.textEditor;
+
+            if (textEditor) {
+                let selectedTextRange = textEditor.selectedTextRange;
+                cookie.startLine = selectedTextRange.startLine;
+                cookie.startColumn = selectedTextRange.startColumn;
+                cookie.endLine = selectedTextRange.endLine;
+                cookie.endColumn = selectedTextRange.endColumn;
+
+                let scrollOffset = textEditor.scrollOffset;
+                cookie.scrollOffsetX = scrollOffset.x;
+                cookie.scrollOffsetY = scrollOffset.y;
+            }
+        }
+        break;
+    }
+
     WI.showRepresentedObject(localResourceOverride, cookie, {...options, ignoreNetworkTab: true, ignoreSearchTab: true});
 };
 
@@ -1791,22 +1822,18 @@ WI._saveCookieForOpenTabs = function()
     }
 };
 
-WI._windowFocused = function(event)
+WI._updateWindowInactiveState = function(event)
 {
-    if (event.target.document.nodeType !== Node.DOCUMENT_NODE)
-        return;
-
     // FIXME: We should use the :window-inactive pseudo class once https://webkit.org/b/38927 is fixed.
-    document.body.classList.remove(WI.dockConfiguration === WI.DockConfiguration.Undocked ? "window-inactive" : "window-docked-inactive");
-};
 
-WI._windowBlurred = function(event)
-{
-    if (event.target.document.nodeType !== Node.DOCUMENT_NODE)
-        return;
+    if (document.activeElement?.tagName === "IFRAME") {
+        // An active iframe means an extension tab is active and we can't tell when the window blurs due to cross-origin restrictions.
+        // In this case we need to keep checking to know if the window loses focus since there is no event we can use.
+        setTimeout(WI._updateWindowInactiveState, 250);
+    }
 
-    // FIXME: We should use the :window-inactive pseudo class once https://webkit.org/b/38927 is fixed.
-    document.body.classList.add(WI.dockConfiguration === WI.DockConfiguration.Undocked ? "window-inactive" : "window-docked-inactive");
+    let inactive = !document.hasFocus();
+    document.body.classList.toggle(WI.dockConfiguration === WI.DockConfiguration.Undocked ? "window-inactive" : "window-docked-inactive", inactive);
 };
 
 WI._windowResized = function(event)
@@ -1890,12 +1917,15 @@ WI._contextMenuRequested = function(event)
                 InspectorBackend.activeTracer = new WI.CapturingProtocolTracer;
         }, isCapturingTraffic);
 
-        protocolSubMenu.appendSeparator();
+        let trace = InspectorBackend.activeTracer?.trace;
+        if (trace && WI.FileUtilities.canSave(trace.saveMode)) {
+            protocolSubMenu.appendSeparator();
 
-        protocolSubMenu.appendItem(WI.unlocalizedString("Export Trace\u2026"), () => {
-            const forceSaveAs = true;
-            WI.FileUtilities.save(InspectorBackend.activeTracer.trace.saveData, forceSaveAs);
-        }, !isCapturingTraffic);
+            protocolSubMenu.appendItem(WI.unlocalizedString("Export Trace\u2026"), () => {
+                const forceSaveAs = true;
+                WI.FileUtilities.save(trace.saveMode, trace.saveData, forceSaveAs);
+            }, !isCapturingTraffic);
+        }
     } else {
         const onlyExisting = true;
         proposedContextMenu = WI.ContextMenu.createFromEvent(event, onlyExisting);
@@ -2408,7 +2438,7 @@ WI._handleDeviceSettingsTabBarButtonClicked = function(event)
             name: WI.UIString("Enable:"),
             columns: [
                 [
-                    {name: WI.UIString("ITP Debug Mode"), setting: InspectorBackend.Enum.Page.Setting.ITPDebugModeEnabled, value: true},
+                    {name: WI.UIString("Intelligent Tracking Prevention Debug Mode"), setting: InspectorBackend.Enum.Page.Setting.ITPDebugModeEnabled, value: true},
                     // COMPATIBILITY (iOS 14.0): `Page.Setting.AdClickAttributionDebugModeEnabled` was renamed to `Page.Setting.PrivateClickMeasurementDebugModeEnabled`.
                     {name: WI.UIString("Private Click Measurement Debug Mode"), setting: InspectorBackend.Enum.Page.Setting.PrivateClickMeasurementDebugModeEnabled, value: true},
                     {name: WI.UIString("Ad Click Attribution Debug Mode"), setting: InspectorBackend.Enum.Page.Setting.AdClickAttributionDebugModeEnabled, value: true},
@@ -2451,7 +2481,7 @@ WI._handleDeviceSettingsTabBarButtonClicked = function(event)
         }
     }
 
-    contentElement.appendChild(WI.createReferencePageLink("device-settings"));
+    contentElement.appendChild(WI.ReferencePage.DeviceSettings.createLinkElement());
 
     WI._deviceSettingsPopover.presentNewContentWithFrame(contentElement, calculateTargetFrame(), preferredEdges);
 };
@@ -2525,7 +2555,7 @@ WI._updateDownloadTabBarButton = function()
     if (!WI._reloadTabBarButton)
         return;
 
-    if (!InspectorBackend.hasCommand("Page.archive")) {
+    if (!WI.FileUtilities.canSave(WI.FileUtilities.SaveMode.SingleFile) || !InspectorBackend.hasCommand("Page.archive")) {
         WI._downloadTabBarButton.hidden = true;
         WI._updateTabBarDividers();
         return;
@@ -2738,7 +2768,10 @@ WI._save = function(event)
     if (!contentView || !contentView.supportsSave)
         return;
 
-    WI.FileUtilities.save(contentView.saveData);
+    if (!WI.FileUtilities.canSave(contentView.saveMode))
+        return;
+
+    WI.FileUtilities.save(contentView.saveMode, contentView.saveData);
 };
 
 WI._saveAs = function(event)
@@ -2747,7 +2780,10 @@ WI._saveAs = function(event)
     if (!contentView || !contentView.supportsSave)
         return;
 
-    WI.FileUtilities.save(contentView.saveData, true);
+    if (!WI.FileUtilities.canSave(contentView.saveMode))
+        return;
+
+    WI.FileUtilities.save(contentView.saveMode, contentView.saveData, true);
 };
 
 WI._clear = function(event)
@@ -3084,7 +3120,7 @@ WI.createMessageTextView = function(message, isError)
 
     let textElement = messageElement.appendChild(document.createElement("div"));
     textElement.className = "message";
-    textElement.textContent = message;
+    textElement.append(message);
 
     return messageElement;
 };
@@ -3109,23 +3145,6 @@ WI.createNavigationItemHelp = function(formatString, navigationItem)
 
     String.format(formatString, [wrapperElement], String.standardFormatters, containerElement, append);
     return containerElement;
-};
-
-WI.createReferencePageLink = function(page, fragment)
-{
-    let url = "https://webkit.org/web-inspector/" + page + "/";
-    if (fragment)
-        url += "#" + fragment;
-
-    let wrapper = document.createElement("span");
-    wrapper.className = "reference-page-link-container";
-
-    let link = wrapper.appendChild(document.createElement("a"));
-    link.className = "reference-page-link";
-    link.href = link.title = url;
-    link.textContent = "?";
-
-    return wrapper;
 };
 
 WI.createGoToArrowButton = function()
@@ -3442,19 +3461,28 @@ WI.archiveMainFrame = function()
         WI._downloadingPage = false;
         WI._updateDownloadTabBarButton();
 
-        if (error)
+        if (error) {
+            WI.reportInternalError(error);
             return;
+        }
 
         let mainFrame = WI.networkManager.mainFrame;
         let archiveName = mainFrame.mainResource.urlComponents.host || mainFrame.mainResource.displayName || "Archive";
-        let url = WI.FileUtilities.inspectorURLForFilename(archiveName + ".webarchive");
 
-        InspectorFrontendHost.save(url, data, true, true);
+        const forceSaveAs = true;
+        WI.FileUtilities.save(WI.FileUtilities.SaveMode.SingleFile, {
+            suggestedName: archiveName + ".webarchive",
+            content: data,
+            base64Encoded: true,
+        }, forceSaveAs);
     });
 };
 
 WI.canArchiveMainFrame = function()
 {
+    if (!WI.FileUtilities.canSave(WI.FileUtilities.SaveMode.SingleFile))
+        return false;
+
     if (!InspectorBackend.hasCommand("Page.archive"))
         return false;
 
@@ -3555,7 +3583,6 @@ WI.reset = async function()
 };
 
 WI.isEngineeringBuild = false;
-WI.isExperimentalBuild = InspectorFrontendHost.isExperimentalBuild();
 
 // OpenResourceDialog delegate
 
