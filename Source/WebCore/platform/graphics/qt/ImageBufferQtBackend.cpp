@@ -162,7 +162,13 @@ GraphicsContext &ImageBufferQtBackend::context() const { return *m_context; }
 
 static bool encodeImage(const QImage& image, const String& mimeType, std::optional<double> quality, QByteArray& data)
 {
-    ASSERT(MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType));
+    //ASSERT(MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType));
+
+    if (!MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType))
+    {
+        qWarning("Unsupported mime type '%s'", mimeType.utf8().data());
+        return false;
+    }
 
     // QImageWriter does not support mimetypes. It does support Qt image formats (png,
     // gif, jpeg..., xpm) so skip the image/ to get the Qt image format used to encode
