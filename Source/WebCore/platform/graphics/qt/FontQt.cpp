@@ -138,12 +138,4 @@ void Font::platformDestroy()
 {
 }
 
-GlyphBufferAdvance Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned beginningGlyphIndex, unsigned beginningStringIndex, bool enableKerning, bool, const AtomString&, StringView, TextDirection) const
-{
-    QRawFont::LayoutFlags flags = enableKerning ? QRawFont::KernedAdvances : QRawFont::SeparateAdvances;
-    m_platformData.rawFont().advancesForGlyphIndexes(reinterpret_cast<quint32*>(glyphBuffer.glyphs(beginningGlyphIndex)), glyphBuffer.advances(beginningGlyphIndex), glyphBuffer.size(), flags);
-
-    return makeGlyphBufferAdvance();
-}
-
 }
