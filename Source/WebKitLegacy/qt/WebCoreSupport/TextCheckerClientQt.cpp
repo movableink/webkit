@@ -66,14 +66,6 @@ void TextCheckerClientQt::learnWord(const String& word)
     m_spellChecker->learnWord(word);
 }
 
-String TextCheckerClientQt::getAutoCorrectSuggestionForMisspelledWord(const String& misspelledWord)
-{
-    if (!loadSpellChecker())
-        return String();
-
-    return m_spellChecker->autoCorrectSuggestionForMisspelledWord(misspelledWord);
-}
-
 void TextCheckerClientQt::checkSpellingOfString(StringView view, int* misspellingLocation, int* misspellingLength)
 {
     if (!loadSpellChecker())

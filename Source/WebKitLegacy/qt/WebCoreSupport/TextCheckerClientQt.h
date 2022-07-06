@@ -43,7 +43,6 @@ public:
     void ignoreWordInSpellDocument(const String&) final;
     void learnWord(const String&) final;
     void checkSpellingOfString(StringView, int* misspellingLocation, int* misspellingLength) final;
-    String getAutoCorrectSuggestionForMisspelledWord(const String& misspelledWord) final;
     void checkGrammarOfString(StringView, Vector<GrammarDetail>&, int* badGrammarLocation, int* badGrammarLength) final;
     void getGuessesForWord(const String& word, const String& context, const VisibleSelection&, Vector<String>& guesses) final;
     void requestCheckingOfString(WebCore::TextCheckingRequest&, const VisibleSelection&) final { }

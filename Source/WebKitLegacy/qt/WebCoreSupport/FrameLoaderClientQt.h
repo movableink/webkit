@@ -165,8 +165,8 @@ public:
     bool canHandleRequest(const WebCore::ResourceRequest&) const override;
     bool canShowMIMEType(const String& MIMEType) const override;
     bool canShowMIMETypeAsHTML(const String& MIMEType) const override;
-    bool representationExistsForURLScheme(const String& URLScheme) const override;
-    String generatedMIMETypeForURLScheme(const String& URLScheme) const override;
+    bool representationExistsForURLScheme(StringView URLScheme) const override;
+    String generatedMIMETypeForURLScheme(StringView URLScheme) const override;
 
     void frameLoadCompleted() override;
     void saveViewStateToItem(WebCore::HistoryItem&) override;
@@ -189,8 +189,8 @@ public:
     bool canCachePage() const override;
     void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const WebCore::ResourceResponse&) override;
 
-    RefPtr<Frame> createFrame(const String& name, HTMLFrameOwnerElement&) override;
-    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool) override;
+    RefPtr<Frame> createFrame(const AtomString& name, HTMLFrameOwnerElement&) override;
+    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool) override;
     void redirectDataToPlugin(Widget& pluginWidget) override;
 
     ObjectContentType objectContentType(const URL&, const String& mimeTypeIn) override;

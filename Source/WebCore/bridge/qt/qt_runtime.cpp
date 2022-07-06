@@ -146,27 +146,27 @@ void registerCustomType(int qtMetaTypeId, ConvertToVariantFunction toVariantFunc
 
 static bool isJSUint8Array(VM& vm, JSObjectRef object)
 {
-    return toJS(object)->inherits<JSUint8Array>(vm);
+    return toJS(object)->inherits<JSUint8Array>();
 }
 
 static bool isJSUint8ClampedArray(VM& vm, JSObjectRef object)
 {
-    return toJS(object)->inherits<JSUint8ClampedArray>(vm);
+    return toJS(object)->inherits<JSUint8ClampedArray>();
 }
 
 static bool isJSArray(VM& vm, JSObjectRef object)
 {
-    return toJS(object)->inherits<JSArray>(vm);
+    return toJS(object)->inherits<JSArray>();
 }
 
 static bool isJSDate(VM& vm, JSObjectRef object)
 {
-    return toJS(object)->inherits<DateInstance>(vm);
+    return toJS(object)->inherits<DateInstance>();
 }
 
 static bool isQtObject(VM& vm, JSObjectRef object)
 {
-    return toJS(object)->inherits<RuntimeObject>(vm);
+    return toJS(object)->inherits<RuntimeObject>();
 }
 
 static JSRealType valueRealType(JSContextRef context, JSValueRef value, JSValueRef* exception)
@@ -211,11 +211,11 @@ static JSValueRef unwrapBoxedPrimitive(JSContextRef context, JSValueRef value, J
     JSGlobalObject* lexicalGlobalObject = toJS(context);
     JSLockHolder locker(lexicalGlobalObject);
     JSObject* object = toJS(obj);
-    if (object->inherits<NumberObject>(lexicalGlobalObject->vm()))
+    if (object->inherits<NumberObject>())
         return toRef(lexicalGlobalObject, jsNumber(object->toNumber(lexicalGlobalObject)));
-    if (object->inherits<StringObject>(lexicalGlobalObject->vm()))
+    if (object->inherits<StringObject>())
         return toRef(lexicalGlobalObject, object->toString(lexicalGlobalObject));
-    if (object->inherits<BooleanObject>(lexicalGlobalObject->vm()))
+    if (object->inherits<BooleanObject>())
         return toRef(lexicalGlobalObject, object->toPrimitive(lexicalGlobalObject));
     return value;
 }
@@ -295,7 +295,7 @@ static void getGregorianDateTimeUTC(JSContextRef context, JSRealType type, JSVal
     const GregorianDateTime* other;
     if (type == Date) {
         JSObject* jsObject = toJS(object);
-        DateInstance* date = jsDynamicCast<DateInstance*>(lexicalGlobalObject->vm(), jsObject);
+        DateInstance* date = jsDynamicCast<DateInstance*>(jsObject);
         other = date->gregorianDateTimeUTC(lexicalGlobalObject->vm().dateCache);
     } else {
         double ms = JSValueToNumber(context, value, exception);
@@ -782,7 +782,7 @@ JSValueRef convertQVariantToValue(JSContextRef context, RootObject* root, const 
     if (customRuntimeConversions()->contains(type)) {
         JSGlobalObject* lexicalGlobalObject = toJS(context);
         JSLockHolder locker(lexicalGlobalObject);
-        if (!root->globalObject()->inherits<JSDOMWindow>(lexicalGlobalObject->vm()))
+        if (!root->globalObject()->inherits<JSDOMWindow>())
             return JSValueMakeUndefined(context);
 
         Document* document = JSDOMWindow::toWrapped(lexicalGlobalObject->vm(), root->globalObject())->document();

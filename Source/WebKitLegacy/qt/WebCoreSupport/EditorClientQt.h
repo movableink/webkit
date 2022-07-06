@@ -90,12 +90,12 @@ public:
     void handleKeyboardEvent(KeyboardEvent&) override;
     void handleInputMethodKeydown(KeyboardEvent&) override;
 
-    void textFieldDidBeginEditing(Element*) override;
-    void textFieldDidEndEditing(Element*) override;
-    void textDidChangeInTextField(Element*) override;
-    bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) override;
-    void textWillBeDeletedInTextField(Element*) override;
-    void textDidChangeInTextArea(Element*) override;
+    void textFieldDidBeginEditing(Element&) override;
+    void textFieldDidEndEditing(Element&) override;
+    void textDidChangeInTextField(Element&) override;
+    bool doTextFieldCommandFromEvent(Element&, KeyboardEvent*) override;
+    void textWillBeDeletedInTextField(Element&) override;
+    void textDidChangeInTextArea(Element&) override;
 
     void updateSpellingUIWithGrammarString(const String&, const GrammarDetail&) override;
     void updateSpellingUIWithMisspelledWord(const String&) override;

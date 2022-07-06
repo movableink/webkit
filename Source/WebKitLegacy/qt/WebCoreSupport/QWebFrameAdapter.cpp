@@ -113,22 +113,22 @@ void QWebFrameAdapter::load(const QNetworkRequest& req, QNetworkAccessManager::O
 
     switch (operation) {
     case QNetworkAccessManager::HeadOperation:
-        request.setHTTPMethod("HEAD");
+        request.setHTTPMethod("HEAD"_s);
         break;
     case QNetworkAccessManager::GetOperation:
-        request.setHTTPMethod("GET");
+        request.setHTTPMethod("GET"_s);
         break;
     case QNetworkAccessManager::PutOperation:
-        request.setHTTPMethod("PUT");
+        request.setHTTPMethod("PUT"_s);
         break;
     case QNetworkAccessManager::PostOperation:
-        request.setHTTPMethod("POST");
+        request.setHTTPMethod("POST"_s);
         break;
     case QNetworkAccessManager::DeleteOperation:
-        request.setHTTPMethod("DELETE");
+        request.setHTTPMethod("DELETE"_s);
         break;
     case QNetworkAccessManager::CustomOperation:
-        request.setHTTPMethod(req.attribute(QNetworkRequest::CustomVerbAttribute).toByteArray().constData());
+        request.setHTTPMethod(String::fromLatin1(req.attribute(QNetworkRequest::CustomVerbAttribute).toByteArray().constData()));
         break;
     case QNetworkAccessManager::UnknownOperation:
         // eh?
@@ -221,7 +221,7 @@ void QWebFrameAdapter::addToJavaScriptWindowObject(const QString& name, QObject*
     JSC::JSObject* runtimeObject = JSC::Bindings::QtInstance::getQtInstance(object, root, valueOwnership)->createRuntimeObject(lexicalGlobalObject);
 
     JSC::PutPropertySlot slot(window);
-    window->methodTable(lexicalGlobalObject->vm())->put(window, lexicalGlobalObject, JSC::Identifier::fromString(lexicalGlobalObject->vm(), reinterpret_cast_ptr<const UChar*>(name.constData()), name.length()), runtimeObject, slot);
+    window->methodTable()->put(window, lexicalGlobalObject, JSC::Identifier::fromString(lexicalGlobalObject->vm(), reinterpret_cast_ptr<const UChar*>(name.constData()), name.length()), runtimeObject, slot);
 }
 
 QString QWebFrameAdapter::toHtml() const
@@ -248,14 +248,14 @@ void QWebFrameAdapter::setContent(const QByteArray &data, const QString &mimeTyp
     WebCore::ResourceRequest request(kurl);
     WTF::RefPtr<WebCore::SharedBuffer> buffer = WebCore::SharedBuffer::create(data.constData(), data.length());
     QString actualMimeType;
-    WTF::String encoding;
+    WTF::StringView encoding;
     if (mimeType.isEmpty())
         actualMimeType = QLatin1String("text/html");
     else {
         actualMimeType = extractMIMETypeFromMediaType(mimeType);
-        encoding = extractCharsetFromMediaType(mimeType);
+        encoding = extractCharsetFromMediaType(String(mimeType));
     }
-    WebCore::ResourceResponse response(URL(), WTF::String(actualMimeType), buffer->size(), encoding);
+    WebCore::ResourceResponse response(URL(), actualMimeType, buffer->size(), encoding.toStringWithoutCopying());
     // FIXME: visibility?
     WebCore::SubstituteData substituteData(WTFMove(buffer), URL(), response, SubstituteData::SessionHistoryVisibility::Hidden);
     frame->loader().load(WebCore::FrameLoadRequest(*frame, request, substituteData));
@@ -280,7 +280,7 @@ QMultiMap<QString, QString> QWebFrameAdapter::metaData() const
 
     QMultiMap<QString, QString> map;
     Document* doc = frame->document();
-    auto list = doc->getElementsByTagName("meta");
+    auto list = doc->getElementsByTagName("meta"_s);
     unsigned len = list->length();
     for (unsigned i = 0; i < len; i++) {
         HTMLMetaElement* meta = static_cast<HTMLMetaElement*>(list->item(i));

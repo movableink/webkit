@@ -61,8 +61,8 @@ static const ExtensionMap extensionMap[] = {
 String MIMETypeRegistry::mimeTypeForExtension(StringView ext)
 {
     for (auto& entry : extensionMap) {
-        if (equalIgnoringASCIICase(ext, entry.extension))
-            return entry.mimeType;
+        if (equalIgnoringASCIICase(ext, String::fromLatin1(entry.extension)))
+            return String::fromLatin1(entry.mimeType);
     }
 
     // QMimeDatabase lacks the ability to query by extension alone, so we create a fake filename to lookup.
@@ -86,8 +86,8 @@ String MIMETypeRegistry::mimeTypeForExtension(StringView ext)
 String MIMETypeRegistry::mimeTypeForPath(StringView path)
 {
     for (auto& entry : extensionMap) {
-        if (path.endsWithIgnoringASCIICase(entry.dotExtension))
-            return entry.mimeType;
+        if (path.endsWithIgnoringASCIICase(String::fromLatin1(entry.dotExtension)))
+            return String::fromLatin1(entry.mimeType);
     }
 
     // FIXME: See comment in mimeTypeForExtension.
@@ -122,8 +122,8 @@ String MIMETypeRegistry::preferredExtensionForMIMEType(const String& mimeTypeNam
 
 bool MIMETypeRegistry::isApplicationPluginMIMEType(const String& mimeType)
 {
-    return equalLettersIgnoringASCIICase(mimeType, "application/x-qt-plugin")
-        || equalLettersIgnoringASCIICase(mimeType, "application/x-qt-styled-widget");
+    return equalLettersIgnoringASCIICase(mimeType, "application/x-qt-plugin"_s)
+        || equalLettersIgnoringASCIICase(mimeType, "application/x-qt-styled-widget"_s);
 }
 
 }

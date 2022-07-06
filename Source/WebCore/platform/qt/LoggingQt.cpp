@@ -39,9 +39,7 @@ String logLevelString()
 #else
 
     // To disable logging notImplemented set the DISABLE_NI_WARNING environment variable to 1.
-    String logLevel = "NotYetImplemented,";
-    logLevel.append(QString::fromLocal8Bit(loggingEnv));
-    return logLevel;
+    return String(QStringLiteral("NotYetImplemented,").append(QLatin1String(loggingEnv.constData())));
 #endif
 }
 

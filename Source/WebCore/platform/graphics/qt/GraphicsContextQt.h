@@ -43,7 +43,7 @@ public:
     void save() final;
     void restore() final;
 
-    void didUpdateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
+    void didUpdateState(GraphicsContextState&);
 
     FloatRect roundToDevicePixels(const FloatRect&, GraphicsContext::RoundingMode = RoundAllSides) final;
 

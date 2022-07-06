@@ -55,7 +55,7 @@ ImageBufferQtBackend::ImageBufferQtBackend(const Parameters& parameters, std::un
     , m_image(WTFMove(image))
 {}
 
-std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const HostWindow *hostWindow)
+std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Parameters& parameters, const ImageBuffer::CreationContext&)
 {
     IntSize backendSize = calculateBackendSize(parameters);
     if (backendSize.isEmpty())
@@ -122,40 +122,12 @@ void ImageBufferQtBackend::initPainter(QPainter *painter)
     painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
 }
 
-// QTFIXME: Use PreserveResolution?
-RefPtr<Image> ImageBufferQtBackend::copyImage(BackingStoreCopy copyBehavior, PreserveResolution) const
-{
-    if (copyBehavior == CopyBackingStore)
-        return StillImage::create(*m_nativeImage.get());
-
-    return StillImage::createForRendering(m_nativeImage.get());
-}
-
 RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyBehavior) const
 {
     if (copyBehavior == CopyBackingStore)
         return NativeImage::create(m_nativeImage->copy());
 
     return NativeImage::create(QImage(*m_nativeImage.get()));
-}
-
-void ImageBufferQtBackend::draw(GraphicsContext &destContext, const FloatRect &destRect, const FloatRect &srcRect, const ImagePaintingOptions &options) {
-    if (&destContext == &context()) {
-        RefPtr<Image> copy = copyImage();
-        destContext.drawImage(*copy, destRect, srcRect, options);
-    } else {
-        destContext.drawImage(*m_image, destRect, srcRect, options);
-    }
-}
-
-void ImageBufferQtBackend::drawPattern(GraphicsContext &destContext, const FloatRect &destRect, const FloatRect &srcRect, const AffineTransform &patternTransform, const FloatPoint &phase, const FloatSize &spacing, const ImagePaintingOptions &options)
-{
-    if (&destContext == &context()) {
-        RefPtr<Image> copy = copyImage();
-        copy->drawPattern(destContext, destRect, srcRect, patternTransform, phase, spacing, options);
-    } else {
-        m_image->drawPattern(destContext, destRect, srcRect, patternTransform, phase, spacing, options);
-    }
 }
 
 GraphicsContext &ImageBufferQtBackend::context() const { return *m_context; }
@@ -176,7 +148,7 @@ static bool encodeImage(const QImage& image, const String& mimeType, std::option
     String format = mimeType.substring(sizeof "image");
 
     int compressionQuality = -1;
-    if (format == "jpeg" || format == "webp") {
+    if (format == "jpeg"_s || format == "webp"_s) {
         compressionQuality = 100;
         if (quality && *quality >= 0.0 && *quality <= 1.0)
             compressionQuality = static_cast<int>(*quality * 100 + 0.5);
@@ -193,19 +165,19 @@ static bool encodeImage(const QImage& image, const String& mimeType, std::option
 // QTFIXME: Use PreserveResolution?
 String ImageBufferQtBackend::toDataURL(const String& mimeType, std::optional<double> quality, PreserveResolution) const
 {
-    RefPtr<Image> image = copyImage(DontCopyBackingStore);
+    RefPtr<NativeImage> image = copyNativeImage(DontCopyBackingStore);
     QByteArray data;
-    if (!encodeImage(image->nativeImageForCurrentFrame()->platformImage(), mimeType, quality, data))
-        return "data:,";
+    if (!encodeImage(image->platformImage(), mimeType, quality, data))
+        return "data:,"_s;
 
     return "data:" + mimeType + ";base64," + data.toBase64().data();
 }
 
 Vector<uint8_t> ImageBufferQtBackend::toData(const String& mimeType, std::optional<double> quality) const
 {
-    RefPtr<Image> image = copyImage(DontCopyBackingStore);
+    RefPtr<NativeImage> image = copyNativeImage(DontCopyBackingStore);
     QByteArray data;
-    if (!encodeImage(image->nativeImageForCurrentFrame()->platformImage(), mimeType, quality, data))
+    if (!encodeImage(image->platformImage(), mimeType, quality, data))
         return { };
 
     Vector<uint8_t> result(data.size());
@@ -218,6 +190,7 @@ void ImageBufferQtBackend::transformToColorSpace(const DestinationColorSpace& ne
     if (m_parameters.colorSpace == newColorSpace)
         return;
 
+#if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB)
     // only sRGB <-> linearRGB are supported at the moment
     if ((m_parameters.colorSpace != DestinationColorSpace::LinearSRGB() && m_parameters.colorSpace != DestinationColorSpace::SRGB())
         || (newColorSpace != DestinationColorSpace::LinearSRGB() && newColorSpace != DestinationColorSpace::SRGB()))
@@ -246,6 +219,11 @@ void ImageBufferQtBackend::transformToColorSpace(const DestinationColorSpace& ne
         }();
         platformTransformColorSpace(deviceRgbLUT);
     }
+#else
+    ASSERT(newColorSpace == DestinationColorSpace::SRGB());
+    ASSERT(m_parameters.colorSpace == DestinationColorSpace::SRGB());
+    UNUSED_PARAM(newColorSpace);
+#endif
 }
 
 void ImageBufferQtBackend::platformTransformColorSpace(const std::array<uint8_t, 256>& lookUpTable)
@@ -278,9 +256,9 @@ void ImageBufferQtBackend::platformTransformColorSpace(const std::array<uint8_t,
     painter->restore();
 }
 
-std::optional<PixelBuffer> ImageBufferQtBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const
+RefPtr<PixelBuffer> ImageBufferQtBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator) const
 {
-    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage->bits())));
+    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, const_cast<void*>(reinterpret_cast<const void*>(m_nativeImage->bits())), allocator);
 }
 
 void ImageBufferQtBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)

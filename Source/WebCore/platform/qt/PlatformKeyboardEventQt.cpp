@@ -949,8 +949,11 @@ void PlatformKeyboardEvent::disambiguateKeyDownEvent(Type type, bool)
             we try to detect this situation and still set the text, to ensure that the
             general event handling sends a key press event after this disambiguation.
         */
-        if (!m_useNativeVirtualKeyAsDOMKey && m_text.isEmpty() && m_windowsVirtualKeyCode && isVirtualKeyCodeRepresentingCharacter(m_windowsVirtualKeyCode))
-            m_text.append(UChar(m_windowsVirtualKeyCode));
+        if (!m_useNativeVirtualKeyAsDOMKey && m_text.isEmpty() && m_windowsVirtualKeyCode && isVirtualKeyCodeRepresentingCharacter(m_windowsVirtualKeyCode)) {
+            StringBuilder code;
+            code.append(UChar(m_windowsVirtualKeyCode));
+            m_text = code.toString();
+        }
 
         m_keyIdentifier = String();
         m_windowsVirtualKeyCode = 0;

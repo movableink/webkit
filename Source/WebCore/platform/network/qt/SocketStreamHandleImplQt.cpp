@@ -46,7 +46,7 @@ SocketStreamHandlePrivate::SocketStreamHandlePrivate(SocketStreamHandleImpl* str
 {
     m_streamHandle = streamHandle;
     m_socket = 0;
-    bool isSecure = url.protocolIs("wss");
+    bool isSecure = url.protocolIs("wss"_s);
 
     if (isSecure) {
 #ifndef QT_NO_SSL

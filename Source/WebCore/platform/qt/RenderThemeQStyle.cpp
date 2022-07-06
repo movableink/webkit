@@ -638,8 +638,6 @@ ControlPart RenderThemeQStyle::initializeCommonQStyleOptions(QStyleFacadeOption 
     case PushButtonPart:
     case SquareButtonPart:
     case ButtonPart:
-    case ButtonBevelPart:
-    case ListItemPart:
     case MenulistButtonPart:
     case InnerSpinButtonPart:
     case SearchFieldResultsButtonPart:

@@ -497,10 +497,10 @@ void QWebHistory::setMaximumItemCount(int count)
 QVariantMap QWebHistory::toMap() const
 {
     WebCore::KeyedEncoderQt encoder;
-    encoder.encodeUInt32("currentItemIndex", currentItemIndex());
+    encoder.encodeUInt32("currentItemIndex"_s, currentItemIndex());
 
     const HistoryItemVector &items = d->lst->entries();
-    encoder.encodeObjects("history", items.begin(), items.end(), [&encoder](WebCore::KeyedEncoder&, const WebCore::HistoryItem& item) {
+    encoder.encodeObjects("history"_s, items.begin(), items.end(), [&encoder](WebCore::KeyedEncoder&, const WebCore::HistoryItem& item) {
         WebCore::encodeBackForwardTree(encoder, item);
     });
 
@@ -517,12 +517,12 @@ void QWebHistory::loadFromMap(const QVariantMap& map)
     WebCore::KeyedDecoderQt decoder { QVariantMap(map) };
 
     int currentIndex;
-    if (!decoder.decodeInt32("currentItemIndex", currentIndex))
+    if (!decoder.decodeInt32("currentItemIndex"_s, currentIndex))
         return;
 
     auto* lst = d->lst;
     Vector<int> ignore;
-    bool result = decoder.decodeObjects("history", ignore, [&lst, &decoder](WebCore::KeyedDecoder&, int&) -> bool {
+    bool result = decoder.decodeObjects("history"_s, ignore, [&lst, &decoder](WebCore::KeyedDecoder&, int&) -> bool {
         auto item = WebCore::HistoryItem::create();
         if (!WebCore::decodeBackForwardTree(decoder, item))
             return false;

@@ -41,18 +41,14 @@ public:
     ImageBufferQtBackend(const Parameters& parameters, std::unique_ptr<GraphicsContext>&& context, std::unique_ptr<QImage>&& nativeImage, Ref<Image> image);
     ~ImageBufferQtBackend() { context().platformContext()->painter()->end(); }
 
-    static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const HostWindow *);
+    static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const ImageBuffer::CreationContext&);
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const GraphicsContext &);
 
     static size_t calculateMemoryCost(const Parameters&);
     static unsigned calculateBytesPerRow(const IntSize& backendSize);
     static size_t calculateExternalMemoryCost(const Parameters&);
 
-    RefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, PreserveResolution = PreserveResolution::No) const override;
     RefPtr<NativeImage> copyNativeImage(BackingStoreCopy = CopyBackingStore) const override;
-
-    void draw(GraphicsContext &destContext, const FloatRect &destRect, const FloatRect &srcRect, const ImagePaintingOptions &options) override;
-    void drawPattern(GraphicsContext &destContext, const FloatRect &destRect, const FloatRect &srcRect, const AffineTransform &patternTransform, const FloatPoint &phase, const FloatSize &spacing, const ImagePaintingOptions &) override;
 
     void transformToColorSpace(const DestinationColorSpace&) override;
 
@@ -61,7 +57,7 @@ public:
 
     GraphicsContext& context() const override;
 
-    std::optional<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect) const override;
+    RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator = ImageBufferAllocator()) const override;
     void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
 protected:

@@ -192,10 +192,6 @@ void QWebSettingsPrivate::apply()
 //                                      global->attributes.value(QWebSettings::JavascriptCanCloseWindows));
 //        settings->setAllowScriptsToCloseWindows(value);
 
-        value = attributes.value(QWebSettings::JavaEnabled,
-                                      global->attributes.value(QWebSettings::JavaEnabled));
-        settings->setJavaEnabled(value);
-
         value = attributes.value(QWebSettings::SpatialNavigationEnabled,
                                       global->attributes.value(QWebSettings::SpatialNavigationEnabled));
         settings->setSpatialNavigationEnabled(value);
@@ -249,14 +245,6 @@ void QWebSettingsPrivate::apply()
                                       global->attributes.value(QWebSettings::AllowRunningInsecureContent));
         settings->setAllowDisplayOfInsecureContent(value);
         settings->setAllowRunningOfInsecureContent(value);
-
-        value = attributes.value(QWebSettings::XSSAuditingEnabled,
-                                      global->attributes.value(QWebSettings::XSSAuditingEnabled));
-        settings->setXSSAuditorEnabled(value);
-
-        value = attributes.value(QWebSettings::WebSecurityEnabled,
-                                      global->attributes.value(QWebSettings::WebSecurityEnabled));
-        settings->setWebSecurityEnabled(value);
 
 #if USE(TILED_BACKING_STORE)
         value = attributes.value(QWebSettings::TiledBackingStoreEnabled,
@@ -1198,7 +1186,7 @@ void QWebSettings::enablePersistentStorage(const QString& path)
 
         storagePath = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
         if (storagePath.isEmpty())
-            storagePath = FileSystem::pathByAppendingComponent(QDir::homePath(), QCoreApplication::applicationName());
+            storagePath = FileSystem::pathByAppendingComponent(String(QDir::homePath()), String(QCoreApplication::applicationName()));
     } else
         storagePath = path;
 
@@ -1206,8 +1194,8 @@ void QWebSettings::enablePersistentStorage(const QString& path)
 
     QWebSettings::setIconDatabasePath(storagePath);
     QWebSettings::setOfflineWebApplicationCachePath(storagePath);
-    QWebSettings::setOfflineStoragePath(FileSystem::pathByAppendingComponent(storagePath, "Databases"));
-    QWebSettings::globalSettings()->setLocalStoragePath(FileSystem::pathByAppendingComponent(storagePath, "LocalStorage"));
+    QWebSettings::setOfflineStoragePath(FileSystem::pathByAppendingComponent(String(storagePath), "Databases"_s));
+    QWebSettings::globalSettings()->setLocalStoragePath(FileSystem::pathByAppendingComponent(String(storagePath), "LocalStorage"_s));
     QWebSettings::globalSettings()->setAttribute(QWebSettings::LocalStorageEnabled, true);
     QWebSettings::globalSettings()->setAttribute(QWebSettings::OfflineStorageDatabaseEnabled, true);
     QWebSettings::globalSettings()->setAttribute(QWebSettings::OfflineWebApplicationCacheEnabled, true);

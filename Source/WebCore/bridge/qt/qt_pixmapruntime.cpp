@@ -134,7 +134,7 @@ static JSValueRef assignToHTMLImageElement(JSContextRef context, JSObjectRef /*f
     JSGlobalObject* lexicalGlobalObject = ::toJS(context);
     VM& vm = lexicalGlobalObject->vm();
 
-    if (!jsObject->inherits(vm, JSHTMLImageElement::info()))
+    if (!jsObject->inherits(JSHTMLImageElement::info()))
         return JSValueMakeUndefined(context);
 
     QVariant& data = *static_cast<QVariant*>(JSObjectGetPrivate(object));
@@ -225,7 +225,7 @@ QVariant QtPixmapRuntime::toQt(JSContextRef context, JSObjectRef obj, QMetaType:
     JSGlobalObject* lexicalGlobalObject = ::toJS(context);
     VM& vm = lexicalGlobalObject->vm();
 
-    if (!jsObject->inherits(vm, JSHTMLImageElement::info()))
+    if (!jsObject->inherits(JSHTMLImageElement::info()))
         return emptyVariantForHint(hint);
 
     HTMLImageElement* imageElement = JSHTMLImageElement::toWrapped(vm, jsObject);

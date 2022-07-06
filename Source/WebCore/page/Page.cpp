@@ -2432,18 +2432,6 @@ void Page::resumeAllMediaBuffering()
         platformMediaSessionManager->resumeAllMediaBufferingForGroup(mediaSessionGroupIdentifier());
 #endif
 }
-    
-#if PLATFORM(QT)
-void Page::pluginVisibilityChanged(bool visible)
-{
-    for (auto& view : pluginViews()) {
-        if (visible)
-            view->show();
-        else
-            view->hide();
-    }
-}
-#endif // PLATFORM(QT)
 
 unsigned Page::subframeCount() const
 {

@@ -95,7 +95,7 @@ bool FontCache::isSystemFontForbiddenForEditing(const String&)
 
 Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescription)
 {
-    const AtomString fallbackFamily = String(QFont(/*fontDescription.firstFamily()*/).lastResortFamily()); // FIXME
+    const AtomString fallbackFamily = AtomString(QFont(/*fontDescription.firstFamily()*/).lastResortFamily()); // FIXME
     FontPlatformData platformData(fontDescription, fallbackFamily);
     return fontForPlatformData(platformData);
 }
@@ -118,8 +118,8 @@ Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamil
     return { };
 }
 
-#if USE(FREETYPE)
-foo()
-#endif
+void FontCache::platformInvalidate()
+{
+}
 
 } // namespace WebCore

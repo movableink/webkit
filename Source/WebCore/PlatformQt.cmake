@@ -148,6 +148,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/PathQt.cpp
     platform/graphics/qt/PatternQt.cpp
     platform/graphics/qt/StillImageQt.cpp
+    platform/graphics/qt/SystemFontDatabaseQt.cpp
     platform/graphics/qt/TileQt.cpp
     platform/graphics/qt/TransformationMatrixQt.cpp
 

@@ -7,6 +7,7 @@ list(APPEND WTF_SOURCES
     qt/RunLoopQt.cpp
     qt/URLQt.cpp
 
+    text/qt/AtomStringQt.cpp
     text/qt/StringQt.cpp
     text/qt/TextBreakIteratorInternalICUQt.cpp
 )

@@ -42,25 +42,25 @@ static void encodeElement(KeyedEncoder& encoder, const FormDataElement& element)
 {
     switchOn(element.data,
         [&] (const Vector<uint8_t>& bytes) {
-            encoder.encodeEnum("type", FormDataType::Data);
-            encoder.encodeBytes("data", bytes.data(), bytes.size());
+            encoder.encodeEnum("type"_s, FormDataType::Data);
+            encoder.encodeBytes("data"_s, bytes.data(), bytes.size());
         }, [&] (const FormDataElement::EncodedFileData& fileData) {
-            encoder.encodeEnum("type", FormDataType::EncodedFile);
-            encoder.encodeString("filename", fileData.filename);
-            encoder.encodeInt64("fileStart", fileData.fileStart);
-            encoder.encodeInt64("fileLength", fileData.fileLength);
+            encoder.encodeEnum("type"_s, FormDataType::EncodedFile);
+            encoder.encodeString("filename"_s, fileData.filename);
+            encoder.encodeInt64("fileStart"_s, fileData.fileStart);
+            encoder.encodeInt64("fileLength"_s, fileData.fileLength);
             if (fileData.expectedFileModificationTime)
-                encoder.encodeDouble("expectedFileModificationTime", fileData.expectedFileModificationTime.value().secondsSinceEpoch().seconds());
+                encoder.encodeDouble("expectedFileModificationTime"_s, fileData.expectedFileModificationTime.value().secondsSinceEpoch().seconds());
         }, [&] (const FormDataElement::EncodedBlobData& blobData) {
-            encoder.encodeEnum("type", FormDataType::EncodedBlob);
-            encoder.encodeString("url", blobData.url.string());
+            encoder.encodeEnum("type"_s, FormDataType::EncodedBlob);
+            encoder.encodeString("url"_s, blobData.url.string());
         });
 }
 
 static bool decodeElement(KeyedDecoder& decoder, FormDataElement& element)
 {
     FormDataType type;
-    if (!decoder.decodeEnum("type", type, [](FormDataType type) {
+    if (!decoder.decodeEnum("type"_s, type, [](FormDataType type) {
         switch (type) {
         case FormDataType::Data:
         case FormDataType::EncodedFile:
@@ -75,24 +75,24 @@ static bool decodeElement(KeyedDecoder& decoder, FormDataElement& element)
     switch (type) {
     case FormDataType::Data: {
         Vector<uint8_t> bytes;
-        if (!decoder.decodeBytes("data", bytes))
+        if (!decoder.decodeBytes("data"_s, bytes))
             return false;
         element.data = WTFMove(bytes);
         break;
     }
     case FormDataType::EncodedFile: {
         FormDataElement::EncodedFileData fileData;
-        if (!decoder.decodeString("filename", fileData.filename))
+        if (!decoder.decodeString("filename"_s, fileData.filename))
             return false;
 
         int64_t fileStart;
-        if (!decoder.decodeInt64("fileStart", fileStart))
+        if (!decoder.decodeInt64("fileStart"_s, fileStart))
             return false;
         if (fileStart < 0)
             return false;
 
         int64_t fileLength;
-        if (!decoder.decodeInt64("fileLength", fileLength))
+        if (!decoder.decodeInt64("fileLength"_s, fileLength))
             return false;
         if (fileLength != BlobDataItem::toEndOfFile && fileLength < fileStart)
             return false;
@@ -101,7 +101,7 @@ static bool decodeElement(KeyedDecoder& decoder, FormDataElement& element)
         fileData.fileLength = fileLength;
 
         double expectedFileModificationTime; // Optional field
-        if (decoder.decodeDouble("expectedFileModificationTime", expectedFileModificationTime))
+        if (decoder.decodeDouble("expectedFileModificationTime"_s, expectedFileModificationTime))
             fileData.expectedFileModificationTime = WallTime::fromRawSeconds(expectedFileModificationTime);
 
         element.data = WTFMove(fileData);
@@ -110,7 +110,7 @@ static bool decodeElement(KeyedDecoder& decoder, FormDataElement& element)
 
     case FormDataType::EncodedBlob: {
         String blobURLString;
-        if (!decoder.decodeString("url", blobURLString))
+        if (!decoder.decodeString("url"_s, blobURLString))
             return false;
 
         element.data = FormDataElement::EncodedBlobData { URL(URL(), blobURLString) };
@@ -123,14 +123,14 @@ static bool decodeElement(KeyedDecoder& decoder, FormDataElement& element)
 
 void encodeFormData(const FormData& formData, KeyedEncoder& encoder)
 {
-    encoder.encodeBool("alwaysStream", formData.alwaysStream());
-    encoder.encodeBytes("boundary", reinterpret_cast<const uint8_t*>(formData.boundary().data()), formData.boundary().size());
+    encoder.encodeBool("alwaysStream"_s, formData.alwaysStream());
+    encoder.encodeBytes("boundary"_s, reinterpret_cast<const uint8_t*>(formData.boundary().data()), formData.boundary().size());
 
-    encoder.encodeObjects("elements", formData.elements().begin(), formData.elements().end(), [](KeyedEncoder& encoder, const FormDataElement& element) {
+    encoder.encodeObjects("elements"_s, formData.elements().begin(), formData.elements().end(), [](KeyedEncoder& encoder, const FormDataElement& element) {
         encodeElement(encoder, element);
     });
 
-    encoder.encodeInt64("identifier", formData.identifier());
+    encoder.encodeInt64("identifier"_s, formData.identifier());
 }
 
 RefPtr<FormData> decodeFormData(KeyedDecoder& decoder)
@@ -138,20 +138,20 @@ RefPtr<FormData> decodeFormData(KeyedDecoder& decoder)
     RefPtr<FormData> data = FormData::create();
 
     bool alwaysStream;
-    if (!decoder.decodeBool("alwaysStream", alwaysStream))
+    if (!decoder.decodeBool("alwaysStream"_s, alwaysStream))
         return nullptr;
     data->setAlwaysStream(alwaysStream);
 
-    if (!decoder.decodeBytes("boundary", const_cast<Vector<char>&>(data->boundary())))
+    if (!decoder.decodeBytes("boundary"_s, const_cast<Vector<char>&>(data->boundary())))
         return nullptr;
 
-    if (!decoder.decodeObjects("elements", const_cast<Vector<FormDataElement>&>(data->elements()), [](KeyedDecoder& decoder, FormDataElement& element) {
+    if (!decoder.decodeObjects("elements"_s, const_cast<Vector<FormDataElement>&>(data->elements()), [](KeyedDecoder& decoder, FormDataElement& element) {
         return decodeElement(decoder, element);
     }))
         return nullptr;
 
     int64_t identifier;
-    if (!decoder.decodeInt64("identifier", identifier))
+    if (!decoder.decodeInt64("identifier"_s, identifier))
         return nullptr;
 
     data->setIdentifier(identifier);
@@ -160,48 +160,48 @@ RefPtr<FormData> decodeFormData(KeyedDecoder& decoder)
 
 static void encodeBackForwardTreeNode(KeyedEncoder& encoder, const HistoryItem& item)
 {
-    encoder.encodeObjects("children", item.children().begin(), item.children().end(),
+    encoder.encodeObjects("children"_s, item.children().begin(), item.children().end(),
         encodeBackForwardTreeNode);
 
-    encoder.encodeString("originalURLString", item.originalURLString());
-    encoder.encodeString("urlString", item.urlString());
+    encoder.encodeString("originalURLString"_s, item.originalURLString());
+    encoder.encodeString("urlString"_s, item.urlString());
 
-    encoder.encodeInt64("documentSequenceNumber", item.documentSequenceNumber());
+    encoder.encodeInt64("documentSequenceNumber"_s, item.documentSequenceNumber());
 
-    encoder.encodeObjects("documentState", item.documentState().begin(), item.documentState().end(), [](KeyedEncoder& encoder, const String& string) {
-        encoder.encodeString("string", string);
+    encoder.encodeObjects("documentState"_s, item.documentState().begin(), item.documentState().end(), [](KeyedEncoder& encoder, const String& string) {
+        encoder.encodeString("string"_s, string);
     });
 
-    encoder.encodeString("formContentType", item.formContentType());
+    encoder.encodeString("formContentType"_s, item.formContentType());
 
-    encoder.encodeConditionalObject("formData", const_cast<HistoryItem&>(item).formData(), [](KeyedEncoder& encoder, const FormData& formData) {
+    encoder.encodeConditionalObject("formData"_s, const_cast<HistoryItem&>(item).formData(), [](KeyedEncoder& encoder, const FormData& formData) {
         encodeFormData(formData, encoder);
     });
 
-    encoder.encodeInt64("itemSequenceNumber", item.itemSequenceNumber());
+    encoder.encodeInt64("itemSequenceNumber"_s, item.itemSequenceNumber());
 
-    encoder.encodeString("referrer", item.referrer());
+    encoder.encodeString("referrer"_s, item.referrer());
 
-    encoder.encodeObject("scrollPosition", item.scrollPosition(), [](KeyedEncoder& encoder, const IntPoint& scrollPosition) {
-        encoder.encodeInt32("x", scrollPosition.x());
-        encoder.encodeInt32("y", scrollPosition.y());
+    encoder.encodeObject("scrollPosition"_s, item.scrollPosition(), [](KeyedEncoder& encoder, const IntPoint& scrollPosition) {
+        encoder.encodeInt32("x"_s, scrollPosition.x());
+        encoder.encodeInt32("y"_s, scrollPosition.y());
     });
 
-    encoder.encodeFloat("pageScaleFactor", item.pageScaleFactor());
+    encoder.encodeFloat("pageScaleFactor"_s, item.pageScaleFactor());
 
-    encoder.encodeConditionalObject("stateObject", item.stateObject(), [](KeyedEncoder& encoder, const SerializedScriptValue& stateObject) {
-        encoder.encodeBytes("data", stateObject.wireBytes().data(), stateObject.wireBytes().size());
+    encoder.encodeConditionalObject("stateObject"_s, item.stateObject(), [](KeyedEncoder& encoder, const SerializedScriptValue& stateObject) {
+        encoder.encodeBytes("data"_s, stateObject.wireBytes().data(), stateObject.wireBytes().size());
     });
 
-    encoder.encodeString("target", item.target());
+    encoder.encodeString("target"_s, item.target());
 }
 
 void encodeBackForwardTree(KeyedEncoderQt& encoder, const HistoryItem& item)
 {
-    encoder.encodeString("title", item.title());
+    encoder.encodeString("title"_s, item.title());
     encodeBackForwardTreeNode(encoder, item);
     if (item.userData().isValid())
-        encoder.encodeVariant("userData", item.userData());
+        encoder.encodeVariant("userData"_s, item.userData());
 }
 
 template<typename F>
@@ -216,17 +216,17 @@ bool decodeString(KeyedDecoder& decoder, const String& key, F&& consumer)
 
 static bool decodeBackForwardTreeNode(KeyedDecoder& decoder, HistoryItem& item)
 {
-    if (!decodeString(decoder, "urlString", [&item](String&& str) {
+    if (!decodeString(decoder, "urlString"_s, [&item](String&& str) {
         item.setURLString(str);
     }))
         return false;
 
-    decodeString(decoder, "originalURLString", [&item](String&& str) {
+    decodeString(decoder, "originalURLString"_s, [&item](String&& str) {
         item.setOriginalURLString(str);
     });
 
     Vector<int> ignore;
-    decoder.decodeObjects("children", ignore, [&item](KeyedDecoder& decoder, int&) {
+    decoder.decodeObjects("children"_s, ignore, [&item](KeyedDecoder& decoder, int&) {
         Ref<HistoryItem> element = HistoryItem::create();
         if (decodeBackForwardTreeNode(decoder, element)) {
             item.addChildItem(WTFMove(element));
@@ -236,61 +236,62 @@ static bool decodeBackForwardTreeNode(KeyedDecoder& decoder, HistoryItem& item)
     });
 
     int64_t documentSequenceNumber;
-    if (decoder.decodeInt64("documentSequenceNumber", documentSequenceNumber))
+    if (decoder.decodeInt64("documentSequenceNumber"_s, documentSequenceNumber))
         item.setDocumentSequenceNumber(documentSequenceNumber);
 
-    Vector<String> documentState;
-    decoder.decodeObjects("documentState", documentState, [](KeyedDecoder& decoder, String& string) -> bool {
-        return decoder.decodeString("string", string);
+    Vector<AtomString> documentState;
+    decoder.decodeObjects("documentState"_s, documentState, [](KeyedDecoder& decoder, AtomString& string) -> bool {
+        String s { string };
+        return decoder.decodeString("string"_s, s);
     });
     item.setDocumentState(documentState);
 
-    decodeString(decoder, "formContentType", [&item](String&& str) {
+    decodeString(decoder, "formContentType"_s, [&item](String&& str) {
         item.setFormContentType(str);
     });
 
     RefPtr<FormData> formData;
-    if (decoder.decodeObject("formData", formData, [](KeyedDecoder& decoder, RefPtr<FormData>& formData) {
+    if (decoder.decodeObject("formData"_s, formData, [](KeyedDecoder& decoder, RefPtr<FormData>& formData) {
         formData = decodeFormData(decoder);
         return formData != nullptr;
     }))
         item.setFormData(WTFMove(formData));
 
     int64_t itemSequenceNumber;
-    if (decoder.decodeInt64("itemSequenceNumber", itemSequenceNumber))
+    if (decoder.decodeInt64("itemSequenceNumber"_s, itemSequenceNumber))
         item.setItemSequenceNumber(itemSequenceNumber);
 
-    decodeString(decoder, "referrer", [&item](String&& str) {
+    decodeString(decoder, "referrer"_s, [&item](String&& str) {
         item.setReferrer(str);
     });
 
     int ignore2;
-    decoder.decodeObject("scrollPosition", ignore2, [&item](KeyedDecoder& decoder, int&) -> bool {
+    decoder.decodeObject("scrollPosition"_s, ignore2, [&item](KeyedDecoder& decoder, int&) -> bool {
         int x, y;
-        if (!decoder.decodeInt32("x", x))
+        if (!decoder.decodeInt32("x"_s, x))
             return false;
-        if (!decoder.decodeInt32("y", y))
+        if (!decoder.decodeInt32("y"_s, y))
             return false;
         item.setScrollPosition(IntPoint(x, y));
         return true;
     });
 
     float pageScaleFactor;
-    if (decoder.decodeFloat("pageScaleFactor", pageScaleFactor))
+    if (decoder.decodeFloat("pageScaleFactor"_s, pageScaleFactor))
         item.setPageScaleFactor(pageScaleFactor);
 
     RefPtr<SerializedScriptValue> stateObject;
-    decoder.decodeConditionalObject("stateObject", stateObject, [](KeyedDecoder& decoder, RefPtr<SerializedScriptValue>& stateObject) -> bool {
+    decoder.decodeConditionalObject("stateObject"_s, stateObject, [](KeyedDecoder& decoder, RefPtr<SerializedScriptValue>& stateObject) -> bool {
         Vector<uint8_t> bytes;
-        if (decoder.decodeBytes("data", bytes)) {
+        if (decoder.decodeBytes("data"_s, bytes)) {
             stateObject = SerializedScriptValue::createFromWireBytes(WTFMove(bytes));
             return true;
         }
         return false;
     });
 
-    decodeString(decoder, "target", [&item](String&& str) {
-        item.setTarget(str);
+    decodeString(decoder, "target"_s, [&item](String&& str) {
+        item.setTarget(AtomString(str));
     });
 
     return true;
@@ -298,13 +299,13 @@ static bool decodeBackForwardTreeNode(KeyedDecoder& decoder, HistoryItem& item)
 
 bool decodeBackForwardTree(KeyedDecoderQt& decoder, HistoryItem& item)
 {
-    if (!decodeString(decoder, "title", [&item](String&& str) {
+    if (!decodeString(decoder, "title"_s, [&item](String&& str) {
         item.setTitle(str);
     }))
         return false;
 
     QVariant userData;
-    if (decoder.decodeVariant("userData", userData))
+    if (decoder.decodeVariant("userData"_s, userData))
         item.setUserData(userData);
 
     return decodeBackForwardTreeNode(decoder, item);

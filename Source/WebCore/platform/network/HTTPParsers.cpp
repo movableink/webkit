@@ -327,7 +327,7 @@ ContentDispositionType contentDispositionType(const String& contentDisposition)
     String dispositionType = parameters[0];
     dispositionType.stripWhiteSpace();
 
-    if (equalLettersIgnoringASCIICase(dispositionType, "inline"))
+    if (equalLettersIgnoringASCIICase(dispositionType, "inline"_s))
         return ContentDispositionInline;
 
     // Some broken sites just send bogus headers like

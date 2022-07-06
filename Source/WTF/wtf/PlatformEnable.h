@@ -100,6 +100,11 @@
 #include <wtf/PlatformEnablePlayStation.h>
 #endif
 
+/* --------- Qt port --------- */
+#if PLATFORM(QT)
+#include <wtf/PlatformEnableQt.h>
+#endif
+
 /* ---------  ENABLE macro defaults --------- */
 
 /* Do not use PLATFORM() tests in this section ! */

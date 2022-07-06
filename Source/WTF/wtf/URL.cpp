@@ -274,7 +274,7 @@ String URL::fileSystemPath() const
         return QUrl(*this).toLocalFile();
 
     // A valid qrc resource path begins with a colon.
-    if (protocolIs("qrc"))
+    if (protocolIs("qrc"_s))
         return ":" + decodeEscapeSequencesFromParsedURL(StringView(path()));
 
     return String();

@@ -34,8 +34,8 @@ public:
     SelectData(WebCore::PopupMenuClient*& data) : d(data) { }
 
     ItemType itemType(int) const override;
-    QString itemText(int idx) const override { return QString(d ? d->itemText(idx) : ""); }
-    QString itemToolTip(int idx) const override { return QString(d ? d->itemToolTip(idx) : ""); }
+    QString itemText(int idx) const override { return QString(d ? d->itemText(idx) : ""_s); }
+    QString itemToolTip(int idx) const override { return QString(d ? d->itemToolTip(idx) : ""_s); }
     bool itemIsEnabled(int idx) const override { return d ? d->itemIsEnabled(idx) : false; }
     int itemCount() const override { return d ? d->listSize() : 0; }
     bool itemIsSelected(int idx) const override { return d ? d->itemIsSelected(idx) : false; }

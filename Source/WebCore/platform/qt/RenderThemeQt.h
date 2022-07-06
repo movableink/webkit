@@ -102,8 +102,6 @@ public:
 #endif
 
 protected:
-    void updateCachedSystemFontDescription(CSSValueID systemFontID, FontCascadeDescription&) const override;
-
     bool paintCheckbox(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     void setCheckboxSize(RenderStyle&) const override;
 
@@ -142,6 +140,8 @@ protected:
 #ifndef QT_NO_SPINBOX
     void adjustInnerSpinButtonStyle(RenderStyle&, const Element*) const override;
 #endif
+
+    String m_mediaControlsStyleSheet;
 
 #if 0 //ENABLE(VIDEO)
     virtual bool paintMediaFullscreenButton(const RenderObject&, const PaintInfo&, const IntRect&);

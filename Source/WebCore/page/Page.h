@@ -689,10 +689,6 @@ public:
 
     void didFinishLoadingImageForElement(HTMLImageElement&);
 
-#if PLATFORM(QT)
-    void pluginVisibilityChanged(bool visible);
-#endif // PLATFORM(QT)
-
     WEBCORE_EXPORT void addLayoutMilestones(OptionSet<LayoutMilestone>);
     WEBCORE_EXPORT void removeLayoutMilestones(OptionSet<LayoutMilestone>);
     OptionSet<LayoutMilestone> requestedLayoutMilestones() const { return m_requestedLayoutMilestones; }

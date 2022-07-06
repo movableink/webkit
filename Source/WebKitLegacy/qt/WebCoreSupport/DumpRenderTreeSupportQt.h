@@ -94,7 +94,7 @@ public:
     static void executeCoreCommandByName(QWebPageAdapter*, const QString& name, const QString& value);
     static bool isCommandEnabled(QWebPageAdapter*, const QString& name);
     static QVariantList selectedRange(QWebPageAdapter*);
-    static QVariantList firstRectForCharacterRange(QWebPageAdapter*, int location, int length);
+    static QVariantList firstRectForCharacterRange(QWebPageAdapter*, uint64_t location, uint64_t length);
     static void confirmComposition(QWebPageAdapter*, const char* text);
 
     static void setDomainRelaxationForbiddenForURLScheme(bool forbidden, const QString& scheme);

@@ -93,7 +93,7 @@ QNetworkRequest ResourceRequest::toNetworkRequest(NetworkingContext *context) co
 
 #if USE(HTTP2)
     static const bool NegotiateHttp2ForHttps = alpnIsSupported();
-    if (originalUrl.protocolIs("https") && NegotiateHttp2ForHttps) {
+    if (originalUrl.protocolIs("https"_s) && NegotiateHttp2ForHttps) {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
         static const auto params = createHttp2Configuration();
         request.setHttp2Configuration(params);

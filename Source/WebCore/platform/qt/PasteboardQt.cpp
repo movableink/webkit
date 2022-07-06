@@ -50,12 +50,12 @@ namespace WebCore {
 
 static bool isTextMimeType(const String& type)
 {
-    return type == "text/plain" || type.startsWith("text/plain;");
+    return type == "text/plain"_s || type.startsWith("text/plain;"_s);
 }
 
 static bool isHtmlMimeType(const String& type)
 {
-    return type == "text/html" || type.startsWith("text/html;");
+    return type == "text/html"_s || type.startsWith("text/html;"_s);
 }
 
 static String normalizeMimeType(const String& type)
@@ -63,9 +63,9 @@ static String normalizeMimeType(const String& type)
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/dnd.html#dom-datatransfer-setdata
     String qType = type.convertToASCIILowercase();
 
-    if (qType == "text")
+    if (qType == "text"_s)
         qType = "text/plain"_s;
-    else if (qType == "url")
+    else if (qType == "url"_s)
         qType = "text/uri-list"_s;
 
     return qType;
@@ -176,7 +176,7 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(Frame& frame, const Simple
     if (mimeData->hasHtml()) {
         QString html = mimeData->html();
         if (!html.isEmpty()) {
-            RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(*frame.document(), html, "", DisallowScriptingAndPluginContent);
+            RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(*frame.document(), html, ""_s, DisallowScriptingAndPluginContent);
             if (fragment)
                 return fragment;
         }
@@ -190,7 +190,7 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(Frame& frame, const Simple
                 title = QStringLiteral(" title=\"") + title + QStringLiteral("\"");
             if (urls.count() == 1) {
                 QString html = QStringLiteral("<img src=\"") + urls.first().toString(QUrl::FullyEncoded) + QStringLiteral("\"") + title + QStringLiteral(">");
-                RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(*frame.document(), html, "", DisallowScriptingAndPluginContent);
+                RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(*frame.document(), html, ""_s, DisallowScriptingAndPluginContent);
                 if (fragment)
                     return fragment;
             }

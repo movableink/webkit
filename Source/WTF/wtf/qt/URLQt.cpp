@@ -29,7 +29,7 @@ namespace WTF {
 URL::URL(const QUrl& url)
 {
     QByteArray encoded = url.toEncoded();
-    URLParser parser(encoded.constData(), { });
+    URLParser parser(String::fromUTF8(encoded.constData()));
     *this = parser.result();
 }
 

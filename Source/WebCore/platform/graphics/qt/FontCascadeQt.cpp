@@ -133,7 +133,7 @@ static void drawQtGlyphRun(GraphicsContext& context, const QGlyphRun& qtGlyphRun
     if (context.hasShadow()) {
         const GraphicsContextState& state = context.state();
         if (context.mustUseShadowBlur()) {
-            ShadowBlur shadow(state);
+            ShadowBlur shadow(context.dropShadow(), context.shadowsIgnoreTransforms());
             const qreal width = qtGlyphRun.boundingRect().width();
             const QRawFont& font = qtGlyphRun.rawFont();
             const qreal height = font.ascent() + font.descent();
@@ -143,7 +143,7 @@ static void drawQtGlyphRun(GraphicsContext& context, const QGlyphRun& qtGlyphRun
                 [state, point, qtGlyphRun, textStrokePath](GraphicsContext& shadowContext)
                 {
                     QPainter* shadowPainter = shadowContext.platformContext()->painter();
-                    shadowPainter->setPen(state.shadowColor);
+                    shadowPainter->setPen(shadowContext.shadowColor());
                     if (shadowContext.textDrawingMode() & TextDrawingMode::Fill)
                         shadowPainter->drawGlyphRun(point, qtGlyphRun);
                     else if (shadowContext.textDrawingMode() & TextDrawingMode::Stroke)
@@ -155,14 +155,14 @@ static void drawQtGlyphRun(GraphicsContext& context, const QGlyphRun& qtGlyphRun
                 });
         } else {
             QPen previousPen = painter->pen();
-            painter->setPen(state.shadowColor);
-            const QPointF shadowOffset(state.shadowOffset.width(), state.shadowOffset.height());
-            painter->translate(shadowOffset);
+            painter->setPen(context.shadowColor());
+            const QPointF offset(context.shadowOffset().width(), context.shadowOffset().height());
+            painter->translate(offset);
             if (context.textDrawingMode() & TextDrawingMode::Fill)
                 painter->drawGlyphRun(point, qtGlyphRun);
             else if (context.textDrawingMode() & TextDrawingMode::Stroke)
                 painter->strokePath(textStrokePath, painter->pen());
-            painter->translate(-shadowOffset);
+            painter->translate(-offset);
             painter->setPen(previousPen);
         }
     }

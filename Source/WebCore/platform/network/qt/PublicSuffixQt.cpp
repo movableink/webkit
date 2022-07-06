@@ -41,14 +41,14 @@ static inline QByteArray asciiStringToByteArrayNoCopy(const String& string)
     return QByteArray::fromRawData(reinterpret_cast<const char*>(string.characters8()), string.length());
 }
 
-static QString fromAce(const String& domain)
+static QString fromAce(StringView domain)
 {
     if (domain.is8Bit())
         return QUrl::fromAce(asciiStringToByteArrayNoCopy(domain.convertToASCIILowercase()));
-    return QString(domain).toLower();
+    return QString(domain.toString()).toLower();
 }
 
-bool isPublicSuffix(const String& domain)
+bool isPublicSuffix(StringView domain)
 {
     if (domain.isEmpty())
         return false;
@@ -64,7 +64,7 @@ String topPrivatelyControlledDomain(const String& domain)
         return domain;
 
     String lowercaseDomain = domain.convertToASCIILowercase();
-    if (lowercaseDomain == "localhost")
+    if (lowercaseDomain == QLatin1String("localhost"))
         return lowercaseDomain;
 
     QString qLowercaseDomain = lowercaseDomain;

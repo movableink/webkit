@@ -127,11 +127,9 @@ void Gradient::createQtGradient()
 
 void Gradient::fill(GraphicsContext& context, const FloatRect& rect)
 {
-    qDebug() << "Gradient::fill" << rect << m_gradient;
     if (m_gradient == nullptr)
         createQtGradient();
 
-    qDebug() << "Gradient::fill after create" << m_gradient;
     context.platformContext()->painter()->fillRect(rect, *m_gradient);
 }
 

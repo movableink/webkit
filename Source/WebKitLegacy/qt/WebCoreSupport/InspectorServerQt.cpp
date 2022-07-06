@@ -240,7 +240,7 @@ void InspectorServerRequestHandlerQt::tcpReadyRead()
             if (file.exists()) {
                 file.open(QIODevice::ReadOnly);
                 response = file.readAll();
-                contentType = MIMETypeRegistry::mimeTypeForPath(StringView(m_path));
+                contentType = MIMETypeRegistry::mimeTypeForPath(String(m_path));
             } else {
                 code = 404;
                 text = QString::fromLatin1("Not OK");

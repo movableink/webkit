@@ -281,7 +281,6 @@ void QWebPageAdapter::initializeWebCorePage()
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
-        getOrCreateWebLockRegistry(isPrivateBrowsingEnabled),
         WebCore::DummyPermissionController::create(),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
         makeUniqueRef<WebCore::DummyModelPlayerProvider>()
@@ -333,7 +332,7 @@ void QWebPageAdapter::initializeWebCorePage()
     // separate settings for each group, so that for instance an integrated browser/email reader
     // can use different settings for displaying HTML pages and HTML email. To make QtWebKit work
     // as expected out of the box, we use a default group similar to what other ports are doing.
-    page->setGroupName("Default Group");
+    page->setGroupName("Default Group"_s);
 
     page->addLayoutMilestones(DidFirstVisuallyNonEmptyLayout);
 
@@ -395,13 +394,6 @@ void QWebPageAdapter::setVisibilityState(VisibilityState state)
 QWebPageAdapter::VisibilityState QWebPageAdapter::visibilityState() const
 {
     return webCoreVisibilityStateToWebPageVisibilityState(page->visibilityState());
-}
-
-void QWebPageAdapter::setPluginsVisible(bool visible)
-{
-    if (!page)
-        return;
-    page->pluginVisibilityChanged(visible);
 }
 
 void QWebPageAdapter::setNetworkAccessManager(QNetworkAccessManager *manager)
@@ -993,10 +985,10 @@ QStringList QWebPageAdapter::supportedContentTypes() const
     QStringList mimeTypes;
 
     for (auto& type : MIMETypeRegistry::supportedImageMIMETypes())
-        mimeTypes << type;
+        mimeTypes << String(type);
 
     for (auto& type : MIMETypeRegistry::supportedNonImageMIMETypes())
-        mimeTypes << type;
+        mimeTypes << String(type);
 
     return mimeTypes;
 }
@@ -1067,7 +1059,7 @@ void QWebPageAdapter::updateActionInternal(QWebPageAdapter::MenuAction action, c
 
         // if it's an editor command, let its logic determine state
         if (commandName) {
-            Editor::Command command = editor.command(commandName);
+            Editor::Command command = editor.command(String::fromLatin1(commandName));
             *enabled = command.isEnabled();
             if (*enabled)
                 *checked = command.state() != TriState::False;
@@ -1202,7 +1194,7 @@ void QWebPageAdapter::triggerAction(QWebPageAdapter::MenuAction action, QWebHitT
     }
     default:
         if (commandName)
-            editor.command(commandName).execute();
+            editor.command(String::fromLatin1(commandName)).execute();
         break;
     }
 }
@@ -1340,12 +1332,12 @@ void QWebPageAdapter::setGeolocationEnabledForFrame(QWebFrameAdapter* frame, boo
 
 QString QWebPageAdapter::defaultUserAgentString()
 {
-    return UserAgentQt::standardUserAgent("");
+    return UserAgentQt::standardUserAgent(""_s);
 }
 
 bool QWebPageAdapter::treatSchemeAsLocal(const QString& scheme)
 {
-    return WebCore::LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(scheme);
+    return WebCore::LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(String(scheme));
 }
 
 QObject* QWebPageAdapter::currentFrame() const

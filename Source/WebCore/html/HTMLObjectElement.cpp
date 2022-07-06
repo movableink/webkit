@@ -165,7 +165,6 @@ void HTMLObjectElement::parametersForPlugin(Vector<AtomString>& paramNames, Vect
         // FIXME: url adjustment does not belong in this function.
         if (url.isEmpty() && urlParameter.isEmpty() && (equalLettersIgnoringASCIICase(name, "src"_s) || equalLettersIgnoringASCIICase(name, "movie"_s) || equalLettersIgnoringASCIICase(name, "code"_s) || equalLettersIgnoringASCIICase(name, "url"_s)))
             urlParameter = stripLeadingAndTrailingHTMLSpaces(param.value());
-        }
         // FIXME: serviceType calculation does not belong in this function.
         if (serviceType.isEmpty() && equalLettersIgnoringASCIICase(name, "type"_s)) {
             serviceType = param.value();
@@ -474,3 +473,4 @@ bool HTMLObjectElement::canContainRangeEndPoint() const
 }
 
 }
+

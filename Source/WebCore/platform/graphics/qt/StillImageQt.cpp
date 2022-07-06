@@ -81,11 +81,11 @@ ImageDrawResult StillImage::draw(GraphicsContext& ctxt, const FloatRect& dst, co
     normalizedSrc.scale(m_image->devicePixelRatio());
 
     CompositeOperator previousOperator = ctxt.compositeOperation();
-    BlendMode previousBlendMode = ctxt.blendModeOperation();
+    BlendMode previousBlendMode = ctxt.blendMode();
     ctxt.setCompositeOperation(options.compositeOperator(), options.blendMode());
 
     if (false && ctxt.hasShadow()) {
-        ShadowBlur shadow(ctxt.state());
+        ShadowBlur shadow(ctxt.dropShadow(), ctxt.shadowsIgnoreTransforms());
         const auto& pixmap = *m_image;
         shadow.drawShadowLayer(ctxt.getCTM(), ctxt.clipBounds(), normalizedDst,
             [normalizedSrc, normalizedDst, &pixmap](GraphicsContext& shadowContext)

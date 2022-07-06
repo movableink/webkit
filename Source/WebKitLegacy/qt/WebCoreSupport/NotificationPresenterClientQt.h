@@ -84,7 +84,7 @@ public:
     ~NotificationPresenterClientQt();
 
     /* WebCore::NotificationClient interface */
-    bool show(Notification&) override;
+    bool show(Notification&, CompletionHandler<void()>&&) override;
     void cancel(Notification&) override;
     void notificationObjectDestroyed(Notification&) override;
     void notificationControllerDestroyed() override;

@@ -46,11 +46,6 @@ namespace WebCore {
 
 RefPtr<JSC::Bindings::Instance> ScriptController::createScriptInstanceForWidget(Widget* widget)
 {
-    if (widget->isPluginViewBase()) {
-        PluginViewBase* pluginView = downcast<PluginViewBase>(widget);
-        return pluginView->bindingInstance();
-    }
-
     QObject* object = widget->bindingObject();
 
     if (!object)

@@ -120,7 +120,7 @@ static const URLSchemesMap& builtinLocalURLSchemes() WTF_REQUIRES_LOCK(schemeReg
         "applewebdata"_s,
 #endif
 #if PLATFORM(QT)
-        "qrc",
+        "qrc"_s,
 #endif
     };
     return schemes;

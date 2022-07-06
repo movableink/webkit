@@ -167,16 +167,19 @@ void NotificationPresenterClientQt::removeClient()
     }
 }
 
-bool NotificationPresenterClientQt::show(Notification& notification)
+bool NotificationPresenterClientQt::show(Notification& notification, CompletionHandler<void()>&& completionHandler)
 {
     // FIXME: workers based notifications are not supported yet.
-    if (notification.scriptExecutionContext()->isWorkerGlobalScope())
+    if (notification.scriptExecutionContext()->isWorkerGlobalScope()) {
+        completionHandler();
         return false;
+    }
     if (!notification.tag().isEmpty())
         removeReplacedNotificationFromQueue(&notification);
     if (dumpNotification)
         dumpShowText(notification);
     displayNotification(notification);
+    completionHandler();
     return true;
 }
 
@@ -321,7 +324,7 @@ void NotificationPresenterClientQt::sendDisplayEvent(NotificationWrapper* wrappe
 {
     Notification* notification = notificationForWrapper(wrapper);
     if (notification)
-        sendEvent(notification, "show");
+        sendEvent(notification, "show"_s);
 }
 
 void NotificationPresenterClientQt::sendEvent(Notification* notification, const AtomString& eventName)

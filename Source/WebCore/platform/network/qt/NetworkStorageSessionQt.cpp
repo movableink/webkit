@@ -119,45 +119,50 @@ void NetworkStorageSession::setCookie(const Cookie&)
     // FIXME: Implement for WebKit to use.
 }
 
-void NetworkStorageSession::deleteCookie(const Cookie&)
+void NetworkStorageSession::deleteCookie(const Cookie&, CompletionHandler<void()>&& handler)
 {
     // FIXME: Implement for WebKit to use.
+    handler();
 }
 
-void NetworkStorageSession::deleteCookie(const URL& url, const String& cookie) const
+void NetworkStorageSession::deleteCookie(const URL& url, const String& cookie, CompletionHandler<void()>&& handler) const
 {
-    //cookieStorage().deleteCookie(*this, url, cookie);
+    // FIXME: Implement for WebKit to use.
+    handler();
 }
 
-void NetworkStorageSession::deleteAllCookies()
+void NetworkStorageSession::deleteAllCookies(CompletionHandler<void()>&& handler)
 {
     ASSERT(!m_cookieJar); // Not yet implemented for cookie jars other than the shared one.
     SharedCookieJarQt* jar = SharedCookieJarQt::shared();
     if (jar)
         jar->deleteAllCookies();
+
+    handler();
 }
 
-void NetworkStorageSession::deleteAllCookiesModifiedSince(WallTime time)
+void NetworkStorageSession::deleteAllCookiesModifiedSince(WallTime time, CompletionHandler<void()>&& handler)
 {
     ASSERT(!m_cookieJar); // Not yet implemented for cookie jars other than the shared one.
     SharedCookieJarQt* jar = SharedCookieJarQt::shared();
     if (jar)
         jar->deleteAllCookiesModifiedSince(time);
+
+    handler();
 }
 
-void NetworkStorageSession::deleteCookiesForHostnames(const Vector<String>& hostnames, IncludeHttpOnlyCookies includeHttpOnlyCookies)
+void NetworkStorageSession::deleteCookiesForHostnames(const Vector<String>& hostnames, IncludeHttpOnlyCookies includeHttpOnlyCookies, ScriptWrittenCookiesOnly scriptWrittenCookiesOnly, CompletionHandler<void()>&& handler)
 {
     // QTFIXME: Not yet implemented.
     UNUSED_PARAM(includeHttpOnlyCookies);
-    deleteCookiesForHostnames(hostnames);
-}
+    UNUSED_PARAM(scriptWrittenCookiesOnly);
 
-void NetworkStorageSession::deleteCookiesForHostnames(const Vector<String>& hostNames)
-{
     ASSERT(!m_cookieJar); // Not yet implemented for cookie jars other than the shared one.
     SharedCookieJarQt* jar = SharedCookieJarQt::shared();
     if (jar)
-        jar->deleteCookiesForHostnames(hostNames);
+        jar->deleteCookiesForHostnames(hostnames);
+
+    handler();
 }
 
 Vector<Cookie> NetworkStorageSession::getAllCookies()
@@ -185,11 +190,6 @@ bool NetworkStorageSession::getRawCookies(const URL& firstParty, const SameSiteI
     // QTFIXME: Not yet implemented
     rawCookies.clear();
     return false; // return true when implemented
-}
-
-void NetworkStorageSession::flushCookieStore()
-{
-    // FIXME: Implement for WebKit to use.
 }
 
 std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, IncludeSecureCookies includeSecureCookies, ShouldAskITP,  ShouldRelaxThirdPartyCookieBlocking) const

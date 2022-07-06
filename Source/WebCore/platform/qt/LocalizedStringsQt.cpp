@@ -542,7 +542,7 @@ String AXFigureText()
     return String();
 }
 
-String AXARIAContentGroupText(const String&)
+String AXARIAContentGroupText(StringView)
 {
     notImplemented();
     return String();
@@ -626,39 +626,39 @@ String mediaElementLiveBroadcastStateText()
 
 String localizedMediaControlElementString(const String& name)
 {
-    if (name == "AudioElement")
+    if (name == "AudioElement"_s)
         return QCoreApplication::translate("QWebPage", "Audio Element", "Media controller element");
-    if (name == "VideoElement")
+    if (name == "VideoElement"_s)
         return QCoreApplication::translate("QWebPage", "Video Element", "Media controller element");
-    if (name == "MuteButton")
+    if (name == "MuteButton"_s)
         return QCoreApplication::translate("QWebPage", "Mute Button", "Media controller element");
-    if (name == "UnMuteButton")
+    if (name == "UnMuteButton"_s)
         return QCoreApplication::translate("QWebPage", "Unmute Button", "Media controller element");
-    if (name == "PlayButton")
+    if (name == "PlayButton"_s)
         return QCoreApplication::translate("QWebPage", "Play Button", "Media controller element");
-    if (name == "PauseButton")
+    if (name == "PauseButton"_s)
         return QCoreApplication::translate("QWebPage", "Pause Button", "Media controller element");
-    if (name == "Slider")
+    if (name == "Slider"_s)
         return QCoreApplication::translate("QWebPage", "Slider", "Media controller element");
-    if (name == "SliderThumb")
+    if (name == "SliderThumb"_s)
         return QCoreApplication::translate("QWebPage", "Slider Thumb", "Media controller element");
-    if (name == "RewindButton")
+    if (name == "RewindButton"_s)
         return QCoreApplication::translate("QWebPage", "Rewind Button", "Media controller element");
-    if (name == "ReturnToRealtimeButton")
+    if (name == "ReturnToRealtimeButton"_s)
         return QCoreApplication::translate("QWebPage", "Return to Real-time Button", "Media controller element");
-    if (name == "CurrentTimeDisplay")
+    if (name == "CurrentTimeDisplay"_s)
         return QCoreApplication::translate("QWebPage", "Elapsed Time", "Media controller element");
-    if (name == "TimeRemainingDisplay")
+    if (name == "TimeRemainingDisplay"_s)
         return QCoreApplication::translate("QWebPage", "Remaining Time", "Media controller element");
-    if (name == "StatusDisplay")
+    if (name == "StatusDisplay"_s)
         return QCoreApplication::translate("QWebPage", "Status Display", "Media controller element");
-    if (name == "EnterFullscreenButton")
+    if (name == "EnterFullscreenButton"_s)
         return QCoreApplication::translate("QWebPage", "EnterFullscreen Button", "Media controller element");
-    if (name == "ExitFullscreenButton")
+    if (name == "ExitFullscreenButton"_s)
         return QCoreApplication::translate("QWebPage", "ExitFullscreen Button", "Media controller element");
-    if (name == "SeekForwardButton")
+    if (name == "SeekForwardButton"_s)
         return QCoreApplication::translate("QWebPage", "Seek Forward Button", "Media controller element");
-    if (name == "SeekBackButton")
+    if (name == "SeekBackButton"_s)
         return QCoreApplication::translate("QWebPage", "Seek Back Button", "Media controller element");
 
     return String();
@@ -666,39 +666,39 @@ String localizedMediaControlElementString(const String& name)
 
 String localizedMediaControlElementHelpText(const String& name)
 {
-    if (name == "AudioElement")
+    if (name == "AudioElement"_s)
         return QCoreApplication::translate("QWebPage", "Audio element playback controls and status display", "Media controller element");
-    if (name == "VideoElement")
+    if (name == "VideoElement"_s)
         return QCoreApplication::translate("QWebPage", "Video element playback controls and status display", "Media controller element");
-    if (name == "MuteButton")
+    if (name == "MuteButton"_s)
         return QCoreApplication::translate("QWebPage", "Mute audio tracks", "Media controller element");
-    if (name == "UnMuteButton")
+    if (name == "UnMuteButton"_s)
         return QCoreApplication::translate("QWebPage", "Unmute audio tracks", "Media controller element");
-    if (name == "PlayButton")
+    if (name == "PlayButton"_s)
         return QCoreApplication::translate("QWebPage", "Begin playback", "Media controller element");
-    if (name == "PauseButton")
+    if (name == "PauseButton"_s)
         return QCoreApplication::translate("QWebPage", "Pause playback", "Media controller element");
-    if (name == "Slider")
+    if (name == "Slider"_s)
         return QCoreApplication::translate("QWebPage", "Movie time scrubber", "Media controller element");
-    if (name == "SliderThumb")
+    if (name == "SliderThumb"_s)
         return QCoreApplication::translate("QWebPage", "Movie time scrubber thumb", "Media controller element");
-    if (name == "RewindButton")
+    if (name == "RewindButton"_s)
         return QCoreApplication::translate("QWebPage", "Rewind movie", "Media controller element");
-    if (name == "ReturnToRealtimeButton")
+    if (name == "ReturnToRealtimeButton"_s)
         return QCoreApplication::translate("QWebPage", "Return streaming movie to real-time", "Media controller element");
-    if (name == "CurrentTimeDisplay")
+    if (name == "CurrentTimeDisplay"_s)
         return QCoreApplication::translate("QWebPage", "Current movie time", "Media controller element");
-    if (name == "TimeRemainingDisplay")
+    if (name == "TimeRemainingDisplay"_s)
         return QCoreApplication::translate("QWebPage", "Remaining movie time", "Media controller element");
-    if (name == "StatusDisplay")
+    if (name == "StatusDisplay"_s)
         return QCoreApplication::translate("QWebPage", "Current movie status", "Media controller element");
-    if (name == "EnterFullscreenButton")
+    if (name == "EnterFullscreenButton"_s)
         return QCoreApplication::translate("QWebPage", "Play movie in full-screen mode", "Media controller element");
-    if (name == "ExitFullscreenButton")
+    if (name == "ExitFullscreenButton"_s)
         return QCoreApplication::translate("QWebPage", "Exit full-screen mode", "Media controller element");
-    if (name == "SeekForwardButton")
+    if (name == "SeekForwardButton"_s)
         return QCoreApplication::translate("QWebPage", "Seek quickly back", "Media controller element");
-    if (name == "SeekBackButton")
+    if (name == "SeekBackButton"_s)
         return QCoreApplication::translate("QWebPage", "Seek quickly forward", "Media controller element");
 
     ASSERT_NOT_REACHED();

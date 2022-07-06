@@ -355,7 +355,7 @@ void QNetworkReplyWrapper::receiveMetaData()
     stopForwarding();
 
     WTF::String contentType = m_reply->header(QNetworkRequest::ContentTypeHeader).toString();
-    m_encoding = extractCharsetFromMediaType(contentType);
+    m_encoding = extractCharsetFromMediaType(contentType).toString();
     m_advertisedMIMEType = extractMIMETypeFromMediaType(contentType);
 
     m_redirectionTargetUrl = m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
@@ -449,20 +449,20 @@ String QNetworkReplyHandler::httpMethod() const
 {
     switch (m_method) {
     case QNetworkAccessManager::GetOperation:
-        return "GET";
+        return "GET"_s;
     case QNetworkAccessManager::HeadOperation:
-        return "HEAD";
+        return "HEAD"_s;
     case QNetworkAccessManager::PostOperation:
-        return "POST";
+        return "POST"_s;
     case QNetworkAccessManager::PutOperation:
-        return "PUT";
+        return "PUT"_s;
     case QNetworkAccessManager::DeleteOperation:
-        return "DELETE";
+        return "DELETE"_s;
     case QNetworkAccessManager::CustomOperation:
-        return m_resourceHandle->firstRequest().httpMethod();
+        return String(m_resourceHandle->firstRequest().httpMethod());
     default:
         ASSERT_NOT_REACHED();
-        return "GET";
+        return "GET"_s;
     }
 }
 
@@ -475,15 +475,15 @@ QNetworkReplyHandler::QNetworkReplyHandler(ResourceHandle* handle, LoadType load
 {
     const ResourceRequest &r = m_resourceHandle->firstRequest();
 
-    if (r.httpMethod() == "GET")
+    if (r.httpMethod() == "GET"_s)
         m_method = QNetworkAccessManager::GetOperation;
-    else if (r.httpMethod() == "HEAD")
+    else if (r.httpMethod() == "HEAD"_s)
         m_method = QNetworkAccessManager::HeadOperation;
-    else if (r.httpMethod() == "POST")
+    else if (r.httpMethod() == "POST"_s)
         m_method = QNetworkAccessManager::PostOperation;
-    else if (r.httpMethod() == "PUT")
+    else if (r.httpMethod() == "PUT"_s)
         m_method = QNetworkAccessManager::PutOperation;
-    else if (r.httpMethod() == "DELETE" && !r.httpBody()) // A delete with a body is a custom operation.
+    else if (r.httpMethod() == "DELETE"_s && !r.httpBody()) // A delete with a body is a custom operation.
         m_method = QNetworkAccessManager::DeleteOperation;
     else
         m_method = QNetworkAccessManager::CustomOperation;
@@ -578,7 +578,7 @@ void QNetworkReplyHandler::timeout()
 
     ASSERT(m_replyWrapper->reply());
 
-    ResourceError timeoutError("QtNetwork", QNetworkReply::TimeoutError, m_replyWrapper->reply()->url(), "Request timed out");
+    ResourceError timeoutError("QtNetwork"_s, QNetworkReply::TimeoutError, URL(String(m_replyWrapper->reply()->url().toString())), "Request timed out"_s);
     timeoutError.setType(ResourceErrorBase::Type::Timeout);
     client->didFail(m_resourceHandle, timeoutError);
 
@@ -608,7 +608,7 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
 
     if (mimeType.isEmpty()) {
         // let's try to guess from the extension
-        mimeType = MIMETypeRegistry::mimeTypeForPath(StringView(m_replyWrapper->reply()->url().path()));
+        mimeType = MIMETypeRegistry::mimeTypeForPath(String(m_replyWrapper->reply()->url().path()));
     }
 
     URL url(m_replyWrapper->reply()->url());
@@ -622,7 +622,7 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
         // The status code is equal to 0 for protocols not in the HTTP family.
         int statusCode = m_replyWrapper->reply()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         response.setHTTPStatusCode(statusCode);
-        response.setHTTPStatusText(m_replyWrapper->reply()->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toByteArray().constData());
+        response.setHTTPStatusText(AtomString::fromLatin1(m_replyWrapper->reply()->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toByteArray().constData()));
 
         // Add remaining headers.
         foreach (const QNetworkReply::RawHeaderPair& pair, m_replyWrapper->reply()->rawHeaderPairs())
@@ -684,9 +684,9 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
 
     m_redirectionTries--;
     if (!m_redirectionTries) {
-        ResourceError error("HTTP", 400 /*bad request*/,
-                            newUrl,
-                            QCoreApplication::translate("QWebPage", "Redirection limit reached"));
+        ResourceError error("HTTP"_s, 400 /*bad request*/,
+                            URL(String(newUrl.toString())),
+                            String(QCoreApplication::translate("QWebPage", "Redirection limit reached")));
         client->didFail(m_resourceHandle, error);
         m_replyWrapper = nullptr;
         return;
@@ -696,7 +696,7 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
     //    - If original request is POST convert to GET and redirect automatically
     //  Status Code 307 (Temporary Redirect) and all other redirect status codes:
     //    - Use the HTTP method from the previous request
-    if ((statusCode >= 301 && statusCode <= 303) && m_resourceHandle->firstRequest().httpMethod() == "POST")
+    if ((statusCode >= 301 && statusCode <= 303) && m_resourceHandle->firstRequest().httpMethod() == "POST"_s)
         m_method = QNetworkAccessManager::GetOperation;
 
     ResourceRequest newRequest = m_resourceHandle->firstRequest();
@@ -704,7 +704,7 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
     newRequest.setURL(newUrl);
 
     // Should not set Referer after a redirect from a secure resource to non-secure one.
-    if (!newRequest.url().protocolIs("https") && protocolIs(newRequest.httpReferrer(), "https") && m_resourceHandle->context()->shouldClearReferrerOnHTTPSToHTTPRedirect())
+    if (!newRequest.url().protocolIs("https"_s) && protocolIs(newRequest.httpReferrer(), "https"_s) && m_resourceHandle->context()->shouldClearReferrerOnHTTPSToHTTPRedirect())
         newRequest.clearHTTPReferrer();
 
     setLoadingDeferred(true);
@@ -888,9 +888,9 @@ ResourceError QNetworkReplyHandler::errorForReply(QNetworkReply* reply)
     int httpStatusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     if (httpStatusCode)
-        return ResourceError("HTTP", httpStatusCode, url, reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString());
+        return ResourceError("HTTP"_s, httpStatusCode, URL(String(url.toString())), String(reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString()));
 
-    return ResourceError("QtNetwork", reply->error(), url, reply->errorString());
+    return ResourceError("QtNetwork"_s, reply->error(), URL(String(url.toString())), String(reply->errorString()));
 }
 
 }

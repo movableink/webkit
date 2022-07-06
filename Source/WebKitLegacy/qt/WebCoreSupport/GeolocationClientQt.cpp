@@ -101,7 +101,7 @@ void GeolocationClientQt::startUpdating(const String&, bool)
 
     if (!m_location) {
         WebCore::Page* page = m_webPage->page;
-        auto error = GeolocationError::create(GeolocationError::PositionUnavailable, failedToStartServiceErrorMessage);
+        auto error = GeolocationError::create(GeolocationError::PositionUnavailable, String::fromLatin1(failedToStartServiceErrorMessage));
         GeolocationController::from(page)->errorOccurred(error.get());
         return;
     }

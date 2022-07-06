@@ -559,13 +559,13 @@ bool FrameLoaderClientQt::canShowMIMEType(const String& MIMEType) const
     return false;
 }
 
-bool FrameLoaderClientQt::representationExistsForURLScheme(const String&) const
+bool FrameLoaderClientQt::representationExistsForURLScheme(StringView) const
 {
     return false;
 }
 
 
-String FrameLoaderClientQt::generatedMIMETypeForURLScheme(const String&) const
+String FrameLoaderClientQt::generatedMIMETypeForURLScheme(StringView) const
 {
     notImplemented();
     return String();
@@ -772,7 +772,7 @@ void FrameLoaderClientQt::committedLoad(WebCore::DocumentLoader* loader, const S
 
 WebCore::ResourceError FrameLoaderClientQt::cancelledError(const WebCore::ResourceRequest& request) const
 {
-    ResourceError error = ResourceError("QtNetwork", QNetworkReply::OperationCanceledError, request.url(),
+    ResourceError error = ResourceError("QtNetwork"_s, QNetworkReply::OperationCanceledError, request.url(),
         QCoreApplication::translate("QWebFrame", "Request cancelled", 0), ResourceError::Type::Cancellation);
     return error;
 }
@@ -791,38 +791,38 @@ enum {
 
 WebCore::ResourceError FrameLoaderClientQt::blockedError(const WebCore::ResourceRequest& request) const
 {
-    return ResourceError("WebKitErrorDomain", WebKitErrorCannotUseRestrictedPort, request.url(),
+    return ResourceError("WebKitErrorDomain"_s, WebKitErrorCannotUseRestrictedPort, request.url(),
         QCoreApplication::translate("QWebFrame", "Request blocked", 0));
 }
 
 
 WebCore::ResourceError FrameLoaderClientQt::cannotShowURLError(const WebCore::ResourceRequest& request) const
 {
-    return ResourceError("WebKitErrorDomain", WebKitErrorCannotShowURL, request.url(),
+    return ResourceError("WebKitErrorDomain"_s, WebKitErrorCannotShowURL, request.url(),
         QCoreApplication::translate("QWebFrame", "Cannot show URL", 0));
 }
 
 WebCore::ResourceError FrameLoaderClientQt::interruptedForPolicyChangeError(const WebCore::ResourceRequest& request) const
 {
-    return ResourceError("WebKitErrorDomain", WebKitErrorFrameLoadInterruptedByPolicyChange, request.url(),
+    return ResourceError("WebKitErrorDomain"_s, WebKitErrorFrameLoadInterruptedByPolicyChange, request.url(),
         QCoreApplication::translate("QWebFrame", "Frame load interrupted by policy change", 0));
 }
 
 WebCore::ResourceError FrameLoaderClientQt::cannotShowMIMETypeError(const WebCore::ResourceResponse& response) const
 {
-    return ResourceError("WebKitErrorDomain", WebKitErrorCannotShowMIMEType, response.url(),
+    return ResourceError("WebKitErrorDomain"_s, WebKitErrorCannotShowMIMEType, response.url(),
         QCoreApplication::translate("QWebFrame", "Cannot show mimetype", 0));
 }
 
 WebCore::ResourceError FrameLoaderClientQt::fileDoesNotExistError(const WebCore::ResourceResponse& response) const
 {
-    return ResourceError("QtNetwork", QNetworkReply::ContentNotFoundError, response.url(),
+    return ResourceError("QtNetwork"_s, QNetworkReply::ContentNotFoundError, response.url(),
         QCoreApplication::translate("QWebFrame", "File does not exist", 0));
 }
 
 WebCore::ResourceError FrameLoaderClientQt::pluginWillHandleLoadError(const WebCore::ResourceResponse& response) const
 {
-    return ResourceError("WebKit", WebKitErrorPluginWillHandleLoad, response.url(),
+    return ResourceError("WebKit"_s, WebKitErrorPluginWillHandleLoad, response.url(),
         QCoreApplication::translate("QWebFrame", "Loading is handled by the media engine", 0));
 }
 
@@ -937,7 +937,7 @@ void FrameLoaderClientQt::dispatchWillSendRequest(WebCore::DocumentLoader*, Reso
     }
 
     for (int i = 0; i < sendRequestClearHeaders.size(); ++i)
-        newRequest.setHTTPHeaderField(sendRequestClearHeaders.at(i).toLocal8Bit().constData(), QString());
+        newRequest.setHTTPHeaderField(String::fromLatin1(sendRequestClearHeaders.at(i).toLocal8Bit().constData()), String());
 
     if (QWebPageAdapter::drtRun) {
         QMap<QString, QString>::const_iterator it = URLsToRedirect.constFind(url.toString());
@@ -975,7 +975,7 @@ void FrameLoaderClientQt::dispatchDidReceiveResponse(WebCore::DocumentLoader*, W
     if (dumpResourceResponseMIMETypes) {
         printf("%s has MIME type %s\n",
             qPrintable(QString(response.url().lastPathComponent().toString())),
-            qPrintable(QString(response.mimeType())));
+            qPrintable(QString(String(response.mimeType()))));
     }
 }
 
@@ -1170,12 +1170,12 @@ void FrameLoaderClientQt::startDownload(const WebCore::ResourceRequest& request,
         m_webFrame->pageAdapter->emitDownloadRequested(r);
 }
 
-RefPtr<Frame> FrameLoaderClientQt::createFrame(const String& name, HTMLFrameOwnerElement& ownerElement)
+RefPtr<Frame> FrameLoaderClientQt::createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement)
 {
     if (!m_webFrame)
         return nullptr;
 
-    QWebFrameData frameData(m_frame->page(), m_frame, &ownerElement, name);
+    QWebFrameData frameData(m_frame->page(), m_frame, &ownerElement, String(name));
 
     QWebFrameAdapter* childWebFrame = m_webFrame->createChildFrame(&frameData);
     // The creation of the frame may have run arbitrary JavaScript that removed it from the page already.
@@ -1215,7 +1215,7 @@ ObjectContentType FrameLoaderClientQt::objectContentType(const URL& url, const S
     if (MIMETypeRegistry::isSupportedNonImageMIMEType(mimeType))
         return ObjectContentType::Frame;
 
-    if (url.protocol() == "about")
+    if (url.protocol() == "about"_s)
         return ObjectContentType::Frame;
 
     return ObjectContentType::None;
@@ -1296,7 +1296,7 @@ private:
 };
 
 
-RefPtr<Widget> FrameLoaderClientQt::createPlugin(const IntSize& pluginSize, HTMLPlugInElement& element, const URL& url, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually)
+RefPtr<Widget> FrameLoaderClientQt::createPlugin(const IntSize& pluginSize, HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually)
 {
     // qDebug()<<"------ Creating plugin in FrameLoaderClientQt::createPlugin for "<<url.string() << mimeType;
     // qDebug()<<"------\t url = "<<url.string();
@@ -1306,15 +1306,15 @@ RefPtr<Widget> FrameLoaderClientQt::createPlugin(const IntSize& pluginSize, HTML
 
     QStringList params;
     QStringList values;
-    QString classid(element.getAttribute("classid").string());
+    QString classid(element.getAttribute("classid"_s).string());
 
     for (unsigned i = 0; i < paramNames.size(); ++i) {
-        params.append(paramNames[i]);
-        if (paramNames[i] == "classid")
-            classid = paramValues[i];
+        params.append(String(paramNames[i]));
+        if (paramNames[i] == "classid"_s)
+            classid = String(paramValues[i]);
     }
     for (unsigned i = 0; i < paramValues.size(); ++i)
-        values.append(paramValues[i]);
+        values.append(String(paramValues[i]));
 
     QString urlStr(url.string());
     QUrl qurl = urlStr;
@@ -1325,10 +1325,10 @@ RefPtr<Widget> FrameLoaderClientQt::createPlugin(const IntSize& pluginSize, HTML
         pluginAdapter = m_webFrame->pageAdapter->createPlugin(classid, qurl, params, values);
 #ifndef QT_NO_STYLE_STYLESHEET
         QtPluginWidgetAdapter* widget = qobject_cast<QtPluginWidgetAdapter*>(pluginAdapter);
-        if (widget && equalLettersIgnoringASCIICase(mimeType, "application/x-qt-styled-widget")) {
+        if (widget && equalLettersIgnoringASCIICase(mimeType, "application/x-qt-styled-widget"_s)) {
 
             StringBuilder styleSheet;
-            styleSheet.append(element.getAttribute("style"));
+            styleSheet.append(element.getAttribute("style"_s));
             if (!styleSheet.isEmpty())
                 styleSheet.append(';');
 

@@ -432,7 +432,7 @@ void EditorClientQt::handleKeyboardEvent(KeyboardEvent& event)
             // WebKit doesn't have enough information about mode to decide how commands that just insert text if executed via Editor should be treated,
             // so we leave it upon WebCore to either handle them immediately (e.g. Tab that changes focus) or let a keypress event be generated
             // (e.g. Tab that inserts a Tab character, or Enter).
-            if (frame.editor().command(cmd).isTextInsertion()
+            if (frame.editor().command(String::fromLatin1(cmd)).isTextInsertion()
                 && kevent->type() == PlatformEvent::RawKeyDown)
                 return;
 
@@ -442,7 +442,7 @@ void EditorClientQt::handleKeyboardEvent(KeyboardEvent& event)
         }
 #endif // QT_NO_SHORTCUT
         {
-            String commandName = editorCommandForKeyDownEvent(&event);
+            String commandName = String::fromLatin1(editorCommandForKeyDownEvent(&event));
             if (!commandName.isEmpty()) {
                 if (frame.editor().command(commandName).execute()) // Event handled.
                     event.setDefaultHandled();
@@ -501,7 +501,7 @@ void EditorClientQt::handleKeyboardEvent(KeyboardEvent& event)
         case VK_PRIOR: // PageUp
         case VK_NEXT: // PageDown
             {
-                String commandName = editorCommandForKeyDownEvent(&event);
+                String commandName = String::fromLatin1(editorCommandForKeyDownEvent(&event));
                 ASSERT(!commandName.isEmpty());
                 frame.editor().command(commandName).execute();
                 event.setDefaultHandled();
@@ -530,30 +530,30 @@ EditorClientQt::EditorClientQt(QWebPageAdapter* pageAdapter)
 {
 }
 
-void EditorClientQt::textFieldDidBeginEditing(Element*)
+void EditorClientQt::textFieldDidBeginEditing(Element&)
 {
     m_editing = true;
 }
 
-void EditorClientQt::textFieldDidEndEditing(Element*)
+void EditorClientQt::textFieldDidEndEditing(Element&)
 {
     m_editing = false;
 }
 
-void EditorClientQt::textDidChangeInTextField(Element*)
+void EditorClientQt::textDidChangeInTextField(Element&)
 {
 }
 
-bool EditorClientQt::doTextFieldCommandFromEvent(Element*, KeyboardEvent*)
+bool EditorClientQt::doTextFieldCommandFromEvent(Element&, KeyboardEvent*)
 {
     return false;
 }
 
-void EditorClientQt::textWillBeDeletedInTextField(Element*)
+void EditorClientQt::textWillBeDeletedInTextField(Element&)
 {
 }
 
-void EditorClientQt::textDidChangeInTextArea(Element*)
+void EditorClientQt::textDidChangeInTextArea(Element&)
 {
 }
 

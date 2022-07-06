@@ -109,7 +109,7 @@ private:
 
         switch (qvariant.type()) {
         case QVariant::Bool:
-            retVal = qvariant.toBool() ? "true" : "false";
+            retVal = qvariant.toBool() ? "true"_s : "false"_s;
             break;
         case QVariant::String:
             retVal = qvariant.toString();
@@ -191,7 +191,7 @@ Inspector::FrontendChannel* InspectorClientQt::openLocalFrontend(WebCore::Inspec
     m_frontendWebPage = inspectorPage;
 
     // Web Inspector should not belong to any other page groups since it is a specialized debugger window.
-    m_frontendWebPage->page->setGroupName("__WebInspectorPageGroup__");
+    m_frontendWebPage->page->setGroupName("__WebInspectorPageGroup__"_s);
     frontendChannel = this;
 
     inspectorPage->mainFrameAdapter().load(QNetworkRequest(inspectorUrl));

@@ -343,7 +343,7 @@ void QWebElement::setAttribute(const QString &name, const QString &value)
 {
     if (!m_element)
         return;
-    m_element->setAttribute(String(name), String(value));
+    m_element->setAttribute(AtomString(name), AtomString(value));
 }
 
 /*!
@@ -357,7 +357,7 @@ void QWebElement::setAttributeNS(const QString &namespaceUri, const QString &nam
 {
     if (!m_element)
         return;
-    m_element->setAttributeNS(String(namespaceUri), String(name), String(value));
+    m_element->setAttributeNS(AtomString(namespaceUri), AtomString(name), AtomString(value));
 }
 
 /*!
@@ -370,8 +370,8 @@ QString QWebElement::attribute(const QString &name, const QString &defaultValue)
 {
     if (!m_element)
         return QString();
-    if (m_element->hasAttribute(String(name)))
-        return m_element->getAttribute(String(name)).string();
+    if (m_element->hasAttribute(AtomString(name)))
+        return m_element->getAttribute(AtomString(name)).string();
     return defaultValue;
 }
 
@@ -385,8 +385,8 @@ QString QWebElement::attributeNS(const QString &namespaceUri, const QString &nam
 {
     if (!m_element)
         return QString();
-    if (m_element->hasAttributeNS(String(namespaceUri), String(name)))
-        return m_element->getAttributeNS(String(namespaceUri), String(name)).string();
+    if (m_element->hasAttributeNS(AtomString(namespaceUri), AtomString(name)))
+        return m_element->getAttributeNS(AtomString(namespaceUri), AtomString(name)).string();
     return defaultValue;
 }
 
@@ -400,7 +400,7 @@ bool QWebElement::hasAttribute(const QString &name) const
 {
     if (!m_element)
         return false;
-    return m_element->hasAttribute(String(name));
+    return m_element->hasAttribute(AtomString(name));
 }
 
 /*!
@@ -413,7 +413,7 @@ bool QWebElement::hasAttributeNS(const QString &namespaceUri, const QString &nam
 {
     if (!m_element)
         return false;
-    return m_element->hasAttributeNS(String(namespaceUri), String(name));
+    return m_element->hasAttributeNS(AtomString(namespaceUri), AtomString(name));
 }
 
 /*!
@@ -425,7 +425,7 @@ void QWebElement::removeAttribute(const QString &name)
 {
     if (!m_element)
         return;
-    m_element->removeAttribute(String(name));
+    m_element->removeAttribute(AtomString(name));
 }
 
 /*!
@@ -438,7 +438,7 @@ void QWebElement::removeAttributeNS(const QString &namespaceUri, const QString &
 {
     if (!m_element)
         return;
-    m_element->removeAttributeNS(String(namespaceUri), String(name));
+    m_element->removeAttributeNS(AtomString(namespaceUri), AtomString(name));
 }
 
 /*!
@@ -1988,13 +1988,13 @@ static QVariant convertJSValueToWebElementVariant(JSC::JSGlobalObject* lexicalGl
     JSC::VM& vm = lexicalGlobalObject->vm();
     Element* element = 0;
     QVariant ret;
-    if (object && object->inherits<JSElement>(vm)) {
+    if (object && object->inherits<JSElement>()) {
         element = JSElement::toWrapped(vm, object);
         *distance = 0;
         // Allow other objects to reach this one. This won't cause our algorithm to
         // loop since when we find an Element we do not recurse.
         visitedObjects->remove(toRef(object));
-    } else if (object && object->inherits<JSElement>(vm)) {
+    } else if (object && object->inherits<JSElement>()) {
         // To support TestRunnerQt::nodesFromRect(), used in DRT, we do an implicit
         // conversion from 'document' to the QWebElement representing the 'document.documentElement'.
         // We can't simply use a QVariantMap in nodesFromRect() because it currently times out

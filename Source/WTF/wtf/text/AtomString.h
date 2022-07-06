@@ -30,6 +30,12 @@
 #include <wtf/text/win/WCharStringExtras.h>
 #endif
 
+#if PLATFORM(QT)
+QT_BEGIN_NAMESPACE
+class QString;
+QT_END_NAMESPACE
+#endif
+
 namespace WTF {
 
 class AtomString final {
@@ -132,6 +138,11 @@ public:
 #ifdef __OBJC__
     AtomString(NSString *);
     operator NSString *() const { return m_string; }
+#endif
+
+#if PLATFORM(QT)
+    WTF_EXPORT_PRIVATE AtomString(const QString&);
+    WTF_EXPORT_PRIVATE AtomString(const QStringRef&);
 #endif
 
 #if OS(WINDOWS)

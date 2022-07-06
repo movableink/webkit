@@ -143,9 +143,7 @@ bool RenderThemeQt::supportsFocusRing(const RenderStyle& style) const
     case PushButtonPart:
     case SquareButtonPart:
     case ButtonPart:
-    case ButtonBevelPart:
     case ListboxPart:
-    case ListItemPart:
     case MenulistPart:
     case MenulistButtonPart:
     case SliderHorizontalPart:
@@ -526,12 +524,22 @@ bool RenderThemeQt::supportsFocus(ControlPart appearance) const
 #if ENABLE(VIDEO)
 String RenderThemeQt::mediaControlsStyleSheet()
 {
-    return String(mediaControlsBaseUserAgentStyleSheet, sizeof(mediaControlsBaseUserAgentStyleSheet));
+#if ENABLE(MODERN_MEDIA_CONTROLS)
+    if (m_mediaControlsStyleSheet.isEmpty())
+        m_mediaControlsStyleSheet = StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
+    return m_mediaControlsStyleSheet;
+#else
+    return emptyString();
+#endif
 }
 
 Vector<String, 2> RenderThemeQt::mediaControlsScripts()
 {
-    return { mediaControlsLocalizedStringsJavaScript, mediaControlsBaseJavaScript };
+#if ENABLE(MODERN_MEDIA_CONTROLS)
+    return { StringImpl::createWithoutCopying(ModernMediaControlsJavaScript, sizeof(ModernMediaControlsJavaScript)) };
+#else
+    return { };
+#endif
 }
 #endif
 
@@ -830,21 +838,11 @@ bool RenderThemeQt::paintMediaSliderThumb(RenderObject& o, const PaintInfo& pain
 
 void RenderThemeQt::adjustSliderThumbSize(RenderStyle& style, const Element*) const
 {
-    // timelineThumbHeight should match the height property of -webkit-media-controls-timeline in mediaControlsQt.css.
-    const int timelineThumbHeight = 12;
-    const int timelineThumbWidth = timelineThumbHeight / 3;
-    // volumeThumbWidth should match the width property of -webkit-media-controls-volume-slider in mediaControlsQt.css.
-    const int volumeThumbWidth = 12;
-    const int volumeThumbHeight = volumeThumbWidth / 3;
-    ControlPart part = style.appearance();
+    const int thumbHeight = 12;
+    const int thumbWidth = thumbHeight / 3;
 
-    if (part == MediaSliderThumbPart) {
-        style.setWidth(Length(timelineThumbWidth, LengthType::Fixed));
-        style.setHeight(Length(timelineThumbHeight, LengthType::Fixed));
-    } else if (part == MediaVolumeSliderThumbPart) {
-        style.setHeight(Length(volumeThumbHeight, LengthType::Fixed));
-        style.setWidth(Length(volumeThumbWidth, LengthType::Fixed));
-    }
+    style.setWidth(Length(thumbWidth, LengthType::Fixed));
+    style.setHeight(Length(thumbHeight, LengthType::Fixed));
 }
 
 Seconds RenderThemeQt::caretBlinkInterval() const
@@ -873,16 +871,6 @@ String RenderThemeQt::fileListNameForWidth(const FileList* fileList, const FontC
     }
 
     return string;
-}
-
-void RenderThemeQt::updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription& fontDescription) const
-{
-    QFontInfo fi(qGuiApp->font());
-    fontDescription.setOneFamily(String(fi.family()));
-    fontDescription.setSpecifiedSize(fi.pixelSize());
-    fontDescription.setIsAbsoluteSize(true);
-    fontDescription.setWeight((fi.bold() ? boldWeightValue() : normalWeightValue()));
-    fontDescription.setItalic(fi.italic() ? italicValue() : normalItalicValue());
 }
 
 StylePainter::StylePainter(GraphicsContext& context)

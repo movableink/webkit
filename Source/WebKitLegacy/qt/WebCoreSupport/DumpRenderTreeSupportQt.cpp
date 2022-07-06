@@ -150,7 +150,7 @@ WebCore::Node* QtDRTNodeRuntime::get(const QDRTNode& node)
 static QVariant convertJSValueToNodeVariant(JSC::JSGlobalObject* lexicalGlobalObject, JSC::JSObject* object, int *distance, HashSet<JSObjectRef>*)
 {
     JSC::VM& vm = lexicalGlobalObject->vm();
-    if (!object || !object->inherits<JSNode>(vm))
+    if (!object || !object->inherits<JSNode>())
         return QVariant();
     return QVariant::fromValue<QDRTNode>(QtDRTNodeRuntime::create(JSNode::toWrapped(vm, object)));
 }
@@ -318,7 +318,7 @@ QVariantList DumpRenderTreeSupportQt::selectedRange(QWebPageAdapter *adapter)
 
 }
 
-QVariantList DumpRenderTreeSupportQt::firstRectForCharacterRange(QWebPageAdapter *adapter, int location, int length)
+QVariantList DumpRenderTreeSupportQt::firstRectForCharacterRange(QWebPageAdapter *adapter, uint64_t location, uint64_t length)
 {
     WebCore::Frame& frame = adapter->page->focusController().focusedOrMainFrame();
     QVariantList rect;
@@ -543,7 +543,7 @@ bool DumpRenderTreeSupportQt::isTargetItem(const QWebHistoryItem& historyItem)
 QString DumpRenderTreeSupportQt::historyItemTarget(const QWebHistoryItem& historyItem)
 {
     QWebHistoryItem it = historyItem;
-    return (QWebHistoryItemPrivate::core(&it)->target());
+    return (String(QWebHistoryItemPrivate::core(&it)->target()));
 }
 
 QMap<QString, QWebHistoryItem> DumpRenderTreeSupportQt::getChildHistoryItems(const QWebHistoryItem& historyItem)

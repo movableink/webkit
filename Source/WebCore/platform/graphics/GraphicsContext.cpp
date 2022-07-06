@@ -121,7 +121,7 @@ bool GraphicsContext::getShadow(FloatSize& offset, float& blur, Color& color) co
             return true;
         // We can avoid ShadowBlur and optimize, since we're not drawing on a
         // canvas and box shadows are affected by the transformation matrix.
-        if (!m_state.shadowsIgnoreTransforms)
+        if (!shadowsIgnoreTransforms())
             return false;
         // We can avoid ShadowBlur, since there are no transformations to apply to the canvas.
         if (getCTM().isIdentity())

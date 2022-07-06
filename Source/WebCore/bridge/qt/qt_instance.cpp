@@ -72,7 +72,7 @@ private:
     QtRuntimeObject(VM&, Structure*, RefPtr<Instance>&&);
 };
 
-const ClassInfo QtRuntimeObject::s_info = { "QtRuntimeObject", &RuntimeObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(QtRuntimeObject) };
+const ClassInfo QtRuntimeObject::s_info = { "QtRuntimeObject"_s, &RuntimeObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(QtRuntimeObject) };
 
 QtRuntimeObject::QtRuntimeObject(VM& vm, Structure* structure, RefPtr<Instance>&& instance)
     : RuntimeObject(vm, structure, WTFMove(instance))
@@ -152,7 +152,7 @@ QtInstance* QtInstance::getInstance(JSGlobalObject* lexicalGlobalObject, JSObjec
 {
     if (!object)
         return 0;
-    if (!object->inherits(lexicalGlobalObject->vm(), QtRuntimeObject::info()))
+    if (!object->inherits(QtRuntimeObject::info()))
         return 0;
     return static_cast<QtInstance*>(static_cast<RuntimeObject*>(object)->getInternalInstance());
 }
@@ -192,13 +192,13 @@ void QtInstance::getPropertyNames(JSGlobalObject* lexicalGlobalObject, PropertyN
         for (i = 0; i < meta->propertyCount(); i++) {
             QMetaProperty prop = meta->property(i);
             if (prop.isScriptable())
-                array.add(Identifier::fromString(vm, prop.name()));
+                array.add(Identifier::fromString(vm, String::fromUTF8(prop.name())));
         }
 
 #ifndef QT_NO_PROPERTIES
         QList<QByteArray> dynProps = obj->dynamicPropertyNames();
         foreach (const QByteArray& ba, dynProps)
-            array.add(Identifier::fromString(vm, ba.constData()));
+            array.add(Identifier::fromString(vm, String::fromUTF8(ba.constData())));
 #endif
 
         const int methodCount = meta->methodCount();
@@ -277,7 +277,7 @@ JSValue QtInstance::stringValue(JSGlobalObject* lexicalGlobalObject) const
 
         buf = str.toLatin1();
     }
-    return jsString(lexicalGlobalObject->vm(), buf.constData());
+    return jsString(lexicalGlobalObject->vm(), String::fromUTF8(buf.constData()));
 }
 
 JSValue QtInstance::numberValue(JSGlobalObject*) const
@@ -337,7 +337,7 @@ JSValue QtField::valueFromInstance(JSGlobalObject* lexicalGlobalObject, const In
         return toJS(lexicalGlobalObject, jsValue);
     }
     QString msg = QString(QLatin1String("cannot access member `%1' of deleted QObject")).arg(QLatin1String(name()));
-    return throwException(lexicalGlobalObject, scope, createError(lexicalGlobalObject, msg.toLatin1().constData()));
+    return throwException(lexicalGlobalObject, scope, createError(lexicalGlobalObject, String(msg)));
 }
 
 bool QtField::setValueToInstance(JSGlobalObject* lexicalGlobalObject, const Instance* inst, JSValue aValue) const
@@ -371,8 +371,8 @@ bool QtField::setValueToInstance(JSGlobalObject* lexicalGlobalObject, const Inst
             return obj->setProperty(m_dynamicProperty.constData(), val);
 #endif
     } else {
-        QString msg = QString(QLatin1String("cannot access member `%1' of deleted QObject")).arg(QLatin1String(name()));
-        throwException(lexicalGlobalObject, scope, createError(lexicalGlobalObject, msg.toLatin1().constData()));
+        QString msg = QLatin1String("cannot access member `%1' of deleted QObject").arg(QLatin1String(name()));
+        throwException(lexicalGlobalObject, scope, createError(lexicalGlobalObject, String(msg)));
     }
     return false;
 }

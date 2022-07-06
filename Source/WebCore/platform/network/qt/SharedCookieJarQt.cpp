@@ -79,7 +79,7 @@ bool SharedCookieJarQt::deleteCookie(const QNetworkCookie& cookie)
         return false;
     }
 
-    sqlQuery->bindText(1, StringView(cookie.domain().append(QLatin1String(cookie.name())).toLatin1()));
+    sqlQuery->bindText(1, String(cookie.domain().append(QLatin1String(cookie.name()))));
     int result = sqlQuery->step();
     if (result != SQLITE_DONE) {
         qWarning("Failed to delete cookie from database - %i", result);
@@ -114,7 +114,7 @@ void SharedCookieJarQt::deleteCookiesForHostname(const String& hostname)
     transaction.begin();
     while (it != end) {
         if (it->domain() == QString(hostname)) {
-            sqlQuery->bindText(1, StringView(it->domain().append(QLatin1String(it->name()))));
+            sqlQuery->bindText(1, String(it->domain().append(QLatin1String(it->name()))));
             int result = sqlQuery->step();
             if (result != SQLITE_DONE)
                 qWarning("Failed to remove cookie from database - %i", result);
@@ -182,9 +182,9 @@ bool SharedCookieJarQt::setCookiesFromUrl(const QList<QNetworkCookie>& cookieLis
     foreach (const QNetworkCookie &cookie, cookiesForUrl(url)) {
         if (cookie.isSessionCookie())
             continue;
-        sqlQuery->bindText(1, StringView(cookie.domain().append(QLatin1String(cookie.name()))));
+        sqlQuery->bindText(1, String(cookie.domain().append(QLatin1String(cookie.name()))));
         QByteArray rawCookie = cookie.toRawForm();
-        sqlQuery->bindBlob(2, String(rawCookie.constData(), rawCookie.size()));
+        sqlQuery->bindBlob(2, String::fromUTF8(rawCookie.constData()));
         int result = sqlQuery->step();
         if (result != SQLITE_DONE)
             qWarning("Failed to insert cookie into database - %i", result);
