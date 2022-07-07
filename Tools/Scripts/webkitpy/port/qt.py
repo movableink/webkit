@@ -28,11 +28,12 @@
 
 """QtWebKit implementation of the Port interface."""
 
+import os
+
 import glob
 import logging
 import re
 import sys
-import os
 import platform
 
 from webkitpy.common.memoized import memoized
@@ -42,6 +43,7 @@ from webkitpy.port.base import Port
 from webkitpy.port.xorgdriver import XorgDriver
 from webkitpy.port.xvfbdriver import XvfbDriver
 from webkitpy.port.linux_get_crash_log import GDBCrashLogGenerator
+from webkitcorepy import decorators
 
 _log = logging.getLogger(__name__)
 
@@ -100,6 +102,7 @@ class QtPort(Port):
     def _path_to_driver(self):
         return self._build_path('bin/%s' % self.driver_name())
 
+    @decorators.Memoize()
     def _path_to_image_diff(self):
         return self._build_path('bin/ImageDiff')
 
@@ -155,10 +158,10 @@ class QtPort(Port):
         search_paths.append(self.port_name)
         return search_paths
 
-    def default_baseline_search_path(self):
-        return map(self._webkit_baseline_path, self._search_paths())
+    def default_baseline_search_path(self, **kwargs):
+        return list(map(self._webkit_baseline_path, self._search_paths()))
 
-    def _port_specific_expectations_files(self):
+    def _port_specific_expectations_files(self, **kwargs):
         paths = self._search_paths()
         if self.get_option('webkit_test_runner'):
             paths.append('wk2')
@@ -200,8 +203,8 @@ class QtPort(Port):
     def operating_system(self):
         return self._operating_system
 
-    def check_sys_deps(self, needs_http):
-        result = super(QtPort, self).check_sys_deps(needs_http)
+    def check_sys_deps(self):
+        result = super(QtPort, self).check_sys_deps()
         if not 'WEBKIT_TESTFONTS' in os.environ:
             _log.error('\nThe WEBKIT_TESTFONTS environment variable is not defined or not set properly.')
             _log.error('You must set it before running the tests.')
@@ -210,7 +213,7 @@ class QtPort(Port):
         return result
 
     # Qt port is not ready for parallel testing, see https://bugs.webkit.org/show_bug.cgi?id=77730 for details.
-    def default_child_processes(self):
+    def default_child_processes(self, **kwargs):
         return 1
 
     def build_webkit_command(self, build_style=None):
@@ -228,5 +231,6 @@ class QtPort(Port):
             command.append("-2")
         return command
 
-    def _get_crash_log(self, name, pid, stdout, stderr, newer_than):
-        return GDBCrashLogGenerator(name, pid, newer_than, self._filesystem, self._path_to_driver).generate_crash_log(stdout, stderr)
+    def _get_crash_log(self, name, pid, stdout, stderr, newer_than, target_host=None):
+        return GDBCrashLogGenerator(self._executive, name, pid, newer_than,
+                                    self._filesystem, self._path_to_driver, self.port_name, self.get_option('configuration')).generate_crash_log(stdout, stderr)
