@@ -2152,15 +2152,15 @@ void tst_QObjectBridge::introspectQtMethods_data()
     QTest::addColumn<QStringList>("expectedPropertyNames");
 
     QTest::newRow("myObject.mySignal")
-        << "myObject" << "mySignal" << (QStringList() << "connect" << "disconnect" << "name");
+        << "myObject" << "mySignal" << (QStringList() << "connect" << "disconnect" << "length" << "name");
     QTest::newRow("myObject.mySlot")
-        << "myObject" << "mySlot" << (QStringList() << "connect" << "disconnect" << "name");
+        << "myObject" << "mySlot" << (QStringList() << "connect" << "disconnect" << "length" << "name");
     QTest::newRow("myObject.myInvokable")
-        << "myObject" << "myInvokable" << (QStringList() << "connect" << "disconnect" << "name");
+        << "myObject" << "myInvokable" << (QStringList() << "connect" << "disconnect" << "length" << "name");
     QTest::newRow("myObject.mySignal.connect")
-        << "myObject.mySignal" << "connect" << (QStringList() << "name");
+        << "myObject.mySignal" << "connect" << (QStringList() << "length" << "name");
     QTest::newRow("myObject.mySignal.disconnect")
-        << "myObject.mySignal" << "disconnect" << (QStringList() << "name");
+        << "myObject.mySignal" << "disconnect" << (QStringList() << "length" << "name");
 }
 
 void tst_QObjectBridge::introspectQtMethods()
@@ -2181,7 +2181,7 @@ void tst_QObjectBridge::introspectQtMethods()
         QCOMPARE(evalJS("descriptor.set"), sUndefined);
         QCOMPARE(evalJS(QString::fromLatin1("descriptor.value === %0['%1']").arg(methodLookup).arg(name)), sTrue);
         QCOMPARE(evalJS(QString::fromLatin1("descriptor.enumerable")), sFalse);
-        QCOMPARE(evalJS(QString::fromLatin1("descriptor.configurable")), name == "name" ? sTrue : sFalse);
+        QCOMPARE(evalJS(QString::fromLatin1("descriptor.configurable")), (name == "name" || name == "length") ? sTrue : sFalse);
     }
 
     QVERIFY(evalJSV("var props=[]; for (var p in myObject.deleteLater) {props.push(p);}; props.sort()").toStringList().isEmpty());
@@ -2225,19 +2225,19 @@ protected:
 
 void tst_QObjectBridge::scriptablePlugin()
 {
-//#if !PLUGIN_VIEW_IS_BROKEN
+#if 0
     QWebView view;
     TestWebPage* page = new TestWebPage;
     view.setPage(page);
     page->setParent(&view);
-    view.settings()->setAttribute(QWebSettings::PluginsEnabled, true);
+    //view.settings()->setAttribute(QWebSettings::PluginsEnabled, true);
 
     page->mainFrame()->setHtml("<object width=100 height=100 type=\"application/x-qt-plugin\"></object>");
     QCOMPARE(page->creationCount, 1);
 
     QVariant result = page->mainFrame()->evaluateJavaScript("document.querySelector(\"object\").slotWithReturnValue()");
     QCOMPARE(result.toString(), QLatin1String("42"));
-//#endif
+#endif
 }
 
 class WebPageWithConsoleCapture : public QWebPage

@@ -142,7 +142,7 @@ void tst_QWebView::reusePage()
     QWebView* view1 = new QWebView;
     QPointer<QWebPage> page = new QWebPage;
     view1->setPage(page.data());
-    page.data()->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
+    //page.data()->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
     QWebFrame* mainFrame = page.data()->mainFrame();
     mainFrame->setHtml(html, QUrl::fromLocalFile(TESTS_SOURCE_DIR));
     if (html.contains("</embed>")) {

@@ -179,9 +179,9 @@ void tst_QWebSecurityOrigin::whiteList()
     m_view->page()->setNetworkAccessManager(&manager);
     QString testJS="runTest(\"" + testUrl + "\")";
     QCOMPARE(m_view->page()->mainFrame()->evaluateJavaScript(testJS), QVariant(successBeforeAdd));
-    origin->addAccessWhitelistEntry(scheme, host, subdomainSetting);
+    origin->addAccessAllowlistEntry(scheme, host, subdomainSetting);
     QCOMPARE(m_view->page()->mainFrame()->evaluateJavaScript(testJS), QVariant(successAfterAdd));
-    origin->removeAccessWhitelistEntry(scheme, host, subdomainSetting);
+    origin->removeAccessAllowlistEntry(scheme, host, subdomainSetting);
     QCOMPARE(m_view->page()->mainFrame()->evaluateJavaScript(testJS), QVariant(successAfterRemove));
     m_view->page()->setNetworkAccessManager(0);
 }

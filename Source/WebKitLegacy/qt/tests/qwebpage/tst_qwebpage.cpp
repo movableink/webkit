@@ -136,13 +136,6 @@ private Q_SLOTS:
     void contextMenuCrash();
     void updatePositionDependentActionsCrash();
     void database();
-    void createPluginWithPluginsEnabled();
-    void createPluginWithPluginsDisabled();
-    void destroyPlugin_data();
-    void destroyPlugin();
-    void createViewlessPlugin_data();
-    void createViewlessPlugin();
-    void graphicsWidgetPlugin();
 
 #ifdef HAVE_QTTESTSUPPORT
     void multiplePageGroupsAndLocalStorage();
@@ -929,179 +922,6 @@ static void createPlugin(QWebView *view)
         QVERIFY(ci.returnValue != 0);
         QVERIFY(ci.returnValue->inherits("QPushButton"));
     }
-}
-
-void tst_QWebPage::graphicsWidgetPlugin()
-{
-    m_view->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
-    QGraphicsWebView webView;
-
-    QSignalSpy loadSpy(&webView, SIGNAL(loadFinished(bool)));
-
-    PluginPage* newPage = new PluginPage(&webView);
-    webView.setPage(newPage);
-
-    // type has to be application/x-qt-plugin
-    webView.setHtml(QString("<html><body><object type='application/x-foobarbaz' classid='graphicswidget' id='mygraphicswidget'/></body></html>"));
-    QTRY_COMPARE(loadSpy.count(), 1);
-    QCOMPARE(newPage->calls.count(), 0);
-
-    webView.setHtml(QString("<html><body><object type='application/x-qt-plugin' classid='graphicswidget' id='mygraphicswidget'/></body></html>"));
-    QTRY_COMPARE(loadSpy.count(), 2);
-    QCOMPARE(newPage->calls.count(), 1);
-    {
-        PluginPage::CallInfo ci = newPage->calls.takeFirst();
-        QCOMPARE(ci.classid, QString::fromLatin1("graphicswidget"));
-        QCOMPARE(ci.url, QUrl());
-        QCOMPARE(ci.paramNames.count(), 3);
-        QCOMPARE(ci.paramValues.count(), 3);
-        QCOMPARE(ci.paramNames.at(0), QString::fromLatin1("type"));
-        QCOMPARE(ci.paramValues.at(0), QString::fromLatin1("application/x-qt-plugin"));
-        QCOMPARE(ci.paramNames.at(1), QString::fromLatin1("classid"));
-        QCOMPARE(ci.paramValues.at(1), QString::fromLatin1("graphicswidget"));
-        QCOMPARE(ci.paramNames.at(2), QString::fromLatin1("id"));
-        QCOMPARE(ci.paramValues.at(2), QString::fromLatin1("mygraphicswidget"));
-        QVERIFY(ci.returnValue);
-        QVERIFY(ci.returnValue->inherits("QGraphicsWidget"));
-    }
-    // test JS bindings
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("document.getElementById('mygraphicswidget').toString()").toString(),
-             QString::fromLatin1("[object HTMLObjectElement]"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("mygraphicswidget.toString()").toString(),
-             QString::fromLatin1("[object HTMLObjectElement]"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("typeof mygraphicswidget.objectName").toString(),
-             QString::fromLatin1("string"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("mygraphicswidget.objectName").toString(),
-             QString::fromLatin1("graphicswidget"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("typeof mygraphicswidget.geometryChanged").toString(),
-             QString::fromLatin1("function"));
-    QCOMPARE(newPage->mainFrame()->evaluateJavaScript("mygraphicswidget.geometryChanged.toString()").toString(),
-             QString::fromLatin1("function geometryChanged() {\n    [native code]\n}"));
-}
-
-void tst_QWebPage::createPluginWithPluginsEnabled()
-{
-    m_view->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
-    createPlugin(m_view);
-}
-
-void tst_QWebPage::createPluginWithPluginsDisabled()
-{
-    // Qt Plugins should be loaded by QtWebKit even when PluginsEnabled is
-    // false. The client decides whether a Qt plugin is enabled or not when
-    // it decides whether or not to instantiate it.
-    m_view->settings()->setAttribute(QWebSettings::PluginsEnabled, false);
-    createPlugin(m_view);
-}
-
-// Standard base class for template PluginTracerPage. In tests it is used as interface.
-class PluginCounterPage : public QWebPage {
-public:
-    int m_count;
-    QPointer<QObject> m_widget;
-    QObject* m_pluginParent;
-    PluginCounterPage(QObject* parent = 0)
-        : QWebPage(parent)
-        , m_count(0)
-        , m_pluginParent(0)
-    {
-       settings()->setAttribute(QWebSettings::PluginsEnabled, true);
-    }
-    ~PluginCounterPage()
-    {
-        if (m_pluginParent)
-            m_pluginParent->deleteLater();
-    }
-};
-
-template<class T>
-class PluginTracerPage : public PluginCounterPage {
-public:
-    PluginTracerPage(QObject* parent = 0)
-        : PluginCounterPage(parent)
-    {
-        // this is a dummy parent object for the created plugin
-        m_pluginParent = new T;
-    }
-    virtual QObject* createPlugin(const QString&, const QUrl&, const QStringList&, const QStringList&)
-    {
-        m_count++;
-        m_widget = new T;
-        // need a cast to the specific type, as QObject::setParent cannot be called,
-        // because it is not virtual. Instead it is necesary to call QWidget::setParent,
-        // which also takes a QWidget* instead of a QObject*. Therefore we need to
-        // upcast to T*, which is a QWidget.
-        static_cast<T*>(m_widget.data())->setParent(static_cast<T*>(m_pluginParent));
-        return m_widget.data();
-    }
-};
-
-class PluginFactory {
-public:
-    enum FactoredType {QWidgetType, QGraphicsWidgetType};
-    static PluginCounterPage* create(FactoredType type, QObject* parent = 0)
-    {
-        PluginCounterPage* result = 0;
-        switch (type) {
-        case QWidgetType:
-            result = new PluginTracerPage<QWidget>(parent);
-            break;
-        case QGraphicsWidgetType:
-            result = new PluginTracerPage<QGraphicsWidget>(parent);
-            break;
-        default: {/*Oops*/};
-        }
-        return result;
-    }
-
-    static void prepareTestData()
-    {
-        QTest::addColumn<int>("type");
-        QTest::newRow("QWidget") << (int)PluginFactory::QWidgetType;
-        QTest::newRow("QGraphicsWidget") << (int)PluginFactory::QGraphicsWidgetType;
-    }
-};
-
-void tst_QWebPage::destroyPlugin_data()
-{
-    PluginFactory::prepareTestData();
-}
-
-void tst_QWebPage::destroyPlugin()
-{
-    QFETCH(int, type);
-    PluginCounterPage* page = PluginFactory::create((PluginFactory::FactoredType)type, m_view);
-    m_view->setPage(page);
-
-    // we create the plugin, so the widget should be constructed
-    QString content("<html><body><object type=\"application/x-qt-plugin\" classid=\"QProgressBar\"></object></body></html>");
-    m_view->setHtml(content);
-    QVERIFY(page->m_widget);
-    QCOMPARE(page->m_count, 1);
-
-    // navigate away, the plugin widget should be destructed
-    m_view->setHtml("<html><body>Hi</body></html>");
-    QTestEventLoop::instance().enterLoop(1);
-    QVERIFY(!page->m_widget);
-}
-
-void tst_QWebPage::createViewlessPlugin_data()
-{
-    PluginFactory::prepareTestData();
-}
-
-void tst_QWebPage::createViewlessPlugin()
-{
-    QFETCH(int, type);
-    PluginCounterPage* page = PluginFactory::create((PluginFactory::FactoredType)type);
-    QString content("<html><body><object type=\"application/x-qt-plugin\" classid=\"QProgressBar\"></object></body></html>");
-    page->mainFrame()->setHtml(content);
-    QCOMPARE(page->m_count, 1);
-    QVERIFY(page->m_widget);
-    QVERIFY(page->m_pluginParent);
-    QVERIFY(page->m_widget.data()->parent() == page->m_pluginParent);
-    delete page;
-
 }
 
 #ifdef HAVE_QTTESTSUPPORT
@@ -2474,7 +2294,7 @@ void tst_QWebPage::protectBindingsRuntimeObjectsFromCollector()
     PluginPage* newPage = new PluginPage(m_view);
     m_view->setPage(newPage);
 
-    m_view->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
+    //m_view->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
 
     m_view->setHtml(QString("<html><body><object type='application/x-qt-plugin' classid='lineedit' id='mylineedit'/></body></html>"));
     QTRY_COMPARE(loadSpy.count(), 1);
@@ -2843,7 +2663,7 @@ void tst_QWebPage::screenshot()
 
     QFETCH(QString, html);
     QWebPage* page = new QWebPage;
-    page->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
+    //page->settings()->setAttribute(QWebSettings::PluginsEnabled, true);
     QWebFrame* mainFrame = page->mainFrame();
     mainFrame->setHtml(html, QUrl::fromLocalFile(TESTS_SOURCE_DIR));
     ::waitForSignal(mainFrame, SIGNAL(loadFinished(bool)), 2000);
