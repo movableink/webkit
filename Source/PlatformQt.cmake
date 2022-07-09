@@ -34,7 +34,11 @@ if (USE_MINIMAL_DEBUG_INFO AND CMAKE_BUILD_TYPE STREQUAL "Debug")
     endif ()
 
     target_compile_options(WebKitLegacy      PRIVATE -g1 -O1)
-    target_compile_options(WebKit            PRIVATE -g1 -O1)
+
+    if (TARGET WebKit)
+        target_compile_options(WebKit            PRIVATE -g1 -O1)
+    endif ()
+
     if (NOT APPLE)
         target_compile_options(WebKitLegacy  PRIVATE -fdebug-types-section)
         target_compile_options(WebKit        PRIVATE -fdebug-types-section)

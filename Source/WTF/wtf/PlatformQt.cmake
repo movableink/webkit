@@ -117,7 +117,6 @@ endif ()
 
 if (APPLE)
     list(APPEND WTF_SOURCES
-        cocoa/CPUTimeCocoa.cpp
         cocoa/WorkQueueCocoa.cpp
 
         text/cf/AtomStringImplCF.cpp
