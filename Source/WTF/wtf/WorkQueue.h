@@ -126,7 +126,7 @@ protected:
 private:
 #if USE(COCOA_EVENT_LOOP) || (PLATFORM(QT) && USE(MACH_PORTS))
     explicit WorkQueue(OSObjectPtr<dispatch_queue_t>&&);
-#elsif !PLATFORM(QT)
+#elif !PLATFORM(QT)
     explicit WorkQueue(RunLoop&);
 #endif
     static Ref<WorkQueue> constructMainWorkQueue();
