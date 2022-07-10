@@ -37,7 +37,7 @@
 #include <wtf/win/Win32Handle.h>
 #endif
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || (PLATFORM(QT) && OS(DARWIN))
 #include <wtf/OSObjectPtr.h>
 #endif
 
@@ -282,7 +282,7 @@ private:
     void holdOffTimerFired();
 #endif
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || (PLATFORM(QT) && OS(DARWIN))
     OSObjectPtr<dispatch_queue_t> m_dispatchQueue;
 #endif
 };

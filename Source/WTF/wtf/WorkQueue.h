@@ -74,16 +74,16 @@ protected:
         Concurrent
     };
     WorkQueueBase(const char* name, Type, QOS);
-#if USE(COCOA_EVENT_LOOP)
+#if USE(COCOA_EVENT_LOOP) || (PLATFORM(QT) && USE(MACH_PORTS))
     explicit WorkQueueBase(OSObjectPtr<dispatch_queue_t>&&);
-#elsif !PLATFORM(QT)
+#elif !PLATFORM(QT)
     explicit WorkQueueBase(RunLoop&);
 #endif
 
     void platformInitialize(const char* name, Type, QOS);
     void platformInvalidate();
 
-#if USE(COCOA_EVENT_LOOP)
+#if USE(COCOA_EVENT_LOOP) || (PLATFORM(QT) && USE(MACH_PORTS))
     OSObjectPtr<dispatch_queue_t> m_dispatchQueue;
 #elif PLATFORM(QT) && USE(UNIX_DOMAIN_SOCKETS)
     class WorkItemQt;
@@ -114,7 +114,7 @@ public:
     class WorkItemQt;
     QThread* m_workThread;
     friend class WorkItemQt;
-#elif !USE(COCOA_EVENT_LOOP)
+#elif !USE(COCOA_EVENT_LOOP) && !(PLATFORM(QT) && USE(MACH_PORTS))
     RunLoop& runLoop() const { return *m_runLoop; }
 #endif
 
@@ -124,7 +124,7 @@ protected:
     {
     }
 private:
-#if USE(COCOA_EVENT_LOOP)
+#if USE(COCOA_EVENT_LOOP) || (PLATFORM(QT) && USE(MACH_PORTS))
     explicit WorkQueue(OSObjectPtr<dispatch_queue_t>&&);
 #elsif !PLATFORM(QT)
     explicit WorkQueue(RunLoop&);

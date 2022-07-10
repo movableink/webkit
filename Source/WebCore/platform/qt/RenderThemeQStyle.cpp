@@ -293,7 +293,7 @@ void RenderThemeQStyle::adjustButtonStyle(RenderStyle& style, const Element*) co
     if (style.appearance() == PushButtonPart) {
         // The Mac ports ignore the specified height for <input type="button"> elements
         // unless a border and/or background CSS property is also specified.
-        style.setHeight(Length(Auto));
+        style.setHeight(Length(LengthType::Auto));
     }
 #endif
 

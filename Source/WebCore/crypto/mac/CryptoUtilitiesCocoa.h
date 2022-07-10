@@ -31,6 +31,10 @@
 #include <CommonCrypto/CommonCryptoError.h>
 #include <wtf/Vector.h>
 
+#if PLATFORM(QT)
+#include "CommonCryptoUtilities.h"
+#endif
+
 typedef uint32_t CCDigestAlgorithm;
 typedef uint32_t CCHmacAlgorithm;
 typedef uint32_t CCOperation;

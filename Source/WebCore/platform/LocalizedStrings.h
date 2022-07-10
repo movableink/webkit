@@ -397,7 +397,7 @@ namespace WebCore {
     String contextMenuItemTagTranslate(const String& selectedString);
 #endif
 
-#if USE(CF) && !PLATFORM(WIN)
+#if USE(CF) && !PLATFORM(WIN) && !PLATFORM(QT)
 #define WEB_UI_STRING(string, description) WebCore::localizedString(CFSTR(string))
 #define WEB_UI_STRING_KEY(string, key, description) WebCore::localizedString(CFSTR(key))
 #define WEB_UI_STRING_WITH_MNEMONIC(string, mnemonic, description) WebCore::localizedString(CFSTR(string))
@@ -412,7 +412,7 @@ namespace WebCore {
 #define WEB_UI_STRING_WITH_MNEMONIC(string, mnemonic, description) WebCore::localizedString(string)
 #endif
 
-#if USE(CF)
+#if USE(CF) && !PLATFORM(QT)
 // This is exactly as WEB_UI_STRING, but renamed to ensure the string is not scanned by non-CF ports.
 #if PLATFORM(WIN)
 // Work around default Mac Roman encoding of CFSTR() for Apple Windows port.
@@ -426,13 +426,13 @@ namespace WebCore {
     WEBCORE_EXPORT RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key);
 #endif
 
-#if USE(CF) && !PLATFORM(WIN)
+#if USE(CF) && !PLATFORM(WIN) && !PLATFORM(QT)
     WEBCORE_EXPORT String localizedString(CFStringRef key);
 #else
     WEBCORE_EXPORT String localizedString(const char* key);
 #endif
 
-#if USE(CF)
+#if USE(CF) && !PLATFORM(QT)
 #if PLATFORM(WIN)
 // Work around default Mac Roman encoding of CFSTR() for Apple Windows port.
 #define WEB_UI_FORMAT_CFSTRING(string, description, ...) WebCore::formatLocalizedString(string, __VA_ARGS__)
@@ -449,7 +449,7 @@ namespace WebCore {
 #define WEB_UI_FORMAT_STRING(string, description, ...) WebCore::formatLocalizedString(string, __VA_ARGS__)
 #endif
 
-#if USE(CF) && !PLATFORM(WIN)
+#if USE(CF) && !PLATFORM(WIN) && !PLATFORM(QT)
     String formatLocalizedString(CFStringRef format, ...) CF_FORMAT_FUNCTION(1, 2);
 #else
     String formatLocalizedString(const char* format, ...) WTF_ATTRIBUTE_PRINTF(1, 2);

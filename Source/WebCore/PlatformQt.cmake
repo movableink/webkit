@@ -109,7 +109,6 @@ list(APPEND WebCore_SOURCES
 
     platform/ScrollAnimationKinetic.cpp
     platform/ScrollAnimationSmooth.cpp
-    platform/UserAgentQuirks.cpp
 
     platform/audio/qt/AudioBusQt.cpp
 
@@ -386,6 +385,7 @@ if (USE_GLIB)
     )
     list(APPEND WebCore_SOURCES
         platform/network/glib/DNSResolveQueueGLib.cpp
+        platform/UserAgentQuirks.cpp
     )
 endif ()
 
@@ -438,6 +438,10 @@ if (USE_GCRYPT)
 endif ()
 
 if (USE_COMMONCRYPTO)
+    list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+        crypto/CommonCryptoUtilities.h
+    )
+
     list(APPEND WebCore_SOURCES
         crypto/CommonCryptoUtilities.cpp
 
@@ -460,6 +464,7 @@ if (USE_COMMONCRYPTO)
         crypto/mac/CryptoKeyECMac.cpp
         crypto/mac/CryptoKeyMac.cpp
         crypto/mac/CryptoKeyRSAMac.cpp
+        crypto/mac/CryptoUtilitiesCocoa.cpp
 
         crypto/qt/SerializedCryptoKeyWrapNone.cpp
     )
