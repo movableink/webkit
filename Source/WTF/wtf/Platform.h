@@ -169,7 +169,9 @@
 
 #include <QtNetwork/qtnetwork-config.h>
 #if !QT_CONFIG(bearermanagement)
+#ifndef QT_NO_BEARERMANAGEMENT
 #define QT_NO_BEARERMANAGEMENT
+#endif
 #endif
 
 #endif
