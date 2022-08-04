@@ -42,6 +42,7 @@
 #include <WebCore/Notification.h>
 #include <WebCore/Page.h>
 #include <WebCore/ScriptExecutionContext.h>
+#include <WebCore/FrameDestructionObserverInlines.h>
 
 namespace WebCore {
 

@@ -27,6 +27,7 @@
 #include "config.h"
 #include "Editor.h"
 
+#include "FrameDestructionObserverInlines.h"
 #include "DocumentFragment.h"
 #include "Pasteboard.h"
 
