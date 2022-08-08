@@ -800,7 +800,9 @@ if (COMPILER_IS_GCC_OR_CLANG)
     )
 endif ()
 
-add_subdirectory(qt/tests)
+if (ENABLE_API_TESTS)
+    add_subdirectory(qt/tests)
+endif ()
 
 if (ENABLE_WEBKIT)
     add_subdirectory(qt/declarative)
