@@ -624,9 +624,9 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
         response.setHTTPStatusCode(statusCode);
         response.setHTTPStatusText(AtomString::fromLatin1(m_replyWrapper->reply()->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toByteArray().constData()));
 
-        // Add remaining headers.
+        // Add remaining headers. Qt may send a header with multiple values newline-separated; replace with comma.
         foreach (const QNetworkReply::RawHeaderPair& pair, m_replyWrapper->reply()->rawHeaderPairs())
-            response.setHTTPHeaderField(String(pair.first.constData(), pair.first.size()), String(pair.second.constData(), pair.second.size()));
+            response.setHTTPHeaderField(String(pair.first.constData(), pair.first.size()), makeStringByReplacingAll(StringView(pair.second.constData(), pair.second.size()), '\n', ','));
     }
 
     // Note: Qt sets RedirectionTargetAttribute only for 3xx responses, so Location header in 201 responce won't affect this code
