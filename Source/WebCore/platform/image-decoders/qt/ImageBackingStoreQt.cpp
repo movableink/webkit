@@ -37,7 +37,7 @@ PlatformImagePtr ImageBackingStore::image() const
     return QImage(reinterpret_cast<unsigned char*>(const_cast<uint32_t*>(m_pixelsPtr)),
         size().width(), size().height(), 
         m_premultiplyAlpha ? QImage::Format_ARGB32_Premultiplied : QImage::Format_ARGB32, 
-        [](void* data) { static_cast<SharedBuffer*>(data)->deref(); }, 
+        [](void* data) { static_cast<DataSegment*>(data)->deref(); },
         m_pixels.get());
 }
 
