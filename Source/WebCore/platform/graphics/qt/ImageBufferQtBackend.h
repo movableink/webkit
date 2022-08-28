@@ -44,6 +44,8 @@ public:
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const ImageBuffer::CreationContext&);
     static std::unique_ptr<ImageBufferQtBackend> create(const Parameters&, const GraphicsContext &);
 
+    IntSize backendSize() const override;
+
     static size_t calculateMemoryCost(const Parameters&);
     static unsigned calculateBytesPerRow(const IntSize& backendSize);
     static size_t calculateExternalMemoryCost(const Parameters&);

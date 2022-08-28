@@ -83,6 +83,11 @@ std::unique_ptr<ImageBufferQtBackend> ImageBufferQtBackend::create(const Paramet
     return ImageBufferQtBackend::create(parameters, nullptr);
 }
 
+IntSize ImageBufferQtBackend::backendSize() const
+{
+    return { m_nativeImage->width(), m_nativeImage->height() };
+}
+
 size_t ImageBufferQtBackend::calculateMemoryCost(const Parameters& parameters)
 {
     IntSize backendSize = calculateBackendSize(parameters);
