@@ -89,7 +89,7 @@ QNetworkRequest ResourceRequest::toNetworkRequest(NetworkingContext *context) co
     QNetworkRequest request;
     const URL& originalUrl = url();
     request.setUrl(toQUrl(originalUrl));
-    //request.setOriginatingObject(context ? context->originatingObject() : 0);
+    request.setOriginatingObject(context ? context->originatingObject() : 0);
 
 #if USE(HTTP2)
     static const bool NegotiateHttp2ForHttps = alpnIsSupported();
@@ -135,10 +135,10 @@ QNetworkRequest ResourceRequest::toNetworkRequest(NetworkingContext *context) co
         break;
     }
 
-    /*if (!allowCookies() || !thirdPartyCookiePolicyPermits(context->storageSession(), url(), firstPartyForCookies())) {
+    if (!allowCookies() || !thirdPartyCookiePolicyPermits(context->storageSession(), url(), firstPartyForCookies())) {
         request.setAttribute(QNetworkRequest::CookieSaveControlAttribute, QNetworkRequest::Manual);
         request.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);
-    }*/
+    }
 
     if (!allowCookies())
         request.setAttribute(QNetworkRequest::AuthenticationReuseAttribute, QNetworkRequest::Manual);
