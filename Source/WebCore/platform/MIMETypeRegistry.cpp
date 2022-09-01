@@ -482,7 +482,7 @@ std::unique_ptr<MIMETypeRegistryThreadGlobalData> MIMETypeRegistry::createMIMETy
         "image/ico"_s,
 #elif USE(CAIRO)
         "image/png"_s,
-#elif USE(QT)
+#elif PLATFORM(QT)
         "image/png"_s,
         "image/jpeg"_s,
         "image/gif"_s,
