@@ -135,6 +135,12 @@ RefPtr<NativeImage> ImageBufferQtBackend::copyNativeImage(BackingStoreCopy copyB
     return NativeImage::create(QImage(*m_nativeImage.get()));
 }
 
+void ImageBufferQtBackend::clipToMask(GraphicsContext& context, const FloatRect& destRect)
+{
+    if (RefPtr<NativeImage> nativeImage = copyNativeImage(DontCopyBackingStore))
+        context.platformContext()->pushTransparencyLayerInternal(QRectF(destRect).toRect(), 1.0, nativeImage->platformImage());
+}
+
 GraphicsContext &ImageBufferQtBackend::context() const { return *m_context; }
 
 static bool encodeImage(const QImage& image, const String& mimeType, std::optional<double> quality, QByteArray& data)

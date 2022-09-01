@@ -78,6 +78,7 @@ public:
     void clipOut(const Path&) final;
 
     void clipPath(const Path&, WindRule = WindRule::EvenOdd) final;
+    void clipToImageBuffer(ImageBuffer& buffer, const FloatRect& destRect);
 
     void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode);
 
@@ -110,9 +111,10 @@ public:
     void endTransparencyLayer() final;
 
     QPainter* painter() const;
+
+    void pushTransparencyLayerInternal(const QRect&, qreal, const QImage&);
 private:
 
-    void pushTransparencyLayerInternal(const QRect&, qreal, QImage&);
     void popTransparencyLayerInternal();
 
     void takeOwnershipOfPlatformContext();

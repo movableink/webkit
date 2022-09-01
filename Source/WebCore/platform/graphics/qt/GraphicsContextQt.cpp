@@ -1042,6 +1042,13 @@ void GraphicsContextQt::fillRectWithRoundedHole(const FloatRect& rect, const Flo
     p->fillPath(platformPath, QColor(color));
 }
 
+void GraphicsContextQt::clipToImageBuffer(ImageBuffer& buffer, const FloatRect& destRect)
+{
+
+    IntRect rect = enclosingIntRect(destRect);
+    buffer.clipToMask(*this, rect);
+}
+
 void GraphicsContextQt::clip(const FloatRect& rect)
 {
     m_data->p()->setClipRect(rect, Qt::IntersectClip);
@@ -1340,14 +1347,14 @@ FloatRect GraphicsContextQt::roundToDevicePixels(const FloatRect& frect, Roundin
     return FloatRect(roundedOrigin, roundedLowerRight - roundedOrigin);
 }
 
-void GraphicsContextQt::pushTransparencyLayerInternal(const QRect &rect, qreal opacity, QImage& alphaMask)
+void GraphicsContextQt::pushTransparencyLayerInternal(const QRect &rect, qreal opacity, const QImage& originalAlphaMask)
 {
     QPainter* p = m_data->p();
 
     QTransform deviceTransform = p->transform();
     QRect deviceClip = deviceTransform.mapRect(rect);
 
-    alphaMask = alphaMask.transformed(deviceTransform);
+    QImage alphaMask = originalAlphaMask.transformed(deviceTransform);
     if (alphaMask.width() != deviceClip.width() || alphaMask.height() != deviceClip.height())
         alphaMask = alphaMask.scaled(deviceClip.width(), deviceClip.height());
 

@@ -59,6 +59,8 @@ public:
 
     GraphicsContext& context() const override;
 
+    void clipToMask(GraphicsContext&, const FloatRect& rect) override;
+
     RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator = ImageBufferAllocator()) const override;
     void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
