@@ -49,6 +49,7 @@
 #include "FloatConversion.h"
 #include "FontCascade.h"
 #include "Gradient.h"
+#include "GraphicsContextStateSaver.h"
 #include "ImageBuffer.h"
 #include "NativeImageQt.h"
 #include "Path.h"
@@ -666,6 +667,8 @@ void GraphicsContextQt::fillPath(const Path& path)
                     }
                 },
                 [this](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize) {
+                    GraphicsContextStateSaver shadowStateSaver(*this);
+                    clearShadow();
                     drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), compositeOperation());
                 });
         } else {
@@ -817,6 +820,8 @@ void GraphicsContextQt::strokePath(const Path& path)
                     }
                 },
             [this](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize) {
+                GraphicsContextStateSaver shadowStateSaver(*this);
+                clearShadow();
                 drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), compositeOperation());
             });
         } else {
@@ -900,6 +905,8 @@ void GraphicsContextQt::fillRect(const FloatRect& rect)
                 drawRepeatPattern(shadowPainter, fillPattern, normalizedRect);
             },
             [this](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize) {
+                GraphicsContextStateSaver shadowStateSaver(*this);
+                clearShadow();
                 drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), compositeOperation());
             });
         }
@@ -916,6 +923,8 @@ void GraphicsContextQt::fillRect(const FloatRect& rect)
                 shadowPainter->fillRect(normalizedRect, brush);
             },
             [this](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize) {
+                GraphicsContextStateSaver shadowStateSaver(*this);
+                clearShadow();
                 drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), compositeOperation());
             });
         }
@@ -934,6 +943,8 @@ void GraphicsContextQt::fillRect(const FloatRect& rect)
                         shadowPainter->fillRect(normalizedRect, brush);
                     },
                     [this](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize) {
+                        GraphicsContextStateSaver shadowStateSaver(*this);
+                        clearShadow();
                         drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), compositeOperation());
                     });
                 } else

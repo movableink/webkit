@@ -29,6 +29,7 @@
 #include "Gradient.h"
 #include "GraphicsTypes.h"
 #include "GraphicsContextQt.h"
+#include "GraphicsContextStateSaver.h"
 #include "NotImplemented.h"
 #include "Pattern.h"
 #include "ShadowBlur.h"
@@ -143,7 +144,8 @@ static void drawQtGlyphRun(GraphicsContext& context, const QGlyphRun& qtGlyphRun
                 [state, point, qtGlyphRun, textStrokePath](GraphicsContext& shadowContext)
                 {
                     QPainter* shadowPainter = shadowContext.platformContext()->painter();
-                    shadowPainter->setPen(shadowContext.shadowColor());
+                    shadowPainter->setPen(QColor(0, 0, 0));
+
                     if (shadowContext.textDrawingMode() & TextDrawingMode::Fill)
                         shadowPainter->drawGlyphRun(point, qtGlyphRun);
                     else if (shadowContext.textDrawingMode() & TextDrawingMode::Stroke)
@@ -151,6 +153,8 @@ static void drawQtGlyphRun(GraphicsContext& context, const QGlyphRun& qtGlyphRun
                 },
                 [&context](ImageBuffer& layerImage, const FloatPoint& layerOrigin, const FloatSize& layerSize)
                 {
+                    GraphicsContextStateSaver shadowStateSaver(context);
+                    context.clearShadow();
                     context.drawImageBuffer(layerImage, FloatRect(roundedIntPoint(layerOrigin), layerSize), FloatRect(FloatPoint(), layerSize), context.compositeOperation());
                 });
         } else {
