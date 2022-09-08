@@ -154,6 +154,7 @@ public:
     bool hasTailCalls() const { return m_hasTailCalls; }
     void setHasTailCalls() { m_hasTailCalls = true; }
     bool allowDirectEvalCache() const { return !(m_features & NoEvalCacheFeature); }
+    bool usesImportMeta() const { return m_features & ImportMetaFeature; }
 
     bool hasExpressionInfo() { return m_expressionInfo.size(); }
     const FixedVector<ExpressionRangeInfo>& expressionInfo() { return m_expressionInfo; }
@@ -421,7 +422,7 @@ private:
     unsigned m_age : 3;
     static_assert(((1U << 3) - 1) >= maxAge);
     bool m_hasCheckpoints : 1;
-    unsigned m_lexicalScopeFeatures : 4;
+    unsigned m_lexicalScopeFeatures : bitWidthOfLexicalScopeFeatures;
 public:
     ConcurrentJSLock m_lock;
 #if ENABLE(JIT)

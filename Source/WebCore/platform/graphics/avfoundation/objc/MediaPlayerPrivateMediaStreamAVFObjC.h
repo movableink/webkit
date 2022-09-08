@@ -85,7 +85,8 @@ public:
     WTFLogChannel& logChannel() const final;
 
     using MediaStreamTrackPrivate::Observer::weakPtrFactory;
-    using WeakValueType = MediaStreamTrackPrivate::Observer::WeakValueType;
+    using MediaStreamTrackPrivate::Observer::WeakValueType;
+    using MediaStreamTrackPrivate::Observer::WeakPtrImplType;
 
 private:
     PlatformLayer* rootLayer() const;
@@ -168,6 +169,7 @@ private:
     void audioOutputDeviceChanged() final;
     std::optional<VideoFrameMetadata> videoFrameMetadata() final;
     void setResourceOwner(const ProcessIdentity&) final { ASSERT_NOT_REACHED(); }
+    void renderVideoWillBeDestroyed() final { destroyLayers(); }
 
     MediaPlayer::ReadyState currentReadyState();
     void updateReadyState();

@@ -39,8 +39,6 @@
 #import <WebKit/WKWebpagePreferencesPrivate.h>
 #import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/_WKContentRuleListAction.h>
-#import <WebKit/_WKUserContentExtensionStore.h>
-#import <WebKit/_WKUserContentFilter.h>
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/Vector.h>
@@ -211,7 +209,13 @@ TEST_F(WKContentRuleListStoreTest, Removal)
     TestWebKitAPI::Util::run(&doneRemoving);
 }
 
+#if CPU(ARM64) && defined(NDEBUG)
+// FIXME: The code below crashes on arm64e release builds.
+// See rdar://95391568 and rdar://95247117
+TEST_F(WKContentRuleListStoreTest, DISABLED_CrossOriginCookieBlocking)
+#else
 TEST_F(WKContentRuleListStoreTest, CrossOriginCookieBlocking)
+#endif
 {
     using namespace TestWebKitAPI;
 
@@ -224,18 +228,8 @@ TEST_F(WKContentRuleListStoreTest, CrossOriginCookieBlocking)
                 auto request = co_await connection.awaitableReceiveHTTPRequest();
                 auto path = HTTPServer::parsePath(request);
                 auto response = [&] {
-                    if (path == "/com"_s) {
-#if CPU(ARM64E) && defined(NDEBUG)
-                        // FIXME: This is exactly equivalent code, but the code below crashes on release builds on arm64e.
-                        // See rdar://95391568
-                        HashMap<String, String> headerFields;
-                        headerFields.reserveInitialCapacity(1);
-                        headerFields.add("Set-Cookie"_s, "testCookie=42; Path=/; SameSite=None; Secure"_s);
-                        return HTTPResponse(WTFMove(headerFields), "<script>alert('hi')</script>"_s);
-#else
+                    if (path == "/com"_s)
                         return HTTPResponse({ { "Set-Cookie"_s, "testCookie=42; Path=/; SameSite=None; Secure"_s } }, "<script>alert('hi')</script>"_s);
-#endif
-                    }
                     if (path == "/org"_s)
                         return HTTPResponse("<script>fetch('https://example.com/cookie-check', {credentials: 'include'})</script>"_s);
                     if (path == "/cookie-check"_s) {
@@ -535,44 +529,6 @@ TEST_F(WKContentRuleListStoreTest, UnsafeMMap)
     TestWebKitAPI::Util::run(&doneRemoving);
 }
 #endif // PLATFORM(IOS_FAMILY)
-
-TEST_F(WKContentRuleListStoreTest, _WKUserContentExtensionStoreSelectors)
-{
-    [[WKContentRuleListStore defaultStore] _removeAllContentRuleLists];
-    NSString *identifier = @"TestOldSPIMixup";
-
-    __block bool doneCompiling = false;
-    [(_WKUserContentExtensionStore *)[WKContentRuleListStore defaultStore] compileContentExtensionForIdentifier:identifier encodedContentExtension:basicFilter completionHandler:^(_WKUserContentFilter *filter, NSError *error) {
-        EXPECT_NULL(error);
-        EXPECT_NOT_NULL(filter);
-        doneCompiling = true;
-    }];
-    TestWebKitAPI::Util::run(&doneCompiling);
-
-    __block bool doneLookingUp = false;
-    [(_WKUserContentExtensionStore *)[WKContentRuleListStore defaultStore] lookupContentExtensionForIdentifier:identifier completionHandler:^(_WKUserContentFilter *filter, NSError *error) {
-        EXPECT_NULL(error);
-        EXPECT_NOT_NULL(filter);
-        doneLookingUp = true;
-    }];
-    TestWebKitAPI::Util::run(&doneLookingUp);
-
-    __block bool domeRemoving = false;
-    [(_WKUserContentExtensionStore *)[WKContentRuleListStore defaultStore] removeContentExtensionForIdentifier:identifier completionHandler:^(NSError *error) {
-        EXPECT_NULL(error);
-        domeRemoving = true;
-    }];
-    TestWebKitAPI::Util::run(&domeRemoving);
-
-    doneLookingUp = false;
-    [(_WKUserContentExtensionStore *)[WKContentRuleListStore defaultStore] lookupContentExtensionForIdentifier:identifier completionHandler:^(_WKUserContentFilter *filter, NSError *error) {
-        EXPECT_WK_STREQ(error.domain, WKErrorDomain);
-        EXPECT_EQ(error.code, WKErrorContentRuleListStoreLookUpFailed);
-        EXPECT_NULL(filter);
-        doneLookingUp = true;
-    }];
-    TestWebKitAPI::Util::run(&doneLookingUp);
-}
 
 static RetainPtr<WKContentRuleList> compileContentRuleList(const char* json, NSString *identifier = @"testidentifier")
 {

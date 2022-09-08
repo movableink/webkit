@@ -799,6 +799,27 @@ void MakeDebugUtilsLabel(GLenum source, const char *marker, VkDebugUtilsLabelEXT
     kLabelColors[colorIndex].writeData(label->color);
 }
 
+angle::Result SetDebugUtilsObjectName(ContextVk *contextVk,
+                                      VkObjectType objectType,
+                                      uint64_t handle,
+                                      const std::string &label)
+{
+    RendererVk *renderer = contextVk->getRenderer();
+
+    VkDebugUtilsObjectNameInfoEXT objectNameInfo = {};
+    objectNameInfo.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+    objectNameInfo.objectType   = objectType;
+    objectNameInfo.objectHandle = handle;
+    objectNameInfo.pObjectName  = label.c_str();
+
+    if (vkSetDebugUtilsObjectNameEXT)
+    {
+        ANGLE_VK_TRY(contextVk,
+                     vkSetDebugUtilsObjectNameEXT(renderer->getDevice(), &objectNameInfo));
+    }
+    return angle::Result::Continue;
+}
+
 // ClearValuesArray implementation.
 ClearValuesArray::ClearValuesArray() : mValues{}, mEnabled{} {}
 
@@ -878,6 +899,24 @@ void ClampViewport(VkViewport *viewport)
     }
 }
 
+void ApplyPipelineCreationFeedback(Context *context, const VkPipelineCreationFeedback &feedback)
+{
+    const bool cacheHit =
+        (feedback.flags & VK_PIPELINE_CREATION_FEEDBACK_APPLICATION_PIPELINE_CACHE_HIT_BIT) != 0;
+
+    angle::VulkanPerfCounters &perfCounters = context->getPerfCounters();
+
+    if (cacheHit)
+    {
+        ++perfCounters.pipelineCreationCacheHits;
+        perfCounters.pipelineCreationTotalCacheHitsDurationNs += feedback.duration;
+    }
+    else
+    {
+        ++perfCounters.pipelineCreationCacheMisses;
+        perfCounters.pipelineCreationTotalCacheMissesDurationNs += feedback.duration;
+    }
+}
 }  // namespace vk
 
 #if !defined(ANGLE_SHARED_LIBVULKAN)
@@ -887,6 +926,7 @@ PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = nullptr;
 PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT       = nullptr;
 PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT           = nullptr;
 PFN_vkCmdInsertDebugUtilsLabelEXT vkCmdInsertDebugUtilsLabelEXT     = nullptr;
+PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT       = nullptr;
 
 // VK_EXT_debug_report
 PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT   = nullptr;
@@ -1005,6 +1045,7 @@ void InitDebugUtilsEXTFunctions(VkInstance instance)
     GET_INSTANCE_FUNC(vkCmdBeginDebugUtilsLabelEXT);
     GET_INSTANCE_FUNC(vkCmdEndDebugUtilsLabelEXT);
     GET_INSTANCE_FUNC(vkCmdInsertDebugUtilsLabelEXT);
+    GET_INSTANCE_FUNC(vkSetDebugUtilsObjectNameEXT);
 }
 
 void InitDebugReportEXTFunctions(VkInstance instance)
@@ -1640,134 +1681,4 @@ gl::LevelIndex GetLevelIndex(vk::LevelIndex levelVk, gl::LevelIndex baseLevel)
     return gl::LevelIndex(levelVk.get() + baseLevel.get());
 }
 }  // namespace vk_gl
-
-namespace vk
-{
-// BufferBlock implementation.
-BufferBlock::BufferBlock() : mMemoryPropertyFlags(0), mSize(0), mMappedMemory(nullptr) {}
-
-BufferBlock::BufferBlock(BufferBlock &&other)
-    : mVirtualBlock(std::move(other.mVirtualBlock)),
-      mBuffer(std::move(other.mBuffer)),
-      mDeviceMemory(std::move(other.mDeviceMemory)),
-      mMemoryPropertyFlags(other.mMemoryPropertyFlags),
-      mSize(other.mSize),
-      mMappedMemory(other.mMappedMemory),
-      mSerial(other.mSerial),
-      mCountRemainsEmpty(0)
-{}
-
-BufferBlock &BufferBlock::operator=(BufferBlock &&other)
-{
-    std::swap(mVirtualBlock, other.mVirtualBlock);
-    std::swap(mBuffer, other.mBuffer);
-    std::swap(mDeviceMemory, other.mDeviceMemory);
-    std::swap(mMemoryPropertyFlags, other.mMemoryPropertyFlags);
-    std::swap(mSize, other.mSize);
-    std::swap(mMappedMemory, other.mMappedMemory);
-    std::swap(mSerial, other.mSerial);
-    std::swap(mCountRemainsEmpty, other.mCountRemainsEmpty);
-    return *this;
-}
-
-BufferBlock::~BufferBlock()
-{
-    ASSERT(!mVirtualBlock.valid());
-    ASSERT(!mBuffer.valid());
-    ASSERT(!mDeviceMemory.valid());
-}
-
-void BufferBlock::destroy(RendererVk *renderer)
-{
-    VkDevice device = renderer->getDevice();
-
-    if (mMappedMemory)
-    {
-        unmap(device);
-    }
-
-    mVirtualBlock.destroy(device);
-    mBuffer.destroy(device);
-    mDeviceMemory.destroy(device);
-}
-
-angle::Result BufferBlock::init(Context *context,
-                                Buffer &buffer,
-                                vma::VirtualBlockCreateFlags flags,
-                                DeviceMemory &deviceMemory,
-                                VkMemoryPropertyFlags memoryPropertyFlags,
-                                VkDeviceSize size)
-{
-    RendererVk *renderer = context->getRenderer();
-    ASSERT(!mVirtualBlock.valid());
-    ASSERT(!mBuffer.valid());
-    ASSERT(!mDeviceMemory.valid());
-
-    mVirtualBlockMutex.init(renderer->isAsyncCommandQueueEnabled());
-    ANGLE_VK_TRY(context, mVirtualBlock.init(renderer->getDevice(), flags, size));
-
-    mBuffer              = std::move(buffer);
-    mDeviceMemory        = std::move(deviceMemory);
-    mMemoryPropertyFlags = memoryPropertyFlags;
-    mSize                = size;
-    mMappedMemory        = nullptr;
-    mSerial              = renderer->getResourceSerialFactory().generateBufferSerial();
-
-    return angle::Result::Continue;
-}
-
-void BufferBlock::initWithoutVirtualBlock(Context *context,
-                                          Buffer &buffer,
-                                          DeviceMemory &deviceMemory,
-                                          VkMemoryPropertyFlags memoryPropertyFlags,
-                                          VkDeviceSize size)
-{
-    RendererVk *renderer = context->getRenderer();
-    ASSERT(!mVirtualBlock.valid());
-    ASSERT(!mBuffer.valid());
-    ASSERT(!mDeviceMemory.valid());
-
-    mBuffer              = std::move(buffer);
-    mDeviceMemory        = std::move(deviceMemory);
-    mMemoryPropertyFlags = memoryPropertyFlags;
-    mSize                = size;
-    mMappedMemory        = nullptr;
-    mSerial              = renderer->getResourceSerialFactory().generateBufferSerial();
-}
-
-VkResult BufferBlock::map(const VkDevice device)
-{
-    ASSERT(mMappedMemory == nullptr);
-    return mDeviceMemory.map(device, 0, mSize, 0, &mMappedMemory);
-}
-
-void BufferBlock::unmap(const VkDevice device)
-{
-    mDeviceMemory.unmap(device);
-    mMappedMemory = nullptr;
-}
-
-void BufferBlock::free(VkDeviceSize offset)
-{
-    std::lock_guard<ConditionalMutex> lock(mVirtualBlockMutex);
-    mVirtualBlock.free(offset);
-}
-
-int32_t BufferBlock::getAndIncrementEmptyCounter()
-{
-    return ++mCountRemainsEmpty;
-}
-
-void BufferBlock::calculateStats(vma::StatInfo *pStatInfo) const
-{
-    std::lock_guard<ConditionalMutex> lock(mVirtualBlockMutex);
-    mVirtualBlock.calculateStats(pStatInfo);
-}
-
-// BufferSuballocation implementation.
-VkResult BufferSuballocation::map(Context *context)
-{
-    return mBufferBlock->map(context->getDevice());
-}
-}  // namespace vk
 }  // namespace rx

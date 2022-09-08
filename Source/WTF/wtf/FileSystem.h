@@ -134,7 +134,7 @@ WTF_EXPORT_PRIVATE std::optional<FileType> fileType(const String&);
 WTF_EXPORT_PRIVATE std::optional<FileType> fileTypeFollowingSymlinks(const String&);
 
 WTF_EXPORT_PRIVATE void setMetadataURL(const String& path, const String& urlString, const String& referrer = { });
-WTF_EXPORT_PRIVATE bool excludeFromBackup(const String&); // Returns true if successful.
+WTF_EXPORT_PRIVATE bool setExcludedFromBackup(const String&, bool); // Returns true if successful.
 
 WTF_EXPORT_PRIVATE Vector<String> listDirectory(const String& path); // Returns file names, not full paths.
 
@@ -216,6 +216,11 @@ WTF_EXPORT_PRIVATE bool setAllowsMaterializingDatalessFiles(bool, PolicyScope);
 WTF_EXPORT_PRIVATE std::optional<bool> allowsMaterializingDatalessFiles(PolicyScope);
 #endif
 
+// Impl for systems that do not already have createTemporaryDirectory
+#if !OS(WINDOWS) && !PLATFORM(COCOA) && !PLATFORM(PLAYSTATION)
+WTF_EXPORT_PRIVATE String createTemporaryDirectory();
+#endif
+
 WTF_EXPORT_PRIVATE bool deleteNonEmptyDirectory(const String&);
 
 WTF_EXPORT_PRIVATE String realPath(const String&);
@@ -287,6 +292,9 @@ inline MappedFileData& MappedFileData::operator=(MappedFileData&& other)
 // This creates the destination file, maps it, write the provided data to it and returns the mapped file.
 // This function fails if there is already a file at the destination path.
 WTF_EXPORT_PRIVATE MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(Span<const uint8_t>)>&)>&& apply, PlatformFileHandle* = nullptr);
+
+WTF_EXPORT_PRIVATE MappedFileData createMappedFileData(const String&, size_t, PlatformFileHandle* = nullptr);
+WTF_EXPORT_PRIVATE void finalizeMappedFileData(MappedFileData&, size_t);
 
 } // namespace FileSystemImpl
 } // namespace WTF

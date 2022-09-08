@@ -31,12 +31,14 @@
 # * A feature enabled here but not WebKitFeatures.cmake is EXPERIMENTAL.
 # * A feature enabled in WebKitFeatures.cmake but not here is a BUG.
 
+package webkitperl::FeatureList;
+
 use strict;
 use warnings;
 
 use FindBin;
 use lib $FindBin::Bin;
-use webkitdirs;
+use autouse 'webkitdirs' => qw(prohibitUnknownPort);
 
 BEGIN {
    use Exporter   ();
@@ -133,6 +135,7 @@ my (
     $orientationEventsSupport,
     $overflowScrollingTouchSupport,
     $paymentRequestSupport,
+    $pdfJS,
     $pdfkitPluginSupport,
     $pictureInPictureAPISupport,
     $pointerLockSupport,
@@ -186,8 +189,6 @@ my (
     $wirelessPlaybackTargetSupport,
     $xsltSupport,
 );
-
-prohibitUnknownPort();
 
 sub isQtGstreamer { return isQt() && !isAnyWindows() && !isDarwin() }
 
@@ -429,6 +430,9 @@ my @features = (
     { option => "payment-request", desc => "Toggle Payment Request support",
       define => "ENABLE_PAYMENT_REQUEST", value => \$paymentRequestSupport },
 
+    { option => "pdfjs", desc => "Toggle PDF.js integration",
+      define => "ENABLE_PDFJS", value => \$pdfJS },
+
     { option => "pdfkit-plugin", desc => "Toggle PDFKit plugin support",
       define => "ENABLE_PDFKIT_PLUGIN", value => \$pdfkitPluginSupport },
 
@@ -573,6 +577,7 @@ my @features = (
 
 sub getFeatureOptionList()
 {
+    webkitdirs::prohibitUnknownPort();
     return @features;
 }
 

@@ -25,9 +25,10 @@
 
 #include "config.h"
 
+#include "APIArray.h"
+#include "WKAPICast.h"
 #include "WKPreferencesRef.h"
 #include "WKPreferencesRefPrivate.h"
-#include "WKAPICast.h"
 #include "WebPreferences.h"
 #include <WebCore/Settings.h>
 #include <wtf/RefPtr.h>
@@ -67,6 +68,12 @@ void WKPreferencesEndBatchingUpdates(WKPreferencesRef preferencesRef)
     toImpl(preferencesRef)->endBatchingUpdates();
 }
 
+WKArrayRef WKPreferencesCopyExperimentalFeatures(WKPreferencesRef preferencesRef)
+{
+    auto experimentalFeatures = toImpl(preferencesRef)->experimentalFeatures();
+    return toAPI(&API::Array::create(WTFMove(experimentalFeatures)).leakRef());
+}
+
 void WKPreferencesEnableAllExperimentalFeatures(WKPreferencesRef preferencesRef)
 {
     toImpl(preferencesRef)->enableAllExperimentalFeatures();
@@ -75,6 +82,12 @@ void WKPreferencesEnableAllExperimentalFeatures(WKPreferencesRef preferencesRef)
 void WKPreferencesSetExperimentalFeatureForKey(WKPreferencesRef preferencesRef, bool value, WKStringRef experimentalFeatureKey)
 {
     toImpl(preferencesRef)->setExperimentalFeatureEnabledForKey(toWTFString(experimentalFeatureKey), value);
+}
+
+WKArrayRef WKPreferencesCopyInternalDebugFeatures(WKPreferencesRef preferencesRef)
+{
+    auto internalDebugFeatures = toImpl(preferencesRef)->internalDebugFeatures();
+    return toAPI(&API::Array::create(WTFMove(internalDebugFeatures)).leakRef());
 }
 
 void WKPreferencesResetAllInternalDebugFeatures(WKPreferencesRef preferencesRef)

@@ -79,6 +79,16 @@ SVGResources* SVGResourcesCache::cachedResourcesForRenderer(const RenderElement&
     return resourcesCacheFromRenderer(renderer).m_cache.get(&renderer);
 }
 
+static bool hasPaintResourceRequiringRemovalOnClientLayoutChange(RenderSVGResource* resource)
+{
+    return resource && resource->resourceType() == PatternResourceType;
+}
+
+static bool hasResourcesRequiringRemovalOnClientLayoutChange(SVGResources& resources)
+{
+    return resources.masker() || resources.filter() || hasPaintResourceRequiringRemovalOnClientLayoutChange(resources.fill()) || hasPaintResourceRequiringRemovalOnClientLayoutChange(resources.stroke());
+}
+
 void SVGResourcesCache::clientLayoutChanged(RenderElement& renderer)
 {
     auto* resources = SVGResourcesCache::cachedResourcesForRenderer(renderer);
@@ -87,7 +97,7 @@ void SVGResourcesCache::clientLayoutChanged(RenderElement& renderer)
 
     // Invalidate the resources if either the RenderElement itself changed,
     // or we have filter resources, which could depend on the layout of children.
-    if (renderer.selfNeedsLayout())
+    if (renderer.selfNeedsLayout() && hasResourcesRequiringRemovalOnClientLayoutChange(*resources))
         resources->removeClientFromCache(renderer, false);
 }
 
@@ -96,7 +106,7 @@ static inline bool rendererCanHaveResources(RenderObject& renderer)
     return renderer.node() && renderer.node()->isSVGElement() && !renderer.isSVGInlineText();
 }
 
-void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDifference diff, const RenderStyle& newStyle)
+void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDifference diff, const RenderStyle* oldStyle, const RenderStyle& newStyle)
 {
     if (diff == StyleDifference::Equal || !renderer.parent())
         return;
@@ -105,11 +115,42 @@ void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDiffere
     if (renderer.isSVGResourceFilterPrimitive() && (diff == StyleDifference::Repaint || diff == StyleDifference::RepaintIfText))
         return;
 
-    // Dynamic changes of CSS properties like 'clip-path' may require us to recompute the associated resources for a renderer.
-    // FIXME: Avoid passing in a useless StyleDifference, but instead compare oldStyle/newStyle to see which resources changed
-    // to be able to selectively rebuild individual resources, instead of all of them.
-    if (rendererCanHaveResources(renderer)) {
-        auto& cache = resourcesCacheFromRenderer(renderer);
+    auto& cache = resourcesCacheFromRenderer(renderer);
+
+    auto hasStyleDifferencesAffectingResources = [&] {
+        if (!rendererCanHaveResources(renderer))
+            return false;
+
+        if (!oldStyle)
+            return true;
+
+        if (!arePointingToEqualData(oldStyle->clipPath(), newStyle.clipPath()))
+            return true;
+
+        // RenderSVGResourceMarker only supports SVG <mask> references.
+        if (!arePointingToEqualData(oldStyle->maskImage(), newStyle.maskImage()))
+            return true;
+
+        if (oldStyle->filter() != newStyle.filter())
+            return true;
+
+        // -apple-color-filter affects gradients.
+        if (oldStyle->appleColorFilter() != newStyle.appleColorFilter())
+            return true;
+
+        auto& oldSVGStyle = oldStyle->svgStyle();
+        auto& newSVGStyle = newStyle.svgStyle();
+
+        if (oldSVGStyle.fillPaintUri() != newSVGStyle.fillPaintUri())
+            return true;
+
+        if (oldSVGStyle.strokePaintUri() != newSVGStyle.strokePaintUri())
+            return true;
+
+        return false;
+    };
+
+    if (hasStyleDifferencesAffectingResources()) {
         cache.removeResourcesFromRenderer(renderer);
         cache.addResourcesFromRenderer(renderer, newStyle);
     }
@@ -165,7 +206,8 @@ void SVGResourcesCache::resourceDestroyed(RenderSVGResourceContainer& resource)
         if (it.value->resourceDestroyed(resource)) {
             // Mark users of destroyed resources as pending resolution based on the id of the old resource.
             auto& clientElement = *it.key->element();
-            clientElement.document().accessSVGExtensions().addPendingResource(resource.element().getIdAttribute(), clientElement);
+            RELEASE_ASSERT(is<SVGElement>(clientElement));
+            clientElement.document().accessSVGExtensions().addPendingResource(resource.element().getIdAttribute(), downcast<SVGElement>(clientElement));
         }
     }
 }

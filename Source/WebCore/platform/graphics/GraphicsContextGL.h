@@ -824,6 +824,20 @@ public:
     // GL_ANGLE_request_extension
     static constexpr GCGLenum REQUESTABLE_EXTENSIONS_ANGLE = 0x93A8;
 
+    // ANGLE special internal formats
+    static constexpr GCGLenum BGRA4_ANGLEX = 0x6ABC;
+    static constexpr GCGLenum BGR5_A1_ANGLEX = 0x6ABD;
+    static constexpr GCGLenum BGRA8_SRGB_ANGLEX = 0x6AC0;
+
+    // GL_OES_depth32
+    static constexpr GCGLenum DEPTH_COMPONENT32_OES = 0x81A7;
+
+    // GL_APPLE_texture_format_BGRA8888
+    static constexpr GCGLenum BGRA8_EXT = 0x93A1;
+
+    // GL_ANGLE_rgbx_internal_format
+    static constexpr GCGLenum RGBX8_ANGLE = 0x96BA;
+
     // Attempt to enumerate all possible native image formats to
     // reduce the amount of temporary allocations during texture
     // uploading. This enum must be public because it is accessed
@@ -1407,6 +1421,12 @@ public:
     virtual void blendFuncSeparateiOES(GCGLuint buf, GCGLenum srcRGB, GCGLenum dstRGB, GCGLenum srcAlpha, GCGLenum dstAlpha) = 0;
     virtual void colorMaskiOES(GCGLuint buf, GCGLboolean red, GCGLboolean green, GCGLboolean blue, GCGLboolean alpha) = 0;
 
+    // GL_ANGLE_base_vertex_base_instance
+    virtual void drawArraysInstancedBaseInstanceANGLE(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei instanceCount, GCGLuint baseInstance) = 0;
+    virtual void drawElementsInstancedBaseVertexBaseInstanceANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLintptr offset, GCGLsizei instanceCount, GCGLint baseVertex, GCGLuint baseInstance) = 0;
+    virtual void multiDrawArraysInstancedBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLint, const GCGLsizei, const GCGLsizei, const GCGLuint> firstsCountsInstanceCountsAndBaseInstances) = 0;
+    virtual void multiDrawElementsInstancedBaseVertexBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLsizei, const GCGLsizei, const GCGLsizei, const GCGLint, const GCGLuint> countsOffsetsInstanceCountsBaseVerticesAndBaseInstances, GCGLenum type) = 0;
+
     // ========== Other functions.
     GCGLfloat getFloat(GCGLenum pname);
     GCGLboolean getBoolean(GCGLenum pname);
@@ -1514,7 +1534,7 @@ public:
     // If the data is not tightly packed according to the passed
     // unpackParams, the output data will be tightly packed.
     // Returns true if successful, false if any error occurred.
-    static bool extractTextureData(unsigned width, unsigned height, GCGLenum format, GCGLenum type, const PixelStoreParams& unpackParams, bool flipY, bool premultiplyAlpha, const void* pixels, Vector<uint8_t>& data);
+    static bool extractTextureData(unsigned width, unsigned height, GCGLenum format, GCGLenum type, const PixelStoreParams& unpackParams, bool flipY, bool premultiplyAlpha, GCGLSpan<const GCGLvoid> pixels, Vector<uint8_t>& data);
 
     // Packs the contents of the given Image which is passed in |pixels| into the passed Vector
     // according to the given format and type, and obeying the flipY and AlphaOp flags.

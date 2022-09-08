@@ -396,7 +396,8 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             break;
         }
             
-        case Array::Contiguous: {
+        case Array::Contiguous:
+        case Array::AlwaysSlowPutContiguous: {
             if (mode.isInBounds()) {
                 read(Butterfly_publicLength);
                 read(IndexedContiguousProperties);
@@ -667,6 +668,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             read(IndexedInt32Properties);
             return;
         case Array::Contiguous:
+        case Array::AlwaysSlowPutContiguous:
             read(IndexedContiguousProperties);
             return;
         default:
@@ -1016,6 +1018,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             return;
             
         case Array::Contiguous:
+        case Array::AlwaysSlowPutContiguous:
             if (mode.isInBounds() || mode.isOutOfBoundsSaneChain()) {
                 read(Butterfly_publicLength);
                 read(IndexedContiguousProperties);
@@ -1186,6 +1189,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         case Array::String:
         case Array::DirectArguments:
         case Array::ScopedArguments:
+        case Array::AlwaysSlowPutContiguous:
             DFG_CRASH(graph, node, "impossible array mode for put");
             return;
         }
@@ -1433,6 +1437,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         case Array::Int32:
         case Array::Double:
         case Array::Contiguous:
+        case Array::AlwaysSlowPutContiguous:
         case Array::ArrayStorage:
         case Array::SlowPutArrayStorage:
             read(Butterfly_publicLength);
@@ -1819,6 +1824,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
             write(RegExpState);
             write(RegExpObject_lastIndex);
             return;
+        } else if (node->child1().useKind() == StringUse
+            && node->child2().useKind() == StringUse
+            && node->child3().useKind() == StringUse) {
+            return;
         }
         clobberTop();
         return;
@@ -1975,6 +1984,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case WeakSetAdd: {
         Edge& mapEdge = node->child1();
         Edge& keyEdge = node->child2();
+        if (keyEdge.useKind() != ObjectUse) {
+            read(World);
+            write(SideState);
+        }
         write(JSWeakSetFields);
         def(HeapLocation(WeakMapGetLoc, JSWeakSetFields, mapEdge, keyEdge), LazyNode(keyEdge.node()));
         return;
@@ -1984,6 +1997,10 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         Edge& mapEdge = graph.varArgChild(node, 0);
         Edge& keyEdge = graph.varArgChild(node, 1);
         Edge& valueEdge = graph.varArgChild(node, 2);
+        if (keyEdge.useKind() != ObjectUse) {
+            read(World);
+            write(SideState);
+        }
         write(JSWeakMapFields);
         def(HeapLocation(WeakMapGetLoc, JSWeakMapFields, mapEdge, keyEdge), LazyNode(valueEdge.node()));
         return;

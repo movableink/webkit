@@ -24,6 +24,7 @@
 #include "config.h"
 #include "Error.h"
 
+#include "ExecutableBaseInlines.h"
 #include "Interpreter.h"
 #include "JSCJSValueInlines.h"
 #include "JSGlobalObject.h"
@@ -122,9 +123,6 @@ class FindFirstCallerFrameWithCodeblockFunctor {
 public:
     FindFirstCallerFrameWithCodeblockFunctor(CallFrame* startCallFrame)
         : m_startCallFrame(startCallFrame)
-        , m_foundCallFrame(nullptr)
-        , m_foundStartCallFrame(false)
-        , m_index(0)
     { }
 
     IterationStatus operator()(StackVisitor& visitor) const
@@ -132,25 +130,34 @@ public:
         if (!m_foundStartCallFrame && (visitor->callFrame() == m_startCallFrame))
             m_foundStartCallFrame = true;
 
-        if (m_foundStartCallFrame) {
-            if (!visitor->isWasmFrame() && visitor->callFrame()->codeBlock()) {
-                m_foundCallFrame = visitor->callFrame();
-                return IterationStatus::Done;
-            }
-            m_index++;
-        }
+        if (!m_foundStartCallFrame)
+            return IterationStatus::Continue;
 
-        return IterationStatus::Continue;
+        if (visitor->isWasmFrame())
+            return IterationStatus::Continue;
+
+        if (visitor->isImplementationVisibilityPrivate())
+            return IterationStatus::Continue;
+
+        auto* codeBlock = visitor->codeBlock();
+        if (!codeBlock)
+            return IterationStatus::Continue;
+
+        m_codeBlock = codeBlock;
+
+        if (!codeBlock->unlinkedCodeBlock()->isBuiltinFunction())
+            m_bytecodeIndex = visitor->bytecodeIndex();
+        return IterationStatus::Done;
     }
 
-    CallFrame* foundCallFrame() const { return m_foundCallFrame; }
-    unsigned index() const { return m_index; }
+    CodeBlock* codeBlock() const { return m_codeBlock; }
+    BytecodeIndex bytecodeIndex() const { return m_bytecodeIndex; }
 
 private:
     CallFrame* m_startCallFrame;
-    mutable CallFrame* m_foundCallFrame;
-    mutable bool m_foundStartCallFrame;
-    mutable unsigned m_index;
+    mutable CodeBlock* m_codeBlock { nullptr };
+    mutable bool m_foundStartCallFrame { false };
+    mutable BytecodeIndex m_bytecodeIndex { 0 };
 };
 
 std::unique_ptr<Vector<StackFrame>> getStackTrace(JSGlobalObject*, VM& vm, JSObject* obj, bool useCurrentFrame)
@@ -161,22 +168,18 @@ std::unique_ptr<Vector<StackFrame>> getStackTrace(JSGlobalObject*, VM& vm, JSObj
 
     size_t framesToSkip = useCurrentFrame ? 0 : 1;
     std::unique_ptr<Vector<StackFrame>> stackTrace = makeUnique<Vector<StackFrame>>();
-    vm.interpreter->getStackTrace(obj, *stackTrace, framesToSkip, globalObject->stackTraceLimit().value());
+    vm.interpreter.getStackTrace(obj, *stackTrace, framesToSkip, globalObject->stackTraceLimit().value());
     return stackTrace;
 }
 
-void getBytecodeIndex(VM& vm, CallFrame* startCallFrame, Vector<StackFrame>* stackTrace, CallFrame*& callFrame, BytecodeIndex& bytecodeIndex)
+std::tuple<CodeBlock*, BytecodeIndex> getBytecodeIndex(VM& vm, CallFrame* startCallFrame)
 {
     FindFirstCallerFrameWithCodeblockFunctor functor(startCallFrame);
     StackVisitor::visit(vm.topCallFrame, vm, functor);
-    callFrame = functor.foundCallFrame();
-    unsigned stackIndex = functor.index();
-    bytecodeIndex = BytecodeIndex(0);
-    if (stackTrace && stackIndex < stackTrace->size() && stackTrace->at(stackIndex).hasBytecodeIndex())
-        bytecodeIndex = stackTrace->at(stackIndex).bytecodeIndex();
+    return { functor.codeBlock(), functor.bytecodeIndex() };
 }
 
-bool getLineColumnAndSource(Vector<StackFrame>* stackTrace, unsigned& line, unsigned& column, String& sourceURL)
+bool getLineColumnAndSource(VM& vm, Vector<StackFrame>* stackTrace, unsigned& line, unsigned& column, String& sourceURL)
 {
     line = 0;
     column = 0;
@@ -189,7 +192,7 @@ bool getLineColumnAndSource(Vector<StackFrame>* stackTrace, unsigned& line, unsi
         StackFrame& frame = stackTrace->at(i);
         if (frame.hasLineAndColumnInfo()) {
             frame.computeLineAndColumn(line, column);
-            sourceURL = frame.sourceURL();
+            sourceURL = frame.sourceURL(vm);
             return true;
         }
     }
@@ -206,7 +209,7 @@ bool addErrorInfo(VM& vm, Vector<StackFrame>* stackTrace, JSObject* obj)
         unsigned line;
         unsigned column;
         String sourceURL;
-        getLineColumnAndSource(stackTrace, line, column, sourceURL);
+        getLineColumnAndSource(vm, stackTrace, line, column, sourceURL);
         obj->putDirect(vm, vm.propertyNames->line, jsNumber(line));
         obj->putDirect(vm, vm.propertyNames->column, jsNumber(column));
         if (!sourceURL.isEmpty())

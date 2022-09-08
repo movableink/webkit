@@ -74,6 +74,9 @@ struct Extensions
     // GLES 2.0+ extensions
     // --------------------
 
+    // GL_EXT_base_instance
+    bool baseInstanceEXT = false;
+
     // GL_KHR_blend_equation_advanced
     bool blendEquationAdvancedKHR = false;
 
@@ -331,6 +334,9 @@ struct Extensions
 
     // GL_NV_read_depth
     bool readDepthNV = false;
+
+    // GL_NV_read_depth_stencil
+    bool readDepthStencilNV = false;
 
     // GL_EXT_read_format_bgra
     bool readFormatBgraEXT = false;
@@ -649,6 +655,12 @@ struct Extensions
 
     // GL_ANGLE_semaphore_fuchsia
     bool semaphoreFuchsiaANGLE = false;
+
+    // GL_ANGLE_shader_pixel_local_storage
+    bool shaderPixelLocalStorageANGLE = false;
+
+    // GL_ANGLE_shader_pixel_local_storage_coherent
+    bool shaderPixelLocalStorageCoherentANGLE = false;
 
     // GL_CHROMIUM_sync_query
     bool syncQueryCHROMIUM = false;

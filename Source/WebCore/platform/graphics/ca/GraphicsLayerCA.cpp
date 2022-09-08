@@ -44,7 +44,6 @@
 #include "PlatformScreen.h"
 #include "Region.h"
 #include "RotateTransformOperation.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScaleTransformOperation.h"
 #include "TiledBacking.h"
 #include "TransformState.h"
@@ -101,6 +100,9 @@ static const unsigned cMaxLayerTreeDepth = 128;
 
 // About 10 screens of an iPhone 6 Plus. <rdar://problem/44532782>
 static const unsigned cMaxTotalBackdropFilterArea = 1242 * 2208 * 10;
+
+// Don't let a single tiled layer use more than 156MB of memory. On a 3x display with RGB10A8 surfaces, this is about 12 tiles.
+static const unsigned cMaxScaledTiledLayerMemorySize = 1024 * 1024 * 156;
 
 // If we send a duration of 0 to CA, then it will use the default duration
 // of 250ms. So send a very small value instead.
@@ -321,9 +323,11 @@ bool GraphicsLayer::supportsLayerType(Type type)
 {
     switch (type) {
     case Type::Normal:
+    case Type::Structural:
     case Type::PageTiledBacking:
     case Type::ScrollContainer:
     case Type::ScrolledContents:
+    case Type::TiledBacking:
         return true;
     case Type::Shape:
 #if PLATFORM(COCOA)
@@ -335,16 +339,6 @@ bool GraphicsLayer::supportsLayerType(Type type)
     }
     ASSERT_NOT_REACHED();
     return false;
-}
-
-bool GraphicsLayer::supportsBackgroundColorContent()
-{
-    return true;
-}
-
-bool GraphicsLayer::supportsRoundedClip()
-{
-    return true;
 }
 
 bool GraphicsLayer::supportsSubpixelAntialiasedLayerText()
@@ -442,6 +436,11 @@ void GraphicsLayerCA::initialize(Type layerType)
     PlatformCALayer::LayerType platformLayerType;
     switch (layerType) {
     case Type::Normal:
+        platformLayerType = PlatformCALayer::LayerType::LayerTypeWebLayer;
+        break;
+    case Type::Structural:
+        platformLayerType = PlatformCALayer::LayerType::LayerTypeTransformLayer;
+        break;
     case Type::ScrolledContents:
         platformLayerType = PlatformCALayer::LayerType::LayerTypeWebLayer;
         break;
@@ -453,6 +452,9 @@ void GraphicsLayerCA::initialize(Type layerType)
         break;
     case Type::Shape:
         platformLayerType = PlatformCALayer::LayerType::LayerTypeShapeLayer;
+        break;
+    case Type::TiledBacking:
+        platformLayerType = PlatformCALayer::LayerType::LayerTypeTiledBackingLayer;
         break;
     }
     m_layer = createPlatformCALayer(platformLayerType, this);
@@ -1026,15 +1028,6 @@ void GraphicsLayerCA::setContentsRectClipsDescendants(bool contentsRectClipsDesc
     noteLayerPropertyChanged(ChildrenChanged | ContentsRectsChanged);
 }
 
-void GraphicsLayerCA::setMasksToBoundsRect(const FloatRoundedRect& roundedRect)
-{
-    if (roundedRect == m_masksToBoundsRect)
-        return;
-
-    GraphicsLayer::setMasksToBoundsRect(roundedRect);
-    noteLayerPropertyChanged(MasksToBoundsRectChanged);
-}
-
 void GraphicsLayerCA::setShapeLayerPath(const Path& path)
 {
     // FIXME: need to check for path equality. No bool Path::operator==(const Path&)!.
@@ -1575,6 +1568,46 @@ TransformationMatrix GraphicsLayerCA::transformByApplyingAnchorPoint(const Trans
     return result;
 }
 
+void GraphicsLayerCA::adjustContentsScaleLimitingFactor()
+{
+    if (type() == Type::PageTiledBacking || !m_layer->usesTiledBackingLayer())
+        return;
+
+    float contentsScaleLimitingFactor = 1;
+    auto bounds = FloatRect { m_boundsOrigin, size() };
+    auto tileCoverageRect = intersection(m_coverageRect, bounds);
+    if (!tileCoverageRect.isEmpty()) {
+        const unsigned bytesPerPixel = 4; // FIXME: Use backingStoreBytesPerPixel(), which needs to be plumbed out through TiledBacking.
+        double scaleFactor = deviceScaleFactor() * pageScaleFactor();
+        double memoryEstimate = tileCoverageRect.area() * scaleFactor * scaleFactor * bytesPerPixel;
+        if (memoryEstimate > cMaxScaledTiledLayerMemorySize) {
+            // sqrt because the memory computation is based on area, while contents scale is per-axis.
+            contentsScaleLimitingFactor = std::sqrt(cMaxScaledTiledLayerMemorySize / memoryEstimate);
+
+            const float minFactor = 0.05;
+            const float maxFactor = 1;
+            contentsScaleLimitingFactor = clampTo(contentsScaleLimitingFactor, minFactor, maxFactor);
+
+            // Quantize the value to avoid too many repaints when animating.
+            const float quanitzationFactor = 20;
+            contentsScaleLimitingFactor = std::round(contentsScaleLimitingFactor * quanitzationFactor) / quanitzationFactor;
+        }
+
+        LOG_WITH_STREAM(Tiling, stream << "GraphicsLayerCA " << this << " id " << primaryLayerID() << " " << size() << " adjustContentsScaleLimitingFactor: for coverage area " << tileCoverageRect << " memory " << (memoryEstimate / (1024 * 1024)) << "MP computed contentsScaleLimitingFactor " << contentsScaleLimitingFactor);
+    }
+
+    setContentsScaleLimitingFactor(contentsScaleLimitingFactor);
+}
+
+void GraphicsLayerCA::setContentsScaleLimitingFactor(float factor)
+{
+    if (factor == m_contentsScaleLimitingFactor)
+        return;
+    
+    m_contentsScaleLimitingFactor = factor;
+    noteLayerPropertyChanged(ContentsScaleChanged);
+}
+
 GraphicsLayerCA::VisibleAndCoverageRects GraphicsLayerCA::computeVisibleAndCoverageRect(TransformState& state, bool preserves3D, ComputeVisibleRectFlags flags) const
 {
     FloatPoint position = approximatePosition();
@@ -1592,18 +1625,11 @@ GraphicsLayerCA::VisibleAndCoverageRects GraphicsLayerCA::computeVisibleAndCover
     state.applyTransform(layerTransform, accumulation, &applyWasClamped);
 
     bool mapWasClamped;
-    FloatRect clipRectForChildren = state.mappedQuad(&mapWasClamped).boundingBox();
-    FloatPoint boundsOrigin = m_boundsOrigin;
-#if PLATFORM(IOS_FAMILY)
-    // In WK1, UIKit may be changing layer bounds behind our back in overflow-scroll layers, so use the layer's origin.
-    if (m_layer->isPlatformCALayerCocoa())
-        boundsOrigin = m_layer->bounds().location();
-#endif
-    clipRectForChildren.move(boundsOrigin.x(), boundsOrigin.y());
-    
-    FloatRect clipRectForSelf(boundsOrigin, m_size);
+    auto clipRectFromParent = state.mappedQuad(&mapWasClamped).boundingBox();
+
+    auto clipRectForSelf = FloatRect { { }, m_size };
     if (!applyWasClamped && !mapWasClamped)
-        clipRectForSelf.intersect(clipRectForChildren);
+        clipRectForSelf.intersect(clipRectFromParent);
 
     if (masksToBounds()) {
         ASSERT(accumulation == TransformState::FlattenTransform);
@@ -1614,10 +1640,23 @@ GraphicsLayerCA::VisibleAndCoverageRects GraphicsLayerCA::computeVisibleAndCover
             state.setSecondaryQuad(FloatQuad { clipRectForSelf });
     }
 
-    FloatRect coverageRect = clipRectForSelf;
+    auto boundsOrigin = m_boundsOrigin;
+#if PLATFORM(IOS_FAMILY)
+    // In WK1, UIKit may be changing layer bounds behind our back in overflow-scroll layers, so use the layer's origin.
+    if (m_layer->isPlatformCALayerCocoa())
+        boundsOrigin = m_layer->bounds().location();
+#endif
+
+    auto coverageRect = clipRectForSelf;
     auto quad = state.mappedSecondaryQuad(&mapWasClamped);
     if (quad && !mapWasClamped && !applyWasClamped)
         coverageRect = (*quad).boundingBox();
+
+    if (!boundsOrigin.isZero()) {
+        state.move(LayoutSize { toFloatSize(-boundsOrigin) }, accumulation);
+        clipRectForSelf.moveBy(boundsOrigin);
+        coverageRect.moveBy(boundsOrigin);
+    }
 
     return { clipRectForSelf, coverageRect, currentTransform };
 }
@@ -1639,6 +1678,7 @@ bool GraphicsLayerCA::adjustCoverageRect(VisibleAndCoverageRects& rects, const F
         }
         break;
     case Type::Normal:
+    case Type::TiledBacking:
         if (m_layer->usesTiledBackingLayer())
             coverageRect = tiledBacking()->adjustTileCoverageRect(coverageRect, oldVisibleRect, rects.visibleRect, size() != m_sizeAtLastCoverageRectUpdate);
         break;
@@ -1688,6 +1728,8 @@ void GraphicsLayerCA::setVisibleAndCoverageRects(const VisibleAndCoverageRects& 
         addUncommittedChanges(CoverageRectChanged);
         m_coverageRect = rects.coverageRect;
     }
+
+    adjustContentsScaleLimitingFactor();
 }
 
 bool GraphicsLayerCA::needsCommit(const CommitState& commitState)
@@ -2021,10 +2063,12 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
     if (m_uncommittedChanges & AnimationChanged)
         updateAnimations();
 
+    updateRootRelativeScale(); // Needs to happen before ContentsScaleChanged.
+
     // Updating the contents scale can cause parts of the layer to be invalidated,
     // so make sure to update the contents scale before updating the dirty rects.
     if (m_uncommittedChanges & ContentsScaleChanged)
-        updateContentsScale(pageScaleFactor);
+        updateContentsScale(m_rootRelativeScaleFactor * pageScaleFactor);
 
     if (m_uncommittedChanges & CoverageRectChanged)
         updateCoverage(commitState);
@@ -2040,9 +2084,6 @@ void GraphicsLayerCA::commitLayerChangesBeforeSublayers(CommitState& commitState
     
     if (m_uncommittedChanges & ContentsRectsChanged) // Needs to happen before ChildrenChanged
         updateContentsRects();
-
-    if (m_uncommittedChanges & MasksToBoundsRectChanged) // Needs to happen before ChildrenChanged
-        updateMasksToBoundsRect();
 
     if (m_uncommittedChanges & EventRegionChanged)
         updateEventRegion();
@@ -2643,7 +2684,7 @@ bool GraphicsLayerCA::ensureStructuralLayer(StructuralLayerPurpose purpose)
 
 GraphicsLayerCA::StructuralLayerPurpose GraphicsLayerCA::structuralLayerPurpose() const
 {
-    if (preserves3D())
+    if (preserves3D() && m_type != Type::Structural)
         return StructuralLayerForPreserves3D;
     
     if (isReplicated())
@@ -2957,26 +2998,6 @@ void GraphicsLayerCA::updateContentsRects()
                 m_layerClones->contentsShapeMaskLayerClones.remove(cloneID);
             else if (shapeMaskLayerClone && !hadShapeMask)
                 m_layerClones->contentsShapeMaskLayerClones.add(cloneID, shapeMaskLayerClone);
-        }
-    }
-}
-
-void GraphicsLayerCA::updateMasksToBoundsRect()
-{
-    updateClippingStrategy(*m_layer, m_shapeMaskLayer, m_masksToBoundsRect);
-
-    if (m_layerClones) {
-        for (auto& clone : m_layerClones->primaryLayerClones) {
-            CloneID cloneID = clone.key;
-            RefPtr<PlatformCALayer> shapeMaskLayerClone = m_layerClones->shapeMaskLayerClones.get(cloneID);
-
-            bool hadShapeMask = shapeMaskLayerClone;
-            updateClippingStrategy(*clone.value, shapeMaskLayerClone, m_masksToBoundsRect);
-
-            if (!shapeMaskLayerClone)
-                m_layerClones->shapeMaskLayerClones.remove(cloneID);
-            else if (!hadShapeMask && shapeMaskLayerClone)
-                m_layerClones->shapeMaskLayerClones.add(cloneID, shapeMaskLayerClone);
         }
     }
 }
@@ -4002,9 +4023,39 @@ GraphicsLayerCA::LayerMap* GraphicsLayerCA::animatedLayerClones(AnimatedProperty
     return (property == AnimatedPropertyBackgroundColor) ? &m_layerClones->contentsLayerClones : primaryLayerClones();
 }
 
+void GraphicsLayerCA::updateRootRelativeScale()
+{
+    // For CSS animations we could figure out the max scale level during the animation and only figure out the max content scale once.
+    // For JS driven animation, we need to be more clever to keep the peformance as before. Ideas:
+    // - only update scale factor when the change is 'significant' (to be defined, (orig - new)/orig > delta?)
+    // - never update the scale factor when it gets smaller (unless we're under memory pressure) (or only periodcally)
+    // - ...
+    // --> For now we disable this logic alltogether, but allow to turn it on selectively (for LBSE)
+    if (!m_shouldUpdateRootRelativeScaleFactor)
+        return;
+
+    auto computeMaxScaleFromTransform = [](const TransformationMatrix& transform) -> float {
+        if (transform.isIdentityOrTranslation())
+            return 1;
+        TransformationMatrix::Decomposed2Type decomposeData;
+        transform.decompose2(decomposeData);
+        return std::max(std::abs(decomposeData.scaleX), std::abs(decomposeData.scaleY));
+    };
+
+    float rootRelativeScaleFactor = hasNonIdentityTransform() ? computeMaxScaleFromTransform(transform()) : 1;
+
+    if (auto* parentLayer = parent(); parentLayer && parentLayer->hasNonIdentityChildrenTransform())
+        rootRelativeScaleFactor = std::max(rootRelativeScaleFactor, computeMaxScaleFromTransform(parentLayer->childrenTransform()));
+
+    if (rootRelativeScaleFactor != m_rootRelativeScaleFactor) {
+        m_rootRelativeScaleFactor = rootRelativeScaleFactor;
+        m_uncommittedChanges |= ContentsScaleChanged;
+    }
+}
+
 void GraphicsLayerCA::updateContentsScale(float pageScaleFactor)
 {
-    float contentsScale = pageScaleFactor * deviceScaleFactor();
+    float contentsScale = pageScaleFactor * deviceScaleFactor() * m_contentsScaleLimitingFactor;
 
     if (isPageTiledBackingLayer() && tiledBacking()) {
         float zoomedOutScale = client().zoomedOutPageScaleFactor() * deviceScaleFactor();
@@ -4269,7 +4320,6 @@ const char* GraphicsLayerCA::layerChangeAsString(LayerChange layerChange)
     case LayerChange::ContentsPlatformLayerChanged: return "ContentsPlatformLayerChanged";
     case LayerChange::ContentsColorLayerChanged: return "ContentsColorLayerChanged";
     case LayerChange::ContentsRectsChanged: return "ContentsRectsChanged";
-    case LayerChange::MasksToBoundsRectChanged: return "MasksToBoundsRectChanged";
     case LayerChange::MaskLayerChanged: return "MaskLayerChanged";
     case LayerChange::ReplicatedLayerChanged: return "ReplicatedLayerChanged";
     case LayerChange::ContentsNeedsDisplay: return "ContentsNeedsDisplay";
@@ -4329,6 +4379,8 @@ void GraphicsLayerCA::dumpAdditionalProperties(TextStream& textStream, OptionSet
         textStream << indent << "(coverage rect " << m_coverageRect.x() << ", " << m_coverageRect.y() << " " << m_coverageRect.width() << " x " << m_coverageRect.height() << ")\n";
         textStream << indent << "(intersects coverage rect " << m_intersectsCoverageRect << ")\n";
         textStream << indent << "(contentsScale " << m_layer->contentsScale() << ")\n";
+        if (m_contentsScaleLimitingFactor != 1)
+            textStream << indent << "(contentsScale limiting factor " << m_contentsScaleLimitingFactor << ")\n";
     }
 
     if (tiledBacking() && (options & LayerTreeAsTextOptions::IncludeTileCaches)) {
@@ -4405,6 +4457,9 @@ void GraphicsLayerCA::setCustomAppearance(CustomAppearance customAppearance)
 
 bool GraphicsLayerCA::requiresTiledLayer(float pageScaleFactor) const
 {
+    if (isTiledBackingLayer())
+        return true;
+
     if (!m_drawsContent || isPageTiledBackingLayer() || !allowsTiling())
         return false;
 
@@ -4469,6 +4524,8 @@ void GraphicsLayerCA::changeLayerTypeTo(PlatformCALayer::LayerType newLayerType)
     
     if (isTiledLayer)
         addUncommittedChanges(CoverageRectChanged);
+
+    adjustContentsScaleLimitingFactor();
 
     moveAnimations(oldLayer.get(), m_layer.get());
     

@@ -138,6 +138,11 @@ bool ImageSibling::isYUV() const
     return mTargetOf.get() && mTargetOf->isYUV();
 }
 
+bool ImageSibling::isCreatedWithAHB() const
+{
+    return mTargetOf.get() && mTargetOf->isCreatedWithAHB();
+}
+
 bool ImageSibling::hasProtectedContent() const
 {
     return mTargetOf.get() && mTargetOf->hasProtectedContent();
@@ -268,7 +273,6 @@ ImageState::ImageState(EGLenum target, ImageSibling *buffer, const AttributeMap 
       target(target),
       imageIndex(GetImageIndex(target, attribs)),
       source(buffer),
-      targets(),
       format(GL_NONE),
       yuv(false),
       cubeMap(false),
@@ -302,7 +306,10 @@ void Image::onDestroy(const Display *display)
 {
     // All targets should hold a ref to the egl image and it should not be deleted until there are
     // no siblings left.
-    ASSERT(mState.targets.empty());
+    ASSERT([&] {
+        std::unique_lock lock(mState.targetsLock);
+        return mState.targets.empty();
+    }());
 
     // Make sure the implementation gets a chance to clean up before we delete the source.
     mImplementation->onDestroy(display);
@@ -341,6 +348,7 @@ EGLLabelKHR Image::getLabel() const
 
 void Image::addTargetSibling(ImageSibling *sibling)
 {
+    std::unique_lock lock(mState.targetsLock);
     mState.targets.insert(sibling);
 }
 
@@ -357,13 +365,17 @@ angle::Result Image::orphanSibling(const gl::Context *context, ImageSibling *sib
         ASSERT(!IsExternalImageTarget(mState.sourceType));
 
         // If the sibling is the source, it cannot be a target.
-        ASSERT(mState.targets.find(sibling) == mState.targets.end());
+        ASSERT([&] {
+            std::unique_lock lock(mState.targetsLock);
+            return mState.targets.find(sibling) == mState.targets.end();
+        }());
         mState.source = nullptr;
         mOrphanedAndNeedsInit =
             (sibling->initState(GL_NONE, mState.imageIndex) == gl::InitState::MayNeedInit);
     }
     else
     {
+        std::unique_lock lock(mState.targetsLock);
         mState.targets.erase(sibling);
     }
 
@@ -421,6 +433,11 @@ bool Image::isTexturable(const gl::Context *context) const
 bool Image::isYUV() const
 {
     return mState.yuv;
+}
+
+bool Image::isCreatedWithAHB() const
+{
+    return mState.target == EGL_NATIVE_BUFFER_ANDROID;
 }
 
 bool Image::isCubeMap() const
@@ -551,6 +568,7 @@ void Image::notifySiblings(const ImageSibling *notifier, angle::SubjectMessage m
         mState.source->onSubjectStateChange(rx::kTextureImageSiblingMessageIndex, message);
     }
 
+    std::unique_lock lock(mState.targetsLock);
     for (ImageSibling *target : mState.targets)
     {
         if (target != notifier)

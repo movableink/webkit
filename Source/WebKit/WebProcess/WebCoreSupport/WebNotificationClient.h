@@ -29,6 +29,8 @@
 #if ENABLE(NOTIFICATIONS)
 
 #include <WebCore/NotificationClient.h>
+#include <WebCore/SecurityOriginData.h>
+#include <wtf/HashSet.h>
 
 namespace WebCore {
 class ScriptExecutionContext;
@@ -43,6 +45,7 @@ class WebNotificationClient final : public WebCore::NotificationClient {
 public:
     WebNotificationClient(WebPage*);
     virtual ~WebNotificationClient();
+    void clearNotificationPermissionState();
 
 private:
     bool show(WebCore::Notification&, CompletionHandler<void()>&&) final;
@@ -51,7 +54,8 @@ private:
     void notificationControllerDestroyed() final;
     void requestPermission(WebCore::ScriptExecutionContext&, PermissionHandler&&) final;
     WebCore::NotificationClient::Permission checkPermission(WebCore::ScriptExecutionContext*) final;
-    
+
+    HashSet<WebCore::SecurityOriginData> m_notificationPermissionRequesters;
     WebPage* m_page { nullptr };
 };
 

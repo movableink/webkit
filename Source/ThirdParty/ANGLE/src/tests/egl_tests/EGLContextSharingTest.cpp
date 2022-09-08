@@ -31,7 +31,7 @@ EGLBoolean SafeDestroyContext(EGLDisplay display, EGLContext &context)
     return result;
 }
 
-class EGLContextSharingTest : public ANGLETest
+class EGLContextSharingTest : public ANGLETest<>
 {
   public:
     EGLContextSharingTest() : mContexts{EGL_NO_CONTEXT, EGL_NO_CONTEXT}, mTexture(0) {}
@@ -105,18 +105,18 @@ class EGLContextSharingTestNoFixture : public EGLContextSharingTest
         EGLint count         = 0;
         EGLint clientVersion = mMajorVersion == 3 ? EGL_OPENGL_ES3_BIT : EGL_OPENGL_ES2_BIT;
         EGLint attribs[]     = {EGL_RED_SIZE,
-                            8,
-                            EGL_GREEN_SIZE,
-                            8,
-                            EGL_BLUE_SIZE,
-                            8,
-                            EGL_ALPHA_SIZE,
-                            8,
-                            EGL_RENDERABLE_TYPE,
-                            clientVersion,
-                            EGL_SURFACE_TYPE,
-                            EGL_WINDOW_BIT | EGL_PBUFFER_BIT,
-                            EGL_NONE};
+                                8,
+                                EGL_GREEN_SIZE,
+                                8,
+                                EGL_BLUE_SIZE,
+                                8,
+                                EGL_ALPHA_SIZE,
+                                8,
+                                EGL_RENDERABLE_TYPE,
+                                clientVersion,
+                                EGL_SURFACE_TYPE,
+                                EGL_WINDOW_BIT | EGL_PBUFFER_BIT,
+                                EGL_NONE};
 
         result = eglChooseConfig(mDisplay, attribs, config, 1, &count);
         EXPECT_EGL_TRUE(result && (count > 0));
@@ -401,6 +401,62 @@ TEST_P(EGLContextSharingTest, DisplayShareGroupReleaseShareGroupThatOwnsStagedUp
     drawQuad(program1, essl1_shaders::PositionAttrib(), 0.5f);
     EXPECT_GL_NO_ERROR();
     EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::blue);
+
+    // Destroy context2
+    eglDestroyContext(display, context2);
+}
+
+// Tests that after creating a texture using EGL_ANGLE_display_texture_share_group,
+// and use it for sampling, and then deleting the Context (which destroys shareGroup) works. If
+// anything cached in ShareGroup, it should be handled nicely if texture can outlive ShareGroup (for
+// example, bugs like angleproject:7466).
+TEST_P(EGLContextSharingTest, DisplayShareGroupReleaseShareGroupThenDestroyTexture)
+{
+    EGLDisplay display = getEGLWindow()->getDisplay();
+    ANGLE_SKIP_TEST_IF(
+        !IsEGLDisplayExtensionEnabled(display, "EGL_ANGLE_display_texture_share_group"));
+
+    EGLConfig config   = getEGLWindow()->getConfig();
+    EGLSurface surface = getEGLWindow()->getSurface();
+
+    const EGLint inShareGroupContextAttribs[] = {
+        EGL_CONTEXT_CLIENT_VERSION, 2, EGL_DISPLAY_TEXTURE_SHARE_GROUP_ANGLE, EGL_TRUE, EGL_NONE};
+
+    // Create two contexts in the global share group, but not in the same context share group
+    EGLContext context1 = eglCreateContext(display, config, nullptr, inShareGroupContextAttribs);
+    EGLContext context2 = eglCreateContext(display, config, nullptr, inShareGroupContextAttribs);
+
+    // Create a texture in context1 and stage a texture update
+    ASSERT_EGL_TRUE(eglMakeCurrent(display, surface, surface, context1));
+    constexpr GLsizei kTexSize                   = 2;
+    const GLColor kBlueData[kTexSize * kTexSize] = {GLColor::blue, GLColor::blue, GLColor::blue,
+                                                    GLColor::blue};
+    {
+        GLTexture textureFromCtx1;
+        glBindTexture(GL_TEXTURE_2D, textureFromCtx1);
+        // This will stage a texture update in context1's SharedGroup::BufferPool
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, kBlueData);
+
+        // Sample from textureFromCtx1 and check it works properly
+        glBindTexture(GL_TEXTURE_2D, textureFromCtx1);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        ANGLE_GL_PROGRAM(program1, essl1_shaders::vs::Texture2D(), essl1_shaders::fs::Texture2D());
+        glUseProgram(program1);
+        drawQuad(program1, essl1_shaders::PositionAttrib(), 0.5f);
+        EXPECT_GL_NO_ERROR();
+        EXPECT_PIXEL_COLOR_EQ(0, 0, GLColor::blue);
+
+        // Destroy context 1, this also destroys context1's SharedGroup and BufferPool
+        // The texture staged update in context1's SharedGroup BufferPool will be flushed
+        SafeDestroyContext(display, context1);
+
+        // Switch to context2 and verify that the texture is accessible
+        ASSERT_EGL_TRUE(eglMakeCurrent(display, surface, surface, context2));
+        ASSERT_GL_TRUE(glIsTexture(textureFromCtx1));
+
+        // textureFromCtx1 should be destroyed when leaving this scope
+    }
 
     // Destroy context2
     eglDestroyContext(display, context2);
@@ -724,7 +780,7 @@ TEST_P(EGLContextSharingTestNoFixture, EglTerminateMultiThreaded)
 
     EGLint dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, GetParam().getRenderer(), EGL_NONE};
     mDisplay           = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE,
-                                        reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
+                                                  reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
     EXPECT_TRUE(mDisplay != EGL_NO_DISPLAY);
     EXPECT_EGL_TRUE(eglInitialize(mDisplay, nullptr, nullptr));
 
@@ -842,7 +898,7 @@ TEST_P(EGLContextSharingTestNoFixture, EglDestoryContextManyTimesSameContext)
 {
     EGLint dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, GetParam().getRenderer(), EGL_NONE};
     mDisplay           = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE,
-                                        reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
+                                                  reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
     EXPECT_TRUE(mDisplay != EGL_NO_DISPLAY);
     EXPECT_EGL_TRUE(eglInitialize(mDisplay, nullptr, nullptr));
 
@@ -978,7 +1034,7 @@ TEST_P(EGLContextSharingTestNoFixture, EglTerminateMultipleTimes)
 
     EGLint dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, GetParam().getRenderer(), EGL_NONE};
     mDisplay           = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE,
-                                        reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
+                                                  reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
     EXPECT_TRUE(mDisplay != EGL_NO_DISPLAY);
     EXPECT_EGL_TRUE(eglInitialize(mDisplay, nullptr, nullptr));
 
@@ -1021,7 +1077,7 @@ TEST_P(EGLContextSharingTestNoFixture, SwapBuffersShared)
 {
     EGLint dispattrs[] = {EGL_PLATFORM_ANGLE_TYPE_ANGLE, GetParam().getRenderer(), EGL_NONE};
     mDisplay           = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE,
-                                        reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
+                                                  reinterpret_cast<void *>(EGL_DEFAULT_DISPLAY), dispattrs);
     EXPECT_TRUE(mDisplay != EGL_NO_DISPLAY);
     EXPECT_EGL_TRUE(eglInitialize(mDisplay, nullptr, nullptr));
 

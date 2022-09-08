@@ -24,11 +24,8 @@ namespace sh
 class SpecConst
 {
   public:
-    SpecConst(TSymbolTable *symbolTable, ShCompileOptions compileOptions, GLenum shaderType);
+    SpecConst(TSymbolTable *symbolTable, const ShCompileOptions &compileOptions, GLenum shaderType);
     virtual ~SpecConst();
-
-    // Line rasterizaton emulation
-    TIntermSymbol *getLineRasterEmulation();
 
     // Flip/rotation
     // Returns a boolean: should X and Y be swapped?
@@ -45,9 +42,8 @@ class SpecConst
 
     // If unsupported, this should be set to null.
     TSymbolTable *mSymbolTable;
-    ShCompileOptions mCompileOptions;
+    const ShCompileOptions &mCompileOptions;
 
-    TVariable *mLineRasterEmulationVar;
     TVariable *mSurfaceRotationVar;
     TVariable *mDitherVar;
 

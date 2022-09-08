@@ -66,6 +66,7 @@ class DriverUniform
     TIntermTyped *getAdvancedBlendEquation() const;
     TIntermTyped *getNumSamples() const;
     TIntermTyped *getClipDistancesEnabled() const;
+    TIntermTyped *getTransformDepth() const;
 
     virtual TIntermTyped *getViewport() const { return nullptr; }
     virtual TIntermTyped *getXfbBufferOffsets() const { return nullptr; }
@@ -89,7 +90,6 @@ class DriverUniformExtended : public DriverUniform
     DriverUniformExtended(DriverUniformMode mode) : DriverUniform(mode) {}
     ~DriverUniformExtended() override {}
 
-    TIntermTyped *getViewport() const override;
     TIntermTyped *getXfbBufferOffsets() const override;
     TIntermTyped *getXfbVerticesPerInstance() const override;
 

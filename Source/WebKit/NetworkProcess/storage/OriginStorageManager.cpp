@@ -73,6 +73,7 @@ public:
     OptionSet<WebsiteDataType> fetchDataTypesInList(OptionSet<WebsiteDataType>);
     void deleteData(OptionSet<WebsiteDataType>, WallTime);
     void moveData(OptionSet<WebsiteDataType>, const String& localStoragePath, const String& idbStoragePath);
+    void deleteEmptyDirectory();
     String resolvedLocalStoragePath();
     String resolvedIDBStoragePath();
     String resolvedPath(WebsiteDataType);
@@ -362,6 +363,22 @@ void OriginStorageManager::StorageBucket::moveData(OptionSet<WebsiteDataType> ty
     }
 }
 
+void OriginStorageManager::StorageBucket::deleteEmptyDirectory()
+{
+    if (m_shouldUseCustomPaths) {
+        FileSystem::deleteEmptyDirectory(m_customLocalStoragePath);
+        FileSystem::deleteEmptyDirectory(m_customIDBStoragePath);
+    } else {
+        auto localStoragePath = typeStoragePath(StorageType::LocalStorage);
+        FileSystem::deleteEmptyDirectory(localStoragePath);
+        auto idbStoragePath = typeStoragePath(StorageType::IndexedDB);
+        FileSystem::deleteEmptyDirectory(idbStoragePath);
+    }
+
+    auto fileSystemStoragePath = typeStoragePath(StorageType::FileSystem);
+    FileSystem::deleteEmptyDirectory(fileSystemStoragePath);
+}
+
 String OriginStorageManager::StorageBucket::resolvedLocalStoragePath()
 {
     if (!m_resolvedLocalStoragePath.isNull())
@@ -369,13 +386,12 @@ String OriginStorageManager::StorageBucket::resolvedLocalStoragePath()
 
     if (m_shouldUseCustomPaths) {
         ASSERT(m_customLocalStoragePath.isEmpty() == m_rootPath.isEmpty());
-        FileSystem::makeAllDirectories(FileSystem::parentPath(m_customLocalStoragePath));
         m_resolvedLocalStoragePath = m_customLocalStoragePath;
     } else if (!m_rootPath.isEmpty()) {
         auto localStorageDirectory = typeStoragePath(StorageType::LocalStorage);
         auto localStoragePath = LocalStorageManager::localStorageFilePath(localStorageDirectory);
         if (!m_customLocalStoragePath.isEmpty() && !FileSystem::fileExists(localStoragePath) && FileSystem::fileExists(m_customLocalStoragePath)) {
-            RELEASE_LOG(Storage, "%p - StorageBucket::resolvedLocalStoragePath New path '%{public}s'", this, localStoragePath.utf8().data());
+            RELEASE_LOG(Storage, "%p - StorageBucket::resolvedLocalStoragePath New path '%" PUBLIC_LOG_STRING "'", this, localStoragePath.utf8().data());
             FileSystem::makeAllDirectories(localStorageDirectory);
             auto moved = WebCore::SQLiteFileSystem::moveDatabaseFile(m_customLocalStoragePath, localStoragePath);
             if (!moved && !FileSystem::fileExists(localStoragePath))
@@ -385,12 +401,6 @@ String OriginStorageManager::StorageBucket::resolvedLocalStoragePath()
         m_resolvedLocalStoragePath = localStoragePath;
     } else
         m_resolvedLocalStoragePath = emptyString();
-
-#if PLATFORM(IOS_FAMILY)
-    // Exclude LocalStorage directory to reduce backup traffic. See https://webkit.org/b/168388.
-    if (!m_resolvedLocalStoragePath.isEmpty())
-        FileSystem::excludeFromBackup(FileSystem::parentPath(m_customLocalStoragePath));
-#endif
 
     return m_resolvedLocalStoragePath;
 }
@@ -407,7 +417,7 @@ String OriginStorageManager::StorageBucket::resolvedIDBStoragePath()
         m_resolvedIDBStoragePath = m_customIDBStoragePath;
     } else {
         auto idbStoragePath = typeStoragePath(StorageType::IndexedDB);
-        RELEASE_LOG(Storage, "%p - StorageBucket::resolvedIDBStoragePath New path '%{public}s'", this, idbStoragePath.utf8().data());
+        RELEASE_LOG(Storage, "%p - StorageBucket::resolvedIDBStoragePath New path '%" PUBLIC_LOG_STRING "'", this, idbStoragePath.utf8().data());
         auto moved = IDBStorageManager::migrateOriginData(m_customIDBStoragePath, idbStoragePath);
         if (!moved && FileSystem::fileExists(idbStoragePath)) {
             auto fileNames = FileSystem::listDirectory(m_customIDBStoragePath);
@@ -573,6 +583,16 @@ void OriginStorageManager::moveData(OptionSet<WebsiteDataType> types, const Stri
     ASSERT(!RunLoop::isMain());
 
     defaultBucket().moveData(types, localStoragePath, idbStoragePath);
+}
+
+void OriginStorageManager::deleteEmptyDirectory()
+{
+    ASSERT(!RunLoop::isMain());
+
+    if (m_path.isEmpty())
+        return;
+
+    defaultBucket().deleteEmptyDirectory();
 }
 
 } // namespace WebKit

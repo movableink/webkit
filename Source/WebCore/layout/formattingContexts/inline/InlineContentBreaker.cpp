@@ -26,8 +26,6 @@
 #include "config.h"
 #include "InlineContentBreaker.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FontCascade.h"
 #include "Hyphenation.h"
 #include "InlineItem.h"
@@ -265,7 +263,8 @@ InlineContentBreaker::Result InlineContentBreaker::processOverflowingContent(con
         // Parent style drives the wrapping behavior here.
         // e.g. <div style="white-space: nowrap">some text<div style="display: inline-block; white-space: pre-wrap"></div></div>.
         // While the inline-block has pre-wrap which allows wrapping, the content lives in a nowrap context.
-        return TextUtil::isWrappingAllowed(continuousContent.runs()[overflowingRunIndex].style);
+        auto& parentLayoutBox = continuousContent.runs()[overflowingRunIndex].inlineItem.layoutBox().parent();
+        return TextUtil::isWrappingAllowed(parentLayoutBox.style());
     };
     if (shouldWrapUnbreakableContentToNextLine())
         return { Result::Action::Wrap, IsEndOfLine::Yes };
@@ -292,7 +291,7 @@ static std::optional<size_t> findTrailingRunIndex(const InlineContentBreaker::Co
 
 static bool isWrappableRun(const InlineContentBreaker::ContinuousContent::Run& run)
 {
-    ASSERT(run.inlineItem.isText() || run.inlineItem.isInlineBoxStart() || run.inlineItem.isInlineBoxEnd() || run.inlineItem.layoutBox().isImage() || run.inlineItem.layoutBox().isListMarker());
+    ASSERT(run.inlineItem.isText() || run.inlineItem.isInlineBoxStart() || run.inlineItem.isInlineBoxEnd() || run.inlineItem.layoutBox().isImage() || run.inlineItem.layoutBox().isListMarkerBox());
     if (!run.inlineItem.isText()) {
         // Can't break horizontal spacing -> e.g. <span style="padding-right: 100px;">textcontent</span>, if the [inline box end] is the overflown inline item
         // we need to check if there's another inline item beyond the [inline box end] to split.
@@ -344,9 +343,9 @@ static inline std::optional<size_t> lastValidBreakingPosition(const InlineConten
     for (auto index = inlineTextItem.end() - 1; index > left; --index) {
         U16_SET_CP_START(text, left, index);
         // We should never find surrogates/segments across inline items.
-        ASSERT(index > inlineTextItem.start());
+        ASSERT(index >= inlineTextItem.start());
         if (canBreakBefore(text[index], lineBreak))
-            return index;
+            return index == inlineTextItem.start() ? std::nullopt : std::make_optional(index);
     }
     return { };
 }
@@ -383,7 +382,7 @@ struct CandidateTextRunForBreaking {
     bool isOverflowingRun { true };
     InlineLayoutUnit logicalLeft { 0 };
 };
-std::optional<InlineContentBreaker::PartialRun> InlineContentBreaker::tryBreakingTextRun(const ContinuousContent::RunList& runs, const CandidateTextRunForBreaking& candidateTextRun, InlineLayoutUnit availableWidth, bool lineHasWrapOpportunityAtPreviousPosition) const
+std::optional<InlineContentBreaker::PartialRun> InlineContentBreaker::tryBreakingTextRun(const ContinuousContent::RunList& runs, const CandidateTextRunForBreaking& candidateTextRun, InlineLayoutUnit availableWidth, const LineStatus& lineStatus) const
 {
     auto& candidateRun = runs[candidateTextRun.index];
     ASSERT(candidateRun.inlineItem.isText());
@@ -391,7 +390,7 @@ std::optional<InlineContentBreaker::PartialRun> InlineContentBreaker::tryBreakin
     auto& style = candidateRun.style;
     auto lineHasRoomForContent = availableWidth > 0;
 
-    auto breakRules = wordBreakBehavior(style, lineHasWrapOpportunityAtPreviousPosition);
+    auto breakRules = wordBreakBehavior(style, lineStatus.hasWrapOpportunityAtPreviousPosition);
     if (breakRules.isEmpty())
         return { };
 
@@ -419,6 +418,30 @@ std::optional<InlineContentBreaker::PartialRun> InlineContentBreaker::tryBreakin
                 }
                 if (canBreakBefore(inlineTextItem.inlineTextBox().content()[inlineTextItem.start()], style.lineBreak()))
                     return PartialRun { };
+                else {
+                    // Since this is an overflowing content and we are allowed to break at arbitrary position, we really ought to find a breaking position.
+                    // Unless of course it's really an unbreakable content with nothing but e.g. punctuation characters.
+                    // FIXME: This should be merged with the "let's keep the first character on the line" logic (see in InlineContentBreaker::processOverflowingContent)
+                    auto firstBreakablePosition = [&] () -> std::optional<TextUtil::WordBreakLeft> {
+                        if (lineStatus.hasContent)
+                            return { };
+                        auto text = inlineTextItem.inlineTextBox().content();
+                        const auto left = inlineTextItem.start();
+                        auto right = left;
+                        U16_SET_CP_START(text, left, right);
+                        while (right < inlineTextItem.end()) {
+                            U16_FWD_1(text, right, inlineTextItem.length());
+                            if (canBreakBefore(text[right], style.lineBreak())) {
+                                if (right == inlineTextItem.end())
+                                    return { };
+                                return TextUtil::WordBreakLeft { right - left, TextUtil::width(inlineTextItem, style.fontCascade(), left, right, candidateTextRun.logicalLeft) };
+                            }
+                        }
+                        return { };
+                    };
+                    if (auto wordBreak = firstBreakablePosition())
+                        return PartialRun { wordBreak->length, wordBreak->logicalWidth };
+                }
                 return { };
             }
 
@@ -520,7 +543,7 @@ std::optional<InlineContentBreaker::OverflowingTextContent::BreakingPosition> In
         return { };
 
     auto availableWidth = std::max(0.f, lineStatus.availableWidth - nonOverflowingContentWidth);
-    auto partialOverflowingRun = tryBreakingTextRun(runs, { overflowingRunIndex, true, lineStatus.contentLogicalRight + nonOverflowingContentWidth }, availableWidth, lineStatus.hasWrapOpportunityAtPreviousPosition);
+    auto partialOverflowingRun = tryBreakingTextRun(runs, { overflowingRunIndex, true, lineStatus.contentLogicalRight + nonOverflowingContentWidth }, availableWidth, lineStatus);
     if (!partialOverflowingRun)
         return { };
     if (partialOverflowingRun->length)
@@ -543,7 +566,7 @@ std::optional<InlineContentBreaker::OverflowingTextContent::BreakingPosition> In
             continue;
         ASSERT(run.inlineItem.isText());
         auto availableWidth = std::max(0.f, lineStatus.availableWidth - previousContentWidth);
-        if (auto partialRun = tryBreakingTextRun(runs, { index, false, lineStatus.contentLogicalRight + previousContentWidth }, availableWidth, lineStatus.hasWrapOpportunityAtPreviousPosition)) {
+        if (auto partialRun = tryBreakingTextRun(runs, { index, false, lineStatus.contentLogicalRight + previousContentWidth }, availableWidth, lineStatus)) {
             // We know this run fits, so if breaking is allowed on the run, it should return a non-empty left-side
             // since it's either at hyphen position or the entire run is returned.
             ASSERT(partialRun->length);
@@ -555,14 +578,14 @@ std::optional<InlineContentBreaker::OverflowingTextContent::BreakingPosition> In
                     // we should forward the breaking index to the closing inline box.
                     // FIXME: We may wanna skip over the visually empty inline boxes only e.g. <span style="word-wrap: break-word">fits_and_we_break_at_the_right_edge</span><span></span><span>overflows</span>
                     auto trailingInlineBoxEndIndex = std::optional<size_t> { };
-                    for (auto candidateIndex = index + 1; candidateIndex < overflowingRunIndex; ++candidateIndex) {
+                    for (auto candidateIndex = index + 1; candidateIndex <= overflowingRunIndex; ++candidateIndex) {
                         auto& trailingInlineItem = runs[candidateIndex].inlineItem;
                         if (trailingInlineItem.isInlineBoxEnd())
                             trailingInlineBoxEndIndex = candidateIndex;
                         if (!trailingInlineItem.isInlineBoxStart() && !trailingInlineItem.isInlineBoxEnd())
                             break;
                     }
-                    ASSERT(!trailingInlineBoxEndIndex || *trailingInlineBoxEndIndex < overflowingRunIndex);
+                    ASSERT(!trailingInlineBoxEndIndex || *trailingInlineBoxEndIndex <= overflowingRunIndex);
                     return trailingInlineBoxEndIndex.value_or(index);
                 };
                 return OverflowingTextContent::BreakingPosition { trailingRunIndex(), OverflowingTextContent::BreakingPosition::TrailingContent { false, std::nullopt } };
@@ -584,7 +607,7 @@ std::optional<InlineContentBreaker::OverflowingTextContent::BreakingPosition> In
         }
         ASSERT(run.inlineItem.isText());
         // At this point the available space is zero. Let's try the break these overflowing set of runs at the earliest possible.
-        if (auto partialRun = tryBreakingTextRun(runs, { index, true, lineStatus.contentLogicalRight + nextContentWidth }, 0, lineStatus.hasWrapOpportunityAtPreviousPosition)) {
+        if (auto partialRun = tryBreakingTextRun(runs, { index, true, lineStatus.contentLogicalRight + nextContentWidth }, 0, lineStatus)) {
             // <span>unbreakable_and_overflows<span style="word-break: break-all">breakable</span>
             // The partial run length could very well be 0 meaning the trailing run is actually the overflowing run (see above in the example).
             if (partialRun->length) {
@@ -745,4 +768,3 @@ void InlineContentBreaker::ContinuousContent::reset()
 }
 }
 }
-#endif

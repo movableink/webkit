@@ -40,7 +40,7 @@ class AbortAlgorithm;
 class ScriptExecutionContext;
 class WebCoreOpaqueRoot;
 
-class AbortSignal final : public RefCounted<AbortSignal>, public EventTargetWithInlineData, private ContextDestructionObserver {
+class AbortSignal final : public RefCounted<AbortSignal>, public EventTarget, private ContextDestructionObserver {
     WTF_MAKE_ISO_ALLOCATED_EXPORT(AbortSignal, WEBCORE_EXPORT);
 public:
     static Ref<AbortSignal> create(ScriptExecutionContext*);
@@ -63,7 +63,7 @@ public:
     using RefCounted::ref;
     using RefCounted::deref;
 
-    using Algorithm = Function<void()>;
+    using Algorithm = Function<void(JSC::JSValue reason)>;
     void addAlgorithm(Algorithm&& algorithm) { m_algorithms.append(WTFMove(algorithm)); }
 
     bool isFollowingSignal() const { return !!m_followingSignal; }
@@ -85,7 +85,7 @@ private:
     
     bool m_aborted { false };
     Vector<Algorithm> m_algorithms;
-    WeakPtr<AbortSignal> m_followingSignal;
+    WeakPtr<AbortSignal, WeakPtrImplWithEventTargetData> m_followingSignal;
     JSValueInWrappedObject m_reason;
     bool m_hasActiveTimeoutTimer { false };
     bool m_hasAbortEventListener { false };

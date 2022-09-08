@@ -43,6 +43,7 @@ angle::Result ProgramPipelineVk::link(const gl::Context *glContext,
     GlslangProgramInterfaceInfo glslangProgramInterfaceInfo;
     GlslangWrapperVk::ResetGlslangProgramInterfaceInfo(&glslangProgramInterfaceInfo);
 
+    reset(contextVk);
     mExecutable.clearVariableInfoMap();
 
     // Now that the program pipeline has all of the programs attached, the various descriptor
@@ -97,12 +98,9 @@ angle::Result ProgramPipelineVk::link(const gl::Context *glContext,
 
     mExecutable.setAllDefaultUniformsDirty(glExecutable);
 
-    if (contextVk->getFeatures().enablePrecisionQualifiers.enabled)
-    {
-        mExecutable.resolvePrecisionMismatch(mergedVaryings);
-    }
+    ANGLE_TRY(mExecutable.createPipelineLayout(contextVk, mState.getExecutable(), nullptr));
 
-    return mExecutable.createPipelineLayout(contextVk, mState.getExecutable(), nullptr);
+    return mExecutable.warmUpPipelineCache(contextVk, mState.getExecutable());
 }  // namespace rx
 
 void ProgramPipelineVk::onProgramUniformUpdate(gl::ShaderType shaderType)

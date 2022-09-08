@@ -39,6 +39,7 @@
 
 namespace WebCore {
 
+class WeakPtrImplWithEventTargetData;
 class HTMLElement;
 class HTMLFormControlElement;
 class Node;
@@ -49,7 +50,7 @@ class ValidationMessageClient;
 class ValidationMessage : public CanMakeWeakPtr<ValidationMessage> {
     WTF_MAKE_NONCOPYABLE(ValidationMessage); WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit ValidationMessage(HTMLFormControlElement*);
+    explicit ValidationMessage(HTMLFormControlElement&);
     ~ValidationMessage();
 
     void updateValidationMessage(const String&);
@@ -65,7 +66,7 @@ private:
     void buildBubbleTree();
     void deleteBubbleTree();
 
-    HTMLFormControlElement* m_element;
+    WeakPtr<HTMLFormControlElement, WeakPtrImplWithEventTargetData> m_element;
     String m_message;
     std::unique_ptr<Timer> m_timer;
     RefPtr<HTMLElement> m_bubble;

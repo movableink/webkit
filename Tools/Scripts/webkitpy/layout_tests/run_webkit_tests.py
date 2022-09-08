@@ -126,7 +126,7 @@ def parse_args(args):
         optparse.make_option("--experimental-feature", type="string", action="append", default=[],
             help="Enable (disable) an experimental feature (--experimental-feature FeatureName[=true|false])"),
         optparse.make_option("--no-enable-all-experimental-features", action="store_false", default=True, dest="enable_all_experimental_features",
-            help="Enables all experimental features in WebKitTestRunner"),
+            help="Don't enable all experimental features in WebKitTestRunner"),
     ]))
 
     option_group_definitions.append(("WebKit Options", [
@@ -387,6 +387,14 @@ def parse_args(args):
             raise RuntimeError('--use-gpu-process implicitly sets the result flavor, this should not be overridden')
         options.result_report_flavor = 'gpuprocess'
 
+    if options.accessibility_isolated_tree:
+        host = Host()
+        host.initialize_scm()
+        options.additional_expectations.insert(0, host.filesystem.join(host.scm().checkout_root, 'LayoutTests/accessibility-isolated-tree/TestExpectations'))
+        if options.result_report_flavor:
+            raise RuntimeError('--accessibility-isolated-tree implicitly sets the result flavor, this should not be overridden')
+        options.result_report_flavor = 'accessibility-isolated-tree'
+
     return options, args
 
 
@@ -476,10 +484,6 @@ def _set_up_derived_options(port, options):
     # Don't maintain render tree dump results for Apple Windows port.
     if port.port_name == "win":
         options.ignore_render_tree_dump_results = True
-
-    if options.leaks:
-        options.additional_env_var.append("JSC_usePoisoning=0")
-        options.additional_env_var.append("__XPC_JSC_usePoisoning=0")
 
 def run(port, options, args, logging_stream):
     logger = logging.getLogger()

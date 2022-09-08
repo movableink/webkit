@@ -87,6 +87,7 @@ public:
     void removeMockMediaDevice(const String&);
     void resetMockMediaDevices();
     void setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted);
+    void triggerMockMicrophoneConfigurationChange();
     void updateSandboxAccess(bool allowAudioCapture, bool allowVideoCapture, bool allowDisplayCapture);
 #endif
 
@@ -152,6 +153,13 @@ private:
     void didCreateContextForVisibilityPropagation(WebPageProxyIdentifier, WebCore::PageIdentifier, LayerHostingContextID);
 #endif
 
+#if ENABLE(VP9)
+    void setHasVP9HardwareDecoder(bool hasVP9HardwareDecoder) { s_hasVP9HardwareDecoder = hasVP9HardwareDecoder; }
+#endif
+#if ENABLE(MEDIA_STREAM) && PLATFORM(IOS_FAMILY)
+    void statusBarWasTapped(CompletionHandler<void()>&&);
+#endif
+
     GPUProcessCreationParameters processCreationParameters();
     void platformInitializeGPUProcessParameters(GPUProcessCreationParameters&);
 
@@ -170,6 +178,9 @@ private:
 
 #if HAVE(SCREEN_CAPTURE_KIT)
     bool m_hasEnabledScreenCaptureKit { false };
+#endif
+#if ENABLE(VP9)
+    static std::optional<bool> s_hasVP9HardwareDecoder;
 #endif
 
     HashSet<PAL::SessionID> m_sessionIDs;

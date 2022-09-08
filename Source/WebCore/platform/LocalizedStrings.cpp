@@ -489,6 +489,58 @@ String contextMenuItemTagInspectElement()
     return WEB_UI_STRING_WITH_MNEMONIC("Inspect Element", "Inspect _Element", "Inspect Element context menu item");
 }
 
+#if ENABLE(PDFJS)
+String contextMenuItemPDFAutoSize()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Automatically Resize", "_Automatically Resize", "Automatically Resize context menu item");
+}
+
+String contextMenuItemPDFZoomIn()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Zoom In", "_Zoom In", "Zoom In Continuous context menu item");
+}
+
+String contextMenuItemPDFZoomOut()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Zoom Out", "_Zoom Out", "Zoom Out context menu item");
+}
+
+String contextMenuItemPDFActualSize()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Actual Size", "_Actual Size", "Actual Size context menu item");
+}
+
+String contextMenuItemPDFSinglePage()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Single Page", "_Single Page", "Single Page context menu item");
+}
+
+String contextMenuItemPDFSinglePageContinuous()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Single Page Continuous", "_Single Page Continuous", "Single Page Continuous context menu item");
+}
+
+String contextMenuItemPDFTwoPages()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Two Pages", "_Two Pages", "Two Pages context menu item");
+}
+
+String contextMenuItemPDFTwoPagesContinuous()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Two Pages Continuous", "_Two Pages Continuous", "Two Pages Continuous context menu item");
+}
+
+String contextMenuItemPDFNextPage()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Next Page", "_Next Page", "Next Page context menu item");
+}
+
+String contextMenuItemPDFPreviousPage()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Previous Page", "_Previous Page", "Previous Page context menu item");
+}
+#endif
+
 #if !PLATFORM(COCOA)
 String contextMenuItemTagSearchWeb()
 {
@@ -580,6 +632,11 @@ String AXSummaryText()
 String AXFooterRoleDescriptionText()
 {
     return WEB_UI_STRING("footer", "accessibility role description for a footer");
+}
+
+String AXSuggestionRoleDescriptionText()
+{
+    return WEB_UI_STRING("suggestion", "accessibility role description for a suggestion element");
 }
 
 String AXFileUploadButtonText()
@@ -852,6 +909,11 @@ String AXAutoFillStrongPasswordLabel()
 String AXAutoFillCreditCardLabel()
 {
     return WEB_UI_STRING("credit card AutoFill", "Label for the credit card AutoFill button inside a text field.");
+}
+
+String AXAutoFillLoadingLabel()
+{
+    return WEB_UI_STRING("loading AutoFill", "Label for the loading AutoFill button inside a text field.");
 }
 
 String autoFillStrongPasswordLabel()
@@ -1300,6 +1362,11 @@ String addAudioTrackKindCommentarySuffix(const String& text)
 }
 
 #endif // USE(CF)
+
+String contextMenuItemTagShowMediaStats()
+{
+    return WEB_UI_STRING("Show Media Stats", "Media stats context menu item");
+}
 
 #endif // ENABLE(VIDEO)
 

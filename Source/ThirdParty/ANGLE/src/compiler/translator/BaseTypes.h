@@ -147,6 +147,13 @@ enum TBasicType
     EbtGuardUIntImageEnd = EbtUImageBuffer,
     EbtGuardImageEnd     = EbtGuardUIntImageEnd,
 
+    // ANGLE_shader_pixel_local_storage
+    EbtGuardPixelLocalBegin,
+    EbtPixelLocalANGLE = EbtGuardPixelLocalBegin,
+    EbtIPixelLocalANGLE,
+    EbtUPixelLocalANGLE,
+    EbtGuardPixelLocalEnd = EbtUPixelLocalANGLE,
+
     // Subpass Input
     EbtGuardSubpassInputBegin,
     EbtSubpassInput = EbtGuardSubpassInputBegin,
@@ -228,6 +235,11 @@ inline bool IsAtomicCounter(TBasicType type)
     return type == EbtAtomicCounter;
 }
 
+inline bool IsPixelLocal(TBasicType type)
+{
+    return type >= EbtGuardPixelLocalBegin && type <= EbtGuardPixelLocalEnd;
+}
+
 inline bool IsSubpassInputType(TBasicType type)
 {
     return type >= EbtGuardSubpassInputBegin && type <= EbtGuardSubpassInputEnd;
@@ -235,7 +247,8 @@ inline bool IsSubpassInputType(TBasicType type)
 
 inline bool IsOpaqueType(TBasicType type)
 {
-    return IsSampler(type) || IsImage(type) || IsAtomicCounter(type) || IsSubpassInputType(type);
+    return IsSampler(type) || IsImage(type) || IsAtomicCounter(type) || IsPixelLocal(type) ||
+           IsSubpassInputType(type);
 }
 
 inline bool IsIntegerSampler(TBasicType type)
@@ -1351,7 +1364,8 @@ struct TLayoutQualifier
                invocations == 0 && maxVertices == -1 && vertices == 0 &&
                tesPrimitiveType == EtetUndefined && tesVertexSpacingType == EtetUndefined &&
                tesOrderingType == EtetUndefined && tesPointType == EtetUndefined && index == -1 &&
-               inputAttachmentIndex == -1 && noncoherent == false && !advancedBlendEquations.any();
+               inputAttachmentIndex == -1 && noncoherent == false &&
+               !advancedBlendEquations.any() && !pushConstant;
     }
 
     bool isCombinationValid() const
@@ -1391,6 +1405,8 @@ struct TLayoutQualifier
 
     int binding;
     int offset;
+
+    bool pushConstant;
 
     // Image format layout qualifier
     TLayoutImageInternalFormat imageInternalFormat;
@@ -1435,6 +1451,7 @@ struct TLayoutQualifier
           localSize(-1),
           binding(-1),
           offset(-1),
+          pushConstant(false),
           imageInternalFormat(EiifUnspecified),
           numViews(-1),
           yuv(false),

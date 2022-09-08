@@ -26,6 +26,7 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/async-clipboard"
     "${WEBCORE_DIR}/Modules/beacon"
     "${WEBCORE_DIR}/Modules/cache"
+    "${WEBCORE_DIR}/Modules/compression"
     "${WEBCORE_DIR}/Modules/contact-picker"
     "${WEBCORE_DIR}/Modules/cookie-consent"
     "${WEBCORE_DIR}/Modules/credentialmanagement"
@@ -57,6 +58,7 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/plugins"
     "${WEBCORE_DIR}/Modules/push-api"
     "${WEBCORE_DIR}/Modules/remoteplayback"
+    "${WEBCORE_DIR}/Modules/reporting"
     "${WEBCORE_DIR}/Modules/speech"
     "${WEBCORE_DIR}/Modules/storage"
     "${WEBCORE_DIR}/Modules/streams"
@@ -86,6 +88,7 @@ set(WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/css"
     "${WEBCORE_DIR}/css/calc"
     "${WEBCORE_DIR}/css/parser"
+    "${WEBCORE_DIR}/css/query"
     "${WEBCORE_DIR}/css/typedom"
     "${WEBCORE_DIR}/css/typedom/color"
     "${WEBCORE_DIR}/css/typedom/numeric"
@@ -205,6 +208,7 @@ set(WebCore_IDL_INCLUDES
     Modules/WebGPU
     Modules/airplay
     Modules/cache
+    Modules/compression
     Modules/credentialmanagement
     Modules/encryptedmedia/legacy
     Modules/entriesapi
@@ -221,6 +225,7 @@ set(WebCore_IDL_INCLUDES
     Modules/paymentrequest
     Modules/permissions
     Modules/push-api
+    Modules/reporting
     Modules/speech
     Modules/storage
     Modules/streams
@@ -257,6 +262,11 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/cache/DOMCache.idl
     Modules/cache/DOMCacheStorage.idl
     Modules/cache/WindowOrWorkerGlobalScope+Caches.idl
+
+    Modules/compression/CompressionStream.idl
+    Modules/compression/CompressionStreamEncoder.idl
+    Modules/compression/DecompressionStream.idl
+    Modules/compression/DecompressionStreamDecoder.idl
 
     Modules/contact-picker/ContactInfo.idl
     Modules/contact-picker/ContactProperty.idl
@@ -514,6 +524,7 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/permissions/PermissionState.idl
     Modules/permissions/PermissionStatus.idl
     Modules/permissions/Permissions.idl
+    Modules/permissions/WorkerNavigator+Permissions.idl
 
     Modules/pictureinpicture/Document+PictureInPicture.idl
     Modules/pictureinpicture/DocumentOrShadowRoot+PictureInPicture.idl
@@ -539,6 +550,12 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/remoteplayback/RemotePlayback.idl
     Modules/remoteplayback/RemotePlaybackAvailabilityCallback.idl
 
+    Modules/reporting/Report.idl
+    Modules/reporting/ReportBody.idl
+    Modules/reporting/ReportingObserver.idl
+    Modules/reporting/ReportingObserverCallback.idl
+    Modules/reporting/TestReportBody.idl
+
     Modules/speech/DOMWindow+SpeechSynthesis.idl
     Modules/speech/SpeechRecognitionErrorEvent.idl
     Modules/speech/SpeechRecognition.idl
@@ -560,6 +577,7 @@ set(WebCore_NON_SVG_IDL_FILES
 
     Modules/streams/ByteLengthQueuingStrategy.idl
     Modules/streams/CountQueuingStrategy.idl
+    Modules/streams/GenericTransformStream.idl
     Modules/streams/ReadableByteStreamController.idl
     Modules/streams/ReadableStream.idl
     Modules/streams/ReadableStreamBYOBReader.idl
@@ -808,6 +826,7 @@ set(WebCore_NON_SVG_IDL_FILES
     css/FontFace.idl
     css/FontFaceSet.idl
     css/FontFaceSource.idl
+    css/LinkStyle.idl
     css/MediaList.idl
     css/MediaQueryList.idl
     css/MediaQueryListEvent.idl
@@ -835,6 +854,7 @@ set(WebCore_NON_SVG_IDL_FILES
     css/typedom/color/CSSOKLab.idl
     css/typedom/color/CSSRGB.idl
 
+    css/typedom/numeric/CSSMathClamp.idl
     css/typedom/numeric/CSSMathInvert.idl
     css/typedom/numeric/CSSMathMax.idl
     css/typedom/numeric/CSSMathMin.idl
@@ -920,6 +940,7 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/Element+PointerLock.idl
     dom/Element.idl
     dom/ElementContentEditable.idl
+    dom/ElementInternals.idl
     dom/ErrorEvent.idl
     dom/Event.idl
     dom/EventInit.idl
@@ -969,9 +990,11 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/Range.idl
     dom/RequestAnimationFrameCallback.idl
     dom/SecurityPolicyViolationEvent.idl
+    dom/SecurityPolicyViolationEventDisposition.idl
     dom/ShadowRoot.idl
     dom/ShadowRootInit.idl
     dom/ShadowRootMode.idl
+    dom/SlotAssignmentMode.idl
     dom/Slotable.idl
     dom/StaticRange.idl
     dom/StringCallback.idl
@@ -1245,6 +1268,8 @@ set(WebCore_NON_SVG_IDL_FILES
     page/WindowSessionStorage.idl
     page/WorkerNavigator.idl
 
+    page/csp/CSPViolationReportBody.idl
+
     plugins/DOMMimeType.idl
     plugins/DOMMimeTypeArray.idl
     plugins/DOMPlugin.idl
@@ -1460,6 +1485,7 @@ list(APPEND WebCore_NON_SVG_IDL_FILES
     Modules/gamepad/GamepadButton.idl
     Modules/gamepad/GamepadEvent.idl
     Modules/gamepad/Navigator+Gamepad.idl
+    Modules/gamepad/WindowEventHandlers+Gamepad.idl
 )
 
 if (ENABLE_GAMEPAD)
@@ -1840,10 +1866,12 @@ if (ENABLE_WEBGL)
         html/canvas/WebGLDebugShaders.cpp
         html/canvas/WebGLDepthTexture.cpp
         html/canvas/WebGLDrawBuffers.cpp
+        html/canvas/WebGLDrawInstancedBaseVertexBaseInstance.cpp
         html/canvas/WebGLExtension.cpp
         html/canvas/WebGLFramebuffer.cpp
         html/canvas/WebGLLoseContext.cpp
         html/canvas/WebGLMultiDraw.cpp
+        html/canvas/WebGLMultiDrawInstancedBaseVertexBaseInstance.cpp
         html/canvas/WebGLObject.cpp
         html/canvas/WebGLProgram.cpp
         html/canvas/WebGLQuery.cpp
@@ -1904,9 +1932,11 @@ list(APPEND WebCore_IDL_FILES
     html/canvas/WebGLDebugShaders.idl
     html/canvas/WebGLDepthTexture.idl
     html/canvas/WebGLDrawBuffers.idl
+    html/canvas/WebGLDrawInstancedBaseVertexBaseInstance.idl
     html/canvas/WebGLFramebuffer.idl
     html/canvas/WebGLLoseContext.idl
     html/canvas/WebGLMultiDraw.idl
+    html/canvas/WebGLMultiDrawInstancedBaseVertexBaseInstance.idl
     html/canvas/WebGLProgram.idl
     html/canvas/WebGLQuery.idl
     html/canvas/WebGLRenderbuffer.idl
@@ -2109,6 +2139,7 @@ set(MODERN_MEDIA_CONTROLS_STYLE_SHEETS
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/media-controls.css"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/media-document.css"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/placard.css"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/slider-base.css"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/slider.css"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/status-label.css"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/text-tracks.css"
@@ -2116,6 +2147,12 @@ set(MODERN_MEDIA_CONTROLS_STYLE_SHEETS
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/watchos-activity-indicator.css"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/watchos-media-controls.css"
 )
+
+if (PORT STREQUAL "GTK" OR PORT STREQUAL "WPE")
+    list(APPEND MODERN_MEDIA_CONTROLS_STYLE_SHEETS
+        "${WEBCORE_DIR}/Modules/modern-media-controls/controls/adwaita-overrides.css"
+    )
+endif ()
 
 add_custom_command(
     OUTPUT ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.css
@@ -2136,6 +2173,7 @@ set(MODERN_MEDIA_CONTROLS_SCRIPTS
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/background-tint.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/time-control.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/time-label.js"
+    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/slider-base.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/slider.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/button.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/play-pause-button.js"
@@ -2150,9 +2188,6 @@ set(MODERN_MEDIA_CONTROLS_SCRIPTS
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/rewind-button.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/forward-button.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/overflow-button.js"
-    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/range-button.js"
-    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/brightness-button.js"
-    "${WEBCORE_DIR}/Modules/modern-media-controls/controls/volume-button.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/buttons-container.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/status-label.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/controls/controls-bar.js"
@@ -2178,7 +2213,6 @@ set(MODERN_MEDIA_CONTROLS_SCRIPTS
     "${WEBCORE_DIR}/Modules/modern-media-controls/media/media-controller-support.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/media/airplay-support.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/media/audio-support.js"
-    "${WEBCORE_DIR}/Modules/modern-media-controls/media/brightness-support.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/media/close-support.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/media/controls-visibility-support.js"
     "${WEBCORE_DIR}/Modules/modern-media-controls/media/fullscreen-support.js"
@@ -2442,6 +2476,8 @@ add_dependencies(WebCoreTestSupportBindings WebCoreBindings)
 # WebCore JS Builtins
 
 set(WebCore_BUILTINS_SOURCES
+    ${WEBCORE_DIR}/Modules/compression/CompressionStream.js
+    ${WEBCORE_DIR}/Modules/compression/DecompressionStream.js
     ${WEBCORE_DIR}/Modules/streams/ByteLengthQueuingStrategy.js
     ${WEBCORE_DIR}/Modules/streams/CountQueuingStrategy.js
     ${WEBCORE_DIR}/Modules/streams/ReadableByteStreamController.js
@@ -2547,6 +2583,15 @@ list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/XMLNSNames.cpp)
 
 GENERATE_DOM_NAMES(XML ${WEBCORE_DIR}/xml/xmlattrs.in)
 list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/XMLNames.cpp)
+
+GENERATE_DOM_NAME_ENUM(TagName)
+list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/TagName.cpp)
+
+GENERATE_DOM_NAME_ENUM(ElementName)
+list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/ElementName.cpp)
+
+GENERATE_DOM_NAME_ENUM(Namespace)
+list(APPEND WebCore_SOURCES ${WebCore_DERIVED_SOURCES_DIR}/Namespace.cpp)
 
 WEBKIT_COMPUTE_SOURCES(WebCore)
 

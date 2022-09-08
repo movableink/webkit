@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+# Copyright (C) 2018-2022 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -26,14 +26,17 @@ import logging
 
 from django.db import models
 
-from ews.config import ERR_EXISTING_PATCH, ERR_INVALID_PATCH_ID, ERR_NON_EXISTING_PATCH, SUCCESS
+from ews.config import ERR_EXISTING_CHANGE, ERR_INVALID_CHANGE_ID, ERR_NON_EXISTING_CHANGE, SUCCESS
 
 _log = logging.getLogger(__name__)
 
 
-class Patch(models.Model):
-    patch_id = models.IntegerField(primary_key=True)
+class Change(models.Model):
+    change_id = models.TextField(primary_key=True)
     bug_id = models.IntegerField()
+    pr_id = models.IntegerField(default=-1)
+    pr_project = models.TextField(default='')
+    comment_id = models.IntegerField(default=-1)
     obsolete = models.BooleanField(default=False)
     sent_to_buildbot = models.BooleanField(default=False)
     sent_to_commit_queue = models.BooleanField(default=False)
@@ -41,126 +44,153 @@ class Patch(models.Model):
     modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return str(self.patch_id)
+        return str(self.change_id)
 
     @classmethod
-    def save_patch(cls, patch_id, bug_id=-1, obsolete=False, sent_to_buildbot=False, sent_to_commit_queue=False):
-        if not Patch.is_valid_patch_id(patch_id):
-            _log.warn('Patch id {} in invalid. Skipped saving.'.format(patch_id))
-            return ERR_INVALID_PATCH_ID
+    def save_change(cls, change_id, bug_id=-1, pr_id=-1, pr_project='', obsolete=False, sent_to_buildbot=False, sent_to_commit_queue=False):
+        if not Change.is_valid_change_id(change_id):
+            _log.warn('Change id {} in invalid. Skipped saving.'.format(change_id))
+            return ERR_INVALID_CHANGE_ID
 
-        if Patch.is_existing_patch_id(patch_id):
-            _log.debug('Patch id {} already exists in database. Skipped saving.'.format(patch_id))
-            return ERR_EXISTING_PATCH
-        Patch(patch_id, bug_id, obsolete, sent_to_buildbot, sent_to_commit_queue).save()
-        _log.info('Saved patch in database, id: {}'.format(patch_id))
+        if Change.is_existing_change_id(change_id):
+            _log.debug('Change id {} already exists in database. Skipped saving.'.format(change_id))
+            return ERR_EXISTING_CHANGE
+        Change(change_id=change_id, bug_id=bug_id, pr_id=pr_id, pr_project=pr_project, obsolete=obsolete, sent_to_buildbot=sent_to_buildbot, sent_to_commit_queue=sent_to_commit_queue).save()
+        _log.info('Saved change in database, id: {}, pr_id: {}, pr_project: {}'.format(change_id, pr_id, pr_project))
         return SUCCESS
 
     @classmethod
-    def save_patches(cls, patch_id_list):
-        for patch_id in patch_id_list:
-            Patch.save_patch(patch_id)
+    def save_changes(cls, change_id_list):
+        for change_id in change_id_list:
+            Change.save_change(change_id)
 
     @classmethod
-    def is_valid_patch_id(cls, patch_id):
-        if not patch_id or patch_id < 1:
-            _log.warn('Invalid patch id: {}'.format(patch_id))
-            return False
-        if type(patch_id) != int:
-            _log.warn('Data type mismatch for patch_id, expected: int, found: {}, id: {}'.format(type(patch_id), patch_id))
+    def is_valid_change_id(cls, change_id):
+        if not change_id:
+            _log.warn('Invalid change id: {}'.format(change_id))
             return False
         return True
 
     @classmethod
-    def is_existing_patch_id(cls, patch_id):
-        return bool(Patch.objects.filter(patch_id=patch_id))
+    def is_existing_change_id(cls, change_id):
+        return bool(Change.objects.filter(change_id=change_id))
 
     @classmethod
-    def is_patch_sent_to_buildbot(cls, patch_id, commit_queue=False):
+    def is_change_sent_to_buildbot(cls, change_id, commit_queue=False):
         if commit_queue:
-            return Patch._is_patch_sent_to_commit_queue(patch_id)
-        return Patch._is_patch_sent_to_buildbot(patch_id)
+            return Change._is_change_sent_to_commit_queue(change_id)
+        return Change._is_change_sent_to_buildbot(change_id)
 
     @classmethod
-    def _is_patch_sent_to_buildbot(cls, patch_id):
-        return Patch.is_existing_patch_id(patch_id) and Patch.objects.get(pk=patch_id).sent_to_buildbot
+    def _is_change_sent_to_buildbot(cls, change_id):
+        return Change.is_existing_change_id(change_id) and Change.objects.get(pk=change_id).sent_to_buildbot
 
     @classmethod
-    def _is_patch_sent_to_commit_queue(cls, patch_id):
-        return Patch.is_existing_patch_id(patch_id) and Patch.objects.get(pk=patch_id).sent_to_commit_queue
+    def _is_change_sent_to_commit_queue(cls, change_id):
+        return Change.is_existing_change_id(change_id) and Change.objects.get(pk=change_id).sent_to_commit_queue
 
     @classmethod
-    def get_patch(cls, patch_id):
+    def get_change(cls, change_id):
         try:
-            return Patch.objects.get(patch_id=patch_id)
+            return Change.objects.get(change_id=change_id)
         except:
             return None
 
     @classmethod
-    def set_sent_to_buildbot(cls, patch_id, value, commit_queue=False):
+    def mark_old_changes_as_obsolete(cls, pr_id, change_id):
+        changes = Change.objects.filter(pr_id=pr_id).order_by('-created')
+        if not changes or len(changes) == 1:
+            return []
+        obsolete_changes = []
+        for change in changes[1:]:
+            if not change.obsolete:
+                if change.change_id == change_id:
+                    _log.info('Marking change {} on pr {} as obsolete, even though we just received builds for it. Latest commit:'.format(change_id, pr_id, change[0].pr_id))
+                change.obsolete = True
+                change.save()
+                obsolete_changes.append(change)
+                _log.info('Marked change {} on pr {} as obsolete'.format(change.change_id, pr_id))
+        return obsolete_changes
+
+    @classmethod
+    def set_sent_to_buildbot(cls, change_id, value, commit_queue=False):
         if commit_queue:
-            return Patch._set_sent_to_commit_queue(patch_id, sent_to_commit_queue=value)
-        return Patch._set_sent_to_buildbot(patch_id, sent_to_buildbot=value)
+            return Change._set_sent_to_commit_queue(change_id, sent_to_commit_queue=value)
+        return Change._set_sent_to_buildbot(change_id, sent_to_buildbot=value)
 
     @classmethod
-    def _set_sent_to_buildbot(cls, patch_id, sent_to_buildbot=True):
-        if not Patch.is_existing_patch_id(patch_id):
-            Patch.save_patch(patch_id=patch_id, sent_to_buildbot=sent_to_buildbot)
-            _log.info('Patch {} saved to database with sent_to_buildbot={}'.format(patch_id, sent_to_buildbot))
+    def _set_sent_to_buildbot(cls, change_id, sent_to_buildbot=True):
+        if not Change.is_existing_change_id(change_id):
+            Change.save_change(change_id=change_id, sent_to_buildbot=sent_to_buildbot)
+            _log.info('Change {} saved to database with sent_to_buildbot={}'.format(change_id, sent_to_buildbot))
             return SUCCESS
 
-        patch = Patch.objects.get(pk=patch_id)
-        if patch.sent_to_buildbot == sent_to_buildbot:
-            _log.warn('Patch {} already has sent_to_buildbot={}'.format(patch_id, sent_to_buildbot))
+        change = Change.objects.get(pk=change_id)
+        if change.sent_to_buildbot == sent_to_buildbot:
+            _log.warn('Change {} already has sent_to_buildbot={}'.format(change_id, sent_to_buildbot))
             return SUCCESS
 
-        patch.sent_to_buildbot = sent_to_buildbot
-        patch.save()
-        _log.info('Updated patch {} with sent_to_buildbot={}'.format(patch_id, sent_to_buildbot))
+        change.sent_to_buildbot = sent_to_buildbot
+        change.save()
+        _log.info('Updated change {} with sent_to_buildbot={}'.format(change_id, sent_to_buildbot))
         return SUCCESS
 
     @classmethod
-    def _set_sent_to_commit_queue(cls, patch_id, sent_to_commit_queue=True):
-        if not Patch.is_existing_patch_id(patch_id):
-            Patch.save_patch(patch_id=patch_id, sent_to_commit_queue=sent_to_commit_queue)
-            _log.info('Patch {} saved to database with sent_to_commit_queue={}'.format(patch_id, sent_to_commit_queue))
+    def _set_sent_to_commit_queue(cls, change_id, sent_to_commit_queue=True):
+        if not Change.is_existing_change_id(change_id):
+            Change.save_change(change_id=change_id, sent_to_commit_queue=sent_to_commit_queue)
+            _log.info('Change {} saved to database with sent_to_commit_queue={}'.format(change_id, sent_to_commit_queue))
             return SUCCESS
 
-        patch = Patch.objects.get(pk=patch_id)
-        if patch.sent_to_commit_queue == sent_to_commit_queue:
-            _log.warn('Patch {} already has sent_to_commit_queue={}'.format(patch_id, sent_to_commit_queue))
+        change = Change.objects.get(pk=change_id)
+        if change.sent_to_commit_queue == sent_to_commit_queue:
+            _log.warn('Change {} already has sent_to_commit_queue={}'.format(change_id, sent_to_commit_queue))
             return SUCCESS
 
-        patch.sent_to_commit_queue = sent_to_commit_queue
-        patch.save()
-        _log.info('Updated patch {} with sent_to_commit_queue={}'.format(patch_id, sent_to_commit_queue))
+        change.sent_to_commit_queue = sent_to_commit_queue
+        change.save()
+        _log.info('Updated change {} with sent_to_commit_queue={}'.format(change_id, sent_to_commit_queue))
         return SUCCESS
 
     @classmethod
-    def set_bug_id(cls, patch_id, bug_id):
-        if not Patch.is_existing_patch_id(patch_id):
-            return ERR_NON_EXISTING_PATCH
+    def set_bug_id(cls, change_id, bug_id):
+        if not Change.is_existing_change_id(change_id):
+            return ERR_NON_EXISTING_CHANGE
 
-        patch = Patch.objects.get(pk=patch_id)
-        if patch.bug_id == bug_id:
-            _log.warn('Patch {} already has bug id {} set.'.format(patch_id, bug_id))
+        change = Change.objects.get(pk=change_id)
+        if change.bug_id == bug_id:
+            _log.warn('Change {} already has bug id {} set.'.format(change_id, bug_id))
             return SUCCESS
 
-        patch.bug_id = bug_id
-        patch.save()
-        _log.debug('Updated patch {} with bug id {}'.format(patch_id, bug_id))
+        change.bug_id = bug_id
+        change.save()
+        _log.debug('Updated change {} with bug id {}'.format(change_id, bug_id))
         return SUCCESS
 
     @classmethod
-    def set_obsolete(cls, patch_id, obsolete=True):
-        if not Patch.is_existing_patch_id(patch_id):
-            return ERR_NON_EXISTING_PATCH
+    def set_obsolete(cls, change_id, obsolete=True):
+        if not Change.is_existing_change_id(change_id):
+            return ERR_NON_EXISTING_CHANGE
 
-        patch = Patch.objects.get(pk=patch_id)
-        if patch.obsolete == obsolete:
-            _log.warn('Patch {} is already marked with obsolete={}.'.format(patch_id, obsolete))
+        change = Change.objects.get(pk=change_id)
+        if change.obsolete == obsolete:
+            _log.warn('Change {} is already marked with obsolete={}.'.format(change_id, obsolete))
             return SUCCESS
-        patch.obsolete = obsolete
-        patch.save()
-        _log.debug('Marked patch {} as obsolete={}'.format(patch_id, obsolete))
+        change.obsolete = obsolete
+        change.save()
+        _log.debug('Marked change {} as obsolete={}'.format(change_id, obsolete))
+        return SUCCESS
+
+    def set_comment_id(self, comment_id):
+        if type(comment_id) != int or comment_id < 0:
+            _log.error('Invalid comment_id {}, while trying to set comment_id for change: {}'.format(comment_id, self.change_id))
+            return FAILURE
+
+        if self.comment_id == comment_id:
+            _log.warn('Change {} already has comment id {} set.'.format(self.change_id, comment_id))
+            return SUCCESS
+
+        self.comment_id = comment_id
+        self.save()
+        _log.info('Updated change {} with comment id {}'.format(self.change_id, comment_id))
         return SUCCESS

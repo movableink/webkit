@@ -38,6 +38,7 @@
 #include "RenderLayerModelObject.h"
 #include "RenderPtr.h"
 #include "ScrollView.h"
+#include "SimpleRange.h"
 #include "StyleColor.h"
 #include "TiledBacking.h"
 #include <memory>
@@ -74,14 +75,11 @@ class RenderStyle;
 class RenderView;
 class RenderWidget;
 class ScrollingCoordinator;
+class ScrollAnchoringController;
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 namespace Display {
 class View;
 }
-#endif
-
-enum class FrameFlattening : uint8_t;
 
 Pagination::Mode paginationModeForRenderStyle(const RenderStyle&);
 
@@ -106,10 +104,8 @@ public:
 
     WEBCORE_EXPORT RenderView* renderView() const;
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     Display::View* existingDisplayView() const;
     Display::View& displayView();
-#endif
 
     int mapFromLayoutToCSSUnits(LayoutUnit) const;
     LayoutUnit mapFromCSSToLayoutUnits(int) const;
@@ -120,8 +116,6 @@ public:
     bool isVisibleToHitTesting() const final;
 
     Ref<Scrollbar> createScrollbar(ScrollbarOrientation) final;
-
-    bool avoidScrollbarCreation() const final;
 
     void setContentsSize(const IntSize&) final;
     void updateContentsSize() final;
@@ -137,6 +131,7 @@ public:
 
     void setNeedsCompositingConfigurationUpdate();
     void setNeedsCompositingGeometryUpdate();
+    void setDescendantsNeedUpdateBackingAndHierarchyTraversal();
 
     WEBCORE_EXPORT void setViewportConstrainedObjectsNeedLayout();
 
@@ -268,10 +263,11 @@ public:
     WEBCORE_EXPORT void setScrollPosition(const ScrollPosition&, const ScrollPositionChangeOptions& = ScrollPositionChangeOptions::createProgrammatic()) final;
     void restoreScrollbar();
     void scheduleScrollToFocusedElement(SelectionRevealMode);
-    void cancelScheduledScrollToFocusedElement();
+    void cancelScheduledScrolls();
     void scrollToFocusedElementImmediatelyIfNeeded();
     void updateLayerPositionsAfterScrolling() final;
     void updateCompositingLayersAfterScrolling() final;
+    static WEBCORE_EXPORT bool scrollRectToVisible(const LayoutRect& absoluteRect, const RenderObject&, bool insideFixed, const ScrollRectToVisibleOptions&);
 
     bool requestScrollPositionUpdate(const ScrollPosition&, ScrollType = ScrollType::User, ScrollClamping = ScrollClamping::Clamped) final;
     bool requestAnimatedScrollToPosition(const ScrollPosition&, ScrollClamping = ScrollClamping::Clamped) final;
@@ -431,8 +427,6 @@ public:
     void paintScrollbar(GraphicsContext&, Scrollbar&, const IntRect&) final;
 
     WEBCORE_EXPORT Color documentBackgroundColor() const;
-
-    bool isInChildFrameWithFrameFlattening() const;
 
     void startDisallowingLayout() { layoutContext().startDisallowingLayout(); }
     void endDisallowingLayout() { layoutContext().endDisallowingLayout(); }
@@ -695,8 +689,6 @@ public:
 
     void setSpeculativeTilingDelayDisabledForTesting(bool disabled) { m_speculativeTilingDelayDisabledForTesting = disabled; }
 
-    FrameFlattening effectiveFrameFlattening() const;
-
     WEBCORE_EXPORT void invalidateControlTints();
     void invalidateImagesWithAsyncDecodes();
 
@@ -751,6 +743,9 @@ private:
     bool useSlowRepaintsIfNotOverlapped() const;
     void updateCanBlitOnScrollRecursively();
     bool shouldLayoutAfterContentsResized() const;
+    
+    void cancelScheduledScrollToFocusedElement();
+    void cancelScheduledTextFragmentIndicatorTimer();
 
     ScrollingCoordinator* scrollingCoordinator() const;
     bool shouldUpdateCompositingLayersAfterScrolling() const;
@@ -790,6 +785,8 @@ private:
     void delegatesScrollingDidChange() final;
 
     void unobscuredContentSizeChanged() final;
+    
+    void textFragmentIndicatorTimerFired();
 
     // ScrollableArea interface
     void invalidateScrollbarRect(Scrollbar&, const IntRect&) final;
@@ -811,6 +808,8 @@ private:
     bool usesCompositedScrolling() const final;
     bool mockScrollbarsControllerEnabled() const final;
     void logMockScrollbarsControllerMessage(const String&) const final;
+
+    bool canShowNonOverlayScrollbars() const final;
 
     bool styleHidesScrollbarWithOrientation(ScrollbarOrientation) const;
     bool horizontalScrollbarHiddenByStyle() const final;
@@ -857,9 +856,6 @@ private:
 
     FrameView* parentFrameView() const;
 
-    bool frameFlatteningEnabled() const;
-    bool isFrameFlatteningValidForThisFrame() const;
-
     void markRootOrBodyRendererDirty() const;
 
     bool qualifiesAsSignificantRenderedText() const;
@@ -896,12 +892,14 @@ private:
 
     static MonotonicTime sCurrentPaintTimeStamp; // used for detecting decoded resource thrash in the cache
 
+    void scrollRectToVisibleInChildView(const LayoutRect& absoluteRect, bool insideFixed, const ScrollRectToVisibleOptions&, const HTMLFrameOwnerElement*);
+    void scrollRectToVisibleInTopLevelView(const LayoutRect& absoluteRect, bool insideFixed, const ScrollRectToVisibleOptions&);
+    LayoutRect getPossiblyFixedRectToExpose(const LayoutRect& visibleRect, const LayoutRect& exposeRect, bool insideFixed, const ScrollAlignment& alignX, const ScrollAlignment& alignY) const;
+
     const Ref<Frame> m_frame;
     FrameViewLayoutContext m_layoutContext;
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     std::unique_ptr<Display::View> m_displayView;
-#endif
 
     HashSet<Widget*> m_widgetsInRenderTree;
     std::unique_ptr<ListHashSet<RenderEmbeddedObject*>> m_embeddedObjectsToUpdate;
@@ -909,6 +907,8 @@ private:
 
     RefPtr<ContainerNode> m_maintainScrollPositionAnchor;
     RefPtr<Node> m_nodeToDraw;
+    std::optional<SimpleRange> m_pendingTextFragmentIndicatorRange;
+    String m_pendingTextFragmentIndicatorText;
 
     // Renderer to hold our custom scroll corner.
     RenderPtr<RenderScrollbarPart> m_scrollCorner;
@@ -918,10 +918,11 @@ private:
     Timer m_delayedScrollEventTimer;
     Timer m_delayedScrollToFocusedElementTimer;
     Timer m_speculativeTilingEnableTimer;
+    Timer m_delayedTextFragmentIndicatorTimer;
 
     MonotonicTime m_lastPaintTime;
 
-    LayoutSize m_size;
+    LayoutSize m_lastUsedSizeForLayout;
 
     Color m_baseBackgroundColor { Color::white };
     IntSize m_lastViewportSize;
@@ -981,6 +982,7 @@ private:
     ViewportRendererType m_viewportRendererType { ViewportRendererType::None };
     ScrollPinningBehavior m_scrollPinningBehavior { DoNotPin };
     SelectionRevealMode m_selectionRevealModeForFocusedElement { SelectionRevealMode::DoNotReveal };
+    std::unique_ptr<ScrollAnchoringController> m_scrollAnchoringController;
 
     bool m_shouldUpdateWhileOffscreen { true };
     bool m_overflowStatusDirty { true };

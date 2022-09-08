@@ -263,7 +263,7 @@ public:
     }
     
 private:
-    CodeBlock* m_codeBlock;
+    CodeBlock* const m_codeBlock;
     const Identifier& m_ident;
 };
 
@@ -303,7 +303,8 @@ CodeBlock::CodeBlock(VM& vm, Structure* structure, CopyParsedBlockTag, CodeBlock
     ASSERT(m_scopeRegister.isLocal());
 
     ASSERT(source().provider());
-    setNumParameters(other.numParameters());
+    constexpr bool allocateArgumentValueProfiles = false;
+    setNumParameters(other.numParameters(), allocateArgumentValueProfiles);
 
     vm.heap.codeBlockSet().add(this);
 }
@@ -348,7 +349,8 @@ CodeBlock::CodeBlock(VM& vm, Structure* structure, ScriptExecutable* ownerExecut
     ASSERT(m_scopeRegister.isLocal());
 
     ASSERT(source().provider());
-    setNumParameters(unlinkedCodeBlock->numParameters());
+    constexpr bool allocateArgumentValueProfiles = true;
+    setNumParameters(unlinkedCodeBlock->numParameters(), allocateArgumentValueProfiles);
 
     vm.heap.codeBlockSet().add(this);
 }
@@ -1001,11 +1003,10 @@ void CodeBlock::setAlternative(VM& vm, CodeBlock* alternative)
     m_alternative.set(vm, this, alternative);
 }
 
-void CodeBlock::setNumParameters(unsigned newValue)
+void CodeBlock::setNumParameters(unsigned newValue, bool allocateArgumentValueProfiles)
 {
     m_numParameters = newValue;
-
-    m_argumentValueProfiles = FixedVector<ValueProfile>(Options::useJIT() ? newValue : 0);
+    m_argumentValueProfiles = FixedVector<ValueProfile>((Options::useJIT() && allocateArgumentValueProfiles) ? newValue : 0);
 }
 
 CodeBlock* CodeBlock::specialOSREntryBlockOrNull()
@@ -1610,7 +1611,10 @@ void CodeBlock::finalizeUnconditionally(VM& vm)
 {
     UNUSED_PARAM(vm);
 
-    updateAllPredictions();
+    // CodeBlock::finalizeUnconditionally is called for all live CodeBlocks.
+    // We do not need to call updateAllPredictions for DFG / FTL since the same thing happens in LLInt / Baseline CodeBlock for them.
+    if (JITCode::isBaselineCode(jitType()))
+        updateAllPredictions();
 
     if (JITCode::couldBeInterpreted(jitType())) {
         finalizeLLIntInlineCaches();
@@ -2285,21 +2289,6 @@ void CodeBlock::jettison(Profiler::JettisonReason reason, ReoptimizationMode mod
     if (vm.heap.currentThreadIsDoingGCWork() && !vm.heap.isMarked(ownerExecutable()))
         return;
 
-    {
-        ConcurrentJSLocker locker(m_lock);
-        if (JITCode::isOptimizingJIT(jitType())) {
-#if ENABLE(DFG_JIT)
-            DFG::CommonData* dfgCommon = m_jitCode->dfgCommon();
-            for (auto* callLinkInfo : dfgCommon->m_callLinkInfos)
-                callLinkInfo->setClearedByJettison();
-#endif
-        } else {
-            forEachLLIntOrBaselineCallLinkInfo([&](BaselineCallLinkInfo& callLinkInfo) {
-                callLinkInfo.setClearedByJettison();
-            });
-        }
-    }
-
     // This accomplishes (2).
     ownerExecutable()->installCode(vm, alternative(), codeType(), specializationKind());
 
@@ -2350,8 +2339,8 @@ public:
     bool didRecurse() const { return m_didRecurse; }
 
 private:
-    CallFrame* m_startCallFrame;
-    CodeBlock* m_codeBlock;
+    CallFrame* const m_startCallFrame;
+    CodeBlock* const m_codeBlock;
     mutable unsigned m_depthToCheck;
     mutable bool m_foundStartCallFrame;
     mutable bool m_didRecurse;
@@ -2844,10 +2833,8 @@ bool CodeBlock::hasIdentifier(UniquedStringImpl* uid)
 }
 #endif
 
-void CodeBlock::updateAllValueProfilePredictionsAndCountLiveness(unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles)
+void CodeBlock::updateAllValueProfilePredictionsAndCountLiveness(const ConcurrentJSLocker& locker, unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles)
 {
-    ConcurrentJSLocker locker(m_lock);
-
     numberOfLiveNonArgumentValueProfiles = 0;
     numberOfSamplesInProfiles = 0; // If this divided by ValueProfile::numberOfBuckets equals numberOfValueProfiles() then value profiles are full.
 
@@ -2884,10 +2871,10 @@ void CodeBlock::updateAllValueProfilePredictionsAndCountLiveness(unsigned& numbe
 #endif
 }
 
-void CodeBlock::updateAllValueProfilePredictions()
+void CodeBlock::updateAllValueProfilePredictions(const ConcurrentJSLocker& locker)
 {
     unsigned ignoredValue1, ignoredValue2;
-    updateAllValueProfilePredictionsAndCountLiveness(ignoredValue1, ignoredValue2);
+    updateAllValueProfilePredictionsAndCountLiveness(locker, ignoredValue1, ignoredValue2);
 }
 
 void CodeBlock::updateAllArrayProfilePredictions(const ConcurrentJSLocker& locker)
@@ -2923,10 +2910,8 @@ void CodeBlock::updateAllArrayProfilePredictions(const ConcurrentJSLocker& locke
     });
 }
 
-void CodeBlock::updateAllArrayPredictions()
+void CodeBlock::updateAllArrayPredictions(const ConcurrentJSLocker& locker)
 {
-    ConcurrentJSLocker locker(m_lock);
-
     updateAllArrayProfilePredictions(locker);
     
     forEachArrayAllocationProfile([&](ArrayAllocationProfile& profile) {
@@ -2936,8 +2921,9 @@ void CodeBlock::updateAllArrayPredictions()
 
 void CodeBlock::updateAllPredictions()
 {
-    updateAllValueProfilePredictions();
-    updateAllArrayPredictions();
+    ConcurrentJSLocker locker(m_lock);
+    updateAllValueProfilePredictions(locker);
+    updateAllArrayPredictions(locker);
 }
 
 bool CodeBlock::shouldOptimizeNow()
@@ -2947,11 +2933,13 @@ bool CodeBlock::shouldOptimizeNow()
     if (m_optimizationDelayCounter >= Options::maximumOptimizationDelay())
         return true;
     
-    updateAllArrayPredictions();
-    
     unsigned numberOfLiveNonArgumentValueProfiles;
     unsigned numberOfSamplesInProfiles;
-    updateAllValueProfilePredictionsAndCountLiveness(numberOfLiveNonArgumentValueProfiles, numberOfSamplesInProfiles);
+    {
+        ConcurrentJSLocker locker(m_lock);
+        updateAllArrayPredictions(locker);
+        updateAllValueProfilePredictionsAndCountLiveness(locker, numberOfLiveNonArgumentValueProfiles, numberOfSamplesInProfiles);
+    }
 
     if (Options::verboseOSR()) {
         dataLogF(

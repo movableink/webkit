@@ -146,8 +146,17 @@ shouldBe(String(Temporal.PlainTime.from('2007-01-09 03:24:30+01:00[u-ca=japanese
 shouldBe(String(Temporal.PlainTime.from('2007-01-09 03:24:30+01:00[Europe/Brussels][u-ca=japanese]')), `03:24:30`);
 shouldBe(String(Temporal.PlainTime.from('2007-01-09 03:24:30[u-ca=japanese]')), `03:24:30`);
 {
-    let time = Temporal.PlainTime.from('1995-12-07T03:24:30+01:00[Europe/Brussels]')
+    let time = Temporal.PlainTime.from('1995-12-07T03:24:30+01:00[Europe/Brussels]');
     shouldBe(time === Temporal.PlainTime.from(time), false);
+
+    let dateTime = Temporal.PlainDateTime.from('1995-12-07T03:24:30+01:00[Europe/Brussels]')
+    shouldBe(Temporal.PlainTime.from(dateTime).toString(), time.toString());
+
+    let date = Temporal.PlainDate.from('1995-12-07T03:24:30+01:00[Europe/Brussels]');
+    shouldBe(time.toPlainDateTime(date).toString(), dateTime.toString());
+
+    shouldBe(time.toJSON(), time.toString());
+    shouldBe(time.toLocaleString(), time.toString());
 }
 {
     let time = Temporal.PlainTime.from({

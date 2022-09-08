@@ -90,7 +90,6 @@ set(JavaScriptCore_OBJECT_LUT_SOURCES
     runtime/JSDataViewPrototype.cpp
     runtime/JSGlobalObject.cpp
     runtime/JSInternalPromiseConstructor.cpp
-    runtime/JSModuleLoader.cpp
     runtime/JSONObject.cpp
     runtime/JSPromiseConstructor.cpp
     runtime/JSPromisePrototype.cpp
@@ -119,6 +118,8 @@ set(JavaScriptCore_OBJECT_LUT_SOURCES
     runtime/TemporalObject.cpp
     runtime/TemporalPlainDateConstructor.cpp
     runtime/TemporalPlainDatePrototype.cpp
+    runtime/TemporalPlainDateTimeConstructor.cpp
+    runtime/TemporalPlainDateTimePrototype.cpp
     runtime/TemporalPlainTimeConstructor.cpp
     runtime/TemporalPlainTimePrototype.cpp
     runtime/TemporalTimeZoneConstructor.cpp
@@ -354,6 +355,7 @@ set(JavaScriptCore_BUILTINS_SOURCES
     ${JAVASCRIPTCORE_DIR}/builtins/PromiseConstructor.js
     ${JAVASCRIPTCORE_DIR}/builtins/PromiseOperations.js
     ${JAVASCRIPTCORE_DIR}/builtins/PromisePrototype.js
+    ${JAVASCRIPTCORE_DIR}/builtins/ProxyHelpers.js
     ${JAVASCRIPTCORE_DIR}/builtins/ReflectObject.js
     ${JAVASCRIPTCORE_DIR}/builtins/RegExpPrototype.js
     ${JAVASCRIPTCORE_DIR}/builtins/RegExpStringIteratorPrototype.js
@@ -465,7 +467,7 @@ if (MSVC AND NOT ENABLE_C_LOOP)
         COMMAND ${MASM_EXECUTABLE} ${LLINT_MASM_FLAGS} ${JavaScriptCore_DERIVED_SOURCES_DIR}/LowLevelInterpreterWin.obj ${JavaScriptCore_DERIVED_SOURCES_DIR}/LowLevelInterpreterWin.asm
         VERBATIM)
     list(APPEND JavaScriptCore_SOURCES ${JavaScriptCore_DERIVED_SOURCES_DIR}/LowLevelInterpreterWin.obj)
-    add_library(LowLevelInterpreterLib STATIC llint/LowLevelInterpreter.cpp)
+    add_library(LowLevelInterpreterLib OBJECT llint/LowLevelInterpreter.cpp)
 else ()
     # As there's poor toolchain support for using `.file` directives in
     # inline asm (i.e. there's no way to avoid clashes with the `.file`
@@ -474,7 +476,7 @@ else ()
     # an object file. We only need to do this for LowLevelInterpreter.cpp
     # and cmake doesn't allow us to introduce a compiler wrapper for a
     # single source file, so we need to create a separate target for it.
-    add_library(LowLevelInterpreterLib STATIC llint/LowLevelInterpreter.cpp
+    add_library(LowLevelInterpreterLib OBJECT llint/LowLevelInterpreter.cpp
         ${JavaScriptCore_DERIVED_SOURCES_DIR}/${LLIntOutput})
 endif ()
 
@@ -578,6 +580,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     assembler/AbstractMacroAssembler.h
     assembler/AssemblerBuffer.h
     assembler/AssemblerCommon.h
+    assembler/AssemblyComments.h
     assembler/CPU.h
     assembler/CodeLocation.h
     assembler/FastJITPermissions.h
@@ -616,6 +619,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     builtins/BuiltinNames.h
     builtins/BuiltinUtils.h
 
+    bytecode/AdaptiveInferredPropertyValueWatchpointBase.h
     bytecode/ArithProfile.h
     bytecode/ArrayAllocationProfile.h
     bytecode/ArrayProfile.h
@@ -798,6 +802,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     heap/WeakSet.h
     heap/WeakSetInlines.h
 
+    inspector/AsyncStackTrace.h
     inspector/ConsoleMessage.h
     inspector/ContentSearchUtilities.h
     inspector/IdentifiersFactory.h
@@ -837,11 +842,13 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     inspector/remote/RemoteInspector.h
 
     interpreter/AbstractPC.h
+    interpreter/CLoopStack.h
     interpreter/CallFrame.h
     interpreter/CallFrameInlines.h
     interpreter/CalleeBits.h
     interpreter/EntryFrame.h
     interpreter/FrameTracers.h
+    interpreter/Interpreter.h
     interpreter/Register.h
     interpreter/RegisterInlines.h
     interpreter/ShadowChicken.h
@@ -1020,6 +1027,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/HashMapImplInlines.h
     runtime/Identifier.h
     runtime/IdentifierInlines.h
+    runtime/ImplementationVisibility.h
     runtime/IndexingHeader.h
     runtime/IndexingHeaderInlines.h
     runtime/IndexingType.h
@@ -1126,6 +1134,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/NumericStrings.h
     runtime/ObjectConstructor.h
     runtime/ObjectInitializationScope.h
+    runtime/ObjectPropertyChangeAdaptiveWatchpoint.h
     runtime/ObjectPrototype.h
     runtime/Operations.h
     runtime/Options.h
@@ -1187,6 +1196,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/SymbolPrototype.h
     runtime/SymbolTable.h
     runtime/SymbolTableOrScopeDepth.h
+    runtime/SyntheticModuleRecord.h
     runtime/TemplateObjectDescriptor.h
     runtime/TemporalNow.h
     runtime/TemporalObject.h
@@ -1342,7 +1352,6 @@ set(JavaScriptCore_INSPECTOR_PROTOCOL_SCRIPTS
     ${JavaScriptCore_INSPECTOR_SCRIPTS_DIR}/codegen/generator_templates.py
     ${JavaScriptCore_INSPECTOR_SCRIPTS_DIR}/codegen/__init__.py
     ${JavaScriptCore_INSPECTOR_SCRIPTS_DIR}/codegen/models.py
-    ${JavaScriptCore_INSPECTOR_SCRIPTS_DIR}/codegen/preprocess.pl
 )
 
 set(JavaScriptCore_INSPECTOR_DOMAINS
@@ -1381,7 +1390,7 @@ add_custom_command(
     OUTPUT ${JavaScriptCore_DERIVED_SOURCES_DIR}/CombinedDomains.json
     MAIN_DEPENDENCY ${JavaScriptCore_SCRIPTS_DIR}/generate-combined-inspector-json.py
     DEPENDS ${JavaScriptCore_INSPECTOR_DOMAINS}
-    COMMAND ${PYTHON_EXECUTABLE} ${JavaScriptCore_SCRIPTS_DIR}/generate-combined-inspector-json.py ${JavaScriptCore_INSPECTOR_DOMAINS} > ${JavaScriptCore_DERIVED_SOURCES_DIR}/CombinedDomains.json
+    COMMAND ${PYTHON_EXECUTABLE} ${JavaScriptCore_SCRIPTS_DIR}/generate-combined-inspector-json.py ${JavaScriptCore_INSPECTOR_DOMAINS} "${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}" > ${JavaScriptCore_DERIVED_SOURCES_DIR}/CombinedDomains.json
     VERBATIM)
 
 # Inspector Backend Dispatchers, Frontend Dispatchers, Type Builders
@@ -1393,19 +1402,11 @@ add_custom_command(
            ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorFrontendDispatchers.h
            ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorProtocolObjects.cpp
            ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorProtocolObjects.h
+           ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorBackendCommands.js
     MAIN_DEPENDENCY ${JavaScriptCore_DERIVED_SOURCES_DIR}/CombinedDomains.json
     DEPENDS ${JavaScriptCore_INSPECTOR_PROTOCOL_SCRIPTS}
     COMMAND ${PYTHON_EXECUTABLE} ${JavaScriptCore_INSPECTOR_SCRIPTS_DIR}/generate-inspector-protocol-bindings.py --outputDir "${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector" --framework JavaScriptCore ${JavaScriptCore_DERIVED_SOURCES_DIR}/CombinedDomains.json
     VERBATIM)
-add_custom_command(
-    OUTPUT ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorBackendCommands.js
-           ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorBackendCommands.js.in
-    MAIN_DEPENDENCY ${JavaScriptCore_DERIVED_SOURCES_DIR}/CombinedDomains.json
-    DEPENDS ${JavaScriptCore_INSPECTOR_PROTOCOL_SCRIPTS}
-    COMMAND ${PYTHON_EXECUTABLE} ${JavaScriptCore_INSPECTOR_SCRIPTS_DIR}/generate-inspector-protocol-bindings.py --outputDir ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector --framework WebInspectorUI ${JavaScriptCore_DERIVED_SOURCES_DIR}/CombinedDomains.json
-    COMMAND ${PERL_EXECUTABLE} ${JavaScriptCore_INSPECTOR_SCRIPTS_DIR}/codegen/preprocess.pl --input ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorBackendCommands.js.in --defines "${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}" --preprocessor "${CODE_GENERATOR_PREPROCESSOR}" --output ${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorBackendCommands.js
-    VERBATIM)
-add_custom_target(InspectorBackendCommands DEPENDS "${JavaScriptCore_DERIVED_SOURCES_DIR}/inspector/InspectorBackendCommands.js")
 
 if (WTF_CPU_X86_64)
     if (MSVC AND NOT ENABLE_C_LOOP)
@@ -1435,7 +1436,11 @@ WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 if (COMPILER_IS_GCC_OR_CLANG)
     # Avoid using fused multiply-add instructions since this could give different results
     # for e.g. parseInt depending on the platform and compilation flags.
-    WEBKIT_ADD_TARGET_CXX_FLAGS(JavaScriptCore -ffp-contract=off -fno-slp-vectorize)
+    if (WTF_CPU_LOONGARCH64)
+        WEBKIT_ADD_TARGET_CXX_FLAGS(JavaScriptCore -ffp-contract=off)
+    else ()
+        WEBKIT_ADD_TARGET_CXX_FLAGS(JavaScriptCore -ffp-contract=off -fno-slp-vectorize)
+    endif ()
 
     # On MIPS we have to explicitly disable madd4, since some versions of gcc still generate
     # such instructions despite -ffp-contract=off
@@ -1491,7 +1496,13 @@ if (CMAKE_COMPILER_IS_GNUCXX AND GCC_OFFLINEASM_SOURCE_MAP)
         COMPILE_OPTIONS "-fno-lto")
 endif ()
 
-list(APPEND JavaScriptCore_PRIVATE_LIBRARIES LowLevelInterpreterLib)
+# When building JavaScriptCore as an object library, we need to make sure the
+# lowlevelinterpreter lib objects get propogated.
+if (${JavaScriptCore_LIBRARY_TYPE} STREQUAL "OBJECT")
+    list(APPEND JavaScriptCore_PRIVATE_LIBRARIES $<TARGET_OBJECTS:LowLevelInterpreterLib>)
+else ()
+    list(APPEND JavaScriptCore_SOURCES $<TARGET_OBJECTS:LowLevelInterpreterLib>)
+endif ()
 
 WEBKIT_COMPUTE_SOURCES(JavaScriptCore)
 WEBKIT_FRAMEWORK(JavaScriptCore)
@@ -1511,12 +1522,6 @@ QT_ADD_EXTRA_WEBKIT_TARGET_EXPORT(JavaScriptCore)
 
 add_custom_target(JavaScriptCoreSharedScripts DEPENDS ${JavaScriptCore_SCRIPTS})
 add_dependencies(JavaScriptCore JavaScriptCoreSharedScripts ${JavaScriptCore_EXTRA_DEPENDENCIES})
-
-# JavaScriptCore target needs to have a direct or indirect dependency
-# of InspectorBackendCommands for CMake Visual Studio generator to
-# eliminate duplicated custom commands. Otherwise,
-# CombinedDomains.json will be generated in both projects.
-add_dependencies(JavaScriptCore InspectorBackendCommands)
 
 if (USE_VERSION_STAMPER)
     add_custom_command(

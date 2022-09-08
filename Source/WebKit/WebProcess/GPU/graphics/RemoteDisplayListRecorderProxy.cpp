@@ -30,6 +30,8 @@
 
 #include "FilterReference.h"
 #include "RemoteDisplayListRecorderMessages.h"
+#include "RemoteImageBufferProxy.h"
+#include "RemoteRenderingBackendProxy.h"
 #include "WebCoreArgumentCoders.h"
 #include <WebCore/DisplayList.h>
 #include <WebCore/DisplayListDrawingContext.h>
@@ -44,7 +46,7 @@
 namespace WebKit {
 using namespace WebCore;
 
-RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(ImageBuffer& imageBuffer, RemoteRenderingBackendProxy& renderingBackend, const FloatRect& initialClip, const AffineTransform& initialCTM)
+RemoteDisplayListRecorderProxy::RemoteDisplayListRecorderProxy(RemoteImageBufferProxy& imageBuffer, RemoteRenderingBackendProxy& renderingBackend, const FloatRect& initialClip, const AffineTransform& initialCTM)
     : DisplayList::Recorder({ }, initialClip, initialCTM, DrawGlyphsMode::DeconstructUsingDrawGlyphsCommands)
     , m_destinationBufferIdentifier(imageBuffer.renderingResourceIdentifier())
     , m_imageBuffer(imageBuffer)
@@ -60,6 +62,16 @@ void RemoteDisplayListRecorderProxy::convertToLuminanceMask()
 void RemoteDisplayListRecorderProxy::transformToColorSpace(const WebCore::DestinationColorSpace& colorSpace)
 {
     send(Messages::RemoteDisplayListRecorder::TransformToColorSpace(colorSpace));
+}
+
+template<typename T>
+ALWAYS_INLINE void RemoteDisplayListRecorderProxy::send(T&& message)
+{
+    if (UNLIKELY(!(m_renderingBackend && m_imageBuffer)))
+        return;
+
+    m_imageBuffer->backingStoreWillChange();
+    m_renderingBackend->sendToStream(WTFMove(message), m_destinationBufferIdentifier);
 }
 
 RenderingMode RemoteDisplayListRecorderProxy::renderingMode() const
@@ -187,7 +199,7 @@ void RemoteDisplayListRecorderProxy::recordDrawGlyphs(const Font& font, const Gl
 
 void RemoteDisplayListRecorderProxy::recordDrawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
 {
-    send(Messages::RemoteDisplayListRecorder::DrawDecomposedGlyphs(font.renderingResourceIdentifier(), decomposedGlyphs.renderingResourceIdentifier(), decomposedGlyphs.bounds()));
+    send(Messages::RemoteDisplayListRecorder::DrawDecomposedGlyphs(font.renderingResourceIdentifier(), decomposedGlyphs.renderingResourceIdentifier()));
 }
 
 void RemoteDisplayListRecorderProxy::recordDrawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
@@ -339,6 +351,11 @@ void RemoteDisplayListRecorderProxy::recordStrokeRect(const FloatRect& rect, flo
 void RemoteDisplayListRecorderProxy::recordStrokeLine(const LineData& data)
 {
     send(Messages::RemoteDisplayListRecorder::StrokeLine(data));
+}
+
+void RemoteDisplayListRecorderProxy::recordStrokeLineWithColorAndThickness(SRGBA<uint8_t> color, float thickness, const LineData& data)
+{
+    send(Messages::RemoteDisplayListRecorder::StrokeLineWithColorAndThickness(color, thickness, data));
 }
 
 void RemoteDisplayListRecorderProxy::recordStrokeArc(const ArcData& data)

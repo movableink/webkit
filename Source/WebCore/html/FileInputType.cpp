@@ -24,6 +24,7 @@
 
 #include "Chrome.h"
 #include "DOMFormData.h"
+#include "DeprecatedGlobalSettings.h"
 #include "DirectoryFileListCreator.h"
 #include "DragData.h"
 #include "ElementChildIterator.h"
@@ -40,7 +41,7 @@
 #include "LocalizedStrings.h"
 #include "MIMETypeRegistry.h"
 #include "RenderFileUploadControl.h"
-#include "RuntimeEnabledFeatures.h"
+#include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
@@ -95,6 +96,7 @@ Ref<UploadButtonElement> UploadButtonElement::createForMultiple(Document& docume
 Ref<UploadButtonElement> UploadButtonElement::createInternal(Document& document, const String& value)
 {
     auto button = adoptRef(*new UploadButtonElement(document));
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { button };
     button->setType(HTMLNames::buttonTag->localName());
     button->setPseudo(ShadowPseudoIds::fileSelectorButton());
     button->setValue(value);
@@ -264,6 +266,7 @@ void FileInputType::createShadowSubtree()
     ASSERT(element()->shadowRoot());
 
     auto button = element()->multiple() ? UploadButtonElement::createForMultiple(element()->document()) : UploadButtonElement::create(element()->document());
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
     element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, button);
     disabledStateChanged();
 }
@@ -342,7 +345,7 @@ void FileInputType::applyFileChooserSettings()
 
 bool FileInputType::allowsDirectories() const
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().directoryUploadEnabled())
+    if (!DeprecatedGlobalSettings::directoryUploadEnabled())
         return false;
     ASSERT(element());
     return element()->hasAttributeWithoutSynchronization(webkitdirectoryAttr);
@@ -447,7 +450,7 @@ void FileInputType::didCreateFileList(Ref<FileList>&& fileList, RefPtr<Icon>&& i
     ASSERT(!allowsDirectories() || m_directoryFileListCreator);
     m_directoryFileListCreator = nullptr;
 
-    setFiles(WTFMove(fileList), icon ? RequestIcon::Yes : RequestIcon::No, WasSetByJavaScript::No);
+    setFiles(WTFMove(fileList), icon ? RequestIcon::No : RequestIcon::Yes, WasSetByJavaScript::No);
     if (icon && !m_fileList->isEmpty() && element())
         iconLoaded(WTFMove(icon));
 }

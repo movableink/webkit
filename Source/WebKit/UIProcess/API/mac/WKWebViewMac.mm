@@ -243,6 +243,8 @@ WEBCORE_COMMAND(pageUp)
 WEBCORE_COMMAND(pageUpAndModifySelection)
 WEBCORE_COMMAND(paste)
 WEBCORE_COMMAND(pasteAsPlainText)
+WEBCORE_COMMAND(scrollPageDown)
+WEBCORE_COMMAND(scrollPageUp)
 WEBCORE_COMMAND(pasteFont)
 WEBCORE_COMMAND(scrollLineDown)
 WEBCORE_COMMAND(scrollLineUp)
@@ -266,26 +268,6 @@ WEBCORE_COMMAND(yank)
 WEBCORE_COMMAND(yankAndSelect)
 
 #undef WEBCORE_COMMAND
-
-- (void)scrollPageDown:(id)sender
-{
-    if (_impl->page().preferences().eventHandlerDrivenSmoothKeyboardScrollingEnabled()) {
-        [self.nextResponder tryToPerform:_cmd with:sender];
-        return;
-    }
-
-    _impl->executeEditCommandForSelector(_cmd);
-}
-
-- (void)scrollPageUp:(id)sender
-{
-    if (_impl->page().preferences().eventHandlerDrivenSmoothKeyboardScrollingEnabled()) {
-        [self.nextResponder tryToPerform:_cmd with:sender];
-        return;
-    }
-
-    _impl->executeEditCommandForSelector(_cmd);
-}
 
 - (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pasteboard types:(NSArray *)types
 {
@@ -1307,6 +1289,16 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
     _impl->setIgnoresNonWheelEvents(ignoresNonWheelEvents);
 }
 
+- (BOOL)_ignoresMouseMoveEvents
+{
+    return _impl->ignoresMouseMoveEvents();
+}
+
+- (void)_setIgnoresMouseMoveEvents:(BOOL)ignoresMouseMoveEvents
+{
+    _impl->setIgnoresMouseMoveEvents(ignoresMouseMoveEvents);
+}
+
 - (NSView *)_safeBrowsingWarning
 {
     return _impl->safeBrowsingWarning();
@@ -1385,16 +1377,6 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 - (BOOL)_automaticallyAdjustsContentInsets
 {
     return _impl->automaticallyAdjustsContentInsets();
-}
-
-- (void)_setOverrideDeviceScaleFactor:(CGFloat)deviceScaleFactor
-{
-    _impl->setOverrideDeviceScaleFactor(deviceScaleFactor);
-}
-
-- (CGFloat)_overrideDeviceScaleFactor
-{
-    return _impl->overrideDeviceScaleFactor();
 }
 
 - (BOOL)_windowOcclusionDetectionEnabled

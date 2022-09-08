@@ -51,12 +51,11 @@ class ShaderInfo final : angle::NonCopyable
 
 struct ProgramTransformOptions final
 {
-    uint8_t enableLineRasterEmulation : 1;
     uint8_t surfaceRotation : 1;
-    uint8_t enableDepthCorrection : 1;
     uint8_t removeTransformFeedbackEmulation : 1;
-    uint8_t reserved : 4;  // must initialize to zero
-    static constexpr uint32_t kPermutationCount = 0x1 << 4;
+    uint8_t multiSampleFramebufferFetch : 1;
+    uint8_t reserved : 5;  // must initialize to zero
+    static constexpr uint32_t kPermutationCount = 0x1 << 3;
 };
 static_assert(sizeof(ProgramTransformOptions) == 1, "Size check failed");
 static_assert(static_cast<int>(SurfaceRotation::EnumCount) <= 8, "Size check failed");
@@ -116,16 +115,17 @@ class ProgramExecutableVk
 
     void reset(ContextVk *contextVk);
 
-    void save(gl::BinaryOutputStream *stream);
+    void save(ContextVk *contextVk, bool isSeparable, gl::BinaryOutputStream *stream);
     std::unique_ptr<rx::LinkEvent> load(ContextVk *contextVk,
                                         const gl::ProgramExecutable &glExecutable,
+                                        bool isSeparable,
                                         gl::BinaryInputStream *stream);
 
     void clearVariableInfoMap();
 
-    ProgramInfo &getGraphicsProgramInfo()
+    ProgramInfo &getGraphicsProgramInfo(ProgramTransformOptions transformOptions)
     {
-        uint8_t index = gl::bitCast<uint8_t, ProgramTransformOptions>(mTransformOptions);
+        uint8_t index = gl::bitCast<uint8_t, ProgramTransformOptions>(transformOptions);
         return mGraphicsProgramInfos[index];
     }
     ProgramInfo &getComputeProgramInfo() { return mComputeProgramInfo; }
@@ -136,12 +136,18 @@ class ProgramExecutableVk
 
     angle::Result getGraphicsPipeline(ContextVk *contextVk,
                                       gl::PrimitiveMode mode,
+                                      PipelineCacheAccess *pipelineCache,
+                                      PipelineSource source,
                                       const vk::GraphicsPipelineDesc &desc,
                                       const gl::ProgramExecutable &glExecutable,
                                       const vk::GraphicsPipelineDesc **descPtrOut,
                                       vk::PipelineHelper **pipelineOut);
 
-    angle::Result getComputePipeline(ContextVk *contextVk, vk::PipelineHelper **pipelineOut);
+    angle::Result getComputePipeline(ContextVk *contextVk,
+                                     PipelineCacheAccess *pipelineCache,
+                                     PipelineSource source,
+                                     const gl::ProgramExecutable &glExecutable,
+                                     vk::PipelineHelper **pipelineOut);
 
     const vk::PipelineLayout &getPipelineLayout() const { return mPipelineLayout.get(); }
     angle::Result createPipelineLayout(ContextVk *contextVk,
@@ -158,16 +164,17 @@ class ProgramExecutableVk
                                               vk::CommandBufferHelperCommon *commandBufferHelper,
                                               const vk::DescriptorSetDesc &texturesDesc);
     angle::Result updateShaderResourcesDescriptorSet(
-        ContextVk *contextVk,
+        vk::Context *context,
         UpdateDescriptorSetsBuilder *updateBuilder,
         vk::CommandBufferHelperCommon *commandBufferHelper,
-        const vk::DescriptorSetDescBuilder &shaderResourcesDesc);
+        const vk::DescriptorSetDescBuilder &shaderResourcesDesc,
+        vk::SharedDescriptorSetCacheKey *newSharedCacheKeyOut);
     angle::Result updateUniformsAndXfbDescriptorSet(
         vk::Context *context,
         UpdateDescriptorSetsBuilder *updateBuilder,
         vk::CommandBufferHelperCommon *commandBufferHelper,
         vk::BufferHelper *defaultUniformBuffer,
-        const vk::DescriptorSetDescBuilder &uniformsAndXfbDesc);
+        vk::DescriptorSetDescBuilder *uniformsAndXfbDesc);
 
     template <typename CommandBufferT>
     angle::Result bindDescriptorSets(vk::Context *context,
@@ -221,6 +228,9 @@ class ProgramExecutableVk
 
     const ShaderInterfaceVariableInfoMap &getVariableInfoMap() const { return mVariableInfoMap; }
 
+    angle::Result warmUpPipelineCache(ContextVk *contextVk,
+                                      const gl::ProgramExecutable &glExecutable);
+
   private:
     friend class ProgramVk;
     friend class ProgramPipelineVk;
@@ -244,8 +254,6 @@ class ProgramExecutableVk
         const gl::ProgramExecutable &executable,
         const gl::ActiveTextureArray<TextureVk *> *activeTextures,
         vk::DescriptorSetLayoutDesc *descOut);
-
-    void resolvePrecisionMismatch(const gl::ProgramMergedVaryings &mergedVaryings);
 
     size_t calcUniformUpdateRequiredSpace(vk::Context *context,
                                           const gl::ProgramExecutable &glExecutable,
@@ -297,6 +305,17 @@ class ProgramExecutableVk
                            programInfo, variableInfoMap);
     }
 
+    angle::Result getGraphicsPipelineImpl(ContextVk *contextVk,
+                                          ProgramTransformOptions transformOptions,
+                                          gl::PrimitiveMode mode,
+                                          gl::DrawBufferMask framebufferMask,
+                                          PipelineCacheAccess *pipelineCache,
+                                          PipelineSource source,
+                                          const vk::GraphicsPipelineDesc &desc,
+                                          const gl::ProgramExecutable &glExecutable,
+                                          const vk::GraphicsPipelineDesc **descPtrOut,
+                                          vk::PipelineHelper **pipelineOut);
+
     angle::Result resizeUniformBlockMemory(ContextVk *contextVk,
                                            const gl::ProgramExecutable &glExecutable,
                                            const gl::ShaderMap<size_t> &requiredBufferSize);
@@ -305,11 +324,16 @@ class ProgramExecutableVk
                                              UpdateDescriptorSetsBuilder *updateBuilder,
                                              vk::CommandBufferHelperCommon *commandBufferHelper,
                                              const vk::DescriptorSetDescBuilder &descriptorSetDesc,
-                                             DescriptorSetIndex setIndex);
+                                             DescriptorSetIndex setIndex,
+                                             vk::SharedDescriptorSetCacheKey *newSharedCacheKeyOut);
+
+    angle::Result initializePipelineCache(ContextVk *contextVk,
+                                          const std::vector<uint8_t> &compressedPipelineData);
+
+    void resetLayout(ContextVk *contextVk);
 
     // Descriptor sets and pools for shader resources for this program.
     vk::DescriptorSetArray<VkDescriptorSet> mDescriptorSets;
-    vk::DescriptorSetArray<VkDescriptorSet> mEmptyDescriptorSets;
     vk::DescriptorSetArray<vk::DescriptorPoolPointer> mDescriptorPools;
     vk::DescriptorSetArray<vk::RefCountedDescriptorPoolBinding> mDescriptorPoolBindings;
     uint32_t mNumDefaultUniformDescriptors;
@@ -334,12 +358,32 @@ class ProgramExecutableVk
     ProgramInfo mGraphicsProgramInfos[ProgramTransformOptions::kPermutationCount];
     ProgramInfo mComputeProgramInfo;
 
-    ProgramTransformOptions mTransformOptions;
-
     DefaultUniformBlockMap mDefaultUniformBlocks;
     gl::ShaderBitSet mDefaultUniformBlocksDirty;
 
     ShaderInfo mOriginalShaderInfo;
+
+    // The pipeline cache specific to this program executable.  Currently:
+    //
+    // - This is only used during warm up (at link time)
+    // - The contents are merged to RendererVk's pipeline cache immediately after warm up
+    // - The contents are returned as part of program binary
+    // - Draw-time pipeline creation uses RendererVk's cache
+    //
+    // This cache is not used for draw-time pipeline creations to allow reuse of other blobs that
+    // are independent of the actual shaders; vertex input fetch, fragment output and blend.
+    //
+    // TODO(http://anglebug.com/7369): Once VK_EXT_graphics_pipeline_library is supported, the
+    // situation should change as follows:
+    //
+    // - The cache is still warmed up at link time
+    // - The contents are returned as part of program binary
+    // - RendererVk's cache is split in two; one corresponding to VERTEX_INPUT_INTERFACE pipelines,
+    //   one corresponding to FRAGMENT_OUTPUT_INTERFACE pipelines.
+    // - Draw-time pipeline creations use this cache, creating
+    //   PRE_RASTERIZATION_SHADERS|FRAGMENT_SHADER pipelines.
+    //
+    vk::PipelineCache mPipelineCache;
 };
 
 }  // namespace rx

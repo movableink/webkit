@@ -130,21 +130,6 @@ angle::Result ReadWriteResource::waitForIdle(ContextVk *contextVk,
     return WaitForIdle(contextVk, this, debugMessage, reason);
 }
 
-// SharedBufferSuballocationGarbage implementation.
-bool SharedBufferSuballocationGarbage::destroyIfComplete(RendererVk *renderer,
-                                                         Serial completedSerial)
-{
-    if (mLifetime.isCurrentlyInUse(completedSerial))
-    {
-        return false;
-    }
-
-    mBuffer.destroy(renderer->getDevice());
-    mSuballocation.destroy(renderer);
-    mLifetime.release();
-    return true;
-}
-
 // SharedGarbage implementation.
 SharedGarbage::SharedGarbage() = default;
 
@@ -224,6 +209,14 @@ void ResourceUseList::releaseResourceUsesAndUpdateSerials(Serial serial)
     }
 
     mResourceUses.clear();
+}
+
+void ResourceUseList::clearCommandBuffer(CommandBufferID commandBufferID)
+{
+    for (SharedResourceUse &use : mResourceUses)
+    {
+        use.clearCommandBuffer(commandBufferID);
+    }
 }
 }  // namespace vk
 }  // namespace rx

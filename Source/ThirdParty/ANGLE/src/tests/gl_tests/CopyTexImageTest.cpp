@@ -10,7 +10,7 @@
 namespace angle
 {
 
-class CopyTexImageTest : public ANGLETest
+class CopyTexImageTest : public ANGLETest<>
 {
   protected:
     CopyTexImageTest()
@@ -279,11 +279,6 @@ class CopyTexImageTest : public ANGLETest
                                                          {0.5f, 0.25f, 1.0f, 0.75f}};
 };
 
-// Until C++17, need to redundantly declare the constexpr members outside the class (only the
-// arrays, because the others are already const-propagated and not needed by the linker).
-constexpr uint32_t CopyTexImageTest::kFboSizes[];
-constexpr GLfloat CopyTexImageTest::kFboColors[][4];
-
 TEST_P(CopyTexImageTest, RGBAToRGB)
 {
     GLubyte expected[3][4] = {
@@ -550,9 +545,6 @@ TEST_P(CopyTexImageTest, CopyTexSubImageToNonCubeCompleteDestination)
 // Deleting textures after copying to them. http://anglebug.com/4267
 TEST_P(CopyTexImageTest, DeleteAfterCopyingToTextures)
 {
-    // TODO(anglebug.com/5360): Failing on ARM-based Apple DTKs.
-    ANGLE_SKIP_TEST_IF(IsOSX() && IsARM64() && IsDesktopOpenGL());
-
     GLTexture texture;
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
@@ -1274,18 +1266,24 @@ ANGLE_INSTANTIATE_TEST(CopyTexImageTest,
                        ANGLE_ALL_TEST_PLATFORMS_ES2,
                        ES2_D3D11_PRESENT_PATH_FAST(),
                        ES3_VULKAN(),
+                       ES2_OPENGL().enable(Feature::EmulateCopyTexImage2D),
+                       ES2_OPENGLES().enable(Feature::EmulateCopyTexImage2D),
                        ES2_OPENGL().enable(Feature::EmulateCopyTexImage2DFromRenderbuffers),
                        ES2_OPENGLES().enable(Feature::EmulateCopyTexImage2DFromRenderbuffers));
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(CopyTexImageTestES3);
 ANGLE_INSTANTIATE_TEST(CopyTexImageTestES3,
                        ANGLE_ALL_TEST_PLATFORMS_ES3,
+                       ES3_OPENGL().enable(Feature::EmulateCopyTexImage2D),
+                       ES3_OPENGLES().enable(Feature::EmulateCopyTexImage2D),
                        ES3_OPENGL().enable(Feature::EmulateCopyTexImage2DFromRenderbuffers),
                        ES3_OPENGLES().enable(Feature::EmulateCopyTexImage2DFromRenderbuffers));
 ANGLE_INSTANTIATE_TEST(CopyTexImageTestRobustResourceInit,
                        ANGLE_ALL_TEST_PLATFORMS_ES2,
                        ES2_D3D11_PRESENT_PATH_FAST(),
                        ES3_VULKAN(),
+                       ES2_OPENGL().enable(Feature::EmulateCopyTexImage2D),
+                       ES2_OPENGLES().enable(Feature::EmulateCopyTexImage2D),
                        ES2_OPENGL().enable(Feature::EmulateCopyTexImage2DFromRenderbuffers),
                        ES2_OPENGLES().enable(Feature::EmulateCopyTexImage2DFromRenderbuffers));
 }  // namespace angle

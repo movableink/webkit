@@ -23,6 +23,7 @@
 #include "config.h"
 #include "RenderInline.h"
 
+#include "BorderPainter.h"
 #include "Chrome.h"
 #include "FloatQuad.h"
 #include "FrameSelection.h"
@@ -188,7 +189,6 @@ void RenderInline::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
             updateStyleOfAnonymousBlockContinuations(*containingBlock(), &newStyle, oldStyle);
     }
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (diff >= StyleDifference::Repaint) {
         if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this)) {
             auto shouldInvalidateLineLayoutPath = selfNeedsLayout() || !LayoutIntegration::LineLayout::canUseForAfterInlineBoxStyleChange(*this, diff);
@@ -198,7 +198,6 @@ void RenderInline::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
                 lineLayout->updateStyle(*this, *oldStyle);
         }
     }
-#endif
 }
 
 bool RenderInline::mayAffectLayout() const
@@ -228,13 +227,16 @@ bool RenderInline::mayAffectLayout() const
 
 void RenderInline::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this)) {
+        lineLayout->paint(paintInfo, paintOffset, this);
+        return;
+    }
     m_lineBoxes.paint(this, paintInfo, paintOffset);
 }
 
 template<typename GeneratorContext>
 void RenderInline::generateLineBoxRects(GeneratorContext& context) const
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this)) {
         auto inlineBoxRects = lineLayout->collectInlineBoxRects(*this);
         if (inlineBoxRects.isEmpty()) {
@@ -245,7 +247,6 @@ void RenderInline::generateLineBoxRects(GeneratorContext& context) const
             context.addRect(inlineBoxRect);
         return;
     }
-#endif
     if (LegacyInlineFlowBox* curr = firstLineBox()) {
         for (; curr; curr = curr->nextLineBox())
             context.addRect(FloatRect(curr->topLeft(), curr->size()));
@@ -342,10 +343,8 @@ LayoutUnit RenderInline::offsetTop() const
 
 LayoutPoint RenderInline::firstInlineBoxTopLeft() const
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this))
         return lineLayout->firstInlineBoxRect(*this).location();
-#endif
     if (LegacyInlineBox* firstBox = firstLineBox())
         return flooredLayoutPoint(firstBox->locationIncludingFlipping());
     return { };
@@ -420,9 +419,8 @@ bool RenderInline::nodeAtPoint(const HitTestRequest& request, HitTestResult& res
                                 const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction)
 {
     ASSERT(layer());
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-    ASSERT(!LayoutIntegration::LineLayout::containing(const_cast<RenderInline&>(*this)));
-#endif
+    if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this))
+        return lineLayout->hitTest(request, result, locationInContainer, accumulatedOffset, hitTestAction, this);
     return m_lineBoxes.hitTest(this, request, result, locationInContainer, accumulatedOffset, hitTestAction);
 }
 
@@ -459,10 +457,8 @@ private:
 
 IntRect RenderInline::linesBoundingBox() const
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* layout = LayoutIntegration::LineLayout::containing(*this))
         return enclosingIntRect(layout->enclosingBorderBoxRectFor(*this));
-#endif
 
     IntRect result;
     
@@ -495,10 +491,8 @@ IntRect RenderInline::linesBoundingBox() const
 
 LayoutRect RenderInline::linesVisualOverflowBoundingBox() const
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* layout = LayoutIntegration::LineLayout::containing(*this))
         return layout->visualOverflowBoundingBoxRectFor(*this);
-#endif
 
     if (!firstLineBox() || !lastLineBox())
         return LayoutRect();
@@ -589,10 +583,8 @@ LayoutRect RenderInline::clippedOverflowRect(const RenderLayerModelObject* repai
             return false;
         if (continuation())
             return false;
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
         if (LayoutIntegration::LineLayout::containing(*this))
             return false;
-#endif
         return true;
     };
 
@@ -690,7 +682,7 @@ std::optional<LayoutRect> RenderInline::computeVisibleRectInContainer(const Layo
     if (localContainer->hasNonVisibleOverflow()) {
         // FIXME: Respect the value of context.options.
         SetForScope change(context.options, context.options | VisibleRectContextOption::ApplyCompositedContainerScrolls);
-        bool isEmpty = !downcast<RenderBox>(*localContainer).applyCachedClipAndScrollPosition(adjustedRect, container, context);
+        bool isEmpty = !downcast<RenderLayerModelObject>(*localContainer).applyCachedClipAndScrollPosition(adjustedRect, container, context);
         if (isEmpty) {
             if (context.options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection))
                 return std::nullopt;
@@ -1003,7 +995,7 @@ void RenderInline::paintOutlineForLine(GraphicsContext& graphicsContext, const L
 
     float outlineWidth = styleToUse.outlineWidth();
     BorderStyle outlineStyle = styleToUse.outlineStyle();
-    bool antialias = shouldAntialiasLines(graphicsContext);
+    bool antialias = BorderPainter::shouldAntialiasLines(graphicsContext);
 
     auto adjustedPreviousLine = previousLine;
     adjustedPreviousLine.moveBy(paintOffset);

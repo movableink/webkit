@@ -31,7 +31,7 @@
 #include "CSSSelectorParser.h"
 
 #include "CommonAtomStrings.h"
-#include "RuntimeEnabledFeatures.h"
+#include "DeprecatedGlobalSettings.h"
 #include <memory>
 #include <wtf/OptionSet.h>
 #include <wtf/SetForScope.h>
@@ -598,10 +598,7 @@ static bool isOnlyPseudoClassFunction(CSSSelector::PseudoClassType pseudoClassTy
     case CSSSelector::PseudoClassNthLastOfType:
     case CSSSelector::PseudoClassLang:
     case CSSSelector::PseudoClassAny:
-#if ENABLE(CSS_SELECTORS_LEVEL4)
     case CSSSelector::PseudoClassDir:
-    case CSSSelector::PseudoClassRole:
-#endif
         return true;
     default:
         break;
@@ -649,7 +646,7 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumePseudo(CSSParserTok
             if (!m_context.hasPseudoClassEnabled && selector->pseudoClassType() == CSSSelector::PseudoClassHas)
                 return nullptr;
 #if ENABLE(ATTACHMENT_ELEMENT)
-            if (!m_context.attachmentEnabled && selector->pseudoClassType() == CSSSelector::PseudoClassHasAttachment)
+            if (!DeprecatedGlobalSettings::attachmentElementEnabled() && selector->pseudoClassType() == CSSSelector::PseudoClassHasAttachment)
                 return nullptr;
 #endif
         }
@@ -743,11 +740,11 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumePseudo(CSSParserTok
             return selector;
         }
         case CSSSelector::PseudoClassHost: {
-            auto selectorList = makeUnique<CSSSelectorList>();
-            *selectorList = consumeCompoundSelectorList(block);
-            if (selectorList->isEmpty() || !block.atEnd())
+            auto innerSelector = consumeCompoundSelector(block);
+            block.consumeWhitespace();
+            if (!innerSelector || !block.atEnd())
                 return nullptr;
-            selector->setSelectorList(WTFMove(selectorList));
+            selector->adoptSelectorVector(Vector<std::unique_ptr<CSSParserSelector>>::from(WTFMove(innerSelector)));
             return selector;
         }
         case CSSSelector::PseudoClassHas: {
@@ -762,16 +759,13 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumePseudo(CSSParserTok
             selector->setSelectorList(WTFMove(selectorList));
             return selector;
         }
-#if ENABLE(CSS_SELECTORS_LEVEL4)
-        case CSSSelector::PseudoClassDir:
-        case CSSSelector::PseudoClassRole: {
+        case CSSSelector::PseudoClassDir: {
             const CSSParserToken& ident = block.consumeIncludingWhitespace();
             if (ident.type() != IdentToken || !block.atEnd())
                 return nullptr;
             selector->setArgument(ident.value().toAtomString());
             return selector;
         }
-#endif
         default:
             break;
         }

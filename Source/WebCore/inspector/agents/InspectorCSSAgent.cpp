@@ -44,12 +44,14 @@
 #include "ElementAncestorIterator.h"
 #include "ElementChildIterator.h"
 #include "ElementRareData.h"
+#include "EventTarget.h"
 #include "Font.h"
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "FontPlatformData.h"
 #include "Frame.h"
 #include "HTMLHeadElement.h"
+#include "HTMLHtmlElement.h"
 #include "HTMLStyleElement.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorHistory.h"
@@ -269,11 +271,12 @@ CSSStyleRule* InspectorCSSAgent::asCSSStyleRule(CSSRule& rule)
     return downcast<CSSStyleRule>(&rule);
 }
 
-InspectorCSSAgent::InspectorCSSAgent(WebAgentContext& context)
+InspectorCSSAgent::InspectorCSSAgent(PageAgentContext& context)
     : InspectorAgentBase("CSS"_s, context)
     , m_frontendDispatcher(makeUnique<CSSFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(CSSBackendDispatcher::create(context.backendDispatcher, this))
-    , m_layoutContextTypeChangedTimer(*this, &InspectorCSSAgent::layoutContextTypeChangedTimerFired)
+    , m_inspectedPage(context.inspectedPage)
+    , m_nodesWithPendingLayoutFlagsChangeDispatchTimer(*this, &InspectorCSSAgent::nodesWithPendingLayoutFlagsChangeDispatchTimerFired)
 {
 }
 
@@ -296,9 +299,10 @@ void InspectorCSSAgent::reset()
     m_nodeToInspectorStyleSheet.clear();
     m_documentToInspectorStyleSheet.clear();
     m_documentToKnownCSSStyleSheets.clear();
-    m_nodesWithPendingLayoutContextTypeChanges.clear();
-    if (m_layoutContextTypeChangedTimer.isActive())
-        m_layoutContextTypeChangedTimer.stop();
+    m_lastLayoutFlagsForNode.clear();
+    m_nodesWithPendingLayoutFlagsChange.clear();
+    if (m_nodesWithPendingLayoutFlagsChangeDispatchTimer.isActive())
+        m_nodesWithPendingLayoutFlagsChangeDispatchTimer.stop();
     m_layoutContextTypeChangedMode = Protocol::CSS::LayoutContextTypeChangedMode::Observed;
     resetPseudoStates();
 }
@@ -538,8 +542,10 @@ Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::CSS::CSSComputedStylePropert
 
 static Ref<Protocol::CSS::Font> buildObjectForFont(const Font& font)
 {
+    auto& fontPlatformData = font.platformData();
+    
     auto resultVariationAxes = JSON::ArrayOf<Protocol::CSS::FontVariationAxis>::create();
-    for (auto& variationAxis : font.platformData().variationAxes(ShouldLocalizeAxisNames::Yes)) {
+    for (auto& variationAxis : fontPlatformData.variationAxes(ShouldLocalizeAxisNames::Yes)) {
         auto axis = Protocol::CSS::FontVariationAxis::create()
             .setTag(variationAxis.tag())
             .setMinimumValue(variationAxis.minimumValue())
@@ -552,11 +558,16 @@ static Ref<Protocol::CSS::Font> buildObjectForFont(const Font& font)
         
         resultVariationAxes->addItem(WTFMove(axis));
     }
-    
-    return Protocol::CSS::Font::create()
+
+    auto protocolFont = Protocol::CSS::Font::create()
         .setDisplayName(font.platformData().familyName())
         .setVariationAxes(WTFMove(resultVariationAxes))
         .release();
+
+    protocolFont->setSynthesizedBold(fontPlatformData.syntheticBold());
+    protocolFont->setSynthesizedOblique(fontPlatformData.syntheticOblique());
+
+    return protocolFont;
 }
 
 Protocol::ErrorStringOr<Ref<Protocol::CSS::Font>> InspectorCSSAgent::getFontDataForNode(Protocol::DOM::NodeId nodeId)
@@ -810,8 +821,7 @@ Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::CSS::CSSPropertyInfo>>> Insp
 
     for (int i = firstCSSProperty; i <= lastCSSProperty; ++i) {
         CSSPropertyID propertyID = convertToCSSPropertyID(i);
-        // FIXME: Should take account for flags in settings().
-        if (isInternalCSSProperty(propertyID) || !isEnabledCSSProperty(propertyID))
+        if (!isCSSPropertyExposed(propertyID, &m_inspectedPage.settings()))
             continue;
 
         auto property = Protocol::CSS::CSSPropertyInfo::create()
@@ -830,10 +840,11 @@ Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::CSS::CSSPropertyInfo>>> Insp
         if (shorthand.length()) {
             auto longhands = JSON::ArrayOf<String>::create();
             for (auto longhand : shorthand) {
-                if (isEnabledCSSProperty(longhand))
+                if (isCSSPropertyExposed(longhand, &m_inspectedPage.settings()))
                     longhands->addItem(getPropertyNameString(longhand));
             }
-            property->setLonghands(WTFMove(longhands));
+            if (longhands->length())
+                property->setLonghands(WTFMove(longhands));
         }
 
         if (CSSParserFastPaths::isKeywordPropertyID(propertyID)) {
@@ -935,26 +946,106 @@ Protocol::ErrorStringOr<void> InspectorCSSAgent::forcePseudoState(Protocol::DOM:
     return { };
 }
 
-std::optional<Protocol::CSS::LayoutContextType> InspectorCSSAgent::layoutContextTypeForRenderer(RenderObject* renderer)
+static std::optional<InspectorCSSAgent::LayoutFlag> layoutFlagContextType(RenderObject* renderer)
 {
     if (auto* renderFlexibleBox = dynamicDowncast<RenderFlexibleBox>(renderer)) {
         // Subclasses of RenderFlexibleBox (buttons, selection inputs, etc.) should not be considered flex containers,
         // as it is an internal implementation detail.
         if (renderFlexibleBox->isFlexibleBoxImpl())
             return std::nullopt;
-        return Protocol::CSS::LayoutContextType::Flex;
+        return InspectorCSSAgent::LayoutFlag::Flex;
     }
     if (is<RenderGrid>(renderer))
-        return Protocol::CSS::LayoutContextType::Grid;
+        return InspectorCSSAgent::LayoutFlag::Grid;
     return std::nullopt;
 }
 
-static void pushChildrenNodesToFrontendIfLayoutContextTypePresent(InspectorDOMAgent& domAgent, ContainerNode& node)
+static bool layoutFlagsContainLayoutContextType(OptionSet<InspectorCSSAgent::LayoutFlag> layoutFlags)
+{
+    return layoutFlags.containsAny({
+        InspectorCSSAgent::LayoutFlag::Flex,
+        InspectorCSSAgent::LayoutFlag::Grid,
+    });
+}
+
+static bool hasJSEventListener(Node& node)
+{
+    if (const auto* eventTargetData = node.eventTargetData()) {
+        for (const auto& type : eventTargetData->eventListenerMap.eventTypes()) {
+            for (const auto& listener : node.eventListeners(type)) {
+                if (listener->callback().type() == EventListener::JSEventListenerType)
+                    return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+OptionSet<InspectorCSSAgent::LayoutFlag> InspectorCSSAgent::layoutFlagsForNode(Node& node)
+{
+    auto* renderer = node.renderer();
+
+    OptionSet<LayoutFlag> layoutFlags;
+
+    if (renderer) {
+        layoutFlags.add(InspectorCSSAgent::LayoutFlag::Rendered);
+
+        if (is<Document>(node)) {
+            // We display document scrollability on the document element's node in the frontend. Other browsers show
+            // scrollability on document.scrollingElement(), but that makes it impossible to see when both the document
+            // and the <body> are scrollable in quirks mode.
+        } else if (is<HTMLHtmlElement>(node)) {
+            if (auto* frameView = node.document().view()) {
+                if (frameView->isScrollable())
+                    layoutFlags.add(InspectorCSSAgent::LayoutFlag::Scrollable);
+            }
+        } else if (is<RenderBox>(*renderer) && downcast<RenderBox>(*renderer).canBeScrolledAndHasScrollableArea())
+            layoutFlags.add(InspectorCSSAgent::LayoutFlag::Scrollable);
+    }
+
+    if (auto contextType = layoutFlagContextType(renderer))
+        layoutFlags.add(*contextType);
+
+    if (hasJSEventListener(node))
+        layoutFlags.add(InspectorCSSAgent::LayoutFlag::Event);
+
+    return layoutFlags;
+}
+
+static RefPtr<JSON::ArrayOf<String /* Protocol::CSS::LayoutFlag */>> toProtocol(OptionSet<InspectorCSSAgent::LayoutFlag> layoutFlags)
+{
+    if (layoutFlags.isEmpty())
+        return nullptr;
+
+    auto protocolLayoutFlags = JSON::ArrayOf<String /* Protocol::CSS::LayoutFlag */>::create();
+    if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::Rendered))
+        protocolLayoutFlags->addItem(Protocol::Helpers::getEnumConstantValue(Protocol::CSS::LayoutFlag::Rendered));
+    if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::Scrollable))
+        protocolLayoutFlags->addItem(Protocol::Helpers::getEnumConstantValue(Protocol::CSS::LayoutFlag::Scrollable));
+    if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::Flex))
+        protocolLayoutFlags->addItem(Protocol::Helpers::getEnumConstantValue(Protocol::CSS::LayoutFlag::Flex));
+    if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::Grid))
+        protocolLayoutFlags->addItem(Protocol::Helpers::getEnumConstantValue(Protocol::CSS::LayoutFlag::Grid));
+    if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::Event))
+        protocolLayoutFlags->addItem(Protocol::Helpers::getEnumConstantValue(Protocol::CSS::LayoutFlag::Event));
+    return protocolLayoutFlags;
+}
+
+RefPtr<JSON::ArrayOf<String /* Protocol::CSS::LayoutFlag */>> InspectorCSSAgent::protocolLayoutFlagsForNode(Node& node)
+{
+    auto layoutFlags = layoutFlagsForNode(node);
+    if (!layoutFlags.isEmpty())
+        m_lastLayoutFlagsForNode.set(node, layoutFlags);
+    return toProtocol(layoutFlags);
+}
+
+static void pushChildrenNodesToFrontendIfLayoutFlagIsRelevant(InspectorDOMAgent& domAgent, ContainerNode& node)
 {
     for (auto& child : childrenOfType<Element>(node))
-        pushChildrenNodesToFrontendIfLayoutContextTypePresent(domAgent, child);
+        pushChildrenNodesToFrontendIfLayoutFlagIsRelevant(domAgent, child);
     
-    if (InspectorCSSAgent::layoutContextTypeForRenderer(node.renderer()))
+    if (layoutFlagContextType(node.renderer()))
         domAgent.pushNodeToFrontend(&node);
 }
 
@@ -971,35 +1062,58 @@ Protocol::ErrorStringOr<void> InspectorCSSAgent::setLayoutContextTypeChangedMode
             return makeUnexpected("DOM domain must be enabled"_s);
 
         for (auto* document : domAgent->documents())
-            pushChildrenNodesToFrontendIfLayoutContextTypePresent(*domAgent, *document);
+            pushChildrenNodesToFrontendIfLayoutFlagIsRelevant(*domAgent, *document);
     }
     
     return { };
 }
 
-void InspectorCSSAgent::nodeLayoutContextTypeChanged(Node& node, RenderObject* newRenderer)
+void InspectorCSSAgent::didChangeRendererForDOMNode(Node& node)
+{
+    nodeHasLayoutFlagsChange(node);
+}
+
+void InspectorCSSAgent::didAddEventListener(EventTarget& target)
+{
+    if (auto* node = dynamicDowncast<Node>(target))
+        nodeHasLayoutFlagsChange(*node);
+}
+void InspectorCSSAgent::willRemoveEventListener(EventTarget& target)
+{
+    if (auto* node = dynamicDowncast<Node>(target))
+        nodeHasLayoutFlagsChange(*node);
+}
+
+void InspectorCSSAgent::nodeHasLayoutFlagsChange(Node& node)
+{
+    m_nodesWithPendingLayoutFlagsChange.add(node);
+    if (!m_nodesWithPendingLayoutFlagsChangeDispatchTimer.isActive())
+        m_nodesWithPendingLayoutFlagsChangeDispatchTimer.startOneShot(0_s);
+}
+
+void InspectorCSSAgent::nodesWithPendingLayoutFlagsChangeDispatchTimerFired()
 {
     auto* domAgent = m_instrumentingAgents.persistentDOMAgent();
     if (!domAgent)
         return;
 
-    auto nodeId = domAgent->boundNodeId(&node);
-    if (!nodeId && m_layoutContextTypeChangedMode == Protocol::CSS::LayoutContextTypeChangedMode::All) {
-        // FIXME: <https://webkit.org/b/189687> Preserve DOM.NodeId if a node is removed and re-added
-        nodeId = domAgent->identifierForNode(node);
+    for (auto&& node : std::exchange(m_nodesWithPendingLayoutFlagsChange, { })) {
+        auto layoutFlags = layoutFlagsForNode(node);
+        auto lastLayoutFlags = m_lastLayoutFlagsForNode.get(node);
+        if (lastLayoutFlags == layoutFlags)
+            continue;
+
+        auto nodeId = domAgent->boundNodeId(&node);
+        if (!nodeId && m_layoutContextTypeChangedMode == Protocol::CSS::LayoutContextTypeChangedMode::All && layoutFlagsContainLayoutContextType(layoutFlags)) {
+            // FIXME: <https://webkit.org/b/189687> Preserve DOM.NodeId if a node is removed and re-added
+            nodeId = domAgent->identifierForNode(node);
+        }
+        if (!nodeId)
+            continue;
+
+        m_lastLayoutFlagsForNode.set(node, layoutFlags);
+        m_frontendDispatcher->nodeLayoutFlagsChanged(nodeId, toProtocol(layoutFlags));
     }
-    if (!nodeId)
-        return;
-
-    m_nodesWithPendingLayoutContextTypeChanges.set(nodeId, newRenderer);
-    if (!m_layoutContextTypeChangedTimer.isActive())
-        m_layoutContextTypeChangedTimer.startOneShot(0_s);
-}
-
-void InspectorCSSAgent::layoutContextTypeChangedTimerFired()
-{
-    for (auto&& [nodeId, renderer] : std::exchange(m_nodesWithPendingLayoutContextTypeChanges, { }))
-        m_frontendDispatcher->nodeLayoutContextTypeChanged(nodeId, layoutContextTypeForRenderer(renderer.get()));
 }
 
 InspectorStyleSheetForInlineStyle& InspectorCSSAgent::asInspectorStyleSheet(StyledElement& element)

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutInitialContainingBlock.h"
 #include <wtf/HashMap.h>
 #include <wtf/UniqueRef.h>
@@ -36,6 +34,7 @@ namespace WebCore {
 
 class RenderBlock;
 class RenderBoxModelObject;
+class RenderInline;
 
 namespace LayoutIntegration {
 
@@ -57,6 +56,9 @@ public:
 
     const Layout::Box& layoutBoxForRenderer(const RenderObject&) const;
     Layout::Box& layoutBoxForRenderer(const RenderObject&);
+
+    const Layout::ContainerBox& layoutBoxForRenderer(const RenderInline&) const;
+    Layout::ContainerBox& layoutBoxForRenderer(const RenderInline&);
 
     const RenderObject& rendererForLayoutBox(const Layout::Box&) const;
     RenderObject& rendererForLayoutBox(const Layout::Box&);
@@ -88,4 +90,3 @@ void showInlineContent(TextStream&, const InlineContent&, size_t depth);
 }
 }
 
-#endif

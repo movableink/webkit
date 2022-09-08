@@ -263,6 +263,7 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     finalizeInlineCaches(m_getByIds, linkBuffer);
     finalizeInlineCaches(m_getByIdsWithThis, linkBuffer);
     finalizeInlineCaches(m_getByVals, linkBuffer);
+    finalizeInlineCaches(m_getByValsWithThis, linkBuffer);
     finalizeInlineCaches(m_putByIds, linkBuffer);
     finalizeInlineCaches(m_putByVals, linkBuffer);
     finalizeInlineCaches(m_delByIds, linkBuffer);
@@ -329,7 +330,7 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
         ASSERT(m_exitSiteLabels.size() == m_osrExit.size());
         for (unsigned i = 0; i < m_exitSiteLabels.size(); ++i) {
             Vector<Label>& labels = m_exitSiteLabels[i];
-            Vector<MacroAssemblerCodePtr<JSInternalPtrTag>> addresses;
+            Vector<CodePtr<JSInternalPtrTag>> addresses;
             for (unsigned j = 0; j < labels.size(); ++j)
                 addresses.append(linkBuffer.locationOf<JSInternalPtrTag>(labels[j]));
             m_graph.compilation()->addOSRExitSite(addresses);
@@ -408,7 +409,7 @@ void JITCompiler::compile()
         addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
 
     emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::argumentGPR0);
-    m_speculative->callOperationWithCallFrameRollbackOnException(operationThrowStackOverflowError, GPRInfo::argumentGPR0);
+    m_speculative->callThrowOperationWithCallFrameRollback(operationThrowStackOverflowError, GPRInfo::argumentGPR0);
 
     // Generate slow path code.
     m_speculative->runSlowPathGenerators(m_pcToCodeOriginMapBuilder);
@@ -470,6 +471,31 @@ void JITCompiler::compileFunction()
 
     // === Function footer code generation ===
     //
+    // The fast entry point into a function does not check the correct number of arguments
+    // have been passed to the call (we only use the fast entry point where we can statically
+    // determine the correct number of arguments have been passed, or have already checked).
+    // In cases where an arity check is necessary, we enter here.
+    // FIXME: change this from a cti call to a DFG style operation (normal C calling conventions).
+    Call callArityFixup;
+    Label arityCheck;
+    bool requiresArityFixup = m_codeBlock->numParameters() != 1;
+    if (requiresArityFixup) {
+        arityCheck = label();
+        compileEntry();
+
+        unsigned numberOfParameters = m_codeBlock->numParameters();
+        load32(AssemblyHelpers::payloadFor((VirtualRegister)CallFrameSlot::argumentCountIncludingThis), GPRInfo::regT1);
+        branch32(AboveOrEqual, GPRInfo::regT1, TrustedImm32(numberOfParameters)).linkTo(fromArityCheck, this);
+
+        getArityPadding(vm(), numberOfParameters, GPRInfo::regT1, GPRInfo::regT0, GPRInfo::regT2, GPRInfo::regT3, stackOverflow);
+
+        emitStoreCodeOrigin(CodeOrigin(BytecodeIndex(0)));
+        move(GPRInfo::regT0, GPRInfo::argumentGPR0);
+        callArityFixup = nearCall();
+        jump(fromArityCheck);
+    } else
+        arityCheck = entryLabel;
+
     // Generate code to perform the stack overflow handling (if the stack check in
     // the function header fails), and generate the entry point with arity check.
     //
@@ -483,37 +509,7 @@ void JITCompiler::compileFunction()
         addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
 
     emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::argumentGPR0);
-    m_speculative->callOperationWithCallFrameRollbackOnException(operationThrowStackOverflowError, GPRInfo::argumentGPR0);
-    
-    // The fast entry point into a function does not check the correct number of arguments
-    // have been passed to the call (we only use the fast entry point where we can statically
-    // determine the correct number of arguments have been passed, or have already checked).
-    // In cases where an arity check is necessary, we enter here.
-    // FIXME: change this from a cti call to a DFG style operation (normal C calling conventions).
-    Call callArityFixup;
-    Label arityCheck;
-    bool requiresArityFixup = m_codeBlock->numParameters() != 1;
-    if (requiresArityFixup) {
-        arityCheck = label();
-        compileEntry();
-
-        load32(AssemblyHelpers::payloadFor((VirtualRegister)CallFrameSlot::argumentCountIncludingThis), GPRInfo::regT1);
-        branch32(AboveOrEqual, GPRInfo::regT1, TrustedImm32(m_codeBlock->numParameters())).linkTo(fromArityCheck, this);
-        emitStoreCodeOrigin(CodeOrigin(BytecodeIndex(0)));
-        if (maxFrameExtentForSlowPathCall)
-            addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
-        emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::argumentGPR0);
-        loadPtr(Address(GPRInfo::argumentGPR0, CodeBlock::offsetOfGlobalObject()), GPRInfo::argumentGPR0);
-        m_speculative->callOperationWithCallFrameRollbackOnException(m_codeBlock->isConstructor() ? operationConstructArityCheck : operationCallArityCheck, GPRInfo::returnValueGPR, GPRInfo::argumentGPR0);
-        if (maxFrameExtentForSlowPathCall)
-            addPtr(TrustedImm32(maxFrameExtentForSlowPathCall), stackPointerRegister);
-        branchTest32(Zero, GPRInfo::returnValueGPR).linkTo(fromArityCheck, this);
-        emitStoreCodeOrigin(CodeOrigin(BytecodeIndex(0)));
-        move(GPRInfo::returnValueGPR, GPRInfo::argumentGPR0);
-        callArityFixup = nearCall();
-        jump(fromArityCheck);
-    } else
-        arityCheck = entryLabel;
+    m_speculative->callThrowOperationWithCallFrameRollback(operationThrowStackOverflowError, GPRInfo::argumentGPR0);
 
     // Generate slow path code.
     m_speculative->runSlowPathGenerators(m_pcToCodeOriginMapBuilder);
@@ -535,11 +531,11 @@ void JITCompiler::compileFunction()
     m_speculative->linkOSREntries(*linkBuffer);
     
     if (requiresArityFixup)
-        linkBuffer->link(callArityFixup, FunctionPtr<JITThunkPtrTag>(vm().getCTIStub(arityFixupGenerator).code()));
+        linkBuffer->link(callArityFixup, vm().getCTIStub(arityFixupGenerator).code());
 
     disassemble(*linkBuffer);
 
-    MacroAssemblerCodePtr<JSEntryPtrTag> withArityCheck = linkBuffer->locationOf<JSEntryPtrTag>(arityCheck);
+    CodePtr<JSEntryPtrTag> withArityCheck = linkBuffer->locationOf<JSEntryPtrTag>(arityCheck);
 
     m_jitCode->initializeCodeRefForDFG(
         FINALIZE_DFG_CODE(*linkBuffer, JSEntryPtrTag, "DFG JIT code for %s", toCString(CodeBlockWithJITType(m_codeBlock, JITType::DFGJIT)).data()),

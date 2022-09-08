@@ -32,6 +32,7 @@
 #import "AVAssetTrackUtilities.h"
 #import "AVStreamDataParserMIMETypeCache.h"
 #import "CDMSessionAVStreamSession.h"
+#import "ContentTypeUtilities.h"
 #import "GraphicsContext.h"
 #import "IOSurface.h"
 #import "Logging.h"
@@ -82,6 +83,18 @@ String convertEnumerationToString(MediaPlayerPrivateMediaSourceAVFObjC::SeekStat
     ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
+
+#if HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
+
+static bool isCopyDisplayedPixelBufferAvailable()
+{
+    static auto result = [] {
+        return [PAL::getAVSampleBufferDisplayLayerClass() instancesRespondToSelector:@selector(copyDisplayedPixelBuffer)];
+    }();
+    return MediaSessionManagerCocoa::mediaSourceInlinePaintingEnabled() && result;
+}
+
+#endif // HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
     
 #pragma mark -
 #pragma mark MediaPlayerPrivateMediaSourceAVFObjC
@@ -258,6 +271,9 @@ MediaPlayer::SupportsType MediaPlayerPrivateMediaSourceAVFObjC::supportsTypeAndC
 {
     // This engine does not support non-media-source sources.
     if (!parameters.isMediaSource)
+        return MediaPlayer::SupportsType::IsNotSupported;
+
+    if (!contentTypeMeetsContainerAndCodecTypeRequirements(parameters.type, parameters.allowedMediaContainerTypes, parameters.allowedMediaCodecTypes))
         return MediaPlayer::SupportsType::IsNotSupported;
 
     auto supported = SourceBufferParser::isContentTypeSupported(parameters.type);
@@ -655,21 +671,10 @@ RefPtr<NativeImage> MediaPlayerPrivateMediaSourceAVFObjC::nativeImageForCurrentT
 
 bool MediaPlayerPrivateMediaSourceAVFObjC::updateLastPixelBuffer()
 {
-#if HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
-    if (m_videoOutput) {
-        CMTime outputTime;
-        if (auto pixelBuffer = adoptCF([m_videoOutput copyPixelBufferForSourceTime:PAL::toCMTime(currentMediaTime()) sourceTimeForDisplay:&outputTime])) {
-            ALWAYS_LOG(LOGIDENTIFIER, "new pixelbuffer found for time ", PAL::toMediaTime(outputTime));
-            m_lastPixelBuffer = WTFMove(pixelBuffer);
-            return true;
-        }
-    }
-#endif
-
 #if HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
-    if ([m_sampleBufferDisplayLayer respondsToSelector:@selector(copyDisplayedPixelBuffer)]) {
+    if (isCopyDisplayedPixelBufferAvailable()) {
         if (auto pixelBuffer = adoptCF([m_sampleBufferDisplayLayer copyDisplayedPixelBuffer])) {
-            ALWAYS_LOG(LOGIDENTIFIER, "displayed pixelbuffer copied for time ", currentMediaTime());
+            INFO_LOG(LOGIDENTIFIER, "displayed pixelbuffer copied for time ", currentMediaTime());
             m_lastPixelBuffer = WTFMove(pixelBuffer);
             return true;
         }
@@ -684,7 +689,7 @@ bool MediaPlayerPrivateMediaSourceAVFObjC::updateLastPixelBuffer()
     if (!newPixelBuffer)
         return false;
 
-    m_lastPixelBuffer = newPixelBuffer;
+    m_lastPixelBuffer = WTFMove(newPixelBuffer);
 
     if (m_resourceOwner) {
         if (auto surface = CVPixelBufferGetIOSurface(m_lastPixelBuffer.get()))
@@ -776,41 +781,37 @@ bool MediaPlayerPrivateMediaSourceAVFObjC::supportsAcceleratedRendering() const
 
 bool MediaPlayerPrivateMediaSourceAVFObjC::shouldEnsureLayer() const
 {
-#if !HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
-    if (!m_hasBeenAskedToPaintGL)
-        return true;
+#if HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
+    return isCopyDisplayedPixelBufferAvailable() && [&] {
+        if (m_sampleBufferDisplayLayer)
+            return !CGRectIsEmpty([m_sampleBufferDisplayLayer bounds]);
+        return !m_player->playerContentBoxRect().isEmpty();
+    }();
+#else
+    return !m_hasBeenAskedToPaintGL && !m_isGatheringVideoFrameMetadata;
 #endif
-    return readbackMethod() != VideoOutputReadbackMethod::None;
+}
+
+void MediaPlayerPrivateMediaSourceAVFObjC::playerContentBoxRectChanged(const LayoutRect& newRect)
+{
+    if (!m_sampleBufferDisplayLayer && !newRect.isEmpty())
+        updateDisplayLayerAndDecompressionSession();
 }
 
 void MediaPlayerPrivateMediaSourceAVFObjC::acceleratedRenderingStateChanged()
 {
+    updateDisplayLayerAndDecompressionSession();
+}
+
+void MediaPlayerPrivateMediaSourceAVFObjC::updateDisplayLayerAndDecompressionSession()
+{
     if (shouldEnsureLayer()) {
         destroyDecompressionSession();
         ensureLayer();
-    } else {
-        destroyLayer();
-        ensureDecompressionSession();
-    }
-    updateVideoOutput();
-}
-
-void MediaPlayerPrivateMediaSourceAVFObjC::updateVideoOutput()
-{
-#if HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
-    if (readbackMethod() == VideoOutputReadbackMethod::UseVideoOutput) {
-        if (!m_videoOutput)
-            m_videoOutput = adoptNS([PAL::allocAVSampleBufferVideoOutputInstance() init]);
-        ASSERT(m_videoOutput);
-    } else
-        m_videoOutput = nil;
-
-    if (m_videoOutput == [m_sampleBufferDisplayLayer output])
         return;
-
-    ALWAYS_LOG(LOGIDENTIFIER, m_videoOutput ? "Setting up" : "Tearing down", " sample buffer video output.");
-    [m_sampleBufferDisplayLayer setOutput:m_videoOutput.get()];
-#endif // HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
+    }
+    destroyLayer();
+    ensureDecompressionSession();
 }
 
 void MediaPlayerPrivateMediaSourceAVFObjC::notifyActiveSourceBuffersChanged()
@@ -964,37 +965,6 @@ void MediaPlayerPrivateMediaSourceAVFObjC::destroyDecompressionSession()
 bool MediaPlayerPrivateMediaSourceAVFObjC::shouldBePlaying() const
 {
     return m_playing && !seeking() && allRenderersHaveAvailableSamples() && m_readyState >= MediaPlayer::ReadyState::HaveFutureData;
-}
-
-MediaPlayerPrivateMediaSourceAVFObjC::VideoOutputReadbackMethod MediaPlayerPrivateMediaSourceAVFObjC::readbackMethod() const
-{
-#if HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
-    if (!MediaSessionManagerCocoa::mediaSourceInlinePaintingEnabled())
-        return VideoOutputReadbackMethod::None;
-#endif
-
-#if HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
-    static auto canCopyDisplayedPixelBuffer = [&] {
-        return [PAL::getAVSampleBufferDisplayLayerClass() instancesRespondToSelector:@selector(copyDisplayedPixelBuffer)];
-    }();
-
-    if (canCopyDisplayedPixelBuffer) {
-        if (m_sampleBufferDisplayLayer) {
-            if (!CGRectIsEmpty([m_sampleBufferDisplayLayer bounds]))
-                return VideoOutputReadbackMethod::CopyPixelBufferFromDisplayLayer;
-        } else {
-            if (!m_player->playerContentBoxRect().isEmpty())
-                return VideoOutputReadbackMethod::CopyPixelBufferFromDisplayLayer;
-        }
-    }
-#endif // HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
-
-#if HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
-    if (PAL::getAVSampleBufferVideoOutputClass())
-        return VideoOutputReadbackMethod::UseVideoOutput;
-#endif
-
-    return VideoOutputReadbackMethod::None;
 }
 
 void MediaPlayerPrivateMediaSourceAVFObjC::setHasAvailableVideoFrame(bool flag)
@@ -1360,6 +1330,21 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     m_player->renderingModeChanged();
 }
 
+void MediaPlayerPrivateMediaSourceAVFObjC::removeAudioTrack(AudioTrackPrivate& track)
+{
+    m_player->removeAudioTrack(track);
+}
+
+void MediaPlayerPrivateMediaSourceAVFObjC::removeVideoTrack(VideoTrackPrivate& track)
+{
+    m_player->removeVideoTrack(track);
+}
+
+void MediaPlayerPrivateMediaSourceAVFObjC::removeTextTrack(InbandTextTrackPrivate& track)
+{
+    m_player->removeTextTrack(track);
+}
+
 void MediaPlayerPrivateMediaSourceAVFObjC::characteristicsChanged()
 {
     updateAllRenderersHaveAvailableSamples();
@@ -1459,8 +1444,11 @@ void MediaPlayerPrivateMediaSourceAVFObjC::audioOutputDeviceChanged()
 
 void MediaPlayerPrivateMediaSourceAVFObjC::startVideoFrameMetadataGathering()
 {
-    ASSERT(!m_videoFrameMetadataGatheringObserver || m_synchronizer);
+    if (m_videoFrameMetadataGatheringObserver)
+        return;
+    ASSERT(m_synchronizer);
     m_isGatheringVideoFrameMetadata = true;
+    acceleratedRenderingStateChanged();
 
     // FIXME: We should use a CADisplayLink to get updates on rendering, for now we emulate with addPeriodicTimeObserverForInterval.
     m_videoFrameMetadataGatheringObserver = [m_synchronizer addPeriodicTimeObserverForInterval:PAL::CMTimeMake(1, 60) queue:dispatch_get_main_queue() usingBlock:[weakThis = WeakPtr { *this }](CMTime currentTime) {
@@ -1492,6 +1480,7 @@ void MediaPlayerPrivateMediaSourceAVFObjC::checkNewVideoFrameMetadata(CMTime cur
 void MediaPlayerPrivateMediaSourceAVFObjC::stopVideoFrameMetadataGathering()
 {
     m_isGatheringVideoFrameMetadata = false;
+    acceleratedRenderingStateChanged();
     m_videoFrameMetadata = { };
 
     ASSERT(m_videoFrameMetadataGatheringObserver);

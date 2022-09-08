@@ -73,6 +73,7 @@
 #include "WebPageCreationParameters.h"
 #include "WebPageGroupProxy.h"
 #include "WebPaymentCoordinator.h"
+#include "WebPermissionController.h"
 #include "WebPlatformStrategies.h"
 #include "WebPluginInfoProvider.h"
 #include "WebProcessCreationParameters.h"
@@ -125,6 +126,7 @@
 #include <WebCore/NetworkStorageSession.h>
 #include <WebCore/Page.h>
 #include <WebCore/PageGroup.h>
+#include <WebCore/PermissionController.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PlatformMediaSessionManager.h>
 #include <WebCore/ProcessWarming.h>
@@ -132,7 +134,6 @@
 #include <WebCore/RemoteCommandListener.h>
 #include <WebCore/ResourceLoadStatistics.h>
 #include <WebCore/RuntimeApplicationChecks.h>
-#include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/ScriptExecutionContext.h>
 #include <WebCore/SecurityOrigin.h>
 #include <WebCore/ServiceWorkerContextData.h>
@@ -353,6 +354,7 @@ WebProcess::WebProcess()
 #endif
 
     WebCore::WebLockRegistry::setSharedRegistry(RemoteWebLockRegistry::create(*this));
+    WebCore::PermissionController::setSharedController(WebPermissionController::create(*this));
 }
 
 WebProcess::~WebProcess()
@@ -568,13 +570,13 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters)
 
     setMemoryCacheDisabled(parameters.memoryCacheDisabled);
 
-    WebCore::RuntimeEnabledFeatures::sharedFeatures().setAttrStyleEnabled(parameters.attrStyleEnabled);
+    WebCore::DeprecatedGlobalSettings::setAttrStyleEnabled(parameters.attrStyleEnabled);
     
     commonVM().setGlobalConstRedeclarationShouldThrow(parameters.shouldThrowExceptionForGlobalConstantRedeclaration);
 
     ScriptExecutionContext::setCrossOriginMode(parameters.crossOriginMode);
     m_isCaptivePortalModeEnabled = parameters.isCaptivePortalModeEnabled;
-    RuntimeEnabledFeatures::sharedFeatures().setArePDFImagesEnabled(!m_isCaptivePortalModeEnabled);
+    DeprecatedGlobalSettings::setArePDFImagesEnabled(!m_isCaptivePortalModeEnabled);
 
 #if ENABLE(SERVICE_CONTROLS)
     setEnabledServices(parameters.hasImageServices, parameters.hasSelectionServices, parameters.hasRichContentServices);
@@ -595,10 +597,6 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters)
     ServiceWorkerProvider::setSharedProvider(WebServiceWorkerProvider::singleton());
 #endif
     SharedWorkerProvider::setSharedProvider(WebSharedWorkerProvider::singleton());
-
-#if ENABLE(WEBASSEMBLY)
-    JSC::Wasm::enableFastMemory();
-#endif
 
 #if ENABLE(INTELLIGENT_TRACKING_PREVENTION) && !RELEASE_LOG_DISABLED
     WebResourceLoadObserver::setShouldLogUserInteraction(parameters.shouldLogUserInteraction);
@@ -1143,7 +1141,7 @@ NO_RETURN inline void failedToSendSyncMessage()
 static NetworkProcessConnectionInfo getNetworkProcessConnection(IPC::Connection& connection)
 {
     NetworkProcessConnectionInfo connectionInfo;
-    auto requestConnection = [&] {
+    auto requestConnection = [&]() -> bool {
         if (!connection.isValid()) {
             // Connection to UIProcess has been severed, exit cleanly.
             exit(0);
@@ -1152,10 +1150,10 @@ static NetworkProcessConnectionInfo getNetworkProcessConnection(IPC::Connection&
             RELEASE_LOG_ERROR(Process, "getNetworkProcessConnection: Failed to send or receive message");
             return false;
         }
-        return IPC::Connection::identifierIsValid(connectionInfo.identifier());
+        return connectionInfo.identifier();
     };
 
-    static constexpr unsigned maxFailedAttempts = 10;
+    static constexpr unsigned maxFailedAttempts = 30;
     unsigned failedAttempts = 0;
     while (!requestConnection()) {
         if (++failedAttempts >= maxFailedAttempts)
@@ -1860,7 +1858,7 @@ void WebProcess::clearCachedPage(BackForwardItemIdentifier backForwardItemID, Co
 LibWebRTCNetwork& WebProcess::libWebRTCNetwork()
 {
     if (!m_libWebRTCNetwork)
-        m_libWebRTCNetwork = LibWebRTCNetwork::create();
+        m_libWebRTCNetwork = LibWebRTCNetwork::create().moveToUniquePtr();
     return *m_libWebRTCNetwork;
 }
 
@@ -2032,14 +2030,7 @@ void WebProcess::setUseGPUProcessForCanvasRendering(bool useGPUProcessForCanvasR
 
 void WebProcess::setUseGPUProcessForDOMRendering(bool useGPUProcessForDOMRendering)
 {
-    if (useGPUProcessForDOMRendering == m_useGPUProcessForDOMRendering)
-        return;
-
     m_useGPUProcessForDOMRendering = useGPUProcessForDOMRendering;
-#if USE(CG)
-    if (m_useGPUProcessForDOMRendering)
-        ImageDecoderCG::disableHardwareAcceleratedDecoding();
-#endif
 }
 
 void WebProcess::setUseGPUProcessForMedia(bool useGPUProcessForMedia)

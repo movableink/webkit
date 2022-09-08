@@ -519,9 +519,9 @@ static Ref<JSON::ArrayOf<Protocol::CSS::Grouping>> buildArrayForGroupings(CSSRul
                 .release();
 
             StringBuilder builder;
-            auto nameFilter = containerRule->nameFilterText();
-            if (!nameFilter.isEmpty())
-                builder.append(nameFilter, ' ');
+            auto nameText = containerRule->nameText();
+            if (!nameText.isEmpty())
+                builder.append(nameText, ' ');
             builder.append(containerRule->conditionText());
             containerRulePayload->setText(builder.toString());
 
@@ -674,8 +674,7 @@ Vector<InspectorStyleProperty> InspectorStyle::collectProperties(bool includeAll
     if (includeAll) {
         for (auto i = firstCSSProperty; i < lastCSSProperty; ++i) {
             auto id = convertToCSSPropertyID(i);
-            // FIXME: Should take account for flags in settings().
-            if (isInternalCSSProperty(id) || !isEnabledCSSProperty(id))
+            if (!isCSSPropertyExposed(id, m_style->settings()))
                 continue;
 
             auto name = getPropertyNameString(id);
@@ -723,7 +722,7 @@ Ref<Protocol::CSS::CSSStyle> InspectorStyle::styleWithProperties() const
         CSSPropertyID propertyId = cssPropertyID(name);
 
         // Default "parsedOk" == true.
-        if (!propertyEntry.parsedOk || isInternalCSSProperty(propertyId))
+        if (!propertyEntry.parsedOk || !isCSSPropertyExposed(propertyId, m_style->settings()))
             property->setParsedOk(false);
         if (it->hasRawText())
             property->setText(it->rawText);

@@ -25,12 +25,23 @@
 
 #pragma once
 
-#if USE(LIBWEBRTC) && PLATFORM(COCOA)
+// FIXME: We should likely rename this header file to WebRTCProvider.h because depending on the
+// build configuration we create either a LibWebRTCProvider, or a GStreamerWebRTCProvider or
+// fallback to WebRTCProvider. This rename would open another can of worms though, leading to the
+// renaming of more LibWebRTC-prefixed files in WebKit.
+// https://bugs.webkit.org/show_bug.cgi?id=243774
+
+#if USE(LIBWEBRTC)
+
+#if PLATFORM(COCOA)
 #include <WebCore/LibWebRTCProviderCocoa.h>
-#elif USE(LIBWEBRTC) && USE(GSTREAMER)
+#elif USE(GSTREAMER)
 #include <WebCore/LibWebRTCProviderGStreamer.h>
-#else
-#include <WebCore/LibWebRTCProvider.h>
+#endif
+#elif USE(GSTREAMER_WEBRTC)
+#include <WebCore/GStreamerWebRTCProvider.h>
+#else // !USE(LIBWEBRTC) && !USE(GSTREAMER_WEBRTC)
+#include <WebCore/WebRTCProvider.h>
 #endif
 
 namespace WebKit {
@@ -78,8 +89,17 @@ inline UniqueRef<LibWebRTCProvider> createLibWebRTCProvider(WebPage& page)
 {
     return makeUniqueRef<LibWebRTCProvider>(page);
 }
+
+#elif USE(GSTREAMER_WEBRTC)
+using LibWebRTCProvider = WebCore::GStreamerWebRTCProvider;
+
+inline UniqueRef<LibWebRTCProvider> createLibWebRTCProvider(WebPage&)
+{
+    return makeUniqueRef<LibWebRTCProvider>();
+}
+
 #else
-using LibWebRTCProvider = WebCore::LibWebRTCProvider;
+using LibWebRTCProvider = WebCore::WebRTCProvider;
 
 inline UniqueRef<LibWebRTCProvider> createLibWebRTCProvider(WebPage&)
 {

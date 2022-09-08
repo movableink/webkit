@@ -90,12 +90,6 @@ String makeStringByRemoving(const String& string, unsigned position, unsigned le
     return makeString(view.left(position), view.substring(position + lengthToRemove));
 }
 
-String String::substring(unsigned position, unsigned length) const
-{
-    // FIXME: Should this function, and the many others like it, be inlined?
-    return m_impl ? m_impl->substring(position, length) : String { };
-}
-
 String String::substringSharingImpl(unsigned offset, unsigned length) const
 {
     // FIXME: We used to check against a limit of Heap::minExtraCost / sizeof(UChar).
@@ -459,19 +453,19 @@ CString String::latin1() const
     return result;
 }
 
-Expected<CString, UTF8ConversionError> String::tryGetUtf8(ConversionMode mode) const
+Expected<CString, UTF8ConversionError> String::tryGetUTF8(ConversionMode mode) const
 {
-    return m_impl ? m_impl->tryGetUtf8(mode) : CString { "", 0 };
+    return m_impl ? m_impl->tryGetUTF8(mode) : CString { "", 0 };
 }
 
-Expected<CString, UTF8ConversionError> String::tryGetUtf8() const
+Expected<CString, UTF8ConversionError> String::tryGetUTF8() const
 {
-    return tryGetUtf8(LenientConversion);
+    return tryGetUTF8(LenientConversion);
 }
 
 CString String::utf8(ConversionMode mode) const
 {
-    Expected<CString, UTF8ConversionError> expectedString = tryGetUtf8(mode);
+    Expected<CString, UTF8ConversionError> expectedString = tryGetUTF8(mode);
     RELEASE_ASSERT(expectedString);
     return expectedString.value();
 }

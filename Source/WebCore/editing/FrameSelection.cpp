@@ -57,6 +57,7 @@
 #include "LegacyInlineTextBox.h"
 #include "Logging.h"
 #include "Page.h"
+#include "PseudoClassChangeInvalidation.h"
 #include "Range.h"
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
@@ -154,6 +155,11 @@ static inline bool shouldAlwaysUseDirectionalSelection(Document* document)
     return !document || document->editor().behavior().shouldConsiderSelectionAsDirectional();
 }
 
+static inline bool isPageActive(Document* document)
+{
+    return document && document->page() && document->page()->focusController().isActive();
+}
+
 FrameSelection::FrameSelection(Document* document)
     : m_document(document)
     , m_granularity(TextGranularity::CharacterGranularity)
@@ -166,6 +172,7 @@ FrameSelection::FrameSelection(Document* document)
     , m_caretPaint(true)
     , m_isCaretBlinkingSuspended(false)
     , m_focused(document && document->frame() && document->page() && document->page()->focusController().focusedFrame() == document->frame())
+    , m_isActive(isPageActive(document))
     , m_shouldShowBlockCursor(false)
     , m_pendingSelectionUpdate(false)
     , m_alwaysAlignCursorOnScrollWhenRevealingSelection(false)
@@ -570,6 +577,11 @@ void FrameSelection::nodeWillBeRemoved(Node& node)
     respondToNodeModification(node, removingNodeRemovesPosition(node, m_selection.anchor()), removingNodeRemovesPosition(node, m_selection.focus()),
         removingNodeRemovesPosition(node, m_selection.base()), removingNodeRemovesPosition(node, m_selection.extent()),
         removingNodeRemovesPosition(node, m_selection.start()), removingNodeRemovesPosition(node, m_selection.end()));
+        
+    if (UNLIKELY(node.contains(m_previousCaretNode.get()))) {
+        m_previousCaretNode = m_selection.start().anchorNode();
+        setCaretRectNeedsUpdate();
+    }
 }
 
 void FrameSelection::respondToNodeModification(Node& node, bool anchorRemoved, bool focusRemoved, bool baseRemoved, bool extentRemoved, bool startRemoved, bool endRemoved)
@@ -2142,29 +2154,40 @@ void FrameSelection::focusedOrActiveStateChanged()
     if (activeAndFocused)
         setSelectionFromNone();
     setCaretVisibility(activeAndFocused ? Visible : Hidden, ShouldUpdateAppearance::Yes);
-
-    // Because Style::Resolver::checkOneSelector() and
-    // RenderTheme::isFocused() check if the frame is active, we have to
-    // update style and theme state that depended on those.
-    if (Element* element = m_document->focusedElement()) {
-        element->invalidateStyleForSubtree();
-        if (RenderObject* renderer = element->renderer())
-            if (renderer && renderer->style().hasEffectiveAppearance())
-                renderer->theme().stateChanged(*renderer, ControlStates::States::Focused);
-    }
 #endif
+}
+
+static Vector<Style::PseudoClassChangeInvalidation> invalidateFocusedElementAndShadowIncludingAncestors(Element* focusedElement, bool activeAndFocused)
+{
+    Vector<Style::PseudoClassChangeInvalidation> invalidations;
+    for (RefPtr element = focusedElement; element; element = element->shadowHost()) {
+        invalidations.append({ *element, { { CSSSelector::PseudoClassFocus, activeAndFocused }, { CSSSelector::PseudoClassFocusVisible, activeAndFocused } } });
+        for (auto& lineage : lineageOfType<Element>(*element))
+            invalidations.append({ lineage, CSSSelector::PseudoClassFocusWithin, activeAndFocused });
+    }
+    return invalidations;
 }
 
 void FrameSelection::pageActivationChanged()
 {
+    bool isActive = isPageActive(m_document.get());
+    RefPtr focusedElement = m_document->focusedElement();
+    auto invalidations = invalidateFocusedElementAndShadowIncludingAncestors(focusedElement.get(), m_focused && isActive);
+    m_isActive = isActive;
+
     focusedOrActiveStateChanged();
 }
 
-void FrameSelection::setFocused(bool flag)
+void FrameSelection::setFocused(bool isFocused)
 {
-    if (m_focused == flag)
+    if (m_focused == isFocused)
         return;
-    m_focused = flag;
+
+    bool isActive = isPageActive(m_document.get());
+    RefPtr focusedElement = m_document->focusedElement();
+    auto invalidations = invalidateFocusedElementAndShadowIncludingAncestors(focusedElement.get(), isFocused && isActive);
+    m_focused = isFocused;
+    m_isActive = isActive;
 
     focusedOrActiveStateChanged();
 }
@@ -2227,7 +2250,7 @@ void FrameSelection::updateAppearance()
 #endif
 
     {
-        ScriptDisallowedScope scriptDisallowedScope;
+        ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         auto* view = m_document->renderView();
         if (!view)
             return;
@@ -2484,24 +2507,24 @@ void FrameSelection::revealSelection(SelectionRevealMode revealMode, const Scrol
 
     Position start = m_selection.start();
     ASSERT(start.deprecatedNode());
-    if (start.deprecatedNode() && start.deprecatedNode()->renderer()) {
+    if (!start.deprecatedNode() || !start.deprecatedNode()->renderer())
+        return;
+
 #if PLATFORM(IOS_FAMILY)
-        if (RenderLayer* layer = start.deprecatedNode()->renderer()->enclosingLayer()) {
-            if (!m_scrollingSuppressCount) {
-                layer->scrollRectToVisible(rect, insideFixed, { revealMode, alignment, alignment, ShouldAllowCrossOriginScrolling::Yes, scrollBehavior});
-                updateAppearance();
-                if (m_document->page())
-                    m_document->page()->chrome().client().notifyRevealedSelectionByScrollingFrame(*m_document->frame());
-            }
-        }
-#else
-        // FIXME: This code only handles scrolling the startContainer's layer, but
-        // the selection rect could intersect more than just that.
-        // See <rdar://problem/4799899>.
-        if (start.deprecatedNode()->renderer()->scrollRectToVisible(rect, insideFixed, { revealMode, alignment, alignment, ShouldAllowCrossOriginScrolling::Yes, scrollBehavior}))
-            updateAppearance();
+    if (m_scrollingSuppressCount)
+        return;
 #endif
-    }
+
+    // FIXME: This code only handles scrolling the startContainer's layer, but
+    // the selection rect could intersect more than just that.
+    // See <rdar://problem/4799899>.
+    FrameView::scrollRectToVisible(rect, *start.deprecatedNode()->renderer(), insideFixed, { revealMode, alignment, alignment, ShouldAllowCrossOriginScrolling::Yes, scrollBehavior });
+    updateAppearance();
+
+#if PLATFORM(IOS_FAMILY)
+    if (m_document->page())
+        m_document->page()->chrome().client().notifyRevealedSelectionByScrollingFrame(*m_document->frame());
+#endif
 }
 
 void FrameSelection::setSelectionFromNone()
@@ -2871,12 +2894,12 @@ void FrameSelection::setCaretColor(const Color& caretColor)
 
 #endif // PLATFORM(IOS_FAMILY)
 
-static bool containsEndpoints(const WeakPtr<Document>& document, const std::optional<SimpleRange>& range)
+static bool containsEndpoints(const WeakPtr<Document, WeakPtrImplWithEventTargetData>& document, const std::optional<SimpleRange>& range)
 {
     return document && range && document->contains(range->start.container) && document->contains(range->end.container);
 }
 
-static bool containsEndpoints(const WeakPtr<Document>& document, const Range& liveRange)
+static bool containsEndpoints(const WeakPtr<Document, WeakPtrImplWithEventTargetData>& document, const Range& liveRange)
 {
     // Only need to check the start container because live ranges enforce the invariant that start and end have a common ancestor.
     return document && document->contains(liveRange.startContainer());

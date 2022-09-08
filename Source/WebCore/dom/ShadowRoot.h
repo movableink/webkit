@@ -34,6 +34,7 @@
 #include "HTMLVideoElement.h"
 #endif
 #include "ShadowRootMode.h"
+#include "SlotAssignmentMode.h"
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -48,10 +49,12 @@ class ShadowRoot final : public DocumentFragment, public TreeScope {
 public:
 
     enum class DelegatesFocus : uint8_t { Yes, No };
+    enum class AvailableToElementInternals : uint8_t { Yes, No };
 
-    static Ref<ShadowRoot> create(Document& document, ShadowRootMode type, DelegatesFocus delegatesFocus = DelegatesFocus::No)
+    static Ref<ShadowRoot> create(Document& document, ShadowRootMode type,
+        SlotAssignmentMode assignmentMode = SlotAssignmentMode::Named, DelegatesFocus delegatesFocus = DelegatesFocus::No, AvailableToElementInternals availableToElementInternals = AvailableToElementInternals::No)
     {
-        return adoptRef(*new ShadowRoot(document, type, delegatesFocus));
+        return adoptRef(*new ShadowRoot(document, type, assignmentMode, delegatesFocus, availableToElementInternals));
     }
 
     static Ref<ShadowRoot> create(Document& document, std::unique_ptr<SlotAssignment>&& assignment)
@@ -74,8 +77,10 @@ public:
     bool containsFocusedElement() const { return m_containsFocusedElement; }
     void setContainsFocusedElement(bool flag) { m_containsFocusedElement = flag; }
 
+    bool isAvailableToElementInternals() const { return m_availableToElementInternals; }
+
     Element* host() const { return m_host.get(); }
-    void setHost(WeakPtr<Element>&& host) { m_host = WTFMove(host); }
+    void setHost(WeakPtr<Element, WeakPtrImplWithEventTargetData>&& host) { m_host = WTFMove(host); }
 
     String innerHTML() const;
     ExceptionOr<void> setInnerHTML(const String&);
@@ -87,22 +92,25 @@ public:
 
     void removeAllEventListeners() override;
 
+    SlotAssignmentMode slotAssignmentMode() const { return m_slotAssignmentMode; }
     HTMLSlotElement* findAssignedSlot(const Node&);
 
     void renameSlotElement(HTMLSlotElement&, const AtomString& oldName, const AtomString& newName);
     void addSlotElementByName(const AtomString&, HTMLSlotElement&);
     void removeSlotElementByName(const AtomString&, HTMLSlotElement&, ContainerNode& oldParentOfRemovedTree);
+    void slotManualAssignmentDidChange(HTMLSlotElement&, Vector<WeakPtr<Node, WeakPtrImplWithEventTargetData>>& previous, Vector<WeakPtr<Node, WeakPtrImplWithEventTargetData>>& current);
+    void didRemoveManuallyAssignedNode(HTMLSlotElement&, const Node&);
     void slotFallbackDidChange(HTMLSlotElement&);
     void resolveSlotsBeforeNodeInsertionOrRemoval();
     void willRemoveAllChildren(ContainerNode&);
     void willRemoveAssignedNode(const Node&);
 
     void didRemoveAllChildrenOfShadowHost();
-    void didChangeDefaultSlot();
+    void didMutateTextNodesOfShadowHost();
     void hostChildElementDidChange(const Element&);
     void hostChildElementDidChangeSlotAttribute(Element&, const AtomString& oldValue, const AtomString& newValue);
 
-    const Vector<WeakPtr<Node>>* assignedNodesForSlot(const HTMLSlotElement&);
+    const Vector<WeakPtr<Node, WeakPtrImplWithEventTargetData>>* assignedNodesForSlot(const HTMLSlotElement&);
 
     void moveShadowRootToNewParentScope(TreeScope&, Document&);
     void moveShadowRootToNewDocument(Document&);
@@ -118,7 +126,7 @@ public:
     Vector<RefPtr<WebAnimation>> getAnimations();
 
 private:
-    ShadowRoot(Document&, ShadowRootMode, DelegatesFocus);
+    ShadowRoot(Document&, ShadowRootMode, SlotAssignmentMode, DelegatesFocus, AvailableToElementInternals);
     ShadowRoot(Document&, std::unique_ptr<SlotAssignment>&&);
 
     bool childTypeAllowed(NodeType) const override;
@@ -134,9 +142,11 @@ private:
     bool m_hasBegunDeletingDetachedChildren { false };
     bool m_delegatesFocus { false };
     bool m_containsFocusedElement { false };
+    bool m_availableToElementInternals { false };
     ShadowRootMode m_type { ShadowRootMode::UserAgent };
+    SlotAssignmentMode m_slotAssignmentMode { SlotAssignmentMode::Named };
 
-    WeakPtr<Element> m_host;
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> m_host;
     RefPtr<StyleSheetList> m_styleSheetList;
 
     std::unique_ptr<Style::Scope> m_styleScope;

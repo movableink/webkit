@@ -560,8 +560,12 @@ TEST(WebKit, WebAudioAndGetUserMedia)
 #endif
 
 #if ENABLE(GPU_PROCESS)
-// FIXME: https://bugs.webkit.org/show_bug.cgi?id=239315
+// FIXME: https://bugs.webkit.org/show_bug.cgi?id=243412
+#if PLATFORM(IOS)
+TEST(WebKit2, DISABLED_CrashGPUProcessWhileCapturing)
+#else 
 TEST(WebKit2, CrashGPUProcessWhileCapturing)
+#endif
 {
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     auto preferences = [configuration preferences];
@@ -708,8 +712,12 @@ TEST(WebKit2, CrashGPUProcessAfterApplyingConstraints)
     EXPECT_EQ(webViewPID, [webView _webProcessIdentifier]);
 }
 
-// FIXME: https://bugs.webkit.org/show_bug.cgi?id=239309
+// FIXME: https://bugs.webkit.org/show_bug.cgi?id=243412
+#if PLATFORM(IOS)
+TEST(WebKit2, DISABLED_CrashGPUProcessWhileCapturingAndCalling)
+#else
 TEST(WebKit2, CrashGPUProcessWhileCapturingAndCalling)
+#endif
 {
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
     auto preferences = [configuration preferences];
@@ -1071,6 +1079,40 @@ TEST(WebKit2, CapturePermission)
     done = false;
 }
 
+TEST(WebKit2, EnumerateDevicesAfterMuting)
+{
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    [configuration preferences]._inactiveMediaCaptureSteamRepromptIntervalInMinutes = .5 / 60;
+
+    initializeMediaCaptureConfiguration(configuration.get());
+
+#if PLATFORM(IOS_FAMILY)
+    [configuration setAllowsInlineMediaPlayback:YES];
+#endif
+
+    auto messageHandler = adoptNS([[GUMMessageHandler alloc] init]);
+    [[configuration userContentController] addScriptMessageHandler:messageHandler.get() name:@"gum"];
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 400, 400) configuration:configuration.get()]);
+
+    auto delegate = adoptNS([[UserMediaCaptureUIDelegate alloc] init]);
+    webView.get().UIDelegate = delegate.get();
+
+    [webView loadTestPageNamed:@"getUserMedia"];
+    EXPECT_TRUE(waitUntilCaptureState(webView.get(), _WKMediaCaptureStateDeprecatedActiveCamera));
+
+    [webView setCameraCaptureState:WKMediaCaptureStateMuted completionHandler:nil];
+    [webView setMicrophoneCaptureState:WKMediaCaptureStateMuted completionHandler:nil];
+
+    // Sleep long enough for the reprompt timer to fire and clear cached state.
+    Util::sleep(1);
+
+    // Verify enumerateDevices still works fine.
+    done = false;
+    [webView stringByEvaluatingJavaScript:@"checkEnumerateDevicesDoesNotFilter()"];
+    TestWebKitAPI::Util::run(&done);
+}
+
 #if PLATFORM(IOS_FAMILY)
 TEST(WebKit2, CapturePermissionWithSystemBlocking)
 {
@@ -1155,7 +1197,6 @@ TEST(WebKit2, ConnectedToHardwareConsole)
     int retryCount = 1000;
     while (--retryCount && cameraCaptureState == WKMediaCaptureStateMuted)
         TestWebKitAPI::Util::spinRunLoop(10);
-    EXPECT_TRUE(!!retryCount);
     EXPECT_TRUE(cameraCaptureState == WKMediaCaptureStateMuted);
 
     // Capture should be unmuted if it was active when the disconnect happened.
@@ -1181,6 +1222,35 @@ TEST(WebKit2, ConnectedToHardwareConsole)
     EXPECT_TRUE(cameraCaptureState == WKMediaCaptureStateMuted);
 }
 
+TEST(WebKit2, DoNotUnmuteWhenTakingAThumbnail)
+{
+    auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
+    auto processPoolConfig = adoptNS([[_WKProcessPoolConfiguration alloc] init]);
+    initializeMediaCaptureConfiguration(configuration.get());
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 320, 500) configuration:configuration.get() processPoolConfiguration:processPoolConfig.get()]);
+    auto delegate = adoptNS([[UserMediaCaptureUIDelegate alloc] init]);
+    [webView setUIDelegate:delegate.get()];
+    [webView _setMediaCaptureReportingDelayForTesting:0];
+
+    auto observer = adoptNS([[MediaCaptureObserver alloc] init]);
+    [webView addObserver:observer.get() forKeyPath:@"microphoneCaptureState" options:NSKeyValueObservingOptionNew context:nil];
+    [webView addObserver:observer.get() forKeyPath:@"cameraCaptureState" options:NSKeyValueObservingOptionNew context:nil];
+
+    cameraCaptureStateChange = false;
+    [webView loadTestPageNamed:@"getUserMedia"];
+    EXPECT_TRUE(waitUntilCameraState(webView.get(), WKMediaCaptureStateActive));
+
+    cameraCaptureStateChange = false;
+    [webView setCameraCaptureState:WKMediaCaptureStateMuted completionHandler:nil];
+    EXPECT_TRUE(waitUntilCameraState(webView.get(), WKMediaCaptureStateMuted));
+
+    [webView _setThumbnailView:nil];
+    int retryCount = 1000;
+    while (--retryCount && cameraCaptureState == WKMediaCaptureStateMuted) {
+        TestWebKitAPI::Util::spinRunLoop(10);
+    }
+    EXPECT_TRUE(cameraCaptureState == WKMediaCaptureStateMuted);
+}
 #endif
 
 } // namespace TestWebKitAPI

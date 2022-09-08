@@ -1,10 +1,19 @@
 
 == Running test suite: ArrayUtilities
+-- Running test case: Array.prototype.min
+PASS: min of an empty array should be undefined.
+PASS: min of an array with one item should be the item.
+PASS: min of an increasing array should be the smallest item.
+PASS: min of an decreasing array should be the smallest item.
+PASS: min of a mixed array should be the smallest item.
+PASS: min of an array with duplicates should be the smallest item.
+PASS: min with a comparator of a mixed array should be the smallest item.
+
 -- Running test case: Array.prototype.minIndex
-PASS: minIndex of an empty array should be 0.
+PASS: minIndex of an empty array should be -1.
 PASS: minIndex of an array with one item should be the index of the item.
-PASS: minIndex of an increasing array should be 0.
-PASS: minIndex of an decreasing array should be length - 1.
+PASS: minIndex of an increasing array should be the index of the smallest item.
+PASS: minIndex of an decreasing array should be the index of the smallest item.
 PASS: minIndex of a mixed array should be the index of the smallest item.
 PASS: minIndex of an array with duplicates should be the index of the smallest item.
 PASS: minIndex with a comparator of a mixed array should be the index of the smallest item.
@@ -103,6 +112,10 @@ Repeating items:
 ["a","b","b","b","c"], ["c","b","b","a"] => [["a",-1],["c",1],["b",0],["b",0],["b",-1],["c",-1],["a",1]]
 ["a","a","b","b","c","c"], ["b","b","c","c","a","a"] => [["a",-1],["a",-1],["b",0],["b",0],["c",0],["c",0],["a",1],["a",1]]
 
+-- Running test case: Array.prototype.firstValue
+PASS: firstValue of a nonempty array should be the first value.
+PASS: firstValue of an empty array should be undefined.
+
 -- Running test case: Array.prototype.lastValue
 PASS: lastValue of a nonempty array should be the last value.
 PASS: lastValue of an empty array should be undefined.
@@ -133,6 +146,8 @@ PASS: toggleIncludes of an existing item with force true should have no effect.
 PASS: toggleIncludes of an existing item with force false should remove the item.
 PASS: toggleIncludes of a nonexistent item with force true should add the item.
 PASS: toggleIncludes of a nonexistent item with force false should have no effect.
+PASS: toggleIncludes with no 'force' should add the item if it's not present.
+PASS: toggleIncludes with no 'force' should remove the item if it's present.
 
 -- Running test case: Array.prototype.insertAtIndex
 PASS: insertAtIndex with index unspecified should insert at the beginning.

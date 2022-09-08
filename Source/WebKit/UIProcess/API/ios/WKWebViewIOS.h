@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,6 @@
 
 #import "WKWebViewInternal.h"
 #import "_WKTapHandlingResult.h"
-#if USE(APPLE_INTERNAL_SDK) && PLATFORM(IOS_FAMILY) && __has_include(<WebKitAdditions/WKWebViewAdditions.h>)
-#import <WebKitAdditions/WKWebViewAdditions.h>
-#endif
 
 @class UIScrollEvent;
 
@@ -62,6 +59,7 @@ enum class TapHandlingResult : uint8_t;
 - (void)_processWillSwap;
 - (void)_didRelaunchProcess;
 
+- (WKScrollView *)_wkScrollView;
 - (UIView *)_currentContentView;
 
 - (void)_didCommitLoadForMainFrame;
@@ -134,6 +132,8 @@ enum class TapHandlingResult : uint8_t;
 - (void)findNext:(id)sender;
 - (void)findPrevious:(id)sender;
 - (void)findAndReplace:(id)sender;
+- (void)useSelectionForFind:(id)sender;
+- (void)_findSelected:(id)sender;
 
 - (id<UITextSearching>)_searchableObject;
 #endif
@@ -153,6 +153,13 @@ enum class TapHandlingResult : uint8_t;
 
 - (BOOL)_effectiveAppearanceIsDark;
 - (BOOL)_effectiveUserInterfaceLevelIsElevated;
+
+- (void)_beginLiveResize;
+- (void)_endLiveResize;
+
+#if ENABLE(LOCKDOWN_MODE_API)
++ (void)_clearLockdownModeWarningNeeded;
+#endif
 
 #if HAVE(UISCROLLVIEW_ASYNCHRONOUS_SCROLL_EVENT_HANDLING)
 - (void)_scrollView:(UIScrollView *)scrollView asynchronouslyHandleScrollEvent:(UIScrollEvent *)scrollEvent completion:(void (^)(BOOL handled))completion;

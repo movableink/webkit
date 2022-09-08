@@ -216,6 +216,7 @@ PASS outline-color
 PASS outline-offset
 PASS outline-style
 PASS outline-width
+PASS overflow-anchor
 PASS overflow-wrap
 PASS overflow-x
 PASS overflow-y
@@ -317,7 +318,6 @@ PASS transition-property
 PASS transition-timing-function
 PASS translate
 PASS unicode-bidi
-PASS user-select
 PASS vector-effect
 PASS vertical-align
 PASS visibility

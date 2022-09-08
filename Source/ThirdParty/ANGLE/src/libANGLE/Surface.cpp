@@ -33,6 +33,7 @@ SurfaceState::SurfaceState(const egl::Config *configIn, const AttributeMap &attr
       config((configIn != nullptr) ? new egl::Config(*configIn) : nullptr),
       attributes(attributesIn),
       timestampsEnabled(false),
+      autoRefreshEnabled(false),
       directComposition(false),
       swapBehavior(EGL_NONE)
 {
@@ -60,6 +61,7 @@ EGLint SurfaceState::getPreferredSwapInterval() const
 }
 
 Surface::Surface(EGLint surfaceType,
+                 GLuint serialId,
                  const egl::Config *config,
                  const AttributeMap &attributes,
                  bool forceRobustResourceInit,
@@ -100,7 +102,8 @@ Surface::Surface(EGLint surfaceType,
       mIsDamageRegionSet(false),
       mColorInitState(gl::InitState::Initialized),
       mDepthStencilInitState(gl::InitState::Initialized),
-      mImplObserverBinding(this, kSurfaceImplSubjectIndex)
+      mImplObserverBinding(this, kSurfaceImplSubjectIndex),
+      mSerialId(serialId)
 {
     mPostSubBufferRequested =
         (attributes.get(EGL_POST_SUB_BUFFER_SUPPORTED_NV, EGL_FALSE) == EGL_TRUE);
@@ -617,10 +620,14 @@ bool Surface::isYUV() const
     return false;
 }
 
+bool Surface::isCreatedWithAHB() const
+{
+    return false;
+}
+
 GLuint Surface::getId() const
 {
-    UNREACHABLE();
-    return 0;
+    return mSerialId;
 }
 
 Error Surface::getBufferAgeImpl(const gl::Context *context, EGLint *age) const
@@ -693,6 +700,13 @@ bool Surface::isTimestampsEnabled() const
     return mState.timestampsEnabled;
 }
 
+Error Surface::setAutoRefreshEnabled(bool enabled)
+{
+    ANGLE_TRY(mImplementation->setAutoRefreshEnabled(enabled));
+    mState.autoRefreshEnabled = enabled;
+    return NoError();
+}
+
 bool Surface::hasProtectedContent() const
 {
     return mState.hasProtectedContent();
@@ -738,6 +752,9 @@ void Surface::onSubjectStateChange(angle::SubjectIndex index, angle::SubjectMess
             break;
         case angle::SubjectMessage::SurfaceChanged:
             onStateChange(angle::SubjectMessage::SurfaceChanged);
+            break;
+        case angle::SubjectMessage::SwapchainImageChanged:
+            onStateChange(angle::SubjectMessage::SwapchainImageChanged);
             break;
         default:
             UNREACHABLE();
@@ -858,7 +875,7 @@ WindowSurface::WindowSurface(rx::EGLImplFactory *implFactory,
                              EGLNativeWindowType window,
                              const AttributeMap &attribs,
                              bool robustResourceInit)
-    : Surface(EGL_WINDOW_BIT, config, attribs, robustResourceInit)
+    : Surface(EGL_WINDOW_BIT, implFactory->getNextSurfaceID(), config, attribs, robustResourceInit)
 {
     mImplementation = implFactory->createWindowSurface(mState, window, attribs);
 }
@@ -874,7 +891,7 @@ PbufferSurface::PbufferSurface(rx::EGLImplFactory *implFactory,
                                const Config *config,
                                const AttributeMap &attribs,
                                bool robustResourceInit)
-    : Surface(EGL_PBUFFER_BIT, config, attribs, robustResourceInit)
+    : Surface(EGL_PBUFFER_BIT, implFactory->getNextSurfaceID(), config, attribs, robustResourceInit)
 {
     mImplementation = implFactory->createPbufferSurface(mState, attribs);
 }
@@ -885,7 +902,12 @@ PbufferSurface::PbufferSurface(rx::EGLImplFactory *implFactory,
                                EGLClientBuffer clientBuffer,
                                const AttributeMap &attribs,
                                bool robustResourceInit)
-    : Surface(EGL_PBUFFER_BIT, config, attribs, robustResourceInit, buftype)
+    : Surface(EGL_PBUFFER_BIT,
+              implFactory->getNextSurfaceID(),
+              config,
+              attribs,
+              robustResourceInit,
+              buftype)
 {
     mImplementation =
         implFactory->createPbufferFromClientBuffer(mState, buftype, clientBuffer, attribs);
@@ -898,7 +920,7 @@ PixmapSurface::PixmapSurface(rx::EGLImplFactory *implFactory,
                              NativePixmapType nativePixmap,
                              const AttributeMap &attribs,
                              bool robustResourceInit)
-    : Surface(EGL_PIXMAP_BIT, config, attribs, robustResourceInit)
+    : Surface(EGL_PIXMAP_BIT, implFactory->getNextSurfaceID(), config, attribs, robustResourceInit)
 {
     mImplementation = implFactory->createPixmapSurface(mState, nativePixmap, attribs);
 }

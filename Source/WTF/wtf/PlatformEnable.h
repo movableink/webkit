@@ -348,10 +348,6 @@
 #define ENABLE_LAYER_BASED_SVG_ENGINE 0
 #endif
 
-#if !defined(ENABLE_LAYOUT_FORMATTING_CONTEXT)
-#define ENABLE_LAYOUT_FORMATTING_CONTEXT 0
-#endif
-
 #if !defined(ENABLE_LLVM_PROFILE_GENERATION)
 #define ENABLE_LLVM_PROFILE_GENERATION 0
 #endif
@@ -590,13 +586,13 @@
 #endif
 
 #if USE(JSVALUE32_64)
-#if !CPU(ARM_HARDFP)
+#if CPU(MIPS)
 #undef ENABLE_WEBASSEMBLY
 #define ENABLE_WEBASSEMBLY 0
 #undef ENABLE_WEBASSEMBLY_B3JIT
 #define ENABLE_WEBASSEMBLY_B3JIT 0
 #endif
-#if (CPU(ARM_THUMB2) || CPU(MIPS)) && OS(LINUX)
+#if ((CPU(ARM_THUMB2) && CPU(ARM_HARDFP)) || CPU(MIPS)) && OS(LINUX)
 /* On ARMv7 and MIPS on Linux the JIT is enabled unless explicitly disabled. */
 #if !defined(ENABLE_JIT)
 #define ENABLE_JIT 1
@@ -895,7 +891,8 @@
 #endif
 #endif
 
-#if !defined(ENABLE_PDFJS) && (PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE))
+// FIXME: Reenable PDFJS by default for Cocoa (https://bugs.webkit.org/show_bug.cgi?id=242263).
+#if !defined(ENABLE_PDFJS) && ( /* PLATFORM(COCOA) || */ PLATFORM(GTK) || PLATFORM(WPE))
 #define ENABLE_PDFJS 1
 #endif
 
@@ -962,7 +959,7 @@
 #endif
 
 #if ENABLE(SERVICE_WORKER) && ENABLE(NOTIFICATIONS) \
-    && PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 130000
+    && ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 130000) || (PLATFORM(GTK) || PLATFORM(WPE)))
 #if !defined(ENABLE_NOTIFICATION_EVENT)
 #define ENABLE_NOTIFICATION_EVENT 1
 #endif

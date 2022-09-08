@@ -545,11 +545,6 @@ void WebChromeClient::setStatusbarText(const String& status)
     }
 }
 
-bool WebChromeClient::supportsImmediateInvalidation()
-{
-    return true;
-}
-
 void WebChromeClient::invalidateRootView(const IntRect&)
 {
 }
@@ -944,7 +939,7 @@ void WebChromeClient::triggerRenderingUpdate()
 
 #if ENABLE(VIDEO)
 
-bool WebChromeClient::canEnterVideoFullscreen() const
+bool WebChromeClient::canEnterVideoFullscreen(WebCore::HTMLMediaElementEnums::VideoFullscreenMode) const
 {
 #if !PLATFORM(IOS_FAMILY) || HAVE(AVKIT)
     return true;

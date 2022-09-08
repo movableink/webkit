@@ -108,7 +108,7 @@ Thread *GetCurrentThread();
 Debug *GetDebug();
 
 // Sync the current context from Thread to global state.
-class ANGLE_NO_DISCARD ScopedSyncCurrentContextFromThread
+class [[nodiscard]] ScopedSyncCurrentContextFromThread
 {
   public:
     ScopedSyncCurrentContextFromThread(egl::Thread *thread);
@@ -133,7 +133,7 @@ namespace gl
 {
 ANGLE_INLINE Context *GetGlobalContext()
 {
-#if defined(ANGLE_PLATFORM_ANDROID)
+#if defined(ANGLE_USE_ANDROID_TLS_SLOT)
     // TODO: Replace this branch with a compile time flag (http://anglebug.com/4764)
     if (angle::gUseAndroidOpenGLTlsSlot)
     {
@@ -152,7 +152,7 @@ ANGLE_INLINE Context *GetGlobalContext()
 
 ANGLE_INLINE Context *GetValidGlobalContext()
 {
-#if defined(ANGLE_PLATFORM_ANDROID)
+#if defined(ANGLE_USE_ANDROID_TLS_SLOT)
     // TODO: Replace this branch with a compile time flag (http://anglebug.com/4764)
     if (angle::gUseAndroidOpenGLTlsSlot)
     {
@@ -190,18 +190,25 @@ static ANGLE_INLINE void DirtyContextIfNeeded(Context *context)
 
 #endif
 
+#if !defined(ANGLE_ENABLE_SHARE_CONTEXT_LOCK)
+#    define SCOPED_SHARE_CONTEXT_LOCK(context)
+#else
 ANGLE_INLINE std::unique_lock<angle::GlobalMutex> GetContextLock(Context *context)
 {
-#if defined(ANGLE_FORCE_CONTEXT_CHECK_EVERY_CALL)
+#    if defined(ANGLE_FORCE_CONTEXT_CHECK_EVERY_CALL)
     auto lock = std::unique_lock<angle::GlobalMutex>(egl::GetGlobalMutex());
 
     DirtyContextIfNeeded(context);
     return lock;
-#else
+#    else
     return context->isShared() ? std::unique_lock<angle::GlobalMutex>(egl::GetGlobalMutex())
                                : std::unique_lock<angle::GlobalMutex>();
-#endif
+#    endif
 }
+
+#    define SCOPED_SHARE_CONTEXT_LOCK(context) \
+        std::unique_lock<angle::GlobalMutex> shareContextLock = GetContextLock(context)
+#endif
 
 }  // namespace gl
 

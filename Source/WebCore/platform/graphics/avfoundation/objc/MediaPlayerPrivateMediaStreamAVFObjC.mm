@@ -400,13 +400,8 @@ void MediaPlayerPrivateMediaStreamAVFObjC::ensureLayers()
 
     auto size = snappedIntRect(m_player->playerContentBoxRect()).size();
     m_sampleBufferDisplayLayer->initialize(hideRootLayer(), size, [weakThis = WeakPtr { *this }, size](auto didSucceed) {
-        if (weakThis) {
-#if !RELEASE_LOG_DISABLED
-            if (weakThis->m_sampleBufferDisplayLayer)
-                weakThis->m_sampleBufferDisplayLayer->setLogIdentifier(makeString(hex(reinterpret_cast<uintptr_t>(weakThis->logIdentifier()))));
-#endif
+        if (weakThis)
             weakThis->layersAreInitialized(size, didSucceed);
-        }
     });
 }
 
@@ -415,11 +410,13 @@ void MediaPlayerPrivateMediaStreamAVFObjC::layersAreInitialized(IntSize size, bo
     if (!didSucceed) {
         ERROR_LOG(LOGIDENTIFIER, "Initializing the SampleBufferDisplayLayer failed.");
         m_sampleBufferDisplayLayer = nullptr;
+        updateLayersAsNeeded();
         return;
     }
 
     scheduleRenderingModeChanged();
 
+    m_sampleBufferDisplayLayer->setLogIdentifier(makeString(hex(reinterpret_cast<uintptr_t>(logIdentifier()))));
     m_sampleBufferDisplayLayer->updateBoundsAndPosition(m_sampleBufferDisplayLayer->rootLayer().bounds, m_videoRotation);
     m_sampleBufferDisplayLayer->updateDisplayMode(m_displayMode < PausedImage, hideRootLayer());
     m_shouldUpdateDisplayLayer = true;

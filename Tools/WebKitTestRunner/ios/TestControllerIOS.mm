@@ -26,7 +26,6 @@
 #import "config.h"
 #import "TestController.h"
 
-#import "EditMenuInteractionSwizzler.h"
 #import "GeneratedTouchesDebugWindow.h"
 #import "HIDEventGenerator.h"
 #import "IOSLayoutTestCommunication.h"
@@ -115,10 +114,6 @@ void TestController::platformInitialize(const Options& options)
     CFNotificationCenterAddObserver(center, this, handleMenuWillHideNotification, (CFStringRef)UIMenuControllerWillHideMenuNotification, nullptr, CFNotificationSuspensionBehaviorDeliverImmediately);
     CFNotificationCenterAddObserver(center, this, handleMenuDidHideNotification, (CFStringRef)UIMenuControllerDidHideMenuNotification, nullptr, CFNotificationSuspensionBehaviorDeliverImmediately);
     ALLOW_DEPRECATED_DECLARATIONS_END
-
-#if HAVE(UI_EDIT_MENU_INTERACTION)
-    m_editMenuInteractionSwizzler = makeUnique<EditMenuInteractionSwizzler>();
-#endif
 }
 
 void TestController::platformDestroy()
@@ -159,6 +154,46 @@ static _WKDragInteractionPolicy dragInteractionPolicy(const TestOptions& options
     return _WKDragInteractionPolicyDefault;
 }
 
+static _WKFocusStartsInputSessionPolicy focusStartsInputSessionPolicy(const TestOptions& options)
+{
+    auto policy = options.focusStartsInputSessionPolicy();
+    if (policy == "allow")
+        return _WKFocusStartsInputSessionPolicyAllow;
+    if (policy == "disallow")
+        return _WKFocusStartsInputSessionPolicyDisallow;
+    return _WKFocusStartsInputSessionPolicyAuto;
+}
+
+static void restorePortraitOrientationIfNeeded(PlatformWebView* platformWebView, Seconds timeoutDuration)
+{
+#if HAVE(UI_WINDOW_SCENE_GEOMETRY_PREFERENCES)
+    if (!platformWebView)
+        return;
+
+    auto *scene = platformWebView->platformView().window.windowScene;
+    if (scene.effectiveGeometry.interfaceOrientation == UIInterfaceOrientationPortrait)
+        return;
+
+    auto geometryPreferences = adoptNS([[UIWindowSceneGeometryPreferencesIOS alloc] initWithInterfaceOrientations:UIInterfaceOrientationMaskPortrait]);
+    [scene requestGeometryUpdateWithPreferences:geometryPreferences.get() errorHandler:^(NSError *error) {
+        NSLog(@"Failed to restore portrait orientation with error: %@.", error);
+    }];
+
+    auto startTime = MonotonicTime::now();
+    while ([NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:NSDate.distantPast]) {
+        if (scene.effectiveGeometry.interfaceOrientation == UIInterfaceOrientationPortrait)
+            break;
+
+        if (MonotonicTime::now() - startTime >= timeoutDuration)
+            break;
+    }
+#else
+    UNUSED_PARAM(platformWebView);
+    UNUSED_PARAM(timeoutDuration);
+    [[UIDevice currentDevice] setOrientation:UIDeviceOrientationPortrait animated:NO];
+#endif
+}
+
 bool TestController::platformResetStateToConsistentValues(const TestOptions& options)
 {
     cocoaResetStateToConsistentValues(options);
@@ -166,9 +201,10 @@ bool TestController::platformResetStateToConsistentValues(const TestOptions& opt
     [UIKeyboardImpl.activeInstance setCorrectionLearningAllowed:NO];
     [pasteboardConsistencyEnforcer() clearPasteboard];
     [[UIApplication sharedApplication] _cancelAllTouches];
-    [[UIDevice currentDevice] setOrientation:UIDeviceOrientationPortrait animated:NO];
     [[UIScreen mainScreen] _setScale:2.0];
     [[HIDEventGenerator sharedHIDEventGenerator] resetActiveModifiers];
+
+    restorePortraitOrientationIfNeeded(mainWebView(), m_currentInvocation->shortTimeout());
 
     // Ensures that only the UCB is on-screen when showing the keyboard, if the hardware keyboard is attached.
     TIPreferencesController *textInputPreferences = [getTIPreferencesControllerClass() sharedPreferencesController];
@@ -234,6 +270,11 @@ bool TestController::platformResetStateToConsistentValues(const TestOptions& opt
         [webView _clearInterfaceOrientationOverride];
         [webView setAllowedMenuActions:nil];
         webView._dragInteractionPolicy = dragInteractionPolicy(options);
+        webView.focusStartsInputSessionPolicy = focusStartsInputSessionPolicy(options);
+
+#if HAVE(UIFINDINTERACTION)
+        webView.findInteractionEnabled = options.findInteractionEnabled();
+#endif
 
         UIScrollView *scrollView = webView.scrollView;
         [scrollView _removeAllAnimations:YES];
@@ -268,7 +309,7 @@ bool TestController::platformResetStateToConsistentValues(const TestOptions& opt
         UIViewController *webViewController = [[webView window] rootViewController];
 
         MonotonicTime waitEndTime = MonotonicTime::now() + m_currentInvocation->shortTimeout();
-        
+
         bool hasPresentedViewController = !![webViewController presentedViewController];
         while (hasPresentedViewController && MonotonicTime::now() < waitEndTime) {
             [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantPast]];
@@ -405,21 +446,5 @@ UIPasteboardConsistencyEnforcer *TestController::pasteboardConsistencyEnforcer()
         m_pasteboardConsistencyEnforcer = adoptNS([[UIPasteboardConsistencyEnforcer alloc] initWithPasteboardName:UIPasteboardNameGeneral]);
     return m_pasteboardConsistencyEnforcer.get();
 }
-
-#if HAVE(UI_EDIT_MENU_INTERACTION)
-
-void TestController::didPresentEditMenuInteraction(UIEditMenuInteraction *interaction)
-{
-    if (auto* webView = mainWebView())
-        [webView->platformView() didPresentEditMenuInteraction:interaction];
-}
-
-void TestController::didDismissEditMenuInteraction(UIEditMenuInteraction *interaction)
-{
-    if (auto* webView = mainWebView())
-        [webView->platformView() didDismissEditMenuInteraction:interaction];
-}
-
-#endif // HAVE(UI_EDIT_MENU_INTERACTION)
 
 } // namespace WTR

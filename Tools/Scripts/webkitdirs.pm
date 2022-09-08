@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2021 Apple Inc. All rights reserved.
+# Copyright (C) 2005-2022 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
 # Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
@@ -29,6 +29,8 @@
 
 # Module to share code to get to WebKit directories.
 
+package webkitdirs;
+
 use strict;
 use version;
 use warnings;
@@ -38,6 +40,7 @@ use Digest::MD5 qw(md5_hex);
 use FindBin;
 use File::Basename;
 use File::Find;
+use File::Glob qw(bsd_glob);
 use File::Path qw(make_path mkpath rmtree);
 use File::Spec;
 use File::Temp qw(tempdir);
@@ -46,6 +49,7 @@ use List::Util;
 use POSIX;
 use Time::HiRes qw(usleep);
 use VCSUtils;
+use webkitperl::FeatureList qw(getFeatureOptionList);
 
 unless (defined(&decode_json)) {
     eval "use JSON::XS;";
@@ -62,42 +66,142 @@ BEGIN {
        &XcodeOptionString
        &XcodeOptionStringNoConfig
        &XcodeOptions
+       &XcodeSDKPath
        &XcodeStaticAnalyzerOption
        &appDisplayNameFromBundle
        &appendToEnvironmentVariableList
        &archCommandLineArgumentsForRestrictedEnvironmentVariables
+       &architecture
+       &architecturesForProducts
+       &argumentsForConfiguration
+       &asanIsEnabled
        &availableXcodeSDKs
        &baseProductDir
+       &buildCMakeProjectOrExit
+       &buildVisualStudioProject
+       &buildXCodeProject
+       &buildXcodeScheme
+       &builtDylibPathForName
+       &canUseNinja
        &chdirWebKit
+       &checkForArgumentAndRemoveFromARGV
+       &checkForArgumentAndRemoveFromARGVGettingValue
+       &checkForArgumentAndRemoveFromArrayRef
+       &checkForArgumentAndRemoveFromArrayRefGettingValue
        &checkFrameworks
+       &checkRequiredSystemConfig
        &cmakeArgsFromFeatures
+       &configuration
+       &configuredXcodeWorkspace
+       &coverageIsEnabled
+       &currentPerlPath
        &currentSVNRevision
+       &debugMiniBrowser
        &debugSafari
+       &debugWebKitTestRunner
+       &determineCurrentSVNRevision
+       &determineIsWin64
+       &determineXcodeSDK
        &executableProductDir
-       &extractNonHostConfiguration
+       &exitStatus
+       &extractNonMacOSHostConfiguration
+       &forceOptimizationLevel
+       &formatBuildTime
+       &generateBuildSystemFromCMakeProject
+       &getJhbuildPath
+       &getJhbuildModulesetName
+       &inFlatpakSandbox
        &iosVersion
+       &isARM64
+       &isAnyWindows
+       &isAppleCocoaWebKit
+       &isAppleMacWebKit
+       &isAppleWebKit
+       &isAppleWinWebKit
+       &isCMakeBuild
+       &isCygwin
+       &isDebianBased
+       &isFedoraBased
+       &isEmbeddedWebKit
+       &isFTW
+       &isGenerateProjectOnly
+       &isGtk
+       &isIOSWebKit
+       &isInspectorFrontend
+       &isJSCOnly
+       &isLinux
+       &isPlayStation
+       &isWPE
+       &isWinCairo
+       &isWin64
+       &isWindows
+       &isX86_64
+       &jscPath
+       &jscProductDir
+       &launcherName
+       &launcherPath
+       &ltoMode
+       &markBaseProductDirectoryAsCreatedByXcodeBuildSystem
+       &maxCPULoad
+       &nativeArchitecture
        &nmPath
+       &numberOfCPUs
+       &osXVersion
+       &overrideConfiguredXcodeWorkspace
+       &parseAvailableXcodeSDKs
+       &passedArchitecture
        &passedConfiguration
+       &plistPathFromBundle
+       &portName
        &prependToEnvironmentVariableList
        &printHelpAndExitForRunAndDebugWebKitAppIfNeeded
        &productDir
+       &prohibitUnknownPort
+       &relativeScriptsDir
+       &removeCMakeCache
+       &runGitUpdate
        &runIOSWebKitApp
+       &runInFlatpak
+       &runInFlatpakIfAvailable
        &runMacWebKitApp
+       &runMiniBrowser
+       &runSafari
+       &runSvnUpdateAndResolveChangeLogs
+       &runWebKitTestRunner
        &safariPath
        &sdkDirectory
        &sdkPlatformDirectory
+       &setArchitecture
+       &setBaseProductDir
        &setConfiguration
+       &setConfigurationProductDir
+       &setPathForRunningWebKitApp
+       &setUpGuardMallocIfNeeded
+       &setXcodeSDK
+       &setupAppleWinEnv
        &setupMacWebKitEnvironment
        &setupUnixWebKitEnvironment
        &sharedCommandLineOptions
        &sharedCommandLineOptionsUsage
        &shouldUseFlatpak
-       &runInFlatpak
        &sourceDir
+       &splitVersionString
+       &tsanIsEnabled
+       &ubsanIsEnabled
+       &willUseAppleTVDeviceSDK
+       &willUseAppleTVSimulatorSDK
        &willUseIOSDeviceSDK
        &willUseIOSSimulatorSDK
+       &willUseWatchDeviceSDK
+       &willUseWatchSimulatorSDK
+       &winVersion
+       &wrapperPrefixIfNeeded
+       &xcodeSDK
+       &xcodeSDKPlatformName
        DO_NOT_USE_OPEN_COMMAND
+       Mac
        USE_OPEN_COMMAND
+       iOS
    );
    %EXPORT_TAGS = ( );
    @EXPORT_OK   = ();
@@ -166,6 +270,7 @@ my $portName;
 my $shouldUseGuardMalloc;
 my $shouldNotUseNinja;
 my $xcodeVersion;
+my $configuredXcodeWorkspace;
 
 my $unknownPortProhibited = 0;
 my @originalArgv = @ARGV;
@@ -645,8 +750,28 @@ sub parseAvailableXcodeSDKs($)
     return @result;
 }
 
+sub unversionedSDKNameFromSDK($)
+{
+    my $basename = shift;
+    if ($basename =~ /(\D+)(\d+\.[\d\.]+)(\D*)\.sdk/) {
+        if ($3) {
+            return lc "$1.$3";
+        } else {
+            return lc "$1";
+        }
+    }
+}
+
 sub availableXcodeSDKs
 {
+    # Looking for SDKs in known locations is much faster than calling through to xcodebuild.
+    chomp(my $developerDir = `xcode-select -p`);
+    my @availableSDKDirectories = bsd_glob("$developerDir/Platforms/*.platform/Developer/SDKs/*");
+    if (@availableSDKDirectories) {
+        return map { unversionedSDKNameFromSDK(basename $_) || () } @availableSDKDirectories;
+    }
+
+    # As a fallback, parse the SDK list provided by xcodebuild.
     my @output = `xcodebuild -showsdks`;
     return parseAvailableXcodeSDKs(\@output);
 }
@@ -1013,6 +1138,29 @@ sub argumentsForXcode()
     return @args;
 }
 
+sub determineConfiguredXcodeWorkspace()
+{
+    return if defined $configuredXcodeWorkspace;
+    determineBaseProductDir();
+
+    if (open WORKSPACE, "$baseProductDir/Workspace") {
+        $configuredXcodeWorkspace = <WORKSPACE>;
+        close WORKSPACE;
+        chomp $configuredXcodeWorkspace;
+    }
+}
+
+sub configuredXcodeWorkspace()
+{
+    determineConfiguredXcodeWorkspace();
+    return $configuredXcodeWorkspace;
+}
+
+sub overrideConfiguredXcodeWorkspace($)
+{
+    $configuredXcodeWorkspace = shift;
+}
+
 sub XcodeOptions
 {
     determineBaseProductDir();
@@ -1026,11 +1174,16 @@ sub XcodeOptions
     determineLTOMode();
     if (isAppleCocoaWebKit()) {
       determineXcodeSDK();
+      determineConfiguredXcodeWorkspace();
     }
 
     my @options;
     push @options, "-UseSanitizedBuildSystemEnvironment=YES";
     push @options, "-ShowBuildOperationDuration=YES";
+    if (!checkForArgumentAndRemoveFromARGV("--no-use-workspace")) {
+        my $workspace = $configuredXcodeWorkspace // sourceDir() . "/WebKit.xcworkspace";
+        push @options, ("-workspace", $workspace) if $workspace;
+    }
     push @options, ("-configuration", $configuration);
     if ($asanIsEnabled) {
         my $xcconfig = $ubsanIsEnabled ? "asan+ubsan.xcconfig" : "asan.xcconfig";
@@ -1055,6 +1208,16 @@ sub XcodeOptions
     push @options, @baseProductDirOption;
     push @options, "ARCHS=$architecture" if $architecture;
     push @options, "SDKROOT=$xcodeSDK" if $xcodeSDK;
+
+    my @features = webkitperl::FeatureList::getFeatureOptionList();
+    foreach (@features) {
+        if (checkForArgumentAndRemoveFromARGV("--no-$_->{option}")) {
+            push @options, "$_->{define}=";
+        } 
+        if (checkForArgumentAndRemoveFromARGV("--$_->{option}")) {
+            push @options, "$_->{define}=$_->{define}";
+        }   
+    }
 
     # When this environment variable is set Tools/Scripts/check-for-weak-vtables-and-externals
     # treats errors as non-fatal when it encounters missing symbols related to coverage.
@@ -2163,13 +2326,14 @@ sub buildXCodeProject($$@)
     return system "xcodebuild", "-project", "$project.xcodeproj", @extraOptions;
 }
 
-sub buildXCodeWorkspace($$$@)
+sub buildXcodeScheme($$@)
 {
-    my ($workspace, $scheme, $clean, @extraOptions) = @_;
+    my ($scheme, $clean, @extraOptions) = @_;
     if ($clean) {
         push @extraOptions, "clean";
     }
-    return system "xcodebuild", "-workspace", $workspace, "-scheme", $scheme, @extraOptions;
+    
+    return system "xcodebuild", "-scheme", $scheme, @extraOptions;
 }
 
 sub getVisualStudioToolset()
@@ -3358,16 +3522,9 @@ sub runSvnUpdateAndResolveChangeLogs(@)
 
 sub runGitUpdate()
 {
-    # Doing a git fetch first allows setups with svn-remote.svn.fetch = trunk:refs/remotes/origin/master
-    # to perform the rebase much much faster.
-    system("git", "fetch");
-    if (isGitSVNDirectory(".")) {
-        system("git", "svn", "rebase") == 0 or die;
-    } else {
-        # This will die if branch.$BRANCHNAME.merge isn't set, which is
-        # almost certainly what we want.
-        system("git", "pull") == 0 or die;
-    }
+    # This will die if branch.$BRANCHNAME.merge isn't set, which is
+    # almost certainly what we want.
+    system("git", "pull") == 0 or die;
 }
 
 1;

@@ -3,47 +3,47 @@ PASS textarea: select()
 PASS textarea: select() a second time (must not fire select)
 PASS textarea: select() disconnected node
 PASS textarea: select() event queue
-FAIL textarea: select() twice in disconnected node (must fire select only once) assert_equals: expected 0 but got 6
+PASS textarea: select() twice in disconnected node (must fire select only once)
 PASS textarea: selectionStart
 PASS textarea: selectionStart a second time (must not fire select)
 PASS textarea: selectionStart disconnected node
 PASS textarea: selectionStart event queue
-FAIL textarea: selectionStart twice in disconnected node (must fire select only once) assert_equals: expected 0 but got 6
+PASS textarea: selectionStart twice in disconnected node (must fire select only once)
 PASS textarea: selectionEnd
 PASS textarea: selectionEnd a second time (must not fire select)
 PASS textarea: selectionEnd disconnected node
 PASS textarea: selectionEnd event queue
-FAIL textarea: selectionEnd twice in disconnected node (must fire select only once) assert_equals: expected 0 but got 6
+PASS textarea: selectionEnd twice in disconnected node (must fire select only once)
 PASS textarea: selectionDirection
-FAIL textarea: selectionDirection a second time (must not fire select) assert_unreached: the select event must not fire the second time Reached unreachable code
+PASS textarea: selectionDirection a second time (must not fire select)
 PASS textarea: selectionDirection disconnected node
 PASS textarea: selectionDirection event queue
-FAIL textarea: selectionDirection twice in disconnected node (must fire select only once) assert_equals: expected 0 but got 6
+PASS textarea: selectionDirection twice in disconnected node (must fire select only once)
 PASS textarea: setSelectionRange()
 PASS textarea: setSelectionRange() a second time (must not fire select)
 PASS textarea: setSelectionRange() disconnected node
 PASS textarea: setSelectionRange() event queue
-FAIL textarea: setSelectionRange() twice in disconnected node (must fire select only once) assert_equals: expected 0 but got 6
+PASS textarea: setSelectionRange() twice in disconnected node (must fire select only once)
 PASS textarea: setRangeText()
 PASS textarea: setRangeText() a second time (must not fire select)
 PASS textarea: setRangeText() disconnected node
 PASS textarea: setRangeText() event queue
-FAIL textarea: setRangeText() twice in disconnected node (must fire select only once) assert_equals: expected 0 but got 15
+PASS textarea: setRangeText() twice in disconnected node (must fire select only once)
 PASS textarea: selectionStart out of range
 PASS textarea: selectionStart out of range a second time (must not fire select)
-FAIL textarea: selectionStart out of range disconnected node assert_true: event didn't fire expected true got false
-FAIL textarea: selectionStart out of range event queue assert_true: event didn't fire expected true got false
-FAIL textarea: selectionStart out of range twice in disconnected node (must fire select only once) assert_equals: expected 0 but got 6
+PASS textarea: selectionStart out of range disconnected node
+PASS textarea: selectionStart out of range event queue
+PASS textarea: selectionStart out of range twice in disconnected node (must fire select only once)
 PASS textarea: selectionEnd out of range
 PASS textarea: selectionEnd out of range a second time (must not fire select)
-FAIL textarea: selectionEnd out of range disconnected node assert_true: event didn't fire expected true got false
-FAIL textarea: selectionEnd out of range event queue assert_true: event didn't fire expected true got false
-FAIL textarea: selectionEnd out of range twice in disconnected node (must fire select only once) assert_equals: expected 0 but got 6
+PASS textarea: selectionEnd out of range disconnected node
+PASS textarea: selectionEnd out of range event queue
+PASS textarea: selectionEnd out of range twice in disconnected node (must fire select only once)
 PASS textarea: setSelectionRange out of range
 PASS textarea: setSelectionRange out of range a second time (must not fire select)
-FAIL textarea: setSelectionRange out of range disconnected node assert_true: event didn't fire expected true got false
-FAIL textarea: setSelectionRange out of range event queue assert_true: event didn't fire expected true got false
-FAIL textarea: setSelectionRange out of range twice in disconnected node (must fire select only once) assert_equals: expected 0 but got 6
+PASS textarea: setSelectionRange out of range disconnected node
+PASS textarea: setSelectionRange out of range event queue
+PASS textarea: setSelectionRange out of range twice in disconnected node (must fire select only once)
 PASS input type text: select()
 PASS input type text: select() a second time (must not fire select)
 PASS input type text: select() disconnected node
@@ -60,7 +60,7 @@ PASS input type text: selectionEnd disconnected node
 PASS input type text: selectionEnd event queue
 PASS input type text: selectionEnd twice in disconnected node (must fire select only once)
 PASS input type text: selectionDirection
-FAIL input type text: selectionDirection a second time (must not fire select) assert_unreached: the select event must not fire the second time Reached unreachable code
+PASS input type text: selectionDirection a second time (must not fire select)
 PASS input type text: selectionDirection disconnected node
 PASS input type text: selectionDirection event queue
 PASS input type text: selectionDirection twice in disconnected node (must fire select only once)
@@ -105,7 +105,7 @@ PASS input type search: selectionEnd disconnected node
 PASS input type search: selectionEnd event queue
 PASS input type search: selectionEnd twice in disconnected node (must fire select only once)
 PASS input type search: selectionDirection
-FAIL input type search: selectionDirection a second time (must not fire select) assert_unreached: the select event must not fire the second time Reached unreachable code
+PASS input type search: selectionDirection a second time (must not fire select)
 PASS input type search: selectionDirection disconnected node
 PASS input type search: selectionDirection event queue
 PASS input type search: selectionDirection twice in disconnected node (must fire select only once)
@@ -150,7 +150,7 @@ PASS input type tel: selectionEnd disconnected node
 PASS input type tel: selectionEnd event queue
 PASS input type tel: selectionEnd twice in disconnected node (must fire select only once)
 PASS input type tel: selectionDirection
-FAIL input type tel: selectionDirection a second time (must not fire select) assert_unreached: the select event must not fire the second time Reached unreachable code
+PASS input type tel: selectionDirection a second time (must not fire select)
 PASS input type tel: selectionDirection disconnected node
 PASS input type tel: selectionDirection event queue
 PASS input type tel: selectionDirection twice in disconnected node (must fire select only once)
@@ -195,7 +195,7 @@ PASS input type url: selectionEnd disconnected node
 PASS input type url: selectionEnd event queue
 PASS input type url: selectionEnd twice in disconnected node (must fire select only once)
 PASS input type url: selectionDirection
-FAIL input type url: selectionDirection a second time (must not fire select) assert_unreached: the select event must not fire the second time Reached unreachable code
+PASS input type url: selectionDirection a second time (must not fire select)
 PASS input type url: selectionDirection disconnected node
 PASS input type url: selectionDirection event queue
 PASS input type url: selectionDirection twice in disconnected node (must fire select only once)
@@ -240,7 +240,7 @@ PASS input type password: selectionEnd disconnected node
 PASS input type password: selectionEnd event queue
 PASS input type password: selectionEnd twice in disconnected node (must fire select only once)
 PASS input type password: selectionDirection
-FAIL input type password: selectionDirection a second time (must not fire select) assert_unreached: the select event must not fire the second time Reached unreachable code
+PASS input type password: selectionDirection a second time (must not fire select)
 PASS input type password: selectionDirection disconnected node
 PASS input type password: selectionDirection event queue
 PASS input type password: selectionDirection twice in disconnected node (must fire select only once)

@@ -139,6 +139,7 @@ public:
 #if PLATFORM(COCOA)
     GraphicsContext* drawingContext() const final;
 #endif
+    WEBCORE_EXPORT void setAvoidIOSurfaceSizeCheckInWebProcessForTesting();
 
 private:
     HTMLCanvasElement(const QualifiedName&, Document&);
@@ -153,6 +154,8 @@ private:
     void eventListenersDidChange() final;
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
 
     bool canContainRangeEndPoint() const final;
@@ -184,7 +187,8 @@ private:
     mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
 
     std::optional<bool> m_usesDisplayListDrawing;
-
+    
+    bool m_avoidBackendSizeCheckForTesting { false };
     bool m_ignoreReset { false };
     // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
     mutable bool m_hasCreatedImageBuffer { false };

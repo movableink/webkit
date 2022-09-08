@@ -32,6 +32,7 @@ div#image-overlay {
     text-indent: 0;
     text-align: center;
     font-family: system-ui;
+    cursor: auto;
 }
 
 :host(:not(img)) div#image-overlay:-webkit-full-screen-document {
@@ -85,5 +86,5 @@ div.image-overlay-line, .image-overlay-text {
 
 div.image-overlay-data-detector-result {
     position: absolute;
-    user-select: none;
+    -webkit-user-select: none;
 }

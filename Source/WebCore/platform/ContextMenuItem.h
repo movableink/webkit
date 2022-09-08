@@ -157,7 +157,11 @@ enum ContextMenuAction {
     ContextMenuItemTagLookUpImage,
     ContextMenuItemTagTranslate,
     ContextMenuItemTagCopySubject,
-    ContextMenuItemLastNonCustomTag = ContextMenuItemTagCopySubject,
+    ContextMenuItemPDFSinglePageContinuous,
+    ContextMenuItemPDFTwoPages,
+    ContextMenuItemPDFTwoPagesContinuous,
+    ContextMenuItemTagShowMediaStats,
+    ContextMenuItemLastNonCustomTag = ContextMenuItemTagShowMediaStats,
     ContextMenuItemBaseCustomTag = 5000,
     ContextMenuItemLastCustomTag = 5999,
     ContextMenuItemBaseApplicationTag = 10000

@@ -25,6 +25,7 @@
 #include "config.h"
 #include "RenderLayerModelObject.h"
 
+#include "InspectorInstrumentation.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerCompositor.h"
@@ -124,8 +125,10 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
     RenderElement::styleDidChange(diff, oldStyle);
     updateFromStyle();
 
+    bool gainedOrLostLayer = false;
     if (requiresLayer()) {
         if (!layer() && layerCreationAllowedForSubtree()) {
+            gainedOrLostLayer = true;
             if (s_wasFloating && isFloating())
                 setChildNeedsLayout();
             createLayer();
@@ -133,6 +136,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
                 layer()->setRepaintStatus(NeedsFullRepaint);
         }
     } else if (layer() && layer()->parent()) {
+        gainedOrLostLayer = true;
 #if ENABLE(CSS_COMPOSITING)
         if (oldStyle && oldStyle->hasBlendMode())
             layer()->willRemoveChildWithBlendMode();
@@ -153,6 +157,9 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
         if (s_hadTransform)
             setNeedsLayoutAndPrefWidthsRecalc();
     }
+
+    if (gainedOrLostLayer)
+        InspectorInstrumentation::didAddOrRemoveScrollbars(*this);
 
     if (layer()) {
         layer()->styleChanged(diff, oldStyle);
@@ -244,6 +251,13 @@ void RenderLayerModelObject::suspendAnimations(MonotonicTime time)
     layer()->backing()->suspendAnimations(time);
 }
 
+TransformationMatrix* RenderLayerModelObject::layerTransform() const
+{
+    if (hasLayer())
+        return layer()->transform();
+    return nullptr;
+}
+
 void RenderLayerModelObject::updateLayerTransform()
 {
     // Transform-origin depends on box size, so we need to update the layer transform after layout.
@@ -252,6 +266,23 @@ void RenderLayerModelObject::updateLayerTransform()
 }
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
+bool RenderLayerModelObject::shouldPaintSVGRenderer(const PaintInfo& paintInfo, const std::optional<StdUnorderedSet<PaintPhase>>& relevantPaintPhases) const
+{
+    if (paintInfo.context().paintingDisabled())
+        return false;
+
+    if (relevantPaintPhases && !relevantPaintPhases->contains(paintInfo.phase))
+        return false;
+
+    if (!paintInfo.shouldPaintWithinRoot(*this))
+        return false;
+
+    if (style().visibility() == Visibility::Hidden || style().display() == DisplayType::None)
+        return false;
+
+    return true;
+}
+
 std::optional<LayoutRect> RenderLayerModelObject::computeVisibleRectInSVGContainer(const LayoutRect& rect, const RenderLayerModelObject* container, RenderObject::VisibleRectContext context) const
 {
     ASSERT(is<RenderSVGModelObject>(this) || is<RenderSVGBlock>(this));
@@ -270,24 +301,34 @@ std::optional<LayoutRect> RenderLayerModelObject::computeVisibleRectInSVGContain
 
     LayoutRect adjustedRect = rect;
 
-    // FIXME: [LBSE] Upstream RenderSVGForeignObject changes
-    // Move to origin of local coordinate system, if this is the first call to computeVisibleRectInContainer() originating
-    // from a SVG renderer (RenderSVGModelObject / RenderSVGBlock) or if we cross the boundary from HTML -> SVG via RenderSVGForeignObject.
-    // bool moveToOrigin = is<RenderSVGForeignObject>(renderer);
-    bool moveToOrigin = false;
+    LayoutSize locationOffset;
+    if (is<RenderSVGModelObject>(this))
+        locationOffset = downcast<RenderSVGModelObject>(*this).locationOffsetEquivalent();
+    else if (is<RenderSVGBlock>(this))
+        locationOffset = downcast<RenderSVGBlock>(*this).locationOffset();
 
-    /* FIXME: [LBSE] Upstream RenderObject changes
-    if (context.options.contains(RenderObject::VisibleRectContextOption::TranslateToSVGRendererOrigin)) {
-        context.options.remove(RenderObject::VisibleRectContextOption::TranslateToSVGRendererOrigin);
-        moveToOrigin = true;
+    LayoutPoint topLeft = adjustedRect.location();
+    topLeft.move(locationOffset);
+
+    // We are now in our parent container's coordinate space. Apply our transform to obtain a bounding box
+    // in the parent's coordinate space that encloses us.
+    if (hasLayer() && layer()->transform()) {
+        adjustedRect = layer()->transform()->mapRect(adjustedRect);
+        topLeft = adjustedRect.location();
+        topLeft.move(locationOffset);
     }
-    */
 
-    if (moveToOrigin)
-        adjustedRect.moveBy(nominalSVGLayoutLocation());
-
-    if (auto* transform = layer()->transform())
-        adjustedRect = transform->mapRect(adjustedRect);
+    // FIXME: We ignore the lightweight clipping rect that controls use, since if |o| is in mid-layout,
+    // its controlClipRect will be wrong. For overflow clip we use the values cached by the layer.
+    adjustedRect.setLocation(topLeft);
+    if (localContainer->hasNonVisibleOverflow()) {
+        bool isEmpty = !downcast<RenderLayerModelObject>(*localContainer).applyCachedClipAndScrollPosition(adjustedRect, container, context);
+        if (isEmpty) {
+            if (context.options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection))
+                return std::nullopt;
+            return adjustedRect;
+        }
+    }
 
     return localContainer->computeVisibleRectInContainer(adjustedRect, container, context);
 }
@@ -334,36 +375,49 @@ void RenderLayerModelObject::mapLocalToSVGContainer(const RenderLayerModelObject
     container->mapLocalToContainer(ancestorContainer, transformState, mode, wasFixed);
 }
 
-void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, SVGGraphicsElement& graphicsElement, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
+void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, SVGGraphicsElement& graphicsElement, const RenderStyle& style, const FloatRect& boundingBox, const std::optional<AffineTransform>& preApplySVGTransformMatrix, const std::optional<AffineTransform>& postApplySVGTransformMatrix, OptionSet<RenderStyle::TransformOperationOption> options) const
 {
+    auto svgTransform = graphicsElement.animatedLocalTransform();
+
     // This check does not use style.hasTransformRelatedProperty() on purpose -- we only want to know if either the 'transform' property, an
     // offset path, or the individual transform operations are set (perspective / transform-style: preserve-3d are not relevant here).
     bool hasCSSTransform = style.hasTransform() || style.rotate() || style.translate() || style.scale();
+    bool hasSVGTransform = !svgTransform.isIdentity() || preApplySVGTransformMatrix || postApplySVGTransformMatrix;
 
-    bool affectedByTransformOrigin = false;
-    std::optional<AffineTransform> svgTransform;
-
-    if (hasCSSTransform)
-        affectedByTransformOrigin = style.affectedByTransformOrigin();
-    else if (auto affineTransform = graphicsElement.animatedLocalTransform(); !affineTransform.isIdentity()) {
-        svgTransform = affineTransform;
-        affectedByTransformOrigin = affineTransform.a() != 1 || affineTransform.b() || affineTransform.c() || affineTransform.d() != 1;
-    }
-
-    if (!hasCSSTransform && !svgTransform.has_value())
+    // Common case: 'viewBox' set on outermost <svg> element -> 'preApplySVGTransformMatrix'
+    // passed by RenderSVGViewportContainer::applyTransform(), the anonymous single child
+    // of RenderSVGRoot, that wraps all direct children from <svg> as present in DOM. All
+    // other transformations are unset (no need to compute transform-origin, etc. in that case).
+    if (!hasCSSTransform && !hasSVGTransform)
         return;
 
+    auto affectedByTransformOrigin = [&]() {
+        if (preApplySVGTransformMatrix && !preApplySVGTransformMatrix->isIdentityOrTranslation())
+            return true;
+        if (postApplySVGTransformMatrix && !postApplySVGTransformMatrix->isIdentityOrTranslation())
+            return true;
+        if (hasCSSTransform)
+            return style.affectedByTransformOrigin();
+        return !svgTransform.isIdentityOrTranslation();
+    };
+
     FloatPoint3D originTranslate;
-    if (options.contains(RenderStyle::TransformOperationOption::TransformOrigin) && affectedByTransformOrigin)
+    if (options.contains(RenderStyle::TransformOperationOption::TransformOrigin) && affectedByTransformOrigin())
         originTranslate = style.computeTransformOrigin(boundingBox);
 
     style.applyTransformOrigin(transform, originTranslate);
 
+    if (preApplySVGTransformMatrix)
+        transform.multiplyAffineTransform(preApplySVGTransformMatrix.value());
+
     // CSS transforms take precedence over SVG transforms.
     if (hasCSSTransform)
         style.applyCSSTransform(transform, boundingBox, options);
-    else
-        transform.multiplyAffineTransform(svgTransform.value());
+    else if (!svgTransform.isIdentity())
+        transform.multiplyAffineTransform(svgTransform);
+
+    if (postApplySVGTransformMatrix)
+        transform.multiplyAffineTransform(postApplySVGTransformMatrix.value());
 
     style.unapplyTransformOrigin(transform, originTranslate);
 }

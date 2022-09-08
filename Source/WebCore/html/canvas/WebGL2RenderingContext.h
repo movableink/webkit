@@ -264,6 +264,8 @@ public:
 
     void addMembersToOpaqueRoots(JSC::AbstractSlotVisitor&) override;
 
+    bool isTransformFeedbackActiveAndNotPaused();
+
 private:
     WebGL2RenderingContext(CanvasBase&, GraphicsContextGLAttributes);
     WebGL2RenderingContext(CanvasBase&, Ref<GraphicsContextGL>&&, GraphicsContextGLAttributes);
@@ -316,6 +318,11 @@ private:
     // Generate GL errors and return 0 if target is invalid or texture bound is
     // null. Otherwise, return the texture bound to the target.
     RefPtr<WebGLTexture> validateTexture3DBinding(const char* functionName, GCGLenum target);
+
+    // Helper function to check immutable texture 2D target and texture bound to the target.
+    // Generate GL errors and return 0 if target is invalid or texture bound is
+    // null. Otherwise, return the texture bound to the target.
+    RefPtr<WebGLTexture> validateTextureStorage2DBinding(const char* functionName, GCGLenum target);
 
     bool validateTexFuncLayer(const char*, GCGLenum texTarget, GCGLint layer);
     GCGLint maxTextureLevelForTarget(GCGLenum target) final;

@@ -26,6 +26,7 @@
 #import "config.h"
 #import "TestNavigationDelegate.h"
 
+#import "PlatformUtilities.h"
 #import "Utilities.h"
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <wtf/RetainPtr.h>
@@ -98,10 +99,13 @@
         completionHandler(NSURLSessionAuthChallengePerformDefaultHandling, nil);
 }
 
-- (void)_webView:(WKWebView *)webView navigation:(WKNavigation *)navigation didSameDocumentNavigation:(_WKSameDocumentNavigationType)navigationType
+- (void)allowAnyTLSCertificate
 {
-    if (_didSameDocumentNavigation)
-        _didSameDocumentNavigation(webView, navigation);
+    EXPECT_FALSE(self.didReceiveAuthenticationChallenge);
+    self.didReceiveAuthenticationChallenge = ^(WKWebView *, NSURLAuthenticationChallenge *challenge, void (^callback)(NSURLSessionAuthChallengeDisposition, NSURLCredential *)) {
+        EXPECT_WK_STREQ(challenge.protectionSpace.authenticationMethod, NSURLAuthenticationMethodServerTrust);
+        callback(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust]);
+    };
 }
 
 - (void)waitForDidStartProvisionalNavigation
@@ -130,25 +134,6 @@
     TestWebKitAPI::Util::run(&finished);
 
     self.didFinishNavigation = nil;
-}
-
-- (void)waitForDidFinishNavigationOrSameDocumentNavigation
-{
-    EXPECT_FALSE(self.didFinishNavigation);
-    EXPECT_FALSE(self.didSameDocumentNavigation);
-
-    __block bool finished = false;
-    self.didFinishNavigation = ^(WKWebView *, WKNavigation *) {
-        finished = true;
-    };
-    self.didSameDocumentNavigation = ^(WKWebView *, WKNavigation *) {
-        finished = true;
-    };
-
-    TestWebKitAPI::Util::run(&finished);
-
-    self.didFinishNavigation = nil;
-    self.didSameDocumentNavigation = nil;
 }
 
 - (void)waitForWebContentProcessDidTerminate
@@ -265,17 +250,6 @@
     }];
     TestWebKitAPI::Util::run(&presentationUpdateHappened);
 #endif
-}
-
-- (void)_test_waitForDidFinishNavigationOrSameDocumentNavigation
-{
-    EXPECT_FALSE(self.navigationDelegate);
-
-    auto navigationDelegate = adoptNS([[TestNavigationDelegate alloc] init]);
-    self.navigationDelegate = navigationDelegate.get();
-    [navigationDelegate waitForDidFinishNavigationOrSameDocumentNavigation];
-
-    self.navigationDelegate = nil;
 }
 
 - (void)_test_waitForWebContentProcessDidTerminate

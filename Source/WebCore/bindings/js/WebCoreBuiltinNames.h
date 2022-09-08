@@ -1,6 +1,6 @@
 /*
  *  Copyright (c) 2015, Canon Inc. All rights reserved.
- *  Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -101,12 +101,16 @@ namespace WebCore {
     macro(Clients) \
     macro(Clipboard) \
     macro(ClipboardItem) \
+    macro(CompressionStream) \
+    macro(CompressionStreamEncoder) \
+    macro(CompressionStreamTransform) \
     macro(ConstantSourceNode) \
     macro(ContactsManager) \
     macro(ConvolverNode) \
     macro(Credential) \
     macro(CredentialsContainer) \
     macro(CryptoKey) \
+    macro(CSPViolationReportBody) \
     macro(CSSAnimation) \
     macro(CSSCounterStyleRule) \
     macro(CSSColor) \
@@ -117,6 +121,7 @@ namespace WebCore {
     macro(CSSKeywordValue) \
     macro(CSSLCH) \
     macro(CSSLab) \
+    macro(CSSMathClamp) \
     macro(CSSMathInvert) \
     macro(CSSMathMax) \
     macro(CSSMathMin) \
@@ -150,6 +155,9 @@ namespace WebCore {
     macro(Database) \
     macro(DataTransferItem) \
     macro(DataTransferItemList) \
+    macro(DecompressionStream) \
+    macro(DecompressionStreamDecoder) \
+    macro(DecompressionStreamTransform) \
     macro(DelayNode) \
     macro(DocumentTimeline) \
     macro(DynamicsCompressorNode) \
@@ -305,6 +313,9 @@ namespace WebCore {
     macro(PushSubscription) \
     macro(PushSubscriptionChangeEvent) \
     macro(PushSubscriptionOptions) \
+    macro(Report) \
+    macro(ReportBody) \
+    macro(ReportingObserver) \
     macro(ResizeObserver) \
     macro(ResizeObserverEntry) \
     macro(RTCCertificate) \
@@ -372,6 +383,7 @@ namespace WebCore {
     macro(StorageManager) \
     macro(StorageManagerFileSystemAccess) \
     macro(SubtleCrypto) \
+    macro(TestReportBody) \
     macro(TextDecoderStream) \
     macro(TextDecoderStreamDecoder) \
     macro(TextEncoderStream) \
@@ -492,6 +504,7 @@ namespace WebCore {
     macro(focus) \
     macro(frames) \
     macro(getInternalWritableStream) \
+    macro(getMatchedCSSRules) \
     macro(getTracks) \
     macro(getUserMedia) \
     macro(gpu) \

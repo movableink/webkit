@@ -25,6 +25,7 @@
 #include "ColorBlending.h"
 #include "ColorLuminance.h"
 #include "ControlStates.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "FileList.h"
 #include "FloatConversion.h"
@@ -48,8 +49,8 @@
 #include "RenderMeter.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ShadowPseudoIds.h"
+#include "SliderThumbElement.h"
 #include "SpinButtonElement.h"
 #include "StringTruncator.h"
 #include "TextControlInnerElements.h"
@@ -179,7 +180,7 @@ void RenderTheme::adjustStyle(RenderStyle& style, const Element* element, const 
 
     if (!supportsBoxShadow(style))
         style.setBoxShadow(nullptr);
-    
+
 #if USE(NEW_THEME)
     switch (part) {
     case CheckboxPart:
@@ -340,7 +341,7 @@ ControlPart RenderTheme::autoAppearanceForElement(const Element* elementPtr) con
     if (isImageControl(*elementPtr))
         return ImageControlsButtonPart;
 #endif
-    
+
     Ref element = *elementPtr;
 
     if (is<HTMLInputElement>(element)) {
@@ -465,7 +466,7 @@ bool RenderTheme::paint(const RenderBox& box, ControlStates& controlStates, cons
     IntRect integralSnappedRect = snappedIntRect(rect);
     float deviceScaleFactor = box.document().deviceScaleFactor();
     FloatRect devicePixelSnappedRect = snapRectToDevicePixels(rect, deviceScaleFactor);
-    
+
 #if USE(NEW_THEME)
     float pageScaleFactor = box.page().pageScaleFactor();
 
@@ -923,68 +924,61 @@ bool RenderTheme::isIndeterminate(const RenderObject& o) const
 
 bool RenderTheme::isEnabled(const RenderObject& renderer) const
 {
-    Node* node = renderer.node();
-    if (!is<Element>(node))
-        return true;
-    return !downcast<Element>(*node).isDisabledFormControl();
+    if (auto* element = dynamicDowncast<Element>(renderer.node()))
+        return !element->isDisabledFormControl();
+    return true;
 }
 
 bool RenderTheme::isFocused(const RenderObject& renderer) const
 {
-    Node* node = renderer.node();
-    if (!is<Element>(node))
+    auto element = dynamicDowncast<Element>(renderer.node());
+    if (!element)
         return false;
 
-    auto focusDelegate = downcast<Element>(*node).focusDelegate();
-    Document& document = focusDelegate->document();
+    RefPtr delegate = element;
+    if (is<SliderThumbElement>(element))
+        delegate = downcast<SliderThumbElement>(*element).hostInput();
+
+    Document& document = delegate->document();
     Frame* frame = document.frame();
-    return focusDelegate == document.focusedElement() && frame && frame->selection().isFocusedAndActive();
+    return delegate == document.focusedElement() && frame && frame->selection().isFocusedAndActive();
 }
 
 bool RenderTheme::isPressed(const RenderObject& renderer) const
 {
-    if (!is<Element>(renderer.node()))
-        return false;
-    return downcast<Element>(*renderer.node()).active();
+    if (auto* element = dynamicDowncast<Element>(renderer.node()))
+        return element->active();
+    return false;
 }
 
 bool RenderTheme::isSpinUpButtonPartPressed(const RenderObject& renderer) const
 {
-    Node* node = renderer.node();
-    if (!is<Element>(node))
-        return false;
-    Element& element = downcast<Element>(*node);
-    if (!element.active() || !is<SpinButtonElement>(element))
-        return false;
-    return downcast<SpinButtonElement>(element).upDownState() == SpinButtonElement::Up;
+    if (auto* spinButton = dynamicDowncast<SpinButtonElement>(renderer.node()))
+        return spinButton->active() && spinButton->upDownState() == SpinButtonElement::Up;
+    return false;
 }
 
 bool RenderTheme::isReadOnlyControl(const RenderObject& renderer) const
 {
-    Node* node = renderer.node();
-    if (!is<HTMLFormControlElement>(node))
-        return false;
-    return !downcast<Element>(*node).matchesReadWritePseudoClass();
+    if (auto* element = dynamicDowncast<HTMLFormControlElement>(renderer.node()))
+        return !static_cast<Element&>(*element).matchesReadWritePseudoClass();
+    return false;
 }
 
 bool RenderTheme::isHovered(const RenderObject& renderer) const
 {
-    Node* node = renderer.node();
-    if (!is<Element>(node))
-        return false;
-    Element& element = downcast<Element>(*node);
-    if (!is<SpinButtonElement>(element))
-        return element.hovered();
-    SpinButtonElement& spinButton = downcast<SpinButtonElement>(element);
-    return spinButton.hovered() && spinButton.upDownState() != SpinButtonElement::Indeterminate;
+    if (auto* spinButton = dynamicDowncast<SpinButtonElement>(renderer.node()))
+        return spinButton->hovered() && spinButton->upDownState() != SpinButtonElement::Indeterminate;
+    if (auto* element = dynamicDowncast<Element>(renderer.node()))
+        return element->hovered();
+    return false;
 }
 
 bool RenderTheme::isSpinUpButtonPartHovered(const RenderObject& renderer) const
 {
-    Node* node = renderer.node();
-    if (!is<SpinButtonElement>(node))
-        return false;
-    return downcast<SpinButtonElement>(*node).upDownState() == SpinButtonElement::Up;
+    if (auto* spinButton = dynamicDowncast<SpinButtonElement>(renderer.node()))
+        return spinButton->upDownState() == SpinButtonElement::Up;
+    return false;
 }
 
 bool RenderTheme::isPresenting(const RenderObject& o) const
@@ -1115,7 +1109,7 @@ bool RenderTheme::paintCapsLockIndicator(const RenderObject&, const PaintInfo&, 
 
 String RenderTheme::attachmentStyleSheet() const
 {
-    ASSERT(RuntimeEnabledFeatures::sharedFeatures().attachmentElementEnabled());
+    ASSERT(DeprecatedGlobalSettings::attachmentElementEnabled());
     return "attachment { appearance: auto; }"_s;
 }
 
@@ -1139,7 +1133,7 @@ String RenderTheme::colorInputStyleSheet(const Settings&) const
 
 String RenderTheme::dataListStyleSheet() const
 {
-    ASSERT(RuntimeEnabledFeatures::sharedFeatures().dataListElementEnabled());
+    ASSERT(DeprecatedGlobalSettings::dataListElementEnabled());
     return "datalist { display: none; }"_s;
 }
 
@@ -1169,7 +1163,7 @@ void RenderTheme::paintSliderTicks(const RenderObject& o, const PaintInfo& paint
     double max = input.maximum();
     ControlPart part = o.style().effectiveAppearance();
     // We don't support ticks on alternate sliders like MediaVolumeSliders.
-    if (part !=  SliderHorizontalPart && part != SliderVerticalPart)
+    if (part != SliderHorizontalPart && part != SliderVerticalPart)
         return;
     bool isHorizontal = part ==  SliderHorizontalPart;
 
@@ -1472,7 +1466,7 @@ Color RenderTheme::disabledTextColor(const Color& textColor, const Color& backgr
         disabledColor = textColor.lightened();
     else
         disabledColor = textColor.darkened();
-    
+
     // If there's not very much contrast between the disabled color and the background color,
     // just leave the text color alone. We don't want to change a good contrast color scheme so that it has really bad contrast.
     // If the contrast was already poor, then it doesn't do any good to change it to a different poor contrast color scheme.

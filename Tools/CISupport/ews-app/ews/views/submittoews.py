@@ -30,9 +30,9 @@ from django.shortcuts import redirect, render
 from django.views import View
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-from ews.config import ERR_BUG_CLOSED, ERR_OBSOLETE_PATCH, ERR_UNABLE_TO_FETCH_PATCH
+from ews.config import ERR_BUG_CLOSED, ERR_OBSOLETE_CHANGE, ERR_UNABLE_TO_FETCH_CHANGE
 from ews.fetcher import BugzillaPatchFetcher
-from ews.models.patch import Patch
+from ews.models.patch import Change
 
 _log = logging.getLogger(__name__)
 
@@ -44,26 +44,32 @@ class SubmitToEWS(View):
     @xframe_options_exempt
     def post(self, request):
         try:
-            patch_id = request.POST.get('patch_id')
-            patch_id = int(patch_id)
+            change_id = request.POST.get('change_id')
+            _log.info('SubmitToEWS::change: {}'.format(change_id))
+            change_id = int(change_id)
         except:
-            return HttpResponse('Invalid patch id provided, should be an integer.')
+            return HttpResponse('Invalid patch id provided, should be an integer. git hashes are not supported.')
 
-        _log.info('SubmitToEWS::patch: {}'.format(patch_id))
-        if Patch.is_patch_sent_to_buildbot(patch_id):
-            _log.info('SubmitToEWS::patch {} already submitted'.format(patch_id))
+        if change_id < 459500:
+            return HttpResponse('Patch is too old. Skipping.')
+
+        if change_id > 600000:
+            return HttpResponse('patch id is too large. Skipping.')
+
+        if Change.is_change_sent_to_buildbot(change_id):
+            _log.info('SubmitToEWS::change {} already submitted'.format(change_id))
             if request.POST.get('next_action') == 'return_to_bubbles':
-                return redirect('/status-bubble/{}'.format(patch_id))
-            return HttpResponse("Patch {} already submitted. Please wait for status-bubbles.".format(patch_id))
+                return redirect('/status-bubble/{}'.format(change_id))
+            return HttpResponse("Change {} already submitted. Please wait for status-bubbles.".format(change_id))
 
-        rc = BugzillaPatchFetcher().fetch([patch_id])
-        if rc == ERR_UNABLE_TO_FETCH_PATCH:
-            return HttpResponse('Set r? on patch, EWS is currently unable to access patch {}.'.format(patch_id))
-        if rc == ERR_OBSOLETE_PATCH:
-            return HttpResponse('Obsolete Patch: {}, not submitting to EWS.'.format(patch_id))
+        rc = BugzillaPatchFetcher().fetch([change_id])
+        if rc == ERR_UNABLE_TO_FETCH_CHANGE:
+            return HttpResponse('Set r? on patch, EWS is currently unable to access patch {}.'.format(change_id))
+        if rc == ERR_OBSOLETE_CHANGE:
+            return HttpResponse('Obsolete Patch: {}, not submitting to EWS.'.format(change_id))
         if rc == ERR_BUG_CLOSED:
-            return HttpResponse('Closed Bug for patch: {}, not submitting to EWS.'.format(patch_id))
+            return HttpResponse('Closed Bug for patch: {}, not submitting to EWS.'.format(change_id))
 
         if request.POST.get('next_action') == 'return_to_bubbles':
-            return redirect('/status-bubble/{}'.format(patch_id))
-        return HttpResponse("Submitted patch {} to EWS.".format(patch_id))
+            return redirect('/status-bubble/{}'.format(change_id))
+        return HttpResponse("Submitted patch {} to EWS.".format(change_id))

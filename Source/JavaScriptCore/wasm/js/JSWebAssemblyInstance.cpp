@@ -176,13 +176,8 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, JSGlobalObject* 
     WebAssemblyModuleRecord* moduleRecord = WebAssemblyModuleRecord::create(globalObject, vm, globalObject->webAssemblyModuleRecordStructure(), moduleKey, moduleInformation);
     RETURN_IF_EXCEPTION(throwScope, nullptr);
 
-    auto storeTopCallFrame = [&vm] (void* topCallFrame) {
-        vm.topCallFrame = bitwise_cast<CallFrame*>(topCallFrame);
-    };
-
     // FIXME: These objects could be pretty big we should try to throw OOM here.
-    auto* jsInstance = new (NotNull, allocateCell<JSWebAssemblyInstance>(vm)) JSWebAssemblyInstance(vm, instanceStructure, 
-        Wasm::Instance::create(&vm.wasmContext, WTFMove(module), &vm.topEntryFrame, vm.addressOfSoftStackLimit(), WTFMove(storeTopCallFrame)));
+    auto* jsInstance = new (NotNull, allocateCell<JSWebAssemblyInstance>(vm)) JSWebAssemblyInstance(vm, instanceStructure, Wasm::Instance::create(vm, WTFMove(module)));
     jsInstance->finishCreation(vm, jsModule, moduleRecord);
     RETURN_IF_EXCEPTION(throwScope, nullptr);
 
@@ -193,18 +188,23 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, JSGlobalObject* 
     }
 
     // For each import i in module.imports:
-    for (auto& import : moduleInformation.imports) {
-        Identifier moduleName = Identifier::fromString(vm, String::fromUTF8(import.module));
-        Identifier fieldName = Identifier::fromString(vm, String::fromUTF8(import.field));
-        moduleRecord->appendRequestedModule(moduleName);
-        moduleRecord->addImportEntry(WebAssemblyModuleRecord::ImportEntry {
-            WebAssemblyModuleRecord::ImportEntryType::Single,
-            moduleName,
-            fieldName,
-            Identifier::fromUid(PrivateName(PrivateName::Description, "WebAssemblyImportName"_s)),
-        });
+    {
+        IdentifierSet specifiers;
+        for (auto& import : moduleInformation.imports) {
+            Identifier moduleName = Identifier::fromString(vm, String::fromUTF8(import.module));
+            Identifier fieldName = Identifier::fromString(vm, String::fromUTF8(import.field));
+            auto result = specifiers.add(moduleName.impl());
+            if (result.isNewEntry)
+                moduleRecord->appendRequestedModule(moduleName, nullptr);
+            moduleRecord->addImportEntry(WebAssemblyModuleRecord::ImportEntry {
+                WebAssemblyModuleRecord::ImportEntryType::Single,
+                moduleName,
+                fieldName,
+                Identifier::fromUid(PrivateName(PrivateName::Description, "WebAssemblyImportName"_s)),
+            });
+        }
+        ASSERT(moduleRecord->importEntries().size() == moduleInformation.imports.size());
     }
-    ASSERT(moduleRecord->importEntries().size() == moduleInformation.imports.size());
 
     bool hasMemoryImport = moduleInformation.memory.isImport();
     if (moduleInformation.memory && !hasMemoryImport) {
@@ -212,9 +212,7 @@ JSWebAssemblyInstance* JSWebAssemblyInstance::tryCreate(VM& vm, JSGlobalObject* 
         auto* jsMemory = JSWebAssemblyMemory::tryCreate(globalObject, vm, globalObject->webAssemblyMemoryStructure());
         RETURN_IF_EXCEPTION(throwScope, nullptr);
 
-        RefPtr<Wasm::Memory> memory = Wasm::Memory::tryCreate(moduleInformation.memory.initial(), moduleInformation.memory.maximum(), moduleInformation.memory.isShared() ? Wasm::MemorySharingMode::Shared: Wasm::MemorySharingMode::Default,
-            [&vm](Wasm::Memory::NotifyPressure) { vm.heap.collectAsync(CollectionScope::Full); },
-            [&vm](Wasm::Memory::SyncTryToReclaim) { vm.heap.collectSync(CollectionScope::Full); },
+        RefPtr<Wasm::Memory> memory = Wasm::Memory::tryCreate(vm, moduleInformation.memory.initial(), moduleInformation.memory.maximum(), moduleInformation.memory.isShared() ? Wasm::MemorySharingMode::Shared: Wasm::MemorySharingMode::Default,
             [&vm, jsMemory](Wasm::Memory::GrowSuccess, Wasm::PageCount oldPageCount, Wasm::PageCount newPageCount) { jsMemory->growSuccessCallback(vm, oldPageCount, newPageCount); }
         );
         if (!memory)

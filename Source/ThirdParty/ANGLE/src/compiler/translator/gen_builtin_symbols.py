@@ -255,10 +255,6 @@ namespace sh
 using Resources = ShBuiltInResources;
 using TableBase = TSymbolTableBase;
 
-// Since some of the BuiltInId declarations are used outside of constexpr expressions, we need to
-// have these definitions without an initializer. C++17 should eventually remove the need for this.
-{builtin_id_definitions}
-
 const int TSymbolTable::kLastBuiltInId = {last_builtin_id};
 
 namespace BuiltInName
@@ -634,6 +630,9 @@ basic_types_enumeration = [
     'UImageCubeArray',
     'UImageRect',
     'UImageBuffer',
+    'PixelLocalANGLE',
+    'IPixelLocalANGLE',
+    'UPixelLocalANGLE',
     'SubpassInput',
     'ISubpassInput',
     'USubpassInput',
@@ -663,7 +662,7 @@ def get_basic_mangled_name(basic):
 
 essl_levels = [
     'ESSL3_2_BUILTINS', 'ESSL3_1_BUILTINS', 'ESSL3_BUILTINS', 'ESSL1_BUILTINS', 'COMMON_BUILTINS',
-    'ESSL_VULKAN_BUILTINS'
+    'ESSL_INTERNAL_BACKEND_BUILTINS'
 ]
 
 glsl_levels = [
@@ -685,8 +684,8 @@ def generate_suffix_from_level(level):
 def get_essl_shader_version_for_level(level):
     if level == None:
         return '-1'
-    elif level == 'ESSL_VULKAN_BUILTINS':
-        return 'kESSLVulkanOnly'
+    elif level == 'ESSL_INTERNAL_BACKEND_BUILTINS':
+        return 'kESSLInternalBackendBuiltIns'
     elif level == 'ESSL3_2_BUILTINS':
         return '320'
     elif level == 'ESSL3_1_BUILTINS':
@@ -1221,8 +1220,10 @@ class TType:
             type_obj['basic'] = glsl_header_type[0].upper() + glsl_header_type[1:]
             return type_obj
 
-        if glsl_header_type.startswith('gsampler') or glsl_header_type.startswith(
-                'gimage') or glsl_header_type.startswith('gsubpassInput'):
+        if glsl_header_type.startswith('gsampler') or \
+           glsl_header_type.startswith('gimage') or \
+           glsl_header_type.startswith('gpixelLocal') or \
+           glsl_header_type.startswith('gsubpassInput'):
             type_obj['basic'] = glsl_header_type[1].upper() + glsl_header_type[2:]
             type_obj['genType'] = 'sampler_or_image_or_subpass'
             return type_obj
@@ -1244,9 +1245,6 @@ class SymbolsData:
 
         # Declarations of symbol unique ids
         self.builtin_id_declarations = []
-
-        # Definitions of symbol unique ids needed for those ids used outside of constexpr expressions.
-        self.builtin_id_definitions = []
 
         # Declarations of name string variables
         self.name_declarations = set()
@@ -1715,9 +1713,6 @@ def process_single_function(shader_type, group_name, function_props, symbols, va
         template_builtin_id_declaration = '    static constexpr const TSymbolUniqueId {human_readable_name} = TSymbolUniqueId({id});'
         symbols.builtin_id_declarations.append(
             template_builtin_id_declaration.format(**template_args))
-        template_builtin_id_definition = 'constexpr const TSymbolUniqueId BuiltInId::{human_readable_name};'
-        symbols.builtin_id_definitions.append(
-            template_builtin_id_definition.format(**template_args))
 
         parameters_list = []
         for param in parameters:
@@ -1889,8 +1884,6 @@ def process_single_variable(shader_type, variable_name, props, symbols, variable
 
     template_builtin_id_declaration = '    static constexpr const TSymbolUniqueId {name_with_suffix} = TSymbolUniqueId({id});'
     symbols.builtin_id_declarations.append(template_builtin_id_declaration.format(**template_args))
-    template_builtin_id_definition = 'constexpr const TSymbolUniqueId BuiltInId::{name_with_suffix};'
-    symbols.builtin_id_definitions.append(template_builtin_id_definition.format(**template_args))
 
     template_name_declaration = 'constexpr const ImmutableString {name}("{name}");'
     symbols.name_declarations.add(template_name_declaration.format(**template_args))
@@ -2128,8 +2121,6 @@ def generate_files(essl_only, args, functions_txt_filename, variables_json_filen
             os.path.basename(__file__),
         'builtin_id_declarations':
             '\n'.join(symbols.builtin_id_declarations),
-        'builtin_id_definitions':
-            '\n'.join(symbols.builtin_id_definitions),
         'last_builtin_id':
             id_counter - 1,
         'name_declarations':

@@ -991,7 +991,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
         case CSSSelector::PseudoClassFocusVisible:
             return matchesFocusVisiblePseudoClass(element);
         case CSSSelector::PseudoClassFocusWithin:
-            return element.hasFocusWithin();
+            return matchesFocusWithinPseudoClass(element);
         case CSSSelector::PseudoClassHover:
             if (m_strictParsing || element.isLink() || canMatchHoverOrActiveInQuirksMode(context)) {
                 // See the comment in generateElementIsHovered() in SelectorCompiler.
@@ -1117,15 +1117,8 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, const LocalCont
         case CSSSelector::PseudoClassCornerPresent:
             return false;
 
-#if ENABLE(CSS_SELECTORS_LEVEL4)
-        // FIXME: Implement :dir() selector.
         case CSSSelector::PseudoClassDir:
-            return false;
-
-        // FIXME: Implement :role() selector.
-        case CSSSelector::PseudoClassRole:
-            return false;
-#endif
+            return matchesDirPseudoClass(element, selector.argument());
 
 #if ENABLE(ATTACHMENT_ELEMENT)
         case CSSSelector::PseudoClassHasAttachment:

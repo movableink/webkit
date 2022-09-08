@@ -47,6 +47,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 #include "AVAudioSessionCaptureDeviceManager.h"
+#include "MediaCaptureStatusBarManager.h"
 #endif
 
 #include <pal/cf/AudioToolboxSoftLink.h>
@@ -206,6 +207,10 @@ CoreAudioSharedUnit::CoreAudioSharedUnit()
 {
 }
 
+CoreAudioSharedUnit::~CoreAudioSharedUnit()
+{
+}
+
 void CoreAudioSharedUnit::resetSampleRate()
 {
     setSampleRate(m_getSampleRateCallback ? m_getSampleRateCallback() : AudioSession::sharedSession().sampleRate());
@@ -338,6 +343,7 @@ OSStatus CoreAudioSharedUnit::configureMicrophoneProc(int sampleRate)
         return err;
     }
 
+    m_shouldUpdateMicrophoneSampleBufferSize = false;
     m_microphoneSampleBuffer = AudioSampleBufferList::create(microphoneProcFormat, preferredIOBufferSize() * 2);
     m_microphoneProcFormat = microphoneProcFormat;
 
@@ -381,16 +387,28 @@ OSStatus CoreAudioSharedUnit::configureSpeakerProc(int sampleRate)
 }
 
 #if !LOG_DISABLED
-void CoreAudioSharedUnit::checkTimestamps(const AudioTimeStamp& timeStamp, uint64_t sampleTime, double hostTime)
+void CoreAudioSharedUnit::checkTimestamps(const AudioTimeStamp& timeStamp, double hostTime)
 {
-    if (!timeStamp.mSampleTime || sampleTime == m_latestMicTimeStamp || !hostTime)
-        RELEASE_LOG_ERROR(WebRTC, "CoreAudioSharedUnit::checkTimestamps: unusual timestamps, sample time = %lld, previous sample time = %lld, hostTime %f", sampleTime, m_latestMicTimeStamp, hostTime);
+    if (!timeStamp.mSampleTime || timeStamp.mSampleTime == m_latestMicTimeStamp || !hostTime)
+        RELEASE_LOG_ERROR(WebRTC, "CoreAudioSharedUnit::checkTimestamps: unusual timestamps, sample time = %f, previous sample time = %f, hostTime %f", timeStamp.mSampleTime, m_latestMicTimeStamp, hostTime);
 }
 #endif
 
 OSStatus CoreAudioSharedUnit::provideSpeakerData(AudioUnitRenderActionFlags& flags, const AudioTimeStamp& timeStamp, UInt32 /*inBusNumber*/, UInt32 inNumberFrames, AudioBufferList& ioData)
 {
-    if (m_isReconfiguring || !m_speakerSamplesProducerLock.tryLock()) {
+    if (m_isReconfiguring || m_shouldNotifySpeakerSamplesProducer || !m_hasNotifiedSpeakerSamplesProducer || !m_speakerSamplesProducerLock.tryLock()) {
+        if (m_shouldNotifySpeakerSamplesProducer) {
+            m_shouldNotifySpeakerSamplesProducer = false;
+            callOnMainThread([this, weakThis = WeakPtr { *this }] {
+                if (!weakThis)
+                    return;
+                m_hasNotifiedSpeakerSamplesProducer = true;
+                Locker locker { m_speakerSamplesProducerLock };
+                if (m_speakerSamplesProducer)
+                    m_speakerSamplesProducer->captureUnitIsStarting();
+            });
+        }
+
         AudioSampleBufferList::zeroABL(ioData, static_cast<size_t>(inNumberFrames * m_speakerProcFormat.bytesPerFrame()));
         flags = kAudioUnitRenderAction_OutputIsSilence;
         return noErr;
@@ -425,13 +443,13 @@ OSStatus CoreAudioSharedUnit::processMicrophoneSamples(AudioUnitRenderActionFlag
     AudioBufferList& bufferList = m_microphoneSampleBuffer->bufferList();
     if (auto err = m_ioUnit->render(&ioActionFlags, &timeStamp, inBusNumber, inNumberFrames, &bufferList)) {
         RELEASE_LOG_ERROR(WebRTC, "CoreAudioSharedUnit::processMicrophoneSamples(%p) AudioUnitRender failed with error %d (%.4s), bufferList size %d, inNumberFrames %d ", this, (int)err, (char*)&err, (int)bufferList.mBuffers[0].mDataByteSize, (int)inNumberFrames);
-        if (err == kAudio_ParamError) {
+        if (err == kAudio_ParamError && !m_shouldUpdateMicrophoneSampleBufferSize) {
+            m_shouldUpdateMicrophoneSampleBufferSize = true;
             // Our buffer might be too small, the preferred buffer size or sample rate might have changed.
             callOnMainThread([] {
                 CoreAudioSharedUnit::singleton().reconfigure();
             });
         }
-        // We return early so that if this error happens, we do not increment m_microphoneProcsCalled and fail the capture once timer kicks in.
         return err;
     }
 
@@ -441,9 +459,9 @@ OSStatus CoreAudioSharedUnit::processMicrophoneSamples(AudioUnitRenderActionFlag
     double adjustedHostTime = m_DTSConversionRatio * timeStamp.mHostTime;
     uint64_t sampleTime = timeStamp.mSampleTime;
 #if !LOG_DISABLED
-    checkTimestamps(timeStamp, sampleTime, adjustedHostTime);
+    checkTimestamps(timeStamp, adjustedHostTime);
 #endif
-    m_latestMicTimeStamp = sampleTime;
+    m_latestMicTimeStamp = timeStamp.mSampleTime;
     m_microphoneSampleBuffer->setTimes(adjustedHostTime, sampleTime);
 
     if (volume() != 1.0)
@@ -527,11 +545,8 @@ OSStatus CoreAudioSharedUnit::startInternal()
 
     unduck();
 
-    {
-        Locker locker { m_speakerSamplesProducerLock };
-        if (m_speakerSamplesProducer)
-            m_speakerSamplesProducer->captureUnitIsStarting();
-    }
+    m_shouldNotifySpeakerSamplesProducer = true;
+    m_hasNotifiedSpeakerSamplesProducer = false;
 
     if (auto err = m_ioUnit->start()) {
         {
@@ -612,6 +627,9 @@ void CoreAudioSharedUnit::stopInternal()
     }
 
     m_ioUnitStarted = false;
+#if PLATFORM(IOS_FAMILY)
+    setIsInBackground(false);
+#endif
 }
 
 void CoreAudioSharedUnit::registerSpeakerSamplesProducer(CoreAudioSpeakerSamplesProducer& producer)
@@ -646,6 +664,35 @@ void CoreAudioSharedUnit::unregisterSpeakerSamplesProducer(CoreAudioSpeakerSampl
 
     setIsRenderingAudio(false);
 }
+
+#if PLATFORM(IOS_FAMILY)
+void CoreAudioSharedUnit::setIsInBackground(bool isInBackground)
+{
+    if (!MediaCaptureStatusBarManager::hasSupport())
+        return;
+
+    if (!isInBackground) {
+        if (m_statusBarManager) {
+            m_statusBarManager->stop();
+            m_statusBarManager = nullptr;
+        }
+        return;
+    }
+
+    if (m_statusBarManager)
+        return;
+
+    m_statusBarManager = makeUnique<MediaCaptureStatusBarManager>([this](auto&& completionHandler) {
+        if (m_statusBarWasTappedCallback)
+            m_statusBarWasTappedCallback(WTFMove(completionHandler));
+    }, [this] {
+        RELEASE_LOG_ERROR(WebRTC, "CoreAudioSharedUnit status bar failed");
+        captureFailed();
+        ASSERT(!m_statusBarManager);
+    });
+    m_statusBarManager->start();
+}
+#endif
 
 } // namespace WebCore
 

@@ -517,6 +517,51 @@ CommitDate: {time_c}
             mocked.staged['added.txt'] = 'added'
             self.assertEqual(local.Git(self.path).pull(), 128)
 
+    def test_source_remotes_default(self):
+        with mocks.local.Git(self.path), OutputCapture():
+            self.assertEqual(local.Git(self.path).source_remotes(), ['origin'])
+
+    def test_source_remotes_single(self):
+        with mocks.local.Git(self.path, remotes={
+            'origin': 'git@github.example.com:WebKit/WebKit.git',
+            'fork': 'git@github.example.com:Contributor/WebKit.git',
+        }), OutputCapture():
+            project_config = os.path.join(self.path, 'metadata', local.Git.GIT_CONFIG_EXTENSION)
+            os.mkdir(os.path.dirname(project_config))
+            with open(project_config, 'w') as f:
+                f.write('[webkitscmpy "remotes"]\n')
+                f.write('    origin = git@github.example.com:WebKit/WebKit.git\n')
+                f.write('    security = git@github.example.com:WebKit/WebKit-security.git\n')
+
+            self.assertEqual(local.Git(self.path).source_remotes(), ['origin'])
+
+    def test_source_remotes_multiple(self):
+        with mocks.local.Git(self.path, remotes={
+            'origin': 'git@github.example.com:WebKit/WebKit.git',
+            'fork': 'git@github.example.com:Contributor/WebKit.git',
+            'security': 'git@github.example.com:WebKit/WebKit-security.git',
+            'security-fork': 'git@github.example.com:Contributor/WebKit-security.git',
+        }), OutputCapture():
+            project_config = os.path.join(self.path, 'metadata', local.Git.GIT_CONFIG_EXTENSION)
+            os.mkdir(os.path.dirname(project_config))
+            with open(project_config, 'w') as f:
+                f.write('[webkitscmpy "remotes"]\n')
+                f.write('    origin = git@github.example.com:WebKit/WebKit.git\n')
+                f.write('    security = git@github.example.com:WebKit/WebKit-security.git\n')
+
+            self.assertEqual(local.Git(self.path).source_remotes(), ['origin', 'security'])
+            self.assertEqual(
+                local.Git(self.path).source_remotes(personal=True),
+                ['origin', 'security', 'fork', 'security-fork'],
+            )
+
+    def test_files_changed(self):
+        with mocks.local.Git(self.path), OutputCapture():
+            self.assertEqual(
+                local.Git(self.path).files_changed('4@main'),
+                ['Source/main.cpp', 'Source/main.h'],
+            )
+
 
 class TestGitHub(testing.TestCase):
     remote = 'https://github.example.com/WebKit/WebKit'
@@ -677,6 +722,13 @@ class TestGitHub(testing.TestCase):
                 [str(commit) for commit in git.commits(begin=dict(argument='a30ce849'), end=dict(argument='branch-b'))],
             )
 
+    def test_files_changed(self):
+        with mocks.remote.GitHub():
+            self.assertEqual(
+                remote.GitHub(self.remote).files_changed('4@main'),
+                ['Source/main.cpp', 'Source/main.h'],
+            )
+
 
 class TestBitBucket(testing.TestCase):
     remote = 'https://bitbucket.example.com/projects/WEBKIT/repos/webkit'
@@ -808,3 +860,10 @@ class TestBitBucket(testing.TestCase):
 
     def test_id(self):
         self.assertEqual(remote.BitBucket(self.remote).id, 'webkit')
+
+    def test_files_changed(self):
+        with mocks.remote.BitBucket():
+            self.assertEqual(
+                remote.BitBucket(self.remote).files_changed('4@main'),
+                ['Source/main.cpp', 'Source/main.h'],
+            )

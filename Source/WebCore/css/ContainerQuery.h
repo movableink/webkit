@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "GenericMediaQueryTypes.h"
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 #include <wtf/text/AtomString.h>
@@ -35,36 +36,21 @@ class Element;
 
 namespace CQ {
 
+using SizeFeature = MQ::Feature;
+
 struct ContainerCondition;
 struct SizeCondition;
-struct SizeFeature;
 
 struct UnknownQuery {
     String name;
     String text;
 };
 
-using ContainerQuery = std::variant<ContainerCondition, SizeFeature, UnknownQuery>;
-
-enum class LogicalOperator : uint8_t { And, Or, Not };
-enum class ComparisonOperator : uint8_t { LessThan, LessThanOrEqual, Equal, GreaterThan, GreaterThanOrEqual };
-enum class Syntax : uint8_t { Boolean, Colon, Range };
+using QueryInParens = std::variant<ContainerCondition, SizeFeature, UnknownQuery>;
 
 struct ContainerCondition {
-    LogicalOperator logicalOperator { LogicalOperator::And };
-    Vector<ContainerQuery> queries;
-};
-
-struct Comparison {
-    ComparisonOperator op { ComparisonOperator::Equal };
-    RefPtr<CSSValue> value;
-};
-
-struct SizeFeature {
-    AtomString name;
-    Syntax syntax;
-    std::optional<Comparison> leftComparison;
-    std::optional<Comparison> rightComparison;
+    MQ::LogicalOperator logicalOperator { MQ::LogicalOperator::And };
+    Vector<QueryInParens> queries;
 };
 
 namespace FeatureNames {
@@ -84,18 +70,17 @@ enum class Axis : uint8_t {
 };
 OptionSet<Axis> requiredAxesForFeature(const AtomString&);
 
-}
-
-using ContainerQuery = CQ::ContainerQuery;
-
-struct FilteredContainerQuery {
-    AtomString nameFilter;
+struct ContainerQuery {
+    AtomString name;
     OptionSet<CQ::Axis> axisFilter;
-    ContainerQuery query;
+    CQ::ContainerCondition condition;
 };
 
-using CachedQueryContainers = Vector<Ref<const Element>>;
-
+void serialize(StringBuilder&, const ContainerCondition&);
 void serialize(StringBuilder&, const ContainerQuery&);
+
+}
+
+using CachedQueryContainers = Vector<Ref<const Element>>;
 
 }

@@ -128,7 +128,6 @@ public:
     WEBCORE_EXPORT void setContentsRect(const FloatRect&) override;
     WEBCORE_EXPORT void setContentsClippingRect(const FloatRoundedRect&) override;
     WEBCORE_EXPORT void setContentsRectClipsDescendants(bool) override;
-    WEBCORE_EXPORT void setMasksToBoundsRect(const FloatRoundedRect&) override;
 
     WEBCORE_EXPORT void setShapeLayerPath(const Path&) override;
     WEBCORE_EXPORT void setShapeLayerWindRule(WindRule) override;
@@ -171,6 +170,7 @@ public:
     WEBCORE_EXPORT void setCustomAppearance(CustomAppearance) override;
 
     WEBCORE_EXPORT void deviceOrPageScaleFactorChanged() override;
+    void setShouldUpdateRootRelativeScaleFactor(bool value) override { m_shouldUpdateRootRelativeScaleFactor = value; }
 
     FloatSize pixelAlignmentOffset() const override { return m_pixelAlignmentOffset; }
 
@@ -341,10 +341,15 @@ private:
     const FloatRect& coverageRect() const { return m_coverageRect; }
 
     void setVisibleAndCoverageRects(const VisibleAndCoverageRects&);
-    
+
+    void adjustContentsScaleLimitingFactor();
+    void setContentsScaleLimitingFactor(float);
+
     bool recursiveVisibleRectChangeRequiresFlush(const CommitState&, const TransformState&) const;
-    
+
+    bool isTiledBackingLayer() const { return type() == Type::TiledBacking; }
     bool isPageTiledBackingLayer() const { return type() == Type::PageTiledBacking; }
+    bool isStructuralLayer() const { return type() == Type::Structural; }
 
     // Used to track the path down the tree for replica layers.
     struct ReplicaState {
@@ -432,7 +437,6 @@ private:
     void updateContentsPlatformLayer();
     void updateContentsColorLayer();
     void updateContentsRects();
-    void updateMasksToBoundsRect();
     void updateEventRegion();
 #if ENABLE(SCROLLING_THREAD)
     void updateScrollingNode();
@@ -446,6 +450,7 @@ private:
     void updateSupportsSubpixelAntialiasedText();
     void updateDebugIndicators();
     void updateTiles();
+    void updateRootRelativeScale();
     void updateContentsScale(float pageScaleFactor);
     void updateCustomAppearance();
 
@@ -553,7 +558,6 @@ private:
         ContentsPlatformLayerChanged            = 1LLU << 16,
         ContentsColorLayerChanged               = 1LLU << 17,
         ContentsRectsChanged                    = 1LLU << 18,
-        MasksToBoundsRectChanged                = 1LLU << 19,
         MaskLayerChanged                        = 1LLU << 20,
         ReplicatedLayerChanged                  = 1LLU << 21,
         ContentsNeedsDisplay                    = 1LLU << 22,
@@ -657,9 +661,12 @@ private:
 
     std::unique_ptr<DisplayList::InMemoryDisplayList> m_displayList;
 
+    float m_contentsScaleLimitingFactor { 1 };
+    float m_rootRelativeScaleFactor { 1.0f };
+
     ContentsLayerPurpose m_contentsLayerPurpose { ContentsLayerPurpose::None };
     bool m_isCommittingChanges { false };
-
+    bool m_shouldUpdateRootRelativeScaleFactor : 1 { false };
     bool m_needsFullRepaint : 1;
     bool m_allowsBackingStoreDetaching : 1;
     bool m_intersectsCoverageRect : 1;

@@ -27,10 +27,6 @@
 (deny system-privilege)
 (allow system-audit file-read-metadata)
 
-;; We can remove the catch once we no longer need to support iOS 15 (or earlier))
-(catch (lambda)
-    (import "dyld-support.sb"))
-
 ;; Silence spurious logging due to rdar://20117923 and rdar://72366475
 (deny system-privilege (privilege-id PRIV_GLOBAL_PROC_INFO) (with no-report))
 
@@ -42,7 +38,7 @@
 (import "util.sb")
 
 (define-once (allow-read-and-issue-generic-extensions . filters)
-    (allow file-read* (with telemetry)
+    (allow file-read*
            (apply require-any filters))
     (allow file-issue-extension
         (require-all
@@ -64,7 +60,7 @@
     (allow-preferences-common)
     (for-each (lambda (domain)
         (begin
-            (allow user-preference-read (with telemetry) (preference-domain domain))
+            (allow user-preference-read (preference-domain domain))
             (allow file-read*
                 (home-literal (string-append "/Library/Preferences/" domain ".plist")))))
         domains))
@@ -82,7 +78,7 @@
             (play-media asset-access-filter))))
 
 (define-once (play-audio)
-    (allow mach-lookup (with telemetry)
+    (allow mach-lookup
            (global-name "com.apple.audio.AURemoteIOServer")))
 
 (define-once (play-media . filters)
@@ -94,20 +90,22 @@
                 (extension-class "com.apple.mediaserverd.read"))))
     ;; CoreMedia framework.
     (allow mach-lookup (with telemetry)
-           (global-name "com.apple.coremedia.admin")
-           (global-name "com.apple.coremedia.asset.xpc")
            (global-name "com.apple.coremedia.assetimagegenerator.xpc")
            (global-name "com.apple.coremedia.audiodeviceclock.xpc") ; Needed for CMTimeBase
-           (global-name "com.apple.coremedia.audioprocessingtap.xpc")
            (global-name "com.apple.coremedia.capturesession")      ; Actually for video capture
            (global-name "com.apple.coremedia.capturesource")       ; Also for video capture (<rdar://problem/15794291>).
            (global-name "com.apple.coremedia.cpe.xpc") ; Needed for HDR playback.
+           (global-name "com.apple.coremedia.remotequeue"))
+    (allow mach-lookup
+           (global-name "com.apple.coremedia.admin")
+           (global-name "com.apple.coremedia.asset.xpc")
+           (global-name "com.apple.coremedia.audioprocessingtap.xpc")
            (global-name "com.apple.coremedia.customurlloader.xpc") ; Needed for custom media loading
+           (global-name "com.apple.coremedia.figcpecryptor")
            (global-name "com.apple.coremedia.formatreader.xpc")
            (global-name "com.apple.coremedia.mediaparserd.formatreader.xpc")
            (global-name "com.apple.coremedia.player.xpc")
            (global-name "com.apple.coremedia.remaker")
-           (global-name "com.apple.coremedia.remotequeue")
            (global-name "com.apple.coremedia.routediscoverer.xpc")
            (global-name "com.apple.coremedia.routingcontext.xpc")
            (global-name "com.apple.coremedia.samplebufferaudiorenderer.xpc")
@@ -121,7 +119,6 @@
         (global-name "com.apple.coremedia.cpeprotector.xpc")
         (global-name "com.apple.coremedia.endpoint.xpc")
         (global-name "com.apple.coremedia.figcontentkeysession.xpc")
-        (global-name "com.apple.coremedia.figcpecryptor")
         (global-name "com.apple.coremedia.routingsessionmanager.xpc")
         (global-name "com.apple.coremedia.sts"))
 
@@ -138,7 +135,7 @@
         (literal "/private/var/preferences/com.apple.networkd.plist"))
 
     ;; Required by the MediaPlayer framework.
-    (allow mach-lookup (with telemetry)
+    (allow mach-lookup
         (global-name "com.apple.audio.AudioSession"))
 
     (allow mach-lookup (with telemetry)
@@ -153,14 +150,24 @@
 (define-once (media-remote)
     (mobile-preferences-read
         "com.apple.mediaremote")
-    (allow mach-lookup (with telemetry)
-           (global-name "com.apple.mediaremoted.xpc"))
-)
+    (allow mach-lookup
+        (global-name "com.apple.mediaremoted.xpc")))
 
 (define-once (media-capture-support)
     ;; Media capture, microphone access
     (with-filter (extension "com.apple.webkit.microphone")
-        (allow device-microphone))
+        (allow device-microphone)
+
+        (with-filter (system-attribute apple-internal)
+            (allow user-preference-read (preference-domain "com.apple.coreaudio"))
+            (allow file-read* file-write*
+                (subpath "/private/tmp/AudioCapture")
+                (subpath "/tmp/AudioCapture")
+            )
+        )
+        (allow mach-lookup
+            (global-name "com.apple.springboard.statusbarservices"))
+    )
 
     ;; Media capture, camera access
     (with-filter (extension "com.apple.webkit.camera")
@@ -171,7 +178,8 @@
 
     ;; Support incoming video connections
     (allow mach-lookup (with telemetry)
-        (global-name "com.apple.coremedia.compressionsession")
+        (global-name "com.apple.coremedia.compressionsession"))
+    (allow mach-lookup
         (global-name "com.apple.coremedia.decompressionsession")
         (global-name "com.apple.coremedia.videoqueue"))
 )
@@ -197,7 +205,7 @@
 ;;; Declare that the application uses the OpenGL, Metal, and CoreML hardware & frameworks.
 ;;;
 (define-once (opengl)
-    (allow iokit-open (with telemetry)
+    (allow iokit-open
            (iokit-connection "IOGPU")
            (iokit-user-client-class
                 "AGXDeviceUserClient"))
@@ -214,7 +222,7 @@
     (allow sysctl-read
         (sysctl-name #"kern.bootsessionuuid"))
 
-    (allow mach-lookup (with telemetry)
+    (allow mach-lookup
        ;; <rdar://problem/47268166>
        (xpc-service-name "com.apple.MTLCompilerService"))
     
@@ -255,7 +263,7 @@
     (deny file-read* file-write*
           (vnode-type BLOCK-DEVICE CHARACTER-DEVICE))
 
-    (allow file-read* file-write-data file-ioctl (with telemetry)
+    (allow file-read* file-write-data file-ioctl
            (literal "/dev/dtracehelper"))
 
     (allow file-read* (with telemetry)
@@ -278,7 +286,7 @@
         (global-name "com.apple.CARenderServer"))
 
     ; UIKit-required IOKit nodes.
-    (allow iokit-open (with telemetry)
+    (allow iokit-open
         (iokit-user-client-class "IOSurfaceAcceleratorClient")
         ;; Requires by UIView -> UITextMagnifierRenderer -> UIWindow
         (iokit-user-client-class "IOSurfaceRootUserClient"))
@@ -294,11 +302,11 @@
 
 (deny file-write-mount file-write-unmount)
 
-(allow file-read-metadata (with telemetry)
+(allow file-read-metadata
     (vnode-type DIRECTORY))
 
 (with-elevated-precedence
-    (allow file-read* (with telemetry)
+    (allow file-read*
            (subpath "/usr/lib"
                     "/usr/share"
                     "/private/var/db/timezone"))
@@ -314,16 +322,16 @@
                 (literal "/System/Library/Caches/apticket.der")
                 (subpath "/System/Library/Caches/com.apple.kernelcaches")
                 (subpath "/System/Library/Caches/com.apple.factorydata"))))
-        (deny file-issue-extension file-read* (with telemetry) hw-identifying-paths))
+        (deny file-issue-extension file-read* hw-identifying-paths))
     
-    (allow file-map-executable (with telemetry)
+    (allow file-map-executable
            (subpath "/System/Library")
            (subpath "/usr/lib"))
-    (allow file-read-metadata (with telemetry)
+    (allow file-read-metadata
            (vnode-type SYMLINK))
 
     ;;; <rdar://problem/24144418>
-    (allow file-read* (with telemetry)
+    (allow file-read*
            (subpath "/private/var/preferences/Logging"))
 
     (allow user-preference-read (preference-domain "kCFPreferencesAnyApplication"))
@@ -349,7 +357,7 @@
                 "com.apple.app-sandbox.read"
                 "com.apple.app-sandbox.read-write"
                 "com.apple.sharing.airdrop.readonly")
-            (allow file-read* file-read-metadata (with telemetry))
+            (allow file-read* file-read-metadata)
             (allow file-issue-extension
                    (extension-class "com.apple.app-sandbox.read"
                                     "com.apple.mediaserverd.read"
@@ -358,7 +366,7 @@
             (extension
                 "com.apple.app-sandbox.read-write")
             (allow file-write* (with telemetry))
-            (allow file-issue-extension (with telemetry)
+            (allow file-issue-extension
                    (extension-class "com.apple.app-sandbox.read-write"
                                     "com.apple.mediaserverd.read-write"))))
 
@@ -384,7 +392,7 @@
 (allow file-read*
     required-etc-files)
 
-(allow file-read* (with telemetry) (with message "Accessing root of filesystem")
+(allow file-read*
     (literal "/"))
 
 (device-access)
@@ -398,7 +406,7 @@
     (global-name "com.apple.logd")
     (global-name "com.apple.logd.events"))
 
-(allow mach-lookup (with telemetry)
+(allow mach-lookup
     (global-name "com.apple.tccd"))
 
 (allow mach-lookup
@@ -419,7 +427,7 @@
     (deny ipc-posix-sem-create ipc-posix-sem-post ipc-posix-sem-unlink ipc-posix-sem-wait)
     (allow ipc-posix-sem-open (with telemetry)))
 
-(allow mach-lookup (with telemetry)
+(allow mach-lookup
     (global-name "com.apple.runningboard")) ;; Needed by process assertion code (ProcessTaskStateObserver).
 
 (allow system-sched (with telemetry)
@@ -438,12 +446,10 @@
 
 ;; ObjC map_images needs to send logging data to syslog. <rdar://problem/39778918>
 (with-filter (system-attribute apple-internal)
-    (allow network-outbound (with telemetry)
-       (literal "/private/var/run/syslog")
-    )
-)
+    (allow network-outbound
+       (literal "/private/var/run/syslog")))
 
-(allow mach-lookup (with telemetry)
+(allow mach-lookup
        (global-name "com.apple.system.notification_center"))
 (allow ipc-posix-shm-read*
        (ipc-posix-name "apple.shm.notification_center"))
@@ -458,8 +464,8 @@
 
 (allow mach-task-name (with telemetry) (target self))
 
-(allow process-info* (with telemetry))
-(allow process-info-pidinfo (target self))
+(deny process-info*)
+(allow process-info-pidinfo)
 (allow process-info-pidfdinfo (target self))
 (allow process-info-pidfileportinfo (target self))
 (allow process-info-setcontrol (target self))
@@ -535,8 +541,8 @@
 ;;; End UIKit-apps.sb content
 ;;;
 
-(deny sysctl* (with telemetry))
-(allow sysctl-read (with telemetry)
+(deny sysctl*)
+(allow sysctl-read
     (sysctl-name
         "hw.activecpu"
         "hw.cachelinesize"
@@ -640,10 +646,10 @@
 
 ;; Sandbox extensions
 (define (apply-read-and-issue-extension op path-filter)
-    (op file-read* (with telemetry) path-filter)
+    (op file-read* path-filter)
     (op file-issue-extension (require-all (extension-class "com.apple.app-sandbox.read") path-filter)))
 (define (apply-write-and-issue-extension op path-filter)
-    (op file-write* (with telemetry) path-filter)
+    (op file-write* path-filter)
     (op file-issue-extension (require-all (extension-class "com.apple.app-sandbox.read-write") path-filter)))
 (define (read-only-and-issue-extensions path-filter)
     (apply-read-and-issue-extension allow path-filter))
@@ -675,6 +681,7 @@
 (deny file-write-create (vnode-type SYMLINK))
 (deny file-read-xattr file-write-xattr (xattr-prefix "com.apple.security.private."))
 
+#if HAVE(AGX_COMPILER_SERVICE)
 (allow iokit-open
     (require-all
         (extension "com.apple.webkit.extension.iokit")
@@ -689,32 +696,29 @@
             "IOAccelContext2"
             "IOAccelDevice2"
             "IOAccelSharedUserClient2")))
+#endif // HAVE(AGX_COMPILER_SERVICE)
 
 (deny mach-lookup (with no-log)
     (xpc-service-name "com.apple.audio.toolbox.reporting.service")
 )
 
-(deny mach-lookup (with no-log) (with telemetry)
+(deny mach-lookup (with no-log)
     (global-name "com.apple.audio.AudioComponentRegistrar"))
 
-(deny mach-lookup (with telemetry)
+(deny mach-lookup
     (xpc-service-name "com.apple.iconservices")
     (global-name
         "com.apple.PowerManagement.control"
         "com.apple.iconservices"
-        "com.apple.frontboard.systemappservices"
-    )
-)
+        "com.apple.frontboard.systemappservices"))
 
-(allow mach-lookup (with telemetry)
-    (global-name "com.apple.systemstatus.activityattribution")
-)
+(allow mach-lookup
+    (global-name "com.apple.systemstatus.activityattribution"))
 
 (media-capture-support)
 
-(allow mach-lookup (with telemetry)
-  (global-name "com.apple.audio.AudioQueueServer")
-)
+(allow mach-lookup
+    (global-name "com.apple.audio.AudioQueueServer"))
 
 ;; These services have been identified as unused during living-on.
 ;; This list overrides some definitions above and in common.sb.
@@ -815,6 +819,7 @@
         SYS_sem_open
         SYS_sendto
         SYS_shared_region_check_np
+        SYS_shared_region_map_and_slide_2_np
         SYS_shm_open
         SYS_sigaction
         SYS_sigprocmask
@@ -851,10 +856,16 @@
             MSC__kernelrpc_mach_port_mod_refs_trap
             MSC__kernelrpc_mach_port_request_notification_trap
             MSC__kernelrpc_mach_port_type_trap
+#if PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED < 160000
+            MSC__kernelrpc_mach_port_unguard_trap
+#endif
             MSC__kernelrpc_mach_vm_allocate_trap
             MSC__kernelrpc_mach_vm_deallocate_trap
             MSC__kernelrpc_mach_vm_map_trap
             MSC__kernelrpc_mach_vm_protect_trap
+#if PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED < 160000
+            MSC__kernelrpc_mach_vm_purgable_control_trap
+#endif
             MSC_host_create_mach_voucher_trap
             MSC_host_self_trap
             MSC_mach_generate_activity_id

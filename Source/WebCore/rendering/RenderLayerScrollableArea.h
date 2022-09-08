@@ -139,6 +139,8 @@ public:
     bool horizontalScrollbarHiddenByStyle() const final;
     bool verticalScrollbarHiddenByStyle() const final;
 
+    bool canShowNonOverlayScrollbars() const final;
+
     ScrollPosition scrollPosition() const final { return m_scrollPosition; }
 
     Scrollbar* horizontalScrollbar() const final { return m_hBar.get(); }
@@ -239,6 +241,8 @@ public:
 
     std::optional<LayoutRect> updateScrollPosition(const ScrollPositionChangeOptions&, const LayoutRect& revealRect, const LayoutRect& localExposeRect);
     bool isVisibleToHitTesting() const final;
+    LayoutRect scrollRectToVisible(const LayoutRect& absoluteRect, const ScrollRectToVisibleOptions&);
+    std::optional<LayoutRect> updateScrollPositionForScrollIntoView(const ScrollPositionChangeOptions&, const LayoutRect& revealRect, const LayoutRect& localExposeRect);
 
 private:
     bool hasHorizontalOverflow() const;

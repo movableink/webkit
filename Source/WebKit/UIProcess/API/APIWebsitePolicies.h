@@ -77,9 +77,6 @@ public:
     void setDeviceOrientationAndMotionAccessState(WebCore::DeviceOrientationOrMotionPermissionState state) { m_deviceOrientationAndMotionAccessState = state; }
 #endif
 
-    const Vector<WebCore::HTTPHeaderField>& legacyCustomHeaderFields() const { return m_legacyCustomHeaderFields; }
-    void setLegacyCustomHeaderFields(Vector<WebCore::HTTPHeaderField>&& fields) { m_legacyCustomHeaderFields = WTFMove(fields); }
-
     const Vector<WebCore::CustomHeaderFields>& customHeaderFields() const { return m_customHeaderFields; }
     void setCustomHeaderFields(Vector<WebCore::CustomHeaderFields>&& fields) { m_customHeaderFields = WTFMove(fields); }
 
@@ -144,6 +141,9 @@ public:
     bool idempotentModeAutosizingOnlyHonorsPercentages() const { return m_idempotentModeAutosizingOnlyHonorsPercentages; }
     void setIdempotentModeAutosizingOnlyHonorsPercentages(bool idempotentModeAutosizingOnlyHonorsPercentages) { m_idempotentModeAutosizingOnlyHonorsPercentages = idempotentModeAutosizingOnlyHonorsPercentages; }
 
+    bool allowPrivacyProxy() const { return m_allowPrivacyProxy; }
+    void setAllowPrivacyProxy(bool allow) { m_allowPrivacyProxy = allow; }
+
 private:
     // FIXME: replace most or all of these members with a WebsitePoliciesData.
     bool m_contentBlockersEnabled { true };
@@ -153,7 +153,6 @@ private:
 #if ENABLE(DEVICE_ORIENTATION)
     WebCore::DeviceOrientationOrMotionPermissionState m_deviceOrientationAndMotionAccessState { WebCore::DeviceOrientationOrMotionPermissionState::Prompt };
 #endif
-    Vector<WebCore::HTTPHeaderField> m_legacyCustomHeaderFields;
     Vector<WebCore::CustomHeaderFields> m_customHeaderFields;
     WebKit::WebsitePopUpPolicy m_popUpPolicy { WebKit::WebsitePopUpPolicy::Default };
     RefPtr<WebKit::WebsiteDataStore> m_websiteDataStore;
@@ -175,6 +174,7 @@ private:
     bool m_idempotentModeAutosizingOnlyHonorsPercentages { false };
     std::optional<bool> m_captivePortalModeEnabled;
     WebCore::ColorSchemePreference m_colorSchemePreference { WebCore::ColorSchemePreference::NoPreference };
+    bool m_allowPrivacyProxy { true };
 };
 
 } // namespace API

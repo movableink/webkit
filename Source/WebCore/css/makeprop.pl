@@ -67,6 +67,7 @@ my %settingsFlags;
 my $numPredefinedProperties = 2;
 my %nameIsColorProperty;
 my %nameIsDescriptorOnly;
+my %nameIsTopPriority;
 my %nameIsHighPriority;
 my %nameIsDeferred;
 my %nameIsInherited;
@@ -143,6 +144,12 @@ while (my ($groupName, $logicalPropertyGroup) = each %logicalPropertyGroups) {
             }
         }
     }
+}
+
+sub uniq(@)
+{
+    my %hash = map { $_, 1 } @_;
+    return keys %hash;
 }
 
 sub matchEnableFlags($)
@@ -288,7 +295,12 @@ sub addProperty($$)
                     next;
                 } elsif ($codegenOptionName eq "comment") {
                     next;
+                } elsif ($codegenOptionName eq "top-priority") {
+                    die "$name has top priority, but no comment to justify" if not (exists $codegenProperties->{"comment"});
+                    die "$name is a shorthand, but has top-priority" if exists $codegenProperties->{"longhands"};
+                    $nameIsTopPriority{$name} = 1;
                 } elsif ($codegenOptionName eq "high-priority") {
+                    die "$name can't have conflicting top/high priority" if !!$nameIsTopPriority{$name};
                     die "$name is a shorthand, but has high-priority" if exists $codegenProperties->{"longhands"};
                     $nameIsHighPriority{$name} = 1;
                 } elsif ($codegenOptionName eq "sink-priority") {
@@ -369,6 +381,13 @@ sub sortByDescendingPriorityAndName
     if (exists $propertiesWithStyleBuilderOptions{$a}{"longhands"} > exists $propertiesWithStyleBuilderOptions{$b}{"longhands"}) {
         return 1;
     }
+    # Sort longhands with top priority to the front
+    if (!!$nameIsTopPriority{$a} < !!$nameIsTopPriority{$b}) {
+        return 1;
+    }
+    if (!!$nameIsTopPriority{$a} > !!$nameIsTopPriority{$b}) {
+        return -1;
+    }
     # Sort longhands with high priority to the front
     if (!!$nameIsHighPriority{$a} < !!$nameIsHighPriority{$b}) {
         return 1;
@@ -410,9 +429,11 @@ print GPERF << "EOF";
 #include \"CSSProperty.h\"
 #include \"CSSPropertyNames.h\"
 #include \"HashTools.h\"
-#include "RuntimeEnabledFeatures.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Settings.h"
 #include <wtf/ASCIICType.h>
+#include <wtf/FixedVector.h>
+#include <wtf/Hasher.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/WTFString.h>
 #include <string.h>
@@ -473,7 +494,7 @@ const Property* findProperty(const char* str, unsigned int len)
     return CSSPropertyNamesHash::findPropertyImpl(str, len);
 }
 
-bool isInternalCSSProperty(const CSSPropertyID id)
+bool isInternalCSSProperty(CSSPropertyID id)
 {
     switch (id) {
 EOF
@@ -493,13 +514,13 @@ EOF
 
 if (%runtimeFlags) {
   print GPERF << "EOF";
-bool isEnabledCSSProperty(const CSSPropertyID id)
+static bool isEnabledCSSProperty(CSSPropertyID id)
 {
     switch (id) {
 EOF
   foreach my $name (sort keys %runtimeFlags) {
     print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
-    print GPERF "        return RuntimeEnabledFeatures::sharedFeatures()." . $runtimeFlags{$name} . "Enabled();\n";
+    print GPERF "        return DeprecatedGlobalSettings::" . $runtimeFlags{$name} . "Enabled();\n";
   }
   print GPERF << "EOF";
     default:
@@ -508,7 +529,7 @@ EOF
 EOF
 } else {
   print GPERF << "EOF";
-bool isEnabledCSSProperty(const CSSPropertyID)
+static bool isEnabledCSSProperty(CSSPropertyID)
 {
     return true;
 EOF
@@ -517,7 +538,7 @@ EOF
 print GPERF << "EOF";
 }
 
-bool isCSSPropertyEnabledBySettings(const CSSPropertyID id, const Settings* settings)
+static bool isCSSPropertyEnabledBySettings(CSSPropertyID id, const Settings* settings)
 {
     if (!settings)
         return true;
@@ -534,7 +555,36 @@ print GPERF << "EOF";
     default:
         return true;
     }
+}
+
+static bool isCSSPropertyEnabledByCSSPropertySettings(CSSPropertyID id, const CSSPropertySettings* settings)
+{
+    if (!settings)
+        return true;
+
+    switch (id) {
+EOF
+
+foreach my $name (keys %settingsFlags) {
+  print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
+  print GPERF "        return settings->" . $settingsFlags{$name} . ";\n";
+}
+
+print GPERF << "EOF";
+    default:
+        return true;
+    }
     return true;
+}
+
+bool isCSSPropertyExposed(CSSPropertyID id, const Settings* settings)
+{
+    return isEnabledCSSProperty(id) && isCSSPropertyEnabledBySettings(id, settings) && !isInternalCSSProperty(id);
+}
+
+bool isCSSPropertyExposed(CSSPropertyID id, const CSSPropertySettings* settings)
+{
+    return isEnabledCSSProperty(id) && isCSSPropertyEnabledByCSSPropertySettings(id, settings) && !isInternalCSSProperty(id);
 }
 
 ASCIILiteral getPropertyName(CSSPropertyID id)
@@ -689,7 +739,8 @@ bool CSSProperty::isDirectionAwareProperty(CSSPropertyID id)
 {
     switch (id) {
 EOF
-for my $logicalPropertyGroup (sort values %logicalPropertyGroups) {
+for my $groupName (sort keys %logicalPropertyGroups) {
+    my $logicalPropertyGroup = $logicalPropertyGroups{$groupName};
     for my $name (sort values %{ $logicalPropertyGroup->{"logical"} }) {
         print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
     }
@@ -707,7 +758,8 @@ bool CSSProperty::isInLogicalPropertyGroup(CSSPropertyID id)
     switch (id) {
 EOF
 
-for my $logicalPropertyGroup (sort values %logicalPropertyGroups) {
+for my $groupName (sort keys %logicalPropertyGroups) {
+    my $logicalPropertyGroup = $logicalPropertyGroups{$groupName};
     for my $kind ("logical", "physical") {
         for my $name (sort values %{ $logicalPropertyGroup->{$kind} }) {
             print GPERF "    case CSSPropertyID::CSSProperty" . $nameToId{$name} . ":\n";
@@ -727,7 +779,8 @@ bool CSSProperty::areInSameLogicalPropertyGroupWithDifferentMappingLogic(CSSProp
     switch (id1) {
 EOF
 
-for my $logicalPropertyGroup (sort values %logicalPropertyGroups) {
+for my $groupName (sort keys %logicalPropertyGroups) {
+    my $logicalPropertyGroup = $logicalPropertyGroups{$groupName};
     my $logical = $logicalPropertyGroup->{"logical"};
     my $physical = $logicalPropertyGroup->{"physical"};
     for my $first ($logical, $physical) {
@@ -762,7 +815,8 @@ CSSPropertyID CSSProperty::resolveDirectionAwareProperty(CSSPropertyID propertyI
     switch (propertyID) {
 EOF
 
-for my $logicalPropertyGroup (sort values %logicalPropertyGroups) {
+for my $groupName (sort keys %logicalPropertyGroups) {
+    my $logicalPropertyGroup = $logicalPropertyGroups{$groupName};
     for my $resolver (sort keys %{ $logicalPropertyGroup->{"logical"} }) {
         my $name = $logicalPropertyGroup->{"logical"}->{$resolver};
         my $kind = $logicalPropertyGroup->{"kind"};
@@ -789,8 +843,10 @@ CSSPropertyID CSSProperty::unresolvePhysicalProperty(CSSPropertyID propertyID, T
     switch (propertyID) {
 EOF
 
-for my $logicalPropertyGroup (values %logicalPropertyGroups) {
-    while (my ($resolver, $name) = each %{ $logicalPropertyGroup->{"physical"} }) {
+for my $groupName (sort keys %logicalPropertyGroups) {
+    my $logicalPropertyGroup = $logicalPropertyGroups{$groupName};
+    for my $resolver (sort keys %{ $logicalPropertyGroup->{"physical"} }) {
+        my $name = $logicalPropertyGroup->{"physical"}->{$resolver};
         my $kind = $logicalPropertyGroup->{"kind"};
         my $kindId = nameToId($kind);
         my $resolverEnum = "Box" . $kindId . "::" . nameToId($resolver);
@@ -827,6 +883,54 @@ print GPERF << "EOF";
     }
 }
 
+CSSPropertySettings::CSSPropertySettings(const Settings& settings)
+EOF
+
+my $nthSetting = 0;
+foreach my $name (sort(uniq(values %settingsFlags))) {
+    print GPERF "    ";
+    if ($nthSetting == 0) {
+        print GPERF ": ";
+    } else {
+        print GPERF ", ";
+    }
+    print GPERF $name . " { settings." . $name . "() }\n";
+    $nthSetting += 1;
+}
+
+print GPERF << "EOF";
+{
+}
+
+bool operator==(const CSSPropertySettings& a, const CSSPropertySettings& b)
+{
+    return true
+EOF
+
+foreach my $name (sort(uniq(values %settingsFlags))) {
+    print GPERF "        && a." . $name . " == b." . $name . "\n";
+}
+
+print GPERF << "EOF";
+    ;
+}
+
+void add(Hasher& hasher, const CSSPropertySettings& settings)
+{
+    unsigned bits = 0
+EOF
+
+$nthSetting = 0;
+foreach my $name (sort(uniq(values %settingsFlags))) {
+    print GPERF "        | settings." . $name . " << " . $nthSetting . "\n";
+    $nthSetting += 1;
+}
+
+print GPERF << "EOF";
+    ;
+    add(hasher, bits);
+}
+
 } // namespace WebCore
 
 IGNORE_WARNINGS_END
@@ -857,6 +961,8 @@ EOF
 my $first = $numPredefinedProperties;
 my $i = $numPredefinedProperties;
 my $maxLen = 0;
+my $firstTopPriorityPropertyName;
+my $lastTopPriorityPropertyName;
 my $firstHighPriorityPropertyName;
 my $lastHighPriorityPropertyName;
 my $firstLowPriorityPropertyName;
@@ -870,6 +976,9 @@ foreach my $name (@names) {
   if (exists $propertiesWithStyleBuilderOptions{$name}{"longhands"}) {
     $firstShorthandPropertyName = $name if !$firstShorthandPropertyName;
     $lastShorthandPropertyName = $name;
+  } elsif ($nameIsTopPriority{$name}) {
+    $firstTopPriorityPropertyName = $name if !$firstTopPriorityPropertyName;
+    $lastTopPriorityPropertyName = $name;
   } elsif ($nameIsHighPriority{$name}) {
     $firstHighPriorityPropertyName = $name if !$firstHighPriorityPropertyName;
     $lastHighPriorityPropertyName = $name;
@@ -894,6 +1003,8 @@ print HEADER "const int firstCSSProperty = $first;\n";
 print HEADER "const int numCSSProperties = $num;\n";
 print HEADER "const int lastCSSProperty = $last;\n";
 print HEADER "const size_t maxCSSPropertyNameLength = $maxLen;\n";
+print HEADER "const CSSPropertyID firstTopPriorityProperty = CSSProperty" . $nameToId{$firstTopPriorityPropertyName} . ";\n";
+print HEADER "const CSSPropertyID lastTopPriorityProperty = CSSProperty" . $nameToId{$lastTopPriorityPropertyName} . ";\n";
 print HEADER "const CSSPropertyID firstHighPriorityProperty = CSSProperty" . $nameToId{$firstHighPriorityPropertyName} . ";\n";
 print HEADER "const CSSPropertyID lastHighPriorityProperty = CSSProperty" . $nameToId{$lastHighPriorityPropertyName} . ";\n";
 print HEADER "const CSSPropertyID firstLowPriorityProperty = CSSProperty" . $nameToId{$firstLowPriorityPropertyName} . ";\n";
@@ -928,9 +1039,26 @@ print HEADER "const size_t numComputedPropertyIDs = $numComputedPropertyIDs;\n";
 
 print HEADER << "EOF";
 
-bool isInternalCSSProperty(const CSSPropertyID);
-bool isEnabledCSSProperty(const CSSPropertyID);
-bool isCSSPropertyEnabledBySettings(const CSSPropertyID, const Settings* = nullptr);
+struct CSSPropertySettings {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+EOF
+
+foreach my $name (sort(uniq(values %settingsFlags))) {
+  print HEADER "    bool " . $name . " { false };\n";
+}
+
+print HEADER << "EOF";
+    CSSPropertySettings() = default;
+    explicit CSSPropertySettings(const Settings&);
+};
+
+bool operator==(const CSSPropertySettings&, const CSSPropertySettings&);
+inline bool operator!=(const CSSPropertySettings& a, const CSSPropertySettings& b) { return !(a == b); }
+void add(Hasher&, const CSSPropertySettings&);
+
+bool isInternalCSSProperty(CSSPropertyID);
+bool isCSSPropertyExposed(CSSPropertyID, const Settings*);
+bool isCSSPropertyExposed(CSSPropertyID, const CSSPropertySettings*);
 ASCIILiteral getPropertyName(CSSPropertyID);
 const AtomString& getPropertyNameAtomString(CSSPropertyID id);
 String getPropertyNameString(CSSPropertyID id);
@@ -1763,7 +1891,7 @@ foreach my $nameOrAlias (@namesAndAliases) {
 
     my @extendedAttributeValues = ("DelegateToSharedSyntheticAttribute=propertyValueForCamelCasedIDLAttribute", "CallWith=PropertyName");
     push(@extendedAttributeValues, "EnabledBySetting=${settingsFlags{$name}}") if $settingsFlags{$name};
-    push(@extendedAttributeValues, "EnabledAtRuntime=Enabled${runtimeFlags{$name}}") if $runtimeFlags{$name};
+    push(@extendedAttributeValues, "EnabledByDeprecatedGlobalSetting=Enabled${runtimeFlags{$name}}") if $runtimeFlags{$name};
     my $extendedAttributes = join(", ", @extendedAttributeValues);
 
     print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL "    [CEReactions, ${extendedAttributes}] attribute [LegacyNullToEmptyString] CSSOMString ${camelCasedAttributeName};\n";
@@ -1786,7 +1914,7 @@ foreach my $nameOrAlias (grep { $_ =~ /^\-webkit\-/ } @namesAndAliases) {
 
     my @extendedAttributeValues = ("DelegateToSharedSyntheticAttribute=propertyValueForWebKitCasedIDLAttribute", "CallWith=PropertyName");
     push(@extendedAttributeValues, "EnabledBySetting=${settingsFlags{$name}}") if $settingsFlags{$name};
-    push(@extendedAttributeValues, "EnabledAtRuntime=Enabled${runtimeFlags{$name}}") if $runtimeFlags{$name};
+    push(@extendedAttributeValues, "EnabledByDeprecatedGlobalSetting=Enabled${runtimeFlags{$name}}") if $runtimeFlags{$name};
     my $extendedAttributes = join(", ", @extendedAttributeValues);
 
     print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL "    [CEReactions, ${extendedAttributes}] attribute [LegacyNullToEmptyString] CSSOMString ${webkitCasedAttributeName};\n";
@@ -1808,7 +1936,7 @@ foreach my $nameOrAlias (grep { $_ =~ /\-/ } @namesAndAliases) {
 
     my @extendedAttributeValues = ("DelegateToSharedSyntheticAttribute=propertyValueForDashedIDLAttribute", "CallWith=PropertyName");
     push(@extendedAttributeValues, "EnabledBySetting=${settingsFlags{$name}}") if $settingsFlags{$name};
-    push(@extendedAttributeValues, "EnabledAtRuntime=Enabled${runtimeFlags{$name}}") if $runtimeFlags{$name};
+    push(@extendedAttributeValues, "EnabledByDeprecatedGlobalSetting=Enabled${runtimeFlags{$name}}") if $runtimeFlags{$name};
     my $extendedAttributes = join(", ", @extendedAttributeValues);
 
     print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL "    [CEReactions, ${extendedAttributes}] attribute [LegacyNullToEmptyString] CSSOMString ${dashedAttributeName};\n";
@@ -1830,7 +1958,7 @@ foreach my $nameOrAlias (grep { $_ =~ /^\-epub\-/ } @namesAndAliases) {
 
     my @extendedAttributeValues = ("DelegateToSharedSyntheticAttribute=propertyValueForEpubCasedIDLAttribute", "CallWith=PropertyName");
     push(@extendedAttributeValues, "EnabledBySetting=${settingsFlags{$name}}") if $settingsFlags{$name};
-    push(@extendedAttributeValues, "EnabledAtRuntime=Enabled${runtimeFlags{$name}}") if $runtimeFlags{$name};
+    push(@extendedAttributeValues, "EnabledByDeprecatedGlobalSetting=Enabled${runtimeFlags{$name}}") if $runtimeFlags{$name};
     my $extendedAttributes = join(", ", @extendedAttributeValues);
 
     print CSS_STYLE_DECLARATION_PROPERTY_NAMES_IDL "    [CEReactions, ${extendedAttributes}] attribute [LegacyNullToEmptyString] CSSOMString ${epubCasedAttributeName};\n";

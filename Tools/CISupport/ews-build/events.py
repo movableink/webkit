@@ -158,7 +158,9 @@ class Events(service.BuildbotService):
             "type": self.type_prefix + "build",
             "status": "started",
             "hostname": self.master_hostname,
-            "patch_id": self.extractProperty(build, 'patch_id'),
+            "change_id": self.extractProperty(build, 'github.head.sha') or self.extractProperty(build, 'patch_id'),
+            "pr_id": self.extractProperty(build, 'github.number') or -1,
+            "pr_project": self.extractProperty(build, 'project') or '',
             "build_id": build.get('buildid'),
             "builder_id": build.get('builderid'),
             "number": build.get('number'),
@@ -209,17 +211,15 @@ class Events(service.BuildbotService):
         build['description'] = builder.get('description', '?')
 
         if self.extractProperty(build, 'github.number'):
-            return self.buildFinishedGitHub(build)
-
-        patch_id = self.extractProperty(build, 'patch_id')
-        if not patch_id:
-            return
+            self.buildFinishedGitHub(build)
 
         data = {
             "type": self.type_prefix + "build",
             "status": "finished",
             "hostname": self.master_hostname,
-            "patch_id": self.extractProperty(build, 'patch_id'),
+            "change_id": self.extractProperty(build, 'github.head.sha') or self.extractProperty(build, 'patch_id'),
+            "pr_id": self.extractProperty(build, 'github.number') or -1,
+            "pr_project": self.extractProperty(build, 'project') or '',
             "build_id": build.get('buildid'),
             "builder_id": build.get('builderid'),
             "number": build.get('number'),
@@ -241,6 +241,10 @@ class Events(service.BuildbotService):
         if not sha or not repository:
             print('Pull request number defined, but sha is {} and repository {}, which are invalid'.format(sha, repository))
             print('Not reporting step started to GitHub')
+            return
+
+        if 'WebKit/WebKit' in repository:
+            # Do not report status directly to GitHub for WebKit/WebKit, since we have status-bubbles for that.
             return
 
         builder = yield self.master.db.builders.getBuilder(build.get('builderid'))
@@ -329,6 +333,7 @@ class GitHubEventHandlerNoEdits(GitHubEventHandler):
     UNSAFE_MERGE_QUEUE_LABEL = 'unsafe-merge-queue'
     MERGE_QUEUE_LABEL = 'merge-queue'
     LABEL_PROCESS_DELAY = 10
+    ACCOUNTS_TO_IGNORE = ('webkit-early-warning-system', 'webkit-commit-queue')
 
     @classmethod
     def file_with_status_sign(cls, info):
@@ -375,6 +380,7 @@ class GitHubEventHandlerNoEdits(GitHubEventHandler):
         action = payload.get('action')
         state = payload.get('pull_request', {}).get('state')
         labels = [label.get('name') for label in payload.get('pull_request', {}).get('labels', [])]
+        sender = payload.get('sender', {}).get('login', '')
 
         if state not in self.OPEN_STATES:
             log.msg("PR #{} is '{}', which triggers nothing".format(pr_number, state))
@@ -392,5 +398,9 @@ class GitHubEventHandlerNoEdits(GitHubEventHandler):
             payload['action'] = 'synchronize'
             time.sleep(self.LABEL_PROCESS_DELAY)
             return super(GitHubEventHandlerNoEdits, self).handle_pull_request(payload, 'merge_queue')
+
+        if sender in self.ACCOUNTS_TO_IGNORE:
+            log.msg(f"PR #{pr_number} was updated by '{sender}', ignore it")
+            return ([], 'git')
 
         return super(GitHubEventHandlerNoEdits, self).handle_pull_request(payload, event)

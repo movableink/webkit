@@ -9,7 +9,7 @@
 
 using namespace angle;
 
-class DrawBuffersTest : public ANGLETest
+class DrawBuffersTest : public ANGLETest<>
 {
   protected:
     DrawBuffersTest()
@@ -262,13 +262,6 @@ TEST_P(DrawBuffersTest, Gaps)
 {
     ANGLE_SKIP_TEST_IF(!setupTest());
 
-    // TODO(syoussefi): Qualcomm driver crashes in the presence of VK_ATTACHMENT_UNUSED.
-    // http://anglebug.com/3423
-    ANGLE_SKIP_TEST_IF(IsVulkan() && IsAndroid());
-
-    // Fails on Intel Ubuntu 19.04 Mesa 19.0.2 Vulkan. http://anglebug.com/3616
-    ANGLE_SKIP_TEST_IF(IsLinux() && IsIntel() && IsVulkan());
-
     glBindTexture(GL_TEXTURE_2D, mTextures[0]);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, mTextures[0], 0);
 
@@ -290,13 +283,6 @@ TEST_P(DrawBuffersTest, Gaps)
 TEST_P(DrawBuffersTest, BlendWithGaps)
 {
     ANGLE_SKIP_TEST_IF(!setupTest());
-
-    // Qualcomm driver crashes in the presence of VK_ATTACHMENT_UNUSED.
-    // http://anglebug.com/3423
-    ANGLE_SKIP_TEST_IF(IsVulkan() && IsAndroid());
-
-    // Fails on Intel Ubuntu 19.04 Mesa 19.0.2 Vulkan. http://anglebug.com/3616
-    ANGLE_SKIP_TEST_IF(IsLinux() && IsIntel() && IsVulkan());
 
     // http://anglebug.com/5154
     ANGLE_SKIP_TEST_IF(IsOSX() && IsIntel() && IsDesktopOpenGL());
@@ -337,10 +323,6 @@ TEST_P(DrawBuffersTest, BlendWithGaps)
 // Test that clear works with gaps
 TEST_P(DrawBuffersTest, ClearWithGaps)
 {
-    // TODO(syoussefi): Qualcomm driver crashes in the presence of VK_ATTACHMENT_UNUSED.
-    // http://anglebug.com/3423
-    ANGLE_SKIP_TEST_IF(IsVulkan() && IsAndroid());
-
     ANGLE_SKIP_TEST_IF(!setupTest());
 
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &mMaxDrawBuffers);
@@ -559,10 +541,6 @@ TEST_P(DrawBuffersTest, FirstAndLast)
 {
     ANGLE_SKIP_TEST_IF(!setupTest());
 
-    // TODO(syoussefi): Qualcomm driver crashes in the presence of VK_ATTACHMENT_UNUSED.
-    // http://anglebug.com/3423
-    ANGLE_SKIP_TEST_IF(IsVulkan() && IsAndroid());
-
     glBindTexture(GL_TEXTURE_2D, mTextures[0]);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, mTextures[0], 0);
 
@@ -590,13 +568,6 @@ TEST_P(DrawBuffersTest, FirstAndLast)
 TEST_P(DrawBuffersTest, FirstHalfNULL)
 {
     ANGLE_SKIP_TEST_IF(!setupTest());
-
-    // TODO(syoussefi): Qualcomm driver crashes in the presence of VK_ATTACHMENT_UNUSED.
-    // http://anglebug.com/3423
-    ANGLE_SKIP_TEST_IF(IsVulkan() && IsAndroid());
-
-    // Fails on Intel Ubuntu 19.04 Mesa 19.0.2 Vulkan. http://anglebug.com/3616
-    ANGLE_SKIP_TEST_IF(IsLinux() && IsIntel() && IsVulkan());
 
     bool flags[8]  = {false};
     GLenum bufs[8] = {GL_NONE};
@@ -642,15 +613,48 @@ TEST_P(DrawBuffersTest, DefaultFramebufferDrawBufferQuery)
     EXPECT_EQ(GL_NONE, drawbuffer);
 }
 
+// Test that draws to every buffer and verifies that every buffer was drawn to.
+TEST_P(DrawBuffersTest, AllRGBA8)
+{
+    ANGLE_SKIP_TEST_IF(!setupTest());
+
+    bool flags[8]  = {false};
+    GLenum bufs[8] = {GL_NONE};
+    GLTexture textures[8];
+
+    for (GLint texIndex = 0; texIndex < mMaxDrawBuffers; ++texIndex)
+    {
+        glBindTexture(GL_TEXTURE_2D, textures[texIndex]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, getWindowWidth(), getWindowHeight(), 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + texIndex, GL_TEXTURE_2D,
+                               textures[texIndex], 0);
+        flags[texIndex] = true;
+        bufs[texIndex]  = GL_COLOR_ATTACHMENT0 + texIndex;
+    }
+
+    GLuint program;
+    setupMRTProgram(flags, &program);
+
+    setDrawBuffers(mMaxDrawBuffers, bufs);
+    drawQuad(program, positionAttrib(), 0.5);
+
+    for (GLint texIndex = 0; texIndex < mMaxDrawBuffers; ++texIndex)
+    {
+        verifyAttachment2D(texIndex, textures[texIndex], GL_TEXTURE_2D, 0);
+    }
+
+    EXPECT_GL_NO_ERROR();
+
+    glDeleteProgram(program);
+}
 // Same as above but adds a state change from a program with different masks after a clear.
 TEST_P(DrawBuffersWebGL2Test, TwoProgramsWithDifferentOutputsAndClear)
 {
     // TODO(http://anglebug.com/2872): Broken on the GL back-end.
     ANGLE_SKIP_TEST_IF(IsOpenGL());
-
-    // TODO(syoussefi): Qualcomm driver crashes in the presence of VK_ATTACHMENT_UNUSED.
-    // http://anglebug.com/3423
-    ANGLE_SKIP_TEST_IF(IsVulkan() && IsAndroid());
 
     ANGLE_SKIP_TEST_IF(!setupTest());
 
@@ -660,7 +664,7 @@ TEST_P(DrawBuffersWebGL2Test, TwoProgramsWithDifferentOutputsAndClear)
     bool flags[8]      = {false};
     GLenum someBufs[4] = {GL_NONE};
     GLenum allBufs[4]  = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2,
-                         GL_COLOR_ATTACHMENT3};
+                          GL_COLOR_ATTACHMENT3};
 
     constexpr GLuint kMaxBuffers     = 4;
     constexpr GLuint kHalfMaxBuffers = 2;
@@ -1085,13 +1089,6 @@ TEST_P(DrawBuffersTestES3, BlendWithDrawBufferAndFramebufferChanges)
 {
     ANGLE_SKIP_TEST_IF(!IsGLExtensionEnabled("GL_OES_draw_buffers_indexed"));
 
-    // Qualcomm driver crashes in the presence of VK_ATTACHMENT_UNUSED.
-    // http://anglebug.com/3423
-    ANGLE_SKIP_TEST_IF(IsVulkan() && IsAndroid());
-
-    // Fails on Intel Ubuntu 19.04 Mesa 19.0.2 Vulkan. http://anglebug.com/3616
-    ANGLE_SKIP_TEST_IF(IsLinux() && IsIntel() && IsVulkan());
-
     // http://anglebug.com/5154
     ANGLE_SKIP_TEST_IF(IsOSX() && IsIntel() && IsDesktopOpenGL());
 
@@ -1454,6 +1451,7 @@ TEST_P(ColorMaskForDrawBuffersTest, Blit)
 ANGLE_INSTANTIATE_TEST(DrawBuffersTest,
                        ANGLE_ALL_TEST_PLATFORMS_ES2,
                        ANGLE_ALL_TEST_PLATFORMS_ES3,
+                       ES2_METAL().enable(Feature::LimitMaxDrawBuffersForTesting),
                        ES2_VULKAN()
                            .disable(Feature::SupportsTransformFeedbackExtension)
                            .disable(Feature::SupportsGeometryStreamsCapability)

@@ -41,6 +41,7 @@
 #include "ControlFlowProfiler.h"
 #include "CustomGetterSetter.h"
 #include "DOMAttributeGetterSetter.h"
+#include "Debugger.h"
 #include "DeferredWorkTimer.h"
 #include "Disassembler.h"
 #include "DoublePredictionFuzzerAgent.h"
@@ -69,6 +70,7 @@
 #include "JSImmutableButterfly.h"
 #include "JSLock.h"
 #include "JSMap.h"
+#include "JSMicrotask.h"
 #include "JSPromise.h"
 #include "JSPropertyNameEnumerator.h"
 #include "JSScriptFetchParameters.h"
@@ -210,40 +212,23 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
     , heap(*this, heapType)
     , clientHeap(heap)
     , vmType(vmType)
-    , clientData(nullptr)
-    , topEntryFrame(nullptr)
     , topCallFrame(CallFrame::noCaller())
     , deferredWorkTimer(DeferredWorkTimer::create(*this))
     , m_atomStringTable(vmType == Default ? Thread::current().atomStringTable() : new AtomStringTable)
-    , m_privateSymbolRegistry(WTF::SymbolRegistry::Type::PrivateSymbol)
-    , propertyNames(nullptr)
     , emptyList(new ArgList)
     , machineCodeBytesPerBytecodeWordForBaselineJIT(makeUnique<SimpleStats>())
     , symbolImplToSymbolMap(*this)
-    , interpreter(nullptr)
-    , entryScope(nullptr)
     , m_regExpCache(new RegExpCache(this))
-    , m_compactVariableMap(adoptRef(*(new CompactTDZEnvironmentMap)))
-#if ENABLE(REGEXP_TRACING)
-    , m_rtTraceList(new RTTraceList())
-#endif
-#if ENABLE(GC_VALIDATION)
-    , m_initializingObjectClass(0)
-#endif
-    , m_stackPointerAtVMEntry(nullptr)
+    , m_compactVariableMap(adoptRef(*new CompactTDZEnvironmentMap))
     , m_codeCache(makeUnique<CodeCache>())
     , m_intlCache(makeUnique<IntlCache>())
     , m_builtinExecutables(makeUnique<BuiltinExecutables>(*this))
-    , m_typeProfilerEnabledCount(0)
-    , m_primitiveGigacageEnabled(IsWatched)
-    , m_controlFlowProfilerEnabledCount(0)
 {
     if (UNLIKELY(vmCreationShouldCrash))
         CRASH_WITH_INFO(0x4242424220202020, 0xbadbeef0badbeef, 0x1234123412341234, 0x1337133713371337);
 
     VMInspector::instance().add(this);
 
-    interpreter = new Interpreter(*this);
     updateSoftReservedZoneSize(Options::softReservedZoneSize());
     setLastStackTop(Thread::current());
 
@@ -337,8 +322,6 @@ VM::VM(VMType vmType, HeapType heapType, WTF::RunLoop* runLoop, bool* success)
         m_perBytecodeProfiler->registerToSaveAtExit(pathOut.toCString().data());
     }
 
-    callFrameForCatch = nullptr;
-
     // Initialize this last, as a free way of asserting that VM initialization itself
     // won't use this.
     m_typedArrayController = adoptRef(new SimpleTypedArrayController());
@@ -426,7 +409,7 @@ VM::~VM()
     deferredWorkTimer->stopRunningTasks();
 #if ENABLE(WEBASSEMBLY)
     if (Wasm::Worklist* worklist = Wasm::existingWorklistOrNull())
-        worklist->stopAllPlansForContext(wasmContext);
+        worklist->stopAllPlansForContext(*this);
 #endif
     if (UNLIKELY(m_watchdog))
         m_watchdog->willDestroyVM(this);
@@ -463,11 +446,6 @@ VM::~VM()
 
     VMInspector::instance().remove(this);
 
-    delete interpreter;
-#ifndef NDEBUG
-    interpreter = reinterpret_cast<Interpreter*>(0xbbadbeef);
-#endif
-
     delete emptyList;
 
     delete propertyNames;
@@ -476,10 +454,6 @@ VM::~VM()
 
     delete clientData;
     delete m_regExpCache;
-
-#if ENABLE(REGEXP_TRACING)
-    delete m_rtTraceList;
-#endif
 
 #if ENABLE(DFG_JIT)
     for (unsigned i = 0; i < m_scratchBuffers.size(); ++i)
@@ -652,9 +626,9 @@ MacroAssemblerCodeRef<JITThunkPtrTag> VM::getCTIStub(ThunkGenerator generator)
 
 #endif // ENABLE(JIT)
 
-NativeExecutable* VM::getHostFunction(NativeFunction function, NativeFunction constructor, const String& name)
+NativeExecutable* VM::getHostFunction(NativeFunction function, ImplementationVisibility implementationVisibility, NativeFunction constructor, const String& name)
 {
-    return getHostFunction(function, NoIntrinsic, constructor, nullptr, name);
+    return getHostFunction(function, implementationVisibility, NoIntrinsic, constructor, nullptr, name);
 }
 
 static Ref<NativeJITCode> jitCodeForCallTrampoline()
@@ -677,19 +651,19 @@ static Ref<NativeJITCode> jitCodeForConstructTrampoline()
     return *result;
 }
 
-NativeExecutable* VM::getHostFunction(NativeFunction function, Intrinsic intrinsic, NativeFunction constructor, const DOMJIT::Signature* signature, const String& name)
+NativeExecutable* VM::getHostFunction(NativeFunction function, ImplementationVisibility implementationVisibility, Intrinsic intrinsic, NativeFunction constructor, const DOMJIT::Signature* signature, const String& name)
 {
 #if ENABLE(JIT)
     if (Options::useJIT()) {
         return jitStubs->hostFunctionStub(
-            *this, function, constructor,
+            *this, toTagged(function), toTagged(constructor),
             intrinsic != NoIntrinsic ? thunkGeneratorForIntrinsic(intrinsic) : nullptr,
-            intrinsic, signature, name);
+            implementationVisibility, intrinsic, signature, name);
     }
 #endif // ENABLE(JIT)
     UNUSED_PARAM(intrinsic);
     UNUSED_PARAM(signature);
-    return NativeExecutable::create(*this, jitCodeForCallTrampoline(), function, jitCodeForConstructTrampoline(), constructor, name);
+    return NativeExecutable::create(*this, jitCodeForCallTrampoline(), toTagged(function), jitCodeForConstructTrampoline(), toTagged(constructor), implementationVisibility, name);
 }
 
 NativeExecutable* VM::getBoundFunction(bool isJSFunction, bool canConstruct)
@@ -701,6 +675,7 @@ NativeExecutable* VM::getBoundFunction(bool isJSFunction, bool canConstruct)
             return cached;
         NativeExecutable* result = getHostFunction(
             slowCase ? boundFunctionCall : boundThisNoArgsFunctionCall,
+            ImplementationVisibility::Public,
             slowCase ? NoIntrinsic : BoundFunctionCallIntrinsic,
             canConstruct ? (slowCase ? boundFunctionConstruct : boundThisNoArgsFunctionConstruct) : callHostFunctionAsConstructor, nullptr, String());
         slot = Weak<NativeExecutable>(result);
@@ -733,7 +708,7 @@ NativeExecutable* VM::getRemoteFunction(bool isJSFunction)
 
         NativeExecutable* result = getHostFunction(
             slowCase ? remoteFunctionCallGeneric : remoteFunctionCallForJSFunction,
-            intrinsic,
+            ImplementationVisibility::Public, intrinsic,
             callHostFunctionAsConstructor, nullptr, String());
         slot = Weak<NativeExecutable>(result);
         return result;
@@ -744,7 +719,7 @@ NativeExecutable* VM::getRemoteFunction(bool isJSFunction)
     return getOrCreate(m_fastRemoteFunctionExecutable);
 }
 
-MacroAssemblerCodePtr<JSEntryPtrTag> VM::getCTIInternalFunctionTrampolineFor(CodeSpecializationKind kind)
+CodePtr<JSEntryPtrTag> VM::getCTIInternalFunctionTrampolineFor(CodeSpecializationKind kind)
 {
 #if ENABLE(JIT)
     if (Options::useJIT()) {
@@ -911,7 +886,7 @@ Exception* VM::throwException(JSGlobalObject* globalObject, Exception* exception
         CRASH();
     }
 
-    interpreter->notifyDebuggerOfExceptionToBeThrown(*this, globalObject, throwOriginFrame, exceptionToThrow);
+    interpreter.notifyDebuggerOfExceptionToBeThrown(*this, globalObject, throwOriginFrame, exceptionToThrow);
 
     setException(exceptionToThrow);
 
@@ -947,7 +922,7 @@ size_t VM::updateSoftReservedZoneSize(size_t softReservedZoneSize)
     size_t oldSoftReservedZoneSize = m_currentSoftReservedZoneSize;
     m_currentSoftReservedZoneSize = softReservedZoneSize;
 #if ENABLE(C_LOOP)
-    interpreter->cloopStack().setSoftReservedZoneSize(softReservedZoneSize);
+    interpreter.cloopStack().setSoftReservedZoneSize(softReservedZoneSize);
 #endif
 
     updateStackLimits();
@@ -1091,6 +1066,7 @@ static void logSanitizeStack(VM& vm)
 }
 
 #if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
+
 char* VM::acquireRegExpPatternContexBuffer()
 {
     m_regExpPatternContextLock.lock();
@@ -1106,21 +1082,23 @@ void VM::releaseRegExpPatternContexBuffer()
 
     m_regExpPatternContextLock.unlock();
 }
+
 #endif
 
 #if ENABLE(REGEXP_TRACING)
+
 void VM::addRegExpToTrace(RegExp* regExp)
 {
     gcProtect(regExp);
-    m_rtTraceList->add(regExp);
+    m_rtTraceList.add(regExp);
 }
 
 void VM::dumpRegExpTrace()
 {
-    // The first RegExp object is ignored.  It is create by the RegExpPrototype ctor and not used.
-    RTTraceList::iterator iter = ++m_rtTraceList->begin();
+    // The first RegExp object is ignored. It is created by the RegExpPrototype ctor and not used.
+    RTTraceList::iterator iter = ++m_rtTraceList.begin();
     
-    if (iter != m_rtTraceList->end()) {
+    if (iter != m_rtTraceList.end()) {
         dataLogF("\nRegExp Tracing\n");
         dataLogF("Regular Expression                              8 Bit          16 Bit        match()    Matches    Average\n");
         dataLogF(" <Match only / Match>                         JIT Addr      JIT Address       calls      found   String len\n");
@@ -1128,7 +1106,7 @@ void VM::dumpRegExpTrace()
     
         unsigned reCount = 0;
     
-        for (; iter != m_rtTraceList->end(); ++iter, ++reCount) {
+        for (; iter != m_rtTraceList.end(); ++iter, ++reCount) {
             (*iter)->printTraceData();
             gcUnprotect(*iter);
         }
@@ -1136,12 +1114,9 @@ void VM::dumpRegExpTrace()
         dataLogF("%d Regular Expressions\n", reCount);
     }
     
-    m_rtTraceList->clear();
+    m_rtTraceList.clear();
 }
-#else
-void VM::dumpRegExpTrace()
-{
-}
+
 #endif
 
 WatchpointSet* VM::ensureWatchpointSetForImpureProperty(UniquedStringImpl* propertyName)
@@ -1232,9 +1207,9 @@ void VM::dumpTypeProfilerData()
     typeProfiler()->dumpTypeProfilerData(*this);
 }
 
-void VM::queueMicrotask(JSGlobalObject& globalObject, Ref<Microtask>&& task)
+void VM::queueMicrotask(QueuedTask&& task)
 {
-    m_microtaskQueue.append(makeUnique<QueuedTask>(*this, &globalObject, WTFMove(task)));
+    m_microtaskQueue.enqueue(WTFMove(task));
 }
 
 void VM::callPromiseRejectionCallback(Strong<JSPromise>& promise)
@@ -1280,7 +1255,8 @@ void VM::drainMicrotasks()
     else {
         do {
             while (!m_microtaskQueue.isEmpty()) {
-                m_microtaskQueue.takeFirst()->run();
+                auto task = m_microtaskQueue.dequeue();
+                task.run();
                 if (m_onEachMicrotaskTick)
                     m_onEachMicrotaskTick(*this);
             }
@@ -1288,11 +1264,6 @@ void VM::drainMicrotasks()
         } while (!m_microtaskQueue.isEmpty());
     }
     finalizeSynchronousJSExecution();
-}
-
-void QueuedTask::run()
-{
-    m_microtask->run(m_globalObject.get());
 }
 
 void sanitizeStackForVM(VM& vm)
@@ -1306,7 +1277,7 @@ void sanitizeStackForVM(VM& vm)
 
     RELEASE_ASSERT(stack.contains(vm.lastStackTop()), 0xaa10, vm.lastStackTop(), stack.origin(), stack.end());
 #if ENABLE(C_LOOP)
-    vm.interpreter->cloopStack().sanitizeStack();
+    vm.interpreter.cloopStack().sanitizeStack();
 #else
     sanitizeStackForVMImpl(&vm);
 #endif
@@ -1329,17 +1300,17 @@ size_t VM::committedStackByteCount()
 #if ENABLE(C_LOOP)
 bool VM::ensureStackCapacityForCLoop(Register* newTopOfStack)
 {
-    return interpreter->cloopStack().ensureCapacityFor(newTopOfStack);
+    return interpreter.cloopStack().ensureCapacityFor(newTopOfStack);
 }
 
 bool VM::isSafeToRecurseSoftCLoop() const
 {
-    return interpreter->cloopStack().isSafeToRecurse();
+    return interpreter.cloopStack().isSafeToRecurse();
 }
 
 void* VM::currentCLoopStackPointer() const
 {
-    return interpreter->cloopStack().currentStackPointer();
+    return interpreter.cloopStack().currentStackPointer();
 }
 #endif // ENABLE(C_LOOP)
 
@@ -1491,5 +1462,56 @@ void VM::removeLoopHintExecutionCounter(const JSInstruction* instruction)
     if (!iter->value.first)
         m_loopHintExecutionCounts.remove(iter);
 }
+
+void VM::beginMarking()
+{
+    m_microtaskQueue.beginMarking();
+}
+
+template<typename Visitor>
+void VM::visitAggregateImpl(Visitor& visitor)
+{
+    m_microtaskQueue.visitAggregate(visitor);
+}
+DEFINE_VISIT_AGGREGATE(VM);
+
+void VM::addDebugger(Debugger& debugger)
+{
+    m_debuggers.append(&debugger);
+}
+
+void VM::removeDebugger(Debugger& debugger)
+{
+    m_debuggers.remove(&debugger);
+}
+
+void QueuedTask::run()
+{
+    if (!m_job.isObject())
+        return;
+    JSObject* job = jsCast<JSObject*>(m_job);
+    JSGlobalObject* globalObject = job->globalObject();
+    runJSMicrotask(globalObject, m_identifier, job, m_arguments[0], m_arguments[1], m_arguments[2], m_arguments[3]);
+}
+
+template<typename Visitor>
+void MicrotaskQueue::visitAggregateImpl(Visitor& visitor)
+{
+    // Because content in the queue will not be changed, we need to scan it only once per an entry during one GC cycle.
+    // We record the previous scan's index, and restart scanning again in CollectorPhase::FixPoint from that.
+    // When new GC phase begins, this cursor is reset to zero (beginMarking). This optimization is introduced because
+    // some of application have massive size of MicrotaskQueue depth. For example, in parallel-promises-es2015-native.js
+    // benchmark, it becomes 251670 at most.
+    // This cursor is adjusted when an entry is dequeued. And we do not use any locking here, and that's fine: these
+    // values are read by GC when CollectorPhase::FixPoint and CollectorPhase::Begin, and both suspend the mutator, thus,
+    // there is no concurrency issue.
+    for (auto iterator = m_queue.begin() + m_markedBefore, end = m_queue.end(); iterator != end; ++iterator) {
+        auto& task = *iterator;
+        visitor.appendUnbarriered(task.m_job);
+        visitor.appendUnbarriered(task.m_arguments, QueuedTask::maxArguments);
+    }
+    m_markedBefore = m_queue.size();
+}
+DEFINE_VISIT_AGGREGATE(MicrotaskQueue);
 
 } // namespace JSC

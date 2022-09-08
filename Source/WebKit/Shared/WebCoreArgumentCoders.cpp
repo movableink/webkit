@@ -37,6 +37,8 @@
 #include <WebCore/AuthenticationChallenge.h>
 #include <WebCore/AuthenticationChallenge.h>
 #include <WebCore/BlobPart.h>
+#include <WebCore/ByteArrayPixelBuffer.h>
+#include <WebCore/CSPViolationReportBody.h>
 #include <WebCore/CacheQueryOptions.h>
 #include <WebCore/CacheStorageConnection.h>
 #include <WebCore/CompositionUnderline.h>
@@ -66,6 +68,7 @@
 #include <WebCore/Length.h>
 #include <WebCore/LengthBox.h>
 #include <WebCore/MediaSelectionOption.h>
+#include <WebCore/NotificationResources.h>
 #include <WebCore/Pasteboard.h>
 #include <WebCore/PluginData.h>
 #include <WebCore/PromisedAttachmentInfo.h>
@@ -73,6 +76,8 @@
 #include <WebCore/RectEdges.h>
 #include <WebCore/Region.h>
 #include <WebCore/RegistrableDomain.h>
+#include <WebCore/Report.h>
+#include <WebCore/ReportBody.h>
 #include <WebCore/ResourceError.h>
 #include <WebCore/ResourceLoadStatistics.h>
 #include <WebCore/ResourceRequest.h>
@@ -90,6 +95,7 @@
 #include <WebCore/ShareData.h>
 #include <WebCore/SharedBuffer.h>
 #include <WebCore/SystemImage.h>
+#include <WebCore/TestReportBody.h>
 #include <WebCore/TextCheckerClient.h>
 #include <WebCore/TextIndicator.h>
 #include <WebCore/TimingFunction.h>
@@ -143,11 +149,7 @@ using namespace WebKit;
     template void ArgumentCoder<Type>::encode<Encoder>(Encoder&, const Type&); \
     template void ArgumentCoder<Type>::encode<StreamConnectionEncoder>(StreamConnectionEncoder&, const Type&);
 
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(AffineTransform)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(FloatBoxExtent)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(FloatPoint)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(FloatPoint3D)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(FloatRect)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(FloatRoundedRect)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(FloatSize)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(IntPoint)
@@ -156,89 +158,10 @@ DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(IntSize)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(LayoutPoint)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(LayoutSize)
 
-#if USE(CG)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(CGRect)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(CGSize)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(CGPoint)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(CGAffineTransform)
-#endif
-
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(DisplayList::SetInlineFillColor)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE(DisplayList::SetInlineStrokeColor)
 
 #undef DEFINE_SIMPLE_ARGUMENT_CODER_FOR_SOURCE
-
-void ArgumentCoder<CacheQueryOptions>::encode(Encoder& encoder, const CacheQueryOptions& options)
-{
-    encoder << options.ignoreSearch;
-    encoder << options.ignoreMethod;
-    encoder << options.ignoreVary;
-    encoder << options.cacheName;
-}
-
-bool ArgumentCoder<CacheQueryOptions>::decode(Decoder& decoder, CacheQueryOptions& options)
-{
-    bool ignoreSearch;
-    if (!decoder.decode(ignoreSearch))
-        return false;
-    bool ignoreMethod;
-    if (!decoder.decode(ignoreMethod))
-        return false;
-    bool ignoreVary;
-    if (!decoder.decode(ignoreVary))
-        return false;
-    String cacheName;
-    if (!decoder.decode(cacheName))
-        return false;
-
-    options.ignoreSearch = ignoreSearch;
-    options.ignoreMethod = ignoreMethod;
-    options.ignoreVary = ignoreVary;
-    options.cacheName = WTFMove(cacheName);
-    return true;
-}
-
-void ArgumentCoder<CharacterRange>::encode(Encoder& encoder, const CharacterRange& range)
-{
-    encoder << static_cast<uint64_t>(range.location);
-    encoder << static_cast<uint64_t>(range.length);
-}
-
-std::optional<CharacterRange> ArgumentCoder<CharacterRange>::decode(Decoder& decoder)
-{
-    std::optional<uint64_t> location;
-    decoder >> location;
-    if (!location)
-        return std::nullopt;
-
-    std::optional<uint64_t> length;
-    decoder >> length;
-    if (!length)
-        return std::nullopt;
-
-    return { { *location, *length } };
-}
-
-void ArgumentCoder<DOMCacheEngine::CacheInfo>::encode(Encoder& encoder, const DOMCacheEngine::CacheInfo& info)
-{
-    encoder << info.identifier;
-    encoder << info.name;
-}
-
-auto ArgumentCoder<DOMCacheEngine::CacheInfo>::decode(Decoder& decoder) -> std::optional<DOMCacheEngine::CacheInfo>
-{
-    std::optional<uint64_t> identifier;
-    decoder >> identifier;
-    if (!identifier)
-        return std::nullopt;
-    
-    std::optional<String> name;
-    decoder >> name;
-    if (!name)
-        return std::nullopt;
-    
-    return {{ WTFMove(*identifier), WTFMove(*name) }};
-}
 
 void ArgumentCoder<DOMCacheEngine::Record>::encode(Encoder& encoder, const DOMCacheEngine::Record& record)
 {
@@ -350,91 +273,6 @@ bool ArgumentCoder<EventTrackingRegions>::decode(Decoder& decoder, EventTracking
     eventTrackingRegions.eventSpecificSynchronousDispatchRegions = WTFMove(eventSpecificSynchronousDispatchRegions);
     return true;
 }
-
-template<typename Encoder>
-void ArgumentCoder<TransformationMatrix>::encode(Encoder& encoder, const TransformationMatrix& transformationMatrix)
-{
-    encoder << transformationMatrix.m11();
-    encoder << transformationMatrix.m12();
-    encoder << transformationMatrix.m13();
-    encoder << transformationMatrix.m14();
-
-    encoder << transformationMatrix.m21();
-    encoder << transformationMatrix.m22();
-    encoder << transformationMatrix.m23();
-    encoder << transformationMatrix.m24();
-
-    encoder << transformationMatrix.m31();
-    encoder << transformationMatrix.m32();
-    encoder << transformationMatrix.m33();
-    encoder << transformationMatrix.m34();
-
-    encoder << transformationMatrix.m41();
-    encoder << transformationMatrix.m42();
-    encoder << transformationMatrix.m43();
-    encoder << transformationMatrix.m44();
-}
-
-bool ArgumentCoder<TransformationMatrix>::decode(Decoder& decoder, TransformationMatrix& transformationMatrix)
-{
-    double m11;
-    if (!decoder.decode(m11))
-        return false;
-    double m12;
-    if (!decoder.decode(m12))
-        return false;
-    double m13;
-    if (!decoder.decode(m13))
-        return false;
-    double m14;
-    if (!decoder.decode(m14))
-        return false;
-
-    double m21;
-    if (!decoder.decode(m21))
-        return false;
-    double m22;
-    if (!decoder.decode(m22))
-        return false;
-    double m23;
-    if (!decoder.decode(m23))
-        return false;
-    double m24;
-    if (!decoder.decode(m24))
-        return false;
-
-    double m31;
-    if (!decoder.decode(m31))
-        return false;
-    double m32;
-    if (!decoder.decode(m32))
-        return false;
-    double m33;
-    if (!decoder.decode(m33))
-        return false;
-    double m34;
-    if (!decoder.decode(m34))
-        return false;
-
-    double m41;
-    if (!decoder.decode(m41))
-        return false;
-    double m42;
-    if (!decoder.decode(m42))
-        return false;
-    double m43;
-    if (!decoder.decode(m43))
-        return false;
-    double m44;
-    if (!decoder.decode(m44))
-        return false;
-
-    transformationMatrix.setMatrix(m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44);
-    return true;
-}
-
-template void ArgumentCoder<TransformationMatrix>::encode<Encoder>(Encoder&, const TransformationMatrix&);
-template void ArgumentCoder<TransformationMatrix>::encode<StreamConnectionEncoder>(StreamConnectionEncoder&, const TransformationMatrix&);
 
 void ArgumentCoder<LinearTimingFunction>::encode(Encoder& encoder, const LinearTimingFunction& timingFunction)
 {
@@ -1017,7 +855,6 @@ std::optional<Ref<Font>> ArgumentCoder<Font>::decode(Decoder& decoder)
 void ArgumentCoder<DecomposedGlyphs>::encode(Encoder& encoder, const DecomposedGlyphs& decomposedGlyphs)
 {
     encoder << decomposedGlyphs.positionedGlyphs();
-    encoder << decomposedGlyphs.bounds();
     encoder << decomposedGlyphs.renderingResourceIdentifier();
 }
 
@@ -1028,17 +865,12 @@ std::optional<Ref<DecomposedGlyphs>> ArgumentCoder<DecomposedGlyphs>::decode(Dec
     if (!positionedGlyphs)
         return std::nullopt;
 
-    std::optional<FloatRect> bounds;
-    decoder >> bounds;
-    if (!bounds)
-        return std::nullopt;
-
     std::optional<RenderingResourceIdentifier> renderingResourceIdentifier;
     decoder >> renderingResourceIdentifier;
     if (!renderingResourceIdentifier)
         return std::nullopt;
 
-    return DecomposedGlyphs::create(WTFMove(*positionedGlyphs), *bounds, *renderingResourceIdentifier);
+    return DecomposedGlyphs::create(WTFMove(*positionedGlyphs), *renderingResourceIdentifier);
 }
 
 void ArgumentCoder<Cursor>::encode(Encoder& encoder, const Cursor& cursor)
@@ -1491,38 +1323,6 @@ bool ArgumentCoder<PasteboardCustomData>::decode(Decoder& decoder, PasteboardCus
         return false;
 
     data = PasteboardCustomData(WTFMove(origin), WTFMove(items));
-    return true;
-}
-
-void ArgumentCoder<PasteboardURL>::encode(Encoder& encoder, const PasteboardURL& content)
-{
-    encoder << content.url;
-    encoder << content.title;
-#if PLATFORM(MAC)
-    encoder << content.userVisibleForm;
-#endif
-#if PLATFORM(GTK)
-    encoder << content.markup;
-#endif
-}
-
-bool ArgumentCoder<PasteboardURL>::decode(Decoder& decoder, PasteboardURL& content)
-{
-    if (!decoder.decode(content.url))
-        return false;
-
-    if (!decoder.decode(content.title))
-        return false;
-
-#if PLATFORM(MAC)
-    if (!decoder.decode(content.userVisibleForm))
-        return false;
-#endif
-#if PLATFORM(GTK)
-    if (!decoder.decode(content.markup))
-        return false;
-#endif
-
     return true;
 }
 
@@ -2919,7 +2719,7 @@ void ArgumentCoder<WebCore::FragmentedSharedBuffer>::encode(Encoder& encoder, co
         auto sharedMemoryBuffer = SharedMemory::copyBuffer(buffer);
         sharedMemoryBuffer->createHandle(handle, SharedMemory::Protection::ReadOnly);
     }
-    encoder << SharedMemory::IPCHandle { WTFMove(handle), bufferSize };
+    encoder << WTFMove(handle);
 #endif
 }
 
@@ -2943,11 +2743,11 @@ std::optional<Ref<WebCore::FragmentedSharedBuffer>> ArgumentCoder<WebCore::Fragm
 
     return SharedBuffer::create(WTFMove(data));
 #else
-    SharedMemory::IPCHandle ipcHandle;
-    if (!decoder.decode(ipcHandle))
+    SharedMemory::Handle handle;
+    if (!decoder.decode(handle))
         return std::nullopt;
 
-    auto sharedMemoryBuffer = SharedMemory::map(ipcHandle.handle, SharedMemory::Protection::ReadOnly);
+    auto sharedMemoryBuffer = SharedMemory::map(handle, SharedMemory::Protection::ReadOnly);
     if (!sharedMemoryBuffer)
         return std::nullopt;
 
@@ -3087,6 +2887,25 @@ std::optional<Ref<SystemImage>> ArgumentCoder<SystemImage>::decode(Decoder& deco
     return std::nullopt;
 }
 
+void ArgumentCoder<WebCore::NotificationResources>::encode(Encoder& encoder, const WebCore::NotificationResources& resources)
+{
+    encodeOptionalImage(encoder, resources.icon().get());
+}
+
+std::optional<RefPtr<WebCore::NotificationResources>> ArgumentCoder<WebCore::NotificationResources>::decode(Decoder& decoder)
+{
+    RefPtr<Image> icon;
+    if (!decodeOptionalImage(decoder, icon))
+        return std::nullopt;
+
+    if (!icon)
+        return nullptr;
+
+    auto resources = WebCore::NotificationResources::create();
+    resources->setIcon(WTFMove(icon));
+    return resources;
+}
+
 #if ENABLE(ENCRYPTED_MEDIA)
 void ArgumentCoder<WebCore::CDMInstanceSession::Message>::encode(Encoder& encoder, const WebCore::CDMInstanceSession::Message& message)
 {
@@ -3183,5 +3002,89 @@ std::optional<UnixFileDescriptor> ArgumentCoder<UnixFileDescriptor>::decode(Deco
 }
 
 #endif
+
+template<class Encoder>
+void ArgumentCoder<PixelBuffer>::encode(Encoder& encoder, const PixelBuffer& pixelBuffer)
+{
+    if (LIKELY(is<const ByteArrayPixelBuffer>(pixelBuffer))) {
+        downcast<const ByteArrayPixelBuffer>(pixelBuffer).encode(encoder);
+        return;
+    }
+    ASSERT_NOT_REACHED();
+}
+
+std::optional<Ref<PixelBuffer>> ArgumentCoder<PixelBuffer>::decode(Decoder& decoder)
+{
+    return ByteArrayPixelBuffer::decode(decoder);
+}
+
+template
+void ArgumentCoder<PixelBuffer>::encode<Encoder>(Encoder&, const PixelBuffer&);
+
+template
+void ArgumentCoder<PixelBuffer>::encode<StreamConnectionEncoder>(StreamConnectionEncoder&, const PixelBuffer&);
+
+void ArgumentCoder<Ref<WebCore::Report>>::encode(Encoder& encoder, const Ref<WebCore::Report>& report)
+{
+    report->encode(encoder);
+}
+
+std::optional<Ref<WebCore::Report>> ArgumentCoder<Ref<WebCore::Report>>::decode(Decoder& decoder)
+{
+    return WebCore::Report::decode(decoder);
+}
+
+void ArgumentCoder<RefPtr<WebCore::ReportBody>>::encode(Encoder& encoder, const RefPtr<WebCore::ReportBody>& reportBody)
+{
+    bool hasReportBody = !!reportBody;
+    encoder << hasReportBody;
+    if (!hasReportBody)
+        return;
+
+    encoder << reportBody->reportBodyType();
+
+    switch (reportBody->reportBodyType()) {
+    case ViolationReportType::ContentSecurityPolicy:
+        downcast<CSPViolationReportBody>(reportBody.get())->encode(encoder);
+        return;
+    case ViolationReportType::Test:
+        downcast<TestReportBody>(reportBody.get())->encode(encoder);
+        return;
+    case ViolationReportType::StandardReportingAPIViolation:
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+std::optional<RefPtr<WebCore::ReportBody>> ArgumentCoder<RefPtr<WebCore::ReportBody>>::decode(Decoder& decoder)
+{
+    bool hasReportBody = false;
+    if (!decoder.decode(hasReportBody))
+        return std::nullopt;
+
+    RefPtr<WebCore::ReportBody> result;
+    if (!hasReportBody)
+        return { result };
+
+    std::optional<ViolationReportType> reportBodyType;
+    decoder >> reportBodyType;
+    if (!reportBodyType)
+        return std::nullopt;
+
+    switch (*reportBodyType) {
+    case ViolationReportType::ContentSecurityPolicy:
+        return CSPViolationReportBody::decode(decoder);
+    case ViolationReportType::Test:
+        return TestReportBody::decode(decoder);
+    case ViolationReportType::StandardReportingAPIViolation:
+        ASSERT_NOT_REACHED();
+        return std::nullopt;
+    }
+
+    ASSERT_NOT_REACHED();
+    return std::nullopt;
+}
 
 } // namespace IPC

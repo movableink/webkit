@@ -44,6 +44,7 @@ enum class LinkTimeConstant : int32_t;
     macro(arrayPush) \
     macro(getByIdDirect) \
     macro(getByIdDirectPrivate) \
+    macro(getByValWithThis) \
     macro(getPrototypeOf) \
     macro(getPromiseInternalField) \
     macro(getGeneratorInternalField) \
@@ -130,6 +131,7 @@ enum class LinkTimeConstant : int32_t;
     macro(generatorFieldNext) \
     macro(generatorFieldThis) \
     macro(generatorFieldFrame) \
+    macro(generatorFieldContext) \
     macro(GeneratorResumeModeNormal) \
     macro(GeneratorResumeModeThrow) \
     macro(GeneratorResumeModeReturn) \

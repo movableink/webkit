@@ -1,5 +1,20 @@
+diff --git a/src/common/apple_platform_utils.mm b/src/common/apple_platform_utils.mm
+index a9757cbb72b7c75f155a1cfedd84a2e98120b564..eebe70cdcc3e1db0d7922f083ae9287b3c0cb16d 100644
+--- a/src/common/apple_platform_utils.mm
++++ b/src/common/apple_platform_utils.mm
+@@ -67,6 +67,10 @@ bool IsMetalRendererAvailable()
+                     if ([device supportsFeatureSet:static_cast<MTLFeatureSet>(iosFamily3v1)])
+                         gpuFamilySufficient = true;
+                 }
++#elif defined(ANGLE_PLATFORM_IOS) && TARGET_OS_SIMULATOR
++                // FIXME: Currently we do not have good simulator query, as it does not support
++                // the whole feature set needed for iOS.
++                gpuFamilySufficient = true;
+ #endif
+             }
+         }
 diff --git a/src/common/utilities.cpp b/src/common/utilities.cpp
-index 274d8029521aa8e6d6fdae039a21931f00125fe6..5314733998768cdbda34126ed61d4247ef952541 100644
+index 6fa028f23f1473e358cbe6e1a8e39cbb98d20cb8..d576ef22114e0d3af42c74dc1bd5e6614d09846c 100644
 --- a/src/common/utilities.cpp
 +++ b/src/common/utilities.cpp
 @@ -6,6 +6,12 @@
@@ -42,62 +57,8 @@ index 497ef881e2d9cf0efb669ca8c7c4f2669633baba..47213c90497c8c9d8f76baf0653fdbc3
  
  #ifdef ANGLE_ENABLE_METAL_SPIRV
  #    include "compiler/translator/TranslatorMetal.h"
-diff --git a/src/compiler/translator/IntermNode.cpp b/src/compiler/translator/IntermNode.cpp
-index 11cb0f04409902a33f2c3677ac280d3d9b3f373c..791dd6dc4e3ea5bbb6289245ded8acffe27568c7 100644
---- a/src/compiler/translator/IntermNode.cpp
-+++ b/src/compiler/translator/IntermNode.cpp
-@@ -279,7 +279,7 @@ bool TIntermLoop::replaceChildNode(TIntermNode *original, TIntermNode *replaceme
- }
- 
- TIntermBranch::TIntermBranch(const TIntermBranch &node)
--    : TIntermBranch(node.mFlowOp, node.mExpression->deepCopy())
-+    : TIntermBranch(node.mFlowOp, node.mExpression ? node.mExpression->deepCopy() : nullptr)
- {}
- 
- size_t TIntermBranch::getChildCount() const
-@@ -1602,10 +1602,10 @@ TIntermLoop::TIntermLoop(TLoopType type,
- 
- TIntermLoop::TIntermLoop(const TIntermLoop &node)
-     : TIntermLoop(node.mType,
--                  node.mInit->deepCopy(),
--                  node.mCond->deepCopy(),
--                  node.mExpr->deepCopy(),
--                  node.mBody->deepCopy())
-+                  node.mInit ? node.mInit->deepCopy() : nullptr,
-+                  node.mCond ? node.mCond->deepCopy() : nullptr,
-+                  node.mExpr ? node.mExpr->deepCopy() : nullptr,
-+                  node.mBody ? node.mBody->deepCopy() : nullptr)
- {}
- 
- TIntermIfElse::TIntermIfElse(TIntermTyped *cond, TIntermBlock *trueB, TIntermBlock *falseB)
-diff --git a/src/compiler/translator/TranslatorMetalDirect/IdGen.cpp b/src/compiler/translator/TranslatorMetalDirect/IdGen.cpp
-index 81ff2722f4983df6bc508602ea4fe06d6da74dd2..9d2b43bc0f987e8b9cb37b2119778e8b5ceb886c 100644
---- a/src/compiler/translator/TranslatorMetalDirect/IdGen.cpp
-+++ b/src/compiler/translator/TranslatorMetalDirect/IdGen.cpp
-@@ -25,7 +25,7 @@ Name IdGen::createNewName(size_t count,
- {
-     const unsigned id = mNext++;
-     char idBuffer[std::numeric_limits<unsigned>::digits10 + 1];
--    sprintf(idBuffer, "%u", id);
-+    snprintf(idBuffer, sizeof(idBuffer), "%u", id);
- 
-     mNewNameBuffer.clear();
-     mNewNameBuffer += '_';
-diff --git a/src/compiler/translator/TranslatorMetalDirect/ModifyStruct.cpp b/src/compiler/translator/TranslatorMetalDirect/ModifyStruct.cpp
-index bcc5d65897a4ab90b2b64c5a5108b7e0d25a3e04..60758fbe8f45b609799af915943e166d2e697e8c 100644
---- a/src/compiler/translator/TranslatorMetalDirect/ModifyStruct.cpp
-+++ b/src/compiler/translator/TranslatorMetalDirect/ModifyStruct.cpp
-@@ -601,7 +601,7 @@ class ConvertStructState : angle::NonCopyable
-     void pushNamePath(unsigned extra)
-     {
-         char buffer[std::numeric_limits<unsigned>::digits10 + 1];
--        sprintf(buffer, "%u", extra);
-+        snprintf(buffer, sizeof(buffer), "%u", extra);
-         pushNamePath(buffer);
-     }
- 
 diff --git a/src/compiler/translator/glslang_tab_autogen.cpp b/src/compiler/translator/glslang_tab_autogen.cpp
-index daa1c614f71f0788bc8b1ea1d0e4d8709f6c7b0a..e3a3ddba082f4629478be45068cc7c560276e7e6 100644
+index 5aacebed5475c819b35072b110cf71d3ba152050..d75a99cb07583ae874e39d61323ef91e654b4fd7 100644
 --- a/src/compiler/translator/glslang_tab_autogen.cpp
 +++ b/src/compiler/translator/glslang_tab_autogen.cpp
 @@ -1,5 +1,8 @@
@@ -110,7 +71,7 @@ index daa1c614f71f0788bc8b1ea1d0e4d8709f6c7b0a..e3a3ddba082f4629478be45068cc7c56
  
     Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2019 Free Software Foundation,
 diff --git a/src/compiler/translator/glslang_tab_autogen.h b/src/compiler/translator/glslang_tab_autogen.h
-index d2eab0b7bc55675eb9ad5e210fb4d0cb869f35d1..2ec2d2c4495c1ed97a55173e49ea329d82d3f155 100644
+index fc8e7979a2c098faa33a17dd40eed2627320c643..d6b6ef81b43fbd40f4de89b69852545e393fa5a8 100644
 --- a/src/compiler/translator/glslang_tab_autogen.h
 +++ b/src/compiler/translator/glslang_tab_autogen.h
 @@ -1,5 +1,8 @@
@@ -123,7 +84,7 @@ index d2eab0b7bc55675eb9ad5e210fb4d0cb869f35d1..2ec2d2c4495c1ed97a55173e49ea329d
  
     Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2019 Free Software Foundation,
 diff --git a/src/compiler/translator/glslang_wrapper.cpp b/src/compiler/translator/glslang_wrapper.cpp
-index 187f350014fd283b3f406f5c3144a753f02436cb..3de7597d17b8813b60a62ffb14dd29e71491f8af 100644
+index 6925023e202ea9954ed19a3bda6835f1502f7a78..7ec8685896a68733c8d29679688b4ee627b09e7c 100644
 --- a/src/compiler/translator/glslang_wrapper.cpp
 +++ b/src/compiler/translator/glslang_wrapper.cpp
 @@ -10,6 +10,7 @@
@@ -154,7 +115,7 @@ index 55e2f8b9717ec73d2d52607d400352f5f4c0c191..4237558526274ea3e643d45ccf574b6b
 +#endif
  }  // namespace sh
 diff --git a/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h b/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h
-index ad3cc080de119748939e5aa893fe095b9dd4a2f3..75069c57284bb3b0cb796717191c7d55934c11af 100644
+index 648c7190a9382f0ce020839322fae56acfbe40db..9ddc681d320550b171a2916cac8e9a4b1c3b7fab 100644
 --- a/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h
 +++ b/src/compiler/translator/tree_ops/apple/UnfoldShortCircuitAST.h
 @@ -11,7 +11,7 @@
@@ -167,7 +128,7 @@ index ad3cc080de119748939e5aa893fe095b9dd4a2f3..75069c57284bb3b0cb796717191c7d55
  {
  
 diff --git a/src/libANGLE/State.cpp b/src/libANGLE/State.cpp
-index 1a5b0d8874f173fed2ee1f27d69b8ea4db6fd919..4459f29401d15fd2b3c553c10c71f1625dc2e2e1 100644
+index 781e3e550b3b7a2b08b20c6c1cddf365f84b7bfb..69076ed40dfc6aa996009c46fdb4f521154f521e 100644
 --- a/src/libANGLE/State.cpp
 +++ b/src/libANGLE/State.cpp
 @@ -6,6 +6,9 @@
@@ -213,34 +174,19 @@ index ce9c26e401ffd4fa59eb8308a5210998970bec8c..dcaa142fc2a5e0d45ddf7e8fcaac14bb
      const ShaderInterfaceVariableInfo &getTransformFeedbackInfo(gl::ShaderType shaderType,
                                                                  uint32_t bufferIndex) const;
  
-diff --git a/src/libANGLE/renderer/driver_utils.cpp b/src/libANGLE/renderer/driver_utils.cpp
-index e1555cff0ce083f309e845eab2678be57839122e..ad08da0ed2befa72cf2a5291a6d91c62538939b4 100644
---- a/src/libANGLE/renderer/driver_utils.cpp
-+++ b/src/libANGLE/renderer/driver_utils.cpp
-@@ -268,6 +268,10 @@ const char *GetVendorString(uint32_t vendorId)
-             return "Qualcomm";
-         case VENDOR_ID_SAMSUNG:
-             return "Samsung Electronics Co., Ltd.";
-+        case VENDOR_ID_VMWARE:
-+            return "VMware";
-+        case VENDOR_ID_VIVANTE:
-+            return "Vivante";
-         case 0xba5eba11:  // Mock vendor ID used for tests.
-             return "Test";
-         case 0:
 diff --git a/src/libANGLE/renderer/glslang_wrapper_utils.h b/src/libANGLE/renderer/glslang_wrapper_utils.h
-index 6eb21d9e204cd958448603938053f9c72bb91846..e21456e19ce5112a5535080193979d0858b7d58b 100644
+index 448f08e7b51791fe83a35b0d756bafe15a6cf54a..d3d7669beaa1e3adee795ba3f9cb10b0bce30af4 100644
 --- a/src/libANGLE/renderer/glslang_wrapper_utils.h
 +++ b/src/libANGLE/renderer/glslang_wrapper_utils.h
-@@ -157,7 +157,7 @@ void GlslangAssignTransformFeedbackLocations(gl::ShaderType shaderType,
+@@ -156,7 +156,7 @@ void GlslangAssignTransformFeedbackLocations(gl::ShaderType shaderType,
                                               bool isTransformFeedbackStage,
                                               GlslangProgramInterfaceInfo *programInterfaceInfo,
                                               ShaderInterfaceVariableInfoMap *variableInfoMapOut);
 -
 +#if ANGLE_ENABLE_METAL_SPIRV
  // Retrieves the compiled SPIR-V code for each shader stage, and calls |GlslangAssignLocations|.
- void GlslangGetShaderSpirvCode(const GlslangSourceOptions &options,
-                                const gl::ProgramState &programState,
+ void GlslangGetShaderSpirvCode(const gl::Context *context,
+                                const GlslangSourceOptions &options,
 @@ -170,6 +170,7 @@ angle::Result GlslangTransformSpirvCode(const GlslangSpirvOptions &options,
                                          const ShaderInterfaceVariableInfoMap &variableInfoMap,
                                          const angle::spirv::Blob &initialSpirvBlob,
@@ -271,64 +217,11 @@ index c8769efa38736be06a1c7fc12a4f21ef578c5f01..1766256930914b030119724f01d2adb2
              {
                  maxBuffers = 10;
                  mBufferPool.setAlwaysUseSharedMem();
-diff --git a/src/libANGLE/renderer/metal/ContextMtl.h b/src/libANGLE/renderer/metal/ContextMtl.h
-index 038515414371ccde7b55e50d41465438dc163b00..67e137dc22a12cf56394162754090f7d102bf48b 100644
---- a/src/libANGLE/renderer/metal/ContextMtl.h
-+++ b/src/libANGLE/renderer/metal/ContextMtl.h
-@@ -577,6 +577,8 @@ class ContextMtl : public ContextImpl, public mtl::Context
-     gl::AttributesMask mDirtyDefaultAttribsMask;
-     DirtyBits mDirtyBits;
- 
-+    uint32_t mRenderPassesSinceFlush = 0;
-+
-     // State
-     mtl::RenderPipelineDesc mRenderPipelineDesc;
-     mtl::DepthStencilDesc mDepthStencilDesc;
-diff --git a/src/libANGLE/renderer/metal/ContextMtl.mm b/src/libANGLE/renderer/metal/ContextMtl.mm
-index 89bb8b23a4f712adfa3f9b72967d36d6cfe14527..dc2f5fe8fbd3c8bc2c11f9982f76f7a290be0517 100644
---- a/src/libANGLE/renderer/metal/ContextMtl.mm
-+++ b/src/libANGLE/renderer/metal/ContextMtl.mm
-@@ -1693,10 +1693,19 @@ GLint GetOwnershipIdentity(const egl::AttributeMap &attribs)
- 
-     endEncoding(true);
-     mCmdBuffer.commit(operation);
-+    mRenderPassesSinceFlush = 0;
- }
- 
- void ContextMtl::flushCommandBufferIfNeeded()
- {
-+    if (mRenderPassesSinceFlush >= mtl::kMaxRenderPassesPerCommandBuffer)
-+    {
-+        // WaitUntilScheduled here is intended to help the CPU-GPU pipeline and
-+        // helps to keep the number of inflight render passes in the system to a
-+        // minimum.
-+        flushCommandBuffer(mtl::WaitUntilScheduled);
-+    }
-+
-     if (mCmdBuffer.needsFlushForDrawCallLimits())
-     {
-         flushCommandBuffer(mtl::NoWait);
-@@ -1717,6 +1726,7 @@ GLint GetOwnershipIdentity(const egl::AttributeMap &attribs)
-     endEncoding(false);
-     mCmdBuffer.present(presentationDrawable);
-     mCmdBuffer.commit(mtl::NoWait);
-+    mRenderPassesSinceFlush = 0;
- }
- 
- angle::Result ContextMtl::finishCommandBuffer()
-@@ -1752,6 +1762,7 @@ GLint GetOwnershipIdentity(const egl::AttributeMap &attribs)
-     endEncoding(false);
- 
-     ensureCommandBufferReady();
-+    mRenderPassesSinceFlush++;
- 
-     // Need to re-apply everything on next draw call.
-     mDirtyBits.set();
 diff --git a/src/libANGLE/renderer/metal/DisplayMtl.mm b/src/libANGLE/renderer/metal/DisplayMtl.mm
-index 13aec00fac3e4ea8932a86883dcc6eff7f30f59c..295a3788aa012838660233608df48f10bd269831 100644
+index 7a42a4dfa032925c449039fb74d25820c9811970..85d8475ecb729c47d7e1c22cd1fa3592e74c60b8 100644
 --- a/src/libANGLE/renderer/metal/DisplayMtl.mm
 +++ b/src/libANGLE/renderer/metal/DisplayMtl.mm
-@@ -1210,8 +1210,7 @@ bool IsMetalDisplayAvailable()
+@@ -1245,8 +1245,7 @@ bool IsMetalDisplayAvailable()
  bool DisplayMtl::supports32BitFloatFiltering() const
  {
  #if (defined(__MAC_11_0) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_11_0) ||        \
@@ -338,6 +231,19 @@ index 13aec00fac3e4ea8932a86883dcc6eff7f30f59c..295a3788aa012838660233608df48f10
      if (@available(ios 14.0, macOS 11.0, *))
      {
          return [mMetalDevice supports32BitFloatFiltering];
+diff --git a/src/libANGLE/renderer/metal/ProgramMtl.mm b/src/libANGLE/renderer/metal/ProgramMtl.mm
+index 28be9fe2a99431a834f0a7d701f6315fb2f5feb0..b88e1604660e85b808509fb71ead8159c8098c0f 100644
+--- a/src/libANGLE/renderer/metal/ProgramMtl.mm
++++ b/src/libANGLE/renderer/metal/ProgramMtl.mm
+@@ -173,7 +173,7 @@ void InitArgumentBufferEncoder(mtl::Context *context,
+                                uint32_t bufferIndex,
+                                ProgramArgumentBufferEncoderMtl *encoder)
+ {
+-    encoder->metalArgBufferEncoder = [function newArgumentEncoderWithBufferIndex:bufferIndex];
++    encoder->metalArgBufferEncoder = mtl::adoptObjCObj([function newArgumentEncoderWithBufferIndex:bufferIndex]);
+     if (encoder->metalArgBufferEncoder)
+     {
+         encoder->bufferPool.initialize(context, encoder->metalArgBufferEncoder.get().encodedLength,
 diff --git a/src/libANGLE/renderer/metal/mtl_buffer_pool.h b/src/libANGLE/renderer/metal/mtl_buffer_pool.h
 index c3be11f78156c7fab4ee8a90733de2f3b049de7e..204ebb949873112c010242b2b16b0860cd40c00a 100644
 --- a/src/libANGLE/renderer/metal/mtl_buffer_pool.h
@@ -351,22 +257,6 @@ index c3be11f78156c7fab4ee8a90733de2f3b049de7e..204ebb949873112c010242b2b16b0860
      bool mAlwaysAllocateNewBuffer;
  };
  
-diff --git a/src/libANGLE/renderer/metal/mtl_common.h b/src/libANGLE/renderer/metal/mtl_common.h
-index 3f3086c36d3ae3886af05a044bbdc834e63d2239..c6618ecc2259f22756b61738d041e679420ce8bf 100644
---- a/src/libANGLE/renderer/metal/mtl_common.h
-+++ b/src/libANGLE/renderer/metal/mtl_common.h
-@@ -147,6 +147,11 @@ constexpr uint32_t kMaxViewports         = 1;
- // will be flushed next time
- constexpr const size_t kMaximumResidentMemorySizeInBytes = 400 * 1024 * 1024;
- 
-+// Restrict in-flight render passes per command buffer to 16.
-+// The goal is to reduce the number of active render passes on the system at
-+// anyone time and this value was determined through experimentation.
-+constexpr uint32_t kMaxRenderPassesPerCommandBuffer = 16;
-+
- constexpr uint32_t kVertexAttribBufferStrideAlignment = 4;
- // Alignment requirement for offset passed to setVertex|FragmentBuffer
- #if TARGET_OS_OSX || TARGET_OS_MACCATALYST
 diff --git a/src/libANGLE/renderer/metal/mtl_render_utils.mm b/src/libANGLE/renderer/metal/mtl_render_utils.mm
 index 4b854d589c5c7042ba8ab2e32960425c4070eb2a..1e2b6888ef205c355b2220fb36d3b889a614fa25 100644
 --- a/src/libANGLE/renderer/metal/mtl_render_utils.mm
@@ -538,7 +428,7 @@ index afbc985eb92dfbd5af964bd8ac207ac1db6ac97e..9805aa705a259a97e92418387f123851
    public:
      static angle::Result MakeBuffer(ContextMtl *context,
 diff --git a/src/libANGLE/renderer/metal/mtl_resources.mm b/src/libANGLE/renderer/metal/mtl_resources.mm
-index 6bcb9cd8d3e2087dd269b4c5fb8b8214c33e2f0e..414a3d9dbb7ab125172ee99aa9df636383c3d4f5 100644
+index 976eb1c2efba44b080f85a1c4a10389b99416021..eb282986994385026129e6d9a6517a0387adbe33 100644
 --- a/src/libANGLE/renderer/metal/mtl_resources.mm
 +++ b/src/libANGLE/renderer/metal/mtl_resources.mm
 @@ -35,12 +35,14 @@ inline NSUInteger GetMipSize(NSUInteger baseSize, const MipmapNativeLevel level)
@@ -567,41 +457,7 @@ index 6bcb9cd8d3e2087dd269b4c5fb8b8214c33e2f0e..414a3d9dbb7ab125172ee99aa9df6363
  {
  #if TARGET_OS_OSX || TARGET_OS_MACCATALYST
      // Make sure GPU & CPU contents are synchronized.
-@@ -271,11 +273,10 @@ void EnsureCPUMemWillBeSynced(ContextMtl *context, T *resource)
-     {
-         return angle::Result::Stop;
-     }
--    refOut->reset(new Texture(context, desc, mips, renderTargetOnly, allowFormatView, memoryLess));
--    if (!refOut || !refOut->get())
--    {
--        ANGLE_MTL_CHECK(context, false, GL_OUT_OF_MEMORY);
--    }
-+    ASSERT(refOut);
-+    Texture *newTexture = new Texture(context, desc, mips, renderTargetOnly, allowFormatView, memoryLess);
-+    ANGLE_MTL_CHECK(context, newTexture->valid(), GL_OUT_OF_MEMORY);
-+    refOut->reset(newTexture);
-     if (!mtlFormat.hasDepthAndStencilBits())
-     {
-         refOut->get()->setColorWritableMask(GetEmulatedColorWriteMask(mtlFormat));
-@@ -299,13 +300,10 @@ void EnsureCPUMemWillBeSynced(ContextMtl *context, T *resource)
-                                    bool renderTargetOnly,
-                                    TextureRef *refOut)
- {
--
--    refOut->reset(new Texture(context, desc, surfaceRef, slice, renderTargetOnly));
--
--    if (!(*refOut) || !(*refOut)->get())
--    {
--        ANGLE_MTL_CHECK(context, false, GL_OUT_OF_MEMORY);
--    }
-+    ASSERT(refOut);
-+    Texture *newTexture = new Texture(context, desc, surfaceRef, slice, renderTargetOnly);
-+    ANGLE_MTL_CHECK(context, newTexture->valid(), GL_OUT_OF_MEMORY);
-+    refOut->reset(newTexture);
-     if (!mtlFormat.hasDepthAndStencilBits())
-     {
-         refOut->get()->setColorWritableMask(GetEmulatedColorWriteMask(mtlFormat));
-@@ -504,12 +502,12 @@ bool needMultisampleColorFormatShaderReadWorkaround(ContextMtl *context, MTLText
+@@ -507,12 +509,12 @@ bool needMultisampleColorFormatShaderReadWorkaround(ContextMtl *context, MTLText
  
  void Texture::syncContent(ContextMtl *context, mtl::BlitCommandEncoder *blitEncoder)
  {
@@ -616,7 +472,7 @@ index 6bcb9cd8d3e2087dd269b4c5fb8b8214c33e2f0e..414a3d9dbb7ab125172ee99aa9df6363
  }
  
  bool Texture::isCPUAccessible() const
-@@ -988,7 +986,7 @@ bool needMultisampleColorFormatShaderReadWorkaround(ContextMtl *context, MTLText
+@@ -991,7 +993,7 @@ bool needMultisampleColorFormatShaderReadWorkaround(ContextMtl *context, MTLText
  
  void Buffer::syncContent(ContextMtl *context, mtl::BlitCommandEncoder *blitEncoder)
  {
@@ -625,7 +481,7 @@ index 6bcb9cd8d3e2087dd269b4c5fb8b8214c33e2f0e..414a3d9dbb7ab125172ee99aa9df6363
  }
  
  const uint8_t *Buffer::mapReadOnly(ContextMtl *context)
-@@ -1009,7 +1007,7 @@ bool needMultisampleColorFormatShaderReadWorkaround(ContextMtl *context, MTLText
+@@ -1012,7 +1014,7 @@ bool needMultisampleColorFormatShaderReadWorkaround(ContextMtl *context, MTLText
      {
          CommandQueue &cmdQueue = context->cmdQueue();
  
@@ -635,10 +491,10 @@ index 6bcb9cd8d3e2087dd269b4c5fb8b8214c33e2f0e..414a3d9dbb7ab125172ee99aa9df6363
          if (this->isBeingUsedByGPU(context))
          {
 diff --git a/src/libANGLE/renderer/metal/mtl_state_cache.mm b/src/libANGLE/renderer/metal/mtl_state_cache.mm
-index 7ef96c443d7b780ad045dfeac423ef0a86889750..625416a3ba8f1f819ecbe63e81371a5b13949b32 100644
+index c525add3369e3c5a9af865ce5a1e91b3248a1940..abd36e8aecb66fea297137cd53ce687a4a915257 100644
 --- a/src/libANGLE/renderer/metal/mtl_state_cache.mm
 +++ b/src/libANGLE/renderer/metal/mtl_state_cache.mm
-@@ -943,6 +943,62 @@ void ToObjC(const RenderPassStencilAttachmentDesc &desc,
+@@ -948,6 +948,62 @@ void ToObjC(const RenderPassStencilAttachmentDesc &desc,
      return re.first->second;
  }
  
@@ -701,9 +557,9 @@ index 7ef96c443d7b780ad045dfeac423ef0a86889750..625416a3ba8f1f819ecbe63e81371a5b
  AutoObjCPtr<id<MTLRenderPipelineState>> RenderPipelineCache::createRenderPipelineState(
      ContextMtl *context,
      const RenderPipelineDesc &originalDesc,
-@@ -1005,23 +1061,10 @@ void ToObjC(const RenderPassStencilAttachmentDesc &desc,
-         // Convert to Objective-C desc:
-         AutoObjCObj<MTLRenderPipelineDescriptor> objCDesc = ToObjC(vertShader, fragShader, desc);
+@@ -1009,23 +1065,10 @@ void ToObjC(const RenderPassStencilAttachmentDesc &desc,
+ 
+         auto objCDesc = CreateMTLRenderPipelineDescriptor(vertShader, fragShader, desc);
  
 -        // Validate Render Pipeline State:
 -        if (DeviceHasMaximumRenderTargetSize(metalDevice))
@@ -743,43 +599,3 @@ index d218c13ed14be57f514cbf3c9dbeedefcdd49621..b236d92655d0307bb0b61ce51bf6406e
                                                            AutoObjCPtr<NSError *> *error);
  
  bool SupportsAppleGPUFamily(id<MTLDevice> device, uint8_t appleFamily);
-diff --git a/src/tests/deqp_support/deqp_egl_test_expectations.txt b/src/tests/deqp_support/deqp_egl_TestExpectations
-similarity index 100%
-rename from src/tests/deqp_support/deqp_egl_test_expectations.txt
-rename to src/tests/deqp_support/deqp_egl_TestExpectations
-diff --git a/src/tests/deqp_support/deqp_gles2_test_expectations.txt b/src/tests/deqp_support/deqp_gles2_TestExpectations
-similarity index 100%
-rename from src/tests/deqp_support/deqp_gles2_test_expectations.txt
-rename to src/tests/deqp_support/deqp_gles2_TestExpectations
-diff --git a/src/tests/deqp_support/deqp_gles31_test_expectations.txt b/src/tests/deqp_support/deqp_gles31_TestExpectations
-similarity index 100%
-rename from src/tests/deqp_support/deqp_gles31_test_expectations.txt
-rename to src/tests/deqp_support/deqp_gles31_TestExpectations
-diff --git a/src/tests/deqp_support/deqp_gles31_rotate_test_expectations.txt b/src/tests/deqp_support/deqp_gles31_rotate_TestExpectations
-similarity index 100%
-rename from src/tests/deqp_support/deqp_gles31_rotate_test_expectations.txt
-rename to src/tests/deqp_support/deqp_gles31_rotate_TestExpectations
-diff --git a/src/tests/deqp_support/deqp_gles3_test_expectations.txt b/src/tests/deqp_support/deqp_gles3_TestExpectations
-similarity index 100%
-rename from src/tests/deqp_support/deqp_gles3_test_expectations.txt
-rename to src/tests/deqp_support/deqp_gles3_TestExpectations
-diff --git a/src/tests/deqp_support/deqp_gles3_rotate_test_expectations.txt b/src/tests/deqp_support/deqp_gles3_rotate_TestExpectations
-similarity index 100%
-rename from src/tests/deqp_support/deqp_gles3_rotate_test_expectations.txt
-rename to src/tests/deqp_support/deqp_gles3_rotate_TestExpectations
-diff --git a/src/tests/deqp_support/deqp_khr_gles2_test_expectations.txt b/src/tests/deqp_support/deqp_khr_gles2_TestExpectations
-similarity index 100%
-rename from src/tests/deqp_support/deqp_khr_gles2_test_expectations.txt
-rename to src/tests/deqp_support/deqp_khr_gles2_TestExpectations
-diff --git a/src/tests/deqp_support/deqp_khr_gles31_test_expectations.txt b/src/tests/deqp_support/deqp_khr_gles31_TestExpectations
-similarity index 100%
-rename from src/tests/deqp_support/deqp_khr_gles31_test_expectations.txt
-rename to src/tests/deqp_support/deqp_khr_gles31_TestExpectations
-diff --git a/src/tests/deqp_support/deqp_khr_gles32_test_expectations.txt b/src/tests/deqp_support/deqp_khr_gles32_TestExpectations
-similarity index 100%
-rename from src/tests/deqp_support/deqp_khr_gles32_test_expectations.txt
-rename to src/tests/deqp_support/deqp_khr_gles32_TestExpectations
-diff --git a/src/tests/deqp_support/deqp_khr_gles3_test_expectations.txt b/src/tests/deqp_support/deqp_khr_gles3_TestExpectations
-similarity index 100%
-rename from src/tests/deqp_support/deqp_khr_gles3_test_expectations.txt
-rename to src/tests/deqp_support/deqp_khr_gles3_TestExpectations

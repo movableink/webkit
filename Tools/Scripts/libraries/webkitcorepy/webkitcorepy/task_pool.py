@@ -150,9 +150,12 @@ class _BiDirectionalQueue(object):
                 return self.incoming.get(block=False)
 
             difference = Timeout.difference()
-            if difference is not None:
-                return self.incoming.get(timeout=difference)
-            return self.incoming.get()
+            try:
+                if difference is not None:
+                    return self.incoming.get(timeout=difference)
+                return self.incoming.get()
+            except Queue.Empty:
+                pass
 
     def close(self):
         with OutputCapture():
@@ -386,7 +389,7 @@ class TaskPool(object):
             ),
         ) for count in range(self._num_workers)]
 
-        with Timeout(seconds=10, patch=False, handler=self.Exception('Failed to start all workers')):
+        with Timeout(seconds=60, patch=False, handler=self.Exception('Failed to start all workers')):
             for worker in self.workers:
                 worker.start()
             while self._started < len(self.workers):

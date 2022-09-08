@@ -8,7 +8,10 @@ deqp_path = "../../third_party/VK-GL-CTS/src"
 deqp_include_dirs = [
   "$deqp_path/executor",
   "$deqp_path/execserver",
+  "$deqp_path/framework/platform/lnx",
+  "$deqp_path/framework/platform/lnx/X11",
   "$deqp_path/framework/platform/null",
+  "$deqp_path/framework/platform/win32",
   "$deqp_path/framework/xexml",
   "$deqp_path/modules/gles2",
   "$deqp_path/modules/gles2/functional",
@@ -1233,6 +1236,22 @@ deqp_khr_glesext_sources = [
   "$deqp_path/external/openglcts/modules/glesext/draw_buffers_indexed/esextcDrawBuffersIndexedSetGet.hpp",
   "$deqp_path/external/openglcts/modules/glesext/draw_buffers_indexed/esextcDrawBuffersIndexedTests.cpp",
   "$deqp_path/external/openglcts/modules/glesext/draw_elements_base_vertex/esextcDrawElementsBaseVertexTests.cpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateAPI.cpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateAPI.hpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateAttachmentTests.cpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateAttachmentTests.hpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateBasic.cpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateBasic.hpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateCombinedTests.cpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateCombinedTests.hpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateComplex.cpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateComplex.hpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateErrors.cpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateErrors.hpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateRenderTarget.cpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateRenderTarget.hpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateTests.cpp",
+  "$deqp_path/external/openglcts/modules/glesext/fragment_shading_rate/esextcFragmentShadingRateTests.hpp",
   "$deqp_path/external/openglcts/modules/glesext/geometry_shader/esextcGeometryShaderAPI.cpp",
   "$deqp_path/external/openglcts/modules/glesext/geometry_shader/esextcGeometryShaderAPI.hpp",
   "$deqp_path/external/openglcts/modules/glesext/geometry_shader/esextcGeometryShaderAdjacency.cpp",
@@ -1971,6 +1990,16 @@ deqp_glshared_sources = [
   "$deqp_path/modules/glshared/glsVertexArrayTests.hpp",
 ]
 
+deqp_framework_platform_sources = [
+  "$deqp_path/framework/platform/null/tcuNullContextFactory.cpp",
+  "$deqp_path/framework/platform/null/tcuNullContextFactory.hpp",
+  "$deqp_path/framework/platform/null/tcuNullRenderContext.cpp",
+  "$deqp_path/framework/platform/win32/tcuWGL.hpp",
+  "$deqp_path/framework/platform/win32/tcuWGLContextFactory.hpp",
+  "$deqp_path/framework/platform/win32/tcuWin32EGLNativeDisplayFactory.hpp",
+  "$deqp_path/framework/platform/win32/tcuWin32Window.hpp",
+]
+
 deqp_libtester_sources = [
   "$deqp_path/execserver/xsDefs.cpp",
   "$deqp_path/execserver/xsDefs.hpp",
@@ -2016,9 +2045,6 @@ deqp_libtester_sources = [
   "$deqp_path/executor/xeTestResultParser.hpp",
   "$deqp_path/executor/xeXMLWriter.cpp",
   "$deqp_path/executor/xeXMLWriter.hpp",
-  "$deqp_path/framework/platform/null/tcuNullContextFactory.cpp",
-  "$deqp_path/framework/platform/null/tcuNullContextFactory.hpp",
-  "$deqp_path/framework/platform/null/tcuNullRenderContext.cpp",
   "deqp_support/tcuANGLENativeDisplayFactory.cpp",
   "deqp_support/tcuANGLENativeDisplayFactory.h",
 

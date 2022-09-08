@@ -106,7 +106,7 @@ template<> void JSTestNamedSetterWithLegacyOverrideBuiltInsDOMConstructor::initi
 
 static const HashTableValue JSTestNamedSetterWithLegacyOverrideBuiltInsPrototypeTableValues[] =
 {
-    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestNamedSetterWithLegacyOverrideBuiltInsConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestNamedSetterWithLegacyOverrideBuiltInsConstructor, 0 } },
 };
 
 const ClassInfo JSTestNamedSetterWithLegacyOverrideBuiltInsPrototype::s_info = { "TestNamedSetterWithLegacyOverrideBuiltIns"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedSetterWithLegacyOverrideBuiltInsPrototype) };
@@ -120,8 +120,8 @@ void JSTestNamedSetterWithLegacyOverrideBuiltInsPrototype::finishCreation(VM& vm
 
 const ClassInfo JSTestNamedSetterWithLegacyOverrideBuiltIns::s_info = { "TestNamedSetterWithLegacyOverrideBuiltIns"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestNamedSetterWithLegacyOverrideBuiltIns) };
 
-JSTestNamedSetterWithLegacyOverrideBuiltIns::JSTestNamedSetterWithLegacyOverrideBuiltIns(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestNamedSetterWithLegacyOverrideBuiltIns>&& impl)
-    : JSDOMWrapper<TestNamedSetterWithLegacyOverrideBuiltIns>(structure, globalObject, WTFMove(impl))
+JSTestNamedSetterWithLegacyOverrideBuiltIns::JSTestNamedSetterWithLegacyOverrideBuiltIns(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestNamedSetterWithLegacyOverrideBuiltIns>&& impl, JSC::Butterfly* butterfly)
+    : JSDOMWrapper<TestNamedSetterWithLegacyOverrideBuiltIns>(structure, globalObject, WTFMove(impl), butterfly)
 {
 }
 

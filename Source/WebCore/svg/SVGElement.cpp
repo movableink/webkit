@@ -158,9 +158,10 @@ static NEVER_INLINE MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, CSSPrope
     return map;
 }
 
-SVGElement::SVGElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
+SVGElement::SVGElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry, ConstructionType constructionType)
     : StyledElement(tagName, document, constructionType)
     , m_propertyAnimatorFactory(makeUnique<SVGPropertyAnimatorFactory>())
+    , m_propertyRegistry(WTFMove(propertyRegistry))
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -178,6 +179,11 @@ SVGElement::~SVGElement()
         m_svgRareData = nullptr;
     }
     document().accessSVGExtensions().removeElementToRebuild(*this);
+
+    if (hasPendingResources()) {
+        document().accessSVGExtensions().removeElementFromPendingResources(*this);
+        ASSERT(!hasPendingResources());
+    }
 }
 
 void SVGElement::willRecalcStyle(Style::Change change)
@@ -197,9 +203,21 @@ SVGElementRareData& SVGElement::ensureSVGRareData()
     return *m_svgRareData;
 }
 
+bool SVGElement::isInnerSVGSVGElement() const
+{
+    if (!is<SVGSVGElement>(this))
+        return false;
+
+    // Element may not be in the document, pretend we're outermost for viewport(), getCTM(), etc.
+    if (!parentNode())
+        return false;
+
+    return is<SVGElement>(parentNode());
+}
+
 bool SVGElement::isOutermostSVGSVGElement() const
 {
-    if (!is<SVGSVGElement>(*this))
+    if (!is<SVGSVGElement>(this))
         return false;
 
     // Element may not be in the document, pretend we're outermost for viewport(), getCTM(), etc.
@@ -207,7 +225,7 @@ bool SVGElement::isOutermostSVGSVGElement() const
         return true;
 
     // We act like an outermost SVG element, if we're a direct child of a <foreignObject> element.
-    if (is<SVGForeignObjectElement>(*parentNode()))
+    if (is<SVGForeignObjectElement>(parentNode()))
         return true;
 
     // If we're inside the shadow tree of a <use> element, we're always an inner <svg> element.
@@ -215,7 +233,7 @@ bool SVGElement::isOutermostSVGSVGElement() const
         return false;
 
     // This is true whenever this is the outermost SVG, even if there are HTML elements outside it
-    return !is<SVGElement>(*parentNode());
+    return !is<SVGElement>(parentNode());
 }
 
 void SVGElement::reportAttributeParsingError(SVGParsingError error, const QualifiedName& name, const AtomString& value)
@@ -245,6 +263,9 @@ void SVGElement::removedFromAncestor(RemovalType removalType, ContainerNode& old
         updateRelativeLengthsInformation(false, *this);
 
     StyledElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
+
+    if (hasPendingResources())
+        document().accessSVGExtensions().removeElementFromPendingResources(*this);
 
     if (removalType.disconnectedFromDocument) {
         auto& extensions = document().accessSVGExtensions();
@@ -291,10 +312,10 @@ SVGElement* SVGElement::viewportElement() const
     return nullptr;
 }
  
-const WeakHashSet<SVGElement>& SVGElement::instances() const
+const WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>& SVGElement::instances() const
 {
     if (!m_svgRareData) {
-        static NeverDestroyed<WeakHashSet<SVGElement>> emptyInstances;
+        static NeverDestroyed<WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>> emptyInstances;
         return emptyInstances;
     }
     return m_svgRareData->instances();
@@ -535,12 +556,27 @@ static MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> createSVGLayerAwareEl
     MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> set;
 
     const Vector<SVGQualifiedName> allowedTags = {
+        aTag.get(),
+        altGlyphTag.get(),
         circleTag.get(),
+        defsTag.get(),
         ellipseTag.get(),
+        foreignObjectTag.get(),
         gTag.get(),
+        imageTag.get(),
+        lineTag.get(),
         pathTag.get(),
+        polygonTag.get(),
+        polylineTag.get(),
         rectTag.get(),
-        textTag.get()
+        svgTag.get(),
+        switchTag.get(),
+        symbolTag.get(),
+        textPathTag.get(),
+        textTag.get(),
+        trefTag.get(),
+        tspanTag.get(),
+        useTag.get()
     };
     for (auto& tag : allowedTags)
         set.add(tag.localName());
@@ -564,8 +600,8 @@ bool SVGElement::childShouldCreateRenderer(const Node& child) const
     // If the layer based SVG engine is enabled, all renderers that do not support the
     // RenderLayer aware layout / painting / hit-testing mode ('LBSE-mode') have to be skipped.
     // FIXME: [LBSE] Upstream support for all elements, and remove 'isSVGLayerAwareElement' check afterwards.
-    if (document().settings().layerBasedSVGEngineEnabled())
-        return isSVGLayerAwareElement(svgChild);
+    if (document().settings().layerBasedSVGEngineEnabled() && !isSVGLayerAwareElement(svgChild))
+        return false;
 #endif
 
     static const QualifiedName* const invalidTextContent[] {

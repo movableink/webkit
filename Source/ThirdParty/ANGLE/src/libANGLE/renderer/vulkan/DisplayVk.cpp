@@ -20,6 +20,7 @@
 #include "libANGLE/renderer/vulkan/RendererVk.h"
 #include "libANGLE/renderer/vulkan/SurfaceVk.h"
 #include "libANGLE/renderer/vulkan/SyncVk.h"
+#include "libANGLE/renderer/vulkan/TextureVk.h"
 #include "libANGLE/renderer/vulkan/VkImageImageSiblingVk.h"
 #include "libANGLE/trace.h"
 
@@ -407,15 +408,19 @@ egl::Error DisplayVk::getEGLError(EGLint errorCode)
     return egl::Error(errorCode, 0, std::move(errorString));
 }
 
+void DisplayVk::initializeFrontendFeatures(angle::FrontendFeatures *features) const
+{
+    mRenderer->initializeFrontendFeatures(features);
+}
+
 void DisplayVk::populateFeatureList(angle::FeatureList *features)
 {
     mRenderer->getFeatures().populateFeatureList(features);
 }
 
-ShareGroupVk::ShareGroupVk()
+ShareGroupVk::ShareGroupVk() : mOrphanNonEmptyBufferBlock(false)
 {
-    mLastPruneTime             = angle::GetCurrentSystemTime();
-    mOrphanNonEmptyBufferBlock = false;
+    mLastPruneTime = angle::GetCurrentSystemTime();
 }
 
 void ShareGroupVk::addContext(ContextVk *contextVk)
@@ -453,12 +458,12 @@ void ShareGroupVk::onDestroy(const egl::Display *display)
     mPipelineLayoutCache.destroy(renderer);
     mDescriptorSetLayoutCache.destroy(renderer);
 
-    mMetaDescriptorPools[DescriptorSetIndex::UniformsAndXfb].destroy(
-        renderer, VulkanCacheType::UniformsAndXfbDescriptors);
-    mMetaDescriptorPools[DescriptorSetIndex::Texture].destroy(renderer,
-                                                              VulkanCacheType::TextureDescriptors);
-    mMetaDescriptorPools[DescriptorSetIndex::ShaderResource].destroy(
-        renderer, VulkanCacheType::ShaderResourcesDescriptors);
+    mMetaDescriptorPools[DescriptorSetIndex::UniformsAndXfb].destroy(renderer);
+    mMetaDescriptorPools[DescriptorSetIndex::Texture].destroy(renderer);
+    mMetaDescriptorPools[DescriptorSetIndex::ShaderResource].destroy(renderer);
+
+    mFramebufferCache.destroy(renderer);
+    resetPrevTexture();
 
     ASSERT(mResourceUseLists.empty());
 }
@@ -472,6 +477,58 @@ void ShareGroupVk::releaseResourceUseLists(const Serial &submitSerial)
             it.releaseResourceUsesAndUpdateSerials(submitSerial);
         }
         mResourceUseLists.clear();
+    }
+}
+
+angle::Result ShareGroupVk::onMutableTextureUpload(ContextVk *contextVk, TextureVk *newTexture)
+{
+    return mTextureUpload.onMutableTextureUpload(contextVk, newTexture);
+}
+
+void ShareGroupVk::onTextureRelease(TextureVk *textureVk)
+{
+    mTextureUpload.onTextureRelease(textureVk);
+}
+
+angle::Result TextureUpload::onMutableTextureUpload(ContextVk *contextVk, TextureVk *newTexture)
+{
+    // This feature is currently disabled in the case of display-level texture sharing.
+    ASSERT(!contextVk->hasDisplayTextureShareGroup());
+
+    // If the previous texture is null, it should be set to the current texture. We also have to
+    // make sure that the previous texture pointer is still a mutable texture. Otherwise, we skip
+    // the optimization.
+    if (mPrevUploadedMutableTexture == nullptr || mPrevUploadedMutableTexture->isImmutable())
+    {
+        mPrevUploadedMutableTexture = newTexture;
+        return angle::Result::Continue;
+    }
+
+    // Skip the optimization if we have not switched to a new texture yet.
+    if (mPrevUploadedMutableTexture == newTexture)
+    {
+        return angle::Result::Continue;
+    }
+
+    // If the mutable texture is consistently specified, we initialize a full mip chain for it.
+    if (mPrevUploadedMutableTexture->isMutableTextureConsistentlySpecifiedForFlush())
+    {
+        ANGLE_TRY(mPrevUploadedMutableTexture->ensureImageInitialized(
+            contextVk, ImageMipLevels::FullMipChain));
+        contextVk->getPerfCounters().mutableTexturesUploaded++;
+    }
+
+    // Update the mutable texture pointer with the new pointer for the next potential flush.
+    mPrevUploadedMutableTexture = newTexture;
+
+    return angle::Result::Continue;
+}
+
+void TextureUpload::onTextureRelease(TextureVk *textureVk)
+{
+    if (mPrevUploadedMutableTexture == textureVk)
+    {
+        resetPrevTexture();
     }
 }
 

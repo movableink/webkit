@@ -29,6 +29,7 @@
 
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HexNumber.h>
+#include <wtf/Logging.h>
 #include <wtf/Scope.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
@@ -37,6 +38,7 @@
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 #if USE(GLIB) && !PLATFORM(QT)
@@ -424,43 +426,49 @@ String createTemporaryZipArchive(const String&)
     return { };
 }
 
-bool excludeFromBackup(const String&)
+bool setExcludedFromBackup(const String&, bool)
 {
     return false;
 }
 
 #endif
 
-MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(Span<const uint8_t>)>&)>&& apply, PlatformFileHandle* outputHandle)
+MappedFileData createMappedFileData(const String& path, size_t bytesSize, PlatformFileHandle* outputHandle)
 {
     constexpr bool failIfFileExists = true;
     auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::User, failIfFileExists);
-    if (!FileSystem::isHandleValid(handle) || !FileSystem::truncateFile(handle, bytesSize)) {
+
+    auto fileCloser = WTF::makeScopeExit([&handle]() {
         FileSystem::closeFile(handle);
+    });
+
+    if (!FileSystem::isHandleValid(handle))
+        return { };
+
+    if (!FileSystem::truncateFile(handle, bytesSize)) {
+        RELEASE_LOG_FAULT(MemoryPressure, "Unable to truncate file");
         return { };
     }
 
-    if (!FileSystem::makeSafeToUseMemoryMapForPath(path)) {
-        FileSystem::closeFile(handle);
+    if (!FileSystem::makeSafeToUseMemoryMapForPath(path))
         return { };
-    }
 
     bool success;
     FileSystem::MappedFileData mappedFile(handle, FileSystem::FileOpenMode::ReadWrite, FileSystem::MappedFileMode::Shared, success);
-    if (!success) {
-        FileSystem::closeFile(handle);
+    if (!success)
         return { };
+
+    if (outputHandle) {
+        fileCloser.release();
+        *outputHandle = handle;
     }
 
-    void* map = const_cast<void*>(mappedFile.data());
-    uint8_t* mapData = static_cast<uint8_t*>(map);
+    return mappedFile;
+}
 
-    apply([&mapData](Span<const uint8_t> chunk) {
-        memcpy(mapData, chunk.data(), chunk.size());
-        mapData += chunk.size();
-        return true;
-    });
-
+void finalizeMappedFileData(MappedFileData& mappedFileData, size_t bytesSize)
+{
+    void* map = const_cast<void*>(mappedFileData.data());
 #if OS(WINDOWS)
     DWORD oldProtection;
     VirtualProtect(map, bytesSize, FILE_MAP_READ, &oldProtection);
@@ -472,11 +480,24 @@ MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(con
     // Flush (asynchronously) to file, turning this into clean memory.
     msync(map, bytesSize, MS_ASYNC);
 #endif
+}
 
-    if (outputHandle)
-        *outputHandle = handle;
-    else
-        FileSystem::closeFile(handle);
+MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(Span<const uint8_t>)>&)>&& apply, PlatformFileHandle* outputHandle)
+{
+    auto mappedFile = createMappedFileData(path, bytesSize, outputHandle);
+    if (!mappedFile)
+        return { };
+
+    void* map = const_cast<void*>(mappedFile.data());
+    uint8_t* mapData = static_cast<uint8_t*>(map);
+
+    apply([&mapData](Span<const uint8_t> chunk) {
+        memcpy(mapData, chunk.data(), chunk.size());
+        mapData += chunk.size();
+        return true;
+    });
+
+    finalizeMappedFileData(mappedFile, bytesSize);
 
     return mappedFile;
 }
@@ -832,6 +853,26 @@ String pathByAppendingComponents(StringView path, const Vector<StringView>& comp
 }
 
 #endif
+
+#if !OS(WINDOWS) && !PLATFORM(COCOA) && !PLATFORM(PLAYSTATION)
+
+String createTemporaryDirectory()
+{
+    std::error_code ec;
+    std::string tempDir = std::filesystem::temp_directory_path(ec);
+    if (ec)
+        return String();
+
+    std::string newTempDirTemplate = tempDir + "XXXXXXXX";
+
+    Vector<char> newTempDir(newTempDirTemplate.c_str(), newTempDirTemplate.size());
+    if (!mkdtemp(newTempDir.data()))
+        return String();
+
+    return stringFromFileSystemRepresentation(newTempDir.data());
+}
+
+#endif // !OS(WINDOWS) && !PLATFORM(COCOA)
 
 #endif // HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
 

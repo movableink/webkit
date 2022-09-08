@@ -1,4 +1,4 @@
-// Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+// Copyright (C) 2017-2022 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -21,6 +21,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
+API/APIIntegrity.cpp
 API/JSAPIGlobalObject.cpp
 API/JSAPIValueWrapper.cpp
 API/JSBase.cpp
@@ -46,17 +47,18 @@ API/OpaqueJSString.cpp
 
 assembler/AbstractMacroAssembler.cpp
 assembler/AssemblerBuffer.cpp
+assembler/AssemblyComments.cpp
 assembler/CPU.cpp
 assembler/JITOperationList.cpp
 assembler/LinkBuffer.cpp
 assembler/MacroAssembler.cpp
-assembler/MacroAssemblerARM64.cpp
-assembler/MacroAssemblerARMv7.cpp
+assembler/MacroAssemblerARM64.cpp @no-unify
+assembler/MacroAssemblerARMv7.cpp @no-unify
 assembler/MacroAssemblerCodeRef.cpp
-assembler/MacroAssemblerMIPS.cpp
+assembler/MacroAssemblerMIPS.cpp @no-unify
 assembler/MacroAssemblerPrinter.cpp
-assembler/MacroAssemblerRISCV64.cpp
-assembler/MacroAssemblerX86Common.cpp
+assembler/MacroAssemblerRISCV64.cpp @no-unify
+assembler/MacroAssemblerX86Common.cpp @no-unify
 assembler/PerfLog.cpp
 assembler/Printer.cpp
 assembler/ProbeContext.cpp
@@ -269,6 +271,7 @@ bytecode/PreciseJumpTargets.cpp
 bytecode/ProgramCodeBlock.cpp
 bytecode/PropertyCondition.cpp
 bytecode/ProxyableAccessCase.cpp
+bytecode/ProxyObjectAccessCase.cpp
 bytecode/PutByIdFlags.cpp
 bytecode/PutByStatus.cpp
 bytecode/PutByVariant.cpp
@@ -1028,6 +1031,7 @@ runtime/SymbolConstructor.cpp
 runtime/SymbolObject.cpp
 runtime/SymbolPrototype.cpp
 runtime/SymbolTable.cpp
+runtime/SyntheticModuleRecord.cpp
 runtime/TemplateObjectDescriptor.cpp
 runtime/TemporalCalendar.cpp
 runtime/TemporalCalendarConstructor.cpp
@@ -1043,6 +1047,9 @@ runtime/TemporalObject.cpp
 runtime/TemporalPlainDate.cpp
 runtime/TemporalPlainDateConstructor.cpp
 runtime/TemporalPlainDatePrototype.cpp
+runtime/TemporalPlainDateTime.cpp
+runtime/TemporalPlainDateTimeConstructor.cpp
+runtime/TemporalPlainDateTimePrototype.cpp
 runtime/TemporalPlainTime.cpp
 runtime/TemporalPlainTimeConstructor.cpp
 runtime/TemporalPlainTimePrototype.cpp

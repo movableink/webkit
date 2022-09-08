@@ -103,6 +103,7 @@ PASS contain-intrinsic-width
 PASS container-name
 PASS container-type
 PASS content
+PASS content-visibility
 PASS counter-increment
 PASS counter-reset
 PASS cursor
@@ -219,6 +220,7 @@ PASS outline-color
 PASS outline-offset
 PASS outline-style
 PASS outline-width
+PASS overflow-anchor
 PASS overflow-wrap
 PASS overflow-x
 PASS overflow-y
@@ -321,7 +323,6 @@ PASS transition-property
 PASS transition-timing-function
 PASS translate
 PASS unicode-bidi
-PASS user-select
 PASS vector-effect
 PASS vertical-align
 PASS visibility
@@ -336,7 +337,6 @@ PASS x
 PASS y
 PASS z-index
 PASS zoom
-PASS -apple-color-filter
 PASS -webkit-backdrop-filter
 PASS -webkit-background-clip
 PASS -webkit-background-origin
@@ -392,4 +392,5 @@ PASS -webkit-text-stroke-width
 PASS -webkit-text-zoom
 PASS -webkit-user-drag
 PASS -webkit-user-modify
+PASS -webkit-user-select
 

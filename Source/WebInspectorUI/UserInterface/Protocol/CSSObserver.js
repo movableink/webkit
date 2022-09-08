@@ -47,9 +47,15 @@ WI.CSSObserver = class CSSObserver extends InspectorBackend.Dispatcher
         WI.cssManager.styleSheetRemoved(id);
     }
 
+    nodeLayoutFlagsChanged(nodeId, layoutFlags)
+    {
+        WI.domManager.nodeLayoutFlagsChanged(nodeId, layoutFlags);
+    }
+
     nodeLayoutContextTypeChanged(nodeId, layoutContextType)
     {
-        WI.domManager.nodeLayoutContextTypeChanged(nodeId, layoutContextType);
+        // COMPATIBILITY (macOS 13.0, iOS 16.0): CSS.nodeLayoutContextTypeChanged was renamed/expanded to CSS.nodeLayoutFlagsChanged.
+        WI.domManager.nodeLayoutFlagsChanged(nodeId, [WI.DOMNode.LayoutFlag.Rendered, layoutContextType]);
     }
 
     namedFlowCreated(namedFlow)

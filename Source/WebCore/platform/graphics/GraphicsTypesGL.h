@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <JavaScriptCore/ArrayBufferView.h>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
@@ -70,107 +71,126 @@ typedef unsigned GLuint;
 inline constexpr size_t gcGLSpanDynamicExtent = std::numeric_limits<size_t>::max();
 
 template<typename T, size_t Extent = gcGLSpanDynamicExtent>
-struct GCGLSpan;
+class GCGLSpan;
 template<typename T, size_t Extent>
-struct GCGLSpan {
+class GCGLSpan {
+public:
     explicit GCGLSpan(T* array, size_t size = Extent)
-        : data(array)
+        : m_data(array)
     {
         ASSERT_UNUSED(size, size == Extent);
     }
     GCGLSpan(T (&array)[Extent])
-        : data(array)
+        : m_data(array)
     { }
     template<typename U>
     GCGLSpan(const GCGLSpan<U, Extent>& other, std::enable_if_t<std::is_convertible_v<U(*)[], T(*)[]>, std::nullptr_t> = nullptr)
-        : data(other.data)
+        : m_data(other.m_data)
     { }
     GCGLSpan(std::array<T, Extent>& array)
-        : data(array.data())
+        : m_data(array.data())
     { }
     GCGLSpan(const std::array<T, Extent>& array)
-        : data(array.data())
+        : m_data(array.data())
     { }
-    T& operator[](size_t i) { RELEASE_ASSERT(data && i < bufSize); return data[i]; }
-    T& operator*() { RELEASE_ASSERT(data && bufSize); return *data; }
-    T* data;
-    constexpr static size_t bufSize = Extent;
+    T* data() const noexcept { return m_data; }
+    size_t size() const noexcept { return m_bufSize; }
+    T& operator[](size_t i) { RELEASE_ASSERT(m_data && i < m_bufSize); return m_data[i]; }
+    T& operator*() { RELEASE_ASSERT(m_data && m_bufSize); return *m_data; }
+private:
+    T* m_data;
+    constexpr static size_t m_bufSize = Extent;
 };
 
 template<typename T>
-struct GCGLSpan<T, gcGLSpanDynamicExtent> {
-    GCGLSpan(T* array, size_t bufSize_)
-        : data(array)
-        , bufSize(bufSize_)
+class GCGLSpan<T, gcGLSpanDynamicExtent> {
+public:
+    GCGLSpan(T* array, size_t bufSize)
+        : m_data(array)
+        , m_bufSize(bufSize)
     { }
     template<size_t Sz>
     GCGLSpan(T (&array)[Sz])
-        : data(array)
-        , bufSize(Sz)
+        : GCGLSpan(array, Sz)
     { }
     template<typename U, size_t UExtent>
     GCGLSpan(const GCGLSpan<U, UExtent>& other, std::enable_if_t<std::is_convertible_v<U(*)[], T(*)[]>, std::nullptr_t> = nullptr)
-        : data(other.data)
-        , bufSize(other.bufSize)
+        : GCGLSpan(other.data(), other.size())
     { }
     template<typename U, size_t inlineCapacity>
     GCGLSpan(Vector<U, inlineCapacity>& array, std::enable_if_t<std::is_convertible_v<U(*)[], T(*)[]>, std::nullptr_t> = nullptr)
-        : data(array.data())
-        , bufSize(array.size())
+        : GCGLSpan(array.data(), array.size())
     { }
-    T& operator[](size_t i) { RELEASE_ASSERT(data && i < bufSize); return data[i]; }
-    T& operator*() { RELEASE_ASSERT(data && bufSize); return *data; }
-    T* data;
-    const size_t bufSize;
+    GCGLSpan(const ArrayBufferView& view)
+        : GCGLSpan(view.baseAddress(), view.byteLength())
+    { }
+    T* data() const noexcept { return m_data; }
+    size_t size() const noexcept { return m_bufSize; }
+    T& operator[](size_t i) { RELEASE_ASSERT(m_data && i < m_bufSize); return m_data[i]; }
+    T& operator*() { RELEASE_ASSERT(m_data && m_bufSize); return *m_data; }
+private:
+    T* m_data;
+    size_t m_bufSize;
 };
 
 template<>
-struct GCGLSpan<GCGLvoid> {
-    GCGLSpan(GCGLvoid* array, size_t bufSize_)
-        : data(array)
-        , bufSize(bufSize_)
+class GCGLSpan<GCGLvoid> {
+public:
+    GCGLSpan(GCGLvoid* array, size_t bufSize)
+        : m_data(array)
+        , m_bufSize(bufSize)
     { }
     template<typename U, size_t Sz>
     GCGLSpan(U (&array)[Sz])
-        : data(array)
-        , bufSize(Sz * sizeof(U))
+        : GCGLSpan(array, Sz * sizeof(U))
+    { }
+    GCGLSpan(const GCGLSpan<GCGLvoid>& other)
+        : GCGLSpan(other.data(), other.size())
     { }
     template<typename U, size_t UExtent>
     GCGLSpan(const GCGLSpan<U, UExtent>& other)
-        : data(other.data)
-        , bufSize(other.bufSize * sizeof(U))
+        : GCGLSpan(other.data(), other.size() * sizeof(U))
     { }
     template<typename U, size_t inlineCapacity>
     GCGLSpan(Vector<U, inlineCapacity>& array)
-        : data(array.data())
-        , bufSize(array.size() * sizeof(U))
+        : GCGLSpan(array.data(), array.size() * sizeof(U))
     { }
-    GCGLvoid* data;
-    const size_t bufSize;
+    GCGLSpan(const ArrayBufferView& view)
+        : GCGLSpan(view.baseAddress(), view.byteLength())
+    { }
+    void* data() const noexcept { return m_data; }
+    size_t size() const noexcept { return m_bufSize; }
+private:
+    GCGLvoid* m_data;
+    size_t m_bufSize;
 };
 
 template<>
-struct GCGLSpan<const GCGLvoid> {
-    GCGLSpan(const GCGLvoid* array, size_t bufSize_)
-        : data(array)
-        , bufSize(bufSize_)
+class GCGLSpan<const GCGLvoid> {
+public:
+    GCGLSpan(const GCGLvoid* array, size_t bufSize)
+        : m_data(array)
+        , m_bufSize(bufSize)
     { }
     template<typename U, size_t Sz>
     GCGLSpan(U (&array)[Sz])
-        : data(array)
-        , bufSize(Sz * sizeof(U))
+        : GCGLSpan(array, Sz * sizeof(U))
     { }
     GCGLSpan(const GCGLSpan<GCGLvoid>& other)
-        : data(other.data)
-        , bufSize(other.bufSize)
+        : GCGLSpan(other.data(), other.size())
     { }
     template<typename U, size_t UExtent>
     GCGLSpan(const GCGLSpan<U, UExtent>& other)
-        : data(other.data)
-        , bufSize(other.bufSize * sizeof(U))
+        : GCGLSpan(other.data(), other.size() * sizeof(U))
     { }
-    const GCGLvoid* data;
-    const size_t bufSize;
+    GCGLSpan(const ArrayBufferView& view)
+        : GCGLSpan(view.baseAddress(), view.byteLength())
+    { }
+    const void* data() const noexcept { return m_data; }
+    size_t size() const noexcept { return m_bufSize; }
+private:
+    const GCGLvoid* m_data;
+    size_t m_bufSize;
 };
 
 template<typename T, size_t N>
@@ -235,6 +255,40 @@ struct GCGLSpanTuple<T0, T1, T2> : public GCGLSpanTuple<T0, T1> {
     T2* const data2;
 };
 
+template<typename T0, typename T1, typename T2, typename T3>
+struct GCGLSpanTuple<T0, T1, T2, T3> : public GCGLSpanTuple<T0, T1, T2> {
+    GCGLSpanTuple(T0* data0_, T1* data1_, T2* data2_, T3* data3_, size_t bufSize_)
+        : GCGLSpanTuple<T0, T1, T2>(data0_, data1_, data2_, bufSize_)
+        , data3(data3_)
+    {
+    }
+    template<typename U0, typename U1, typename U2, typename U3>
+    GCGLSpanTuple(const Vector<U0>& data0_, const Vector<U1>& data1_, const Vector<U2>& data2_, const Vector<U3>& data3_)
+        : GCGLSpanTuple<T0, T1, T2>(data0_, data1_, data2_)
+        , data3(data3_.data())
+    {
+        ASSERT(data3_.size() == data0_.size());
+    }
+    T3* const data3;
+};
+
+template<typename T0, typename T1, typename T2, typename T3, typename T4>
+struct GCGLSpanTuple<T0, T1, T2, T3, T4> : public GCGLSpanTuple<T0, T1, T2, T3> {
+    GCGLSpanTuple(T0* data0_, T1* data1_, T2* data2_, T3* data3_, T4* data4_, size_t bufSize_)
+        : GCGLSpanTuple<T0, T1, T2, T3>(data0_, data1_, data2_, data3_, bufSize_)
+        , data4(data4_)
+    {
+    }
+    template<typename U0, typename U1, typename U2, typename U3, typename U4>
+    GCGLSpanTuple(const Vector<U0>& data0_, const Vector<U1>& data1_, const Vector<U2>& data2_, const Vector<U3>& data3_, const Vector<U4>& data4_)
+        : GCGLSpanTuple<T0, T1, T2, T3>(data0_, data1_, data2_, data3_)
+        , data4(data4_.data())
+    {
+        ASSERT(data4_.size() == data0_.size());
+    }
+    T4* const data4;
+};
+
 template<typename T0, typename T1>
 GCGLSpanTuple(T0*, T1*, size_t) -> GCGLSpanTuple<T0, T1>;
 
@@ -246,3 +300,15 @@ GCGLSpanTuple(T0*, T1*, T2*, size_t) -> GCGLSpanTuple<T0, T1, T2>;
 
 template<typename T0, typename T1, typename T2>
 GCGLSpanTuple(const Vector<T0>&, const Vector<T1>&, const Vector<T2>&) -> GCGLSpanTuple<const T0, const T1, const T2>;
+
+template<typename T0, typename T1, typename T2, typename T3>
+GCGLSpanTuple(T0*, T1*, T2*, T3*, size_t) -> GCGLSpanTuple<T0, T1, T2, T3>;
+
+template<typename T0, typename T1, typename T2, typename T3>
+GCGLSpanTuple(const Vector<T0>&, const Vector<T1>&, const Vector<T2>&, const Vector<T3>&) -> GCGLSpanTuple<const T0, const T1, const T2, const T3>;
+
+template<typename T0, typename T1, typename T2, typename T3, typename T4>
+GCGLSpanTuple(T0*, T1*, T2*, T3*, T4*, size_t) -> GCGLSpanTuple<T0, T1, T2, T3, T4>;
+
+template<typename T0, typename T1, typename T2, typename T3, typename T4>
+GCGLSpanTuple(const Vector<T0>&, const Vector<T1>&, const Vector<T2>&, const Vector<T3>&, const Vector<T4>&) -> GCGLSpanTuple<const T0, const T1, const T2, const T3, const T4>;

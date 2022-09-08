@@ -388,7 +388,7 @@ public:
     TextDecorationSkipInk textDecorationSkipInk() const { return static_cast<TextDecorationSkipInk>(m_rareInheritedData->textDecorationSkipInk); }
     TextUnderlinePosition textUnderlinePosition() const { return static_cast<TextUnderlinePosition>(m_rareInheritedData->textUnderlinePosition); }
     TextUnderlineOffset textUnderlineOffset() const { return m_rareInheritedData->textUnderlineOffset; }
-    TextDecorationThickness textDecorationThickness() const { return m_rareInheritedData->textDecorationThickness; }
+    TextDecorationThickness textDecorationThickness() const { return m_rareNonInheritedData->textDecorationThickness; }
 
     TextIndentLine textIndentLine() const { return static_cast<TextIndentLine>(m_rareInheritedData->textIndentLine); }
     TextIndentType textIndentType() const { return static_cast<TextIndentType>(m_rareInheritedData->textIndentType); }
@@ -422,8 +422,7 @@ public:
     bool breakOnlyAfterWhiteSpace() const;
     bool breakWords() const;
 
-    FillRepeat backgroundRepeatX() const { return static_cast<FillRepeat>(m_backgroundData->background->repeatX()); }
-    FillRepeat backgroundRepeatY() const { return static_cast<FillRepeat>(m_backgroundData->background->repeatY()); }
+    FillRepeatXY backgroundRepeat() const { return m_backgroundData->background->repeat(); }
     FillAttachment backgroundAttachment() const { return static_cast<FillAttachment>(m_backgroundData->background->attachment()); }
     FillBox backgroundClip() const { return static_cast<FillBox>(m_backgroundData->background->clip()); }
     FillBox backgroundOrigin() const { return static_cast<FillBox>(m_backgroundData->background->origin()); }
@@ -436,8 +435,7 @@ public:
     BlendMode backgroundBlendMode() const { return static_cast<BlendMode>(m_backgroundData->background->blendMode()); }
 
     StyleImage* maskImage() const { return m_rareNonInheritedData->mask->image(); }
-    FillRepeat maskRepeatX() const { return static_cast<FillRepeat>(m_rareNonInheritedData->mask->repeatX()); }
-    FillRepeat maskRepeatY() const { return static_cast<FillRepeat>(m_rareNonInheritedData->mask->repeatY()); }
+    FillRepeatXY maskRepeat() const { return m_rareNonInheritedData->mask->repeat(); }
     CompositeOperator maskComposite() const { return static_cast<CompositeOperator>(m_rareNonInheritedData->mask->composite()); }
     FillBox maskClip() const { return static_cast<FillBox>(m_rareNonInheritedData->mask->clip()); }
     FillBox maskOrigin() const { return static_cast<FillBox>(m_rareNonInheritedData->mask->origin()); }
@@ -540,10 +538,15 @@ public:
     OptionSet<Containment> effectiveContainment() const { return m_rareNonInheritedData->effectiveContainment(); }
     bool containsLayout() const { return effectiveContainment().contains(Containment::Layout); }
     bool containsSize() const { return effectiveContainment().contains(Containment::Size); }
+    bool containsInlineSize() const { return effectiveContainment().contains(Containment::InlineSize); }
+    bool containsSizeOrInlineSize() const { return effectiveContainment().containsAny({ Containment::Size, Containment::InlineSize }); }
     bool containsStyle() const { return effectiveContainment().contains(Containment::Style); }
     bool containsPaint() const { return effectiveContainment().contains(Containment::Paint); }
+    bool containsLayoutOrPaint() const { return effectiveContainment().containsAny({ Containment::Layout, Containment::Paint }); }
     ContainerType containerType() const { return static_cast<ContainerType>(m_rareNonInheritedData->containerType); }
     const Vector<AtomString>& containerNames() const { return m_rareNonInheritedData->containerNames; }
+
+    ContentVisibility contentVisibility() const { return static_cast<ContentVisibility>(m_rareNonInheritedData->contentVisibility); }
 
     ContainIntrinsicSizeType containIntrinsicWidthType() const { return static_cast<ContainIntrinsicSizeType>(m_rareNonInheritedData->containIntrinsicWidthType); }
     ContainIntrinsicSizeType containIntrinsicHeightType() const { return static_cast<ContainIntrinsicSizeType>(m_rareNonInheritedData->containIntrinsicHeightType); }
@@ -940,8 +943,7 @@ public:
     void setBackgroundAttachment(FillAttachment attachment) { SET_NESTED_VAR(m_backgroundData, background, m_attachment, static_cast<unsigned>(attachment)); SET_NESTED_VAR(m_backgroundData, background, m_attachmentSet, true); }
     void setBackgroundClip(FillBox fillBox) { SET_NESTED_VAR(m_backgroundData, background, m_clip, static_cast<unsigned>(fillBox)); SET_NESTED_VAR(m_backgroundData, background, m_clipSet, true); }
     void setBackgroundOrigin(FillBox fillBox) { SET_NESTED_VAR(m_backgroundData, background, m_origin, static_cast<unsigned>(fillBox)); SET_NESTED_VAR(m_backgroundData, background, m_originSet, true); }
-    void setBackgroundRepeatX(FillRepeat fillRepeat) { SET_NESTED_VAR(m_backgroundData, background, m_repeatX, static_cast<unsigned>(fillRepeat)); SET_NESTED_VAR(m_backgroundData, background, m_repeatXSet, true); }
-    void setBackgroundRepeatY(FillRepeat fillRepeat) { SET_NESTED_VAR(m_backgroundData, background, m_repeatY, static_cast<unsigned>(fillRepeat)); SET_NESTED_VAR(m_backgroundData, background, m_repeatYSet, true); }
+    void setBackgroundRepeat(FillRepeatXY fillRepeat) { SET_NESTED_VAR(m_backgroundData, background, m_repeat, fillRepeat); SET_NESTED_VAR(m_backgroundData, background, m_repeatSet, true); }
     void setBackgroundBlendMode(BlendMode blendMode) { SET_NESTED_VAR(m_backgroundData, background, m_blendMode, static_cast<unsigned>(blendMode)); SET_NESTED_VAR(m_backgroundData, background, m_blendModeSet, true); }
 
     void setBorderImage(const NinePieceImage& b) { SET_VAR(m_surroundData, border.m_image, b); }
@@ -1034,7 +1036,7 @@ public:
     void setTextDecorationSkipInk(TextDecorationSkipInk skipInk) { SET_VAR(m_rareInheritedData, textDecorationSkipInk, static_cast<unsigned>(skipInk)); }
     void setTextUnderlinePosition(TextUnderlinePosition position) { SET_VAR(m_rareInheritedData, textUnderlinePosition, static_cast<unsigned>(position)); }
     void setTextUnderlineOffset(TextUnderlineOffset textUnderlineOffset) { SET_VAR(m_rareInheritedData, textUnderlineOffset, textUnderlineOffset); }
-    void setTextDecorationThickness(TextDecorationThickness textDecorationThickness) { SET_VAR(m_rareInheritedData, textDecorationThickness, textDecorationThickness); }
+    void setTextDecorationThickness(TextDecorationThickness textDecorationThickness) { SET_VAR(m_rareNonInheritedData, textDecorationThickness, textDecorationThickness); }
     void setDirection(TextDirection v) { m_inheritedFlags.direction = static_cast<unsigned>(v); }
     void setHasExplicitlySetDirection(bool v) { m_nonInheritedFlags.hasExplicitlySetDirection = v; }
     void setLineHeight(Length&&);
@@ -1084,8 +1086,7 @@ public:
     void setMaskBoxImageSource(RefPtr<StyleImage>&& v) { m_rareNonInheritedData.access().maskBoxImage.setImage(WTFMove(v)); }
     void setMaskXPosition(Length&& length) { SET_NESTED_VAR(m_rareNonInheritedData, mask, m_xPosition, WTFMove(length)); }
     void setMaskYPosition(Length&& length) { SET_NESTED_VAR(m_rareNonInheritedData, mask, m_yPosition, WTFMove(length)); }
-    void setMaskRepeatX(FillRepeat fillRepeat) { SET_NESTED_VAR(m_rareNonInheritedData, mask, m_repeatX, static_cast<unsigned>(fillRepeat)); SET_NESTED_VAR(m_rareNonInheritedData, mask, m_repeatXSet, true); }
-    void setMaskRepeatY(FillRepeat fillRepeat) { SET_NESTED_VAR(m_rareNonInheritedData, mask, m_repeatY, static_cast<unsigned>(fillRepeat)); SET_NESTED_VAR(m_rareNonInheritedData, mask, m_repeatYSet, true); }
+    void setMaskRepeat(FillRepeatXY fillRepeat) { SET_NESTED_VAR(m_rareNonInheritedData, mask, m_repeat, fillRepeat); SET_NESTED_VAR(m_rareNonInheritedData, mask, m_repeatSet, true); }
 
     void setMaskSize(LengthSize size) { SET_NESTED_VAR(m_rareNonInheritedData, mask, m_sizeLength, WTFMove(size)); }
 
@@ -1106,6 +1107,8 @@ public:
     void setContainIntrinsicHeightType(ContainIntrinsicSizeType containIntrinsicHeightType) { SET_VAR(m_rareNonInheritedData, containIntrinsicHeightType, static_cast<unsigned>(containIntrinsicHeightType)); }
     void setContainIntrinsicWidth(std::optional<Length> width) { SET_VAR(m_rareNonInheritedData, containIntrinsicWidth, width); }
     void setContainIntrinsicHeight(std::optional<Length> height) { SET_VAR(m_rareNonInheritedData, containIntrinsicHeight, height); }
+
+    void setContentVisibility(ContentVisibility value) { SET_VAR(m_rareNonInheritedData, contentVisibility, static_cast<unsigned>(value)); }
 
     void setListStyleStringValue(const AtomString& value) { SET_VAR(m_rareInheritedData, listStyleStringValue, value); }
     void setListStyleType(ListStyleType v) { m_inheritedFlags.listStyleType = static_cast<unsigned>(v); }
@@ -1562,6 +1565,7 @@ public:
     bool isDisplayFlexibleOrGridBox() const { return isDisplayFlexibleOrGridBox(display()); }
     bool isDisplayFlexibleBoxIncludingDeprecatedOrGridBox() const { return isDisplayFlexibleOrGridBox() || isDisplayDeprecatedFlexibleBox(display()); }
     bool isDisplayRegionType() const;
+    bool isDisplayBlockLevel() const;
     bool isDisplayTableOrTablePart() const { return isDisplayTableOrTablePart(display()); }
     bool isOriginalDisplayListItemType() const { return isDisplayListItemType(originalDisplay()); }
 
@@ -1718,7 +1722,8 @@ public:
     static OptionSet<Containment> initialContainment() { return OptionSet<Containment> { }; }
     static OptionSet<Containment> strictContainment() { return OptionSet<Containment> { Containment::Size, Containment::Layout, Containment::Paint, Containment::Style }; }
     static OptionSet<Containment> contentContainment() { return OptionSet<Containment> { Containment::Layout, Containment::Paint, Containment::Style }; }
-    static ContainerType initialContainerType() { return ContainerType::None; }
+    static ContainerType initialContainerType() { return ContainerType::Normal; }
+    static constexpr ContentVisibility initialContentVisibility() { return ContentVisibility::Visible; }
     static Vector<AtomString> initialContainerNames() { return { }; }
     static double initialAspectRatioWidth() { return 1.0; }
     static double initialAspectRatioHeight() { return 1.0; }
@@ -1958,6 +1963,10 @@ public:
     static OffsetRotation initialOffsetRotate() { return OffsetRotation(true, 0); }
 
     bool borderAndBackgroundEqual(const RenderStyle&) const;
+    
+    OverflowAnchor overflowAnchor() const { return static_cast<OverflowAnchor>(m_rareNonInheritedData->overflowAnchor); }
+    void setOverflowAnchor(OverflowAnchor a) { SET_VAR(m_rareNonInheritedData, overflowAnchor, static_cast<unsigned>(a)); }
+    static OverflowAnchor initialOverflowAnchor() { return OverflowAnchor::Auto; }
 
 private:
     struct NonInheritedFlags {
@@ -2441,6 +2450,13 @@ inline bool RenderStyle::isDisplayRegionType() const
     return display() == DisplayType::Block || display() == DisplayType::InlineBlock
         || display() == DisplayType::TableCell || display() == DisplayType::TableCaption
         || display() == DisplayType::ListItem;
+}
+
+inline bool RenderStyle::isDisplayBlockLevel() const
+{
+    return display() == DisplayType::Block || display() == DisplayType::Table
+        || display() == DisplayType::FlowRoot || display() == DisplayType::Grid
+        || display() == DisplayType::Flex || display() == DisplayType::ListItem;
 }
 
 inline bool RenderStyle::setWritingMode(WritingMode v)

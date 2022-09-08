@@ -29,6 +29,11 @@ struct FeaturesVk;
 
 namespace rx
 {
+namespace vk
+{
+class SyncHelper;
+}  // namespace vk
+
 class ProgramExecutableVk;
 class RendererVk;
 class WindowSurfaceVk;
@@ -248,7 +253,7 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
                                                 GLsizei stride);
 
     // ShareGroup
-    ShareGroupVk *getShareGroupVk() { return mShareGroupVk; }
+    ShareGroupVk *getShareGroup() { return mShareGroupVk; }
     PipelineLayoutCache &getPipelineLayoutCache()
     {
         return mShareGroupVk->getPipelineLayoutCache();
@@ -378,6 +383,8 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
 
     ANGLE_INLINE void invalidateTexture(gl::TextureType target) override {}
 
+    bool hasDisplayTextureShareGroup() const { return mState.hasDisplayTextureShareGroup(); }
+
     // EXT_shader_framebuffer_fetch_non_coherent
     void framebufferFetchBarrier() override;
 
@@ -463,6 +470,7 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     void updateColorMasks();
     void updateBlendFuncsAndEquations();
     void updateSampleMaskWithRasterizationSamples(const uint32_t rasterizationSamples);
+    void updateFrameBufferFetchSamples(const uint32_t prevSamples, const uint32_t curSamples);
 
     void handleError(VkResult errorCode,
                      const char *file,
@@ -525,8 +533,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
 
     RenderPassCache &getRenderPassCache() { return mRenderPassCache; }
 
-    vk::DescriptorSetLayoutDesc getDriverUniformsDescriptorSetDesc() const;
-
     bool emulateSeamfulCubeMapSampling() const { return mEmulateSeamfulCubeMapSampling; }
 
     const gl::Debug &getDebug() const { return mState.getDebug(); }
@@ -552,7 +558,7 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     {
         ASSERT(mRenderPassCommands->started());
         mRenderPassCommands->imageWrite(this, level, layerStart, layerCount, aspectFlags,
-                                        imageLayout, vk::AliasingMode::Allowed, image);
+                                        imageLayout, image);
     }
 
     void onColorDraw(gl::LevelIndex level,
@@ -659,20 +665,25 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
 
     angle::Result syncExternalMemory();
 
+    // Either issue a submission or defer it when a sync object is initialized.  If deferred, a
+    // submission will have to be incurred during client wait.
+    angle::Result onSyncObjectInit(vk::SyncHelper *syncHelper, bool isEGLSyncObject);
+    // Called when a sync object is waited on while its submission was deffered in onSyncObjectInit.
+    // It's a no-op if this context doesn't have a pending submission.  Note that due to
+    // mHasDeferredFlush being set, flushing the render pass leads to a submission automatically.
+    angle::Result flushCommandsAndEndRenderPassIfDeferredSyncInit(RenderPassClosureReason reason);
+
     void addCommandBufferDiagnostics(const std::string &commandBufferDiagnostics);
 
     VkIndexType getVkIndexType(gl::DrawElementsType glIndexType) const;
     size_t getVkIndexTypeSize(gl::DrawElementsType glIndexType) const;
     bool shouldConvertUint8VkIndexType(gl::DrawElementsType glIndexType) const;
 
-    ANGLE_INLINE bool isBresenhamEmulationEnabled(const gl::PrimitiveMode mode)
-    {
-        return getFeatures().basicGLLineRasterization.enabled && gl::IsLineMode(mode);
-    }
-
     ProgramExecutableVk *getExecutable() const;
 
     bool isRobustResourceInitEnabled() const;
+
+    uint32_t getDriverUniformSize(PipelineType pipelineType) const;
 
     // Queries that begin and end automatically with render pass start and end
     angle::Result beginRenderPassQuery(QueryVk *queryVk);
@@ -733,15 +744,21 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
         return angle::Result::Continue;
     }
 
-    const angle::PerfMonitorCounterGroups &getPerfMonitorCounters() override;
-
-    void resetPerFramePerfCounters();
-
     angle::Result bindCachedDescriptorPool(
         DescriptorSetIndex descriptorSetIndex,
         const vk::DescriptorSetLayoutDesc &descriptorSetLayoutDesc,
         uint32_t descriptorCountMultiplier,
         vk::DescriptorPoolPointer *poolPointerOut);
+
+    // Put the context in framebuffer fetch mode.  If the permanentlySwitchToFramebufferFetchMode
+    // feature is enabled, this is done on first encounter of framebuffer fetch, and makes the
+    // context use framebuffer-fetch-enabled render passes from here on.
+    angle::Result switchToFramebufferFetchMode(bool hasFramebufferFetch);
+    bool isInFramebufferFetchMode() const { return mIsInFramebufferFetchMode; }
+
+    const angle::PerfMonitorCounterGroups &getPerfMonitorCounters() override;
+
+    void resetPerFramePerfCounters();
 
     // Accumulate cache stats for a specific cache
     void accumulateCacheStats(VulkanCacheType cache, const CacheStats &stats)
@@ -750,6 +767,10 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     }
 
     std::ostringstream &getPipelineCacheGraphStream() { return mPipelineCacheGraph; }
+
+    // Add resource to the resource use list tracking the last CommandBuffer (i.e,
+    // RenderpassCommands if exists, or outsideRenderPassCommands)
+    void retainResource(vk::Resource *resource);
 
   private:
     // Dirty bits.
@@ -786,7 +807,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
         DIRTY_BIT_INDEX_BUFFER,
         DIRTY_BIT_UNIFORMS,
         DIRTY_BIT_DRIVER_UNIFORMS,
-        DIRTY_BIT_DRIVER_UNIFORMS_BINDING,
         // Shader resources excluding textures, which are handled separately.
         DIRTY_BIT_SHADER_RESOURCES,
         DIRTY_BIT_TRANSFORM_FEEDBACK_BUFFERS,
@@ -856,8 +876,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
                   "Render pass using dirty bit must be handled after the render pass dirty bit");
     static_assert(DIRTY_BIT_DRIVER_UNIFORMS > DIRTY_BIT_RENDER_PASS,
                   "Render pass using dirty bit must be handled after the render pass dirty bit");
-    static_assert(DIRTY_BIT_DRIVER_UNIFORMS_BINDING > DIRTY_BIT_RENDER_PASS,
-                  "Render pass using dirty bit must be handled after the render pass dirty bit");
     static_assert(DIRTY_BIT_SHADER_RESOURCES > DIRTY_BIT_RENDER_PASS,
                   "Render pass using dirty bit must be handled after the render pass dirty bit");
     static_assert(DIRTY_BIT_TRANSFORM_FEEDBACK_BUFFERS > DIRTY_BIT_RENDER_PASS,
@@ -916,21 +934,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     using GraphicsDirtyBitHandler = angle::Result (
         ContextVk::*)(DirtyBits::Iterator *dirtyBitsIterator, DirtyBits dirtyBitMask);
     using ComputeDirtyBitHandler = angle::Result (ContextVk::*)();
-
-    struct DriverUniformsDescriptorSet
-    {
-        DriverUniformsDescriptorSet();
-        ~DriverUniformsDescriptorSet();
-
-        void init(RendererVk *rendererVk);
-        void destroy(RendererVk *rendererVk);
-
-        vk::DynamicBuffer dynamicBuffer;
-        VkDescriptorSet descriptorSet;
-        vk::BufferHelper *currentBuffer;
-        vk::BindingPointer<vk::DescriptorSetLayout> descriptorSetLayout;
-        vk::RefCountedDescriptorPoolBinding descriptorPoolBinding;
-    };
 
     // The GpuEventQuery struct holds together a timestamp query and enough data to create a
     // trace event based on that. Use traceGpuEvent to insert such queries.  They will be readback
@@ -1042,7 +1045,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     }
 
     angle::Result invalidateProgramExecutableHelper(const gl::Context *context);
-    angle::Result checkAndUpdateFramebufferFetchStatus(const gl::ProgramExecutable *executable);
 
     void invalidateCurrentDefaultUniforms();
     angle::Result invalidateCurrentTextures(const gl::Context *context, gl::Command command);
@@ -1080,8 +1082,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
                                                  DirtyBits dirtyBitMask);
     angle::Result handleDirtyGraphicsDriverUniforms(DirtyBits::Iterator *dirtyBitsIterator,
                                                     DirtyBits dirtyBitMask);
-    angle::Result handleDirtyGraphicsDriverUniformsBinding(DirtyBits::Iterator *dirtyBitsIterator,
-                                                           DirtyBits dirtyBitMask);
     angle::Result handleDirtyGraphicsShaderResources(DirtyBits::Iterator *dirtyBitsIterator,
                                                      DirtyBits dirtyBitMask);
     angle::Result handleDirtyGraphicsFramebufferFetchBarrier(DirtyBits::Iterator *dirtyBitsIterator,
@@ -1151,7 +1151,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     angle::Result handleDirtyComputePipelineBinding();
     angle::Result handleDirtyComputeTextures();
     angle::Result handleDirtyComputeDriverUniforms();
-    angle::Result handleDirtyComputeDriverUniformsBinding();
     angle::Result handleDirtyComputeShaderResources();
     angle::Result handleDirtyComputeDescriptorSets();
     angle::Result handleDirtyComputeUniforms();
@@ -1170,29 +1169,25 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
                                                  PipelineType pipelineType);
     void handleDirtyShaderBufferResourcesImpl(vk::CommandBufferHelperCommon *commandBufferHelper);
     template <typename CommandBufferHelperT>
-    void handleDirtyDriverUniformsBindingImpl(CommandBufferHelperT *commandBufferHelper,
-                                              VkPipelineBindPoint bindPoint,
-                                              DriverUniformsDescriptorSet *driverUniforms);
-    template <typename CommandBufferHelperT>
     angle::Result handleDirtyDescriptorSetsImpl(CommandBufferHelperT *commandBufferHelper,
                                                 PipelineType pipelineType);
     void handleDirtyGraphicsDynamicScissorImpl(bool isPrimitivesGeneratedQueryActive);
 
-    angle::Result allocateDriverUniforms(size_t driverUniformsSize,
-                                         DriverUniformsDescriptorSet *driverUniforms,
-                                         uint8_t **ptrOut,
-                                         bool *newBufferOut);
-    angle::Result updateDriverUniformsDescriptorSet(
-        vk::CommandBufferHelperCommon *commandBufferHelper,
-        bool newBuffer,
-        size_t driverUniformsSize,
-        PipelineType pipelineType);
-
     void writeAtomicCounterBufferDriverUniformOffsets(uint32_t *offsetsOut, size_t offsetsSize);
 
-    angle::Result submitFrame(const vk::Semaphore *signalSemaphore, Serial *submitSerialOut);
+    enum class Submit
+    {
+        OutsideRenderPassCommandsOnly,
+        AllCommands,
+    };
+
+    angle::Result submitFrame(const vk::Semaphore *signalSemaphore,
+                              Submit submission,
+                              Serial *submitSerialOut);
     angle::Result submitFrameOutsideCommandBufferOnly(Serial *submitSerialOut);
-    angle::Result submitCommands(const vk::Semaphore *signalSemaphore, Serial *submitSerialOut);
+    angle::Result submitCommands(const vk::Semaphore *signalSemaphore,
+                                 Submit submission,
+                                 Serial *submitSerialOut);
 
     angle::Result synchronizeCpuGpuTime();
     angle::Result traceGpuEventImpl(vk::OutsideRenderPassCommandBuffer *commandBuffer,
@@ -1215,6 +1210,9 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
                                                DirtyBits dirtyBitMask,
                                                RenderPassClosureReason reason);
 
+    // Mark the render pass to be closed on the next draw call.  The render pass is not actually
+    // closed and can be restored with restoreFinishedRenderPass if necessary, for example to append
+    // a resolve attachment.
     void onRenderPassFinished(RenderPassClosureReason reason);
 
     void initIndexTypeMap();
@@ -1279,6 +1277,16 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
 
     void updateDither();
 
+    // When the useNonZeroStencilWriteMaskStaticState workaround is enabled, the static state for
+    // stencil should be non-zero despite the state being dynamic.  This is done when:
+    //
+    // - The shader includes discard, or
+    // - Alpha-to-coverage is enabled.
+    //
+    // An alternative could have been to set the static state unconditionally to non-zero.  This is
+    // avoided however, as on the affected driver that would disable certain optimizations.
+    void updateStencilWriteWorkaround();
+
     SpecConstUsageBits getCurrentProgramSpecConstUsageBits() const;
     void updateGraphicsPipelineDescWithSpecConstUsageBits(SpecConstUsageBits usageBits);
 
@@ -1308,7 +1316,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     // threads simultaneously. Hence, we keep them in the ContextVk instead of the RendererVk.
     // Note that this implementation would need to change in shared resource scenarios. Likely
     // we'd instead share a single set of pools between the share groups.
-    angle::PackedEnumMap<PipelineType, vk::DynamicDescriptorPool> mDriverUniformsDescriptorPools;
     gl::QueryTypeMap<vk::DynamicQueryPool> mQueryPools;
 
     // Queries that need to be closed and reopened with the render pass:
@@ -1338,8 +1345,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
                                                              DIRTY_BIT_DESCRIPTOR_SETS};
     static constexpr DirtyBits kXfbBuffersAndDescSetDirtyBits{DIRTY_BIT_TRANSFORM_FEEDBACK_BUFFERS,
                                                               DIRTY_BIT_DESCRIPTOR_SETS};
-    static constexpr DirtyBits kDriverUniformsAndBindingDirtyBits{
-        DIRTY_BIT_DRIVER_UNIFORMS, DIRTY_BIT_DRIVER_UNIFORMS_BINDING};
 
     // The offset we had the last time we bound the index buffer.
     const GLvoid *mLastIndexBufferOffset;
@@ -1374,8 +1379,6 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
 
     // Whether this context should do seamful cube map sampling emulation.
     bool mEmulateSeamfulCubeMapSampling;
-
-    angle::PackedEnumMap<PipelineType, DriverUniformsDescriptorSet> mDriverUniforms;
 
     // This info is used in the descriptor update step.
     gl::ActiveTextureArray<TextureVk *> mActiveTextures;
@@ -1455,6 +1458,13 @@ class ContextVk : public ContextImpl, public vk::Context, public MultisampleText
     // shared-present mode, and the app is unnecessarily calling eglSwapBuffers (which equates
     // glFlush in that mode).
     bool mHasAnyCommandsPendingSubmission;
+
+    // Whether framebuffer fetch is active.  When the permanentlySwitchToFramebufferFetchMode
+    // feature is enabled, if any program uses framebuffer fetch, rendering switches to assuming
+    // framebuffer fetch could happen in any render pass.  This incurs a potential cost due to usage
+    // of the GENERAL layout instead of COLOR_ATTACHMENT_OPTIMAL, but has definite benefits of
+    // avoiding render pass breaks when a framebuffer fetch program is used mid render pass.
+    bool mIsInFramebufferFetchMode;
 
     // The size of copy commands issued between buffers and images. Used to submit the command
     // buffer for the outside render pass.
@@ -1553,9 +1563,21 @@ ANGLE_INLINE angle::Result ContextVk::onVertexAttributeChange(size_t attribIndex
     return onVertexBufferChange(vertexBuffer);
 }
 
+ANGLE_INLINE void ContextVk::retainResource(vk::Resource *resource)
+{
+    if (hasStartedRenderPass())
+    {
+        mRenderPassCommands->retainResource(resource);
+    }
+    else
+    {
+        mOutsideRenderPassCommands->retainResource(resource);
+    }
+}
+
 ANGLE_INLINE bool UseLineRaster(const ContextVk *contextVk, gl::PrimitiveMode mode)
 {
-    return contextVk->getFeatures().basicGLLineRasterization.enabled && gl::IsLineMode(mode);
+    return gl::IsLineMode(mode);
 }
 }  // namespace rx
 

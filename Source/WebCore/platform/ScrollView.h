@@ -67,8 +67,9 @@ class ScrollView : public Widget, public ScrollableArea {
 public:
     virtual ~ScrollView();
 
-    using WeakValueType = Widget::WeakValueType;
     using Widget::weakPtrFactory;
+    using Widget::WeakValueType;
+    using Widget::WeakPtrImplType;
 
     // ScrollableArea functions.
     WEBCORE_EXPORT void setScrollOffset(const ScrollOffset&) final;
@@ -120,8 +121,6 @@ public:
     void setScrollingModesLock(bool lock = true) { m_horizontalScrollbarLock = m_verticalScrollbarLock = lock; }
 
     WEBCORE_EXPORT virtual void setCanHaveScrollbars(bool);
-
-    virtual bool avoidScrollbarCreation() const { return false; }
 
     void setScrollbarOverlayStyle(ScrollbarOverlayStyle) final;
 

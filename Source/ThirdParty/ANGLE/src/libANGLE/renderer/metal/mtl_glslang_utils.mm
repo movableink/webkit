@@ -377,7 +377,8 @@ angle::Result ConvertSpirvToMsl(Context *context,
 
 }  // namespace
 
-void GlslangGetShaderSpirvCode(const gl::ProgramState &programState,
+void GlslangGetShaderSpirvCode(const gl::Context *context,
+                               const gl::ProgramState &programState,
                                const gl::ProgramLinkedResources &resources,
                                gl::ShaderMap<const angle::spirv::Blob *> *spirvBlobsOut,
                                ShaderInterfaceVariableInfoMap *variableInfoMapOut,
@@ -390,7 +391,7 @@ void GlslangGetShaderSpirvCode(const gl::ProgramState &programState,
     options.supportsTransformFeedbackEmulation = true;
 
     // Get shader sources and fill variable info map with transform feedback disabled.
-    rx::GlslangGetShaderSpirvCode(options, programState, resources, &programInterfaceInfo,
+    rx::GlslangGetShaderSpirvCode(context, options, programState, resources, &programInterfaceInfo,
                                   spirvBlobsOut, variableInfoMapOut);
 
     const gl::ProgramExecutable &programExecutable = programState.getExecutable();
@@ -419,8 +420,7 @@ angle::Result GlslangTransformSpirvCode(const gl::ShaderBitSet &linkedShaderStag
     for (const gl::ShaderType shaderType : linkedShaderStages)
     {
         GlslangSpirvOptions options;
-        options.shaderType                         = shaderType;
-        options.transformPositionToVulkanClipSpace = true;
+        options.shaderType = shaderType;
         options.isTransformFeedbackStage =
             shaderType == gl::ShaderType::Vertex && isTransformFeedbackEnabled;
         options.isTransformFeedbackEmulated = true;

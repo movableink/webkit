@@ -69,6 +69,12 @@ const AtomString& webkitCreditCardAutoFillButton()
     return webkitCreditCardAutoFillButton;
 }
 
+const AtomString& webkitLoadingAutoFillButton()
+{
+    static MainThreadNeverDestroyed<const AtomString> webkitLoadingAutoFillButton("-webkit-loading-auto-fill-button"_s);
+    return webkitLoadingAutoFillButton;
+}
+
 const AtomString& webkitStrongPasswordAutoFillButton()
 {
     static MainThreadNeverDestroyed<const AtomString> webkitStrongPasswordAutoFillButton("-webkit-strong-password-auto-fill-button"_s);
@@ -319,6 +325,12 @@ const AtomString& webkitValidationBubbleBody()
 {
     static MainThreadNeverDestroyed<const AtomString> webkitValidationBubbleBody("-webkit-validation-bubble-body"_s);
     return webkitValidationBubbleBody;
+}
+
+const AtomString& appleAttachmentControlsContainer()
+{
+    static MainThreadNeverDestroyed<const AtomString> appleAttachmentControlsContainer("-apple-attachment-controls-container"_s);
+    return appleAttachmentControlsContainer;
 }
 
 } // namespace ShadowPseudoId

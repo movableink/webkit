@@ -52,6 +52,8 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         // FIXME: Provide dedicated UI to toggle Network Interception globally?
         this._interceptionEnabled = true;
 
+        this._emulatedCondition = WI.NetworkManager.EmulatedCondition.None;
+
         // COMPATIBILITY (iOS 14.0): Inspector.activateExtraDomains was removed in favor of a declared debuggable type
         WI.notifications.addEventListener(WI.Notification.ExtraDomainsActivated, this._extraDomainsActivated, this);
 
@@ -193,7 +195,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         if (target.hasDomain("Network")) {
             target.NetworkAgent.enable();
 
-            // COMPATIBILITY (iOS 10.3): Network.setDisableResourceCaching did not exist.
+            // COMPATIBILITY (iOS 10.3): Network.setResourceCachingDisabled did not exist.
             if (target.hasCommand("Network.setResourceCachingDisabled"))
                 target.NetworkAgent.setResourceCachingDisabled(WI.settings.resourceCachingDisabled.value);
 
@@ -208,6 +210,8 @@ WI.NetworkManager = class NetworkManager extends WI.Object
                 }
             }
         }
+
+        this._applyEmulatedCondition(target);
 
         if (target.type === WI.TargetType.Worker)
             this.adoptOrphanedResourcesForTarget(target);
@@ -247,6 +251,28 @@ WI.NetworkManager = class NetworkManager extends WI.Object
             if (target.hasCommand("Network.setInterceptionEnabled"))
                 target.NetworkAgent.setInterceptionEnabled(this._interceptionEnabled);
         }
+    }
+
+    get emulatedCondition()
+    {
+        return this._emulatedCondition;
+    }
+
+    set emulatedCondition(condition)
+    {
+        console.assert(Object.values(WI.NetworkManager.EmulatedCondition).includes(condition), condition);
+        console.assert(WI.settings.experimentalEnableNetworkEmulatedCondition.value);
+        console.assert(InspectorBackend.hasCommand("Network.setEmulatedConditions"));
+
+        if (condition === this._emulatedCondition)
+            return;
+
+        this._emulatedCondition = condition;
+
+        for (let target of WI.targets)
+            this._applyEmulatedCondition(target);
+
+        this.dispatchEventToListeners(WI.NetworkManager.Event.EmulatedConditionChanged);
     }
 
     frameForIdentifier(frameId)
@@ -685,7 +711,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
             requestSentWalltime: walltime,
             referrerPolicy: request.referrerPolicy,
             integrity: request.integrity,
-            initiatorCallFrames: this._initiatorCallFramesFromPayload(initiator),
+            initiatorStackTrace: this._initiatorStackTraceFromPayload(initiator),
             initiatorSourceCodeLocation: this._initiatorSourceCodeLocationFromPayload(initiator),
             initiatorNode: this._initiatorNodeFromPayload(initiator),
         });
@@ -825,7 +851,7 @@ WI.NetworkManager = class NetworkManager extends WI.Object
             requestIdentifier,
             requestMethod: "GET",
             requestSentTimestamp: elapsedTime,
-            initiatorCallFrames: this._initiatorCallFramesFromPayload(initiator),
+            initiatorStackTrace: this._initiatorStackTraceFromPayload(initiator),
             initiatorSourceCodeLocation: this._initiatorSourceCodeLocationFromPayload(initiator),
             initiatorNode: this._initiatorNodeFromPayload(initiator),
         });
@@ -966,6 +992,9 @@ WI.NetworkManager = class NetworkManager extends WI.Object
             if (localResourceOverride.disabled)
                 continue;
 
+            let isPassthrough = localResourceOverride.isPassthrough;
+            let originalHeaders = isPassthrough ? request.headers : {};
+
             let localResource = localResourceOverride.localResource;
             await localResource.requestContent();
 
@@ -983,9 +1012,17 @@ WI.NetworkManager = class NetworkManager extends WI.Object
                 target.NetworkAgent.interceptWithRequest.invoke({
                     requestId,
                     url: localResourceOverride.generateRequestRedirectURL(request.url) ?? undefined,
-                    method: localResource.requestMethod ?? undefined,
-                    headers: !isEmptyObject(localResource.requestHeaders) ? localResource.requestHeaders : undefined,
-                    postData: (WI.HTTPUtilities.RequestMethodsWithBody.has(localResource.requestMethod) && localResource.requestData) ? btoa(localResource.requestData) : undefined,
+                    method: localResource.requestMethod ?? (isPassthrough ? request.method : ""),
+                    headers: {...originalHeaders, ...localResource.requestHeaders},
+                    postData: (function() {
+                        if (!WI.HTTPUtilities.RequestMethodsWithBody.has(localResource.requestMethod))
+                            return undefined;
+                        if (localResource.requestData ?? false)
+                            return btoa(localResource.requestData);
+                        if (isPassthrough)
+                            return request.data;
+                        return "";
+                    })(),
                 });
                 return;
             }
@@ -996,10 +1033,18 @@ WI.NetworkManager = class NetworkManager extends WI.Object
                     requestId,
                     content: revision.content,
                     base64Encoded: !!revision.base64Encoded,
-                    mimeType: revision.mimeType ?? undefined,
+                    mimeType: revision.mimeType ?? "text/plain",
                     status: !isNaN(localResource.statusCode) ? localResource.statusCode : 200,
-                    statusText: !isNaN(localResource.statusCode) ? (localResource.statusText ?? "") : WI.HTTPUtilities.statusTextForStatusCode(200),
-                    headers: localResource.responseHeaders,
+                    statusText: (function() {
+                        if (localResource.statusText ?? false)
+                            return localResource.statusText;
+
+                        if (!isNaN(localResource.statusCode))
+                            return WI.HTTPUtilities.statusTextForStatusCode(localResource.statusCode);
+
+                        return WI.HTTPUtilities.statusTextForStatusCode(200);
+                    })(),
+                    headers: {...originalHeaders, ...localResource.responseHeaders},
                 });
                 return;
             }
@@ -1020,6 +1065,9 @@ WI.NetworkManager = class NetworkManager extends WI.Object
             if (localResourceOverride.disabled)
                 continue;
 
+            let isPassthrough = localResourceOverride.isPassthrough;
+            let originalHeaders = isPassthrough ? response.headers : {};
+
             let localResource = localResourceOverride.localResource;
             await localResource.requestContent();
 
@@ -1032,10 +1080,29 @@ WI.NetworkManager = class NetworkManager extends WI.Object
                     requestId,
                     content: revision.content,
                     base64Encoded: !!revision.base64Encoded,
-                    mimeType: revision.mimeType ?? undefined,
-                    status: !isNaN(localResource.statusCode) ? localResource.statusCode : undefined,
-                    statusText: !isNaN(localResource.statusCode) ? (localResource.statusText ?? "") : undefined,
-                    headers: !isEmptyObject(localResource.responseHeaders) ? localResource.responseHeaders : undefined,
+                    mimeType: revision.mimeType ?? (isPassthrough ? response.mimeType : "text/plain"),
+                    status: (function() {
+                        if (!isNaN(localResource.statusCode))
+                            return localResource.statusCode;
+
+                        if (isPassthrough)
+                            return response.statusCode;
+
+                        return 200;
+                    })(),
+                    statusText: (function() {
+                        if (localResource.statusText ?? false)
+                            return localResource.statusText;
+
+                        if (isPassthrough)
+                            return response.statusText;
+
+                        if (!isNaN(localResource.statusCode))
+                            return WI.HTTPUtilities.statusTextForStatusCode(localResource.statusCode);
+
+                        return WI.HTTPUtilities.statusTextForStatusCode(200);
+                    })(),
+                    headers: {...originalHeaders, ...localResource.responseHeaders},
                 });
                 return;
             }
@@ -1147,16 +1214,20 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         target.addResource(resource);
     }
 
-    _initiatorCallFramesFromPayload(initiatorPayload)
+    _initiatorStackTraceFromPayload(initiatorPayload)
     {
         if (!initiatorPayload)
             return null;
 
-        let callFrames = initiatorPayload.stackTrace;
-        if (!callFrames)
+        let stackTrace = initiatorPayload.stackTrace;
+        if (!stackTrace)
             return null;
 
-        return callFrames.map((payload) => WI.CallFrame.fromPayload(WI.assumingMainTarget(), payload));
+        // COMPATIBILITY (macOS 13.0, iOS 16.0): `stackTrace` was an array of `Console.CallFrame`.
+        if (Array.isArray(stackTrace))
+            stackTrace = {callFrames: stackTrace};
+
+        return WI.StackTrace.fromPayload(WI.assumingMainTarget(), stackTrace);
     }
 
     _initiatorSourceCodeLocationFromPayload(initiatorPayload)
@@ -1168,10 +1239,10 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         var lineNumber = NaN;
         var columnNumber = 0;
 
-        if (initiatorPayload.stackTrace && initiatorPayload.stackTrace.length) {
-            var stackTracePayload = initiatorPayload.stackTrace;
-            for (var i = 0; i < stackTracePayload.length; ++i) {
-                var callFramePayload = stackTracePayload[i];
+        // COMPATIBILITY (macOS 13.0, iOS 16.0): `stackTrace` was an array of `Console.CallFrame`.
+        let callFramesPayload = Array.isArray(initiatorPayload.stackTrace) ? initiatorPayload.stackTrace : initiatorPayload.stackTrace?.callFrames;
+        if (callFramesPayload?.length) {
+            for (let callFramePayload of callFramesPayload) {
                 if (!callFramePayload.url || callFramePayload.url === "[native code]")
                     continue;
 
@@ -1392,6 +1463,18 @@ WI.NetworkManager = class NetworkManager extends WI.Object
         }
     }
 
+    _applyEmulatedCondition(target)
+    {
+        if (!WI.settings.experimentalEnableNetworkEmulatedCondition.value)
+            return;
+
+        // COMPATIBILITY (macOS 13.0, iOS 16.0): Network.setEmulatedConditions did not exist.
+        if (!target.hasCommand("Network.setEmulatedConditions"))
+            return;
+
+        target.NetworkAgent.setEmulatedConditions(this._emulatedCondition.bytesPerSecondLimit);
+    }
+
     _dispatchFrameWasAddedEvent(frame)
     {
         this.dispatchEventToListeners(WI.NetworkManager.Event.FrameWasAdded, {frame});
@@ -1566,6 +1649,51 @@ WI.NetworkManager = class NetworkManager extends WI.Object
     }
 };
 
+WI.NetworkManager.EmulatedCondition = {
+    // Keep this first.
+    None: {
+        id: "none",
+        bytesPerSecondLimit: 0,
+        get displayName() { return WI.UIString("No throttling", "Label indicating that network throttling is inactive."); }
+    },
+
+    Mobile3G: {
+        id: "mobile-3g",
+        bytesPerSecondLimit: 780 * 1000 / 8, // 780kbps
+        get displayName() { return WI.UIString("3G", "Label indicating that network activity is being simulated with 3G connectivity."); }
+    },
+
+    DSL: {
+        id: "dsl",
+        bytesPerSecondLimit: 2 * 1000 * 1000 / 8, // 2mbps
+        get displayName() { return WI.UIString("DSL", "Label indicating that network activity is being simulated with DSL connectivity."); }
+    },
+
+    Edge: {
+        id: "edge",
+        bytesPerSecondLimit: 240 * 1000 / 8, // 240kbps
+        get displayName() { return WI.UIString("Edge", "Label indicating that network activity is being simulated with Edge connectivity."); }
+    },
+
+    LTE: {
+        id: "lte",
+        bytesPerSecondLimit: 50 * 1000 * 1000 / 8, // 50mbps
+        get displayName() { return WI.UIString("LTE", "Label indicating that network activity is being simulated with LTE connectivity"); }
+    },
+
+    WiFi: {
+        id: "wifi",
+        bytesPerSecondLimit: 40 * 1000 * 1000 / 8, // 40mbps
+        get displayName() { return WI.UIString("Wi-Fi", "Label indicating that network activity is being simulated with Wi-Fi connectivity"); }
+    },
+
+    WiFi802_11ac: {
+        id: "wifi-802_11ac",
+        bytesPerSecondLimit: 250 * 1000 * 1000 / 8, // 250mbps
+        get displayName() { return WI.UIString("Wi-Fi 802.11ac", "Label indicating that network activity is being simulated with Wi-Fi 802.11ac connectivity"); }
+    },
+};
+
 WI.NetworkManager.Event = {
     FrameWasAdded: "network-manager-frame-was-added",
     FrameWasRemoved: "network-manager-frame-was-removed",
@@ -1575,4 +1703,5 @@ WI.NetworkManager.Event = {
     BootstrapScriptDestroyed: "network-manager-bootstrap-script-destroyed",
     LocalResourceOverrideAdded: "network-manager-local-resource-override-added",
     LocalResourceOverrideRemoved: "network-manager-local-resource-override-removed",
+    EmulatedConditionChanged: "network-manager-emulated-condition-changed",
 };

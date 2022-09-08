@@ -287,6 +287,8 @@ public:
 
     virtual void didChangeContentSize(const WebCore::IntSize&) = 0;
 
+    virtual void topContentInsetDidChange() { }
+
     virtual void showSafeBrowsingWarning(const SafeBrowsingWarning&, CompletionHandler<void(std::variant<ContinueUnsafeLoad, URL>&&)>&& completionHandler) { completionHandler(ContinueUnsafeLoad::Yes); }
     virtual void clearSafeBrowsingWarning() { }
     virtual void clearSafeBrowsingWarningIfForMainFrameNavigation() { }
@@ -381,6 +383,7 @@ public:
 #endif
 #if ENABLE(IOS_TOUCH_EVENTS)
     virtual void doneDeferringTouchStart(bool preventNativeGestures) = 0;
+    virtual void doneDeferringTouchMove(bool preventNativeGestures) = 0;
     virtual void doneDeferringTouchEnd(bool preventNativeGestures) = 0;
 #endif
 
@@ -568,9 +571,7 @@ public:
 
     virtual void makeViewBlank(bool) { }
 
-#if HAVE(PASTEBOARD_DATA_OWNER)
     virtual WebCore::DataOwnerType dataOwnerForPasteboard(PasteboardAccessIntent) const { return WebCore::DataOwnerType::Undefined; }
-#endif
 
     virtual bool hasResizableWindows() const { return false; }
 

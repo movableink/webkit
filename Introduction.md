@@ -53,7 +53,7 @@ Filing a new bug, fixing a bug, or adding a new feature.
 There are three different kinds of contributors in the WebKit project.
 
  * Contributor - This category encompasses everyone. Anyone who files a bug or contributes a code change or reviews a code change is considered as a contributor
- * Committer - A committer is someone who has write access to [WebKit's subversion repository](https://svn.webkit.org/repository/webkit/).
+ * Committer - A committer is someone who has write access to [WebKit's repository](https://github.com/WebKit/WebKit).
  * Reviewer - A reviewer is someone who has the right to review and approve code changes other contributors proposed.
 
 See [Commit and Review Policy](https://webkit.org/commit-and-review-policy/) for more details on how to become a committer or a reviewer.
@@ -77,24 +77,8 @@ To [file a new WebKit bug](https://bugs.webkit.org/enter_bug.cgi), see [reportin
 
 To edit an existing bug, you may need [editbug-bits](https://webkit.org/bugzilla-bits/).
 
-### Code Reviews in bugs.webkit.org
-
-We also use [bugs.webkit.org](https://bugs.webkit.org/) to upload & review code changes to WebKit.
-You can post a code change with `Tools/Scripts/webkit-patch upload`.
-Note that the `webkit-patch` script only looks for changes below current directory,
-so generally you should change the current directory to the top-level directory of a WebKit first.
-
-When a patch is posted on [bugs.webkit.org](https://bugs.webkit.org/) requesting a formal code review (r? flag is set),
-The Early Warning System (a.k.a. EWS) will automatically build and run tests against your code change.
-This allows contributors to find build or test failures before committing code changes to the WebKit’s primary Subversion repository.
-
-Once a patch is approved by a reviewer (r+ flag is set),
-then the patch can be either committed directly into the Subversion repository by a WebKit committer, 
-who has write access to the Subversion repository,
-or via the commit queue which can be requested by setting cq? flag and approved by any WebKit committer by setting cq+.
-
-The Subversion commit message should be created by `Tools/Scripts/commit-log-editor` based on the change log entries.
-`Tools/Scripts/webkit-patch land` does this automatically.
+### Code review
+Code reviews are done on GitHub when a pull request is made. See [Submitting a pull request](#submitting-a-pull-request).
 
 ### Security Bugs in bugs.webkit.org
 
@@ -123,11 +107,55 @@ This will allow you to run various tools you by name instead of typing the full 
 
 ### Updating checkouts
 
-There is a script to update a WebKit checkout: `Tools/Scripts/update-webkit`. This script will automatically merge change logs mentioned below.
+There is a script to update a WebKit checkout: `Tools/Scripts/update-webkit`.
 
 ### Building WebKit
 
 [See Building WebKit](https://github.com/WebKit/webkit/blob/master/ReadMe.md#building-webkit)
+
+### Getting setup to contribute
+
+If you've followed the steps above, get setup to contribute by running:
+
+```Bash
+git webkit setup
+```
+
+The `setup` checks that your environment is optimally configured to contribute, and may prompt you for some additional information.
+
+### Submitting a pull request
+
+Firstly, please make sure you [file a bug](https://bugs.webkit.org) for the thing you are adding or fixing! Or, find a bug that you think is relevant to the fix you are making.
+
+Assuming you are working off "main" branch, once your patch is working and [tests are passing](#correctness-testing-in-webkit), simply run:
+
+```Bash
+git webkit pr --issue <your bug number here>
+```
+
+That will pull down the details from [bugs.webkit.org](https://bugs.webkit.org), create a new git branch, and generate a commit message for you.
+If necessary, please add additional details describing what you've added, modified, or fixed.
+
+Once your pull request is on GitHub, the Early Warning System (a.k.a. EWS) will automatically build and run tests against your code change.
+This allows contributors to find build or test failures before committing code changes to the WebKit’s repository.
+
+Note, if you'd like to submit a draft pull request, you can do so by running:
+
+```Bash
+git webkit pr --draft
+```
+
+## Addressing review feedback
+
+After you receive review feedback on GitHub, you should collaborate with the reviewer to address the feedback.
+
+Once done, you can update your pull request to include the changes by again simply running:
+
+```Bash
+git webkit pr
+```
+
+That will replace your old pull request with a new one with the new changes, while also updating the pull request's description with your current commit message.
 
 ### Fixing mysterious build or runtime errors after Xcode upgrades
 
@@ -258,51 +286,61 @@ These days, uploading a patch on [bugs.webkit.org](https://bugs.webkit.org/) tri
 
 For any bug fix or a feature addition, there should be a new test demonstrating the behavior change caused by the code change.
 If no such test can be written in a reasonable manner (e.g. the fix for a hard-to-reproduce race condition),
-then the reason writing a tests is impractical should be explained in the accompanying change log.
+then the reason writing a tests is impractical should be explained in the accompanying commit message.
 
 Any patch which introduces new test failures or performance regressions may be reverted.
 It’s in your interest to wait for the Early Warning System to fully build and test your patch on all relevant platforms.
 
-### ChangeLog Files
+### Commit messages
 
-ChangeLogs are simple text files which provide historical documentation for all changes to the WebKit project.
-All patches require an entry to the ChangeLog.
+Commit messages serve as change logs, providing historical documentation for all changes to the WebKit project.
+Running `git-webkit setup` configures your git hooks to properly generate commit messages.
 
-The first line contains the date, your full name, and your email address.
-Use this to write up a brief summary of the changes you’ve made.
-Don’t worry about the “Reviewed by NOBODY (OOPS!)” line, the person landing your patch will fill this in.
-There is one ChangeLog per top-level directory.
-If you changed code and tests you will need to edit at least two ChangeLogs.
-`Tools/Scripts/prepare-ChangeLog` script will create stub entries for ChangeLog files based on code changes you made in your Git or Subversion checkouts.
-
-You should edit these stubs to describe your change, including the full URL to the bug (example entry, note that you can use `--bug` flag).
-(You should set `EMAIL_ADDRESS` and `CHANGE_LOG_NAME` in your environment if you will be running this script frequently.)
-A typical change log entry before being submitted to [bugs.webkit.org](https://bugs.webkit.org/) looks like this:
+The first line shall contain a short description of the commit message (this should be the same as the Summary field in Bugzilla).
+On the next line, enter the Bugzilla URL. 
+Below the "Reviewed by" line, enter a detailed description of your changes. 
+There will be a list of files and functions modified at the bottom of the commit message.
+You are encouraged to add comments here as well. (See the commit below for reference).
+Do not worry about the “Reviewed by NOBODY (OOPS!)” line, GitHub will update this field upon merging.
 
 ```
-2012-10-04  Enrica Casucci  <e•••••@apple.com>
+Allow downsampling when invoking Remove Background or Copy Subject
+https://bugs.webkit.org/show_bug.cgi?id=242048
 
-        Font::glyphDataAndPageForCharacter doesn't account for text orientation when using systemFallback on a cold cache.
-        https://bugs.webkit.org/show_bug.cgi?id=98452.
+Reviewed by NOBODY (OOPS!).
 
-        Reviewed by NOBODY (OOPS!).
+Soft-link `vk_cgImageRemoveBackgroundWithDownsizing` from VisionKitCore, and call into it to perform
+background removal when performing Remove Background or Copy Subject, if available. On recent builds
+of Ventura and iOS 16, VisionKit will automatically reject hi-res (> 12MP) images from running
+through subject analysis; for clients such as WebKit, this new SPI allows us to opt into
+downsampling these large images, instead of failing outright.
 
-        The text orientation was considered only when there is a cache hit.
-        This change moves the logic to handle text orientation to a separate
-        inline function that is called also when the glyph is added to the cache.
+* Source/WebCore/PAL/pal/cocoa/VisionKitCoreSoftLink.h:
+* Source/WebCore/PAL/pal/cocoa/VisionKitCoreSoftLink.mm:
+* Source/WebCore/PAL/pal/spi/cocoa/VisionKitCoreSPI.h:
+* Source/WebKit/Platform/cocoa/ImageAnalysisUtilities.h:
+* Source/WebKit/Platform/cocoa/ImageAnalysisUtilities.mm:
+(WebKit::requestBackgroundRemoval):
 
-        Test: fast/text/vertical-rl-rtl-linebreak.html
+Refactor the code so that we call `vk_cgImageRemoveBackgroundWithDownsizing` if it's available, and
+otherwise fall back to `vk_cgImageRemoveBackground`.
 
-        * platform/graphics/FontFastPath.cpp:
-        (WebCore::applyTextOrientationForCharacter): Added.
-        (WebCore::Font::glyphDataAndPageForCharacter): Modified to use the new function in
-        both cases of cold and warm cache.
+* Source/WebKit/UIProcess/ios/WKContentViewInteraction.mm:
+(-[WKContentView doAfterComputingImageAnalysisResultsForBackgroundRemoval:]):
+(-[WKContentView _completeImageAnalysisRequestForContextMenu:requestIdentifier:hasTextResults:]):
+(-[WKContentView imageAnalysisGestureDidTimeOut:]):
+* Source/WebKit/UIProcess/mac/WebContextMenuProxyMac.mm:
+(WebKit::WebContextMenuProxyMac::appendMarkupItemToControlledImageMenuIfNeeded):
+(WebKit::WebContextMenuProxyMac::getContextMenuFromItems):
+
+Additionally, remove the `cropRect` completion handler argument, since the new SPI function no
+longer provides this information. The `cropRect` argument was also unused after removing support for
+revealing the subject, in `249582@main`.
 ```
 
-
-The “No new tests. (OOPS!)” line appears if `prepare-ChangeLog` did not detect the addition of new tests.
+The “No new tests. (OOPS!)” line will appear if `git webkit commit` did not detect the addition of new tests.
 If your patch does not require test cases (or test cases are not possible), remove this line and explain why you didn’t write tests.
-Otherwise all changes require test cases which should be mentioned in the ChangeLog.
+Otherwise all changes require test cases which should be mentioned in the commit message.
 
 ## WebKit’s Build System
 
@@ -430,7 +468,13 @@ WebKit uses two primary management strategies when objects in other cases:
 
 ## Garbage collection in WebKit
 
-FIXME: Write this.
+See these blog posts:
+
+* [Understanding Garbage Collection in JavaScriptCore From Scratch](https://webkit.org/blog/12967/understanding-gc-in-jsc-from-scratch/):
+  Summary of how our GC is organized and how it works.
+* [Introducing Riptide: WebKit’s Retreating Wavefront Concurrent Garbage Collector](https://webkit.org/blog/7122/introducing-riptide-webkits-retreating-wavefront-concurrent-garbage-collector/):
+  Focusing on novel algorithms of our GC including how to tackle web browser specific problems (managing DOM objects, concurrency, etc.).
+
 
 ## Reference counting in WebKit
 
@@ -677,6 +721,14 @@ Because `WeakHashSet` does not get notified when the referenced object is delete
 the users / owners of `WeakHashSet` are still responsible for deleting the relevant entries from the set.
 Otherwise, WeakHashSet will hold onto `WeakPtrImpl` until `computeSize` is called or rehashing happens.
 
+### WeakHashMap
+
+Like `WeakHashSet`, `WeakHashMap` is a specialized class to map a WeakPtr key with a value.
+Because `WeakHashMap` does not get notified when the referenced object is deleted,
+the users / owners of `WeakHashMap` are still responsible for deleting the relevant entries from the map.
+Otherwise, the memory space used by `WeakPtrImpl` and its value will not be free'ed up until
+next rehash or amortized cleanup cycle arrives (based on the total number of read or write operations).
+
 # Understanding Document Object Model
 
 ## Introduction
@@ -728,8 +780,8 @@ such as [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Window/po
 ## JavaScript Wrappers and IDL files
 
 In addition to typical C++ translation units (.cpp) and C++ header files (.cpp) along with some Objective-C and Objective-C++ files,
-[WebCore](https://github.com/WebKit/WebKit/tree/main/Source/WebCore) contains hundreds of [Web IDL](https://heycam.github.io/webidl/) (.idl) files.
-[Web IDL](https://heycam.github.io/webidl/) is an [interface description language](https://en.wikipedia.org/wiki/Interface_description_language)
+[WebCore](https://github.com/WebKit/WebKit/tree/main/Source/WebCore) contains hundreds of [Web IDL](https://webidl.spec.whatwg.org) (.idl) files.
+[Web IDL](https://webidl.spec.whatwg.org) is an [interface description language](https://en.wikipedia.org/wiki/Interface_description_language)
 and it's used to define the shape and the behavior of JavaScript API implemented in WebKit.
 
 When building WebKit, a [perl script](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/bindings/scripts/CodeGeneratorJS.pm)
@@ -742,7 +794,7 @@ are called **JS DOM binding code** and implements JavaScript API for objects and
 For example, C++ implementation of [Node](https://developer.mozilla.org/en-US/docs/Web/API/Node)
 is [Node class](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/dom/Node.h)
 and its JavaScript interface is implemented by `JSNode` class.
-The class declartion and most of definitions are auto-generated
+The class declaration and most of definitions are auto-generated
 at `WebKitBuild/Debug/DerivedSources/WebCore/JSNode.h` and `WebKitBuild/Debug/DerivedSources/WebCore/JSNode.cpp` for debug builds.
 It also has some custom, manually written, bindings code in
 [Source/WebCore/bindings/js/JSNodeCustom.cpp](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/bindings/js/JSNodeCustom.cpp).
@@ -775,11 +827,15 @@ which has an inline pointer to the JS wrapper for the main world if one was alre
 ### Adding new JavaScript API
 
 To introduce a new JavaScript API in [WebCore](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/), 
-first identify the directory under which to implement this new API, and introduce corresponding Web IDL files.
+first identify the directory under which to implement this new API, and introduce corresponding Web IDL files (e.g., "dom/SomeAPI.idl").
+
 New IDL files should be listed in [Source/WebCore/DerivedSources.make](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/DerivedSources.make)
-so that the aforementioned perl script can generate corresponding JS*.cpp and JS*.h filies.
+so that the aforementioned perl script can generate corresponding JS*.cpp and JS*.h files.
 Add these newly generated JS*.cpp files to [Source/WebCore/Sources.txt](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/Sources.txt)
 in order for them to be compiled.
+
+Also, add the new IDL file(s) to [Source/WebCore/CMakeLists.txt](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/CMakeLists.txt).
+
 Remember to add these files to [WebCore's Xcode project](https://github.com/WebKit/WebKit/tree/main/Source/WebCore/WebCore.xcodeproj) as well.
 
 For example, [this commit](https://github.com/WebKit/WebKit/commit/cbda68a29beb3da90d19855882c5340ce06f1546)
@@ -1688,7 +1744,7 @@ FIXME: Write how to investigate a test failure.
 ## Debugging Layout Tests in Xcode
 
 The easiest way to debug a layout test is with WebKitTestRunner or DumpRenderTree.
-In Product > Scheme, select “All Source”.
+In Product > Scheme, select “Everything up to WebKit + Tools”.
 
 In Product > Scheme > Edit Scheme, open “Run” tab.
 Pick WebKitTestRunner or DumpRenderTree, whichever is desired in “Executable”.

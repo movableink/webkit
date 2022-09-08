@@ -250,11 +250,16 @@ public:
 
     HTMLSlotElement* assignedSlot() const;
     HTMLSlotElement* assignedSlotForBindings() const;
+    HTMLSlotElement* manuallyAssignedSlot() const;
+    void setManuallyAssignedSlot(HTMLSlotElement*);
 
-    bool isUndefinedCustomElement() const { return customElementState() == CustomElementState::Undefined || customElementState() == CustomElementState::Failed; }
+    bool isUncustomizedCustomElement() const { return customElementState() == CustomElementState::Uncustomized; }
     bool isCustomElementUpgradeCandidate() const { return customElementState() == CustomElementState::Undefined; }
     bool isDefinedCustomElement() const { return customElementState() == CustomElementState::Custom; }
-    bool isFailedCustomElement() const { return customElementState() == CustomElementState::Failed; }
+    bool isFailedCustomElement() const { return customElementState() == CustomElementState::FailedOrPrecustomized && isUnknownElement(); }
+    bool isFailedOrPrecustomizedCustomElement() const { return customElementState() == CustomElementState::FailedOrPrecustomized; }
+    bool isPrecustomizedCustomElement() const { return customElementState() == CustomElementState::FailedOrPrecustomized && !isUnknownElement(); }
+    bool isPrecustomizedOrDefinedCustomElement() const { return isPrecustomizedCustomElement() || isDefinedCustomElement(); }
 
     // Returns null, a child of ShadowRoot, or a legacy shadow root.
     Node* nonBoundaryShadowTreeRootNode();
@@ -285,8 +290,14 @@ public:
     // Returns the parent node, but null if the parent node is a ShadowRoot.
     ContainerNode* nonShadowBoundaryParentNode() const;
 
-    bool selfOrAncestorHasDirAutoAttribute() const { return hasNodeFlag(NodeFlag::SelfOrAncestorHasDirAuto); }
-    void setSelfOrAncestorHasDirAutoAttribute(bool flag) { setNodeFlag(NodeFlag::SelfOrAncestorHasDirAuto, flag); }
+    bool selfOrPrecedingNodesAffectDirAuto() const { return hasNodeFlag(NodeFlag::SelfOrPrecedingNodesAffectDirAuto); }
+    void setSelfOrPrecedingNodesAffectDirAuto(bool flag) { setNodeFlag(NodeFlag::SelfOrPrecedingNodesAffectDirAuto, flag); }
+
+    TextDirection effectiveTextDirection() const;
+    void setEffectiveTextDirection(TextDirection);
+
+    bool usesEffectiveTextDirection() const { return rareDataBitfields().usesEffectiveTextDirection; }
+    void setUsesEffectiveTextDirection(bool);
 
     // Returns the enclosing event parent Element (or self) that, when clicked, would trigger a navigation.
     WEBCORE_EXPORT Element* enclosingLinkEventParentOrSelf();
@@ -333,9 +344,6 @@ public:
 
     bool isLink() const { return hasNodeFlag(NodeFlag::IsLink); }
     void setIsLink(bool flag) { setNodeFlag(NodeFlag::IsLink, flag); }
-
-    bool hasEventTargetData() const { return hasNodeFlag(NodeFlag::HasEventTargetData); }
-    void setHasEventTargetData(bool flag) { setNodeFlag(NodeFlag::HasEventTargetData, flag); }
 
     bool isInGCReacheableRefMap() const { return hasNodeFlag(NodeFlag::IsInGCReachableRefMap); }
     void setIsInGCReacheableRefMap(bool flag) { setNodeFlag(NodeFlag::IsInGCReachableRefMap, flag); }
@@ -391,6 +399,7 @@ public:
     bool isInUserAgentShadowTree() const;
     bool isInShadowTree() const { return hasNodeFlag(NodeFlag::IsInShadowTree); }
     bool isInTreeScope() const { return hasNodeFlag(NodeFlag::IsConnected) || hasNodeFlag(NodeFlag::IsInShadowTree); }
+    bool hasBeenInUserAgentShadowTree() const { return hasNodeFlag(NodeFlag::HasBeenInUserAgentShadowTree); }
 
     // https://dom.spec.whatwg.org/#in-a-document-tree
     bool isInDocumentTree() const { return isConnected() && !isInShadowTree(); }
@@ -518,10 +527,6 @@ public:
     bool m_adoptionIsRequired { true };
 #endif
 
-    EventTargetData* eventTargetData() final;
-    EventTargetData* eventTargetDataConcurrently() final;
-    EventTargetData& ensureEventTargetData() final;
-
     HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> registeredMutationObservers(MutationObserverOptionType, const QualifiedName* attributeName);
     void registerMutationObserver(MutationObserver&, MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
     void unregisterMutationObserver(MutationObserverRegistration&);
@@ -567,7 +572,6 @@ protected:
         IsConnected = 1 << 10,
         IsInShadowTree = 1 << 11,
         IsUnknownElement = 1 << 12,
-        HasEventTargetData = 1 << 13,
 
         // These bits are used by derived classes, pulled up here so they can
         // be stored in the same memory word as the Node bits above.
@@ -577,7 +581,7 @@ protected:
         IsUserActionElement = 1 << 17,
         IsParsingChildrenFinished = 1 << 18,
         HasSyntheticAttrChildNodes = 1 << 19,
-        SelfOrAncestorHasDirAuto = 1 << 20,
+        SelfOrPrecedingNodesAffectDirAuto = 1 << 20,
 
         HasCustomStyleResolveCallbacks = 1 << 21,
 
@@ -591,8 +595,9 @@ protected:
         IsInTopLayer = 1 << 27,
         NeedsSVGRendererUpdate = 1 << 28,
         NeedsUpdateQueryContainerDependentStyle = 1 << 29,
+        HasBeenInUserAgentShadowTree = 1 << 30,
 
-        // Bits 30-31 are free.
+        // Bit 31 is free.
     };
 
     enum class TabIndexState : uint8_t {
@@ -606,13 +611,15 @@ protected:
         Uncustomized = 0,
         Undefined = 1,
         Custom = 2,
-        Failed = 3,
+        FailedOrPrecustomized = 3,
     };
 
     struct RareDataBitFields {
         uint16_t connectedSubframeCount : 10;
         uint16_t tabIndexState : 2;
         uint16_t customElementState : 2;
+        uint16_t usesEffectiveTextDirection : 1;
+        uint16_t effectiveTextDirection : 1;
     };
 
     bool hasNodeFlag(NodeFlag flag) const { return m_nodeFlags.contains(flag); }
@@ -704,14 +711,13 @@ protected:
     NodeRareData& ensureRareData();
     void clearRareData();
 
-    void clearEventTargetData();
-
     void setHasCustomStyleResolveCallbacks() { setNodeFlag(NodeFlag::HasCustomStyleResolveCallbacks); }
 
     void setTreeScope(TreeScope& scope) { m_treeScope = &scope; }
 
     void invalidateStyle(Style::Validity, Style::InvalidationMode = Style::InvalidationMode::Normal);
     void updateAncestorsForStyleRecalc();
+    void markAncestorsForInvalidatedStyle();
 
     ExceptionOr<RefPtr<Node>> convertNodesOrStringsIntoNode(FixedVector<NodeOrString>&&);
 
@@ -726,7 +732,6 @@ private:
 
     void refEventTarget() final;
     void derefEventTarget() final;
-    bool isNode() const final;
 
     void trackForDebugging();
     void materializeRareData();
@@ -739,11 +744,9 @@ private:
     static void moveShadowTreeToNewDocument(ShadowRoot&, Document& oldDocument, Document& newDocument);
     static void moveTreeToNewScope(Node&, TreeScope& oldScope, TreeScope& newScope);
     void moveNodeToNewDocument(Document& oldDocument, Document& newDocument);
-    
-    struct NodeRareDataDeleter {
-        void operator()(NodeRareData*) const;
-    };
 
+    WEBCORE_EXPORT void notifyInspectorOfRendererChange();
+    
     mutable uint32_t m_refCountAndParentBit { s_refCountIncrement };
     mutable OptionSet<NodeFlag> m_nodeFlags;
 
@@ -752,7 +755,7 @@ private:
     Node* m_previous { nullptr };
     Node* m_next { nullptr };
     CompactPointerTuple<RenderObject*, uint16_t> m_rendererWithStyleFlags;
-    CompactUniquePtrTuple<NodeRareData, uint16_t, NodeRareDataDeleter> m_rareDataWithBitfields;
+    CompactUniquePtrTuple<NodeRareData, uint16_t> m_rareDataWithBitfields;
 };
 
 bool connectedInSameTreeScope(const Node*, const Node*);

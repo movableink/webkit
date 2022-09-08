@@ -39,13 +39,15 @@ namespace Wasm {
     macro(OutOfBoundsCallIndirect, "Out of bounds call_indirect"_s) \
     macro(NullTableEntry,  "call_indirect to a null table entry"_s) \
     macro(NullReference,  "call_ref to a null reference"_s) \
+    macro(NullI31Get, "i31.get_<sx> to a null reference"_s) \
     macro(BadSignature, "call_indirect to a signature that does not match"_s) \
     macro(OutOfBoundsTrunc, "Out of bounds Trunc operation"_s) \
     macro(Unreachable, "Unreachable code should not be executed"_s) \
     macro(DivisionByZero, "Division by zero"_s) \
     macro(IntegerOverflow, "Integer overflow"_s) \
     macro(StackOverflow, "Stack overflow"_s) \
-    macro(FuncrefNotWasm, "Funcref must be an exported wasm function"_s)
+    macro(FuncrefNotWasm, "Funcref must be an exported wasm function"_s) \
+    macro(InvalidGCTypeUse, "Unsupported use of struct or array type"_s)
 
 enum class ExceptionType : uint32_t {
 #define MAKE_ENUM(enumName, error) enumName,

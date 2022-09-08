@@ -102,6 +102,11 @@ function mac_process_gpu_entitlements()
             plistbuddy Add :com.apple.security.cs.jit-write-allowlist bool YES
         fi
 
+        if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 120000 ))
+        then
+            plistbuddy add :com.apple.coreaudio.allow-vorbis-decode bool YES
+        fi
+
         if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 130000 ))
         then
             plistbuddy Add :com.apple.private.gpu-restricted bool YES
@@ -379,6 +384,11 @@ function ios_family_process_gpu_entitlements()
     plistbuddy Add :com.apple.tcc.delegated-services array
     plistbuddy Add :com.apple.tcc.delegated-services:0 string kTCCServiceCamera
     plistbuddy Add :com.apple.tcc.delegated-services:1 string kTCCServiceMicrophone
+
+    plistbuddy Add :com.apple.springboard.statusbarstyleoverrides bool YES
+    plistbuddy Add :com.apple.springboard.statusbarstyleoverrides.coordinator array
+    plistbuddy Add :com.apple.springboard.statusbarstyleoverrides.coordinator:0 string UIStatusBarStyleOverrideWebRTCAudioCapture
+    plistbuddy Add :com.apple.springboard.statusbarstyleoverrides.coordinator:1 string UIStatusBarStyleOverrideWebRTCCapture
 
     plistbuddy Add :com.apple.private.sandbox.profile string com.apple.WebKit.GPU
 

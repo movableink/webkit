@@ -92,6 +92,16 @@ void WebPageProxy::platformInitialize()
 {
 }
 
+PlatformDisplayID WebPageProxy::generateDisplayIDFromPageID() const
+{
+    // In order to ensure that we get a unique DisplayRefreshMonitor per-DrawingArea (necessary because DisplayRefreshMonitor
+    // is driven by that class), give each page a unique DisplayID derived from WebPage's unique ID.
+    // FIXME: While using the high end of the range of DisplayIDs makes a collision with real, non-RemoteLayerTreeDrawingArea
+    // DisplayIDs less likely, it is not entirely safe to have a RemoteLayerTreeDrawingArea and TiledCoreAnimationDrawingArea
+    // coeexist in the same process.
+    return std::numeric_limits<uint32_t>::max() - webPageID().toUInt64();
+}
+
 String WebPageProxy::userAgentForURL(const URL&)
 {
     return userAgent();
@@ -611,16 +621,16 @@ void WebPageProxy::performActionOnElement(uint32_t action)
     });
 }
 
-void WebPageProxy::saveImageToLibrary(const SharedMemory::IPCHandle& imageHandle, const String& authorizationToken)
+void WebPageProxy::saveImageToLibrary(const SharedMemory::Handle& imageHandle, const String& authorizationToken)
 {
-    MESSAGE_CHECK(!imageHandle.handle.isNull());
+    MESSAGE_CHECK(!imageHandle.isNull());
     MESSAGE_CHECK(isValidPerformActionOnElementAuthorizationToken(authorizationToken));
 
-    auto sharedMemoryBuffer = SharedMemory::map(imageHandle.handle, SharedMemory::Protection::ReadOnly);
+    auto sharedMemoryBuffer = SharedMemory::map(imageHandle, SharedMemory::Protection::ReadOnly);
     if (!sharedMemoryBuffer)
         return;
 
-    auto buffer = sharedMemoryBuffer->createSharedBuffer(imageHandle.dataSize);
+    auto buffer = sharedMemoryBuffer->createSharedBuffer(sharedMemoryBuffer->size());
     pageClient().saveImageToLibrary(WTFMove(buffer));
 }
 
@@ -1620,6 +1630,21 @@ Color WebPageProxy::platformUnderPageBackgroundColor() const
         return contentViewBackgroundColor;
 
     return WebCore::Color::white;
+}
+
+void WebPageProxy::statusBarWasTapped()
+{
+#if PLATFORM(IOS)
+    RELEASE_LOG_INFO(WebRTC, "WebPageProxy::statusBarWasTapped");
+
+#if USE(APPLE_INTERNAL_SDK)
+    UIApplication *app = UIApplication.sharedApplication;
+    if (!app.supportsMultipleScenes && app.applicationState != UIApplicationStateActive)
+        [[LSApplicationWorkspace defaultWorkspace] openApplicationWithBundleID:[[NSBundle mainBundle] bundleIdentifier]];
+#endif
+
+    m_uiClient->statusBarWasTapped();
+#endif
 }
 
 } // namespace WebKit

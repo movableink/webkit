@@ -24,6 +24,7 @@
 accessibility/atspi/AccessibilityAtspi.cpp
 accessibility/atspi/AccessibilityObjectAtspi.cpp
 accessibility/atspi/AccessibilityObjectActionAtspi.cpp
+accessibility/atspi/AccessibilityObjectCollectionAtspi.cpp
 accessibility/atspi/AccessibilityObjectComponentAtspi.cpp
 accessibility/atspi/AccessibilityObjectDocumentAtspi.cpp
 accessibility/atspi/AccessibilityObjectHyperlinkAtspi.cpp
@@ -83,6 +84,8 @@ platform/graphics/egl/GLContextEGLX11.cpp @no-unify
 
 platform/graphics/gbm/GBMBufferSwapchain.cpp
 platform/graphics/gbm/GBMDevice.cpp
+platform/graphics/gbm/GraphicsContextGLANGLELinux.cpp
+platform/graphics/gbm/GraphicsContextGLFallback.cpp
 platform/graphics/gbm/GraphicsContextGLGBM.cpp
 platform/graphics/gbm/GraphicsContextGLGBMTextureMapper.cpp
 

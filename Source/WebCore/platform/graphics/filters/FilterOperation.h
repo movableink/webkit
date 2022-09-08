@@ -27,7 +27,7 @@
 
 #include "Color.h"
 #include "LayoutSize.h"
-#include "Length.h"
+#include "LengthBox.h"
 #include <wtf/EnumTraits.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeCasts.h>
@@ -96,6 +96,10 @@ public:
     }
 
     bool isSameType(const FilterOperation& o) const { return o.type() == m_type; }
+
+    virtual bool isIdentity() const { return false; }
+
+    virtual IntOutsets outsets() const { return { }; }
 
     // True if the alpha channel of any pixel can change under this operation.
     virtual bool affectsOpacity() const { return false; }
@@ -195,6 +199,9 @@ private:
 
     bool operator==(const FilterOperation&) const override;
 
+    bool isIdentity() const override;
+    IntOutsets outsets() const override;
+
     String m_url;
     AtomString m_fragment;
     std::unique_ptr<CachedSVGDocumentReference> m_cachedSVGDocumentReference;
@@ -229,6 +236,7 @@ private:
     {
     }
 
+    bool isIdentity() const override;
     bool transformColor(SRGBA<float>&) const override;
 
     double m_amount;
@@ -264,6 +272,7 @@ private:
     {
     }
 
+    bool isIdentity() const override;
     bool transformColor(SRGBA<float>&) const override;
 
     double m_amount;
@@ -323,6 +332,9 @@ private:
     {
     }
 
+    bool isIdentity() const override;
+    IntOutsets outsets() const override;
+
     Length m_stdDeviation;
 };
 
@@ -359,6 +371,9 @@ private:
         , m_color(color)
     {
     }
+
+    bool isIdentity() const override;
+    IntOutsets outsets() const override;
 
     IntPoint m_location; // FIXME: should location be in Lengths?
     int m_stdDeviation;

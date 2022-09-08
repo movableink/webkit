@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,7 @@
 #import <WebKit/WKGeolocationManager.h>
 #import <WebKit/WKGeolocationPosition.h>
 #import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKRetainPtr.h>
 #import <WebKit/WKUIDelegatePrivate.h>
 #import <WebKit/WKWebViewPrivateForTesting.h>
@@ -47,6 +48,11 @@
 
 #if PLATFORM(MAC)
 #import <Carbon/Carbon.h>
+#endif
+
+#if PLATFORM(IOS)
+#import "ClassMethodSwizzler.h"
+#import "UIKitSPI.h"
 #endif
 
 static bool didReceiveMessage;
@@ -389,6 +395,162 @@ TEST(WebKit, InjectedBundleNodeHandleIsSelectElement)
     TestWebKitAPI::Util::run(&done);
 }
 
+#if PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 160000
+
+static int presentViewControllerCallCount = 0;
+
+static UIViewController *overrideViewControllerForFullscreenPresentation()
+{
+    ++presentViewControllerCallCount;
+    return nil;
+}
+
+constexpr auto WebKitCaptivePortalModeAlertShownKey = @"WebKitCaptivePortalModeAlertShown";
+
+TEST(WebKit, LockdownModeDefaultFirstUseMessage)
+{
+    ClassMethodSwizzler swizzler(UIViewController.class, @selector(_viewControllerForFullScreenPresentationFromView:), reinterpret_cast<IMP>(overrideViewControllerForFullscreenPresentation));
+
+    auto webViewConfiguration = adoptNS([WKWebViewConfiguration new]);
+    EXPECT_FALSE(webViewConfiguration.get().defaultWebpagePreferences.lockdownModeEnabled);
+    webViewConfiguration.get().defaultWebpagePreferences.lockdownModeEnabled = YES;
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:webViewConfiguration.get() addToWindow:NO]);
+
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:WebKitCaptivePortalModeAlertShownKey];
+    [WKProcessPool _setCaptivePortalModeEnabledGloballyForTesting:YES];
+    [WKWebView _resetPresentLockdownModeMessage];
+
+    presentViewControllerCallCount = 0;
+
+    [webView addToTestWindow];
+
+    EXPECT_EQ(presentViewControllerCallCount, 0);
+    [webView waitForNextPresentationUpdate];
+    EXPECT_EQ(presentViewControllerCallCount, 1);
+
+    EXPECT_TRUE([[NSUserDefaults standardUserDefaults] boolForKey:WebKitCaptivePortalModeAlertShownKey]);
+    
+    [WKProcessPool _clearCaptivePortalModeEnabledGloballyForTesting];
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:WebKitCaptivePortalModeAlertShownKey];
+}
+
+static bool showedNoFirstUseMessage;
+
+@interface NoLockdownFirstUseMessage : NSObject <WKUIDelegatePrivate>
+@end
+
+@implementation NoLockdownFirstUseMessage
+- (void)webView:(WKWebView *)webView showLockdownModeFirstUseMessage:(NSString *)message completionHandler:(void (^)(WKDialogResult))completionHandler
+{
+    showedNoFirstUseMessage = true;
+    completionHandler(WKDialogResultHandled);
+}
+@end
+
+TEST(WebKit, LockdownModeNoFirstUseMessage)
+{
+    ClassMethodSwizzler swizzler(UIViewController.class, @selector(_viewControllerForFullScreenPresentationFromView:), reinterpret_cast<IMP>(overrideViewControllerForFullscreenPresentation));
+
+    auto webViewConfiguration = adoptNS([WKWebViewConfiguration new]);
+    EXPECT_FALSE(webViewConfiguration.get().defaultWebpagePreferences.lockdownModeEnabled);
+    webViewConfiguration.get().defaultWebpagePreferences.lockdownModeEnabled = YES;
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:webViewConfiguration.get() addToWindow:NO]);
+
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:WebKitCaptivePortalModeAlertShownKey];
+    [WKProcessPool _setCaptivePortalModeEnabledGloballyForTesting:YES];
+    [WKWebView _resetPresentLockdownModeMessage];
+
+    presentViewControllerCallCount = 0;
+    showedNoFirstUseMessage = false;
+
+    auto delegate = adoptNS([[NoLockdownFirstUseMessage alloc] init]);
+    [webView setUIDelegate:delegate.get()];
+    [webView addToTestWindow];
+
+    EXPECT_TRUE(showedNoFirstUseMessage);
+    EXPECT_EQ(presentViewControllerCallCount, 0);
+    [webView waitForNextPresentationUpdate];
+    EXPECT_EQ(presentViewControllerCallCount, 0);
+
+    EXPECT_TRUE([[NSUserDefaults standardUserDefaults] boolForKey:WebKitCaptivePortalModeAlertShownKey]);
+    
+    [WKProcessPool _clearCaptivePortalModeEnabledGloballyForTesting];
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:WebKitCaptivePortalModeAlertShownKey];
+}
+
+static bool showedCustomFirstUseMessage;
+static bool requestFutureFirstUseMessage;
+
+@interface AskAgainFirstUseMessage : NSObject <WKUIDelegatePrivate>
+@end
+
+@implementation AskAgainFirstUseMessage
+- (void)webView:(WKWebView *)webView showLockdownModeFirstUseMessage:(NSString *)message completionHandler:(void (^)(WKDialogResult))completionHandler
+{
+    if (requestFutureFirstUseMessage) {
+        requestFutureFirstUseMessage = false;
+        showedCustomFirstUseMessage = false;
+        completionHandler(WKDialogResultShowDefault);
+        return;
+    }
+        
+    requestFutureFirstUseMessage = true;
+    showedCustomFirstUseMessage = true;
+    completionHandler(WKDialogResultAskAgain);
+}
+@end
+
+TEST(WebKit, LockdownModeAskAgainFirstUseMessage)
+{
+    ClassMethodSwizzler swizzler(UIViewController.class, @selector(_viewControllerForFullScreenPresentationFromView:), reinterpret_cast<IMP>(overrideViewControllerForFullscreenPresentation));
+
+    auto webViewConfiguration = adoptNS([WKWebViewConfiguration new]);
+    EXPECT_FALSE(webViewConfiguration.get().defaultWebpagePreferences.lockdownModeEnabled);
+    webViewConfiguration.get().defaultWebpagePreferences.lockdownModeEnabled = YES;
+
+    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:webViewConfiguration.get() addToWindow:NO]);
+
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:WebKitCaptivePortalModeAlertShownKey];
+    [WKProcessPool _setCaptivePortalModeEnabledGloballyForTesting:YES];
+    [WKWebView _resetPresentLockdownModeMessage];
+
+    presentViewControllerCallCount = 0;
+    showedCustomFirstUseMessage = false;
+    requestFutureFirstUseMessage = false;
+
+    auto delegate = adoptNS([[AskAgainFirstUseMessage alloc] init]);
+    [webView setUIDelegate:delegate.get()];
+    [webView addToTestWindow];
+
+    EXPECT_EQ(presentViewControllerCallCount, 0);
+    EXPECT_TRUE(showedCustomFirstUseMessage);
+    EXPECT_TRUE(requestFutureFirstUseMessage);
+
+    EXPECT_FALSE([[NSUserDefaults standardUserDefaults] boolForKey:WebKitCaptivePortalModeAlertShownKey]);
+
+    // Load a new view and ask again:
+    auto secondWebView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600) configuration:webViewConfiguration.get() addToWindow:NO]);
+
+    [secondWebView setUIDelegate:delegate.get()];
+    [secondWebView addToTestWindow];
+
+    EXPECT_EQ(presentViewControllerCallCount, 0);
+    [secondWebView waitForNextPresentationUpdate];
+    EXPECT_EQ(presentViewControllerCallCount, 1);
+
+    EXPECT_FALSE(showedCustomFirstUseMessage);
+    EXPECT_FALSE(requestFutureFirstUseMessage);
+
+    EXPECT_TRUE([[NSUserDefaults standardUserDefaults] boolForKey:WebKitCaptivePortalModeAlertShownKey]);
+
+    [WKProcessPool _clearCaptivePortalModeEnabledGloballyForTesting];
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:WebKitCaptivePortalModeAlertShownKey];
+}
+
+#endif // PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 160000
+
 #if PLATFORM(MAC)
 
 @class UITestDelegate;
@@ -467,47 +629,6 @@ TEST(WebKit, PointerLock)
         @"</script>"
     ];
     [webView sendClicksAtPoint:NSMakePoint(200, 200) numberOfClicks:1];
-    TestWebKitAPI::Util::run(&done);
-}
-
-static bool resizableSet;
-
-@interface ModalDelegate : NSObject <WKUIDelegatePrivate>
-@end
-
-@implementation ModalDelegate
-
-- (void)_webViewRunModal:(WKWebView *)webView
-{
-    EXPECT_TRUE(resizableSet);
-    EXPECT_EQ(webView, createdWebView.get());
-    done = true;
-}
-
-- (void)_webView:(WKWebView *)webView setResizable:(BOOL)isResizable
-{
-    EXPECT_FALSE(isResizable);
-    resizableSet = true;
-}
-
-- (WKWebView *)webView:(WKWebView *)webView createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration forNavigationAction:(WKNavigationAction *)navigationAction windowFeatures:(WKWindowFeatures *)windowFeatures
-{
-    createdWebView = adoptNS([[TestWKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600) configuration:configuration]);
-    [createdWebView setUIDelegate:self];
-    return createdWebView.get();
-}
-
-@end
-
-TEST(WebKit, RunModal)
-{
-    auto delegate = adoptNS([[ModalDelegate alloc] init]);
-    auto webView = adoptNS([[TestWKWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)]);
-    [webView setUIDelegate:delegate.get()];
-    NSURL *url = [[NSBundle mainBundle] URLForResource:@"simple" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"];
-    NSString *html = [NSString stringWithFormat:@"%@%@%@", @"<script> function openModal() { window.showModalDialog('", url, @"'); } </script> <input type='button' value='Click to open modal' onclick='openModal();'>"];
-    [webView synchronouslyLoadHTMLString:html];
-    [webView sendClicksAtPoint:NSMakePoint(20, 600 - 20) numberOfClicks:1];
     TestWebKitAPI::Util::run(&done);
 }
 
@@ -815,7 +936,7 @@ TEST(WebKit, ClickAutoFillButton)
     [webView setUIDelegate:delegate.get()];
     [webView evaluateJavaScript:@"" completionHandler: nil]; // Ensure the WebProcess and injected bundle are running.
     TestWebKitAPI::Util::run(&readyForClick);
-    NSPoint buttonLocation = NSMakePoint(130, 575);
+    NSPoint buttonLocation = NSMakePoint(130, 577);
     [webView mouseDownAtPoint:buttonLocation simulatePressure:NO];
     [webView mouseUpAtPoint:buttonLocation];
     TestWebKitAPI::Util::run(&done);

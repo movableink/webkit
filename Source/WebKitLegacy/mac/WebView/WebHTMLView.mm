@@ -81,6 +81,7 @@
 #import <WebCore/CompositionHighlight.h>
 #import <WebCore/ContextMenu.h>
 #import <WebCore/ContextMenuController.h>
+#import <WebCore/DeprecatedGlobalSettings.h>
 #import <WebCore/DictationAlternative.h>
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/Document.h>
@@ -117,7 +118,6 @@
 #import <WebCore/RenderView.h>
 #import <WebCore/RenderWidget.h>
 #import <WebCore/RuntimeApplicationChecks.h>
-#import <WebCore/RuntimeEnabledFeatures.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/StyleProperties.h>
 #import <WebCore/StyleScope.h>
@@ -419,9 +419,6 @@ static std::optional<NSInteger> toTag(WebCore::ContextMenuAction action)
 {
     using namespace WebCore;
     switch (action) {
-    case ContextMenuItemTagNoAction:
-        return std::nullopt;
-
     case ContextMenuItemTagOpenLinkInNewWindow:
         return WebMenuItemTagOpenLinkInNewWindow;
     case ContextMenuItemTagDownloadLinkToDisk:
@@ -590,18 +587,12 @@ static std::optional<NSInteger> toTag(WebCore::ContextMenuAction action)
         return WebMenuItemTagDictationAlternative;
     case ContextMenuItemTagToggleVideoFullscreen:
         return WebMenuItemTagToggleVideoFullscreen;
-    case ContextMenuItemTagAddHighlightToCurrentQuickNote:
-    case ContextMenuItemTagAddHighlightToNewQuickNote:
-        return std::nullopt;
     case ContextMenuItemTagShareMenu:
         return WebMenuItemTagShareMenu;
     case ContextMenuItemTagToggleVideoEnhancedFullscreen:
         return WebMenuItemTagToggleVideoEnhancedFullscreen;
     case ContextMenuItemTagTranslate:
         return WebMenuItemTagTranslate;
-    case ContextMenuItemTagCopySubject:
-    case ContextMenuItemTagLookUpImage:
-        return std::nullopt;
 
     case ContextMenuItemBaseCustomTag ... ContextMenuItemLastCustomTag:
         // We just pass these through.
@@ -609,6 +600,10 @@ static std::optional<NSInteger> toTag(WebCore::ContextMenuAction action)
 
     case ContextMenuItemBaseApplicationTag:
         ASSERT_NOT_REACHED();
+        break;
+
+    default:
+        break;
     }
 
     return std::nullopt;
@@ -634,8 +629,24 @@ static std::optional<NSInteger> toTag(WebCore::ContextMenuAction action)
 
 - (void)forwardContextMenuAction:(id)sender
 {
-    if (auto action = toAction([sender tag]))
+    auto action = toAction([sender tag]);
+    if (!action)
+        return;
+
+    switch (*action) {
+    case WebCore::ContextMenuItemTagShowFonts:
+        [[NSFontManager sharedFontManager] orderFrontFontPanel:nil];
+        break;
+    case WebCore::ContextMenuItemTagStyles:
+        [[NSFontManager sharedFontManager] orderFrontStylesPanel:nil];
+        break;
+    case WebCore::ContextMenuItemTagShowColors:
+        [[NSApplication sharedApplication] orderFrontColorPanel:nil];
+        break;
+    default:
         _menuController->contextMenuItemSelected(*action, [sender title]);
+        break;
+    }
 }
 
 @end
@@ -1134,7 +1145,7 @@ static NSControlStateValue kit(TriState state)
         nil]);
 
 #if ENABLE(ATTACHMENT_ELEMENT)
-    if (!WebCore::RuntimeEnabledFeatures::sharedFeatures().attachmentElementEnabled())
+    if (!WebCore::DeprecatedGlobalSettings::attachmentElementEnabled())
         [elements addObject:@"object"];
 #endif
 

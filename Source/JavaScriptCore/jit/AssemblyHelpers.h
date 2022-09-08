@@ -595,6 +595,8 @@ public:
     }
 #endif
 
+    void getArityPadding(VM&, unsigned numberOfParameters, GPRReg argumentCountIncludingThisGPR, GPRReg paddingOutputGPR, GPRReg scratchGPR0, GPRReg scratchGPR1, JumpList& stackOverflow);
+
     void emitGetFromCallFrameHeaderPtr(VirtualRegister entry, GPRReg to, GPRReg from = GPRInfo::callFrameRegister)
     {
         ASSERT(entry.isHeader());
@@ -611,6 +613,12 @@ public:
     {
         ASSERT(entry.isHeader());
         storePtr(TrustedImmPtr(value), Address(GPRInfo::callFrameRegister, entry.offset() * sizeof(Register)));
+    }
+
+    void emitPutCellToCallFrameHeader(GPRReg from, VirtualRegister entry)
+    {
+        ASSERT(entry.isHeader());
+        storeCell(from, Address(GPRInfo::callFrameRegister, entry.offset() * sizeof(Register)));
     }
 
     void emitZeroToCallFrameHeader(VirtualRegister entry)
@@ -1352,6 +1360,7 @@ public:
     void jitAssertArgumentCountSane();
     inline void jitAssertNoException(VM& vm) { jitReleaseAssertNoException(vm); }
     void jitAssertCodeBlockOnCallFrameWithType(GPRReg scratchGPR, JITType);
+    void jitAssertCodeBlockMatchesCurrentCalleeCodeBlockOnCallFrame(GPRReg scratchGPR, GPRReg scratchGPR2, UnlinkedCodeBlock&);
     void jitAssertCodeBlockOnCallFrameIsOptimizingJIT(GPRReg scratchGPR);
 #else
     void jitAssertIsInt32(GPRReg) { }
@@ -1366,6 +1375,7 @@ public:
     void jitAssertNoException(VM&) { }
     void jitAssertCodeBlockOnCallFrameWithType(GPRReg, JITType) { }
     void jitAssertCodeBlockOnCallFrameIsOptimizingJIT(GPRReg) { }
+    void jitAssertCodeBlockMatchesCurrentCalleeCodeBlockOnCallFrame(GPRReg, GPRReg, UnlinkedCodeBlock&) { }
 #endif
 
     void jitReleaseAssertNoException(VM&);
@@ -1955,8 +1965,8 @@ public:
 protected:
     void copyCalleeSavesToEntryFrameCalleeSavesBufferImpl(GPRReg calleeSavesBuffer);
 
-    CodeBlock* m_codeBlock;
-    CodeBlock* m_baselineCodeBlock;
+    CodeBlock* const m_codeBlock;
+    CodeBlock* const m_baselineCodeBlock;
 };
 
 } // namespace JSC

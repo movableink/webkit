@@ -120,6 +120,7 @@ messages -> NetworkProcess LegacyReceiver {
     SetPruneEntriesDownTo(PAL::SessionID sessionID, uint64_t maximumEntryCount) -> ()
     SetShouldClassifyResourcesBeforeDataRecordsRemoval(PAL::SessionID sessionID, bool value) -> ()
     SetNotifyPagesWhenDataRecordsWereScanned(PAL::SessionID sessionID, bool value) -> ()
+    SetResourceLoadStatisticsTimeAdvanceForTesting(PAL::SessionID sessionID, Seconds time) -> ()
     SetIsRunningResourceLoadStatisticsTest(PAL::SessionID sessionID, bool value) -> ()
     SetResourceLoadStatisticsDebugMode(PAL::SessionID sessionID, bool debugMode) -> ()
     SetVeryPrevalentResource(PAL::SessionID sessionID, WebCore::RegistrableDomain resourceDomain) -> ()
@@ -179,6 +180,9 @@ messages -> NetworkProcess LegacyReceiver {
     ResetServiceWorkerFetchTimeoutForTesting() -> () Synchronous
 
     ResetQuota(PAL::SessionID sessionID) -> ()
+#if PLATFORM(IOS_FAMILY)
+    SetBackupExclusionPeriodForTesting(PAL::SessionID sessionID, Seconds period) -> ()
+#endif
     ClearStorage(PAL::SessionID sessionID) -> ()
     DidIncreaseQuota(PAL::SessionID sessionID, struct WebCore::ClientOrigin origin, WebKit::QuotaIncreaseRequestIdentifier identifier, std::optional<uint64_t> newQuota)
     
@@ -214,7 +218,13 @@ messages -> NetworkProcess LegacyReceiver {
     ProcessPushMessage(PAL::SessionID sessionID, struct WebKit::WebPushMessage pushMessage, enum:uint8_t WebCore::PushPermissionState pushPermissionState) -> (bool didSucceed)
     ProcessNotificationEvent(struct WebCore::NotificationData data, enum:bool WebCore::NotificationEventType eventType) -> (bool didSucceed)
 #endif
+    SetPushAndNotificationsEnabledForOrigin(PAL::SessionID sessionID, struct WebCore::SecurityOriginData origin, bool enabled) -> ()
     DeletePushAndNotificationRegistration(PAL::SessionID sessionID, struct WebCore::SecurityOriginData origin) -> (String errorMessage)
     GetOriginsWithPushAndNotificationPermissions(PAL::SessionID sessionID) -> (Vector<WebCore::SecurityOriginData> origins)
+    GetOriginsWithPushSubscriptions(PAL::SessionID sessionID) -> (Vector<WebCore::SecurityOriginData> origins)
     HasPushSubscriptionForTesting(PAL::SessionID sessionID, URL scopeURL) -> (bool hasSubscription)
+
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+    SetEmulatedConditions(PAL::SessionID sessionID, std::optional<int64_t> bytesPerSecondLimit)
+#endif
 }

@@ -57,6 +57,7 @@ public:
         virtual void trackEnded(MediaStreamTrackPrivate&) = 0;
         virtual void trackMutedChanged(MediaStreamTrackPrivate&) = 0;
         virtual void trackSettingsChanged(MediaStreamTrackPrivate&) = 0;
+        virtual void trackConfigurationChanged(MediaStreamTrackPrivate&) { };
         virtual void trackEnabledChanged(MediaStreamTrackPrivate&) = 0;
         virtual void readyStateChanged(MediaStreamTrackPrivate&) { };
     };
@@ -85,6 +86,8 @@ public:
 
     bool muted() const;
     void setMuted(bool muted) { m_source->setMuted(muted); }
+
+    void setIsInBackground(bool value) { m_source->setIsInBackground(value); }
 
     bool isCaptureTrack() const;
 
@@ -133,6 +136,7 @@ private:
     void sourceStopped() final;
     void sourceMutedChanged() final;
     void sourceSettingsChanged() final;
+    void sourceConfigurationChanged() final;
     bool preventSourceFromStopping() final;
     void audioUnitWillStart() final;
     void hasStartedProducingData() final;

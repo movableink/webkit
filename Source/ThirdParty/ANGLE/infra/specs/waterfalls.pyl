@@ -52,12 +52,29 @@
         ],
         'test_suites': {
           'gtest_tests': 'android_vulkan_gtests',
+          'isolated_scripts': 'angle_restricted_trace_gold_isolated_scripts',
+        },
+      },
+      'linux-amd': {
+        'os_type': 'linux',
+        'mixins': [
+          'linux_amd_rx_5500_xt',
+        ],
+        'test_suites': {
+        },
+      },
+      'linux-exp-intel': {
+        'os_type': 'linux',
+        'mixins': [
+          'linux_intel_uhd_630_stable',
+        ],
+        'test_suites': {
         },
       },
       'linux-intel': {
         'os_type': 'linux',
         'mixins': [
-          'linux_intel_hd_630_stable',
+          'linux_intel_uhd_630_stable',
         ],
         'test_suites': {
           'gtest_tests': 'linux_intel_gtests',
@@ -67,7 +84,7 @@
       'linux-intel-perf': {
         'os_type': 'linux',
         'mixins': [
-          'linux_intel_hd_630_stable',
+          'linux_intel_uhd_630_stable',
         ],
         'test_suites': {
           'isolated_scripts': 'angle_perf_isolated_scripts',
@@ -154,13 +171,12 @@
           'gtest_tests': 'mac_amd_and_intel_gtests',
         },
       },
-      'mac-exp-amd': {
+      'mac-exp-intel': {
         'os_type': 'mac',
         'mixins': [
-          'mac_retina_amd_gpu_experimental',
+          'mac_mini_intel_gpu_experimental',
         ],
         'test_suites': {
-          'gtest_tests': 'mac_amd_and_intel_gtests',
         },
       },
       'mac-intel': {

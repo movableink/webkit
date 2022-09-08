@@ -26,6 +26,9 @@
 #include "GStreamerCommon.h"
 #include <wtf/StdMap.h>
 #include <wtf/glib/WTFGType.h>
+#include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringToIntegerConversion.h>
+#include <wtf/text/StringView.h>
 
 using namespace WebCore;
 
@@ -44,6 +47,7 @@ struct EncoderDefinition {
     GRefPtr<GstCaps> caps;
     const char* name;
     const char* parserName;
+    GRefPtr<GstElementFactory> factory;
     GRefPtr<GstCaps> encodedFormat;
     SetBitrateFunc setBitrate;
     SetupFunc setupEncoder;
@@ -72,25 +76,36 @@ public:
         SetupFunc&& setupEncoder, const char* bitratePropertyName, SetBitrateFunc&& setBitrate, const char* keyframeIntervalPropertyName)
     {
         auto encoderFactory = adoptGRef(gst_element_factory_find(name));
-        if (!encoderFactory)
+        if (!encoderFactory) {
+            GST_WARNING("Encoder %s not found, will not be used", name);
             return;
+        }
+
+        if (gst_plugin_feature_get_rank(GST_PLUGIN_FEATURE_CAST(encoderFactory.get())) < GST_RANK_MARGINAL) {
+            GST_WARNING("Encoder %s rank is below MARGINAL, will not be used.", name);
+            return;
+        }
 
         if (parserName) {
             auto parserFactory = adoptGRef(gst_element_factory_find(parserName));
-            if (!parserFactory)
+            if (!parserFactory) {
+                GST_WARNING("Parser %s is required for encoder %s. Skipping registration", parserName, name);
                 return;
+            }
         }
 
-        singleton().emplace(std::make_pair(id, (EncoderDefinition) {
+        singleton().emplace(std::make_pair(id, EncoderDefinition {
             .caps = adoptGRef(gst_caps_from_string(caps)),
             .name = name,
             .parserName = parserName,
+            .factory = WTFMove(encoderFactory),
             .encodedFormat = encodedFormat ? adoptGRef(gst_caps_from_string(encodedFormat)) : nullptr,
             .setBitrate = WTFMove(setBitrate),
             .setupEncoder = WTFMove(setupEncoder),
             .bitratePropertyName = bitratePropertyName,
             .keyframeIntervalPropertyName = keyframeIntervalPropertyName,
         }));
+        GST_INFO("Encoder %s registered", name);
     }
 
     static EncoderDefinition* definition(EncoderId id)
@@ -101,16 +116,23 @@ public:
     }
 };
 
+/* Internal bin structure: videoconvert ! inputCapsFilter ! encoder ! outputCapsFilter ! (optional
+   parser) ! capsFilter */
 struct _WebKitWebrtcVideoEncoderPrivate {
     EncoderId encoderId;
     GRefPtr<GstElement> encoder;
     GRefPtr<GstElement> parser;
+    GRefPtr<GstElement> capsFilter;
+    GRefPtr<GstElement> inputCapsFilter;
+    GRefPtr<GstElement> outputCapsFilter;
+    GRefPtr<GstElement> videoConvert;
+    GRefPtr<GstCaps> encodedCaps;
     unsigned bitrate;
 };
 
 #define webkit_webrtc_video_encoder_parent_class parent_class
 WEBKIT_DEFINE_TYPE_WITH_CODE(WebKitWebrtcVideoEncoder, webkit_webrtc_video_encoder, GST_TYPE_BIN,
-    GST_DEBUG_CATEGORY_INIT(webrtc_venc_debug, "webkitwebrtcencoder", 0, "Video encoder for WebRTC"))
+    GST_DEBUG_CATEGORY_INIT(webrtc_venc_debug, "webkitwebrtcvideoencoder", 0, "Video encoder for WebRTC"))
 
 enum {
     PROP_FORMAT = 1,
@@ -162,64 +184,137 @@ static void webrtcVideoEncoderSetBitrate(WebKitWebrtcVideoEncoder* self, guint b
     }
 }
 
-static void webrtcVideoEncoderSetEncoder(WebKitWebrtcVideoEncoder* self, GRefPtr<GstElement>&& encoderElement, EncoderId encoderId)
+static void webrtcVideoEncoderSetEncoder(WebKitWebrtcVideoEncoder* self, EncoderId encoderId, GRefPtr<GstCaps>&& encodedCaps)
 {
+    ASSERT(encoderId != EncoderId::None);
+
     auto* priv = self->priv;
-    priv->encoderId = encoderId;
-    priv->encoder = WTFMove(encoderElement);
+    auto srcPad = adoptGRef(gst_element_get_static_pad(GST_ELEMENT_CAST(self), "src"));
 
-    auto encoder = Encoders::definition(encoderId);
-    ASSERT(encoder);
-    if (encoder->parserName)
-        priv->parser = makeGStreamerElement(encoder->parserName, nullptr);
+    priv->encodedCaps = WTFMove(encodedCaps);
 
-    encoder->setupEncoder(self);
+    gst_element_set_locked_state(GST_ELEMENT_CAST(self), TRUE);
 
-    gst_bin_add(GST_BIN_CAST(self), priv->encoder.get());
-
-    auto sinkPadTarget = adoptGRef(gst_element_get_static_pad(priv->encoder.get(), "sink"));
-    auto sinkPad = adoptGRef(gst_element_get_static_pad(GST_ELEMENT_CAST(self), "sink"));
-    gst_ghost_pad_set_target(GST_GHOST_PAD(sinkPad.get()), sinkPadTarget.get());
-
-    GRefPtr<GstPad> srcPadTarget;
-    if (priv->parser) {
-        gst_bin_add(GST_BIN_CAST(self), priv->parser.get());
-        gst_element_link(priv->encoder.get(), priv->parser.get());
-        srcPadTarget = adoptGRef(gst_element_get_static_pad(priv->parser.get(), "src"));
-    } else
-        srcPadTarget = adoptGRef(gst_element_get_static_pad(priv->encoder.get(), "src"));
-
-    if (encoder->encodedFormat) {
-        auto* capsfilter = gst_element_factory_make("capsfilter", nullptr);
-        g_object_set(capsfilter, "caps", encoder->encodedFormat.get(), nullptr);
-
-        gst_bin_add(GST_BIN_CAST(self), capsfilter);
-        auto sinkPad = adoptGRef(gst_element_get_static_pad(capsfilter, "sink"));
-        gst_pad_link(srcPadTarget.get(), sinkPad.get());
-        srcPadTarget = adoptGRef(gst_element_get_static_pad(capsfilter, "src"));
+    if (priv->capsFilter) {
+        gst_element_set_locked_state(priv->capsFilter.get(), TRUE);
+        auto sinkPad = adoptGRef(gst_element_get_static_pad(priv->capsFilter.get(), "sink"));
+        auto peerPad = adoptGRef(gst_pad_get_peer(sinkPad.get()));
+        auto peer = adoptGRef(gst_pad_get_parent_element(peerPad.get()));
+        gst_element_set_state(priv->capsFilter.get(), GST_STATE_NULL);
+        gst_element_unlink(peer.get(), priv->capsFilter.get());
+        gst_bin_remove(GST_BIN_CAST(self), priv->capsFilter.get());
+        sinkPad.clear();
+        priv->capsFilter.clear();
     }
 
-    auto srcPad = adoptGRef(gst_element_get_static_pad(GST_ELEMENT_CAST(self), "src"));
+    auto encoderDefinition = Encoders::definition(encoderId);
+    ASSERT(encoderDefinition);
+
+    bool shouldLinkEncoder = false;
+    if (priv->encoderId != encoderId) {
+        if (priv->encoder) {
+#ifndef GST_DISABLE_GST_DEBUG
+            auto previousEncoder = Encoders::definition(priv->encoderId);
+            GST_DEBUG_OBJECT(self, "Switching from %s to %s", previousEncoder->name, encoderDefinition->name);
+#endif
+            gst_element_set_locked_state(priv->encoder.get(), TRUE);
+            gst_element_set_state(priv->encoder.get(), GST_STATE_NULL);
+            gst_element_unlink(priv->inputCapsFilter.get(), priv->encoder.get());
+            gst_bin_remove(GST_BIN_CAST(self), priv->encoder.get());
+        }
+        priv->encoder = gst_element_factory_create(encoderDefinition->factory.get(), nullptr);
+        gst_bin_add(GST_BIN_CAST(self), priv->encoder.get());
+        shouldLinkEncoder = true;
+    } else {
+        GST_DEBUG_OBJECT(self, "Reconfiguring existing %s encoder", encoderDefinition->name);
+        gst_element_set_state(priv->encoder.get(), GST_STATE_READY);
+    }
+
+    if (priv->parser) {
+        gst_element_set_locked_state(priv->parser.get(), TRUE);
+        gst_element_set_state(priv->parser.get(), GST_STATE_NULL);
+        gst_element_unlink_many(priv->encoder.get(), priv->parser.get(), priv->outputCapsFilter.get(), nullptr);
+        gst_bin_remove(GST_BIN_CAST(self), priv->parser.get());
+        priv->parser.clear();
+    }
+
+    priv->encoderId = encoderId;
+
+    if (!priv->inputCapsFilter) {
+        priv->inputCapsFilter = gst_element_factory_make("capsfilter", nullptr);
+        gst_bin_add(GST_BIN_CAST(self), priv->inputCapsFilter.get());
+    }
+
+    if (!priv->videoConvert) {
+        priv->videoConvert = makeGStreamerElement("videoconvert", nullptr);
+        gst_bin_add(GST_BIN_CAST(self), priv->videoConvert.get());
+
+        auto sinkPadTarget = adoptGRef(gst_element_get_static_pad(priv->videoConvert.get(), "sink"));
+        auto sinkPad = adoptGRef(gst_element_get_static_pad(GST_ELEMENT_CAST(self), "sink"));
+        gst_ghost_pad_set_target(GST_GHOST_PAD(sinkPad.get()), sinkPadTarget.get());
+    } else {
+        gst_element_unlink(priv->videoConvert.get(), priv->inputCapsFilter.get());
+        auto caps = adoptGRef(gst_caps_new_any());
+        g_object_set(priv->inputCapsFilter.get(), "caps", caps.get(), nullptr);
+    }
+
+    if (encoderDefinition->parserName) {
+        priv->parser = makeGStreamerElement(encoderDefinition->parserName, nullptr);
+
+        if (!priv->outputCapsFilter) {
+            priv->outputCapsFilter = gst_element_factory_make("capsfilter", nullptr);
+            gst_bin_add(GST_BIN_CAST(self), priv->outputCapsFilter.get());
+        }
+    }
+
+    encoderDefinition->setupEncoder(self);
+
+    gst_element_link(priv->videoConvert.get(), priv->inputCapsFilter.get());
+    if (shouldLinkEncoder)
+        gst_element_link(priv->inputCapsFilter.get(), priv->encoder.get());
+
+    if (priv->parser) {
+        gst_bin_add(GST_BIN_CAST(self), priv->parser.get());
+        if (shouldLinkEncoder)
+            gst_element_link(priv->encoder.get(), priv->outputCapsFilter.get());
+        gst_element_link(priv->outputCapsFilter.get(), priv->parser.get());
+    }
+
+    priv->capsFilter = gst_element_factory_make("capsfilter", nullptr);
+    if (encoderDefinition->encodedFormat)
+        g_object_set(priv->capsFilter.get(), "caps", encoderDefinition->encodedFormat.get(), nullptr);
+    else
+        g_object_set(priv->capsFilter.get(), "caps", priv->encodedCaps.get(), nullptr);
+
+    gst_bin_add(GST_BIN_CAST(self), priv->capsFilter.get());
+
+    auto srcPadTarget = adoptGRef(gst_element_get_static_pad(priv->capsFilter.get(), "src"));
     gst_ghost_pad_set_target(GST_GHOST_PAD(srcPad.get()), srcPadTarget.get());
+
+    gst_element_link(priv->parser ? priv->parser.get() : priv->encoder.get(), priv->capsFilter.get());
+
+    gst_bin_sync_children_states(GST_BIN_CAST(self));
+    gst_element_set_locked_state(GST_ELEMENT_CAST(self), FALSE);
 
     webrtcVideoEncoderSetBitrate(self, priv->bitrate);
 }
 
-static void webrtcVideoEncoderSetFormat(WebKitWebrtcVideoEncoder* self, const GstCaps* caps)
+bool webrtcVideoEncoderSetFormat(WebKitWebrtcVideoEncoder* self, GRefPtr<GstCaps>&& caps)
 {
     if (!caps)
-        return;
+        return false;
 
-    for (const auto& pair : Encoders::singleton()) {
-        const auto& encoder = pair.second;
-        if (gst_caps_can_intersect(encoder.caps.get(), caps)) {
-            GRefPtr<GstElement> element = makeGStreamerElement(encoder.name, nullptr);
-            webrtcVideoEncoderSetEncoder(self, WTFMove(element), pair.first);
-            return;
+    GST_DEBUG_OBJECT(self, "Looking for an encoder matching caps %" GST_PTR_FORMAT, caps.get());
+    for (const auto& [id, encoder] : Encoders::singleton()) {
+        if (gst_element_factory_can_src_any_caps(encoder.factory.get(), caps.get())) {
+            GST_DEBUG_OBJECT(self, "Setting encoder to %s", encoder.name);
+            webrtcVideoEncoderSetEncoder(self, id, WTFMove(caps));
+            return true;
         }
     }
 
-    GST_ERROR("No encoder found for format %" GST_PTR_FORMAT, caps);
+    GST_ERROR_OBJECT(self, "No encoder found for format %" GST_PTR_FORMAT, caps.get());
+    return false;
 }
 
 static void webrtcVideoEncoderSetProperty(GObject* object, guint prop_id, const GValue* value, GParamSpec* pspec)
@@ -228,9 +323,11 @@ static void webrtcVideoEncoderSetProperty(GObject* object, guint prop_id, const 
     auto* priv = self->priv;
 
     switch (prop_id) {
-    case PROP_FORMAT:
-        webrtcVideoEncoderSetFormat(self, gst_value_get_caps(value));
+    case PROP_FORMAT: {
+        auto caps = adoptGRef(gst_caps_copy(gst_value_get_caps(value)));
+        webrtcVideoEncoderSetFormat(self, WTFMove(caps));
         break;
+    }
     case PROP_BITRATE:
         webrtcVideoEncoderSetBitrate(self, g_value_get_uint(value));
         break;
@@ -297,25 +394,46 @@ static void webkit_webrtc_video_encoder_class_init(WebKitWebrtcVideoEncoderClass
             g_object_set(self->priv->parser.get(), "config-interval", 1, nullptr);
         }, "target-bitrate", setBitrateBitPerSec, "interval-intraframes");
     Encoders::registerEncoder(X264, "x264enc", "h264parse", "video/x-h264",
-        "video/x-h264,alignment=au,stream-format=byte-stream,profile=constrained-baseline",
+        "video/x-h264,alignment=au,stream-format=byte-stream",
         [](WebKitWebrtcVideoEncoder* self) {
             gst_util_set_object_arg(G_OBJECT(self->priv->encoder.get()), "tune", "zerolatency");
             gst_util_set_object_arg(G_OBJECT(self->priv->encoder.get()), "speed-preset", "ultrafast");
-            g_object_set(G_OBJECT(self->priv->encoder.get()), "key-int-max", 15, "threads", 4, nullptr);
+            g_object_set(self->priv->encoder.get(), "key-int-max", 15, "threads", 4, nullptr);
             g_object_set(self->priv->parser.get(), "config-interval", 1, nullptr);
+
+            const auto* structure = gst_caps_get_structure(self->priv->encodedCaps.get(), 0);
+            auto inputCaps = adoptGRef(gst_caps_new_any());
+            if (const char* profileString = gst_structure_get_string(structure, "profile")) {
+                auto profile = StringView::fromLatin1(profileString);
+                if (profile.find("high"_s) != notFound)
+                    inputCaps = adoptGRef(gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "Y444", nullptr));
+            }
+            g_object_set(self->priv->inputCapsFilter.get(), "caps", inputCaps.get(), nullptr);
+            g_object_set(self->priv->outputCapsFilter.get(), "caps", self->priv->encodedCaps.get(), nullptr);
         }, "bitrate", setBitrateKbitPerSec, "key-int-max");
     Encoders::registerEncoder(OpenH264, "openh264enc", "h264parse", "video/x-h264",
-        "video/x-h264,alignment=au,stream-format=byte-stream,profile=baseline",
+        "video/x-h264,alignment=au,stream-format=byte-stream",
         [](WebKitWebrtcVideoEncoder* self) {
             g_object_set(self->priv->parser.get(), "config-interval", 1, nullptr);
+            g_object_set(self->priv->outputCapsFilter.get(), "caps", self->priv->encodedCaps.get(), nullptr);
         }, "bitrate", setBitrateBitPerSec, "gop-size");
     Encoders::registerEncoder(Vp8, "vp8enc", nullptr, "video/x-vp8", nullptr,
         [](WebKitWebrtcVideoEncoder* self) {
             gst_preset_load_preset(GST_PRESET(self->priv->encoder.get()), "Profile Realtime");
         }, "target-bitrate", setBitrateBitPerSec, "keyframe-max-dist");
+
     Encoders::registerEncoder(Vp9, "vp9enc", nullptr, "video/x-vp9", nullptr,
         [](WebKitWebrtcVideoEncoder* self) {
             g_object_set(self->priv->encoder.get(), "threads", 4, "cpu-used", 4, "tile-rows", 2, "row-mt", true, nullptr);
+            auto inputCaps = adoptGRef(gst_caps_new_any());
+            const auto* structure = gst_caps_get_structure(self->priv->encodedCaps.get(), 0);
+            if (const char* profileString = gst_structure_get_string(structure, "profile")) {
+                auto profile = StringView::fromLatin1(profileString);
+                auto profileId = parseInteger<int>(profile, 10);
+                if (profileId && *profileId >= 2)
+                    inputCaps = adoptGRef(gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "I420_10LE", nullptr));
+            }
+            g_object_set(self->priv->inputCapsFilter.get(), "caps", inputCaps.get(), nullptr);
         }, "target-bitrate", setBitrateBitPerSec, "keyframe-max-dist");
 
     auto srcPadTemplateCaps = createSrcPadTemplateCaps();

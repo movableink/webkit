@@ -697,11 +697,11 @@
 /* Option in segmented control for inserting a numbered list in text editing */
 "Numbered list" = "Numbered list";
 
+/* Label for OK button in alerts */
+"OK" = "OK";
+
 /* Title of the OK button for the number pad in zoomed form controls. */
 "OK (OK button title in extra zoomed number pad)" = "OK";
-
-/* OK button label in document password failure alert */
-"OK (document password failure alert)" = "OK";
 
 /* Menu item label for the track that represents disabling closed captions. */
 "Off (text track)" = "Off";
@@ -906,6 +906,9 @@
 
 /* Show fonts context menu item */
 "Show Fonts" = "Show Fonts";
+
+/* Media stats context menu item */
+"Show Media Stats" = "Show Media Stats";
 
 /* menu item title */
 "Show Spelling and Grammar" = "Show Spelling and Grammar";
@@ -1285,6 +1288,9 @@
 /* Label for the credit card AutoFill button inside a text field. */
 "credit card AutoFill" = "credit card AutoFill";
 
+/* Label for the loading AutoFill button inside a text field. */
+"loading AutoFill" = "loading AutoFill";
+
 /* The less good value description for a meter element. */
 "critical value" = "critical value";
 
@@ -1347,6 +1353,9 @@
 
 /* accessibility role description for a footer */
 "footer" = "footer";
+
+/* Suggestion role description for a suggestion group */
+"suggestion" = "suggestion";
 
 /* HTTP result code string */
 "forbidden" = "forbidden";
@@ -1690,3 +1699,29 @@
 /* Option in segmented control for choosing list type in text editing */
 "•" = "•";
 
+/* Lockdown Mode alert title */
+"Lockdown Mode is Turned On For “%@“" = "Lockdown Mode is Turned On For “%@“";
+
+/* Lockdown Mode alert message */
+"Certain experiences and features may not function as expected. You can turn off Lockdown Mode for this app in Settings." = "Certain experiences and features may not function as expected. You can turn off Lockdown Mode for this app in Settings.";
+
+/* PDFJS strings */
+"Automatically Resize" = "Automatically Resize";
+
+"Zoom In" = "Zoom In";
+
+"Zoom Out" = "Zoom Out";
+
+"Actual Size" = "Actual Size";
+
+"Single Page" = "Single Page";
+
+"Single Page Continuous" = "Single Page Continuous";
+
+"Two Pages" = "Two Pages";
+
+"Two Pages Continuous" = "Two Pages Continuous";
+
+"Next Page" = "Next Page";
+
+"Previous Page" = "Previous Page";

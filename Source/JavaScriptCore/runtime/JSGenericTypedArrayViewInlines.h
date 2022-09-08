@@ -264,26 +264,22 @@ bool JSGenericTypedArrayView<Adaptor>::set(
         if (!success)
             return false;
 
-        RELEASE_ASSERT(JSC::elementSize(Adaptor::typeValue) == JSC::elementSize(other->classInfo()->typedArrayStorageType));
+        RELEASE_ASSERT(JSC::elementSize(Adaptor::typeValue) == JSC::elementSize(other->type()));
         memmove(typedVector() + offset, bitwise_cast<typename Adaptor::Type*>(other->vector()) + objectOffset, length * elementSize);
         return true;
     };
 
-    const ClassInfo* ci = object->classInfo();
-    if (ci->typedArrayStorageType == Adaptor::typeValue)
+    TypedArrayType typedArrayType = JSC::typedArrayType(object->type());
+    if (typedArrayType == Adaptor::typeValue)
         return memmoveFastPath(jsCast<JSArrayBufferView*>(object));
 
-    auto isSomeUint8 = [] (TypedArrayType type) {
-        return type == TypedArrayType::TypeUint8 || type == TypedArrayType::TypeUint8Clamped;
-    };
-
-    if (isSomeUint8(ci->typedArrayStorageType) && isSomeUint8(Adaptor::typeValue))
+    if (isSomeUint8(typedArrayType) && isSomeUint8(Adaptor::typeValue))
         return memmoveFastPath(jsCast<JSArrayBufferView*>(object));
 
-    if (isInt(Adaptor::typeValue) && isInt(ci->typedArrayStorageType) && !isClamped(Adaptor::typeValue) && JSC::elementSize(Adaptor::typeValue) == JSC::elementSize(ci->typedArrayStorageType))
+    if (isInt(Adaptor::typeValue) && isInt(typedArrayType) && !isClamped(Adaptor::typeValue) && JSC::elementSize(Adaptor::typeValue) == JSC::elementSize(typedArrayType))
         return memmoveFastPath(jsCast<JSArrayBufferView*>(object));
 
-    switch (ci->typedArrayStorageType) {
+    switch (typedArrayType) {
     case TypeInt8:
         RELEASE_AND_RETURN(scope, setWithSpecificType<Int8Adaptor>(
             globalObject, offset, jsCast<JSInt8Array*>(object), objectOffset, length, type));
@@ -338,8 +334,7 @@ bool JSGenericTypedArrayView<Adaptor>::set(
                 return false;
         }
         for (size_t i = safeLength; i < length; ++i) {
-            Identifier ident = Identifier::from(vm, static_cast<uint64_t>(i + objectOffset));
-            JSValue value = object->get(globalObject, ident);
+            JSValue value = object->get(globalObject, static_cast<uint64_t>(i + objectOffset));
             RETURN_IF_EXCEPTION(scope, false);
             bool success = setIndex(globalObject, offset + i, value);
             EXCEPTION_ASSERT(!scope.exception() || !success);
@@ -523,7 +518,7 @@ void JSGenericTypedArrayView<Adaptor>::getOwnPropertyNames(
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
 
     if (array.includeStringProperties()) {
-        for (unsigned i = 0; i < thisObject->m_length; ++i)
+        for (uint64_t i = 0; i < thisObject->m_length; ++i)
             array.add(Identifier::from(vm, i));
     }
     

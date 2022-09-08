@@ -74,7 +74,9 @@ inline bool isValueType(Type type)
     case TypeKind::Ref:
     case TypeKind::RefNull:
         return Options::useWebAssemblyTypedFunctionReferences();
-    case TypeKind::Rtt:
+    // Rec type kinds are used internally to represent `rec.<i>` references
+    // within recursion groups. They are invalid in other contexts.
+    case TypeKind::Rec:
         return Options::useWebAssemblyGC();
     default:
         break;
@@ -118,6 +120,13 @@ inline bool isFuncref(Type type)
     return type.kind == TypeKind::Funcref;
 }
 
+inline bool isI31ref(Type type)
+{
+    if (!Options::useWebAssemblyGC())
+        return false;
+    return isRefType(type) && type.index == static_cast<TypeIndex>(TypeKind::I31ref);
+}
+
 inline Type funcrefType()
 {
     if (Options::useWebAssemblyTypedFunctionReferences())
@@ -137,7 +146,7 @@ inline bool isRefWithTypeIndex(Type type)
     if (!Options::useWebAssemblyTypedFunctionReferences())
         return false;
 
-    return isRefType(type) && !isExternref(type) && !isFuncref(type);
+    return isRefType(type) && !isExternref(type) && !isFuncref(type) && !isI31ref(type);
 }
 
 inline bool isTypeIndexHeapType(int32_t heapType)
@@ -167,8 +176,9 @@ inline bool isValidHeapTypeKind(TypeKind kind)
     switch (kind) {
     case TypeKind::Funcref:
     case TypeKind::Externref:
-    case TypeKind::Rtt:
         return true;
+    case TypeKind::I31ref:
+        return Options::useWebAssemblyGC();
     default:
         break;
     }
@@ -455,7 +465,7 @@ struct InternalFunction {
 // meant as fast lookup tables for these opcodes and do not own code.
 struct WasmToWasmImportableFunction {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    using LoadLocation = MacroAssemblerCodePtr<WasmEntryPtrTag>*;
+    using LoadLocation = CodePtr<WasmEntryPtrTag>*;
     static ptrdiff_t offsetOfSignatureIndex() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, typeIndex); }
     static ptrdiff_t offsetOfEntrypointLoadLocation() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, entrypointLoadLocation); }
 

@@ -42,6 +42,10 @@ struct AudioTimeStamp;
 
 namespace WebCore {
 
+#if PLATFORM(IOS_FAMILY)
+class MediaCaptureStatusBarManager;
+#endif
+
 class CoreAudioSpeakerSamplesProducer;
 
 class CoreAudioSharedUnit final : public BaseAudioSharedUnit {
@@ -61,9 +65,10 @@ public:
         virtual void delaySamples(Seconds) { }
     };
 
-    static CoreAudioSharedUnit& unit();
+    WEBCORE_EXPORT static CoreAudioSharedUnit& unit();
     static BaseAudioSharedUnit& singleton()  { return unit(); }
     CoreAudioSharedUnit();
+    ~CoreAudioSharedUnit();
 
     using CreationCallback = Function<Expected<UniqueRef<InternalUnit>, OSStatus>()>;
     void setInternalUnitCreationCallback(CreationCallback&& callback) { m_creationCallback = WTFMove(callback); }
@@ -74,6 +79,11 @@ public:
     void unregisterSpeakerSamplesProducer(CoreAudioSpeakerSamplesProducer&);
     bool isRunning() const { return m_ioUnitStarted; }
     void setSampleRateRange(CapabilityValueOrRange range) { m_sampleRateCapabilities = range; }
+
+#if PLATFORM(IOS_FAMILY)
+    void setIsInBackground(bool);
+    void setStatusBarWasTappedCallback(Function<void(CompletionHandler<void()>&&)>&& callback) { m_statusBarWasTappedCallback = WTFMove(callback); }
+#endif
 
 private:
     static size_t preferredIOBufferSize();
@@ -121,7 +131,7 @@ private:
 
     CAAudioStreamDescription m_microphoneProcFormat;
     RefPtr<AudioSampleBufferList> m_microphoneSampleBuffer;
-    uint64_t m_latestMicTimeStamp { 0 };
+    double m_latestMicTimeStamp { 0 };
 
     CAAudioStreamDescription m_speakerProcFormat;
 
@@ -134,7 +144,7 @@ private:
     mutable std::optional<RealtimeMediaSourceSettings> m_currentSettings;
 
 #if !LOG_DISABLED
-    void checkTimestamps(const AudioTimeStamp&, uint64_t, double);
+    void checkTimestamps(const AudioTimeStamp&, double);
 
     String m_ioUnitName;
 #endif
@@ -145,9 +155,17 @@ private:
     uint64_t m_microphoneProcsCalledLastTime { 0 };
     Timer m_verifyCapturingTimer;
 
+    bool m_shouldUpdateMicrophoneSampleBufferSize { false };
     bool m_isReconfiguring { false };
+    bool m_shouldNotifySpeakerSamplesProducer { false };
+    bool m_hasNotifiedSpeakerSamplesProducer { false };
     mutable Lock m_speakerSamplesProducerLock;
     CoreAudioSpeakerSamplesProducer* m_speakerSamplesProducer WTF_GUARDED_BY_LOCK(m_speakerSamplesProducerLock) { nullptr };
+
+#if PLATFORM(IOS_FAMILY)
+    std::unique_ptr<MediaCaptureStatusBarManager> m_statusBarManager;
+    Function<void(CompletionHandler<void()>&&)> m_statusBarWasTappedCallback;
+#endif
 };
 
 } // namespace WebCore

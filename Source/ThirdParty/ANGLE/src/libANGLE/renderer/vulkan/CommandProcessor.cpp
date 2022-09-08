@@ -70,7 +70,7 @@ void ResetSecondaryCommandBuffers(VkDevice device,
 }
 
 template <>
-ANGLE_MAYBE_UNUSED void ResetSecondaryCommandBuffers<std::vector<VulkanSecondaryCommandBuffer>>(
+[[maybe_unused]] void ResetSecondaryCommandBuffers<std::vector<VulkanSecondaryCommandBuffer>>(
     VkDevice device,
     vk::CommandPool *commandPool,
     std::vector<VulkanSecondaryCommandBuffer> *commandBuffers)
@@ -963,7 +963,7 @@ angle::Result CommandQueue::retireFinishedCommands(Context *context, size_t fini
     while (!mGarbageQueue.empty())
     {
         GarbageAndSerial &garbageList = mGarbageQueue.front();
-        if (garbageList.getSerial() < lastCompletedQueueSerial)
+        if (garbageList.getSerial() <= lastCompletedQueueSerial)
         {
             for (GarbageObject &garbage : garbageList.get())
             {

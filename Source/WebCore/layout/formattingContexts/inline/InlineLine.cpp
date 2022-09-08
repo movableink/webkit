@@ -26,8 +26,6 @@
 #include "config.h"
 #include "InlineLine.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FontCascade.h"
 #include "InlineFormattingContext.h"
 #include "InlineSoftLineBreakItem.h"
@@ -51,6 +49,7 @@ Line::~Line()
 
 void Line::initialize(const Vector<InlineItem>& lineSpanningInlineBoxes, bool collapseLeadingNonBreakingSpace)
 {
+    m_contentIsTruncated = false;
     m_collapseLeadingNonBreakingSpace = collapseLeadingNonBreakingSpace;
     m_inlineBoxListWithClonedDecorationEnd.clear();
     m_clonedEndDecorationWidthForInlineBoxRuns = { };
@@ -170,6 +169,27 @@ void Line::applyRunExpansion(InlineLayoutUnit horizontalAvailableSpace)
     }
     // Content grows as runs expand.
     m_contentLogicalWidth += accumulatedExpansion;
+}
+
+void Line::truncate(InlineLayoutUnit logicalRight)
+{
+    ASSERT(!m_contentIsTruncated);
+    ASSERT(m_contentLogicalWidth > logicalRight);
+    auto isFirstRun = true;
+    for (auto& run : m_runs) {
+        if (run.isInlineBox())
+            continue;
+        if (run.logicalRight() > logicalRight) {
+            // The first character or atomic inline-level element on a line must be clipped rather than ellipsed.
+            if (isFirstRun)
+                m_contentIsTruncated = run.truncate(logicalRight - run.logicalLeft(), Run::CanFullyTruncate::No);
+            else {
+                run.truncate(logicalRight - run.logicalLeft());
+                m_contentIsTruncated = true;
+            }
+        }
+        isFirstRun = false;
+    }
 }
 
 void Line::removeTrailingTrimmableContent(ShouldApplyTrailingWhiteSpaceFollowedByBRQuirk shouldApplyTrailingWhiteSpaceFollowedByBRQuirk)
@@ -293,6 +313,10 @@ void Line::appendInlineBoxEnd(const InlineItem& inlineItem, const RenderStyle& s
 void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderStyle& style, InlineLayoutUnit logicalWidth)
 {
     auto willCollapseCompletely = [&] {
+        if (inlineTextItem.isEmpty()) {
+            // Some generated content initiates empty text items. They are truly collapsible.
+            return true;
+        }
         if (!inlineTextItem.isWhitespace()) {
             auto isLeadingCollapsibleNonBreakingSpace = [&] {
                 // Let's check for leading non-breaking space collapsing to match legacy line layout quirk.
@@ -578,7 +602,7 @@ inline static Line::Run::Type toLineRunType(const InlineItem& inlineItem)
     case InlineItem::Type::WordBreakOpportunity:
         return Line::Run::Type::WordBreakOpportunity;
     case InlineItem::Type::Box:
-        return inlineItem.layoutBox().isListMarker() ? Line::Run::Type::ListMarker : Line::Run::Type::GenericInlineLevelBox;
+        return inlineItem.layoutBox().isListMarkerBox() ? Line::Run::Type::ListMarker : Line::Run::Type::GenericInlineLevelBox;
     case InlineItem::Type::InlineBoxStart:
         return Line::Run::Type::InlineBoxStart;
     case InlineItem::Type::InlineBoxEnd:
@@ -689,7 +713,7 @@ std::optional<Line::Run> Line::Run::detachTrailingWhitespace()
     auto trailingWhitespaceRun = *this;
 
     auto leadingNonWhitespaceContentLength = m_textContent->length - m_trailingWhitespace->length;
-    trailingWhitespaceRun.m_textContent = { m_textContent->start + leadingNonWhitespaceContentLength, m_trailingWhitespace->length, false };
+    trailingWhitespaceRun.m_textContent = { m_textContent->start + leadingNonWhitespaceContentLength, m_trailingWhitespace->length, { }, false };
 
     trailingWhitespaceRun.m_logicalWidth = m_trailingWhitespace->width;
     trailingWhitespaceRun.m_logicalLeft = logicalRight() - m_trailingWhitespace->width;
@@ -751,7 +775,30 @@ InlineLayoutUnit Line::Run::removeTrailingWhitespace()
     return trimmedWidth;
 }
 
+bool Line::Run::truncate(InlineLayoutUnit visibleWidth, CanFullyTruncate canFullyTruncate)
+{
+    ASSERT(!visibleWidth || visibleWidth < m_logicalWidth);
+
+    if (isText()) {
+        m_isTruncated = true;
+        auto& inlineTextBox = downcast<InlineTextBox>(*m_layoutBox);
+        auto leftSide = TextUtil::WordBreakLeft { };
+        if (visibleWidth > 0.f)
+            leftSide = TextUtil::breakWord(inlineTextBox, m_textContent->start, m_textContent->length, m_logicalWidth, visibleWidth, m_logicalLeft, m_style.fontCascade());
+
+        if (leftSide.length)
+            m_textContent->partiallyVisibleContent = { leftSide.length, leftSide.logicalWidth };
+        else if (canFullyTruncate == CanFullyTruncate::No) {
+            auto firstCharacterLength = TextUtil::firstUserPerceivedCharacterLength(inlineTextBox, m_textContent->start, m_textContent->length);
+            auto firstCharacterWidth = TextUtil::width(inlineTextBox, inlineTextBox.style().fontCascade(), m_textContent->start, m_textContent->start + firstCharacterLength, { }, TextUtil::UseTrailingWhitespaceMeasuringOptimization::No);
+            m_textContent->partiallyVisibleContent = { firstCharacterLength, firstCharacterWidth };
+        }
+    } else
+        m_isTruncated = canFullyTruncate == CanFullyTruncate::Yes;
+
+    return m_isTruncated;
+}
+
 }
 }
 
-#endif

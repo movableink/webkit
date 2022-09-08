@@ -2,6 +2,7 @@ slottedToSecondSlot
 slottedToFirstSlot
 outside
 
+
 PASS focus() on host with delegatesFocus, all tabindex=0
 PASS focus() on host with delegatesFocus & tabindex =-1, all other tabindex=0
 PASS focus() on host with delegatesFocus & no tabindex, all other tabindex=0
@@ -16,4 +17,5 @@ PASS focus() on host with delegatesFocus & tabindex=0, #slottedToFirstSlot, #slo
 PASS focus() on host with delegatesFocus and already-focused non-first shadow descendant
 PASS focus() on host with delegatesFocus with another host with no delegatesFocus and a focusable child
 PASS focus() on host with delegatesFocus with another host with delegatesFocus and a focusable child
+PASS focus() on host with delegatesFocus and slotted focusable children
 

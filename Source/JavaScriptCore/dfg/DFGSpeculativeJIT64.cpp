@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -723,7 +723,7 @@ void SpeculativeJIT::emitCall(Node* node)
     unsigned numAllocatedArgs = 0;
 
     auto* callLinkInfo = m_jit.jitCode()->common.addCallLinkInfo(m_currentNode->origin.semantic, m_graph.m_plan.isUnlinked() ? CallLinkInfo::UseDataIC::Yes : CallLinkInfo::UseDataIC::No);
-    
+
     // Gotta load the arguments somehow. Varargs is trickier.
     if (isVarargs || isForwardVarargs) {
         RELEASE_ASSERT(!isDirect);
@@ -792,7 +792,7 @@ void SpeculativeJIT::emitCall(Node* node)
             loadArgumentsGPR(GPRInfo::returnValueGPR);
             m_jit.move(TrustedImm32(numUsedStackSlots), scratchGPR1);
             emitSetVarargsFrame(m_jit, GPRInfo::returnValueGPR, false, scratchGPR1, scratchGPR1);
-            m_jit.addPtr(TrustedImm32(-(sizeof(CallerFrameAndPC) + WTF::roundUpToMultipleOf(stackAlignmentBytes(), 5 * sizeof(void*)))), scratchGPR1, JITCompiler::stackPointerRegister);
+            m_jit.addPtr(TrustedImm32(-static_cast<int32_t>(sizeof(CallerFrameAndPC) + WTF::roundUpToMultipleOf(stackAlignmentBytes(), 5 * sizeof(void*)))), scratchGPR1, JITCompiler::stackPointerRegister);
             
             callOperation(operationSetupVarargsFrame, GPRInfo::returnValueGPR, JITCompiler::LinkableConstant(m_jit, m_graph.globalObjectFor(node->origin.semantic)), scratchGPR1, argumentsGPR, data->firstVarArgOffset, GPRInfo::returnValueGPR);
             m_jit.exceptionCheck();
@@ -2514,7 +2514,8 @@ void SpeculativeJIT::compileGetByVal(Node* node, const ScopedLambda<std::tuple<J
         break;
     }
     case Array::Int32:
-    case Array::Contiguous: {
+    case Array::Contiguous:
+    case Array::AlwaysSlowPutContiguous: {
         if (node->arrayMode().isInBounds()) {
             SpeculateStrictInt32Operand property(this, m_graph.varArgChild(node, 1));
             StorageOperand storage(this, m_graph.varArgChild(node, 2));
@@ -2534,7 +2535,7 @@ void SpeculativeJIT::compileGetByVal(Node* node, const ScopedLambda<std::tuple<J
 
             m_jit.load64(MacroAssembler::BaseIndex(storageReg, propertyReg, MacroAssembler::TimesEight), result);
             if (node->arrayMode().isInBoundsSaneChain()) {
-                ASSERT(node->arrayMode().type() == Array::Contiguous);
+                ASSERT(node->arrayMode().isAnyKindOfContiguous());
                 JITCompiler::Jump notHole = m_jit.branchIfNotEmpty(result);
                 m_jit.move(TrustedImm64(JSValue::encode(jsUndefined())), result);
                 notHole.link(&m_jit);
@@ -5000,8 +5001,11 @@ void SpeculativeJIT::compile(Node* node)
         if (node->child2().useKind() != UntypedUse)
             speculate(node, node->child2());
 
-        m_jit.load32(MacroAssembler::Address(mapGPR, HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::offsetOfCapacity()), maskGPR);
+        CCallHelpers::JumpList notPresentInTable;
+
         m_jit.loadPtr(MacroAssembler::Address(mapGPR, HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::offsetOfBuffer()), bufferGPR);
+        notPresentInTable.append(m_jit.branchTestPtr(CCallHelpers::Zero, bufferGPR));
+        m_jit.load32(MacroAssembler::Address(mapGPR, HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::offsetOfCapacity()), maskGPR);
         m_jit.sub32(TrustedImm32(1), maskGPR);
         m_jit.move(hashGPR, indexGPR);
 
@@ -5013,8 +5017,9 @@ void SpeculativeJIT::compile(Node* node)
         m_jit.and32(maskGPR, indexGPR);
         m_jit.loadPtr(MacroAssembler::BaseIndex(bufferGPR, indexGPR, MacroAssembler::TimesEight), bucketGPR);
         m_jit.move(bucketGPR, resultGPR);
-        auto notPresentInTable = m_jit.branchPtr(MacroAssembler::Equal, 
-            bucketGPR, TrustedImmPtr(bitwise_cast<size_t>(HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::emptyValue())));
+
+        notPresentInTable.append(m_jit.branchPtr(MacroAssembler::Equal,
+            bucketGPR, TrustedImmPtr(bitwise_cast<size_t>(HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::emptyValue()))));
         loopAround.append(m_jit.branchPtr(MacroAssembler::Equal, 
             bucketGPR, TrustedImmPtr(bitwise_cast<size_t>(HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::deletedValue()))));
 
@@ -6379,6 +6384,77 @@ void SpeculativeJIT::compileDateGet(Node* node)
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
+}
+
+void SpeculativeJIT::compileGetByValWithThis(Node* node)
+{
+    JSValueOperand base(this, node->child1(), ManualOperandSpeculation);
+    JSValueOperand thisValue(this, node->child2(), ManualOperandSpeculation);
+    JSValueOperand property(this, node->child3(), ManualOperandSpeculation);
+
+    GPRReg baseGPR = base.gpr();
+    GPRReg thisValueGPR = thisValue.gpr();
+    GPRReg propertyGPR = property.gpr();
+
+    GPRTemporary stubInfoTemp;
+    GPRReg stubInfoGPR = InvalidGPRReg;
+    if (m_graph.m_plan.isUnlinked()) {
+        stubInfoTemp = GPRTemporary(this);
+        stubInfoGPR = stubInfoTemp.gpr();
+    }
+
+    speculate(node, node->child1());
+    speculate(node, node->child2());
+    speculate(node, node->child3());
+
+    JSValueRegsTemporary results(this);
+    JSValueRegs resultRegs = results.regs();
+    GPRReg resultGPR = resultRegs.gpr();
+
+    CodeOrigin codeOrigin = node->origin.semantic;
+    CallSiteIndex callSite = m_jit.recordCallSiteAndGenerateExceptionHandlingOSRExitIfNeeded(codeOrigin, m_stream.size());
+    RegisterSet usedRegisters = this->usedRegisters();
+
+    JITCompiler::JumpList slowCases;
+    if (!m_state.forNode(node->child1()).isType(SpecCell))
+        slowCases.append(m_jit.branchIfNotCell(baseGPR));
+
+    JSValueRegs baseRegs { baseGPR };
+    JSValueRegs propertyRegs { propertyGPR };
+    JSValueRegs thisValueRegs { thisValueGPR };
+    auto [ stubInfo, stubInfoConstant ] = m_jit.addStructureStubInfo();
+    JITGetByValWithThisGenerator gen(
+        m_jit.codeBlock(), stubInfo, JITType::DFGJIT, codeOrigin, callSite, AccessType::GetByValWithThis, usedRegisters,
+        baseRegs, propertyRegs, thisValueRegs, resultRegs, stubInfoGPR);
+
+    std::visit([&](auto* stubInfo) {
+        if (m_state.forNode(node->child3()).isType(SpecString))
+            stubInfo->propertyIsString = true;
+        else if (m_state.forNode(node->child3()).isType(SpecInt32Only))
+            stubInfo->propertyIsInt32 = true;
+        else if (m_state.forNode(node->child3()).isType(SpecSymbol))
+            stubInfo->propertyIsSymbol = true;
+    }, stubInfo);
+
+    std::unique_ptr<SlowPathGenerator> slowPath;
+    if (m_graph.m_plan.isUnlinked()) {
+        gen.generateDFGDataICFastPath(m_jit, stubInfoConstant.index(), stubInfoGPR);
+        gen.m_unlinkedStubInfoConstantIndex = stubInfoConstant.index();
+        slowPath = slowPathICCall(
+            slowCases, this, stubInfoConstant, stubInfoGPR, CCallHelpers::Address(stubInfoGPR, StructureStubInfo::offsetOfSlowOperation()), operationGetByValWithThisOptimize,
+            resultGPR, JITCompiler::LinkableConstant(m_jit, m_graph.globalObjectFor(codeOrigin)), stubInfoGPR, nullptr, baseGPR, propertyGPR, thisValueGPR);
+    } else {
+        gen.generateFastPath(m_jit);
+        slowCases.append(gen.slowPathJump());
+        slowPath = slowPathCall(
+            slowCases, this, operationGetByValWithThisOptimize,
+            resultGPR, JITCompiler::LinkableConstant(m_jit, m_graph.globalObjectFor(codeOrigin)), TrustedImmPtr(gen.stubInfo()), nullptr, baseGPR, propertyGPR, thisValueGPR);
+    }
+
+    m_jit.addGetByValWithThis(gen, slowPath.get());
+    addSlowPathGenerator(WTFMove(slowPath));
+
+    jsValueResult(resultGPR, node);
 }
 
 #endif

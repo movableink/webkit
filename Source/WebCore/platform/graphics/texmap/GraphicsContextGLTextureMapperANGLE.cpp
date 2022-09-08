@@ -150,7 +150,7 @@ RefPtr<VideoFrame> GraphicsContextGLTextureMapperANGLE::paintCompositedResultsTo
 {
 #if USE(GSTREAMER)
     if (auto pixelBuffer = readCompositedResults())
-        return VideoFrameGStreamer::createFromPixelBuffer(pixelBuffer.releaseNonNull());
+        return VideoFrameGStreamer::createFromPixelBuffer(pixelBuffer.releaseNonNull(), VideoFrameGStreamer::CanvasContentType::WebGL, VideoFrameGStreamer::Rotation::UpsideDown, MediaTime::invalidTime(), { }, 30, true, { });
 #endif
     return nullptr;
 }
@@ -256,6 +256,11 @@ bool GraphicsContextGLTextureMapperANGLE::platformInitializeContext()
 
 bool GraphicsContextGLTextureMapperANGLE::platformInitialize()
 {
+#if ENABLE(WEBGL2)
+    if (m_isForWebGL2)
+        GL_Enable(GraphicsContextGL::PRIMITIVE_RESTART_FIXED_INDEX);
+#endif
+
     m_texmapLayer = makeUnique<TextureMapperGCGLPlatformLayer>(*this);
     m_layerContentsDisplayDelegate = PlatformLayerDisplayDelegate::create(m_texmapLayer.get());
 
@@ -265,6 +270,23 @@ bool GraphicsContextGLTextureMapperANGLE::platformInitialize()
     // We require this extension to render into the dmabuf-backed EGLImage.
     RELEASE_ASSERT(supportsExtension("GL_OES_EGL_image"_s));
     GL_RequestExtensionANGLE("GL_OES_EGL_image");
+
+    Vector<ASCIILiteral, 4> requiredExtensions;
+#if ENABLE(WEBGL2)
+    if (m_isForWebGL2) {
+        // For WebGL 2.0 occlusion queries to work.
+        requiredExtensions.append("GL_EXT_occlusion_query_boolean"_s);
+        requiredExtensions.append("GL_ANGLE_framebuffer_multisample"_s);
+    }
+#endif
+
+    for (auto& extension : requiredExtensions) {
+        if (!supportsExtension(extension)) {
+            LOG(WebGL, "Missing required extension. %s", extension.characters());
+            return false;
+        }
+        ensureExtensionEnabled(extension);
+    }
 
     validateAttributes();
     auto attributes = contextAttributes(); // They may have changed during validation.

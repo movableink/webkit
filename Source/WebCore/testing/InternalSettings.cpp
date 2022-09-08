@@ -38,7 +38,6 @@
 #include "PageGroup.h"
 #include "PlatformMediaSessionManager.h"
 #include "RenderTheme.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Supplementable.h"
 #include <wtf/Language.h>
 
@@ -61,9 +60,8 @@ InternalSettings::Backup::Backup(Settings& settings)
     , m_forcedPrefersContrastAccessibilityValue(settings.forcedPrefersContrastAccessibilityValue())
     , m_forcedPrefersReducedMotionAccessibilityValue(settings.forcedPrefersReducedMotionAccessibilityValue())
     , m_fontLoadTimingOverride(settings.fontLoadTimingOverride())
-    , m_frameFlattening(settings.frameFlattening())
-    , m_fetchAPIKeepAliveAPIEnabled(RuntimeEnabledFeatures::sharedFeatures().fetchAPIKeepAliveEnabled())
-    , m_customPasteboardDataEnabled(RuntimeEnabledFeatures::sharedFeatures().customPasteboardDataEnabled())
+    , m_fetchAPIKeepAliveAPIEnabled(DeprecatedGlobalSettings::fetchAPIKeepAliveEnabled())
+    , m_customPasteboardDataEnabled(DeprecatedGlobalSettings::customPasteboardDataEnabled())
     , m_originalMockScrollbarsEnabled(DeprecatedGlobalSettings::mockScrollbarsEnabled())
 #if USE(AUDIO_SESSION)
     , m_shouldManageAudioSessionCategory(DeprecatedGlobalSettings::shouldManageAudioSessionCategory())
@@ -71,7 +69,6 @@ InternalSettings::Backup::Backup(Settings& settings)
 #if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
     , m_shouldDeactivateAudioSession(PlatformMediaSessionManager::shouldDeactivateAudioSession())
 #endif
-    , m_shouldMockBoldSystemFontForAccessibility(RenderTheme::singleton().shouldMockBoldSystemFontForAccessibility())
 {
 }
 
@@ -117,10 +114,9 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
     settings.setForcedPrefersContrastAccessibilityValue(m_forcedPrefersContrastAccessibilityValue);
     settings.setForcedPrefersReducedMotionAccessibilityValue(m_forcedPrefersReducedMotionAccessibilityValue);
     settings.setFontLoadTimingOverride(m_fontLoadTimingOverride);
-    settings.setFrameFlattening(m_frameFlattening);
 
-    RuntimeEnabledFeatures::sharedFeatures().setFetchAPIKeepAliveEnabled(m_fetchAPIKeepAliveAPIEnabled);
-    RuntimeEnabledFeatures::sharedFeatures().setCustomPasteboardDataEnabled(m_customPasteboardDataEnabled);
+    DeprecatedGlobalSettings::setFetchAPIKeepAliveEnabled(m_fetchAPIKeepAliveAPIEnabled);
+    DeprecatedGlobalSettings::setCustomPasteboardDataEnabled(m_customPasteboardDataEnabled);
 
 #if USE(AUDIO_SESSION)
     DeprecatedGlobalSettings::setShouldManageAudioSessionCategory(m_shouldManageAudioSessionCategory);
@@ -129,10 +125,6 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
 #if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
     PlatformMediaSessionManager::setShouldDeactivateAudioSession(m_shouldDeactivateAudioSession);
 #endif
-
-    RenderTheme::singleton().setShouldMockBoldSystemFontForAccessibility(m_shouldMockBoldSystemFontForAccessibility);
-    // FIXME: Call setShouldMockBoldSystemFontForAccessibility() on all workers.
-    FontCache::forCurrentThread().setShouldMockBoldSystemFontForAccessibility(m_shouldMockBoldSystemFontForAccessibility);
 
 #if ENABLE(WEB_AUDIO)
     AudioContext::setDefaultSampleRateForTesting(std::nullopt);
@@ -366,14 +358,6 @@ ExceptionOr<void> InternalSettings::setSystemLayoutDirection(SystemLayoutDirecti
     return { };
 }
 
-ExceptionOr<void> InternalSettings::setFrameFlattening(FrameFlatteningValue frameFlattening)
-{
-    if (!m_page)
-        return Exception { InvalidAccessError };
-    settings().setFrameFlattening(frameFlattening);
-    return { };
-}
-
 InternalSettings::ForcedAccessibilityValue InternalSettings::forcedColorsAreInvertedAccessibilityValue() const
 {
     return settings().forcedColorsAreInvertedAccessibilityValue();
@@ -428,7 +412,7 @@ ExceptionOr<void> InternalSettings::setFetchAPIKeepAliveEnabled(bool enabled)
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-    RuntimeEnabledFeatures::sharedFeatures().setFetchAPIKeepAliveEnabled(enabled);
+    DeprecatedGlobalSettings::setFetchAPIKeepAliveEnabled(enabled);
     return { };
 }
 
@@ -444,7 +428,7 @@ bool InternalSettings::vp9DecoderEnabled() const
 bool InternalSettings::mediaSourceInlinePaintingEnabled() const
 {
 #if ENABLE(MEDIA_SOURCE) && (HAVE(AVSAMPLEBUFFERVIDEOOUTPUT) || USE(GSTREAMER))
-    return RuntimeEnabledFeatures::sharedFeatures().mediaSourceInlinePaintingEnabled();
+    return DeprecatedGlobalSettings::mediaSourceInlinePaintingEnabled();
 #else
     return false;
 #endif
@@ -454,7 +438,7 @@ ExceptionOr<void> InternalSettings::setCustomPasteboardDataEnabled(bool enabled)
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-    RuntimeEnabledFeatures::sharedFeatures().setCustomPasteboardDataEnabled(enabled);
+    DeprecatedGlobalSettings::setCustomPasteboardDataEnabled(enabled);
     return { };
 }
 
@@ -572,9 +556,12 @@ ExceptionOr<void> InternalSettings::setShouldMockBoldSystemFontForAccessibility(
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-    RenderTheme::singleton().setShouldMockBoldSystemFontForAccessibility(should);
-    // FIXME: Call setShouldMockBoldSystemFontForAccessibility() on all workers.
-    FontCache::forCurrentThread().setShouldMockBoldSystemFontForAccessibility(should);
+    FontCache::invalidateAllFontCaches();
+#if PLATFORM(COCOA)
+    setOverrideEnhanceTextLegibility(should);
+#else
+    UNUSED_PARAM(should);
+#endif
     return { };
 }
 

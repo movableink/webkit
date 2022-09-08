@@ -204,6 +204,8 @@ UIProcess/Automation/libwpe/WebAutomationSessionLibWPE.cpp
 
 UIProcess/CoordinatedGraphics/DrawingAreaProxyCoordinatedGraphics.cpp
 
+UIProcess/Gamepad/wpe/UIGamepadProviderWPE.cpp
+
 UIProcess/geoclue/GeoclueGeolocationProvider.cpp
 
 UIProcess/glib/WebPageProxyGLib.cpp
@@ -218,6 +220,8 @@ UIProcess/Launcher/glib/ProcessLauncherGLib.cpp
 UIProcess/Launcher/glib/BubblewrapLauncher.cpp
 UIProcess/Launcher/glib/FlatpakLauncher.cpp
 UIProcess/Launcher/glib/XDGDBusProxy.cpp
+
+UIProcess/Notifications/glib/NotificationService.cpp
 
 UIProcess/WebsiteData/soup/WebsiteDataStoreSoup.cpp
 UIProcess/WebsiteData/unix/WebsiteDataStoreUnix.cpp

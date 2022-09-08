@@ -16,7 +16,7 @@
   (layout viewport at (0,207.50) size 785x585)
   (min layout viewport origin (0,0))
   (max layout viewport origin (1223,1436))
-  (behavior for fixed 0)
+  (behavior for fixed 1)
   (visual viewport smaller than layout viewport 1)
   (children 4
     (Fixed node
@@ -53,19 +53,47 @@
       (children 4
         (GraphicsLayer
           (position 0.00 207.00)
-          (bounds 785.00 101.00)
+          (bounds origin 0.00 207.00)
+          (preserves3D 1)
+          (children 1
+            (GraphicsLayer
+              (position 0.00 207.00)
+              (bounds 785.00 101.00)
+            )
+          )
         )
         (GraphicsLayer
           (position 0.00 692.00)
-          (bounds 785.00 101.00)
+          (bounds origin 0.00 692.00)
+          (preserves3D 1)
+          (children 1
+            (GraphicsLayer
+              (position 0.00 692.00)
+              (bounds 785.00 101.00)
+            )
+          )
         )
         (GraphicsLayer
           (position 0.00 207.00)
-          (bounds 100.00 586.00)
+          (bounds origin 0.00 207.00)
+          (preserves3D 1)
+          (children 1
+            (GraphicsLayer
+              (position 0.00 207.00)
+              (bounds 100.00 586.00)
+            )
+          )
         )
         (GraphicsLayer
           (position 685.00 207.00)
-          (bounds 100.00 586.00)
+          (bounds origin 685.00 207.00)
+          (preserves3D 1)
+          (children 1
+            (GraphicsLayer
+              (position 685.00 207.00)
+              (bounds 100.00 586.00)
+            )
+          )
         )
       )
     )

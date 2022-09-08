@@ -74,7 +74,7 @@ RtpParameters RestoreEncodingLayers(
     const RtpParameters& parameters,
     const std::vector<std::string>& removed_rids,
     const std::vector<RtpEncodingParameters>& all_layers) {
-  RTC_DCHECK_EQ(parameters.encodings.size() + removed_rids.size(),
+  RTC_CHECK_EQ(parameters.encodings.size() + removed_rids.size(),
                 all_layers.size());
   RtpParameters result(parameters);
   result.encodings.clear();
@@ -84,6 +84,7 @@ RtpParameters RestoreEncodingLayers(
       result.encodings.push_back(encoding);
       continue;
     }
+    RTC_CHECK_LT(index, parameters.encodings.size());
     result.encodings.push_back(parameters.encodings[index++]);
   }
   return result;
@@ -291,7 +292,7 @@ void RtpSenderBase::SetSsrc(uint32_t ssrc) {
       // we need to copy.
       RtpParameters current_parameters =
           media_channel_->GetRtpSendParameters(ssrc_);
-      RTC_DCHECK_GE(current_parameters.encodings.size(),
+      RTC_CHECK_GE(current_parameters.encodings.size(),
                     init_parameters_.encodings.size());
       for (size_t i = 0; i < init_parameters_.encodings.size(); ++i) {
         init_parameters_.encodings[i].ssrc =

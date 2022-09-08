@@ -294,6 +294,12 @@ double DateCache::gregorianDateTimeToMS(const GregorianDateTime& t, double milli
     return localTimeResult - localToUTCTimeOffset;
 }
 
+double DateCache::localTimeToMS(double milliseconds, WTF::TimeType inputTimeType)
+{
+    double localToUTCTimeOffset = inputTimeType == WTF::LocalTime ? localTimeOffset(milliseconds, inputTimeType).offset : 0;
+    return milliseconds - localToUTCTimeOffset;
+}
+
 // input is UTC
 void DateCache::msToGregorianDateTime(double millisecondsFromEpoch, WTF::TimeType outputTimeType, GregorianDateTime& tm)
 {
@@ -311,7 +317,7 @@ double DateCache::parseDate(JSGlobalObject* globalObject, VM& vm, const String& 
 
     if (date == m_cachedDateString)
         return m_cachedDateStringValue;
-    auto expectedString = date.tryGetUtf8();
+    auto expectedString = date.tryGetUTF8();
     if (!expectedString) {
         if (expectedString.error() == UTF8ConversionError::OutOfMemory)
             throwOutOfMemoryError(globalObject, scope);
@@ -333,8 +339,8 @@ double DateCache::parseDate(JSGlobalObject* globalObject, VM& vm, const String& 
         return value;
     };
 
-    auto dateUtf8 = expectedString.value();
-    double value = parseDateImpl(dateUtf8.data());
+    auto dateUTF8 = expectedString.value();
+    double value = parseDateImpl(dateUTF8.data());
     m_cachedDateString = date;
     m_cachedDateStringValue = value;
     return value;

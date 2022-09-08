@@ -36,17 +36,19 @@
 #include "ExceptionEventLocation.h"
 #include "FunctionHasExecutedCache.h"
 #include "Heap.h"
+#include "ImplementationVisibility.h"
 #include "IndexingType.h"
 #include "Integrity.h"
+#include "Interpreter.h"
 #include "Intrinsic.h"
 #include "JSCJSValue.h"
 #include "JSDateMath.h"
 #include "JSLock.h"
 #include "JSONAtomStringCache.h"
-#include "MacroAssemblerCodeRef.h"
 #include "Microtask.h"
 #include "NativeFunction.h"
 #include "NumericStrings.h"
+#include "SlotVisitorMacros.h"
 #include "SmallStrings.h"
 #include "Strong.h"
 #include "SubspaceAccess.h"
@@ -62,14 +64,14 @@
 #include <wtf/Forward.h>
 #include <wtf/Gigacage.h>
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StackPointer.h>
 #include <wtf/Stopwatch.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/UniqueArray.h>
+#include <wtf/text/SymbolImpl.h>
 #include <wtf/text/SymbolRegistry.h>
-#include <wtf/text/WTFString.h>
+
 #if ENABLE(REGEXP_TRACING)
 #include <wtf/ListHashSet.h>
 #endif
@@ -112,7 +114,6 @@ class FuzzerAgent;
 class HasOwnPropertyCache;
 class HeapAnalyzer;
 class HeapProfiler;
-class Interpreter;
 class IntlCache;
 class JSDestructibleObjectHeapCellType;
 class JSGlobalObject;
@@ -122,6 +123,7 @@ class JSPropertyNameEnumerator;
 class JITSizeStatistics;
 class JITThunks;
 class NativeExecutable;
+class Debugger;
 class DeferredWorkTimer;
 class RegExp;
 class RegExpCache;
@@ -133,6 +135,7 @@ class ShadowChicken;
 class SharedJITStubSet;
 class SourceProvider;
 class SourceProviderCache;
+class StackFrame;
 class Structure;
 class Symbol;
 class TypedArrayController;
@@ -164,29 +167,69 @@ class Signature;
 
 struct EntryFrame;
 
-template<typename> struct BaseInstruction;
-struct JSOpcodeTraits;
-struct WasmOpcodeTraits;
-using JSInstruction = BaseInstruction<JSOpcodeTraits>;
-using WasmInstruction = BaseInstruction<WasmOpcodeTraits>;
-
-using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruction*>;
-
+class MicrotaskQueue;
 class QueuedTask {
-    WTF_MAKE_NONCOPYABLE(QueuedTask);
     WTF_MAKE_FAST_ALLOCATED;
+    friend class MicrotaskQueue;
 public:
-    void run();
+    static constexpr unsigned maxArguments = 4;
 
-    QueuedTask(VM& vm, JSGlobalObject* globalObject, Ref<Microtask>&& microtask)
-        : m_globalObject(vm, globalObject)
-        , m_microtask(WTFMove(microtask))
+    QueuedTask(MicrotaskIdentifier identifier, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
+        : m_identifier(identifier)
+        , m_job(job)
+        , m_arguments { argument0, argument1, argument2, argument3 }
     {
     }
 
+    void run();
+
+    MicrotaskIdentifier identifier() const { return m_identifier; }
+
 private:
-    Strong<JSGlobalObject> m_globalObject;
-    Ref<Microtask> m_microtask;
+    MicrotaskIdentifier m_identifier;
+    JSValue m_job;
+    JSValue m_arguments[maxArguments];
+};
+
+class MicrotaskQueue {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(MicrotaskQueue);
+public:
+    MicrotaskQueue() = default;
+
+    QueuedTask dequeue()
+    {
+        if (m_markedBefore)
+            --m_markedBefore;
+        return m_queue.takeFirst();
+    }
+
+    void enqueue(QueuedTask&& task)
+    {
+        m_queue.append(WTFMove(task));
+    }
+
+    bool isEmpty() const
+    {
+        return m_queue.isEmpty();
+    }
+
+    void clear()
+    {
+        m_queue.clear();
+        m_markedBefore = 0;
+    }
+
+    void beginMarking()
+    {
+        m_markedBefore = 0;
+    }
+
+    DECLARE_VISIT_AGGREGATE;
+
+private:
+    Deque<QueuedTask> m_queue;
+    unsigned m_markedBefore { 0 };
 };
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(VM);
@@ -255,6 +298,8 @@ public:
 
     struct ClientData {
         JS_EXPORT_PRIVATE virtual ~ClientData() = 0;
+
+        JS_EXPORT_PRIVATE virtual String overrideSourceURL(const StackFrame&, const String& originalSourceURL) const = 0;
     };
 
     bool isSharedInstance() { return vmType == APIShared; }
@@ -391,7 +436,7 @@ public:
     ALWAYS_INLINE GCClient::IsoSubspace& unlinkedFunctionExecutableSpace() { return clientHeap.unlinkedFunctionExecutableSpace; }
 
     VMType vmType;
-    ClientData* clientData;
+    ClientData* clientData { nullptr };
     EntryFrame* topEntryFrame { nullptr };
     // NOTE: When throwing an exception while rolling back the call frame, this may be equal to
     // topEntryFrame.
@@ -459,13 +504,13 @@ public:
 
     Ref<DeferredWorkTimer> deferredWorkTimer;
 
-    JSCell* currentlyDestructingCallbackObject;
+    JSCell* currentlyDestructingCallbackObject { nullptr };
     const ClassInfo* currentlyDestructingCallbackObjectClassInfo { nullptr };
 
     AtomStringTable* m_atomStringTable;
     WTF::SymbolRegistry m_symbolRegistry;
-    WTF::SymbolRegistry m_privateSymbolRegistry;
-    CommonIdentifiers* propertyNames;
+    WTF::SymbolRegistry m_privateSymbolRegistry { WTF::SymbolRegistry::Type::PrivateSymbol };
+    CommonIdentifiers* propertyNames { nullptr };
     const ArgList* emptyList;
     SmallStrings smallStrings;
     NumericStrings numericStrings;
@@ -554,24 +599,22 @@ public:
 
     typedef HashMap<RefPtr<SourceProvider>, RefPtr<SourceProviderCache>> SourceProviderCacheMap;
     SourceProviderCacheMap sourceProviderCacheMap;
-    Interpreter* interpreter;
 #if ENABLE(JIT)
     std::unique_ptr<JITThunks> jitStubs;
     MacroAssemblerCodeRef<JITThunkPtrTag> getCTIStub(ThunkGenerator);
     std::unique_ptr<SharedJITStubSet> m_sharedJITStubs;
-
-#endif // ENABLE(JIT)
+#endif
 #if ENABLE(FTL_JIT)
     std::unique_ptr<FTL::Thunks> ftlThunks;
 #endif
 
-    NativeExecutable* getHostFunction(NativeFunction, NativeFunction constructor, const String& name);
-    NativeExecutable* getHostFunction(NativeFunction, Intrinsic, NativeFunction constructor, const DOMJIT::Signature*, const String& name);
+    NativeExecutable* getHostFunction(NativeFunction, ImplementationVisibility, NativeFunction constructor, const String& name);
+    NativeExecutable* getHostFunction(NativeFunction, ImplementationVisibility, Intrinsic, NativeFunction constructor, const DOMJIT::Signature*, const String& name);
 
     NativeExecutable* getBoundFunction(bool isJSFunction, bool canConstruct);
     NativeExecutable* getRemoteFunction(bool isJSFunction);
 
-    MacroAssemblerCodePtr<JSEntryPtrTag> getCTIInternalFunctionTrampolineFor(CodeSpecializationKind);
+    CodePtr<JSEntryPtrTag> getCTIInternalFunctionTrampolineFor(CodeSpecializationKind);
     MacroAssemblerCodeRef<JSEntryPtrTag> getCTILinkCall();
     MacroAssemblerCodeRef<JSEntryPtrTag> getCTIThrowExceptionFromCallSlowPath();
     MacroAssemblerCodeRef<JITStubRoutinePtrTag> getCTIVirtualCall(CallMode);
@@ -656,7 +699,6 @@ public:
         return isSafeToRecurse(m_stackLimit);
     }
 
-    void** addressOfLastStackTop() { return &m_lastStackTop; }
     void* lastStackTop() { return m_lastStackTop; }
     void setLastStackTop(const Thread&);
     
@@ -669,12 +711,12 @@ public:
     }
 
     EncodedJSValue encodedHostCallReturnValue { };
-    unsigned varargsLength;
     CallFrame* newCallFrameReturnValue;
-    CallFrame* callFrameForCatch;
+    CallFrame* callFrameForCatch { nullptr };
     CalleeBits calleeForWasmCatch;
     void* targetMachinePCForThrow;
     JSOrWasmInstruction targetInterpreterPCForThrow;
+    unsigned varargsLength;
     uint32_t osrExitIndex;
     void* osrExitJumpDestination;
     RegExp* m_executingRegExp { nullptr };
@@ -704,8 +746,9 @@ public:
     bool hasCheckpointOSRSideState() const { return m_checkpointSideState.size(); }
     void scanSideState(ConservativeRoots&) const;
 
+    Interpreter interpreter;
     unsigned disallowVMEntryCount { 0 };
-    VMEntryScope* entryScope;
+    VMEntryScope* entryScope { nullptr };
 
     JSObject* stringRecursionCheckFirstObject { nullptr };
     HashSet<JSObject*> stringRecursionCheckVisitedObjects;
@@ -720,8 +763,8 @@ public:
 
 #if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
     static constexpr size_t patternContextBufferSize = 8192; // Space allocated to save nested parenthesis context
-    UniqueArray<char> m_regExpPatternContexBuffer;
     Lock m_regExpPatternContextLock;
+    UniqueArray<char> m_regExpPatternContexBuffer;
     char* acquireRegExpPatternContexBuffer() WTF_ACQUIRES_LOCK(m_regExpPatternContextLock);
     void releaseRegExpPatternContexBuffer() WTF_RELEASES_LOCK(m_regExpPatternContextLock);
 #else
@@ -735,17 +778,14 @@ public:
     HasOwnPropertyCache* ensureHasOwnPropertyCache();
 
 #if ENABLE(REGEXP_TRACING)
-    typedef ListHashSet<RegExp*> RTTraceList;
-    RTTraceList* m_rtTraceList;
+    ListHashSet<RegExp*> m_rtTraceList;
+    void addRegExpToTrace(RegExp*);
+    JS_EXPORT_PRIVATE void dumpRegExpTrace();
 #endif
 
     void resetDateCacheIfNecessary() { dateCache.resetIfNecessary(); }
 
     RegExpCache* regExpCache() { return m_regExpCache; }
-#if ENABLE(REGEXP_TRACING)
-    void addRegExpToTrace(RegExp*);
-#endif
-    JS_EXPORT_PRIVATE void dumpRegExpTrace();
 
     bool isCollectorBusyOnCurrentThread() { return heap.currentThreadIsDoingGCWork(); }
 
@@ -788,7 +828,7 @@ public:
     bool enableControlFlowProfiler();
     bool disableControlFlowProfiler();
 
-    void queueMicrotask(JSGlobalObject&, Ref<Microtask>&&);
+    void queueMicrotask(QueuedTask&&);
     JS_EXPORT_PRIVATE void drainMicrotasks();
     void setOnEachMicrotaskTick(WTF::Function<void(VM&)>&& func) { m_onEachMicrotaskTick = WTFMove(func); }
     void finalizeSynchronousJSExecution() { ASSERT(currentThreadIsHoldingAPILock()); m_currentWeakRefVersion++; }
@@ -859,6 +899,14 @@ public:
     void verifyCanGC() { }
 #endif
 
+    void beginMarking();
+    DECLARE_VISIT_AGGREGATE;
+
+    void addDebugger(Debugger&);
+    void removeDebugger(Debugger&);
+    template<typename Func>
+    void forEachDebugger(const Func&);
+
 private:
     VM(VMType, HeapType, WTF::RunLoop* = nullptr, bool* success = nullptr);
     static VM*& sharedInstanceInternal();
@@ -907,10 +955,10 @@ private:
     void didExhaustMicrotaskQueue();
 
 #if ENABLE(GC_VALIDATION)
-    const ClassInfo* m_initializingObjectClass;
+    const ClassInfo* m_initializingObjectClass { nullptr };
 #endif
 
-    void* m_stackPointerAtVMEntry;
+    void* m_stackPointerAtVMEntry { nullptr };
     size_t m_currentSoftReservedZoneSize;
     void* m_stackLimit { nullptr };
     void* m_softStackLimit { nullptr };
@@ -946,18 +994,18 @@ private:
     HashMap<RefPtr<UniquedStringImpl>, RefPtr<WatchpointSet>> m_impurePropertyWatchpointSets;
     std::unique_ptr<TypeProfiler> m_typeProfiler;
     std::unique_ptr<TypeProfilerLog> m_typeProfilerLog;
-    unsigned m_typeProfilerEnabledCount;
+    unsigned m_typeProfilerEnabledCount { 0 };
     bool m_needToFirePrimitiveGigacageEnabled { false };
     bool m_isInService { false };
     Lock m_scratchBufferLock;
     Vector<ScratchBuffer*> m_scratchBuffers;
     size_t m_sizeOfLastScratchBuffer { 0 };
     Vector<std::unique_ptr<CheckpointOSRExitSideState>, expectedMaxActiveSideStateCount> m_checkpointSideState;
-    InlineWatchpointSet m_primitiveGigacageEnabled;
+    InlineWatchpointSet m_primitiveGigacageEnabled { IsWatched };
     FunctionHasExecutedCache m_functionHasExecutedCache;
     std::unique_ptr<ControlFlowProfiler> m_controlFlowProfiler;
-    unsigned m_controlFlowProfilerEnabledCount;
-    Deque<std::unique_ptr<QueuedTask>> m_microtaskQueue;
+    unsigned m_controlFlowProfilerEnabledCount { 0 };
+    MicrotaskQueue m_microtaskQueue;
     MallocPtr<EncodedJSValue, VMMalloc> m_exceptionFuzzBuffer;
     VMTraps m_traps;
     RefPtr<Watchdog> m_watchdog;
@@ -985,6 +1033,8 @@ private:
 #if ENABLE(DFG_DOES_GC_VALIDATION)
     DoesGCCheck m_doesGC;
 #endif
+
+    DoublyLinkedList<Debugger> m_debuggers;
 
     VM* m_prev; // Required by DoublyLinkedListNode.
     VM* m_next; // Required by DoublyLinkedListNode.

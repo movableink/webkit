@@ -11,7 +11,7 @@ using namespace angle;
 
 namespace
 {
-class BlitFramebufferANGLETest : public ANGLETest
+class BlitFramebufferANGLETest : public ANGLETest<>
 {
   protected:
     BlitFramebufferANGLETest()
@@ -1479,7 +1479,7 @@ TEST_P(BlitFramebufferANGLETest, Errors)
 // TODO(geofflang): Fix the dependence on glBlitFramebufferANGLE without checks and assuming the
 // default framebuffer is BGRA to enable the GL and GLES backends. (http://anglebug.com/1289)
 
-class BlitFramebufferTest : public ANGLETest
+class BlitFramebufferTest : public ANGLETest<>
 {
   protected:
     BlitFramebufferTest()
@@ -1800,9 +1800,6 @@ TEST_P(BlitFramebufferTest, BlitMultisampleStencilToDefault)
 // Tests clearing a multisampled depth buffer.
 TEST_P(BlitFramebufferTest, MultisampleDepthClear)
 {
-    // clearDepth && !maskDepth fails on Intel Ubuntu 19.04 Mesa 19.0.2 GL. http://anglebug.com/3614
-    ANGLE_SKIP_TEST_IF(IsLinux() && IsIntel() && IsDesktopOpenGL());
-
     // http://anglebug.com/4092
     ANGLE_SKIP_TEST_IF(IsAndroid() && IsOpenGLES());
 

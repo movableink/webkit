@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #include <wtf/Lock.h>
 #include <wtf/StdLibExtras.h>
 
-#if OS(DARWIN)
+#if PLATFORM(COCOA)
 #include <wtf/spi/cocoa/MachVMSPI.h>
 #include <mach/mach.h>
 #elif OS(LINUX)
@@ -62,7 +62,7 @@ namespace WTF {
 #if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 void setPermissionsOfConfigPage()
 {
-#if OS(DARWIN)
+#if PLATFORM(COCOA)
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
         mach_vm_address_t addr = bitwise_cast<uintptr_t>(static_cast<void*>(WebConfig::g_config));
@@ -86,7 +86,7 @@ void setPermissionsOfConfigPage()
 
         RELEASE_ASSERT(result == KERN_SUCCESS);
     });
-#endif // OS(DARWIN)
+#endif // PLATFORM(COCOA)
 }
 #endif // ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 
@@ -107,14 +107,14 @@ void Config::permanentlyFreeze()
     int result = 0;
 
 #if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-#if OS(DARWIN)
+#if PLATFORM(COCOA)
     enum {
-        AllowPermissionChangesAfterThis = false,
-        DisallowPermissionChangesAfterThis = true
+        DontUpdateMaximumPermission = false,
+        UpdateMaximumPermission = true
     };
 
     // There's no going back now!
-    result = vm_protect(mach_task_self(), reinterpret_cast<vm_address_t>(&WebConfig::g_config), ConfigSizeToProtect, DisallowPermissionChangesAfterThis, VM_PROT_READ);
+    result = vm_protect(mach_task_self(), reinterpret_cast<vm_address_t>(&WebConfig::g_config), ConfigSizeToProtect, UpdateMaximumPermission, VM_PROT_READ);
 #elif OS(LINUX)
     result = mprotect(&WebConfig::g_config, ConfigSizeToProtect, PROT_READ);
 #elif OS(WINDOWS)

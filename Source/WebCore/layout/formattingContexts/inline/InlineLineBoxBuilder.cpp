@@ -29,9 +29,8 @@
 #include "InlineLineBoxVerticalAligner.h"
 #include "InlineLineBuilder.h"
 #include "LayoutBoxGeometry.h"
+#include "LayoutListMarkerBox.h"
 #include "LayoutReplacedBox.h"
-
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
 namespace WebCore {
 namespace Layout {
@@ -40,7 +39,8 @@ static std::optional<InlineLayoutUnit> horizontalAlignmentOffset(TextAlignMode t
 {
     // Depending on the line’s alignment/justification, the hanging glyph can be placed outside the line box.
     auto& runs = lineContent.runs;
-    auto contentLogicalWidth = lineContent.contentLogicalWidth;
+    auto contentLogicalRight = lineContent.contentLogicalRight;
+    auto lineLogicalRight = lineContent.lineLogicalWidth;
     if (lineContent.hangingContentWidth) {
         ASSERT(!runs.isEmpty());
         // If white-space is set to pre-wrap, the UA must (unconditionally) hang this sequence, unless the sequence is followed
@@ -50,11 +50,11 @@ static std::optional<InlineLayoutUnit> horizontalAlignmentOffset(TextAlignMode t
         // In some cases, a glyph at the end of a line can conditionally hang: it hangs only if it does not otherwise fit in the line prior to justification.
         if (isConditionalHanging) {
             // FIXME: Conditional hanging needs partial overflow trimming at glyph boundary, one by one until they fit.
-            contentLogicalWidth = std::min(contentLogicalWidth, lineContent.lineLogicalWidth);
+            contentLogicalRight = std::min(contentLogicalRight, lineLogicalRight);
         } else
-            contentLogicalWidth -= lineContent.hangingContentWidth;
+            contentLogicalRight -= lineContent.hangingContentWidth;
     }
-    auto extraHorizontalSpace = lineContent.lineLogicalWidth - contentLogicalWidth;
+    auto extraHorizontalSpace = lineLogicalRight - contentLogicalRight;
     if (extraHorizontalSpace <= 0)
         return { };
 
@@ -257,12 +257,16 @@ void LineBoxBuilder::constructInlineLevelBoxes(LineBox& lineBox, const LineBuild
         auto& style = styleToUse(layoutBox);
         auto runHasContent = [&] () -> bool {
             ASSERT(!lineHasContent);
-            if (run.isText() || run.isBox() || run.isSoftLineBreak() || run.isHardLineBreak() || run.isListMarker())
+            if (run.isContentful())
                 return true;
-            if (run.isLineSpanningInlineBoxStart())
+            if (run.isText() || run.isWordBreakOpportunity())
                 return false;
-            if (run.isWordBreakOpportunity())
+
+            ASSERT(run.isInlineBox());
+            if (run.isLineSpanningInlineBoxStart()) {
+                // We already handled inline box decoration at the non-spanning start.
                 return false;
+            }
             auto& inlineBoxGeometry = formattingContext().geometryForBox(layoutBox);
             // Even negative horizontal margin makes the line "contentful".
             if (run.isInlineBoxStart())
@@ -305,14 +309,14 @@ void LineBoxBuilder::constructInlineLevelBoxes(LineBox& lineBox, const LineBuild
             continue;
         }
         if (run.isListMarker()) {
-            auto& ListMarkerBoxGeometry = formattingContext().geometryForBox(layoutBox);
-            auto marginBoxHeight = ListMarkerBoxGeometry.marginBoxHeight();
+            auto& listMarkerBoxGeometry = formattingContext().geometryForBox(layoutBox);
+            auto marginBoxHeight = listMarkerBoxGeometry.marginBoxHeight();
             // Integration codepath constructs ReplacedBoxes for list markers.
             auto baseline = downcast<ReplacedBox>(layoutBox).baseline();
             auto ascent = baseline.value_or(marginBoxHeight);
 
-            logicalLeft += std::max(0_lu, ListMarkerBoxGeometry.marginStart());
-            auto listMarkerInlineLevelBox = InlineLevelBox::createAtomicInlineLevelBox(layoutBox, style, logicalLeft, { ListMarkerBoxGeometry.borderBoxWidth(), marginBoxHeight });
+            logicalLeft += std::max(0_lu, listMarkerBoxGeometry.marginStart());
+            auto listMarkerInlineLevelBox = InlineLevelBox::createAtomicInlineLevelBox(layoutBox, style, logicalLeft, { listMarkerBoxGeometry.borderBoxWidth(), marginBoxHeight });
             setBaselineAndLayoutBounds(listMarkerInlineLevelBox, { ascent, marginBoxHeight - ascent }, baseline.has_value() ? BehavesAsText::Yes : BehavesAsText::No);
             lineBox.addInlineLevelBox(WTFMove(listMarkerInlineLevelBox));
             continue;
@@ -337,7 +341,7 @@ void LineBoxBuilder::constructInlineLevelBoxes(LineBox& lineBox, const LineBuild
             auto marginStart = formattingContext().geometryForBox(layoutBox).marginStart();
             logicalLeft += std::max(0_lu, marginStart);
             auto initialLogicalWidth = rootInlineBox.logicalWidth() - (logicalLeft - rootInlineBox.logicalLeft());
-            ASSERT(initialLogicalWidth >= 0 || lineContent.hangingContentWidth);
+            ASSERT(initialLogicalWidth >= 0 || lineContent.hangingContentWidth || std::isnan(initialLogicalWidth));
             initialLogicalWidth = std::max(initialLogicalWidth, 0.f);
             auto inlineBox = InlineLevelBox::createInlineBox(layoutBox, style, logicalLeft, initialLogicalWidth);
             inlineBox.setIsFirstBox();
@@ -426,17 +430,18 @@ void LineBoxBuilder::adjustIdeographicBaselineIfApplicable(LineBox& lineBox, siz
         if (!initiatesLayoutBoundsChange)
             return;
 
+        auto behavesAsText = inlineLevelBox.isLineBreakBox() || (inlineLevelBox.isListMarker() && !downcast<ListMarkerBox>(inlineLevelBox.layoutBox()).isImage());
         auto layoutBoundsPrimaryMetrics = LayoutBoundsMetrics { };
-        if (inlineLevelBox.isInlineBox())
+        if (behavesAsText) {
+            auto& parentInlineBox = lineBox.inlineLevelBoxForLayoutBox(inlineLevelBox.layoutBox().parent());
+            layoutBoundsPrimaryMetrics = layoutBoundsPrimaryMetricsForInlineBox(parentInlineBox, IdeographicBaseline);
+        } else if (inlineLevelBox.isInlineBox())
             layoutBoundsPrimaryMetrics = layoutBoundsPrimaryMetricsForInlineBox(inlineLevelBox, IdeographicBaseline);
         else if (inlineLevelBox.isAtomicInlineLevelBox()) {
             auto inlineLevelBoxHeight = inlineLevelBox.layoutBounds().height();
             InlineLayoutUnit ideographicBaseline = roundToInt(inlineLevelBoxHeight / 2);
             // Move the baseline position but keep the same logical height.
             layoutBoundsPrimaryMetrics = { ideographicBaseline, inlineLevelBoxHeight - ideographicBaseline };
-        } else if (inlineLevelBox.isLineBreakBox()) {
-            auto& parentInlineBox = lineBox.inlineLevelBoxForLayoutBox(inlineLevelBox.layoutBox().parent());
-            layoutBoundsPrimaryMetrics = layoutBoundsPrimaryMetricsForInlineBox(parentInlineBox, IdeographicBaseline);
         }
         setBaselineAndLayoutBounds(inlineLevelBox, layoutBoundsPrimaryMetrics);
 
@@ -451,6 +456,11 @@ void LineBoxBuilder::adjustIdeographicBaselineIfApplicable(LineBox& lineBox, siz
     for (auto& inlineLevelBox : lineBox.nonRootInlineLevelBoxes()) {
         if (inlineLevelBox.isAtomicInlineLevelBox()) {
             auto& layoutBox = inlineLevelBox.layoutBox();
+            if (layoutBox.isInlineTableBox()) {
+                // This is the integration codepath where inline table boxes are represented as atomic inline boxes.
+                // Integration codepath sets ideographic baseline by default for non-horizontal content.
+                continue;
+            }
             auto isInlineBlockWithNonSyntheticBaseline = layoutBox.isIntegrationInlineBlock() && downcast<ReplacedBox>(layoutBox).baseline().has_value();
             // FIXME: While the layoutBox.isIntegrationInlineBlock check may seem redundant here, it's really just because currently
             // the integration codepath turns inline-blocks into replaced type boxes.
@@ -466,4 +476,3 @@ void LineBoxBuilder::adjustIdeographicBaselineIfApplicable(LineBox& lineBox, siz
 }
 }
 
-#endif

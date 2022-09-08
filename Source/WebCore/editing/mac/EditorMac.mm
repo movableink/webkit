@@ -54,7 +54,6 @@
 #import "RenderBlock.h"
 #import "RenderImage.h"
 #import "RuntimeApplicationChecks.h"
-#import "RuntimeEnabledFeatures.h"
 #import "SharedBuffer.h"
 #import "StyleProperties.h"
 #import "WebContentReader.h"
@@ -65,25 +64,6 @@
 #import <wtf/cocoa/NSURLExtras.h>
 
 namespace WebCore {
-
-void Editor::showFontPanel()
-{
-    auto* client = this->client();
-    if (!client || !client->canShowFontPanel())
-        return;
-
-    [[NSFontManager sharedFontManager] orderFrontFontPanel:nil];
-}
-
-void Editor::showStylesPanel()
-{
-    [[NSFontManager sharedFontManager] orderFrontStylesPanel:nil];
-}
-
-void Editor::showColorPanel()
-{
-    [[NSApplication sharedApplication] orderFrontColorPanel:nil];
-}
 
 void Editor::pasteWithPasteboard(Pasteboard* pasteboard, OptionSet<PasteOption> options)
 {
@@ -270,7 +250,7 @@ void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& imageElemen
         pasteboardImage.dataInWebArchiveFormat = imageInWebArchiveFormat(imageElement);
 
     if (auto imageRange = makeRangeSelectingNode(imageElement))
-        pasteboardImage.dataInHTMLFormat = serializePreservingVisualAppearance(VisibleSelection { *imageRange }, ResolveURLs::YesExcludingLocalFileURLsForPrivacy, SerializeComposedTree::Yes);
+        pasteboardImage.dataInHTMLFormat = serializePreservingVisualAppearance(VisibleSelection { *imageRange }, ResolveURLs::YesExcludingURLsForPrivacy, SerializeComposedTree::Yes);
 
     pasteboardImage.url.url = url;
     pasteboardImage.url.title = title;

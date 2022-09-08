@@ -48,6 +48,7 @@
     macro(devicePixelRatio, "-webkit-device-pixel-ratio") \
     macro(deviceWidth, "device-width") \
     macro(dynamicRange, "dynamic-range") \
+    macro(forcedColors, "forced-colors") \
     macro(grid, "grid") \
     macro(height, "height") \
     macro(hover, "hover") \
@@ -81,6 +82,7 @@
     macro(prefersDarkInterface, "prefers-dark-interface") \
     macro(prefersReducedMotion, "prefers-reduced-motion") \
     macro(resolution, "resolution") \
+    macro(scan, "scan") \
     macro(transform2d, "-webkit-transform-2d") \
     macro(transform3d, "-webkit-transform-3d") \
     macro(transition, "-webkit-transition") \

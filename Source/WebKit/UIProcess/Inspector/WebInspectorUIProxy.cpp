@@ -652,6 +652,14 @@ void WebInspectorUIProxy::showCertificate(const CertificateInfo& certificateInfo
     platformShowCertificate(certificateInfo);
 }
 
+void WebInspectorUIProxy::setInspectorPageDeveloperExtrasEnabled(bool enabled)
+{
+    if (!m_inspectorPage)
+        return;
+
+    m_inspectorPage->preferences().setDeveloperExtrasEnabled(enabled);
+}
+
 void WebInspectorUIProxy::elementSelectionChanged(bool active)
 {
     m_elementSelectionActive = active;
@@ -697,6 +705,16 @@ void WebInspectorUIProxy::setDeveloperPreferenceOverride(WebCore::InspectorClien
 
     ASSERT_NOT_REACHED();
 }
+
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+
+void WebInspectorUIProxy::setEmulatedConditions(std::optional<int64_t>&& bytesPerSecondLimit)
+{
+    if (m_inspectedPage)
+        m_inspectedPage->websiteDataStore().setEmulatedConditions(WTFMove(bytesPerSecondLimit));
+}
+
+#endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
 
 void WebInspectorUIProxy::setDiagnosticLoggingAvailable(bool available)
 {

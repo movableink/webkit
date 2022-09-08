@@ -34,7 +34,7 @@ struct TestIdentifier
     static bool ParseFromString(const std::string &str, TestIdentifier *idOut);
 
     bool valid() const { return !testName.empty(); }
-    void sprintfName(char *outBuffer) const;
+    void snprintfName(char *outBuffer, size_t maxLen) const;
 
     std::string testSuiteName;
     std::string testName;
@@ -127,6 +127,7 @@ class TestSuite
 {
   public:
     TestSuite(int *argc, char **argv);
+    TestSuite(int *argc, char **argv, std::function<void()> registerTestsCallback);
     ~TestSuite();
 
     int run();
@@ -159,6 +160,8 @@ class TestSuite
         mTestExpectationsParser.setTestExpectationsAllowMask(mask);
     }
 
+    const std::string &getTestExecutableName() const { return mTestExecutableName; }
+
   private:
     bool parseSingleArg(const char *argument);
     bool launchChildTestProcess(uint32_t batchId, const std::vector<TestIdentifier> &testsInBatch);
@@ -167,11 +170,11 @@ class TestSuite
     void startWatchdog();
     void dumpTestExpectationsErrorMessages();
     int getSlowTestTimeout() const;
+    void writeOutputFiles(bool interrupted);
 
     static TestSuite *mInstance;
 
     std::string mTestExecutableName;
-    std::string mTestSuiteName;
     TestQueue mTestQueue;
     std::string mFilterString;
     std::string mFilterFile;
@@ -206,8 +209,11 @@ class TestSuite
     HistogramWriter mHistogramWriter;
     std::string mTestArtifactDirectory;
     GPUTestExpectationsParser mTestExpectationsParser;
+
+    class TestEventListener;
 };
 
+std::string ReplaceDashesWithQuestionMark(std::string dashesString);
 bool GetTestResultsFromFile(const char *fileName, TestResults *resultsOut);
 }  // namespace angle
 

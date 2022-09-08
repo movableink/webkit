@@ -135,24 +135,6 @@ class Std140BlockLayoutEncoderFactory : public gl::CustomBlockLayoutEncoderFacto
   public:
     sh::BlockLayoutEncoder *makeEncoder() override { return new sh::Std140BlockEncoder(); }
 };
-
-void SetupDefaultPipelineState(const ContextVk *contextVk,
-                               size_t outputVariablesCount,
-                               gl::PrimitiveMode mode,
-                               vk::GraphicsPipelineDesc *graphicsPipelineDescOut)
-{
-    graphicsPipelineDescOut->initDefaults(contextVk);
-    graphicsPipelineDescOut->setTopology(mode);
-    graphicsPipelineDescOut->setRenderPassSampleCount(1);
-
-    constexpr angle::FormatID kDefaultColorAttachmentFormat = angle::FormatID::R8G8B8A8_UNORM;
-    for (size_t colorAttachmentIndex = 0; colorAttachmentIndex < outputVariablesCount;
-         colorAttachmentIndex++)
-    {
-        graphicsPipelineDescOut->setRenderPassColorAttachmentFormat(colorAttachmentIndex,
-                                                                    kDefaultColorAttachmentFormat);
-    }
-}
 }  // anonymous namespace
 
 // ProgramVk implementation.
@@ -184,12 +166,13 @@ std::unique_ptr<rx::LinkEvent> ProgramVk::load(const gl::Context *context,
 
     reset(contextVk);
 
-    return mExecutable.load(contextVk, mState.getExecutable(), stream);
+    return mExecutable.load(contextVk, mState.getExecutable(), mState.isSeparable(), stream);
 }
 
 void ProgramVk::save(const gl::Context *context, gl::BinaryOutputStream *stream)
 {
-    mExecutable.save(stream);
+    ContextVk *contextVk = vk::GetImpl(context);
+    mExecutable.save(contextVk, mState.isSeparable(), stream);
 }
 
 void ProgramVk::setBinaryRetrievableHint(bool retrievable)
@@ -212,26 +195,21 @@ std::unique_ptr<LinkEvent> ProgramVk::link(const gl::Context *context,
     ContextVk *contextVk = vk::GetImpl(context);
     // Link resources before calling GetShaderSource to make sure they are ready for the set/binding
     // assignment done in that function.
-    linkResources(resources);
+    linkResources(context, resources);
 
     reset(contextVk);
     mExecutable.clearVariableInfoMap();
 
     // Gather variable info and compiled SPIR-V binaries.
     gl::ShaderMap<const angle::spirv::Blob *> spirvBlobs;
-    GlslangWrapperVk::GetShaderCode(contextVk->getFeatures(), mState, resources,
+    GlslangWrapperVk::GetShaderCode(context, contextVk->getFeatures(), mState, resources,
                                     &mGlslangProgramInterfaceInfo, &spirvBlobs,
                                     &mExecutable.mVariableInfoMap);
-
-    if (contextVk->getFeatures().enablePrecisionQualifiers.enabled)
-    {
-        mExecutable.resolvePrecisionMismatch(mergedVaryings);
-    }
 
     // Compile the shaders.
     const gl::ProgramExecutable &programExecutable = mState.getExecutable();
     angle::Result status                           = mExecutable.mOriginalShaderInfo.initShaders(
-        programExecutable.getLinkedShaderStages(), spirvBlobs, mExecutable.mVariableInfoMap);
+                                  programExecutable.getLinkedShaderStages(), spirvBlobs, mExecutable.mVariableInfoMap);
     if (status != angle::Result::Continue)
     {
         return std::make_unique<LinkEventDone>(status);
@@ -246,57 +224,27 @@ std::unique_ptr<LinkEvent> ProgramVk::link(const gl::Context *context,
     // TODO(jie.a.chen@intel.com): Parallelize linking.
     // http://crbug.com/849576
     status = mExecutable.createPipelineLayout(contextVk, programExecutable, nullptr);
-
-    // Create pipeline with default state
-    if ((status == angle::Result::Continue) &&
-        contextVk->getFeatures().createPipelineDuringLink.enabled)
+    if (status != angle::Result::Continue)
     {
-        status = createGraphicsPipelineWithDefaultState(context);
+        return std::make_unique<LinkEventDone>(status);
     }
 
+    // Warm up the pipeline cache by creating a few placeholder pipelines.  This is not done for
+    // separable programs, and is deferred to when the program pipeline is finalized.
+    if (!mState.isSeparable())
+    {
+        status = mExecutable.warmUpPipelineCache(contextVk, programExecutable);
+    }
     return std::make_unique<LinkEventDone>(status);
 }
 
-angle::Result ProgramVk::createGraphicsPipelineWithDefaultState(const gl::Context *context)
-{
-    const gl::ProgramExecutable &glExecutable = mState.getExecutable();
-
-    // NOOP if -
-    // 1. Program is separable
-    // 2. Program has a compute shader
-    // 3. Program has greater than 3 output variables
-    bool isProgramSeperable = mState.isSeparable();
-    bool hasComputeShader   = glExecutable.hasLinkedShaderStage(gl::ShaderType::Compute);
-    if (isProgramSeperable || hasComputeShader || glExecutable.getOutputVariables().size() > 3)
-    {
-        return angle::Result::Continue;
-    }
-
-    ContextVk *contextVk                    = vk::GetImpl(context);
-    const vk::GraphicsPipelineDesc *descPtr = nullptr;
-    vk::PipelineHelper *pipeline            = nullptr;
-    vk::GraphicsPipelineDesc graphicsPipelineDesc;
-
-    // It is only at drawcall time that we will have complete information required to build the
-    // graphics pipeline descriptor. Use the most "commonly seen" state values and create the
-    // pipeline. This attempts to improve shader binary cache hits in the underlying ICD since it is
-    // common for the same shader to be used across different pipelines.
-    gl::PrimitiveMode mode = (glExecutable.hasLinkedShaderStage(gl::ShaderType::TessControl) ||
-                              glExecutable.hasLinkedShaderStage(gl::ShaderType::TessEvaluation))
-                                 ? gl::PrimitiveMode::Patches
-                                 : gl::PrimitiveMode::TriangleStrip;
-    SetupDefaultPipelineState(contextVk, glExecutable.getOutputVariables().size(), mode,
-                              &graphicsPipelineDesc);
-    return mExecutable.getGraphicsPipeline(contextVk, mode, graphicsPipelineDesc, glExecutable,
-                                           &descPtr, &pipeline);
-}
-
-void ProgramVk::linkResources(const gl::ProgramLinkedResources &resources)
+void ProgramVk::linkResources(const gl::Context *context,
+                              const gl::ProgramLinkedResources &resources)
 {
     Std140BlockLayoutEncoderFactory std140EncoderFactory;
     gl::ProgramLinkedResourcesLinker linker(&std140EncoderFactory);
 
-    linker.linkResources(mState, resources);
+    linker.linkResources(context, mState, resources);
 }
 
 angle::Result ProgramVk::initDefaultUniformBlocks(const gl::Context *glContext)
@@ -308,7 +256,7 @@ angle::Result ProgramVk::initDefaultUniformBlocks(const gl::Context *glContext)
     gl::ShaderMap<size_t> requiredBufferSize;
     requiredBufferSize.fill(0);
 
-    generateUniformLayoutMapping(layoutMap, requiredBufferSize);
+    generateUniformLayoutMapping(glContext, layoutMap, requiredBufferSize);
     initDefaultUniformLayoutMapping(layoutMap);
 
     // All uniform initializations are complete, now resize the buffers accordingly and return
@@ -316,7 +264,8 @@ angle::Result ProgramVk::initDefaultUniformBlocks(const gl::Context *glContext)
                                                 requiredBufferSize);
 }
 
-void ProgramVk::generateUniformLayoutMapping(gl::ShaderMap<sh::BlockLayoutMap> &layoutMap,
+void ProgramVk::generateUniformLayoutMapping(const gl::Context *context,
+                                             gl::ShaderMap<sh::BlockLayoutMap> &layoutMap,
                                              gl::ShaderMap<size_t> &requiredBufferSize)
 {
     const gl::ProgramExecutable &glExecutable = mState.getExecutable();
@@ -327,7 +276,7 @@ void ProgramVk::generateUniformLayoutMapping(gl::ShaderMap<sh::BlockLayoutMap> &
 
         if (shader)
         {
-            const std::vector<sh::ShaderVariable> &uniforms = shader->getUniforms();
+            const std::vector<sh::ShaderVariable> &uniforms = shader->getUniforms(context);
             InitDefaultUniformBlock(uniforms, &layoutMap[shaderType],
                                     &requiredBufferSize[shaderType]);
         }

@@ -38,11 +38,11 @@
 #include "WebNotification.h"
 #include "WebNotificationManagerMessages.h"
 #include "WebPageProxyMessages.h"
+#include <WebCore/DeprecatedGlobalSettings.h>
 #include <WebCore/Document.h>
 #include <WebCore/Notification.h>
 #include <WebCore/NotificationData.h>
 #include <WebCore/Page.h>
-#include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/SWContextManager.h>
 #include <WebCore/ScriptExecutionContext.h>
 #include <WebCore/SecurityOrigin.h>
@@ -129,18 +129,20 @@ static bool sendMessage(Notification& notification, WebPage* page, const Functio
         return false;
 
 #if ENABLE(BUILT_IN_NOTIFICATIONS)
-    if (RuntimeEnabledFeatures::sharedFeatures().builtInNotificationsEnabled())
+    if (DeprecatedGlobalSettings::builtInNotificationsEnabled())
         return sendMessage(WebProcess::singleton().ensureNetworkProcessConnection().connection(), WebProcess::singleton().sessionID().toUInt64());
 #endif
 
     std::optional<WebCore::PageIdentifier> pageIdentifier;
     if (page)
         pageIdentifier = page->identifier();
+#if ENABLE(SERVICE_WORKER)
     else if (auto* connection = SWContextManager::singleton().connection()) {
         // Pageless notification messages are, by default, on behalf of a service worker.
         // So use the service worker connection's page identifier.
         pageIdentifier = connection->pageIdentifier();
     }
+#endif
 
     ASSERT(pageIdentifier);
     return sendMessage(*WebProcess::singleton().parentProcessConnection(), pageIdentifier->toUInt64());
@@ -170,7 +172,7 @@ bool WebNotificationManager::show(Notification& notification, WebPage* page, Com
     if (page && !page->corePage()->settings().notificationsEnabled())
         return false;
 
-    if (!sendNotificationMessageWithAsyncReply(Messages::NotificationManagerMessageHandler::ShowNotification(notification.data()), notification, page, WTFMove(callback)))
+    if (!sendNotificationMessageWithAsyncReply(Messages::NotificationManagerMessageHandler::ShowNotification(notification.data(), notification.resources()), notification, page, WTFMove(callback)))
         return false;
 
     if (!notification.isPersistent()) {

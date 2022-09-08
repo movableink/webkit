@@ -108,7 +108,7 @@ CodeLocationLabel<JSInternalPtrTag> CallLinkInfo::doneLocation()
     return m_doneLocation;
 }
 
-void CallLinkInfo::setMonomorphicCallee(VM& vm, JSCell* owner, JSObject* callee, CodeBlock* codeBlock, MacroAssemblerCodePtr<JSEntryPtrTag> codePtr)
+void CallLinkInfo::setMonomorphicCallee(VM& vm, JSCell* owner, JSObject* callee, CodeBlock* codeBlock, CodePtr<JSEntryPtrTag> codePtr)
 {
     RELEASE_ASSERT(!isDirect());
     RELEASE_ASSERT(!(bitwise_cast<uintptr_t>(callee) & polymorphicCalleeMask));
@@ -135,7 +135,7 @@ void CallLinkInfo::clearCallee()
     if (isDataIC()) {
         u.dataIC.m_codeBlock = nullptr;
         u.dataIC.m_monomorphicCallDestination = nullptr;
-    } else if (!clearedByJettison()) {
+    } else {
 #if ENABLE(JIT)
         MacroAssembler::repatchPointer(u.codeIC.m_codeBlockLocation, nullptr);
         MacroAssembler::repatchPointer(u.codeIC.m_calleeLocation, nullptr);
@@ -284,7 +284,7 @@ void CallLinkInfo::visitWeak(VM& vm)
     }
 }
 
-void CallLinkInfo::setSlowPathCallDestination(MacroAssemblerCodePtr<JSEntryPtrTag> codePtr)
+void CallLinkInfo::setSlowPathCallDestination(CodePtr<JSEntryPtrTag> codePtr)
 {
     m_slowPathCallDestination = codePtr;
 }

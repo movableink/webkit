@@ -279,12 +279,23 @@ GPUConnectionToWebProcess::GPUConnectionToWebProcess(GPUProcess& gpuProcess, Web
     // reply from the GPU process, which would be unsafe.
     m_connection->setOnlySendMessagesAsDispatchWhenWaitingForSyncReplyWhenProcessingSuchAMessage(true);
     m_connection->open();
+
+#if ENABLE(VP9)
+    bool hasVP9HardwareDecoder;
+    if (parameters.hasVP9HardwareDecoder)
+        hasVP9HardwareDecoder = *parameters.hasVP9HardwareDecoder;
+    else {
+        hasVP9HardwareDecoder = WebCore::vp9HardwareDecoderAvailable();
+        gpuProcess.send(Messages::GPUProcessProxy::SetHasVP9HardwareDecoder(hasVP9HardwareDecoder));
+    }
+#endif
+
     WebKit::GPUProcessConnectionInfo info {
 #if HAVE(AUDIT_TOKEN)
         gpuProcess.parentProcessConnection()->getAuditToken(),
 #endif
 #if ENABLE(VP9)
-        WebCore::vp9HardwareDecoderAvailable()
+        hasVP9HardwareDecoder
 #endif
     };
     m_connection->send(Messages::GPUProcessConnection::DidInitialize(info), 0);
@@ -699,6 +710,7 @@ void GPUConnectionToWebProcess::setMediaOverridesForTesting(MediaOverridesForTes
 {
 #if ENABLE(VP9) && PLATFORM(COCOA)
     VP9TestingOverrides::singleton().setHardwareDecoderDisabled(WTFMove(overrides.vp9HardwareDecoderDisabled));
+    VP9TestingOverrides::singleton().setVP9DecoderDisabled(WTFMove(overrides.vp9DecoderDisabled));
     VP9TestingOverrides::singleton().setVP9ScreenSizeAndScale(WTFMove(overrides.vp9ScreenSizeAndScale));
 #endif
 

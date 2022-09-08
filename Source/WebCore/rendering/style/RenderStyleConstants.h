@@ -1205,7 +1205,7 @@ enum class Containment : uint8_t {
 };
 
 enum class ContainerType : uint8_t {
-    None,
+    Normal,
     Size,
     InlineSize,
 };
@@ -1214,6 +1214,12 @@ enum class ContainIntrinsicSizeType : uint8_t {
     None,
     Length,
     AutoAndLength
+};
+
+enum class ContentVisibility : uint8_t {
+    Visible,
+    Auto,
+    Hidden,
 };
 
 CSSBoxType transformBoxToCSSBoxType(TransformBox);

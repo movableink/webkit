@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -193,6 +193,7 @@ interface TestRunner {
     // Cookies testing
     undefined setAlwaysAcceptCookies(boolean accept);
     undefined setOnlyAcceptFirstPartyCookies(boolean accept);
+    undefined removeAllCookies();
 
     // Page Visibility API
     undefined setPageVisibility(DOMString state);
@@ -388,6 +389,7 @@ interface TestRunner {
     undefined setMockCameraOrientation(unsigned long orientation);
     boolean isMockRealtimeMediaSourceCenterEnabled();
     undefined setMockCaptureDevicesInterrupted(boolean isCameraInterrupted, boolean isMicrophoneInterrupted);
+    undefined triggerMockMicrophoneConfigurationChange();
 
     boolean hasAppBoundSession();
     undefined clearAppBoundSession();
@@ -430,4 +432,7 @@ interface TestRunner {
     undefined setIsMediaKeySystemPermissionGranted(boolean value);
 
     undefined takeViewPortSnapshot(object callback);
+
+    // Reporting API
+    undefined generateTestReport(DOMString message, DOMString group);
 };

@@ -783,7 +783,7 @@ Ref<Protocol::Network::Initiator> InspectorNetworkAgent::buildInitiatorObject(Do
         initiatorObject = Protocol::Network::Initiator::create()
             .setType(Protocol::Network::Initiator::Type::Script)
             .release();
-        initiatorObject->setStackTrace(stackTrace->buildInspectorArray());
+        initiatorObject->setStackTrace(stackTrace->buildInspectorObject());
     } else if (document && document->scriptableDocumentParser()) {
         initiatorObject = Protocol::Network::Initiator::create()
             .setType(Protocol::Network::Initiator::Type::Parser)
@@ -876,7 +876,7 @@ Protocol::ErrorStringOr<void> InspectorNetworkAgent::enable()
             auto identifier = channel->progressIdentifier();
             didCreateWebSocket(identifier, webSocket->url());
 
-            auto cookieRequestHeaderFieldValue = [document = WeakPtr { document }](const URL& url) -> String {
+            auto cookieRequestHeaderFieldValue = [document = WeakPtr<Document, WeakPtrImplWithEventTargetData> { document }](const URL& url) -> String {
                 if (!document || !document->page())
                     return { };
                 return document->page()->cookieJar().cookieRequestHeaderFieldValue(*document, url);
@@ -907,6 +907,10 @@ Protocol::ErrorStringOr<void> InspectorNetworkAgent::disable()
     continuePendingResponses();
 
     setResourceCachingDisabled(false);
+
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+    setEmulatedConditions(std::nullopt);
+#endif
 
     return { };
 }
@@ -1383,6 +1387,21 @@ Protocol::ErrorStringOr<void> InspectorNetworkAgent::interceptRequestWithError(c
     loader.didFail(ResourceError(InspectorNetworkAgent::errorDomain(), 0, loader.url(), "Blocked by Web Inspector"_s, toResourceErrorType(errorType)));
     return { };
 }
+
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+
+Protocol::ErrorStringOr<void> InspectorNetworkAgent::setEmulatedConditions(std::optional<int>&& bytesPerSecondLimit)
+{
+    if (bytesPerSecondLimit && *bytesPerSecondLimit < 0)
+        return makeUnexpected("bytesPerSecond cannot be negative"_s);
+
+    if (setEmulatedConditionsInternal(WTFMove(bytesPerSecondLimit)))
+        return { };
+
+    return makeUnexpected("Not supported"_s);
+}
+
+#endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
 
 bool InspectorNetworkAgent::shouldTreatAsText(const String& mimeType)
 {

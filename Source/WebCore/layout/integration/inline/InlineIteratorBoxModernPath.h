@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FontCascade.h"
 #include "LayoutContainerBox.h"
 #include "LayoutIntegrationInlineContent.h"
@@ -63,7 +61,7 @@ public:
     unsigned char bidiLevel() const { return box().bidiLevel(); }
 
     bool hasHyphen() const { return box().text()->hasHyphen(); }
-    StringView text() const { return box().text()->originalContent(); }
+    StringView originalText() const { return box().text()->originalContent(); }
     unsigned start() const { return box().text()->start(); }
     unsigned end() const { return box().text()->end(); }
     unsigned length() const { return box().text()->length(); }
@@ -74,26 +72,19 @@ public:
             start(),
             length(),
             box().text()->hasHyphen() ? box().style().hyphenString().length() : 0,
-            box().isLineBreak()
+            box().isLineBreak(),
+            box().text()->visuallyVisibleLength()
         };
     }
 
-    TextRun createTextRun(CreateTextRunMode mode) const
+    TextRun textRun(TextRunMode mode = TextRunMode::Painting) const
     {
         auto& style = box().style();
         auto expansion = box().expansion();
         auto rect = this->visualRectIgnoringBlockDirection();
         auto xPos = rect.x() - (line().lineBoxLeft() + line().contentLogicalOffset());
-
-        auto textForRun = [&] {
-            if (mode == CreateTextRunMode::Editing || !hasHyphen())
-                return text().toStringWithoutCopying();
-
-            return makeString(text(), style.hyphenString());
-        }();
-
-        bool characterScanForCodePath = !renderText().canUseSimpleFontCodePath();
-        TextRun textRun { textForRun, xPos, expansion.horizontalExpansion, expansion.behavior, direction(), style.rtlOrdering() == Order::Visual, characterScanForCodePath };
+        auto characterScanForCodePath = isText() && !renderText().canUseSimpleFontCodePath();
+        auto textRun = TextRun { mode == TextRunMode::Editing ? originalText() : box().text()->renderedContent(), xPos, expansion.horizontalExpansion, expansion.behavior, direction(), style.rtlOrdering() == Order::Visual, characterScanForCodePath };
         textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
         return textRun;
     };
@@ -212,6 +203,27 @@ public:
         return last;
     }
 
+    BoxModernPath parentInlineBox() const
+    {
+        ASSERT(!atEnd());
+
+        auto candidate = *this;
+
+        if (isRootInlineBox()) {
+            candidate.setAtEnd();
+            return candidate;
+        }
+
+        auto& parentLayoutBox = box().layoutBox().parent();
+        do {
+            candidate.traversePreviousBox();
+        } while (!candidate.atEnd() && &candidate.box().layoutBox() != &parentLayoutBox);
+
+        ASSERT(candidate.atEnd() || candidate.box().isInlineBox());
+
+        return candidate;
+    }
+
     TextDirection direction() const { return bidiLevel() % 2 ? TextDirection::RTL : TextDirection::LTR; }
     bool isFirstLine() const { return !box().lineIndex(); }
 
@@ -288,4 +300,3 @@ private:
 }
 }
 
-#endif

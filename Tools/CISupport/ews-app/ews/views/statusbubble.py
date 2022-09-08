@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+# Copyright (C) 2018-2022 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@ from django.views import View
 from django.views.decorators.clickjacking import xframe_options_exempt
 from ews.common.buildbot import Buildbot
 from ews.models.build import Build
-from ews.models.patch import Patch
+from ews.models.patch import Change
 import ews.config as config
 
 _log = logging.getLogger(__name__)
@@ -46,32 +46,17 @@ class StatusBubble(View):
     ALL_QUEUES = ['style', 'ios', 'ios-sim', 'mac', 'mac-debug', 'mac-AS-debug', 'tv', 'tv-sim', 'watch', 'watch-sim', 'gtk', 'wpe', 'wincairo', 'win',
                   'ios-wk2', 'mac-wk1', 'mac-wk2', 'mac-wk2-stress', 'mac-AS-debug-wk2', 'gtk-wk2', 'api-ios', 'api-mac', 'api-gtk',
                   'bindings', 'jsc', 'jsc-armv7', 'jsc-armv7-tests', 'jsc-mips', 'jsc-mips-tests', 'jsc-i386', 'webkitperl', 'webkitpy', 'services']
-    # FIXME: Auto-generate the queue's trigger relationship
-    QUEUE_TRIGGERS = {
-        'api-ios': 'ios-sim',
-        'ios-wk2': 'ios-sim',
-        'api-mac': 'mac',
-        'mac-wk1': 'mac',
-        'mac-wk2': 'mac',
-        'mac-wk2-stress': 'mac',
-        'mac-debug-wk1': 'mac-debug',
-        'mac-AS-debug-wk2': 'mac-AS-debug',
-        'api-gtk': 'gtk',
-        'gtk-wk2': 'gtk',
-        'jsc-mips-tests': 'jsc-mips',
-        'jsc-armv7-tests': 'jsc-armv7',
-    }
 
     STEPS_TO_HIDE = ['^Archived built product$', '^Uploaded built product$', '^Transferred archive to S3$',
                      '^Archived test results$', '^Uploaded test results$', '^Extracted test results$',
                      '^Downloaded built product$', '^Extracted built product$',
                      '^Crash collection has quiesced$', '^Triggered crash log submission$',
                      '^Cleaned and updated working directory$', '^Checked out required revision$', '^Updated working directory$',
-                     '^Validated patch$', '^Killed old processes$', '^Configured build$', '^OS:.*Xcode:', '(skipped)',
+                     '^Validated change$', '^Killed old processes$', '^Configured build$', '^OS:.*Xcode:', '(skipped)',
                      '^Printed configuration$', '^Patch contains relevant changes$', '^Deleted .git/index.lock$',
                      '^triggered.*$', '^Found modified ChangeLogs$', '^Created local git commit$', '^Set build summary$',
                      '^Validated commiter$', '^Validated commiter and reviewer$', '^Validated ChangeLog and Reviewer$',
-                     '^Removed flags on bugzilla patch$', '^Checked patch status on other queues$', '^Identifier:.*$',
+                     '^Removed flags on bugzilla patch$', '^Checked change status on other queues$', '^Identifier:.*$',
                      '^Updated branch information$', '^worker .* ready$']
     DAYS_TO_CHECK_QUEUE_POSITION = 0.5
     DAYS_TO_HIDE_BUBBLE = 7
@@ -80,19 +65,19 @@ class StatusBubble(View):
     BUILD_RETRY_MSG = 'retrying build'
     UNKNOWN_QUEUE_POSITION = '?'
 
-    def _build_bubble(self, patch, queue, hide_icons=False, sent_to_buildbot=True):
+    def _build_bubble(self, change, queue, hide_icons=False, sent_to_buildbot=True):
         bubble = {
             'name': queue,
         }
-        is_tester_queue = self._is_tester_queue(queue)
-        is_builder_queue = self._is_builder_queue(queue)
+        is_tester_queue = Buildbot.is_tester_queue(queue)
+        is_builder_queue = Buildbot.is_builder_queue(queue)
         if hide_icons == False:
             if is_tester_queue:
                 bubble['name'] = StatusBubble.TESTER_ICON + '  ' + bubble['name']
             if is_builder_queue:
                 bubble['name'] = StatusBubble.BUILDER_ICON + '  ' + bubble['name']
 
-        builds, is_parent_build = self.get_all_builds_for_queue(patch, queue, self._get_parent_queue(queue))
+        builds, is_parent_build = self.get_all_builds_for_queue(change, queue, Buildbot.get_parent_queue(queue))
         build = None
         if builds:
             build = builds[0]
@@ -102,13 +87,13 @@ class StatusBubble(View):
 
         if not build:
             bubble['state'] = 'none'
-            queue_position = self._queue_position(patch, queue, self._get_parent_queue(queue))
+            queue_position = self._queue_position(change, queue, Buildbot.get_parent_queue(queue))
             if not queue_position:
                 return None
             if queue_position != StatusBubble.UNKNOWN_QUEUE_POSITION:
                 bubble['queue_position'] = queue_position
-            if self._get_parent_queue(queue):
-                queue = self._get_parent_queue(queue)
+            if Buildbot.get_parent_queue(queue):
+                queue = Buildbot.get_parent_queue(queue)
             queue_full_name = Buildbot.queue_name_by_shortname_mapping.get(queue)
             if queue_full_name:
                 bubble['url'] = 'https://{}/#/builders/{}'.format(config.BUILDBOT_SERVER_HOST, queue_full_name)
@@ -133,10 +118,10 @@ class StatusBubble(View):
                 bubble['url'] = 'https://{}/#/builders/{}'.format(config.BUILDBOT_SERVER_HOST, queue_full_name)
         elif build.result == Buildbot.SUCCESS:
             if is_parent_build:
-                if patch.created < (timezone.now() - datetime.timedelta(days=StatusBubble.DAYS_TO_HIDE_BUBBLE)):
-                    # Do not display bubble for old patch for which no build has been reported on given queue.
-                    # Most likely the patch would never be processed on this queue, since either the queue was
-                    # added after the patch was submitted, or build request for that patch was cancelled.
+                if change.created < (timezone.now() - datetime.timedelta(days=StatusBubble.DAYS_TO_HIDE_BUBBLE)):
+                    # Do not display bubble for old change for which no build has been reported on given queue.
+                    # Most likely the change would never be processed on this queue, since either the queue was
+                    # added after the change was submitted, or build request for that change was cancelled.
                     return None
                 bubble['state'] = 'started'
                 bubble['details_message'] = 'Waiting to run tests.'
@@ -167,7 +152,7 @@ class StatusBubble(View):
                 bubble['state'] = 'provisional-fail'
         elif build.result == Buildbot.SKIPPED:
             bubble['state'] = 'skipped'
-            bubble['details_message'] = 'The patch is no longer eligible for processing.'
+            bubble['details_message'] = 'The change is no longer eligible for processing.'
             if re.search(r'Bug .* is already closed', build.state_string):
                 bubble['details_message'] += ' Bug was already closed when EWS attempted to process it.'
             elif re.search(r'Patch .* is marked r-', build.state_string):
@@ -176,7 +161,7 @@ class StatusBubble(View):
                 bubble['details_message'] += ' Patch was obsolete when EWS attempted to process it.'
 
             if len(builds) > 1:
-                bubble['details_message'] += '\nSome messages were logged while the patch was still eligible:'
+                bubble['details_message'] += '\nSome messages were logged while the change was still eligible:'
                 bubble['details_message'] += self._steps_messages_from_multiple_builds(builds)
 
         elif build.result == Buildbot.EXCEPTION:
@@ -202,17 +187,6 @@ class StatusBubble(View):
                 bubble['details_message'] += '\n\n' + timestamp
 
         return bubble
-
-    def _is_tester_queue(self, queue):
-        icon = Buildbot.icons_for_queues_mapping.get(queue)
-        return icon in ['testOnly', 'buildAndTest']
-
-    def _is_builder_queue(self, queue):
-        icon = Buildbot.icons_for_queues_mapping.get(queue)
-        return icon in ['buildOnly', 'buildAndTest']
-
-    def _get_parent_queue(self, queue):
-        return StatusBubble.QUEUE_TRIGGERS.get(queue)
 
     def get_os_details(self, build):
         for step in build.step_set.all():
@@ -259,33 +233,33 @@ class StatusBubble(View):
                 return step.state_string
         return ''
 
-    def get_latest_build_for_queue(self, patch, queue, parent_queue=None):
-        builds, is_parent_build = self.get_all_builds_for_queue(patch, queue, parent_queue)
+    def get_latest_build_for_queue(self, change, queue, parent_queue=None):
+        builds, is_parent_build = self.get_all_builds_for_queue(change, queue, parent_queue)
         if not builds:
             return (None, None)
         return (builds[0], is_parent_build)
 
-    def get_all_builds_for_queue(self, patch, queue, parent_queue=None):
-        builds = self.get_builds_for_queue(patch, queue)
+    def get_all_builds_for_queue(self, change, queue, parent_queue=None):
+        builds = self.get_builds_for_queue(change, queue)
         is_parent_build = False
         if not builds and parent_queue:
-            builds = self.get_builds_for_queue(patch, parent_queue)
+            builds = self.get_builds_for_queue(change, parent_queue)
             is_parent_build = True
         if not builds:
             return (None, None)
         builds.sort(key=lambda build: build.number, reverse=True)
         return (builds, is_parent_build)
 
-    def get_builds_for_queue(self, patch, queue):
-        return [build for build in patch.build_set.all() if build.builder_display_name == queue]
+    def get_builds_for_queue(self, change, queue):
+        return [build for build in change.build_set.all() if build.builder_display_name == queue]
 
-    def find_failed_builds_for_patch(self, patch_id):
-        patch = Patch.get_patch(patch_id)
-        if not patch:
+    def find_failed_builds_for_change(self, change_id):
+        change = Change.get_change(change_id)
+        if not change:
             return []
         failed_builds = []
         for queue in StatusBubble.ALL_QUEUES:
-            build, _ = self.get_latest_build_for_queue(patch, queue)
+            build, _ = self.get_latest_build_for_queue(change, queue)
             if not build:
                 continue
             if build.result in (Buildbot.FAILURE, Buildbot.EXCEPTION, Buildbot.CANCELLED):
@@ -299,78 +273,77 @@ class StatusBubble(View):
             return False
         return True
 
-    def _queue_position(self, patch, queue, parent_queue=None):
+    def _queue_position(self, change, queue, parent_queue=None):
         # FIXME: Handle retried builds and cancelled build-requests as well.
         from_timestamp = timezone.now() - datetime.timedelta(days=StatusBubble.DAYS_TO_CHECK_QUEUE_POSITION)
         hide_from_timestamp = timezone.now() - datetime.timedelta(days=StatusBubble.DAYS_TO_HIDE_BUBBLE)
 
-        if patch.created < hide_from_timestamp:
-            # Do not display bubble for old patch for which no build has been reported on given queue.
-            # Most likely the patch would never be processed on this queue, since either the queue was
-            # added after the patch was submitted, or build request for that patch was cancelled.
+        if change.created < hide_from_timestamp:
+            # Do not display bubble for old change for which no build has been reported on given queue.
+            # Most likely the change would never be processed on this queue, since either the queue was
+            # added after the change was submitted, or build request for that change was cancelled.
             return None
 
-        if patch.created < from_timestamp:
-            # This means patch has been waiting on given queue for long time, but not long enough to hide the status-bubble.
+        if change.created < from_timestamp:
+            # This means change has been waiting on given queue for long time, but not long enough to hide the status-bubble.
             # Instead of calculating exact queue position (which might be slow), we display a fixed high queue position.
             return StatusBubble.UNKNOWN_QUEUE_POSITION
 
         sent = 'sent_to_commit_queue' if queue == 'commit' else 'sent_to_buildbot'
-        previously_sent_patches = set(Patch.objects
+        previously_sent_changes = set(Change.objects
                                           .filter(created__gte=from_timestamp)
                                           .filter(**{sent: True})
                                           .filter(obsolete=False)
-                                          .filter(created__lt=patch.created))
+                                          .filter(created__lt=change.created))
         if parent_queue:
             recent_builds_parent_queue = Build.objects \
                                              .filter(created__gte=from_timestamp) \
                                              .filter(builder_display_name=parent_queue)
-            processed_patches_parent_queue = set([build.patch for build in recent_builds_parent_queue])
-            return len(previously_sent_patches - processed_patches_parent_queue) + 1
+            processed_changes_parent_queue = set([build.change for build in recent_builds_parent_queue])
+            return len(previously_sent_changes - processed_changes_parent_queue) + 1
 
         recent_builds = Build.objects \
                             .filter(created__gte=from_timestamp) \
                             .filter(builder_display_name=queue)
-        processed_patches = set([build.patch for build in recent_builds])
-        _log.debug('Patch: {}, queue: {}, previous patches: {}'.format(patch.patch_id, queue, previously_sent_patches - processed_patches))
-        return len(previously_sent_patches - processed_patches) + 1
+        processed_changes = set([build.change for build in recent_builds])
+        _log.debug('Change: {}, queue: {}, previous changes: {}'.format(change.change_id, queue, previously_sent_changes - processed_changes))
+        return len(previously_sent_changes - processed_changes) + 1
 
-    def _build_bubbles_for_patch(self, patch, hide_icons=False):
+    def _build_bubbles_for_change(self, change, hide_icons=False):
         show_submit_to_ews = True
         failed_to_apply = False  # TODO: https://bugs.webkit.org/show_bug.cgi?id=194598
         show_retry = False
         bubbles = []
 
-        if not patch:
+        if not change:
             return (None, show_submit_to_ews, failed_to_apply, show_retry)
 
         for queue in StatusBubble.ALL_QUEUES:
-            bubble = self._build_bubble(patch, queue, hide_icons, patch.sent_to_buildbot)
+            bubble = self._build_bubble(change, queue, hide_icons, change.sent_to_buildbot)
             if bubble:
                 bubbles.append(bubble)
                 if bubble['state'] in ('fail', 'error'):
                     show_retry = True
 
-        if patch.sent_to_commit_queue:
-            if not patch.sent_to_buildbot:
+        if change.sent_to_commit_queue:
+            if not change.sent_to_buildbot:
                 hide_icons = True
-            cq_bubble = self._build_bubble(patch, 'commit', hide_icons)
+            cq_bubble = self._build_bubble(change, 'commit', hide_icons)
             if cq_bubble:
                 bubbles.insert(0, cq_bubble)
 
-        show_submit_to_ews = not patch.sent_to_buildbot
+        show_submit_to_ews = not change.sent_to_buildbot
         return (bubbles, show_submit_to_ews, failed_to_apply, show_retry)
 
     @xframe_options_exempt
-    def get(self, request, patch_id):
+    def get(self, request, change_id):
         hide_icons = request.GET.get('hide_icons', False)
-        patch_id = int(patch_id)
-        patch = Patch.get_patch(patch_id)
-        bubbles, show_submit_to_ews, show_failure_to_apply, show_retry = self._build_bubbles_for_patch(patch, hide_icons)
+        change = Change.get_change(change_id)
+        bubbles, show_submit_to_ews, show_failure_to_apply, show_retry = self._build_bubbles_for_change(change, hide_icons)
 
         template_values = {
             'bubbles': bubbles,
-            'patch_id': patch_id,
+            'change_id': change_id,
             'show_submit_to_ews': show_submit_to_ews,
             'show_failure_to_apply': show_failure_to_apply,
             'show_retry_button': show_retry,

@@ -1,17 +1,31 @@
 SCRIPTS_PATH ?= ../Tools/Scripts
 
-XCODE_OPTIONS = `perl -I$(SCRIPTS_PATH) -Mwebkitdirs -e 'print XcodeOptionString()' -- $(BUILD_WEBKIT_OPTIONS)` $${COLOR_DIAGNOSTICS_ARG} $(ARGS)
-ifeq (ON,$(ENABLE_LLVM_PROFILE_GENERATION))
-	XCODE_OPTIONS += ENABLE_LLVM_PROFILE_GENERATION=ENABLE_LLVM_PROFILE_GENERATION
+ifneq ($(MAKECMDGOALS),installsrc)
+
+ifneq ($(USE_WORKSPACE),NO)
+SCHEME ?= $(notdir $(CURDIR))
+XCODE_TARGET = -scheme "$(SCHEME)"
+
+ifneq (,$(WORKSPACE_PATH))
+CONFIG_OPTIONS += --workspace=$(WORKSPACE_PATH)
 endif
 
-ifeq ($(USE_WORKSPACE),YES)
-SCHEME ?= $(notdir $(CURDIR))
-WORKSPACE_PATH ?= $(dir $(lastword $(MAKEFILE_LIST)))WebKit.xcworkspace
-XCODE_TARGET = -workspace $(WORKSPACE_PATH) -scheme "$(SCHEME)"
-XCODE_OPTIONS += WK_VALIDATE_DEPENDENCIES=YES_ERROR
+# FIXME: Move this setting to xcconfigs once all local Xcode builds of WebKit
+# happen in the workspace. When this is only passed on the command line, it
+# invalidates build results made in the IDE (rdar://88135402).
+#XCODE_OPTIONS += WK_VALIDATE_DEPENDENCIES=YES_ERROR
+BUILD_GOAL = $(SCHEME)
 else
 USE_WORKSPACE =
+BUILD_WEBKIT_OPTIONS += --no-use-workspace
+BUILD_GOAL = $(notdir $(CURDIR))
+endif
+
+
+XCODE_OPTIONS = `perl -I$(SCRIPTS_PATH) -Mwebkitdirs -e 'print XcodeOptionString()' -- $(BUILD_WEBKIT_OPTIONS)` $(ARGS)
+XCODE_OPTIONS += $(if $(GCC_PREPROCESSOR_ADDITIONS),GCC_PREPROCESSOR_DEFINITIONS='$(GCC_PREPROCESSOR_ADDITIONS) $$(inherited)')
+ifeq (ON,$(ENABLE_LLVM_PROFILE_GENERATION))
+	XCODE_OPTIONS += ENABLE_LLVM_PROFILE_GENERATION=ENABLE_LLVM_PROFILE_GENERATION
 endif
 
 ifneq (,$(SDKROOT))
@@ -54,6 +68,8 @@ ifneq (,$(EXPORT_COMPILE_COMMANDS))
 		XCODE_OPTIONS += CLANG_ENABLE_MODULE_DEBUGGING=NO
 		XCODE_OPTIONS += COMPILER_INDEX_STORE_ENABLE=NO
 endif
+
+endif # ifneq ($(MAKECMDGOALS),installsrc)
 
 DEFAULT_VERBOSITY := $(shell defaults read org.webkit.BuildConfiguration BuildTranscriptVerbosity 2>/dev/null || echo "default")
 VERBOSITY ?= $(DEFAULT_VERBOSITY)
@@ -114,9 +130,8 @@ endef
 
 define invoke_xcode
 	( \
-		[[ -t 1 ]] && COLOR_DIAGNOSTICS_ARG="COLOR_DIAGNOSTICS=YES"; \
 		echo; \
-		echo "===== BUILDING $(if $(USE_WORKSPACE),$(SCHEME),$(notdir $(CURDIR))) ====="; \
+		echo "===== BUILDING $(BUILD_GOAL) ====="; \
 		echo; \
 		$1 xcodebuild $2 $(OTHER_OPTIONS) $(XCODE_TARGET) $(XCODE_OPTIONS) $3 | $(OUTPUT_FILTER) && exit $${PIPESTATUS[0]} \
 	)
@@ -124,27 +139,28 @@ endef
 
 all:
 	@$(call set_webkit_configuration,)
-	@$(call invoke_xcode,,,GCC_PREPROCESSOR_DEFINITIONS='$(GCC_PREPROCESSOR_ADDITIONS) $$(inherited)')
+	@$(call invoke_xcode,,,)
 
 debug d: force
 	@$(call set_webkit_configuration,--debug)
-	@$(call invoke_xcode,,,GCC_PREPROCESSOR_DEFINITIONS='$(GCC_PREPROCESSOR_ADDITIONS) $$(inherited)')
+	@$(call invoke_xcode,,,)
 
 release r: force
 	@$(call set_webkit_configuration,--release)
-	@$(call invoke_xcode,,,GCC_PREPROCESSOR_DEFINITIONS='$(GCC_PREPROCESSOR_ADDITIONS) $$(inherited)')
+	@$(call invoke_xcode,,,)
 
 release+assert ra: force
 	@$(call set_webkit_configuration,--release)
-	@$(call invoke_xcode,,,GCC_PREPROCESSOR_DEFINITIONS='$(GCC_PREPROCESSOR_ADDITIONS) ASSERT_ENABLED=1 $$(inherited)')
+	@$(call invoke_xcode,,,)
+release+assert ra: override GCC_PREPROCESSOR_ADDITIONS += ASSERT_ENABLED=1
 
 testing t: force
 	@$(call set_webkit_configuration,--debug --force-optimization-level=O3)
-	@$(call invoke_xcode,,,GCC_PREPROCESSOR_DEFINITIONS='$(GCC_PREPROCESSOR_ADDITIONS) $$(inherited)')
+	@$(call invoke_xcode,,,)
 
 analyze:
 	@$(call set_webkit_configuration,--debug)
-	@$(call invoke_xcode,$(PATH_TO_SCAN_BUILD),build analyze,GCC_PREPROCESSOR_DEFINITIONS='$(GCC_PREPROCESSOR_ADDITIONS) $$(inherited)')
+	@$(call invoke_xcode,$(PATH_TO_SCAN_BUILD),build analyze,)
 
 clean:
 ifndef XCODE_TARGET
@@ -154,10 +170,6 @@ else
 endif
 
 installsrc:
-ifndef XCODE_TARGET
-	@$(call invoke_xcode,,,-alltargets installsrc SRCROOT="$(SRCROOT)$(PATH_FROM_ROOT)")
-else
-	@$(call invoke_xcode,,,installsrc SRCROOT="$(SRCROOT)$(PATH_FROM_ROOT)")
-endif
+	xcodebuild installsrc SRCROOT="$(SRCROOT)$(PATH_FROM_ROOT)"
 
 force: ;

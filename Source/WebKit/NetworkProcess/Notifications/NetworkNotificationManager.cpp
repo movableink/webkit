@@ -63,6 +63,16 @@ void NetworkNotificationManager::requestSystemNotificationPermission(const Strin
     sendMessageWithReply<WebPushD::MessageType::RequestSystemNotificationPermission>(WTFMove(completionHandler), originString);
 }
 
+void NetworkNotificationManager::setPushAndNotificationsEnabledForOrigin(const SecurityOriginData& origin, bool enabled, CompletionHandler<void()>&& completionHandler)
+{
+    if (!m_connection) {
+        completionHandler();
+        return;
+    }
+
+    sendMessageWithReply<WebPushD::MessageType::SetPushAndNotificationsEnabledForOrigin>(WTFMove(completionHandler), origin.toString(), enabled);
+}
+
 void NetworkNotificationManager::deletePushAndNotificationRegistration(const SecurityOriginData& origin, CompletionHandler<void(const String&)>&& completionHandler)
 {
     if (!m_connection) {
@@ -85,6 +95,18 @@ void NetworkNotificationManager::getOriginsWithPushAndNotificationPermissions(Co
     sendMessageWithReply<WebPushD::MessageType::GetOriginsWithPushAndNotificationPermissions>(WTFMove(replyHandler));
 }
 
+void NetworkNotificationManager::getOriginsWithPushSubscriptions(CompletionHandler<void(const Vector<SecurityOriginData>&)>&& completionHandler)
+{
+    CompletionHandler<void(Vector<String>&&)> replyHandler = [completionHandler = WTFMove(completionHandler)] (Vector<String> originStrings) mutable {
+        auto origins = originStrings.map([](auto& originString) {
+            return SecurityOriginData::fromURL({ { }, originString });
+        });
+        completionHandler(WTFMove(origins));
+    };
+
+    sendMessageWithReply<WebPushD::MessageType::GetOriginsWithPushSubscriptions>(WTFMove(replyHandler));
+}
+
 void NetworkNotificationManager::getPendingPushMessages(CompletionHandler<void(const Vector<WebPushMessage>&)>&& completionHandler)
 {
     CompletionHandler<void(Vector<WebPushMessage>&&)> replyHandler = [completionHandler = WTFMove(completionHandler)] (Vector<WebPushMessage>&& messages) mutable {
@@ -95,7 +117,7 @@ void NetworkNotificationManager::getPendingPushMessages(CompletionHandler<void(c
     sendMessageWithReply<WebPushD::MessageType::GetPendingPushMessages>(WTFMove(replyHandler));
 }
 
-void NetworkNotificationManager::showNotification(IPC::Connection&, const WebCore::NotificationData&, CompletionHandler<void()>&& callback)
+void NetworkNotificationManager::showNotification(IPC::Connection&, const WebCore::NotificationData&, RefPtr<NotificationResources>&&, CompletionHandler<void()>&& callback)
 {
     callback();
 

@@ -87,8 +87,9 @@ exclude Tools/wpe/jhbuildrc
 
 file Tools/glib/common.py
 file Tools/glib/generate-inspector-gresource-manifest.py
+file Tools/glib/generate-modern-media-controls-gresource-manifest.py
+file Tools/glib/generate-pdfjs-resource-manifest.py
 
-directory Tools/gtkdoc
 directory Tools/MiniBrowser
 directory Tools/TestWebKitAPI
 
@@ -96,6 +97,6 @@ file CMakeLists.txt
 file Tools/CMakeLists.txt
 file Tools/PlatformWPE.cmake
 
-directory ${CMAKE_BINARY_DIR}/Documentation/wpe-javascriptcore-${WPE_API_VERSION} Documentation/wpe-javascriptcore-${WPE_API_DOC_VERSION}
-directory ${CMAKE_BINARY_DIR}/Documentation/wpe-webkit-${WPE_API_VERSION} Documentation/wpe-webkit-${WPE_API_DOC_VERSION}
-directory ${CMAKE_BINARY_DIR}/Documentation/wpe-web-extension-${WPE_API_VERSION} Documentation/wpe-web-extension-${WPE_API_DOC_VERSION}
+directory ${CMAKE_BINARY_DIR}/Documentation/wpe-javascriptcore-${WPE_API_VERSION} Documentation/wpe-javascriptcore-${WPE_API_VERSION}
+directory ${CMAKE_BINARY_DIR}/Documentation/wpe-webkit-${WPE_API_VERSION} Documentation/wpe-webkit-${WPE_API_VERSION}
+directory ${CMAKE_BINARY_DIR}/Documentation/wpe-web-extension-${WPE_API_VERSION} Documentation/wpe-web-extension-${WPE_API_VERSION}

@@ -35,6 +35,7 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
 
         this._sourceCode = sourceCode;
         this._breakpointMap = {};
+        this._inlineBreakpointDataForLine = new Multimap;
         this._issuesLineNumberMap = new Map;
         this._widgetMap = new Map;
         this._contentPopulated = false;
@@ -316,6 +317,7 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
     {
         this.revealPosition(new WI.SourceCodePosition(lineNumber - 1, 0), {
             textRangeToSelect: new WI.TextRange(lineNumber - 1, 0, lineNumber, 0),
+            preventHighlight: true,
         });
     }
 
@@ -440,11 +442,25 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
         return this.sourceCode.createSourceCodeLocation(unformattedLineInfo.lineNumber, unformattedLineInfo.columnNumber);
     }
 
-    _editorLineInfoForSourceCodeLocation(sourceCodeLocation)
+    _editorPositionForSourceCodeLocation(sourceCodeLocation)
     {
         if (this._sourceCode instanceof WI.SourceMapResource)
-            return {lineNumber: sourceCodeLocation.displayLineNumber, columnNumber: sourceCodeLocation.displayColumnNumber};
-        return {lineNumber: sourceCodeLocation.formattedLineNumber, columnNumber: sourceCodeLocation.formattedColumnNumber};
+            return sourceCodeLocation.displayPosition();
+        return sourceCodeLocation.formattedPosition();
+    }
+
+    _editorLineInfoForSourceCodeLocation(sourceCodeLocation)
+    {
+        let position = this._editorPositionForSourceCodeLocation(sourceCodeLocation);
+        return this._editorLineInfoForEditorPosition(position);
+    }
+
+    _editorLineInfoForEditorPosition(position)
+    {
+        return {
+            lineNumber: position.lineNumber,
+            columnNumber: position.columnNumber,
+        };
     }
 
     _breakpointForEditorLineInfo(lineInfo)
@@ -456,8 +472,11 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
 
     _addBreakpointWithEditorLineInfo(breakpoint, lineInfo)
     {
-        if (!this._breakpointMap[lineInfo.lineNumber])
+        if (!this._breakpointMap[lineInfo.lineNumber]) {
+            this._addBreakpointWidgetsForLine(lineInfo.lineNumber);
+
             this._breakpointMap[lineInfo.lineNumber] = {};
+        }
 
         this._breakpointMap[lineInfo.lineNumber][lineInfo.columnNumber] = breakpoint;
     }
@@ -468,8 +487,11 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
 
         delete this._breakpointMap[lineInfo.lineNumber][lineInfo.columnNumber];
 
-        if (isEmptyObject(this._breakpointMap[lineInfo.lineNumber]))
+        if (isEmptyObject(this._breakpointMap[lineInfo.lineNumber])) {
             delete this._breakpointMap[lineInfo.lineNumber];
+
+            this._removeBreakpointWidgetsForLine(lineInfo.lineNumber);
+        }
     }
 
     _populateWithContent(content)
@@ -534,6 +556,8 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
             return;
 
         if (this._supportsDebugging) {
+            this._removeBreakpointWidgets();
+
             this._breakpointMap = {};
 
             for (let breakpoint of WI.debuggerManager.breakpointsForSourceCode(this._sourceCode)) {
@@ -710,6 +734,46 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
         this.setBreakpointInfoForLineAndColumn(lineInfo.lineNumber, lineInfo.columnNumber, null);
     }
 
+    async _addBreakpointWidgetsForLine(lineNumber)
+    {
+        console.assert(!(lineNumber in this._breakpointMap), this._breakpointMap[lineNumber]);
+
+        let startPosition = this.currentPositionToOriginalPosition(new WI.SourceCodePosition(lineNumber, 0));
+        let script = this._getAssociatedScript(startPosition);
+        if (!script)
+            return;
+
+        let endPosition = this.currentPositionToOriginalPosition(new WI.SourceCodePosition(lineNumber + 1, 0));
+        console.assert(script === this._getAssociatedScript(endPosition), script);
+
+        let locations = await script.breakpointLocations(startPosition, endPosition);
+        for (let location of locations) {
+            console.assert(!Array.from(this._inlineBreakpointDataForLine.values()).some(({widget}) => widget.sourceCodeLocation.isEqual(location)), location, this._inlineBreakpointDataForLine);
+            let inlineBreakpointWidget = new WI.BreakpointInlineWidget(WI.debuggerManager.breakpointsForSourceCodeLocation(location).firstValue || location);
+            let bookmark = this.setInlineWidget(this.originalPositionToCurrentPosition(location.position()), inlineBreakpointWidget.element);
+            this._inlineBreakpointDataForLine.add(lineNumber, {bookmark, widget: inlineBreakpointWidget});
+        }
+    }
+
+    _removeBreakpointWidgetsForLine(lineNumber)
+    {
+        console.assert(!(lineNumber in this._breakpointMap), this._breakpointMap[lineNumber]);
+
+        let inlineData = this._inlineBreakpointDataForLine.take(lineNumber);
+        if (!inlineData)
+            return;
+
+        for (let {bookmark} of inlineData)
+            bookmark.clear();
+    }
+
+    _removeBreakpointWidgets()
+    {
+        for (let {bookmark} of this._inlineBreakpointDataForLine.values())
+            bookmark.clear();
+        this._inlineBreakpointDataForLine.clear();
+    }
+
     _targetAdded(event)
     {
         if (WI.targets.length === 2)
@@ -741,7 +805,7 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
     _addThreadIndicatorForTarget(target)
     {
         let targetData = WI.debuggerManager.dataForTarget(target);
-        let topCallFrame = targetData.callFrames[0];
+        let topCallFrame = targetData.stackTrace?.callFrames[0];
         if (!topCallFrame)
             return;
 
@@ -1038,9 +1102,11 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
         if (this._sourceCode instanceof WI.SourceMapResource)
             return breakpoint.sourceCodeLocation.displaySourceCode === this._sourceCode;
         if (this._sourceCode instanceof WI.Resource)
-            return breakpoint.contentIdentifier === this._sourceCode.contentIdentifier;
-        if (this._sourceCode instanceof WI.Script)
-            return breakpoint.contentIdentifier === this._sourceCode.contentIdentifier || breakpoint.scriptIdentifier === this._sourceCode.id;
+            return breakpoint.contentIdentifier && breakpoint.contentIdentifier === this._sourceCode.contentIdentifier;
+        if (this._sourceCode instanceof WI.Script) {
+            return (breakpoint.contentIdentifier && breakpoint.contentIdentifier === this._sourceCode.contentIdentifier)
+                || (breakpoint.scriptIdentifier && breakpoint.scriptIdentifier === this._sourceCode.id);
+        }
         return false;
     }
 
@@ -1349,17 +1415,21 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
         if (!this._supportsDebugging)
             return;
 
-        var lineInfo = {lineNumber, columnNumber};
-        var breakpoint = this._breakpointForEditorLineInfo(lineInfo);
-        console.assert(breakpoint);
-        if (!breakpoint)
-            return;
+        let breakpointsToRemove = this._breakpointMap[lineNumber];
+        if (!nullish(columnNumber))
+            breakpointsToRemove = {[columnNumber]: breakpointsToRemove[columnNumber]};
+        for (let column in breakpointsToRemove) {
+            let breakpoint = breakpointsToRemove[column];
 
-        this._removeBreakpointWithEditorLineInfo(breakpoint, lineInfo);
+            this._removeBreakpointWithEditorLineInfo(breakpoint, {
+                lineNumber,
+                columnNumber: column,
+            });
 
-        this._ignoreBreakpointRemovedBreakpoint = breakpoint;
-        WI.debuggerManager.removeBreakpoint(breakpoint);
-        this._ignoreBreakpointRemovedBreakpoint = null;
+            this._ignoreBreakpointRemovedBreakpoint = breakpoint;
+            WI.debuggerManager.removeBreakpoint(breakpoint);
+            this._ignoreBreakpointRemovedBreakpoint = null;
+        }
     }
 
     textEditorBreakpointMoved(textEditor, oldLineNumber, oldColumnNumber, newLineNumber, newColumnNumber)
@@ -1395,12 +1465,14 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
         if (!this._supportsDebugging)
             return;
 
-        var breakpoint = this._breakpointForEditorLineInfo({lineNumber, columnNumber});
-        console.assert(breakpoint);
-        if (!breakpoint)
-            return;
+        let breakpointsToToggle = this._breakpointMap[lineNumber];
+        if (!nullish(columnNumber))
+            breakpointsToToggle = {[columnNumber]: breakpointsToToggle[columnNumber]};
+        breakpointsToToggle = Object.values(breakpointsToToggle);
 
-        breakpoint.disabled = !breakpoint.disabled;
+        let shouldEnable = breakpointsToToggle.some((breakpoint) => breakpoint.disabled);
+        for (let breakpoint of breakpointsToToggle)
+            breakpoint.disabled = !shouldEnable;
     }
 
     textEditorUpdatedFormatting(textEditor)
@@ -1632,6 +1704,8 @@ WI.SourceCodeTextEditor = class SourceCodeTextEditor extends WI.TextEditor
 
         // Some breakpoints / issues may have moved, some might not have. Just go through
         // and remove and reinsert all the breakpoints / issues.
+
+        this._removeBreakpointWidgets();
 
         var oldBreakpointMap = this._breakpointMap;
         this._breakpointMap = {};

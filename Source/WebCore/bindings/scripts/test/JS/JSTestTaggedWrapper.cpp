@@ -104,7 +104,7 @@ template<> void JSTestTaggedWrapperDOMConstructor::initializeProperties(VM& vm, 
 
 static const HashTableValue JSTestTaggedWrapperPrototypeTableValues[] =
 {
-    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestTaggedWrapperConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestTaggedWrapperConstructor, 0 } },
 };
 
 const ClassInfo JSTestTaggedWrapperPrototype::s_info = { "TestTaggedWrapper"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestTaggedWrapperPrototype) };
@@ -118,8 +118,8 @@ void JSTestTaggedWrapperPrototype::finishCreation(VM& vm)
 
 const ClassInfo JSTestTaggedWrapper::s_info = { "TestTaggedWrapper"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestTaggedWrapper) };
 
-JSTestTaggedWrapper::JSTestTaggedWrapper(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestTaggedWrapper>&& impl)
-    : JSDOMWrapper<TestTaggedWrapper, SignedPtrTraits<TestTaggedWrapper, TestTaggedWrapperPtrTag>>(structure, globalObject, WTFMove(impl))
+JSTestTaggedWrapper::JSTestTaggedWrapper(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestTaggedWrapper>&& impl, JSC::Butterfly* butterfly)
+    : JSDOMWrapper<TestTaggedWrapper, SignedPtrTraits<TestTaggedWrapper, TestTaggedWrapperPtrTag>>(structure, globalObject, WTFMove(impl), butterfly)
 {
 }
 

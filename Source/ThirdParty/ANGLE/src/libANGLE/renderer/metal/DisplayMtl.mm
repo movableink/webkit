@@ -7,7 +7,9 @@
 // DisplayMtl.mm: Metal implementation of DisplayImpl
 
 #include "libANGLE/renderer/metal/DisplayMtl.h"
+#include <sys/param.h>
 
+#include "common/apple_platform_utils.h"
 #include "common/system_utils.h"
 #include "gpu_info_util/SystemInfo.h"
 #include "libANGLE/Context.h"
@@ -86,16 +88,7 @@ static EGLint GetStencilSize(GLint internalformat)
 
 bool IsMetalDisplayAvailable()
 {
-    // We only support macos 10.13+ and 11 for now. Since they are requirements for Metal 2.0.
-#if TARGET_OS_SIMULATOR
-    if (ANGLE_APPLE_AVAILABLE_XCI(10.13, 13.0, 13))
-#else
-    if (ANGLE_APPLE_AVAILABLE_XCI(10.13, 13.0, 11))
-#endif
-    {
-        return true;
-    }
-    return false;
+    return angle::IsMetalRendererAvailable();
 }
 
 DisplayImpl *CreateMetalDisplay(const egl::DisplayState &state)
@@ -547,7 +540,6 @@ egl::ConfigSet DisplayMtl::generateConfigs()
 #endif
 
     config.renderTargetFormat = GL_RGBA8;
-    config.depthStencilFormat = GL_DEPTH24_STENCIL8;
 
     config.conformant     = EGL_OPENGL_ES2_BIT | (supportsES3 ? EGL_OPENGL_ES3_BIT_KHR : 0);
     config.renderableType = config.conformant;
@@ -571,19 +563,28 @@ egl::ConfigSet DisplayMtl::generateConfigs()
         config.bufferSize = config.redSize + config.greenSize + config.blueSize + config.alphaSize;
 
         // With DS
-        config.depthSize   = 24;
-        config.stencilSize = 8;
+        config.depthSize          = 24;
+        config.stencilSize        = 8;
+        config.depthStencilFormat = GL_DEPTH24_STENCIL8;
 
         configs.add(config);
 
         // With D
-        config.depthSize   = 24;
-        config.stencilSize = 0;
+        config.depthSize          = 24;
+        config.stencilSize        = 0;
+        config.depthStencilFormat = GL_DEPTH_COMPONENT24;
         configs.add(config);
 
         // With S
-        config.depthSize   = 0;
-        config.stencilSize = 8;
+        config.depthSize          = 0;
+        config.stencilSize        = 8;
+        config.depthStencilFormat = GL_STENCIL_INDEX8;
+        configs.add(config);
+
+        // No DS
+        config.depthSize          = 0;
+        config.stencilSize        = 0;
+        config.depthStencilFormat = GL_NONE;
         configs.add(config);
 
         // Tests like dEQP-GLES2.functional.depth_range.* assume EGL_DEPTH_SIZE is properly set even
@@ -707,7 +708,7 @@ void DisplayMtl::ensureCapsInitialized() const
 #endif
 
     mNativeCaps.maxArrayTextureLayers = 2048;
-    mNativeCaps.maxLODBias            = 2.0;  // default GLES3 limit
+    mNativeCaps.maxLODBias            = std::log2(mNativeCaps.max2DTextureSize) + 1;
     mNativeCaps.maxCubeMapTextureSize = mNativeCaps.max2DTextureSize;
     mNativeCaps.maxRenderbufferSize   = mNativeCaps.max2DTextureSize;
     mNativeCaps.minAliasedPointSize   = 1;
@@ -727,12 +728,42 @@ void DisplayMtl::ensureCapsInitialized() const
     mNativeCaps.minAliasedLineWidth = 1.0f;
     mNativeCaps.maxAliasedLineWidth = 1.0f;
 
-    mNativeCaps.maxDrawBuffers       = mtl::kMaxRenderTargets;
+    if (supportsEitherGPUFamily(2, 1) && !mFeatures.limitMaxDrawBuffersForTesting.enabled)
+    {
+        mNativeCaps.maxDrawBuffers      = mtl::kMaxRenderTargets;
+        mNativeCaps.maxColorAttachments = mtl::kMaxRenderTargets;
+    }
+    else
+    {
+        mNativeCaps.maxDrawBuffers      = mtl::kMaxRenderTargetsOlderGPUFamilies;
+        mNativeCaps.maxColorAttachments = mtl::kMaxRenderTargetsOlderGPUFamilies;
+    }
+    ASSERT(static_cast<uint32_t>(mNativeCaps.maxDrawBuffers) <= mtl::kMaxRenderTargets);
+    ASSERT(static_cast<uint32_t>(mNativeCaps.maxColorAttachments) <= mtl::kMaxRenderTargets);
+
     mNativeCaps.maxFramebufferWidth  = mNativeCaps.max2DTextureSize;
     mNativeCaps.maxFramebufferHeight = mNativeCaps.max2DTextureSize;
-    mNativeCaps.maxColorAttachments  = mtl::kMaxRenderTargets;
     mNativeCaps.maxViewportWidth     = mNativeCaps.max2DTextureSize;
     mNativeCaps.maxViewportHeight    = mNativeCaps.max2DTextureSize;
+
+    bool isCatalyst = TARGET_OS_MACCATALYST;
+
+    mMaxColorTargetBits = mtl::kMaxColorTargetBitsApple1To3;
+    if (supportsMacGPUFamily(1) || isCatalyst)
+    {
+        mMaxColorTargetBits = mtl::kMaxColorTargetBitsMacAndCatalyst;
+    }
+    else if (supportsAppleGPUFamily(4))
+    {
+        mMaxColorTargetBits = mtl::kMaxColorTargetBitsApple4Plus;
+    }
+
+    if (mFeatures.limitMaxColorTargetBitsForTesting.enabled)
+    {
+        // Set so we have enough for RGBA8 on every attachment
+        // but not enough for RGBA32UI.
+        mMaxColorTargetBits = mNativeCaps.maxColorAttachments * 32;
+    }
 
     // MSAA
     mNativeCaps.maxSamples             = mFormatTable.getMaxSamples();
@@ -853,11 +884,6 @@ void DisplayMtl::ensureCapsInitialized() const
     {
         mNativeLimitations.noCompressedTexture3D = true;
     }
-
-    // Direct-to-metal constants:
-    mNativeCaps.driverUniformsBindingIndex    = mtl::kDriverUniformsBindingIndex;
-    mNativeCaps.defaultUniformsBindingIndex   = mtl::kDefaultUniformsBindingIndex;
-    mNativeCaps.UBOArgumentBufferBindingIndex = mtl::kUBOArgumentBufferBindingIndex;
 }
 
 void DisplayMtl::initializeExtensions() const
@@ -975,9 +1001,14 @@ void DisplayMtl::initializeExtensions() const
     // GL_KHR_parallel_shader_compile
     mNativeExtensions.parallelShaderCompileKHR = true;
 
+    mNativeExtensions.baseInstanceEXT             = mFeatures.hasBaseVertexInstancedDraw.enabled;
     mNativeExtensions.baseVertexBaseInstanceANGLE = mFeatures.hasBaseVertexInstancedDraw.enabled;
     mNativeExtensions.baseVertexBaseInstanceShaderBuiltinANGLE =
         mFeatures.hasBaseVertexInstancedDraw.enabled;
+
+    // Metal uses the opposite provoking vertex as GLES so emulation is required to use the GLES
+    // behaviour. Allow users to change the provoking vertex for improved performance.
+    mNativeExtensions.provokingVertexANGLE = true;
 }
 
 void DisplayMtl::initializeTextureCaps() const
@@ -1000,6 +1031,10 @@ void DisplayMtl::initializeTextureCaps() const
     {
         mNativeLimitations.emulatedEtc1 = true;
     }
+
+    // Enable EXT_compressed_ETC1_RGB8_sub_texture if ETC1 is supported.
+    mNativeExtensions.compressedETC1RGB8SubTextureEXT =
+        mNativeExtensions.compressedETC1RGB8TextureOES;
 
     // Enable ASTC sliced 3D, requires MTLGPUFamilyApple3
     if (supportsAppleGPUFamily(3) && mNativeExtensions.textureCompressionAstcLdrKHR)
@@ -1041,7 +1076,7 @@ void DisplayMtl::initializeFeatures()
     bool isOSX       = TARGET_OS_OSX;
     bool isCatalyst  = TARGET_OS_MACCATALYST;
     bool isSimulator = TARGET_OS_SIMULATOR;
-    bool isARM       = ANGLE_MTL_ARM;
+    bool isARM       = ANGLE_APPLE_IS_ARM;
 
     ANGLE_FEATURE_CONDITION((&mFeatures), allowGenMultipleMipsPerPass, true);
     ANGLE_FEATURE_CONDITION((&mFeatures), forceBufferGPUStorage, false);

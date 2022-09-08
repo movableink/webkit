@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "CacheStorageConnection.h"
 #include "ClientOrigin.h"
 #include "ImageBitmap.h"
+#include "ReportingClient.h"
 #include "ScriptExecutionContext.h"
 #include "Supplementable.h"
 #include "WindowOrWorkerGlobalScope.h"
@@ -55,6 +56,7 @@ class FileSystemStorageConnection;
 class FontFaceSet;
 class MessagePortChannelProvider;
 class Performance;
+class ReportingScope;
 class ScheduledAction;
 class ScriptBuffer;
 class ScriptBufferSourceProvider;
@@ -69,11 +71,13 @@ class WorkerStorageConnection;
 class WorkerThread;
 struct WorkerParameters;
 
+enum class ViolationReportType : uint8_t;
+
 namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-class WorkerGlobalScope : public Supplementable<WorkerGlobalScope>, public Base64Utilities, public WindowOrWorkerGlobalScope, public WorkerOrWorkletGlobalScope {
+class WorkerGlobalScope : public Supplementable<WorkerGlobalScope>, public Base64Utilities, public WindowOrWorkerGlobalScope, public WorkerOrWorkletGlobalScope, public ReportingClient {
     WTF_MAKE_ISO_ALLOCATED(WorkerGlobalScope);
 public:
     virtual ~WorkerGlobalScope();
@@ -82,6 +86,7 @@ public:
     virtual Type type() const = 0;
 
     const URL& url() const final { return m_url; }
+    const URL& ownerURL() const { return m_ownerURL; }
     String origin() const;
     const String& inspectorIdentifier() const { return m_inspectorIdentifier; }
 
@@ -89,8 +94,9 @@ public:
     void suspend() final;
     void resume() final;
 
-    using WeakValueType = EventTarget::WeakValueType;
     using EventTarget::weakPtrFactory;
+    using EventTarget::WeakValueType;
+    using EventTarget::WeakPtrImplType;
     WorkerStorageConnection& storageConnection();
     static void postFileSystemStorageTask(Function<void()>&&);
     WorkerFileSystemStorageConnection& getFileSystemStorageConnection(Ref<FileSystemStorageConnection>&&);
@@ -133,6 +139,7 @@ public:
 
     Crypto& crypto();
     Performance& performance() const;
+    ReportingScope& reportingScope() const { return m_reportingScope.get(); }
 
     void prepareForDestruction() override;
 
@@ -197,7 +204,12 @@ private:
 
     void stopIndexedDatabase();
 
+    void notifyReportObservers(Ref<Report>&&) final;
+    String endpointURIForToken(const String&) const final;
+    void sendReportToEndpoints(const URL& baseURL, Vector<String>&& endPoints, Ref<FormData>&& report, ViolationReportType) final;
+
     URL m_url;
+    URL m_ownerURL;
     String m_inspectorIdentifier;
     String m_userAgent;
 
@@ -214,6 +226,7 @@ private:
     RefPtr<SocketProvider> m_socketProvider;
 
     RefPtr<Performance> m_performance;
+    Ref<ReportingScope> m_reportingScope;
     mutable RefPtr<Crypto> m_crypto;
 
     WeakPtr<ScriptBufferSourceProvider> m_mainScriptSourceProvider;

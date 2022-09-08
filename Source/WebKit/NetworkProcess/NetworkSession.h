@@ -177,7 +177,7 @@ public:
     PrefetchCache& prefetchCache() { return m_prefetchCache; }
     void clearPrefetchCache() { m_prefetchCache.clear(); }
 
-    virtual std::unique_ptr<WebSocketTask> createWebSocketTask(WebPageProxyIdentifier, NetworkSocketChannel&, const WebCore::ResourceRequest&, const String& protocol, const WebCore::ClientOrigin&, bool hadMainFrameMainResourcePrivateRelayed);
+    virtual std::unique_ptr<WebSocketTask> createWebSocketTask(WebPageProxyIdentifier, NetworkSocketChannel&, const WebCore::ResourceRequest&, const String& protocol, const WebCore::ClientOrigin&, bool hadMainFrameMainResourcePrivateRelayed, bool allowPrivacyProxy);
     virtual void removeWebSocketTask(SessionSet&, WebSocketTask&) { }
     virtual void addWebSocketTask(WebPageProxyIdentifier, WebSocketTask&) { }
 
@@ -212,8 +212,7 @@ public:
     WebSharedWorkerServer& ensureSharedWorkerServer();
 
     NetworkStorageManager& storageManager() { return m_storageManager.get(); }
-    CacheStorage::Engine* cacheEngine() { return m_cacheEngine.get(); }
-    void ensureCacheEngine(Function<void(CacheStorage::Engine&)>&&);
+    CacheStorage::Engine& ensureCacheEngine();
     void clearCacheEngine();
 
     NetworkLoadScheduler& networkLoadScheduler();
@@ -241,6 +240,10 @@ public:
     
 #if !HAVE(NSURLSESSION_WEBSOCKET)
     bool shouldAcceptInsecureCertificatesForWebSockets() const { return m_shouldAcceptInsecureCertificatesForWebSockets; }
+#endif
+
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+    void setEmulatedConditions(std::optional<int64_t>&& bytesPerSecondLimit);
 #endif
 
 protected:
@@ -315,6 +318,7 @@ protected:
     std::unique_ptr<WebSharedWorkerServer> m_sharedWorkerServer;
 
     Ref<NetworkStorageManager> m_storageManager;
+    String m_cacheStorageDirectory;
     RefPtr<CacheStorage::Engine> m_cacheEngine;
     Vector<Function<void(CacheStorage::Engine&)>> m_cacheStorageParametersCallbacks;
 
@@ -329,6 +333,9 @@ protected:
 #endif
 #if !HAVE(NSURLSESSION_WEBSOCKET)
     bool m_shouldAcceptInsecureCertificatesForWebSockets { false };
+#endif
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+    std::optional<int64_t> m_bytesPerSecondLimit;
 #endif
 };
 

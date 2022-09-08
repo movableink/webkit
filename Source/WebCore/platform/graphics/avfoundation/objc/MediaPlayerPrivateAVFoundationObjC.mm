@@ -1557,6 +1557,8 @@ void MediaPlayerPrivateAVFoundationObjC::currentMediaTimeDidChange(MediaTime&& t
 
 void MediaPlayerPrivateAVFoundationObjC::seekToTime(const MediaTime& time, const MediaTime& negativeTolerance, const MediaTime& positiveTolerance)
 {
+    ASSERT(time.isFinite());
+    
     // setCurrentTime generates several event callbacks, update afterwards.
     setDelayCallbacks(true);
 
@@ -1567,9 +1569,11 @@ void MediaPlayerPrivateAVFoundationObjC::seekToTime(const MediaTime& time, const
     CMTime cmBefore = PAL::toCMTime(negativeTolerance);
     CMTime cmAfter = PAL::toCMTime(positiveTolerance);
 
-    // [AVPlayerItem seekToTime] will throw an exception if toleranceBefore is negative.
-    if (PAL::CMTimeCompare(cmBefore, PAL::kCMTimeZero) < 0)
-        cmBefore = PAL::kCMTimeZero;
+    // [AVPlayerItem seekToTime] will throw an exception if a tolerance is invalid or negative.
+    if (!CMTIME_IS_VALID(cmBefore) || PAL::CMTimeCompare(cmBefore, PAL::kCMTimeZero) < 0)
+        cmBefore = PAL::kCMTimePositiveInfinity;
+    if (!CMTIME_IS_VALID(cmAfter) || PAL::CMTimeCompare(cmAfter, PAL::kCMTimeZero) < 0)
+        cmAfter = PAL::kCMTimePositiveInfinity;
     
     WeakPtr weakThis { *this };
 
@@ -1830,10 +1834,28 @@ std::optional<bool> MediaPlayerPrivateAVFoundationObjC::allTracksArePlayable() c
         return std::nullopt;
 
     for (AVAssetTrack *assetTrack : [m_avAsset tracks]) {
-        if (!trackIsPlayable(assetTrack))
+        if ([assetTrack isEnabled] && !trackIsPlayable(assetTrack))
             return false;
     }
     return true;
+}
+
+bool MediaPlayerPrivateAVFoundationObjC::containsDisabledTracks() const
+{
+    if (m_avPlayerItem) {
+        for (AVPlayerItemTrack *track in [m_avPlayerItem tracks]) {
+            if (![track isEnabled])
+                return true;
+        }
+        return false;
+    }
+
+    ASSERT(m_avAsset);
+    for (AVAssetTrack *assetTrack : [m_avAsset tracks]) {
+        if (![assetTrack isEnabled])
+            return true;
+    }
+    return false;
 }
 
 bool MediaPlayerPrivateAVFoundationObjC::trackIsPlayable(AVAssetTrack* track) const
@@ -1922,7 +1944,7 @@ MediaPlayerPrivateAVFoundation::AssetStatus MediaPlayerPrivateAVFoundationObjC::
     }
 
     if (!m_cachedAssetIsPlayable)
-        m_cachedAssetIsPlayable = [[m_avAsset valueForKey:@"playable"] boolValue];
+        m_cachedAssetIsPlayable = [[m_avAsset valueForKey:@"playable"] boolValue] || containsDisabledTracks();
 
     if (*m_cachedAssetIsPlayable && *m_cachedTracksArePlayable)
         return MediaPlayerAVAssetStatusPlayable;
@@ -2681,8 +2703,9 @@ bool MediaPlayerPrivateAVFoundationObjC::videoOutputHasAvailableFrame()
     if (m_lastImage)
         return true;
 
+    createVideoOutput();
     if (!m_videoOutput)
-        createVideoOutput();
+        return false;
 
     return m_videoOutput->hasImageForTime(PAL::toMediaTime([m_avPlayerItem currentTime]));
 }
@@ -3041,7 +3064,7 @@ void MediaPlayerPrivateAVFoundationObjC::processMediaSelectionOptions()
         }
 #endif
 
-        m_textTracks.append(InbandTextTrackPrivateAVFObjC::create(this, option, InbandTextTrackPrivate::CueFormat::Generic));
+        m_textTracks.append(InbandTextTrackPrivateAVFObjC::create(this, legibleGroup, option, InbandTextTrackPrivate::CueFormat::Generic));
     }
 
     processNewAndRemovedTextTracks(removedTextTracks);

@@ -1907,6 +1907,37 @@ template<> inline CSSPrimitiveValue::operator OverscrollBehavior() const
     return OverscrollBehavior::Auto;
 }
 
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(OverflowAnchor anchor)
+    : CSSValue(PrimitiveClass)
+{
+    setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
+    switch (anchor) {
+    case OverflowAnchor::None:
+        m_value.valueID = CSSValueNone;
+        break;
+    case OverflowAnchor::Auto:
+        m_value.valueID = CSSValueAuto;
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator OverflowAnchor() const
+{
+    ASSERT(isValueID());
+
+    switch (m_value.valueID) {
+    case CSSValueNone:
+        return OverflowAnchor::None;
+    case CSSValueAuto:
+        return OverflowAnchor::Auto;
+    default:
+        break;
+    }
+
+    ASSERT_NOT_REACHED();
+    return OverflowAnchor::Auto;
+}
+
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(BreakBetween e)
     : CSSValue(PrimitiveClass)
 {
@@ -5576,8 +5607,8 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ContainerType containerTy
 {
     setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
     switch (containerType) {
-    case ContainerType::None:
-        m_value.valueID = CSSValueNone;
+    case ContainerType::Normal:
+        m_value.valueID = CSSValueNormal;
         break;
     case ContainerType::Size:
         m_value.valueID = CSSValueSize;
@@ -5592,8 +5623,8 @@ template<> inline CSSPrimitiveValue::operator ContainerType() const
 {
     ASSERT(isValueID());
     switch (m_value.valueID) {
-    case CSSValueNone:
-        return ContainerType::None;
+    case CSSValueNormal:
+        return ContainerType::Normal;
     case CSSValueSize:
         return ContainerType::Size;
     case CSSValueInlineSize:
@@ -5602,7 +5633,45 @@ template<> inline CSSPrimitiveValue::operator ContainerType() const
         break;
     }
     ASSERT_NOT_REACHED();
-    return ContainerType::None;
+    return ContainerType::Normal;
+}
+
+constexpr CSSValueID toCSSValueID(ContentVisibility contentVisibility)
+{
+    switch (contentVisibility) {
+    case ContentVisibility::Visible:
+        return CSSValueVisible;
+    case ContentVisibility::Hidden:
+        return CSSValueHidden;
+    case ContentVisibility::Auto:
+        return CSSValueAuto;
+    }
+    ASSERT_NOT_REACHED();
+    return CSSValueVisible;
+}
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ContentVisibility contentVisibility)
+    : CSSValue(PrimitiveClass)
+{
+    setPrimitiveUnitType(CSSUnitType::CSS_VALUE_ID);
+    m_value.valueID = toCSSValueID(contentVisibility);
+}
+
+template<> inline CSSPrimitiveValue::operator ContentVisibility() const
+{
+    ASSERT(isValueID());
+    switch (m_value.valueID) {
+    case CSSValueVisible:
+        return ContentVisibility::Visible;
+    case CSSValueHidden:
+        return ContentVisibility::Hidden;
+    case CSSValueAuto:
+        return ContentVisibility::Auto;
+    default:
+        break;
+    }
+    ASSERT_NOT_REACHED();
+    return ContentVisibility::Visible;
 }
 
 }

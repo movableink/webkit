@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutRect.h"
 
 namespace WebCore {
@@ -37,7 +35,6 @@ public:
     FlexRect() = default;
     FlexRect(LayoutUnit top, LayoutUnit left, LayoutUnit width, LayoutUnit height);
     FlexRect(const LayoutRect&);
-    FlexRect(const LayoutSize&);
     
     LayoutUnit top() const;
     LayoutUnit left() const;
@@ -102,15 +99,6 @@ inline FlexRect::FlexRect(LayoutUnit top, LayoutUnit left, LayoutUnit width, Lay
 inline FlexRect::FlexRect(const LayoutRect& rect)
     : FlexRect(rect.y(), rect.x(), rect.width(), rect.height())
 {
-}
-
-inline FlexRect::FlexRect(const LayoutSize& size)
-    : m_rect({ }, size)
-{
-#if ASSERT_ENABLED
-    m_hasValidWidth = true;
-    m_hasValidHeight = true;
-#endif
 }
 
 #if ASSERT_ENABLED
@@ -265,4 +253,3 @@ inline FlexRect::operator LayoutRect() const
 
 }
 }
-#endif

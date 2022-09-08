@@ -54,6 +54,12 @@ bool defaultCSSOMViewScrollingAPIEnabled()
     return !result;
 }
 
+bool defaultShouldPrintBackgrounds()
+{
+    static bool result = !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DefaultsToExcludingBackgroundsWhenPrinting);
+    return result;
+}
+
 #if !USE(APPLE_INTERNAL_SDK)
 bool defaultAlternateFormControlDesignEnabled()
 {
@@ -146,6 +152,16 @@ bool defaultCaptureAudioInUIProcessEnabled()
     return false;
 }
 
+bool defaultManageCaptureStatusBarInGPUProcessEnabled()
+{
+#if PLATFORM(IOS_FAMILY)
+    // FIXME: Enable by default for all applications.
+    return !WebCore::IOSApplication::isMobileSafari() && !WebCore::IOSApplication::isSafariViewService();
+#else
+    return false;
+#endif
+}
+
 #endif // ENABLE(MEDIA_STREAM)
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
@@ -162,5 +178,15 @@ bool defaultMediaSessionCoordinatorEnabled()
     return enabled;
 }
 #endif
+
+bool defaultShowModalDialogEnabled()
+{
+#if PLATFORM(COCOA)
+    static bool newSDK = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoShowModalDialog);
+    return !newSDK;
+#else
+    return false;
+#endif
+}
 
 } // namespace WebKit

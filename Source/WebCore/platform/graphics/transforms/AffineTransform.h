@@ -27,6 +27,7 @@
 #pragma once
 
 #include "CompositeOperation.h"
+#include "FloatConversion.h"
 #include "FloatPoint.h"
 #include "FloatSize.h"
 #include <array>
@@ -59,8 +60,8 @@ class TransformationMatrix;
 class AffineTransform {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT AffineTransform();
-    WEBCORE_EXPORT AffineTransform(double a, double b, double c, double d, double e, double f);
+    constexpr AffineTransform();
+    constexpr AffineTransform(double a, double b, double c, double d, double e, double f);
 
 #if USE(CG)
     WEBCORE_EXPORT AffineTransform(const CGAffineTransform&);
@@ -154,14 +155,24 @@ public:
         return (m_transform[1] == 0 && m_transform[2] == 0) || (m_transform[0] == 0 && m_transform[3] == 0);
     }
 
-    bool operator== (const AffineTransform& m2) const
+    bool isEssentiallyEqualToAsFloats(const AffineTransform& m2) const
+    {
+        return WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[0]), narrowPrecisionToFloat(m2.m_transform[0]))
+            && WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[1]), narrowPrecisionToFloat(m2.m_transform[1]))
+            && WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[2]), narrowPrecisionToFloat(m2.m_transform[2]))
+            && WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[3]), narrowPrecisionToFloat(m2.m_transform[3]))
+            && WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[4]), narrowPrecisionToFloat(m2.m_transform[4]))
+            && WTF::areEssentiallyEqual(narrowPrecisionToFloat(m_transform[5]), narrowPrecisionToFloat(m2.m_transform[5]));
+    }
+
+    bool operator==(const AffineTransform& m2) const
     {
         return (m_transform[0] == m2.m_transform[0]
-             && m_transform[1] == m2.m_transform[1]
-             && m_transform[2] == m2.m_transform[2]
-             && m_transform[3] == m2.m_transform[3]
-             && m_transform[4] == m2.m_transform[4]
-             && m_transform[5] == m2.m_transform[5]);
+            && m_transform[1] == m2.m_transform[1]
+            && m_transform[2] == m2.m_transform[2]
+            && m_transform[3] == m2.m_transform[3]
+            && m_transform[4] == m2.m_transform[4]
+            && m_transform[5] == m2.m_transform[5]);
     }
 
     bool operator!=(const AffineTransform& other) const { return !(*this == other); }
@@ -222,5 +233,17 @@ private:
 WEBCORE_EXPORT AffineTransform makeMapBetweenRects(const FloatRect& source, const FloatRect& dest);
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const AffineTransform&);
+
+constexpr AffineTransform::AffineTransform()
+    : m_transform { { 1, 0, 0, 1, 0, 0 } }
+{
+}
+
+constexpr AffineTransform::AffineTransform(double a, double b, double c, double d, double e, double f)
+    : m_transform { { a, b, c, d, e, f } }
+{
+}
+
+static constexpr inline AffineTransform identity;
 
 }

@@ -1,4 +1,4 @@
-// Copyright (C) 2010-2016 Apple Inc. All rights reserved.
+// Copyright (C) 2010-2022 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -21,7 +21,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 
-#include "WebKitTargetConditionals.xcconfig"
+#include "../../../Configurations/WebKitTargetConditionals.xcconfig"
 
 PRODUCT_NAME = TestWebKitAPI;
 PRODUCT_BUNDLE_IDENTIFIER = com.apple.WebKit.TestWebKitAPI;
@@ -118,6 +118,7 @@ STRIP_STYLE = debugging;
 CODE_SIGN_IDENTITY[sdk=macosx*] = $(CODE_SIGN_IDENTITY_$(CONFIGURATION));
 CODE_SIGN_IDENTITY_Debug = $(CODE_SIGN_IDENTITY_$(USE_INTERNAL_SDK));
 CODE_SIGN_IDENTITY_Release = $(CODE_SIGN_IDENTITY_$(USE_INTERNAL_SDK));
+CODE_SIGN_IDENTITY_ = -;
 CODE_SIGN_IDENTITY_YES = $(WK_ENGINEERING_CODE_SIGN_IDENTITY);
 CODE_SIGN_IDENTITY_Production = $(CODE_SIGN_IDENTITY_Production_$(USE_INTERNAL_SDK));
 CODE_SIGN_IDENTITY_Production_YES = -;

@@ -134,16 +134,13 @@ TEST(NetworkProcess, CrashWhenNotAssociatedWithDataStore)
     EXPECT_NE(networkProcessPID, [webView configuration].websiteDataStore._networkProcessIdentifier);
 }
 
-TEST(NetworkProcess, TerminateWhenUnused)
+TEST(NetworkProcess, TerminateWhenNoWebsiteDataStore)
 {
-    RetainPtr<WKProcessPool> retainedPool;
     pid_t networkProcessIdentifier = 0;
-
     @autoreleasepool {
         auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
         auto nonPersistentStore = [WKWebsiteDataStore nonPersistentDataStore];
         configuration.get().websiteDataStore = nonPersistentStore;
-        retainedPool = configuration.get().processPool;
         auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0) configuration:configuration.get()]);
         [webView synchronouslyLoadTestPageNamed:@"simple"];
         EXPECT_TRUE([WKWebsiteDataStore _defaultNetworkProcessExists]);
@@ -156,8 +153,11 @@ TEST(NetworkProcess, TerminateWhenUnused)
         TestWebKitAPI::Util::spinRunLoop();
     EXPECT_TRUE(errno == ESRCH);
     EXPECT_FALSE([WKWebsiteDataStore _defaultNetworkProcessExists]);
+}
 
-    retainedPool = nil;
+TEST(NetworkProcess, TerminateWhenNoDefaultWebsiteDataStore)
+{
+    pid_t networkProcessIdentifier = 0;
     @autoreleasepool {
         auto webView = adoptNS([WKWebView new]);
         [webView synchronouslyLoadTestPageNamed:@"simple"];
@@ -166,6 +166,8 @@ TEST(NetworkProcess, TerminateWhenUnused)
         networkProcessIdentifier = [webView.get().configuration.websiteDataStore _networkProcessIdentifier];
         EXPECT_NE(networkProcessIdentifier, 0);
     }
+
+    [WKWebsiteDataStore _deleteDefaultDataStoreForTesting];
 
     while (!kill(networkProcessIdentifier, 0))
         TestWebKitAPI::Util::spinRunLoop();
@@ -694,3 +696,48 @@ TEST(_WKDataTask, Crash)
 }
 
 #endif // HAVE(NSURLSESSION_TASK_DELEGATE)
+
+TEST(WKWebView, CrossOriginDoubleRedirectAuthentication)
+{
+    using namespace TestWebKitAPI;
+    bool done { false };
+
+    auto hasAuthorizationHeaderField = [] (const Vector<char>& request) {
+        const char* field = "Authorization: TestValue\r\n";
+        return memmem(request.data(), request.size(), field, strlen(field));
+    };
+
+    HTTPServer server(HTTPServer::UseCoroutines::Yes, [&](Connection connection) -> Task {
+        while (true) {
+            auto request = co_await connection.awaitableReceiveHTTPRequest();
+            auto path = HTTPServer::parsePath(request);
+            if (path == "http://example.com/original-target"_s) {
+                EXPECT_TRUE(hasAuthorizationHeaderField(request));
+                co_await connection.awaitableSend(HTTPResponse(302, { { "Location"_s, "http://not-example.com/first-redirect"_s } }, { }).serialize());
+            } else if (path == "http://not-example.com/first-redirect"_s) {
+                EXPECT_FALSE(hasAuthorizationHeaderField(request));
+                co_await connection.awaitableSend(HTTPResponse(302, { { "Location"_s, "http://not-example.com/second-redirect"_s } }, { }).serialize());
+            } else if (path == "http://not-example.com/second-redirect"_s) {
+                EXPECT_FALSE(hasAuthorizationHeaderField(request));
+                done = true;
+            } else
+                EXPECT_FALSE(true);
+        }
+    });
+
+    auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] initNonPersistentConfiguration]);
+    [storeConfiguration setProxyConfiguration:@{
+        (NSString *)kCFStreamPropertyHTTPProxyHost: @"127.0.0.1",
+        (NSString *)kCFStreamPropertyHTTPProxyPort: @(server.port())
+    }];
+    auto dataStore = adoptNS([[WKWebsiteDataStore alloc] _initWithConfiguration:storeConfiguration.get()]);
+    auto viewConfiguration = adoptNS([WKWebViewConfiguration new]);
+    [viewConfiguration setWebsiteDataStore:dataStore.get()];
+
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"http://example.com/original-target"]];
+    [request setValue:@"TestValue" forHTTPHeaderField:@"Authorization"];
+
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSZeroRect configuration:viewConfiguration.get()]);
+    [webView loadRequest:request];
+    Util::run(&done);
+}

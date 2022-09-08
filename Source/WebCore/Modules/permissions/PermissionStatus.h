@@ -35,10 +35,9 @@
 
 namespace WebCore {
 
-class PermissionController;
 class ScriptExecutionContext;
 
-class PermissionStatus final : public PermissionObserver, public ActiveDOMObject, public RefCounted<PermissionStatus>, public EventTargetWithInlineData  {
+class PermissionStatus final : public PermissionObserver, public ActiveDOMObject, public RefCounted<PermissionStatus>, public EventTarget  {
     WTF_MAKE_ISO_ALLOCATED(PermissionStatus);
 public:
     static Ref<PermissionStatus> create(ScriptExecutionContext&, PermissionState, const PermissionDescriptor&);
@@ -51,15 +50,18 @@ public:
     using RefCounted::deref;
 
     using PermissionObserver::weakPtrFactory;
-    using WeakValueType = PermissionObserver::WeakValueType;
+    using PermissionObserver::WeakValueType;
+    using PermissionObserver::WeakPtrImplType;
 
 private:
     PermissionStatus(ScriptExecutionContext&, PermissionState, const PermissionDescriptor&);
 
     // PermissionObserver
+    PermissionState currentState() const final { return m_state; }
     void stateChanged(PermissionState) final;
     const ClientOrigin& origin() const final { return m_origin; }
     const PermissionDescriptor& descriptor() const final { return m_descriptor; }
+    const ScriptExecutionContext* context() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
     // ActiveDOMObject
     const char* activeDOMObjectName() const final;
@@ -75,7 +77,6 @@ private:
     PermissionState m_state;
     PermissionDescriptor m_descriptor;
     ClientOrigin m_origin;
-    RefPtr<PermissionController> m_controller;
     std::atomic<bool> m_hasChangeEventListener;
 };
 

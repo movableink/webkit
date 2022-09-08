@@ -24,6 +24,7 @@
 accessibility/atspi/AccessibilityAtspi.cpp
 accessibility/atspi/AccessibilityObjectAtspi.cpp
 accessibility/atspi/AccessibilityObjectActionAtspi.cpp
+accessibility/atspi/AccessibilityObjectCollectionAtspi.cpp
 accessibility/atspi/AccessibilityObjectComponentAtspi.cpp
 accessibility/atspi/AccessibilityObjectDocumentAtspi.cpp
 accessibility/atspi/AccessibilityObjectHyperlinkAtspi.cpp
@@ -61,6 +62,9 @@ platform/UserAgentQuirks.cpp
 platform/adwaita/ScrollbarThemeAdwaita.cpp
 platform/adwaita/ThemeAdwaita.cpp
 
+platform/gamepad/wpe/WPEGamepad.cpp
+platform/gamepad/wpe/WPEGamepadProvider.cpp
+
 platform/generic/ScrollbarsControllerGeneric.cpp
 
 platform/graphics/ANGLEWebKitBridge.cpp
@@ -74,6 +78,8 @@ platform/graphics/egl/GLContextEGLLibWPE.cpp
 
 platform/graphics/gbm/GBMBufferSwapchain.cpp
 platform/graphics/gbm/GBMDevice.cpp
+platform/graphics/gbm/GraphicsContextGLANGLELinux.cpp
+platform/graphics/gbm/GraphicsContextGLFallback.cpp
 platform/graphics/gbm/GraphicsContextGLGBM.cpp
 platform/graphics/gbm/GraphicsContextGLGBMTextureMapper.cpp
 

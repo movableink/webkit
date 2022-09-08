@@ -380,9 +380,6 @@ public:
     void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&);
     void didWriteSelectionToPasteboard();
 
-    void showFontPanel();
-    void showStylesPanel();
-    void showColorPanel();
     void toggleBold();
     void toggleUnderline();
     WEBCORE_EXPORT void setBaseWritingDirection(WritingDirection);
@@ -634,8 +631,6 @@ private:
 
     std::optional<SimpleRange> adjustedSelectionRange();
 
-    bool isInSubframeWithoutUserInteraction() const;
-
 #if PLATFORM(COCOA)
     RefPtr<SharedBuffer> selectionInWebArchiveFormat();
     String selectionInHTMLFormat();
@@ -650,9 +645,6 @@ private:
 #if ENABLE(ATTACHMENT_ELEMENT)
     void notifyClientOfAttachmentUpdates();
 #endif
-
-    bool stopTextFieldDidBeginEditingTimer();
-    void textFieldDidBeginEditingTimerFired();
 
     String platformContentTypeForBlobType(const String& type) const;
 
@@ -696,8 +688,6 @@ private:
     DeferrableOneShotTimer m_telephoneNumberDetectionUpdateTimer;
     Vector<SimpleRange> m_detectedTelephoneNumberRanges;
 #endif
-
-    Timer m_textFieldDidBeginEditingTimer;
 
     mutable std::unique_ptr<ScrollView::ProhibitScrollingWhenChangingContentSizeForScope> m_prohibitScrollingDueToContentSizeChangesWhileTyping;
 

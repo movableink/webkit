@@ -43,6 +43,7 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
 {
     const auto& signature = *typeDefinition.as<FunctionSignature>();
     auto boxWasmResult = [](CCallHelpers& jit, Type type, ValueLocation src, JSValueRegs dst) {
+        JIT_COMMENT(jit, "boxWasmResult ", type);
         switch (type.kind) {
         case TypeKind::Void:
             jit.moveTrustedValue(jsUndefined(), dst);
@@ -66,7 +67,7 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
             break;
         }
         default: {
-            if (isFuncref(type) || isExternref(type))
+            if (isRefType(type))
                 jit.moveValueRegs(src.jsr(), dst);
             else
                 jit.breakpoint();
@@ -74,10 +75,24 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
         }
     };
 
+    // GC support is experimental and currently will throw a runtime error when struct
+    // and array type indices are exported via a function signature to JS.
+    if (Options::useWebAssemblyGC() && (wasmFrameConvention.argumentsIncludeGCTypeIndex || wasmFrameConvention.resultsIncludeGCTypeIndex)) {
+        GPRReg wasmContextInstanceGPR = PinnedRegisterInfo::get().wasmContextInstancePointer;
+        if (Context::useFastTLS()) {
+            wasmContextInstanceGPR = GPRInfo::argumentGPR2;
+            jit.loadWasmContextInstance(wasmContextInstanceGPR);
+        }
+
+        emitThrowWasmToJSException(jit, wasmContextInstanceGPR, ExceptionType::InvalidGCTypeUse);
+        return;
+    }
+
     if (signature.returnsVoid())
         jit.moveTrustedValue(jsUndefined(), JSRInfo::returnValueJSR);
     else if (signature.returnCount() == 1) {
         if (signature.returnType(0).isI64()) {
+            JIT_COMMENT(jit, "convert wasm return to big int");
             JSValueRegs inputJSR = wasmFrameConvention.results[0].jsr();
             GPRReg wasmContextInstanceGPR = PinnedRegisterInfo::get().wasmContextInstancePointer;
             if (Context::useFastTLS()) {
@@ -87,7 +102,7 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
                 jit.loadWasmContextInstance(wasmContextInstanceGPR);
             }
             jit.setupArguments<decltype(operationConvertToBigInt)>(wasmContextInstanceGPR, inputJSR);
-            jit.callOperation(FunctionPtr<OperationPtrTag>(operationConvertToBigInt));
+            jit.callOperation(operationConvertToBigInt);
         } else
             boxWasmResult(jit, signature.returnType(0), wasmFrameConvention.results[0], JSRInfo::returnValueJSR);
     } else {
@@ -107,6 +122,7 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
 
         // We can use the first floating point register as a scratch since it will always be moved onto the stack before other values.
         FPRReg fprScratch = wasmCallingConvention().fprArgs[0];
+        JIT_COMMENT(jit, "scratchFPR: ", fprScratch, " - Scratch jsr: ", scratchJSR, " - saved result registers: ", savedResultRegisters);
         bool hasI64 = false;
         for (unsigned i = 0; i < signature.returnCount(); ++i) {
             ValueLocation loc = wasmFrameConvention.results[i];
@@ -202,7 +218,7 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
 
                 jit.loadValue(address, valueJSR);
                 jit.setupArguments<decltype(operationConvertToBigInt)>(wasmContextInstanceGPR, valueJSR);
-                jit.callOperation(FunctionPtr<OperationPtrTag>(operationConvertToBigInt));
+                jit.callOperation(operationConvertToBigInt);
                 jit.storeValue(JSRInfo::returnValueJSR, address);
             }
         }
@@ -220,7 +236,7 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
             jit.subPtr(CCallHelpers::TrustedImm32(maxFrameExtentForSlowPathCall), CCallHelpers::stackPointerRegister);
         ASSERT(wasmContextInstanceGPR != savedResultsGPR);
         jit.setupArguments<decltype(operationAllocateResultsArray)>(wasmContextInstanceGPR, CCallHelpers::TrustedImmPtr(&typeDefinition), indexingType, savedResultsGPR);
-        jit.callOperation(FunctionPtr<OperationPtrTag>(operationAllocateResultsArray));
+        jit.callOperation(operationAllocateResultsArray);
         if constexpr (maxFrameExtentForSlowPathCall)
             jit.addPtr(CCallHelpers::TrustedImm32(maxFrameExtentForSlowPathCall), CCallHelpers::stackPointerRegister);
 
@@ -230,6 +246,7 @@ void marshallJSResult(CCallHelpers& jit, const TypeDefinition& typeDefinition, c
 
 std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers& jit, const TypeDefinition& typeDefinition, Vector<UnlinkedWasmToWasmCall>* unlinkedWasmToWasmCalls, const ModuleInformation& info, MemoryMode mode, unsigned functionIndex)
 {
+    JIT_COMMENT(jit, "jsToWasm wrapper for wasm-function[", functionIndex, "] : ", typeDefinition);
     auto result = makeUnique<InternalFunction>();
     jit.emitFunctionPrologue();
 
@@ -266,6 +283,7 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers& jit, const
     totalFrameSize += savedResultRegisters.sizeOfAreaInBytes();
 
     totalFrameSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), totalFrameSize);
+    JIT_COMMENT(jit, "Saved result registers: ", savedResultRegisters);
     jit.subPtr(MacroAssembler::TrustedImm32(totalFrameSize), MacroAssembler::stackPointerRegister);
 
     // We save all these registers regardless of having a memory or not.
@@ -302,6 +320,7 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers& jit, const
             RELEASE_ASSERT(jsFrameConvention.params[i].isStack());
 
             Type type = signature.argumentType(i);
+            JIT_COMMENT(jit, "Arg ", i, " : ", type);
             CCallHelpers::Address jsParam(GPRInfo::callFrameRegister, jsFrameConvention.params[i].offsetFromFP());
             if (wasmFrameConvention.params[i].isStackArgument()) {
                 CCallHelpers::Address addr { calleeFrame.withOffset(wasmFrameConvention.params[i].offsetFromSP()) };
@@ -362,8 +381,10 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CCallHelpers& jit, const
         unlinkedWasmToWasmCalls->append({ linkBuffer.locationOfNearCall<WasmEntryPtrTag>(call), functionIndexSpace });
     });
 
+    JIT_COMMENT(jit, "marshallJSResult");
     marshallJSResult(jit, typeDefinition, wasmFrameConvention, savedResultRegisters);
 
+    JIT_COMMENT(jit, "restore registersToSpill");
     for (const RegisterAtOffset& regAtOffset : registersToSpill) {
         GPRReg reg = regAtOffset.reg().gpr();
         ASSERT(!JSRInfo::returnValueJSR.uses(reg));

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -285,9 +285,6 @@ NS_ASSUME_NONNULL_END
 
 #if ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER) && PLATFORM(MAC)
 
-OBJC_CLASS AVFunctionBarMediaSelectionOption;
-OBJC_CLASS AVFunctionBarPlaybackControlsProvider;
-OBJC_CLASS AVFunctionBarScrubber;
 OBJC_CLASS AVTouchBarMediaSelectionOption;
 OBJC_CLASS AVTouchBarPlaybackControlsProvider;
 OBJC_CLASS AVTouchBarScrubber;
@@ -298,26 +295,7 @@ OBJC_CLASS AVTouchBarScrubber;
 #else
 NS_ASSUME_NONNULL_BEGIN
 
-__attribute__((availability(macosx, obsoleted = 10.13))) @protocol AVFunctionBarPlaybackControlsControlling <NSObject>;
-@property (readonly) NSTimeInterval contentDuration;
-@property (readonly, nullable) AVValueTiming *timing;
-@property (readonly, getter=isSeeking) BOOL seeking;
-@property (readonly) NSTimeInterval seekToTime;
-- (void)seekToTime:(NSTimeInterval)time toleranceBefore:(NSTimeInterval)toleranceBefore toleranceAfter:(NSTimeInterval)toleranceAfter;
-@property (readonly) BOOL hasEnabledAudio;
-@property (readonly) BOOL hasEnabledVideo;
-@end
-
-__attribute__((availability(macosx, obsoleted = 10.13))) @interface AVFunctionBarPlaybackControlsProvider : NSResponder
-@property (strong, readonly, nullable) NSTouchBar *touchBar;
-@property (assign, nullable) id<AVFunctionBarPlaybackControlsControlling> playbackControlsController;
-@end
-
 @class AVThumbnail;
-
-__attribute__((availability(macosx, obsoleted = 10.13))) @interface AVFunctionBarScrubber : NSView
-@property (assign, nullable) id<AVFunctionBarPlaybackControlsControlling> playbackControlsController;
-@end
 
 @protocol AVTouchBarPlaybackControlsControlling <NSObject>
 @property (readonly) NSTimeInterval contentDuration;
@@ -387,3 +365,34 @@ NS_ASSUME_NONNULL_BEGIN
 NS_ASSUME_NONNULL_END
 #endif // USE(APPLE_INTERNAL_SDK)
 #endif // ENABLE(WIRELESS_PLAYBACK_TARGET) && HAVE(AVROUTEPICKERVIEW)
+
+// AVPictureInPicture SPI
+#if HAVE(PIP_CONTROLLER)
+#if USE(APPLE_INTERNAL_SDK)
+
+#if PLATFORM(IOS_FAMILY)
+#import <AVKit/AVPictureInPictureController_GenericSupport.h>
+#endif
+
+#else
+
+#if PLATFORM(IOS_FAMILY)
+NS_ASSUME_NONNULL_BEGIN
+
+@interface AVPictureInPictureContentViewController : UIViewController
+@property (nonatomic, strong, readonly, nullable) AVPlayerController *playerController;
+@end
+
+@interface AVPictureInPictureControllerContentSource (GenericSupport)
+- (instancetype)initWithSourceView:(UIView *)sourceView contentViewController:(AVPictureInPictureContentViewController *)contentViewController playerController:(__kindof AVPlayerController *)playerController API_AVAILABLE(ios(16.0),tvos(16.0)) API_UNAVAILABLE(macos, watchos);
+@property (nonatomic, weak, readonly) UIView *activeSourceView API_AVAILABLE(ios(16.0),tvos(16.0)) API_UNAVAILABLE(macos, watchos);
+@property (nonatomic, readonly) __kindof AVPictureInPictureContentViewController *activeContentViewController API_AVAILABLE(ios(16.0),tvos(16.0)) API_UNAVAILABLE(macos, watchos);
+@end
+
+NS_ASSUME_NONNULL_END
+
+#endif // PLATFORM(IOS_FAMILY
+
+#endif // USE(APPLE_INTERNAL_SDK)
+#endif // HAVE(PIP_CONTROLLER)
+

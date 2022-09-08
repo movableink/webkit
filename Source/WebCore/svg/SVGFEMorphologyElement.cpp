@@ -31,7 +31,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEMorphologyElement);
 
 inline SVGFEMorphologyElement::SVGFEMorphologyElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feMorphologyTag));
     
@@ -111,6 +111,11 @@ void SVGFEMorphologyElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
+}
+
+bool SVGFEMorphologyElement::isIdentity() const
+{
+    return !radiusX() && !radiusY();
 }
 
 RefPtr<FilterEffect> SVGFEMorphologyElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const

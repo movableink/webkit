@@ -633,7 +633,6 @@ std::optional<DataOwnerType> WebPasteboardProxy::determineDataOwner(IPC::Connect
     if (!pageID)
         return DataOwnerType::Undefined;
 
-#if HAVE(PASTEBOARD_DATA_OWNER)
     std::optional<DataOwnerType> result;
     for (auto* page : process->pages()) {
         if (page->webPageID() == *pageID) {
@@ -645,10 +644,6 @@ std::optional<DataOwnerType> WebPasteboardProxy::determineDataOwner(IPC::Connect
     // currently known to the UI process.
     MESSAGE_CHECK_WITH_RETURN_VALUE(result.has_value(), std::nullopt);
     return result;
-#else
-    UNUSED_PARAM(intent);
-    return DataOwnerType::Undefined;
-#endif
 }
 
 void WebPasteboardProxy::PasteboardAccessInformation::grantAccess(WebProcessProxy& process, PasteboardAccessType type)
@@ -688,6 +683,23 @@ std::optional<WebPasteboardProxy::PasteboardAccessType> WebPasteboardProxy::Past
 
     return processes[matchIndex].second;
 }
+
+#if ENABLE(IPC_TESTING_API)
+void WebPasteboardProxy::testIPCSharedMemory(IPC::Connection& connection, const String& pasteboardName, const String& pasteboardType, SharedMemory::Handle&& handle, std::optional<PageIdentifier> pageID, CompletionHandler<void(int64_t, String)>&& completionHandler)
+{
+    MESSAGE_CHECK_COMPLETION(!pasteboardName.isEmpty(), completionHandler(-1, makeString("error")));
+    MESSAGE_CHECK_COMPLETION(!pasteboardType.isEmpty(), completionHandler(-1, makeString("error")));
+
+    auto sharedMemoryBuffer = SharedMemory::map(handle, SharedMemory::Protection::ReadOnly);
+    if (!sharedMemoryBuffer) {
+        completionHandler(-1, makeString("error EOM"));
+        return;
+    }
+
+    String message = { static_cast<char*>(sharedMemoryBuffer->data()), static_cast<unsigned>(sharedMemoryBuffer->size()) };
+    completionHandler(sharedMemoryBuffer->size(), WTFMove(message));
+}
+#endif
 
 } // namespace WebKit
 

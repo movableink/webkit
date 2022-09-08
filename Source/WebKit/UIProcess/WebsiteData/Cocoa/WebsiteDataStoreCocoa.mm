@@ -39,7 +39,6 @@
 #import <WebCore/NetworkStorageSession.h>
 #import <WebCore/RegistrableDomain.h>
 #import <WebCore/RuntimeApplicationChecks.h>
-#import <WebCore/RuntimeEnabledFeatures.h>
 #import <WebCore/SearchPopupMenuCocoa.h>
 #import <pal/spi/cf/CFNetworkSPI.h>
 #import <wtf/FileSystem.h>
@@ -169,14 +168,9 @@ void WebsiteDataStore::platformSetNetworkParameters(WebsiteDataStoreParameters& 
         httpsProxy = URL { [defaults stringForKey:(NSString *)WebKit2HTTPSProxyDefaultsKey] };
 
 #if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
-    bool http3Enabled = WebsiteDataStore::http3Enabled();
     SandboxExtension::Handle alternativeServiceStorageDirectoryExtensionHandle;
     String alternativeServiceStorageDirectory = resolvedAlternativeServicesStorageDirectory();
-    if (!alternativeServiceStorageDirectory.isEmpty()) {
-        // FIXME: SandboxExtension::createHandleForReadWriteDirectory resolves the directory, but that has already been done. Remove this duplicate work.
-        if (auto handle = SandboxExtension::createHandleForReadWriteDirectory(alternativeServiceStorageDirectory))
-            alternativeServiceStorageDirectoryExtensionHandle = WTFMove(*handle);
-    }
+    createHandleFromResolvedPathIfPossible(alternativeServiceStorageDirectory, alternativeServiceStorageDirectoryExtensionHandle);
 #endif
 
     bool shouldIncludeLocalhostInResourceLoadStatistics = isSafari;
@@ -190,7 +184,6 @@ void WebsiteDataStore::platformSetNetworkParameters(WebsiteDataStoreParameters& 
 #if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
     parameters.networkSessionParameters.alternativeServiceDirectory = WTFMove(alternativeServiceStorageDirectory);
     parameters.networkSessionParameters.alternativeServiceDirectoryExtensionHandle = WTFMove(alternativeServiceStorageDirectoryExtensionHandle);
-    parameters.networkSessionParameters.http3Enabled = WTFMove(http3Enabled);
 #endif
     parameters.networkSessionParameters.resourceLoadStatisticsParameters.shouldIncludeLocalhost = shouldIncludeLocalhostInResourceLoadStatistics;
     parameters.networkSessionParameters.resourceLoadStatisticsParameters.enableDebugMode = enableResourceLoadStatisticsDebugMode;
@@ -200,6 +193,7 @@ void WebsiteDataStore::platformSetNetworkParameters(WebsiteDataStoreParameters& 
     parameters.networkSessionParameters.resourceLoadStatisticsParameters.manualPrevalentResource = WTFMove(resourceLoadStatisticsManualPrevalentResource);
 
     auto cookieFile = resolvedCookieStorageFile();
+    createHandleFromResolvedPathIfPossible(FileSystem::parentPath(cookieFile), parameters.cookieStoragePathExtensionHandle);
 
     if (m_uiProcessCookieStorageIdentifier.isEmpty()) {
         auto utf8File = cookieFile.utf8();
@@ -209,22 +203,7 @@ void WebsiteDataStore::platformSetNetworkParameters(WebsiteDataStoreParameters& 
     }
 
     parameters.uiProcessCookieStorageIdentifier = m_uiProcessCookieStorageIdentifier;
-
     parameters.networkSessionParameters.enablePrivateClickMeasurementDebugMode = experimentalFeatureEnabled(WebPreferencesKey::privateClickMeasurementDebugModeEnabledKey());
-
-    if (!cookieFile.isEmpty()) {
-        if (auto handle = SandboxExtension::createHandleForReadWriteDirectory(FileSystem::parentPath(cookieFile)))
-            parameters.cookieStoragePathExtensionHandle = WTFMove(*handle);
-    }
-}
-
-bool WebsiteDataStore::http3Enabled()
-{
-#if HAVE(CFNETWORK_ALTERNATIVE_SERVICE)
-    return experimentalFeatureEnabled(WebPreferencesKey::http3EnabledKey());
-#else
-    return false;
-#endif
 }
 
 bool WebsiteDataStore::useNetworkLoader()
@@ -261,7 +240,7 @@ NSString *WebStorageDirectoryDefaultsKey = @"WebKitLocalStorageDatabasePathPrefe
 NSString *WebKitMediaCacheDirectoryDefaultsKey = @"WebKitMediaCacheDirectory";
 NSString *WebKitMediaKeysStorageDirectoryDefaultsKey = @"WebKitMediaKeysStorageDirectory";
 
-String WebsiteDataStore::defaultApplicationCacheDirectory()
+String WebsiteDataStore::defaultApplicationCacheDirectory(const String&)
 {
 #if PLATFORM(IOS_FAMILY)
     // This quirk used to make these apps share application cache storage, but doesn't accomplish that any more.
@@ -278,19 +257,19 @@ String WebsiteDataStore::defaultApplicationCacheDirectory()
     return cacheDirectoryFileSystemRepresentation("OfflineWebApplicationCache"_s);
 }
 
-String WebsiteDataStore::defaultCacheStorageDirectory()
+String WebsiteDataStore::defaultCacheStorageDirectory(const String&)
 {
     return cacheDirectoryFileSystemRepresentation("CacheStorage"_s);
 }
 
-String WebsiteDataStore::defaultGeneralStorageDirectory()
+String WebsiteDataStore::defaultGeneralStorageDirectory(const String&)
 {
     auto directory = websiteDataDirectoryFileSystemRepresentation("Default"_s);
 
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         // This is the old storage directory, and there might be files left here.
-        auto oldDirectory = cacheDirectoryFileSystemRepresentation("Storage"_s, ShouldCreateDirectory::No);
+        auto oldDirectory = cacheDirectoryFileSystemRepresentation("Storage"_s, { }, ShouldCreateDirectory::No);
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray *files = [fileManager contentsOfDirectoryAtPath:oldDirectory error:0];
         if (files) {
@@ -309,63 +288,68 @@ String WebsiteDataStore::defaultGeneralStorageDirectory()
     return directory;
 }
 
-String WebsiteDataStore::defaultNetworkCacheDirectory()
+String WebsiteDataStore::defaultNetworkCacheDirectory(const String&)
 {
     return cacheDirectoryFileSystemRepresentation("NetworkCache"_s);
 }
 
-String WebsiteDataStore::defaultAlternativeServicesDirectory()
+String WebsiteDataStore::defaultAlternativeServicesDirectory(const String&)
 {
-    return cacheDirectoryFileSystemRepresentation("AlternativeServices"_s, ShouldCreateDirectory::No);
+    return cacheDirectoryFileSystemRepresentation("AlternativeServices"_s, { }, ShouldCreateDirectory::No);
 }
 
-String WebsiteDataStore::defaultMediaCacheDirectory()
+String WebsiteDataStore::defaultHSTSStorageDirectory(const String&)
+{
+    return cacheDirectoryFileSystemRepresentation("HSTS"_s);
+}
+
+String WebsiteDataStore::defaultMediaCacheDirectory(const String&)
 {
     return tempDirectoryFileSystemRepresentation("MediaCache"_s);
 }
 
-String WebsiteDataStore::defaultIndexedDBDatabaseDirectory()
+String WebsiteDataStore::defaultIndexedDBDatabaseDirectory(const String&)
 {
     return websiteDataDirectoryFileSystemRepresentation("IndexedDB"_s);
 }
 
-String WebsiteDataStore::defaultServiceWorkerRegistrationDirectory()
+String WebsiteDataStore::defaultServiceWorkerRegistrationDirectory(const String&)
 {
     return cacheDirectoryFileSystemRepresentation("ServiceWorkers"_s);
 }
 
-String WebsiteDataStore::defaultLocalStorageDirectory()
+String WebsiteDataStore::defaultLocalStorageDirectory(const String&)
 {
     return websiteDataDirectoryFileSystemRepresentation("LocalStorage"_s);
 }
 
-String WebsiteDataStore::defaultMediaKeysStorageDirectory()
+String WebsiteDataStore::defaultMediaKeysStorageDirectory(const String&)
 {
     return websiteDataDirectoryFileSystemRepresentation("MediaKeys"_s);
 }
 
-String WebsiteDataStore::defaultDeviceIdHashSaltsStorageDirectory()
+String WebsiteDataStore::defaultDeviceIdHashSaltsStorageDirectory(const String&)
 {
     return websiteDataDirectoryFileSystemRepresentation("DeviceIdHashSalts"_s);
 }
 
-String WebsiteDataStore::defaultWebSQLDatabaseDirectory()
+String WebsiteDataStore::defaultWebSQLDatabaseDirectory(const String&)
 {
-    return websiteDataDirectoryFileSystemRepresentation("WebSQL"_s, ShouldCreateDirectory::No);
+    return websiteDataDirectoryFileSystemRepresentation("WebSQL"_s, { }, ShouldCreateDirectory::No);
 }
 
-String WebsiteDataStore::defaultResourceLoadStatisticsDirectory()
+String WebsiteDataStore::defaultResourceLoadStatisticsDirectory(const String&)
 {
     return websiteDataDirectoryFileSystemRepresentation("ResourceLoadStatistics"_s);
 }
 
-String WebsiteDataStore::defaultJavaScriptConfigurationDirectory()
+String WebsiteDataStore::defaultJavaScriptConfigurationDirectory(const String&)
 {
     return tempDirectoryFileSystemRepresentation("JavaScriptCoreDebug"_s, ShouldCreateDirectory::No);
 }
 
 #if ENABLE(ARKIT_INLINE_PREVIEW)
-String WebsiteDataStore::defaultModelElementCacheDirectory()
+String WebsiteDataStore::defaultModelElementCacheDirectory(const String&)
 {
     return tempDirectoryFileSystemRepresentation("ModelElement"_s, ShouldCreateDirectory::No);
 }
@@ -400,7 +384,7 @@ String WebsiteDataStore::tempDirectoryFileSystemRepresentation(const String& dir
     return url.absoluteURL.path;
 }
 
-String WebsiteDataStore::cacheDirectoryFileSystemRepresentation(const String& directoryName, ShouldCreateDirectory shouldCreateDirectory)
+String WebsiteDataStore::cacheDirectoryFileSystemRepresentation(const String& directoryName, const String&, ShouldCreateDirectory shouldCreateDirectory)
 {
     static dispatch_once_t onceToken;
     static NeverDestroyed<RetainPtr<NSURL>> cacheURL;
@@ -428,7 +412,7 @@ String WebsiteDataStore::cacheDirectoryFileSystemRepresentation(const String& di
     return url.absoluteURL.path;
 }
 
-String WebsiteDataStore::websiteDataDirectoryFileSystemRepresentation(const String& directoryName, ShouldCreateDirectory shouldCreateDirectory)
+String WebsiteDataStore::websiteDataDirectoryFileSystemRepresentation(const String& directoryName, const String&, ShouldCreateDirectory shouldCreateDirectory)
 {
     static dispatch_once_t onceToken;
     static NeverDestroyed<RetainPtr<NSURL>> websiteDataURL;
@@ -639,71 +623,80 @@ String WebsiteDataStore::cacheDirectoryInContainerOrHomeDirectory(const String& 
     if (path.isEmpty())
         path = NSHomeDirectory();
 
-    path = path + subpath;
-    path = stringByResolvingSymlinksInPath(path);
-    return path;
-}
-
-String WebsiteDataStore::cookieStorageDirectory() const
-{
-    if (!isPersistent())
-        return { };
-
-    return cacheDirectoryInContainerOrHomeDirectory("/Library/Cookies"_s);
-}
-
-String WebsiteDataStore::containerCachesDirectory() const
-{
-    if (!isPersistent())
-        return { };
-
-    String path = cacheDirectoryInContainerOrHomeDirectory("/Library/Caches/com.apple.WebKit.WebContent/"_s);
-    NSError *error = nil;
-    NSString* nsPath = path;
-    if (![[NSFileManager defaultManager] createDirectoryAtPath:nsPath withIntermediateDirectories:YES attributes:nil error:&error]) {
-        NSLog(@"could not create web content caches directory \"%@\", error %@", nsPath, error);
-        return String();
-    }
-
-    return path;
+    return path + subpath;
 }
 
 String WebsiteDataStore::parentBundleDirectory() const
 {
     if (!isPersistent())
-        return { };
+        return emptyString();
 
     return [[[NSBundle mainBundle] bundlePath] stringByStandardizingPath];
 }
 
-String WebsiteDataStore::networkingCachesDirectory() const
+String WebsiteDataStore::resolvedCookieStorageDirectory()
 {
-    if (!isPersistent())
-        return { };
-
-    String path = cacheDirectoryInContainerOrHomeDirectory("/Library/Caches/com.apple.WebKit.Networking/"_s);
-    NSError *error = nil;
-    NSString* nsPath = path;
-    if (![[NSFileManager defaultManager] createDirectoryAtPath:nsPath withIntermediateDirectories:YES attributes:nil error:&error]) {
-        NSLog(@"could not create networking caches directory \"%@\", error %@", nsPath, error);
-        return String();
+    if (m_resolvedCookieStorageDirectory.isNull()) {
+        if (!isPersistent())
+            m_resolvedCookieStorageDirectory = emptyString();
+        else {
+            auto directory = cacheDirectoryInContainerOrHomeDirectory("/Library/Cookies"_s);
+            m_resolvedCookieStorageDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(directory);
+        }
     }
 
-    return path;
+    return m_resolvedCookieStorageDirectory;
 }
 
-String WebsiteDataStore::containerTemporaryDirectory() const
+String WebsiteDataStore::resolvedContainerCachesNetworkingDirectory()
 {
-    if (!isPersistent())
-        return { };
+    if (m_resolvedContainerCachesNetworkingDirectory.isNull()) {
+        if (!isPersistent())
+            m_resolvedContainerCachesNetworkingDirectory = emptyString();
+        else {
+            auto directory = cacheDirectoryInContainerOrHomeDirectory("/Library/Caches/com.apple.WebKit.Networking/"_s);
+            m_resolvedContainerCachesNetworkingDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(directory);
+        }
+    }
 
-    return defaultContainerTemporaryDirectory();
+    return m_resolvedContainerCachesNetworkingDirectory;
 }
 
-String WebsiteDataStore::defaultContainerTemporaryDirectory()
+String WebsiteDataStore::resolvedContainerCachesWebContentDirectory()
 {
-    String path = NSTemporaryDirectory();
-    return stringByResolvingSymlinksInPath(path);
+    if (m_resolvedContainerCachesWebContentDirectory.isNull()) {
+        if (!isPersistent())
+            m_resolvedContainerCachesWebContentDirectory = emptyString();
+        else {
+            auto directory = cacheDirectoryInContainerOrHomeDirectory("/Library/Caches/com.apple.WebKit.WebContent/"_s);
+            m_resolvedContainerCachesWebContentDirectory = resolveAndCreateReadWriteDirectoryForSandboxExtension(directory);
+        }
+    }
+
+    return m_resolvedContainerCachesWebContentDirectory;
+}
+
+String WebsiteDataStore::resolvedContainerTemporaryDirectory()
+{
+    if (m_resolvedContainerTemporaryDirectory.isNull())
+        m_resolvedContainerTemporaryDirectory = defaultResolvedContainerTemporaryDirectory();
+
+    return m_resolvedContainerTemporaryDirectory;
+}
+
+String WebsiteDataStore::defaultResolvedContainerTemporaryDirectory()
+{
+    static NeverDestroyed<String> resolvedTemporaryDirectory;
+    static std::once_flag once;
+    std::call_once(once, [] {
+        resolvedTemporaryDirectory.get() = resolveAndCreateReadWriteDirectoryForSandboxExtension(String(NSTemporaryDirectory()));
+    });
+    return resolvedTemporaryDirectory;
+}
+
+void WebsiteDataStore::setBackupExclusionPeriodForTesting(Seconds period, CompletionHandler<void()>&& completionHandler)
+{
+    networkProcess().setBackupExclusionPeriodForTesting(m_sessionID, period, WTFMove(completionHandler));
 }
 
 #endif

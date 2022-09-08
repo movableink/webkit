@@ -378,7 +378,7 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
             rootContainer->setIdAttribute(imageOverlayElementIdentifier());
             rootContainer->setTranslate(false);
             if (document->isImageDocument())
-                rootContainer->setInlineStyleProperty(CSSPropertyUserSelect, CSSValueText);
+                rootContainer->setInlineStyleProperty(CSSPropertyWebkitUserSelect, CSSValueText);
 
             if (mediaControlsContainer)
                 mediaControlsContainer->appendChild(rootContainer);
@@ -440,7 +440,7 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
         }
 
         if (document->quirks().needsToForceUserSelectAndUserDragWhenInstallingImageOverlay()) {
-            element.setInlineStyleProperty(CSSPropertyUserSelect, CSSValueText);
+            element.setInlineStyleProperty(CSSPropertyWebkitUserSelect, CSSValueText);
             element.setInlineStyleProperty(CSSPropertyWebkitUserDrag, CSSValueAuto);
         }
     }
@@ -510,10 +510,9 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
 
         auto offsetsAlongHorizontalAxis = line.children.map([&](auto& child) -> WTF::Range<float> {
             auto textQuad = convertToContainerCoordinates(child.normalizedQuad);
-            return {
-                offsetAlongHorizontalAxis(textQuad.p1(), textQuad.p4()),
-                offsetAlongHorizontalAxis(textQuad.p2(), textQuad.p3())
-            };
+            auto startOffset = offsetAlongHorizontalAxis(textQuad.p1(), textQuad.p4());
+            auto endOffset = offsetAlongHorizontalAxis(textQuad.p2(), textQuad.p3());
+            return { std::min(startOffset, endOffset), std::max(startOffset, endOffset) };
         });
 
         for (size_t childIndex = 0; childIndex < line.children.size(); ++childIndex) {
@@ -565,7 +564,7 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
                 "scale("_s, targetSize.width() / sizeBeforeTransform.width(), ", "_s, targetSize.height() / sizeBeforeTransform.height(), ") "_s
             ));
 
-            textContainer->setInlineStyleProperty(CSSPropertyUserSelect, applyUserSelectAll ? CSSValueAll : CSSValueNone);
+            textContainer->setInlineStyleProperty(CSSPropertyWebkitUserSelect, applyUserSelectAll ? CSSValueAll : CSSValueNone);
         }
 
         if (document->isImageDocument())

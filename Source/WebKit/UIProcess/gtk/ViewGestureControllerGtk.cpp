@@ -38,8 +38,12 @@ static const Seconds swipeMinAnimationDuration = 100_ms;
 static const Seconds swipeMaxAnimationDuration = 400_ms;
 static const double swipeAnimationBaseVelocity = 0.002;
 
+#if GTK_CHECK_VERSION(4, 7, 0)
+static const double gtkScrollDeltaMultiplier = 1;
+#else
 // GTK divides all scroll deltas by 10, compensate for that
 static const double gtkScrollDeltaMultiplier = 10;
+#endif
 static const double swipeTouchpadBaseWidth = 400;
 
 // This is derivative of the easing function at t=0
@@ -191,10 +195,11 @@ bool ViewGestureController::SwipeProgressTracker::handleEvent(PlatformGtkScrollD
     }
 
     Seconds time = Seconds::fromMilliseconds(eventTime);
-    if (time != m_prevTime)
+    if (time > m_prevTime) {
         m_velocity = deltaX / (time - m_prevTime).milliseconds();
+        m_prevTime = time;
+    }
 
-    m_prevTime = time;
     m_progress += deltaX;
 
     bool swipingLeft = m_viewGestureController.isPhysicallySwipingLeft(m_direction);

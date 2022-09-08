@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,7 +99,7 @@ std::unique_ptr<Compilation> compile(B3::Procedure& proc)
 template<typename T, typename... Arguments>
 T invoke(const Compilation& code, Arguments... arguments)
 {
-    void* executableAddress = untagCFunctionPtr<JITCompilationPtrTag>(code.code().executableAddress());
+    void* executableAddress = untagCFunctionPtr<JITCompilationPtrTag>(code.code().taggedPtr());
     T (*function)(Arguments...) = bitwise_cast<T(*)(Arguments...)>(executableAddress);
     return function(arguments...);
 }
@@ -2370,26 +2370,30 @@ void testZDefOfSpillSlotWithOffsetNeedingToBeMaterializedInARegister()
 
     BasicBlock* root = code.addBlock();
 
-    Vector<StackSlot*> slots;
-    unsigned numberOfSlots = 10000;
-    for (unsigned i = 0; i < numberOfSlots; ++i)
-        slots.append(code.addStackSlot(8, StackSlotKind::Spill));
+    Vector<Tmp> tmps;
+    unsigned numberOfLiveTmps = 10000;
+    for (unsigned i = 0; i < numberOfLiveTmps; ++i)
+        tmps.append(code.newTmp(GP));
 
-    for (auto* slot : slots)
-        root->append(Move32, nullptr, Tmp(GPRInfo::argumentGPR0), Arg::stack(slot));
+    Tmp val = code.newTmp(GP);
+    root->append(Move, nullptr, Arg::imm(0), val);
+    for (auto tmp : tmps) {
+        root->append(Move32, nullptr, val, tmp);
+        root->append(Add64, nullptr, Arg::imm(1), val);
+    }
 
     Tmp loadResult = code.newTmp(GP);
     Tmp sum = code.newTmp(GP);
     root->append(Move, nullptr, Arg::imm(0), sum);
-    for (auto* slot : slots) {
-        root->append(Move, nullptr, Arg::stack(slot), loadResult);
+    for (auto tmp : tmps) {
+        root->append(Move, nullptr, tmp, loadResult);
         root->append(Add64, nullptr, loadResult, sum);
     }
     root->append(Move, nullptr, sum, Tmp(GPRInfo::returnValueGPR));
     root->append(Ret64, nullptr, Tmp(GPRInfo::returnValueGPR));
 
-    int32_t result = compileAndRun<int>(proc, 1);
-    CHECK(result == static_cast<int32_t>(numberOfSlots));
+    const auto result = compileAndRun<uint64_t>(proc);
+    CHECK(result == (numberOfLiveTmps * (numberOfLiveTmps - 1)) / 2);
 }
 
 void testEarlyAndLateUseOfSameTmp()

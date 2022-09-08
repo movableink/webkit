@@ -235,6 +235,7 @@ public:
     int columnCount();
     JSValueRef rowHeaders() const;
     JSValueRef columnHeaders() const;
+    JSRetainPtr<JSStringRef> customContent() const;
 
     // Tree/Outline specific attributes
     RefPtr<AccessibilityUIElement> selectedRowAtIndex(unsigned);
@@ -401,6 +402,13 @@ public:
     RefPtr<AccessibilityUIElement> fieldsetAncestorElement();
 
     bool isIsolatedObject() const;
+    
+    bool isInsertion() const;
+    bool isDeletion() const;
+    bool isFirstItemInSuggestion() const;
+    bool isLastItemInSuggestion() const;
+    
+    bool isMarkAnnotation() const;
 private:
     AccessibilityUIElement(PlatformUIElement);
     AccessibilityUIElement(const AccessibilityUIElement&);

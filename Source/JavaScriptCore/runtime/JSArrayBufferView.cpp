@@ -220,23 +220,9 @@ void JSArrayBufferView::detach()
     m_vector.clear();
 }
 
-static const constexpr size_t ElementSizeData[] = {
-#define FACTORY(type) sizeof(typename type ## Adaptor::Type),
-    FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(FACTORY)
-#undef FACTORY
-    1, // DataViewType
-};
-
 #define FACTORY(type) static_assert(std::is_final<JS ## type ## Array>::value);
 FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(FACTORY)
 #undef FACTORY
-
-static inline size_t elementSize(JSType type)
-{
-    ASSERT(type >= Int8ArrayType && type <= DataViewType);
-    static_assert(BigUint64ArrayType + 1 == DataViewType);
-    return ElementSizeData[type - Int8ArrayType];
-}
 
 size_t JSArrayBufferView::byteLength() const
 {
@@ -349,7 +335,7 @@ JSArrayBufferView* validateTypedArray(JSGlobalObject* globalObject, JSValue type
     }
 
     JSCell* typedArrayCell = typedArrayValue.asCell();
-    if (!isTypedView(typedArrayCell->classInfo()->typedArrayStorageType)) {
+    if (!isTypedView(typedArrayCell->type())) {
         throwTypeError(globalObject, scope, "Argument needs to be a typed array."_s);
         return nullptr;
     }
@@ -360,6 +346,32 @@ JSArrayBufferView* validateTypedArray(JSGlobalObject* globalObject, JSValue type
         return nullptr;
     }
     return typedArray;
+}
+
+bool JSArrayBufferView::isIteratorProtocolFastAndNonObservable()
+{
+    // Excluding DataView.
+    if (!isTypedArrayType(type()))
+        return false;
+
+    JSGlobalObject* globalObject = this->globalObject();
+    TypedArrayType typedArrayType = JSC::typedArrayType(type());
+    if (!globalObject->isTypedArrayPrototypeIteratorProtocolFastAndNonObservable(typedArrayType))
+        return false;
+
+    VM& vm = globalObject->vm();
+    Structure* structure = this->structure();
+    // This is the fast case. Many TypedArrays will be an original typed array structure.
+    if (globalObject->isOriginalTypedArrayStructure(structure))
+        return true;
+
+    if (getPrototypeDirect() != globalObject->typedArrayPrototype(typedArrayType))
+        return false;
+
+    if (getDirectOffset(vm, vm.propertyNames->iteratorSymbol) != invalidOffset)
+        return false;
+
+    return true;
 }
 
 } // namespace JSC

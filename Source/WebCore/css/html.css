@@ -26,7 +26,7 @@
 html {
     display: block;
 #if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
-    color: text;
+    color: CanvasText;
 #endif
 }
 
@@ -117,6 +117,7 @@ video {
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     -webkit-tap-highlight-color: transparent;
 #endif
+    content: normal !important;
 }
 
 audio {
@@ -223,6 +224,7 @@ table {
     border-spacing: 2px;
     border-color: gray;
     text-indent: initial;
+    box-sizing: border-box;
 }
 
 thead {
@@ -409,8 +411,8 @@ textarea,
 input {
     appearance: auto;
 #if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
-    color: text;
-    background-color: -webkit-control-background;
+    color: CanvasText;
+    background-color: Canvas;
 #else
     background-color: white;
 #endif
@@ -424,7 +426,7 @@ input {
     padding: 1px;
 #endif
     -webkit-rtl-ordering: logical;
-    user-select: text;
+    -webkit-user-select: text;
     cursor: auto;
 }
 
@@ -432,6 +434,10 @@ input {
 @media (prefers-dark-interface) {
     input {
         background-color: transparent;
+    }
+    
+    input::-webkit-loading-auto-fill-button {
+        background-image: url('data:image/svg+xml,<svg width="22" height="12" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" xml:space="preserve"><path fill="rgb(55,55,55)" d="M19.36,12.64L19.36,12.64c-0.88-0.88-0.88-2.3,0-3.18l4.6-4.6c0.88-0.88,2.3-0.88,3.18,0l0,0c0.88,0.88,0.88,2.3,0,3.18l-4.6,4.6C21.66,13.52,20.24,13.52,19.36,12.64z"><animate attributeName="fill" begin="0s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(76,76,76)" d="M20.75,16L20.75,16c0-1.24,1.01-2.25,2.25-2.25l6.5,0c1.24,0,2.25,1.01,2.25,2.25v0c0,1.24-1.01,2.25-2.25,2.25l-6.5,0C21.76,18.25,20.75,17.24,20.75,16z"><animate attributeName="fill" begin="0.125s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(97,97,97)" d="M27.14,27.14L27.14,27.14c-0.88,0.88-2.3,0.88-3.18,0l-4.6-4.6c-0.88-0.88-0.88-2.3,0-3.18l0,0c0.88-0.88,2.3-0.88,3.18,0l4.6,4.6C28.02,24.83,28.02,26.26,27.14,27.14z"><animate attributeName="fill" begin="0.25s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(118,118,118)" d="M16,31.75L16,31.75c-1.24,0-2.25-1.01-2.25-2.25l0-6.5c0-1.24,1.01-2.25,2.25-2.25h0c1.24,0,2.25,1.01,2.25,2.25l0,6.5C18.25,30.74,17.24,31.75,16,31.75z"><animate attributeName="fill" begin="0.375s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(138,138,138)" d="M4.86,27.14L4.86,27.14c-0.88-0.88-0.88-2.3,0-3.18l4.6-4.6c0.88-0.88,2.3-0.88,3.18,0l0,0c0.88,0.88,0.88,2.3,0,3.18l-4.6,4.6C7.17,28.02,5.74,28.02,4.86,27.14z"><animate attributeName="fill" begin="0.5s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(159,159,159)" d="M0.25,16L0.25,16c0-1.24,1.01-2.25,2.25-2.25l6.5,0c1.24,0,2.25,1.01,2.25,2.25v0c0,1.24-1.01,2.25-2.25,2.25l-6.5,0C1.26,18.25,0.25,17.24,0.25,16z"><animate attributeName="fill" begin="0.625s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(180,180,180)" d="M12.64,12.64L12.64,12.64c-0.88,0.88-2.3,0.88-3.18,0l-4.6-4.6c-0.88-0.88-0.88-2.3,0-3.18l0,0c0.88-0.88,2.3-0.88,3.18,0l4.6,4.6C13.52,10.34,13.52,11.76,12.64,12.64z"><animate attributeName="fill" begin="0.75s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(201,201,201)" d="M16,11.25L16,11.25c-1.24,0-2.25-1.01-2.25-2.25l0-6.5c0-1.24,1.01-2.25,2.25-2.25h0c1.24,0,2.25,1.01,2.25,2.25l0,6.5C18.25,10.24,17.24,11.25,16,11.25z"><animate attributeName="fill" begin="0.875s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path></svg>');
     }
 }
 #endif
@@ -583,14 +589,14 @@ input::-webkit-inner-spin-button {
      * button in layout(). */
     height: 1.5em;
     flex: none;
-    user-select: none;
+    -webkit-user-select: none;
 }
 
 input::-webkit-strong-password-auto-fill-button {
     flex-shrink: 1 !important;
     font-family: -apple-system !important;
     -webkit-text-security: none !important;
-    user-select: none !important;
+    -webkit-user-select: none !important;
     pointer-events: none !important;
     text-align: right !important;
     color: rgba(0, 0, 0, 0.8) !important;
@@ -616,7 +622,7 @@ input::-webkit-credentials-auto-fill-button {
     background-color: black;
 #endif
     flex: none;
-    user-select: none;
+    -webkit-user-select: none;
 }
 
 input::-webkit-credentials-auto-fill-button:hover {
@@ -648,7 +654,7 @@ input::-webkit-contacts-auto-fill-button {
     margin-right: 2px;
     background-color: black;
     flex: none;
-    user-select: none;
+    -webkit-user-select: none;
 }
 
 input::-webkit-contacts-auto-fill-button:hover {
@@ -668,7 +674,7 @@ input::-webkit-credit-card-auto-fill-button {
     margin-right: 2px;
     background-color: black;
     flex: none;
-    user-select: none;
+    -webkit-user-select: none;
 }
 
 input::-webkit-credit-card-auto-fill-button:hover {
@@ -679,13 +685,23 @@ input::-webkit-credit-card-auto-fill-button:active {
     background-color: rgb(0, 60, 219);
 }
 
+input::-webkit-loading-auto-fill-button {
+    background-image: url('data:image/svg+xml,<svg width="22" height="12" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" xml:space="preserve"><path fill="rgb(55,55,55)" d="M19.36,12.64L19.36,12.64c-0.88-0.88-0.88-2.3,0-3.18l4.6-4.6c0.88-0.88,2.3-0.88,3.18,0l0,0c0.88,0.88,0.88,2.3,0,3.18l-4.6,4.6C21.66,13.52,20.24,13.52,19.36,12.64z"><animate attributeName="fill" begin="0s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(76,76,76)" d="M20.75,16L20.75,16c0-1.24,1.01-2.25,2.25-2.25l6.5,0c1.24,0,2.25,1.01,2.25,2.25v0c0,1.24-1.01,2.25-2.25,2.25l-6.5,0C21.76,18.25,20.75,17.24,20.75,16z"><animate attributeName="fill" begin="0.125s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(97,97,97)" d="M27.14,27.14L27.14,27.14c-0.88,0.88-2.3,0.88-3.18,0l-4.6-4.6c-0.88-0.88-0.88-2.3,0-3.18l0,0c0.88-0.88,2.3-0.88,3.18,0l4.6,4.6C28.02,24.83,28.02,26.26,27.14,27.14z"><animate attributeName="fill" begin="0.25s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(118,118,118)" d="M16,31.75L16,31.75c-1.24,0-2.25-1.01-2.25-2.25l0-6.5c0-1.24,1.01-2.25,2.25-2.25h0c1.24,0,2.25,1.01,2.25,2.25l0,6.5C18.25,30.74,17.24,31.75,16,31.75z"><animate attributeName="fill" begin="0.375s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(138,138,138)" d="M4.86,27.14L4.86,27.14c-0.88-0.88-0.88-2.3,0-3.18l4.6-4.6c0.88-0.88,2.3-0.88,3.18,0l0,0c0.88,0.88,0.88,2.3,0,3.18l-4.6,4.6C7.17,28.02,5.74,28.02,4.86,27.14z"><animate attributeName="fill" begin="0.5s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(159,159,159)" d="M0.25,16L0.25,16c0-1.24,1.01-2.25,2.25-2.25l6.5,0c1.24,0,2.25,1.01,2.25,2.25v0c0,1.24-1.01,2.25-2.25,2.25l-6.5,0C1.26,18.25,0.25,17.24,0.25,16z"><animate attributeName="fill" begin="0.625s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(180,180,180)" d="M12.64,12.64L12.64,12.64c-0.88,0.88-2.3,0.88-3.18,0l-4.6-4.6c-0.88-0.88-0.88-2.3,0-3.18l0,0c0.88-0.88,2.3-0.88,3.18,0l4.6,4.6C13.52,10.34,13.52,11.76,12.64,12.64z"><animate attributeName="fill" begin="0.75s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(201,201,201)" d="M16,11.25L16,11.25c-1.24,0-2.25-1.01-2.25-2.25l0-6.5c0-1.24,1.01-2.25,2.25-2.25h0c1.24,0,2.25,1.01,2.25,2.25l0,6.5C18.25,10.24,17.24,11.25,16,11.25z"><animate attributeName="fill" begin="0.875s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path></svg>');
+    width: 22px;
+    height: 12px;
+    margin-left: 3px;
+    margin-right: 2px;
+    flex: none;
+    -webkit-user-select: none;
+}
+
 input::-webkit-caps-lock-indicator {
     appearance: auto;
     content: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"><path fill="black" fill-opacity="0.4" d="M12.5 0.5A 4 4 0 0 1 16.5 4.5L 16.5 12.5A 4 4 0 0 1 12.5 16.5L 4.5 16.5A 4 4 0 0 1 0.5 12.5L 0.5 4.5A 4 4 0 0 1 4.5 0.5L 12.5 0.5M 8.5 2L 4 7L 6.25 7L 6.25 10.25L 10.75 10.25L 10.75 7L 13 7L 8.5 2M 10.75 12L 6.25 12L 6.25 14.25L 10.75 14.25L 10.75 12"/></svg>');
     max-width: 17px;
     align-self: stretch;
     flex: none;
-    user-select: none;
+    -webkit-user-select: none;
 }
 
 #if defined(ENABLE_DATALIST_ELEMENT) && ENABLE_DATALIST_ELEMENT
@@ -696,7 +712,7 @@ input::-webkit-list-button {
     cursor: default;
     align-self: stretch;
     flex: none;
-    user-select: none;
+    -webkit-user-select: none;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     width: 11px;
     /* Make it easier to hit the button on iOS */
@@ -717,14 +733,14 @@ textarea {
     appearance: auto;
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
 #if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
-    color: text;
-    background-color: -webkit-control-background;
+    color: CanvasText;
+    background-color: Canvas;
 #else
     background-color: white;
 #endif
     border: 1px solid;
     -webkit-rtl-ordering: logical;
-    user-select: text;
+    -webkit-user-select: text;
     padding: 2px;
 #else
     -webkit-nbsp-mode: space;
@@ -774,7 +790,7 @@ input:-webkit-autofill-and-obscured {
 }
 
 input:-webkit-autofill-strong-password {
-    user-select: none !important;
+    -webkit-user-select: none !important;
 }
 
 input:-webkit-autofill-strong-password, input:-webkit-autofill-strong-password-viewable {
@@ -1043,8 +1059,8 @@ select {
 #else
     border: 1px solid;
 #if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
-    color: text;
-    background-color: -webkit-control-background;
+    color: CanvasText;
+    background-color: Canvas;
 #else
     color: black;
     background-color: white;
@@ -1274,11 +1290,19 @@ input[type="file"]:focus::file-selector-button {
 a:any-link {
     color: -webkit-link;
     text-decoration: underline;
-    cursor: auto;
+    cursor: pointer;
 }
 
 a:any-link:active {
     color: -webkit-activelink;
+}
+
+a:any-link:read-write {
+    cursor: text;
+}
+
+area:any-link {
+    cursor: pointer;
 }
 
 /* HTML5 ruby elements */

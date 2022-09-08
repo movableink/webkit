@@ -102,6 +102,11 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (BOOL)accessibilityPerformEscape;
 - (NSString *)accessibilityDOMIdentifier;
 - (NSString *)_accessibilityWebRoleAsString;
+- (BOOL)accessibilityIsInsertion;
+- (BOOL)accessibilityIsDeletion;
+- (BOOL)accessibilityIsFirstItemInSuggestion;
+- (BOOL)accessibilityIsLastItemInSuggestion;
+- (BOOL)accessibilityIsMarkAnnotation;
 
 // TextMarker related
 - (NSArray *)textMarkerRange;
@@ -1279,4 +1284,29 @@ unsigned AccessibilityUIElement::selectedChildrenCount() const
 AccessibilityUIElement AccessibilityUIElement::selectedChildAtIndex(unsigned) const
 {
     return 0;
+}
+
+bool AccessibilityUIElement::isInsertion()
+{
+    return [m_element accessibilityIsInsertion];
+}
+
+bool AccessibilityUIElement::isDeletion()
+{
+    return [m_element accessibilityIsDeletion];
+}
+
+bool AccessibilityUIElement::isFirstItemInSuggestion()
+{
+    return [m_element accessibilityIsFirstItemInSuggestion];
+}
+
+bool AccessibilityUIElement::isLastItemInSuggestion()
+{
+    return [m_element accessibilityIsLastItemInSuggestion];
+}
+
+bool AccessibilityUIElement::isMarkAnnotation() const
+{
+    return [m_element accessibilityIsMarkAnnotation];
 }

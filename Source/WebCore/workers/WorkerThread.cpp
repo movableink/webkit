@@ -50,6 +50,7 @@ WorkerParameters WorkerParameters::isolatedCopy() const
 {
     return {
         scriptURL.isolatedCopy(),
+        ownerURL.isolatedCopy(),
         name.isolatedCopy(),
         inspectorIdentifier.isolatedCopy(),
         userAgent.isolatedCopy(),
@@ -151,7 +152,8 @@ void WorkerThread::evaluateScriptIfNecessary(String& exceptionMessage)
         globalScope()->script()->evaluate(sourceCode, &exceptionMessage);
         finishedEvaluatingScript();
     } else {
-        auto scriptFetcher = WorkerScriptFetcher::create(globalScope()->credentials(), globalScope()->destination(), globalScope()->referrerPolicy());
+        auto parameters = ModuleFetchParameters::create(JSC::ScriptFetchParameters::Type::JavaScript, emptyString(), /* isTopLevelModule */ true);
+        auto scriptFetcher = WorkerScriptFetcher::create(WTFMove(parameters), globalScope()->credentials(), globalScope()->destination(), globalScope()->referrerPolicy());
         ScriptSourceCode sourceCode(m_startupData->sourceCode, URL(m_startupData->params.scriptURL), { }, JSC::SourceProviderSourceType::Module, scriptFetcher.copyRef());
         sourceProvider = static_cast<ScriptBufferSourceProvider&>(sourceCode.provider());
         bool success = globalScope()->script()->loadModuleSynchronously(scriptFetcher.get(), sourceCode);

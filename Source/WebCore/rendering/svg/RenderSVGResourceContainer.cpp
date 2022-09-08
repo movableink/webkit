@@ -41,7 +41,7 @@ static inline SVGDocumentExtensions& svgExtensionsFromElement(SVGElement& elemen
 }
 
 RenderSVGResourceContainer::RenderSVGResourceContainer(SVGElement& element, RenderStyle&& style)
-    : RenderSVGHiddenContainer(element, WTFMove(style))
+    : LegacyRenderSVGHiddenContainer(element, WTFMove(style))
     , m_id(element.getIdAttribute())
 {
 }
@@ -55,7 +55,7 @@ void RenderSVGResourceContainer::layout()
     if (selfNeedsClientInvalidation())
         LegacyRenderSVGRoot::addResourceForClientInvalidation(this);
 
-    RenderSVGHiddenContainer::layout();
+    LegacyRenderSVGHiddenContainer::layout();
 }
 
 void RenderSVGResourceContainer::willBeDestroyed()
@@ -67,12 +67,12 @@ void RenderSVGResourceContainer::willBeDestroyed()
         m_registered = false;
     }
 
-    RenderSVGHiddenContainer::willBeDestroyed();
+    LegacyRenderSVGHiddenContainer::willBeDestroyed();
 }
 
 void RenderSVGResourceContainer::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    RenderSVGHiddenContainer::styleDidChange(diff, oldStyle);
+    LegacyRenderSVGHiddenContainer::styleDidChange(diff, oldStyle);
 
     if (!m_registered) {
         m_registered = true;
@@ -201,7 +201,7 @@ void RenderSVGResourceContainer::registerResource()
         return;
     }
 
-    auto elements = copyToVectorOf<Ref<Element>>(extensions.removePendingResource(m_id));
+    auto elements = copyToVectorOf<Ref<SVGElement>>(extensions.removePendingResource(m_id));
 
     // Cache us with the new id.
     extensions.addResource(m_id, *this);
@@ -213,17 +213,16 @@ void RenderSVGResourceContainer::registerResource()
         auto* renderer = client->renderer();
         if (!renderer)
             continue;
-        SVGResourcesCache::clientStyleChanged(*renderer, StyleDifference::Layout, renderer->style());
+        SVGResourcesCache::clientStyleChanged(*renderer, StyleDifference::Layout, nullptr, renderer->style());
         renderer->setNeedsLayout();
     }
 }
 
-bool RenderSVGResourceContainer::shouldTransformOnTextPainting(const RenderElement& renderer, AffineTransform& resourceTransform)
+float RenderSVGResourceContainer::computeTextPaintingScale(const RenderElement& renderer)
 {
 #if USE(CG)
     UNUSED_PARAM(renderer);
-    UNUSED_PARAM(resourceTransform);
-    return false;
+    return 1;
 #else
     // This method should only be called for RenderObjects that deal with text rendering. Cmp. RenderObject.h's is*() methods.
     ASSERT(renderer.isSVGText() || renderer.isSVGTextPath() || renderer.isSVGInline());
@@ -231,11 +230,7 @@ bool RenderSVGResourceContainer::shouldTransformOnTextPainting(const RenderEleme
     // In text drawing, the scaling part of the graphics context CTM is removed, compare SVGInlineTextBox::paintTextWithShadows.
     // So, we use that scaling factor here, too, and then push it down to pattern or gradient space
     // in order to keep the pattern or gradient correctly scaled.
-    float scalingFactor = SVGRenderingContext::calculateScreenFontSizeScalingFactor(renderer);
-    if (scalingFactor == 1)
-        return false;
-    resourceTransform.scale(scalingFactor);
-    return true;
+    return SVGRenderingContext::calculateScreenFontSizeScalingFactor(renderer);
 #endif
 }
 

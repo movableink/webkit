@@ -68,9 +68,9 @@ GstElement* GStreamerVideoCapturer::createSource()
 GstElement* GStreamerVideoCapturer::createConverter()
 {
     auto* bin = gst_bin_new(nullptr);
-    auto* videoscale = gst_element_factory_make("videoscale", "videoscale");
-    auto* videoconvert = gst_element_factory_make("videoconvert", nullptr);
-    auto* videorate = gst_element_factory_make("videorate", "videorate");
+    auto* videoscale = makeGStreamerElement("videoscale", "videoscale");
+    auto* videoconvert = makeGStreamerElement("videoconvert", nullptr);
+    auto* videorate = makeGStreamerElement("videorate", "videorate");
 
     // https://gitlab.freedesktop.org/gstreamer/gst-plugins-base/issues/97#note_56575
     g_object_set(videorate, "drop-only", 1, "average-period", 1, nullptr);
@@ -85,7 +85,7 @@ GstElement* GStreamerVideoCapturer::createConverter()
         auto caps = adoptGRef(gst_caps_new_empty_simple("video/x-raw"));
         g_object_set(m_videoSrcMIMETypeFilter.get(), "caps", caps.get(), nullptr);
 
-        auto* decodebin = gst_element_factory_make("decodebin3", nullptr);
+        auto* decodebin = makeGStreamerElement("decodebin3", nullptr);
         gst_bin_add_many(GST_BIN_CAST(bin), m_videoSrcMIMETypeFilter.get(), decodebin, nullptr);
         gst_element_link(m_videoSrcMIMETypeFilter.get(), decodebin);
 
@@ -321,7 +321,13 @@ void GStreamerVideoCapturer::reconfigure()
                 selector->maxHeight = *height;
                 selector->maxFrameRate = *frameRate;
                 selector->mimeType = gst_structure_get_name(structure);
-                selector->format = gst_structure_get_string(structure, "format");
+                selector->format = nullptr;
+                if (gst_structure_has_name(structure, "video/x-raw")) {
+                    if (gst_structure_has_field(structure, "format"))
+                        selector->format = gst_structure_get_string(structure, "format");
+                    else
+                        return TRUE;
+                }
                 return FALSE;
             }
 
@@ -330,7 +336,13 @@ void GStreamerVideoCapturer::reconfigure()
                 selector->maxHeight = *height;
                 selector->maxFrameRate = *frameRate;
                 selector->mimeType = gst_structure_get_name(structure);
-                selector->format = gst_structure_get_string(structure, "format");
+                selector->format = nullptr;
+                if (gst_structure_has_name(structure, "video/x-raw")) {
+                    if (gst_structure_has_field(structure, "format"))
+                        selector->format = gst_structure_get_string(structure, "format");
+                    else
+                        return TRUE;
+                }
             }
 
             return TRUE;

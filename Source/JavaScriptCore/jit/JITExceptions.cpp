@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,14 +54,14 @@ void genericUnwind(VM& vm, CallFrame* callFrame)
 
     Exception* exception = scope.exception();
     RELEASE_ASSERT(exception);
-    CatchInfo handler = vm.interpreter->unwind(vm, callFrame, exception); // This may update callFrame.
+    CatchInfo handler = vm.interpreter.unwind(vm, callFrame, exception); // This may update callFrame.
 
     void* catchRoutine;
     JSOrWasmInstruction catchPCForInterpreter = { static_cast<JSInstruction*>(nullptr) };
     if (handler.m_valid) {
         catchPCForInterpreter = handler.m_catchPCForInterpreter;
 #if ENABLE(JIT)
-        catchRoutine = handler.m_nativeCode.executableAddress();
+        catchRoutine = handler.m_nativeCode.taggedPtr();
 #else
 #if ENABLE(WEBASSEMBLY)
 #error WASM requires the JIT, so this section assumes we are in JS
@@ -75,7 +75,7 @@ void genericUnwind(VM& vm, CallFrame* callFrame)
             catchRoutine = LLInt::getCodePtr(pc->opcodeID());
 #endif
     } else
-        catchRoutine = LLInt::handleUncaughtException(vm).code().executableAddress();
+        catchRoutine = LLInt::handleUncaughtException(vm).code().taggedPtr();
 
     ASSERT(bitwise_cast<uintptr_t>(callFrame) < bitwise_cast<uintptr_t>(vm.topEntryFrame));
 

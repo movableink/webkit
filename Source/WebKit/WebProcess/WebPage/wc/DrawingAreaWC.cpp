@@ -29,14 +29,15 @@
 #include "DrawingAreaProxyMessages.h"
 #include "GraphicsLayerWC.h"
 #include "PlatformImageBufferShareableBackend.h"
+#include "RemoteRenderingBackendProxy.h"
 #include "RemoteWCLayerTreeHostProxy.h"
 #include "UpdateInfo.h"
 #include "WebFrame.h"
 #include "WebPageCreationParameters.h"
 #include "WebProcess.h"
-#include <WebCore/ConcreteImageBuffer.h>
 #include <WebCore/Frame.h>
 #include <WebCore/FrameView.h>
+#include <WebCore/ImageBuffer.h>
 
 namespace WebKit {
 using namespace WebCore;
@@ -121,14 +122,10 @@ void DrawingAreaWC::updateGeometry(uint64_t backingStoreStateID, IntSize viewSiz
 
 void DrawingAreaWC::setNeedsDisplay()
 {
-    if (isCompositingMode()) {
-        triggerRenderingUpdate();
-        return;
-    }
-    m_dirtyRegion = { };
+    m_dirtyRegion = m_webPage.bounds();
     m_scrollRect = { };
     m_scrollOffset = { };
-    setNeedsDisplayInRect(m_webPage.bounds());
+    triggerRenderingUpdate();
 }
 
 void DrawingAreaWC::setNeedsDisplayInRect(const IntRect& rect)
@@ -366,7 +363,7 @@ RefPtr<ImageBuffer> DrawingAreaWC::createImageBuffer(FloatSize size)
 {
     if (WebProcess::singleton().shouldUseRemoteRenderingFor(RenderingPurpose::DOM))
         return m_webPage.ensureRemoteRenderingBackendProxy().createImageBuffer(size, RenderingMode::Unaccelerated, RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
-    return ConcreteImageBuffer<UnacceleratedImageBufferShareableBackend>::create(size, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, RenderingPurpose::DOM, nullptr);
+    return ImageBuffer::create<UnacceleratedImageBufferShareableBackend>(size, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, RenderingPurpose::DOM, nullptr);
 }
 
 void DrawingAreaWC::didUpdate()

@@ -106,6 +106,7 @@ if(is_apple)
     list(APPEND libangle_common_sources
         "src/common/apple/SoftLinking.h"
         "src/common/apple/apple_platform.h"
+        "src/common/apple_platform_utils.mm"
         "src/common/gl/cgl/FunctionsCGL.cpp"
         "src/common/gl/cgl/FunctionsCGL.h"
         "src/common/system_utils_apple.cpp"
@@ -145,6 +146,7 @@ set(libangle_image_util_sources
     "src/image_util/copyimage.cpp"
     "src/image_util/imageformats.cpp"
     "src/image_util/loadimage.cpp"
+    "src/image_util/loadimage_astc.cpp"
     "src/image_util/loadimage_etc.cpp"
 )
 
@@ -442,12 +444,17 @@ set(libangle_sources
     "src/libANGLE/renderer/EGLReusableSync.cpp"
     "src/libANGLE/renderer/EGLSyncImpl.cpp"
     "src/libANGLE/renderer/Format_table_autogen.cpp"
+    "src/libANGLE/renderer/FramebufferImpl.cpp"
     "src/libANGLE/renderer/ImageImpl.cpp"
+    "src/libANGLE/renderer/ProgramImpl.cpp"
     "src/libANGLE/renderer/ProgramPipelineImpl.cpp"
     "src/libANGLE/renderer/QueryImpl.cpp"
+    "src/libANGLE/renderer/RenderbufferImpl.cpp"
     "src/libANGLE/renderer/ShaderImpl.cpp"
     "src/libANGLE/renderer/SurfaceImpl.cpp"
     "src/libANGLE/renderer/TextureImpl.cpp"
+    "src/libANGLE/renderer/TransformFeedbackImpl.cpp"
+    "src/libANGLE/renderer/VertexArrayImpl.cpp"
     "src/libANGLE/renderer/driver_utils.cpp"
     "src/libANGLE/renderer/load_functions_table_autogen.cpp"
     "src/libANGLE/renderer/renderer_utils.cpp"
@@ -559,6 +566,7 @@ set(libangle_mac_sources
 # The frame capture headers are always visible to libANGLE.
 list(APPEND libangle_sources
     "src/libANGLE/capture/FrameCapture.h"
+    "src/libANGLE/capture/capture_egl.h"
     "src/libANGLE/capture/capture_gles_1_0_autogen.h"
     "src/libANGLE/capture/capture_gles_2_0_autogen.h"
     "src/libANGLE/capture/capture_gles_3_0_autogen.h"
@@ -574,6 +582,7 @@ list(APPEND libangle_sources
 
 set(libangle_capture_sources
     "src/libANGLE/capture/FrameCapture.cpp"
+    "src/libANGLE/capture/capture_egl.cpp"
     "src/libANGLE/capture/capture_gles_1_0_autogen.cpp"
     "src/libANGLE/capture/capture_gles_1_0_params.cpp"
     "src/libANGLE/capture/capture_gles_2_0_autogen.cpp"
@@ -590,36 +599,9 @@ set(libangle_capture_sources
     "src/libANGLE/capture/frame_capture_utils_autogen.cpp"
     "src/libANGLE/capture/gl_enum_utils.cpp"
     "src/libANGLE/capture/gl_enum_utils_autogen.cpp"
+    "src/libGLESv2/global_state.h"
     "src/third_party/ceval/ceval.h"
 )
-
-
-set(libgl_sources
-    "src/libGL/entry_points_gl_1_autogen.cpp"
-    "src/libGL/entry_points_gl_1_autogen.h"
-    "src/libGL/entry_points_gl_2_autogen.cpp"
-    "src/libGL/entry_points_gl_2_autogen.h"
-    "src/libGL/entry_points_gl_3_autogen.cpp"
-    "src/libGL/entry_points_gl_3_autogen.h"
-    "src/libGL/entry_points_gl_4_autogen.cpp"
-    "src/libGL/entry_points_gl_4_autogen.h"
-    "src/libGL/entry_points_wgl.cpp"
-    "src/libGL/entry_points_wgl.h"
-    "src/libGL/libGL_autogen.cpp"
-    "src/libGL/proc_table_wgl.h"
-    "src/libGL/proc_table_wgl_autogen.cpp"
-    "src/libGLESv2/global_state.cpp"
-    "src/libGLESv2/global_state.h"
-    "src/libGLESv2/resource.h"
-)
-
-
-if(is_win)
-    list(APPEND libgl_sources
-        "src/libGL/libGL.rc"
-        "src/libGL/libGL_autogen.def"
-    )
-endif()
 
 
 set(libglesv2_sources
@@ -649,6 +631,18 @@ set(libglesv2_sources
     "src/libGLESv2/proc_table_egl.h"
     "src/libGLESv2/proc_table_egl_autogen.cpp"
     "src/libGLESv2/resource.h"
+)
+
+
+set(libglesv2_gl_sources
+    "src/libGLESv2/entry_points_gl_1_autogen.cpp"
+    "src/libGLESv2/entry_points_gl_1_autogen.h"
+    "src/libGLESv2/entry_points_gl_2_autogen.cpp"
+    "src/libGLESv2/entry_points_gl_2_autogen.h"
+    "src/libGLESv2/entry_points_gl_3_autogen.cpp"
+    "src/libGLESv2/entry_points_gl_3_autogen.h"
+    "src/libGLESv2/entry_points_gl_4_autogen.cpp"
+    "src/libGLESv2/entry_points_gl_4_autogen.h"
 )
 
 

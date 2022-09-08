@@ -27,10 +27,6 @@
 (deny system-privilege)
 (allow system-audit file-read-metadata)
 
-;; We can remove the catch once we no longer need to support iOS 15 (or earlier))
-(catch (lambda)
-    (import "dyld-support.sb"))
-
 (allow system-privilege (with grant)
     (require-all
         (privilege-id PRIV_NET_PRIVILEGED_SOCKET_DELEGATE)
@@ -224,6 +220,7 @@
            (global-name "com.apple.nehelper"))
 
     (allow mach-lookup
+           (global-name "com.apple.appstored.xpc")
            (global-name "com.apple.appstored.xpc.request"))
 
     ;; <rdar://89031731>
@@ -742,6 +739,7 @@
         SYS_setsockopt
         SYS_setxattr
         SYS_shared_region_check_np
+        SYS_shared_region_map_and_slide_2_np
         SYS_shm_open
         SYS_shutdown
         SYS_sigaction
@@ -800,6 +798,9 @@
             MSC_mk_timer_destroy
             MSC_semaphore_signal_trap
             MSC_semaphore_wait_trap
+#if PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED < 160000
+            MSC_swtch_pri
+#endif
             MSC_syscall_thread_switch
             MSC_task_self_trap
             MSC_thread_get_special_reply_port)))

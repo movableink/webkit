@@ -28,11 +28,12 @@
 
 #include "ActivateFonts.h"
 #include "InjectedBundle.h"
-#include "ReftestFunctions.h"
 #include "StringFunctions.h"
+#include "WPTFunctions.h"
 #include "WebCoreTestSupport.h"
 #include <cmath>
 #include <JavaScriptCore/JSRetainPtr.h>
+#include <JavaScriptCore/RegularExpression.h>
 #include <WebKit/WKArray.h>
 #include <WebKit/WKBundle.h>
 #include <WebKit/WKBundleBackForwardList.h>
@@ -49,6 +50,7 @@
 #include <WebKit/WKURLRequest.h>
 #include <wtf/HashMap.h>
 #include <wtf/RunLoop.h>
+#include <wtf/URL.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -1087,7 +1089,10 @@ WKURLRequestRef InjectedBundlePage::willSendRequestForFrame(WKBundlePageRef page
             }
         }
         if (!mainFrameIsExternal && !isAllowedHost(host.get())) {
-            injectedBundle.outputText(makeString("Blocked access to external URL ", urlString.get(), '\n'));
+            auto blockedURL = makeString(urlString.get());
+            replace(blockedURL, JSC::Yarr::RegularExpression("&key=[^&]+&"_s), "&key=GENERATED_KEY&"_s);
+            replace(blockedURL, JSC::Yarr::RegularExpression("reportID=[-0123456789abcdefABCDEF]+"_s), "reportID=GENERATED_REPORT_ID"_s);
+            injectedBundle.outputText(makeString("Blocked access to external URL ", blockedURL, '\n'));
             return nullptr;
         }
     }
@@ -1774,15 +1779,15 @@ String InjectedBundlePage::platformResponseMimeType(WKURLResponseRef)
 }
 #endif
 
-static bool hasReftestWaitAttribute(WKBundlePageRef page)
+static bool hasTestWaitAttribute(WKBundlePageRef page)
 {
     auto frame = WKBundlePageGetMainFrame(page);
-    return frame && hasReftestWaitAttribute(WKBundleFrameGetJavaScriptContext(frame));
+    return frame && hasTestWaitAttribute(WKBundleFrameGetJavaScriptContext(frame));
 }
 
 static void dumpAfterWaitAttributeIsRemoved(WKBundlePageRef page)
 {
-    if (hasReftestWaitAttribute(page)) {
+    if (hasTestWaitAttribute(page)) {
         WKRetain(page);
         // Use a 1ms interval between tries to allow lower priority run loop sources with zero delays to run.
         RunLoop::current().dispatchAfter(1_ms, [page] {

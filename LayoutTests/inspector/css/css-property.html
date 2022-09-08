@@ -17,13 +17,39 @@ function test() {
             InspectorTest.expectThat(!("background-repeat-x" in WI.CSSProperty._cachedNameCounts), `"background-repeat-x" should not be counted.`);
             InspectorTest.expectThat(!("background-repeat-y" in WI.CSSProperty._cachedNameCounts), `"background-repeat-y" should not be counted.`);
             InspectorTest.expectThat(!("background-repeat-invalid" in WI.CSSProperty._cachedNameCounts), `"background-repeat-invalid" should not be counted.`);
+            InspectorTest.expectThat(!("--foo" in WI.CSSProperty._cachedNameCounts), `"--foo" should not be counted.`);
+            InspectorTest.expectThat(!("--bar" in WI.CSSProperty._cachedNameCounts), `"--bar" should not be counted.`);
+
+            InspectorTest.newline();
 
             const counts = [99, 1, 100, 0, 101, 150, 50, 200];
             let seenProperty = (count) => `Fake Property ${count} Seen`;
             let unseenProperty = (count) => `Fake Property ${count} Unseen`;
+            let createQueryResults = (count, rank) => {
+                let unseen = new WI.QueryResult(unseenProperty(count), ["not reached"]);
+                unseen.rankForTesting = rank;
+
+                let seen = new WI.QueryResult(seenProperty(count), ["not reached"]);
+                seen.rankForTesting = rank;
+
+                return [unseen, seen];
+            }
             for (const count of counts)
                 WI.CSSProperty._cachedNameCounts[seenProperty(count)] = count;
+
+            InspectorTest.log("Sorted by usage:");
             InspectorTest.json(counts.flatMap((count) => [unseenProperty(count), seenProperty(count)]).sort(WI.CSSProperty.sortByPropertyNameUsageCount))
+
+            {
+                let completions = counts.flatMap((count) => createQueryResults(count, count % 2));
+                InspectorTest.log(`Initially selected completion when ranked by \`count % 2\`: "${completions[WI.CSSProperty.indexOfCompletionForMostUsedPropertyName(completions)].value}"`);
+            }
+
+            {
+                let completions = counts.flatMap((count) => createQueryResults(count, count % 3));
+                InspectorTest.log(`Initially selected completion when ranked by \`count % 3\`: "${completions[WI.CSSProperty.indexOfCompletionForMostUsedPropertyName(completions)].value}"`);
+            }
+
             for (const count of counts)
                 delete WI.CSSProperty._cachedNameCounts[seenProperty(count)];
         }
@@ -67,11 +93,9 @@ function test() {
                     switch (property.name) {
                     case "background-repeat":
                     case "background-repeat-x":
+                    case "background-repeat-y":
                     case "background-repeat-invalid":
                         InspectorTest.expectFalse(property.anonymous, `"${property.name}" is not an anonymous CSS property.`);
-                        break;
-                    case "background-repeat-y":
-                        InspectorTest.expectThat(property.anonymous, `"${property.name}" is an anonymous CSS property.`);
                         break;
                     }
                 }
@@ -93,11 +117,9 @@ function test() {
                     switch (property.name) {
                     case "background-repeat":
                     case "background-repeat-x":
+                    case "background-repeat-y":
                     case "background-repeat-invalid":
                         InspectorTest.expectFalse(property.implicit, `"${property.name}" is not an implicit CSS property.`);
-                        break;
-                    case "background-repeat-y":
-                        InspectorTest.expectThat(property.implicit, `"${property.name}" is an implicit CSS property.`);
                         break;
                     }
                 }
@@ -204,16 +226,10 @@ function test() {
                         InspectorTest.expectEqual(property._text, "background-repeat: repeat;", `"${property.name}" has the _text (private) "background-repeat: repeat;".`);
                         break;
                     case "background-repeat-x":
-                        InspectorTest.expectEqual(property.text, "background-repeat-x: repeat;", `"${property.name}" has the text "background-repeat-x: repeat;".`);
-                        InspectorTest.expectEqual(property._text, "background-repeat-x: repeat;", `"${property.name}" has the _text (private) "background-repeat-x: repeat;".`);
-                        break;
                     case "background-repeat-y":
-                        InspectorTest.expectEqual(property.text, "", `"${property.name}" has the text "".`);
-                        InspectorTest.expectEqual(property._text, "", `"${property.name}" has the _text (private) "".`);
-                        break;
                     case "background-repeat-invalid":
-                        InspectorTest.expectEqual(property.text, "background-repeat-invalid: repeat;", `"${property.name}" has the text "background-repeat-invalid: repeat;".`);
-                        InspectorTest.expectEqual(property._text, "background-repeat-invalid: repeat;", `"${property.name}" has the _text (private) "background-repeat-invalid: repeat;".`);
+                        InspectorTest.expectEqual(property.text, `${property.name}: repeat;`, `"${property.name}" has the text "${property.name}: repeat;".`);
+                        InspectorTest.expectEqual(property._text, `${property.name}: repeat;`, `"${property.name}" has the _text (private) "${property.name}: repeat;".`);
                         break;
                     }
                 }
@@ -276,6 +292,8 @@ function test() {
         background-repeat: repeat;
         background-repeat-x: repeat;
         background-repeat-invalid: repeat;
+        --foo: red;
+        --bar: blue;
         /* background-color: black; */
         /* Not a CSS property */
         /* foo:bar; foo:baz; */

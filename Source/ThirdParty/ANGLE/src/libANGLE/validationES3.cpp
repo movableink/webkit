@@ -705,7 +705,7 @@ bool ValidateES3TexImageParametersBase(const Context *context,
             }
 
             // GL_EXT_compressed_ETC1_RGB8_sub_texture allows this format
-            if (actualInternalFormat == GL_ETC1_RGB8_OES &&
+            if (IsETC1Format(actualInternalFormat) &&
                 !context->getExtensions().compressedETC1RGB8SubTextureEXT)
             {
                 context->validationError(entryPoint, GL_INVALID_OPERATION, kInvalidInternalFormat);
@@ -732,6 +732,17 @@ bool ValidateES3TexImageParametersBase(const Context *context,
     }
     else
     {
+        // Compressed formats are not valid internal formats for glTexImage*D
+        if (!isSubImage)
+        {
+            const InternalFormat &internalFormatInfo = GetSizedInternalFormatInfo(internalformat);
+            if (internalFormatInfo.compressed)
+            {
+                context->validationError(entryPoint, GL_INVALID_VALUE, kInvalidInternalFormat);
+                return false;
+            }
+        }
+
         if (!ValidateTexImageFormatCombination(context, entryPoint, texType, actualInternalFormat,
                                                format, type))
         {
@@ -2860,7 +2871,15 @@ bool ValidateCompressedTexSubImage3D(const Context *context,
         return false;
     }
 
+    if (!ValidateES3TexImage3DParameters(context, entryPoint, target, level, GL_NONE, true, true,
+                                         xoffset, yoffset, zoffset, width, height, depth, 0, format,
+                                         GL_NONE, -1, data))
+    {
+        return false;
+    }
+
     const InternalFormat &formatInfo = GetSizedInternalFormatInfo(format);
+
     if (!formatInfo.compressed)
     {
         context->validationError(entryPoint, GL_INVALID_ENUM, kInvalidCompressedFormat);
@@ -2880,17 +2899,21 @@ bool ValidateCompressedTexSubImage3D(const Context *context,
         return false;
     }
 
-    if (!ValidateES3TexImage3DParameters(context, entryPoint, target, level, GL_NONE, true, true,
-                                         xoffset, yoffset, zoffset, width, height, depth, 0, format,
-                                         GL_NONE, -1, data))
+    if (data == nullptr)
     {
-        return false;
-    }
+        if (context->getState().getTargetBuffer(BufferBinding::PixelUnpack) == nullptr)
+        {
+            // If data is null, we need an unpack buffer to read from
+            context->validationError(entryPoint, GL_INVALID_VALUE, kPixelDataNull);
+            return false;
+        }
 
-    if (!data)
-    {
-        context->validationError(entryPoint, GL_INVALID_VALUE, kPixelDataNull);
-        return false;
+        if (context->getTextureByTarget(target)->isCompressedFormatEmulated(context, target, level))
+        {
+            // TODO (anglebug.com/7464): Can't populate from a buffer using emulated format
+            context->validationError(entryPoint, GL_INVALID_VALUE, kInvalidEmulatedFormat);
+            return false;
+        }
     }
 
     return true;
@@ -3858,11 +3881,8 @@ bool ValidateDrawArraysInstancedBaseInstanceANGLE(const Context *context,
         context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
         return false;
     }
-    if (!ValidateDrawArraysInstancedBase(context, entryPoint, mode, first, count, instanceCount))
-    {
-        return false;
-    }
-    return true;
+
+    return ValidateDrawArraysInstancedBase(context, entryPoint, mode, first, count, instanceCount);
 }
 
 bool ValidateDrawElementsInstancedBaseVertexBaseInstanceANGLE(const Context *context,
@@ -3880,12 +3900,9 @@ bool ValidateDrawElementsInstancedBaseVertexBaseInstanceANGLE(const Context *con
         context->validationError(entryPoint, GL_INVALID_OPERATION, kExtensionNotEnabled);
         return false;
     }
-    if (!ValidateDrawElementsInstancedBase(context, entryPoint, mode, count, type, indices,
-                                           instanceCount))
-    {
-        return false;
-    }
-    return true;
+
+    return ValidateDrawElementsInstancedBase(context, entryPoint, mode, count, type, indices,
+                                             instanceCount);
 }
 
 bool ValidateMultiDrawArraysInstancedBaseInstanceANGLE(const Context *context,

@@ -25,6 +25,7 @@
 #include "RenderStyleConstants.h"
 #include "SVGRenderStyleDefs.h"
 #include "TextFlags.h"
+#include <wtf/FixedVector.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
@@ -99,6 +100,7 @@ private:
     Ref<CSSValue> getBackgroundShorthandValue();
     Ref<CSSValue> getMaskShorthandValue();
     Ref<CSSValueList> getCSSPropertyValuesForGridShorthand(const StylePropertyShorthand&);
+    Ref<CSSValue> fontVariantShorthandValue();
 
     RefPtr<Element> m_element;
     PseudoId m_pseudoElementSpecifier;
@@ -140,6 +142,7 @@ private:
     RefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID, EUpdateLayout = UpdateLayout) const;
 
     const Settings* settings() const final;
+    const FixedVector<CSSPropertyID>& exposedComputedCSSPropertyIDs() const;
 
     mutable Ref<Element> m_element;
     PseudoId m_pseudoElementSpecifier;

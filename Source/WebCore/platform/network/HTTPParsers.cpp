@@ -589,7 +589,7 @@ XFrameOptionsDisposition parseXFrameOptionsHeader(StringView header)
     if (header.isEmpty())
         return result;
 
-    for (auto currentHeader : header.split(',')) {
+    for (auto currentHeader : header.splitAllowingEmptyEntries(',')) {
         currentHeader = currentHeader.stripWhiteSpace();
         XFrameOptionsDisposition currentValue = XFrameOptionsDisposition::None;
         if (equalLettersIgnoringASCIICase(currentHeader, "deny"_s))
@@ -897,6 +897,7 @@ bool isForbiddenHeaderName(const String& name)
         case HTTPHeaderName::KeepAlive:
         case HTTPHeaderName::Origin:
         case HTTPHeaderName::Referer:
+        case HTTPHeaderName::SetCookie:
         case HTTPHeaderName::TE:
         case HTTPHeaderName::Trailer:
         case HTTPHeaderName::TransferEncoding:

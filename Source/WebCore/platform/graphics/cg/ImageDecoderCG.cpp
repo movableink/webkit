@@ -34,23 +34,26 @@
 #include "IntPoint.h"
 #include "IntSize.h"
 #include "Logging.h"
-#include "MediaAccessibilitySoftLink.h"
 #include "MIMETypeRegistry.h"
+#include "ProcessCapabilities.h"
 #include "SharedBuffer.h"
 #include "UTIRegistry.h"
 #include <pal/spi/cg/ImageIOSPI.h>
 #include <ImageIO/ImageIO.h>
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 
+#include "MediaAccessibilitySoftLink.h"
+
 namespace WebCore {
 
+const CFStringRef WebCoreCGImagePropertyAVISDictionary = CFSTR("{AVIS}");
 const CFStringRef WebCoreCGImagePropertyHEICSDictionary = CFSTR("{HEICS}");
-const CFStringRef WebCoreCGImagePropertyHEICSFrameInfoArray = CFSTR("FrameInfo");
+const CFStringRef WebCoreCGImagePropertyFrameInfoArray = CFSTR("FrameInfo");
 
 const CFStringRef WebCoreCGImagePropertyUnclampedDelayTime = CFSTR("UnclampedDelayTime");
 const CFStringRef WebCoreCGImagePropertyDelayTime = CFSTR("DelayTime");
 const CFStringRef WebCoreCGImagePropertyLoopCount = CFSTR("LoopCount");
-    
+
 #if PLATFORM(WIN)
 const CFStringRef kCGImageSourceShouldPreferRGB32 = CFSTR("kCGImageSourceShouldPreferRGB32");
 const CFStringRef kCGImageSourceSkipMetadata = CFSTR("kCGImageSourceSkipMetadata");
@@ -72,11 +75,11 @@ static RetainPtr<CFMutableDictionaryRef> createImageSourceOptions()
     CFDictionarySetValue(options.get(), kCGImageSourceShouldPreferRGB32, kCFBooleanTrue);
     CFDictionarySetValue(options.get(), kCGImageSourceSkipMetadata, kCFBooleanTrue);
 
-    if (ImageDecoderCG::hardwareAcceleratedDecodingDisabled())
+    if (ProcessCapabilities::isHardwareAcceleratedDecodingDisabled())
         CFDictionarySetValue(options.get(), kCGImageSourceUseHardwareAcceleration, kCFBooleanFalse);
 
 #if HAVE(IMAGE_RESTRICTED_DECODING) && USE(APPLE_INTERNAL_SDK)
-    if (ImageDecoderCG::decodingHEICEnabled() || ImageDecoderCG::decodingAVIFEnabled())
+    if (ProcessCapabilities::isHEICDecodingEnabled() || ProcessCapabilities::isAVIFDecodingEnabled())
         CFDictionarySetValue(options.get(), kCGImageSourceEnableRestrictedDecoding, kCFBooleanTrue);
 #endif
 
@@ -155,27 +158,30 @@ static CFDictionaryRef animationPropertiesFromProperties(CFDictionaryRef propert
     if (auto animationProperties = (CFDictionaryRef)CFDictionaryGetValue(properties, kCGImagePropertyPNGDictionary))
         return animationProperties;
 
+    if (auto animationProperties = (CFDictionaryRef)CFDictionaryGetValue(properties, WebCoreCGImagePropertyAVISDictionary))
+        return animationProperties;
+
     return (CFDictionaryRef)CFDictionaryGetValue(properties, WebCoreCGImagePropertyHEICSDictionary);
 }
 
-static CFDictionaryRef animationHEICSPropertiesFromProperties(CFDictionaryRef properties, size_t index)
+static CFDictionaryRef animationPropertiesFromProperties(CFDictionaryRef properties, const CFStringRef animationDictionaryName, size_t index)
 {
     if (!properties)
         return nullptr;
 
-    // For HEICS images, ImageIO does not create a properties dictionary for each HEICS frame. Instead it maintains
-    // all frames' information in the image properties dictionary. Here is how ImageIO structures the properties
-    // dictionary for HEICS image:
+    // For HEIF container images, ImageIO does not create a properties dictionary for each frame.
+    // Instead it maintains all frames' information in the image properties dictionary. Here is how
+    // ImageIO structures the properties dictionary for HEICS image:
     //  "{HEICS}" =  {
     //      FrameInfo = ( { DelayTime = "0.1"; }, { DelayTime = "0.1"; }, ... );
     //      LoopCount = 0;
     //      ...
     //  };
-    CFDictionaryRef heicsProperties = (CFDictionaryRef)CFDictionaryGetValue(properties, WebCoreCGImagePropertyHEICSDictionary);
-    if (!heicsProperties)
+    auto animationProperties = (CFDictionaryRef)CFDictionaryGetValue(properties, animationDictionaryName);
+    if (!animationProperties)
         return nullptr;
 
-    CFArrayRef frameInfoArray = (CFArrayRef)CFDictionaryGetValue(heicsProperties, WebCoreCGImagePropertyHEICSFrameInfoArray);
+    auto frameInfoArray = (CFArrayRef)CFDictionaryGetValue(animationProperties, WebCoreCGImagePropertyFrameInfoArray);
     if (!frameInfoArray)
         return nullptr;
 
@@ -267,10 +273,6 @@ void sharedBufferRelease(void* info)
     sharedBuffer->deref();
 }
 #endif
-
-bool ImageDecoderCG::s_enableDecodingHEIC = false;
-bool ImageDecoderCG::s_enableDecodingAVIF = false;
-bool ImageDecoderCG::s_hardwareAcceleratedDecodingDisabled = false;
 
 ImageDecoderCG::ImageDecoderCG(FragmentedSharedBuffer& data, AlphaOption, GammaAndColorProfileOption)
 {
@@ -488,7 +490,9 @@ Seconds ImageDecoderCG::frameDurationAtIndex(size_t index) const
 
     if (frameProperties && !animationProperties) {
         properties = adoptCF(CGImageSourceCopyProperties(m_nativeDecoder.get(), imageSourceOptions().get()));
-        animationProperties = animationHEICSPropertiesFromProperties(properties.get(), index);
+        animationProperties = animationPropertiesFromProperties(properties.get(), WebCoreCGImagePropertyAVISDictionary, index);
+        if (!animationProperties)
+            animationProperties = animationPropertiesFromProperties(properties.get(), WebCoreCGImagePropertyHEICSDictionary, index);
     }
 
     // Use the unclamped frame delay if it exists. Otherwise use the clamped frame delay.
@@ -610,36 +614,6 @@ void ImageDecoderCG::setData(const FragmentedSharedBuffer& data, bool allDataRec
 bool ImageDecoderCG::canDecodeType(const String& mimeType)
 {
     return MIMETypeRegistry::isSupportedImageMIMEType(mimeType);
-}
-
-void ImageDecoderCG::enableDecodingHEIC()
-{
-    s_enableDecodingHEIC = true;
-}
-
-bool ImageDecoderCG::decodingHEICEnabled()
-{
-    return s_enableDecodingHEIC;
-}
-
-void ImageDecoderCG::enableDecodingAVIF()
-{
-    s_enableDecodingAVIF = true;
-}
-
-bool ImageDecoderCG::decodingAVIFEnabled()
-{
-    return s_enableDecodingAVIF;
-}
-
-void ImageDecoderCG::disableHardwareAcceleratedDecoding()
-{
-    s_hardwareAcceleratedDecodingDisabled = true;
-}
-
-bool ImageDecoderCG::hardwareAcceleratedDecodingDisabled()
-{
-    return s_hardwareAcceleratedDecodingDisabled;
 }
 
 }

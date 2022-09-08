@@ -1,7 +1,6 @@
 (GraphicsLayer
   (anchor 0.00 0.00)
   (bounds 800.00 600.00)
-  (clips 1)
   (children 1
     (GraphicsLayer
       (bounds 800.00 600.00)
@@ -57,9 +56,13 @@
           (clips 1)
           (children 1
             (GraphicsLayer
-              (position 10.00 10.00)
-              (bounds 100.00 80.00)
-              (contentsOpaque 1)
+              (children 1
+                (GraphicsLayer
+                  (position 10.00 10.00)
+                  (bounds 100.00 80.00)
+                  (contentsOpaque 1)
+                )
+              )
             )
           )
         )
@@ -73,14 +76,22 @@
           (clips 1)
           (children 1
             (GraphicsLayer
-              (position 21.00 111.00)
-              (bounds 300.00 200.00)
-              (clips 1)
               (children 1
                 (GraphicsLayer
-                  (position 10.00 10.00)
-                  (bounds 100.00 80.00)
-                  (contentsOpaque 1)
+                  (position 21.00 111.00)
+                  (bounds 300.00 200.00)
+                  (clips 1)
+                  (children 1
+                    (GraphicsLayer
+                      (children 1
+                        (GraphicsLayer
+                          (position 10.00 10.00)
+                          (bounds 100.00 80.00)
+                          (contentsOpaque 1)
+                        )
+                      )
+                    )
+                  )
                 )
               )
             )
@@ -92,14 +103,22 @@
           (clips 1)
           (children 1
             (GraphicsLayer
-              (position 21.00 111.00)
-              (bounds 300.00 200.00)
-              (clips 1)
               (children 1
                 (GraphicsLayer
-                  (position 10.00 100.00)
-                  (bounds 100.00 80.00)
-                  (contentsOpaque 1)
+                  (position 21.00 111.00)
+                  (bounds 300.00 200.00)
+                  (clips 1)
+                  (children 1
+                    (GraphicsLayer
+                      (children 1
+                        (GraphicsLayer
+                          (position 10.00 100.00)
+                          (bounds 100.00 80.00)
+                          (contentsOpaque 1)
+                        )
+                      )
+                    )
+                  )
                 )
               )
             )
@@ -111,14 +130,22 @@
           (clips 1)
           (children 1
             (GraphicsLayer
-              (position 21.00 111.00)
-              (bounds 300.00 200.00)
-              (clips 1)
               (children 1
                 (GraphicsLayer
-                  (position 10.00 190.00)
-                  (bounds 100.00 80.00)
-                  (contentsOpaque 1)
+                  (position 21.00 111.00)
+                  (bounds 300.00 200.00)
+                  (clips 1)
+                  (children 1
+                    (GraphicsLayer
+                      (children 1
+                        (GraphicsLayer
+                          (position 10.00 190.00)
+                          (bounds 100.00 80.00)
+                          (contentsOpaque 1)
+                        )
+                      )
+                    )
+                  )
                 )
               )
             )

@@ -1,5 +1,28 @@
 <!DOCTYPE html>
+<html>
+<head>
 <style>
+:root {
+    color-scheme: dark light;
+    --clickable-link-color: blue;
+    --item-highlight-color: red;
+    --button-background-color: white;
+    --panel-background-color: rgba(255, 255, 255, 0.9);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --item-highlight-color: #F8490A;
+        --button-background-color: #666;
+        --panel-background-color: rgba(50, 50, 50, 0.9);
+        --clickable-link-color: #9e9eff;
+    }
+    /* Remove when webkit.org/b/209851 is fixed. */
+    a:link { color: #9e9eff; }
+    a:visited { color: #d0adf0; }
+    a:active { color: red; }
+}
+
 body {
     margin: 0;
     font-family: Helvetica, sans-serif;
@@ -21,7 +44,7 @@ p {
 }
 
 a.clickable {
-    color: blue;
+    color: var(--clickable-link-color);
     cursor: pointer;
     margin-left: 0.2em;
 }
@@ -74,10 +97,6 @@ sup > a {
     font-size: smaller;
 }
 
-.results-row {
-    background-color: white;
-}
-
 .results-row iframe, .results-row img {
     width: 800px;
     height: 600px;
@@ -96,13 +115,13 @@ sup > a {
 
 .floating-panel {
     padding: 6px;
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: var(--panel-background-color);
     border: 1px solid silver;
     border-radius: 4px;
 }
 
 .expand-button {
-    background-color: white;
+    background-color: var(--button-background-color);
     width: 11px;
     height: 12px;
     border: 1px solid gray;
@@ -113,11 +132,11 @@ sup > a {
 }
 
 .current {
-    color: red;
+    color: var(--item-highlight-color);
 }
 
 .current .expand-button {
-    border-color: red;
+    border-color: var(--item-highlight-color);
 }
 
 .expand-button-text {
@@ -173,7 +192,7 @@ tbody.flagged .flag {
     text-align: left;
     position: absolute;
     right: 4px;
-    background-color: white;
+    background-color: var(--panel-background-color);
 }
 
 #options-menu label {
@@ -237,7 +256,7 @@ tbody.flagged .flag {
     right: 4px;
     width: 50%;
     min-width: 400px;
-    background-color: rgba(255, 255, 255, 0.75);
+    background-color: var(--panel-background-color);
 }
 
 #flagged-test-container > h2 {
@@ -647,17 +666,8 @@ class TestResultsController
         if (this.testResults.usesExpectationsFile() && this.testResults.unexpectedPassTests.length)
             this.containerElement.appendChild(this.buildOneSection(this.testResults.unexpectedPassTests, 'passes-table'));
 
-        if (this.testResults.hasHttpTests) {
-            let httpdAccessLogLink = document.createElement('p');
-            httpdAccessLogLink.innerHTML = 'httpd access log: <a href="access_log.txt">access_log.txt</a>';
+        this.containerElement.appendChild(this.buildMiscLinksSection());
 
-            let httpdErrorLogLink = document.createElement('p');
-            httpdErrorLogLink.innerHTML = 'httpd error log: <a href="error_log.txt">error_log.txt</a>';
-            
-            this.containerElement.appendChild(httpdAccessLogLink);
-            this.containerElement.appendChild(httpdErrorLogLink);
-        }
-        
         this.updateTestlistCounts();
     }
 
@@ -719,6 +729,31 @@ class TestResultsController
         let sectionBuilderClass = TestResultsController.sectionBuilderClassForTableID(tableID);
         let sectionBuilder = new sectionBuilderClass(tests, tableID, this);
         return sectionBuilder.build();
+    }
+
+    buildMiscLinksSection()
+    {
+        let section = document.createElement('section');
+        let header = document.createElement('h1');
+        header.textContent = 'Additional test data';
+        section.appendChild(header);
+
+        if (this.testResults.hasHttpTests) {
+            let httpdAccessLogLink = document.createElement('p');
+            httpdAccessLogLink.innerHTML = '<a href="access_log.txt">httpd access log</a>';
+
+            let httpdErrorLogLink = document.createElement('p');
+            httpdErrorLogLink.innerHTML = '<a href="error_log.txt">httpd error log</a>';
+            
+            section.appendChild(httpdAccessLogLink);
+            section.appendChild(httpdErrorLogLink);
+        }
+
+        let perfTreeMapLink = document.createElement('p');
+        perfTreeMapLink.innerHTML = '<a href="test-duration-treemap.html">Test durations</a>';
+        section.appendChild(perfTreeMapLink);
+
+        return section;
     }
 
     updateTestlistCounts()
@@ -793,7 +828,7 @@ class TestResultsController
 
     layoutTestURL(testResult)
     {
-        if (this.shouldUseTracLinks())
+        if (this.shouldUseGithubLinks())
             return this.layoutTestsBasePath() + testResult.name;
 
         return this.testToURL(testResult, this.layoutTestsBasePath());
@@ -802,12 +837,9 @@ class TestResultsController
     layoutTestsBasePath()
     {
         let basePath;
-        if (this.shouldUseTracLinks()) {
-            let revision = this.testResults.revision;
-            basePath = 'http://trac.webkit.org';
-            basePath += revision ? ('/export/' + revision) : '/browser';
-            basePath += '/trunk/LayoutTests/';
-        } else
+        if (this.shouldUseGithubLinks())
+            basePath = 'https://github.com/WebKit/WebKit/blob/main/LayoutTests/';
+        else
             basePath = this.testResults.layoutTestsDir() + '/';
 
         return basePath;
@@ -824,14 +856,14 @@ class TestResultsController
         return fullURL;
     }
 
-    shouldUseTracLinks()
+    shouldUseGithubLinks()
     {
         return !this.testResults.layoutTestsDir() || !location.toString().indexOf('file://') == 0;
     }
 
     checkServerIsRunning(event)
     {
-        if (this.shouldUseTracLinks())
+        if (this.shouldUseGithubLinks())
             return;
 
         let url = event.target.href;
@@ -1105,8 +1137,8 @@ class TestResultsController
         let layoutTestsIndex = src.indexOf('LayoutTests');
         let name;
         if (layoutTestsIndex != -1) {
-            let hasTrac = src.indexOf('trac.webkit.org') != -1;
-            let prefix = hasTrac ? 'trac.webkit.org/.../' : '';
+            let hasGithub = src.indexOf('github.com/WebKit/WebKit/') != -1;
+            let prefix = hasGithub ? 'github.com/WebKit/WebKit/.../' : '';
             name = prefix + src.substring(layoutTestsIndex + 'LayoutTests/'.length);
         } else {
             let lastDashIndex = src.lastIndexOf('-pretty');
@@ -2042,6 +2074,7 @@ function generatePage()
 window.addEventListener('load', generatePage, false);
 
 </script>
+</head>
 <body>
     
     <div class="content-container">
@@ -2060,3 +2093,4 @@ window.addEventListener('load', generatePage, false);
 <div id="main-content"></div>
 
 </body>
+</html>

@@ -84,18 +84,16 @@ void WebInspector::setFrontendConnection(IPC::Attachment encodedConnectionIdenti
         m_frontendConnection = nullptr;
     }
 
-#if USE(UNIX_DOMAIN_SOCKETS)
+#if USE(UNIX_DOMAIN_SOCKETS) || OS(WINDOWS)
     IPC::Connection::Identifier connectionIdentifier(encodedConnectionIdentifier.release().release());
 #elif OS(DARWIN)
     IPC::Connection::Identifier connectionIdentifier(encodedConnectionIdentifier.leakSendRight());
-#elif OS(WINDOWS)
-    IPC::Connection::Identifier connectionIdentifier(encodedConnectionIdentifier.handle());
 #else
     notImplemented();
     return;
 #endif
 
-    if (!IPC::Connection::identifierIsValid(connectionIdentifier))
+    if (!connectionIdentifier)
         return;
 
     m_frontendConnection = IPC::Connection::createClientConnection(connectionIdentifier, *this);
@@ -266,6 +264,15 @@ void WebInspector::setDeveloperPreferenceOverride(InspectorClient::DeveloperPref
 {
     WebProcess::singleton().parentProcessConnection()->send(Messages::WebInspectorUIProxy::SetDeveloperPreferenceOverride(developerPreference, overrideValue), m_page->identifier());
 }
+
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+
+void WebInspector::setEmulatedConditions(std::optional<int64_t>&& bytesPerSecondLimit)
+{
+    WebProcess::singleton().parentProcessConnection()->send(Messages::WebInspectorUIProxy::SetEmulatedConditions(WTFMove(bytesPerSecondLimit)), m_page->identifier());
+}
+
+#endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
 
 bool WebInspector::canAttachWindow()
 {

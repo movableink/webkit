@@ -65,6 +65,7 @@
 #include "RenderBlock.h"
 #include "RenderBox.h"
 #include "RenderTextControl.h"
+#include "RenderTreeUpdater.h"
 #include "RenderView.h"
 #include "SVGElement.h"
 #include "ScopedEventQueue.h"
@@ -106,9 +107,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Node);
 using namespace HTMLNames;
 
 #if DUMP_NODE_STATISTICS
-static WeakHashSet<Node>& liveNodeSet()
+static WeakHashSet<Node, WeakPtrImplWithEventTargetData>& liveNodeSet()
 {
-    static NeverDestroyed<WeakHashSet<Node>> liveNodes;
+    static NeverDestroyed<WeakHashSet<Node, WeakPtrImplWithEventTargetData>> liveNodes;
     return liveNodes;
 }
 
@@ -119,10 +120,10 @@ static const char* stringForRareDataUseType(NodeRareData::UseType useType)
         return "NodeList";
     case NodeRareData::UseType::MutationObserver:
         return "MutationObserver";
+    case NodeRareData::UseType::ManuallyAssignedSlot:
+        return "ManuallyAssignedSlot";
     case NodeRareData::UseType::TabIndex:
         return "TabIndex";
-    case NodeRareData::UseType::MinimumSize:
-        return "MinimumSize";
     case NodeRareData::UseType::ScrollingPosition:
         return "ScrollingPosition";
     case NodeRareData::UseType::ComputedStyle:
@@ -151,6 +152,8 @@ static const char* stringForRareDataUseType(NodeRareData::UseType useType)
         return "PartList";
     case NodeRareData::UseType::PartNames:
         return "PartNames";
+    case NodeRareData::UseType::Nonce:
+        return "Nonce";
     case NodeRareData::UseType::ExplicitlySetAttrElementsMap:
         return "ExplicitlySetAttrElementsMap";
     }
@@ -306,9 +309,9 @@ DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, nodeCounter, ("WebCoreNode"
 #ifndef NDEBUG
 static bool shouldIgnoreLeaks = false;
 
-static WeakHashSet<Node>& ignoreSet()
+static WeakHashSet<Node, WeakPtrImplWithEventTargetData>& ignoreSet()
 {
-    static NeverDestroyed<WeakHashSet<Node>> ignore;
+    static NeverDestroyed<WeakHashSet<Node, WeakPtrImplWithEventTargetData>> ignore;
     return ignore;
 }
 
@@ -342,8 +345,18 @@ void Node::trackForDebugging()
 #endif
 }
 
+inline void NodeRareData::operator delete(NodeRareData* nodeRareData, std::destroying_delete_t)
+{
+    if (nodeRareData->m_isElementRareData)
+        static_cast<ElementRareData*>(nodeRareData)->~ElementRareData();
+    else
+        nodeRareData->~NodeRareData();
+    NodeRareData::freeAfterDestruction(nodeRareData);
+}
+
 Node::Node(Document& document, ConstructionType type)
-    : m_nodeFlags(type)
+    : EventTarget(ConstructNode)
+    , m_nodeFlags(type)
     , m_treeScope(&document)
 {
     ASSERT(isMainThread());
@@ -381,9 +394,6 @@ Node::~Node()
     if (auto* textManipulationController = document().textManipulationControllerIfExists(); UNLIKELY(textManipulationController))
         textManipulationController->removeNode(*this);
 
-    if (hasEventTargetData())
-        clearEventTargetData();
-
     document().decrementReferencingNodeCount();
 
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY) && (ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS))
@@ -418,17 +428,9 @@ void Node::willBeDeletedFrom(Document& document)
 void Node::materializeRareData()
 {
     if (is<Element>(*this))
-        m_rareDataWithBitfields.setPointer(std::unique_ptr<NodeRareData, NodeRareDataDeleter>(new ElementRareData));
+        m_rareDataWithBitfields.setPointer(makeUnique<ElementRareData>());
     else
-        m_rareDataWithBitfields.setPointer(std::unique_ptr<NodeRareData, NodeRareDataDeleter>(new NodeRareData));
-}
-
-inline void Node::NodeRareDataDeleter::operator()(NodeRareData* rareData) const
-{
-    if (rareData->isElementRareData())
-        delete static_cast<ElementRareData*>(rareData);
-    else
-        delete static_cast<NodeRareData*>(rareData);
+        m_rareDataWithBitfields.setPointer(makeUnique<NodeRareData>());
 }
 
 void Node::clearRareData()
@@ -437,11 +439,6 @@ void Node::clearRareData()
     ASSERT(!transientMutationObserverRegistry() || transientMutationObserverRegistry()->isEmpty());
 
     m_rareDataWithBitfields.setPointer(nullptr);
-}
-
-bool Node::isNode() const
-{
-    return true;
 }
 
 String Node::nodeValue() const
@@ -859,7 +856,20 @@ void Node::adjustStyleValidity(Style::Validity validity, Style::InvalidationMode
         setStyleFlag(NodeStyleFlag::StyleResolutionShouldRecompositeLayer);
 }
 
-inline void Node::updateAncestorsForStyleRecalc()
+void Node::updateAncestorsForStyleRecalc()
+{
+    markAncestorsForInvalidatedStyle();
+
+    auto* documentElement = document().documentElement();
+    if (!documentElement)
+        return;
+    if (!documentElement->childNeedsStyleRecalc() && !documentElement->needsStyleRecalc())
+        return;
+    document().setChildNeedsStyleRecalc();
+    document().scheduleStyleRecalc();
+}
+
+void Node::markAncestorsForInvalidatedStyle()
 {
     auto composedAncestors = composedTreeAncestors(*this);
     auto it = composedAncestors.begin();
@@ -876,14 +886,6 @@ inline void Node::updateAncestorsForStyleRecalc()
             it->setChildNeedsStyleRecalc();
         }
     }
-
-    auto* documentElement = document().documentElement();
-    if (!documentElement)
-        return;
-    if (!documentElement->childNeedsStyleRecalc() && !documentElement->needsStyleRecalc())
-        return;
-    document().setChildNeedsStyleRecalc();
-    document().scheduleStyleRecalc();
 }
 
 void Node::invalidateStyle(Style::Validity validity, Style::InvalidationMode mode)
@@ -1214,6 +1216,23 @@ HTMLSlotElement* Node::assignedSlotForBindings() const
     if (shadowRoot && shadowRoot->mode() == ShadowRootMode::Open)
         return shadowRoot->findAssignedSlot(*this);
     return nullptr;
+}
+
+HTMLSlotElement* Node::manuallyAssignedSlot() const
+{
+    if (!hasRareData())
+        return nullptr;
+    return rareData()->manuallyAssignedSlot();
+}
+
+void Node::setManuallyAssignedSlot(HTMLSlotElement* slotElement)
+{
+    if (RefPtr element = dynamicDowncast<Element>(*this))
+        RenderTreeUpdater::tearDownRenderers(*element);
+    else if (RefPtr text = dynamicDowncast<Text>(*this))
+        RenderTreeUpdater::tearDownRenderer(*text);
+
+    ensureRareData().setManuallyAssignedSlot(slotElement);
 }
 
 ContainerNode* Node::parentInComposedTree() const
@@ -2031,11 +2050,14 @@ void Node::moveTreeToNewScope(Node& root, TreeScope& oldScope, TreeScope& newSco
 
     Document& oldDocument = oldScope.documentScope();
     Document& newDocument = newScope.documentScope();
+    bool newScopeIsUAShadowTree = newScope.rootNode().hasBeenInUserAgentShadowTree();
     if (&oldDocument != &newDocument) {
         oldDocument.incrementReferencingNodeCount();
         traverseSubtreeToUpdateTreeScope(root, [&](Node& node) {
             ASSERT(!node.isTreeScope());
             RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&node.treeScope() == &oldScope);
+            if (newScopeIsUAShadowTree)
+                node.setNodeFlag(NodeFlag::HasBeenInUserAgentShadowTree);
             node.setTreeScope(newScope);
             node.moveNodeToNewDocument(oldDocument, newDocument);
         }, [&](ShadowRoot& shadowRoot) {
@@ -2049,6 +2071,8 @@ void Node::moveTreeToNewScope(Node& root, TreeScope& oldScope, TreeScope& newSco
         traverseSubtreeToUpdateTreeScope(root, [&](Node& node) {
             ASSERT(!node.isTreeScope());
             RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&node.treeScope() == &oldScope);
+            if (newScopeIsUAShadowTree)
+                node.setNodeFlag(NodeFlag::HasBeenInUserAgentShadowTree);
             node.setTreeScope(newScope);
             if (UNLIKELY(!node.hasRareData()))
                 return;
@@ -2230,59 +2254,6 @@ static inline bool tryRemoveEventListener(Node* targetNode, const AtomString& ev
 bool Node::removeEventListener(const AtomString& eventType, EventListener& listener, const EventListenerOptions& options)
 {
     return tryRemoveEventListener(this, eventType, listener, options);
-}
-
-typedef HashMap<Node*, std::unique_ptr<EventTargetData>> EventTargetDataMap;
-
-static EventTargetDataMap& eventTargetDataMap()
-{
-    static NeverDestroyed<EventTargetDataMap> map;
-
-    return map;
-}
-
-static Lock s_eventTargetDataMapLock;
-
-EventTargetData* Node::eventTargetData()
-{
-    return hasEventTargetData() ? eventTargetDataMap().get(this) : nullptr;
-}
-
-EventTargetData* Node::eventTargetDataConcurrently()
-{
-    // Not holding the lock when the world is stopped accelerates parallel constraint solving, which
-    // calls this function from many threads. Parallel constraint solving can happen with the world
-    // running or stopped, but if we do it with a running world, then we're usually mixing constraint
-    // solving with other work. Therefore, the most likely time for contention on this lock is when the
-    // world is stopped. We don't have to hold the lock when the world is stopped, because a stopped world
-    // means that we will never mutate the event target data map.
-    JSC::VM* vm = commonVMOrNull();
-    if (vm && vm->heap.worldIsRunning()) {
-        Locker locker { s_eventTargetDataMapLock };
-        return hasEventTargetData() ? eventTargetDataMap().get(this) : nullptr;
-    }
-    return hasEventTargetData() ? eventTargetDataMap().get(this) : nullptr;
-}
-
-EventTargetData& Node::ensureEventTargetData()
-{
-    if (hasEventTargetData())
-        return *eventTargetDataMap().get(this);
-
-    JSC::VM* vm = commonVMOrNull();
-    RELEASE_ASSERT(!vm || vm->heap.worldIsRunning());
-
-    Locker locker { s_eventTargetDataMapLock };
-    setHasEventTargetData(true);
-    return *eventTargetDataMap().add(this, makeUnique<EventTargetData>()).iterator->value;
-}
-
-void Node::clearEventTargetData()
-{
-    JSC::VM* vm = commonVMOrNull();
-    RELEASE_ASSERT(!vm || vm->heap.worldIsRunning());
-    Locker locker { s_eventTargetDataMapLock };
-    eventTargetDataMap().remove(this);
 }
 
 Vector<std::unique_ptr<MutationObserverRegistration>>* Node::mutationObserverRegistry()
@@ -2627,7 +2598,7 @@ void Node::removedLastRef()
 
 void Node::incrementConnectedSubframeCount(unsigned amount)
 {
-    static_assert(RareDataBitFields { Page::maxNumberOfFrames, 0, 0 }.connectedSubframeCount == Page::maxNumberOfFrames, "connectedSubframeCount must fit Page::maxNumberOfFrames");
+    static_assert(RareDataBitFields { Page::maxNumberOfFrames, 0, 0, 0, 0 }.connectedSubframeCount == Page::maxNumberOfFrames, "connectedSubframeCount must fit Page::maxNumberOfFrames");
 
     ASSERT(isContainerNode());
     auto bitfields = rareDataBitfields();
@@ -2667,6 +2638,27 @@ void Node::updateAncestorConnectedSubframeCountForInsertion() const
         node->incrementConnectedSubframeCount(count);
 }
 
+TextDirection Node::effectiveTextDirection() const
+{
+    if (rareDataBitfields().usesEffectiveTextDirection)
+        return static_cast<TextDirection>(rareDataBitfields().effectiveTextDirection);
+    return document().documentElementTextDirection();
+}
+
+void Node::setEffectiveTextDirection(TextDirection direction)
+{
+    auto bitfields = rareDataBitfields();
+    bitfields.effectiveTextDirection = static_cast<uint16_t>(direction);
+    setRareDataBitfields(bitfields);
+}
+
+void Node::setUsesEffectiveTextDirection(bool value)
+{
+    auto bitfields = rareDataBitfields();
+    bitfields.usesEffectiveTextDirection = value;
+    setRareDataBitfields(bitfields);
+}
+
 bool Node::inRenderedDocument() const
 {
     return isConnected() && document().hasLivingRenderTree();
@@ -2683,6 +2675,11 @@ WebCoreOpaqueRoot Node::traverseToOpaqueRoot() const
         node = nextNode;
     }
     return WebCoreOpaqueRoot { const_cast<Node*>(node) };
+}
+
+void Node::notifyInspectorOfRendererChange()
+{
+    InspectorInstrumentation::didChangeRendererForDOMNode(*this);
 }
 
 template<> ContainerNode* parent<Tree>(const Node& node)

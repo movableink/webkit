@@ -54,19 +54,6 @@ AllowViewportShrinkToFitContent:
     WebCore:
       default: true
 
-AlternateWebMPlayerEnabled:
-  type: bool
-  humanReadableName: "Alternate WebM Player"
-  humanReadableDescription: "Enable Alternate WebM Player"
-  condition: ENABLE(ALTERNATE_WEBM_PLAYER)
-  defaultValue:
-    WebKitLegacy:
-     default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false
-
 AlwaysZoomOnDoubleTap:
   type: bool
   humanReadableName: "DTTZ always"
@@ -110,6 +97,17 @@ AsyncOverflowScrollingEnabled:
     WebCore:
       default: false
 
+AutomaticLiveResizeEnabled:
+  type: bool
+  humanReadableName: "Enable Automatic Live Resize"
+  humanReadableDescription: "Automatically synchronize web view resize with painting"
+  webcoreBinding: none
+  exposed: [ WebKit ]
+  defaultValue:
+    WebKit:
+      "HAVE(UIKIT_WEBKIT_INTERNALS)": true
+      default: false
+
 BlockIOKitInWebContentSandbox:
   type: bool
   humanReadableName: "IOKit blocking in the WebContent sandbox"
@@ -124,7 +122,7 @@ CSSLogicalEnabled:
   type: bool
   humanReadableName: "CSS Logical Properties and Values"
   humanReadableDescription: "Enable CSS Logical Properties and Values"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: false
@@ -220,7 +218,7 @@ DataListElementEnabled:
   type: bool
   humanReadableName: "DataList Element"
   humanReadableDescription: "Enable datalist elements"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   condition: ENABLE(DATALIST_ELEMENT)
   defaultValue:
     WebKitLegacy:
@@ -284,7 +282,6 @@ FlexFormattingContextIntegrationEnabled:
   type: bool
   humanReadableName: "Next-generation flex layout integration (FFC)"
   humanReadableDescription: "Enable next-generation flex layout integration (FFC)"
-  condition: ENABLE(LAYOUT_FORMATTING_CONTEXT)
   defaultValue:
     WebKitLegacy:
       default: false
@@ -370,12 +367,23 @@ IPCTestingAPIEnabled:
     WebKit:
       default: false
 
+ImageAnalysisDuringFindInPageEnabled:
+  type: bool
+  humanReadableName: "Image Analysis for Find-in-Page"
+  humanReadableDescription: "Trigger image analysis when performing Find-in-Page"
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 InlineFormattingContextIntegrationEnabled:
   type: bool
   humanReadableName: "Next-generation inline layout integration (IFC)"
   humanReadableDescription: "Enable next-generation inline layout integration (IFC)"
-  webcoreBinding: RuntimeEnabledFeatures
-  condition: ENABLE(LAYOUT_FORMATTING_CONTEXT)
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: true
@@ -527,8 +535,7 @@ LayoutFormattingContextEnabled:
   type: bool
   humanReadableName: "Full next-generation layout (LFC)"
   humanReadableDescription: "Enable full next-generation layout (LFC)"
-  webcoreBinding: RuntimeEnabledFeatures
-  condition: ENABLE(LAYOUT_FORMATTING_CONTEXT)
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: false
@@ -553,7 +560,7 @@ LineHeightUnitsEnabled:
   type: bool
   humanReadableName: "lh / rlh units"
   humanReadableDescription: "Enable the lh and lhr units"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: false
@@ -568,6 +575,19 @@ LiveRangeSelectionEnabled:
     WebKitLegacy:
       default: false
     WebKit:
+      default: false
+    WebCore:
+      default: false
+
+ManageCaptureStatusBarInGPUProcessEnabled:
+  type: bool
+  humanReadableName: "GPU Process: Capture Status Bar management"
+  humanReadableDescription: "Enable Capture Status Bar management in GPU Process"
+  condition: ENABLE(MEDIA_STREAM) && PLATFORM(IOS_FAMILY)
+  defaultValue:
+    WebKit:
+      default: WebKit::defaultManageCaptureStatusBarInGPUProcessEnabled()
+    WebKitLegacy:
       default: false
     WebCore:
       default: false
@@ -618,7 +638,7 @@ MouseEventsSimulationEnabled:
   type: bool
   humanReadableName: "Mouse events simulation"
   humanReadableDescription: "Enable mouse events dispatch along with touch events on iOS"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   condition: ENABLE(TOUCH_EVENTS)
   defaultValue:
     WebKitLegacy:
@@ -644,7 +664,7 @@ NotificationEventEnabled:
   type: bool
   humanReadableName: "NotificationEvent support"
   humanReadableDescription: "NotificationEvent and ServiceWorkerRegistration.showNotification() support"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   condition: ENABLE(NOTIFICATION_EVENT)
   defaultValue:
     WebCore:
@@ -658,7 +678,7 @@ OffscreenCanvasEnabled:
   type: bool
   humanReadableName: "OffscreenCanvas"
   humanReadableDescription: "Support for the OffscreenCanvas APIs"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   condition: ENABLE(OFFSCREEN_CANVAS)
   defaultValue:
     WebKitLegacy:
@@ -671,7 +691,7 @@ OffscreenCanvasInWorkersEnabled:
   type: bool
   humanReadableName: "OffscreenCanvas in Workers"
   humanReadableDescription: "Support for the OffscreenCanvas APIs in Workers"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   condition: ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
   defaultValue:
     WebKitLegacy:
@@ -761,12 +781,25 @@ RestrictedHTTPResponseAccess:
   type: bool
   humanReadableName: "Filter HTTP Response for Web Processes"
   humanReadableDescription: "Enable HTTP Response filtering for Web Processes"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: true
     WebKit:
       default: true
+
+SampleBufferContentKeySessionSupportEnabled:
+  type: bool
+  humanReadableName: "ContentKeySession support for SampleBuffer Renderers"
+  humanReadableDescription: "ContentKeySession support for SampleBuffer Renderers Enabled"
+  condition: HAVE(AVCONTENTKEYSPECIFIER)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
 
 ScrollingPerformanceTestingEnabled:
   type: bool
@@ -786,7 +819,7 @@ SecureContextChecksEnabled:
   type: bool
   humanReadableName: "Secure Context Checks"
   humanReadableDescription: "Allow access to HTTPS-only Web APIs over HTTP"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: true
@@ -800,6 +833,7 @@ SelectionFlippingEnabled:
   webcoreBinding: none
   defaultValue:
     WebKit:
+      "HAVE(UIKIT_WEBKIT_INTERNALS)" : false
       default: true
 
 # FIXME: This is not implemented for WebKitLegacy, so should be excluded from WebKitLegacy entirely.
@@ -828,6 +862,19 @@ ServiceWorkersUserGestureEnabled:
       default: true
     WebCore:
       default: true
+
+ShowModalDialogEnabled:
+  type: bool
+  humanReadableName: "Legacy showModalDialog() API"
+  humanReadableDescription: "Legacy showModalDialog() API"
+  defaultValue:
+    WebKitLegacy:
+      "PLATFORM(IOS_FAMILY)": WebKit::defaultShowModalDialogEnabled()
+      default: false
+    WebKit:
+      default: WebKit::defaultShowModalDialogEnabled()
+    WebCore:
+      default: false
 
 # FIXME: Is this implemented for WebKitLegacy? If not, this should be excluded from WebKitLegacy entirely.
 SpeakerSelectionRequiresUserGesture:
@@ -907,6 +954,17 @@ UseARKitForModel:
     WebKit:
       default: true
 
+UseCGDisplayListImageCache:
+  type: bool
+  humanReadableName: "CG Display Lists: Image Cache"
+  humanReadableDescription: "Cache and transmit surfaces out-of-line for CG Display List image buffers."
+  webcoreBinding: none
+  condition: ENABLE(CG_DISPLAY_LIST_BACKED_IMAGE_BUFFER)
+  exposed: [ WebKit ]
+  defaultValue:
+    WebKit:
+      default: true
+
 UseCGDisplayListsForDOMRendering:
   type: bool
   humanReadableName: "CG Display Lists: DOM Rendering"
@@ -982,7 +1040,7 @@ WebAPIStatisticsEnabled:
   type: bool
   humanReadableName: "Web API Statistics"
   humanReadableDescription: "Enable Web API Statistics"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: false
@@ -993,7 +1051,7 @@ WebRTCAudioLatencyAdaptationEnabled:
   type: bool
   humanReadableName: "WebRTC Audio Latency Adaptation"
   humanReadableDescription: "Enable WebRTC Audio Latency Adaptation"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: true
@@ -1005,7 +1063,7 @@ WebRTCDTMFEnabled:
   type: bool
   humanReadableName: "WebRTC DTMF"
   humanReadableDescription: "Enable WebRTC DTMF"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   condition: ENABLE(WEB_RTC)
   defaultValue:
     WebKitLegacy:
@@ -1031,7 +1089,7 @@ WebRTCH264SimulcastEnabled:
   type: bool
   humanReadableName: "WebRTC H264 Simulcast"
   humanReadableDescription: "Enable WebRTC H264 Simulcast"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   condition: ENABLE(WEB_RTC)
   defaultValue:
     WebKitLegacy:
@@ -1044,7 +1102,7 @@ WebRTCMDNSICECandidatesEnabled:
   type: bool
   humanReadableName: "WebRTC mDNS ICE candidates"
   humanReadableDescription: "Enable WebRTC mDNS ICE candidates"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   condition: ENABLE(WEB_RTC)
   defaultValue:
     WebKitLegacy:

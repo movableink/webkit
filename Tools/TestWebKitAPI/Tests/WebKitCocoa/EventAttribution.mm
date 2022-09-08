@@ -36,6 +36,7 @@
 #import "Utilities.h"
 #import "WKWebViewConfigurationExtras.h"
 #import <WebKit/WKMain.h>
+#import <WebKit/WKNavigationActionPrivate.h>
 #import <WebKit/WKPage.h>
 #import <WebKit/WKPageInjectedBundleClient.h>
 #import <WebKit/WKPreferencesPrivate.h>
@@ -560,9 +561,9 @@ TEST(PrivateClickMeasurement, DaemonDebugMode)
     cleanUpDaemon(tempDir);
 }
 
-TEST(PrivateClickMeasurement, SKAdNetwork)
+static void setupSKAdNetworkTest(Vector<String>& consoleMessages, id<WKNavigationDelegate> navigationDelegate)
 {
-    HTTPServer server({ { "/app/apple-store/id1234567890"_s, { "hello"_s } } }, HTTPServer::Protocol::HttpsProxy);
+    HTTPServer server({ { "/app/id1234567890"_s, { "hello"_s } } }, HTTPServer::Protocol::HttpsProxy);
 
     auto storeConfiguration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
     [storeConfiguration setProxyConfiguration:@{
@@ -581,30 +582,52 @@ TEST(PrivateClickMeasurement, SKAdNetwork)
         }
     }
 
-    Vector<String> consoleMessages;
     setInjectedBundleClient(webView.get(), consoleMessages);
     [viewConfiguration.websiteDataStore _setPrivateClickMeasurementDebugModeEnabledForTesting:YES];
 
     [webView synchronouslyLoadHTMLString:@"<body>"
-        "<a href='https://apps.apple.com/app/apple-store/id1234567890' id='anchorid' attributiondestination='https://destination/' attributionSourceNonce='MTIzNDU2Nzg5MDEyMzQ1Ng'>anchor</a>"
+        "<a href='https://apps.apple.com/app/id1234567890' id='anchorid' attributiondestination='https://destination/' attributionSourceNonce='MTIzNDU2Nzg5MDEyMzQ1Ng'>anchor</a>"
         "</body>" baseURL:[NSURL URLWithString:@"https://example.com/"]];
 
     while (consoleMessages.isEmpty())
         Util::spinRunLoop();
     EXPECT_WK_STREQ(consoleMessages[0], "[Private Click Measurement] Turned Debug Mode on.");
+    consoleMessages.clear();
 
-    auto delegate = adoptNS([TestNavigationDelegate new]);
-    [delegate setDidReceiveAuthenticationChallenge:^(WKWebView *, NSURLAuthenticationChallenge *challenge, void (^callback)(NSURLSessionAuthChallengeDisposition, NSURLCredential *)) {
-        EXPECT_WK_STREQ(challenge.protectionSpace.authenticationMethod, NSURLAuthenticationMethodServerTrust);
-        callback(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust]);
-    }];
-    webView.get().navigationDelegate = delegate.get();
+    webView.get().navigationDelegate = navigationDelegate;
 
     [webView clickOnElementID:@"anchorid"];
+}
 
-    while (consoleMessages.size() < 2)
+const char* expectedSKAdNetworkConsoleMessage = "Submitting potential install attribution for AdamId: 1234567890, adNetworkRegistrableDomain: destination, impressionId: MTIzNDU2Nzg5MDEyMzQ1Ng, sourceWebRegistrableDomain: example.com, version: 3";
+
+TEST(PrivateClickMeasurement, SKAdNetwork)
+{
+    Vector<String> consoleMessages;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    setupSKAdNetworkTest(consoleMessages, delegate.get());
+    while (consoleMessages.isEmpty())
         Util::spinRunLoop();
-    EXPECT_WK_STREQ(consoleMessages[1], "Submitting potential install attribution for AdamId: 1234567890, adNetworkRegistrableDomain: destination, impressionId: MTIzNDU2Nzg5MDEyMzQ1Ng, sourceWebRegistrableDomain: example.com, version: 3");
+    EXPECT_WK_STREQ(consoleMessages[0], expectedSKAdNetworkConsoleMessage);
+}
+
+TEST(PrivateClickMeasurement, SKAdNetworkWithoutNavigatingToAppStoreLink)
+{
+    Vector<String> consoleMessages;
+    auto delegate = adoptNS([TestNavigationDelegate new]);
+    [delegate allowAnyTLSCertificate];
+    delegate.get().decidePolicyForNavigationAction = ^(WKNavigationAction *navigationAction, void (^decisionHandler)(WKNavigationActionPolicy)) {
+        decisionHandler(WKNavigationActionPolicyCancel);
+        Util::sleep(0.1);
+        EXPECT_EQ(0u, consoleMessages.size());
+        [navigationAction _storeSKAdNetworkAttribution];
+    };
+    setupSKAdNetworkTest(consoleMessages, delegate.get());
+
+    while (consoleMessages.isEmpty())
+        Util::spinRunLoop();
+    EXPECT_WK_STREQ(consoleMessages[0], expectedSKAdNetworkConsoleMessage);
 }
 
 TEST(PrivateClickMeasurement, NetworkProcessDebugMode)

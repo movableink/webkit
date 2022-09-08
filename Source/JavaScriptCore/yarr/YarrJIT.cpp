@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2019 the V8 project authors. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -4106,6 +4106,7 @@ public:
         : m_jit(jit)
         , m_vm(vm)
         , m_codeBlock(codeBlock)
+        , m_boyerMooreData(static_cast<YarrBoyerMooreData*>(codeBlock))
         , m_regs(regs)
         , m_pattern(pattern)
         , m_patternString(patternString)
@@ -4118,10 +4119,9 @@ public:
         , m_parenContextSizes(compileMode == JITCompileMode::IncludeSubpatterns ? m_pattern.m_numSubpatterns : 0, m_pattern.m_body->m_callFrameSize)
 #endif
     {
-        m_boyerMooreData = static_cast<YarrBoyerMoyerData*>(m_codeBlock);
     }
 
-    YarrGenerator(CCallHelpers& jit, const VM* vm, YarrBoyerMoyerData* yarrBMData, const YarrJITRegs& regs, YarrPattern& pattern, StringView patternString, CharSize charSize, JITCompileMode compileMode)
+    YarrGenerator(CCallHelpers& jit, const VM* vm, YarrBoyerMooreData* yarrBMData, const YarrJITRegs& regs, YarrPattern& pattern, StringView patternString, CharSize charSize, JITCompileMode compileMode)
         : m_jit(jit)
         , m_vm(vm)
         , m_codeBlock(nullptr)
@@ -4353,7 +4353,7 @@ public:
     }
 
 #if ENABLE(YARR_JIT_REGEXP_TEST_INLINE)
-    void compileInline(YarrBoyerMoyerData& boyerMooreData)
+    void compileInline(YarrBoyerMooreData& boyerMooreData)
     {
         RELEASE_ASSERT(!m_pattern.m_containsBackreferences);
 
@@ -4654,26 +4654,26 @@ public:
 
 private:
     CCallHelpers& m_jit;
-    const VM* m_vm;
-    YarrCodeBlock* m_codeBlock;
-    YarrBoyerMoyerData* m_boyerMooreData;
+    const VM* const m_vm;
+    YarrCodeBlock* const m_codeBlock;
+    YarrBoyerMooreData* const m_boyerMooreData;
     const YarrJITRegs& m_regs;
 
     StackCheck* m_compilationThreadStackChecker { nullptr };
     YarrPattern& m_pattern;
     const StringView m_patternString;
 
-    CharSize m_charSize;
-    JITCompileMode m_compileMode;
+    const CharSize m_charSize;
+    const JITCompileMode m_compileMode;
 
     // Used to detect regular expression constructs that are not currently
     // supported in the JIT; fall back to the interpreter when this is detected.
     std::optional<JITFailureReason> m_failureReason;
 
-    bool m_decodeSurrogatePairs;
-    bool m_unicodeIgnoreCase;
+    const bool m_decodeSurrogatePairs;
+    const bool m_unicodeIgnoreCase;
     bool m_usesT2 { false };
-    CanonicalMode m_canonicalMode;
+    const CanonicalMode m_canonicalMode;
 #if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
     bool m_containsNestedSubpatterns { false };
     ParenContextSizes m_parenContextSizes;
@@ -4759,7 +4759,7 @@ void jitCompile(YarrPattern& pattern, StringView patternString, CharSize charSiz
 #error "No support for inlined JIT'ing of RegExp.test for this CPU / OS combination."
 #endif
 
-void jitCompileInlinedTest(StackCheck* m_compilationThreadStackChecker, StringView patternString, OptionSet<Yarr::Flags> flags, CharSize charSize, const VM* vm, YarrBoyerMoyerData& boyerMooreData, CCallHelpers& jit, YarrJITRegisters& jitRegisters)
+void jitCompileInlinedTest(StackCheck* m_compilationThreadStackChecker, StringView patternString, OptionSet<Yarr::Flags> flags, CharSize charSize, const VM* vm, YarrBoyerMooreData& boyerMooreData, CCallHelpers& jit, YarrJITRegisters& jitRegisters)
 {
     Yarr::ErrorCode errorCode;
     Yarr::YarrPattern pattern(patternString, flags, errorCode);

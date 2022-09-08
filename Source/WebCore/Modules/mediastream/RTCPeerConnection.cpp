@@ -98,7 +98,7 @@ ExceptionOr<Ref<RTCPeerConnection>> RTCPeerConnection::create(Document& document
             peerConnection->registerToController(page->rtcController());
 #if USE(LIBWEBRTC) && (!LOG_DISABLED || !RELEASE_LOG_DISABLED)
             if (!page->sessionID().isEphemeral())
-                page->libWebRTCProvider().setLoggingLevel(LogWebRTC.level);
+                page->webRTCProvider().setLoggingLevel(LogWebRTC.level);
 #endif
         }
     }
@@ -426,7 +426,7 @@ ExceptionOr<Vector<MediaEndpointConfiguration::IceServerInfo>> RTCPeerConnection
                             return Exception { TypeError, "TURN/TURNS username and/or credential are too long"_s };
                     }
                 } else if (!serverURL.protocolIs("stun"_s))
-                    return Exception { NotSupportedError, "ICE server protocol not supported"_s };
+                    return Exception { SyntaxError, "ICE server protocol not supported"_s };
             }
             if (serverURLs.size())
                 servers.uncheckedAppend({ WTFMove(serverURLs), server.credential, server.username });
@@ -555,7 +555,7 @@ ExceptionOr<Ref<RTCDataChannel>> RTCPeerConnection::createDataChannel(String&& l
     // FIXME: Provide better error reporting.
     auto channelHandler = m_backend->createDataChannelHandler(label, options);
     if (!channelHandler)
-        return Exception { NotSupportedError };
+        return Exception { OperationError };
 
     return RTCDataChannel::create(*document(), WTFMove(channelHandler), WTFMove(label), WTFMove(options));
 }
@@ -576,6 +576,9 @@ bool RTCPeerConnection::doClose()
         transceiver->receiver().stop();
     }
     m_operations.clear();
+
+    for (auto& transport : m_dtlsTransports)
+        transport->close();
 
     return true;
 }

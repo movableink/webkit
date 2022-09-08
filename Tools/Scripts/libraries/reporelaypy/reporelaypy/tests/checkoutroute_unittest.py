@@ -97,6 +97,36 @@ class RedirectorUnittest(unittest.TestCase):
             transfered(Commit(hash='deadbeef')).headers.get('location'),
         )
 
+    def test_fallback(self):
+        redir = Redirector('https://github.com/WebKit/WebKit', fallback=Redirector('https://github.com/WebKit/WebKit-security'))
+        self.assertEqual(
+            redir(None).headers.get('location'),
+            'https://github.com/WebKit/WebKit/commits',
+        )
+        self.assertEqual(
+            redir(Commit(hash='deadbeef', message='defined')).headers.get('location'),
+            'https://github.com/WebKit/WebKit/commit/deadbeef',
+        )
+        self.assertEqual(
+            redir(Commit(hash='deadbeef')).headers.get('location'),
+            'https://github.com/WebKit/WebKit-security/commit/deadbeef',
+        )
+
+    def test_fallback_compare(self):
+        redir = Redirector('https://github.com/WebKit/WebKit', fallback=Redirector('https://github.com/WebKit/WebKit-security'))
+        self.assertEqual(
+            redir(None).headers.get('location'),
+            'https://github.com/WebKit/WebKit/commits',
+        )
+        self.assertEqual(
+            redir.compare(Commit(hash='deadbeef', message='defined'), Commit(hash='beefdead', message='defined')).headers.get('location'),
+            'https://github.com/WebKit/WebKit/compare/beefdead...deadbeef',
+        )
+        self.assertEqual(
+            redir.compare(Commit(hash='deadbeef'), Commit(hash='beefdead')).headers.get('location'),
+            'https://github.com/WebKit/WebKit-security/compare/beefdead...deadbeef',
+        )
+
 
 class CheckoutRouteUnittest(testing.PathTestCase):
     basepath = 'mock/repository'
@@ -124,7 +154,8 @@ class CheckoutRouteUnittest(testing.PathTestCase):
                 redirectors=[Redirector('https://trac.webkit.org')],
             ))
             reference = Commit.Encoder().default(repo.commits['main'][3])
-            reference['message'] = reference['message'].rstrip()
+            del reference['author']
+            del reference['message']
 
             response = client.get('4@main/json')
             self.assertEqual(response.status_code, 200)

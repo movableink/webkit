@@ -64,7 +64,6 @@
 #import <WebCore/Cursor.h>
 #import <WebCore/DOMPasteAccess.h>
 #import <WebCore/DictionaryLookup.h>
-#import <WebCore/LocalCurrentTraitCollection.h>
 #import <WebCore/NotImplemented.h>
 #import <WebCore/PlatformScreen.h>
 #import <WebCore/PromisedAttachmentInfo.h>
@@ -456,6 +455,11 @@ void PageClientImpl::doneDeferringTouchStart(bool preventNativeGestures)
     [m_contentView _doneDeferringTouchStart:preventNativeGestures];
 }
 
+void PageClientImpl::doneDeferringTouchMove(bool preventNativeGestures)
+{
+    [m_contentView _doneDeferringTouchMove:preventNativeGestures];
+}
+
 void PageClientImpl::doneDeferringTouchEnd(bool preventNativeGestures)
 {
     [m_contentView _doneDeferringTouchEnd:preventNativeGestures];
@@ -472,14 +476,10 @@ void PageClientImpl::requestTextRecognition(const URL& imageURL, const Shareable
 
 #endif // ENABLE(IMAGE_ANALYSIS)
 
-#if HAVE(PASTEBOARD_DATA_OWNER)
-
 WebCore::DataOwnerType PageClientImpl::dataOwnerForPasteboard(PasteboardAccessIntent intent) const
 {
     return [m_contentView _dataOwnerForPasteboard:intent];
 }
-
-#endif
 
 RefPtr<WebPopupMenuProxy> PageClientImpl::createPopupMenuProxy(WebPageProxy&)
 {
@@ -1034,18 +1034,26 @@ void PageClientImpl::runModalJavaScriptDialog(CompletionHandler<void()>&& callba
 
 WebCore::Color PageClientImpl::contentViewBackgroundColor()
 {
+    WebCore::Color color;
+    auto computeContentViewBackgroundColor = [&]() {
+        color = WebCore::roundAndClampToSRGBALossy([m_contentView backgroundColor].CGColor);
+        if (color.isValid())
+            return;
+
 #if HAVE(OS_DARK_MODE_SUPPORT)
-    WebCore::LocalCurrentTraitCollection localTraitCollection([m_webView traitCollection]);
+        color = WebCore::roundAndClampToSRGBALossy(UIColor.systemBackgroundColor.CGColor);
+#else
+        color = { };
+#endif
+    };
+
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    [[m_webView traitCollection] performAsCurrentTraitCollection:computeContentViewBackgroundColor];
+#else
+    computeContentViewBackgroundColor();
 #endif
 
-    WebCore::Color color = WebCore::roundAndClampToSRGBALossy([m_contentView backgroundColor].CGColor);
-    if (color.isValid())
-        return color;
-#if HAVE(OS_DARK_MODE_SUPPORT)
-    return WebCore::roundAndClampToSRGBALossy(UIColor.systemBackgroundColor.CGColor);
-#else
-    return { };
-#endif
+    return color;
 }
 
 void PageClientImpl::requestScrollToRect(const FloatRect& targetRect, const FloatPoint& origin)

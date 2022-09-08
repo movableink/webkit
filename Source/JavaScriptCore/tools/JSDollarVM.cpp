@@ -749,9 +749,9 @@ static const struct CompactHashIndex staticCustomAccessorTableIndex[9] = {
 };
 
 static const struct HashTableValue staticCustomAccessorTableValues[3] = {
-    { "testStaticAccessor"_s, static_cast<unsigned>(PropertyAttribute::CustomAccessor), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(testStaticAccessorGetter), (intptr_t)static_cast<PutPropertySlot::PutValueFunc>(testStaticAccessorPutter) } },
-    { "testStaticAccessorDontEnum"_s, PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum, NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticAccessorGetter), (intptr_t)static_cast<PutValueFunc>(testStaticAccessorPutter) } },
-    { "testStaticAccessorReadOnly"_s, PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticAccessorGetter), 0 } },
+    { "testStaticAccessor"_s, static_cast<unsigned>(PropertyAttribute::CustomAccessor), NoIntrinsic, { HashTableValue::GetterSetterType, testStaticAccessorGetter, testStaticAccessorPutter } },
+    { "testStaticAccessorDontEnum"_s, PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticAccessorGetter, testStaticAccessorPutter } },
+    { "testStaticAccessorReadOnly"_s, PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticAccessorGetter, nullptr } },
 };
 
 static const struct HashTable staticCustomAccessorTable =
@@ -848,10 +848,10 @@ static const struct CompactHashIndex staticCustomValueTableIndex[8] = {
 };
 
 static const struct HashTableValue staticCustomValueTableValues[4] = {
-    { "testStaticValue"_s, static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticValueGetter), (intptr_t)static_cast<PutValueFunc>(testStaticValuePutter) } },
-    { "testStaticValueNoSetter"_s, PropertyAttribute::CustomValue | PropertyAttribute::DontEnum, NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticValueGetter), 0 } },
-    { "testStaticValueReadOnly"_s, PropertyAttribute::CustomValue | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticValueGetter), 0 } },
-    { "testStaticValueSetFlag"_s, static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticValueGetter), (intptr_t)static_cast<PutValueFunc>(testStaticValuePutterSetFlag) } },
+    { "testStaticValue"_s, static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, testStaticValuePutter } },
+    { "testStaticValueNoSetter"_s, PropertyAttribute::CustomValue | PropertyAttribute::DontEnum, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, nullptr } },
+    { "testStaticValueReadOnly"_s, PropertyAttribute::CustomValue | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, nullptr } },
+    { "testStaticValueSetFlag"_s, static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, testStaticValuePutterSetFlag } },
 };
 
 static const struct HashTable staticCustomValueTable =
@@ -945,9 +945,9 @@ static const struct CompactHashIndex staticDontDeleteDontEnumTableIndex[8] = {
 };
 
 static const struct HashTableValue staticDontDeleteDontEnumTableValues[3] = {
-   { "dontEnum"_s, static_cast<unsigned>(PropertyAttribute::Function|PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(staticDontDeleteDontEnumMethod), (intptr_t)(0) } },
-   { "dontDelete"_s, static_cast<unsigned>(PropertyAttribute::Function|PropertyAttribute::DontDelete), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(staticDontDeleteDontEnumMethod), (intptr_t)(0) } },
-   { "dontDeleteDontEnum"_s, static_cast<unsigned>(PropertyAttribute::Function|PropertyAttribute::DontDelete|PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<RawNativeFunction>(staticDontDeleteDontEnumMethod), (intptr_t)(0) } },
+    { "dontEnum"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
+    { "dontDelete"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontDelete), NoIntrinsic, { HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
+    { "dontDeleteDontEnum"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontDelete | PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
 };
 
 static const struct HashTable staticDontDeleteDontEnumTable =
@@ -993,6 +993,126 @@ public:
         auto* string = value.toString(globalObject);
         RETURN_IF_EXCEPTION(throwScope, false);
         RELEASE_AND_RETURN(throwScope, Base::put(thisObject, globalObject, propertyName, string, slot));
+    }
+};
+
+class AlwaysSlowPutContiguousObject : public JSDestructibleObject {
+public:
+    using Base = JSDestructibleObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
+
+    AlwaysSlowPutContiguousObject(VM& vm, Structure* structure, Butterfly* butterfly)
+        : Base(vm, structure, butterfly)
+    {
+        DollarVMAssertScope assertScope;
+    }
+
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace();
+    }
+
+    DECLARE_INFO;
+
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject)
+    {
+        DollarVMAssertScope assertScope;
+        return Structure::create(vm, globalObject, globalObject->objectPrototype(), TypeInfo(ObjectType, StructureFlags), info(), NonArrayWithAlwaysSlowPutContiguous);
+    }
+
+    static AlwaysSlowPutContiguousObject* create(VM& vm, Structure* structure, Butterfly* butterfly)
+    {
+        DollarVMAssertScope assertScope;
+        AlwaysSlowPutContiguousObject* result = new (NotNull, allocateCell<AlwaysSlowPutContiguousObject>(vm)) AlwaysSlowPutContiguousObject(vm, structure, butterfly);
+        result->finishCreation(vm);
+        return result;
+    }
+};
+
+class AlwaysSlowPutContiguousObjectWithOverrides : public JSDestructibleObject {
+public:
+    using Base = JSDestructibleObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesPut;
+
+    AlwaysSlowPutContiguousObjectWithOverrides(VM& vm, Structure* structure, Butterfly* butterfly)
+        : Base(vm, structure, butterfly)
+    {
+        DollarVMAssertScope assertScope;
+    }
+
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace();
+    }
+
+    DECLARE_INFO;
+
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject)
+    {
+        DollarVMAssertScope assertScope;
+        return Structure::create(vm, globalObject, globalObject->objectPrototype(), TypeInfo(ObjectType, StructureFlags), info(), NonArrayWithAlwaysSlowPutContiguous | MayHaveIndexedAccessors);
+    }
+
+    static AlwaysSlowPutContiguousObjectWithOverrides* create(VM& vm, Structure* structure, Butterfly* butterfly)
+    {
+        DollarVMAssertScope assertScope;
+        AlwaysSlowPutContiguousObjectWithOverrides* result = new (NotNull, allocateCell<AlwaysSlowPutContiguousObjectWithOverrides>(vm)) AlwaysSlowPutContiguousObjectWithOverrides(vm, structure, butterfly);
+        result->finishCreation(vm);
+        return result;
+    }
+
+    static bool put(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
+    {
+        DollarVMAssertScope assertScope;
+        auto* thisObject = jsCast<AlwaysSlowPutContiguousObjectWithOverrides*>(cell);
+        if (std::optional<uint32_t> index = parseIndex(propertyName))
+            return thisObject->methodTable()->putByIndex(thisObject, globalObject, index.value(), value, slot.isStrictMode());
+
+        return Base::put(cell, globalObject, propertyName, value, slot);
+    }
+
+    static bool putByIndex(JSCell* cell, JSGlobalObject* globalObject, unsigned propertyName, JSValue value, bool shouldThrow)
+    {
+        DollarVMAssertScope assertScope;
+        VM& vm = globalObject->vm();
+        auto* thisObject = jsCast<AlwaysSlowPutContiguousObjectWithOverrides*>(cell);
+        thisObject->increment(vm, Identifier::fromString(vm, "putByIndexCalls"_s));
+        return Base::putByIndex(cell, globalObject, propertyName, value, shouldThrow);
+    }
+
+    static bool deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
+    {
+        DollarVMAssertScope assertScope;
+        auto* thisObject = jsCast<AlwaysSlowPutContiguousObjectWithOverrides*>(cell);
+        if (std::optional<uint32_t> index = parseIndex(propertyName))
+            return thisObject->methodTable()->deletePropertyByIndex(thisObject, globalObject, index.value());
+        return Base::deleteProperty(cell, globalObject, propertyName, slot);
+    }
+
+    static bool deletePropertyByIndex(JSCell* cell, JSGlobalObject* globalObject, unsigned propertyName)
+    {
+        DollarVMAssertScope assertScope;
+        VM& vm = globalObject->vm();
+        auto* thisObject = jsCast<AlwaysSlowPutContiguousObjectWithOverrides*>(cell);
+        thisObject->increment(vm, Identifier::fromString(vm, "deleteByIndexCalls"_s));
+        return Base::deletePropertyByIndex(cell, globalObject, propertyName);
+    }
+
+    void finishCreation(VM& vm)
+    {
+        DollarVMAssertScope assertScope;
+        Base::finishCreation(vm);
+        putDirect(vm, Identifier::fromString(vm, "putByIndexCalls"_s), jsNumber(0), static_cast<unsigned>(PropertyAttribute::DontEnum));
+        putDirect(vm, Identifier::fromString(vm, "deleteByIndexCalls"_s), jsNumber(0), static_cast<unsigned>(PropertyAttribute::DontEnum));
+    }
+
+    void increment(VM& vm, const Identifier& identifier)
+    {
+        DollarVMAssertScope assertScope;
+        uint32_t calls = getDirect(vm, identifier).asUInt32();
+        putDirect(vm, identifier, jsNumber(calls + 1), static_cast<unsigned>(PropertyAttribute::DontEnum));
     }
 };
 
@@ -1381,7 +1501,7 @@ void DOMJITGetterComplex::finishCreation(VM& vm, JSGlobalObject* globalObject)
     const DOMJIT::GetterSetter* domJIT = &DOMJITGetterComplexDOMJIT;
     auto* customGetterSetter = DOMAttributeGetterSetter::create(vm, domJIT->getter(), nullptr, DOMAttributeAnnotation { DOMJITGetterComplex::info(), domJIT });
     putDirectCustomAccessor(vm, Identifier::fromString(vm, "customGetter"_s), customGetterSetter, PropertyAttribute::ReadOnly | PropertyAttribute::CustomAccessor);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "enableException"_s), 0, functionDOMJITGetterComplexEnableException, NoIntrinsic, 0);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "enableException"_s), 0, functionDOMJITGetterComplexEnableException, ImplementationVisibility::Public, NoIntrinsic, 0);
 }
 
 extern "C" { static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(functionDOMJITFunctionObjectWithoutTypeCheck, EncodedJSValue, (JSGlobalObject* globalObject, DOMJITNode*)); }
@@ -1462,7 +1582,7 @@ void DOMJITFunctionObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     DollarVMAssertScope assertScope;
     Base::finishCreation(vm);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "func"_s), 0, functionDOMJITFunctionObjectWithTypeCheck, NoIntrinsic, &DOMJITFunctionObjectSignature, static_cast<unsigned>(PropertyAttribute::ReadOnly));
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "func"_s), 0, functionDOMJITFunctionObjectWithTypeCheck, ImplementationVisibility::Public, NoIntrinsic, &DOMJITFunctionObjectSignature, static_cast<unsigned>(PropertyAttribute::ReadOnly));
 }
 
 extern "C" { static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(functionDOMJITCheckJSCastObjectWithoutTypeCheck, EncodedJSValue, (JSGlobalObject* globalObject, DOMJITNode* node)); }
@@ -1524,7 +1644,7 @@ void DOMJITCheckJSCastObject::finishCreation(VM& vm, JSGlobalObject* globalObjec
 {
     DollarVMAssertScope assertScope;
     Base::finishCreation(vm);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "func"_s), 0, functionDOMJITCheckJSCastObjectWithTypeCheck, NoIntrinsic, &DOMJITCheckJSCastObjectSignature, static_cast<unsigned>(PropertyAttribute::ReadOnly));
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "func"_s), 0, functionDOMJITCheckJSCastObjectWithTypeCheck, ImplementationVisibility::Public, NoIntrinsic, &DOMJITCheckJSCastObjectSignature, static_cast<unsigned>(PropertyAttribute::ReadOnly));
 }
 
 static JSC_DECLARE_CUSTOM_GETTER(domJITGetterBaseJSObjectCustomGetter);
@@ -1871,6 +1991,8 @@ const ClassInfo StaticCustomAccessor::s_info = { "StaticCustomAccessor"_s, &Base
 const ClassInfo StaticCustomValue::s_info = { "StaticCustomValue"_s, &Base::s_info, &staticCustomValueTable, nullptr, CREATE_METHOD_TABLE(StaticCustomValue) };
 const ClassInfo StaticDontDeleteDontEnum::s_info = { "StaticDontDeleteDontEnum"_s, &Base::s_info, &staticDontDeleteDontEnumTable, nullptr, CREATE_METHOD_TABLE(StaticDontDeleteDontEnum) };
 const ClassInfo ObjectDoingSideEffectPutWithoutCorrectSlotStatus::s_info = { "ObjectDoingSideEffectPutWithoutCorrectSlotStatus"_s, &Base::s_info, &staticCustomAccessorTable, nullptr, CREATE_METHOD_TABLE(ObjectDoingSideEffectPutWithoutCorrectSlotStatus) };
+const ClassInfo AlwaysSlowPutContiguousObject::s_info = { "AlwaysSlowPutContiguousObject"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AlwaysSlowPutContiguousObject) };
+const ClassInfo AlwaysSlowPutContiguousObjectWithOverrides::s_info = { "AlwaysSlowPutContiguousObjectWithOverrides"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AlwaysSlowPutContiguousObjectWithOverrides) };
 
 ElementHandleOwner* Element::handleOwner()
 {
@@ -1949,8 +2071,8 @@ public:
         Base::finishCreation(vm);
 
         JSGlobalObject* globalObject = this->globalObject();
-        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "addBytes"_s), 0, functionWasmStreamingParserAddBytes, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
-        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "finalize"_s), 0, functionWasmStreamingParserFinalize, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
+        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "addBytes"_s), 0, functionWasmStreamingParserAddBytes, ImplementationVisibility::Public, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
+        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "finalize"_s), 0, functionWasmStreamingParserFinalize, ImplementationVisibility::Public, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
     }
 
     DECLARE_INFO;
@@ -2037,7 +2159,7 @@ public:
         Base::finishCreation(vm);
 
         JSGlobalObject* globalObject = this->globalObject();
-        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "addBytes"_s), 0, functionWasmStreamingCompilerAddBytes, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
+        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "addBytes"_s), 0, functionWasmStreamingCompilerAddBytes, ImplementationVisibility::Public, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
     }
 
     DECLARE_VISIT_CHILDREN;
@@ -2148,6 +2270,8 @@ static JSC_DECLARE_HOST_FUNCTION(functionCreateStaticCustomAccessor);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateStaticCustomValue);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateStaticDontDeleteDontEnum);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateObjectDoingSideEffectPutWithoutCorrectSlotStatus);
+static JSC_DECLARE_HOST_FUNCTION(functionCreateAlwaysSlowPutContiguousObject);
+static JSC_DECLARE_HOST_FUNCTION(functionCreateAlwaysSlowPutContiguousObjectWithOverrides);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateEmptyFunctionWithName);
 static JSC_DECLARE_HOST_FUNCTION(functionSetImpureGetterDelegate);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateBuiltin);
@@ -2200,6 +2324,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionDumpAndResetPasDebugSpectrum);
 static JSC_DECLARE_HOST_FUNCTION(functionMonotonicTimeNow);
 static JSC_DECLARE_HOST_FUNCTION(functionWallTimeNow);
 static JSC_DECLARE_HOST_FUNCTION(functionApproximateTimeNow);
+static JSC_DECLARE_HOST_FUNCTION(functionHeapExtraMemorySize);
 #if ENABLE(JIT)
 static JSC_DECLARE_HOST_FUNCTION(functionJITSizeStatistics);
 static JSC_DECLARE_HOST_FUNCTION(functionDumpJITSizeStatistics);
@@ -2207,6 +2332,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionResetJITSizeStatistics);
 #endif
 
 static JSC_DECLARE_HOST_FUNCTION(functionEnsureArrayStorage);
+static JSC_DECLARE_HOST_FUNCTION(functionHasSparseModeArrayStorage);
 #if PLATFORM(COCOA)
 static JSC_DECLARE_HOST_FUNCTION(functionSetCrashLogMessage);;
 #endif
@@ -3174,6 +3300,43 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateObjectDoingSideEffectPutWithoutCorrectSlo
     return JSValue::encode(result);
 }
 
+template<typename T>
+static JSValue createAlwaysSlowPutContiguousObject(JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    VM& vm = globalObject->vm();
+    JSLockHolder lock(vm);
+
+    uint32_t length = callFrame->argument(0).asUInt32();
+
+    Structure* structure = T::createStructure(vm, globalObject);
+
+    IndexingHeader indexingHeader;
+    indexingHeader.setVectorLength(length);
+    indexingHeader.setPublicLength(length);
+    Butterfly* butterfly = Butterfly::tryCreate(vm, nullptr, 0, structure->outOfLineCapacity(), true, indexingHeader, length * sizeof(EncodedJSValue));
+    if (!butterfly)
+        return jsUndefined();
+
+    for (uint32_t i = length; i--;)
+        butterfly->contiguous().atUnsafe(i).clear();
+
+    T* result = T::create(vm, structure, butterfly);
+    result->putDirect(vm, vm.propertyNames->length, jsNumber(length), static_cast<unsigned>(PropertyAttribute::DontEnum));
+    return result;
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionCreateAlwaysSlowPutContiguousObject, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+    return JSValue::encode(createAlwaysSlowPutContiguousObject<AlwaysSlowPutContiguousObject>(globalObject, callFrame));
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionCreateAlwaysSlowPutContiguousObjectWithOverrides, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+    return JSValue::encode(createAlwaysSlowPutContiguousObject<AlwaysSlowPutContiguousObjectWithOverrides>(globalObject, callFrame));
+}
+
 JSC_DEFINE_HOST_FUNCTION(functionCreateEmptyFunctionWithName, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
@@ -3184,7 +3347,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateEmptyFunctionWithName, (JSGlobalObject* g
     const String name = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(JSFunction::create(vm, globalObject, 1, name, functionCreateEmptyFunctionWithName)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSFunction::create(vm, globalObject, 1, name, functionCreateEmptyFunctionWithName, ImplementationVisibility::Public)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionSetImpureGetterDelegate, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3222,7 +3385,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateBuiltin, (JSGlobalObject* globalObject, C
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     SourceCode source = makeSource(WTFMove(functionText), { });
-    JSFunction* func = JSFunction::create(vm, createBuiltinExecutable(vm, source, Identifier::fromString(vm, "foo"_s), ConstructorKind::None, ConstructAbility::CannotConstruct)->link(vm, nullptr, source), globalObject);
+    JSFunction* func = JSFunction::create(vm, createBuiltinExecutable(vm, source, Identifier::fromString(vm, "foo"_s), ImplementationVisibility::Public, ConstructorKind::None, ConstructAbility::CannotConstruct)->link(vm, nullptr, source), globalObject);
 
     return JSValue::encode(func);
 }
@@ -3865,6 +4028,12 @@ JSC_DEFINE_HOST_FUNCTION(functionApproximateTimeNow, (JSGlobalObject*, CallFrame
     return JSValue::encode(jsNumber(ApproximateTime::now().secondsSinceEpoch().milliseconds()));
 }
 
+JSC_DEFINE_HOST_FUNCTION(functionHeapExtraMemorySize, (JSGlobalObject* globalObject, CallFrame*))
+{
+    DollarVMAssertScope assertScope;
+    return JSValue::encode(jsNumber(globalObject->vm().heap.extraMemorySize()));
+}
+
 #if ENABLE(JIT)
 JSC_DEFINE_HOST_FUNCTION(functionJITSizeStatistics, (JSGlobalObject* globalObject, CallFrame*))
 {
@@ -3919,6 +4088,17 @@ JSC_DEFINE_HOST_FUNCTION(functionEnsureArrayStorage, (JSGlobalObject* globalObje
     return JSValue::encode(jsUndefined());
 }
 
+JSC_DEFINE_HOST_FUNCTION(functionHasSparseModeArrayStorage, (JSGlobalObject*, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+
+    if (JSObject* object = callFrame->argument(0).getObject()) {
+        if (hasAnyArrayStorage(object->indexingMode()))
+            return JSValue::encode(jsBoolean(object->butterfly()->arrayStorage()->inSparseMode()));
+    }
+
+    return JSValue::encode(jsBoolean(false));
+}
 
 #if PLATFORM(COCOA)
 JSC_DEFINE_HOST_FUNCTION(functionSetCrashLogMessage, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3958,13 +4138,13 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "crash"_s, functionCrash, 0);
     addFunction(vm, "breakpoint"_s, functionBreakpoint, 0);
 
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "dfgTrue"_s), 0, functionDFGTrue, DFGTrueIntrinsic, jsDollarVMPropertyAttributes);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "ftlTrue"_s), 0, functionFTLTrue, FTLTrueIntrinsic, jsDollarVMPropertyAttributes);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "dfgTrue"_s), 0, functionDFGTrue, ImplementationVisibility::Public, DFGTrueIntrinsic, jsDollarVMPropertyAttributes);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "ftlTrue"_s), 0, functionFTLTrue, ImplementationVisibility::Public, FTLTrueIntrinsic, jsDollarVMPropertyAttributes);
 
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuMfence"_s), 0, functionCpuMfence, CPUMfenceIntrinsic, jsDollarVMPropertyAttributes);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuRdtsc"_s), 0, functionCpuRdtsc, CPURdtscIntrinsic, jsDollarVMPropertyAttributes);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuCpuid"_s), 0, functionCpuCpuid, CPUCpuidIntrinsic, jsDollarVMPropertyAttributes);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuPause"_s), 0, functionCpuPause, CPUPauseIntrinsic, jsDollarVMPropertyAttributes);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuMfence"_s), 0, functionCpuMfence, ImplementationVisibility::Public, CPUMfenceIntrinsic, jsDollarVMPropertyAttributes);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuRdtsc"_s), 0, functionCpuRdtsc, ImplementationVisibility::Public, CPURdtscIntrinsic, jsDollarVMPropertyAttributes);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuCpuid"_s), 0, functionCpuCpuid, ImplementationVisibility::Public, CPUCpuidIntrinsic, jsDollarVMPropertyAttributes);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuPause"_s), 0, functionCpuPause, ImplementationVisibility::Public, CPUPauseIntrinsic, jsDollarVMPropertyAttributes);
     addFunction(vm, "cpuClflush"_s, functionCpuClflush, 2);
 
     addFunction(vm, "llintTrue"_s, functionLLintTrue, 0);
@@ -4027,6 +4207,8 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "createStaticCustomValue"_s, functionCreateStaticCustomValue, 0);
     addFunction(vm, "createStaticDontDeleteDontEnum"_s, functionCreateStaticDontDeleteDontEnum, 0);
     addFunction(vm, "createObjectDoingSideEffectPutWithoutCorrectSlotStatus"_s, functionCreateObjectDoingSideEffectPutWithoutCorrectSlotStatus, 0);
+    addFunction(vm, "createAlwaysSlowPutContiguousObject"_s, functionCreateAlwaysSlowPutContiguousObject, 0);
+    addFunction(vm, "createAlwaysSlowPutContiguousObjectWithOverrides"_s, functionCreateAlwaysSlowPutContiguousObjectWithOverrides, 0);
     addFunction(vm, "createEmptyFunctionWithName"_s, functionCreateEmptyFunctionWithName, 1);
     addFunction(vm, "getPrivateProperty"_s, functionGetPrivateProperty, 2);
     addFunction(vm, "setImpureGetterDelegate"_s, functionSetImpureGetterDelegate, 2);
@@ -4101,6 +4283,8 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "wallTimeNow"_s, functionWallTimeNow, 0);
     addFunction(vm, "approximateTimeNow"_s, functionApproximateTimeNow, 0);
 
+    addFunction(vm, "heapExtraMemorySize"_s, functionHeapExtraMemorySize, 0);
+
 #if ENABLE(JIT)
     addFunction(vm, "jitSizeStatistics"_s, functionJITSizeStatistics, 0);
     addFunction(vm, "dumpJITSizeStatistics"_s, functionDumpJITSizeStatistics, 0);
@@ -4108,6 +4292,7 @@ void JSDollarVM::finishCreation(VM& vm)
 #endif
 
     addFunction(vm, "ensureArrayStorage"_s, functionEnsureArrayStorage, 1);
+    addFunction(vm, "hasSparseModeArrayStorage"_s, functionHasSparseModeArrayStorage, 1);
 
 #if PLATFORM(COCOA)
     addFunction(vm, "setCrashLogMessage"_s, functionSetCrashLogMessage, 1);
@@ -4120,14 +4305,14 @@ void JSDollarVM::addFunction(VM& vm, JSGlobalObject* globalObject, ASCIILiteral 
 {
     DollarVMAssertScope assertScope;
     Identifier identifier = Identifier::fromString(vm, name);
-    putDirect(vm, identifier, JSFunction::create(vm, globalObject, arguments, identifier.string(), function), jsDollarVMPropertyAttributes);
+    putDirect(vm, identifier, JSFunction::create(vm, globalObject, arguments, identifier.string(), function, ImplementationVisibility::Public), jsDollarVMPropertyAttributes);
 }
 
 void JSDollarVM::addConstructibleFunction(VM& vm, JSGlobalObject* globalObject, ASCIILiteral name, NativeFunction function, unsigned arguments)
 {
     DollarVMAssertScope assertScope;
     Identifier identifier = Identifier::fromString(vm, name);
-    putDirect(vm, identifier, JSFunction::create(vm, globalObject, arguments, identifier.string(), function, NoIntrinsic, function), jsDollarVMPropertyAttributes);
+    putDirect(vm, identifier, JSFunction::create(vm, globalObject, arguments, identifier.string(), function, ImplementationVisibility::Public, NoIntrinsic, function), jsDollarVMPropertyAttributes);
 }
 
 template<typename Visitor>

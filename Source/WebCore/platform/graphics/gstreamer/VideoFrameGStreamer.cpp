@@ -30,6 +30,13 @@
 
 namespace WebCore {
 
+static inline void setBufferFields(GstBuffer* buffer, const MediaTime& presentationTime, double frameRate)
+{
+    GST_BUFFER_FLAG_SET(buffer, GST_BUFFER_FLAG_LIVE);
+    GST_BUFFER_DTS(buffer) = GST_BUFFER_PTS(buffer) = toGstClockTime(presentationTime);
+    GST_BUFFER_DURATION(buffer) = toGstClockTime(1_s / frameRate);
+}
+
 Ref<VideoFrameGStreamer> VideoFrameGStreamer::createFromPixelBuffer(Ref<PixelBuffer>&& pixelBuffer, CanvasContentType canvasContentType, Rotation videoRotation, const MediaTime& presentationTime, const IntSize& destinationSize, double frameRate, bool videoMirrored, std::optional<VideoFrameTimeMetadata>&& metadata)
 {
     ensureGStreamerInitialized();
@@ -57,22 +64,18 @@ Ref<VideoFrameGStreamer> VideoFrameGStreamer::createFromPixelBuffer(Ref<PixelBuf
         break;
     }
     const char* formatName = gst_video_format_to_string(format);
-    gst_buffer_add_video_meta(buffer.get(), GST_VIDEO_FRAME_FLAG_NONE, format, width, height);
-
-    if (metadata)
-        webkitGstBufferSetVideoFrameTimeMetadata(buffer.get(), *metadata);
-
     int frameRateNumerator, frameRateDenominator;
     gst_util_double_to_fraction(frameRate, &frameRateNumerator, &frameRateDenominator);
 
     auto caps = adoptGRef(gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, formatName, "width", G_TYPE_INT, width,
         "height", G_TYPE_INT, height, "framerate", GST_TYPE_FRACTION, frameRateNumerator, frameRateDenominator, nullptr));
-    auto sample = adoptGRef(gst_sample_new(buffer.get(), caps.get(), nullptr, nullptr));
+
+    GRefPtr<GstSample> sample;
 
     // Optionally resize the video frame to fit destinationSize. This code path is used mostly by
     // the mock realtime video source when the gUM constraints specifically required exact width
     // and/or height values.
-    if (!destinationSize.isZero()) {
+    if (!destinationSize.isZero() && size != destinationSize) {
         GstVideoInfo inputInfo;
         gst_video_info_from_caps(&inputInfo, caps.get());
 
@@ -84,12 +87,24 @@ Ref<VideoFrameGStreamer> VideoFrameGStreamer::createFromPixelBuffer(Ref<PixelBuf
         gst_video_info_from_caps(&outputInfo, outputCaps.get());
 
         auto outputBuffer = adoptGRef(gst_buffer_new_allocate(nullptr, GST_VIDEO_INFO_SIZE(&outputInfo), nullptr));
-        gst_buffer_add_video_meta(outputBuffer.get(), GST_VIDEO_FRAME_FLAG_NONE, GST_VIDEO_FORMAT_BGRA, width, height);
-        GUniquePtr<GstVideoConverter> converter(gst_video_converter_new(&inputInfo, &outputInfo, nullptr));
-        GstMappedFrame inputFrame(gst_sample_get_buffer(sample.get()), inputInfo, GST_MAP_READ);
-        GstMappedFrame outputFrame(outputBuffer.get(), outputInfo, GST_MAP_WRITE);
-        gst_video_converter_frame(converter.get(), inputFrame.get(), outputFrame.get());
+        {
+            GUniquePtr<GstVideoConverter> converter(gst_video_converter_new(&inputInfo, &outputInfo, nullptr));
+            GstMappedFrame inputFrame(buffer.get(), inputInfo, GST_MAP_READ);
+            GstMappedFrame outputFrame(outputBuffer.get(), outputInfo, GST_MAP_WRITE);
+            gst_video_converter_frame(converter.get(), inputFrame.get(), outputFrame.get());
+        }
+
+        if (metadata)
+            webkitGstBufferSetVideoFrameTimeMetadata(outputBuffer.get(), *metadata);
+
+        setBufferFields(outputBuffer.get(), presentationTime, frameRate);
         sample = adoptGRef(gst_sample_new(outputBuffer.get(), outputCaps.get(), nullptr, nullptr));
+    } else {
+        if (metadata)
+            buffer = webkitGstBufferSetVideoFrameTimeMetadata(buffer.get(), *metadata);
+
+        setBufferFields(buffer.get(), presentationTime, frameRate);
+        sample = adoptGRef(gst_sample_new(buffer.get(), caps.get(), nullptr, nullptr));
     }
 
     return adoptRef(*new VideoFrameGStreamer(WTFMove(sample), FloatSize(width, height), presentationTime, videoRotation, videoMirrored, WTFMove(metadata)));
@@ -112,6 +127,45 @@ VideoFrameGStreamer::VideoFrameGStreamer(const GRefPtr<GstSample>& sample, const
     : VideoFrame(presentationTime, false, videoRotation)
     , m_sample(sample)
 {
+}
+
+RefPtr<VideoFrameGStreamer> VideoFrameGStreamer::resizeTo(const IntSize& destinationSize)
+{
+    auto* caps = gst_sample_get_caps(m_sample.get());
+
+    const auto* structure = gst_caps_get_structure(caps, 0);
+    int frameRateNumerator, frameRateDenominator;
+    if (!gst_structure_get_fraction(structure, "framerate", &frameRateNumerator, &frameRateDenominator)) {
+        frameRateNumerator = 1;
+        frameRateDenominator = 1;
+    }
+
+    GstVideoInfo inputInfo;
+    gst_video_info_from_caps(&inputInfo, caps);
+    auto format = GST_VIDEO_INFO_FORMAT(&inputInfo);
+    auto width = destinationSize.width();
+    auto height = destinationSize.height();
+    auto outputCaps = adoptGRef(gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, gst_video_format_to_string(format), "width", G_TYPE_INT, width,
+        "height", G_TYPE_INT, height, "framerate", GST_TYPE_FRACTION, frameRateNumerator, frameRateDenominator, nullptr));
+    GstVideoInfo outputInfo;
+    gst_video_info_from_caps(&outputInfo, outputCaps.get());
+
+    auto* buffer = gst_sample_get_buffer(m_sample.get());
+    auto outputBuffer = adoptGRef(gst_buffer_new_allocate(nullptr, GST_VIDEO_INFO_SIZE(&outputInfo), nullptr));
+    {
+        GUniquePtr<GstVideoConverter> converter(gst_video_converter_new(&inputInfo, &outputInfo, nullptr));
+        GstMappedFrame inputFrame(buffer, inputInfo, GST_MAP_READ);
+        GstMappedFrame outputFrame(outputBuffer.get(), outputInfo, GST_MAP_WRITE);
+        gst_video_converter_frame(converter.get(), inputFrame.get(), outputFrame.get());
+    }
+
+    double frameRate;
+    gst_util_fraction_to_double(frameRateNumerator, frameRateDenominator, &frameRate);
+
+    auto presentationTime = this->presentationTime();
+    setBufferFields(outputBuffer.get(), presentationTime, frameRate);
+    auto sample = adoptGRef(gst_sample_new(outputBuffer.get(), outputCaps.get(), nullptr, nullptr));
+    return VideoFrameGStreamer::create(WTFMove(sample), destinationSize, presentationTime, rotation(), isMirrored());
 }
 
 RefPtr<JSC::Uint8ClampedArray> VideoFrameGStreamer::computeRGBAImageData() const
@@ -139,7 +193,6 @@ RefPtr<JSC::Uint8ClampedArray> VideoFrameGStreamer::computeRGBAImageData() const
     unsigned byteLength = GST_VIDEO_INFO_SIZE(&inputInfo);
     auto bufferStorage = JSC::ArrayBuffer::create(width * height, 4);
     auto outputBuffer = adoptGRef(gst_buffer_new_wrapped_full(GST_MEMORY_FLAG_NO_SHARE, bufferStorage->data(), byteLength, 0, byteLength, nullptr, [](gpointer) { }));
-    gst_buffer_add_video_meta(outputBuffer.get(), GST_VIDEO_FRAME_FLAG_NONE, GST_VIDEO_FORMAT_RGBA, width, height);
     GstMappedFrame outputFrame(outputBuffer.get(), outputInfo, GST_MAP_WRITE);
 
     GUniquePtr<GstVideoConverter> converter(gst_video_converter_new(&inputInfo, &outputInfo, nullptr));

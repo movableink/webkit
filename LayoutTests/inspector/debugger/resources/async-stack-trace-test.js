@@ -9,7 +9,7 @@ TestPage.registerInitializer(() => {
         if (!targetData)
             return null;
 
-        return new WI.StackTrace(targetData.callFrames, {parentStackTrace: targetData.asyncStackTrace});
+        return targetData.stackTrace;
     };
 
     window.logAsyncStackTrace = function() {
@@ -66,21 +66,22 @@ TestPage.registerInitializer(() => {
             description,
             setup,
             teardown,
-            async test(resolve, reject) {
-                let result = WI.debuggerManager.awaitEvent(WI.DebuggerManager.Event.Paused)
-                .then(() => {
+            test(resolve, reject) {
+                WI.debuggerManager.singleFireEventListener(WI.DebuggerManager.Event.Paused, () => {
                     InspectorTest.log("PAUSED");
                     logAsyncStackTrace();
 
                     if (pausedHandler)
                         pausedHandler(getAsyncStackTrace());
 
+                    WI.debuggerManager.singleFireEventListener(WI.DebuggerManager.Event.Resumed, () => {
+                        resolve();
+                    });
+
                     WI.debuggerManager.resume();
-                })
-                .then(() => WI.debuggerManager.awaitEvent(WI.DebuggerManager.Event.Resumed));
+                });
 
                 InspectorTest.evaluateInPage(expression);
-                await result;
             }
         });
     };

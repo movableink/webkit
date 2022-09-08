@@ -53,6 +53,7 @@ class IOSurfacePool;
 class Image;
 class NativeImage;
 class PixelBuffer;
+class ProcessIdentity;
 
 enum class PreserveResolution : uint8_t {
     No,
@@ -97,6 +98,14 @@ public:
         template<typename Decoder> static std::optional<Parameters> decode(Decoder&);
     };
 
+    struct Info {
+        RenderingMode renderingMode;
+        bool canMapBackingStore;
+        AffineTransform baseTransform;
+        size_t memoryCost;
+        size_t externalMemoryCost;
+    };
+
     WEBCORE_EXPORT virtual ~ImageBufferBackend();
 
     WEBCORE_EXPORT static IntSize calculateBackendSize(const Parameters&);
@@ -112,15 +121,13 @@ public:
     virtual void finalizeDrawIntoContext(GraphicsContext&) { }
     virtual RefPtr<NativeImage> copyNativeImage(BackingStoreCopy) const = 0;
 
+    WEBCORE_EXPORT virtual RefPtr<NativeImage> copyNativeImageForDrawing(BackingStoreCopy copyBehavior) const;
     WEBCORE_EXPORT virtual RefPtr<NativeImage> sinkIntoNativeImage();
 
     virtual void clipToMask(GraphicsContext&, const FloatRect&) { }
 
     WEBCORE_EXPORT void convertToLuminanceMask();
     virtual void transformToColorSpace(const DestinationColorSpace&) { }
-
-    virtual String toDataURL(const String& mimeType, std::optional<double> quality, PreserveResolution) const = 0;
-    virtual Vector<uint8_t> toData(const String& mimeType, std::optional<double> quality) const = 0;
 
     virtual RefPtr<PixelBuffer> getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect&, const ImageBufferAllocator& = ImageBufferAllocator()) const = 0;
     virtual void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) = 0;
@@ -154,6 +161,10 @@ public:
     virtual void ensureNativeImagesHaveCopiedBackingStore() { }
 
     virtual ImageBufferBackendSharing* toBackendSharing() { return nullptr; }
+
+    virtual void setOwnershipIdentity(const ProcessIdentity&) { }
+
+    virtual void clearContents() { ASSERT_NOT_REACHED(); }
 
 protected:
     WEBCORE_EXPORT ImageBufferBackend(const Parameters&);

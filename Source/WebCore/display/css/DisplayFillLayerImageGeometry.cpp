@@ -26,8 +26,6 @@
 #include "config.h"
 #include "DisplayFillLayerImageGeometry.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "DisplayBox.h"
 #include "FillLayer.h"
 #include "LayoutBox.h"
@@ -288,8 +286,8 @@ static FillLayerImageGeometry geometryForLayer(const FillLayer& fillLayer, Layou
 
     LayoutSize tileSize = calculateFillTileSize(fillLayer, positioningAreaSize, pixelSnappingFactor);
     
-    FillRepeat backgroundRepeatX = fillLayer.repeatX();
-    FillRepeat backgroundRepeatY = fillLayer.repeatY();
+    FillRepeat backgroundRepeatX = fillLayer.repeat().x;
+    FillRepeat backgroundRepeatY = fillLayer.repeat().y;
     LayoutUnit availableWidth = positioningAreaSize.width() - tileSize.width();
     LayoutUnit availableHeight = positioningAreaSize.height() - tileSize.height();
 
@@ -391,4 +389,3 @@ Vector<FillLayerImageGeometry, 1> calculateFillLayerImageGeometry(const RenderSt
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

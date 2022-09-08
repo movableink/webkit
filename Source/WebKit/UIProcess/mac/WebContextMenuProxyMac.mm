@@ -273,7 +273,7 @@ void WebContextMenuProxyMac::setupServicesMenu()
     if (!hasControlledImage)
         [m_menu setShowsStateColumn:YES];
 
-    appendMarkupItemToControlledImageMenuIfNeeded();
+    appendRemoveBackgroundItemToControlledImageMenuIfNeeded();
 
     // Explicitly add a menu item for each telephone number that is in the selection.
     Vector<RetainPtr<NSMenuItem>> telephoneNumberMenuItems;
@@ -304,7 +304,7 @@ void WebContextMenuProxyMac::setupServicesMenu()
         ServicesController::singleton().refreshExistingServices();
 }
 
-void WebContextMenuProxyMac::appendMarkupItemToControlledImageMenuIfNeeded()
+void WebContextMenuProxyMac::appendRemoveBackgroundItemToControlledImageMenuIfNeeded()
 {
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
     auto* page = this->page();
@@ -327,7 +327,7 @@ void WebContextMenuProxyMac::appendMarkupItemToControlledImageMenuIfNeeded()
         if (!image)
             return;
 
-        requestBackgroundRemoval(image.get(), [protectedThis = WTFMove(protectedThis), weakMenu = WTFMove(weakMenu)](CGImageRef result, CGRect) {
+        requestBackgroundRemoval(image.get(), [protectedThis = WTFMove(protectedThis), weakMenu = WTFMove(weakMenu)](CGImageRef result) {
             if (!result)
                 return;
 
@@ -363,7 +363,7 @@ void WebContextMenuProxyMac::clearServicesMenu()
     m_menu = nullptr;
 }
 
-void WebContextMenuProxyMac::applyMarkupToControlledImage()
+void WebContextMenuProxyMac::removeBackgroundFromControlledImage()
 {
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
     if (!page())
@@ -377,7 +377,7 @@ void WebContextMenuProxyMac::applyMarkupToControlledImage()
     if (!data)
         return;
 
-    page()->replaceImageWithMarkupResults(*elementContext, { String(type.get()) }, IPC::DataReference(static_cast<const uint8_t*>([data bytes]), [data length]));
+    page()->replaceImageForRemoveBackground(*elementContext, { String(type.get()) }, IPC::DataReference(static_cast<const uint8_t*>([data bytes]), [data length]));
 #endif // ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
 }
 
@@ -419,8 +419,8 @@ void WebContextMenuProxyMac::getShareMenuItem(CompletionHandler<void(NSMenuItem 
             [items addObject:(NSURL *)downloadableMediaURL];
     }
 
-    if (hitTestData.imageSharedMemory && hitTestData.imageSize) {
-        if (auto image = adoptNS([[NSImage alloc] initWithData:[NSData dataWithBytes:(unsigned char*)hitTestData.imageSharedMemory->data() length:hitTestData.imageSize]]))
+    if (hitTestData.imageSharedMemory) {
+        if (auto image = adoptNS([[NSImage alloc] initWithData:[NSData dataWithBytes:(unsigned char*)hitTestData.imageSharedMemory->data() length:hitTestData.imageSharedMemory->size()]]))
             [items addObject:image.get()];
     }
 
@@ -548,6 +548,9 @@ static NSString *menuItemIdentifier(const WebCore::ContextMenuAction action)
 
     case ContextMenuItemTagToggleMediaControls:
         return _WKMenuItemIdentifierShowHideMediaControls;
+
+    case ContextMenuItemTagShowMediaStats:
+        return _WKMenuItemIdentifierShowHideMediaStats;
 
     case ContextMenuItemTagToggleVideoEnhancedFullscreen:
         return _WKMenuItemIdentifierToggleEnhancedFullScreen;
@@ -690,7 +693,7 @@ void WebContextMenuProxyMac::getContextMenuFromItems(const Vector<WebContextMenu
             if (copySubjectItem) {
                 if (auto image = imageBitmap->makeCGImageCopy()) {
                     protectedThis->m_copySubjectResult = nullptr;
-                    requestBackgroundRemoval(image.get(), [weakPage, protectedThis, copySubjectItem = WTFMove(*copySubjectItem)](auto result, auto) {
+                    requestBackgroundRemoval(image.get(), [weakPage, protectedThis, copySubjectItem = WTFMove(*copySubjectItem)](auto result) {
                         if (!result)
                             return;
 

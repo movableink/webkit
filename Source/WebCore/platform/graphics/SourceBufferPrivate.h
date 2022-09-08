@@ -46,6 +46,7 @@
 #include <wtf/Ref.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
@@ -101,7 +102,7 @@ public:
     WEBCORE_EXPORT virtual void seekToTime(const MediaTime&);
     WEBCORE_EXPORT virtual void updateTrackIds(Vector<std::pair<AtomString, AtomString>>&& trackIdPairs);
 
-    void setClient(SourceBufferPrivateClient* client) { m_client = client; }
+    WEBCORE_EXPORT void setClient(SourceBufferPrivateClient*);
     void setIsAttached(bool flag) { m_isAttached = flag; }
 
     const TimeRanges* buffered() const { return m_buffered.get(); }
@@ -131,7 +132,7 @@ public:
 protected:
     // The following method should never be called directly and be overridden instead.
     WEBCORE_EXPORT virtual void append(Vector<unsigned char>&&);
-    virtual MediaTime timeFudgeFactor() const { return { 1, 10 }; }
+    virtual MediaTime timeFudgeFactor() const { return { 2002, 24000 }; }
     virtual bool isActive() const { return false; }
     virtual bool isSeeking() const { return false; }
     virtual MediaTime currentMediaTime() const { return { }; }
@@ -148,12 +149,12 @@ protected:
 
     void appendCompleted(bool parsingSucceeded, bool isEnded);
     void reenqueSamples(const AtomString& trackID);
-    WEBCORE_EXPORT void didReceiveInitializationSegment(SourceBufferPrivateClient::InitializationSegment&&, CompletionHandler<void()>&&);
+    WEBCORE_EXPORT void didReceiveInitializationSegment(SourceBufferPrivateClient::InitializationSegment&&, CompletionHandler<void(SourceBufferPrivateClient::ReceiveResult)>&&);
     WEBCORE_EXPORT void didReceiveSample(Ref<MediaSample>&&);
     WEBCORE_EXPORT void setBufferedRanges(const PlatformTimeRanges&);
     void provideMediaData(const AtomString& trackID);
 
-    SourceBufferPrivateClient* m_client { nullptr };
+    WeakPtr<SourceBufferPrivateClient> m_client;
 
 private:
     void updateHighestPresentationTimestamp();

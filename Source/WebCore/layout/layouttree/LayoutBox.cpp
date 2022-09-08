@@ -26,8 +26,6 @@
 #include "config.h"
 #include "LayoutBox.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutBoxGeometry.h"
 #include "LayoutContainerBox.h"
 #include "LayoutContainingBlockChainIterator.h"
@@ -204,7 +202,7 @@ bool Box::isRightFloatingPositioned() const
 
 bool Box::hasFloatClear() const
 {
-    return m_style.clear() != Clear::None;
+    return m_style.clear() != Clear::None && (isBlockLevelBox() || isLineBreakBox());
 }
 
 bool Box::isFloatAvoider() const
@@ -577,4 +575,3 @@ void Box::removeRareData()
 }
 }
 
-#endif

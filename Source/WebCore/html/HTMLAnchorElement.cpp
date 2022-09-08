@@ -50,7 +50,6 @@
 #include "RenderImage.h"
 #include "ResourceRequest.h"
 #include "RuntimeApplicationChecks.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SVGImage.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
@@ -214,7 +213,7 @@ void HTMLAnchorElement::defaultEventHandler(Event& event)
     HTMLElement::defaultEventHandler(event);
 }
 
-void HTMLAnchorElement::setActive(bool down, bool pause, Style::InvalidationScope invalidationScope)
+void HTMLAnchorElement::setActive(bool down, Style::InvalidationScope invalidationScope)
 {
     if (down && hasEditableStyle()) {
         switch (document().settings().editableLinkBehavior()) {
@@ -235,7 +234,7 @@ void HTMLAnchorElement::setActive(bool down, bool pause, Style::InvalidationScop
         }
     }
     
-    HTMLElement::setActive(down, pause, invalidationScope);
+    HTMLElement::setActive(down, invalidationScope);
 }
 
 void HTMLAnchorElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -683,7 +682,7 @@ bool HTMLAnchorElement::willRespondToMouseClickEventsWithEditability(Editability
 
 static auto& rootEditableElementMap()
 {
-    static NeverDestroyed<WeakHashMap<HTMLAnchorElement, WeakPtr<Element>>> map;
+    static NeverDestroyed<WeakHashMap<HTMLAnchorElement, WeakPtr<Element, WeakPtrImplWithEventTargetData>, WeakPtrImplWithEventTargetData>> map;
     return map.get();
 }
 

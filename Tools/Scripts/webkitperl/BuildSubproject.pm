@@ -29,6 +29,7 @@
 
 use strict;
 use warnings;
+use File::Basename;
 use FindBin;
 use Getopt::Long qw(:config pass_through);
 use lib $FindBin::Bin;
@@ -190,7 +191,7 @@ if (isCMakeBuild()) {
 
     # This call only returns if nothing wrong happened
     buildCMakeProjectOrExit(0, undef, $buildTarget, @featureArgs, @cmakeArgs);
-    writeCongrats();
+    writeCongrats("JavaScriptCore");
     exit exitStatus(0);
 }
 
@@ -214,12 +215,20 @@ if (isAppleCocoaWebKit()) {
     }
 }
 
-sub buildMyProject
+sub buildUpToProject
 {
     my ($projectDirectory, $projectName) = @_;
     my $result;
     chdir $projectDirectory or die "Can't find $projectName directory to build from";
     if (isAppleCocoaWebKit()) {
+        if (!configuredXcodeWorkspace()) {
+            system("$FindBin::Bin/set-webkit-configuration", "--workspace=" . sourceDir() . "/WebKit.xcworkspace") == 0 or die;
+        }
+        # By convention, projects that support this build workflow
+        # (JavaScriptCore, WebGPU) have a scheme which builds that project
+        # and its implicit dependencies.
+        my $schemeName = "Everything up to $projectName";
+
         my $compilerFlags = 'GCC_PREPROCESSOR_ADDITIONS="';
         if ($forceCLoop) {
             $compilerFlags .= "ENABLE_JIT=0 ENABLE_C_LOOP=1";
@@ -238,7 +247,7 @@ sub buildMyProject
             $extraCommands .= " " . $arg;
         }
 
-        my $command = "make " . (lc configuration()) . " " . $compilerFlags . " " . $extraCommands;
+        my $command = "make SCHEME=\"$schemeName\" " . (lc configuration()) . " " . $compilerFlags . " " . $extraCommands;
 
         print "\n";
         print "building ", $projectName, "\n";

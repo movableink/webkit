@@ -219,6 +219,8 @@ void InjectedBundle::didReceiveMessageToPage(WKBundlePageRef page, WKStringRef m
         m_state = Idle;
         m_dumpPixels = false;
         m_pixelResultIsPending = false;
+        // Needed for pixel result pending mode, otherwise a no-op.
+        InjectedBundle::page()->stopLoading();
 
         setlocale(LC_ALL, "");
         TestRunner::removeAllWebNotificationPermissions();
@@ -549,7 +551,10 @@ void InjectedBundle::done()
 
     m_useWorkQueue = false;
 
-    page()->stopLoading();
+    // Postpone page load stop if pixel result is still pending since
+    // cancelled image loads will paint as broken images.
+    if (!m_pixelResultIsPending)
+        page()->stopLoading();
     setTopLoadingFrame(0);
 
 #if ENABLE(ACCESSIBILITY)
@@ -588,7 +593,7 @@ void InjectedBundle::dumpToStdErr(const String& output)
     if (output.isEmpty())
         return;
     // FIXME: Do we really have to convert to UTF-8 instead of using toWK?
-    auto string = output.tryGetUtf8();
+    auto string = output.tryGetUTF8();
     postPageMessage("DumpToStdErr", string ? string->data() : "Out of memory\n");
 }
 
@@ -599,7 +604,7 @@ void InjectedBundle::outputText(StringView output, IsFinalTestOutput isFinalTest
     if (output.isEmpty())
         return;
     // FIXME: Do we really have to convert to UTF-8 instead of using toWK?
-    auto string = output.tryGetUtf8();
+    auto string = output.tryGetUTF8();
     // We use WKBundlePagePostMessageIgnoringFullySynchronousMode() instead of WKBundlePagePostMessage() to make sure that all text output
     // is done via asynchronous IPC, even if the connection is in fully synchronous mode due to a WKBundlePagePostSynchronousMessageForTesting()
     // call. Otherwise, messages logged via sync and async IPC may end up out of order and cause flakiness.

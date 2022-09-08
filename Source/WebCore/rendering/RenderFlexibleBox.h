@@ -30,7 +30,6 @@
 
 #pragma once
 
-#include "LayoutIntegrationFlexLayout.h"
 #include "OrderIterator.h"
 #include "RenderBlock.h"
 
@@ -79,7 +78,7 @@ public:
     void clearCachedChildIntrinsicContentLogicalHeight(const RenderBox& child);
 
     LayoutUnit staticMainAxisPositionForPositionedChild(const RenderBox&);
-    LayoutUnit staticCrossAxisPositionForPositionedChild(const RenderBox&);
+    LayoutUnit staticCrossAxisPositionForPositionedChild(const RenderBox&) const;
     
     LayoutUnit staticInlinePositionForPositionedChild(const RenderBox&);
     LayoutUnit staticBlockPositionForPositionedChild(const RenderBox&);
@@ -180,7 +179,7 @@ private:
     bool updateAutoMarginsInCrossAxis(RenderBox& child, LayoutUnit availableAlignmentSpace);
     void repositionLogicalHeightDependentFlexItems(Vector<LineContext>&, LayoutUnit gapBetweenLines);
     
-    LayoutUnit availableAlignmentSpaceForChild(LayoutUnit lineCrossAxisExtent, const RenderBox& child);
+    LayoutUnit availableAlignmentSpaceForChild(const LayoutUnit lineCrossAxisExtent, const RenderBox& child) const;
     LayoutUnit marginBoxAscentForChild(const RenderBox& child);
     
     LayoutUnit computeChildMarginValue(Length margin);
@@ -211,9 +210,7 @@ private:
 
     void resetHasDefiniteHeight() { m_hasDefiniteHeight = SizeDefiniteness::Unknown; }
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     void layoutUsingFlexFormattingContext();
-#endif
 
     // This is used to cache the preferred size for orthogonal flow children so we
     // don't have to relayout to get it
@@ -237,9 +234,6 @@ private:
     SizeDefiniteness m_hasDefiniteHeight { SizeDefiniteness::Unknown };
     bool m_inLayout { false };
     bool m_shouldResetChildLogicalHeightBeforeLayout { false };
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-    std::unique_ptr<LayoutIntegration::FlexLayout> m_flexLayout;
-#endif
 };
 
 } // namespace WebCore

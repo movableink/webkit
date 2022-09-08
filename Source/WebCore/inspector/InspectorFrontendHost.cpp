@@ -47,6 +47,7 @@
 #include "FloatRect.h"
 #include "FocusController.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLIFrameElement.h"
 #include "HitTestResult.h"
 #include "InspectorController.h"
@@ -627,8 +628,12 @@ bool InspectorFrontendHost::isBeingInspected()
 
 void InspectorFrontendHost::setAllowsInspectingInspector(bool allow)
 {
-    if (m_frontendPage)
-        m_frontendPage->settings().setDeveloperExtrasEnabled(allow);
+    if (!m_frontendPage)
+        return;
+
+    m_frontendPage->settings().setDeveloperExtrasEnabled(allow);
+    if (m_client)
+        m_client->setInspectorPageDeveloperExtrasEnabled(m_frontendPage->settings().developerExtrasEnabled());
 }
 
 bool InspectorFrontendHost::supportsShowCertificate() const

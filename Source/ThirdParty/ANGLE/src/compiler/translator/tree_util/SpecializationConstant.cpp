@@ -19,8 +19,6 @@ namespace sh
 namespace
 {
 // Specialization constant names
-constexpr ImmutableString kLineRasterEmulationSpecConstVarName =
-    ImmutableString("ANGLELineRasterEmulation");
 constexpr ImmutableString kSurfaceRotationSpecConstVarName =
     ImmutableString("ANGLESurfaceRotation");
 constexpr ImmutableString kDitherSpecConstVarName = ImmutableString("ANGLEDither");
@@ -40,10 +38,11 @@ const TType *MakeSpecConst(const TType &type, vk::SpecializationConstantId id)
 }
 }  // anonymous namespace
 
-SpecConst::SpecConst(TSymbolTable *symbolTable, ShCompileOptions compileOptions, GLenum shaderType)
+SpecConst::SpecConst(TSymbolTable *symbolTable,
+                     const ShCompileOptions &compileOptions,
+                     GLenum shaderType)
     : mSymbolTable(symbolTable),
       mCompileOptions(compileOptions),
-      mLineRasterEmulationVar(nullptr),
       mSurfaceRotationVar(nullptr),
       mDitherVar(nullptr)
 {
@@ -53,7 +52,7 @@ SpecConst::SpecConst(TSymbolTable *symbolTable, ShCompileOptions compileOptions,
     }
 
     // Mark SpecConstUsage::Rotation unconditionally.  gl_Position is always rotated.
-    if ((mCompileOptions & SH_USE_SPECIALIZATION_CONSTANT) != 0)
+    if (mCompileOptions.useSpecializationConstant)
     {
         mUsageBits.set(vk::SpecConstUsage::Rotation);
     }
@@ -66,15 +65,6 @@ void SpecConst::declareSpecConsts(TIntermBlock *root)
     // Add specialization constant declarations.  The default value of the specialization
     // constant is irrelevant, as it will be set when creating the pipeline.
     // Only emit specialized const declaration if it has been referenced.
-    if (mLineRasterEmulationVar != nullptr)
-    {
-        TIntermDeclaration *decl = new TIntermDeclaration();
-        decl->appendDeclarator(
-            new TIntermBinary(EOpInitialize, getLineRasterEmulation(), CreateBoolNode(false)));
-
-        root->insertStatement(0, decl);
-    }
-
     if (mSurfaceRotationVar != nullptr)
     {
         TIntermDeclaration *decl = new TIntermDeclaration();
@@ -93,24 +83,6 @@ void SpecConst::declareSpecConsts(TIntermBlock *root)
     }
 }
 
-TIntermSymbol *SpecConst::getLineRasterEmulation()
-{
-    if ((mCompileOptions & SH_ADD_BRESENHAM_LINE_RASTER_EMULATION) == 0)
-    {
-        return nullptr;
-    }
-    if (mLineRasterEmulationVar == nullptr)
-    {
-        const TType *type = MakeSpecConst(*StaticType::GetBasic<EbtBool, EbpUndefined>(),
-                                          vk::SpecializationConstantId::LineRasterEmulation);
-
-        mLineRasterEmulationVar = new TVariable(mSymbolTable, kLineRasterEmulationSpecConstVarName,
-                                                type, SymbolType::AngleInternal);
-        mUsageBits.set(vk::SpecConstUsage::LineRasterEmulation);
-    }
-    return new TIntermSymbol(mLineRasterEmulationVar);
-}
-
 TIntermSymbol *SpecConst::getRotation()
 {
     if (mSurfaceRotationVar == nullptr)
@@ -126,7 +98,7 @@ TIntermSymbol *SpecConst::getRotation()
 
 TIntermTyped *SpecConst::getSwapXY()
 {
-    if ((mCompileOptions & SH_USE_SPECIALIZATION_CONSTANT) == 0)
+    if (!mCompileOptions.useSpecializationConstant)
     {
         return nullptr;
     }

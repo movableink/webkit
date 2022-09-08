@@ -71,7 +71,6 @@ class EventTarget;
 class FontLoadRequest;
 class MessagePort;
 class NotificationClient;
-class PermissionController;
 class PublicURLManager;
 class RejectedPromiseTracker;
 class RTCDataChannelRemoteHandlerConnection;
@@ -79,7 +78,6 @@ class ResourceRequest;
 class SocketProvider;
 class WebCoreOpaqueRoot;
 enum class LoadedFromOpaqueSource : uint8_t;
-enum class ReferrerPolicy : uint8_t;
 enum class TaskSource : uint8_t;
 
 #if ENABLE(NOTIFICATIONS)
@@ -116,8 +114,6 @@ public:
 
     virtual String userAgent(const URL&) const = 0;
 
-    virtual ReferrerPolicy referrerPolicy() const = 0;
-
     virtual const Settings::Values& settingsValues() const = 0;
 
     virtual NotificationClient* notificationClient() { return nullptr; }
@@ -127,7 +123,6 @@ public:
     virtual void disableWebAssembly(const String& errorMessage) = 0;
 
     virtual IDBClient::IDBConnectionProxy* idbConnectionProxy() = 0;
-    virtual RefPtr<PermissionController> permissionController();
 
     virtual SocketProvider* socketProvider() = 0;
 

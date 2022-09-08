@@ -38,6 +38,7 @@ class HTMLElement;
 class HTMLVideoElement;
 class LayoutUnit;
 class PlatformMouseEvent;
+class WeakPtrImplWithEventTargetData;
 struct SecurityOriginData;
 
 #if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
@@ -156,12 +157,12 @@ public:
 #if ENABLE(IMAGE_ANALYSIS)
     bool needsToForceUserSelectAndUserDragWhenInstallingImageOverlay() const;
 #endif
-
-    bool shouldDisableWebSharePolicy() const;
     
 #if PLATFORM(IOS)
     WEBCORE_EXPORT bool allowLayeredFullscreenVideos() const;
 #endif
+    bool hasBrokenPermissionsAPISupportQuirk() const;
+    bool shouldEnableApplicationCacheQuirk() const;
     
 private:
     bool needsQuirks() const;
@@ -171,7 +172,7 @@ private:
     bool isGoogleMaps() const;
 #endif
 
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 
     mutable std::optional<bool> m_hasBrokenEncryptedMediaAPISupportQuirk;
     mutable std::optional<bool> m_needsFullWidthHeightFullscreenStyleQuirk;
@@ -208,9 +209,12 @@ private:
 #endif
     mutable std::optional<bool> m_blocksReturnToFullscreenFromPictureInPictureQuirk;
     mutable std::optional<bool> m_shouldDisableEndFullscreenEventWhenEnteringPictureInPictureFromFullscreenQuirk;
-    mutable std::optional<bool> m_shouldDisableWebSharePolicy;
 #if PLATFORM(IOS)
     mutable std::optional<bool> m_allowLayeredFullscreenVideos;
+#endif
+    mutable std::optional<bool> m_hasBrokenPermissionsAPISupportQuirk;
+#if PLATFORM(IOS_FAMILY)
+    mutable std::optional<bool> m_shouldEnableApplicationCacheQuirk;
 #endif
 };
 

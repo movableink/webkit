@@ -126,7 +126,7 @@ public:
         return const_cast<Font*>(this);
     }
 
-    bool variantCapsSupportsCharacterForSynthesis(FontVariantCaps, UChar32) const;
+    bool variantCapsSupportedForSynthesis(FontVariantCaps) const;
 
     const Font& verticalRightOrientationFont() const;
     const Font& uprightOrientationFont() const;
@@ -193,10 +193,10 @@ public:
 #if PLATFORM(COCOA)
     CTFontRef getCTFont() const { return m_platformData.font(); }
     RetainPtr<CFDictionaryRef> getCFStringAttributes(bool enableKerning, FontOrientation, const AtomString& locale) const;
-    const BitVector& glyphsSupportedBySmallCaps() const;
-    const BitVector& glyphsSupportedByAllSmallCaps() const;
-    const BitVector& glyphsSupportedByPetiteCaps() const;
-    const BitVector& glyphsSupportedByAllPetiteCaps() const;
+    bool supportsSmallCaps() const;
+    bool supportsAllSmallCaps() const;
+    bool supportsPetiteCaps() const;
+    bool supportsAllPetiteCaps() const;
 #endif
 
     bool canRenderCombiningCharacterSequence(const UChar*, size_t) const;
@@ -219,6 +219,9 @@ public:
     static float ascentConsideringMacAscentHack(const WCHAR*, float ascent, float descent);
 #endif
 
+    void setIsUsedInSystemFallbackFontCache() { m_isUsedInSystemFallbackFontCache = true; }
+    bool isUsedInSystemFallbackFontCache() const { return m_isUsedInSystemFallbackFontCache; }
+
 private:
     WEBCORE_EXPORT Font(const FontPlatformData&, Origin, Interstitial, Visibility, OrientationFallback, std::optional<RenderingResourceIdentifier>);
 
@@ -233,8 +236,6 @@ private:
     RefPtr<Font> createScaledFont(const FontDescription&, float scaleFactor) const;
     RefPtr<Font> platformCreateScaledFont(const FontDescription&, float scaleFactor) const;
 
-    void removeFromSystemFallbackCache();
-    
     struct DerivedFonts;
     DerivedFonts& ensureDerivedFontData() const;
 
@@ -317,10 +318,15 @@ private:
     mutable std::unique_ptr<DerivedFonts> m_derivedFontData;
 
 #if PLATFORM(COCOA)
-    mutable std::optional<BitVector> m_glyphsSupportedBySmallCaps;
-    mutable std::optional<BitVector> m_glyphsSupportedByAllSmallCaps;
-    mutable std::optional<BitVector> m_glyphsSupportedByPetiteCaps;
-    mutable std::optional<BitVector> m_glyphsSupportedByAllPetiteCaps;
+    enum class SupportsFeature {
+        No,
+        Yes,
+        Unknown
+    };
+    mutable SupportsFeature m_supportsSmallCaps { SupportsFeature::Unknown };
+    mutable SupportsFeature m_supportsAllSmallCaps { SupportsFeature::Unknown };
+    mutable SupportsFeature m_supportsPetiteCaps { SupportsFeature::Unknown };
+    mutable SupportsFeature m_supportsAllPetiteCaps { SupportsFeature::Unknown };
     mutable std::optional<PAL::OTSVGTable> m_otSVGTable;
     mutable std::optional<ComplexColorFormatGlyphs> m_glyphsWithComplexColorFormat; // SVG and sbix
 #endif
@@ -347,7 +353,7 @@ private:
     unsigned m_isBrokenIdeographFallback : 1;
     unsigned m_hasVerticalGlyphs : 1;
 
-    unsigned m_isUsedInSystemFallbackCache : 1;
+    unsigned m_isUsedInSystemFallbackFontCache : 1;
     
     unsigned m_allowsAntialiasing : 1;
 

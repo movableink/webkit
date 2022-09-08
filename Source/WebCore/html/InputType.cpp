@@ -248,6 +248,8 @@ bool InputType::isValidValue(const String& value) const
 #endif
     case Type::Text:
         return validateInputType(downcast<TextInputType>(*this), value);
+    default:
+        break;
     }
     ASSERT_NOT_REACHED();
     return false;
@@ -811,8 +813,7 @@ void InputType::setValue(const String& sanitizedValue, bool valueChanged, TextFi
     bool wasInRange = isInRange(element()->value());
     bool inRange = isInRange(sanitizedValue);
 
-    bool dummy;
-    auto oldDirection = element()->directionalityIfhasDirAutoAttribute(dummy);
+    auto oldDirection = element()->directionalityIfDirIsAuto();
 
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (wasInRange != inRange)
@@ -820,7 +821,7 @@ void InputType::setValue(const String& sanitizedValue, bool valueChanged, TextFi
 
     element()->setValueInternal(sanitizedValue, eventBehavior);
 
-    if (oldDirection != element()->directionalityIfhasDirAutoAttribute(dummy))
+    if (oldDirection.value_or(TextDirection::LTR) != element()->directionalityIfDirIsAuto().value_or(TextDirection::LTR))
         element()->invalidateStyleInternal();
 
     switch (eventBehavior) {
@@ -836,10 +837,8 @@ void InputType::setValue(const String& sanitizedValue, bool valueChanged, TextFi
         break;
     }
 
-    if (isRangeControl()) {
-        if (auto* cache = element()->document().existingAXObjectCache())
-            cache->postNotification(element(), AXObjectCache::AXValueChanged);
-    }
+    if (auto* cache = element()->document().existingAXObjectCache())
+        cache->valueChanged(element());
 }
 
 void InputType::willDispatchClick(InputElementClickState&)
@@ -1060,8 +1059,8 @@ ExceptionOr<void> InputType::applyStep(int count, AnyStepHandling anyStepHandlin
     if (result.hasException() || !element())
         return result;
 
-    if (AXObjectCache* cache = element()->document().existingAXObjectCache())
-        cache->postNotification(element(), AXObjectCache::AXValueChanged);
+    if (auto* cache = element()->document().existingAXObjectCache())
+        cache->valueChanged(element());
 
     return result;
 }

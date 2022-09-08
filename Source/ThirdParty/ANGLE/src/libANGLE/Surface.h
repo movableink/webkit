@@ -59,6 +59,7 @@ struct SurfaceState final : private angle::NonCopyable
     AttributeMap attributes;
 
     bool timestampsEnabled;
+    bool autoRefreshEnabled;
     SupportedCompositorTiming supportedCompositorTimings;
     SupportedTimestamps supportedTimestamps;
     bool directComposition;
@@ -165,6 +166,7 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
                       GLenum binding,
                       const gl::ImageIndex &imageIndex) const override;
     bool isYUV() const override;
+    bool isCreatedWithAHB() const override;
 
     void onAttach(const gl::Context *context, rx::Serial framebufferSerial) override {}
     void onDetach(const gl::Context *context, rx::Serial framebufferSerial) override {}
@@ -186,6 +188,9 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
     // EGL_ANDROID_get_frame_timestamps entry points
     void setTimestampsEnabled(bool enabled);
     bool isTimestampsEnabled() const;
+
+    // EGL_ANDROID_front_buffer_auto_refresh entry points
+    Error setAutoRefreshEnabled(bool enabled);
 
     const SupportedCompositorTiming &getSupportedCompositorTimings() const;
     Error getCompositorTiming(EGLint numTimestamps,
@@ -221,6 +226,7 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
 
   protected:
     Surface(EGLint surfaceType,
+            GLuint serialId,
             const egl::Config *config,
             const AttributeMap &attributes,
             bool forceRobustResourceInit,
@@ -296,6 +302,8 @@ class Surface : public LabeledObject, public gl::FramebufferAttachmentObject
     gl::InitState mColorInitState;
     gl::InitState mDepthStencilInitState;
     angle::ObserverBinding mImplObserverBinding;
+
+    GLuint mSerialId;
 };
 
 class WindowSurface final : public Surface
@@ -340,7 +348,7 @@ class PixmapSurface final : public Surface
     ~PixmapSurface() override;
 };
 
-class ANGLE_NO_DISCARD ScopedSurfaceRef
+class [[nodiscard]] ScopedSurfaceRef
 {
   public:
     ScopedSurfaceRef(Surface *surface) : mSurface(surface)

@@ -1,7 +1,11 @@
-ifeq ($(USE_WORKSPACE),YES)
+ifeq ($(MAKECMDGOALS),installsrc)
+USE_WORKSPACE = NO
+endif
+
+ifneq ($(USE_WORKSPACE),NO)
 
 include ../Makefile.shared
-SCHEME = All Tools
+SCHEME = All WebKit Tools
 
 else
 

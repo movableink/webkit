@@ -51,6 +51,7 @@
 #include <WebCore/CachedResource.h>
 #include <WebCore/ContentSecurityPolicy.h>
 #include <WebCore/DataURLDecoder.h>
+#include <WebCore/DeprecatedGlobalSettings.h>
 #include <WebCore/DiagnosticLoggingClient.h>
 #include <WebCore/DiagnosticLoggingKeys.h>
 #include <WebCore/Document.h>
@@ -67,7 +68,6 @@
 #include <WebCore/ReferrerPolicy.h>
 #include <WebCore/ResourceLoader.h>
 #include <WebCore/RuntimeApplicationChecks.h>
-#include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/SecurityOrigin.h>
 #include <WebCore/Settings.h>
 #include <WebCore/SubresourceLoader.h>
@@ -255,13 +255,23 @@ void WebLoaderStrategy::scheduleLoad(ResourceLoader& resourceLoader, CachedResou
 
 bool WebLoaderStrategy::tryLoadingUsingURLSchemeHandler(ResourceLoader& resourceLoader, const WebResourceLoader::TrackingParameters& trackingParameters)
 {
-    auto* webFrameLoaderClient = toWebFrameLoaderClient(resourceLoader.frameLoader()->client());
-    if (!webFrameLoaderClient)
-        return false;
+    RefPtr<WebPage> webPage;
+    RefPtr<WebFrame> webFrame;
 
-    auto& webFrame = webFrameLoaderClient->webFrame();
-    auto* webPage = webFrame.page();
-    if (!webPage)
+    if (auto* webFrameLoaderClient = toWebFrameLoaderClient(resourceLoader.frameLoader()->client())) {
+        webFrame = &webFrameLoaderClient->webFrame();
+        webPage = webFrame->page();
+    } else if (auto* workerFrameLoaderClient = dynamicDowncast<RemoteWorkerFrameLoaderClient>(resourceLoader.frameLoader()->client())) {
+        if (auto serviceWorkerPageIdentifier = workerFrameLoaderClient->serviceWorkerPageIdentifier()) {
+            if (auto* page = Page::serviceWorkerPage(*serviceWorkerPageIdentifier)) {
+                webPage = &WebPage::fromCorePage(*page);
+                auto* frame = webPage->mainFrame();
+                webFrame = frame ? WebFrame::fromCoreFrame(*frame) : nullptr;
+            }
+        }
+    }
+
+    if (!webPage || !webFrame)
         return false;
 
     auto* handler = webPage->urlSchemeHandlerForScheme(resourceLoader.request().url().protocol());
@@ -271,7 +281,7 @@ bool WebLoaderStrategy::tryLoadingUsingURLSchemeHandler(ResourceLoader& resource
     LOG(NetworkScheduling, "(WebProcess) WebLoaderStrategy::scheduleLoad, URL '%s' will be handled by a UIProcess URL scheme handler.", resourceLoader.url().string().utf8().data());
     WEBLOADERSTRATEGY_RELEASE_LOG("tryLoadingUsingURLSchemeHandler: URL will be handled by a UIProcess URL scheme handler");
 
-    handler->startNewTask(resourceLoader, webFrame);
+    handler->startNewTask(resourceLoader, *webFrame);
     return true;
 }
 
@@ -289,13 +299,25 @@ bool WebLoaderStrategy::tryLoadingUsingPDFJSHandler(ResourceLoader& resourceLoad
 }
 #endif
 
-static void addParametersShared(const Frame* frame, NetworkResourceLoadParameters& parameters)
+static void addParametersShared(const Frame* frame, NetworkResourceLoadParameters& parameters, bool isMainFrameNavigation = false)
 {
     parameters.crossOriginAccessControlCheckEnabled = CrossOriginAccessControlCheckDisabler::singleton().crossOriginAccessControlCheckEnabled();
     parameters.hadMainFrameMainResourcePrivateRelayed = WebProcess::singleton().hadMainFrameMainResourcePrivateRelayed();
 
     if (!frame)
         return;
+
+    // When loading the main frame, we need to get allowPrivacyProxy from the same DocumentLoader that
+    // WebFrameLoaderClient::applyToDocumentLoader stored the value on. Otherwise, we need to get the
+    // value from the main frame's current DocumentLoader.
+    auto& mainFrame = frame->mainFrame();
+    auto* mainFrameDocumentLoader = mainFrame.loader().policyDocumentLoader();
+    if (!mainFrameDocumentLoader)
+        mainFrameDocumentLoader = mainFrame.loader().provisionalDocumentLoader();
+    if (!mainFrameDocumentLoader || !isMainFrameNavigation)
+        mainFrameDocumentLoader = mainFrame.loader().documentLoader();
+
+    parameters.allowPrivacyProxy = mainFrameDocumentLoader ? mainFrameDocumentLoader->allowPrivacyProxy() : true;
 
     if (auto* document = frame->document())
         parameters.crossOriginEmbedderPolicy = document->crossOriginEmbedderPolicy();
@@ -360,7 +382,8 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
     loadParameters.maximumBufferingTime = maximumBufferingTime;
     loadParameters.options = resourceLoader.options();
     loadParameters.preflightPolicy = resourceLoader.options().preflightPolicy;
-    addParametersShared(frame, loadParameters);
+    bool isMainFrameNavigation = resourceLoader.frame() && resourceLoader.frame()->isMainFrame() && resourceLoader.options().mode == FetchOptions::Mode::Navigate;
+    addParametersShared(frame, loadParameters, isMainFrameNavigation);
 
 #if ENABLE(SERVICE_WORKER)
     loadParameters.serviceWorkersMode = resourceLoader.options().loadedFromOpaqueSource == LoadedFromOpaqueSource::No ? resourceLoader.options().serviceWorkersMode : ServiceWorkersMode::None;
@@ -434,7 +457,7 @@ void WebLoaderStrategy::scheduleLoadFromNetworkProcess(ResourceLoader& resourceL
 
     loadParameters.shouldRestrictHTTPResponseAccess = shouldPerformSecurityChecks();
 
-    loadParameters.isMainFrameNavigation = resourceLoader.frame() && resourceLoader.frame()->isMainFrame() && resourceLoader.options().mode == FetchOptions::Mode::Navigate;
+    loadParameters.isMainFrameNavigation = isMainFrameNavigation;
     if (loadParameters.isMainFrameNavigation && document)
         loadParameters.sourceCrossOriginOpenerPolicy = document->crossOriginOpenerPolicy();
 
@@ -738,7 +761,7 @@ void WebLoaderStrategy::browsingContextRemoved(Frame& frame)
 
 bool WebLoaderStrategy::usePingLoad() const
 {
-    return !RuntimeEnabledFeatures::sharedFeatures().fetchAPIKeepAliveEnabled();
+    return !DeprecatedGlobalSettings::fetchAPIKeepAliveEnabled();
 }
 
 void WebLoaderStrategy::startPingLoad(Frame& frame, ResourceRequest& request, const HTTPHeaderMap& originalRequestHeaders, const FetchOptions& options, ContentSecurityPolicyImposition policyCheck, PingLoadCompletionHandler&& completionHandler)
@@ -941,7 +964,7 @@ NetworkLoadMetrics WebLoaderStrategy::networkMetricsFromResourceLoadIdentifier(W
 
 bool WebLoaderStrategy::shouldPerformSecurityChecks() const
 {
-    return RuntimeEnabledFeatures::sharedFeatures().restrictedHTTPResponseAccess();
+    return DeprecatedGlobalSettings::restrictedHTTPResponseAccess();
 }
 
 bool WebLoaderStrategy::havePerformedSecurityChecks(const ResourceResponse& response) const

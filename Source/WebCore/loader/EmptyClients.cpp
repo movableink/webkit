@@ -61,7 +61,6 @@
 #include "IDBConnectionToServer.h"
 #include "InspectorClient.h"
 #include "LibWebRTCAudioModule.h"
-#include "LibWebRTCProvider.h"
 #include "MediaRecorderPrivate.h"
 #include "MediaRecorderProvider.h"
 #include "ModalContainerTypes.h"
@@ -69,7 +68,6 @@
 #include "Page.h"
 #include "PageConfiguration.h"
 #include "PaymentCoordinatorClient.h"
-#include "PermissionController.h"
 #include "PluginInfoProvider.h"
 #include "ProgressTrackerClient.h"
 #include "SecurityOriginData.h"
@@ -82,6 +80,7 @@
 #include "ThreadableWebSocketChannel.h"
 #include "UserContentProvider.h"
 #include "VisitedLinkStore.h"
+#include "WebRTCProvider.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <pal/SessionID.h>
 #include <wtf/NeverDestroyed.h>
@@ -366,8 +365,6 @@ private:
     void willSetInputMethodState() final { }
     void setInputMethodState(Element*) final { }
 
-    bool canShowFontPanel() const final { return false; }
-
     class EmptyTextCheckerClient final : public TextCheckerClient {
         bool shouldEraseMarkersAfterChangeSelection(TextCheckingType) const final { return true; }
         void ignoreWordInSpellDocument(const String&) final { }
@@ -502,6 +499,9 @@ class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {
             : m_sessionID(sessionID)
         {
         }
+
+        const SecurityOrigin* topLevelOrigin() const final { return nullptr; };
+
     private:
         Ref<StorageArea> storageArea(const SecurityOrigin&) final { return adoptRef(*new EmptyStorageArea); }
         Ref<StorageNamespace> copy(Page&) final { return adoptRef(*new EmptyStorageNamespace { m_sessionID }); }
@@ -511,10 +511,11 @@ class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {
         PAL::SessionID m_sessionID;
     };
 
-    Ref<StorageNamespace> createSessionStorageNamespace(Page&, unsigned) final;
     Ref<StorageNamespace> createLocalStorageNamespace(unsigned, PAL::SessionID) final;
     Ref<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned, PAL::SessionID) final;
 
+    void copySessionStorageNamespace(Page&, Page&) final { };
+    RefPtr<StorageNamespace> sessionStorageNamespace(const SecurityOrigin&, Page&, ShouldCreateNamespace) final;
 };
 
 class EmptyUserContentProvider final : public UserContentProvider {
@@ -1155,7 +1156,7 @@ void EmptyEditorClient::registerRedoStep(UndoStep&)
 {
 }
 
-Ref<StorageNamespace> EmptyStorageNamespaceProvider::createSessionStorageNamespace(Page& page, unsigned)
+RefPtr<StorageNamespace> EmptyStorageNamespaceProvider::sessionStorageNamespace(const SecurityOrigin&, Page& page, ShouldCreateNamespace)
 {
     return adoptRef(*new EmptyStorageNamespace { page.sessionID() });
 }
@@ -1203,7 +1204,7 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
         sessionID,
         makeUniqueRef<EmptyEditorClient>(),
         SocketProvider::create(),
-        LibWebRTCProvider::create(),
+        WebRTCProvider::create(),
         CacheStorageProvider::create(),
         adoptRef(*new EmptyUserContentProvider),
         adoptRef(*new EmptyBackForwardClient),
@@ -1213,7 +1214,6 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
         makeUniqueRef<DummySpeechRecognitionProvider>(),
         makeUniqueRef<EmptyMediaRecorderProvider>(),
         EmptyBroadcastChannelRegistry::create(),
-        DummyPermissionController::create(),
         makeUniqueRef<DummyStorageProvider>(),
         makeUniqueRef<DummyModelPlayerProvider>()
     };

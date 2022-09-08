@@ -33,7 +33,6 @@
 #include "LegacyInlineTextBox.h"
 #include "RenderCombineText.h"
 #include "RenderLayer.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ShadowData.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -231,6 +230,11 @@ void TextPainter::setForceUseGlyphDisplayListForTesting(bool enabled)
     forceUseGlyphDisplayListForTesting = enabled;
 }
 
+void TextPainter::clearGlyphDisplayListCacheForTesting()
+{
+    GlyphDisplayListCache::singleton().clear();
+}
+
 String TextPainter::cachedGlyphDisplayListsForTextNodeAsText(Text& textNode, OptionSet<DisplayList::AsTextFlag> flags)
 {
     if (!textNode.renderer())
@@ -242,10 +246,8 @@ String TextPainter::cachedGlyphDisplayListsForTextNodeAsText(Text& textNode, Opt
         DisplayList::DisplayList* displayList = nullptr;
         if (auto* legacyInlineBox = textBox.legacyInlineBox())
             displayList = TextPainter::glyphDisplayListIfExists(*legacyInlineBox);
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
         else
             displayList = TextPainter::glyphDisplayListIfExists(*textBox.inlineBox());
-#endif
         if (displayList) {
             builder.append(displayList->asText(flags));
             builder.append('\n');

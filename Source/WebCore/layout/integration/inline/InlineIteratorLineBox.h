@@ -46,9 +46,7 @@ struct EndLineBoxIterator { };
 class LineBox {
 public:
     using PathVariant = std::variant<
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
         LineBoxIteratorModernPath,
-#endif
         LineBoxIteratorLegacyPath
     >;
 
@@ -63,12 +61,21 @@ public:
     float contentLogicalLeft() const;
     float contentLogicalRight() const;
     float contentLogicalWidth() const;
+    float contentLogicalHeight() const;
 
     float contentLogicalTopAdjustedForPrecedingLineBox() const;
     float contentLogicalBottomAdjustedForFollowingLineBox() const;
 
     float inkOverflowTop() const;
     float inkOverflowBottom() const;
+
+    const RenderStyle& style() const { return isFirst() ? containingBlock().firstLineStyle() : containingBlock().style(); }
+
+    bool hasEllipsis() const;
+    enum AdjustedForSelection : uint8_t { No, Yes };
+    FloatRect ellipsisVisualRect(AdjustedForSelection = AdjustedForSelection::No) const;
+    TextRun ellipsisText() const;
+    RenderObject::HighlightState ellipsisSelectionState() const;
 
     const RenderBlockFlow& containingBlock() const;
     RenderFragmentContainer* containingFragment() const;
@@ -197,6 +204,44 @@ inline float LineBox::inkOverflowBottom() const
     });
 }
 
+inline bool LineBox::hasEllipsis() const
+{
+    return WTF::switchOn(m_pathVariant, [](const auto& path) {
+        return path.hasEllipsis();
+    });
+}
+
+inline FloatRect LineBox::ellipsisVisualRect(AdjustedForSelection adjustedForSelection) const
+{
+    ASSERT(hasEllipsis());
+
+    auto visualRect = WTF::switchOn(m_pathVariant, [](const auto& path) {
+        return path.ellipsisVisualRectIgnoringBlockDirection();
+    });
+
+    // FIXME: Add pixel snapping here.
+    if (adjustedForSelection == AdjustedForSelection::No) {
+        containingBlock().flipForWritingMode(visualRect);
+        return visualRect;
+    }
+    auto selectionTop = containingBlock().adjustEnclosingTopForPrecedingBlock(LayoutUnit { contentLogicalTopAdjustedForPrecedingLineBox() });
+    auto selectionBottom = contentLogicalBottomAdjustedForFollowingLineBox();
+
+    visualRect.setY(selectionTop);
+    visualRect.setHeight(selectionBottom - selectionTop);
+    containingBlock().flipForWritingMode(visualRect);
+    return visualRect;
+}
+
+inline TextRun LineBox::ellipsisText() const
+{
+    ASSERT(hasEllipsis());
+
+    return WTF::switchOn(m_pathVariant, [](const auto& path) {
+        return path.ellipsisText();
+    });
+}
+
 inline float LineBox::contentLogicalLeft() const
 {
     return WTF::switchOn(m_pathVariant, [](const auto& path) {
@@ -214,6 +259,11 @@ inline float LineBox::contentLogicalRight() const
 inline float LineBox::contentLogicalWidth() const
 {
     return contentLogicalRight() - contentLogicalLeft();
+}
+
+inline float LineBox::contentLogicalHeight() const
+{
+    return contentLogicalBottom() - contentLogicalTop();
 }
 
 inline bool LineBox::isHorizontal() const

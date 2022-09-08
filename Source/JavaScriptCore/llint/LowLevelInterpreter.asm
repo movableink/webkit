@@ -137,8 +137,14 @@
 # You can assume that ft1-ft5 or fa1-fa3 are never fr, and that ftX is never
 # faY if X != Y.
 
-# First come the common protocols that both interpreters use. Note that each
-# of these must have an ASSERT() in LLIntData.cpp
+# Do not put any code before this.
+global _llintPCRangeStart
+_llintPCRangeStart:
+    # This break instruction is needed so that the synthesized llintPCRangeStart# label
+    # doesn't point to the exact same location as vmEntryToJavaScript which comes after it.
+    # Otherwise, libunwind will report vmEntryToJavaScript as llintPCRangeStart in
+    # stack traces.
+    break
 
 # Work-around for the fact that the toolchain's awareness of armv7k / armv7s
 # results in a separate slab in the fat binary, yet the offlineasm doesn't know
@@ -147,6 +153,9 @@ if ARMv7k
 end
 if ARMv7s
 end
+
+# First come the common protocols that both interpreters use. Note that each
+# of these must have an ASSERT() in LLIntData.cpp
 
 # These declarations must match interpreter/JSStack.h.
 
@@ -543,17 +552,17 @@ const TagOffset = constexpr TagOffset
 const PayloadOffset = constexpr PayloadOffset
 
 # Constant for reasoning about butterflies.
-const IsArray                  = constexpr IsArray
-const IndexingShapeMask        = constexpr IndexingShapeMask
-const IndexingTypeMask         = constexpr IndexingTypeMask
-const NoIndexingShape          = constexpr NoIndexingShape
-const Int32Shape               = constexpr Int32Shape
-const DoubleShape              = constexpr DoubleShape
-const ContiguousShape          = constexpr ContiguousShape
-const ArrayStorageShape        = constexpr ArrayStorageShape
-const SlowPutArrayStorageShape = constexpr SlowPutArrayStorageShape
-const CopyOnWrite              = constexpr CopyOnWrite
-const ArrayWithUndecided       = constexpr ArrayWithUndecided
+const IsArray                      = constexpr IsArray
+const IndexingShapeMask            = constexpr IndexingShapeMask
+const IndexingTypeMask             = constexpr IndexingTypeMask
+const NoIndexingShape              = constexpr NoIndexingShape
+const Int32Shape                   = constexpr Int32Shape
+const DoubleShape                  = constexpr DoubleShape
+const ContiguousShape              = constexpr ContiguousShape
+const AlwaysSlowPutContiguousShape = constexpr AlwaysSlowPutContiguousShape
+const ArrayStorageShape            = constexpr ArrayStorageShape
+const CopyOnWrite                  = constexpr CopyOnWrite
+const ArrayWithUndecided           = constexpr ArrayWithUndecided
 
 # Type constants.
 const StructureType = constexpr StructureType
@@ -631,7 +640,7 @@ const NotInitialization = constexpr InitializationMode::NotInitialization
 
 const MarkedBlockSize = constexpr MarkedBlock::blockSize
 const MarkedBlockMask = ~(MarkedBlockSize - 1)
-const MarkedBlockFooterOffset = constexpr MarkedBlock::offsetOfFooter
+const MarkedBlockHeaderOffset = constexpr MarkedBlock::offsetOfHeader
 const PreciseAllocationHeaderSize = constexpr (PreciseAllocation::headerSize())
 const PreciseAllocationVMOffset = (PreciseAllocation::m_weakSet + WeakSet::m_vm - PreciseAllocationHeaderSize)
 
@@ -1498,7 +1507,7 @@ end
 macro convertCalleeToVM(callee)
     btpnz callee, (constexpr PreciseAllocation::halfAlignment), .preciseAllocation
     andp MarkedBlockMask, callee
-    loadp MarkedBlockFooterOffset + MarkedBlock::Footer::m_vm[callee], callee
+    loadp MarkedBlockHeaderOffset + MarkedBlock::Header::m_vm[callee], callee
     jmp .done
 .preciseAllocation:
     loadp PreciseAllocationVMOffset[callee], callee
@@ -1669,13 +1678,6 @@ macro doReturn()
     end
 end
 
-# This break instruction is needed so that the synthesized llintPCRangeStart label
-# doesn't point to the exact same location as vmEntryToJavaScript which comes after it.
-# Otherwise, libunwind will report vmEntryToJavaScript as llintPCRangeStart in
-# stack traces.
-
-    break
-
 # stub to call into JavaScript or Native functions
 # EncodedJSValue vmEntryToJavaScript(void* code, VM* vm, ProtoCallFrame* protoFrame)
 # EncodedJSValue vmEntryToNativeFunction(void* code, VM* vm, ProtoCallFrame* protoFrame)
@@ -1774,11 +1776,29 @@ if not (C_LOOP or C_LOOP_WIN)
         bpbeq sp, address, .zeroFillDone
         move address, sp
 
-        move 0, scratch
-    .zeroFillLoop:
-        storep scratch, [address]
-        addp PtrSize, address
-        bpa a0, address, .zeroFillLoop
+        # Filling stack space from |address| to sp (stored in |a0| now).
+        if (ARM64 or ARM64E) and ADDRESS64
+            # Because of ARM64 calling convention, stack-pointer is already 16-byte aligned.
+            # Let's check address is aligned or not to use 16-byte zero-fill.
+            assert(macro (ok)  btpz a0, (PtrSize * 2 - 1), ok end)
+            btpz address, (PtrSize * 2 - 1), .zeroFillLoop
+            # If it is not aligned, then store pointer-size and increment.
+            emit "str xzr, [x1], #8" # address is a1, thus x1
+            bpbeq a0, address, .zeroFillDone
+            assert(macro (ok)  btpz address, (PtrSize * 2 - 1), ok end)
+        .zeroFillLoop:
+            # Use non-temporal store-pair (stnp) since these stack values are meaningless to the execution.
+            # Avoid polluting CPU cache by using stnp.
+            emit "stnp xzr, xzr, [x1]" # address is a1, thus x1
+            addp PtrSize * 2, address
+            bpa a0, address, .zeroFillLoop
+        else
+            move 0, scratch
+        .zeroFillLoop:
+            storep scratch, [address]
+            addp PtrSize, address
+            bpa a0, address, .zeroFillLoop
+        end
 
     .zeroFillDone:
         move a0, sp
@@ -2031,7 +2051,7 @@ end)
 
 op(llint_function_for_call_arity_check, macro ()
     prologue(_llint_entry_osr_function_for_call_arityCheck, _llint_trace_arityCheck_for_call)
-    functionArityCheck(llint_function_for_call_arity_check, .functionForCallBegin, _slow_path_call_arityCheck)
+    functionArityCheck(llint_function_for_call_arity_check, .functionForCallBegin)
 .functionForCallBegin:
     functionInitialization(0)
     dispatch(0)
@@ -2039,7 +2059,7 @@ end)
 
 op(llint_function_for_construct_arity_check, macro ()
     prologue(_llint_entry_osr_function_for_construct_arityCheck, _llint_trace_arityCheck_for_construct)
-    functionArityCheck(llint_function_for_construct_arity_check, .functionForConstructBegin, _slow_path_construct_arityCheck)
+    functionArityCheck(llint_function_for_construct_arity_check, .functionForConstructBegin)
 .functionForConstructBegin:
     functionInitialization(1)
     dispatch(0)
@@ -2721,9 +2741,11 @@ end
 
 global _wasmLLIntPCRangeStart
 _wasmLLIntPCRangeStart:
+    break # FIXME: rdar://96556827
 wasmScope()
 global _wasmLLIntPCRangeEnd
 _wasmLLIntPCRangeEnd:
+    break # FIXME: rdar://96556827
 
 else
 
@@ -2759,3 +2781,8 @@ _wasm_trampoline_wasm_call_ref_no_tls_wide32:
 end
 
 include? LowLevelInterpreterAdditions
+
+global _llintPCRangeEnd
+_llintPCRangeEnd:
+    break # FIXME: rdar://96556827
+# Do not put any code after this.

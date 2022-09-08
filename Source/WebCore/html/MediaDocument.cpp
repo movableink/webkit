@@ -47,7 +47,6 @@
 #include "NodeList.h"
 #include "Page.h"
 #include "RawDataDocumentParser.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptController.h"
 #include "ShadowRoot.h"
 #include "TypedElementDescendantIterator.h"
@@ -78,7 +77,7 @@ private:
     void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
     void createDocumentStructure();
 
-    HTMLMediaElement* m_mediaElement { nullptr };
+    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
     String m_outgoingReferrer;
 };
     
@@ -108,7 +107,7 @@ void MediaDocumentParser::createDocumentStructure()
     rootElement->appendChild(body);
 
     auto videoElement = HTMLVideoElement::create(document);
-    m_mediaElement = videoElement.ptr();
+    m_mediaElement = videoElement.get();
     videoElement->setAttributeWithoutSynchronization(controlsAttr, emptyAtom());
     videoElement->setAttributeWithoutSynchronization(autoplayAttr, emptyAtom());
     videoElement->setAttributeWithoutSynchronization(srcAttr, AtomString { document.url().string() });

@@ -26,4 +26,5 @@
 dictionary ShadowRootInit {
     required ShadowRootMode mode;
     boolean delegatesFocus = false;
+    [EnabledBySetting=ImperativeSlotAPIEnabled] SlotAssignmentMode slotAssignment = "named";
 };

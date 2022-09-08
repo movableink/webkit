@@ -1035,8 +1035,8 @@ void SubtleCrypto::wrapKey(JSC::JSGlobalObject& state, KeyFormat format, CryptoK
                     // FIXME: Converting to JS just to JSON-Stringify seems inefficient. We should find a way to go directly from the struct to JSON.
                     auto jwk = toJS<IDLDictionary<JsonWebKey>>(*(promise->globalObject()), *(promise->globalObject()), WTFMove(std::get<JsonWebKey>(key)));
                     String jwkString = JSONStringify(promise->globalObject(), jwk, 0);
-                    CString jwkUtf8String = jwkString.utf8(StrictConversion);
-                    bytes.append(jwkUtf8String.data(), jwkUtf8String.length());
+                    CString jwkUTF8String = jwkString.utf8(StrictConversion);
+                    bytes.append(jwkUTF8String.data(), jwkUTF8String.length());
                 }
                 }
 
@@ -1124,7 +1124,7 @@ void SubtleCrypto::unwrapKey(JSC::JSGlobalObject& state, KeyFormat format, Buffe
     WeakPtr weakThis { *this };
     auto callback = [index, weakThis, format, importAlgorithm, unwrappedKeyAlgorithm = crossThreadCopyImportParams(*unwrappedKeyAlgorithm), extractable, keyUsagesBitmap](const Vector<uint8_t>& bytes) mutable {
         if (weakThis) {
-            if (auto promise = weakThis->m_pendingPromises.get(index)) {
+            if (RefPtr promise = weakThis->m_pendingPromises.get(index)) {
                 KeyData keyData;
                 switch (format) {
                 case SubtleCrypto::KeyFormat::Spki:

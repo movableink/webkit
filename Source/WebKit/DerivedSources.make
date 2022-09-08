@@ -170,6 +170,7 @@ MESSAGE_RECEIVERS = \
 	UIProcess/mac/SecItemShimProxy \
 	UIProcess/WebGeolocationManagerProxy \
 	UIProcess/WebLockRegistryProxy \
+	UIProcess/WebPermissionControllerProxy \
 	UIProcess/Cocoa/PlaybackSessionManagerProxy \
 	UIProcess/Cocoa/UserMediaCaptureManagerProxy \
 	UIProcess/Cocoa/VideoFullscreenManagerProxy \
@@ -224,6 +225,7 @@ MESSAGE_RECEIVERS = \
 	WebProcess/WebCoreSupport/WebBroadcastChannelRegistry \
 	WebProcess/WebCoreSupport/WebDeviceOrientationUpdateProvider \
 	WebProcess/WebCoreSupport/WebFileSystemStorageConnection \
+	WebProcess/WebCoreSupport/WebPermissionController \
 	WebProcess/WebCoreSupport/WebSpeechRecognitionConnection \
 	WebProcess/Speech/SpeechRecognitionRealtimeMediaSourceManager \
 	WebProcess/Storage/WebSharedWorkerContextManagerConnection \
@@ -444,3 +446,21 @@ $(WEB_PREFERENCES_COMBINED_INPUT_FILE) : $(WEB_PREFERENCES_INPUT_FILES)
 
 $(WEB_PREFERENCES_PATTERNS) : $(WTF_BUILD_SCRIPTS_DIR)/GeneratePreferences.rb $(WEB_PREFERENCES_TEMPLATES) $(WEB_PREFERENCES_COMBINED_INPUT_FILE) $(WEB_PREFERENCES_CATEGORY_INPUT_FILES)
 	$(RUBY) $< --frontend WebKit --base $(WEB_PREFERENCES_COMBINED_INPUT_FILE) --debug ${WTF_BUILD_SCRIPTS_DIR}/Preferences/WebPreferencesDebug.yaml --experimental ${WTF_BUILD_SCRIPTS_DIR}/Preferences/WebPreferencesExperimental.yaml	--internal ${WTF_BUILD_SCRIPTS_DIR}/Preferences/WebPreferencesInternal.yaml $(addprefix --template , $(WEB_PREFERENCES_TEMPLATES))
+
+SERIALIZATION_DESCRIPTION_FILES = \
+	NetworkProcess/NetworkProcessCreationParameters.serialization.in \
+	Shared/API/APIGeometry.serialization.in \
+	Shared/FrameInfoData.serialization.in \
+	Shared/FrameTreeNodeData.serialization.in \
+	Shared/WebCoreArgumentCoders.serialization.in \
+	Shared/mac/SecItemResponseData.serialization.in \
+	Shared/WebsiteDataStoreParameters.serialization.in \
+	Shared/WebGPU/WebGPUValidationError.serialization.in \
+	Shared/WebGPU/WebGPUSupportedFeatures.serialization.in \
+	Shared/WebGPU/WebGPUOrigin3D.serialization.in \
+#
+
+all : GeneratedSerializers.h GeneratedSerializers.cpp SerializedTypeInfo.cpp
+
+GeneratedSerializers.h GeneratedSerializers.cpp SerializedTypeInfo.cpp : $(WebKit2)/Scripts/generate-serializers.py $(SERIALIZATION_DESCRIPTION_FILES) $(WebKit2)/DerivedSources.make
+	$(PYTHON) $(WebKit2)/Scripts/generate-serializers.py $(WebKit2)/ $(SERIALIZATION_DESCRIPTION_FILES)

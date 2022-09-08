@@ -10,10 +10,12 @@
 
 namespace angle
 {
-class ContextLostTest : public ANGLETest
+class ContextLostTest : public ANGLETest<>
 {
   protected:
-    ContextLostTest()
+    ContextLostTest() {}
+
+    void testSetUp() override
     {
         if (IsEGLClientExtensionEnabled("EGL_EXT_create_context_robustness"))
         {
@@ -118,10 +120,12 @@ TEST_P(ContextLostTest, ParallelCompileReadyQuery)
     EXPECT_GLENUM_EQ(linkStatus, 0xBADF00D);
 }
 
-class ContextLostSkipValidationTest : public ANGLETest
+class ContextLostSkipValidationTest : public ANGLETest<>
 {
   protected:
-    ContextLostSkipValidationTest()
+    ContextLostSkipValidationTest() {}
+
+    void testSetUp() override
     {
         if (IsEGLClientExtensionEnabled("EGL_EXT_create_context_robustness"))
         {

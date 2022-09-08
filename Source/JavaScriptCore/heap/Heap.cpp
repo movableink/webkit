@@ -318,6 +318,7 @@ Heap::Heap(VM& vm, HeapType heapType)
     , injectedScriptHostSpaceHeapCellType(IsoHeapCellType::Args<Inspector::JSInjectedScriptHost>())
     , javaScriptCallFrameHeapCellType(IsoHeapCellType::Args<Inspector::JSJavaScriptCallFrame>())
     , jsModuleRecordHeapCellType(IsoHeapCellType::Args<JSModuleRecord>())
+    , syntheticModuleRecordHeapCellType(IsoHeapCellType::Args<SyntheticModuleRecord>())
     , moduleNamespaceObjectHeapCellType(IsoHeapCellType::Args<JSModuleNamespaceObject>())
     , nativeStdFunctionHeapCellType(IsoHeapCellType::Args<JSNativeStdFunction>())
     , weakMapHeapCellType(IsoHeapCellType::Args<JSWeakMap>())
@@ -790,7 +791,7 @@ void Heap::gatherStackRoots(ConservativeRoots& roots)
 void Heap::gatherJSStackRoots(ConservativeRoots& roots)
 {
 #if ENABLE(C_LOOP)
-    vm().interpreter->cloopStack().gatherConservativeRoots(roots, *m_jitStubRoutines, *m_codeBlocks);
+    vm().interpreter.cloopStack().gatherConservativeRoots(roots, *m_jitStubRoutines, *m_codeBlocks);
 #else
     UNUSED_PARAM(roots);
 #endif
@@ -814,6 +815,7 @@ void Heap::beginMarking()
     TimingScope timingScope(*this, "Heap::beginMarking");
     m_jitStubRoutines->clearMarks();
     m_objectSpace.beginMarking();
+    vm().beginMarking();
     setMutatorShouldBeFenced(true);
 }
 
@@ -2282,7 +2284,7 @@ void Heap::pruneStaleEntriesFromWeakGCHashTables()
 
 void Heap::sweepArrayBuffers()
 {
-    m_arrayBuffers.sweep(vm());
+    m_arrayBuffers.sweep(vm(), collectionScope().value_or(CollectionScope::Eden));
 }
 
 void Heap::snapshotUnswept()
@@ -2834,9 +2836,11 @@ void Heap::addCoreConstraints()
                 scanExternalRememberedSet(vm, visitor);
             }
 
-            if (vm.smallStrings.needsToBeVisited(*m_collectionScope)) {
+            {
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::StrongReferences);
-                vm.smallStrings.visitStrongReferences(visitor);
+                if (vm.smallStrings.needsToBeVisited(*m_collectionScope))
+                    vm.smallStrings.visitStrongReferences(visitor);
+                vm.visitAggregate(visitor);
             }
             
             {

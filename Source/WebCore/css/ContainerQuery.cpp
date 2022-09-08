@@ -90,9 +90,9 @@ OptionSet<Axis> requiredAxesForFeature(const AtomString& featureName)
 void serialize(StringBuilder&, const SizeFeature&);
 template<typename ConditionType> void serialize(StringBuilder&, const ConditionType&);
 
-static void serialize(StringBuilder& builder, const ContainerQuery& containerQuery)
+static void serialize(StringBuilder& builder, const QueryInParens& query)
 {
-    WTF::switchOn(containerQuery, [&](auto& node) {
+    WTF::switchOn(query, [&](auto& node) {
         builder.append('(');
         serialize(builder, node);
         builder.append(')');
@@ -106,22 +106,22 @@ static void serialize(StringBuilder& builder, const ContainerQuery& containerQue
 
 void serialize(StringBuilder& builder, const SizeFeature& sizeFeature)
 {
-    auto serializeRangeComparisonOperator = [&](ComparisonOperator op) {
+    auto serializeRangeComparisonOperator = [&](MQ::ComparisonOperator op) {
         builder.append(' ');
         switch (op) {
-        case ComparisonOperator::LessThan:
+        case MQ::ComparisonOperator::LessThan:
             builder.append('<');
             break;
-        case ComparisonOperator::LessThanOrEqual:
+        case MQ::ComparisonOperator::LessThanOrEqual:
             builder.append("<=");
             break;
-        case ComparisonOperator::Equal:
+        case MQ::ComparisonOperator::Equal:
             builder.append('=');
             break;
-        case ComparisonOperator::GreaterThan:
+        case MQ::ComparisonOperator::GreaterThan:
             builder.append('>');
             break;
-        case ComparisonOperator::GreaterThanOrEqual:
+        case MQ::ComparisonOperator::GreaterThanOrEqual:
             builder.append(">=");
             break;
         }
@@ -129,22 +129,22 @@ void serialize(StringBuilder& builder, const SizeFeature& sizeFeature)
     };
 
     switch (sizeFeature.syntax) {
-    case Syntax::Boolean:
+    case MQ::Syntax::Boolean:
         serializeIdentifier(sizeFeature.name, builder);
         break;
 
-    case Syntax::Colon:
+    case MQ::Syntax::Plain:
         switch (sizeFeature.rightComparison->op) {
-        case ComparisonOperator::LessThanOrEqual:
+        case MQ::ComparisonOperator::LessThanOrEqual:
             builder.append("max-");
             break;
-        case ComparisonOperator::Equal:
+        case MQ::ComparisonOperator::Equal:
             break;
-        case ComparisonOperator::GreaterThanOrEqual:
+        case MQ::ComparisonOperator::GreaterThanOrEqual:
             builder.append("min-");
             break;
-        case ComparisonOperator::LessThan:
-        case ComparisonOperator::GreaterThan:
+        case MQ::ComparisonOperator::LessThan:
+        case MQ::ComparisonOperator::GreaterThan:
             ASSERT_NOT_REACHED();
             break;
         }
@@ -154,7 +154,7 @@ void serialize(StringBuilder& builder, const SizeFeature& sizeFeature)
         builder.append(sizeFeature.rightComparison->value->cssText());
         break;
 
-    case Syntax::Range:
+    case MQ::Syntax::Range:
         if (sizeFeature.leftComparison) {
             builder.append(sizeFeature.leftComparison->value->cssText());
             serializeRangeComparisonOperator(sizeFeature.leftComparison->op);
@@ -173,7 +173,7 @@ void serialize(StringBuilder& builder, const SizeFeature& sizeFeature)
 template<typename ConditionType>
 void serialize(StringBuilder& builder, const ConditionType& condition)
 {
-    if (condition.queries.size() == 1 && condition.logicalOperator == LogicalOperator::Not) {
+    if (condition.queries.size() == 1 && condition.logicalOperator == MQ::LogicalOperator::Not) {
         builder.append("not ");
         serialize(builder, condition.queries.first());
         return;
@@ -181,17 +181,27 @@ void serialize(StringBuilder& builder, const ConditionType& condition)
 
     for (auto& query : condition.queries) {
         if (&query != &condition.queries.first())
-            builder.append(condition.logicalOperator == LogicalOperator::And ? " and " : " or ");
+            builder.append(condition.logicalOperator == MQ::LogicalOperator::And ? " and " : " or ");
         serialize(builder, query);
     }
 }
 
+void serialize(StringBuilder& builder, const ContainerCondition& condition)
+{
+    serialize<ContainerCondition>(builder, condition);
 }
 
 void serialize(StringBuilder& builder, const ContainerQuery& query)
 {
-    CQ::serialize(builder, query);
+    auto name = query.name;
+    if (!name.isEmpty()) {
+        serializeIdentifier(name, builder);
+        builder.append(' ');
+    }
+
+    serialize(builder, query.condition);
 }
 
+}
 }
 

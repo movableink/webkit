@@ -338,6 +338,7 @@ State::State(const State *shareContextState,
              const OverlayType *overlay,
              const EGLenum clientType,
              const Version &clientVersion,
+             EGLint profileMask,
              bool debug,
              bool bindGeneratesResourceCHROMIUM,
              bool clientArraysEnabled,
@@ -347,6 +348,7 @@ State::State(const State *shareContextState,
              bool hasProtectedContent)
     : mID({gIDCounter++}),
       mClientType(clientType),
+      mProfileMask(profileMask),
       mContextPriority(contextPriority),
       mHasProtectedContent(hasProtectedContent),
       mIsDebugContext(debug),
@@ -565,6 +567,8 @@ void State::initialize(Context *context)
     mNoSimultaneousConstantColorAndAlphaBlendFunc =
         context->getLimitations().noSimultaneousConstantColorAndAlphaBlendFunc ||
         context->getExtensions().webglCompatibilityANGLE;
+
+    mNoUnclampedBlendColor = context->getLimitations().noUnclampedBlendColor;
 
     // GLES1 emulation: Initialize state for GLES1 if version applies
     // TODO(http://anglebug.com/3745): When on desktop client only do this in compatibility profile
@@ -988,7 +992,7 @@ void State::setBlendColor(float red, float green, float blue, float alpha)
     const bool hasFloatBlending =
         mExtensions.colorBufferFloatEXT || mExtensions.colorBufferHalfFloatEXT ||
         mExtensions.colorBufferFloatRgbCHROMIUM || mExtensions.colorBufferFloatRgbaCHROMIUM;
-    if (isES2 && !hasFloatBlending)
+    if ((isES2 && !hasFloatBlending) || mNoUnclampedBlendColor)
     {
         red   = clamp01(red);
         green = clamp01(green);
@@ -1609,6 +1613,11 @@ void State::setFragmentShaderDerivativeHint(GLenum hint)
 
 void State::setViewportParams(GLint x, GLint y, GLsizei width, GLsizei height)
 {
+    // [OpenGL ES 2.0.25] section 2.12.1 page 45:
+    // Viewport width and height are clamped to implementation-dependent maximums when specified.
+    width  = std::min(width, mCaps.maxViewportWidth);
+    height = std::min(height, mCaps.maxViewportHeight);
+
     // Skip if same viewport info
     if (mViewport.x != x || mViewport.y != y || mViewport.width != width ||
         mViewport.height != height)
@@ -1884,16 +1893,13 @@ void State::setVertexArrayBinding(const Context *context, VertexArray *vertexArr
         return;
     }
 
-    if (context->isWebGL())
+    if (mVertexArray)
     {
-        if (mVertexArray)
-        {
-            mVertexArray->onBindingChanged(context, -1);
-        }
-        if (vertexArray)
-        {
-            vertexArray->onBindingChanged(context, 1);
-        }
+        mVertexArray->onBindingChanged(context, -1);
+    }
+    if (vertexArray)
+    {
+        vertexArray->onBindingChanged(context, 1);
     }
 
     mVertexArray = vertexArray;

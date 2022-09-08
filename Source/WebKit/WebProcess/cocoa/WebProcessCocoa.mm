@@ -59,6 +59,7 @@
 #import <WebCore/AVAssetMIMETypeCache.h>
 #import <WebCore/AXObjectCache.h>
 #import <WebCore/CPUMonitor.h>
+#import <WebCore/DeprecatedGlobalSettings.h>
 #import <WebCore/DisplayRefreshMonitorManager.h>
 #import <WebCore/FontCache.h>
 #import <WebCore/FontCacheCoreText.h>
@@ -79,8 +80,8 @@
 #import <WebCore/PictureInPictureSupport.h>
 #import <WebCore/PlatformMediaSessionManager.h>
 #import <WebCore/PlatformScreen.h>
+#import <WebCore/ProcessCapabilities.h>
 #import <WebCore/RuntimeApplicationChecks.h>
-#import <WebCore/RuntimeEnabledFeatures.h>
 #import <WebCore/SWContextManager.h>
 #import <WebCore/SystemBattery.h>
 #import <WebCore/SystemSoundManager.h>
@@ -199,11 +200,12 @@ void WebProcess::platformSetCacheModel(CacheModel)
 #if USE(APPKIT)
 static id NSApplicationAccessibilityFocusedUIElement(NSApplication*, SEL)
 {
-    WebPage* page = WebProcess::singleton().focusedWebPage();
-    if (!page || !page->accessibilityRemoteObject())
-        return 0;
-
-    return [page->accessibilityRemoteObject() accessibilityFocusedUIElement];
+    return Accessibility::retrieveAutoreleasedValueFromMainThread<id>([] () -> RetainPtr<id> {
+        WebPage* page = WebProcess::singleton().focusedWebPage();
+        if (!page || !page->accessibilityRemoteObject())
+            return nil;
+        return [page->accessibilityRemoteObject() accessibilityFocusedUIElement];
+    });
 }
 
 #if ENABLE(SET_WEBCONTENT_PROCESS_INFORMATION_IN_NETWORK_PROCESS)
@@ -238,8 +240,21 @@ static void softlinkDataDetectorsFrameworks()
 #endif // ENABLE(DATA_DETECTION)
 }
 
+static void initializeXPCConnectionToLogd()
+{
+    // Log a long message to make sure the XPC connection to the log daemon for oversized messages is opened.
+    // This is needed to block launchd after the WebContent process has launched, since access to launchd is
+    // required when opening new XPC connections.
+    char stringWithSpaces[1024];
+    memset(stringWithSpaces, ' ', sizeof(stringWithSpaces));
+    stringWithSpaces[sizeof(stringWithSpaces) - 1] = 0;
+    RELEASE_LOG(Process, "WebProcess::platformInitializeWebProcess %s", stringWithSpaces);
+}
+
 void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& parameters)
 {
+    initializeXPCConnectionToLogd();
+    
     applyProcessCreationParameters(parameters.auxiliaryProcessParameters);
 
     setQOS(parameters.latencyQOS, parameters.throughputQOS);
@@ -254,6 +269,8 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     populateMobileGestaltCache(WTFMove(parameters.mobileGestaltExtensionHandle));
 
     m_uiProcessBundleIdentifier = parameters.uiProcessBundleIdentifier;
+
+    WebCore::setPresentingApplicationBundleIdentifier(parameters.presentingApplicationBundleIdentifier);
 
 #if ENABLE(SANDBOX_EXTENSIONS)
     SandboxExtension::consumePermanently(parameters.uiProcessBundleResourcePathExtensionHandle);
@@ -273,12 +290,12 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     OptionSet<VideoDecoderBehavior> videoDecoderBehavior;
     
     if (parameters.enableDecodingHEIC) {
-        ImageDecoderCG::enableDecodingHEIC();
+        ProcessCapabilities::setHEICDecodingEnabled(true);
         videoDecoderBehavior.add(VideoDecoderBehavior::EnableHEIC);
     }
 
     if (parameters.enableDecodingAVIF) {
-        ImageDecoderCG::enableDecodingAVIF();
+        ProcessCapabilities::setAVIFDecodingEnabled(true);
         videoDecoderBehavior.add(VideoDecoderBehavior::EnableAVIF);
     }
 
@@ -376,15 +393,15 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
 #endif
 
 #if ENABLE(WEBM_FORMAT_READER)
-    PlatformMediaSessionManager::setWebMFormatReaderEnabled(RuntimeEnabledFeatures::sharedFeatures().webMFormatReaderEnabled());
+    PlatformMediaSessionManager::setWebMFormatReaderEnabled(DeprecatedGlobalSettings::webMFormatReaderEnabled());
 #endif
 
 #if ENABLE(VORBIS)
-    PlatformMediaSessionManager::setVorbisDecoderEnabled(RuntimeEnabledFeatures::sharedFeatures().vorbisDecoderEnabled());
+    PlatformMediaSessionManager::setVorbisDecoderEnabled(DeprecatedGlobalSettings::vorbisDecoderEnabled());
 #endif
 
 #if ENABLE(OPUS)
-    PlatformMediaSessionManager::setOpusDecoderEnabled(RuntimeEnabledFeatures::sharedFeatures().opusDecoderEnabled());
+    PlatformMediaSessionManager::setOpusDecoderEnabled(DeprecatedGlobalSettings::opusDecoderEnabled());
 #endif
 
     if (!parameters.mediaMIMETypes.isEmpty())
@@ -441,6 +458,9 @@ void WebProcess::platformInitializeWebProcess(WebProcessCreationParameters& para
     WebCore::IOSurface::setBytesPerRowAlignment(parameters.bytesPerRowIOSurfaceAlignment);
 
     accessibilityPreferencesDidChange(parameters.accessibilityPreferences);
+#if PLATFORM(IOS_FAMILY)
+    _AXSApplicationAccessibilitySetEnabled(parameters.applicationAccessibilityEnabled);
+#endif
 
     disableURLSchemeCheckInDataDetectors();
 
@@ -1030,8 +1050,9 @@ void WebProcess::accessibilityPreferencesDidChange(const AccessibilityPreference
     auto invertColorsEnabled = preferences.invertColorsEnabled;
     if (_AXSInvertColorsEnabledApp(appID) != invertColorsEnabled)
         _AXSInvertColorsSetEnabledApp(invertColorsEnabled, appID);
-    FontCache::invalidateAllFontCaches();
 #endif
+    setOverrideEnhanceTextLegibility(preferences.enhanceTextLegibilityOverall);
+    FontCache::invalidateAllFontCaches();
 }
 
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)

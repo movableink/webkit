@@ -50,6 +50,7 @@
 #include "FrameSelection.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
+#include "HTMLFrameOwnerElement.h"
 #include "HitTestResult.h"
 #include "ImageOverlay.h"
 #include "InspectorController.h"
@@ -72,6 +73,10 @@
 #include <wtf/SetForScope.h>
 #include <wtf/WallTime.h>
 #include <wtf/unicode/CharacterNames.h>
+
+#if ENABLE(PDFJS)
+#include "PDFDocument.h"
+#endif
 
 #if ENABLE(SERVICE_CONTROLS)
 #include "ImageControlsMac.h"
@@ -174,8 +179,8 @@ std::unique_ptr<ContextMenu> ContextMenuController::maybeCreateContextMenu(Event
 
 void ContextMenuController::showContextMenu(Event& event)
 {
-    if ((!m_menuProvider || m_menuProvider->contextMenuContextType() == ContextMenuContext::Type::ContextMenu) && m_page.inspectorController().enabled())
-        addInspectElementItem();
+    if ((!m_menuProvider || m_menuProvider->contextMenuContextType() == ContextMenuContext::Type::ContextMenu) && m_page.settings().developerExtrasEnabled())
+        addDebuggingItems();
 
     event.setDefaultHandled();
 }
@@ -283,6 +288,9 @@ void ContextMenuController::contextMenuItemSelected(ContextMenuAction action, co
         break;
     case ContextMenuItemTagToggleMediaLoop:
         m_context.hitTestResult().toggleMediaLoopPlayback();
+        break;
+    case ContextMenuItemTagShowMediaStats:
+        m_context.hitTestResult().toggleShowMediaStats();
         break;
     case ContextMenuItemTagToggleVideoFullscreen:
         m_context.hitTestResult().toggleMediaFullscreenState();
@@ -489,17 +497,6 @@ void ContextMenuController::contextMenuItemSelected(ContextMenuAction action, co
     case ContextMenuItemTagCheckGrammarWithSpelling:
         frame->editor().toggleGrammarChecking();
         break;
-#if PLATFORM(COCOA)
-    case ContextMenuItemTagShowFonts:
-        frame->editor().showFontPanel();
-        break;
-    case ContextMenuItemTagStyles:
-        frame->editor().showStylesPanel();
-        break;
-    case ContextMenuItemTagShowColors:
-        frame->editor().showColorPanel();
-        break;
-#endif
 #if USE(APPKIT)
     case ContextMenuItemTagMakeUpperCase:
         frame->editor().uppercaseWord();
@@ -546,6 +543,11 @@ void ContextMenuController::contextMenuItemSelected(ContextMenuAction action, co
     case ContextMenuItemTagDictationAlternative:
         frame->editor().applyDictationAlternative(title);
         break;
+#if PLATFORM(MAC)
+    case ContextMenuItemTagShowFonts:
+    case ContextMenuItemTagStyles:
+    case ContextMenuItemTagShowColors:
+#endif
     case ContextMenuItemTagCopySubject:
     case ContextMenuItemTagLookUpImage:
         // These should be handled at the client layer.
@@ -559,10 +561,43 @@ void ContextMenuController::contextMenuItemSelected(ContextMenuAction action, co
                 view->contentsToRootView(enclosingIntRect(frame->selection().selectionBounds())),
                 view->contentsToRootView(m_context.hitTestResult().roundedPointInInnerNodeFrame()),
                 m_context.hitTestResult().isContentEditable() ? TranslationContextMenuMode::Editable : TranslationContextMenuMode::NonEditable,
+                ImageOverlay::isInsideOverlay(frame->selection().selection()) ? TranslationContextMenuSource::Image : TranslationContextMenuSource::Unspecified,
             });
         }
 #endif
         break;
+#if ENABLE(PDFJS)
+    case ContextMenuItemPDFAutoSize:
+        performPDFJSAction(*frame, "context-menu-auto-size"_s);
+        break;
+    case ContextMenuItemPDFZoomIn:
+        performPDFJSAction(*frame, "context-menu-zoom-in"_s);
+        break;
+    case ContextMenuItemPDFZoomOut:
+        performPDFJSAction(*frame, "context-menu-zoom-out"_s);
+        break;
+    case ContextMenuItemPDFActualSize:
+        performPDFJSAction(*frame, "context-menu-actual-size"_s);
+        break;
+    case ContextMenuItemPDFSinglePage:
+        performPDFJSAction(*frame, "context-menu-single-page"_s);
+        break;
+    case ContextMenuItemPDFSinglePageContinuous:
+        performPDFJSAction(*frame, "context-menu-single-page-continuous"_s);
+        break;
+    case ContextMenuItemPDFTwoPages:
+        performPDFJSAction(*frame, "context-menu-two-pages"_s);
+        break;
+    case ContextMenuItemPDFTwoPagesContinuous:
+        performPDFJSAction(*frame, "context-menu-two-pages-continuous"_s);
+        break;
+    case ContextMenuItemPDFNextPage:
+        performPDFJSAction(*frame, "context-menu-next-page"_s);
+        break;
+    case ContextMenuItemPDFPreviousPage:
+        performPDFJSAction(*frame, "context-menu-previous-page"_s);
+        break;
+#endif
     default:
         break;
     }
@@ -826,6 +861,22 @@ void ContextMenuController::populate()
     ContextMenuItem SearchSpotlightItem(ActionType, ContextMenuItemTagSearchInSpotlight, 
         contextMenuItemTagSearchInSpotlight());
 #endif
+
+#if ENABLE(PDFJS)
+    ContextMenuItem PDFAutoSizeItem(ActionType, ContextMenuItemPDFAutoSize, contextMenuItemPDFAutoSize());
+    ContextMenuItem PDFZoomInItem(ActionType, ContextMenuItemPDFZoomIn, contextMenuItemPDFZoomIn());
+    ContextMenuItem PDFZoomOutItem(ActionType, ContextMenuItemPDFZoomOut, contextMenuItemPDFZoomOut());
+    ContextMenuItem PDFActualSizeItem(ActionType, ContextMenuItemPDFActualSize, contextMenuItemPDFActualSize());
+
+    ContextMenuItem PDFSinglePageItem(ActionType, ContextMenuItemPDFSinglePage, contextMenuItemPDFSinglePage());
+    ContextMenuItem PDFSinglePageContinuousItem(ActionType, ContextMenuItemPDFSinglePageContinuous, contextMenuItemPDFSinglePageContinuous());
+    ContextMenuItem PDFTwoPagesItem(ActionType, ContextMenuItemPDFTwoPages, contextMenuItemPDFTwoPages());
+    ContextMenuItem PDFTwoPagesContinuousItem(ActionType, ContextMenuItemPDFTwoPagesContinuous, contextMenuItemPDFTwoPagesContinuous());
+
+    ContextMenuItem PDFNextPageItem(ActionType, ContextMenuItemPDFNextPage, contextMenuItemPDFNextPage());
+    ContextMenuItem PDFPreviousPageItem(ActionType, ContextMenuItemPDFPreviousPage, contextMenuItemPDFPreviousPage());
+#endif
+    
 #if ENABLE(APP_HIGHLIGHTS)
     ContextMenuItem AddHighlightItem(ActionType, ContextMenuItemTagAddHighlightToCurrentQuickNote, contextMenuItemTagAddHighlightToCurrentQuickNote());
     ContextMenuItem AddHighlightToNewQuickNoteItem(ActionType, ContextMenuItemTagAddHighlightToNewQuickNote, contextMenuItemTagAddHighlightToNewQuickNote());
@@ -838,7 +889,7 @@ void ContextMenuController::populate()
     ContextMenuItem ForwardItem(ActionType, ContextMenuItemTagGoForward,  contextMenuItemTagGoForward());
     ContextMenuItem StopItem(ActionType, ContextMenuItemTagStop, contextMenuItemTagStop());
     ContextMenuItem ReloadItem(ActionType, ContextMenuItemTagReload, contextMenuItemTagReload());
-    ContextMenuItem OpenFrameItem(ActionType, ContextMenuItemTagOpenFrameInNewWindow, 
+    ContextMenuItem OpenFrameItem(ActionType, ContextMenuItemTagOpenFrameInNewWindow,
         contextMenuItemTagOpenFrameInNewWindow());
     ContextMenuItem NoGuessesItem(ActionType, ContextMenuItemTagNoGuessesFound, 
         contextMenuItemTagNoGuessesFound());
@@ -988,6 +1039,11 @@ void ContextMenuController::populate()
         if (selectionIsInsideImageOverlay || (linkURL.isEmpty() && mediaURL.isEmpty() && imageURL.isEmpty())) {
             if (!imageURL.isEmpty())
                 appendItem(*separatorItem(), m_contextMenu.get());
+            
+            auto* page = frame->page();
+            RefPtr ownerElement = frame->ownerElement();
+            bool isPDFDocument = ownerElement && ownerElement->document().isPDFDocument();
+            bool isMainFrame = frame->isMainFrame();
 
             if (m_context.hitTestResult().isSelected()) {
                 addSelectedTextActionsIfNeeded(selectedText);
@@ -997,7 +1053,7 @@ void ContextMenuController::populate()
                 appendItem(*separatorItem(), m_contextMenu.get());
 
 #if ENABLE(APP_HIGHLIGHTS)
-                if (auto* page = frame->page(); page && page->settings().appHighlightsEnabled() && !selectionIsInsideImageOverlay) {
+                if (page && page->settings().appHighlightsEnabled() && !selectionIsInsideImageOverlay) {
                     appendItem(AddHighlightToNewQuickNoteItem, m_contextMenu.get());
                     appendItem(AddHighlightItem, m_contextMenu.get());
                     appendItem(*separatorItem(), m_contextMenu.get());
@@ -1012,7 +1068,7 @@ void ContextMenuController::populate()
                 appendItem(SpeechMenuItem, m_contextMenu.get());
 #endif                
             } else {
-                if (!(frame->page() && (frame->page()->inspectorController().inspectionLevel() > 0 || frame->page()->inspectorController().hasRemoteFrontend()))) {
+                if (!(page && (page->inspectorController().inspectionLevel() > 0 || page->inspectorController().hasRemoteFrontend()))) {
 
                 // In GTK+ unavailable items are not hidden but insensitive.
 #if PLATFORM(GTK)
@@ -1021,29 +1077,51 @@ void ContextMenuController::populate()
                 appendItem(StopItem, m_contextMenu.get());
                 appendItem(ReloadItem, m_contextMenu.get());
 #else
-                if (frame->page() && frame->page()->backForward().canGoBackOrForward(-1))
-                    appendItem(BackItem, m_contextMenu.get());
 
-                if (frame->page() && frame->page()->backForward().canGoBackOrForward(1))
-                    appendItem(ForwardItem, m_contextMenu.get());
+                if (isMainFrame) {
+                    if (page && page->backForward().canGoBackOrForward(-1))
+                        appendItem(BackItem, m_contextMenu.get());
 
-                // use isLoadingInAPISense rather than isLoading because Stop/Reload are
-                // intended to match WebKit's API, not WebCore's internal notion of loading status
-                if (loader.documentLoader()->isLoadingInAPISense())
-                    appendItem(StopItem, m_contextMenu.get());
-                else
-                    appendItem(ReloadItem, m_contextMenu.get());
+                    if (page && page->backForward().canGoBackOrForward(1))
+                        appendItem(ForwardItem, m_contextMenu.get());
+
+                    // Here we use isLoadingInAPISense rather than isLoading because Stop/Reload are
+                    // intended to match WebKit's API, not WebCore's internal notion of loading status.
+                    if (loader.documentLoader()->isLoadingInAPISense())
+                        appendItem(StopItem, m_contextMenu.get());
+                    else
+                        appendItem(ReloadItem, m_contextMenu.get());
+                }
 #endif
                 }
 
-                if (frame->page() && !frame->isMainFrame())
+                if (page && !isMainFrame && !isPDFDocument) 
                     appendItem(OpenFrameItem, m_contextMenu.get());
-
                 if (!ShareMenuItem.isNull()) {
                     appendItem(*separatorItem(), m_contextMenu.get());
                     appendItem(ShareMenuItem, m_contextMenu.get());
                 }
             }
+#if ENABLE(PDFJS)
+            if (isPDFDocument) {
+                if (m_contextMenu && !m_contextMenu->items().isEmpty())
+                    appendItem(*separatorItem(), m_contextMenu.get());
+                appendItem(PDFAutoSizeItem, m_contextMenu.get());
+                appendItem(PDFZoomInItem, m_contextMenu.get());
+                appendItem(PDFZoomOutItem, m_contextMenu.get());
+                appendItem(PDFActualSizeItem, m_contextMenu.get());
+                appendItem(*separatorItem(), m_contextMenu.get());
+
+                appendItem(PDFSinglePageItem, m_contextMenu.get());
+                appendItem(PDFSinglePageContinuousItem, m_contextMenu.get());
+                appendItem(PDFTwoPagesItem, m_contextMenu.get());
+                appendItem(PDFTwoPagesContinuousItem, m_contextMenu.get());
+                appendItem(*separatorItem(), m_contextMenu.get());
+
+                appendItem(PDFNextPageItem, m_contextMenu.get());
+                appendItem(PDFPreviousPageItem, m_contextMenu.get());
+            }
+#endif
         } else if (!ShareMenuItem.isNull()) {
             appendItem(*separatorItem(), m_contextMenu.get());
             appendItem(ShareMenuItem, m_contextMenu.get());
@@ -1205,7 +1283,7 @@ void ContextMenuController::populate()
     }
 }
 
-void ContextMenuController::addInspectElementItem()
+void ContextMenuController::addDebuggingItems()
 {
     Node* node = m_context.hitTestResult().innerNonSharedNode();
     if (!node)
@@ -1218,11 +1296,25 @@ void ContextMenuController::addInspectElementItem()
     Page* page = frame->page();
     if (!page)
         return;
+    ASSERT(page->inspectorController().enabled());
 
-    ContextMenuItem InspectElementItem(ActionType, ContextMenuItemTagInspectElement, contextMenuItemTagInspectElement());
+#if ENABLE(PDFJS)
+    if (RefPtr ownerElement = frame->ownerElement(); ownerElement && ownerElement->document().isPDFDocument())
+        return;
+#endif
+
     if (m_contextMenu && !m_contextMenu->items().isEmpty())
         appendItem(*separatorItem(), m_contextMenu.get());
+
+    ContextMenuItem InspectElementItem(ActionType, ContextMenuItemTagInspectElement, contextMenuItemTagInspectElement());
     appendItem(InspectElementItem, m_contextMenu.get());
+
+#if ENABLE(VIDEO)
+    if (page->settings().showMediaStatsContextMenuItemEnabled() && !m_context.hitTestResult().absoluteMediaURL().isEmpty()) {
+        ContextMenuItem ShowMediaStats(CheckableActionType, ContextMenuItemTagShowMediaStats, contextMenuItemTagShowMediaStats());
+        appendItem(ShowMediaStats, m_contextMenu.get());
+    }
+#endif // ENABLE(VIDEO)
 }
 
 void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
@@ -1479,6 +1571,9 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
         case ContextMenuItemTagToggleMediaLoop:
             shouldCheck = m_context.hitTestResult().mediaLoopEnabled();
             break;
+        case ContextMenuItemTagShowMediaStats:
+            shouldCheck = m_context.hitTestResult().mediaStatsShowing();
+            break;
         case ContextMenuItemTagToggleVideoFullscreen:
 #if SUPPORTS_TOGGLE_VIDEO_FULLSCREEN
             item.setTitle(m_context.hitTestResult().mediaIsInFullscreen() ? contextMenuItemTagExitVideoFullscreen() : contextMenuItemTagEnterVideoFullscreen());
@@ -1504,6 +1599,9 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
         case ContextMenuItemPDFZoomOut:
         case ContextMenuItemPDFAutoSize:
         case ContextMenuItemPDFSinglePage:
+        case ContextMenuItemPDFSinglePageContinuous:
+        case ContextMenuItemPDFTwoPages:
+        case ContextMenuItemPDFTwoPagesContinuous:
         case ContextMenuItemPDFFacingPages:
         case ContextMenuItemPDFContinuous:
         case ContextMenuItemPDFNextPage:
@@ -1575,6 +1673,17 @@ void ContextMenuController::showImageControlsMenu(Event& event)
     clearContextMenu();
     handleContextMenuEvent(event);
     m_client.showContextMenu();
+}
+
+#endif
+
+#if ENABLE(PDFJS)
+
+void ContextMenuController::performPDFJSAction(Frame& frame, const String& action)
+{
+    auto* pdfDocument = dynamicDowncast<PDFDocument>(frame.ownerElement()->document());
+    if (pdfDocument)
+        pdfDocument->postMessageToIframe(action, nullptr);
 }
 
 #endif

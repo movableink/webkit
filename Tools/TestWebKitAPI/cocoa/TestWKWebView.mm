@@ -32,6 +32,7 @@
 #import "Utilities.h"
 
 #import <WebKit/WKContentWorld.h>
+#import <WebKit/WKUIDelegate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivateForTesting.h>
 #import <WebKit/WebKitPrivate.h>
@@ -373,6 +374,11 @@ NSEventMask __simulated_forceClickAssociatedEventsMask(id self, SEL _cmd)
     [self sendEvent:[NSEvent mouseEventWithType:eventType location:point modifierFlags:modifierFlags timestamp:_webView.eventTimestamp windowNumber:self.windowNumber context:[NSGraphicsContext currentContext] eventNumber:++gEventNumber clickCount:clickCount pressure:0]];
 }
 
+- (BOOL)canBecomeKeyWindow
+{
+    return _webView.forceWindowToBecomeKey || super.canBecomeKeyWindow;
+}
+
 #endif
 
 - (BOOL)isKeyWindow
@@ -460,6 +466,7 @@ static InputSessionChangeCount nextInputSessionChangeCount()
     InputSessionChangeCount _inputSessionChangeCount;
 #endif
 #if PLATFORM(MAC)
+    BOOL _forceWindowToBecomeKey;
     NSTimeInterval _eventTimestampOffset;
 #endif
 }
@@ -526,6 +533,11 @@ static UICalloutBar *suppressUICalloutBar()
 
 - (void)addToTestWindow
 {
+    if (!_hostWindow) {
+        [self _setUpTestWindow:self.frame];
+        return;
+    }
+
 #if PLATFORM(MAC)
     [[_hostWindow contentView] addSubview:self];
 #else
@@ -801,6 +813,16 @@ static WKContentView *recursiveFindWKContentView(UIView *view)
 - (NSTimeInterval)eventTimestamp
 {
     return GetCurrentEventTime() + _eventTimestampOffset;
+}
+
+- (BOOL)forceWindowToBecomeKey
+{
+    return _forceWindowToBecomeKey;
+}
+
+- (void)setForceWindowToBecomeKey:(BOOL)forceWindowToBecomeKey
+{
+    _forceWindowToBecomeKey = forceWindowToBecomeKey;
 }
 
 - (void)mouseDownAtPoint:(NSPoint)pointInWindow simulatePressure:(BOOL)simulatePressure

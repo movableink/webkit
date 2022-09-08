@@ -45,6 +45,7 @@
 #include "RenderFlexibleBox.h"
 #include "RenderSlider.h"
 #include "RenderTheme.h"
+#include "ScriptDisallowedScope.h"
 #include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "StepRange.h"
@@ -173,6 +174,7 @@ void RenderSliderContainer::layout()
 Ref<SliderThumbElement> SliderThumbElement::create(Document& document)
 {
     auto element = adoptRef(*new SliderThumbElement(document));
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { element };
     element->setPseudo(ShadowPseudoIds::webkitSliderThumb());
     return element;
 }
@@ -202,11 +204,6 @@ bool SliderThumbElement::matchesReadWritePseudoClass() const
 {
     auto input = hostInput();
     return input && input->matchesReadWritePseudoClass();
-}
-
-RefPtr<Element> SliderThumbElement::focusDelegate()
-{
-    return hostInput();
 }
 
 void SliderThumbElement::dragFrom(const LayoutPoint& point)
@@ -474,7 +471,7 @@ void SliderThumbElement::handleTouchEvent(TouchEvent& touchEvent)
 {
     auto input = hostInput();
     ASSERT(input);
-    if (input->isReadOnly() || input->isDisabledFormControl()) {
+    if (!input->isMutable()) {
         clearExclusiveTouchIdentifier();
         stopDragging();
         touchEvent.setDefaultHandled();
@@ -586,6 +583,7 @@ inline SliderContainerElement::SliderContainerElement(Document& document)
 Ref<SliderContainerElement> SliderContainerElement::create(Document& document)
 {
     auto element = adoptRef(*new SliderContainerElement(document));
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { element };
     element->setPseudo(ShadowPseudoIds::webkitSliderContainer());
     return element;
 }

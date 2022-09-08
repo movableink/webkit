@@ -55,7 +55,6 @@
 #include "PlatformMouseEvent.h"
 #include "RenderImage.h"
 #include "RenderView.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptController.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
@@ -579,23 +578,44 @@ bool HTMLImageElement::attributeContainsURL(const Attribute& attribute) const
         || HTMLElement::attributeContainsURL(attribute);
 }
 
-String HTMLImageElement::completeURLsInAttributeValue(const URL& base, const Attribute& attribute) const
+String HTMLImageElement::completeURLsInAttributeValue(const URL& base, const Attribute& attribute, ResolveURLs resolveURLs) const
 {
     if (attribute.name() == srcsetAttr) {
+        if (resolveURLs == ResolveURLs::No)
+            return attribute.value();
+
         Vector<ImageCandidate> imageCandidates = parseImageCandidatesFromSrcsetAttribute(StringView(attribute.value()));
+
+        if (resolveURLs == ResolveURLs::NoExcludingURLsForPrivacy) {
+            bool needsToResolveURLs = false;
+            for (const auto& candidate : imageCandidates) {
+                auto urlString = candidate.string.toString();
+                auto completeURL = base.isNull() ? document().completeURL(urlString) : URL(base, urlString);
+                if (document().shouldMaskURLForBindings(completeURL)) {
+                    needsToResolveURLs = true;
+                    break;
+                }
+            }
+
+            if (!needsToResolveURLs)
+                return attribute.value();
+        }
+
         StringBuilder result;
         for (const auto& candidate : imageCandidates) {
             if (&candidate != &imageCandidates[0])
                 result.append(", ");
-            result.append(URL(base, candidate.string.toString()).string());
+            result.append(resolveURLStringIfNeeded(candidate.string.toString(), resolveURLs, base));
             if (candidate.density != UninitializedDescriptor)
                 result.append(' ', candidate.density, 'x');
             if (candidate.resourceWidth != UninitializedDescriptor)
                 result.append(' ', candidate.resourceWidth, 'w');
         }
+
         return result.toString();
     }
-    return HTMLElement::completeURLsInAttributeValue(base, attribute);
+
+    return HTMLElement::completeURLsInAttributeValue(base, attribute, resolveURLs);
 }
 
 bool HTMLImageElement::matchesUsemap(const AtomStringImpl& name) const
@@ -790,12 +810,17 @@ bool HTMLImageElement::childShouldCreateRenderer(const Node& child) const
 
 #if PLATFORM(IOS_FAMILY)
 // FIXME: We should find a better place for the touch callout logic. See rdar://problem/48937767.
-bool HTMLImageElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
+bool HTMLImageElement::willRespondToMouseClickEventsWithEditability(Editability editability, IgnoreTouchCallout ignoreTouchCallout) const
 {
     auto renderer = this->renderer();
-    if (!renderer || renderer->style().touchCalloutEnabled())
+    if (ignoreTouchCallout == IgnoreTouchCallout::No && (!renderer || renderer->style().touchCalloutEnabled()))
         return true;
     return HTMLElement::willRespondToMouseClickEventsWithEditability(editability);
+}
+
+bool HTMLImageElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
+{
+    return willRespondToMouseClickEventsWithEditability(editability, IgnoreTouchCallout::No);
 }
 #endif
 
@@ -855,6 +880,16 @@ bool HTMLImageElement::virtualHasPendingActivity() const
 size_t HTMLImageElement::pendingDecodePromisesCountForTesting() const
 {
     return m_imageLoader->pendingDecodePromisesCountForTesting();
+}
+
+AtomString HTMLImageElement::srcsetForBindings() const
+{
+    return getAttributeForBindings(srcsetAttr);
+}
+
+void HTMLImageElement::setSrcsetForBindings(const AtomString& value)
+{
+    setAttributeWithoutSynchronization(srcsetAttr, value);
 }
 
 const AtomString& HTMLImageElement::loadingForBindings() const

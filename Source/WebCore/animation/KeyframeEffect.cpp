@@ -240,7 +240,7 @@ static inline ExceptionOr<KeyframeEffect::KeyframeLikeObject> processKeyframeLik
 
     // 5. Sort animation properties in ascending order by the Unicode codepoints that define each property name.
     std::sort(animationProperties.begin(), animationProperties.end(), [](auto& lhs, auto& rhs) {
-        return lhs.string().string().utf8() < rhs.string().string().utf8();
+        return codePointCompareLessThan(lhs.string().string(), rhs.string().string());
     });
 
     // 6. For each property name in animation properties,
@@ -538,10 +538,11 @@ ExceptionOr<Ref<KeyframeEffect>> KeyframeEffect::create(JSGlobalObject& lexicalG
                 keyframeEffectOptions.direction
             };
 
-            if (document.settings().webAnimationsIterationCompositeEnabled()) {
+            if (document.settings().webAnimationsCompositeOperationsEnabled())
                 keyframeEffect->setComposite(keyframeEffectOptions.composite);
+
+            if (document.settings().webAnimationsIterationCompositeEnabled())
                 keyframeEffect->setIterationComposite(keyframeEffectOptions.iterationComposite);
-            }
         }
         auto updateTimingResult = keyframeEffect->updateTiming(timing);
         if (updateTimingResult.hasException())
@@ -904,6 +905,21 @@ const HashSet<CSSPropertyID>& KeyframeEffect::animatedProperties()
     return m_animatedProperties;
 }
 
+const HashSet<AtomString>& KeyframeEffect::animatedCustomProperties()
+{
+    if (!m_blendingKeyframes.isEmpty())
+        return m_blendingKeyframes.customProperties();
+
+    if (m_animatedCustomProperties.isEmpty()) {
+        for (auto& keyframe : m_parsedKeyframes) {
+            for (auto keyframeCustomProperty : keyframe.customStyleStrings.keys())
+                m_animatedCustomProperties.add(keyframeCustomProperty);
+        }
+    }
+
+    return m_animatedCustomProperties;
+}
+
 bool KeyframeEffect::animatesProperty(CSSPropertyID property) const
 {
     if (!m_blendingKeyframes.isEmpty())
@@ -949,6 +965,7 @@ void KeyframeEffect::setBlendingKeyframes(KeyframeList& blendingKeyframes)
 
     m_blendingKeyframes = WTFMove(blendingKeyframes);
     m_animatedProperties.clear();
+    m_animatedCustomProperties.clear();
 
     computedNeedsForcedLayout();
     computeStackingContextImpact();

@@ -27,15 +27,17 @@
 #import "AudioSampleDataConverter.h"
 
 #import "AudioSampleBufferList.h"
+#import "DeprecatedGlobalSettings.h"
 #import "Logging.h"
-#import "RuntimeEnabledFeatures.h"
 #import <AudioToolbox/AudioConverter.h>
+#include <wtf/FastMalloc.h>
+
 #import <pal/cf/AudioToolboxSoftLink.h>
 
 namespace WebCore {
 
 AudioSampleDataConverter::AudioSampleDataConverter()
-    : m_latencyAdaptationEnabled(RuntimeEnabledFeatures::sharedFeatures().webRTCAudioLatencyAdaptationEnabled())
+    : m_latencyAdaptationEnabled(DeprecatedGlobalSettings::webRTCAudioLatencyAdaptationEnabled())
 {
 }
 
@@ -85,6 +87,7 @@ bool AudioSampleDataConverter::updateBufferedAmount(size_t currentBufferedAmount
         return !!m_selectedConverter;
 
     if (currentBufferedAmount) {
+        DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
         if (m_selectedConverter == m_regularConverter) {
             if (currentBufferedAmount <= m_lowBufferSize) {
                 m_selectedConverter = m_lowConverter;

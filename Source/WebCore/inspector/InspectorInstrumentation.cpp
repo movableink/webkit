@@ -179,10 +179,27 @@ void InspectorInstrumentation::willDestroyDOMNodeImpl(InstrumentingAgents& instr
         domAgent->willDestroyDOMNode(node);
 }
 
-void InspectorInstrumentation::nodeLayoutContextChangedImpl(InstrumentingAgents& instrumentingAgents, Node& node, RenderObject* newRenderer)
+void InspectorInstrumentation::didChangeRendererForDOMNodeImpl(InstrumentingAgents& instrumentingAgents, Node& node)
 {
     if (auto* cssAgent = instrumentingAgents.enabledCSSAgent())
-        cssAgent->nodeLayoutContextTypeChanged(node, newRenderer);
+        cssAgent->didChangeRendererForDOMNode(node);
+}
+
+void InspectorInstrumentation::didAddOrRemoveScrollbarsImpl(InstrumentingAgents& instrumentingAgents, FrameView& frameView)
+{
+    if (auto* cssAgent = instrumentingAgents.enabledCSSAgent()) {
+        auto* document = frameView.frame().document();
+        if (auto* documentElement = document ? document->documentElement() : nullptr)
+            cssAgent->didChangeRendererForDOMNode(*documentElement);
+    }
+}
+
+void InspectorInstrumentation::didAddOrRemoveScrollbarsImpl(InstrumentingAgents& instrumentingAgents, RenderObject& renderer)
+{
+    if (auto* cssAgent = instrumentingAgents.enabledCSSAgent()) {
+        if (auto* node = renderer.node())
+            cssAgent->didChangeRendererForDOMNode(*node);
+    }
 }
 
 void InspectorInstrumentation::willModifyDOMAttrImpl(InstrumentingAgents& instrumentingAgents, Element& element, const AtomString& oldValue, const AtomString& newValue)
@@ -353,6 +370,8 @@ void InspectorInstrumentation::didAddEventListenerImpl(InstrumentingAgents& inst
         webDebuggerAgent->didAddEventListener(target, eventType, listener, capture);
     if (auto* domAgent = instrumentingAgents.persistentDOMAgent())
         domAgent->didAddEventListener(target);
+    if (auto* cssAgent = instrumentingAgents.enabledCSSAgent())
+        cssAgent->didAddEventListener(target);
 }
 
 void InspectorInstrumentation::willRemoveEventListenerImpl(InstrumentingAgents& instrumentingAgents, EventTarget& target, const AtomString& eventType, EventListener& listener, bool capture)
@@ -361,6 +380,8 @@ void InspectorInstrumentation::willRemoveEventListenerImpl(InstrumentingAgents& 
         webDebuggerAgent->willRemoveEventListener(target, eventType, listener, capture);
     if (auto* domAgent = instrumentingAgents.persistentDOMAgent())
         domAgent->willRemoveEventListener(target, eventType, listener, capture);
+    if (auto* cssAgent = instrumentingAgents.enabledCSSAgent())
+        cssAgent->willRemoveEventListener(target);
 }
 
 bool InspectorInstrumentation::isEventListenerDisabledImpl(InstrumentingAgents& instrumentingAgents, EventTarget& target, const AtomString& eventType, EventListener& listener, bool capture)
@@ -431,7 +452,7 @@ void InspectorInstrumentation::willHandleEventImpl(InstrumentingAgents& instrume
 void InspectorInstrumentation::didHandleEventImpl(InstrumentingAgents& instrumentingAgents, ScriptExecutionContext& context, Event& event, const RegisteredEventListener& listener)
 {
     if (auto* webDebuggerAgent = instrumentingAgents.enabledWebDebuggerAgent())
-        webDebuggerAgent->didDispatchAsyncCall();
+        webDebuggerAgent->didHandleEvent(listener);
 
     if (auto* domDebuggerAgent = instrumentingAgents.enabledDOMDebuggerAgent())
         domDebuggerAgent->didHandleEvent(context, event, listener);
@@ -483,10 +504,10 @@ void InspectorInstrumentation::willFireTimerImpl(InstrumentingAgents& instrument
         timelineAgent->willFireTimer(timerId, frameForScriptExecutionContext(context));
 }
 
-void InspectorInstrumentation::didFireTimerImpl(InstrumentingAgents& instrumentingAgents, int /* timerId */, bool oneShot)
+void InspectorInstrumentation::didFireTimerImpl(InstrumentingAgents& instrumentingAgents, int timerId, bool oneShot)
 {
     if (auto* webDebuggerAgent = instrumentingAgents.enabledWebDebuggerAgent())
-        webDebuggerAgent->didDispatchAsyncCall();
+        webDebuggerAgent->didDispatchAsyncCall(InspectorDebuggerAgent::AsyncCallType::DOMTimer, timerId);
     if (auto* domDebuggerAgent = instrumentingAgents.enabledDOMDebuggerAgent())
         domDebuggerAgent->didFireTimer(oneShot);
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())
@@ -1242,10 +1263,10 @@ void InspectorInstrumentation::willFireAnimationFrameImpl(InstrumentingAgents& i
         timelineAgent->willFireAnimationFrame(callbackId, document.frame());
 }
 
-void InspectorInstrumentation::didFireAnimationFrameImpl(InstrumentingAgents& instrumentingAgents)
+void InspectorInstrumentation::didFireAnimationFrameImpl(InstrumentingAgents& instrumentingAgents, int callbackId)
 {
-    if (auto* webDebuggerAgent = instrumentingAgents.enabledWebDebuggerAgent())
-        webDebuggerAgent->didDispatchAsyncCall();
+    if (auto* pageDebuggerAgent = instrumentingAgents.enabledPageDebuggerAgent())
+        pageDebuggerAgent->didFireAnimationFrame(callbackId);
     if (auto* pageDOMDebuggerAgent = instrumentingAgents.enabledPageDOMDebuggerAgent())
         pageDOMDebuggerAgent->didFireAnimationFrame();
     if (auto* timelineAgent = instrumentingAgents.trackingTimelineAgent())

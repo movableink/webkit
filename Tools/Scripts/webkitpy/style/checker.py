@@ -54,7 +54,6 @@ from webkitpy.style.checkers.jstest import JSTestChecker
 from webkitpy.style.checkers.messagesin import MessagesInChecker
 from webkitpy.style.checkers.png import PNGChecker
 from webkitpy.style.checkers.python import PythonChecker, Python3Checker
-from webkitpy.style.checkers.sdkvariant import SDKVariantChecker
 from webkitpy.style.checkers.test_expectations import TestExpectationsChecker
 from webkitpy.style.checkers.text import TextChecker
 from webkitpy.style.checkers.watchlist import WatchListChecker
@@ -280,6 +279,8 @@ _PATH_RULES_SPECIFIER = [
       os.path.join('Source', 'WebCore', 'platform', 'mediastream', 'gstreamer', 'GStreamerVideoEncoder.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'ProxyResolverSoup.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'ProxyResolverSoup.h'),
+      os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'WebKitAutoconfigProxyResolver.cpp'),
+      os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'WebKitAutoconfigProxyResolver.h'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'WebKitFormDataInputStream.cpp'),
       os.path.join('Source', 'WebCore', 'platform', 'network', 'soup', 'WebKitFormDataInputStream.h'),
       os.path.join('Source', 'WebKit', 'NetworkProcess', 'soup', 'WebKitDirectoryInputStream.h')],
@@ -340,6 +341,12 @@ _PATH_RULES_SPECIFIER = [
      os.path.join('Tools', 'Scripts', 'webkitpy', 'binary_bundling', 'dlopenwrap')],
      ["-readability/naming/underscores",
       "-whitespace/tab"]),
+
+    ([  # MiniBrowser doesn't use WTF, but only public WebKit API.
+     os.path.join('Tools', 'MiniBrowser')],
+     ["-runtime/wtf_make_unique",
+      "-runtime/wtf_move"]),
+
 ]
 
 
@@ -490,7 +497,6 @@ def _all_categories():
     categories = categories.union(ChangeLogChecker.categories)
     categories = categories.union(PNGChecker.categories)
     categories = categories.union(FeatureDefinesChecker.categories)
-    categories = categories.union(SDKVariantChecker.categories)
 
     # FIXME: Consider adding all of the pep8 categories.  Since they
     #        are not too meaningful for documentation purposes, for
@@ -739,8 +745,6 @@ class CheckerDispatcher(object):
             return FileType.TEXT
         elif os.path.basename(file_path) == "FeatureDefines.xcconfig":
             return FileType.FEATUREDEFINES
-        elif os.path.basename(file_path) == "SDKVariant.xcconfig":
-            return FileType.SDKVARIANT
         else:
             return FileType.NONE
 
@@ -809,8 +813,6 @@ class CheckerDispatcher(object):
             checker = WatchListChecker(file_path, handle_style_error)
         elif file_type == FileType.FEATUREDEFINES:
             checker = FeatureDefinesChecker(file_path, handle_style_error)
-        elif file_type == FileType.SDKVARIANT:
-            checker = SDKVariantChecker(file_path, handle_style_error)
         else:
             raise ValueError('Invalid file type "%(file_type)s": the only valid file types '
                              "are %(NONE)s, %(CPP)s, and %(TEXT)s."

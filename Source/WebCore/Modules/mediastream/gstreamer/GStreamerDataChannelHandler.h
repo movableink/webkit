@@ -44,22 +44,28 @@ public:
     explicit GStreamerDataChannelHandler(GRefPtr<GstWebRTCDataChannel>&&);
     ~GStreamerDataChannelHandler();
 
+    RTCDataChannelInit dataChannelInit() const;
+    String label() const;
+
     static GUniquePtr<GstStructure> fromRTCDataChannelInit(const RTCDataChannelInit&);
-    static Ref<RTCDataChannelEvent> createDataChannelEvent(Document&, GRefPtr<GstWebRTCDataChannel>&&);
+
+    const GstWebRTCDataChannel* channel() const { return m_channel.get(); }
 
 private:
     // RTCDataChannelHandler API
     void setClient(RTCDataChannelHandlerClient&, ScriptExecutionContextIdentifier) final;
     bool sendStringData(const CString&) final;
     bool sendRawData(const uint8_t*, size_t) final;
+    std::optional<unsigned short> id() const final;
     void close() final;
 
     void onMessageData(GBytes*);
     void onMessageString(const char*);
     void onError(GError*);
-    void onBufferedAmountLow();
-    void readyStateChanged();
+    void onClose();
 
+    void readyStateChanged();
+    void bufferedAmountChanged();
     void checkState();
     void postTask(Function<void()>&&);
 
@@ -74,11 +80,10 @@ private:
     GRefPtr<GstWebRTCDataChannel> m_channel;
     std::optional<WeakPtr<RTCDataChannelHandlerClient>> m_client WTF_GUARDED_BY_LOCK(m_clientLock);
     ScriptExecutionContextIdentifier m_contextIdentifier;
-    std::optional<uint64_t> m_previousBufferedAmount;
     PendingMessages m_pendingMessages WTF_GUARDED_BY_LOCK(m_clientLock);
 
-    Lock m_openLock;
-    Condition m_openCondition WTF_GUARDED_BY_LOCK(m_openLock);
+    std::optional<size_t> m_cachedBufferedAmount;
+    bool m_closing { false };
 };
 
 } // namespace WebCore

@@ -199,8 +199,8 @@ public:
 
     CodeLocationLabel<JSInternalPtrTag> doneLocation();
 
-    void setMonomorphicCallee(VM&, JSCell*, JSObject* callee, CodeBlock*, MacroAssemblerCodePtr<JSEntryPtrTag>);
-    void setSlowPathCallDestination(MacroAssemblerCodePtr<JSEntryPtrTag>);
+    void setMonomorphicCallee(VM&, JSCell*, JSObject* callee, CodeBlock*, CodePtr<JSEntryPtrTag>);
+    void setSlowPathCallDestination(CodePtr<JSEntryPtrTag>);
     void clearCallee();
     JSObject* callee();
 
@@ -265,19 +265,9 @@ public:
         return m_clearedByVirtual;
     }
 
-    bool clearedByJettison()
-    {
-        return m_clearedByJettison;
-    }
-
     void setClearedByVirtual()
     {
         m_clearedByVirtual = true;
-    }
-
-    void setClearedByJettison()
-    {
-        m_clearedByJettison = true;
     }
     
     void setCallType(CallType callType)
@@ -379,7 +369,6 @@ protected:
         , m_clearedByGC(false)
         , m_clearedByVirtual(false)
         , m_allowStubs(true)
-        , m_clearedByJettison(false)
         , m_callType(None)
         , m_useDataIC(static_cast<unsigned>(useDataIC))
         , m_type(static_cast<unsigned>(type))
@@ -394,7 +383,7 @@ protected:
 
     uint32_t m_maxArgumentCountIncludingThis { 0 }; // For varargs: the profiled maximum number of arguments. For direct: the number of stack slots allocated for arguments.
     CodeLocationLabel<JSInternalPtrTag> m_doneLocation;
-    MacroAssemblerCodePtr<JSEntryPtrTag> m_slowPathCallDestination;
+    CodePtr<JSEntryPtrTag> m_slowPathCallDestination;
     union UnionType {
         UnionType()
             : dataIC { nullptr, nullptr }
@@ -402,7 +391,7 @@ protected:
 
         struct DataIC {
             CodeBlock* m_codeBlock; // This is weekly held. And cleared whenever m_monomorphicCallDestination is changed.
-            MacroAssemblerCodePtr<JSEntryPtrTag> m_monomorphicCallDestination;
+            CodePtr<JSEntryPtrTag> m_monomorphicCallDestination;
         } dataIC;
 
         struct {
@@ -422,7 +411,6 @@ protected:
     bool m_clearedByGC : 1;
     bool m_clearedByVirtual : 1;
     bool m_allowStubs : 1;
-    bool m_clearedByJettison : 1;
     unsigned m_callType : 4; // CallType
     unsigned m_useDataIC : 1; // UseDataIC
     unsigned m_type : 1; // Type

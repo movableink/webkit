@@ -624,6 +624,14 @@ TIntermAggregate *TIntermAggregate::CreateConstructor(const TType &type, TInterm
     return new TIntermAggregate(nullptr, type, EOpConstruct, arguments);
 }
 
+TIntermAggregate *TIntermAggregate::CreateConstructor(
+    const TType &type,
+    const std::initializer_list<TIntermNode *> &arguments)
+{
+    TIntermSequence argSequence(arguments);
+    return CreateConstructor(type, &argSequence);
+}
+
 TIntermAggregate::TIntermAggregate(const TFunction *func,
                                    const TType &type,
                                    TOperator op,
@@ -1997,7 +2005,7 @@ TPrecision TIntermBinary::derivePrecision() const
             const TFieldList &fields = mOp == EOpIndexDirectStruct
                                            ? mLeft->getType().getStruct()->fields()
                                            : mLeft->getType().getInterfaceBlock()->fields();
-            const int fieldIndex = mRight->getAsConstantUnion()->getIConst(0);
+            const int fieldIndex     = mRight->getAsConstantUnion()->getIConst(0);
             return fields[fieldIndex]->type()->getPrecision();
         }
 

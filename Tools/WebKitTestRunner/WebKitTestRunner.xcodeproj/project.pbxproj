@@ -128,7 +128,7 @@
 		8097338A14874A5A008156D9 /* AccessibilityNotificationHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8097338914874A5A008156D9 /* AccessibilityNotificationHandler.mm */; };
 		932BB9C0270E27000094CC33 /* ModifierKeys.mm in Sources */ = {isa = PBXBuildFile; fileRef = 932BB9BE270E27000094CC33 /* ModifierKeys.mm */; };
 		9376417A210D737200A3DAAE /* WebKitTestRunnerWindow.mm in Sources */ = {isa = PBXBuildFile; fileRef = 93764176210D736000A3DAAE /* WebKitTestRunnerWindow.mm */; };
-		93C78823250C6C2E00C0AA24 /* ReftestFunctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 93C7881F250C69E400C0AA24 /* ReftestFunctions.cpp */; };
+		93C78823250C6C2E00C0AA24 /* WPTFunctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 93C7881F250C69E400C0AA24 /* WPTFunctions.cpp */; };
 		93C78831250C719F00C0AA24 /* JSBasics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 93C78830250C719900C0AA24 /* JSBasics.cpp */; };
 		93C78832250C71B700C0AA24 /* JSBasics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 93C78830250C719900C0AA24 /* JSBasics.cpp */; };
 		A185103A1B9AE0DA00744AEB /* CrashReporterInfo.mm in Sources */ = {isa = PBXBuildFile; fileRef = 0FEB90A31905BC6A000FDBF3 /* CrashReporterInfo.mm */; };
@@ -166,8 +166,6 @@
 		F44A531721B899E200DBB99C /* ClassMethodSwizzler.mm in Sources */ = {isa = PBXBuildFile; fileRef = F44A531421B899DA00DBB99C /* ClassMethodSwizzler.mm */; };
 		F44A531821B899E500DBB99C /* InstanceMethodSwizzler.mm in Sources */ = {isa = PBXBuildFile; fileRef = F44A531621B899DA00DBB99C /* InstanceMethodSwizzler.mm */; };
 		F46240B1217013E500917B16 /* UIScriptControllerCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = F46240AF2170128300917B16 /* UIScriptControllerCocoa.mm */; };
-		F47A0ED2285FB1C1001D0ECE /* EditMenuInteractionSwizzler.mm in Sources */ = {isa = PBXBuildFile; fileRef = F47A0ECF285FB1B3001D0ECE /* EditMenuInteractionSwizzler.mm */; };
-		F47A0ED3285FB2AE001D0ECE /* EditMenuInteractionSwizzler.h in Headers */ = {isa = PBXBuildFile; fileRef = F47A0ECE285FB1B3001D0ECE /* EditMenuInteractionSwizzler.h */; };
 		F4C3578C20E8444600FA0748 /* LayoutTestSpellChecker.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4C3578A20E8444000FA0748 /* LayoutTestSpellChecker.mm */; };
 		F4FED324235823A3003C139C /* NSPasteboardAdditions.mm in Sources */ = {isa = PBXBuildFile; fileRef = F4FED3222358215E003C139C /* NSPasteboardAdditions.mm */; };
 /* End PBXBuildFile section */
@@ -380,8 +378,8 @@
 		9338D1BE250BD9DD00E827F6 /* DictionaryFunctions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DictionaryFunctions.h; sourceTree = "<group>"; };
 		93764176210D736000A3DAAE /* WebKitTestRunnerWindow.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebKitTestRunnerWindow.mm; sourceTree = "<group>"; };
 		93764177210D736100A3DAAE /* WebKitTestRunnerWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebKitTestRunnerWindow.h; sourceTree = "<group>"; };
-		93C7881F250C69E400C0AA24 /* ReftestFunctions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReftestFunctions.cpp; path = ../TestRunnerShared/ReftestFunctions.cpp; sourceTree = "<group>"; };
-		93C78820250C69E400C0AA24 /* ReftestFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReftestFunctions.h; path = ../TestRunnerShared/ReftestFunctions.h; sourceTree = "<group>"; };
+		93C7881F250C69E400C0AA24 /* WPTFunctions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = WPTFunctions.cpp; path = ../TestRunnerShared/WPTFunctions.cpp; sourceTree = "<group>"; };
+		93C78820250C69E400C0AA24 /* WPTFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WPTFunctions.h; path = ../TestRunnerShared/WPTFunctions.h; sourceTree = "<group>"; };
 		93C7882F250C719900C0AA24 /* JSBasics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = JSBasics.h; path = ../TestRunnerShared/Bindings/JSBasics.h; sourceTree = "<group>"; };
 		93C78830250C719900C0AA24 /* JSBasics.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = JSBasics.cpp; path = ../TestRunnerShared/Bindings/JSBasics.cpp; sourceTree = "<group>"; };
 		9B0D132E2036D346008FC8FB /* WebKitTestRunnerApp-iOS.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "WebKitTestRunnerApp-iOS.entitlements"; sourceTree = "<group>"; };
@@ -389,7 +387,6 @@
 		A18510271B9ADE4800744AEB /* libWebKitTestRunner.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libWebKitTestRunner.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		A18510381B9ADF2200744AEB /* WebKitTestRunner.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = WebKitTestRunner.xcconfig; sourceTree = "<group>"; };
 		A18510391B9ADFF800744AEB /* WebKitTestRunnerApp.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = WebKitTestRunnerApp.xcconfig; sourceTree = "<group>"; };
-		A1B89B94221E026B00EB4CEA /* SDKVariant.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = SDKVariant.xcconfig; sourceTree = "<group>"; };
 		BC14E4D8120E02D000826C0C /* GCController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GCController.h; sourceTree = "<group>"; };
 		BC14E4D9120E02D000826C0C /* GCController.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GCController.cpp; sourceTree = "<group>"; };
 		BC14E4E1120E032000826C0C /* GCController.idl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = GCController.idl; sourceTree = "<group>"; };
@@ -449,8 +446,6 @@
 		F44A531521B899DA00DBB99C /* ClassMethodSwizzler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClassMethodSwizzler.h; path = ../TestRunnerShared/cocoa/ClassMethodSwizzler.h; sourceTree = "<group>"; };
 		F44A531621B899DA00DBB99C /* InstanceMethodSwizzler.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = InstanceMethodSwizzler.mm; path = ../TestRunnerShared/cocoa/InstanceMethodSwizzler.mm; sourceTree = "<group>"; };
 		F46240AF2170128300917B16 /* UIScriptControllerCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = UIScriptControllerCocoa.mm; sourceTree = "<group>"; };
-		F47A0ECE285FB1B3001D0ECE /* EditMenuInteractionSwizzler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EditMenuInteractionSwizzler.h; sourceTree = "<group>"; };
-		F47A0ECF285FB1B3001D0ECE /* EditMenuInteractionSwizzler.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EditMenuInteractionSwizzler.mm; sourceTree = "<group>"; };
 		F4C3578A20E8444000FA0748 /* LayoutTestSpellChecker.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = LayoutTestSpellChecker.mm; path = ../TestRunnerShared/cocoa/LayoutTestSpellChecker.mm; sourceTree = "<group>"; };
 		F4C3578B20E8444000FA0748 /* LayoutTestSpellChecker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LayoutTestSpellChecker.h; path = ../TestRunnerShared/cocoa/LayoutTestSpellChecker.h; sourceTree = "<group>"; };
 		F4FED3212358215E003C139C /* NSPasteboardAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NSPasteboardAdditions.h; path = ../TestRunnerShared/mac/NSPasteboardAdditions.h; sourceTree = "<group>"; };
@@ -574,12 +569,12 @@
 				0F73B5471BA782FE004B3EF4 /* UIScriptContext */,
 				3148A0531E6F85B600D3B316 /* IOSLayoutTestCommunication.cpp */,
 				3148A0541E6F85B600D3B316 /* IOSLayoutTestCommunication.h */,
-				93C7881F250C69E400C0AA24 /* ReftestFunctions.cpp */,
-				93C78820250C69E400C0AA24 /* ReftestFunctions.h */,
 				7CFF9BC72534AF1D0008009F /* TestCommand.cpp */,
 				7CFF9BC82534AF1D0008009F /* TestCommand.h */,
 				7CFF9BC62534AF1D0008009F /* TestFeatures.cpp */,
 				7CFF9BC52534AF1D0008009F /* TestFeatures.h */,
+				93C7881F250C69E400C0AA24 /* WPTFunctions.cpp */,
+				93C78820250C69E400C0AA24 /* WPTFunctions.h */,
 			);
 			name = TestRunnerShared;
 			sourceTree = "<group>";
@@ -749,8 +744,6 @@
 		2EE52D121890A9FB0010ED21 /* ios */ = {
 			isa = PBXGroup;
 			children = (
-				F47A0ECE285FB1B3001D0ECE /* EditMenuInteractionSwizzler.h */,
-				F47A0ECF285FB1B3001D0ECE /* EditMenuInteractionSwizzler.mm */,
 				4430AE181F82C4EF0099915A /* GeneratedTouchesDebugWindow.h */,
 				4430AE171F82C4EE0099915A /* GeneratedTouchesDebugWindow.mm */,
 				0FEBF8581BB61DF20028722D /* HIDEventGenerator.h */,
@@ -895,7 +888,6 @@
 				0F2109C7189C650D00F879A3 /* BaseTarget.xcconfig */,
 				BC793427118F7DAF005EA8E2 /* DebugRelease.xcconfig */,
 				BC25197111D15E61002EBC01 /* InjectedBundle.xcconfig */,
-				A1B89B94221E026B00EB4CEA /* SDKVariant.xcconfig */,
 				57A0062C22976E4D00AD08BD /* WebKitTestRunner.entitlements */,
 				A18510381B9ADF2200744AEB /* WebKitTestRunner.xcconfig */,
 				9B0D132E2036D346008FC8FB /* WebKitTestRunnerApp-iOS.entitlements */,
@@ -1002,7 +994,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				2DB6187E1D7D58D400978D19 /* CoreGraphicsTestSPI.h in Headers */,
-				F47A0ED3285FB2AE001D0ECE /* EditMenuInteractionSwizzler.h in Headers */,
 				2DD4C49A1D6E7D3B0007379C /* EventSerializerMac.h in Headers */,
 				0F73B5521BA78968004B3EF4 /* JSUIScriptController.h in Headers */,
 				2DFA98481D7F70CF00AFF2C9 /* SharedEventStreamsMac.h in Headers */,
@@ -1232,7 +1223,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F47A0ED2285FB1C1001D0ECE /* EditMenuInteractionSwizzler.mm in Sources */,
 				2E749BF21891EBFA007FC175 /* EventSenderProxyIOS.mm in Sources */,
 				4430AE191F82C4FD0099915A /* GeneratedTouchesDebugWindow.mm in Sources */,
 				0FEBF85A1BB61DF20028722D /* HIDEventGenerator.mm in Sources */,
@@ -1339,10 +1329,10 @@
 				BC952F1F11F3C652003398B4 /* JSTestRunner.cpp in Sources */,
 				5641E2D014335E95008307E5 /* JSTextInputController.cpp in Sources */,
 				0F6E89031D6BC5A2008ED0FA /* JSWrapper.cpp in Sources */,
-				93C78823250C6C2E00C0AA24 /* ReftestFunctions.cpp in Sources */,
 				2E63EDA61891BDC0002A7AFC /* TestRunner.cpp in Sources */,
 				C0CE720B1247C93300BC0EC4 /* TestRunnerMac.mm in Sources */,
 				5664A49A14326384008881BE /* TextInputController.cpp in Sources */,
+				93C78823250C6C2E00C0AA24 /* WPTFunctions.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

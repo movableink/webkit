@@ -26,8 +26,6 @@
 #include "config.h"
 #include "InlineTextItem.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FontCascade.h"
 #include "InlineSoftLineBreakItem.h"
 #include "TextUtil.h"
@@ -50,8 +48,8 @@ InlineTextItem::InlineTextItem(const InlineTextBox& inlineTextBox, unsigned star
     m_textItemType = textItemType;
 }
 
-InlineTextItem::InlineTextItem(const InlineTextBox& inlineTextBox, UBiDiLevel bidiLevel)
-    : InlineItem(inlineTextBox, Type::Text, bidiLevel)
+InlineTextItem::InlineTextItem(const InlineTextBox& inlineTextBox)
+    : InlineItem(inlineTextBox, Type::Text, UBIDI_DEFAULT_LTR)
 {
 }
 
@@ -104,4 +102,3 @@ bool InlineTextItem::shouldPreserveSpacesAndTabs(const InlineTextItem& inlineTex
 
 }
 }
-#endif

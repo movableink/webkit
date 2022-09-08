@@ -47,6 +47,7 @@
 #include "DatabaseProvider.h"
 #include "DebugOverlayRegions.h"
 #include "DebugPageOverlays.h"
+#include "DeprecatedGlobalSettings.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
 #include "DisplayRefreshMonitorManager.h"
@@ -89,7 +90,6 @@
 #include "InspectorInstrumentation.h"
 #include "LayoutDisallowedScope.h"
 #include "LegacySchemeRegistry.h"
-#include "LibWebRTCProvider.h"
 #include "LoaderStrategy.h"
 #include "LogInitialization.h"
 #include "Logging.h"
@@ -108,7 +108,6 @@
 #include "PerformanceLogging.h"
 #include "PerformanceLoggingClient.h"
 #include "PerformanceMonitor.h"
-#include "PermissionController.h"
 #include "PlatformMediaSessionManager.h"
 #include "PlatformScreen.h"
 #include "PlatformStrategies.h"
@@ -128,7 +127,6 @@
 #include "RenderingUpdateScheduler.h"
 #include "ResizeObserver.h"
 #include "ResourceUsageOverlay.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGImage.h"
 #include "ScriptController.h"
@@ -164,6 +162,7 @@
 #include "VisitedLinkStore.h"
 #include "VoidCallback.h"
 #include "WebCoreJSClientData.h"
+#include "WebRTCProvider.h"
 #include "WheelEventDeltaFilter.h"
 #include "WheelEventTestMonitor.h"
 #include "Widget.h"
@@ -193,9 +192,7 @@
 #include "WebGLStateTracker.h"
 #endif
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 #include "DisplayView.h"
-#endif
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
 #include "MediaSessionCoordinator.h"
@@ -292,7 +289,7 @@ Page::Page(PageConfiguration&& pageConfiguration)
 #endif
     , m_speechRecognitionProvider((WTFMove(pageConfiguration.speechRecognitionProvider)))
     , m_mediaRecorderProvider((WTFMove(pageConfiguration.mediaRecorderProvider)))
-    , m_libWebRTCProvider(WTFMove(pageConfiguration.libWebRTCProvider))
+    , m_webRTCProvider(WTFMove(pageConfiguration.webRTCProvider))
     , m_domTimerAlignmentInterval(DOMTimer::defaultAlignmentInterval())
     , m_domTimerAlignmentIntervalIncreaseTimer(*this, &Page::domTimerAlignmentIntervalIncreaseTimerFired)
     , m_activityState(pageInitialActivityState())
@@ -337,11 +334,11 @@ Page::Page(PageConfiguration&& pageConfiguration)
     , m_deviceOrientationUpdateProvider(WTFMove(pageConfiguration.deviceOrientationUpdateProvider))
 #endif
     , m_corsDisablingPatterns(WTFMove(pageConfiguration.corsDisablingPatterns))
+    , m_maskedURLSchemes(WTFMove(pageConfiguration.maskedURLSchemes))
     , m_allowedNetworkHosts(WTFMove(pageConfiguration.allowedNetworkHosts))
     , m_loadsSubresources(pageConfiguration.loadsSubresources)
     , m_shouldRelaxThirdPartyCookieBlocking(pageConfiguration.shouldRelaxThirdPartyCookieBlocking)
     , m_httpsUpgradeEnabled(pageConfiguration.httpsUpgradeEnabled)
-    , m_permissionController(WTFMove(pageConfiguration.permissionController))
     , m_storageProvider(WTFMove(pageConfiguration.storageProvider))
     , m_modelPlayerProvider(WTFMove(pageConfiguration.modelPlayerProvider))
 #if ENABLE(ATTACHMENT_ELEMENT)
@@ -372,6 +369,8 @@ Page::Page(PageConfiguration&& pageConfiguration)
 #ifndef NDEBUG
     pageCounter.increment();
 #endif
+
+    m_storageNamespaceProvider->setSessionStorageQuota(m_settings->sessionStorageQuota());
 
 #if ENABLE(REMOTE_INSPECTOR)
     if (m_inspectorController->inspectorClient() && m_inspectorController->inspectorClient()->allowRemoteInspectionToPageDirectly())
@@ -593,8 +592,8 @@ Ref<DOMRectList> Page::passiveTouchEventListenerRectsForTesting()
 void Page::settingsDidChange()
 {
 #if USE(LIBWEBRTC)
-    m_libWebRTCProvider->setH265Support(settings().webRTCH265CodecEnabled());
-    m_libWebRTCProvider->setVP9Support(settings().webRTCVP9Profile0CodecEnabled(), settings().webRTCVP9Profile2CodecEnabled());
+    m_webRTCProvider->setH265Support(settings().webRTCH265CodecEnabled());
+    m_webRTCProvider->setVP9Support(settings().webRTCVP9Profile0CodecEnabled(), settings().webRTCVP9Profile2CodecEnabled());
 #endif
 }
 
@@ -806,6 +805,17 @@ bool Page::findString(const String& target, FindOptions options, DidWrap* didWra
 
     return false;
 }
+
+#if ENABLE(IMAGE_ANALYSIS)
+void Page::analyzeImagesForFindInPage(Function<void()>&& callback)
+{
+    if (settings().imageAnalysisDuringFindInPageEnabled()) {
+        imageAnalysisQueue().setDidBecomeEmptyCallback(WTFMove(callback));
+        if (RefPtr mainDocument = m_mainFrame->document())
+            imageAnalysisQueue().enqueueAllImagesIfNeeded(*mainDocument, { }, { });
+    }
+}
+#endif
 
 auto Page::findTextMatches(const String& target, FindOptions options, unsigned limit, bool markMatches) -> MatchingRanges
 {
@@ -1095,7 +1105,15 @@ bool Page::shouldBuildInteractionRegions() const
 {
     return m_settings->interactionRegionsEnabled();
 }
-#endif
+
+void Page::setInteractionRegionsEnabled(bool enable)
+{
+    bool needsUpdate = enable && !shouldBuildInteractionRegions();
+    m_settings->setInteractionRegionsEnabled(enable);
+    if (needsUpdate)
+        mainFrame().invalidateContentEventRegionsIfNeeded(Frame::InvalidateContentEventRegionsReason::Layout);
+}
+#endif // ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
 
 const VisibleSelection& Page::selection() const
 {
@@ -1197,6 +1215,7 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin, bool inStable
         if (view && !delegatesScaling()) {
             view->setNeedsLayoutAfterViewConfigurationChange();
             view->setNeedsCompositingGeometryUpdate();
+            view->setDescendantsNeedUpdateBackingAndHierarchyTraversal();
 
             document->resolveStyle(Document::ResolveStyleType::Rebuild);
 
@@ -1624,7 +1643,7 @@ void Page::updateRendering()
 #endif
 
     // Timestamps should not change while serving the rendering update steps.
-    Vector<WeakPtr<Document>> initialDocuments;
+    Vector<WeakPtr<Document, WeakPtrImplWithEventTargetData>> initialDocuments;
     forEachDocument([&initialDocuments] (Document& document) {
         document.domWindow()->freezeNowTimestamp();
         initialDocuments.append(document);
@@ -1716,14 +1735,12 @@ void Page::doAfterUpdateRendering()
     // Code here should do once-per-frame work that needs to be done before painting, and requires
     // layout to be up-to-date. It should not run script, trigger layout, or dirty layout.
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled()) {
+    if (DeprecatedGlobalSettings::layoutFormattingContextEnabled()) {
         forEachDocument([] (Document& document) {
             if (auto* frameView = document.view())
                 frameView->displayView().prepareForDisplay();
         });
     }
-#endif
 
     auto runProcessingStep = [&](RenderingUpdateStep step, const Function<void(Document&)>& perDocumentFunction) {
         m_renderingUpdateRemainingSteps.last().remove(step);
@@ -1754,7 +1771,7 @@ void Page::doAfterUpdateRendering()
         
         if (appHighlightStorage->hasUnrestoredHighlights() && MonotonicTime::now() - appHighlightStorage->lastRangeSearchTime() > 1_s) {
             appHighlightStorage->resetLastRangeSearchTime();
-            document.eventLoop().queueTask(TaskSource::InternalAsyncTask, [weakDocument = WeakPtr { document }] {
+            document.eventLoop().queueTask(TaskSource::InternalAsyncTask, [weakDocument = WeakPtr<Document, WeakPtrImplWithEventTargetData> { document }] {
                 RefPtr document { weakDocument.get() };
                 if (!document)
                     return;
@@ -2121,21 +2138,6 @@ void Page::setDebugger(JSC::Debugger* debugger)
 
     for (Frame* frame = &m_mainFrame.get(); frame; frame = frame->tree().traverseNext())
         frame->windowProxy().attachDebugger(m_debugger);
-}
-
-StorageNamespace* Page::sessionStorage(bool optionalCreate)
-{
-    if (!m_sessionStorage && optionalCreate) {
-        ASSERT(m_settings->sessionStorageQuota() != StorageMap::noQuota);
-        m_sessionStorage = m_storageNamespaceProvider->createSessionStorageNamespace(*this, m_settings->sessionStorageQuota());
-    }
-
-    return m_sessionStorage.get();
-}
-
-void Page::setSessionStorage(RefPtr<StorageNamespace>&& newStorage)
-{
-    m_sessionStorage = WTFMove(newStorage);
 }
 
 bool Page::hasCustomHTMLTokenizerTimeDelay() const
@@ -2684,6 +2686,11 @@ void Page::whenUnnested(Function<void()>&& callback)
     m_unnestCallback = WTFMove(callback);
 }
 
+void Page::setCurrentKeyboardScrollingAnimator(KeyboardScrollingAnimator* animator)
+{
+    m_currentKeyboardScrollingAnimator = animator;
+}
+
 #if ENABLE(REMOTE_INSPECTOR)
 
 bool Page::remoteInspectionAllowed() const
@@ -3114,8 +3121,11 @@ void Page::setSessionID(PAL::SessionID sessionID)
     if (sessionID != m_sessionID)
         m_idbConnectionToServer = nullptr;
 
-    if (sessionID != m_sessionID && m_sessionStorage)
-        m_sessionStorage->setSessionIDForTesting(sessionID);
+    if (sessionID != m_sessionID) {
+        constexpr auto doNotCreate = StorageNamespaceProvider::ShouldCreateNamespace::No;
+        if (auto sessionStorage = m_storageNamespaceProvider->sessionStorageNamespace(m_mainFrame->document()->topOrigin(), *this, doNotCreate))
+            sessionStorage->setSessionIDForTesting(sessionID);
+    }
 
     bool privateBrowsingStateChanged = (sessionID.isEphemeral() != m_sessionID.isEphemeral());
 
@@ -3538,12 +3548,12 @@ void Page::applicationWillResignActive()
 
 void Page::applicationDidEnterBackground()
 {
-    m_libWebRTCProvider->setActive(false);
+    m_webRTCProvider->setActive(false);
 }
 
 void Page::applicationWillEnterForeground()
 {
-    m_libWebRTCProvider->setActive(true);
+    m_webRTCProvider->setActive(true);
 }
 
 void Page::applicationDidBecomeActive()
@@ -3677,7 +3687,7 @@ void Page::configureLoggingChannel(const String& channelName, WTFLogChannelState
 
 #if USE(LIBWEBRTC)
         if (channel == &LogWebRTC && m_mainFrame->document() && !sessionID().isEphemeral())
-            libWebRTCProvider().setLoggingLevel(LogWebRTC.level);
+            webRTCProvider().setLoggingLevel(LogWebRTC.level);
 #endif
     }
 
@@ -3848,6 +3858,12 @@ ImageOverlayController& Page::imageOverlayController()
     return *m_imageOverlayController;
 }
 
+Page* Page::serviceWorkerPage(ScriptExecutionContextIdentifier serviceWorkerPageIdentifier)
+{
+    auto* serviceWorkerPageDocument = Document::allDocumentsMap().get(serviceWorkerPageIdentifier);
+    return serviceWorkerPageDocument ? serviceWorkerPageDocument->page() : nullptr;
+}
+
 #if ENABLE(IMAGE_ANALYSIS)
 
 ImageAnalysisQueue& Page::imageAnalysisQueue()
@@ -3950,11 +3966,6 @@ void Page::setServiceWorkerGlobalScope(ServiceWorkerGlobalScope& serviceWorkerGl
     m_serviceWorkerGlobalScope = serviceWorkerGlobalScope;
 }
 #endif
-
-PermissionController& Page::permissionController()
-{
-    return m_permissionController.get();
-}
 
 StorageConnection& Page::storageConnection()
 {

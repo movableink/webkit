@@ -26,8 +26,6 @@
 #include "config.h"
 #include "FormattingState.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FloatingState.h"
 #include "LayoutBoxGeometry.h"
 #include <wtf/IsoMallocInlines.h>
@@ -50,8 +48,9 @@ FormattingState::~FormattingState()
 
 BoxGeometry& FormattingState::boxGeometry(const Box& layoutBox)
 {
-    // Should never need to mutate a display box outside of the formatting context.
-    ASSERT(&layoutState().formattingStateForFormattingContext(layoutBox.formattingContextRoot()) == this);
+    // Should never need to mutate a display box outside of the formatting context, unless we are trying
+    // to compute the static position of an out-of-flow box.
+    ASSERT((layoutBox.isOutOfFlowPositioned() && isInlineFormattingState()) || &layoutState().formattingStateForFormattingContext(layoutBox.formattingContextRoot()) == this);
     // Anonymous text wrappers do not need to compute box geometry. They initiate inline runs.
     ASSERT(!layoutBox.isInlineTextBox());
     return layoutState().ensureGeometryForBox(layoutBox);
@@ -59,4 +58,3 @@ BoxGeometry& FormattingState::boxGeometry(const Box& layoutBox)
 
 }
 }
-#endif

@@ -104,7 +104,7 @@ template<> void JSTestReportExtraMemoryCostDOMConstructor::initializeProperties(
 
 static const HashTableValue JSTestReportExtraMemoryCostPrototypeTableValues[] =
 {
-    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestReportExtraMemoryCostConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },
+    { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsTestReportExtraMemoryCostConstructor, 0 } },
 };
 
 const ClassInfo JSTestReportExtraMemoryCostPrototype::s_info = { "TestReportExtraMemoryCost"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReportExtraMemoryCostPrototype) };
@@ -118,8 +118,8 @@ void JSTestReportExtraMemoryCostPrototype::finishCreation(VM& vm)
 
 const ClassInfo JSTestReportExtraMemoryCost::s_info = { "TestReportExtraMemoryCost"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestReportExtraMemoryCost) };
 
-JSTestReportExtraMemoryCost::JSTestReportExtraMemoryCost(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestReportExtraMemoryCost>&& impl)
-    : JSDOMWrapper<TestReportExtraMemoryCost>(structure, globalObject, WTFMove(impl))
+JSTestReportExtraMemoryCost::JSTestReportExtraMemoryCost(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestReportExtraMemoryCost>&& impl, JSC::Butterfly* butterfly)
+    : JSDOMWrapper<TestReportExtraMemoryCost>(structure, globalObject, WTFMove(impl), butterfly)
 {
 }
 

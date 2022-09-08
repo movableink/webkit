@@ -42,6 +42,10 @@
 #import <wtf/Vector.h>
 #import <wtf/cocoa/VectorCocoa.h>
 
+#if HAVE(ACCESSIBILITY_FRAMEWORK)
+#import <Accessibility/Accessibility.h>
+#endif
+
 #define NSAccessibilityDOMIdentifierAttribute @"AXDOMIdentifier"
 
 #ifndef NSAccessibilityOwnsAttribute
@@ -390,6 +394,23 @@ void AccessibilityUIElement::getChildrenWithRange(Vector<RefPtr<AccessibilityUIE
         children = [m_element accessibilityArrayAttributeValues:NSAccessibilityChildrenAttribute index:location maxCount:length];
     });
     elementVector = makeVector<RefPtr<AccessibilityUIElement>>(children.get());
+    END_AX_OBJC_EXCEPTIONS
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::customContent() const
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+#if HAVE(ACCESSIBILITY_FRAMEWORK)
+    auto customContent = adoptNS([[NSMutableArray alloc] init]);
+    s_controller->executeOnAXThreadAndWait([this, &customContent] {
+        for (AXCustomContent *content in [m_element accessibilityCustomContent])
+            [customContent addObject:[NSString stringWithFormat:@"%@: %@", content.label, content.value]];
+    });
+
+    return [[customContent.get() componentsJoinedByString:@"\n"] createJSStringRef];
+#else
+    return nullptr;
+#endif
     END_AX_OBJC_EXCEPTIONS
 }
 
@@ -1994,7 +2015,7 @@ bool AccessibilityUIElement::insertText(JSStringRef text)
         result = [m_element accessibilityInsertText:text];
     });
     END_AX_OBJC_EXCEPTIONS
-    return false;
+    return result;
 }
 
 RefPtr<AccessibilityTextMarker> AccessibilityUIElement::startTextMarkerForBounds(int x, int y, int width, int height)
@@ -2395,6 +2416,26 @@ void AccessibilityUIElement::performAction(NSString *actionName) const
         [m_element accessibilityPerformAction:actionName];
     });
     END_AX_OBJC_EXCEPTIONS
+}
+
+bool AccessibilityUIElement::isInsertion() const
+{
+    return false;
+}
+
+bool AccessibilityUIElement::isDeletion() const
+{
+    return false;
+}
+
+bool AccessibilityUIElement::isFirstItemInSuggestion() const
+{
+    return false;
+}
+
+bool AccessibilityUIElement::isLastItemInSuggestion() const
+{
+    return false;
 }
 
 } // namespace WTR

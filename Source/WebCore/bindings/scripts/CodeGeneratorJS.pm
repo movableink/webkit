@@ -401,7 +401,6 @@ sub AddSetLikeAttributesAndOperationIfNeeded
     push(@{$forEachOperation->arguments}, ($forEachArgument));
     $forEachOperation->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($forEachOperation->extendedAttributes, $interface->setLike->extendedAttributes);
-    # FIXME: The WebIDL spec says that the forEach operation should be enumerable.
     $forEachOperation->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->operations}, $forEachOperation);
 
@@ -1998,7 +1997,7 @@ sub NeedsRuntimeCheck
         return 1 if !IsAlwaysExposedOnInterface($interface->extendedAttributes->{Exposed}, $context->extendedAttributes->{Exposed});
     }
 
-    return $context->extendedAttributes->{EnabledAtRuntime}
+    return $context->extendedAttributes->{EnabledByDeprecatedGlobalSetting}
         || $context->extendedAttributes->{EnabledForContext}
         || $context->extendedAttributes->{EnabledForWorld}
         || $context->extendedAttributes->{EnabledBySetting}
@@ -2011,8 +2010,8 @@ sub NeedsRuntimeReadWriteCheck
 {
     my ($interface, $context) = @_;
     
-    return $context->extendedAttributes->{RuntimeConditionallyReadWrite}
-        || $context->extendedAttributes->{SettingsConditionallyReadWrite}
+    return $context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting}
+        || $context->extendedAttributes->{EnabledConditionallyReadWriteBySetting}
 }
 
 # https://webidl.spec.whatwg.org/#es-operations
@@ -3234,7 +3233,7 @@ sub GenerateHeader
     } elsif (!NeedsImplementationClass($interface)) {
         push(@headerContent, "    $className(JSC::Structure*, JSDOMGlobalObject&);\n\n");
      } else {
-        push(@headerContent, "    $className(JSC::Structure*, JSDOMGlobalObject&, Ref<$implType>&&);\n\n");
+        push(@headerContent, "    $className(JSC::Structure*, JSDOMGlobalObject&, Ref<$implType>&&, JSC::Butterfly* = nullptr);\n\n");
     }
 
     if ($interfaceName eq "DOMWindow" || $interfaceName eq "RemoteDOMWindow") {
@@ -4054,7 +4053,7 @@ sub GenerateRuntimeEnableConditionalStringForExposed
 }
 
 # Returns the conditional string that determines whether a method/attribute is enabled at runtime.
-# A method/attribute is enabled at runtime if either its RuntimeEnabledFeatures function returns
+# A method/attribute is enabled at runtime if either its DeprecatedGlobalSettings function returns
 # true or its EnabledForWorld function returns true (or both).
 # NOTE: Parameter passed in must have an 'extendedAttributes' property.
 # (e.g. IDLInterface, IDLAttribute, IDLOperation, IDLIterable, etc.)
@@ -4097,14 +4096,14 @@ sub GenerateRuntimeEnableConditionalString
         }
     }
 
-    if ($context->extendedAttributes->{SettingsConditionallyReadWrite}) {
-        assert("Must specify value for SettingsConditionallyReadWrite.") if $context->extendedAttributes->{SettingsConditionallyReadWrite} eq "VALUE_IS_MISSING";
+    if ($context->extendedAttributes->{EnabledConditionallyReadWriteBySetting}) {
+        assert("Must specify value for EnabledConditionallyReadWriteBySetting.") if $context->extendedAttributes->{EnabledConditionallyReadWriteBySetting} eq "VALUE_IS_MISSING";
 
         AddToImplIncludes("Document.h");
 
-        assert("SettingsConditionallyReadWrite can only be used by interfaces only exposed to the Window") if $interface->extendedAttributes->{Exposed} && $interface->extendedAttributes->{Exposed} ne "Window";
+        assert("EnabledConditionallyReadWriteBySetting can only be used by interfaces only exposed to the Window") if $interface->extendedAttributes->{Exposed} && $interface->extendedAttributes->{Exposed} ne "Window";
 
-        my @flags = split(/&/, $context->extendedAttributes->{SettingsConditionallyReadWrite});
+        my @flags = split(/&/, $context->extendedAttributes->{EnabledConditionallyReadWriteBySetting});
         foreach my $flag (@flags) {
             push(@conjuncts, "downcast<Document>(jsCast<JSDOMGlobalObject*>(" . $globalObjectPtr . ")->scriptExecutionContext())->settingsValues()." . ToMethodName($flag));
         }
@@ -4138,25 +4137,25 @@ sub GenerateRuntimeEnableConditionalString
         }
     }
 
-    if ($context->extendedAttributes->{EnabledAtRuntime}) {
-        assert("Must specify value for EnabledAtRuntime.") if $context->extendedAttributes->{EnabledAtRuntime} eq "VALUE_IS_MISSING";
+    if ($context->extendedAttributes->{EnabledByDeprecatedGlobalSetting}) {
+        assert("Must specify value for EnabledByDeprecatedGlobalSetting.") if $context->extendedAttributes->{EnabledByDeprecatedGlobalSetting} eq "VALUE_IS_MISSING";
 
-        AddToImplIncludes("RuntimeEnabledFeatures.h");
+        AddToImplIncludes("DeprecatedGlobalSettings.h");
 
-        my @flags = split(/&/, $context->extendedAttributes->{EnabledAtRuntime});
+        my @flags = split(/&/, $context->extendedAttributes->{EnabledByDeprecatedGlobalSetting});
         foreach my $flag (@flags) {
-            push(@conjuncts, "RuntimeEnabledFeatures::sharedFeatures()." . ToMethodName($flag) . "()");
+            push(@conjuncts, "DeprecatedGlobalSettings::" . ToMethodName($flag) . "()");
         }
     }
 
-    if ($context->extendedAttributes->{RuntimeConditionallyReadWrite}) {
-        assert("Must specify value for RuntimeConditionallyReadWrite.") if $context->extendedAttributes->{RuntimeConditionallyReadWrite} eq "VALUE_IS_MISSING";
+    if ($context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting}) {
+        assert("Must specify value for EnabledConditionallyReadWriteByDeprecatedGlobalSetting.") if $context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting} eq "VALUE_IS_MISSING";
 
-        AddToImplIncludes("RuntimeEnabledFeatures.h");
+        AddToImplIncludes("DeprecatedGlobalSettings.h");
 
-        my @flags = split(/&/, $context->extendedAttributes->{RuntimeConditionallyReadWrite});
+        my @flags = split(/&/, $context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting});
         foreach my $flag (@flags) {
-            push(@conjuncts, "RuntimeEnabledFeatures::sharedFeatures()." . ToMethodName($flag) . "()");
+            push(@conjuncts, "DeprecatedGlobalSettings::" . ToMethodName($flag) . "()");
         }
     }
 
@@ -4650,14 +4649,16 @@ sub GenerateImplementation
             AddToImplIncludes("WebCoreJSClientData.h");
             my $conditionalString = $codeGenerator->GenerateConditionalString($operation);
             push(@implContent, "#if ${conditionalString}\n") if $conditionalString;
-            push(@implContent, "    putDirect(vm, builtinNames(vm)." . $operation->name . "PrivateName(), JSFunction::create(vm, globalObject(), 0, String(), " . GetFunctionName($interface, $className, $operation) . "), JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::DontEnum);\n");
+            push(@implContent, "    putDirect(vm, builtinNames(vm)." . $operation->name . "PrivateName(), JSFunction::create(vm, globalObject(), 0, String(), " . GetFunctionName($interface, $className, $operation) . ", ImplementationVisibility::Public), JSC::PropertyAttribute::ReadOnly | JSC::PropertyAttribute::DontEnum);\n");
             push(@implContent, "#endif\n") if $conditionalString;
         }
 
         if (InterfaceNeedsIterator($interface)) {
             AddToImplIncludes("<JavaScriptCore/BuiltinNames.h>");
-            if (IsKeyValueIterableInterface($interface) or $interface->mapLike or $interface->setLike) {
+            if (IsKeyValueIterableInterface($interface) or $interface->mapLike) {
                 push(@implContent, "    putDirect(vm, vm.propertyNames->iteratorSymbol, getDirect(vm, vm.propertyNames->builtinNames().entriesPublicName()), static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));\n");
+            } elsif ($interface->setLike) {
+                push(@implContent, "    putDirect(vm, vm.propertyNames->iteratorSymbol, getDirect(vm, vm.propertyNames->builtinNames().valuesPublicName()), static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));\n");
             } else {
                 AddToImplIncludes("<JavaScriptCore/ArrayPrototype.h>");
                 push(@implContent, "    putDirect(vm, vm.propertyNames->iteratorSymbol, globalObject()->arrayPrototype()->getDirect(vm, vm.propertyNames->builtinNames().valuesPrivateName()), static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));\n");
@@ -4712,8 +4713,8 @@ sub GenerateImplementation
         push(@implContent, "${className}::$className(Structure* structure, JSDOMGlobalObject& globalObject)\n");
         push(@implContent, "    : $parentClassName(structure, globalObject) { }\n\n");
     } else {
-        push(@implContent, "${className}::$className(Structure* structure, JSDOMGlobalObject& globalObject, Ref<$implType>&& impl)\n");
-        push(@implContent, "    : $parentClassName(structure, globalObject, WTFMove(impl))\n");
+        push(@implContent, "${className}::$className(Structure* structure, JSDOMGlobalObject& globalObject, Ref<$implType>&& impl, JSC::Butterfly* butterfly)\n");
+        push(@implContent, "    : $parentClassName(structure, globalObject, WTFMove(impl), butterfly)\n");
         push(@implContent, "{\n");
         push(@implContent, "}\n\n");
     }
@@ -4816,7 +4817,7 @@ sub GenerateImplementation
         if (IsJSBuiltin($interface, $operation)) {
             push(@implContent, "        putDirectBuiltinFunction(vm, this, $propertyName, $implementationFunction(vm), attributesForStructure($jsAttributes));\n");
         } else {
-            push(@implContent, "        putDirectNativeFunction(vm, this, $propertyName, $functionLength, $implementationFunction, NoIntrinsic, attributesForStructure($jsAttributes));\n");
+            push(@implContent, "        putDirectNativeFunction(vm, this, $propertyName, $functionLength, $implementationFunction, ImplementationVisibility::Public, NoIntrinsic, attributesForStructure($jsAttributes));\n");
         }
         push(@implContent, "#endif\n") if $conditionalString;
     }
@@ -7323,8 +7324,8 @@ sub GenerateHashTableValueArray
 
     my $i = 0;
     foreach my $key (@{$keys}) {
-        my $firstTargetType;
-        my $secondTargetType = "";
+        my $typeTag;
+        my $hasSecondValue = 1;
         my $conditional;
 
         if ($conditionals) {
@@ -7336,47 +7337,47 @@ sub GenerateHashTableValueArray
         }
 
         if ("@$specials[$i]" =~ m/DOMJITFunction/) {
-            $firstTargetType = "static_cast<RawNativeFunction>";
-            $secondTargetType = "static_cast<const JSC::DOMJIT::Signature*>";
+            $typeTag = "DOMJITFunction";
         } elsif ("@$specials[$i]" =~ m/Function/) {
-            $firstTargetType = "static_cast<RawNativeFunction>";
+            $typeTag = "NativeFunction";
         } elsif ("@$specials[$i]" =~ m/Builtin/) {
-            $firstTargetType = "static_cast<BuiltinGenerator>";
+            $typeTag = ("@$specials[$i]" =~ m/Accessor/) ? "BuiltinAccessor" : "BuiltinGenerator";
         } elsif ("@$specials[$i]" =~ m/ConstantInteger/) {
-            $firstTargetType = "";
+            $typeTag = "Constant";
+            $hasSecondValue = 0;
         } elsif ("@$specials[$i]" =~ m/DOMJITAttribute/) {
-            $firstTargetType = "static_cast<const JSC::DOMJIT::GetterSetter*>";
+            $typeTag = "DOMJITAttribute";
         } else {
-            $firstTargetType = "static_cast<PropertySlot::GetValueFunc>";
-            $secondTargetType = "static_cast<PutPropertySlot::PutValueFunc>";
+            $typeTag = "GetterSetter";
             $hasSetter = "true";
         }
         if ("@$specials[$i]" =~ m/ConstantInteger/) {
-            push(@implContent, "    { \"$key\"_s, @$specials[$i], NoIntrinsic, { (long long)" . $firstTargetType . "(@$value1[$i]) } },\n");
+            push(@implContent, "    { \"$key\"_s, @$specials[$i], NoIntrinsic, { HashTableValue::" . $typeTag . "Type, @$value1[$i] } },\n");
         } else {
             my $readWriteConditional = $readWriteConditionals ? $readWriteConditionals->{$key} : undef;
             if ($readWriteConditional) {
                 my $readWriteConditionalString = $codeGenerator->GenerateConditionalStringFromAttributeValue($readWriteConditional);
                 push(@implContent, "#if ${readWriteConditionalString}\n");
             }
-
-            push(@implContent, "    { \"$key\"_s, @$specials[$i], NoIntrinsic, { (intptr_t)" . $firstTargetType . "(@$value1[$i]), (intptr_t) " . $secondTargetType . "(@$value2[$i]) } },\n");
+            my $secondValue = $hasSecondValue ? ", @$value2[$i]" : "";
+            push(@implContent, "    { \"$key\"_s, @$specials[$i], NoIntrinsic, { HashTableValue::" . $typeTag . "Type, @$value1[$i]$secondValue } },\n");
 
             if ($readWriteConditional) {
                 push(@implContent, "#else\n") ;
-                push(@implContent, "    { \"$key\"_s, JSC::PropertyAttribute::ReadOnly | @$specials[$i], NoIntrinsic, { (intptr_t)" . $firstTargetType . "(@$value1[$i]), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },\n");
+                my $secondValue = $hasSecondValue ? ", 0" : "";
+                push(@implContent, "    { \"$key\"_s, JSC::PropertyAttribute::ReadOnly | @$specials[$i], NoIntrinsic, { HashTableValue::" . $typeTag . "Type, @$value1[$i]$secondValue } },\n");
                 push(@implContent, "#endif\n");
             }
         }
         if ($conditional) {
             push(@implContent, "#else\n");
-            push(@implContent, "    { { }, 0, NoIntrinsic, { 0, 0 } },\n");
+            push(@implContent, "    { { }, 0, NoIntrinsic, { HashTableValue::End } },\n");
             push(@implContent, "#endif\n");
         }
         ++$i;
     }
 
-    push(@implContent, "    { { }, 0, NoIntrinsic, { 0, 0 } }\n") if (!$packedSize);
+    push(@implContent, "    { { }, 0, NoIntrinsic, { HashTableValue::End } }\n") if (!$packedSize);
     push(@implContent, "};\n\n");
 
     return $hasSetter;

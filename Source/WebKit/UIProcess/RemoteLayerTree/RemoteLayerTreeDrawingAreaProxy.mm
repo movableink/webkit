@@ -48,6 +48,10 @@
 @interface WKOneShotDisplayLinkHandler : NSObject {
     WebKit::RemoteLayerTreeDrawingAreaProxy* _drawingAreaProxy;
     CADisplayLink *_displayLink;
+#if ENABLE(TIMER_DRIVEN_DISPLAY_REFRESH_FOR_TESTING)
+    RetainPtr<NSTimer> _updateTimer;
+    std::optional<WebCore::FramesPerSecond> _overrideFrameRate;
+#endif
 }
 
 - (id)initWithDrawingAreaProxy:(WebKit::RemoteLayerTreeDrawingAreaProxy*)drawingAreaProxy;
@@ -65,14 +69,28 @@
     if (self = [super init]) {
         _drawingAreaProxy = drawingAreaProxy;
         // Note that CADisplayLink retains its target (self), so a call to -invalidate is needed on teardown.
-        _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkFired:)];
-        [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
-        _displayLink.paused = YES;
-        _displayLink.preferredFramesPerSecond = 60;
+        bool createDisplayLink = true;
+#if ENABLE(TIMER_DRIVEN_DISPLAY_REFRESH_FOR_TESTING)
+        NSInteger overrideRefreshRateValue = [NSUserDefaults.standardUserDefaults integerForKey:@"MainScreenRefreshRate"];
+        if (overrideRefreshRateValue) {
+            _overrideFrameRate = overrideRefreshRateValue;
+            createDisplayLink = false;
+        }
+#endif
+        if (createDisplayLink) {
+            _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkFired:)];
+            [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+            _displayLink.paused = YES;
+
+            if (drawingAreaProxy && !drawingAreaProxy->page().preferences().preferPageRenderingUpdatesNear60FPSEnabled())
+                _displayLink.preferredFramesPerSecond = (1.0 / _displayLink.maximumRefreshRate);
+            else
+                _displayLink.preferredFramesPerSecond = 60;
+        }
 
         if (drawingAreaProxy) {
             auto& page = drawingAreaProxy->page();
-            if (page.preferences().webAnimationsCustomFrameRateEnabled()) {
+            if (page.preferences().webAnimationsCustomFrameRateEnabled() || !page.preferences().preferPageRenderingUpdatesNear60FPSEnabled()) {
                 auto minimumRefreshInterval = _displayLink.maximumRefreshRate;
                 if (minimumRefreshInterval > 0) {
                     if (auto displayId = page.displayId()) {
@@ -103,20 +121,41 @@
     _drawingAreaProxy->didRefreshDisplay();
 }
 
+#if ENABLE(TIMER_DRIVEN_DISPLAY_REFRESH_FOR_TESTING)
+- (void)timerFired
+{
+    ASSERT(isUIThread());
+    _drawingAreaProxy->didRefreshDisplay();
+}
+#endif // ENABLE(TIMER_DRIVEN_DISPLAY_REFRESH_FOR_TESTING)
+
 - (void)invalidate
 {
     [_displayLink invalidate];
     _displayLink = nullptr;
+
+#if ENABLE(TIMER_DRIVEN_DISPLAY_REFRESH_FOR_TESTING)
+    [_updateTimer invalidate];
+    _updateTimer = nil;
+#endif
 }
 
 - (void)schedule
 {
     _displayLink.paused = NO;
+#if ENABLE(TIMER_DRIVEN_DISPLAY_REFRESH_FOR_TESTING)
+    if (!_updateTimer && _overrideFrameRate.has_value())
+        _updateTimer = [NSTimer scheduledTimerWithTimeInterval:1.0 / _overrideFrameRate.value() target:self selector:@selector(timerFired) userInfo:nil repeats:YES];
+#endif
 }
 
 - (void)pause
 {
     _displayLink.paused = YES;
+#if ENABLE(TIMER_DRIVEN_DISPLAY_REFRESH_FOR_TESTING)
+    [_updateTimer invalidate];
+    _updateTimer = nil;
+#endif
 }
 
 @end

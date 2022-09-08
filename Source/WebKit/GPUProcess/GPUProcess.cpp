@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,7 +49,6 @@
 #include <WebCore/MemoryRelease.h>
 #include <WebCore/NowPlayingManager.h>
 #include <WebCore/RuntimeApplicationChecks.h>
-#include <WebCore/RuntimeEnabledFeatures.h>
 #include <wtf/Algorithms.h>
 #include <wtf/CallbackAggregator.h>
 #include <wtf/LogInitialization.h>
@@ -70,6 +69,7 @@
 #endif
 
 #if PLATFORM(COCOA)
+#include <WebCore/CoreAudioSharedUnit.h>
 #include <WebCore/VP9UtilitiesCocoa.h>
 #endif
 
@@ -119,12 +119,10 @@ void GPUProcess::didReceiveMessage(IPC::Connection& connection, IPC::Decoder& de
 
 static IPC::Connection::Identifier asConnectionIdentifier(IPC::Attachment&& connectionHandle)
 {
-#if USE(UNIX_DOMAIN_SOCKETS)
+#if USE(UNIX_DOMAIN_SOCKETS) || OS(WINDOWS)
     return IPC::Connection::Identifier { connectionHandle.release().release() };
 #elif OS(DARWIN)
     return IPC::Connection::Identifier { connectionHandle.leakSendRight() };
-#elif OS(WINDOWS)
-    return IPC::Connection::Identifier { connectionHandle.handle() };
 #else
     notImplemented();
     return IPC::Connection::Identifier { };
@@ -139,7 +137,7 @@ void GPUProcess::createGPUConnectionToWebProcess(WebCore::ProcessIdentifier iden
     auto connectionIdentifier = asConnectionIdentifier(WTFMove(connectionHandle));
     // If sender exited before we received the identifier, the identifier
     // may not be valid.
-    if (!IPC::Connection::identifierIsValid(connectionIdentifier))
+    if (!connectionIdentifier)
         return;
 
     auto newConnection = GPUConnectionToWebProcess::create(*this, identifier, sessionID, WTFMove(connectionIdentifier), WTFMove(parameters));
@@ -255,6 +253,12 @@ void GPUProcess::initializeGPUProcess(GPUProcessCreationParameters&& parameters)
 #if PLATFORM(MAC)
     SandboxExtension::consumePermanently(parameters.microphoneSandboxExtensionHandle);
 #endif
+#if PLATFORM(IOS_FAMILY)
+    CoreAudioSharedUnit::unit().setStatusBarWasTappedCallback([this](auto completionHandler) {
+        parentProcessConnection()->sendWithAsyncReply(Messages::GPUProcessProxy::StatusBarWasTapped(), [] { }, 0);
+        completionHandler();
+    });
+#endif
 #endif // ENABLE(MEDIA_STREAM)
 
 #if USE(SANDBOX_EXTENSIONS_FOR_CACHE_AND_TEMP_DIRECTORY_ACCESS)
@@ -289,7 +293,7 @@ void GPUProcess::updateGPUProcessPreferences(GPUProcessPreferences&& preferences
 {
 #if ENABLE(MEDIA_SOURCE) && ENABLE(VP9)
     if (updatePreference(m_preferences.webMParserEnabled, preferences.webMParserEnabled))
-        WebCore::RuntimeEnabledFeatures::sharedFeatures().setWebMParserEnabled(*m_preferences.webMParserEnabled);
+        DeprecatedGlobalSettings::setWebMParserEnabled(*m_preferences.webMParserEnabled);
 #endif
 
 #if ENABLE(WEBM_FORMAT_READER)
@@ -309,7 +313,7 @@ void GPUProcess::updateGPUProcessPreferences(GPUProcessPreferences&& preferences
     
 #if ENABLE(MEDIA_SOURCE) && HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
     if (updatePreference(m_preferences.mediaSourceInlinePaintingEnabled, preferences.mediaSourceInlinePaintingEnabled))
-        WebCore::RuntimeEnabledFeatures::sharedFeatures().setMediaSourceInlinePaintingEnabled(*m_preferences.mediaSourceInlinePaintingEnabled);
+        DeprecatedGlobalSettings::setMediaSourceInlinePaintingEnabled(*m_preferences.mediaSourceInlinePaintingEnabled);
 #endif
 
 #if HAVE(AVCONTENTKEYSPECIFIER)
@@ -376,6 +380,10 @@ void GPUProcess::setOrientationForMediaCapture(uint64_t orientation)
 
 void GPUProcess::updateCaptureAccess(bool allowAudioCapture, bool allowVideoCapture, bool allowDisplayCapture, WebCore::ProcessIdentifier processID, CompletionHandler<void()>&& completionHandler)
 {
+#if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
+    ensureAVCaptureServerConnection();
+#endif
+
     if (auto* connection = webProcessConnection(processID)) {
         connection->updateCaptureAccess(allowAudioCapture, allowVideoCapture, allowDisplayCapture);
         return completionHandler();
@@ -399,10 +407,6 @@ void GPUProcess::updateSandboxAccess(const Vector<SandboxExtension::Handle>& ext
 {
     for (auto& extension : extensions)
         SandboxExtension::consumePermanently(extension);
-
-#if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
-    sandboxWasUpatedForCapture();
-#endif
 }
 
 void GPUProcess::addMockMediaDevice(const WebCore::MockMediaDevice& device)
@@ -428,6 +432,11 @@ void GPUProcess::resetMockMediaDevices()
 void GPUProcess::setMockCaptureDevicesInterrupted(bool isCameraInterrupted, bool isMicrophoneInterrupted)
 {
     MockRealtimeMediaSourceCenter::setMockCaptureDevicesInterrupted(isCameraInterrupted, isMicrophoneInterrupted);
+}
+
+void GPUProcess::triggerMockMicrophoneConfigurationChange()
+{
+    MockRealtimeMediaSourceCenter::singleton().triggerMockMicrophoneConfigurationChange();
 }
 #endif // ENABLE(MEDIA_STREAM)
 

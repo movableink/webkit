@@ -53,13 +53,13 @@ WebAudioBufferList::WebAudioBufferList(const CAAudioStreamDescription& format)
     reset();
 }
 
-WebAudioBufferList::WebAudioBufferList(const CAAudioStreamDescription& format, uint32_t sampleCount)
+WebAudioBufferList::WebAudioBufferList(const CAAudioStreamDescription& format, size_t sampleCount)
     : WebAudioBufferList(format)
 {
     setSampleCount(sampleCount);
 }
 
-static inline std::optional<std::pair<size_t, size_t>> computeBufferSizes(uint32_t numberOfInterleavedChannels, uint32_t bytesPerFrame, uint32_t numberOfChannelStreams, uint32_t sampleCount)
+static inline std::optional<std::pair<size_t, size_t>> computeBufferSizes(uint32_t numberOfInterleavedChannels, uint32_t bytesPerFrame, uint32_t numberOfChannelStreams, size_t sampleCount)
 {
     size_t totalSampleCount;
     bool result = WTF::safeMultiply(sampleCount, numberOfInterleavedChannels, totalSampleCount);
@@ -79,12 +79,12 @@ static inline std::optional<std::pair<size_t, size_t>> computeBufferSizes(uint32
     return std::make_pair(bytesPerBuffer, flatBufferSize);
 }
 
-bool WebAudioBufferList::isSupportedDescription(const CAAudioStreamDescription& format, uint32_t sampleCount)
+bool WebAudioBufferList::isSupportedDescription(const CAAudioStreamDescription& format, size_t sampleCount)
 {
     return !!computeBufferSizes(format.numberOfInterleavedChannels(), format.bytesPerFrame(), format.numberOfChannelStreams(), sampleCount);
 }
 
-void WebAudioBufferList::setSampleCount(uint32_t sampleCount)
+void WebAudioBufferList::setSampleCount(size_t sampleCount)
 {
     if (!sampleCount || m_sampleCount == sampleCount)
         return;
@@ -98,6 +98,7 @@ void WebAudioBufferList::setSampleCount(uint32_t sampleCount)
 
     m_flatBuffer.resize(bufferSizes->second);
     auto* data = m_flatBuffer.data();
+    memset(data, 0, bufferSizes->second);
 
     for (uint32_t buffer = 0; buffer < m_canonicalList->mNumberBuffers; ++buffer) {
         m_canonicalList->mBuffers[buffer].mData = data;

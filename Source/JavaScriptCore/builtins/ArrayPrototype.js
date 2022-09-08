@@ -156,15 +156,15 @@ function filter(callback /*, thisArg */)
     return result;
 }
 
-function groupBy(callback /*, thisArg */)
+function group(callback /*, thisArg */)
 {
     "use strict";
 
-    var array = @toObject(this, "Array.prototype.groupBy requires that |this| not be null or undefined");
+    var array = @toObject(this, "Array.prototype.group requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
     if (!@isCallable(callback))
-        @throwTypeError("Array.prototype.groupBy callback must be a function");
+        @throwTypeError("Array.prototype.group callback must be a function");
 
     var thisArg = @argument(1);
 
@@ -182,15 +182,15 @@ function groupBy(callback /*, thisArg */)
     return groups;
 }
 
-function groupByToMap(callback /*, thisArg */)
+function groupToMap(callback /*, thisArg */)
 {
     "use strict";
 
-    var array = @toObject(this, "Array.prototype.groupByToMap requires that |this| not be null or undefined");
+    var array = @toObject(this, "Array.prototype.groupToMap requires that |this| not be null or undefined");
     var length = @toLength(array.length);
 
     if (!@isCallable(callback))
-        @throwTypeError("Array.prototype.groupByToMap callback must be a function");
+        @throwTypeError("Array.prototype.groupToMap callback must be a function");
 
     var thisArg = @argument(1);
 
@@ -395,7 +395,7 @@ function includes(searchElement /*, fromIndex*/)
     return false;
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortStringComparator(a, b)
 {
     "use strict";
@@ -409,7 +409,7 @@ function sortStringComparator(a, b)
     return aString > bString ? 1 : -1;
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortCompact(receiver, receiverLength, compacted, isStringSort)
 {
     "use strict";
@@ -433,7 +433,7 @@ function sortCompact(receiver, receiverLength, compacted, isStringSort)
     return undefinedCount;
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortCommit(receiver, receiverLength, sorted, undefinedCount)
 {
     "use strict";
@@ -460,7 +460,7 @@ function sortCommit(receiver, receiverLength, sorted, undefinedCount)
         delete receiver[i];
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortMerge(dst, src, srcIndex, srcEnd, width, comparator)
 {
     "use strict";
@@ -493,7 +493,7 @@ function sortMerge(dst, src, srcIndex, srcEnd, width, comparator)
     }
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortMergeSort(array, comparator)
 {
     "use strict";
@@ -515,7 +515,7 @@ function sortMergeSort(array, comparator)
     return src;
 }
 
-@globalPrivate
+@linkTimeConstant
 function sortBucketSort(array, dst, bucket, depth)
 {
     "use strict";
@@ -589,7 +589,7 @@ function sort(comparator)
     return receiver;
 }
 
-@globalPrivate
+@linkTimeConstant
 function concatSlowPath()
 {
     "use strict";
@@ -648,7 +648,7 @@ function concat(first)
     return @tailCallForwardArguments(@concatSlowPath, this);
 }
 
-@globalPrivate
+@linkTimeConstant
 function maxWithPositives(a, b)
 {
     "use strict";
@@ -656,7 +656,7 @@ function maxWithPositives(a, b)
     return (a < b) ? b : a;
 }
 
-@globalPrivate
+@linkTimeConstant
 function minWithMaybeNegativeZeroAndPositive(maybeNegativeZero, positive)
 {
     "use strict";
@@ -705,7 +705,7 @@ function copyWithin(target, start /*, end */)
     return array;
 }
 
-@globalPrivate
+@linkTimeConstant
 function flatIntoArray(target, source, sourceLength, targetIndex, depth)
 {
     "use strict";
@@ -744,7 +744,7 @@ function flat()
     return result;
 }
 
-@globalPrivate
+@linkTimeConstant
 function flatIntoArrayWithCallback(target, source, sourceLength, targetIndex, callback, thisArg)
 {
     "use strict";
@@ -818,12 +818,12 @@ function toReversed()
     return result;
 }
 
-function toSorted(comparefn)
+function toSorted(comparator)
 {
     "use strict";
 
     // Step 1.
-    if (comparefn !== @undefined && !@isCallable(comparefn))
+    if (comparator !== @undefined && !@isCallable(comparator))
         @throwTypeError("Array.prototype.toSorted requires the comparator argument to be a function or undefined");
 
     // Step 2.
@@ -840,7 +840,7 @@ function toSorted(comparefn)
         @putByValDirect(result, k, array[k]);
 
     // Step 6.
-    @arraySort.@call(result, comparefn);
+    @arraySort.@call(result, comparator);
 
     return result;
 }

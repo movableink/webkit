@@ -788,6 +788,22 @@ window.UIHelper = class UIHelper {
         });
     }
 
+    static waitForKeyboardToShow()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript(`
+                (function() {
+                    if (uiController.isShowingKeyboard)
+                        uiController.uiScriptComplete();
+                    else
+                        uiController.didShowKeyboardCallback = () => uiController.uiScriptComplete();
+                })()`, resolve);
+        });
+    }
+
     static waitForKeyboardToHide()
     {
         if (!this.isWebKit2() || !this.isIOSFamily())
@@ -1188,18 +1204,36 @@ window.UIHelper = class UIHelper {
         return new Promise(resolve => testRunner.runUIScript(`uiController.setScrollViewKeyboardAvoidanceEnabled(${enabled})`, resolve));
     }
 
+    static presentFindNavigator() {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => testRunner.runUIScript(`uiController.presentFindNavigator()`, resolve));
+    }
+
+    static dismissFindNavigator() {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => testRunner.runUIScript(`uiController.dismissFindNavigator()`, resolve));
+    }
+
     static resignFirstResponder()
     {
-        if (!this.isWebKit2())
+        if (!this.isWebKit2()) {
+            testRunner.setMainFrameIsFirstResponder(false);
             return Promise.resolve();
+        }
 
         return new Promise(resolve => testRunner.runUIScript(`uiController.resignFirstResponder()`, resolve));
     }
 
     static becomeFirstResponder()
     {
-        if (!this.isWebKit2())
+        if (!this.isWebKit2()) {
+            testRunner.setMainFrameIsFirstResponder(true);
             return Promise.resolve();
+        }
 
         return new Promise(resolve => testRunner.runUIScript(`uiController.becomeFirstResponder()`, resolve));
     }
@@ -1307,6 +1341,16 @@ window.UIHelper = class UIHelper {
             const [offsetX, offsetY] = JSON.parse(result)
             resolve({ x: offsetX, y: offsetY });
         }));
+    }
+
+    static adjustedContentInset()
+    {
+        if (!this.isWebKit2() || !this.isIOSFamily())
+            return Promise.resolve();
+
+        return new Promise(resolve => {
+            testRunner.runUIScript("JSON.stringify(uiController.adjustedContentInset)", result => resolve(JSON.parse(result)));
+        });
     }
 
     static undoAndRedoLabels()

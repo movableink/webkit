@@ -43,6 +43,7 @@
 #include <WebCore/FrameView.h>
 #include <WebCore/GeometryUtilities.h>
 #include <WebCore/GraphicsContext.h>
+#include <WebCore/ImageAnalysisQueue.h>
 #include <WebCore/ImageOverlay.h>
 #include <WebCore/Page.h>
 #include <WebCore/PageOverlayController.h>
@@ -232,7 +233,7 @@ void FindController::updateFindUIAfterPageScroll(bool found, const String& strin
         hideFindIndicator();
 }
 
-void FindController::findString(const String& string, OptionSet<FindOptions> options, unsigned maxMatchCount, CompletionHandler<void(bool)>&& completionHandler)
+void FindController::findString(const String& string, OptionSet<FindOptions> options, unsigned maxMatchCount, TriggerImageAnalysis canTriggerImageAnalysis, CompletionHandler<void(bool)>&& completionHandler)
 {
 #if ENABLE(PDFKIT_PLUGIN)
     auto* pluginView = mainFramePlugIn();
@@ -286,13 +287,22 @@ void FindController::findString(const String& string, OptionSet<FindOptions> opt
                 m_foundStringMatchIndex++;
         }
     }
+#if ENABLE(IMAGE_ANALYSIS)
+    if (canTriggerImageAnalysis == TriggerImageAnalysis::Yes) {
+        m_webPage->corePage()->analyzeImagesForFindInPage([weakPage = WeakPtr { m_webPage }, string, options, maxMatchCount] {
+            if (weakPage)
+                weakPage->findController().findString(string, options, maxMatchCount, TriggerImageAnalysis::No); 
+        });
+    }
+#endif
 
     RefPtr<WebPage> protectedWebPage = m_webPage;
     m_webPage->drawingArea()->dispatchAfterEnsuringUpdatedScrollPosition([protectedWebPage, found, string, options, maxMatchCount, didWrap] () {
         protectedWebPage->findController().updateFindUIAfterPageScroll(found, string, options, maxMatchCount, didWrap, FindUIOriginator::FindString);
     });
 
-    completionHandler(found);
+    if (completionHandler)
+        completionHandler(found);
 }
 
 void FindController::findStringMatches(const String& string, OptionSet<FindOptions> options, unsigned maxMatchCount)
@@ -400,6 +410,11 @@ void FindController::hideFindUI()
     
     hideFindIndicator();
     resetMatchIndex();
+
+#if ENABLE(IMAGE_ANALYSIS)
+    if (auto imageAnalysisQueue = m_webPage->corePage()->imageAnalysisQueueIfExists())
+        imageAnalysisQueue->clearDidBecomeEmptyCallback();
+#endif
 }
 
 #if !PLATFORM(IOS_FAMILY)

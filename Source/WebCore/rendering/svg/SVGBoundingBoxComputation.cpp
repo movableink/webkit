@@ -24,6 +24,7 @@
 #include "RenderChildIterator.h"
 #include "RenderSVGContainer.h"
 #include "RenderSVGForeignObject.h"
+#include "RenderSVGHiddenContainer.h"
 #include "RenderSVGImage.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGResourceClipper.h"
@@ -69,9 +70,7 @@ FloatRect SVGBoundingBoxComputation::computeDecoratedBoundingBox(const SVGBoundi
 
     // - "foreignObject"
     // - "image"
-    // FIXME: [LBSE] Upstream new RenderSVGImage implementation
-    // if (is<RenderSVGForeignObject>(m_renderer) || is<RenderSVGImage>(m_renderer))
-    if (is<RenderSVGForeignObject>(m_renderer))
+    if (is<RenderSVGForeignObject>(m_renderer) || is<RenderSVGImage>(m_renderer))
         return handleForeignObjectOrImage(options, boundingBoxValid);
 
     ASSERT_NOT_REACHED();
@@ -165,9 +164,7 @@ FloatRect SVGBoundingBoxComputation::handleRootOrContainer(const SVGBoundingBoxC
     //    - Otherwise, set box to be the union of box and the result of invoking the algorithm to compute a bounding box with child
     //      as the element and the same values for space, fill, stroke, markers and clipped as the corresponding algorithm input values.
     for (auto& child : childrenOfType<RenderLayerModelObject>(m_renderer)) {
-        // FIXME: [LBSE] Upstream new RenderSVGHiddenContainer implementation
-        // if (is<RenderSVGHiddenContainer>(child) || (is<RenderSVGShape>(child) && downcast<RenderSVGShape>(child).isRenderingDisabled()))
-        if (is<RenderSVGShape>(child) && downcast<RenderSVGShape>(child).isRenderingDisabled())
+        if (is<RenderSVGHiddenContainer>(child) || (is<RenderSVGShape>(child) && downcast<RenderSVGShape>(child).isRenderingDisabled()))
             continue;
 
         SVGBoundingBoxComputation childBoundingBoxComputation(child);
@@ -198,15 +195,15 @@ FloatRect SVGBoundingBoxComputation::handleRootOrContainer(const SVGBoundingBoxC
     if (options.contains(DecorationOption::IncludeClippers) && m_renderer.hasNonVisibleOverflow()) {
         ASSERT(m_renderer.hasLayer());
 
-        // FIXME: [LBSE] Upstream new RenderSVGViewportContainer / RenderSVGResourceMarker implementation
+        // FIXME: [LBSE] Upstream new RenderSVGResourceMarker implementation
         // ASSERT(is<RenderSVGViewportContainer>(m_renderer) || is<RenderSVGResourceMarker>(m_renderer) || is<RenderSVGRoot>(m_renderer));
-        ASSERT(is<RenderSVGRoot>(m_renderer));
+        ASSERT(is<RenderSVGViewportContainer>(m_renderer) || is<RenderSVGRoot>(m_renderer));
 
         LayoutRect overflowClipRect;
-        if (is<RenderSVGModelObject>(m_renderer))
-            overflowClipRect = downcast<RenderSVGModelObject>(m_renderer).overflowClipRect(LayoutPoint());
-        else if (is<RenderBox>(m_renderer))
-            overflowClipRect = downcast<RenderBox>(m_renderer).overflowClipRect(LayoutPoint());
+        if (auto* svgModelObject = dynamicDowncast<RenderSVGModelObject>(m_renderer))
+            overflowClipRect = svgModelObject->overflowClipRect(svgModelObject->currentSVGLayoutLocation());
+        else if (auto* box = dynamicDowncast<RenderBox>(m_renderer))
+            overflowClipRect = box->overflowClipRect(box->location());
         else {
             ASSERT_NOT_REACHED();
             return FloatRect();

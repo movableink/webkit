@@ -42,7 +42,7 @@ bool shouldDumpIR(Procedure& procedure, B3CompilationMode mode)
         return true;
 
 #if ENABLE(FTL_JIT)
-    return FTL::verboseCompilationEnabled() || FTL::shouldDumpDisassembly() || shouldDumpIRAtEachPhase(mode);
+    return FTL::verboseCompilationEnabled() || shouldDumpIRAtEachPhase(mode);
 #else
     return shouldDumpIRAtEachPhase(mode);
 #endif
@@ -70,12 +70,13 @@ bool shouldSaveIRBeforePhase()
     return Options::verboseValidationFailure();
 }
 
-std::optional<GPRReg> pinnedExtendedOffsetAddrRegister()
+GPRReg extendedOffsetAddrRegister()
 {
+    RELEASE_ASSERT(isARM64() || isRISCV64());
 #if CPU(ARM64) || CPU(RISCV64)
-    return MacroAssembler::dataTempRegister;
+    return MacroAssembler::linkRegister;
 #elif CPU(X86_64)
-    return std::nullopt;
+    return GPRReg::InvalidGPRReg;
 #else
 #error Unhandled architecture.
 #endif

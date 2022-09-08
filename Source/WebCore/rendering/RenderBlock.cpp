@@ -41,7 +41,6 @@
 #include "HitTestResult.h"
 #include "ImageBuffer.h"
 #include "InlineIteratorInlineBox.h"
-#include "InlineWalker.h"
 #include "LayoutRepainter.h"
 #include "LegacyInlineElementBox.h"
 #include "LegacyInlineTextBox.h"
@@ -58,6 +57,7 @@
 #include "RenderDeprecatedFlexibleBox.h"
 #include "RenderFlexibleBox.h"
 #include "RenderFragmentedFlow.h"
+#include "RenderGrid.h"
 #include "RenderInline.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
@@ -312,7 +312,7 @@ public:
             return;
 
         Ref<OverflowEvent> overflowEvent = OverflowEvent::create(horizontalLayoutOverflowChanged, hasHorizontalLayoutOverflow, verticalLayoutOverflowChanged, hasVerticalLayoutOverflow);
-        overflowEvent->setTarget(m_block->element());
+        overflowEvent->setTarget(RefPtr { m_block->element() });
         m_block->document().enqueueOverflowEvent(WTFMove(overflowEvent));
     }
 
@@ -431,8 +431,11 @@ void RenderBlock::styleWillChange(StyleDifference diff, const RenderStyle& newSt
     const RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
     // FIXME: Should change the expression below to newStyle.display() == DisplayType::InlineBlock.
     setReplacedOrInlineBlock(newStyle.isDisplayInlineType());
-    if (oldStyle)
+    if (oldStyle) {
         removePositionedObjectsIfNeeded(*oldStyle, newStyle);
+        if (isLegend() && !oldStyle->isFloating() && newStyle.isFloating())
+            setIsExcludedFromNormalLayout(false);
+    }
     RenderBox::styleWillChange(diff, newStyle);
 }
 
@@ -908,31 +911,11 @@ void RenderBlock::dirtyForLayoutFromPercentageHeightDescendants()
 
 void RenderBlock::simplifiedNormalFlowLayout()
 {
-    if (childrenInline()) {
-        ListHashSet<LegacyRootInlineBox*> lineBoxes;
-        for (InlineWalker walker(downcast<RenderBlockFlow>(*this)); !walker.atEnd(); walker.advance()) {
-            RenderObject& renderer = *walker.current();
-            if (!renderer.isOutOfFlowPositioned() && (renderer.isReplacedOrInlineBlock() || renderer.isFloating())) {
-                RenderBox& box = downcast<RenderBox>(renderer);
-                box.layoutIfNeeded();
-                if (box.inlineBoxWrapper())
-                    lineBoxes.add(&box.inlineBoxWrapper()->root());
-            } else if (is<RenderText>(renderer) || is<RenderInline>(renderer))
-                renderer.clearNeedsLayout();
-        }
+    ASSERT(!childrenInline());
 
-        // FIXME: Glyph overflow will get lost in this case, but not really a big deal.
-        // FIXME: Find a way to invalidate the knownToHaveNoOverflow flag on the InlineBoxes.
-        GlyphOverflowAndFallbackFontsMap textBoxDataMap;                  
-        for (auto it = lineBoxes.begin(), end = lineBoxes.end(); it != end; ++it) {
-            LegacyRootInlineBox* box = *it;
-            box->computeOverflow(box->lineTop(), box->lineBottom(), textBoxDataMap);
-        }
-    } else {
-        for (auto* box = firstChildBox(); box; box = box->nextSiblingBox()) {
-            if (!box->isOutOfFlowPositioned())
-                box->layoutIfNeeded();
-        }
+    for (auto* box = firstChildBox(); box; box = box->nextSiblingBox()) {
+        if (!box->isOutOfFlowPositioned())
+            box->layoutIfNeeded();
     }
 }
 
@@ -1137,19 +1120,25 @@ void RenderBlock::markForPaginationRelayoutIfNeeded()
 
 void RenderBlock::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    LayoutPoint adjustedPaintOffset = paintOffset + location();
+    auto adjustedPaintOffset = paintOffset + location();
     PaintPhase phase = paintInfo.phase;
 
-    // Check if we need to do anything at all.
-    // FIXME: Could eliminate the isDocumentElementRenderer() check if we fix background painting so that the RenderView
-    // paints the root's background.
-    if (!isDocumentElementRenderer() && !paintInfo.paintBehavior.contains(PaintBehavior::CompositedOverflowScrollContent)) {
-        LayoutRect overflowBox = visualOverflowRect();
+    // FIXME: Could eliminate the isDocumentElementRenderer() check if we fix background painting so that the RenderView paints the root's background.
+    auto visualContentIsClippedOut = [&](LayoutRect paintingRect) {
+        if (isDocumentElementRenderer())
+            return false;
+
+        if (paintInfo.paintBehavior.contains(PaintBehavior::CompositedOverflowScrollContent) && hasLayer() && layer()->usesCompositedScrolling())
+            return false;
+
+        auto overflowBox = visualOverflowRect();
         flipForWritingMode(overflowBox);
         overflowBox.moveBy(adjustedPaintOffset);
-        if (!overflowBox.intersects(paintInfo.rect))
-            return;
-    }
+        return !overflowBox.intersects(paintingRect);
+    };
+
+    if (visualContentIsClippedOut(paintInfo.rect))
+        return;
 
     bool pushedClip = pushContentsClip(paintInfo, adjustedPaintOffset);
     paintObject(paintInfo, adjustedPaintOffset);
@@ -2275,7 +2264,7 @@ void RenderBlock::offsetForContents(LayoutPoint& offset) const
 void RenderBlock::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
     ASSERT(!childrenInline());
-    auto shouldIgnoreDescendantContentForLogicalWidth = shouldApplySizeOrStyleContainment({ Containment::Size, Containment::InlineSize });
+    auto shouldIgnoreDescendantContentForLogicalWidth = shouldApplySizeOrInlineSizeContainment();
     if (!shouldIgnoreDescendantContentForLogicalWidth)
         computeBlockPreferredLogicalWidths(minLogicalWidth, maxLogicalWidth);
 
@@ -2298,9 +2287,11 @@ void RenderBlock::computePreferredLogicalWidths()
     if (!isTableCell() && lengthToUse.isFixed() && lengthToUse.value() >= 0
         && !(isDeprecatedFlexItem() && !lengthToUse.intValue()))
         m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(lengthToUse);
-    else if (shouldComputeLogicalWidthFromAspectRatio())
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = computeLogicalWidthFromAspectRatio();
-    else
+    else if (shouldComputeLogicalWidthFromAspectRatio()) {
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = (computeLogicalWidthFromAspectRatio() - borderAndPaddingLogicalWidth());
+        m_minPreferredLogicalWidth = std::max(0_lu, m_minPreferredLogicalWidth);
+        m_maxPreferredLogicalWidth = std::max(0_lu, m_maxPreferredLogicalWidth);
+    } else 
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
     RenderBox::computePreferredLogicalWidths(styleToUse.logicalMinWidth(), styleToUse.logicalMaxWidth(), borderAndPaddingLogicalWidth());

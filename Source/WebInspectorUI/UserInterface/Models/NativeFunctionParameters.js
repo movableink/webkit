@@ -252,8 +252,8 @@ WI.NativePrototypeFunctionParameters = {
         findLast: "callback, [thisArg]",
         findLastIndex: "callback, [thisArg]",
         forEach: "callback, [thisArg]",
-        groupBy: "callback, [thisArg]",
-        groupByToMap: "callback, [thisArg]",
+        group: "callback, [thisArg]",
+        groupToMap: "callback, [thisArg]",
         includes: "searchValue, [startIndex=0]",
         indexOf: "searchValue, [startIndex=0]",
         join: "[separator=\",\"]",
@@ -1693,11 +1693,6 @@ WI.NativePrototypeFunctionParameters = {
 
     StringCallback: {
         handleEvent: "data",
-        __proto__: null,
-    },
-
-    StyleMedia: {
-        matchMedium: "[mediaquery]",
         __proto__: null,
     },
 

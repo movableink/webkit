@@ -105,7 +105,7 @@ const char *CompileStatusToString(gl::CompileStatus status)
 
 #undef ENUM_TO_STRING
 
-class ANGLE_NO_DISCARD GroupScope
+class [[nodiscard]] GroupScope
 {
   public:
     GroupScope(JsonSerializer *json, const std::string &name) : mJson(json)
@@ -348,7 +348,7 @@ Result SerializeFramebufferState(const gl::Context *context,
 
     {
         GroupScope attachmentsGroup(json, "Attachments");
-        const std::vector<gl::FramebufferAttachment> &colorAttachments =
+        const gl::DrawBuffersVector<gl::FramebufferAttachment> &colorAttachments =
             framebufferState.getColorAttachments();
         for (size_t attachmentIndex = 0; attachmentIndex < colorAttachments.size();
              ++attachmentIndex)
@@ -947,10 +947,13 @@ void SerializeShaderState(JsonSerializer *json, const gl::ShaderState &shaderSta
     json->addCString("CompileStatus", CompileStatusToString(shaderState.getCompileStatus()));
 }
 
-void SerializeShader(JsonSerializer *json, GLuint id, gl::Shader *shader)
+void SerializeShader(const gl::Context *context,
+                     JsonSerializer *json,
+                     GLuint id,
+                     gl::Shader *shader)
 {
     // Ensure deterministic compilation.
-    shader->resolveCompile();
+    shader->resolveCompile(context);
 
     GroupScope group(json, "Shader", id);
     SerializeShaderState(json, shader->getState());
@@ -1207,6 +1210,11 @@ Result SerializeTextureData(JsonSerializer *json,
     {
         gl::ImageIndex index = imageIter.next();
 
+        // Skip serializing level data if the level index is out of range
+        GLuint levelIndex = index.getLevelIndex();
+        if (levelIndex > texture->getMipmapMaxLevel() || levelIndex < texture->getBaseLevel())
+            continue;
+
         const gl::ImageDesc &desc = texture->getTextureState().getImageDesc(index);
 
         if (desc.size.empty())
@@ -1220,7 +1228,8 @@ Result SerializeTextureData(JsonSerializer *json,
                index.getType() == gl::TextureType::CubeMap ||
                index.getType() == gl::TextureType::CubeMapArray ||
                index.getType() == gl::TextureType::_2DMultisampleArray ||
-               index.getType() == gl::TextureType::_2DMultisample);
+               index.getType() == gl::TextureType::_2DMultisample ||
+               index.getType() == gl::TextureType::External);
 
         GLenum glFormat = format.format;
         GLenum glType   = format.type;
@@ -1408,7 +1417,7 @@ Result SerializeContextToString(const gl::Context *context, std::string *stringO
         {
             GLuint id             = shader.first;
             gl::Shader *shaderPtr = shader.second;
-            SerializeShader(&json, id, shaderPtr);
+            SerializeShader(context, &json, id, shaderPtr);
         }
     }
     {

@@ -66,6 +66,7 @@
 #import <WebCore/ColorCocoa.h>
 #import <WebCore/ColorSerialization.h>
 #import <WebCore/Cursor.h>
+#import <WebCore/DeprecatedGlobalSettings.h>
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/DocumentLoader.h>
 #import <WebCore/EventNames.h>
@@ -92,7 +93,6 @@
 #import <WebCore/PluginData.h>
 #import <WebCore/PluginDocument.h>
 #import <WebCore/RenderBoxModelObject.h>
-#import <WebCore/RuntimeEnabledFeatures.h>
 #import <WebCore/ScrollAnimator.h>
 #import <WebCore/ScrollbarTheme.h>
 #import <WebCore/Settings.h>
@@ -162,12 +162,12 @@ static const uint32_t nonLinearizedPDFSentinel = std::numeric_limits<uint32_t>::
     PDFLayerController *_pdfLayerController;
     WeakObjCPtr<NSObject> _parent;
     WebKit::PDFPlugin* _pdfPlugin;
-    WeakPtr<WebCore::HTMLPlugInElement> _pluginElement;
+    WeakPtr<WebCore::HTMLPlugInElement, WebCore::WeakPtrImplWithEventTargetData> _pluginElement;
 }
 
 @property (assign) PDFLayerController *pdfLayerController;
 @property (assign) WebKit::PDFPlugin* pdfPlugin;
-@property (assign) WeakPtr<WebCore::HTMLPlugInElement> pluginElement;
+@property (assign) WeakPtr<WebCore::HTMLPlugInElement, WebCore::WeakPtrImplWithEventTargetData> pluginElement;
 
 - (id)initWithPDFPlugin:(WebKit::PDFPlugin *)plugin andElement:(WebCore::HTMLPlugInElement *)element;
 
@@ -239,13 +239,18 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
         return [[self parent] accessibilityAttributeValue:NSAccessibilityTopLevelUIElementAttribute];
     if ([attribute isEqualToString:NSAccessibilityWindowAttribute])
         return [[self parent] accessibilityAttributeValue:NSAccessibilityWindowAttribute];
-    if ([attribute isEqualToString:NSAccessibilitySizeAttribute])
-        return [NSValue valueWithSize:_pdfPlugin->boundsOnScreen().size()];
+    if ([attribute isEqualToString:NSAccessibilitySizeAttribute]) {
+        return [NSValue valueWithSize:WebCore::Accessibility::retrieveValueFromMainThread<WebCore::IntSize>([protectedSelf = retainPtr(self)] {
+            return protectedSelf.get().pdfPlugin->boundsOnScreen().size();
+        })];
+    }
     if ([attribute isEqualToString:NSAccessibilityEnabledAttribute])
         return [[self parent] accessibilityAttributeValue:NSAccessibilityEnabledAttribute];
-    if ([attribute isEqualToString:NSAccessibilityPositionAttribute])
-        return [NSValue valueWithPoint:_pdfPlugin->boundsOnScreen().location()];
-
+    if ([attribute isEqualToString:NSAccessibilityPositionAttribute]) {
+        return [NSValue valueWithPoint:WebCore::Accessibility::retrieveValueFromMainThread<WebCore::IntPoint>([protectedSelf = retainPtr(self)] {
+            return protectedSelf.get().pdfPlugin->boundsOnScreen().location();
+        })];
+    }
     if ([attribute isEqualToString:NSAccessibilityChildrenAttribute])
         return @[ _pdfLayerController ];
     if ([attribute isEqualToString:NSAccessibilityRoleAttribute])
@@ -264,7 +269,9 @@ ALLOW_DEPRECATED_IMPLEMENTATIONS_END
 {
     if ([attribute isEqualToString:NSAccessibilityBoundsForRangeParameterizedAttribute]) {
         NSRect boundsInPDFViewCoordinates = [[_pdfLayerController accessibilityBoundsForRangeAttributeForParameter:parameter] rectValue];
-        NSRect boundsInScreenCoordinates = _pdfPlugin->convertFromPDFViewToScreen(boundsInPDFViewCoordinates);
+        NSRect boundsInScreenCoordinates = WebCore::Accessibility::retrieveValueFromMainThread<NSRect>([protectedSelf = retainPtr(self), boundsInPDFViewCoordinates] {
+            return protectedSelf.get().pdfPlugin->convertFromPDFViewToScreen(boundsInPDFViewCoordinates);
+        });
         return [NSValue valueWithRect:boundsInScreenCoordinates];
     }
 
@@ -639,7 +646,7 @@ PDFPlugin::PDFPlugin(HTMLPlugInElement& element)
     , m_pdfLayerControllerDelegate(adoptNS([[WKPDFLayerControllerDelegate alloc] initWithPDFPlugin:this]))
 #if HAVE(INCREMENTAL_PDF_APIS)
     , m_streamLoaderClient(adoptRef(*new PDFPluginStreamLoaderClient(*this)))
-    , m_incrementalPDFLoadingEnabled(WebCore::RuntimeEnabledFeatures::sharedFeatures().incrementalPDFLoadingEnabled())
+    , m_incrementalPDFLoadingEnabled(WebCore::DeprecatedGlobalSettings::incrementalPDFLoadingEnabled())
 #endif
     , m_identifier(PDFPluginIdentifier::generate())
 {
@@ -1766,8 +1773,9 @@ void PDFPlugin::createPasswordEntryForm()
     if (!supportsForms())
         return;
 
-    m_passwordField = PDFPluginPasswordField::create(m_pdfLayerController.get(), this);
-    m_passwordField->attach(m_annotationContainer.get());
+    auto passwordField = PDFPluginPasswordField::create(m_pdfLayerController.get(), this);
+    m_passwordField = passwordField.ptr();
+    passwordField->attach(m_annotationContainer.get());
 }
 
 void PDFPlugin::attemptToUnlockPDF(const String& password)
@@ -2432,8 +2440,9 @@ void PDFPlugin::setActiveAnnotation(PDFAnnotation *annotation)
         }
         ALLOW_DEPRECATED_DECLARATIONS_END
 
-        m_activeAnnotation = PDFPluginAnnotation::create(annotation, m_pdfLayerController.get(), this);
-        m_activeAnnotation->attach(m_annotationContainer.get());
+        auto activeAnnotation = PDFPluginAnnotation::create(annotation, m_pdfLayerController.get(), this);
+        m_activeAnnotation = activeAnnotation.get();
+        activeAnnotation->attach(m_annotationContainer.get());
     } else
         m_activeAnnotation = nullptr;
 }

@@ -1168,6 +1168,14 @@ fine
 // none
 hover
 
+// (scan:) media feature.
+progressive
+interlace
+
+// (forced-colors:) media feature.
+// none
+active
+
 // blend modes
 // normal
 multiply
@@ -1506,6 +1514,7 @@ dark
 
 #if defined(ENABLE_DARK_MODE_CSS) && ENABLE_DARK_MODE_CSS
 // color-scheme
+// normal
 only
 // light
 // dark
@@ -1583,7 +1592,7 @@ paint
 #endif
 
 // container-type
-// none
+// normal
 // size
 inline-size
 
@@ -1601,3 +1610,7 @@ sides
 and
 or
 not
+
+// overflow-anchor
+// none
+// auto

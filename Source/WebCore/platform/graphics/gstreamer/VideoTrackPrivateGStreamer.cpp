@@ -29,6 +29,7 @@
 
 #include "VideoTrackPrivateGStreamer.h"
 
+#include "GStreamerCommon.h"
 #include "MediaPlayerPrivateGStreamer.h"
 #include <gst/pbutils/pbutils.h>
 
@@ -58,9 +59,12 @@ VideoTrackPrivateGStreamer::VideoTrackPrivateGStreamer(WeakPtr<MediaPlayerPrivat
         });
     }), this);
     g_signal_connect_swapped(m_stream, "notify::tags", G_CALLBACK(+[](VideoTrackPrivateGStreamer* track) {
-        track->m_taskQueue.enqueueTask([track]() {
+        if (isMainThread())
             track->updateConfigurationFromTags();
-        });
+        else
+            track->m_taskQueue.enqueueTask([track]() {
+                track->updateConfigurationFromTags();
+            });
     }), this);
 
     updateConfigurationFromCaps();
@@ -85,6 +89,12 @@ void VideoTrackPrivateGStreamer::updateConfigurationFromCaps()
     ASSERT(isMainThread());
     auto caps = adoptGRef(gst_stream_get_caps(m_stream));
     if (!caps || !gst_caps_is_fixed(caps.get()))
+        return;
+
+    // We might be notified of RTP caps here, when an incoming video track is re-enabled. Since
+    // those caps most likely do not contain the information we need (width, height, colorimetry,
+    // ...), keep previous configuration and return early.
+    if (!doCapsHaveType(caps.get(), GST_VIDEO_CAPS_TYPE_PREFIX))
         return;
 
     auto configuration = this->configuration();

@@ -115,6 +115,10 @@
     readonly attribute DOMString classList;
     readonly attribute DOMString embeddedImageDescription;
     readonly attribute object imageOverlayElements;
+    readonly attribute boolean isInsertion;
+    readonly attribute boolean isDeletion;
+    readonly attribute boolean isFirstItemInSuggestion;
+    readonly attribute boolean isLastItemInSuggestion;
 
     readonly attribute long x;
     readonly attribute long y;
@@ -175,6 +179,7 @@
     long columnCount();
     object columnHeaders();
     object rowHeaders();
+    readonly attribute DOMString customContent;
 
     object detailsElements();
     object errorMessageElements();
@@ -289,6 +294,7 @@
     undefined assistiveTechnologySimulatedFocus();
     readonly attribute boolean isSearchField;
     readonly attribute boolean isTextArea;
+    readonly attribute boolean isMarkAnnotation;
 
     readonly attribute boolean hasDocumentRoleAncestor;
     readonly attribute boolean hasWebApplicationAncestor;

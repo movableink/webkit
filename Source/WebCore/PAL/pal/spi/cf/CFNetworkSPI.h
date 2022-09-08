@@ -183,6 +183,9 @@ typedef enum {
 - (void)setBoundInterfaceIdentifier:(NSString *)identifier;
 - (void)_setPreventHSTSStorage:(BOOL)preventHSTSStorage;
 - (void)_setIgnoreHSTS:(BOOL)ignoreHSTS;
+#if HAVE(PROHIBIT_PRIVACY_PROXY)
+@property (setter=_setProhibitPrivacyProxy:) BOOL _prohibitPrivacyProxy;
+#endif
 @end
 
 @interface NSURLProtocol ()
@@ -299,6 +302,9 @@ typedef NS_ENUM(NSInteger, NSURLSessionCompanionProxyPreference) {
 #endif
 #if ENABLE(SERVER_PRECONNECT)
 @property (nonatomic, assign) BOOL _preconnect;
+#endif
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+@property (readwrite, assign) int64_t _bytesPerSecondLimit;
 #endif
 @end
 

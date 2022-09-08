@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,14 +27,6 @@
 
 #if ENABLE(JIT)
 
-// We've run into some problems where changing the size of the class JIT leads to
-// performance fluctuations. Try forcing alignment in an attempt to stabilize this.
-#if COMPILER(GCC_COMPATIBLE)
-#define JIT_CLASS_ALIGNMENT alignas(32)
-#else
-#define JIT_CLASS_ALIGNMENT
-#endif
-
 #define ASSERT_JIT_OFFSET(actual, expected) ASSERT_WITH_MESSAGE(actual == expected, "JIT Offset \"%s\" should be %d, not %d.\n", #expected, static_cast<int>(expected), static_cast<int>(actual));
 
 #include "BaselineJITCode.h"
@@ -59,7 +51,6 @@ namespace JSC {
     class FunctionExecutable;
     class JIT;
     class Identifier;
-    class Interpreter;
     class BlockDirectory;
     class Register;
     class StructureChain;
@@ -81,13 +72,13 @@ namespace JSC {
     template<PtrTag tag>
     struct CallRecord {
         MacroAssembler::Call from;
-        FunctionPtr<tag> callee;
+        CodePtr<tag> callee;
 
         CallRecord()
         {
         }
 
-        CallRecord(MacroAssembler::Call from, FunctionPtr<tag> callee)
+        CallRecord(MacroAssembler::Call from, CodePtr<tag> callee)
             : from(from)
             , callee(callee)
         {
@@ -157,9 +148,9 @@ namespace JSC {
         UnlinkedCallLinkInfo* unlinkedCallLinkInfo;
     };
 
-    void ctiPatchCallByReturnAddress(ReturnAddressPtr, FunctionPtr<CFunctionPtrTag> newCalleeFunction);
+    void ctiPatchCallByReturnAddress(ReturnAddressPtr, CodePtr<CFunctionPtrTag> newCalleeFunction);
 
-    class JIT_CLASS_ALIGNMENT JIT : public JSInterfaceJIT {
+    class JIT final : public JSInterfaceJIT {
         friend class JITSlowPathCall;
         friend class JITStubCall;
         friend class JITThunks;
@@ -207,7 +198,7 @@ namespace JSC {
         CompilationResult privateCompile(CodeBlock*, JITCompilationEffort);
 
         // Add a call out from JIT code, without an exception check.
-        Call appendCall(const FunctionPtr<CFunctionPtrTag> function)
+        Call appendCall(const CodePtr<CFunctionPtrTag> function)
         {
             Call functionCall = call(OperationPtrTag);
             m_farCalls.append(FarCallRecord(functionCall, function.retagged<OperationPtrTag>()));
@@ -220,7 +211,7 @@ namespace JSC {
         }
 
 #if OS(WINDOWS) && CPU(X86_64)
-        Call appendCallWithSlowPathReturnType(const FunctionPtr<CFunctionPtrTag> function)
+        Call appendCallWithSlowPathReturnType(const CodePtr<CFunctionPtrTag> function)
         {
             Call functionCall = callWithSlowPathReturnType(OperationPtrTag);
             m_farCalls.append(FarCallRecord(functionCall, function.retagged<OperationPtrTag>()));
@@ -269,11 +260,6 @@ namespace JSC {
         void exceptionCheck()
         {
             m_exceptionChecks.append(emitExceptionCheck(vm()));
-        }
-
-        void exceptionCheckWithCallFrameRollback()
-        {
-            m_exceptionChecksWithCallFrameRollback.append(emitExceptionCheck(vm()));
         }
 
         void advanceToNextCheckpoint();
@@ -375,8 +361,11 @@ namespace JSC {
         void emitJumpSlowCaseIfNotJSCell(JSValueRegs, VirtualRegister);
 
         template<typename Op>
+        void emit_compare(const JSInstruction*, RelationalCondition);
+        template <typename EmitCompareFunctor>
+        void emit_compareImpl(VirtualRegister op1, VirtualRegister op2, RelationalCondition, const EmitCompareFunctor&);
+        template<typename Op>
         void emit_compareAndJump(const JSInstruction*, RelationalCondition);
-        void emit_compareAndJumpImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, RelationalCondition);
         template<typename Op>
         void emit_compareUnsigned(const JSInstruction*, RelationalCondition);
         void emit_compareUnsignedImpl(VirtualRegister dst, VirtualRegister op1, VirtualRegister op2, RelationalCondition);
@@ -384,9 +373,11 @@ namespace JSC {
         void emit_compareUnsignedAndJump(const JSInstruction*, RelationalCondition);
         void emit_compareUnsignedAndJumpImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, RelationalCondition);
         template<typename Op, typename SlowOperation>
+        void emit_compareSlow(const JSInstruction*, DoubleCondition, SlowOperation, Vector<SlowCaseEntry>::iterator&);
+        template<typename SlowOperation, typename HanldeReturnValueGPRFunctor, typename EmitDoubleCompareFunctor>
+        void emit_compareSlowImpl(VirtualRegister op1, VirtualRegister op2, size_t instructionSize, SlowOperation, Vector<SlowCaseEntry>::iterator&, const HanldeReturnValueGPRFunctor&, const EmitDoubleCompareFunctor&);
+        template<typename Op, typename SlowOperation>
         void emit_compareAndJumpSlow(const JSInstruction*, DoubleCondition, SlowOperation, bool invert, Vector<SlowCaseEntry>::iterator&);
-        template<typename SlowOperation>
-        void emit_compareAndJumpSlowImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, size_t instructionSize, DoubleCondition, SlowOperation, bool invert, Vector<SlowCaseEntry>::iterator&);
 
         void emit_op_add(const JSInstruction*);
         void emit_op_bitand(const JSInstruction*);
@@ -427,6 +418,7 @@ namespace JSC {
         void emit_op_get_by_id_with_this(const JSInstruction*);
         void emit_op_get_by_id_direct(const JSInstruction*);
         void emit_op_get_by_val(const JSInstruction*);
+        void emit_op_get_by_val_with_this(const JSInstruction*);
         void emit_op_get_private_name(const JSInstruction*);
         void emit_op_set_private_brand(const JSInstruction*);
         void emit_op_check_private_brand(const JSInstruction*);
@@ -459,6 +451,10 @@ namespace JSC {
         void emit_op_jnundefined_or_null(const JSInstruction*);
         void emit_op_jeq_ptr(const JSInstruction*);
         void emit_op_jneq_ptr(const JSInstruction*);
+        void emit_op_less(const JSInstruction*);
+        void emit_op_lesseq(const JSInstruction*);
+        void emit_op_greater(const JSInstruction*);
+        void emit_op_greatereq(const JSInstruction*);
         void emit_op_jless(const JSInstruction*);
         void emit_op_jlesseq(const JSInstruction*);
         void emit_op_jgreater(const JSInstruction*);
@@ -569,6 +565,7 @@ namespace JSC {
         void emitSlow_op_get_by_id_with_this(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_by_id_direct(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_by_val(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_get_by_val_with_this(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_private_name(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_set_private_brand(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_check_private_brand(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
@@ -578,6 +575,10 @@ namespace JSC {
         void emitSlow_op_has_private_name(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_has_private_brand(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_instanceof(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_less(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_lesseq(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_greater(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_greatereq(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_jless(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_jlesseq(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_jgreater(const JSInstruction*, Vector<SlowCaseEntry>::iterator&);
@@ -667,6 +668,7 @@ namespace JSC {
         static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_get_by_id_callSlowOperationThenCheckExceptionGenerator(VM&);
         static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_put_by_id_callSlowOperationThenCheckExceptionGenerator(VM&);
         static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_get_by_val_callSlowOperationThenCheckExceptionGenerator(VM&);
+        static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_get_by_val_with_this_callSlowOperationThenCheckExceptionGenerator(VM&);
         static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_get_private_name_callSlowOperationThenCheckExceptionGenerator(VM&);
         static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_get_from_scopeGenerator(VM&);
         static MacroAssemblerCodeRef<JITThunkPtrTag> slow_op_resolve_scopeGenerator(VM&);
@@ -702,13 +704,12 @@ namespace JSC {
             return hasAnySlowCases(m_slowCases, iter, m_bytecodeIndex);
         }
 
-        MacroAssembler::Call appendCallWithExceptionCheck(const FunctionPtr<CFunctionPtrTag>);
+        MacroAssembler::Call appendCallWithExceptionCheck(const CodePtr<CFunctionPtrTag>);
         void appendCallWithExceptionCheck(Address);
-        MacroAssembler::Call appendCallWithCallFrameRollbackOnException(const FunctionPtr<CFunctionPtrTag>);
-        MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResult(const FunctionPtr<CFunctionPtrTag>, VirtualRegister result);
+        MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResult(const CodePtr<CFunctionPtrTag>, VirtualRegister result);
         void appendCallWithExceptionCheckSetJSValueResult(Address, VirtualRegister result);
         template<typename Bytecode>
-        MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResultWithProfile(const Bytecode&, const FunctionPtr<CFunctionPtrTag>, VirtualRegister result);
+        MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResultWithProfile(const Bytecode&, const CodePtr<CFunctionPtrTag>, VirtualRegister result);
         template<typename Bytecode>
         void appendCallWithExceptionCheckSetJSValueResultWithProfile(const Bytecode&, Address, VirtualRegister result);
         
@@ -818,10 +819,13 @@ namespace JSC {
 #endif // OS(WINDOWS) && CPU(X86_64)
 
         template<typename OperationType, typename... Args>
-        MacroAssembler::Call callOperationWithCallFrameRollbackOnException(OperationType operation, Args... args)
+        MacroAssembler::Call callThrowOperationWithCallFrameRollback(OperationType operation, Args... args)
         {
             setupArguments<OperationType>(args...);
-            return appendCallWithCallFrameRollbackOnException(operation);
+            updateTopCallFrame(); // The callee is responsible for setting topCallFrame to their caller
+            MacroAssembler::Call call = appendCall(operation);
+            m_exceptionChecksWithCallFrameRollback.append(jump());
+            return call;
         }
 
         enum class ProfilingPolicy {
@@ -896,8 +900,6 @@ namespace JSC {
         std::tuple<BaselineUnlinkedStructureStubInfo*, JITConstantPool::Constant> addUnlinkedStructureStubInfo();
         UnlinkedCallLinkInfo* addUnlinkedCallLinkInfo();
 
-        Interpreter* m_interpreter;
-
         Vector<FarCallRecord> m_farCalls;
         Vector<NearCallRecord> m_nearCalls;
         Vector<NearJumpRecord> m_nearJumps;
@@ -907,6 +909,7 @@ namespace JSC {
         Vector<JITGetByIdGenerator> m_getByIds;
         Vector<JITGetByValGenerator> m_getByVals;
         Vector<JITGetByIdWithThisGenerator> m_getByIdsWithThis;
+        Vector<JITGetByValWithThisGenerator> m_getByValsWithThis;
         Vector<JITPutByIdGenerator> m_putByIds;
         Vector<JITPutByValGenerator> m_putByVals;
         Vector<JITInByIdGenerator> m_inByIds;
@@ -932,6 +935,7 @@ namespace JSC {
         unsigned m_getByIdIndex { UINT_MAX };
         unsigned m_getByValIndex { UINT_MAX };
         unsigned m_getByIdWithThisIndex { UINT_MAX };
+        unsigned m_getByValWithThisIndex { UINT_MAX };
         unsigned m_putByIdIndex { UINT_MAX };
         unsigned m_putByValIndex { UINT_MAX };
         unsigned m_inByIdIndex { UINT_MAX };
@@ -959,8 +963,8 @@ namespace JSC {
         bool m_shouldEmitProfiling;
         BytecodeIndex m_loopOSREntryBytecodeIndex;
 
-        CodeBlock* m_profiledCodeBlock { nullptr };
-        UnlinkedCodeBlock* m_unlinkedCodeBlock { nullptr };
+        CodeBlock* const m_profiledCodeBlock { nullptr };
+        UnlinkedCodeBlock* const m_unlinkedCodeBlock { nullptr };
 
         MathICHolder m_mathICs;
         RefPtr<BaselineJITCode> m_jitCode;

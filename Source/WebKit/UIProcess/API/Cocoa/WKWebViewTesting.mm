@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -481,7 +481,8 @@
         }
 
         using WebCore::MediaSessionCoordinatorClient::weakPtrFactory;
-        using WeakValueType = WebCore::MediaSessionCoordinatorClient::WeakValueType;
+        using WebCore::MediaSessionCoordinatorClient::WeakValueType;
+        using WebCore::MediaSessionCoordinatorClient::WeakPtrImplType;
 
     private:
         explicit WKMediaSessionCoordinatorForTesting(id <_WKMediaSessionCoordinator> clientCoordinator)

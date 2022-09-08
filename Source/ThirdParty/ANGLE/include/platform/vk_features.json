@@ -8,14 +8,6 @@
     ],
     "features": [
         {
-            "name": "basic_GL_line_rasterization",
-            "category": "Features",
-            "description": [
-                "Enable the use of pixel shader patching to implement OpenGL basic line ",
-                "rasterization rules"
-            ]
-        },
-        {
             "name": "bresenham_line_rasterization",
             "category": "Features",
             "description": [
@@ -51,6 +43,14 @@
                 "The depth value is not clamped to [0,1] for floating point depth buffers."
             ],
             "issue": "http://anglebug.com/3970"
+        },
+        {
+            "name": "mutable_mipmap_texture_upload",
+            "category": "Features",
+            "description": [
+                "Enable uploading the previously defined mutable mipmap texture."
+            ],
+            "issue": "https://anglebug.com/7308"
         },
         {
             "name": "supports_renderpass2",
@@ -257,14 +257,6 @@
             "issue": "http://anglebug.com/3153"
         },
         {
-            "name": "bind_empty_for_unused_descriptor_sets",
-            "category": "Workarounds",
-            "description": [
-                "Gaps in bound descriptor set indices causes the post-gap sets to misbehave"
-            ],
-            "issue": "http://anglebug.com/2727"
-        },
-        {
             "name": "force_D16_tex_filter",
             "category": "Workarounds",
             "description": [
@@ -365,6 +357,14 @@
             "issue": "http://anglebug.com/2162"
         },
         {
+            "name": "extra_buffer_logging_and_checking",
+            "category": "Features",
+            "description": [
+                "Enable extra buffer logging and checking to catch rare crashes"
+            ],
+            "issue": "https://issuetracker.google.com/236098131"
+        },
+        {
             "name": "enable_pre_rotate_surfaces",
             "category": "Features",
             "description": [
@@ -441,12 +441,29 @@
             "issue": "http://anglebug.com/5371"
         },
         {
+            "name": "disallow_mixed_depth_stencil_load_op_none_and_load",
+            "category": "Workarounds",
+            "description": [
+                "Disallow use of LOAD_OP_NONE for only one of the depth or stencil aspects of a ",
+                "depth/stencil attachment"
+            ],
+            "issue": "http://anglebug.com/7370"
+        },
+        {
             "name": "supports_depth_clip_control",
             "category": "Features",
             "description": [
                 "VkDevice supports VK_EXT_depth_clip_control extension."
             ],
             "issue": "http://anglebug.com/5421"
+        },
+        {
+            "name": "supports_primitive_topology_list_restart",
+            "category": "Features",
+            "description": [
+                "VkDevice supports VK_EXT_primitive_topology_list_restart extension."
+            ],
+            "issue": "http://anglebug.com/3832"
         },
         {
             "name": "supports_blend_operation_advanced",
@@ -590,12 +607,12 @@
             "issue": "http://anglebug.com/4889"
         },
         {
-            "name": "force_driver_uniform_over_spec_const",
-            "category": "Workarounds",
+            "name": "prefer_driver_uniform_over_spec_const",
+            "category": "Features",
             "description": [
-                "Forces using driver uniforms instead of specialization constants."
+                "Prefer using driver uniforms instead of specialization constants."
             ],
-            "issue": "http://issuetracker.google.com/173636783"
+            "issue": "http://anglebug.com/7406"
         },
         {
             "name": "expose_non_conformant_extensions_and_versions",
@@ -661,6 +678,30 @@
             "issue": "http://anglebug.com/6692"
         },
         {
+            "name": "supports_pipeline_creation_cache_control",
+            "category": "Features",
+            "description": [
+                "VkDevice supports VK_EXT_pipeline_creation_cache_control extension"
+            ],
+            "issue": "http://anglebug.com/5881"
+        },
+        {
+            "name": "supports_pipeline_creation_feedback",
+            "category": "Features",
+            "description": [
+                "VkDevice supports VK_EXT_pipeline_creation_feedback extension"
+            ],
+            "issue": "http://anglebug.com/5881"
+        },
+        {
+            "name": "supports_primitives_generated_query",
+            "category": "Features",
+            "description": [
+                "VkDevice supports VK_EXT_primitives_generated_query extension"
+            ],
+            "issue": "http://anglebug.com/5430"
+        },
+        {
             "name": "supports_surface_capabilities2_extension",
             "category": "Features",
             "description": [
@@ -718,6 +759,14 @@
             ]
         },
         {
+            "name": "permanently_switch_to_framebuffer_fetch_mode",
+            "category": "Features",
+            "description": [
+                "Whether the context should permanently switch to framebuffer fetch mode on first",
+                "encounter"
+            ]
+        },
+        {
             "name": "supports_lock_surface_extension",
             "category": "Features",
             "description": [
@@ -728,8 +777,8 @@
             "name": "swapbuffers_on_flush_or_finish_with_single_buffer",
             "category": "Features",
             "description": [
-                "Bypass deferredFlush with calling swapbuffers on flush or finish when in Shared Present ",
-                "mode"
+                "Bypass deferredFlush with calling swapbuffers on flush or finish when in Shared ",
+                "Present mode"
             ],
             "issue": "http://anglebug.com/6878"
         },
@@ -758,6 +807,14 @@
             "issue": "http://anglebug.com/3586"
         },
         {
+            "name": "precision_safe_division",
+            "category": "Workarounds",
+            "description": [
+                "Special case handling for platforms that do not generate 1.0f even when the dividend and",
+                "divisor have the same value"
+            ]
+        },
+        {
             "name": "bottom_left_origin_present_region_rectangles",
             "category": "Workarounds",
             "description": [
@@ -782,12 +839,12 @@
             "issue": "http://anglebug.com/5901"
         },
         {
-            "name": "create_pipeline_during_link",
+            "name": "warm_up_pipeline_cache_at_link",
             "category": "Features",
             "description": [
-                "Create pipeline with default state during glLinkProgram"
+                "Warm up the Vulkan pipeline cache at link time"
             ],
-            "issue": "http://anglebug.com/7046"
+            "issue": "http://anglebug.com/5881"
         },
         {
             "name": "prefer_device_local_memory_host_visible",
@@ -822,6 +879,14 @@
             "issue": "http://anglebug.com/7172"
         },
         {
+            "name": "supports_fragment_shader_pixel_interlock",
+            "category": "Features",
+            "description": [
+                "VkDevice supports the VK_EXT_fragment_shader_interlock extension ",
+                "and has the fragmentShaderPixelInterlock feature"
+            ]
+        },
+        {
             "name": "explicitly_enable_per_sample_shading",
             "category": "Workarounds",
             "description": [
@@ -845,6 +910,37 @@
                 "VkDevice supports VK_EXT_image_2d_view_of_3d"
             ],
             "issue": "https://anglebug.com/7320"
+        },
+        {
+            "name": "supports_imageless_framebuffer",
+            "category": "Features",
+            "description": [
+                "VkDevice supports VK_KHR_imageless_framebuffer extension"
+            ],
+            "issue": "http://anglebug.com/7553"
+        },
+        {
+            "name": "prefer_linear_filter_for_YUV",
+            "category": "Features",
+            "description": [
+                "Prefer to use VK_FILTER_LINEAR for VkSamplerYcbcrConversion"
+            ]
+        },
+        {
+            "name": "supports_yuv_target",
+            "category": "Features",
+            "description": [
+                "VkDevice supports VK_ANDROID_render_to_external_format and VK_EXT_ycbcr_attachment"
+            ]
+        },
+        {
+            "name": "use_non_zero_stencil_write_mask_static_state",
+            "category": "Workarounds",
+            "description": [
+                "Work around a driver bug where 0 in stencil write mask static state would make the",
+                "corresponding dynamic state malfunction in the presence of discard or alpha to coverage"
+            ],
+            "issue": "http://anglebug.com/7556"
         }
     ]
 }

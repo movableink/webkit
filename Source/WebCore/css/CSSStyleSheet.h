@@ -40,6 +40,7 @@ class CSSStyleSheet;
 class CachedCSSStyleSheet;
 class Document;
 class Element;
+class WeakPtrImplWithEventTargetData;
 class MediaQuerySet;
 class StyleRuleKeyframes;
 class StyleSheetContents;
@@ -57,10 +58,10 @@ public:
     virtual ~CSSStyleSheet();
 
     CSSStyleSheet* parentStyleSheet() const final;
-    Node* ownerNode() const final { return m_ownerNode; }
+    Node* ownerNode() const final;
     MediaList* media() const final;
     String href() const final;
-    String title() const final { return m_title; }
+    String title() const final { return !m_title.isEmpty() ? m_title : String(); }
     bool disabled() const final { return m_isDisabled; }
     void setDisabled(bool) final;
 
@@ -70,20 +71,20 @@ public:
 
     WEBCORE_EXPORT ExceptionOr<unsigned> insertRule(const String& rule, unsigned index);
     WEBCORE_EXPORT ExceptionOr<void> deleteRule(unsigned index);
-    
+
     WEBCORE_EXPORT ExceptionOr<int> addRule(const String& selector, const String& style, std::optional<unsigned> index);
     ExceptionOr<void> removeRule(unsigned index) { return deleteRule(index); }
-    
+
     // For CSSRuleList.
     unsigned length() const;
     CSSRule* item(unsigned index);
 
     void clearOwnerNode() final;
-    CSSImportRule* ownerRule() const final { return m_ownerRule; }
+    WEBCORE_EXPORT CSSImportRule* ownerRule() const final;
     URL baseURL() const final;
     bool isLoading() const final;
-    
-    void clearOwnerRule() { m_ownerRule = 0; }
+
+    void clearOwnerRule() { m_ownerRule = nullptr; }
 
     Document* ownerDocument() const;
     CSSStyleSheet& rootStyleSheet();
@@ -128,7 +129,7 @@ public:
     bool isInline() const { return m_isInlineStylesheet; }
     TextPosition startPosition() const { return m_startPosition; }
 
-    void detachFromDocument() { m_ownerNode = nullptr; }
+    void detachFromDocument() { clearOwnerNode(); }
 
     bool canAccessRules() const;
 
@@ -151,8 +152,8 @@ private:
     RefPtr<MediaQuerySet> m_mediaQueries;
     WeakPtr<Style::Scope> m_styleScope;
 
-    Node* m_ownerNode { nullptr };
-    CSSImportRule* m_ownerRule { nullptr };
+    WeakPtr<Node, WeakPtrImplWithEventTargetData> m_ownerNode;
+    WeakPtr<CSSImportRule> m_ownerRule;
 
     TextPosition m_startPosition;
 

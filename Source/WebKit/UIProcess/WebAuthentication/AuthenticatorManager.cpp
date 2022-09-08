@@ -65,6 +65,8 @@ static AuthenticatorManager::TransportSet collectTransports(const std::optional<
         ASSERT_UNUSED(addResult, addResult.isNewEntry);
         addResult = result.add(AuthenticatorTransport::Ble);
         ASSERT_UNUSED(addResult, addResult.isNewEntry);
+        addResult = result.add(AuthenticatorTransport::SmartCard);
+        ASSERT_UNUSED(addResult, addResult.isNewEntry);
         return result;
     }
 
@@ -79,6 +81,8 @@ static AuthenticatorManager::TransportSet collectTransports(const std::optional<
         addResult = result.add(AuthenticatorTransport::Nfc);
         ASSERT_UNUSED(addResult, addResult.isNewEntry);
         addResult = result.add(AuthenticatorTransport::Ble);
+        ASSERT_UNUSED(addResult, addResult.isNewEntry);
+        addResult = result.add(AuthenticatorTransport::SmartCard);
         ASSERT_UNUSED(addResult, addResult.isNewEntry);
         return result;
     }
@@ -104,6 +108,8 @@ static AuthenticatorManager::TransportSet collectTransports(const Vector<PublicK
         ASSERT_UNUSED(addResult, addResult.isNewEntry);
         addResult = result.add(AuthenticatorTransport::Ble);
         ASSERT_UNUSED(addResult, addResult.isNewEntry);
+        addResult = result.add(AuthenticatorTransport::SmartCard);
+        ASSERT_UNUSED(addResult, addResult.isNewEntry);
     }
 
     for (auto& allowCredential : allowCredentials) {
@@ -112,6 +118,7 @@ static AuthenticatorManager::TransportSet collectTransports(const Vector<PublicK
             result.add(AuthenticatorTransport::Usb);
             result.add(AuthenticatorTransport::Nfc);
             result.add(AuthenticatorTransport::Ble);
+            result.add(AuthenticatorTransport::SmartCard);
 
             break;
         }
@@ -132,6 +139,7 @@ static AuthenticatorManager::TransportSet collectTransports(const Vector<PublicK
             result.remove(AuthenticatorTransport::Usb);
             result.remove(AuthenticatorTransport::Nfc);
             result.remove(AuthenticatorTransport::Ble);
+            result.remove(AuthenticatorTransport::SmartCard);
         }
 
         if (authenticatorAttachment == AuthenticatorAttachment::CrossPlatform)
@@ -157,8 +165,11 @@ static void processGoogleLegacyAppIdSupportExtension(const std::optional<Authent
 
 static String getRpId(const std::variant<PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions>& options)
 {
-    if (std::holds_alternative<PublicKeyCredentialCreationOptions>(options))
-        return std::get<PublicKeyCredentialCreationOptions>(options).rp.id;
+    if (std::holds_alternative<PublicKeyCredentialCreationOptions>(options)) {
+        auto& creationOptions = std::get<PublicKeyCredentialCreationOptions>(options);
+        ASSERT(creationOptions.rp.id);
+        return *creationOptions.rp.id;
+    }
     return std::get<PublicKeyCredentialRequestOptions>(options).rpId;
 }
 
@@ -171,7 +182,7 @@ static String getUserName(const std::variant<PublicKeyCredentialCreationOptions,
 
 } // namespace
 
-const size_t AuthenticatorManager::maxTransportNumber = 4;
+const size_t AuthenticatorManager::maxTransportNumber = 5;
 
 AuthenticatorManager::AuthenticatorManager()
     : m_requestTimeOutTimer(RunLoop::main(), this, &AuthenticatorManager::timeOutTimerFired)
@@ -393,6 +404,7 @@ void AuthenticatorManager::requestLAContextForUserVerification(CompletionHandler
 void AuthenticatorManager::cancelRequest()
 {
     invokePendingCompletionHandler(ExceptionData { NotAllowedError, "This request has been cancelled by the user."_s });
+    RELEASE_LOG_ERROR(WebAuthn, "Request cancelled due to AuthenticatorManager::cancelRequest being called.");
     clearState();
     m_requestTimeOutTimer.stop();
 }

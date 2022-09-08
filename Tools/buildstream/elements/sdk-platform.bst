@@ -8,6 +8,7 @@ depends:
 - filtered-openh264.bst
 
 # replaced (patched) elements:
+- sdk/abseil-cpp.bst
 - sdk/adwaita-icon-theme.bst
 - sdk/apitrace.bst
 - sdk/breakpad.bst
@@ -43,6 +44,7 @@ depends:
 - sdk/libkate.bst
 - sdk/libmanette.bst
 - sdk/libnotify.bst
+- sdk/libsecret.bst
 - sdk/libsoup3.bst
 - sdk/libusrsctp.bst
 - sdk/libwpe.bst
@@ -58,6 +60,8 @@ depends:
 - sdk/ruby-webrick.bst
 - sdk/sccache.bst
 - sdk/sparkle-cdm.bst
+- sdk/unifdef.bst
+- sdk/webrtc-audio-processing-1.bst
 - sdk/woff2.bst
 - sdk/wpebackend-fdo.bst
 - sdk/x264.bst
@@ -214,7 +218,6 @@ depends:
 - freedesktop-sdk.bst:components/v4l-utils.bst
 - freedesktop-sdk.bst:components/vulkan-headers.bst
 - freedesktop-sdk.bst:components/wayland.bst
-- freedesktop-sdk.bst:components/webrtc-audio-processing.bst
 - freedesktop-sdk.bst:components/weston.bst
 - freedesktop-sdk.bst:components/which.bst
 - freedesktop-sdk.bst:components/xcb-util-cursor.bst

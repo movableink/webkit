@@ -26,8 +26,6 @@
 #include "config.h"
 #include "LayoutIntegrationPagination.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FontCascade.h"
 #include "RenderBlockFlow.h"
 #include "RenderTableCell.h"
@@ -143,6 +141,7 @@ static std::unique_ptr<InlineContent> makeAdjustedContent(const InlineContent& i
             line.contentLogicalOffset(),
             line.contentLogicalWidth(),
             line.isHorizontal(),
+            { },
             isFirstAfterPageBreak
         };
     };
@@ -211,4 +210,3 @@ std::unique_ptr<InlineContent> adjustLinePositionsForPagination(const InlineCont
 }
 }
 
-#endif

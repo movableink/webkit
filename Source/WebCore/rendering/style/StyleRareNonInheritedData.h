@@ -39,6 +39,7 @@
 #include "StyleContentAlignmentData.h"
 #include "StyleScrollSnapPoints.h"
 #include "StyleSelfAlignmentData.h"
+#include "TextDecorationThickness.h"
 #include "TouchAction.h"
 #include "TranslateTransformOperation.h"
 #include "WillChangeData.h"
@@ -212,8 +213,10 @@ public:
     unsigned effectiveAppearance : appearanceBitWidth; // EAppearance
 
     unsigned textDecorationStyle : 3; // TextDecorationStyle
+    TextDecorationThickness textDecorationThickness;
 
-    unsigned aspectRatioType : 3;
+    unsigned aspectRatioType : 2; // AspectRatioType
+    unsigned contentVisibility : 2; // ContentVisibility
 
 #if ENABLE(CSS_COMPOSITING)
     unsigned effectiveBlendMode: 5; // EBlendMode
@@ -242,6 +245,8 @@ public:
     unsigned containIntrinsicHeightType : 2; // ContainIntrinsicSizeType
 
     unsigned containerType : 2; // ContainerType
+
+    unsigned overflowAnchor : 1; // Scroll Anchoring- OverflowAnchor
 
     Vector<AtomString> containerNames;
 

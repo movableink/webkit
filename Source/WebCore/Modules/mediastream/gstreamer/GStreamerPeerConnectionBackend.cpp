@@ -56,61 +56,6 @@ static std::unique_ptr<PeerConnectionBackend> createGStreamerPeerConnectionBacke
 
 CreatePeerConnectionBackend PeerConnectionBackend::create = createGStreamerPeerConnectionBackend;
 
-static RTCRtpCapabilities gstreamerRtpCapatiblities(const String& kind)
-{
-    RTCRtpCapabilities capabilities;
-    capabilities.headerExtensions.append({ "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01"_s });
-    if (kind == "audio"_s) {
-        capabilities.codecs.reserveCapacity(4);
-        capabilities.codecs.uncheckedAppend({ .mimeType = "audio/OPUS"_s,
-            .clockRate = 48000,
-            .channels = 2,
-            .sdpFmtpLine = emptyString() });
-        capabilities.codecs.uncheckedAppend({ .mimeType = "audio/G722"_s,
-            .clockRate = 8000,
-            .channels = 1,
-            .sdpFmtpLine = emptyString() });
-        capabilities.codecs.uncheckedAppend({ .mimeType = "audio/PCMA"_s,
-            .clockRate = 8000,
-            .channels = 1,
-            .sdpFmtpLine = emptyString() });
-        capabilities.codecs.uncheckedAppend({ .mimeType = "audio/PCMU"_s,
-            .clockRate = 8000,
-            .channels = 1,
-            .sdpFmtpLine = emptyString() });
-    } else {
-        capabilities.headerExtensions.append({ "urn:3gpp:video-orientation"_s });
-        capabilities.codecs.reserveCapacity(4);
-        capabilities.codecs.uncheckedAppend({ .mimeType = "video/VP8"_s,
-            .clockRate = 90000,
-            .channels = std::nullopt,
-            .sdpFmtpLine = emptyString() });
-        capabilities.codecs.uncheckedAppend({ .mimeType = "video/VP9"_s,
-            .clockRate = 90000,
-            .channels = std::nullopt,
-            .sdpFmtpLine = "profile-id=0"_s });
-        capabilities.codecs.uncheckedAppend({ .mimeType = "video/VP9"_s,
-            .clockRate = 90000,
-            .channels = std::nullopt,
-            .sdpFmtpLine = "profile-id=1"_s });
-        capabilities.codecs.uncheckedAppend({ .mimeType = "video/H264"_s,
-            .clockRate = 90000,
-            .channels = std::nullopt,
-            .sdpFmtpLine = "packetization-mode=1;profile-level-id=42e01f"_s });
-    }
-    return capabilities;
-}
-
-std::optional<RTCRtpCapabilities> PeerConnectionBackend::receiverCapabilities(ScriptExecutionContext&, const String& kind)
-{
-    return gstreamerRtpCapatiblities(kind);
-}
-
-std::optional<RTCRtpCapabilities> PeerConnectionBackend::senderCapabilities(ScriptExecutionContext&, const String& kind)
-{
-    return gstreamerRtpCapatiblities(kind);
-}
-
 GStreamerPeerConnectionBackend::GStreamerPeerConnectionBackend(RTCPeerConnection& peerConnection)
     : PeerConnectionBackend(peerConnection)
     , m_endpoint(GStreamerMediaEndpoint::create(*this))
@@ -270,15 +215,15 @@ ExceptionOr<Ref<RTCRtpSender>> GStreamerPeerConnectionBackend::addTrack(MediaStr
 
     if (auto sender = findExistingSender(m_peerConnection.currentTransceivers(), *senderBackend)) {
         backendFromRTPSender(*sender).takeSource(*senderBackend);
-        sender->setTrack(Ref(track));
-        sender->setMediaStreamIds(WTFMove(mediaStreamIds));
+        sender->setTrack(track);
+        sender->setMediaStreamIds(mediaStreamIds);
         return sender.releaseNonNull();
     }
 
     auto transceiverBackend = m_endpoint->transceiverBackendFromSender(*senderBackend);
 
-    auto sender = RTCRtpSender::create(m_peerConnection, Ref(track), WTFMove(senderBackend));
-    sender->setMediaStreamIds(WTFMove(mediaStreamIds));
+    auto sender = RTCRtpSender::create(m_peerConnection, track, WTFMove(senderBackend));
+    sender->setMediaStreamIds(mediaStreamIds);
     auto receiver = createReceiver(transceiverBackend->createReceiverBackend(), track.kind(), track.id());
     auto transceiver = RTCRtpTransceiver::create(sender.copyRef(), WTFMove(receiver), WTFMove(transceiverBackend));
     m_peerConnection.addInternalTransceiver(WTFMove(transceiver));
@@ -348,11 +293,17 @@ void GStreamerPeerConnectionBackend::addPendingTrackEvent(PendingTrackEvent&& ev
     m_pendingTrackEvents.append(WTFMove(event));
 }
 
-void GStreamerPeerConnectionBackend::dispatchPendingTrackEvents()
+void GStreamerPeerConnectionBackend::dispatchPendingTrackEvents(MediaStream& mediaStream)
 {
     auto events = WTFMove(m_pendingTrackEvents);
-    for (auto& event : events)
+    for (auto& event : events) {
+        Vector<RefPtr<MediaStream>> pendingStreams;
+        pendingStreams.reserveInitialCapacity(1);
+        pendingStreams.uncheckedAppend(&mediaStream);
+        event.streams = WTFMove(pendingStreams);
+
         dispatchTrackEvent(event);
+    }
 }
 
 void GStreamerPeerConnectionBackend::removeTrack(RTCRtpSender& sender)

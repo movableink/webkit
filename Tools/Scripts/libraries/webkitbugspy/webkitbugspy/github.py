@@ -49,6 +49,13 @@ class Tracker(GenericTracker):
     DEFAULT_COMPONENT_COLOR = 'FFFFFF'
     DEFAULT_VERSION_COLOR = 'EEEEEE'
     ACCEPT_HEADER = 'application/vnd.github.v3+json'
+    ERROR_MAP = {
+        'missing': 'A resource does not exist.',
+        'missing_field': 'A required field on a resource has not been set.',
+        'invalid': 'The formatting of a field is invalid. Review the documentation for more specific information.',
+        'already_exists': 'Another resource has the same value as this field. This can happen in resources that must have some unique key (such as label names).',
+        'unprocessable': 'The inputs provided were invalid.'
+    }
 
 
     class Encoder(GenericTracker.Encoder):
@@ -334,7 +341,9 @@ with 'repo' and 'workflow' access and appropriate 'Expiration' for your {host} u
             if not isinstance(assignee, User):
                 raise TypeError("Must assign to '{}', not '{}'".format(User, type(assignee)))
             issue._assignee = self.user(name=assignee.name, username=assignee.username, email=assignee.email)
-            update_dict['assignees'] = [issue._assignee.username]
+            assignees = [issue._assignee.username]
+            if self.add_assignees(issue, assignees) != assignees:
+                return None
 
         if opened is not None:
             issue._opened = bool(opened)
@@ -404,13 +413,29 @@ with 'repo' and 'workflow' access and appropriate 'Expiration' for your {host} u
                 error_message="Failed to modify '{}'".format(issue)
             )
             if not response:
-                if assignee:
-                    issue._assignee = None
                 if opened is not None:
                     issue._opened = None
                 return None
 
         return self.add_comment(issue, why) if why else issue
+
+    def add_assignees(self, issue, assignees):
+        response = self.request(
+            'issues/{id}/assignees'.format(id=issue.id),
+            method='POST',
+            authenticated=True,
+            json={'assignees': assignees},
+            error_message="Failed to modify '{}'".format(issue)
+        )
+        if not response:
+            issue._assignee = None
+            sys.stderr.write('Could not add any assignee(s) to issue')
+            return []
+        response_assignees = [assignee.get('login') for assignee in response.get('assignees', [])]
+        missed_assignees = [assignee for assignee in assignees if assignee not in response_assignees]
+        if missed_assignees:
+            sys.stderr.write('Could not assign {} to issue'.format(missed_assignees))
+        return response_assignees
 
     def add_comment(self, issue, text):
         data = self.request(
@@ -545,3 +570,34 @@ with 'repo' and 'workflow' access and appropriate 'Expiration' for your {host} u
             return None
 
         return self.issue(response['number'])
+
+    def parse_error(self, json):
+        message = json.get('message', 'Empty Message')
+        error_messages = []
+        for error in json.get('errors', []):
+            error_message = '---\tERROR\t---\n'
+
+            code = error.get('code')
+            if code:
+                type = self.ERROR_MAP.get(code, '')
+                if code == 'custom':
+                    type = error['message']
+
+                error_message += 'Type: {}\n'.format(type)
+
+            resource = error.get('resource')
+            if resource:
+                error_message += 'Resource: {}\n'.format(resource)
+
+            field = error.get('field')
+            if field:
+                error_message += 'Field: {}\n'.format(field)
+
+            error_message += '---\t---\t---\n'
+            error_messages.append(error_message)
+
+        documentation_url = json.get('documentation_url')
+        if documentation_url:
+            error_messages += 'Documentation URL: {}\n'.format(documentation_url)
+
+        return 'Error Message: {}\n{}'.format(message, ''.join(error_messages))

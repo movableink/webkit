@@ -138,8 +138,10 @@ public:
     WTF_EXPORT_PRIVATE CString utf8(ConversionMode) const;
     WTF_EXPORT_PRIVATE CString utf8() const;
 
-    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUtf8(ConversionMode) const;
-    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUtf8() const;
+    template<typename Func>
+    Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> tryGetUTF8ForRange(const Func&, unsigned offset, unsigned length, ConversionMode = LenientConversion) const;
+    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8(ConversionMode) const;
+    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8() const;
 
     UChar characterAt(unsigned index) const;
     UChar operator[](unsigned index) const { return characterAt(index); }
@@ -201,7 +203,7 @@ public:
     bool endsWith(char character) const { return endsWith(static_cast<UChar>(character)); }
     bool hasInfixEndingAt(StringView suffix, unsigned end) const;
 
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN substring(unsigned position, unsigned length = MaxLength) const;
+    String WARN_UNUSED_RETURN substring(unsigned position, unsigned length = MaxLength) const;
     WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN substringSharingImpl(unsigned position, unsigned length = MaxLength) const;
     String WARN_UNUSED_RETURN left(unsigned length) const { return substring(0, length); }
     String WARN_UNUSED_RETURN right(unsigned length) const { return substring(this->length() - length, length); }
@@ -312,7 +314,7 @@ public:
     WTF_EXPORT_PRIVATE static String fromCodePoint(UChar32 codePoint);
 
     // Determines the writing direction using the Unicode Bidi Algorithm rules P2 and P3.
-    UCharDirection defaultWritingDirection(bool* hasStrongDirectionality = nullptr) const;
+    std::optional<UCharDirection> defaultWritingDirection() const;
 
     bool isAllASCII() const { return !m_impl || m_impl->isAllASCII(); }
     bool isAllLatin1() const { return !m_impl || m_impl->isAllLatin1(); }
@@ -509,19 +511,40 @@ template<size_t inlineCapacity> inline String String::make8BitFrom16BitSource(co
     return make8BitFrom16BitSource(buffer.data(), buffer.size());
 }
 
-inline UCharDirection String::defaultWritingDirection(bool* hasStrongDirectionality) const
+inline std::optional<UCharDirection> String::defaultWritingDirection() const
 {
     if (m_impl)
-        return m_impl->defaultWritingDirection(hasStrongDirectionality);
-    if (hasStrongDirectionality)
-        *hasStrongDirectionality = false;
-    return U_LEFT_TO_RIGHT;
+        return m_impl->defaultWritingDirection();
+    return std::nullopt;
 }
 
 inline void String::clearImplIfNotShared()
 {
     if (m_impl && m_impl->hasOneRef())
         m_impl = nullptr;
+}
+
+inline String String::substring(unsigned position, unsigned length) const
+{
+    if (!m_impl)
+        return { };
+
+    if (!position && length >= m_impl->length())
+        return *this;
+
+    return m_impl->substring(position, length);
+}
+
+template<typename Func>
+inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> String::tryGetUTF8ForRange(const Func& function, unsigned offset, unsigned length, ConversionMode mode) const
+{
+    ASSERT(offset <= this->length());
+    ASSERT(length <= (this->length() - offset));
+    if (!m_impl) {
+        constexpr const char* emptyString = "";
+        return function(Span { emptyString, emptyString });
+    }
+    return m_impl->tryGetUTF8ForRange(function, offset, length, mode);
 }
 
 #ifdef __OBJC__

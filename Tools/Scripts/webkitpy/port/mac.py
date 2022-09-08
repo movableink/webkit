@@ -40,6 +40,7 @@ from webkitpy.common.version_name_map import VersionNameMap
 from webkitpy.port.base import Port
 from webkitpy.port.config import apple_additions, Config
 from webkitpy.port.darwin import DarwinPort
+from webkitpy.port.driver import DriverInput
 
 _log = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ _log = logging.getLogger(__name__)
 class MacPort(DarwinPort):
     port_name = "mac"
 
-    CURRENT_VERSION = Version(12, 0)
+    CURRENT_VERSION = Version(13, 0)
     LAST_MACOSX = Version(10, 15)
 
     SDK = 'macosx'
@@ -328,6 +329,15 @@ class MacPort(DarwinPort):
                 configuration['model'] = match.group('model')
 
         return configuration
+
+    def setup_test_run(self, device_type=None):
+        super(MacPort, self).setup_test_run(device_type)
+        # Warm-up can be disabled with `--no-timeout`. This is useful when trying to avoid debugger
+        # attaching to the warmup process when debugging with `lldb --wait-for --attach-name ...`.
+        if not self.get_option("no_timeout"):
+            _log.debug('Warming up the runner ...')
+            warmup_driver = self.create_driver(0)
+            warmup_driver.run_test(DriverInput('file:///warmup-does-not-exist', 60000., None, should_run_pixel_test=False), stop_when_done=True)
 
 
 class MacCatalystPort(MacPort):

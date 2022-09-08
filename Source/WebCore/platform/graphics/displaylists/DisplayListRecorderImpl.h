@@ -102,6 +102,7 @@ private:
     void recordStrokeRect(const FloatRect&, float) final;
 #if ENABLE(INLINE_PATH_DATA)
     void recordStrokeLine(const LineData&) final;
+    void recordStrokeLineWithColorAndThickness(SRGBA<uint8_t>, float, const LineData&) final;
     void recordStrokeArc(const ArcData&) final;
     void recordStrokeQuadCurve(const QuadCurveData&) final;
     void recordStrokeBezierCurve(const BezierCurveData&) final;
@@ -125,22 +126,7 @@ private:
     void append(Args&&... args)
     {
         m_displayList.append<T>(std::forward<Args>(args)...);
-
-        if constexpr (T::isDrawingItem) {
-            if (LIKELY(!m_displayList.tracksDrawingItemExtents()))
-                return;
-
-            auto item = T(std::forward<Args>(args)...);
-            if (auto rect = item.localBounds(*this))
-                m_displayList.addDrawingItemExtent(extentFromLocalBounds(*rect));
-            else if (auto rect = item.globalBounds())
-                m_displayList.addDrawingItemExtent(*rect);
-            else
-                m_displayList.addDrawingItemExtent(std::nullopt);
-        }
     }
-
-    FloatRect extentFromLocalBounds(const FloatRect&) const;
 
     DisplayList& m_displayList;
 };

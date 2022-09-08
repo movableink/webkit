@@ -96,7 +96,9 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , appearance(static_cast<unsigned>(RenderStyle::initialAppearance()))
     , effectiveAppearance(static_cast<unsigned>(RenderStyle::initialAppearance()))
     , textDecorationStyle(static_cast<unsigned>(RenderStyle::initialTextDecorationStyle()))
+    , textDecorationThickness(RenderStyle::initialTextDecorationThickness())
     , aspectRatioType(static_cast<unsigned>(RenderStyle::initialAspectRatioType()))
+    , contentVisibility(static_cast<unsigned>(RenderStyle::initialContentVisibility()))
 #if ENABLE(CSS_COMPOSITING)
     , effectiveBlendMode(static_cast<unsigned>(RenderStyle::initialBlendMode()))
     , isolation(static_cast<unsigned>(RenderStyle::initialIsolation()))
@@ -116,6 +118,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , containIntrinsicWidthType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicWidthType()))
     , containIntrinsicHeightType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicHeightType()))
     , containerType(static_cast<unsigned>(RenderStyle::initialContainerType()))
+    , overflowAnchor(static_cast<unsigned>(RenderStyle::initialOverflowAnchor()))
     , columnGap(RenderStyle::initialColumnGap())
     , rowGap(RenderStyle::initialRowGap())
     , offsetDistance(RenderStyle::initialOffsetDistance())
@@ -204,7 +207,9 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , appearance(o.appearance)
     , effectiveAppearance(o.effectiveAppearance)
     , textDecorationStyle(o.textDecorationStyle)
+    , textDecorationThickness(o.textDecorationThickness)
     , aspectRatioType(o.aspectRatioType)
+    , contentVisibility(o.contentVisibility)
 #if ENABLE(CSS_COMPOSITING)
     , effectiveBlendMode(o.effectiveBlendMode)
     , isolation(o.isolation)
@@ -224,6 +229,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , containIntrinsicWidthType(o.containIntrinsicWidthType)
     , containIntrinsicHeightType(o.containIntrinsicHeightType)
     , containerType(o.containerType)
+    , overflowAnchor(o.overflowAnchor)
     , containerNames(o.containerNames)
     , columnGap(o.columnGap)
     , rowGap(o.rowGap)
@@ -315,6 +321,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && appearance == o.appearance
         && effectiveAppearance == o.effectiveAppearance
         && textDecorationStyle == o.textDecorationStyle
+        && textDecorationThickness == o.textDecorationThickness
         && arePointingToEqualData(rotate, o.rotate)
         && arePointingToEqualData(scale, o.scale)
         && arePointingToEqualData(translate, o.translate)
@@ -329,6 +336,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && applePayButtonType == o.applePayButtonType
 #endif
         && aspectRatioType == o.aspectRatioType
+        && contentVisibility == o.contentVisibility
         && objectFit == o.objectFit
         && breakAfter == o.breakAfter
         && breakBefore == o.breakBefore
@@ -346,7 +354,8 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && offsetDistance == o.offsetDistance
         && offsetPosition == o.offsetPosition
         && offsetAnchor == o.offsetAnchor
-        && offsetRotate == o.offsetRotate;
+        && offsetRotate == o.offsetRotate
+        && overflowAnchor == o.overflowAnchor;
 }
 
 bool StyleRareNonInheritedData::contentDataEquivalent(const StyleRareNonInheritedData& other) const
@@ -370,7 +379,7 @@ OptionSet<Containment> StyleRareNonInheritedData::effectiveContainment() const
     auto containment = contain;
 
     switch (static_cast<ContainerType>(containerType)) {
-    case ContainerType::None:
+    case ContainerType::Normal:
         break;
     case ContainerType::Size:
         containment.add({ Containment::Layout, Containment::Style, Containment::Size });

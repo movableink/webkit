@@ -22,6 +22,7 @@
 #if USE(GSTREAMER_WEBRTC)
 #include "RealtimeIncomingSourceGStreamer.h"
 
+#include "GStreamerCommon.h"
 #include <gst/app/gstappsink.h>
 #include <wtf/text/WTFString.h>
 
@@ -41,9 +42,6 @@ RealtimeIncomingSourceGStreamer::RealtimeIncomingSourceGStreamer()
     gst_bin_add_many(GST_BIN_CAST(m_bin.get()), m_valve.get(), queue, m_tee.get(), nullptr);
 
     gst_element_link_many(m_valve.get(), queue, m_tee.get(), nullptr);
-    gst_element_sync_state_with_parent(m_valve.get());
-    gst_element_sync_state_with_parent(queue);
-    gst_element_sync_state_with_parent(m_tee.get());
 
     auto sinkPad = adoptGRef(gst_element_get_static_pad(m_valve.get(), "sink"));
     gst_element_add_pad(m_bin.get(), gst_ghost_pad_new("sink", sinkPad.get()));
@@ -51,21 +49,23 @@ RealtimeIncomingSourceGStreamer::RealtimeIncomingSourceGStreamer()
 
 void RealtimeIncomingSourceGStreamer::closeValve() const
 {
+    GST_DEBUG_OBJECT(m_bin.get(), "Closing valve");
     if (m_valve)
         g_object_set(m_valve.get(), "drop", true, nullptr);
 }
 
 void RealtimeIncomingSourceGStreamer::openValve() const
 {
+    GST_DEBUG_OBJECT(m_bin.get(), "Opening valve");
     if (m_valve)
         g_object_set(m_valve.get(), "drop", false, nullptr);
 }
 
 void RealtimeIncomingSourceGStreamer::registerClient()
 {
-    GST_DEBUG("Registering new client");
+    GST_DEBUG_OBJECT(m_bin.get(), "Registering new client");
     auto* queue = gst_element_factory_make("queue", nullptr);
-    auto* sink = gst_element_factory_make("appsink", nullptr);
+    auto* sink = makeGStreamerElement("appsink", nullptr);
     g_object_set(sink, "enable-last-sample", FALSE, "emit-signals", TRUE, "max-buffers", 1, nullptr);
     g_signal_connect_swapped(sink, "new-sample", G_CALLBACK(+[](RealtimeIncomingSourceGStreamer* self, GstElement* sink) -> GstFlowReturn {
         auto sample = adoptGRef(gst_app_sink_pull_sample(GST_APP_SINK(sink)));
@@ -84,10 +84,7 @@ void RealtimeIncomingSourceGStreamer::registerClient()
     gst_element_sync_state_with_parent(queue);
     gst_element_sync_state_with_parent(sink);
 
-#ifndef GST_DISABLE_GST_DEBUG
-    auto dotFileName = makeString(GST_OBJECT_NAME(m_bin.get()), ".incoming");
-    GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN_CAST(m_bin.get()), GST_DEBUG_GRAPH_SHOW_ALL, dotFileName.utf8().data());
-#endif
+    GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN_CAST(m_bin.get()), GST_DEBUG_GRAPH_SHOW_ALL, GST_OBJECT_NAME(m_bin.get()));
 }
 
 } // namespace WebCore

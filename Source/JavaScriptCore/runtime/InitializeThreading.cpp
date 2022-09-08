@@ -29,6 +29,7 @@
 #include "config.h"
 #include "InitializeThreading.h"
 
+#include "AssemblyComments.h"
 #include "ExecutableAllocator.h"
 #include "JITOperationList.h"
 #include "JSCConfig.h"
@@ -47,6 +48,13 @@
 #include <wtf/GenerateProfiles.h>
 #include <wtf/Threading.h>
 #include <wtf/threads/Signals.h>
+
+#if !USE(SYSTEM_MALLOC)
+#include <bmalloc/BPlatform.h>
+#if BUSE(LIBPAS)
+#include <bmalloc/pas_scavenger.h>
+#endif
+#endif
 
 namespace JSC {
 
@@ -84,11 +92,19 @@ void initialize()
         }
         Options::finalize();
 
+#if !USE(SYSTEM_MALLOC)
+#if BUSE(LIBPAS)
+        if (Options::libpasScavengeContinuously())
+            pas_scavenger_disable_shut_down();
+#endif
+#endif
+
         JITOperationList::populatePointersInJavaScriptCore();
 
         if (Options::useSigillCrashAnalyzer())
             enableSigillCrashAnalyzer();
 
+        AssemblyCommentRegistry::initialize();
         LLInt::initialize();
         DisallowGC::initialize();
 
@@ -112,7 +128,7 @@ void initialize()
 #endif
         VMTraps::initializeSignals();
 #if ENABLE(WEBASSEMBLY)
-        Wasm::prepareFastMemory();
+        Wasm::prepareSignalingMemory();
 #endif
 
         WTF::compilerFence();

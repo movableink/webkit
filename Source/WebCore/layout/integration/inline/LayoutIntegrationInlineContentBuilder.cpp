@@ -26,8 +26,6 @@
 #include "config.h"
 #include "LayoutIntegrationInlineContentBuilder.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "InlineDisplayBox.h"
 #include "InlineFormattingState.h"
 #include "LayoutBoxGeometry.h"
@@ -79,6 +77,12 @@ void InlineContentBuilder::build(Layout::InlineFormattingState& inlineFormatting
         }
     };
     updateIfTextRenderersNeedVisualReordering();
+    createDisplayLines(inlineFormattingState, inlineContent);
+}
+
+void InlineContentBuilder::updateLineOverflow(Layout::InlineFormattingState& inlineFormattingState, InlineContent& inlineContent) const
+{
+    inlineContent.lines.clear();
     createDisplayLines(inlineFormattingState, inlineContent);
 }
 
@@ -139,11 +143,10 @@ void InlineContentBuilder::createDisplayLines(Layout::InlineFormattingState& inl
         auto boxCount = boxIndex - firstBoxIndex;
         if (!inlineContent.hasVisualOverflow() && lineInkOverflowRect != line.scrollableOverflow())
             inlineContent.setHasVisualOverflow();
-        inlineContent.lines.append({ firstBoxIndex, boxCount, FloatRect { line.lineBoxRect() }, line.enclosingTopAndBottom().top, line.enclosingTopAndBottom().bottom, scrollableOverflowRect, lineInkOverflowRect, line.baseline(), line.baselineType(), line.contentLogicalOffset(), line.contentLogicalWidth(), line.isHorizontal() });
+        inlineContent.lines.append({ firstBoxIndex, boxCount, FloatRect { line.lineBoxRect() }, line.enclosingTopAndBottom().top, line.enclosingTopAndBottom().bottom, scrollableOverflowRect, lineInkOverflowRect, line.baseline(), line.baselineType(), line.contentLogicalOffset(), line.contentLogicalWidth(), line.isHorizontal(), line.ellipsisVisualRect() });
     }
 }
 
 }
 }
 
-#endif

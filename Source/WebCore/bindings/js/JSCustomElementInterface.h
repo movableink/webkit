@@ -51,6 +51,8 @@ class JSDOMGlobalObject;
 class MathMLElement;
 class SVGElement;
 
+enum class ParserConstructElementWithEmptyStack { No, Yes };
+
 class JSCustomElementInterface : public RefCounted<JSCustomElementInterface>, public ActiveDOMCallback {
 public:
     static Ref<JSCustomElementInterface> create(const QualifiedName& name, JSC::JSObject* callback, JSDOMGlobalObject* globalObject)
@@ -58,7 +60,7 @@ public:
         return adoptRef(*new JSCustomElementInterface(name, callback, globalObject));
     }
 
-    Ref<Element> constructElementWithFallback(Document&, const AtomString&);
+    Ref<Element> constructElementWithFallback(Document&, const AtomString&, ParserConstructElementWithEmptyStack = ParserConstructElementWithEmptyStack::No);
     Ref<Element> constructElementWithFallback(Document&, const QualifiedName&);
 
     void upgradeElement(Element&);
@@ -79,8 +81,17 @@ public:
     bool observesAttribute(const AtomString& name) const { return m_observedAttributes.contains(name); }
     void invokeAttributeChangedCallback(Element&, const QualifiedName&, const AtomString& oldValue, const AtomString& newValue);
 
+    void disableElementInternals() { m_isElementInternalsDisabled = true; }
+    bool isElementInternalsDisabled() const { return m_isElementInternalsDisabled; }
+
     void disableShadow() { m_isShadowDisabled = true; }
     bool isShadowDisabled() const { return m_isShadowDisabled; }
+
+    void setIsFormAssociated() { m_isFormAssociated = true; }
+    void setFormAssociatedCallback(JSC::JSObject*);
+    void setFormResetCallback(JSC::JSObject*);
+    void setFormDisabledCallback(JSC::JSObject*);
+    void setFormStateRestoreCallback(JSC::JSObject*);
 
     ScriptExecutionContext* scriptExecutionContext() const { return ContextDestructionObserver::scriptExecutionContext(); }
     JSC::JSObject* constructor() { return m_constructor.get(); }
@@ -93,10 +104,11 @@ public:
 
     virtual ~JSCustomElementInterface();
 
+    template<typename Visitor> void visitJSFunctions(Visitor&) const;
 private:
     JSCustomElementInterface(const QualifiedName&, JSC::JSObject* callback, JSDOMGlobalObject*);
 
-    RefPtr<Element> tryToConstructCustomElement(Document&, const AtomString&);
+    RefPtr<Element> tryToConstructCustomElement(Document&, const AtomString&, ParserConstructElementWithEmptyStack);
 
     void invokeCallback(Element&, JSC::JSObject* callback, const Function<void(JSC::JSGlobalObject*, JSDOMGlobalObject*, JSC::MarkedArgumentBuffer&)>& addArguments = [](JSC::JSGlobalObject*, JSDOMGlobalObject*, JSC::MarkedArgumentBuffer&) { });
 
@@ -106,10 +118,16 @@ private:
     JSC::Weak<JSC::JSObject> m_disconnectedCallback;
     JSC::Weak<JSC::JSObject> m_adoptedCallback;
     JSC::Weak<JSC::JSObject> m_attributeChangedCallback;
+    JSC::Weak<JSC::JSObject> m_formAssociatedCallback;
+    JSC::Weak<JSC::JSObject> m_formResetCallback;
+    JSC::Weak<JSC::JSObject> m_formDisabledCallback;
+    JSC::Weak<JSC::JSObject> m_formStateRestoreCallback;
     Ref<DOMWrapperWorld> m_isolatedWorld;
     Vector<RefPtr<Element>, 1> m_constructionStack;
     MemoryCompactRobinHoodHashSet<AtomString> m_observedAttributes;
+    bool m_isElementInternalsDisabled : 1;
     bool m_isShadowDisabled : 1;
+    bool m_isFormAssociated : 1;
 };
 
 } // namespace WebCore

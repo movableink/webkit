@@ -420,6 +420,13 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
 #endif
 }
 
+- (void)_setResourceLoadStatisticsTimeAdvanceForTesting:(NSTimeInterval)time completionHandler:(void(^)(void))completionHandler
+{
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+    _websiteDataStore->setResourceLoadStatisticsTimeAdvanceForTesting(Seconds(time), makeBlockPtr(completionHandler));
+#endif
+}
+
 + (void)_allowWebsiteDataRecordsForAllOrigins
 {
     WebKit::WebsiteDataStore::allowWebsiteDataRecordsForAllOrigins();
@@ -895,6 +902,18 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
     });
 }
 
+- (void)_getOriginsWithPushSubscriptions:(void(^)(NSSet<WKSecurityOrigin *> *))completionHandler {
+    auto completionHandlerCopy = makeBlockPtr(completionHandler);
+    _websiteDataStore->networkProcess().getOriginsWithPushSubscriptions(_websiteDataStore->sessionID(), [completionHandlerCopy](const Vector<WebCore::SecurityOriginData>& origins) {
+        auto set = adoptNS([[NSMutableSet alloc] initWithCapacity:origins.size()]);
+        for (auto& origin : origins) {
+            auto apiOrigin = API::SecurityOrigin::create(origin);
+            [set addObject:wrapper(apiOrigin.get())];
+        }
+        completionHandlerCopy(set.get());
+    });
+}
+
 -(void)_scopeURL:(NSURL *)scopeURL hasPushSubscriptionForTesting:(void(^)(BOOL))completionHandler
 {
     auto completionHandlerCopy = makeBlockPtr(completionHandler);
@@ -915,5 +934,18 @@ static Vector<WebKit::WebsiteDataRecord> toWebsiteDataRecords(NSArray *dataRecor
         completionHandlerCopy(result);
     });
 }
+
+-(void)_setBackupExclusionPeriodForTesting:(double)seconds completionHandler:(void(^)(void))completionHandler
+{
+#if PLATFORM(IOS_FAMILY)
+    _websiteDataStore->setBackupExclusionPeriodForTesting(Seconds(seconds), [completionHandler = makeBlockPtr(completionHandler)] {
+        completionHandler();
+    });
+#else
+    UNUSED_PARAM(seconds);
+    completionHandler();
+#endif
+}
+
 
 @end

@@ -27,6 +27,7 @@
 #include "InteractionRegion.h"
 
 #include "Document.h"
+#include "ElementInlines.h"
 #include "Frame.h"
 #include "FrameSnapshotting.h"
 #include "FrameView.h"
@@ -72,7 +73,11 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     auto& mainFrameView = *regionRenderer.document().frame()->mainFrame().view();
     auto layoutArea = mainFrameView.layoutSize().area();
 
-    if (bounds.area() > layoutArea / 2)
+    auto checkedRegionArea = bounds.area<RecordOverflow>();
+    if (checkedRegionArea.hasOverflowed())
+        return std::nullopt;
+
+    if (checkedRegionArea.value() > layoutArea / 2)
         return std::nullopt;
 
     auto element = dynamicDowncast<Element>(regionRenderer.node());
@@ -100,10 +105,6 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
         bounds.inflate(inlinePadding);
     }
 
-    bool hasLightBackground = true;
-    if (auto linkRange = makeRangeSelectingNode(*element))
-        hasLightBackground = estimatedBackgroundColorForRange(*linkRange, *element->document().frame()).luminance() > 0.5;
-
     float borderRadius = 0;
     if (const auto& renderBox = dynamicDowncast<RenderBox>(renderer))
         borderRadius = renderBox->borderRadii().minimumRadius();
@@ -114,7 +115,6 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     return { {
         element->identifier(),
         boundsRegion,
-        hasLightBackground,
         borderRadius
     } };
 }
@@ -122,7 +122,6 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
 TextStream& operator<<(TextStream& ts, const InteractionRegion& interactionRegion)
 {
     ts.dumpProperty("region", interactionRegion.regionInLayerCoordinates);
-    ts.dumpProperty("hasLightBackground", interactionRegion.hasLightBackground);
     ts.dumpProperty("borderRadius", interactionRegion.borderRadius);
 
     return ts;

@@ -85,6 +85,7 @@ public:
         virtual void sourceMutedChanged() { }
         virtual void sourceSettingsChanged() { }
         virtual void audioUnitWillStart() { }
+        virtual void sourceConfigurationChanged() { }
 
         // Observer state queries.
         virtual bool preventSourceFromStopping() { return false; }
@@ -137,7 +138,6 @@ public:
     virtual bool interrupted() const { return false; }
 
     const AtomString& name() const { return m_name; }
-    void setName(const AtomString& name) { m_name = name; }
 
     unsigned fitnessScore() const { return m_fitnessScore; }
 
@@ -222,6 +222,7 @@ public:
     virtual void setInterruptedForTesting(bool);
 
     virtual bool setShouldApplyRotation(bool) { return false; }
+    virtual void setIsInBackground(bool);
 
     PageIdentifier pageIdentifier() const { return m_pageIdentifier; }
 
@@ -259,6 +260,9 @@ protected:
 
     void setType(Type);
 
+    void setName(const AtomString&);
+    void setPersistentId(const String&);
+
 private:
     virtual void startProducingData() { }
     virtual void stopProducingData() { }
@@ -270,6 +274,7 @@ private:
     virtual void didEnd() { }
 
     void updateHasStartedProducingData();
+    void initializePersistentId();
 
 #if !RELEASE_LOG_DISABLED
     RefPtr<const Logger> m_logger;
@@ -289,8 +294,8 @@ private:
     mutable Lock m_audioSampleObserversLock;
     HashSet<AudioSampleObserver*> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
 
-    mutable Lock m_VideoFrameObserversLock;
-    HashSet<VideoFrameObserver*> m_VideoFrameObservers WTF_GUARDED_BY_LOCK(m_VideoFrameObserversLock);
+    mutable Lock m_videoFrameObserversLock;
+    HashSet<VideoFrameObserver*> m_videoFrameObservers WTF_GUARDED_BY_LOCK(m_videoFrameObserversLock);
 
     // Set on the main thread from constraints.
     IntSize m_size;
@@ -327,6 +332,11 @@ struct CaptureSourceOrError {
 
 String convertEnumerationToString(RealtimeMediaSource::Type);
 
+inline void RealtimeMediaSource::setName(const AtomString& name)
+{
+    m_name = name;
+}
+
 inline void RealtimeMediaSource::whenReady(CompletionHandler<void(String)>&& callback)
 {
     callback({ });
@@ -340,6 +350,10 @@ inline bool RealtimeMediaSource::isVideoSource() const
 inline bool RealtimeMediaSource::isProducingData() const
 {
     return m_isProducingData;
+}
+
+inline void RealtimeMediaSource::setIsInBackground(bool)
+{
 }
 
 } // namespace WebCore

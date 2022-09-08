@@ -11,35 +11,49 @@ Test for the Console.stackTrace in different cases.
 CALL STACK:
 0: [F] (anonymous function)
 1: [F] triggerConsoleTrace
+ASYNC CALL STACK:
+0: --- setTimeout ---
+1: [P] Global Code
 
 -- Running test case: Console.StackTrace.ConsoleError
 CALL STACK:
 0: [F] (anonymous function)
 1: [F] triggerConsoleError
+ASYNC CALL STACK:
+0: --- setTimeout ---
+1: [P] Global Code
 
 -- Running test case: Console.StackTrace.UncaughtException
 Uncaught exception in test page: TypeError: undefined is not an object (evaluating '[].x.x') [message-stack-trace.html:24]
 CALL STACK:
 0: [F] (anonymous function)
 1: [F] triggerUncaughtException
+ASYNC CALL STACK:
+0: --- setTimeout ---
+1: [P] Global Code
 
 -- Running test case: Console.StackTrace.UnhandledPromiseRejection.PromiseReject
 CALL STACK:
-0: [N] (anonymous function)
-1: [N] rejectPromise
-2: [N] reject
-3: [F] triggerUnhandledRejectionPromiseReject
+0: [N] reject
+1: [F] triggerUnhandledRejectionPromiseReject
+ASYNC CALL STACK:
+0: --- setTimeout ---
+1: [P] Global Code
 
 -- Running test case: Console.StackTrace.UnhandledPromiseRejection.ExplicitReject
 CALL STACK:
-0: [N] (anonymous function)
-1: [N] rejectPromise
-2: [F] (anonymous function)
-3: [N] Promise
-4: [F] triggerUnhandledRejectionExplicit
+0: [F] (anonymous function)
+1: [N] Promise
+2: [F] triggerUnhandledRejectionExplicit
+ASYNC CALL STACK:
+0: --- setTimeout ---
+1: [P] Global Code
 
 -- Running test case: Console.StackTrace.UnhandledPromiseRejection.ImplicitReject
 CALL STACK:
 0: [F] (anonymous function)
-1: [N] promiseReactionJob
+ASYNC CALL STACK:
+0: --- enqueueJob ---
+1: [N] then
+2: [F] triggerUnhandledRejectionImplicitWithException
 

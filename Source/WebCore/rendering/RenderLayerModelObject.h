@@ -22,7 +22,9 @@
 
 #pragma once
 
+#include "PaintPhase.h"
 #include "RenderElement.h"
+#include <wtf/StdUnorderedSet.h>
 
 namespace WebCore {
 
@@ -55,6 +57,10 @@ public:
     // The query rect is given in local coordinate system.
     virtual bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect&) const { return false; }
 
+    // Returns false if the rect has no intersection with the applied clip rect. When the context specifies edge-inclusive
+    // intersection, this return value allows distinguishing between no intersection and zero-area intersection.
+    virtual bool applyCachedClipAndScrollPosition(LayoutRect&, const RenderLayerModelObject*, VisibleRectContext) const { return false; }
+
     virtual bool isScrollableOrRubberbandableBox() const { return false; }
 
     bool shouldPlaceVerticalScrollbarOnLeft() const;
@@ -69,6 +75,10 @@ public:
     void suspendAnimations(MonotonicTime = MonotonicTime()) override;
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // Single source of truth deciding if a SVG renderer should be painted. All SVG renderers
+    // use this method to test if they should continue processing in the paint() function or stop.
+    bool shouldPaintSVGRenderer(const PaintInfo&, const std::optional<StdUnorderedSet<PaintPhase>>& relevantPaintPhases = std::nullopt) const;
+
     // Provides the SVG implementation for computeVisibleRectInContainer().
     // This lives in RenderLayerModelObject, which is the common base-class for all SVG renderers.
     std::optional<LayoutRect> computeVisibleRectInSVGContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const;
@@ -77,7 +87,7 @@ public:
     // This lives in RenderLayerModelObject, which is the common base-class for all SVG renderers.
     void mapLocalToSVGContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const;
 
-    void applySVGTransform(TransformationMatrix&, SVGGraphicsElement&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const;
+    void applySVGTransform(TransformationMatrix&, SVGGraphicsElement&, const RenderStyle&, const FloatRect& boundingBox, const std::optional<AffineTransform>& preApplySVGTransformMatrix, const std::optional<AffineTransform>& postApplySVGTransformMatrix, OptionSet<RenderStyle::TransformOperationOption>) const;
     void updateHasSVGTransformFlags(const SVGGraphicsElement&);
 
     LayoutPoint nominalSVGLayoutLocation() const { return flooredLayoutPoint(objectBoundingBoxWithoutTransformations().minXMinYCorner()); }
@@ -85,8 +95,9 @@ public:
     virtual void setCurrentSVGLayoutLocation(const LayoutPoint&) { ASSERT_NOT_REACHED(); }
 #endif
 
-    void updateLayerTransform();
+    TransformationMatrix* layerTransform() const;
 
+    virtual void updateLayerTransform();
     virtual void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const = 0;
 
 protected:

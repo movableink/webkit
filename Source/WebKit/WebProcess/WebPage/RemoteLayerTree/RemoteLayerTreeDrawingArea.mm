@@ -173,6 +173,7 @@ void RemoteLayerTreeDrawingArea::updatePreferences(const WebPreferencesStore& pr
     m_rootLayer->setShowDebugBorder(settings.showDebugBorders());
 
     m_remoteLayerTreeContext->setUseCGDisplayListsForDOMRendering(preferences.getBoolValueForKey(WebPreferencesKey::useCGDisplayListsForDOMRenderingKey()));
+    m_remoteLayerTreeContext->setUseCGDisplayListImageCache(preferences.getBoolValueForKey(WebPreferencesKey::useCGDisplayListImageCacheKey()) && !preferences.getBoolValueForKey(WebPreferencesKey::replayCGDisplayListsIntoBackingStoreKey()));
 
     DebugPageOverlays::settingsChanged(*m_webPage.corePage());
 }
@@ -375,8 +376,12 @@ void RemoteLayerTreeDrawingArea::updateRendering()
     commitEncoder.get() << WTFMove(message).arguments();
 
     auto flushers = backingStoreCollection.didFlushLayers(layerTransaction);
+    bool haveFlushers = flushers.size();
     RefPtr<BackingStoreFlusher> backingStoreFlusher = BackingStoreFlusher::create(WebProcess::singleton().parentProcessConnection(), WTFMove(commitEncoder), WTFMove(flushers));
     m_pendingBackingStoreFlusher = backingStoreFlusher;
+
+    if (haveFlushers)
+        m_webPage.didPaintLayers();
 
     auto pageID = m_webPage.identifier();
     dispatch_async(m_commitQueue.get(), [backingStoreFlusher = WTFMove(backingStoreFlusher), pageID] {

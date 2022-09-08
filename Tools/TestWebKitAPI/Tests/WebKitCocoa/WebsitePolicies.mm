@@ -30,6 +30,7 @@
 #import "TestNavigationDelegate.h"
 #import "TestUIDelegate.h"
 #import "TestWKWebView.h"
+#import <WebKit/WKContentRuleListStorePrivate.h>
 #import <WebKit/WKMutableDictionary.h>
 #import <WebKit/WKNavigationDelegatePrivate.h>
 #import <WebKit/WKPagePrivate.h>
@@ -44,7 +45,6 @@
 #import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/WKWebsitePolicies.h>
 #import <WebKit/_WKCustomHeaderFields.h>
-#import <WebKit/_WKUserContentExtensionStorePrivate.h>
 #import <WebKit/_WKWebsiteDataStoreConfiguration.h>
 #import <wtf/Function.h>
 #import <wtf/HashMap.h>
@@ -138,15 +138,15 @@ static size_t alertCount;
 
 TEST(WebpagePreferences, WebsitePoliciesContentBlockersEnabled)
 {
-    [[_WKUserContentExtensionStore defaultStore] _removeAllContentExtensions];
+    [[WKContentRuleListStore defaultStore] _removeAllContentRuleLists];
 
     auto configuration = adoptNS([[WKWebViewConfiguration alloc] init]);
 
     doneCompiling = false;
     NSString* contentBlocker = @"[{\"action\":{\"type\":\"css-display-none\",\"selector\":\".hidden\"},\"trigger\":{\"url-filter\":\".*\"}}]";
-    [[_WKUserContentExtensionStore defaultStore] compileContentExtensionForIdentifier:@"WebsitePoliciesTest" encodedContentExtension:contentBlocker completionHandler:^(_WKUserContentFilter *filter, NSError *error) {
+    [[WKContentRuleListStore defaultStore] compileContentRuleListForIdentifier:@"WebsitePoliciesTest" encodedContentRuleList:contentBlocker completionHandler:^(WKContentRuleList *list, NSError *error) {
         EXPECT_TRUE(error == nil);
-        [[configuration userContentController] _addUserContentFilter:filter];
+        [[configuration userContentController] addContentRuleList:list];
         doneCompiling = true;
     }];
     TestWebKitAPI::Util::run(&doneCompiling);
@@ -171,7 +171,7 @@ TEST(WebpagePreferences, WebsitePoliciesContentBlockersEnabled)
     [webView _reloadWithoutContentBlockers];
     TestWebKitAPI::Util::run(&receivedAlert);
 
-    [[_WKUserContentExtensionStore defaultStore] _removeAllContentExtensions];
+    [[WKContentRuleListStore defaultStore] _removeAllContentRuleLists];
 }
 
 @interface AutoplayPoliciesDelegate : TestNavigationDelegate <WKNavigationDelegate, WKUIDelegatePrivate>
@@ -988,18 +988,6 @@ static bool thirdTestDone;
 static bool fourthTestDone;
 static bool fifthTestDone;
 
-static void expectLegacyHeaders(id <WKURLSchemeTask> task, bool expected)
-{
-    NSURLRequest *request = task.request;
-    if (expected) {
-        EXPECT_STREQ([[request valueForHTTPHeaderField:@"X-key1"] UTF8String], "value1");
-        EXPECT_STREQ([[request valueForHTTPHeaderField:@"X-key2"] UTF8String], "value2");
-    } else {
-        EXPECT_TRUE([request valueForHTTPHeaderField:@"X-key1"] == nil);
-        EXPECT_TRUE([request valueForHTTPHeaderField:@"X-key2"] == nil);
-    }
-}
-
 static void expectHeaders(id <WKURLSchemeTask> task, bool expected)
 {
     NSURLRequest *request = task.request;
@@ -1026,11 +1014,6 @@ static void respond(id <WKURLSchemeTask>task, NSString *html = nil)
 
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction preferences:(WKWebpagePreferences *)preferences decisionHandler:(void (^)(WKNavigationActionPolicy, WKWebpagePreferences *))decisionHandler
 {
-    auto legacyHeaderFieldDictionary = adoptWK(WKMutableDictionaryCreate());
-    WKDictionarySetItem(legacyHeaderFieldDictionary.get(), adoptWK(WKStringCreateWithUTF8CString("X-key1")).get(), adoptWK(WKStringCreateWithUTF8CString("value1")).get());
-    WKDictionarySetItem(legacyHeaderFieldDictionary.get(), adoptWK(WKStringCreateWithUTF8CString("X-key2")).get(), adoptWK(WKStringCreateWithUTF8CString("value2")).get());
-    WKWebsitePoliciesSetCustomHeaderFields((WKWebsitePoliciesRef)preferences, legacyHeaderFieldDictionary.get());
-
     auto headerFields = adoptNS([[_WKCustomHeaderFields alloc] init]);
     [headerFields setFields:@{@"X-key3": @"value3", @"X-key4": @"value4"}];
     [headerFields setThirdPartyDomains:@[
@@ -1053,40 +1036,29 @@ static void respond(id <WKURLSchemeTask>task, NSString *html = nil)
 {
     NSString *path = urlSchemeTask.request.URL.path;
     if ([path isEqualToString:@"/mainresource"]) {
-        expectLegacyHeaders(urlSchemeTask, true);
         respond(urlSchemeTask, @"<script>fetch('subresource').then(function(response){fetch('test://differentsecurityorigin/crossoriginsubresource',{mode:'no-cors'})})</script>");
     } else if ([path isEqualToString:@"/subresource"]) {
-        expectLegacyHeaders(urlSchemeTask, true);
         respond(urlSchemeTask);
     } else if ([path isEqualToString:@"/crossoriginsubresource"]) {
-        expectLegacyHeaders(urlSchemeTask, false);
         respond(urlSchemeTask);
         firstTestDone = true;
     } else if ([path isEqualToString:@"/mainresourcewithiframe"]) {
-        expectLegacyHeaders(urlSchemeTask, true);
         respond(urlSchemeTask, @"<iframe src='test://iframeorigin/iframemainresource'></iframe>");
     } else if ([path isEqualToString:@"/iframemainresource"]) {
-        expectLegacyHeaders(urlSchemeTask, false);
         respond(urlSchemeTask, @"<script>fetch('iframesubresource').then(function(response){fetch('test://mainframeorigin/originaloriginsubresource',{mode:'no-cors'})})</script>");
     } else if ([path isEqualToString:@"/iframesubresource"]) {
-        expectLegacyHeaders(urlSchemeTask, false);
         respond(urlSchemeTask);
     } else if ([path isEqualToString:@"/originaloriginsubresource"]) {
-        expectLegacyHeaders(urlSchemeTask, false);
         respond(urlSchemeTask);
         secondTestDone = true;
     } else if ([path isEqualToString:@"/nestedtop"]) {
-        expectLegacyHeaders(urlSchemeTask, true);
         respond(urlSchemeTask, @"<iframe src='test://otherorigin/nestedmid'></iframe>");
     } else if ([path isEqualToString:@"/nestedmid"]) {
-        expectLegacyHeaders(urlSchemeTask, false);
         respond(urlSchemeTask, @"<iframe src='test://toporigin/nestedbottom'></iframe>");
     } else if ([path isEqualToString:@"/nestedbottom"]) {
-        expectLegacyHeaders(urlSchemeTask, true);
         respond(urlSchemeTask);
         thirdTestDone = true;
     } else if ([path isEqualToString:@"/requestfromaboutblank"]) {
-        expectLegacyHeaders(urlSchemeTask, true);
         respond(urlSchemeTask);
         fourthTestDone = true;
     } else if ([path isEqualToString:@"/testcustomheaderfieldhosts"]) {

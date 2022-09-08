@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc.
+ *  Copyright (C) 2003-2022 Apple Inc.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -23,6 +23,7 @@
 #include "config.h"
 #include "Completion.h"
 
+#include "BuiltinNames.h"
 #include "BytecodeCacheError.h"
 #include "CatchScope.h"
 #include "CodeCache.h"
@@ -43,7 +44,7 @@ namespace JSC {
 static inline bool checkSyntaxInternal(VM& vm, const SourceCode& source, ParserError& error)
 {
     return !!parse<ProgramNode>(
-        vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin,
+        vm, source, Identifier(), ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin,
         JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, SuperBinding::NotNeeded, error);
 }
 
@@ -75,13 +76,13 @@ bool checkModuleSyntax(JSGlobalObject* globalObject, const SourceCode& source, P
     JSLockHolder lock(vm);
     RELEASE_ASSERT(vm.atomStringTable() == Thread::current().atomStringTable());
     std::unique_ptr<ModuleProgramNode> moduleProgramNode = parse<ModuleProgramNode>(
-        vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin,
+        vm, source, Identifier(), ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin,
         JSParserStrictMode::Strict, JSParserScriptMode::Module, SourceParseMode::ModuleAnalyzeMode, SuperBinding::NotNeeded, error);
     if (!moduleProgramNode)
         return false;
 
     PrivateName privateName(PrivateName::Description, "EntryPointModule"_s);
-    ModuleAnalyzer moduleAnalyzer(globalObject, Identifier::fromUid(privateName), source, moduleProgramNode->varDeclarations(), moduleProgramNode->lexicalVariables());
+    ModuleAnalyzer moduleAnalyzer(globalObject, Identifier::fromUid(privateName), source, moduleProgramNode->varDeclarations(), moduleProgramNode->lexicalVariables(), moduleProgramNode->features());
     moduleAnalyzer.analyze(*moduleProgramNode);
     return true;
 }
@@ -134,7 +135,7 @@ JSValue evaluate(JSGlobalObject* globalObject, const SourceCode& source, JSValue
     if (!thisValue || thisValue.isUndefinedOrNull())
         thisValue = globalObject;
     JSObject* thisObj = jsCast<JSObject*>(thisValue.toThis(globalObject, ECMAMode::sloppy()));
-    JSValue result = vm.interpreter->executeProgram(source, globalObject, thisObj);
+    JSValue result = vm.interpreter.executeProgram(source, globalObject, thisObj);
 
     if (scope.exception()) {
         returnedException = scope.exception();
@@ -264,6 +265,58 @@ JSInternalPromise* importModule(JSGlobalObject* globalObject, const Identifier& 
     RELEASE_ASSERT(!vm.isCollectorBusyOnCurrentThread());
 
     return globalObject->moduleLoader()->requestImportModule(globalObject, moduleKey, parameters, scriptFetcher);
+}
+
+HashMap<RefPtr<UniquedStringImpl>, String> retrieveAssertionsFromDynamicImportOptions(JSGlobalObject* globalObject, JSValue options, const Vector<RefPtr<UniquedStringImpl>>& supportedAssertions)
+{
+    // https://tc39.es/proposal-import-assertions/#sec-evaluate-import-call
+
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (options.isUndefined())
+        return { };
+
+    auto* optionsObject = jsDynamicCast<JSObject*>(options);
+    if (UNLIKELY(!optionsObject)) {
+        throwTypeError(globalObject, scope, "dynamic import's options should be an object"_s);
+        return { };
+    }
+
+    JSValue assertions = optionsObject->get(globalObject, vm.propertyNames->builtinNames().assertPublicName());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (assertions.isUndefined())
+        return { };
+
+    auto* assertionsObject = jsDynamicCast<JSObject*>(assertions);
+    if (UNLIKELY(!assertionsObject)) {
+        throwTypeError(globalObject, scope, "dynamic import's options.assert should be an object"_s);
+        return { };
+    }
+
+    PropertyNameArray properties(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
+    assertionsObject->methodTable()->getOwnPropertyNames(assertionsObject, globalObject, properties, DontEnumPropertiesMode::Exclude);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    HashMap<RefPtr<UniquedStringImpl>, String> result;
+    for (auto& key : properties) {
+        JSValue value = assertionsObject->get(globalObject, key);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        if (UNLIKELY(!value.isString())) {
+            throwTypeError(globalObject, scope, "dynamic import's options.assert includes non string property"_s);
+            return { };
+        }
+
+        String valueString = value.toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        if (supportedAssertions.contains(key.impl()))
+            result.add(key.impl(), WTFMove(valueString));
+    }
+
+    return result;
 }
 
 } // namespace JSC

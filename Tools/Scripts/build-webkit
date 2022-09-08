@@ -230,6 +230,10 @@ if ((isAppleWebKit() || isWinCairo() || isPlayStation() || isFTW()) && !-d "WebK
 my @options = ();
 
 if (isAppleCocoaWebKit()) {
+    if (!$useWorkspace) {
+        # Ignore any workspace set by set-webkit-configuration
+        overrideConfiguredXcodeWorkspace("");
+    }
     push @options, XcodeOptions();
 
     sub option($$)
@@ -250,6 +254,7 @@ if (isAppleCocoaWebKit()) {
         "deprecated.\nIf you have a workflow requirement that depends " .
         "on building targets in manual order, please document it in " .
         "https://bugs.webkit.org/show_bug.cgi?id=241295.\n";
+        
         # ANGLE and libwebrtc must come before WebCore
         splice @projects, 0, 0, ("Source/ThirdParty/ANGLE");
         # if (not $archs32bit and (portName() eq Mac or portName() eq iOS or portName() eq watchOS)) {
@@ -357,18 +362,21 @@ if (isAppleWinWebKit() || isWinCairo() || isPlayStation() || isFTW()) {
     push @local_options, XcodeCoverageSupportOptions() if $coverageSupport;
     push @local_options, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
     push @local_options, "WK_LTO_MODE=$ltoMode" if ($ltoMode ne "default");
-    # When we know we're in a workspace (and not an individual project), turn
-    # on dependency validation errors. Other conditions (e.g. whether we're in
-    # a script phase or not) influence the actual VALIDATE_DEPENDENCIES setting
-    # recognized by the build system.
-    push @local_options, "WK_VALIDATE_DEPENDENCIES=YES_ERROR" if $useWorkspace;
+    # FIXME: Move this setting to xcconfigs once all local Xcode builds of WebKit
+    # happen in the workspace. When this is only passed on the command line, it
+    # invalidates build results made in the IDE (rdar://88135402).
+    ## When we know we're in a workspace (and not an individual project), turn
+    ## on dependency validation errors. Other conditions (e.g. whether we're in
+    ## a script phase or not) influence the actual VALIDATE_DEPENDENCIES setting
+    ## recognized by the build system.
+    #push @local_options, "WK_VALIDATE_DEPENDENCIES=YES_ERROR" if $useWorkspace;
  
     markBaseProductDirectoryAsCreatedByXcodeBuildSystem();
 
     # Build, and abort if the build fails.
     if ($useWorkspace) {
-        my $scheme = $onlyWebKitProject ? "WebKitLegacy" : "All Modules";
-        $result = buildXCodeWorkspace("WebKit.xcworkspace", $scheme, $clean, @local_options, @ARGV);
+        my $scheme = $onlyWebKitProject ? "WebKitLegacy" : "Everything up to WebKit + Tools";
+        $result = buildXcodeScheme($scheme, $clean, @local_options, @ARGV);
         if (exitStatus($result)) {
             exit exitStatus($result);
         }

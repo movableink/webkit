@@ -171,6 +171,7 @@ enum {
     PROP_ENABLE_JAVASCRIPT_MARKUP,
     PROP_ENABLE_MEDIA,
     PROP_MEDIA_CONTENT_TYPES_REQUIRING_HARDWARE_SUPPORT,
+    PROP_ENABLE_WEBRTC,
     N_PROPERTIES,
 };
 
@@ -192,9 +193,6 @@ static void webKitSettingsConstructed(GObject* object)
 #if ENABLE(MEDIA_STREAM)
     prefs->setMediaDevicesEnabled(true);
     prefs->setMediaStreamEnabled(true);
-#if ENABLE(WEB_RTC)
-    prefs->setPeerConnectionEnabled(true);
-#endif
 #endif
 
     // FIXME: Expose API for this when this feature is officially non-experimental.
@@ -231,7 +229,6 @@ static void webKitSettingsSetProperty(GObject* object, guint propId, const GValu
     case PROP_ENABLE_XSS_AUDITOR:
         break;
     case PROP_ENABLE_FRAME_FLATTENING:
-        webkit_settings_set_enable_frame_flattening(settings, g_value_get_boolean(value));
         break;
     case PROP_ENABLE_PLUGINS:
         break;
@@ -399,6 +396,9 @@ static void webKitSettingsSetProperty(GObject* object, guint propId, const GValu
     case PROP_MEDIA_CONTENT_TYPES_REQUIRING_HARDWARE_SUPPORT:
         webkit_settings_set_media_content_types_requiring_hardware_support(settings, g_value_get_string(value));
         break;
+    case PROP_ENABLE_WEBRTC:
+        webkit_settings_set_enable_webrtc(settings, g_value_get_boolean(value));
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
         break;
@@ -432,7 +432,7 @@ static void webKitSettingsGetProperty(GObject* object, guint propId, GValue* val
         g_value_set_boolean(value, FALSE);
         break;
     case PROP_ENABLE_FRAME_FLATTENING:
-        g_value_set_boolean(value, webkit_settings_get_enable_frame_flattening(settings));
+        g_value_set_boolean(value, FALSE);
         break;
     case PROP_ENABLE_PLUGINS:
         g_value_set_boolean(value, FALSE);
@@ -595,6 +595,9 @@ static void webKitSettingsGetProperty(GObject* object, guint propId, GValue* val
     case PROP_MEDIA_CONTENT_TYPES_REQUIRING_HARDWARE_SUPPORT:
         g_value_set_string(value, webkit_settings_get_media_content_types_requiring_hardware_support(settings));
         break;
+    case PROP_ENABLE_WEBRTC:
+        g_value_set_boolean(value, webkit_settings_get_enable_webrtc(settings));
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propId, paramSpec);
         break;
@@ -722,9 +725,9 @@ static void webkit_settings_class_init(WebKitSettingsClass* klass)
     /**
      * WebKitSettings:enable-frame-flattening:
      *
-     * Whether to enable the frame flattening. With this setting each subframe is expanded
-     * to its contents, which will flatten all the frames to become one scrollable page.
-     * On touch devices scrollable subframes on a page can result in a confusing user experience.
+     * Frame flattening is no longer supported. This property does nothing.
+     *
+     * Deprecated: 2.38
      */
     sObjProperties[PROP_ENABLE_FRAME_FLATTENING] =
         g_param_spec_boolean(
@@ -732,7 +735,7 @@ static void webkit_settings_class_init(WebKitSettingsClass* klass)
             _("Enable frame flattening"),
             _("Whether to enable frame flattening."),
             FALSE,
-            readWriteConstructParamFlags);
+            static_cast<GParamFlags>(readWriteConstructParamFlags | G_PARAM_DEPRECATED));
 
     /**
      * WebKitSettings:enable-plugins:
@@ -1559,6 +1562,25 @@ static void webkit_settings_class_init(WebKitSettingsClass* klass)
             nullptr, // A null string forces the default value.
             readWriteConstructParamFlags);
 
+    /**
+     * WebKitSettings:enable-webrtc:
+     *
+     * Enable WebRTC support for loaded pages.
+     *
+     * Enabling this setting implies that [property@Settings:enable-media-stream]
+     * will be enabled as well.
+     *
+     * See also https://www.w3.org/TR/webrtc/
+     *
+     * Since: 2.38
+     */
+    sObjProperties[PROP_ENABLE_WEBRTC] = g_param_spec_boolean(
+        "enable-webrtc",
+        _("Enable WebRTC"),
+        _("Whether WebRTC content should be handled"),
+        FALSE,
+        readWriteConstructParamFlags);
+
     g_object_class_install_properties(gObjectClass, N_PROPERTIES, sObjProperties);
 }
 
@@ -1570,8 +1592,9 @@ WebPreferences* webkitSettingsGetPreferences(WebKitSettings* settings)
 /**
  * webkit_settings_new:
  *
- * Creates a new #WebKitSettings instance with default values. It must
- * be manually attached to a #WebKitWebView.
+ * Creates a new #WebKitSettings instance with default values.
+ *
+ * It must be manually attached to a #WebKitWebView.
  * See also webkit_settings_new_with_settings().
  *
  * Returns: a new #WebKitSettings instance.
@@ -1587,8 +1610,9 @@ WebKitSettings* webkit_settings_new()
  * @...: value of first setting, followed by more settings,
  *    %NULL-terminated
  *
- * Creates a new #WebKitSettings instance with the given settings. It must
- * be manually attached to a #WebKitWebView.
+ * Creates a new #WebKitSettings instance with the given settings.
+ *
+ * It must be manually attached to a #WebKitWebView.
  *
  * Returns: a new #WebKitSettings instance.
  */
@@ -1846,16 +1870,17 @@ void webkit_settings_set_enable_xss_auditor(WebKitSettings* settings, gboolean e
  * webkit_settings_get_enable_frame_flattening:
  * @settings: a #WebKitSettings
  *
- * Get the #WebKitSettings:enable-frame-flattening property.
+ * Frame flattening is no longer supported. This function returns %FALSE.
  *
- * Returns: %TRUE If frame flattening is enabled or %FALSE otherwise.
+ * Returns: %FALSE
  *
+ * Deprecated: 2.38
  **/
 gboolean webkit_settings_get_enable_frame_flattening(WebKitSettings* settings)
 {
     g_return_val_if_fail(WEBKIT_IS_SETTINGS(settings), FALSE);
 
-    return settings->priv->preferences->frameFlatteningEnabled();
+    return FALSE;
 }
 
 /**
@@ -1863,18 +1888,13 @@ gboolean webkit_settings_get_enable_frame_flattening(WebKitSettings* settings)
  * @settings: a #WebKitSettings
  * @enabled: Value to be set
  *
- * Set the #WebKitSettings:enable-frame-flattening property.
+ * Frame flattening is no longer supported. This function does nothing.
+ *
+ * Deprecated: 2.38
  */
-void webkit_settings_set_enable_frame_flattening(WebKitSettings* settings, gboolean enabled)
+void webkit_settings_set_enable_frame_flattening(WebKitSettings* settings, gboolean)
 {
     g_return_if_fail(WEBKIT_IS_SETTINGS(settings));
-
-    WebKitSettingsPrivate* priv = settings->priv;
-    if (priv->preferences->frameFlatteningEnabled() == enabled)
-        return;
-
-    priv->preferences->setFrameFlatteningEnabled(enabled);
-    g_object_notify_by_pspec(G_OBJECT(settings), sObjProperties[PROP_ENABLE_FRAME_FLATTENING]);
 }
 
 /**
@@ -1937,7 +1957,9 @@ gboolean webkit_settings_get_enable_java(WebKitSettings* settings)
  * @settings: a #WebKitSettings
  * @enabled: Value to be set
  *
- * Set the #WebKitSettings:enable-java property. Deprecated function that does nothing.
+ * Set the #WebKitSettings:enable-java property.
+ *
+ * Deprecated function that does nothing.
  *
  * Deprecated: 2.38. This function does nothing.
  */
@@ -3104,6 +3126,8 @@ void webkit_settings_set_user_agent(WebKitSettings* settings, const char* userAg
  * @application_name: (allow-none): The application name used for the user agent or %NULL to use the default user agent.
  * @application_version: (allow-none): The application version for the user agent or %NULL to user the default version.
  *
+ * Set the #WebKitSettings:user-agent property by appending the application details.
+ *
  * Set the #WebKitSettings:user-agent property by appending the application details to the default user
  * agent. If no application name or version is given, the default user agent used will be used. If only
  * the version is given, the default engine version is used with the given application name.
@@ -3263,8 +3287,50 @@ void webkit_settings_set_enable_media_stream(WebKitSettings* settings, gboolean 
 
     priv->preferences->setMediaDevicesEnabled(enabled);
     priv->preferences->setMediaStreamEnabled(enabled);
-    priv->preferences->setPeerConnectionEnabled(enabled);
     g_object_notify_by_pspec(G_OBJECT(settings), sObjProperties[PROP_ENABLE_MEDIA_STREAM]);
+}
+
+/**
+ * webkit_settings_get_enable_webrtc:
+ * @settings: a #WebKitSettings
+ *
+ * Get the [property@Settings:enable-webrtc] property.
+ *
+ * Returns: %TRUE If WebRTC support is enabled or %FALSE otherwise.
+ *
+ * Since: 2.38
+ */
+gboolean webkit_settings_get_enable_webrtc(WebKitSettings* settings)
+{
+    g_return_val_if_fail(WEBKIT_IS_SETTINGS(settings), FALSE);
+
+    return settings->priv->preferences->peerConnectionEnabled();
+}
+
+/**
+ * webkit_settings_set_enable_webrtc:
+ * @settings: a #WebKitSettings
+ * @enabled: Value to be set
+ *
+ * Set the [property@Settings:enable-webrtc] property.
+ *
+ * Setting this property to %TRUE implies the media-stream web-setting will also be enabled.
+ *
+ * Since: 2.38
+ */
+void webkit_settings_set_enable_webrtc(WebKitSettings* settings, gboolean enabled)
+{
+    g_return_if_fail(WEBKIT_IS_SETTINGS(settings));
+
+    WebKitSettingsPrivate* priv = settings->priv;
+    bool currentValue = priv->preferences->peerConnectionEnabled();
+    if (currentValue == enabled)
+        return;
+
+    if (enabled)
+        webkit_settings_set_enable_media_stream(settings, enabled);
+    priv->preferences->setPeerConnectionEnabled(enabled);
+    g_object_notify_by_pspec(G_OBJECT(settings), sObjProperties[PROP_ENABLE_WEBRTC]);
 }
 
 /**
@@ -3709,6 +3775,8 @@ void webkit_settings_set_enable_back_forward_navigation_gestures(WebKitSettings*
  * webkit_settings_font_size_to_points:
  * @pixels: the font size in pixels to convert to points
  *
+ * Convert @pixels to the equivalent value in points.
+ *
  * Convert @pixels to the equivalent value in points, based on the current
  * screen DPI. Applications can use this function to convert font size values
  * in pixels to font size values in points when getting the font size properties
@@ -3726,6 +3794,8 @@ guint32 webkit_settings_font_size_to_points(guint32 pixels)
 /**
  * webkit_settings_font_size_to_pixels:
  * @points: the font size in points to convert to pixels
+ *
+ * Convert @points to the equivalent value in pixels.
  *
  * Convert @points to the equivalent value in pixels, based on the current
  * screen DPI. Applications can use this function to convert font size values

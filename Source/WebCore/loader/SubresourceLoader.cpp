@@ -46,7 +46,6 @@
 #include "Page.h"
 #include "ResourceLoadObserver.h"
 #include "ResourceTiming.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
@@ -85,15 +84,29 @@ namespace WebCore {
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, subresourceLoaderCounter, ("SubresourceLoader"));
 
 SubresourceLoader::RequestCountTracker::RequestCountTracker(CachedResourceLoader& cachedResourceLoader, const CachedResource& resource)
-    : m_cachedResourceLoader(cachedResourceLoader)
-    , m_resource(resource)
+    : m_cachedResourceLoader(&cachedResourceLoader)
+    , m_resource(&resource)
 {
-    m_cachedResourceLoader.incrementRequestCount(m_resource);
+    cachedResourceLoader.incrementRequestCount(resource);
+}
+
+SubresourceLoader::RequestCountTracker::RequestCountTracker(RequestCountTracker&& other)
+    : m_cachedResourceLoader(std::exchange(other.m_cachedResourceLoader, nullptr))
+    , m_resource(std::exchange(other.m_resource, nullptr))
+{
+}
+
+auto SubresourceLoader::RequestCountTracker::operator=(RequestCountTracker&& other) -> RequestCountTracker&
+{
+    m_cachedResourceLoader = std::exchange(other.m_cachedResourceLoader, nullptr);
+    m_resource = std::exchange(other.m_resource, nullptr);
+    return *this;
 }
 
 SubresourceLoader::RequestCountTracker::~RequestCountTracker()
 {
-    m_cachedResourceLoader.decrementRequestCount(m_resource);
+    if (m_cachedResourceLoader && m_resource)
+        m_cachedResourceLoader->decrementRequestCount(*m_resource);
 }
 
 SubresourceLoader::SubresourceLoader(Frame& frame, CachedResource& resource, const ResourceLoaderOptions& options)
@@ -280,7 +293,7 @@ void SubresourceLoader::willSendRequestInternal(ResourceRequest&& newRequest, co
 
         if (!m_documentLoader->cachedResourceLoader().updateRequestAfterRedirection(m_resource->type(), newRequest, options(), originalRequest().url())) {
             SUBRESOURCELOADER_RELEASE_LOG("willSendRequestInternal: resource load canceled because CachedResourceLoader::updateRequestAfterRedirection (really CachedResourceLoader::canRequestAfterRedirection) said no");
-            cancel();
+            cancel(ResourceError { String(), 0, request().url(), "Redirect was not allowed"_s, ResourceError::Type::AccessControl });
             return completionHandler(WTFMove(newRequest));
         }
 

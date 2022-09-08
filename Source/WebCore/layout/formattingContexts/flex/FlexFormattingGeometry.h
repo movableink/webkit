@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FormattingGeometry.h"
 
 namespace WebCore {
@@ -43,6 +41,9 @@ public:
 
     IntrinsicWidthConstraints intrinsicWidthConstraints(const ContainerBox&) const;
 
+    static bool isMainAxisParallelWithInlineAxis(const ContainerBox& flexBox);
+    static bool isReversedToContentDirection(const ContainerBox& flexBox);
+
 private:
     const FlexFormattingContext& formattingContext() const { return downcast<FlexFormattingContext>(FormattingGeometry::formattingContext()); }
 };
@@ -52,4 +53,3 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_GEOMETRY(FlexFormattingGeometry, isFlexFormattingGeometry())
 
-#endif

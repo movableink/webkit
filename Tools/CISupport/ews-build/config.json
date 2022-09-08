@@ -21,6 +21,7 @@
     { "name": "igalia12-gtk-wk2-ews", "platform": "gtk" },
     { "name": "igalia13-gtk-wk2-ews", "platform": "gtk" },
     { "name": "aperez-gtk-ews", "platform": "gtk" },
+    { "name": "csaavedra-gtk-ews", "platform": "gtk" },
     { "name": "igalia-wpe-ews", "platform": "wpe" },
     { "name": "igalia2-wpe-ews", "platform": "wpe" },
     { "name": "aperez-wpe-ews", "platform": "wpe" },
@@ -106,7 +107,8 @@
     { "name": "webkit-cq-01", "platform": "mac-bigsur" },
     { "name": "webkit-cq-02", "platform": "mac-bigsur" },
     { "name": "webkit-cq-03", "platform": "mac-bigsur" },
-    { "name": "webkit-cq-04", "platform": "mac-bigsur" }
+    { "name": "webkit-cq-04", "platform": "mac-bigsur" },
+    { "name": "webkit-cq-05", "platform": "mac-bigsur" }
   ],
   "builders": [
     {
@@ -124,7 +126,7 @@
       "factory": "GTKBuildFactory", "platform": "gtk",
       "configuration": "release", "architectures": ["x86_64"],
       "triggers": ["api-tests-gtk-ews", "gtk-wk2-tests-ews"],
-      "workernames": ["aperez-gtk-ews", "igalia1-gtk-wk2-ews", "igalia2-gtk-wk2-ews", "igalia13-gtk-wk2-ews"]
+      "workernames": ["aperez-gtk-ews", "csaavedra-gtk-ews", "igalia1-gtk-wk2-ews", "igalia2-gtk-wk2-ews", "igalia13-gtk-wk2-ews"]
     },
     {
       "name": "GTK-WK2-Tests-EWS", "shortname": "gtk-wk2", "icon": "testOnly",
@@ -335,19 +337,19 @@
       "name": "Commit-Queue", "shortname": "commit", "icon": "buildAndTest",
       "factory": "CommitQueueFactory", "platform": "mac-bigsur",
       "configuration": "release", "architectures": ["x86_64"],
-      "workernames": ["webkit-cq-01", "webkit-cq-02", "webkit-cq-03"]
+      "workernames": ["webkit-cq-01", "webkit-cq-02", "webkit-cq-03", "webkit-cq-05"]
     },
     {
       "name": "Merge-Queue", "shortname": "merge", "icon": "buildAndTest",
       "factory": "MergeQueueFactory", "platform": "mac-bigsur",
       "configuration": "release", "architectures": ["x86_64"],
-      "workernames": ["webkit-cq-01", "webkit-cq-02", "webkit-cq-03"]
+      "workernames": ["webkit-cq-01", "webkit-cq-02", "webkit-cq-03", "webkit-cq-05"]
     },
     {
       "name": "Unsafe-Merge-Queue", "shortname": "unsafe-merge", "icon": "buildAndTest",
       "factory": "UnsafeMergeQueueFactory", "platform": "mac-bigsur",
       "configuration": "release", "architectures": ["arm64"],
-      "workernames": ["webkit-cq-01", "webkit-cq-02", "webkit-cq-03", "webkit-cq-04"]
+      "workernames": ["webkit-cq-01", "webkit-cq-02", "webkit-cq-03", "webkit-cq-04", "webkit-cq-05"]
     }
   ],
   "schedulers": [

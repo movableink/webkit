@@ -492,6 +492,8 @@ op :get_by_val_with_this,
     },
     metadata: {
         profile: ValueProfile,
+        arrayProfile: ArrayProfile,
+        seenIdentifiers: GetByValHistory,
     }
 
 op :get_by_id_direct,
@@ -1892,10 +1894,22 @@ op_group :CatchAll,
         exception: VirtualRegister,
     }
 
-op :rtt_canon,
+op :i31_new,
     args: {
         dst: VirtualRegister,
-        typeIndex: unsigned,
+        value: VirtualRegister,
+    }
+
+op :i31_get_s,
+    args: {
+        dst: VirtualRegister,
+        ref: VirtualRegister,
+    }
+
+op :i31_get_u,
+    args: {
+        dst: VirtualRegister,
+        ref: VirtualRegister,
     }
 
 end_section :Wasm

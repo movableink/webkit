@@ -40,11 +40,13 @@ enum class SDKAlignedBehavior {
     ConvertsInvalidURLsToBlank,
     DataURLFragmentRemoval,
     DecidesPolicyBeforeLoadingQuickLookPreview,
+    DefaultsToExcludingBackgroundsWhenPrinting,
     DefaultsToPassiveTouchListenersOnDocument,
     DefaultsToPassiveWheelListenersOnDocument,
     DisallowsSettingAnyXHRHeaderFromFileURLs,
     DoesNotDrainTheMicrotaskQueueWhenCallingObjC,
     DoesNotParseStringEndingWithFullStopAsFloatingPointNumber,
+    DoesNotAddIntrinsicMarginsToFormControls,
     DOMWindowReuseRestriction,
     DownloadDelegatesCalledOnTheMainThread,
     DropToNavigateDisallowedByDefault,
@@ -67,6 +69,7 @@ enum class SDKAlignedBehavior {
     NoLaBanquePostaleQuirks,
     NoMoviStarPlusCORSPreflightQuirk,
     NoPokerBrosBuiltInTagQuirk,
+    NoShowModalDialog,
     NoTheSecretSocietyHiddenMysteryWindowOpenQuirk,
     NoTypedArrayAPIQuirk,
     NoUnconditionalUniversalSandboxExtension,
@@ -95,6 +98,7 @@ enum class SDKAlignedBehavior {
     WKContentViewDoesNotOverrideKeyCommands,
     WKWebsiteDataStoreInitReturningNil,
     UIBackForwardSkipsHistoryItemsWithoutUserGesture,
+    ProgrammaticFocusDuringUserScriptShowsInputViews,
 
     NumberOfBehaviors
 };

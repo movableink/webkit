@@ -11,6 +11,7 @@
 #define COMPILER_TRANSLATOR_TREEOPS_VULKAN_EMULATEADVANCEDBLENDEQUATIONS_H_
 
 #include "common/angleutils.h"
+#include "compiler/translator/Compiler.h"
 
 namespace sh
 {
@@ -25,8 +26,9 @@ class AdvancedBlendEquations;
 // Declares the necessary input attachment (if not already for framebuffer fetch), loads from it and
 // implements the specified advanced blend equation functions.  A driver uniform is used to select
 // which function to use at runtime.
-ANGLE_NO_DISCARD bool EmulateAdvancedBlendEquations(
+[[nodiscard]] bool EmulateAdvancedBlendEquations(
     TCompiler *compiler,
+    const ShCompileOptions &compileOptions,
     TIntermBlock *root,
     TSymbolTable *symbolTable,
     const DriverUniform *driverUniforms,

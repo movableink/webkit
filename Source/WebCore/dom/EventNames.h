@@ -28,10 +28,6 @@
 #include <functional>
 #include <wtf/text/AtomString.h>
 
-#if ENABLE(TOUCH_EVENTS)
-#include "RuntimeEnabledFeatures.h"
-#endif
-
 namespace WebCore {
 
 #if ENABLE(APPLE_PAY_COUPON_CODE)
@@ -92,6 +88,7 @@ namespace WebCore {
     macro(compositionend) \
     macro(compositionstart) \
     macro(compositionupdate) \
+    macro(configurationchange) \
     macro(connect) \
     macro(connectionstatechange) \
     macro(connecting) \
@@ -242,6 +239,7 @@ namespace WebCore {
     macro(seeked) \
     macro(seeking) \
     macro(select) \
+    macro(selectedcandidatepairchange) \
     macro(selectend) \
     macro(selectionchange) \
     macro(selectstart) \

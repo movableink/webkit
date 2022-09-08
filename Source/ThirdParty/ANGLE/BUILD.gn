@@ -7,6 +7,9 @@ import("gni/angle.gni")
 if (angle_enable_vulkan) {
   import("//build_overrides//vulkan_headers.gni")
 }
+if (angle_use_wayland) {
+  import("//build_overrides/wayland.gni")
+}
 if (angle_has_build) {
   import("//build/config/linux/pkg_config.gni")
   import("//build/config/sanitizers/sanitizers.gni")
@@ -58,6 +61,17 @@ declare_args() {
   # Allow shared library custom name extensions for setting soname such as libEGL.so.1
   angle_egl_extension = ""
   angle_glesv2_extension = ""
+
+  # Enable share context lock. If it is false, the client need to use gl calls in a threadsafe way.
+  # Chromium only uses share contexts on the GPU thread.
+  # angle_deqp_tests contains threading related tests.
+  angle_enable_share_context_lock =
+      !build_with_chromium || build_angle_deqp_tests
+
+  if (is_android) {
+    # Use Android TLS slot to store current context.
+    angle_use_android_tls_slot = !build_with_chromium
+  }
 }
 
 if (angle_build_all) {
@@ -110,7 +124,17 @@ config("internal_config") {
     "src",
   ]
 
-  defines = []
+  # Handle breaking changes in VulkanMemoryAllocator.
+  angle_vma_version_define = "ANGLE_VMA_VERSION="
+  if (defined(angle_vma_version)) {
+    angle_vma_version_define += angle_vma_version
+  } else {
+    # Default to 2.3.0. This can be bumped and include guards removed when all
+    # clients have migrated to 3.x.
+    angle_vma_version_define += 2003000
+  }
+
+  defines = [ angle_vma_version_define ]
 
   if (is_win) {
     defines += [ "ANGLE_IS_WIN" ]
@@ -119,6 +143,16 @@ config("internal_config") {
     }
   } else if (is_linux || is_chromeos) {
     defines += [ "ANGLE_IS_LINUX" ]
+  }
+
+  if (angle_enable_share_context_lock) {
+    defines += [ "ANGLE_ENABLE_SHARE_CONTEXT_LOCK=1" ]
+  }
+
+  if (is_android) {
+    if (angle_use_android_tls_slot) {
+      defines += [ "ANGLE_USE_ANDROID_TLS_SLOT=1" ]
+    }
   }
 
   # Enables debug/trace-related functionality, including logging every GLES/EGL API command to the
@@ -172,6 +206,10 @@ config("internal_config") {
 
   if (is_lsan) {
     defines += [ "ANGLE_WITH_LSAN" ]
+  }
+
+  if (angle_has_astc_encoder) {
+    defines += [ "ANGLE_HAS_ASTCENC" ]
   }
 }
 
@@ -422,6 +460,10 @@ angle_static_library("angle_common") {
   if (using_sanitizer && !build_with_chromium) {
     data_deps = [ "//build/config/clang:llvm-symbolizer_data($host_toolchain)" ]
   }
+
+  if (is_apple) {
+    frameworks = [ "Metal.framework" ]
+  }
 }
 
 config("angle_image_util_config") {
@@ -440,6 +482,11 @@ angle_static_library("angle_image_util") {
   sources = libangle_image_util_sources
   public_configs += [ ":angle_image_util_config" ]
   public_deps = [ ":angle_image_util_headers" ]
+
+  if (angle_has_astc_encoder) {
+    public_deps += [ "third_party/astc-encoder:astcenc" ]
+    include_dirs = [ "third_party/astc-encoder/src/Source/" ]
+  }
 }
 
 config("angle_gl_visibility_config") {
@@ -909,10 +956,13 @@ angle_source_set("libANGLE_base") {
   if (angle_enable_cl) {
     sources += libangle_cl_sources
   }
+  defines = []
+  if (angle_enable_gl_desktop_frontend) {
+    defines += [ "ANGLE_ENABLE_GL_DESKTOP_FRONTEND" ]
+  }
 
   include_dirs = []
   libs = []
-  defines = []
   if (angle_link_glx) {
     libs += [ "GL" ]
     defines += [ "ANGLE_LINK_GLX" ]
@@ -1034,7 +1084,7 @@ angle_source_set("angle_gl_enum_utils") {
 
 if (angle_use_wayland) {
   config("angle_wayland_config") {
-    if (!defined(use_system_libwayland) || use_system_libwayland) {
+    if (use_system_libwayland) {
       libs = [
         "wayland-client",
         "wayland-egl",
@@ -1042,23 +1092,19 @@ if (angle_use_wayland) {
     }
 
     include_dirs = [
-      "$angle_wayland_dir/egl",
-      "$angle_wayland_dir/src",
-
-      # In case we are building with chromium, we need to take into account the case
-      # where wayland-egl-backend.h is not installed in the system include directories
-      "//third_party/wayland/src/egl",
+      "$wayland_dir/egl",
+      "$wayland_dir/src",
     ]
   }
 
   group("angle_wayland") {
     public_configs = [ ":angle_wayland_config" ]
 
-    if (defined(use_system_libwayland) && !use_system_libwayland) {
-      # Use chromium third-party targets
+    if (!use_system_libwayland) {
+      # Use third-party targets
       public_deps = [
-        "//third_party/wayland:wayland_client",
-        "//third_party/wayland:wayland_egl",
+        "$wayland_gn_dir:wayland_client",
+        "$wayland_gn_dir:wayland_egl",
       ]
     }
   }
@@ -1211,6 +1257,11 @@ config("library_name_config") {
       "ANGLE_EGL_LIBRARY_NAME=\"libEGL${angle_libs_suffix}.cr\"",
       "ANGLE_GLESV2_LIBRARY_NAME=\"libGLESv2${angle_libs_suffix}.cr\"",
     ]
+  } else if (angle_expose_wgl_entry_points) {
+    defines = [
+      "ANGLE_EGL_LIBRARY_NAME=\"libEGL\"",
+      "ANGLE_GLESV2_LIBRARY_NAME=\"opengl32\"",
+    ]
   } else {
     defines = [
       "ANGLE_EGL_LIBRARY_NAME=\"libEGL${angle_libs_suffix}\"",
@@ -1238,10 +1289,9 @@ set_defaults("angle_libGLESv2") {
 
 template("angle_libGLESv2") {
   angle_shared_library(target_name) {
-    sources = libglesv2_sources + invoker.sources
-    if (angle_enable_cl) {
-      sources += libglesv2_cl_sources
-    }
+    sources = invoker.sources + libglesv2_sources
+    deps = invoker.deps + [ ":includes" ]
+    defines = [ "LIBGLESV2_IMPLEMENTATION" ]
 
     output_name = "${invoker.output_name}${angle_libs_suffix}"
     if (angle_glesv2_extension != "") {
@@ -1254,9 +1304,24 @@ template("angle_libGLESv2") {
       ":gl_prototypes",
     ]
 
-    defines = [ "LIBGLESV2_IMPLEMENTATION" ]
+    if (angle_enable_gl_desktop_frontend) {
+      sources += libglesv2_gl_sources
+      defines += [ "ANGLE_ENABLE_GL_DESKTOP_FRONTEND" ]
+    }
 
-    deps = invoker.deps + [ ":includes" ]
+    if (angle_expose_wgl_entry_points) {
+      sources += [
+        "src/libGLESv2/entry_points_wgl.cpp",
+        "src/libGLESv2/entry_points_wgl.h",
+        "src/libGLESv2/proc_table_wgl.h",
+        "src/libGLESv2/proc_table_wgl_autogen.cpp",
+      ]
+      defines += [ "ANGLE_EXPOSE_WGL_ENTRY_POINTS" ]
+    }
+
+    if (angle_enable_cl) {
+      sources += libglesv2_cl_sources
+    }
 
     if (is_win) {
       sources += [
@@ -1289,37 +1354,33 @@ if (angle_has_frame_capture) {
   }
 }
 
-if (is_win && !angle_is_winuwp) {
-  angle_shared_library("libGL") {
-    sources = libgl_sources
-
-    output_name = "openGL32"
-    output_dir = "$root_out_dir/angle_libs"
-
-    configs += [
-      ":angle_gl_visibility_config",
-      ":debug_annotations_config",
-      ":gl_prototypes",
-    ]
-
-    defines = [
-      "ANGLE_CAPTURE_ENABLED=0",
-      "LIBGL_IMPLEMENTATION",
-    ]
-
-    deps = [
-      ":includes",
-      ":libANGLE",
-    ]
-
+if (angle_enable_gl_desktop_frontend) {
+  angle_libGLESv2("libGL") {
     if (is_win) {
-      deps += [ ":angle_version" ]
+      output_name = "opengl32"
+    } else {
+      output_name = "libGL"
     }
+
+    deps = [ ":libANGLE" ]
   }
 }
 
 angle_static_library("libGLESv2_static") {
   sources = libglesv2_sources
+  if (angle_enable_gl_desktop_frontend) {
+    sources += libglesv2_gl_sources
+    defines = [ "ANGLE_ENABLE_GL_DESKTOP_FRONTEND" ]
+  }
+  if (angle_expose_wgl_entry_points) {
+    sources += [
+      "src/libGLESv2/entry_points_wgl.cpp",
+      "src/libGLESv2/entry_points_wgl.h",
+      "src/libGLESv2/proc_table_wgl.h",
+      "src/libGLESv2/proc_table_wgl_autogen.cpp",
+    ]
+    defines += [ "ANGLE_EXPOSE_WGL_ENTRY_POINTS" ]
+  }
   if (angle_enable_cl) {
     sources += libglesv2_cl_sources
   }

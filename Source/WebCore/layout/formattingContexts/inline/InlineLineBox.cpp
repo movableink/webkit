@@ -26,8 +26,6 @@
 #include "config.h"
 #include "InlineLineBox.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutBoxGeometry.h"
 #include "LayoutContainerBox.h"
 
@@ -35,7 +33,8 @@ namespace WebCore {
 namespace Layout {
 
 LineBox::LineBox(const Box& rootLayoutBox, InlineLayoutUnit rootInlineBoxAlignmentOffset, InlineLayoutUnit contentLogicalWidth, size_t lineIndex, size_t nonSpanningInlineLevelBoxCount)
-    : m_rootInlineBoxAlignmentOffset(rootInlineBoxAlignmentOffset)
+    : m_lineIndex(lineIndex)
+    , m_rootInlineBoxAlignmentOffset(rootInlineBoxAlignmentOffset)
     , m_rootInlineBox({ rootLayoutBox, !lineIndex ? rootLayoutBox.firstLineStyle() : rootLayoutBox.style(), { }, InlineLayoutSize { contentLogicalWidth, { } }, InlineLevelBox::Type::RootInlineBox })
 {
     m_nonRootInlineLevelBoxList.reserveInitialCapacity(nonSpanningInlineLevelBoxCount);
@@ -71,29 +70,33 @@ InlineRect LineBox::logicalRectForLineBreakBox(const Box& layoutBox) const
     return logicalRectForInlineLevelBox(layoutBox);
 }
 
+InlineLayoutUnit LineBox::inlineLevelBoxAbsoluteTop(const InlineLevelBox& inlineLevelBox) const
+{
+    // Inline level boxes are relative to their parent unless the vertical alignment makes them relative to the line box (e.g. top, bottom).
+    auto top = inlineLevelBox.logicalTop();
+    if (inlineLevelBox.isRootInlineBox() || inlineLevelBox.hasLineBoxRelativeAlignment())
+        return top;
+
+    // Fast path for inline level boxes on the root inline box (e.g <div><img></div>).
+    if (&inlineLevelBox.layoutBox().parent() == &m_rootInlineBox.layoutBox())
+        return top + m_rootInlineBox.logicalTop();
+
+    // Nested inline content e.g <div><span><img></span></div>
+    auto* ancestorInlineBox = &inlineLevelBox;
+    while (ancestorInlineBox != &m_rootInlineBox && !ancestorInlineBox->hasLineBoxRelativeAlignment()) {
+        ancestorInlineBox = &inlineLevelBoxForLayoutBox(ancestorInlineBox->layoutBox().parent());
+        ASSERT(ancestorInlineBox->isInlineBox());
+        top += ancestorInlineBox->logicalTop();
+    }
+    return top;
+}
+
 InlineRect LineBox::logicalRectForInlineLevelBox(const Box& layoutBox) const
 {
     ASSERT(layoutBox.isInlineLevelBox() || layoutBox.isLineBreakBox());
-    // Inline level boxes are relative to their parent unless the vertical alignment makes them relative to the line box (e.g. top, bottom).
-    auto* inlineBox = &inlineLevelBoxForLayoutBox(layoutBox);
-    auto inlineBoxLogicalRect = inlineBox->logicalRect();
-    if (inlineBox->hasLineBoxRelativeAlignment())
-        return inlineBoxLogicalRect;
-
-    // Fast path for inline level boxes on the root inline box (e.g <div><img></div>).
-    if (&layoutBox.parent() == &m_rootInlineBox.layoutBox()) {
-        inlineBoxLogicalRect.moveVertically(m_rootInlineBox.logicalTop());
-        return inlineBoxLogicalRect;
-    }
-
-    // e.g <div><span><img></span></div>
-    auto inlineBoxAbsolutelogicalTop = inlineBoxLogicalRect.top();
-    while (inlineBox != &m_rootInlineBox && !inlineBox->hasLineBoxRelativeAlignment()) {
-        inlineBox = &inlineLevelBoxForLayoutBox(inlineBox->layoutBox().parent());
-        ASSERT(inlineBox->isInlineBox());
-        inlineBoxAbsolutelogicalTop += inlineBox->logicalTop();
-    }
-    return InlineRect { inlineBoxAbsolutelogicalTop, inlineBoxLogicalRect.left(), inlineBoxLogicalRect.width(), inlineBoxLogicalRect.height() };
+    auto& inlineBox = inlineLevelBoxForLayoutBox(layoutBox);
+    auto inlineBoxLogicalRect = inlineBox.logicalRect();
+    return InlineRect { inlineLevelBoxAbsoluteTop(inlineBox), inlineBoxLogicalRect.left(), inlineBoxLogicalRect.width(), inlineBoxLogicalRect.height() };
 }
 
 InlineRect LineBox::logicalBorderBoxForAtomicInlineLevelBox(const Box& layoutBox, const BoxGeometry& boxGeometry) const
@@ -120,4 +123,3 @@ InlineRect LineBox::logicalBorderBoxForInlineBox(const Box& layoutBox, const Box
 } // namespace Layout
 } // namespace WebCore
 
-#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,6 +78,10 @@ public:
     static void enqueuePostUpgradeReactions(Element&);
 
     bool observesStyleAttribute() const;
+    bool isElementInternalsDisabled() const;
+    bool isElementInternalsAttached() const;
+    void setElementInternalsAttached();
+
     void invokeAll(Element&);
     void clear();
     bool isEmpty() const { return m_items.isEmpty(); }
@@ -92,6 +96,7 @@ private:
 
     Ref<JSCustomElementInterface> m_interface;
     Vector<CustomElementReactionQueueItem> m_items;
+    bool m_elementInternalsAttached { false };
 };
 
 class CustomElementReactionDisallowedScope {
@@ -166,8 +171,8 @@ private:
     WEBCORE_EXPORT void processQueue(JSC::JSGlobalObject*);
 
     CustomElementQueue* m_queue { nullptr }; // Use raw pointer to avoid generating delete in the destructor.
-    CustomElementReactionStack* m_previousProcessingStack;
-    JSC::JSGlobalObject* m_state;
+    CustomElementReactionStack* const m_previousProcessingStack;
+    JSC::JSGlobalObject* const m_state;
 
     WEBCORE_EXPORT static CustomElementReactionStack* s_currentProcessingStack;
 

@@ -26,11 +26,11 @@
 #include "config.h"
 #include "Connection.h"
 
-#include "ArgumentCoder.h"
 #include "Logging.h"
 #include "MessageFlags.h"
 #include "MessageReceiveQueues.h"
 #include <memory>
+#include <wtf/ArgumentCoder.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
@@ -384,16 +384,16 @@ void Connection::removeWorkQueueMessageReceiver(ReceiverName receiverName, uint6
     removeMessageReceiveQueue(ReceiverMatcher::createWithZeroAsAnyDestination(receiverName, destinationID));
 }
 
-void Connection::addThreadMessageReceiver(ReceiverName receiverName, ThreadMessageReceiver* receiver, uint64_t destinationID)
+void Connection::addMessageReceiver(FunctionDispatcher& dispatcher, MessageReceiver& receiver, ReceiverName receiverName, uint64_t destinationID)
 {
     auto receiverMatcher = ReceiverMatcher::createWithZeroAsAnyDestination(receiverName, destinationID);
-    auto receiveQueue = makeUnique<ThreadMessageReceiverQueue>(*receiver);
+    auto receiveQueue = makeUnique<FunctionDispatcherQueue>(dispatcher, receiver);
     Locker incomingMessagesLocker { m_incomingMessagesLock };
     enqueueMatchingMessagesToMessageReceiveQueue(*receiveQueue, receiverMatcher);
     m_receiveQueues.add(WTFMove(receiveQueue), receiverMatcher);
 }
 
-void Connection::removeThreadMessageReceiver(ReceiverName receiverName, uint64_t destinationID)
+void Connection::removeMessageReceiver(ReceiverName receiverName, uint64_t destinationID)
 {
     removeMessageReceiveQueue(ReceiverMatcher::createWithZeroAsAnyDestination(receiverName, destinationID));
 }
@@ -435,12 +435,11 @@ void Connection::invalidate()
 {
     ASSERT(RunLoop::isMain());
 
-    if (!isValid()) {
-        // Someone already called invalidate().
+    if (std::exchange(m_didInvalidationOnMainThread, true))
         return;
-    }
-    
+
     m_isValid = false;
+
     clearAsyncReplyHandlers(*this);
 
     m_connectionQueue->dispatch([protectedThis = Ref { *this }]() mutable {
@@ -599,7 +598,7 @@ std::unique_ptr<Decoder> Connection::waitForMessage(MessageName messageName, uin
         }
 
         if (UNLIKELY(m_inDispatchSyncMessageCount && !timeout.isInfinity())) {
-            RELEASE_LOG_ERROR(IPC, "Connection::waitForMessage(%{public}s): Exiting immediately, since we're handling a sync message already", description(messageName));
+            RELEASE_LOG_ERROR(IPC, "Connection::waitForMessage(%" PUBLIC_LOG_STRING "): Exiting immediately, since we're handling a sync message already", description(messageName));
             m_waitingForMessage = nullptr;
             break;
         }
@@ -727,7 +726,7 @@ std::unique_ptr<Decoder> Connection::waitForSyncReply(SyncRequestID syncRequestI
     }
 
 #if OS(DARWIN)
-    RELEASE_LOG_ERROR(IPC, "Connection::waitForSyncReply: Timed-out while waiting for reply for %{public}s from process %d, id=%" PRIu64, description(messageName), remoteProcessID(), syncRequestID.toUInt64());
+    RELEASE_LOG_ERROR(IPC, "Connection::waitForSyncReply: Timed-out while waiting for reply for %" PUBLIC_LOG_STRING " from process %d, id=%" PRIu64, description(messageName), remoteProcessID(), syncRequestID.toUInt64());
 #else
     RELEASE_LOG_ERROR(IPC, "Connection::waitForSyncReply: Timed-out while waiting for reply for %s, id=%" PRIu64, description(messageName), syncRequestID.toUInt64());
 #endif
@@ -909,6 +908,7 @@ void Connection::postConnectionDidCloseOnConnectionWorkQueue()
 void Connection::connectionDidClose()
 {
     // The connection is now invalid.
+    m_isValid = false;
     platformInvalidate();
 
     {
@@ -938,12 +938,8 @@ void Connection::connectionDidClose()
     RunLoop::main().dispatch([protectedThis = Ref { *this }]() mutable {
         // If the connection has been explicitly invalidated before dispatchConnectionDidClose was called,
         // then the connection will be invalid here.
-        if (!protectedThis->isValid())
+        if (std::exchange(protectedThis->m_didInvalidationOnMainThread, true))
             return;
-
-        // Set m_isValid to false before calling didClose, otherwise, sendSync will try to send a message
-        // to the connection and will then wait indefinitely for a reply.
-        protectedThis->m_isValid = false;
 
         protectedThis->m_client.didClose(protectedThis.get());
 
@@ -1075,7 +1071,8 @@ void Connection::enqueueIncomingMessage(std::unique_ptr<Decoder> incomingMessage
 
 void Connection::dispatchMessage(Decoder& decoder)
 {
-    RELEASE_ASSERT(isValid());
+    ASSERT(RunLoop::isMain());
+    RELEASE_ASSERT(!m_didInvalidationOnMainThread);
     if (decoder.messageReceiverName() == ReceiverName::AsyncReply) {
         auto handler = takeAsyncReplyHandler(*this, decoder.destinationID());
         if (!handler) {
@@ -1243,9 +1240,7 @@ void Connection::dispatchIncomingMessages()
         messagesToProcess = m_incomingMessagesThrottler->numberOfMessagesToProcess(m_incomingMessages.size());
         if (messagesToProcess < m_incomingMessages.size()) {
             RELEASE_LOG_ERROR(IPC, "%p - Connection::dispatchIncomingMessages: IPC throttling was triggered (has %zu pending incoming messages, will only process %zu before yielding)", this, m_incomingMessages.size(), messagesToProcess);
-#if PLATFORM(COCOA)
-            RELEASE_LOG_ERROR(IPC, "%p - Connection::dispatchIncomingMessages: first IPC message in queue is %{public}s", this, description(message->messageName()));
-#endif
+            RELEASE_LOG_ERROR(IPC, "%p - Connection::dispatchIncomingMessages: first IPC message in queue is %" PUBLIC_LOG_STRING, this, description(message->messageName()));
         }
 
         // Re-schedule ourselves *before* we dispatch the messages because we want to process follow-up messages if the client

@@ -207,8 +207,6 @@ RTCRtpParameters toRTCRtpParameters(const webrtc::RtpParameters& rtcParameters)
         parameters.codecs.append(toRTCCodecParameters(codec));
 
     parameters.rtcp.reducedSize = rtcParameters.rtcp.reduced_size;
-    if (rtcParameters.rtcp.cname.length())
-        parameters.rtcp.cname = fromStdString(rtcParameters.rtcp.cname);
 
     return parameters;
 }
@@ -216,6 +214,7 @@ RTCRtpParameters toRTCRtpParameters(const webrtc::RtpParameters& rtcParameters)
 RTCRtpSendParameters toRTCRtpSendParameters(const webrtc::RtpParameters& rtcParameters)
 {
     RTCRtpSendParameters parameters { toRTCRtpParameters(rtcParameters) };
+    parameters.rtcp.cname = fromStdString(rtcParameters.rtcp.cname);
 
     parameters.transactionId = fromStdString(rtcParameters.transaction_id);
     for (auto& rtcEncoding : rtcParameters.encodings)
@@ -404,13 +403,9 @@ static inline std::optional<RTCIceCandidateType> toRTCIceCandidateType(const std
     return RTCIceCandidateType::Relay;
 }
 
-std::optional<RTCIceCandidate::Fields> parseIceCandidateSDP(const String& sdp)
+RTCIceCandidateFields convertIceCandidate(const cricket::Candidate& candidate)
 {
-    cricket::Candidate candidate;
-    if (!webrtc::ParseCandidate(sdp.utf8().data(), &candidate, nullptr, true))
-        return { };
-
-    RTCIceCandidate::Fields fields;
+    RTCIceCandidateFields fields;
     fields.foundation = fromStdString(candidate.foundation());
     fields.component = toRTCIceComponent(candidate.component());
     fields.priority = candidate.priority();

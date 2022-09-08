@@ -128,6 +128,8 @@ set(PROTOCOL_GENERATOR_SCRIPTS_DIR "${JAVASCRIPTCORE_DIR}/inspector/scripts")
 
 list(APPEND WebKit_UNIFIED_SOURCE_LIST_FILES
     "Sources.txt"
+
+    "Platform/Sources.txt"
 )
 
 set(WebKit_MESSAGES_IN_FILES
@@ -236,6 +238,7 @@ set(WebKit_MESSAGES_IN_FILES
     UIProcess/WebLockRegistryProxy
     UIProcess/WebPageProxy
     UIProcess/WebPasteboardProxy
+    UIProcess/WebPermissionControllerProxy
     UIProcess/WebProcessPool
     UIProcess/WebProcessProxy
 
@@ -318,6 +321,7 @@ set(WebKit_MESSAGES_IN_FILES
     WebProcess/WebCoreSupport/RemoteWebLockRegistry
     WebProcess/WebCoreSupport/WebBroadcastChannelRegistry
     WebProcess/WebCoreSupport/WebFileSystemStorageConnection
+    WebProcess/WebCoreSupport/WebPermissionController
     WebProcess/WebCoreSupport/WebSpeechRecognitionConnection
 
     WebProcess/WebPage/DrawingArea
@@ -511,6 +515,39 @@ endif ()
     )
 endmacro()
 GENERATE_MESSAGE_SOURCES(WebKit_DERIVED_SOURCES "${WebKit_MESSAGES_IN_FILES}")
+
+set(WebKit_SERIALIZATION_IN_FILES
+    NetworkProcess/NetworkProcessCreationParameters.serialization.in
+
+    Shared/FrameInfoData.serialization.in
+    Shared/FrameTreeNodeData.serialization.in
+    Shared/WebCoreArgumentCoders.serialization.in
+    Shared/WebsiteDataStoreParameters.serialization.in
+
+    Shared/API/APIGeometry.serialization.in
+
+    Shared/WebGPU/WebGPUOrigin3D.serialization.in
+    Shared/WebGPU/WebGPUSupportedFeatures.serialization.in
+    Shared/WebGPU/WebGPUValidationError.serialization.in
+)
+
+list(APPEND WebKit_DERIVED_SOURCES
+    ${WebKit_DERIVED_SOURCES_DIR}/GeneratedSerializers.h
+    ${WebKit_DERIVED_SOURCES_DIR}/GeneratedSerializers.cpp
+)
+
+add_custom_command(
+    OUTPUT
+        ${WebKit_DERIVED_SOURCES_DIR}/GeneratedSerializers.h
+        ${WebKit_DERIVED_SOURCES_DIR}/GeneratedSerializers.cpp
+        ${WebKit_DERIVED_SOURCES_DIR}/SerializedTypeInfo.cpp
+    MAIN_DEPENDENCY ${WEBKIT_DIR}/Scripts/generate-serializers.py
+    DEPENDS
+        ${WebKit_SERIALIZATION_IN_FILES}
+    COMMAND ${PYTHON_EXECUTABLE} ${WEBKIT_DIR}/Scripts/generate-serializers.py ${WEBKIT_DIR}/ ${WebKit_SERIALIZATION_IN_FILES}
+    WORKING_DIRECTORY ${WebKit_DERIVED_SOURCES_DIR}
+    VERBATIM
+)
 
 set(WebKit_AUTOMATION_PROTOCOL_GENERATOR_SCRIPTS
     ${PROTOCOL_GENERATOR_SCRIPTS_DIR}/generate-inspector-protocol-bindings.py

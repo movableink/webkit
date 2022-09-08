@@ -26,10 +26,9 @@
 #include "config.h"
 #include "InlineDisplayLineBuilder.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "InlineDisplayContentBuilder.h"
 #include "LayoutBoxGeometry.h"
+#include "TextUtil.h"
 
 namespace WebCore {
 namespace Layout {
@@ -43,7 +42,10 @@ InlineDisplayLineBuilder::EnclosingLineGeometry InlineDisplayLineBuilder::collec
 {
     auto& rootInlineBox = lineBox.rootInlineBox();
     auto scrollableOverflowRect = lineBoxRect;
-    auto enclosingTopAndBottom = InlineDisplay::Line::EnclosingTopAndBottom { lineBoxRect.top() + rootInlineBox.logicalTop(), lineBoxRect.top() + rootInlineBox.logicalBottom() };
+    auto enclosingTopAndBottom = InlineDisplay::Line::EnclosingTopAndBottom {
+        lineBoxRect.top() + rootInlineBox.logicalTop() - rootInlineBox.annotationAbove().value_or(0.f),
+        lineBoxRect.top() + rootInlineBox.logicalBottom() + rootInlineBox.annotationUnder().value_or(0.f)
+    };
 
     for (auto& inlineLevelBox : lineBox.nonRootInlineLevelBoxes()) {
         if (!inlineLevelBox.isAtomicInlineLevelBox() && !inlineLevelBox.isInlineBox())
@@ -66,18 +68,18 @@ InlineDisplayLineBuilder::EnclosingLineGeometry InlineDisplayLineBuilder::collec
             };
             if (lineBox.hasContent() && hasScrollableContent()) {
                 // Empty lines (e.g. continuation pre/post blocks) don't expect scrollbar overflow.
-                scrollableOverflowRect.expandToContain(borderBox);
+                scrollableOverflowRect.expandVerticallyToContain(borderBox);
             }
         } else
             ASSERT_NOT_REACHED();
 
-        enclosingTopAndBottom.top = std::min(enclosingTopAndBottom.top, borderBox.top());
-        enclosingTopAndBottom.bottom = std::max(enclosingTopAndBottom.bottom, borderBox.bottom());
+        enclosingTopAndBottom.top = std::min(enclosingTopAndBottom.top, borderBox.top() - inlineLevelBox.annotationAbove().value_or(0.f));
+        enclosingTopAndBottom.bottom = std::max(enclosingTopAndBottom.bottom, borderBox.bottom() + inlineLevelBox.annotationUnder().value_or(0.f));
     }
     return { enclosingTopAndBottom, scrollableOverflowRect };
 }
 
-InlineDisplay::Line InlineDisplayLineBuilder::build(const LineBuilder::LineContent& lineContent, const LineBox& lineBox, InlineLayoutUnit lineBoxLogicalHeight) const
+InlineDisplay::Line InlineDisplayLineBuilder::build(const LineBuilder::LineContent& lineContent, const LineBox& lineBox) const
 {
     auto& rootInlineBox = lineBox.rootInlineBox();
     auto& rootGeometry = layoutState().geometryForBox(root());
@@ -86,12 +88,12 @@ InlineDisplay::Line InlineDisplayLineBuilder::build(const LineBuilder::LineConte
 
     auto lineBoxVisualLeft = isLeftToRightDirection
         ? rootGeometry.contentBoxLeft() + lineOffsetFromContentBox
-        : InlineLayoutUnit { rootGeometry.borderEnd() } + rootGeometry.paddingEnd().value_or(0_lu);
+        : InlineLayoutUnit { rootGeometry.borderEnd() } + rootGeometry.horizontalSpaceForScrollbar() + rootGeometry.paddingEnd().value_or(0_lu);
     auto contentVisualLeft = isLeftToRightDirection
         ? lineBox.rootInlineBoxAlignmentOffset()
         : rootGeometry.contentBoxWidth() - lineOffsetFromContentBox -  lineBox.rootInlineBoxAlignmentOffset() - lineContent.contentLogicalRight;
 
-    auto lineBoxRect = InlineRect { lineContent.lineLogicalTopLeft.y(), lineBoxVisualLeft, lineContent.lineLogicalWidth, lineBoxLogicalHeight };
+    auto lineBoxRect = InlineRect { lineContent.lineLogicalTopLeft.y(), lineBoxVisualLeft, lineBox.hasContent() ? lineContent.lineLogicalWidth : 0.f, lineBox.logicalRect().height() };
     auto enclosingLineGeometry = collectEnclosingLineGeometry(lineBox, lineBoxRect);
 
     // FIXME: Figure out if properties like enclosingLineGeometry top and bottom needs to be flipped as well.
@@ -104,7 +106,37 @@ InlineDisplay::Line InlineDisplayLineBuilder::build(const LineBuilder::LineConte
         , contentVisualLeft
         , rootInlineBox.logicalWidth()
         , lineBox.isHorizontal()
+        , trailingEllipsisRect(lineContent, lineBox)
     };
+}
+
+// FIXME: for bidi content, we may need to run this code after we finished constructing the display boxes
+// and also run truncation on the (visual)display box list and not on the (logical)line runs.
+std::optional<FloatRect> InlineDisplayLineBuilder::trailingEllipsisRect(const LineBuilder::LineContent& lineContent, const LineBox& lineBox) const
+{
+    if (!lineContent.contentNeedsTrailingEllipsis)
+        return { };
+
+    auto ellipsisStart = 0.f;
+    for (auto& lineRun : lineContent.runs) {
+        if (lineRun.isInlineBox())
+            continue;
+        if (lineRun.isTruncated()) {
+            if (lineRun.isText() && lineRun.textContent()->partiallyVisibleContent)
+                ellipsisStart = std::max(ellipsisStart, lineRun.logicalLeft() + lineRun.textContent()->partiallyVisibleContent->width);
+            break;
+        }
+        ellipsisStart = std::max(ellipsisStart, lineRun.logicalRight());
+    }
+    auto ellipsisWidth = !lineBox.lineIndex() ? root().firstLineStyle().fontCascade().width(TextUtil::ellipsisTextRun()) : root().style().fontCascade().width(TextUtil::ellipsisTextRun());
+    auto rootInlineBoxRect = lineBox.logicalRectForRootInlineBox();
+    auto lineBoxRect = lineBox.logicalRect();
+    auto ellipsisRect = FloatRect { lineBoxRect.left() + ellipsisStart, lineBoxRect.top() + rootInlineBoxRect.top(), ellipsisWidth, rootInlineBoxRect.height() };
+
+    if (root().style().isLeftToRightDirection())
+        return ellipsisRect;
+    ellipsisRect.setX(lineBoxRect.right() - (ellipsisStart + ellipsisRect.width()));
+    return ellipsisRect;
 }
 
 InlineRect InlineDisplayLineBuilder::flipLogicalLineRectToVisualForWritingMode(const InlineRect& lineLogicalRect, WritingMode writingMode) const
@@ -126,4 +158,3 @@ InlineRect InlineDisplayLineBuilder::flipLogicalLineRectToVisualForWritingMode(c
 }
 }
 
-#endif

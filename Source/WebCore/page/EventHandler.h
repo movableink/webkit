@@ -367,7 +367,7 @@ public:
     WEBCORE_EXPORT void cancelSelectionAutoscroll();
 #endif
 
-    WEBCORE_EXPORT std::optional<Cursor> selectCursor(const HitTestResult&, bool shiftKey);
+    WEBCORE_EXPORT std::optional<Cursor> selectCursor(const HitTestResult&);
 
 #if ENABLE(KINETIC_SCROLLING)
     std::optional<WheelScrollGestureState> wheelScrollGestureState() const { return m_wheelScrollGestureState; }
@@ -386,6 +386,9 @@ public:
     static bool scrollableAreaCanHandleEvent(const PlatformWheelEvent&, ScrollableArea&);
     
     WEBCORE_EXPORT void selectClosestContextualWordOrLinkFromHitTestResult(const HitTestResult&, AppendTrailingWhitespace);
+
+    bool keyboardScrollRecursively(std::optional<ScrollDirection>, std::optional<ScrollGranularity>, Node*);
+    WEBCORE_EXPORT bool shouldUseSmoothKeyboardScrollingForFocusedScrollableArea();
 
 private:
 #if ENABLE(DRAG_SUPPORT)
@@ -407,9 +410,13 @@ private:
     bool handleMousePressEventDoubleClick(const MouseEventWithHitTestResults&);
     bool handleMousePressEventTripleClick(const MouseEventWithHitTestResults&);
 
-    KeyboardScrollingAnimator* keyboardScrollingAnimatorForFocusedNode();
-    bool startKeyboardScrolling(KeyboardEvent&);
+    bool beginKeyboardScrollGesture(KeyboardScrollingAnimator*, ScrollDirection, ScrollGranularity);
     void stopKeyboardScrolling();
+    bool startKeyboardScrollAnimationOnDocument(ScrollDirection, ScrollGranularity);
+    bool startKeyboardScrollAnimationOnRenderBoxLayer(ScrollDirection, ScrollGranularity, RenderBox*);
+    bool startKeyboardScrollAnimationOnRenderBoxAndItsAncestors(ScrollDirection, ScrollGranularity, RenderBox*);
+    bool startKeyboardScrollAnimationOnEnclosingScrollableContainer(ScrollDirection, ScrollGranularity, Node*);
+    bool focusedScrollableAreaUsesScrollSnap();
 
 #if ENABLE(DRAG_SUPPORT)
     bool handleMouseDraggedEvent(const MouseEventWithHitTestResults&, CheckDragHysteresis = ShouldCheckDragHysteresis);
@@ -420,7 +427,7 @@ private:
 
     bool internalKeyEvent(const PlatformKeyboardEvent&);
 
-    void updateCursor(FrameView&, const HitTestResult&, bool shiftKey);
+    void updateCursor(FrameView&, const HitTestResult&);
 
     void hoverTimerFired();
 

@@ -24,11 +24,27 @@ constexpr VkDeviceSize kMaxTotalEmptyBufferBytes = 16 * 1024 * 1024;
 class RendererVk;
 using ContextVkSet = std::set<ContextVk *>;
 
+class TextureUpload
+{
+  public:
+    TextureUpload() { mPrevUploadedMutableTexture = nullptr; }
+    ~TextureUpload() { resetPrevTexture(); }
+    angle::Result onMutableTextureUpload(ContextVk *contextVk, TextureVk *newTexture);
+    void onTextureRelease(TextureVk *textureVk);
+    void resetPrevTexture() { mPrevUploadedMutableTexture = nullptr; }
+
+  private:
+    // Keep track of the previously stored texture. Used to flush mutable textures.
+    TextureVk *mPrevUploadedMutableTexture;
+};
+
 class ShareGroupVk : public ShareGroupImpl
 {
   public:
     ShareGroupVk();
     void onDestroy(const egl::Display *display) override;
+
+    FramebufferCache &getFramebufferCache() { return mFramebufferCache; }
 
     // PipelineLayoutCache and DescriptorSetLayoutCache can be shared between multiple threads
     // accessing them via shared contexts. The ShareGroup locks around gl entrypoints ensuring
@@ -47,6 +63,9 @@ class ShareGroupVk : public ShareGroupImpl
         mResourceUseLists.emplace_back(std::move(resourceUseList));
     }
 
+    // Used to flush the mutable textures more often.
+    angle::Result onMutableTextureUpload(ContextVk *contextVk, TextureVk *newTexture);
+
     vk::BufferPool *getDefaultBufferPool(RendererVk *renderer,
                                          VkDeviceSize size,
                                          uint32_t memoryTypeIndex);
@@ -59,7 +78,14 @@ class ShareGroupVk : public ShareGroupImpl
     void addContext(ContextVk *contextVk);
     void removeContext(ContextVk *contextVk);
 
+    void onTextureRelease(TextureVk *textureVk);
+
   private:
+    // VkFramebuffer caches
+    FramebufferCache mFramebufferCache;
+
+    void resetPrevTexture() { mTextureUpload.resetPrevTexture(); }
+
     // ANGLE uses a PipelineLayout cache to store compatible pipeline layouts.
     PipelineLayoutCache mPipelineLayoutCache;
 
@@ -85,6 +111,9 @@ class ShareGroupVk : public ShareGroupImpl
 
     // The system time when last pruneEmptyBuffer gets called.
     double mLastPruneTime;
+
+    // Texture update manager used to flush uploaded mutable textures.
+    TextureUpload mTextureUpload;
 
     // If true, it is expected that a BufferBlock may still in used by textures that outlived
     // ShareGroup. The non-empty BufferBlock will be put into RendererVk's orphan list instead.
@@ -167,8 +196,8 @@ class DisplayVk : public DisplayImpl, public vk::Context
     // surfaceType, which would still allow the config to be used for pbuffers.
     virtual void checkConfigSupport(egl::Config *config) = 0;
 
-    ANGLE_NO_DISCARD bool getScratchBuffer(size_t requestedSizeBytes,
-                                           angle::MemoryBuffer **scratchBufferOut) const;
+    [[nodiscard]] bool getScratchBuffer(size_t requestedSizeBytes,
+                                        angle::MemoryBuffer **scratchBufferOut) const;
     angle::ScratchBuffer *getScratchBuffer() const { return &mScratchBuffer; }
 
     void handleError(VkResult result,
@@ -178,6 +207,8 @@ class DisplayVk : public DisplayImpl, public vk::Context
 
     // TODO(jmadill): Remove this once refactor is done. http://anglebug.com/3041
     egl::Error getEGLError(EGLint errorCode);
+
+    void initializeFrontendFeatures(angle::FrontendFeatures *features) const override;
 
     void populateFeatureList(angle::FeatureList *features) override;
 

@@ -165,9 +165,20 @@ void ImageBufferIOSurfaceBackend::invalidateCachedNativeImage() const
     m_mayHaveOutstandingBackingStoreReferences = false;
 }
 
+void ImageBufferIOSurfaceBackend::invalidateCachedNativeImageIfNeeded() const
+{
+    if (m_mayHaveOutstandingBackingStoreReferences)
+        invalidateCachedNativeImage();
+}
+
 RefPtr<NativeImage> ImageBufferIOSurfaceBackend::copyNativeImage(BackingStoreCopy) const
 {
     m_mayHaveOutstandingBackingStoreReferences = true;
+    return NativeImage::create(m_surface->createImage());
+}
+
+RefPtr<NativeImage> ImageBufferIOSurfaceBackend::copyNativeImageForDrawing(BackingStoreCopy) const
+{
     return NativeImage::create(m_surface->createImage());
 }
 
@@ -184,15 +195,6 @@ void ImageBufferIOSurfaceBackend::finalizeDrawIntoContext(GraphicsContext& desti
         invalidateCachedNativeImage();
 }
 
-RetainPtr<CGImageRef> ImageBufferIOSurfaceBackend::copyCGImageForEncoding(CFStringRef destinationUTI, PreserveResolution preserveResolution) const
-{
-    if (m_requiresDrawAfterPutPixelBuffer) {
-        invalidateCachedNativeImage();
-        m_requiresDrawAfterPutPixelBuffer = false;
-    }
-    return ImageBufferCGBackend::copyCGImageForEncoding(destinationUTI, preserveResolution);
-}
-
 RefPtr<PixelBuffer> ImageBufferIOSurfaceBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator) const
 {
     IOSurface::Locker lock(*m_surface);
@@ -201,9 +203,9 @@ RefPtr<PixelBuffer> ImageBufferIOSurfaceBackend::getPixelBuffer(const PixelBuffe
 
 void ImageBufferIOSurfaceBackend::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
 {
+    invalidateCachedNativeImageIfNeeded();
     IOSurface::Locker lock(*m_surface, IOSurface::Locker::AccessMode::ReadWrite);
     ImageBufferBackend::putPixelBuffer(pixelBuffer, srcRect, destPoint, destFormat, lock.surfaceBaseAddress());
-    m_requiresDrawAfterPutPixelBuffer = true;
 }
 
 IOSurface* ImageBufferIOSurfaceBackend::surface()

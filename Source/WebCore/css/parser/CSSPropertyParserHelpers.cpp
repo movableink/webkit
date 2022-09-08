@@ -47,10 +47,10 @@
 #include "ColorInterpolation.h"
 #include "ColorLuminance.h"
 #include "ColorNormalization.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Logging.h"
 #include "Pair.h"
 #include "RenderStyleConstants.h"
-#include "RuntimeEnabledFeatures.h"
 #include "StyleColor.h"
 #include "WebKitFontFamilyNames.h"
 #include <wtf/SortedArrayMap.h>
@@ -3922,7 +3922,7 @@ static RefPtr<CSSValue> consumeFilterImage(CSSParserTokenRange& args, const CSSP
 #if ENABLE(CSS_PAINTING_API)
 static RefPtr<CSSValue> consumeCustomPaint(CSSParserTokenRange& args)
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().cssPaintingAPIEnabled())
+    if (!DeprecatedGlobalSettings::cssPaintingAPIEnabled())
         return nullptr;
     if (args.peek().type() != IdentToken)
         return nullptr;
@@ -4291,11 +4291,19 @@ AtomString consumeCounterStyleNameInPrelude(CSSParserTokenRange& prelude)
 
 RefPtr<CSSPrimitiveValue> consumeSingleContainerName(CSSParserTokenRange& range)
 {
-    if (range.peek().id() == CSSValueNone)
+    switch (range.peek().id()) {
+    case CSSValueNormal:
+    case CSSValueNone:
+    case CSSValueAuto:
+    case CSSValueAnd:
+    case CSSValueOr:
+    case CSSValueNot:
         return nullptr;
-    if (auto ident = consumeCustomIdent(range))
-        return ident;
-    return nullptr;
+    default:
+        if (auto ident = consumeCustomIdent(range))
+            return ident;
+        return nullptr;
+    }
 }
 
 std::optional<CSSValueID> consumeFontVariantCSS21Raw(CSSParserTokenRange& range)

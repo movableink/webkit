@@ -40,6 +40,7 @@ const AtomString& placeholder();
 const AtomString& webkitContactsAutoFillButton();
 const AtomString& webkitCredentialsAutoFillButton();
 const AtomString& webkitCreditCardAutoFillButton();
+const AtomString& webkitLoadingAutoFillButton();
 const AtomString& webkitStrongPasswordAutoFillButton();
 
 const AtomString& webkitCapsLockIndicator();
@@ -101,6 +102,8 @@ const AtomString& webkitValidationBubbleIcon();
 const AtomString& webkitValidationBubbleTextBlock();
 const AtomString& webkitValidationBubbleHeading();
 const AtomString& webkitValidationBubbleBody();
+
+const AtomString& appleAttachmentControlsContainer();
 
 } // namespace ShadowPseudoId
 

@@ -48,7 +48,7 @@
 }
 
 .tree-outline.dom.non-selectable {
-    user-select: text;
+    -webkit-user-select: text;
 }
 
 .tree-outline.dom li .selection-area {
@@ -85,6 +85,16 @@ body:not(.window-inactive, .window-docked-inactive) .tree-outline.dom:not(.non-s
 
 body:not(.window-inactive, .window-docked-inactive) .tree-outline.dom:focus-within li.inspected-node.selected > span::after {
     color: var(--selected-secondary-text-color);
+}
+
+.content-view.dom-tree.deemphasize-unrendered .tree-outline.dom li:not(.rendered) > span > *:not(.html-comment) {
+    filter: grayscale();
+}
+
+.content-view.dom-tree.deemphasize-unrendered .tree-outline.dom li:not(.rendered, .selected) > span > *:not(.html-comment),
+.content-view.dom-tree.deemphasize-unrendered .tree-outline.dom:not(:focus-within) li.selected:not(.rendered) > span > *:not(.html-comment),
+body:is(.window-inactive, .window-docked-inactive) .content-view.dom-tree.deemphasize-unrendered .tree-outline.dom li.selected:not(.rendered) > span > *:not(.html-comment) {
+    opacity: 0.7;
 }
 
 .tree-outline.dom ol {

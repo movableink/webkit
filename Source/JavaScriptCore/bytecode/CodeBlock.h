@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -156,7 +156,7 @@ public:
 
     unsigned numParameters() const { return m_numParameters; }
 private:
-    void setNumParameters(unsigned newValue);
+    void setNumParameters(unsigned newValue, bool allocateArgumentValueProfiles);
 public:
 
     unsigned numberOfArgumentsToSkip() const { return m_numberOfArgumentsToSkip; }
@@ -399,13 +399,14 @@ public:
     static ptrdiff_t offsetOfArgumentValueProfiles() { return OBJECT_OFFSETOF(CodeBlock, m_argumentValueProfiles); }
     unsigned numberOfArgumentValueProfiles()
     {
-        ASSERT(m_argumentValueProfiles.size() == static_cast<unsigned>(m_numParameters) || !Options::useJIT());
+        ASSERT(m_argumentValueProfiles.size() == static_cast<unsigned>(m_numParameters) || !Options::useJIT() || !JITCode::isBaselineCode(jitType()));
         return m_argumentValueProfiles.size();
     }
 
     ValueProfile& valueProfileForArgument(unsigned argumentIndex)
     {
         ASSERT(Options::useJIT()); // This is only called from the various JIT compilers or places that first check numberOfArgumentValueProfiles before calling this.
+        ASSERT(JITCode::isBaselineCode(jitType()));
         ValueProfile& result = m_argumentValueProfiles[argumentIndex];
         return result;
     }
@@ -715,9 +716,9 @@ public:
 #endif
 
     bool shouldOptimizeNow();
-    void updateAllValueProfilePredictions();
+    void updateAllValueProfilePredictions(const ConcurrentJSLocker&);
     void updateAllArrayProfilePredictions(const ConcurrentJSLocker&);
-    void updateAllArrayPredictions();
+    void updateAllArrayPredictions(const ConcurrentJSLocker&);
     void updateAllPredictions();
 
     unsigned frameRegisterCount();
@@ -867,7 +868,7 @@ private:
     
     double optimizationThresholdScalingFactor();
 
-    void updateAllValueProfilePredictionsAndCountLiveness(unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
+    void updateAllValueProfilePredictionsAndCountLiveness(const ConcurrentJSLocker&, unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
 
     Vector<unsigned> setConstantRegisters(const FixedVector<WriteBarrier<Unknown>>& constants, const FixedVector<SourceCodeRepresentation>& constantsSourceCodeRepresentation);
     void initializeTemplateObjects(ScriptExecutable* topLevelExecutable, const Vector<unsigned>& templateObjectIndices);
@@ -913,8 +914,8 @@ private:
     template<typename Func>
     void forEachStructureStubInfo(Func);
 
-    unsigned m_numCalleeLocals;
-    unsigned m_numVars;
+    const unsigned m_numCalleeLocals;
+    const unsigned m_numVars;
     unsigned m_numParameters;
     unsigned m_numberOfArgumentsToSkip { 0 };
     uint32_t m_osrExitCounter { 0 };
@@ -934,9 +935,9 @@ private:
     WriteBarrier<ScriptExecutable> m_ownerExecutable;
     // m_vm must be a pointer (instead of a reference) because the JSCLLIntOffsetsExtractor
     // cannot handle it being a reference.
-    VM* m_vm;
+    VM* const m_vm;
 
-    const void* m_instructionsRawPointer { nullptr };
+    const void* const m_instructionsRawPointer { nullptr };
     SentinelLinkedList<CallLinkInfo, PackedRawSentinelNode<CallLinkInfo>> m_incomingCalls;
 #if ENABLE(JIT)
     SentinelLinkedList<PolymorphicCallNode, PackedRawSentinelNode<PolymorphicCallNode>> m_incomingPolymorphicCalls;

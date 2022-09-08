@@ -128,28 +128,6 @@ public:
     class WorkQueueMessageReceiver : public MessageReceiver, public ThreadSafeRefCounted<WorkQueueMessageReceiver> {
     };
 
-    class ThreadMessageReceiver : public MessageReceiver {
-    public:
-        virtual void dispatchToThread(WTF::Function<void()>&&) = 0;
-
-        void ref() { refMessageReceiver(); }
-        void deref() { derefMessageReceiver(); }
-
-    protected:
-        virtual void refMessageReceiver() = 0;
-        virtual void derefMessageReceiver() = 0;
-    };
-
-    class ThreadMessageReceiverRefCounted : public ThreadMessageReceiver, public ThreadSafeRefCounted<ThreadMessageReceiverRefCounted> {
-    public:
-        using ThreadSafeRefCounted::ref;
-        using ThreadSafeRefCounted::deref;
-
-    private:
-        void refMessageReceiver() final { ThreadSafeRefCounted::ref(); }
-        void derefMessageReceiver() final { ThreadSafeRefCounted::deref(); }
-    };
-
 #if ENABLE(IPC_TESTING_API)
     class MessageObserver : public CanMakeWeakPtr<MessageObserver> {
     public:
@@ -159,10 +137,39 @@ public:
     };
 #endif
 
+    struct Identifier {
+        Identifier() = default;
 #if USE(UNIX_DOMAIN_SOCKETS)
-    typedef int Identifier;
-    static bool identifierIsValid(Identifier identifier) { return identifier != -1; }
+        explicit Identifier(int handle)
+            : handle(handle)
+        {
+        }
+        operator bool() const { return handle != -1; }
+        int handle { -1 };
+#elif OS(WINDOWS)
+        explicit Identifier(HANDLE handle)
+            : handle(handle)
+        {
+        }
+        operator bool() const { return !!handle; }
+        HANDLE handle { 0 };
+#elif OS(DARWIN)
+        explicit Identifier(mach_port_t port)
+            : port(port)
+        {
+        }
+        Identifier(mach_port_t port, OSObjectPtr<xpc_connection_t> xpcConnection)
+            : port(port)
+            , xpcConnection(WTFMove(xpcConnection))
+        {
+        }
+        operator bool() const { return MACH_PORT_VALID(port); }
+        mach_port_t port { MACH_PORT_NULL };
+        OSObjectPtr<xpc_connection_t> xpcConnection;
+#endif
+    };
 
+#if USE(UNIX_DOMAIN_SOCKETS)
     struct SocketPair {
         int client;
         int server;
@@ -175,33 +182,11 @@ public:
 
     static Connection::SocketPair createPlatformConnection(unsigned options = SetCloexecOnClient | SetCloexecOnServer);
 #elif OS(DARWIN)
-    struct Identifier {
-        Identifier()
-        {
-        }
-
-        Identifier(mach_port_t port)
-            : port(port)
-        {
-        }
-
-        Identifier(mach_port_t port, OSObjectPtr<xpc_connection_t> xpcConnection)
-            : port(port)
-            , xpcConnection(WTFMove(xpcConnection))
-        {
-        }
-
-        mach_port_t port { MACH_PORT_NULL };
-        OSObjectPtr<xpc_connection_t> xpcConnection;
-    };
-    static bool identifierIsValid(Identifier identifier) { return MACH_PORT_VALID(identifier.port); }
     xpc_connection_t xpcConnection() const { return m_xpcConnection.get(); }
     std::optional<audit_token_t> getAuditToken();
     pid_t remoteProcessID() const;
 #elif OS(WINDOWS)
-    typedef HANDLE Identifier;
-    static bool createServerAndClientIdentifiers(Identifier& serverIdentifier, Identifier& clientIdentifier);
-    static bool identifierIsValid(Identifier identifier) { return !!identifier; }
+    static bool createServerAndClientIdentifiers(HANDLE& serverIdentifier, HANDLE& clientIdentifier);
 #endif
 
     static Ref<Connection> createServerConnection(Identifier, Client&);
@@ -240,17 +225,20 @@ public:
     void addMessageReceiveQueue(MessageReceiveQueue&, const ReceiverMatcher&);
     void removeMessageReceiveQueue(const ReceiverMatcher&);
 
-    // Adds a message receieve queue that dispatches through WorkQueue to WorkQueueMessageReceiver.
+    // Adds a message receive queue that dispatches through WorkQueue to WorkQueueMessageReceiver.
     // Keeps the WorkQueue and the WorkQueueMessageReceiver alive. Dispatched tasks keep WorkQueueMessageReceiver alive.
     // destinationID == 0 matches all ids.
     void addWorkQueueMessageReceiver(ReceiverName, WorkQueue&, WorkQueueMessageReceiver&, uint64_t destinationID = 0);
     void removeWorkQueueMessageReceiver(ReceiverName, uint64_t destinationID = 0);
 
-    // Adds a message receieve queue that dispatches through ThreadMessageReceiver.
-    // Keeps the ThreadMessageReceiver alive. Dispatched tasks keep the ThreadMessageReceiver alive.
-    // destinationID == 0 matches all ids.
-    void addThreadMessageReceiver(ReceiverName, ThreadMessageReceiver*, uint64_t destinationID = 0);
-    void removeThreadMessageReceiver(ReceiverName, uint64_t destinationID = 0);
+    // Adds a message receive queue that dispatches through FunctionDispatcher.
+    // `FunctionDispatcher` will be used in any thread.
+    // `FunctionDispatcher` will be used to dispatch `MessageReceiver` functions
+    // until `removeMessageReceiver()` for same receiver name, destination id returns.
+    // The caller is responsible for making sure the `MessageReceiver` is alive when the dispatched functions
+    // are run.
+    void addMessageReceiver(FunctionDispatcher&, MessageReceiver&, ReceiverName, uint64_t destinationID = 0);
+    void removeMessageReceiver(ReceiverName, uint64_t destinationID = 0);
 
     bool open();
     void invalidate();
@@ -312,7 +300,6 @@ public:
 
 #if PLATFORM(COCOA) || (PLATFORM(QT) && USE(MACH_PORTS))
     bool kill();
-    void terminateSoon(Seconds);
 #endif
 
     bool isValid() const { return m_isValid; }
@@ -408,6 +395,7 @@ private:
     Client& m_client;
     UniqueID m_uniqueID;
     bool m_isServer;
+    bool m_didInvalidationOnMainThread { false }; // Main thread only.
     std::atomic<bool> m_isValid { true };
 
     bool m_onlySendMessagesAsDispatchWhenWaitingForSyncReplyWhenProcessingSuchAMessage { false };

@@ -87,6 +87,7 @@ SOFT_LINK_CLASS_OPTIONAL(Synapse, SYNotesActivationObserver)
 
 #if PLATFORM(IOS_FAMILY)
 #import <WebCore/RenderThemeIOS.h>
+#import "UIKitSPI.h"
 #else
 #import <WebCore/RenderThemeMac.h>
 #endif
@@ -258,7 +259,7 @@ void WebPageProxy::startDrag(const DragItem& dragItem, const ShareableBitmap::Ha
 // FIXME: Move these functions to WebPageProxyIOS.mm.
 #if PLATFORM(IOS_FAMILY)
 
-void WebPageProxy::setPromisedDataForImage(const String&, const SharedMemory::IPCHandle&, const String&, const String&, const String&, const String&, const String&, const SharedMemory::IPCHandle&, const String&)
+void WebPageProxy::setPromisedDataForImage(const String&, const SharedMemory::Handle&, const String&, const String&, const String&, const String&, const String&, const SharedMemory::Handle&, const String&)
 {
     notImplemented();
 }
@@ -300,7 +301,9 @@ void WebPageProxy::platformRegisterAttachment(Ref<API::Attachment>&& attachment,
 
 void WebPageProxy::platformCloneAttachment(Ref<API::Attachment>&& fromAttachment, Ref<API::Attachment>&& toAttachment)
 {
-    toAttachment->setFileWrapper(fromAttachment->fileWrapper());
+    fromAttachment->doWithFileWrapper([&](NSFileWrapper *fileWrapper) {
+        toAttachment->setFileWrapper(fileWrapper);
+    });
 }
 
 static RefPtr<WebKit::ShareableBitmap> convertPlatformImageToBitmap(CocoaImage *image, const WebCore::FloatSize& fittingSize)
@@ -337,7 +340,7 @@ RefPtr<WebKit::ShareableBitmap> WebPageProxy::iconForAttachment(const String& fi
 #else
     auto image = RenderThemeMac::iconForAttachment(fileName, contentType, title);
 #endif
-    return convertPlatformImageToBitmap(image.get(), size);
+    return convertPlatformImageToBitmap(image.get(), iconSize);
 }
 
 #endif // ENABLE(ATTACHMENT_ELEMENT)
@@ -599,7 +602,7 @@ void WebPageProxy::fullscreenVideoTextRecognitionTimerFired()
 
 #if HAVE(QUICKLOOK_THUMBNAILING)
 
-void WebPageProxy::requestThumbnailWithOperation(WKQLThumbnailLoadOperation *operation)
+void WebPageProxy::requestThumbnail(WKQLThumbnailLoadOperation *operation)
 {
     [operation setCompletionBlock:^{
         RunLoop::main().dispatch([this, operation = retainPtr(operation)] {
@@ -610,20 +613,18 @@ void WebPageProxy::requestThumbnailWithOperation(WKQLThumbnailLoadOperation *ope
             this->updateAttachmentThumbnail(identifier, convertedImage);
         });
     }];
-        
+
     [[WKQLThumbnailQueueManager sharedInstance].queue addOperation:operation];
 }
 
-void WebPageProxy::requestThumbnailWithFileWrapper(NSFileWrapper *fileWrapper, const String& identifier)
+void WebPageProxy::requestThumbnail(const API::Attachment& attachment, const String& identifier)
 {
-    auto operation = adoptNS([[WKQLThumbnailLoadOperation alloc] initWithAttachment:fileWrapper identifier:identifier]);
-    requestThumbnailWithOperation(operation.get());
+    requestThumbnail(adoptNS([[WKQLThumbnailLoadOperation alloc] initWithAttachment:attachment identifier:identifier]).get());
 }
 
-void WebPageProxy::requestThumbnailWithPath(const String& identifier, const String& filePath)
+void WebPageProxy::requestThumbnailWithPath(const String& filePath, const String& identifier)
 {
-    auto operation = adoptNS([[WKQLThumbnailLoadOperation alloc] initWithURL:filePath identifier:identifier]);
-    requestThumbnailWithOperation(operation.get());
+    requestThumbnail(adoptNS([[WKQLThumbnailLoadOperation alloc] initWithURL:filePath identifier:identifier]).get());
 }
 
 #endif // HAVE(QUICKLOOK_THUMBNAILING)
@@ -716,11 +717,11 @@ void WebPageProxy::restoreAppHighlightsAndScrollToIndex(const Vector<Ref<SharedM
     if (!hasRunningProcess())
         return;
 
-    auto memoryHandles = WTF::compactMap(highlights, [](auto& highlight) -> std::optional<SharedMemory::IPCHandle> {
+    auto memoryHandles = WTF::compactMap(highlights, [](auto& highlight) -> std::optional<SharedMemory::Handle> {
         SharedMemory::Handle handle;
         if (!highlight->createHandle(handle, SharedMemory::Protection::ReadOnly))
             return std::nullopt;
-        return SharedMemory::IPCHandle { WTFMove(handle), highlight->size() };
+        return handle;
     });
     
     setUpHighlightsObserver();
@@ -939,9 +940,9 @@ void WebPageProxy::replaceSelectionWithPasteboardData(const Vector<String>& type
 
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
 
-void WebPageProxy::replaceImageWithMarkupResults(const ElementContext& elementContext, const Vector<String>& types, const IPC::DataReference& data)
+void WebPageProxy::replaceImageForRemoveBackground(const ElementContext& elementContext, const Vector<String>& types, const IPC::DataReference& data)
 {
-    send(Messages::WebPage::ReplaceImageWithMarkupResults(elementContext, types, data));
+    send(Messages::WebPage::ReplaceImageForRemoveBackground(elementContext, types, data));
 }
 
 #endif

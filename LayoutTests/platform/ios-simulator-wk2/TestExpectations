@@ -87,10 +87,6 @@ webkit.org/b/214730 [ Debug ] webrtc/simulcast-h264.html [ Skip ]
 
 webkit.org/b/214358 fast/scrolling/ios/programmatic-scroll-while-zoomed.html [ Pass Failure ]
 
-webkit.org/b/214731 imported/w3c/web-platform-tests/IndexedDB/key-generators/reading-autoincrement-store-cursors.any.serviceworker.html [ Pass Failure ]
-
-webkit.org/b/214732 imported/w3c/web-platform-tests/IndexedDB/key-generators/reading-autoincrement-store.any.serviceworker.html [ Pass Failure ]
-
 webkit.org/b/214736 imported/w3c/web-platform-tests/css/css-flexbox/align-self-014.html [ Pass Timeout ]
 
 webkit.org/b/214739 [ Debug ] imported/w3c/web-platform-tests/css/css-flexbox/getcomputedstyle/flexbox_computedstyle_align-content-center.html [ Pass Timeout ]
@@ -122,8 +118,6 @@ webkit.org/b/215676 [ Release ] http/tests/security/contentSecurityPolicy/worker
 webkit.org/b/217114 [ Release ] compositing/debug-borders-dynamic.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/217414 [ Release ] imported/w3c/web-platform-tests/user-timing/measure-l3.any.html [ Pass Failure ]
-
-webkit.org/b/217419 [ Release ] imported/w3c/web-platform-tests/css/css-cascade/all-prop-initial-xml.html [ Failure ]
 
 webkit.org/b/217461 imported/w3c/web-platform-tests/css/css-masking/clip-path/svg-clipPath.svg [ Skip ]
 
@@ -177,3 +171,5 @@ webkit.org/b/236926 imported/w3c/web-platform-tests/webaudio/the-audio-api/the-b
 webkit.org/b/236926 webrtc/vp9-profile2.html [ Timeout Pass ]
 # This passes only on the arm64 host
 imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/adopt-from-image-document.html [ Pass ImageOnlyFailure ]
+
+webkit.org/b/242748 [ Release arm64 ] css3/color-filters/svg/color-filter-inline-svg.html [ ImageOnlyFailure ]

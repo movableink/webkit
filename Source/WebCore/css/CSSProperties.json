@@ -136,6 +136,10 @@
         "corresponding \"StylePropertyShorthand propertyIdShorthand()\" function will be",
         "generated in StylePropertyShorthandFunctions.h header.",
         "",
+        "* top-priority:",
+        "Whether the property needs to be applied before high-priority properties",
+        "in CSS cascading order. Please justify usage with a comment field.",
+        "",
         "* high-priority:",
         "Whether the property needs to be applied before non-high-priority properties",
         "in CSS cascading order. High priority properties must not accept <length>",
@@ -167,10 +171,6 @@
         "Indicates that code should only be generated for this property/value if the",
         "specified macro define is enabled. Prefix the macro define with '!' to",
         "generate code when the macro define is not enabled.",
-        "",
-        "* runtime-flag:",
-        "The name of the flag on RuntimeEnabledFeatures (e.g. \"cssLogical\")",
-        "that conditionally enables the property.",
         "",
         "* settings-flag:",
         "The name of the flag on Settings (e.g. \"CSSOMViewSmoothScrolling\")",
@@ -742,7 +742,8 @@
             "codegen-properties": {
                 "custom": "Value",
                 "high-priority": true,
-                "enable-if": "ENABLE_TEXT_AUTOSIZING"
+                "enable-if": "ENABLE_TEXT_AUTOSIZING",
+                "settings-flag": "textAutosizingEnabled"
             },
             "status": "experimental",
             "specification": {
@@ -798,7 +799,8 @@
                     "-epub-writing-mode"
                 ],
                 "custom": "Value",
-                "high-priority": true
+                "comment": "This is top priority because vi/vb units (depending on writing-mode) may be used by other properties",
+                "top-priority": true
             },
             "specification": {
                 "category": "css-writing-modes",
@@ -853,7 +855,8 @@
                 }
             ],
             "codegen-properties": {
-                "comment": "This is the highest priority property and 'is resolved before all other properties, to ensure that its value can be checked when determining a smart default font size', (<https://trac.webkit.org/browser/trunk/Source/WebCore/ChangeLog?rev=172861>)."
+                "top-priority": true,
+                "comment": "This is a top priority property to ensure that its value can be checked when determining a smart default font size', (<https://trac.webkit.org/browser/trunk/Source/WebCore/ChangeLog?rev=172861>)."
             },
             "specification": {
                 "category": "css-ruby",
@@ -1074,8 +1077,7 @@
                     "background-position-x",
                     "background-position-y",
                     "background-size",
-                    "background-repeat-x",
-                    "background-repeat-y",
+                    "background-repeat",
                     "background-attachment",
                     "background-origin",
                     "background-clip",
@@ -1202,10 +1204,6 @@
             "specification": {
                 "category": "css-backgrounds",
                 "url": "https://drafts.csswg.org/css-backgrounds-4/#propdef-background-position-x"
-            },
-            "status": {
-                "status": "experimental",
-                "enabled-by-default": true
             }
         },
         "background-position-y": {
@@ -1216,50 +1214,16 @@
             "specification": {
                 "category": "css-backgrounds",
                 "url": "https://drafts.csswg.org/css-backgrounds-4/#propdef-background-position-y"
-            },
-            "status": {
-                "status": "experimental",
-                "enabled-by-default": true
             }
         },
         "background-repeat": {
             "codegen-properties": {
-                "longhands": [
-                    "background-repeat-x",
-                    "background-repeat-y"
-                ]
+                "name-for-methods": "Repeat",
+                "fill-layer-property": true
             },
             "specification": {
                 "category": "css-backgrounds",
                 "url": "https://www.w3.org/TR/css3-background/#background-repeat"
-            }
-        },
-        "background-repeat-x": {
-            "codegen-properties": {
-                "name-for-methods": "RepeatX",
-                "fill-layer-property": true,
-                "internal-only": true
-            },
-            "specification": {
-                "category": "css-backgrounds"
-            },
-            "status": {
-                "status": "experimental",
-                "enabled-by-default": true
-            }
-        },
-        "background-repeat-y": {
-            "codegen-properties": {
-                "name-for-methods": "RepeatY",
-                "fill-layer-property": true,
-                "internal-only": true
-            },
-            "specification": {
-                "category": "css-backgrounds"
-            },
-            "status": {
-                "status": "experimental",
-                "enabled-by-default": true
             }
         },
         "background-size": {
@@ -3332,8 +3296,7 @@
                     "-webkit-mask-position-x",
                     "-webkit-mask-position-y",
                     "mask-size",
-                    "mask-repeat-x",
-                    "mask-repeat-y",
+                    "mask-repeat",
                     "mask-origin",
                     "mask-clip",
                     "mask-composite",
@@ -3467,28 +3430,12 @@
                 "aliases":[
                     "-webkit-mask-repeat"
                 ],
-                "longhands": [
-                    "mask-repeat-x",
-                    "mask-repeat-y"
-                ]
+                "name-for-methods": "Repeat",
+                "fill-layer-property": true
             },
             "specification": {
                 "category": "css-masking",
                 "url": "https://www.w3.org/TR/css-masking-1/#propdef-mask-repeat"
-            }
-        },
-        "mask-repeat-x": {
-            "codegen-properties": {
-                "name-for-methods": "RepeatX",
-                "fill-layer-property": true,
-                "internal-only": true
-            }
-        },
-        "mask-repeat-y": {
-            "codegen-properties": {
-                "name-for-methods": "RepeatY",
-                "fill-layer-property": true,
-                "internal-only": true
             }
         },
         "mask-size": {
@@ -3833,6 +3780,19 @@
             "specification": {
                 "category": "css-overflow",
                 "url": "https://www.w3.org/TR/css-overflow-3/#propdef-overflow"
+            }
+        },
+        "overflow-anchor": {
+            "codegen-properties": {
+                "settings-flag": "cssScrollAnchoringEnabled"
+            },
+            "values": [
+                "none",
+                "auto"
+            ],
+            "specification": {
+                "category": "css-scroll-anchoring",
+                "url": "https://www.w3.org/TR/css-scroll-anchoring-1/#propdef-overflow-anchor"
             }
         },
         "overflow-wrap": {
@@ -5380,6 +5340,23 @@
                 "url": "https://drafts.csswg.org/css-contain-3/#container-queries"
             }
         },
+        "content-visibility": {
+            "codegen-properties": {
+                "settings-flag": "cssContentVisibilityEnabled"
+            },
+            "values": [
+                "visible",
+                "hidden",
+                "auto"
+            ],
+            "status": {
+                "status": "experimental"
+            },
+            "specification": {
+                "category": "css-content-visibility",
+                "url": "https://www.w3.org/TR/css-contain-2/#content-visibility"
+            }
+        },
         "backface-visibility": {
             "codegen-properties": {
                 "aliases": [
@@ -5868,6 +5845,7 @@
         "-apple-color-filter": {
             "inherited": true,
             "codegen-properties": {
+                "settings-flag": "colorFilterEnabled",
                 "conditional-converter": "FilterOperations"
             },
             "status": {
@@ -6539,8 +6517,7 @@
                     "-webkit-mask-position-x",
                     "-webkit-mask-position-y",
                     "mask-size",
-                    "mask-repeat-x",
-                    "mask-repeat-y",
+                    "mask-repeat",
                     "mask-origin",
                     "-webkit-mask-clip"
                 ],
@@ -6671,7 +6648,7 @@
         "color-scheme": {
             "inherited": true,
             "values": [
-                "auto",
+                "normal",
                 "light",
                 "dark",
                 "only"
@@ -6681,10 +6658,10 @@
                     "supported-color-schemes"
                 ],
                 "converter": "ColorScheme",
-                "comment": "This is the second highest priority property, to ensure that its value can be checked when resolving colors.",
+                "comment": "This is a top priority property, to ensure that its value can be checked when resolving colors.",
                 "custom": "Value",
                 "enable-if": "ENABLE_DARK_MODE_CSS",
-                "high-priority": true
+                "top-priority": true
             },
             "specification": {
                 "category": "css-color-adjust",
@@ -6983,7 +6960,6 @@
             }
         },
         "text-decoration-thickness": {
-            "inherited": true,
             "codegen-properties": {
                 "converter": "TextDecorationThickness"
             },
@@ -7003,7 +6979,8 @@
             "inherited": true,
             "codegen-properties": {
                 "skip-builder": true,
-                "enable-if": "ENABLE_TEXT_AUTOSIZING"
+                "enable-if": "ENABLE_TEXT_AUTOSIZING",
+                "internal-only": true
             },
             "status": "non-standard"
         },
@@ -7284,23 +7261,14 @@
             ],
             "status": "non-standard"
         },
-        "user-select": {
-            "codegen-properties": {
-                "aliases": [
-                    "-webkit-user-select"
-                ]
-            },
+        "-webkit-user-select": {
             "inherited": true,
             "values": [
-                "none",
-                "auto",
-                "text",
-                "all",
-                {
-                    "value": "contain",
-                    "status": "unimplemented"
-                }
+                "element"
             ],
+            "status": {
+                "status": "experimental"
+        },
             "specification": {
                 "category": "css-ui",
                 "url": "https://www.w3.org/TR/css-ui-4/#propdef-user-select"
@@ -7721,7 +7689,8 @@
             "codegen-properties": {
                 "name-for-methods": "UseTouchOverflowScrolling",
                 "converter": "OverflowScrolling",
-                "enable-if": "ENABLE_OVERFLOW_SCROLLING_TOUCH"
+                "enable-if": "ENABLE_OVERFLOW_SCROLLING_TOUCH",
+                "settings-flag": "legacyOverflowScrollingTouchEnabled"
             },
             "status": "non-standard"
         },
@@ -7875,6 +7844,11 @@
             "longname": "CSS Generated Content Module",
             "url": "https://www.w3.org/TR/css-content-3/"
         },
+        "css-content-visibility": {
+            "shortname": "CSS Content Visibility",
+            "longname": "CSS Content Visibility Module",
+            "url": "https://www.w3.org/TR/css-contain-2/#content-visibility"
+        },
         "css-counter-styles": {
             "shortname": "CSS Counter Styles",
             "longname": "CSS Counter Styles Module",
@@ -7978,6 +7952,11 @@
             "shortname": "CSS Ruby",
             "longname": "CSS Ruby Layout Module",
             "url": "https://www.w3.org/TR/css-ruby-1/"
+        },
+        "css-scroll-anchoring": {
+            "shortname": "CSS Scroll Anchoring",
+            "longname": "CSS Scroll Anchoring Module",
+            "url": "https://www.w3.org/TR/css-scroll-anchoring-1/"
         },
         "css-scroll-snap": {
             "shortname": "CSS Scroll Snap",

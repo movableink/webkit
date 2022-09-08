@@ -27,10 +27,6 @@
 (deny system-privilege)
 (allow system-audit file-read-metadata)
 
-;; We can remove the catch once we no longer need to support iOS 15 (or earlier))
-(catch (lambda)
-    (import "dyld-support.sb"))
-
 ;; Silence spurious logging due to rdar://20117923 and rdar://72366475
 (deny system-privilege (privilege-id PRIV_GLOBAL_PROC_INFO) (with no-report))
 
@@ -246,9 +242,8 @@
             (xpc-service-name "com.apple.MTLCompilerService")
         )
     )
-    ;; This is just for logging. Remove when GPU process is enabled by default.
+    ;; Remove when GPU process is enabled by default.
     (allow mach-lookup
-        (with telemetry)
         (require-all
             (require-not (extension "com.apple.webkit.extension.mach"))
             (xpc-service-name "com.apple.MTLCompilerService")
@@ -562,30 +557,11 @@
 (allow mach-lookup
     (global-name "com.apple.system.notification_center")
     (apply-message-filter
-        (deny mach-message-send (with telemetry))
+        (deny mach-message-send)
         (deny mach-message-send (with no-report) (message-number 1023))
         (allow mach-message-send (message-number
-            1002
-            1009
-            1010
-            1011
-            1012
-            1016
-            1017
-            1018
-            1019
-            1021
-            1022
-            1025
-            1026
-            1028
-            1029
-            1030
-            1031
-            1032
-        ))
-    )
-)
+            1002 1011 1012 1016 1017 1018 1021 1025 1026 1028 1029 1030 1031 1032))))
+
 (allow ipc-posix-shm-read*
        (ipc-posix-name "apple.shm.notification_center"))
 
@@ -779,6 +755,9 @@
     (sysctl-name-prefix "hw.perflevel") ;; <rdar://problem/76782530>
 )
 
+(deny sysctl-read (with no-report)
+    (sysctl-name "vm.task_no_footprint_for_debug"))
+
 (allow iokit-get-properties
     (iokit-property "AAPL,DisplayPipe")
     (iokit-property "AAPL,OpenCLdisabled")
@@ -903,7 +882,8 @@
 (deny file-read-xattr file-write-xattr (xattr-prefix "com.apple.security.private."))
 
 ;; Allow loading injected bundles.
-(allow file-map-executable)
+(with-filter (require-not (state-flag "WebContentProcessLaunched"))
+    (allow file-map-executable))
 
 #if !ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
 ;; Allow ManagedPreference access
@@ -919,31 +899,27 @@
     (home-subpath "/Library/Preferences/")
     (with no-log))
 
-(deny mach-lookup (with no-log) (with telemetry)
+(deny mach-lookup (with no-log)
     (global-name "com.apple.containermanagerd")
 )
 
-(deny mach-lookup (with telemetry)
-    (global-name "com.apple.mobilegestalt.xpc")
-)
+(deny mach-lookup
+    (global-name "com.apple.mobilegestalt.xpc"))
 
 (deny mach-lookup (with no-log)
     (xpc-service-name "com.apple.audio.toolbox.reporting.service")
 )
 
-(allow iokit-open (with telemetry-backtrace)
+(allow iokit-open
     (require-all
         (require-not (extension "com.apple.webkit.extension.iokit"))
         (iokit-user-client-class "IOSurfaceRootUserClient")))
 
-(deny iokit-open (with telemetry)
+(deny iokit-open
     (require-all
         (require-not (extension "com.apple.webkit.extension.iokit"))
         (iokit-user-client-class
-            "IOSurfaceAcceleratorClient"
-        )
-    )
-)
+            "IOSurfaceAcceleratorClient")))
 
 (deny iokit-open (with no-log)
     (iokit-user-client-class
@@ -965,6 +941,7 @@
     (preference-domain "com.apple.WebKit.WebContent.BlockIOKitInWebContentSandbox"))
 
 (with-filter (state-flag "BlockIOKitInWebContentSandbox")
+    (deny iokit-open-service)
     (deny iokit-open (with telemetry-backtrace)
         (require-all
             (require-not (extension "com.apple.webkit.extension.iokit"))
@@ -1017,6 +994,7 @@
         (global-name
             "com.apple.iconservices")))
 
+#if HAVE(AGX_COMPILER_SERVICE)
 (allow iokit-open
     (require-all
         (extension "com.apple.webkit.extension.iokit")
@@ -1039,6 +1017,7 @@
     (require-all
         (extension "com.apple.webkit.extension.mach")
         (xpc-service-name-prefix "com.apple.AGXCompilerService")))
+#endif // HAVE(AGX_COMPILER_SERVICE)
 
 (media-capture-support)
 
@@ -1085,6 +1064,7 @@
         SYS_close_nocancel
         SYS_csops ;; used by Corefoundation initialization
         SYS_csops_audittoken ;; used by WK to get entitlments
+        SYS_dup
         SYS_exit
         SYS_faccessat ;; <rdar://problem/56998930>
         SYS_fcntl
@@ -1096,6 +1076,7 @@
         SYS_fsetxattr ;; <rdar://problem/49795964>
         SYS_fstat64
         SYS_fstat64_extended ;; <rdar://problem/61310019>
+        SYS_fstatat64
         SYS_fstatfs64
         SYS_ftruncate
         SYS_getattrlist ;; xpc_realpath and directory enumeration
@@ -1167,9 +1148,9 @@
 
 (define (syscall-unix-rarely-in-use)
     (syscall-number
-        SYS_dup
+        SYS___pthread_sigmask
+        SYS___semwait_signal
         SYS_fgetxattr
-        SYS_fstatat64
         SYS_fsync
         SYS_getattrlistbulk ;; xpc_realpath and directory enumeration
         SYS_getgid
@@ -1179,6 +1160,7 @@
         SYS_open_dprotected_np
         SYS_openat_nocancel
         SYS_pread_nocancel
+        SYS_psynch_rw_wrlock
         SYS_rmdir
         SYS_sendto
         SYS_setrlimit
@@ -1188,6 +1170,7 @@
         SYS_sigreturn
 #endif
         SYS_thread_selfusage
+        SYS_umask
         SYS_unlink
         SYS_write
         SYS_writev))
@@ -1195,15 +1178,11 @@
 (define (syscall-unix-rarely-in-use-need-backtrace)
     (syscall-number
         SYS___pthread_kill
-        SYS___pthread_sigmask
-        SYS___semwait_signal
 #if !ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
         SYS_necp_client_action
         SYS_necp_open
 #endif
-        SYS_psynch_rw_wrlock
-        SYS_umask
-        SYS_work_interval_ctl))
+        ))
 
 (when (defined? 'syscall-unix)
     (deny syscall-unix (with telemetry) (with send-signal SIGKILL))
@@ -1222,14 +1201,14 @@
             (syscall-unix-only-in-use-during-launch)))
 #endif
 
-    (allow syscall-unix (with telemetry)
+    (allow syscall-unix
         (syscall-unix-rarely-in-use))
 
-    (allow syscall-unix (with report) (with telemetry-backtrace)
+    (allow syscall-unix (with report)
         (syscall-unix-rarely-in-use-need-backtrace))
 )
 
-(deny syscall-unix (syscall-number
+(deny syscall-unix (with no-report) (syscall-number
     SYS_connect
     SYS_socket))
 
@@ -1266,7 +1245,7 @@
             F_SETFL ;; CMCapture uses when camera is enabled
             F_SETNOSIGPIPE)) ;; CMCapture uses when camera is enabled
 
-    (allow system-fcntl (with telemetry-backtrace)
+    (allow system-fcntl
         (fcntl-command
             F_GETLK
             F_OFD_SETLK))
@@ -1326,6 +1305,9 @@
 (define-once (mach-bootstrap-message-numbers)
     (message-number 206 207 711 712 718 800 802 803 804 805 904))
 
+(define-once (mach-bootstrap-message-numbers-post-launch)
+    (message-number 206 207 711 712 800 804 904))
+
 (define (allow-mach-bootstrap-with-filter)
     (allow mach-bootstrap
         (apply-message-filter
@@ -1337,7 +1319,9 @@
 (if (require-ancestor-with-entitlement "com.apple.private.security.enable-state-flags")
     (allow mach-bootstrap
         (apply-message-filter
-            (allow mach-message-send (with telemetry-backtrace))))
+            (deny mach-message-send (with telemetry-backtrace))
+            (allow mach-message-send (with telemetry-backtrace)
+                (mach-bootstrap-message-numbers-post-launch))))
 ;; else
     (allow-mach-bootstrap-with-filter))
 
@@ -1528,7 +1512,7 @@
     )
 )
 
-(deny darwin-notification-post (with no-log) (with telemetry))
+(deny darwin-notification-post (with no-log))
 (allow darwin-notification-post
     (notification-name
         "_AXNotification_AXSClassicInvertColorsPreference"

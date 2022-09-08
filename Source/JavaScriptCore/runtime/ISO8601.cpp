@@ -1269,12 +1269,42 @@ String temporalTimeToString(PlainTime plainTime, std::tuple<Precision, unsigned>
 
 String temporalDateToString(PlainDate plainDate)
 {
-    return makeString(pad('0', 4, plainDate.year()), '-', pad('0', 2, plainDate.month()), '-', pad('0', 2, plainDate.day()));
+    auto year = plainDate.year();
+
+    String prefix;
+    auto yearDigits = 4;
+    if (year < 0 || year > 9999) {
+        prefix = year < 0 ? "-"_s : "+"_s;
+        yearDigits = 6;
+        year = abs(year);
+    }
+
+    return makeString(prefix, pad('0', yearDigits, year), '-', pad('0', 2, plainDate.month()), '-', pad('0', 2, plainDate.day()));
+}
+
+String temporalDateTimeToString(PlainDate plainDate, PlainTime plainTime, std::tuple<Precision, unsigned> precision)
+{
+    return makeString(temporalDateToString(plainDate), 'T', temporalTimeToString(plainTime, precision));
 }
 
 String monthCode(uint32_t month)
 {
     return makeString('M', pad('0', 2, month));
+}
+
+// returns 0 for any invalid string
+uint8_t monthFromCode(StringView monthCode)
+{
+    if (monthCode.length() != 3 || !monthCode.startsWith('M') || !isASCIIDigit(monthCode[2]))
+        return 0;
+
+    uint8_t result = monthCode[2] - '0';
+    if (monthCode[1] == '1')
+        result += 10;
+    else if (monthCode[1] != '0')
+        return 0;
+
+    return result;
 }
 
 // IsValidDuration ( years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds )

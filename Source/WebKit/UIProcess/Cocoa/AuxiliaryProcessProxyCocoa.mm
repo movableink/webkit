@@ -26,9 +26,13 @@
 #import "config.h"
 #import "AuxiliaryProcessProxy.h"
 
-#if PLATFORM(COCOA)
-
 #import <WebCore/WebMAudioUtilitiesCocoa.h>
+#import <wtf/cocoa/VectorCocoa.h>
+
+#if PLATFORM(IOS_FAMILY) 
+#include "XPCConnectionTerminationWatchdog.h"
+#endif
+
 #import <pal/cf/AudioToolboxSoftLink.h>
 
 namespace WebKit {
@@ -49,10 +53,24 @@ RefPtr<WebCore::SharedBuffer> AuxiliaryProcessProxy::fetchAudioComponentServerRe
     if (noErr != AudioComponentFetchServerRegistrations(&registrations) || !registrations)
         return nullptr;
 
-    return WebCore::SharedBuffer::create(registrations);
+    return WebCore::SharedBuffer::create(adoptCF(registrations).get());
 }
 #endif
 
-} // namespace WebKit
+Vector<String> AuxiliaryProcessProxy::platformOverrideLanguages() const
+{
+    static const NeverDestroyed<Vector<String>> overrideLanguages = makeVector<String>([[NSUserDefaults standardUserDefaults] valueForKey:@"AppleLanguages"]);
+    return overrideLanguages;
+}
 
-#endif // PLATFORM(COCOA)
+void AuxiliaryProcessProxy::platformStartConnectionTerminationWatchdog()
+{
+#if PLATFORM(IOS_FAMILY)
+    // On iOS deploy a watchdog in the UI process, since the child process may be suspended.
+    // If 30s is insufficient for any outstanding activity to complete cleanly, then it will be killed.
+    ASSERT(m_connection && m_connection->xpcConnection());
+    XPCConnectionTerminationWatchdog::startConnectionTerminationWatchdog(m_connection->xpcConnection(), 30_s);
+#endif
+}
+
+} // namespace WebKit

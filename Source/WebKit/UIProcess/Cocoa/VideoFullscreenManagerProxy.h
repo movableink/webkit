@@ -45,16 +45,17 @@
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
 
+#if HAVE(PIP_CONTROLLER)
+#include "WebCore/VideoFullscreenInterfacePiP.h"
+typedef WebCore::VideoFullscreenInterfacePiP PlatformVideoFullscreenInterface;
+#else
 #if PLATFORM(IOS_FAMILY)
 #include <WebCore/VideoFullscreenInterfaceAVKit.h>
-#else
-#include <WebCore/VideoFullscreenInterfaceMac.h>
-#endif
-
-#if PLATFORM(IOS_FAMILY)
 typedef WebCore::VideoFullscreenInterfaceAVKit PlatformVideoFullscreenInterface;
 #else
+#include <WebCore/VideoFullscreenInterfaceMac.h>
 typedef WebCore::VideoFullscreenInterfaceMac PlatformVideoFullscreenInterface;
+#endif
 #endif
 
 namespace WebKit {
@@ -112,6 +113,7 @@ private:
     void requestVideoContentLayer() final;
     void returnVideoContentLayer() final;
     void didSetupFullscreen() final;
+    void failedToEnterFullscreen() final;
     void didEnterFullscreen(const WebCore::FloatSize&) final;
     void willExitFullscreen() final;
     void didExitFullscreen() final;
@@ -198,6 +200,7 @@ private:
     void didSetupFullscreen(PlaybackSessionContextIdentifier);
     void willExitFullscreen(PlaybackSessionContextIdentifier);
     void didExitFullscreen(PlaybackSessionContextIdentifier);
+    void failedToEnterFullscreen(PlaybackSessionContextIdentifier);
     void didEnterFullscreen(PlaybackSessionContextIdentifier, const WebCore::FloatSize&);
     void didCleanupFullscreen(PlaybackSessionContextIdentifier);
     void setVideoLayerFrame(PlaybackSessionContextIdentifier, WebCore::FloatRect);

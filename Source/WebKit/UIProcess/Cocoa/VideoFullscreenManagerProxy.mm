@@ -255,6 +255,12 @@ void VideoFullscreenModelContext::didSetupFullscreen()
         m_manager->didSetupFullscreen(m_contextId);
 }
 
+void VideoFullscreenModelContext::failedToEnterFullscreen()
+{
+    if (m_manager)
+        m_manager->failedToEnterFullscreen(m_contextId);
+}
+
 void VideoFullscreenModelContext::didEnterFullscreen(const WebCore::FloatSize& size)
 {
     if (m_manager)
@@ -392,7 +398,7 @@ bool VideoFullscreenManagerProxy::isPlayingVideoInEnhancedFullscreen() const
         if (interface->isPlayingVideoInEnhancedFullscreen())
             return true;
     }
-    
+
     return false;
 }
 #endif
@@ -859,6 +865,11 @@ void VideoFullscreenManagerProxy::didEnterFullscreen(PlaybackSessionContextIdent
     m_page->didEnterFullscreen(contextId);
 }
 
+void VideoFullscreenManagerProxy::failedToEnterFullscreen(PlaybackSessionContextIdentifier contextId)
+{
+    m_page->send(Messages::VideoFullscreenManager::FailedToEnterFullscreen(contextId));
+}
+
 void VideoFullscreenManagerProxy::didCleanupFullscreen(PlaybackSessionContextIdentifier contextId)
 {
     auto& [model, interface] = ensureModelAndInterface(contextId);
@@ -906,8 +917,12 @@ void VideoFullscreenManagerProxy::fullscreenMayReturnToInline(PlaybackSessionCon
 
 AVPlayerViewController *VideoFullscreenManagerProxy::playerViewController(PlaybackSessionContextIdentifier identifier) const
 {
+#if HAVE(PIP_CONTROLLER)
+    return nil;
+#else
     auto* interface = findInterface(identifier);
     return interface ? interface->avPlayerViewController() : nil;
+#endif
 }
 
 #endif // PLATFORM(IOS_FAMILY)

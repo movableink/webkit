@@ -27,8 +27,8 @@
 #include "config.h"
 #include "MIMETypeRegistry.h"
 
+#include "DeprecatedGlobalSettings.h"
 #include "MediaPlayer.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ThreadGlobalData.h"
 #include <wtf/FixedVector.h>
 #include <wtf/HashMap.h>
@@ -39,6 +39,7 @@
 #include <wtf/Vector.h>
 
 #if USE(CG)
+#include "ImageBufferUtilitiesCG.h"
 #include "ImageSourceCG.h"
 #include "UTIRegistry.h"
 #include <ImageIO/ImageIO.h>
@@ -549,12 +550,16 @@ bool MIMETypeRegistry::isTextMediaPlaylistMIMEType(const String& mimeType)
     return false;
 }
 
+// https://mimesniff.spec.whatwg.org/#json-mime-type
 bool MIMETypeRegistry::isSupportedJSONMIMEType(const String& mimeType)
 {
     if (mimeType.isEmpty())
         return false;
 
     if (equalLettersIgnoringASCIICase(mimeType, "application/json"_s))
+        return true;
+
+    if (equalLettersIgnoringASCIICase(mimeType, "text/json"_s))
         return true;
 
     // When detecting +json ensure there is a non-empty type / subtype preceeding the suffix.
@@ -679,7 +684,7 @@ bool MIMETypeRegistry::canShowMIMEType(const String& mimeType)
 #endif
 
 #if ENABLE(MODEL_ELEMENT)
-    if (isSupportedModelMIMEType(mimeType) && RuntimeEnabledFeatures::sharedFeatures().modelDocumentEnabled())
+    if (isSupportedModelMIMEType(mimeType) && DeprecatedGlobalSettings::modelDocumentEnabled())
         return true;
 #endif
 
@@ -842,6 +847,18 @@ Vector<String> MIMETypeRegistry::allowedFileExtensions(const Vector<String>& mim
         allowedFileExtensions.appendIfNotContains(trimmedExtension(extension));
 
     return allowedFileExtensions;
+}
+
+bool MIMETypeRegistry::isJPEGMIMEType(const String& mimeType)
+{
+#if USE(CG)
+    auto destinationUTI = utiFromImageBufferMIMEType(mimeType);
+    if (!destinationUTI)
+        return false;
+    return CFEqual(destinationUTI.get(), jpegUTI());
+#else
+    return mimeType == "image/jpeg"_s;
+#endif
 }
 
 } // namespace WebCore

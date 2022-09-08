@@ -26,50 +26,16 @@
 #include "libANGLE/Version.h"
 #include "libANGLE/angletypes.h"
 
-#if TARGET_OS_IPHONE
-#    if !defined(__IPHONE_11_0)
-#        define __IPHONE_11_0 110000
-#    endif
-#    if !defined(ANGLE_IOS_DEPLOY_TARGET)
-#        define ANGLE_IOS_DEPLOY_TARGET __IPHONE_11_0
-#    endif
-#    if !defined(__IPHONE_OS_VERSION_MAX_ALLOWED)
-#        define __IPHONE_OS_VERSION_MAX_ALLOWED __IPHONE_11_0
-#    endif
-#    if !defined(__TV_OS_VERSION_MAX_ALLOWED)
-#        define __TV_OS_VERSION_MAX_ALLOWED __IPHONE_11_0
-#    endif
-#endif
-
-#if !defined(TARGET_OS_MACCATALYST)
-#    define TARGET_OS_MACCATALYST 0
-#endif
-
-#if defined(__ARM_ARCH)
-#    define ANGLE_MTL_ARM (__ARM_ARCH != 0)
-#else
-#    define ANGLE_MTL_ARM 0
-#endif
-
-#define ANGLE_MTL_OBJC_SCOPE @autoreleasepool
-
-#if !__has_feature(objc_arc)
-#    define ANGLE_MTL_AUTORELEASE autorelease
-#    define ANGLE_MTL_RETAIN retain
-#    define ANGLE_MTL_RELEASE release
-#else
-#    define ANGLE_MTL_AUTORELEASE self
-#    define ANGLE_MTL_RETAIN self
-#    define ANGLE_MTL_RELEASE self
-#endif
-
-#define ANGLE_MTL_UNUSED __attribute__((unused))
-
 #if defined(ANGLE_MTL_ENABLE_TRACE)
 #    define ANGLE_MTL_LOG(...) NSLog(@__VA_ARGS__)
 #else
 #    define ANGLE_MTL_LOG(...) (void)0
 #endif
+
+#define ANGLE_MTL_OBJC_SCOPE ANGLE_APPLE_OBJC_SCOPE
+#define ANGLE_MTL_AUTORELEASE ANGLE_APPLE_AUTORELEASE
+#define ANGLE_MTL_RETAIN ANGLE_APPLE_RETAIN
+#define ANGLE_MTL_RELEASE ANGLE_APPLE_RELEASE
 
 namespace egl
 {
@@ -120,8 +86,17 @@ namespace mtl
 
 // NOTE(hqle): support variable max number of vertex attributes
 constexpr uint32_t kMaxVertexAttribs = gl::MAX_VERTEX_ATTRIBS;
-// NOTE(hqle): support variable max number of render targets
-constexpr uint32_t kMaxRenderTargets = 4;
+// Note: This is the max number of render targets the backend supports.
+// It is NOT how many the device supports which may be lower. If you
+// increase this number you will also need to edit the shaders in
+// metal/shaders/common.h.
+constexpr uint32_t kMaxRenderTargets = 8;
+// Metal Apple1 iOS devices only support 4 render targets
+constexpr uint32_t kMaxRenderTargetsOlderGPUFamilies = 4;
+
+constexpr uint32_t kMaxColorTargetBitsApple1To3      = 256;
+constexpr uint32_t kMaxColorTargetBitsApple4Plus     = 512;
+constexpr uint32_t kMaxColorTargetBitsMacAndCatalyst = std::numeric_limits<uint32_t>::max();
 
 constexpr uint32_t kMaxShaderUBOs = 12;
 constexpr uint32_t kMaxUBOSize    = 16384;
@@ -149,7 +124,7 @@ constexpr const size_t kMaximumResidentMemorySizeInBytes = 400 * 1024 * 1024;
 
 // Restrict in-flight render passes per command buffer to 16.
 // The goal is to reduce the number of active render passes on the system at
-// anyone time and this value was determined through experimentation.
+// any one time and this value was determined through experimentation.
 constexpr uint32_t kMaxRenderPassesPerCommandBuffer = 16;
 
 constexpr uint32_t kVertexAttribBufferStrideAlignment = 4;

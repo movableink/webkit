@@ -28,7 +28,9 @@ namespace sh
 class SpecConstMetal : public SpecConst
 {
   public:
-    SpecConstMetal(TSymbolTable *symbolTable, ShCompileOptions compileOptions, GLenum shaderType)
+    SpecConstMetal(TSymbolTable *symbolTable,
+                   const ShCompileOptions &compileOptions,
+                   GLenum shaderType)
         : SpecConst(symbolTable, compileOptions, shaderType)
     {}
     ~SpecConstMetal() override {}
@@ -42,18 +44,17 @@ class TranslatorMetal : public TranslatorVulkan
     TranslatorMetal(sh::GLenum type, ShShaderSpec spec);
 
   protected:
-    ANGLE_NO_DISCARD bool translate(TIntermBlock *root,
-                                    ShCompileOptions compileOptions,
-                                    PerformanceDiagnostics *perfDiagnostics) override;
+    [[nodiscard]] bool translate(TIntermBlock *root,
+                                 const ShCompileOptions &compileOptions,
+                                 PerformanceDiagnostics *perfDiagnostics) override;
 
-    ANGLE_NO_DISCARD bool transformDepthBeforeCorrection(
-        TIntermBlock *root,
-        const DriverUniform *driverUniforms) override;
+    [[nodiscard]] bool transformDepthBeforeCorrection(TIntermBlock *root,
+                                                      const DriverUniform *driverUniforms) override;
 
-    ANGLE_NO_DISCARD bool insertSampleMaskWritingLogic(TInfoSinkBase &sink,
-                                                       TIntermBlock *root,
-                                                       const DriverUniformMetal *driverUniforms);
-    ANGLE_NO_DISCARD bool insertRasterizerDiscardLogic(TInfoSinkBase &sink, TIntermBlock *root);
+    [[nodiscard]] bool insertSampleMaskWritingLogic(TInfoSinkBase &sink,
+                                                    TIntermBlock *root,
+                                                    const DriverUniformMetal *driverUniforms);
+    [[nodiscard]] bool insertRasterizerDiscardLogic(TInfoSinkBase &sink, TIntermBlock *root);
 };
 
 }  // namespace sh

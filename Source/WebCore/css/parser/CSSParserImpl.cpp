@@ -692,7 +692,7 @@ RefPtr<StyleRulePage> CSSParserImpl::consumePageRule(CSSParserTokenRange prelude
 
 RefPtr<StyleRuleCounterStyle> CSSParserImpl::consumeCounterStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
-    if (!m_context.counterStyleAtRulesEnabled)
+    if (!m_context.propertySettings.cssCounterStyleAtRulesEnabled)
         return nullptr;
 
     auto rangeCopy = prelude; // For inspector callbacks
@@ -774,13 +774,13 @@ RefPtr<StyleRuleLayer> CSSParserImpl::consumeLayerRule(CSSParserTokenRange prelu
 
 RefPtr<StyleRuleContainer> CSSParserImpl::consumeContainerRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
-    if (!m_context.containerQueriesEnabled)
+    if (!m_context.propertySettings.cssContainerQueriesEnabled)
         return nullptr;
 
     if (prelude.atEnd())
         return nullptr;
 
-    auto query = ContainerQueryParser::consumeFilteredContainerQuery(prelude, m_context);
+    auto query = ContainerQueryParser::consumeContainerQuery(prelude, m_context);
     if (!query)
         return nullptr;
 
@@ -943,7 +943,7 @@ void CSSParserImpl::consumeDeclaration(CSSParserTokenRange range, StyleRuleType 
 
     size_t propertiesCount = m_parsedProperties.size();
 
-    if (m_context.isPropertyRuntimeDisabled(propertyID) || isInternalCSSProperty(propertyID))
+    if (!isCSSPropertyExposed(propertyID, &m_context.propertySettings))
         propertyID = CSSPropertyInvalid;
 
     if (propertyID == CSSPropertyInvalid && CSSVariableParser::isValidVariableName(token)) {

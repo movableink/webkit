@@ -59,8 +59,8 @@
 #import "RenderProgress.h"
 #import "RenderSlider.h"
 #import "RenderView.h"
-#import "RuntimeEnabledFeatures.h"
 #import "SharedBuffer.h"
+#import "SliderThumbElement.h"
 #import "StringTruncator.h"
 #import "ThemeMac.h"
 #import "TimeRanges.h"
@@ -1625,14 +1625,6 @@ void RenderThemeMac::adjustMenuListStyle(RenderStyle& style, const Element* e) c
     // White-space is locked to pre
     style.setWhiteSpace(WhiteSpace::Pre);
 
-    // Set the foreground color to black or gray when we have the aqua look.
-    Color c = Color::darkGray;
-    if (e) {
-        OptionSet<StyleColorOptions> options = e->document().styleColorOptions(&style);
-        c = !e->isDisabledFormControl() ? systemColor(CSSValueButtontext, options) : systemColor(CSSValueGraytext, options);
-    }
-    style.setColor(c);
-
     // Set the button's vertical size.
     setSizeFromFont(style, menuListButtonSizes());
 
@@ -1696,7 +1688,7 @@ void RenderThemeMac::adjustMenuListButtonStyle(RenderStyle& style, const Element
     style.resetPadding();
     style.setBorderRadius(IntSize(int(baseBorderRadius + fontScale - 1), int(baseBorderRadius + fontScale - 1))); // FIXME: Round up?
 
-    const int minHeight = 15;
+    const int minHeight = 18;
     style.setMinHeight(Length(minHeight, LengthType::Fixed));
 
     style.setLineHeight(RenderStyle::initialLineHeight());
@@ -1806,8 +1798,11 @@ bool RenderThemeMac::paintSliderThumb(const RenderObject& o, const PaintInfo& pa
 
     // Update the various states we respond to.
     updateEnabledState(sliderThumbCell, o);
-    auto focusDelegate = is<Element>(o.node()) ? downcast<Element>(*o.node()).focusDelegate() : nullptr;
-    updateFocusedState(sliderThumbCell, focusDelegate ? focusDelegate->renderer() : nullptr);
+    RefPtr element = dynamicDowncast<Element>(o.node());
+    RefPtr delegate = element;
+    if (is<SliderThumbElement>(element))
+        delegate = downcast<SliderThumbElement>(*element).hostInput();
+    updateFocusedState(sliderThumbCell, delegate ? delegate->renderer() : nullptr);
 
     // Update the pressed state using the NSCell tracking methods, since that's how NSSliderCell keeps track of it.
     bool oldPressed;

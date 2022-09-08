@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,9 @@
 #import "HTTPServer.h"
 
 #import "Utilities.h"
+#import <WebCore/SQLiteFileSystem.h>
 #import <wtf/BlockPtr.h>
+#import <wtf/CallbackAggregator.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/SHA1.h>
@@ -181,8 +183,19 @@ void HTTPServer::cancel()
     nw_listener_cancel(m_listener.get());
     Util::run(&cancelled);
     m_listener = nullptr;
+
+    bool done { false };
+    terminateAllConnections([&] {
+        done = true;
+    });
+    Util::run(&done);
+}
+
+void HTTPServer::terminateAllConnections(CompletionHandler<void()>&& completionHandler)
+{
+    auto aggregator = CallbackAggregator::create(WTFMove(completionHandler));
     for (auto& connection : std::exchange(m_requestData->connections, { }))
-        connection.cancel();
+        connection.terminate([aggregator] { });
 }
 
 HTTPServer::HTTPServer(std::initializer_list<std::pair<String, HTTPResponse>> responses, Protocol protocol, CertificateVerifier&& verifier, RetainPtr<SecIdentityRef>&& identity, std::optional<uint16_t> port)
@@ -542,19 +555,6 @@ void Connection::terminate(CompletionHandler<void()>&& completionHandler)
             completionHandler();
     }).get());
     nw_connection_cancel(m_connection.get());
-}
-
-void Connection::cancel()
-{
-    __block bool cancelled = false;
-    nw_connection_set_state_changed_handler(m_connection.get(), ^(nw_connection_state_t state, nw_error_t error) {
-        ASSERT_UNUSED(error, !error);
-        if (state == nw_connection_state_cancelled)
-            cancelled = true;
-    });
-    nw_connection_cancel(m_connection.get());
-    Util::run(&cancelled);
-    m_connection = nullptr;
 }
 
 Vector<uint8_t> HTTPResponse::bodyFromString(const String& string)

@@ -108,6 +108,7 @@
 #import <UIKit/UIContextMenuInteraction_ForSpringBoardOnly.h>
 #import <UIKit/UIContextMenuInteraction_ForWebKitOnly.h>
 #import <UIKit/UIContextMenuInteraction_Private.h>
+#import <UIKit/UIMenu_Private.h>
 #endif
 
 #if HAVE(UIDATEPICKER_OVERLAY_PRESENTATION)
@@ -164,6 +165,13 @@
 #import <UIKit/NSItemProvider+UIKitAdditions.h>
 #endif
 
+typedef NS_ENUM(NSInteger, _UIDataOwner) {
+    _UIDataOwnerUndefined,
+    _UIDataOwnerUser,
+    _UIDataOwnerEnterprise,
+    _UIDataOwnerShared,
+};
+
 #if HAVE(LINK_PREVIEW)
 typedef NS_ENUM(NSInteger, UIPreviewItemType) {
     UIPreviewItemTypeNone,
@@ -172,13 +180,6 @@ typedef NS_ENUM(NSInteger, UIPreviewItemType) {
     UIPreviewItemTypeImage,
     UIPreviewItemTypeText,
     UIPreviewItemTypeAttachment,
-};
-
-typedef NS_ENUM(NSInteger, _UIDataOwner) {
-    _UIDataOwnerUndefined,
-    _UIDataOwnerUser,
-    _UIDataOwnerEnterprise,
-    _UIDataOwnerShared,
 };
 
 @class UIPreviewItemController;
@@ -353,6 +354,10 @@ typedef id<NSCoding, NSCopying> _UITextSearchDocumentIdentifier;
 @property (nonatomic, strong) id<_UITextSearching> searchableObject;
 @end
 
+@interface UIFindInteraction ()
+@property (class, nonatomic, copy, getter=_globalFindBuffer, setter=_setGlobalFindBuffer:) NSString *_globalFindBuffer;
+@end
+
 #endif // HAVE(UIFINDINTERACTION)
 
 typedef enum {
@@ -503,10 +508,8 @@ typedef enum {
 - (void)_wheelChangedWithEvent:(UIEvent *)event;
 - (void)_beginPinningInputViews;
 - (void)_endPinningInputViews;
-#if HAVE(PASTEBOARD_DATA_OWNER)
 @property (nonatomic, setter=_setDataOwnerForCopy:) _UIDataOwner _dataOwnerForCopy;
 @property (nonatomic, setter=_setDataOwnerForPaste:) _UIDataOwner _dataOwnerForPaste;
-#endif
 @end
 
 @class FBSDisplayConfiguration;
@@ -632,6 +635,10 @@ typedef enum {
 - (BOOL)hasContent;
 - (BOOL)hasSelection;
 - (void)selectAll;
+@end
+
+@protocol _UITextInputTranslationSupport <UITextInput>
+@property (nonatomic, readonly, getter=isImageBacked) BOOL imageBacked;
 @end
 
 @interface UITextInputTraits : NSObject <UITextInputTraits, UITextInputTraits_Private, NSCopying>
@@ -1337,6 +1344,10 @@ typedef NS_ENUM(NSUInteger, _UIContextMenuLayout) {
 
 #if USE(UICONTEXTMENU)
 
+typedef NS_ENUM(NSUInteger, UIMenuOptionsPrivate) {
+    UIMenuOptionsPrivateRemoveLineLimitForChildren = 1 << 6,
+};
+
 @interface UIContextMenuInteraction ()
 @property (nonatomic, readonly) UIGestureRecognizer *gestureRecognizerForFailureRelationships;
 - (void)_presentMenuAtLocation:(CGPoint)location;
@@ -1404,6 +1415,16 @@ typedef NS_ENUM(NSUInteger, _UIContextMenuLayout) {
 #endif // HAVE(UIKIT_RESIZABLE_WINDOWS)
 
 #endif // USE(APPLE_INTERNAL_SDK)
+
+#if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+typedef NS_ENUM(NSUInteger, _UIScrollDeviceCategory) {
+    _UIScrollDeviceCategoryOverlayScroll = 6
+};
+
+@interface UIScrollEvent ()
+- (_UIScrollDeviceCategory)_scrollDeviceCategory;
+@end
+#endif
 
 @interface UITextInteractionAssistant (IPI)
 @property (nonatomic, readonly) BOOL inGesture;

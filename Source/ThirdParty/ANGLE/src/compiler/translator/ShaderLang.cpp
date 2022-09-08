@@ -216,6 +216,7 @@ void InitBuiltInResources(ShBuiltInResources *resources)
     resources->NV_shader_noperspective_interpolation          = 0;
     resources->OES_texture_storage_multisample_2d_array       = 0;
     resources->OES_texture_3D                                 = 0;
+    resources->ANGLE_shader_pixel_local_storage               = 0;
     resources->ANGLE_texture_multisample                      = 0;
     resources->ANGLE_multi_draw                               = 0;
     resources->ANGLE_base_vertex_base_instance                = 0;
@@ -401,7 +402,7 @@ const std::string &GetBuiltInResourcesString(const ShHandle handle)
 bool Compile(const ShHandle handle,
              const char *const shaderStrings[],
              size_t numStrings,
-             ShCompileOptions compileOptions)
+             const ShCompileOptions &compileOptions)
 {
     TCompiler *compiler = GetCompilerFromHandle(handle);
     ASSERT(compiler);
@@ -735,6 +736,17 @@ const std::set<std::string> *GetUsedImage2DFunctionNames(const ShHandle handle)
 #endif  // ANGLE_ENABLE_HLSL
 }
 
+bool HasDiscardInFragmentShader(const ShHandle handle)
+{
+    ASSERT(handle);
+
+    TShHandleBase *base = static_cast<TShHandleBase *>(handle);
+    TCompiler *compiler = base->getAsCompiler();
+    ASSERT(compiler);
+
+    return compiler->getShaderType() == GL_FRAGMENT_SHADER && compiler->hasDiscard();
+}
+
 bool HasValidGeometryShaderInputPrimitiveType(const ShHandle handle)
 {
     ASSERT(handle);
@@ -976,15 +988,13 @@ const char kDriverUniformsVarName[]   = "ANGLEUniforms";
 // Interface block array name used for atomic counter emulation
 const char kAtomicCountersBlockName[] = "ANGLEAtomicCounters";
 
-const char kLineRasterEmulationPosition[] = "ANGLEPosition";
-
 const char kXfbEmulationGetOffsetsFunctionName[] = "ANGLEGetXfbOffsets";
 const char kXfbEmulationCaptureFunctionName[]    = "ANGLECaptureXfb";
 const char kXfbEmulationBufferBlockName[]        = "ANGLEXfbBuffer";
 const char kXfbEmulationBufferName[]             = "ANGLEXfb";
 const char kXfbEmulationBufferFieldName[]        = "xfbOut";
 
-const char kPreRotationRotatePositionFunctionName[] = "ANGLEPreRotatePositionXY";
+const char kTransformPositionFunctionName[] = "ANGLETransformPosition";
 
 const char kXfbExtensionPositionOutName[] = "ANGLEXfbPosition";
 

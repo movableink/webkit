@@ -47,14 +47,16 @@ class UpdateDescriptorSetsBuilder;
 
 enum class DescriptorSetIndex : uint32_t
 {
-    Internal,        // ANGLE driver uniforms or internal shaders
-    UniformsAndXfb,  // Uniforms set index
-    Texture,         // Textures set index
-    ShaderResource,  // Other shader resources set index
+    Internal       = 0,         // Internal shaders
+    UniformsAndXfb = Internal,  // Uniforms set index
+    Texture        = 1,         // Textures set index
+    ShaderResource = 2,         // Other shader resources set index
 
-    InvalidEnum,
-    EnumCount = InvalidEnum,
+    InvalidEnum = 3,
+    EnumCount   = InvalidEnum,
 };
+
+class PipelineCacheAccess;
 
 namespace vk
 {
@@ -172,6 +174,7 @@ class alignas(4) RenderPassDesc final
 
     bool isColorAttachmentEnabled(size_t colorIndexGL) const;
     bool hasDepthStencilAttachment() const;
+    gl::DrawBufferMask getColorResolveAttachmentMask() const { return mColorResolveAttachmentMask; }
     bool hasColorResolveAttachment(size_t colorIndexGL) const
     {
         return mColorResolveAttachmentMask.test(colorIndexGL);
@@ -207,7 +210,7 @@ class alignas(4) RenderPassDesc final
     {
         mHasFramebufferFetch = hasFramebufferFetch;
     }
-    bool getFramebufferFetchMode() const { return mHasFramebufferFetch; }
+    bool hasFramebufferFetch() const { return mHasFramebufferFetch; }
 
     void updateRenderToTexture(bool isRenderToTexture) { mIsRenderToTexture = isRenderToTexture; }
     bool isRenderToTexture() const { return mIsRenderToTexture; }
@@ -283,6 +286,15 @@ bool operator==(const RenderPassDesc &lhs, const RenderPassDesc &rhs);
 
 constexpr size_t kRenderPassDescSize = sizeof(RenderPassDesc);
 static_assert(kRenderPassDescSize == 16, "Size check failed");
+
+enum class CacheLookUpFeedback
+{
+    None,
+    Hit,
+    Miss,
+    WarmUpHit,
+    WarmUpMiss,
+};
 
 struct PackedAttachmentOpsDesc final
 {
@@ -456,12 +468,13 @@ struct PackedColorBlendStateInfo final
 constexpr size_t kPackedColorBlendStateSize = sizeof(PackedColorBlendStateInfo);
 static_assert(kPackedColorBlendStateSize == 36, "Size check failed");
 
-struct PackedDither final
+struct PackedDitherAndWorkarounds final
 {
     static_assert(gl::IMPLEMENTATION_MAX_DRAW_BUFFERS <= 8,
                   "2 bits per draw buffer is needed for dither emulation");
     uint16_t emulatedDitherControl;
-    uint16_t unused;
+    uint16_t nonZeroStencilWriteMaskWorkaround : 1;
+    uint16_t unused : 15;
 };
 
 // State that is dynamic in VK_EXT_extended_dynamic_state and 2.  These are placed at the end of the
@@ -486,7 +499,7 @@ struct PackedDynamicState1And2 final
     // From VK_EXT_extended_dynamic_state2
     uint32_t rasterizerDiscardEnable : 1;
     uint32_t depthBiasEnable : 1;
-    uint32_t restartEnable : 1;
+    uint32_t primitiveRestartEnable : 1;
 
     // Store support for VK_EXT_extended_dynamic_state/2 in the bits wasted here for padding.  This
     // is to support GraphicsPipelineDesc::hash(), allowing it to exclude this state from the hash.
@@ -525,7 +538,7 @@ static_assert(kPackedDynamicStateSize == 40, "Size check failed");
 constexpr size_t kGraphicsPipelineDescSumOfSizes =
     kVertexInputAttributesSize + kRenderPassDescSize +
     kPackedInputAssemblyAndRasterizationStateSize + kPackedColorBlendStateSize +
-    sizeof(PackedDither) + kPackedDynamicStateSize;
+    sizeof(PackedDitherAndWorkarounds) + kPackedDynamicStateSize;
 
 // Number of dirty bits in the dirty bit set.
 constexpr size_t kGraphicsPipelineDirtyBitBytes = 4;
@@ -565,7 +578,7 @@ class GraphicsPipelineDesc final
     }
 
     angle::Result initializePipeline(ContextVk *contextVk,
-                                     const PipelineCache &pipelineCacheVk,
+                                     PipelineCacheAccess *pipelineCache,
                                      const RenderPass &compatibleRenderPass,
                                      const PipelineLayout &pipelineLayout,
                                      const gl::AttributesMask &activeAttribLocationsMask,
@@ -573,7 +586,8 @@ class GraphicsPipelineDesc final
                                      const gl::DrawBufferMask &missingOutputsMask,
                                      const ShaderAndSerialMap &shaders,
                                      const SpecializationConstants &specConsts,
-                                     Pipeline *pipelineOut) const;
+                                     Pipeline *pipelineOut,
+                                     CacheLookUpFeedback *feedbackOut) const;
 
     // Vertex input state. For ES 3.1 this should be separated into binding and attribute.
     void updateVertexInput(ContextVk *contextVk,
@@ -623,6 +637,9 @@ class GraphicsPipelineDesc final
     void updateRenderPassDesc(GraphicsPipelineTransitionBits *transition,
                               const RenderPassDesc &renderPassDesc);
     void setRenderPassSampleCount(GLint samples);
+    void setRenderPassFramebufferFetchMode(bool hasFramebufferFetch);
+    bool getRenderPassFramebufferFetchMode() const { return mRenderPassDesc.hasFramebufferFetch(); }
+
     void setRenderPassColorAttachmentFormat(size_t colorIndexGL, angle::FormatID formatID);
 
     // Blend states
@@ -704,13 +721,34 @@ class GraphicsPipelineDesc final
     }
 
     void updateEmulatedDitherControl(GraphicsPipelineTransitionBits *transition, uint16_t value);
-    uint32_t getEmulatedDitherControl() const { return mDither.emulatedDitherControl; }
+    uint32_t getEmulatedDitherControl() const
+    {
+        return mDitherAndWorkarounds.emulatedDitherControl;
+    }
+
+    void updateNonZeroStencilWriteMaskWorkaround(GraphicsPipelineTransitionBits *transition,
+                                                 bool enabled);
 
     void setSupportsDynamicStateForTest(bool supports)
     {
         mDynamicState.ds1And2.supportsDynamicState1 = supports;
         mDynamicState.ds1And2.supportsDynamicState2 = supports;
     }
+
+    // Helpers to dump the state
+    const VertexInputAttributes &getVertexInputAttribsForLog() const { return mVertexInputAttribs; }
+    const RenderPassDesc &getRenderPassDescForLog() const { return mRenderPassDesc; }
+    const PackedInputAssemblyAndRasterizationStateInfo
+    getInputAssemblyAndRasterizationStateInfoForLog() const
+    {
+        return mInputAssemblyAndRasterizationStateInfo;
+    }
+    const PackedColorBlendStateInfo &getColorBlendStateInfoForLog() const
+    {
+        return mColorBlendStateInfo;
+    }
+    const PackedDitherAndWorkarounds &getDitherForLog() const { return mDitherAndWorkarounds; }
+    const PackedDynamicState &getDynamicStateForLog() const { return mDynamicState; }
 
   private:
     void updateSubpass(GraphicsPipelineTransitionBits *transition, uint32_t subpass);
@@ -719,7 +757,7 @@ class GraphicsPipelineDesc final
     RenderPassDesc mRenderPassDesc;
     PackedInputAssemblyAndRasterizationStateInfo mInputAssemblyAndRasterizationStateInfo;
     PackedColorBlendStateInfo mColorBlendStateInfo;
-    PackedDither mDither;
+    PackedDitherAndWorkarounds mDitherAndWorkarounds;
     PackedDynamicState mDynamicState;
 };
 
@@ -783,9 +821,9 @@ class DescriptorSetLayoutDesc final
         mPackedDescriptorSetLayout;
 };
 
-// The following are for caching descriptor set layouts. Limited to max four descriptor set layouts.
-// This can be extended in the future.
-constexpr size_t kMaxDescriptorSetLayouts = 4;
+// The following are for caching descriptor set layouts. Limited to max three descriptor set
+// layouts. This can be extended in the future.
+constexpr size_t kMaxDescriptorSetLayouts = 3;
 
 struct PackedPushConstantRange
 {
@@ -820,7 +858,7 @@ class PipelineLayoutDesc final
   private:
     DescriptorSetArray<DescriptorSetLayoutDesc> mDescriptorSetLayouts;
     PackedPushConstantRange mPushConstantRange;
-    ANGLE_MAYBE_UNUSED uint32_t mPadding;
+    [[maybe_unused]] uint32_t mPadding;
 
     // Verify the arrays are properly packed.
     static_assert(sizeof(decltype(mDescriptorSetLayouts)) ==
@@ -855,7 +893,9 @@ class YcbcrConversionDesc final
                 VkFilter chromaFilter,
                 VkComponentMapping components,
                 angle::FormatID intendedFormatID);
-    void updateChromaFilter(VkFilter filter);
+    VkFilter getChromaFilter() const { return static_cast<VkFilter>(mChromaFilter); }
+    bool updateChromaFilter(RendererVk *rendererVk, VkFilter filter);
+    void updateConversionModel(VkSamplerYcbcrModelConversion conversionModel);
     uint64_t getExternalFormat() const { return mIsExternalFormat ? mExternalOrVkFormat : 0; }
 
     angle::Result init(Context *context, SamplerYcbcrConversion *conversionOut) const;
@@ -1024,9 +1064,10 @@ class PipelineHelper final : public Resource
   public:
     PipelineHelper();
     ~PipelineHelper() override;
-    inline explicit PipelineHelper(Pipeline &&pipeline);
+    inline explicit PipelineHelper(Pipeline &&pipeline, CacheLookUpFeedback feedback);
 
     void destroy(VkDevice device);
+    void release(ContextVk *contextVk);
 
     bool valid() const { return mPipeline.valid(); }
     Pipeline &getPipeline() { return mPipeline; }
@@ -1054,12 +1095,54 @@ class PipelineHelper final : public Resource
 
     const std::vector<GraphicsPipelineTransition> getTransitions() const { return mTransitions; }
 
+    void setCacheLookUpFeedback(CacheLookUpFeedback feedback)
+    {
+        ASSERT(mCacheLookUpFeedback == CacheLookUpFeedback::None);
+        mCacheLookUpFeedback = feedback;
+    }
+    CacheLookUpFeedback getCacheLookUpFeedback() const { return mCacheLookUpFeedback; }
+
   private:
     std::vector<GraphicsPipelineTransition> mTransitions;
     Pipeline mPipeline;
+    CacheLookUpFeedback mCacheLookUpFeedback = CacheLookUpFeedback::None;
 };
 
-ANGLE_INLINE PipelineHelper::PipelineHelper(Pipeline &&pipeline) : mPipeline(std::move(pipeline)) {}
+class FramebufferHelper : public Resource
+{
+  public:
+    FramebufferHelper();
+    ~FramebufferHelper() override;
+
+    FramebufferHelper(FramebufferHelper &&other);
+    FramebufferHelper &operator=(FramebufferHelper &&other);
+
+    angle::Result init(ContextVk *contextVk, const VkFramebufferCreateInfo &createInfo);
+    void destroy(RendererVk *rendererVk);
+    void release(ContextVk *contextVk);
+
+    bool valid() { return mFramebuffer.valid(); }
+
+    const Framebuffer &getFramebuffer() const
+    {
+        ASSERT(mFramebuffer.valid());
+        return mFramebuffer;
+    }
+
+    Framebuffer &getFramebuffer()
+    {
+        ASSERT(mFramebuffer.valid());
+        return mFramebuffer;
+    }
+
+  private:
+    // Vulkan object.
+    Framebuffer mFramebuffer;
+};
+
+ANGLE_INLINE PipelineHelper::PipelineHelper(Pipeline &&pipeline, CacheLookUpFeedback feedback)
+    : mPipeline(std::move(pipeline)), mCacheLookUpFeedback(feedback)
+{}
 
 struct ImageSubresourceRange
 {
@@ -1231,6 +1314,26 @@ class DescriptorSetDesc
     angle::FastMap<DescriptorInfoDesc, kFastDescriptorSetDescLimit> mDescriptorInfos;
 };
 
+class DescriptorPoolHelper;
+using RefCountedDescriptorPoolHelper = RefCounted<DescriptorPoolHelper>;
+
+// SharedDescriptorSetCacheKey.
+// Because DescriptorSet must associate with a pool, we need to define a structure that wraps both.
+struct DescriptorSetDescAndPool
+{
+    DescriptorSetDesc mDesc;
+    DynamicDescriptorPool *mPool;
+};
+using DescriptorSetAndPoolPointer = std::unique_ptr<DescriptorSetDescAndPool>;
+using SharedDescriptorSetCacheKey = std::shared_ptr<DescriptorSetAndPoolPointer>;
+ANGLE_INLINE const SharedDescriptorSetCacheKey
+CreateSharedDescriptorSetCacheKey(const DescriptorSetDesc &desc, DynamicDescriptorPool *pool)
+{
+    DescriptorSetAndPoolPointer DescriptorAndPoolPointer =
+        std::make_unique<DescriptorSetDescAndPool>(DescriptorSetDescAndPool{desc, pool});
+    return std::make_shared<DescriptorSetAndPoolPointer>(std::move(DescriptorAndPoolPointer));
+}
+
 constexpr VkDescriptorType kStorageBufferDescriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 
 // Manages a descriptor set desc with a few helper routines and also stores object handles.
@@ -1307,10 +1410,18 @@ class DescriptorSetDescBuilder final
                                            const gl::ActiveTextureArray<TextureVk *> &textures,
                                            const gl::SamplerBindingVector &samplers,
                                            bool emulateSeamfulCubeMapSampling,
-                                           PipelineType pipelineType);
+                                           PipelineType pipelineType,
+                                           const SharedDescriptorSetCacheKey &sharedCacheKey);
 
     void updateDescriptorSet(UpdateDescriptorSetsBuilder *updateBuilder,
                              VkDescriptorSet descriptorSet) const;
+
+    // If sharedCacheKey is not null, it means a new cache entry for descriptoret has been created.
+    // This function will store the new shared cache key in the buffer or textures that the
+    // descriptorSet is created so that the descriptorSet cache can be destroyed when any of these
+    // is release or destroyed.
+    void updateImagesAndBuffersWithSharedCacheKey(
+        const SharedDescriptorSetCacheKey &sharedCacheKey);
 
     const uint32_t *getDynamicOffsets() const { return mDynamicOffsets.data(); }
     size_t getDynamicOffsetsSize() const { return mDynamicOffsets.size(); }
@@ -1324,7 +1435,8 @@ class DescriptorSetDescBuilder final
         const gl::ActiveTextureArray<TextureVk *> &textures,
         const gl::SamplerBindingVector &samplers,
         bool emulateSeamfulCubeMapSampling,
-        PipelineType pipelineType);
+        PipelineType pipelineType,
+        const SharedDescriptorSetCacheKey &sharedCacheKey);
 
     void updateWriteDesc(uint32_t bindingIndex,
                          VkDescriptorType descriptorType,
@@ -1334,10 +1446,16 @@ class DescriptorSetDescBuilder final
     angle::FastMap<DescriptorDescHandles, kFastDescriptorSetDescLimit> mHandles;
     angle::FastMap<uint32_t, kFastDescriptorSetDescLimit> mDynamicOffsets;
     uint32_t mCurrentInfoIndex = 0;
+
+    // Track textures and buffers that used for this descriptorSet.
+    std::vector<TextureVk *> mUsedImages;
+    std::vector<BufferBlock *> mUsedBufferBlocks;
+    std::vector<BufferHelper *> mUsedBufferHelpers;
 };
 
 // Specialized update for textures.
-void UpdatePreCacheActiveTextures(const gl::ActiveTextureMask &activeTextures,
+void UpdatePreCacheActiveTextures(const std::vector<gl::SamplerBinding> &samplerBindings,
+                                  const gl::ActiveTextureMask &activeTextures,
                                   const gl::ActiveTextureArray<TextureVk *> &textures,
                                   const gl::SamplerBindingVector &samplers,
                                   DescriptorSetDesc *desc);
@@ -1398,7 +1516,7 @@ class FramebufferDesc
 
     void updateLayerCount(uint32_t layerCount);
     uint32_t getLayerCount() const { return mLayerCount; }
-    void updateFramebufferFetchMode(bool hasFramebufferFetch);
+    void setFramebufferFetchMode(bool hasFramebufferFetch);
     bool hasFramebufferFetch() const { return mHasFramebufferFetch; }
 
     bool isMultiview() const { return mIsMultiview; }
@@ -1440,6 +1558,16 @@ static_assert(kFramebufferDescSize == 148, "Size check failed");
 // Disable warnings about struct padding.
 ANGLE_DISABLE_STRUCT_PADDING_WARNINGS
 
+// SharedFramebufferCacheKey
+using FramebufferDescPointer    = std::unique_ptr<FramebufferDesc>;
+using SharedFramebufferCacheKey = std::shared_ptr<FramebufferDescPointer>;
+ANGLE_INLINE const SharedFramebufferCacheKey
+CreateSharedFramebufferCacheKey(const FramebufferDesc &desc)
+{
+    FramebufferDescPointer framebufferDescPointer = std::make_unique<FramebufferDesc>(desc);
+    return std::make_shared<FramebufferDescPointer>(std::move(framebufferDescPointer));
+}
+
 // The SamplerHelper allows a Sampler to be coupled with a serial.
 // Must be included before we declare SamplerCache.
 class SamplerHelper final : angle::NonCopyable
@@ -1474,6 +1602,7 @@ class RenderPassHelper final : angle::NonCopyable
     RenderPassHelper &operator=(RenderPassHelper &&other);
 
     void destroy(VkDevice device);
+    void release(ContextVk *contextVk);
 
     const RenderPass &getRenderPass() const;
     RenderPass &getRenderPass();
@@ -1485,6 +1614,36 @@ class RenderPassHelper final : angle::NonCopyable
     RenderPass mRenderPass;
     RenderPassPerfCounters mPerfCounters;
 };
+
+// Helper class manages the lifetime of various cache objects so that the cache entry can be
+// destroyed when one of the components becomes invalid.
+template <class SharedCacheKeyT>
+class SharedCacheKeyManager
+{
+  public:
+    SharedCacheKeyManager() = default;
+    ~SharedCacheKeyManager() { ASSERT(empty()); }
+    // Store the pointer to the cache key and retains it
+    void addKey(const SharedCacheKeyT &key);
+    // Iterate over the descriptor array and release the descriptor and cache.
+    void releaseKeys(ContextVk *contextVk);
+    // Iterate over the descriptor array and destroy the descriptor and cache.
+    void destroyKeys(RendererVk *renderer);
+    void clear();
+
+    // The following APIs are expected to be used for assertion only
+    bool containsKey(const SharedCacheKeyT &key) const;
+    bool empty() const { return mSharedCacheKeys.empty(); }
+    void assertAllEntriesDestroyed();
+
+  private:
+    // Tracks an array of cache keys with refcounting. Note this owns one refcount of
+    // SharedCacheKeyT object.
+    std::vector<SharedCacheKeyT> mSharedCacheKeys;
+};
+
+using FramebufferCacheManager   = SharedCacheKeyManager<SharedFramebufferCacheKey>;
+using DescriptorSetCacheManager = SharedCacheKeyManager<SharedDescriptorSetCacheKey>;
 }  // namespace vk
 }  // namespace rx
 
@@ -1612,6 +1771,7 @@ class CacheStats final : angle::NonCopyable
     ANGLE_INLINE void hit() { mHitCount++; }
     ANGLE_INLINE void miss() { mMissCount++; }
     ANGLE_INLINE void incrementSize() { mSize++; }
+    ANGLE_INLINE void decrementSize() { mSize--; }
     ANGLE_INLINE void missAndIncrementSize()
     {
         mMissCount++;
@@ -1640,6 +1800,7 @@ class CacheStats final : angle::NonCopyable
     }
 
     ANGLE_INLINE uint32_t getSize() const { return mSize; }
+    ANGLE_INLINE void setSize(uint32_t size) { mSize = size; }
 
     void reset()
     {
@@ -1688,6 +1849,27 @@ class HasCacheStats : angle::NonCopyable
 
 using VulkanCacheStats = angle::PackedEnumMap<VulkanCacheType, CacheStats>;
 
+// FramebufferVk Cache
+class FramebufferCache final : angle::NonCopyable
+{
+  public:
+    FramebufferCache() = default;
+    ~FramebufferCache() { ASSERT(mPayload.empty()); }
+
+    void destroy(RendererVk *rendererVk);
+
+    bool get(ContextVk *contextVk, const vk::FramebufferDesc &desc, vk::Framebuffer &framebuffer);
+    void insert(const vk::FramebufferDesc &desc, vk::FramebufferHelper &&framebufferHelper);
+    void erase(ContextVk *contextVk, const vk::FramebufferDesc &desc);
+
+    size_t getSize() const { return mPayload.size(); }
+    bool empty() const { return mPayload.empty(); }
+
+  private:
+    angle::HashMap<vk::FramebufferDesc, vk::FramebufferHelper> mPayload;
+    CacheStats mCacheStats;
+};
+
 // TODO(jmadill): Add cache trimming/eviction.
 class RenderPassCache final : angle::NonCopyable
 {
@@ -1696,6 +1878,7 @@ class RenderPassCache final : angle::NonCopyable
     ~RenderPassCache();
 
     void destroy(RendererVk *rendererVk);
+    void clear(ContextVk *contextVk);
 
     ANGLE_INLINE angle::Result getCompatibleRenderPass(ContextVk *contextVk,
                                                        const vk::RenderPassDesc &desc,
@@ -1744,6 +1927,43 @@ class RenderPassCache final : angle::NonCopyable
     CacheStats mRenderPassWithOpsCacheStats;
 };
 
+// A class that encapsulates the vk::PipelineCache and associated mutex.  The mutex may be nullptr
+// if synchronization is not necessary.
+class PipelineCacheAccess
+{
+  public:
+    PipelineCacheAccess()  = default;
+    ~PipelineCacheAccess() = default;
+
+    void init(const vk::PipelineCache *pipelineCache, std::mutex *mutex)
+    {
+        mPipelineCache = pipelineCache;
+        mMutex         = mutex;
+    }
+
+    angle::Result createGraphicsPipeline(vk::Context *context,
+                                         const VkGraphicsPipelineCreateInfo &createInfo,
+                                         vk::Pipeline *pipelineOut);
+    angle::Result createComputePipeline(vk::Context *context,
+                                        const VkComputePipelineCreateInfo &createInfo,
+                                        vk::Pipeline *pipelineOut);
+
+    void merge(RendererVk *renderer, const vk::PipelineCache &pipelineCache);
+
+  private:
+    std::unique_lock<std::mutex> getLock();
+
+    const vk::PipelineCache *mPipelineCache = nullptr;
+    std::mutex *mMutex;
+};
+
+enum class PipelineSource
+{
+    WarmUp,
+    Draw,
+    Utils,
+};
+
 // TODO(jmadill): Add cache trimming/eviction.
 class GraphicsPipelineCache final : public HasCacheStats<VulkanCacheType::GraphicsPipeline>
 {
@@ -1752,12 +1972,12 @@ class GraphicsPipelineCache final : public HasCacheStats<VulkanCacheType::Graphi
     ~GraphicsPipelineCache() override;
 
     void destroy(RendererVk *rendererVk);
-    void release(ContextVk *context);
+    void release(ContextVk *contextVk);
 
     void populate(const vk::GraphicsPipelineDesc &desc, vk::Pipeline &&pipeline);
 
     ANGLE_INLINE angle::Result getPipeline(ContextVk *contextVk,
-                                           const vk::PipelineCache &pipelineCacheVk,
+                                           PipelineCacheAccess *pipelineCache,
                                            const vk::RenderPass &compatibleRenderPass,
                                            const vk::PipelineLayout &pipelineLayout,
                                            const gl::AttributesMask &activeAttribLocationsMask,
@@ -1765,6 +1985,7 @@ class GraphicsPipelineCache final : public HasCacheStats<VulkanCacheType::Graphi
                                            const gl::DrawBufferMask &missingOutputsMask,
                                            const vk::ShaderAndSerialMap &shaders,
                                            const vk::SpecializationConstants &specConsts,
+                                           PipelineSource source,
                                            const vk::GraphicsPipelineDesc &desc,
                                            const vk::GraphicsPipelineDesc **descPtrOut,
                                            vk::PipelineHelper **pipelineOut)
@@ -1779,9 +2000,9 @@ class GraphicsPipelineCache final : public HasCacheStats<VulkanCacheType::Graphi
         }
 
         mCacheStats.missAndIncrementSize();
-        return insertPipeline(contextVk, pipelineCacheVk, compatibleRenderPass, pipelineLayout,
+        return insertPipeline(contextVk, pipelineCache, compatibleRenderPass, pipelineLayout,
                               activeAttribLocationsMask, programAttribsTypeMask, missingOutputsMask,
-                              shaders, specConsts, desc, descPtrOut, pipelineOut);
+                              shaders, specConsts, source, desc, descPtrOut, pipelineOut);
     }
 
     // Helper for VulkanPipelineCachePerf that resets the object without destroying any object.
@@ -1789,7 +2010,7 @@ class GraphicsPipelineCache final : public HasCacheStats<VulkanCacheType::Graphi
 
   private:
     angle::Result insertPipeline(ContextVk *contextVk,
-                                 const vk::PipelineCache &pipelineCacheVk,
+                                 PipelineCacheAccess *pipelineCache,
                                  const vk::RenderPass &compatibleRenderPass,
                                  const vk::PipelineLayout &pipelineLayout,
                                  const gl::AttributesMask &activeAttribLocationsMask,
@@ -1797,6 +2018,7 @@ class GraphicsPipelineCache final : public HasCacheStats<VulkanCacheType::Graphi
                                  const gl::DrawBufferMask &missingOutputsMask,
                                  const vk::ShaderAndSerialMap &shaders,
                                  const vk::SpecializationConstants &specConsts,
+                                 PipelineSource source,
                                  const vk::GraphicsPipelineDesc &desc,
                                  const vk::GraphicsPipelineDesc **descPtrOut,
                                  vk::PipelineHelper **pipelineOut);
@@ -1897,22 +2119,32 @@ class DescriptorSetCache final : angle::NonCopyable
     void resetCache() { mPayload.clear(); }
 
     ANGLE_INLINE bool getDescriptorSet(const vk::DescriptorSetDesc &desc,
-                                       VkDescriptorSet *descriptorSet)
+                                       VkDescriptorSet *descriptorSetOut,
+                                       vk::RefCountedDescriptorPoolHelper **poolOut)
     {
         auto iter = mPayload.find(desc);
         if (iter != mPayload.end())
         {
-            *descriptorSet = iter->second;
+            *descriptorSetOut = iter->second->getDescriptorSet();
+            *poolOut          = iter->second->getPool();
             return true;
         }
         return false;
     }
 
     ANGLE_INLINE void insertDescriptorSet(const vk::DescriptorSetDesc &desc,
-                                          VkDescriptorSet descriptorSet)
+                                          VkDescriptorSet descriptorSet,
+                                          vk::RefCountedDescriptorPoolHelper *pool)
     {
-        mPayload.emplace(desc, descriptorSet);
+        mPayload.emplace(desc, std::make_unique<dsCacheEntry>(descriptorSet, pool));
     }
+
+    ANGLE_INLINE void eraseDescriptorSet(const vk::DescriptorSetDesc &desc)
+    {
+        mPayload.erase(desc);
+    }
+
+    ANGLE_INLINE size_t getTotalCacheSize() const { return mPayload.size(); }
 
     size_t getTotalCacheKeySizeBytes() const
     {
@@ -1925,8 +2157,26 @@ class DescriptorSetCache final : angle::NonCopyable
         return totalSize;
     }
 
+    bool empty() const { return mPayload.empty(); }
+
   private:
-    angle::HashMap<vk::DescriptorSetDesc, VkDescriptorSet> mPayload;
+    class dsCacheEntry
+    {
+      public:
+        dsCacheEntry(VkDescriptorSet descriptorSet, vk::RefCountedDescriptorPoolHelper *pool)
+            : mDescriptorSet(descriptorSet), mPool(pool)
+        {}
+        VkDescriptorSet getDescriptorSet() const { return mDescriptorSet; }
+        vk::RefCountedDescriptorPoolHelper *getPool() const { return mPool; }
+
+      private:
+        VkDescriptorSet mDescriptorSet;
+        // Weak pointer to the pool this descriptorSet allocated from. The RefCount is tracking if
+        // this pool is bound as the current pool in any ProgramExecutableVk or not, so we should
+        // not add refcount from the cache.
+        vk::RefCountedDescriptorPoolHelper *mPool;
+    };
+    angle::HashMap<vk::DescriptorSetDesc, std::unique_ptr<dsCacheEntry>> mPayload;
 };
 
 // Only 1 driver uniform binding is used.

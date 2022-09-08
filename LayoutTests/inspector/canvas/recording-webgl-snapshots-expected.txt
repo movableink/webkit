@@ -18,9 +18,6 @@ frames:
         0: useProgram
         1: performActions
         2: Global Code
-        3: evaluateWithScopeExtension
-        4: (anonymous function)
-        5: _wrapCall
     1: clearColor(0, 0, 0, 1)
       swizzleTypes: [Number, Number, Number, Number]
       trace:
@@ -28,9 +25,6 @@ frames:
         1: clearContext
         2: performActions
         3: Global Code
-        4: evaluateWithScopeExtension
-        5: (anonymous function)
-        6: _wrapCall
     2: clear(16384)
       swizzleTypes: [Number]
       trace:
@@ -38,9 +32,6 @@ frames:
         1: clearContext
         2: performActions
         3: Global Code
-        4: evaluateWithScopeExtension
-        5: (anonymous function)
-        6: _wrapCall
       snapshot: <PASS: content changed>
     3: bufferData(34962, 0, 35044)
       swizzleTypes: [Number, TypedArray, Number]
@@ -49,9 +40,6 @@ frames:
         1: drawArrays
         2: performActions
         3: Global Code
-        4: evaluateWithScopeExtension
-        5: (anonymous function)
-        6: _wrapCall
     4: drawArrays(4, 0, 3)
       swizzleTypes: [Number, Number, Number]
       trace:
@@ -59,9 +47,6 @@ frames:
         1: drawArrays
         2: performActions
         3: Global Code
-        4: evaluateWithScopeExtension
-        5: (anonymous function)
-        6: _wrapCall
       snapshot: <PASS: content changed>
     5: clearColor(0, 0, 0, 1)
       swizzleTypes: [Number, Number, Number, Number]
@@ -70,9 +55,6 @@ frames:
         1: clearContext
         2: performActions
         3: Global Code
-        4: evaluateWithScopeExtension
-        5: (anonymous function)
-        6: _wrapCall
     6: clear(16384)
       swizzleTypes: [Number]
       trace:
@@ -80,9 +62,6 @@ frames:
         1: clearContext
         2: performActions
         3: Global Code
-        4: evaluateWithScopeExtension
-        5: (anonymous function)
-        6: _wrapCall
       snapshot: <PASS: content changed>
     7: bufferData(34962, 0, 35044)
       swizzleTypes: [Number, TypedArray, Number]
@@ -91,9 +70,6 @@ frames:
         1: drawElements
         2: performActions
         3: Global Code
-        4: evaluateWithScopeExtension
-        5: (anonymous function)
-        6: _wrapCall
     8: bufferData(34963, 0, 35044)
       swizzleTypes: [Number, TypedArray, Number]
       trace:
@@ -101,9 +77,6 @@ frames:
         1: drawElements
         2: performActions
         3: Global Code
-        4: evaluateWithScopeExtension
-        5: (anonymous function)
-        6: _wrapCall
     9: drawElements(4, 3, 5123, 0)
       swizzleTypes: [Number, Number, Number, Number]
       trace:
@@ -111,9 +84,6 @@ frames:
         1: drawElements
         2: performActions
         3: Global Code
-        4: evaluateWithScopeExtension
-        5: (anonymous function)
-        6: _wrapCall
       snapshot: <PASS: content changed>
     10: clearColor(0, 0, 0, 1)
       swizzleTypes: [Number, Number, Number, Number]
@@ -122,9 +92,6 @@ frames:
         1: clearContext
         2: performActions
         3: Global Code
-        4: evaluateWithScopeExtension
-        5: (anonymous function)
-        6: _wrapCall
     11: clear(16384)
       swizzleTypes: [Number]
       trace:
@@ -132,8 +99,5 @@ frames:
         1: clearContext
         2: performActions
         3: Global Code
-        4: evaluateWithScopeExtension
-        5: (anonymous function)
-        6: _wrapCall
       snapshot: <PASS: content changed>
 

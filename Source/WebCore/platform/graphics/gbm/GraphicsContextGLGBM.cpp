@@ -40,118 +40,10 @@
 
 namespace WebCore {
 
-GraphicsContextGLANGLE::GraphicsContextGLANGLE(GraphicsContextGLAttributes attributes)
-    : GraphicsContextGL(attributes)
+static inline bool isDMABufSupportedByANGLEPlatform(const GraphicsContextGLGBM::EGLExtensions& eglExtensions)
 {
-}
-
-GraphicsContextGLANGLE::~GraphicsContextGLANGLE()
-{
-    bool success = makeContextCurrent();
-    ASSERT_UNUSED(success, success);
-    if (m_texture)
-        GL_DeleteTextures(1, &m_texture);
-
-    auto attributes = contextAttributes();
-
-    if (attributes.antialias) {
-        GL_DeleteRenderbuffers(1, &m_multisampleColorBuffer);
-        if (attributes.stencil || attributes.depth)
-            GL_DeleteRenderbuffers(1, &m_multisampleDepthStencilBuffer);
-        GL_DeleteFramebuffers(1, &m_multisampleFBO);
-    } else if (attributes.stencil || attributes.depth) {
-        if (m_depthStencilBuffer)
-            GL_DeleteRenderbuffers(1, &m_depthStencilBuffer);
-    }
-    GL_DeleteFramebuffers(1, &m_fbo);
-}
-
-GCGLDisplay GraphicsContextGLANGLE::platformDisplay() const
-{
-    return m_displayObj;
-}
-
-GCGLConfig GraphicsContextGLANGLE::platformConfig() const
-{
-    return m_configObj;
-}
-
-bool GraphicsContextGLANGLE::makeContextCurrent()
-{
-    static thread_local TLS_MODEL_INITIAL_EXEC GraphicsContextGLANGLE* s_currentContext { nullptr };
-
-    auto madeCurrent =
-        [&] {
-            if (s_currentContext == this)
-                return true;
-            bool current = !!EGL_MakeCurrent(m_displayObj, EGL_NO_SURFACE, EGL_NO_SURFACE, m_contextObj);
-            if (current)
-                s_currentContext = this;
-            return current;
-        }();
-
-    auto& contextSwapchain = static_cast<GraphicsContextGLGBM&>(*this).swapchain();
-    if (madeCurrent && contextSwapchain.swapchain && !contextSwapchain.drawBO) {
-        auto size = getInternalFramebufferSize();
-        contextSwapchain.drawBO = contextSwapchain.swapchain->getBuffer(
-            GBMBufferSwapchain::BufferDescription {
-                .format = DMABufFormat::create(uint32_t(contextAttributes().alpha ? DMABufFormat::FourCC::ARGB8888 : DMABufFormat::FourCC::XRGB8888)),
-                .width = std::clamp<uint32_t>(size.width(), 0, UINT_MAX),
-                .height = std::clamp<uint32_t>(size.height(), 0, UINT_MAX),
-                .flags = GBMBufferSwapchain::BufferDescription::NoFlags,
-            });
-
-        GLenum textureTarget = drawingBufferTextureTarget();
-        ScopedRestoreTextureBinding restoreBinding(drawingBufferTextureTargetQueryForDrawingTarget(textureTarget), textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
-
-        auto result = contextSwapchain.images.ensure(contextSwapchain.drawBO->handle(),
-            [&] {
-                auto dmabufObject = contextSwapchain.drawBO->createDMABufObject(0);
-                auto attributes = DMABufEGLUtilities::constructEGLCreateImageAttributes(dmabufObject, 0,
-                    DMABufEGLUtilities::PlaneModifiersUsage { static_cast<GraphicsContextGLGBM&>(*this).eglExtensions().EXT_image_dma_buf_import_modifiers });
-                return EGL_CreateImageKHR(contextSwapchain.platformDisplay, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, (EGLClientBuffer)nullptr, attributes.data());
-            });
-
-        GL_BindTexture(textureTarget, m_texture);
-        GL_EGLImageTargetTexture2DOES(textureTarget, result.iterator->value);
-
-        // If just created, the dmabuf has to be cleared to provide a zeroed-out buffer.
-        // Current color-clear and framebuffer state has to be preserved and re-established after this.
-        if (result.isNewEntry) {
-            GCGLuint boundFBO { 0 };
-            GL_GetIntegerv(GL_FRAMEBUFFER_BINDING, reinterpret_cast<GCGLint*>(&boundFBO));
-
-            GCGLuint targetFBO = contextAttributes().antialias ? m_multisampleFBO : m_fbo;
-            if (targetFBO != boundFBO)
-                GL_BindFramebuffer(GL_FRAMEBUFFER, targetFBO);
-
-            std::array<float, 4> clearColor { 0, 0, 0, 0 };
-            GL_GetFloatv(GL_COLOR_CLEAR_VALUE, clearColor.data());
-
-            GL_ClearColor(0, 0, 0, 0);
-            GL_Clear(GL_COLOR_BUFFER_BIT);
-
-            GL_ClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
-
-            if (targetFBO != boundFBO)
-                GL_BindFramebuffer(GL_FRAMEBUFFER, boundFBO);
-        }
-    }
-
-    return madeCurrent;
-}
-
-void GraphicsContextGLANGLE::checkGPUStatus()
-{
-}
-
-void GraphicsContextGLANGLE::platformReleaseThreadResources()
-{
-}
-
-RefPtr<PixelBuffer> GraphicsContextGLANGLE::readCompositedResults()
-{
-    return readRenderingResults();
+    return eglExtensions.KHR_image_base && eglExtensions.KHR_surfaceless_context
+        && eglExtensions.EXT_image_dma_buf_import;
 }
 
 RefPtr<GraphicsContextGLGBM> GraphicsContextGLGBM::create(GraphicsContextGLAttributes&& attributes)
@@ -200,6 +92,7 @@ void GraphicsContextGLGBM::prepareForDisplay()
     markLayerComposited();
 
     m_swapchain.displayBO = WTFMove(m_swapchain.drawBO);
+    allocateDrawBufferObject();
 }
 
 bool GraphicsContextGLGBM::platformInitializeContext()
@@ -226,8 +119,30 @@ bool GraphicsContextGLGBM::platformInitializeContext()
     }
     LOG(WebGL, "ANGLE initialised Major: %d Minor: %d", majorVersion, minorVersion);
 
-    const char* displayExtensions = EGL_QueryString(m_displayObj, EGL_EXTENSIONS);
-    LOG(WebGL, "Extensions: %s", displayExtensions);
+    {
+        const char* extensionsString = EGL_QueryString(m_displayObj, EGL_EXTENSIONS);
+        LOG(WebGL, "Extensions: %s\n", extensionsString);
+
+        auto displayExtensions = StringView::fromLatin1(extensionsString).split(' ');
+        auto findExtension =
+            [&](auto extensionName) {
+                return std::any_of(displayExtensions.begin(), displayExtensions.end(),
+                    [&](auto extensionEntry) {
+                        return extensionEntry == extensionName;
+                    });
+            };
+
+        m_eglExtensions.KHR_image_base = findExtension("EGL_KHR_image_base"_s);
+        m_eglExtensions.KHR_surfaceless_context = findExtension("EGL_KHR_surfaceless_context"_s);
+        m_eglExtensions.EXT_image_dma_buf_import = findExtension("EGL_EXT_image_dma_buf_import"_s);
+        m_eglExtensions.EXT_image_dma_buf_import_modifiers = findExtension("EGL_EXT_image_dma_buf_import_modifiers"_s);
+        m_eglExtensions.ANGLE_power_preference = findExtension("EGL_ANGLE_power_preference"_s);
+    }
+
+    if (!isDMABufSupportedByANGLEPlatform(m_eglExtensions)) {
+        LOG(WebGL, "Warning: GL images could not be created using DMABuf buffers backend, we fallback to common GL images, they require a copy, that causes a performance penalty.");
+        return false;
+    }
 
     EGLint configAttributes[] = {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
@@ -276,7 +191,7 @@ bool GraphicsContextGLGBM::platformInitializeContext()
     eglContextAttributes.append(EGL_CONTEXT_BIND_GENERATES_RESOURCE_CHROMIUM);
     eglContextAttributes.append(EGL_FALSE);
 
-    if (strstr(displayExtensions, "EGL_ANGLE_power_preference")) {
+    if (m_eglExtensions.ANGLE_power_preference) {
         eglContextAttributes.append(EGL_POWER_PREFERENCE_ANGLE);
         // EGL_LOW_POWER_ANGLE is the default. Change to
         // EGL_HIGH_POWER_ANGLE if desired.
@@ -293,9 +208,6 @@ bool GraphicsContextGLGBM::platformInitializeContext()
         LOG(WebGL, "ANGLE makeContextCurrent failed.");
         return false;
     }
-
-    if (strstr(displayExtensions, "EGL_EXT_image_dma_buf_import_modifiers"))
-        m_eglExtensions.EXT_image_dma_buf_import_modifiers = true;
 
     LOG(WebGL, "Got EGLContext");
     return true;
@@ -360,22 +272,47 @@ void GraphicsContextGLGBM::prepareTexture()
 
 bool GraphicsContextGLGBM::reshapeDisplayBufferBacking()
 {
-    auto attrs = contextAttributes();
-    const auto size = getInternalFramebufferSize();
-    const int width = size.width();
-    const int height = size.height();
-    GLuint colorFormat = attrs.alpha ? GL_RGBA : GL_RGB;
-    GLenum textureTarget = drawingBufferTextureTarget();
-    GLuint internalColorFormat = textureTarget == GL_TEXTURE_2D ? colorFormat : m_internalColorFormat;
-    ScopedRestoreTextureBinding restoreBinding(drawingBufferTextureTargetQueryForDrawingTarget(textureTarget), textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
-
     m_swapchain = Swapchain(platformDisplay());
+    allocateDrawBufferObject();
 
-    GL_BindTexture(textureTarget, m_texture);
-    GL_TexImage2D(textureTarget, 0, internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
-    GL_FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, textureTarget, m_texture, 0);
+    {
+        GLenum textureTarget = drawingBufferTextureTarget();
+        ScopedRestoreTextureBinding restoreBinding(drawingBufferTextureTargetQueryForDrawingTarget(textureTarget), textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
+
+        GL_BindTexture(textureTarget, m_texture);
+        GL_FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, textureTarget, m_texture, 0);
+    }
 
     return true;
+}
+
+void GraphicsContextGLGBM::allocateDrawBufferObject()
+{
+    if (!m_swapchain.swapchain || m_swapchain.drawBO)
+        return;
+
+    auto size = getInternalFramebufferSize();
+    m_swapchain.drawBO = m_swapchain.swapchain->getBuffer(
+        GBMBufferSwapchain::BufferDescription {
+            .format = DMABufFormat::create(uint32_t(contextAttributes().alpha ? DMABufFormat::FourCC::ARGB8888 : DMABufFormat::FourCC::XRGB8888)),
+            .width = std::clamp<uint32_t>(size.width(), 0, UINT_MAX),
+            .height = std::clamp<uint32_t>(size.height(), 0, UINT_MAX),
+            .flags = GBMBufferSwapchain::BufferDescription::NoFlags,
+        });
+
+    GLenum textureTarget = drawingBufferTextureTarget();
+    ScopedRestoreTextureBinding restoreBinding(drawingBufferTextureTargetQueryForDrawingTarget(textureTarget), textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
+
+    auto result = m_swapchain.images.ensure(m_swapchain.drawBO->handle(),
+        [&] {
+            auto dmabufObject = m_swapchain.drawBO->createDMABufObject(0);
+            auto attributes = DMABufEGLUtilities::constructEGLCreateImageAttributes(dmabufObject, 0,
+                DMABufEGLUtilities::PlaneModifiersUsage { static_cast<GraphicsContextGLGBM&>(*this).eglExtensions().EXT_image_dma_buf_import_modifiers });
+            return EGL_CreateImageKHR(m_swapchain.platformDisplay, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, (EGLClientBuffer)nullptr, attributes.data());
+        });
+
+    GL_BindTexture(textureTarget, m_texture);
+    GL_EGLImageTargetTexture2DOES(textureTarget, result.iterator->value);
 }
 
 GraphicsContextGLGBM::Swapchain::Swapchain(GCGLDisplay platformDisplay)

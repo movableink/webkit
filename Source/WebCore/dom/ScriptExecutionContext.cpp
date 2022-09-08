@@ -48,7 +48,6 @@
 #include "Navigator.h"
 #include "Page.h"
 #include "Performance.h"
-#include "PermissionController.h"
 #include "PublicURLManager.h"
 #include "RTCDataChannelRemoteHandlerConnection.h"
 #include "RejectedPromiseTracker.h"
@@ -196,6 +195,7 @@ ScriptExecutionContext::~ScriptExecutionContext()
 
 void ScriptExecutionContext::processMessageWithMessagePortsSoon()
 {
+    ASSERT(isContextThread());
     if (m_willprocessMessageWithMessagePortsSoon)
         return;
 
@@ -207,6 +207,7 @@ void ScriptExecutionContext::processMessageWithMessagePortsSoon()
 
 void ScriptExecutionContext::dispatchMessagePortEvents()
 {
+    ASSERT(isContextThread());
     checkConsistency();
 
     Ref<ScriptExecutionContext> protectedThis(*this);
@@ -375,11 +376,6 @@ void ScriptExecutionContext::didCreateDestructionObserver(ContextDestructionObse
 void ScriptExecutionContext::willDestroyDestructionObserver(ContextDestructionObserver& observer)
 {
     m_destructionObservers.remove(&observer);
-}
-
-RefPtr<PermissionController> ScriptExecutionContext::permissionController()
-{
-    return nullptr;
 }
 
 RefPtr<RTCDataChannelRemoteHandlerConnection> ScriptExecutionContext::createRTCDataChannelRemoteHandlerConnection()

@@ -71,7 +71,6 @@
 #include "ResourceLoadInfo.h"
 #include "ResourceTiming.h"
 #include "RuntimeApplicationChecks.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImage.h"
 #include "ScriptController.h"
@@ -1072,9 +1071,10 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
     ASSERT(resource);
     resource->setOriginalRequest(WTFMove(originalRequest));
 
-    if (forPreload == ForPreload::No && resource->loader() && resource->ignoreForRequestCount()) {
+    if (auto* subresourceLoader = resource->loader(); forPreload == ForPreload::No && subresourceLoader && resource->ignoreForRequestCount()) {
+        subresourceLoader->clearRequestCountTracker();
         resource->setIgnoreForRequestCount(false);
-        incrementRequestCount(*resource);
+        subresourceLoader->resetRequestCountTracker(*this, *resource);
     }
 
     if ((policy != Use || resource->stillNeedsLoad()) && imageLoading == ImageLoading::Immediate) {
@@ -1486,20 +1486,19 @@ void CachedResourceLoader::loadDone(LoadCompletionType type, bool shouldPerformP
 // remove it from the map.
 void CachedResourceLoader::garbageCollectDocumentResources()
 {
-    LOG(ResourceLoading, "CachedResourceLoader %p garbageCollectDocumentResources", this);
-
     typedef Vector<String, 10> StringVector;
     StringVector resourcesToDelete;
 
     for (auto& resourceEntry : m_documentResources) {
         auto& resource = *resourceEntry.value;
-        LOG(ResourceLoading, "  cached resource %p - hasOneHandle %d", &resource, resource.hasOneHandle());
 
         if (resource.hasOneHandle() && !resource.loader() && !resource.isPreloaded()) {
             resourcesToDelete.append(resourceEntry.key);
             m_resourceTimingInfo.removeResourceTiming(resource);
         }
     }
+
+    LOG_WITH_STREAM(ResourceLoading, stream << "CachedResourceLoader " << this << " garbageCollectDocumentResources - deleting " << resourcesToDelete.size() << " resources");
 
     for (auto& resource : resourcesToDelete)
         m_documentResources.remove(resource);

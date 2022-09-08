@@ -268,6 +268,34 @@ TEST(WebKit, SettingNonPersistentDataStorePathsThrowsException)
     [configuration setSourceApplicationSecondaryIdentifier:@"com.apple.Safari"];
 }
 
+TEST(WKWebsiteDataStore, FetchPersistentWebStorage)
+{
+    auto dataTypes = [NSSet setWithObjects:WKWebsiteDataTypeLocalStorage, WKWebsiteDataTypeSessionStorage, nil];
+    auto localStorageType = [NSSet setWithObjects:WKWebsiteDataTypeLocalStorage, nil];
+
+    readyToContinue = false;
+    [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^{
+        readyToContinue = true;
+    }];
+    TestWebKitAPI::Util::run(&readyToContinue);
+
+    @autoreleasepool {
+        auto webView = adoptNS([[WKWebView alloc] init]);
+        auto navigationDelegate = adoptNS([[NavigationTestDelegate alloc] init]);
+        [webView setNavigationDelegate:navigationDelegate.get()];
+        [webView loadHTMLString:@"<script>sessionStorage.setItem('session', 'storage'); localStorage.setItem('local', 'storage');</script>" baseURL:[NSURL URLWithString:@"http://localhost"]];
+        [navigationDelegate waitForDidFinishNavigation];
+    }
+
+    readyToContinue = false;
+    [[WKWebsiteDataStore defaultDataStore] fetchDataRecordsOfTypes:dataTypes completionHandler:^(NSArray<WKWebsiteDataRecord *> * records) {
+        EXPECT_EQ([records count], 1u);
+        EXPECT_TRUE([[[records firstObject] dataTypes] isEqualToSet:localStorageType]);
+        readyToContinue = true;
+    }];
+    TestWebKitAPI::Util::run(&readyToContinue);
+}
+
 TEST(WKWebsiteDataStore, FetchNonPersistentWebStorage)
 {
     auto nonPersistentDataStore = [WKWebsiteDataStore nonPersistentDataStore];
@@ -418,6 +446,13 @@ TEST(WKWebsiteDataStore, DoNotCreateDefaultDataStore)
     auto configuration = adoptNS([WKWebViewConfiguration new]);
     [configuration.get() copy];
     EXPECT_FALSE([WKWebsiteDataStore _defaultDataStoreExists]);
+}
+
+TEST(WebKit, DefaultHSTSStorageDirectory)
+{
+    auto configuration = adoptNS([[_WKWebsiteDataStoreConfiguration alloc] init]);
+    EXPECT_FALSE(configuration.get().hstsStorageDirectory == nil);
+    EXPECT_GT(configuration.get().hstsStorageDirectory.absoluteString.length, 0U);
 }
 
 } // namespace TestWebKitAPI

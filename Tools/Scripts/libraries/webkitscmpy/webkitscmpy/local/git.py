@@ -32,7 +32,7 @@ import time
 
 from collections import defaultdict
 
-from webkitcorepy import run, decorators, NestedFuzzyDict
+from webkitcorepy import run, decorators, NestedFuzzyDict, string_utils
 from webkitscmpy.local import Scm
 from webkitscmpy import remote, Commit, Contributor, log
 
@@ -96,7 +96,7 @@ class Git(Scm):
                     self._revisions_to_identifiers[self._ordered_revisions[branch][index]] = identifier
                 index -= 1
 
-        def populate(self, branch=None):
+        def populate(self, branch=None, remote=None):
             branch = branch or self.repo.branch
             if not branch:
                 return
@@ -111,6 +111,7 @@ class Git(Scm):
             # If we aren't on the default branch, we will need the default branch to determine when
             # our  branch  intersects with the default branch.
             if not is_default_branch:
+                self.populate(branch=self.repo.default_branch, remote=self.repo.default_remote)
                 self.populate(branch=self.repo.default_branch)
             hashes = []
             revisions = []
@@ -129,7 +130,7 @@ class Git(Scm):
                     kwargs = dict(encoding='utf-8')
                 self._last_populated[branch] = time.time()
                 log = subprocess.Popen(
-                    [self.repo.executable(), 'log', branch, '--no-decorate', '--date=unix', '--'],
+                    [self.repo.executable(), 'log', '{}/{}'.format(remote, branch) if remote else branch, '--no-decorate', '--date=unix', '--'],
                     cwd=self.repo.root_path,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
@@ -375,6 +376,7 @@ class Git(Scm):
         super(Git, self).__init__(path, dev_branches=dev_branches, prod_branches=prod_branches, contributors=contributors, id=id)
         self._branch = None
         self.cache = self.Cache(self) if self.root_path and cached else None
+        self.default_remote = 'origin'
         if not self.root_path:
             raise OSError('Provided path {} is not a git repository'.format(path))
 
@@ -430,12 +432,12 @@ class Git(Scm):
     @decorators.Memoize()
     def default_branch(self):
         for name in ['HEAD', 'main', 'master']:
-            result = run([self.executable(), 'rev-parse', '--symbolic-full-name', 'refs/remotes/origin/{}'.format(name)],
+            result = run([self.executable(), 'rev-parse', '--symbolic-full-name', 'refs/remotes/{}/{}'.format(self.default_remote, name)],
                          cwd=self.path, capture_output=True, encoding='utf-8')
             s = result.stdout.strip()
             if result.returncode == 0 and s:
-                assert s.startswith('refs/remotes/origin/')
-                return s[len('refs/remotes/origin/'):]
+                assert s.startswith('refs/remotes/{}/'.format(self.default_remote))
+                return s[len('refs/remotes/{}/'.format(self.default_remote)):]
 
         candidates = self.branches
         if 'main' in candidates:
@@ -483,11 +485,13 @@ class Git(Scm):
         return result
 
     def url(self, name=None, cached=None):
-        return self.config(cached=cached).get('remote.{}.url'.format(name or 'origin'))
+        return self.config(cached=cached).get('remote.{}.url'.format(name or self.default_remote))
 
     @decorators.Memoize()
     def remote(self, name=None):
         url = self.url(name=name)
+        if not url:
+            return None
         ssh_match = self.SSH_REMOTE.match(url)
         http_match = self.HTTP_REMOTE.match(url)
         if ssh_match:
@@ -502,6 +506,41 @@ class Git(Scm):
 
         return None
 
+    @decorators.Memoize()
+    def source_remotes(self, cached=True, personal=False):
+        candidates = [self.default_remote]
+        config = self.config(cached=cached)
+        for candidate in config.keys():
+            if not candidate.startswith('webkitscmpy.remotes'):
+                continue
+            candidate = candidate.split('.')[-1]
+            if candidate in candidates:
+                continue
+            if config.get('remote.{}.url'.format(candidate)):
+                candidates.append(candidate)
+
+        personal_remotes = []
+        if personal:
+            all_remotes = list(self.branches_for(remote=None))
+            for candidate in ['fork'] + ['{}-fork'.format(og) for og in candidates]:
+                if candidate in all_remotes:
+                    personal_remotes.append(candidate)
+            usernames = []
+            rmt = self.remote()
+            for candidate in all_remotes:
+                if not candidate or '-' in candidate:
+                    continue
+                if candidate in candidates or candidate in personal_remotes:
+                    continue
+                if isinstance(rmt, remote.GitHub) and candidate == rmt.credentials(required=False)[0]:
+                    continue
+                usernames.append(candidate)
+            for username in sorted(usernames):
+                for candidate in [username] + ['{}-{}'.format(username, og) for og in candidates]:
+                    if candidate in all_remotes:
+                        personal_remotes.append(candidate)
+        return candidates + personal_remotes
+
     def _commit_count(self, native_parameter):
         revision_count = run(
             [self.executable(), 'rev-list', '--count', '--no-merges', native_parameter],
@@ -514,7 +553,7 @@ class Git(Scm):
     @decorators.Memoize(cached=False)
     def branches_for(self, hash=None, remote=True):
         branch = run(
-            [self.executable(), 'branch'] + (['--contains', hash] if hash else ['-a']),
+            [self.executable(), 'branch'] + (['--contains', hash, '-a'] if hash else ['-a']),
             cwd=self.root_path,
             capture_output=True,
             encoding='utf-8',
@@ -533,7 +572,7 @@ class Git(Scm):
             return sorted(result[None])
         if remote is True:
             return sorted(set.union(*result.values()))
-        if isinstance(remote, str):
+        if isinstance(remote, string_utils.basestring):
             return sorted(result[remote])
         return result
 
@@ -610,7 +649,13 @@ class Git(Scm):
                 if is_default and parsed_branch_point:
                     raise self.Exception('Cannot provide a branch point for a commit on the default branch')
 
-                base_count = self._commit_count(baseline if is_default else '{}..{}'.format(default_branch, baseline))
+                if is_default:
+                    base_count = self._commit_count(baseline)
+                else:
+                    base_count = min(
+                        self._commit_count('{}..{}'.format(default_branch, baseline)),
+                        self._commit_count('{}/{}..{}'.format(self.default_remote, default_branch, baseline)),
+                    )
 
                 if identifier > base_count:
                     raise self.Exception('Identifier {} cannot be found on the specified branch in the current checkout'.format(identifier))
@@ -665,7 +710,13 @@ class Git(Scm):
 
         # Compute the identifier if the function did not receive one and we were asked to
         if not identifier and include_identifier:
-            identifier = self._commit_count(hash if branch == default_branch else '{}..{}'.format(default_branch, hash))
+            if branch == default_branch:
+                identifier = self._commit_count(hash)
+            else:
+                identifier = min(
+                    self._commit_count('{}..{}'.format(default_branch, hash)),
+                    self._commit_count('{}/{}..{}'.format(self.default_remote, default_branch, hash)),
+                )
 
         # Only compute the branch point we're on something other than the default branch
         if not branch_point and include_identifier and branch != default_branch:
@@ -874,7 +925,10 @@ class Git(Scm):
             name = match.group('name')
             username = name.split('/')[0]
             repo_name = rmt.name if '/' not in name else name.split('/', 1)[-1]
-            name = username + repo_name[len(rmt.name):]
+            if username == rmt.credentials(required=False)[0]:
+                name = 'fork' + repo_name[len(rmt.name):]
+            else:
+                name = username + repo_name[len(rmt.name):]
 
             if not self.url(name):
                 url = self.url()
@@ -906,6 +960,16 @@ class Git(Scm):
                 cwd=self.root_path,
             ).returncode else self.commit()
 
+        branch_remote = self.remote_for(argument)
+        if branch_remote:
+            result = run([
+                self.executable(), 'branch',
+                '--set-upstream-to' if argument in self.branches_for(remote=False) else '--track',
+                argument, '{}/{}'.format(branch_remote, argument),
+            ], capture_output=True, encoding='utf-8', cwd=self.root_path)
+            if result.returncode:
+                sys.stderr.write(result.stderr)
+
         return None if run(
             [self.executable(), 'checkout', self._to_git_ref(argument)] + log_arg + ['--'],
             cwd=self.root_path,
@@ -931,13 +995,14 @@ class Git(Scm):
             ), 'refs/heads/{}...{}'.format(target, head),
         ], cwd=self.root_path, env={'FILTER_BRANCH_SQUELCH_WARNING': '1'}, capture_output=True).returncode
 
-    def fetch(self, branch, remote='origin'):
+    def fetch(self, branch, remote=None):
         return run(
-            [self.executable(), 'fetch', remote, '{}:{}'.format(branch, branch)],
+            [self.executable(), 'fetch', remote or self.default_remote, '{}:{}'.format(branch, branch)],
             cwd=self.root_path,
         ).returncode
 
-    def pull(self, rebase=None, branch=None, remote='origin'):
+    def pull(self, rebase=None, branch=None, remote=None):
+        remote = remote or self.default_remote
         commit = self.commit() if self.is_svn or branch else None
 
         code = 0
@@ -1027,3 +1092,35 @@ class Git(Scm):
         while line:
             yield line.rstrip()
             line = proc.stdout.readline()
+
+    def files_changed(self, argument=None):
+        if not argument:
+            return self.modified()
+        commit = self.find(argument, include_log=False, include_identifier=False)
+        if not commit:
+            raise ValueError("'{}' is not an argument recognized by git".format(argument))
+
+        output = run(
+            [self.executable(), 'show', commit.hash, '--pretty=', '--name-only'],
+            cwd=self.root_path, capture_output=True, encoding='utf-8',
+        )
+        if output.returncode:
+            raise ValueError("'{}' is not an argument recognized by git".format(argument))
+        return output.stdout.rstrip().splitlines()
+
+    def remote_for(self, argument):
+        candidates = self.source_remotes()
+        while candidates:
+            if argument not in self.branches_for(remote=candidates[-1]):
+                candidates.remove(candidates[-1])
+                continue
+            up_to_date = list(self.branches_for(hash='{}/{}'.format(candidates[-1], argument), remote=None).keys())
+            for candidate in candidates:
+                if candidate in up_to_date:
+                    return candidate
+            candidates.remove(candidates[-1])
+
+        for remote in self.source_remotes(personal=True)[len(self.source_remotes()):]:
+            if argument in self.branches_for(remote=remote):
+                return remote
+        return None

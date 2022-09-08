@@ -29,8 +29,8 @@
 #include "CSSMarkup.h"
 #include "CSSSelectorList.h"
 #include "CommonAtomStrings.h"
+#include "DeprecatedGlobalSettings.h"
 #include "HTMLNames.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SelectorPseudoTypeMap.h"
 #include <wtf/Assertions.h>
 #include <wtf/StdLibExtras.h>
@@ -133,10 +133,11 @@ static unsigned simpleSelectorSpecificityInternal(const CSSSelector& simpleSelec
         case CSSSelector::PseudoClassNthLastChild:
         case CSSSelector::PseudoClassHost:
             return CSSSelector::addSpecificities(static_cast<unsigned>(SelectorSpecificityIncrement::ClassB), simpleSelector.selectorList() ? maxSpecificity(*simpleSelector.selectorList()) : 0);
+        case CSSSelector::PseudoClassRelativeScope:
+            return 0;
         default:
-            break;
+            return static_cast<unsigned>(SelectorSpecificityIncrement::ClassB);
         }
-        return static_cast<unsigned>(SelectorSpecificityIncrement::ClassB);
     case CSSSelector::Exact:
     case CSSSelector::Class:
     case CSSSelector::Set:
@@ -281,11 +282,11 @@ CSSSelector::PseudoElementType CSSSelector::parsePseudoElementType(StringView na
 
     auto type = parsePseudoElementString(name);
     if (type == PseudoElementUnknown) {
-        if (name.startsWith("-webkit-"_s))
+        if (name.startsWith("-webkit-"_s) || name.startsWith("-apple-"_s))
             type = PseudoElementWebKitCustom;
     }
 
-    if (type == PseudoElementHighlight && !RuntimeEnabledFeatures::sharedFeatures().highlightAPIEnabled())
+    if (type == PseudoElementHighlight && !DeprecatedGlobalSettings::highlightAPIEnabled())
         return PseudoElementUnknown;
 
     return type;
@@ -334,17 +335,12 @@ bool CSSSelector::operator==(const CSSSelector& other) const
 static void appendPseudoClassFunctionTail(StringBuilder& builder, const CSSSelector* selector)
 {
     switch (selector->pseudoClassType()) {
-#if ENABLE(CSS_SELECTORS_LEVEL4)
     case CSSSelector::PseudoClassDir:
-#endif
     case CSSSelector::PseudoClassLang:
     case CSSSelector::PseudoClassNthChild:
     case CSSSelector::PseudoClassNthLastChild:
     case CSSSelector::PseudoClassNthOfType:
     case CSSSelector::PseudoClassNthLastOfType:
-#if ENABLE(CSS_SELECTORS_LEVEL4)
-    case CSSSelector::PseudoClassRole:
-#endif
         builder.append(selector->argument());
         builder.append(')');
         break;
@@ -486,12 +482,10 @@ String CSSSelector::selectorText(const String& rightSide) const
             case CSSSelector::PseudoClassDefault:
                 builder.append(":default");
                 break;
-#if ENABLE(CSS_SELECTORS_LEVEL4)
             case CSSSelector::PseudoClassDir:
                 builder.append(":dir(");
                 appendPseudoClassFunctionTail(builder, cs);
                 break;
-#endif
             case CSSSelector::PseudoClassDisabled:
                 builder.append(":disabled");
                 break;
@@ -675,12 +669,6 @@ String CSSSelector::selectorText(const String& rightSide) const
             case CSSSelector::PseudoClassRequired:
                 builder.append(":required");
                 break;
-#if ENABLE(CSS_SELECTORS_LEVEL4)
-            case CSSSelector::PseudoClassRole:
-                builder.append(":role(");
-                appendPseudoClassFunctionTail(builder, cs);
-                break;
-#endif
             case CSSSelector::PseudoClassRoot:
                 builder.append(":root");
                 break;

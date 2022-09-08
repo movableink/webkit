@@ -48,8 +48,9 @@ enum class CatchKind {
 };
 
 template<typename EnclosingStack, typename NewStack>
-void splitStack(BlockSignature signature, EnclosingStack& enclosingStack, NewStack& newStack)
+void splitStack(BlockSignature originalSignature, EnclosingStack& enclosingStack, NewStack& newStack)
 {
+    BlockSignature signature = &originalSignature->expand();
     newStack.reserveInitialCapacity(signature->as<FunctionSignature>()->argumentCount());
     ASSERT(enclosingStack.size() >= signature->as<FunctionSignature>()->argumentCount());
     unsigned offset = enclosingStack.size() - signature->as<FunctionSignature>()->argumentCount();
@@ -156,6 +157,7 @@ private:
     PartialResult WARN_UNUSED_RETURN parseFunctionIndex(uint32_t&);
     PartialResult WARN_UNUSED_RETURN parseExceptionIndex(uint32_t&);
     PartialResult WARN_UNUSED_RETURN parseBranchTarget(uint32_t&);
+    PartialResult WARN_UNUSED_RETURN parseDelegateTarget(uint32_t&, uint32_t);
 
     struct TableInitImmediates {
         unsigned elementIndex;
@@ -229,7 +231,7 @@ template<typename Context>
 FunctionParser<Context>::FunctionParser(Context& context, const uint8_t* functionStart, size_t functionLength, const TypeDefinition& signature, const ModuleInformation& info)
     : Parser(functionStart, functionLength)
     , m_context(context)
-    , m_signature(signature)
+    , m_signature(signature.expand())
     , m_info(info)
 {
     if (verbose)
@@ -242,6 +244,7 @@ auto FunctionParser<Context>::parse() -> Result
 {
     uint32_t localGroupsCount;
 
+    WASM_PARSER_FAIL_IF(!m_signature.is<FunctionSignature>(), "type signature was not a function signature");
     const auto& signature = *m_signature.as<FunctionSignature>();
     WASM_PARSER_FAIL_IF(!m_context.addArguments(m_signature), "can't add ", signature.argumentCount(), " arguments to Function");
     WASM_PARSER_FAIL_IF(!parseVarUInt32(localGroupsCount), "can't get local groups count");
@@ -606,6 +609,22 @@ auto FunctionParser<Context>::parseBranchTarget(uint32_t& resultTarget) -> Parti
     uint32_t target;
     WASM_PARSER_FAIL_IF(!parseVarUInt32(target), "can't get br / br_if's target");
     WASM_PARSER_FAIL_IF(target >= m_controlStack.size(), "br / br_if's target ", target, " exceeds control stack size ", m_controlStack.size());
+    resultTarget = target;
+    return { };
+}
+
+template<typename Context>
+auto FunctionParser<Context>::parseDelegateTarget(uint32_t& resultTarget, uint32_t unreachableBlocks) -> PartialResult
+{
+    // Right now, control stack includes try-delegate block, and delegate needs to specify outer scope.
+    uint32_t target;
+    WASM_PARSER_FAIL_IF(!parseVarUInt32(target), "can't get delegate target");
+    Checked<uint32_t, RecordOverflow> controlStackSize { m_controlStack.size() };
+    if (unreachableBlocks)
+        controlStackSize += (unreachableBlocks - 1); // The first block is in the control stack already.
+    controlStackSize -= 1; // delegate target does not include the current block.
+    WASM_PARSER_FAIL_IF(controlStackSize.hasOverflowed(), "invalid control stack size");
+    WASM_PARSER_FAIL_IF(target >= controlStackSize.value(), "delegate target ", target, " exceeds control stack size ", controlStackSize.value());
     resultTarget = target;
     return { };
 }
@@ -1046,15 +1065,37 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         WASM_PARSER_FAIL_IF(!parseUInt8(extOp), "can't parse extended GC opcode");
 
         switch (static_cast<GCOpType>(extOp)) {
-        case GCOpType::RttCanon: {
-            uint32_t typeIndex;
-            WASM_PARSER_FAIL_IF(!parseVarUInt32(typeIndex), "can't get type index for rtt.canon");
-            WASM_VALIDATOR_FAIL_IF(typeIndex >= m_info.typeCount(), "rtt.canon index ", typeIndex, " is out of bounds");
+        case GCOpType::I31New: {
+            TypedExpression value;
+            WASM_TRY_POP_EXPRESSION_STACK_INTO(value, "i31.new");
+            WASM_VALIDATOR_FAIL_IF(!value.type().isI32(), "i31.new value to type ", value.type().kind, " expected ", TypeKind::I32);
 
             ExpressionType result;
-            WASM_TRY_ADD_TO_CONTEXT(addRttCanon(typeIndex, result));
+            WASM_TRY_ADD_TO_CONTEXT(addI31New(value, result));
 
-            m_expressionStack.constructAndAppend(Type { TypeKind::Rtt, Nullable::No, static_cast<TypeIndex>(typeIndex) }, result);
+            m_expressionStack.constructAndAppend(Type { TypeKind::Ref, Nullable::No, static_cast<TypeIndex>(TypeKind::I31ref) }, result);
+            return { };
+        }
+        case GCOpType::I31GetS: {
+            TypedExpression ref;
+            WASM_TRY_POP_EXPRESSION_STACK_INTO(ref, "i31.get_s");
+            WASM_VALIDATOR_FAIL_IF(!isI31ref(ref.type()), "i31.get_s ref to type ", ref.type().kind, " expected ", TypeKind::I31ref);
+
+            ExpressionType result;
+            WASM_TRY_ADD_TO_CONTEXT(addI31GetS(ref, result));
+
+            m_expressionStack.constructAndAppend(Types::I32, result);
+            return { };
+        }
+        case GCOpType::I31GetU: {
+            TypedExpression ref;
+            WASM_TRY_POP_EXPRESSION_STACK_INTO(ref, "i31.get_u");
+            WASM_VALIDATOR_FAIL_IF(!isI31ref(ref.type()), "i31.get_u ref to type ", ref.type().kind, " expected ", TypeKind::I31ref);
+
+            ExpressionType result;
+            WASM_TRY_ADD_TO_CONTEXT(addI31GetU(ref, result));
+
+            m_expressionStack.constructAndAppend(Types::I32, result);
             return { };
         }
 
@@ -1219,7 +1260,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         WASM_FAIL_IF_HELPER_FAILS(parseFunctionIndex(functionIndex));
 
         TypeIndex calleeTypeIndex = m_info.typeIndexFromFunctionIndexSpace(functionIndex);
-        const TypeDefinition& typeDefinition = TypeInformation::get(calleeTypeIndex);
+        const TypeDefinition& typeDefinition = TypeInformation::get(calleeTypeIndex).expand();
         const auto& calleeSignature = *typeDefinition.as<FunctionSignature>();
         WASM_PARSER_FAIL_IF(calleeSignature.argumentCount() > m_expressionStack.size(), "call function index ", functionIndex, " has ", calleeSignature.argumentCount(), " arguments, but the expression stack currently holds ", m_expressionStack.size(), " values");
 
@@ -1258,7 +1299,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         WASM_PARSER_FAIL_IF(m_info.tables[tableIndex].type() != TableElementType::Funcref, "call_indirect is only valid when a table has type funcref");
 
         const TypeDefinition& typeDefinition = m_info.typeSignatures[signatureIndex].get();
-        const auto& calleeSignature = *typeDefinition.as<FunctionSignature>();
+        const auto& calleeSignature = *typeDefinition.expand().as<FunctionSignature>();
         size_t argumentCount = calleeSignature.argumentCount() + 1; // Add the callee's index.
         WASM_PARSER_FAIL_IF(argumentCount > m_expressionStack.size(), "call_indirect expects ", argumentCount, " arguments, but the expression stack currently holds ", m_expressionStack.size(), " values");
 
@@ -1287,11 +1328,12 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
 
     case CallRef: {
         WASM_PARSER_FAIL_IF(!Options::useWebAssemblyTypedFunctionReferences(), "function references are not enabled");
+        WASM_PARSER_FAIL_IF(m_expressionStack.isEmpty(), "can't call_ref on empty expression stack");
         WASM_VALIDATOR_FAIL_IF(!isRefWithTypeIndex(m_expressionStack.last().type()), "non-funcref call_ref value ", m_expressionStack.last().type().kind);
 
         const TypeIndex calleeTypeIndex = m_expressionStack.last().type().index;
         const TypeDefinition& typeDefinition = TypeInformation::get(calleeTypeIndex);
-        const auto& calleeSignature = *typeDefinition.as<FunctionSignature>();
+        const auto& calleeSignature = *typeDefinition.expand().as<FunctionSignature>();
         size_t argumentCount = calleeSignature.argumentCount() + 1; // Add the callee's value.
         WASM_PARSER_FAIL_IF(argumentCount > m_expressionStack.size(), "call_ref expects ", argumentCount, " arguments, but the expression stack currently holds ", m_expressionStack.size(), " values");
 
@@ -1320,7 +1362,8 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         BlockSignature inlineSignatureAsType;
         WASM_PARSER_FAIL_IF(!parseBlockSignature(m_info, inlineSignatureAsType), "can't get block's signature");
 
-        const FunctionSignature* inlineSignature = inlineSignatureAsType->as<FunctionSignature>();
+        BlockSignature expandedSignature = &inlineSignatureAsType->expand();
+        const FunctionSignature* inlineSignature = expandedSignature->as<FunctionSignature>();
         WASM_VALIDATOR_FAIL_IF(m_expressionStack.size() < inlineSignature->argumentCount(), "Too few values on stack for block. Block expects ", inlineSignature->argumentCount(), ", but only ", m_expressionStack.size(), " were present. Block has inlineSignature: ", inlineSignature->toString());
         unsigned offset = m_expressionStack.size() - inlineSignature->argumentCount();
         for (unsigned i = 0; i < inlineSignature->argumentCount(); ++i) {
@@ -1331,7 +1374,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         int64_t oldSize = m_expressionStack.size();
         Stack newStack;
         ControlType block;
-        WASM_TRY_ADD_TO_CONTEXT(addBlock(inlineSignatureAsType, m_expressionStack, block, newStack));
+        WASM_TRY_ADD_TO_CONTEXT(addBlock(expandedSignature, m_expressionStack, block, newStack));
         ASSERT_UNUSED(oldSize, oldSize - m_expressionStack.size() == inlineSignature->argumentCount());
         ASSERT(newStack.size() == inlineSignature->argumentCount());
 
@@ -1344,7 +1387,8 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         BlockSignature inlineSignatureAsType;
         WASM_PARSER_FAIL_IF(!parseBlockSignature(m_info, inlineSignatureAsType), "can't get loop's signature");
 
-        const FunctionSignature* inlineSignature = inlineSignatureAsType->as<FunctionSignature>();
+        BlockSignature expandedSignature = &inlineSignatureAsType->expand();
+        const FunctionSignature* inlineSignature = expandedSignature->as<FunctionSignature>();
         WASM_VALIDATOR_FAIL_IF(m_expressionStack.size() < inlineSignature->argumentCount(), "Too few values on stack for loop block. Loop expects ", inlineSignature->argumentCount(), ", but only ", m_expressionStack.size(), " were present. Loop has inlineSignature: ", inlineSignature->toString());
         unsigned offset = m_expressionStack.size() - inlineSignature->argumentCount();
         for (unsigned i = 0; i < inlineSignature->argumentCount(); ++i) {
@@ -1355,7 +1399,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         int64_t oldSize = m_expressionStack.size();
         Stack newStack;
         ControlType loop;
-        WASM_TRY_ADD_TO_CONTEXT(addLoop(inlineSignatureAsType, m_expressionStack, loop, newStack, m_loopIndex++));
+        WASM_TRY_ADD_TO_CONTEXT(addLoop(expandedSignature, m_expressionStack, loop, newStack, m_loopIndex++));
         ASSERT_UNUSED(oldSize, oldSize - m_expressionStack.size() == inlineSignature->argumentCount());
         ASSERT(newStack.size() == inlineSignature->argumentCount());
 
@@ -1370,7 +1414,8 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         WASM_PARSER_FAIL_IF(!parseBlockSignature(m_info, inlineSignatureAsType), "can't get if's signature");
         WASM_TRY_POP_EXPRESSION_STACK_INTO(condition, "if condition");
 
-        const FunctionSignature* inlineSignature = inlineSignatureAsType->as<FunctionSignature>();
+        BlockSignature expandedSignature = &inlineSignatureAsType->expand();
+        const FunctionSignature* inlineSignature = expandedSignature->as<FunctionSignature>();
         WASM_VALIDATOR_FAIL_IF(!condition.type().isI32(), "if condition must be i32, got ", condition.type().kind);
         WASM_VALIDATOR_FAIL_IF(m_expressionStack.size() < inlineSignature->argumentCount(), "Too few arguments on stack for if block. If expects ", inlineSignature->argumentCount(), ", but only ", m_expressionStack.size(), " were present. If block has signature: ", inlineSignature->toString());
         unsigned offset = m_expressionStack.size() - inlineSignature->argumentCount();
@@ -1380,7 +1425,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         int64_t oldSize = m_expressionStack.size();
         Stack newStack;
         ControlType control;
-        WASM_TRY_ADD_TO_CONTEXT(addIf(condition, inlineSignatureAsType, m_expressionStack, control, newStack));
+        WASM_TRY_ADD_TO_CONTEXT(addIf(condition, expandedSignature, m_expressionStack, control, newStack));
         ASSERT_UNUSED(oldSize, oldSize - m_expressionStack.size() == inlineSignature->argumentCount());
         ASSERT(newStack.size() == inlineSignature->argumentCount());
 
@@ -1407,7 +1452,8 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         BlockSignature inlineSignatureAsType;
         WASM_PARSER_FAIL_IF(!parseBlockSignature(m_info, inlineSignatureAsType), "can't get try's signature");
 
-        const FunctionSignature* inlineSignature = inlineSignatureAsType->as<FunctionSignature>();
+        BlockSignature expandedSignature = &inlineSignatureAsType->expand();
+        const FunctionSignature* inlineSignature = expandedSignature->as<FunctionSignature>();
         WASM_VALIDATOR_FAIL_IF(m_expressionStack.size() < inlineSignature->argumentCount(), "Too few arguments on stack for try block. Trye expects ", inlineSignature->argumentCount(), ", but only ", m_expressionStack.size(), " were present. Try block has signature: ", inlineSignature->toString());
         unsigned offset = m_expressionStack.size() - inlineSignature->argumentCount();
         for (unsigned i = 0; i < inlineSignature->argumentCount(); ++i)
@@ -1416,7 +1462,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         int64_t oldSize = m_expressionStack.size();
         Stack newStack;
         ControlType control;
-        WASM_TRY_ADD_TO_CONTEXT(addTry(inlineSignatureAsType, m_expressionStack, control, newStack));
+        WASM_TRY_ADD_TO_CONTEXT(addTry(expandedSignature, m_expressionStack, control, newStack));
         ASSERT_UNUSED(oldSize, oldSize - m_expressionStack.size() == inlineSignature->argumentCount());
         ASSERT(newStack.size() == inlineSignature->argumentCount());
 
@@ -1433,7 +1479,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         uint32_t exceptionIndex;
         WASM_FAIL_IF_HELPER_FAILS(parseExceptionIndex(exceptionIndex));
         TypeIndex typeIndex = m_info.typeIndexFromExceptionIndexSpace(exceptionIndex);
-        const TypeDefinition& exceptionSignature = TypeInformation::get(typeIndex);
+        const TypeDefinition& exceptionSignature = TypeInformation::get(typeIndex).expand();
 
         ControlEntry& controlEntry = m_controlStack.last();
         WASM_VALIDATOR_FAIL_IF(!isTryOrCatch(controlEntry.controlData), "catch block isn't associated to a try");
@@ -1473,7 +1519,7 @@ FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_CASE)
         WASM_PARSER_FAIL_IF(m_controlStack.size() == 1, "can't use delegate at the top-level of a function");
 
         uint32_t target;
-        WASM_FAIL_IF_HELPER_FAILS(parseBranchTarget(target));
+        WASM_FAIL_IF_HELPER_FAILS(parseDelegateTarget(target, /* unreachableBlocks */ 0));
 
         ControlEntry controlEntry = m_controlStack.takeLast();
         WASM_VALIDATOR_FAIL_IF(!ControlType::isTry(controlEntry.controlData), "delegate isn't associated to a try");
@@ -1687,7 +1733,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
         uint32_t exceptionIndex;
         WASM_FAIL_IF_HELPER_FAILS(parseExceptionIndex(exceptionIndex));
         TypeIndex typeIndex = m_info.typeIndexFromExceptionIndexSpace(exceptionIndex);
-        const TypeDefinition& exceptionSignature = TypeInformation::get(typeIndex);
+        const TypeDefinition& exceptionSignature = TypeInformation::get(typeIndex).expand();
 
         if (m_unreachableBlocks > 1)
             return { };
@@ -1726,7 +1772,7 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
         WASM_PARSER_FAIL_IF(m_controlStack.size() == 1, "can't use delegate at the top-level of a function");
 
         uint32_t target;
-        WASM_FAIL_IF_HELPER_FAILS(parseBranchTarget(target));
+        WASM_FAIL_IF_HELPER_FAILS(parseDelegateTarget(target, m_unreachableBlocks));
 
         if (m_unreachableBlocks == 1) {
             ControlEntry controlEntry = m_controlStack.takeLast();
@@ -1964,11 +2010,10 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
         WASM_PARSER_FAIL_IF(!parseUInt8(extOp), "can't parse extended GC opcode");
 
         switch (static_cast<GCOpType>(extOp)) {
-        case GCOpType::RttCanon: {
-            uint32_t unused;
-            WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get type index immediate for rtt.canon in unreachable context");
+        case GCOpType::I31New:
+        case GCOpType::I31GetS:
+        case GCOpType::I31GetU:
             return { };
-        }
         default:
             WASM_PARSER_FAIL_IF(true, "invalid extended GC op ", extOp);
             break;

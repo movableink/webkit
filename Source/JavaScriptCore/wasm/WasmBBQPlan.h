@@ -54,7 +54,7 @@ public:
 
     using Base::Base;
 
-    BBQPlan(Context*, Ref<ModuleInformation>, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, CalleeGroup*, CompletionTask&&);
+    BBQPlan(VM&, Ref<ModuleInformation>, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, CalleeGroup*, CompletionTask&&);
 
     bool hasWork() const final
     {
@@ -75,8 +75,11 @@ public:
         return Base::parseAndValidateModule(m_source.data(), m_source.size());
     }
 
+    static bool planGeneratesLoopOSREntrypoints(const ModuleInformation&);
+
 private:
     bool prepareImpl() final;
+    void dumpDisassembly(CompilationContext&, LinkBuffer&);
     void compileFunction(uint32_t functionIndex) final;
     void didCompleteCompilation() WTF_REQUIRES_LOCK(m_lock) final;
 

@@ -251,6 +251,11 @@ public:
     bool hasContainedByFieldsetTrait();
     AccessibilityUIElement fieldsetAncestorElement();
     JSRetainPtr<JSStringRef> attributedStringForElement();
+    
+    bool isDeletion();
+    bool isInsertion();
+    bool isFirstItemInSuggestion();
+    bool isLastItemInSuggestion();
 #endif
 
     // Table-specific
@@ -322,6 +327,8 @@ public:
     bool isTextArea() const;
     bool isSearchField() const;
     
+    bool isMarkAnnotation() const;
+
     AccessibilityTextMarkerRange textMarkerRangeMatchesTextNearMarkers(JSStringRef, AccessibilityTextMarker*, AccessibilityTextMarker*);
 #endif // PLATFORM(IOS_FAMILY)
 

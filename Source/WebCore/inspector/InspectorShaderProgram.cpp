@@ -29,16 +29,17 @@
 #if ENABLE(WEBGL)
 
 #include "InspectorCanvas.h"
-#include <JavaScriptCore/IdentifiersFactory.h>
-#include <variant>
-#include <wtf/Ref.h>
-#include <wtf/text/WTFString.h>
 
 #if ENABLE(WEBGL)
+#include "JSExecState.h"
 #include "WebGLProgram.h"
 #include "WebGLRenderingContextBase.h"
 #include "WebGLSampler.h"
 #include "WebGLShader.h"
+#include <JavaScriptCore/ConsoleMessage.h>
+#include <JavaScriptCore/IdentifiersFactory.h>
+#include <JavaScriptCore/ScriptCallStack.h>
+#include <JavaScriptCore/ScriptCallStackFactory.h>
 #endif
 
 namespace WebCore {
@@ -123,8 +124,18 @@ bool InspectorShaderProgram::updateShader(Inspector::Protocol::Canvas::ShaderTyp
                         auto& contextWebGLBase = downcast<WebGLRenderingContextBase>(*context);
                         contextWebGLBase.shaderSource(*shader, source);
                         contextWebGLBase.compileShader(*shader);
-                        if (shader->isValid()) {
-                            contextWebGLBase.linkProgramWithoutInvalidatingAttribLocations(&program);
+                        auto compileStatus = contextWebGLBase.getShaderParameter(*shader, GraphicsContextGL::COMPILE_STATUS);
+                        if (std::holds_alternative<bool>(compileStatus)) {
+                            if (std::get<bool>(compileStatus))
+                                contextWebGLBase.linkProgramWithoutInvalidatingAttribLocations(&program);
+                            else {
+                                auto errors = contextWebGLBase.getShaderInfoLog(*shader);
+                                auto* scriptContext = m_canvas.scriptExecutionContext();
+                                for (auto error : StringView(errors).split('\n')) {
+                                    auto message = makeString("WebGL: "_s, error);
+                                    scriptContext->addConsoleMessage(makeUnique<ConsoleMessage>(MessageSource::Rendering, MessageType::Log, MessageLevel::Error, message));
+                                }
+                            }
                             return true;
                         }
                     }

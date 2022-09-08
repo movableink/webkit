@@ -46,8 +46,10 @@ namespace WebPushD {
 static void updateTopicLists(PushServiceConnection& connection, PushDatabase& database, CompletionHandler<void()> completionHandler)
 {
     database.getTopics([&connection, completionHandler = WTFMove(completionHandler)](auto&& topics) mutable {
-        // FIXME: move topics to ignored list based on user preferences.
-        connection.setEnabledTopics(WTFMove(topics));
+        PushServiceConnection::TopicLists topicLists;
+        topicLists.enabledTopics = WTFMove(topics.enabledTopics);
+        topicLists.ignoredTopics = WTFMove(topics.ignoredTopics);
+        connection.setTopicLists(WTFMove(topicLists));
         completionHandler();
     });
 }
@@ -65,7 +67,6 @@ void PushService::create(const String& incomingPushServiceName, const String& da
         if (!databaseResult) {
             RELEASE_LOG_ERROR(Push, "Push service initialization failed with database error");
             creationHandler(std::unique_ptr<PushService>());
-            transaction = nullptr;
             return;
         }
 
@@ -81,7 +82,6 @@ void PushService::create(const String& incomingPushServiceName, const String& da
         // date, which APSConnection cares about.
         updateTopicLists(connectionRef, databaseRef, [transaction = WTFMove(transaction), service = WTFMove(service), creationHandler = WTFMove(creationHandler)]() mutable {
             creationHandler(service.moveToUniquePtr());
-            transaction = nullptr;
         });
     });
 }
@@ -501,6 +501,11 @@ void PushService::didCompleteUnsubscribeRequest(UnsubscribeRequest& request)
     finishedPushServiceRequest(m_unsubscribeRequests, request);
 }
 
+void PushService::getOriginsWithPushSubscriptions(const String& bundleIdentifier, CompletionHandler<void(Vector<String>&&)>&& handler)
+{
+    m_database->getOriginsWithPushSubscriptions(bundleIdentifier, WTFMove(handler));
+}
+
 void PushService::incrementSilentPushCount(const String& bundleIdentifier, const String& securityOrigin, CompletionHandler<void(unsigned)>&& handler)
 {
     if (bundleIdentifier.isEmpty() || securityOrigin.isEmpty()) {
@@ -520,6 +525,20 @@ void PushService::incrementSilentPushCount(const String& bundleIdentifier, const
         removeRecordsImpl(bundleIdentifier, securityOrigin, [handler = WTFMove(handler), silentPushCount](auto&&) mutable {
             handler(silentPushCount);
         });
+    });
+}
+
+void PushService::setPushesEnabledForBundleIdentifierAndOrigin(const String& bundleIdentifier, const String& securityOrigin, bool enabled, CompletionHandler<void()>&& handler)
+{
+    if (bundleIdentifier.isEmpty() || securityOrigin.isEmpty()) {
+        RELEASE_LOG_ERROR(Push, "Ignoring setPushesEnabledForBundleIdentifierAndOrigin request with bundleIdentifier (empty = %d) and securityOrigin (empty = %d)", bundleIdentifier.isEmpty(), securityOrigin.isEmpty());
+        return handler();
+    }
+
+    m_database->setPushesEnabledForOrigin(bundleIdentifier, securityOrigin, enabled, [this, handler = WTFMove(handler)](bool recordsChanged) mutable {
+        if (!recordsChanged)
+            return handler();
+        updateTopicLists(m_connection, m_database, WTFMove(handler));
     });
 }
 
@@ -651,11 +670,13 @@ void PushService::didReceivePublicToken(Vector<uint8_t>&& token)
 
 void PushService::didReceivePushMessage(NSString* topic, NSDictionary* userInfo, CompletionHandler<void()>&& completionHandler)
 {
+    auto transaction = adoptOSObject(os_transaction_create("com.apple.webkit.webpushd.push-service.incoming-push"));
+
     auto messageResult = makeRawPushMessage(topic, userInfo);
     if (!messageResult)
         return;
 
-    m_database->getRecordByTopic(topic, [this, message = WTFMove(*messageResult), completionHandler = WTFMove(completionHandler)](auto&& recordResult) mutable {
+    m_database->getRecordByTopic(topic, [this, message = WTFMove(*messageResult), completionHandler = WTFMove(completionHandler), transaction = WTFMove(transaction)](auto&& recordResult) mutable {
         if (!recordResult) {
             RELEASE_LOG_ERROR(Push, "Dropping incoming push sent to unknown topic: %{private}s", message.topic.utf8().data());
             completionHandler();

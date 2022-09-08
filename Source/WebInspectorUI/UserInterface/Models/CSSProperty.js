@@ -37,19 +37,24 @@ WI.CSSProperty = class CSSProperty extends WI.Object
         this._initialState = null;
         this._modified = false;
         this._isUpdatingText = false;
+        this._isNewProperty = false;
 
         this.update(text, name, value, priority, enabled, overridden, implicit, anonymous, valid, styleSheetTextRange, true);
     }
 
     // Static
 
+    static isVariable(name)
+    {
+        return name.startsWith("--") && name.length > 2;
+    }
+
     static isInheritedPropertyName(name)
     {
         console.assert(typeof name === "string");
         if (WI.CSSKeywordCompletions.InheritedProperties.has(name))
             return true;
-        // Check if the name is a CSS variable.
-        return name.startsWith("--");
+        return WI.CSSProperty.isVariable(name);
     }
 
     // FIXME: <https://webkit.org/b/226647> This naively collects variable-like names used in values. It should be hardened.
@@ -85,6 +90,18 @@ WI.CSSProperty = class CSSProperty extends WI.Object
         return names;
     }
 
+    static sortPreferringNonPrefixed(a, b)
+    {
+        let aIsPrefixed = a[0] === "-" && a[1] !== "-";
+        let bIsPrefixed = b[0] === "-" && b[1] !== "-";
+        if (!aIsPrefixed && bIsPrefixed)
+            return -1;
+        if (aIsPrefixed && !bIsPrefixed)
+            return 1;
+
+        return a.extendedLocaleCompare(b);
+    }
+
     static sortByPropertyNameUsageCount(propertyNameA, propertyNameB)
     {
         let countA = WI.CSSProperty._cachedNameCounts[propertyNameA];
@@ -110,6 +127,25 @@ WI.CSSProperty = class CSSProperty extends WI.Object
         }
 
         return 0;
+    }
+
+    static indexOfCompletionForMostUsedPropertyName(completions)
+    {
+        let highestRankCompletions = completions;
+        if (highestRankCompletions.every((completion) => completion instanceof WI.QueryResult)) {
+            let highestRankValue = -1;
+            for (let completion of completions) {
+                if (completion.rank > highestRankValue) {
+                    highestRankValue = completion.rank;
+                    highestRankCompletions = [];
+                }
+
+                if (completion.rank === highestRankValue)
+                    highestRankCompletions.push(completion);
+            }
+        }
+        let mostUsedHighestRankCompletion = highestRankCompletions.min((a, b) => WI.CSSProperty.sortByPropertyNameUsageCount(WI.CSSCompletions.getCompletionText(a), WI.CSSCompletions.getCompletionText(b)));
+        return completions.indexOf(mostUsedHighestRankCompletion);
     }
 
     static _initializePropertyNameCounts()
@@ -196,7 +232,7 @@ WI.CSSProperty = class CSSProperty extends WI.Object
         this._anonymous = anonymous;
         this._inherited = WI.CSSProperty.isInheritedPropertyName(name);
         this._valid = valid;
-        this._isVariable = name.startsWith("--");
+        this._isVariable = WI.CSSProperty.isVariable(name);
         this._styleSheetTextRange = styleSheetTextRange || null;
 
         this._rawValueNewlineIndent = "";
@@ -508,6 +544,9 @@ WI.CSSProperty = class CSSProperty extends WI.Object
         return this._shorthandPropertyNames;
     }
 
+    get isNewProperty() { return this._isNewProperty; }
+    set isNewProperty(value) { this._isNewProperty = value; }
+
     hasOtherVendorNameOrKeyword()
     {
         if ("_hasOtherVendorNameOrKeyword" in this)
@@ -557,7 +596,10 @@ WI.CSSProperty = class CSSProperty extends WI.Object
             return;
 
         let changeCount = (propertyName, delta) => {
-            if (!propertyName || this._implicit || this._anonymous || !this._enabled)
+            if (this._implicit || this._anonymous || !this._enabled)
+                return;
+
+            if (!propertyName || WI.CSSProperty.isVariable(propertyName))
                 return;
 
             let cachedCount = WI.CSSProperty._cachedNameCounts[propertyName];

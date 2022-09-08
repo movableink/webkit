@@ -60,7 +60,6 @@ class RenderTargetVk final : public FramebufferAttachmentRenderTarget
               uint32_t layerIndex,
               uint32_t layerCount,
               RenderTargetTransience transience);
-    void reset();
 
     vk::ImageOrBufferViewSubresourceSerial getDrawSubresourceSerial() const;
     vk::ImageOrBufferViewSubresourceSerial getResolveSubresourceSerial() const;
@@ -135,7 +134,17 @@ class RenderTargetVk final : public FramebufferAttachmentRenderTarget
         return mTransience == RenderTargetTransience::EntirelyTransient;
     }
 
+    void onNewFramebuffer(const vk::SharedFramebufferCacheKey &sharedFramebufferCacheKey)
+    {
+        ASSERT(!mFramebufferCacheManager.containsKey(sharedFramebufferCacheKey));
+        mFramebufferCacheManager.addKey(sharedFramebufferCacheKey);
+    }
+    void release(ContextVk *contextVk) { mFramebufferCacheManager.releaseKeys(contextVk); }
+    void destroy(RendererVk *renderer) { mFramebufferCacheManager.destroyKeys(renderer); }
+
   private:
+    void reset();
+
     angle::Result getImageViewImpl(vk::Context *context,
                                    const vk::ImageHelper &image,
                                    gl::SrgbWriteControlMode mode,
@@ -209,6 +218,9 @@ class RenderTargetVk final : public FramebufferAttachmentRenderTarget
     // resolve attachment, it is not used.  The only purpose of |mResolveImage| is to store deferred
     // clears.
     RenderTargetTransience mTransience;
+
+    // Track references to the cached Framebuffer object that created out of this object
+    vk::FramebufferCacheManager mFramebufferCacheManager;
 };
 
 // A vector of rendertargets

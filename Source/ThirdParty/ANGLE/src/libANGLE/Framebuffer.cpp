@@ -486,6 +486,8 @@ const FramebufferAttachment *FramebufferState::getReadPixelsAttachment(GLenum re
             return getDepthAttachment();
         case GL_STENCIL_INDEX_OES:
             return getStencilOrDepthStencilAttachment();
+        case GL_DEPTH_STENCIL_OES:
+            return getDepthStencilAttachment();
         default:
             return getReadAttachment();
     }
@@ -903,9 +905,15 @@ void Framebuffer::setReadSurface(const Context *context, egl::Surface *readSurfa
     mDirtyBits.set(DIRTY_BIT_READ_BUFFER);
 }
 
-void Framebuffer::setLabel(const Context *context, const std::string &label)
+angle::Result Framebuffer::setLabel(const Context *context, const std::string &label)
 {
     mState.mLabel = label;
+
+    if (mImpl)
+    {
+        return mImpl->onLabelUpdate(context);
+    }
+    return angle::Result::Continue;
 }
 
 const std::string &Framebuffer::getLabel() const
@@ -1048,7 +1056,7 @@ GLenum Framebuffer::getDrawBufferState(size_t drawBuffer) const
     return mState.mDrawBufferStates[drawBuffer];
 }
 
-const std::vector<GLenum> &Framebuffer::getDrawBufferStates() const
+const DrawBuffersVector<GLenum> &Framebuffer::getDrawBufferStates() const
 {
     return mState.getDrawBufferStates();
 }
@@ -2079,6 +2087,17 @@ void Framebuffer::onSubjectStateChange(angle::SubjectIndex index, angle::Subject
         {
             mDirtyBits.set(DIRTY_BIT_COLOR_BUFFER_CONTENTS_0 + index);
             onStateChange(angle::SubjectMessage::DirtyBitsFlagged);
+            return;
+        }
+
+        // Swapchain changes should only result in color buffer changes.
+        if (message == angle::SubjectMessage::SwapchainImageChanged)
+        {
+            if (index < DIRTY_BIT_COLOR_ATTACHMENT_MAX)
+            {
+                mDirtyBits.set(DIRTY_BIT_COLOR_BUFFER_CONTENTS_0 + index);
+                onStateChange(angle::SubjectMessage::DirtyBitsFlagged);
+            }
             return;
         }
 

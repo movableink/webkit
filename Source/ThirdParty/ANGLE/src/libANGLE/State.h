@@ -94,6 +94,7 @@ class State : angle::NonCopyable
           const OverlayType *overlay,
           const EGLenum clientType,
           const Version &clientVersion,
+          EGLint profileMask,
           bool debug,
           bool bindGeneratesResourceCHROMIUM,
           bool clientArraysEnabled,
@@ -109,6 +110,7 @@ class State : angle::NonCopyable
     // Getters
     ContextID getContextID() const { return mID; }
     EGLenum getClientType() const { return mClientType; }
+    EGLint getProfileMask() const { return mProfileMask; }
     EGLenum getContextPriority() const { return mContextPriority; }
     bool hasProtectedContent() const { return mHasProtectedContent; }
     bool isDebugContext() const { return mIsDebugContext; }
@@ -124,6 +126,8 @@ class State : angle::NonCopyable
     bool isWebGL() const { return mExtensions.webglCompatibilityANGLE; }
 
     bool isWebGL1() const { return (isWebGL() && mClientVersion.major == 2); }
+
+    bool isGLES1() const { return mClientVersion < ES_2_0; }
 
     const TextureCaps &getTextureCap(GLenum internalFormat) const
     {
@@ -971,6 +975,7 @@ class State : angle::NonCopyable
     ContextID mID;
 
     EGLenum mClientType;
+    EGLint mProfileMask;
     EGLenum mContextPriority;
     bool mHasProtectedContent;
     bool mIsDebugContext;
@@ -1003,6 +1008,8 @@ class State : angle::NonCopyable
     RasterizerState mRasterizer;
     bool mScissorTest;
     Rectangle mScissor;
+
+    bool mNoUnclampedBlendColor;
 
     BlendState mBlendState;  // Buffer zero blend state legacy struct
     BlendStateExt mBlendStateExt;

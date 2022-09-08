@@ -31,6 +31,7 @@
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "LegacyRenderSVGRoot.h"
+#include "LegacyRenderSVGViewportContainer.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGRoot.h"
 #include "RenderSVGViewportContainer.h"
@@ -48,6 +49,7 @@
 #include "SVGViewElement.h"
 #include "SVGViewSpec.h"
 #include "StaticNodeList.h"
+#include "TypedElementDescendantIterator.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -55,7 +57,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGSVGElement);
 
 inline SVGSVGElement::SVGSVGElement(const QualifiedName& tagName, Document& document)
-    : SVGGraphicsElement(tagName, document)
+    : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGFitToViewBox(this)
     , m_timeContainer(SMILTimeContainer::create(*this))
 {
@@ -229,8 +231,18 @@ void SVGSVGElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     if (SVGFitToViewBox::isKnownAttribute(attrName)) {
-        if (auto* renderer = this->renderer())
+        if (auto* renderer = this->renderer()) {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+            if (document().settings().layerBasedSVGEngineEnabled()) {
+                renderer->updateFromElement();
+                updateSVGRendererForElementChange();
+                return;
+            }
+#endif
+
             renderer->setNeedsTransformUpdate();
+        }
+
         updateSVGRendererForElementChange();
         return;
     }
@@ -250,11 +262,19 @@ Ref<NodeList> SVGSVGElement::collectIntersectionOrEnclosureList(SVGRect& rect, S
 
 static bool checkIntersectionWithoutUpdatingLayout(SVGElement& element, SVGRect& rect)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (element.document().settings().layerBasedSVGEngineEnabled())
+        return RenderSVGModelObject::checkIntersection(element.renderer(), rect.value());
+#endif
     return LegacyRenderSVGModelObject::checkIntersection(element.renderer(), rect.value());
 }
     
 static bool checkEnclosureWithoutUpdatingLayout(SVGElement& element, SVGRect& rect)
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (element.document().settings().layerBasedSVGEngineEnabled())
+        return RenderSVGModelObject::checkEnclosure(element.renderer(), rect.value());
+#endif
     return LegacyRenderSVGModelObject::checkEnclosure(element.renderer(), rect.value());
 }
 
@@ -343,6 +363,13 @@ Ref<SVGTransform> SVGSVGElement::createSVGTransformFromMatrix(DOMMatrix2DInit&& 
 
 AffineTransform SVGSVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMScope mode) const
 {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled()) {
+        // FIXME: [LBSE] Upstream getCTM() support.
+        return { };
+    }
+#endif
+
     AffineTransform viewBoxTransform;
     if (!hasEmptyViewBox()) {
         FloatSize size = currentViewportSize();
@@ -410,7 +437,12 @@ RenderPtr<RenderElement> SVGSVGElement::createElementRenderer(RenderStyle&& styl
 #endif
         return createRenderer<LegacyRenderSVGRoot>(*this, WTFMove(style));
     }
-    return createRenderer<RenderSVGViewportContainer>(*this, WTFMove(style));
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
+        return createRenderer<RenderSVGViewportContainer>(*this, WTFMove(style));
+#endif
+    return createRenderer<LegacyRenderSVGViewportContainer>(*this, WTFMove(style));
 }
 
 Node::InsertedIntoAncestorResult SVGSVGElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -481,6 +513,15 @@ bool SVGSVGElement::selfHasRelativeLengths() const
         || hasAttribute(SVGNames::viewBoxAttr);
 }
 
+bool SVGSVGElement::hasTransformRelatedAttributes() const
+{
+    if (SVGGraphicsElement::hasTransformRelatedAttributes())
+        return true;
+
+    // 'x' / 'y' / 'viewBox' lead to a non-identity supplementalLayerTransform in RenderSVGViewportContainer
+    return (hasAttribute(SVGNames::xAttr) || hasAttribute(SVGNames::yAttr)) || (hasAttribute(SVGNames::viewBoxAttr) && !hasEmptyViewBox());
+}
+
 FloatRect SVGSVGElement::currentViewBoxRect() const
 {
     if (m_useCurrentView)
@@ -516,16 +557,22 @@ FloatSize SVGSVGElement::currentViewportSize() const
     FloatSize viewportSize;
 
     if (renderer()) {
-        if (is<LegacyRenderSVGRoot>(*renderer())) {
+        if (is<LegacyRenderSVGRoot>(renderer())) {
             auto& root = downcast<LegacyRenderSVGRoot>(*renderer());
             viewportSize = root.contentBoxRect().size() / root.style().effectiveZoom();
+        } else if (is<LegacyRenderSVGViewportContainer>(renderer()))
+            viewportSize = downcast<LegacyRenderSVGViewportContainer>(*renderer()).viewport().size();
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-        } else if (is<RenderSVGRoot>(*renderer())) {
+        else if (is<RenderSVGRoot>(renderer())) {
             auto& root = downcast<RenderSVGRoot>(*renderer());
             viewportSize = root.contentBoxRect().size() / root.style().effectiveZoom();
-#endif
-        } else
+        } else if (is<RenderSVGViewportContainer>(renderer()))
             viewportSize = downcast<RenderSVGViewportContainer>(*renderer()).viewport().size();
+#endif
+        else {
+            ASSERT_NOT_REACHED();
+            return { };
+        }
     }
 
     if (!viewportSize.isEmpty())
@@ -714,6 +761,14 @@ Element* SVGSVGElement::getElementById(const AtomString& id)
     if (id.isNull())
         return nullptr;
 
+    if (UNLIKELY(!isInTreeScope())) {
+        for (auto& element : descendantsOfType<Element>(*this)) {
+            if (element.getIdAttribute() == id)
+                return &element;
+        }
+        return nullptr;
+    }
+
     RefPtr element = treeScope().getElementById(id);
     if (element && element->isDescendantOf(*this))
         return element.get();
@@ -723,12 +778,21 @@ Element* SVGSVGElement::getElementById(const AtomString& id)
                 return element;
         }
     }
+
     return nullptr;
 }
 
 bool SVGSVGElement::isValid() const
 {
     return SVGTests::isValid();
+}
+
+void SVGSVGElement::didAttachRenderers()
+{
+    SVGGraphicsElement::didAttachRenderers();
+
+    if (auto* renderer = this->renderer())
+        renderer->updateFromElement();
 }
 
 }

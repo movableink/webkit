@@ -32,6 +32,7 @@
 #import "IOSurfacePool.h"
 #import "Logging.h"
 #import "PlatformScreen.h"
+#import "ProcessCapabilities.h"
 #import "ProcessIdentity.h"
 #import <pal/spi/cg/CoreGraphicsSPI.h>
 #import <wtf/Assertions.h>
@@ -46,6 +47,8 @@ namespace WebCore {
 
 std::unique_ptr<IOSurface> IOSurface::create(IOSurfacePool* pool, IntSize size, const DestinationColorSpace& colorSpace, Format pixelFormat)
 {
+    ASSERT(ProcessCapabilities::canUseAcceleratedBuffers());
+
     if (pool) {
         if (auto cachedSurface = pool->takeSurface(size, colorSpace, pixelFormat)) {
             cachedSurface->releaseGraphicsContext();
@@ -67,6 +70,8 @@ std::unique_ptr<IOSurface> IOSurface::create(IOSurfacePool* pool, IntSize size, 
 
 std::unique_ptr<IOSurface> IOSurface::createFromSendRight(const MachSendRight&& sendRight, const DestinationColorSpace& colorSpace)
 {
+    ASSERT(ProcessCapabilities::canUseAcceleratedBuffers());
+
     auto surface = adoptCF(IOSurfaceLookupFromMachPort(sendRight.sendRight()));
     return IOSurface::createFromSurface(surface.get(), colorSpace);
 }
@@ -273,8 +278,8 @@ size_t IOSurface::bytesPerRowAlignment()
 {
     auto alignment = surfaceBytesPerRowAlignment().load();
     if (!alignment) {
-        surfaceBytesPerRowAlignment().store(IOSurfaceGetPropertyAlignment(kIOSurfaceBytesPerRow));
-        alignment = surfaceBytesPerRowAlignment().load();
+        alignment = IOSurfaceGetPropertyAlignment(kIOSurfaceBytesPerRow);
+
         // A return value for IOSurfaceGetPropertyAlignment(kIOSurfaceBytesPerRow) of 1 is invalid.
         // See https://developer.apple.com/documentation/iosurface/1419453-iosurfacegetpropertyalignment?language=objc
         // This likely means that the sandbox is blocking access to the IOSurface IOKit class,
@@ -284,6 +289,8 @@ size_t IOSurface::bytesPerRowAlignment()
             // 64 bytes is currently the alignment on all platforms.
             alignment = 64;
         }
+
+        surfaceBytesPerRowAlignment().store(alignment);
     }
     return alignment;
 }

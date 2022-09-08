@@ -198,6 +198,11 @@ void TestRunner::clearAllDatabases()
     [[WebDatabaseManager sharedWebDatabaseManager] deleteAllIndexedDatabases];
 }
 
+void TestRunner::clearNotificationPermissionState()
+{
+    [[mainFrame webView] _clearNotificationPermissionState];
+}
+
 void TestRunner::setStorageDatabaseIdleInterval(double interval)
 {
     [WebStorageManager setStorageDatabaseIdleInterval:interval];
@@ -548,6 +553,11 @@ void TestRunner::setValueForUser(JSContextRef context, JSValueRef nodeObject, JS
 void TestRunner::dispatchPendingLoadRequests()
 {
     [[mainFrame webView] _dispatchPendingLoadRequests];
+}
+
+void TestRunner::removeAllCookies()
+{
+    [WebPreferences _clearNetworkLoaderSession];
 }
 
 void TestRunner::removeAllVisitedLinks()

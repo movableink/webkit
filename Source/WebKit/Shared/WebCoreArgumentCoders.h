@@ -26,14 +26,12 @@
 #pragma once
 
 #include "ArgumentCoders.h"
-#include <WebCore/AffineTransform.h>
+#include "Decoder.h"
+#include "Encoder.h"
 #include <WebCore/AutoplayEvent.h>
 #include <WebCore/ColorSpace.h>
 #include <WebCore/DiagnosticLoggingClient.h>
 #include <WebCore/DisplayListItems.h>
-#include <WebCore/FloatPoint.h>
-#include <WebCore/FloatPoint3D.h>
-#include <WebCore/FloatRect.h>
 #include <WebCore/FloatRoundedRect.h>
 #include <WebCore/FloatSize.h>
 #include <WebCore/FrameLoaderTypes.h>
@@ -56,6 +54,7 @@
 #include <WebCore/ServiceWorkerTypes.h>
 #include <WebCore/StoredCredentialsPolicy.h>
 #include <WebCore/WorkerType.h>
+#include <wtf/ArgumentCoder.h>
 #include <wtf/EnumTraits.h>
 
 #if ENABLE(APPLE_PAY)
@@ -99,10 +98,6 @@
 
 #if PLATFORM(COCOA)
 #include "ArgumentCodersCF.h"
-
-namespace WTF {
-class MachSendRight;
-}
 #endif
 
 #if USE(UNIX_DOMAIN_SOCKETS)
@@ -123,6 +118,7 @@ class BlobPart;
 class CertificateInfo;
 class Color;
 class SharedBuffer;
+class CSPViolationReportBody;
 class Credential;
 class CubicBezierTimingFunction;
 class Cursor;
@@ -139,10 +135,14 @@ class HTTPHeaderMap;
 class KeyframeValueList;
 class LinearTimingFunction;
 class Notification;
+class NotificationResources;
 class PasteboardCustomData;
 class PaymentInstallmentConfiguration;
+class PixelBuffer;
 class ProtectionSpace;
 class Region;
+class Report;
+class ReportBody;
 class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
@@ -154,12 +154,9 @@ class StepsTimingFunction;
 class StickyPositionViewportConstraints;
 class SystemImage;
 class TextCheckingRequestData;
-class TransformationMatrix;
 class UserStyleSheet;
 
 struct AttributedString;
-struct CacheQueryOptions;
-struct CharacterRange;
 struct CompositionUnderline;
 struct DataDetectorElementInfo;
 struct DictationAlternative;
@@ -176,7 +173,6 @@ struct Length;
 struct GrammarDetail;
 struct MimeClassInfo;
 struct PasteboardImage;
-struct PasteboardURL;
 struct PluginInfo;
 struct PromisedAttachmentInfo;
 struct RecentSearch;
@@ -227,7 +223,6 @@ struct SerializedAttachmentData;
 #endif
 
 namespace DOMCacheEngine {
-struct CacheInfo;
 struct Record;
 }
 
@@ -242,11 +237,7 @@ namespace IPC {
         static std::optional<Type> decode(Decoder&); \
     };
 
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::AffineTransform)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::FloatBoxExtent)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::FloatPoint)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::FloatPoint3D)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::FloatRect)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::FloatRoundedRect)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::FloatSize)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::IntPoint)
@@ -254,13 +245,6 @@ DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::IntRect)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::IntSize)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::LayoutPoint)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::LayoutSize)
-
-#if USE(CG)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(CGRect)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(CGSize)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(CGPoint)
-DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(CGAffineTransform)
-#endif
 
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::DisplayList::SetInlineFillColor)
 DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::DisplayList::SetInlineStrokeColor)
@@ -270,21 +254,6 @@ DEFINE_SIMPLE_ARGUMENT_CODER_FOR_HEADER(WebCore::DisplayList::SetInlineStrokeCol
 template<> struct ArgumentCoder<WebCore::AttributedString> {
     static void encode(Encoder&, const WebCore::AttributedString&);
     static std::optional<WebCore::AttributedString> decode(Decoder&);
-};
-
-template<> struct ArgumentCoder<WebCore::CacheQueryOptions> {
-    static void encode(Encoder&, const WebCore::CacheQueryOptions&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::CacheQueryOptions&);
-};
-
-template<> struct ArgumentCoder<WebCore::CharacterRange> {
-    static void encode(Encoder&, const WebCore::CharacterRange&);
-    static std::optional<WebCore::CharacterRange> decode(Decoder&);
-};
-
-template<> struct ArgumentCoder<WebCore::DOMCacheEngine::CacheInfo> {
-    static void encode(Encoder&, const WebCore::DOMCacheEngine::CacheInfo&);
-    static std::optional<WebCore::DOMCacheEngine::CacheInfo> decode(Decoder&);
 };
 
 template<> struct ArgumentCoder<WebCore::DOMCacheEngine::Record> {
@@ -300,12 +269,6 @@ template<> struct ArgumentCoder<WebCore::TouchActionData> {
 template<> struct ArgumentCoder<WebCore::EventTrackingRegions> {
     static void encode(Encoder&, const WebCore::EventTrackingRegions&);
     static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::EventTrackingRegions&);
-};
-
-template<> struct ArgumentCoder<WebCore::TransformationMatrix> {
-    template<typename Encoder>
-    static void encode(Encoder&, const WebCore::TransformationMatrix&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::TransformationMatrix&);
 };
 
 template<> struct ArgumentCoder<WebCore::LinearTimingFunction> {
@@ -439,12 +402,6 @@ template<> struct ArgumentCoder<WebCore::DragData> {
 
 #if PLATFORM(COCOA)
 
-template<> struct ArgumentCoder<WTF::MachSendRight> {
-    static void encode(Encoder&, const WTF::MachSendRight&);
-    static void encode(Encoder&, WTF::MachSendRight&&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WTF::MachSendRight&);
-};
-
 template<> struct ArgumentCoder<WebCore::KeypressCommand> {
     static void encode(Encoder&, const WebCore::KeypressCommand&);
     static std::optional<WebCore::KeypressCommand> decode(Decoder&);
@@ -477,11 +434,6 @@ template<> struct ArgumentCoder<WebCore::PasteboardImage> {
 template<> struct ArgumentCoder<WebCore::PasteboardCustomData> {
     static void encode(Encoder&, const WebCore::PasteboardCustomData&);
     static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::PasteboardCustomData&);
-};
-
-template<> struct ArgumentCoder<WebCore::PasteboardURL> {
-    static void encode(Encoder&, const WebCore::PasteboardURL&);
-    static WARN_UNUSED_RETURN bool decode(Decoder&, WebCore::PasteboardURL&);
 };
 
 #if USE(SOUP)
@@ -773,6 +725,11 @@ template<> struct ArgumentCoder<WebCore::SystemImage> {
     static std::optional<Ref<WebCore::SystemImage>> decode(Decoder&);
 };
 
+template<> struct ArgumentCoder<WebCore::NotificationResources> {
+    static void encode(Encoder&, const WebCore::NotificationResources&);
+    static std::optional<RefPtr<WebCore::NotificationResources>> decode(Decoder&);
+};
+
 #if ENABLE(DATA_DETECTION)
 
 template<> struct ArgumentCoder<WebCore::DataDetectorElementInfo> {
@@ -843,6 +800,21 @@ template<> struct ArgumentCoder<UnixFileDescriptor> {
 };
 
 #endif
+
+template<> struct ArgumentCoder<WebCore::PixelBuffer> {
+    template<class Encoder> static void encode(Encoder&, const WebCore::PixelBuffer&);
+    static std::optional<Ref<WebCore::PixelBuffer>> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<Ref<WebCore::Report>> {
+    static void encode(Encoder&, const Ref<WebCore::Report>&);
+    static std::optional<Ref<WebCore::Report>> decode(Decoder&);
+};
+
+template<> struct ArgumentCoder<RefPtr<WebCore::ReportBody>> {
+    static void encode(Encoder&, const RefPtr<WebCore::ReportBody>&);
+    static std::optional<RefPtr<WebCore::ReportBody>> decode(Decoder&);
+};
 
 } // namespace IPC
 

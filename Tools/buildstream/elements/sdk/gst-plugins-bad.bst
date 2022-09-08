@@ -1,8 +1,17 @@
 kind: meson
 sources:
 - kind: tar
-  url: gst_downloads:gst-plugins-bad/gst-plugins-bad-1.20.2.tar.xz
-  ref: 4adc4c05f41051f8136b80cda99b0d049a34e777832f9fea7c5a70347658745b
+  url: gst_downloads:gst-plugins-bad/gst-plugins-bad-1.20.3.tar.xz
+  ref: 7a11c13b55dd1d2386dd902219e41cbfcdda8e1e0aa3e738186c95074b35da4f
+# https://gitlab.freedesktop.org/gstreamer/gst-plugins-bad/-/merge_requests/2341/
+- kind: patch
+  path: patches/gst-plugins-bad-mr-2341.patch
+# https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/2918 (candidate for 1.20 backport)
+- kind: patch
+  path: patches/gst-plugins-bad-openh264-Register-debug-categories-earlier.patch
+# https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/2919 (candidate for 1.20 backport)
+- kind: patch
+  path: patches/gst-plugins-bad-openh264enc-Fix-constrained-high-encoding.patch
 build-depends:
 - freedesktop-sdk.bst:public-stacks/buildsystem-meson.bst
 depends:
@@ -29,7 +38,7 @@ depends:
 - freedesktop-sdk.bst:components/orc.bst
 - freedesktop-sdk.bst:components/sndfile.bst
 - freedesktop-sdk.bst:components/wayland.bst
-- freedesktop-sdk.bst:components/webrtc-audio-processing.bst
+- sdk/webrtc-audio-processing-1.bst
 - freedesktop-sdk.bst:bootstrap-import.bst
 
 variables:
@@ -62,7 +71,6 @@ variables:
     -Dgs=disabled
     -Dgsm=disabled
     -Diqa=disabled
-    -Disac=disabled
     -Dladspa=disabled
     -Dldac=disabled
     -Dlibde265=disabled
@@ -81,7 +89,6 @@ variables:
     -Dopenaptx=disabled
     -Dopencv=disabled
     -Dopenexr=disabled
-    -Dopenh264=disabled
     -Dopenmpt=disabled
     -Dopenni2=disabled
     -Dopensles=disabled

@@ -66,6 +66,10 @@
 #include "WebKitWebSourceGStreamer.h"
 #endif
 
+#if USE(GSTREAMER_WEBRTC)
+#include <gst/webrtc/webrtc-enumtypes.h>
+#endif
+
 GST_DEBUG_CATEGORY(webkit_gst_common_debug);
 #define GST_CAT_DEFAULT webkit_gst_common_debug
 
@@ -112,21 +116,8 @@ bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, 
         return false;
     }
 
-    if (areEncryptedCaps(caps)) {
-        GstStructure* structure = gst_caps_get_structure(caps, 0);
-        format = GST_VIDEO_FORMAT_ENCODED;
-        stride = 0;
-        int width = 0, height = 0;
-        gst_structure_get_int(structure, "width", &width);
-        gst_structure_get_int(structure, "height", &height);
-        if (!gst_structure_get_fraction(structure, "pixel-aspect-ratio", &pixelAspectRatioNumerator, &pixelAspectRatioDenominator)) {
-            pixelAspectRatioNumerator = 1;
-            pixelAspectRatioDenominator = 1;
-        }
-
-        size.setWidth(width);
-        size.setHeight(height);
-    } else {
+    GstStructure* structure = gst_caps_get_structure(caps, 0);
+    if (!areEncryptedCaps(caps) && (!gst_structure_has_name(structure, "video/x-raw") || gst_structure_has_field(structure, "format"))) {
         GstVideoInfo info;
         gst_video_info_init(&info);
         if (!gst_video_info_from_caps(&info, caps))
@@ -138,6 +129,22 @@ bool getVideoSizeAndFormatFromCaps(const GstCaps* caps, WebCore::IntSize& size, 
         pixelAspectRatioNumerator = GST_VIDEO_INFO_PAR_N(&info);
         pixelAspectRatioDenominator = GST_VIDEO_INFO_PAR_D(&info);
         stride = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+    } else {
+        if (areEncryptedCaps(caps))
+            format = GST_VIDEO_FORMAT_ENCODED;
+        else
+            format = GST_VIDEO_FORMAT_UNKNOWN;
+        stride = 0;
+        int width = 0, height = 0;
+        gst_structure_get_int(structure, "width", &width);
+        gst_structure_get_int(structure, "height", &height);
+        if (!gst_structure_get_fraction(structure, "pixel-aspect-ratio", &pixelAspectRatioNumerator, &pixelAspectRatioDenominator)) {
+            pixelAspectRatioNumerator = 1;
+            pixelAspectRatioDenominator = 1;
+        }
+
+        size.setWidth(width);
+        size.setHeight(height);
     }
 
     return true;
@@ -153,12 +160,8 @@ std::optional<FloatSize> getVideoResolutionFromCaps(const GstCaps* caps)
     int width = 0, height = 0;
     int pixelAspectRatioNumerator = 1, pixelAspectRatioDenominator = 1;
 
-    if (areEncryptedCaps(caps)) {
-        GstStructure* structure = gst_caps_get_structure(caps, 0);
-        gst_structure_get_int(structure, "width", &width);
-        gst_structure_get_int(structure, "height", &height);
-        gst_structure_get_fraction(structure, "pixel-aspect-ratio", &pixelAspectRatioNumerator, &pixelAspectRatioDenominator);
-    } else {
+    GstStructure* structure = gst_caps_get_structure(caps, 0);
+    if (!areEncryptedCaps(caps) && (!gst_structure_has_name(structure, "video/x-raw") || gst_structure_has_field(structure, "format"))) {
         GstVideoInfo info;
         gst_video_info_init(&info);
         if (!gst_video_info_from_caps(&info, caps))
@@ -168,6 +171,10 @@ std::optional<FloatSize> getVideoResolutionFromCaps(const GstCaps* caps)
         height = GST_VIDEO_INFO_HEIGHT(&info);
         pixelAspectRatioNumerator = GST_VIDEO_INFO_PAR_N(&info);
         pixelAspectRatioDenominator = GST_VIDEO_INFO_PAR_D(&info);
+    } else {
+        gst_structure_get_int(structure, "width", &width);
+        gst_structure_get_int(structure, "height", &height);
+        gst_structure_get_fraction(structure, "pixel-aspect-ratio", &pixelAspectRatioNumerator, &pixelAspectRatioDenominator);
     }
 
     return std::make_optional(FloatSize(width, height * (static_cast<float>(pixelAspectRatioDenominator) / static_cast<float>(pixelAspectRatioNumerator))));
@@ -645,6 +652,13 @@ static std::optional<RefPtr<JSON::Value>> gstStructureValueToJSON(const GValue* 
     if (valueType == G_TYPE_STRING)
         return JSON::Value::create(makeString(g_value_get_string(value)))->asValue();
 
+#if USE(GSTREAMER_WEBRTC)
+    if (valueType == GST_TYPE_WEBRTC_STATS_TYPE) {
+        GUniquePtr<char> statsType(g_enum_to_string(GST_TYPE_WEBRTC_STATS_TYPE, g_value_get_enum(value)));
+        return JSON::Value::create(makeString(statsType.get()))->asValue();
+    }
+#endif
+
     GST_WARNING("Unhandled GValue type: %s", G_VALUE_TYPE_NAME(value));
     return { };
 }
@@ -676,6 +690,36 @@ String gstStructureToJSONString(const GstStructure* structure)
         return { };
     return value->toJSONString();
 }
+
+#if !GST_CHECK_VERSION(1, 18, 0)
+GstClockTime webkitGstElementGetCurrentRunningTime(GstElement* element)
+{
+    g_return_val_if_fail(GST_IS_ELEMENT(element), GST_CLOCK_TIME_NONE);
+
+    auto baseTime = gst_element_get_base_time(element);
+    if (!GST_CLOCK_TIME_IS_VALID(baseTime)) {
+        GST_DEBUG_OBJECT(element, "Could not determine base time");
+        return GST_CLOCK_TIME_NONE;
+    }
+
+    auto clock = adoptGRef(gst_element_get_clock(element));
+    if (!clock) {
+        GST_DEBUG_OBJECT(element, "Element has no clock");
+        return GST_CLOCK_TIME_NONE;
+    }
+
+    auto clockTime = gst_clock_get_time(clock.get());
+    if (!GST_CLOCK_TIME_IS_VALID(clockTime))
+        return GST_CLOCK_TIME_NONE;
+
+    if (clockTime < baseTime) {
+        GST_DEBUG_OBJECT(element, "Got negative current running time");
+        return GST_CLOCK_TIME_NONE;
+    }
+
+    return clockTime - baseTime;
+}
+#endif
 
 }
 

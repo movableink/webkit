@@ -59,10 +59,36 @@ macro(WEBKIT_OPTION_DEPEND _name _depend)
     list(APPEND _WEBKIT_AVAILABLE_OPTIONS_${_name}_DEPENDENCIES ${_depend})
 endmacro()
 
+# We can't use WEBKIT_OPTION_DEFINE for USE_64KB_PAGE_BLOCK because it's needed to set the default
+# value of other options. Why do we need this option? Because JSC and bmalloc both want to know the
+# userspace page size at compile time, which is impossible on Linux because it's a runtime setting.
+# We cannot test the system page size at build time in hopes that it will be the same on the target
+# system, because (a) cross compiling wouldn't work, and (b) the build system could use a different
+# page size than the target system (which will be true for Fedora aarch64, because Fedora is built
+# using RHEL), so the best we can do is guess based on based on the target CPU architecture. In
+# practice, guessing works for all architectures except aarch64 (unless unusual page sizes are
+# used), but it fails for aarch64 because distros are split between using 4 KB and 64 KB pages
+# there. Most distros (including Fedora) use 4 KB, but enterprise distros support both 4 KB and
+# 64 KB. Since there is no way to guess correctly, the best we can do is provide an option for it.
+# You should probably only use this if building for aarch64.
+option(USE_64KB_PAGE_BLOCK "Support 64 KB userspace page size (reduces security and performance)" OFF)
+
 macro(WEBKIT_OPTION_BEGIN)
     set(_SETTING_WEBKIT_OPTIONS TRUE)
 
-    if (WTF_CPU_ARM64 OR WTF_CPU_X86_64)
+    if (USE_64KB_PAGE_BLOCK)
+        set(ENABLE_JIT_DEFAULT OFF)
+        set(ENABLE_FTL_DEFAULT OFF)
+        set(USE_SYSTEM_MALLOC_DEFAULT ON)
+        if (WTF_CPU_ARM64)
+            set(ENABLE_C_LOOP_DEFAULT OFF)
+            set(ENABLE_SAMPLING_PROFILER_DEFAULT ON)
+        else ()
+            message(WARNING "Building with USE_64KB_PAGE_BLOCK on an architecture other than aarch64 is unusual. Are you sure you want USE_64KB_PAGE_BLOCK?")
+            set(ENABLE_C_LOOP_DEFAULT ON)
+            set(ENABLE_SAMPLING_PROFILER_DEFAULT OFF)
+        endif ()
+    elseif (WTF_CPU_ARM64 OR WTF_CPU_X86_64)
         set(ENABLE_JIT_DEFAULT ON)
         set(ENABLE_FTL_DEFAULT ON)
         set(USE_SYSTEM_MALLOC_DEFAULT OFF)
@@ -112,6 +138,7 @@ macro(WEBKIT_OPTION_BEGIN)
     WEBKIT_OPTION_DEFINE(ENABLE_ATTACHMENT_ELEMENT "Toggle Attachment Element support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_AUTOCAPITALIZE "Toggle autocapitalize support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_AVF_CAPTIONS "Toggle AVFoundation caption support" PRIVATE OFF)
+    WEBKIT_OPTION_DEFINE(ENABLE_BREAKPAD "Toggle breakpad minidump support." PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_BUBBLEWRAP_SANDBOX "Toggle Bubblewrap sandboxing support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_CACHE_PARTITIONING "Toggle cache partitioning support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_CHANNEL_MESSAGING "Toggle Channel Messaging support" PRIVATE ON)
@@ -125,7 +152,6 @@ macro(WEBKIT_OPTION_BEGIN)
     WEBKIT_OPTION_DEFINE(ENABLE_CSS_DEVICE_ADAPTATION "Toggle CSS Device Adaptation support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_CSS_IMAGE_RESOLUTION "Toggle CSS image-resolution support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_CSS_PAINTING_API "Toggle CSS Painting API support" PRIVATE OFF)
-    WEBKIT_OPTION_DEFINE(ENABLE_CSS_SELECTORS_LEVEL4 "Toggle CSS Selectors Level 4 support" PRIVATE ON)
     WEBKIT_OPTION_DEFINE(ENABLE_CSS_TYPED_OM "Toggle CSS Typed OM support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_CURSOR_VISIBILITY "Toggle cursor visibility support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_C_LOOP "Enable CLoop interpreter" PRIVATE ${ENABLE_C_LOOP_DEFAULT})
@@ -159,7 +185,6 @@ macro(WEBKIT_OPTION_BEGIN)
     WEBKIT_OPTION_DEFINE(ENABLE_IOS_TOUCH_EVENTS "Toggle iOS touch events support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_JIT "Toggle JustInTime JavaScript support" PRIVATE ${ENABLE_JIT_DEFAULT})
     WEBKIT_OPTION_DEFINE(ENABLE_LAYER_BASED_SVG_ENGINE "Toggle Layer Based SVG Engine support" PRIVATE OFF)
-    WEBKIT_OPTION_DEFINE(ENABLE_LAYOUT_FORMATTING_CONTEXT "Toggle Layout Formatting Context support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_LLVM_PROFILE_GENERATION "Include LLVM's instrumentation to generate profiles for PGO" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_LEGACY_CUSTOM_PROTOCOL_MANAGER "Toggle legacy protocol manager support" PRIVATE OFF)
     WEBKIT_OPTION_DEFINE(ENABLE_LEGACY_ENCRYPTED_MEDIA "Toggle Legacy EME V2 support" PRIVATE OFF)
@@ -443,3 +468,5 @@ endmacro()
 
 option(ENABLE_EXPERIMENTAL_FEATURES "Enable experimental features" OFF)
 SET_AND_EXPOSE_TO_BUILD(ENABLE_EXPERIMENTAL_FEATURES ${ENABLE_EXPERIMENTAL_FEATURES})
+
+SET_AND_EXPOSE_TO_BUILD(USE_64KB_PAGE_BLOCK ${USE_64KB_PAGE_BLOCK})

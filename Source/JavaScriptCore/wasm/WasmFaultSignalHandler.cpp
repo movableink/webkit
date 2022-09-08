@@ -50,8 +50,6 @@ static constexpr bool verbose = false;
 }
 }
 
-static bool fastHandlerInstalled { false };
-
 #if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
 
 static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegisters& context)
@@ -61,7 +59,7 @@ static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegiste
     auto instructionPointer = MachineContext::instructionPointer(context);
     if (!instructionPointer)
         return SignalAction::NotHandled;
-    void* faultingInstruction = instructionPointer->untaggedExecutableAddress();
+    void* faultingInstruction = instructionPointer->untaggedPtr();
     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "starting handler for fault at: ", RawPointer(faultingInstruction));
 
     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "JIT memory start: ", RawPointer(startOfFixedExecutableMemoryPool()), " end: ", RawPointer(endOfFixedExecutableMemoryPool()));
@@ -107,12 +105,7 @@ static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegiste
 
 #endif // ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
 
-bool fastMemoryEnabled()
-{
-    return fastHandlerInstalled;
-}
-
-void enableFastMemory()
+void activateSignalingMemory()
 {
 #if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
     static std::once_flag once;
@@ -120,17 +113,15 @@ void enableFastMemory()
         if (!Wasm::isSupported())
             return;
 
-        if (!Options::useWebAssemblyFastMemory() && !Options::useSharedArrayBuffer())
+        if (!Options::useWasmFaultSignalHandler())
             return;
 
         activateSignalHandlersFor(Signal::AccessFault);
-
-        fastHandlerInstalled = true;
     });
-#endif
+#endif // ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
 }
 
-void prepareFastMemory()
+void prepareSignalingMemory()
 {
 #if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
     static std::once_flag once;
@@ -138,7 +129,7 @@ void prepareFastMemory()
         if (!Wasm::isSupported())
             return;
 
-        if (!Options::useWebAssemblyFastMemory() && !Options::useSharedArrayBuffer())
+        if (!Options::useWasmFaultSignalHandler())
             return;
 
         addSignalHandler(Signal::AccessFault, [] (Signal signal, SigInfo& sigInfo, PlatformRegisters& ucontext) {

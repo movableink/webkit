@@ -33,6 +33,7 @@
 #include "RangeInputType.h"
 
 #include "Decimal.h"
+#include "DeprecatedGlobalSettings.h"
 #include "DocumentInlines.h"
 #include "ElementChildIterator.h"
 #include "ElementRareData.h"
@@ -45,8 +46,8 @@
 #include "MouseEvent.h"
 #include "PlatformMouseEvent.h"
 #include "RenderSlider.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScopedEventQueue.h"
+#include "ScriptDisallowedScope.h"
 #include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "SliderThumbElement.h"
@@ -259,12 +260,16 @@ void RangeInputType::createShadowSubtree()
     ASSERT(element()->userAgentShadowRoot());
 
     Document& document = element()->document();
+
+    ScriptDisallowedScope::EventAllowedScope eventAllowedScope { *element()->userAgentShadowRoot() };
+
     auto track = HTMLDivElement::create(document);
+    auto container = SliderContainerElement::create(document);
+    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, container);
+    container->appendChild(ContainerNode::ChildChange::Source::Parser, track);
+
     track->setPseudo(ShadowPseudoIds::webkitSliderRunnableTrack());
     track->appendChild(ContainerNode::ChildChange::Source::Parser, SliderThumbElement::create(document));
-    auto container = SliderContainerElement::create(document);
-    container->appendChild(ContainerNode::ChildChange::Source::Parser, track);
-    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, container);
 }
 
 HTMLElement* RangeInputType::sliderTrackElement() const
@@ -375,7 +380,7 @@ String RangeInputType::sanitizeValue(const String& proposedValue) const
 bool RangeInputType::shouldRespectListAttribute()
 {
 #if ENABLE(DATALIST_ELEMENT)
-    return RuntimeEnabledFeatures::sharedFeatures().dataListElementEnabled();
+    return DeprecatedGlobalSettings::dataListElementEnabled();
 #else
     return InputType::themeSupportsDataListUI(this);
 #endif

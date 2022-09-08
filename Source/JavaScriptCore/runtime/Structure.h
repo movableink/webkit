@@ -557,7 +557,7 @@ public:
 
     bool hijacksIndexingHeader() const
     {
-        return isTypedView(m_classInfo->typedArrayStorageType);
+        return isTypedView(m_blob.type());
     }
     
     bool couldHaveIndexingHeader() const
@@ -750,7 +750,7 @@ public:
         return m_transitionWatchpointSet;
     }
     
-    WatchpointSet* ensurePropertyReplacementWatchpointSet(VM&, PropertyOffset);
+    JS_EXPORT_PRIVATE WatchpointSet* ensurePropertyReplacementWatchpointSet(VM&, PropertyOffset);
     void startWatchingPropertyForReplacements(VM& vm, PropertyOffset offset)
     {
         ensurePropertyReplacementWatchpointSet(vm, offset);
@@ -866,7 +866,11 @@ private:
     PropertyOffset attributeChange(VM&, PropertyName, unsigned attributes, const Func&);
     PropertyOffset attributeChange(VM&, PropertyName, unsigned attributes);
 
+#if ASSERT_ENABLED
     void checkConsistency();
+#else
+    ALWAYS_INLINE void checkConsistency() { }
+#endif
 
     // This may grab the lock, or not. Do not call when holding the Structure's lock.
     PropertyTable* ensurePropertyTableIfNotEmpty(VM& vm)

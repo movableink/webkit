@@ -46,7 +46,7 @@ audio {
     direction: ltr;
     flex-direction: row;
     align-items: center;
-    user-select: none;
+    -webkit-user-select: none;
     position: relative;
     bottom: 0;
     width: 100%;
@@ -86,7 +86,7 @@ video:-webkit-full-page-media::-webkit-media-controls-panel {
     align-items: center;
     justify-content: flex-end;
     flex: 1 1;
-    user-select: none;
+    -webkit-user-select: none;
     height: 16px;
     min-width: 0;
 }
@@ -165,7 +165,7 @@ video::-webkit-media-text-track-container {
     text-indent: 0;
     text-decoration: none;
     pointer-events: none;
-    user-select: none;
+    -webkit-user-select: none;
     word-break: break-word;
 
     flex: 1 1;
@@ -175,6 +175,70 @@ video::-webkit-media-text-track-container {
 
 video::cue {
     background-color: rgba(0, 0, 0, 0.8);
+}
+
+video::cue(.white) {
+    color: rgb(255, 255, 255);
+}
+
+video::cue(.lime) {
+    color: rgb(0, 255, 0);
+}
+
+video::cue(.cyan) {
+    color: rgb(0, 255, 255);
+}
+
+video::cue(.red) {
+    color: rgb(255, 0, 0);
+}
+
+video::cue(.yellow) {
+    color: rgb(255, 255, 0);
+}
+
+video::cue(.magenta) {
+    color: rgb(255, 0, 255);
+}
+
+video::cue(.blue) {
+    color: rgb(0, 0, 255);
+}
+
+video::cue(.black) {
+    color: rgb(0, 0, 0);
+}
+
+video::cue(.bg_white) {
+    background-color: rgb(255, 255, 255);
+}
+
+video::cue(.bg_lime) {
+    background-color: rgb(0, 255, 0);
+}
+
+video::cue(.bg_cyan) {
+    background-color: rgb(0, 255, 255);
+}
+
+video::cue(.bg_red) {
+    background-color: rgb(255, 0, 0);
+}
+
+video::cue(.bg_yellow) {
+    background-color: rgb(255, 255, 0);
+}
+
+video::cue(.bg_magenta) {
+    background-color: rgb(255, 0, 255);
+}
+
+video::cue(.bg_blue) {
+    background-color: rgb(0, 0, 255);
+}
+
+video::cue(.bg_black) {
+    background-color: rgb(0, 0, 0);
 }
 
 video::-webkit-media-text-track-region {

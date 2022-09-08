@@ -315,11 +315,13 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
         }
 
         WI.debuggerManager.addEventListener(WI.DebuggerManager.Event.BreakpointAdded, this._handleDebuggerBreakpointAdded, this);
+        WI.debuggerManager.addEventListener(WI.DebuggerManager.Event.SymbolicBreakpointAdded, this._handleDebuggerBreakpointAdded, this);
         WI.domDebuggerManager.addEventListener(WI.DOMDebuggerManager.Event.DOMBreakpointAdded, this._handleDebuggerBreakpointAdded, this);
         WI.domDebuggerManager.addEventListener(WI.DOMDebuggerManager.Event.EventBreakpointAdded, this._handleDebuggerBreakpointAdded, this);
         WI.domDebuggerManager.addEventListener(WI.DOMDebuggerManager.Event.URLBreakpointAdded, this._handleDebuggerBreakpointAdded, this);
 
         WI.debuggerManager.addEventListener(WI.DebuggerManager.Event.BreakpointRemoved, this._handleDebuggerBreakpointRemoved, this);
+        WI.debuggerManager.addEventListener(WI.DebuggerManager.Event.SymbolicBreakpointRemoved, this._handleDebuggerBreakpointRemoved, this);
         WI.domDebuggerManager.addEventListener(WI.DOMDebuggerManager.Event.DOMBreakpointRemoved, this._handleDebuggerBreakpointRemoved, this);
         WI.domDebuggerManager.addEventListener(WI.DOMDebuggerManager.Event.EventBreakpointRemoved, this._handleDebuggerBreakpointRemoved, this);
         WI.domDebuggerManager.addEventListener(WI.DOMDebuggerManager.Event.URLBreakpointRemoved, this._handleDebuggerBreakpointRemoved, this);
@@ -476,11 +478,13 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
         }
 
         WI.debuggerManager.removeEventListener(WI.DebuggerManager.Event.BreakpointAdded, this._handleDebuggerBreakpointAdded, this);
+        WI.debuggerManager.removeEventListener(WI.DebuggerManager.Event.SymbolicBreakpointAdded, this._handleDebuggerBreakpointAdded, this);
         WI.domDebuggerManager.removeEventListener(WI.DOMDebuggerManager.Event.DOMBreakpointAdded, this._handleDebuggerBreakpointAdded, this);
         WI.domDebuggerManager.removeEventListener(WI.DOMDebuggerManager.Event.EventBreakpointAdded, this._handleDebuggerBreakpointAdded, this);
         WI.domDebuggerManager.removeEventListener(WI.DOMDebuggerManager.Event.URLBreakpointAdded, this._handleDebuggerBreakpointAdded, this);
 
         WI.debuggerManager.removeEventListener(WI.DebuggerManager.Event.BreakpointRemoved, this._handleDebuggerBreakpointRemoved, this);
+        WI.debuggerManager.removeEventListener(WI.DebuggerManager.Event.SymbolicBreakpointRemoved, this._handleDebuggerBreakpointRemoved, this);
         WI.domDebuggerManager.removeEventListener(WI.DOMDebuggerManager.Event.DOMBreakpointRemoved, this._handleDebuggerBreakpointRemoved, this);
         WI.domDebuggerManager.removeEventListener(WI.DOMDebuggerManager.Event.EventBreakpointRemoved, this._handleDebuggerBreakpointRemoved, this);
         WI.domDebuggerManager.removeEventListener(WI.DOMDebuggerManager.Event.URLBreakpointRemoved, this._handleDebuggerBreakpointRemoved, this);
@@ -706,7 +710,7 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
                 continue;
             }
 
-            if (treeElement.isAsyncBoundaryCallFrame)
+            if (treeElement.isAsyncBoundaryCallFrame || treeElement.isTruncatedBoundaryCallFrame)
                 asyncBoundary = treeElement.mainTitle;
 
             if (!selectedTreeElements.has(treeElement))
@@ -851,7 +855,12 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
             return;
         }
 
-        console.assert();
+        if (popover instanceof WI.SymbolicBreakpointPopover) {
+            this._willDismissSymbolicBreakpointPopover(popover);
+            return;
+        }
+
+        console.assert(false, "not reached", popover);
     }
 
     // Private
@@ -899,6 +908,18 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
         }
 
         if (!WI.domDebuggerManager.addURLBreakpoint(breakpoint))
+            InspectorFrontendHost.beep();
+    }
+
+    _willDismissSymbolicBreakpointPopover(popover)
+    {
+        let breakpoint = popover.breakpoint;
+        if (!breakpoint) {
+            InspectorFrontendHost.beep();
+            return;
+        }
+
+        if (!WI.debuggerManager.addSymbolicBreakpoint(breakpoint))
             InspectorFrontendHost.beep();
     }
 
@@ -1261,7 +1282,8 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
                 (treeElement) => treeElement.representedObject === WI.debuggerManager.allExceptionsBreakpoint,
                 (treeElement) => treeElement.representedObject === WI.debuggerManager.uncaughtExceptionsBreakpoint,
                 (treeElement) => treeElement.representedObject === WI.debuggerManager.assertionFailuresBreakpoint,
-                (treeElement) => treeElement instanceof WI.JavaScriptBreakpointTreeElement || treeElement instanceof WI.ResourceTreeElement || treeElement instanceof WI.ScriptTreeElement,
+                (treeElement) => treeElement instanceof WI.ResourceTreeElement || treeElement instanceof WI.ScriptTreeElement || (treeElement instanceof WI.JavaScriptBreakpointTreeElement && !treeElement.representedObject.special),
+                (treeElement) => treeElement instanceof WI.SymbolicBreakpointTreeElement,
                 (treeElement) => treeElement.representedObject === WI.debuggerManager.allMicrotasksBreakpoint,
                 (treeElement) => treeElement.representedObject === WI.domDebuggerManager.allAnimationFramesBreakpoint,
                 (treeElement) => treeElement.representedObject === WI.domDebuggerManager.allTimeoutsBreakpoint,
@@ -1363,6 +1385,8 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
             }
         } else if (breakpoint instanceof WI.URLBreakpoint)
             constructor = WI.URLBreakpointTreeElement;
+        else if (breakpoint instanceof WI.SymbolicBreakpoint)
+            constructor = WI.SymbolicBreakpointTreeElement;
         else {
             let sourceCode = breakpoint.sourceCodeLocation && breakpoint.sourceCodeLocation.displaySourceCode;
             if (!sourceCode)
@@ -1585,31 +1609,24 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
     _updatePauseReasonSection(target, pauseReason, pauseData)
     {
         switch (pauseReason) {
-        case WI.DebuggerManager.PauseReason.AnimationFrame: {
-            this._pauseReasonTreeOutline = this.createContentTreeOutline({suppressFiltering: true});
-
-            let eventBreakpointTreeElement = new WI.EventBreakpointTreeElement(WI.domDebuggerManager.allAnimationFramesBreakpoint, {
-                classNames: ["paused"],
-                title: WI.UIString("requestAnimationFrame Fired"),
-            });
-            this._pauseReasonTreeOutline.appendChild(eventBreakpointTreeElement);
-
-            let eventBreakpointRow = new WI.DetailsSectionRow;
-            eventBreakpointRow.element.appendChild(this._pauseReasonTreeOutline.element);
-
-            this._pauseReasonGroup.rows = [eventBreakpointRow];
+        case WI.DebuggerManager.PauseReason.AnimationFrame:
+            if (!this._updatePauseReasonForBreakpoint(WI.domDebuggerManager.allAnimationFramesBreakpoint, WI.UIString("requestAnimationFrame Fired"))) {
+                console.assert(false, "not reached");
+                break;
+            }
             return true;
-        }
 
-        case WI.DebuggerManager.PauseReason.Assertion:
+        case WI.DebuggerManager.PauseReason.Assertion: {
             // FIXME: We should include the assertion condition string.
             console.assert(pauseData, "Expected data with an assertion, but found none.");
-            if (pauseData && pauseData.message)
-                this._pauseReasonTextRow.text = WI.UIString("Assertion with message: %s").format(pauseData.message);
-            else
-                this._pauseReasonTextRow.text = WI.UIString("Assertion Failed");
-            this._pauseReasonGroup.rows = [this._pauseReasonTextRow];
+
+            let title = pauseData?.message ? this._createBreakpointPauseReasonTitleWithTooltip(WI.UIString("Assertion Failed: %s"), pauseData.message) : WI.UIString("Assertion Failed");
+            if (!this._updatePauseReasonForBreakpoint(WI.debuggerManager.assertionFailuresBreakpoint, title)) {
+                console.assert(false, "not reached");
+                break;
+            }
             return true;
+        }
 
         case WI.DebuggerManager.PauseReason.BlackboxedScript: {
             console.assert(pauseData);
@@ -1630,34 +1647,43 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
             if (!pauseData || !pauseData.breakpointId)
                 break;
 
-            this._pauseReasonTreeOutline = this.createContentTreeOutline({suppressFiltering: true});
-            this._pauseReasonTreeOutline.addEventListener(WI.TreeOutline.Event.SelectionDidChange, this._handleTreeSelectionDidChange, this);
-
             let breakpoint = WI.debuggerManager.breakpointForIdentifier(pauseData.breakpointId);
-            let breakpointTreeElement = new WI.JavaScriptBreakpointTreeElement(breakpoint, {
-                classNames: ["paused"],
-                title: WI.UIString("Triggered Breakpoint"),
-            });
-            let breakpointDetailsSection = new WI.DetailsSectionRow;
-            this._pauseReasonTreeOutline.appendChild(breakpointTreeElement);
-            breakpointDetailsSection.element.appendChild(this._pauseReasonTreeOutline.element);
+            console.assert(breakpoint, pauseData.breakpointId);
+            if (!breakpoint)
+                break;
 
-            this._pauseReasonGroup.rows = [breakpointDetailsSection];
+            if (!this._updatePauseReasonForBreakpoint(breakpoint, WI.UIString("Triggered Breakpoint"))) {
+                console.assert(false, "not reached");
+                break;
+            }
             return true;
         }
 
-        case WI.DebuggerManager.PauseReason.CSPViolation:
+        case WI.DebuggerManager.PauseReason.CSPViolation: {
             console.assert(pauseData, "Expected data with a CSP Violation, but found none.");
             if (!pauseData)
                 break;
 
-            this._pauseReasonTextRow.text = WI.UIString("Content Security Policy violation of directive: %s").format(pauseData.directive);
-            this._pauseReasonGroup.rows = [this._pauseReasonTextRow];
+            let breakpoint = WI.debuggerManager.allExceptionsBreakpoint || WI.debuggerManager.uncaughtExceptionsBreakpoint;
+            let titleElement = this._createBreakpointPauseReasonTitleWithTooltip(WI.UIString("Content Security Policy violation of directive: %s"), pauseData.directive);
+            if (!this._updatePauseReasonForBreakpoint(breakpoint, titleElement)) {
+                console.assert(false, "not reached");
+                break;
+            }
             return true;
+        }
 
         case WI.DebuggerManager.PauseReason.DebuggerStatement:
-            this._pauseReasonTextRow.text = WI.UIString("Debugger Statement");
-            this._pauseReasonGroup.rows = [this._pauseReasonTextRow];
+            if (!WI.JavaScriptBreakpoint.supportsDebuggerStatements()) {
+                this._pauseReasonTextRow.text = WI.UIString("Debugger Statement");
+                this._pauseReasonGroup.rows = [this._pauseReasonTextRow];
+                return true;
+            }
+
+            if (!this._updatePauseReasonForBreakpoint(WI.debuggerManager.debuggerStatementsBreakpoint, WI.UIString("Debugger Statement"))) {
+                console.assert(false, "not reached");
+                break;
+            }
             return true;
 
         case WI.DebuggerManager.PauseReason.DOM: {
@@ -1680,19 +1706,13 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
             if (!domBreakpoint)
                 break;
 
-            this._pauseReasonTreeOutline = this.createContentTreeOutline({suppressFiltering: true});
-
-            let type = WI.DOMBreakpoint.displayNameForType(domBreakpoint.type);
-            let domBreakpointTreeElement = new WI.DOMBreakpointTreeElement(domBreakpoint, {
-                classNames: ["paused"],
-                title: type,
-            });
-            let domBreakpointRow = new WI.DetailsSectionRow;
-            this._pauseReasonTreeOutline.appendChild(domBreakpointTreeElement);
-            domBreakpointRow.element.appendChild(this._pauseReasonTreeOutline.element);
+            if (!this._updatePauseReasonForBreakpoint(domBreakpoint, WI.DOMBreakpoint.displayNameForType(domBreakpoint.type))) {
+                console.assert(false, "not reached");
+                break;
+            }
 
             let ownerElementRow = new WI.DetailsSectionSimpleRow(WI.UIString("Element"), WI.linkifyNodeReference(domNode));
-            this._pauseReasonGroup.rows = [domBreakpointRow, ownerElementRow];
+            this._pauseReasonGroup.rows = this._pauseReasonGroup.rows.concat(ownerElementRow);
 
             let updateTargetDescription = (nodeId) => {
                 if (!nodeId)
@@ -1752,18 +1772,11 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
             if (!eventBreakpoint)
                 break;
 
-            this._pauseReasonTreeOutline = this.createContentTreeOutline({suppressFiltering: true});
-
-            let eventBreakpointTreeElement = new WI.EventBreakpointTreeElement(eventBreakpoint, {
-                classNames: ["paused"],
-                title: WI.UIString("\u201C%s\u201D Event Fired").format(pauseData.eventName),
-            });
-            this._pauseReasonTreeOutline.appendChild(eventBreakpointTreeElement);
-
-            let eventBreakpointRow = new WI.DetailsSectionRow;
-            eventBreakpointRow.element.appendChild(this._pauseReasonTreeOutline.element);
-
-            let rows = [eventBreakpointRow];
+            let titleElement = this._createBreakpointPauseReasonTitleWithTooltip(WI.UIString("\u201C%s\u201D Event Fired"), pauseData.eventName);
+            if (!this._updatePauseReasonForBreakpoint(eventBreakpoint, titleElement)) {
+                console.assert(false, "not reached");
+                break;
+            }
 
             let eventListener = eventBreakpoint.eventListener;
             if (eventListener) {
@@ -1775,10 +1788,9 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
                 else if (eventListener.node)
                     value = WI.linkifyNodeReference(eventListener.node);
                 if (value)
-                    rows.push(new WI.DetailsSectionSimpleRow(WI.UIString("Target"), value));
+                    this._pauseReasonGroup.rows = this._pauseReasonGroup.rows.concat(new WI.DetailsSectionSimpleRow(WI.UIString("Target"), value));
             }
 
-            this._pauseReasonGroup.rows = rows;
             return true;
         }
 
@@ -1789,30 +1801,47 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
 
             // FIXME: We should improve the appearance of thrown objects. This works well for exception strings.
             let data = WI.RemoteObject.fromPayload(pauseData, target);
-            this._pauseReasonTextRow.text = WI.UIString("Exception with thrown value: %s").format(data.description);
-            this._pauseReasonGroup.rows = [this._pauseReasonTextRow];
+
+            let breakpoint = WI.debuggerManager.allExceptionsBreakpoint || WI.debuggerManager.uncaughtExceptionsBreakpoint;
+            let titleElement = this._createBreakpointPauseReasonTitleWithTooltip(WI.UIString("Exception with thrown value: %s"), data.description);
+            if (!this._updatePauseReasonForBreakpoint(breakpoint, titleElement)) {
+                console.assert(false, "not reached");
+                break;
+            }
             return true;
         }
 
-        case WI.DebuggerManager.PauseReason.Interval: {
-            this._pauseReasonTreeOutline = this.createContentTreeOutline({suppressFiltering: true});
+        case WI.DebuggerManager.PauseReason.FunctionCall: {
+            console.assert(pauseData, "Expected data with an event listener, but found none.");
+            if (!pauseData)
+                break;
 
-            let eventBreakpointTreeElement = new WI.EventBreakpointTreeElement(WI.domDebuggerManager.allIntervalsBreakpoint, {
-                classNames: ["paused"],
-                title: WI.UIString("setInterval Fired"),
-            });
-            this._pauseReasonTreeOutline.appendChild(eventBreakpointTreeElement);
+            let symbolicBreakpoint = WI.debuggerManager.symbolicBreakpointsForSymbol(pauseData.name)[0];
+            console.assert(symbolicBreakpoint, "Expected Symbolic breakpoint for function name.", pauseData.name);
+            if (!symbolicBreakpoint)
+                break;
 
-            let eventBreakpointRow = new WI.DetailsSectionRow;
-            eventBreakpointRow.element.appendChild(this._pauseReasonTreeOutline.element);
-
-            this._pauseReasonGroup.rows = [eventBreakpointRow];
+            const format = WI.UIString("Calling Function \u201C%s\u201D", "Calling Function \u201C%s\u201D @ Sources Navigation Sidebar Panel", "Label shown when JavaScript execution is paused due to a symbolic breakpoint.");
+            let titleElement = this._createBreakpointPauseReasonTitleWithTooltip(format, pauseData.name);
+            if (!this._updatePauseReasonForBreakpoint(symbolicBreakpoint, titleElement)) {
+                console.assert(false, "not reached");
+                break;
+            }
             return true;
         }
+
+        case WI.DebuggerManager.PauseReason.Interval:
+            if (!this._updatePauseReasonForBreakpoint(WI.debuggerManager.allIntervalsBreakpoint, WI.UIString("setInterval Fired"))) {
+                console.assert(false, "not reached");
+                break;
+            }
+            return true;
 
         case WI.DebuggerManager.PauseReason.Microtask:
-            this._pauseReasonTextRow.text = WI.UIString("Microtask Fired");
-            this._pauseReasonGroup.rows = [this._pauseReasonTextRow];
+            if (!this._updatePauseReasonForBreakpoint(WI.debuggerManager.allMicrotasksBreakpoint, WI.UIString("Microtask Fired"))) {
+                console.assert(false, "not reached");
+                break;
+            }
             return true;
 
         case WI.DebuggerManager.PauseReason.PauseOnNextStatement:
@@ -1825,50 +1854,25 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
             if (!pauseData)
                 break;
 
-            let eventBreakpoint = null;
             switch (pauseData.eventName) {
             case "setTimeout":
-                eventBreakpoint = WI.domDebuggerManager.allTimeoutsBreakpoint;
-                break;
+                if (!this._updatePauseReasonForBreakpoint(WI.domDebuggerManager.allTimeoutsBreakpoint, WI.UIString("setTimeout Fired")))
+                    break;
+                return true;
 
             case "setInterval":
-                eventBreakpoint = WI.domDebuggerManager.allIntervalsBreakpoint;
-                break;
+                if (!this._updatePauseReasonForBreakpoint(WI.domDebuggerManager.allIntervalsBreakpoint, WI.UIString("setInterval Fired")))
+                    break;
+                return true;
             }
-            console.assert(eventBreakpoint, "Expected Timer breakpoint for event name.", pauseData.eventName);
-            if (!eventBreakpoint)
-                break;
 
-            this._pauseReasonTreeOutline = this.createContentTreeOutline({suppressFiltering: true});
-
-            let eventBreakpointTreeElement = new WI.EventBreakpointTreeElement(eventBreakpoint, {
-                classNames: ["paused"],
-                title: WI.UIString("%s Fired").format(pauseData.eventName),
-            });
-            this._pauseReasonTreeOutline.appendChild(eventBreakpointTreeElement);
-
-            let eventBreakpointRow = new WI.DetailsSectionRow;
-            eventBreakpointRow.element.appendChild(this._pauseReasonTreeOutline.element);
-
-            this._pauseReasonGroup.rows = [eventBreakpointRow];
-            return true;
+            console.assert(false, "not reached");
+            break;
         }
 
-        case WI.DebuggerManager.PauseReason.Timeout: {
-            this._pauseReasonTreeOutline = this.createContentTreeOutline({suppressFiltering: true});
-
-            let eventBreakpointTreeElement = new WI.EventBreakpointTreeElement(WI.domDebuggerManager.allTimeoutsBreakpoint, {
-                classNames: ["paused"],
-                title: WI.UIString("setTimeout Fired"),
-            });
-            this._pauseReasonTreeOutline.appendChild(eventBreakpointTreeElement);
-
-            let eventBreakpointRow = new WI.DetailsSectionRow;
-            eventBreakpointRow.element.appendChild(this._pauseReasonTreeOutline.element);
-
-            this._pauseReasonGroup.rows = [eventBreakpointRow];
+        case WI.DebuggerManager.PauseReason.Timeout:
+            this._updatePauseReasonForBreakpoint(WI.domDebuggerManager.allTimeoutsBreakpoint, WI.UIString("setTimeout Fired"));
             return true;
-        }
 
         case WI.DebuggerManager.PauseReason.Fetch:
         case WI.DebuggerManager.PauseReason.XHR: {
@@ -1877,28 +1881,22 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
             if (!pauseData)
                 break;
 
-            if (pauseData.breakpointURL) {
-                let urlBreakpoint = WI.domDebuggerManager.urlBreakpointForURL(pauseData.breakpointURL);
-                console.assert(urlBreakpoint, "Expected URL breakpoint for URL.", pauseData.breakpointURL);
-
-                this._pauseReasonTreeOutline = this.createContentTreeOutline({suppressFiltering: true});
-
-                let urlBreakpointTreeElement = new WI.URLBreakpointTreeElement(urlBreakpoint, {
-                    classNames: ["paused"],
-                    title: WI.UIString("Triggered URL Breakpoint"),
-                });
-                let urlBreakpointRow = new WI.DetailsSectionRow;
-                this._pauseReasonTreeOutline.appendChild(urlBreakpointTreeElement);
-                urlBreakpointRow.element.appendChild(this._pauseReasonTreeOutline.element);
-
-                this._pauseReasonTextRow.text = pauseData.url;
-                this._pauseReasonGroup.rows = [urlBreakpointRow, this._pauseReasonTextRow];
-            } else {
+            let urlBreakpoint = null;
+            if (pauseData.breakpointURL)
+                urlBreakpoint = WI.domDebuggerManager.urlBreakpointForURL(pauseData.breakpointURL);
+            else {
                 console.assert(pauseData.breakpointURL === "", "Should be the All Requests breakpoint which has an empty URL");
-                this._pauseReasonTextRow.text = WI.UIString("Requesting: %s").format(pauseData.url);
-                this._pauseReasonGroup.rows = [this._pauseReasonTextRow];
+                urlBreakpoint = WI.domDebuggerManager.allRequestsBreakpoint;
             }
-            this._pauseReasonTextRow.element.title = pauseData.url;
+            console.assert(urlBreakpoint, pauseData.breakpointURL);
+            if (!urlBreakpoint)
+                break;
+
+            let titleElement = this._createBreakpointPauseReasonTitleWithTooltip(WI.UIString("Requesting \u201C%s\u201D"), pauseData.url);
+            if (!this._updatePauseReasonForBreakpoint(urlBreakpoint, titleElement)) {
+                console.assert(false, "not reached");
+                break;
+            }
             return true;
         }
 
@@ -1908,6 +1906,48 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
         }
 
         return false;
+    }
+
+    _updatePauseReasonForBreakpoint(breakpoint, title)
+    {
+        let Constructor = null;
+        if (breakpoint instanceof WI.JavaScriptBreakpoint)
+            Constructor = WI.JavaScriptBreakpointTreeElement;
+        else if (breakpoint instanceof WI.DOMBreakpoint)
+            Constructor = WI.DOMBreakpointTreeElement;
+        else if (breakpoint instanceof WI.EventBreakpoint)
+            Constructor = WI.EventBreakpointTreeElement;
+        else if (breakpoint instanceof WI.URLBreakpoint)
+            Constructor = WI.URLBreakpointTreeElement;
+        else if (breakpoint instanceof WI.SymbolicBreakpoint)
+            Constructor = WI.SymbolicBreakpointTreeElement;
+        console.assert(Constructor);
+        if (!Constructor)
+            return false;
+
+        this._pauseReasonTreeOutline = this.createContentTreeOutline({suppressFiltering: true});
+        this._pauseReasonTreeOutline.addEventListener(WI.TreeOutline.Event.SelectionDidChange, this._handleTreeSelectionDidChange, this);
+
+        let breakpointTreeElement = new Constructor(breakpoint, {
+            classNames: ["paused"],
+            title,
+        })
+        this._pauseReasonTreeOutline.appendChild(breakpointTreeElement);
+
+        let breakpointRow = new WI.DetailsSectionRow;
+        breakpointRow.element.appendChild(this._pauseReasonTreeOutline.element);
+
+        this._pauseReasonGroup.rows = [breakpointRow];
+
+        return true;
+    }
+
+    _createBreakpointPauseReasonTitleWithTooltip(format, title)
+    {
+        let titleElement = document.createElement("span");
+        titleElement.textContent = format.format(title);
+        titleElement.title = title;
+        return titleElement;
     }
 
     _handleResourceGroupingModeScopeBarSelectionChanged(event)
@@ -1934,7 +1974,8 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
         if (treeElement instanceof WI.DOMNodeTreeElement
             || treeElement instanceof WI.DOMBreakpointTreeElement
             || treeElement instanceof WI.EventBreakpointTreeElement
-            || treeElement instanceof WI.URLBreakpointTreeElement)
+            || treeElement instanceof WI.URLBreakpointTreeElement
+            || treeElement instanceof WI.SymbolicBreakpointTreeElement)
             return;
 
         if (treeElement.representedObject === SourcesNavigationSidebarPanel.__windowEventTargetRepresentedObject)
@@ -2039,6 +2080,15 @@ WI.SourcesNavigationSidebarPanel = class SourcesNavigationSidebarPanel extends W
                 else
                     callback();
             }, !!breakpoint);
+        }
+
+        if (WI.SymbolicBreakpoint.supported()) {
+            contextMenu.appendItem(WI.UIString("Symbolic Breakpoint\u2026", "Symbolic Breakpoint\u2026 @ Sources Navigation Sidebar Panel", "Context menu item for creating a new symbolic breakpoint."), () => {
+                let popover = new WI.SymbolicBreakpointPopover(this);
+                popover.show(this._createBreakpointButton.element, [WI.RectEdge.MAX_Y, WI.RectEdge.MIN_Y, WI.RectEdge.MAX_X]);
+            });
+
+            contextMenu.appendSeparator();
         }
 
         addToggleForSpecialBreakpoint(WI.repeatedUIString.assertionFailures(), WI.debuggerManager.assertionFailuresBreakpoint, () => {

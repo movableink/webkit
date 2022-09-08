@@ -19,7 +19,7 @@ using namespace angle;
 namespace
 {
 
-class RobustBufferAccessBehaviorTest : public ANGLETest
+class RobustBufferAccessBehaviorTest : public ANGLETest<>
 {
   protected:
     RobustBufferAccessBehaviorTest()
@@ -46,7 +46,9 @@ class RobustBufferAccessBehaviorTest : public ANGLETest
 
         Library *driverLib = ANGLETestEnvironment::GetDriverLibrary(GLESDriverType::AngleEGL);
 
-        mEGLWindow = EGLWindow::New(GetParam().majorVersion, GetParam().minorVersion);
+        const PlatformParameters &params = GetParam();
+        mEGLWindow = EGLWindow::New(params.clientType, params.majorVersion, params.minorVersion,
+                                    params.profileMask);
         if (!mEGLWindow->initializeDisplay(mOSWindow, driverLib, GLESDriverType::AngleEGL,
                                            GetParam().eglParameters))
         {

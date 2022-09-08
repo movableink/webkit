@@ -40,9 +40,10 @@ namespace JSC {
 
 ALWAYS_INLINE bool JSGlobalObject::objectPrototypeIsSaneConcurrently(Structure* objectPrototypeStructure)
 {
-    return !hasIndexedProperties(objectPrototypeStructure->indexingType())
-        && objectPrototypeStructure->hasMonoProto()
-        && objectPrototypeStructure->storedPrototype().isNull();
+    ASSERT(objectPrototypeStructure->typeInfo().isImmutablePrototypeExoticObject());
+    ASSERT(objectPrototypeStructure->storedPrototype().isNull());
+
+    return !hasIndexedProperties(objectPrototypeStructure->indexingType());
 }
 
 ALWAYS_INLINE bool JSGlobalObject::arrayPrototypeChainIsSaneConcurrently(Structure* arrayPrototypeStructure, Structure* objectPrototypeStructure)
@@ -90,6 +91,31 @@ ALWAYS_INLINE bool JSGlobalObject::isArrayPrototypeIteratorProtocolFastAndNonObs
     return arrayIteratorProtocolWatchpointSet().isStillValid() && !isHavingABadTime() && arrayPrototypeChainIsSane();
 }
 
+ALWAYS_INLINE bool JSGlobalObject::isTypedArrayPrototypeIteratorProtocolFastAndNonObservable(TypedArrayType typedArrayType)
+{
+    ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
+
+    typedArrayPrototype(typedArrayType); // Materialize WatchpointSet.
+
+    // Since TypedArray iteration uses ArrayIterator, we need to check the state of ArrayIteratorProtocolWatchpointSet.
+    // But we do not need to check isHavingABadTime() and array prototype's chain.
+    if (!arrayIteratorProtocolWatchpointSet().isStillValid())
+        return false;
+
+    // This WatchpointSet ensures that
+    //     1. "length" getter is absent on derived TypedArray prototype (e.g. Uint8Array.prototype).
+    //     2. @@iterator function is absent on derived TypedArray prototype.
+    //     3. derived TypedArray prototype's [[Prototype]] is TypedArray.prototype.
+    if (typedArrayIteratorProtocolWatchpointSet(typedArrayType).state() != IsWatched)
+        return false;
+
+    // This WatchpointSet ensures that TypedArray.prototype has default "length" getter and @@iterator function.
+    if (typedArrayPrototypeIteratorProtocolWatchpointSet().state() != IsWatched)
+        return false;
+
+    return true;
+}
+
 // We're non-observable if the iteration protocol hasn't changed.
 //
 // Note: it only makes sense to call this from the main thread. If you're
@@ -133,6 +159,7 @@ ALWAYS_INLINE Structure* JSGlobalObject::arrayStructureForIndexingTypeDuringAllo
 }
 
 inline JSFunction* JSGlobalObject::throwTypeErrorFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::throwTypeErrorFunction)); }
+inline JSFunction* JSGlobalObject::iteratorProtocolFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performIteration)); }
 inline JSFunction* JSGlobalObject::newPromiseCapabilityFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::newPromiseCapability)); }
 inline JSFunction* JSGlobalObject::resolvePromiseFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::resolvePromise)); }
 inline JSFunction* JSGlobalObject::rejectPromiseFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::rejectPromise)); }

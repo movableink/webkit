@@ -197,6 +197,9 @@ bool isValidContextMenuAction(ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemPDFZoomOut:
     case ContextMenuAction::ContextMenuItemPDFAutoSize:
     case ContextMenuAction::ContextMenuItemPDFSinglePage:
+    case ContextMenuAction::ContextMenuItemPDFSinglePageContinuous:
+    case ContextMenuAction::ContextMenuItemPDFTwoPages:
+    case ContextMenuAction::ContextMenuItemPDFTwoPagesContinuous:
     case ContextMenuAction::ContextMenuItemPDFFacingPages:
     case ContextMenuAction::ContextMenuItemPDFContinuous:
     case ContextMenuAction::ContextMenuItemPDFNextPage:
@@ -252,6 +255,7 @@ bool isValidContextMenuAction(ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemTagCopyMediaLinkToClipboard:
     case ContextMenuAction::ContextMenuItemTagToggleMediaControls:
     case ContextMenuAction::ContextMenuItemTagToggleMediaLoop:
+    case ContextMenuAction::ContextMenuItemTagShowMediaStats:
     case ContextMenuAction::ContextMenuItemTagEnterVideoFullscreen:
     case ContextMenuAction::ContextMenuItemTagMediaPlayPause:
     case ContextMenuAction::ContextMenuItemTagMediaMute:

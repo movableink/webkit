@@ -121,6 +121,10 @@ void InitExtensionBehavior(const ShBuiltInResources &resources, TExtensionBehavi
     {
         extBehavior[TExtension::OES_texture_3D] = EBhUndefined;
     }
+    if (resources.ANGLE_shader_pixel_local_storage)
+    {
+        extBehavior[TExtension::ANGLE_shader_pixel_local_storage] = EBhUndefined;
+    }
     if (resources.ANGLE_texture_multisample)
     {
         extBehavior[TExtension::ANGLE_texture_multisample] = EBhUndefined;
@@ -193,7 +197,7 @@ void InitExtensionBehavior(const ShBuiltInResources &resources, TExtensionBehavi
 
 void ResetExtensionBehavior(const ShBuiltInResources &resources,
                             TExtensionBehavior &extBehavior,
-                            const ShCompileOptions compileOptions)
+                            const ShCompileOptions &compileOptions)
 {
     for (auto &ext : extBehavior)
     {
@@ -201,7 +205,7 @@ void ResetExtensionBehavior(const ShBuiltInResources &resources,
     }
     if (resources.ARB_texture_rectangle)
     {
-        if ((compileOptions & SH_DISABLE_ARB_TEXTURE_RECTANGLE) != 0)
+        if (compileOptions.disableARBTextureRectangle)
         {
             // Remove ARB_texture_rectangle so it can't be enabled by extension directives.
             extBehavior.erase(TExtension::ARB_texture_rectangle);

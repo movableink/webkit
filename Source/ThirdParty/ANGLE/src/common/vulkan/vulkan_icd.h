@@ -33,7 +33,7 @@ struct SimpleDisplayWindow
     uint16_t height;
 };
 
-class ANGLE_NO_DISCARD ScopedVkLoaderEnvironment : angle::NonCopyable
+class [[nodiscard]] ScopedVkLoaderEnvironment : angle::NonCopyable
 {
   public:
     ScopedVkLoaderEnvironment(bool enableValidationLayers, vk::ICD icd);
@@ -60,6 +60,8 @@ class ANGLE_NO_DISCARD ScopedVkLoaderEnvironment : angle::NonCopyable
 void ChoosePhysicalDevice(PFN_vkGetPhysicalDeviceProperties pGetPhysicalDeviceProperties,
                           const std::vector<VkPhysicalDevice> &physicalDevices,
                           vk::ICD preferredICD,
+                          uint32_t preferredVendorID,
+                          uint32_t preferredDeviceID,
                           VkPhysicalDevice *physicalDeviceOut,
                           VkPhysicalDeviceProperties *physicalDevicePropertiesOut);
 

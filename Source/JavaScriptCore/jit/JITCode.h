@@ -67,7 +67,6 @@ static_assert(WTF::getMSBSetConstexpr(static_cast<std::underlying_type_t<JITType
 
 class JITCode : public ThreadSafeRefCounted<JITCode> {
 public:
-    template<PtrTag tag> using CodePtr = MacroAssemblerCodePtr<tag>;
     template<PtrTag tag> using CodeRef = MacroAssemblerCodeRef<tag>;
 
     static ASCIILiteral typeName(JITType);
@@ -162,6 +161,9 @@ public:
     }
 
     virtual const DOMJIT::Signature* signature() const { return nullptr; }
+
+    virtual bool canSwapCodeRefForDebugger() const { return false; }
+    virtual CodeRef<JSEntryPtrTag> swapCodeRefForDebugger(CodeRef<JSEntryPtrTag>);
     
     enum class ShareAttribute : uint8_t {
         NotShared,
@@ -247,6 +249,8 @@ public:
     size_t size() override;
     bool contains(void*) override;
 
+    CodeRef<JSEntryPtrTag> swapCodeRefForDebugger(CodeRef<JSEntryPtrTag>) override;
+
 protected:
     CodeRef<JSEntryPtrTag> m_ref;
 };
@@ -276,6 +280,8 @@ public:
     ~NativeJITCode() override;
 
     CodePtr<JSEntryPtrTag> addressForCall(ArityCheckMode) override;
+
+    bool canSwapCodeRefForDebugger() const override { return true; }
 };
 
 class NativeDOMJITCode final : public NativeJITCode {

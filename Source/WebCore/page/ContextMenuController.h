@@ -58,7 +58,7 @@ public:
     void populate();
     WEBCORE_EXPORT void didDismissContextMenu();
     WEBCORE_EXPORT void contextMenuItemSelected(ContextMenuAction, const String& title);
-    void addInspectElementItem();
+    void addDebuggingItems();
 
     WEBCORE_EXPORT void checkOrEnableIfNeeded(ContextMenuItem&) const;
 
@@ -91,6 +91,10 @@ private:
     void createAndAppendTransformationsSubMenu(ContextMenuItem&);
 #if PLATFORM(GTK)
     void createAndAppendUnicodeSubMenu(ContextMenuItem&);
+#endif
+
+#if ENABLE(PDFJS)
+    void performPDFJSAction(Frame&, const String& action);
 #endif
 
     Page& m_page;

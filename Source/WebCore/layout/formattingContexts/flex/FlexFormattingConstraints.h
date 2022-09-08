@@ -25,25 +25,26 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FormattingConstraints.h"
 
 namespace WebCore {
 namespace Layout {
 
 struct ConstraintsForFlexContent : public ConstraintsForInFlowContent {
-    ConstraintsForFlexContent(const ConstraintsForInFlowContent&, std::optional<LayoutUnit> availableVerticalSpace);
+    ConstraintsForFlexContent(const ConstraintsForInFlowContent&, std::optional<LayoutUnit> availableVerticalSpace, std::optional<LayoutUnit> minimumVerticalSpace);
 
     std::optional<LayoutUnit> availableVerticalSpace() const { return m_availableVerticalSpace; }
+    std::optional<LayoutUnit> minimumVerticalSpace() const { return m_minimumVerticalSpace; }
 
 private:
     std::optional<LayoutUnit> m_availableVerticalSpace;
+    std::optional<LayoutUnit> m_minimumVerticalSpace;
 };
 
-inline ConstraintsForFlexContent::ConstraintsForFlexContent(const ConstraintsForInFlowContent& genericContraints, std::optional<LayoutUnit> availableVerticalSpace)
+inline ConstraintsForFlexContent::ConstraintsForFlexContent(const ConstraintsForInFlowContent& genericContraints, std::optional<LayoutUnit> availableVerticalSpace, std::optional<LayoutUnit> minimumVerticalSpace)
     : ConstraintsForInFlowContent(genericContraints.horizontal(), genericContraints.logicalTop(), FlexContent)
     , m_availableVerticalSpace(availableVerticalSpace)
+    , m_minimumVerticalSpace(minimumVerticalSpace)
 {
 }
 
@@ -52,4 +53,3 @@ inline ConstraintsForFlexContent::ConstraintsForFlexContent(const ConstraintsFor
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_CONSTRAINTS(ConstraintsForFlexContent, isConstraintsForFlexContent())
 
-#endif

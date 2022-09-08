@@ -328,6 +328,9 @@ public:
     void setCustomUserAgent(const String& customUserAgent) { m_customUserAgent = customUserAgent; }
     const String& customUserAgent() const { return m_customUserAgent; }
 
+    void setAllowPrivacyProxy(bool allow) { m_allowPrivacyProxy = allow; }
+    bool allowPrivacyProxy() const { return m_allowPrivacyProxy; }
+
     void setCustomUserAgentAsSiteSpecificQuirks(const String& customUserAgent) { m_customUserAgentAsSiteSpecificQuirks = customUserAgent; }
     const String& customUserAgentAsSiteSpecificQuirks() const { return m_customUserAgentAsSiteSpecificQuirks; }
 
@@ -429,11 +432,8 @@ public:
     WEBCORE_EXPORT void setCustomHeaderFields(Vector<CustomHeaderFields>&&);
     const Vector<CustomHeaderFields>& customHeaderFields() const { return m_customHeaderFields; }
 
-    void setAllowsWebArchiveForMainFrame(bool allowsWebArchiveForMainFrame) { m_allowsWebArchiveForMainFrame = allowsWebArchiveForMainFrame; }
-    bool allowsWebArchiveForMainFrame() const { return m_allowsWebArchiveForMainFrame; }
-
-    void setAllowsDataURLsForMainFrame(bool allowsDataURLsForMainFrame) { m_allowsDataURLsForMainFrame = allowsDataURLsForMainFrame; }
-    bool allowsDataURLsForMainFrame() const { return m_allowsDataURLsForMainFrame; }
+    bool allowsWebArchiveForMainFrame() const { return m_isRequestFromClientOrUserInput; }
+    bool allowsDataURLsForMainFrame() const { return m_isRequestFromClientOrUserInput; }
 
     const AtomString& downloadAttribute() const { return m_triggeringAction.downloadAttribute(); }
 
@@ -459,6 +459,10 @@ public:
     bool isContinuingLoadAfterProvisionalLoadStarted() const { return m_isContinuingLoadAfterProvisionalLoadStarted; }
     void setIsContinuingLoadAfterProvisionalLoadStarted(bool isContinuingLoadAfterProvisionalLoadStarted) { m_isContinuingLoadAfterProvisionalLoadStarted = isContinuingLoadAfterProvisionalLoadStarted; }
 
+    bool isRequestFromClientOrUserInput() const { return m_isRequestFromClientOrUserInput; }
+    void setIsRequestFromClientOrUserInput(bool isRequestFromClientOrUserInput) { m_isRequestFromClientOrUserInput = isRequestFromClientOrUserInput; }
+
+    bool isInFinishedLoadingOfEmptyDocument() const { return m_isInFinishedLoadingOfEmptyDocument; }
 #if ENABLE(CONTENT_FILTERING)
     bool contentFilterWillHandleProvisionalLoadFailure(const ResourceError&);
     void contentFilterHandleProvisionalLoadFailure(const ResourceError&);
@@ -559,7 +563,6 @@ private:
 
     // ContentSecurityPolicyClient
     WEBCORE_EXPORT void addConsoleMessage(MessageSource, MessageLevel, const String&, unsigned long requestIdentifier) final;
-    WEBCORE_EXPORT void sendCSPViolationReport(URL&&, Ref<FormData>&&) final;
     WEBCORE_EXPORT void enqueueSecurityPolicyViolationEvent(SecurityPolicyViolationEventInit&&) final;
 
     bool disallowWebArchive() const;
@@ -604,6 +607,7 @@ private:
     bool m_isClientRedirect { false };
     bool m_isLoadingMultipartContent { false };
     bool m_isContinuingLoadAfterProvisionalLoadStarted { false };
+    bool m_isInFinishedLoadingOfEmptyDocument { false };
 
     // FIXME: Document::m_processingLoadEvent and DocumentLoader::m_wasOnloadDispatched are roughly the same
     // and should be merged.
@@ -720,10 +724,9 @@ private:
     bool m_hasEverBeenAttached { false };
 #endif
 
-    bool m_allowsWebArchiveForMainFrame { false };
-    bool m_allowsDataURLsForMainFrame { false };
-
+    bool m_isRequestFromClientOrUserInput { false };
     bool m_lastNavigationWasAppInitiated { true };
+    bool m_allowPrivacyProxy { true };
 };
 
 inline void DocumentLoader::recordMemoryCacheLoadForFutureClientNotification(const ResourceRequest& request)
