@@ -131,6 +131,7 @@ BEGIN {
        &isJSCOnly
        &isLinux
        &isPlayStation
+       &isQt
        &isWPE
        &isWinCairo
        &isWin64
