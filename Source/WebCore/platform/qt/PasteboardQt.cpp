@@ -135,7 +135,7 @@ void Pasteboard::writeSelection(const SimpleRange& selectedRange, bool canSmartC
     m_writableData->setText(text);
 
     QString markup = serializePreservingVisualAppearance(selectedRange, nullptr,
-        AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, ResolveURLs::YesExcludingLocalFileURLsForPrivacy);
+        AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, ResolveURLs::YesExcludingURLsForPrivacy);
 #ifdef Q_OS_MACOS
     markup.prepend(QLatin1String("<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" /></head><body>"));
     markup.append(QLatin1String("</body></html>"));
