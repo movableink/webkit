@@ -780,6 +780,10 @@ void TestRunner::addDisallowedURL(JSStringRef url)
 {
 }
 
+void TestRunner::removeAllCookies()
+{
+}
+
 void TestRunner::queueLoad(JSStringRef url, JSStringRef target)
 {
     DumpRenderTree* drt = DumpRenderTree::instance();

@@ -183,6 +183,11 @@ String contextMenuItemTagHideMediaControls()
     return QCoreApplication::translate("QWebPage", "Hide Controls", "Hide Media Controls");
 }
 
+String contextMenuItemTagShowMediaStats()
+{
+    return QCoreApplication::translate("QWebPage", "Show Stats", "Show Media Stats");
+}
+
 String contextMenuItemTagToggleMediaLoop()
 {
     return QCoreApplication::translate("QWebPage", "Looping", "Toggle Media Loop Playback");
@@ -536,7 +541,19 @@ String AXAutoFillCreditCardLabel()
     return String();
 }
 
+String AXAutoFillLoadingLabel()
+{
+    notImplemented();
+    return String();
+}
+
 String AXFigureText()
+{
+    notImplemented();
+    return String();
+}
+
+String AXSuggestionRoleDescriptionText()
 {
     notImplemented();
     return String();

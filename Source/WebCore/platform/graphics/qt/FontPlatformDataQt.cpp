@@ -157,6 +157,13 @@ unsigned FontPlatformData::hash() const
             ^ qHash(*reinterpret_cast<const quint32*>(&m_size));
 }
 
+String FontPlatformData::familyName() const
+{
+    if (!m_data)
+        return nullString();
+    return String { m_data->rawFont.familyName() };
+}
+
 #if !LOG_DISABLED
 String FontPlatformData::description() const
 {
