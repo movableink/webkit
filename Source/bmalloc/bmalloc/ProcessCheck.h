@@ -39,7 +39,7 @@ bool gigacageEnabledForProcess();
 inline bool gigacageEnabledForProcess() { return true; }
 #endif
 
-#if BOS(DARWIN)
+#if BOS(DARWIN) && !BPLATFORM(QT)
 bool shouldAllowMiniMode();
 #else
 inline bool shouldAllowMiniMode() { return true; }
