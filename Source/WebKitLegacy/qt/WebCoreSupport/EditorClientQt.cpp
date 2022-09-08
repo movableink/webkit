@@ -673,11 +673,6 @@ bool EditorClientQt::performTwoStepDrop(DocumentFragment&, const SimpleRange& de
     return false;
 }
 
-bool EditorClientQt::canShowFontPanel() const
-{
-    return false;
-}
-
 }
 
 // vim: ts=4 sw=4 et

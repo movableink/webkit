@@ -118,7 +118,6 @@ public:
     void canceledComposition() final;
     void didUpdateComposition() final;
     bool performTwoStepDrop(DocumentFragment&, const SimpleRange& destination, bool isMove) final;
-    bool canShowFontPanel() const final;
 
     bool isEditing() const;
 

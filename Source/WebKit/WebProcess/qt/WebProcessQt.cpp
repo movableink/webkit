@@ -35,7 +35,6 @@
 #include <QCoreApplication>
 #include <wtf/FileSystem.h>
 #include <WebCore/MemoryCache.h>
-#include <WebCore/RuntimeEnabledFeatures.h>
 #include <wtf/RAMSize.h>
 
 #if defined(Q_OS_MACOS)

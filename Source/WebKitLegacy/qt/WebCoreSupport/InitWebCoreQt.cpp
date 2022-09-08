@@ -37,7 +37,6 @@
 #include <WebCore/Image.h>
 #include <WebCore/LogInitialization.h>
 #include <WebCore/MemoryCache.h>
-#include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/SecurityPolicy.h>
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>

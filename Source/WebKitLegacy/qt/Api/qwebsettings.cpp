@@ -38,7 +38,6 @@
 #include <WebCore/MemoryRelease.h>
 #include <WebCore/NetworkStateNotifier.h>
 #include <WebCore/Page.h>
-#include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/Settings.h>
 #include <WebCore/WorkerThread.h>
 #include <wtf/FastMalloc.h>

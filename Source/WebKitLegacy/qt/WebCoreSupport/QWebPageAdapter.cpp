@@ -81,7 +81,6 @@
 #include <WebCore/HitTestResult.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/LegacySchemeRegistry.h>
-#include <WebCore/LibWebRTCProvider.h>
 #include <WebCore/LocalizedStrings.h>
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/MemoryCache.h>
@@ -91,7 +90,6 @@
 #include <WebCore/PageConfiguration.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PlatformMouseEvent.h>
-#include <WebCore/PermissionController.h>
 #include <WebCore/ProgressTracker.h>
 #include <WebCore/QWebPageClient.h>
 #include <WebCore/RenderTextControl.h>
@@ -104,6 +102,7 @@
 #include <WebCore/UserGestureIndicator.h>
 #include <WebCore/VisibilityState.h>
 #include <WebCore/WebLockRegistry.h>
+#include <WebCore/WebRTCProvider.h>
 #include <WebCore/WindowFeatures.h>
 #include <WebCore/markup.h>
 #include <wtf/UniqueRef.h>
@@ -271,7 +270,7 @@ void QWebPageAdapter::initializeWebCorePage()
         sessionID,
         makeUniqueRef<EditorClientQt>(this),
         SocketProvider::create(),
-        LibWebRTCProvider::create(),
+        WebRTCProvider::create(),
         CacheStorageProvider::create(),
         userContentProvider(),
         BackForwardList::create(*this),
@@ -281,7 +280,6 @@ void QWebPageAdapter::initializeWebCorePage()
         makeUniqueRef<WebCore::DummySpeechRecognitionProvider>(),
         makeUniqueRef<WebCore::MediaRecorderProvider>(),
         WebBroadcastChannelRegistry::getOrCreate(isPrivateBrowsingEnabled),
-        WebCore::DummyPermissionController::create(),
         makeUniqueRef<WebCore::DummyStorageProvider>(),
         makeUniqueRef<WebCore::DummyModelPlayerProvider>()
     };
@@ -968,7 +966,7 @@ QWebHitTestResultPrivate* QWebPageAdapter::updatePositionDependentMenuActions(co
     page->contextMenuController().setHitTestResult(result);
 
     if (page->inspectorController().enabled())
-        page->contextMenuController().addInspectElementItem();
+        page->contextMenuController().addDebuggingItems();
 
     WebCore::ContextMenu* webcoreMenu = page->contextMenuController().contextMenu();
     QList<MenuItem> itemDescriptions;
