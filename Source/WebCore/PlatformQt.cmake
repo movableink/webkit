@@ -59,6 +59,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 
     platform/graphics/qt/MediaPlayerPrivateQt.h
     platform/graphics/qt/ImageBufferQtBackend.h
+    platform/graphics/qt/ImageBufferUtilitiesQt.h
     platform/graphics/qt/GraphicsContextQt.h
 
     platform/mock/GeolocationClientMock.h
@@ -140,6 +141,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/qt/IconQt.cpp
     platform/graphics/qt/ImageQt.cpp
     platform/graphics/qt/ImageBufferQtBackend.cpp
+    platform/graphics/qt/ImageBufferUtilitiesQt.cpp
     platform/graphics/qt/IntPointQt.cpp
     platform/graphics/qt/IntRectQt.cpp
     platform/graphics/qt/IntSizeQt.cpp
@@ -230,7 +232,7 @@ QTWEBKIT_GENERATE_MOC_FILE_H(WebCore platform/network/qt/SocketStreamHandlePriva
 
 if (COMPILER_IS_GCC_OR_CLANG)
     set_source_files_properties(
-        platform/graphics/qt/ImageBufferQt.cpp
+        platform/graphics/qt/ImageBufferQtBackend.cpp
     PROPERTIES
         COMPILE_FLAGS "-frtti -UQT_NO_DYNAMIC_CAST"
     )

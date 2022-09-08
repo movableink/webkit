@@ -143,59 +143,6 @@ void ImageBufferQtBackend::clipToMask(GraphicsContext& context, const FloatRect&
 
 GraphicsContext &ImageBufferQtBackend::context() const { return *m_context; }
 
-static bool encodeImage(const QImage& image, const String& mimeType, std::optional<double> quality, QByteArray& data)
-{
-    //ASSERT(MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType));
-
-    if (!MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType))
-    {
-        qWarning("Unsupported mime type '%s'", mimeType.utf8().data());
-        return false;
-    }
-
-    // QImageWriter does not support mimetypes. It does support Qt image formats (png,
-    // gif, jpeg..., xpm) so skip the image/ to get the Qt image format used to encode
-    // the m_pixmap image.
-    String format = mimeType.substring(sizeof "image");
-
-    int compressionQuality = -1;
-    if (format == "jpeg"_s || format == "webp"_s) {
-        compressionQuality = 100;
-        if (quality && *quality >= 0.0 && *quality <= 1.0)
-            compressionQuality = static_cast<int>(*quality * 100 + 0.5);
-    }
-
-    QBuffer buffer(&data);
-    buffer.open(QBuffer::WriteOnly);
-    bool success = image.save(&buffer, format.utf8().data(), compressionQuality);
-    buffer.close();
-
-    return success;
-}
-
-// QTFIXME: Use PreserveResolution?
-String ImageBufferQtBackend::toDataURL(const String& mimeType, std::optional<double> quality, PreserveResolution) const
-{
-    RefPtr<NativeImage> image = copyNativeImage(DontCopyBackingStore);
-    QByteArray data;
-    if (!encodeImage(image->platformImage(), mimeType, quality, data))
-        return "data:,"_s;
-
-    return "data:" + mimeType + ";base64," + data.toBase64().data();
-}
-
-Vector<uint8_t> ImageBufferQtBackend::toData(const String& mimeType, std::optional<double> quality) const
-{
-    RefPtr<NativeImage> image = copyNativeImage(DontCopyBackingStore);
-    QByteArray data;
-    if (!encodeImage(image->platformImage(), mimeType, quality, data))
-        return { };
-
-    Vector<uint8_t> result(data.size());
-    memcpy(result.data(), data.constData(), data.size());
-    return result;
-}
-
 void ImageBufferQtBackend::transformToColorSpace(const DestinationColorSpace& newColorSpace)
 {
     if (m_parameters.colorSpace == newColorSpace)

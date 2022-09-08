@@ -54,9 +54,6 @@ public:
 
     void transformToColorSpace(const DestinationColorSpace&) override;
 
-    String toDataURL(const String &mimeType, std::optional<double> quality, PreserveResolution) const override;
-    Vector<uint8_t> toData(const String &mimeType, std::optional<double> quality) const override;
-
     GraphicsContext& context() const override;
 
     void clipToMask(GraphicsContext&, const FloatRect& rect) override;
