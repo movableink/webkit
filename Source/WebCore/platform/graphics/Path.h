@@ -149,7 +149,7 @@ public:
 #if PLATFORM(QT)
     WEBCORE_EXPORT bool isNull() const { return false; }
 #else
-    WEBCORE_EXPORT bool isNull() const { return !m_path; }
+    WEBCORE_EXPORT bool isNull() const;
 #endif
     bool isEmpty() const;
     // Gets the current point of the current path, which is conceptually the final point reached by the path so far.

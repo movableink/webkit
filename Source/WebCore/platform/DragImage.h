@@ -120,7 +120,12 @@ public:
     bool hasVisiblePath() const { return !!m_visiblePath; }
     std::optional<Path> visiblePath() const { return m_visiblePath; }
 
-    explicit operator bool() const { return /*!!m_dragImageRef*/ !m_dragImageRef.isNull(); }
+#if PLATFORM(QT)
+    explicit operator bool() const { return !m_dragImageRef.isNull(); }
+#else
+    explicit operator bool() const { return !!m_dragImageRef; }
+#endif
+
     DragImageRef get() const { return m_dragImageRef; }
 
 private:
